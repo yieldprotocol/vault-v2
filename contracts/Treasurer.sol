@@ -12,6 +12,16 @@ contract DaiLike{
   function transferFrom(address from, address to, uint tokens) public returns (bool);
 }
 
+contract VatLike {
+  struct Ilk {
+      uint256 Art;   // Total Normalised Debt     [wad]
+      uint256 rate;  // Accumulated Rates         [ray]
+      uint256 spot;  // Price with Safety Margin  [ray]
+      uint256 line;  // Debt Ceiling              [rad]
+      uint256 dust;  // Urn Debt Floor            [rad]
+  }
+  function ilks(bytes32 ilk) public returns (Ilk);
+}
 ////////////////////////////////////
 
 contract Treasurer {
@@ -35,6 +45,8 @@ contract Treasurer {
   uint chop;                        // minimum collateralization [wad]
   //GeneratorLike public generator;
   address recorder;
+  address public vat;
+  bytes32 ilk;
   DaiLike public dai;
   //Math
   // --- Math ---
@@ -62,7 +74,23 @@ contract Treasurer {
       //generator = GeneratorLike(Generator_);
       recorder = generator_;
       dai = DaiLike(dai_);
+      vat = VatLike(vat_);
       must = must_;
+  }
+
+  function peek() internal returns (uint r){
+    // This oracle has a safety margin built in and should be changed
+    r = VatLike(vat).ilks(ilk).spot;
+  }
+
+  function file(bytes32 what, address data) external {
+    require(msg.sender == recorder);
+    if (what == "Vat") vat = data;
+  }
+
+  function file(bytes32 what, uint data) external {
+    require(msg.sender == recorder);
+    if (what == "Ilk") ilk = data;
   }
 
   // record new yToken
@@ -92,7 +120,7 @@ contract Treasurer {
 
     //check that repo is in danger zone
     Repo memory repo        = repos[series][bum];
-    uint rate               = RATE_GETTER(); // to add rate getter!!!
+    uint rate               = peek(); // to add rate getter!!!
     uint256 min             = wmul(wmul(repo.debt, chop), rate);
     require(repo.ink < min, "treasurer-bite-still-safe");
 
@@ -104,14 +132,10 @@ contract Treasurer {
     uint256 bitten            = wmul(amount, rate);
     repo.ink                  = sub(repo.ink, bitten);
     repo.debt                 = sub(repo.ink, amount);
-    repos[series][bum]       = repo;
+    repos[series][bum]        = repo;
 
     // send bitten funds
     msg.sender.transfer(bitten);
-  }
-
-  function RATE_GETTER() internal pure returns (uint r){
-    r = 1;
   }
 
   // make a new yToken
@@ -120,7 +144,7 @@ contract Treasurer {
   // paid   - amount of collateral to lock up
   function make( uint series, uint made, uint paid) external {
     Repo memory repo        = repos[series][msg.sender];
-    uint rate               = RATE_GETTER(); // to add rate getter!!!
+    uint rate               = peek(); // to add rate getter!!!
     uint256 min             = wmul(wmul(made, must), rate);
     require (paid >= min, "treasurer-make-insufficient-collateral");
 
@@ -151,7 +175,7 @@ contract Treasurer {
     // if would be undercollateralized after freeing clean, fail
     uint rink               = sub(repo.ink, sweat);
     uint rdebt              = sub(repo.debt, tears);
-    uint rate               = RATE_GETTER(); // to add rate getter!!!
+    uint rate               = peek(); // to add rate getter!!!
     uint256 min             = wmul(wmul(rdebt, must), rate);
     require(rink > min, "treasurer-wipe-insufficient-remaining-collateral");
 
@@ -188,11 +212,6 @@ contract Treasurer {
 
   }
 
-  // lets a repo owner pay the debt for a matured yToken by initiating conversion to Dai
-  // series - matured yToken
-  // function resolve(uint series, uint256 amount) external {}
-
-
   // tender tokens for available Dai
   // series - matured yToken
   // amount - amount of yTokens to redeem
@@ -218,7 +237,7 @@ contract Treasurer {
     yT.burn(msg.sender, amount);
 
     Repo memory repo        = repos[series][holder];
-    uint rate               = RATE_GETTER(); // to add rate getter!!!
+    uint rate               = peek(); // to add rate getter!!!
     uint256 goods           = wdiv(amount, rate);
     require(repo.debt > amount, "treasurer-redeem-redemption-exceeds-repo-debt");
     repo.ink               = sub(repo.ink, goods);
@@ -226,6 +245,4 @@ contract Treasurer {
 
     msg.sender.transfer(goods);
   }
-
-
 }
