@@ -1,4 +1,5 @@
 pragma solidity ^0.5.0;
+pragma experimental ABIEncoderV2;
 import './yToken.sol';
 
 // Contract Templates
@@ -20,7 +21,7 @@ contract VatLike {
       uint256 line;  // Debt Ceiling              [rad]
       uint256 dust;  // Urn Debt Floor            [rad]
   }
-  function ilks(bytes32 ilk) public returns (Ilk);
+  function ilks(bytes32 ilk) public returns (Ilk memory);
 }
 ////////////////////////////////////
 
@@ -74,7 +75,6 @@ contract Treasurer {
       //generator = GeneratorLike(Generator_);
       recorder = generator_;
       dai = DaiLike(dai_);
-      vat = VatLike(vat_);
       must = must_;
   }
 
@@ -83,18 +83,20 @@ contract Treasurer {
     r = VatLike(vat).ilks(ilk).spot;
   }
 
+  // provide address to MakerDao's Vat, our ETH price oracle
   function file(bytes32 what, address data) external {
     require(msg.sender == recorder);
     if (what == "Vat") vat = data;
   }
 
-  function file(bytes32 what, uint data) external {
+  // provide Ilk name for ETH to MakerDao's Vat
+  function file(bytes32 what, bytes32 data) external {
     require(msg.sender == recorder);
     if (what == "Ilk") ilk = data;
   }
 
-  // record new yToken
-  function record(uint series, uint256 era) external {
+  // issue new yToken
+  function issue(uint series, uint256 era) external {
     require(msg.sender == recorder);
     yToken _token = new yToken(era);
     address _a = address(_token);

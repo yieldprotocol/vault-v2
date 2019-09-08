@@ -5,7 +5,7 @@ import 'openzeppelin-solidity/contracts/token/ERC20/ERC20Burnable.sol';
 
 
 contract yToken is ERC20Burnable, ERC20Mintable {
-  uint256 era;
+  uint256 public era;
 
   constructor(uint256 era_) public {
       era = era_;
