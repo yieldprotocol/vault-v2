@@ -14,5 +14,8 @@
   "license": "ISC",
   "dependencies": {
     "openzeppelin-solidity": "2.3.0"
+  },
+  "devDependencies": {
+    "@gnosis.pm/mock-contract": "^3.0.7"
   }
 }

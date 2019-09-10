@@ -47,7 +47,7 @@ contract Treasurer {
   //GeneratorLike public generator;
   address recorder;
   address public vat;
-  bytes32 ilk;
+  bytes32 public ilk;
   DaiLike public dai;
   //Math
   // --- Math ---
@@ -84,15 +84,10 @@ contract Treasurer {
   }
 
   // provide address to MakerDao's Vat, our ETH price oracle
-  function file(bytes32 what, address data) external {
+  function oracle(address vat_,  bytes32 ilk_) external {
     require(msg.sender == recorder);
-    if (what == "Vat") vat = data;
-  }
-
-  // provide Ilk name for ETH to MakerDao's Vat
-  function file(bytes32 what, bytes32 data) external {
-    require(msg.sender == recorder);
-    if (what == "Ilk") ilk = data;
+    vat = vat_;
+    ilk = ilk_;
   }
 
   // issue new yToken
