@@ -34,10 +34,10 @@ contract('Treasurer', async (accounts) =>  {
     assert(balance_after > balance_before);
   });
 
-  it("should file Vat address", async() => {
+  it("should provide Vat address", async() => {
     const TreasurerInstance = await Treasurer.deployed();
 
-    // Instantiate mock and make it return true for any invocation
+    // Instantiate mock
     const mock = await MockContract.new()
     await TreasurerInstance.oracle(mock.address,  web3.utils.fromAscii("ETH"));
 
@@ -46,6 +46,25 @@ contract('Treasurer', async (accounts) =>  {
     assert.equal(address, mock.address);
     assert.equal(web3.utils.toAscii(ilk).replace(/\0.*$/g,''), "ETH");
   });
+
+  it("should make new yTokens", async() => {
+    const TreasurerInstance = await Treasurer.deployed();
+
+    // create another yToken series with a 24 hour period until maturity
+    var number = await web3.eth.getBlockNumber();
+    var currentTimeStamp = (await web3.eth.getBlock(number)).timestamp;
+    var series = 2
+    var era = currentTimeStamp + (60*60)*24;
+    await TreasurerInstance.issue(series, era);
+
+
+    const mock = await MockContract.new()
+    var value = web3.utils.toWei("100");
+    mock.givenAnyReturnUint(value); //should price ETH at $100 * ONE
+    await TreasurerInstance.make(series, web3.utils.toWei(".1"), web3.utils.toWei("1"))
+
+  });
+
 
 
 });
