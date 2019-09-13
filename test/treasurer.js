@@ -1,10 +1,16 @@
 const Treasurer = artifacts.require('./Treasurer');
 const YToken = artifacts.require('./yToken');
-const MockContract = artifacts.require("./MockContract.sol")
+const MockContract = artifacts.require("./MockContract")
+const Oracle= artifacts.require("./Oracle")
+
+var OracleMock = null;
 
 contract('Treasurer', async (accounts) =>  {
 
-  before('deploy TimeContract', async() => {
+  before('deploy OracleMock', async() => {
+    const TreasurerInstance = await Treasurer.deployed();
+    OracleMock = await MockContract.new()
+    await TreasurerInstance.set_oracle(OracleMock.address);
   });
 
   it("should issue a new yToken", async() => {
@@ -34,17 +40,10 @@ contract('Treasurer', async (accounts) =>  {
     assert(balance_after > balance_before);
   });
 
-  it("should provide Vat address", async() => {
+  it("should provide Oracle address", async() => {
     const TreasurerInstance = await Treasurer.deployed();
-
-    // Instantiate mock
-    const mock = await MockContract.new()
-    await TreasurerInstance.oracle(mock.address,  web3.utils.fromAscii("ETH"));
-
-    const address = await TreasurerInstance.vat()
-    const ilk     = await TreasurerInstance.ilk()
-    assert.equal(address, mock.address);
-    assert.equal(web3.utils.toAscii(ilk).replace(/\0.*$/g,''), "ETH");
+    const _address = await TreasurerInstance.oracle()
+    assert.equal(_address, OracleMock.address);
   });
 
   it("should make new yTokens", async() => {
@@ -57,13 +56,24 @@ contract('Treasurer', async (accounts) =>  {
     var era = currentTimeStamp + (60*60)*24;
     await TreasurerInstance.issue(series, era);
 
+    // set up oracle
+    const oracle = await Oracle.new();
+    var rate = web3.utils.toWei(".001"); // rate = Dai/ETH
+    await OracleMock.givenAnyReturnUint(rate); // should price ETH at $100 * ONE
+    await TreasurerInstance.make(series, web3.utils.toWei("1"), web3.utils.toWei("1"), {from:accounts[1]});
 
-    const mock = await MockContract.new()
-    var value = web3.utils.toWei("100");
-    mock.givenAnyReturnUint(value); //should price ETH at $100 * ONE
-    await TreasurerInstance.make(series, web3.utils.toWei(".1"), web3.utils.toWei("1"))
+    // check yToken balance
+    const token = await TreasurerInstance.yTokens.call(series);
+    const yTokenInstance = await YToken.at(token.where);
+    const balance = await yTokenInstance.balanceOf(accounts[1]);
+    assert.equal(balance.toString(), web3.utils.toWei("1"), "Did not make new yTokens");
 
+    //check unlocked collateral, locked collateral
+    const repo = await TreasurerInstance.repos(series, accounts[1]);
+    assert.equal(repo.locked.toString(), web3.utils.toWei("1"), "Did not lock collateral");
+    assert.equal(repo.debt.toString(), web3.utils.toWei("1"), "Did not lock collateral");
   });
+
 
 
 

@@ -13,22 +13,22 @@ contract DaiLike{
   function transferFrom(address from, address to, uint tokens) public returns (bool);
 }
 
-contract VatLike {
-  struct Ilk {
-      uint256 Art;   // Total Normalised Debt     [wad]
-      uint256 rate;  // Accumulated Rates         [ray]
-      uint256 spot;  // Price with Safety Margin  [ray]
-      uint256 line;  // Debt Ceiling              [rad]
-      uint256 dust;  // Urn Debt Floor            [rad]
+//Using fake contract instead of abstract for mocking
+contract Oracle {
+  uint256 value;
+  function poke(uint256 _value) public {
+    value = _value;
   }
-  function ilks(bytes32 ilk) public returns (Ilk memory);
+  function peek() public view returns (uint256){
+    return value;
+  }
 }
 ////////////////////////////////////
 
 contract Treasurer {
 
   struct Repo {
-      uint256 ink;   // Locked Collateral  [wad]
+      uint256 locked;   // Locked Collateral  [wad]
       uint256 debt;   // Debt    [wad]
   }
 
@@ -46,22 +46,29 @@ contract Treasurer {
   uint chop;                        // minimum collateralization [wad]
   //GeneratorLike public generator;
   address recorder;
-  address public vat;
+  address public oracle;
   bytes32 public ilk;
   DaiLike public dai;
-  //Math
+
+  constructor(address generator_, address dai_, uint must_) public {
+        //generator = GeneratorLike(Generator_);
+        recorder = generator_;
+        dai = DaiLike(dai_);
+        must = must_;
+  }
+
   // --- Math ---
   uint constant WAD = 10 ** 18;
   uint constant RAY = 10 ** 27;
   function add(uint x, uint y) internal pure returns (uint z) {
       z = x + y;
-      require(z >= x);
+      require(z >= x, "treasurer-add-z-not-greater-eq-x");
   }
   function sub(uint x, uint y) internal pure returns (uint z) {
-      require((z = x - y) <= x);
+      require((z = x - y) <= x, "treasurer-sub-failed");
   }
   function mul(uint x, uint y) internal pure returns (uint z) {
-    require(y == 0 || (z = x * y) / y == x);
+    require(y == 0 || (z = x * y) / y == x,  "treasurer-mul-failed");
   }
   function wmul(uint x, uint y) internal pure returns (uint z) {
     z = add(mul(x, y), WAD / 2) / WAD;
@@ -70,24 +77,27 @@ contract Treasurer {
     z = add(mul(x, WAD), y / 2) / y;
   }
 
-  // Member functions
-  constructor(address generator_, address dai_, uint must_) public {
-      //generator = GeneratorLike(Generator_);
-      recorder = generator_;
-      dai = DaiLike(dai_);
-      must = must_;
+  // --- Views ---
+
+  // return unlocked collateral balance
+  function balance(address usr) public view returns (uint){
+    return gem[usr];
   }
 
-  function peek() internal returns (uint r){
-    // This oracle has a safety margin built in and should be changed
-    r = VatLike(vat).ilks(ilk).spot;
-  }
+  // --- Actions ---
 
-  // provide address to MakerDao's Vat, our ETH price oracle
-  function oracle(address vat_,  bytes32 ilk_) external {
+  // provide address to oracle
+  function set_oracle(address oracle_) external {
     require(msg.sender == recorder);
-    vat = vat_;
-    ilk = ilk_;
+    oracle = oracle_;
+  }
+
+  function peek() public returns (uint r){
+    // This oracle has a safety margin built in and should be changed
+    Oracle _oracle = Oracle(oracle);
+    //require (false, "treasurer-peek-1");
+    r= _oracle.peek();
+    //require (false, "treasurer-peek-2");
   }
 
   // issue new yToken
@@ -112,29 +122,6 @@ contract Treasurer {
     usr.transfer(wad);
   }
 
-  //liquidate a repo
-  function bite(uint series, address bum, uint256 amount) external {
-
-    //check that repo is in danger zone
-    Repo memory repo        = repos[series][bum];
-    uint rate               = peek(); // to add rate getter!!!
-    uint256 min             = wmul(wmul(repo.debt, chop), rate);
-    require(repo.ink < min, "treasurer-bite-still-safe");
-
-    //burn tokens
-    yTokenLike yT  = yTokenLike(yTokens[series].where);
-    yT.burn(msg.sender, amount);
-
-    //update repo
-    uint256 bitten            = wmul(amount, rate);
-    repo.ink                  = sub(repo.ink, bitten);
-    repo.debt                 = sub(repo.ink, amount);
-    repos[series][bum]        = repo;
-
-    // send bitten funds
-    msg.sender.transfer(bitten);
-  }
-
   // make a new yToken
   // series - yToken to mint
   // made   - amount of yToken to mint
@@ -143,12 +130,13 @@ contract Treasurer {
     Repo memory repo        = repos[series][msg.sender];
     uint rate               = peek(); // to add rate getter!!!
     uint256 min             = wmul(wmul(made, must), rate);
-    require (paid >= min, "treasurer-make-insufficient-collateral");
+    require (paid >= min, "treasurer-make-insufficient-collateral-for-those-tokens");
 
     // lock msg.sender Collateral, add debt
+    require(gem[msg.sender] >= paid, "treasurer-make-insufficient-collateral-to-lock");
     gem[msg.sender]           = sub(gem[msg.sender], paid);
-    repo.ink                  = add(repo.ink, paid);
-    repo.debt                 = add(repo.ink, made);
+    repo.locked               = add(repo.locked, paid);
+    repo.debt                 = add(repo.debt, made);
     repos[series][msg.sender] = repo;
 
     // mint new yTokens
@@ -160,6 +148,7 @@ contract Treasurer {
 
   }
 
+
   // wipe repo debt with yToken
   // series - yToken to mint
   // tears   - amount of yToken to wipe
@@ -170,18 +159,18 @@ contract Treasurer {
 
     Repo memory repo        = repos[series][msg.sender];
     // if would be undercollateralized after freeing clean, fail
-    uint rink               = sub(repo.ink, sweat);
+    uint rlocked               = sub(repo.locked, sweat);
     uint rdebt              = sub(repo.debt, tears);
     uint rate               = peek(); // to add rate getter!!!
     uint256 min             = wmul(wmul(rdebt, must), rate);
-    require(rink > min, "treasurer-wipe-insufficient-remaining-collateral");
+    require(rlocked > min, "treasurer-wipe-insufficient-remaining-collateral");
 
     //burn tokens
     yTokenLike yT  = yTokenLike(yTokens[series].where);
     yT.burn(msg.sender, tears);
 
     // reduce the collateral and the debt
-    repo.ink                  = sub(repo.ink, sweat);
+    repo.locked                  = sub(repo.locked, sweat);
     repo.debt                 = sub(repo.debt, tears);
     repos[series][msg.sender] = repo;
 
@@ -190,7 +179,30 @@ contract Treasurer {
 
   }
 
-  // lets a repo owner pay the Dai debt for a matured yToken
+  //liquidate a repo
+  function bite(uint series, address bum, uint256 amount) external {
+
+    //check that repo is in danger zone
+    Repo memory repo        = repos[series][bum];
+    uint rate               = peek(); // to add rate getter!!!
+    uint256 min             = wmul(wmul(repo.debt, chop), rate);
+    require(repo.locked < min, "treasurer-bite-still-safe");
+
+    //burn tokens
+    yTokenLike yT  = yTokenLike(yTokens[series].where);
+    yT.burn(msg.sender, amount);
+
+    //update repo
+    uint256 bitten            = wmul(amount, rate);
+    repo.locked                  = sub(repo.locked, bitten);
+    repo.debt                 = sub(repo.locked, amount);
+    repos[series][bum]        = repo;
+
+    // send bitten funds
+    msg.sender.transfer(bitten);
+  }
+
+  // pay the Dai debt for a matured yToken by a repo owner
   // must first approve this contract to transfer the Dai
   // series - matured yToken
   // amount    - amount of yToken to close
@@ -237,7 +249,7 @@ contract Treasurer {
     uint rate               = peek(); // to add rate getter!!!
     uint256 goods           = wdiv(amount, rate);
     require(repo.debt > amount, "treasurer-redeem-redemption-exceeds-repo-debt");
-    repo.ink               = sub(repo.ink, goods);
+    repo.locked               = sub(repo.locked, goods);
     repos[series][msg.sender] = repo;
 
     msg.sender.transfer(goods);
