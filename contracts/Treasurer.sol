@@ -92,7 +92,7 @@ contract Treasurer {
     oracle = oracle_;
   }
 
-  function peek() public returns (uint r){
+  function peek() public view returns (uint r){
     // This oracle has a safety margin built in and should be changed
     Oracle _oracle = Oracle(oracle);
     //require (false, "treasurer-peek-1");
@@ -145,38 +145,41 @@ contract Treasurer {
     yTokenLike yT  = yTokenLike(yTokens[series].where);
     address sender = msg.sender;
     yT.mint(sender, made);
-
   }
 
+  event Debug( uint256 balance, uint256 credit);
 
   // wipe repo debt with yToken
   // series - yToken to mint
-  // tears   - amount of yToken to wipe
-  // sweat  - amounht of collateral to free
-  function wipe(uint series, uint tears, uint sweat) external {
+  // credit   - amount of yToken to wipe
+  // released  - amount of collateral to free
+  function wipe(uint series, uint credit, uint released) external {
     // if yToken has matured, should call resolve
     require(now < yTokens[series].era, "treasurer-wipe-yToken-has-matured");
 
     Repo memory repo        = repos[series][msg.sender];
+    require(repo.locked >= released, "treasurer-wipe-release-more-than-locked");
+    require(repo.debt >= credit,     "treasurer-wipe-wipe-more-debt-than-present");
     // if would be undercollateralized after freeing clean, fail
-    uint rlocked               = sub(repo.locked, sweat);
-    uint rdebt              = sub(repo.debt, tears);
+    uint rlocked            = sub(repo.locked, released);
+    uint rdebt              = sub(repo.debt, credit);
     uint rate               = peek(); // to add rate getter!!!
     uint256 min             = wmul(wmul(rdebt, must), rate);
     require(rlocked > min, "treasurer-wipe-insufficient-remaining-collateral");
 
     //burn tokens
-    yTokenLike yT  = yTokenLike(yTokens[series].where);
-    yT.burn(msg.sender, tears);
+    yToken yT  = yToken(yTokens[series].where);
+    require(yT.balanceOf(msg.sender) > credit, "treasurer-wipe-insufficient-token-balance");
+    emit Debug(yT.balanceOf(msg.sender), credit);
+    yT.burnFrom(msg.sender, credit);
 
     // reduce the collateral and the debt
-    repo.locked                  = sub(repo.locked, sweat);
-    repo.debt                 = sub(repo.debt, tears);
+    repo.locked               = sub(repo.locked, released);
+    repo.debt                 = sub(repo.debt, credit);
     repos[series][msg.sender] = repo;
 
     // add collateral back to the gem
-    gem[msg.sender] = add(gem[msg.sender], sweat);
-
+    gem[msg.sender] = add(gem[msg.sender], released);
   }
 
   //liquidate a repo

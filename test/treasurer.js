@@ -52,7 +52,7 @@ contract('Treasurer', async (accounts) =>  {
     // create another yToken series with a 24 hour period until maturity
     var number = await web3.eth.getBlockNumber();
     var currentTimeStamp = (await web3.eth.getBlock(number)).timestamp;
-    var series = 2
+    var series = 2;
     var era = currentTimeStamp + (60*60)*24;
     await TreasurerInstance.issue(series, era);
 
@@ -60,6 +60,8 @@ contract('Treasurer', async (accounts) =>  {
     const oracle = await Oracle.new();
     var rate = web3.utils.toWei(".001"); // rate = Dai/ETH
     await OracleMock.givenAnyReturnUint(rate); // should price ETH at $100 * ONE
+
+    // make new yTokens
     await TreasurerInstance.make(series, web3.utils.toWei("1"), web3.utils.toWei("1"), {from:accounts[1]});
 
     // check yToken balance
@@ -71,9 +73,38 @@ contract('Treasurer', async (accounts) =>  {
     //check unlocked collateral, locked collateral
     const repo = await TreasurerInstance.repos(series, accounts[1]);
     assert.equal(repo.locked.toString(), web3.utils.toWei("1"), "Did not lock collateral");
-    assert.equal(repo.debt.toString(), web3.utils.toWei("1"), "Did not lock collateral");
+    assert.equal(repo.debt.toString(), web3.utils.toWei("1"), "Did not create debt");
   });
 
+  it("should accept tokens to wipe yToken debt", async() => {
+    const TreasurerInstance = await Treasurer.deployed();
+    var series = 2;
+    var amountToWipe = web3.utils.toWei(".1");
+
+    // set up oracle
+    const oracle = await Oracle.new();
+    var rate = web3.utils.toWei(".001"); // rate = Dai/ETH
+    await OracleMock.givenAnyReturnUint(rate); // should price ETH at $100 * ONE
+
+    // get acess to token
+    const token = await TreasurerInstance.yTokens.call(series);
+    const yTokenInstance = await YToken.at(token.where);
+
+    //authorize the wipe
+    await yTokenInstance.approve(TreasurerInstance.address, amountToWipe, {from:accounts[1]});
+    // wipe tokens
+    await TreasurerInstance.wipe(series, amountToWipe, web3.utils.toWei(".1"), {from:accounts[1]});
+
+    // check yToken balance
+    const balance = await yTokenInstance.balanceOf(accounts[1]);
+    assert.equal(balance.toString(), web3.utils.toWei(".9"), "Did not wipe yTokens");
+
+    //check unlocked collateral, locked collateral
+    const repo = await TreasurerInstance.repos(series, accounts[1]);
+    assert.equal(repo.locked.toString(), web3.utils.toWei(".9"), "Did not unlock collateral");
+    assert.equal(repo.debt.toString(), web3.utils.toWei(".9"), "Did not wipe debg");
+
+  });
 
 
 
