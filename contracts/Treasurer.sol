@@ -3,12 +3,6 @@ pragma experimental ABIEncoderV2;
 import './yToken.sol';
 
 // Contract Templates
-
-contract yTokenLike {
-  function mint(address guy, uint wad) public;
-  function burn(address guy, uint wad) public;
-}
-
 contract DaiLike{
   function transferFrom(address from, address to, uint tokens) public returns (bool);
 }
@@ -50,11 +44,12 @@ contract Treasurer {
   bytes32 public ilk;
   DaiLike public dai;
 
-  constructor(address generator_, address dai_, uint must_) public {
+  constructor(address generator_, address dai_, uint must_, uint chop_) public {
         //generator = GeneratorLike(Generator_);
         recorder = generator_;
         dai = DaiLike(dai_);
         must = must_;
+        chop = chop_;
   }
 
   // --- Math ---
@@ -96,7 +91,7 @@ contract Treasurer {
     // This oracle has a safety margin built in and should be changed
     Oracle _oracle = Oracle(oracle);
     //require (false, "treasurer-peek-1");
-    r= _oracle.peek();
+    r = _oracle.peek();
     //require (false, "treasurer-peek-2");
   }
 
@@ -127,13 +122,15 @@ contract Treasurer {
   // made   - amount of yToken to mint
   // paid   - amount of collateral to lock up
   function make( uint series, uint made, uint paid) external {
+    // first check if sufficient capital to lock up
+    require(gem[msg.sender] >= paid, "treasurer-make-insufficient-unlocked-to-lock");
+
     Repo memory repo        = repos[series][msg.sender];
     uint rate               = peek(); // to add rate getter!!!
     uint256 min             = wmul(wmul(made, must), rate);
     require (paid >= min, "treasurer-make-insufficient-collateral-for-those-tokens");
 
     // lock msg.sender Collateral, add debt
-    require(gem[msg.sender] >= paid, "treasurer-make-insufficient-collateral-to-lock");
     gem[msg.sender]           = sub(gem[msg.sender], paid);
     repo.locked               = add(repo.locked, paid);
     repo.debt                 = add(repo.debt, made);
@@ -142,12 +139,10 @@ contract Treasurer {
     // mint new yTokens
     // first, ensure yToken is initialized and matures in the future
     require(yTokens[series].era > now, "treasurer-make-invalid-or-matured-ytoken");
-    yTokenLike yT  = yTokenLike(yTokens[series].where);
+    yToken yT  = yToken(yTokens[series].where);
     address sender = msg.sender;
     yT.mint(sender, made);
   }
-
-  event Debug( uint256 balance, uint256 credit);
 
   // wipe repo debt with yToken
   // series - yToken to mint
@@ -170,7 +165,6 @@ contract Treasurer {
     //burn tokens
     yToken yT  = yToken(yTokens[series].where);
     require(yT.balanceOf(msg.sender) > credit, "treasurer-wipe-insufficient-token-balance");
-    emit Debug(yT.balanceOf(msg.sender), credit);
     yT.burnFrom(msg.sender, credit);
 
     // reduce the collateral and the debt
@@ -183,6 +177,9 @@ contract Treasurer {
   }
 
   //liquidate a repo
+  // series - yToken of debt to buy
+  // bum    - owner of the undercollateralized repo
+  // amount - amount of yToken debt to buy
   function bite(uint series, address bum, uint256 amount) external {
 
     //check that repo is in danger zone
@@ -192,13 +189,13 @@ contract Treasurer {
     require(repo.locked < min, "treasurer-bite-still-safe");
 
     //burn tokens
-    yTokenLike yT  = yTokenLike(yTokens[series].where);
-    yT.burn(msg.sender, amount);
+    yToken yT  = yToken(yTokens[series].where);
+    yT.burnByOwner(msg.sender, amount);
 
     //update repo
-    uint256 bitten            = wmul(amount, rate);
-    repo.locked                  = sub(repo.locked, bitten);
-    repo.debt                 = sub(repo.locked, amount);
+    uint256 bitten            = wmul(wmul(amount, chop), rate);
+    repo.locked               = sub(repo.locked, bitten);
+    repo.debt                 = sub(repo.debt, amount);
     repos[series][bum]        = repo;
 
     // send bitten funds
@@ -230,8 +227,8 @@ contract Treasurer {
   function redeem(uint series, uint256 amount) external {
     require(asset[series] > amount, "treasurer-redeem-insufficient-dai-balance");
     //burn tokens
-    yTokenLike yT  = yTokenLike(yTokens[series].where);
-    yT.burn(msg.sender, amount);
+    yToken yT  = yToken(yTokens[series].where);
+    yT.burnByOwner(msg.sender, amount);
 
     //transfer Dai and record the presence of Dai for the yToken series
     require(dai.transferFrom(address(this), msg.sender, amount), "treasurer-redeem-dai-transfer-failed");
@@ -245,8 +242,8 @@ contract Treasurer {
   function retrieve(uint series, address holder, uint256 amount) external {
 
     //burn tokens
-    yTokenLike yT  = yTokenLike(yTokens[series].where);
-    yT.burn(msg.sender, amount);
+    yToken yT  = yToken(yTokens[series].where);
+    yT.burnByOwner(msg.sender, amount);
 
     Repo memory repo        = repos[series][holder];
     uint rate               = peek(); // to add rate getter!!!

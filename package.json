@@ -13,7 +13,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "openzeppelin-solidity": "2.3.0"
+    "openzeppelin-solidity": "2.3.0",
+    "truffle-assertions": "^0.9.1"
   },
   "devDependencies": {
     "@gnosis.pm/mock-contract": "^3.0.7"

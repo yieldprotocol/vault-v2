@@ -11,5 +11,8 @@ contract yToken is ERC20Burnable, ERC20Mintable {
       era = era_;
   }
 
+  function burnByOwner(address account, uint256 amount) external onlyMinter {
+    _burn(account, amount);
+  }
 
 }
