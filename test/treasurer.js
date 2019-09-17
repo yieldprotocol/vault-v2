@@ -3,8 +3,10 @@ const YToken = artifacts.require('./yToken');
 const MockContract = artifacts.require("./MockContract")
 const Oracle= artifacts.require("./Oracle")
 const truffleAssert = require('truffle-assertions');
+const helper = require('ganache-time-traveler');
 
 var OracleMock = null;
+const SECONDS_IN_DAY = 86400;
 
 contract('Treasurer', async (accounts) =>  {
 
@@ -54,7 +56,7 @@ contract('Treasurer', async (accounts) =>  {
     var number = await web3.eth.getBlockNumber();
     var currentTimeStamp = (await web3.eth.getBlock(number)).timestamp;
     var series = 2;
-    var era = currentTimeStamp + (60*60)*24;
+    var era = currentTimeStamp + SECONDS_IN_DAY;
     await TreasurerInstance.issue(series, era);
 
     // set up oracle
@@ -169,6 +171,20 @@ contract('Treasurer', async (accounts) =>  {
     assert.equal(repo.locked.toString(), web3.utils.toWei(".45"), "Did not unlock collateral");
     assert.equal(repo.debt.toString(), web3.utils.toWei("50"), "Did not wipe debg");
 
+  });
+
+  it("should allow for settlement", async() => {
+    const TreasurerInstance = await Treasurer.deployed();
+    var series = 2;
+    snapShot = await helper.takeSnapshot();
+    snapshotId = snapShot['result'];
+
+    await helper.advanceTimeAndBlock(SECONDS_IN_DAY * 1.5);
+    await TreasurerInstance.settlement(series);
+    var rate = (await TreasurerInstance.settled(series)).toString();
+    assert.equal(rate, web3.utils.toWei(".02"), "settled rate not set");
+    //unwind state
+    await helper.revertToSnapshot(snapshotId);
   });
 
 });

@@ -32,9 +32,10 @@ contract Treasurer {
   }
 
   mapping (uint    => yieldT) public yTokens;
-  mapping (uint   => mapping (address => Repo)) public repos;
-  mapping (address => uint) public gem;  // [wad]
+  mapping (uint    => mapping (address => Repo)) public repos; // locked ETH and debt
+  mapping (address => uint) public gem;  // [wad] unlocked ETH
   mapping (uint    => uint) public asset;
+  mapping (uint    => uint) public settled; //
 
   uint must;                        // collateralization ratio [wad]
   uint chop;                        // minimum collateralization [wad]
@@ -202,6 +203,46 @@ contract Treasurer {
     msg.sender.transfer(bitten);
   }
 
+  // trigger settlement
+  // series - yToken of debt to settle
+  function settlement(uint series) external {
+    require(now > yTokens[series].era, "treasurer-settlement-yToken-hasnt-matured");
+    require(settled[series] == 0, "treasurer-settlement-settlement-already-called");
+    settled[series] = peek();
+  }
+
+
+  // redeem tokens for underlying Ether
+  // series - matured yToken
+  // amount    - amount of yToken to close
+  function withdraw(uint series, uint256 amount) external {
+    require(now > yTokens[series].era, "treasurer-withdraw-yToken-hasnt-matured");
+    require(settled[series] != 0, "treasurer-settlement-settlement-not-yet-called");
+
+    yToken yT  = yToken(yTokens[series].where);
+    yT.burnByOwner(msg.sender, amount);
+
+    uint rate               = settled[series];
+    uint256 goods           = wdiv(amount, rate);
+    msg.sender.transfer(goods);
+  }
+
+  // close repo and retrieve remaining Ether
+  function close(uint series) external {
+    require(now > yTokens[series].era, "treasurer-withdraw-yToken-hasnt-matured");
+    require(settled[series] != 0, "treasurer-settlement-settlement-not-yet-called");
+
+    Repo memory repo        = repos[series][msg.sender];
+    uint rate               = settled[series]; // to add rate getter!!!
+    uint256 goods           = sub(repo.locked, wdiv(repo.debt, rate));
+    repo.locked             = 0;
+    repo.debt               = 0;
+    repos[series][msg.sender] = repo;
+
+    msg.sender.transfer(goods);
+  }
+
+
   // pay the Dai debt for a matured yToken by a repo owner
   // must first approve this contract to transfer the Dai
   // series - matured yToken
@@ -254,4 +295,7 @@ contract Treasurer {
 
     msg.sender.transfer(goods);
   }
+
+
+
 }
