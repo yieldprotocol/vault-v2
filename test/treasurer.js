@@ -196,15 +196,11 @@ contract('Treasurer', async (accounts) =>  {
     await helper.advanceTimeAndBlock(SECONDS_IN_DAY * 1.5);
     await TreasurerInstance.settlement(series);
     var balance_before = await web3.eth.getBalance(accounts[3]);
-    //console.log(balance_before);
 
     const result = await TreasurerInstance.withdraw(series, web3.utils.toWei("25"), {from:accounts[3]});
 
     var balance_after = await web3.eth.getBalance(accounts[3]);
-    //console.log(balance_after);
-
     const tx = await web3.eth.getTransaction(result.tx);
-    var balance_after = await web3.eth.getBalance(accounts[3]);
     const total =  Number(balance_after) - Number(balance_before) + result.receipt.gasUsed * tx.gasPrice;
     assert(total > Number(web3.utils.toWei(".49999")), "bite funds not received");
     assert(total < Number(web3.utils.toWei(".50001")), "bite funds not received");
@@ -212,6 +208,35 @@ contract('Treasurer', async (accounts) =>  {
     //assert.equal(rate, web3.utils.toWei(".02"), "settled rate not set");
     //unwind state
     await helper.revertToSnapshot(snapshotId);
+  });
+
+  it("should allow repo holder to close repo and recieve remaining collateral", async() => {
+    const TreasurerInstance = await Treasurer.deployed();
+    var series = 2;
+    snapShot = await helper.takeSnapshot();
+    snapshotId = snapShot['result'];
+
+    //fix margin for account 2 (it is underfunded from wipe test)
+    await TreasurerInstance.join({from:accounts[2], value:web3.utils.toWei("1")});
+    await TreasurerInstance.make(series, web3.utils.toWei("0"), web3.utils.toWei("1"), {from:accounts[2]}),
+
+    await helper.advanceTimeAndBlock(SECONDS_IN_DAY * 1.5);
+    await TreasurerInstance.settlement(series);
+    var balance_before = await web3.eth.getBalance(accounts[2]);
+
+    //run close
+    const result = await TreasurerInstance.close(series, {from:accounts[2]});
+
+    var balance_after = await web3.eth.getBalance(accounts[2]);
+    const tx = await web3.eth.getTransaction(result.tx);
+    var balance_after = await web3.eth.getBalance(accounts[2]);
+    const total =  Number(balance_after) - Number(balance_before) + result.receipt.gasUsed * tx.gasPrice;
+    assert(total > Number(web3.utils.toWei(".44999")), "repo funds not received");
+    assert(total < Number(web3.utils.toWei(".45001")), "repo funds not received");
+
+    //unwind state
+    await helper.revertToSnapshot(snapshotId);
+
   });
 
 });

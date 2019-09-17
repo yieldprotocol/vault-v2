@@ -227,6 +227,7 @@ contract Treasurer {
     msg.sender.transfer(goods);
   }
 
+  event Debug(uint locked, uint debt, uint rate, uint remainder );
   // close repo and retrieve remaining Ether
   function close(uint series) external {
     require(now > yTokens[series].era, "treasurer-withdraw-yToken-hasnt-matured");
@@ -234,13 +235,21 @@ contract Treasurer {
 
     Repo memory repo        = repos[series][msg.sender];
     uint rate               = settled[series]; // to add rate getter!!!
-    uint256 goods           = sub(repo.locked, wdiv(repo.debt, rate));
+    uint remainder          = wmul(repo.debt, rate);
+    emit Debug(repo.locked, repo.debt, rate, remainder);
+    require(repo.locked > remainder, "treasurer-settlement-repo-underfunded-at-settlement" );
+    uint256 goods           = sub(repo.locked, wmul(repo.debt, rate));
     repo.locked             = 0;
     repo.debt               = 0;
     repos[series][msg.sender] = repo;
 
     msg.sender.transfer(goods);
   }
+
+  // Locked   450000000000000000
+  // debt   50000000000000000000
+  // rate      20000000000000000
+  // rem     1000000000000000000
 
 
   // pay the Dai debt for a matured yToken by a repo owner
