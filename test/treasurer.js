@@ -187,4 +187,31 @@ contract('Treasurer', async (accounts) =>  {
     await helper.revertToSnapshot(snapshotId);
   });
 
+  it("should allow token holder to withdraw face value", async() => {
+    const TreasurerInstance = await Treasurer.deployed();
+    var series = 2;
+    snapShot = await helper.takeSnapshot();
+    snapshotId = snapShot['result'];
+
+    await helper.advanceTimeAndBlock(SECONDS_IN_DAY * 1.5);
+    await TreasurerInstance.settlement(series);
+    var balance_before = await web3.eth.getBalance(accounts[3]);
+    //console.log(balance_before);
+
+    const result = await TreasurerInstance.withdraw(series, web3.utils.toWei("25"), {from:accounts[3]});
+
+    var balance_after = await web3.eth.getBalance(accounts[3]);
+    //console.log(balance_after);
+
+    const tx = await web3.eth.getTransaction(result.tx);
+    var balance_after = await web3.eth.getBalance(accounts[3]);
+    const total =  Number(balance_after) - Number(balance_before) + result.receipt.gasUsed * tx.gasPrice;
+    assert(total > Number(web3.utils.toWei(".49999")), "bite funds not received");
+    assert(total < Number(web3.utils.toWei(".50001")), "bite funds not received");
+
+    //assert.equal(rate, web3.utils.toWei(".02"), "settled rate not set");
+    //unwind state
+    await helper.revertToSnapshot(snapshotId);
+  });
+
 });

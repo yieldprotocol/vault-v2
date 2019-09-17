@@ -223,7 +223,7 @@ contract Treasurer {
     yT.burnByOwner(msg.sender, amount);
 
     uint rate               = settled[series];
-    uint256 goods           = wdiv(amount, rate);
+    uint256 goods           = wmul(amount, rate);
     msg.sender.transfer(goods);
   }
 
