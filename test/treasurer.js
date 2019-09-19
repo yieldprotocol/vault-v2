@@ -13,7 +13,7 @@ contract('Treasurer', async (accounts) =>  {
   before('deploy OracleMock', async() => {
     const TreasurerInstance = await Treasurer.deployed();
     OracleMock = await MockContract.new()
-    await TreasurerInstance.set_oracle(OracleMock.address);
+    await TreasurerInstance.setOracle(OracleMock.address);
   });
 
   it("should issue a new yToken", async() => {
@@ -24,13 +24,13 @@ contract('Treasurer', async (accounts) =>  {
     let repo = await TreasurerInstance.yTokens(1);
     let address = repo.where;
     var yTokenInstance = await YToken.at(address);
-    assert.equal(await yTokenInstance.era(), 1, "New yToken has incorrect era");
+    assert.equal(await yTokenInstance.when(), 1, "New yToken has incorrect era");
   });
 
   it("should accept collateral", async() => {
     const TreasurerInstance = await Treasurer.deployed();
     await TreasurerInstance.join({from:accounts[1], value:web3.utils.toWei("1")});
-    var result = await TreasurerInstance.gem(accounts[1]);
+    var result = await TreasurerInstance.unlocked(accounts[1]);
     assert.equal(result.toString(), web3.utils.toWei("1"), "Did not accept collateral");
   });
 
@@ -38,7 +38,7 @@ contract('Treasurer', async (accounts) =>  {
     const TreasurerInstance = await Treasurer.deployed();
     await TreasurerInstance.join({from:accounts[1], value:web3.utils.toWei("1")});
     var balance_before = await web3.eth.getBalance(accounts[1]);
-    await TreasurerInstance.exit(accounts[1], web3.utils.toWei("1"), {from:accounts[1]});
+    await TreasurerInstance.exit(web3.utils.toWei("1"), {from:accounts[1]});
     var balance_after = await web3.eth.getBalance(accounts[1]);
     assert(balance_after > balance_before);
   });
