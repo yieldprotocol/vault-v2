@@ -128,7 +128,7 @@ contract('Treasurer', async (accounts) =>  {
 
   });
 
-  it("should accept bites of undercollateralized repos", async() => {
+  it("should accept liquidations undercollateralized repos", async() => {
     const TreasurerInstance = await Treasurer.deployed();
     var series = 2;
 
@@ -155,16 +155,16 @@ contract('Treasurer', async (accounts) =>  {
     );
     var balance_before = await web3.eth.getBalance(accounts[3]);
 
-    // attempt to bite
-    const result = await TreasurerInstance.bite(series, accounts[2], web3.utils.toWei("50"), {from:accounts[3]});
+    // attempt to liquidate
+    const result = await TreasurerInstance.liquidate(series, accounts[2], web3.utils.toWei("50"), {from:accounts[3]});
 
     //check received 1.05
     const tx = await web3.eth.getTransaction(result.tx);
     var balance_after = await web3.eth.getBalance(accounts[3]);
     const total =  Number(balance_after) - Number(balance_before) + result.receipt.gasUsed * tx.gasPrice;
     //try to constrain the test rather than use an inequality (I think the Javascript math is losing precision)
-    assert(total > Number(web3.utils.toWei("1.04999")), "bite funds not received");
-    assert(total < Number(web3.utils.toWei("1.05001")), "bite funds not received");
+    assert(total > Number(web3.utils.toWei("1.04999")), "liquidation funds not received");
+    assert(total < Number(web3.utils.toWei("1.05001")), "liquidation funds not received");
 
     //check unlocked collateral, locked collateral
     const repo = await TreasurerInstance.repos(series, accounts[2]);
@@ -202,8 +202,8 @@ contract('Treasurer', async (accounts) =>  {
     var balance_after = await web3.eth.getBalance(accounts[3]);
     const tx = await web3.eth.getTransaction(result.tx);
     const total =  Number(balance_after) - Number(balance_before) + result.receipt.gasUsed * tx.gasPrice;
-    assert(total > Number(web3.utils.toWei(".49999")), "bite funds not received");
-    assert(total < Number(web3.utils.toWei(".50001")), "bite funds not received");
+    assert(total > Number(web3.utils.toWei(".49999")), "withdrawn funds not received");
+    assert(total < Number(web3.utils.toWei(".50001")), "withdrawn funds not received");
 
     //assert.equal(rate, web3.utils.toWei(".02"), "settled rate not set");
     //unwind state

@@ -34,13 +34,13 @@ contract Treasurer {
   mapping (uint    => uint) public settled; // settlement price of collateral
   address owner;
   address public oracle;
-  uint must;                        // collateralization ratio
-  uint chop;                        // minimum collateralization
+  uint collateralRatio;                        // collateralization ratio
+  uint minCollateralRatio;                     // minimum collateralization ratio
 
-  constructor(address owner_, uint must_, uint chop_) public {
+  constructor(address owner_, uint collateralRatio_, uint minCollateralRatio_) public {
     owner = owner_;
-    must = must_;
-    chop = chop_;
+    collateralRatio = collateralRatio_;
+    minCollateralRatio = minCollateralRatio_;
   }
 
   // --- Math ---
@@ -100,7 +100,7 @@ contract Treasurer {
 
   // add collateral to repo
   function join() external payable {
-    require(msg.value >= 0, "treasurer-join-must-include-deposit");
+    require(msg.value >= 0, "treasurer-join-collateralRatio-include-deposit");
     unlocked[msg.sender] = add(unlocked[msg.sender], msg.value);
   }
 
@@ -122,7 +122,7 @@ contract Treasurer {
 
     Repo memory repo = repos[series][msg.sender];
     uint rate        = peek(); // to add rate getter!!!
-    uint256 min      = wmul(wmul(made, must), rate);
+    uint256 min      = wmul(wmul(made, collateralRatio), rate);
     require (paid >= min, "treasurer-make-insufficient-collateral-for-those-tokens");
 
     // lock msg.sender Collateral, add debt
@@ -154,7 +154,7 @@ contract Treasurer {
     uint rlocked  = sub(repo.locked, released);
     uint rdebt    = sub(repo.debt, credit);
     uint rate     = peek(); // to add rate getter!!!
-    uint256 min   = wmul(wmul(rdebt, must), rate);
+    uint256 min   = wmul(wmul(rdebt, collateralRatio), rate);
     require(rlocked > min, "treasurer-wipe-insufficient-remaining-collateral");
 
     //burn tokens
@@ -175,12 +175,12 @@ contract Treasurer {
   // series - yToken of debt to buy
   // bum    - owner of the undercollateralized repo
   // amount - amount of yToken debt to buy
-  function bite(uint series, address bum, uint256 amount) external {
+  function liquidate(uint series, address bum, uint256 amount) external {
 
     //check that repo is in danger zone
     Repo memory repo  = repos[series][bum];
     uint rate         = peek(); // to add rate getter!!!
-    uint256 min       = wmul(wmul(repo.debt, chop), rate);
+    uint256 min       = wmul(wmul(repo.debt, minCollateralRatio), rate);
     require(repo.locked < min, "treasurer-bite-still-safe");
 
     //burn tokens
@@ -188,7 +188,7 @@ contract Treasurer {
     yT.burnByOwner(msg.sender, amount);
 
     //update repo
-    uint256 bitten     = wmul(wmul(amount, chop), rate);
+    uint256 bitten     = wmul(wmul(amount, minCollateralRatio), rate);
     repo.locked        = sub(repo.locked, bitten);
     repo.debt          = sub(repo.debt, amount);
     repos[series][bum] = repo;
