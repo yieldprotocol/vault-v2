@@ -2,19 +2,8 @@ pragma solidity ^0.5.2;
 pragma experimental ABIEncoderV2;
 
 import './yToken.sol';
+import './Oracle.sol';
 
-//Using fake contract instead of abstract for mocking
-contract Oracle {
-  uint256 value;
-
-  function poke(uint256 _value) public {
-    value = _value;
-  }
-
-  function peek() public view returns (uint256){
-    return value;
-  }
-}
 
 
 contract Treasurer {
@@ -86,7 +75,7 @@ contract Treasurer {
   // get oracle value
   function peek() public view returns (uint r){
     Oracle _oracle = Oracle(oracle);
-    r = _oracle.peek();
+    r = _oracle.read();
   }
 
   // issue new yToken
@@ -106,6 +95,7 @@ contract Treasurer {
 
   // remove collateral from repo
   // amount - amount of ETH to remove from unlocked account
+  // TO-DO: Update as described in https://diligence.consensys.net/posts/2019/09/stop-using-soliditys-transfer-now/
   function exit(uint amount) external {
     require(amount >= 0, "treasurer-exit-insufficient-balance");
     unlocked[msg.sender] = sub(unlocked[msg.sender], amount);

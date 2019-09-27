@@ -15,7 +15,8 @@
   "dependencies": {
     "ganache-time-traveler": "^1.0.5",
     "openzeppelin-solidity": "2.3.0",
-    "truffle-assertions": "^0.9.1"
+    "truffle-assertions": "^0.9.1",
+    "truffle-hdwallet-provider": "^1.0.17"
   },
   "devDependencies": {
     "@gnosis.pm/mock-contract": "^3.0.7"
