@@ -13,6 +13,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "dotenv": "^8.1.0",
     "ganache-time-traveler": "^1.0.5",
     "openzeppelin-solidity": "2.3.0",
     "truffle-assertions": "^0.9.1",

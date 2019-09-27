@@ -25,7 +25,8 @@
 // const mnemonic = fs.readFileSync(".secret").toString().trim();
 
 var HDWalletProvider = require("truffle-hdwallet-provider");
-var mnemonic = "cigar coil mad entry frequent invite toast reflect climb daring tribe luggage";
+require('dotenv').config();
+var mnemonic = process.env.KOVAN_MNEMONIC;
 
 module.exports = {
   /**
@@ -81,7 +82,11 @@ module.exports = {
     // },
 
     kovan: {
-       provider: () => new HDWalletProvider(mnemonic, "https://kovan.infura.io/v3/dbf694c0bd224624b851854c607c978c"),
+       provider: () => new HDWalletProvider([
+         process.env.KOVAN_1,
+         process.env.KOVAN_2,
+         process.env.KOVAN_3
+       ], "https://kovan.infura.io/v3/dbf694c0bd224624b851854c607c978c", 0, 3),
        network_id: 42,       // Ropsten's id
        gas: 5500000,        // Ropsten has a lower block limit than mainnet
        confirmations: 2,    // # of confs to wait between deployments. (default: 0)
