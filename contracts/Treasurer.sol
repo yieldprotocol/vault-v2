@@ -9,6 +9,7 @@ import './Oracle.sol';
 contract Treasurer {
   struct Repo {
       uint256 locked;   // Locked Collateral
+      uint256 unminted;   // unminted
       uint256 debt;     // Debt
   }
 
@@ -21,6 +22,7 @@ contract Treasurer {
   mapping (uint    => mapping (address => Repo)) public repos; // locked ETH and debt
   mapping (address => uint) public unlocked;  // unlocked ETH
   mapping (uint    => uint) public settled; // settlement price of collateral
+  uint[] public issuedSeries;
   address owner;
   address public oracle;
   uint collateralRatio;                        // collateralization ratio
@@ -80,11 +82,13 @@ contract Treasurer {
 
   // issue new yToken
   function issue(uint series, uint256 when) external {
-    require(msg.sender == owner);
+    require(msg.sender == owner, "treasurer-issue-only-owner-may-issue");
+    require(yTokens[series].when == 0, "treasurer-issue-may-not-reissue-series");
     yToken _token = new yToken(when);
     address _a = address(_token);
     yieldT memory yT = yieldT(_a, when);
     yTokens[series] = yT;
+    issuedSeries.push(series);
   }
 
   // add collateral to repo
@@ -101,6 +105,7 @@ contract Treasurer {
     unlocked[msg.sender] = sub(unlocked[msg.sender], amount);
     msg.sender.transfer(amount);
   }
+
 
   // make a new yToken
   // series - yToken to mint

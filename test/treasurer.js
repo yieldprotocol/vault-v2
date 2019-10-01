@@ -108,6 +108,19 @@ contract('Treasurer', async (accounts) =>  {
     assert.equal(repo.debt.toString(), web3.utils.toWei(".9"), "Did not wipe debg");
   });
 
+  it("should not permit re-issuing a series", async() => {
+    const TreasurerInstance = await Treasurer.deployed();
+    var number = await web3.eth.getBlockNumber();
+    var currentTimeStamp = (await web3.eth.getBlock(number)).timestamp;
+    // reuse same series number
+    var series = 2;
+    var era = currentTimeStamp + SECONDS_IN_DAY;
+    await truffleAssert.fails(
+      TreasurerInstance.issue(series, era),
+      truffleAssert.REVERT
+    );
+  });
+
   it("should refuse to create an undercollateralized repos", async() => {
     const TreasurerInstance = await Treasurer.deployed();
     var series = 2;
