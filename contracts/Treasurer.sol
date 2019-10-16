@@ -23,10 +23,10 @@ contract Treasurer {
   mapping (address => uint) public unlocked;  // unlocked ETH
   mapping (uint    => uint) public settled; // settlement price of collateral
   uint[] public issuedSeries;
-  address owner;
+  address public owner;
   address public oracle;
-  uint collateralRatio;                        // collateralization ratio
-  uint minCollateralRatio;                     // minimum collateralization ratio
+  uint public collateralRatio;                        // collateralization ratio
+  uint public minCollateralRatio;                     // minimum collateralization ratio
 
   constructor(address owner_, uint collateralRatio_, uint minCollateralRatio_) public {
     owner = owner_;
@@ -105,7 +105,6 @@ contract Treasurer {
     unlocked[msg.sender] = sub(unlocked[msg.sender], amount);
     msg.sender.transfer(amount);
   }
-
 
   // make a new yToken
   // series - yToken to mint
