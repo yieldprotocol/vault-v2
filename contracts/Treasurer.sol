@@ -148,12 +148,11 @@ contract Treasurer {
     uint rdebt    = sub(repo.debt, credit);
     uint rate     = peek(); // to add rate getter!!!
     uint256 min   = wmul(wmul(rdebt, collateralRatio), rate);
-    require(rlocked > min, "treasurer-wipe-insufficient-remaining-collateral");
     uint deficiency = 0;
-    if (min > rlocked){
+    if (min >= rlocked){
       deficiency = sub(min, rlocked);
     }
-    return (rlocked > min, deficiency);
+    return (rlocked >= min, deficiency);
   }
 
   // wipe repo debt with yToken
@@ -172,7 +171,7 @@ contract Treasurer {
     uint rdebt    = sub(repo.debt, credit);
     uint rate     = peek(); // to add rate getter!!!
     uint256 min   = wmul(wmul(rdebt, collateralRatio), rate);
-    require(rlocked > min, "treasurer-wipe-insufficient-remaining-collateral");
+    require(rlocked >= min, "treasurer-wipe-insufficient-remaining-collateral");
 
     //burn tokens
     yToken yT  = yToken(yTokens[series].where);
