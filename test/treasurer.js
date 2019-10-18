@@ -93,6 +93,7 @@ contract('Treasurer', async (accounts) =>  {
     const token = await TreasurerInstance.yTokens.call(series);
     const yTokenInstance = await YToken.at(token.where);
 
+    console.log(await TreasurerInstance.wipeCheck(series, amountToWipe, web3.utils.toWei(".1"), {from:accounts[1]}))
     //authorize the wipe
     await yTokenInstance.approve(TreasurerInstance.address, amountToWipe, {from:accounts[1]});
     // wipe tokens
