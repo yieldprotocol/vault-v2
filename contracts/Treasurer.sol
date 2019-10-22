@@ -133,6 +133,28 @@ contract Treasurer {
     yT.mint(sender, made);
   }
 
+  // check that wipe leaves sufficient collateral
+  // series - yToken to mint
+  // credit   - amount of yToken to wipe
+  // released  - amount of collateral to free
+  // returns (true, 0) if sufficient collateral would remain
+  // returns (false, deficiency) if sufficient collateral would not remain
+  function wipeCheck(uint series, uint credit, uint released) public view returns (bool, uint) {
+    Repo memory repo        = repos[series][msg.sender];
+    require(repo.locked >= released, "treasurer-wipe-release-more-than-locked");
+    require(repo.debt >= credit,     "treasurer-wipe-wipe-more-debt-than-present");
+    // if would be undercollateralized after freeing clean, fail
+    uint rlocked  = sub(repo.locked, released);
+    uint rdebt    = sub(repo.debt, credit);
+    uint rate     = peek(); // to add rate getter!!!
+    uint256 min   = wmul(wmul(rdebt, collateralRatio), rate);
+    uint deficiency = 0;
+    if (min >= rlocked){
+      deficiency = sub(min, rlocked);
+    }
+    return (rlocked >= min, deficiency);
+  }
+
   // wipe repo debt with yToken
   // series - yToken to mint
   // credit   - amount of yToken to wipe
@@ -149,7 +171,7 @@ contract Treasurer {
     uint rdebt    = sub(repo.debt, credit);
     uint rate     = peek(); // to add rate getter!!!
     uint256 min   = wmul(wmul(rdebt, collateralRatio), rate);
-    require(rlocked > min, "treasurer-wipe-insufficient-remaining-collateral");
+    require(rlocked >= min, "treasurer-wipe-insufficient-remaining-collateral");
 
     //burn tokens
     yToken yT  = yToken(yTokens[series].where);
