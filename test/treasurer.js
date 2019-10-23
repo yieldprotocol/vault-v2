@@ -16,25 +16,24 @@ contract('Treasurer', async (accounts) =>  {
     await TreasurerInstance.setOracle(OracleMock.address);
   });
 
-  /*****
+
   it("should refuse to issue a new yToken with old maturity date", async() => {
     const TreasurerInstance = await Treasurer.deployed();
     var number = await web3.eth.getBlockNumber();
     var currentTimeStamp = (await web3.eth.getBlock(number)).timestamp;
-    // Issue yToken with series 1 and era 1
-    let series = await TreasurerInstance.issue(1);
-    let repo = await TreasurerInstance.yTokens(series);
-    let address = repo.where;
-    var yTokenInstance = await YToken.at(address);
-    assert.equal(await yTokenInstance.when(), 1, "New yToken has incorrect era");
+    currentTimeStamp = currentTimeStamp - 1;
+    await truffleAssert.fails(
+      TreasurerInstance.issue(currentTimeStamp),
+      truffleAssert.REVERT
+    );
+    //let series = await TreasurerInstance.issue(currentTimeStamp);
   });
-  ****/
+
 
   it("should issue a new yToken", async() => {
     const TreasurerInstance = await Treasurer.deployed();
     var number = await web3.eth.getBlockNumber();
     var currentTimeStamp = (await web3.eth.getBlock(number)).timestamp;
-    // Issue yToken with series 1 and era 1
     var era = currentTimeStamp + SECONDS_IN_DAY;
     let series = await TreasurerInstance.issue.call(era.toString());
     await TreasurerInstance.issue(era.toString());
