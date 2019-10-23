@@ -27,6 +27,7 @@ contract Treasurer {
   address public oracle;
   uint public collateralRatio;                        // collateralization ratio
   uint public minCollateralRatio;                     // minimum collateralization ratio
+  uint public totalSeries = 0;
 
   constructor(address owner_, uint collateralRatio_, uint minCollateralRatio_) public {
     owner = owner_;
@@ -81,14 +82,16 @@ contract Treasurer {
   }
 
   // issue new yToken
-  function issue(uint series, uint256 when) external {
+  function issue(uint256 when) external returns (uint series) {
     require(msg.sender == owner, "treasurer-issue-only-owner-may-issue");
+    series = totalSeries;
     require(yTokens[series].when == 0, "treasurer-issue-may-not-reissue-series");
     yToken _token = new yToken(when);
     address _a = address(_token);
     yieldT memory yT = yieldT(_a, when);
     yTokens[series] = yT;
     issuedSeries.push(series);
+    totalSeries = totalSeries + 1;
   }
 
   // add collateral to repo
@@ -111,6 +114,7 @@ contract Treasurer {
   // made   - amount of yToken to mint
   // paid   - amount of collateral to lock up
   function make(uint series, uint made, uint paid) external {
+    require(series < totalSeries);
     // first check if sufficient capital to lock up
     require(unlocked[msg.sender] >= paid, "treasurer-make-insufficient-unlocked-to-lock");
 
@@ -140,6 +144,7 @@ contract Treasurer {
   // returns (true, 0) if sufficient collateral would remain
   // returns (false, deficiency) if sufficient collateral would not remain
   function wipeCheck(uint series, uint credit, uint released) public view returns (bool, uint) {
+    require(series < totalSeries);
     Repo memory repo        = repos[series][msg.sender];
     require(repo.locked >= released, "treasurer-wipe-release-more-than-locked");
     require(repo.debt >= credit,     "treasurer-wipe-wipe-more-debt-than-present");
@@ -160,6 +165,7 @@ contract Treasurer {
   // credit   - amount of yToken to wipe
   // released  - amount of collateral to free
   function wipe(uint series, uint credit, uint released) external {
+    require(series < totalSeries);
     // if yToken has matured, should call resolve
     require(now < yTokens[series].when, "treasurer-wipe-yToken-has-matured");
 
@@ -192,7 +198,7 @@ contract Treasurer {
   // bum    - owner of the undercollateralized repo
   // amount - amount of yToken debt to buy
   function liquidate(uint series, address bum, uint256 amount) external {
-
+    require(series < totalSeries);
     //check that repo is in danger zone
     Repo memory repo  = repos[series][bum];
     uint rate         = peek(); // to add rate getter!!!
@@ -216,6 +222,7 @@ contract Treasurer {
   // trigger settlement
   // series - yToken of debt to settle
   function settlement(uint series) external {
+    require(series < totalSeries);
     require(now > yTokens[series].when, "treasurer-settlement-yToken-hasnt-matured");
     require(settled[series] == 0, "treasurer-settlement-settlement-already-called");
     settled[series] = peek();
@@ -226,6 +233,7 @@ contract Treasurer {
   // series - matured yToken
   // amount    - amount of yToken to close
   function withdraw(uint series, uint256 amount) external {
+    require(series < totalSeries);
     require(now > yTokens[series].when, "treasurer-withdraw-yToken-hasnt-matured");
     require(settled[series] != 0, "treasurer-settlement-settlement-not-yet-called");
 
@@ -240,6 +248,7 @@ contract Treasurer {
   // close repo and retrieve remaining Ether
   // series - matured yToken
   function close(uint series) external {
+    require(series < totalSeries);
     require(now > yTokens[series].when, "treasurer-withdraw-yToken-hasnt-matured");
     require(settled[series] != 0, "treasurer-settlement-settlement-not-yet-called");
 

@@ -16,15 +16,32 @@ contract('Treasurer', async (accounts) =>  {
     await TreasurerInstance.setOracle(OracleMock.address);
   });
 
-  it("should issue a new yToken", async() => {
+  /*****
+  it("should refuse to issue a new yToken with old maturity date", async() => {
     const TreasurerInstance = await Treasurer.deployed();
-
+    var number = await web3.eth.getBlockNumber();
+    var currentTimeStamp = (await web3.eth.getBlock(number)).timestamp;
     // Issue yToken with series 1 and era 1
-    await TreasurerInstance.issue(1, 1);
-    let repo = await TreasurerInstance.yTokens(1);
+    let series = await TreasurerInstance.issue(1);
+    let repo = await TreasurerInstance.yTokens(series);
     let address = repo.where;
     var yTokenInstance = await YToken.at(address);
     assert.equal(await yTokenInstance.when(), 1, "New yToken has incorrect era");
+  });
+  ****/
+
+  it("should issue a new yToken", async() => {
+    const TreasurerInstance = await Treasurer.deployed();
+    var number = await web3.eth.getBlockNumber();
+    var currentTimeStamp = (await web3.eth.getBlock(number)).timestamp;
+    // Issue yToken with series 1 and era 1
+    var era = currentTimeStamp + SECONDS_IN_DAY;
+    let series = await TreasurerInstance.issue.call(era.toString());
+    await TreasurerInstance.issue(era.toString());
+    let repo = await TreasurerInstance.yTokens(series);
+    let address = repo.where;
+    var yTokenInstance = await YToken.at(address);
+    assert.equal(await yTokenInstance.when(), era, "New yToken has incorrect era");
   });
 
   it("should accept collateral", async() => {
@@ -57,7 +74,7 @@ contract('Treasurer', async (accounts) =>  {
     var currentTimeStamp = (await web3.eth.getBlock(number)).timestamp;
     var series = 2;
     var era = currentTimeStamp + SECONDS_IN_DAY;
-    await TreasurerInstance.issue(series, era);
+    await TreasurerInstance.issue(era);
 
     // set up oracle
     const oracle = await Oracle.new();
@@ -108,6 +125,7 @@ contract('Treasurer', async (accounts) =>  {
     assert.equal(repo.debt.toString(), web3.utils.toWei(".9"), "Did not wipe debg");
   });
 
+  /******** No longer relevant, but saved as an example
   it("should not permit re-issuing a series", async() => {
     const TreasurerInstance = await Treasurer.deployed();
     var number = await web3.eth.getBlockNumber();
@@ -116,10 +134,11 @@ contract('Treasurer', async (accounts) =>  {
     var series = 2;
     var era = currentTimeStamp + SECONDS_IN_DAY;
     await truffleAssert.fails(
-      TreasurerInstance.issue(series, era),
+      TreasurerInstance.issue(era),
       truffleAssert.REVERT
     );
   });
+  *****/
 
   it("should refuse to create an undercollateralized repos", async() => {
     const TreasurerInstance = await Treasurer.deployed();

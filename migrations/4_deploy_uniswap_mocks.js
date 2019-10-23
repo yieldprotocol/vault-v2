@@ -10,7 +10,7 @@ setup = async () => {
   await oracle.set(rate);
   await treasurer.setOracle(oracle.address);
   var thedate = Math.floor(Date.now() / 1000) + (24*60*60)*30;
-  await treasurer.issue("1", thedate.toString());
+  await treasurer.issue(thedate.toString());
 }
 
 module.exports = function(deployer, network, accounts) {

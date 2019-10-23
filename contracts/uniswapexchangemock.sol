@@ -4,7 +4,7 @@ pragma solidity ^0.5.2;
 contract UniswapExchangeMock {
 
     function getEthToTokenInputPrice(uint256 eth_sold) external view returns (uint256 tokens_bought){
-      return 0.98 ether;
+      return 0.98 ether + (eth_sold - eth_sold);
     }
 
 }
