@@ -3,7 +3,7 @@ pragma experimental ABIEncoderV2;
 
 import './yToken.sol';
 import './Oracle.sol';
-
+import "@nomiclabs/buidler/console.sol";
 
 
 contract Treasurer {
@@ -93,6 +93,7 @@ contract Treasurer {
     yTokens[series] = yT;
     issuedSeries.push(series);
     totalSeries = totalSeries + 1;
+    console.log("New series:", series);
   }
 
   // add collateral to repo

@@ -9,16 +9,21 @@ var OracleMock = null;
 const SECONDS_IN_DAY = 86400;
 
 contract('Treasurer', async (accounts) =>  {
+  let TreasurerInstance;
+  let owner = accounts[0];
 
   before('deploy OracleMock', async() => {
-    const TreasurerInstance = await Treasurer.deployed();
+    TreasurerInstance = await Treasurer.new(
+      owner,
+      web3.utils.toWei("1.5"),
+      web3.utils.toWei("1.05")
+    );
     OracleMock = await MockContract.new()
     await TreasurerInstance.setOracle(OracleMock.address);
   });
 
 
   it("should refuse to issue a new yToken with old maturity date", async() => {
-    const TreasurerInstance = await Treasurer.deployed();
     var number = await web3.eth.getBlockNumber();
     var currentTimeStamp = (await web3.eth.getBlock(number)).timestamp;
     currentTimeStamp = currentTimeStamp - 1;
@@ -31,7 +36,6 @@ contract('Treasurer', async (accounts) =>  {
 
 
   it("should issue a new yToken", async() => {
-    const TreasurerInstance = await Treasurer.deployed();
     var number = await web3.eth.getBlockNumber();
     var currentTimeStamp = (await web3.eth.getBlock(number)).timestamp;
     var era = currentTimeStamp + SECONDS_IN_DAY;
@@ -44,14 +48,12 @@ contract('Treasurer', async (accounts) =>  {
   });
 
   it("should accept collateral", async() => {
-    const TreasurerInstance = await Treasurer.deployed();
     await TreasurerInstance.join({from:accounts[1], value:web3.utils.toWei("1")});
     var result = await TreasurerInstance.unlocked(accounts[1]);
     assert.equal(result.toString(), web3.utils.toWei("1"), "Did not accept collateral");
   });
 
   it("should return collateral", async() => {
-    const TreasurerInstance = await Treasurer.deployed();
     await TreasurerInstance.join({from:accounts[1], value:web3.utils.toWei("1")});
     var balance_before = await web3.eth.getBalance(accounts[1]);
     await TreasurerInstance.exit(web3.utils.toWei("1"), {from:accounts[1]});
@@ -60,20 +62,18 @@ contract('Treasurer', async (accounts) =>  {
   });
 
   it("should provide Oracle address", async() => {
-    const TreasurerInstance = await Treasurer.deployed();
     const _address = await TreasurerInstance.oracle()
     assert.equal(_address, OracleMock.address);
   });
 
   it("should make new yTokens", async() => {
-    const TreasurerInstance = await Treasurer.deployed();
 
     // create another yToken series with a 24 hour period until maturity
     var number = await web3.eth.getBlockNumber();
     var currentTimeStamp = (await web3.eth.getBlock(number)).timestamp;
-    var series = 2;
+    var series = 1;
     var era = currentTimeStamp + SECONDS_IN_DAY;
-    await TreasurerInstance.issue(era);
+    result = await TreasurerInstance.issue(era);
 
     // set up oracle
     const oracle = await Oracle.new();
@@ -96,8 +96,7 @@ contract('Treasurer', async (accounts) =>  {
   });
 
   it("should accept tokens to wipe yToken debt", async() => {
-    const TreasurerInstance = await Treasurer.deployed();
-    var series = 2;
+    var series = 1;
     var amountToWipe = web3.utils.toWei(".1");
 
     // set up oracle
@@ -140,8 +139,7 @@ contract('Treasurer', async (accounts) =>  {
   *****/
 
   it("should refuse to create an undercollateralized repos", async() => {
-    const TreasurerInstance = await Treasurer.deployed();
-    var series = 2;
+    var series = 1;
 
     // set up oracle
     const oracle = await Oracle.new();
@@ -160,8 +158,7 @@ contract('Treasurer', async (accounts) =>  {
   });
 
   it("should accept liquidations undercollateralized repos", async() => {
-    const TreasurerInstance = await Treasurer.deployed();
-    var series = 2;
+    var series = 1;
 
     // set up oracle
     const oracle = await Oracle.new();
@@ -205,12 +202,12 @@ contract('Treasurer', async (accounts) =>  {
   });
 
   it("should allow for settlement", async() => {
-    const TreasurerInstance = await Treasurer.deployed();
-    var series = 2;
+    var series = 1;
     snapShot = await helper.takeSnapshot();
     snapshotId = snapShot['result'];
 
-    await helper.advanceTimeAndBlock(SECONDS_IN_DAY * 1.5);
+    await helper.advanceTime(SECONDS_IN_DAY * 1.5);
+    await helper.advanceBlock();
     await TreasurerInstance.settlement(series);
     var rate = (await TreasurerInstance.settled(series)).toString();
     assert.equal(rate, web3.utils.toWei(".02"), "settled rate not set");
@@ -219,12 +216,13 @@ contract('Treasurer', async (accounts) =>  {
   });
 
   it("should allow token holder to withdraw face value", async() => {
-    const TreasurerInstance = await Treasurer.deployed();
-    var series = 2;
+    var series = 1;
     snapShot = await helper.takeSnapshot();
     snapshotId = snapShot['result'];
 
-    await helper.advanceTimeAndBlock(SECONDS_IN_DAY * 1.5);
+    //await helper.advanceTimeAndBlock(SECONDS_IN_DAY * 1.5);
+    await helper.advanceTime(SECONDS_IN_DAY * 1.5);
+    await helper.advanceBlock();
     await TreasurerInstance.settlement(series);
     var balance_before = await web3.eth.getBalance(accounts[3]);
 
@@ -242,8 +240,7 @@ contract('Treasurer', async (accounts) =>  {
   });
 
   it("should allow repo holder to close repo and recieve remaining collateral", async() => {
-    const TreasurerInstance = await Treasurer.deployed();
-    var series = 2;
+    var series = 1;
     snapShot = await helper.takeSnapshot();
     snapshotId = snapShot['result'];
 
@@ -251,7 +248,9 @@ contract('Treasurer', async (accounts) =>  {
     await TreasurerInstance.join({from:accounts[2], value:web3.utils.toWei("1")});
     await TreasurerInstance.make(series, web3.utils.toWei("0"), web3.utils.toWei("1"), {from:accounts[2]}),
 
-    await helper.advanceTimeAndBlock(SECONDS_IN_DAY * 1.5);
+    //await helper.advanceTimeAndBlock(SECONDS_IN_DAY * 1.5);
+    await helper.advanceTime(SECONDS_IN_DAY * 1.5);
+    await helper.advanceBlock();
     await TreasurerInstance.settlement(series);
     var balance_before = await web3.eth.getBalance(accounts[2]);
 
