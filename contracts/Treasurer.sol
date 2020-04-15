@@ -93,7 +93,6 @@ contract Treasurer {
     yTokens[series] = yT;
     issuedSeries.push(series);
     totalSeries = totalSeries + 1;
-    console.log("New series:", series);
   }
 
   // add collateral to repo

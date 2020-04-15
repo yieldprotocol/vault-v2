@@ -7,6 +7,7 @@
     "test": "test"
   },
   "scripts": {
+    "lint": "solium -d contracts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -24,6 +25,7 @@
     "@nomiclabs/buidler": "^1.2.0",
     "@nomiclabs/buidler-truffle5": "^1.2.0",
     "@nomiclabs/buidler-web3": "^1.2.0",
+    "ethlint": "^1.2.5",
     "web3": "^1.2.6"
   }
 }
