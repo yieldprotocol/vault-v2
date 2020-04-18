@@ -9,6 +9,7 @@ contract('CollateralVault', async (accounts) =>    {
     let collateral;
     let maturity;
     const [ owner, user1 ] = accounts;
+    const bogusContract = owner;
 
     beforeEach(async() => {
         collateral = await TestERC20.new(supply, { from: owner });
@@ -22,6 +23,94 @@ contract('CollateralVault', async (accounts) =>    {
                 tx.logs[0].event,
                 "CollateralAccepted",
         );
+    });
+
+    it("collateral can't be retrieved if not available", async() => {
+        await truffleAssert.fails(
+            collateralVault.retrieveCollateral(collateral.address, 1, { from: user1 }),
+            truffleAssert.REVERT,
+            "CollateralVault: Don't have it",
+        );
+    });
+
+    it("collateral can't be locked if not available", async() => {
+        await truffleAssert.fails(
+            collateralVault.lockCollateral(collateral.address, 1, { from: user1 }),
+            truffleAssert.REVERT,
+            "CollateralVault: Don't have it",
+        );
+    });
+
+    it("collateral can't be unlocked if not locked", async() => {
+        await truffleAssert.fails(
+            collateralVault.unlockCollateral(collateral.address, 1, { from: user1 }),
+            truffleAssert.REVERT,
+            "CollateralVault: Don't have it",
+        );
+    });
+
+    describe('once collateral is accepted', () => {
+        beforeEach(async() => {
+            await collateralVault.acceptCollateral(collateral.address, { from: owner });
+        });
+
+        it("collateral can't be posted for non accepted denominations", async() => {
+            await truffleAssert.fails(
+                collateralVault.postCollateral(bogusContract, 1, { from: user1 }),
+                truffleAssert.REVERT,
+                "CollateralVault: Not accepted",
+            );
+        });
+
+        it("collateral can be posted", async() => {
+            await collateral.approve(collateralVault.address, 10, { from: user1 });
+            await collateralVault.postCollateral(collateral.address, 10, { from: user1 });
+            assert.equal(
+                    await collateralVault.postedCollateralOf(collateral.address, user1),
+                    10,
+            );
+        });
+
+        describe('once collateral is posted', () => {
+            beforeEach(async() => {
+                await collateral.approve(collateralVault.address, 10, { from: user1 });
+                await collateralVault.postCollateral(collateral.address, 10, { from: user1 });
+            });
+
+            it("collateral can be retrieved", async() => {
+                await collateralVault.retrieveCollateral(collateral.address, 10, { from: user1 });
+                assert.equal(
+                        await collateralVault.postedCollateralOf(collateral.address, user1),
+                        0,
+                );
+                assert.equal(
+                    await collateral.balanceOf(user1),
+                    web3.utils.toWei("100"),
+                );
+            });
+
+            it("collateral can be locked", async() => {
+                tx = await collateralVault.lockCollateral(collateral.address, 10, { from: user1 });
+                assert.equal(
+                    tx.logs[0].event,
+                    "CollateralLocked",
+                );
+            });
+
+            describe('once collateral is locked', () => {
+                beforeEach(async() => {
+                    await collateralVault.lockCollateral(collateral.address, 10, { from: user1 });
+                });
+            
+                it("collateral can be unlocked", async() => {
+                    await collateralVault.unlockCollateral(collateral.address, 10, { from: user1 });
+                    assert.equal(
+                        await collateralVault.unlockedCollateralOf(collateral.address, user1),
+                        10,
+                    );
+                });
+            });
+        });
     });
 
     // TODO: Test mint for failed collateral transfers
