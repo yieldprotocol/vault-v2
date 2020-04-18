@@ -9,8 +9,8 @@ contract CollateralVault is Ownable { // TODO: Upgrade to openzeppelin 3.0 and u
     using EnumerableSet for EnumerableSet.AddressSet;
 
     event CollateralAccepted(address collateral);
-    event CollateralLocked(address collateral, address user, address amount);
-    event CollateralUnlocked(address collateral address user, address amount);
+    event CollateralLocked(address collateral, address user, uint256 amount);
+    event CollateralUnlocked(address collateral, address user, uint256 amount);
 
     // TODO: Use address(0) to represent Ether, consider also using an ERC20 Ether wrapper
     EnumerableSet.AddressSet internal collaterals; // Set of accepted collateral contract addresses
