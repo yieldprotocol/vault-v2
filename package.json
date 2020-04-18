@@ -1,31 +1,29 @@
 {
-  "name": "yieldtoken",
+  "name": "dapp",
   "version": "1.0.0",
-  "description": "Created using the following tutorial: https://medium.com/@ethdapp/build-smart-contracts-with-openzeppelin-and-truffle-67b2851d3b07",
-  "main": "truffle-config.js",
-  "directories": {
-    "test": "test"
-  },
+  "description": "",
+  "main": "index.js",
+  "author": "",
   "scripts": {
     "lint": "solium -d contracts",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "dotenv": "^8.2.0",
-    "ganache-time-traveler": "^1.0.14",
-    "openzeppelin-solidity": "2.3.0",
-    "truffle-assertions": "^0.9.2",
-    "truffle-hdwallet-provider": "^1.0.17"
+    "test": "buidler test"
   },
   "devDependencies": {
     "@gnosis.pm/mock-contract": "^3.0.8",
     "@nomiclabs/buidler": "^1.2.0",
-    "@nomiclabs/buidler-truffle5": "^1.2.0",
-    "@nomiclabs/buidler-web3": "^1.2.0",
-    "ethlint": "^1.2.5",
+    "@nomiclabs/buidler-truffle5": "^1.1.2",
+    "@nomiclabs/buidler-web3": "^1.1.2",
+    "eth-gas-reporter": "0.2.16",
+    "ethlint": "1.2.5",
+    "ganache-time-traveler": "^1.0.11",
+    "mocha": "^7.1.0",
+    "shelljs": "^0.8.3",
     "web3": "^1.2.6"
+  },
+  "dependencies": {
+    "@hq20/contracts": "^0.0.3",
+    "@openzeppelin/contracts": "^2.5.0",
+    "builder": "^5.0.0",
+    "root": "github:nomiclabs/buidler#v1.2.0"
   }
 }
