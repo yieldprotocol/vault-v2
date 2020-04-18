@@ -8,6 +8,10 @@ import "@openzeppelin/contracts/utils/EnumerableSet.sol"; // Check line 20 of En
 contract CollateralVault is Ownable { // TODO: Upgrade to openzeppelin 3.0 and use AccessControl
     using EnumerableSet for EnumerableSet.AddressSet;
 
+    event CollateralAccepted(address collateral);
+    event CollateralLocked(address collateral, address user, address amount);
+    event CollateralUnlocked(address collateral address user, address amount);
+
     // TODO: Use address(0) to represent Ether, consider also using an ERC20 Ether wrapper
     EnumerableSet.AddressSet internal collaterals; // Set of accepted collateral contract addresses
     mapping(address => mapping(address => uint256)) internal posted;
@@ -21,6 +25,7 @@ contract CollateralVault is Ownable { // TODO: Upgrade to openzeppelin 3.0 and u
             collaterals.add(collateral) == true,
             "CollateralVault: Already exists"
         );
+        emit CollateralAccepted(collateral);
         return true;
     }
 
@@ -43,7 +48,7 @@ contract CollateralVault is Ownable { // TODO: Upgrade to openzeppelin 3.0 and u
             collaterals.contains(collateral) == true,
             "CollateralVault: Not accepted"
         );
-        IERC20(collateral).transferFrom(msg.sender, address(this), amount);
+        IERC20(collateral).transferFrom(msg.sender, address(this), amount); // No need for extra events
         posted[collateral][msg.sender] += amount; // No need for SafeMath, can't overflow.
         return true;
     }
@@ -55,7 +60,7 @@ contract CollateralVault is Ownable { // TODO: Upgrade to openzeppelin 3.0 and u
             unlockedCollateralOf(collateral, msg.sender) >= amount,
             "CollateralVault: Don't have it"
         );
-        IERC20(collateral).transfer(msg.sender, amount);
+        IERC20(collateral).transfer(msg.sender, amount); // No need for extra events
         posted[collateral][msg.sender] -= amount; // No need for SafeMath, we are checking first.
         return true;
     }
@@ -68,6 +73,7 @@ contract CollateralVault is Ownable { // TODO: Upgrade to openzeppelin 3.0 and u
             "CollateralVault: Don't have it"
         );
         locked[collateral][msg.sender] += amount; // No need for SafeMath, can't overflow.
+        emit CollateralLocked(collateral, msg.sender, amount);
         return true;
     }
 
@@ -79,6 +85,7 @@ contract CollateralVault is Ownable { // TODO: Upgrade to openzeppelin 3.0 and u
             "CollateralVault: Don't have it"
         );
         locked[collateral][msg.sender] -= amount; // No need for SafeMath, we are checking first.
+        emit CollateralUnlocked(collateral, msg.sender, amount);
         return true;
     }
 }
