@@ -26,6 +26,11 @@ contract YToken is ERC20 {
 
     /// @dev Burn yTokens and return an equal amount of underlying.
     function burn(uint256 amount) public returns (bool) {
+        require(
+            // solium-disable-next-line security/no-block-members
+            now > maturity,
+            "YToken: Wait for maturity"
+        );
         _burn(msg.sender, amount);
         require(
             underlying.transfer(msg.sender, amount) == true,
