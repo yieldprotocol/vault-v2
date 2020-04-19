@@ -2,90 +2,74 @@ pragma solidity ^0.5.2;
 
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/EnumerableSet.sol"; // Check line 20 of EnumerableSet :)
 
 
 contract Vault is Ownable { // TODO: Upgrade to openzeppelin 3.0 and use AccessControl
-    using EnumerableSet for EnumerableSet.AddressSet;
-
-    event CollateralAccepted(address collateral);
     event CollateralLocked(address collateral, address user, uint256 amount);
     event CollateralUnlocked(address collateral, address user, uint256 amount);
 
     // TODO: Use address(0) to represent Ether, consider also using an ERC20 Ether wrapper
-    EnumerableSet.AddressSet internal collaterals; // Set of accepted collateral contract addresses
-    mapping(address => mapping(address => uint256)) internal posted;
-    mapping(address => mapping(address => uint256)) internal locked;
+    IERC20 internal collateral;
+    mapping(address => uint256) internal posted;
+    mapping(address => uint256) internal locked;
 
-    constructor () public Ownable() {}
-
-    /// @dev Add a new accepted collateral contracts
-    function accept(address collateral) public onlyOwner returns (bool) {
-        require(
-            collaterals.add(collateral) == true,
-            "Vault: Already exists"
-        );
-        emit CollateralAccepted(collateral);
-        return true;
+    constructor (address collateral_) public Ownable() {
+        collateral = IERC20(collateral_);
     }
 
     /// @dev Return posted collateral of an user
-    function postedOf(address collateral, address user) public view returns (uint256) {
+    function postedOf(address user) public view returns (uint256) {
         // No need for SafeMath, can't lock more than you have.
-        return posted[collateral][user];
+        return posted[user];
     }
 
     /// @dev Return unlocked collateral of an user
-    function unlockedOf(address collateral, address user) public view returns (uint256) {
+    function unlockedOf(address user) public view returns (uint256) {
         // No need for SafeMath, can't lock more than you have.
-        return posted[collateral][user] - locked[collateral][user];
+        return posted[user] - locked[user];
     }
 
-    /// @dev Post collateral of an accepted denomination
+    /// @dev Post collateral
     /// TODO: Allow posting for others with AccessControl
-    function post(address collateral, uint256 amount) public returns (bool) {
-        require(
-            collaterals.contains(collateral) == true,
-            "Vault: Not accepted"
-        );
-        IERC20(collateral).transferFrom(msg.sender, address(this), amount); // No need for extra events
-        posted[collateral][msg.sender] += amount; // No need for SafeMath, can't overflow.
+    function post(uint256 amount) public returns (bool) {
+        collateral.transferFrom(msg.sender, address(this), amount); // No need for extra events
+        posted[msg.sender] += amount; // No need for SafeMath, can't overflow.
         return true;
     }
 
     /// @dev Retrieve collateral
     /// TODO: Allow retrieving for others with AccessControl
-    function retrieve(address collateral, uint256 amount) public returns (bool) {
+    function retrieve(uint256 amount) public returns (bool) {
         require(
-            unlockedOf(collateral, msg.sender) >= amount,
+            unlockedOf(msg.sender) >= amount,
             "Vault: Don't have it"
         );
-        IERC20(collateral).transfer(msg.sender, amount); // No need for extra events
-        posted[collateral][msg.sender] -= amount; // No need for SafeMath, we are checking first.
+        collateral.transfer(msg.sender, amount); // No need for extra events
+        posted[msg.sender] -= amount; // No need for SafeMath, we are checking first.
         return true;
     }
 
-    /// @dev Lock collateral of an accepted denomination
+    /// @dev Lock collateral
     /// TODO: Allow locking for others with AccessControl
-    function lock(address collateral, uint256 amount) public returns (bool) {
+    function lock(uint256 amount) public returns (bool) {
         require(
-            unlockedOf(collateral, msg.sender) >= amount,
+            unlockedOf(msg.sender) >= amount,
             "Vault: Don't have it"
         );
-        locked[collateral][msg.sender] += amount; // No need for SafeMath, can't overflow.
-        emit CollateralLocked(collateral, msg.sender, amount);
+        locked[msg.sender] += amount; // No need for SafeMath, can't overflow.
+        emit CollateralLocked(address(collateral), msg.sender, amount);
         return true;
     }
 
     /// @dev Unlock collateral
     /// TODO: Allow unlocking for others with AccessControl
-    function unlock(address collateral, uint256 amount) public returns (bool) {
+    function unlock(uint256 amount) public returns (bool) {
         require(
-            locked[collateral][msg.sender] >= amount,
+            locked[msg.sender] >= amount,
             "Vault: Don't have it"
         );
-        locked[collateral][msg.sender] -= amount; // No need for SafeMath, we are checking first.
-        emit CollateralUnlocked(collateral, msg.sender, amount);
+        locked[msg.sender] -= amount; // No need for SafeMath, we are checking first.
+        emit CollateralUnlocked(address(collateral), msg.sender, amount);
         return true;
     }
 }
