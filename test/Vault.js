@@ -34,7 +34,7 @@ contract('Vault', async (accounts) =>    {
 
     it("collateral can't be locked if not available", async() => {
         await truffleAssert.fails(
-            vault.lock(underlyingToLock, { from: user1 }),
+            vault.lock(user1, underlyingToLock, { from: owner }),
             truffleAssert.REVERT,
             "Vault: Don't have it",
         );
@@ -42,7 +42,7 @@ contract('Vault', async (accounts) =>    {
 
     it("collateral can't be unlocked if not locked", async() => {
         await truffleAssert.fails(
-            vault.unlock(underlyingToLock, { from: user1 }),
+            vault.unlock(user1, underlyingToLock, { from: owner }),
             truffleAssert.REVERT,
             "Vault: Don't have it",
         );
@@ -76,7 +76,7 @@ contract('Vault', async (accounts) =>    {
         });
 
         it("collateral can be locked", async() => {
-            tx = await vault.lock(underlyingToLock, { from: user1 });
+            tx = await vault.lock(user1, underlyingToLock, { from: owner });
             assert.equal(
                 tx.logs[0].event,
                 "CollateralLocked",
@@ -85,19 +85,19 @@ contract('Vault', async (accounts) =>    {
 
         describe('once collateral is locked', () => {
             beforeEach(async() => {
-                await vault.lock(underlyingToLock, { from: user1 });
+                await vault.lock(user1, underlyingToLock, { from: owner });
             });
         
             it("collateral can't be unlocked above the posted amount", async() => {
                 await truffleAssert.fails(
-                    vault.unlock(tooMuchUnderlying, { from: user1 }),
+                    vault.unlock(user1, tooMuchUnderlying, { from: owner }),
                     truffleAssert.REVERT,
                     "Vault: Don't have it",
                 );
             });
 
             it("collateral can be unlocked", async() => {
-                await vault.unlock(underlyingToLock, { from: user1 });
+                await vault.unlock(user1, underlyingToLock, { from: owner });
                 assert.equal(
                     await vault.unlockedOf(user1),
                     collateralToPost,
