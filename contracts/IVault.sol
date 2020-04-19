@@ -6,7 +6,7 @@ interface IVault {
     event CollateralUnlocked(address collateral, address user, uint256 amount);
 
     /// @dev Return posted collateral of an user
-    function postedOf(address user) external view returns (uint256);
+    function balanceOf(address user) external view returns (uint256);
 
     /// @dev Return unlocked collateral of an user
     function unlockedOf(address user) external view returns (uint256);

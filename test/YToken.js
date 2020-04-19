@@ -10,6 +10,7 @@ const supply = web3.utils.toWei("1000");
 const collateralToPost = web3.utils.toWei("10");
 const underlyingToLock = web3.utils.toWei("5");
 const underlyingPrice = web3.utils.toWei("2");
+const collateralRatio = web3.utils.toWei("2");
 
 contract('YToken', async (accounts) =>    {
     let yToken;
@@ -29,7 +30,7 @@ contract('YToken', async (accounts) =>    {
         await collateral.transfer(user1, user1collateral, { from: owner });
         const oracle = await TestOracle.new({ from: owner });
         await oracle.set(underlyingPrice, { from: owner });
-        vault = await Vault.new(collateral.address, oracle.address);
+        vault = await Vault.new(collateral.address, oracle.address, collateralRatio);
 
         const block = await web3.eth.getBlockNumber();
         maturity = (await web3.eth.getBlock(block)).timestamp + 1000;
@@ -53,7 +54,7 @@ contract('YToken', async (accounts) =>    {
         await truffleAssert.fails(
             yToken.borrow(web3.utils.toWei("10"), { from: user1 }),
             truffleAssert.REVERT,
-            "Vault: Not enough unlocked",
+            "Vault: Not enough collateral",
         );
     });
 

@@ -11,7 +11,6 @@ contract Vault is Ownable {
     using DecimalMath for uint256;
 
     event CollateralLocked(address collateral, address user, uint256 amount);
-    event CollateralUnlocked(address collateral, address user, uint256 amount);
 
     // TODO: Use address(0) to represent Ether, consider also using an ERC20 Ether wrapper
     IERC20 internal collateral;
@@ -27,7 +26,7 @@ contract Vault is Ownable {
     }
 
     /// @dev Return posted collateral of an user
-    function postedOf(address user) public view returns (uint256) {
+    function balanceOf(address user) public view returns (uint256) {
         // No need for SafeMath, can't lock more than you have.
         return posted[user];
     }
@@ -65,28 +64,16 @@ contract Vault is Ownable {
     }
 
     /// @dev Lock collateral equivalent to an amount of underlying
+    /// This function can be called repeatedly to update the locked collateral as price changes
     function lock(address user, uint256 amount) public onlyOwner returns (bool) {
         uint256 collateralAmount = equivalentCollateral(amount);
         collateralAmount = collateralAmount.muld(ratio, 18);
         require(
-            unlockedOf(user) >= collateralAmount,
-            "Vault: Not enough unlocked"
+            balanceOf(user) >= collateralAmount,
+            "Vault: Not enough collateral"
         );
-        locked[user] += collateralAmount; // No need for SafeMath, can't overflow.
+        locked[user] = collateralAmount; // No need for SafeMath, can't overflow.
         emit CollateralLocked(address(collateral), user, collateralAmount);
-        return true;
-    }
-
-    /// @dev Unlock collateral equivalent to an amount of underlying
-    function unlock(address user, uint256 amount) public onlyOwner returns (bool) {
-        uint256 collateralAmount = equivalentCollateral(amount);
-        collateralAmount = collateralAmount.muld(ratio, 18);
-        require(
-            locked[user] >= collateralAmount,
-            "Vault: Not enough locked"
-        );
-        locked[user] -= collateralAmount; // No need for SafeMath, we are checking first.
-        emit CollateralUnlocked(address(collateral), user, collateralAmount);
         return true;
     }
 

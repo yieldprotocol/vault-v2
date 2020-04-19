@@ -49,9 +49,9 @@ contract YToken is ERC20 {
 
     /// @dev Mint yTokens by locking its market value in collateral. Debt is recorded in the vault.
     function borrow(uint256 amount) public returns (bool) {
-        // The vault will revert if there is not enough unlocked collateral
-        collateral.lock(msg.sender, amount);
         debt[msg.sender] += amount; // Can't be higher than collateral.totalSupply(), can't overflow
+        // The vault will revert if there is not enough unlocked collateral
+        collateral.lock(msg.sender, debt[msg.sender]);
         _mint(msg.sender, amount);
         return true;
     }
@@ -64,9 +64,9 @@ contract YToken is ERC20 {
             "YToken: Wait for maturity"
         );
         _burn(msg.sender, amount);
-        // The vault will revert if there is not enough locked collateral
-        collateral.unlock(msg.sender, amount);
         debt[msg.sender] -= amount; // Unless we mess up in `borrow`, this can't underflow
+        // The vault will revert if there is not enough locked collateral
+        collateral.lock(msg.sender, debt[msg.sender]);
         return true;
     }
 }
