@@ -63,8 +63,13 @@ contract YToken is ERC20 {
             now > maturity,
             "YToken: Wait for maturity"
         );
+        require(
+            // solium-disable-next-line security/no-block-members
+            debt[msg.sender] >= amount,
+            "YToken: Not enough debt"
+        );
         _burn(msg.sender, amount);
-        debt[msg.sender] -= amount; // Unless we mess up in `borrow`, this can't underflow
+        debt[msg.sender] -= amount; // This can't underflow
         // The vault will revert if there is not enough locked collateral
         collateral.lock(msg.sender, debt[msg.sender]);
         return true;

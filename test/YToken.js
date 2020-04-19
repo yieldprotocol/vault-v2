@@ -5,7 +5,6 @@ const TestERC20 = artifacts.require('TestERC20');
 const helper = require('ganache-time-traveler');
 const truffleAssert = require('truffle-assertions');
 
-const SECONDS_IN_DAY = 86400;
 const supply = web3.utils.toWei("1000");
 const collateralToPost = web3.utils.toWei("10");
 const underlyingToLock = web3.utils.toWei("5");
@@ -23,6 +22,9 @@ contract('YToken', async (accounts) =>    {
     const user1underlying = web3.utils.toWei("100");
 
     beforeEach(async() => {
+        let snapshot = await helper.takeSnapshot();
+        snapshotId = snapshot['result'];
+
         underlying = await TestERC20.new(supply, { from: owner });
         await underlying.transfer(user1, user1underlying, { from: owner });
         
@@ -36,6 +38,10 @@ contract('YToken', async (accounts) =>    {
         maturity = (await web3.eth.getBlock(block)).timestamp + 1000;
         yToken = await YToken.new(underlying.address, vault.address, maturity);
         await vault.transferOwnership(yToken.address);
+    });
+ 
+    afterEach(async() => {
+        await helper.revertToSnapshot(snapshotId);
     });
 
     it("yToken should be initialized", async() => {
@@ -55,6 +61,15 @@ contract('YToken', async (accounts) =>    {
             yToken.borrow(web3.utils.toWei("10"), { from: user1 }),
             truffleAssert.REVERT,
             "Vault: Not enough collateral",
+        );
+    });
+
+    it("debts can't be repaid with too many yTokens", async() => {
+        helper.advanceTimeAndBlock(1000);
+        await truffleAssert.fails(
+            yToken.repay(web3.utils.toWei("10"), { from: user1 }),
+            truffleAssert.REVERT,
+            "YToken: Not enough debt",
         );
     });
 
