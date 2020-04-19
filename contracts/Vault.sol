@@ -15,13 +15,15 @@ contract Vault is Ownable {
 
     // TODO: Use address(0) to represent Ether, consider also using an ERC20 Ether wrapper
     IERC20 internal collateral;
+    uint256 public ratio; // collateralization ratio, with 18 decimals
     IOracle internal oracle;
     mapping(address => uint256) internal posted; // In collateral
     mapping(address => uint256) internal locked; // In collateral
 
-    constructor (address collateral_, address oracle_) public Ownable() {
+    constructor (address collateral_, address oracle_, uint256 ratio_) public Ownable() {
         collateral = IERC20(collateral_);
         oracle = IOracle(oracle_);
+        ratio = ratio_;
     }
 
     /// @dev Return posted collateral of an user
@@ -65,6 +67,7 @@ contract Vault is Ownable {
     /// @dev Lock collateral equivalent to an amount of underlying
     function lock(address user, uint256 amount) public onlyOwner returns (bool) {
         uint256 collateralAmount = equivalentCollateral(amount);
+        collateralAmount = collateralAmount.muld(ratio, 18);
         require(
             unlockedOf(user) >= collateralAmount,
             "Vault: Not enough unlocked"
@@ -77,6 +80,7 @@ contract Vault is Ownable {
     /// @dev Unlock collateral equivalent to an amount of underlying
     function unlock(address user, uint256 amount) public onlyOwner returns (bool) {
         uint256 collateralAmount = equivalentCollateral(amount);
+        collateralAmount = collateralAmount.muld(ratio, 18);
         require(
             locked[user] >= collateralAmount,
             "Vault: Not enough locked"

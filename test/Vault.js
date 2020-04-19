@@ -5,10 +5,11 @@ const truffleAssert = require('truffle-assertions');
 
 const supply = web3.utils.toWei("1000");
 const user1balance = web3.utils.toWei("100");
-const collateralToPost = web3.utils.toWei("10");
+const collateralToPost = web3.utils.toWei("20");
 const underlyingToLock = web3.utils.toWei("5");
-const tooMuchUnderlying = web3.utils.toWei("6");
 const underlyingPrice = web3.utils.toWei("2");
+const collateralRatio = web3.utils.toWei("2");
+const tooMuchUnderlying = web3.utils.toWei("6");
 
 contract('Vault', async (accounts) =>    {
     let vault;
@@ -20,7 +21,7 @@ contract('Vault', async (accounts) =>    {
         await collateral.transfer(user1, user1balance, { from: owner });
         const oracle = await TestOracle.new({ from: owner });
         await oracle.set(underlyingPrice, { from: owner });
-        vault = await Vault.new(collateral.address, oracle.address);
+        vault = await Vault.new(collateral.address, oracle.address, collateralRatio);
     });
 
     it("collateral can't be retrieved if not available", async() => {
