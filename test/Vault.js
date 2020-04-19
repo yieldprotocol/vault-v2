@@ -1,11 +1,11 @@
-const CollateralVault = artifacts.require('CollateralVault');
+const Vault = artifacts.require('Vault');
 const TestERC20 = artifacts.require('TestERC20');
 const truffleAssert = require('truffle-assertions');
 
 const supply = web3.utils.toWei("1000");
 
-contract('CollateralVault', async (accounts) =>    {
-    let collateralVault;
+contract('Vault', async (accounts) =>    {
+    let vault;
     let collateral;
     let maturity;
     const [ owner, user1 ] = accounts;
@@ -14,11 +14,11 @@ contract('CollateralVault', async (accounts) =>    {
     beforeEach(async() => {
         collateral = await TestERC20.new(supply, { from: owner });
         await collateral.transfer(user1, web3.utils.toWei("100"), { from: owner });
-        collateralVault = await CollateralVault.new();
+        vault = await Vault.new();
     });
 
     it("collateral contracts can be added to the vault", async() => {
-        const tx = await collateralVault.acceptCollateral(collateral.address, { from: owner });
+        const tx = await vault.accept(collateral.address, { from: owner });
         assert.equal(
                 tx.logs[0].event,
                 "CollateralAccepted",
@@ -27,60 +27,60 @@ contract('CollateralVault', async (accounts) =>    {
 
     it("collateral can't be retrieved if not available", async() => {
         await truffleAssert.fails(
-            collateralVault.retrieveCollateral(collateral.address, 1, { from: user1 }),
+            vault.retrieve(collateral.address, 1, { from: user1 }),
             truffleAssert.REVERT,
-            "CollateralVault: Don't have it",
+            "Vault: Don't have it",
         );
     });
 
     it("collateral can't be locked if not available", async() => {
         await truffleAssert.fails(
-            collateralVault.lockCollateral(collateral.address, 1, { from: user1 }),
+            vault.lock(collateral.address, 1, { from: user1 }),
             truffleAssert.REVERT,
-            "CollateralVault: Don't have it",
+            "Vault: Don't have it",
         );
     });
 
     it("collateral can't be unlocked if not locked", async() => {
         await truffleAssert.fails(
-            collateralVault.unlockCollateral(collateral.address, 1, { from: user1 }),
+            vault.unlock(collateral.address, 1, { from: user1 }),
             truffleAssert.REVERT,
-            "CollateralVault: Don't have it",
+            "Vault: Don't have it",
         );
     });
 
     describe('once collateral is accepted', () => {
         beforeEach(async() => {
-            await collateralVault.acceptCollateral(collateral.address, { from: owner });
+            await vault.accept(collateral.address, { from: owner });
         });
 
         it("collateral can't be posted for non accepted denominations", async() => {
             await truffleAssert.fails(
-                collateralVault.postCollateral(bogusContract, 1, { from: user1 }),
+                vault.post(bogusContract, 1, { from: user1 }),
                 truffleAssert.REVERT,
-                "CollateralVault: Not accepted",
+                "Vault: Not accepted",
             );
         });
 
         it("collateral can be posted", async() => {
-            await collateral.approve(collateralVault.address, 10, { from: user1 });
-            await collateralVault.postCollateral(collateral.address, 10, { from: user1 });
+            await collateral.approve(vault.address, 10, { from: user1 });
+            await vault.post(collateral.address, 10, { from: user1 });
             assert.equal(
-                    await collateralVault.postedCollateralOf(collateral.address, user1),
+                    await vault.postedOf(collateral.address, user1),
                     10,
             );
         });
 
         describe('once collateral is posted', () => {
             beforeEach(async() => {
-                await collateral.approve(collateralVault.address, 10, { from: user1 });
-                await collateralVault.postCollateral(collateral.address, 10, { from: user1 });
+                await collateral.approve(vault.address, 10, { from: user1 });
+                await vault.post(collateral.address, 10, { from: user1 });
             });
 
             it("collateral can be retrieved", async() => {
-                await collateralVault.retrieveCollateral(collateral.address, 10, { from: user1 });
+                await vault.retrieve(collateral.address, 10, { from: user1 });
                 assert.equal(
-                        await collateralVault.postedCollateralOf(collateral.address, user1),
+                        await vault.postedOf(collateral.address, user1),
                         0,
                 );
                 assert.equal(
@@ -90,7 +90,7 @@ contract('CollateralVault', async (accounts) =>    {
             });
 
             it("collateral can be locked", async() => {
-                tx = await collateralVault.lockCollateral(collateral.address, 10, { from: user1 });
+                tx = await vault.lock(collateral.address, 10, { from: user1 });
                 assert.equal(
                     tx.logs[0].event,
                     "CollateralLocked",
@@ -99,13 +99,13 @@ contract('CollateralVault', async (accounts) =>    {
 
             describe('once collateral is locked', () => {
                 beforeEach(async() => {
-                    await collateralVault.lockCollateral(collateral.address, 10, { from: user1 });
+                    await vault.lock(collateral.address, 10, { from: user1 });
                 });
             
                 it("collateral can be unlocked", async() => {
-                    await collateralVault.unlockCollateral(collateral.address, 10, { from: user1 });
+                    await vault.unlock(collateral.address, 10, { from: user1 });
                     assert.equal(
-                        await collateralVault.unlockedCollateralOf(collateral.address, user1),
+                        await vault.unlockedOf(collateral.address, user1),
                         10,
                     );
                 });
@@ -115,32 +115,32 @@ contract('CollateralVault', async (accounts) =>    {
 
     // TODO: Test mint for failed collateral transfers
 
-    /* it("collateralVault are minted with collateral", async() => {
-        await collateral.approve(collateralVault.address, web3.utils.toWei("10"), { from: user1 });
-        await collateralVault.mint(user1, web3.utils.toWei("10"), { from: user1 });
+    /* it("vault are minted with collateral", async() => {
+        await collateral.approve(vault.address, web3.utils.toWei("10"), { from: user1 });
+        await vault.mint(user1, web3.utils.toWei("10"), { from: user1 });
         assert.equal(
-                await collateralVault.balanceOf(user1),
+                await vault.balanceOf(user1),
                 web3.utils.toWei("10"),
         );
     });
 
-    describe('once users have collateralVaults', () => {
+    describe('once users have vaults', () => {
         beforeEach(async() => {
-            await collateral.approve(collateralVault.address, web3.utils.toWei("10"), { from: user1 });
-            await collateralVault.mint(user1, web3.utils.toWei("10"), { from: user1 });
+            await collateral.approve(vault.address, web3.utils.toWei("10"), { from: user1 });
+            await vault.mint(user1, web3.utils.toWei("10"), { from: user1 });
         });
 
-        it("collateralVault can't be burned before maturity", async() => {
+        it("vault can't be burned before maturity", async() => {
             await truffleAssert.fails(
-                collateralVault.burn(web3.utils.toWei("10"), { from: user1 }),
+                vault.burn(web3.utils.toWei("10"), { from: user1 }),
                 truffleAssert.REVERT,
-                "CollateralVault: Wait for maturity",
+                "Vault: Wait for maturity",
             );
         });
 
-        it("collateralVault can be burned for collateral", async() => {
+        it("vault can be burned for collateral", async() => {
             helper.advanceTimeAndBlock(1000);
-            await collateralVault.burn(web3.utils.toWei("10"), { from: user1 });
+            await vault.burn(web3.utils.toWei("10"), { from: user1 });
             assert.equal(
                     await collateral.balanceOf(user1),
                     web3.utils.toWei("100"),
@@ -163,16 +163,16 @@ contract('CollateralVault', async (accounts) =>    {
     });
 
 
-    it("should issue a new collateralVault", async() => {
+    it("should issue a new vault", async() => {
         var number = await web3.eth.getBlockNumber();
         var currentTimeStamp = (await web3.eth.getBlock(number)).timestamp;
         var era = currentTimeStamp + SECONDS_IN_DAY;
         let series = await TreasurerInstance.issue.call(era.toString());
         await TreasurerInstance.issue(era.toString());
-        let repo = await TreasurerInstance.collateralVaults(series);
+        let repo = await TreasurerInstance.vaults(series);
         let address = repo.where;
-        var collateralVaultInstance = await CollateralVault.at(address);
-        assert.equal(await collateralVaultInstance.when(), era, "New collateralVault has incorrect era");
+        var vaultInstance = await Vault.at(address);
+        assert.equal(await vaultInstance.when(), era, "New vault has incorrect era");
     });
 
     it("should accept collateral", async() => {
@@ -194,9 +194,9 @@ contract('CollateralVault', async (accounts) =>    {
         assert.equal(_address, OracleMock.address);
     });
 
-    it("should make new collateralVaults", async() => {
+    it("should make new vaults", async() => {
 
-        // create another collateralVault series with a 24 hour period until maturity
+        // create another vault series with a 24 hour period until maturity
         var number = await web3.eth.getBlockNumber();
         var currentTimeStamp = (await web3.eth.getBlock(number)).timestamp;
         var series = 1;
@@ -208,14 +208,14 @@ contract('CollateralVault', async (accounts) =>    {
         var rate = web3.utils.toWei(".01"); // rate = Dai/ETH
         await OracleMock.givenAnyReturnUint(rate); // should price ETH at $100 * ONE
 
-        // make new collateralVaults
+        // make new vaults
         await TreasurerInstance.make(series, web3.utils.toWei("1"), web3.utils.toWei("1"), {from:accounts[1]});
 
-        // check collateralVault balance
-        const token = await TreasurerInstance.collateralVaults.call(series);
-        const collateralVaultInstance = await CollateralVault.at(token.where);
-        const balance = await collateralVaultInstance.balanceOf(accounts[1]);
-        assert.equal(balance.toString(), web3.utils.toWei("1"), "Did not make new collateralVaults");
+        // check vault balance
+        const token = await TreasurerInstance.vaults.call(series);
+        const vaultInstance = await Vault.at(token.where);
+        const balance = await vaultInstance.balanceOf(accounts[1]);
+        assert.equal(balance.toString(), web3.utils.toWei("1"), "Did not make new vaults");
 
         //check unlocked collateral, locked collateral
         const repo = await TreasurerInstance.repos(series, accounts[1]);
@@ -223,7 +223,7 @@ contract('CollateralVault', async (accounts) =>    {
         assert.equal(repo.debt.toString(), web3.utils.toWei("1"), "Did not create debt");
     });
 
-    it("should accept tokens to wipe collateralVault debt", async() => {
+    it("should accept tokens to wipe vault debt", async() => {
         var series = 1;
         var amountToWipe = web3.utils.toWei(".1");
 
@@ -233,17 +233,17 @@ contract('CollateralVault', async (accounts) =>    {
         await OracleMock.givenAnyReturnUint(rate); // should price ETH at $100 * ONE
 
         // get acess to token
-        const token = await TreasurerInstance.collateralVaults.call(series);
-        const collateralVaultInstance = await CollateralVault.at(token.where);
+        const token = await TreasurerInstance.vaults.call(series);
+        const vaultInstance = await Vault.at(token.where);
 
         //authorize the wipe
-        await collateralVaultInstance.approve(TreasurerInstance.address, amountToWipe, {from:accounts[1]});
+        await vaultInstance.approve(TreasurerInstance.address, amountToWipe, {from:accounts[1]});
         // wipe tokens
         await TreasurerInstance.wipe(series, amountToWipe, web3.utils.toWei(".1"), {from:accounts[1]});
 
-        // check collateralVault balance
-        const balance = await collateralVaultInstance.balanceOf(accounts[1]);
-        assert.equal(balance.toString(), web3.utils.toWei(".9"), "Did not wipe collateralVaults");
+        // check vault balance
+        const balance = await vaultInstance.balanceOf(accounts[1]);
+        assert.equal(balance.toString(), web3.utils.toWei(".9"), "Did not wipe vaults");
 
         //check unlocked collateral, locked collateral
         const repo = await TreasurerInstance.repos(series, accounts[1]);
@@ -274,9 +274,9 @@ contract('CollateralVault', async (accounts) =>    {
         var rate = web3.utils.toWei(".01"); // rate = Dai/ETH
         await OracleMock.givenAnyReturnUint(rate); // should price ETH at $100 * ONE
 
-        // make new collateralVaults with new account
+        // make new vaults with new account
         // at 100 dai/ETH, and 150% collateral requirement (set at deployment),
-        // should refuse to create 101 collateralVaults
+        // should refuse to create 101 vaults
         await TreasurerInstance.join({from:accounts[2], value:web3.utils.toWei("1.5")});
         await truffleAssert.fails(
                 TreasurerInstance.make(series, web3.utils.toWei("101"), web3.utils.toWei("1.5"), {from:accounts[2]}),
@@ -293,13 +293,13 @@ contract('CollateralVault', async (accounts) =>    {
         var rate = web3.utils.toWei(".01"); // rate = Dai/ETH
         await OracleMock.givenAnyReturnUint(rate); // should price ETH at $100 * ONE
 
-        // make new collateralVaults with new account
+        // make new vaults with new account
         await TreasurerInstance.make(series, web3.utils.toWei("100"), web3.utils.toWei("1.5"), {from:accounts[2]});
 
         // transfer tokens to another account
-        const token = await TreasurerInstance.collateralVaults.call(series);
-        const collateralVaultInstance = await CollateralVault.at(token.where);
-        await collateralVaultInstance.transfer(accounts[3], web3.utils.toWei("100"), {from:accounts[2]});
+        const token = await TreasurerInstance.vaults.call(series);
+        const vaultInstance = await Vault.at(token.where);
+        await vaultInstance.transfer(accounts[3], web3.utils.toWei("100"), {from:accounts[2]});
 
         //change rate to make tokens undercollateralized
         rate = web3.utils.toWei(".02"); // rate = Dai/ETH
