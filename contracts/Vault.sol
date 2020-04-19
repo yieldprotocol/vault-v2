@@ -66,8 +66,7 @@ contract Vault is Ownable {
     /// @dev Lock collateral equivalent to an amount of underlying
     /// This function can be called repeatedly to update the locked collateral as price changes
     function lock(address user, uint256 amount) public onlyOwner returns (bool) {
-        uint256 collateralAmount = equivalentCollateral(amount);
-        collateralAmount = collateralAmount.muld(ratio, 18);
+        uint256 collateralAmount = collateralNeeded(amount);
         require(
             balanceOf(user) >= collateralAmount,
             "Vault: Not enough collateral"
@@ -77,9 +76,17 @@ contract Vault is Ownable {
         return true;
     }
 
-    function equivalentCollateral(uint256 amount) public view returns (uint256) {
+    /// @dev Return whether a position can be collateralized
+    function isCollateralized(address user, uint256 amount) public view returns (bool) {
+        return balanceOf(user) >= collateralNeeded(amount);
+    }
+
+    /// @dev Return how much collateral is needed to collateralize an amount of underlying
+    function collateralNeeded(uint256 amount) public view returns (uint256) {
+        // TODO: Think about oracle decimals
         // TODO: Do I have to worry about the oracle returning zero?
         // TODO: What happens for tiny amounts that get divided to zero?
-        return amount.divd(oracle.get(), 18); // TODO: Think about oracle decimals
+        // (amount / price) * ratio
+        return amount.muld(oracle.get(), 18).muld(ratio, 18);
     }
 }

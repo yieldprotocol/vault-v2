@@ -14,12 +14,13 @@ const tooMuchUnderlying = web3.utils.toWei("6");
 contract('Vault', async (accounts) =>    {
     let vault;
     let collateral;
+    let oracle;
     const [ owner, user1 ] = accounts;
 
     beforeEach(async() => {
         collateral = await TestERC20.new(supply, { from: owner });
         await collateral.transfer(user1, user1balance, { from: owner });
-        const oracle = await TestOracle.new({ from: owner });
+        oracle = await TestOracle.new({ from: owner });
         await oracle.set(underlyingPrice, { from: owner });
         vault = await Vault.new(collateral.address, oracle.address, collateralRatio);
     });
@@ -37,6 +38,13 @@ contract('Vault', async (accounts) =>    {
             vault.lock(user1, underlyingToLock, { from: owner }),
             truffleAssert.REVERT,
             "Vault: Not enough collateral",
+        );
+    });
+
+    it("tells how much collateral is needed for a position", async() => {
+        assert.equal(
+            await vault.collateralNeeded(underlyingToLock, { from: user1 }),
+            collateralToPost,
         );
     });
 
@@ -86,6 +94,12 @@ contract('Vault', async (accounts) =>    {
                     await vault.unlockedOf(user1),
                     collateralToPost,
                 );
+            });
+
+            it("it can be known if a position is undercollateralized", async() => {
+                assert(await vault.isCollateralized(user1, underlyingToLock));
+                await oracle.set(web3.utils.toWei("3"), { from: owner });
+                assert((await vault.isCollateralized(user1, underlyingToLock)) == false);
             });
         });
     });

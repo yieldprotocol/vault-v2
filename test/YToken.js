@@ -6,7 +6,7 @@ const helper = require('ganache-time-traveler');
 const truffleAssert = require('truffle-assertions');
 
 const supply = web3.utils.toWei("1000");
-const collateralToPost = web3.utils.toWei("10");
+const collateralToPost = web3.utils.toWei("20");
 const underlyingToLock = web3.utils.toWei("5");
 const underlyingPrice = web3.utils.toWei("2");
 const collateralRatio = web3.utils.toWei("2");
