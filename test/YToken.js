@@ -1,23 +1,37 @@
 const YToken = artifacts.require('YToken');
+const Vault = artifacts.require('Vault');
+const TestOracle = artifacts.require('TestOracle');
 const TestERC20 = artifacts.require('TestERC20');
 const helper = require('ganache-time-traveler');
 const truffleAssert = require('truffle-assertions');
 
 const SECONDS_IN_DAY = 86400;
 const supply = web3.utils.toWei("1000");
+const underlyingPrice = web3.utils.toWei("2");
 
 contract('YToken', async (accounts) =>    {
     let yToken;
+    let collateral;
+    let vault;
     let underlying;
     let maturity;
     const [ owner, user1 ] = accounts;
+    const user1collateral = web3.utils.toWei("100");
+    const user1underlying = web3.utils.toWei("100");
 
     beforeEach(async() => {
         underlying = await TestERC20.new(supply, { from: owner });
-        await underlying.transfer(user1, web3.utils.toWei("100"), { from: owner });
+        await underlying.transfer(user1, user1underlying, { from: owner });
+        
+        collateral = await TestERC20.new(supply, { from: owner });
+        await collateral.transfer(user1, user1collateral, { from: owner });
+        const oracle = await TestOracle.new({ from: owner });
+        await oracle.set(underlyingPrice, { from: owner });
+        vault = await Vault.new(collateral.address, oracle.address);
+
         const block = await web3.eth.getBlockNumber();
         maturity = (await web3.eth.getBlock(block)).timestamp + 1000;
-        yToken = await YToken.new(underlying.address, maturity);
+        yToken = await YToken.new(underlying.address, vault.address, maturity);
     });
 
     it("yToken should be initialized", async() => {
@@ -32,11 +46,9 @@ contract('YToken', async (accounts) =>    {
         );
     });
 
-    // TODO: Test mint for failed underlying transfers
-
     it("yToken are minted with underlying", async() => {
         await underlying.approve(yToken.address, web3.utils.toWei("10"), { from: user1 });
-        await yToken.mint(user1, web3.utils.toWei("10"), { from: user1 });
+        await yToken.mint(web3.utils.toWei("10"), { from: user1 });
         assert.equal(
                 await yToken.balanceOf(user1),
                 web3.utils.toWei("10"),
@@ -46,7 +58,7 @@ contract('YToken', async (accounts) =>    {
     describe('once users have yTokens', () => {
         beforeEach(async() => {
             await underlying.approve(yToken.address, web3.utils.toWei("10"), { from: user1 });
-            await yToken.mint(user1, web3.utils.toWei("10"), { from: user1 });
+            await yToken.mint(web3.utils.toWei("10"), { from: user1 });
         });
 
         it("yToken can't be burned before maturity", async() => {
@@ -62,7 +74,7 @@ contract('YToken', async (accounts) =>    {
             await yToken.burn(web3.utils.toWei("10"), { from: user1 });
             assert.equal(
                     await underlying.balanceOf(user1),
-                    web3.utils.toWei("100"),
+                    user1underlying,
             );
         });
 

@@ -13,7 +13,6 @@ const underlyingPrice = web3.utils.toWei("2");
 contract('Vault', async (accounts) =>    {
     let vault;
     let collateral;
-    let maturity;
     const [ owner, user1 ] = accounts;
 
     beforeEach(async() => {

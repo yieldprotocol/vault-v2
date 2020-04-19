@@ -39,7 +39,10 @@ contract Vault is Ownable {
     /// @dev Post collateral
     /// TODO: Allow posting for others with Ownable
     function post(uint256 amount) public returns (bool) {
-        collateral.transferFrom(msg.sender, address(this), amount); // No need for extra events
+        require(
+            collateral.transferFrom(msg.sender, address(this), amount) == true,
+            "Vault: Transfer failed"
+        ); // No need for extra events
         posted[msg.sender] += amount; // No need for SafeMath, can't overflow.
         return true;
     }
@@ -51,7 +54,11 @@ contract Vault is Ownable {
             unlockedOf(msg.sender) >= amount,
             "Vault: Don't have it"
         );
-        collateral.transfer(msg.sender, amount); // No need for extra events
+        // TODO: Check for failed transfers
+        require(
+            collateral.transfer(msg.sender, amount) == true,
+            "Vault: Failed transfer"
+        ); // No need for extra events
         posted[msg.sender] -= amount; // No need for SafeMath, we are checking first.
         return true;
     }
