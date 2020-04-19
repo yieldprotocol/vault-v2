@@ -68,7 +68,7 @@ contract Vault is Ownable {
         uint256 collateralAmount = equivalentCollateral(amount);
         require(
             unlockedOf(user) >= collateralAmount,
-            "Vault: Don't have it"
+            "Vault: Not enough unlocked"
         );
         locked[user] += collateralAmount; // No need for SafeMath, can't overflow.
         emit CollateralLocked(address(collateral), user, collateralAmount);
@@ -80,7 +80,7 @@ contract Vault is Ownable {
         uint256 collateralAmount = equivalentCollateral(amount);
         require(
             locked[user] >= collateralAmount,
-            "Vault: Don't have it"
+            "Vault: Not enough locked"
         );
         locked[user] -= collateralAmount; // No need for SafeMath, we are checking first.
         emit CollateralUnlocked(address(collateral), user, collateralAmount);

@@ -7,6 +7,8 @@ const truffleAssert = require('truffle-assertions');
 
 const SECONDS_IN_DAY = 86400;
 const supply = web3.utils.toWei("1000");
+const collateralToPost = web3.utils.toWei("10");
+const underlyingToLock = web3.utils.toWei("5");
 const underlyingPrice = web3.utils.toWei("2");
 
 contract('YToken', async (accounts) =>    {
@@ -32,6 +34,7 @@ contract('YToken', async (accounts) =>    {
         const block = await web3.eth.getBlockNumber();
         maturity = (await web3.eth.getBlock(block)).timestamp + 1000;
         yToken = await YToken.new(underlying.address, vault.address, maturity);
+        await vault.transferOwnership(yToken.address);
     });
 
     it("yToken should be initialized", async() => {
@@ -46,12 +49,32 @@ contract('YToken', async (accounts) =>    {
         );
     });
 
+    it("yToken can't be borrowed without enough collateral", async() => {
+        await truffleAssert.fails(
+            yToken.borrow(web3.utils.toWei("10"), { from: user1 }),
+            truffleAssert.REVERT,
+            "Vault: Not enough unlocked",
+        );
+    });
+
     it("yToken are minted with underlying", async() => {
         await underlying.approve(yToken.address, web3.utils.toWei("10"), { from: user1 });
         await yToken.mint(web3.utils.toWei("10"), { from: user1 });
         assert.equal(
                 await yToken.balanceOf(user1),
                 web3.utils.toWei("10"),
+        );
+    });
+
+    it("yToken are borrowed with collateral", async() => {
+        await collateral.approve(vault.address, collateralToPost, { from: user1 });
+        await vault.post(collateralToPost, { from: user1 });
+
+        await underlying.approve(yToken.address, underlyingToLock, { from: user1 });
+        await yToken.borrow(underlyingToLock, { from: user1 });
+        assert.equal(
+                await yToken.balanceOf(user1),
+                underlyingToLock,
         );
     });
 

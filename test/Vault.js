@@ -35,7 +35,7 @@ contract('Vault', async (accounts) =>    {
         await truffleAssert.fails(
             vault.lock(user1, underlyingToLock, { from: owner }),
             truffleAssert.REVERT,
-            "Vault: Don't have it",
+            "Vault: Not enough unlocked",
         );
     });
 
@@ -43,7 +43,7 @@ contract('Vault', async (accounts) =>    {
         await truffleAssert.fails(
             vault.unlock(user1, underlyingToLock, { from: owner }),
             truffleAssert.REVERT,
-            "Vault: Don't have it",
+            "Vault: Not enough locked",
         );
     });
 
@@ -91,7 +91,7 @@ contract('Vault', async (accounts) =>    {
                 await truffleAssert.fails(
                     vault.unlock(user1, tooMuchUnderlying, { from: owner }),
                     truffleAssert.REVERT,
-                    "Vault: Don't have it",
+                    "Vault: Not enough locked",
                 );
             });
 
