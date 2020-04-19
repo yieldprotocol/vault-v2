@@ -113,6 +113,13 @@ contract('YToken', async (accounts) =>    {
             await yToken.borrow(underlyingToLock, { from: user1 });
         });
 
+        it("debt can be retrieved", async() => {
+            assert.equal(
+                await yToken.debtOf(user1),
+                underlyingToLock,
+            );
+        });
+
         it("yToken can't be repaid before maturity", async() => {
             await truffleAssert.fails(
                 yToken.repay(underlyingToLock, { from: user1 }),
@@ -125,8 +132,12 @@ contract('YToken', async (accounts) =>    {
             helper.advanceTimeAndBlock(1000);
             await yToken.repay(underlyingToLock, { from: user1 });
             assert.equal(
-                    await yToken.balanceOf(user1),
-                    0,
+                await yToken.balanceOf(user1),
+                0,
+            );
+            assert.equal(
+                await yToken.debtOf(user1),
+                0,
             );
         });
     });

@@ -18,7 +18,6 @@ contract Vault is Ownable {
     IOracle internal oracle;
     mapping(address => uint256) internal posted; // In collateral
     mapping(address => uint256) internal locked; // In collateral
-    mapping(address => uint256) internal debt; // In underlying
 
     constructor (address collateral_, address oracle_) public Ownable() {
         collateral = IERC20(collateral_);
@@ -35,11 +34,6 @@ contract Vault is Ownable {
     function unlockedOf(address user) public view returns (uint256) {
         // No need for SafeMath, can't lock more than you have.
         return posted[user] - locked[user];
-    }
-
-    /// @dev Return debt in underlying of an user
-    function debtOf(address user) public view returns (uint256) {
-        return debt[user];
     }
 
     /// @dev Post collateral
@@ -75,7 +69,6 @@ contract Vault is Ownable {
             unlockedOf(user) >= collateralAmount,
             "Vault: Not enough unlocked"
         );
-        debt[user] += amount; // This might need SafeMath
         locked[user] += collateralAmount; // No need for SafeMath, can't overflow.
         emit CollateralLocked(address(collateral), user, collateralAmount);
         return true;
@@ -89,7 +82,6 @@ contract Vault is Ownable {
             "Vault: Not enough locked"
         );
         locked[user] -= collateralAmount; // No need for SafeMath, we are checking first.
-        debt[user] -= amount; // This might need SafeMath
         emit CollateralUnlocked(address(collateral), user, collateralAmount);
         return true;
     }

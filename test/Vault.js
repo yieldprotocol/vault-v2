@@ -95,22 +95,11 @@ contract('Vault', async (accounts) =>    {
                 );
             });
 
-            it("debt can be retrieved", async() => {
-                assert.equal(
-                    await vault.debtOf(user1),
-                    underlyingToLock,
-                );
-            });
-
             it("collateral can be unlocked", async() => {
                 await vault.unlock(user1, underlyingToLock, { from: owner });
                 assert.equal(
                     await vault.unlockedOf(user1),
                     collateralToPost,
-                );
-                assert.equal(
-                    await vault.debtOf(user1),
-                    0,
                 );
             });
         });
