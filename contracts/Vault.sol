@@ -76,14 +76,14 @@ contract Vault is Ownable { // TODO: Upgrade to openzeppelin 3.0 and use AccessC
             locked[msg.sender] >= collateralAmount,
             "Vault: Don't have it"
         );
-        locked[msg.sender] -= amount; // No need for SafeMath, we are checking first.
+        locked[msg.sender] -= collateralAmount; // No need for SafeMath, we are checking first.
         emit CollateralUnlocked(address(collateral), msg.sender, collateralAmount);
         return true;
     }
 
     function equivalentCollateral(uint256 amount) public view returns (uint256) {
-        (uint256 price, bool err) = oracle.read();
-        require(!err, "Vault: Zero price");
-        return amount.muld(price, 18); // TODO: Think about oracle decimals
+        // TODO: Do I have to worry about the oracle returning zero?
+        // TODO: What happens for tiny amounts that get divided to zero?
+        return amount.divd(oracle.get(), 18); // TODO: Think about oracle decimals
     }
 }

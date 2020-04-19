@@ -1,8 +1,14 @@
 const Vault = artifacts.require('Vault');
 const TestERC20 = artifacts.require('TestERC20');
+const TestOracle = artifacts.require('TestOracle');
 const truffleAssert = require('truffle-assertions');
 
 const supply = web3.utils.toWei("1000");
+const user1balance = web3.utils.toWei("100");
+const collateralToPost = web3.utils.toWei("10");
+const underlyingToLock = web3.utils.toWei("5");
+const tooMuchUnderlying = web3.utils.toWei("6");
+const underlyingPrice = web3.utils.toWei("2");
 
 contract('Vault', async (accounts) =>    {
     let vault;
@@ -12,13 +18,15 @@ contract('Vault', async (accounts) =>    {
 
     beforeEach(async() => {
         collateral = await TestERC20.new(supply, { from: owner });
-        await collateral.transfer(user1, web3.utils.toWei("100"), { from: owner });
-        vault = await Vault.new(collateral.address);
+        await collateral.transfer(user1, user1balance, { from: owner });
+        const oracle = await TestOracle.new({ from: owner });
+        await oracle.set(underlyingPrice, { from: owner });
+        vault = await Vault.new(collateral.address, oracle.address);
     });
 
     it("collateral can't be retrieved if not available", async() => {
         await truffleAssert.fails(
-            vault.retrieve(1, { from: user1 }),
+            vault.retrieve(collateralToPost, { from: user1 }),
             truffleAssert.REVERT,
             "Vault: Don't have it",
         );
@@ -26,7 +34,7 @@ contract('Vault', async (accounts) =>    {
 
     it("collateral can't be locked if not available", async() => {
         await truffleAssert.fails(
-            vault.lock(1, { from: user1 }),
+            vault.lock(underlyingToLock, { from: user1 }),
             truffleAssert.REVERT,
             "Vault: Don't have it",
         );
@@ -34,41 +42,41 @@ contract('Vault', async (accounts) =>    {
 
     it("collateral can't be unlocked if not locked", async() => {
         await truffleAssert.fails(
-            vault.unlock(1, { from: user1 }),
+            vault.unlock(underlyingToLock, { from: user1 }),
             truffleAssert.REVERT,
             "Vault: Don't have it",
         );
     });
 
     it("collateral can be posted", async() => {
-        await collateral.approve(vault.address, 10, { from: user1 });
-        await vault.post(10, { from: user1 });
+        await collateral.approve(vault.address, collateralToPost, { from: user1 });
+        await vault.post(collateralToPost, { from: user1 });
         assert.equal(
                 await vault.postedOf(user1),
-                10,
+                collateralToPost,
         );
     });
 
     describe('once collateral is posted', () => {
         beforeEach(async() => {
-            await collateral.approve(vault.address, 10, { from: user1 });
-            await vault.post(10, { from: user1 });
+            await collateral.approve(vault.address, collateralToPost, { from: user1 });
+            await vault.post(collateralToPost, { from: user1 });
         });
 
         it("collateral can be retrieved", async() => {
-            await vault.retrieve(10, { from: user1 });
+            await vault.retrieve(collateralToPost, { from: user1 });
             assert.equal(
                     await vault.postedOf(user1),
                     0,
             );
             assert.equal(
                 await collateral.balanceOf(user1),
-                web3.utils.toWei("100"),
+                user1balance,
             );
         });
 
         it("collateral can be locked", async() => {
-            tx = await vault.lock(10, { from: user1 });
+            tx = await vault.lock(underlyingToLock, { from: user1 });
             assert.equal(
                 tx.logs[0].event,
                 "CollateralLocked",
@@ -77,14 +85,22 @@ contract('Vault', async (accounts) =>    {
 
         describe('once collateral is locked', () => {
             beforeEach(async() => {
-                await vault.lock(10, { from: user1 });
+                await vault.lock(underlyingToLock, { from: user1 });
             });
         
+            it("collateral can't be unlocked above the posted amount", async() => {
+                await truffleAssert.fails(
+                    vault.unlock(tooMuchUnderlying, { from: user1 }),
+                    truffleAssert.REVERT,
+                    "Vault: Don't have it",
+                );
+            });
+
             it("collateral can be unlocked", async() => {
-                await vault.unlock(10, { from: user1 });
+                await vault.unlock(underlyingToLock, { from: user1 });
                 assert.equal(
                     await vault.unlockedOf(user1),
-                    10,
+                    collateralToPost,
                 );
             });
         });
