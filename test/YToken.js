@@ -104,6 +104,32 @@ contract('YToken', async (accounts) =>    {
         // TODO: Test burn for failed underlying transfers
     });
 
+    describe('once users have borrowed yTokens', () => {
+        beforeEach(async() => {
+            await collateral.approve(vault.address, collateralToPost, { from: user1 });
+            await vault.post(collateralToPost, { from: user1 });
+    
+            await underlying.approve(yToken.address, underlyingToLock, { from: user1 });
+            await yToken.borrow(underlyingToLock, { from: user1 });
+        });
+
+        it("yToken can't be repaid before maturity", async() => {
+            await truffleAssert.fails(
+                yToken.repay(underlyingToLock, { from: user1 }),
+                truffleAssert.REVERT,
+                "YToken: Wait for maturity",
+            );
+        });
+
+        it("yToken debt can be repaid", async() => {
+            helper.advanceTimeAndBlock(1000);
+            await yToken.repay(underlyingToLock, { from: user1 });
+            assert.equal(
+                    await yToken.balanceOf(user1),
+                    0,
+            );
+        });
+    });
 
 /*        const currentTimeStamp = (await web3.eth.getBlock(number)).timestamp;
 

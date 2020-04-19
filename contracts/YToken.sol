@@ -41,7 +41,7 @@ contract YToken is ERC20 {
         return true;
     }
 
-    /// @dev Mint yTokens by locking its market value in collateral.
+    /// @dev Mint yTokens by locking its market value in collateral. Debt is recorded in the vault.
     function borrow(uint256 amount) public returns (bool) {
         // The vault will revert if there is not enough unlocked collateral
         collateral.lock(msg.sender, amount);
@@ -49,8 +49,7 @@ contract YToken is ERC20 {
         return true;
     }
 
-    /// @dev Burn yTokens and unlock its market value in collateral.
-    /// TODO: Does this make sense?
+    /// @dev Burn yTokens and unlock its market value in collateral. Debt is erased in the vault.
     function repay(uint256 amount) public returns (bool) {
         require(
             // solium-disable-next-line security/no-block-members
