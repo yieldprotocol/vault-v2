@@ -53,7 +53,7 @@ contract Vault is Ownable {
     function retrieve(uint256 amount) public returns (bool) {
         require(
             unlockedOf(msg.sender) >= amount,
-            "Vault: Don't have it"
+            "Vault: Unlock more collateral"
         );
         require(
             collateral.transfer(msg.sender, amount) == true,

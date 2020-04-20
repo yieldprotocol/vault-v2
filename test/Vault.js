@@ -29,7 +29,7 @@ contract('Vault', async (accounts) =>    {
         await truffleAssert.fails(
             vault.retrieve(collateralToPost, { from: user1 }),
             truffleAssert.REVERT,
-            "Vault: Don't have it",
+            "Vault: Unlock more collateral",
         );
     });
 
