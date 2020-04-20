@@ -100,24 +100,24 @@ contract('YToken', async (accounts) =>    {
             await yToken.mint(web3.utils.toWei("10"), { from: user1 });
         });
 
-        it("yToken can't be burned before maturity", async() => {
+        it("yToken can't be redeemed before maturity", async() => {
             await truffleAssert.fails(
-                yToken.burn(web3.utils.toWei("10"), { from: user1 }),
+                yToken.redeem(web3.utils.toWei("10"), { from: user1 }),
                 truffleAssert.REVERT,
                 "YToken: Wait for maturity",
             );
         });
 
-        it("yToken can be burned for underlying", async() => {
+        it("yToken can be redeemed for underlying", async() => {
             helper.advanceTimeAndBlock(1000);
-            await yToken.burn(web3.utils.toWei("10"), { from: user1 });
+            await yToken.redeem(web3.utils.toWei("10"), { from: user1 });
             assert.equal(
                     await underlying.balanceOf(user1),
                     user1underlying,
             );
         });
 
-        // TODO: Test burn for failed underlying transfers
+        // TODO: Test redeem for failed underlying transfers
     });
 
     describe('once users have borrowed yTokens', () => {

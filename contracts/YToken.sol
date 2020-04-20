@@ -33,7 +33,7 @@ contract YToken is ERC20 {
     }
 
     /// @dev Burn yTokens and return an equal amount of underlying.
-    function burn(uint256 amount) public returns (bool) {
+    function redeem(uint256 amount) public returns (bool) {
         require(
             // solium-disable-next-line security/no-block-members
             now > maturity,
