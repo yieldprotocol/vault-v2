@@ -136,16 +136,7 @@ contract('YToken', async (accounts) =>    {
             );
         });
 
-        it("yToken can't be repaid before maturity", async() => {
-            await truffleAssert.fails(
-                yToken.repay(underlyingToLock, { from: user1 }),
-                truffleAssert.REVERT,
-                "YToken: Wait for maturity",
-            );
-        });
-
         it("yToken debt can be repaid", async() => {
-            helper.advanceTimeAndBlock(1000);
             await yToken.repay(underlyingToLock, { from: user1 });
             assert.equal(
                 await yToken.balanceOf(user1),

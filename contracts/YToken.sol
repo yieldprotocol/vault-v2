@@ -58,11 +58,6 @@ contract YToken is ERC20 {
 
     /// @dev Burn yTokens and unlock its market value in collateral. Debt is erased in the vault.
     function repay(uint256 amount) public returns (bool) {
-        require( // TODO: Do we need this?
-            // solium-disable-next-line security/no-block-members
-            now > maturity,
-            "YToken: Wait for maturity"
-        );
         require(
             // solium-disable-next-line security/no-block-members
             debt[msg.sender] >= amount,
