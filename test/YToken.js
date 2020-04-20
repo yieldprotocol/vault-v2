@@ -109,7 +109,8 @@ contract('YToken', async (accounts) =>    {
         });
 
         it("yToken can be redeemed for underlying", async() => {
-            helper.advanceTimeAndBlock(1000);
+            await helper.advanceTime(1000);
+            await helper.advanceBlock();
             await yToken.redeem(web3.utils.toWei("10"), { from: user1 });
             assert.equal(
                     await underlying.balanceOf(user1),

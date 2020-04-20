@@ -1,5 +1,5 @@
 const Treasurer = artifacts.require('./Treasurer');
-const YToken = artifacts.require('./yToken');
+const YToken = artifacts.require('./yTokenOld');
 const MockContract = artifacts.require("./MockContract")
 const Oracle= artifacts.require("./Oracle")
 const truffleAssert = require('truffle-assertions');
