@@ -37,6 +37,7 @@ contract('YDai', async (accounts) =>    {
         await oracle.set(underlyingPrice, { from: owner });
         vault = await Vault.new(collateral.address, oracle.address, collateralRatio);
 
+        //current releases at: https://changelog.makerdao.com/
         vat = await MockContract.new();
         pot = await MockContract.new();
 
@@ -45,9 +46,9 @@ contract('YDai', async (accounts) =>    {
         yDai = await YDai.new(
             underlying.address, 
             vault.address, 
-            maturity, 
             vat.address,
-            pot.address
+            pot.address,
+            maturity
         );
         await vault.transferOwnership(yDai.address);
     });

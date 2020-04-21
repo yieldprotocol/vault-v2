@@ -2,6 +2,8 @@ pragma solidity ^0.5.2;
 
 import "./YToken.sol";
 
+///@dev yDai is a yToken targeting Dai
+
 
 contract YDai is YToken {
     address public vat;
@@ -12,9 +14,9 @@ contract YDai is YToken {
     constructor(
         address underlying_,
         address collateral_,
-        uint256 maturity_,
         address vat_,
-        address pot_
+        address pot_,
+        uint256 maturity_
     ) YToken(underlying_, collateral_, maturity_) public {
         vat = vat_;
         pot = pot_;
