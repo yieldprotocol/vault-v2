@@ -1,9 +1,23 @@
 pragma solidity ^0.5.2;
 pragma experimental ABIEncoderV2;
 
-import './yToken.sol';
 import './Oracle.sol';
 import "@nomiclabs/buidler/console.sol";
+import '@openzeppelin/contracts/token/ERC20/ERC20Mintable.sol';
+import '@openzeppelin/contracts/token/ERC20/ERC20Burnable.sol';
+
+contract yTokenOld is ERC20Burnable, ERC20Mintable {
+  uint256 public when;
+
+  constructor(uint256 when_) public {
+      when = when_;
+  }
+
+  function burnByOwner(address account, uint256 amount) external onlyMinter {
+    _burn(account, amount);
+  }
+
+}
 
 
 contract Treasurer {
@@ -14,8 +28,8 @@ contract Treasurer {
   }
 
   struct yieldT {
-      address where;  // contract address of yToken
-      uint256 when;   // maturity time of yToken
+      address where;  // contract address of yTokenOld
+      uint256 when;   // maturity time of yTokenOld
   }
 
   mapping (uint    => yieldT) public yTokens;
@@ -87,7 +101,7 @@ contract Treasurer {
     require(when > now, "treasurer-issue-maturity-is-in-past");
     series = totalSeries;
     require(yTokens[series].when == 0, "treasurer-issue-may-not-reissue-series");
-    yToken _token = new yToken(when);
+    yTokenOld _token = new yTokenOld(when);
     address _a = address(_token);
     yieldT memory yT = yieldT(_a, when);
     yTokens[series] = yT;
@@ -133,7 +147,7 @@ contract Treasurer {
     // mint new yTokens
     // first, ensure yToken is initialized and matures in the future
     require(yTokens[series].when > now, "treasurer-make-invalid-or-matured-ytoken");
-    yToken yT  = yToken(yTokens[series].where);
+    yTokenOld yT  = yTokenOld(yTokens[series].where);
     address sender = msg.sender;
     yT.mint(sender, made);
   }
@@ -181,7 +195,7 @@ contract Treasurer {
     require(rlocked >= min, "treasurer-wipe-insufficient-remaining-collateral");
 
     //burn tokens
-    yToken yT  = yToken(yTokens[series].where);
+    yTokenOld yT  = yTokenOld(yTokens[series].where);
     require(yT.balanceOf(msg.sender) > credit, "treasurer-wipe-insufficient-token-balance");
     yT.burnFrom(msg.sender, credit);
 
@@ -207,7 +221,7 @@ contract Treasurer {
     require(repo.locked < min, "treasurer-bite-still-safe");
 
     //burn tokens
-    yToken yT  = yToken(yTokens[series].where);
+    yTokenOld yT  = yTokenOld(yTokens[series].where);
     yT.burnByOwner(msg.sender, amount);
 
     //update repo
@@ -238,7 +252,7 @@ contract Treasurer {
     require(now > yTokens[series].when, "treasurer-withdraw-yToken-hasnt-matured");
     require(settled[series] != 0, "treasurer-settlement-settlement-not-yet-called");
 
-    yToken yT  = yToken(yTokens[series].where);
+    yTokenOld yT  = yTokenOld(yTokens[series].where);
     yT.burnByOwner(msg.sender, amount);
 
     uint rate     = settled[series];

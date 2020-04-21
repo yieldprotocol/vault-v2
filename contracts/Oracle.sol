@@ -1,21 +1,20 @@
 pragma solidity ^0.5.2;
-pragma experimental ABIEncoderV2;
 
 //Using fake contract instead of abstract for mocking
 contract Oracle {
-  uint256 val;
+    uint256 price;
 
-  function set(uint256 _value) public {
-    val = _value;
-  }
+    function set(uint256 price_) public {
+        price = price_;
+    }
 
-  function read() external view returns (uint256) {
-      require(val > 0, "Invalid price feed");
-      return val;
-  }
+    function read() external view returns (uint256) {
+        require(price > 0, "Inpriceid price feed");
+        return price;
+    }
 
-  function peek() external view returns (uint256,bool) {
-      return (val, val > 0);
-  }
+    function peek() external view returns (uint256,bool) {
+        return (price, price > 0);
+    }
 
 }

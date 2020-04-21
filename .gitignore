@@ -1,6 +1,4 @@
-node_modules/
-build/
-.DS_Store
-.env
-artifacts
+#Buidler files
 cache
+artifacts
+node_modules/
