@@ -94,6 +94,31 @@ contract('YToken', async (accounts) =>    {
         );
     });
 
+    it("yToken is not mature before maturity", async() => {
+            assert.equal(
+                    await yToken.isMature.call(),
+                    false,
+            );
+    });
+    
+    it("yToken cannot mature before maturity time", async() => {
+            await truffleAssert.fails(
+                yToken.mature(),
+                truffleAssert.REVERT,
+                "YToken: Not time for maturity",
+            );
+    });
+    
+    it("yToken can mature at maturity time", async() => {
+            await helper.advanceTime(1000);
+            await helper.advanceBlock();
+            await yToken.mature();
+            assert.equal(
+                await yToken.isMature.call(),
+                true,
+            );
+    });
+
     describe('once users have yTokens', () => {
         beforeEach(async() => {
             await underlying.approve(yToken.address, web3.utils.toWei("10"), { from: user1 });
@@ -108,9 +133,20 @@ contract('YToken', async (accounts) =>    {
             );
         });
 
+        it("yToken can't be redeemed before mature()", async() => {
+            await helper.advanceTime(1000);
+            await helper.advanceBlock();
+            await truffleAssert.fails(
+                yToken.redeem(web3.utils.toWei("10"), { from: user1 }),
+                truffleAssert.REVERT,
+                "YToken: mature() not called",
+            );
+        });
+
         it("yToken can be redeemed for underlying", async() => {
             await helper.advanceTime(1000);
             await helper.advanceBlock();
+            await yToken.mature();
             await yToken.redeem(web3.utils.toWei("10"), { from: user1 });
             assert.equal(
                     await underlying.balanceOf(user1),
