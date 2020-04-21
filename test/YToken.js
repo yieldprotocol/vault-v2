@@ -105,7 +105,7 @@ contract('YToken', async (accounts) =>    {
             await truffleAssert.fails(
                 yToken.mature(),
                 truffleAssert.REVERT,
-                "YToken: Not time for maturity",
+                "YToken: Too early to mature",
             );
     });
     
@@ -125,21 +125,13 @@ contract('YToken', async (accounts) =>    {
             await yToken.mint(web3.utils.toWei("10"), { from: user1 });
         });
 
-        it("yToken can't be redeemed before maturity", async() => {
-            await truffleAssert.fails(
-                yToken.redeem(web3.utils.toWei("10"), { from: user1 }),
-                truffleAssert.REVERT,
-                "YToken: Wait for maturity",
-            );
-        });
-
         it("yToken can't be redeemed before mature()", async() => {
             await helper.advanceTime(1000);
             await helper.advanceBlock();
             await truffleAssert.fails(
                 yToken.redeem(web3.utils.toWei("10"), { from: user1 }),
                 truffleAssert.REVERT,
-                "YToken: mature() not called",
+                "YToken: Not matured yet",
             );
         });
 

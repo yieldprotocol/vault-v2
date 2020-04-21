@@ -37,13 +37,8 @@ contract YToken is ERC20 {
     function redeem(uint256 amount) public returns (bool) {
         require(
             // solium-disable-next-line security/no-block-members
-            now > maturity,
-            "YToken: Wait for maturity"
-        );
-        require(
-            // solium-disable-next-line security/no-block-members
             isMature,
-            "YToken: mature() not called"
+            "YToken: Not matured yet"
         );
         _burn(msg.sender, amount);
         require(
@@ -58,7 +53,7 @@ contract YToken is ERC20 {
         require(
             // solium-disable-next-line security/no-block-members
             now > maturity,
-            "YToken: Not time for maturity"
+            "YToken: Too early to mature"
         );
         isMature = true;
         return true;
