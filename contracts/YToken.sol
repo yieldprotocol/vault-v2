@@ -10,6 +10,7 @@ contract YToken is ERC20 {
     mapping(address => uint256) internal debt; // In underlying
     IVault public collateral; // Can be replaced for an EnumerableSet.AddressSet for multicollateralized yTokens
     uint256 public maturity;
+    bool public isMature;
 
     constructor(address underlying_, address collateral_, uint256 maturity_) public {
         underlying = IERC20(underlying_);
@@ -36,14 +37,25 @@ contract YToken is ERC20 {
     function redeem(uint256 amount) public returns (bool) {
         require(
             // solium-disable-next-line security/no-block-members
-            now > maturity,
-            "YToken: Wait for maturity"
+            isMature,
+            "YToken: Not matured yet"
         );
         _burn(msg.sender, amount);
         require(
             underlying.transfer(msg.sender, amount) == true,
             "YToken: Failed transfer"
         );
+        return true;
+    }
+
+    /// @dev Mature yToken to make redeemable.
+    function mature() public returns (bool) {
+        require(
+            // solium-disable-next-line security/no-block-members
+            now > maturity,
+            "YToken: Too early to mature"
+        );
+        isMature = true;
         return true;
     }
 
