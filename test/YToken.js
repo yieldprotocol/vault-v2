@@ -154,7 +154,6 @@ contract('YToken', async (accounts) =>    {
             await collateral.approve(vault.address, collateralToPost, { from: user1 });
             await vault.post(collateralToPost, { from: user1 });
     
-            await underlying.approve(yToken.address, underlyingToLock, { from: user1 });
             await yToken.borrow(underlyingToLock, { from: user1 });
         });
 
