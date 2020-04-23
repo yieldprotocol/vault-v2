@@ -1,6 +1,6 @@
 pragma solidity ^0.5.2;
 
-import "./../IOracle.sol";
+import "./../interfaces/IOracle.sol";
 
 
 //Using fake contract instead of abstract for mocking

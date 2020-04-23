@@ -1,6 +1,7 @@
 pragma solidity ^0.5.2;
 
-import "./../IVat.sol";
+import "./../interfaces/IVat.sol";
+
 
 contract TestVat is Vat {
     uint256 _rate;

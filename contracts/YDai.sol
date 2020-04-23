@@ -1,9 +1,9 @@
 pragma solidity ^0.5.2;
 
-import "./YToken.sol";
-import "./IVat.sol";
-import "./IPot.sol";
 import "@hq20/contracts/contracts/math/DecimalMath.sol";
+import "./interfaces/IVat.sol";
+import "./interfaces/IPot.sol";
+import "./YToken.sol";
 
 
 ///@dev yDai is a yToken targeting Dai
