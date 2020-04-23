@@ -3,8 +3,8 @@ pragma solidity ^0.5.2;
 import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./IOracle.sol";
-import "./IVault.sol";
+import "./interfaces/IOracle.sol";
+import "./interfaces/IVault.sol";
 
 
 contract Vault is Ownable {

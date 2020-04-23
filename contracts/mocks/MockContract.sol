@@ -5,6 +5,6 @@ pragma solidity ^0.5.2;
 import "@gnosis.pm/mock-contract/contracts/MockContract.sol";
 
 
-contract DoesNothing {
+contract Hack {
 
 }
