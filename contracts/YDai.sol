@@ -1,6 +1,7 @@
 pragma solidity ^0.5.2;
 
 import "@hq20/contracts/contracts/math/DecimalMath.sol";
+import "@openzeppelin/contracts/math/Math.sol";
 import "./interfaces/IVat.sol";
 import "./interfaces/IPot.sol";
 import "./YToken.sol";
@@ -9,6 +10,7 @@ import "./YToken.sol";
 ///@dev yDai is a yToken targeting Dai
 contract YDai is YToken {
     using DecimalMath for uint256;
+    using DecimalMath for uint8;
 
     event Matured(uint256 rate, uint256 chi);
 
@@ -21,8 +23,8 @@ contract YDai is YToken {
     uint8 constant public ray = 27;
     uint8 constant public rad = 45;
 
-    uint256 public maturityChi;  //maturityChi accumulator (for dsr) at maturity
-    uint256 public maturityRate; //maturityRate accumulator (for stability fee) at maturity
+    uint256 public maturityChi;  // accumulator (for dsr) at maturity in ray units
+    uint256 public maturityRate; // accumulator (for stability fee) at maturity in ray units
 
     constructor(
         address underlying_,
@@ -52,7 +54,8 @@ contract YDai is YToken {
             now > maturity,
             "YToken: Too early to mature"
         );
-        (, maturityRate,,,) = vat.ilks("ETH-A");
+        (, maturityRate,,,) = vat.ilks("ETH-A"); // Retrieve the MakerDAO DSR
+        maturityRate = Math.max(maturityRate, ray.unit()); // Floor it at 1.0
         maturityChi = pot.chi();
         isMature = true;
         emit Matured(maturityRate, maturityChi);
