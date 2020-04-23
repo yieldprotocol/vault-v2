@@ -13,8 +13,14 @@ contract YDai is YToken {
     IVat public vat;
     IPot public pot;
 
-    uint256 public chi;  //chi accumulator (for dsr) at maturity
-    uint256 public rate; //rate accumulator (for stability fee) at maturity
+    // TODO: Move to Constants.sol
+    // Fixed point precisions from MakerDao
+    uint8 constant public wad = 18;
+    uint8 constant public ray = 27;
+    uint8 constant public rad = 45;
+
+    uint256 public maturityChi;  //maturityChi accumulator (for dsr) at maturity
+    uint256 public maturityRate; //maturityRate accumulator (for stability fee) at maturity
 
     constructor(
         address underlying_,
@@ -30,9 +36,8 @@ contract YDai is YToken {
     /// @dev Return debt in underlying of an user
     function debtOf(address user) public view returns (uint256) {
         if (isMature){
-            uint256 currentRate;
-            (, currentRate,,,) = vat.ilks("ETH-A");
-            return debt[user].muld(currentRate.divd(rate, 27), 27);
+            (, uint256 rate,,,) = vat.ilks("ETH-A");
+            return debt[user].muld(rate.divd(maturityRate, ray), ray);
         } else {
             return debt[user];
         }
@@ -45,8 +50,8 @@ contract YDai is YToken {
             now > maturity,
             "YToken: Too early to mature"
         );
-        (, rate,,,) = vat.ilks("ETH-A");
-        chi = pot.chi();
+        (, maturityRate,,,) = vat.ilks("ETH-A");
+        maturityChi = pot.chi();
         isMature = true;
         return true;
     }

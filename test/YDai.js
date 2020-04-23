@@ -121,16 +121,16 @@ contract('YDai', async (accounts) =>    {
             );
         });
 
-        it("yToken snapshots chi and rate", async() => {
+        it("yToken snapshots maturity chi and maturity rate", async() => {
             await helper.advanceTime(1000);
             await helper.advanceBlock();
             await yDai.mature();
             assert.equal(
-                await yDai.rate.call(),
+                await yDai.maturityRate.call(),
                 rate,
             );
             assert.equal(
-                await yDai.chi.call(),
+                await yDai.maturityChi.call(),
                 chi,
             );
         });
