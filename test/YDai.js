@@ -95,32 +95,6 @@ contract('YDai', async (accounts) =>    {
             );
         });
 
-
-        it("yToken is not mature before maturity", async() => {
-            assert.equal(
-                    await yDai.isMature.call(),
-                    false,
-            );
-        });
-    
-        it("yToken cannot mature before maturity time", async() => {
-                await truffleAssert.fails(
-                    yDai.mature(),
-                    truffleAssert.REVERT,
-                    "YToken: Too early to mature",
-                );
-        });
-
-        it("yToken can mature at maturity time", async() => {
-            await helper.advanceTime(1000);
-            await helper.advanceBlock();
-            await yDai.mature();
-            assert.equal(
-                await yDai.isMature.call(),
-                true,
-            );
-        });
-
         it("yToken snapshots maturity chi and maturity rate", async() => {
             await helper.advanceTime(1000);
             await helper.advanceBlock();
@@ -150,25 +124,5 @@ contract('YDai', async (accounts) =>    {
                 result > web3.utils.toBN(underlyingToLock)
             );
         });
-        
-        /** 
-        it("yToken can be redeemed for underlying", async() => {
-            await helper.advanceTime(1000);
-            await helper.advanceBlock();
-            await yDai.mature();
-            await pot.set(laterChi);
-            await yDai.redeem(underlyingToLock, { from: user1 });
-            DaiBalance = await underlying.balanceOf(user1);
-            yDaiBalance = await yDai.balanceOf(user1);
-            console.log("Balance:", yDaiBalance.toString())
-            console.log("underlyingToLock: ", underlyingToLock)
-            assert.equal(
-                    await underlying.balanceOf(user1),
-                    user1underlying,
-            );
-        });
-        */
-
     });
-
 });
