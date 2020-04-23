@@ -10,8 +10,8 @@ import "./YToken.sol";
 contract YDai is YToken {
     using DecimalMath for uint256;
 
-    Vat public vat;
-    Pot public pot;
+    IVat public vat;
+    IPot public pot;
 
     uint256 public chi;  //chi accumulator (for dsr) at maturity
     uint256 public rate; //rate accumulator (for stability fee) at maturity
@@ -23,8 +23,8 @@ contract YDai is YToken {
         address pot_,
         uint256 maturity_
     ) YToken(underlying_, collateral_, maturity_) public {
-        vat = Vat(vat_);
-        pot = Pot(pot_);
+        vat = IVat(vat_);
+        pot = IPot(pot_);
     }
 
     /// @dev Return debt in underlying of an user
@@ -32,7 +32,7 @@ contract YDai is YToken {
         if (isMature){
             uint256 currentRate;
             (, currentRate,,,) = vat.ilks("ETH-A");
-            return debt[user].muld(currentRate.divd(rate, 27) ,27);
+            return debt[user].muld(currentRate.divd(rate, 27), 27);
         } else {
             return debt[user];
         }
