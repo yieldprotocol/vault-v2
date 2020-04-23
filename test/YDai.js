@@ -17,10 +17,10 @@ const underlyingPrice = web3.utils.toWei("2");
 const collateralRatio = web3.utils.toWei("2");
 const user1collateral = web3.utils.toWei("100");
 const user1underlying = web3.utils.toWei("100");
-const rate =      "1019999142148527182676895718";
+const rate      = "1019999142148527182676895718";
 const laterRate = "1020000000000000000000000000";
-
-const chi = "1018008449363110619399951035";
+const chi       = "1018008449363110619399951035";
+const laterChi  = "1019000000000000000000000000";
 
 contract('YDai', async (accounts) =>    {
     let yDai;
@@ -145,11 +145,29 @@ contract('YDai', async (accounts) =>    {
             await helper.advanceBlock();
             await yDai.mature();
             await vat.set(laterRate);
-            result = (await yDai.debtOf(user1)).toString()
+            result = await yDai.debtOf(user1);
             assert(
                 result > web3.utils.toBN(underlyingToLock)
             );
         });
+        
+        /** 
+        it("yToken can be redeemed for underlying", async() => {
+            await helper.advanceTime(1000);
+            await helper.advanceBlock();
+            await yDai.mature();
+            await pot.set(laterChi);
+            await yDai.redeem(underlyingToLock, { from: user1 });
+            DaiBalance = await underlying.balanceOf(user1);
+            yDaiBalance = await yDai.balanceOf(user1);
+            console.log("Balance:", yDaiBalance.toString())
+            console.log("underlyingToLock: ", underlyingToLock)
+            assert.equal(
+                    await underlying.balanceOf(user1),
+                    user1underlying,
+            );
+        });
+        */
 
     });
 
