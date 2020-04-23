@@ -10,6 +10,8 @@ import "./YToken.sol";
 contract YDai is YToken {
     using DecimalMath for uint256;
 
+    event Matured(uint256 rate, uint256 chi);
+
     IVat public vat;
     IPot public pot;
 
@@ -53,6 +55,7 @@ contract YDai is YToken {
         (, maturityRate,,,) = vat.ilks("ETH-A");
         maturityChi = pot.chi();
         isMature = true;
+        emit Matured(maturityRate, maturityChi);
         return true;
     }
 }
