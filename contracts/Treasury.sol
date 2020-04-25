@@ -104,7 +104,7 @@ contract Treasury {
             dai.transferFrom(source, address(this), amount),
             "YToken: DAI transfer fail"
         );
-        require(
+        require( // No need for `dai.approve(address(daiJoin), amount)?
             daiJoin.join(address(this), amount),
             "YToken: DAI join failed"
         );
@@ -164,8 +164,8 @@ contract Treasury {
             daiJoin.exit(address(this), amount),
             "YToken: DAI exit failed"
         );
-        require(
-            dai.transferFrom(source, address(this), amount),
+        require( // address(daiJoin) holds the dai?
+            dai.transferFrom(address(daiJoin), address(this), amount),
             "YToken: DAI transfer fail"
         );
     }
@@ -179,6 +179,11 @@ contract Treasury {
         );
         if (daiBalance > toSend) {
             //send funds directly
+            require(
+                dai.transfer(receiver, amount),
+                "YToken: DAI transfer fail"
+            );
+        );
         } else {
             //borrow funds and send them
             _generateDai(receiver, amount);
