@@ -74,7 +74,8 @@ contract Treasury {
             dink,
             dart
         ); // `vat.frob` reverts on failure
-        wethJoin.exit(receiver, amount); // `GemJoin` reverts on failures
+        wethJoin.exit(address(this), amount); // `GemJoin` reverts on failures
+        weth.transferFrom(address(wethJoin), receiver, amount);
     }
 
     /// @dev Moves Dai from user into Treasury controlled Maker Dai vault
