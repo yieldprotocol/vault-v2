@@ -4,18 +4,20 @@ import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IDaiJoin.sol";
-import "./interfaces/IEthJoin.sol";
+import "./interfaces/IGemJoin.sol";
 import "./interfaces/IVat.sol";
 
 
 contract Treasury {
+    using DecimalMath for uint256;
     using DecimalMath for int256;
+    using DecimalMath for uint8;
 
     IERC20 public weth;
     IERC20 public dai;
     // Maker join contracts:
     // https://github.com/makerdao/dss/blob/master/src/join.sol
-    IEthJoin public ethjoin;
+    IGemJoin public wethJoin;
     IDaiJoin public daiJoin;
     // Maker vat contract:
     IVat public vat;
@@ -38,63 +40,42 @@ contract Treasury {
             weth.transferFrom(from, address(this), amount),
             "YToken: WETH transfer fail"
         );
-        weth.approve(address(ethjoin), amount);
-        require(
-            ethjoin.join(address(this), amount),
-            "YToken: ETH join failed"
-        );
+        weth.approve(address(wethJoin), amount);
+        wethJoin.join(address(this), amount); // GemJoin reverts if anything goes wrong.
         // All added collateral should be locked into the vault
         // collateral to add - wad
-        int dink = int(amount);
-        require(
-            dink >= 0,
-            "YToken: Invalid amount"
-        );
+        int dink = int(amount); // Can't be negative because `amount` is a uint
         // Normalized Dai to receive - wad
         int dart = 0;
         // frob alters Maker vaults
-        require(
-            vat.frob(
-                collateralType,
-                address(this),
-                address(this),
-                address(this),
-                dink,
-                dart
-            ),
-            "YToken: vault update failed"
-        );
+        vat.frob(
+            collateralType,
+            address(this),
+            address(this),
+            address(this),
+            dink,
+            dart
+        ); // `vat.frob` reverts on failure
         ethBalance += amount;
     }
 
     /// @dev Moves Eth collateral from Treasury controlled Maker Eth vault back to user
-    function withdraw(address dst, uint256 amount) public {
+    function withdraw(address receiver, uint256 amount) public {
         // Remove collateral from vault
         // collateral to add - wad
-        int dink = -int(amount);
-        require(
-            dink <= 0,
-            "YToken: Invalid amount"
-        );
+        int dink = -int(amount); // `amount` must be positive since it is an uint
         // Normalized Dai to receive - wad
         int dart = 0;
         // frob alters Maker vaults
-        require(
-            vat.frob(
-                collateralType,
-                address(this),
-                address(this),
-                address(this),
-                dink,
-                dart
-            ),
-            "YToken: vault update failed"
-        );
-        require(
-            ethjoin.exit(dst, amount),
-            "YToken: ETH exit failed"
-        );
-        // Don't we need a weth.transferFrom() here?
+        vat.frob(
+            collateralType,
+            address(this),
+            address(this),
+            address(this),
+            dink,
+            dart
+        ); // `vat.frob` reverts on failure
+        wethJoin.exit(receiver, amount); // `GemJoin` reverts on failures
         ethBalance -= amount;
     }
 
@@ -103,71 +84,51 @@ contract Treasury {
         require(
             dai.transferFrom(source, address(this), amount),
             "YToken: DAI transfer fail"
-        );
-        require( // No need for `dai.approve(address(daiJoin), amount)?
-            daiJoin.join(address(this), amount),
-            "YToken: DAI join failed"
-        );
+        ); // TODO: Check dai behaviour on failed transfers
+        // No need for `dai.approve(address(daiJoin), amount)?
+        daiJoin.join(address(this)); // `daiJoin.join` doesn't pass an amount as a parameter?
         // Add Dai to vault
         // collateral to add - wad
         int dink = 0;
 
         // Normalized Dai to receive - wad
         (, rate,,,) = vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
-        int dart = -int(amount.divd(rate, ray.unit()));
-        require(
-            dart <= 0,
-            "YToken: Invalid amount"
-        );
+        int dart = -int(amount.divd(rate, ray)); // `amount` and `rate` are positive
         // frob alters Maker vaults
-        require(
-            vat.frob(
-                collateralType,
-                address(this),
-                address(this),
-                address(this),
-                dink,
-                dart
-            ),
-            "YToken: vault update failed"
-        );
-
+        vat.frob(
+            collateralType,
+            address(this),
+            address(this),
+            address(this),
+            dink,
+            dart
+        ); // `vat.frob` reverts on failure
     }
 
     /// @dev Mint an `amount` of Dai
-    function _generateDai(address dst, uint256 amount) private {
+    function _generateDai(address receiver, uint256 amount) private {
         // Add Dai to vault
         // collateral to add - wad
         int dink = 0; // Delta ink, change in collateral balance
         // Normalized Dai to receive - wad
         (, rate,,,) = vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
         // collateral to add -- all collateral should already be present
-        int dart = -int(amount.divd(rate, ray.unit())); // Delta art, change in dai debt
-        require(
-            dart <= 0,
-            "YToken: Invalid amount"
-        );
+        int dart = -int(amount.divd(rate, ray)); // Delta art, change in dai debt
         // Normalized Dai to receive - wad
         // frob alters Maker vaults
-        require(
-            vat.frob(
-                collateralType,
-                address(this),
-                address(this),
-                address(this),
-                dink,
-                dart
-            ),
-            "YToken: vault update failed"
-        );
-        require(
-            daiJoin.exit(address(this), amount),
-            "YToken: DAI exit failed"
-        );
+        vat.frob(
+            collateralType,
+            address(this),
+            address(this),
+            address(this),
+            dink,
+            dart
+        ); // `vat.frob` reverts on failure
+        daiJoin.exit(address(this), amount); // `daiJoin` reverts on failures
         require( // address(daiJoin) holds the dai?
-            dai.transferFrom(address(daiJoin), address(this), amount),
+            dai.transferFrom(address(daiJoin), receiver, amount),
             "YToken: DAI transfer fail"
-        );
+        ); // TODO: Check dai behaviour on failed transfers
     }
 
     /// @dev moves Dai from Treasury to user, borrowing from Maker DAO if not enough present.
@@ -182,8 +143,7 @@ contract Treasury {
             require(
                 dai.transfer(receiver, amount),
                 "YToken: DAI transfer fail"
-            );
-        );
+            ); // TODO: Check dai behaviour on failed transfers
         } else {
             //borrow funds and send them
             _generateDai(receiver, amount);
