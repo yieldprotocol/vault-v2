@@ -3,6 +3,8 @@ pragma solidity ^0.5.2;
 import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./interfaces/IDaiJoin.sol";
+import "./interfaces/IEthJoin.sol";
 import "./interfaces/IVat.sol";
 
 
