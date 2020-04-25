@@ -17,7 +17,7 @@ interface IVault {
 
     /// @dev Retrieve collateral
     /// TODO: Allow retrieving for others with AccessControl
-    function retrieve(uint256 amount) external returns (bool);
+    function withdraw(uint256 amount) external returns (bool);
 
     /// @dev Lock collateral equivalent to an amount of underlying
     /// TODO: Allow locking for others with AccessControl

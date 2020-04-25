@@ -30,7 +30,7 @@ contract Treasury {
     uint256 public rate; // accumulator (for stability fee) at maturity in ray units
 
     /// @dev Moves Eth collateral from user into Treasury controlled Maker Eth vault
-    function postCollateral(address from, uint256 amount) public {
+    function post(address from, uint256 amount) public {
         require(
             weth.transferFrom(from, address(this), amount),
             "YToken: WETH transfer fail"
@@ -65,7 +65,7 @@ contract Treasury {
     }
 
     /// @dev Moves Eth collateral from Treasury controlled Maker Eth vault back to user
-    function withdrawCollateral(address dst, uint256 amount) public {
+    function withdraw(address dst, uint256 amount) public {
         // Remove collateral from vault
         // collateral to add - wad
         int dink = -int(amount);
@@ -95,7 +95,7 @@ contract Treasury {
     }
 
     /// @dev Moves Dai from user into Treasury controlled Maker Dai vault
-    function repayDai(address source, uint256 amount) public {
+    function repay(address source, uint256 amount) public {
         require(
             dai.transferFrom(source, address(this), amount),
             "YToken: WETH transfer fail"
