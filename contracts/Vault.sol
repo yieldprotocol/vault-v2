@@ -50,7 +50,7 @@ contract Vault is Ownable {
 
     /// @dev Retrieve collateral
     /// TODO: Allow retrieving for others with Ownable
-    function retrieve(uint256 amount) public returns (bool) {
+    function withdraw(uint256 amount) public returns (bool) {
         require(
             unlockedOf(msg.sender) >= amount,
             "Vault: Unlock more collateral"

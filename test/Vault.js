@@ -25,9 +25,9 @@ contract('Vault', async (accounts) =>    {
         vault = await Vault.new(collateral.address, oracle.address, collateralRatio);
     });
 
-    it("collateral can't be retrieved if not available", async() => {
+    it("collateral can't be withdrawn if not available", async() => {
         await truffleAssert.fails(
-            vault.retrieve(collateralToPost, { from: user1 }),
+            vault.withdraw(collateralToPost, { from: user1 }),
             truffleAssert.REVERT,
             "Vault: Unlock more collateral",
         );
@@ -63,8 +63,8 @@ contract('Vault', async (accounts) =>    {
             await vault.post(collateralToPost, { from: user1 });
         });
 
-        it("collateral can be retrieved", async() => {
-            await vault.retrieve(collateralToPost, { from: user1 });
+        it("collateral can be withdrawn", async() => {
+            await vault.withdraw(collateralToPost, { from: user1 });
             assert.equal(
                     await vault.balanceOf(user1),
                     0,
