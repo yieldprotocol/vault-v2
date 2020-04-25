@@ -2,14 +2,15 @@ pragma solidity ^0.5.2;
 
 import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IVat.sol";
 
 
 contract Treasury {
     using DecimalMath for int256;
 
-    IWETH    public weth;
-    IDAI     public dai;
+    IERC20 public weth;
+    IERC20 public dai;
     // Maker join contracts:
     // https://github.com/makerdao/dss/blob/master/src/join.sol
     IEthJoin public ethjoin;
