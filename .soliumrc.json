@@ -45,9 +45,6 @@
         "semicolon-whitespace": "warning",
         "comma-whitespace": "warning",
         "conditionals-whitespace": "warning",
-        "arg-overflow": [
-            "warning",
-            3
-        ]
+        "arg-overflow": "off"
     }
 }
