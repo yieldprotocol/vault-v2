@@ -27,7 +27,7 @@ contract Treasury {
     bytes32 collateralType = "ETH-A";
 
     // TODO: Move to Constants.sol
-    // Fixed point precisions from MakerDao
+    // Fixed point256 precisions from MakerDao
     uint8 constant public wad = 18;
     uint8 constant public ray = 27;
     uint8 constant public rad = 45;
@@ -44,9 +44,9 @@ contract Treasury {
         wethJoin.join(address(this), amount); // GemJoin reverts if anything goes wrong.
         // All added collateral should be locked into the vault
         // collateral to add - wad
-        int dink = int(amount); // Can't be negative because `amount` is a uint
+        int256 dink = int256(amount); // Can't be negative because `amount` is a uint
         // Normalized Dai to receive - wad
-        int dart = 0;
+        int256 dart = 0;
         // frob alters Maker vaults
         vat.frob(
             collateralType,
@@ -63,9 +63,9 @@ contract Treasury {
     function withdraw(address receiver, uint256 amount) public {
         // Remove collateral from vault
         // collateral to add - wad
-        int dink = -int(amount); // `amount` must be positive since it is an uint
+        int256 dink = -int256(amount); // `amount` must be positive since it is an uint
         // Normalized Dai to receive - wad
-        int dart = 0;
+        int256 dart = 0;
         // frob alters Maker vaults
         vat.frob(
             collateralType,
@@ -89,11 +89,11 @@ contract Treasury {
         daiJoin.join(address(this)); // `daiJoin.join` doesn't pass an amount as a parameter?
         // Add Dai to vault
         // collateral to add - wad
-        int dink = 0;
+        int256 dink = 0;
 
         // Normalized Dai to receive - wad
         (, rate,,,) = vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
-        int dart = -int(amount.divd(rate, ray)); // `amount` and `rate` are positive
+        int256 dart = -int256(amount.divd(rate, ray)); // `amount` and `rate` are positive
         // frob alters Maker vaults
         vat.frob(
             collateralType,
@@ -105,15 +105,15 @@ contract Treasury {
         ); // `vat.frob` reverts on failure
     }
 
-    /// @dev Mint an `amount` of Dai
+    /// @dev Mint256 an `amount` of Dai
     function _generateDai(address receiver, uint256 amount) private {
         // Add Dai to vault
         // collateral to add - wad
-        int dink = 0; // Delta ink, change in collateral balance
+        int256 dink = 0; // Delta ink, change in collateral balance
         // Normalized Dai to receive - wad
         (, rate,,,) = vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
         // collateral to add -- all collateral should already be present
-        int dart = -int(amount.divd(rate, ray)); // Delta art, change in dai debt
+        int256 dart = -int256(amount.divd(rate, ray)); // Delta art, change in dai debt
         // Normalized Dai to receive - wad
         // frob alters Maker vaults
         vat.frob(
@@ -133,7 +133,7 @@ contract Treasury {
 
     /// @dev moves Dai from Treasury to user, borrowing from Maker DAO if not enough present.
     function disburse(address receiver, uint256 amount) public {
-        int toSend = int(amount);
+        int256 toSend = int256(amount);
         require(
             toSend >= 0,
             "YToken: Invalid amount"
