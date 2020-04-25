@@ -38,7 +38,7 @@ contract Treasury {
         weth.approve(address(ethjoin), amount);
         require(
             ethjoin.join(address(this), amount),
-            "YToken: ETHJOIN failed"
+            "YToken: ETH join failed"
         );
         // All added collateral should be locked into the vault
         // collateral to add - wad
@@ -89,8 +89,9 @@ contract Treasury {
         );
         require(
             ethjoin.exit(dst, amount),
-            "YToken: ETHJOIN failed"
+            "YToken: ETH exit failed"
         );
+        // Don't we need a weth.transferFrom() here?
         ethBalance -= amount;
     }
 
@@ -98,11 +99,11 @@ contract Treasury {
     function repay(address source, uint256 amount) public {
         require(
             dai.transferFrom(source, address(this), amount),
-            "YToken: WETH transfer fail"
+            "YToken: DAI transfer fail"
         );
         require(
             daiJoin.join(address(this), amount),
-            "YToken: ETHJOIN failed"
+            "YToken: DAI join failed"
         );
         // Add Dai to vault
         // collateral to add - wad
@@ -158,7 +159,7 @@ contract Treasury {
         );
         require(
             daiJoin.exit(address(this), amount),
-            "YToken: DAIJOIN failed"
+            "YToken: DAI exit failed"
         );
         require(
             dai.transferFrom(source, address(this), amount),
