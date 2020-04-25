@@ -29,7 +29,7 @@ contract Treasury {
 
     uint256 public rate; // accumulator (for stability fee) at maturity in ray units
 
-    /// @dev moves collateral from user into Treasury controlled vault
+    /// @dev Moves Eth collateral from user into Treasury controlled Maker Eth vault
     function postCollateral(address from, uint256 amount) public {
         require(
             weth.transferFrom(from, address(this), amount),
@@ -52,18 +52,19 @@ contract Treasury {
         // frob alters Maker vaults
         require(
             vat.frob(
-            collateralType,
-            address(this),
-            address(this),
-            address(this),
-            dink,
-            dart),
+                collateralType,
+                address(this),
+                address(this),
+                address(this),
+                dink,
+                dart
+            ),
             "YToken: vault update failed"
         );
         ethBalance += amount;
     }
 
-    /// @dev moves collateral from Treasury controlled vault back to user
+    /// @dev Moves Eth collateral from Treasury controlled Maker Eth vault back to user
     function withdrawCollateral(address dst, uint256 amount) public {
         // Remove collateral from vault
         // collateral to add - wad
@@ -77,12 +78,13 @@ contract Treasury {
         // frob alters Maker vaults
         require(
             vat.frob(
-            collateralType,
-            address(this),
-            address(this),
-            address(this),
-            dink,
-            dart),
+                collateralType,
+                address(this),
+                address(this),
+                address(this),
+                dink,
+                dart
+            ),
             "YToken: vault update failed"
         );
         require(
@@ -92,6 +94,7 @@ contract Treasury {
         ethBalance -= amount;
     }
 
+    /// @dev Moves Dai from user into Treasury controlled Maker Dai vault
     function repayDai(address source, uint256 amount) public {
         require(
             dai.transferFrom(source, address(this), amount),
@@ -115,25 +118,27 @@ contract Treasury {
         // frob alters Maker vaults
         require(
             vat.frob(
-            collateralType,
-            address(this),
-            address(this),
-            address(this),
-            dink,
-            dart),
+                collateralType,
+                address(this),
+                address(this),
+                address(this),
+                dink,
+                dart
+            ),
             "YToken: vault update failed"
         );
 
     }
 
-    function _generateDai(address dst, uint256 amount) public {
+    /// @dev Mint an `amount` of Dai
+    function _generateDai(address dst, uint256 amount) private {
         // Add Dai to vault
         // collateral to add - wad
-        int dink = 0;
+        int dink = 0; // Delta ink, change in collateral balance
         // Normalized Dai to receive - wad
         (, rate,,,) = vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
         // collateral to add -- all collateral should already be present
-        int dart = -int(amount.divd(rate, ray.unit()));
+        int dart = -int(amount.divd(rate, ray.unit())); // Delta art, change in dai debt
         require(
             dart <= 0,
             "YToken: Invalid amount"
@@ -142,25 +147,26 @@ contract Treasury {
         // frob alters Maker vaults
         require(
             vat.frob(
-            collateralType,
-            address(this),
-            address(this),
-            address(this),
-            dink,
-            dart),
+                collateralType,
+                address(this),
+                address(this),
+                address(this),
+                dink,
+                dart
+            ),
             "YToken: vault update failed"
         );
         require(
             daiJoin.exit(address(this), amount),
-            "YToken: ETHJOIN failed"
+            "YToken: DAIJOIN failed"
         );
         require(
             dai.transferFrom(source, address(this), amount),
-            "YToken: WETH transfer fail"
+            "YToken: DAI transfer fail"
         );
     }
 
-    /// @dev moves collateral from user into Treasury controlled vault
+    /// @dev moves Dai from Treasury to user, borrowing from Maker DAO if not enough present.
     function disburse(address receiver, uint256 amount) public {
         int toSend = int(amount);
         require(
