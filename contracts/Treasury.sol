@@ -22,8 +22,8 @@ contract Treasury {
     // Maker vat contract:
     IVat public vat;
 
-    int256 daiBalance;
-    uint256 ethBalance;
+    int256 daiBalance; // Could this be retrieved as dai.balanceOf(address(this)) - something?
+    // uint256 ethBalance; // This can be retrieved as weth.balanceOf(address(this))
     bytes32 collateralType = "ETH-A";
 
     // TODO: Move to Constants.sol
@@ -56,7 +56,6 @@ contract Treasury {
             dink,
             dart
         ); // `vat.frob` reverts on failure
-        ethBalance += amount;
     }
 
     /// @dev Moves Eth collateral from Treasury controlled Maker Eth vault back to user
@@ -76,7 +75,6 @@ contract Treasury {
             dart
         ); // `vat.frob` reverts on failure
         wethJoin.exit(receiver, amount); // `GemJoin` reverts on failures
-        ethBalance -= amount;
     }
 
     /// @dev Moves Dai from user into Treasury controlled Maker Dai vault
