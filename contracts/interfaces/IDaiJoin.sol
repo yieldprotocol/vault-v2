@@ -6,6 +6,6 @@ interface IDaiJoin {
     function rely(address usr) external;
     function deny(address usr) external;
     function cage() external;
-    function join(address usr) external;
+    function join(address usr, uint wad) external;
     function exit(address usr, uint wad) external;
 }

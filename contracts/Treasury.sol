@@ -83,8 +83,7 @@ contract Treasury {
             dai.transferFrom(source, address(this), amount),
             "YToken: DAI transfer fail"
         ); // TODO: Check dai behaviour on failed transfers
-        // No need for `dai.approve(address(daiJoin), amount)?
-        daiJoin.join(address(this)); // `daiJoin.join` doesn't pass an amount as a parameter?
+        daiJoin.join(address(this), amount);
         // Add Dai to vault
         // collateral to add - wad
         int256 dink = 0;
