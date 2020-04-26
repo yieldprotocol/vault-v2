@@ -74,8 +74,7 @@ contract Treasury {
             dink,
             dart
         ); // `vat.frob` reverts on failure
-        wethJoin.exit(address(this), amount); // `GemJoin` reverts on failures
-        weth.transferFrom(address(wethJoin), receiver, amount);
+        wethJoin.exit(receiver, amount); // `GemJoin` reverts on failures
     }
 
     /// @dev Moves Dai from user into Treasury controlled Maker Dai vault
@@ -123,11 +122,7 @@ contract Treasury {
             dink,
             dart
         ); // `vat.frob` reverts on failure
-        daiJoin.exit(address(this), amount); // `daiJoin` reverts on failures
-        require( // address(daiJoin) holds the dai?
-            dai.transferFrom(address(daiJoin), receiver, amount),
-            "YToken: DAI transfer fail"
-        ); // TODO: Check dai behaviour on failed transfers
+        daiJoin.exit(receiver, amount); // `daiJoin` reverts on failures
     }
 
     /// @dev moves Dai from Treasury to user, borrowing from Maker DAO if not enough present.
