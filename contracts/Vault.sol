@@ -27,7 +27,6 @@ contract Vault is Ownable {
 
     /// @dev Return posted collateral of an user
     function balanceOf(address user) public view returns (uint256) {
-        // No need for SafeMath, can't lock more than you have.
         return posted[user];
     }
 

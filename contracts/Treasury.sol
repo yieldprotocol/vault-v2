@@ -22,6 +22,8 @@ contract Treasury {
     // Maker vat contract:
     IVat public vat;
 
+    mapping(address => uint256) internal posted; // In WETH
+
     int256 daiBalance; // Could this be retrieved as dai.balanceOf(address(this)) - something?
     // uint256 ethBalance; // This can be retrieved as weth.balanceOf(address(this))
     bytes32 collateralType = "ETH-A";
@@ -33,6 +35,11 @@ contract Treasury {
     uint8 constant public rad = 45;
 
     uint256 public rate; // accumulator (for stability fee) at maturity in ray units
+
+    /// @dev Return posted collateral of an user
+    function postedOf(address user) public view returns (uint256) {
+        return posted[user];
+    }
 
     /// @dev Moves Eth collateral from user into Treasury controlled Maker Eth vault
     function post(address from, uint256 amount) public {
@@ -56,6 +63,7 @@ contract Treasury {
             dink,
             dart
         ); // `vat.frob` reverts on failure
+        posted[msg.sender].add(amount);
     }
 
     /// @dev Moves Eth collateral from Treasury controlled Maker Eth vault back to user
@@ -75,6 +83,7 @@ contract Treasury {
             dart
         ); // `vat.frob` reverts on failure
         wethJoin.exit(receiver, amount); // `GemJoin` reverts on failures
+        posted[msg.sender].sub(amount);
     }
 
     /// @dev Moves Dai from user into Treasury controlled Maker Dai vault
@@ -102,6 +111,25 @@ contract Treasury {
         ); // `vat.frob` reverts on failure
     }
 
+    /// @dev moves Dai from Treasury to user, borrowing from Maker DAO if not enough present.
+    function disburse(address receiver, uint256 amount) public {
+        int256 toSend = int256(amount);
+        require(
+            toSend >= 0,
+            "YToken: Invalid amount"
+        );
+        if (daiBalance > toSend) {
+            //send funds directly
+            require(
+                dai.transfer(receiver, amount),
+                "YToken: DAI transfer fail"
+            ); // TODO: Check dai behaviour on failed transfers
+        } else {
+            //borrow funds and send them
+            _generateDai(receiver, amount);
+        }
+    }
+
     /// @dev Mint256 an `amount` of Dai
     function _generateDai(address receiver, uint256 amount) private {
         // Add Dai to vault
@@ -122,24 +150,5 @@ contract Treasury {
             dart
         ); // `vat.frob` reverts on failure
         daiJoin.exit(receiver, amount); // `daiJoin` reverts on failures
-    }
-
-    /// @dev moves Dai from Treasury to user, borrowing from Maker DAO if not enough present.
-    function disburse(address receiver, uint256 amount) public {
-        int256 toSend = int256(amount);
-        require(
-            toSend >= 0,
-            "YToken: Invalid amount"
-        );
-        if (daiBalance > toSend) {
-            //send funds directly
-            require(
-                dai.transfer(receiver, amount),
-                "YToken: DAI transfer fail"
-            ); // TODO: Check dai behaviour on failed transfers
-        } else {
-            //borrow funds and send them
-            _generateDai(receiver, amount);
-        }
     }
 }
