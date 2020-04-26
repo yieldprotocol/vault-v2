@@ -101,7 +101,7 @@ contract YDai {
     /// @dev Burn yTokens and unlock its market value in collateral. Debt is erased in the vault.
     function repay(uint256 amount) public returns (bool) {
         _burn(msg.sender, amount);
-        treasury.unlock(msg.sender, amount);
+        treasury.unlock(msg.sender, amount); // If repaying more than the debt, this should revert.
         return true;
     }
 }
