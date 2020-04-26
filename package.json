@@ -1,6 +1,6 @@
 {
-  "name": "dapp",
-  "version": "1.0.0",
+  "name": "yToken",
+  "version": "0.3.0",
   "description": "",
   "main": "index.js",
   "author": "",
@@ -27,8 +27,8 @@
     "web3": "^1.2.6"
   },
   "dependencies": {
-    "@hq20/contracts": "^0.0.3",
-    "@openzeppelin/contracts": "^2.5.0",
+    "@hq20/contracts": "^0.0.4",
+    "@openzeppelin/contracts": "^3.0.0",
     "builder": "^5.0.0",
     "root": "github:nomiclabs/buidler#v1.2.0"
   }

@@ -1,4 +1,4 @@
-pragma solidity ^0.5.2;
+pragma solidity ^0.6.2;
 
 
 /// @dev Interface to interact with the `Join.sol` contract from MakerDAO using ERC20
