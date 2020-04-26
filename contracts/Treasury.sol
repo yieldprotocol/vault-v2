@@ -8,7 +8,7 @@ import "./interfaces/IGemJoin.sol";
 import "./interfaces/IVat.sol";
 
 
-contract Treasury {
+contract Treasury is Ownable() {
     using DecimalMath for uint256;
     using DecimalMath for int256;
     using DecimalMath for uint8;
@@ -23,6 +23,7 @@ contract Treasury {
     IVat public vat;
 
     mapping(address => uint256) internal posted; // In WETH
+    mapping(address => uint256) internal debt; // In DAI
 
     int256 daiBalance; // Could this be retrieved as dai.balanceOf(address(this)) - something?
     // uint256 ethBalance; // This can be retrieved as weth.balanceOf(address(this))
@@ -84,6 +85,30 @@ contract Treasury {
         ); // `vat.frob` reverts on failure
         wethJoin.exit(receiver, amount); // `GemJoin` reverts on failures
         posted[msg.sender].sub(amount);
+    }
+
+    /// @dev Add `amount` to the debt of `user`, as long as `user` has posted enough collateral
+    function lock(address user, uint256 amount) public onlyOwner returns (bool) {
+        uint256 totalDebt = debt[user].add(amount);
+        uint256 collateralAmount = totalDebt; // TODO: Convert from DAI amount to WETH amount
+        require(
+            postedOf(user) >= collateralAmount,
+            "Vault: Not enough collateral"
+        );
+        debt[user] = totalDebt;
+        return true;
+    }
+
+    /// @dev Remove `amount from the debt of `user`.
+    function unlock(address user, uint256 amount) public onlyOwner returns (bool) {
+        uint256 totalDebt = debt[user].sub(amount);
+        uint256 collateralAmount = totalDebt; // TODO: Convert from DAI amount to WETH amount
+        require(
+            postedOf(user) >= collateralAmount, // TODO: Not sure if this can ever happen
+            "Vault: Not enough collateral"
+        );
+        debt[user] = totalDebt;
+        return true;
     }
 
     /// @dev Moves Dai from user into Treasury controlled Maker Dai vault
