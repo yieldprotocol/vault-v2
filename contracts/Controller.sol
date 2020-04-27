@@ -43,7 +43,20 @@ contract Controller is Ownable, Constants {
         return posted[user].sub(debtOf(user).divd(_daiOracle.get(), ray));
     }
 
-    // ---------- Manage Collateral ----------
+    /// @dev Return debt in underlying of an user
+    ///
+    ///                        rate_now
+    /// debt_now = debt_mat * ----------
+    ///                        rate_mat
+    ///
+    function debtOf(address user) public view returns (uint256) {
+        if (_yDai.isMature){
+            (, uint256 rate,,,) = vat.ilks("ETH-A");
+            return debt[user].muld(rate.divd(_yDai.maturityRate, ray), ray);
+        } else {
+            return debt[user];
+        }
+    }
 
     /// @dev Moves Eth collateral from user into Treasury controlled Maker Eth vault
     /// user --- Weth ---> us
@@ -88,6 +101,7 @@ contract Controller is Ownable, Constants {
     ///                                   debt_mat
     /// debt_now = debt - repay_amount * ----------
     ///                                   debt_now
+    ///
     /// user --- Dai ---> us
     /// debt--
     function repay(address user, uint256 amount) public {
@@ -112,18 +126,5 @@ contract Controller is Ownable, Constants {
             "Accounts: Only mature redeem"
         );
         _treasury.burn(user, amount);
-    }
-
-    /// @dev Return debt in underlying of an user
-    ///                        rate_now
-    /// debt_now = debt_mat * ----------
-    ///                        rate_mat
-    function debtOf(address user) public view returns (uint256) {
-        if (_yDai.isMature){
-            (, uint256 rate,,,) = vat.ilks("ETH-A");
-            return debt[user].muld(rate.divd(_yDai.maturityRate, ray), ray);
-        } else {
-            return debt[user];
-        }
     }
 }
