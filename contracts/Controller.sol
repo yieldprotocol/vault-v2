@@ -77,9 +77,12 @@ contract Controller is Ownable, Constants {
     }
 
     /// @dev Moves Dai from user into Treasury controlled Maker Dai vault
+    ///                                   debt_mat
+    /// debt_now = debt - repay_amount * ----------
+    ///                                   debt_now
     function repay(address user, uint256 amount) public {
-        // TODO: Needs to reverse the `debtOf` formula
-        debt[user] = debt[user].sub(amount); // Will revert if not enough debt
+        uint256 debtProportion = debt[user].mul(ray.unit()).divd(debtOf(user).mul(ray.unit()), ray);
+        debt[user] = debt[user].sub(amount.muld(debtProportion, ray)); // Will revert if not enough debt
         _treasury.repay(user, amount);
     }
 
@@ -98,11 +101,13 @@ contract Controller is Ownable, Constants {
     }
 
     /// @dev Return debt in underlying of an user
-    /// TODO: This needs to move to Treasury.sol, which also needs then to have the maturity data
+    ///                        rate_now
+    /// debt_now = debt_mat * ----------
+    ///                        rate_mat
     function debtOf(address user) public view returns (uint256) {
         if (_yDai.isMature){
             (, uint256 rate,,,) = vat.ilks("ETH-A");
-            return debt[user].muld(rate.divd(maturityRate, ray), ray);
+            return debt[user].muld(rate.divd(_yDai.maturityRate, ray), ray);
         } else {
             return debt[user];
         }
