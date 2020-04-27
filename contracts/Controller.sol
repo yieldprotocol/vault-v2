@@ -39,8 +39,9 @@ contract Controller is Ownable, Constants {
     ///                       daiOracle.get()(ray)
     ///
     function unlockedOf(address user) public view returns (uint256) {
-        // TODO: Reverts when unlocked collateral goes into the negative
-        return posted[user].sub(debtOf(user).divd(_daiOracle.get(), ray));
+        uint256 locked = debtOf(user).divd(_daiOracle.get(), ray);
+        if (locked > posted[user]) return 0; // Unlikely
+        return posted[user].sub(locked);
     }
 
     /// @dev Return debt in underlying of an user
