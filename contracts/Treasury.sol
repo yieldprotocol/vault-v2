@@ -1,6 +1,7 @@
 pragma solidity ^0.6.2;
 
 import "@hq20/contracts/contracts/math/DecimalMath.sol";
+import "@hq20/contracts/contracts/utils/SafeCast.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/Math.sol";
@@ -47,7 +48,7 @@ contract Treasury is Ownable, Constants {
         wethJoin.join(address(this), amount); // GemJoin reverts if anything goes wrong.
         // All added collateral should be locked into the vault
         // collateral to add - wad
-        int256 dink = int256(amount); // Can't be negative because `amount` is a uint
+        int256 dink = amount.toInt256();
         // Normalized Dai to receive - wad
         int256 dart = 0;
         // frob alters Maker vaults
@@ -66,7 +67,7 @@ contract Treasury is Ownable, Constants {
     function withdraw(address receiver, uint256 amount) public {
         // Remove collateral from vault
         // collateral to add - wad
-        int256 dink = -int256(amount); // `amount` must be positive since it is an uint
+        int256 dink = -(amount.toInt256());
         // Normalized Dai to receive - wad
         int256 dart = 0;
         // frob alters Maker vaults
@@ -123,7 +124,7 @@ contract Treasury is Ownable, Constants {
         }
     }
 
-    /// @dev Mint256 an `amount` of Dai
+    /// @dev Mint an `amount` of Dai
     function _borrowDai(address receiver, uint256 amount) private {
         // Add Dai to vault
         // collateral to add - wad
@@ -131,7 +132,7 @@ contract Treasury is Ownable, Constants {
         // Normalized Dai to receive - wad
         (, rate,,,) = vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
         // collateral to add -- all collateral should already be present
-        int256 dart = -int256(amount.divd(rate, ray)); // Delta art, change in dai debt
+        int256 dart = -(amount.divd(rate, ray).toInt256()); // Delta art, change in dai debt
         // Normalized Dai to receive - wad
         // frob alters Maker vaults
         vat.frob(
