@@ -6,9 +6,11 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IDaiJoin.sol";
 import "./interfaces/IGemJoin.sol";
 import "./interfaces/IVat.sol";
+import "./Constants.sol";
 
 
-contract Treasury is Ownable() {
+/// @dev Treasury is the bottom layer that moves all assets.
+contract Treasury is Ownable, Constants {
     using DecimalMath for uint256;
     using DecimalMath for int256;
     using DecimalMath for uint8;
@@ -22,9 +24,6 @@ contract Treasury is Ownable() {
     // Maker vat contract:
     IVat public vat;
 
-    mapping(address => uint256) internal posted; // In WETH
-    mapping(address => uint256) internal debt; // In DAI
-
     int256 daiBalance; // Could this be retrieved as dai.balanceOf(address(this)) - something?
     // uint256 ethBalance; // This can be retrieved as weth.balanceOf(address(this))
     bytes32 collateralType = "ETH-A";
@@ -34,13 +33,6 @@ contract Treasury is Ownable() {
     uint8 constant public wad = 18;
     uint8 constant public ray = 27;
     uint8 constant public rad = 45;
-
-    uint256 public rate; // accumulator (for stability fee) at maturity in ray units
-
-    /// @dev Return posted collateral of an user
-    function postedOf(address user) public view returns (uint256) {
-        return posted[user];
-    }
 
     /// @dev Moves Eth collateral from user into Treasury controlled Maker Eth vault
     function post(address from, uint256 amount) public {
@@ -64,7 +56,6 @@ contract Treasury is Ownable() {
             dink,
             dart
         ); // `vat.frob` reverts on failure
-        posted[msg.sender].add(amount);
     }
 
     /// @dev Moves Eth collateral from Treasury controlled Maker Eth vault back to user
@@ -84,31 +75,6 @@ contract Treasury is Ownable() {
             dart
         ); // `vat.frob` reverts on failure
         wethJoin.exit(receiver, amount); // `GemJoin` reverts on failures
-        posted[msg.sender].sub(amount);
-    }
-
-    /// @dev Add `amount` to the debt of `user`, as long as `user` has posted enough collateral
-    function lock(address user, uint256 amount) public onlyOwner returns (bool) {
-        uint256 totalDebt = debt[user].add(amount);
-        uint256 collateralAmount = totalDebt; // TODO: Convert from DAI amount to WETH amount
-        require(
-            postedOf(user) >= collateralAmount,
-            "Vault: Not enough collateral"
-        );
-        debt[user] = totalDebt;
-        return true;
-    }
-
-    /// @dev Remove `amount from the debt of `user`.
-    function unlock(address user, uint256 amount) public onlyOwner returns (bool) {
-        uint256 totalDebt = debt[user].sub(amount);
-        uint256 collateralAmount = totalDebt; // TODO: Convert from DAI amount to WETH amount
-        require(
-            postedOf(user) >= collateralAmount, // TODO: Not sure if this can ever happen
-            "Vault: Not enough collateral"
-        );
-        debt[user] = totalDebt;
-        return true;
     }
 
     /// @dev Moves Dai from user into Treasury controlled Maker Dai vault
