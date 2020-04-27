@@ -43,13 +43,17 @@ contract Controller is Ownable, Constants {
         return posted[user].sub(debtOf(user).divd(_daiOracle.get(), ray));
     }
 
+    // ---------- Manage Collateral ----------
+
     /// @dev Moves Eth collateral from user into Treasury controlled Maker Eth vault
+    /// user --- Weth ---> us
     function post(address user, uint256 amount) public {
         posted[user] = posted[user].add(amount);
         _treasury.post(user, amount);
     }
 
     /// @dev Moves Eth collateral from Treasury controlled Maker Eth vault back to user
+    /// us --- Weth ---> user
     function withdraw(address user, uint256 amount) public {
         require(
             unlockedOf(user) >= amount,
@@ -59,10 +63,14 @@ contract Controller is Ownable, Constants {
         _treasury.withdraw(user, amount);
     }
 
+    // ---------- Manage Dai/yDai ----------
+
     /// @dev Mint yTokens by locking its market value in collateral. Debt is recorded in the vault.
     ///
     /// posted[user](wad) >= (debt[user](wad)) * amount (wad)) * collateralization (ray)
     ///
+    /// us --- yDai ---> user
+    /// debt++
     function borrow(address user, uint256 amount) public {
         require(
             _yDai.isMature != true,
@@ -80,6 +88,8 @@ contract Controller is Ownable, Constants {
     ///                                   debt_mat
     /// debt_now = debt - repay_amount * ----------
     ///                                   debt_now
+    /// user --- Dai ---> us
+    /// debt--
     function repay(address user, uint256 amount) public {
         uint256 debtProportion = debt[user].mul(ray.unit()).divd(debtOf(user).mul(ray.unit()), ray);
         debt[user] = debt[user].sub(amount.muld(debtProportion, ray)); // Will revert if not enough debt
@@ -87,11 +97,15 @@ contract Controller is Ownable, Constants {
     }
 
     /// @dev Mint yTokens by posting an equal amount of underlying.
+    /// user --- Dai  ---> us
+    /// us   --- yDai ---> user
     function mint(address user, uint256 amount) public {
         _treasury.mint(user, amount);
     }
 
     /// @dev Burn yTokens and return an equal amount of underlying.
+    /// user --- yDai ---> us
+    /// us   --- Dai  ---> user
     function redeem(address user, uint256 amount) public returns (bool) {
         require(
             _yDai.isMature() == true,
