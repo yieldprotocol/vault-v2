@@ -168,13 +168,13 @@ contract Treasury is Ownable, Constants {
     function _lockDai() private {
         uint256 balance = dai.balanceOf(address(this));
         uint256 chi = pot.chi();
-        uint256 normalizedAmount = amount.divd(chi, ray));
+        uint256 normalizedAmount = balance.divd(chi, ray));
         pot.join(normalizedAmount);
     }
 
     /// @dev remove Dai from the DSR
     function _freeDai(uint256 amount) private {
-         uint256 chi = pot.chi();
+        uint256 chi = pot.chi();
         uint256 normalizedAmount = amount.divd(chi, ray));
         pot.exit(normalizedAmount);
     }
