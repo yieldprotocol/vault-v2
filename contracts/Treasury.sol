@@ -67,7 +67,7 @@ contract Treasury is Ownable, Constants {
     function withdraw(address receiver, uint256 amount) public {
         // Remove collateral from vault
         // collateral to add - wad
-        int256 dink = -(amount.toInt256());
+        int256 dink = -amount.toInt256();
         // Normalized Dai to receive - wad
         int256 dart = 0;
         // frob alters Maker vaults
@@ -88,13 +88,13 @@ contract Treasury is Ownable, Constants {
             dai.transferFrom(source, address(this), amount),
             "YToken: DAI transfer fail"
         ); // TODO: Check dai behaviour on failed transfers
-        (, uint256 normalizedDebt) = vat.urns(collateralType, address(this)));
+        (, uint256 normalizedDebt) = vat.urns(collateralType, address(this));
         if (normalizedDebt > 0){
             // repay as much debt as possible
             (, uint256 rate,,,) = vat.ilks(collateralType);
             // Normalized Dai to receive - wad
             int256 dart = int256(amount.divd(rate, ray)); // `amount` and `rate` are positive
-            maturityRate = Math.min(dart, ray.unit()); // only repay up to total in 
+            maturityRate = Math.min(dart, ray.unit()); // only repay up to total in
             _repayDai(dart);
         } else {
             // put funds in the DSR
@@ -112,7 +112,7 @@ contract Treasury is Ownable, Constants {
         uint256 balance = normalizedBalance.muld(chi, ray);
         if (balance > toSend) {
             //send funds directly
-            uint256 normalizedAmount = amount.divd(chi, ray));
+            uint256 normalizedAmount = amount.divd(chi, ray);
             _freeDai(normalizedAmount);
             require(
                 dai.transfer(receiver, amount),
@@ -125,14 +125,14 @@ contract Treasury is Ownable, Constants {
     }
 
     /// @dev Mint an `amount` of Dai
-    function _borrowDai(address receiver, uint256 amount) private {
+    function _borrowDai(address receiver, uint256 amount) internal {
         // Add Dai to vault
         // collateral to add - wad
         int256 dink = 0; // Delta ink, change in collateral balance
         // Normalized Dai to receive - wad
         (, rate,,,) = vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
         // collateral to add -- all collateral should already be present
-        int256 dart = -(amount.divd(rate, ray).toInt256()); // Delta art, change in dai debt
+        int256 dart = -amount.divd(rate, ray).toInt256(); // Delta art, change in dai debt
         // Normalized Dai to receive - wad
         // frob alters Maker vaults
         vat.frob(
@@ -147,7 +147,7 @@ contract Treasury is Ownable, Constants {
     }
 
         /// @dev Moves Dai from user into Treasury controlled Maker Dai vault
-    function _repayDai(uint256 dart) private {
+    function _repayDai(uint256 dart) internal {
         // TODO: Check dai behaviour on failed transfers
         daiJoin.join(address(this), amount);
         // Add Dai to vault
@@ -165,17 +165,17 @@ contract Treasury is Ownable, Constants {
     }
 
     /// @dev lock all Dai in the DSR
-    function _lockDai() private {
+    function _lockDai() internal {
         uint256 balance = dai.balanceOf(address(this));
         uint256 chi = pot.chi();
-        uint256 normalizedAmount = balance.divd(chi, ray));
+        uint256 normalizedAmount = balance.divd(chi, ray);
         pot.join(normalizedAmount);
     }
 
     /// @dev remove Dai from the DSR
-    function _freeDai(uint256 amount) private {
+    function _freeDai(uint256 amount) internal {
         uint256 chi = pot.chi();
-        uint256 normalizedAmount = amount.divd(chi, ray));
+        uint256 normalizedAmount = amount.divd(chi, ray);
         pot.exit(normalizedAmount);
     }
 }
