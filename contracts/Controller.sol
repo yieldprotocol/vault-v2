@@ -8,7 +8,7 @@ import "./interfaces/IOracle.sol";
 import "./Constants.sol";
 
 
-/// @dev Controller is the top layer that implements rules and keeps the system state
+/// @dev Controller manages the state variables for an yDai series
 contract Controller is Ownable, Constants {
     using DecimalMath for uint256;
     using DecimalMath for int256;
@@ -115,7 +115,8 @@ contract Controller is Ownable, Constants {
     /// user --- Dai  ---> us
     /// us   --- yDai ---> user
     function mint(address user, uint256 amount) public {
-        _treasury.mint(user, amount);
+        _treasury.repay(user, amount);
+        _yDai.mint(user, amount);
     }
 
     /// @dev Burn yTokens and return an equal amount of underlying.
@@ -126,6 +127,7 @@ contract Controller is Ownable, Constants {
             _yDai.isMature() == true,
             "Accounts: Only mature redeem"
         );
-        _treasury.burn(user, amount);
+        _yDai.burn(user, amount);
+        _treasure.disburse(user, amount);
     }
 }
