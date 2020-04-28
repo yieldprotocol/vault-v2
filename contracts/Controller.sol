@@ -99,9 +99,9 @@ contract Controller is Ownable, Constants {
     }
 
     /// @dev Moves Dai from user into Treasury controlled Maker Dai vault
-    ///                                   debt_mat
-    /// debt_now = debt - repay_amount * ----------
-    ///                                   debt_now
+    ///                                                  debt_maturity
+    /// debt_discounted = debt_nominal - repay_amount * ---------------
+    ///                                                  debt_nominal
     ///
     /// user --- Dai ---> us
     /// debt--
