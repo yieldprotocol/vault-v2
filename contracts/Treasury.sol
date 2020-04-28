@@ -125,7 +125,7 @@ contract Treasury is Ownable, Constants {
     }
 
     /// @dev Mint an `amount` of Dai
-    function _borrowDai(address receiver, uint256 amount) private {
+    function _borrowDai(address receiver, uint256 amount) internal {
         // Add Dai to vault
         // collateral to add - wad
         int256 dink = 0; // Delta ink, change in collateral balance
@@ -147,7 +147,7 @@ contract Treasury is Ownable, Constants {
     }
 
         /// @dev Moves Dai from user into Treasury controlled Maker Dai vault
-    function _repayDai(uint256 dart) private {
+    function _repayDai(uint256 dart) internal {
         // TODO: Check dai behaviour on failed transfers
         daiJoin.join(address(this), amount);
         // Add Dai to vault
@@ -165,7 +165,7 @@ contract Treasury is Ownable, Constants {
     }
 
     /// @dev lock all Dai in the DSR
-    function _lockDai() private {
+    function _lockDai() internal {
         uint256 balance = dai.balanceOf(address(this));
         uint256 chi = pot.chi();
         uint256 normalizedAmount = balance.divd(chi, ray);
@@ -173,7 +173,7 @@ contract Treasury is Ownable, Constants {
     }
 
     /// @dev remove Dai from the DSR
-    function _freeDai(uint256 amount) private {
+    function _freeDai(uint256 amount) internal {
         uint256 chi = pot.chi();
         uint256 normalizedAmount = amount.divd(chi, ray);
         pot.exit(normalizedAmount);
