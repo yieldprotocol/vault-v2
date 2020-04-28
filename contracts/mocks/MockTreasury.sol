@@ -17,7 +17,7 @@ contract MockTreasury is Treasury {
         _lockDai();
     }
 
-    function _freeDai(uint256 amount) private {
+    function freeDai(uint256 amount) public {
         _freeDai(amount);
     }
 }
