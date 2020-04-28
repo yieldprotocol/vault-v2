@@ -84,7 +84,7 @@ contract('Treasury', async (accounts) =>  {
     });
 });
 
-contract('Treasury Private Functions', async (accounts) =>  {
+contract('Treasury Internal Functions', async (accounts) =>  {
     let TreasuryInstance;
     let owner = accounts[0];
 
