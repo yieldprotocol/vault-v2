@@ -1,5 +1,6 @@
 pragma solidity ^0.6.2;
 
+import "@hq20/contracts/contracts/access/AuthorizedAccess.sol";
 import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@hq20/contracts/contracts/utils/SafeCast.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
@@ -13,7 +14,7 @@ import "./Constants.sol";
 
 
 /// @dev Treasury is the bottom layer that moves all assets.
-contract Treasury is Ownable, Constants {
+contract Treasury is AuthorizedAccess(), Constants() {
     using DecimalMath for uint256;
     using DecimalMath for int256;
     using DecimalMath for uint8;
@@ -39,7 +40,7 @@ contract Treasury is Ownable, Constants {
     uint8 constant public rad = 45;
 
     /// @dev Moves Eth collateral from user into Treasury controlled Maker Eth vault
-    function post(address from, uint256 amount) public {
+    function post(address from, uint256 amount) public onlyAuthorized {
         require(
             weth.transferFrom(from, address(this), amount),
             "YToken: WETH transfer fail"
@@ -64,7 +65,7 @@ contract Treasury is Ownable, Constants {
 
     /// @dev Moves Eth collateral from Treasury controlled Maker Eth vault back to user
     /// TODO: This function requires authorization to use
-    function withdraw(address receiver, uint256 amount) public {
+    function withdraw(address receiver, uint256 amount) public onlyAuthorized {
         // Remove collateral from vault
         // collateral to add - wad
         int256 dink = -amount.toInt256();
@@ -83,7 +84,7 @@ contract Treasury is Ownable, Constants {
     }
 
     /// @dev Moves Dai from user into Treasury controlled Maker Dai vault
-    function repay(address source, uint256 amount) public {
+    function repay(address source, uint256 amount) public onlyAuthorized {
         require(
             dai.transferFrom(source, address(this), amount),
             "YToken: DAI transfer fail"
@@ -106,7 +107,7 @@ contract Treasury is Ownable, Constants {
 
     /// @dev moves Dai from Treasury to user, borrowing from Maker DAO if not enough present.
     /// TODO: This function requires authorization to use
-    function disburse(address receiver, uint256 amount) public {
+    function disburse(address receiver, uint256 amount) public onlyAuthorized {
         uint256 chi = pot.chi();
         uint256 normalizedBalance = pot.pie(address(this));
         uint256 balance = normalizedBalance.muld(chi, ray);

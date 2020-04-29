@@ -2,13 +2,14 @@ pragma solidity ^0.6.2;
 
 import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@openzeppelin/contracts/math/Math.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IVat.sol";
 import "./interfaces/IPot.sol";
 import "./YToken.sol";
 
 
 ///@dev yDai is a yToken targeting Dai
-contract YDai {
+contract YDai is Ownable() {
     using DecimalMath for uint256;
     using DecimalMath for uint8;
 
@@ -43,13 +44,13 @@ contract YDai {
         emit Matured(maturityRate, maturityChi);
     }
 
-    /// @dev Mint yDai.
-    function mint(address user, uint256 amount) public {
+    /// @dev Mint yDai. Only callable by its Controller contract.
+    function mint(address user, uint256 amount) public onlyOwner {
         _mint(user, amount);
     }
 
-    /// @dev Burn yTokens and unlock its market value in collateral. Debt is erased in the vault.
-    function burn(address user, uint256 amount) public {
+    /// @dev Burn yDai. Only callable by its Controller contract.
+    function burn(address user, uint256 amount) public onlyOwner {
         _burn(user, amount);
     }
 }
