@@ -11,7 +11,7 @@ contract TestOracle is IOracle {
         price = price_;
     }
 
-    function get() public view returns (uint256) {
+    function get() public view override returns (uint256) {
         return price;
     }
 }
