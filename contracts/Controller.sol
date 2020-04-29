@@ -1,6 +1,6 @@
 pragma solidity ^0.6.2;
 
-import "@hq20/contracts/contracts/math/DecimalMath.sol";
+/* import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/ITreasury.sol";
@@ -130,4 +130,4 @@ contract Controller is Ownable, Constants {
         _yDai.burn(user, amount);
         _treasure.disburse(user, amount);
     }
-}
+} */
