@@ -1,11 +1,10 @@
-pragma solidity ^0.6.2;
+pragma solidity ^0.6.0;
 
-import "@hq20/contracts/contracts/math/DecimalMath.sol";
+/* import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IVat.sol";
 import "./interfaces/IPot.sol";
-import "./YToken.sol";
 
 
 ///@dev yDai is a yToken targeting Dai
@@ -53,4 +52,4 @@ contract YDai is Ownable() {
     function burn(address user, uint256 amount) public onlyOwner {
         _burn(user, amount);
     }
-}
+} */
