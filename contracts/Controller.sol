@@ -2,6 +2,7 @@ pragma solidity ^0.6.2;
 
 import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IOracle.sol";
@@ -11,6 +12,7 @@ import "./YDai.sol"; // TODO: Find how to use an interface
 
 /// @dev Controller manages the state variables for an yDai series
 contract Controller is Ownable, Constants {
+    using SafeMath for uint256;
     using DecimalMath for uint256;
     using DecimalMath for int256;
     using DecimalMath for uint8;
