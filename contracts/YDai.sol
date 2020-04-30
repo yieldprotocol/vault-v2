@@ -1,18 +1,23 @@
 pragma solidity ^0.6.0;
 
-/* import "@hq20/contracts/contracts/math/DecimalMath.sol";
-import "@openzeppelin/contracts/math/Math.sol";
+import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./interfaces/IVat.sol";
+import "@openzeppelin/contracts/math/Math.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./interfaces/IPot.sol";
+import "./interfaces/IVat.sol";
+import "./Constants.sol";
 
 
 ///@dev yDai is a yToken targeting Dai
-contract YDai is Ownable() {
+contract YDai is Constants, Ownable, ERC20 {
     using DecimalMath for uint256;
     using DecimalMath for uint8;
 
     event Matured(uint256 rate, uint256 chi);
+
+    IVat public vat;
+    IPot public pot;
 
     bool public isMature;
     uint256 public maturity;
@@ -20,16 +25,19 @@ contract YDai is Ownable() {
     uint256 public maturityRate; // accumulator (for stability fee) at maturity in ray units
 
     constructor(
-        address underlying_,
-        address treasury_,
+        string memory name,
+        string memory symbol,
+        address vat_,
+        address pot_,
         uint256 maturity_
-    ) public {
-        underlying = IERC20(underlying_);
-        treasury = ITreasury(treasury_);
+    ) public ERC20(name, symbol) Ownable() {
+        vat = IVat(vat_);
+        pot = IPot(pot_);
         maturity = maturity_;
     }
 
     /// @dev Mature yDai and capture maturity data
+    /// TODO: Should we just take maturityRate and maturityChi as parameters?
     function mature() public {
         require(
             // solium-disable-next-line security/no-block-members
@@ -52,4 +60,4 @@ contract YDai is Ownable() {
     function burn(address user, uint256 amount) public onlyOwner {
         _burn(user, amount);
     }
-} */
+}
