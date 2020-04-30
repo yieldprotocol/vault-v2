@@ -9,8 +9,8 @@ contract MockTreasury is Treasury {
         _borrowDai(receiver, amount);
     }
 
-    function repayDai(uint256 dart) public {
-        _repayDai(dart);
+    function repayDai() public {
+        _repayDai();
     }
 
     function lockDai() public {
