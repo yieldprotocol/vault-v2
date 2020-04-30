@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IOracle.sol";
 import "./Constants.sol";
+import "./YDai.sol"; // TODO: Find how to use an interface
 
 
 /// @dev Controller manages the state variables for an yDai series
@@ -17,7 +18,7 @@ contract Controller is Ownable, Constants {
     ITreasury internal _treasury;
     IERC20 internal _weth;
     IERC20 internal _dai;
-    IYDai internal _yDai;
+    YDai internal _yDai;
     IOracle internal _daiOracle;
 
     mapping(address => uint256) internal posted; // In WETH
@@ -28,7 +29,7 @@ contract Controller is Ownable, Constants {
 
     constructor (address treasury_, address yDai_, address daiOracle_) public {
         _treasury = ITreasury(treasury_);
-        _yDai = IYDai(yDai_);
+        _yDai = YDai(yDai_);
         _daiOracle = IOracle(daiOracle_);
     }
 
