@@ -88,11 +88,7 @@ contract Treasury is AuthorizedAccess(), Constants() {
         (, uint256 normalizedDebt) = vat.urns(collateralType, address(this));
         if (normalizedDebt > 0){
             // repay as much debt as possible
-            (, uint256 rate,,,) = vat.ilks(collateralType);
-            // Normalized Dai to receive - wad
-            uint256 dart = amount.divd(rate, ray); // `amount` and `rate` are positive
-            dart = Math.min(dart, ray.unit()); // only repay up to total in
-            _repayDai(dart);
+            _repayDai();
         } else {
             // put funds in the DSR
             _lockDai();
@@ -143,10 +139,26 @@ contract Treasury is AuthorizedAccess(), Constants() {
         daiJoin.exit(receiver, amount); // `daiJoin` reverts on failures
     }
 
-        /// @dev Moves Dai from user into Treasury controlled Maker Dai vault
-    function _repayDai(uint256 amount) internal {
+    /// @dev Moves Dai from user into Treasury controlled Maker Dai vault
+    function _repayDai() internal {
+        // repay as much debt as possible
+        uint256 balance = dai.balanceOf(address(this));
+        (, uint256 rate,,,) = vat.ilks(collateralType);
+        uint256 normalizedAmount = balance.divd(rate, ray);
+        (, uint256 normalizedDebt) = vat.urns(collateralType, address(this));
+        //int256 toRepay = Math.min(normalizedAmount, normalizedDebt); // only repay up to total in
+        int256 toRepay;
+        uint256 toJoin;
+        if (normalizedAmount >= normalizedDebt){
+            toRepay = -normalizedDebt.toInt();
+            toJoin = normalizedDebt.muld(rate, ray);
+        } else {
+            toRepay = -normalizedAmount.toInt();
+            toJoin = balance;
+
+        }
         // TODO: Check dai behaviour on failed transfers
-        daiJoin.join(address(this), amount);
+        daiJoin.join(address(this), toJoin);
         // Add Dai to vault
         // collateral to add - wad
         int256 dink = 0;
@@ -157,7 +169,7 @@ contract Treasury is AuthorizedAccess(), Constants() {
             address(this),
             address(this),
             dink,
-            amount.toInt()
+            toRepay
         ); // `vat.frob` reverts on failure
     }
 
