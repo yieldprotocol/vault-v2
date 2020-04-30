@@ -72,7 +72,7 @@ contract Controller is Ownable, Constants {
         require(
             unlockedOf(user) >= amount,
             "Accounts: Free more collateral"
-        )
+        );
         posted[user] = posted[user].sub(amount); // Will revert if not enough posted
         _treasury.withdraw(user, amount);
     }
@@ -93,7 +93,7 @@ contract Controller is Ownable, Constants {
         require(
             posted[user] >= (debtOf(user).add(amount)).muld(collateralization, ray),
             "Accounts: Post more collateral"
-        )
+        );
         debt[user] = debt[user].add(amount); // TODO: Check collateralization ratio
         _treasury.mint(user, amount);
     }
