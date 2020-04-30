@@ -55,9 +55,9 @@ contract Controller is Ownable, Constants {
     //                        rate_mat
     //
     function debtOf(address user) public view returns (uint256) {
-        if (_yDai.isMature){
+        if (_yDai.isMature()){
             (, uint256 rate,,,) = _vat.ilks("ETH-A");
-            return debt[user].muld(rate.divd(_yDai.maturityRate, ray), ray);
+            return debt[user].muld(rate.divd(_yDai.maturityRate(), ray), ray);
         } else {
             return debt[user];
         }
@@ -91,7 +91,7 @@ contract Controller is Ownable, Constants {
     // debt++
     function borrow(address user, uint256 amount) public {
         require(
-            _yDai.isMature != true,
+            _yDai.isMature() != true,
             "Accounts: No mature borrow"
         );
         require(
@@ -128,7 +128,7 @@ contract Controller is Ownable, Constants {
     // us   --- Dai  ---> user
     function redeem(address user, uint256 amount) public returns (bool) {
         require(
-            _yDai.isMature() == true,
+            _yDai.isMature(),
             "Accounts: Only mature redeem"
         );
         _yDai.burn(user, amount);
