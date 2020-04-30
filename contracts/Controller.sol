@@ -99,7 +99,7 @@ contract Controller is Ownable, Constants {
             "Accounts: Post more collateral"
         );
         debt[user] = debt[user].add(amount); // TODO: Check collateralization ratio
-        _treasury.mint(user, amount);
+        _yDai.mint(user, amount);
     }
 
     /// @dev Moves Dai from user into Treasury controlled Maker Dai vault
