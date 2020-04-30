@@ -10,11 +10,12 @@ import "./interfaces/IDaiJoin.sol";
 import "./interfaces/IGemJoin.sol";
 import "./interfaces/IVat.sol";
 import "./interfaces/IPot.sol";
+import "./interfaces/ITreasury.sol";
 import "./Constants.sol";
 
 
 /// @dev Treasury is the bottom layer that moves all assets.
-contract Treasury is AuthorizedAccess(), Constants() {
+contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
     using DecimalMath for uint256;
     using DecimalMath for int256;
     using DecimalMath for uint8;
@@ -36,7 +37,7 @@ contract Treasury is AuthorizedAccess(), Constants() {
     bytes32 collateralType = "ETH-A";
 
     /// @dev Moves Eth collateral from user into Treasury controlled Maker Eth vault
-    function post(address from, uint256 amount) public onlyAuthorized("Treasury: Not Authorized") {
+    function post(address from, uint256 amount) public override onlyAuthorized("Treasury: Not Authorized") {
         require(
             weth.transferFrom(from, address(this), amount),
             "YToken: WETH transfer fail"
@@ -61,7 +62,7 @@ contract Treasury is AuthorizedAccess(), Constants() {
 
     /// @dev Moves Eth collateral from Treasury controlled Maker Eth vault back to user
     /// TODO: This function requires authorization to use
-    function withdraw(address receiver, uint256 amount) public onlyAuthorized("Treasury: Not Authorized") {
+    function withdraw(address receiver, uint256 amount) public override onlyAuthorized("Treasury: Not Authorized") {
         // Remove collateral from vault
         // collateral to add - wad
         int256 dink = -amount.toInt();
@@ -80,7 +81,7 @@ contract Treasury is AuthorizedAccess(), Constants() {
     }
 
     /// @dev Moves Dai from user into Treasury controlled Maker Dai vault
-    function repay(address source, uint256 amount) public onlyAuthorized("Treasury: Not Authorized") {
+    function repay(address source, uint256 amount) public override onlyAuthorized("Treasury: Not Authorized") {
         require(
             dai.transferFrom(source, address(this), amount),
             "YToken: DAI transfer fail"
@@ -93,13 +94,11 @@ contract Treasury is AuthorizedAccess(), Constants() {
             // put funds in the DSR
             _lockDai();
         }
-
-
     }
 
     /// @dev moves Dai from Treasury to user, borrowing from Maker DAO if not enough present.
     /// TODO: This function requires authorization to use
-    function disburse(address receiver, uint256 amount) public onlyAuthorized("Treasury: Not Authorized") {
+    function disburse(address receiver, uint256 amount) public override onlyAuthorized("Treasury: Not Authorized") {
         uint256 chi = pot.chi();
         uint256 normalizedBalance = pot.pie(address(this));
         uint256 balance = normalizedBalance.muld(chi, ray);
