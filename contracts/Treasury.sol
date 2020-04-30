@@ -150,10 +150,10 @@ contract Treasury is AuthorizedAccess(), Constants() {
         int256 toRepay;
         uint256 toJoin;
         if (normalizedAmount >= normalizedDebt){
-            toRepay = -int256(normalizedDebt);
-            toJoin = normalizedDebt.muld(rate, ray);      
+            toRepay = -normalizedDebt.toInt();
+            toJoin = normalizedDebt.muld(rate, ray);
         } else {
-            toRepay = -int(normalizedAmount);
+            toRepay = -normalizedAmount.toInt();
             toJoin = balance;
 
         }
