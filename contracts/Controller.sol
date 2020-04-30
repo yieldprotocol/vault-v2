@@ -19,6 +19,7 @@ contract Controller is Ownable, Constants {
     IERC20 internal _weth;
     IERC20 internal _dai;
     YDai internal _yDai;
+    IVat internal _vat;
     IOracle internal _daiOracle;
 
     mapping(address => uint256) internal posted; // In WETH
@@ -53,7 +54,7 @@ contract Controller is Ownable, Constants {
     //
     function debtOf(address user) public view returns (uint256) {
         if (_yDai.isMature){
-            (, uint256 rate,,,) = vat.ilks("ETH-A");
+            (, uint256 rate,,,) = _vat.ilks("ETH-A");
             return debt[user].muld(rate.divd(_yDai.maturityRate, ray), ray);
         } else {
             return debt[user];
@@ -129,6 +130,6 @@ contract Controller is Ownable, Constants {
             "Accounts: Only mature redeem"
         );
         _yDai.burn(user, amount);
-        _treasure.disburse(user, amount);
+        _treasury.disburse(user, amount);
     }
 }
