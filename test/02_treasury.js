@@ -3,14 +3,43 @@ const MockTreasury = artifacts.require('./MockTreasury');
 const MockContract = artifacts.require("./MockContract")
 const truffleAssert = require('truffle-assertions');
 const helper = require('ganache-time-traveler');
-
+const Vat= artifacts.require('./Vat');
+const GemJoin = artifacts.require('./GemJoin');
+const ERC20 = artifacts.require("./TestERC20");
 
 
 contract('Treasury', async (accounts) =>  {
     let TreasuryInstance;
-    let owner = accounts[0];
+    let [ owner, user ] = accounts;
+    let vat;
+    let collateral;
+    let ilk = web3.utils.fromAscii("collateral")
+    let Line = web3.utils.fromAscii("Line")
+    let spot = web3.utils.fromAscii("spot")
+    let linel = web3.utils.fromAscii("line")
+
+    const ray  = "1000000000000000000000000000";
+    const supply = web3.utils.toWei("1000");
+    const rad = web3.utils.toBN('49')
+    const limits =  web3.utils.toBN('10').pow(rad).toString();
+    // console.log(limits);
 
     beforeEach('setup and deploy OracleMock', async() => {
+        // Set up vat, join and collateral
+        vat = await Vat.new();
+
+        collateral = await ERC20.new(supply, { from: owner }); 
+        await vat.init(ilk, { from: owner });
+        collateralJoin = await GemJoin.new(vat.address, ilk, collateral.address, { from: owner });
+
+        await vat.file(ilk, spot,    ray, { from: owner });
+        await vat.file(ilk, linel, limits, { from: owner });
+        await vat.file(Line,       limits); // TODO: Why can't we specify `, { from: owner }`?
+
+        await vat.rely(vat.address, { from: owner });
+        await vat.rely(collateralJoin.address, { from: owner });
+        // await collateralJoin.join(owner, supply);
+
         TreasuryInstance = await Treasury.new();
     });
 
@@ -135,6 +164,5 @@ contract('Treasury Internal Functions', async (accounts) =>  {
         it("should request normalized amount Dai from DSR", async() => {
 
         });
-
     });
 });

@@ -1,11 +1,7 @@
 const Vat= artifacts.require('./Vat');
 const GemJoin = artifacts.require('./GemJoin');
-const MockTreasury = artifacts.require('./MockTreasury');
-const MockContract = artifacts.require("./MockContract")
-const truffleAssert = require('truffle-assertions');
-const helper = require('ganache-time-traveler');
 const ERC20 = artifacts.require("./TestERC20");
-var ethers = require('ethers');
+
 
 contract('vat', async (accounts) =>  {
     let vat;
