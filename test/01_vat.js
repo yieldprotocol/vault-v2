@@ -1,11 +1,15 @@
 const Vat = artifacts.require('Vat');
 const GemJoin = artifacts.require('GemJoin');
+const DaiJoin = artifacts.require('DaiJoin');
 const ERC20 = artifacts.require("TestERC20");
 
 
 contract('vat', async (accounts) =>  {
     let vat;
     let gold;
+    let goldJoin;
+    let dai;
+    let daiJoin;
     let ilk = web3.utils.fromAscii("gold")
     let Line = web3.utils.fromAscii("Line")
     let spot = web3.utils.fromAscii("spot")
@@ -21,10 +25,13 @@ contract('vat', async (accounts) =>  {
 
     beforeEach(async() => {
         vat = await Vat.new();
+        await vat.init(ilk, { from: owner });
 
         gold = await ERC20.new(supply, { from: owner }); 
-        await vat.init(ilk, { from: owner });
         goldJoin = await GemJoin.new(vat.address, ilk, gold.address, { from: owner });
+
+        dai = await ERC20.new(0, { from: owner }); 
+        daiJoin = await DaiJoin.new(vat.address, dai.address, { from: owner });
 
         await vat.file(ilk, spot,    ray, { from: owner });
         await vat.file(ilk, linel, limits, { from: owner });
@@ -32,14 +39,14 @@ contract('vat', async (accounts) =>  {
 
         await vat.rely(vat.address, { from: owner });
         await vat.rely(goldJoin.address, { from: owner });
-        // await goldJoin.join(owner, supply);
+        await vat.rely(daiJoin.address, { from: owner });
 
+        await vat.hope(daiJoin.address, { from: owner });
     });
 
     it("should setup vat", async() => {
         let spot = (await vat.ilks(ilk)).spot.toString()
         assert(spot == ray, "spot not initialized")
-
     });
 
     it("should join funds", async() => {
@@ -48,7 +55,7 @@ contract('vat', async (accounts) =>  {
             web3.utils.toWei("0")
         );
         let amount = web3.utils.toWei("500");
-        await gold.mint(amount, { from: account1 });
+        await gold.mint(account1, amount, { from: account1 });
         await gold.approve(goldJoin.address, amount, { from: account1 }); 
         await goldJoin.join(account1, amount, { from: account1 });
         assert.equal(
@@ -111,25 +118,34 @@ contract('vat', async (accounts) =>  {
             });
 
             it("should borrow Dai", async() => {
-                let dai = web3.utils.toWei("1");
-                await vat.frob(ilk, owner, owner, owner, 0, dai, { from: owner });
-                let balance = (await vat.dai(owner)).toString();
+                let daiBorrowed = web3.utils.toWei("1");
+                await vat.frob(ilk, owner, owner, owner, 0, daiBorrowed, { from: owner });
+                let vatBalance = (await vat.dai(owner)).toString();
                 const rad = web3.utils.toBN('45')
                 const daiRad =  web3.utils.toBN('10').pow(rad).toString(); //dai in rad
                 assert.equal(
-                    balance,   
+                    vatBalance,   
                     daiRad
+                );
+                await daiJoin.exit(owner, daiBorrowed, { from: owner }); // Shouldn't we be able to exit vatBalance?
+                let daiBalance = (await dai.balanceOf(owner)).toString();
+                assert.equal(
+                    daiBalance,   
+                    daiBorrowed
                 );
             });
 
             describe("with dai borrowed", () => {
                 beforeEach(async() => {
-                    let dai = web3.utils.toWei("1");
-                    await vat.frob(ilk, owner, owner, owner, 0, dai, { from: owner });
+                    let daiBorrowed = web3.utils.toWei("1");
+                    await vat.frob(ilk, owner, owner, owner, 0, daiBorrowed, { from: owner });
+                    await daiJoin.exit(owner, daiBorrowed, { from: owner });
                 });
 
                 it("should return Dai", async() => {
                     let undai = web3.utils.toWei("-1");
+                    let daiReturned = web3.utils.toWei("1");
+                    await daiJoin.join(owner, daiReturned, { from: owner });
                     await vat.frob(ilk, owner, owner, owner, 0, undai, { from: owner });
                     let balance = (await vat.dai(owner)).toString();
                     assert.equal(
@@ -141,6 +157,8 @@ contract('vat', async (accounts) =>  {
                 it("should return Dai and withdraw collateral", async() => {
                     let unfrob = web3.utils.toWei("-6");
                     let undai = web3.utils.toWei("-1");
+                    let daiReturned = web3.utils.toWei("1");
+                    await daiJoin.join(owner, daiReturned, { from: owner });
                     await vat.frob(ilk, owner, owner, owner, unfrob, undai, { from: owner });
                     //let ink2 = (await vat.dai(ilk, owner)).ink.toString()
                     let balance = (await vat.dai(owner)).toString();
