@@ -49,17 +49,11 @@ contract('Treasury', async (accounts) =>  {
             // Let's check how WETH is implemented, maybe we can remove this one.
         });
 
-        it("should fail if not authorized", async() => {
-            // No need to test this one, it's tested in the imported repo.
-            // We will test in the contract factory that the permissions are give to the right accounts.
-        });
-
         it("should transfer amount of WETH from user", async() => {
             // Merge with test below.
         });
 
-        it("should send amount of WETH to ETHJoin", async() => {
-            // Unless we break `post` into two functions, this is covered with the test above.
+        it("should send amount of WETH from user to ETHJoin", async() => {
             // The EthJoin mock contract needs to have a `join` function that authorizes Vat for incoming weth transfers.
             // The EthJoin mock contract needs to have a function to return it's weth balance.
         });
@@ -69,15 +63,9 @@ contract('Treasury', async (accounts) =>  {
             // The Vat mock contract needs to have a frob function that takes `dink` weth from user to EthJoin
         });
 
-
     });
 
     describe("withdraw()", () => {
-
-        it("should fail if not authorized", async() => {
-            // No need to test this one, it's tested in the imported repo.
-            // We will test in the contract factory that the permissions are give to the right accounts.
-        });
 
         it("should withdraw amount of token", async() => {
             // Meaning the user and vault balances are modified.
@@ -88,26 +76,19 @@ contract('Treasury', async (accounts) =>  {
 
     describe("repay()", () => {
 
-        it("should fail if not authorized", async() => {
-            // No need to test this one, it's tested in the imported repo.
-            // We will test in the contract factory that the permissions are give to the right accounts.
-        });
-
         it("should fail for failed dai transfers", async() => {
             // Let's check how DAI is implemented, maybe we can remove this one.
         });
 
-        it("should transfer amount of Dai from source", async() => {
-            // Unless we break `repay` into two functions, this is covered by the tests below.
-        });
-
         it("should payback debt first", async() => {
+            // Dai is transferred from user
             // Test `repayDai()` and `lockDai()` first
             // Test with `normalizedDebt == amount`
             // dai contract can be a standard ERC20
         });
 
         it("if no debt, should lock Dai in DSR ", async() => {
+            // Dai is transferred from user
             // Test with `normalizedDebt == 0 && amount > 0`
             // Test with `normalizedDebt > 0 && amount > normalizedDebt`
         });
@@ -115,42 +96,22 @@ contract('Treasury', async (accounts) =>  {
 
     describe("disburse()", () => {
 
-        it("should fail if not authorized", async() => {
-            // No need to test this one, it's tested in the imported repo.
-            // We will test in the contract factory that the permissions are give to the right accounts.
-        });
-
         it("if DSR balance is equal or greater than amount, withdraw from DSR", async() => {
             // Test `_borrowDai()` and `_freeDai` first
             // Test with `balance == amount`
             // Mock Pot contract needs a `setChi()` and `chi()` functions.
             // Mock Pie contract needs a `setPie()` and `pie()` functions.
+            // Transfer Dai to the user
         });
 
         it("if DSR balance is not equal or greater than amount, borrow from Maker", async() => {
             // Test with `balance == 0 && amount > 0`
             // Test with `balance > 0 && amount > balance`
+            // Transfer Dai to the user
         });
-
-        it("should transfer to the receiver", async() => {
-            // Unless we break `disburse` into two functions, this is covered by the tests above.
-        });
-    });
-});
-
-contract('Treasury Internal Functions', async (accounts) =>  {
-    let TreasuryInstance;
-    let owner = accounts[0];
-
-    beforeEach('setup and deploy OracleMock', async() => {
-        TreasuryInstance = await MockTreasury.new();
     });
 
     describe("_borrowDai()", () => {
-
-        it("should call vat correctly", async() => {
-            // Isn't this covered by the test below?
-        });
 
         it("should transfer funds from daiJoin", async() => {
             // Test with two different stability rates, if possible.
@@ -161,26 +122,19 @@ contract('Treasury Internal Functions', async (accounts) =>  {
 
     describe("_repayDai()", () => {
 
-        it("should transfer funds from daiJoin", async() => {
-            // This should be covered by the test below.
-        });      
-        
-        it("should call vat correctly", async() => {
+        it("should repay Dai borrowed from the vat", async() => {
             // Test `normalizedAmount >= normalizedDebt`
             // Test `normalizedAmount < normalizedDebt`
             // Mock Vat contract needs to return `normalizedDebt` with a `urns` function
             // The DaiJoin mock contract needs to have a `join` function that authorizes Vat for incoming dai transfers.
             // The DaiJoin mock contract needs to have a function to return it's dai balance.
             // The Vat mock contract needs to have a frob function that takes `dart` dai from user to DaiJoin
+            // Should transfer funds from daiJoin
         });
 
     });
 
     describe("_lockDai()", () => {
-
-        it("should call pot.join", async() => {
-            // Covered by test below.
-        });
 
         it("should transfer all Dai into pot.join", async() => {
             // Test with dai.balanceOf(address(this)) > 0 && pot.chi() != 1
