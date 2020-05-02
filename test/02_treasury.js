@@ -1,19 +1,18 @@
-const Treasury = artifacts.require('./Treasury');
-const MockTreasury = artifacts.require('./MockTreasury');
-const MockContract = artifacts.require("./MockContract")
-const truffleAssert = require('truffle-assertions');
-const helper = require('ganache-time-traveler');
+const Treasury = artifacts.require('./MockTreasury');
+// const MockContract = artifacts.require("./MockContract")
 const Vat= artifacts.require('./Vat');
 const GemJoin = artifacts.require('./GemJoin');
 const ERC20 = artifacts.require("./TestERC20");
 
+const truffleAssert = require('truffle-assertions');
+const helper = require('ganache-time-traveler');
 
 contract('Treasury', async (accounts) =>  {
     let [ owner, user ] = accounts;
     let vat;
     let weth;
     let treasury;
-    let ilk = web3.utils.fromAscii("weth")
+    let ilk = web3.utils.fromAscii("ETH-A")
     let Line = web3.utils.fromAscii("Line")
     let spot = web3.utils.fromAscii("spot")
     let linel = web3.utils.fromAscii("line")
@@ -22,6 +21,7 @@ contract('Treasury', async (accounts) =>  {
     const supply = web3.utils.toWei("1000");
     const rad = web3.utils.toBN('49')
     const limits =  web3.utils.toBN('10').pow(rad).toString();
+    const mockAddress = accounts[9];
     // console.log(limits);
 
     beforeEach('setup and deploy OracleMock', async() => {
@@ -36,7 +36,14 @@ contract('Treasury', async (accounts) =>  {
         await vat.file(ilk, linel, limits, { from: owner });
         await vat.file(Line,       limits); // TODO: Why can't we specify `, { from: owner }`?
 
-        treasury = await Treasury.new();
+        treasury = await Treasury.new(
+            weth.address,       // weth
+            mockAddress,              // dai
+            wethJoin.address,   // wethJoin
+            mockAddress,              // daiJoin
+            vat.address,        // vat
+            mockAddress               // pot
+        );
 
         await vat.rely(vat.address, { from: owner });
         await vat.rely(wethJoin.address, { from: owner });
@@ -51,22 +58,21 @@ contract('Treasury', async (accounts) =>  {
             // Let's check how WETH is implemented, maybe we can remove this one.
         });
 
-        it("should send amount of WETH from user to ETHJoin", async() => {
+        it("should send amount of WETH from user to WETHJoin", async() => {
             assert.equal(
                 (await weth.balanceOf(wethJoin.address)),   
                 web3.utils.toWei("0")
             );
+            
             let amount = web3.utils.toWei("500");
             await weth.mint(amount, { from: user });
-            await weth.approve(wethJoin.address, amount, { from: user }); 
+            await weth.approve(treasury.address, amount, { from: user }); 
             await treasury.post(user, amount, { from: user });
+
             assert.equal(
                 (await weth.balanceOf(wethJoin.address)),   
                 web3.utils.toWei("500")
             );
-
-            // The EthJoin mock contract needs to have a `join` function that authorizes Vat for incoming weth transfers.
-            // The EthJoin mock contract needs to have a function to return it's weth balance.
         });
 
         it("should call frob", async() => {

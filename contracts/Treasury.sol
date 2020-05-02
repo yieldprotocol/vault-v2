@@ -34,7 +34,17 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
 
     int256 daiBalance; // Could this be retrieved as dai.balanceOf(address(this)) - something?
     // uint256 ethBalance; // This can be retrieved as weth.balanceOf(address(this))
-    bytes32 collateralType = "ETH-A";
+    bytes32 constant collateralType = "ETH-A";
+
+    constructor (address weth_, address dai_, address wethJoin_, address daiJoin_, address vat_, address pot_) public {
+        // These could be hardcoded for mainnet deployment.
+        weth = IERC20(weth_);
+        dai = IERC20(dai_);
+        wethJoin = IGemJoin(wethJoin_);
+        daiJoin = IDaiJoin(daiJoin_);
+        vat = IVat(vat_);
+        pot = IPot(pot_);
+    }
 
     /// @dev Moves Eth collateral from user into Treasury controlled Maker Eth vault
     function post(address from, uint256 amount) public override onlyAuthorized("Treasury: Not Authorized") {
