@@ -7,7 +7,7 @@ const helper = require('ganache-time-traveler');
 const ERC20 = artifacts.require("./TestERC20");
 var ethers = require('ethers');
 
-contract('Treasury', async (accounts) =>  {
+contract('vat', async (accounts) =>  {
     let vat;
     let gold;
     let ilk = web3.utils.fromAscii("gold")
@@ -20,7 +20,7 @@ contract('Treasury', async (accounts) =>  {
     const supply = web3.utils.toWei("1000");
     const power = web3.utils.toBN('49')
     const limits =  web3.utils.toBN('10').pow(power).toString();
-    console.log(limits);
+    // console.log(limits);
 
 
     beforeEach('setup', async() => {
@@ -28,42 +28,46 @@ contract('Treasury', async (accounts) =>  {
 
         gold = await ERC20.new(supply); 
         await vat.init(ilk);
-        gemA = await GemJoin.new(vat.address, ilk, gold.address);
+        goldJoin = await GemJoin.new(vat.address, ilk, gold.address);
 
         await vat.file(ilk, spot,    ray);
         await vat.file(ilk, linel, limits);
         await vat.file(Line,       limits);
 
-        await gold.approve(gemA.address, supply);
-        await gold.approve(vat.address, supply); 
-
         await vat.rely(vat.address);
-        await vat.rely(gemA.address);
-
-        await gemA.join(owner, supply);
+        await vat.rely(goldJoin.address);
+        // await goldJoin.join(owner, supply);
 
     });
 
-    describe("initial tests of vat", () => {
+    it("should setup vat", async() => {
+        let spot = (await vat.ilks(ilk)).spot.toString()
+        assert(spot == ray, "spot not initialized")
 
-        it("should setup vat", async() => {
-            let spot = (await vat.ilks(ilk)).spot.toString()
-            assert(spot == ray, "spot not initialized")
+    });
 
+    it("should join funds", async() => {
+        assert.equal(
+            (await gold.balanceOf(goldJoin.address)),   
+            web3.utils.toWei("0")
+        );
+        let amount = web3.utils.toWei("500");
+        await gold.mint(amount , {from: account1});
+        await gold.approve(goldJoin.address, amount, {from: account1}); 
+        await goldJoin.join(account1, amount, {from: account1});
+        assert.equal(
+            (await gold.balanceOf(goldJoin.address)),   
+            web3.utils.toWei("500")
+        );
+    });
+
+    describe("with funds joined", () => {
+        beforeEach('setup', async() => {
+            await gold.approve(goldJoin.address, supply);
+            // await gold.approve(vat.address, supply); 
+
+            await goldJoin.join(owner, supply);
         });
-
-        it("should join funds", async() => {
-            let testA = web3.utils.toWei("500");
-            await gold.mint(testA , {from: account1});
-            await gold.approve(gemA.address, testA, {from: account1}); 
-            await gemA.join(account1, testA, {from: account1});
-            assert.equal(
-                (await gold.balanceOf(gemA.address)),   
-                web3.utils.toWei("1500")
-            );
-
-        });
-
 
         it("should deposit and withdraw collateral", async() => {
             let amount = web3.utils.toWei("6");
@@ -105,9 +109,5 @@ contract('Treasury', async (accounts) =>  {
                 "0"
             );
         });
-
-
     });
-
-
 });
