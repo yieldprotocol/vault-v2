@@ -18,12 +18,12 @@ contract('vat', async (accounts) =>  {
     let account1 = accounts[1];
     const ray  = "1000000000000000000000000000";
     const supply = web3.utils.toWei("1000");
-    const power = web3.utils.toBN('49')
-    const limits =  web3.utils.toBN('10').pow(power).toString();
+    const rad = web3.utils.toBN('49')
+    const limits =  web3.utils.toBN('10').pow(rad).toString();
     // console.log(limits);
 
 
-    beforeEach('setup', async() => {
+    beforeEach(async() => {
         vat = await Vat.new();
 
         gold = await ERC20.new(supply, { from: owner }); 
@@ -52,7 +52,7 @@ contract('vat', async (accounts) =>  {
             web3.utils.toWei("0")
         );
         let amount = web3.utils.toWei("500");
-        await gold.mint(amount , { from: account1 });
+        await gold.mint(amount, { from: account1 });
         await gold.approve(goldJoin.address, amount, { from: account1 }); 
         await goldJoin.join(account1, amount, { from: account1 });
         assert.equal(
@@ -62,52 +62,103 @@ contract('vat', async (accounts) =>  {
     });
 
     describe("with funds joined", () => {
-        beforeEach('setup', async() => {
+        beforeEach(async() => {
             await gold.approve(goldJoin.address, supply, { from: owner });
             // await gold.approve(vat.address, supply); 
 
             await goldJoin.join(owner, supply, { from: owner });
         });
 
-        it("should deposit and withdraw collateral", async() => {
-            let amount = web3.utils.toWei("6");
-            await vat.frob(ilk, owner, owner, owner, amount, 0, { from: owner });
+        it("should deposit collateral", async() => {
+            let collateral = web3.utils.toWei("6");
+            await vat.frob(ilk, owner, owner, owner, collateral, 0, { from: owner });
             let ink = (await vat.urns(ilk, owner)).ink.toString()
             assert.equal(
                 ink,   
-                amount
-            );
-            let unfrob = web3.utils.toWei("-6");
-            await vat.frob(ilk, owner, owner, owner, unfrob, 0, { from: owner });
-            let ink2 = (await vat.urns(ilk, owner)).ink.toString()
-            assert.equal(
-                ink2,   
-                "0"
+                collateral
             );
         });
 
-        it("should borrow and return Dai", async() => {
+        it("should deposit colalteral and borrow Dai", async() => {
             let collateral = web3.utils.toWei("6");
             let dai = web3.utils.toWei("1");
             await vat.frob(ilk, owner, owner, owner, collateral, dai, { from: owner });
             //let ink = (await vat.urns(ilk, owner)).ink.toString();
             let balance = (await vat.dai(owner)).toString();
-            const power = web3.utils.toBN('45')
-            const daiRad =  web3.utils.toBN('10').pow(power).toString(); //dai in rad
+            const rad = web3.utils.toBN('45')
+            const daiRad =  web3.utils.toBN('10').pow(rad).toString(); //dai in rad
             assert.equal(
                 balance,   
                 daiRad
             );
-            // Now remove debt and collateral
-            let unfrob = web3.utils.toWei("-6");
-            let undai = web3.utils.toWei("-1");
-            await vat.frob(ilk, owner, owner, owner, unfrob, undai, { from: owner });
-            //let ink2 = (await vat.dai(ilk, owner)).ink.toString()
-            let balance2 = (await vat.dai(owner)).toString();
+            let ink = (await vat.urns(ilk, owner)).ink.toString()
             assert.equal(
-                balance2,   
-                "0"
+                ink,   
+                collateral
             );
+        });
+
+        describe("with collateral deposited", () => {
+            beforeEach(async() => {
+                let collateral = web3.utils.toWei("6");
+                await vat.frob(ilk, owner, owner, owner, collateral, 0, { from: owner });
+            });
+     
+            it("should withdraw collateral", async() => {
+                let unfrob = web3.utils.toWei("-6");
+                await vat.frob(ilk, owner, owner, owner, unfrob, 0, { from: owner });
+                let ink = (await vat.urns(ilk, owner)).ink.toString()
+                assert.equal(
+                    ink,   
+                    "0"
+                );
+            });
+
+            it("should borrow Dai", async() => {
+                let dai = web3.utils.toWei("1");
+                await vat.frob(ilk, owner, owner, owner, 0, dai, { from: owner });
+                let balance = (await vat.dai(owner)).toString();
+                const rad = web3.utils.toBN('45')
+                const daiRad =  web3.utils.toBN('10').pow(rad).toString(); //dai in rad
+                assert.equal(
+                    balance,   
+                    daiRad
+                );
+            });
+
+            describe("with dai borrowed", () => {
+                beforeEach(async() => {
+                    let dai = web3.utils.toWei("1");
+                    await vat.frob(ilk, owner, owner, owner, 0, dai, { from: owner });
+                });
+
+                it("should return Dai", async() => {
+                    let undai = web3.utils.toWei("-1");
+                    await vat.frob(ilk, owner, owner, owner, 0, undai, { from: owner });
+                    let balance = (await vat.dai(owner)).toString();
+                    assert.equal(
+                        balance,   
+                        "0"
+                    );
+                });
+
+                it("should return Dai and withdraw collateral", async() => {
+                    let unfrob = web3.utils.toWei("-6");
+                    let undai = web3.utils.toWei("-1");
+                    await vat.frob(ilk, owner, owner, owner, unfrob, undai, { from: owner });
+                    //let ink2 = (await vat.dai(ilk, owner)).ink.toString()
+                    let balance = (await vat.dai(owner)).toString();
+                    assert.equal(
+                        balance,   
+                        "0"
+                    );
+                    let ink = (await vat.urns(ilk, owner)).ink.toString()
+                    assert.equal(
+                        ink,   
+                        "0"
+                    );
+                });
+            });
         });
     });
 });
