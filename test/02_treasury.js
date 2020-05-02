@@ -9,11 +9,11 @@ const ERC20 = artifacts.require("./TestERC20");
 
 
 contract('Treasury', async (accounts) =>  {
-    let TreasuryInstance;
     let [ owner, user ] = accounts;
     let vat;
-    let collateral;
-    let ilk = web3.utils.fromAscii("collateral")
+    let weth;
+    let treasury;
+    let ilk = web3.utils.fromAscii("weth")
     let Line = web3.utils.fromAscii("Line")
     let spot = web3.utils.fromAscii("spot")
     let linel = web3.utils.fromAscii("line")
@@ -25,22 +25,24 @@ contract('Treasury', async (accounts) =>  {
     // console.log(limits);
 
     beforeEach('setup and deploy OracleMock', async() => {
-        // Set up vat, join and collateral
+        // Set up vat, join and weth
         vat = await Vat.new();
 
-        collateral = await ERC20.new(supply, { from: owner }); 
+        weth = await ERC20.new(supply, { from: owner }); 
         await vat.init(ilk, { from: owner });
-        collateralJoin = await GemJoin.new(vat.address, ilk, collateral.address, { from: owner });
+        wethJoin = await GemJoin.new(vat.address, ilk, weth.address, { from: owner });
 
         await vat.file(ilk, spot,    ray, { from: owner });
         await vat.file(ilk, linel, limits, { from: owner });
         await vat.file(Line,       limits); // TODO: Why can't we specify `, { from: owner }`?
 
-        await vat.rely(vat.address, { from: owner });
-        await vat.rely(collateralJoin.address, { from: owner });
-        // await collateralJoin.join(owner, supply);
+        treasury = await Treasury.new();
 
-        TreasuryInstance = await Treasury.new();
+        await vat.rely(vat.address, { from: owner });
+        await vat.rely(wethJoin.address, { from: owner });
+        await vat.rely(treasury.address, { from: owner });
+
+        await treasury.grantAccess(user, { from: owner });
     });
 
     describe("post()", () => {
@@ -49,11 +51,20 @@ contract('Treasury', async (accounts) =>  {
             // Let's check how WETH is implemented, maybe we can remove this one.
         });
 
-        it("should transfer amount of WETH from user", async() => {
-            // Merge with test below.
-        });
-
         it("should send amount of WETH from user to ETHJoin", async() => {
+            assert.equal(
+                (await weth.balanceOf(wethJoin.address)),   
+                web3.utils.toWei("0")
+            );
+            let amount = web3.utils.toWei("500");
+            await weth.mint(amount, { from: user });
+            await weth.approve(wethJoin.address, amount, { from: user }); 
+            await treasury.post(user, amount, { from: user });
+            assert.equal(
+                (await weth.balanceOf(wethJoin.address)),   
+                web3.utils.toWei("500")
+            );
+
             // The EthJoin mock contract needs to have a `join` function that authorizes Vat for incoming weth transfers.
             // The EthJoin mock contract needs to have a function to return it's weth balance.
         });
