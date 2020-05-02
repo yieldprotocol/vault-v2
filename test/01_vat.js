@@ -37,11 +37,11 @@ contract('vat', async (accounts) =>  {
         await vat.file(ilk, linel, limits, { from: owner });
         await vat.file(Line,       limits); // TODO: Why can't we specify `, { from: owner }`?
 
-        await vat.rely(vat.address, { from: owner });
-        await vat.rely(goldJoin.address, { from: owner });
-        await vat.rely(daiJoin.address, { from: owner });
+        await vat.rely(vat.address, { from: owner });      // `owner` authorizing `vat` to operate for `vat`?
+        await vat.rely(goldJoin.address, { from: owner }); // `owner` authorizing `goldJoin` to operate for `vat`
+        await vat.rely(daiJoin.address, { from: owner });  // `owner` authorizing `daiJoin` to operate for `vat`
 
-        await vat.hope(daiJoin.address, { from: owner });
+        await vat.hope(daiJoin.address, { from: owner }); // `owner` allowing daiJoin to move his dai.
     });
 
     it("should setup vat", async() => {
