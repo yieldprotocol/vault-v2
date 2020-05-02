@@ -63,7 +63,7 @@ contract('Treasury', async (accounts) =>  {
         );
         
         let amount = web3.utils.toWei("500");
-        await weth.mint(amount, { from: user });
+        await weth.mint(user, amount, { from: user });
         await weth.approve(treasury.address, amount, { from: user }); 
         await treasury.post(user, amount, { from: user });
 
@@ -84,7 +84,7 @@ contract('Treasury', async (accounts) =>  {
     describe("with posted collateral", () => {
         beforeEach(async() => {
             let amount = web3.utils.toWei("500");
-            await weth.mint(amount, { from: user });
+            await weth.mint(user, amount, { from: user });
             await weth.approve(treasury.address, amount, { from: user }); 
             await treasury.post(user, amount, { from: user });
         });

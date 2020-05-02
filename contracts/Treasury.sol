@@ -187,13 +187,13 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
         uint256 balance = dai.balanceOf(address(this));
         uint256 chi = pot.chi();
         uint256 normalizedAmount = balance.divd(chi, ray);
-        pot.join(normalizedAmount);
+        pot.join(normalizedAmount); // Might need to call `drip` in the same transaction
     }
 
     /// @dev remove Dai from the DSR
     function _freeDai(uint256 amount) internal {
         uint256 chi = pot.chi();
         uint256 normalizedAmount = amount.divd(chi, ray);
-        pot.exit(normalizedAmount);
+        pot.exit(normalizedAmount); // Might need to call `drip` in the same transaction
     }
 }
