@@ -24,7 +24,7 @@ contract('Treasury', async (accounts) =>  {
     const mockAddress = accounts[9];
     // console.log(limits);
 
-    beforeEach('setup and deploy OracleMock', async() => {
+    beforeEach(async() => {
         // Set up vat, join and weth
         vat = await Vat.new();
 
@@ -52,34 +52,53 @@ contract('Treasury', async (accounts) =>  {
         await treasury.grantAccess(user, { from: owner });
     });
 
-    describe("post()", () => {
+    it("should fail for failed weth transfers", async() => {
+        // Let's check how WETH is implemented, maybe we can remove this one.
+    });
 
-        it("should fail for failed weth transfers", async() => {
-            // Let's check how WETH is implemented, maybe we can remove this one.
-        });
+    it("allows user to post collateral", async() => {
+        assert.equal(
+            (await weth.balanceOf(wethJoin.address)),   
+            web3.utils.toWei("0")
+        );
+        
+        let amount = web3.utils.toWei("500");
+        await weth.mint(amount, { from: user });
+        await weth.approve(treasury.address, amount, { from: user }); 
+        await treasury.post(user, amount, { from: user });
 
-        it("should send amount of WETH from user to WETHJoin", async() => {
-            assert.equal(
-                (await weth.balanceOf(wethJoin.address)),   
-                web3.utils.toWei("0")
-            );
-            
+        assert.equal(
+            (await weth.balanceOf(wethJoin.address)),   
+            web3.utils.toWei("500")
+        );
+
+        // Test result of `frob` call.
+    });
+
+    describe("with posted collateral", () => {
+        beforeEach(async() => {
             let amount = web3.utils.toWei("500");
             await weth.mint(amount, { from: user });
             await weth.approve(treasury.address, amount, { from: user }); 
             await treasury.post(user, amount, { from: user });
+        });
+
+        it("allows user to withdraw collateral", async() => {
+            assert.equal(
+                (await weth.balanceOf(user)),   
+                web3.utils.toWei("0")
+            );
+            
+            let amount = web3.utils.toWei("500");
+            await treasury.withdraw(user, amount, { from: user });
 
             assert.equal(
-                (await weth.balanceOf(wethJoin.address)),   
+                (await weth.balanceOf(user)),   
                 web3.utils.toWei("500")
             );
-        });
 
-        it("should call frob", async() => {
-            // Wouldn't `frob` fail if `join` isn't called beforehand?
-            // The Vat mock contract needs to have a frob function that takes `dink` weth from user to EthJoin
+            // Test result of `frob` call.
         });
-
     });
 
     describe("withdraw()", () => {
