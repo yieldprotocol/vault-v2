@@ -67,12 +67,18 @@ contract('Treasury', async (accounts) =>  {
         await weth.approve(treasury.address, amount, { from: user }); 
         await treasury.post(user, amount, { from: user });
 
+        // Test transfer of collateral
         assert.equal(
             (await weth.balanceOf(wethJoin.address)),   
             web3.utils.toWei("500")
         );
 
-        // Test result of `frob` call.
+        // Test collateral registering via `frob`
+        let ink = (await vat.urns(ilk, treasury.address)).ink.toString()
+        assert.equal(
+            ink,   
+            amount
+        );
     });
 
     describe("with posted collateral", () => {
@@ -92,12 +98,18 @@ contract('Treasury', async (accounts) =>  {
             let amount = web3.utils.toWei("500");
             await treasury.withdraw(user, amount, { from: user });
 
+            // Test transfer of collateral
             assert.equal(
                 (await weth.balanceOf(user)),   
                 web3.utils.toWei("500")
             );
 
-            // Test result of `frob` call.
+            // Test collateral registering via `frob`
+            let ink = (await vat.urns(ilk, treasury.address)).ink.toString()
+            assert.equal(
+                ink,   
+                0
+            );
         });
     });
 
