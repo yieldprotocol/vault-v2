@@ -1,3 +1,4 @@
+const Pot = artifacts.require('Pot');
 const Vat = artifacts.require('Vat');
 const GemJoin = artifacts.require('GemJoin');
 const ERC20 = artifacts.require("TestERC20");
@@ -5,8 +6,9 @@ const ERC20 = artifacts.require("TestERC20");
 
 contract('vat', async (accounts) =>  {
     let vat;
-    let gold;
-    let ilk = web3.utils.fromAscii("gold")
+    let collateral;
+    let pot;
+    let ilk = web3.utils.fromAscii("ETH-A")
     let Line = web3.utils.fromAscii("Line")
     let spot = web3.utils.fromAscii("spot")
     let linel = web3.utils.fromAscii("line")
@@ -22,47 +24,47 @@ contract('vat', async (accounts) =>  {
     beforeEach(async() => {
         vat = await Vat.new();
 
-        gold = await ERC20.new(supply, { from: owner }); 
+        collateral = await ERC20.new(supply, { from: owner }); 
         await vat.init(ilk, { from: owner });
-        goldJoin = await GemJoin.new(vat.address, ilk, gold.address, { from: owner });
+        collateralJoin = await GemJoin.new(vat.address, ilk, collateral.address, { from: owner });
 
         await vat.file(ilk, spot,    ray, { from: owner });
         await vat.file(ilk, linel, limits, { from: owner });
         await vat.file(Line,       limits); // TODO: Why can't we specify `, { from: owner }`?
 
         await vat.rely(vat.address, { from: owner });
-        await vat.rely(goldJoin.address, { from: owner });
-        // await goldJoin.join(owner, supply);
+        await vat.rely(collateralJoin.address, { from: owner });
 
+        pot = await Pot.new(vat.address);
     });
 
-    it("should setup vat", async() => {
-        let spot = (await vat.ilks(ilk)).spot.toString()
-        assert(spot == ray, "spot not initialized")
+    it("should setup pot", async() => {
+        let chi = await pot.chi.call();
+        assert(chi == ray, "chi not initialized")
 
     });
 
     it("should join funds", async() => {
         assert.equal(
-            (await gold.balanceOf(goldJoin.address)),   
+            (await collateral.balanceOf(collateralJoin.address)),   
             web3.utils.toWei("0")
         );
         let amount = web3.utils.toWei("500");
-        await gold.mint(amount, { from: account1 });
-        await gold.approve(goldJoin.address, amount, { from: account1 }); 
-        await goldJoin.join(account1, amount, { from: account1 });
+        await collateral.mint(amount, { from: account1 });
+        await collateral.approve(collateralJoin.address, amount, { from: account1 }); 
+        await collateralJoin.join(account1, amount, { from: account1 });
         assert.equal(
-            (await gold.balanceOf(goldJoin.address)),   
+            (await collateral.balanceOf(collateralJoin.address)),   
             web3.utils.toWei("500")
         );
     });
 
     describe("with funds joined", () => {
         beforeEach(async() => {
-            await gold.approve(goldJoin.address, supply, { from: owner });
-            // await gold.approve(vat.address, supply); 
+            await collateral.approve(collateralJoin.address, supply, { from: owner });
+            // await collateral.approve(vat.address, supply); 
 
-            await goldJoin.join(owner, supply, { from: owner });
+            await collateralJoin.join(owner, supply, { from: owner });
         });
 
         it("should deposit collateral", async() => {
