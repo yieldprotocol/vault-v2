@@ -79,7 +79,7 @@ contract('vat', async (accounts) =>  {
             );
         });
 
-        it("should deposit colalteral and borrow Dai", async() => {
+        it("should deposit collateral and borrow Dai", async() => {
             let collateral = web3.utils.toWei("6");
             let dai = web3.utils.toWei("1");
             await vat.frob(ilk, owner, owner, owner, collateral, dai, { from: owner });
