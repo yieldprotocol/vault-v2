@@ -113,15 +113,6 @@ contract('Treasury', async (accounts) =>  {
         });
     });
 
-    describe("withdraw()", () => {
-
-        it("should withdraw amount of token", async() => {
-            // Meaning the user and vault balances are modified.
-            // The EthJoin mock contract needs to have an `exit` function that transfers weth to user.
-            // The Vat mock contract needs to have a frob function that authorizes outgoing `wethJoin.exit` weth transfers through the `dink` parameter
-        });
-    });
-
     describe("repay()", () => {
 
         it("should fail for failed dai transfers", async() => {
