@@ -129,8 +129,8 @@ contract('Treasury', async (accounts) =>  {
             // Test with two different stability rates, if possible.
             // Mock Vat contract needs a `setRate` and an `ilks` functions.
             // Mock Vat contract needs the `frob` function to authorize `daiJoin.exit` transfers through the `dart` parameter.
-            let daiBorrowed = web3.utils.toWei("1");
-            await treasury.borrowDai(owner, daiBorrowed);
+            let daiBorrowed = web3.utils.toWei("100");
+            await treasury.borrowDai(owner, daiBorrowed, { from: owner });
 
             let daiBalance = (await dai.balanceOf(owner)).toString();
             assert.equal(
@@ -139,10 +139,23 @@ contract('Treasury', async (accounts) =>  {
             );
         });
     
-        describe("_repayDai()", () => {
-    
+        describe("with a dai debt towards MakerDAO", () => {
+            beforeEach(async() => {
+                let daiBorrowed = web3.utils.toWei("100");
+                await treasury.borrowDai(owner, daiBorrowed, { from: owner });
+            });
+
             it("should repay Dai borrowed from the vat", async() => {
                 // Test `normalizedAmount >= normalizedDebt`
+                let daiBorrowed = web3.utils.toWei("100");
+                await dai.transfer(treasury.address, daiBorrowed, { from: owner });
+                await treasury.repayDai({ from: owner });
+                let daiBalance = (await dai.balanceOf(owner)).toString();
+                assert.equal(
+                    daiBalance,   
+                    0
+                );
+                
                 // Test `normalizedAmount < normalizedDebt`
                 // Mock Vat contract needs to return `normalizedDebt` with a `urns` function
                 // The DaiJoin mock contract needs to have a `join` function that authorizes Vat for incoming dai transfers.
