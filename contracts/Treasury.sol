@@ -192,6 +192,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
         uint256 balance = dai.balanceOf(address(this));
         uint256 chi = pot.chi();
         uint256 normalizedAmount = balance.divd(chi, ray);
+        daiJoin.join(address(this), normalizedAmount);
         pot.drip();
         pot.join(normalizedAmount);
     }

@@ -17,10 +17,10 @@ contract('Treasury', async (accounts) =>  {
     let daiJoin;
     let pot;
     let treasury;
-    let ilk = web3.utils.fromAscii("ETH-A")
-    let Line = web3.utils.fromAscii("Line")
-    let spot = web3.utils.fromAscii("spot")
-    let linel = web3.utils.fromAscii("line")
+    const ilk = web3.utils.fromAscii("ETH-A")
+    const Line = web3.utils.fromAscii("Line")
+    const spot = web3.utils.fromAscii("spot")
+    const linel = web3.utils.fromAscii("line")
 
     const ray  = "1000000000000000000000000000";
     const supply = web3.utils.toWei("1000");
@@ -64,7 +64,7 @@ contract('Treasury', async (accounts) =>  {
 
         await treasury.grantAccess(user, { from: owner });
     });
-
+    
     it("should fail for failed weth transfers", async() => {
         // Let's check how WETH is implemented, maybe we can remove this one.
     });
@@ -140,6 +140,21 @@ contract('Treasury', async (accounts) =>  {
             // assert treasury debt = daiBorrowed
         });
 
+        it("internally allows to save dai in the Pot", async() => {
+            // Test with two different stability rates, if possible.
+            // Mock Vat contract needs a `setRate` and an `ilks` functions.
+            // Mock Vat contract needs the `frob` function to authorize `daiJoin.exit` transfers through the `dart` parameter.
+            let daiBorrowed = web3.utils.toWei("100");
+            await treasury.borrowDai(user, daiBorrowed, { from: owner });
+
+            let daiBalance = (await dai.balanceOf(user)).toString();
+            assert.equal(
+                daiBalance,   
+                daiBorrowed
+            );
+            // assert treasury debt = daiBorrowed
+        });
+
         it("borrows dai if there is none in the Pot", async() => {
             let daiBorrowed = web3.utils.toWei("100");
             await treasury.disburse(user, daiBorrowed, { from: user });
@@ -191,6 +206,38 @@ contract('Treasury', async (accounts) =>  {
                 // assert treasury debt = 0
             });
         });
+
+        describe("without a dai debt towards MakerDAO", () => {
+            beforeEach(async() => {
+                // Generate dai without generating debt for treasury
+                let wethPosted = web3.utils.toWei("60");
+                let daiBorrowed = web3.utils.toWei("10");
+                await weth.approve(wethJoin.address, wethPosted, { from: owner });
+                await wethJoin.join(owner, wethPosted, { from: owner });
+                // owner gets the debt for generating the dai
+                await vat.rely(owner, { from: owner }); // Some hacking going on here
+                await vat.frob(ilk, owner, owner, owner, wethPosted, daiBorrowed, { from: owner });
+                // treasury receives the dai
+                await vat.hope(daiJoin.address, { from: owner }); // Owner allows daiJoin to deal with its dai in the vat
+                await daiJoin.exit(treasury.address, daiBorrowed, { from: owner });
+            });
+
+            it("internally transfers all dai into the Pot", async() => {
+                // Test with dai.balanceOf(address(this)) > 0 && pot.chi() != 1
+                // The mock Pot contract should inherit from ERC20 and `join` should be a pre-approved `transferFrom`
+                let daiBorrowed = web3.utils.toWei("10");
+                await treasury.lockDai({ from: owner });
+                assert.equal(
+                    (await pot.pie(treasury.address)).toString(),   
+                    daiBorrowed
+                );
+            });
+    
+            it("internally retrieves dai from the Pot", async() => {
+                // Test with amount > 0 && pot.chi() != 1
+                // The mock Pot contract should inherit from ERC20 and `exit` should be a `transfer`
+            });
+        });
     });
 
     describe("repay()", () => {
@@ -228,25 +275,5 @@ contract('Treasury', async (accounts) =>  {
             // Test with `balance > 0 && amount > balance`
             // Transfer Dai to the user
         });
-    });
-
-
-
-    describe("_lockDai()", () => {
-
-        it("should transfer all Dai into pot.join", async() => {
-            // Test with dai.balanceOf(address(this)) > 0 && pot.chi() != 1
-            // The mock Pot contract should inherit from ERC20 and `join` should be a pre-approved `transferFrom`
-        });
-
-    });
-
-    describe("_freeDai()", () => {
-
-        it("should request normalized amount Dai from DSR", async() => {
-            // Test with amount > 0 && pot.chi() != 1
-            // The mock Pot contract should inherit from ERC20 and `exit` should be a `transfer`
-        });
-
     });
 });
