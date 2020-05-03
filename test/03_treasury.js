@@ -233,25 +233,44 @@ contract('Treasury', async (accounts) =>  {
                 // owner gets the debt for generating the dai
                 await vat.rely(owner, { from: owner }); // Some hacking going on here
                 await vat.frob(ilk, owner, owner, owner, wethPosted, daiBorrowed, { from: owner });
-                // treasury receives the dai
                 await vat.hope(daiJoin.address, { from: owner }); // Owner allows daiJoin to deal with its dai in the vat
-                await daiJoin.exit(treasury.address, daiBorrowed, { from: owner });
+                await daiJoin.exit(owner, daiBorrowed, { from: owner });
             });
 
             it("internally transfers all dai into the Pot", async() => {
                 // Test with dai.balanceOf(address(this)) > 0 && pot.chi() != 1
                 // The mock Pot contract should inherit from ERC20 and `join` should be a pre-approved `transferFrom`
                 let daiBorrowed = web3.utils.toWei("10");
+                await dai.transfer(treasury.address, daiBorrowed, { from: owner });
                 await treasury.lockDai({ from: owner });
                 assert.equal(
                     (await pot.pie(treasury.address)).toString(),   
                     daiBorrowed
                 );
             });
+
+            it("locks dai in the Pot if there is no debt", async() => {
+                let daiBorrowed = web3.utils.toWei("10");
+                await dai.transfer(user, daiBorrowed, { from: owner });
+                await dai.approve(treasury.address, daiBorrowed, { from: user });
+                await treasury.repay(user, daiBorrowed, { from: user });
+                let daiBalance = (await dai.balanceOf(user)).toString();
+                assert.equal(
+                    daiBalance,   
+                    0
+                );
+                assert.equal(
+                    (await pot.pie(treasury.address)).toString(),   
+                    daiBorrowed
+                );
+                // Test with `normalizedDebt == 0 && amount > 0`
+                // Test with `normalizedDebt > 0 && amount > normalizedDebt`
+            });
     
             describe("with dai in the Pot", () => {
                 beforeEach(async() => {
                     let daiBorrowed = web3.utils.toWei("10");
+                    await dai.transfer(treasury.address, daiBorrowed, { from: owner });
                     await treasury.lockDai({ from: owner });
                 });
         
@@ -269,26 +288,6 @@ contract('Treasury', async (accounts) =>  {
                     );
                 });
             });
-        });
-    });
-
-    describe("repay()", () => {
-
-        it("should fail for failed dai transfers", async() => {
-            // Let's check how DAI is implemented, maybe we can remove this one.
-        });
-
-        it("should payback debt first", async() => {
-            // Dai is transferred from user
-            // Test `repayDai()` and `lockDai()` first
-            // Test with `normalizedDebt == amount`
-            // dai contract can be a standard ERC20
-        });
-
-        it("if no debt, should lock Dai in DSR ", async() => {
-            // Dai is transferred from user
-            // Test with `normalizedDebt == 0 && amount > 0`
-            // Test with `normalizedDebt > 0 && amount > normalizedDebt`
         });
     });
 
