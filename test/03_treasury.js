@@ -155,15 +155,15 @@ contract('Treasury', async (accounts) =>  {
         describe("with a dai debt towards MakerDAO", () => {
             beforeEach(async() => {
                 let daiBorrowed = web3.utils.toWei("100");
-                await treasury.borrowDai(owner, daiBorrowed, { from: owner });
+                await treasury.disburse(user, daiBorrowed, { from: user });
             });
 
-            it("should repay Dai borrowed from the vat", async() => {
+            it("internally repays Dai borrowed from the vat", async() => {
                 // Test `normalizedAmount >= normalizedDebt`
                 let daiBorrowed = web3.utils.toWei("100");
-                await dai.transfer(treasury.address, daiBorrowed, { from: owner });
+                await dai.transfer(treasury.address, daiBorrowed, { from: user });
                 await treasury.repayDai({ from: owner });
-                let daiBalance = (await dai.balanceOf(owner)).toString();
+                let daiBalance = (await dai.balanceOf(user)).toString();
                 assert.equal(
                     daiBalance,   
                     0
@@ -176,6 +176,19 @@ contract('Treasury', async (accounts) =>  {
                 // The DaiJoin mock contract needs to have a function to return it's dai balance.
                 // The Vat mock contract needs to have a frob function that takes `dart` dai from user to DaiJoin
                 // Should transfer funds from daiJoin
+            });
+
+            it("repays dai if there is a debt", async() => {
+                // Test `normalizedAmount >= normalizedDebt`
+                let daiBorrowed = web3.utils.toWei("100");
+                await dai.approve(treasury.address, daiBorrowed, { from: user });
+                await treasury.repay(user, daiBorrowed, { from: user });
+                let daiBalance = (await dai.balanceOf(user)).toString();
+                assert.equal(
+                    daiBalance,   
+                    0
+                );
+                // assert treasury debt = 0
             });
         });
     });
