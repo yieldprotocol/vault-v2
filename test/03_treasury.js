@@ -300,7 +300,7 @@ contract('Treasury', async (accounts) =>  {
                     assert.equal(
                         (await pot.pie(treasury.address)).toString(),   
                         0
-                    );
+                    ); // It seems to call _borrowDai instead of _freeDai
                     // assert treasury debt = daiBorrowed
                     /* assert.equal(
                         (await vat.dai(treasury.address)).toString(),   
