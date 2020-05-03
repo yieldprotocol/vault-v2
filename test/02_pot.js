@@ -66,7 +66,7 @@ contract('pot', async (accounts) =>  {
 
     });
 
-    it("should join funds", async() => {
+    it("should save dai in the pot", async() => {
         assert.equal(
             (await dai.balanceOf(owner)),   
             web3.utils.toWei("10"),
@@ -80,11 +80,34 @@ contract('pot', async (accounts) =>  {
         let daiSaved = web3.utils.toWei("1");
         await daiJoin.join(owner, daiSaved, { from: owner }); // The dai needs to be joined to the vat first.
         await vat.hope(pot.address, { from: owner });         // The user joining dai to the Pot needs to have authorized pot.address in the vat first
-        await pot.join(daiSaved, { from: owner });            // The transaction where the user joins Dai to the Pot needs to have called drip() as well
+        await pot.mockJoin(daiSaved, { from: owner });            // The transaction where the user joins Dai to the Pot needs to have called drip() as well
         // await pot.dripAndJoin(daiSaved, { from: owner });
         assert.equal(
             (await pot.pie(owner)).toString(),   
             web3.utils.toWei("1")
         );
+    });
+
+    describe("with dai saved in the Pot", () => {
+        beforeEach(async() => {
+            let daiSaved = web3.utils.toWei("1");
+            await daiJoin.join(owner, daiSaved, { from: owner }); // The dai needs to be joined to the vat first.
+            await vat.hope(pot.address, { from: owner });         // The user joining dai to the Pot needs to have authorized pot.address in the vat first
+            await pot.mockJoin(daiSaved, { from: owner });            // The transaction where the user joins Dai to the Pot needs to have called drip() as well
+        });
+
+        it("should get dai out of the pot", async() => {
+            let daiSaved = web3.utils.toWei("1");
+            assert.equal(
+                (await pot.pie(owner)).toString(),   
+                daiSaved
+            );
+            
+            await pot.exit(daiSaved, { from: owner });            // The transaction where the user gets Dai out of the Pot needs to have called drip() as well
+            assert.equal(
+                (await pot.pie(owner)).toString(),   
+                web3.utils.toWei("0")
+            );
+        });
     });
 });
