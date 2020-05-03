@@ -287,24 +287,27 @@ contract('Treasury', async (accounts) =>  {
                         daiBorrowedInRad
                     );
                 });
+
+                it("disburses dai from the Pot if there is any", async() => {
+                    let daiBorrowed = web3.utils.toWei("100");
+                    await treasury.disburse(user, daiBorrowed, { from: user });
+
+                    let daiBalance = (await dai.balanceOf(user)).toString();
+                    assert.equal(
+                        daiBalance,   
+                        daiBorrowed
+                    );
+                    assert.equal(
+                        (await pot.pie(treasury.address)).toString(),   
+                        0
+                    );
+                    // assert treasury debt = daiBorrowed
+                    /* assert.equal(
+                        (await vat.dai(treasury.address)).toString(),   
+                        daiBorrowed
+                    ); */ // Not sure if I'm not checking treasury dai debt right
+                });
             });
-        });
-    });
-
-    describe("disburse()", () => {
-
-        it("if DSR balance is equal or greater than amount, withdraw from DSR", async() => {
-            // Test `_borrowDai()` and `_freeDai` first
-            // Test with `balance == amount`
-            // Mock Pot contract needs a `setChi()` and `chi()` functions.
-            // Mock Pie contract needs a `setPie()` and `pie()` functions.
-            // Transfer Dai to the user
-        });
-
-        it("if DSR balance is not equal or greater than amount, borrow from Maker", async() => {
-            // Test with `balance == 0 && amount > 0`
-            // Test with `balance > 0 && amount > balance`
-            // Transfer Dai to the user
         });
     });
 });

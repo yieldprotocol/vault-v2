@@ -116,7 +116,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
         uint256 chi = pot.chi();
         uint256 normalizedBalance = pot.pie(address(this));
         uint256 balance = normalizedBalance.muld(chi, ray);
-        if (balance > amount) {
+        if (balance >= amount) {
             //send funds directly
             uint256 normalizedAmount = amount.divd(chi, ray);
             _freeDai(normalizedAmount);
