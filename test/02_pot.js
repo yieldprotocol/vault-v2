@@ -1,4 +1,4 @@
-const Pot = artifacts.require('MockPot');
+const Pot = artifacts.require('Pot');
 const Vat = artifacts.require('Vat');
 const GemJoin = artifacts.require('GemJoin');
 const DaiJoin = artifacts.require('DaiJoin');

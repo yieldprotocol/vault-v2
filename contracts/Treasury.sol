@@ -44,6 +44,10 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
         daiJoin = IDaiJoin(daiJoin_);
         vat = IVat(vat_);
         pot = IPot(pot_);
+
+        // vat.hope(address(wethJoin));
+        vat.hope(address(daiJoin));
+        vat.hope(address(pot));
     }
 
     /// @dev Moves Eth collateral from user into Treasury controlled Maker Eth vault
@@ -187,13 +191,15 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
         uint256 balance = dai.balanceOf(address(this));
         uint256 chi = pot.chi();
         uint256 normalizedAmount = balance.divd(chi, ray);
-        pot.join(normalizedAmount); // Might need to call `drip` in the same transaction
+        pot.drip();
+        pot.join(normalizedAmount);
     }
 
     /// @dev remove Dai from the DSR
     function _freeDai(uint256 amount) internal {
         uint256 chi = pot.chi();
         uint256 normalizedAmount = amount.divd(chi, ray);
+        pot.drip();
         pot.exit(normalizedAmount); // Might need to call `drip` in the same transaction
     }
 }
