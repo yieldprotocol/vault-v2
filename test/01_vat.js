@@ -40,8 +40,6 @@ contract('vat', async (accounts) =>  {
         await vat.rely(vat.address, { from: owner });      // `owner` authorizing `vat` to operate for `vat`?
         await vat.rely(goldJoin.address, { from: owner }); // `owner` authorizing `goldJoin` to operate for `vat`
         await vat.rely(daiJoin.address, { from: owner });  // `owner` authorizing `daiJoin` to operate for `vat`
-
-        await vat.hope(daiJoin.address, { from: owner }); // `owner` allowing daiJoin to move his dai.
     });
 
     it("should setup vat", async() => {
@@ -110,7 +108,7 @@ contract('vat', async (accounts) =>  {
             it("should withdraw collateral", async() => {
                 let unfrob = web3.utils.toWei("-6");
                 await vat.frob(ilk, owner, owner, owner, unfrob, 0, { from: owner });
-                let ink = (await vat.urns(ilk, owner)).ink.toString()
+                let ink = (await vat.urns(ilk, owner)).ink.toString();
                 assert.equal(
                     ink,   
                     "0"
@@ -127,6 +125,7 @@ contract('vat', async (accounts) =>  {
                     vatBalance,   
                     daiRad
                 );
+                await vat.hope(daiJoin.address, { from: owner }); // `owner` allowing daiJoin to move his dai.
                 await daiJoin.exit(owner, daiBorrowed, { from: owner }); // Shouldn't we be able to exit vatBalance?
                 let daiBalance = (await dai.balanceOf(owner)).toString();
                 assert.equal(
@@ -139,6 +138,7 @@ contract('vat', async (accounts) =>  {
                 beforeEach(async() => {
                     let daiBorrowed = web3.utils.toWei("1");
                     await vat.frob(ilk, owner, owner, owner, 0, daiBorrowed, { from: owner });
+                    await vat.hope(daiJoin.address, { from: owner }); // `owner` allowing daiJoin to move his dai.
                     await daiJoin.exit(owner, daiBorrowed, { from: owner });
                 });
 

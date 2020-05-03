@@ -62,18 +62,26 @@ contract('pot', async (accounts) =>  {
 
     it("should setup pot", async() => {
         let chi = await pot.chi.call();
-        assert(chi == ray, "chi not initialized")
+        assert(chi == ray, "chi not initialized");
 
     });
 
     it("should join funds", async() => {
         assert.equal(
             (await dai.balanceOf(owner)),   
-            web3.utils.toWei("10")
+            web3.utils.toWei("10"),
+            "Preconditions not met - dai.balanceOf(owner)"
         );
+        let chi = await pot.chi.call();
+        assert(chi == ray, "Preconditions not met - chi not 1.0");
+        let daiOwner = (await vat.dai(owner)).toString();
+        assert(daiOwner, web3.utils.toWei("10"), "Preconditions not met - vat.dai(owner)");
+        
         let daiSaved = web3.utils.toWei("1");
-        // await pot.join(daiSaived, { from: owner });
-        await pot.dripAndJoin(daiSaved, { from: owner });
+        await daiJoin.join(owner, daiSaved, { from: owner }); // The dai needs to be joined to the vat first.
+        await vat.hope(pot.address, { from: owner });         // The user joining dai to the Pot needs to have authorized pot.address in the vat first
+        await pot.join(daiSaved, { from: owner });            // The transaction where the user joins Dai to the Pot needs to have called drip() as well
+        // await pot.dripAndJoin(daiSaved, { from: owner });
         assert.equal(
             (await pot.pie(owner)).toString(),   
             web3.utils.toWei("1")
