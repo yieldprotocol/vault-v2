@@ -153,6 +153,10 @@ contract('Treasury', async (accounts) =>  {
                 daiBorrowed
             );
             // assert treasury debt = daiBorrowed
+            assert.equal(
+                (await vat.dai(treasury.address)).toString(),   
+                daiBorrowed
+            ); // Not sure if I'm not checking treasury dai debt right
         });
 
         it("borrows dai if there is none in the Pot", async() => {
@@ -165,6 +169,10 @@ contract('Treasury', async (accounts) =>  {
                 daiBorrowed
             );
             // assert treasury debt = daiBorrowed
+            assert.equal(
+                (await vat.dai(treasury.address)).toString(),   
+                daiBorrowed
+                ); // Not sure if I'm not checking treasury dai debt right
         });
     
         describe("with a dai debt towards MakerDAO", () => {
@@ -184,6 +192,10 @@ contract('Treasury', async (accounts) =>  {
                     0
                 );
                 // assert treasury debt = 0
+                assert.equal(
+                    (await vat.dai(treasury.address)).toString(),   
+                    0
+                );
 
                 // Test `normalizedAmount < normalizedDebt`
                 // Mock Vat contract needs to return `normalizedDebt` with a `urns` function
@@ -204,6 +216,10 @@ contract('Treasury', async (accounts) =>  {
                     0
                 );
                 // assert treasury debt = 0
+                assert.equal(
+                    (await vat.dai(treasury.address)).toString(),   
+                    0
+                );
             });
         });
 
