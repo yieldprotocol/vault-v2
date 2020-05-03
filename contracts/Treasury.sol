@@ -138,6 +138,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
         // Normalized Dai to receive - wad
         (, uint256 rate,,,) = vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
         // collateral to add -- all collateral should already be present
+        // IS THE ONE BELOW THAT SHOULD ALWAYS BE POSITIVE?
         int256 dart = -amount.divd(rate, ray).toInt(); // Delta art, change in dai debt
         // Normalized Dai to receive - wad
         // frob alters Maker vaults

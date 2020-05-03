@@ -5,7 +5,7 @@ import "./../Treasury.sol";
 
 contract MockTreasury is Treasury {
 
-    constructor (address weth_, address dai_, address wethJoin_, address daiJoin_, address vat_, address pot_) 
+    constructor (address weth_, address dai_, address wethJoin_, address daiJoin_, address vat_, address pot_)
         public Treasury(weth_, dai_, wethJoin_, daiJoin_, vat_, pot_){
     }
 

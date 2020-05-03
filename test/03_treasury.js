@@ -29,7 +29,7 @@ contract('Treasury', async (accounts) =>  {
         vat = await Vat.new();
 
         weth = await ERC20.new(supply, { from: owner }); 
-        await vat.init(ilk, { from: owner });
+        await vat.init(ilk, { from: owner }); // Set ilk rate to 1.0
         wethJoin = await GemJoin.new(vat.address, ilk, weth.address, { from: owner });
 
         await vat.file(ilk, spot,    ray, { from: owner });
@@ -38,11 +38,11 @@ contract('Treasury', async (accounts) =>  {
 
         treasury = await Treasury.new(
             weth.address,       // weth
-            mockAddress,              // dai
+            mockAddress,        // dai
             wethJoin.address,   // wethJoin
-            mockAddress,              // daiJoin
+            mockAddress,        // daiJoin
             vat.address,        // vat
-            mockAddress               // pot
+            mockAddress         // pot
         );
 
         await vat.rely(vat.address, { from: owner });
@@ -111,6 +111,33 @@ contract('Treasury', async (accounts) =>  {
                 0
             );
         });
+
+        it("internally allows to borrow dai", async() => {
+            // Test with two different stability rates, if possible.
+            // Mock Vat contract needs a `setRate` and an `ilks` functions.
+            // Mock Vat contract needs the `frob` function to authorize `daiJoin.exit` transfers through the `dart` parameter.
+            let daiBorrowed = web3.utils.toWei("1");
+            await treasury.borrowDai(owner, daiBorrowed);
+
+            let daiBalance = (await dai.balanceOf(owner)).toString();
+            assert.equal(
+                daiBalance,   
+                daiBorrowed
+            );
+        });
+    
+        describe("_repayDai()", () => {
+    
+            it("should repay Dai borrowed from the vat", async() => {
+                // Test `normalizedAmount >= normalizedDebt`
+                // Test `normalizedAmount < normalizedDebt`
+                // Mock Vat contract needs to return `normalizedDebt` with a `urns` function
+                // The DaiJoin mock contract needs to have a `join` function that authorizes Vat for incoming dai transfers.
+                // The DaiJoin mock contract needs to have a function to return it's dai balance.
+                // The Vat mock contract needs to have a frob function that takes `dart` dai from user to DaiJoin
+                // Should transfer funds from daiJoin
+            });
+        });
     });
 
     describe("repay()", () => {
@@ -150,28 +177,7 @@ contract('Treasury', async (accounts) =>  {
         });
     });
 
-    describe("_borrowDai()", () => {
 
-        it("should transfer funds from daiJoin", async() => {
-            // Test with two different stability rates, if possible.
-            // Mock Vat contract needs a `setRate` and an `ilks` functions.
-            // Mock Vat contract needs the `frob` function to authorize `daiJoin.exit` transfers through the `dart` parameter.
-        });
-    });
-
-    describe("_repayDai()", () => {
-
-        it("should repay Dai borrowed from the vat", async() => {
-            // Test `normalizedAmount >= normalizedDebt`
-            // Test `normalizedAmount < normalizedDebt`
-            // Mock Vat contract needs to return `normalizedDebt` with a `urns` function
-            // The DaiJoin mock contract needs to have a `join` function that authorizes Vat for incoming dai transfers.
-            // The DaiJoin mock contract needs to have a function to return it's dai balance.
-            // The Vat mock contract needs to have a frob function that takes `dart` dai from user to DaiJoin
-            // Should transfer funds from daiJoin
-        });
-
-    });
 
     describe("_lockDai()", () => {
 
