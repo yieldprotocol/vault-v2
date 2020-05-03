@@ -202,6 +202,6 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
         uint256 chi = pot.chi();
         uint256 normalizedAmount = amount.divd(chi, ray);
         pot.drip();
-        pot.exit(normalizedAmount); // Might need to call `drip` in the same transaction
+        pot.exit(normalizedAmount);
     }
 }
