@@ -1,8 +1,9 @@
 const Treasury = artifacts.require('./MockTreasury');
-// const MockContract = artifacts.require("./MockContract")
-const Vat= artifacts.require('./Vat');
-const GemJoin = artifacts.require('./GemJoin');
 const ERC20 = artifacts.require("./TestERC20");
+const DaiJoin = artifacts.require('DaiJoin');
+const GemJoin = artifacts.require('./GemJoin');
+const Pot = artifacts.require('Pot');
+const Vat= artifacts.require('./Vat');
 
 const truffleAssert = require('truffle-assertions');
 const helper = require('ganache-time-traveler');
@@ -11,6 +12,10 @@ contract('Treasury', async (accounts) =>  {
     let [ owner, user ] = accounts;
     let vat;
     let weth;
+    let dai;
+    let wethJoin;
+    let daiJoin;
+    let pot;
     let treasury;
     let ilk = web3.utils.fromAscii("ETH-A")
     let Line = web3.utils.fromAscii("Line")
@@ -27,27 +32,35 @@ contract('Treasury', async (accounts) =>  {
     beforeEach(async() => {
         // Set up vat, join and weth
         vat = await Vat.new();
+        await vat.rely(vat.address, { from: owner });
 
         weth = await ERC20.new(supply, { from: owner }); 
         await vat.init(ilk, { from: owner }); // Set ilk rate to 1.0
         wethJoin = await GemJoin.new(vat.address, ilk, weth.address, { from: owner });
+        await vat.rely(wethJoin.address, { from: owner });
 
+        dai = await ERC20.new(0, { from: owner });
+        daiJoin = await DaiJoin.new(vat.address, dai.address, { from: owner });
+        await vat.rely(daiJoin.address, { from: owner });
+
+        // Setup vat
         await vat.file(ilk, spot,    ray, { from: owner });
         await vat.file(ilk, linel, limits, { from: owner });
         await vat.file(Line,       limits); // TODO: Why can't we specify `, { from: owner }`?
 
+        // Setup pot
+        pot = await Pot.new(vat.address);
+        await vat.rely(pot.address, { from: owner });
+
         treasury = await Treasury.new(
             weth.address,       // weth
-            mockAddress,        // dai
+            dai.address,        // dai
             wethJoin.address,   // wethJoin
-            mockAddress,        // daiJoin
+            daiJoin.address,    // daiJoin
             vat.address,        // vat
-            mockAddress         // pot
+            pot.address         // pot
         );
-
-        await vat.rely(vat.address, { from: owner });
-        await vat.rely(wethJoin.address, { from: owner });
-        await vat.rely(treasury.address, { from: owner });
+        await vat.rely(treasury.address, { from: owner }); //?
 
         await treasury.grantAccess(user, { from: owner });
     });
