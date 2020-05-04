@@ -289,7 +289,11 @@ contract('Treasury', async (accounts) =>  {
                 });
 
                 it("disburses dai from the Pot if there is any", async() => {
-                    let daiBorrowed = web3.utils.toWei("100");
+                    let daiBorrowed = web3.utils.toWei("10");
+                    assert.equal(
+                        (await pot.pie(treasury.address)).toString(),   
+                        daiBorrowed
+                    );
                     await treasury.disburse(user, daiBorrowed, { from: user });
 
                     let daiBalance = (await dai.balanceOf(user)).toString();
@@ -301,11 +305,6 @@ contract('Treasury', async (accounts) =>  {
                         (await pot.pie(treasury.address)).toString(),   
                         0
                     ); // It seems to call _borrowDai instead of _freeDai
-                    // assert treasury debt = daiBorrowed
-                    /* assert.equal(
-                        (await vat.dai(treasury.address)).toString(),   
-                        daiBorrowed
-                    ); */ // Not sure if I'm not checking treasury dai debt right
                 });
             });
         });

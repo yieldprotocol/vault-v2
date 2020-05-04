@@ -118,12 +118,8 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
         uint256 balance = normalizedBalance.muld(chi, ray);
         if (balance >= amount) {
             //send funds directly
-            uint256 normalizedAmount = amount.divd(chi, ray);
-            _freeDai(normalizedAmount);
-            require(
-                dai.transfer(receiver, amount),
-                "YToken: DAI transfer fail"
-            ); // TODO: Check dai behaviour on failed transfers
+            _freeDai(amount);
+            daiJoin.exit(receiver, amount);
         } else {
             //borrow funds and send them
             _borrowDai(receiver, amount);
