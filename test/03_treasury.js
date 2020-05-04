@@ -181,7 +181,7 @@ contract('Treasury', async (accounts) =>  {
                 await treasury.disburse(user, daiBorrowed, { from: user });
             });
 
-            it("internally repays Dai borrowed from the vat", async() => {
+            it("internally repays Dai debt and no more", async() => {
                 // Test `normalizedAmount >= normalizedDebt`
                 let daiBorrowed = web3.utils.toWei("100");
                 await dai.transfer(treasury.address, daiBorrowed, { from: user });
@@ -205,7 +205,7 @@ contract('Treasury', async (accounts) =>  {
                 // Should transfer funds from daiJoin
             });
 
-            it("repays dai if there is a debt", async() => {
+            it("repays dai if there is a debt, but no more", async() => {
                 // Test `normalizedAmount >= normalizedDebt`
                 let daiBorrowed = web3.utils.toWei("100");
                 await dai.approve(treasury.address, daiBorrowed, { from: user });
