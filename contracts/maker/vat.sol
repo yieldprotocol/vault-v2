@@ -82,27 +82,27 @@ contract Vat {
     // --- Math ---
     function add(uint x, int y) internal pure returns (uint z) {
         z = x + uint(y);
-        require(y >= 0 || z <= x);
-        require(y <= 0 || z >= x);
+        require(y >= 0 || z <= x, "Vat/add");
+        require(y <= 0 || z >= x, "Vat/add");
     }
     function sub(uint x, int y) internal pure returns (uint z) {
         z = x - uint(y);
-        require(y <= 0 || z <= x);
-        require(y >= 0 || z >= x);
+        require(y <= 0 || z <= x, "Vat/sub");
+        require(y >= 0 || z >= x, "Vat/sub");
     }
     function mul(uint x, int y) internal pure returns (int z) {
         z = int(x) * y;
-        require(int(x) >= 0);
-        require(y == 0 || z / y == int(x));
+        require(int(x) >= 0, "Vat/mul");
+        require(y == 0 || z / y == int(x), "Vat/mul");
     }
     function add(uint x, uint y) internal pure returns (uint z) {
-        require((z = x + y) >= x);
+        require((z = x + y) >= x, "Vat/add");
     }
     function sub(uint x, uint y) internal pure returns (uint z) {
-        require((z = x - y) <= x);
+        require((z = x - y) <= x, "Vat/sub");
     }
     function mul(uint x, uint y) internal pure returns (uint z) {
-        require(y == 0 || (z = x * y) / y == x);
+        require(y == 0 || (z = x * y) / y == x, "Vat/mul");
     }
 
     // --- Administration ---

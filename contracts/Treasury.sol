@@ -34,7 +34,21 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
 
     int256 daiBalance; // Could this be retrieved as dai.balanceOf(address(this)) - something?
     // uint256 ethBalance; // This can be retrieved as weth.balanceOf(address(this))
-    bytes32 collateralType = "ETH-A";
+    bytes32 constant collateralType = "ETH-A";
+
+    constructor (address weth_, address dai_, address wethJoin_, address daiJoin_, address vat_, address pot_) public {
+        // These could be hardcoded for mainnet deployment.
+        weth = IERC20(weth_);
+        dai = IERC20(dai_);
+        wethJoin = IGemJoin(wethJoin_);
+        daiJoin = IDaiJoin(daiJoin_);
+        vat = IVat(vat_);
+        pot = IPot(pot_);
+
+        // vat.hope(address(wethJoin));
+        vat.hope(address(daiJoin));
+        vat.hope(address(pot));
+    }
 
     /// @dev Moves Eth collateral from user into Treasury controlled Maker Eth vault
     function post(address from, uint256 amount) public override onlyAuthorized("Treasury: Not Authorized") {
@@ -102,14 +116,10 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
         uint256 chi = pot.chi();
         uint256 normalizedBalance = pot.pie(address(this));
         uint256 balance = normalizedBalance.muld(chi, ray);
-        if (balance > amount) {
+        if (balance >= amount) {
             //send funds directly
-            uint256 normalizedAmount = amount.divd(chi, ray);
-            _freeDai(normalizedAmount);
-            require(
-                dai.transfer(receiver, amount),
-                "YToken: DAI transfer fail"
-            ); // TODO: Check dai behaviour on failed transfers
+            _freeDai(amount);
+            daiJoin.exit(receiver, amount);
         } else {
             //borrow funds and send them
             _borrowDai(receiver, amount);
@@ -124,7 +134,8 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
         // Normalized Dai to receive - wad
         (, uint256 rate,,,) = vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
         // collateral to add -- all collateral should already be present
-        int256 dart = -amount.divd(rate, ray).toInt(); // Delta art, change in dai debt
+        // IS THE ONE BELOW THAT SHOULD ALWAYS BE POSITIVE?
+        int256 dart = amount.divd(rate, ray).toInt(); // Delta art, change in dai debt
         // Normalized Dai to receive - wad
         // frob alters Maker vaults
         vat.frob(
@@ -177,6 +188,8 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
         uint256 balance = dai.balanceOf(address(this));
         uint256 chi = pot.chi();
         uint256 normalizedAmount = balance.divd(chi, ray);
+        daiJoin.join(address(this), normalizedAmount);
+        pot.drip();
         pot.join(normalizedAmount);
     }
 
@@ -184,6 +197,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
     function _freeDai(uint256 amount) internal {
         uint256 chi = pot.chi();
         uint256 normalizedAmount = amount.divd(chi, ray);
+        pot.drip();
         pot.exit(normalizedAmount);
     }
 }
