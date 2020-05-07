@@ -88,7 +88,7 @@ contract ChaiController is Ownable, Constants {
     /// @dev Takes Chai as collateral from `from` address and gives it to the Lender (converted to Dai) if it has debt, or to the Saver otherwise
     // from --- Chai ---> us
     function post(address from, uint256 chai) public {
-        uint256 dai = _chai.price(chai);
+        uint256 dai = chai.muld(_chaiOracle.price(), RAY);
         if (_lender.debt() > dai){
             _chai.transferFrom(from, address(this), chai);
             _chai.exit(chai);

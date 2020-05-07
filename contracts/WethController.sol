@@ -123,7 +123,7 @@ contract WethController is Ownable, Constants {
         );
         require(
             posted[to] >= (debtOf(to).add(yDai))
-                .divd(_wethOracle.price())
+                .divd(_wethOracle.price(), RAY)
                 .muld(_collateralization, RAY),
             "Accounts: Post more collateral"
         );
