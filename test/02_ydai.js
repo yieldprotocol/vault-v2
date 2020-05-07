@@ -90,4 +90,22 @@ contract('yDai', async (accounts) =>  {
             true,
         );
     });
+
+    describe("once mature", () => {
+        beforeEach(async() => {
+            await helper.advanceTime(1000);
+            await helper.advanceBlock();
+            await yDai.mature();
+        });
+
+        // TODO: Test with a moving chi
+        it("chi gets fixed to maturity time", async() => {
+            assert((await yDai.chi()) == RAY);
+        });
+
+        // TODO: Test with a moving rate
+        it("rate gets fixed to maturity time", async() => {
+            assert((await yDai.rate()) == RAY);
+        });
+    });
 });
