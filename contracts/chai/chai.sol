@@ -40,10 +40,10 @@ interface GemLike {
 
 contract Chai {
     // --- Data ---
-    VatLike  public vat = VatLike(0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B);
-    PotLike  public pot = PotLike(0x197E90f9FAD81970bA7976f33CbD77088E5D7cf7);
-    JoinLike public daiJoin = JoinLike(0x9759A6Ac90977b93B58547b4A71c78317f391A28);
-    GemLike  public daiToken = GemLike(0x6B175474E89094C44Da98b954EedeAC495271d0F);
+    VatLike  public vat;
+    PotLike  public pot;
+    JoinLike public daiJoin;
+    GemLike  public daiToken;
 
     // --- ERC20 Data ---
     string  public constant name     = "Chai";
@@ -88,12 +88,17 @@ contract Chai {
     // keccak256("Permit(address holder,address spender,uint256 nonce,uint256 expiry,bool allowed)"));
     bytes32 public constant PERMIT_TYPEHASH  = 0xea2aa0a1be11a07ed86d755c93467f4f82362b452371d1ba94d1715123511acb;
 
-    constructor() public {
-        assert (DOMAIN_SEPARATOR ==
+    constructor(address vat_, address pot_, address daiJoin_, address weth_) public {
+        /* assert (DOMAIN_SEPARATOR ==
           keccak256(abi.encode(
             keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
             keccak256(bytes(name)), keccak256(bytes(version)), 1, address(this)))
-        );
+        ); */
+
+        vat = VatLike(vat_);
+        pot = PotLike(pot_);
+        daiJoin = JoinLike(daiJoin_);
+        daiToken = GemLike(weth_);
 
         vat.hope(address(daiJoin));
         vat.hope(address(pot));
