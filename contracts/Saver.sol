@@ -2,24 +2,14 @@ pragma solidity ^0.6.0;
 
 import "@hq20/contracts/contracts/access/AuthorizedAccess.sol";
 import "@hq20/contracts/contracts/math/DecimalMath.sol";
-import "@hq20/contracts/contracts/utils/SafeCast.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./interfaces/IDaiJoin.sol";
-import "./interfaces/IGemJoin.sol";
-import "./interfaces/IVat.sol";
-import "./interfaces/ILender.sol";
+import "./interfaces/ISaver.sol";
 import "./Constants.sol";
 
 
 /// @dev Saver holds Chai.
 contract Saver is ISaver, AuthorizedAccess(), Constants() {
     using DecimalMath for uint256;
-    using DecimalMath for int256;
-    using DecimalMath for uint8;
-    using SafeCast for uint256;
-    using SafeCast for int256;
 
     IERC20 internal _chai;
 
