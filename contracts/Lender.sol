@@ -14,8 +14,8 @@ import "./interfaces/ITreasury.sol";
 import "./Constants.sol";
 
 
-/// @dev Treasury is the bottom layer that moves all assets.
-contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
+/// @dev Lender manages the Dai, interacting with MakerDAO's vat when needed.
+contract Lender is ILender, AuthorizedAccess(), Constants() {
     using DecimalMath for uint256;
     using DecimalMath for int256;
     using DecimalMath for uint8;
