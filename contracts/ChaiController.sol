@@ -7,13 +7,13 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IOracle.sol";
 import "./interfaces/ILender.sol";
 import "./interfaces/ISaver.sol";
-import "./interfaces/IWeth.sol";
+import "./interfaces/IChai.sol";
 import "./Constants.sol";
 import "./YDai.sol"; // TODO: Find how to use an interface
 
 
-/// @dev Controller manages the state variables for an yDai series
-contract Controller is Ownable, Constants {
+/// @dev ChaiController manages a Chai/yDai series pair.
+contract ChaiController is Ownable, Constants {
     using SafeMath for uint256;
     using DecimalMath for uint256;
     using DecimalMath for int256;
@@ -21,12 +21,13 @@ contract Controller is Ownable, Constants {
 
     ILender internal _lender;
     ISaver internal _saver;
+    IERC20 internal _dai;
     YDai internal _yDai;
-    IWeth internal _weth;
-    IOracle internal _wethOracle;
+    IChai internal _chai;
+    IOracle internal _chaiOracle;
 
-    mapping(address => uint256) internal posted; // In WETH
-    mapping(address => uint256) internal debt; // In DAI
+    mapping(address => uint256) internal posted; // In Chai
+    mapping(address => uint256) internal debt; // In yDai
 
     uint256 public _stability; // accumulator (for stability fee) at maturity in RAY units
     uint256 public _collateralization; // accumulator (for stability fee) at maturity in RAY units
@@ -34,16 +35,18 @@ contract Controller is Ownable, Constants {
     constructor (
         address lender_,
         address saver_,
+        address _dai,
         address yDai_,
-        address weth_,
-        address wethOracle_,
+        address chai_,
+        address chaiOracle_,
         uint256 collateralization_
     ) public {
         _lender = ILender(lender_);
         _saver = ISaver(saver_);
+        _dai = IERC20(dai_);
         _yDai = YDai(yDai_);
-        _weth = IERC20(weth_);
-        _wethOracle = IOracle(wethOracle_);
+        _chai = IChai(chai_);
+        _chaiOracle = IOracle(chaiOracle_);
         _collateralization = collateralization_;
     }
 
@@ -55,7 +58,7 @@ contract Controller is Ownable, Constants {
     //
     function unlockedOf(address user) public view returns (uint256) {
         uint256 locked = debtOf(user)
-            .divd(_wethOracle.price(), RAY)
+            .divd(_chaiOracle.price(), RAY)
             .muld(_collateralization, RAY);
         if (locked > posted[user]) return 0; // Unlikely
         return posted[user].sub(locked);
@@ -76,34 +79,48 @@ contract Controller is Ownable, Constants {
         }
     }
 
-    /// @dev Takes Weth as collateral from caller and gives it to the Lender
-    // caller --- Weth ---> us
-    function post(uint256 weth) public {
-        post(msg.sender, weth);
+    /// @dev Takes Chai as collateral from caller and gives it to the Lender (converted to Dai) if it has debt, or to the Saver otherwise
+    // caller --- Chai ---> us
+    function post(uint256 chai) public {
+        post(msg.sender, chai);
     }
 
-    /// @dev Takes Weth as collateral from `from` address and gives it to the Lender
-    // from --- Weth ---> us
-    function post(address from, uint256 weth) public {
-        _lender.post(weth);
-        posted[from] = posted[from].add(weth);
+    /// @dev Takes Chai as collateral from `from` address and gives it to the Lender (converted to Dai) if it has debt, or to the Saver otherwise
+    // from --- Chai ---> us
+    function post(address from, uint256 chai) public {
+        uint256 dai = _chai.price(chai);
+        if (_lender.debt() > dai){
+            _chai.transferFrom(user, address(this), chai);
+            _chai.exit(chai);
+            _lender.repay(dai);
+        }
+        else {
+            _saver.join(from, chai);
+        }
+        posted[from] = posted[from].add(chai);
     }
 
-    /// @dev Moves Weth collateral from Lender to caller
-    // us --- Weth ---> caller
-    function withdraw(uint256 weth) public {
-        withdraw(msg.sender, weth);
+    /// @dev Moves Chai collateral from Saver to caller if there are savings, or otherwise borrows Dai from Lender and sends it converted to Chai
+    // us --- Chai ---> caller
+    function withdraw(uint256 chai) public {
+        withdraw(msg.sender, chai);
     }
 
-    /// @dev Moves Weth collateral from Lender to `to` address
-    // us --- Weth ---> to
-    function withdraw(address to, uint256 weth) public {
+    /// @dev Moves Chai collateral from Saver to `to` address if there are savings, or otherwise borrows Dai from Lender and sends it converted to Chai
+    // us --- Chai ---> to
+    function withdraw(address to, uint256 chai) public {
         require(
-            unlockedOf(to) >= weth,
+            unlockedOf(to) >= chai,
             "Accounts: Free more collateral"
         );
-        posted[to] = posted[to].sub(weth); // Will revert if not enough posted
-        _lender.withdraw(to, weth);
+        posted[to] = posted[to].sub(chai); // Will revert if not enough posted
+        if (_saver.savings() >= chai){
+            _saver.exit(to, chai);
+        }
+        else {
+            uint256 dai = chai.muld(_chaiOracle.price(), RAY);
+            _lender.borrow(to, dai);
+        }
     }
 
     // ---------- Manage Dai/yDai ----------
@@ -125,7 +142,7 @@ contract Controller is Ownable, Constants {
         );
         require(
             posted[to] >= (debtOf(to).add(yDai))
-                .divd(_wethOracle.price())
+                .divd(_chaiOracle.price())
                 .muld(_collateralization, RAY),
             "Accounts: Post more collateral"
         );
@@ -143,7 +160,7 @@ contract Controller is Ownable, Constants {
     // debt_discounted = debt_nominal - repay_amount * ---------------
     //                                                  debt_nominal
     //
-    // user --- Dai ---> us
+    // user --- yDai ---> us
     // debt--
     function repay(address from, uint256 yDai) public {
         uint256 debtProportion = debt[from].mul(ray.unit())

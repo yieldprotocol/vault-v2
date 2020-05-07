@@ -18,9 +18,9 @@ contract('pot', async (accounts) =>  {
     let linel = web3.utils.fromAscii("line")
     let owner = accounts[0];
     let account1 = accounts[1];
-    const ray  = "1000000000000000000000000000";
+    const RAY  = "1000000000000000000000000000";
     const supply = web3.utils.toWei("1000");
-    const rad = web3.utils.toBN('49')
+    const RAD = web3.utils.toBN('49')
     const limits =  web3.utils.toBN('10').pow(rad).toString();
     // console.log(limits);
 
@@ -36,7 +36,7 @@ contract('pot', async (accounts) =>  {
         daiJoin = await DaiJoin.new(vat.address, dai.address, { from: owner });
 
         // Setup vat
-        await vat.file(ilk, spot,    ray, { from: owner });
+        await vat.file(ilk, spot,    RAY, { from: owner });
         await vat.file(ilk, linel, limits, { from: owner });
         await vat.file(Line,       limits); // TODO: Why can't we specify `, { from: owner }`?
 
@@ -62,7 +62,7 @@ contract('pot', async (accounts) =>  {
 
     it("should setup pot", async() => {
         let chi = await pot.chi.call();
-        assert(chi == ray, "chi not initialized");
+        assert(chi == RAY, "chi not initialized");
 
     });
 
@@ -73,7 +73,7 @@ contract('pot', async (accounts) =>  {
             "Preconditions not met - dai.balanceOf(owner)"
         );
         let chi = await pot.chi.call();
-        assert(chi == ray, "Preconditions not met - chi not 1.0");
+        assert(chi == RAY, "Preconditions not met - chi not 1.0");
         let daiOwner = (await vat.dai(owner)).toString();
         assert(daiOwner, web3.utils.toWei("10"), "Preconditions not met - vat.dai(owner)");
         

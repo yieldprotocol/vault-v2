@@ -22,131 +22,123 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
     using SafeCast for uint256;
     using SafeCast for int256;
 
-    IERC20 public weth;
-    IERC20 public dai;
-    // Maker join contracts:
-    // https://github.com/makerdao/dss/blob/master/src/join.sol
-    IGemJoin public wethJoin;
-    IDaiJoin public daiJoin;
-    // Maker vat contract:
-    IVat public vat;
-    IPot public pot;
-
-    int256 daiBalance; // Could this be retrieved as dai.balanceOf(address(this)) - something?
-    // uint256 ethBalance; // This can be retrieved as weth.balanceOf(address(this))
     bytes32 constant collateralType = "ETH-A";
 
-    constructor (address weth_, address dai_, address wethJoin_, address daiJoin_, address vat_, address pot_) public {
+    IERC20 internal _dai;
+    IERC20 internal _weth;
+    IDaiJoin internal _daiJoin;
+    IGemJoin internal _wethJoin;
+    IVat internal _vat;
+
+    uint256 internal _debt;
+
+    constructor (address dai_, address weth_, address daiJoin_, address wethJoin_, address vat_) public {
         // These could be hardcoded for mainnet deployment.
-        weth = IERC20(weth_);
-        dai = IERC20(dai_);
-        wethJoin = IGemJoin(wethJoin_);
-        daiJoin = IDaiJoin(daiJoin_);
-        vat = IVat(vat_);
-        pot = IPot(pot_);
+        _dai = IERC20(dai_);
+        _weth = IERC20(weth_);
+        _daiJoin = IDaiJoin(daiJoin_);
+        _wethJoin = IGemJoin(wethJoin_);
+        _vat = IVat(vat_);
 
         // vat.hope(address(wethJoin));
-        vat.hope(address(daiJoin));
-        vat.hope(address(pot));
+        _vat.hope(address(daiJoin_));
+        _vat.hope(address(pot_));
     }
 
-    /// @dev Moves Eth collateral from user into Treasury controlled Maker Eth vault
-    function post(address from, uint256 amount) public override onlyAuthorized("Treasury: Not Authorized") {
+    function debt() public returns(uint256) {
+        return _debt;
+    }
+
+    /// @dev Moves Weth collateral from caller into Lender controlled Maker Eth vault
+    function post(uint256 weth) public override {
+        post(msg.sender, weth);
+    }
+
+    /// @dev Moves Weth collateral from `from` address into Lender controlled Maker Eth vault
+    function post(address from, uint256 weth) public override onlyAuthorized("Lender: Not Authorized") {
         require(
-            weth.transferFrom(from, address(this), amount),
+            _weth.transferFrom(from, address(this), weth),
             "YToken: WETH transfer fail"
         );
-        weth.approve(address(wethJoin), amount);
-        wethJoin.join(address(this), amount); // GemJoin reverts if anything goes wrong.
-        // All added collateral should be locked into the vault
-        // collateral to add - wad
-        int256 dink = amount.toInt();
-        // Normalized Dai to receive - wad
-        int256 dart = 0;
-        // frob alters Maker vaults
-        vat.frob(
+        _weth.approve(address(_wethJoin), weth);
+        _wethJoin.join(address(this), weth); // GemJoin reverts if anything goes wrong.
+        // All added collateral should be locked into the vault using frob
+        _vat.frob(
             collateralType,
             address(this),
             address(this),
             address(this),
-            dink,
-            dart
-        ); // `vat.frob` reverts on failure
+            weth.toInt(), // Collateral to add - WAD
+            0 // Normalized Dai to receive - WAD
+        );
     }
 
-    /// @dev Moves Eth collateral from Treasury controlled Maker Eth vault back to user
-    /// TODO: This function requires authorization to use
-    function withdraw(address receiver, uint256 amount) public override onlyAuthorized("Treasury: Not Authorized") {
-        // Remove collateral from vault
-        // collateral to add - wad
-        int256 dink = -amount.toInt();
-        // Normalized Dai to receive - wad
-        int256 dart = 0;
-        // frob alters Maker vaults
-        vat.frob(
+    /// @dev Moves Weth collateral from Lender controlled Maker Eth vault to caller.
+    function withdraw(uint256 weth) public override {
+        withdraw(msg.sender, weth);
+    }
+
+    /// @dev Moves Weth collateral from Lender controlled Maker Eth vault to `to` address.
+    function withdraw(address to, uint256 weth) public override onlyAuthorized("Lender: Not Authorized") {
+        // Remove collateral from vault using frob
+        _vat.frob(
             collateralType,
             address(this),
             address(this),
             address(this),
-            dink,
-            dart
-        ); // `vat.frob` reverts on failure
-        wethJoin.exit(receiver, amount); // `GemJoin` reverts on failures
+            -weth.toInt(), // Weth collateral to add - WAD
+            0              // Dai debt to add - WAD
+        );
+        _wethJoin.exit(to, weth); // `GemJoin` reverts on failures
     }
 
-    /// @dev Moves Dai from user into Treasury controlled Maker Dai vault
-    function repay(address source, uint256 amount) public override onlyAuthorized("Treasury: Not Authorized") {
+    /// @dev Moves Dai from caller into Lender controlled Maker Dai vault
+    function repay(uint256 dai) public override {
+        repay(msg.sender, dai);
+    }
+
+    /// @dev Moves Dai from `from` address into Lender controlled Maker Dai vault
+    function repay(address from, uint256 dai) public override onlyAuthorized("Lender: Not Authorized") {
         require(
-            dai.transferFrom(source, address(this), amount),
+            _dai.transferFrom(from, address(this), dai),
             "YToken: DAI transfer fail"
         ); // TODO: Check dai behaviour on failed transfers
-        (, uint256 normalizedDebt) = vat.urns(collateralType, address(this));
-        if (normalizedDebt > 0){
-            // repay as much debt as possible
-            _repayDai();
-        } else {
-            // put funds in the DSR
-            _lockDai();
-        }
-    }
-
-    /// @dev moves Dai from Treasury to user, borrowing from Maker DAO if not enough present.
-    /// TODO: This function requires authorization to use
-    function disburse(address receiver, uint256 amount) public override onlyAuthorized("Treasury: Not Authorized") {
-        uint256 chi = pot.chi();
-        uint256 normalizedBalance = pot.pie(address(this));
-        uint256 balance = normalizedBalance.muld(chi, ray);
-        if (balance >= amount) {
-            //send funds directly
-            _freeDai(amount);
-            daiJoin.exit(receiver, amount);
-        } else {
-            //borrow funds and send them
-            _borrowDai(receiver, amount);
-        }
-    }
-
-    /// @dev Mint an `amount` of Dai
-    function _borrowDai(address receiver, uint256 amount) internal {
-        // Add Dai to vault
-        // collateral to add - wad
-        int256 dink = 0; // Delta ink, change in collateral balance
-        // Normalized Dai to receive - wad
-        (, uint256 rate,,,) = vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
-        // collateral to add -- all collateral should already be present
-        // IS THE ONE BELOW THAT SHOULD ALWAYS BE POSITIVE?
-        int256 dart = amount.divd(rate, ray).toInt(); // Delta art, change in dai debt
-        // Normalized Dai to receive - wad
-        // frob alters Maker vaults
-        vat.frob(
+        require(
+            _debt >= dai,
+            "Lender: Not enough debt"
+        );
+        _daiJoin.join(address(this), dai);
+        // Remove debt from vault using frob
+        _vat.frob(
             collateralType,
             address(this),
             address(this),
             address(this),
-            dink,
-            dart
+            0,           // Weth collateral to add
+            -dai.toInt() // Dai debt to add
+        );
+        (, _debt) = _vat.urns(collateralType, address(this));
+    }
+
+    /// @dev moves Dai from Lender controlled Maker vault, borrowing if necessary, to caller.
+    function borrow(uint256 dai) public override {
+        borrow(msg.sender, dai);
+    }
+
+    /// @dev moves Dai from Lender controlled Maker vault, borrowing if necessary, to `to` address.
+    function borrow(address to, uint256 dai) public override onlyAuthorized("Lender: Not Authorized") {
+        (, uint256 rate,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
+        // Increase the dai debt by the dai to receive divided by the stability fee
+        _vat.frob(
+            collateralType,
+            address(this),
+            address(this),
+            address(this),
+            0,
+            dai.divd(rate, RAY).toInt()
         ); // `vat.frob` reverts on failure
-        daiJoin.exit(receiver, amount); // `daiJoin` reverts on failures
+        (, _debt) = _vat.urns(collateralType, address(this)); // Doesn't follow checks effects interactions pattern
+        _daiJoin.exit(to, dai); // `daiJoin` reverts on failures
     }
 
     /// @dev Moves Dai from user into Treasury controlled Maker Dai vault

@@ -22,9 +22,9 @@ contract('Treasury', async (accounts) =>  {
     const spot = web3.utils.fromAscii("spot")
     const linel = web3.utils.fromAscii("line")
 
-    const ray  = "1000000000000000000000000000";
+    const RAY  = "1000000000000000000000000000";
     const supply = web3.utils.toWei("1000");
-    const rad = web3.utils.toBN('45')
+    const RAD = web3.utils.toBN('45')
     const limits =  web3.utils.toBN('10000').mul(web3.utils.toBN('10').pow(rad)).toString(); // 10000 * 10**45
     const mockAddress = accounts[9];
     // console.log(limits);
@@ -44,7 +44,7 @@ contract('Treasury', async (accounts) =>  {
         await vat.rely(daiJoin.address, { from: owner });
 
         // Setup vat
-        await vat.file(ilk, spot,    ray, { from: owner });
+        await vat.file(ilk, spot,    RAY, { from: owner });
         await vat.file(ilk, linel, limits, { from: owner });
         await vat.file(Line,       limits); // TODO: Why can't we specify `, { from: owner }`?
 

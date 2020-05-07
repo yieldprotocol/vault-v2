@@ -16,9 +16,9 @@ contract('vat', async (accounts) =>  {
     let linel = web3.utils.fromAscii("line")
     let owner = accounts[0];
     let account1 = accounts[1];
-    const ray  = "1000000000000000000000000000";
+    const RAY  = "1000000000000000000000000000";
     const supply = web3.utils.toWei("1000");
-    const rad = web3.utils.toBN('49')
+    const RAD = web3.utils.toBN('49')
     const limits =  web3.utils.toBN('10').pow(rad).toString();
     // console.log(limits);
 
@@ -33,7 +33,7 @@ contract('vat', async (accounts) =>  {
         dai = await ERC20.new(0, { from: owner }); 
         daiJoin = await DaiJoin.new(vat.address, dai.address, { from: owner });
 
-        await vat.file(ilk, spot,    ray, { from: owner });
+        await vat.file(ilk, spot,    RAY, { from: owner });
         await vat.file(ilk, linel, limits, { from: owner });
         await vat.file(Line,       limits); // TODO: Why can't we specify `, { from: owner }`?
 
@@ -44,7 +44,7 @@ contract('vat', async (accounts) =>  {
 
     it("should setup vat", async() => {
         let spot = (await vat.ilks(ilk)).spot.toString()
-        assert(spot == ray, "spot not initialized")
+        assert(spot == RAY, "spot not initialized")
     });
 
     it("should join funds", async() => {
@@ -86,8 +86,8 @@ contract('vat', async (accounts) =>  {
             await vat.frob(ilk, owner, owner, owner, collateral, dai, { from: owner });
             //let ink = (await vat.urns(ilk, owner)).ink.toString();
             let balance = (await vat.dai(owner)).toString();
-            const rad = web3.utils.toBN('45')
-            const daiRad =  web3.utils.toBN('10').pow(rad).toString(); //dai in rad
+            const RAD = web3.utils.toBN('45')
+            const daiRad =  web3.utils.toBN('10').pow(rad).toString(); //dai in RAD
             assert.equal(
                 balance,   
                 daiRad
@@ -119,8 +119,8 @@ contract('vat', async (accounts) =>  {
                 let daiBorrowed = web3.utils.toWei("1");
                 await vat.frob(ilk, owner, owner, owner, 0, daiBorrowed, { from: owner });
                 let vatBalance = (await vat.dai(owner)).toString();
-                const rad = web3.utils.toBN('45')
-                const daiRad =  web3.utils.toBN('10').pow(rad).toString(); //dai in rad
+                const RAD = web3.utils.toBN('45')
+                const daiRad =  web3.utils.toBN('10').pow(rad).toString(); //dai in RAD
                 assert.equal(
                     vatBalance,   
                     daiRad

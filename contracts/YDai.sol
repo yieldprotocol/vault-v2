@@ -16,13 +16,13 @@ contract YDai is Constants, Ownable, ERC20 {
 
     event Matured(uint256 rate, uint256 chi);
 
-    IVat public vat;
-    IPot public pot;
+    IVat internal _vat;
+    IPot internal _pot; // Can we get this from Chai.sol?
 
-    bool public isMature;
-    uint256 public maturity;
-    uint256 public maturityChi;  // accumulator (for dsr) at maturity in ray units
-    uint256 public maturityRate; // accumulator (for stability fee) at maturity in ray units
+    bool internal _isMature;
+    uint256 internal _maturity;
+    uint256 internal _chi; 
+    uint256 internal _rate;
 
     constructor(
         string memory name,
@@ -31,33 +31,52 @@ contract YDai is Constants, Ownable, ERC20 {
         address pot_,
         uint256 maturity_
     ) public ERC20(name, symbol) Ownable() {
-        vat = IVat(vat_);
-        pot = IPot(pot_);
-        maturity = maturity_;
+        _vat = IVat(vat_);
+        _pot = IPot(pot_);
+        _maturity = maturity_;
     }
 
+    /// @dev Whether the yDai has matured or not
+    function isMature() public returns(bool){
+        return _isMature;
+    }
+
+    /// @dev Programmed time for yDai maturity
+    function maturity() public returns(uint256){
+        return _maturity;
+    }
+    
+    /// @dev accumulator (for dsr) at maturity in RAY units
+    function chi() public returns(uint256){
+        return _chi;
+    };
+    
+    /// @dev accumulator (for stability fee) at maturity in RAY units
+    function rate() public returns(uint256){
+        return _rate;
+    };
+
     /// @dev Mature yDai and capture maturity data
-    /// TODO: Should we just take maturityRate and maturityChi as parameters?
     function mature() public {
         require(
             // solium-disable-next-line security/no-block-members
-            now > maturity,
+            now > _maturity,
             "YDai: Too early to mature"
         );
-        (, maturityRate,,,) = vat.ilks("ETH-A"); // Retrieve the MakerDAO DSR
-        maturityRate = Math.max(maturityRate, ray.unit()); // Floor it at 1.0
-        maturityChi = pot.chi();
-        isMature = true;
-        emit Matured(maturityRate, maturityChi);
+        (, _rate,,,) = vat.ilks("ETH-A"); // Retrieve the MakerDAO DSR
+        _rate = Math.max(_rate, RAY.unit()); // Floor it at 1.0
+        _chi = (now > pot.rho()) ? pot.drip() : pot.chi();
+        _isMature = true;
+        emit Matured(_rate, _chi);
     }
 
-    /// @dev Mint yDai. Only callable by its Controller contract.
-    function mint(address user, uint256 amount) public onlyOwner {
-        _mint(user, amount);
+    /// @dev Mint yDai. Only callable by Controller contracts.
+    function mint(address to, uint256 yDai) public onlyAuthorized("YDai: Not Authorized") {
+        _mint(to, yDai);
     }
 
-    /// @dev Burn yDai. Only callable by its Controller contract.
-    function burn(address user, uint256 amount) public onlyOwner {
-        _burn(user, amount);
+    /// @dev Burn yDai. Only callable by Controller contracts.
+    function burn(address from, uint256 yDai) public onlyAuthorized("YDai: Not Authorized") {
+        _burn(from, yDai);
     }
 }
