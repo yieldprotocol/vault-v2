@@ -7,13 +7,13 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IOracle.sol";
 import "./interfaces/ILender.sol";
 import "./interfaces/ISaver.sol";
-import "./interfaces/IChai.sol";
+import "./interfaces/IWeth.sol";
 import "./Constants.sol";
 import "./YDai.sol"; // TODO: Find how to use an interface
 
 
-/// @dev ChaiController manages a Chai/yDai series pair.
-contract ChaiController is Ownable, Constants {
+/// @dev WethController manages a Weth/yDai series pair
+contract WethController is Ownable, Constants {
     using SafeMath for uint256;
     using DecimalMath for uint256;
     using DecimalMath for int256;
@@ -21,13 +21,12 @@ contract ChaiController is Ownable, Constants {
 
     ILender internal _lender;
     ISaver internal _saver;
-    IERC20 internal _dai;
     YDai internal _yDai;
-    IChai internal _chai;
-    IOracle internal _chaiOracle;
+    IWeth internal _weth;
+    IOracle internal _wethOracle;
 
-    mapping(address => uint256) internal posted; // In Chai
-    mapping(address => uint256) internal debt; // In yDai
+    mapping(address => uint256) internal posted; // In WETH
+    mapping(address => uint256) internal debt; // In DAI
 
     uint256 public _stability; // accumulator (for stability fee) at maturity in RAY units
     uint256 public _collateralization; // accumulator (for stability fee) at maturity in RAY units
@@ -35,18 +34,16 @@ contract ChaiController is Ownable, Constants {
     constructor (
         address lender_,
         address saver_,
-        address dai_,
         address yDai_,
-        address chai_,
-        address chaiOracle_,
+        address weth_,
+        address wethOracle_,
         uint256 collateralization_
     ) public {
         _lender = ILender(lender_);
         _saver = ISaver(saver_);
-        _dai = IERC20(dai_);
         _yDai = YDai(yDai_);
-        _chai = IChai(chai_);
-        _chaiOracle = IOracle(chaiOracle_);
+        _weth = IERC20(weth_);
+        _wethOracle = IOracle(wethOracle_);
         _collateralization = collateralization_;
     }
 
@@ -58,7 +55,7 @@ contract ChaiController is Ownable, Constants {
     //
     function unlockedOf(address user) public view returns (uint256) {
         uint256 locked = debtOf(user)
-            .divd(_chaiOracle.price(), RAY)
+            .divd(_wethOracle.price(), RAY)
             .muld(_collateralization, RAY);
         if (locked > posted[user]) return 0; // Unlikely
         return posted[user].sub(locked);
@@ -79,51 +76,36 @@ contract ChaiController is Ownable, Constants {
         }
     }
 
-    /// @dev Takes Chai as collateral from caller and gives it to the Lender (converted to Dai) if it has debt, or to the Saver otherwise
-    // caller --- Chai ---> us
-    function post(uint256 chai) public {
-        post(msg.sender, chai);
+    /// @dev Takes Weth as collateral from caller and gives it to the Lender
+    // caller --- Weth ---> us
+    function post(uint256 weth) public {
+        post(msg.sender, weth);
     }
 
-    /// @dev Takes Chai as collateral from `from` address and gives it to the Lender (converted to Dai) if it has debt, or to the Saver otherwise
-    // from --- Chai ---> us
-    function post(address from, uint256 chai) public {
-        uint256 dai = _chai.price(chai);
-        if (_lender.debt() > dai){
-            _chai.transferFrom(user, address(this), chai);
-            _chai.exit(chai);
-            _lender.repay(dai);
-        }
-        else {
-            _saver.join(from, chai);
-        }
-        posted[from] = posted[from].add(chai);
+    /// @dev Takes Weth as collateral from `from` address and gives it to the Lender
+    // from --- Weth ---> us
+    function post(address from, uint256 weth) public {
+        _lender.post(weth);
+        posted[from] = posted[from].add(weth);
     }
 
-    /// @dev Moves Chai collateral from Saver to caller if there are savings, or otherwise borrows Dai from Lender and sends it converted to Chai
-    // us --- Chai ---> caller
-    function withdraw(uint256 chai) public {
-        withdraw(msg.sender, chai);
+    /// @dev Moves Weth collateral from Lender to caller
+    // us --- Weth ---> caller
+    function withdraw(uint256 weth) public {
+        withdraw(msg.sender, weth);
     }
 
-    /// @dev Moves Chai collateral from Saver to `to` address if there are savings, or otherwise borrows Dai from Lender and sends it converted to Chai
-    // us --- Chai ---> to
-    function withdraw(address to, uint256 chai) public {
+    /// @dev Moves Weth collateral from Lender to `to` address
+    // us --- Weth ---> to
+    function withdraw(address to, uint256 weth) public {
         require(
-            unlockedOf(to) >= chai,
+            unlockedOf(to) >= weth,
             "Accounts: Free more collateral"
         );
-        posted[to] = posted[to].sub(chai); // Will revert if not enough posted
-        if (_saver.savings() >= chai){
-            _saver.exit(to, chai);
-        }
-        else {
-            uint256 dai = chai.muld(_chaiOracle.price(), RAY);
-            _lender.borrow(to, dai);
-        }
+        posted[to] = posted[to].sub(weth); // Will revert if not enough posted
+        _lender.withdraw(to, weth);
     }
 
-    // ---------- Manage Dai/yDai ----------
     /// @dev Mint yTokens for caller by locking its market value in collateral, user debt is increased.
     function borrow(uint256 yDai) public {
         borrow(msg.sender, yDai);
@@ -142,7 +124,7 @@ contract ChaiController is Ownable, Constants {
         );
         require(
             posted[to] >= (debtOf(to).add(yDai))
-                .divd(_chaiOracle.price())
+                .divd(_wethOracle.price())
                 .muld(_collateralization, RAY),
             "Accounts: Post more collateral"
         );
@@ -160,7 +142,7 @@ contract ChaiController is Ownable, Constants {
     // debt_discounted = debt_nominal - repay_amount * ---------------
     //                                                  debt_nominal
     //
-    // user --- yDai ---> us
+    // user --- Dai ---> us
     // debt--
     function repay(address from, uint256 yDai) public {
         uint256 debtProportion = debt[from].mul(ray.unit())
