@@ -16,11 +16,11 @@
 
 pragma solidity 0.6.2;
 
-contract VatLike {
+interface VatLike {
     function hope(address) external;
 }
 
-contract PotLike {
+interface PotLike {
     function chi() external returns (uint256);
     function rho() external returns (uint256);
     function drip() external returns (uint256);
@@ -28,12 +28,12 @@ contract PotLike {
     function exit(uint256) external;
 }
 
-contract JoinLike {
+interface JoinLike {
     function join(address, uint) external;
     function exit(address, uint) external;
 }
 
-contract GemLike {
+interface GemLike {
     function transferFrom(address,address,uint) external returns (bool);
     function approve(address,uint) external returns (bool);
 }
