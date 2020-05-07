@@ -12,8 +12,8 @@ import "./Constants.sol";
 import "./YDai.sol";
 
 
-/// @dev YdaiController manages a Dai/yDai pair. Note that Dai is underlying, not collateral, and therefore the functions are minting and redeeming, instead of borrowing and repaying.
-contract YDaiController is IController, Ownable, Constants {
+/// @dev DaiController manages a Dai/yDai pair. Note that Dai is underlying, not collateral, and therefore the functions are minting and redeeming, instead of borrowing and repaying.
+contract DaiController is Ownable, Constants {
     using SafeMath for uint256;
     using DecimalMath for uint256;
     using DecimalMath for int256;
@@ -60,19 +60,19 @@ contract YDaiController is IController, Ownable, Constants {
     /// @dev Burn yTokens and return an equal amount of underlying.
     // user --- yDai ---> us
     // us   --- Dai  ---> user
-    function redeem(address user, uint256 ydai) public returns (bool) {
+    function redeem(address user, uint256 yDai) public returns (bool) {
         require(
             _yDai.isMature(),
             "Accounts: Only mature redeem"
         );
-        _yDai.burn(user, ydai);
-        uint256 chai = ydai.divd(yDai.chi(), RAY);
+        _yDai.burn(user, yDai);
+        uint256 chai = _yDai.divd(_yDai.chi(), RAY);
         if (_saver.savings() > chai){
             _saver.exit(chai);
             _chai.exit(user, chai);
         }
         else {
-            _lender.borrow(user, ydai);
+            _lender.borrow(user, yDai);
         }
     }
 }
