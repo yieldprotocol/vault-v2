@@ -90,7 +90,7 @@ contract ChaiController is Ownable, Constants {
     function post(address from, uint256 chai) public {
         uint256 dai = _chai.price(chai);
         if (_lender.debt() > dai){
-            _chai.transferFrom(user, address(this), chai);
+            _chai.transferFrom(from, address(this), chai);
             _chai.exit(chai);
             _lender.repay(dai);
         }
@@ -163,8 +163,8 @@ contract ChaiController is Ownable, Constants {
     // user --- yDai ---> us
     // debt--
     function repay(address from, uint256 yDai) public {
-        uint256 debtProportion = debt[from].mul(ray.unit())
-            .divd(debtOf(from).mul(ray.unit()), RAY);
+        uint256 debtProportion = debt[from].mul(RAY.unit())
+            .divd(debtOf(from).mul(RAY.unit()), RAY);
         _yDai.burn(from, yDai);
         debt[from] = debt[from].sub(yDai.muld(debtProportion, RAY)); // Will revert if not enough debt
     }
