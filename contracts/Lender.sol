@@ -10,7 +10,7 @@ import "./interfaces/IDaiJoin.sol";
 import "./interfaces/IGemJoin.sol";
 import "./interfaces/IVat.sol";
 import "./interfaces/IPot.sol";
-import "./interfaces/ITreasury.sol";
+import "./interfaces/ILender.sol";
 import "./Constants.sol";
 
 

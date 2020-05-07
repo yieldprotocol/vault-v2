@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IOracle.sol";
 import "./interfaces/ILender.sol";
 import "./interfaces/ISaver.sol";
-import "./interfaces/IWeth.sol";
 import "./Constants.sol";
 import "./YDai.sol"; // TODO: Find how to use an interface
 
@@ -22,7 +21,7 @@ contract WethController is Ownable, Constants {
     ILender internal _lender;
     ISaver internal _saver;
     YDai internal _yDai;
-    IWeth internal _weth;
+    IERC20 internal _weth;
     IOracle internal _wethOracle;
 
     mapping(address => uint256) internal posted; // In WETH
