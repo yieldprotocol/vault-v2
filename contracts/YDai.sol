@@ -49,12 +49,12 @@ contract YDai is Constants, Ownable, ERC20 {
     /// @dev accumulator (for dsr) at maturity in RAY units
     function chi() public returns(uint256){
         return _chi;
-    };
+    }
     
     /// @dev accumulator (for stability fee) at maturity in RAY units
     function rate() public returns(uint256){
         return _rate;
-    };
+    }
 
     /// @dev Mature yDai and capture maturity data
     function mature() public {

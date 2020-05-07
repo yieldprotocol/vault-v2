@@ -32,7 +32,7 @@ contract YDaiController is IController, Ownable, Constants {
         address _dai,
         address yDai_,
         address chai_,
-        address chaiOracle_,
+        address chaiOracle_
     ) public {
         _lender = ILender(lender_);
         _saver = ISaver(saver_);
