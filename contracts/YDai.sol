@@ -63,9 +63,9 @@ contract YDai is AuthorizedAccess, ERC20, Constants  {
             now > _maturity,
             "YDai: Too early to mature"
         );
-        (, _rate,,,) = vat.ilks("ETH-A"); // Retrieve the MakerDAO DSR
+        (, _rate,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO DSR
         _rate = Math.max(_rate, RAY.unit()); // Floor it at 1.0
-        _chi = (now > pot.rho()) ? pot.drip() : pot.chi();
+        _chi = (now > _pot.rho()) ? _pot.drip() : _pot.chi();
         _isMature = true;
         emit Matured(_rate, _chi);
     }
