@@ -21,7 +21,7 @@ contract('pot', async (accounts) =>  {
     const RAY  = "1000000000000000000000000000";
     const supply = web3.utils.toWei("1000");
     const RAD = web3.utils.toBN('49')
-    const limits =  web3.utils.toBN('10').pow(rad).toString();
+    const limits =  web3.utils.toBN('10').pow(RAD).toString();
     // console.log(limits);
 
 

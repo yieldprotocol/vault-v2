@@ -19,7 +19,7 @@ contract('vat', async (accounts) =>  {
     const RAY  = "1000000000000000000000000000";
     const supply = web3.utils.toWei("1000");
     const RAD = web3.utils.toBN('49')
-    const limits =  web3.utils.toBN('10').pow(rad).toString();
+    const limits =  web3.utils.toBN('10').pow(RAD).toString();
     // console.log(limits);
 
 
@@ -87,7 +87,7 @@ contract('vat', async (accounts) =>  {
             //let ink = (await vat.urns(ilk, owner)).ink.toString();
             let balance = (await vat.dai(owner)).toString();
             const RAD = web3.utils.toBN('45')
-            const daiRad =  web3.utils.toBN('10').pow(rad).toString(); //dai in RAD
+            const daiRad =  web3.utils.toBN('10').pow(RAD).toString(); //dai in RAD
             assert.equal(
                 balance,   
                 daiRad
@@ -120,7 +120,7 @@ contract('vat', async (accounts) =>  {
                 await vat.frob(ilk, owner, owner, owner, 0, daiBorrowed, { from: owner });
                 let vatBalance = (await vat.dai(owner)).toString();
                 const RAD = web3.utils.toBN('45')
-                const daiRad =  web3.utils.toBN('10').pow(rad).toString(); //dai in RAD
+                const daiRad =  web3.utils.toBN('10').pow(RAD).toString(); //dai in RAD
                 assert.equal(
                     vatBalance,   
                     daiRad
