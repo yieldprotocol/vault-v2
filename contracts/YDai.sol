@@ -1,7 +1,7 @@
 pragma solidity ^0.6.0;
 
+import "@hq20/contracts/contracts/access/AuthorizedAccess.sol";
 import "@hq20/contracts/contracts/math/DecimalMath.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./interfaces/IPot.sol";
@@ -10,7 +10,7 @@ import "./Constants.sol";
 
 
 ///@dev yDai is a yToken targeting Dai
-contract YDai is Constants, Ownable, ERC20 {
+contract YDai is AuthorizedAccess, ERC20, Constants  {
     using DecimalMath for uint256;
     using DecimalMath for uint8;
 
@@ -21,7 +21,7 @@ contract YDai is Constants, Ownable, ERC20 {
 
     bool internal _isMature;
     uint256 internal _maturity;
-    uint256 internal _chi; 
+    uint256 internal _chi;
     uint256 internal _rate;
 
     constructor(
@@ -30,7 +30,7 @@ contract YDai is Constants, Ownable, ERC20 {
         address vat_,
         address pot_,
         uint256 maturity_
-    ) public ERC20(name, symbol) Ownable() {
+    ) public AuthorizedAccess() ERC20(name, symbol) {
         _vat = IVat(vat_);
         _pot = IPot(pot_);
         _maturity = maturity_;
