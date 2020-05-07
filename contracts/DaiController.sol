@@ -66,7 +66,7 @@ contract DaiController is Ownable, Constants {
             "Accounts: Only mature redeem"
         );
         _yDai.burn(user, yDai);
-        uint256 chai = _yDai.divd(_yDai.chi(), RAY);
+        uint256 chai = yDai.divd(_yDai.chi(), RAY);
         if (_saver.savings() > chai){
             _saver.exit(chai);
             _chai.exit(user, chai);
