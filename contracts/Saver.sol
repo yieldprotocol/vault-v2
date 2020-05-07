@@ -13,11 +13,14 @@ contract Saver is ISaver, AuthorizedAccess(), Constants() {
 
     IERC20 internal _chai;
 
-    uint256 public savings; // Make a function
-
     constructor (address chai_) public {
         // These could be hardcoded for mainnet deployment.
         _chai = IERC20(chai_);
+    }
+
+    /// @dev Returns the amount of Chai in this contract.
+    function savings() public view override returns(uint256){
+        return _chai.balanceOf(address(this));
     }
 
     /// @dev Moves Chai into the contract
@@ -31,7 +34,6 @@ contract Saver is ISaver, AuthorizedAccess(), Constants() {
             _chai.transferFrom(msg.sender, address(this), chai),
             "Saver: Chai transfer fail"
         );
-        savings = savings.add(chai);
     }
 
     /// @dev Moves Chai out of the contract
@@ -41,7 +43,6 @@ contract Saver is ISaver, AuthorizedAccess(), Constants() {
 
     /// @dev Moves Chai out of the contract
     function exit(address user, uint256 chai) public override onlyAuthorized("Saver: Not Authorized") {
-        savings = savings.sub(chai, "Saver: Not enough savings");
         require(
             _chai.transfer(user, chai),
             "Saver: Chai transfer fail"
