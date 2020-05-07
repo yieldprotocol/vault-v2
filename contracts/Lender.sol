@@ -44,7 +44,8 @@ contract Lender is ILender, AuthorizedAccess(), Constants() {
     }
 
     function debt() public returns(uint256) {
-        return _debt;
+        (, uint256 rate,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
+        return _debt.muld(rate, RAY);
     }
 
     /// @dev Moves Weth collateral from caller into Lender controlled Maker Eth vault
@@ -98,13 +99,13 @@ contract Lender is ILender, AuthorizedAccess(), Constants() {
     /// @dev Moves Dai from `from` address into Lender controlled Maker Dai vault
     function repay(address from, uint256 dai) public override onlyAuthorized("Lender: Not Authorized") {
         require(
+            debt() >= dai,
+            "Lender: Not enough debt"
+        );
+        require(
             _dai.transferFrom(from, address(this), dai),
             "YToken: DAI transfer fail"
         ); // TODO: Check dai behaviour on failed transfers
-        require(
-            _debt >= dai,
-            "Lender: Not enough debt"
-        );
         _daiJoin.join(address(this), dai);
         // Remove debt from vault using frob
         (, uint256 rate,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
@@ -116,7 +117,7 @@ contract Lender is ILender, AuthorizedAccess(), Constants() {
             0,                           // Weth collateral to add
             -dai.divd(rate, RAY).toInt() // Dai debt to add
         );
-        (, _debt) = _vat.urns(collateralType, address(this)); // Do we need to adjust this for the stability fee?
+        (, _debt) = _vat.urns(collateralType, address(this));
     }
 
     /// @dev borrows Dai from Lender controlled Maker vault, to caller.
