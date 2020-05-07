@@ -91,7 +91,7 @@ contract ChaiController is Ownable, Constants {
         uint256 dai = chai.muld(_chaiOracle.price(), RAY);
         if (_lender.debt() > dai){
             _chai.transferFrom(from, address(this), chai);
-            _chai.exit(chai);
+            _chai.exit(from, chai);
             _lender.repay(dai);
         }
         else {
