@@ -25,17 +25,17 @@ contract YDai is AuthorizedAccess, ERC20, Constants  {
     uint256 internal _rate;
 
     constructor(
-        string memory name,
-        string memory symbol,
         address vat_,
         address pot_,
-        uint256 maturity_
+        uint256 maturity_,
+        string memory name,
+        string memory symbol
     ) public AuthorizedAccess() ERC20(name, symbol) {
         _vat = IVat(vat_);
         _pot = IPot(pot_);
         _maturity = maturity_;
-        _chi = RAY;
-        _rate = RAY;
+        _chi = RAY.unit();
+        _rate = RAY.unit();
     }
 
     /// @dev Whether the yDai has matured or not
