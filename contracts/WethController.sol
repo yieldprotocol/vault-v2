@@ -68,9 +68,9 @@ contract WethController is Ownable, Constants {
     //
     function debtOf(address user) public view returns (uint256) {
         if (_yDai.isMature()){
-            (, uint256 rate,,,) = _vat.ilks("ETH-A"); // What would this be?
-            return debt[user].muld(rate.divd(_yDai.rate(), RAY), RAY);
-        } else {
+            return debt[user].muld(_yDai.rate(), RAY);
+        }
+        else {
             return debt[user];
         }
     }
