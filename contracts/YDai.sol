@@ -39,17 +39,17 @@ contract YDai is AuthorizedAccess, ERC20, Constants  {
     }
 
     /// @dev Whether the yDai has matured or not
-    function isMature() public returns(bool){
+    function isMature() public view returns(bool){
         return _isMature;
     }
 
     /// @dev Programmed time for yDai maturity
-    function maturity() public returns(uint256){
+    function maturity() public view returns(uint256){
         return _maturity;
     }
 
     /// @dev accumulator (for dsr) at maturity in RAY units
-    function chi() public returns(uint256){
+    function chi() public view returns(uint256){
         return _chi;
     }
 
@@ -59,7 +59,7 @@ contract YDai is AuthorizedAccess, ERC20, Constants  {
     // ----------
     //  rate_mat
     //
-    function rate() public returns(uint256){
+    function rate() public view returns(uint256){
         (, uint256 rateNow,,,) = _vat.ilks("ETH-A");
         return rateNow.divd(_rate, RAY);
     }
