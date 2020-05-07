@@ -144,8 +144,8 @@ contract WethController is Ownable, Constants {
     // user --- Dai ---> us
     // debt--
     function repay(address from, uint256 yDai) public {
-        uint256 debtProportion = debt[from].mul(ray.unit())
-            .divd(debtOf(from).mul(ray.unit()), RAY);
+        uint256 debtProportion = debt[from].mul(RAY.unit())
+            .divd(debtOf(from).mul(RAY.unit()), RAY);
         _yDai.burn(from, yDai);
         debt[from] = debt[from].sub(yDai.muld(debtProportion, RAY)); // Will revert if not enough debt
     }
