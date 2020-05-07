@@ -29,7 +29,7 @@ contract YDaiController is IController, Ownable, Constants {
     constructor (
         address lender_,
         address saver_,
-        address _dai,
+        address dai_,
         address yDai_,
         address chai_,
         address chaiOracle_
