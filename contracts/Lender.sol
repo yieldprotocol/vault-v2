@@ -43,7 +43,7 @@ contract Lender is ILender, AuthorizedAccess(), Constants() {
 
     }
 
-    function debt() public view override eturns(uint256) {
+    function debt() public view override returns(uint256) {
         (, uint256 rate,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
         return _debt.muld(rate, RAY);
     }
