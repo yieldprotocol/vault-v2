@@ -9,7 +9,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IDaiJoin.sol";
 import "./interfaces/IGemJoin.sol";
 import "./interfaces/IVat.sol";
-import "./interfaces/IPot.sol";
 import "./interfaces/ILender.sol";
 import "./Constants.sol";
 
@@ -39,10 +38,9 @@ contract Lender is ILender, AuthorizedAccess(), Constants() {
         _daiJoin = IDaiJoin(daiJoin_);
         _wethJoin = IGemJoin(wethJoin_);
         _vat = IVat(vat_);
-
-        // vat.hope(address(wethJoin));
+        _vat.hope(address(wethJoin_));
         _vat.hope(address(daiJoin_));
-        _vat.hope(address(pot_));
+
     }
 
     function debt() public returns(uint256) {
@@ -109,23 +107,24 @@ contract Lender is ILender, AuthorizedAccess(), Constants() {
         );
         _daiJoin.join(address(this), dai);
         // Remove debt from vault using frob
+        (, uint256 rate,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
         _vat.frob(
             collateralType,
             address(this),
             address(this),
             address(this),
-            0,           // Weth collateral to add
-            -dai.toInt() // Dai debt to add
+            0,                           // Weth collateral to add
+            -dai.divd(rate, RAY).toInt() // Dai debt to add
         );
-        (, _debt) = _vat.urns(collateralType, address(this));
+        (, _debt) = _vat.urns(collateralType, address(this)); // Do we need to adjust this for the stability fee?
     }
 
-    /// @dev moves Dai from Lender controlled Maker vault, borrowing if necessary, to caller.
+    /// @dev borrows Dai from Lender controlled Maker vault, to caller.
     function borrow(uint256 dai) public override {
         borrow(msg.sender, dai);
     }
 
-    /// @dev moves Dai from Lender controlled Maker vault, borrowing if necessary, to `to` address.
+    /// @dev borrows Dai from Lender controlled Maker vault, to `to` address.
     function borrow(address to, uint256 dai) public override onlyAuthorized("Lender: Not Authorized") {
         (, uint256 rate,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
         // Increase the dai debt by the dai to receive divided by the stability fee
@@ -139,57 +138,5 @@ contract Lender is ILender, AuthorizedAccess(), Constants() {
         ); // `vat.frob` reverts on failure
         (, _debt) = _vat.urns(collateralType, address(this)); // Doesn't follow checks effects interactions pattern
         _daiJoin.exit(to, dai); // `daiJoin` reverts on failures
-    }
-
-    /// @dev Moves Dai from user into Treasury controlled Maker Dai vault
-    function _repayDai() internal {
-        // repay as much debt as possible
-        uint256 balance = dai.balanceOf(address(this));
-        (, uint256 rate,,,) = vat.ilks(collateralType);
-        uint256 normalizedAmount = balance.divd(rate, ray);
-        (, uint256 normalizedDebt) = vat.urns(collateralType, address(this));
-        //int256 toRepay = Math.min(normalizedAmount, normalizedDebt); // only repay up to total in
-        int256 toRepay;
-        uint256 toJoin;
-        if (normalizedAmount >= normalizedDebt){
-            toRepay = -normalizedDebt.toInt();
-            toJoin = normalizedDebt.muld(rate, ray);
-        } else {
-            toRepay = -normalizedAmount.toInt();
-            toJoin = balance;
-
-        }
-        // TODO: Check dai behaviour on failed transfers
-        daiJoin.join(address(this), toJoin);
-        // Add Dai to vault
-        // collateral to add - wad
-        int256 dink = 0;
-        // frob alters Maker vaults
-        vat.frob(
-            collateralType,
-            address(this),
-            address(this),
-            address(this),
-            dink,
-            toRepay
-        ); // `vat.frob` reverts on failure
-    }
-
-    /// @dev lock all Dai in the DSR
-    function _lockDai() internal {
-        uint256 balance = dai.balanceOf(address(this));
-        uint256 chi = pot.chi();
-        uint256 normalizedAmount = balance.divd(chi, ray);
-        daiJoin.join(address(this), normalizedAmount);
-        pot.drip();
-        pot.join(normalizedAmount);
-    }
-
-    /// @dev remove Dai from the DSR
-    function _freeDai(uint256 amount) internal {
-        uint256 chi = pot.chi();
-        uint256 normalizedAmount = amount.divd(chi, ray);
-        pot.drip();
-        pot.exit(normalizedAmount);
     }
 }
