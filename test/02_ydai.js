@@ -2,6 +2,7 @@ const YDai = artifacts.require('YDai');
 const Pot = artifacts.require('Pot');
 const Vat = artifacts.require('Vat');
 const helper = require('ganache-time-traveler');
+const truffleAssert = require('truffle-assertions');
 
 contract('yDai', async (accounts) =>  {
     let vat;
@@ -65,28 +66,28 @@ contract('yDai', async (accounts) =>  {
         );
     });
 
-    /* it("yToken is not mature before maturity", async() => {
+    it("yDai is not mature before maturity", async() => {
         assert.equal(
-                await yToken.isMature.call(),
-                false,
+            await yDai.isMature(),
+            false,
         );
     });
 
-    it("yToken cannot mature before maturity time", async() => {
+    it("yDai cannot mature before maturity time", async() => {
         await truffleAssert.fails(
-            yToken.mature(),
+            yDai.mature(),
             truffleAssert.REVERT,
-            "YToken: Too early to mature",
+            "YDai: Too early to mature",
         );
     });
 
-    it("yToken can mature at maturity time", async() => {
+    it("yDai can mature at maturity time", async() => {
         await helper.advanceTime(1000);
         await helper.advanceBlock();
-        await yToken.mature();
+        await yDai.mature();
         assert.equal(
-            await yToken.isMature.call(),
+            await yDai.isMature(),
             true,
         );
-    }); */
+    });
 });
