@@ -90,7 +90,6 @@ contract ChaiController is Ownable, Constants {
     function post(address from, uint256 chai) public {
         uint256 dai = chai.muld(_chaiOracle.price(), RAY);
         if (_lender.debt() > dai){
-            _chai.transferFrom(from, address(this), chai);
             _chai.exit(from, chai);
             _lender.repay(address(this), dai);
         }
