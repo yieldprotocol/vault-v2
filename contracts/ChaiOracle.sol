@@ -6,11 +6,11 @@ import "./interfaces/IOracle.sol";
 contract ChaiOracle is IOracle{
     IPot _pot;
 
-    constructor (address chai_) public {
+    constructor (address pot_) public {
         _pot = IPot(pot_);
     }
 
     function price() public override returns(uint256) {
-        return (now > pot.rho()) ? pot.drip() : pot.chi();
+        return (now > _pot.rho()) ? _pot.drip() : _pot.chi();
     }
 }
