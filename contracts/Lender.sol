@@ -48,11 +48,6 @@ contract Lender is ILender, AuthorizedAccess(), Constants() {
         return _debt.muld(rate, RAY);
     }
 
-    /// @dev Moves Weth collateral from caller into Lender controlled Maker Eth vault
-    function post(uint256 weth) public override {
-        post(msg.sender, weth);
-    }
-
     /// @dev Moves Weth collateral from `from` address into Lender controlled Maker Eth vault
     function post(address from, uint256 weth) public override onlyAuthorized("Lender: Not Authorized") {
         require(
@@ -72,11 +67,6 @@ contract Lender is ILender, AuthorizedAccess(), Constants() {
         );
     }
 
-    /// @dev Moves Weth collateral from Lender controlled Maker Eth vault to caller.
-    function withdraw(uint256 weth) public override {
-        withdraw(msg.sender, weth);
-    }
-
     /// @dev Moves Weth collateral from Lender controlled Maker Eth vault to `to` address.
     function withdraw(address to, uint256 weth) public override onlyAuthorized("Lender: Not Authorized") {
         // Remove collateral from vault using frob
@@ -89,11 +79,6 @@ contract Lender is ILender, AuthorizedAccess(), Constants() {
             0              // Dai debt to add - WAD
         );
         _wethJoin.exit(to, weth); // `GemJoin` reverts on failures
-    }
-
-    /// @dev Moves Dai from caller into Lender controlled Maker Dai vault
-    function repay(uint256 dai) public override {
-        repay(msg.sender, dai);
     }
 
     /// @dev Moves Dai from `from` address into Lender controlled Maker Dai vault
@@ -118,11 +103,6 @@ contract Lender is ILender, AuthorizedAccess(), Constants() {
             -dai.divd(rate, RAY).toInt() // Dai debt to add
         );
         (, _debt) = _vat.urns(collateralType, address(this));
-    }
-
-    /// @dev borrows Dai from Lender controlled Maker vault, to caller.
-    function borrow(uint256 dai) public override {
-        borrow(msg.sender, dai);
     }
 
     /// @dev borrows Dai from Lender controlled Maker vault, to `to` address.

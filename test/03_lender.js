@@ -69,7 +69,7 @@ contract('Lender', async (accounts) =>  {
         let amount = web3.utils.toWei("500");
         await weth.mint(user, amount, { from: user });
         await weth.approve(lender.address, amount, { from: user }); 
-        await lender.post(amount, { from: user });
+        await lender.post(user, amount, { from: user });
 
         // Test transfer of collateral
         assert.equal(
@@ -90,7 +90,7 @@ contract('Lender', async (accounts) =>  {
             let amount = web3.utils.toWei("500");
             await weth.mint(user, amount, { from: user });
             await weth.approve(lender.address, amount, { from: user }); 
-            await lender.post(amount, { from: user });
+            await lender.post(user, amount, { from: user });
         });
 
         it("allows user to withdraw collateral", async() => {
@@ -100,7 +100,7 @@ contract('Lender', async (accounts) =>  {
             );
             
             let amount = web3.utils.toWei("500");
-            await lender.withdraw(amount, { from: user });
+            await lender.withdraw(user, amount, { from: user });
 
             // Test transfer of collateral
             assert.equal(

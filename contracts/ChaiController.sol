@@ -56,7 +56,7 @@ contract ChaiController is Ownable, Constants {
     // posted[user](wad) - -----------------------
     //                       daiOracle.get()(ray)
     //
-    function unlockedOf(address user) public view returns (uint256) {
+    function unlockedOf(address user) public returns (uint256) {
         uint256 locked = debtOf(user)
             .divd(_chaiOracle.price(), RAY)
             .muld(_collateralization, RAY);
@@ -92,7 +92,7 @@ contract ChaiController is Ownable, Constants {
         if (_lender.debt() > dai){
             _chai.transferFrom(from, address(this), chai);
             _chai.exit(from, chai);
-            _lender.repay(dai);
+            _lender.repay(address(this), dai);
         }
         else {
             _saver.join(from, chai);

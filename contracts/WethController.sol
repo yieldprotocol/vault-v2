@@ -52,7 +52,7 @@ contract WethController is Ownable, Constants {
     // posted[user](wad) - -----------------------
     //                       daiOracle.get()(ray)
     //
-    function unlockedOf(address user) public view returns (uint256) {
+    function unlockedOf(address user) public returns (uint256) {
         uint256 locked = debtOf(user)
             .divd(_wethOracle.price(), RAY)
             .muld(_collateralization, RAY);
@@ -84,7 +84,7 @@ contract WethController is Ownable, Constants {
     /// @dev Takes Weth as collateral from `from` address and gives it to the Lender
     // from --- Weth ---> us
     function post(address from, uint256 weth) public {
-        _lender.post(weth);
+        _lender.post(from, weth);
         posted[from] = posted[from].add(weth);
     }
 
