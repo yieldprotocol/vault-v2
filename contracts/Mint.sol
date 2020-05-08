@@ -50,9 +50,8 @@ contract Mint is Ownable, Constants {
             _lender.repay(user, dai);
         }
         else {
-            _dai.transferFrom(user, address(this), dai);
             uint256 chai = dai.divd(_chaiOracle.price(), RAY);
-            _saver.join(chai);
+            _saver.join(user, chai);
         }
         _yDai.mint(user, dai);
     }
@@ -63,12 +62,12 @@ contract Mint is Ownable, Constants {
     function redeem(address user, uint256 yDai) public returns (bool) {
         require(
             _yDai.isMature(),
-            "Accounts: Only mature redeem"
+            "Mint: Only mature redeem"
         );
         _yDai.burn(user, yDai);
         uint256 chai = yDai.divd(_yDai.chi(), RAY);
         if (_saver.savings() > chai){
-            _saver.exit(chai);
+            _saver.exit(address(this), chai);
             _chai.exit(user, chai);
         }
         else {
