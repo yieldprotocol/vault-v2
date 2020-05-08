@@ -1,9 +1,9 @@
-const Chai = artifacts.require('./Chai');
+const ChaiOracle = artifacts.require('./ChaiOracle');
 const ERC20 = artifacts.require("./TestERC20");
 const DaiJoin = artifacts.require('DaiJoin');
 const GemJoin = artifacts.require('./GemJoin');
-const Vat= artifacts.require('./Vat');
-const Pot= artifacts.require('./Pot');
+const Vat = artifacts.require('./Vat');
+const Pot = artifacts.require('./Pot');
 
 const truffleAssert = require('truffle-assertions');
 const helper = require('ganache-time-traveler');
@@ -12,11 +12,11 @@ contract('Chai', async (accounts) =>  {
     let [ owner ] = accounts;
     let vat;
     let pot;
-    let chai;
     let dai;
     let weth;
     let daiJoin;
     let wethJoin;
+    let chaiOracle;
 
     const ilk = web3.utils.fromAscii("ETH-A")
     const Line = web3.utils.fromAscii("Line")
@@ -51,81 +51,16 @@ contract('Chai', async (accounts) =>  {
         pot = await Pot.new(vat.address);
         await vat.rely(pot.address, { from: owner });
 
-        // Setup chai
-        chai = await Chai.new(
-            vat.address,
-            pot.address,
-            daiJoin.address,
-            dai.address,
-        );
-        await vat.rely(chai.address, { from: owner });
-
-        // Borrow dai
-        await vat.hope(daiJoin.address, { from: owner });
-        await vat.hope(wethJoin.address, { from: owner });
-        let wethTokens = web3.utils.toWei("500");
-        let daiTokens = web3.utils.toWei("100");
-        await weth.approve(wethJoin.address, wethTokens, { from: owner });
-        await wethJoin.join(owner, wethTokens, { from: owner });
-        await vat.frob(ilk, owner, owner, owner, wethTokens, daiTokens, { from: owner });
-        await daiJoin.exit(owner, daiTokens, { from: owner });
-
+        // Setup chaiOracle
+        chaiOracle = await ChaiOracle.new(pot.address, { from: owner });
     });
 
-    it("allows to exchange dai for chai", async() => {
-        /* assert.equal(
-            (await dai.balanceOf(owner)),   
-            web3.utils.toWei("100")
-        ); */ // TODO: Test dai balances
+    it("retrieves chai price as pot.chi", async() => {
         assert.equal(
-            (await chai.balanceOf(owner)),   
-            web3.utils.toWei("0")
-        );
-        
-        let amount = web3.utils.toWei("100");
-        await dai.approve(chai.address, amount, { from: owner }); 
-        await chai.join(owner, amount, { from: owner });
-
-        // Test transfer of chai
-        /* assert.equal(
-            (await dai.balanceOf(owner)),   
-            web3.utils.toWei("0")
-        ); */
-        assert.equal(
-            (await chai.balanceOf(owner)),   
-            web3.utils.toWei("100")
+            await chaiOracle.price.call({ from: owner }), // price() is a transaction
+            RAY
         );
     });
 
-    describe("with chai", () => {
-        beforeEach(async() => {
-            let amount = web3.utils.toWei("100");
-            await dai.approve(chai.address, amount, { from: owner }); 
-            await chai.join(owner, amount, { from: owner });
-        });
-
-        it("allows to exchange chai for dai", async() => {
-            /* assert.equal(
-                (await dai.balanceOf(owner)),   
-                web3.utils.toWei("0")
-            ); */
-            assert.equal(
-                (await chai.balanceOf(owner)),   
-                web3.utils.toWei("100")
-            );
-            
-            let amount = web3.utils.toWei("100");
-            await chai.exit(owner, amount, { from: owner });
-
-            // Test transfer of chai
-            /* assert.equal(
-                (await dai.balanceOf(owner)),   
-                web3.utils.toWei("100")
-            ); */
-            assert.equal(
-                (await chai.balanceOf(owner)),   
-                web3.utils.toWei("0")
-            );
-        });
-    });
+    // TODO: Test with different chi
 });
