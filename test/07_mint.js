@@ -82,6 +82,9 @@ contract('DaiController', async (accounts) =>  {
         );
         await vat.rely(chai.address, { from: owner });
 
+        // Setup chaiOracle
+        chaiOracle = await ChaiOracle.new(pot.address, { from: owner });
+
         // Setup saver
         chai = await ERC20.new(supply, { from: owner }); 
         saver = await Saver.new(chai.address);

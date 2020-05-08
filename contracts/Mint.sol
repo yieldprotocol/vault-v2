@@ -12,8 +12,8 @@ import "./Constants.sol";
 import "./YDai.sol";
 
 
-/// @dev DaiController manages a Dai/yDai pair. Note that Dai is underlying, not collateral, and therefore the functions are minting and redeeming, instead of borrowing and repaying.
-contract DaiController is Ownable, Constants {
+/// @dev Mint manages a Dai/yDai pair. Note that Dai is underlying, not collateral, and therefore the functions are minting and redeeming, instead of borrowing and repaying.
+contract Mint is Ownable, Constants {
     using SafeMath for uint256;
     using DecimalMath for uint256;
     using DecimalMath for int256;
