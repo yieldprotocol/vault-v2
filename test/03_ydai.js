@@ -5,6 +5,7 @@ const helper = require('ganache-time-traveler');
 const truffleAssert = require('truffle-assertions');
 
 contract('yDai', async (accounts) =>  {
+    let [ owner, user ] = accounts;
     let vat;
     let pot;
     let yDai;
@@ -13,8 +14,6 @@ contract('yDai', async (accounts) =>  {
     let Line = web3.utils.fromAscii("Line")
     let spot = web3.utils.fromAscii("spot")
     let linel = web3.utils.fromAscii("line")
-    let owner = accounts[0];
-    let account1 = accounts[1];
     let snapshot;
     let snapshotId;
     const RAY  = "1000000000000000000000000000";
