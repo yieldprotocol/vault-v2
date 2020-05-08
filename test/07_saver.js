@@ -29,7 +29,7 @@ contract('Saver', async (accounts) =>  {
         let amount = web3.utils.toWei("500");
         await chai.mint(user, amount, { from: user });
         await chai.approve(saver.address, amount, { from: user }); 
-        await saver.join(amount, { from: user });
+        await saver.join(user, amount, { from: user });
 
         // Test transfer of collateral
         assert.equal(
@@ -47,7 +47,7 @@ contract('Saver', async (accounts) =>  {
             let amount = web3.utils.toWei("500");
             await chai.mint(user, amount, { from: user });
             await chai.approve(saver.address, amount, { from: user }); 
-            await saver.join(amount, { from: user });
+            await saver.join(user, amount, { from: user });
         });
 
         it("allows to withdraw chai", async() => {
@@ -57,7 +57,7 @@ contract('Saver', async (accounts) =>  {
             );
             
             let amount = web3.utils.toWei("500");
-            await saver.exit(amount, { from: user });
+            await saver.exit(user, amount, { from: user });
 
             // Test transfer of collateral
             assert.equal(
