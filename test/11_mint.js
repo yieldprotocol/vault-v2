@@ -1,4 +1,6 @@
 const Mint = artifacts.require('Mint');
+const Lender = artifacts.require('Lender');
+const Saver = artifacts.require('Saver');
 const Chai = artifacts.require('Chai');
 const YDai = artifacts.require('YDai');
 const ERC20 = artifacts.require('TestERC20');
@@ -15,9 +17,11 @@ contract('Chai', async (accounts) =>  {
     let [ owner ] = accounts;
     let vat;
     let pot;
-    let chai;
+    let lender;
+    let saver;
     let dai;
     let yDai;
+    let chai;
     let weth;
     let daiJoin;
     let wethJoin;
@@ -71,6 +75,32 @@ contract('Chai', async (accounts) =>  {
         maturity = (await web3.eth.getBlock(block)).timestamp + 1000;
         yDai = await YDai.new(vat.address, pot.address, maturity, "Name", "Symbol");
 
+        // Setup lender
+        lender = await Lender.new(
+            dai.address,        // dai
+            weth.address,       // weth
+            daiJoin.address,    // daiJoin
+            wethJoin.address,   // wethJoin
+            vat.address,        // vat
+        );
+        await vat.rely(lender.address, { from: owner }); //?
+
+        // Setup saver
+        saver = await Saver.new(chai.address);
+
+        // Setup mint
+        mint = await Mint.new(
+            lender.address,
+            saver.address,
+            dai.address,
+            yDai.address,
+            chai.address,
+            { from: owner },
+        );
+        await yDai.grantAccess(mint.address, { from: owner });
+        await lender.grantAccess(mint.address, { from: owner });
+        await saver.grantAccess(mint.address, { from: owner });
+
         // Borrow dai
         await vat.hope(daiJoin.address, { from: owner });
         await vat.hope(wethJoin.address, { from: owner });
@@ -79,10 +109,6 @@ contract('Chai', async (accounts) =>  {
         await wethJoin.join(owner, wethTokens, { from: owner });
         await vat.frob(ilk, owner, owner, owner, wethTokens, amount, { from: owner });
         await daiJoin.exit(owner, amount, { from: owner });
-
-        // Setup mint
-        mint = await Mint.new(dai.address, yDai.address, chai.address, { from: owner });
-        await yDai.grantAccess(mint.address, { from: owner });
     });
 
     describe("chai tests", async() => {

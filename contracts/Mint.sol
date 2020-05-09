@@ -1,21 +1,29 @@
 pragma solidity ^0.6.2;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./interfaces/ILender.sol";
+import "./interfaces/ISaver.sol";
 import "./YDai.sol"; // Fix interface
 import "./interfaces/IChai.sol";
 import "@nomiclabs/buidler/console.sol";
 
 
 contract Mint {
+    ILender internal _lender;
+    ISaver internal _saver;
     IERC20 internal _dai;
     YDai internal _yDai; // Fix interface
     IChai internal _chai;
 
     constructor (
+        address lender_,
+        address saver_,
         address dai_,
         address yDai_,
         address chai_
     ) public {
+        _lender = ILender(lender_);
+        _saver = ISaver(saver_);
         _dai = IERC20(dai_);
         _yDai = YDai(yDai_); // Fix interface
         _chai = IChai(chai_);
