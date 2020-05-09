@@ -1,14 +1,14 @@
 pragma solidity ^0.6.2;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./interfaces/IYDai.sol";
+import "./YDai.sol"; // Fix interface
 import "./interfaces/IChai.sol";
 import "@nomiclabs/buidler/console.sol";
 
 
 contract Mint {
     IERC20 internal _dai;
-    IYDai internal _yDai;
+    YDai internal _yDai; // Fix interface
     IChai internal _chai;
 
     constructor (
@@ -17,7 +17,7 @@ contract Mint {
         address chai_
     ) public {
         _dai = IERC20(dai_);
-        _yDai = IYDai(yDai_);
+        _yDai = YDai(yDai_); // Fix interface
         _chai = IChai(chai_);
     }
 
@@ -29,6 +29,8 @@ contract Mint {
     }
 
     function redeem(uint256 dai) public {
+        _yDai.transferFrom(msg.sender, address(this), dai);
+        _yDai.burn(address(this), dai);
         _chai.exit(address(this), dai);
         _dai.transfer(msg.sender, dai);
     }
