@@ -134,7 +134,7 @@ contract('Chai', async (accounts) =>  {
                 );
             });
 
-            it("can grab dai and convert to chai", async() => {
+            it("mint: can grab dai and convert to chai", async() => {
                 assert.equal(
                     (await dai.balanceOf(owner)),   
                     amount,
@@ -242,6 +242,31 @@ contract('Chai', async (accounts) =>  {
                             (await chai.balanceOf(mint.address)),   
                             0,
                             "Mint should have no chai",
+                        );
+                    });
+
+                    it("redeem: can convert chai to dai and spit chai out", async() => {
+                        assert.equal(
+                            (await chai.balanceOf(mint.address)),   
+                            amount,
+                        );
+                        assert.equal(
+                            (await dai.balanceOf(mint.address)),   
+                            0,
+                            "Mint should have no dai",
+                        );
+
+                        await mint.redeem(amount, { from: owner });
+
+                        assert.equal(
+                            (await dai.balanceOf(mint.address)),   
+                            0,
+                            "Mint should have no dai",
+                        );
+                        assert.equal(
+                            (await dai.balanceOf(owner)),   
+                            amount,
+                            "Owner should have dai",
                         );
                     });
                 });
