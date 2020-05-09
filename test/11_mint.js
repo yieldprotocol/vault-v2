@@ -218,16 +218,16 @@ contract('Chai', async (accounts) =>  {
             });
 
 
-            it("redeem: burns yDai to return dai", async() => {
+            it("redeem: burns yDai to return dai, pulls chai from Saver", async() => {
                 assert.equal(
                     (await yDai.balanceOf(owner)),   
                     amount,
                     "Owner does not have yDai",
                 );
                 assert.equal(
-                    (await chai.balanceOf(mint.address)),   
+                    (await chai.balanceOf(saver.address)),   
                     amount,
-                    "Mint does not have chai",
+                    "Saver does not have chai",
                 );
                 assert.equal(
                     (await dai.balanceOf(mint.address)),   
@@ -239,14 +239,19 @@ contract('Chai', async (accounts) =>  {
                 await mint.redeem(amount, { from: owner });
 
                 assert.equal(
+                    (await dai.balanceOf(owner)),   
+                    amount,
+                    "Owner should have dai",
+                );
+                assert.equal(
                     (await dai.balanceOf(mint.address)),   
                     0,
                     "Mint should have no dai",
                 );
                 assert.equal(
-                    (await dai.balanceOf(owner)),   
-                    amount,
-                    "Owner should have dai",
+                    (await chai.balanceOf(saver.address)),   
+                    0,
+                    "Saver should not have chai",
                 );
             });
 

@@ -30,19 +30,21 @@ contract Mint {
     }
 
     function mint(uint256 dai) public {
-        _dai.transferFrom(msg.sender, address(this), dai); // Get the dai
+        _dai.transferFrom(msg.sender, address(this), dai); // Get the dai from user
         _dai.approve(address(_chai), dai);                 // Chai will take dai
         _chai.join(address(this), dai);                    // Give dai to Chai, take chai back
-        uint256 chai = dai;
+        uint256 chai = dai;                                // Convert dai amount to chai amount
         _chai.approve(address(_saver), chai);              // Saver will take chai
         _saver.join(address(this), chai);                  // Send chai to Saver
-        _yDai.mint(msg.sender, dai);                       // Mint yDai
+        _yDai.mint(msg.sender, dai);                       // Mint yDai to user
     }
 
     function redeem(uint256 dai) public {
-        _yDai.burn(msg.sender, dai);
-        _chai.exit(address(this), dai);
-        _dai.transfer(msg.sender, dai);
+        _yDai.burn(msg.sender, dai);                       // Burn yDai from user
+        uint256 chai = dai;                                // Convert dai amount to chai amount
+        _saver.exit(address(this), chai);                  // Take chai from Saver
+        _chai.exit(address(this), dai);                    // Give dai to Chai, take chai back
+        _dai.transfer(msg.sender, dai);                    // Give dai to user
     }
 
     /* function grab(uint256 dai) public {
