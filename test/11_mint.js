@@ -263,6 +263,71 @@ contract('Chai', async (accounts) =>  {
                 ); */
             });
 
+            describe("with Lender debt", async() => {
+                beforeEach(async() => {
+                    // Some other user posted collateral to MakerDAO through Lender
+                    await lender.grantAccess(user, { from: owner });
+                    await weth.mint(user, amount, { from: user });
+                    await weth.approve(lender.address, amount, { from: user }); 
+                    await lender.post(user, amount, { from: user });
+                    let ink = (await vat.urns(ilk, lender.address)).ink.toString()
+                    assert.equal(
+                        ink,   
+                        amount,
+                    );
+                    
+                    // Someone redeems yDai, causing Lender debt
+                    await yDai.approve(mint.address, amount, { from: owner });
+                    await mint.redeemNoSavings(amount, { from: owner });
+                    assert.equal(
+                        (await lender.debt()),
+                        amount,
+                    );
+                });
+
+                it("mintDebt: mints yDai in exchange for dai, dai repays Lender debt", async() => {
+                    assert.equal(
+                        (await dai.balanceOf(owner)),   
+                        amount,
+                        "Owner does not have dai",
+                    );
+                    /* assert.equal(
+                        (await chai.balanceOf(mint.address)),   
+                        0,
+                        "Mint has chai",
+                    ); */
+                    assert.equal(
+                        (await yDai.balanceOf(owner)),   
+                        0,
+                        "Owner has yDai"
+                    );
+                    assert.equal(
+                        (await lender.debt()),
+                        amount,
+                        "Lender doesn't have debt",
+                    );
+
+                    await dai.approve(mint.address, amount, { from: owner });
+                    await mint.mintDebt(amount, { from: owner });
+        
+                    assert.equal(
+                        (await lender.debt()),
+                        0,
+                        "Lender shouldn't have debt",
+                    );
+                    assert.equal(
+                        (await yDai.balanceOf(owner)),   
+                        amount,
+                        "Owner should have yDai"
+                    );
+                    /* assert.equal(
+                        (await dai.balanceOf(mint.address)),   
+                        0,
+                        "Mint should have no dai",
+                    ); */
+                });
+            });
+
             /* it("can spit dai", async() => {
                 assert.equal(
                     (await dai.balanceOf(mint.address)),   
