@@ -14,7 +14,7 @@ const helper = require('ganache-time-traveler');
 const { balance, BN, constants, ether, expectEvent, expectRevert, send } = require('@openzeppelin/test-helpers');
 
 contract('Chai', async (accounts) =>  {
-    let [ owner ] = accounts;
+    let [ owner, user ] = accounts;
     let vat;
     let pot;
     let lender;
@@ -111,45 +111,6 @@ contract('Chai', async (accounts) =>  {
         await daiJoin.exit(owner, amount, { from: owner });
     });
 
-    describe("chai tests", async() => {
-
-        it("allows to exchange dai for chai", async() => {
-            assert.equal(
-                (await chai.balanceOf(owner)),   
-                web3.utils.toWei("0")
-            );
-            
-            await dai.approve(chai.address, amount, { from: owner }); 
-            await chai.join(owner, amount, { from: owner });
-
-            assert.equal(
-                (await chai.balanceOf(owner)),   
-                amount
-            );
-        });
-
-        describe("with chai", () => {
-            beforeEach(async() => {
-                await dai.approve(chai.address, amount, { from: owner }); 
-                await chai.join(owner, amount, { from: owner });
-            });
-
-            it("allows to exchange chai for dai", async() => {
-                assert.equal(
-                    (await chai.balanceOf(owner)),   
-                    amount,
-                );
-                
-                await chai.exit(owner, amount, { from: owner });
-
-                assert.equal(
-                    (await chai.balanceOf(owner)),   
-                    web3.utils.toWei("0")
-                );
-            });
-        });
-    });
-
     describe("mint tests", async() => {
         /* it("can grab dai", async() => {
             assert.equal(
@@ -170,7 +131,7 @@ contract('Chai', async (accounts) =>  {
             );
         }); */
 
-        it("mint: mints yDai in exchange for dai, chai goes to Saver", async() => {
+        it("mintNoDebt: mints yDai in exchange for dai, chai goes to Saver", async() => {
             assert.equal(
                 (await dai.balanceOf(owner)),   
                 amount,
@@ -192,7 +153,7 @@ contract('Chai', async (accounts) =>  {
                 "Mint has dai",
             );
             await dai.approve(mint.address, amount, { from: owner });
-            await mint.mint(amount, { from: owner });
+            await mint.mintNoDebt(amount, { from: owner });
 
             assert.equal(
                 (await chai.balanceOf(saver.address)),   
@@ -214,11 +175,10 @@ contract('Chai', async (accounts) =>  {
         describe("with yDai", async() => {
             beforeEach(async() => {
                 await dai.approve(mint.address, amount, { from: owner });
-                await mint.mint(amount, { from: owner });
+                await mint.mintNoDebt(amount, { from: owner });
             });
 
-
-            it("redeem: burns yDai to return dai, pulls chai from Saver", async() => {
+            it("redeemSavings: burns yDai to return dai, pulls chai from Saver", async() => {
                 assert.equal(
                     (await yDai.balanceOf(owner)),   
                     amount,
@@ -236,7 +196,7 @@ contract('Chai', async (accounts) =>  {
                 );
 
                 await yDai.approve(mint.address, amount, { from: owner });
-                await mint.redeem(amount, { from: owner });
+                await mint.redeemSavings(amount, { from: owner });
 
                 assert.equal(
                     (await dai.balanceOf(owner)),   
@@ -253,6 +213,54 @@ contract('Chai', async (accounts) =>  {
                     0,
                     "Saver should not have chai",
                 );
+            });
+
+            it("redeemNoSavings: burns yDai to return dai, borrows dai from Lender", async() => {
+                // Some other user posted collateral to MakerDAO through Lender
+                await lender.grantAccess(user, { from: owner });
+                await weth.mint(user, amount, { from: user });
+                await weth.approve(lender.address, amount, { from: user }); 
+                await lender.post(user, amount, { from: user });
+                let ink = (await vat.urns(ilk, lender.address)).ink.toString()
+                assert.equal(
+                    ink,   
+                    amount
+                );
+
+                assert.equal(
+                    (await yDai.balanceOf(owner)),   
+                    amount,
+                    "Owner does not have yDai",
+                );
+                /* assert.equal(
+                    (await chai.balanceOf(saver.address)),   
+                    amount,
+                    "Saver does not have chai",
+                ); */
+                assert.equal(
+                    (await dai.balanceOf(mint.address)),   
+                    0,
+                    "Mint has dai",
+                );
+
+                await yDai.approve(mint.address, amount, { from: owner });
+                await mint.redeemNoSavings(amount, { from: owner });
+
+                assert.equal(
+                    (await dai.balanceOf(owner)),   
+                    amount,
+                    "Owner should have dai",
+                );
+                assert.equal(
+                    (await dai.balanceOf(mint.address)),   
+                    0,
+                    "Mint should have no dai",
+                );
+                /* assert.equal(
+                    (await chai.balanceOf(saver.address)),   
+                    0,
+                    "Saver should not have chai",
+                ); */
             });
 
             /* it("can spit dai", async() => {
@@ -338,4 +346,136 @@ contract('Chai', async (accounts) =>  {
             }); */
         });
     });
+
+    /* it("allows posting collateral through Lender", async() => {
+        await lender.grantAccess(user, { from: owner });
+        let amount = web3.utils.toWei("500");
+        await weth.mint(user, amount, { from: user });
+        await weth.approve(lender.address, amount, { from: user }); 
+        await lender.post(user, amount, { from: user });
+
+        // Test collateral registering via `frob`
+        let ink = (await vat.urns(ilk, lender.address)).ink.toString()
+        assert.equal(
+            ink,   
+            amount
+        );
+    });
+
+    describe("with posted collateral", () => {
+        beforeEach(async() => {
+            let amount = web3.utils.toWei("500");
+            await weth.mint(user, amount, { from: user });
+            await weth.approve(lender.address, amount, { from: user }); 
+            await lender.post(user, amount, { from: user });
+        });
+
+        it("allows user to withdraw collateral", async() => {
+            assert.equal(
+                (await weth.balanceOf(user)),   
+                web3.utils.toWei("0")
+            );
+            
+            let amount = web3.utils.toWei("500");
+            await lender.withdraw(user, amount, { from: user });
+
+            // Test transfer of collateral
+            assert.equal(
+                (await weth.balanceOf(user)),   
+                web3.utils.toWei("500")
+            );
+
+            // Test collateral registering via `frob`
+            let ink = (await vat.urns(ilk, lender.address)).ink.toString()
+            assert.equal(
+                ink,   
+                0
+            );
+        });
+
+        it("allows to borrow dai", async() => {
+            // Test with two different stability rates, if possible.
+            // Mock Vat contract needs a `setRate` and an `ilks` functions.
+            // Mock Vat contract needs the `frob` function to authorize `daiJoin.exit` transfers through the `dart` parameter.
+            let daiBorrowed = web3.utils.toWei("100");
+            await lender.borrow(user, daiBorrowed, { from: user });
+
+            let daiBalance = (await dai.balanceOf(user)).toString();
+            assert.equal(
+                daiBalance,   
+                daiBorrowed
+            );
+            // TODO: assert lender debt = daiBorrowed
+        });
+    
+        describe("with a dai debt towards MakerDAO", () => {
+            beforeEach(async() => {
+                let daiBorrowed = web3.utils.toWei("100");
+                await lender.borrow(user, daiBorrowed, { from: user });
+            });
+
+            it("repays dai debt and no more", async() => {
+                // Test `normalizedAmount >= normalizedDebt`
+                let daiBorrowed = web3.utils.toWei("100");
+                await dai.approve(lender.address, daiBorrowed, { from: user });
+                await lender.repay(user, daiBorrowed, { from: user });
+                let daiBalance = (await dai.balanceOf(user)).toString();
+                assert.equal(
+                    daiBalance,   
+                    0
+                );
+                // assert lender debt = 0
+                assert.equal(
+                    (await vat.dai(lender.address)).toString(),   
+                    0
+                );
+
+                // Test `normalizedAmount < normalizedDebt`
+                // Mock Vat contract needs to return `normalizedDebt` with a `urns` function
+                // The DaiJoin mock contract needs to have a `join` function that authorizes Vat for incoming dai transfers.
+                // The DaiJoin mock contract needs to have a function to return it's dai balance.
+                // The Vat mock contract needs to have a frob function that takes `dart` dai from user to DaiJoin
+                // Should transfer funds from daiJoin
+            });
+        });
+    }); */
+
+    /* describe("chai tests", async() => {
+
+        it("allows to exchange dai for chai", async() => {
+            assert.equal(
+                (await chai.balanceOf(owner)),   
+                web3.utils.toWei("0")
+            );
+            
+            await dai.approve(chai.address, amount, { from: owner }); 
+            await chai.join(owner, amount, { from: owner });
+
+            assert.equal(
+                (await chai.balanceOf(owner)),   
+                amount
+            );
+        });
+
+        describe("with chai", () => {
+            beforeEach(async() => {
+                await dai.approve(chai.address, amount, { from: owner }); 
+                await chai.join(owner, amount, { from: owner });
+            });
+
+            it("allows to exchange chai for dai", async() => {
+                assert.equal(
+                    (await chai.balanceOf(owner)),   
+                    amount,
+                );
+                
+                await chai.exit(owner, amount, { from: owner });
+
+                assert.equal(
+                    (await chai.balanceOf(owner)),   
+                    web3.utils.toWei("0")
+                );
+            });
+        });
+    }); */
 });
