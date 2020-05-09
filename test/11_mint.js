@@ -107,14 +107,9 @@ contract('Chai', async (accounts) =>  {
         await lender.grantAccess(mint.address, { from: owner });
         await saver.grantAccess(mint.address, { from: owner });
 
-        // Borrow dai
+        // Allow owner to borrow dai
         await vat.hope(daiJoin.address, { from: owner });
         await vat.hope(wethJoin.address, { from: owner });
-        let wethTokens = web3.utils.toWei("500");
-        await weth.approve(wethJoin.address, wethTokens, { from: owner });
-        await wethJoin.join(owner, wethTokens, { from: owner });
-        await vat.frob(ilk, owner, owner, owner, wethTokens, amount, { from: owner });
-        await daiJoin.exit(owner, amount, { from: owner });
     });
 
     describe("mint tests", async() => {
@@ -138,6 +133,13 @@ contract('Chai', async (accounts) =>  {
         }); */
 
         it("mintNoDebt: mints yDai in exchange for dai, chai goes to Saver", async() => {
+            // Borrow dai
+            let wethTokens = web3.utils.toWei("500");
+            await weth.approve(wethJoin.address, wethTokens, { from: owner });
+            await wethJoin.join(owner, wethTokens, { from: owner });
+            await vat.frob(ilk, owner, owner, owner, wethTokens, amount, { from: owner });
+            await daiJoin.exit(owner, amount, { from: owner });
+
             assert.equal(
                 (await dai.balanceOf(owner)),   
                 amount,
@@ -183,8 +185,61 @@ contract('Chai', async (accounts) =>  {
             );
         });
 
+        it("redeemNoSavings: burns yDai to return dai, borrows dai from Lender", async() => {
+            // Some other user posted collateral to MakerDAO through Lender
+            await lender.grantAccess(user, { from: owner });
+            await weth.mint(user, amount, { from: user });
+            await weth.approve(lender.address, amount, { from: user }); 
+            await lender.post(user, amount, { from: user });
+            let ink = (await vat.urns(ilk, lender.address)).ink.toString()
+            assert.equal(
+                ink,   
+                amount
+            );
+
+            // Mint some yDai the sneaky way
+            await yDai.grantAccess(owner, { from: owner });
+            await yDai.mint(owner, amount, { from: owner });
+
+            assert.equal(
+                (await yDai.balanceOf(owner)),   
+                amount,
+                "Owner does not have yDai",
+            );
+            assert.equal(
+                (await lender.debt()),   
+                0,
+                "Lender has debt",
+            );
+
+            await yDai.approve(mint.address, amount, { from: owner });
+            await mint.redeemNoSavings(owner, amount, { from: owner });
+            assert.equal(
+                (await lender.debt()),   
+                amount,
+                "Lender should have debt",
+            );
+            assert.equal(
+                (await dai.balanceOf(owner)),   
+                amount,
+                "Owner should have dai",
+            );
+            assert.equal(
+                (await dai.balanceOf(mint.address)),   
+                0,
+                "Mint should have no dai",
+            );
+        });
+
         describe("with yDai", async() => {
             beforeEach(async() => {
+                // Borrow dai
+                let wethTokens = web3.utils.toWei("500");
+                await weth.approve(wethJoin.address, wethTokens, { from: owner });
+                await wethJoin.join(owner, wethTokens, { from: owner });
+                await vat.frob(ilk, owner, owner, owner, wethTokens, amount, { from: owner });
+                await daiJoin.exit(owner, amount, { from: owner });
+                // Mint yDai
                 await dai.approve(mint.address, amount, { from: owner });
                 await mint.mintNoDebt(owner, amount, { from: owner });
             });
@@ -229,59 +284,6 @@ contract('Chai', async (accounts) =>  {
                     0,
                     "Saver should not have chai",
                 );
-            });
-
-            it("redeemNoSavings: burns yDai to return dai, borrows dai from Lender", async() => {
-                // Some other user posted collateral to MakerDAO through Lender
-                await lender.grantAccess(user, { from: owner });
-                await weth.mint(user, amount, { from: user });
-                await weth.approve(lender.address, amount, { from: user }); 
-                await lender.post(user, amount, { from: user });
-                let ink = (await vat.urns(ilk, lender.address)).ink.toString()
-                assert.equal(
-                    ink,   
-                    amount
-                );
-
-                assert.equal(
-                    (await yDai.balanceOf(owner)),   
-                    amount,
-                    "Owner does not have yDai",
-                );
-                /* assert.equal(
-                    (await chai.balanceOf(saver.address)),   
-                    0,
-                    "Saver has chai",
-                ); */
-                /* assert.equal(
-                    (await saver.savings()),   
-                    0,
-                    "Saver has savings",
-                ); */
-                assert.equal(
-                    (await dai.balanceOf(mint.address)),   
-                    0,
-                    "Mint has dai",
-                );
-
-                await yDai.approve(mint.address, amount, { from: owner });
-                await mint.redeemNoSavings(owner, amount, { from: owner });
-
-                assert.equal(
-                    (await dai.balanceOf(owner)),   
-                    amount,
-                    "Owner should have dai",
-                );
-                assert.equal(
-                    (await dai.balanceOf(mint.address)),   
-                    0,
-                    "Mint should have no dai",
-                );
-                /* assert.equal(
-                    (await chai.balanceOf(saver.address)),   
-                    0,
-                    "Saver should not have chai",
-                ); */
             });
 
             describe("with Lender debt", async() => {

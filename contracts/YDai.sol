@@ -79,12 +79,12 @@ contract YDai is AuthorizedAccess, ERC20, Constants, IYDai  {
         emit Matured(_rate, _chi);
     }
 
-    /// @dev Mint yDai. Only callable by Controller contracts.
+    /// @dev Mint yDai. Only callable by Mint contracts.
     function mint(address to, uint256 yDai) public override onlyAuthorized("YDai: Not Authorized") {
         _mint(to, yDai);
     }
 
-    /// @dev Burn yDai. Only callable by Controller contracts.
+    /// @dev Burn yDai. Only callable by Mint contracts.
     function burn(address from, uint256 yDai) public override onlyAuthorized("YDai: Not Authorized") {
         _burn(from, yDai);
     }

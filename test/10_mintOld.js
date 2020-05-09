@@ -192,8 +192,8 @@ contract('Mint', async (accounts) =>  {
             "There is chai before `mint()`"
         );
 
-        dai.approve(mint.address, daiTokens, { from: owner });
-        mint.mint(owner, daiTokens, { from: owner });
+        await dai.approve(mint.address, daiTokens, { from: owner });
+        await mint.mint(owner, daiTokens, { from: owner });
 
         assert.equal(
             (await dai.balanceOf(owner)),   
