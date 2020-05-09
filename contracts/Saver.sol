@@ -26,7 +26,7 @@ contract Saver is ISaver, AuthorizedAccess(), Constants() {
     /// @dev Moves Chai into the contract
     function join(address user, uint256 chai) public override onlyAuthorized("Saver: Not Authorized") {
         require(
-            _chai.transferFrom(msg.sender, address(this), chai),
+            _chai.transferFrom(user, address(this), chai),
             "Saver: Chai transfer fail"
         );
     }
