@@ -2,6 +2,7 @@ const Mint = artifacts.require('Mint');
 const Lender = artifacts.require('Lender');
 const Saver = artifacts.require('Saver');
 const Chai = artifacts.require('Chai');
+const ChaiOracle = artifacts.require('ChaiOracle');
 const YDai = artifacts.require('YDai');
 const ERC20 = artifacts.require('TestERC20');
 const DaiJoin = artifacts.require('DaiJoin');
@@ -22,6 +23,7 @@ contract('Chai', async (accounts) =>  {
     let dai;
     let yDai;
     let chai;
+    let chaiOracle;
     let weth;
     let daiJoin;
     let wethJoin;
@@ -88,6 +90,9 @@ contract('Chai', async (accounts) =>  {
         // Setup saver
         saver = await Saver.new(chai.address);
 
+        // Setup chaiOracle
+        chaiOracle = await ChaiOracle.new(pot.address, { from: owner });
+
         // Setup mint
         mint = await Mint.new(
             lender.address,
@@ -95,6 +100,7 @@ contract('Chai', async (accounts) =>  {
             dai.address,
             yDai.address,
             chai.address,
+            chaiOracle.address,
             { from: owner },
         );
         await yDai.grantAccess(mint.address, { from: owner });
