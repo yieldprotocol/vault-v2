@@ -25,6 +25,7 @@ contract Mint {
         _dai.transferFrom(msg.sender, address(this), dai);
         _dai.approve(address(_chai), dai);
         _chai.join(address(this), dai);
+        _yDai.mint(msg.sender, dai);
     }
 
     function redeem(uint256 dai) public {

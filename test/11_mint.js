@@ -80,7 +80,9 @@ contract('Chai', async (accounts) =>  {
         await vat.frob(ilk, owner, owner, owner, wethTokens, amount, { from: owner });
         await daiJoin.exit(owner, amount, { from: owner });
 
+        // Setup mint
         mint = await Mint.new(dai.address, yDai.address, chai.address, { from: owner });
+        await yDai.grantAccess(mint.address, { from: owner });
     });
 
     describe("chai mints", async() => {
@@ -141,7 +143,7 @@ contract('Chai', async (accounts) =>  {
                 );
             });
 
-            it("mint: can grab dai and convert to chai", async() => {
+            it("mint: mints yDai in exchange for dai", async() => {
                 assert.equal(
                     (await dai.balanceOf(owner)),   
                     amount,
@@ -156,6 +158,10 @@ contract('Chai', async (accounts) =>  {
 
                 assert.equal(
                     (await chai.balanceOf(mint.address)),   
+                    amount,
+                );
+                assert.equal(
+                    (await yDai.balanceOf(owner)),   
                     amount,
                 );
                 assert.equal(
