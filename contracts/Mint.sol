@@ -38,33 +38,33 @@ contract Mint is Constants {
     }
 
     function mintNoDebt(address user, uint256 dai) public {
-        _dai.transferFrom(user, address(this), dai); // Get the dai from user
-        _dai.approve(address(_chai), dai);                 // Chai will take dai
-        _chai.join(address(this), dai);                    // Give dai to Chai, take chai back
-        uint256 chai = dai;                                // Convert dai amount to chai amount
-        _chai.approve(address(_saver), chai);              // Saver will take chai
-        _saver.join(address(this), chai);                  // Send chai to Saver
-        _yDai.mint(user, dai);                       // Mint yDai to user
+        _dai.transferFrom(user, address(this), dai);        // Get the dai from user
+        _dai.approve(address(_chai), dai);                  // Chai will take dai
+        _chai.join(address(this), dai);                     // Give dai to Chai, take chai back
+        uint256 chai = dai.divd(_chaiOracle.price(), RAY);  // Convert dai amount to chai amount
+        _chai.approve(address(_saver), chai);               // Saver will take chai
+        _saver.join(address(this), chai);                   // Send chai to Saver
+        _yDai.mint(user, dai);                              // Mint yDai to user
     }
 
     function mintDebt(address user, uint256 dai) public {
-        _dai.transferFrom(user, address(this), dai); // Get the dai from user
-        _dai.approve(address(_lender), dai);               // Lender will take the dai
-        _lender.repay(address(this), dai);                 // Lender takes dai from Mint to repay debt
-        _yDai.mint(user, dai);                       // Mint yDai to user
+        _dai.transferFrom(user, address(this), dai);        // Get the dai from user
+        _dai.approve(address(_lender), dai);                // Lender will take the dai
+        _lender.repay(address(this), dai);                  // Lender takes dai from Mint to repay debt
+        _yDai.mint(user, dai);                              // Mint yDai to user
     }
 
     function redeemSavings(address user, uint256 yDai) public {
-        _yDai.burn(user, yDai);                       // Burn yDai from user
-        uint256 chai = yDai.divd(_yDai.chi(), RAY);  // Convert dai amount to chai amount
-        _saver.exit(address(this), chai);            // Take chai from Saver
-        _chai.exit(address(this), yDai);              // Give dai to Chai, take chai back
-        _dai.transfer(user, yDai);                    // Give dai to user
+        _yDai.burn(user, yDai);                             // Burn yDai from user
+        uint256 chai = yDai.divd(_chaiOracle.price(), RAY); // Convert dai amount to chai amount
+        _saver.exit(address(this), chai);                   // Take chai from Saver
+        _chai.exit(address(this), yDai);                    // Give dai to Chai, take chai back
+        _dai.transfer(user, yDai);                          // Give dai to user
     }
 
     function redeemNoSavings(address user, uint256 yDai) public {
-        _yDai.burn(user, yDai);                       // Burn yDai from user
-        _lender.borrow(user, yDai);                   // Borrow Dai from Lender to user
+        _yDai.burn(user, yDai);                             // Burn yDai from user
+        _lender.borrow(user, yDai);                         // Borrow Dai from Lender to user
     }
 
     /* function grab(uint256 dai) public {
