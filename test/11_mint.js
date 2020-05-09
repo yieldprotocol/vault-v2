@@ -153,7 +153,7 @@ contract('Chai', async (accounts) =>  {
                 "Mint has dai",
             );
             await dai.approve(mint.address, amount, { from: owner });
-            await mint.mintNoDebt(amount, { from: owner });
+            await mint.mintNoDebt(owner, amount, { from: owner });
 
             assert.equal(
                 (await chai.balanceOf(saver.address)),   
@@ -175,7 +175,7 @@ contract('Chai', async (accounts) =>  {
         describe("with yDai", async() => {
             beforeEach(async() => {
                 await dai.approve(mint.address, amount, { from: owner });
-                await mint.mintNoDebt(amount, { from: owner });
+                await mint.mintNoDebt(owner, amount, { from: owner });
             });
 
             it("redeemSavings: burns yDai to return dai, pulls chai from Saver", async() => {
@@ -196,7 +196,7 @@ contract('Chai', async (accounts) =>  {
                 );
 
                 await yDai.approve(mint.address, amount, { from: owner });
-                await mint.redeemSavings(amount, { from: owner });
+                await mint.redeemSavings(owner, amount, { from: owner });
 
                 assert.equal(
                     (await dai.balanceOf(owner)),   
@@ -244,7 +244,7 @@ contract('Chai', async (accounts) =>  {
                 );
 
                 await yDai.approve(mint.address, amount, { from: owner });
-                await mint.redeemNoSavings(amount, { from: owner });
+                await mint.redeemNoSavings(owner, amount, { from: owner });
 
                 assert.equal(
                     (await dai.balanceOf(owner)),   
@@ -278,7 +278,7 @@ contract('Chai', async (accounts) =>  {
                     
                     // Someone redeems yDai, causing Lender debt
                     await yDai.approve(mint.address, amount, { from: owner });
-                    await mint.redeemNoSavings(amount, { from: owner });
+                    await mint.redeemNoSavings(owner, amount, { from: owner });
                     assert.equal(
                         (await lender.debt()),
                         amount,
@@ -308,7 +308,7 @@ contract('Chai', async (accounts) =>  {
                     );
 
                     await dai.approve(mint.address, amount, { from: owner });
-                    await mint.mintDebt(amount, { from: owner });
+                    await mint.mintDebt(owner, amount, { from: owner });
         
                     assert.equal(
                         (await lender.debt()),
