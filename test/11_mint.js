@@ -170,7 +170,7 @@ contract('Chai', async (accounts) =>  {
             );
         }); */
 
-        it("mint: mints yDai in exchange for dai", async() => {
+        it("mint: mints yDai in exchange for dai, chai goes to Saver", async() => {
             assert.equal(
                 (await dai.balanceOf(owner)),   
                 amount,
@@ -195,9 +195,9 @@ contract('Chai', async (accounts) =>  {
             await mint.mint(amount, { from: owner });
 
             assert.equal(
-                (await chai.balanceOf(mint.address)),   
+                (await chai.balanceOf(saver.address)),   
                 amount,
-                "Mint should have chai",
+                "Saver should have chai",
             );
             assert.equal(
                 (await yDai.balanceOf(owner)),   

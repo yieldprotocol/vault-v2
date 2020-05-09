@@ -30,10 +30,13 @@ contract Mint {
     }
 
     function mint(uint256 dai) public {
-        _dai.transferFrom(msg.sender, address(this), dai);
-        _dai.approve(address(_chai), dai);
-        _chai.join(address(this), dai);
-        _yDai.mint(msg.sender, dai);
+        _dai.transferFrom(msg.sender, address(this), dai); // Get the dai
+        _dai.approve(address(_chai), dai);                 // Chai will take dai
+        _chai.join(address(this), dai);                    // Give dai to Chai, take chai back
+        uint256 chai = dai;
+        _chai.approve(address(_saver), chai);              // Saver will take chai
+        _saver.join(address(this), chai);                  // Send chai to Saver
+        _yDai.mint(msg.sender, dai);                       // Mint yDai
     }
 
     function redeem(uint256 dai) public {
@@ -42,7 +45,7 @@ contract Mint {
         _dai.transfer(msg.sender, dai);
     }
 
-    function grab(uint256 dai) public {
+    /* function grab(uint256 dai) public {
         _dai.transferFrom(msg.sender, address(this), dai);
     }
 
@@ -57,5 +60,5 @@ contract Mint {
 
     function spit(uint256 dai) public {
         _dai.transfer(msg.sender, dai);
-    }
+    } */
 }
