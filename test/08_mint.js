@@ -16,7 +16,7 @@ const helper = require('ganache-time-traveler');
 let snapshot;
 let snapshotId;
 
-contract('Chai', async (accounts) =>  {
+contract('Mint', async (accounts) =>  {
     let [ owner, user ] = accounts;
     let vat;
     let pot;
