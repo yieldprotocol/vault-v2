@@ -158,8 +158,13 @@ contract('Chai', async (accounts) =>  {
                 0,
                 "Mint has dai",
             );
+            assert.equal(
+                (await lender.debt()),   
+                0,
+                "Lender has debt",
+            );
             await dai.approve(mint.address, amount, { from: owner });
-            await mint.mintNoDebt(owner, amount, { from: owner });
+            await mint.mint(owner, amount, { from: owner });
 
             assert.equal(
                 (await chai.balanceOf(saver.address)),   
@@ -196,13 +201,18 @@ contract('Chai', async (accounts) =>  {
                     "Saver does not have chai",
                 );
                 assert.equal(
+                    (await saver.savings()),   
+                    amount,
+                    "Saver does not have savings",
+                );
+                assert.equal(
                     (await dai.balanceOf(mint.address)),   
                     0,
                     "Mint has dai",
                 );
 
                 await yDai.approve(mint.address, amount, { from: owner });
-                await mint.redeemSavings(owner, amount, { from: owner });
+                await mint.redeem(owner, amount, { from: owner });
 
                 assert.equal(
                     (await dai.balanceOf(owner)),   
@@ -240,8 +250,13 @@ contract('Chai', async (accounts) =>  {
                 );
                 /* assert.equal(
                     (await chai.balanceOf(saver.address)),   
-                    amount,
-                    "Saver does not have chai",
+                    0,
+                    "Saver has chai",
+                ); */
+                /* assert.equal(
+                    (await saver.savings()),   
+                    0,
+                    "Saver has savings",
                 ); */
                 assert.equal(
                     (await dai.balanceOf(mint.address)),   
@@ -281,7 +296,7 @@ contract('Chai', async (accounts) =>  {
                         ink,   
                         amount,
                     );
-                    
+
                     // Someone redeems yDai, causing Lender debt
                     await yDai.approve(mint.address, amount, { from: owner });
                     await mint.redeemNoSavings(owner, amount, { from: owner });
@@ -297,11 +312,11 @@ contract('Chai', async (accounts) =>  {
                         amount,
                         "Owner does not have dai",
                     );
-                    /* assert.equal(
+                    assert.equal(
                         (await chai.balanceOf(mint.address)),   
                         0,
                         "Mint has chai",
-                    ); */
+                    );
                     assert.equal(
                         (await yDai.balanceOf(owner)),   
                         0,
@@ -326,11 +341,11 @@ contract('Chai', async (accounts) =>  {
                         amount,
                         "Owner should have yDai"
                     );
-                    /* assert.equal(
+                    assert.equal(
                         (await dai.balanceOf(mint.address)),   
                         0,
                         "Mint should have no dai",
-                    ); */
+                    );
                 });
             });
 

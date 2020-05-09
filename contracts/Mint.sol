@@ -37,6 +37,15 @@ contract Mint is Constants {
         _chaiOracle = IOracle(chaiOracle_);
     }
 
+    function mint(address user, uint256 dai) public {
+        if (_lender.debt() < dai) {
+            mintNoDebt(user, dai);
+        }
+        else {
+            mintDebt(user, dai);
+        }
+    }
+
     function mintNoDebt(address user, uint256 dai) public {
         _dai.transferFrom(user, address(this), dai);        // Get the dai from user
         _dai.approve(address(_chai), dai);                  // Chai will take dai
@@ -52,6 +61,15 @@ contract Mint is Constants {
         _dai.approve(address(_lender), dai);                // Lender will take the dai
         _lender.repay(address(this), dai);                  // Lender takes dai from Mint to repay debt
         _yDai.mint(user, dai);                              // Mint yDai to user
+    }
+
+    function redeem(address user, uint256 dai) public {
+        if (_saver.savings() < dai) {
+            redeemNoSavings(user, dai);
+        }
+        else {
+            redeemSavings(user, dai);
+        }
     }
 
     function redeemSavings(address user, uint256 yDai) public {
