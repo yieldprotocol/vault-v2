@@ -12,7 +12,9 @@ const Pot= artifacts.require('Pot');
 
 const truffleAssert = require('truffle-assertions');
 const helper = require('ganache-time-traveler');
-const { balance, BN, constants, ether, expectEvent, expectRevert, send } = require('@openzeppelin/test-helpers');
+
+let snapshot;
+let snapshotId;
 
 contract('Chai', async (accounts) =>  {
     let [ owner, user ] = accounts;
@@ -41,6 +43,9 @@ contract('Chai', async (accounts) =>  {
     const limits =  web3.utils.toBN('10000').mul(web3.utils.toBN('10').pow(RAD)).toString(); // 10000 * 10**45
 
     beforeEach(async() => {
+        snapshot = await helper.takeSnapshot();
+        snapshotId = snapshot['result'];
+
         // Set up vat, join and weth
         vat = await Vat.new();
         await vat.rely(vat.address, { from: owner });
@@ -112,6 +117,17 @@ contract('Chai', async (accounts) =>  {
         await vat.hope(wethJoin.address, { from: owner });
     });
 
+    afterEach(async() => {
+        await helper.revertToSnapshot(snapshotId);
+    });
+    
+    it("yDai can't be redeemed before maturity", async() => {
+        await truffleAssert.fails(
+            mint.redeem(owner, amount, { from: owner }),
+            truffleAssert.REVERT,
+            "Mint: yDai is not mature",
+        );
+    });
 
     it("mintNoDebt: mints yDai in exchange for dai, chai goes to Saver", async() => {
         // Borrow dai
@@ -167,6 +183,10 @@ contract('Chai', async (accounts) =>  {
     });
 
     it("redeemNoSavings: burns yDai to return dai, borrows dai from Lender", async() => {
+        // yDai matures
+        await helper.advanceTime(1000);
+        await helper.advanceBlock();
+        await yDai.mature();
         // Some other user posted collateral to MakerDAO through Lender
         await lender.grantAccess(user, { from: owner });
         await weth.mint(user, amount, { from: user });
@@ -213,6 +233,10 @@ contract('Chai', async (accounts) =>  {
     });
 
     it("redeemSavings: burns yDai to return dai, pulls chai from Saver", async() => {
+        // yDai matures
+        await helper.advanceTime(1000);
+        await helper.advanceBlock();
+        await yDai.mature();
         // Borrow dai
         let wethTokens = web3.utils.toWei("500");
         await weth.approve(wethJoin.address, wethTokens, { from: owner });
@@ -265,6 +289,10 @@ contract('Chai', async (accounts) =>  {
     });
 
     it("mintDebt: mints yDai in exchange for dai, dai repays Lender debt", async() => {
+        // yDai matures
+        await helper.advanceTime(1000);
+        await helper.advanceBlock();
+        await yDai.mature();
         // Mint some yDai the sneaky way
         await yDai.grantAccess(owner, { from: owner });
         await yDai.mint(owner, amount, { from: owner });
