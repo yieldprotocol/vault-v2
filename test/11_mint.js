@@ -1,5 +1,6 @@
 const Mint = artifacts.require('Mint');
 const Chai = artifacts.require('Chai');
+const YDai = artifacts.require('YDai');
 const ERC20 = artifacts.require('TestERC20');
 const DaiJoin = artifacts.require('DaiJoin');
 const GemJoin = artifacts.require('GemJoin');
@@ -16,6 +17,7 @@ contract('Chai', async (accounts) =>  {
     let pot;
     let chai;
     let dai;
+    let yDai;
     let weth;
     let daiJoin;
     let wethJoin;
@@ -64,6 +66,11 @@ contract('Chai', async (accounts) =>  {
         );
         await vat.rely(chai.address, { from: owner });
 
+        // Setup yDai
+        const block = await web3.eth.getBlockNumber();
+        maturity = (await web3.eth.getBlock(block)).timestamp + 1000;
+        yDai = await YDai.new(vat.address, pot.address, maturity, "Name", "Symbol");
+
         // Borrow dai
         await vat.hope(daiJoin.address, { from: owner });
         await vat.hope(wethJoin.address, { from: owner });
@@ -73,7 +80,7 @@ contract('Chai', async (accounts) =>  {
         await vat.frob(ilk, owner, owner, owner, wethTokens, amount, { from: owner });
         await daiJoin.exit(owner, amount, { from: owner });
 
-        mint = await Mint.new(dai.address, chai.address, { from: owner });
+        mint = await Mint.new(dai.address, yDai.address, chai.address, { from: owner });
     });
 
     describe("chai mints", async() => {

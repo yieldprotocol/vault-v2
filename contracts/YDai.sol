@@ -6,11 +6,12 @@ import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./interfaces/IPot.sol";
 import "./interfaces/IVat.sol";
+import "./interfaces/IYDai.sol";
 import "./Constants.sol";
 
 
 ///@dev yDai is a yToken targeting Dai
-contract YDai is AuthorizedAccess, ERC20, Constants  {
+contract YDai is AuthorizedAccess, ERC20, Constants, IYDai  {
     using DecimalMath for uint256;
     using DecimalMath for uint8;
 
@@ -39,17 +40,17 @@ contract YDai is AuthorizedAccess, ERC20, Constants  {
     }
 
     /// @dev Whether the yDai has matured or not
-    function isMature() public view returns(bool){
+    function isMature() public view override returns(bool){
         return _isMature;
     }
 
     /// @dev Programmed time for yDai maturity
-    function maturity() public view returns(uint256){
+    function maturity() public view override returns(uint256){
         return _maturity;
     }
 
     /// @dev accumulator (for dsr) at maturity in RAY units
-    function chi() public view returns(uint256){
+    function chi() public view override returns(uint256){
         return _chi;
     }
 
@@ -59,13 +60,13 @@ contract YDai is AuthorizedAccess, ERC20, Constants  {
     // ----------
     //  rate_mat
     //
-    function rate() public view returns(uint256){
+    function rate() public view override returns(uint256){
         (, uint256 rateNow,,,) = _vat.ilks("ETH-A");
         return rateNow.divd(_rate, RAY);
     }
 
     /// @dev Mature yDai and capture maturity data
-    function mature() public {
+    function mature() public override {
         require(
             // solium-disable-next-line security/no-block-members
             now > _maturity,
@@ -79,12 +80,12 @@ contract YDai is AuthorizedAccess, ERC20, Constants  {
     }
 
     /// @dev Mint yDai. Only callable by Controller contracts.
-    function mint(address to, uint256 yDai) public onlyAuthorized("YDai: Not Authorized") {
+    function mint(address to, uint256 yDai) public override onlyAuthorized("YDai: Not Authorized") {
         _mint(to, yDai);
     }
 
     /// @dev Burn yDai. Only callable by Controller contracts.
-    function burn(address from, uint256 yDai) public onlyAuthorized("YDai: Not Authorized") {
+    function burn(address from, uint256 yDai) public override onlyAuthorized("YDai: Not Authorized") {
         _burn(from, yDai);
     }
 }
