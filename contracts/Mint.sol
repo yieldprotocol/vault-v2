@@ -46,7 +46,7 @@ contract Mint is Constants {
         }
     }
 
-    function mintNoDebt(address user, uint256 dai) public {
+    function mintNoDebt(address user, uint256 dai) internal {
         _dai.transferFrom(user, address(this), dai);        // Get the dai from user
         _dai.approve(address(_chai), dai);                  // Chai will take dai
         _chai.join(address(this), dai);                     // Give dai to Chai, take chai back
@@ -56,7 +56,7 @@ contract Mint is Constants {
         _yDai.mint(user, dai);                              // Mint yDai to user
     }
 
-    function mintDebt(address user, uint256 dai) public {
+    function mintDebt(address user, uint256 dai) internal {
         _dai.transferFrom(user, address(this), dai);        // Get the dai from user
         _dai.approve(address(_lender), dai);                // Lender will take the dai
         _lender.repay(address(this), dai);                  // Lender takes dai from Mint to repay debt
@@ -72,7 +72,7 @@ contract Mint is Constants {
         }
     }
 
-    function redeemSavings(address user, uint256 yDai) public {
+    function redeemSavings(address user, uint256 yDai) internal {
         _yDai.burn(user, yDai);                             // Burn yDai from user
         uint256 chai = yDai.divd(_chaiOracle.price(), RAY); // Convert dai amount to chai amount
         _saver.exit(address(this), chai);                   // Take chai from Saver
@@ -80,7 +80,7 @@ contract Mint is Constants {
         _dai.transfer(user, yDai);                          // Give dai to user
     }
 
-    function redeemNoSavings(address user, uint256 yDai) public {
+    function redeemNoSavings(address user, uint256 yDai) internal {
         _yDai.burn(user, yDai);                             // Burn yDai from user
         _lender.borrow(user, yDai);                         // Borrow Dai from Lender to user
     }
