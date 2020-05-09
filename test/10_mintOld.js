@@ -8,7 +8,7 @@ const Lender = artifacts.require('Lender');
 const Chai = artifacts.require('Chai');
 const Saver = artifacts.require('Saver');
 const ChaiOracle = artifacts.require('ChaiOracle');
-const Mint = artifacts.require('./Mint');
+const Mint = artifacts.require('Mint');
 
 const truffleAssert = require('truffle-assertions');
 const helper = require('ganache-time-traveler');
@@ -96,9 +96,7 @@ contract('Mint', async (accounts) =>  {
         chaiOracle = await ChaiOracle.new(pot.address, { from: owner });
 
         // Setup saver
-        chai = await ERC20.new(supply, { from: owner }); 
         saver = await Saver.new(chai.address);
-        await saver.grantAccess(user, { from: owner });
 
         // Setup mint
         mint = await Mint.new(
@@ -125,7 +123,7 @@ contract('Mint', async (accounts) =>  {
         await vat.frob(ilk, owner, owner, owner, wethTokens, daiTokens, { from: owner });
         await daiJoin.exit(owner, daiTokens, { from: owner });
     });
-    
+
     it("yDai can't be redeemed before maturity", async() => {
         await truffleAssert.fails(
             yDai.mature(),
@@ -134,20 +132,97 @@ contract('Mint', async (accounts) =>  {
         );
     });
 
+    it("allows to save chai", async() => {
+        let daiTokens = web3.utils.toWei("100");
+        assert.equal(
+            (await dai.balanceOf(owner)),   
+            daiTokens,
+            "Owner doesn't have the dai"
+        );
+        assert.equal(
+            (await saver.savings()),   
+            web3.utils.toWei("0")
+        );
+
+        // Exchange chai for dai
+        await dai.approve(chai.address, daiTokens, { from: owner }); 
+        await chai.join(owner, daiTokens, { from: owner });
+        assert.equal(
+            (await chai.balanceOf(owner)),   
+            daiTokens,
+            "Owner doesn't have the chai"
+        );
+        assert.equal(
+            (await chai.totalSupply.call()),   
+            daiTokens,
+            "`totalSupply()` doesn't work"
+        );
+
+        await chai.approve(saver.address, daiTokens, { from: owner }); 
+        await saver.grantAccess(owner, { from: owner });
+        await saver.join(owner, daiTokens, { from: owner });
+
+        // Test transfer of collateral
+        assert.equal(
+            (await saver.savings()),   
+            daiTokens,
+            "Saver doesn't have the chai",
+        );
+        assert.equal(
+            (await chai.balanceOf(owner)),   
+            0,
+        );
+    });
+
+    it("yDai can be minted for dai, dai is converted to chai and stored in Saver", async() => {
+        let daiTokens = web3.utils.toWei("100");
+        assert.equal(
+            (await dai.balanceOf(owner)),   
+            daiTokens,
+            "Owner doesn't have the dai",
+        );
+        assert.equal(
+            (await chaiOracle.price.call()),   
+            RAY,
+            "Chai price is not RAY.unit()",
+        );
+        assert.equal(
+            (await chai.totalSupply.call()),   
+            0,
+            "There is chai before `mint()`"
+        );
+
+        dai.approve(mint.address, daiTokens, { from: owner });
+        mint.mint(owner, daiTokens, { from: owner });
+
+        assert.equal(
+            (await dai.balanceOf(owner)),   
+            daiTokens,
+            "Owner still has the dai",
+        );
+        /* assert.equal(
+            (await dai.balanceOf(mint.address)),   
+            daiTokens,
+            "The dai was not transferred",
+        ); */
+        /* assert.equal(
+            (await yDai.balanceOf(owner)),   
+            daiTokens,
+            "The yDai was not minted",
+        ); */
+        assert.equal(
+            (await chai.balanceOf(mint.address)),   
+            daiTokens,
+            "Mint doesn't have the chai"
+        );
+        /* assert.equal(
+            (await saver.savings()),   
+            web3.utils.toWei("100")
+        ); */
+    });
+
     describe("with no debt in the lender", () => {
-        it("yDai can be minted for dai, dai is converted to chai and stored in Saver", async() => {
-            let daiTokens = web3.utils.toWei("100");
-            dai.approve(mint.address, daiTokens, { from: owner });
-            mint.mint(owner, daiTokens, { from: owner });
-            assert.equal(
-                (await yDai.balanceOf(owner)),   
-                web3.utils.toWei("100")
-            );
-            /* assert.equal(
-                (await saver.savings()),   
-                web3.utils.toWei("100")
-            ); */
-        });
+
     });
 
     describe("with debt in the lender", () => {

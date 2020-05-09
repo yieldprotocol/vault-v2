@@ -1,77 +1,47 @@
 pragma solidity ^0.6.2;
 
-import "@hq20/contracts/contracts/math/DecimalMath.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./interfaces/ILender.sol";
-import "./interfaces/ISaver.sol";
-import "./interfaces/IOracle.sol";
 import "./interfaces/IChai.sol";
-import "./Constants.sol";
-import "./YDai.sol";
+import "@nomiclabs/buidler/console.sol";
 
 
-/// @dev Mint manages a Dai/yDai pair. Note that Dai is underlying, not collateral, and therefore the functions are minting and redeeming, instead of borrowing and repaying.
-contract Mint is Ownable, Constants {
-    using SafeMath for uint256;
-    using DecimalMath for uint256;
-    using DecimalMath for int256;
-    using DecimalMath for uint8;
-
-    ILender internal _lender;
-    ISaver internal _saver;
+contract Mint {
     IERC20 internal _dai;
-    YDai internal _yDai;
     IChai internal _chai;
-    IOracle internal _chaiOracle;
 
     constructor (
-        address lender_,
-        address saver_,
         address dai_,
-        address yDai_,
-        address chai_,
-        address chaiOracle_
+        address chai_
     ) public {
-        _lender = ILender(lender_);
-        _saver = ISaver(saver_);
         _dai = IERC20(dai_);
-        _yDai = YDai(yDai_);
         _chai = IChai(chai_);
-        _chaiOracle = IOracle(chaiOracle_);
     }
 
-    /// @dev Mint yTokens by posting an equal amount of Dai.
-    // user --- Dai  ---> us
-    // us   --- yDai ---> user
-    function mint(address user, uint256 dai) public {
-        if (_lender.debt() > dai){
-            _lender.repay(user, dai);
-        }
-        else {
-            uint256 chai = dai.divd(_chaiOracle.price(), RAY);
-            _saver.join(user, chai);
-        }
-        _yDai.mint(user, dai);
+    function mint(uint256 dai) public {
+        _dai.transferFrom(msg.sender, address(this), dai);
+        _dai.approve(address(_chai), dai);
+        _chai.join(address(this), dai);
     }
 
-    /// @dev Burn yTokens and return an equal amount of underlying.
-    // user --- yDai ---> us
-    // us   --- Dai  ---> user
-    function redeem(address user, uint256 yDai) public returns (bool) {
-        require(
-            _yDai.isMature(),
-            "Mint: Only mature redeem"
-        );
-        _yDai.burn(user, yDai);
-        uint256 chai = yDai.divd(_yDai.chi(), RAY);
-        if (_saver.savings() > chai){
-            _saver.exit(address(this), chai);
-            _chai.exit(user, chai);
-        }
-        else {
-            _lender.borrow(user, yDai);
-        }
+    function redeem(uint256 dai) public {
+        _chai.exit(address(this), dai);
+        _dai.transfer(msg.sender, dai);
+    }
+
+    function grab(uint256 dai) public {
+        _dai.transferFrom(msg.sender, address(this), dai);
+    }
+
+    function toChai(uint256 dai) public {
+        _dai.approve(address(_chai), dai);
+        _chai.join(address(this), dai);
+    }
+
+    function toDai(uint256 dai) public {
+        _chai.exit(address(this), dai);
+    }
+
+    function spit(uint256 dai) public {
+        _dai.transfer(msg.sender, dai);
     }
 }
