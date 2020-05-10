@@ -8,7 +8,7 @@ import "./Dealer.sol";
 
 
 /// @dev A WethDealer takes weth as collateral and issues yDai. Weth is posted to MakerDAO through the Lender.
-contract ChaiDealer is Dealer {
+contract WethDealer is Dealer {
 
     ILender internal _lender;
 
