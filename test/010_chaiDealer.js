@@ -193,7 +193,7 @@ contract('yDai', async (accounts) =>  {
         });
 
         it("allows to borrow yDai", async() => {
-            /* let amount = web3.utils.toWei("100");
+            let amount = web3.utils.toWei("100");
             assert.equal(
                 (await chaiDealer.unlockedOf.call(owner)),   
                 amount,
@@ -226,17 +226,17 @@ contract('yDai', async (accounts) =>  {
                 (await chaiDealer.unlockedOf.call(owner)),   
                 0,
                 "Owner should not have unlocked collateral",
-            ); */
+            );
         });
 
         describe("with borrowed yDai", () => {
             beforeEach(async() => {
-                // let amount = web3.utils.toWei("100");
-                // await chaiDealer.borrow(owner, amount, { from: owner });
+                let amount = web3.utils.toWei("100");
+                await chaiDealer.borrow(owner, amount, { from: owner });
             });
 
             it("allows to repay yDai", async() => {
-                /* let amount = web3.utils.toWei("100");
+                let amount = web3.utils.toWei("100");
                 assert.equal(
                     (await yDai.balanceOf(owner)),   
                     amount,
@@ -270,7 +270,7 @@ contract('yDai', async (accounts) =>  {
                     (await chaiDealer.debtOf.call(owner)),   
                     0,
                     "Owner should not have debt",
-                ); */
+                );
             });
         });
     });
