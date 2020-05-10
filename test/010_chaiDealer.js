@@ -10,7 +10,6 @@ const ChaiOracle = artifacts.require('ChaiOracle');
 const ChaiDealer = artifacts.require('ChaiDealer');
 
 const truffleAssert = require('truffle-assertions');
-const helper = require('ganache-time-traveler');
 
 contract('yDai', async (accounts) =>  {
     let [ owner, user ] = accounts;
@@ -30,8 +29,6 @@ contract('yDai', async (accounts) =>  {
     let Line = web3.utils.fromAscii("Line")
     let spot = web3.utils.fromAscii("spot")
     let linel = web3.utils.fromAscii("line")
-    let snapshot;
-    let snapshotId;
     const RAY = "1000000000000000000000000000";
     const RAD = web3.utils.toBN('49')
     const limits =  web3.utils.toBN('10').pow(RAD).toString();
@@ -39,9 +36,6 @@ contract('yDai', async (accounts) =>  {
 
 
     beforeEach(async() => {
-        snapshot = await helper.takeSnapshot();
-        snapshotId = snapshot['result'];
-
         // Set up vat, join and weth
         vat = await Vat.new();
         await vat.rely(vat.address, { from: owner });
@@ -104,10 +98,6 @@ contract('yDai', async (accounts) =>  {
         let amount = web3.utils.toWei("100");
         await dai.approve(chai.address, amount, { from: owner }); 
         await chai.join(owner, amount, { from: owner });
-    });
-
-    afterEach(async() => {
-        await helper.revertToSnapshot(snapshotId);
     });
 
     it("allows user to post chai", async() => {
