@@ -5,7 +5,7 @@ const DaiJoin = artifacts.require('DaiJoin');
 const ERC20 = artifacts.require("TestERC20");
 
 
-contract('pot', async (accounts) =>  {
+contract('Pot', async (accounts) =>  {
     let vat;
     let collateral;
     let collateralJoin;

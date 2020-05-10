@@ -4,7 +4,7 @@ const DaiJoin = artifacts.require('DaiJoin');
 const ERC20 = artifacts.require("TestERC20");
 
 
-contract('vat', async (accounts) =>  {
+contract('Vat', async (accounts) =>  {
     let vat;
     let gold;
     let goldJoin;

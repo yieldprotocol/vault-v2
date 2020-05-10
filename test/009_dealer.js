@@ -7,7 +7,7 @@ const Vat = artifacts.require('Vat');
 const helper = require('ganache-time-traveler');
 const truffleAssert = require('truffle-assertions');
 
-contract('yDai', async (accounts) =>  {
+contract('Dealer', async (accounts) =>  {
     let [ owner, user ] = accounts;
     let vat;
     let pot;

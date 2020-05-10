@@ -8,7 +8,7 @@ const Pot = artifacts.require('./Pot');
 const truffleAssert = require('truffle-assertions');
 const helper = require('ganache-time-traveler');
 
-contract('Chai', async (accounts) =>  {
+contract('ChaiOracle', async (accounts) =>  {
     let [ owner ] = accounts;
     let vat;
     let pot;

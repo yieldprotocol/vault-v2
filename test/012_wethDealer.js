@@ -10,7 +10,7 @@ const WethDealer = artifacts.require('WethDealer');
 
 const truffleAssert = require('truffle-assertions');
 
-contract('yDai', async (accounts) =>  {
+contract('WethDealer', async (accounts) =>  {
     let [ owner, user ] = accounts;
     let vat;
     let pot;
@@ -20,7 +20,6 @@ contract('yDai', async (accounts) =>  {
     let wethJoin;
     let dai;
     let daiJoin;
-    // let chai;
     let wethOracle;
     let wethDealer;
     let maturity;
@@ -56,15 +55,6 @@ contract('yDai', async (accounts) =>  {
         pot = await Pot.new(vat.address);
         await vat.rely(pot.address, { from: owner });
 
-        // Setup chai
-        /* chai = await Chai.new(
-            vat.address,
-            pot.address,
-            daiJoin.address,
-            dai.address,
-        );
-        await vat.rely(chai.address, { from: owner }); */
-
         // Set lender
         lender = await Lender.new(
             dai.address,        // dai
@@ -94,22 +84,6 @@ contract('yDai', async (accounts) =>  {
         );
         await yDai.grantAccess(wethDealer.address, { from: owner });
         await lender.grantAccess(wethDealer.address, { from: owner });
-
-        // Borrow dai
-        /* await vat.hope(daiJoin.address, { from: owner });
-        await vat.hope(wethJoin.address, { from: owner });
-        let wethTokens = web3.utils.toWei("500");
-        let daiTokens = web3.utils.toWei("100");
-        await weth.mint(owner, wethTokens, { from: owner });
-        await weth.approve(wethJoin.address, wethTokens, { from: owner });
-        await wethJoin.join(owner, wethTokens, { from: owner });
-        await vat.frob(ilk, owner, owner, owner, wethTokens, daiTokens, { from: owner });
-        await daiJoin.exit(owner, daiTokens, { from: owner }); */
-
-        // Convert to chai
-        /* let amount = web3.utils.toWei("100");
-        await dai.approve(chai.address, amount, { from: owner }); 
-        await chai.join(owner, amount, { from: owner }); */
     });
 
     it("allows user to post weth", async() => {
@@ -151,47 +125,48 @@ contract('yDai', async (accounts) =>  {
         );
     });
 
-    /* describe("with posted chai", () => {
+    describe("with posted weth", () => {
         beforeEach(async() => {
             let amount = web3.utils.toWei("100");
-            await chai.approve(wethDealer.address, amount, { from: owner }); 
+            await weth.mint(owner, amount, { from: owner });
+            await weth.approve(wethDealer.address, amount, { from: owner }); 
             await wethDealer.post(owner, amount, { from: owner });
         });
 
-        it("allows user to withdraw chai", async() => {
+        it("allows user to withdraw weth", async() => {
             let amount = web3.utils.toWei("100");
             assert.equal(
-                (await chai.balanceOf(saver.address)),   
+                (await vat.urns(ilk, lender.address)).ink.toString(),   
                 amount,
-                "Saver does not have chai",
+                "Lender does not have weth in MakerDAO",
             );
             assert.equal(
-                (await chai.balanceOf(owner)),   
+                (await weth.balanceOf(owner)),   
                 0,
-                "Owner has chai",
+                "Owner has weth",
             );
             assert.equal(
                 (await wethDealer.unlockedOf.call(owner)),   
                 amount,
-                "Owner does not have unlocked collateral",
+                "Owner does not have unlocked weth",
             );
 
             await wethDealer.withdraw(owner, amount, { from: owner });
 
             assert.equal(
-                (await chai.balanceOf(owner)),   
+                (await weth.balanceOf(owner)),   
                 amount,
-                "Dealer should have chai",
+                "Owner should have weth",
             );
             assert.equal(
-                (await chai.balanceOf(saver.address)),   
+                (await vat.urns(ilk, lender.address)).ink.toString(),   
                 0,
-                "Saver should not have chai",
+                "Lender should not have weth in MakerDAO",
             );
             assert.equal(
                 (await wethDealer.unlockedOf.call(owner)),   
                 0,
-                "Owner should have unlocked collateral",
+                "Owner should have unlocked weth",
             );
         });
 
@@ -276,5 +251,5 @@ contract('yDai', async (accounts) =>  {
                 );
             });
         });
-    }); */
+    });
 });

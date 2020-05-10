@@ -11,7 +11,7 @@ const ChaiDealer = artifacts.require('ChaiDealer');
 
 const truffleAssert = require('truffle-assertions');
 
-contract('yDai', async (accounts) =>  {
+contract('ChaiDealer', async (accounts) =>  {
     let [ owner, user ] = accounts;
     let vat;
     let pot;
