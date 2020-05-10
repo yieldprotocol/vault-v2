@@ -148,49 +148,48 @@ contract('yDai', async (accounts) =>  {
         );
     });
 
-    describe("with posted collateral", () => {
+    describe("with posted chai", () => {
         beforeEach(async() => {
-            /* let amount = web3.utils.toWei("100");
-            await chai.mint(owner, amount, { from: owner });
+            let amount = web3.utils.toWei("100");
             await chai.approve(chaiDealer.address, amount, { from: owner }); 
-            await chaiDealer.post(owner, amount, { from: owner });*/
+            await chaiDealer.post(owner, amount, { from: owner });
         });
 
-        it("allows user to withdraw collateral", async() => {
-            /* let amount = web3.utils.toWei("100");
+        it("allows user to withdraw chai", async() => {
+            let amount = web3.utils.toWei("100");
             assert.equal(
-                (await chai.balanceOf(chaiDealer.address)),   
+                (await chai.balanceOf(saver.address)),   
                 amount,
-                "Dealer does not have collateral",
+                "Saver does not have chai",
+            );
+            assert.equal(
+                (await chai.balanceOf(owner)),   
+                0,
+                "Owner has chai",
             );
             assert.equal(
                 (await chaiDealer.unlockedOf.call(owner)),   
                 amount,
                 "Owner does not have unlocked collateral",
             );
-            assert.equal(
-                (await chai.balanceOf(owner)),   
-                0,
-                "Owner has collateral in hand"
-            );
-            
+
             await chaiDealer.withdraw(owner, amount, { from: owner });
 
             assert.equal(
                 (await chai.balanceOf(owner)),   
                 amount,
-                "Owner should have collateral in hand"
+                "Dealer should have chai",
             );
             assert.equal(
-                (await chai.balanceOf(chaiDealer.address)),   
+                (await chai.balanceOf(saver.address)),   
                 0,
-                "Dealer should not have collateral",
+                "Saver should not have chai",
             );
             assert.equal(
                 (await chaiDealer.unlockedOf.call(owner)),   
                 0,
-                "Owner should not have unlocked collateral",
-            ); */
+                "Owner should have unlocked collateral",
+            );
         });
 
         it("allows to borrow yDai", async() => {
