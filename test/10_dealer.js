@@ -66,61 +66,136 @@ contract('yDai', async (accounts) =>  {
         await helper.revertToSnapshot(snapshotId);
     });
 
-    it("should setup yDai", async() => {
-        assert(
-            (await yDai.chi()) == RAY,
-            "chi not initialized",
-        );
-        assert(
-            (await yDai.rate()) == RAY,
-            "rate not initialized",
-        );
-        assert(
-            (await yDai.maturity()) == maturity,
-            "maturity not initialized",
-        );
-    });
-
-    it("yDai is not mature before maturity", async() => {
+    it("allows user to post collateral", async() => {
         assert.equal(
-            await yDai.isMature(),
-            false,
+            (await token.balanceOf(dealer.address)),   
+            web3.utils.toWei("0"),
+            "Dealer has collateral",
         );
-    });
-
-    it("yDai cannot mature before maturity time", async() => {
-        await truffleAssert.fails(
-            yDai.mature(),
-            truffleAssert.REVERT,
-            "YDai: Too early to mature",
-        );
-    });
-
-    it("yDai can mature at maturity time", async() => {
-        await helper.advanceTime(1000);
-        await helper.advanceBlock();
-        await yDai.mature();
         assert.equal(
-            await yDai.isMature(),
-            true,
+            (await dealer.unlockedOf.call(owner)),   
+            0,
+            "Owner has unlocked collateral",
+        );
+        
+        let amount = web3.utils.toWei("100");
+        await token.mint(owner, amount, { from: owner });
+        await token.approve(dealer.address, amount, { from: owner }); 
+        await dealer.post(owner, amount, { from: owner });
+
+        assert.equal(
+            (await token.balanceOf(dealer.address)),   
+            amount,
+            "Dealer should have collateral",
+        );
+        assert.equal(
+            (await dealer.unlockedOf.call(owner)),   
+            amount,
+            "Owner should have unlocked collateral",
         );
     });
 
-    describe("once mature", () => {
+    describe("with posted collateral", () => {
         beforeEach(async() => {
+            let amount = web3.utils.toWei("100");
+            await token.mint(owner, amount, { from: owner });
+            await token.approve(dealer.address, amount, { from: owner }); 
+            await dealer.post(owner, amount, { from: owner });
+        });
+
+        it("allows user to withdraw collateral", async() => {
+            let amount = web3.utils.toWei("100");
+            assert.equal(
+                (await token.balanceOf(dealer.address)),   
+                amount,
+                "Dealer does not have collateral",
+            );
+            assert.equal(
+                (await dealer.unlockedOf.call(owner)),   
+                amount,
+                "Owner does not have unlocked collateral",
+            );
+            assert.equal(
+                (await token.balanceOf(owner)),   
+                0,
+                "Owner has collateral in hand"
+            );
+            
+            await dealer.withdraw(owner, amount, { from: owner });
+
+            assert.equal(
+                (await token.balanceOf(owner)),   
+                amount,
+                "Owner should have collateral in hand"
+            );
+            assert.equal(
+                (await token.balanceOf(dealer.address)),   
+                0,
+                "Dealer should not have collateral",
+            );
+            assert.equal(
+                (await dealer.unlockedOf.call(owner)),   
+                0,
+                "Owner should not have unlocked collateral",
+            );
+        });
+
+        /* it("should setup yDai", async() => {
+            assert(
+                (await yDai.chi()) == RAY,
+                "chi not initialized",
+            );
+            assert(
+                (await yDai.rate()) == RAY,
+                "rate not initialized",
+            );
+            assert(
+                (await yDai.maturity()) == maturity,
+                "maturity not initialized",
+            );
+        });
+
+        it("yDai is not mature before maturity", async() => {
+            assert.equal(
+                await yDai.isMature(),
+                false,
+            );
+        });
+
+        it("yDai cannot mature before maturity time", async() => {
+            await truffleAssert.fails(
+                yDai.mature(),
+                truffleAssert.REVERT,
+                "YDai: Too early to mature",
+            );
+        });
+
+        it("yDai can mature at maturity time", async() => {
             await helper.advanceTime(1000);
             await helper.advanceBlock();
             await yDai.mature();
+            assert.equal(
+                await yDai.isMature(),
+                true,
+            );
         });
 
-        // TODO: Test with a moving chi
-        it("chi gets fixed to maturity time", async() => {
-            assert((await yDai.chi()) == RAY);
-        });
+        describe("once mature", () => {
+            beforeEach(async() => {
+                await helper.advanceTime(1000);
+                await helper.advanceBlock();
+                await yDai.mature();
+            });
 
-        // TODO: Test with a moving rate
-        it("rate gets fixed to maturity time", async() => {
-            assert((await yDai.rate()) == RAY);
-        });
+            // TODO: Test with a moving chi
+            it("chi gets fixed to maturity time", async() => {
+                assert((await yDai.chi()) == RAY);
+            });
+
+            // TODO: Test with a moving rate
+            it("rate gets fixed to maturity time", async() => {
+                assert((await yDai.rate()) == RAY);
+            });
+        }); */
     });
 });
