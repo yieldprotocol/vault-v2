@@ -2,6 +2,7 @@ pragma solidity ^0.6.2;
 
 import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IOracle.sol";
 import "./interfaces/IYDai.sol";
@@ -10,6 +11,7 @@ import "./Constants.sol";
 
 /// @dev A dealer takes one type of collateral token and issues yDai
 contract Dealer is Ownable, Constants {
+    using SafeMath for uint256;
     using DecimalMath for uint256;
     using DecimalMath for uint8;
 
@@ -25,7 +27,7 @@ contract Dealer is Ownable, Constants {
         address token_,
         address tokenOracle_
     ) public {
-        _yDai = YDai(yDai_);
+        _yDai = IYDai(yDai_);
         _token = IERC20(token_);
         _tokenOracle = IOracle(tokenOracle_);
     }
@@ -62,7 +64,7 @@ contract Dealer is Ownable, Constants {
     // from --- Token ---> us
     function post(address from, uint256 token) public {
         require(
-            _token.transferFrom(from, token),
+            _token.transferFrom(from, address(this), token),
             "Dealer: Collateral transfer fail"
         );
         posted[from] = posted[from].add(token);
