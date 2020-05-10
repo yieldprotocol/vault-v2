@@ -60,6 +60,7 @@ contract('yDai', async (accounts) =>  {
 
         // Setup Dealer
         dealer = await Dealer.new(yDai.address, token.address, oracle.address, { from: owner });
+        yDai.grantAccess(dealer.address, { from: owner });
     });
 
     afterEach(async() => {
@@ -132,6 +133,46 @@ contract('yDai', async (accounts) =>  {
                 (await token.balanceOf(dealer.address)),   
                 0,
                 "Dealer should not have collateral",
+            );
+            assert.equal(
+                (await dealer.unlockedOf.call(owner)),   
+                0,
+                "Owner should not have unlocked collateral",
+            );
+        });
+
+        it("allows to borrow yDai", async() => {
+            // Test with two different stability rates, if possible.
+            // Mock Vat contract needs a `setRate` and an `ilks` functions.
+            // Mock Vat contract needs the `frob` function to authorize `daiJoin.exit` transfers through the `dart` parameter.
+            let amount = web3.utils.toWei("100");
+            assert.equal(
+                (await dealer.unlockedOf.call(owner)),   
+                amount,
+                "Owner does not have unlocked collateral",
+            );
+            assert.equal(
+                (await yDai.balanceOf(owner)),   
+                0,
+                "Owner has yDai",
+            );
+            assert.equal(
+                (await dealer.debtOf.call(owner)),   
+                0,
+                "Owner has debt",
+            );
+    
+            await dealer.borrow(owner, amount, { from: owner });
+
+            assert.equal(
+                (await yDai.balanceOf(owner)),   
+                amount,
+                "Owner should have yDai",
+            );
+            assert.equal(
+                (await dealer.debtOf.call(owner)),   
+                amount,
+                "Owner should have debt",
             );
             assert.equal(
                 (await dealer.unlockedOf.call(owner)),   
