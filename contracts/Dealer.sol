@@ -62,7 +62,7 @@ contract Dealer is Ownable, Constants {
 
     /// @dev Takes collateral tokens from `from` address
     // from --- Token ---> us
-    function post(address from, uint256 token) public {
+    function post(address from, uint256 token) public virtual {
         require(
             _token.transferFrom(from, address(this), token),
             "Dealer: Collateral transfer fail"
@@ -72,7 +72,7 @@ contract Dealer is Ownable, Constants {
 
     /// @dev Returns collateral to `to` address
     // us --- Token ---> to
-    function withdraw(address to, uint256 token) public {
+    function withdraw(address to, uint256 token) public virtual {
         require(
             unlockedOf(to) >= token,
             "Dealer: Free more collateral"

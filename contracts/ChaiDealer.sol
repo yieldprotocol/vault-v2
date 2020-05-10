@@ -23,7 +23,7 @@ contract ChaiDealer is Dealer {
         address yDai_,
         address chai_,
         address chaiOracle_
-    ) public Dealer(yDai_, chai_, chaiOracle) {
+    ) public Dealer(yDai_, chai_, chaiOracle_) {
         _saver = ISaver(saver_);
     }
 
@@ -57,7 +57,7 @@ contract ChaiDealer is Dealer {
 
     /// @dev Takes chai from `from` address and gives it to the Saver
     // from --- Chai ---> saver
-    function post(address from, uint256 chai) public {
+    function post(address from, uint256 chai) public override {
         // TODO: Consider a require on super.post()
         super.post(from, chai);                // Grab chai and update posted
         _token.approve(address(_saver), chai); // Saver will take chai
@@ -66,7 +66,7 @@ contract ChaiDealer is Dealer {
 
     /// @dev Takes chai from Saver and gives it to `to` address
     // us --- Token ---> to
-    function withdraw(address to, uint256 chai) public {
+    function withdraw(address to, uint256 chai) public override {
         _saver.exit(address(this), chai);      // Take chai from Saver
         super.withdraw(to, chai);              // Check collateralization, send chai to user and update posted
         // TODO: Consider a require on super.withdraw()
