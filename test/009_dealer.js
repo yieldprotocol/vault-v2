@@ -142,9 +142,6 @@ contract('yDai', async (accounts) =>  {
         });
 
         it("allows to borrow yDai", async() => {
-            // Test with two different stability rates, if possible.
-            // Mock Vat contract needs a `setRate` and an `ilks` functions.
-            // Mock Vat contract needs the `frob` function to authorize `daiJoin.exit` transfers through the `dart` parameter.
             let amount = web3.utils.toWei("100");
             assert.equal(
                 (await dealer.unlockedOf.call(owner)),   
@@ -181,62 +178,49 @@ contract('yDai', async (accounts) =>  {
             );
         });
 
-        /* it("should setup yDai", async() => {
-            assert(
-                (await yDai.chi()) == RAY,
-                "chi not initialized",
-            );
-            assert(
-                (await yDai.rate()) == RAY,
-                "rate not initialized",
-            );
-            assert(
-                (await yDai.maturity()) == maturity,
-                "maturity not initialized",
-            );
-        });
-
-        it("yDai is not mature before maturity", async() => {
-            assert.equal(
-                await yDai.isMature(),
-                false,
-            );
-        });
-
-        it("yDai cannot mature before maturity time", async() => {
-            await truffleAssert.fails(
-                yDai.mature(),
-                truffleAssert.REVERT,
-                "YDai: Too early to mature",
-            );
-        });
-
-        it("yDai can mature at maturity time", async() => {
-            await helper.advanceTime(1000);
-            await helper.advanceBlock();
-            await yDai.mature();
-            assert.equal(
-                await yDai.isMature(),
-                true,
-            );
-        });
-
-        describe("once mature", () => {
+        describe("with borrowed yDai", () => {
             beforeEach(async() => {
-                await helper.advanceTime(1000);
-                await helper.advanceBlock();
-                await yDai.mature();
+                let amount = web3.utils.toWei("100");
+                await dealer.borrow(owner, amount, { from: owner });
             });
 
-            // TODO: Test with a moving chi
-            it("chi gets fixed to maturity time", async() => {
-                assert((await yDai.chi()) == RAY);
-            });
+            it("allows to repay yDai", async() => {
+                let amount = web3.utils.toWei("100");
+                assert.equal(
+                    (await yDai.balanceOf(owner)),   
+                    amount,
+                    "Owner does not have yDai",
+                );
+                assert.equal(
+                    (await dealer.debtOf.call(owner)),   
+                    amount,
+                    "Owner does not have debt",
+                );
+                assert.equal(
+                    (await dealer.unlockedOf.call(owner)),   
+                    0,
+                    "Owner has unlocked collateral",
+                );
 
-            // TODO: Test with a moving rate
-            it("rate gets fixed to maturity time", async() => {
-                assert((await yDai.rate()) == RAY);
+                await yDai.approve(dealer.address, amount, { from: owner });
+                await dealer.repay(owner, amount, { from: owner });
+    
+                assert.equal(
+                    (await dealer.unlockedOf.call(owner)),   
+                    amount,
+                    "Owner should have unlocked collateral",
+                );
+                assert.equal(
+                    (await yDai.balanceOf(owner)),   
+                    0,
+                    "Owner should not have yDai",
+                );
+                assert.equal(
+                    (await dealer.debtOf.call(owner)),   
+                    0,
+                    "Owner should not have debt",
+                );
             });
-        }); */
+        });
     });
 });
