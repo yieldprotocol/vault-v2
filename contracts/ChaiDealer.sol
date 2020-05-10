@@ -1,21 +1,14 @@
 pragma solidity ^0.6.2;
 
-import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./interfaces/IOracle.sol";
 import "./interfaces/ISaver.sol";
-import "./interfaces/IYDai.sol";
 import "./Constants.sol";
 import "./Dealer.sol";
 
 
 /// @dev A ChaiDealer takes chai as collateral and issues yDai. Chai is saved in the Saver.
 contract ChaiDealer is Dealer {
-    using SafeMath for uint256;
-    using DecimalMath for uint256;
-    using DecimalMath for uint8;
 
     ISaver internal _saver;
     // IYDai internal _yDai;
