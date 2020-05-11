@@ -13,9 +13,9 @@ contract('TestOracle', async (accounts) =>    {
     });
 
     it("price can be set", async() => {
-        await oracle.set(collateralPrice, { from: owner });
+        await oracle.setPrice(collateralPrice, { from: owner });
         assert.equal(
-            await oracle.get(),
+            await oracle.price.call(),
             collateralPrice,
         );
     });

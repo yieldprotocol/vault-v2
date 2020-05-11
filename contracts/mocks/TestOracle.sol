@@ -5,13 +5,13 @@ import "./../interfaces/IOracle.sol";
 
 //Using fake contract instead of abstract for mocking
 contract TestOracle is IOracle {
-    uint256 internal price;
+    uint256 internal _price; // units of collateral per dai in RAY
 
-    function set(uint256 price_) public {
-        price = price_;
+    function setPrice(uint256 price_) public {
+        _price = price_;
     }
 
-    function get() public view override returns (uint256) {
-        return price;
+    function price() public override returns (uint256) {
+        return _price;
     }
 }
