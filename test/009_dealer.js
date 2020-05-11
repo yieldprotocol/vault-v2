@@ -1,4 +1,4 @@
-const Dealer = artifacts.require('Dealer');
+const ERC20Dealer = artifacts.require('ERC20Dealer');
 const TestERC20 = artifacts.require('TestERC20');
 const TestOracle = artifacts.require('TestOracle');
 const YDai = artifacts.require('YDai');
@@ -7,7 +7,7 @@ const Vat = artifacts.require('Vat');
 const helper = require('ganache-time-traveler');
 const truffleAssert = require('truffle-assertions');
 
-contract('Dealer', async (accounts) =>  {
+contract('ERC20Dealer', async (accounts) =>  {
     let [ owner, user ] = accounts;
     let vat;
     let pot;
@@ -58,8 +58,8 @@ contract('Dealer', async (accounts) =>  {
         oracle = await TestOracle.new({ from: owner });
         await oracle.setPrice(RAY); // Setting price at 1
 
-        // Setup Dealer
-        dealer = await Dealer.new(yDai.address, token.address, oracle.address, { from: owner });
+        // Setup ERC20Dealer
+        dealer = await ERC20Dealer.new(yDai.address, token.address, oracle.address, { from: owner });
         yDai.grantAccess(dealer.address, { from: owner });
     });
 
@@ -71,7 +71,7 @@ contract('Dealer', async (accounts) =>  {
         assert.equal(
             (await token.balanceOf(dealer.address)),   
             web3.utils.toWei("0"),
-            "Dealer has collateral",
+            "ERC20Dealer has collateral",
         );
         assert.equal(
             (await dealer.unlockedOf.call(owner)),   
@@ -87,7 +87,7 @@ contract('Dealer', async (accounts) =>  {
         assert.equal(
             (await token.balanceOf(dealer.address)),   
             amount,
-            "Dealer should have collateral",
+            "ERC20Dealer should have collateral",
         );
         assert.equal(
             (await dealer.unlockedOf.call(owner)),   
@@ -109,7 +109,7 @@ contract('Dealer', async (accounts) =>  {
             assert.equal(
                 (await token.balanceOf(dealer.address)),   
                 amount,
-                "Dealer does not have collateral",
+                "ERC20Dealer does not have collateral",
             );
             assert.equal(
                 (await dealer.unlockedOf.call(owner)),   
@@ -132,7 +132,7 @@ contract('Dealer', async (accounts) =>  {
             assert.equal(
                 (await token.balanceOf(dealer.address)),   
                 0,
-                "Dealer should not have collateral",
+                "ERC20Dealer should not have collateral",
             );
             assert.equal(
                 (await dealer.unlockedOf.call(owner)),   

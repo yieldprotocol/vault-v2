@@ -10,7 +10,7 @@ import "./Constants.sol";
 
 
 /// @dev A dealer takes one type of collateral token and issues yDai
-contract Dealer is Ownable, Constants {
+contract ERC20Dealer is Ownable, Constants {
     using SafeMath for uint256;
     using DecimalMath for uint256;
     using DecimalMath for uint8;
@@ -65,7 +65,7 @@ contract Dealer is Ownable, Constants {
     function post(address from, uint256 token) public virtual {
         require(
             _token.transferFrom(from, address(this), token),
-            "Dealer: Collateral transfer fail"
+            "ERC20Dealer: Collateral transfer fail"
         );
         posted[from] = posted[from].add(token);
     }
@@ -75,12 +75,12 @@ contract Dealer is Ownable, Constants {
     function withdraw(address to, uint256 token) public virtual {
         require(
             unlockedOf(to) >= token,
-            "Dealer: Free more collateral"
+            "ERC20Dealer: Free more collateral"
         );
         posted[to] = posted[to].sub(token); // Will revert if not enough posted
         require(
             _token.transfer(to, token),
-            "Dealer: Collateral transfer fail"
+            "ERC20Dealer: Collateral transfer fail"
         );
     }
 
@@ -93,12 +93,12 @@ contract Dealer is Ownable, Constants {
     function borrow(address to, uint256 yDai) public {
         require(
             _yDai.isMature() != true,
-            "Dealer: No mature borrow"
+            "ERC20Dealer: No mature borrow"
         );
         require(
             posted[to] >= (debtOf(to).add(yDai))
                 .divd(_tokenOracle.price(), RAY),
-            "Dealer: Post more collateral"
+            "ERC20Dealer: Post more collateral"
         );
         debt[to] = debt[to].add(yDai);
         _yDai.mint(to, yDai);

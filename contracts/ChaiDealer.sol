@@ -4,11 +4,11 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/ISaver.sol";
 import "./Constants.sol";
-import "./Dealer.sol";
+import "./ERC20Dealer.sol";
 
 
 /// @dev A ChaiDealer takes chai as collateral and issues yDai. Chai is saved in the Saver.
-contract ChaiDealer is Dealer {
+contract ChaiDealer is ERC20Dealer {
 
     ISaver internal _saver;
 
@@ -17,7 +17,7 @@ contract ChaiDealer is Dealer {
         address yDai_,
         address chai_,
         address chaiOracle_
-    ) public Dealer(yDai_, chai_, chaiOracle_) {
+    ) public ERC20Dealer(yDai_, chai_, chaiOracle_) {
         _saver = ISaver(saver_);
     }
 

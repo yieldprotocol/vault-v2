@@ -4,11 +4,11 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/ILender.sol";
 import "./Constants.sol";
-import "./Dealer.sol";
+import "./ERC20Dealer.sol";
 
 
 /// @dev A WethDealer takes weth as collateral and issues yDai. Weth is posted to MakerDAO through the Lender.
-contract WethDealer is Dealer {
+contract WethDealer is ERC20Dealer {
 
     ILender internal _lender;
 
@@ -17,7 +17,7 @@ contract WethDealer is Dealer {
         address yDai_,
         address weth_,
         address wethOracle_
-    ) public Dealer(yDai_, weth_, wethOracle_) {
+    ) public ERC20Dealer(yDai_, weth_, wethOracle_) {
         _lender = ILender(lender_);
     }
 

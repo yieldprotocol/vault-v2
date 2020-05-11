@@ -92,7 +92,7 @@ contract('WethDealer', async (accounts) =>  {
         assert.equal(
             (await weth.balanceOf(owner)),   
             amount,
-            "Dealer does not have weth",
+            "ERC20Dealer does not have weth",
         );
         assert.equal(
             (await vat.urns(ilk, lender.address)).ink.toString(),   

@@ -105,7 +105,7 @@ contract('ChaiDealer', async (accounts) =>  {
         assert.equal(
             (await chai.balanceOf(owner)),   
             amount,
-            "Dealer does not have chai",
+            "ERC20Dealer does not have chai",
         );
         assert.equal(
             (await chai.balanceOf(saver.address)),   
@@ -168,7 +168,7 @@ contract('ChaiDealer', async (accounts) =>  {
             assert.equal(
                 (await chai.balanceOf(owner)),   
                 amount,
-                "Dealer should have chai",
+                "ERC20Dealer should have chai",
             );
             assert.equal(
                 (await chai.balanceOf(saver.address)),   
