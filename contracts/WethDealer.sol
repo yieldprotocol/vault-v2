@@ -15,9 +15,9 @@ contract WethDealer is Dealer {
     constructor (
         address lender_,
         address yDai_,
-        address chai_,
-        address chaiOracle_
-    ) public Dealer(yDai_, chai_, chaiOracle_) {
+        address weth_,
+        address wethOracle_
+    ) public Dealer(yDai_, weth_, wethOracle_) {
         _lender = ILender(lender_);
     }
 
@@ -34,7 +34,7 @@ contract WethDealer is Dealer {
     // us --- Token ---> to
     function withdraw(address to, uint256 weth) public override {
         _lender.withdraw(address(this), weth);  // Take weth from Lender
-        super.withdraw(to, weth);               // Check collateralization, send chai to user and update posted
+        super.withdraw(to, weth);               // Check collateralization, send weth to user and update posted
         // TODO: Consider a require on super.withdraw()
     }
 }
