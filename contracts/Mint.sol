@@ -102,21 +102,4 @@ contract Mint is Constants {
         _yDai.burn(user, yDai);                             // Burn yDai from user
         _lender.borrow(user, yDai);                         // Borrow Dai from Lender to user
     }
-
-    /* function grab(uint256 dai) public {
-        _dai.transferFrom(msg.sender, address(this), dai);
-    }
-
-    function toChai(uint256 dai) public {
-        _dai.approve(address(_chai), dai);
-        _chai.join(address(this), dai);
-    }
-
-    function toDai(uint256 dai) public {
-        _chai.exit(address(this), dai);
-    }
-
-    function spit(uint256 dai) public {
-        _dai.transfer(msg.sender, dai);
-    } */
 }
