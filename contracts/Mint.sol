@@ -93,7 +93,7 @@ contract Mint is Constants {
         _yDai.burn(user, yDai);                             // Burn yDai from user
         uint256 chai = yDai.divd(_chaiOracle.price(), RAY); // Convert dai amount to chai amount
         _saver.exit(address(this), chai);                   // Take chai from Saver
-        _chai.exit(address(this), yDai);                    // Give dai to Chai, take chai back
+        _chai.exit(address(this), yDai);                    // Give chai to Chai, take dai back
         _dai.transfer(user, yDai);                          // Give dai to user
     }
 
