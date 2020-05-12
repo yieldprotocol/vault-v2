@@ -74,6 +74,11 @@ contract('Pot', async (accounts) =>  {
             chi,
             "chi not set to 1.1",
         );
+        assert.equal(
+            await pot.drip.call({ from: owner }),
+            chi,
+            "chi not set to 1.1",
+        );
     });
 
     it("should save dai in the pot", async() => {
