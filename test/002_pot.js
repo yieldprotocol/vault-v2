@@ -61,9 +61,19 @@ contract('Pot', async (accounts) =>  {
     });
 
     it("should setup pot", async() => {
-        let chi = await pot.chi.call();
+        const chi = await pot.chi.call();
         assert(chi == RAY, "chi not initialized");
 
+    });
+
+    it("should set chi to a target", async() => {
+        const chi  = "1100000000000000000000000000";
+        await pot.setChi(chi, { from: owner });
+        assert.equal(
+            await pot.chi.call(),
+            chi,
+            "chi not set to 1.1",
+        );
     });
 
     it("should save dai in the pot", async() => {
