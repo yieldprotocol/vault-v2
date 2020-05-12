@@ -51,8 +51,6 @@ contract('Lender', async (accounts) =>  {
             wethJoin.address,   // wethJoin
             vat.address,        // vat
         );
-        await vat.rely(lender.address, { from: owner }); //?
-
         await lender.grantAccess(user, { from: owner });
     });
     
