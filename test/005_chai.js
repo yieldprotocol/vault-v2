@@ -38,7 +38,7 @@ contract('Chai', async (accounts) =>  {
         wethJoin = await GemJoin.new(vat.address, ilk, weth.address, { from: owner });
         await vat.rely(wethJoin.address, { from: owner });
 
-        dai = await ERC20.new(supply, { from: owner });
+        dai = await ERC20.new(0, { from: owner });
         daiJoin = await DaiJoin.new(vat.address, dai.address, { from: owner });
         await vat.rely(daiJoin.address, { from: owner });
 
@@ -64,67 +64,80 @@ contract('Chai', async (accounts) =>  {
         await vat.hope(daiJoin.address, { from: owner });
         await vat.hope(wethJoin.address, { from: owner });
         let wethTokens = web3.utils.toWei("500");
-        let daiTokens = web3.utils.toWei("100");
+        let daiTokens = web3.utils.toWei("110");
         await weth.approve(wethJoin.address, wethTokens, { from: owner });
         await wethJoin.join(owner, wethTokens, { from: owner });
         await vat.frob(ilk, owner, owner, owner, wethTokens, daiTokens, { from: owner });
         await daiJoin.exit(owner, daiTokens, { from: owner });
 
+        // Set chi to 1.1
+        const chi  = "1100000000000000000000000000";
+        await pot.setChi(chi, { from: owner });
     });
 
     it("allows to exchange dai for chai", async() => {
-        /* assert.equal(
+        let daiTokens = web3.utils.toWei("110");
+        let chaiTokens = web3.utils.toWei("100");
+        assert.equal(
             (await dai.balanceOf(owner)),   
-            web3.utils.toWei("100")
-        ); */ // TODO: Test dai balances
+            daiTokens,
+            "Does not have dai"
+        );
         assert.equal(
             (await chai.balanceOf(owner)),   
-            web3.utils.toWei("0")
+            0,
+            "Does have Chai",
         );
         
-        let amount = web3.utils.toWei("100");
-        await dai.approve(chai.address, amount, { from: owner }); 
-        await chai.join(owner, amount, { from: owner });
+        await dai.approve(chai.address, daiTokens, { from: owner }); 
+        await chai.join(owner, daiTokens, { from: owner });
 
         // Test transfer of chai
-        /* assert.equal(
-            (await dai.balanceOf(owner)),   
-            web3.utils.toWei("0")
-        ); */
         assert.equal(
             (await chai.balanceOf(owner)),   
-            web3.utils.toWei("100")
+            chaiTokens,
+            "Should have chai",
+        );
+        assert.equal(
+            (await dai.balanceOf(owner)),   
+            0,
+            "Should not have dai",
         );
     });
 
     describe("with chai", () => {
         beforeEach(async() => {
-            let amount = web3.utils.toWei("100");
-            await dai.approve(chai.address, amount, { from: owner }); 
-            await chai.join(owner, amount, { from: owner });
+            let daiTokens = web3.utils.toWei("110");
+            await dai.approve(chai.address, daiTokens, { from: owner }); 
+            await chai.join(owner, daiTokens, { from: owner });
         });
 
         it("allows to exchange chai for dai", async() => {
-            /* assert.equal(
-                (await dai.balanceOf(owner)),   
-                web3.utils.toWei("0")
-            ); */
+            let daiTokens = web3.utils.toWei("110");
+            let chaiTokens = web3.utils.toWei("100");
             assert.equal(
                 (await chai.balanceOf(owner)),   
-                web3.utils.toWei("100")
+                chaiTokens,
+                "Does not have chai tokens",
+            );
+            assert.equal(
+                (await dai.balanceOf(owner)),   
+                0,
+                "Has dai tokens"
             );
             
-            let amount = web3.utils.toWei("100");
-            await chai.exit(owner, amount, { from: owner });
+            await chai.exit(owner, chaiTokens, { from: owner });
 
             // Test transfer of chai
-            /* assert.equal(
+            assert.equal(
                 (await dai.balanceOf(owner)),   
-                web3.utils.toWei("100")
-            ); */
+                daiTokens,
+                "Should have dai",
+            );
             assert.equal(
                 (await chai.balanceOf(owner)),   
-                web3.utils.toWei("0")
+                0,
+                "Should not have chai",
             );
         });
     });
