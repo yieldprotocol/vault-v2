@@ -61,7 +61,8 @@ contract Mint is Constants {
             "Mint: yDai is not mature"
         );
         // TODO: Take as much as possible from savings, and borrow the rest
-        if (_saver.savings() < dai) {
+        uint256 chai = dai.divd(_chaiOracle.price(), RAY); // Saver saves chai
+        if (_saver.savings() < chai) {
             redeemNoSavings(user, dai);
         }
         else {
@@ -93,7 +94,7 @@ contract Mint is Constants {
         _yDai.burn(user, yDai);                             // Burn yDai from user
         uint256 chai = yDai.divd(_chaiOracle.price(), RAY); // Convert dai amount to chai amount
         _saver.exit(address(this), chai);                   // Take chai from Saver
-        _chai.exit(address(this), yDai);                    // Give chai to Chai, take dai back
+        _chai.exit(address(this), chai);                    // Give chai to Chai, take dai back
         _dai.transfer(user, yDai);                          // Give dai to user
     }
 
