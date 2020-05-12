@@ -18,16 +18,16 @@ contract('UniLPOracle', async (accounts) =>  {
     let uniLPToken;
     let uniLPOracle;
     let uniswap;
-
-    const ilk = web3.utils.fromAscii("ETH-A")
-    const Line = web3.utils.fromAscii("Line")
-    const spot = web3.utils.fromAscii("spot")
-    const linel = web3.utils.fromAscii("line")
-
+    let maturity;
+    let ilk = web3.utils.fromAscii("ETH-A")
+    let Line = web3.utils.fromAscii("Line")
+    let spot = web3.utils.fromAscii("spot")
+    let linel = web3.utils.fromAscii("line")
+    let snapshot;
+    let snapshotId;
     const RAY  = "1000000000000000000000000000";
-    const RAD = web3.utils.toBN('45');
-    const supply = web3.utils.toWei("1000");
-    const limits =  web3.utils.toBN('10000').mul(web3.utils.toBN('10').pow(RAD)).toString(); // 10000 * 10**45
+    const RAD = web3.utils.toBN('49')
+    const limits =  web3.utils.toBN('10').pow(RAD).toString();
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
