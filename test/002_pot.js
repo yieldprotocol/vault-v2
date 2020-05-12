@@ -4,6 +4,7 @@ const GemJoin = artifacts.require('GemJoin');
 const DaiJoin = artifacts.require('DaiJoin');
 const ERC20 = artifacts.require("TestERC20");
 
+const { BN } = require('@openzeppelin/test-helpers');
 
 contract('Pot', async (accounts) =>  {
     let vat;
@@ -50,7 +51,7 @@ contract('Pot', async (accounts) =>  {
         await collateral.approve(collateralJoin.address, supply, { from: owner });
         await collateralJoin.join(owner, supply, { from: owner });
         let collateralPosted = web3.utils.toWei("60");
-        let daiBorrowed = web3.utils.toWei("10");
+        let daiBorrowed = web3.utils.toWei("11");
         await vat.frob(ilk, owner, owner, owner, collateralPosted, daiBorrowed, { from: owner });
         await daiJoin.exit(owner, daiBorrowed, { from: owner });
 
@@ -84,13 +85,13 @@ contract('Pot', async (accounts) =>  {
     it("should save dai in the pot", async() => {
         assert.equal(
             (await dai.balanceOf(owner)),   
-            web3.utils.toWei("10"),
+            web3.utils.toWei("11"),
             "Preconditions not met - dai.balanceOf(owner)"
         );
         let chi = await pot.chi.call();
         assert(chi == RAY, "Preconditions not met - chi not 1.0");
         let daiOwner = (await vat.dai(owner)).toString();
-        assert(daiOwner, web3.utils.toWei("10"), "Preconditions not met - vat.dai(owner)");
+        assert(daiOwner, web3.utils.toWei("11"), "Preconditions not met - vat.dai(owner)");
         
         let daiSaved = web3.utils.toWei("1");
         await daiJoin.join(owner, daiSaved, { from: owner }); // The dai needs to be joined to the vat first.
@@ -103,25 +104,88 @@ contract('Pot', async (accounts) =>  {
         );
     });
 
-    describe("with dai saved in the Pot", () => {
+    it("should save dai in the pot proportionally to chi", async() => {
+        assert.equal(
+            (await dai.balanceOf(owner)),   
+            web3.utils.toWei("11"),
+            "Preconditions not met - dai.balanceOf(owner)"
+        );
+        let daiOwner = (await vat.dai(owner)).toString();
+        assert(daiOwner, web3.utils.toWei("10"), "Preconditions not met - vat.dai(owner)");
+        
+        const chi  = "1100000000000000000000000000";
+        await pot.setChi(chi, { from: owner });
+
+        let daiJoined = web3.utils.toWei("11");
+        let daiNormalized = web3.utils.toWei("10");
+        const daiInVat =  "11000000000000000000000000000000000000000000000"; // Vat stores dai in RAD units. Tsk tsk.
+        await daiJoin.join(owner, daiJoined, { from: owner });
+        assert.equal(
+            (await vat.dai.call(owner)).toString(),   
+            daiInVat,
+            "Owner should have the joined dai in the vat",
+        );
+        await vat.hope(pot.address, { from: owner });
+        await pot.mockJoin(daiNormalized, { from: owner }); // The Pot will store normalized dai = joined dai / chi
+        // await pot.dripAndJoin(daiSaved, { from: owner });
+        assert.equal(
+            (await vat.dai.call(owner)),
+            0,
+            "Owner should have no dai in the vat",
+        );
+        assert.equal(
+            (await pot.pie(owner)).toString(),   
+            daiNormalized,
+            "Normalized dai was not in the pot",
+        );
+    });
+
+    describe("with dai saved in the Pot and chi = 1.1", () => {
         beforeEach(async() => {
-            let daiSaved = web3.utils.toWei("1");
-            await daiJoin.join(owner, daiSaved, { from: owner }); // The dai needs to be joined to the vat first.
-            await vat.hope(pot.address, { from: owner });         // The user joining dai to the Pot needs to have authorized pot.address in the vat first
-            await pot.mockJoin(daiSaved, { from: owner });            // The transaction where the user joins Dai to the Pot needs to have called drip() as well
+            const chi  = "1100000000000000000000000000";
+            await pot.setChi(chi, { from: owner });
+            let daiJoined = web3.utils.toWei("11");
+            let daiNormalized = web3.utils.toWei("10");
+            await daiJoin.join(owner, daiJoined, { from: owner });
+            await vat.hope(pot.address, { from: owner });
+            await pot.mockJoin(daiNormalized, { from: owner });
         });
 
         it("should get dai out of the pot", async() => {
-            let daiSaved = web3.utils.toWei("1");
+            let daiJoined = web3.utils.toWei("11");
+            let daiNormalized = web3.utils.toWei("10");
+            assert.equal(
+                (await dai.balanceOf(owner)),   
+                0,
+                "Owner has dai in hand",
+            );
+            assert.equal(
+                (await vat.dai.call(owner)),   
+                0,
+                "Owner has dai in the vat",
+            );
             assert.equal(
                 (await pot.pie(owner)).toString(),   
-                daiSaved
+                daiNormalized,
+                "Owner does not have 10 normalized dai in the Pot",
             );
             
-            await pot.exit(daiSaved, { from: owner });            // The transaction where the user gets Dai out of the Pot needs to have called drip() as well
+            await pot.exit(daiNormalized, { from: owner });            // The transaction where the user gets Dai out of the Pot needs to have called drip() as well
+            await daiJoin.exit(owner, daiJoined, { from: owner }); // The dai needs to be joined to the vat first.
             assert.equal(
                 (await pot.pie(owner)).toString(),   
-                web3.utils.toWei("0")
+                0,
+                "Owner should have no dai in the Pot",
+            );
+            assert.equal(
+                (await vat.dai.call(owner)),   
+                0,
+                "Owner should have no dai in the vat",
+            );
+            assert.equal(
+                (await dai.balanceOf(owner)),   
+                daiJoined,
+                "Owner should have received the joined dai",
             );
         });
     });
