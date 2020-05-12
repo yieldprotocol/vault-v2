@@ -36,11 +36,12 @@ contract ERC20Dealer is Ownable, Constants {
     //
     //                       debtOf(user)(wad)
     // posted[user](wad) - -----------------------
-    //                       daiOracle.get()(ray)
+    //                       oracle.price()(ray)
     //
     function unlockedOf(address user) public returns (uint256) {
+        // collateral = dai * price
         uint256 locked = debtOf(user)
-            .divd(_tokenOracle.price(), RAY);
+            .muld(_tokenOracle.price(), RAY);
         if (locked > posted[user]) return 0; // Unlikely
         return posted[user].sub(locked);
     }
@@ -95,9 +96,9 @@ contract ERC20Dealer is Ownable, Constants {
             _yDai.isMature() != true,
             "ERC20Dealer: No mature borrow"
         );
-        require(
+        require( // collateral = dai * price
             posted[to] >= (debtOf(to).add(yDai))
-                .divd(_tokenOracle.price(), RAY),
+                .muld(_tokenOracle.price(), RAY),
             "ERC20Dealer: Post more collateral"
         );
         debt[to] = debt[to].add(yDai);
@@ -112,7 +113,7 @@ contract ERC20Dealer is Ownable, Constants {
     // user --- Dai ---> us
     // debt--
     function repay(address from, uint256 yDai) public {
-        uint256 debtProportion = debt[from].mul(RAY.unit())
+        uint256 debtProportion = debtOf(from).mul(RAY.unit())
             .divd(debtOf(from).mul(RAY.unit()), RAY);
         _yDai.burn(from, yDai);
         debt[from] = debt[from].sub(yDai.muld(debtProportion, RAY)); // Will revert if not enough debt

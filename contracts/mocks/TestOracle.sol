@@ -5,7 +5,7 @@ import "./../interfaces/IOracle.sol";
 
 //Using fake contract instead of abstract for mocking
 contract TestOracle is IOracle {
-    uint256 internal _price; // units of collateral per dai in RAY
+    uint256 internal _price; // collateral = dai * price, in RAY units
 
     function setPrice(uint256 price_) public {
         _price = price_;

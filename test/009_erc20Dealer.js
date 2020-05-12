@@ -6,6 +6,7 @@ const Pot = artifacts.require('Pot');
 const Vat = artifacts.require('Vat');
 const helper = require('ganache-time-traveler');
 const truffleAssert = require('truffle-assertions');
+const { BN } = require('@openzeppelin/test-helpers');
 
 contract('ERC20Dealer', async (accounts) =>  {
     let [ owner, user ] = accounts;
@@ -24,6 +25,9 @@ contract('ERC20Dealer', async (accounts) =>  {
     let snapshotId;
     const RAY  = "1000000000000000000000000000";
     const RAD = web3.utils.toBN('49')
+    const price  = "1100000000000000000000000000";
+    const daiTokens = web3.utils.toWei("100");
+    const erc20Tokens = web3.utils.toWei("110");
     const limits =  web3.utils.toBN('10').pow(RAD).toString();
     // console.log(limits);
 
@@ -56,7 +60,7 @@ contract('ERC20Dealer', async (accounts) =>  {
 
         // Setup Oracle
         oracle = await TestOracle.new({ from: owner });
-        await oracle.setPrice(RAY); // Setting price at 1
+        await oracle.setPrice(price); // Setting price at 1.1
 
         // Setup ERC20Dealer
         dealer = await ERC20Dealer.new(yDai.address, token.address, oracle.address, { from: owner });
@@ -70,7 +74,7 @@ contract('ERC20Dealer', async (accounts) =>  {
     it("allows user to post collateral", async() => {
         assert.equal(
             (await token.balanceOf(dealer.address)),   
-            web3.utils.toWei("0"),
+            0,
             "ERC20Dealer has collateral",
         );
         assert.equal(
@@ -79,41 +83,38 @@ contract('ERC20Dealer', async (accounts) =>  {
             "Owner has unlocked collateral",
         );
         
-        let amount = web3.utils.toWei("100");
-        await token.mint(owner, amount, { from: owner });
-        await token.approve(dealer.address, amount, { from: owner }); 
-        await dealer.post(owner, amount, { from: owner });
+        await token.mint(owner, erc20Tokens, { from: owner });
+        await token.approve(dealer.address, erc20Tokens, { from: owner }); 
+        await dealer.post(owner, erc20Tokens, { from: owner });
 
         assert.equal(
             (await token.balanceOf(dealer.address)),   
-            amount,
+            erc20Tokens,
             "ERC20Dealer should have collateral",
         );
         assert.equal(
             (await dealer.unlockedOf.call(owner)),   
-            amount,
+            erc20Tokens,
             "Owner should have unlocked collateral",
         );
     });
 
     describe("with posted collateral", () => {
         beforeEach(async() => {
-            let amount = web3.utils.toWei("100");
-            await token.mint(owner, amount, { from: owner });
-            await token.approve(dealer.address, amount, { from: owner }); 
-            await dealer.post(owner, amount, { from: owner });
+            await token.mint(owner, erc20Tokens, { from: owner });
+            await token.approve(dealer.address, erc20Tokens, { from: owner }); 
+            await dealer.post(owner, erc20Tokens, { from: owner });
         });
 
         it("allows user to withdraw collateral", async() => {
-            let amount = web3.utils.toWei("100");
             assert.equal(
                 (await token.balanceOf(dealer.address)),   
-                amount,
+                erc20Tokens,
                 "ERC20Dealer does not have collateral",
             );
             assert.equal(
                 (await dealer.unlockedOf.call(owner)),   
-                amount,
+                erc20Tokens,
                 "Owner does not have unlocked collateral",
             );
             assert.equal(
@@ -122,11 +123,11 @@ contract('ERC20Dealer', async (accounts) =>  {
                 "Owner has collateral in hand"
             );
             
-            await dealer.withdraw(owner, amount, { from: owner });
+            await dealer.withdraw(owner, erc20Tokens, { from: owner });
 
             assert.equal(
                 (await token.balanceOf(owner)),   
-                amount,
+                erc20Tokens,
                 "Owner should have collateral in hand"
             );
             assert.equal(
@@ -142,10 +143,9 @@ contract('ERC20Dealer', async (accounts) =>  {
         });
 
         it("allows to borrow yDai", async() => {
-            let amount = web3.utils.toWei("100");
             assert.equal(
                 (await dealer.unlockedOf.call(owner)),   
-                amount,
+                erc20Tokens,
                 "Owner does not have unlocked collateral",
             );
             assert.equal(
@@ -159,41 +159,39 @@ contract('ERC20Dealer', async (accounts) =>  {
                 "Owner has debt",
             );
     
-            await dealer.borrow(owner, amount, { from: owner });
+            await dealer.borrow(owner, daiTokens, { from: owner });
 
             assert.equal(
                 (await yDai.balanceOf(owner)),   
-                amount,
+                daiTokens,
                 "Owner should have yDai",
             );
             assert.equal(
                 (await dealer.debtOf.call(owner)),   
-                amount,
+                daiTokens,
                 "Owner should have debt",
             );
             assert.equal(
                 (await dealer.unlockedOf.call(owner)),   
                 0,
-                "Owner should not have unlocked collateral",
+                "Owner should not have unlocked collateral, instead has " + (await dealer.unlockedOf.call(owner)).toString(),
             );
         });
 
         describe("with borrowed yDai", () => {
             beforeEach(async() => {
-                let amount = web3.utils.toWei("100");
-                await dealer.borrow(owner, amount, { from: owner });
+                await dealer.borrow(owner, daiTokens, { from: owner });
             });
 
             it("allows to repay yDai", async() => {
-                let amount = web3.utils.toWei("100");
                 assert.equal(
                     (await yDai.balanceOf(owner)),   
-                    amount,
+                    daiTokens,
                     "Owner does not have yDai",
                 );
                 assert.equal(
                     (await dealer.debtOf.call(owner)),   
-                    amount,
+                    daiTokens,
                     "Owner does not have debt",
                 );
                 assert.equal(
@@ -202,12 +200,12 @@ contract('ERC20Dealer', async (accounts) =>  {
                     "Owner has unlocked collateral",
                 );
 
-                await yDai.approve(dealer.address, amount, { from: owner });
-                await dealer.repay(owner, amount, { from: owner });
+                await yDai.approve(dealer.address, daiTokens, { from: owner });
+                await dealer.repay(owner, daiTokens, { from: owner });
     
                 assert.equal(
                     (await dealer.unlockedOf.call(owner)),   
-                    amount,
+                    erc20Tokens,
                     "Owner should have unlocked collateral",
                 );
                 assert.equal(
