@@ -28,6 +28,8 @@ contract('UniLPOracle', async (accounts) =>  {
     const RAY  = "1000000000000000000000000000";
     const RAD = web3.utils.toBN('49')
     const limits =  web3.utils.toBN('10').pow(RAD).toString();
+    const uniLPTokens = web3.utils.toWei("200");
+    const daiTokens = web3.utils.toWei("100");
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
@@ -122,41 +124,38 @@ contract('UniLPOracle', async (accounts) =>  {
                 "Owner has unlocked collateral",
             );
             
-            let amount = web3.utils.toWei("100");
-            await uniLPToken.mint(owner, amount, { from: owner });
-            await uniLPToken.approve(uniLPDealer.address, amount, { from: owner }); 
-            await uniLPDealer.post(owner, amount, { from: owner });
+            await uniLPToken.mint(owner, uniLPTokens, { from: owner });
+            await uniLPToken.approve(uniLPDealer.address, uniLPTokens, { from: owner }); 
+            await uniLPDealer.post(owner, uniLPTokens, { from: owner });
 
             assert.equal(
                 (await uniLPToken.balanceOf(uniLPDealer.address)),   
-                amount,
+                uniLPTokens,
                 "ERC20Dealer should have collateral",
             );
             assert.equal(
                 (await uniLPDealer.unlockedOf.call(owner)),   
-                amount,
+                uniLPTokens,
                 "Owner should have unlocked collateral",
             );
         });
 
         describe("with posted collateral", () => {
             beforeEach(async() => {
-                let amount = web3.utils.toWei("100");
-                await uniLPToken.mint(owner, amount, { from: owner });
-                await uniLPToken.approve(uniLPDealer.address, amount, { from: owner }); 
-                await uniLPDealer.post(owner, amount, { from: owner });
+                await uniLPToken.mint(owner, uniLPTokens, { from: owner });
+                await uniLPToken.approve(uniLPDealer.address, uniLPTokens, { from: owner }); 
+                await uniLPDealer.post(owner, uniLPTokens, { from: owner });
             });
 
             it("allows user to withdraw collateral", async() => {
-                let amount = web3.utils.toWei("100");
                 assert.equal(
                     (await uniLPToken.balanceOf(uniLPDealer.address)),   
-                    amount,
+                    uniLPTokens,
                     "ERC20Dealer does not have collateral",
                 );
                 assert.equal(
                     (await uniLPDealer.unlockedOf.call(owner)),   
-                    amount,
+                    uniLPTokens,
                     "Owner does not have unlocked collateral",
                 );
                 assert.equal(
@@ -165,11 +164,11 @@ contract('UniLPOracle', async (accounts) =>  {
                     "Owner has collateral in hand"
                 );
                 
-                await uniLPDealer.withdraw(owner, amount, { from: owner });
+                await uniLPDealer.withdraw(owner, uniLPTokens, { from: owner });
 
                 assert.equal(
                     (await uniLPToken.balanceOf(owner)),   
-                    amount,
+                    uniLPTokens,
                     "Owner should have collateral in hand"
                 );
                 assert.equal(
@@ -185,10 +184,9 @@ contract('UniLPOracle', async (accounts) =>  {
             });
 
             it("allows to borrow yDai", async() => {
-                let amount = web3.utils.toWei("100");
                 assert.equal(
                     (await uniLPDealer.unlockedOf.call(owner)),   
-                    amount,
+                    uniLPTokens,
                     "Owner does not have unlocked collateral",
                 );
                 assert.equal(
@@ -201,56 +199,54 @@ contract('UniLPOracle', async (accounts) =>  {
                     0,
                     "Owner has debt",
                 );
-        
-                await uniLPDealer.borrow(owner, amount, { from: owner });
+
+                await uniLPDealer.borrow(owner, daiTokens, { from: owner });
 
                 assert.equal(
                     (await yDai.balanceOf(owner)),   
-                    amount,
+                    daiTokens,
                     "Owner should have yDai",
                 );
                 assert.equal(
                     (await uniLPDealer.debtOf.call(owner)),   
-                    amount,
+                    daiTokens,
                     "Owner should have debt",
                 );
-                /* assert.equal(
+                assert.equal(
                     (await uniLPDealer.unlockedOf.call(owner)),   
                     0,
                     "Owner should not have unlocked collateral",
-                ); */
+                );
             });
 
             describe("with borrowed yDai", () => {
                 beforeEach(async() => {
-                    let amount = web3.utils.toWei("100");
-                    await uniLPDealer.borrow(owner, amount, { from: owner });
+                    await uniLPDealer.borrow(owner, daiTokens, { from: owner });
                 });
 
                 it("allows to repay yDai", async() => {
-                    let amount = web3.utils.toWei("100");
                     assert.equal(
                         (await yDai.balanceOf(owner)),   
-                        amount,
+                        daiTokens,
                         "Owner does not have yDai",
                     );
                     assert.equal(
                         (await uniLPDealer.debtOf.call(owner)),   
-                        amount,
+                        daiTokens,
                         "Owner does not have debt",
                     );
-                    /* assert.equal(
+                    assert.equal(
                         (await uniLPDealer.unlockedOf.call(owner)),   
                         0,
                         "Owner has unlocked collateral",
-                    ); */
+                    );
 
-                    await yDai.approve(uniLPDealer.address, amount, { from: owner });
-                    await uniLPDealer.repay(owner, amount, { from: owner });
+                    await yDai.approve(uniLPDealer.address, daiTokens, { from: owner });
+                    await uniLPDealer.repay(owner, daiTokens, { from: owner });
         
                     assert.equal(
                         (await uniLPDealer.unlockedOf.call(owner)),   
-                        amount,
+                        uniLPTokens,
                         "Owner should have unlocked collateral",
                     );
                     assert.equal(
