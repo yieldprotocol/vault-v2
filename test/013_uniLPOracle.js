@@ -1,9 +1,9 @@
-const UniLPOracle = artifacts.require('./UniLPOracle');
-const ERC20 = artifacts.require("./TestERC20");
-const DaiJoin = artifacts.require('DaiJoin');
-const GemJoin = artifacts.require('./GemJoin');
-const Vat = artifacts.require('./Vat');
-const Pot = artifacts.require('./Pot');
+const Vat = artifacts.require('Vat');
+const Pot = artifacts.require('Pot');
+const YDai = artifacts.require('YDai');
+const ERC20Dealer = artifacts.require('ERC20Dealer');
+const TestERC20 = artifacts.require("TestERC20");
+const UniLPOracle = artifacts.require('UniLPOracle');
 const Uniswap = artifacts.require('./Uniswap');
 
 const truffleAssert = require('truffle-assertions');
@@ -13,11 +13,10 @@ contract('ChaiOracle', async (accounts) =>  {
     let [ owner ] = accounts;
     let vat;
     let pot;
-    let dai;
-    let weth;
-    let daiJoin;
-    let wethJoin;
-    let chaiOracle;
+    let yDai;
+    let uniLPDealer;
+    let uniLPToken;
+    let uniLPOracle;
     let uniswap;
 
     const ilk = web3.utils.fromAscii("ETH-A")
@@ -31,32 +30,48 @@ contract('ChaiOracle', async (accounts) =>  {
     const limits =  web3.utils.toBN('10000').mul(web3.utils.toBN('10').pow(RAD)).toString(); // 10000 * 10**45
 
     beforeEach(async() => {
-        // Set up vat, join and weth
+        snapshot = await helper.takeSnapshot();
+        snapshotId = snapshot['result'];
+
         vat = await Vat.new();
-        await vat.rely(vat.address, { from: owner });
-
-        weth = await ERC20.new(supply, { from: owner }); 
-        await vat.init(ilk, { from: owner }); // Set ilk rate to 1.0
-        wethJoin = await GemJoin.new(vat.address, ilk, weth.address, { from: owner });
-        await vat.rely(wethJoin.address, { from: owner });
-
-        dai = await ERC20.new(supply, { from: owner });
-        daiJoin = await DaiJoin.new(vat.address, dai.address, { from: owner });
-        await vat.rely(daiJoin.address, { from: owner });
+        await vat.init(ilk, { from: owner });
 
         // Setup vat
         await vat.file(ilk, spot,    RAY, { from: owner });
         await vat.file(ilk, linel, limits, { from: owner });
         await vat.file(Line,       limits); // TODO: Why can't we specify `, { from: owner }`?
+        await vat.rely(vat.address, { from: owner });
 
         // Setup pot
         pot = await Pot.new(vat.address);
         await vat.rely(pot.address, { from: owner });
+        // Do we need to set the dsr to something different than one?
+
+        // Setup yDai
+        const block = await web3.eth.getBlockNumber();
+        maturity = (await web3.eth.getBlock(block)).timestamp + 1000;
+        yDai = await YDai.new(vat.address, pot.address, maturity, "Name", "Symbol");
+
+        // Setup uniLPToken Token
+        uniLPToken = await TestERC20.new(0, { from: owner }); 
+
+        // Setup Oracle
+        uniswap = await Uniswap.new();
+        // Setup UniLPOracle
+        uniLPOracle = await UniLPOracle.new(uniswap.address, { from: owner });
+
+        // Setup ERC20Dealer
+        uniLPDealer = await ERC20Dealer.new(yDai.address, uniLPToken.address, uniLPOracle.address, { from: owner });
+        yDai.grantAccess(uniLPDealer.address, { from: owner });
 
 
         uniswap = await Uniswap.new();
         // Setup UniLPOracle
-        uniLPoracle = await UniLPOracle.new(uniswap.address, { from: owner });
+        uniLPOracle = await UniLPOracle.new(uniswap.address, { from: owner });
+    });
+
+    afterEach(async() => {
+        await helper.revertToSnapshot(snapshotId);
     });
 
     it("should calculate price", async() => {
@@ -77,7 +92,7 @@ contract('ChaiOracle', async (accounts) =>  {
             .mul(web3.utils.toBN(RAY))
             .div(tS);
 
-        result = (await uniLPoracle.price.call()).toString();
+        result = (await uniLPOracle.price.call()).toString();
         
         assert.equal(  
             result, 
