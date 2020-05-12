@@ -90,7 +90,6 @@ contract('Mint', async (accounts) =>  {
             wethJoin.address,   // wethJoin
             vat.address,        // vat
         );
-        await vat.rely(lender.address, { from: owner }); //?
 
         // Setup saver
         saver = await Saver.new(chai.address);
