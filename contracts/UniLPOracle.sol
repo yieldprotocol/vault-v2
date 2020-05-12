@@ -8,13 +8,12 @@ import "./Constants.sol";
 import "@nomiclabs/buidler/console.sol";
 
 
-contract UniLPOracle is IOracle, Constants{
+contract UniLPOracle is IOracle, Constants {
     using SafeMath for uint256;
     using DecimalMath for uint256;
+    using DecimalMath for uint8;
 
     IUniswap internal _uniswap;
-
-    uint256 constant ONE = uint256(10)**RAY;
 
     constructor (address uniswap_) public {
         _uniswap = IUniswap(uniswap_);
@@ -26,8 +25,8 @@ contract UniLPOracle is IOracle, Constants{
         uint256 _r0 = uint256(_reserve0);
         uint256 _r1 = uint256(_reserve1);
         return 2 * sqrt(_r0.mul(_r1))
-            .muld(ONE, WAD)           //converty to RAY
-            .divd(_totalSupply, WAD);
+            .divd(_totalSupply, WAD)
+            .muld(RAY.unit(), WAD);           //converty to RAY
     }
 
     // We should replace this sqrt with the appropriate library version, if any
