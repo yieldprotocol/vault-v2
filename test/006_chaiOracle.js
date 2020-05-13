@@ -53,14 +53,18 @@ contract('ChaiOracle', async (accounts) =>  {
 
         // Setup chaiOracle
         chaiOracle = await ChaiOracle.new(pot.address, { from: owner });
+        
+        // Set chi to 1.1
+        const chi  = "1100000000000000000000000000";
+        await pot.setChi(chi, { from: owner });
     });
 
     it("retrieves chai price as pot.chi", async() => {
+        const chi  = "1100000000000000000000000000";
         assert.equal(
             await chaiOracle.price.call({ from: owner }), // price() is a transaction
-            RAY
+            chi,
+            "Should be 1.1",
         );
     });
-
-    // TODO: Test with different chi
 });

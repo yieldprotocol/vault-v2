@@ -71,6 +71,12 @@ contract Pot is LibNote {
         live = 1;
     }
 
+    // --- Test ---
+    /// @dev The dsr can be left at ONE so that calling `drip` doesn't change chi
+    function setChi(uint chi_) public {
+        chi = chi_;
+    }
+
     // --- Math ---
     uint256 constant ONE = 10 ** 27;
     function rpow(uint x, uint n, uint base) internal pure returns (uint z) {

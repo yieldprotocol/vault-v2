@@ -32,6 +32,9 @@ contract('ChaiDealer', async (accounts) =>  {
     const RAY = "1000000000000000000000000000";
     const RAD = web3.utils.toBN('49')
     const limits =  web3.utils.toBN('10').pow(RAD).toString();
+    let daiTokens = web3.utils.toWei("110");
+    let chaiTokens = web3.utils.toWei("100");
+    const chi  = "1100000000000000000000000000";
     // console.log(limits);
 
 
@@ -87,24 +90,24 @@ contract('ChaiDealer', async (accounts) =>  {
         await vat.hope(daiJoin.address, { from: owner });
         await vat.hope(wethJoin.address, { from: owner });
         let wethTokens = web3.utils.toWei("500");
-        let daiTokens = web3.utils.toWei("100");
         await weth.mint(owner, wethTokens, { from: owner });
         await weth.approve(wethJoin.address, wethTokens, { from: owner });
         await wethJoin.join(owner, wethTokens, { from: owner });
         await vat.frob(ilk, owner, owner, owner, wethTokens, daiTokens, { from: owner });
         await daiJoin.exit(owner, daiTokens, { from: owner });
 
+        // Set chi to 1.1
+        await pot.setChi(chi, { from: owner });
+
         // Convert to chai
-        let amount = web3.utils.toWei("100");
-        await dai.approve(chai.address, amount, { from: owner }); 
-        await chai.join(owner, amount, { from: owner });
+        await dai.approve(chai.address, daiTokens, { from: owner }); 
+        await chai.join(owner, daiTokens, { from: owner });
     });
 
     it("allows user to post chai", async() => {
-        let amount = web3.utils.toWei("100");
         assert.equal(
             (await chai.balanceOf(owner)),   
-            amount,
+            chaiTokens,
             "ERC20Dealer does not have chai",
         );
         assert.equal(
@@ -118,12 +121,12 @@ contract('ChaiDealer', async (accounts) =>  {
             "Owner has unlocked collateral",
         );
         
-        await chai.approve(chaiDealer.address, amount, { from: owner }); 
-        await chaiDealer.post(owner, amount, { from: owner });
+        await chai.approve(chaiDealer.address, chaiTokens, { from: owner }); 
+        await chaiDealer.post(owner, chaiTokens, { from: owner }); // Post transfers chai
 
         assert.equal(
             (await chai.balanceOf(saver.address)),   
-            amount,
+            chaiTokens,
             "Saver should have chai",
         );
         assert.equal(
@@ -133,23 +136,21 @@ contract('ChaiDealer', async (accounts) =>  {
         );
         assert.equal(
             (await chaiDealer.unlockedOf.call(owner)),   
-            amount,
+            chaiTokens,
             "Owner should have unlocked collateral",
         );
     });
 
     describe("with posted chai", () => {
         beforeEach(async() => {
-            let amount = web3.utils.toWei("100");
-            await chai.approve(chaiDealer.address, amount, { from: owner }); 
-            await chaiDealer.post(owner, amount, { from: owner });
+            await chai.approve(chaiDealer.address, chaiTokens, { from: owner }); 
+            await chaiDealer.post(owner, chaiTokens, { from: owner });
         });
 
         it("allows user to withdraw chai", async() => {
-            let amount = web3.utils.toWei("100");
             assert.equal(
                 (await chai.balanceOf(saver.address)),   
-                amount,
+                chaiTokens,
                 "Saver does not have chai",
             );
             assert.equal(
@@ -159,15 +160,15 @@ contract('ChaiDealer', async (accounts) =>  {
             );
             assert.equal(
                 (await chaiDealer.unlockedOf.call(owner)),   
-                amount,
+                chaiTokens,
                 "Owner does not have unlocked collateral",
             );
 
-            await chaiDealer.withdraw(owner, amount, { from: owner });
+            await chaiDealer.withdraw(owner, chaiTokens, { from: owner }); // Withdraw transfers chai
 
             assert.equal(
                 (await chai.balanceOf(owner)),   
-                amount,
+                chaiTokens,
                 "ERC20Dealer should have chai",
             );
             assert.equal(
@@ -183,10 +184,9 @@ contract('ChaiDealer', async (accounts) =>  {
         });
 
         it("allows to borrow yDai", async() => {
-            let amount = web3.utils.toWei("100");
             assert.equal(
                 (await chaiDealer.unlockedOf.call(owner)),   
-                amount,
+                chaiTokens,
                 "Owner does not have unlocked collateral",
             );
             assert.equal(
@@ -200,16 +200,16 @@ contract('ChaiDealer', async (accounts) =>  {
                 "Owner has debt",
             );
     
-            await chaiDealer.borrow(owner, amount, { from: owner });
+            await chaiDealer.borrow(owner, daiTokens, { from: owner });
 
             assert.equal(
                 (await yDai.balanceOf(owner)),   
-                amount,
+                daiTokens,
                 "Owner should have yDai",
             );
             assert.equal(
                 (await chaiDealer.debtOf.call(owner)),   
-                amount,
+                daiTokens, // Debt is in dai always
                 "Owner should have debt",
             );
             assert.equal(
@@ -221,20 +221,18 @@ contract('ChaiDealer', async (accounts) =>  {
 
         describe("with borrowed yDai", () => {
             beforeEach(async() => {
-                let amount = web3.utils.toWei("100");
-                await chaiDealer.borrow(owner, amount, { from: owner });
+                await chaiDealer.borrow(owner, daiTokens, { from: owner }); // Borrow yDai
             });
 
             it("allows to repay yDai", async() => {
-                let amount = web3.utils.toWei("100");
                 assert.equal(
                     (await yDai.balanceOf(owner)),   
-                    amount,
+                    daiTokens,
                     "Owner does not have yDai",
                 );
                 assert.equal(
                     (await chaiDealer.debtOf.call(owner)),   
-                    amount,
+                    daiTokens,
                     "Owner does not have debt",
                 );
                 assert.equal(
@@ -243,12 +241,12 @@ contract('ChaiDealer', async (accounts) =>  {
                     "Owner has unlocked collateral",
                 );
 
-                await yDai.approve(chaiDealer.address, amount, { from: owner });
-                await chaiDealer.repay(owner, amount, { from: owner });
+                await yDai.approve(chaiDealer.address, daiTokens, { from: owner });
+                await chaiDealer.repay(owner, daiTokens, { from: owner }); // Repay is in yDai
     
                 assert.equal(
                     (await chaiDealer.unlockedOf.call(owner)),   
-                    amount,
+                    chaiTokens,
                     "Owner should have unlocked collateral",
                 );
                 assert.equal(
