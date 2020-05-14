@@ -82,7 +82,7 @@ contract('Saver', async (accounts) =>  {
         await saver.grantAccess(owner, { from: owner });
     });
 
-    it("allows to save chai", async() => {
+    it("allows to save dai", async() => {
         assert.equal(
             (await chai.balanceOf(saver.address)),   
             0,
@@ -114,7 +114,7 @@ contract('Saver', async (accounts) =>  {
             "Saver should report savings in dai units"
         );
         assert.equal(
-            (await dai.balanceOf(user)),   
+            (await dai.balanceOf(owner)),   
             0,
             "User should not have dai",
         );
@@ -126,7 +126,7 @@ contract('Saver', async (accounts) =>  {
             await saver.hold(owner, daiTokens, { from: owner });
         });
 
-        it("allows to withdraw chai", async() => {
+        it("allows to withdraw dai", async() => {
             assert.equal(
                 (await chai.balanceOf(saver.address)),   
                 chaiTokens,
@@ -138,7 +138,7 @@ contract('Saver', async (accounts) =>  {
                 "Saver does not report savings in dai units"
             );
             assert.equal(
-                (await dai.balanceOf(user)),   
+                (await dai.balanceOf(owner)),   
                 0,
                 "User has dai",
             );
@@ -159,6 +159,42 @@ contract('Saver', async (accounts) =>  {
                 (await dai.balanceOf(owner)),   
                 daiTokens,
                 "User should have dai",
+            );
+        });
+
+        it("allows to withdraw chai", async() => {
+            assert.equal(
+                (await chai.balanceOf(saver.address)),   
+                chaiTokens,
+                "Saver does not have chai"
+            );
+            assert.equal(
+                (await saver.savings.call()),   
+                daiTokens,
+                "Saver does not report savings in dai units"
+            );
+            assert.equal(
+                (await chai.balanceOf(owner)),   
+                0,
+                "User has chai",
+            );
+            
+            await saver.releaseChai(owner, chaiTokens, { from: owner });
+
+            assert.equal(
+                (await chai.balanceOf(saver.address)),   
+                0,
+                "Saver should not have chai",
+            );
+            assert.equal(
+                (await saver.savings.call()),   
+                0,
+                "Saver should not have savings in dai units"
+            );
+            assert.equal(
+                (await chai.balanceOf(owner)),   
+                chaiTokens,
+                "User should have chai",
             );
         });
     });
