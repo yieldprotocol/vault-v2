@@ -73,11 +73,13 @@ contract Mint is Constants {
     /// @dev Mint yDai assuming there is no debt
     function mintNoDebt(address user, uint256 dai) internal {
         _dai.transferFrom(user, address(this), dai);        // Get the dai from user
-        _dai.approve(address(_chai), dai);                  // Chai will take dai
-        _chai.join(address(this), dai);                     // Give dai to Chai, take chai back
-        uint256 chai = dai.divd(_chaiOracle.price(), RAY);  // Convert dai amount to chai amount
-        _chai.approve(address(_saver), chai);               // Saver will take chai
-        _saver.join(address(this), chai);                   // Send chai to Saver
+        _dai.approve(address(_saver), dai);                 // Saver will take dai
+        _saver.join(address(this), dai);                    // Send dai to Saver
+        // _dai.approve(address(_chai), dai);                  // Chai will take dai
+        // _chai.join(address(this), dai);                     // Give dai to Chai, take chai back
+        // uint256 chai = dai.divd(_chaiOracle.price(), RAY);  // Convert dai amount to chai amount
+        // _chai.approve(address(_saver), chai);               // Saver will take chai
+        // _saver.join(address(this), chai);                   // Send chai to Saver
         _yDai.mint(user, dai);                              // Mint yDai to user
     }
 
@@ -92,10 +94,11 @@ contract Mint is Constants {
     /// @dev Redeem yDai assuming there are savings
     function redeemSavings(address user, uint256 yDai) internal {
         _yDai.burn(user, yDai);                             // Burn yDai from user
-        uint256 chai = yDai.divd(_chaiOracle.price(), RAY); // Convert dai amount to chai amount
-        _saver.exit(address(this), chai);                   // Take chai from Saver
-        _chai.exit(address(this), chai);                    // Give chai to Chai, take dai back
-        _dai.transfer(user, yDai);                          // Give dai to user
+        _saver.exit(user, yDai);                            // Give dai to user, from Saver
+        // uint256 chai = yDai.divd(_chaiOracle.price(), RAY); // Convert dai amount to chai amount
+        // _saver.exit(address(this), chai);                   // Take chai from Saver
+        // _chai.exit(address(this), chai);                    // Give chai to Chai, take dai back
+        // _dai.transfer(user, yDai);                          // Give dai to user
     }
 
     /// @dev Redeem yDai assuming there are no savings

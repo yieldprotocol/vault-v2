@@ -1,5 +1,10 @@
 const Saver = artifacts.require('./Saver');
+const Chai = artifacts.require('./Chai');
 const ERC20 = artifacts.require("./TestERC20");
+const DaiJoin = artifacts.require('DaiJoin');
+const GemJoin = artifacts.require('./GemJoin');
+const Vat= artifacts.require('./Vat');
+const Pot= artifacts.require('./Pot');
 
 const truffleAssert = require('truffle-assertions');
 const helper = require('ganache-time-traveler');
@@ -7,66 +12,153 @@ const helper = require('ganache-time-traveler');
 contract('Saver', async (accounts) =>  {
     let [ owner, user ] = accounts;
     let saver;
+    let vat;
+    let pot;
     let chai;
+    let dai;
+    let weth;
+    let daiJoin;
+    let wethJoin;
+
+    const ilk = web3.utils.fromAscii("ETH-A")
+    const Line = web3.utils.fromAscii("Line")
+    const spot = web3.utils.fromAscii("spot")
+    const linel = web3.utils.fromAscii("line")
 
     const RAY  = "1000000000000000000000000000";
     const RAD = web3.utils.toBN('45');
     const supply = web3.utils.toWei("1000");
     const limits =  web3.utils.toBN('10000').mul(web3.utils.toBN('10').pow(RAD)).toString(); // 10000 * 10**45
+    let wethTokens = web3.utils.toWei("110");
+    let daiTokens = web3.utils.toWei("110");
+    let chaiTokens = web3.utils.toWei("100");
+    const chi  = "1100000000000000000000000000";
 
     beforeEach(async() => {
-        chai = await ERC20.new(supply, { from: owner }); 
-        saver = await Saver.new(chai.address);
-        await saver.grantAccess(user, { from: owner });
+        // Set up vat, join and weth
+        vat = await Vat.new();
+        await vat.rely(vat.address, { from: owner });
+
+        weth = await ERC20.new(supply, { from: owner }); 
+        await vat.init(ilk, { from: owner }); // Set ilk rate to 1.0
+        wethJoin = await GemJoin.new(vat.address, ilk, weth.address, { from: owner });
+        await vat.rely(wethJoin.address, { from: owner });
+
+        dai = await ERC20.new(0, { from: owner });
+        daiJoin = await DaiJoin.new(vat.address, dai.address, { from: owner });
+        await vat.rely(daiJoin.address, { from: owner });
+
+        // Setup vat
+        await vat.file(ilk, spot,    RAY, { from: owner });
+        await vat.file(ilk, linel, limits, { from: owner });
+        await vat.file(Line,       limits); // TODO: Why can't we specify `, { from: owner }`?
+
+        // Setup pot
+        pot = await Pot.new(vat.address);
+        await vat.rely(pot.address, { from: owner });
+
+        // Setup chai
+        chai = await Chai.new(
+            vat.address,
+            pot.address,
+            daiJoin.address,
+            dai.address,
+        );
+        await vat.rely(chai.address, { from: owner });
+
+        // Borrow dai
+        await vat.hope(daiJoin.address, { from: owner });
+        await vat.hope(wethJoin.address, { from: owner });
+        await weth.approve(wethJoin.address, wethTokens, { from: owner });
+        await wethJoin.join(owner, wethTokens, { from: owner });
+        await vat.frob(ilk, owner, owner, owner, wethTokens, daiTokens, { from: owner });
+        await daiJoin.exit(owner, daiTokens, { from: owner });
+
+        // Set chi to 1.1
+        await pot.setChi(chi, { from: owner });
+        
+        // Set Saver
+        saver = await Saver.new(dai.address, chai.address);
+        await saver.grantAccess(owner, { from: owner });
     });
 
     it("allows to save chai", async() => {
         assert.equal(
-            (await saver.savings()),   
-            web3.utils.toWei("0")
+            (await chai.balanceOf(saver.address)),   
+            0,
+            "Saver has chai",
+        );
+        assert.equal(
+            (await saver.savings.call()),   
+            0,
+            "Saver has savings in dai units"
+        );
+        assert.equal(
+            (await dai.balanceOf(owner)),   
+            daiTokens,
+            "User does not have dai",
         );
         
-        let amount = web3.utils.toWei("500");
-        await chai.mint(user, amount, { from: user });
-        await chai.approve(saver.address, amount, { from: user }); 
-        await saver.join(user, amount, { from: user });
+        await dai.approve(saver.address, daiTokens, { from: owner }); 
+        await saver.join(owner, daiTokens, { from: owner });
 
         // Test transfer of collateral
         assert.equal(
-            (await saver.savings()),   
-            web3.utils.toWei("500")
+            (await chai.balanceOf(saver.address)),   
+            chaiTokens,
+            "Saver should have chai"
         );
         assert.equal(
-            (await chai.balanceOf(user)),   
-            0
+            (await saver.savings.call()),   
+            daiTokens,
+            "Saver should report savings in dai units"
+        );
+        assert.equal(
+            (await dai.balanceOf(user)),   
+            0,
+            "User should not have dai",
         );
     });
 
     describe("with savings", () => {
         beforeEach(async() => {
-            let amount = web3.utils.toWei("500");
-            await chai.mint(user, amount, { from: user });
-            await chai.approve(saver.address, amount, { from: user }); 
-            await saver.join(user, amount, { from: user });
+            await dai.approve(saver.address, daiTokens, { from: owner }); 
+            await saver.join(owner, daiTokens, { from: owner });
         });
 
         it("allows to withdraw chai", async() => {
             assert.equal(
-                (await chai.balanceOf(user)),   
-                web3.utils.toWei("0")
+                (await chai.balanceOf(saver.address)),   
+                chaiTokens,
+                "Saver does not have chai"
+            );
+            assert.equal(
+                (await saver.savings.call()),   
+                daiTokens,
+                "Saver does not report savings in dai units"
+            );
+            assert.equal(
+                (await dai.balanceOf(user)),   
+                0,
+                "User has dai",
             );
             
-            let amount = web3.utils.toWei("500");
-            await saver.exit(user, amount, { from: user });
+            await saver.exit(owner, daiTokens, { from: owner });
 
-            // Test transfer of collateral
             assert.equal(
-                (await saver.savings()),   
-                0
+                (await chai.balanceOf(saver.address)),   
+                0,
+                "Saver should not have chai",
             );
             assert.equal(
-                (await chai.balanceOf(user)),   
-                web3.utils.toWei("500")
+                (await saver.savings.call()),   
+                0,
+                "Saver should not have savings in dai units"
+            );
+            assert.equal(
+                (await dai.balanceOf(owner)),   
+                daiTokens,
+                "User should have dai",
             );
         });
     });
