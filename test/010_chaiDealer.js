@@ -71,7 +71,7 @@ contract('ChaiDealer', async (accounts) =>  {
         await vat.rely(chai.address, { from: owner });
 
         // Set saver
-        saver = await Saver.new(chai.address);
+        saver = await Saver.new(dai.address, chai.address);
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
