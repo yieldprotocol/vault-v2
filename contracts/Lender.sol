@@ -29,8 +29,6 @@ contract Lender is ILender, AuthorizedAccess(), Constants() {
     IGemJoin internal _wethJoin;
     IVat internal _vat;
 
-    uint256 internal _debt;
-
     constructor (address dai_, address weth_, address daiJoin_, address wethJoin_, address vat_) public {
         // These could be hardcoded for mainnet deployment.
         _dai = IERC20(dai_);
@@ -43,9 +41,19 @@ contract Lender is ILender, AuthorizedAccess(), Constants() {
 
     }
 
+    /// @dev Returns the Lender debt towards MakerDAO, as the dai borrowed times the stability fee for Weth.
+    // (rate * art) <= (ink * spot)
     function debt() public view override returns(uint256) {
-        (, uint256 rate,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
-        return _debt.muld(rate, RAY);
+        (, uint256 rate,,,) = _vat.ilks("ETH-A");            // Retrieve the MakerDAO stability fee for Weth
+        (, uint256 art) = _vat.urns("ETH-A", address(this)); // Retrieve the Lender debt in MakerDAO
+        return art.muld(rate, RAY);
+    }
+
+    /// @dev Returns the Lender borrowing capacity from MakerDAO, as the collateral posted times the collateralization ratio for Weth.
+    function power() public view override returns(uint256) {
+        (,, uint256 spot,,) = _vat.ilks("ETH-A");            // Retrieve the MakerDAO collateralization ratio for Weth
+        (uint256 ink,) = _vat.urns("ETH-A", address(this));  // Retrieve the Lender debt in MakerDAO
+        return ink.muld(spot, RAY);
     }
 
     /// @dev Moves Weth collateral from `from` address into Lender controlled Maker Eth vault
@@ -102,10 +110,10 @@ contract Lender is ILender, AuthorizedAccess(), Constants() {
             0,                           // Weth collateral to add
             -dai.divd(rate, RAY).toInt() // Dai debt to add
         );
-        (, _debt) = _vat.urns(collateralType, address(this));
     }
 
     /// @dev borrows Dai from Lender controlled Maker vault, to `to` address.
+    // TODO: Check that the Lender has posted enough collateral to borrow the dai
     function borrow(address to, uint256 dai) public override onlyAuthorized("Lender: Not Authorized") {
         (, uint256 rate,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
         // Increase the dai debt by the dai to receive divided by the stability fee
@@ -117,7 +125,6 @@ contract Lender is ILender, AuthorizedAccess(), Constants() {
             0,
             dai.divd(rate, RAY).toInt()
         ); // `vat.frob` reverts on failure
-        (, _debt) = _vat.urns(collateralType, address(this)); // Doesn't follow checks effects interactions pattern
         _daiJoin.exit(to, dai); // `daiJoin` reverts on failures
     }
 }

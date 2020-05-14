@@ -25,12 +25,15 @@ contract('Lender', async (accounts) =>  {
     const supply = web3.utils.toWei("1000");
     const limits =  web3.utils.toBN('10000').mul(web3.utils.toBN('10').pow(RAD)).toString(); // 10000 * 10**45
 
+    let wethTokens = web3.utils.toWei("100");
+    let daiTokens = web3.utils.toWei("100");
+
     beforeEach(async() => {
         // Set up vat, join and weth
         vat = await Vat.new();
         await vat.rely(vat.address, { from: owner });
 
-        weth = await ERC20.new(supply, { from: owner }); 
+        weth = await ERC20.new(0, { from: owner }); 
         await vat.init(ilk, { from: owner }); // Set ilk rate to 1.0
         wethJoin = await GemJoin.new(vat.address, ilk, weth.address, { from: owner });
         await vat.rely(wethJoin.address, { from: owner });
@@ -64,52 +67,54 @@ contract('Lender', async (accounts) =>  {
             web3.utils.toWei("0")
         );
         
-        let amount = web3.utils.toWei("500");
-        await weth.mint(user, amount, { from: user });
-        await weth.approve(lender.address, amount, { from: user }); 
-        await lender.post(user, amount, { from: user });
+        await weth.mint(user, wethTokens, { from: user });
+        await weth.approve(lender.address, wethTokens, { from: user }); 
+        await lender.post(user, wethTokens, { from: user });
 
         // Test transfer of collateral
         assert.equal(
-            (await weth.balanceOf(wethJoin.address)),   
-            web3.utils.toWei("500")
+            await weth.balanceOf(wethJoin.address),   
+            wethTokens,
         );
 
         // Test collateral registering via `frob`
-        let ink = (await vat.urns(ilk, lender.address)).ink.toString()
         assert.equal(
-            ink,   
-            amount
+            (await vat.urns(ilk, lender.address)).ink,   
+            wethTokens,
         );
     });
 
     describe("with posted collateral", () => {
         beforeEach(async() => {
-            let amount = web3.utils.toWei("500");
-            await weth.mint(user, amount, { from: user });
-            await weth.approve(lender.address, amount, { from: user }); 
-            await lender.post(user, amount, { from: user });
+            await weth.mint(user, wethTokens, { from: user });
+            await weth.approve(lender.address, wethTokens, { from: user }); 
+            await lender.post(user, wethTokens, { from: user });
+        });
+
+        it("returns borrowing power", async() => {
+            assert.equal(
+                await lender.power(),   
+                wethTokens,
+            );
         });
 
         it("allows user to withdraw collateral", async() => {
             assert.equal(
-                (await weth.balanceOf(user)),   
-                web3.utils.toWei("0")
+                await weth.balanceOf(user),   
+                0,
             );
             
-            let amount = web3.utils.toWei("500");
-            await lender.withdraw(user, amount, { from: user });
+            await lender.withdraw(user, wethTokens, { from: user });
 
             // Test transfer of collateral
             assert.equal(
                 (await weth.balanceOf(user)),   
-                web3.utils.toWei("500")
+                wethTokens,
             );
 
             // Test collateral registering via `frob`
-            let ink = (await vat.urns(ilk, lender.address)).ink.toString()
             assert.equal(
-                ink,   
+                (await vat.urns(ilk, lender.address)).ink,   
                 0
             );
         });
@@ -118,36 +123,45 @@ contract('Lender', async (accounts) =>  {
             // Test with two different stability rates, if possible.
             // Mock Vat contract needs a `setRate` and an `ilks` functions.
             // Mock Vat contract needs the `frob` function to authorize `daiJoin.exit` transfers through the `dart` parameter.
-            let daiBorrowed = web3.utils.toWei("100");
-            await lender.borrow(user, daiBorrowed, { from: user });
+            await lender.borrow(user, daiTokens, { from: user });
 
-            let daiBalance = (await dai.balanceOf(user)).toString();
             assert.equal(
-                daiBalance,   
-                daiBorrowed
+                await dai.balanceOf(user),   
+                daiTokens
             );
-            // TODO: assert lender debt = daiBorrowed
+            assert.equal(
+                (await vat.urns(ilk, lender.address)).art,   
+                daiTokens,
+            );
         });
     
         describe("with a dai debt towards MakerDAO", () => {
             beforeEach(async() => {
-                let daiBorrowed = web3.utils.toWei("100");
-                await lender.borrow(user, daiBorrowed, { from: user });
+                await lender.borrow(user, daiTokens, { from: user });
+            });
+
+            it("returns lender debt", async() => {
+                assert.equal(
+                    (await lender.debt()),   
+                    daiTokens,
+                );
             });
 
             it("repays dai debt and no more", async() => {
                 // Test `normalizedAmount >= normalizedDebt`
-                let daiBorrowed = web3.utils.toWei("100");
-                await dai.approve(lender.address, daiBorrowed, { from: user });
-                await lender.repay(user, daiBorrowed, { from: user });
-                let daiBalance = (await dai.balanceOf(user)).toString();
+                await dai.approve(lender.address, daiTokens, { from: user });
+                await lender.repay(user, daiTokens, { from: user });
+
                 assert.equal(
-                    daiBalance,   
+                    await dai.balanceOf(user),   
                     0
                 );
-                // assert lender debt = 0
                 assert.equal(
-                    (await vat.dai(lender.address)).toString(),   
+                    (await vat.urns(ilk, lender.address)).art,   
+                    0,
+                );
+                assert.equal(
+                    await vat.dai(lender.address),   
                     0
                 );
 
