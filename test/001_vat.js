@@ -3,6 +3,7 @@ const GemJoin = artifacts.require('GemJoin');
 const DaiJoin = artifacts.require('DaiJoin');
 const ERC20 = artifacts.require("TestERC20");
 
+const { expectRevert } = require('@openzeppelin/test-helpers');
 
 contract('Vat', async (accounts) =>  {
     const [ owner, user ] = accounts;
@@ -20,9 +21,11 @@ contract('Vat', async (accounts) =>  {
     const RAD = web3.utils.toBN('49')
     const supply = web3.utils.toWei("1000");
     const limits =  web3.utils.toBN('10').pow(RAD).toString();
-    const spot  = "1500000000000000000000000000";
-    const wethTokens = web3.utils.toWei("150");
-    const daiTokens = web3.utils.toWei("100");
+    const spot  = "1250000000000000000000000000";
+    const rate  = "1500000000000000000000000000";
+    const wethTokens = web3.utils.toWei("120"); // Collateral we join: 100 * spot
+    const daiDebt = web3.utils.toWei("100");    // Dai debt for `frob`: 100
+    const daiTokens = web3.utils.toWei("150");  // Dai we can borrow: 100 * rate
     // console.log(limits);
 
 
@@ -36,13 +39,17 @@ contract('Vat', async (accounts) =>  {
         dai = await ERC20.new(0, { from: owner }); 
         daiJoin = await DaiJoin.new(vat.address, dai.address, { from: owner });
 
-        await vat.file(ilk, spotName, RAY, { from: owner });
+        await vat.file(ilk, spotName, spot, { from: owner });
         await vat.file(ilk, linel, limits, { from: owner });
         await vat.file(Line, limits); // TODO: Why can't we specify `, { from: owner }`?
 
         await vat.rely(vat.address, { from: owner });      // `owner` authorizing `vat` to operate for `vat`?
         await vat.rely(wethJoin.address, { from: owner }); // `owner` authorizing `wethJoin` to operate for `vat`
         await vat.rely(daiJoin.address, { from: owner });  // `owner` authorizing `daiJoin` to operate for `vat`
+        await vat.hope(daiJoin.address, { from: owner }); // `owner` allowing daiJoin to move his dai.
+
+        const rateIncrease  = "500000000000000000000000000";
+        await vat.fold(ilk, vat.address, rateIncrease, { from: owner }); // 1 + 0.25
     });
 
     it("should setup vat", async() => {
@@ -50,6 +57,11 @@ contract('Vat', async (accounts) =>  {
             (await vat.ilks(ilk)).spot,
             spot,
             "spot not initialized",
+        )
+        assert(
+            (await vat.ilks(ilk)).rate,
+            rate,
+            "rate not initialized",
         )
     });
 
@@ -61,11 +73,12 @@ contract('Vat', async (accounts) =>  {
 
         await weth.mint(owner, wethTokens, { from: owner });
         await weth.approve(wethJoin.address, wethTokens, { from: owner }); 
-        await wethJoin.join(owner, wethTokens, { from: owner });
+        await wethJoin.join(owner, wethTokens, { from: owner }); // We join 150 weth
 
         assert.equal(
             await weth.balanceOf(wethJoin.address),   
             wethTokens,
+            "We should have joined " + wethTokens + " weth."
         );
     });
 
@@ -82,24 +95,53 @@ contract('Vat', async (accounts) =>  {
             assert.equal(
                 (await vat.urns(ilk, owner)).ink,   
                 wethTokens,
+                "We should have " + wethTokens + " weth as collateral.",
             );
         });
 
         it("should deposit collateral and borrow Dai", async() => {
             
-            await vat.frob(ilk, owner, owner, owner, wethTokens, daiTokens, { from: owner });
+            await vat.frob(ilk, owner, owner, owner, wethTokens, daiDebt, { from: owner });
             //let ink = (await vat.urns(ilk, owner)).ink.toString();
-            let balance = (await vat.dai(owner)).toString();
-            const pow = web3.utils.toBN('47')
-            const daiRad =  web3.utils.toBN('10').pow(pow).toString(); // 100 dai in RAD
+            // const pow = web3.utils.toBN('47')
+            // const daiRad =  web3.utils.toBN('10').pow(pow).toString(); // 100 dai in RAD
+            /* assert.equal(
+                await vat.dai(owner),   
+                "125000000000000000000000000000000000000000000000",
+            ); */
             assert.equal(
-                balance,   
-                daiRad
+                (await vat.urns(ilk, owner)).ink,   
+                wethTokens,
+                "We should have " + wethTokens + " weth as collateral.",
             );
-            let ink = (await vat.urns(ilk, owner)).ink.toString()
             assert.equal(
-                ink,   
-                wethTokens
+                (await vat.urns(ilk, owner)).art,   
+                daiDebt,
+                "Owner should have " + daiDebt + " dai debt.",
+            );
+
+            await daiJoin.exit(owner, daiTokens, { from: owner }); // Shouldn't we be able to exit vatBalance?
+
+            assert.equal(
+                await dai.balanceOf(owner),   
+                daiTokens,
+                "Owner should have " + daiTokens + " dai.",
+            );
+        });
+
+        it("shouldn't allow borrowing without enough collateral", async() => {
+            // spot = 1.25
+            // rate = 1.5
+            // debt * rate <= collateral * spot
+            // 100 * 1.5 <= 120 * 1.5
+            // await vat.frob(ilk, owner, owner, owner, web3.utils.toWei("119"), daiDebt, { from: owner });
+            await expectRevert(
+                vat.frob(ilk, owner, owner, owner, web3.utils.toWei("119"), daiDebt, { from: owner }),
+                "Vat/not-safe",
+            );
+            await expectRevert(
+                vat.frob(ilk, owner, owner, owner, wethTokens, web3.utils.toWei("101"), { from: owner }),
+                "Vat/not-safe",
             );
         });
 
@@ -109,7 +151,7 @@ contract('Vat', async (accounts) =>  {
             });
      
             it("should withdraw collateral", async() => {
-                const unfrob = web3.utils.toWei("-150");
+                const unfrob = "-" + wethTokens;
                 await vat.frob(ilk, owner, owner, owner, unfrob, 0, { from: owner });
 
                 assert.equal(
@@ -120,32 +162,30 @@ contract('Vat', async (accounts) =>  {
 
             it("should borrow Dai", async() => {
 
-                await vat.frob(ilk, owner, owner, owner, 0, daiTokens, { from: owner });
-                let vatBalance = (await vat.dai(owner)).toString();
-                const pow = web3.utils.toBN('47')
-                const daiRad =  web3.utils.toBN('10').pow(pow).toString(); // 100 dai in RAD
+                await vat.frob(ilk, owner, owner, owner, 0, daiDebt, { from: owner });
+
                 assert.equal(
-                    vatBalance,   
-                    daiRad
+                    (await vat.dai(owner)).toString(),   
+                    daiTokens + "000000000000000000000000000", // dai balances in vat are in RAD
                 );
-                await vat.hope(daiJoin.address, { from: owner }); // `owner` allowing daiJoin to move his dai.
+
                 await daiJoin.exit(owner, daiTokens, { from: owner }); // Shouldn't we be able to exit vatBalance?
 
                 assert.equal(
                     await dai.balanceOf(owner),   
-                    daiTokens
+                    daiTokens,
                 );
             });
 
             describe("with dai borrowed", () => {
                 beforeEach(async() => {
-                    await vat.frob(ilk, owner, owner, owner, 0, daiTokens, { from: owner });
+                    await vat.frob(ilk, owner, owner, owner, 0, daiDebt, { from: owner });
                     await vat.hope(daiJoin.address, { from: owner }); // `owner` allowing daiJoin to move his dai.
                     await daiJoin.exit(owner, daiTokens, { from: owner });
                 });
 
                 it("should return Dai", async() => {
-                    let undai = web3.utils.toWei("-100");
+                    let undai = "-" + daiDebt;
 
                     await daiJoin.join(owner, daiTokens, { from: owner });
                     await vat.frob(ilk, owner, owner, owner, 0, undai, { from: owner });
@@ -157,8 +197,8 @@ contract('Vat', async (accounts) =>  {
                 });
 
                 it("should return Dai and withdraw collateral", async() => {
-                    let unfrob = web3.utils.toWei("-150");
-                    let undai = web3.utils.toWei("-100");
+                    let unfrob = "-" + wethTokens;
+                    let undai =  "-" + daiDebt;
 
                     await daiJoin.join(owner, daiTokens, { from: owner });
                     await vat.frob(ilk, owner, owner, owner, unfrob, undai, { from: owner });
