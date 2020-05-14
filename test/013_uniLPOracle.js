@@ -8,6 +8,7 @@ const Uniswap = artifacts.require('./Uniswap');
 
 const truffleAssert = require('truffle-assertions');
 const helper = require('ganache-time-traveler');
+const { expectRevert } = require('@openzeppelin/test-helpers');
 
 contract('UniLPOracle', async (accounts) =>  {
     let [ owner ] = accounts;
@@ -28,8 +29,10 @@ contract('UniLPOracle', async (accounts) =>  {
     const RAY  = "1000000000000000000000000000";
     const RAD = web3.utils.toBN('49')
     const limits =  web3.utils.toBN('10').pow(RAD).toString();
-    const uniLPTokens = web3.utils.toWei("200");
+    const uniLPTokens = web3.utils.toWei("50");
     const daiTokens = web3.utils.toWei("100");
+    const tooMuchDai = web3.utils.toWei("101");
+    const price  = "500000000000000000000000000";
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
@@ -79,7 +82,7 @@ contract('UniLPOracle', async (accounts) =>  {
         const totalSupply = web3.utils.toWei("20");
         await uniswap.setTotalSupply(totalSupply);
 
-        const amount = web3.utils.toWei("5");
+        /* const amount = web3.utils.toWei("5");
         const n0 = web3.utils.toBN(supply0);
         const n1 = web3.utils.toBN(supply1);
         const tS = web3.utils.toBN(totalSupply);
@@ -87,13 +90,13 @@ contract('UniLPOracle', async (accounts) =>  {
         let term = web3.utils.toBN(root);
         let expectedResult = term.mul(web3.utils.toBN('2'))
             .mul(web3.utils.toBN(RAY))
-            .div(tS);
+            .div(tS); */
 
-        result = (await uniLPOracle.price.call()).toString();
+        // result = (await uniLPOracle.price.call()).toString();
         
         assert.equal(  
-            result, 
-            expectedResult
+            await uniLPOracle.price.call(), 
+            price
         );
     });
 
@@ -216,6 +219,13 @@ contract('UniLPOracle', async (accounts) =>  {
                     (await uniLPDealer.unlockedOf.call(owner)),   
                     0,
                     "Owner should not have unlocked collateral",
+                );
+            });
+
+            it("doesn't allow to borrow yDai over the price limit", async() => {
+                await expectRevert(
+                    uniLPDealer.borrow(owner, tooMuchDai, { from: owner }),
+                    "ERC20Dealer: Post more collateral",
                 );
             });
 
