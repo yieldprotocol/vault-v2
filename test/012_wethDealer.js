@@ -30,6 +30,9 @@ contract('WethDealer', async (accounts) =>  {
     const RAY = "1000000000000000000000000000";
     const RAD = web3.utils.toBN('49')
     const limits =  web3.utils.toBN('10').pow(RAD).toString();
+    const price  = "1100000000000000000000000000";
+    const daiTokens = web3.utils.toWei("100");
+    const wethTokens = web3.utils.toWei("110");
     // console.log(limits);
 
     beforeEach(async() => {
@@ -72,7 +75,7 @@ contract('WethDealer', async (accounts) =>  {
 
         // Setup WethOracle
         wethOracle = await TestOracle.new({ from: owner });
-        await wethOracle.setPrice(RAY);
+        await wethOracle.setPrice(price);
 
         // Setup WethDealer
         wethDealer = await WethDealer.new(
@@ -87,11 +90,10 @@ contract('WethDealer', async (accounts) =>  {
     });
 
     it("allows user to post weth", async() => {
-        let amount = web3.utils.toWei("100");
-        await weth.mint(owner, amount, { from: owner });
+        await weth.mint(owner, wethTokens, { from: owner });
         assert.equal(
             (await weth.balanceOf(owner)),   
-            amount,
+            wethTokens,
             "ERC20Dealer does not have weth",
         );
         assert.equal(
@@ -105,12 +107,12 @@ contract('WethDealer', async (accounts) =>  {
             "Owner has unlocked weth",
         );
         
-        await weth.approve(wethDealer.address, amount, { from: owner }); 
-        await wethDealer.post(owner, amount, { from: owner });
+        await weth.approve(wethDealer.address, wethTokens, { from: owner }); 
+        await wethDealer.post(owner, wethTokens, { from: owner });
 
         assert.equal(
             (await vat.urns(ilk, lender.address)).ink.toString(),   
-            amount,
+            wethTokens,
             "Lender should have weth in MakerDAO",
         );
         assert.equal(
@@ -120,24 +122,22 @@ contract('WethDealer', async (accounts) =>  {
         );
         assert.equal(
             (await wethDealer.unlockedOf.call(owner)),   
-            amount,
+            wethTokens,
             "Owner should have unlocked collateral",
         );
     });
 
     describe("with posted weth", () => {
         beforeEach(async() => {
-            let amount = web3.utils.toWei("100");
-            await weth.mint(owner, amount, { from: owner });
-            await weth.approve(wethDealer.address, amount, { from: owner }); 
-            await wethDealer.post(owner, amount, { from: owner });
+            await weth.mint(owner, wethTokens, { from: owner });
+            await weth.approve(wethDealer.address, wethTokens, { from: owner }); 
+            await wethDealer.post(owner, wethTokens, { from: owner });
         });
 
         it("allows user to withdraw weth", async() => {
-            let amount = web3.utils.toWei("100");
             assert.equal(
                 (await vat.urns(ilk, lender.address)).ink.toString(),   
-                amount,
+                wethTokens,
                 "Lender does not have weth in MakerDAO",
             );
             assert.equal(
@@ -147,15 +147,15 @@ contract('WethDealer', async (accounts) =>  {
             );
             assert.equal(
                 (await wethDealer.unlockedOf.call(owner)),   
-                amount,
+                wethTokens,
                 "Owner does not have unlocked weth",
             );
 
-            await wethDealer.withdraw(owner, amount, { from: owner });
+            await wethDealer.withdraw(owner, wethTokens, { from: owner });
 
             assert.equal(
                 (await weth.balanceOf(owner)),   
-                amount,
+                wethTokens,
                 "Owner should have weth",
             );
             assert.equal(
@@ -171,10 +171,9 @@ contract('WethDealer', async (accounts) =>  {
         });
 
         it("allows to borrow yDai", async() => {
-            let amount = web3.utils.toWei("100");
             assert.equal(
                 (await wethDealer.unlockedOf.call(owner)),   
-                amount,
+                wethTokens,
                 "Owner does not have unlocked collateral",
             );
             assert.equal(
@@ -188,16 +187,16 @@ contract('WethDealer', async (accounts) =>  {
                 "Owner has debt",
             );
     
-            await wethDealer.borrow(owner, amount, { from: owner });
+            await wethDealer.borrow(owner, daiTokens, { from: owner });
 
             assert.equal(
                 (await yDai.balanceOf(owner)),   
-                amount,
+                daiTokens,
                 "Owner should have yDai",
             );
             assert.equal(
                 (await wethDealer.debtOf.call(owner)),   
-                amount,
+                daiTokens,
                 "Owner should have debt",
             );
             assert.equal(
@@ -209,20 +208,18 @@ contract('WethDealer', async (accounts) =>  {
 
         describe("with borrowed yDai", () => {
             beforeEach(async() => {
-                let amount = web3.utils.toWei("100");
-                await wethDealer.borrow(owner, amount, { from: owner });
+                await wethDealer.borrow(owner, daiTokens, { from: owner });
             });
 
             it("allows to repay yDai", async() => {
-                let amount = web3.utils.toWei("100");
                 assert.equal(
                     (await yDai.balanceOf(owner)),   
-                    amount,
+                    daiTokens,
                     "Owner does not have yDai",
                 );
                 assert.equal(
                     (await wethDealer.debtOf.call(owner)),   
-                    amount,
+                    daiTokens,
                     "Owner does not have debt",
                 );
                 assert.equal(
@@ -231,12 +228,12 @@ contract('WethDealer', async (accounts) =>  {
                     "Owner has unlocked collateral",
                 );
 
-                await yDai.approve(wethDealer.address, amount, { from: owner });
-                await wethDealer.repay(owner, amount, { from: owner });
+                await yDai.approve(wethDealer.address, daiTokens, { from: owner });
+                await wethDealer.repay(owner, daiTokens, { from: owner });
     
                 assert.equal(
                     (await wethDealer.unlockedOf.call(owner)),   
-                    amount,
+                    wethTokens,
                     "Owner should have unlocked collateral",
                 );
                 assert.equal(

@@ -24,8 +24,8 @@ contract UniLPOracle is IOracle, Constants {
         uint256 _totalSupply = _uniswap.totalSupply();
         uint256 _r0 = uint256(_reserve0);
         uint256 _r1 = uint256(_reserve1);
-        return 2 * sqrt(_r0.mul(_r1))
-            .divd(_totalSupply, WAD)
+        return _totalSupply
+            .divd(2 * sqrt(_r0.mul(_r1)), WAD)
             .muld(RAY.unit(), WAD);           //converty to RAY
     }
 
