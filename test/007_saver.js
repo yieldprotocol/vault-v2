@@ -100,7 +100,7 @@ contract('Saver', async (accounts) =>  {
         );
         
         await dai.approve(saver.address, daiTokens, { from: owner }); 
-        await saver.join(owner, daiTokens, { from: owner });
+        await saver.hold(owner, daiTokens, { from: owner });
 
         // Test transfer of collateral
         assert.equal(
@@ -123,7 +123,7 @@ contract('Saver', async (accounts) =>  {
     describe("with savings", () => {
         beforeEach(async() => {
             await dai.approve(saver.address, daiTokens, { from: owner }); 
-            await saver.join(owner, daiTokens, { from: owner });
+            await saver.hold(owner, daiTokens, { from: owner });
         });
 
         it("allows to withdraw chai", async() => {
@@ -143,7 +143,7 @@ contract('Saver', async (accounts) =>  {
                 "User has dai",
             );
             
-            await saver.exit(owner, daiTokens, { from: owner });
+            await saver.release(owner, daiTokens, { from: owner });
 
             assert.equal(
                 (await chai.balanceOf(saver.address)),   

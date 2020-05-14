@@ -26,8 +26,10 @@ contract Saver is ISaver, AuthorizedAccess(), Constants() {
         return _chai.dai(address(this));
     }
 
+    // Anyone can send chai to saver, no way of stopping it
+
     /// @dev Moves Dai into the contract and converts it to Chai
-    function join(address user, uint256 dai) public override onlyAuthorized("Saver: Not Authorized") {
+    function hold(address user, uint256 dai) public override onlyAuthorized("Saver: Not Authorized") {
         require(
             _dai.transferFrom(user, address(this), dai),
             "Saver: Chai transfer fail"
@@ -36,8 +38,10 @@ contract Saver is ISaver, AuthorizedAccess(), Constants() {
         _chai.join(address(this), dai);    // Give dai to Chai, take chai back
     }
 
+    // Make another function to withdraw cahi, so that ChaiDealer can use it.
+
     /// @dev Converts Chai to Dai and gives it to the user
-    function exit(address user, uint256 dai) public override onlyAuthorized("Saver: Not Authorized") {
+    function release(address user, uint256 dai) public override onlyAuthorized("Saver: Not Authorized") {
         _chai.draw(address(this), dai);     // Grab dai from Chai, converted from chai
         require(                            // Give dai to user
             _dai.transfer(user, dai),
