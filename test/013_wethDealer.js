@@ -5,7 +5,7 @@ const YDai = artifacts.require('YDai');
 const ERC20 = artifacts.require('TestERC20');
 const GemJoin = artifacts.require('GemJoin');
 const DaiJoin = artifacts.require('DaiJoin');
-const TestOracle = artifacts.require('TestOracle');
+const WethOracle = artifacts.require('WethOracle');
 const WethDealer = artifacts.require('WethDealer');
 
 const truffleAssert = require('truffle-assertions');
@@ -25,15 +25,17 @@ contract('WethDealer', async (accounts) =>  {
     let maturity;
     let ilk = web3.utils.fromAscii("ETH-A")
     let Line = web3.utils.fromAscii("Line")
-    let spot = web3.utils.fromAscii("spot")
+    let spotName = web3.utils.fromAscii("spot")
     let linel = web3.utils.fromAscii("line")
-    const RAY = "1000000000000000000000000000";
     const RAD = web3.utils.toBN('49')
     const limits =  web3.utils.toBN('10').pow(RAD).toString();
-    const price  = "1100000000000000000000000000";
-    const daiTokens = web3.utils.toWei("100");
-    const wethTokens = web3.utils.toWei("110");
-    // console.log(limits);
+    const spot  = "1500000000000000000000000000";
+    const rate  = "1250000000000000000000000000";
+    const price  = "1200000000000000000000000000"; // spot / rate
+    const daiTokens = web3.utils.toWei("125");  // Dai we borrow
+    const daiDebt = web3.utils.toWei("100");    // Dai debt for `frob`: daiTokens / rate = 100
+    const wethTokens = web3.utils.toWei("150"); // Collateral we join: daiTokens * price = 125
+
 
     beforeEach(async() => {
         // Set up vat, join and weth
@@ -50,9 +52,11 @@ contract('WethDealer', async (accounts) =>  {
         await vat.rely(daiJoin.address, { from: owner });
 
         // Setup vat
-        await vat.file(ilk, spot,    RAY, { from: owner });
+        await vat.file(ilk, spotName, spot, { from: owner });
         await vat.file(ilk, linel, limits, { from: owner });
-        await vat.file(Line,       limits); // TODO: Why can't we specify `, { from: owner }`?
+        await vat.file(Line, limits); // TODO: Why can't we specify `, { from: owner }`?
+        const rateIncrease  = "250000000000000000000000000";
+        await vat.fold(ilk, vat.address, rateIncrease, { from: owner }); // 1 + 0.25
 
         // Setup pot
         pot = await Pot.new(vat.address);
@@ -74,8 +78,7 @@ contract('WethDealer', async (accounts) =>  {
         yDai = await YDai.new(vat.address, pot.address, maturity, "Name", "Symbol");
 
         // Setup WethOracle
-        wethOracle = await TestOracle.new({ from: owner });
-        await wethOracle.setPrice(price);
+        wethOracle = await WethOracle.new(vat.address, { from: owner });
 
         // Setup WethDealer
         wethDealer = await WethDealer.new(
@@ -87,6 +90,14 @@ contract('WethDealer', async (accounts) =>  {
         );
         await yDai.grantAccess(wethDealer.address, { from: owner });
         await lender.grantAccess(wethDealer.address, { from: owner });
+    });
+
+    it("retrieves weth price as rate / spot", async() => {
+        assert.equal(
+            await wethOracle.price.call({ from: owner }), // price() is a transaction
+            price,
+            "Should be " + price,
+        );
     });
 
     it("allows user to post weth", async() => {
@@ -116,14 +127,14 @@ contract('WethDealer', async (accounts) =>  {
             "Lender should have weth in MakerDAO",
         );
         assert.equal(
-            (await weth.balanceOf(owner)),   
-            0,
-            "Owner should not have weth",
-        );
-        assert.equal(
             (await wethDealer.unlockedOf.call(owner)),   
             wethTokens,
             "Owner should have unlocked collateral",
+        );
+        assert.equal(
+            (await weth.balanceOf(owner)),   
+            0,
+            "Owner should not have weth",
         );
     });
 
