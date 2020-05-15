@@ -6,7 +6,7 @@ contract('Vat', async (accounts) =>  {
     const [ owner, user ] = accounts;
     let vat;
     let wethOracle;
-    let ilk = web3.utils.fromAscii("weth")
+    let ilk = web3.utils.fromAscii("ETH-A")
     let Line = web3.utils.fromAscii("Line")
     let spotName = web3.utils.fromAscii("spot")
     let linel = web3.utils.fromAscii("line")
