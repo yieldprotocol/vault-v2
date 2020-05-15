@@ -27,6 +27,8 @@ contract('ChaiOracle', async (accounts) =>  {
     const RAD = web3.utils.toBN('45');
     const supply = web3.utils.toWei("1000");
     const limits =  web3.utils.toBN('10000').mul(web3.utils.toBN('10').pow(RAD)).toString(); // 10000 * 10**45
+    const chi  = "1250000000000000000000000000"; // 1.25
+    const price  = "800000000000000000000000000"; // 0.8
 
     beforeEach(async() => {
         // Set up vat, join and weth
@@ -54,17 +56,15 @@ contract('ChaiOracle', async (accounts) =>  {
         // Setup chaiOracle
         chaiOracle = await ChaiOracle.new(pot.address, { from: owner });
         
-        // Set chi to 1.1
-        const chi  = "1100000000000000000000000000";
+        // Set chi to 1.25
         await pot.setChi(chi, { from: owner });
     });
 
-    it("retrieves chai price as pot.chi", async() => {
-        const chi  = "1100000000000000000000000000";
+    it("retrieves chai price as 1/pot.chi", async() => {
         assert.equal(
             await chaiOracle.price.call({ from: owner }), // price() is a transaction
-            chi,
-            "Should be 1.1",
+            price,
+            "Should be 0.8",
         );
     });
 });

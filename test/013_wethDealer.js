@@ -29,12 +29,12 @@ contract('WethDealer', async (accounts) =>  {
     let linel = web3.utils.fromAscii("line")
     const RAD = web3.utils.toBN('49')
     const limits =  web3.utils.toBN('10').pow(RAD).toString();
-    const spot  = "1250000000000000000000000000";
-    const rate  = "1500000000000000000000000000";
-    const price  = "1200000000000000000000000000"; // rate / spot
-    const daiTokens = web3.utils.toWei("150");  // Dai we borrow
+    const spot  = "1500000000000000000000000000";
+    const rate  = "1250000000000000000000000000";
+    const price  = "1200000000000000000000000000"; // spot / rate
+    const daiTokens = web3.utils.toWei("125");  // Dai we borrow
     const daiDebt = web3.utils.toWei("100");    // Dai debt for `frob`: daiTokens / rate = 100
-    const wethTokens = web3.utils.toWei("125"); // Collateral we join: daiTokens * price = 125
+    const wethTokens = web3.utils.toWei("150"); // Collateral we join: daiTokens * price = 125
 
 
     beforeEach(async() => {
@@ -55,8 +55,8 @@ contract('WethDealer', async (accounts) =>  {
         await vat.file(ilk, spotName, spot, { from: owner });
         await vat.file(ilk, linel, limits, { from: owner });
         await vat.file(Line, limits); // TODO: Why can't we specify `, { from: owner }`?
-        const rateIncrease  = "500000000000000000000000000";
-        await vat.fold(ilk, vat.address, rateIncrease, { from: owner }); // 1 + 0.5
+        const rateIncrease  = "250000000000000000000000000";
+        await vat.fold(ilk, vat.address, rateIncrease, { from: owner }); // 1 + 0.25
 
         // Setup pot
         pot = await Pot.new(vat.address);

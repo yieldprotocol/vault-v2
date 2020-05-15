@@ -18,10 +18,10 @@ contract WethOracle is IOracle, Constants{
         require(spot > 0, "WethOracle: Spot not set");
     }
 
-    /// @dev Price is (rate / spot)
+    /// @dev Price is (spot / rate)
     /// collateral = price * dai
     function price() public override returns(uint256) {
         (,uint256 rate, uint256 spot,,) = _vat.ilks("ETH-A");  // Stability fee and collateralization ratio for Weth
-        return rate.divd(spot, RAY);
+        return spot.divd(rate, RAY);
     }
 }

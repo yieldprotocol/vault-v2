@@ -32,9 +32,10 @@ contract('ChaiDealer', async (accounts) =>  {
     const RAY = "1000000000000000000000000000";
     const RAD = web3.utils.toBN('49')
     const limits =  web3.utils.toBN('10').pow(RAD).toString();
-    let daiTokens = web3.utils.toWei("110");
+    let daiTokens = web3.utils.toWei("125");
     let chaiTokens = web3.utils.toWei("100");
-    const chi  = "1100000000000000000000000000";
+    const chi  = "1250000000000000000000000000";
+    const price  = "800000000000000000000000000";
     // console.log(limits);
 
 
@@ -71,7 +72,7 @@ contract('ChaiDealer', async (accounts) =>  {
         await vat.rely(chai.address, { from: owner });
 
         // Set saver
-        saver = await Saver.new(chai.address);
+        saver = await Saver.new(dai.address, chai.address);
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();

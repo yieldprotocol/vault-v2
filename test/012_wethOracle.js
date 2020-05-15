@@ -12,9 +12,9 @@ contract('Vat', async (accounts) =>  {
     let linel = web3.utils.fromAscii("line")
     const RAD = web3.utils.toBN('49')
     const limits =  web3.utils.toBN('10').pow(RAD).toString();
-    const spot  = "1250000000000000000000000000";
-    const rate  = "1500000000000000000000000000";
-    const price  = "1200000000000000000000000000"; // rate / spot
+    const spot  = "1500000000000000000000000000";
+    const rate  = "1250000000000000000000000000";
+    const price  = "1200000000000000000000000000"; // spot / rate
 
 
     beforeEach(async() => {
@@ -25,8 +25,8 @@ contract('Vat', async (accounts) =>  {
         await vat.file(ilk, linel, limits, { from: owner });
         await vat.file(Line, limits); // TODO: Why can't we specify `, { from: owner }`?
 
-        const rateIncrease  = "500000000000000000000000000";
-        await vat.fold(ilk, vat.address, rateIncrease, { from: owner }); // 1 + 0.5
+        const rateIncrease  = "250000000000000000000000000";
+        await vat.fold(ilk, vat.address, rateIncrease, { from: owner }); // 1 + 0.25
 
         wethOracle = await WethOracle.new(vat.address, { from: owner });
     });
