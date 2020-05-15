@@ -26,11 +26,11 @@ contract('Lender', async (accounts) =>  {
     const supply = web3.utils.toWei("1000");
     const limits =  web3.utils.toBN('10000').mul(web3.utils.toBN('10').pow(RAD)).toString(); // 10000 * 10**45
 
-    const spot  = "1250000000000000000000000000";
-    const rate  = "1500000000000000000000000000";
-    const wethTokens = web3.utils.toWei("120"); // Collateral we join: 100 * spot
-    const daiDebt = web3.utils.toWei("100");    // Dai debt for `frob`: 100
-    const daiTokens = web3.utils.toWei("150");  // Dai we can borrow: 100 * rate
+    const spot  = "1500000000000000000000000000";
+    const rate  = "1250000000000000000000000000";
+    const daiDebt = web3.utils.toWei("120");    // Dai debt for `frob`: 120
+    const wethTokens = web3.utils.toWei("100"); // Collateral we join: 120 * rate / spot
+    const daiTokens = web3.utils.toWei("150");  // Dai we can borrow: 120 * rate
 
     beforeEach(async() => {
         // Set up vat, join and weth
@@ -60,8 +60,8 @@ contract('Lender', async (accounts) =>  {
         );
         await lender.grantAccess(user, { from: owner });
 
-        const rateIncrease  = "500000000000000000000000000";
-        await vat.fold(ilk, vat.address, rateIncrease, { from: owner }); // 1 + 0.5
+        const rateIncrease  = "250000000000000000000000000";
+        await vat.fold(ilk, vat.address, rateIncrease, { from: owner }); // 1 + 0.25
     });
     
     it("should fail for failed weth transfers", async() => {
@@ -101,8 +101,8 @@ contract('Lender', async (accounts) =>  {
         it("returns borrowing power", async() => {
             assert.equal(
                 await lender.power(),   
-                daiDebt,
-                "Should return posted collateral * collatearlization ratio / stability fee"
+                daiTokens,
+                "Should return posted collateral * collateralization ratio"
             );
         });
 
@@ -140,6 +140,25 @@ contract('Lender', async (accounts) =>  {
             assert.equal(
                 (await vat.urns(ilk, lender.address)).art,   
                 daiDebt,
+            );
+        });
+
+
+        it("shouldn't allow borrowing beyond power", async() => {
+            await lender.borrow(user, daiTokens, { from: user });
+            assert.equal(
+                await lender.power(),   
+                daiTokens,
+                "We should have " + daiTokens + " dai borrowing power.",
+            );
+            assert.equal(
+                await lender.debt(),   
+                daiTokens,
+                "We should have " + daiTokens + " dai debt.",
+            );
+            await expectRevert(
+                lender.borrow(user, 1, { from: user }), // Not a wei more borrowing
+                "Vat/sub",
             );
         });
     

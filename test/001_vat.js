@@ -21,11 +21,11 @@ contract('Vat', async (accounts) =>  {
     const RAD = web3.utils.toBN('49')
     const supply = web3.utils.toWei("1000");
     const limits =  web3.utils.toBN('10').pow(RAD).toString();
-    const spot  = "1250000000000000000000000000";
-    const rate  = "1500000000000000000000000000";
-    const wethTokens = web3.utils.toWei("120"); // Collateral we join: 100 * spot
-    const daiDebt = web3.utils.toWei("100");    // Dai debt for `frob`: 100
-    const daiTokens = web3.utils.toWei("150");  // Dai we can borrow: 100 * rate
+    const spot  = "1500000000000000000000000000";
+    const rate  = "1250000000000000000000000000";
+    const daiDebt = web3.utils.toWei("120");    // Dai debt for `frob`: 120
+    const wethTokens = web3.utils.toWei("100"); // Collateral we join: 120 * rate / spot
+    const daiTokens = web3.utils.toWei("150");  // Dai we can borrow: 120 * rate
     // console.log(limits);
 
 
@@ -48,8 +48,8 @@ contract('Vat', async (accounts) =>  {
         await vat.rely(daiJoin.address, { from: owner });  // `owner` authorizing `daiJoin` to operate for `vat`
         await vat.hope(daiJoin.address, { from: owner }); // `owner` allowing daiJoin to move his dai.
 
-        const rateIncrease  = "500000000000000000000000000";
-        await vat.fold(ilk, vat.address, rateIncrease, { from: owner }); // 1 + 0.5
+        const rateIncrease  = "250000000000000000000000000";
+        await vat.fold(ilk, vat.address, rateIncrease, { from: owner }); // 1 + 0.25
     });
 
     it("should setup vat", async() => {
@@ -130,12 +130,12 @@ contract('Vat', async (accounts) =>  {
         });
 
         it("shouldn't allow borrowing without enough collateral", async() => {
-            // spot = 1.25
-            // rate = 1.5
+            // spot = 1.5
+            // rate = 1.25
             // debt * rate <= collateral * spot
             // collateral = (rate / spot) * debt
-            // 100 * 1.5 <= 120 * 1.25
-            await vat.frob(ilk, owner, owner, owner, wethTokens, daiDebt, { from: owner }) // weth 120, dai debt 100
+            // 120 * 1.25 <= 100 * 1.5
+            await vat.frob(ilk, owner, owner, owner, wethTokens, daiDebt, { from: owner }); // weth 100, dai debt 120
             assert.equal(
                 (await vat.urns(ilk, owner)).ink,   
                 wethTokens,
