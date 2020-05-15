@@ -6,6 +6,7 @@ const Vat= artifacts.require('./Vat');
 
 const truffleAssert = require('truffle-assertions');
 const helper = require('ganache-time-traveler');
+const { expectRevert } = require('@openzeppelin/test-helpers');
 
 contract('Lender', async (accounts) =>  {
     let [ owner, user ] = accounts;
@@ -17,7 +18,7 @@ contract('Lender', async (accounts) =>  {
     let vat;
     const ilk = web3.utils.fromAscii("ETH-A")
     const Line = web3.utils.fromAscii("Line")
-    const spot = web3.utils.fromAscii("spot")
+    const spotName = web3.utils.fromAscii("spot")
     const linel = web3.utils.fromAscii("line")
 
     const RAY  = "1000000000000000000000000000";
@@ -25,8 +26,11 @@ contract('Lender', async (accounts) =>  {
     const supply = web3.utils.toWei("1000");
     const limits =  web3.utils.toBN('10000').mul(web3.utils.toBN('10').pow(RAD)).toString(); // 10000 * 10**45
 
-    let wethTokens = web3.utils.toWei("100");
-    let daiTokens = web3.utils.toWei("100");
+    const spot  = "1250000000000000000000000000";
+    const rate  = "1500000000000000000000000000";
+    const wethTokens = web3.utils.toWei("120"); // Collateral we join: 100 * spot
+    const daiDebt = web3.utils.toWei("100");    // Dai debt for `frob`: 100
+    const daiTokens = web3.utils.toWei("150");  // Dai we can borrow: 100 * rate
 
     beforeEach(async() => {
         // Set up vat, join and weth
@@ -43,9 +47,9 @@ contract('Lender', async (accounts) =>  {
         await vat.rely(daiJoin.address, { from: owner });
 
         // Setup vat
-        await vat.file(ilk, spot,    RAY, { from: owner });
+        await vat.file(ilk, spotName, spot, { from: owner });
         await vat.file(ilk, linel, limits, { from: owner });
-        await vat.file(Line,       limits); // TODO: Why can't we specify `, { from: owner }`?
+        await vat.file(Line, limits); // TODO: Why can't we specify `, { from: owner }`?
 
         lender = await Lender.new(
             dai.address,        // dai
@@ -55,6 +59,9 @@ contract('Lender', async (accounts) =>  {
             vat.address,        // vat
         );
         await lender.grantAccess(user, { from: owner });
+
+        const rateIncrease  = "500000000000000000000000000";
+        await vat.fold(ilk, vat.address, rateIncrease, { from: owner }); // 1 + 0.5
     });
     
     it("should fail for failed weth transfers", async() => {
@@ -94,7 +101,8 @@ contract('Lender', async (accounts) =>  {
         it("returns borrowing power", async() => {
             assert.equal(
                 await lender.power(),   
-                wethTokens,
+                daiDebt,
+                "Should return posted collateral * collatearlization ratio / stability fee"
             );
         });
 
@@ -131,7 +139,7 @@ contract('Lender', async (accounts) =>  {
             );
             assert.equal(
                 (await vat.urns(ilk, lender.address)).art,   
-                daiTokens,
+                daiDebt,
             );
         });
     
@@ -144,6 +152,7 @@ contract('Lender', async (accounts) =>  {
                 assert.equal(
                     (await lender.debt()),   
                     daiTokens,
+                    "Should return borrowed dai"
                 );
             });
 

@@ -49,7 +49,7 @@ contract('Vat', async (accounts) =>  {
         await vat.hope(daiJoin.address, { from: owner }); // `owner` allowing daiJoin to move his dai.
 
         const rateIncrease  = "500000000000000000000000000";
-        await vat.fold(ilk, vat.address, rateIncrease, { from: owner }); // 1 + 0.25
+        await vat.fold(ilk, vat.address, rateIncrease, { from: owner }); // 1 + 0.5
     });
 
     it("should setup vat", async() => {
@@ -135,7 +135,17 @@ contract('Vat', async (accounts) =>  {
             // debt * rate <= collateral * spot
             // collateral = (rate / spot) * debt
             // 100 * 1.5 <= 120 * 1.25
-            vat.frob(ilk, owner, owner, owner, wethTokens, daiDebt, { from: owner }) // weth 120, dai debt 100
+            await vat.frob(ilk, owner, owner, owner, wethTokens, daiDebt, { from: owner }) // weth 120, dai debt 100
+            assert.equal(
+                (await vat.urns(ilk, owner)).ink,   
+                wethTokens,
+                "We should have " + wethTokens + " weth as collateral.",
+            );
+            assert.equal(
+                (await vat.urns(ilk, owner)).art,   
+                daiDebt,
+                "We should have " + daiDebt + " normalized dai debt.",
+            );
             await expectRevert(
                 vat.frob(ilk, owner, owner, owner, -1, 0, { from: owner }), // Not a wei less collateral
                 "Vat/not-safe",

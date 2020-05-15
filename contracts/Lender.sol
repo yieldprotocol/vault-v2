@@ -42,7 +42,8 @@ contract Lender is ILender, AuthorizedAccess(), Constants() {
     }
 
     /// @dev Returns the Lender debt towards MakerDAO, as the dai borrowed times the stability fee for Weth.
-    // (rate * art) <= (ink * spot)
+    /// We have borrowed (rate * art)
+    /// Borrowing Limit (rate * art) <= (ink * spot)
     function debt() public view override returns(uint256) {
         (, uint256 rate,,,) = _vat.ilks("ETH-A");            // Retrieve the MakerDAO stability fee for Weth
         (, uint256 art) = _vat.urns("ETH-A", address(this)); // Retrieve the Lender debt in MakerDAO
@@ -50,10 +51,11 @@ contract Lender is ILender, AuthorizedAccess(), Constants() {
     }
 
     /// @dev Returns the Lender borrowing capacity from MakerDAO, as the collateral posted times the collateralization ratio for Weth.
+    /// We can borrow (ink * spot / rate)
     function power() public view override returns(uint256) {
-        (,, uint256 spot,,) = _vat.ilks("ETH-A");            // Retrieve the MakerDAO collateralization ratio for Weth
-        (uint256 ink,) = _vat.urns("ETH-A", address(this));  // Retrieve the Lender debt in MakerDAO
-        return ink.muld(spot, RAY);
+        (,uint256 rate, uint256 spot,,) = _vat.ilks("ETH-A");  // Stability fee and collateralization ratio for Weth
+        (uint256 ink,) = _vat.urns("ETH-A", address(this));    // Lender Weth collateral in MakerDAO
+        return ink.muld(spot, RAY).divd(rate, RAY);
     }
 
     /// @dev Moves Weth collateral from `from` address into Lender controlled Maker Eth vault
