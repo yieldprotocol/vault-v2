@@ -133,15 +133,21 @@ contract('Vat', async (accounts) =>  {
             // spot = 1.25
             // rate = 1.5
             // debt * rate <= collateral * spot
-            // 100 * 1.5 <= 120 * 1.5
-            // await vat.frob(ilk, owner, owner, owner, web3.utils.toWei("119"), daiDebt, { from: owner });
+            // collateral = (rate / spot) * debt
+            // 100 * 1.5 <= 120 * 1.25
+            vat.frob(ilk, owner, owner, owner, wethTokens, daiDebt, { from: owner }) // weth 120, dai debt 100
             await expectRevert(
-                vat.frob(ilk, owner, owner, owner, web3.utils.toWei("119"), daiDebt, { from: owner }),
+                vat.frob(ilk, owner, owner, owner, -1, 0, { from: owner }), // Not a wei less collateral
                 "Vat/not-safe",
             );
             await expectRevert(
-                vat.frob(ilk, owner, owner, owner, wethTokens, web3.utils.toWei("101"), { from: owner }),
+                vat.frob(ilk, owner, owner, owner, 0, 1, { from: owner }), // Not a wei more debt
                 "Vat/not-safe",
+            );
+            await daiJoin.exit(owner, daiTokens, { from: owner }); // We can borrow weth * spot / rate (dai 150)
+            await expectRevert(
+                daiJoin.exit(owner, 1, { from: owner }), // Not a wei more borrowing
+                "Vat/sub",
             );
         });
 
