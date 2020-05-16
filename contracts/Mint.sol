@@ -35,13 +35,17 @@ contract Mint is Constants {
     // user --- Dai  ---> us
     // us   --- yDai ---> user
     function mint(address user, uint256 dai) public {
+        _dai.transferFrom(user, address(this), dai); // Get the dai from user
         // TODO: Pay as much debt as possible, and save the rest
         if (_lender.debt() < dai) {
-            mintNoDebt(user, dai);
+            _dai.approve(address(_saver), dai);      // Saver will take dai
+            _saver.hold(address(this), dai);         // Send dai to Saver
         }
         else {
-            mintDebt(user, dai);
+            _dai.approve(address(_lender), dai);     // Lender will take the dai
+            _lender.repay(address(this), dai);       // Lender takes dai from Mint to repay debt
         }
+        _yDai.mint(user, dai);                       // Mint yDai to user
     }
 
     /// @dev Burn yTokens and return an equal amount of underlying.
@@ -53,40 +57,13 @@ contract Mint is Constants {
             _yDai.isMature(),
             "Mint: yDai is not mature"
         );
+        _yDai.burn(user, dai);                       // Burn yDai from user
         // TODO: Take as much as possible from savings, and borrow the rest
         if (_saver.savings() < dai) {
-            redeemNoSavings(user, dai);
+            _lender.borrow(user, dai);               // Borrow Dai from Lender to user
         }
         else {
-            redeemSavings(user, dai);
+            _saver.release(user, dai);               // Give dai to user, from Saver
         }
-    }
-
-    /// @dev Mint yDai assuming there is no debt
-    function mintNoDebt(address user, uint256 dai) internal {
-        _dai.transferFrom(user, address(this), dai);        // Get the dai from user
-        _dai.approve(address(_saver), dai);                 // Saver will take dai
-        _saver.hold(address(this), dai);                    // Send dai to Saver
-        _yDai.mint(user, dai);                              // Mint yDai to user
-    }
-
-    /// @dev Mint yDai assuming there is debt
-    function mintDebt(address user, uint256 dai) internal {
-        _dai.transferFrom(user, address(this), dai);        // Get the dai from user
-        _dai.approve(address(_lender), dai);                // Lender will take the dai
-        _lender.repay(address(this), dai);                  // Lender takes dai from Mint to repay debt
-        _yDai.mint(user, dai);                              // Mint yDai to user
-    }
-
-    /// @dev Redeem yDai assuming there are savings
-    function redeemSavings(address user, uint256 yDai) internal {
-        _yDai.burn(user, yDai);                             // Burn yDai from user
-        _saver.release(user, yDai);                            // Give dai to user, from Saver
-    }
-
-    /// @dev Redeem yDai assuming there are no savings
-    function redeemNoSavings(address user, uint256 yDai) internal {
-        _yDai.burn(user, yDai);                             // Burn yDai from user
-        _lender.borrow(user, yDai);                         // Borrow Dai from Lender to user
     }
 }

@@ -133,7 +133,7 @@ contract('Mint', async (accounts) =>  {
         );
     });
 
-    it("mintNoDebt: mints yDai in exchange for dai, chai goes to Saver", async() => {
+    it("mint without system debt: mints yDai in exchange for dai, dai goes to Saver", async() => {
         // Borrow dai
         await weth.approve(wethJoin.address, wethTokens, { from: owner });
         await wethJoin.join(owner, wethTokens, { from: owner });
@@ -190,7 +190,7 @@ contract('Mint', async (accounts) =>  {
         );
     });
 
-    it("redeemNoSavings: burns yDai to return dai, borrows dai from Lender", async() => {
+    it("redeem without system savings: burns yDai to return dai, borrows dai from Lender", async() => {
         // yDai matures
         await helper.advanceTime(1000);
         await helper.advanceBlock();
@@ -241,7 +241,7 @@ contract('Mint', async (accounts) =>  {
         );
     });
 
-    it("redeemSavings: burns yDai to return dai, pulls chai from Saver", async() => {
+    it("redeem with system savings: burns yDai to return dai, pulls dai from Saver", async() => {
         // yDai matures
         await helper.advanceTime(1000);
         await helper.advanceBlock();
@@ -301,7 +301,7 @@ contract('Mint', async (accounts) =>  {
         );
     });
 
-    it("mintDebt: mints yDai in exchange for dai, dai repays Lender debt", async() => {
+    it("mint with system debt: mints yDai in exchange for dai, dai repays Lender debt", async() => {
         // yDai matures
         await helper.advanceTime(1000);
         await helper.advanceBlock();
