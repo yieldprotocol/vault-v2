@@ -62,7 +62,7 @@ contract Mint is Constants {
             "Mint: yDai is not mature"
         );
         _yDai.burn(user, yDai);                       // Burn yDai from user
-        uint256 dai = yDai.muld(_yDai.rate(), RAY);
+        uint256 dai = yDai.muld(_yDai.chi(), RAY);    // User gets interest for holding after maturity
         // TODO: Take as much as possible from savings, and borrow the rest
         if (_saver.savings() < dai) {
             _lender.borrow(user, dai);               // Borrow Dai from Lender to user

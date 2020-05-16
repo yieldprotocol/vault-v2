@@ -42,14 +42,20 @@ contract('Mint', async (accounts) =>  {
     const supply = web3.utils.toWei("1000");
     const limits =  web3.utils.toBN('10000').mul(web3.utils.toBN('10').pow(RAD)).toString(); // 10000 * 10**45
 
-    const chi = "1100000000000000000000000000";
-    const originalRate  = "1200000000000000000000000000";       // 1.2
-    const rateIncrease  = "300000000000000000000000000";        // 0.3
-    const rateDifferential  = "12500000000000000000000000000";  // 1.25 = 1.5 / 1.2
+    const originalChi = "1200000000000000000000000000";        // 1.2
+    const finalChi  = "1500000000000000000000000000";          // 1.5
+    const chiDifferential  = "12500000000000000000000000000";  // 1.25 = 1.5 / 1.2
 
-    const wethTokens = web3.utils.toWei("110");
-    const daiTokens = web3.utils.toWei("110");
-    const chaiTokens = web3.utils.toWei("100");
+    const wethTokens = web3.utils.toWei("120");
+    const daiTokens = web3.utils.toWei("120");
+
+    const moreDai = web3.utils.toWei("150");    // 120 * 1.25 - More dai is returned as chi increases
+    const moreWeth = web3.utils.toWei("150");   // 120 * 1.25 - As chi increases, we need more collateral to borrow dai from vat
+    const moreSavings = web3.utils.toWei("187.5");   // 150 * 1.25 - As chi increases, the dai in Saver grows
+    const daiSurplus = web3.utils.toWei("30");  // moreDai - daiTokens
+    const savingsSurplus = web3.utils.toWei("37.5");  // moreSavings - moreDai
+
+    const chaiTokens = web3.utils.toWei("100"); // daiTokens / 1.2
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
@@ -72,8 +78,6 @@ contract('Mint', async (accounts) =>  {
         await vat.file(ilk, spot,    RAY, { from: owner });
         await vat.file(ilk, linel, limits, { from: owner });
         await vat.file(Line,       limits); // TODO: Why can't we specify `, { from: owner }`?
-        // Set rate to 1.5
-        // await vat.fold(ilk, vat.address, "500000000000000000000000000", { from: owner });
 
         // Setup pot
         pot = await Pot.new(vat.address);
@@ -124,8 +128,8 @@ contract('Mint', async (accounts) =>  {
         await vat.hope(daiJoin.address, { from: owner });
         await vat.hope(wethJoin.address, { from: owner });
 
-        // Set chi to 1.1
-        await pot.setChi(chi, { from: owner });
+        // Set chi
+        await pot.setChi(originalChi, { from: owner });
     });
 
     afterEach(async() => {
@@ -319,6 +323,74 @@ contract('Mint', async (accounts) =>  {
             (await chai.balanceOf(saver.address)),   
             0,
             "Saver should not have chai",
+        );
+    });
+
+    it("redeem with increased chi returns more dai", async() => {
+        // Owner is going to mint `moreDai` (150) yDai, but after the chi raises he is going to redeem `daiTokens` (120)
+        // As a result, after redeeming, owner will have `moreDai` (150) dai and another 30 yDai left
+        // Borrow dai
+        await weth.approve(wethJoin.address, moreWeth, { from: owner });
+        await wethJoin.join(owner, moreWeth, { from: owner });
+        await vat.frob(ilk, owner, owner, owner, moreWeth, moreDai, { from: owner });
+        await daiJoin.exit(owner, moreDai, { from: owner });
+        
+        // Mint yDai
+        await dai.approve(mint.address, moreDai, { from: owner });
+        await mint.mint(owner, moreDai, { from: owner });
+
+        // yDai matures
+        await helper.advanceTime(1000);
+        await helper.advanceBlock();
+        await yDai.mature();
+
+        // Chi increases
+        await pot.setChi(finalChi, { from: owner });
+        
+        assert(
+            await yDai.chi.call(),
+            chiDifferential,
+            "chi differential should be " + chiDifferential + ", instead is " + (await yDai.chi.call()),
+        );
+        assert.equal(
+            (await yDai.balanceOf(owner)),   
+            moreDai,
+            "Owner does not have yDai",
+        );
+        assert.equal(
+            (await saver.savings.call()),
+            moreSavings, // The increased chi affects the savings in Saver as well
+            "Saver should have " + moreSavings + " dai saved, instead has " + (await saver.savings.call()),
+        );
+        assert.equal(
+            (await dai.balanceOf(mint.address)),   
+            0,
+            "Mint has dai",
+        );
+
+        await yDai.approve(mint.address, daiTokens, { from: owner });
+        await mint.redeem(owner, daiTokens, { from: owner });
+
+        const obtainedDai = new BN(await dai.balanceOf(owner));
+        assert.equal(
+            obtainedDai,   
+            moreDai,
+            "Owner should have " + moreDai + ", instead has " + obtainedDai,
+        );
+        assert.equal(
+            (await yDai.balanceOf(owner)),   
+            daiSurplus,
+            "Owner should have " + daiSurplus + " dai surplus, instead has " + (await yDai.balanceOf(owner)),
+        );
+        assert.equal(
+            (await dai.balanceOf(mint.address)),   
+            0,
+            "Mint should have no dai",
+        );
+        assert.equal(
+            (await saver.savings.call()),   
+            savingsSurplus,
+            "Saver should have some savings",
         );
     });
 
