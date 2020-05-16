@@ -19,8 +19,9 @@ contract('yDai', async (accounts) =>  {
     const RAY  = "1000000000000000000000000000";
     const RAD = web3.utils.toBN('49')
     const limits =  web3.utils.toBN('10').pow(RAD).toString();
-    const finalChi  = "2000000000000000000000000000";           // 2.0
-    const chiIncrease  = "1000000000000000000000000000";        // 1.0
+    const originalChi  = "1300000000000000000000000000";        // 1.3
+    const finalChi  = "1820000000000000000000000000";           // 1.82
+    const chiDifferential  = "1400000000000000000000000000";    // 1.4 = 1.82 / 1.3
     const originalRate  = "1200000000000000000000000000";       // 1.2
     const rateIncrease  = "300000000000000000000000000";        // 0.3
     const rateDifferential  = "12500000000000000000000000000";  // 1.25 = 1.5 / 1.2
@@ -45,7 +46,8 @@ contract('yDai', async (accounts) =>  {
         // Setup pot
         pot = await Pot.new(vat.address);
         await vat.rely(pot.address, { from: owner });
-        // Do we need to set the dsr to something different than one?
+        // Set chi to 1.3
+        await pot.setChi(originalChi, { from: owner });
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
@@ -60,7 +62,7 @@ contract('yDai', async (accounts) =>  {
     it("should setup yDai", async() => {
         assert(
             await yDai.chi.call(),
-            RAY,
+            originalChi,
             "chi not initialized",
         );
         assert(
@@ -111,8 +113,8 @@ contract('yDai', async (accounts) =>  {
             await pot.setChi(finalChi, { from: owner });
             assert(
                 await yDai.chi.call(),
-                chiIncrease,
-                "Chi increase should be " + chiIncrease,
+                chiDifferential,
+                "Chi differential should be " + chiDifferential,
             );
         });
 
