@@ -31,10 +31,6 @@ contract('Mint', async (accounts) =>  {
     let daiJoin;
     let wethJoin;
     let mint;
-    const wethTokens = web3.utils.toWei("110");
-    const daiTokens = web3.utils.toWei("110");
-    const chaiTokens = web3.utils.toWei("100");
-    const chi = "1100000000000000000000000000";
 
     const ilk = web3.utils.fromAscii("ETH-A")
     const Line = web3.utils.fromAscii("Line")
@@ -45,6 +41,15 @@ contract('Mint', async (accounts) =>  {
     const RAD = web3.utils.toBN('45');
     const supply = web3.utils.toWei("1000");
     const limits =  web3.utils.toBN('10000').mul(web3.utils.toBN('10').pow(RAD)).toString(); // 10000 * 10**45
+
+    const chi = "1100000000000000000000000000";
+    const originalRate  = "1200000000000000000000000000";       // 1.2
+    const rateIncrease  = "300000000000000000000000000";        // 0.3
+    const rateDifferential  = "12500000000000000000000000000";  // 1.25 = 1.5 / 1.2
+
+    const wethTokens = web3.utils.toWei("110");
+    const daiTokens = web3.utils.toWei("110");
+    const chaiTokens = web3.utils.toWei("100");
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
@@ -67,6 +72,8 @@ contract('Mint', async (accounts) =>  {
         await vat.file(ilk, spot,    RAY, { from: owner });
         await vat.file(ilk, linel, limits, { from: owner });
         await vat.file(Line,       limits); // TODO: Why can't we specify `, { from: owner }`?
+        // Set rate to 1.5
+        // await vat.fold(ilk, vat.address, "500000000000000000000000000", { from: owner });
 
         // Setup pot
         pot = await Pot.new(vat.address);
@@ -133,6 +140,17 @@ contract('Mint', async (accounts) =>  {
         );
     });
 
+    it("yDai can't be minted after maturity", async() => {
+        await helper.advanceTime(1000);
+        await helper.advanceBlock();
+        await yDai.mature();
+        await truffleAssert.fails(
+            mint.mint(owner, daiTokens, { from: owner }),
+            truffleAssert.REVERT,
+            "Mint: yDai is mature",
+        );
+    });
+
     it("mint without system debt: mints yDai in exchange for dai, dai goes to Saver", async() => {
         // Borrow dai
         await weth.approve(wethJoin.address, wethTokens, { from: owner });
@@ -191,10 +209,6 @@ contract('Mint', async (accounts) =>  {
     });
 
     it("redeem without system savings: burns yDai to return dai, borrows dai from Lender", async() => {
-        // yDai matures
-        await helper.advanceTime(1000);
-        await helper.advanceBlock();
-        await yDai.mature();
         // Some other user posted collateral to MakerDAO through Lender
         await lender.grantAccess(user, { from: owner });
         await weth.mint(user, wethTokens, { from: user });
@@ -209,6 +223,11 @@ contract('Mint', async (accounts) =>  {
         // Mint some yDai the sneaky way
         await yDai.grantAccess(owner, { from: owner });
         await yDai.mint(owner, daiTokens, { from: owner });
+
+        // yDai matures
+        await helper.advanceTime(1000);
+        await helper.advanceBlock();
+        await yDai.mature();
 
         assert.equal(
             (await yDai.balanceOf(owner)),   
@@ -242,18 +261,20 @@ contract('Mint', async (accounts) =>  {
     });
 
     it("redeem with system savings: burns yDai to return dai, pulls dai from Saver", async() => {
-        // yDai matures
-        await helper.advanceTime(1000);
-        await helper.advanceBlock();
-        await yDai.mature();
         // Borrow dai
         await weth.approve(wethJoin.address, wethTokens, { from: owner });
         await wethJoin.join(owner, wethTokens, { from: owner });
         await vat.frob(ilk, owner, owner, owner, wethTokens, daiTokens, { from: owner });
         await daiJoin.exit(owner, daiTokens, { from: owner });
+        
         // Mint yDai
         await dai.approve(mint.address, daiTokens, { from: owner });
         await mint.mint(owner, daiTokens, { from: owner });
+        
+        // yDai matures
+        await helper.advanceTime(1000);
+        await helper.advanceBlock();
+        await yDai.mature();
 
         assert.equal(
             (await yDai.balanceOf(owner)),   
@@ -302,14 +323,6 @@ contract('Mint', async (accounts) =>  {
     });
 
     it("mint with system debt: mints yDai in exchange for dai, dai repays Lender debt", async() => {
-        // yDai matures
-        await helper.advanceTime(1000);
-        await helper.advanceBlock();
-        await yDai.mature();
-        // Mint some yDai the sneaky way
-        await yDai.grantAccess(owner, { from: owner });
-        await yDai.mint(owner, daiTokens, { from: owner });
-
         // Some other user posted collateral to MakerDAO through Lender, so that Lender can borrow dai
         await lender.grantAccess(user, { from: owner });
         await weth.mint(user, wethTokens, { from: user });
@@ -320,14 +333,18 @@ contract('Mint', async (accounts) =>  {
             ink,   
             wethTokens,
         );
-
-        // Someone redeems yDai, using up the collateral and causing Lender debt
-        await yDai.approve(mint.address, daiTokens, { from: owner });
-        await mint.redeem(owner, daiTokens, { from: owner });
+        // Lender incurs debt
+        await lender.borrow(user, daiTokens, { from: user });
         assert.equal(
             (await lender.debt()),
             daiTokens,
         );
+
+        // Owner borrows dai from MakerDAO
+        await weth.approve(wethJoin.address, wethTokens, { from: owner });
+        await wethJoin.join(owner, wethTokens, { from: owner });
+        await vat.frob(ilk, owner, owner, owner, wethTokens, daiTokens, { from: owner });
+        await daiJoin.exit(owner, daiTokens, { from: owner });
 
         assert.equal(
             (await dai.balanceOf(owner)),   

@@ -35,6 +35,10 @@ contract Mint is Constants {
     // user --- Dai  ---> us
     // us   --- yDai ---> user
     function mint(address user, uint256 dai) public {
+        require(
+            !_yDai.isMature(),
+            "Mint: yDai is mature"
+        );
         _dai.transferFrom(user, address(this), dai); // Get the dai from user
         // TODO: Pay as much debt as possible, and save the rest
         if (_lender.debt() < dai) {
@@ -52,12 +56,13 @@ contract Mint is Constants {
     /// If the Saver has savings they are used to deliver the dai to the user, otherwise dai is borrowed from MakerDao
     // user --- yDai ---> us
     // us   --- Dai  ---> user
-    function redeem(address user, uint256 dai) public {
+    function redeem(address user, uint256 yDai) public {
         require(
             _yDai.isMature(),
             "Mint: yDai is not mature"
         );
-        _yDai.burn(user, dai);                       // Burn yDai from user
+        _yDai.burn(user, yDai);                       // Burn yDai from user
+        uint256 dai = yDai.muld(_yDai.rate(), RAY);
         // TODO: Take as much as possible from savings, and borrow the rest
         if (_saver.savings() < dai) {
             _lender.borrow(user, dai);               // Borrow Dai from Lender to user

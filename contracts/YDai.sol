@@ -35,8 +35,8 @@ contract YDai is AuthorizedAccess, ERC20, Constants, IYDai  {
         _vat = IVat(vat_);
         _pot = IPot(pot_);
         _maturity = maturity_;
-        _chi = RAY.unit();
-        _rate = RAY.unit();
+        _chi = RAY.unit(); // TODO: Pull this from Pot
+        _rate = RAY.unit(); // TODO: Pull this from Vat
     }
 
     /// @dev Whether the yDai has matured or not
