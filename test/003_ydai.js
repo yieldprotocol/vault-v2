@@ -19,6 +19,11 @@ contract('yDai', async (accounts) =>  {
     const RAY  = "1000000000000000000000000000";
     const RAD = web3.utils.toBN('49')
     const limits =  web3.utils.toBN('10').pow(RAD).toString();
+    const finalChi  = "2000000000000000000000000000";           // 2.0
+    const chiIncrease  = "1000000000000000000000000000";        // 1.0
+    const originalRate  = "1200000000000000000000000000";       // 1.2
+    const rateIncrease  = "300000000000000000000000000";        // 0.3
+    const rateDifferential  = "12500000000000000000000000000";  // 1.25 = 1.5 / 1.2
     // console.log(limits);
 
 
@@ -34,6 +39,8 @@ contract('yDai', async (accounts) =>  {
         await vat.file(ilk, linel, limits, { from: owner });
         await vat.file(Line,       limits); // TODO: Why can't we specify `, { from: owner }`?
         await vat.rely(vat.address, { from: owner });
+        // Set rate to 1.2
+        await vat.fold(ilk, vat.address, "200000000000000000000000000", { from: owner });
 
         // Setup pot
         pot = await Pot.new(vat.address);
@@ -52,15 +59,18 @@ contract('yDai', async (accounts) =>  {
 
     it("should setup yDai", async() => {
         assert(
-            (await yDai.chi()) == RAY,
+            await yDai.chi(),
+            RAY,
             "chi not initialized",
         );
         assert(
-            (await yDai.rate()) == RAY,
+            await yDai.rate(),
+            originalRate,
             "rate not initialized",
         );
         assert(
-            (await yDai.maturity()) == maturity,
+            await yDai.maturity(),
+            maturity,
             "maturity not initialized",
         );
     });
@@ -94,17 +104,26 @@ contract('yDai', async (accounts) =>  {
         beforeEach(async() => {
             await helper.advanceTime(1000);
             await helper.advanceBlock();
+        });
+
+        it("yDai chi gets fixed at maturity time", async() => {
             await yDai.mature();
+            await pot.setChi(finalChi, { from: owner });
+            assert(
+                await yDai.chi(),
+                chiIncrease,
+                "Chi increase should be " + chiIncrease,
+            );
         });
 
-        // TODO: Test with a moving chi
-        it("chi gets fixed to maturity time", async() => {
-            assert((await yDai.chi()) == RAY);
-        });
-
-        // TODO: Test with a moving rate
-        it("rate gets fixed to maturity time", async() => {
-            assert((await yDai.rate()) == RAY);
+        it("yDai rate gets fixed at maturity time", async() => {
+            await yDai.mature();
+            await vat.fold(ilk, vat.address, rateIncrease, { from: owner });
+            assert(
+                await yDai.rate(),
+                rateDifferential,
+                "Rate differential should be " + rateDifferential,
+            );
         });
     });
 });
