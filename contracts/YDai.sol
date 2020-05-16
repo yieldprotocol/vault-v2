@@ -36,7 +36,7 @@ contract YDai is AuthorizedAccess, ERC20, Constants, IYDai  {
         _pot = IPot(pot_);
         _maturity = maturity_;
         _chi = (now > _pot.rho()) ? _pot.drip() : _pot.chi();
-        (, _rate,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO Vat
+        (, _rate,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO Stability fee
         _rate = Math.max(_rate, RAY.unit()); // Floor it at 1.0
     }
 

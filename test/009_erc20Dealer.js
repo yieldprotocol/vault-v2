@@ -184,7 +184,7 @@ contract('ERC20Dealer', async (accounts) =>  {
                 await dealer.borrow(owner, daiTokens, { from: owner });
             });
 
-            it("as rate increases, so does the debt", async() => {
+            it("as rate increases after maturity, so does the debt", async() => {
                 assert.equal(
                     (await dealer.debtOf.call(owner)),   
                     daiTokens,
