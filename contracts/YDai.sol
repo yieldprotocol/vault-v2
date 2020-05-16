@@ -18,7 +18,7 @@ contract YDai is AuthorizedAccess, ERC20, Constants, IYDai  {
     event Matured(uint256 rate, uint256 chi);
 
     IVat internal _vat;
-    IPot internal _pot; // Can we get this from Chai.sol?
+    IPot internal _pot;
 
     bool internal _isMature;
     uint256 internal _maturity;
