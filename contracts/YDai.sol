@@ -35,8 +35,9 @@ contract YDai is AuthorizedAccess, ERC20, Constants, IYDai  {
         _vat = IVat(vat_);
         _pot = IPot(pot_);
         _maturity = maturity_;
-        _chi = RAY.unit(); // TODO: Pull this from Pot
-        _rate = RAY.unit(); // TODO: Pull this from Vat
+        _chi = (now > _pot.rho()) ? _pot.drip() : _pot.chi();
+        (, _rate,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO Vat
+        _rate = Math.max(_rate, RAY.unit()); // Floor it at 1.0
     }
 
     /// @dev Whether the yDai has matured or not
@@ -50,8 +51,14 @@ contract YDai is AuthorizedAccess, ERC20, Constants, IYDai  {
     }
 
     /// @dev accumulator (for dsr) at maturity in RAY units
-    function chi() public view override returns(uint256){
-        return _chi;
+    //
+    //  chi_now
+    // ----------
+    //  chi_mat
+    //
+    function chi() public override returns(uint256){
+        uint256 chiNow = (now > _pot.rho()) ? _pot.drip() : _pot.chi();
+        return chiNow.divd(_chi, RAY);
     }
 
     /// @dev accumulator differential for stability fee in RAY units. Returns current rate if not mature.
@@ -72,7 +79,7 @@ contract YDai is AuthorizedAccess, ERC20, Constants, IYDai  {
             now > _maturity,
             "YDai: Too early to mature"
         );
-        (, _rate,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO DSR
+        (, _rate,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO Vat
         _rate = Math.max(_rate, RAY.unit()); // Floor it at 1.0
         _chi = (now > _pot.rho()) ? _pot.drip() : _pot.chi();
         _isMature = true;

@@ -59,7 +59,7 @@ contract('yDai', async (accounts) =>  {
 
     it("should setup yDai", async() => {
         assert(
-            await yDai.chi(),
+            await yDai.chi.call(),
             RAY,
             "chi not initialized",
         );
@@ -110,7 +110,7 @@ contract('yDai', async (accounts) =>  {
             await yDai.mature();
             await pot.setChi(finalChi, { from: owner });
             assert(
-                await yDai.chi(),
+                await yDai.chi.call(),
                 chiIncrease,
                 "Chi increase should be " + chiIncrease,
             );
