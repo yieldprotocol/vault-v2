@@ -208,6 +208,37 @@ contract('ERC20Dealer', async (accounts) =>  {
                 );
             });
 
+            it("when dai is provided in excess fo repayment, only the necessary amount is taken", async() => {
+                // Mint some yDai the sneaky way
+                await yDai.grantAccess(owner, { from: owner });
+                await yDai.mint(owner, remainingDebt, { from: owner }); // 25 extra yDai
+
+                assert.equal(
+                    (await yDai.balanceOf(owner)),   
+                    holdingDebt, // Total 125 dai
+                    "Owner does not have yDai",
+                );
+                assert.equal(
+                    (await dealer.debtOf.call(owner)),   
+                    daiTokens, // 100 dai
+                    "Owner does not have debt",
+                );
+
+                await yDai.approve(dealer.address, holdingDebt, { from: owner });
+                await dealer.repay(owner, holdingDebt, { from: owner });
+    
+                assert.equal(
+                    (await yDai.balanceOf(owner)),   
+                    remainingDebt,
+                    "Owner should have yDai left",
+                );
+                assert.equal(
+                    (await dealer.debtOf.call(owner)),   
+                    0,
+                    "Owner should not have debt",
+                );
+            });
+
             it("more yDai is required to repay after maturity as rate increases", async() => {
                 assert.equal(
                     (await yDai.balanceOf(owner)),   

@@ -2,6 +2,7 @@ pragma solidity ^0.6.2;
 
 import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IOracle.sol";
@@ -115,10 +116,10 @@ contract ERC20Dealer is Ownable, Constants {
     // user --- Dai ---> us
     // debt--
     function repay(address from, uint256 yDai) public {
-        // uint256 toRepay = Math.min(yDai, debtOf(from));
+        uint256 toRepay = Math.min(yDai, debtOf(from));
         uint256 debtProportion = _debt[from].mul(RAY.unit())
             .divd(debtOf(from).mul(RAY.unit()), RAY);
-        _yDai.burn(from, yDai);
-        _debt[from] = _debt[from].sub(yDai.muld(debtProportion, RAY)); // Will revert if not enough debt
+        _yDai.burn(from, toRepay);
+        _debt[from] = _debt[from].sub(toRepay.muld(debtProportion, RAY)); // Will revert if not enough debt
     }
 }
