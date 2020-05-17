@@ -108,15 +108,15 @@ contract ERC20Dealer is Ownable, Constants {
     }
 
     /// @dev Burns yDai from `from` address, user debt is decreased.
-    //                                                  debt_maturity
+    //                                                  debt_noḿinal
     // debt_discounted = debt_nominal - repay_amount * ---------------
-    //                                                  debt_nominal
+    //                                                  debt_now
     //
     // user --- Dai ---> us
     // debt--
     function repay(address from, uint256 yDai) public {
         // uint256 toRepay = Math.min(yDai, debtOf(from))
-        uint256 debtProportion = debtOf(from).mul(RAY.unit())
+        uint256 debtProportion = _debt[from].mul(RAY.unit())
             .divd(debtOf(from).mul(RAY.unit()), RAY);
         _yDai.burn(from, yDai);
         _debt[from] = _debt[from].sub(yDai.muld(debtProportion, RAY)); // Will revert if not enough debt
