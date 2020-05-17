@@ -48,20 +48,6 @@ contract ERC20Dealer is Ownable, Constants {
         return posted[user].divd(_tokenOracle.price(), RAY);
     }
 
-    /// @dev Collateral not in use for debt
-    //
-    //                       debtOf(user)(wad)
-    // posted[user](wad) - -----------------------
-    //                       oracle.price()(ray)
-    //
-    function unlockedOf(address user) public returns (uint256) {
-        // collateral = dai * price
-        uint256 locked = debtOf(user)
-            .muld(_tokenOracle.price(), RAY);
-        if (locked > posted[user]) return 0; // Unlikely
-        return posted[user].sub(locked);
-    }
-
     /// @dev Return debt in underlying of an user
     //
     //                        rate_now
@@ -90,8 +76,8 @@ contract ERC20Dealer is Ownable, Constants {
     /// @dev Returns collateral to `to` address
     // us --- Token ---> to
     function withdraw(address to, uint256 token) public virtual {
-        require(
-            unlockedOf(to) >= token,
+        require( // (power - debt) / price
+            (powerOf(to) - debtOf(to)).muld(_tokenOracle.price(), RAY) >= token, // TODO: SafeMath
             "ERC20Dealer: Free more collateral"
         );
         posted[to] = posted[to].sub(token); // Will revert if not enough posted
