@@ -176,7 +176,7 @@ contract('ERC20Dealer', async (accounts) =>  {
         describe("with borrowed yDai", () => {
             beforeEach(async() => {
                 await dealer.borrow(owner, daiTokens, { from: owner });
-            }); // Do not put a test in the line below until fix/power-repay merged
+            });
 
             it("allows to repay yDai", async() => {
                 assert.equal(
