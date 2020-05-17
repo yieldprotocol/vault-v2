@@ -115,7 +115,7 @@ contract ERC20Dealer is Ownable, Constants {
     // user --- Dai ---> us
     // debt--
     function repay(address from, uint256 yDai) public {
-        // uint256 toRepay = Math.min(yDai, debtOf(from))
+        // uint256 toRepay = Math.min(yDai, debtOf(from));
         uint256 debtProportion = _debt[from].mul(RAY.unit())
             .divd(debtOf(from).mul(RAY.unit()), RAY);
         _yDai.burn(from, yDai);

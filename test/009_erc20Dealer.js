@@ -32,6 +32,7 @@ contract('ERC20Dealer', async (accounts) =>  {
     // console.log(limits);
 
     const rateIncrease  = "250000000000000000000000000";
+    const holdingDebt = web3.utils.toWei("125"); //  daiTokens * rate
     const remainingDebt = web3.utils.toWei("25"); //  (daiTokens - (daiTokens / rate)) * rate
 
     beforeEach(async() => {
@@ -229,7 +230,7 @@ contract('ERC20Dealer', async (accounts) =>  {
 
                 assert.equal(
                     (await dealer.debtOf.call(owner)),   
-                    web3.utils.toWei("125"),
+                    holdingDebt,
                     "Owner does not have increased debt",
                 );
 
@@ -245,6 +246,51 @@ contract('ERC20Dealer', async (accounts) =>  {
                     (await dealer.debtOf.call(owner)),   
                     remainingDebt,
                     "Owner should have " + remainingDebt + " dai debt, instead has " + (await dealer.debtOf.call(owner)),
+                );
+            });
+
+            it("all debt can be repaid after maturity", async() => {
+                // Mint some yDai the sneaky way
+                await yDai.grantAccess(owner, { from: owner });
+                await yDai.mint(owner, remainingDebt, { from: owner });
+
+                assert.equal(
+                    (await yDai.balanceOf(owner)),   
+                    holdingDebt,
+                    "Owner does not have yDai",
+                );
+                assert.equal(
+                    (await dealer.debtOf.call(owner)),   
+                    daiTokens,
+                    "Owner does not have debt",
+                );
+
+                // yDai matures
+                await helper.advanceTime(1000);
+                await helper.advanceBlock();
+                await yDai.mature();
+
+                // Rate increase
+                await vat.fold(ilk, vat.address, rateIncrease, { from: owner }); // 1 + 0.25
+
+                assert.equal(
+                    (await dealer.debtOf.call(owner)),   
+                    holdingDebt,
+                    "Owner does not have increased debt",
+                );
+
+                await yDai.approve(dealer.address, holdingDebt, { from: owner });
+                await dealer.repay(owner, holdingDebt, { from: owner });
+    
+                assert.equal(
+                    (await yDai.balanceOf(owner)),   
+                    0,
+                    "Owner should not have yDai",
+                );
+                assert.equal(
+                    (await dealer.debtOf.call(owner)),   
+                    0,
+                    "Owner should have no remaining debt",
                 );
             });
         });
