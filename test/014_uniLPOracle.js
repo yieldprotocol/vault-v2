@@ -122,9 +122,9 @@ contract('UniLPOracle', async (accounts) =>  {
                 "ERC20Dealer has collateral",
             );
             assert.equal(
-                (await uniLPDealer.unlockedOf.call(owner)),   
+                (await uniLPDealer.powerOf.call(owner)),   
                 0,
-                "Owner has unlocked collateral",
+                "Owner has borrowing power",
             );
             
             await uniLPToken.mint(owner, uniLPTokens, { from: owner });
@@ -137,9 +137,9 @@ contract('UniLPOracle', async (accounts) =>  {
                 "ERC20Dealer should have collateral",
             );
             assert.equal(
-                (await uniLPDealer.unlockedOf.call(owner)),   
-                uniLPTokens,
-                "Owner should have unlocked collateral",
+                (await uniLPDealer.powerOf.call(owner)),   
+                daiTokens,
+                "Owner should have borrowing power",
             );
         });
 
@@ -157,9 +157,9 @@ contract('UniLPOracle', async (accounts) =>  {
                     "ERC20Dealer does not have collateral",
                 );
                 assert.equal(
-                    (await uniLPDealer.unlockedOf.call(owner)),   
-                    uniLPTokens,
-                    "Owner does not have unlocked collateral",
+                    (await uniLPDealer.powerOf.call(owner)),   
+                    daiTokens,
+                    "Owner does not have borrowing power",
                 );
                 assert.equal(
                     (await uniLPToken.balanceOf(owner)),   
@@ -180,17 +180,17 @@ contract('UniLPOracle', async (accounts) =>  {
                     "ERC20Dealer should not have collateral",
                 );
                 assert.equal(
-                    (await uniLPDealer.unlockedOf.call(owner)),   
+                    (await uniLPDealer.powerOf.call(owner)),   
                     0,
-                    "Owner should not have unlocked collateral",
+                    "Owner should not have borrowing power",
                 );
             });
 
             it("allows to borrow yDai", async() => {
                 assert.equal(
-                    (await uniLPDealer.unlockedOf.call(owner)),   
-                    uniLPTokens,
-                    "Owner does not have unlocked collateral",
+                    (await uniLPDealer.powerOf.call(owner)),   
+                    daiTokens,
+                    "Owner does not have borrowing power",
                 );
                 assert.equal(
                     (await yDai.balanceOf(owner)),   
@@ -214,11 +214,6 @@ contract('UniLPOracle', async (accounts) =>  {
                     (await uniLPDealer.debtOf.call(owner)),   
                     daiTokens,
                     "Owner should have debt",
-                );
-                assert.equal(
-                    (await uniLPDealer.unlockedOf.call(owner)),   
-                    0,
-                    "Owner should not have unlocked collateral",
                 );
             });
 
@@ -245,20 +240,10 @@ contract('UniLPOracle', async (accounts) =>  {
                         daiTokens,
                         "Owner does not have debt",
                     );
-                    assert.equal(
-                        (await uniLPDealer.unlockedOf.call(owner)),   
-                        0,
-                        "Owner has unlocked collateral",
-                    );
 
                     await yDai.approve(uniLPDealer.address, daiTokens, { from: owner });
                     await uniLPDealer.repay(owner, daiTokens, { from: owner });
         
-                    assert.equal(
-                        (await uniLPDealer.unlockedOf.call(owner)),   
-                        uniLPTokens,
-                        "Owner should have unlocked collateral",
-                    );
                     assert.equal(
                         (await yDai.balanceOf(owner)),   
                         0,

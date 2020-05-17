@@ -117,9 +117,9 @@ contract('ChaiDealer', async (accounts) =>  {
             "Saver has chai",
         );
         assert.equal(
-            (await chaiDealer.unlockedOf.call(owner)),   
+            (await chaiDealer.powerOf.call(owner)),   
             0,
-            "Owner has unlocked collateral",
+            "Owner has borrowing power",
         );
         
         await chai.approve(chaiDealer.address, chaiTokens, { from: owner }); 
@@ -136,9 +136,9 @@ contract('ChaiDealer', async (accounts) =>  {
             "Owner should not have chai",
         );
         assert.equal(
-            (await chaiDealer.unlockedOf.call(owner)),   
-            chaiTokens,
-            "Owner should have unlocked collateral",
+            (await chaiDealer.powerOf.call(owner)),   
+            daiTokens,
+            "Owner should have borrowing power",
         );
     });
 
@@ -160,9 +160,9 @@ contract('ChaiDealer', async (accounts) =>  {
                 "Owner has chai",
             );
             assert.equal(
-                (await chaiDealer.unlockedOf.call(owner)),   
-                chaiTokens,
-                "Owner does not have unlocked collateral",
+                (await chaiDealer.powerOf.call(owner)),   
+                daiTokens,
+                "Owner does not have borrowing power",
             );
 
             await chaiDealer.withdraw(owner, chaiTokens, { from: owner }); // Withdraw transfers chai
@@ -178,17 +178,17 @@ contract('ChaiDealer', async (accounts) =>  {
                 "Saver should not have chai",
             );
             assert.equal(
-                (await chaiDealer.unlockedOf.call(owner)),   
+                (await chaiDealer.powerOf.call(owner)),   
                 0,
-                "Owner should have unlocked collateral",
+                "Owner should not have borrowing power",
             );
         });
 
         it("allows to borrow yDai", async() => {
             assert.equal(
-                (await chaiDealer.unlockedOf.call(owner)),   
-                chaiTokens,
-                "Owner does not have unlocked collateral",
+                (await chaiDealer.powerOf.call(owner)),   
+                daiTokens,
+                "Owner does not have borrowing power",
             );
             assert.equal(
                 (await yDai.balanceOf(owner)),   
@@ -213,11 +213,6 @@ contract('ChaiDealer', async (accounts) =>  {
                 daiTokens, // Debt is in dai always
                 "Owner should have debt",
             );
-            assert.equal(
-                (await chaiDealer.unlockedOf.call(owner)),   
-                0,
-                "Owner should not have unlocked collateral",
-            );
         });
 
         describe("with borrowed yDai", () => {
@@ -236,20 +231,10 @@ contract('ChaiDealer', async (accounts) =>  {
                     daiTokens,
                     "Owner does not have debt",
                 );
-                assert.equal(
-                    (await chaiDealer.unlockedOf.call(owner)),   
-                    0,
-                    "Owner has unlocked collateral",
-                );
 
                 await yDai.approve(chaiDealer.address, daiTokens, { from: owner });
                 await chaiDealer.repay(owner, daiTokens, { from: owner }); // Repay is in yDai
     
-                assert.equal(
-                    (await chaiDealer.unlockedOf.call(owner)),   
-                    chaiTokens,
-                    "Owner should have unlocked collateral",
-                );
                 assert.equal(
                     (await yDai.balanceOf(owner)),   
                     0,

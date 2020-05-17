@@ -37,6 +37,17 @@ contract ERC20Dealer is Ownable, Constants {
         return posted[user];
     }
 
+    /// @dev Maximum borrowing power of an user in dai
+    //
+    //                        posted[user](wad)
+    // powerOf[user](wad) = ---------------------
+    //                       oracle.price()(ray)
+    //
+    function powerOf(address user) public returns (uint256) {
+        // collateral = dai * price
+        return posted[user].divd(_tokenOracle.price(), RAY);
+    }
+
     /// @dev Collateral not in use for debt
     //
     //                       debtOf(user)(wad)
