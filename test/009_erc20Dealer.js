@@ -27,6 +27,7 @@ contract('ERC20Dealer', async (accounts) =>  {
     const RAD = web3.utils.toBN('49')
     const price  = "1100000000000000000000000000";
     const daiTokens = web3.utils.toWei("100");
+    const increasedDebt = web3.utils.toWei("150"); // 100 dai * 1.5 rate
     const erc20Tokens = web3.utils.toWei("110");
     const limits =  web3.utils.toBN('10').pow(RAD).toString();
     // console.log(limits);
@@ -181,6 +182,27 @@ contract('ERC20Dealer', async (accounts) =>  {
         describe("with borrowed yDai", () => {
             beforeEach(async() => {
                 await dealer.borrow(owner, daiTokens, { from: owner });
+            });
+
+            it("as rate increases after maturity, so does the debt", async() => {
+                assert.equal(
+                    (await dealer.debtOf.call(owner)),   
+                    daiTokens,
+                    "Owner should have " + daiTokens + " debt",
+                );
+                // yDai matures
+                await helper.advanceTime(1000);
+                await helper.advanceBlock();
+                await yDai.mature();
+
+                // Set rate to 1.5
+                await vat.fold(ilk, vat.address, "500000000000000000000000000", { from: owner });
+                
+                assert.equal(
+                    (await dealer.debtOf.call(owner)),   
+                    increasedDebt,
+                    "Owner should have " + increasedDebt + " debt after the rate change, instead has " + BN((await dealer.debtOf.call(owner))),
+                );
             });
 
             it("allows to repay yDai", async() => {
