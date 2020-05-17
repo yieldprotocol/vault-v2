@@ -19,7 +19,7 @@ contract ERC20Dealer is Ownable, Constants {
     IERC20 internal _token;
     IOracle internal _tokenOracle; // The oracle should return the price adjusted by collateralization
 
-    mapping(address => uint256) public posted; // In Erc20
+    mapping(address => uint256) internal posted; // In Erc20
     mapping(address => uint256) internal debt;   // In Dai/yDai
 
     constructor (
@@ -30,6 +30,11 @@ contract ERC20Dealer is Ownable, Constants {
         _yDai = IYDai(yDai_);
         _token = IERC20(token_);
         _tokenOracle = IOracle(tokenOracle_);
+    }
+
+    /// @dev Posted collateral
+    function postedOf(address user) public returns (uint256) {
+        return posted[user];
     }
 
     /// @dev Collateral not in use for debt
