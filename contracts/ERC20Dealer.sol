@@ -77,8 +77,12 @@ contract ERC20Dealer is Ownable, Constants {
     /// @dev Returns collateral to `to` address
     // us --- Token ---> to
     function withdraw(address to, uint256 token) public virtual {
-        require( // (power - debt) / price
-            (powerOf(to) - debtOf(to)).muld(_tokenOracle.price(), RAY) >= token, // TODO: SafeMath
+        require(
+            powerOf(to) >= debtOf(to),
+            "ERC20Dealer: Undercollateralized"
+        );
+        require( // (power - debt) * price
+            (powerOf(to) - debtOf(to)).muld(_tokenOracle.price(), RAY) >= token, // SafeMath not needed
             "ERC20Dealer: Free more collateral"
         );
         _posted[to] = _posted[to].sub(token); // Will revert if not enough posted

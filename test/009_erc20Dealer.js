@@ -7,6 +7,7 @@ const Vat = artifacts.require('Vat');
 const helper = require('ganache-time-traveler');
 const truffleAssert = require('truffle-assertions');
 const { BN } = require('@openzeppelin/test-helpers');
+const { expectRevert } = require('@openzeppelin/test-helpers');
 
 contract('ERC20Dealer', async (accounts) =>  {
     let [ owner, user ] = accounts;
@@ -32,7 +33,7 @@ contract('ERC20Dealer', async (accounts) =>  {
     // console.log(limits);
 
     const rateIncrease  = "250000000000000000000000000";
-    const holdingDebt = web3.utils.toWei("125"); //  daiTokens * rate
+    const moreDai = web3.utils.toWei("125"); //  daiTokens * rate
     const remainingDebt = web3.utils.toWei("25"); //  (daiTokens - (daiTokens / rate)) * rate
 
     beforeEach(async() => {
@@ -176,9 +177,65 @@ contract('ERC20Dealer', async (accounts) =>  {
             );
         });
 
+        it("doesn't allow to borrow yDai beyond borrowing power", async() => {
+            assert.equal(
+                (await dealer.powerOf.call(owner)),   
+                daiTokens,
+                "Owner does not have borrowing power",
+            );
+            assert.equal(
+                (await dealer.debtOf.call(owner)),   
+                0,
+                "Owner has debt",
+            );
+    
+            await expectRevert(
+                dealer.borrow(owner, moreDai, { from: owner }),
+                "ERC20Dealer: Post more collateral",
+            );
+        });
+
         describe("with borrowed yDai", () => {
             beforeEach(async() => {
                 await dealer.borrow(owner, daiTokens, { from: owner });
+            });
+
+            it("doesn't allow to withdraw if undercollateralized", async() => {
+                assert.equal(
+                    (await dealer.powerOf.call(owner)),   
+                    daiTokens,
+                    "Owner does not have borrowing power",
+                );
+                assert.equal(
+                    (await dealer.debtOf.call(owner)),   
+                    daiTokens,
+                    "Owner does not have debt",
+                );
+
+                await oracle.setPrice("1200000000000000000000000000"); // Increase price to 1.2
+        
+                await expectRevert(
+                    dealer.withdraw(owner, erc20Tokens, { from: owner }),
+                    "ERC20Dealer: Undercollateralized",
+                );
+            });
+
+            it("doesn't allow to withdraw and become undercollateralized", async() => {
+                assert.equal(
+                    (await dealer.powerOf.call(owner)),   
+                    daiTokens,
+                    "Owner does not have borrowing power",
+                );
+                assert.equal(
+                    (await dealer.debtOf.call(owner)),   
+                    daiTokens,
+                    "Owner does not have debt",
+                );
+
+                await expectRevert(
+                    dealer.borrow(owner, erc20Tokens, { from: owner }),
+                    "ERC20Dealer: Post more collateral",
+                );
             });
 
             it("allows to repay yDai", async() => {
@@ -215,7 +272,7 @@ contract('ERC20Dealer', async (accounts) =>  {
 
                 assert.equal(
                     (await yDai.balanceOf(owner)),   
-                    holdingDebt, // Total 125 dai
+                    moreDai, // Total 125 dai
                     "Owner does not have yDai",
                 );
                 assert.equal(
@@ -224,8 +281,8 @@ contract('ERC20Dealer', async (accounts) =>  {
                     "Owner does not have debt",
                 );
 
-                await yDai.approve(dealer.address, holdingDebt, { from: owner });
-                await dealer.repay(owner, holdingDebt, { from: owner });
+                await yDai.approve(dealer.address, moreDai, { from: owner });
+                await dealer.repay(owner, moreDai, { from: owner });
     
                 assert.equal(
                     (await yDai.balanceOf(owner)),   
@@ -261,7 +318,7 @@ contract('ERC20Dealer', async (accounts) =>  {
 
                 assert.equal(
                     (await dealer.debtOf.call(owner)),   
-                    holdingDebt,
+                    moreDai,
                     "Owner does not have increased debt",
                 );
 
@@ -287,7 +344,7 @@ contract('ERC20Dealer', async (accounts) =>  {
 
                 assert.equal(
                     (await yDai.balanceOf(owner)),   
-                    holdingDebt,
+                    moreDai,
                     "Owner does not have yDai",
                 );
                 assert.equal(
@@ -306,12 +363,12 @@ contract('ERC20Dealer', async (accounts) =>  {
 
                 assert.equal(
                     (await dealer.debtOf.call(owner)),   
-                    holdingDebt,
+                    moreDai,
                     "Owner does not have increased debt",
                 );
 
-                await yDai.approve(dealer.address, holdingDebt, { from: owner });
-                await dealer.repay(owner, holdingDebt, { from: owner });
+                await yDai.approve(dealer.address, moreDai, { from: owner });
+                await dealer.repay(owner, moreDai, { from: owner });
     
                 assert.equal(
                     (await yDai.balanceOf(owner)),   
