@@ -13,6 +13,7 @@ import "./interfaces/IChai.sol";
 import "./interfaces/ILender.sol";
 import "./interfaces/ISaver.sol";
 import "./Constants.sol";
+import "@nomiclabs/buidler/console.sol";
 
 
 /// @dev Treasury manages the Dai, interacting with MakerDAO's vat when needed.
@@ -72,6 +73,24 @@ contract Treasury is ILender, ISaver, AuthorizedAccess(), Constants() {
     /// @dev Returns the amount of Dai in this contract.
     function savings() public override returns(uint256){
         return _chai.dai(address(this));
+    }
+
+    /// @dev Takes dai and pays system debt as much as possible, saving the rest as chai.
+    function push(address user, uint256 dai) public override onlyAuthorized("Treasury: Not Authorized") {
+        uint256 toRepay = Math.min(debt(), dai);
+        repay(user, toRepay);                   // Lender takes dai from Mint to repay debt
+
+        uint256 toSave = dai - toRepay;         // toRepay can't be greater than dai
+        hold(user, toSave);                     // Send dai to Saver
+    }
+
+    /// @dev Returns dai using chai savings as much as possible, and borrowing the rest.
+    function pull(address user, uint256 dai) public override onlyAuthorized("Treasury: Not Authorized") {
+        uint256 toRelease = Math.min(savings(), dai);
+        release(user, toRelease);              // Give dai to user from savings
+
+        uint256 toBorrow = dai - toRelease;    // toRelease can't be greater than dai
+        borrow(user, toBorrow);                // Borrow Dai from MakerDAO for user
     }
 
     // Anyone can send chai to saver, no way of stopping it

@@ -126,6 +126,44 @@ contract('Treasury', async (accounts) =>  {
         );
     });
 
+    it("pushes dai to become savings", async() => {
+        assert.equal(
+            (await chai.balanceOf(treasury.address)),   
+            0,
+            "Treasury has chai",
+        );
+        assert.equal(
+            (await treasury.savings.call()),   
+            0,
+            "Treasury has savings in dai units"
+        );
+        assert.equal(
+            (await dai.balanceOf(owner)),   
+            daiTokens,
+            "User does not have dai",
+        );
+        
+        await dai.approve(treasury.address, daiTokens, { from: owner }); 
+        await treasury.push(owner, daiTokens, { from: owner });
+
+        // Test transfer of collateral
+        assert.equal(
+            (await chai.balanceOf(treasury.address)),   
+            chaiTokens,
+            "Treasury should have chai"
+        );
+        assert.equal(
+            (await treasury.savings.call()),   
+            daiTokens,
+            "Treasury should report savings in dai units"
+        );
+        assert.equal(
+            (await dai.balanceOf(owner)),   
+            0,
+            "User should not have dai",
+        );
+    });
+
     describe("with savings", () => {
         beforeEach(async() => {
             await dai.approve(treasury.address, daiTokens, { from: owner }); 
@@ -150,6 +188,42 @@ contract('Treasury', async (accounts) =>  {
             );
             
             await treasury.release(owner, daiTokens, { from: owner });
+
+            assert.equal(
+                (await chai.balanceOf(treasury.address)),   
+                0,
+                "Treasury should not have chai",
+            );
+            assert.equal(
+                (await treasury.savings.call()),   
+                0,
+                "Treasury should not have savings in dai units"
+            );
+            assert.equal(
+                (await dai.balanceOf(owner)),   
+                daiTokens,
+                "User should have dai",
+            );
+        });
+
+        it("pulls dai from savings", async() => {
+            assert.equal(
+                (await chai.balanceOf(treasury.address)),   
+                chaiTokens,
+                "Treasury does not have chai"
+            );
+            assert.equal(
+                (await treasury.savings.call()),   
+                daiTokens,
+                "Treasury does not report savings in dai units"
+            );
+            assert.equal(
+                (await dai.balanceOf(owner)),   
+                0,
+                "User has dai",
+            );
+            
+            await treasury.pull(owner, daiTokens, { from: owner });
 
             assert.equal(
                 (await chai.balanceOf(treasury.address)),   
