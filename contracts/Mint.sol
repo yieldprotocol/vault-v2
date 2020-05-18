@@ -1,6 +1,7 @@
 pragma solidity ^0.6.2;
 
 import "@hq20/contracts/contracts/math/DecimalMath.sol";
+import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/ILender.sol";
 import "./interfaces/ISaver.sol";
@@ -35,58 +36,39 @@ contract Mint is Constants {
     // user --- Dai  ---> us
     // us   --- yDai ---> user
     function mint(address user, uint256 dai) public {
-        // TODO: Pay as much debt as possible, and save the rest
-        if (_lender.debt() < dai) {
-            mintNoDebt(user, dai);
-        }
-        else {
-            mintDebt(user, dai);
-        }
+        require(
+            !_yDai.isMature(),
+            "Mint: yDai is mature"
+        );
+        _dai.transferFrom(user, address(this), dai); // Get the dai from user
+
+        uint256 toRepay = Math.min(_lender.debt(), dai);
+        _dai.approve(address(_lender), toRepay);     // Lender will take the dai
+        _lender.repay(address(this), toRepay);       // Lender takes dai from Mint to repay debt
+
+        uint256 toSave = dai - toRepay;             // toRepay can't be greater than dai
+        _dai.approve(address(_saver), toSave);      // Saver will take dai
+        _saver.hold(address(this), toSave);         // Send dai to Saver
+
+        _yDai.mint(user, dai);                       // Mint yDai to user
     }
 
     /// @dev Burn yTokens and return an equal amount of underlying.
     /// If the Saver has savings they are used to deliver the dai to the user, otherwise dai is borrowed from MakerDao
     // user --- yDai ---> us
     // us   --- Dai  ---> user
-    function redeem(address user, uint256 dai) public {
+    function redeem(address user, uint256 yDai) public {
         require(
             _yDai.isMature(),
             "Mint: yDai is not mature"
         );
-        // TODO: Take as much as possible from savings, and borrow the rest
-        if (_saver.savings() < dai) {
-            redeemNoSavings(user, dai);
-        }
-        else {
-            redeemSavings(user, dai);
-        }
-    }
+        _yDai.burn(user, yDai);                       // Burn yDai from user
+        uint256 dai = yDai.muld(_yDai.chi(), RAY);    // User gets interest for holding after maturity
 
-    /// @dev Mint yDai assuming there is no debt
-    function mintNoDebt(address user, uint256 dai) internal {
-        _dai.transferFrom(user, address(this), dai);        // Get the dai from user
-        _dai.approve(address(_saver), dai);                 // Saver will take dai
-        _saver.hold(address(this), dai);                    // Send dai to Saver
-        _yDai.mint(user, dai);                              // Mint yDai to user
-    }
+        uint256 toRelease = Math.min(_saver.savings(), dai);
+        _saver.release(user, toRelease);                // Give dai to user, from Saver
 
-    /// @dev Mint yDai assuming there is debt
-    function mintDebt(address user, uint256 dai) internal {
-        _dai.transferFrom(user, address(this), dai);        // Get the dai from user
-        _dai.approve(address(_lender), dai);                // Lender will take the dai
-        _lender.repay(address(this), dai);                  // Lender takes dai from Mint to repay debt
-        _yDai.mint(user, dai);                              // Mint yDai to user
-    }
-
-    /// @dev Redeem yDai assuming there are savings
-    function redeemSavings(address user, uint256 yDai) internal {
-        _yDai.burn(user, yDai);                             // Burn yDai from user
-        _saver.release(user, yDai);                            // Give dai to user, from Saver
-    }
-
-    /// @dev Redeem yDai assuming there are no savings
-    function redeemNoSavings(address user, uint256 yDai) internal {
-        _yDai.burn(user, yDai);                             // Burn yDai from user
-        _lender.borrow(user, yDai);                         // Borrow Dai from Lender to user
+        uint256 toBorrow = dai - toRelease;           // toRelease can't be greater than dai
+        _lender.borrow(user, toBorrow);                // Borrow Dai from Lender to user
     }
 }

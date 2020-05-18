@@ -113,7 +113,7 @@ contract ERC20Dealer is Ownable, Constants {
     }
 
     /// @dev Burns yDai from `from` address, user debt is decreased.
-    //                                                  debt_noḿinal
+    //                                                  debt_nominal
     // debt_discounted = debt_nominal - repay_amount * ---------------
     //                                                  debt_now
     //

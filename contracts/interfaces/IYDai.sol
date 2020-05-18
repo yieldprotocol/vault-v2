@@ -4,7 +4,7 @@ pragma solidity ^0.6.2;
 interface IYDai {
     function isMature() external view returns(bool);
     function maturity() external view returns(uint);
-    function chi() external view returns(uint);
+    function chi() external returns(uint);
     function rate() external view returns(uint);
     function mature() external;
     function mint(address, uint) external;
