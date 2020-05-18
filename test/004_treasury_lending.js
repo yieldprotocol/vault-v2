@@ -208,32 +208,6 @@ contract('Treasury', async (accounts) =>  {
                 );
             });
 
-            it("repays dai debt and no more", async() => {
-                // Test `normalizedAmount >= normalizedDebt`
-                await dai.transfer(treasury.address, daiTokens, { from: user });
-                await treasury.repay(daiTokens, { from: user });
-
-                assert.equal(
-                    await dai.balanceOf(user),   
-                    0
-                );
-                assert.equal(
-                    (await vat.urns(ilk, treasury.address)).art,   
-                    0,
-                );
-                assert.equal(
-                    await vat.dai(treasury.address),   
-                    0
-                );
-
-                // Test `normalizedAmount < normalizedDebt`
-                // Mock Vat contract needs to return `normalizedDebt` with a `urns` function
-                // The DaiJoin mock contract needs to have a `join` function that authorizes Vat for incoming dai transfers.
-                // The DaiJoin mock contract needs to have a function to return it's dai balance.
-                // The Vat mock contract needs to have a frob function that takes `dart` dai from user to DaiJoin
-                // Should transfer funds from daiJoin
-            });
-
             it("pushes dai that repays debt towards MakerDAO", async() => {
                 // Test `normalizedAmount >= normalizedDebt`
                 await dai.approve(treasury.address, daiTokens, { from: user });
