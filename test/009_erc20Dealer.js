@@ -7,6 +7,7 @@ const Vat = artifacts.require('Vat');
 const helper = require('ganache-time-traveler');
 const truffleAssert = require('truffle-assertions');
 const { BN } = require('@openzeppelin/test-helpers');
+const { expectRevert } = require('@openzeppelin/test-helpers');
 
 contract('ERC20Dealer', async (accounts) =>  {
     let [ owner, user ] = accounts;
@@ -32,6 +33,9 @@ contract('ERC20Dealer', async (accounts) =>  {
     const limits =  web3.utils.toBN('10').pow(RAD).toString();
     // console.log(limits);
 
+    const rateIncrease  = "250000000000000000000000000";
+    const moreDai = web3.utils.toWei("125"); //  daiTokens * rate
+    const remainingDebt = web3.utils.toWei("25"); //  (daiTokens - (daiTokens / rate)) * rate
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
@@ -79,9 +83,9 @@ contract('ERC20Dealer', async (accounts) =>  {
             "ERC20Dealer has collateral",
         );
         assert.equal(
-            (await dealer.unlockedOf.call(owner)),   
+            (await dealer.powerOf.call(owner)),   
             0,
-            "Owner has unlocked collateral",
+            "Owner has borrowing power",
         );
         
         await token.mint(owner, erc20Tokens, { from: owner });
@@ -94,9 +98,9 @@ contract('ERC20Dealer', async (accounts) =>  {
             "ERC20Dealer should have collateral",
         );
         assert.equal(
-            (await dealer.unlockedOf.call(owner)),   
-            erc20Tokens,
-            "Owner should have unlocked collateral",
+            (await dealer.powerOf.call(owner)),   
+            daiTokens,
+            "Owner should have borrowing power",
         );
     });
 
@@ -114,9 +118,9 @@ contract('ERC20Dealer', async (accounts) =>  {
                 "ERC20Dealer does not have collateral",
             );
             assert.equal(
-                (await dealer.unlockedOf.call(owner)),   
-                erc20Tokens,
-                "Owner does not have unlocked collateral",
+                (await dealer.powerOf.call(owner)),   
+                daiTokens,
+                "Owner does not have borrowing power",
             );
             assert.equal(
                 (await token.balanceOf(owner)),   
@@ -137,17 +141,17 @@ contract('ERC20Dealer', async (accounts) =>  {
                 "ERC20Dealer should not have collateral",
             );
             assert.equal(
-                (await dealer.unlockedOf.call(owner)),   
+                (await dealer.powerOf.call(owner)),   
                 0,
-                "Owner should not have unlocked collateral",
+                "Owner should not have borrowing power",
             );
         });
 
         it("allows to borrow yDai", async() => {
             assert.equal(
-                (await dealer.unlockedOf.call(owner)),   
-                erc20Tokens,
-                "Owner does not have unlocked collateral",
+                (await dealer.powerOf.call(owner)),   
+                daiTokens,
+                "Owner does not have borrowing power",
             );
             assert.equal(
                 (await yDai.balanceOf(owner)),   
@@ -172,10 +176,23 @@ contract('ERC20Dealer', async (accounts) =>  {
                 daiTokens,
                 "Owner should have debt",
             );
+        });
+
+        it("doesn't allow to borrow yDai beyond borrowing power", async() => {
             assert.equal(
-                (await dealer.unlockedOf.call(owner)),   
+                (await dealer.powerOf.call(owner)),   
+                daiTokens,
+                "Owner does not have borrowing power",
+            );
+            assert.equal(
+                (await dealer.debtOf.call(owner)),   
                 0,
-                "Owner should not have unlocked collateral, instead has " + (await dealer.unlockedOf.call(owner)).toString(),
+                "Owner has debt",
+            );
+    
+            await expectRevert(
+                dealer.borrow(owner, moreDai, { from: owner }),
+                "ERC20Dealer: Post more collateral",
             );
         });
 
@@ -184,6 +201,44 @@ contract('ERC20Dealer', async (accounts) =>  {
                 await dealer.borrow(owner, daiTokens, { from: owner });
             });
 
+            it("doesn't allow to withdraw if undercollateralized", async() => {
+                assert.equal(
+                    (await dealer.powerOf.call(owner)),   
+                    daiTokens,
+                    "Owner does not have borrowing power",
+                );
+                assert.equal(
+                    (await dealer.debtOf.call(owner)),   
+                    daiTokens,
+                    "Owner does not have debt",
+                );
+
+                await oracle.setPrice("1200000000000000000000000000"); // Increase price to 1.2
+        
+                await expectRevert(
+                    dealer.withdraw(owner, erc20Tokens, { from: owner }),
+                    "ERC20Dealer: Undercollateralized",
+                );
+            });
+
+            it("doesn't allow to withdraw and become undercollateralized", async() => {
+                assert.equal(
+                    (await dealer.powerOf.call(owner)),   
+                    daiTokens,
+                    "Owner does not have borrowing power",
+                );
+                assert.equal(
+                    (await dealer.debtOf.call(owner)),   
+                    daiTokens,
+                    "Owner does not have debt",
+                );
+
+                await expectRevert(
+                    dealer.borrow(owner, erc20Tokens, { from: owner }),
+                    "ERC20Dealer: Post more collateral",
+                );
+            });
+            
             it("as rate increases after maturity, so does the debt", async() => {
                 assert.equal(
                     (await dealer.debtOf.call(owner)),   
@@ -216,20 +271,10 @@ contract('ERC20Dealer', async (accounts) =>  {
                     daiTokens,
                     "Owner does not have debt",
                 );
-                assert.equal(
-                    (await dealer.unlockedOf.call(owner)),   
-                    0,
-                    "Owner has unlocked collateral",
-                );
 
                 await yDai.approve(dealer.address, daiTokens, { from: owner });
                 await dealer.repay(owner, daiTokens, { from: owner });
     
-                assert.equal(
-                    (await dealer.unlockedOf.call(owner)),   
-                    erc20Tokens,
-                    "Owner should have unlocked collateral",
-                );
                 assert.equal(
                     (await yDai.balanceOf(owner)),   
                     0,
@@ -239,6 +284,123 @@ contract('ERC20Dealer', async (accounts) =>  {
                     (await dealer.debtOf.call(owner)),   
                     0,
                     "Owner should not have debt",
+                );
+            });
+
+            it("when dai is provided in excess fo repayment, only the necessary amount is taken", async() => {
+                // Mint some yDai the sneaky way
+                await yDai.grantAccess(owner, { from: owner });
+                await yDai.mint(owner, remainingDebt, { from: owner }); // 25 extra yDai
+
+                assert.equal(
+                    (await yDai.balanceOf(owner)),   
+                    moreDai, // Total 125 dai
+                    "Owner does not have yDai",
+                );
+                assert.equal(
+                    (await dealer.debtOf.call(owner)),   
+                    daiTokens, // 100 dai
+                    "Owner does not have debt",
+                );
+
+                await yDai.approve(dealer.address, moreDai, { from: owner });
+                await dealer.repay(owner, moreDai, { from: owner });
+    
+                assert.equal(
+                    (await yDai.balanceOf(owner)),   
+                    remainingDebt,
+                    "Owner should have yDai left",
+                );
+                assert.equal(
+                    (await dealer.debtOf.call(owner)),   
+                    0,
+                    "Owner should not have debt",
+                );
+            });
+
+            it("more yDai is required to repay after maturity as rate increases", async() => {
+                assert.equal(
+                    (await yDai.balanceOf(owner)),   
+                    daiTokens,
+                    "Owner does not have yDai",
+                );
+                assert.equal(
+                    (await dealer.debtOf.call(owner)),   
+                    daiTokens,
+                    "Owner does not have debt",
+                );
+
+                // yDai matures
+                await helper.advanceTime(1000);
+                await helper.advanceBlock();
+                await yDai.mature();
+
+                // Rate increase
+                await vat.fold(ilk, vat.address, rateIncrease, { from: owner }); // 1 + 0.25
+
+                assert.equal(
+                    (await dealer.debtOf.call(owner)),   
+                    moreDai,
+                    "Owner does not have increased debt",
+                );
+
+                await yDai.approve(dealer.address, daiTokens, { from: owner });
+                await dealer.repay(owner, daiTokens, { from: owner });
+    
+                assert.equal(
+                    (await yDai.balanceOf(owner)),   
+                    0,
+                    "Owner should not have yDai",
+                );
+                assert.equal(
+                    (await dealer.debtOf.call(owner)),   
+                    remainingDebt,
+                    "Owner should have " + remainingDebt + " dai debt, instead has " + (await dealer.debtOf.call(owner)),
+                );
+            });
+
+            it("all debt can be repaid after maturity", async() => {
+                // Mint some yDai the sneaky way
+                await yDai.grantAccess(owner, { from: owner });
+                await yDai.mint(owner, remainingDebt, { from: owner });
+
+                assert.equal(
+                    (await yDai.balanceOf(owner)),   
+                    moreDai,
+                    "Owner does not have yDai",
+                );
+                assert.equal(
+                    (await dealer.debtOf.call(owner)),   
+                    daiTokens,
+                    "Owner does not have debt",
+                );
+
+                // yDai matures
+                await helper.advanceTime(1000);
+                await helper.advanceBlock();
+                await yDai.mature();
+
+                // Rate increase
+                await vat.fold(ilk, vat.address, rateIncrease, { from: owner }); // 1 + 0.25
+
+                assert.equal(
+                    (await dealer.debtOf.call(owner)),   
+                    moreDai,
+                    "Owner does not have increased debt",
+                );
+
+                await yDai.approve(dealer.address, moreDai, { from: owner });
+                await dealer.repay(owner, moreDai, { from: owner });
+    
+                assert.equal(
+                    (await yDai.balanceOf(owner)),   
+                    0,
+                    "Owner should not have yDai",
+                );
+                assert.equal(
+                    (await dealer.debtOf.call(owner)),   
+                    0,
+                    "Owner should have no remaining debt",
                 );
             });
         });

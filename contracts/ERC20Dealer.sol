@@ -2,6 +2,7 @@ pragma solidity ^0.6.2;
 
 import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IOracle.sol";
@@ -19,8 +20,8 @@ contract ERC20Dealer is Ownable, Constants {
     IERC20 internal _token;
     IOracle internal _tokenOracle; // The oracle should return the price adjusted by collateralization
 
-    mapping(address => uint256) public posted; // In Erc20
-    mapping(address => uint256) internal debt;   // In Dai/yDai
+    mapping(address => uint256) internal _posted; // In Erc20
+    mapping(address => uint256) internal _debt;   // In Dai/yDai
 
     constructor (
         address yDai_,
@@ -32,18 +33,20 @@ contract ERC20Dealer is Ownable, Constants {
         _tokenOracle = IOracle(tokenOracle_);
     }
 
-    /// @dev Collateral not in use for debt
+    /// @dev Posted collateral
+    function postedOf(address user) public returns (uint256) {
+        return _posted[user];
+    }
+
+    /// @dev Maximum borrowing power of an user in dai
     //
-    //                       debtOf(user)(wad)
-    // posted[user](wad) - -----------------------
+    //                        _posted[user](wad)
+    // powerOf[user](wad) = ---------------------
     //                       oracle.price()(ray)
     //
-    function unlockedOf(address user) public returns (uint256) {
+    function powerOf(address user) public returns (uint256) {
         // collateral = dai * price
-        uint256 locked = debtOf(user)
-            .muld(_tokenOracle.price(), RAY);
-        if (locked > posted[user]) return 0; // Unlikely
-        return posted[user].sub(locked);
+        return _posted[user].divd(_tokenOracle.price(), RAY);
     }
 
     /// @dev Return debt in underlying of an user
@@ -54,10 +57,10 @@ contract ERC20Dealer is Ownable, Constants {
     //
     function debtOf(address user) public view returns (uint256) {
         if (_yDai.isMature()){
-            return debt[user].muld(_yDai.rate(), RAY);
+            return _debt[user].muld(_yDai.rate(), RAY);
         }
         else {
-            return debt[user];
+            return _debt[user];
         }
     }
 
@@ -68,17 +71,21 @@ contract ERC20Dealer is Ownable, Constants {
             _token.transferFrom(from, address(this), token),
             "ERC20Dealer: Collateral transfer fail"
         );
-        posted[from] = posted[from].add(token);
+        _posted[from] = _posted[from].add(token);
     }
 
     /// @dev Returns collateral to `to` address
     // us --- Token ---> to
     function withdraw(address to, uint256 token) public virtual {
         require(
-            unlockedOf(to) >= token,
+            powerOf(to) >= debtOf(to),
+            "ERC20Dealer: Undercollateralized"
+        );
+        require( // (power - debt) * price
+            (powerOf(to) - debtOf(to)).muld(_tokenOracle.price(), RAY) >= token, // SafeMath not needed
             "ERC20Dealer: Free more collateral"
         );
-        posted[to] = posted[to].sub(token); // Will revert if not enough posted
+        _posted[to] = _posted[to].sub(token); // Will revert if not enough posted
         require(
             _token.transfer(to, token),
             "ERC20Dealer: Collateral transfer fail"
@@ -87,7 +94,7 @@ contract ERC20Dealer is Ownable, Constants {
 
     /// @dev Mint yDai for address `to` by locking its market value in collateral, user debt is increased.
     //
-    // posted[user](wad) >= (debt[user](wad)) * amount (wad)) * collateralization (ray)
+    // _posted[user](wad) >= (_debt[user](wad)) * amount (wad)) * collateralization (ray)
     //
     // us --- yDai ---> user
     // debt++
@@ -97,25 +104,26 @@ contract ERC20Dealer is Ownable, Constants {
             "ERC20Dealer: No mature borrow"
         );
         require( // collateral = dai * price
-            posted[to] >= (debtOf(to).add(yDai))
+            _posted[to] >= (debtOf(to).add(yDai))
                 .muld(_tokenOracle.price(), RAY),
             "ERC20Dealer: Post more collateral"
         );
-        debt[to] = debt[to].add(yDai);
+        _debt[to] = _debt[to].add(yDai);
         _yDai.mint(to, yDai);
     }
 
     /// @dev Burns yDai from `from` address, user debt is decreased.
-    //                                                  debt_maturity
-    // debt_discounted = debt_nominal - repay_amount * ---------------
     //                                                  debt_nominal
+    // debt_discounted = debt_nominal - repay_amount * ---------------
+    //                                                  debt_now
     //
     // user --- Dai ---> us
     // debt--
     function repay(address from, uint256 yDai) public {
-        uint256 debtProportion = debtOf(from).mul(RAY.unit())
+        uint256 toRepay = Math.min(yDai, debtOf(from));
+        uint256 debtProportion = _debt[from].mul(RAY.unit())
             .divd(debtOf(from).mul(RAY.unit()), RAY);
-        _yDai.burn(from, yDai);
-        debt[from] = debt[from].sub(yDai.muld(debtProportion, RAY)); // Will revert if not enough debt
+        _yDai.burn(from, toRepay);
+        _debt[from] = _debt[from].sub(toRepay.muld(debtProportion, RAY)); // Will revert if not enough debt
     }
 }

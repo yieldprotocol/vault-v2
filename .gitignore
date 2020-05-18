@@ -4,4 +4,5 @@ artifacts
 node_modules/
 
 #Solidity-coverage
-coverage
+coverage/
+coverage.json

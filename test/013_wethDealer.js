@@ -113,9 +113,9 @@ contract('WethDealer', async (accounts) =>  {
             "Lender has weth in MakerDAO",
         );
         assert.equal(
-            (await wethDealer.unlockedOf.call(owner)),   
+            (await wethDealer.powerOf.call(owner)),   
             0,
-            "Owner has unlocked weth",
+            "Owner has borrowing power",
         );
         
         await weth.approve(wethDealer.address, wethTokens, { from: owner }); 
@@ -127,9 +127,9 @@ contract('WethDealer', async (accounts) =>  {
             "Lender should have weth in MakerDAO",
         );
         assert.equal(
-            (await wethDealer.unlockedOf.call(owner)),   
-            wethTokens,
-            "Owner should have unlocked collateral",
+            (await wethDealer.powerOf.call(owner)),   
+            daiTokens,
+            "Owner should have borrowing power",
         );
         assert.equal(
             (await weth.balanceOf(owner)),   
@@ -157,9 +157,9 @@ contract('WethDealer', async (accounts) =>  {
                 "Owner has weth",
             );
             assert.equal(
-                (await wethDealer.unlockedOf.call(owner)),   
-                wethTokens,
-                "Owner does not have unlocked weth",
+                (await wethDealer.powerOf.call(owner)),   
+                daiTokens,
+                "Owner does not have borrowing power",
             );
 
             await wethDealer.withdraw(owner, wethTokens, { from: owner });
@@ -175,17 +175,17 @@ contract('WethDealer', async (accounts) =>  {
                 "Lender should not have weth in MakerDAO",
             );
             assert.equal(
-                (await wethDealer.unlockedOf.call(owner)),   
+                (await wethDealer.powerOf.call(owner)),   
                 0,
-                "Owner should have unlocked weth",
+                "Owner should not have borrowing power",
             );
         });
 
         it("allows to borrow yDai", async() => {
             assert.equal(
-                (await wethDealer.unlockedOf.call(owner)),   
-                wethTokens,
-                "Owner does not have unlocked collateral",
+                (await wethDealer.powerOf.call(owner)),   
+                daiTokens,
+                "Owner does not have borrowing power",
             );
             assert.equal(
                 (await yDai.balanceOf(owner)),   
@@ -193,7 +193,7 @@ contract('WethDealer', async (accounts) =>  {
                 "Owner has yDai",
             );
             assert.equal(
-                (await wethDealer.debtOf.call(owner)),   
+                (await wethDealer.debtOf(owner)),   
                 0,
                 "Owner has debt",
             );
@@ -206,14 +206,9 @@ contract('WethDealer', async (accounts) =>  {
                 "Owner should have yDai",
             );
             assert.equal(
-                (await wethDealer.debtOf.call(owner)),   
+                (await wethDealer.debtOf(owner)),   
                 daiTokens,
                 "Owner should have debt",
-            );
-            assert.equal(
-                (await wethDealer.unlockedOf.call(owner)),   
-                0,
-                "Owner should not have unlocked collateral",
             );
         });
 
@@ -229,33 +224,18 @@ contract('WethDealer', async (accounts) =>  {
                     "Owner does not have yDai",
                 );
                 assert.equal(
-                    (await wethDealer.debtOf.call(owner)),   
+                    (await wethDealer.debtOf(owner)),   
                     daiTokens,
                     "Owner does not have debt",
-                );
-                assert.equal(
-                    (await wethDealer.unlockedOf.call(owner)),   
-                    0,
-                    "Owner has unlocked collateral",
                 );
 
                 await yDai.approve(wethDealer.address, daiTokens, { from: owner });
                 await wethDealer.repay(owner, daiTokens, { from: owner });
     
                 assert.equal(
-                    (await wethDealer.unlockedOf.call(owner)),   
-                    wethTokens,
-                    "Owner should have unlocked collateral",
-                );
-                assert.equal(
                     (await yDai.balanceOf(owner)),   
                     0,
                     "Owner should not have yDai",
-                );
-                assert.equal(
-                    (await wethDealer.debtOf.call(owner)),   
-                    0,
-                    "Owner should not have debt",
                 );
             });
         });
