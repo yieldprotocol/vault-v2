@@ -333,6 +333,43 @@ contract('ERC20Dealer', async (accounts) =>  {
                 );
             });
 
+            it("allows to repay yDai with dai", async() => {
+                // Borrow dai
+                await vat.hope(daiJoin.address, { from: owner });
+                await vat.hope(wethJoin.address, { from: owner });
+                let wethTokens = web3.utils.toWei("500");
+                await weth.mint(owner, wethTokens, { from: owner });
+                await weth.approve(wethJoin.address, wethTokens, { from: owner });
+                await wethJoin.join(owner, wethTokens, { from: owner });
+                await vat.frob(ilk, owner, owner, owner, wethTokens, daiTokens, { from: owner });
+                await daiJoin.exit(owner, daiTokens, { from: owner });
+
+                assert.equal(
+                    (await dai.balanceOf(owner)),   
+                    daiTokens,
+                    "Owner does not have dai",
+                );
+                assert.equal(
+                    (await dealer.debtOf.call(owner)),   
+                    daiTokens,
+                    "Owner does not have debt",
+                );
+
+                await dai.approve(dealer.address, daiTokens, { from: owner });
+                await dealer.repay(owner, daiTokens, { from: owner });
+    
+                assert.equal(
+                    (await dai.balanceOf(owner)),   
+                    0,
+                    "Owner should not have yDai",
+                );
+                assert.equal(
+                    (await dealer.debtOf.call(owner)),   
+                    0,
+                    "Owner should not have debt",
+                );
+            });
+
             it("when dai is provided in excess fo repayment, only the necessary amount is taken", async() => {
                 // Mint some yDai the sneaky way
                 await yDai.grantAccess(owner, { from: owner });

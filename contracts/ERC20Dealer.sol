@@ -127,12 +127,9 @@ contract ERC20Dealer is Ownable, Constants {
     // user --- yDai ---> us
     // debt--
     function restore(address from, uint256 yDai) public {
-        uint256 toRepay = Math.min(yDai, debtOf(from));
-        uint256 debtProportion = _debt[from].mul(RAY.unit())
-            .divd(debtOf(from).mul(RAY.unit()), RAY);
-
+        (uint256 toRepay, uint256 debtDecrease) = amounts(from, yDai);
         _yDai.burn(from, toRepay);
-        _debt[from] = _debt[from].sub(toRepay.muld(debtProportion, RAY)); // Will revert if not enough debt
+        _debt[from] = _debt[from].sub(debtDecrease);
     }
 
     /// @dev Takes dai from `from` address, user debt is decreased.
@@ -148,13 +145,10 @@ contract ERC20Dealer is Ownable, Constants {
             "ERC20Dealer: Dai transfer fail"
         );
 
-        uint256 toRepay = Math.min(dai, debtOf(from));
-        uint256 debtProportion = _debt[from].mul(RAY.unit())
-            .divd(debtOf(from).mul(RAY.unit()), RAY);
-
+        (uint256 toRepay, uint256 debtDecrease) = amounts(from, dai);
         _dai.approve(address(_treasury), toRepay);              // Treasury will take the dai
         _treasury.push(address(this), toRepay);                 // Give the dai to Treasury
-        _debt[from] = _debt[from].sub(toRepay.muld(debtProportion, RAY)); // Will revert if not enough debt
+        _debt[from] = _debt[from].sub(debtDecrease);
     }
 
     /// @dev Calculates the amount to repay and the amount by which to reduce the debt
