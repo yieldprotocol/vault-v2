@@ -123,16 +123,6 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
         );
     }
 
-    // Anyone can send chai to saver, no way of stopping it
-
-    /// @dev Gives chai to the user
-    function releaseChai(address user, uint256 chai) public override onlyAuthorized("Treasury: Not Authorized") {
-        require(
-            _chai.transfer(user, chai),    // Give chai to user
-            "Treasury: Chai transfer fail"
-        );
-    }
-
     /// @dev Moves Weth collateral from `from` address into Treasury controlled Maker Eth vault
     function post(address from, uint256 weth) public override onlyAuthorized("Treasury: Not Authorized") {
         require(

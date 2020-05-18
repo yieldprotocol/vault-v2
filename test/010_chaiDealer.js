@@ -1,6 +1,6 @@
 const Vat = artifacts.require('Vat');
 const Pot = artifacts.require('Pot');
-const Saver = artifacts.require('Saver');
+const Treasury = artifacts.require('Treasury');
 const YDai = artifacts.require('YDai');
 const ERC20 = artifacts.require('TestERC20');
 const GemJoin = artifacts.require('GemJoin');
@@ -15,7 +15,7 @@ contract('ChaiDealer', async (accounts) =>  {
     let [ owner, user ] = accounts;
     let vat;
     let pot;
-    let saver;
+    let treasury;
     let yDai;
     let weth;
     let wethJoin;
@@ -71,8 +71,15 @@ contract('ChaiDealer', async (accounts) =>  {
         );
         await vat.rely(chai.address, { from: owner });
 
-        // Set saver
-        saver = await Saver.new(dai.address, chai.address);
+        // Set treasury
+        treasury = await Treasury.new(
+            dai.address,        // dai
+            chai.address,       // chai
+            weth.address,       // weth
+            daiJoin.address,    // daiJoin
+            wethJoin.address,   // wethJoin
+            vat.address,        // vat
+        );
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
@@ -83,9 +90,16 @@ contract('ChaiDealer', async (accounts) =>  {
         chaiOracle = await ChaiOracle.new(pot.address, { from: owner });
 
         // Setup ChaiDealer
-        chaiDealer = await ChaiDealer.new(saver.address, yDai.address, chai.address, chaiOracle.address, { from: owner });
+        chaiDealer = await ChaiDealer.new(
+            treasury.address,
+            dai.address,
+            yDai.address,
+            chai.address,
+            chaiOracle.address,
+            { from: owner },
+        );
         await yDai.grantAccess(chaiDealer.address, { from: owner });
-        await saver.grantAccess(chaiDealer.address, { from: owner });
+        await treasury.grantAccess(chaiDealer.address, { from: owner });
 
         // Borrow dai
         await vat.hope(daiJoin.address, { from: owner });
@@ -112,9 +126,9 @@ contract('ChaiDealer', async (accounts) =>  {
             "ERC20Dealer does not have chai",
         );
         assert.equal(
-            (await chai.balanceOf(saver.address)),   
+            (await chai.balanceOf(treasury.address)),   
             0,
-            "Saver has chai",
+            "Treasury has chai",
         );
         assert.equal(
             (await chaiDealer.powerOf.call(owner)),   
@@ -126,9 +140,9 @@ contract('ChaiDealer', async (accounts) =>  {
         await chaiDealer.post(owner, chaiTokens, { from: owner }); // Post transfers chai
 
         assert.equal(
-            (await chai.balanceOf(saver.address)),   
+            (await chai.balanceOf(treasury.address)),   
             chaiTokens,
-            "Saver should have chai",
+            "Treasury should have chai",
         );
         assert.equal(
             (await chai.balanceOf(owner)),   
@@ -150,9 +164,9 @@ contract('ChaiDealer', async (accounts) =>  {
 
         it("allows user to withdraw chai", async() => {
             assert.equal(
-                (await chai.balanceOf(saver.address)),   
+                (await chai.balanceOf(treasury.address)),   
                 chaiTokens,
-                "Saver does not have chai",
+                "Treasury does not have chai",
             );
             assert.equal(
                 (await chai.balanceOf(owner)),   
@@ -173,9 +187,9 @@ contract('ChaiDealer', async (accounts) =>  {
                 "ERC20Dealer should have chai",
             );
             assert.equal(
-                (await chai.balanceOf(saver.address)),   
+                (await chai.balanceOf(treasury.address)),   
                 0,
-                "Saver should not have chai",
+                "Treasury should not have chai",
             );
             assert.equal(
                 (await chaiDealer.powerOf.call(owner)),   
