@@ -10,14 +10,13 @@ import "./interfaces/IDaiJoin.sol";
 import "./interfaces/IGemJoin.sol";
 import "./interfaces/IVat.sol";
 import "./interfaces/IChai.sol";
-import "./interfaces/ILender.sol";
-import "./interfaces/ISaver.sol";
+import "./interfaces/ITreasury.sol";
 import "./Constants.sol";
 import "@nomiclabs/buidler/console.sol";
 
 
-/// @dev Treasury manages the Dai, interacting with MakerDAO's vat when needed.
-contract Treasury is ILender, ISaver, AuthorizedAccess(), Constants() {
+/// @dev Treasury manages the Dai, interacting with MakerDAO's vat and chai when needed.
+contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
     using DecimalMath for uint256;
     using DecimalMath for int256;
     using DecimalMath for uint8;
@@ -56,7 +55,7 @@ contract Treasury is ILender, ISaver, AuthorizedAccess(), Constants() {
     /// @dev Returns the Treasury debt towards MakerDAO, as the dai borrowed times the stability fee for Weth.
     /// We have borrowed (rate * art)
     /// Borrowing Limit (rate * art) <= (ink * spot)
-    function debt() public view override returns(uint256) {
+    function debt() public view returns(uint256) {
         (, uint256 rate,,,) = _vat.ilks("ETH-A");            // Retrieve the MakerDAO stability fee for Weth
         (, uint256 art) = _vat.urns("ETH-A", address(this)); // Retrieve the Treasury debt in MakerDAO
         return art.muld(rate, RAY);
@@ -64,14 +63,14 @@ contract Treasury is ILender, ISaver, AuthorizedAccess(), Constants() {
 
     /// @dev Returns the Treasury borrowing capacity from MakerDAO, as the collateral posted times the collateralization ratio for Weth.
     /// We can borrow (ink * spot)
-    function power() public view override returns(uint256) {
+    function power() public view returns(uint256) {
         (,, uint256 spot,,) = _vat.ilks("ETH-A");            // Collateralization ratio for Weth
         (uint256 ink,) = _vat.urns("ETH-A", address(this));  // Treasury Weth collateral in MakerDAO
         return ink.muld(spot, RAY);
     }
 
     /// @dev Returns the amount of Dai in this contract.
-    function savings() public override returns(uint256){
+    function savings() public returns(uint256){
         return _chai.dai(address(this));
     }
 
@@ -96,7 +95,7 @@ contract Treasury is ILender, ISaver, AuthorizedAccess(), Constants() {
     // Anyone can send chai to saver, no way of stopping it
 
     /// @dev Moves Dai into the contract and converts it to Chai
-    function hold(address user, uint256 dai) public override onlyAuthorized("Treasury: Not Authorized") {
+    function hold(address user, uint256 dai) public onlyAuthorized("Treasury: Not Authorized") {
         require(
             _dai.transferFrom(user, address(this), dai),
             "Treasury: Chai transfer fail"
@@ -114,7 +113,7 @@ contract Treasury is ILender, ISaver, AuthorizedAccess(), Constants() {
     }
 
     /// @dev Converts Chai to Dai and gives it to the user
-    function release(address user, uint256 dai) public override onlyAuthorized("Treasury: Not Authorized") {
+    function release(address user, uint256 dai) public onlyAuthorized("Treasury: Not Authorized") {
         _chai.draw(address(this), dai);     // Grab dai from Chai, converted from chai
         require(                            // Give dai to user
             _dai.transfer(user, dai),
@@ -123,7 +122,7 @@ contract Treasury is ILender, ISaver, AuthorizedAccess(), Constants() {
     }
 
     /// @dev Moves Weth collateral from `from` address into Treasury controlled Maker Eth vault
-    function post(address from, uint256 weth) public override onlyAuthorized("Treasury: Not Authorized") {
+    function post(address from, uint256 weth) public onlyAuthorized("Treasury: Not Authorized") {
         require(
             _weth.transferFrom(from, address(this), weth),
             "YToken: WETH transfer fail"
@@ -142,7 +141,7 @@ contract Treasury is ILender, ISaver, AuthorizedAccess(), Constants() {
     }
 
     /// @dev Moves Weth collateral from Treasury controlled Maker Eth vault to `to` address.
-    function withdraw(address to, uint256 weth) public override onlyAuthorized("Treasury: Not Authorized") {
+    function withdraw(address to, uint256 weth) public onlyAuthorized("Treasury: Not Authorized") {
         // Remove collateral from vault using frob
         _vat.frob(
             collateralType,
@@ -156,7 +155,7 @@ contract Treasury is ILender, ISaver, AuthorizedAccess(), Constants() {
     }
 
     /// @dev Moves Dai from `from` address into Treasury controlled Maker Dai vault
-    function repay(address from, uint256 dai) public override onlyAuthorized("Treasury: Not Authorized") {
+    function repay(address from, uint256 dai) public onlyAuthorized("Treasury: Not Authorized") {
         require(
             debt() >= dai,
             "Treasury: Not enough debt"
@@ -180,7 +179,7 @@ contract Treasury is ILender, ISaver, AuthorizedAccess(), Constants() {
 
     /// @dev borrows Dai from Treasury controlled Maker vault, to `to` address.
     // TODO: Check that the Treasury has posted enough collateral to borrow the dai
-    function borrow(address to, uint256 dai) public override onlyAuthorized("Treasury: Not Authorized") {
+    function borrow(address to, uint256 dai) public onlyAuthorized("Treasury: Not Authorized") {
         (, uint256 rate,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
         // Increase the dai debt by the dai to receive divided by the stability fee
         _vat.frob(
