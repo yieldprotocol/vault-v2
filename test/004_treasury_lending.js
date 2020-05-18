@@ -145,23 +145,7 @@ contract('Treasury', async (accounts) =>  {
             );
         });
 
-        it("allows to borrow dai", async() => {
-            // Test with two different stability rates, if possible.
-            // Mock Vat contract needs a `setRate` and an `ilks` functions.
-            // Mock Vat contract needs the `frob` function to authorize `daiJoin.exit` transfers through the `dart` parameter.
-            await treasury.borrow(user, daiTokens, { from: user });
-
-            assert.equal(
-                await dai.balanceOf(user),   
-                daiTokens
-            );
-            assert.equal(
-                (await vat.urns(ilk, treasury.address)).art,   
-                daiDebt,
-            );
-        });
-
-        it("pulls to dai borrowed from MakerDAO", async() => {
+        it("pulls dai borrowed from MakerDAO", async() => {
             // Test with two different stability rates, if possible.
             // Mock Vat contract needs a `setRate` and an `ilks` functions.
             // Mock Vat contract needs the `frob` function to authorize `daiJoin.exit` transfers through the `dart` parameter.
@@ -178,7 +162,7 @@ contract('Treasury', async (accounts) =>  {
         });
 
         it("shouldn't allow borrowing beyond power", async() => {
-            await treasury.borrow(user, daiTokens, { from: user });
+            await treasury.pull(user, daiTokens, { from: user });
             assert.equal(
                 await treasury.power(),   
                 daiTokens,
@@ -190,14 +174,14 @@ contract('Treasury', async (accounts) =>  {
                 "We should have " + daiTokens + " dai debt.",
             );
             await expectRevert(
-                treasury.borrow(user, 1, { from: user }), // Not a wei more borrowing
+                treasury.pull(user, 1, { from: user }), // Not a wei more borrowing
                 "Vat/sub",
             );
         });
     
         describe("with a dai debt towards MakerDAO", () => {
             beforeEach(async() => {
-                await treasury.borrow(user, daiTokens, { from: user });
+                await treasury.pull(user, daiTokens, { from: user });
             });
 
             it("returns treasury debt", async() => {

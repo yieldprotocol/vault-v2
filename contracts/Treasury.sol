@@ -102,10 +102,25 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
     /// @dev Returns dai using chai savings as much as possible, and borrowing the rest.
     function pull(address user, uint256 dai) public override onlyAuthorized("Treasury: Not Authorized") {
         uint256 toRelease = Math.min(savings(), dai);
-        release(user, toRelease);              // Give dai to user from savings
+        _chai.draw(address(this), toRelease);     // Grab dai from Chai, converted from chai
 
         uint256 toBorrow = dai - toRelease;    // toRelease can't be greater than dai
-        borrow(user, toBorrow);                // Borrow Dai from MakerDAO for user
+        (, uint256 rate,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
+        // Increase the dai debt by the dai to receive divided by the stability fee
+        _vat.frob(
+            collateralType,
+            address(this),
+            address(this),
+            address(this),
+            0,
+            toBorrow.divd(rate, RAY).toInt()
+        ); // `vat.frob` reverts on failure
+        _daiJoin.exit(address(this), toBorrow); // `daiJoin` reverts on failures
+
+        require(                            // Give dai to user
+            _dai.transfer(user, dai),
+            "Treasury: Dai transfer fail"
+        );
     }
 
     // Anyone can send chai to saver, no way of stopping it
@@ -115,15 +130,6 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
         require(
             _chai.transfer(user, chai),    // Give chai to user
             "Treasury: Chai transfer fail"
-        );
-    }
-
-    /// @dev Converts Chai to Dai and gives it to the user
-    function release(address user, uint256 dai) public onlyAuthorized("Treasury: Not Authorized") {
-        _chai.draw(address(this), dai);     // Grab dai from Chai, converted from chai
-        require(                            // Give dai to user
-            _dai.transfer(user, dai),
-            "Treasury: Dai transfer fail"
         );
     }
 
@@ -158,21 +164,5 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
             0              // Dai debt to add - WAD
         );
         _wethJoin.exit(to, weth); // `GemJoin` reverts on failures
-    }
-
-    /// @dev borrows Dai from Treasury controlled Maker vault, to `to` address.
-    // TODO: Check that the Treasury has posted enough collateral to borrow the dai
-    function borrow(address to, uint256 dai) public onlyAuthorized("Treasury: Not Authorized") {
-        (, uint256 rate,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
-        // Increase the dai debt by the dai to receive divided by the stability fee
-        _vat.frob(
-            collateralType,
-            address(this),
-            address(this),
-            address(this),
-            0,
-            dai.divd(rate, RAY).toInt()
-        ); // `vat.frob` reverts on failure
-        _daiJoin.exit(to, dai); // `daiJoin` reverts on failures
     }
 }
