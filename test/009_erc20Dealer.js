@@ -1,9 +1,13 @@
 const ERC20Dealer = artifacts.require('ERC20Dealer');
-const TestERC20 = artifacts.require('TestERC20');
+const ERC20 = artifacts.require('TestERC20');
 const TestOracle = artifacts.require('TestOracle');
+const Treasury = artifacts.require('Treasury');
 const YDai = artifacts.require('YDai');
+const Chai = artifacts.require('Chai');
 const Pot = artifacts.require('Pot');
 const Vat = artifacts.require('Vat');
+const GemJoin = artifacts.require('GemJoin');
+const DaiJoin = artifacts.require('DaiJoin');
 const helper = require('ganache-time-traveler');
 const truffleAssert = require('truffle-assertions');
 const { BN } = require('@openzeppelin/test-helpers');
@@ -13,7 +17,13 @@ contract('ERC20Dealer', async (accounts) =>  {
     let [ owner, user ] = accounts;
     let vat;
     let pot;
+    let treasury;
     let yDai;
+    let chai;
+    let weth;
+    let wethJoin;
+    let dai;
+    let daiJoin;
     let oracle;
     let token;
     let dealer;
@@ -41,10 +51,18 @@ contract('ERC20Dealer', async (accounts) =>  {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
+        // Setup vat
         vat = await Vat.new();
         await vat.init(ilk, { from: owner });
 
-        // Setup vat
+        weth = await ERC20.new(0, { from: owner }); 
+        wethJoin = await GemJoin.new(vat.address, ilk, weth.address, { from: owner });
+        await vat.rely(wethJoin.address, { from: owner });
+
+        dai = await ERC20.new(0, { from: owner });
+        daiJoin = await DaiJoin.new(vat.address, dai.address, { from: owner });
+        await vat.rely(daiJoin.address, { from: owner });
+
         await vat.file(ilk, spot,    RAY, { from: owner });
         await vat.file(ilk, linel, limits, { from: owner });
         await vat.file(Line,       limits); // TODO: Why can't we specify `, { from: owner }`?
@@ -55,20 +73,48 @@ contract('ERC20Dealer', async (accounts) =>  {
         await vat.rely(pot.address, { from: owner });
         // Do we need to set the dsr to something different than one?
 
+        // Setup chai
+        chai = await Chai.new(
+            vat.address,
+            pot.address,
+            daiJoin.address,
+            dai.address,
+        );
+        await vat.rely(chai.address, { from: owner });
+
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
         maturity = (await web3.eth.getBlock(block)).timestamp + 1000;
         yDai = await YDai.new(vat.address, pot.address, maturity, "Name", "Symbol");
 
+        // Set treasury
+        treasury = await Treasury.new(
+            dai.address,        // dai
+            chai.address,       // chai
+            weth.address,       // weth
+            daiJoin.address,    // daiJoin
+            wethJoin.address,   // wethJoin
+            vat.address,        // vat
+        );
+        await vat.rely(treasury.address, { from: owner }); //?
+
         // Setup Collateral Token
-        token = await TestERC20.new(0, { from: owner }); 
+        token = await ERC20.new(0, { from: owner }); 
 
         // Setup Oracle
         oracle = await TestOracle.new({ from: owner });
         await oracle.setPrice(price); // Setting price at 1.1
 
         // Setup ERC20Dealer
-        dealer = await ERC20Dealer.new(yDai.address, token.address, oracle.address, { from: owner });
+        dealer = await ERC20Dealer.new(
+            treasury.address,
+            dai.address,
+            yDai.address,
+            token.address,
+            oracle.address,
+            { from: owner },
+        );
+        treasury.grantAccess(dealer.address, { from: owner });
         yDai.grantAccess(dealer.address, { from: owner });
     });
 
@@ -273,7 +319,7 @@ contract('ERC20Dealer', async (accounts) =>  {
                 );
 
                 await yDai.approve(dealer.address, daiTokens, { from: owner });
-                await dealer.repay(owner, daiTokens, { from: owner });
+                await dealer.restore(owner, daiTokens, { from: owner });
     
                 assert.equal(
                     (await yDai.balanceOf(owner)),   
@@ -304,7 +350,7 @@ contract('ERC20Dealer', async (accounts) =>  {
                 );
 
                 await yDai.approve(dealer.address, moreDai, { from: owner });
-                await dealer.repay(owner, moreDai, { from: owner });
+                await dealer.restore(owner, moreDai, { from: owner });
     
                 assert.equal(
                     (await yDai.balanceOf(owner)),   
@@ -345,7 +391,7 @@ contract('ERC20Dealer', async (accounts) =>  {
                 );
 
                 await yDai.approve(dealer.address, daiTokens, { from: owner });
-                await dealer.repay(owner, daiTokens, { from: owner });
+                await dealer.restore(owner, daiTokens, { from: owner });
     
                 assert.equal(
                     (await yDai.balanceOf(owner)),   
@@ -390,7 +436,7 @@ contract('ERC20Dealer', async (accounts) =>  {
                 );
 
                 await yDai.approve(dealer.address, moreDai, { from: owner });
-                await dealer.repay(owner, moreDai, { from: owner });
+                await dealer.restore(owner, moreDai, { from: owner });
     
                 assert.equal(
                     (await yDai.balanceOf(owner)),   

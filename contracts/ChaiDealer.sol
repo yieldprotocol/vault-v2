@@ -14,8 +14,6 @@ import "./ERC20Dealer.sol";
 contract ChaiDealer is ERC20Dealer {
     using DecimalMath for uint256;
 
-    ITreasury internal _treasury;
-    IERC20 internal _dai;
     IChai internal _chai;
     IOracle internal _chaiOracle;
 
@@ -25,9 +23,7 @@ contract ChaiDealer is ERC20Dealer {
         address yDai_,
         address chai_,
         address chaiOracle_
-    ) public ERC20Dealer(yDai_, chai_, chaiOracle_) { // ERC20Dealer also moves chai
-        _treasury = ITreasury(treasury_);
-        _dai = IERC20(dai_);
+    ) public ERC20Dealer(treasury_, dai_, yDai_, chai_, chaiOracle_) {
         _chai = IChai(chai_);
         _chaiOracle = IOracle(chaiOracle_);
     }

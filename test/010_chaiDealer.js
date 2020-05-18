@@ -247,7 +247,7 @@ contract('ChaiDealer', async (accounts) =>  {
                 );
 
                 await yDai.approve(chaiDealer.address, daiTokens, { from: owner });
-                await chaiDealer.repay(owner, daiTokens, { from: owner }); // Repay is in yDai
+                await chaiDealer.restore(owner, daiTokens, { from: owner }); // Repay is in yDai
     
                 assert.equal(
                     (await yDai.balanceOf(owner)),   

@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IOracle.sol";
+import "./interfaces/ITreasury.sol";
 import "./interfaces/IYDai.sol";
 import "./Constants.sol";
 
@@ -16,6 +17,8 @@ contract ERC20Dealer is Ownable, Constants {
     using DecimalMath for uint256;
     using DecimalMath for uint8;
 
+    ITreasury internal _treasury;
+    IERC20 internal _dai;
     IYDai internal _yDai;
     IERC20 internal _token;
     IOracle internal _tokenOracle; // The oracle should return the price adjusted by collateralization
@@ -24,10 +27,14 @@ contract ERC20Dealer is Ownable, Constants {
     mapping(address => uint256) internal _debt;   // In Dai/yDai
 
     constructor (
+        address treasury_,
+        address dai_,
         address yDai_,
         address token_,
         address tokenOracle_
     ) public {
+        _treasury = ITreasury(treasury_);
+        _dai = IERC20(dai_);
         _yDai = IYDai(yDai_);
         _token = IERC20(token_);
         _tokenOracle = IOracle(tokenOracle_);
@@ -117,13 +124,44 @@ contract ERC20Dealer is Ownable, Constants {
     // debt_discounted = debt_nominal - repay_amount * ---------------
     //                                                  debt_now
     //
-    // user --- Dai ---> us
+    // user --- yDai ---> us
     // debt--
-    function repay(address from, uint256 yDai) public {
+    function restore(address from, uint256 yDai) public {
         uint256 toRepay = Math.min(yDai, debtOf(from));
         uint256 debtProportion = _debt[from].mul(RAY.unit())
             .divd(debtOf(from).mul(RAY.unit()), RAY);
+
         _yDai.burn(from, toRepay);
         _debt[from] = _debt[from].sub(toRepay.muld(debtProportion, RAY)); // Will revert if not enough debt
+    }
+
+    /// @dev Takes dai from `from` address, user debt is decreased.
+    //                                                  debt_nominal
+    // debt_discounted = debt_nominal - repay_amount * ---------------
+    //                                                  debt_now
+    //
+    // user --- dai ---> us
+    // debt--
+    function repay(address from, uint256 dai) public {
+        require(
+            _dai.transferFrom(from, address(this), dai),       // Take dai from user
+            "ERC20Dealer: Dai transfer fail"
+        );
+
+        uint256 toRepay = Math.min(dai, debtOf(from));
+        uint256 debtProportion = _debt[from].mul(RAY.unit())
+            .divd(debtOf(from).mul(RAY.unit()), RAY);
+
+        _dai.approve(address(_treasury), toRepay);              // Treasury will take the dai
+        _treasury.push(address(this), toRepay);                 // Give the dai to Treasury
+        _debt[from] = _debt[from].sub(toRepay.muld(debtProportion, RAY)); // Will revert if not enough debt
+    }
+
+    /// @dev Calculates the amount to repay and the amount by which to reduce the debt
+    function amounts(address user, uint256 dai) internal view returns(uint256, uint256) {
+        uint256 toRepay = Math.min(dai, debtOf(user));
+        uint256 debtProportion = _debt[user].mul(RAY.unit())
+            .divd(debtOf(user).mul(RAY.unit()), RAY);
+        return (toRepay, toRepay.muld(debtProportion, RAY));
     }
 }

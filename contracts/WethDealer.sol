@@ -10,15 +10,14 @@ import "./ERC20Dealer.sol";
 /// @dev A WethDealer takes weth as collateral and issues yDai. Weth is posted to MakerDAO through the Treasury.
 contract WethDealer is ERC20Dealer {
 
-    ITreasury internal _treasury;
-
     constructor (
         address treasury_,
+        address dai_,
         address yDai_,
         address weth_,
         address wethOracle_
-    ) public ERC20Dealer(yDai_, weth_, wethOracle_) {
-        _treasury = ITreasury(treasury_);
+    ) public ERC20Dealer(treasury_, dai_, yDai_, weth_, wethOracle_) {
+        //
     }
 
     /// @dev Takes weth from `from` address and posts it to the Treasury
