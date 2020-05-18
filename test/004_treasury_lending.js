@@ -210,8 +210,8 @@ contract('Treasury', async (accounts) =>  {
 
             it("repays dai debt and no more", async() => {
                 // Test `normalizedAmount >= normalizedDebt`
-                await dai.approve(treasury.address, daiTokens, { from: user });
-                await treasury.repay(user, daiTokens, { from: user });
+                await dai.transfer(treasury.address, daiTokens, { from: user });
+                await treasury.repay(daiTokens, { from: user });
 
                 assert.equal(
                     await dai.balanceOf(user),   
