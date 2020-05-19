@@ -243,7 +243,7 @@ contract('UniLPOracle', async (accounts) =>  {
                     "Owner has yDai",
                 );
                 assert.equal(
-                    (await uniLPDealer.debtOf.call(owner)),   
+                    (await uniLPDealer.debtDai.call(owner)),   
                     0,
                     "Owner has debt",
                 );
@@ -256,7 +256,7 @@ contract('UniLPOracle', async (accounts) =>  {
                     "Owner should have yDai",
                 );
                 assert.equal(
-                    (await uniLPDealer.debtOf.call(owner)),   
+                    (await uniLPDealer.debtDai.call(owner)),   
                     daiTokens,
                     "Owner should have debt",
                 );
@@ -281,7 +281,7 @@ contract('UniLPOracle', async (accounts) =>  {
                         "Owner does not have yDai",
                     );
                     assert.equal(
-                        (await uniLPDealer.debtOf.call(owner)),   
+                        (await uniLPDealer.debtDai.call(owner)),   
                         daiTokens,
                         "Owner does not have debt",
                     );
@@ -295,7 +295,7 @@ contract('UniLPOracle', async (accounts) =>  {
                         "Owner should not have yDai",
                     );
                     assert.equal(
-                        (await uniLPDealer.debtOf.call(owner)),   
+                        (await uniLPDealer.debtDai.call(owner)),   
                         0,
                         "Owner should not have debt",
                     );

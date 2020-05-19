@@ -205,7 +205,7 @@ contract('ERC20Dealer', async (accounts) =>  {
                 "Owner has yDai",
             );
             assert.equal(
-                (await dealer.debtOf.call(owner)),   
+                (await dealer.debtDai.call(owner)),   
                 0,
                 "Owner has debt",
             );
@@ -218,7 +218,7 @@ contract('ERC20Dealer', async (accounts) =>  {
                 "Owner should have yDai",
             );
             assert.equal(
-                (await dealer.debtOf.call(owner)),   
+                (await dealer.debtDai.call(owner)),   
                 daiTokens,
                 "Owner should have debt",
             );
@@ -231,7 +231,7 @@ contract('ERC20Dealer', async (accounts) =>  {
                 "Owner does not have borrowing power",
             );
             assert.equal(
-                (await dealer.debtOf.call(owner)),   
+                (await dealer.debtDai.call(owner)),   
                 0,
                 "Owner has debt",
             );
@@ -254,7 +254,7 @@ contract('ERC20Dealer', async (accounts) =>  {
                     "Owner does not have borrowing power",
                 );
                 assert.equal(
-                    (await dealer.debtOf.call(owner)),   
+                    (await dealer.debtDai.call(owner)),   
                     daiTokens,
                     "Owner does not have debt",
                 );
@@ -274,7 +274,7 @@ contract('ERC20Dealer', async (accounts) =>  {
                     "Owner does not have borrowing power",
                 );
                 assert.equal(
-                    (await dealer.debtOf.call(owner)),   
+                    (await dealer.debtDai.call(owner)),   
                     daiTokens,
                     "Owner does not have debt",
                 );
@@ -287,7 +287,7 @@ contract('ERC20Dealer', async (accounts) =>  {
             
             it("as rate increases after maturity, so does the debt in when measured in dai", async() => {
                 assert.equal(
-                    (await dealer.debtOf.call(owner)),   
+                    (await dealer.debtDai.call(owner)),   
                     daiTokens,
                     "Owner should have " + daiTokens + " debt",
                 );
@@ -300,15 +300,15 @@ contract('ERC20Dealer', async (accounts) =>  {
                 await vat.fold(ilk, vat.address, "500000000000000000000000000", { from: owner });
                 
                 assert.equal(
-                    (await dealer.debtOf.call(owner)),   
+                    (await dealer.debtDai.call(owner)),   
                     increasedDebt,
-                    "Owner should have " + increasedDebt + " debt after the rate change, instead has " + BN(await dealer.debtOf.call(owner)),
+                    "Owner should have " + increasedDebt + " debt after the rate change, instead has " + BN(await dealer.debtDai.call(owner)),
                 );
             });
 
             it("as rate increases after maturity, the debt doesn't in when measured in yDai", async() => {
                 assert.equal(
-                    (await dealer.debtOf.call(owner)),   
+                    (await dealer.debtDai.call(owner)),   
                     daiTokens,
                     "Owner should have " + daiTokens + " debt",
                 );
@@ -320,7 +320,7 @@ contract('ERC20Dealer', async (accounts) =>  {
                 // Set rate to 1.5
                 await vat.fold(ilk, vat.address, "500000000000000000000000000", { from: owner });
                 
-                let debt = await dealer.debtOf.call(owner);
+                let debt = await dealer.debtDai.call(owner);
                 assert.equal(
                     (await dealer.inYDai(debt)),   
                     daiTokens,
@@ -335,7 +335,7 @@ contract('ERC20Dealer', async (accounts) =>  {
                     "Owner does not have yDai",
                 );
                 assert.equal(
-                    (await dealer.debtOf.call(owner)),   
+                    (await dealer.debtDai.call(owner)),   
                     daiTokens,
                     "Owner does not have debt",
                 );
@@ -349,7 +349,7 @@ contract('ERC20Dealer', async (accounts) =>  {
                     "Owner should not have yDai",
                 );
                 assert.equal(
-                    (await dealer.debtOf.call(owner)),   
+                    (await dealer.debtDai.call(owner)),   
                     0,
                     "Owner should not have debt",
                 );
@@ -372,7 +372,7 @@ contract('ERC20Dealer', async (accounts) =>  {
                     "Owner does not have dai",
                 );
                 assert.equal(
-                    (await dealer.debtOf.call(owner)),   
+                    (await dealer.debtDai.call(owner)),   
                     daiTokens,
                     "Owner does not have debt",
                 );
@@ -386,7 +386,7 @@ contract('ERC20Dealer', async (accounts) =>  {
                     "Owner should not have yDai",
                 );
                 assert.equal(
-                    (await dealer.debtOf.call(owner)),   
+                    (await dealer.debtDai.call(owner)),   
                     0,
                     "Owner should not have debt",
                 );
@@ -403,7 +403,7 @@ contract('ERC20Dealer', async (accounts) =>  {
                     "Owner does not have yDai",
                 );
                 assert.equal(
-                    (await dealer.debtOf.call(owner)),   
+                    (await dealer.debtDai.call(owner)),   
                     daiTokens, // 100 dai
                     "Owner does not have debt",
                 );
@@ -417,7 +417,7 @@ contract('ERC20Dealer', async (accounts) =>  {
                     "Owner should have yDai left",
                 );
                 assert.equal(
-                    (await dealer.debtOf.call(owner)),   
+                    (await dealer.debtDai.call(owner)),   
                     0,
                     "Owner should not have debt",
                 );
@@ -430,7 +430,7 @@ contract('ERC20Dealer', async (accounts) =>  {
                     "Owner does not have yDai",
                 );
                 assert.equal(
-                    (await dealer.debtOf.call(owner)),   
+                    (await dealer.debtDai.call(owner)),   
                     daiTokens,
                     "Owner does not have debt",
                 );
@@ -444,7 +444,7 @@ contract('ERC20Dealer', async (accounts) =>  {
                 await vat.fold(ilk, vat.address, rateIncrease, { from: owner }); // 1 + 0.25
 
                 assert.equal(
-                    (await dealer.debtOf.call(owner)),   
+                    (await dealer.debtDai.call(owner)),   
                     moreDai,
                     "Owner does not have increased debt",
                 );
@@ -458,9 +458,9 @@ contract('ERC20Dealer', async (accounts) =>  {
                     "Owner should not have yDai",
                 );
                 assert.equal(
-                    (await dealer.debtOf.call(owner)),   
+                    (await dealer.debtDai.call(owner)),   
                     remainingDebt,
-                    "Owner should have " + remainingDebt + " dai debt, instead has " + (await dealer.debtOf.call(owner)),
+                    "Owner should have " + remainingDebt + " dai debt, instead has " + (await dealer.debtDai.call(owner)),
                 );
             });
 
@@ -475,7 +475,7 @@ contract('ERC20Dealer', async (accounts) =>  {
                     "Owner does not have yDai",
                 );
                 assert.equal(
-                    (await dealer.debtOf.call(owner)),   
+                    (await dealer.debtDai.call(owner)),   
                     daiTokens,
                     "Owner does not have debt",
                 );
@@ -489,7 +489,7 @@ contract('ERC20Dealer', async (accounts) =>  {
                 await vat.fold(ilk, vat.address, rateIncrease, { from: owner }); // 1 + 0.25
 
                 assert.equal(
-                    (await dealer.debtOf.call(owner)),   
+                    (await dealer.debtDai.call(owner)),   
                     moreDai,
                     "Owner does not have increased debt",
                 );
@@ -503,7 +503,7 @@ contract('ERC20Dealer', async (accounts) =>  {
                     "Owner should not have yDai",
                 );
                 assert.equal(
-                    (await dealer.debtOf.call(owner)),   
+                    (await dealer.debtDai.call(owner)),   
                     0,
                     "Owner should have no remaining debt",
                 );

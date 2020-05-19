@@ -205,7 +205,7 @@ contract('WethDealer', async (accounts) =>  {
                 "Owner has yDai",
             );
             assert.equal(
-                (await wethDealer.debtOf(owner)),   
+                (await wethDealer.debtDai(owner)),   
                 0,
                 "Owner has debt",
             );
@@ -218,7 +218,7 @@ contract('WethDealer', async (accounts) =>  {
                 "Owner should have yDai",
             );
             assert.equal(
-                (await wethDealer.debtOf(owner)),   
+                (await wethDealer.debtDai(owner)),   
                 daiTokens,
                 "Owner should have debt",
             );
@@ -236,7 +236,7 @@ contract('WethDealer', async (accounts) =>  {
                     "Owner does not have yDai",
                 );
                 assert.equal(
-                    (await wethDealer.debtOf(owner)),   
+                    (await wethDealer.debtDai(owner)),   
                     daiTokens,
                     "Owner does not have debt",
                 );

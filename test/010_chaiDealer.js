@@ -210,7 +210,7 @@ contract('ChaiDealer', async (accounts) =>  {
                 "Owner has yDai",
             );
             assert.equal(
-                (await chaiDealer.debtOf.call(owner)),   
+                (await chaiDealer.debtDai.call(owner)),   
                 0,
                 "Owner has debt",
             );
@@ -223,7 +223,7 @@ contract('ChaiDealer', async (accounts) =>  {
                 "Owner should have yDai",
             );
             assert.equal(
-                (await chaiDealer.debtOf.call(owner)),   
+                (await chaiDealer.debtDai.call(owner)),   
                 daiTokens, // Debt is in dai always
                 "Owner should have debt",
             );
@@ -241,7 +241,7 @@ contract('ChaiDealer', async (accounts) =>  {
                     "Owner does not have yDai",
                 );
                 assert.equal(
-                    (await chaiDealer.debtOf.call(owner)),   
+                    (await chaiDealer.debtDai.call(owner)),   
                     daiTokens,
                     "Owner does not have debt",
                 );
@@ -255,7 +255,7 @@ contract('ChaiDealer', async (accounts) =>  {
                     "Owner should not have yDai",
                 );
                 assert.equal(
-                    (await chaiDealer.debtOf.call(owner)),   
+                    (await chaiDealer.debtDai.call(owner)),   
                     0,
                     "Owner should not have debt",
                 );
