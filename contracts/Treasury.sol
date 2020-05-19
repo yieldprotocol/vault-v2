@@ -150,7 +150,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
             address(this),
             address(this),
             address(this),
-            -weth.toInt(), // Weth collateral to add - WAD
+            -weth.toInt(), // Weth collateral to remove - WAD
             0              // Dai debt to add - WAD
         );
         _wethJoin.exit(to, weth); // `GemJoin` reverts on failures
