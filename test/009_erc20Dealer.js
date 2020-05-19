@@ -285,7 +285,7 @@ contract('ERC20Dealer', async (accounts) =>  {
                 );
             });
             
-            it("as rate increases after maturity, so does the debt", async() => {
+            it("as rate increases after maturity, so does the debt in when measured in dai", async() => {
                 assert.equal(
                     (await dealer.debtOf.call(owner)),   
                     daiTokens,
@@ -302,7 +302,29 @@ contract('ERC20Dealer', async (accounts) =>  {
                 assert.equal(
                     (await dealer.debtOf.call(owner)),   
                     increasedDebt,
-                    "Owner should have " + increasedDebt + " debt after the rate change, instead has " + BN((await dealer.debtOf.call(owner))),
+                    "Owner should have " + increasedDebt + " debt after the rate change, instead has " + BN(await dealer.debtOf.call(owner)),
+                );
+            });
+
+            it("as rate increases after maturity, the debt doesn't in when measured in yDai", async() => {
+                assert.equal(
+                    (await dealer.debtOf.call(owner)),   
+                    daiTokens,
+                    "Owner should have " + daiTokens + " debt",
+                );
+                // yDai matures
+                await helper.advanceTime(1000);
+                await helper.advanceBlock();
+                await yDai.mature();
+
+                // Set rate to 1.5
+                await vat.fold(ilk, vat.address, "500000000000000000000000000", { from: owner });
+                
+                let debt = await dealer.debtOf.call(owner);
+                assert.equal(
+                    (await dealer.inYDai(debt)),   
+                    daiTokens,
+                    "Owner should have " + daiTokens + " debt after the rate change, instead has " + BN(await dealer.inYDai(debt)),
                 );
             });
 

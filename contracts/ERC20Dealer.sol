@@ -24,7 +24,7 @@ contract ERC20Dealer is Ownable, Constants {
     IOracle internal _tokenOracle; // The oracle should return the price adjusted by collateralization
 
     mapping(address => uint256) internal _posted; // In Erc20
-    mapping(address => uint256) internal _debt;   // In Dai/yDai
+    mapping(address => uint256) internal _debt;   // In yDai
 
     constructor (
         address treasury_,
@@ -56,18 +56,33 @@ contract ERC20Dealer is Ownable, Constants {
         return _posted[user].divd(_tokenOracle.price(), RAY);
     }
 
-    /// @dev Return debt in underlying of an user
+    /// @dev Return debt in dai of an user
     //
     //                        rate_now
     // debt_now = debt_mat * ----------
     //                        rate_mat
     //
     function debtOf(address user) public view returns (uint256) {
+        return inDai(_debt[user]);
+    }
+
+    /// @dev Returns the dai equivalent of an yDai amount
+    function inDai(uint256 yDai) public view returns (uint256) {
         if (_yDai.isMature()){
-            return _debt[user].muld(_yDai.rate(), RAY);
+            return yDai.muld(_yDai.rate(), RAY);
         }
         else {
-            return _debt[user];
+            return yDai;
+        }
+    }
+
+    /// @dev Returns the yDai equivalent of a dai amount
+    function inYDai(uint256 dai) public view returns (uint256) {
+        if (_yDai.isMature()){
+            return dai.divd(_yDai.rate(), RAY);
+        }
+        else {
+            return dai;
         }
     }
 
@@ -145,15 +160,15 @@ contract ERC20Dealer is Ownable, Constants {
             "ERC20Dealer: Dai transfer fail"
         );
 
-        (uint256 toRepay, uint256 debtDecrease) = amounts(from, dai);
+        (uint256 toRepay, uint256 debtDecrease) = amounts(from, inYDai(dai));
         _dai.approve(address(_treasury), toRepay);              // Treasury will take the dai
         _treasury.push(address(this), toRepay);                 // Give the dai to Treasury
         _debt[from] = _debt[from].sub(debtDecrease);
     }
 
     /// @dev Calculates the amount to repay and the amount by which to reduce the debt
-    function amounts(address user, uint256 dai) internal view returns(uint256, uint256) {
-        uint256 toRepay = Math.min(dai, debtOf(user));
+    function amounts(address user, uint256 yDai) internal view returns(uint256, uint256) {
+        uint256 toRepay = Math.min(yDai, debtOf(user));
         uint256 debtProportion = _debt[user].mul(RAY.unit())
             .divd(debtOf(user).mul(RAY.unit()), RAY);
         return (toRepay, toRepay.muld(debtProportion, RAY));
