@@ -92,7 +92,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
                 address(this),
                 address(this),
                 0,                           // Weth collateral to add
-                -toRepay.divd(rate, RAY).toInt() // Dai debt to add
+                -toRepay.divd(rate, RAY).toInt() // Dai debt to remove
             );
         }
 
