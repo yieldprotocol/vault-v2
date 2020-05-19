@@ -82,40 +82,48 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
         );
 
         uint256 toRepay = Math.min(debt(), dai);
-        _daiJoin.join(address(this), toRepay);
-        // Remove debt from vault using frob
-        (, uint256 rate,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
-        _vat.frob(
-            collateralType,
-            address(this),
-            address(this),
-            address(this),
-            0,                           // Weth collateral to add
-            -toRepay.divd(rate, RAY).toInt() // Dai debt to add
-        );
+        if (toRepay > 0) {
+            _daiJoin.join(address(this), toRepay);
+            // Remove debt from vault using frob
+            (, uint256 rate,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
+            _vat.frob(
+                collateralType,
+                address(this),
+                address(this),
+                address(this),
+                0,                           // Weth collateral to add
+                -toRepay.divd(rate, RAY).toInt() // Dai debt to add
+            );
+        }
 
         uint256 toSave = dai - toRepay;         // toRepay can't be greater than dai
-        _dai.approve(address(_chai), toSave); // Chai will take dai
-        _chai.join(address(this), toSave);    // Give dai to Chai, take chai back
+        if (toSave > 0) {
+            _dai.approve(address(_chai), toSave); // Chai will take dai
+            _chai.join(address(this), toSave);    // Give dai to Chai, take chai back
+        }
     }
 
     /// @dev Returns dai using chai savings as much as possible, and borrowing the rest.
     function pull(address user, uint256 dai) public override onlyAuthorized("Treasury: Not Authorized") {
         uint256 toRelease = Math.min(savings(), dai);
-        _chai.draw(address(this), toRelease);     // Grab dai from Chai, converted from chai
+        if (toRelease > 0) {
+            _chai.draw(address(this), toRelease);     // Grab dai from Chai, converted from chai
+        }
 
         uint256 toBorrow = dai - toRelease;    // toRelease can't be greater than dai
-        (, uint256 rate,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
-        // Increase the dai debt by the dai to receive divided by the stability fee
-        _vat.frob(
-            collateralType,
-            address(this),
-            address(this),
-            address(this),
-            0,
-            toBorrow.divd(rate, RAY).toInt()
-        ); // `vat.frob` reverts on failure
-        _daiJoin.exit(address(this), toBorrow); // `daiJoin` reverts on failures
+        if (toBorrow > 0) {
+            (, uint256 rate,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
+            // Increase the dai debt by the dai to receive divided by the stability fee
+            _vat.frob(
+                collateralType,
+                address(this),
+                address(this),
+                address(this),
+                0,
+                toBorrow.divd(rate, RAY).toInt()
+            ); // `vat.frob` reverts on failure
+            _daiJoin.exit(address(this), toBorrow); // `daiJoin` reverts on failures
+        }
 
         require(                            // Give dai to user
             _dai.transfer(user, dai),
