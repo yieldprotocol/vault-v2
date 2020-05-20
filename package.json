@@ -15,6 +15,7 @@
     "@nomiclabs/buidler-truffle5": "^1.1.2",
     "@nomiclabs/buidler-web3": "^1.1.2",
     "@openzeppelin/test-helpers": "0.5.5",
+    "@truffle/hdwallet-provider": "1.0.28",
     "bignumber.js": "9.0.0",
     "chai": "4.2.0",
     "chai-bn": "0.2.1",

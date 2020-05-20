@@ -1,19 +1,16 @@
 // const { BN } = require('@openzeppelin/test-helpers');
 
 module.exports = async (deployer, network, accounts) => {
-  const [ owner ] = accounts;
-  console.log("Owner: " + owner);
-
-  let vat;
-  let weth;
-  let wethJoin;
-  let dai;
-  let daiJoin;
-  let pot;
-  let chai;
-  let treasury;
-  let chaiOracle;
-  let wethOracle;
+  let vatAddress;
+  let wethAddress;
+  let wethJoinAddress;
+  let daiAddress;
+  let daiJoinAddress;
+  let potAddress;
+  let chaiAddress;
+  let treasuryAddress;
+  let chaiOracleAddress;
+  let wethOracleAddress;
 
   if (network == "development") {
     // Setting up Vat
@@ -38,23 +35,23 @@ module.exports = async (deployer, network, accounts) => {
 
     // Setup Vat, Dai, Join and Weth
     await deployer.deploy(Vat);
-    vat = await Vat.deployed();
-    await vat.rely(vat.address);
+    const vat = await Vat.deployed();
+    vatAddress = vat.address;
+    await vat.rely(vatAddress);
     await vat.init(ilk); // Set ilk rate to 1.0
 
     await deployer.deploy(ERC20, 0);
-    weth = await ERC20.deployed(); 
+    wethAddress = (await ERC20.deployed()).address;
 
-    await deployer.deploy(GemJoin, vat.address, ilk, weth.address);
-    wethJoin = await GemJoin.deployed();
-    await vat.rely(wethJoin.address);
+    await deployer.deploy(GemJoin, vatAddress, ilk, wethAddress);
+    wethJoinAddress = (await GemJoin.deployed()).address;
 
     await deployer.deploy(ERC20, 0);
-    dai = await ERC20.deployed();
+    daiAddress = (await ERC20.deployed()).address;
 
-    await deployer.deploy(DaiJoin, vat.address, dai.address);
-    daiJoin = await DaiJoin.deployed();
-    await vat.rely(daiJoin.address);
+    await deployer.deploy(DaiJoin, vatAddress, daiAddress);
+    daiJoinAddress = (await DaiJoin.deployed()).address;
+    await vat.rely(daiJoinAddress);
 
     // Setup spot and limits
     await vat.file(ilk, spotName, spot);
@@ -62,20 +59,20 @@ module.exports = async (deployer, network, accounts) => {
     await vat.file(Line, limits);
 
     // Setup Pot
-    await deployer.deploy(Pot, vat.address);
-    pot = await Pot.deployed();
-    await vat.rely(pot.address);
+    await deployer.deploy(Pot, vatAddress);
+    potAddress = (await Pot.deployed()).address;
+    await vat.rely(potAddress);
 
     // Setup Chai
     await deployer.deploy(
         Chai,
-        vat.address,
-        pot.address,
-        daiJoin.address,
-        dai.address,
+        vatAddress,
+        potAddress,
+        daiJoinAddress,
+        daiAddress,
     );
-    chai = await Chai.deployed();
-    await vat.rely(chai.address);
+    chaiAddress = (await Chai.deployed()).address;
+    await vat.rely(chaiAddress);
 
     // --- TODO: Find out how to move the next section to 3_deploy, passing the addresses on
     
@@ -85,23 +82,23 @@ module.exports = async (deployer, network, accounts) => {
 
     await deployer.deploy(
       Treasury,
-      dai.address,        // dai
-      chai.address,       // chai
-      weth.address,       // weth
-      daiJoin.address,    // daiJoin
-      wethJoin.address,   // wethJoin
-      vat.address,        // vat
+      daiAddress,        // dai
+      chaiAddress,       // chai
+      wethAddress,       // weth
+      daiJoinAddress,    // daiJoin
+      wethJoinAddress,   // wethJoin
+      vatAddress,        // vat
     );
     treasury = await Treasury.deployed();
-    await treasury.grantAccess(owner); // Do not copy over beyond development
+    treasuryAddress = treasury.address;
 
     // Setup chaiOracle
-    await deployer.deploy(ChaiOracle, pot.address);
-    chaiOracle = await ChaiOracle.deployed();
+    await deployer.deploy(ChaiOracle, potAddress);
+    chaiOracleAddress = (await ChaiOracle.deployed()).address;
 
     // Setup wethOracle
-    await deployer.deploy(WethOracle, vat.address);
-    wethOracle = await WethOracle.deployed();
+    await deployer.deploy(WethOracle, vatAddress);
+    wethOracleAddress = (await WethOracle.deployed()).address;
   };
 
   if (network == "mainnet") {
@@ -121,7 +118,7 @@ module.exports = async (deployer, network, accounts) => {
     dai = "0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa";
     daiJoin = "0x5AA71a3ae1C0bd6ac27A1f28e1415fFFB6F15B8c";
     pot = "0xEA190DBDC7adF265260ec4dA6e9675Fd4f5A78bb";
-    chai = "0x";
+    chai = "0xb641957b6c29310926110848db2d464c8c3c3f38";
   };
 
   if (network == "goerli") {
@@ -131,27 +128,57 @@ module.exports = async (deployer, network, accounts) => {
     dai = "0x7D750374481D8E3190aB39cAFf94f3aB28502f5D";
     daiJoin = "0xB62FFaBf09E23bd6082dd1491bFb5511BD518d23";
     pot = "0x9C42a352B2814E6b103E9ba91da7922b76C86924";
-    chai = "0x";
+    
+    // Setup Chai
+    await deployer.deploy(
+      Chai,
+      vatAddress,
+      potAddress,
+      daiJoinAddress,
+      daiAddress,
+    );
+    chai = await Chai.deployed();
+    await vat.rely(chaiAddress);
   };
 
   if (network == "rinkeby") {
-    vat = "0x6E631D87bF9456495dDC9bDa576534592f486964";
-    weth = "0xc421f99D871aC5793985fd86d8659B7bDACFc9AC";
-    wethJoin = "0xA6268caddf03356aF17C7259E10d865C9DF48863";
-    dai = "0x6A9865aDE2B6207dAAC49f8bCba9705dEB0B0e6D";
-    daiJoin = "0xa956A2a53C3F8F3Dc02793F7b13e8121aD114c54";
-    pot = "0x867E3054af4d30fCCF0fCf3B6e855B49EF7e02Ed";
-    chai = "0x";
+    vatAddress = "0x6E631D87bF9456495dDC9bDa576534592f486964";
+    wethAddress = "0xc421f99D871aC5793985fd86d8659B7bDACFc9AC";
+    wethJoinAddress = "0xA6268caddf03356aF17C7259E10d865C9DF48863";
+    daiAddress = "0x6A9865aDE2B6207dAAC49f8bCba9705dEB0B0e6D";
+    daiJoinAddress = "0xa956A2a53C3F8F3Dc02793F7b13e8121aD114c54";
+    potAddress = "0x867E3054af4d30fCCF0fCf3B6e855B49EF7e02Ed";
+    
+    // Setup Chai
+    await deployer.deploy(
+      Chai,
+      vatAddress,
+      potAddress,
+      daiJoinAddress,
+      daiAddress,
+    );
+    chaiAddress = (await Chai.deployed()).address;
+    await vat.rely(chaiAddress);
   };
 
   if (network == "ropsten") {
-    vat = "0xFfCFcAA53b61cF5F332b4FBe14033c1Ff5A391eb";
-    weth = "0x7715c353d352Ac5746A063AFe2036A092b5D0db0";
-    wethJoin = "0xa885b27E8754f8238DBedaBd2eae180490C341d7";
-    dai = "0x31F42841c2db5173425b5223809CF3A38FEde360";
-    daiJoin = "0xA0b569e9E0816A20Ab548D692340cC28aC7Be986";
-    pot = "0x9588a660241aeA569B3965e2f00631f2C5eDaE33";
-    chai = "0x";
+    vatAddress = "0xFfCFcAA53b61cF5F332b4FBe14033c1Ff5A391eb";
+    wethAddress = "0x7715c353d352Ac5746A063AFe2036A092b5D0db0";
+    wethJoinAddress = "0xa885b27E8754f8238DBedaBd2eae180490C341d7";
+    daiAddress = "0x31F42841c2db5173425b5223809CF3A38FEde360";
+    daiJoinAddress = "0xA0b569e9E0816A20Ab548D692340cC28aC7Be986";
+    potAddress = "0x9588a660241aeA569B3965e2f00631f2C5eDaE33";
+    
+    // Setup Chai
+    await deployer.deploy(
+      Chai,
+      vatAddress,
+      potAddress,
+      daiJoinAddress,
+      daiAddress,
+    );
+    chaiAddress = (await Chai.deployed()).address;
+    await vat.rely(chaiAddress);
   };
 
   // --- TODO: Find out how to move the next section to 4_deploy, passing the addresses on
@@ -162,16 +189,16 @@ module.exports = async (deployer, network, accounts) => {
   const ChaiDealer = artifacts.require("ChaiDealer");
   const WethDealer = artifacts.require("WethDealer");
 
-  let yDai;
-  let mint;
-  let chaiDealer;
-  let wethDealer;
-  const block = await web3.eth.getBlockNumber();
+  // const block = await web3.eth.getBlockNumber();
   const maturitiesInput = new Set([
-    [(await web3.eth.getBlock(block)).timestamp + 1000, 'Name1','Symbol1'],
-    [(await web3.eth.getBlock(block)).timestamp + 2000, 'Name2','Symbol2'],
-    [(await web3.eth.getBlock(block)).timestamp + 3000, 'Name3','Symbol3'],
-    [(await web3.eth.getBlock(block)).timestamp + 4000, 'Name4','Symbol4'],
+    // [(await web3.eth.getBlock(block)).timestamp + 1000, 'Name1','Symbol1'],
+    // [(await web3.eth.getBlock(block)).timestamp + 2000, 'Name2','Symbol2'],
+    // [(await web3.eth.getBlock(block)).timestamp + 3000, 'Name3','Symbol3'],
+    // [(await web3.eth.getBlock(block)).timestamp + 4000, 'Name4','Symbol4'],
+    [1601510399, 'yDai-2020-09-30', 'yDai-2020-09-30'],
+    [1609459199, 'yDai-2020-12-31', 'yDai-2020-12-31'],
+    [1617235199, 'yDai-2021-03-31', 'yDai-2021-03-31'],
+    [1625097599, 'yDai-2021-06-30', 'yDai-2021-06-30'],
   ]);
 
   const maturitiesOutput = [];
@@ -179,50 +206,49 @@ module.exports = async (deployer, network, accounts) => {
     // Setup YDai
     await deployer.deploy(
       YDai,
-      vat.address,
-      pot.address,
+      vatAddress,
+      potAddress,
       maturity,
       name,
       symbol,
     );
-    yDai = await YDai.deployed();
+    const yDai = await YDai.deployed();
+    const yDaiAddress = yDai.address;
 
     // Setup mint
     await deployer.deploy(
       Mint,
-      treasury.address,
-      dai.address,
-      yDai.address,
-      { from: owner },
+      treasuryAddress,
+      daiAddress,
+      yDaiAddress,
     );
-    mint = await Mint.deployed();
+    const mint = await Mint.deployed();
     await yDai.grantAccess(mint.address);
     await treasury.grantAccess(mint.address);
 
     // Setup ChaiDealer
     await deployer.deploy(
       ChaiDealer,
-      treasury.address,
-      dai.address,
-      yDai.address,
-      chai.address,
-      chaiOracle.address,
-      { from: owner },
+      treasuryAddress,
+      daiAddress,
+      yDaiAddress,
+      chaiAddress,
+      chaiOracleAddress,
     );
-    chaiDealer = await ChaiDealer.deployed();
+    const chaiDealer = await ChaiDealer.deployed();
     await yDai.grantAccess(chaiDealer.address);
     await treasury.grantAccess(chaiDealer.address);
   
     // Setup WethDealer
     await deployer.deploy(
       WethDealer,
-      treasury.address,
-      dai.address,
-      yDai.address,
-      weth.address,
-      wethOracle.address,
+      treasuryAddress,
+      daiAddress,
+      yDaiAddress,
+      wethAddress,
+      wethOracleAddress,
     );
-    wethDealer = await WethDealer.deployed();
+    const wethDealer = await WethDealer.deployed();
     await yDai.grantAccess(wethDealer.address);
     await treasury.grantAccess(wethDealer.address);
 

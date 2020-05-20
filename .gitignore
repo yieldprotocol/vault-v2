@@ -4,6 +4,7 @@ artifacts
 node_modules/
 
 #Truffle files
+.secret
 build/
 
 #Solidity-coverage
