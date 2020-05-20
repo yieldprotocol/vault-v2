@@ -6,7 +6,8 @@
   "author": "",
   "scripts": {
     "lint": "solium -d contracts",
-    "test": "buidler test"
+    "test": "buidler test",
+    "ganache": "./scripts/ganache.sh"
   },
   "devDependencies": {
     "@gnosis.pm/mock-contract": "^3.0.8",
@@ -30,6 +31,7 @@
   "dependencies": {
     "@hq20/contracts": "^0.0.4",
     "@openzeppelin/contracts": "^3.0.0",
+    "@truffle/hdwallet-provider": "1.0.28",
     "builder": "^5.0.0",
     "root": "github:nomiclabs/buidler#v1.2.0"
   }
