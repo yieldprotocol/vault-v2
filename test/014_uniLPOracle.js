@@ -1,8 +1,12 @@
 const Vat = artifacts.require('Vat');
 const Pot = artifacts.require('Pot');
+const Chai = artifacts.require('Chai');
+const Treasury = artifacts.require('Treasury');
 const YDai = artifacts.require('YDai');
 const ERC20Dealer = artifacts.require('ERC20Dealer');
-const TestERC20 = artifacts.require("TestERC20");
+const ERC20 = artifacts.require("TestERC20");
+const GemJoin = artifacts.require('GemJoin');
+const DaiJoin = artifacts.require('DaiJoin');
 const UniLPOracle = artifacts.require('UniLPOracle');
 const Uniswap = artifacts.require('./Uniswap');
 
@@ -14,7 +18,13 @@ contract('UniLPOracle', async (accounts) =>  {
     let [ owner ] = accounts;
     let vat;
     let pot;
+    let chai;
+    let treasury;
     let yDai;
+    let weth;
+    let wethJoin;
+    let dai;
+    let daiJoin;
     let uniLPDealer;
     let uniLPToken;
     let uniLPOracle;
@@ -41,6 +51,14 @@ contract('UniLPOracle', async (accounts) =>  {
         vat = await Vat.new();
         await vat.init(ilk, { from: owner });
 
+        weth = await ERC20.new(0, { from: owner }); 
+        wethJoin = await GemJoin.new(vat.address, ilk, weth.address, { from: owner });
+        await vat.rely(wethJoin.address, { from: owner });
+
+        dai = await ERC20.new(0, { from: owner });
+        daiJoin = await DaiJoin.new(vat.address, dai.address, { from: owner });
+        await vat.rely(daiJoin.address, { from: owner });
+
         // Setup vat
         await vat.file(ilk, spot,    RAY, { from: owner });
         await vat.file(ilk, linel, limits, { from: owner });
@@ -52,13 +70,32 @@ contract('UniLPOracle', async (accounts) =>  {
         await vat.rely(pot.address, { from: owner });
         // Do we need to set the dsr to something different than one?
 
+        // Setup chai
+        chai = await Chai.new(
+            vat.address,
+            pot.address,
+            daiJoin.address,
+            dai.address,
+        );
+        await vat.rely(chai.address, { from: owner });
+
+        // Set treasury
+        treasury = await Treasury.new(
+            dai.address,        // dai
+            chai.address,       // chai
+            weth.address,       // weth
+            daiJoin.address,    // daiJoin
+            wethJoin.address,   // wethJoin
+            vat.address,        // vat
+        );
+
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
         maturity = (await web3.eth.getBlock(block)).timestamp + 1000;
         yDai = await YDai.new(vat.address, pot.address, maturity, "Name", "Symbol");
 
         // Setup uniLPToken Token
-        uniLPToken = await TestERC20.new(0, { from: owner }); 
+        uniLPToken = await ERC20.new(0, { from: owner }); 
 
         // Setup Oracle
         uniswap = await Uniswap.new();
@@ -66,8 +103,16 @@ contract('UniLPOracle', async (accounts) =>  {
         uniLPOracle = await UniLPOracle.new(uniswap.address, { from: owner });
 
         // Setup ERC20Dealer
-        uniLPDealer = await ERC20Dealer.new(yDai.address, uniLPToken.address, uniLPOracle.address, { from: owner });
+        uniLPDealer = await ERC20Dealer.new(
+            treasury.address,
+            dai.address,
+            yDai.address,
+            uniLPToken.address,
+            uniLPOracle.address,
+            { from: owner },
+        );
         yDai.grantAccess(uniLPDealer.address, { from: owner });
+        await treasury.grantAccess(uniLPDealer.address, { from: owner });
     });
 
     afterEach(async() => {
@@ -198,7 +243,7 @@ contract('UniLPOracle', async (accounts) =>  {
                     "Owner has yDai",
                 );
                 assert.equal(
-                    (await uniLPDealer.debtOf.call(owner)),   
+                    (await uniLPDealer.debtDai.call(owner)),   
                     0,
                     "Owner has debt",
                 );
@@ -211,7 +256,7 @@ contract('UniLPOracle', async (accounts) =>  {
                     "Owner should have yDai",
                 );
                 assert.equal(
-                    (await uniLPDealer.debtOf.call(owner)),   
+                    (await uniLPDealer.debtDai.call(owner)),   
                     daiTokens,
                     "Owner should have debt",
                 );
@@ -236,13 +281,13 @@ contract('UniLPOracle', async (accounts) =>  {
                         "Owner does not have yDai",
                     );
                     assert.equal(
-                        (await uniLPDealer.debtOf.call(owner)),   
+                        (await uniLPDealer.debtDai.call(owner)),   
                         daiTokens,
                         "Owner does not have debt",
                     );
 
                     await yDai.approve(uniLPDealer.address, daiTokens, { from: owner });
-                    await uniLPDealer.repay(owner, daiTokens, { from: owner });
+                    await uniLPDealer.restore(owner, daiTokens, { from: owner });
         
                     assert.equal(
                         (await yDai.balanceOf(owner)),   
@@ -250,7 +295,7 @@ contract('UniLPOracle', async (accounts) =>  {
                         "Owner should not have yDai",
                     );
                     assert.equal(
-                        (await uniLPDealer.debtOf.call(owner)),   
+                        (await uniLPDealer.debtDai.call(owner)),   
                         0,
                         "Owner should not have debt",
                     );

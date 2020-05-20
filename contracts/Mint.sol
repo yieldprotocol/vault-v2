@@ -3,8 +3,7 @@ pragma solidity ^0.6.2;
 import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./interfaces/ILender.sol";
-import "./interfaces/ISaver.sol";
+import "./interfaces/ITreasury.sol";
 import "./interfaces/IYDai.sol";
 import "./Constants.sol";
 import "@nomiclabs/buidler/console.sol";
@@ -14,19 +13,16 @@ import "@nomiclabs/buidler/console.sol";
 contract Mint is Constants {
     using DecimalMath for uint256;
 
-    ILender internal _lender;
-    ISaver internal _saver;
+    ITreasury internal _treasury;
     IERC20 internal _dai;
     IYDai internal _yDai;
 
     constructor (
-        address lender_,
-        address saver_,
+        address treasury_,
         address dai_,
         address yDai_
     ) public {
-        _lender = ILender(lender_);
-        _saver = ISaver(saver_);
+        _treasury = ITreasury(treasury_);
         _dai = IERC20(dai_);
         _yDai = IYDai(yDai_);
     }
@@ -40,17 +36,13 @@ contract Mint is Constants {
             !_yDai.isMature(),
             "Mint: yDai is mature"
         );
-        _dai.transferFrom(user, address(this), dai); // Get the dai from user
-
-        uint256 toRepay = Math.min(_lender.debt(), dai);
-        _dai.approve(address(_lender), toRepay);     // Lender will take the dai
-        _lender.repay(address(this), toRepay);       // Lender takes dai from Mint to repay debt
-
-        uint256 toSave = dai - toRepay;             // toRepay can't be greater than dai
-        _dai.approve(address(_saver), toSave);      // Saver will take dai
-        _saver.hold(address(this), toSave);         // Send dai to Saver
-
-        _yDai.mint(user, dai);                       // Mint yDai to user
+        require(
+            _dai.transferFrom(user, address(this), dai),           // Take dai from user
+            "Mint: Dai transfer fail"
+        );
+        _dai.approve(address(_treasury), dai);      // Treasury will take the dai
+        _treasury.push(address(this), dai);                  // Give the dai to Treasury
+        _yDai.mint(user, dai);                      // Mint yDai to user
     }
 
     /// @dev Burn yTokens and return an equal amount of underlying.
@@ -64,11 +56,6 @@ contract Mint is Constants {
         );
         _yDai.burn(user, yDai);                       // Burn yDai from user
         uint256 dai = yDai.muld(_yDai.chi(), RAY);    // User gets interest for holding after maturity
-
-        uint256 toRelease = Math.min(_saver.savings(), dai);
-        _saver.release(user, toRelease);                // Give dai to user, from Saver
-
-        uint256 toBorrow = dai - toRelease;           // toRelease can't be greater than dai
-        _lender.borrow(user, toBorrow);                // Borrow Dai from Lender to user
+        _treasury.pull(user, dai);                // Give dai to user, from Saver
     }
 }

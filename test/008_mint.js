@@ -1,6 +1,5 @@
 const Mint = artifacts.require('Mint');
-const Lender = artifacts.require('Lender');
-const Saver = artifacts.require('Saver');
+const Treasury = artifacts.require('Treasury');
 const Chai = artifacts.require('Chai');
 const ChaiOracle = artifacts.require('ChaiOracle');
 const YDai = artifacts.require('YDai');
@@ -21,8 +20,7 @@ contract('Mint', async (accounts) =>  {
     let [ owner, user ] = accounts;
     let vat;
     let pot;
-    let lender;
-    let saver;
+    let treasury;
     let dai;
     let yDai;
     let chai;
@@ -51,7 +49,7 @@ contract('Mint', async (accounts) =>  {
 
     const moreDai = web3.utils.toWei("150");    // 120 * 1.25 - More dai is returned as chi increases
     const moreWeth = web3.utils.toWei("150");   // 120 * 1.25 - As chi increases, we need more collateral to borrow dai from vat
-    const moreSavings = web3.utils.toWei("187.5");   // 150 * 1.25 - As chi increases, the dai in Saver grows
+    const moreSavings = web3.utils.toWei("187.5");   // 150 * 1.25 - As chi increases, the dai in Treasury grows
     const daiSurplus = web3.utils.toWei("30");  // moreDai - daiTokens
     const savingsSurplus = web3.utils.toWei("37.5");  // moreSavings - moreDai
 
@@ -97,32 +95,28 @@ contract('Mint', async (accounts) =>  {
         maturity = (await web3.eth.getBlock(block)).timestamp + 1000;
         yDai = await YDai.new(vat.address, pot.address, maturity, "Name", "Symbol");
 
-        // Setup lender
-        lender = await Lender.new(
+        // Setup treasury
+        treasury = await Treasury.new(
             dai.address,        // dai
+            chai.address,       // chai
             weth.address,       // weth
             daiJoin.address,    // daiJoin
             wethJoin.address,   // wethJoin
             vat.address,        // vat
         );
 
-        // Setup saver
-        saver = await Saver.new(dai.address, chai.address);
-
         // Setup chaiOracle
         chaiOracle = await ChaiOracle.new(pot.address, { from: owner });
 
         // Setup mint
         mint = await Mint.new(
-            lender.address,
-            saver.address,
+            treasury.address,
             dai.address,
             yDai.address,
             { from: owner },
         );
         await yDai.grantAccess(mint.address, { from: owner });
-        await lender.grantAccess(mint.address, { from: owner });
-        await saver.grantAccess(mint.address, { from: owner });
+        await treasury.grantAccess(mint.address, { from: owner });
 
         // Allow owner to borrow dai
         await vat.hope(daiJoin.address, { from: owner });
@@ -155,7 +149,7 @@ contract('Mint', async (accounts) =>  {
         );
     });
 
-    it("mint without system debt: mints yDai in exchange for dai, dai goes to Saver", async() => {
+    it("mint takes dai and pushes it to Treasury, mints yDai for the user", async() => {
         // Borrow dai
         await weth.approve(wethJoin.address, wethTokens, { from: owner });
         await wethJoin.join(owner, wethTokens, { from: owner });
@@ -168,57 +162,37 @@ contract('Mint', async (accounts) =>  {
             "Owner does not have dai",
         );
         assert.equal(
-            (await chai.balanceOf(mint.address)),   
-            0,
-            "Mint has chai",
-        );
-        assert.equal(
             (await yDai.balanceOf(owner)),   
             0,
             "Owner has yDai"
         );
         assert.equal(
-            (await dai.balanceOf(mint.address)),   
+            (await treasury.savings.call()),   
             0,
-            "Mint has dai",
-        );
-        assert.equal(
-            (await lender.debt()),   
-            0,
-            "Lender has debt",
+            "Treasury has savings",
         );
         await dai.approve(mint.address, daiTokens, { from: owner });
         await mint.mint(owner, daiTokens, { from: owner });
 
         assert.equal(
-            (await saver.savings.call()),   
+            (await treasury.savings.call()),   
             daiTokens,
-            "Saver should have dai",
-        );
-        assert.equal(
-            (await chai.balanceOf(saver.address)),   
-            chaiTokens,
-            "Saver should have " + chaiTokens + " chai, instead has " + BN(await chai.balanceOf(saver.address)).toString(),
+            "Treasury should have dai",
         );
         assert.equal(
             (await yDai.balanceOf(owner)),   
             daiTokens,
             "Owner should have yDai"
         );
-        assert.equal(
-            (await dai.balanceOf(mint.address)),   
-            0,
-            "Mint should have no dai",
-        );
     });
 
-    it("redeem without system savings: burns yDai to return dai, borrows dai from Lender", async() => {
-        // Some other user posted collateral to MakerDAO through Lender
-        await lender.grantAccess(user, { from: owner });
+    it("redeem burns yDai to return dai, pulls dai from Treasury", async() => {
+        // Some other user posted collateral to MakerDAO through Treasury
+        await treasury.grantAccess(user, { from: owner });
         await weth.mint(user, wethTokens, { from: user });
-        await weth.approve(lender.address, wethTokens, { from: user }); 
-        await lender.post(user, wethTokens, { from: user });
-        let ink = (await vat.urns(ilk, lender.address)).ink.toString()
+        await weth.approve(treasury.address, wethTokens, { from: user }); 
+        await treasury.post(user, wethTokens, { from: user });
+        let ink = (await vat.urns(ilk, treasury.address)).ink.toString()
         assert.equal(
             ink,   
             wethTokens
@@ -239,90 +213,23 @@ contract('Mint', async (accounts) =>  {
             "Owner does not have yDai",
         );
         assert.equal(
-            (await saver.savings.call()),   
+            (await treasury.savings.call()),   
             0,
-            "Saver has no savings",
+            "Treasury has no savings",
         );
 
         await yDai.approve(mint.address, daiTokens, { from: owner });
         await mint.redeem(owner, daiTokens, { from: owner });
 
         assert.equal(
-            (await lender.debt()),   
+            (await treasury.debt()),   
             daiTokens,
-            "Lender should have debt",
+            "Treasury should have debt",
         );
         assert.equal(
             (await dai.balanceOf(owner)),   
             daiTokens,
             "Owner should have dai",
-        );
-        assert.equal(
-            (await dai.balanceOf(mint.address)),   
-            0,
-            "Mint should have no dai",
-        );
-    });
-
-    it("redeem with system savings: burns yDai to return dai, pulls dai from Saver", async() => {
-        // Borrow dai
-        await weth.approve(wethJoin.address, wethTokens, { from: owner });
-        await wethJoin.join(owner, wethTokens, { from: owner });
-        await vat.frob(ilk, owner, owner, owner, wethTokens, daiTokens, { from: owner });
-        await daiJoin.exit(owner, daiTokens, { from: owner });
-        
-        // Mint yDai
-        await dai.approve(mint.address, daiTokens, { from: owner });
-        await mint.mint(owner, daiTokens, { from: owner });
-        
-        // yDai matures
-        await helper.advanceTime(1000);
-        await helper.advanceBlock();
-        await yDai.mature();
-
-        assert.equal(
-            (await yDai.balanceOf(owner)),   
-            daiTokens,
-            "Owner does not have yDai",
-        );
-        assert.equal(
-            (await chai.balanceOf(saver.address)),   
-            chaiTokens,
-            "Saver does not have chai",
-        );
-        assert.equal(
-            (await saver.savings.call()),   
-            daiTokens,
-            "Saver does not have savings",
-        );
-        assert.equal(
-            (await dai.balanceOf(mint.address)),   
-            0,
-            "Mint has dai",
-        );
-
-        await yDai.approve(mint.address, daiTokens, { from: owner });
-        await mint.redeem(owner, daiTokens, { from: owner });
-
-        assert.equal(
-            (await dai.balanceOf(owner)),   
-            daiTokens,
-            "Owner should have dai",
-        );
-        assert.equal(
-            (await dai.balanceOf(mint.address)),   
-            0,
-            "Mint should have no dai",
-        );
-        assert.equal(
-            (await saver.savings.call()),   
-            0,
-            "Saver should not have savings",
-        );
-        assert.equal(
-            (await chai.balanceOf(saver.address)),   
-            0,
-            "Saver should not have chai",
         );
     });
 
@@ -358,9 +265,9 @@ contract('Mint', async (accounts) =>  {
             "Owner does not have yDai",
         );
         assert.equal(
-            (await saver.savings.call()),
-            moreSavings, // The increased chi affects the savings in Saver as well
-            "Saver should have " + moreSavings + " dai saved, instead has " + (await saver.savings.call()),
+            (await treasury.savings.call()),
+            moreSavings, // The increased chi affects the savings in Treasury as well
+            "Treasury should have " + moreSavings + " dai saved, instead has " + (await treasury.savings.call()),
         );
         assert.equal(
             (await dai.balanceOf(mint.address)),   
@@ -388,69 +295,9 @@ contract('Mint', async (accounts) =>  {
             "Mint should have no dai",
         );
         assert.equal(
-            (await saver.savings.call()),   
+            (await treasury.savings.call()),   
             savingsSurplus,
-            "Saver should have some savings",
-        );
-    });
-
-    it("mint with system debt: mints yDai in exchange for dai, dai repays Lender debt", async() => {
-        // Some other user posted collateral to MakerDAO through Lender, so that Lender can borrow dai
-        await lender.grantAccess(user, { from: owner });
-        await weth.mint(user, wethTokens, { from: user });
-        await weth.approve(lender.address, wethTokens, { from: user }); 
-        await lender.post(user, wethTokens, { from: user });
-        let ink = (await vat.urns(ilk, lender.address)).ink.toString()
-        assert.equal(
-            ink,   
-            wethTokens,
-        );
-        // Lender incurs debt
-        await lender.borrow(user, daiTokens, { from: user });
-        assert.equal(
-            (await lender.debt()),
-            daiTokens,
-        );
-
-        // Owner borrows dai from MakerDAO
-        await weth.approve(wethJoin.address, wethTokens, { from: owner });
-        await wethJoin.join(owner, wethTokens, { from: owner });
-        await vat.frob(ilk, owner, owner, owner, wethTokens, daiTokens, { from: owner });
-        await daiJoin.exit(owner, daiTokens, { from: owner });
-
-        assert.equal(
-            (await dai.balanceOf(owner)),   
-            daiTokens,
-            "Owner does not have dai",
-        );
-        assert.equal(
-            (await yDai.balanceOf(owner)),   
-            0,
-            "Owner has yDai"
-        );
-        assert.equal(
-            (await lender.debt()),
-            daiTokens,
-            "Lender doesn't have debt",
-        );
-
-        await dai.approve(mint.address, daiTokens, { from: owner });
-        await mint.mint(owner, daiTokens, { from: owner });
-
-        assert.equal(
-            (await lender.debt()),
-            0,
-            "Lender shouldn't have debt",
-        );
-        assert.equal(
-            (await yDai.balanceOf(owner)),   
-            daiTokens,
-            "Owner should have yDai"
-        );
-        assert.equal(
-            (await dai.balanceOf(mint.address)),   
-            0,
-            "Mint should have no dai",
+            "Treasury should have some savings",
         );
     });
 });

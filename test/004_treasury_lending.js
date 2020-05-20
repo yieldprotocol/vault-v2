@@ -1,21 +1,25 @@
-const Lender = artifacts.require('./Lender');
-const ERC20 = artifacts.require("./TestERC20");
+const Treasury = artifacts.require('Treasury');
+const Chai = artifacts.require('Chai');
+const ERC20 = artifacts.require("TestERC20");
 const DaiJoin = artifacts.require('DaiJoin');
-const GemJoin = artifacts.require('./GemJoin');
-const Vat= artifacts.require('./Vat');
+const GemJoin = artifacts.require('GemJoin');
+const Vat = artifacts.require('Vat');
+const Pot = artifacts.require('Pot');
 
 const truffleAssert = require('truffle-assertions');
 const helper = require('ganache-time-traveler');
 const { expectRevert } = require('@openzeppelin/test-helpers');
 
-contract('Lender', async (accounts) =>  {
+contract('Treasury', async (accounts) =>  {
     let [ owner, user ] = accounts;
-    let lender;
+    let treasury;
     let dai;
+    let chai;
     let weth;
     let daiJoin;
     let wethJoin;
     let vat;
+    let pot;
     const ilk = web3.utils.fromAscii("ETH-A")
     const Line = web3.utils.fromAscii("Line")
     const spotName = web3.utils.fromAscii("spot")
@@ -51,14 +55,28 @@ contract('Lender', async (accounts) =>  {
         await vat.file(ilk, linel, limits, { from: owner });
         await vat.file(Line, limits); // TODO: Why can't we specify `, { from: owner }`?
 
-        lender = await Lender.new(
+        // Setup pot
+        pot = await Pot.new(vat.address);
+        await vat.rely(pot.address, { from: owner });
+
+        // Setup chai
+        chai = await Chai.new(
+            vat.address,
+            pot.address,
+            daiJoin.address,
+            dai.address,
+        );
+        await vat.rely(chai.address, { from: owner });
+
+        treasury = await Treasury.new(
             dai.address,        // dai
+            chai.address,       // chai
             weth.address,       // weth
             daiJoin.address,    // daiJoin
             wethJoin.address,   // wethJoin
             vat.address,        // vat
         );
-        await lender.grantAccess(user, { from: owner });
+        await treasury.grantAccess(user, { from: owner });
 
         const rateIncrease  = "250000000000000000000000000";
         await vat.fold(ilk, vat.address, rateIncrease, { from: owner }); // 1 + 0.25
@@ -75,8 +93,8 @@ contract('Lender', async (accounts) =>  {
         );
         
         await weth.mint(user, wethTokens, { from: user });
-        await weth.approve(lender.address, wethTokens, { from: user }); 
-        await lender.post(user, wethTokens, { from: user });
+        await weth.approve(treasury.address, wethTokens, { from: user }); 
+        await treasury.post(user, wethTokens, { from: user });
 
         // Test transfer of collateral
         assert.equal(
@@ -86,7 +104,7 @@ contract('Lender', async (accounts) =>  {
 
         // Test collateral registering via `frob`
         assert.equal(
-            (await vat.urns(ilk, lender.address)).ink,   
+            (await vat.urns(ilk, treasury.address)).ink,   
             wethTokens,
         );
     });
@@ -94,13 +112,13 @@ contract('Lender', async (accounts) =>  {
     describe("with posted collateral", () => {
         beforeEach(async() => {
             await weth.mint(user, wethTokens, { from: user });
-            await weth.approve(lender.address, wethTokens, { from: user }); 
-            await lender.post(user, wethTokens, { from: user });
+            await weth.approve(treasury.address, wethTokens, { from: user }); 
+            await treasury.post(user, wethTokens, { from: user });
         });
 
         it("returns borrowing power", async() => {
             assert.equal(
-                await lender.power(),   
+                await treasury.power(),   
                 daiTokens,
                 "Should return posted collateral * collateralization ratio"
             );
@@ -112,7 +130,7 @@ contract('Lender', async (accounts) =>  {
                 0,
             );
             
-            await lender.withdraw(user, wethTokens, { from: user });
+            await treasury.withdraw(user, wethTokens, { from: user });
 
             // Test transfer of collateral
             assert.equal(
@@ -122,74 +140,73 @@ contract('Lender', async (accounts) =>  {
 
             // Test collateral registering via `frob`
             assert.equal(
-                (await vat.urns(ilk, lender.address)).ink,   
+                (await vat.urns(ilk, treasury.address)).ink,   
                 0
             );
         });
 
-        it("allows to borrow dai", async() => {
+        it("pulls dai borrowed from MakerDAO", async() => {
             // Test with two different stability rates, if possible.
             // Mock Vat contract needs a `setRate` and an `ilks` functions.
             // Mock Vat contract needs the `frob` function to authorize `daiJoin.exit` transfers through the `dart` parameter.
-            await lender.borrow(user, daiTokens, { from: user });
+            await treasury.pull(user, daiTokens, { from: user });
 
             assert.equal(
                 await dai.balanceOf(user),   
                 daiTokens
             );
             assert.equal(
-                (await vat.urns(ilk, lender.address)).art,   
+                (await vat.urns(ilk, treasury.address)).art,   
                 daiDebt,
             );
         });
 
-
         it("shouldn't allow borrowing beyond power", async() => {
-            await lender.borrow(user, daiTokens, { from: user });
+            await treasury.pull(user, daiTokens, { from: user });
             assert.equal(
-                await lender.power(),   
+                await treasury.power(),   
                 daiTokens,
                 "We should have " + daiTokens + " dai borrowing power.",
             );
             assert.equal(
-                await lender.debt(),   
+                await treasury.debt(),   
                 daiTokens,
                 "We should have " + daiTokens + " dai debt.",
             );
             await expectRevert(
-                lender.borrow(user, 1, { from: user }), // Not a wei more borrowing
+                treasury.pull(user, 1, { from: user }), // Not a wei more borrowing
                 "Vat/sub",
             );
         });
     
         describe("with a dai debt towards MakerDAO", () => {
             beforeEach(async() => {
-                await lender.borrow(user, daiTokens, { from: user });
+                await treasury.pull(user, daiTokens, { from: user });
             });
 
-            it("returns lender debt", async() => {
+            it("returns treasury debt", async() => {
                 assert.equal(
-                    (await lender.debt()),   
+                    (await treasury.debt()),   
                     daiTokens,
                     "Should return borrowed dai"
                 );
             });
 
-            it("repays dai debt and no more", async() => {
+            it("pushes dai that repays debt towards MakerDAO", async() => {
                 // Test `normalizedAmount >= normalizedDebt`
-                await dai.approve(lender.address, daiTokens, { from: user });
-                await lender.repay(user, daiTokens, { from: user });
+                await dai.approve(treasury.address, daiTokens, { from: user });
+                await treasury.push(user, daiTokens, { from: user });
 
                 assert.equal(
                     await dai.balanceOf(user),   
                     0
                 );
                 assert.equal(
-                    (await vat.urns(ilk, lender.address)).art,   
+                    (await vat.urns(ilk, treasury.address)).art,   
                     0,
                 );
                 assert.equal(
-                    await vat.dai(lender.address),   
+                    await vat.dai(treasury.address),   
                     0
                 );
 

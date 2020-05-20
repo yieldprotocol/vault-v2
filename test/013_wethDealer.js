@@ -1,7 +1,8 @@
 const Vat = artifacts.require('Vat');
 const Pot = artifacts.require('Pot');
-const Lender = artifacts.require('Lender');
+const Treasury = artifacts.require('Treasury');
 const YDai = artifacts.require('YDai');
+const Chai = artifacts.require('Chai');
 const ERC20 = artifacts.require('TestERC20');
 const GemJoin = artifacts.require('GemJoin');
 const DaiJoin = artifacts.require('DaiJoin');
@@ -14,12 +15,13 @@ contract('WethDealer', async (accounts) =>  {
     let [ owner, user ] = accounts;
     let vat;
     let pot;
-    let lender;
+    let treasury;
     let yDai;
     let weth;
     let wethJoin;
     let dai;
     let daiJoin;
+    let chai;
     let wethOracle;
     let wethDealer;
     let maturity;
@@ -62,15 +64,24 @@ contract('WethDealer', async (accounts) =>  {
         pot = await Pot.new(vat.address);
         await vat.rely(pot.address, { from: owner });
 
-        // Set lender
-        lender = await Lender.new(
+        // Setup chai
+        chai = await Chai.new(
+            vat.address,
+            pot.address,
+            daiJoin.address,
+            dai.address,
+        );
+        await vat.rely(chai.address, { from: owner });
+
+        // Set treasury
+        treasury = await Treasury.new(
             dai.address,        // dai
+            chai.address,       // chai
             weth.address,       // weth
             daiJoin.address,    // daiJoin
             wethJoin.address,   // wethJoin
             vat.address,        // vat
         );
-        await vat.rely(lender.address, { from: owner }); //?
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
@@ -82,14 +93,15 @@ contract('WethDealer', async (accounts) =>  {
 
         // Setup WethDealer
         wethDealer = await WethDealer.new(
-            lender.address,
+            treasury.address,
+            dai.address,
             yDai.address,
             weth.address,
             wethOracle.address,
             { from: owner },
         );
         await yDai.grantAccess(wethDealer.address, { from: owner });
-        await lender.grantAccess(wethDealer.address, { from: owner });
+        await treasury.grantAccess(wethDealer.address, { from: owner });
     });
 
     it("retrieves weth price as rate / spot", async() => {
@@ -108,9 +120,9 @@ contract('WethDealer', async (accounts) =>  {
             "ERC20Dealer does not have weth",
         );
         assert.equal(
-            (await vat.urns(ilk, lender.address)).ink.toString(),   
+            (await vat.urns(ilk, treasury.address)).ink.toString(),   
             0,
-            "Lender has weth in MakerDAO",
+            "Treasury has weth in MakerDAO",
         );
         assert.equal(
             (await wethDealer.powerOf.call(owner)),   
@@ -122,9 +134,9 @@ contract('WethDealer', async (accounts) =>  {
         await wethDealer.post(owner, wethTokens, { from: owner });
 
         assert.equal(
-            (await vat.urns(ilk, lender.address)).ink.toString(),   
+            (await vat.urns(ilk, treasury.address)).ink.toString(),   
             wethTokens,
-            "Lender should have weth in MakerDAO",
+            "Treasury should have weth in MakerDAO",
         );
         assert.equal(
             (await wethDealer.powerOf.call(owner)),   
@@ -147,9 +159,9 @@ contract('WethDealer', async (accounts) =>  {
 
         it("allows user to withdraw weth", async() => {
             assert.equal(
-                (await vat.urns(ilk, lender.address)).ink.toString(),   
+                (await vat.urns(ilk, treasury.address)).ink.toString(),   
                 wethTokens,
-                "Lender does not have weth in MakerDAO",
+                "Treasury does not have weth in MakerDAO",
             );
             assert.equal(
                 (await weth.balanceOf(owner)),   
@@ -170,9 +182,9 @@ contract('WethDealer', async (accounts) =>  {
                 "Owner should have weth",
             );
             assert.equal(
-                (await vat.urns(ilk, lender.address)).ink.toString(),   
+                (await vat.urns(ilk, treasury.address)).ink.toString(),   
                 0,
-                "Lender should not have weth in MakerDAO",
+                "Treasury should not have weth in MakerDAO",
             );
             assert.equal(
                 (await wethDealer.powerOf.call(owner)),   
@@ -193,7 +205,7 @@ contract('WethDealer', async (accounts) =>  {
                 "Owner has yDai",
             );
             assert.equal(
-                (await wethDealer.debtOf(owner)),   
+                (await wethDealer.debtDai(owner)),   
                 0,
                 "Owner has debt",
             );
@@ -206,7 +218,7 @@ contract('WethDealer', async (accounts) =>  {
                 "Owner should have yDai",
             );
             assert.equal(
-                (await wethDealer.debtOf(owner)),   
+                (await wethDealer.debtDai(owner)),   
                 daiTokens,
                 "Owner should have debt",
             );
@@ -224,13 +236,13 @@ contract('WethDealer', async (accounts) =>  {
                     "Owner does not have yDai",
                 );
                 assert.equal(
-                    (await wethDealer.debtOf(owner)),   
+                    (await wethDealer.debtDai(owner)),   
                     daiTokens,
                     "Owner does not have debt",
                 );
 
                 await yDai.approve(wethDealer.address, daiTokens, { from: owner });
-                await wethDealer.repay(owner, daiTokens, { from: owner });
+                await wethDealer.restore(owner, daiTokens, { from: owner });
     
                 assert.equal(
                     (await yDai.balanceOf(owner)),   
