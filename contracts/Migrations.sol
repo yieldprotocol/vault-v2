@@ -3,6 +3,7 @@ pragma solidity ^0.6.0;
 contract Migrations {
     address public owner;
     uint public last_completed_migration;
+    mapping(string => address) public contracts;
 
     constructor() public {
         owner = msg.sender;
@@ -19,5 +20,9 @@ contract Migrations {
     function upgrade(address new_address) public restricted {
         Migrations upgraded = Migrations(new_address);
         upgraded.setCompleted(last_completed_migration);
+    }
+
+    function setDupAddr(string calldata dupNum, address dupAddr ) external restricted {
+        contracts[dupNum] = dupAddr;
     }
 }
