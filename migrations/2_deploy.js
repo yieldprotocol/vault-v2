@@ -193,6 +193,7 @@ module.exports = async (deployer, network, accounts) => {
       maturity,
       name,
       symbol,
+      { gas: 5000000 },
     );
     const yDai = await YDai.deployed();
     const yDaiAddress = yDai.address;
@@ -203,6 +204,7 @@ module.exports = async (deployer, network, accounts) => {
       treasuryAddress,
       daiAddress,
       yDaiAddress,
+      { gas: 5000000 },
     );
     const mint = await Mint.deployed();
     await yDai.grantAccess(mint.address);
@@ -216,6 +218,7 @@ module.exports = async (deployer, network, accounts) => {
       yDaiAddress,
       chaiAddress,
       chaiOracleAddress,
+      { gas: 5000000 },
     );
     const chaiDealer = await ChaiDealer.deployed();
     await yDai.grantAccess(chaiDealer.address);
@@ -229,6 +232,7 @@ module.exports = async (deployer, network, accounts) => {
       yDaiAddress,
       wethAddress,
       wethOracleAddress,
+      { gas: 5000000 },
     );
     const wethDealer = await WethDealer.deployed();
     await yDai.grantAccess(wethDealer.address);
