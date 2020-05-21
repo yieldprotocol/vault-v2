@@ -30,7 +30,7 @@ module.exports = async (deployer, network, accounts) => {
     // const rate  = toRay(1.25);
     const limits = "1000000000000000000000000000000000000000000000";
     const spot = "1500000000000000000000000000"
-    const rate = "1250000000000000000000000000"
+    const rateIncrease  = "250000000000000000000000000"; // Total: 1.25
 
     // Setup Vat, Dai, Join and Weth
     await deployer.deploy(Vat);
@@ -38,6 +38,7 @@ module.exports = async (deployer, network, accounts) => {
     vatAddress = vat.address;
     await vat.rely(vatAddress);
     await vat.init(ilk); // Set ilk rate to 1.0
+    await vat.fold(ilk, vat.address, rateIncrease, { from: owner }); // 1 + 0.25
 
     await deployer.deploy(ERC20, 0);
     wethAddress = (await ERC20.deployed()).address;
@@ -174,13 +175,10 @@ module.exports = async (deployer, network, accounts) => {
   // const block = await web3.eth.getBlockNumber();
   const maturitiesInput = new Set([
     // [(await web3.eth.getBlock(block)).timestamp + 1000, 'Name1','Symbol1'],
-    // [(await web3.eth.getBlock(block)).timestamp + 2000, 'Name2','Symbol2'],
-    // [(await web3.eth.getBlock(block)).timestamp + 3000, 'Name3','Symbol3'],
-    // [(await web3.eth.getBlock(block)).timestamp + 4000, 'Name4','Symbol4'],
     [1601510399, 'yDai-2020-09-30', 'yDai-2020-09-30'],
-    [1609459199, 'yDai-2020-12-31', 'yDai-2020-12-31'],
-    [1617235199, 'yDai-2021-03-31', 'yDai-2021-03-31'],
-    [1625097599, 'yDai-2021-06-30', 'yDai-2021-06-30'],
+    // [1609459199, 'yDai-2020-12-31', 'yDai-2020-12-31'],
+    // [1617235199, 'yDai-2021-03-31', 'yDai-2021-03-31'],
+    // [1625097599, 'yDai-2021-06-30', 'yDai-2021-06-30'],
   ]);
 
   const maturitiesOutput = [];
