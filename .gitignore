@@ -4,6 +4,7 @@ artifacts
 node_modules/
 
 #Truffle files
+.infuraKey
 .secret
 build/
 

@@ -12,14 +12,13 @@ module.exports = async (deployer, network, accounts) => {
   let chaiOracleAddress;
   let wethOracleAddress;
 
-  if (network == "development") {
+  if (network === "development") {
     // Setting up Vat
     const ERC20 = artifacts.require("TestERC20");
     const Vat = artifacts.require("Vat");
     const GemJoin = artifacts.require("GemJoin");
     const DaiJoin = artifacts.require("DaiJoin");
     const Pot = artifacts.require("Pot");
-    const Chai = artifacts.require("Chai");
 
     const ilk = web3.utils.fromAscii("ETH-A");
     const Line = web3.utils.fromAscii("Line");
@@ -62,113 +61,58 @@ module.exports = async (deployer, network, accounts) => {
     await deployer.deploy(Pot, vatAddress);
     potAddress = (await Pot.deployed()).address;
     await vat.rely(potAddress);
-
-    // Setup Chai
-    await deployer.deploy(
-        Chai,
-        vatAddress,
-        potAddress,
-        daiJoinAddress,
-        daiAddress,
-    );
-    chaiAddress = (await Chai.deployed()).address;
-    await vat.rely(chaiAddress);
-
-    // --- TODO: Find out how to move the next section to 3_deploy, passing the addresses on
-    
-    const Treasury = artifacts.require("Treasury");
-    const ChaiOracle = artifacts.require("ChaiOracle");
-    const WethOracle = artifacts.require("WethOracle");
-
-    await deployer.deploy(
-      Treasury,
-      daiAddress,        // dai
-      chaiAddress,       // chai
-      wethAddress,       // weth
-      daiJoinAddress,    // daiJoin
-      wethJoinAddress,   // wethJoin
-      vatAddress,        // vat
-    );
-    treasury = await Treasury.deployed();
-    treasuryAddress = treasury.address;
-
-    // Setup chaiOracle
-    await deployer.deploy(ChaiOracle, potAddress);
-    chaiOracleAddress = (await ChaiOracle.deployed()).address;
-
-    // Setup wethOracle
-    await deployer.deploy(WethOracle, vatAddress);
-    wethOracleAddress = (await WethOracle.deployed()).address;
   };
 
-  if (network == "mainnet") {
-    vat = "0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B";
-    weth = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
-    wethJoin = "0x2F0b23f53734252Bda2277357e97e1517d6B042A";
-    dai = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
-    daiJoin = "0x9759A6Ac90977b93B58547b4A71c78317f391A28";
-    pot = "0x197E90f9FAD81970bA7976f33CbD77088E5D7cf7";
-    chai = "0x06af07097c9eeb7fd685c692751d5c66db49c215";
+  if (network === "mainnet") {
+    vatAddress = "0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B";
+    wethAddress = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
+    wethJoinAddress = "0x2F0b23f53734252Bda2277357e97e1517d6B042A";
+    daiAddress = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
+    daiJoinAddress = "0x9759A6Ac90977b93B58547b4A71c78317f391A28";
+    potAddress = "0x197E90f9FAD81970bA7976f33CbD77088E5D7cf7";
+    chaiAddress = "0x06af07097c9eeb7fd685c692751d5c66db49c215";
   };
 
-  if (network == "kovan") {
-    vat = "0xbA987bDB501d131f766fEe8180Da5d81b34b69d9";
-    weth = "0xd0A1E359811322d97991E03f863a0C30C2cF029C";
-    wethJoin = "0x775787933e92b709f2a3C70aa87999696e74A9F8";
-    dai = "0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa";
-    daiJoin = "0x5AA71a3ae1C0bd6ac27A1f28e1415fFFB6F15B8c";
-    pot = "0xEA190DBDC7adF265260ec4dA6e9675Fd4f5A78bb";
-    chai = "0xb641957b6c29310926110848db2d464c8c3c3f38";
+  if (network === "kovan" || network === "kovan-fork") {
+    vatAddress = "0xbA987bDB501d131f766fEe8180Da5d81b34b69d9";
+    wethAddress = "0xd0A1E359811322d97991E03f863a0C30C2cF029C";
+    wethJoinAddress = "0x775787933e92b709f2a3C70aa87999696e74A9F8";
+    daiAddress = "0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa";
+    daiJoinAddress = "0x5AA71a3ae1C0bd6ac27A1f28e1415fFFB6F15B8c";
+    potAddress = "0xEA190DBDC7adF265260ec4dA6e9675Fd4f5A78bb";
+    chaiAddress = "0xb641957b6c29310926110848db2d464c8c3c3f38";
   };
 
-  if (network == "goerli") {
-    vat = "0x0de72A41138079f8052e4625C24eD06ac55c97Be";
-    weth = "0x222CB0e85cDD0dc66bB79587399DE1d4eD9Ed6D9";
-    wethJoin = "0xf5d1Af9424CF64F23f713817CCf38F3F0F7bd716";
-    dai = "0x7D750374481D8E3190aB39cAFf94f3aB28502f5D";
-    daiJoin = "0xB62FFaBf09E23bd6082dd1491bFb5511BD518d23";
-    pot = "0x9C42a352B2814E6b103E9ba91da7922b76C86924";
-    
-    // Setup Chai
-    await deployer.deploy(
-      Chai,
-      vatAddress,
-      potAddress,
-      daiJoinAddress,
-      daiAddress,
-    );
-    chai = await Chai.deployed();
-    await vat.rely(chaiAddress);
-  };
+  if (network === "goerli" || network === "goerli-fork") {
+    vatAddress = "0x0de72A41138079f8052e4625C24eD06ac55c97Be";
+    wethAddress = "0x222CB0e85cDD0dc66bB79587399DE1d4eD9Ed6D9";
+    wethJoinAddress = "0xf5d1Af9424CF64F23f713817CCf38F3F0F7bd716";
+    daiAddress = "0x7D750374481D8E3190aB39cAFf94f3aB28502f5D";
+    daiJoinAddress = "0xB62FFaBf09E23bd6082dd1491bFb5511BD518d23";
+    potAddress = "0x9C42a352B2814E6b103E9ba91da7922b76C86924";
+  };    
 
-  if (network == "rinkeby") {
+  if (network === "rinkeby" || network === "rinkeby-fork") {
     vatAddress = "0x6E631D87bF9456495dDC9bDa576534592f486964";
     wethAddress = "0xc421f99D871aC5793985fd86d8659B7bDACFc9AC";
     wethJoinAddress = "0xA6268caddf03356aF17C7259E10d865C9DF48863";
     daiAddress = "0x6A9865aDE2B6207dAAC49f8bCba9705dEB0B0e6D";
     daiJoinAddress = "0xa956A2a53C3F8F3Dc02793F7b13e8121aD114c54";
     potAddress = "0x867E3054af4d30fCCF0fCf3B6e855B49EF7e02Ed";
-    
-    // Setup Chai
-    await deployer.deploy(
-      Chai,
-      vatAddress,
-      potAddress,
-      daiJoinAddress,
-      daiAddress,
-    );
-    chaiAddress = (await Chai.deployed()).address;
-    await vat.rely(chaiAddress);
   };
 
-  if (network == "ropsten") {
+  if (network === "ropsten" || network === "ropsten-fork") {
     vatAddress = "0xFfCFcAA53b61cF5F332b4FBe14033c1Ff5A391eb";
     wethAddress = "0x7715c353d352Ac5746A063AFe2036A092b5D0db0";
     wethJoinAddress = "0xa885b27E8754f8238DBedaBd2eae180490C341d7";
     daiAddress = "0x31F42841c2db5173425b5223809CF3A38FEde360";
     daiJoinAddress = "0xA0b569e9E0816A20Ab548D692340cC28aC7Be986";
     potAddress = "0x9588a660241aeA569B3965e2f00631f2C5eDaE33";
-    
+  };
+
+  if (network !== "mainnet" && network !== "kovan" && network !== "kovan-fork") {
+    const Chai = artifacts.require("Chai");
+
     // Setup Chai
     await deployer.deploy(
       Chai,
@@ -178,8 +122,46 @@ module.exports = async (deployer, network, accounts) => {
       daiAddress,
     );
     chaiAddress = (await Chai.deployed()).address;
+    // TODO: Make this work in goerli, ropsten and rinkeby
+    const Vat = artifacts.require("Vat");
+    const vat = Vat.at(vatAddress);
     await vat.rely(chaiAddress);
   };
+
+  // --- TODO: Find out how to move the next section to 3_deploy, passing the addresses on
+  
+  console.log("    External contract addresses");
+  console.log("    ---------------------------");
+  console.log("    vat:      " + vatAddress);
+  console.log("    weth:     " + wethAddress);
+  console.log("    wethJoin: " + wethJoinAddress);
+  console.log("    dai:      " + daiAddress);
+  console.log("    daiJoin:  " + daiJoinAddress);
+  console.log("    chai:     " + chaiAddress);
+
+  const Treasury = artifacts.require("Treasury");
+  const ChaiOracle = artifacts.require("ChaiOracle");
+  const WethOracle = artifacts.require("WethOracle");
+
+  await deployer.deploy(
+    Treasury,
+    daiAddress,        // dai
+    chaiAddress,       // chai
+    wethAddress,       // weth
+    daiJoinAddress,    // daiJoin
+    wethJoinAddress,   // wethJoin
+    vatAddress,        // vat
+  );
+  treasury = await Treasury.deployed();
+  treasuryAddress = treasury.address;
+
+  // Setup chaiOracle
+  await deployer.deploy(ChaiOracle, potAddress);
+  chaiOracleAddress = (await ChaiOracle.deployed()).address;
+
+  // Setup wethOracle
+  await deployer.deploy(WethOracle, vatAddress);
+  wethOracleAddress = (await WethOracle.deployed()).address;
 
   // --- TODO: Find out how to move the next section to 4_deploy, passing the addresses on
 
@@ -290,6 +272,6 @@ module.exports = async (deployer, network, accounts) => {
 }; */
 
 /// @dev Converts a bytes32 to string
-function bytes32ToString(text) {
+/* function bytes32ToString(text) {
   return web3.utils.toAscii(text).replace(/\0/g, '');
-};
+}; */
