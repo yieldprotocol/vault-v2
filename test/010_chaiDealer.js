@@ -184,12 +184,48 @@ contract('ChaiDealer', async (accounts) =>  {
             assert.equal(
                 (await chai.balanceOf(owner)),   
                 chaiTokens,
-                "ERC20Dealer should have chai",
+                "Owner should have chai",
             );
             assert.equal(
                 (await chai.balanceOf(treasury.address)),   
                 0,
                 "Treasury should not have chai",
+            );
+            assert.equal(
+                (await chaiDealer.powerOf.call(owner)),   
+                0,
+                "Owner should not have borrowing power",
+            );
+        });
+
+        it("allows user to withdraw dai", async() => {
+            assert.equal(
+                (await treasury.savings.call()),   
+                daiTokens,
+                "Treasury does not have dai",
+            );
+            assert.equal(
+                (await dai.balanceOf(owner)),   
+                0,
+                "Owner has dai",
+            );
+            assert.equal(
+                (await chaiDealer.powerOf.call(owner)),   
+                daiTokens,
+                "Owner does not have borrowing power",
+            );
+
+            await chaiDealer.withdrawDai(owner, daiTokens, { from: owner });
+
+            assert.equal(
+                (await dai.balanceOf(owner)),   
+                daiTokens,
+                "Owner should have chai",
+            );
+            assert.equal(
+                (await treasury.savings.call()),   
+                0,
+                "Treasury should not have dai",
             );
             assert.equal(
                 (await chaiDealer.powerOf.call(owner)),   
