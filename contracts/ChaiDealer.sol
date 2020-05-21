@@ -28,8 +28,8 @@ contract ChaiDealer is ERC20Dealer {
         _chaiOracle = IOracle(chaiOracle_);
     }
 
-    /// @dev Takes chai from `from` address and gives it to the Saver
-    // from --- Chai ---> treasury
+    /// @dev Takes chai from `from` address, unwraps it to dai, and gives it to the Treasury
+    // from --- Chai -> Dai ---> treasury
     function post(address from, uint256 chai) public override {
         // TODO: Consider a require on super.post()
         super.post(from, chai);                             // Grab chai and update posted
@@ -39,8 +39,8 @@ contract ChaiDealer is ERC20Dealer {
         _treasury.push(address(this), dai);                 // Give dai to treasury
     }
 
-    /// @dev Takes chai from Saver and gives it to `to` address
-    // us --- Token ---> to
+    /// @dev Takes dai from Treasury, wraps it to chai, and gives it to `to` address
+    // Treasury --- Dai -> Chai ---> to
     function withdraw(address to, uint256 chai) public override {
         uint256 dai = chai.divd(_chaiOracle.price(), RAY);  // dai = chai / price
         _treasury.pull(address(this), dai);                 // Take dai from treasury
@@ -48,5 +48,22 @@ contract ChaiDealer is ERC20Dealer {
         _chai.join(address(this), dai);                     // Give dai to Chai, take chai back
         super.withdraw(to, chai);                           // Check collateralization, send chai to user and update posted
         // TODO: Consider a require on super.withdraw()
+    }
+
+    /// @dev Takes dai from Treasury, and gives it to `to` address
+    // Treasury --- Dai ---> to
+    function withdrawDai(address to, uint256 dai) public {
+        require(
+            powerOf(to) >= debtDai(to),
+            "ChaiDealer: Undercollateralized"
+        );
+        require(
+            powerOf(to) - debtDai(to) >= dai, // SafeMath not needed
+            "ChaiDealer: Free more collateral"
+        );
+        uint256 chai = dai.muld(_chaiOracle.price(), RAY);  // chai = dai * price
+        posted[to] = posted[to].sub(chai);                  // Will revert if not enough posted
+
+        _treasury.pull(to, dai);                            // Take dai from treasury
     }
 }
