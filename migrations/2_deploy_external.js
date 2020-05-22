@@ -1,5 +1,12 @@
 // const { BN } = require('@openzeppelin/test-helpers');
 const fixed_addrs = require('./fixed_addrs.json');
+const ERC20 = artifacts.require("TestERC20");
+const Vat = artifacts.require("Vat");
+const GemJoin = artifacts.require("GemJoin");
+const DaiJoin = artifacts.require("DaiJoin");
+const Pot = artifacts.require("Pot");
+const Migrations = artifacts.require("Migrations");
+
 
 module.exports = async (deployer, network, accounts) => {
   let vatAddress;
@@ -12,14 +19,6 @@ module.exports = async (deployer, network, accounts) => {
 
   if (network === "development") {
     // Setting up Vat
-    const ERC20 = artifacts.require("TestERC20");
-    const Vat = artifacts.require("Vat");
-    const GemJoin = artifacts.require("GemJoin");
-    const DaiJoin = artifacts.require("DaiJoin");
-    const Pot = artifacts.require("Pot");
-
-    const Migrations = artifacts.require("Migrations");
-
     const ilk = web3.utils.fromAscii("ETH-A");
     const Line = web3.utils.fromAscii("Line");
     const spotName = web3.utils.fromAscii("spot");
@@ -81,8 +80,8 @@ module.exports = async (deployer, network, accounts) => {
       fixed_addrs[network].chaiAddress && (chaiAddress = fixed_addrs[network].chaiAddress);
    };
 
-   // if (!fixed_addrs[network].chaiAddress) {
-   if (network !== "mainnet" && network !== "kovan" && network !== "kovan-fork") {
+   // if (network !== "mainnet" && network !== "kovan" && network !== "kovan-fork") {
+  if (!fixed_addrs[network].chaiAddress) {
     const Chai = artifacts.require("Chai");
     // Setup Chai
     await deployer.deploy(
@@ -93,10 +92,12 @@ module.exports = async (deployer, network, accounts) => {
       daiAddress,
     );
     chaiAddress = (await Chai.deployed()).address;
+
     // TODO: Make this work in goerli, ropsten and rinkeby
-    const Vat = artifacts.require("Vat");
-    const vat = Vat.at(vatAddress);
-    // await vat.rely(chaiAddress);
+    // const Vat = artifacts.require("Vat");
+    const deployedVat = await Vat.at(fixed_addrs[network].vatAddress);
+    console.log(deployedVat);
+    await deployedVat.rely(chaiAddress);
   };
   
   console.log("    External contract addresses");

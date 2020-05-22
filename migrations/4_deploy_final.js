@@ -47,11 +47,10 @@ module.exports = async (deployer, network, accounts) => {
     chaiAddress = (await Chai.deployed()).address;
  }
 
- treasuryAddress = (await Treasury.deployed()).address;
+ treasury = await Treasury.deployed();
+ treasuryAddress = treasury.address;
  chaiOracleAddress = (await ChaiOracle.deployed()).address
  wethOracleAddress = (await WethOracle.deployed()).address;
-
- treasury = await Treasury.deployed();
 
   // Setup yDai - TODO: Replace by the right maturities, there will be several of these
   const YDai = artifacts.require("YDai");
