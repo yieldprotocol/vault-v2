@@ -66,7 +66,6 @@ contract('Treasury', async (accounts) =>  {
             daiJoin.address,
             dai.address,
         );
-        await vat.rely(chai.address, { from: owner });
 
         treasury = await Treasury.new(
             dai.address,        // dai
