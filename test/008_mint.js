@@ -88,7 +88,6 @@ contract('Mint', async (accounts) =>  {
             daiJoin.address,
             dai.address,
         );
-        await vat.rely(chai.address, { from: owner });
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();

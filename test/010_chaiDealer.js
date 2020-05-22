@@ -69,7 +69,6 @@ contract('ChaiDealer', async (accounts) =>  {
             daiJoin.address,
             dai.address,
         );
-        await vat.rely(chai.address, { from: owner });
 
         // Set treasury
         treasury = await Treasury.new(
