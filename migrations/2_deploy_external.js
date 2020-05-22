@@ -92,12 +92,6 @@ module.exports = async (deployer, network, accounts) => {
       daiAddress,
     );
     chaiAddress = (await Chai.deployed()).address;
-
-    // TODO: Make this work in goerli, ropsten and rinkeby
-    // const Vat = artifacts.require("Vat");
-    const deployedVat = await Vat.at(fixed_addrs[network].vatAddress);
-    console.log(deployedVat);
-    await deployedVat.rely(chaiAddress);
   };
   
   console.log("    External contract addresses");

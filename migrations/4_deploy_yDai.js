@@ -62,9 +62,9 @@ module.exports = async (deployer, network, accounts) => {
   const maturitiesInput = new Set([
     // [(await web3.eth.getBlock(block)).timestamp + 1000, 'Name1','Symbol1'],
     [1601510399, 'yDai-2020-09-30', 'yDai-2020-09-30'],
-    // [1609459199, 'yDai-2020-12-31', 'yDai-2020-12-31'],
-    // [1617235199, 'yDai-2021-03-31', 'yDai-2021-03-31'],
-    // [1625097599, 'yDai-2021-06-30', 'yDai-2021-06-30'],
+    [1609459199, 'yDai-2020-12-31', 'yDai-2020-12-31'],
+    [1617235199, 'yDai-2021-03-31', 'yDai-2021-03-31'],
+    [1625097599, 'yDai-2021-06-30', 'yDai-2021-06-30'],
   ]);
 
   const maturitiesOutput = [];
