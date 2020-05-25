@@ -2,7 +2,9 @@ const YDai = artifacts.require('YDai');
 const Pot = artifacts.require('Pot');
 const Vat = artifacts.require('Vat');
 const helper = require('ganache-time-traveler');
+
 const truffleAssert = require('truffle-assertions');
+const { expectRevert } = require('@openzeppelin/test-helpers');
 
 contract('yDai', async (accounts) =>  {
     let [ owner, user ] = accounts;
@@ -85,9 +87,8 @@ contract('yDai', async (accounts) =>  {
     });
 
     it("yDai cannot mature before maturity time", async() => {
-        await truffleAssert.fails(
+        await expectRevert(
             yDai.mature(),
-            truffleAssert.REVERT,
             "YDai: Too early to mature",
         );
     });
@@ -99,6 +100,16 @@ contract('yDai', async (accounts) =>  {
         assert.equal(
             await yDai.isMature(),
             true,
+        );
+    });
+
+    it("yDai can't mature more than once", async() => {
+        await helper.advanceTime(1000);
+        await helper.advanceBlock();
+        await yDai.mature();
+        await expectRevert(
+            yDai.mature(),
+            "YDai: Already mature",
         );
     });
 
