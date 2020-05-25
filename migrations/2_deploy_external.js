@@ -80,8 +80,7 @@ module.exports = async (deployer, network, accounts) => {
       fixed_addrs[network].chaiAddress && (chaiAddress = fixed_addrs[network].chaiAddress);
    };
 
-   // if (network !== "mainnet" && network !== "kovan" && network !== "kovan-fork") {
-  if (!fixed_addrs[network].chaiAddress) {
+  if (network !== "mainnet" && network !== "kovan" && network !== "kovan-fork") {
     const Chai = artifacts.require("Chai");
     // Setup Chai
     await deployer.deploy(
