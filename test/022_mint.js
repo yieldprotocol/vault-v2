@@ -186,11 +186,11 @@ contract('Mint', async (accounts) =>  {
     });
 
     it("redeem burns yDai to return dai, pulls dai from Treasury", async() => {
-        // Some other user posted collateral to MakerDAO through Treasury
-        await treasury.grantAccess(user, { from: owner });
-        await weth.mint(user, wethTokens, { from: user });
-        await weth.approve(treasury.address, wethTokens, { from: user }); 
-        await treasury.post(user, wethTokens, { from: user });
+        // Post collateral to MakerDAO through Treasury
+        await treasury.grantAccess(owner, { from: owner });
+        await weth.mint(user, wethTokens, { from: owner });
+        await weth.transfer(treasury.address, wethTokens, { from: owner }); 
+        await treasury.post({ from: owner });
         let ink = (await vat.urns(ilk, treasury.address)).ink.toString()
         assert.equal(
             ink,   

@@ -24,16 +24,16 @@ contract WethDealer is ERC20Dealer {
     // from --- Weth ---> treasury
     function post(address from, uint256 weth) public override {
         // TODO: Consider a require on super.post()
-        super.post(from, weth);                 // Grab weth and update posted
-        _token.approve(address(_treasury), weth); // Treasury will take weth
-        _treasury.post(address(this), weth);      // Post weth to Treasury
+        super.post(from, weth);                    // Grab weth and update posted
+        _token.transfer(address(_treasury), weth); // Give weth to Treasury weth
+        _treasury.post();                          // Have Treasury process the weth
     }
 
     /// @dev Takes weth from Treasury and gives it to `to` address
     // us --- Token ---> to
     function withdraw(address to, uint256 weth) public override {
         _treasury.withdraw(address(this), weth);  // Take weth from Treasury
-        super.withdraw(to, weth);               // Check collateralization, send weth to user and update posted
+        super.withdraw(to, weth);                 // Check collateralization, send weth to user and update posted
         // TODO: Consider a require on super.withdraw()
     }
 }

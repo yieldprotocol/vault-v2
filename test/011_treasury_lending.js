@@ -92,8 +92,8 @@ contract('Treasury', async (accounts) =>  {
         );
         
         await weth.mint(user, wethTokens, { from: user });
-        await weth.approve(treasury.address, wethTokens, { from: user }); 
-        await treasury.post(user, wethTokens, { from: user });
+        await weth.transfer(treasury.address, wethTokens, { from: user }); 
+        await treasury.post({ from: user });
 
         // Test transfer of collateral
         assert.equal(
@@ -111,8 +111,8 @@ contract('Treasury', async (accounts) =>  {
     describe("with posted collateral", () => {
         beforeEach(async() => {
             await weth.mint(user, wethTokens, { from: user });
-            await weth.approve(treasury.address, wethTokens, { from: user }); 
-            await treasury.post(user, wethTokens, { from: user });
+            await weth.transfer(treasury.address, wethTokens, { from: user }); 
+            await treasury.post({ from: user });
         });
 
         it("returns borrowing power", async() => {

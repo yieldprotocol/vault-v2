@@ -128,12 +128,14 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
         );
     }
 
-    /// @dev Moves Weth collateral from `from` address into Treasury controlled Maker Eth vault
-    function post(address from, uint256 weth) public override onlyAuthorized("Treasury: Not Authorized") {
-        require(
+    /// @dev Moves all Weth collateral from Treasury into Maker
+    function post() public override onlyAuthorized("Treasury: Not Authorized") {
+        /* require(
             _weth.transferFrom(from, address(this), weth),
             "YToken: WETH transfer fail"
-        );
+        ); */
+        uint256 weth = _weth.balanceOf(address(this));
+
         _weth.approve(address(_wethJoin), weth);
         _wethJoin.join(address(this), weth); // GemJoin reverts if anything goes wrong.
         // All added collateral should be locked into the vault using frob
