@@ -193,8 +193,9 @@ contract('Treasury', async (accounts) =>  {
 
             it("pushes dai that repays debt towards MakerDAO", async() => {
                 // Test `normalizedAmount >= normalizedDebt`
-                await dai.approve(treasury.address, daiTokens, { from: user });
-                await treasury.push(user, daiTokens, { from: user });
+                //await dai.approve(treasury.address, daiTokens, { from: user });
+                dai.transfer(treasury.address, daiTokens, { from: user });
+                await treasury.push({ from: user });
 
                 assert.equal(
                     await dai.balanceOf(user),   

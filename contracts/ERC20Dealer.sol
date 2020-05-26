@@ -151,13 +151,12 @@ contract ERC20Dealer is Ownable, Constants {
     // debt--
     function repay(address from, uint256 dai) public {
         require(
-            _dai.transferFrom(from, address(this), dai),       // Take dai from user
+            _dai.transferFrom(from, address(_treasury), dai),  // Take dai from user to Treasury
             "ERC20Dealer: Dai transfer fail"
         );
 
+        _treasury.push();                                      // Have Treasury process the dai
         (uint256 toRepay, uint256 debtDecrease) = amounts(from, inYDai(dai));
-        _dai.approve(address(_treasury), toRepay);              // Treasury will take the dai
-        _treasury.push(address(this), toRepay);                 // Give the dai to Treasury
         debtYDai[from] = debtYDai[from].sub(debtDecrease);
     }
 

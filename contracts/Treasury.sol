@@ -74,12 +74,9 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
         return _chai.dai(address(this));
     }
 
-    /// @dev Takes dai and pays system debt as much as possible, saving the rest as chai.
-    function push(address user, uint256 dai) public override onlyAuthorized("Treasury: Not Authorized") {
-        require(
-            _dai.transferFrom(user, address(this), dai),       // Take dai from user
-            "Mint: Dai transfer fail"
-        );
+    /// @dev Pays as much system debt as possible from the Treasury balance, saving the rest as chai.
+    function push() public override onlyAuthorized("Treasury: Not Authorized") {
+        uint256 dai = _dai.balanceOf(address(this));
 
         uint256 toRepay = Math.min(debt(), dai);
         if (toRepay > 0) {

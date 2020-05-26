@@ -35,8 +35,8 @@ contract ChaiDealer is ERC20Dealer {
         super.post(from, chai);                             // Grab chai and update posted
         uint256 dai = chai.divd(_chaiOracle.price(), RAY);  // dai = chai / price
         _chai.draw(address(this), dai);                     // Grab dai from Chai, converted from chai
-        _dai.approve(address(_treasury), dai);              // Treasury will take the dai
-        _treasury.push(address(this), dai);                 // Give dai to treasury
+        _dai.transfer(address(_treasury), dai);             // Give Treasury the dai
+        _treasury.push();                                   // Have Treasury process the dai
     }
 
     /// @dev Takes dai from Treasury, wraps it to chai, and gives it to `to` address
