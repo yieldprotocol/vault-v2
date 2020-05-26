@@ -45,24 +45,24 @@ module.exports = async (deployer, network, accounts) => {
     chaiAddress = (await Chai.deployed()).address;
  }
 
-await deployer.deploy(
-  Treasury,
-  daiAddress,        // dai
-  chaiAddress,       // chai
-  wethAddress,       // weth
-  daiJoinAddress,    // daiJoin
-  wethJoinAddress,   // wethJoin
-  vatAddress,        // vat
-);
-treasury = await Treasury.deployed();
-treasuryAddress = treasury.address;
+  // Setup chaiOracle
+  await deployer.deploy(ChaiOracle, potAddress);
+  chaiOracleAddress = (await ChaiOracle.deployed()).address;
 
-// Setup chaiOracle
-await deployer.deploy(ChaiOracle, potAddress);
-chaiOracleAddress = (await ChaiOracle.deployed()).address;
+  // Setup wethOracle
+  await deployer.deploy(WethOracle, vatAddress);
+  wethOracleAddress = (await WethOracle.deployed()).address;
 
-// Setup wethOracle
-await deployer.deploy(WethOracle, vatAddress);
-wethOracleAddress = (await WethOracle.deployed()).address;
-
+  await deployer.deploy(
+    Treasury,
+    daiAddress,        // dai
+    chaiAddress,       // chai
+    chaiOracleAddress, // chaiOracle
+    wethAddress,       // weth
+    daiJoinAddress,    // daiJoin
+    wethJoinAddress,   // wethJoin
+    vatAddress,        // vat
+  );
+  treasury = await Treasury.deployed();
+  treasuryAddress = treasury.address;
 };
