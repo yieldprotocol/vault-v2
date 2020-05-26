@@ -95,7 +95,7 @@ contract Dealer is Ownable, Constants {
         if (collateral == WETH){
             require(
                 tokens[collateral].transferFrom(from, address(_treasury), amount),
-                "ERC20Dealer: Collateral transfer fail"
+                "Dealer: Collateral transfer fail"
             );
             _treasury.post();                          // Have Treasury process the weth
         } else if (collateral == CHAI) {
@@ -112,7 +112,7 @@ contract Dealer is Ownable, Constants {
         bytes32 collateral = CHAI;
         require(
             tokens[collateral].transferFrom(from, address(this), chai),
-            "ERC20Dealer: Collateral transfer fail"
+            "Dealer: Collateral transfer fail"
         );                           // Grab chai and update posted
         uint256 dai = chai.divd(oracles[collateral].price(), RAY);   // dai = chai / price
         IChai(address(tokens[collateral])).draw(address(this), dai); // Grab dai from Chai, converted from chai
@@ -125,11 +125,11 @@ contract Dealer is Ownable, Constants {
     function withdraw(address to, bytes32 collateral, uint256 amount) public virtual {
         require( // Is this needed for Chai?
             powerOf(to, collateral) >= debtDai(to, collateral),
-            "ERC20Dealer: Undercollateralized"
+            "Dealer: Undercollateralized"
         );
         require( // (power - debt) * price
             (powerOf(to, collateral) - debtDai(to, collateral)).muld(oracles[collateral].price(), RAY) >= amount, // SafeMath not needed
-            "ERC20Dealer: Free more collateral"
+            "Dealer: Free more collateral"
         );
         posted[to][collateral] = posted[to][collateral].sub(amount); // Will revert if not enough posted
         if (collateral == WETH){
@@ -151,7 +151,7 @@ contract Dealer is Ownable, Constants {
         IChai(address(tokens[collateral])).join(address(this), dai); // Give dai to Chai, take chai back
         require(
             tokens[collateral].transfer(to, chai),                   //  Transfer collateral to `to`
-            "ERC20Dealer: Collateral transfer fail"
+            "Dealer: Collateral transfer fail"
         );
     }
 
@@ -160,12 +160,12 @@ contract Dealer is Ownable, Constants {
     function withdrawDai(address to, bytes32 collateral, uint256 dai) public virtual {
         require( // Is this needed for Chai?
             powerOf(to, collateral) >= debtDai(to, collateral),
-            "ERC20Dealer: Undercollateralized"
+            "Dealer: Undercollateralized"
         );
         uint256 amount = dai.muld(oracles[collateral].price(), RAY);  // collateral = dai * price
         require( // (power - debt) * price
             (powerOf(to, collateral) - debtDai(to, collateral)).muld(oracles[collateral].price(), RAY) >= amount, // SafeMath not needed
-            "ERC20Dealer: Free more collateral"
+            "Dealer: Free more collateral"
         );
         posted[to][collateral] = posted[to][collateral].sub(amount); // Will revert if not enough posted
         if (collateral == WETH || collateral == CHAI){
@@ -184,12 +184,12 @@ contract Dealer is Ownable, Constants {
     function borrow(address to, bytes32 collateral, uint256 yDai) public {
         require(
             _yDai.isMature() != true,
-            "ERC20Dealer: No mature borrow"
+            "Dealer: No mature borrow"
         );
         require( // collateral = dai * price
             posted[to][collateral] >= (debtDai(to, collateral).add(yDai))
                 .muld(oracles[collateral].price(), RAY),
-            "ERC20Dealer: Post more collateral"
+            "Dealer: Post more collateral"
         );
         debtYDai[to][collateral] = debtYDai[to][collateral].add(yDai);
         _yDai.mint(to, yDai);
@@ -218,7 +218,7 @@ contract Dealer is Ownable, Constants {
     function repay(address from, bytes32 collateral, uint256 dai) public {
         require(
             _dai.transferFrom(from, address(_treasury), dai),  // Take dai from user to Treasury
-            "ERC20Dealer: Dai transfer fail"
+            "Dealer: Dai transfer fail"
         );
 
         _treasury.push();                                      // Have Treasury process the dai
