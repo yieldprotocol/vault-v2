@@ -158,9 +158,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
     function pullChai(address user, uint256 chai) public override onlyAuthorized("Treasury: Not Authorized") {
         uint256 dai = chai.divd(_chaiOracle.price(), RAY);   // dai = chai * price
         uint256 toRelease = Math.min(savings(), dai);
-        if (toRelease > 0) {
-            _chai.draw(address(this), toRelease);     // Grab dai from Chai, converted from chai
-        }
+        // As much chai as the Treasury has, can be used, we borrwo dai and convert it to chai for the rest
 
         uint256 toBorrow = dai - toRelease;    // toRelease can't be greater than dai
         if (toBorrow > 0) {
@@ -174,8 +172,9 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
                 0,
                 toBorrow.divd(rate, RAY).toInt()
             ); // `vat.frob` reverts on failure
-            _daiJoin.exit(address(this), toBorrow); // `daiJoin` reverts on failures
-            _chai.join(address(this), toBorrow);     // Grab dai from Chai, converted from chai
+            _daiJoin.exit(address(this), toBorrow);  // `daiJoin` reverts on failures
+            _dai.approve(address(_chai), toBorrow);   // Chai will take dai
+            _chai.join(address(this), toBorrow);     // Grab chai from Chai, converted from dai
         }
 
         require(                            // Give dai to user

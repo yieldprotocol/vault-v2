@@ -92,32 +92,18 @@ contract Dealer is Ownable, Constants {
     /// @dev Takes collateral tokens from `from` address
     // from --- Token ---> us
     function post(bytes32 collateral, address from, uint256 amount) public virtual {
+        require(
+            tokens[collateral].transferFrom(from, address(_treasury), amount),
+            "Dealer: Collateral transfer fail"
+        );
         if (collateral == WETH){
-            require(
-                tokens[collateral].transferFrom(from, address(_treasury), amount),
-                "Dealer: Collateral transfer fail"
-            );
             _treasury.pushWeth();                          // Have Treasury process the weth
         } else if (collateral == CHAI) {
-            postChai(from, amount);
+            _treasury.pushChai();
         } else {
             revert("Dealer: Unsupported collateral");
         }
         posted[collateral][from] = posted[collateral][from].add(amount);
-    }
-
-    /// @dev Takes chai from `from` address, unwraps it to dai, and gives it to the Treasury
-    // from --- Chai -> Dai ---> treasury
-    function postChai(address from, uint256 chai) internal { // TODO: Have Treasury wrap and unwrap
-        bytes32 collateral = CHAI;
-        require(
-            tokens[collateral].transferFrom(from, address(this), chai),
-            "Dealer: Collateral transfer fail"
-        );                           // Grab chai and update posted
-        uint256 dai = chai.divd(oracles[collateral].price(), RAY);   // dai = chai / price
-        IChai(address(tokens[collateral])).draw(address(this), dai); // Grab dai from Chai, converted from chai
-        _dai.transfer(address(_treasury), dai);                      // Give Treasury the dai
-        _treasury.pushDai();                                            // Have Treasury process the dai
     }
 
     /// @dev Returns collateral to `to` address
@@ -135,24 +121,10 @@ contract Dealer is Ownable, Constants {
         if (collateral == WETH){
             _treasury.pullWeth(to, amount);                          // Take weth from Treasury and give it to `to`
         } else if (collateral == CHAI) {
-            withdrawChai(to, amount);
+            _treasury.pullChai(to, amount);
         } else {
             revert("Dealer: Unsupported collateral");
         }
-    }
-
-    /// @dev Takes dai from Treasury, wraps it to chai, and gives it to `to` address
-    // Treasury --- Dai -> Chai ---> to
-    function withdrawChai(address to, uint256 chai) internal {
-        bytes32 collateral = CHAI;
-        uint256 dai = chai.divd(oracles[collateral].price(), RAY);   // dai = chai / price
-        _treasury.pullDai(address(this), dai);                          // Take dai from treasury
-        _dai.approve(address(tokens[collateral]), dai);              // Chai will take dai
-        IChai(address(tokens[collateral])).join(address(this), dai); // Give dai to Chai, take chai back
-        require(
-            tokens[collateral].transfer(to, chai),                   //  Transfer collateral to `to`
-            "Dealer: Collateral transfer fail"
-        );
     }
 
     /// @dev Returns collateral to `to` address, converted to Dai
