@@ -1,5 +1,6 @@
 const Treasury = artifacts.require('Treasury');
 const Chai = artifacts.require('Chai');
+const ChaiOracle = artifacts.require('ChaiOracle');
 const ERC20 = artifacts.require("TestERC20");
 const DaiJoin = artifacts.require('DaiJoin');
 const GemJoin = artifacts.require('GemJoin');
@@ -20,6 +21,7 @@ contract('Treasury', async (accounts) =>  {
     let wethJoin;
     let vat;
     let pot;
+    let chaiOracle;
     const ilk = web3.utils.fromAscii("ETH-A")
     const Line = web3.utils.fromAscii("Line")
     const spotName = web3.utils.fromAscii("spot")
@@ -67,9 +69,13 @@ contract('Treasury', async (accounts) =>  {
             dai.address,
         );
 
+        // Setup chaiOracle
+        chaiOracle = await ChaiOracle.new(pot.address, { from: owner });
+
         treasury = await Treasury.new(
             dai.address,        // dai
             chai.address,       // chai
+            chaiOracle.address, // chaiOracle
             weth.address,       // weth
             daiJoin.address,    // daiJoin
             wethJoin.address,   // wethJoin

@@ -95,23 +95,24 @@ contract('Dealer', async (accounts) =>  {
         maturity = (await web3.eth.getBlock(block)).timestamp + 1000;
         yDai = await YDai.new(vat.address, pot.address, maturity, "Name", "Symbol");
 
-        // Set treasury
-        treasury = await Treasury.new(
-            dai.address,        // dai
-            chai.address,       // chai
-            weth.address,       // weth
-            daiJoin.address,    // daiJoin
-            wethJoin.address,   // wethJoin
-            vat.address,        // vat
-        );
-        await vat.rely(treasury.address, { from: owner }); //?
-
         // Setup Oracle
         wethOracle = await TestOracle.new({ from: owner });
         await wethOracle.setPrice(wethPrice); // Setting wethPrice at 1.1
 
         // Setup ChaiOracle
         chaiOracle = await ChaiOracle.new(pot.address, { from: owner });
+
+        // Set treasury
+        treasury = await Treasury.new(
+            dai.address,        // dai
+            chai.address,       // chai
+            chaiOracle.address, // chai
+            weth.address,       // weth
+            daiJoin.address,    // daiJoin
+            wethJoin.address,   // wethJoin
+            vat.address,        // vat
+        );
+        await vat.rely(treasury.address, { from: owner }); //?
 
         // Setup Dealer
         dealer = await Dealer.new(

@@ -89,6 +89,9 @@ contract('Mint', async (accounts) =>  {
             dai.address,
         );
 
+        // Setup chaiOracle
+        chaiOracle = await ChaiOracle.new(pot.address, { from: owner });
+
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
         maturity = (await web3.eth.getBlock(block)).timestamp + 1000;
@@ -98,14 +101,12 @@ contract('Mint', async (accounts) =>  {
         treasury = await Treasury.new(
             dai.address,        // dai
             chai.address,       // chai
+            chaiOracle.address, // chaiOracle
             weth.address,       // weth
             daiJoin.address,    // daiJoin
             wethJoin.address,   // wethJoin
             vat.address,        // vat
         );
-
-        // Setup chaiOracle
-        chaiOracle = await ChaiOracle.new(pot.address, { from: owner });
 
         // Setup mint
         mint = await Mint.new(
