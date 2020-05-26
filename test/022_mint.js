@@ -190,7 +190,7 @@ contract('Mint', async (accounts) =>  {
         await treasury.grantAccess(owner, { from: owner });
         await weth.mint(user, wethTokens, { from: owner });
         await weth.transfer(treasury.address, wethTokens, { from: owner }); 
-        await treasury.post({ from: owner });
+        await treasury.pushWeth({ from: owner });
         let ink = (await vat.urns(ilk, treasury.address)).ink.toString()
         assert.equal(
             ink,   

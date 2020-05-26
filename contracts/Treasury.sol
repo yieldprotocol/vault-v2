@@ -75,7 +75,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
     }
 
     /// @dev Pays as much system debt as possible from the Treasury balance, saving the rest as chai.
-    function push() public override onlyAuthorized("Treasury: Not Authorized") {
+    function pushDai() public override onlyAuthorized("Treasury: Not Authorized") {
         uint256 dai = _dai.balanceOf(address(this));
 
         uint256 toRepay = Math.min(debt(), dai);
@@ -101,7 +101,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
     }
 
     /// @dev Returns dai using chai savings as much as possible, and borrowing the rest.
-    function pull(address user, uint256 dai) public override onlyAuthorized("Treasury: Not Authorized") {
+    function pullDai(address user, uint256 dai) public override onlyAuthorized("Treasury: Not Authorized") {
         uint256 toRelease = Math.min(savings(), dai);
         if (toRelease > 0) {
             _chai.draw(address(this), toRelease);     // Grab dai from Chai, converted from chai
@@ -129,11 +129,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
     }
 
     /// @dev Moves all Weth collateral from Treasury into Maker
-    function post() public override onlyAuthorized("Treasury: Not Authorized") {
-        /* require(
-            _weth.transferFrom(from, address(this), weth),
-            "YToken: WETH transfer fail"
-        ); */
+    function pushWeth() public override onlyAuthorized("Treasury: Not Authorized") {
         uint256 weth = _weth.balanceOf(address(this));
 
         _weth.approve(address(_wethJoin), weth);
@@ -150,7 +146,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
     }
 
     /// @dev Moves Weth collateral from Treasury controlled Maker Eth vault to `to` address.
-    function withdraw(address to, uint256 weth) public override onlyAuthorized("Treasury: Not Authorized") {
+    function pullWeth(address to, uint256 weth) public override onlyAuthorized("Treasury: Not Authorized") {
         // Remove collateral from vault using frob
         _vat.frob(
             collateralType,

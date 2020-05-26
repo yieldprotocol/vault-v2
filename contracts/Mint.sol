@@ -41,7 +41,7 @@ contract Mint is Constants {
             "Mint: Dai transfer fail"
         );
         
-        _treasury.push();                                     // Have Treasury process the dai
+        _treasury.pushDai();                                     // Have Treasury process the dai
         _yDai.mint(user, dai);                                // Mint yDai to user
     }
 
@@ -56,6 +56,6 @@ contract Mint is Constants {
         );
         _yDai.burn(user, yDai);                       // Burn yDai from user
         uint256 dai = yDai.muld(_yDai.chi(), RAY);    // User gets interest for holding after maturity
-        _treasury.pull(user, dai);                    // Give dai to user, from Treasury
+        _treasury.pullDai(user, dai);                    // Give dai to user, from Treasury
     }
 }

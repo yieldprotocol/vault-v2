@@ -97,7 +97,7 @@ contract Dealer is Ownable, Constants {
                 tokens[collateral].transferFrom(from, address(_treasury), amount),
                 "Dealer: Collateral transfer fail"
             );
-            _treasury.post();                          // Have Treasury process the weth
+            _treasury.pushWeth();                          // Have Treasury process the weth
         } else if (collateral == CHAI) {
             postChai(from, amount);
         } else {
@@ -117,7 +117,7 @@ contract Dealer is Ownable, Constants {
         uint256 dai = chai.divd(oracles[collateral].price(), RAY);   // dai = chai / price
         IChai(address(tokens[collateral])).draw(address(this), dai); // Grab dai from Chai, converted from chai
         _dai.transfer(address(_treasury), dai);                      // Give Treasury the dai
-        _treasury.push();                                            // Have Treasury process the dai
+        _treasury.pushDai();                                            // Have Treasury process the dai
     }
 
     /// @dev Returns collateral to `to` address
@@ -133,7 +133,7 @@ contract Dealer is Ownable, Constants {
         );
         posted[collateral][to] = posted[collateral][to].sub(amount); // Will revert if not enough posted
         if (collateral == WETH){
-            _treasury.withdraw(to, amount);                          // Take weth from Treasury and give it to `to`
+            _treasury.pullWeth(to, amount);                          // Take weth from Treasury and give it to `to`
         } else if (collateral == CHAI) {
             withdrawChai(to, amount);
         } else {
@@ -146,7 +146,7 @@ contract Dealer is Ownable, Constants {
     function withdrawChai(address to, uint256 chai) internal {
         bytes32 collateral = CHAI;
         uint256 dai = chai.divd(oracles[collateral].price(), RAY);   // dai = chai / price
-        _treasury.pull(address(this), dai);                          // Take dai from treasury
+        _treasury.pullDai(address(this), dai);                          // Take dai from treasury
         _dai.approve(address(tokens[collateral]), dai);              // Chai will take dai
         IChai(address(tokens[collateral])).join(address(this), dai); // Give dai to Chai, take chai back
         require(
@@ -169,7 +169,7 @@ contract Dealer is Ownable, Constants {
         );
         posted[collateral][to] = posted[collateral][to].sub(amount); // Will revert if not enough posted
         if (collateral == WETH || collateral == CHAI){
-            _treasury.pull(to, dai);                           // Take dai from treasury and give it to `to`
+            _treasury.pullDai(to, dai);                           // Take dai from treasury and give it to `to`
         } else {
             revert("Dealer: Unsupported collateral");
         }
@@ -221,7 +221,7 @@ contract Dealer is Ownable, Constants {
             "Dealer: Dai transfer fail"
         );
 
-        _treasury.push();                                      // Have Treasury process the dai
+        _treasury.pushDai();                                      // Have Treasury process the dai
         (uint256 toRepay, uint256 debtDecrease) = amounts(from, collateral, inYDai(dai));
         debtYDai[collateral][from] = debtYDai[collateral][from].sub(debtDecrease);
     }
