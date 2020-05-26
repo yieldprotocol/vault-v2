@@ -464,6 +464,8 @@ contract('Dealer', async (accounts) =>  {
                 );
             });
 
+            // TODO: Test that when yDai is provided in excess for repayment, only the necessary amount is taken
+
             it("more yDai is required to repay after maturity as rate increases", async() => {
                 assert.equal(
                     (await yDai.balanceOf(owner)),   

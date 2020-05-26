@@ -188,13 +188,13 @@ contract Dealer is Ownable, Constants {
     // user --- dai ---> us
     // debt--
     function repayDai(bytes32 collateral, address from, uint256 dai) public {
+        (uint256 toRepay, uint256 debtDecrease) = amounts(from, collateral, inYDai(dai));
         require(
-            _dai.transferFrom(from, address(_treasury), dai),  // Take dai from user to Treasury
+            _dai.transferFrom(from, address(_treasury), toRepay),  // Take dai from user to Treasury
             "Dealer: Dai transfer fail"
         );
 
         _treasury.pushDai();                                      // Have Treasury process the dai
-        (uint256 toRepay, uint256 debtDecrease) = amounts(from, collateral, inYDai(dai));
         debtYDai[collateral][from] = debtYDai[collateral][from].sub(debtDecrease);
     }
 
