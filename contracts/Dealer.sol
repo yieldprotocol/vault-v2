@@ -130,26 +130,6 @@ contract Dealer is Ownable, Constants {
         }
     }
 
-    /// @dev Returns collateral to `to` address, converted to Dai
-    // us --- Dai ---> to
-    function withdrawDai(bytes32 collateral, address to, uint256 dai) public virtual {
-        require( // Is this needed for Chai?
-            powerOf(collateral, to) >= debtDai(collateral, to),
-            "Dealer: Undercollateralized"
-        );
-        uint256 amount = dai.muld(oracles[collateral].price(), RAY);  // collateral = dai * price
-        require( // (power - debt) * price
-            (powerOf(collateral, to) - debtDai(collateral, to)).muld(oracles[collateral].price(), RAY) >= amount, // SafeMath not needed
-            "Dealer: Free more collateral"
-        );
-        posted[collateral][to] = posted[collateral][to].sub(amount); // Will revert if not enough posted
-        if (collateral == WETH || collateral == CHAI){
-            _treasury.pullDai(to, dai);                           // Take dai from treasury and give it to `to`
-        } else {
-            revert("Dealer: Unsupported collateral");
-        }
-    }
-
     /// @dev Mint yDai for address `to` by locking its market value in collateral, user debt is increased.
     //
     // posted[user](wad) >= (debtYDai[user](wad)) * amount (wad)) * collateralization (ray)

@@ -218,42 +218,6 @@ contract('Dealer', async (accounts) =>  {
             );
         });
 
-        it("allows user to withdraw dai", async() => {
-            assert.equal(
-                (await treasury.savings.call()),   
-                daiTokens,
-                "Treasury does not have dai",
-            );
-            assert.equal(
-                (await dai.balanceOf(owner)),   
-                0,
-                "Owner has dai",
-            );
-            assert.equal(
-                (await dealer.powerOf.call(CHAI, owner)),   
-                daiTokens,
-                "Owner does not have borrowing power",
-            );
-
-            await dealer.withdrawDai(CHAI, owner, daiTokens, { from: owner });
-
-            assert.equal(
-                (await dai.balanceOf(owner)),   
-                daiTokens,
-                "Owner should have chai",
-            );
-            assert.equal(
-                (await treasury.savings.call()),   
-                0,
-                "Treasury should not have dai",
-            );
-            assert.equal(
-                (await dealer.powerOf.call(CHAI, owner)),   
-                0,
-                "Owner should not have borrowing power",
-            );
-        });
-
         it("allows to borrow yDai", async() => {
             assert.equal(
                 (await dealer.powerOf.call(CHAI, owner)),   
