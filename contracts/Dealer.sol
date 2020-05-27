@@ -27,6 +27,7 @@ contract Dealer is Ownable, Constants {
 
     mapping(bytes32 => IERC20) internal tokens;                           // Weth or Chai
     mapping(bytes32 => IOracle) internal oracles;                         // WethOracle or ChaiOracle
+    // TODO: Make the ones below public
     mapping(bytes32 => mapping(address => uint256)) internal posted;     // In Weth or Chai, per collateral type
     mapping(bytes32 => mapping(address => uint256)) internal debtYDai;   // In yDai, per collateral type
 
@@ -198,7 +199,15 @@ contract Dealer is Ownable, Constants {
         debtYDai[collateral][from] = debtYDai[collateral][from].sub(debtDecrease);
     }
 
+    /// @dev Moves debt from `from` in YDai to `to` in MakerDAO, denominated in Dai
+    /// `to` needs to surround this call with `_vat.hope(address(_treasury))` and `_vat.nope(address(_treasury))`
+    function split(bytes32 collateral, address from, address to, uint256 dai) public {
+        _treasury.transferDebt(to, dai);
+        debtYDai[collateral][from] = debtYDai[collateral][from].sub(inYDai(dai));
+    }
+
     /// @dev Calculates the amount to repay and the amount by which to reduce the debt
+    // TODO: Swap user and collateral parameters below.
     function amounts(address user, bytes32 collateral, uint256 yDai) internal view returns(uint256, uint256) {
         uint256 toRepay = Math.min(yDai, debtDai(collateral, user));
         uint256 debtProportion = debtYDai[collateral][user].mul(RAY.unit())

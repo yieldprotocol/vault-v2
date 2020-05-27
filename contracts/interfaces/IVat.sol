@@ -6,10 +6,11 @@ pragma solidity ^0.6.2;
 interface IVat {
     // function can(address, address) external view returns (uint);
     function hope(address) external;
+    function nope(address) external;
     function ilks(bytes32) external view returns (uint, uint, uint, uint, uint);
-    // function dai(address) external view returns (uint);
     function urns(bytes32, address) external view returns (uint, uint);
+    // function dai(address) external view returns (uint);
     function frob(bytes32, address, address, address, int, int) external;
-    // function hope(address) external;
+    function fork(bytes32, address, address, int, int) external;
     // function move(address, address, uint) external;
 }

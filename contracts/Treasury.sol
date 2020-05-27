@@ -213,4 +213,20 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
         );
         _wethJoin.exit(to, weth); // `GemJoin` reverts on failures
     }
+
+    /// @dev Moves dai debt from Treasury to `user` in MakerDAO
+    /// Needs to be surrounded by `vat.hope(treasury.address)` and `vat.nope(treasury.address)`
+    /// The user taking on the debt needs to have enough collateral
+    // No need really to restrict access to this one
+    function transferDebt(address user, uint256 dai) public override {
+        _vat.hope(user);
+        _vat.fork( // Move the debt
+            collateralType,
+            address(this),
+            user,
+            0,
+            dai.toInt()
+        );
+        _vat.nope(user);
+    }
 }

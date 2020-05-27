@@ -8,4 +8,5 @@ interface ITreasury {
     function pullChai(address user, uint256 chai) external;
     function pushWeth() external;
     function pullWeth(address to, uint256 weth) external;
+    function transferDebt(address user, uint256 dai) external;
 }

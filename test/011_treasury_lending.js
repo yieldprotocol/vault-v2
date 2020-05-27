@@ -257,6 +257,47 @@ contract('Treasury', async (accounts) =>  {
                     0
                 );
             });
+
+            it("allows to move debt to MakerDAO", async() => {
+                // Receiving user needs to have enough collateral
+                await weth.mint(user, wethTokens, { from: user });
+                weth.approve(wethJoin.address, wethTokens, { from: user });
+                wethJoin.join(user, wethTokens, { from: user });
+                vat.frob(
+                    ilk,
+                    user,
+                    user,
+                    user,
+                    wethTokens, // Collateral to add - WAD
+                    0, // Normalized Dai to receive - WAD
+                    { from: user },
+                );
+
+                assert.equal(
+                    (await vat.urns(ilk, treasury.address)).art,   
+                    daiDebt,
+                    "Treasury does not have " + daiDebt + " debt, instead has " + (await vat.urns(ilk, treasury.address)).art,
+                );
+                assert.equal(
+                    (await vat.urns(ilk, user)).art,   
+                    0,
+                    "User has debt",
+                );
+                await vat.hope(treasury.address, { from: user });
+                await treasury.transferDebt(user, daiDebt, { from: user });
+                await vat.nope(treasury.address, { from: user });
+
+                assert.equal(
+                    (await vat.urns(ilk, treasury.address)).art,   
+                    0,
+                    "Treasury should have no debt, instead has " + (await vat.urns(ilk, treasury.address)).art,
+                );
+                assert.equal(
+                    (await vat.urns(ilk, user)).art,   
+                    daiDebt,
+                    "User should have debt",
+                );
+            });
         });
     });
 });
