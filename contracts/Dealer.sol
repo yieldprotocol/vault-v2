@@ -69,6 +69,11 @@ contract Dealer is Ownable, Constants {
         return inDai(debtYDai[collateral][user]);
     }
 
+    /// @dev Return if the borrowing power of an user is equal or greater than its debt
+    function isCollateralized(bytes32 collateral, address user) public returns (bool) {
+        return powerOf(collateral, user) >= debtDai(collateral, user);
+    }
+
     /// @dev Returns the dai equivalent of an yDai amount
     function inDai(uint256 yDai) public view returns (uint256) {
         if (_yDai.isMature()){
@@ -109,15 +114,13 @@ contract Dealer is Ownable, Constants {
     /// @dev Returns collateral to `to` address
     // us --- Token ---> to
     function withdraw(bytes32 collateral, address to, uint256 amount) public virtual {
-        require( // TODO: This is not needed for Chai
-            powerOf(collateral, to) >= debtDai(collateral, to),
-            "Dealer: Undercollateralized"
-        );
-        require( // (power - debt) * price | TODO: Move to a post-effect require in a function common with borrow
-            (powerOf(collateral, to) - debtDai(collateral, to)).muld(oracles[collateral].price(), RAY) >= amount, // SafeMath not needed
+        posted[collateral][to] = posted[collateral][to].sub(amount); // Will revert if not enough posted
+
+        require(
+            isCollateralized(collateral, to),
             "Dealer: Free more collateral"
         );
-        posted[collateral][to] = posted[collateral][to].sub(amount); // Will revert if not enough posted
+
         if (collateral == WETH){
             _treasury.pullWeth(to, amount);                          // Take weth from Treasury and give it to `to`
         } else if (collateral == CHAI) {
@@ -158,12 +161,14 @@ contract Dealer is Ownable, Constants {
             _yDai.isMature() != true,
             "Dealer: No mature borrow"
         );
-        require( // collateral = dai * price | TODO: Move to a post-effect require in a function common with withdraw
-            posted[collateral][to] >= (debtDai(collateral, to).add(yDai))
-                .muld(oracles[collateral].price(), RAY),
+
+        debtYDai[collateral][to] = debtYDai[collateral][to].add(yDai);
+
+        require(
+            isCollateralized(collateral, to),
             "Dealer: Post more collateral"
         );
-        debtYDai[collateral][to] = debtYDai[collateral][to].add(yDai);
+
         _yDai.mint(to, yDai);
     }
 
