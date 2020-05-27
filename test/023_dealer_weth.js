@@ -198,42 +198,6 @@ contract('Dealer', async (accounts) =>  {
             );
         });
 
-        it("allows user to withdraw dai", async() => {
-            assert.equal(
-                (await vat.urns(ilk, treasury.address)).ink.toString(),   
-                wethTokens,
-                "Treasury does not have weth in MakerDAO",
-            );
-            assert.equal(
-                (await dai.balanceOf(owner)),   
-                0,
-                "Owner has dai",
-            );
-            assert.equal(
-                (await dealer.powerOf.call(WETH, owner)),   
-                daiTokens,
-                "Owner does not have borrowing power",
-            );
-
-            await dealer.withdrawDai(WETH, owner, daiTokens, { from: owner });
-
-            assert.equal(
-                (await dai.balanceOf(owner)),   
-                daiTokens,
-                "Owner should have dai",
-            );
-            assert.equal(
-                (await treasury.debt.call()),   
-                daiTokens,
-                "Treasury should have debt towards MakerDAO",
-            );
-            assert.equal(
-                (await dealer.powerOf.call(WETH, owner)),   
-                0,
-                "Owner should not have borrowing power",
-            );
-        });
-
         it("allows to borrow yDai", async() => {
             assert.equal(
                 (await dealer.powerOf.call(WETH, owner)),   
