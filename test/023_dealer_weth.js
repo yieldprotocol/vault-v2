@@ -592,9 +592,14 @@ contract('Dealer', async (accounts) =>  {
                     "Treasury does not have " + daiTokens + " debt, instead has " + (await vat.urns(ilk, treasury.address)).art,
                 );
                 assert.equal(
+                    (await dealer.debtDai(WETH, owner)),   
+                    daiTokens,
+                    "User does not have debt in Dealer",
+                );
+                assert.equal(
                     (await vat.urns(ilk, owner)).art,   
                     0,
-                    "User has debt",
+                    "User has debt in MakerDAO",
                 );
                 await vat.hope(treasury.address, { from: owner });
                 await dealer.split(WETH, owner, owner, daiTokens, { from: owner });
@@ -603,14 +608,19 @@ contract('Dealer', async (accounts) =>  {
                 // TODO: Test with CHAI collateral as well
 
                 assert.equal(
+                    (await vat.urns(ilk, owner)).art,   
+                    daiTokens,
+                    "User should have debt",
+                );
+                assert.equal(
                     (await vat.urns(ilk, treasury.address)).art,   
                     0,
                     "Treasury should have no debt, instead has " + (await vat.urns(ilk, treasury.address)).art,
                 );
                 assert.equal(
-                    (await vat.urns(ilk, owner)).art,   
-                    daiTokens,
-                    "User should have debt",
+                    (await dealer.debtDai(WETH, owner)),   
+                    0,
+                    "User should not have debt in Dealer",
                 );
             });
         });
