@@ -109,11 +109,11 @@ contract Dealer is Ownable, Constants {
     /// @dev Returns collateral to `to` address
     // us --- Token ---> to
     function withdraw(bytes32 collateral, address to, uint256 amount) public virtual {
-        require( // Is this needed for Chai?
+        require( // TODO: This is not needed for Chai
             powerOf(collateral, to) >= debtDai(collateral, to),
             "Dealer: Undercollateralized"
         );
-        require( // (power - debt) * price
+        require( // (power - debt) * price | TODO: Move to a post-effect require in a function common with borrow
             (powerOf(collateral, to) - debtDai(collateral, to)).muld(oracles[collateral].price(), RAY) >= amount, // SafeMath not needed
             "Dealer: Free more collateral"
         );
@@ -158,7 +158,7 @@ contract Dealer is Ownable, Constants {
             _yDai.isMature() != true,
             "Dealer: No mature borrow"
         );
-        require( // collateral = dai * price
+        require( // collateral = dai * price | TODO: Move to a post-effect require in a function common with withdraw
             posted[collateral][to] >= (debtDai(collateral, to).add(yDai))
                 .muld(oracles[collateral].price(), RAY),
             "Dealer: Post more collateral"
