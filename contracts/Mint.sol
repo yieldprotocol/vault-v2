@@ -37,12 +37,12 @@ contract Mint is Constants {
             "Mint: yDai is mature"
         );
         require(
-            _dai.transferFrom(user, address(this), dai),           // Take dai from user
+            _dai.transferFrom(user, address(_treasury), dai), // Take dai from user and give it to Treasury
             "Mint: Dai transfer fail"
         );
-        _dai.approve(address(_treasury), dai);      // Treasury will take the dai
-        _treasury.push(address(this), dai);                  // Give the dai to Treasury
-        _yDai.mint(user, dai);                      // Mint yDai to user
+        
+        _treasury.pushDai();                                     // Have Treasury process the dai
+        _yDai.mint(user, dai);                                // Mint yDai to user
     }
 
     /// @dev Burn yTokens and return an equal amount of underlying.
@@ -56,6 +56,6 @@ contract Mint is Constants {
         );
         _yDai.burn(user, yDai);                       // Burn yDai from user
         uint256 dai = yDai.muld(_yDai.chi(), RAY);    // User gets interest for holding after maturity
-        _treasury.pull(user, dai);                // Give dai to user, from Saver
+        _treasury.pullDai(user, dai);                    // Give dai to user, from Treasury
     }
 }

@@ -89,6 +89,9 @@ contract('Mint', async (accounts) =>  {
             dai.address,
         );
 
+        // Setup chaiOracle
+        chaiOracle = await ChaiOracle.new(pot.address, { from: owner });
+
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
         maturity = (await web3.eth.getBlock(block)).timestamp + 1000;
@@ -98,14 +101,12 @@ contract('Mint', async (accounts) =>  {
         treasury = await Treasury.new(
             dai.address,        // dai
             chai.address,       // chai
+            chaiOracle.address, // chaiOracle
             weth.address,       // weth
             daiJoin.address,    // daiJoin
             wethJoin.address,   // wethJoin
             vat.address,        // vat
         );
-
-        // Setup chaiOracle
-        chaiOracle = await ChaiOracle.new(pot.address, { from: owner });
 
         // Setup mint
         mint = await Mint.new(
@@ -186,11 +187,11 @@ contract('Mint', async (accounts) =>  {
     });
 
     it("redeem burns yDai to return dai, pulls dai from Treasury", async() => {
-        // Some other user posted collateral to MakerDAO through Treasury
-        await treasury.grantAccess(user, { from: owner });
-        await weth.mint(user, wethTokens, { from: user });
-        await weth.approve(treasury.address, wethTokens, { from: user }); 
-        await treasury.post(user, wethTokens, { from: user });
+        // Post collateral to MakerDAO through Treasury
+        await treasury.grantAccess(owner, { from: owner });
+        await weth.mint(user, wethTokens, { from: owner });
+        await weth.transfer(treasury.address, wethTokens, { from: owner }); 
+        await treasury.pushWeth({ from: owner });
         let ink = (await vat.urns(ilk, treasury.address)).ink.toString()
         assert.equal(
             ink,   

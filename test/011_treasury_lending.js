@@ -1,5 +1,6 @@
 const Treasury = artifacts.require('Treasury');
 const Chai = artifacts.require('Chai');
+const ChaiOracle = artifacts.require('ChaiOracle');
 const ERC20 = artifacts.require("TestERC20");
 const DaiJoin = artifacts.require('DaiJoin');
 const GemJoin = artifacts.require('GemJoin');
@@ -20,6 +21,7 @@ contract('Treasury', async (accounts) =>  {
     let wethJoin;
     let vat;
     let pot;
+    let chaiOracle;
     const ilk = web3.utils.fromAscii("ETH-A")
     const Line = web3.utils.fromAscii("Line")
     const spotName = web3.utils.fromAscii("spot")
@@ -35,6 +37,10 @@ contract('Treasury', async (accounts) =>  {
     const daiDebt = web3.utils.toWei("120");    // Dai debt for `frob`: 120
     const wethTokens = web3.utils.toWei("100"); // Collateral we join: 120 * rate / spot
     const daiTokens = web3.utils.toWei("150");  // Dai we can borrow: 120 * rate
+
+    const chi  = "1250000000000000000000000000";
+    const chaiPrice  = "800000000000000000000000000";
+    const chaiTokens = web3.utils.toWei("120");
 
     beforeEach(async() => {
         // Set up vat, join and weth
@@ -58,6 +64,7 @@ contract('Treasury', async (accounts) =>  {
         // Setup pot
         pot = await Pot.new(vat.address);
         await vat.rely(pot.address, { from: owner });
+        await pot.setChi(chi, { from: owner });
 
         // Setup chai
         chai = await Chai.new(
@@ -67,9 +74,13 @@ contract('Treasury', async (accounts) =>  {
             dai.address,
         );
 
+        // Setup chaiOracle
+        chaiOracle = await ChaiOracle.new(pot.address, { from: owner });
+
         treasury = await Treasury.new(
             dai.address,        // dai
             chai.address,       // chai
+            chaiOracle.address, // chaiOracle
             weth.address,       // weth
             daiJoin.address,    // daiJoin
             wethJoin.address,   // wethJoin
@@ -92,8 +103,8 @@ contract('Treasury', async (accounts) =>  {
         );
         
         await weth.mint(user, wethTokens, { from: user });
-        await weth.approve(treasury.address, wethTokens, { from: user }); 
-        await treasury.post(user, wethTokens, { from: user });
+        await weth.transfer(treasury.address, wethTokens, { from: user }); 
+        await treasury.pushWeth({ from: user });
 
         // Test transfer of collateral
         assert.equal(
@@ -111,8 +122,8 @@ contract('Treasury', async (accounts) =>  {
     describe("with posted collateral", () => {
         beforeEach(async() => {
             await weth.mint(user, wethTokens, { from: user });
-            await weth.approve(treasury.address, wethTokens, { from: user }); 
-            await treasury.post(user, wethTokens, { from: user });
+            await weth.transfer(treasury.address, wethTokens, { from: user }); 
+            await treasury.pushWeth({ from: user });
         });
 
         it("returns borrowing power", async() => {
@@ -129,7 +140,7 @@ contract('Treasury', async (accounts) =>  {
                 0,
             );
             
-            await treasury.withdraw(user, wethTokens, { from: user });
+            await treasury.pullWeth(user, wethTokens, { from: user });
 
             // Test transfer of collateral
             assert.equal(
@@ -148,7 +159,7 @@ contract('Treasury', async (accounts) =>  {
             // Test with two different stability rates, if possible.
             // Mock Vat contract needs a `setRate` and an `ilks` functions.
             // Mock Vat contract needs the `frob` function to authorize `daiJoin.exit` transfers through the `dart` parameter.
-            await treasury.pull(user, daiTokens, { from: user });
+            await treasury.pullDai(user, daiTokens, { from: user });
 
             assert.equal(
                 await dai.balanceOf(user),   
@@ -160,8 +171,24 @@ contract('Treasury', async (accounts) =>  {
             );
         });
 
+        it("pulls chai converted from dai borrowed from MakerDAO", async() => {
+            // Test with two different stability rates, if possible.
+            // Mock Vat contract needs a `setRate` and an `ilks` functions.
+            // Mock Vat contract needs the `frob` function to authorize `daiJoin.exit` transfers through the `dart` parameter.
+            await treasury.pullChai(user, chaiTokens, { from: user });
+
+            assert.equal(
+                await chai.balanceOf(user),   
+                chaiTokens
+            );
+            assert.equal(
+                (await vat.urns(ilk, treasury.address)).art,   
+                daiDebt,
+            );
+        });
+
         it("shouldn't allow borrowing beyond power", async() => {
-            await treasury.pull(user, daiTokens, { from: user });
+            await treasury.pullDai(user, daiTokens, { from: user });
             assert.equal(
                 await treasury.power(),   
                 daiTokens,
@@ -173,14 +200,14 @@ contract('Treasury', async (accounts) =>  {
                 "We should have " + daiTokens + " dai debt.",
             );
             await expectRevert(
-                treasury.pull(user, 1, { from: user }), // Not a wei more borrowing
+                treasury.pullDai(user, 1, { from: user }), // Not a wei more borrowing
                 "Vat/sub",
             );
         });
     
         describe("with a dai debt towards MakerDAO", () => {
             beforeEach(async() => {
-                await treasury.pull(user, daiTokens, { from: user });
+                await treasury.pullDai(user, daiTokens, { from: user });
             });
 
             it("returns treasury debt", async() => {
@@ -193,8 +220,9 @@ contract('Treasury', async (accounts) =>  {
 
             it("pushes dai that repays debt towards MakerDAO", async() => {
                 // Test `normalizedAmount >= normalizedDebt`
-                await dai.approve(treasury.address, daiTokens, { from: user });
-                await treasury.push(user, daiTokens, { from: user });
+                //await dai.approve(treasury.address, daiTokens, { from: user });
+                dai.transfer(treasury.address, daiTokens, { from: user });
+                await treasury.pushDai({ from: user });
 
                 assert.equal(
                     await dai.balanceOf(user),   
@@ -208,13 +236,26 @@ contract('Treasury', async (accounts) =>  {
                     await vat.dai(treasury.address),   
                     0
                 );
+            });
 
-                // Test `normalizedAmount < normalizedDebt`
-                // Mock Vat contract needs to return `normalizedDebt` with a `urns` function
-                // The DaiJoin mock contract needs to have a `join` function that authorizes Vat for incoming dai transfers.
-                // The DaiJoin mock contract needs to have a function to return it's dai balance.
-                // The Vat mock contract needs to have a frob function that takes `dart` dai from user to DaiJoin
-                // Should transfer funds from daiJoin
+            it("pushes chai that repays debt towards MakerDAO", async() => {
+                await dai.approve(chai.address, daiTokens, { from: user });
+                await chai.join(user, daiTokens, { from: user });
+                await chai.transfer(treasury.address, chaiTokens, { from: user }); 
+                await treasury.pushChai({ from: user });
+
+                assert.equal(
+                    await dai.balanceOf(user),   
+                    0
+                );
+                assert.equal(
+                    (await vat.urns(ilk, treasury.address)).art,   
+                    0,
+                );
+                assert.equal(
+                    await vat.dai(treasury.address),   
+                    0
+                );
             });
         });
     });
