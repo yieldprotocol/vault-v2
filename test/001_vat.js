@@ -30,7 +30,7 @@ contract('Vat', async (accounts) =>  {
 
 
     beforeEach(async() => {
-        /* vat = await Vat.new();
+        vat = await Vat.new();
         await vat.init(ilk, { from: owner });
 
         weth = await ERC20.new(0, { from: owner }); 
@@ -42,14 +42,6 @@ contract('Vat', async (accounts) =>  {
         await vat.file(ilk, spotName, spot, { from: owner });
         await vat.file(ilk, linel, limits, { from: owner });
         await vat.file(Line, limits); // TODO: Why can't we specify `, { from: owner }`? */
-
-        vat = await Vat.deployed();
-        // wethAddress = await migration.contracts.call('weth', (e,r)=> !e && r)
-        wethJoin = await GemJoin.deployed();
-        // daiAddress = await migration.contracts.call('dai', (e,r)=> !e && r)
-        daiJoin = await DaiJoin.deployed();
-        // potAddress = (await Pot.deployed()).address;
-        // chaiAddress = (await Chai.deployed()).address;
 
         await vat.rely(vat.address, { from: owner });      // `owner` authorizing `vat` to operate for `vat`?
         await vat.rely(wethJoin.address, { from: owner }); // `owner` authorizing `wethJoin` to operate for `vat`
@@ -73,7 +65,7 @@ contract('Vat', async (accounts) =>  {
         )
     });
 
-    /* it("should join funds", async() => {
+    it("should join funds", async() => {
         assert.equal(
             await weth.balanceOf(wethJoin.address),   
             0,
@@ -233,5 +225,5 @@ contract('Vat', async (accounts) =>  {
                 });
             });
         });
-    }); */
+    });
 });
