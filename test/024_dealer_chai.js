@@ -308,27 +308,6 @@ contract('Dealer', async (accounts) =>  {
                 await dealer.borrow(CHAI, owner, daiTokens, { from: owner });
             });
 
-            /* it("doesn't allow to withdraw if undercollateralized", async() => {
-                assert.equal(
-                    (await dealer.powerOf.call(CHAI, owner)),   
-                    daiTokens,
-                    "Owner does not have borrowing power",
-                );
-                assert.equal(
-                    (await dealer.debtDai(CHAI, owner)),   
-                    daiTokens,
-                    "Owner does not have debt",
-                );
-
-                // Set chi to 1.5
-                await pot.setChi("1500000000000000000000000000", { from: owner });
-        
-                await expectRevert(
-                    dealer.withdraw(CHAI, owner, chaiTokens, { from: owner }),
-                    "Dealer: Undercollateralized",
-                );
-            }); */
-
             it("doesn't allow to withdraw and become undercollateralized", async() => {
                 assert.equal(
                     (await dealer.powerOf.call(CHAI, owner)),   

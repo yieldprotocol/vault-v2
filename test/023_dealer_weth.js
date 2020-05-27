@@ -288,26 +288,6 @@ contract('Dealer', async (accounts) =>  {
                 await dealer.borrow(WETH, owner, daiTokens, { from: owner });
             });
 
-            it("doesn't allow to withdraw if undercollateralized", async() => {
-                assert.equal(
-                    (await dealer.powerOf.call(WETH, owner)),   
-                    daiTokens,
-                    "Owner does not have borrowing power",
-                );
-                assert.equal(
-                    (await dealer.debtDai(WETH, owner)),   
-                    daiTokens,
-                    "Owner does not have debt",
-                );
-
-                await wethOracle.setPrice("1200000000000000000000000000"); // Increase price to 1.2
-        
-                await expectRevert(
-                    dealer.withdraw(WETH, owner, wethTokens, { from: owner }),
-                    "Dealer: Undercollateralized",
-                );
-            });
-
             it("doesn't allow to withdraw and become undercollateralized", async() => {
                 assert.equal(
                     (await dealer.powerOf.call(WETH, owner)),   
