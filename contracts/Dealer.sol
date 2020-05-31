@@ -175,7 +175,7 @@ contract Dealer is Ownable, Constants {
     // user --- yDai ---> us
     // debt--
     function repayYDai(bytes32 collateral, address from, uint256 yDai) public {
-        (uint256 toRepay, uint256 debtDecrease) = amounts(from, collateral, yDai);
+        (uint256 toRepay, uint256 debtDecrease) = amounts(collateral, from, yDai);
         _yDai.burn(from, toRepay);
         debtYDai[collateral][from] = debtYDai[collateral][from].sub(debtDecrease);
     }
@@ -188,7 +188,7 @@ contract Dealer is Ownable, Constants {
     // user --- dai ---> us
     // debt--
     function repayDai(bytes32 collateral, address from, uint256 dai) public {
-        (uint256 toRepay, uint256 debtDecrease) = amounts(from, collateral, inYDai(dai));
+        (uint256 toRepay, uint256 debtDecrease) = amounts(collateral, from, inYDai(dai));
         require(
             _dai.transferFrom(from, address(_treasury), toRepay),  // Take dai from user to Treasury
             "Dealer: Dai transfer fail"
@@ -207,8 +207,7 @@ contract Dealer is Ownable, Constants {
     }
 
     /// @dev Calculates the amount to repay and the amount by which to reduce the debt
-    // TODO: Swap user and collateral parameters below.
-    function amounts(address user, bytes32 collateral, uint256 yDai) internal view returns(uint256, uint256) {
+    function amounts(bytes32 collateral, address user, uint256 yDai) internal view returns(uint256, uint256) {
         uint256 toRepay = Math.min(yDai, debtDai(collateral, user));
         uint256 debtProportion = debtYDai[collateral][user].mul(RAY.unit())
             .divd(debtDai(collateral, user).mul(RAY.unit()), RAY);
