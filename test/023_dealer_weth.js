@@ -589,11 +589,11 @@ contract('Dealer', async (accounts) =>  {
                     daiTokens,
                     "User does not have debt in Dealer",
                 );
-                /* assert.equal(
+                assert.equal(
                     (await dealer.posted.call(WETH, owner)),   
                     wethTokens,
                     "User does not have collateral in Dealer",
-                ); */
+                );
                 assert.equal(
                     (await vat.urns(ilk, owner)).art,   
                     0,
@@ -626,11 +626,11 @@ contract('Dealer', async (accounts) =>  {
                     0,
                     "User should not have debt in Dealer",
                 );
-                /* assert.equal(
+                assert.equal(
                     (await dealer.posted.call(WETH, owner)),   
                     0,
                     "User should not have collateral in Dealer",
-                ); */
+                );
             });
 
             it("allows to move user debt to MakerDAO beyond system debt", async() => {
@@ -652,11 +652,11 @@ contract('Dealer', async (accounts) =>  {
                     daiTokens,
                     "User does not have debt in Dealer",
                 );
-                /* assert.equal(
+                assert.equal(
                     (await dealer.posted.call(WETH, owner)),   
                     wethTokens,
                     "User does not have collateral in Dealer",
-                ); */
+                );
                 assert.equal(
                     (await vat.urns(ilk, owner)).art,   
                     0,
@@ -700,11 +700,11 @@ contract('Dealer', async (accounts) =>  {
                     0,
                     "User should not have debt in Dealer",
                 );
-                /* assert.equal(
+                assert.equal(
                     (await dealer.posted.call(WETH, owner)),   
                     0,
                     "User should not have collateral in Dealer",
-                ); */
+                );
             });
         });
     });
