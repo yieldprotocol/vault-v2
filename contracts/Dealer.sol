@@ -199,11 +199,12 @@ contract Dealer is Ownable, Constants {
         debtYDai[collateral][from] = debtYDai[collateral][from].sub(debtDecrease);
     }
 
-    /// @dev Moves debt from `from` in YDai to `to` in MakerDAO, denominated in Dai
+    /// @dev Moves all debt and weth from `from` in YDai to `to` in MakerDAO, denominated in Dai
     /// `to` needs to surround this call with `_vat.hope(address(_treasury))` and `_vat.nope(address(_treasury))`
-    function split(bytes32 collateral, address from, address to, uint256 dai) public {
-        _treasury.transferDebt(to, dai);
-        debtYDai[collateral][from] = debtYDai[collateral][from].sub(inYDai(dai));
+    function split(address from, address to) public {
+        _treasury.transferPosition(to, posted[WETH][from], debtDai(WETH, from));
+        delete posted[WETH][from];
+        delete debtYDai[WETH][from];
     }
 
     /// @dev Calculates the amount to repay and the amount by which to reduce the debt
