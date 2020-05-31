@@ -215,7 +215,6 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
 
     /// @dev Moves dai debt and weth collateral from Treasury to `user` in MakerDAO
     /// Needs to be surrounded by `vat.hope(treasury.address)` and `vat.nope(treasury.address)`
-    /// The user taking on the debt needs to have enough collateral
     /// Only the Dealer can call `transferPosition`, to avoid transferring more debt than an user has.
     function transferPosition(address user, uint256 weth, uint256 dai)
         public override onlyAuthorized("Treasury: Not Authorized")
