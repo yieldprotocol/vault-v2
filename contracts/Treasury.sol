@@ -216,13 +216,14 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
     /// @dev Moves dai debt and weth collateral from Treasury to `user` in MakerDAO
     /// Needs to be surrounded by `vat.hope(treasury.address)` and `vat.nope(treasury.address)`
     /// Only the Dealer can call `transferPosition`, to avoid transferring more debt than an user has.
+    /// The `dai` parameter is measured in normalized dai, not in the units used in `vat.urns(ilk, user)).art`.
     function transferPosition(address user, uint256 weth, uint256 dai)
         public override onlyAuthorized("Treasury: Not Authorized")
     {
         // If the Treasury doesn't have enough debt, it needs to borrow dai, which becomes chai savings.
+        (, uint256 rate,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
         uint256 toBorrow = dai - Math.min(debt(), dai);
         if (toBorrow > 0) {
-            (, uint256 rate,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
             _vat.frob(
                 collateralType,
                 address(this),
@@ -241,7 +242,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
             address(this),
             user,
             weth.toInt(),
-            dai.toInt()
+            dai.divd(rate, RAY).toInt()
         );
         _vat.nope(user);
     }
