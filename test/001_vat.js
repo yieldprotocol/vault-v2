@@ -4,7 +4,7 @@ const DaiJoin = artifacts.require('DaiJoin');
 const ERC20 = artifacts.require('TestERC20');
 
 const { expectRevert } = require('@openzeppelin/test-helpers');
-const { toWad, toRay, toRad } = require('./shared/utils')
+const { toWad, toRay, toRad } = require('./shared/utils');
 
 contract('Vat', async (accounts) =>  {
     const [ owner, user ] = accounts;
@@ -23,7 +23,7 @@ contract('Vat', async (accounts) =>  {
     const rate  = 1.25;
     const daiDebt = 120;    // Dai debt for `frob`: 120
     const daiTokens = daiDebt * rate;  // Dai we can borrow: 120 * rate
-    const wethTokens = daiDebt * rate / spot; // Collateral we join: 120 * rate / spot
+    const wethTokens = daiTokens / spot; // Collateral we join: 120 * rate / spot
 
 
     beforeEach(async() => {
@@ -68,7 +68,7 @@ contract('Vat', async (accounts) =>  {
 
         await weth.mint(owner, toWad(wethTokens), { from: owner });
         await weth.approve(wethJoin.address, toWad(wethTokens), { from: owner }); 
-        await wethJoin.join(owner, toWad(wethTokens), { from: owner }); // We join 150 weth
+        await wethJoin.join(owner, toWad(wethTokens), { from: owner });
 
         assert.equal(
             await weth.balanceOf(wethJoin.address),   
