@@ -18,6 +18,7 @@ contract('Chai', async (accounts) =>  {
     let dai;
     let daiJoin;
     let pot;
+    let chai;
     let ilk = web3.utils.fromAscii("ETH-A")
     let Line = web3.utils.fromAscii("Line")
     let spotName = web3.utils.fromAscii("spot")

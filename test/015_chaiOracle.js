@@ -1,70 +1,73 @@
-const ChaiOracle = artifacts.require('./ChaiOracle');
-const ERC20 = artifacts.require("./TestERC20");
+const Vat = artifacts.require('Vat');
+const GemJoin = artifacts.require('GemJoin');
 const DaiJoin = artifacts.require('DaiJoin');
-const GemJoin = artifacts.require('./GemJoin');
-const Vat = artifacts.require('./Vat');
-const Pot = artifacts.require('./Pot');
+const Weth = artifacts.require("WETH9");
+const ERC20 = artifacts.require("TestERC20");
+const Pot = artifacts.require('Pot');
+const ChaiOracle = artifacts.require('./ChaiOracle');
 
 const truffleAssert = require('truffle-assertions');
 const helper = require('ganache-time-traveler');
+const { toWad, toRay, toRad } = require('./shared/utils');
 
 contract('ChaiOracle', async (accounts) =>  {
     let [ owner ] = accounts;
     let vat;
-    let pot;
-    let dai;
     let weth;
-    let daiJoin;
     let wethJoin;
+    let dai;
+    let daiJoin;
+    let pot;
     let chaiOracle;
-
-    const ilk = web3.utils.fromAscii("ETH-A")
-    const Line = web3.utils.fromAscii("Line")
-    const spot = web3.utils.fromAscii("spot")
-    const linel = web3.utils.fromAscii("line")
-
-    const RAY  = "1000000000000000000000000000";
-    const RAD = web3.utils.toBN('45');
-    const supply = web3.utils.toWei("1000");
-    const limits =  web3.utils.toBN('10000').mul(web3.utils.toBN('10').pow(RAD)).toString(); // 10000 * 10**45
-    const chi  = "1250000000000000000000000000"; // 1.25
-    const price  = "800000000000000000000000000"; // 0.8
+    let ilk = web3.utils.fromAscii("ETH-A")
+    let Line = web3.utils.fromAscii("Line")
+    let spotName = web3.utils.fromAscii("spot")
+    let linel = web3.utils.fromAscii("line")
+    const limits =  10000;
+    const spot  = 1.5;
+    const rate  = 1.25;
+    const daiDebt = 100;
+    const daiTokens = daiDebt * rate;
+    const wethTokens = daiDebt * rate / spot;
+    const chi = 1.25;
+    const price = (1 / chi);
 
     beforeEach(async() => {
-        // Set up vat, join and weth
         vat = await Vat.new();
-        await vat.rely(vat.address, { from: owner });
+        await vat.init(ilk, { from: owner });
 
-        weth = await ERC20.new(supply, { from: owner }); 
-        await vat.init(ilk, { from: owner }); // Set ilk rate to 1.0
+        weth = await Weth.new({ from: owner });
         wethJoin = await GemJoin.new(vat.address, ilk, weth.address, { from: owner });
-        await vat.rely(wethJoin.address, { from: owner });
 
-        dai = await ERC20.new(supply, { from: owner });
+        dai = await ERC20.new(0, { from: owner });
         daiJoin = await DaiJoin.new(vat.address, dai.address, { from: owner });
-        await vat.rely(daiJoin.address, { from: owner });
 
         // Setup vat
-        await vat.file(ilk, spot,    RAY, { from: owner });
-        await vat.file(ilk, linel, limits, { from: owner });
-        await vat.file(Line,       limits); // TODO: Why can't we specify `, { from: owner }`?
+        await vat.file(ilk, spotName, toRay(spot), { from: owner });
+        await vat.file(ilk, linel, toRad(limits), { from: owner });
+        await vat.file(Line, toRad(limits)); // TODO: Why can't we specify `, { from: owner }`?
+        await vat.fold(ilk, vat.address, toRay(rate - 1), { from: owner }); // 1 + 0.25
+
+        // Permissions
+        await vat.rely(vat.address, { from: owner });
+        await vat.rely(wethJoin.address, { from: owner });
+        await vat.rely(daiJoin.address, { from: owner });
+        await vat.hope(daiJoin.address, { from: owner });
 
         // Setup pot
         pot = await Pot.new(vat.address);
+        await pot.setChi(toRay(chi), { from: owner });
         await vat.rely(pot.address, { from: owner });
 
         // Setup chaiOracle
         chaiOracle = await ChaiOracle.new(pot.address, { from: owner });
-        
-        // Set chi to 1.25
-        await pot.setChi(chi, { from: owner });
     });
 
     it("retrieves chai price as 1/pot.chi", async() => {
         assert.equal(
             await chaiOracle.price.call({ from: owner }), // price() is a transaction
-            price,
-            "Should be 0.8",
+            toRay(price).toString(),
+            "Price should be " + toRay(price),
         );
     });
 });
