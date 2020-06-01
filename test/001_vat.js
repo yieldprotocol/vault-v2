@@ -2,6 +2,7 @@ const Vat = artifacts.require('Vat');
 const GemJoin = artifacts.require('GemJoin');
 const DaiJoin = artifacts.require('DaiJoin');
 const ERC20 = artifacts.require('TestERC20');
+const Weth = artifacts.require('WETH9');
 
 const { expectRevert } = require('@openzeppelin/test-helpers');
 const { toWad, toRay, toRad } = require('./shared/utils');
@@ -30,7 +31,7 @@ contract('Vat', async (accounts) =>  {
         vat = await Vat.new();
         await vat.init(ilk, { from: owner });
 
-        weth = await ERC20.new(0, { from: owner }); 
+        weth = await Weth.new({ from: owner }); 
         wethJoin = await GemJoin.new(vat.address, ilk, weth.address, { from: owner });
 
         dai = await ERC20.new(0, { from: owner }); 
@@ -66,7 +67,7 @@ contract('Vat', async (accounts) =>  {
             0,
         );
 
-        await weth.mint(owner, toWad(wethTokens), { from: owner });
+        await weth.deposit({ from: owner, value: toWad(wethTokens)});
         await weth.approve(wethJoin.address, toWad(wethTokens), { from: owner }); 
         await wethJoin.join(owner, toWad(wethTokens), { from: owner });
 
@@ -79,7 +80,7 @@ contract('Vat', async (accounts) =>  {
 
     describe('with funds joined', () => {
         beforeEach(async() => {
-            await weth.mint(owner, toWad(wethTokens), { from: owner });
+            await weth.deposit({ from: owner, value: toWad(wethTokens)});
             await weth.approve(wethJoin.address, toWad(wethTokens), { from: owner }); 
             await wethJoin.join(owner, toWad(wethTokens), { from: owner });
         });

@@ -1,6 +1,7 @@
 const Vat = artifacts.require('Vat');
 const GemJoin = artifacts.require('GemJoin');
 const DaiJoin = artifacts.require('DaiJoin');
+const Weth = artifacts.require("WETH9");
 const ERC20 = artifacts.require("TestERC20");
 const Pot = artifacts.require('Pot');
 
@@ -33,7 +34,7 @@ contract('Pot', async (accounts) =>  {
         vat = await Vat.new();
         await vat.init(ilk, { from: owner });
 
-        weth = await ERC20.new(0, { from: owner });
+        weth = await Weth.new({ from: owner });
         wethJoin = await GemJoin.new(vat.address, ilk, weth.address, { from: owner });
 
         dai = await ERC20.new(0, { from: owner });
@@ -53,7 +54,7 @@ contract('Pot', async (accounts) =>  {
         await vat.hope(daiJoin.address, { from: owner });
 
         // Borrow some dai
-        await weth.mint(owner, toWad(wethTokens), { from: owner });
+        await weth.deposit({ from: owner, value: toWad(wethTokens)});
         await weth.approve(wethJoin.address, toWad(wethTokens), { from: owner }); 
         await wethJoin.join(owner, toWad(wethTokens), { from: owner });
         await vat.frob(ilk, owner, owner, owner, toWad(wethTokens), toWad(daiDebt), { from: owner });
