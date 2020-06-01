@@ -3,7 +3,7 @@ const GemJoin = artifacts.require('GemJoin');
 const DaiJoin = artifacts.require('DaiJoin');
 const ERC20 = artifacts.require('TestERC20');
 
-const { BN, expectRevert } = require('@openzeppelin/test-helpers');
+const { expectRevert } = require('@openzeppelin/test-helpers');
 const { toWad, toRay, toRad } = require('./shared/utils')
 
 contract('Vat', async (accounts) =>  {
