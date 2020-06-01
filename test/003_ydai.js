@@ -61,27 +61,6 @@ contract('yDai', async (accounts) =>  {
         await helper.revertToSnapshot(snapshotId);
     });
 
-    it("get the size of the contract", async() => {
-        const contracts = [yDai];
-        console.log("-----------------------------------------------------");
-        console.log("|    Contract|    Bytecode|    Deployed| Constructor|");
-        console.log("-----------------------------------------------------");
-        
-        contracts.forEach(contract => {
-            const bytecode = contract.constructor._json.bytecode;
-            const deployed = contract.constructor._json.deployedBytecode;
-            const sizeOfB  = bytecode.length / 2;
-            const sizeOfD  = deployed.length / 2;
-            const sizeOfC  = sizeOfB - sizeOfD;
-            console.log(
-                "|" + (contract.constructor._json.contractName).padStart(12, ' ') +
-                "|" + ("" + sizeOfB).padStart(12, ' ') +
-                "|" + ("" + sizeOfD).padStart(12, ' ') +
-                "|" + ("" + sizeOfC).padStart(12, ' ') + "|");
-        })
-        console.log("-----------------------------------------------------");
-    });
-
     it("should setup yDai", async() => {
         assert(
             await yDai.chi.call(),
