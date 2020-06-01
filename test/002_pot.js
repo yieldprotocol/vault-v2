@@ -4,14 +4,14 @@ const GemJoin = artifacts.require('GemJoin');
 const DaiJoin = artifacts.require('DaiJoin');
 const ERC20 = artifacts.require("TestERC20");
 
-const { toWad, toRay, toRad } = require('./shared/utils')
+const { toWad, toRay, toRad } = require('./shared/utils');
 
 contract('Pot', async (accounts) =>  {
     const [ owner, user ] = accounts;
 
     let vat;
-    let collateral;
-    let collateralJoin;
+    let weth;
+    let wethJoin;
     let dai;
     let daiJoin;
     let pot;
@@ -19,21 +19,22 @@ contract('Pot', async (accounts) =>  {
     let Line = web3.utils.fromAscii("Line")
     let spotName = web3.utils.fromAscii("spot")
     let linel = web3.utils.fromAscii("line")
-    const spot  = 1;
-    const chi = 1.2;
-    const daiTokens = 120;
-    const wethTokens = daiTokens * spot;
-    const daiInPot = daiTokens / chi;
     const limits =  10000;
-    // console.log(limits);
+    const spot  = 1.5;
+    const rate  = 1.25;
+    const daiDebt = 96;    // Dai debt for `frob`: 100
+    const daiTokens = daiDebt * rate;
+    const wethTokens = daiDebt * rate / spot;
+    const chi = 1.2
+    const daiInPot = daiTokens / chi;
 
 
     beforeEach(async() => {
         vat = await Vat.new();
         await vat.init(ilk, { from: owner });
 
-        collateral = await ERC20.new(toWad(wethTokens), { from: owner });
-        collateralJoin = await GemJoin.new(vat.address, ilk, collateral.address, { from: owner });
+        weth = await ERC20.new(0, { from: owner });
+        wethJoin = await GemJoin.new(vat.address, ilk, weth.address, { from: owner });
 
         dai = await ERC20.new(0, { from: owner });
         daiJoin = await DaiJoin.new(vat.address, dai.address, { from: owner });
@@ -44,15 +45,19 @@ contract('Pot', async (accounts) =>  {
         await vat.file(Line, toRad(limits)); // TODO: Why can't we specify `, { from: owner }`?
 
         await vat.rely(vat.address, { from: owner });
-        await vat.rely(collateralJoin.address, { from: owner });
+        await vat.rely(wethJoin.address, { from: owner });
         await vat.rely(daiJoin.address, { from: owner });
 
         await vat.hope(daiJoin.address, { from: owner });
 
+        await vat.fold(ilk, vat.address, toRay(rate - 1), { from: owner }); // 1 + 0.25
+
         // Borrow some dai
-        await collateral.approve(collateralJoin.address, toWad(wethTokens), { from: owner });
-        await collateralJoin.join(owner, toWad(wethTokens), { from: owner });
-        await vat.frob(ilk, owner, owner, owner, toWad(wethTokens), toWad(daiTokens), { from: owner });
+        await weth.mint(owner, toWad(wethTokens), { from: owner });
+        await weth.approve(wethJoin.address, toWad(wethTokens), { from: owner }); 
+        await wethJoin.join(owner, toWad(wethTokens), { from: owner });
+
+        await vat.frob(ilk, owner, owner, owner, toWad(wethTokens), toWad(daiDebt), { from: owner });
         await daiJoin.exit(owner, toWad(daiTokens), { from: owner });
 
         // Setup pot
@@ -71,17 +76,16 @@ contract('Pot', async (accounts) =>  {
     });
 
     it("should set chi to a target", async() => {
-        const chi  = 1.2;
         await pot.setChi(toRay(chi), { from: owner });
         assert.equal(
             await pot.chi.call(),
             toRay(chi).toString(),
-            "chi not set to 1.2",
+            "chi not set to 1.25",
         );
         assert.equal(
             await pot.drip.call({ from: owner }),
             toRay(chi).toString(),
-            "chi not set to 1.2",
+            "chi not set to 1.25",
         );
     });
 
