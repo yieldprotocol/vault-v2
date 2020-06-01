@@ -204,6 +204,64 @@ contract('Treasury', async (accounts) =>  {
                 "Vat/sub",
             );
         });
+
+
+        it("allows to move user debt to MakerDAO beyond system debt", async() => {
+            assert.equal(
+                (await vat.urns(ilk, treasury.address)).art,   
+                0,
+                "Treasury has " + (await vat.urns(ilk, treasury.address)).art + " debt, instead of no debt.",
+            );
+            assert.equal(
+                (await vat.urns(ilk, treasury.address)).ink,   
+                wethTokens,
+                "Treasury does not have " + wethTokens + " collateral, instead has " + (await vat.urns(ilk, treasury.address)).ink,
+            );
+            assert.equal(
+                (await treasury.savings.call()),   
+                0,
+                "Treasury has savings in dai units"
+            );
+            assert.equal(
+                (await vat.urns(ilk, user)).art,   
+                0,
+                "User has debt in MakerDAO",
+            );
+            assert.equal(
+                (await vat.urns(ilk, user)).ink,   
+                0,
+                "User has collateral in MakerDAO",
+            );
+            await vat.hope(treasury.address, { from: user });
+            await treasury.transferPosition(user, wethTokens, daiTokens, { from: user });
+            await vat.nope(treasury.address, { from: user });
+
+            assert.equal(
+                (await vat.urns(ilk, treasury.address)).art,
+                0,
+                "Treasury should have no debt in MakerDAO, instead has " + (await vat.urns(ilk, treasury.address)).art,
+            );
+            assert.equal(
+                (await vat.urns(ilk, treasury.address)).ink,   
+                0,
+                "Treasury should have no collateral in MakerDAO, instead has " + (await vat.urns(ilk, treasury.address)).ink,
+            );
+            assert.equal(
+                (await vat.urns(ilk, user)).art,   
+                daiDebt,
+                "User should have " + daiDebt + " debt in MakerDAO, instead has " + (await vat.urns(ilk, user)).art,
+            );
+            assert.equal(
+                (await vat.urns(ilk, user)).ink,   
+                wethTokens,
+                "User should have collateral in MakerDAO",
+            );
+            assert.equal(
+                (await treasury.savings.call()),   
+                daiTokens,
+                "Treasury should report savings in dai units"
+            );
+        });
     
         describe("with a dai debt towards MakerDAO", () => {
             beforeEach(async() => {
@@ -255,6 +313,53 @@ contract('Treasury', async (accounts) =>  {
                 assert.equal(
                     await vat.dai(treasury.address),   
                     0
+                );
+            });
+
+            it("allows to move debt to MakerDAO", async() => {
+                assert.equal(
+                    (await vat.urns(ilk, treasury.address)).art,   
+                    daiDebt,
+                    "Treasury does not have " + daiDebt + " debt in MakerDAO, instead has " + (await vat.urns(ilk, treasury.address)).art,
+                );
+                assert.equal(
+                    (await vat.urns(ilk, treasury.address)).ink,   
+                    wethTokens,
+                    "Treasury does not have " + wethTokens + " collateral in MakerDAO, instead has " + (await vat.urns(ilk, treasury.address)).ink,
+                );
+                assert.equal(
+                    (await vat.urns(ilk, user)).art,   
+                    0,
+                    "User has debt in MakerDAO",
+                );
+                assert.equal(
+                    (await vat.urns(ilk, user)).ink,   
+                    0,
+                    "User has collateral in MakerDAO",
+                );
+                await vat.hope(treasury.address, { from: user });
+                await treasury.transferPosition(user, wethTokens, daiTokens, { from: user });
+                await vat.nope(treasury.address, { from: user });
+
+                assert.equal(
+                    (await vat.urns(ilk, treasury.address)).art,   
+                    0,
+                    "Treasury should have no debt in MakerDAO, instead has " + (await vat.urns(ilk, treasury.address)).art,
+                );
+                assert.equal(
+                    (await vat.urns(ilk, treasury.address)).ink,   
+                    0,
+                    "Treasury should have no collateral in MakerDAO, instead has " + (await vat.urns(ilk, treasury.address)).ink,
+                );
+                assert.equal(
+                    (await vat.urns(ilk, user)).art,   
+                    daiDebt,
+                    "User should have debt in MakerDAO",
+                );
+                assert.equal(
+                    (await vat.urns(ilk, user)).ink,   
+                    wethTokens,
+                    "User should have collateral in MakerDAO",
                 );
             });
         });

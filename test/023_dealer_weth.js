@@ -5,6 +5,7 @@ const GemJoin = artifacts.require('GemJoin');
 const DaiJoin = artifacts.require('DaiJoin');
 const Chai = artifacts.require('Chai');
 const Treasury = artifacts.require('Treasury');
+const Mint = artifacts.require('Mint');
 const TestOracle = artifacts.require('TestOracle');
 const ChaiOracle = artifacts.require('ChaiOracle');
 const YDai = artifacts.require('YDai');
@@ -27,6 +28,7 @@ contract('Dealer', async (accounts) =>  {
     let chaiOracle;
     let treasury;
     let yDai;
+    let mint;
     let dealer;
     let maturity;
     let WETH = web3.utils.fromAscii("WETH")
@@ -107,6 +109,16 @@ contract('Dealer', async (accounts) =>  {
             vat.address,        // vat
         );
         await vat.rely(treasury.address, { from: owner }); //?
+
+        // Setup mint
+        mint = await Mint.new(
+            treasury.address,
+            dai.address,
+            yDai.address,
+            { from: owner },
+        );
+        await yDai.grantAccess(mint.address, { from: owner });
+        await treasury.grantAccess(mint.address, { from: owner });
 
         // Setup Dealer
         dealer = await Dealer.new(
@@ -493,6 +505,149 @@ contract('Dealer', async (accounts) =>  {
                     (await dealer.debtDai(WETH, owner)),   
                     0,
                     "Owner should have no remaining debt",
+                );
+            });
+
+            it("allows to move debt to MakerDAO", async() => {
+                // Treasury needs to have debt
+                await helper.advanceTime(1000);
+                await helper.advanceBlock();
+                await yDai.mature();
+                await yDai.approve(mint.address, daiTokens, { from: owner });
+                await mint.redeem(owner, daiTokens, { from: owner });
+
+                const daiDebt = daiTokens;
+
+                assert.equal(
+                    (await vat.urns(ilk, treasury.address)).art,   
+                    daiDebt,
+                    "Treasury does not have " + daiDebt + " debt, instead has " + (await vat.urns(ilk, treasury.address)).art,
+                );
+                assert.equal(
+                    (await vat.urns(ilk, treasury.address)).ink,   
+                    wethTokens,
+                    "Treasury does not have " + wethTokens + " collateral, instead has " + (await vat.urns(ilk, treasury.address)).ink,
+                );
+                assert.equal(
+                    (await dealer.debtDai(WETH, owner)),   
+                    daiTokens,
+                    "User does not have debt in Dealer",
+                );
+                assert.equal(
+                    (await dealer.posted.call(WETH, owner)),   
+                    wethTokens,
+                    "User does not have collateral in Dealer",
+                );
+                assert.equal(
+                    (await vat.urns(ilk, owner)).art,   
+                    0,
+                    "User has debt in MakerDAO",
+                );
+                assert.equal(
+                    (await vat.urns(ilk, owner)).ink,   
+                    0,
+                    "User has collateral in MakerDAO",
+                );
+                await vat.hope(treasury.address, { from: owner });
+                await dealer.split(owner, owner, { from: owner });
+                await vat.nope(treasury.address, { from: owner });
+                // TODO: Test with different source and destination accounts
+                // TODO: Test with CHAI collateral as well
+                // TODO: Test with different rates
+
+                assert.equal(
+                    (await vat.urns(ilk, owner)).art,   
+                    daiDebt,
+                    "User should have debt in MakerDAO",
+                );
+                assert.equal(
+                    (await vat.urns(ilk, owner)).ink,   
+                    wethTokens,
+                    "User should have collateral in MakerDAO",
+                );
+                assert.equal(
+                    (await dealer.debtDai(WETH, owner)),   
+                    0,
+                    "User should not have debt in Dealer",
+                );
+                assert.equal(
+                    (await dealer.posted.call(WETH, owner)),   
+                    0,
+                    "User should not have collateral in Dealer",
+                );
+            });
+
+            it("allows to move user debt to MakerDAO beyond system debt", async() => {
+
+                const daiDebt = daiTokens;
+
+                assert.equal(
+                    (await vat.urns(ilk, treasury.address)).art,   
+                    0,
+                    "Treasury has " + daiDebt + " debt, instead of none",
+                );
+                assert.equal(
+                    (await vat.urns(ilk, treasury.address)).ink,   
+                    wethTokens,
+                    "Treasury does not have " + wethTokens + " collateral, instead has " + (await vat.urns(ilk, treasury.address)).ink,
+                );
+                assert.equal(
+                    (await dealer.debtDai(WETH, owner)),   
+                    daiTokens,
+                    "User does not have debt in Dealer",
+                );
+                assert.equal(
+                    (await dealer.posted.call(WETH, owner)),   
+                    wethTokens,
+                    "User does not have collateral in Dealer",
+                );
+                assert.equal(
+                    (await vat.urns(ilk, owner)).art,   
+                    0,
+                    "User has debt in MakerDAO",
+                );
+                assert.equal(
+                    (await vat.urns(ilk, owner)).ink,   
+                    0,
+                    "User has collateral in MakerDAO",
+                );
+                assert.equal(
+                    (await treasury.savings.call()),   
+                    0,
+                    "Treasury has savings in dai units"
+                );
+
+                await vat.hope(treasury.address, { from: owner });
+                await dealer.split(owner, owner, { from: owner });
+                await vat.nope(treasury.address, { from: owner });
+                // TODO: Test with different source and destination accounts
+                // TODO: Test with CHAI collateral as well
+                // TODO: Test with different rates
+
+                assert.equal(
+                    (await treasury.savings.call()),   
+                    daiTokens,
+                    "Treasury should report savings in dai units"
+                );
+                assert.equal(
+                    (await vat.urns(ilk, owner)).art,   
+                    daiDebt,
+                    "User should have debt in MakerDAO",
+                );
+                assert.equal(
+                    (await vat.urns(ilk, owner)).ink,   
+                    wethTokens,
+                    "User should have collateral in MakerDAO",
+                );
+                assert.equal(
+                    (await dealer.debtDai(WETH, owner)),   
+                    0,
+                    "User should not have debt in Dealer",
+                );
+                assert.equal(
+                    (await dealer.posted.call(WETH, owner)),   
+                    0,
+                    "User should not have collateral in Dealer",
                 );
             });
         });

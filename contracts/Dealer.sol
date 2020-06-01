@@ -27,8 +27,8 @@ contract Dealer is Ownable, Constants {
 
     mapping(bytes32 => IERC20) internal tokens;                           // Weth or Chai
     mapping(bytes32 => IOracle) internal oracles;                         // WethOracle or ChaiOracle
-    mapping(bytes32 => mapping(address => uint256)) internal posted;     // In Weth or Chai, per collateral type
-    mapping(bytes32 => mapping(address => uint256)) internal debtYDai;   // In yDai, per collateral type
+    mapping(bytes32 => mapping(address => uint256)) public posted;     // In Weth or Chai, per collateral type
+    mapping(bytes32 => mapping(address => uint256)) public debtYDai;   // In yDai, per collateral type
 
     constructor (
         address treasury_,
@@ -160,7 +160,7 @@ contract Dealer is Ownable, Constants {
     // user --- yDai ---> us
     // debt--
     function repayYDai(bytes32 collateral, address from, uint256 yDai) public {
-        (uint256 toRepay, uint256 debtDecrease) = amounts(from, collateral, yDai);
+        (uint256 toRepay, uint256 debtDecrease) = amounts(collateral, from, yDai);
         _yDai.burn(from, toRepay);
         debtYDai[collateral][from] = debtYDai[collateral][from].sub(debtDecrease);
     }
@@ -173,7 +173,7 @@ contract Dealer is Ownable, Constants {
     // user --- dai ---> us
     // debt--
     function repayDai(bytes32 collateral, address from, uint256 dai) public {
-        (uint256 toRepay, uint256 debtDecrease) = amounts(from, collateral, inYDai(dai));
+        (uint256 toRepay, uint256 debtDecrease) = amounts(collateral, from, inYDai(dai));
         require(
             _dai.transferFrom(from, address(_treasury), toRepay),  // Take dai from user to Treasury
             "Dealer: Dai transfer fail"
@@ -183,8 +183,16 @@ contract Dealer is Ownable, Constants {
         debtYDai[collateral][from] = debtYDai[collateral][from].sub(debtDecrease);
     }
 
+    /// @dev Moves all debt and weth from `from` in YDai to `to` in MakerDAO, denominated in Dai
+    /// `to` needs to surround this call with `_vat.hope(address(_treasury))` and `_vat.nope(address(_treasury))`
+    function split(address from, address to) public {
+        _treasury.transferPosition(to, posted[WETH][from], debtDai(WETH, from));
+        delete posted[WETH][from];
+        delete debtYDai[WETH][from];
+    }
+
     /// @dev Calculates the amount to repay and the amount by which to reduce the debt
-    function amounts(address user, bytes32 collateral, uint256 yDai) internal view returns(uint256, uint256) {
+    function amounts(bytes32 collateral, address user, uint256 yDai) internal view returns(uint256, uint256) {
         uint256 toRepay = Math.min(yDai, debtDai(collateral, user));
         uint256 debtProportion = debtYDai[collateral][user].mul(RAY.unit())
             .divd(debtDai(collateral, user).mul(RAY.unit()), RAY);
