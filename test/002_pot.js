@@ -1,8 +1,8 @@
-const Pot = artifacts.require('Pot');
 const Vat = artifacts.require('Vat');
 const GemJoin = artifacts.require('GemJoin');
 const DaiJoin = artifacts.require('DaiJoin');
 const ERC20 = artifacts.require("TestERC20");
+const Pot = artifacts.require('Pot');
 
 const { toWad, toRay, toRad } = require('./shared/utils');
 
@@ -47,23 +47,21 @@ contract('Pot', async (accounts) =>  {
         await vat.rely(vat.address, { from: owner });
         await vat.rely(wethJoin.address, { from: owner });
         await vat.rely(daiJoin.address, { from: owner });
-
-        await vat.hope(daiJoin.address, { from: owner });
-
         await vat.fold(ilk, vat.address, toRay(rate - 1), { from: owner }); // 1 + 0.25
+
+        // Vat permissions
+        await vat.hope(daiJoin.address, { from: owner });
 
         // Borrow some dai
         await weth.mint(owner, toWad(wethTokens), { from: owner });
         await weth.approve(wethJoin.address, toWad(wethTokens), { from: owner }); 
         await wethJoin.join(owner, toWad(wethTokens), { from: owner });
-
         await vat.frob(ilk, owner, owner, owner, toWad(wethTokens), toWad(daiDebt), { from: owner });
         await daiJoin.exit(owner, toWad(daiTokens), { from: owner });
 
         // Setup pot
         pot = await Pot.new(vat.address);
         await vat.rely(pot.address, { from: owner });
-        // Do we need to set the dsr to something different than one?
     });
 
     it("should setup pot", async() => {

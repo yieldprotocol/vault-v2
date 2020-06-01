@@ -1,51 +1,56 @@
-const Chai = artifacts.require('./Chai');
-const ERC20 = artifacts.require("./TestERC20");
+const Vat = artifacts.require('Vat');
+const GemJoin = artifacts.require('GemJoin');
 const DaiJoin = artifacts.require('DaiJoin');
-const GemJoin = artifacts.require('./GemJoin');
-const Vat= artifacts.require('./Vat');
-const Pot= artifacts.require('./Pot');
+const ERC20 = artifacts.require("TestERC20");
+const Pot = artifacts.require('Pot');
+const Chai = artifacts.require('./Chai');
 
 const truffleAssert = require('truffle-assertions');
 const helper = require('ganache-time-traveler');
+const { toWad, toRay, toRad } = require('./shared/utils');
 
 contract('Chai', async (accounts) =>  {
     let [ owner ] = accounts;
     let vat;
-    let pot;
-    let chai;
-    let dai;
     let weth;
-    let daiJoin;
     let wethJoin;
-
-    const ilk = web3.utils.fromAscii("ETH-A")
-    const Line = web3.utils.fromAscii("Line")
-    const spot = web3.utils.fromAscii("spot")
-    const linel = web3.utils.fromAscii("line")
-
-    const RAY  = "1000000000000000000000000000";
-    const RAD = web3.utils.toBN('45');
-    const supply = web3.utils.toWei("1000");
-    const limits =  web3.utils.toBN('10000').mul(web3.utils.toBN('10').pow(RAD)).toString(); // 10000 * 10**45
+    let dai;
+    let daiJoin;
+    let pot;
+    let ilk = web3.utils.fromAscii("ETH-A")
+    let Line = web3.utils.fromAscii("Line")
+    let spotName = web3.utils.fromAscii("spot")
+    let linel = web3.utils.fromAscii("line")
+    const limits =  10000;
+    const spot  = 1.5;
+    const rate  = 1.25;
+    const daiDebt = 96;    // Dai debt for `frob`: 100
+    const daiTokens = daiDebt * rate;
+    const wethTokens = daiDebt * rate / spot;
+    const chi = 1.2;
+    const chaiTokens = daiTokens / chi;
 
     beforeEach(async() => {
-        // Set up vat, join and weth
         vat = await Vat.new();
-        await vat.rely(vat.address, { from: owner });
+        await vat.init(ilk, { from: owner });
 
-        weth = await ERC20.new(supply, { from: owner }); 
-        await vat.init(ilk, { from: owner }); // Set ilk rate to 1.0
+        weth = await ERC20.new(0, { from: owner });
         wethJoin = await GemJoin.new(vat.address, ilk, weth.address, { from: owner });
-        await vat.rely(wethJoin.address, { from: owner });
 
         dai = await ERC20.new(0, { from: owner });
         daiJoin = await DaiJoin.new(vat.address, dai.address, { from: owner });
-        await vat.rely(daiJoin.address, { from: owner });
 
         // Setup vat
-        await vat.file(ilk, spot,    RAY, { from: owner });
-        await vat.file(ilk, linel, limits, { from: owner });
-        await vat.file(Line,       limits); // TODO: Why can't we specify `, { from: owner }`?
+        await vat.file(ilk, spotName, toRay(spot), { from: owner });
+        await vat.file(ilk, linel, toRad(limits), { from: owner });
+        await vat.file(Line, toRad(limits)); // TODO: Why can't we specify `, { from: owner }`?
+        await vat.fold(ilk, vat.address, toRay(rate - 1), { from: owner }); // 1 + 0.25
+
+        // Permissions
+        await vat.rely(vat.address, { from: owner });
+        await vat.rely(wethJoin.address, { from: owner });
+        await vat.rely(daiJoin.address, { from: owner });
+        await vat.hope(daiJoin.address, { from: owner });
 
         // Setup pot
         pot = await Pot.new(vat.address);
@@ -59,46 +64,40 @@ contract('Chai', async (accounts) =>  {
             dai.address,
         );
 
-        // Borrow dai
-        await vat.hope(daiJoin.address, { from: owner });
-        await vat.hope(wethJoin.address, { from: owner });
-        let wethTokens = web3.utils.toWei("500");
-        let daiTokens = web3.utils.toWei("110");
-        await weth.approve(wethJoin.address, wethTokens, { from: owner });
-        await wethJoin.join(owner, wethTokens, { from: owner });
-        await vat.frob(ilk, owner, owner, owner, wethTokens, daiTokens, { from: owner });
-        await daiJoin.exit(owner, daiTokens, { from: owner });
+        // Borrow some dai
+        await weth.mint(owner, toWad(wethTokens), { from: owner });
+        await weth.approve(wethJoin.address, toWad(wethTokens), { from: owner }); 
+        await wethJoin.join(owner, toWad(wethTokens), { from: owner });
+        await vat.frob(ilk, owner, owner, owner, toWad(wethTokens), toWad(daiDebt), { from: owner });
+        await daiJoin.exit(owner, toWad(daiTokens), { from: owner });
 
-        // Set chi to 1.1
-        const chi  = "1100000000000000000000000000";
-        await pot.setChi(chi, { from: owner });
+        // Set chi
+        await pot.setChi(toRay(chi), { from: owner });
     });
 
     it("allows to exchange dai for chai", async() => {
-        let daiTokens = web3.utils.toWei("110");
-        let chaiTokens = web3.utils.toWei("100");
         assert.equal(
-            (await dai.balanceOf(owner)),   
-            daiTokens,
+            await dai.balanceOf(owner),   
+            toWad(daiTokens).toString(),
             "Does not have dai"
         );
         assert.equal(
-            (await chai.balanceOf(owner)),   
+            await chai.balanceOf(owner),   
             0,
             "Does have Chai",
         );
         
-        await dai.approve(chai.address, daiTokens, { from: owner }); 
-        await chai.join(owner, daiTokens, { from: owner });
+        await dai.approve(chai.address, toWad(daiTokens), { from: owner }); 
+        await chai.join(owner, toWad(daiTokens), { from: owner });
 
         // Test transfer of chai
         assert.equal(
-            (await chai.balanceOf(owner)),   
-            chaiTokens,
+            await chai.balanceOf(owner),   
+            toWad(chaiTokens).toString(),
             "Should have chai",
         );
         assert.equal(
-            (await dai.balanceOf(owner)),   
+            await dai.balanceOf(owner),   
             0,
             "Should not have dai",
         );
@@ -106,35 +105,32 @@ contract('Chai', async (accounts) =>  {
 
     describe("with chai", () => {
         beforeEach(async() => {
-            let daiTokens = web3.utils.toWei("110");
-            await dai.approve(chai.address, daiTokens, { from: owner }); 
-            await chai.join(owner, daiTokens, { from: owner });
+            await dai.approve(chai.address, toWad(daiTokens), { from: owner }); 
+            await chai.join(owner, toWad(daiTokens), { from: owner });
         });
 
         it("allows to exchange chai for dai", async() => {
-            let daiTokens = web3.utils.toWei("110");
-            let chaiTokens = web3.utils.toWei("100");
             assert.equal(
-                (await chai.balanceOf(owner)),   
-                chaiTokens,
+                await chai.balanceOf(owner),   
+                toWad(chaiTokens).toString(),
                 "Does not have chai tokens",
             );
             assert.equal(
-                (await dai.balanceOf(owner)),   
+                await dai.balanceOf(owner),   
                 0,
                 "Has dai tokens"
             );
             
-            await chai.exit(owner, chaiTokens, { from: owner });
+            await chai.exit(owner, toWad(chaiTokens), { from: owner });
 
             // Test transfer of chai
             assert.equal(
-                (await dai.balanceOf(owner)),   
-                daiTokens,
+                await dai.balanceOf(owner),   
+                toWad(daiTokens).toString(),
                 "Should have dai",
             );
             assert.equal(
-                (await chai.balanceOf(owner)),   
+                await chai.balanceOf(owner),   
                 0,
                 "Should not have chai",
             );

@@ -39,12 +39,12 @@ contract('Vat', async (accounts) =>  {
         await vat.file(ilk, spotName, toRay(spot), { from: owner });
         await vat.file(ilk, linel, toRad(limits), { from: owner });
         await vat.file(Line, toRad(limits)); // TODO: Why can't we specify `, { from: owner }`?
+        await vat.fold(ilk, vat.address, toRay(rate - 1), { from: owner }); // 1 + 0.25
 
+        // Vat permissions
         await vat.rely(wethJoin.address, { from: owner }); // `owner` authorizing `wethJoin` to operate for `vat`
         await vat.rely(daiJoin.address, { from: owner });  // `owner` authorizing `daiJoin` to operate for `vat`
         await vat.hope(daiJoin.address, { from: owner }); // `owner` allowing daiJoin to move his dai.
-
-        await vat.fold(ilk, vat.address, toRay(rate - 1), { from: owner }); // 1 + 0.25
     });
 
     it('should setup vat', async() => {
