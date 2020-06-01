@@ -24,9 +24,7 @@ contract('Pot', async (accounts) =>  {
     const daiTokens = 120;
     const wethTokens = daiTokens * spot;
     const daiInPot = daiTokens / chi;
-    const supply = web3.utils.toWei("1000");
-    const RAD = web3.utils.toBN('49')
-    const limits =  web3.utils.toBN('10').pow(RAD).toString();
+    const limits =  10000;
     // console.log(limits);
 
 
@@ -42,8 +40,8 @@ contract('Pot', async (accounts) =>  {
 
         // Setup vat
         await vat.file(ilk, spotName, toRay(spot), { from: owner });
-        await vat.file(ilk, linel, limits, { from: owner });
-        await vat.file(Line, limits); // TODO: Why can't we specify `, { from: owner }`?
+        await vat.file(ilk, linel, toRad(limits), { from: owner });
+        await vat.file(Line, toRad(limits)); // TODO: Why can't we specify `, { from: owner }`?
 
         await vat.rely(vat.address, { from: owner });
         await vat.rely(collateralJoin.address, { from: owner });

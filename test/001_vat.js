@@ -18,7 +18,7 @@ contract('Vat', async (accounts) =>  {
     let Line = web3.utils.fromAscii('Line')
     let spotName = web3.utils.fromAscii('spot')
     let linel = web3.utils.fromAscii('line')
-    const limits =  toRad(10000);
+    const limits =  10000;
     const spot  = 1.5;
     const rate  = 1.25;
     const daiDebt = 120;    // Dai debt for `frob`: 120
@@ -37,8 +37,8 @@ contract('Vat', async (accounts) =>  {
         daiJoin = await DaiJoin.new(vat.address, dai.address, { from: owner });
 
         await vat.file(ilk, spotName, toRay(spot), { from: owner });
-        await vat.file(ilk, linel, limits, { from: owner });
-        await vat.file(Line, limits); // TODO: Why can't we specify `, { from: owner }`?
+        await vat.file(ilk, linel, toRad(limits), { from: owner });
+        await vat.file(Line, toRad(limits)); // TODO: Why can't we specify `, { from: owner }`?
 
         await vat.rely(wethJoin.address, { from: owner }); // `owner` authorizing `wethJoin` to operate for `vat`
         await vat.rely(daiJoin.address, { from: owner });  // `owner` authorizing `daiJoin` to operate for `vat`
