@@ -41,7 +41,7 @@ contract('Vat', async (accounts) =>  {
 
         await vat.file(ilk, spotName, spot, { from: owner });
         await vat.file(ilk, linel, limits, { from: owner });
-        await vat.file(Line, limits); // TODO: Why can't we specify `, { from: owner }`?
+        await vat.file(Line, limits); // TODO: Why can't we specify `, { from: owner }`? */
 
         await vat.rely(vat.address, { from: owner });      // `owner` authorizing `vat` to operate for `vat`?
         await vat.rely(wethJoin.address, { from: owner }); // `owner` authorizing `wethJoin` to operate for `vat`
@@ -102,13 +102,7 @@ contract('Vat', async (accounts) =>  {
         it("should deposit collateral and borrow Dai", async() => {
             
             await vat.frob(ilk, owner, owner, owner, wethTokens, daiDebt, { from: owner });
-            //let ink = (await vat.urns(ilk, owner)).ink.toString();
-            // const pow = web3.utils.toBN('47')
-            // const daiRad =  web3.utils.toBN('10').pow(pow).toString(); // 100 dai in RAD
-            /* assert.equal(
-                await vat.dai(owner),   
-                "125000000000000000000000000000000000000000000000",
-            ); */
+
             assert.equal(
                 (await vat.urns(ilk, owner)).ink,   
                 wethTokens,
