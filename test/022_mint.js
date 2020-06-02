@@ -41,14 +41,15 @@ contract('Treasury', async (accounts) =>  {
     const chi2  = toRay(1.5);
     const chiDifferential  = divRay(chi2, chi1); // 1.5 / 1.2 = 1.25
 
-    const daiTokens1 = toWad(120);
-    // const wethTokens1 = divRay(daiTokens1, spot1);
-    const wethTokens1 = toWad(120); // TODO: Not right
+    const daiDebt1 = toWad(96);
+    const daiTokens1 = mulRay(daiDebt1, rate1);
+    const wethTokens1 = divRay(daiTokens1, spot1);
 
     const daiTokens2 = mulRay(daiTokens1, chiDifferential);    // 120 * 1.25 - More dai is returned as chi increases
     const wethTokens2 = mulRay(wethTokens1, chiDifferential);   // 80 * 1.25 - As chi increases, we need more collateral to borrow dai from vat
 
     // Scenario in which the user mints daiTokens2 yDai, chi increases by a 25%, and user redeems daiTokens1 yDai
+    const daiDebt2 = mulRay(daiDebt1, chiDifferential);
     const savings1 = daiTokens2;
     const savings2 = mulRay(savings1, chiDifferential); // 150 * 1.25 - As chi increases, the dai in Treasury grows
     const yDaiSurplus = subBN(daiTokens2, daiTokens1);
@@ -151,7 +152,7 @@ contract('Treasury', async (accounts) =>  {
         await weth.deposit({ from: owner, value: wethTokens1 });
         await weth.approve(wethJoin.address, wethTokens1, { from: owner });
         await wethJoin.join(owner, wethTokens1, { from: owner });
-        await vat.frob(ilk, owner, owner, owner, wethTokens1, daiTokens1, { from: owner });
+        await vat.frob(ilk, owner, owner, owner, wethTokens1, daiDebt1, { from: owner });
         await daiJoin.exit(owner, daiTokens1, { from: owner });
 
         assert.equal(
@@ -237,7 +238,7 @@ contract('Treasury', async (accounts) =>  {
         await weth.deposit({ from: owner, value: wethTokens2 });
         await weth.approve(wethJoin.address, wethTokens2, { from: owner });
         await wethJoin.join(owner, wethTokens2, { from: owner });
-        await vat.frob(ilk, owner, owner, owner, wethTokens2, daiTokens2, { from: owner });
+        await vat.frob(ilk, owner, owner, owner, wethTokens2, daiDebt2, { from: owner });
         await daiJoin.exit(owner, daiTokens2, { from: owner });
         
         // Mint yDai

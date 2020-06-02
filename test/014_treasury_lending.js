@@ -179,8 +179,6 @@ contract('Treasury', async (accounts) =>  {
 
         it("pulls dai borrowed from MakerDAO", async() => {
             // Test with two different stability rates, if possible.
-            // Mock Vat contract needs a `setRate` and an `ilks` functions.
-            // Mock Vat contract needs the `frob` function to authorize `daiJoin.exit` transfers through the `dart` parameter.
             await treasury.pullDai(user, daiTokens, { from: user });
 
             assert.equal(
@@ -195,8 +193,6 @@ contract('Treasury', async (accounts) =>  {
 
         it("pulls chai converted from dai borrowed from MakerDAO", async() => {
             // Test with two different stability rates, if possible.
-            // Mock Vat contract needs a `setRate` and an `ilks` functions.
-            // Mock Vat contract needs the `frob` function to authorize `daiJoin.exit` transfers through the `dart` parameter.
             await treasury.pullChai(user, chaiTokens, { from: user });
 
             assert.equal(
