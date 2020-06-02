@@ -5,7 +5,7 @@ const Weth = artifacts.require("WETH9");
 const ERC20 = artifacts.require("TestERC20");
 const Pot = artifacts.require('Pot');
 
-const { toWad, toRay, toRad } = require('./shared/utils');
+const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
 
 contract('Pot', async (accounts) =>  {
     const [ owner, user ] = accounts;
@@ -20,14 +20,14 @@ contract('Pot', async (accounts) =>  {
     let Line = web3.utils.fromAscii("Line")
     let spotName = web3.utils.fromAscii("spot")
     let linel = web3.utils.fromAscii("line")
-    const limits =  10000;
-    const spot  = 1.5;
-    const rate  = 1.25;
-    const daiDebt = 96;    // Dai debt for `frob`: 100
-    const daiTokens = daiDebt * rate;
-    const wethTokens = daiDebt * rate / spot;
-    const chi = 1.2
-    const daiInPot = daiTokens / chi;
+    const limits =  toRad(10000);
+    const spot  = toRay(1.5);
+    const rate  = toRay(1.25);
+    const daiDebt = toWad(96);    // Dai debt for `frob`: 100
+    const daiTokens = mulRay(daiDebt, rate);
+    const wethTokens = divRay(daiTokens, spot);
+    const chi = toRay(1.2)
+    const daiInPot = divRay(daiTokens, chi);
 
 
     beforeEach(async() => {
@@ -41,24 +41,24 @@ contract('Pot', async (accounts) =>  {
         daiJoin = await DaiJoin.new(vat.address, dai.address, { from: owner });
 
         // Setup vat
-        await vat.file(ilk, spotName, toRay(spot), { from: owner });
-        await vat.file(ilk, linel, toRad(limits), { from: owner });
-        await vat.file(Line, toRad(limits)); // TODO: Why can't we specify `, { from: owner }`?
+        await vat.file(ilk, spotName, spot, { from: owner });
+        await vat.file(ilk, linel, limits, { from: owner });
+        await vat.file(Line, limits); // TODO: Why can't we specify `, { from: owner }`?
 
         await vat.rely(vat.address, { from: owner });
         await vat.rely(wethJoin.address, { from: owner });
         await vat.rely(daiJoin.address, { from: owner });
-        await vat.fold(ilk, vat.address, toRay(rate - 1), { from: owner }); // 1 + 0.25
+        await vat.fold(ilk, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
 
         // Vat permissions
         await vat.hope(daiJoin.address, { from: owner });
 
         // Borrow some dai
-        await weth.deposit({ from: owner, value: toWad(wethTokens)});
-        await weth.approve(wethJoin.address, toWad(wethTokens), { from: owner }); 
-        await wethJoin.join(owner, toWad(wethTokens), { from: owner });
-        await vat.frob(ilk, owner, owner, owner, toWad(wethTokens), toWad(daiDebt), { from: owner });
-        await daiJoin.exit(owner, toWad(daiTokens), { from: owner });
+        await weth.deposit({ from: owner, value: wethTokens});
+        await weth.approve(wethJoin.address, wethTokens, { from: owner }); 
+        await wethJoin.join(owner, wethTokens, { from: owner });
+        await vat.frob(ilk, owner, owner, owner, wethTokens, daiDebt, { from: owner });
+        await daiJoin.exit(owner, daiTokens, { from: owner });
 
         // Setup pot
         pot = await Pot.new(vat.address);
@@ -75,15 +75,15 @@ contract('Pot', async (accounts) =>  {
     });
 
     it("should set chi to a target", async() => {
-        await pot.setChi(toRay(chi), { from: owner });
+        await pot.setChi(chi, { from: owner });
         assert.equal(
             await pot.chi.call(),
-            toRay(chi).toString(),
+            chi.toString(),
             "chi not set to 1.25",
         );
         assert.equal(
             await pot.drip.call({ from: owner }),
-            toRay(chi).toString(),
+            chi.toString(),
             "chi not set to 1.25",
         );
     });
@@ -91,7 +91,7 @@ contract('Pot', async (accounts) =>  {
     it("should save dai in the pot", async() => {
         assert.equal(
             await dai.balanceOf(owner),   
-            toWad(daiTokens).toString(),
+            daiTokens.toString(),
             "Owner does not have dai"
         );
         assert.equal(
@@ -100,14 +100,14 @@ contract('Pot', async (accounts) =>  {
             "chi not initialized",
         );
         
-        await daiJoin.join(owner, toWad(daiTokens), { from: owner }); // The dai needs to be joined to the vat first.
+        await daiJoin.join(owner, daiTokens, { from: owner }); // The dai needs to be joined to the vat first.
         await vat.hope(pot.address, { from: owner });         // The user joining dai to the Pot needs to have authorized pot.address in the vat first
-        await pot.mockJoin(toWad(daiInPot), { from: owner });            // The transaction where the user joins Dai to the Pot needs to have called drip() as well
+        await pot.mockJoin(daiInPot, { from: owner });            // The transaction where the user joins Dai to the Pot needs to have called drip() as well
         // await pot.dripAndJoin(daiSaved, { from: owner });
 
         assert.equal(
             await pot.pie(owner),   
-            toWad(daiInPot).toString(),
+            daiInPot.toString(),
             "The Dai is not in the Pot"
         );
     });
@@ -115,7 +115,7 @@ contract('Pot', async (accounts) =>  {
     it("should save dai in the pot proportionally to chi", async() => {
         assert.equal(
             await dai.balanceOf(owner),   
-            toWad(daiTokens).toString(),
+            daiTokens.toString(),
             "Owner does not have dai"
         );
         assert.equal(
@@ -124,11 +124,11 @@ contract('Pot', async (accounts) =>  {
             "Owner has dai in the pot",
         );
 
-        await pot.setChi(toRay(chi), { from: owner });
+        await pot.setChi(chi, { from: owner });
 
-        await daiJoin.join(owner, toWad(daiTokens), { from: owner });
+        await daiJoin.join(owner, daiTokens, { from: owner });
         await vat.hope(pot.address, { from: owner });
-        await pot.mockJoin(toWad(daiInPot), { from: owner }); // The Pot will store normalized dai = joined dai / chi
+        await pot.mockJoin(daiInPot, { from: owner }); // The Pot will store normalized dai = joined dai / chi
         // await pot.dripAndJoin(daiSaved, { from: owner });
         assert.equal(
             await dai.balanceOf(owner),   
@@ -137,17 +137,17 @@ contract('Pot', async (accounts) =>  {
         );
         assert.equal(
             await pot.pie(owner),   
-            toWad(daiInPot).toString(),
+            daiInPot.toString(),
             "Dai should be in the pot",
         );
     });
 
     describe("with dai saved in the Pot", () => {
         beforeEach(async() => {
-            await pot.setChi(toRay(chi), { from: owner });
-            await daiJoin.join(owner, toWad(daiTokens), { from: owner });
+            await pot.setChi(chi, { from: owner });
+            await daiJoin.join(owner, daiTokens, { from: owner });
             await vat.hope(pot.address, { from: owner });
-            await pot.mockJoin(toWad(daiInPot), { from: owner });
+            await pot.mockJoin(daiInPot, { from: owner });
         });
 
         it("should get dai out of the pot", async() => {
@@ -163,12 +163,12 @@ contract('Pot', async (accounts) =>  {
             );
             assert.equal(
                 await pot.pie(owner),   
-                toWad(daiInPot).toString(),
+                daiInPot.toString(),
                 "Owner does not have dai in the Pot",
             );
             
-            await pot.exit(toWad(daiInPot), { from: owner });            // The transaction where the user gets Dai out of the Pot needs to have called drip() as well
-            await daiJoin.exit(owner, toWad(daiTokens), { from: owner }); // The dai needs to be joined to the vat first.
+            await pot.exit(daiInPot, { from: owner });            // The transaction where the user gets Dai out of the Pot needs to have called drip() as well
+            await daiJoin.exit(owner, daiTokens, { from: owner }); // The dai needs to be joined to the vat first.
             assert.equal(
                 await pot.pie(owner),   
                 0,
@@ -176,7 +176,7 @@ contract('Pot', async (accounts) =>  {
             );
             assert.equal(
                 await dai.balanceOf(owner),   
-                toWad(daiTokens).toString(),
+                daiTokens.toString(),
                 "Owner should have received the joined dai",
             );
         });

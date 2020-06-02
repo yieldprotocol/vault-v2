@@ -26,11 +26,11 @@ contract('Vat', async (accounts) =>  {
     const daiTokens = mulRay(daiDebt, rate);  // Dai we can borrow: 120 * rate
     const wethTokens = divRay(daiTokens, spot); // Collateral we join: 120 * rate / spot
 
-    console.log("spot: " + spot);
-    console.log("rate: " + rate);            
-    console.log("daiDebt: " + daiDebt);
-    console.log("daiTokens: " + daiTokens);
-    console.log("wethTokens: " + wethTokens);
+    // console.log("spot: " + spot);
+    // console.log("rate: " + rate);            
+    // console.log("daiDebt: " + daiDebt);
+    // console.log("daiTokens: " + daiTokens);
+    // console.log("wethTokens: " + wethTokens);
 
     beforeEach(async() => {
         vat = await Vat.new();
