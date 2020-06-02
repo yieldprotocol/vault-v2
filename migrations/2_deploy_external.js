@@ -49,6 +49,7 @@ module.exports = async (deployer, network, accounts) => {
 
     await deployer.deploy(GemJoin, vatAddress, ilk, wethAddress);
     wethJoinAddress = (await GemJoin.deployed()).address;
+    await vat.rely(wethJoinAddress);
 
     await deployer.deploy(ERC20, 0);
     daiAddress = (await ERC20.deployed()).address;
