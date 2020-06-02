@@ -23,7 +23,7 @@ const toRad = function(value) {
 /// @dev Adds two numbers
 /// I.e. addBN(ray(x), ray(y)) = ray(x - y)
 const addBN = function(x, y) {
-    return bigNumberify(x).sub(bigNumberify(y));
+    return bigNumberify(x).add(bigNumberify(y));
 }
 
 /// @dev Substracts a number from another

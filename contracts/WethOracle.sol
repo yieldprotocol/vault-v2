@@ -19,6 +19,6 @@ contract WethOracle is IOracle, Constants {
     /// collateral = price * dai
     function price() public override returns(uint256) {
         (,uint256 rate, uint256 spot,,) = _vat.ilks("ETH-A");  // Stability fee and collateralization ratio for Weth
-        return spot.divd(rate, RAY);
+        return DecimalMath.unit(RAY).divd(spot, RAY);
     }
 }
