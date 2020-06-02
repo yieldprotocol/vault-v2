@@ -6,6 +6,7 @@ node_modules/
 #Truffle files
 .infuraKey
 .secret
+.firebaseKey.json
 build/
 
 #Solidity-coverage
