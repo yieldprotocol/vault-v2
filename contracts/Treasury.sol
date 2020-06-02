@@ -54,6 +54,8 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
         _vat.hope(address(wethJoin_));
         _vat.hope(address(daiJoin_));
 
+        _dai.approve(address(_chai), uint256(-1));      // Chai will never cheat on us
+        _weth.approve(address(_wethJoin), uint256(-1)); // WethJoin will never cheat on us
     }
 
     /// @dev Returns the Treasury debt towards MakerDAO, as the dai borrowed times the stability fee for Weth.
@@ -99,7 +101,6 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
 
         uint256 toSave = dai - toRepay;         // toRepay can't be greater than dai
         if (toSave > 0) {
-            _dai.approve(address(_chai), toSave); // Chai will take dai
             _chai.join(address(this), toSave);    // Give dai to Chai, take chai back
         }
     }
@@ -173,7 +174,6 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
                 toBorrow.divd(rate, RAY).toInt()
             ); // `vat.frob` reverts on failure
             _daiJoin.exit(address(this), toBorrow);  // `daiJoin` reverts on failures
-            _dai.approve(address(_chai), toBorrow);   // Chai will take dai
             _chai.join(address(this), toBorrow);     // Grab chai from Chai, converted from dai
         }
 
@@ -187,7 +187,6 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
     function pushWeth() public override onlyAuthorized("Treasury: Not Authorized") {
         uint256 weth = _weth.balanceOf(address(this));
 
-        _weth.approve(address(_wethJoin), weth);
         _wethJoin.join(address(this), weth); // GemJoin reverts if anything goes wrong.
         // All added collateral should be locked into the vault using frob
         _vat.frob(
@@ -212,5 +211,39 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
             0              // Dai debt to add - WAD
         );
         _wethJoin.exit(to, weth); // `GemJoin` reverts on failures
+    }
+
+    /// @dev Moves dai debt and weth collateral from Treasury to `user` in MakerDAO
+    /// Needs to be surrounded by `vat.hope(treasury.address)` and `vat.nope(treasury.address)`
+    /// Only the Dealer can call `transferPosition`, to avoid transferring more debt than an user has.
+    /// The `dai` parameter is measured in normalized dai, not in the units used in `vat.urns(ilk, user)).art`.
+    function transferPosition(address user, uint256 weth, uint256 dai)
+        public override onlyAuthorized("Treasury: Not Authorized")
+    {
+        // If the Treasury doesn't have enough debt, it needs to borrow dai, which becomes chai savings.
+        (, uint256 rate,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
+        uint256 toBorrow = dai - Math.min(debt(), dai);
+        if (toBorrow > 0) {
+            _vat.frob(
+                collateralType,
+                address(this),
+                address(this),
+                address(this),
+                0,
+                toBorrow.divd(rate, RAY).toInt()
+            ); // `vat.frob` reverts on failure
+            _daiJoin.exit(address(this), toBorrow);  // `daiJoin` reverts on failures
+            _chai.join(address(this), toBorrow);     // Grab chai from Chai, converted from dai
+        }
+
+        _vat.hope(user);
+        _vat.fork( // Move the debt
+            collateralType,
+            address(this),
+            user,
+            weth.toInt(),
+            dai.divd(rate, RAY).toInt()
+        );
+        _vat.nope(user);
     }
 }

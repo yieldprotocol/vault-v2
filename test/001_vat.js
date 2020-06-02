@@ -98,13 +98,7 @@ contract('Vat', async (accounts) =>  {
         it('should deposit collateral and borrow Dai', async() => {
             
             await vat.frob(ilk, owner, owner, owner, toWad(wethTokens), toWad(daiDebt), { from: owner });
-            //let ink = (await vat.urns(ilk, owner)).ink;
-            // const pow = web3.utils.toBN('47')
-            // const daiRad =  web3.utils.toBN('10').pow(pow).toString(); // 100 dai in RAD
-            /* assert.equal(
-                await vat.dai(owner),   
-                '125000000000000000000000000000000000000000000000',
-            ); */
+
             assert.equal(
                 (await vat.urns(ilk, owner)).ink,   
                 toWad(wethTokens).toString(),

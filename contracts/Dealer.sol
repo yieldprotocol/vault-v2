@@ -27,8 +27,8 @@ contract Dealer is Ownable, Constants {
 
     mapping(bytes32 => IERC20) internal tokens;                           // Weth or Chai
     mapping(bytes32 => IOracle) internal oracles;                         // WethOracle or ChaiOracle
-    mapping(bytes32 => mapping(address => uint256)) internal posted;     // In Weth or Chai, per collateral type
-    mapping(bytes32 => mapping(address => uint256)) internal debtYDai;   // In yDai, per collateral type
+    mapping(bytes32 => mapping(address => uint256)) public posted;     // In Weth or Chai, per collateral type
+    mapping(bytes32 => mapping(address => uint256)) public debtYDai;   // In yDai, per collateral type
 
     constructor (
         address treasury_,
@@ -67,6 +67,11 @@ contract Dealer is Ownable, Constants {
     //
     function debtDai(bytes32 collateral, address user) public view returns (uint256) {
         return inDai(debtYDai[collateral][user]);
+    }
+
+    /// @dev Return if the borrowing power of an user is equal or greater than its debt
+    function isCollateralized(bytes32 collateral, address user) public returns (bool) {
+        return powerOf(collateral, user) >= debtDai(collateral, user);
     }
 
     /// @dev Returns the dai equivalent of an yDai amount
@@ -109,39 +114,17 @@ contract Dealer is Ownable, Constants {
     /// @dev Returns collateral to `to` address
     // us --- Token ---> to
     function withdraw(bytes32 collateral, address to, uint256 amount) public virtual {
-        require( // TODO: This is not needed for Chai
-            powerOf(collateral, to) >= debtDai(collateral, to),
-            "Dealer: Undercollateralized"
-        );
-        require( // (power - debt) * price | TODO: Move to a post-effect require in a function common with borrow
-            (powerOf(collateral, to) - debtDai(collateral, to)).muld(oracles[collateral].price(), RAY) >= amount, // SafeMath not needed
+        posted[collateral][to] = posted[collateral][to].sub(amount); // Will revert if not enough posted
+
+        require(
+            isCollateralized(collateral, to),
             "Dealer: Free more collateral"
         );
-        posted[collateral][to] = posted[collateral][to].sub(amount); // Will revert if not enough posted
+
         if (collateral == WETH){
             _treasury.pullWeth(to, amount);                          // Take weth from Treasury and give it to `to`
         } else if (collateral == CHAI) {
             _treasury.pullChai(to, amount);
-        } else {
-            revert("Dealer: Unsupported collateral");
-        }
-    }
-
-    /// @dev Returns collateral to `to` address, converted to Dai
-    // us --- Dai ---> to
-    function withdrawDai(bytes32 collateral, address to, uint256 dai) public virtual {
-        require( // Is this needed for Chai?
-            powerOf(collateral, to) >= debtDai(collateral, to),
-            "Dealer: Undercollateralized"
-        );
-        uint256 amount = dai.muld(oracles[collateral].price(), RAY);  // collateral = dai * price
-        require( // (power - debt) * price
-            (powerOf(collateral, to) - debtDai(collateral, to)).muld(oracles[collateral].price(), RAY) >= amount, // SafeMath not needed
-            "Dealer: Free more collateral"
-        );
-        posted[collateral][to] = posted[collateral][to].sub(amount); // Will revert if not enough posted
-        if (collateral == WETH || collateral == CHAI){
-            _treasury.pullDai(to, dai);                           // Take dai from treasury and give it to `to`
         } else {
             revert("Dealer: Unsupported collateral");
         }
@@ -158,12 +141,14 @@ contract Dealer is Ownable, Constants {
             _yDai.isMature() != true,
             "Dealer: No mature borrow"
         );
-        require( // collateral = dai * price | TODO: Move to a post-effect require in a function common with withdraw
-            posted[collateral][to] >= (debtDai(collateral, to).add(yDai))
-                .muld(oracles[collateral].price(), RAY),
+
+        debtYDai[collateral][to] = debtYDai[collateral][to].add(yDai);
+
+        require(
+            isCollateralized(collateral, to),
             "Dealer: Post more collateral"
         );
-        debtYDai[collateral][to] = debtYDai[collateral][to].add(yDai);
+
         _yDai.mint(to, yDai);
     }
 
@@ -175,7 +160,7 @@ contract Dealer is Ownable, Constants {
     // user --- yDai ---> us
     // debt--
     function repayYDai(bytes32 collateral, address from, uint256 yDai) public {
-        (uint256 toRepay, uint256 debtDecrease) = amounts(from, collateral, yDai);
+        (uint256 toRepay, uint256 debtDecrease) = amounts(collateral, from, yDai);
         _yDai.burn(from, toRepay);
         debtYDai[collateral][from] = debtYDai[collateral][from].sub(debtDecrease);
     }
@@ -188,7 +173,7 @@ contract Dealer is Ownable, Constants {
     // user --- dai ---> us
     // debt--
     function repayDai(bytes32 collateral, address from, uint256 dai) public {
-        (uint256 toRepay, uint256 debtDecrease) = amounts(from, collateral, inYDai(dai));
+        (uint256 toRepay, uint256 debtDecrease) = amounts(collateral, from, inYDai(dai));
         require(
             _dai.transferFrom(from, address(_treasury), toRepay),  // Take dai from user to Treasury
             "Dealer: Dai transfer fail"
@@ -198,8 +183,16 @@ contract Dealer is Ownable, Constants {
         debtYDai[collateral][from] = debtYDai[collateral][from].sub(debtDecrease);
     }
 
+    /// @dev Moves all debt and weth from `from` in YDai to `to` in MakerDAO, denominated in Dai
+    /// `to` needs to surround this call with `_vat.hope(address(_treasury))` and `_vat.nope(address(_treasury))`
+    function split(address from, address to) public {
+        _treasury.transferPosition(to, posted[WETH][from], debtDai(WETH, from));
+        delete posted[WETH][from];
+        delete debtYDai[WETH][from];
+    }
+
     /// @dev Calculates the amount to repay and the amount by which to reduce the debt
-    function amounts(address user, bytes32 collateral, uint256 yDai) internal view returns(uint256, uint256) {
+    function amounts(bytes32 collateral, address user, uint256 yDai) internal view returns(uint256, uint256) {
         uint256 toRepay = Math.min(yDai, debtDai(collateral, user));
         uint256 debtProportion = debtYDai[collateral][user].mul(RAY.unit())
             .divd(debtDai(collateral, user).mul(RAY.unit()), RAY);
