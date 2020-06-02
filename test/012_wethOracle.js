@@ -1,7 +1,7 @@
 const Vat = artifacts.require('Vat');
 const WethOracle = artifacts.require('WethOracle');
 
-const { toWad, toRay, toRad } = require('./shared/utils');
+const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
 
 contract('Vat', async (accounts) =>  {
     const [ owner, user ] = accounts;
@@ -11,21 +11,21 @@ contract('Vat', async (accounts) =>  {
     let Line = web3.utils.fromAscii("Line")
     let spotName = web3.utils.fromAscii("spot")
     let linel = web3.utils.fromAscii("line")
-    const limits =  10000;
-    const spot  = 1.5;
-    const rate  = 1.25;
-    const price  = 1.2; // spot / rate
+    const limits =  toRad(10000);
+    const spot  = toRay(1.5);
+    const rate  = toRay(1.25);
+    const price  = divRay(spot, rate); // spot / rate
 
 
     beforeEach(async() => {
         vat = await Vat.new();
         await vat.init(ilk, { from: owner });
 
-        await vat.file(ilk, spotName, toRay(spot), { from: owner });
-        await vat.file(ilk, linel, toRad(limits), { from: owner });
-        await vat.file(Line, toRad(limits)); // TODO: Why can't we specify `, { from: owner }`?
+        await vat.file(ilk, spotName, spot, { from: owner });
+        await vat.file(ilk, linel, limits, { from: owner });
+        await vat.file(Line, limits); // TODO: Why can't we specify `, { from: owner }`?
 
-        await vat.fold(ilk, vat.address, toRay(rate - 1), { from: owner }); // 1 + 0.25
+        await vat.fold(ilk, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
 
         wethOracle = await WethOracle.new(vat.address, { from: owner });
     });
@@ -33,12 +33,12 @@ contract('Vat', async (accounts) =>  {
     it("should setup vat", async() => {
         assert(
             (await vat.ilks(ilk)).spot,
-            toRay(spot).toString(),
+            spot.toString(),
             "spot not initialized",
         );
         assert(
             (await vat.ilks(ilk)).rate,
-            toRay(rate).toString(),
+            rate.toString(),
             "rate not initialized",
         );
     });
@@ -46,8 +46,8 @@ contract('Vat', async (accounts) =>  {
     it("retrieves weth price as rate / spot", async() => {
         assert.equal(
             await wethOracle.price.call({ from: owner }), // price() is a transaction
-            toRay(price).toString(),
-            "Should be " + toRay(price),
+            price.toString(),
+            "Should be " + price,
         );
     });
 });
