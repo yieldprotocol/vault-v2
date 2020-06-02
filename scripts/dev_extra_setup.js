@@ -32,7 +32,7 @@ module.exports = async (callback) => {
         vat = await Vat.deployed();
         migrations = await Migrations.deployed();
         weth =  await migrations.contracts('weth');
-        dai = await migrations.contracts('chai');
+        dai = await migrations.contracts('dai');
         wethJoin = await GemJoin.deployed();
         daiJoin = await DaiJoin.deployed();
 
