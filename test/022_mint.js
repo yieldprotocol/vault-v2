@@ -47,8 +47,11 @@ contract('Treasury', async (accounts) =>  {
 
     const daiTokens2 = mulRay(daiTokens1, chiDifferential);    // 120 * 1.25 - More dai is returned as chi increases
     const wethTokens2 = mulRay(wethTokens1, chiDifferential);   // 80 * 1.25 - As chi increases, we need more collateral to borrow dai from vat
-    const savings2 = web3.utils.toWei("187.5"); // TODO: Why?  // 150 * 1.25 - As chi increases, the dai in Treasury grows
-    const daiSurplus = subBN(daiTokens2, daiTokens1);
+
+    // Scenario in which the user mints daiTokens2 yDai, chi increases by a 25%, and user redeems daiTokens1 yDai
+    const savings1 = daiTokens2;
+    const savings2 = mulRay(savings1, chiDifferential); // 150 * 1.25 - As chi increases, the dai in Treasury grows
+    const yDaiSurplus = subBN(daiTokens2, daiTokens1);
     const savingsSurplus = subBN(savings2, daiTokens2);  // savings2 - daiTokens2
 
     beforeEach(async() => {
@@ -228,8 +231,8 @@ contract('Treasury', async (accounts) =>  {
     });
 
     it("redeem with increased chi returns more dai", async() => {
-        // Owner is going to mint `daiTokens2` (150) yDai, but after the chi raises he is going to redeem `daiTokens1` (120)
-        // As a result, after redeeming, owner will have `daiTokens2` (150) dai and another 30 yDai left
+        // Owner is going to mint `daiTokens2` yDai, but after the chi raises he is going to redeem `daiTokens1`
+        // As a result, after redeeming, owner will have `daiTokens2` dai and another `yDaiSurplus` yDai left
         // Borrow dai
         await weth.deposit({ from: owner, value: wethTokens2 });
         await weth.approve(wethJoin.address, wethTokens2, { from: owner });
@@ -245,6 +248,12 @@ contract('Treasury', async (accounts) =>  {
         await helper.advanceTime(1000);
         await helper.advanceBlock();
         await yDai.mature();
+
+        assert.equal(
+            await treasury.savings.call(),
+            savings1.toString(),
+            "Treasury should have " + savings1 + " dai saved, instead has " + (await treasury.savings.call()),
+        );
 
         // Chi increases
         await pot.setChi(chi2, { from: owner });
@@ -280,8 +289,8 @@ contract('Treasury', async (accounts) =>  {
         );
         assert.equal(
             await yDai.balanceOf(owner),
-            daiSurplus.toString(),
-            "Owner should have " + daiSurplus + " dai surplus, instead has " + (await yDai.balanceOf(owner)),
+            yDaiSurplus.toString(),
+            "Owner should have " + yDaiSurplus + " dai surplus, instead has " + (await yDai.balanceOf(owner)),
         );
         assert.equal(
             await dai.balanceOf(mint.address),
