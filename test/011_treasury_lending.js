@@ -91,6 +91,26 @@ contract('Treasury', async (accounts) =>  {
         const rateIncrease  = "250000000000000000000000000";
         await vat.fold(ilk, vat.address, rateIncrease, { from: owner }); // 1 + 0.25
     });
+
+    it("get the size of the contract", async() => {
+        console.log();
+        console.log("·--------------------|------------------|------------------|------------------·");
+        console.log("|  Contract          ·  Bytecode        ·  Deployed        ·  Constructor     |");
+        console.log("·····················|··················|··················|···················");
+        
+        const bytecode = treasury.constructor._json.bytecode;
+        const deployed = treasury.constructor._json.deployedBytecode;
+        const sizeOfB  = bytecode.length / 2;
+        const sizeOfD  = deployed.length / 2;
+        const sizeOfC  = sizeOfB - sizeOfD;
+        console.log(
+            "|  " + (treasury.constructor._json.contractName).padEnd(18, ' ') +
+            "|" + ("" + sizeOfB).padStart(16, ' ') + "  " +
+            "|" + ("" + sizeOfD).padStart(16, ' ') + "  " +
+            "|" + ("" + sizeOfC).padStart(16, ' ') + "  |");
+        console.log("·--------------------|------------------|------------------|------------------·");
+        console.log();
+    });
     
     it("should fail for failed weth transfers", async() => {
         // Let's check how WETH is implemented, maybe we can remove this one.
