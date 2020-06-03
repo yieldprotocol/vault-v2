@@ -471,9 +471,6 @@ contract('Dealer', async (accounts) =>  {
                 const rateDifferential = divRay(addBN(rate, rateIncrease), rate);
                 const increasedDebt = mulRay(daiTokens, rateDifferential);
                 const debtIncrease = subBN(increasedDebt, daiTokens);
-                console.log(daiTokens.toString());
-                console.log(increasedDebt.toString());
-                console.log(debtIncrease.toString());
                 await vat.fold(ilk, vat.address, rateIncrease, { from: owner });
 
                 assert.equal(
