@@ -11,6 +11,27 @@ const WethOracle = artifacts.require("WethOracle");
 
 const Migrations = artifacts.require("Migrations");
 
+const admin = require('firebase-admin');
+let serviceAccount = require('../firebaseKey.json');
+try {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    databaseURL: "https://yield-ydai.firebaseio.com"
+  });
+} catch (e) { console.log(e)}
+
+async function seriesToDb(seriesArr, sysContracts, networkId) {
+  let db = admin.firestore();
+  var batch = db.batch()
+  seriesArr.forEach((doc) => {
+    let docRef = db.collection(networkId.toString()).doc(doc.name);
+    batch.set(docRef, doc);
+  });
+  let sysRef = db.collection(networkId.toString()).doc('sysAddrList')
+  batch.set(sysRef, sysContracts);
+  await batch.commit();
+}
+
 module.exports = async (deployer, network, accounts) => {
 
   console.log( process.argv )
@@ -109,27 +130,33 @@ module.exports = async (deployer, network, accounts) => {
     await yDai.grantAccess(dealer.address);
     await treasury.grantAccess(dealer.address);
 
-    maturitiesOutput.push(new Map([
-      ['maturity', maturity],
-      ['name', name],
-      ['symbol', symbol],
-      ['YDai', yDai.address],
-      ['Mint', mint.address],
-      ['Dealer', dealer.address],
-    ]));
-
-    console.log(maturitiesOutput);
+    maturitiesOutput.push({
+      maturity, 
+      name, 
+      symbol, 
+      'YDai': yDai.address,
+      'Mint': mint.address,
+      'Dealer': Dealer.address,
+    })
   }
 
-  console.log('vat:', vatAddress)
-  console.log('weth:', wethAddress)
-  console.log('wethJoin:', wethJoinAddress)
-  console.log('dai:', daiAddress)
-  console.log('daijoin:', daiJoinAddress)
-  console.log('pot:', potAddress)
-  console.log('chai', chaiAddress)
-  console.log('treasury:', treasuryAddress)
-  console.log('chaiOracle:', chaiOracleAddress)
-  console.log('wethOracle', wethOracleAddress)
+  const sysAddrList = {
+    'Vat': vatAddress,
+    'Weth': wethAddress,
+    'WethJoin': wethJoinAddress,
+    'Dai': daiAddress,
+    'DaiJoin': daiJoinAddress,
+    'Pot': potAddress,
+    'Chai': chaiAddress,
+    'Treasury': treasuryAddress,
+    'ChaiOracle': chaiOracleAddress,
+    'WethOracle': wethOracleAddress
+  }
+
+  const networkId = await web3.eth.net.getId();
+  await seriesToDb(maturitiesOutput, sysAddrList, networkId);
+
+  console.log(sysAddrList)
+  console.log(maturitiesOutput);
 
 };
