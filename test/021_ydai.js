@@ -35,9 +35,9 @@ contract('yDai', async (accounts) =>  {
 
         // Set up vat, join and weth
         vat = await Vat.new();
+        await vat.init(ilk, { from: owner }); // Set ilk rate to 1.0
 
         weth = await Weth.new({ from: owner });
-        await vat.init(ilk, { from: owner }); // Set ilk rate to 1.0
         wethJoin = await GemJoin.new(vat.address, ilk, weth.address, { from: owner });
 
         dai = await ERC20.new(0, { from: owner });
