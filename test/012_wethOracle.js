@@ -14,7 +14,7 @@ contract('Vat', async (accounts) =>  {
     const limits =  toRad(10000);
     const spot  = toRay(1.5);
     const rate  = toRay(1.25);
-    const price  = divRay(spot, rate); // spot / rate
+    const price  = spot;
 
 
     beforeEach(async() => {
@@ -42,7 +42,7 @@ contract('Vat', async (accounts) =>  {
         );
     });
 
-    it("retrieves weth price as rate / spot", async() => {
+    it("retrieves weth price as spot", async() => {
         assert.equal(
             await wethOracle.price.call({ from: owner }), // price() is a transaction
             price.toString(),

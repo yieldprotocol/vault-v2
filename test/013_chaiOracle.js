@@ -30,7 +30,7 @@ contract('ChaiOracle', async (accounts) =>  {
     const daiTokens = mulRay(daiDebt, rate);
     const wethTokens = divRay(daiTokens, spot);
     const chi = toRay(1.2);
-    const price = divRay(toRay(1), chi);
+    const price = chi;
 
     beforeEach(async() => {
         vat = await Vat.new();
@@ -63,7 +63,7 @@ contract('ChaiOracle', async (accounts) =>  {
         chaiOracle = await ChaiOracle.new(pot.address, { from: owner });
     });
 
-    it("retrieves chai price as 1/pot.chi", async() => {
+    it("retrieves dai price in chai as pot.chi", async() => {
         assert.equal(
             await chaiOracle.price.call({ from: owner }), // price() is a transaction
             price.toString(),
