@@ -12,8 +12,10 @@ contract WethOracle is IOracle {
         _vat = IVat(vat_);
     }
 
-    /// @dev Price is the spot for that given collateral in MakerDAO
-    /// weth = dai * price
+    /// @dev We retrieve the spot in MakerDAO and return it as the price
+    /// weth = 1/spot * dai
+    /// dai = spot * weth
+    /// price = spot
     function price() public override returns(uint256) {
         (,, uint256 spot,,) = _vat.ilks("ETH-A");  // Stability fee and collateralization ratio for Weth
         return spot;
