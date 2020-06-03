@@ -34,6 +34,7 @@
     "@openzeppelin/contracts": "^3.0.0",
     "@truffle/hdwallet-provider": "1.0.28",
     "builder": "^5.0.0",
+    "firebase-admin": "^8.12.1",
     "root": "github:nomiclabs/buidler#v1.2.0"
   }
 }
