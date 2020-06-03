@@ -18,11 +18,10 @@ contract ChaiOracle is IOracle, Constants {
     }
 
     /// @dev We update chi and retrieve it from pot as the price
-    /// Chai = Dai * price
-    /// Dai = chi * Chai
-    /// Chai = chi * Chai * price
+    /// chai = (1/chi) * dai
+    /// dai = chi * chai
+    /// price = chi
     function price() public override returns(uint256) {
-        uint256 chi = (now > _pot.rho()) ? _pot.drip() : _pot.chi();
-        return RAY.unit().divd(chi, RAY);
+        return (now > _pot.rho()) ? _pot.drip() : _pot.chi();
     }
 }

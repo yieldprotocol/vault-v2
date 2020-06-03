@@ -50,13 +50,11 @@ contract Dealer is Ownable, Constants {
 
     /// @dev Maximum borrowing power of an user in dai for a given collateral
     //
-    //                        posted[user](wad)
-    // powerOf[user](wad) = ---------------------
-    //                       oracle.price()(ray)
+    // powerOf[user](wad) = posted[user](wad) * oracle.price()(ray)
     //
     function powerOf(bytes32 collateral, address user) public returns (uint256) {
-        // collateral = dai * price
-        return posted[collateral][user].divd(oracles[collateral].price(), RAY);
+        // dai = price * collateral
+        return posted[collateral][user].muld(oracles[collateral].price(), RAY);
     }
 
     /// @dev Return debt in dai of an user
@@ -194,8 +192,25 @@ contract Dealer is Ownable, Constants {
     /// @dev Calculates the amount to repay and the amount by which to reduce the debt
     function amounts(bytes32 collateral, address user, uint256 yDai) internal view returns(uint256, uint256) {
         uint256 toRepay = Math.min(yDai, debtDai(collateral, user));
-        uint256 debtProportion = debtYDai[collateral][user].mul(RAY.unit())
-            .divd(debtDai(collateral, user).mul(RAY.unit()), RAY);
+        // TODO: Check if this can be taken from DecimalMath.sol
+        // uint256 debtProportion = debtYDai[collateral][user].mul(RAY.unit())
+        //     .divdr(debtDai(collateral, user).mul(RAY.unit()), RAY);
+        uint256 debtProportion = divdrup( // TODO: Check it works if we are not rounding.
+            debtYDai[collateral][user].mul(RAY.unit()),
+            debtDai(collateral, user).mul(RAY.unit()),
+            RAY
+        );
         return (toRepay, toRepay.muld(debtProportion, RAY));
+    }
+
+    /// @dev Divides x between y, rounding up to the closest representable number.
+    /// Assumes x and y are both fixed point with `decimals` digits.
+     // TODO: Check if this needs to be taken from DecimalMath.sol
+    function divdrup(uint256 x, uint256 y, uint8 decimals)
+        internal pure returns (uint256)
+    {
+        uint256 z = x.mul((decimals + 1).unit()).div(y);
+        if (z % 10 > 0) return z / 10 + 1;
+        else return z / 10;
     }
 }

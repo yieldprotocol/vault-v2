@@ -157,7 +157,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
 
     /// @dev Returns chai using chai savings as much as possible, and borrowing the rest.
     function pullChai(address user, uint256 chai) public override onlyAuthorized("Treasury: Not Authorized") {
-        uint256 dai = chai.divd(_chaiOracle.price(), RAY);   // dai = chai * price
+        uint256 dai = chai.muld(_chaiOracle.price(), RAY);   // dai = price * chai
         uint256 toRelease = Math.min(savings(), dai);
         // As much chai as the Treasury has, can be used, we borrwo dai and convert it to chai for the rest
 
