@@ -1,18 +1,20 @@
 const Vat = artifacts.require('Vat');
-const Pot = artifacts.require('Pot');
-const ERC20 = artifacts.require('TestERC20');
 const GemJoin = artifacts.require('GemJoin');
 const DaiJoin = artifacts.require('DaiJoin');
+const Weth = artifacts.require("WETH9");
+const ERC20 = artifacts.require("TestERC20");
+const Pot = artifacts.require('Pot');
 const Chai = artifacts.require('Chai');
-const Treasury = artifacts.require('Treasury');
-const TestOracle = artifacts.require('TestOracle');
 const ChaiOracle = artifacts.require('ChaiOracle');
+const WethOracle = artifacts.require('WethOracle');
+const Treasury = artifacts.require('Treasury');
 const YDai = artifacts.require('YDai');
+const Mint = artifacts.require('Mint');
 const Dealer = artifacts.require('Dealer');
+
 const helper = require('ganache-time-traveler');
 const truffleAssert = require('truffle-assertions');
-const { BN } = require('@openzeppelin/test-helpers');
-const { expectRevert } = require('@openzeppelin/test-helpers');
+const { BN, expectRevert } = require('@openzeppelin/test-helpers');
 
 contract('Dealer', async (accounts) =>  {
     let [ owner, user ] = accounts;
@@ -64,7 +66,7 @@ contract('Dealer', async (accounts) =>  {
         vat = await Vat.new();
         await vat.init(ilk, { from: owner });
 
-        weth = await ERC20.new(0, { from: owner }); 
+        weth = await Weth.new({ from: owner });
         wethJoin = await GemJoin.new(vat.address, ilk, weth.address, { from: owner });
         await vat.rely(wethJoin.address, { from: owner });
 
@@ -96,8 +98,7 @@ contract('Dealer', async (accounts) =>  {
         yDai = await YDai.new(vat.address, pot.address, maturity, "Name", "Symbol");
 
         // Setup Oracle
-        wethOracle = await TestOracle.new({ from: owner });
-        await wethOracle.setPrice(wethPrice); // Setting wethPrice at 1.1
+        wethOracle = await WethOracle.new(vat.address, { from: owner });
 
         // Setup ChaiOracle
         chaiOracle = await ChaiOracle.new(pot.address, { from: owner });
@@ -131,7 +132,7 @@ contract('Dealer', async (accounts) =>  {
         // Borrow dai
         await vat.hope(daiJoin.address, { from: owner });
         await vat.hope(wethJoin.address, { from: owner });
-        await weth.mint(owner, wethTokens, { from: owner });
+        await weth.deposit({ from: owner, value: wethTokens });
         await weth.approve(wethJoin.address, wethTokens, { from: owner });
         await wethJoin.join(owner, wethTokens, { from: owner });
         await vat.frob(ilk, owner, owner, owner, wethTokens, daiTokens, { from: owner });
@@ -385,7 +386,7 @@ contract('Dealer', async (accounts) =>  {
                 await vat.hope(daiJoin.address, { from: owner });
                 await vat.hope(wethJoin.address, { from: owner });
                 let wethTokens = web3.utils.toWei("500");
-                await weth.mint(owner, wethTokens, { from: owner });
+                await weth.deposit({ from: owner, value: wethTokens });
                 await weth.approve(wethJoin.address, wethTokens, { from: owner });
                 await wethJoin.join(owner, wethTokens, { from: owner });
                 await vat.frob(ilk, owner, owner, owner, wethTokens, daiTokens, { from: owner });

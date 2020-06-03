@@ -4,8 +4,8 @@ const DaiJoin = artifacts.require('DaiJoin');
 const Weth = artifacts.require("WETH9");
 const ERC20 = artifacts.require("TestERC20");
 const Pot = artifacts.require('Pot');
-const Chai = artifacts.require('./Chai');
-const ChaiOracle = artifacts.require('./ChaiOracle');
+const Chai = artifacts.require('Chai');
+const ChaiOracle = artifacts.require('ChaiOracle');
 const WethOracle = artifacts.require('WethOracle');
 const Treasury = artifacts.require('Treasury');
 const YDai = artifacts.require('YDai');
@@ -59,7 +59,7 @@ contract('Dealer', async (accounts) =>  {
         vat = await Vat.new();
         await vat.init(ilk, { from: owner });
 
-        weth = await ERC20.new(0, { from: owner }); 
+        weth = await Weth.new({ from: owner });
         wethJoin = await GemJoin.new(vat.address, ilk, weth.address, { from: owner });
 
         dai = await ERC20.new(0, { from: owner });
@@ -172,7 +172,7 @@ contract('Dealer', async (accounts) =>  {
             "Owner has borrowing power",
         );
         
-        await weth.mint(owner, wethTokens, { from: owner });
+        await weth.deposit({ from: owner, value: wethTokens });
         await weth.approve(dealer.address, wethTokens, { from: owner }); 
         await dealer.post(WETH, owner, wethTokens, { from: owner });
 
@@ -190,7 +190,7 @@ contract('Dealer', async (accounts) =>  {
 
     describe("with posted weth", () => {
         beforeEach(async() => {
-            await weth.mint(owner, wethTokens, { from: owner });
+            await weth.deposit({ from: owner, value: wethTokens });
             await weth.approve(dealer.address, wethTokens, { from: owner }); 
             await dealer.post(WETH, owner, wethTokens, { from: owner });
         });
@@ -335,7 +335,7 @@ contract('Dealer', async (accounts) =>  {
                 await vat.hope(daiJoin.address, { from: owner });
                 await vat.hope(wethJoin.address, { from: owner });
                 let wethTokens = web3.utils.toWei("500");
-                await weth.mint(owner, wethTokens, { from: owner });
+                await weth.deposit({ from: owner, value: wethTokens });
                 await weth.approve(wethJoin.address, wethTokens, { from: owner });
                 await wethJoin.join(owner, wethTokens, { from: owner });
                 await vat.frob(ilk, owner, owner, owner, wethTokens, daiTokens, { from: owner });

@@ -50,13 +50,11 @@ contract Dealer is Ownable, Constants {
 
     /// @dev Maximum borrowing power of an user in dai for a given collateral
     //
-    //                        posted[user](wad)
-    // powerOf[user](wad) = ---------------------
-    //                       oracle.price()(ray)
+    // powerOf[user](wad) = posted[user](wad) * oracle.price()(ray)                       
     //
     function powerOf(bytes32 collateral, address user) public returns (uint256) {
-        // collateral = dai * price
-        return posted[collateral][user].divd(oracles[collateral].price(), RAY);
+        // dai = collateral * price
+        return posted[collateral][user].muld(oracles[collateral].price(), RAY);
     }
 
     /// @dev Return debt in dai of an user
