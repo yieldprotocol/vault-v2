@@ -53,7 +53,7 @@ contract Dealer is Ownable, Constants {
     // powerOf[user](wad) = posted[user](wad) * oracle.price()(ray)                       
     //
     function powerOf(bytes32 collateral, address user) public returns (uint256) {
-        // dai = collateral * price
+        // dai = price * collateral
         return posted[collateral][user].muld(oracles[collateral].price(), RAY);
     }
 
