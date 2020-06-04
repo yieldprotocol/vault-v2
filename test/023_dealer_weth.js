@@ -9,7 +9,6 @@ const ChaiOracle = artifacts.require('ChaiOracle');
 const WethOracle = artifacts.require('WethOracle');
 const Treasury = artifacts.require('Treasury');
 const YDai = artifacts.require('YDai');
-const Mint = artifacts.require('Mint');
 const Dealer = artifacts.require('Dealer');
 
 const helper = require('ganache-time-traveler');
@@ -30,7 +29,6 @@ contract('Dealer', async (accounts) =>  {
     let wethOracle;
     let treasury;
     let yDai;
-    let mint;
     let dealer;
 
     let WETH = web3.utils.fromAscii("WETH")
@@ -89,11 +87,6 @@ contract('Dealer', async (accounts) =>  {
             dai.address,
         );
 
-        // Setup yDai
-        const block = await web3.eth.getBlockNumber();
-        maturity = (await web3.eth.getBlock(block)).timestamp + 1000;
-        yDai = await YDai.new(vat.address, pot.address, maturity, "Name", "Symbol");
-
         // Setup Oracle
         wethOracle = await WethOracle.new(vat.address, { from: owner });
 
@@ -111,15 +104,18 @@ contract('Dealer', async (accounts) =>  {
             vat.address,
         );
 
-        // Setup mint
-        mint = await Mint.new(
+        // Setup yDai
+        const block = await web3.eth.getBlockNumber();
+        maturity = (await web3.eth.getBlock(block)).timestamp + 1000;
+        yDai = await YDai.new(
+            vat.address,
+            pot.address,
             treasury.address,
-            dai.address,
-            yDai.address,
-            { from: owner },
+            maturity,
+            "Name",
+            "Symbol"
         );
-        await yDai.grantAccess(mint.address, { from: owner });
-        await treasury.grantAccess(mint.address, { from: owner });
+        await treasury.grantAccess(yDai.address, { from: owner });
 
         // Setup Dealer
         dealer = await Dealer.new(
@@ -548,8 +544,8 @@ contract('Dealer', async (accounts) =>  {
                 await helper.advanceTime(1000);
                 await helper.advanceBlock();
                 await yDai.mature();
-                await yDai.approve(mint.address, daiTokens, { from: owner });
-                await mint.redeem(owner, daiTokens, { from: owner });
+                await yDai.approve(yDai.address, daiTokens, { from: owner });
+                await yDai.redeem(owner, daiTokens, { from: owner });
 
                 assert.equal(
                     (await vat.urns(ilk, treasury.address)).art,

@@ -4,8 +4,9 @@ import "@hq20/contracts/contracts/access/AuthorizedAccess.sol";
 import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "./interfaces/IPot.sol";
 import "./interfaces/IVat.sol";
+import "./interfaces/IPot.sol";
+import "./interfaces/ITreasury.sol";
 import "./interfaces/IYDai.sol";
 import "./Constants.sol";
 
@@ -19,25 +20,27 @@ contract YDai is AuthorizedAccess, ERC20, Constants, IYDai  {
 
     IVat internal _vat;
     IPot internal _pot;
+    ITreasury internal _treasury;
 
     bool internal _isMature;
     uint256 internal _maturity;
-    uint256 internal _chi;
-    uint256 internal _rate;
+    uint256 internal _chi;      // Chi at maturity
+    uint256 internal _rate;     // Rate at maturity
 
     constructor(
         address vat_,
         address pot_,
+        address treasury_,
         uint256 maturity_,
         string memory name,
         string memory symbol
     ) public AuthorizedAccess() ERC20(name, symbol) {
         _vat = IVat(vat_);
         _pot = IPot(pot_);
+        _treasury = ITreasury(treasury_);
         _maturity = maturity_;
-        _chi = (now > _pot.rho()) ? _pot.drip() : _pot.chi();
-        (, _rate,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO Stability fee
-        _rate = Math.max(_rate, RAY.unit()); // Floor it at 1.0
+        _chi = RAY.unit();
+        _rate = RAY.unit();
     }
 
     /// @dev Whether the yDai has matured or not
@@ -50,24 +53,26 @@ contract YDai is AuthorizedAccess, ERC20, Constants, IYDai  {
         return _maturity;
     }
 
-    /// @dev accumulator (for dsr) at maturity in RAY units
+    /// @dev Chi differential between maturity and now in RAY. Returns 1.0 if not mature.
     //
-    //  chi_now
-    // ----------
-    //  chi_mat
+    //          chi_now
+    // chi() = ---------
+    //          chi_mat
     //
     function chi() public override returns(uint256){
+        if (!isMature()) return _chi;
         uint256 chiNow = (now > _pot.rho()) ? _pot.drip() : _pot.chi();
         return chiNow.divd(_chi, RAY);
     }
 
-    /// @dev accumulator differential for stability fee in RAY units. Returns current rate if not mature.
+    /// @dev Rate differential between maturity and now in RAY. Returns 1.0 if not mature.
     //
-    //  rate_now
-    // ----------
-    //  rate_mat
+    //           rate_now
+    // rate() = ----------
+    //           rate_mat
     //
     function rate() public view override returns(uint256){
+        if (!isMature()) return _rate;
         (, uint256 rateNow,,,) = _vat.ilks("ETH-A");
         return rateNow.divd(_rate, RAY);
     }
@@ -90,13 +95,26 @@ contract YDai is AuthorizedAccess, ERC20, Constants, IYDai  {
         emit Matured(_rate, _chi);
     }
 
-    /// @dev Mint yDai. Only callable by Mint contracts.
-    function mint(address to, uint256 yDai) public override onlyAuthorized("YDai: Not Authorized") {
-        _mint(to, yDai);
+    /// @dev Burn yTokens and return their dai equivalent value, pulled from the Treasury
+    // user --- yDai ---> us
+    // us   --- Dai  ---> user
+    function redeem(address user, uint256 yDaiAmount) public {
+        require(
+            isMature(),
+            "YDai: yDai is not mature"
+        );
+        _burn(user, yDaiAmount);                         // Burn yDai from user
+        uint256 daiAmount = yDaiAmount.muld(chi(), RAY); // User gets interest for holding after maturity
+        _treasury.pullDai(user, daiAmount);              // Give dai to user, from Treasury
     }
 
-    /// @dev Burn yDai. Only callable by Mint contracts.
-    function burn(address from, uint256 yDai) public override onlyAuthorized("YDai: Not Authorized") {
-        _burn(from, yDai);
+    /// @dev Mint yDai. Only callable by Dealer contracts.
+    function mint(address to, uint256 yDaiAmount) public override onlyAuthorized("YDai: Not Authorized") {
+        _mint(to, yDaiAmount);
+    }
+
+    /// @dev Burn yDai. Only callable by Dealer contracts.
+    function burn(address from, uint256 yDaiAmount) public override onlyAuthorized("YDai: Not Authorized") {
+        _burn(from, yDaiAmount);
     }
 }
