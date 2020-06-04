@@ -50,7 +50,7 @@ module.exports = async (callback) => {
         const rateIncrease  = "250000000000000000000000000";
         await vat.fold(ilk, vat.address, rateIncrease ); // 1 + 0.25
 
-        console.log('executed successfully')
+        console.log('Executed successfully')
 
     } 
     catch (e) {console.log(e)}
