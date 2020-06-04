@@ -9,6 +9,7 @@ const Migrations = artifacts.require("Migrations");
 
 
 module.exports = async (deployer, network, accounts) => {
+  const [owner] = accounts;
   let vatAddress;
   let wethAddress;
   let wethJoinAddress;
@@ -38,8 +39,7 @@ module.exports = async (deployer, network, accounts) => {
     await vat.rely(vatAddress);
     await vat.init(ilk); // Set ilk rate to 1.0
 
-    // await vat.fold(ilk, vat.address, rateIncrease, { from: owner }); // 1 + 0.25
-    await vat.fold(ilk, vat.address, rateIncrease, { from: accounts[0]});
+    await vat.fold(ilk, vat.address, rateIncrease, { from: owner }); // 1 + 0.25
 
     await deployer.deploy(ERC20, 0);
     wethAddress = (await ERC20.deployed()).address;
@@ -49,6 +49,7 @@ module.exports = async (deployer, network, accounts) => {
 
     await deployer.deploy(GemJoin, vatAddress, ilk, wethAddress);
     wethJoinAddress = (await GemJoin.deployed()).address;
+    await vat.rely(wethJoinAddress);
 
     await deployer.deploy(ERC20, 0);
     daiAddress = (await ERC20.deployed()).address;
@@ -80,8 +81,7 @@ module.exports = async (deployer, network, accounts) => {
       fixed_addrs[network].chaiAddress && (chaiAddress = fixed_addrs[network].chaiAddress);
    };
 
-  // if (network !== "mainnet" && network !== "kovan" && network !== "kovan-fork") {
-  if (!fixed_addrs[network].chaiAddress) {
+  if (network !== "mainnet" && network !== "kovan" && network !== "kovan-fork") {
     const Chai = artifacts.require("Chai");
     // Setup Chai
     await deployer.deploy(

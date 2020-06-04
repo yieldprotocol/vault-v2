@@ -11,9 +11,22 @@ const WethOracle = artifacts.require("WethOracle");
 
 const Migrations = artifacts.require("Migrations");
 
+const admin = require('firebase-admin');
+let serviceAccount = require('../firebaseKey.json');
+try {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    databaseURL: "https://yield-ydai.firebaseio.com"
+  });
+} catch (e) { console.log(e)}
+
 module.exports = async (deployer, network, accounts) => {
 
   console.log( process.argv )
+
+  const db = admin.firestore();
+  const batch = db.batch();
+  const networkId = await web3.eth.net.getId();
 
   const migration = await Migrations.deployed();
   let vatAddress;
@@ -37,20 +50,20 @@ module.exports = async (deployer, network, accounts) => {
     fixed_addrs[network].chaiAddress ? 
       (chaiAddress = fixed_addrs[network].chaiAddress)
       : (chaiAddress = (await Chai.deployed()).address);
- } else {
-    vatAddress = (await Vat.deployed()).address;
-    wethAddress = await migration.contracts.call('weth', (e,r)=> !e && r)
-    wethJoinAddress = (await GemJoin.deployed()).address;
-    daiAddress = await migration.contracts.call('dai', (e,r)=> !e && r)
-    daiJoinAddress = (await DaiJoin.deployed()).address;
-    potAddress = (await Pot.deployed()).address;
-    chaiAddress = (await Chai.deployed()).address;
- }
+  } else {
+      vatAddress = (await Vat.deployed()).address;
+      wethAddress = await migration.contracts.call('weth', (e,r)=> !e && r)
+      wethJoinAddress = (await GemJoin.deployed()).address;
+      daiAddress = await migration.contracts.call('dai', (e,r)=> !e && r)
+      daiJoinAddress = (await DaiJoin.deployed()).address;
+      potAddress = (await Pot.deployed()).address;
+      chaiAddress = (await Chai.deployed()).address;
+  }
 
- treasury = await Treasury.deployed();
- treasuryAddress = treasury.address;
- chaiOracleAddress = (await ChaiOracle.deployed()).address
- wethOracleAddress = (await WethOracle.deployed()).address;
+  treasury = await Treasury.deployed();
+  treasuryAddress = treasury.address;
+  chaiOracleAddress = (await ChaiOracle.deployed()).address
+  wethOracleAddress = (await WethOracle.deployed()).address;
 
   // Setup yDai - TODO: Replace by the right maturities, there will be several of these
   const YDai = artifacts.require("YDai");
@@ -66,7 +79,7 @@ module.exports = async (deployer, network, accounts) => {
     [1625097599, 'yDai-2021-06-30', 'yDai-2021-06-30'],
   ]);
 
-  const maturitiesOutput = [];
+  const deployedMaturities = [];
   for (const [maturity, name, symbol] of maturitiesInput.values()) {
     // Setup YDai
     await deployer.deploy(
@@ -109,27 +122,37 @@ module.exports = async (deployer, network, accounts) => {
     await yDai.grantAccess(dealer.address);
     await treasury.grantAccess(dealer.address);
 
-    maturitiesOutput.push(new Map([
-      ['maturity', maturity],
-      ['name', name],
-      ['symbol', symbol],
-      ['YDai', yDai.address],
-      ['Mint', mint.address],
-      ['Dealer', dealer.address],
-    ]));
+    deployedMaturities.push({
+      maturity, 
+      name, 
+      symbol, 
+      'YDai': yDai.address,
+      'Mint': mint.address,
+      'Dealer': Dealer.address,
+    })
 
-    console.log(maturitiesOutput);
+    let maturityRef = db.collection(networkId.toString()).doc(name);
+    batch.set(maturityRef, deployedMaturities[deployedMaturities.length -1]);
   }
 
-  console.log('vat:', vatAddress)
-  console.log('weth:', wethAddress)
-  console.log('wethJoin:', wethJoinAddress)
-  console.log('dai:', daiAddress)
-  console.log('daijoin:', daiJoinAddress)
-  console.log('pot:', potAddress)
-  console.log('chai', chaiAddress)
-  console.log('treasury:', treasuryAddress)
-  console.log('chaiOracle:', chaiOracleAddress)
-  console.log('wethOracle', wethOracleAddress)
+  const deployedCore = {
+    'Vat': vatAddress,
+    'Weth': wethAddress,
+    'WethJoin': wethJoinAddress,
+    'Dai': daiAddress,
+    'DaiJoin': daiJoinAddress,
+    'Pot': potAddress,
+    'Chai': chaiAddress,
+    'Treasury': treasuryAddress,
+    'ChaiOracle': chaiOracleAddress,
+    'WethOracle': wethOracleAddress
+  }
+
+  let coreRef = db.collection(networkId.toString()).doc('deployedCore')
+  batch.set(coreRef, deployedCore);
+  await batch.commit();
+
+  console.log(deployedCore)
+  console.log(deployedMaturities);
 
 };
