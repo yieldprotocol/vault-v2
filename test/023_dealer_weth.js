@@ -140,7 +140,7 @@ contract('Dealer', async (accounts) =>  {
         await helper.revertToSnapshot(snapshotId);
     });
     
-    it("get the size of the contract", async() => {
+    /* it("get the size of the contract", async() => {
         console.log();
         console.log("·--------------------|------------------|------------------|------------------·");
         console.log("|  Contract          ·  Bytecode        ·  Deployed        ·  Constructor     |");
@@ -158,7 +158,7 @@ contract('Dealer', async (accounts) =>  {
             "|" + ("" + sizeOfC).padStart(16, ' ') + "  |");
         console.log("·--------------------|------------------|------------------|------------------·");
         console.log();
-    });
+    }); */
 
     it("allows user to post weth", async() => {
         assert.equal(
