@@ -94,7 +94,7 @@ contract('Treasury', async (accounts) =>  {
         await treasury.grantAccess(user, { from: owner });
     });
 
-    it("get the size of the contract", async() => {
+    /* it("get the size of the contract", async() => {
         console.log();
         console.log("·--------------------|------------------|------------------|------------------·");
         console.log("|  Contract          ·  Bytecode        ·  Deployed        ·  Constructor     |");
@@ -112,7 +112,7 @@ contract('Treasury', async (accounts) =>  {
             "|" + ("" + sizeOfC).padStart(16, ' ') + "  |");
         console.log("·--------------------|------------------|------------------|------------------·");
         console.log();
-    });
+    }); */
     
     it("should fail for failed weth transfers", async() => {
         // Let's check how WETH is implemented, maybe we can remove this one.

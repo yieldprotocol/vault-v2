@@ -99,7 +99,7 @@ contract('Treasury', async (accounts) =>  {
         await treasury.grantAccess(owner, { from: owner });
     });
 
-    it("get the size of the contract", async() => {
+    /* it("get the size of the contract", async() => {
         console.log();
         console.log("·--------------------|------------------|------------------|------------------·");
         console.log("|  Contract          ·  Bytecode        ·  Deployed        ·  Constructor     |");
@@ -117,7 +117,7 @@ contract('Treasury', async (accounts) =>  {
             "|" + ("" + sizeOfC).padStart(16, ' ') + "  |");
         console.log("·--------------------|------------------|------------------|------------------·");
         console.log();
-    });
+    }); */
 
     it("allows to save dai", async() => {
         assert.equal(

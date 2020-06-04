@@ -154,7 +154,7 @@ contract('Dealer', async (accounts) =>  {
         await helper.revertToSnapshot(snapshotId);
     });
 
-    it("get the size of the contract", async() => {
+    /* it("get the size of the contract", async() => {
         console.log();
         console.log("·--------------------|------------------|------------------|------------------·");
         console.log("|  Contract          ·  Bytecode        ·  Deployed        ·  Constructor     |");
@@ -172,7 +172,7 @@ contract('Dealer', async (accounts) =>  {
             "|" + ("" + sizeOfC).padStart(16, ' ') + "  |");
         console.log("·--------------------|------------------|------------------|------------------·");
         console.log();
-    });
+    }); */
 
     it("allows user to post chai", async() => {
         assert.equal(
@@ -479,9 +479,6 @@ contract('Dealer', async (accounts) =>  {
                 const rateDifferential = divRay(addBN(rate, rateIncrease), rate);
                 const increasedDebt = mulRay(daiTokens, rateDifferential);
                 const debtIncrease = subBN(increasedDebt, daiTokens);
-                console.log(daiTokens.toString());
-                console.log(increasedDebt.toString());
-                console.log(debtIncrease.toString());
                 await vat.fold(ilk, vat.address, rateIncrease, { from: owner });
 
                 assert.equal(
