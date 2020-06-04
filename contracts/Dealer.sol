@@ -78,7 +78,7 @@ contract Dealer is Ownable, Constants {
     function totalDebtYDai(address user) public view returns (uint256) {
         uint256 totalDebt;
         for (uint256 i = 0; i < seriesIterator.length; i += 1) {
-            totalDebt = debtYDai[seriesIterator[i]][user];
+            totalDebt = totalDebt + debtYDai[seriesIterator[i]][user];
         } // We don't expect hundreds of maturities per dealer
         return totalDebt;
     }
@@ -130,7 +130,7 @@ contract Dealer is Ownable, Constants {
     function totalDebtDai(address user) public view returns (uint256) {
         uint256 totalDebt;
         for (uint256 i = 0; i < seriesIterator.length; i += 1) {
-            totalDebt = debtDai(seriesIterator[i], user);
+            totalDebt = totalDebt + debtDai(seriesIterator[i], user);
         } // We don't expect hundreds of maturities per dealer
         return totalDebt;
     }

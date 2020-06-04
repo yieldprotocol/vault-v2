@@ -89,11 +89,6 @@ contract('Dealer - Weth', async (accounts) =>  {
             dai.address,
         );
 
-        // Setup yDai
-        const block = await web3.eth.getBlockNumber();
-        maturity = (await web3.eth.getBlock(block)).timestamp + 1000;
-        yDai = await YDai.new(vat.address, pot.address, maturity, "Name", "Symbol");
-
         // Setup Oracle
         wethOracle = await WethOracle.new(vat.address, { from: owner });
 
@@ -112,27 +107,37 @@ contract('Dealer - Weth', async (accounts) =>  {
         );
 
         // Setup mint
-        mint = await Mint.new(
+        /* mint = await Mint.new(
             treasury.address,
             dai.address,
             yDai.address,
             { from: owner },
         );
         await yDai.grantAccess(mint.address, { from: owner });
-        await treasury.grantAccess(mint.address, { from: owner });
+        await treasury.grantAccess(mint.address, { from: owner }); */
 
         // Setup Dealer
         dealer = await Dealer.new(
             treasury.address,
             dai.address,
-            yDai.address,
             weth.address,
             wethOracle.address,
             WETH,
             { from: owner },
         );
         treasury.grantAccess(dealer.address, { from: owner });
+
+        // Setup yDai
+        const block = await web3.eth.getBlockNumber();
+        maturity = (await web3.eth.getBlock(block)).timestamp + 1000;
+        yDai = await YDai.new(vat.address, pot.address, maturity, "Name", "Symbol");
+        dealer.addSeries(yDai.address, { from: owner });
         yDai.grantAccess(dealer.address, { from: owner });
+
+        maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
+        yDai2 = await YDai.new(vat.address, pot.address, maturity2, "Name2", "Symbol2");
+        dealer.addSeries(yDai2.address, { from: owner });
+        yDai2.grantAccess(dealer.address, { from: owner });
     });
 
     afterEach(async() => {
@@ -242,12 +247,12 @@ contract('Dealer - Weth', async (accounts) =>  {
                 "Owner has yDai",
             );
             assert.equal(
-                await dealer.debtDai(owner),
+                await dealer.debtDai(maturity, owner),
                 0,
                 "Owner has debt",
             );
     
-            await dealer.borrow(owner, daiTokens, { from: owner });
+            await dealer.borrow(maturity, owner, daiTokens, { from: owner });
 
             assert.equal(
                 await yDai.balanceOf(owner),
@@ -255,7 +260,7 @@ contract('Dealer - Weth', async (accounts) =>  {
                 "Owner should have yDai",
             );
             assert.equal(
-                await dealer.debtDai(owner),
+                await dealer.debtDai(maturity, owner),
                 daiTokens.toString(),
                 "Owner should have debt",
             );
@@ -268,20 +273,53 @@ contract('Dealer - Weth', async (accounts) =>  {
                 "Owner does not have borrowing power",
             );
             assert.equal(
-                await dealer.debtDai(owner),
+                await dealer.debtDai(maturity, owner),
                 0,
                 "Owner has debt",
             );
     
             await expectRevert(
-                dealer.borrow(owner, addBN(daiTokens, 1), { from: owner }), // Borrow 1 wei beyond power
+                dealer.borrow(maturity, owner, addBN(daiTokens, 1), { from: owner }), // Borrow 1 wei beyond power
                 "Dealer: Post more collateral",
             );
         });
 
         describe("with borrowed yDai", () => {
             beforeEach(async() => {
-                await dealer.borrow(owner, daiTokens, { from: owner });
+                await dealer.borrow(maturity, owner, daiTokens, { from: owner });
+            });
+
+            it("allows to borrow from a second series", async() => {
+                await weth.deposit({ from: owner, value: wethTokens });
+                await weth.approve(dealer.address, wethTokens, { from: owner }); 
+                await dealer.post(owner, wethTokens, { from: owner });
+                await dealer.borrow(maturity2, owner, daiTokens, { from: owner });
+
+                assert.equal(
+                    await yDai.balanceOf(owner),
+                    daiTokens.toString(),
+                    "Owner should have yDai",
+                );
+                assert.equal(
+                    await dealer.debtDai(maturity, owner),
+                    daiTokens.toString(),
+                    "Owner should have debt for series 1",
+                );
+                assert.equal(
+                    await yDai2.balanceOf(owner),
+                    daiTokens.toString(),
+                    "Owner should have yDai2",
+                );
+                assert.equal(
+                    await dealer.debtDai(maturity2, owner),
+                    daiTokens.toString(),
+                    "Owner should have debt for series 2",
+                );
+                assert.equal(
+                    await dealer.totalDebtDai(owner),
+                    addBN(daiTokens, daiTokens).toString(),
+                    "Owner should a combined debt",
+                );
             });
 
             it("doesn't allow to withdraw and become undercollateralized", async() => {
@@ -291,13 +329,13 @@ contract('Dealer - Weth', async (accounts) =>  {
                     "Owner does not have borrowing power",
                 );
                 assert.equal(
-                    await dealer.debtDai(owner),
+                    await dealer.debtDai(maturity, owner),
                     daiTokens.toString(),
                     "Owner does not have debt",
                 );
 
                 await expectRevert(
-                    dealer.borrow(owner, wethTokens, { from: owner }),
+                    dealer.borrow(maturity, owner, wethTokens, { from: owner }),
                     "Dealer: Post more collateral",
                 );
             });
@@ -309,13 +347,13 @@ contract('Dealer - Weth', async (accounts) =>  {
                     "Owner does not have yDai",
                 );
                 assert.equal(
-                    await dealer.debtDai(owner),
+                    await dealer.debtDai(maturity, owner),
                     daiTokens.toString(),
                     "Owner does not have debt",
                 );
 
                 await yDai.approve(dealer.address, daiTokens, { from: owner });
-                await dealer.repayYDai(owner, daiTokens, { from: owner });
+                await dealer.repayYDai(maturity, owner, daiTokens, { from: owner });
     
                 assert.equal(
                     await yDai.balanceOf(owner),
@@ -323,7 +361,7 @@ contract('Dealer - Weth', async (accounts) =>  {
                     "Owner should not have yDai",
                 );
                 assert.equal(
-                    await dealer.debtDai(owner),
+                    await dealer.debtDai(maturity, owner),
                     0,
                     "Owner should not have debt",
                 );
@@ -346,13 +384,13 @@ contract('Dealer - Weth', async (accounts) =>  {
                     "Owner does not have dai",
                 );
                 assert.equal(
-                    await dealer.debtDai(owner),
+                    await dealer.debtDai(maturity, owner),
                     daiTokens.toString(),
                     "Owner does not have debt",
                 );
 
                 await dai.approve(dealer.address, daiTokens, { from: owner });
-                await dealer.repayDai(owner, daiTokens, { from: owner });
+                await dealer.repayDai(maturity, owner, daiTokens, { from: owner });
     
                 assert.equal(
                     await dai.balanceOf(owner),
@@ -360,7 +398,7 @@ contract('Dealer - Weth', async (accounts) =>  {
                     "Owner should not have yDai",
                 );
                 assert.equal(
-                    await dealer.debtDai(owner),
+                    await dealer.debtDai(maturity, owner),
                     0,
                     "Owner should not have debt",
                 );
@@ -378,13 +416,13 @@ contract('Dealer - Weth', async (accounts) =>  {
                     "Owner does not have yDai",
                 );
                 assert.equal(
-                    await dealer.debtDai(owner),
+                    await dealer.debtDai(maturity, owner),
                     daiTokens.toString(),
                     "Owner does not have debt",
                 );
 
                 await yDai.approve(dealer.address, yDaiTokens, { from: owner });
-                await dealer.repayYDai(owner, yDaiTokens, { from: owner });
+                await dealer.repayYDai(maturity, owner, yDaiTokens, { from: owner });
     
                 assert.equal(
                     await yDai.balanceOf(owner),
@@ -392,7 +430,7 @@ contract('Dealer - Weth', async (accounts) =>  {
                     "Owner should have yDai left",
                 );
                 assert.equal(
-                    await dealer.debtDai(owner),
+                    await dealer.debtDai(maturity, owner),
                     0,
                     "Owner should not have debt",
                 );
@@ -401,7 +439,7 @@ contract('Dealer - Weth', async (accounts) =>  {
             
             it("as rate increases after maturity, so does the debt in when measured in dai", async() => {
                 assert.equal(
-                    await dealer.debtDai(owner),
+                    await dealer.debtDai(maturity, owner),
                     daiTokens.toString(),
                     "Owner should have " + daiTokens + " debt",
                 );
@@ -417,15 +455,15 @@ contract('Dealer - Weth', async (accounts) =>  {
                 await vat.fold(ilk, vat.address, rateIncrease, { from: owner });
                 
                 assert.equal(
-                    await dealer.debtDai(owner),
+                    await dealer.debtDai(maturity, owner),
                     increasedDebt.toString(),
-                    "Owner should have " + increasedDebt + " debt after the rate change, instead has " + (await dealer.debtDai(owner)),
+                    "Owner should have " + increasedDebt + " debt after the rate change, instead has " + (await dealer.debtDai(maturity, owner)),
                 );
             });
 
             it("as rate increases after maturity, the debt doesn't in when measured in yDai", async() => {
                 assert.equal(
-                    await dealer.debtDai(owner),
+                    await dealer.debtDai(maturity, owner),
                     daiTokens.toString(),
                     "Owner should have " + daiTokens + " debt",
                 );
@@ -438,11 +476,11 @@ contract('Dealer - Weth', async (accounts) =>  {
                 const rateIncrease = toRay(0.5);
                 await vat.fold(ilk, vat.address, rateIncrease, { from: owner });
                 
-                let debt = await dealer.debtDai(owner);
+                let debt = await dealer.debtDai(maturity, owner);
                 assert.equal(
-                    await dealer.inYDai(debt),
+                    await dealer.inYDai(maturity, debt),
                     daiTokens.toString(),
-                    "Owner should have " + daiTokens + " debt after the rate change, instead has " + (await dealer.inYDai(debt)),
+                    "Owner should have " + daiTokens + " debt after the rate change, instead has " + (await dealer.inYDai(maturity, debt)),
                 );
             });
 
@@ -455,7 +493,7 @@ contract('Dealer - Weth', async (accounts) =>  {
                     "Owner does not have yDai",
                 );
                 assert.equal(
-                    await dealer.debtDai(owner),
+                    await dealer.debtDai(maturity, owner),
                     daiTokens.toString(),
                     "Owner does not have debt",
                 );
@@ -473,13 +511,13 @@ contract('Dealer - Weth', async (accounts) =>  {
                 await vat.fold(ilk, vat.address, rateIncrease, { from: owner });
 
                 assert.equal(
-                    await dealer.debtDai(owner),
+                    await dealer.debtDai(maturity, owner),
                     increasedDebt.toString(),
                     "Owner does not have increased debt",
                 );
 
                 await yDai.approve(dealer.address, daiTokens, { from: owner });
-                await dealer.repayYDai(owner, daiTokens, { from: owner });
+                await dealer.repayYDai(maturity, owner, daiTokens, { from: owner });
     
                 assert.equal(
                     await yDai.balanceOf(owner),
@@ -487,9 +525,9 @@ contract('Dealer - Weth', async (accounts) =>  {
                     "Owner should not have yDai",
                 );
                 assert.equal(
-                    await dealer.debtDai(owner),
+                    await dealer.debtDai(maturity, owner),
                     debtIncrease.toString(),
-                    "Owner should have " + debtIncrease + " dai debt, instead has " + (await dealer.debtDai(owner)),
+                    "Owner should have " + debtIncrease + " dai debt, instead has " + (await dealer.debtDai(maturity, owner)),
                 );
             });
 
@@ -500,7 +538,7 @@ contract('Dealer - Weth', async (accounts) =>  {
                     "Owner does not have yDai",
                 );
                 assert.equal(
-                    await dealer.debtDai(owner),
+                    await dealer.debtDai(maturity, owner),
                     daiTokens.toString(),
                     "Owner does not have debt",
                 );
@@ -522,13 +560,13 @@ contract('Dealer - Weth', async (accounts) =>  {
                 await yDai.mint(owner, debtIncrease, { from: owner });
 
                 assert.equal(
-                    await dealer.debtDai(owner),
+                    await dealer.debtDai(maturity, owner),
                     increasedDebt.toString(),
                     "Owner does not have increased debt",
                 );
 
                 await yDai.approve(dealer.address, increasedDebt, { from: owner });
-                await dealer.repayYDai(owner, increasedDebt, { from: owner });
+                await dealer.repayYDai(maturity, owner, increasedDebt, { from: owner });
     
                 assert.equal(
                     await yDai.balanceOf(owner),
@@ -536,13 +574,13 @@ contract('Dealer - Weth', async (accounts) =>  {
                     "Owner should not have yDai",
                 );
                 assert.equal(
-                    await dealer.debtDai(owner),
+                    await dealer.debtDai(maturity, owner),
                     0,
                     "Owner should have no remaining debt",
                 );
             });
 
-            it("allows to move debt to MakerDAO", async() => {
+            /* it("allows to move debt to MakerDAO", async() => {
                 // Treasury needs to have debt
                 await helper.advanceTime(1000);
                 await helper.advanceBlock();
@@ -679,7 +717,7 @@ contract('Dealer - Weth', async (accounts) =>  {
                     0,
                     "User should not have collateral in Dealer",
                 );
-            });
+            }); */
         });
     });
 });
