@@ -58,7 +58,7 @@ contract Dealer is Ownable, Constants {
     function addSeries(address yDaiContract) public onlyOwner {
         uint256 maturity = IYDai(yDaiContract).maturity();
         require(
-            containsSeries(maturity),
+            !containsSeries(maturity),
             "Dealer: Series already added"
         );
         series[maturity] = IYDai(yDaiContract);
