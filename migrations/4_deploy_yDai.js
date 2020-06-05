@@ -67,7 +67,6 @@ module.exports = async (deployer, network, accounts) => {
 
   // Setup yDai - TODO: Replace by the right maturities, there will be several of these
   const YDai = artifacts.require("YDai");
-  const Mint = artifacts.require("Mint");
   const Dealer = artifacts.require("Dealer");
 
   // const block = await web3.eth.getBlockNumber();
@@ -86,6 +85,7 @@ module.exports = async (deployer, network, accounts) => {
       YDai,
       vatAddress,
       potAddress,
+      treasuryAddress,
       maturity,
       name,
       symbol,
@@ -93,18 +93,7 @@ module.exports = async (deployer, network, accounts) => {
     );
     const yDai = await YDai.deployed();
     const yDaiAddress = yDai.address;
-
-    // Setup mint
-    await deployer.deploy(
-      Mint,
-      treasuryAddress,
-      daiAddress,
-      yDaiAddress,
-      { gas: 5000000 },
-    );
-    const mint = await Mint.deployed();
-    await yDai.grantAccess(mint.address);
-    await treasury.grantAccess(mint.address);
+    await treasury.grantAccess(yDai.address);
 
     let WETH = web3.utils.fromAscii("WETH");
     let CHAI = web3.utils.fromAscii("CHAI");
@@ -144,9 +133,7 @@ module.exports = async (deployer, network, accounts) => {
       name, 
       symbol, 
       'YDai': yDai.address,
-      'Mint': mint.address,
-      'WethDealer': wethDealer.address,
-      'ChaiDealer': chaiDealer.address,
+      'Dealer': Dealer.address,
     })
 
     let maturityRef = db.collection(networkId.toString()).doc(name);

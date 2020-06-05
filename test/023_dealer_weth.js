@@ -9,7 +9,6 @@ const ChaiOracle = artifacts.require('ChaiOracle');
 const WethOracle = artifacts.require('WethOracle');
 const Treasury = artifacts.require('Treasury');
 const YDai = artifacts.require('YDai');
-const Mint = artifacts.require('Mint');
 const Dealer = artifacts.require('Dealer');
 
 const helper = require('ganache-time-traveler');
@@ -31,7 +30,6 @@ contract('Dealer - Weth', async (accounts) =>  {
     let treasury;
     let yDai1;
     let yDai2;
-    let mint;
     let dealer;
 
     let WETH = web3.utils.fromAscii("WETH");
@@ -89,6 +87,7 @@ contract('Dealer - Weth', async (accounts) =>  {
             pot.address,
             daiJoin.address,
             dai.address,
+            { from: owner },
         );
 
         // Setup Oracle
@@ -106,17 +105,8 @@ contract('Dealer - Weth', async (accounts) =>  {
             daiJoin.address,
             wethJoin.address,
             vat.address,
-        );
-
-        // Setup mint
-        /* mint = await Mint.new(
-            treasury.address,
-            dai.address,
-            yDai1.address,
             { from: owner },
         );
-        await yDai1.grantAccess(mint.address, { from: owner });
-        await treasury.grantAccess(mint.address, { from: owner }); */
 
         // Setup Dealer
         dealer = await Dealer.new(
@@ -132,14 +122,32 @@ contract('Dealer - Weth', async (accounts) =>  {
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
-        yDai1 = await YDai.new(vat.address, pot.address, maturity1, "Name", "Symbol");
+        yDai1 = await YDai.new(
+            vat.address,
+            pot.address,
+            treasury.address,
+            maturity1,
+            "Name",
+            "Symbol",
+            { from: owner },
+        );
         dealer.addSeries(yDai1.address, { from: owner });
         yDai1.grantAccess(dealer.address, { from: owner });
+        treasury.grantAccess(yDai1.address, { from: owner });
 
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
-        yDai2 = await YDai.new(vat.address, pot.address, maturity2, "Name2", "Symbol2");
+        yDai2 = await YDai.new(
+            vat.address,
+            pot.address,
+            treasury.address,
+            maturity2,
+            "Name2",
+            "Symbol2",
+            { from: owner },
+        );
         dealer.addSeries(yDai2.address, { from: owner });
         yDai2.grantAccess(dealer.address, { from: owner });
+        treasury.grantAccess(yDai2.address, { from: owner });
     });
 
     afterEach(async() => {
@@ -526,8 +534,8 @@ contract('Dealer - Weth', async (accounts) =>  {
                 await helper.advanceTime(1000);
                 await helper.advanceBlock();
                 await yDai1.mature();
-                await yDai1.approve(mint.address, daiTokens, { from: owner });
-                await mint.redeem(owner, daiTokens, { from: owner });
+                await yDai1.approve(yDai1.address, daiTokens, { from: owner });
+                await yDai1.redeem(owner, daiTokens, { from: owner });
 
                 assert.equal(
                     (await vat.urns(ilk, treasury.address)).art,

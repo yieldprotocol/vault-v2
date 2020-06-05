@@ -9,7 +9,6 @@ const ChaiOracle = artifacts.require('ChaiOracle');
 const WethOracle = artifacts.require('WethOracle');
 const Treasury = artifacts.require('Treasury');
 const YDai = artifacts.require('YDai');
-const Mint = artifacts.require('Mint');
 const Dealer = artifacts.require('Dealer');
 
 const helper = require('ganache-time-traveler');
@@ -31,7 +30,6 @@ contract('Dealer - Chai', async (accounts) =>  {
     let treasury;
     let yDai1;
     let yDai2;
-    let mint;
     let dealer;
 
     let WETH = web3.utils.fromAscii("WETH");
@@ -111,16 +109,6 @@ contract('Dealer - Chai', async (accounts) =>  {
             vat.address,
         );
 
-        // Setup mint
-        /* mint = await Mint.new(
-            treasury.address,
-            dai.address,
-            yDai1.address,
-            { from: owner },
-        );
-        await yDai1.grantAccess(mint.address, { from: owner });
-        await treasury.grantAccess(mint.address, { from: owner }); */
-
         // Setup Dealer
         dealer = await Dealer.new(
             treasury.address,
@@ -135,14 +123,32 @@ contract('Dealer - Chai', async (accounts) =>  {
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
-        yDai1 = await YDai.new(vat.address, pot.address, maturity1, "Name", "Symbol");
+        yDai1 = await YDai.new(
+            vat.address,
+            pot.address,
+            treasury.address,
+            maturity1,
+            "Name",
+            "Symbol",
+            { from: owner },
+        );
         dealer.addSeries(yDai1.address, { from: owner });
         yDai1.grantAccess(dealer.address, { from: owner });
+        treasury.grantAccess(yDai1.address, { from: owner });
 
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
-        yDai2 = await YDai.new(vat.address, pot.address, maturity2, "Name2", "Symbol2");
+        yDai2 = await YDai.new(
+            vat.address,
+            pot.address,
+            treasury.address,
+            maturity2,
+            "Name2",
+            "Symbol2",
+            { from: owner },
+        );
         dealer.addSeries(yDai2.address, { from: owner });
         yDai2.grantAccess(dealer.address, { from: owner });
+        treasury.grantAccess(yDai2.address, { from: owner });
 
         // Borrow dai
         await weth.deposit({ from: owner, value: wethTokens });
@@ -301,6 +307,24 @@ contract('Dealer - Chai', async (accounts) =>  {
         describe("with borrowed yDai", () => {
             beforeEach(async() => {
                 await dealer.borrow(maturity1, owner, daiTokens, { from: owner });
+            });
+
+            it("does not allow to split chai positions", async() => {
+                await vat.hope(treasury.address, { from: owner });
+                await expectRevert(
+                    dealer.splitPosition(maturity1, owner, owner, { from: owner }),
+                    "Dealer: Unsupported collateral for split",
+                );
+                await vat.nope(treasury.address, { from: owner });
+            });
+
+            it("does not allow to split chai collateral", async() => {
+                await vat.hope(treasury.address, { from: owner });
+                await expectRevert(
+                    dealer.splitCollateral(owner, owner, { from: owner }),
+                    "Dealer: Unsupported collateral for split",
+                );
+                await vat.nope(treasury.address, { from: owner });
             });
 
             it("doesn't allow to withdraw and become undercollateralized", async() => {

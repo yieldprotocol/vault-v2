@@ -9,7 +9,6 @@ const ChaiOracle = artifacts.require('ChaiOracle');
 const WethOracle = artifacts.require('WethOracle');
 const Treasury = artifacts.require('Treasury');
 const YDai = artifacts.require('YDai');
-const Mint = artifacts.require('Mint');
 const Dealer = artifacts.require('Dealer');
 
 const helper = require('ganache-time-traveler');
@@ -29,8 +28,8 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
     let chaiOracle;
     let wethOracle;
     let treasury;
-    let yDai;
-    let mint;
+    let yDai1;
+    let yDai2;
     let dealer;
 
     let WETH = web3.utils.fromAscii("WETH");
@@ -134,6 +133,7 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
         );
 
         yDai1 = await YDai.new(vat.address, pot.address, maturity1, "Name1", "Symbol1");
+        treasury.grantAccess(yDai1.address, { from: owner });
 
         await dealer.addSeries(yDai1.address, { from: owner });
         yDai1.grantAccess(dealer.address, { from: owner });
@@ -150,9 +150,11 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
         yDai1 = await YDai.new(vat.address, pot.address, maturity1, "Name1", "Symbol1");
+        treasury.grantAccess(yDai1.address, { from: owner });
 
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
         yDai2 = await YDai.new(vat.address, pot.address, maturity2, "Name2", "Symbol2");
+        treasury.grantAccess(yDai2.address, { from: owner });
 
         await dealer.addSeries(yDai1.address, { from: owner });
         yDai1.grantAccess(dealer.address, { from: owner });
@@ -187,6 +189,7 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
         yDai1 = await YDai.new(vat.address, pot.address, maturity1, "Name1", "Symbol1");
+        treasury.grantAccess(yDai1.address, { from: owner });
 
         await dealer.addSeries(yDai1.address, { from: owner });
         yDai1.grantAccess(dealer.address, { from: owner });
