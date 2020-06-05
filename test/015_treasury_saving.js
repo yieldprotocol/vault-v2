@@ -12,7 +12,7 @@ const truffleAssert = require('truffle-assertions');
 const helper = require('ganache-time-traveler');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
 
-contract('Treasury', async (accounts) =>  {
+contract('Treasury - Saving', async (accounts) =>  {
     let [ owner ] = accounts;
     let vat;
     let weth;

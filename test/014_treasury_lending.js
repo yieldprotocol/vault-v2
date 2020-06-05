@@ -13,7 +13,7 @@ const helper = require('ganache-time-traveler');
 const { expectRevert } = require('@openzeppelin/test-helpers');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
 
-contract('Treasury', async (accounts) =>  {
+contract('Treasury - Lending', async (accounts) =>  {
     let [ owner, user ] = accounts;
     let vat;
     let weth;
