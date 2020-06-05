@@ -106,7 +106,10 @@ module.exports = async (deployer, network, accounts) => {
     await yDai.grantAccess(mint.address);
     await treasury.grantAccess(mint.address);
 
-    // Setup Dealer
+    let WETH = web3.utils.fromAscii("WETH");
+    let CHAI = web3.utils.fromAscii("CHAI");
+
+    // Setup Weth Dealer
     await deployer.deploy(
       Dealer,
       treasuryAddress,
@@ -114,13 +117,27 @@ module.exports = async (deployer, network, accounts) => {
       yDaiAddress,
       wethAddress,
       wethOracleAddress,
-      chaiAddress,
-      chaiOracleAddress,
+      WETH,
       { gas: 5000000 },
     );
-    const dealer = await Dealer.deployed();
-    await yDai.grantAccess(dealer.address);
-    await treasury.grantAccess(dealer.address);
+    const wethDealer = await Dealer.deployed();
+    await yDai.grantAccess(wethDealer.address);
+    await treasury.grantAccess(wethDealer.address);
+
+    // Setup Chai Dealer
+    await deployer.deploy(
+      Dealer,
+      treasuryAddress,
+      daiAddress,
+      yDaiAddress,
+      chaiAddress,
+      chaiOracleAddress,
+      CHAI,
+      { gas: 5000000 },
+    );
+    const chaiDealer = await Dealer.deployed();
+    await yDai.grantAccess(chaiDealer.address);
+    await treasury.grantAccess(chaiDealer.address);
 
     deployedMaturities.push({
       maturity, 
@@ -128,7 +145,8 @@ module.exports = async (deployer, network, accounts) => {
       symbol, 
       'YDai': yDai.address,
       'Mint': mint.address,
-      'Dealer': Dealer.address,
+      'WethDealer': wethDealer.address,
+      'ChaiDealer': chaiDealer.address,
     })
 
     let maturityRef = db.collection(networkId.toString()).doc(name);
@@ -143,9 +161,9 @@ module.exports = async (deployer, network, accounts) => {
     'DaiJoin': daiJoinAddress,
     'Pot': potAddress,
     'Chai': chaiAddress,
-    'Treasury': treasuryAddress,
+    'WethOracle': wethOracleAddress,
     'ChaiOracle': chaiOracleAddress,
-    'WethOracle': wethOracleAddress
+    'Treasury': treasuryAddress
   }
 
   let coreRef = db.collection(networkId.toString()).doc('deployedCore')
