@@ -134,6 +134,7 @@ contract('Dealer - Chai', async (accounts) =>  {
         );
         dealer.addSeries(yDai1.address, { from: owner });
         yDai1.grantAccess(dealer.address, { from: owner });
+        treasury.grantAccess(yDai1.address, { from: owner });
 
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
         yDai2 = await YDai.new(
@@ -147,6 +148,7 @@ contract('Dealer - Chai', async (accounts) =>  {
         );
         dealer.addSeries(yDai2.address, { from: owner });
         yDai2.grantAccess(dealer.address, { from: owner });
+        treasury.grantAccess(yDai2.address, { from: owner });
 
         // Borrow dai
         await weth.deposit({ from: owner, value: wethTokens });
@@ -305,6 +307,24 @@ contract('Dealer - Chai', async (accounts) =>  {
         describe("with borrowed yDai", () => {
             beforeEach(async() => {
                 await dealer.borrow(maturity1, owner, daiTokens, { from: owner });
+            });
+
+            it("does not allow to split chai positions", async() => {
+                await vat.hope(treasury.address, { from: owner });
+                await expectRevert(
+                    dealer.splitPosition(maturity1, owner, owner, { from: owner }),
+                    "Dealer: Unsupported collateral for split",
+                );
+                await vat.nope(treasury.address, { from: owner });
+            });
+
+            it("does not allow to split chai collateral", async() => {
+                await vat.hope(treasury.address, { from: owner });
+                await expectRevert(
+                    dealer.splitCollateral(owner, owner, { from: owner }),
+                    "Dealer: Unsupported collateral for split",
+                );
+                await vat.nope(treasury.address, { from: owner });
             });
 
             it("doesn't allow to withdraw and become undercollateralized", async() => {

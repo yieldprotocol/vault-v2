@@ -244,7 +244,6 @@ contract Dealer is Ownable, Constants {
         uint256 debt = debtDai(maturity, from);
         uint256 weth = divdrup(debt, price, RAY);
         posted[from] = posted[from].sub(weth);
-        series[maturity].burn(from, debtYDai[maturity][from]); // Burn the yDai
         _treasury.transferPosition(to, weth, debt);            // Transfer weth and debt
         delete debtYDai[maturity][from];                       // Delete debt
     }
@@ -262,6 +261,7 @@ contract Dealer is Ownable, Constants {
             "Dealer: Split all debt first"
         );
         uint256 weth = posted[from];
+        delete posted[from];
         _treasury.transferPosition(to, weth, 0);
     }
 

@@ -133,6 +133,7 @@ contract('Dealer - Weth', async (accounts) =>  {
         );
         dealer.addSeries(yDai1.address, { from: owner });
         yDai1.grantAccess(dealer.address, { from: owner });
+        treasury.grantAccess(yDai1.address, { from: owner });
 
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
         yDai2 = await YDai.new(
@@ -146,6 +147,7 @@ contract('Dealer - Weth', async (accounts) =>  {
         );
         dealer.addSeries(yDai2.address, { from: owner });
         yDai2.grantAccess(dealer.address, { from: owner });
+        treasury.grantAccess(yDai2.address, { from: owner });
     });
 
     afterEach(async() => {
