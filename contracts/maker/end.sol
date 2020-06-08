@@ -275,6 +275,10 @@ contract End is LibNote {
         vat.grab(ilk, usr, address(this), address(vow), int(lot), int(art));
     }
 
+    function setTag(bytes32 ilk, uint tag_) external note {
+        tag[ilk] = tag_;
+    }
+
     function skim(bytes32 ilk, address urn) external note {
         require(tag[ilk] != 0, "End/tag-ilk-not-defined");
         (, uint rate,,,) = vat.ilks(ilk);
