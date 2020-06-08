@@ -206,7 +206,7 @@ contract('Dealer - Splitter', async (accounts) =>  {
         it("allows to grab collateral", async() => {
             await dealer.grantAccess(owner, { from: owner }); // Only for testing
             expectEvent(
-                await dealer.grab(owner, { from: owner }),
+                await dealer.grab(owner, wethTokens, { from: owner }),
                 "Grabbed",
                 {
                     tokens: wethTokens.toString(),
@@ -274,7 +274,7 @@ contract('Dealer - Splitter', async (accounts) =>  {
             it("does not allow to grab collateral if there is user debt", async() => {
                 await dealer.grantAccess(owner, { from: owner }); // Only for testing
                 await expectRevert(
-                    dealer.grab(owner, { from: owner }),
+                    dealer.grab(owner, wethTokens, { from: owner }),
                     "Dealer: Settle all debt first",
                 );
             });

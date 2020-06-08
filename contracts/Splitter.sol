@@ -34,7 +34,8 @@ contract Splitter {
             msg.sender == from,
             "Splitter: Only owner"
         );
-        uint256 weth = _vault.grab(from);
+        uint256 weth = _vault.posted(from);
+        _vault.grab(from, weth);
         _treasury.fork(to, weth, 0);
     }
 }

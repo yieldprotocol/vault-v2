@@ -6,7 +6,9 @@ import "../Splitter.sol";
 /// @dev A splitter moves positions and weth collateral from Dealers (using the IVault interface) to MakerDAO.
 contract MockSplitter is Splitter {
     constructor (address treasury_, address vault_)
-        public Splitter(treasury_, vault_ ){ }
+        public Splitter(treasury_, vault_ ) {
+
+    }
 
     /// @dev Moves all debt for one series from `from` in YDai to `to` in MakerDAO.
     /// It also moves just enough weth from YDai to MakerDAO to enable the debt transfer.

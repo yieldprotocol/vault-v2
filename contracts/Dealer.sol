@@ -248,18 +248,16 @@ contract Dealer is AuthorizedAccess(), Constants {
         return (tokenAmount, debt);
     }
 
-    /// @dev Removes user collateral records from dealer. Can only be called with no YDai debt.
+    /// @dev Removes an amount from the user collateral records in dealer. Can only be called with no YDai debt.
     /// `to` needs to surround this call with `_vat.hope(address(_treasury))` and `_vat.nope(address(_treasury))`
-    function grab(address user)
-        public onlyAuthorized("Dealer: Not Authorized") returns (uint256)  {
+    function grab(address user, uint256 amount)
+        public onlyAuthorized("Dealer: Not Authorized") {
         require(
             totalDebtYDai(user) == 0,
             "Dealer: Settle all debt first"
         );
-        uint256 tokenAmount = posted[user];
-        delete posted[user];
-        emit Grabbed(tokenAmount, user);
-        return tokenAmount;
+        posted[user] = posted[user].sub(amount, "Dealer: Not enough collateral");
+        emit Grabbed(amount, user);
     }
 
     /// @dev Calculates the amount to repay and the amount by which to reduce the debt
