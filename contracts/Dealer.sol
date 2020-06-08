@@ -1,11 +1,12 @@
 pragma solidity ^0.6.2;
 
+import "@hq20/contracts/contracts/access/AuthorizedAccess.sol";
 import "@hq20/contracts/contracts/math/DecimalMath.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IChai.sol";
+import "./interfaces/IVault.sol";
 import "./interfaces/IOracle.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IYDai.sol";
@@ -13,7 +14,7 @@ import "./Constants.sol";
 
 
 /// @dev A dealer takes collateral and issues yDai. There is one Dealer per series.
-contract Dealer is Ownable, Constants {
+contract Dealer is AuthorizedAccess(), Constants {
     using SafeMath for uint256;
     using DecimalMath for uint256;
     using DecimalMath for uint8;
@@ -232,37 +233,29 @@ contract Dealer is Ownable, Constants {
         debtYDai[maturity][from] = debtYDai[maturity][from].sub(debtDecrease);
     }
 
-    /// @dev Moves all debt for one series from `from` in YDai to `to` in MakerDAO.
-    /// It also moves just enough weth from YDai to MakerDAO to enable the debt transfer.
-    /// `to` needs to surround this call with `_vat.hope(address(_treasury))` and `_vat.nope(address(_treasury))`
-    function splitPosition(uint256 maturity, address from, address to) public {
-        require(
-            collateral == WETH,
-            "Dealer: Unsupported collateral for split"
-        );
+    /// @dev Erases a debt position and its equivalent amount of collateral from the user records
+    function settle(uint256 maturity, address user)
+        public onlyAuthorized("Dealer: Not Authorized") returns (uint256, uint256) {
         uint256 price = _oracle.price();
-        uint256 debt = debtDai(maturity, from);
-        uint256 weth = divdrup(debt, price, RAY);
-        posted[from] = posted[from].sub(weth);
-        _treasury.transferPosition(to, weth, debt);            // Transfer weth and debt
-        delete debtYDai[maturity][from];                       // Delete debt
+        uint256 debt = debtDai(maturity, user);
+        uint256 tokenAmount = divdrup(debt, price, RAY);
+        posted[user] = posted[user].sub(tokenAmount);
+        delete debtYDai[maturity][user];
+
+        return (tokenAmount, debt);
     }
 
-    /// @dev Moves all weth from `from` in YDai to `to` in MakerDAO.
-    /// Can only be called with no YDai debt.
+    /// @dev Removes user collateral records from dealer. Can only be called with no YDai debt.
     /// `to` needs to surround this call with `_vat.hope(address(_treasury))` and `_vat.nope(address(_treasury))`
-    function splitCollateral(address from, address to) public {
+    function grab(address user)
+        public onlyAuthorized("Dealer: Not Authorized") returns (uint256)  {
         require(
-            collateral == WETH,
-            "Dealer: Unsupported collateral for split"
+            totalDebtYDai(user) == 0,
+            "Dealer: Settle all debt first"
         );
-        require(
-            totalDebtYDai(from) == 0,
-            "Dealer: Split all debt first"
-        );
-        uint256 weth = posted[from];
-        delete posted[from];
-        _treasury.transferPosition(to, weth, 0);
+        uint256 tokenAmount = posted[user];
+        delete posted[user];
+        return tokenAmount;
     }
 
     /// @dev Calculates the amount to repay and the amount by which to reduce the debt
