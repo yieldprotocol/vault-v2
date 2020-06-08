@@ -217,7 +217,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
     /// Needs to be surrounded by `vat.hope(treasury.address)` and `vat.nope(treasury.address)`
     /// Only the Dealer can call `transferPosition`, to avoid transferring more debt than an user has.
     /// The `dai` parameter is measured in normalized dai, not in the units used in `vat.urns(ilk, user)).art`.
-    function transferPosition(address user, uint256 weth, uint256 dai)
+    function fork(address user, uint256 weth, uint256 dai)
         public override onlyAuthorized("Treasury: Not Authorized")
     {
         // If the Treasury doesn't have enough debt, it needs to borrow dai, which becomes chai savings.
