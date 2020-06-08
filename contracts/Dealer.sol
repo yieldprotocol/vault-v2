@@ -19,6 +19,9 @@ contract Dealer is AuthorizedAccess(), Constants {
     using DecimalMath for uint256;
     using DecimalMath for uint8;
 
+    event Settled(uint256 maturity, uint256 tokens, uint256 debt, address user);
+    event Grabbed(uint256 tokens, address user);
+
     bytes32 public constant WETH = "WETH"; // TODO: Upgrade to 0.6.9 and use immutable
     bytes32 public constant CHAI = "CHAI"; // TODO: Upgrade to 0.6.9 and use immutable
 
@@ -241,7 +244,7 @@ contract Dealer is AuthorizedAccess(), Constants {
         uint256 tokenAmount = divdrup(debt, price, RAY);
         posted[user] = posted[user].sub(tokenAmount);
         delete debtYDai[maturity][user];
-
+        emit Settled(maturity, tokenAmount, debt, user);
         return (tokenAmount, debt);
     }
 
@@ -255,6 +258,7 @@ contract Dealer is AuthorizedAccess(), Constants {
         );
         uint256 tokenAmount = posted[user];
         delete posted[user];
+        emit Grabbed(tokenAmount, user);
         return tokenAmount;
     }
 

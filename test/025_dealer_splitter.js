@@ -14,7 +14,7 @@ const Splitter = artifacts.require('MockSplitter');
 
 const helper = require('ganache-time-traveler');
 const truffleAssert = require('truffle-assertions');
-const { BN, expectRevert } = require('@openzeppelin/test-helpers');
+const { BN, expectRevert, expectEvent } = require('@openzeppelin/test-helpers');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
 
 contract('Dealer - Splitter', async (accounts) =>  {
@@ -192,7 +192,7 @@ contract('Dealer - Splitter', async (accounts) =>  {
             await dealer.post(owner, wethTokens, { from: owner });
 
             assert.equal(
-                await dealer.posted.call(owner),
+                await dealer.posted(owner),
                 wethTokens.toString(),
                 "User does not have collateral in Dealer",
             );
@@ -204,15 +204,32 @@ contract('Dealer - Splitter', async (accounts) =>  {
         });        
 
         it("allows to grab collateral", async() => {
-            assert.equal(
-                await dealer.grab.call(owner, { from: owner }),
+            await dealer.grantAccess(owner, { from: owner }); // Only for testing
+            expectEvent(
+                await dealer.grab(owner, { from: owner }),
+                "Grabbed",
+                {
+                    tokens: wethTokens.toString(),
+                    user: owner,
+                },
+            );
+            // TODO: Implement events and use them for testing.
+            /* assert.equal(
+                await dealer.grab(owner, { from: owner }),
                 wethTokens.toString(),
                 wethTokens + " weth should have been grabbed",
-            );
+            ); */
             assert.equal(
-                await dealer.posted.call(owner),
+                await dealer.posted(owner),
                 0,
                 "User should not have collateral in Dealer",
+            );
+        });
+
+        it("only the collateral owner can move it to MakerDAO", async() => {
+            await expectRevert(
+                splitter.splitCollateral(accounts[1], owner, { from: owner }),
+                "Splitter: Only owner",
             );
         });
 
@@ -246,21 +263,21 @@ contract('Dealer - Splitter', async (accounts) =>  {
                 );
             });
 
+            it("only the position owner can move it to MakerDAO", async() => {
+                await expectRevert(
+                    splitter.splitPosition(maturity1, accounts[1], owner, { from: owner }),
+                    "Splitter: Only owner",
+                );
+            });
+    
+
             it("does not allow to grab collateral if there is user debt", async() => {
+                await dealer.grantAccess(owner, { from: owner }); // Only for testing
                 await expectRevert(
                     dealer.grab(owner, { from: owner }),
                     "Dealer: Settle all debt first",
                 );
             });
-
-            /* it("does not allow to split collateral to MakerDAO if there is user debt", async() => {
-                await vat.hope(treasury.address, { from: owner });
-                await expectRevert(
-                    splitter.splitCollateral(owner, owner, { from: owner }),
-                    "Dealer: Split all debt first",
-                );
-                await vat.nope(treasury.address, { from: owner });
-            }); */
 
             it("allows to settle weth positions", async() => {
                 // We post an extra weth wei to test that only the needed collateral is taken
@@ -268,27 +285,29 @@ contract('Dealer - Splitter', async (accounts) =>  {
                 await weth.approve(dealer.address, 1, { from: owner }); 
                 await dealer.post(owner, 1, { from: owner });
 
-                const [settledWeth, settledDebt] = await dealer.settle.call(maturity1, owner, { from: owner });
+                await dealer.grantAccess(owner, { from: owner }); // Only for testing
+                await dealer.settle(maturity1, owner, { from: owner });
+                // TODO: Implement events and use them for testing.
                 // TODO: Test with CHAI collateral as well
                 // TODO: Test with different rates
 
-                assert.equal(
-                    settledWeth,
-                    wethTokens,
+                /* assert.equal(
+                    result[0],
+                    wethTokens.toString(),
                     "User should have forfeited " + wethTokens + " weth",
                 );
                 assert.equal(
-                    settledDebt,
-                    daiTokens,
+                    result[1],
+                    daiTokens.toString(),
                     "User should have settled " + daiTokens + " debt",
-                );
+                ); */
                 assert.equal(
                     await dealer.debtDai(maturity1, owner),
                     0,
                     "User should not have debt in Dealer",
                 );
                 assert.equal(
-                    await dealer.posted.call(owner),
+                    await dealer.posted(owner),
                     1,
                     "User should not have collateral in Dealer",
                 );
