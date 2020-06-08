@@ -241,10 +241,10 @@ contract End is LibNote {
         live = 0;
         when = now;
         vat.cage();
-        cat.cage();
-        vow.cage();
-        spot.cage();
-        pot.cage();
+        // cat.cage();
+        // vow.cage();
+        // spot.cage();
+        // pot.cage();
     }
 
     function cage(bytes32 ilk) external note {
@@ -253,7 +253,7 @@ contract End is LibNote {
         (Art[ilk],,,,) = vat.ilks(ilk);
         (PipLike pip,) = spot.ilks(ilk);
         // par is a ray, pip returns a wad
-        tag[ilk] = wdiv(spot.par(), uint(pip.read()));
+        tag[ilk] = wdiv(spot.par(), uint(pip.read())); // Tag is a RAY
     }
 
     function skip(bytes32 ilk, uint256 id) external note {
@@ -280,7 +280,7 @@ contract End is LibNote {
         (, uint rate,,,) = vat.ilks(ilk);
         (uint ink, uint art) = vat.urns(ilk, urn);
 
-        uint owe = rmul(rmul(art, rate), tag[ilk]);
+        uint owe = rmul(rmul(art, rate), tag[ilk]); // debt(wad) * rate(ray) * tag(ray) = ink(wad); tag = 1/spot;
         uint wad = min(ink, owe);
         gap[ilk] = add(gap[ilk], sub(owe, wad));
 
