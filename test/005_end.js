@@ -56,6 +56,7 @@ contract('End', async (accounts) =>  {
         await vat.rely(end.address, { from: owner }); // `owner` authorizing `end` to operate for `vat`
         await end.rely(owner, { from: owner });       // `owner` authorizing himself to operate for `end`
         await vat.hope(daiJoin.address, { from: owner });  // `owner` allowing daiJoin to move his dai.
+        await vat.hope(wethJoin.address, { from: owner });  // `owner` allowing wethJoin to move his weth.
     });
 
     it('should setup vat', async() => {
@@ -134,12 +135,12 @@ contract('End', async (accounts) =>  {
                     await end.skim(ilk, owner, { from: owner });
                     
                     assert.equal(
-                        (await vat.urns(ilk, owner)).ink,   
+                        (await vat.urns(ilk, owner)).ink,
                         1,
                         'Owner should have 1 wei weth as collateral.',
                     );
                     assert.equal(
-                        (await vat.urns(ilk, owner)).art,   
+                        (await vat.urns(ilk, owner)).art,
                         0,
                         'Owner should have no dai debt.',
                     );
@@ -155,15 +156,78 @@ contract('End', async (accounts) =>  {
                         await wethJoin.exit(owner, 1, { from: owner });
                         
                         assert.equal(
-                            (await vat.urns(ilk, owner)).ink,   
+                            (await vat.urns(ilk, owner)).ink,
                             0,
                             'Owner should have no collateral in vat',
                         );
                         assert.equal(
-                            await weth.balanceOf(owner),   
+                            await weth.balanceOf(owner),
                             1,
                             'Owner should have 1 weth in hand',
                         );
+                    });
+
+                    it('can set debt manually', async() => {
+                        await end.setDebt(0, { from: owner });
+                        
+                        assert(
+                            await end.debt.call(),
+                            1,
+                            'debt not set',
+                        );
+                    });
+
+                    describe('With system debt', () => {
+                        beforeEach(async() => {
+                            await end.setDebt(1, { from: owner });
+                        });
+                
+                        it('can pack dai', async() => {
+                            await daiJoin.join(owner, daiTokens, { from: owner });
+                            await vat.hope(end.address, { from: owner});
+                            await end.pack(daiTokens, { from: owner });
+                            
+                            assert.equal(
+                                await end.bag(owner),
+                                daiTokens.toString(),
+                                'Owner should have packed ' + daiTokens + ' dai in the bag',
+                            );
+                        });
+
+                        describe('With dai packed', () => {
+                            beforeEach(async() => {
+                                await daiJoin.join(owner, daiTokens, { from: owner });
+                                await vat.hope(end.address, { from: owner});
+                                await end.pack(daiTokens, { from: owner });
+                            });
+                    
+                            it('can set fix manually', async() => {
+                                await end.setFix(ilk, fix, { from: owner });
+                                
+                                assert(
+                                    await end.fix(ilk),
+                                    fix,
+                                    'fix not set',
+                                );
+                            });
+
+                            describe('With fix set', () => {
+                                beforeEach(async() => {
+                                    await end.setFix(ilk, fix, { from: owner });
+                                });
+                        
+                                it('can cash weth', async() => {
+                                    await end.cash(ilk, daiTokens, { from: owner });
+                                    await wethJoin.exit(owner, wethTokens, { from: owner });
+                                    
+                                    assert.equal(
+                                        await weth.balanceOf(owner),
+                                        wethTokens.toString(),
+                                        'Owner should have ' + wethTokens + ' in hand',
+                                    );
+                                });
+                            });
+                        });
                     });
                 });
             });

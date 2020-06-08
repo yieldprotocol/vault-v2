@@ -316,11 +316,20 @@ contract End is LibNote {
         fix[ilk] = rdiv(mul(sub(wad, gap[ilk]), RAY), debt);
     }
 
+    function setDebt(uint debt_) external note {
+        debt = debt_;
+    }
+
     function pack(uint256 wad) external note {
         require(debt != 0, "End/debt-zero");
         vat.move(msg.sender, address(vow), mul(wad, RAY));
         bag[msg.sender] = add(bag[msg.sender], wad);
     }
+
+    function setFix(bytes32 ilk, uint fix_) external note {
+        fix[ilk] = fix_;
+    }
+
     function cash(bytes32 ilk, uint wad) external note {
         require(fix[ilk] != 0, "End/fix-ilk-not-defined");
         vat.flux(ilk, address(this), msg.sender, rmul(wad, fix[ilk]));
