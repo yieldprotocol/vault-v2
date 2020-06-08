@@ -37,45 +37,73 @@ contract Shutdown is Constants() {
     IVault internal _wethDealer;
 
     mapping(uint256 => IYDai) public series;
-    mapping(bytes32 => mapping(address => uint256)) public posted;
-    mapping(bytes32 => mapping(uint256 => mapping(address => uint256))) public debtYDai;
+    mapping(address => uint256) public posted; // Weth only
+    mapping(uint256 => mapping(address => uint256)) public debtYDai;
 
     constructor () public {
         _vat.hope(address(_treasury));
         // TODO: A shutdown function in Treasury that forks the MakerDAO vault and transfers all chai.
     }
 
+    /// @dev Settle system debt in MakerDAO
+    function dissolveDebt() public {
+        // Skim treasury's position
+    }
+
+    /// @dev Put all chai savings in MakerDAO
+    function dissolveSavings() public {
+        // Requires no system debt
+        // Convert savings from treasury into dai for shutdown
+        // Pack all dai in MakerDAO
+        // Cash all dai as weth
+    }
+
     /// @dev Takes a series position from Dealer
     function grab(uint256 maturity, bytes32 collateral, address user) public {
-        // Copy and delete debtYdai[series][collateral][user]
-        // Add and remove inDai(debtYdai[series][collateral][user])*oracles[collateral].price() from/to posted[collateral][user]
+        // Copy and delete debtYdai[series][collateral][user] using `_dealer.settle`
+        // debt[maturity][user](yDai) = debt[maturity][user] + `_dealer.settle.debt` TODO: Return as YDai as well
+        // posted[user] = posted[user] + `_dealer.settle.tokenAmount` (if weth)
+        // posted[user] = posted[user] + chaiToWeth(`_dealer.settle.tokenAmount`) (if chai)
     }
 
     /// @dev Takes any collateral from Dealer, if there are no positions
     function grab(bytes32 collateral, address user) public {
         // Check totalDebtYdai[user] == 0
-        // Add and remove posted[collateral][user]
+        // Remove posted[collateral][user] using `_dealer.grab`
+        // posted[user] = posted[user] + `_dealer.settle.tokenAmount` (if weth)
+        // posted[user] = posted[user] + chaiToWeth(`_dealer.settle.tokenAmount`) (if chai)
     }
 
     /// @dev Converts a chai position to a weth one
-    function chaiToWeth(uint256 maturity, address user) public {
-        
-    }
-
-    /// @dev Converts a weth position to a chai one
-    function wethToChai(uint256 maturity, address user) public {
-        
+    function chaiToWeth() public {
+        // dai = chi * chai
+        // dai = spot * weth
+        // weth = (chi / spot) * chai
+        // Or: weth = (chi * fix[ilk]) * chai
     }
 
     /// @dev Repays debt using YDai
-    function repay(uint256 maturity, bytes32 collateral, address user, uint256 yDaiAmount) public { }
+    /// TODO: Needs to be done before merging debt from all series
+    function repay(uint256 maturity, address user, uint256 yDaiAmount) public {
+        // debt[maturity][user] = debt[maturity][user] - yDaiAmount
+    }
 
-    /// @dev Repays weth debt using posted collateral. Users might have to convert from chai to weth or viceversa
-    /// according to the contract holdings.
-    /// posted[WETH][user] = posted[WETH][user] - inDai(debt[WETH][series][user]) * fix[ilk]; delete debt[WETH][series][user]
-    /// posted[CHAI][user] = posted[CHAI][user] - inDai(debt[CHAI][series][user] * fix[ilk]) / chi; delete debt[CHAI][series][user]
-    function settle(uint256 maturity, bytes32 collateral, address user) public { }
+    /// @dev Redeems YDai for weth
+    /// TODO: Needs to be done before merging debt from all series
+    function redeem(uint256 maturity, uint256 yDaiAmount) public {
+        // inDai(maturity, yDaiAmount) * fix[ilk]
+    }
+
+    /// @dev Repays weth debt using posted collateral.
+    function settle(address user) public {
+        // posted[user] = posted[user] - inDai(debt[maturity][user]) * fix[ilk]; delete debt[maturity][user]
+        // if not enough posted[user] enter liquidation
+    }
 
     /// @dev Withdraw free collateral
-    function withdraw(bytes32 collateral, address user) public { }
+    function withdraw(bytes32 collateral, address user) public {
+        // Requires no system savings
+        // Requires no user debt
+        // Call wethJoin to deliver weth as posted[user]
+    }
 }
