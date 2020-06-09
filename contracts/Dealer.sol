@@ -19,11 +19,8 @@ contract Dealer is AuthorizedAccess(), Constants {
     using DecimalMath for uint256;
     using DecimalMath for uint8;
 
-    event Settled(uint256 indexed maturity, address indexed user, uint256 debt, uint256 tokens);
+    event Settled(uint256 indexed maturity, address indexed user, uint256 daiDebt, uint256 yDaiDebt, uint256 tokens);
     event Grabbed(address indexed user, uint256 tokens);
-
-    bytes32 public constant WETH = "WETH"; // TODO: Upgrade to 0.6.9 and use immutable
-    bytes32 public constant CHAI = "CHAI"; // TODO: Upgrade to 0.6.9 and use immutable
 
     ITreasury internal _treasury;
     IERC20 internal _dai;
@@ -238,19 +235,21 @@ contract Dealer is AuthorizedAccess(), Constants {
 
     /// @dev Erases a debt position and its equivalent amount of collateral from the user records
     function settle(uint256 maturity, address user)
-        public onlyAuthorized("Dealer: Not Authorized") returns (uint256, uint256) {
+        public onlyAuthorized("Dealer: Not Authorized") returns (uint256, uint256, uint256) {
         require(
             isCollateralized(user),
             "Dealer: Undercollateralized"
         );
 
         uint256 price = _oracle.price();
-        uint256 debt = debtDai(maturity, user);
-        uint256 tokenAmount = divdrup(debt, price, RAY);
+        uint256 daiDebt = debtDai(maturity, user);
+        uint256 yDaiDebt = debtYDai[maturity][user];
+        uint256 tokenAmount = divdrup(daiDebt, price, RAY);
         posted[user] = posted[user].sub(tokenAmount);
         delete debtYDai[maturity][user];
-        emit Settled(maturity, user, debt, tokenAmount);
-        return (tokenAmount, debt);
+        emit Settled(maturity, user, daiDebt, yDaiDebt, tokenAmount);
+        // TODO: Revert return parameter order to match MakerDAO's convention. Collateral then debt.
+        return (daiDebt, yDaiDebt, tokenAmount);
     }
 
     /// @dev Removes an amount from the user collateral records in dealer.

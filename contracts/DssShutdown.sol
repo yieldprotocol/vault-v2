@@ -15,12 +15,12 @@ import "./interfaces/IChai.sol";
 import "./interfaces/ITreasury.sol";
 // import "./interfaces/IVault.sol";
 import "./interfaces/IYDai.sol";
-// import "./Constants.sol";
+import "./Constants.sol";
 // import "@nomiclabs/buidler/console.sol";
 
 
 /// @dev Treasury manages the Dai, interacting with MakerDAO's vat and chai when needed.
-contract DssShutdown {
+contract DssShutdown is Constants {
     // using DecimalMath for uint256;
     // using DecimalMath for int256;
     // using DecimalMath for uint8;
@@ -43,6 +43,9 @@ contract DssShutdown {
     mapping(uint256 => IYDai) public series;
     mapping(address => uint256) public posted; // Weth only
     mapping(uint256 => mapping(address => uint256)) public debtYDai;
+
+    bool public settled;
+    bool public cashedOut;
 
     constructor (
         address vat_,
@@ -87,6 +90,7 @@ contract DssShutdown {
         _end.free(collateralType);                               // Free collateral
         uint256 gem = _vat.gem("ETH-A", address(this));          // Find out how much collateral we have now
         _wethJoin.exit(address(this), gem);                      // Take collateral out
+        settled = true;
     }
 
     /// @dev Put all chai savings in MakerDAO and exchange them for weth
@@ -106,10 +110,16 @@ contract DssShutdown {
         _end.cash(collateralType, daiTokens);                // Exchange the dai for weth
         uint256 gem = _vat.gem("ETH-A", address(this));      // Find out how much collateral we have now
         _wethJoin.exit(address(this), gem);                  // Take collateral out
+        cashedOut = true;
     }
 
     /// @dev Takes a series position from Dealer
     function grab(uint256 maturity, bytes32 collateral, address user) public {
+        require(settled && cashedOut, "DssShutdown: Not ready");
+        /* if (collateral == WETH) {
+            _wethDealer.settle(maturity, collateral, user);
+            debt[maturity][user](yDai) = debt[maturity][user] + 
+        } */
         // Copy and delete debtYdai[series][collateral][user] using `_dealer.settle`
         // debt[maturity][user](yDai) = debt[maturity][user] + `_dealer.settle.debt` TODO: Return as YDai as well
         // posted[user] = posted[user] + `_dealer.settle.tokenAmount` (if weth)
@@ -118,6 +128,7 @@ contract DssShutdown {
 
     /// @dev Takes any collateral from Dealer, if there are no positions
     function grab(bytes32 collateral, address user) public {
+        require(settled && cashedOut, "DssShutdown: Not ready");
         // Check totalDebtYdai[user] == 0
         // Remove posted[collateral][user] using `_dealer.grab`
         // posted[user] = posted[user] + `_dealer.settle.tokenAmount` (if weth)
@@ -135,23 +146,27 @@ contract DssShutdown {
     /// @dev Repays debt using YDai
     /// TODO: Needs to be done before merging debt from all series
     function repay(uint256 maturity, address user, uint256 yDaiAmount) public {
+        require(settled && cashedOut, "DssShutdown: Not ready");
         // debt[maturity][user] = debt[maturity][user] - yDaiAmount
     }
 
     /// @dev Redeems YDai for weth
     /// TODO: Needs to be done before merging debt from all series
     function redeem(uint256 maturity, uint256 yDaiAmount) public {
+        require(settled && cashedOut, "DssShutdown: Not ready");
         // inDai(maturity, yDaiAmount) * fix[ilk]
     }
 
     /// @dev Repays weth debt using posted collateral.
     function settle(address user) public {
+        require(settled && cashedOut, "DssShutdown: Not ready");
         // posted[user] = posted[user] - inDai(debt[maturity][user]) * fix[ilk]; delete debt[maturity][user]
         // if not enough posted[user] enter liquidation
     }
 
     /// @dev Withdraw free collateral
     function withdraw(bytes32 collateral, address user) public {
+        require(settled && cashedOut, "DssShutdown: Not ready");
         // Requires no system savings
         // Requires no user debt
         // Call wethJoin to deliver weth as posted[user]

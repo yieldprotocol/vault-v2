@@ -22,7 +22,7 @@ contract Splitter {
             msg.sender == from,
             "Splitter: Only owner"
         );
-        (uint256 weth, uint256 debt) = _vault.settle(maturity, from);
+        (uint256 debt, , uint256 weth) = _vault.settle(maturity, from);
         _treasury.fork(to, weth, debt);            // Transfer weth and debt
     }
 

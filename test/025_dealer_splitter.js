@@ -291,7 +291,8 @@ contract('Dealer - Splitter', async (accounts) =>  {
                     {
                         maturity: maturity1.toString(),
                         user: owner,
-                        debt: daiTokens.toString(),
+                        daiDebt: daiTokens.toString(),
+                        yDaiDebt: daiTokens.toString(),
                         tokens: wethTokens.toString(),
                     },
                 );
