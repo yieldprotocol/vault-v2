@@ -18,7 +18,7 @@ import "@nomiclabs/buidler/console.sol";
 
 
 /// @dev Treasury manages the Dai, interacting with MakerDAO's vat and chai when needed.
-contract Shutdown is Constants() {
+contract DssShutdown is Constants() {
     using DecimalMath for uint256;
     using DecimalMath for int256;
     using DecimalMath for uint8;
