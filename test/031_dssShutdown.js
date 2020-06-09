@@ -253,13 +253,13 @@ contract('DssShutdown', async (accounts) =>  {
             });
 
 
-            it("allows to free treasury collateral without debt", async() => {
+            it("allows to free system collateral without debt", async() => {
                 await dssShutdown.settleTreasury({ from: owner });
 
                 assert.equal(
-                    (await vat.urns(ilk, treasury.address)).ink,
+                    await weth.balanceOf(dssShutdown.address, { from: owner }),
                     wethTokens.toString(),
-                    'DssShutdown should have ' + wethTokens.toString() + ' weth available in WethJoin.',
+                    'DssShutdown should have ' + wethTokens.toString() + ' weth in hand.',
                 );
             });
         });
@@ -277,6 +277,11 @@ contract('DssShutdown', async (accounts) =>  {
                     daiTokens.toString(),
                     'Treasury should have ' + daiTokens.toString() + ' dai debt (in Dai).',
                 );
+
+                // Adding some extra unlocked collateral
+                await weth.deposit({ from: owner, value: 1 });
+                await weth.transfer(treasury.address, 1, { from: owner });
+                await treasury.pushWeth({ from: owner });
             });
 
             describe("with Dss shutdown initiated and tag defined", () => {
@@ -289,16 +294,11 @@ contract('DssShutdown', async (accounts) =>  {
                 it("allows to settle treasury debt", async() => {
                     await dssShutdown.settleTreasury({ from: owner });
 
-                    // Fun fact, MakerDAO rounds in your favour when determining how much collateral to take to settle your debt.
+                    // Fun fact: One of the wei is comes from freeing collateral, the other from rounding up on settling the debt.
                     assert.equal(
-                        (await vat.urns(ilk, treasury.address)).ink,
-                        1,
-                        'Treasury should have 1 weth wei as collateral, instead has ' + ((await vat.urns(ilk, treasury.address)).ink),
-                    );
-                    assert.equal(
-                        (await vat.urns(ilk, treasury.address)).art,
-                        0,
-                        'Treasury should have no dai debt.',
+                        await weth.balanceOf(dssShutdown.address, { from: owner }),
+                        2,
+                        'DssShutdown should have ' + 2 + ' weth in hand.',
                     );
                 });
             });
@@ -359,19 +359,9 @@ contract('DssShutdown', async (accounts) =>  {
                         'Treasury should have no savings (as chai).',
                     );
                     assert.equal(
-                        await vat.gem(ilk, dssShutdown.address),
+                        await weth.balanceOf(dssShutdown.address, { from: owner }),
                         wethTokens.sub(1).toString(), // TODO: Unpack the calculations and round the same way in the tests for parameterization
-                        'DssShutdown should have ' + wethTokens.sub(1).toString() + ' available in wethJoin.',
-                    );
-                    assert.equal(
-                        await end.bag(dssShutdown.address),
-                        daiTokens.toString(),
-                        'DssShutdown should have marked ' + daiTokens.toString() + ' in End.sol as packed.',
-                    );
-                    assert.equal(
-                        await end.out(ilk, dssShutdown.address),
-                        daiTokens.toString(),
-                        'DssShutdown should have marked ' + daiTokens.toString() + ' in End.sol as cashed out.',
+                        'DssShutdown should have ' + wethTokens.sub(1).toString() + ' weth in hand.',
                     );
                 });
             });

@@ -2,7 +2,7 @@ pragma solidity ^0.6.0;
 
 // import "@hq20/contracts/contracts/access/AuthorizedAccess.sol";
 // import "@hq20/contracts/contracts/math/DecimalMath.sol";
-// import "@hq20/contracts/contracts/utils/SafeCast.sol";
+import "@hq20/contracts/contracts/utils/SafeCast.sol";
 // import "@openzeppelin/contracts/access/Ownable.sol";
 // import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -24,7 +24,7 @@ contract DssShutdown {
     // using DecimalMath for uint256;
     // using DecimalMath for int256;
     // using DecimalMath for uint8;
-    // using SafeCast for uint256;
+    using SafeCast for uint256;
     // using SafeCast for int256;
 
     bytes32 constant collateralType = "ETH-A";
@@ -75,10 +75,18 @@ contract DssShutdown {
             _end.tag(collateralType) != 0,
             "DssShutdown: End.sol not caged"
         );
-        _end.skim(collateralType, address(_treasury));           // Settle debts
+        (uint256 ink, uint256 art) = _vat.urns("ETH-A", address(_treasury));
+        _vat.fork(                                               // Take the treasury vault
+            collateralType,
+            address(_treasury),
+            address(this),
+            ink.toInt(),
+            art.toInt()
+        );
+        _end.skim(collateralType, address(this));                // Settle debts
         _end.free(collateralType);                               // Free collateral
-        // (uint256 ink,) = _vat.urns("ETH-A", address(_treasury));
-        // _wethJoin.exit(address(_treasury), ink);                 // Take collateral from Treasury
+        uint256 gem = _vat.gem("ETH-A", address(this));          // Find out how much collateral we have now
+        _wethJoin.exit(address(this), gem);                      // Take collateral out
     }
 
     /// @dev Put all chai savings in MakerDAO and exchange them for weth
@@ -96,8 +104,8 @@ contract DssShutdown {
         _daiJoin.join(address(this), daiTokens);             // Put the dai into MakerDAO
         _end.pack(daiTokens);                                // Into End.sol, more exactly
         _end.cash(collateralType, daiTokens);                // Exchange the dai for weth
-        // (uint256 ink,) = _vat.urns("ETH-A", address(this));
-        // _wethJoin.exit(address(this), ink);                  // Take weth out
+        uint256 gem = _vat.gem("ETH-A", address(this));      // Find out how much collateral we have now
+        _wethJoin.exit(address(this), gem);                  // Take collateral out
     }
 
     /// @dev Takes a series position from Dealer
