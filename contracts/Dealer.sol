@@ -19,8 +19,8 @@ contract Dealer is AuthorizedAccess(), Constants {
     using DecimalMath for uint256;
     using DecimalMath for uint8;
 
-    event Settled(uint256 maturity, uint256 tokens, uint256 debt, address user);
-    event Grabbed(uint256 tokens, address user);
+    event Settled(uint256 indexed maturity, address indexed user, uint256 debt, uint256 tokens);
+    event Grabbed(address indexed user, uint256 tokens);
 
     bytes32 public constant WETH = "WETH"; // TODO: Upgrade to 0.6.9 and use immutable
     bytes32 public constant CHAI = "CHAI"; // TODO: Upgrade to 0.6.9 and use immutable
@@ -163,7 +163,7 @@ contract Dealer is AuthorizedAccess(), Constants {
 
         require(
             isCollateralized(to),
-            "Dealer: Free more collateral"
+            "Dealer: Too much debt"
         );
 
         if (collateral == WETH){
@@ -195,7 +195,7 @@ contract Dealer is AuthorizedAccess(), Constants {
 
         require(
             isCollateralized(to),
-            "Dealer: Post more collateral"
+            "Dealer: Too much debt"
         );
 
         series[maturity].mint(to, yDaiAmount);
@@ -239,25 +239,33 @@ contract Dealer is AuthorizedAccess(), Constants {
     /// @dev Erases a debt position and its equivalent amount of collateral from the user records
     function settle(uint256 maturity, address user)
         public onlyAuthorized("Dealer: Not Authorized") returns (uint256, uint256) {
+        require(
+            isCollateralized(user),
+            "Dealer: Undercollateralized"
+        );
+
         uint256 price = _oracle.price();
         uint256 debt = debtDai(maturity, user);
         uint256 tokenAmount = divdrup(debt, price, RAY);
         posted[user] = posted[user].sub(tokenAmount);
         delete debtYDai[maturity][user];
-        emit Settled(maturity, tokenAmount, debt, user);
+        emit Settled(maturity, user, debt, tokenAmount);
         return (tokenAmount, debt);
     }
 
-    /// @dev Removes an amount from the user collateral records in dealer. Can only be called with no YDai debt.
+    /// @dev Removes an amount from the user collateral records in dealer.
     /// `to` needs to surround this call with `_vat.hope(address(_treasury))` and `_vat.nope(address(_treasury))`
     function grab(address user, uint256 amount)
         public onlyAuthorized("Dealer: Not Authorized") {
-        require(
-            totalDebtYDai(user) == 0,
-            "Dealer: Settle all debt first"
-        );
+
         posted[user] = posted[user].sub(amount, "Dealer: Not enough collateral");
-        emit Grabbed(amount, user);
+
+        require(
+            isCollateralized(user),
+            "Dealer: Too much debt"
+        );
+
+        emit Grabbed(user, amount);
     }
 
     /// @dev Calculates the amount to repay and the amount by which to reduce the debt

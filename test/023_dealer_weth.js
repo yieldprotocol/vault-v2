@@ -273,7 +273,7 @@ contract('Dealer - Weth', async (accounts) =>  {
         it("doesn't allow to borrow yDai beyond borrowing power", async() => {
             await expectRevert(
                 dealer.borrow(maturity1, owner, addBN(daiTokens, 1), { from: owner }), // Borrow 1 wei beyond power
-                "Dealer: Post more collateral",
+                "Dealer: Too much debt",
             );
         });
 
@@ -349,7 +349,7 @@ contract('Dealer - Weth', async (accounts) =>  {
                 it("doesn't allow to withdraw and become undercollateralized", async() => {
                     await expectRevert(
                         dealer.borrow(maturity1, owner, wethTokens, { from: owner }),
-                        "Dealer: Post more collateral",
+                        "Dealer: Too much debt",
                     );
                 });
     

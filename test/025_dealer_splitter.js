@@ -10,7 +10,7 @@ const WethOracle = artifacts.require('WethOracle');
 const Treasury = artifacts.require('Treasury');
 const YDai = artifacts.require('YDai');
 const Dealer = artifacts.require('Dealer');
-const Splitter = artifacts.require('MockSplitter');
+const Splitter = artifacts.require('Splitter');
 
 const helper = require('ganache-time-traveler');
 const truffleAssert = require('truffle-assertions');
@@ -209,8 +209,8 @@ contract('Dealer - Splitter', async (accounts) =>  {
                 await dealer.grab(owner, wethTokens, { from: owner }),
                 "Grabbed",
                 {
-                    tokens: wethTokens.toString(),
                     user: owner,
+                    tokens: wethTokens.toString(),
                 },
             );
             // TODO: Implement events and use them for testing.
@@ -228,15 +228,14 @@ contract('Dealer - Splitter', async (accounts) =>  {
 
         it("only the collateral owner can move it to MakerDAO", async() => {
             await expectRevert(
-                splitter.splitCollateral(accounts[1], owner, { from: owner }),
+                splitter.splitCollateral(accounts[1], owner, wethTokens, { from: owner }),
                 "Splitter: Only owner",
             );
         });
 
-        it("allows to move collateral to MakerDAO if there is no user debt", async() => {
+        it("allows to move collateral to MakerDAO", async() => {
             await vat.hope(treasury.address, { from: owner });
-            await splitter.splitCollateral(owner, owner, { from: owner });
-            await vat.nope(treasury.address, { from: owner });
+            await splitter.splitCollateral(owner, owner, wethTokens, { from: owner });
             // TODO: Test with different source and destination accounts
             // TODO: Test with different rates
 
@@ -271,22 +270,31 @@ contract('Dealer - Splitter', async (accounts) =>  {
             });
     
 
-            it("does not allow to grab collateral if there is user debt", async() => {
+            it("does not allow to grab collateral and become undercollateralized", async() => {
                 await dealer.grantAccess(owner, { from: owner }); // Only for testing
                 await expectRevert(
                     dealer.grab(owner, wethTokens, { from: owner }),
-                    "Dealer: Settle all debt first",
+                    "Dealer: Too much debt",
                 );
             });
 
             it("allows to settle weth positions", async() => {
-                // We post an extra weth wei to test that only the needed collateral is taken
+                // We post an extra weth wei to te, uint256 debtst that only the needed collateral is taken
                 await weth.deposit({ from: owner, value: 1 });
                 await weth.approve(dealer.address, 1, { from: owner }); 
                 await dealer.post(owner, 1, { from: owner });
 
                 await dealer.grantAccess(owner, { from: owner }); // Only for testing
-                await dealer.settle(maturity1, owner, { from: owner });
+                expectEvent(
+                    await dealer.settle(maturity1, owner, { from: owner }),
+                    "Settled",
+                    {
+                        maturity: maturity1.toString(),
+                        user: owner,
+                        debt: daiTokens.toString(),
+                        tokens: wethTokens.toString(),
+                    },
+                );
                 // TODO: Implement events and use them for testing.
                 // TODO: Test with CHAI collateral as well
                 // TODO: Test with different rates
@@ -316,7 +324,6 @@ contract('Dealer - Splitter', async (accounts) =>  {
             it("allows to move user debt to MakerDAO beyond system debt", async() => {
                 await vat.hope(treasury.address, { from: owner });
                 await splitter.splitPosition(maturity1, owner, owner, { from: owner });
-                await vat.nope(treasury.address, { from: owner });
                 // TODO: Test with different source and destination accounts
                 // TODO: Test with different rates
 
