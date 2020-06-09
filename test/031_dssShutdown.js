@@ -64,6 +64,9 @@ contract('Dealer - Splitter', async (accounts) =>  {
     let maturity1;
     let maturity2;
 
+    const tag  = divRay(toRay(1), spot); // TODO: Test with tag different than initial value
+    const fix  = divRay(toRay(1), spot); // TODO: Test with fix different from tag
+
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
@@ -135,7 +138,7 @@ contract('Dealer - Splitter', async (accounts) =>  {
             WETH,
             { from: owner },
         );
-        treasury.grantAccess(dealer.address, { from: owner });
+        await treasury.grantAccess(dealer.address, { from: owner });
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
@@ -149,9 +152,9 @@ contract('Dealer - Splitter', async (accounts) =>  {
             "Symbol",
             { from: owner },
         );
-        dealer.addSeries(yDai1.address, { from: owner });
-        yDai1.grantAccess(dealer.address, { from: owner });
-        treasury.grantAccess(yDai1.address, { from: owner });
+        await dealer.addSeries(yDai1.address, { from: owner });
+        await yDai1.grantAccess(dealer.address, { from: owner });
+        await treasury.grantAccess(yDai1.address, { from: owner });
 
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
         yDai2 = await YDai.new(
@@ -163,9 +166,9 @@ contract('Dealer - Splitter', async (accounts) =>  {
             "Symbol2",
             { from: owner },
         );
-        dealer.addSeries(yDai2.address, { from: owner });
-        yDai2.grantAccess(dealer.address, { from: owner });
-        treasury.grantAccess(yDai2.address, { from: owner });
+        await dealer.addSeries(yDai2.address, { from: owner });
+        await yDai2.grantAccess(dealer.address, { from: owner });
+        await treasury.grantAccess(yDai2.address, { from: owner });
 
         // Setup Splitter
         splitter = await Splitter.new(
@@ -173,8 +176,8 @@ contract('Dealer - Splitter', async (accounts) =>  {
             dealer.address,
             { from: owner },
         );
-        dealer.grantAccess(splitter.address, { from: owner });
-        treasury.grantAccess(splitter.address, { from: owner });
+        await dealer.grantAccess(splitter.address, { from: owner });
+        await treasury.grantAccess(splitter.address, { from: owner });
 
         // Setup DssShutdown
         dssShutdown = await DssShutdown.new(
@@ -183,9 +186,13 @@ contract('Dealer - Splitter', async (accounts) =>  {
             treasury.address,
             { from: owner },
         );
-        dealer.grantAccess(dssShutdown.address, { from: owner }); // TODO: For each dealer
-        treasury.registerDssShutdown(dssShutdown.address, { from: owner });
-        yDai1.grantAccess(dssShutdown.address, { from: owner }); // TODO: For each yDai
+        await dealer.grantAccess(dssShutdown.address, { from: owner }); // TODO: For each dealer
+        await treasury.registerDssShutdown(dssShutdown.address, { from: owner });
+        await yDai1.grantAccess(dssShutdown.address, { from: owner }); // TODO: For each yDai
+
+        // Testing permissions
+        await treasury.grantAccess(owner, { from: owner });
+        await end.rely(owner, { from: owner });       // `owner` replaces MKR governance
     });
 
     afterEach(async() => {
@@ -212,22 +219,64 @@ contract('Dealer - Splitter', async (accounts) =>  {
         console.log();
     }); */
 
+    it("does not attempt to settle treasury debt until Dss shutdown initiated", async() => {
+        await expectRevert(
+            dssShutdown.settleTreasury({ from: owner }),
+            "DssShutdown: End.sol not caged",
+        );
+    });
+
     describe("with posted weth", () => {
         beforeEach(async() => {
             await weth.deposit({ from: owner, value: wethTokens });
-            await weth.approve(dealer.address, wethTokens, { from: owner }); 
-            await dealer.post(owner, wethTokens, { from: owner });
+            await weth.transfer(treasury.address, wethTokens, { from: owner }); 
+            await treasury.pushWeth({ from: owner });
 
-            assert.equal(
-                await dealer.posted(owner),
-                wethTokens.toString(),
-                "User does not have collateral in Dealer",
-            );
             assert.equal(
                 (await vat.urns(ilk, treasury.address)).ink,
                 wethTokens.toString(),
-                "Treasury does not have weth in MakerDAO",
+                'Treasury should have ' + wethTokens.toString() + ' weth wei as collateral',
             );
+        });
+
+        describe("with debt", () => {
+            beforeEach(async() => {
+                await treasury.pullDai(owner, daiTokens, { from: owner });
+                assert.equal(
+                    (await vat.urns(ilk, treasury.address)).art,
+                    daiDebt.toString(),
+                    'Treasury should have ' + daiDebt.toString() + ' dai debt.',
+                );
+                assert.equal(
+                    await treasury.debt(),
+                    daiTokens.toString(),
+                    'Treasury should have ' + daiTokens.toString() + ' dai debt (in Dai).',
+                );
+            });
+
+            describe("with Dss shutdown initiated and tag defined", () => {
+                beforeEach(async() => {
+                    await end.cage({ from: owner });
+                    await end.setTag(ilk, tag, { from: owner });
+                });
+
+
+                it("allows to settle treasury debt if not debt", async() => {
+                    await dssShutdown.settleTreasury({ from: owner });
+
+                    // Fun fact, MakerDAO rounds in your favour when determining how much collateral to take to settle your debt.
+                    assert.equal(
+                        (await vat.urns(ilk, treasury.address)).ink,
+                        1,
+                        'Treasury should have 1 weth wei as collateral, instead has ' + ((await vat.urns(ilk, treasury.address)).ink),
+                    );
+                    assert.equal(
+                        (await vat.urns(ilk, treasury.address)).art,
+                        0,
+                        'Treasury should have no dai debt.',
+                    );
+                });
+            });
         });
 
         describe("with borrowed yDai", () => {
@@ -240,71 +289,6 @@ contract('Dealer - Splitter', async (accounts) =>  {
                     "Owner does not have debt",
                 );
             });
-
-
-            it("does not allow to dissolve treasury until Dss shutdown initiated", async() => {
-                await expectRevert(
-                    dssShutdown.settleTreasury({ from: owner }),
-                    "DssShutdown: End.sol not caged",
-                );
-            });
-
-            /* it("only the position owner can move it to MakerDAO", async() => {
-                await expectRevert(
-                    splitter.splitPosition(maturity1, accounts[1], owner, { from: owner }),
-                    "Splitter: Only owner",
-                );
-            });
-    
-
-
-            it("allows to settle weth positions", async() => {
-                // We post an extra weth wei to test that only the needed collateral is taken
-                await weth.deposit({ from: owner, value: 1 });
-                await weth.approve(dealer.address, 1, { from: owner }); 
-                await dealer.post(owner, 1, { from: owner });
-
-                await dealer.grantAccess(owner, { from: owner }); // Only for testing
-                await dealer.settle(maturity1, owner, { from: owner });
-                // TODO: Implement events and use them for testing.
-                // TODO: Test with CHAI collateral as well
-                // TODO: Test with different rates
-
-                assert.equal(
-                    await dealer.debtDai(maturity1, owner),
-                    0,
-                    "User should not have debt in Dealer",
-                );
-                assert.equal(
-                    await dealer.posted(owner),
-                    1,
-                    "User should not have collateral in Dealer",
-                );
-            });
-
-            it("allows to move user debt to MakerDAO beyond system debt", async() => {
-                await vat.hope(treasury.address, { from: owner });
-                await splitter.splitPosition(maturity1, owner, owner, { from: owner });
-                await vat.nope(treasury.address, { from: owner });
-                // TODO: Test with different source and destination accounts
-                // TODO: Test with different rates
-
-                assert.equal(
-                    (await vat.urns(ilk, owner)).art,
-                    daiDebt.toString(),
-                    "User should have debt in MakerDAO",
-                );
-                assert.equal(
-                    (await vat.urns(ilk, owner)).ink,
-                    wethTokens.toString(),
-                    "User should have collateral in MakerDAO",
-                );
-                assert.equal(
-                    (await vat.urns(ilk, treasury.address)).art,
-                    0,
-                    "Treasury should have no debt in MakerDAO",
-                );
-            }); */
         });
     });
 });
