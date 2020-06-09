@@ -19,8 +19,8 @@ contract Dealer is AuthorizedAccess(), Constants {
     using DecimalMath for uint256;
     using DecimalMath for uint8;
 
-    event Settled(uint256 maturity, uint256 tokens, uint256 debt, address user);
-    event Grabbed(uint256 tokens, address user);
+    event Settled(uint256 indexed maturity, address indexed user, uint256 debt, uint256 tokens);
+    event Grabbed(address indexed user, uint256 tokens);
 
     bytes32 public constant WETH = "WETH"; // TODO: Upgrade to 0.6.9 and use immutable
     bytes32 public constant CHAI = "CHAI"; // TODO: Upgrade to 0.6.9 and use immutable
@@ -244,7 +244,7 @@ contract Dealer is AuthorizedAccess(), Constants {
         uint256 tokenAmount = divdrup(debt, price, RAY);
         posted[user] = posted[user].sub(tokenAmount);
         delete debtYDai[maturity][user];
-        emit Settled(maturity, tokenAmount, debt, user);
+        emit Settled(maturity, user, debt, tokenAmount);
         return (tokenAmount, debt);
     }
 
@@ -257,7 +257,7 @@ contract Dealer is AuthorizedAccess(), Constants {
             "Dealer: Settle all debt first"
         );
         posted[user] = posted[user].sub(amount, "Dealer: Not enough collateral");
-        emit Grabbed(amount, user);
+        emit Grabbed(user, amount);
     }
 
     /// @dev Calculates the amount to repay and the amount by which to reduce the debt

@@ -209,8 +209,8 @@ contract('Dealer - Splitter', async (accounts) =>  {
                 await dealer.grab(owner, wethTokens, { from: owner }),
                 "Grabbed",
                 {
-                    tokens: wethTokens.toString(),
                     user: owner,
+                    tokens: wethTokens.toString(),
                 },
             );
             // TODO: Implement events and use them for testing.
@@ -280,13 +280,22 @@ contract('Dealer - Splitter', async (accounts) =>  {
             });
 
             it("allows to settle weth positions", async() => {
-                // We post an extra weth wei to test that only the needed collateral is taken
+                // We post an extra weth wei to te, uint256 debtst that only the needed collateral is taken
                 await weth.deposit({ from: owner, value: 1 });
                 await weth.approve(dealer.address, 1, { from: owner }); 
                 await dealer.post(owner, 1, { from: owner });
 
                 await dealer.grantAccess(owner, { from: owner }); // Only for testing
-                await dealer.settle(maturity1, owner, { from: owner });
+                expectEvent(
+                    await dealer.settle(maturity1, owner, { from: owner }),
+                    "Settled",
+                    {
+                        maturity: maturity1.toString(),
+                        user: owner,
+                        debt: daiTokens.toString(),
+                        tokens: wethTokens.toString(),
+                    },
+                );
                 // TODO: Implement events and use them for testing.
                 // TODO: Test with CHAI collateral as well
                 // TODO: Test with different rates
