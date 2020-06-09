@@ -10,7 +10,7 @@ const WethOracle = artifacts.require('WethOracle');
 const Treasury = artifacts.require('Treasury');
 const YDai = artifacts.require('YDai');
 const Dealer = artifacts.require('Dealer');
-const Splitter = artifacts.require('MockSplitter');
+const Splitter = artifacts.require('Splitter');
 
 const helper = require('ganache-time-traveler');
 const truffleAssert = require('truffle-assertions');
@@ -228,14 +228,14 @@ contract('Dealer - Splitter', async (accounts) =>  {
 
         it("only the collateral owner can move it to MakerDAO", async() => {
             await expectRevert(
-                splitter.splitCollateral(accounts[1], owner, { from: owner }),
+                splitter.splitCollateral(accounts[1], owner, wethTokens, { from: owner }),
                 "Splitter: Only owner",
             );
         });
 
-        it("allows to move collateral to MakerDAO if there is no user debt", async() => {
+        it("allows to move collateral to MakerDAO", async() => {
             await vat.hope(treasury.address, { from: owner });
-            await splitter.splitCollateral(owner, owner, { from: owner });
+            await splitter.splitCollateral(owner, owner, wethTokens, { from: owner });
             // TODO: Test with different source and destination accounts
             // TODO: Test with different rates
 
