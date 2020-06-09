@@ -95,7 +95,6 @@ contract('Treasury - Saving', async (accounts) =>  {
             daiJoin.address,
             wethJoin.address,
             vat.address,
-            accounts[9],        // TODO: shutdown
         );
         await treasury.grantAccess(owner, { from: owner });
     });

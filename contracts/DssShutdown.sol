@@ -1,53 +1,69 @@
 pragma solidity ^0.6.0;
 
-import "@hq20/contracts/contracts/access/AuthorizedAccess.sol";
-import "@hq20/contracts/contracts/math/DecimalMath.sol";
-import "@hq20/contracts/contracts/utils/SafeCast.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/math/Math.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+// import "@hq20/contracts/contracts/access/AuthorizedAccess.sol";
+// import "@hq20/contracts/contracts/math/DecimalMath.sol";
+// import "@hq20/contracts/contracts/utils/SafeCast.sol";
+// import "@openzeppelin/contracts/access/Ownable.sol";
+// import "@openzeppelin/contracts/math/Math.sol";
+// import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IVat.sol";
+// import "./interfaces/IChai.sol";
+// import "./interfaces/IOracle.sol";
 import "./interfaces/IEnd.sol";
-import "./interfaces/IChai.sol";
-import "./interfaces/IOracle.sol";
 import "./interfaces/ITreasury.sol";
-import "./interfaces/IVault.sol";
+// import "./interfaces/IVault.sol";
 import "./interfaces/IYDai.sol";
-import "./Constants.sol";
-import "@nomiclabs/buidler/console.sol";
+// import "./Constants.sol";
+// import "@nomiclabs/buidler/console.sol";
 
 
 /// @dev Treasury manages the Dai, interacting with MakerDAO's vat and chai when needed.
-contract DssShutdown is Constants() {
-    using DecimalMath for uint256;
-    using DecimalMath for int256;
-    using DecimalMath for uint8;
-    using SafeCast for uint256;
-    using SafeCast for int256;
+contract DssShutdown {
+    // using DecimalMath for uint256;
+    // using DecimalMath for int256;
+    // using DecimalMath for uint8;
+    // using SafeCast for uint256;
+    // using SafeCast for int256;
 
     bytes32 constant collateralType = "ETH-A";
 
     IVat internal _vat;
-    IERC20 internal _weth;
+    /* IERC20 internal _weth;
     IChai internal _chai;
-    IOracle internal _chaiOracle;
+    IOracle internal _chaiOracle; */
     IEnd internal _end;
     ITreasury internal _treasury;
-    IVault internal _chaiDealer;
-    IVault internal _wethDealer;
+    /* IVault internal _chaiDealer;
+    IVault internal _wethDealer; */
 
     mapping(uint256 => IYDai) public series;
     mapping(address => uint256) public posted; // Weth only
     mapping(uint256 => mapping(address => uint256)) public debtYDai;
 
-    constructor () public {
+    constructor (address vat_, address end_, address treasury_) public {
+        // These could be hardcoded for mainnet deployment.
+        _vat = IVat(vat_);
+        _end = IEnd(end_);
+        _treasury = ITreasury(treasury_);
+        /* _dai = IERC20(dai_);
+        _chai = IChai(chai_);
+        _chaiOracle = IOracle(chaiOracle_);
+        _weth = IERC20(weth_);
+        _daiJoin = IDaiJoin(daiJoin_);
+        _wethJoin = IGemJoin(wethJoin_); */
+
         _vat.hope(address(_treasury));
-        // TODO: A shutdown function in Treasury that forks the MakerDAO vault and transfers all chai.
+        // Treasury gives permissions to DssShutdown on the constructor as well.
     }
 
     /// @dev Settle system debt in MakerDAO
-    function dissolveDebt() public {
-        // Skim treasury's position
+    function settleTreasury() public {
+        uint256 tag = _end.tag(collateralType);
+        require(
+            tag != 0,
+            "DssShutdown: End.sol not caged"
+        );
+        _end.skim(collateralType, address(_treasury));
     }
 
     /// @dev Put all chai savings in MakerDAO

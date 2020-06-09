@@ -1,16 +1,25 @@
+// External
 const Vat = artifacts.require('Vat');
 const GemJoin = artifacts.require('GemJoin');
 const DaiJoin = artifacts.require('DaiJoin');
 const Weth = artifacts.require("WETH9");
 const ERC20 = artifacts.require("TestERC20");
 const Pot = artifacts.require('Pot');
+const End = artifacts.require('End');
 const Chai = artifacts.require('Chai');
+
+// Common
 const ChaiOracle = artifacts.require('ChaiOracle');
 const WethOracle = artifacts.require('WethOracle');
 const Treasury = artifacts.require('Treasury');
+
+// YDai
 const YDai = artifacts.require('YDai');
 const Dealer = artifacts.require('Dealer');
+
+// Peripheral
 const Splitter = artifacts.require('MockSplitter');
+const DssShutdown = artifacts.require('DssShutdown');
 
 const helper = require('ganache-time-traveler');
 const truffleAssert = require('truffle-assertions');
@@ -25,6 +34,7 @@ contract('Dealer - Splitter', async (accounts) =>  {
     let dai;
     let daiJoin;
     let pot;
+    let end;
     let chai;
     let chaiOracle;
     let wethOracle;
@@ -33,6 +43,7 @@ contract('Dealer - Splitter', async (accounts) =>  {
     let yDai2;
     let dealer;
     let splitter;
+    let dssShutdown;
 
     let WETH = web3.utils.fromAscii("WETH");
     let CHAI = web3.utils.fromAscii("CHAI");
@@ -75,11 +86,16 @@ contract('Dealer - Splitter', async (accounts) =>  {
         // Setup pot
         pot = await Pot.new(vat.address);
 
+        // Setup end
+        end = await End.new({ from: owner });
+        await end.file(web3.utils.fromAscii("vat"), vat.address);
+
         // Permissions
         await vat.rely(vat.address, { from: owner });
         await vat.rely(wethJoin.address, { from: owner });
         await vat.rely(daiJoin.address, { from: owner });
         await vat.rely(pot.address, { from: owner });
+        await vat.rely(end.address, { from: owner });
         await vat.hope(daiJoin.address, { from: owner });
         await vat.hope(wethJoin.address, { from: owner });
 
@@ -121,15 +137,6 @@ contract('Dealer - Splitter', async (accounts) =>  {
         );
         treasury.grantAccess(dealer.address, { from: owner });
 
-        // Setup Splitter
-        splitter = await Splitter.new(
-            treasury.address,
-            dealer.address,
-            { from: owner },
-        );
-        dealer.grantAccess(splitter.address, { from: owner });
-        treasury.grantAccess(splitter.address, { from: owner });
-
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
@@ -159,6 +166,26 @@ contract('Dealer - Splitter', async (accounts) =>  {
         dealer.addSeries(yDai2.address, { from: owner });
         yDai2.grantAccess(dealer.address, { from: owner });
         treasury.grantAccess(yDai2.address, { from: owner });
+
+        // Setup Splitter
+        splitter = await Splitter.new(
+            treasury.address,
+            dealer.address,
+            { from: owner },
+        );
+        dealer.grantAccess(splitter.address, { from: owner });
+        treasury.grantAccess(splitter.address, { from: owner });
+
+        // Setup DssShutdown
+        dssShutdown = await DssShutdown.new(
+            vat.address,
+            end.address,
+            treasury.address,
+            { from: owner },
+        );
+        dealer.grantAccess(dssShutdown.address, { from: owner }); // TODO: For each dealer
+        treasury.registerDssShutdown(dssShutdown.address, { from: owner });
+        yDai1.grantAccess(dssShutdown.address, { from: owner }); // TODO: For each yDai
     });
 
     afterEach(async() => {
@@ -201,55 +228,6 @@ contract('Dealer - Splitter', async (accounts) =>  {
                 wethTokens.toString(),
                 "Treasury does not have weth in MakerDAO",
             );
-        });        
-
-        it("allows to grab collateral", async() => {
-            await dealer.grantAccess(owner, { from: owner }); // Only for testing
-            expectEvent(
-                await dealer.grab(owner, wethTokens, { from: owner }),
-                "Grabbed",
-                {
-                    tokens: wethTokens.toString(),
-                    user: owner,
-                },
-            );
-            // TODO: Implement events and use them for testing.
-            /* assert.equal(
-                await dealer.grab(owner, { from: owner }),
-                wethTokens.toString(),
-                wethTokens + " weth should have been grabbed",
-            ); */
-            assert.equal(
-                await dealer.posted(owner),
-                0,
-                "User should not have collateral in Dealer",
-            );
-        });
-
-        it("only the collateral owner can move it to MakerDAO", async() => {
-            await expectRevert(
-                splitter.splitCollateral(accounts[1], owner, { from: owner }),
-                "Splitter: Only owner",
-            );
-        });
-
-        it("allows to move collateral to MakerDAO if there is no user debt", async() => {
-            await vat.hope(treasury.address, { from: owner });
-            await splitter.splitCollateral(owner, owner, { from: owner });
-            await vat.nope(treasury.address, { from: owner });
-            // TODO: Test with different source and destination accounts
-            // TODO: Test with different rates
-
-            assert.equal(
-                (await vat.urns(ilk, owner)).ink,
-                wethTokens.toString(),
-                "User should have collateral in MakerDAO",
-            );
-            assert.equal(
-                (await vat.urns(ilk, treasury.address)).ink,
-                0,
-                "Treasury should have no collateral in MakerDAO",
-            );
         });
 
         describe("with borrowed yDai", () => {
@@ -263,7 +241,15 @@ contract('Dealer - Splitter', async (accounts) =>  {
                 );
             });
 
-            it("only the position owner can move it to MakerDAO", async() => {
+
+            it("does not allow to dissolve treasury until Dss shutdown initiated", async() => {
+                await expectRevert(
+                    dssShutdown.settleTreasury({ from: owner }),
+                    "DssShutdown: End.sol not caged",
+                );
+            });
+
+            /* it("only the position owner can move it to MakerDAO", async() => {
                 await expectRevert(
                     splitter.splitPosition(maturity1, accounts[1], owner, { from: owner }),
                     "Splitter: Only owner",
@@ -271,13 +257,6 @@ contract('Dealer - Splitter', async (accounts) =>  {
             });
     
 
-            it("does not allow to grab collateral if there is user debt", async() => {
-                await dealer.grantAccess(owner, { from: owner }); // Only for testing
-                await expectRevert(
-                    dealer.grab(owner, wethTokens, { from: owner }),
-                    "Dealer: Settle all debt first",
-                );
-            });
 
             it("allows to settle weth positions", async() => {
                 // We post an extra weth wei to test that only the needed collateral is taken
@@ -291,16 +270,6 @@ contract('Dealer - Splitter', async (accounts) =>  {
                 // TODO: Test with CHAI collateral as well
                 // TODO: Test with different rates
 
-                /* assert.equal(
-                    result[0],
-                    wethTokens.toString(),
-                    "User should have forfeited " + wethTokens + " weth",
-                );
-                assert.equal(
-                    result[1],
-                    daiTokens.toString(),
-                    "User should have settled " + daiTokens + " debt",
-                ); */
                 assert.equal(
                     await dealer.debtDai(maturity1, owner),
                     0,
@@ -335,7 +304,7 @@ contract('Dealer - Splitter', async (accounts) =>  {
                     0,
                     "Treasury should have no debt in MakerDAO",
                 );
-            });
+            }); */
         });
     });
 });

@@ -33,6 +33,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
     IDaiJoin internal _daiJoin;
     IGemJoin internal _wethJoin;
     IVat internal _vat;
+    address internal _dssShutdown;
 
     constructor (
         address dai_,
@@ -41,8 +42,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
         address weth_,
         address daiJoin_,
         address wethJoin_,
-        address vat_,
-        address shutdown_
+        address vat_
     ) public {
         // These could be hardcoded for mainnet deployment.
         _dai = IERC20(dai_);
@@ -57,8 +57,6 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
 
         _dai.approve(address(_chai), uint256(-1));      // Chai will never cheat on us
         _weth.approve(address(_wethJoin), uint256(-1)); // WethJoin will never cheat on us
-        _chai.approve(address(shutdown_), uint256(-1)); // Shutdown will never cheat on us
-        _vat.hope(address(shutdown_));                  // Shutdown will never cheat on us
     }
 
     /// @dev Returns the Treasury debt towards MakerDAO, as the dai borrowed times the stability fee for Weth.
@@ -248,5 +246,16 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
             dai.divd(rate, RAY).toInt()
         );
         _vat.nope(user);
+    }
+
+    /// @dev Registers the one contract that will shut down the Treasury if MakerDAO shuts down.
+    function registerDssShutdown(address dssShutdown_) public onlyOwner {
+        require(
+            _dssShutdown == address(0),
+            "Treasury: Shutdown already set"
+        );
+        _dssShutdown = dssShutdown_;
+        _chai.approve(address(_dssShutdown), uint256(-1)); // Shutdown will never cheat on us
+        _vat.hope(address(_dssShutdown));                  // Shutdown will never cheat on us
     }
 }

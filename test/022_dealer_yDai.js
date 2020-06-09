@@ -103,7 +103,6 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
             daiJoin.address,
             wethJoin.address,
             vat.address,
-            accounts[9],        // TODO: shutdown
         );
 
         // Setup Dealer
