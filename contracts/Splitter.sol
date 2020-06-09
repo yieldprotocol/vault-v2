@@ -16,7 +16,7 @@ contract Splitter {
 
     /// @dev Moves all debt for one series from `from` in YDai to `to` in MakerDAO.
     /// It also moves just enough weth from YDai to MakerDAO to enable the debt transfer.
-    /// `to` needs to surround this call with `_vat.hope(address(_treasury))` and `_vat.nope(address(_treasury))`
+    /// `to` needs to authorize treasury in vat with `_vat.hope(address(_treasury))`.
     function split(uint256 maturity, address from, address to) public {
         require(
             msg.sender == from,
@@ -28,7 +28,7 @@ contract Splitter {
 
     /// @dev Moves all weth from `from` in YDai to `to` in MakerDAO.
     /// Can only be called with no YDai debt.
-    /// `to` needs to surround this call with `_vat.hope(address(_treasury))` and `_vat.nope(address(_treasury))`
+    /// `to` needs to authorize treasury in vat with `_vat.hope(address(_treasury))`.
     function split(address from, address to) public {
         require(
             msg.sender == from,

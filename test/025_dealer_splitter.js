@@ -236,7 +236,6 @@ contract('Dealer - Splitter', async (accounts) =>  {
         it("allows to move collateral to MakerDAO if there is no user debt", async() => {
             await vat.hope(treasury.address, { from: owner });
             await splitter.splitCollateral(owner, owner, { from: owner });
-            await vat.nope(treasury.address, { from: owner });
             // TODO: Test with different source and destination accounts
             // TODO: Test with different rates
 
@@ -325,7 +324,6 @@ contract('Dealer - Splitter', async (accounts) =>  {
             it("allows to move user debt to MakerDAO beyond system debt", async() => {
                 await vat.hope(treasury.address, { from: owner });
                 await splitter.splitPosition(maturity1, owner, owner, { from: owner });
-                await vat.nope(treasury.address, { from: owner });
                 // TODO: Test with different source and destination accounts
                 // TODO: Test with different rates
 
