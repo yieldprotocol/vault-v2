@@ -197,7 +197,7 @@ contract('End', async (accounts) =>  {
                         describe('With dai packed', () => {
                             beforeEach(async() => {
                                 await daiJoin.join(owner, daiTokens, { from: owner });
-                                await vat.hope(end.address, { from: owner});
+                                await vat.hope(end.address, { from: owner });
                                 await end.pack(daiTokens, { from: owner });
                             });
                     

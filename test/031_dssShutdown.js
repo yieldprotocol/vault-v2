@@ -26,7 +26,7 @@ const truffleAssert = require('truffle-assertions');
 const { BN, expectRevert, expectEvent } = require('@openzeppelin/test-helpers');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
 
-contract('Dealer - Splitter', async (accounts) =>  {
+contract('DssShutdown', async (accounts) =>  {
     let [ owner, user ] = accounts;
     let vat;
     let weth;
@@ -58,9 +58,11 @@ contract('Dealer - Splitter', async (accounts) =>  {
     const limits = toRad(10000);
     const spot  = toRay(1.5);
     const rate  = toRay(1.25);
+    const chi = toRay(1.2);
     const daiDebt = toWad(120);
     const daiTokens = mulRay(daiDebt, rate);
     const wethTokens = divRay(daiTokens, spot);
+    const chaiTokens = divRay(daiTokens, chi);
     let maturity1;
     let maturity2;
 
@@ -88,6 +90,7 @@ contract('Dealer - Splitter', async (accounts) =>  {
 
         // Setup pot
         pot = await Pot.new(vat.address);
+        await pot.setChi(chi, { from: owner });
 
         // Setup end
         end = await End.new({ from: owner });
@@ -99,8 +102,6 @@ contract('Dealer - Splitter', async (accounts) =>  {
         await vat.rely(daiJoin.address, { from: owner });
         await vat.rely(pot.address, { from: owner });
         await vat.rely(end.address, { from: owner });
-        await vat.hope(daiJoin.address, { from: owner });
-        await vat.hope(wethJoin.address, { from: owner });
 
         // Setup chai
         chai = await Chai.new(
@@ -182,7 +183,11 @@ contract('Dealer - Splitter', async (accounts) =>  {
         // Setup DssShutdown
         dssShutdown = await DssShutdown.new(
             vat.address,
+            daiJoin.address,
+            weth.address,
+            wethJoin.address,
             end.address,
+            chai.address,
             treasury.address,
             { from: owner },
         );
@@ -191,6 +196,8 @@ contract('Dealer - Splitter', async (accounts) =>  {
         await yDai1.grantAccess(dssShutdown.address, { from: owner }); // TODO: For each yDai
 
         // Testing permissions
+        await vat.hope(daiJoin.address, { from: owner });
+        await vat.hope(wethJoin.address, { from: owner });
         await treasury.grantAccess(owner, { from: owner });
         await end.rely(owner, { from: owner });       // `owner` replaces MKR governance
     });
@@ -198,13 +205,13 @@ contract('Dealer - Splitter', async (accounts) =>  {
     afterEach(async() => {
         await helper.revertToSnapshot(snapshotId);
     });
-    
+
     /* it("get the size of the contract", async() => {
         console.log();
         console.log("·--------------------|------------------|------------------|------------------·");
         console.log("|  Contract          ·  Bytecode        ·  Deployed        ·  Constructor     |");
         console.log("·····················|··················|··················|···················");
-        
+
         const bytecode = dealer.constructor._json.bytecode;
         const deployed = dealer.constructor._json.deployedBytecode;
         const sizeOfB  = bytecode.length / 2;
@@ -229,7 +236,7 @@ contract('Dealer - Splitter', async (accounts) =>  {
     describe("with posted weth", () => {
         beforeEach(async() => {
             await weth.deposit({ from: owner, value: wethTokens });
-            await weth.transfer(treasury.address, wethTokens, { from: owner }); 
+            await weth.transfer(treasury.address, wethTokens, { from: owner });
             await treasury.pushWeth({ from: owner });
 
             assert.equal(
@@ -237,6 +244,24 @@ contract('Dealer - Splitter', async (accounts) =>  {
                 wethTokens.toString(),
                 'Treasury should have ' + wethTokens.toString() + ' weth wei as collateral',
             );
+        });
+
+        describe("with Dss shutdown initiated and tag defined", () => {
+            beforeEach(async() => {
+                await end.cage({ from: owner });
+                await end.setTag(ilk, tag, { from: owner });
+            });
+
+
+            it("allows to free treasury collateral without debt", async() => {
+                await dssShutdown.settleTreasury({ from: owner });
+
+                assert.equal(
+                    (await vat.urns(ilk, treasury.address)).ink,
+                    wethTokens.toString(),
+                    'DssShutdown should have ' + wethTokens.toString() + ' weth available in WethJoin.',
+                );
+            });
         });
 
         describe("with debt", () => {
@@ -261,7 +286,7 @@ contract('Dealer - Splitter', async (accounts) =>  {
                 });
 
 
-                it("allows to settle treasury debt if not debt", async() => {
+                it("allows to settle treasury debt", async() => {
                     await dssShutdown.settleTreasury({ from: owner });
 
                     // Fun fact, MakerDAO rounds in your favour when determining how much collateral to take to settle your debt.
@@ -279,15 +304,76 @@ contract('Dealer - Splitter', async (accounts) =>  {
             });
         });
 
-        describe("with borrowed yDai", () => {
+        describe("with savings", () => {
             beforeEach(async() => {
-                await dealer.borrow(maturity1, owner, daiTokens, { from: owner });
+                // Borrow some dai
+                await weth.deposit({ from: owner, value: wethTokens});
+                await weth.approve(wethJoin.address, wethTokens, { from: owner });
+                await wethJoin.join(owner, wethTokens, { from: owner });
+                await vat.frob(ilk, owner, owner, owner, wethTokens, daiDebt, { from: owner });
+                await daiJoin.exit(owner, daiTokens, { from: owner });
+
+                await dai.transfer(treasury.address, daiTokens, { from: owner });
+                await treasury.pushDai({ from: owner });
 
                 assert.equal(
-                    await dealer.debtDai(maturity1, owner),
-                    daiTokens.toString(),
-                    "Owner does not have debt",
+                    await chai.balanceOf(treasury.address),
+                    chaiTokens.toString(),
+                    'Treasury should have ' + daiTokens.toString() + ' savings (as chai).',
                 );
+            });
+
+            describe("with Dss shutdown initiated and fix defined", () => {
+                beforeEach(async() => {
+                    // End.sol needs to have weth somehow, for example by settling some debt
+                    await vat.hope(daiJoin.address, { from: user });
+                    await vat.hope(wethJoin.address, { from: user });
+                    await weth.deposit({ from: user, value: wethTokens});
+                    await weth.approve(wethJoin.address, wethTokens, { from: user });
+                    await wethJoin.join(user, wethTokens, { from: user });
+                    await vat.frob(ilk, user, user, user, wethTokens, daiDebt, { from: user });
+                    await daiJoin.exit(user, daiTokens, { from: user });
+
+                    await end.cage({ from: owner });
+                    await end.setTag(ilk, tag, { from: owner });
+                    await end.setDebt(1, { from: owner });
+                    await end.setFix(ilk, fix, { from: owner });
+
+                    // Settle some random guy's debt for end.sol to have weth
+                    await end.skim(ilk, user, { from: user });
+                });
+
+                it("allows to cash dai for weth", async() => {
+                    assert.equal(
+                        await vat.gem(ilk, dssShutdown.address),
+                        0,
+                        'DssShutdown should have no weth in WethJoin',
+                    );
+
+                    await dssShutdown.cashSavings({ from: owner });
+
+                    // Fun fact, MakerDAO rounds in your favour when determining how much collateral to take to settle your debt.
+                    assert.equal(
+                        await chai.balanceOf(treasury.address),
+                        0,
+                        'Treasury should have no savings (as chai).',
+                    );
+                    assert.equal(
+                        await vat.gem(ilk, dssShutdown.address),
+                        wethTokens.sub(1).toString(), // TODO: Unpack the calculations and round the same way in the tests for parameterization
+                        'DssShutdown should have ' + wethTokens.sub(1).toString() + ' available in wethJoin.',
+                    );
+                    assert.equal(
+                        await end.bag(dssShutdown.address),
+                        daiTokens.toString(),
+                        'DssShutdown should have marked ' + daiTokens.toString() + ' in End.sol as packed.',
+                    );
+                    assert.equal(
+                        await end.out(ilk, dssShutdown.address),
+                        daiTokens.toString(),
+                        'DssShutdown should have marked ' + daiTokens.toString() + ' in End.sol as cashed out.',
+                    );
+                });
             });
         });
     });

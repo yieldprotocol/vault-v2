@@ -62,7 +62,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
     /// @dev Returns the Treasury debt towards MakerDAO, as the dai borrowed times the stability fee for Weth.
     /// We have borrowed (rate * art)
     /// Borrowing Limit (rate * art) <= (ink * spot)
-    function debt() public view returns(uint256) {
+    function debt() public view override returns(uint256) {
         (, uint256 rate,,,) = _vat.ilks("ETH-A");            // Retrieve the MakerDAO stability fee for Weth
         (, uint256 art) = _vat.urns("ETH-A", address(this)); // Retrieve the Treasury debt in MakerDAO
         return art.muld(rate, RAY);
@@ -77,7 +77,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
     }
 
     /// @dev Returns the amount of Dai in this contract.
-    function savings() public returns(uint256){
+    function savings() public override returns(uint256){
         return _chai.dai(address(this));
     }
 

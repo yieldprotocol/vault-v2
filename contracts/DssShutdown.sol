@@ -5,11 +5,13 @@ pragma solidity ^0.6.0;
 // import "@hq20/contracts/contracts/utils/SafeCast.sol";
 // import "@openzeppelin/contracts/access/Ownable.sol";
 // import "@openzeppelin/contracts/math/Math.sol";
-// import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IVat.sol";
-// import "./interfaces/IChai.sol";
+import "./interfaces/IDaiJoin.sol";
+import "./interfaces/IGemJoin.sol";
 // import "./interfaces/IOracle.sol";
 import "./interfaces/IEnd.sol";
+import "./interfaces/IChai.sol";
 import "./interfaces/ITreasury.sol";
 // import "./interfaces/IVault.sol";
 import "./interfaces/IYDai.sol";
@@ -28,10 +30,12 @@ contract DssShutdown {
     bytes32 constant collateralType = "ETH-A";
 
     IVat internal _vat;
-    /* IERC20 internal _weth;
-    IChai internal _chai;
-    IOracle internal _chaiOracle; */
+    IDaiJoin internal _daiJoin;
+    IERC20 internal _weth;
+    IGemJoin internal _wethJoin;
+    // IOracle internal _chaiOracle;
     IEnd internal _end;
+    IChai internal _chai;
     ITreasury internal _treasury;
     /* IVault internal _chaiDealer;
     IVault internal _wethDealer; */
@@ -40,38 +44,60 @@ contract DssShutdown {
     mapping(address => uint256) public posted; // Weth only
     mapping(uint256 => mapping(address => uint256)) public debtYDai;
 
-    constructor (address vat_, address end_, address treasury_) public {
+    constructor (
+        address vat_,
+        address daiJoin_,
+        address weth_,
+        address wethJoin_,
+        address end_,
+        address chai_,
+        address treasury_
+    ) public {
         // These could be hardcoded for mainnet deployment.
         _vat = IVat(vat_);
-        _end = IEnd(end_);
-        _treasury = ITreasury(treasury_);
-        /* _dai = IERC20(dai_);
-        _chai = IChai(chai_);
-        _chaiOracle = IOracle(chaiOracle_);
-        _weth = IERC20(weth_);
         _daiJoin = IDaiJoin(daiJoin_);
-        _wethJoin = IGemJoin(wethJoin_); */
+        _weth = IERC20(weth_);
+        _wethJoin = IGemJoin(wethJoin_);
+        _end = IEnd(end_);
+        _chai = IChai(chai_);
+        _treasury = ITreasury(treasury_);
+        // _dai = IERC20(dai_);
+        // _chaiOracle = IOracle(chaiOracle_);
 
         _vat.hope(address(_treasury));
+        _vat.hope(address(_end));
         // Treasury gives permissions to DssShutdown on the constructor as well.
     }
 
-    /// @dev Settle system debt in MakerDAO
+    /// @dev Settle system debt in MakerDAO and free remaining collateral.
     function settleTreasury() public {
-        uint256 tag = _end.tag(collateralType);
         require(
-            tag != 0,
+            _end.tag(collateralType) != 0,
             "DssShutdown: End.sol not caged"
         );
-        _end.skim(collateralType, address(_treasury));
+        _end.skim(collateralType, address(_treasury));           // Settle debts
+        _end.free(collateralType);                               // Free collateral
+        // (uint256 ink,) = _vat.urns("ETH-A", address(_treasury));
+        // _wethJoin.exit(address(_treasury), ink);                 // Take collateral from Treasury
     }
 
-    /// @dev Put all chai savings in MakerDAO
-    function dissolveSavings() public {
-        // Requires no system debt
-        // Convert savings from treasury into dai for shutdown
-        // Pack all dai in MakerDAO
-        // Cash all dai as weth
+    /// @dev Put all chai savings in MakerDAO and exchange them for weth
+    function cashSavings() public {
+        require(
+            _end.tag(collateralType) != 0,
+            "DssShutdown: End.sol not caged"
+        );
+        require(
+            _end.fix(collateralType) != 0,
+            "DssShutdown: End.sol not ready"
+        );
+        uint256 daiTokens = _chai.dai(address(_treasury));   // Find out how much is the chai worth
+        _chai.draw(address(_treasury), _treasury.savings()); // Get the chai as dai
+        _daiJoin.join(address(this), daiTokens);             // Put the dai into MakerDAO
+        _end.pack(daiTokens);                                // Into End.sol, more exactly
+        _end.cash(collateralType, daiTokens);                // Exchange the dai for weth
+        // (uint256 ink,) = _vat.urns("ETH-A", address(this));
+        // _wethJoin.exit(address(this), ink);                  // Take weth out
     }
 
     /// @dev Takes a series position from Dealer
