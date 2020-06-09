@@ -105,6 +105,7 @@ contract('Dealer - Weth', async (accounts) =>  {
             daiJoin.address,
             wethJoin.address,
             vat.address,
+            accounts[9],        // TODO: shutdown
             { from: owner },
         );
 

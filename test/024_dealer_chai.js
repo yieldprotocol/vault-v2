@@ -107,6 +107,7 @@ contract('Dealer - Chai', async (accounts) =>  {
             daiJoin.address,
             wethJoin.address,
             vat.address,
+            accounts[9],        // TODO: shutdown
         );
 
         // Setup Dealer

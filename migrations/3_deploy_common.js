@@ -62,6 +62,7 @@ module.exports = async (deployer, network, accounts) => {
     daiJoinAddress,    // daiJoin
     wethJoinAddress,   // wethJoin
     vatAddress,        // vat
+    accounts[9],        // TODO: shutdown
   );
   treasury = await Treasury.deployed();
   treasuryAddress = treasury.address;

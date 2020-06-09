@@ -41,7 +41,8 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
         address weth_,
         address daiJoin_,
         address wethJoin_,
-        address vat_
+        address vat_,
+        address shutdown_
     ) public {
         // These could be hardcoded for mainnet deployment.
         _dai = IERC20(dai_);
@@ -56,6 +57,8 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
 
         _dai.approve(address(_chai), uint256(-1));      // Chai will never cheat on us
         _weth.approve(address(_wethJoin), uint256(-1)); // WethJoin will never cheat on us
+        _chai.approve(address(shutdown_), uint256(-1)); // Shutdown will never cheat on us
+        _vat.hope(address(shutdown_));                  // Shutdown will never cheat on us
     }
 
     /// @dev Returns the Treasury debt towards MakerDAO, as the dai borrowed times the stability fee for Weth.
