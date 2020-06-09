@@ -163,7 +163,7 @@ contract Dealer is AuthorizedAccess(), Constants {
 
         require(
             isCollateralized(to),
-            "Dealer: Free more collateral"
+            "Dealer: Too much debt"
         );
 
         if (collateral == WETH){
@@ -195,7 +195,7 @@ contract Dealer is AuthorizedAccess(), Constants {
 
         require(
             isCollateralized(to),
-            "Dealer: Post more collateral"
+            "Dealer: Too much debt"
         );
 
         series[maturity].mint(to, yDaiAmount);
@@ -241,7 +241,7 @@ contract Dealer is AuthorizedAccess(), Constants {
         public onlyAuthorized("Dealer: Not Authorized") returns (uint256, uint256) {
         require(
             isCollateralized(user),
-            "Dealer: Post more collateral"
+            "Dealer: Undercollateralized"
         );
 
         uint256 price = _oracle.price();
@@ -253,15 +253,18 @@ contract Dealer is AuthorizedAccess(), Constants {
         return (tokenAmount, debt);
     }
 
-    /// @dev Removes an amount from the user collateral records in dealer. Can only be called with no YDai debt.
+    /// @dev Removes an amount from the user collateral records in dealer.
     /// `to` needs to surround this call with `_vat.hope(address(_treasury))` and `_vat.nope(address(_treasury))`
     function grab(address user, uint256 amount)
         public onlyAuthorized("Dealer: Not Authorized") {
-        require(
-            totalDebtYDai(user) == 0,
-            "Dealer: Settle all debt first"
-        );
+
         posted[user] = posted[user].sub(amount, "Dealer: Not enough collateral");
+
+        require(
+            isCollateralized(user),
+            "Dealer: Too much debt"
+        );
+
         emit Grabbed(user, amount);
     }
 

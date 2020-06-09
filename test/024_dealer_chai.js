@@ -300,7 +300,7 @@ contract('Dealer - Chai', async (accounts) =>  {
     
             await expectRevert(
                 dealer.borrow(maturity1, owner, addBN(daiTokens, 1), { from: owner }),
-                "Dealer: Post more collateral",
+                "Dealer: Too much debt",
             );
         });
 
@@ -323,7 +323,7 @@ contract('Dealer - Chai', async (accounts) =>  {
 
                 await expectRevert(
                     dealer.borrow(maturity1, owner, chaiTokens, { from: owner }),
-                    "Dealer: Post more collateral",
+                    "Dealer: Too much debt",
                 );
             });
 

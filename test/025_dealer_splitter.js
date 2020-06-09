@@ -270,11 +270,11 @@ contract('Dealer - Splitter', async (accounts) =>  {
             });
     
 
-            it("does not allow to grab collateral if there is user debt", async() => {
+            it("does not allow to grab collateral and become undercollateralized", async() => {
                 await dealer.grantAccess(owner, { from: owner }); // Only for testing
                 await expectRevert(
                     dealer.grab(owner, wethTokens, { from: owner }),
-                    "Dealer: Settle all debt first",
+                    "Dealer: Too much debt",
                 );
             });
 
