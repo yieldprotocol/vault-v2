@@ -19,7 +19,7 @@ contract Dealer is AuthorizedAccess(), Constants {
     using DecimalMath for uint256;
     using DecimalMath for uint8;
 
-    event Settled(uint256 indexed maturity, address indexed user, uint256 daiDebt, uint256 yDaiDebt, uint256 tokens);
+    event Settled(uint256 indexed maturity, address indexed user, uint256 tokens, uint256 daiDebt, uint256 yDaiDebt);
     event Grabbed(address indexed user, uint256 tokens);
 
     ITreasury internal _treasury;
@@ -247,9 +247,9 @@ contract Dealer is AuthorizedAccess(), Constants {
         uint256 tokenAmount = divdrup(daiDebt, price, RAY);
         posted[user] = posted[user].sub(tokenAmount);
         delete debtYDai[maturity][user];
-        emit Settled(maturity, user, daiDebt, yDaiDebt, tokenAmount);
+        emit Settled(maturity, user, tokenAmount, daiDebt, yDaiDebt);
         // TODO: Revert return parameter order to match MakerDAO's convention. Collateral then debt.
-        return (daiDebt, yDaiDebt, tokenAmount);
+        return (tokenAmount, daiDebt, yDaiDebt);
     }
 
     /// @dev Removes an amount from the user collateral records in dealer.

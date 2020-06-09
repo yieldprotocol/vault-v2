@@ -291,9 +291,9 @@ contract('Dealer - Splitter', async (accounts) =>  {
                     {
                         maturity: maturity1.toString(),
                         user: owner,
+                        tokens: wethTokens.toString(),
                         daiDebt: daiTokens.toString(),
                         yDaiDebt: daiTokens.toString(),
-                        tokens: wethTokens.toString(),
                     },
                 );
                 // TODO: Implement events and use them for testing.
