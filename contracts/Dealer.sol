@@ -239,6 +239,11 @@ contract Dealer is AuthorizedAccess(), Constants {
     /// @dev Erases a debt position and its equivalent amount of collateral from the user records
     function settle(uint256 maturity, address user)
         public onlyAuthorized("Dealer: Not Authorized") returns (uint256, uint256) {
+        require(
+            isCollateralized(user),
+            "Dealer: Post more collateral"
+        );
+
         uint256 price = _oracle.price();
         uint256 debt = debtDai(maturity, user);
         uint256 tokenAmount = divdrup(debt, price, RAY);
