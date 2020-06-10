@@ -75,6 +75,17 @@ contract Dealer is AuthorizedAccess(), Constants {
         return posted[user].muld(_oracle.price(), RAY);
     }
 
+    /// @dev Returns the total debt of the yDai system, across all series, in dai
+    // TODO: Test
+    function systemDebt() public view returns (uint256) {
+        uint256 totalDebt;
+        for (uint256 i = 0; i < seriesIterator.length; i += 1) {
+            IYDai yDai = series[seriesIterator[i]];
+            totalDebt = totalDebt + IERC20(address(yDai)).totalSupply().muld(yDai.rate(), RAY);
+        } // We don't expect hundreds of maturities per dealer
+        return totalDebt;
+    }
+
     /// @dev Returns the total debt of an user, across all series, in yDai
     function totalDebtYDai(address user) public view returns (uint256) {
         uint256 totalDebt;
@@ -95,6 +106,7 @@ contract Dealer is AuthorizedAccess(), Constants {
             containsSeries(maturity),
             "Dealer: Unrecognized series"
         );
+        // TODO: rate() is 1.0 before maturity
         if (series[maturity].isMature()){
             return yDaiAmount.muld(series[maturity].rate(), RAY);
         }
@@ -109,6 +121,7 @@ contract Dealer is AuthorizedAccess(), Constants {
             containsSeries(maturity),
             "Dealer: Unrecognized series"
         );
+        // TODO: rate() is 1.0 before maturity
         if (series[maturity].isMature()){
             return daiAmount.divd(series[maturity].rate(), RAY);
         }
@@ -245,15 +258,14 @@ contract Dealer is AuthorizedAccess(), Constants {
         uint256 daiDebt = debtDai(maturity, user);
         uint256 yDaiDebt = debtYDai[maturity][user];
         uint256 tokenAmount = divdrup(daiDebt, price, RAY);
+        // TODO: delete posted[user] if there is not enough collateral, instead of reverting.
         posted[user] = posted[user].sub(tokenAmount);
         delete debtYDai[maturity][user];
         emit Settled(maturity, user, tokenAmount, daiDebt, yDaiDebt);
-        // TODO: Revert return parameter order to match MakerDAO's convention. Collateral then debt.
         return (tokenAmount, daiDebt, yDaiDebt);
     }
 
     /// @dev Removes an amount from the user collateral records in dealer.
-    /// `to` needs to surround this call with `_vat.hope(address(_treasury))` and `_vat.nope(address(_treasury))`
     function grab(address user, uint256 amount)
         public onlyAuthorized("Dealer: Not Authorized") {
 
