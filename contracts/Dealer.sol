@@ -106,7 +106,6 @@ contract Dealer is AuthorizedAccess(), Constants {
             containsSeries(maturity),
             "Dealer: Unrecognized series"
         );
-        // TODO: rate() is 1.0 before maturity
         if (series[maturity].isMature()){
             return yDaiAmount.muld(series[maturity].rate(), RAY);
         }
@@ -121,7 +120,6 @@ contract Dealer is AuthorizedAccess(), Constants {
             containsSeries(maturity),
             "Dealer: Unrecognized series"
         );
-        // TODO: rate() is 1.0 before maturity
         if (series[maturity].isMature()){
             return daiAmount.divd(series[maturity].rate(), RAY);
         }

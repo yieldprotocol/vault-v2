@@ -16,7 +16,7 @@ import "./interfaces/ITreasury.sol";
 import "./interfaces/IVault.sol";
 import "./interfaces/IYDai.sol";
 import "./Constants.sol";
-// import "@nomiclabs/buidler/console.sol";
+import "@nomiclabs/buidler/console.sol";
 
 
 /// @dev Treasury manages the Dai, interacting with MakerDAO's vat and chai when needed.
@@ -142,20 +142,20 @@ contract DssShutdown is Constants {
         _weth.transfer(user, remainder);
     }
 
-    /// @dev Takes any collateral from Dealer, if there are no positions
-    function grab(bytes32 collateral, address user) public {
+    /// @dev Takes any collateral from Dealer, if there is no user debt, and gives it to the user
+    function withdraw(bytes32 collateral, address user) public {
         require(settled && cashedOut, "DssShutdown: Not ready");
         uint256 remainder;
         if (collateral == WETH) {
             require(
-                _wethDealer.totalDebtYdai(user) == 0,
+                _wethDealer.totalDebtYDai(user) == 0,
                 "DssShutdown: Settle all positions first"
             );
-            uint256 remainder = _wethDealer.posted(user);
+            remainder = _wethDealer.posted(user);
             _wethDealer.grab(user, remainder);
         } else if (collateral == CHAI) {
             require(
-                _chaiDealer.totalDebtYdai(user) == 0,
+                _chaiDealer.totalDebtYDai(user) == 0,
                 "DssShutdown: Settle all positions first"
             );
             uint256 chaiRemainder = _chaiDealer.posted(user);

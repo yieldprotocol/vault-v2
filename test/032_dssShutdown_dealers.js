@@ -26,8 +26,8 @@ const truffleAssert = require('truffle-assertions');
 const { BN, expectRevert, expectEvent } = require('@openzeppelin/test-helpers');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
 
-contract('DssShutdown', async (accounts) =>  {
-    let [ owner, user ] = accounts;
+contract('DssShutdown - Treasury', async (accounts) =>  {
+    let [ owner, user1, user2 ] = accounts;
     let vat;
     let weth;
     let wethJoin;
@@ -253,137 +253,52 @@ contract('DssShutdown', async (accounts) =>  {
         );
     });
 
-    describe("with posted weth", () => {
+    describe("with posted weth and borrowed yDai", () => {
         beforeEach(async() => {
-            await weth.deposit({ from: owner, value: wethTokens });
-            await weth.transfer(treasury.address, wethTokens, { from: owner });
-            await treasury.pushWeth({ from: owner });
+            await weth.deposit({ from: user1, value: wethTokens });
+            await weth.approve(wethDealer.address, wethTokens, { from: user1 });
+            await wethDealer.post(user1, wethTokens, { from: user1 });
+
+            await weth.deposit({ from: user2, value: wethTokens });
+            await weth.approve(wethDealer.address, wethTokens, { from: user2 });
+            await wethDealer.post(user2, wethTokens, { from: user2 });
+
+            await weth.deposit({ from: user2, value: 1 });
+            await weth.approve(wethDealer.address, 1, { from: user2 });
+            await wethDealer.post(user2, 1, { from: user2 });
+
+            await wethDealer.borrow(maturity1, user2, daiTokens, { from: user2 });
 
             assert.equal(
-                (await vat.urns(ilk, treasury.address)).ink,
-                wethTokens.toString(),
-                'Treasury should have ' + wethTokens.toString() + ' weth wei as collateral',
+                await weth.balanceOf(user1),
+                0,
+                'User1 should have no weth',
+            );
+            assert.equal(
+                await weth.balanceOf(user2),
+                0,
+                'User2 should have no weth',
             );
         });
 
-        describe("with Dss shutdown initiated and tag defined", () => {
+        describe("with Dss shutdown initiated and treasury settled", () => {
             beforeEach(async() => {
                 await end.cage({ from: owner });
                 await end.setTag(ilk, tag, { from: owner });
-            });
-
-
-            it("allows to free system collateral without debt", async() => {
+                await end.setDebt(1, { from: owner });
+                await end.setFix(ilk, fix, { from: owner });
                 await dssShutdown.settleTreasury({ from: owner });
+                await dssShutdown.cashSavings({ from: owner });
+            });
+
+            it("allows user to retrieve weth when no debt remains", async() => {
+                await dssShutdown.withdraw(WETH, user1, { from: user1 });
 
                 assert.equal(
-                    await weth.balanceOf(dssShutdown.address, { from: owner }),
+                    await weth.balanceOf(user1),
                     wethTokens.toString(),
-                    'DssShutdown should have ' + wethTokens.toString() + ' weth in hand.',
+                    'User1 should have ' + wethTokens.toString() + ' weth wei',
                 );
-            });
-        });
-
-        describe("with debt", () => {
-            beforeEach(async() => {
-                await treasury.pullDai(owner, daiTokens, { from: owner });
-                assert.equal(
-                    (await vat.urns(ilk, treasury.address)).art,
-                    daiDebt.toString(),
-                    'Treasury should have ' + daiDebt.toString() + ' dai debt.',
-                );
-                assert.equal(
-                    await treasury.debt(),
-                    daiTokens.toString(),
-                    'Treasury should have ' + daiTokens.toString() + ' dai debt (in Dai).',
-                );
-
-                // Adding some extra unlocked collateral
-                await weth.deposit({ from: owner, value: 1 });
-                await weth.transfer(treasury.address, 1, { from: owner });
-                await treasury.pushWeth({ from: owner });
-            });
-
-            describe("with Dss shutdown initiated and tag defined", () => {
-                beforeEach(async() => {
-                    await end.cage({ from: owner });
-                    await end.setTag(ilk, tag, { from: owner });
-                });
-
-
-                it("allows to settle treasury debt", async() => {
-                    await dssShutdown.settleTreasury({ from: owner });
-
-                    // Fun fact: One of the wei is comes from freeing collateral, the other from rounding up on settling the debt.
-                    assert.equal(
-                        await weth.balanceOf(dssShutdown.address, { from: owner }),
-                        2,
-                        'DssShutdown should have ' + 2 + ' weth in hand.',
-                    );
-                });
-            });
-        });
-
-        describe("with savings", () => {
-            beforeEach(async() => {
-                // Borrow some dai
-                await weth.deposit({ from: owner, value: wethTokens});
-                await weth.approve(wethJoin.address, wethTokens, { from: owner });
-                await wethJoin.join(owner, wethTokens, { from: owner });
-                await vat.frob(ilk, owner, owner, owner, wethTokens, daiDebt, { from: owner });
-                await daiJoin.exit(owner, daiTokens, { from: owner });
-
-                await dai.transfer(treasury.address, daiTokens, { from: owner });
-                await treasury.pushDai({ from: owner });
-
-                assert.equal(
-                    await chai.balanceOf(treasury.address),
-                    chaiTokens.toString(),
-                    'Treasury should have ' + daiTokens.toString() + ' savings (as chai).',
-                );
-            });
-
-            describe("with Dss shutdown initiated and fix defined", () => {
-                beforeEach(async() => {
-                    // End.sol needs to have weth somehow, for example by settling some debt
-                    await vat.hope(daiJoin.address, { from: user });
-                    await vat.hope(wethJoin.address, { from: user });
-                    await weth.deposit({ from: user, value: wethTokens});
-                    await weth.approve(wethJoin.address, wethTokens, { from: user });
-                    await wethJoin.join(user, wethTokens, { from: user });
-                    await vat.frob(ilk, user, user, user, wethTokens, daiDebt, { from: user });
-                    await daiJoin.exit(user, daiTokens, { from: user });
-
-                    await end.cage({ from: owner });
-                    await end.setTag(ilk, tag, { from: owner });
-                    await end.setDebt(1, { from: owner });
-                    await end.setFix(ilk, fix, { from: owner });
-
-                    // Settle some random guy's debt for end.sol to have weth
-                    await end.skim(ilk, user, { from: user });
-                });
-
-                it("allows to cash dai for weth", async() => {
-                    assert.equal(
-                        await vat.gem(ilk, dssShutdown.address),
-                        0,
-                        'DssShutdown should have no weth in WethJoin',
-                    );
-
-                    await dssShutdown.cashSavings({ from: owner });
-
-                    // Fun fact, MakerDAO rounds in your favour when determining how much collateral to take to settle your debt.
-                    assert.equal(
-                        await chai.balanceOf(treasury.address),
-                        0,
-                        'Treasury should have no savings (as chai).',
-                    );
-                    assert.equal(
-                        await weth.balanceOf(dssShutdown.address, { from: owner }),
-                        wethTokens.sub(1).toString(), // TODO: Unpack the calculations and round the same way in the tests for parameterization
-                        'DssShutdown should have ' + wethTokens.sub(1).toString() + ' weth in hand.',
-                    );
-                });
             });
         });
     });
