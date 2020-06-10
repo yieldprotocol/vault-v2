@@ -291,7 +291,14 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                 await dssShutdown.cashSavings({ from: owner });
             });
 
-            it("allows user to retrieve weth when no debt remains", async() => {
+            it("weth cannot be withdrawn if debt remains", async() => {
+                await expectRevert(
+                    dssShutdown.withdraw(WETH, user2, { from: user2 }),
+                    'DssShutdown: Settle all positions first',
+                );
+            });
+
+            it("allows user to withdraw weth when no debt remains", async() => {
                 await dssShutdown.withdraw(WETH, user1, { from: user1 });
 
                 assert.equal(
