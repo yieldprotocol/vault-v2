@@ -307,6 +307,16 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                     'User1 should have ' + wethTokens.toString() + ' weth wei',
                 );
             });
+
+            it("users can be forced to withdraw weth when no debt remains", async() => {
+                await dssShutdown.withdraw(WETH, user1, { from: owner });
+
+                assert.equal(
+                    await weth.balanceOf(user1),
+                    wethTokens.toString(),
+                    'User1 should have ' + wethTokens.toString() + ' weth wei',
+                );
+            });
         });
     });
 });
