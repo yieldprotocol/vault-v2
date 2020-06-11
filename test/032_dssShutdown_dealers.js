@@ -322,6 +322,11 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                 0,
                 'User2 should have no weth',
             );
+            assert.equal(
+                await wethDealer.debtYDai(maturity1, user2),
+                daiTokens.toString(),
+                'User2 should have ' + daiTokens.toString() + ' maturity1 weth debt, instead has ' + (await wethDealer.debtYDai(maturity1, user2)).toString(),
+            );
         });
 
         it("does not allow to withdraw collateral if treasury not settled and cashed", async() => {
@@ -378,6 +383,16 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                 );
             });
 
+            it("allows user to settle weth debt", async() => {
+                await dssShutdown.settle(maturity1, WETH, user2, { from: user2 });
+
+                assert.equal(
+                    await wethDealer.debtYDai(maturity1, user2),
+                    0,
+                    'User2 should have no maturity1 weth debt',
+                );
+            });
+
             it("user cannot withdraw chai if he has debt", async() => {
                 await expectRevert(
                     dssShutdown.withdraw(CHAI, user2, { from: user2 }),
@@ -403,6 +418,16 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                     await weth.balanceOf(user1),
                     wethTokens.sub(1).toString(), // Rounding is a thing in end.sol
                     'User1 should have ' + wethTokens.sub(1).toString() + ' weth wei, instead has ' + (await weth.balanceOf(user1)),
+                );
+            });
+
+            it("allows user to settle chai debt", async() => {
+                await dssShutdown.settle(maturity1, CHAI, user2, { from: user2 });
+
+                assert.equal(
+                    await chaiDealer.debtYDai(maturity1, user2),
+                    0,
+                    'User2 should have no maturity1 chai debt',
                 );
             });
         });
