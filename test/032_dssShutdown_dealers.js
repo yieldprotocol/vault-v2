@@ -351,6 +351,13 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             );
         });
 
+        it("does not allow to profit if treasury not settled and cashed", async() => {
+            await expectRevert(
+                dssShutdown.profit(owner, { from: user2 }),
+                "DssShutdown: Not ready",
+            );
+        });
+
         describe("with Dss shutdown initiated and treasury settled", () => {
             beforeEach(async() => {
                 await end.cage({ from: owner });
@@ -362,6 +369,13 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                 await end.skim(ilk, owner, { from: owner });
                 await dssShutdown.settleTreasury({ from: owner });
                 await dssShutdown.cashSavings({ from: owner });
+            });
+
+            it("does not allow to profit if there is user debt", async() => {
+                await expectRevert(
+                    dssShutdown.profit(owner, { from: user2 }),
+                    "DssShutdown: Redeem all yDai",
+                );
             });
 
             it("user can redeem YDai", async() => {
@@ -452,6 +466,24 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                         await weth.balanceOf(user1),
                         wethTokens.sub(1).toString(), // Rounding is a thing in end.sol
                         'User1 should have ' + wethTokens.sub(1).toString() + ' weth wei, instead has ' + (await weth.balanceOf(user1)),
+                    );
+                });
+            });
+
+            describe("with all yDai redeemed", () => {
+                beforeEach(async() => {
+                    await dssShutdown.redeem(maturity1, yDaiTokens.mul(2), user2, { from: user2 });
+                });
+
+                it("allows to extract profit", async() => {
+                    const profit = await weth.balanceOf(dssShutdown.address);
+
+                    await dssShutdown.profit(owner, { from: owner });
+    
+                    assert.equal(
+                        (await weth.balanceOf(owner)).toString(),
+                        profit,
+                        'Owner should have ' + profit + ' weth, instead has ' + (await weth.balanceOf(owner)),
                     );
                 });
             });
