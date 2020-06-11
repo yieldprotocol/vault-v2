@@ -363,26 +363,6 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                 );
             });
 
-            it("allows user to withdraw weth", async() => {
-                await dssShutdown.withdraw(WETH, user1, { from: user1 });
-
-                assert.equal(
-                    await weth.balanceOf(user1),
-                    wethTokens.toString(),
-                    'User1 should have ' + wethTokens.toString() + ' weth wei',
-                );
-            });
-
-            it("users can be forced to withdraw weth when no debt remains", async() => {
-                await dssShutdown.withdraw(WETH, user1, { from: owner });
-
-                assert.equal(
-                    await weth.balanceOf(user1),
-                    wethTokens.toString(),
-                    'User1 should have ' + wethTokens.toString() + ' weth wei',
-                );
-            });
-
             it("allows user to settle weth debt", async() => {
                 await dssShutdown.settle(maturity1, WETH, user2, { from: user2 });
 
@@ -400,27 +380,6 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                 );
             });
 
-            it("allows user to withdraw chai", async() => {
-                await dssShutdown.withdraw(CHAI, user1, { from: user1 });
-
-                // Remember that chai is converted to weth when withdrawing
-                assert.equal(
-                    await weth.balanceOf(user1),
-                    wethTokens.sub(1).toString(), // Rounding is a thing in end.sol
-                    'User1 should have ' + wethTokens.sub(1).toString() + ' weth wei, instead has ' + (await weth.balanceOf(user1)),
-                );
-            });
-
-            it("users can be forced to withdraw chai when no debt remains", async() => {
-                await dssShutdown.withdraw(CHAI, user1, { from: owner });
-
-                assert.equal(
-                    await weth.balanceOf(user1),
-                    wethTokens.sub(1).toString(), // Rounding is a thing in end.sol
-                    'User1 should have ' + wethTokens.sub(1).toString() + ' weth wei, instead has ' + (await weth.balanceOf(user1)),
-                );
-            });
-
             it("allows user to settle chai debt", async() => {
                 await dssShutdown.settle(maturity1, CHAI, user2, { from: user2 });
 
@@ -429,6 +388,54 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                     0,
                     'User2 should have no maturity1 chai debt',
                 );
+            });
+
+            describe("with user debts settled", () => {
+                beforeEach(async() => {
+                    await dssShutdown.settle(maturity1, WETH, user2, { from: user2 });
+                    await dssShutdown.settle(maturity1, CHAI, user2, { from: user2 });
+                });
+
+                it("allows user to withdraw weth", async() => {
+                    await dssShutdown.withdraw(WETH, user1, { from: user1 });
+    
+                    assert.equal(
+                        await weth.balanceOf(user1),
+                        wethTokens.toString(),
+                        'User1 should have ' + wethTokens.toString() + ' weth wei',
+                    );
+                });
+    
+                it("users can be forced to withdraw weth", async() => {
+                    await dssShutdown.withdraw(WETH, user1, { from: owner });
+    
+                    assert.equal(
+                        await weth.balanceOf(user1),
+                        wethTokens.toString(),
+                        'User1 should have ' + wethTokens.toString() + ' weth wei',
+                    );
+                });
+
+                it("allows user to withdraw chai", async() => {
+                    await dssShutdown.withdraw(CHAI, user1, { from: user1 });
+
+                    // Remember that chai is converted to weth when withdrawing
+                    assert.equal(
+                        await weth.balanceOf(user1),
+                        wethTokens.sub(1).toString(), // Rounding is a thing in end.sol
+                        'User1 should have ' + wethTokens.sub(1).toString() + ' weth wei, instead has ' + (await weth.balanceOf(user1)),
+                    );
+                });
+
+                it("users can be forced to withdraw chai", async() => {
+                    await dssShutdown.withdraw(CHAI, user1, { from: owner });
+
+                    assert.equal(
+                        await weth.balanceOf(user1),
+                        wethTokens.sub(1).toString(), // Rounding is a thing in end.sol
+                        'User1 should have ' + wethTokens.sub(1).toString() + ' weth wei, instead has ' + (await weth.balanceOf(user1)),
+                    );
+                });
             });
         });
     });
