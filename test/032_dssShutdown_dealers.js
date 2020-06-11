@@ -287,19 +287,30 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             await vat.hope(daiJoin.address, { from: user2 });
             await vat.hope(wethJoin.address, { from: user2 });
 
-            /* await weth.deposit({ from: user2, value: mulRay(wethTokens, toRay(1.1)) });
-            await weth.approve(wethJoin.address, mulRay(wethTokens, toRay(1.1)), { from: user2 });
-            await wethJoin.join(user2, mulRay(wethTokens, toRay(1.1)), { from: user2 });
-            await vat.frob(ilk, user2, user2, user2, mulRay(wethTokens, toRay(1.1)), mulRay(daiDebt, toRay(1.1)), { from: user2 });
-            await daiJoin.exit(user2, mulRay(daiTokens, toRay(1.1)), { from: user2 });
-            await dai.approve(chai.address, mulRay(daiTokens, toRay(1.1)), { from: user2 });
-            await chai.join(user2, mulRay(daiTokens, toRay(1.1)), { from: user2 });
-            await chai.approve(chaiDealer.address, mulRay(chaiTokens, toRay(1.1)), { from: user1 });
-            await chaiDealer.post(user2, mulRay(chaiTokens, toRay(1.1)), { from: user2 });
-            await chaiDealer.borrow(maturity1, user2, daiTokens, { from: user2 }); */
+            const moreDebt = mulRay(daiDebt, toRay(1.1));
+            const moreDai = mulRay(daiTokens, toRay(1.1));
+            const moreWeth = mulRay(wethTokens, toRay(1.1));
+            const moreChai = mulRay(chaiTokens, toRay(1.1));
+            await weth.deposit({ from: user2, value: moreWeth });
+            await weth.approve(wethJoin.address, moreWeth, { from: user2 });
+            await wethJoin.join(user2, moreWeth, { from: user2 });
+            await vat.frob(ilk, user2, user2, user2, moreWeth, moreDebt, { from: user2 });
+            await daiJoin.exit(user2, moreDai, { from: user2 });
+            await dai.approve(chai.address, moreDai, { from: user2 });
+            await chai.join(user2, moreDai, { from: user2 });
+            await chai.approve(chaiDealer.address, moreChai, { from: user2 });
+            await chaiDealer.post(user2, moreChai, { from: user2 });
+            await chaiDealer.borrow(maturity1, user2, daiTokens, { from: user2 });
 
             // user1 has chaiTokens in chaiDealer and no debt.
             // user2 has chaiTokens * 1.1 in chaiDealer and daiTokens debt.
+
+            // Make sure that end.sol will have enough weth to cash chai savings
+            await weth.deposit({ from: owner, value: wethTokens });
+            await weth.approve(wethJoin.address, wethTokens, { from: owner });
+            await wethJoin.join(owner, wethTokens, { from: owner });
+            await vat.frob(ilk, owner, owner, owner, wethTokens, daiDebt, { from: owner });
+            await daiJoin.exit(owner, daiTokens, { from: owner });
 
             assert.equal(
                 await weth.balanceOf(user1),
@@ -321,6 +332,7 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                 await end.setFix(ilk, fix, { from: owner });
                 await end.skim(ilk, user1, { from: owner });
                 await end.skim(ilk, user2, { from: owner });
+                await end.skim(ilk, owner, { from: owner });
                 await dssShutdown.settleTreasury({ from: owner });
                 await dssShutdown.cashSavings({ from: owner });
             });
@@ -352,12 +364,12 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                 );
             });
 
-            /* it("chai cannot be withdrawn if debt remains", async() => {
+            it("chai cannot be withdrawn if debt remains", async() => {
                 await expectRevert(
                     dssShutdown.withdraw(CHAI, user2, { from: user2 }),
                     'DssShutdown: Settle all positions first',
                 );
-            }); */
+            });
 
             it("allows user to withdraw chai when no debt remains", async() => {
                 await dssShutdown.withdraw(CHAI, user1, { from: user1 });
