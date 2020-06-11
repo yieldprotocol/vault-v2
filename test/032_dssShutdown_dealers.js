@@ -27,7 +27,7 @@ const { BN, expectRevert, expectEvent } = require('@openzeppelin/test-helpers');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
 
 contract('DssShutdown - Treasury', async (accounts) =>  {
-    let [ owner, user1, user2 ] = accounts;
+    let [ owner, user1, user2, user3, user4 ] = accounts;
     let vat;
     let weth;
     let wethJoin;
@@ -261,15 +261,16 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             await weth.approve(wethDealer.address, wethTokens, { from: user1 });
             await wethDealer.post(user1, wethTokens, { from: user1 });
 
-            await weth.deposit({ from: user2, value: wethTokens });
-            await weth.approve(wethDealer.address, wethTokens, { from: user2 });
-            await wethDealer.post(user2, wethTokens, { from: user2 });
-
-            await weth.deposit({ from: user2, value: 1 });
-            await weth.approve(wethDealer.address, 1, { from: user2 });
-            await wethDealer.post(user2, 1, { from: user2 });
-
+            await weth.deposit({ from: user2, value: wethTokens.add(1) });
+            await weth.approve(wethDealer.address, wethTokens.add(1), { from: user2 });
+            await wethDealer.post(user2, wethTokens.add(1), { from: user2 });
             await wethDealer.borrow(maturity1, user2, daiTokens, { from: user2 });
+
+            await weth.deposit({ from: user3, value: wethTokens.mul(3) });
+            await weth.approve(wethDealer.address, wethTokens.mul(3), { from: user3 });
+            await wethDealer.post(user3, wethTokens.mul(3), { from: user3 });
+            await wethDealer.borrow(maturity1, user3, daiTokens, { from: user3 });
+            await wethDealer.borrow(maturity2, user3, daiTokens, { from: user3 });
 
             // Chai setup
             await vat.hope(daiJoin.address, { from: user1 });
@@ -381,27 +382,6 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                 );
             });
 
-            it("allows user to settle weth debt", async() => {
-                await dssShutdown.settle(WETH, user2, { from: user2 });
-
-                assert.equal(
-                    await wethDealer.debtYDai(maturity1, user2),
-                    0,
-                    'User2 should have no maturity1 weth debt',
-                );
-            });
-
-            it("allows user to settle chai debt", async() => {
-                await dssShutdown.settle(CHAI, user2, { from: user2 });
-
-                assert.equal(
-                    await chaiDealer.debtYDai(maturity1, user2),
-                    0,
-                    'User2 should have no maturity1 chai debt',
-                );
-            });
-
-
             it("allows user to settle weth surplus", async() => {
                 await dssShutdown.settle(WETH, user1, { from: user1 });
 
@@ -444,9 +424,41 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                 );
             });
 
+            it("allows user to settle weth debt", async() => {
+                await dssShutdown.settle(WETH, user2, { from: user2 });
+
+                assert.equal(
+                    await wethDealer.debtYDai(maturity1, user2),
+                    0,
+                    'User2 should have no maturity1 weth debt',
+                );
+            });
+
+            it("allows user to settle chai debt", async() => {
+                await dssShutdown.settle(CHAI, user2, { from: user2 });
+
+                assert.equal(
+                    await chaiDealer.debtYDai(maturity1, user2),
+                    0,
+                    'User2 should have no maturity1 chai debt',
+                );
+            });
+
+            it("allows user to settle mutiple weth positions", async() => {
+                await dssShutdown.settle(WETH, user3, { from: user3 });
+
+                assert.equal(
+                    await weth.balanceOf(user3),
+                    wethTokens.add(1).toString(),
+                    'User1 should have ' + wethTokens.add(1).toString() + ' weth wei, instead has ' + (await weth.balanceOf(user3)),
+                );
+            });
+
             describe("with all yDai redeemed", () => {
                 beforeEach(async() => {
                     await dssShutdown.redeem(maturity1, yDaiTokens.mul(2), user2, { from: user2 });
+                    await dssShutdown.redeem(maturity1, yDaiTokens, user3, { from: user3 });
+                    await dssShutdown.redeem(maturity2, yDaiTokens, user3, { from: user3 });
                 });
 
                 it("allows to extract profit", async() => {
