@@ -129,38 +129,15 @@ contract DssShutdown is Constants {
     }
 
     /// @dev Settles a series position in Dealer, and then returns any remaining collateral as weth using the shutdown Dai to Weth price.
-    function settle(uint256 maturity, bytes32 collateral, address user) public {
+    function settle(bytes32 collateral, address user) public {
         require(settled && cashedOut, "DssShutdown: Not ready");
         uint256 remainder;
         if (collateral == WETH) {
-            (uint256 wethAmount, uint256 daiAmount,) = _wethDealer.settle(maturity, user);
+            (uint256 wethAmount, uint256 daiAmount) = _wethDealer.erase(user);
             remainder = subFloorZero(wethAmount, daiAmount.muld(_fix, RAY));
         } else if (collateral == CHAI) {
-            (uint256 chaiAmount, uint256 daiAmount,) = _chaiDealer.settle(maturity, user);
+            (uint256 chaiAmount, uint256 daiAmount) = _chaiDealer.erase(user);
             remainder = subFloorZero(chaiAmount.muld(_chi, RAY), daiAmount).muld(_fix, RAY);
-        }
-        _weth.transfer(user, remainder);
-    }
-
-    /// @dev Takes any collateral from Dealer, if there is no user debt, and gives it to the user
-    function withdraw(bytes32 collateral, address user) public {
-        require(settled && cashedOut, "DssShutdown: Not ready");
-        uint256 remainder;
-        if (collateral == WETH) {
-            require(
-                _wethDealer.totalDebtYDai(user) == 0,
-                "DssShutdown: Settle all positions first"
-            );
-            remainder = _wethDealer.posted(user);
-            _wethDealer.grab(user, remainder);
-        } else if (collateral == CHAI) {
-            require(
-                _chaiDealer.totalDebtYDai(user) == 0,
-                "DssShutdown: Settle all positions first"
-            );
-            uint256 chaiRemainder = _chaiDealer.posted(user);
-            _chaiDealer.grab(user, chaiRemainder);
-            remainder = chaiRemainder.muld(_chi, RAY).muld(_fix, RAY);
         }
         _weth.transfer(user, remainder);
     }

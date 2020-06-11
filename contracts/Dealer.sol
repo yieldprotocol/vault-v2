@@ -19,8 +19,7 @@ contract Dealer is AuthorizedAccess(), Constants {
     using DecimalMath for uint256;
     using DecimalMath for uint8;
 
-    event Settled(uint256 indexed maturity, address indexed user, uint256 tokens, uint256 daiDebt, uint256 yDaiDebt);
-    event Grabbed(address indexed user, uint256 tokens);
+    event Erased(address indexed user, uint256 tokens, uint256 debt);
 
     ITreasury internal _treasury;
     IERC20 internal _dai;
@@ -245,36 +244,19 @@ contract Dealer is AuthorizedAccess(), Constants {
     }
 
     /// @dev Erases a debt position and its equivalent amount of collateral from the user records
-    function settle(uint256 maturity, address user)
-        public onlyAuthorized("Dealer: Not Authorized") returns (uint256, uint256, uint256) {
-        require(
-            isCollateralized(user),
-            "Dealer: Undercollateralized"
-        );
+    function erase(address user)
+        public onlyAuthorized("Dealer: Not Authorized") returns (uint256, uint256) {
 
-        uint256 price = _oracle.price();
-        uint256 daiDebt = debtDai(maturity, user);
-        uint256 yDaiDebt = debtYDai[maturity][user];
-        uint256 tokenAmount = divdrup(daiDebt, price, RAY);
-        // TODO: delete posted[user] if there is not enough collateral, instead of reverting.
-        posted[user] = posted[user].sub(tokenAmount);
-        delete debtYDai[maturity][user];
-        emit Settled(maturity, user, tokenAmount, daiDebt, yDaiDebt);
-        return (tokenAmount, daiDebt, yDaiDebt);
-    }
+        uint256 debt;
+        for (uint256 i = 0; i < seriesIterator.length; i += 1) {
+            debt = debt + debtDai(seriesIterator[i], user);
+            delete debtYDai[seriesIterator[i]][user];
+        } // We don't expect hundreds of maturities per dealer
+        uint256 tokens = posted[user];
+        delete posted[user];
 
-    /// @dev Removes an amount from the user collateral records in dealer.
-    function grab(address user, uint256 amount)
-        public onlyAuthorized("Dealer: Not Authorized") {
-
-        posted[user] = posted[user].sub(amount, "Dealer: Not enough collateral");
-
-        require(
-            isCollateralized(user),
-            "Dealer: Too much debt"
-        );
-
-        emit Grabbed(user, amount);
+        emit Erased(user, tokens, debt);
+        return (tokens, debt);
     }
 
     /// @dev Calculates the amount to repay and the amount by which to reduce the debt

@@ -337,16 +337,9 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             );
         });
 
-        it("does not allow to withdraw collateral if treasury not settled and cashed", async() => {
+        it("does not allow to settle users if treasury not settled and cashed", async() => {
             await expectRevert(
-                dssShutdown.withdraw(WETH, user2, { from: user2 }),
-                "DssShutdown: Not ready",
-            );
-        });
-
-        it("does not allow to settle user debt if treasury not settled and cashed", async() => {
-            await expectRevert(
-                dssShutdown.settle(maturity1, WETH, user2, { from: user2 }),
+                dssShutdown.settle(WETH, user2, { from: user2 }),
                 "DssShutdown: Not ready",
             );
         });
@@ -388,15 +381,8 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                 );
             });
 
-            it("user cannot withdraw weth if he has debt", async() => {
-                await expectRevert(
-                    dssShutdown.withdraw(WETH, user2, { from: user2 }),
-                    'DssShutdown: Settle all positions first',
-                );
-            });
-
             it("allows user to settle weth debt", async() => {
-                await dssShutdown.settle(maturity1, WETH, user2, { from: user2 });
+                await dssShutdown.settle(WETH, user2, { from: user2 });
 
                 assert.equal(
                     await wethDealer.debtYDai(maturity1, user2),
@@ -405,15 +391,8 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                 );
             });
 
-            it("user cannot withdraw chai if he has debt", async() => {
-                await expectRevert(
-                    dssShutdown.withdraw(CHAI, user2, { from: user2 }),
-                    'DssShutdown: Settle all positions first',
-                );
-            });
-
             it("allows user to settle chai debt", async() => {
-                await dssShutdown.settle(maturity1, CHAI, user2, { from: user2 });
+                await dssShutdown.settle(CHAI, user2, { from: user2 });
 
                 assert.equal(
                     await chaiDealer.debtYDai(maturity1, user2),
@@ -422,52 +401,47 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                 );
             });
 
-            describe("with user debts settled", () => {
-                beforeEach(async() => {
-                    await dssShutdown.settle(maturity1, WETH, user2, { from: user2 });
-                    await dssShutdown.settle(maturity1, CHAI, user2, { from: user2 });
-                });
 
-                it("allows user to withdraw weth", async() => {
-                    await dssShutdown.withdraw(WETH, user1, { from: user1 });
-    
-                    assert.equal(
-                        await weth.balanceOf(user1),
-                        wethTokens.toString(),
-                        'User1 should have ' + wethTokens.toString() + ' weth wei',
-                    );
-                });
-    
-                it("users can be forced to withdraw weth", async() => {
-                    await dssShutdown.withdraw(WETH, user1, { from: owner });
-    
-                    assert.equal(
-                        await weth.balanceOf(user1),
-                        wethTokens.toString(),
-                        'User1 should have ' + wethTokens.toString() + ' weth wei',
-                    );
-                });
+            it("allows user to settle weth surplus", async() => {
+                await dssShutdown.settle(WETH, user1, { from: user1 });
 
-                it("allows user to withdraw chai", async() => {
-                    await dssShutdown.withdraw(CHAI, user1, { from: user1 });
+                assert.equal(
+                    await weth.balanceOf(user1),
+                    wethTokens.toString(),
+                    'User1 should have ' + wethTokens.toString() + ' weth wei',
+                );
+            });
 
-                    // Remember that chai is converted to weth when withdrawing
-                    assert.equal(
-                        await weth.balanceOf(user1),
-                        wethTokens.sub(1).toString(), // Rounding is a thing in end.sol
-                        'User1 should have ' + wethTokens.sub(1).toString() + ' weth wei, instead has ' + (await weth.balanceOf(user1)),
-                    );
-                });
+            it("users can be forced to settle weth surplus", async() => {
+                await dssShutdown.settle(WETH, user1, { from: owner });
 
-                it("users can be forced to withdraw chai", async() => {
-                    await dssShutdown.withdraw(CHAI, user1, { from: owner });
+                assert.equal(
+                    await weth.balanceOf(user1),
+                    wethTokens.toString(),
+                    'User1 should have ' + wethTokens.toString() + ' weth wei',
+                );
+            });
 
-                    assert.equal(
-                        await weth.balanceOf(user1),
-                        wethTokens.sub(1).toString(), // Rounding is a thing in end.sol
-                        'User1 should have ' + wethTokens.sub(1).toString() + ' weth wei, instead has ' + (await weth.balanceOf(user1)),
-                    );
-                });
+            it("allows user to settle chai surplus", async() => {
+                await dssShutdown.settle(CHAI, user1, { from: user1 });
+
+                // Remember that chai is converted to weth when withdrawing
+                assert.equal(
+                    await weth.balanceOf(user1),
+                    wethTokens.sub(1).toString(),
+                    'User1 should have ' + wethTokens.sub(1).toString() + ' weth wei',
+                );
+            });
+
+            it("users can be forced to settle chai surplus", async() => {
+                await dssShutdown.settle(CHAI, user1, { from: owner });
+
+                // Remember that chai is converted to weth when withdrawing
+                assert.equal(
+                    await weth.balanceOf(user1),
+                    wethTokens.sub(1).toString(),
+                    'User1 should have ' + wethTokens.sub(1).toString() + ' weth wei',
+                );
             });
 
             describe("with all yDai redeemed", () => {

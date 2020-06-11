@@ -203,22 +203,18 @@ contract('Dealer - Splitter', async (accounts) =>  {
             );
         });        
 
-        it("allows to grab collateral", async() => {
+        it("allows to erase collateral only positions", async() => {
             await dealer.grantAccess(owner, { from: owner }); // Only for testing
             expectEvent(
-                await dealer.grab(owner, wethTokens, { from: owner }),
-                "Grabbed",
+                await dealer.erase(owner, { from: owner }),
+                "Erased",
                 {
                     user: owner,
+                    debt: "0",
                     tokens: wethTokens.toString(),
                 },
             );
-            // TODO: Implement events and use them for testing.
-            /* assert.equal(
-                await dealer.grab(owner, { from: owner }),
-                wethTokens.toString(),
-                wethTokens + " weth should have been grabbed",
-            ); */
+
             assert.equal(
                 await dealer.posted(owner),
                 0,
@@ -226,16 +222,16 @@ contract('Dealer - Splitter', async (accounts) =>  {
             );
         });
 
-        it("only the collateral owner can move it to MakerDAO", async() => {
+        it("only the collateral owner can split it to MakerDAO", async() => {
             await expectRevert(
-                splitter.splitCollateral(accounts[1], owner, wethTokens, { from: owner }),
+                splitter.split(accounts[1], owner, { from: owner }),
                 "Splitter: Only owner",
             );
         });
 
-        it("allows to move collateral to MakerDAO", async() => {
+        it("allows to split weth collateral to MakerDAO", async() => {
             await vat.hope(treasury.address, { from: owner });
-            await splitter.splitCollateral(owner, owner, wethTokens, { from: owner });
+            await splitter.split(owner, owner, { from: owner });
             // TODO: Test with different source and destination accounts
             // TODO: Test with different rates
 
@@ -262,23 +258,14 @@ contract('Dealer - Splitter', async (accounts) =>  {
                 );
             });
 
-            it("only the position owner can move it to MakerDAO", async() => {
+            it("only the position owner can split it to MakerDAO", async() => {
                 await expectRevert(
-                    splitter.splitPosition(maturity1, accounts[1], owner, { from: owner }),
+                    splitter.split(accounts[1], owner, { from: owner }),
                     "Splitter: Only owner",
                 );
             });
-    
 
-            it("does not allow to grab collateral and become undercollateralized", async() => {
-                await dealer.grantAccess(owner, { from: owner }); // Only for testing
-                await expectRevert(
-                    dealer.grab(owner, wethTokens, { from: owner }),
-                    "Dealer: Too much debt",
-                );
-            });
-
-            it("allows to settle weth positions", async() => {
+            it("allows to erase weth positions", async() => {
                 // We post an extra weth wei to te, uint256 debtst that only the needed collateral is taken
                 await weth.deposit({ from: owner, value: 1 });
                 await weth.approve(dealer.address, 1, { from: owner }); 
@@ -286,30 +273,18 @@ contract('Dealer - Splitter', async (accounts) =>  {
 
                 await dealer.grantAccess(owner, { from: owner }); // Only for testing
                 expectEvent(
-                    await dealer.settle(maturity1, owner, { from: owner }),
-                    "Settled",
+                    await dealer.erase(owner, { from: owner }),
+                    "Erased",
                     {
-                        maturity: maturity1.toString(),
                         user: owner,
-                        tokens: wethTokens.toString(),
-                        daiDebt: daiTokens.toString(),
-                        yDaiDebt: daiTokens.toString(),
+                        tokens: wethTokens.add(1).toString(),
+                        debt: daiTokens.toString(),
                     },
                 );
-                // TODO: Implement events and use them for testing.
+                // TODO: Test with several maturities
                 // TODO: Test with CHAI collateral as well
                 // TODO: Test with different rates
 
-                /* assert.equal(
-                    result[0],
-                    wethTokens.toString(),
-                    "User should have forfeited " + wethTokens + " weth",
-                );
-                assert.equal(
-                    result[1],
-                    daiTokens.toString(),
-                    "User should have settled " + daiTokens + " debt",
-                ); */
                 assert.equal(
                     await dealer.debtDai(maturity1, owner),
                     0,
@@ -317,15 +292,16 @@ contract('Dealer - Splitter', async (accounts) =>  {
                 );
                 assert.equal(
                     await dealer.posted(owner),
-                    1,
+                    0,
                     "User should not have collateral in Dealer",
                 );
             });
 
-            it("allows to move user debt to MakerDAO beyond system debt", async() => {
+            it("allows to split user debt to MakerDAO beyond system debt", async() => {
                 await vat.hope(treasury.address, { from: owner });
-                await splitter.splitPosition(maturity1, owner, owner, { from: owner });
+                await splitter.split(owner, owner, { from: owner });
                 // TODO: Test with different source and destination accounts
+                // TODO: Test with several maturities
                 // TODO: Test with different rates
 
                 assert.equal(
