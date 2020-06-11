@@ -300,31 +300,13 @@ contract('Dealer - Chai', async (accounts) =>  {
     
             await expectRevert(
                 dealer.borrow(maturity1, owner, addBN(daiTokens, 1), { from: owner }),
-                "Dealer: Post more collateral",
+                "Dealer: Too much debt",
             );
         });
 
         describe("with borrowed yDai", () => {
             beforeEach(async() => {
                 await dealer.borrow(maturity1, owner, daiTokens, { from: owner });
-            });
-
-            it("does not allow to split chai positions", async() => {
-                await vat.hope(treasury.address, { from: owner });
-                await expectRevert(
-                    dealer.splitPosition(maturity1, owner, owner, { from: owner }),
-                    "Dealer: Unsupported collateral for split",
-                );
-                await vat.nope(treasury.address, { from: owner });
-            });
-
-            it("does not allow to split chai collateral", async() => {
-                await vat.hope(treasury.address, { from: owner });
-                await expectRevert(
-                    dealer.splitCollateral(owner, owner, { from: owner }),
-                    "Dealer: Unsupported collateral for split",
-                );
-                await vat.nope(treasury.address, { from: owner });
             });
 
             it("doesn't allow to withdraw and become undercollateralized", async() => {
@@ -341,7 +323,7 @@ contract('Dealer - Chai', async (accounts) =>  {
 
                 await expectRevert(
                     dealer.borrow(maturity1, owner, chaiTokens, { from: owner }),
-                    "Dealer: Post more collateral",
+                    "Dealer: Too much debt",
                 );
             });
 

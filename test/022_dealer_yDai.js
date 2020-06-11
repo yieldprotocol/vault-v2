@@ -132,7 +132,15 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
             "Dealer should not contain any maturity",
         );
 
-        yDai1 = await YDai.new(vat.address, pot.address, maturity1, "Name1", "Symbol1");
+        yDai1 = await YDai.new(
+            vat.address,
+            pot.address,
+            treasury.address,
+            maturity1,
+            "Name1",
+            "Symbol1",
+            { from: owner },
+        );
         treasury.grantAccess(yDai1.address, { from: owner });
 
         await dealer.addSeries(yDai1.address, { from: owner });
@@ -149,11 +157,27 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
-        yDai1 = await YDai.new(vat.address, pot.address, maturity1, "Name1", "Symbol1");
+        yDai1 = await YDai.new(
+            vat.address,
+            pot.address,
+            treasury.address,
+            maturity1,
+            "Name1",
+            "Symbol1",
+            { from: owner },
+        );
         treasury.grantAccess(yDai1.address, { from: owner });
 
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
-        yDai2 = await YDai.new(vat.address, pot.address, maturity2, "Name2", "Symbol2");
+        yDai2 = await YDai.new(
+            vat.address,
+            pot.address,
+            treasury.address,
+            maturity2,
+            "Name2",
+            "Symbol2",
+            { from: owner },
+        );
         treasury.grantAccess(yDai2.address, { from: owner });
 
         await dealer.addSeries(yDai1.address, { from: owner });
@@ -188,7 +212,15 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
-        yDai1 = await YDai.new(vat.address, pot.address, maturity1, "Name1", "Symbol1");
+        yDai1 = await YDai.new(
+            vat.address,
+            pot.address,
+            treasury.address,
+            maturity1,
+            "Name1",
+            "Symbol1",
+            { from: owner },
+        );
         treasury.grantAccess(yDai1.address, { from: owner });
 
         await dealer.addSeries(yDai1.address, { from: owner });
