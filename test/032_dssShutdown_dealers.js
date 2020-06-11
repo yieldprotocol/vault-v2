@@ -253,7 +253,7 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
         );
     });
 
-    describe("with posted weth and borrowed yDai", () => {
+    describe("with posted collateral and borrowed yDai", () => {
         beforeEach(async() => {
             // Weth setup
             await weth.deposit({ from: user1, value: wethTokens });
@@ -324,6 +324,20 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             );
         });
 
+        it("does not allow to withdraw collateral if treasury not settled and cashed", async() => {
+            await expectRevert(
+                dssShutdown.withdraw(WETH, user2, { from: user2 }),
+                "DssShutdown: Not ready",
+            );
+        });
+
+        it("does not allow to settle user debt if treasury not settled and cashed", async() => {
+            await expectRevert(
+                dssShutdown.settle(maturity1, WETH, user2, { from: user2 }),
+                "DssShutdown: Not ready",
+            );
+        });
+
         describe("with Dss shutdown initiated and treasury settled", () => {
             beforeEach(async() => {
                 await end.cage({ from: owner });
@@ -337,14 +351,14 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                 await dssShutdown.cashSavings({ from: owner });
             });
 
-            it("weth cannot be withdrawn if debt remains", async() => {
+            it("user cannot withdraw weth if he has debt", async() => {
                 await expectRevert(
                     dssShutdown.withdraw(WETH, user2, { from: user2 }),
                     'DssShutdown: Settle all positions first',
                 );
             });
 
-            it("allows user to withdraw weth when no debt remains", async() => {
+            it("allows user to withdraw weth", async() => {
                 await dssShutdown.withdraw(WETH, user1, { from: user1 });
 
                 assert.equal(
@@ -364,14 +378,14 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                 );
             });
 
-            it("chai cannot be withdrawn if debt remains", async() => {
+            it("user cannot withdraw chai if he has debt", async() => {
                 await expectRevert(
                     dssShutdown.withdraw(CHAI, user2, { from: user2 }),
                     'DssShutdown: Settle all positions first',
                 );
             });
 
-            it("allows user to withdraw chai when no debt remains", async() => {
+            it("allows user to withdraw chai", async() => {
                 await dssShutdown.withdraw(CHAI, user1, { from: user1 });
 
                 // Remember that chai is converted to weth when withdrawing
