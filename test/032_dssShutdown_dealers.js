@@ -63,6 +63,7 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
     const daiTokens = mulRay(daiDebt, rate);
     const wethTokens = divRay(daiTokens, spot);
     const chaiTokens = divRay(daiTokens, chi);
+    const yDaiTokens = daiTokens;
     let maturity1;
     let maturity2;
 
@@ -324,8 +325,15 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             );
             assert.equal(
                 await wethDealer.debtYDai(maturity1, user2),
-                daiTokens.toString(),
-                'User2 should have ' + daiTokens.toString() + ' maturity1 weth debt, instead has ' + (await wethDealer.debtYDai(maturity1, user2)).toString(),
+                yDaiTokens.toString(),
+                'User2 should have ' + yDaiTokens.toString() + ' maturity1 weth debt, instead has ' + (await wethDealer.debtYDai(maturity1, user2)).toString(),
+            );
+        });
+
+        it("does not allow to redeem YDai if treasury not settled and cashed", async() => {
+            await expectRevert(
+                dssShutdown.redeem(maturity1, yDaiTokens, user2, { from: user2 }),
+                "DssShutdown: Not ready",
             );
         });
 
@@ -354,6 +362,16 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                 await end.skim(ilk, owner, { from: owner });
                 await dssShutdown.settleTreasury({ from: owner });
                 await dssShutdown.cashSavings({ from: owner });
+            });
+
+            it("user can redeem YDai", async() => {
+                await dssShutdown.redeem(maturity1, yDaiTokens, user2, { from: user2 });
+
+                assert.equal(
+                    await weth.balanceOf(user2),
+                    wethTokens.sub(1).toString(),
+                    'User2 should have ' + wethTokens.sub(1).toString() + ' weth wei, instead has ' + (await weth.balanceOf(user2)).toString(),
+                );
             });
 
             it("user cannot withdraw weth if he has debt", async() => {

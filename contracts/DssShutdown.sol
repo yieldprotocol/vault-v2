@@ -176,14 +176,17 @@ contract DssShutdown is Constants {
         );
     }
 
-    /// @dev Removes any system profit
+    /// @dev Removes any system profit. Can only be executed once all user debt has been resolved,
+    /// defined as the existing amount of yDai of all maturities combined. Users should be advised
+    /// to withdraw all collateral as well, and they can be forced to do so. Otherwise this function
+    /// will take those assets.
     function profit() public {
-        // TODO: Ensure it can only be executed when all the dealer debt has been settled and extra collateral removed.
-        uint256 remainder = subFloorZero(
-            _weth.balanceOf(address(this)),
-            _wethDealer.systemDebt().muld(_fix, RAY)
+        require(settled && cashedOut, "DssShutdown: Not ready");
+        require(
+            _wethDealer.systemDebt() == 0,
+            "DssShutdown: Settle user debt"
         );
         // TODO: Hardcode the address
-        _weth.transfer(address(0),remainder);
+        _weth.transfer(address(0), _weth.balanceOf(address(this)));
     }
 }
