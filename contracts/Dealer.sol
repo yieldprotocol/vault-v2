@@ -195,7 +195,7 @@ contract Dealer is AuthorizedAccess(), Constants {
             revert("Dealer: Unsupported collateral");
         }
 
-        if(posted[to] == 0 && amount >= 0) {
+        if (posted[to] == 0 && amount >= 0) {
             returnBond(10);
         }
     }
@@ -216,13 +216,15 @@ contract Dealer is AuthorizedAccess(), Constants {
             "Dealer: No mature borrow"
         );
 
+        if (debtYDai[maturity][to] == 0 && yDaiAmount >= 0) {
+            lockBond(10);
+        }
         debtYDai[maturity][to] = debtYDai[maturity][to].add(yDaiAmount);
 
         require(
             isCollateralized(to),
             "Dealer: Too much debt"
         );
-
         series[maturity].mint(to, yDaiAmount);
     }
 
@@ -241,6 +243,9 @@ contract Dealer is AuthorizedAccess(), Constants {
         (uint256 toRepay, uint256 debtDecrease) = amounts(maturity, from, yDaiAmount);
         series[maturity].burn(from, toRepay);
         debtYDai[maturity][from] = debtYDai[maturity][from].sub(debtDecrease);
+        if (debtYDai[maturity][from] == 0 && debtDecrease >= 0) {
+            returnBond(10);
+        }
     }
 
     /// @dev Takes dai from `from` address, user debt is decreased.
@@ -259,6 +264,9 @@ contract Dealer is AuthorizedAccess(), Constants {
 
         _treasury.pushDai();                                      // Have Treasury process the dai
         debtYDai[maturity][from] = debtYDai[maturity][from].sub(debtDecrease);
+        if (debtYDai[maturity][from] == 0 && debtDecrease >= 0) {
+            returnBond(10);
+        }
     }
 
     /// @dev Erases a debt position and its equivalent amount of collateral from the user records
