@@ -67,8 +67,9 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
     let maturity1;
     let maturity2;
 
-    const tag  = divRay(toRay(1), spot); // TODO: Test with tag different than initial value
-    const fix  = divRay(toRay(1), spot); // TODO: Test with fix different from tag
+    const tag  = divRay(toRay(1.0), spot); // Irrelevant to the final users
+    const fix  = divRay(toRay(1.0), mulRay(spot, toRay(1.1)));
+    const fixedWeth = mulRay(daiTokens, fix);
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
@@ -308,11 +309,11 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             // user2 has chaiTokens * 1.1 in chaiDealer and daiTokens debt.
 
             // Make sure that end.sol will have enough weth to cash chai savings
-            await weth.deposit({ from: owner, value: wethTokens });
-            await weth.approve(wethJoin.address, wethTokens, { from: owner });
-            await wethJoin.join(owner, wethTokens, { from: owner });
-            await vat.frob(ilk, owner, owner, owner, wethTokens, daiDebt, { from: owner });
-            await daiJoin.exit(owner, daiTokens, { from: owner });
+            await weth.deposit({ from: owner, value: wethTokens.mul(10) });
+            await weth.approve(wethJoin.address, wethTokens.mul(10), { from: owner });
+            await wethJoin.join(owner, wethTokens.mul(10), { from: owner });
+            await vat.frob(ilk, owner, owner, owner, wethTokens.mul(10), daiDebt.mul(10), { from: owner });
+            await daiJoin.exit(owner, daiTokens.mul(10), { from: owner });
 
             assert.equal(
                 await weth.balanceOf(user1),
@@ -377,8 +378,8 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
 
                 assert.equal(
                     await weth.balanceOf(user2),
-                    wethTokens.sub(1).toString(),
-                    'User2 should have ' + wethTokens.sub(1).toString() + ' weth wei, instead has ' + (await weth.balanceOf(user2)).toString(),
+                    fixedWeth.toString(),
+                    'User2 should have ' + fixedWeth.toString() + ' weth wei, instead has ' + (await weth.balanceOf(user2)).toString(),
                 );
             });
 
@@ -408,8 +409,8 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                 // Remember that chai is converted to weth when withdrawing
                 assert.equal(
                     await weth.balanceOf(user1),
-                    wethTokens.sub(1).toString(),
-                    'User1 should have ' + wethTokens.sub(1).toString() + ' weth wei',
+                    fixedWeth.toString(),
+                    'User1 should have ' + fixedWeth.sub(1).toString() + ' weth wei',
                 );
             });
 
@@ -419,8 +420,8 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                 // Remember that chai is converted to weth when withdrawing
                 assert.equal(
                     await weth.balanceOf(user1),
-                    wethTokens.sub(1).toString(),
-                    'User1 should have ' + wethTokens.sub(1).toString() + ' weth wei',
+                    fixedWeth.toString(),
+                    'User1 should have ' + fixedWeth.sub(1).toString() + ' weth wei',
                 );
             });
 
@@ -432,6 +433,7 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                     0,
                     'User2 should have no maturity1 weth debt',
                 );
+                // In the tests the settling nets zero surplus, which we tested above
             });
 
             it("allows user to settle chai debt", async() => {
@@ -442,6 +444,7 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                     0,
                     'User2 should have no maturity1 chai debt',
                 );
+                // In the tests the settling nets zero surplus, which we tested above
             });
 
             it("allows user to settle mutiple weth positions", async() => {
@@ -449,9 +452,10 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
 
                 assert.equal(
                     await weth.balanceOf(user3),
-                    wethTokens.add(1).toString(),
-                    'User1 should have ' + wethTokens.add(1).toString() + ' weth wei, instead has ' + (await weth.balanceOf(user3)),
+                    wethTokens.mul(3).sub(fixedWeth.mul(2)).sub(1).toString(), // Each position settled substracts daiTokens * fix from the user collateral 
+                    'User1 should have ' + wethTokens.mul(3).sub(fixedWeth.mul(2)).sub(1).toString() + ' weth wei, instead has ' + (await weth.balanceOf(user3)),
                 );
+                // In the tests the settling nets zero surplus, which we tested above
             });
 
             describe("with all yDai redeemed", () => {
