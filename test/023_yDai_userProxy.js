@@ -14,7 +14,7 @@ const helper = require('ganache-time-traveler');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
 const { expectRevert, expectEvent } = require('@openzeppelin/test-helpers');
 
-contract('yDai', async (accounts) =>  {
+contract('yDai - UserProxy', async (accounts) =>  {
     let [ owner, holder, other ] = accounts;
     let vat;
     let pot;

@@ -13,7 +13,7 @@ import "./UserProxy.sol";
 
 
 ///@dev yDai is a yToken targeting Dai
-contract YDai is AuthorizedAccess, UserProxy, ERC20, Constants, IYDai  {
+contract YDai is AuthorizedAccess(), UserProxy(), ERC20, Constants, IYDai  {
     using DecimalMath for uint256;
     using DecimalMath for uint8;
 
@@ -35,7 +35,7 @@ contract YDai is AuthorizedAccess, UserProxy, ERC20, Constants, IYDai  {
         uint256 maturity_,
         string memory name,
         string memory symbol
-    ) public AuthorizedAccess() UserProxy() ERC20(name, symbol) {
+    ) public ERC20(name, symbol) {
         _vat = IVat(vat_);
         _pot = IPot(pot_);
         _treasury = ITreasury(treasury_);
