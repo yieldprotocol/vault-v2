@@ -9,10 +9,11 @@ import "./interfaces/IPot.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IYDai.sol";
 import "./Constants.sol";
+import "./UserProxy.sol";
 
 
 ///@dev yDai is a yToken targeting Dai
-contract YDai is AuthorizedAccess, ERC20, Constants, IYDai  {
+contract YDai is AuthorizedAccess, UserProxy, ERC20, Constants, IYDai  {
     using DecimalMath for uint256;
     using DecimalMath for uint8;
 
@@ -34,7 +35,7 @@ contract YDai is AuthorizedAccess, ERC20, Constants, IYDai  {
         uint256 maturity_,
         string memory name,
         string memory symbol
-    ) public AuthorizedAccess() ERC20(name, symbol) {
+    ) public AuthorizedAccess() UserProxy() ERC20(name, symbol) {
         _vat = IVat(vat_);
         _pot = IPot(pot_);
         _treasury = ITreasury(treasury_);
@@ -98,7 +99,8 @@ contract YDai is AuthorizedAccess, ERC20, Constants, IYDai  {
     /// @dev Burn yTokens and return their dai equivalent value, pulled from the Treasury
     // user --- yDai ---> us
     // us   --- Dai  ---> user
-    function redeem(address user, uint256 yDaiAmount) public {
+    function redeem(address user, uint256 yDaiAmount)
+        public onlyHolderOrProxy(user, "YDai: Only Holder Or Proxy") {
         require(
             isMature(),
             "YDai: yDai is not mature"
@@ -109,7 +111,8 @@ contract YDai is AuthorizedAccess, ERC20, Constants, IYDai  {
     }
 
     /// @dev Mint yDai. Only callable by Dealer contracts.
-    function mint(address to, uint256 yDaiAmount) public override onlyAuthorized("YDai: Not Authorized") {
+    function mint(address to, uint256 yDaiAmount) public override onlyAuthorized("YDai: Not Authorized")
+        {
         _mint(to, yDaiAmount);
     }
 
