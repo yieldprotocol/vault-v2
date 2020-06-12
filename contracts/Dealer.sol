@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IChai.sol";
+import "./interfaces/IGasToken.sol";
 import "./interfaces/IVault.sol";
 import "./interfaces/IOracle.sol";
 import "./interfaces/ITreasury.sol";
@@ -29,6 +30,8 @@ contract Dealer is AuthorizedAccess(), Constants {
     IERC20 internal _dai;
     IERC20 internal _token;                       // Weth or Chai
     IOracle internal _oracle;                     // WethOracle or ChaiOracle
+    IGasToken internal _gasToken;
+
     bytes32 public collateral;                    // "WETH" or "CHAI". Upgrade to 0.6.8 and make immutable
     mapping(address => uint256) public posted;    // In Weth or Chai
     mapping(uint256 => IYDai) public series;      // YDai series, indexed by maturity
@@ -40,12 +43,14 @@ contract Dealer is AuthorizedAccess(), Constants {
         address dai_,
         address token_,
         address oracle_,
+        address gasToken_,
         bytes32 collateral_
     ) public {
         _treasury = ITreasury(treasury_);
         _dai = IERC20(dai_);
         _token = IERC20(token_);
         _oracle = IOracle(oracle_);
+        _gasToken = IGasToken(gasToken_);
         require(
             collateral_ == WETH || collateral_ == CHAI,
             "Dealer: Unsupported collateral"

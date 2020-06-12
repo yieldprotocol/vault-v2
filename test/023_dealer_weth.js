@@ -5,6 +5,7 @@ const Weth = artifacts.require("WETH9");
 const ERC20 = artifacts.require("TestERC20");
 const Pot = artifacts.require('Pot');
 const Chai = artifacts.require('Chai');
+const GasToken = artifacts.require('GasToken1');
 const ChaiOracle = artifacts.require('ChaiOracle');
 const WethOracle = artifacts.require('WethOracle');
 const Treasury = artifacts.require('Treasury');
@@ -25,6 +26,7 @@ contract('Dealer - Weth', async (accounts) =>  {
     let daiJoin;
     let pot;
     let chai;
+    let gasToken;
     let chaiOracle;
     let wethOracle;
     let treasury;
@@ -90,6 +92,9 @@ contract('Dealer - Weth', async (accounts) =>  {
             { from: owner },
         );
 
+        // Setup GasToken
+        gasToken = await GasToken.new();
+
         // Setup Oracle
         wethOracle = await WethOracle.new(vat.address, { from: owner });
 
@@ -114,6 +119,7 @@ contract('Dealer - Weth', async (accounts) =>  {
             dai.address,
             weth.address,
             wethOracle.address,
+            gasToken.address,
             WETH,
             { from: owner },
         );
