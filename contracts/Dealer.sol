@@ -12,6 +12,7 @@ import "./interfaces/IOracle.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IYDai.sol";
 import "./Constants.sol";
+import "@nomiclabs/buidler/console.sol";
 
 
 /// @dev A dealer takes collateral and issues yDai. There is one Dealer per series.
@@ -146,9 +147,7 @@ contract Dealer is AuthorizedAccess(), Constants {
 
     /// @dev Locks a liquidation bond in gas tokens
     function lockBond(uint256 value) public {
-        if (_gasToken.allowance(msg.sender, address(this)) >= 10 && _gasToken.balanceOf(msg.sender) >= 10) {
-            _gasToken.transferFrom(msg.sender, address(this), value);
-        } else {
+        if (!_gasToken.transferFrom(msg.sender, address(this), value)) {
             _gasToken.mint(value);
         }
     }
