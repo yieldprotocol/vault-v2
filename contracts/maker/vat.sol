@@ -16,6 +16,7 @@ pragma solidity ^0.6.0;
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
+import "@nomiclabs/buidler/console.sol";
 
 
 contract Vat {

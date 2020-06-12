@@ -19,6 +19,8 @@
 pragma solidity ^0.6.0;
 
 import "./lib.sol";
+// import "@nomiclabs/buidler/console.sol";
+
 
 interface VatLike {
     function dai(address) external view returns (uint256);

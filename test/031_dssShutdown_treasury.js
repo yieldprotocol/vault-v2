@@ -66,8 +66,10 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
     let maturity1;
     let maturity2;
 
-    const tag  = divRay(toRay(1), spot); // TODO: Test with tag different than initial value
-    const fix  = divRay(toRay(1), spot); // TODO: Test with fix different from tag
+    const tag  = divRay(toRay(0.9), spot);
+    const taggedWeth = mulRay(daiTokens, tag);
+    const fix  = divRay(toRay(1.1), spot);
+    const fixedWeth = mulRay(daiTokens, fix);
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
@@ -279,7 +281,7 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                 assert.equal(
                     await weth.balanceOf(dssShutdown.address, { from: owner }),
                     wethTokens.toString(),
-                    'DssShutdown should have ' + wethTokens.toString() + ' weth in hand.',
+                    'Treasury should have ' + wethTokens.toString() + ' weth in hand, instead has ' + (await weth.balanceOf(dssShutdown.address, { from: owner })),
                 );
             });
         });
@@ -314,11 +316,10 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                 it("allows to settle treasury debt", async() => {
                     await dssShutdown.settleTreasury({ from: owner });
 
-                    // Fun fact: One of the wei is comes from freeing collateral, the other from rounding up on settling the debt.
                     assert.equal(
                         await weth.balanceOf(dssShutdown.address, { from: owner }),
-                        2,
-                        'DssShutdown should have ' + 2 + ' weth in hand.',
+                        wethTokens.sub(taggedWeth).add(1).toString(),
+                        'DssShutdown should have ' + wethTokens.sub(taggedWeth).add(1).add(1) + ' weth in hand, instead has ' + (await weth.balanceOf(dssShutdown.address, { from: owner })),
                     );
                 });
             });
@@ -348,11 +349,11 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                     // End.sol needs to have weth somehow, for example by settling some debt
                     await vat.hope(daiJoin.address, { from: user });
                     await vat.hope(wethJoin.address, { from: user });
-                    await weth.deposit({ from: user, value: wethTokens});
-                    await weth.approve(wethJoin.address, wethTokens, { from: user });
-                    await wethJoin.join(user, wethTokens, { from: user });
-                    await vat.frob(ilk, user, user, user, wethTokens, daiDebt, { from: user });
-                    await daiJoin.exit(user, daiTokens, { from: user });
+                    await weth.deposit({ from: user, value: wethTokens.mul(2)});
+                    await weth.approve(wethJoin.address, wethTokens.mul(2), { from: user });
+                    await wethJoin.join(user, wethTokens.mul(2), { from: user });
+                    await vat.frob(ilk, user, user, user, wethTokens.mul(2), daiDebt.mul(2), { from: user });
+                    await daiJoin.exit(user, daiTokens.mul(2), { from: user });
 
                     await end.cage({ from: owner });
                     await end.setTag(ilk, tag, { from: owner });
@@ -380,8 +381,8 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                     );
                     assert.equal(
                         await weth.balanceOf(dssShutdown.address, { from: owner }),
-                        wethTokens.sub(1).toString(), // TODO: Unpack the calculations and round the same way in the tests for parameterization
-                        'DssShutdown should have ' + wethTokens.sub(1).toString() + ' weth in hand.',
+                        fixedWeth.toString(), // TODO: Unpack the calculations and round the same way in the tests for parameterization
+                        'DssShutdown should have ' + fixedWeth.toString() + ' weth in hand, instead has ' + (await weth.balanceOf(dssShutdown.address, { from: owner })),
                     );
                 });
             });
