@@ -144,6 +144,20 @@ contract Dealer is AuthorizedAccess(), Constants {
         return totalDebt;
     }
 
+    /// @dev Locks a liquidation bond in gas tokens
+    function lockBond(uint256 value) public {
+        if (_gasToken.allowance(msg.sender, address(this)) >= 10 && _gasToken.balanceOf(msg.sender) >= 10) {
+            _gasToken.transferFrom(msg.sender, address(this), value);
+        } else {
+            _gasToken.mint(value);
+        }
+    }
+
+    /// @dev Frees a liquidation bond in gas tokens
+    function returnBond(uint256 value) public {
+        _gasToken.transfer(msg.sender, value);
+    }
+
     /// @dev Takes collateral _token from `from` address
     // from --- Token ---> us
     function post(address from, uint256 amount) public virtual {
@@ -157,6 +171,9 @@ contract Dealer is AuthorizedAccess(), Constants {
             _treasury.pushChai();
         } else {
             revert("Dealer: Unsupported collateral");
+        }
+        if (posted[from] == 0 && amount >= 0) {
+            lockBond(10);
         }
         posted[from] = posted[from].add(amount);
     }
@@ -177,6 +194,10 @@ contract Dealer is AuthorizedAccess(), Constants {
             _treasury.pullChai(to, amount);
         } else {
             revert("Dealer: Unsupported collateral");
+        }
+
+        if(posted[to] == 0 && amount >= 0) {
+            returnBond(10);
         }
     }
 
