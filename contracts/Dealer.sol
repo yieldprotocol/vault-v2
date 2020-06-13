@@ -12,11 +12,11 @@ import "./interfaces/IOracle.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IYDai.sol";
 import "./Constants.sol";
-import "@nomiclabs/buidler/console.sol";
+import "./UserProxy.sol";
 
 
 /// @dev A dealer takes collateral and issues yDai. There is one Dealer per series.
-contract Dealer is AuthorizedAccess(), Constants {
+contract Dealer is AuthorizedAccess(), UserProxy(), Constants {
     using SafeMath for uint256;
     using DecimalMath for uint256;
     using DecimalMath for uint8;
@@ -159,7 +159,8 @@ contract Dealer is AuthorizedAccess(), Constants {
 
     /// @dev Takes collateral _token from `from` address
     // from --- Token ---> us
-    function post(address from, uint256 amount) public virtual {
+    function post(address from, uint256 amount)
+        public onlyHolderOrProxy(from, "YDai: Only Holder Or Proxy") {
         require(
             _token.transferFrom(from, address(_treasury), amount),
             "Dealer: Collateral transfer fail"
@@ -179,7 +180,8 @@ contract Dealer is AuthorizedAccess(), Constants {
 
     /// @dev Returns collateral to `to` address
     // us --- Token ---> to
-    function withdraw(address to, uint256 amount) public virtual {
+    function withdraw(address to, uint256 amount)
+        public onlyHolderOrProxy(to, "YDai: Only Holder Or Proxy") {
         posted[to] = posted[to].sub(amount); // Will revert if not enough posted
 
         require(
@@ -206,7 +208,8 @@ contract Dealer is AuthorizedAccess(), Constants {
     //
     // us --- yDai ---> user
     // debt++
-    function borrow(uint256 maturity, address to, uint256 yDaiAmount) public {
+    function borrow(uint256 maturity, address to, uint256 yDaiAmount)
+        public onlyHolderOrProxy(to, "YDai: Only Holder Or Proxy") {
         require(
             containsSeries(maturity),
             "Dealer: Unrecognized series"
@@ -235,7 +238,8 @@ contract Dealer is AuthorizedAccess(), Constants {
     //
     // user --- yDai ---> us
     // debt--
-    function repayYDai(uint256 maturity, address from, uint256 yDaiAmount) public {
+    function repayYDai(uint256 maturity, address from, uint256 yDaiAmount)
+        public onlyHolderOrProxy(from, "YDai: Only Holder Or Proxy") {
         require(
             containsSeries(maturity),
             "Dealer: Unrecognized series"
@@ -255,7 +259,8 @@ contract Dealer is AuthorizedAccess(), Constants {
     //
     // user --- dai ---> us
     // debt--
-    function repayDai(uint256 maturity, address from, uint256 daiAmount) public {
+    function repayDai(uint256 maturity, address from, uint256 daiAmount)
+        public onlyHolderOrProxy(from, "YDai: Only Holder Or Proxy") {
         (uint256 toRepay, uint256 debtDecrease) = amounts(maturity, from, inYDai(maturity, daiAmount));
         require(
             _dai.transferFrom(from, address(_treasury), toRepay),  // Take dai from user to Treasury
