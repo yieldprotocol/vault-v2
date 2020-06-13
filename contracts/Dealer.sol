@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IChai.sol";
+import "./interfaces/IGasToken.sol";
 import "./interfaces/IVault.sol";
 import "./interfaces/IOracle.sol";
 import "./interfaces/ITreasury.sol";
@@ -30,6 +31,8 @@ contract Dealer is AuthorizedAccess(), UserProxy(), Constants {
     IERC20 internal _dai;
     IERC20 internal _token;                       // Weth or Chai
     IOracle internal _oracle;                     // WethOracle or ChaiOracle
+    IGasToken internal _gasToken;
+
     bytes32 public collateral;                    // "WETH" or "CHAI". Upgrade to 0.6.8 and make immutable
     mapping(address => uint256) public posted;    // In Weth or Chai
     mapping(uint256 => IYDai) public series;      // YDai series, indexed by maturity
@@ -41,12 +44,14 @@ contract Dealer is AuthorizedAccess(), UserProxy(), Constants {
         address dai_,
         address token_,
         address oracle_,
+        address gasToken_,
         bytes32 collateral_
     ) public {
         _treasury = ITreasury(treasury_);
         _dai = IERC20(dai_);
         _token = IERC20(token_);
         _oracle = IOracle(oracle_);
+        _gasToken = IGasToken(gasToken_);
         require(
             collateral_ == WETH || collateral_ == CHAI,
             "Dealer: Unsupported collateral"
@@ -140,6 +145,18 @@ contract Dealer is AuthorizedAccess(), UserProxy(), Constants {
         return totalDebt;
     }
 
+    /// @dev Locks a liquidation bond in gas tokens
+    function lockBond(uint256 value) public {
+        if (!_gasToken.transferFrom(msg.sender, address(this), value)) {
+            _gasToken.mint(value);
+        }
+    }
+
+    /// @dev Frees a liquidation bond in gas tokens
+    function returnBond(uint256 value) public {
+        _gasToken.transfer(msg.sender, value);
+    }
+
     /// @dev Takes collateral _token from `from` address
     // from --- Token ---> us
     function post(address from, uint256 amount)
@@ -154,6 +171,9 @@ contract Dealer is AuthorizedAccess(), UserProxy(), Constants {
             _treasury.pushChai();
         } else {
             revert("Dealer: Unsupported collateral");
+        }
+        if (posted[from] == 0 && amount >= 0) {
+            lockBond(10);
         }
         posted[from] = posted[from].add(amount);
     }
@@ -176,6 +196,10 @@ contract Dealer is AuthorizedAccess(), UserProxy(), Constants {
         } else {
             revert("Dealer: Unsupported collateral");
         }
+
+        if (posted[to] == 0 && amount >= 0) {
+            returnBond(10);
+        }
     }
 
     /// @dev Mint yDai for address `to` by locking its market value in collateral, user debt is increased.
@@ -195,13 +219,15 @@ contract Dealer is AuthorizedAccess(), UserProxy(), Constants {
             "Dealer: No mature borrow"
         );
 
+        if (debtYDai[maturity][to] == 0 && yDaiAmount >= 0) {
+            lockBond(10);
+        }
         debtYDai[maturity][to] = debtYDai[maturity][to].add(yDaiAmount);
 
         require(
             isCollateralized(to),
             "Dealer: Too much debt"
         );
-
         series[maturity].mint(to, yDaiAmount);
     }
 
@@ -221,6 +247,9 @@ contract Dealer is AuthorizedAccess(), UserProxy(), Constants {
         (uint256 toRepay, uint256 debtDecrease) = amounts(maturity, from, yDaiAmount);
         series[maturity].burn(from, toRepay);
         debtYDai[maturity][from] = debtYDai[maturity][from].sub(debtDecrease);
+        if (debtYDai[maturity][from] == 0 && debtDecrease >= 0) {
+            returnBond(10);
+        }
     }
 
     /// @dev Takes dai from `from` address, user debt is decreased.
@@ -240,6 +269,9 @@ contract Dealer is AuthorizedAccess(), UserProxy(), Constants {
 
         _treasury.pushDai();                                      // Have Treasury process the dai
         debtYDai[maturity][from] = debtYDai[maturity][from].sub(debtDecrease);
+        if (debtYDai[maturity][from] == 0 && debtDecrease >= 0) {
+            returnBond(10);
+        }
     }
 
     /// @dev Erases a debt position and its equivalent amount of collateral from the user records
