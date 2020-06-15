@@ -1,12 +1,17 @@
 // const { BN } = require('@openzeppelin/test-helpers');
 const fixed_addrs = require('./fixed_addrs.json');
+const Vat = artifacts.require('Vat');
+const GemJoin = artifacts.require('GemJoin');
+const DaiJoin = artifacts.require('DaiJoin');
+const Weth = artifacts.require("WETH9");
 const ERC20 = artifacts.require("TestERC20");
-const Vat = artifacts.require("Vat");
-const GemJoin = artifacts.require("GemJoin");
-const DaiJoin = artifacts.require("DaiJoin");
-const Pot = artifacts.require("Pot");
+const Pot = artifacts.require('Pot');
+const End = artifacts.require('End');
+const Chai = artifacts.require('Chai');
+const GasToken = artifacts.require('GasToken1');
 const Migrations = artifacts.require("Migrations");
 
+const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('../test/shared/utils');
 
 module.exports = async (deployer, network, accounts) => {
   const [owner] = accounts;
@@ -16,7 +21,9 @@ module.exports = async (deployer, network, accounts) => {
   let daiAddress;
   let daiJoinAddress;
   let potAddress;
+  let endAddress;
   let chaiAddress;
+  let gasTokenAddress;
 
   if (network === "development") {
     // Setting up Vat
@@ -25,64 +32,72 @@ module.exports = async (deployer, network, accounts) => {
     const spotName = web3.utils.fromAscii("spot");
     const linel = web3.utils.fromAscii("line");
 
-    // const limits =  toRad(1);
-    // const spot  = toRay(1.5);
-    // const rate  = toRay(1.25);
-    const limits = "1000000000000000000000000000000000000000000000";
-    const spot = "1500000000000000000000000000"
-    const rateIncrease  = "250000000000000000000000000"; // Total: 1.25
+    const limits = toRad(10000);
+    const spot  = toRay(1.5);
+    const rate  = toRay(1.25);
+    const chi = toRay(1.2);
 
-    // Setup Vat, Dai, Join and Weth
+    // Setup vat
     await deployer.deploy(Vat);
     const vat = await Vat.deployed();
     vatAddress = vat.address;
-    await vat.rely(vatAddress);
-    await vat.init(ilk); // Set ilk rate to 1.0
+    await vat.init(ilk);
+    await vat.file(ilk, spotName, spot);
+    await vat.file(ilk, linel, limits);
+    await vat.file(Line, limits);
+    await vat.fold(ilk, vatAddress, subBN(rate, toRay(1)));
 
-    await vat.fold(ilk, vat.address, rateIncrease, { from: owner }); // 1 + 0.25
-
-    await deployer.deploy(ERC20, 0);
-    wethAddress = (await ERC20.deployed()).address;
-
-    const migration = await Migrations.deployed();
-    await migration.setDupAddr('weth', wethAddress );
+    await deployer.deploy(Weth);
+    wethAddress = (await Weth.deployed()).address;
 
     await deployer.deploy(GemJoin, vatAddress, ilk, wethAddress);
     wethJoinAddress = (await GemJoin.deployed()).address;
-    await vat.rely(wethJoinAddress);
 
     await deployer.deploy(ERC20, 0);
     daiAddress = (await ERC20.deployed()).address;
 
-    await migration.setDupAddr('dai', daiAddress );
-
     await deployer.deploy(DaiJoin, vatAddress, daiAddress);
     daiJoinAddress = (await DaiJoin.deployed()).address;
-    await vat.rely(daiJoinAddress);
 
-    // Setup spot and limits
-    await vat.file(ilk, spotName, spot);
-    await vat.file(ilk, linel, limits);
-    await vat.file(Line, limits);
-
-    // Setup Pot
+    // Setup pot
     await deployer.deploy(Pot, vatAddress);
-    potAddress = (await Pot.deployed()).address;
+    const pot = await Pot.deployed();
+    potAddress = pot.address;
+    await pot.setChi(chi);
+
+    // Setup end
+    await deployer.deploy(End)
+    const end = await End.deployed();
+    endAddress = end.address;
+    await end.file(web3.utils.fromAscii("vat"), vatAddress);
+
+    // Permissions
+    await vat.rely(vatAddress);
+    await vat.rely(wethJoinAddress);
+    await vat.rely(daiJoinAddress);
     await vat.rely(potAddress);
+    await vat.rely(endAddress);
+
   };
 
-   if (network !== 'development') {
-      vatAddress = fixed_addrs[network].vatAddress ;
-      wethAddress = fixed_addrs[network].wethAddress;
-      wethJoinAddress = fixed_addrs[network].wethJoinAddress;
-      daiAddress = fixed_addrs[network].daiAddress;
-      daiJoinAddress = fixed_addrs[network].daiJoinAddress;
-      potAddress = fixed_addrs[network].potAddress;
-      fixed_addrs[network].chaiAddress && (chaiAddress = fixed_addrs[network].chaiAddress);
-   };
+  if (network !== 'development') {
+    vatAddress = fixed_addrs[network].vatAddress ;
+    wethAddress = fixed_addrs[network].wethAddress;
+    wethJoinAddress = fixed_addrs[network].wethJoinAddress;
+    daiAddress = fixed_addrs[network].daiAddress;
+    daiJoinAddress = fixed_addrs[network].daiJoinAddress;
+    potAddress = fixed_addrs[network].potAddress;
+    endAddress = fixed_addrs[network].endAddress;
+    fixed_addrs[network].chaiAddress && (chaiAddress = fixed_addrs[network].chaiAddress);
+  };
+
+  if (network === "development" || network === "goerli" && network === "goerli-fork") {
+    // Setup Chai
+    await deployer.deploy(GasToken);
+    gasTokenAddress = (await GasToken.deployed()).address;
+  };
 
   if (network !== "mainnet" && network !== "kovan" && network !== "kovan-fork") {
-    const Chai = artifacts.require("Chai");
     // Setup Chai
     await deployer.deploy(
       Chai,
@@ -102,33 +117,5 @@ module.exports = async (deployer, network, accounts) => {
   console.log("    dai:      " + daiAddress);
   console.log("    daiJoin:  " + daiJoinAddress);
   console.log("    chai:     " + chaiAddress);
+  console.log("    gasToken: " + gasTokenAddress);
 }
-
-
-/// @dev Returns the decimals in a number
-/* function decimals(value) {
-  if(Math.floor(value) === value) return 0;
-  return value.toString().split(".")[1].length || 0; 
-}; */
-
-/// @dev Converts a number to RAY precision
-/* function toRay(value) {
-  return web3.utils.toBN(value.toString()) * web3.utils.toBN('10').pow(new BN(27).sub(new BN(decimals(value.toString())))); 
-}; */
-
-/// @dev Converts a number to RAY precision
-/* function toRad(value) {
-  return web3.utils.toBN(value.toString()) * web3.utils.toBN('10').pow((new BN(45)).sub(new BN(decimals(value.toString())))); 
-}; */
-
-/// @dev Converts a string to bytes32
-/* function stringToBytes32(text) {
-  let result = web3.utils.fromAscii(text);
-  while (result.length < 66) result += '0'; // 0x + 64 digits
-  return result;
-}; */
-
-/// @dev Converts a bytes32 to string
-/* function bytes32ToString(text) {
-  return web3.utils.toAscii(text).replace(/\0/g, '');
-}; */
