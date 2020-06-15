@@ -116,7 +116,8 @@ contract('Dealer - Splitter', async (accounts) =>  {
             dai.address,
             weth.address,
             wethOracle.address,
-            WETH,
+            chai.address,
+            chaiOracle.address,
             { from: owner },
         );
         treasury.grantAccess(dealer.address, { from: owner });
@@ -189,10 +190,10 @@ contract('Dealer - Splitter', async (accounts) =>  {
         beforeEach(async() => {
             await weth.deposit({ from: owner, value: wethTokens });
             await weth.approve(dealer.address, wethTokens, { from: owner }); 
-            await dealer.post(owner, wethTokens, { from: owner });
+            await dealer.post(WETH, owner, wethTokens, { from: owner });
 
             assert.equal(
-                await dealer.posted(owner),
+                await dealer.posted(WETH, owner),
                 wethTokens.toString(),
                 "User does not have collateral in Dealer",
             );
@@ -206,7 +207,7 @@ contract('Dealer - Splitter', async (accounts) =>  {
         it("allows to erase collateral only positions", async() => {
             await dealer.grantAccess(owner, { from: owner }); // Only for testing
             expectEvent(
-                await dealer.erase(owner, { from: owner }),
+                await dealer.erase(WETH, owner, { from: owner }),
                 "Erased",
                 {
                     user: owner,
@@ -216,7 +217,7 @@ contract('Dealer - Splitter', async (accounts) =>  {
             );
 
             assert.equal(
-                await dealer.posted(owner),
+                await dealer.posted(WETH, owner),
                 0,
                 "User should not have collateral in Dealer",
             );
@@ -249,10 +250,10 @@ contract('Dealer - Splitter', async (accounts) =>  {
 
         describe("with borrowed yDai", () => {
             beforeEach(async() => {
-                await dealer.borrow(maturity1, owner, daiTokens, { from: owner });
+                await dealer.borrow(WETH, maturity1, owner, daiTokens, { from: owner });
 
                 assert.equal(
-                    await dealer.debtDai(maturity1, owner),
+                    await dealer.debtDai(WETH, maturity1, owner),
                     daiTokens.toString(),
                     "Owner does not have debt",
                 );
@@ -269,11 +270,11 @@ contract('Dealer - Splitter', async (accounts) =>  {
                 // We post an extra weth wei to te, uint256 debtst that only the needed collateral is taken
                 await weth.deposit({ from: owner, value: 1 });
                 await weth.approve(dealer.address, 1, { from: owner }); 
-                await dealer.post(owner, 1, { from: owner });
+                await dealer.post(WETH, owner, 1, { from: owner });
 
                 await dealer.grantAccess(owner, { from: owner }); // Only for testing
                 expectEvent(
-                    await dealer.erase(owner, { from: owner }),
+                    await dealer.erase(WETH, owner, { from: owner }),
                     "Erased",
                     {
                         user: owner,
@@ -286,12 +287,12 @@ contract('Dealer - Splitter', async (accounts) =>  {
                 // TODO: Test with different rates
 
                 assert.equal(
-                    await dealer.debtDai(maturity1, owner),
+                    await dealer.debtDai(WETH, maturity1, owner),
                     0,
                     "User should not have debt in Dealer",
                 );
                 assert.equal(
-                    await dealer.posted(owner),
+                    await dealer.posted(WETH, owner),
                     0,
                     "User should not have collateral in Dealer",
                 );

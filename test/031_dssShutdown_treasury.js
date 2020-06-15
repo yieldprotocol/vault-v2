@@ -41,7 +41,7 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
     let treasury;
     let yDai1;
     let yDai2;
-    let wethDealer;
+    let dealer;
     let splitter;
     let dssShutdown;
 
@@ -132,27 +132,17 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             { from: owner },
         );
 
-        // Setup wethDealer
-        wethDealer = await Dealer.new(
+        // Setup dealer
+        dealer = await Dealer.new(
             treasury.address,
             dai.address,
             weth.address,
             wethOracle.address,
-            WETH,
-            { from: owner },
-        );
-        await treasury.grantAccess(wethDealer.address, { from: owner });
-
-        // Setup chaiDealer
-        chaiDealer = await Dealer.new(
-            treasury.address,
-            dai.address,
             chai.address,
             chaiOracle.address,
-            CHAI,
             { from: owner },
         );
-        await treasury.grantAccess(chaiDealer.address, { from: owner });
+        await treasury.grantAccess(dealer.address, { from: owner });
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
@@ -166,10 +156,8 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             "Symbol",
             { from: owner },
         );
-        await wethDealer.addSeries(yDai1.address, { from: owner });
-        await chaiDealer.addSeries(yDai1.address, { from: owner });
-        await yDai1.grantAccess(wethDealer.address, { from: owner });
-        await yDai1.grantAccess(chaiDealer.address, { from: owner });
+        await dealer.addSeries(yDai1.address, { from: owner });
+        await yDai1.grantAccess(dealer.address, { from: owner });
         await treasury.grantAccess(yDai1.address, { from: owner });
 
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
@@ -182,19 +170,17 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             "Symbol2",
             { from: owner },
         );
-        await wethDealer.addSeries(yDai2.address, { from: owner });
-        await chaiDealer.addSeries(yDai2.address, { from: owner });
-        await yDai2.grantAccess(wethDealer.address, { from: owner })
-        await yDai2.grantAccess(chaiDealer.address, { from: owner });
+        await dealer.addSeries(yDai2.address, { from: owner });
+        await yDai2.grantAccess(dealer.address, { from: owner })
         await treasury.grantAccess(yDai2.address, { from: owner });
 
         // Setup Splitter
         splitter = await Splitter.new(
             treasury.address,
-            wethDealer.address,
+            dealer.address,
             { from: owner },
         );
-        await wethDealer.grantAccess(splitter.address, { from: owner });
+        await dealer.grantAccess(splitter.address, { from: owner });
         await treasury.grantAccess(splitter.address, { from: owner });
 
         // Setup DssShutdown
@@ -207,12 +193,10 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             chai.address,
             chaiOracle.address,
             treasury.address,
-            wethDealer.address,
-            chaiDealer.address,
+            dealer.address,
             { from: owner },
         );
-        await wethDealer.grantAccess(dssShutdown.address, { from: owner });
-        await chaiDealer.grantAccess(dssShutdown.address, { from: owner });
+        await dealer.grantAccess(dssShutdown.address, { from: owner });
         await treasury.registerDssShutdown(dssShutdown.address, { from: owner });
         await yDai1.grantAccess(dssShutdown.address, { from: owner });
         await yDai2.grantAccess(dssShutdown.address, { from: owner });
@@ -234,13 +218,13 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
         console.log("|  Contract          ·  Bytecode        ·  Deployed        ·  Constructor     |");
         console.log("·····················|··················|··················|···················");
 
-        const bytecode = wethDealer.constructor._json.bytecode;
-        const deployed = wethDealer.constructor._json.deployedBytecode;
+        const bytecode = dealer.constructor._json.bytecode;
+        const deployed = dealer.constructor._json.deployedBytecode;
         const sizeOfB  = bytecode.length / 2;
         const sizeOfD  = deployed.length / 2;
         const sizeOfC  = sizeOfB - sizeOfD;
         console.log(
-            "|  " + (wethDealer.constructor._json.contractName).padEnd(18, ' ') +
+            "|  " + (dealer.constructor._json.contractName).padEnd(18, ' ') +
             "|" + ("" + sizeOfB).padStart(16, ' ') + "  " +
             "|" + ("" + sizeOfD).padStart(16, ' ') + "  " +
             "|" + ("" + sizeOfC).padStart(16, ' ') + "  |");

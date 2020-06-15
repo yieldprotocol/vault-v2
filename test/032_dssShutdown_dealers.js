@@ -41,7 +41,7 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
     let treasury;
     let yDai1;
     let yDai2;
-    let wethDealer;
+    let dealer;
     let splitter;
     let dssShutdown;
 
@@ -132,27 +132,17 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             { from: owner },
         );
 
-        // Setup wethDealer
-        wethDealer = await Dealer.new(
+        // Setup dealer
+        dealer = await Dealer.new(
             treasury.address,
             dai.address,
             weth.address,
             wethOracle.address,
-            WETH,
-            { from: owner },
-        );
-        await treasury.grantAccess(wethDealer.address, { from: owner });
-
-        // Setup chaiDealer
-        chaiDealer = await Dealer.new(
-            treasury.address,
-            dai.address,
             chai.address,
             chaiOracle.address,
-            CHAI,
             { from: owner },
         );
-        await treasury.grantAccess(chaiDealer.address, { from: owner });
+        await treasury.grantAccess(dealer.address, { from: owner });
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
@@ -166,10 +156,8 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             "Symbol",
             { from: owner },
         );
-        await wethDealer.addSeries(yDai1.address, { from: owner });
-        await chaiDealer.addSeries(yDai1.address, { from: owner });
-        await yDai1.grantAccess(wethDealer.address, { from: owner });
-        await yDai1.grantAccess(chaiDealer.address, { from: owner });
+        await dealer.addSeries(yDai1.address, { from: owner });
+        await yDai1.grantAccess(dealer.address, { from: owner });
         await treasury.grantAccess(yDai1.address, { from: owner });
 
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
@@ -182,19 +170,17 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             "Symbol2",
             { from: owner },
         );
-        await wethDealer.addSeries(yDai2.address, { from: owner });
-        await chaiDealer.addSeries(yDai2.address, { from: owner });
-        await yDai2.grantAccess(wethDealer.address, { from: owner })
-        await yDai2.grantAccess(chaiDealer.address, { from: owner });
+        await dealer.addSeries(yDai2.address, { from: owner });
+        await yDai2.grantAccess(dealer.address, { from: owner })
         await treasury.grantAccess(yDai2.address, { from: owner });
 
         // Setup Splitter
         splitter = await Splitter.new(
             treasury.address,
-            wethDealer.address,
+            dealer.address,
             { from: owner },
         );
-        await wethDealer.grantAccess(splitter.address, { from: owner });
+        await dealer.grantAccess(splitter.address, { from: owner });
         await treasury.grantAccess(splitter.address, { from: owner });
 
         // Setup DssShutdown
@@ -207,12 +193,10 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             chai.address,
             chaiOracle.address,
             treasury.address,
-            wethDealer.address,
-            chaiDealer.address,
+            dealer.address,
             { from: owner },
         );
-        await wethDealer.grantAccess(dssShutdown.address, { from: owner });
-        await chaiDealer.grantAccess(dssShutdown.address, { from: owner });
+        await dealer.grantAccess(dssShutdown.address, { from: owner });
         await treasury.registerDssShutdown(dssShutdown.address, { from: owner });
         await yDai1.grantAccess(dssShutdown.address, { from: owner });
         await yDai2.grantAccess(dssShutdown.address, { from: owner });
@@ -234,13 +218,13 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
         console.log("|  Contract          ·  Bytecode        ·  Deployed        ·  Constructor     |");
         console.log("·····················|··················|··················|···················");
 
-        const bytecode = wethDealer.constructor._json.bytecode;
-        const deployed = wethDealer.constructor._json.deployedBytecode;
+        const bytecode = dealer.constructor._json.bytecode;
+        const deployed = dealer.constructor._json.deployedBytecode;
         const sizeOfB  = bytecode.length / 2;
         const sizeOfD  = deployed.length / 2;
         const sizeOfC  = sizeOfB - sizeOfD;
         console.log(
-            "|  " + (wethDealer.constructor._json.contractName).padEnd(18, ' ') +
+            "|  " + (dealer.constructor._json.contractName).padEnd(18, ' ') +
             "|" + ("" + sizeOfB).padStart(16, ' ') + "  " +
             "|" + ("" + sizeOfD).padStart(16, ' ') + "  " +
             "|" + ("" + sizeOfC).padStart(16, ' ') + "  |");
@@ -259,19 +243,19 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
         beforeEach(async() => {
             // Weth setup
             await weth.deposit({ from: user1, value: wethTokens });
-            await weth.approve(wethDealer.address, wethTokens, { from: user1 });
-            await wethDealer.post(user1, wethTokens, { from: user1 });
+            await weth.approve(dealer.address, wethTokens, { from: user1 });
+            await dealer.post(WETH, user1, wethTokens, { from: user1 });
 
             await weth.deposit({ from: user2, value: wethTokens.add(1) });
-            await weth.approve(wethDealer.address, wethTokens.add(1), { from: user2 });
-            await wethDealer.post(user2, wethTokens.add(1), { from: user2 });
-            await wethDealer.borrow(maturity1, user2, daiTokens, { from: user2 });
+            await weth.approve(dealer.address, wethTokens.add(1), { from: user2 });
+            await dealer.post(WETH, user2, wethTokens.add(1), { from: user2 });
+            await dealer.borrow(WETH, maturity1, user2, daiTokens, { from: user2 });
 
             await weth.deposit({ from: user3, value: wethTokens.mul(3) });
-            await weth.approve(wethDealer.address, wethTokens.mul(3), { from: user3 });
-            await wethDealer.post(user3, wethTokens.mul(3), { from: user3 });
-            await wethDealer.borrow(maturity1, user3, daiTokens, { from: user3 });
-            await wethDealer.borrow(maturity2, user3, daiTokens, { from: user3 });
+            await weth.approve(dealer.address, wethTokens.mul(3), { from: user3 });
+            await dealer.post(WETH, user3, wethTokens.mul(3), { from: user3 });
+            await dealer.borrow(WETH, maturity1, user3, daiTokens, { from: user3 });
+            await dealer.borrow(WETH, maturity2, user3, daiTokens, { from: user3 });
 
             // Chai setup
             await vat.hope(daiJoin.address, { from: user1 });
@@ -284,8 +268,8 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             await daiJoin.exit(user1, daiTokens, { from: user1 });
             await dai.approve(chai.address, daiTokens, { from: user1 });
             await chai.join(user1, daiTokens, { from: user1 });
-            await chai.approve(chaiDealer.address, chaiTokens, { from: user1 });
-            await chaiDealer.post(user1, chaiTokens, { from: user1 });
+            await chai.approve(dealer.address, chaiTokens, { from: user1 });
+            await dealer.post(CHAI, user1, chaiTokens, { from: user1 });
 
             await vat.hope(daiJoin.address, { from: user2 });
             await vat.hope(wethJoin.address, { from: user2 });
@@ -301,12 +285,12 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             await daiJoin.exit(user2, moreDai, { from: user2 });
             await dai.approve(chai.address, moreDai, { from: user2 });
             await chai.join(user2, moreDai, { from: user2 });
-            await chai.approve(chaiDealer.address, moreChai, { from: user2 });
-            await chaiDealer.post(user2, moreChai, { from: user2 });
-            await chaiDealer.borrow(maturity1, user2, daiTokens, { from: user2 });
+            await chai.approve(dealer.address, moreChai, { from: user2 });
+            await dealer.post(CHAI, user2, moreChai, { from: user2 });
+            await dealer.borrow(CHAI, maturity1, user2, daiTokens, { from: user2 });
 
-            // user1 has chaiTokens in chaiDealer and no debt.
-            // user2 has chaiTokens * 1.1 in chaiDealer and daiTokens debt.
+            // user1 has chaiTokens in dealer and no debt.
+            // user2 has chaiTokens * 1.1 in dealer and daiTokens debt.
 
             // Make sure that end.sol will have enough weth to cash chai savings
             await weth.deposit({ from: owner, value: wethTokens.mul(10) });
@@ -326,9 +310,9 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                 'User2 should have no weth',
             );
             assert.equal(
-                await wethDealer.debtYDai(maturity1, user2),
+                await dealer.debtYDai(WETH, maturity1, user2),
                 yDaiTokens.toString(),
-                'User2 should have ' + yDaiTokens.toString() + ' maturity1 weth debt, instead has ' + (await wethDealer.debtYDai(maturity1, user2)).toString(),
+                'User2 should have ' + yDaiTokens.toString() + ' maturity1 weth debt, instead has ' + (await dealer.debtYDai(WETH, maturity1, user2)).toString(),
             );
         });
 
@@ -429,7 +413,7 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                 await dssShutdown.settle(WETH, user2, { from: user2 });
 
                 assert.equal(
-                    await wethDealer.debtYDai(maturity1, user2),
+                    await dealer.debtYDai(WETH, maturity1, user2),
                     0,
                     'User2 should have no maturity1 weth debt',
                 );
@@ -440,7 +424,7 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                 await dssShutdown.settle(CHAI, user2, { from: user2 });
 
                 assert.equal(
-                    await chaiDealer.debtYDai(maturity1, user2),
+                    await dealer.debtYDai(CHAI, maturity1, user2),
                     0,
                     'User2 should have no maturity1 chai debt',
                 );

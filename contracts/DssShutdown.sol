@@ -37,8 +37,7 @@ contract DssShutdown is Constants {
     IChai internal _chai;
     IOracle internal _chaiOracle;
     ITreasury internal _treasury;
-    IVault internal _wethDealer;
-    IVault internal _chaiDealer;
+    IVault internal _dealer;
 
     mapping(uint256 => IYDai) public series;
     mapping(address => uint256) public posted; // Weth only
@@ -59,8 +58,7 @@ contract DssShutdown is Constants {
         address chai_,
         address chaiOracle_,
         address treasury_,
-        address wethDealer_,
-        address chaiDealer_
+        address dealer_
     ) public {
         // These could be hardcoded for mainnet deployment.
         _vat = IVat(vat_);
@@ -71,8 +69,7 @@ contract DssShutdown is Constants {
         _chai = IChai(chai_);
         _chaiOracle = IOracle(chaiOracle_);
         _treasury = ITreasury(treasury_);
-        _wethDealer = IVault(wethDealer_);
-        _chaiDealer = IVault(chaiDealer_);
+        _dealer = IVault(dealer_);
         _vat.hope(address(_treasury));
         _vat.hope(address(_end));
         // Treasury gives permissions to DssShutdown on the constructor as well.
@@ -131,13 +128,12 @@ contract DssShutdown is Constants {
     /// @dev Settles a series position in Dealer, and then returns any remaining collateral as weth using the shutdown Dai to Weth price.
     function settle(bytes32 collateral, address user) public {
         require(settled && cashedOut, "DssShutdown: Not ready");
+        (uint256 tokenAmount, uint256 daiAmount) = _dealer.erase(collateral, user);
         uint256 remainder;
         if (collateral == WETH) {
-            (uint256 wethAmount, uint256 daiAmount) = _wethDealer.erase(user);
-            remainder = subFloorZero(wethAmount, daiAmount.muld(_fix, RAY));
+            remainder = subFloorZero(tokenAmount, daiAmount.muld(_fix, RAY));
         } else if (collateral == CHAI) {
-            (uint256 chaiAmount, uint256 daiAmount) = _chaiDealer.erase(user);
-            remainder = subFloorZero(chaiAmount.muld(_chi, RAY), daiAmount).muld(_fix, RAY);
+            remainder = subFloorZero(tokenAmount.muld(_chi, RAY), daiAmount).muld(_fix, RAY);
         }
         _weth.transfer(user, remainder);
     }
@@ -145,7 +141,7 @@ contract DssShutdown is Constants {
     /// @dev Redeems YDai for weth
     function redeem(uint256 maturity, uint256 yDaiAmount, address user) public {
         require(settled && cashedOut, "DssShutdown: Not ready");
-        IYDai yDai = IYDai(_wethDealer.series(maturity));
+        IYDai yDai = IYDai(_dealer.series(maturity));
         yDai.burn(user, yDaiAmount);
         _weth.transfer(
             user,
@@ -158,7 +154,7 @@ contract DssShutdown is Constants {
     function profit(address user) public {
         require(settled && cashedOut, "DssShutdown: Not ready");
         require(
-            _wethDealer.systemDebt() == 0,
+            _dealer.systemDebt() == 0,
             "DssShutdown: Redeem all yDai"
         );
         // TODO: Hardcode the address
