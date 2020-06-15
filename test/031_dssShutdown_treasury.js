@@ -246,12 +246,12 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             );
         });
 
-        /* it("does not allow to shutdown if MakerDAO is live", async() => {
+        it("does not allow to shutdown if MakerDAO is live", async() => {
             await expectRevert(
                 dssShutdown.shutdown({ from: owner }),
                 "DssShutdown: MakerDAO not shutting down",
             );
-        }); */
+        });
 
         describe("with Dss shutdown initiated and tag defined", () => {
             beforeEach(async() => {
@@ -259,9 +259,15 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                 await end.setTag(ilk, tag, { from: owner });
             });
 
-            /* it("allows to shutdown", async() => {
-                dssShutdown.shutdown({ from: owner });
+            it("allows to shutdown", async() => {
+                await dssShutdown.shutdown({ from: owner });
+                
                 assert.equal(
+                    await dssShutdown.live.call(),
+                    false,
+                    'DssShutdown should be activated',
+                );
+                /* assert.equal(
                     await treasury.live.call(),
                     false,
                     'Treasury should not be live',
@@ -270,17 +276,12 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                     await dealer.live.call(),
                     false,
                     'Dealer should not be live',
-                );
-                assert.equal(
-                    await dssShutdown.live.call(),
-                    false,
-                    'DssShutdown should be activated',
-                );
-            }); */
+                ); */
+            });
 
             describe("with yDai in shutdown", () => {
                 beforeEach(async() => {
-                    // await dssShutdown.shutdown({ from: owner });
+                    await dssShutdown.shutdown({ from: owner });
                 });
 
                 it("allows to free system collateral without debt", async() => {
@@ -319,7 +320,7 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                 beforeEach(async() => {
                     await end.cage({ from: owner });
                     await end.setTag(ilk, tag, { from: owner });
-                    // await dssShutdown.shutdown({ from: owner });
+                    await dssShutdown.shutdown({ from: owner });
                 });
 
 

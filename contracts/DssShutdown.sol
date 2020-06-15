@@ -84,7 +84,7 @@ contract DssShutdown is Constants {
         );
         live = false;
         // _treasury.shutdown();
-        _dealer.shutdown();
+        // _dealer.shutdown();
     }
 
     /// @dev max(0, x - y)
@@ -95,10 +95,10 @@ contract DssShutdown is Constants {
 
     /// @dev Settle system debt in MakerDAO and free remaining collateral.
     function settleTreasury() public {
-        /* require(
+        require(
             live == false,
             "DssShutdown: Shutdown first"
-        ); */
+        );
         (uint256 ink, uint256 art) = _vat.urns("ETH-A", address(_treasury));
         _vat.fork(                                               // Take the treasury vault
             collateralType,
