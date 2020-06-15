@@ -7,6 +7,7 @@ const ERC20 = artifacts.require("TestERC20");
 const Pot = artifacts.require('Pot');
 const End = artifacts.require('End');
 const Chai = artifacts.require('Chai');
+const GasToken = artifacts.require('GasToken1');
 
 // Common
 const ChaiOracle = artifacts.require('ChaiOracle');
@@ -36,6 +37,7 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
     let pot;
     let end;
     let chai;
+    let gasToken;
     let chaiOracle;
     let wethOracle;
     let treasury;
@@ -114,7 +116,10 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             { from: owner },
         );
 
-        // Setup Oracle
+        // Setup GasToken
+        gasToken = await GasToken.new();
+
+        // Setup WethOracle
         wethOracle = await WethOracle.new(vat.address, { from: owner });
 
         // Setup ChaiOracle
@@ -140,6 +145,7 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             wethOracle.address,
             chai.address,
             chaiOracle.address,
+            gasToken.address,
             { from: owner },
         );
         await treasury.grantAccess(dealer.address, { from: owner });

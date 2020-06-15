@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IChai.sol";
+import "./interfaces/IGasToken.sol";
 import "./interfaces/IVault.sol";
 import "./interfaces/IOracle.sol";
 import "./interfaces/ITreasury.sol";
@@ -24,6 +25,7 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
 
     ITreasury internal _treasury;
     IERC20 internal _dai;
+    IGasToken internal _gasToken;
     mapping(bytes32 => IERC20) internal _token;                       // Weth or Chai
     mapping(bytes32 => IOracle) internal _oracle;                     // WethOracle or ChaiOracle
     mapping(uint256 => IYDai) public override series;      // YDai series, indexed by maturity
@@ -40,7 +42,8 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
         address weth_,
         address wethOracle_,
         address chai_,
-        address chaiOracle_
+        address chaiOracle_,
+        address gasToken_
     ) public {
         _treasury = ITreasury(treasury_);
         _dai = IERC20(dai_);
@@ -48,6 +51,7 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
         _oracle[WETH] = IOracle(wethOracle_);
         _token[CHAI] = IERC20(chai_);
         _oracle[CHAI] = IOracle(chaiOracle_);
+        _gasToken = IGasToken(gasToken_);
 
         live = true;
     }
@@ -159,6 +163,18 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
     function isCollateralized(bytes32 collateral, address user) public returns (bool) {
         return powerOf(collateral, user) >= totalDebtDai(collateral, user);
     }
+    
+    /// @dev Locks a liquidation bond in gas tokens
+    function lockBond(uint256 value) public {
+        if (!_gasToken.transferFrom(msg.sender, address(this), value)) {
+            _gasToken.mint(value);
+        }
+    }
+
+    /// @dev Frees a liquidation bond in gas tokens
+    function returnBond(uint256 value) public {
+        _gasToken.transfer(msg.sender, value);
+    }
 
     /// @dev Takes collateral _token from `from` address
     // from --- Token ---> us
@@ -174,6 +190,10 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
             _treasury.pushChai();
         } else {
             revert("Dealer: Unsupported collateral");
+        }
+        
+        if (posted[collateral][from] == 0 && amount >= 0) {
+            lockBond(10);
         }
         posted[collateral][from] = posted[collateral][from].add(amount);
     }
@@ -196,6 +216,10 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
         } else {
             revert("Dealer: Unsupported collateral");
         }
+
+        if (posted[collateral][to] == 0 && amount >= 0) {
+            returnBond(10);
+        }
     }
 
     /// @dev Mint yDai for a given series for address `to` by locking its market value in collateral, user debt is increased in the given collateral.
@@ -215,13 +239,15 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
             "Dealer: No mature borrow"
         );
 
+        if (debtYDai[collateral][maturity][to] == 0 && yDaiAmount >= 0) {
+            lockBond(10);
+        }
         debtYDai[collateral][maturity][to] = debtYDai[collateral][maturity][to].add(yDaiAmount);
 
         require(
             isCollateralized(collateral, to),
             "Dealer: Too much debt"
         );
-
         series[maturity].mint(to, yDaiAmount);
     }
 
@@ -241,6 +267,9 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
         (uint256 toRepay, uint256 debtDecrease) = repayProportion(collateral, maturity, from, yDaiAmount);
         series[maturity].burn(from, toRepay);
         debtYDai[collateral][maturity][from] = debtYDai[collateral][maturity][from].sub(debtDecrease);
+        if (debtYDai[collateral][maturity][from] == 0 && debtDecrease >= 0) {
+            returnBond(10);
+        }
     }
 
     /// @dev Takes dai from `from` address, user debt is decreased for the given collateral and yDai series.
@@ -260,6 +289,9 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
 
         _treasury.pushDai();                                      // Have Treasury process the dai
         debtYDai[collateral][maturity][from] = debtYDai[collateral][maturity][from].sub(debtDecrease);
+        if (debtYDai[collateral][maturity][from] == 0 && debtDecrease >= 0) {
+            returnBond(10);
+        }
     }
 
     /// @dev Erases all collateral and debt for an user.
@@ -273,6 +305,7 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
         } // We don't expect hundreds of maturities per dealer
         uint256 tokens = posted[collateral][user];
         delete posted[collateral][user];
+        returnBond((seriesIterator.length + 1) * 10); // 10 per series, and 10 for the collateral
 
         emit Erased(user, collateral, tokens, debt);
         return (tokens, debt);

@@ -1,7 +1,7 @@
 pragma solidity ^0.6.2;
 
 
-/// @dev interface for the pot contract from MakerDao
+/// @dev interface for the chai contract
 /// Taken from https://github.com/makerdao/developerguides/blob/master/dai/dsr-integration-guide/dsr.sol
 interface IChai {
     function balanceOf(address account) external view returns (uint256);
