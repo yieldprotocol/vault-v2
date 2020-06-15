@@ -39,13 +39,13 @@ contract DssShutdown is Constants {
     ITreasury internal _treasury;
     IVault internal _dealer;
 
-    mapping(uint256 => IYDai) public series;
     mapping(address => uint256) public posted; // Weth only
     mapping(uint256 => mapping(address => uint256)) public debtYDai;
 
     uint256 public _fix; // Dai to weth price on DSS Shutdown
     uint256 public _chi; // Chai to dai price on DSS Shutdown
 
+    bool public live;
     bool public settled;
     bool public cashedOut;
 
@@ -70,9 +70,21 @@ contract DssShutdown is Constants {
         _chaiOracle = IOracle(chaiOracle_);
         _treasury = ITreasury(treasury_);
         _dealer = IVault(dealer_);
+
         _vat.hope(address(_treasury));
         _vat.hope(address(_end));
-        // Treasury gives permissions to DssShutdown on the constructor as well.
+        live = true;
+    }
+
+    /// @dev Disables treasury and dealer.
+    function shutdown() public {
+        require(
+            _end.tag(collateralType) != 0,
+            "DssShutdown: MakerDAO not shutting down"
+        );
+        live = false;
+        // _treasury.shutdown();
+        _dealer.shutdown();
     }
 
     /// @dev max(0, x - y)
@@ -83,10 +95,10 @@ contract DssShutdown is Constants {
 
     /// @dev Settle system debt in MakerDAO and free remaining collateral.
     function settleTreasury() public {
-        require(
-            _end.tag(collateralType) != 0,
-            "DssShutdown: End.sol not caged"
-        );
+        /* require(
+            live == false,
+            "DssShutdown: Shutdown first"
+        ); */
         (uint256 ink, uint256 art) = _vat.urns("ETH-A", address(_treasury));
         _vat.fork(                                               // Take the treasury vault
             collateralType,
@@ -141,7 +153,7 @@ contract DssShutdown is Constants {
     /// @dev Redeems YDai for weth
     function redeem(uint256 maturity, uint256 yDaiAmount, address user) public {
         require(settled && cashedOut, "DssShutdown: Not ready");
-        IYDai yDai = IYDai(_dealer.series(maturity));
+        IYDai yDai = _dealer.series(maturity);
         yDai.burn(user, yDaiAmount);
         _weth.transfer(
             user,

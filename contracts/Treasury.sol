@@ -35,6 +35,8 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
     IVat internal _vat;
     address internal _dssShutdown;
 
+    bool public live;
+
     constructor (
         address dai_,
         address chai_,
@@ -57,7 +59,19 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
 
         _dai.approve(address(_chai), uint256(-1));      // Chai will never cheat on us
         _weth.approve(address(_wethJoin), uint256(-1)); // WethJoin will never cheat on us
+
+        live = true;
     }
+
+    /* modifier onlyLive() {
+        require(live == true, "Dealer: Not available during shutdown");
+        _;
+    } */
+
+    /// @dev Disables pulling and pushing. To be called only by shutdown management contracts.
+    /* function shutdown() public override onlyAuthorized("Treasury: Not Authorized") {
+        live = false;
+    } */
 
     /// @dev Returns the Treasury debt towards MakerDAO, as the dai borrowed times the stability fee for Weth.
     /// We have borrowed (rate * art)
@@ -82,7 +96,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
     }
 
     /// @dev Pays as much system debt as possible from the Treasury dai balance, saving the rest as chai.
-    function pushDai() public override onlyAuthorized("Treasury: Not Authorized") {
+    function pushDai() public override onlyAuthorized("Treasury: Not Authorized") /* onlyLive */ {
         uint256 dai = _dai.balanceOf(address(this));
 
         uint256 toRepay = Math.min(debt(), dai);
@@ -107,7 +121,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
     }
 
     /// @dev Pays as much system debt as possible from the Treasury chai balance, saving the rest as chai.
-    function pushChai() public override onlyAuthorized("Treasury: Not Authorized") {
+    function pushChai() public override onlyAuthorized("Treasury: Not Authorized") /* onlyLive */ {
         uint256 dai = _chai.dai(address(this));
 
         uint256 toRepay = Math.min(debt(), dai);
@@ -129,7 +143,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
     }
 
     /// @dev Returns dai using chai savings as much as possible, and borrowing the rest.
-    function pullDai(address user, uint256 dai) public override onlyAuthorized("Treasury: Not Authorized") {
+    function pullDai(address user, uint256 dai) public override onlyAuthorized("Treasury: Not Authorized") /* onlyLive */ {
         uint256 toRelease = Math.min(savings(), dai);
         if (toRelease > 0) {
             _chai.draw(address(this), toRelease);     // Grab dai from Chai, converted from chai
@@ -157,7 +171,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
     }
 
     /// @dev Returns chai using chai savings as much as possible, and borrowing the rest.
-    function pullChai(address user, uint256 chai) public override onlyAuthorized("Treasury: Not Authorized") {
+    function pullChai(address user, uint256 chai) public override onlyAuthorized("Treasury: Not Authorized") /* onlyLive */ {
         uint256 dai = chai.muld(_chaiOracle.price(), RAY);   // dai = price * chai
         uint256 toRelease = Math.min(savings(), dai);
         // As much chai as the Treasury has, can be used, we borrwo dai and convert it to chai for the rest
@@ -185,7 +199,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
     }
 
     /// @dev Moves all Weth collateral from Treasury into Maker
-    function pushWeth() public override onlyAuthorized("Treasury: Not Authorized") {
+    function pushWeth() public override onlyAuthorized("Treasury: Not Authorized") /* onlyLive */ {
         uint256 weth = _weth.balanceOf(address(this));
 
         _wethJoin.join(address(this), weth); // GemJoin reverts if anything goes wrong.
@@ -201,7 +215,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
     }
 
     /// @dev Moves Weth collateral from Treasury controlled Maker Eth vault to `to` address.
-    function pullWeth(address to, uint256 weth) public override onlyAuthorized("Treasury: Not Authorized") {
+    function pullWeth(address to, uint256 weth) public override onlyAuthorized("Treasury: Not Authorized") /* onlyLive */ {
         // Remove collateral from vault using frob
         _vat.frob(
             collateralType,

@@ -197,6 +197,7 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             { from: owner },
         );
         await dealer.grantAccess(dssShutdown.address, { from: owner });
+        await treasury.grantAccess(dssShutdown.address, { from: owner });
         await treasury.registerDssShutdown(dssShutdown.address, { from: owner });
         await yDai1.grantAccess(dssShutdown.address, { from: owner });
         await yDai2.grantAccess(dssShutdown.address, { from: owner });
@@ -232,13 +233,6 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
         console.log();
     }); */
 
-    it("does not attempt to settle treasury debt until Dss shutdown initiated", async() => {
-        await expectRevert(
-            dssShutdown.settleTreasury({ from: owner }),
-            "DssShutdown: End.sol not caged",
-        );
-    });
-
     describe("with posted weth", () => {
         beforeEach(async() => {
             await weth.deposit({ from: owner, value: wethTokens });
@@ -252,21 +246,52 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             );
         });
 
+        /* it("does not allow to shutdown if MakerDAO is live", async() => {
+            await expectRevert(
+                dssShutdown.shutdown({ from: owner }),
+                "DssShutdown: MakerDAO not shutting down",
+            );
+        }); */
+
         describe("with Dss shutdown initiated and tag defined", () => {
             beforeEach(async() => {
                 await end.cage({ from: owner });
                 await end.setTag(ilk, tag, { from: owner });
             });
 
-
-            it("allows to free system collateral without debt", async() => {
-                await dssShutdown.settleTreasury({ from: owner });
-
+            /* it("allows to shutdown", async() => {
+                dssShutdown.shutdown({ from: owner });
                 assert.equal(
-                    await weth.balanceOf(dssShutdown.address, { from: owner }),
-                    wethTokens.toString(),
-                    'Treasury should have ' + wethTokens.toString() + ' weth in hand, instead has ' + (await weth.balanceOf(dssShutdown.address, { from: owner })),
+                    await treasury.live.call(),
+                    false,
+                    'Treasury should not be live',
                 );
+                assert.equal(
+                    await dealer.live.call(),
+                    false,
+                    'Dealer should not be live',
+                );
+                assert.equal(
+                    await dssShutdown.live.call(),
+                    false,
+                    'DssShutdown should be activated',
+                );
+            }); */
+
+            describe("with yDai in shutdown", () => {
+                beforeEach(async() => {
+                    // await dssShutdown.shutdown({ from: owner });
+                });
+
+                it("allows to free system collateral without debt", async() => {
+                    await dssShutdown.settleTreasury({ from: owner });
+
+                    assert.equal(
+                        await weth.balanceOf(dssShutdown.address, { from: owner }),
+                        wethTokens.toString(),
+                        'Treasury should have ' + wethTokens.toString() + ' weth in hand, instead has ' + (await weth.balanceOf(dssShutdown.address, { from: owner })),
+                    );
+                });
             });
         });
 
@@ -290,10 +315,11 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                 await treasury.pushWeth({ from: owner });
             });
 
-            describe("with Dss shutdown initiated and tag defined", () => {
+            describe("with shutdown initiated", () => {
                 beforeEach(async() => {
                     await end.cage({ from: owner });
                     await end.setTag(ilk, tag, { from: owner });
+                    // await dssShutdown.shutdown({ from: owner });
                 });
 
 
@@ -346,6 +372,8 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
 
                     // Settle some random guy's debt for end.sol to have weth
                     await end.skim(ilk, user, { from: user });
+
+                    await dssShutdown.shutdown({ from: owner });
                 });
 
                 it("allows to cash dai for weth", async() => {

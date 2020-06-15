@@ -26,7 +26,7 @@ const truffleAssert = require('truffle-assertions');
 const { BN, expectRevert, expectEvent } = require('@openzeppelin/test-helpers');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
 
-contract('DssShutdown - Treasury', async (accounts) =>  {
+contract('DssShutdown - Dealer', async (accounts) =>  {
     let [ owner, user1, user2, user3, user4 ] = accounts;
     let vat;
     let weth;
@@ -232,12 +232,12 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
         console.log();
     }); */
 
-    it("does not attempt to settle treasury debt until Dss shutdown initiated", async() => {
+    /* it("does not attempt to settle treasury debt until Dss shutdown initiated", async() => {
         await expectRevert(
             dssShutdown.settleTreasury({ from: owner }),
             "DssShutdown: End.sol not caged",
         );
-    });
+    }); */
 
     describe("with posted collateral and borrowed yDai", () => {
         beforeEach(async() => {
