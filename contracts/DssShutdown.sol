@@ -84,7 +84,7 @@ contract DssShutdown is Constants {
         );
         live = false;
         _treasury.shutdown();
-        // _dealer.shutdown();
+        _dealer.shutdown();
     }
 
     /// @dev max(0, x - y)

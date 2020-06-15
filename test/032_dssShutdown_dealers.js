@@ -197,6 +197,7 @@ contract('DssShutdown - Dealer', async (accounts) =>  {
             { from: owner },
         );
         await dealer.grantAccess(dssShutdown.address, { from: owner });
+        await treasury.grantAccess(dssShutdown.address, { from: owner });
         await treasury.registerDssShutdown(dssShutdown.address, { from: owner });
         await yDai1.grantAccess(dssShutdown.address, { from: owner });
         await yDai2.grantAccess(dssShutdown.address, { from: owner });
@@ -346,8 +347,40 @@ contract('DssShutdown - Dealer', async (accounts) =>  {
                 await end.skim(ilk, user1, { from: owner });
                 await end.skim(ilk, user2, { from: owner });
                 await end.skim(ilk, owner, { from: owner });
+                await dssShutdown.shutdown({ from: owner });
                 await dssShutdown.settleTreasury({ from: owner });
                 await dssShutdown.cashSavings({ from: owner });
+            });
+
+            it("dealer shuts down", async() => {
+                assert.equal(
+                    await dealer.live.call(),
+                    false,
+                    'Dealer should not be live',
+                );
+            });
+
+            it("does not allow to post, withdraw, borrow or repay assets", async() => {
+                await expectRevert(
+                    dealer.post(WETH, owner, wethTokens, { from: owner }),
+                    "Dealer: Not available during shutdown",
+                );
+                await expectRevert(
+                    dealer.withdraw(WETH, owner, wethTokens, { from: owner }),
+                    "Dealer: Not available during shutdown",
+                );
+                await expectRevert(
+                    dealer.borrow(WETH, maturity1, owner, yDaiTokens, { from: owner }),
+                    "Dealer: Not available during shutdown",
+                );
+                await expectRevert(
+                    dealer.repayDai(WETH, maturity1, owner, daiTokens, { from: owner }),
+                    "Dealer: Not available during shutdown",
+                );
+                await expectRevert(
+                    dealer.repayYDai(WETH, maturity1, owner, yDaiTokens, { from: owner }),
+                    "Dealer: Not available during shutdown",
+                );
             });
 
             it("does not allow to profit if there is user debt", async() => {

@@ -272,11 +272,6 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                     false,
                     'Treasury should not be live',
                 );
-                /* assert.equal(
-                    await dealer.live.call(),
-                    false,
-                    'Dealer should not be live',
-                ); */
             });
 
             describe("with yDai in shutdown", () => {
