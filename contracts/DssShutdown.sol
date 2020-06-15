@@ -83,7 +83,7 @@ contract DssShutdown is Constants {
             "DssShutdown: MakerDAO not shutting down"
         );
         live = false;
-        // _treasury.shutdown();
+        _treasury.shutdown();
         // _dealer.shutdown();
     }
 

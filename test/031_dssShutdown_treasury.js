@@ -267,12 +267,12 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                     false,
                     'DssShutdown should be activated',
                 );
-                /* assert.equal(
+                assert.equal(
                     await treasury.live.call(),
                     false,
                     'Treasury should not be live',
                 );
-                assert.equal(
+                /* assert.equal(
                     await dealer.live.call(),
                     false,
                     'Dealer should not be live',
@@ -291,6 +291,33 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                         await weth.balanceOf(dssShutdown.address, { from: owner }),
                         wethTokens.toString(),
                         'Treasury should have ' + wethTokens.toString() + ' weth in hand, instead has ' + (await weth.balanceOf(dssShutdown.address, { from: owner })),
+                    );
+                });
+
+                it("does not allow to push or pull assets", async() => {
+                    await expectRevert(
+                        treasury.pushWeth({ from: owner }),
+                        "Treasury: Not available during shutdown",
+                    );
+                    await expectRevert(
+                        treasury.pushChai({ from: owner }),
+                        "Treasury: Not available during shutdown",
+                    );
+                    await expectRevert(
+                        treasury.pushDai({ from: owner }),
+                        "Treasury: Not available during shutdown",
+                    );
+                    await expectRevert(
+                        treasury.pullWeth(owner, 1, { from: owner }),
+                        "Treasury: Not available during shutdown",
+                    );
+                    await expectRevert(
+                        treasury.pullChai(owner, 1, { from: owner }),
+                        "Treasury: Not available during shutdown",
+                    );
+                    await expectRevert(
+                        treasury.pullDai(owner, 1, { from: owner }),
+                        "Treasury: Not available during shutdown",
                     );
                 });
             });
