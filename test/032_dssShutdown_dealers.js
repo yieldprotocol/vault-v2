@@ -19,7 +19,7 @@ const YDai = artifacts.require('YDai');
 const Dealer = artifacts.require('Dealer');
 
 // Peripheral
-const Splitter = artifacts.require('MockSplitter');
+const Splitter = artifacts.require('Splitter');
 const DssShutdown = artifacts.require('DssShutdown');
 
 const helper = require('ganache-time-traveler');
