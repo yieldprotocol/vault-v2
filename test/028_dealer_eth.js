@@ -163,6 +163,7 @@ contract('Dealer - Weth', async (accounts) =>  {
         // Setup EthProxy
         ethProxy = await EthProxy.new(
             weth.address,
+            gasToken.address,
             dealer.address,
             { from: owner },
         );
@@ -211,7 +212,7 @@ contract('Dealer - Weth', async (accounts) =>  {
         
         await dealer.addProxy(ethProxy.address, { from: owner });
         console.log((await balance.current(owner)).toString());
-        await ethProxy.postEth(owner, owner, wethTokens, { from: owner, value: wethTokens });
+        await ethProxy.post(owner, owner, wethTokens, { from: owner, value: wethTokens });
         console.log((await balance.current(owner)).toString());
 
         /* assert.isBelow(
@@ -234,7 +235,7 @@ contract('Dealer - Weth', async (accounts) =>  {
     describe("with posted eth", () => {
         beforeEach(async() => {
             await dealer.addProxy(ethProxy.address, { from: owner });
-            await ethProxy.postEth(owner, owner, wethTokens, { from: owner, value: wethTokens });
+            await ethProxy.post(owner, owner, wethTokens, { from: owner, value: wethTokens });
 
             assert.equal(
                 (await vat.urns(ilk, treasury.address)).ink,
@@ -265,7 +266,7 @@ contract('Dealer - Weth', async (accounts) =>  {
 
         it("allows user to withdraw weth", async() => {
             console.log((await balance.current(owner)).toString());
-            await ethProxy.withdrawEth(owner, owner, wethTokens, { from: owner });
+            await ethProxy.withdraw(owner, owner, wethTokens, { from: owner });
             console.log((await balance.current(owner)).toString());
 
             /* assert.isBelow(
@@ -282,6 +283,16 @@ contract('Dealer - Weth', async (accounts) =>  {
                 await dealer.powerOf.call(WETH, owner),
                 0,
                 "Owner should not have borrowing power",
+            );
+        });
+
+        it("gas tokens are passed on to user", async() => {
+            await ethProxy.withdraw(owner, owner, wethTokens, { from: owner });
+
+            assert.equal(
+                await gasToken.balanceOf(owner),
+                10,
+                "Owner should have gas tokens",
             );
         });
     });
