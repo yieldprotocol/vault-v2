@@ -196,7 +196,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
     it("mints gas tokens when posting", async() => {
         await weth.deposit({ from: owner, value: wethTokens });
         await weth.approve(dealer.address, wethTokens, { from: owner }); 
-        await dealer.post(WETH, owner, wethTokens, { from: owner });
+        await dealer.post(WETH, owner, owner, wethTokens, { from: owner });
 
         assert.equal(
             await gasToken.balanceOf(dealer.address),
@@ -216,7 +216,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
 
         await weth.deposit({ from: owner, value: wethTokens });
         await weth.approve(dealer.address, wethTokens, { from: owner }); 
-        await dealer.post(WETH, owner, wethTokens, { from: owner });
+        await dealer.post(WETH, owner, owner, wethTokens, { from: owner });
 
         assert.equal(
             await gasToken.balanceOf(owner),
@@ -231,7 +231,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
     });
 
     it("does not transfer gas tokens if withdrawal amount and posted collateral are zero", async() => {
-        await dealer.withdraw(WETH, owner, 0, { from: owner });
+        await dealer.withdraw(WETH, owner, owner, 0, { from: owner });
 
         assert.equal(
             await gasToken.balanceOf(owner),
@@ -244,7 +244,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
         beforeEach(async() => {
             await weth.deposit({ from: owner, value: wethTokens });
             await weth.approve(dealer.address, wethTokens, { from: owner }); 
-            await dealer.post(WETH, owner, wethTokens, { from: owner });
+            await dealer.post(WETH, owner, owner, wethTokens, { from: owner });
 
             assert.equal(
                 await gasToken.balanceOf(dealer.address),
@@ -256,7 +256,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
         it("mints gas tokens when a new user posts for the first time", async() => {
             await weth.deposit({ from: user, value: wethTokens });
             await weth.approve(dealer.address, wethTokens, { from: user }); 
-            await dealer.post(WETH, user, wethTokens, { from: user });
+            await dealer.post(WETH, user, user, wethTokens, { from: user });
     
             assert.equal(
                 await gasToken.balanceOf(dealer.address),
@@ -268,7 +268,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
         it("does not mint more gas tokens when same user posts again", async() => {
             await weth.deposit({ from: owner, value: wethTokens });
             await weth.approve(dealer.address, wethTokens, { from: owner }); 
-            await dealer.post(WETH, owner, wethTokens, { from: owner });
+            await dealer.post(WETH, owner, owner, wethTokens, { from: owner });
     
             assert.equal(
                 await gasToken.balanceOf(dealer.address),
@@ -278,7 +278,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
         });
 
         it("does not transfer gas tokens on partial withdrawals", async() => {
-            await dealer.withdraw(WETH, owner, wethTokens.sub(1), { from: owner });
+            await dealer.withdraw(WETH, owner, owner, wethTokens.sub(1), { from: owner });
 
             assert.equal(
                 await gasToken.balanceOf(owner),
@@ -288,7 +288,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
         });
 
         it("transfers gas tokens on withdrawal to zero", async() => {
-            await dealer.withdraw(WETH, owner, wethTokens, { from: owner });
+            await dealer.withdraw(WETH, owner, owner, wethTokens, { from: owner });
 
             assert.equal(
                 await gasToken.balanceOf(owner),
@@ -350,7 +350,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
             it("allows to borrow from a second series", async() => {
                 await weth.deposit({ from: owner, value: wethTokens });
                 await weth.approve(dealer.address, wethTokens, { from: owner }); 
-                await dealer.post(WETH, owner, wethTokens, { from: owner });
+                await dealer.post(WETH, owner, owner, wethTokens, { from: owner });
                 await dealer.borrow(maturity2, owner, daiTokens, { from: owner });
 
                 assert.equal(
@@ -384,7 +384,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
                 beforeEach(async() => {
                     await weth.deposit({ from: owner, value: wethTokens });
                     await weth.approve(dealer.address, wethTokens, { from: owner }); 
-                    await dealer.post(WETH, owner, wethTokens, { from: owner });
+                    await dealer.post(WETH, owner, owner, wethTokens, { from: owner });
                     await dealer.borrow(maturity2, owner, daiTokens, { from: owner });
                 });
 

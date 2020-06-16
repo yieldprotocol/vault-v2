@@ -176,8 +176,8 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
         _gasToken.transfer(msg.sender, value);
     }
 
-    /// @dev Takes collateral _token from `from` address
-    // from --- Token ---> us
+    /// @dev Takes collateral _token from `from` address, and credits it to `to` collateral account.
+    // from --- Token ---> us(to)
     function post(bytes32 collateral, address from, address to, uint256 amount)
         public override onlyHolderOrProxy(from, "YDai: Only Holder Or Proxy") onlyLive {
         require(
@@ -199,8 +199,8 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
         posted[collateral][to] = posted[collateral][to].add(amount);
     }
 
-    /// @dev Returns collateral to `to` address
-    // us --- Token ---> to
+    /// @dev Returns collateral to `to` address, taking it from `from` collateral account.
+    // us(from) --- Token ---> to
     function withdraw(bytes32 collateral, address from, address to, uint256 amount)
         public override onlyHolderOrProxy(from, "YDai: Only Holder Or Proxy") onlyLive {
         posted[collateral][from] = posted[collateral][from].sub(amount); // Will revert if not enough posted

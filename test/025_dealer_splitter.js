@@ -196,7 +196,7 @@ contract('Dealer - Splitter', async (accounts) =>  {
         beforeEach(async() => {
             await weth.deposit({ from: owner, value: wethTokens });
             await weth.approve(dealer.address, wethTokens, { from: owner }); 
-            await dealer.post(WETH, owner, wethTokens, { from: owner });
+            await dealer.post(WETH, owner, owner, wethTokens, { from: owner });
 
             assert.equal(
                 await dealer.posted(WETH, owner),
@@ -276,7 +276,7 @@ contract('Dealer - Splitter', async (accounts) =>  {
                 // We post an extra weth wei to te, uint256 debtst that only the needed collateral is taken
                 await weth.deposit({ from: owner, value: 1 });
                 await weth.approve(dealer.address, 1, { from: owner }); 
-                await dealer.post(WETH, owner, 1, { from: owner });
+                await dealer.post(WETH, owner, owner, 1, { from: owner });
 
                 await dealer.grantAccess(owner, { from: owner }); // Only for testing
                 expectEvent(

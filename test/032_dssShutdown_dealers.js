@@ -19,7 +19,7 @@ const YDai = artifacts.require('YDai');
 const Dealer = artifacts.require('Dealer');
 
 // Peripheral
-const Splitter = artifacts.require('MockSplitter');
+const Splitter = artifacts.require('Splitter');
 const DssShutdown = artifacts.require('DssShutdown');
 
 const helper = require('ganache-time-traveler');
@@ -251,16 +251,16 @@ contract('DssShutdown - Dealer', async (accounts) =>  {
             // Weth setup
             await weth.deposit({ from: user1, value: wethTokens });
             await weth.approve(dealer.address, wethTokens, { from: user1 });
-            await dealer.post(WETH, user1, wethTokens, { from: user1 });
+            await dealer.post(WETH, user1, user1, wethTokens, { from: user1 });
 
             await weth.deposit({ from: user2, value: wethTokens.add(1) });
             await weth.approve(dealer.address, wethTokens.add(1), { from: user2 });
-            await dealer.post(WETH, user2, wethTokens.add(1), { from: user2 });
+            await dealer.post(WETH, user2, user2, wethTokens.add(1), { from: user2 });
             await dealer.borrow(WETH, maturity1, user2, daiTokens, { from: user2 });
 
             await weth.deposit({ from: user3, value: wethTokens.mul(3) });
             await weth.approve(dealer.address, wethTokens.mul(3), { from: user3 });
-            await dealer.post(WETH, user3, wethTokens.mul(3), { from: user3 });
+            await dealer.post(WETH, user3, user3, wethTokens.mul(3), { from: user3 });
             await dealer.borrow(WETH, maturity1, user3, daiTokens, { from: user3 });
             await dealer.borrow(WETH, maturity2, user3, daiTokens, { from: user3 });
 
@@ -276,7 +276,7 @@ contract('DssShutdown - Dealer', async (accounts) =>  {
             await dai.approve(chai.address, daiTokens, { from: user1 });
             await chai.join(user1, daiTokens, { from: user1 });
             await chai.approve(dealer.address, chaiTokens, { from: user1 });
-            await dealer.post(CHAI, user1, chaiTokens, { from: user1 });
+            await dealer.post(CHAI, user1, user1, chaiTokens, { from: user1 });
 
             await vat.hope(daiJoin.address, { from: user2 });
             await vat.hope(wethJoin.address, { from: user2 });
@@ -293,7 +293,7 @@ contract('DssShutdown - Dealer', async (accounts) =>  {
             await dai.approve(chai.address, moreDai, { from: user2 });
             await chai.join(user2, moreDai, { from: user2 });
             await chai.approve(dealer.address, moreChai, { from: user2 });
-            await dealer.post(CHAI, user2, moreChai, { from: user2 });
+            await dealer.post(CHAI, user2, user2, moreChai, { from: user2 });
             await dealer.borrow(CHAI, maturity1, user2, daiTokens, { from: user2 });
 
             // user1 has chaiTokens in dealer and no debt.
@@ -368,11 +368,11 @@ contract('DssShutdown - Dealer', async (accounts) =>  {
 
             it("does not allow to post, withdraw, borrow or repay assets", async() => {
                 await expectRevert(
-                    dealer.post(WETH, owner, wethTokens, { from: owner }),
+                    dealer.post(WETH, owner, owner, wethTokens, { from: owner }),
                     "Dealer: Not available during shutdown",
                 );
                 await expectRevert(
-                    dealer.withdraw(WETH, owner, wethTokens, { from: owner }),
+                    dealer.withdraw(WETH, owner, owner, wethTokens, { from: owner }),
                     "Dealer: Not available during shutdown",
                 );
                 await expectRevert(
