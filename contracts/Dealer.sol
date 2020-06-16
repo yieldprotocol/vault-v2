@@ -15,48 +15,55 @@ import "./Constants.sol";
 import "./UserProxy.sol";
 
 
-/// @dev A dealer takes collateral and issues yDai. There is one Dealer per series.
-contract Dealer is AuthorizedAccess(), UserProxy(), Constants {
+/// @dev A dealer takes collateral and issues yDai.
+contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
     using SafeMath for uint256;
     using DecimalMath for uint256;
     using DecimalMath for uint8;
 
-    event Settled(uint256 indexed maturity, address indexed user, uint256 debt, uint256 tokens);
-    event Grabbed(address indexed user, uint256 tokens);
-
-    bytes32 public constant WETH = "WETH"; // TODO: Upgrade to 0.6.9 and use immutable
-    bytes32 public constant CHAI = "CHAI"; // TODO: Upgrade to 0.6.9 and use immutable
+    event Erased(address indexed user, bytes32 indexed collateral, uint256 tokens, uint256 debt);
 
     ITreasury internal _treasury;
     IERC20 internal _dai;
-    IERC20 internal _token;                       // Weth or Chai
-    IOracle internal _oracle;                     // WethOracle or ChaiOracle
     IGasToken internal _gasToken;
-
-    bytes32 public collateral;                    // "WETH" or "CHAI". Upgrade to 0.6.8 and make immutable
-    mapping(address => uint256) public posted;    // In Weth or Chai
-    mapping(uint256 => IYDai) public series;      // YDai series, indexed by maturity
+    mapping(bytes32 => IERC20) internal _token;                       // Weth or Chai
+    mapping(bytes32 => IOracle) internal _oracle;                     // WethOracle or ChaiOracle
+    mapping(uint256 => IYDai) public override series;      // YDai series, indexed by maturity
     uint256[] internal seriesIterator;            // We need to know all the series
-    mapping(uint256 => mapping(address => uint256)) public debtYDai;  // By series, in yDai
+
+    mapping(bytes32 => mapping(address => uint256)) public override posted;    // In Weth or Chai
+    mapping(bytes32 => mapping(uint256 => mapping(address => uint256))) public debtYDai;  // By series, in yDai
+
+    bool public live;
 
     constructor (
         address treasury_,
         address dai_,
-        address token_,
-        address oracle_,
-        address gasToken_,
-        bytes32 collateral_
+        address weth_,
+        address wethOracle_,
+        address chai_,
+        address chaiOracle_,
+        address gasToken_
     ) public {
         _treasury = ITreasury(treasury_);
         _dai = IERC20(dai_);
-        _token = IERC20(token_);
-        _oracle = IOracle(oracle_);
+        _token[WETH] = IERC20(weth_);
+        _oracle[WETH] = IOracle(wethOracle_);
+        _token[CHAI] = IERC20(chai_);
+        _oracle[CHAI] = IOracle(chaiOracle_);
         _gasToken = IGasToken(gasToken_);
-        require(
-            collateral_ == WETH || collateral_ == CHAI,
-            "Dealer: Unsupported collateral"
-        );
-        collateral = collateral_;
+
+        live = true;
+    }
+
+    modifier onlyLive() {
+        require(live == true, "Dealer: Not available during shutdown");
+        _;
+    }
+
+    /// @dev Disables post, withdraw, borrow and repay. To be called only by shutdown management contracts.
+    function shutdown() public override onlyAuthorized("Dealer: Not Authorized") {
+        live = false;
     }
 
     /// @dev Returns if a series has been added to the Dealer, for a given series identified by maturity
@@ -75,28 +82,17 @@ contract Dealer is AuthorizedAccess(), UserProxy(), Constants {
         seriesIterator.push(maturity);
     }
 
-    /// @dev Maximum borrowing power of an user in dai for a given collateral
-    //
-    // powerOf[user](wad) = posted[user](wad) * oracle.price()(ray)
-    //
-    function powerOf(address user) public returns (uint256) {
-        // dai = price * collateral
-        return posted[user].muld(_oracle.price(), RAY);
-    }
-
-    /// @dev Returns the total debt of an user, across all series, in yDai
-    function totalDebtYDai(address user) public view returns (uint256) {
+    /// @dev Returns the total debt of the yDai system, across all series, in dai
+    // TODO: Test
+    function systemDebt() public view override returns (uint256) {
         uint256 totalDebt;
         for (uint256 i = 0; i < seriesIterator.length; i += 1) {
-            totalDebt = totalDebt + debtYDai[seriesIterator[i]][user];
+            IYDai yDai = series[seriesIterator[i]];
+            totalDebt = totalDebt + IERC20(address(yDai)).totalSupply().muld(yDai.rate(), RAY);
         } // We don't expect hundreds of maturities per dealer
         return totalDebt;
     }
 
-    /// @dev Return if the borrowing power of an user is equal or greater than its debt
-    function isCollateralized(address user) public returns (bool) {
-        return powerOf(user) >= totalDebtDai(user);
-    }
 
     /// @dev Returns the dai equivalent of an yDai amount, for a given series identified by maturity
     function inDai(uint256 maturity, uint256 yDaiAmount) public view returns (uint256) {
@@ -126,25 +122,48 @@ contract Dealer is AuthorizedAccess(), UserProxy(), Constants {
         }
     }
 
-    /// @dev Return debt in dai of an user, for a given series identified by maturity
+    /// @dev Return debt in dai of an user, for a given collateral and series identified by maturity
     //
     //                        rate_now
     // debt_now = debt_mat * ----------
     //                        rate_mat
     //
-    function debtDai(uint256 maturity, address user) public view returns (uint256) {
-        return inDai(maturity, debtYDai[maturity][user]);
+    function debtDai(bytes32 collateral, uint256 maturity, address user) public view returns (uint256) {
+        return inDai(maturity, debtYDai[collateral][maturity][user]);
     }
 
-    /// @dev Returns the total debt of an user, across all series, in Dai
-    function totalDebtDai(address user) public view returns (uint256) {
+    /// @dev Returns the total debt of an user, for a given collateral, across all series, in Dai
+    function totalDebtDai(bytes32 collateral, address user) public view returns (uint256) {
         uint256 totalDebt;
         for (uint256 i = 0; i < seriesIterator.length; i += 1) {
-            totalDebt = totalDebt + debtDai(seriesIterator[i], user);
+            totalDebt = totalDebt + debtDai(collateral, seriesIterator[i], user);
         } // We don't expect hundreds of maturities per dealer
         return totalDebt;
     }
 
+    /// @dev Returns the total debt of an user, for a given collateral, across all series, in yDai
+    function totalDebtYDai(bytes32 collateral, address user) public view override returns (uint256) {
+        uint256 totalDebt;
+        for (uint256 i = 0; i < seriesIterator.length; i += 1) {
+            totalDebt = totalDebt + debtYDai[collateral][seriesIterator[i]][user];
+        } // We don't expect hundreds of maturities per dealer
+        return totalDebt;
+    }
+
+    /// @dev Maximum borrowing power of an user in dai for a given collateral
+    //
+    // powerOf[user](wad) = posted[user](wad) * oracle.price()(ray)
+    //
+    function powerOf(bytes32 collateral, address user) public returns (uint256) {
+        // dai = price * collateral
+        return posted[collateral][user].muld(_oracle[collateral].price(), RAY);
+    }
+
+    /// @dev Return if the borrowing power for a given collateral of an user is equal or greater than its debt for the same collateral
+    function isCollateralized(bytes32 collateral, address user) public returns (bool) {
+        return powerOf(collateral, user) >= totalDebtDai(collateral, user);
+    }
+    
     /// @dev Locks a liquidation bond in gas tokens
     function lockBond(uint256 value) public {
         if (!_gasToken.transferFrom(msg.sender, address(this), value)) {
@@ -159,37 +178,38 @@ contract Dealer is AuthorizedAccess(), UserProxy(), Constants {
 
     /// @dev Takes collateral _token from `from` address
     // from --- Token ---> us
-    function post(address from, uint256 amount)
-        public onlyHolderOrProxy(from, "YDai: Only Holder Or Proxy") {
+    function post(bytes32 collateral, address from, uint256 amount)
+        public onlyHolderOrProxy(from, "YDai: Only Holder Or Proxy") onlyLive {
         require(
-            _token.transferFrom(from, address(_treasury), amount),
+            _token[collateral].transferFrom(from, address(_treasury), amount),
             "Dealer: Collateral transfer fail"
         );
-        if (collateral == WETH){
+        if (collateral == WETH){ // TODO: Refactor Treasury to be `push(collateral, amount)`
             _treasury.pushWeth();                          // Have Treasury process the weth
         } else if (collateral == CHAI) {
             _treasury.pushChai();
         } else {
             revert("Dealer: Unsupported collateral");
         }
-        if (posted[from] == 0 && amount >= 0) {
+        
+        if (posted[collateral][from] == 0 && amount >= 0) {
             lockBond(10);
         }
-        posted[from] = posted[from].add(amount);
+        posted[collateral][from] = posted[collateral][from].add(amount);
     }
 
     /// @dev Returns collateral to `to` address
     // us --- Token ---> to
-    function withdraw(address to, uint256 amount)
-        public onlyHolderOrProxy(to, "YDai: Only Holder Or Proxy") {
-        posted[to] = posted[to].sub(amount); // Will revert if not enough posted
+    function withdraw(bytes32 collateral, address to, uint256 amount)
+        public onlyHolderOrProxy(to, "YDai: Only Holder Or Proxy") onlyLive {
+        posted[collateral][to] = posted[collateral][to].sub(amount); // Will revert if not enough posted
 
         require(
-            isCollateralized(to),
+            isCollateralized(collateral, to),
             "Dealer: Too much debt"
         );
 
-        if (collateral == WETH){
+        if (collateral == WETH){ // TODO: Refactor Treasury to be `pull(collateral, amount)`
             _treasury.pullWeth(to, amount);                          // Take weth from Treasury and give it to `to`
         } else if (collateral == CHAI) {
             _treasury.pullChai(to, amount);
@@ -197,19 +217,19 @@ contract Dealer is AuthorizedAccess(), UserProxy(), Constants {
             revert("Dealer: Unsupported collateral");
         }
 
-        if (posted[to] == 0 && amount >= 0) {
+        if (posted[collateral][to] == 0 && amount >= 0) {
             returnBond(10);
         }
     }
 
-    /// @dev Mint yDai for address `to` by locking its market value in collateral, user debt is increased.
+    /// @dev Mint yDai for a given series for address `to` by locking its market value in collateral, user debt is increased in the given collateral.
     //
     // posted[user](wad) >= (debtYDai[user](wad)) * amount (wad)) * collateralization (ray)
     //
     // us --- yDai ---> user
     // debt++
-    function borrow(uint256 maturity, address to, uint256 yDaiAmount)
-        public onlyHolderOrProxy(to, "YDai: Only Holder Or Proxy") {
+    function borrow(bytes32 collateral, uint256 maturity, address to, uint256 yDaiAmount)
+        public onlyHolderOrProxy(to, "YDai: Only Holder Or Proxy") onlyLive {
         require(
             containsSeries(maturity),
             "Dealer: Unrecognized series"
@@ -219,102 +239,88 @@ contract Dealer is AuthorizedAccess(), UserProxy(), Constants {
             "Dealer: No mature borrow"
         );
 
-        if (debtYDai[maturity][to] == 0 && yDaiAmount >= 0) {
+        if (debtYDai[collateral][maturity][to] == 0 && yDaiAmount >= 0) {
             lockBond(10);
         }
-        debtYDai[maturity][to] = debtYDai[maturity][to].add(yDaiAmount);
+        debtYDai[collateral][maturity][to] = debtYDai[collateral][maturity][to].add(yDaiAmount);
 
         require(
-            isCollateralized(to),
+            isCollateralized(collateral, to),
             "Dealer: Too much debt"
         );
         series[maturity].mint(to, yDaiAmount);
     }
 
-    /// @dev Burns yDai from `from` address, user debt is decreased.
+    /// @dev Burns yDai of a given series from `from` address, user debt is decreased for the given collateral and yDai series.
     //                                                  debt_nominal
     // debt_discounted = debt_nominal - repay_amount * ---------------
     //                                                  debt_now
     //
     // user --- yDai ---> us
     // debt--
-    function repayYDai(uint256 maturity, address from, uint256 yDaiAmount)
-        public onlyHolderOrProxy(from, "YDai: Only Holder Or Proxy") {
+    function repayYDai(bytes32 collateral, uint256 maturity, address from, uint256 yDaiAmount)
+        public onlyHolderOrProxy(from, "YDai: Only Holder Or Proxy") onlyLive {
         require(
             containsSeries(maturity),
             "Dealer: Unrecognized series"
         );
-        (uint256 toRepay, uint256 debtDecrease) = amounts(maturity, from, yDaiAmount);
+        (uint256 toRepay, uint256 debtDecrease) = repayProportion(collateral, maturity, from, yDaiAmount);
         series[maturity].burn(from, toRepay);
-        debtYDai[maturity][from] = debtYDai[maturity][from].sub(debtDecrease);
-        if (debtYDai[maturity][from] == 0 && debtDecrease >= 0) {
+        debtYDai[collateral][maturity][from] = debtYDai[collateral][maturity][from].sub(debtDecrease);
+        if (debtYDai[collateral][maturity][from] == 0 && debtDecrease >= 0) {
             returnBond(10);
         }
     }
 
-    /// @dev Takes dai from `from` address, user debt is decreased.
+    /// @dev Takes dai from `from` address, user debt is decreased for the given collateral and yDai series.
     //                                                  debt_nominal
     // debt_discounted = debt_nominal - repay_amount * ---------------
     //                                                  debt_now
     //
     // user --- dai ---> us
     // debt--
-    function repayDai(uint256 maturity, address from, uint256 daiAmount)
-        public onlyHolderOrProxy(from, "YDai: Only Holder Or Proxy") {
-        (uint256 toRepay, uint256 debtDecrease) = amounts(maturity, from, inYDai(maturity, daiAmount));
+    function repayDai(bytes32 collateral, uint256 maturity, address from, uint256 daiAmount)
+        public onlyHolderOrProxy(from, "YDai: Only Holder Or Proxy") onlyLive {
+        (uint256 toRepay, uint256 debtDecrease) = repayProportion(collateral, maturity, from, inYDai(maturity, daiAmount));
         require(
             _dai.transferFrom(from, address(_treasury), toRepay),  // Take dai from user to Treasury
             "Dealer: Dai transfer fail"
         );
 
         _treasury.pushDai();                                      // Have Treasury process the dai
-        debtYDai[maturity][from] = debtYDai[maturity][from].sub(debtDecrease);
-        if (debtYDai[maturity][from] == 0 && debtDecrease >= 0) {
+        debtYDai[collateral][maturity][from] = debtYDai[collateral][maturity][from].sub(debtDecrease);
+        if (debtYDai[collateral][maturity][from] == 0 && debtDecrease >= 0) {
             returnBond(10);
         }
     }
 
-    /// @dev Erases a debt position and its equivalent amount of collateral from the user records
-    function settle(uint256 maturity, address user)
-        public onlyAuthorized("Dealer: Not Authorized") returns (uint256, uint256) {
-        require(
-            isCollateralized(user),
-            "Dealer: Undercollateralized"
-        );
+    /// @dev Erases all collateral and debt for an user.
+    function erase(bytes32 collateral, address user)
+        public onlyAuthorized("Dealer: Not Authorized") override returns (uint256, uint256) {
 
-        uint256 price = _oracle.price();
-        uint256 debt = debtDai(maturity, user);
-        uint256 tokenAmount = divdrup(debt, price, RAY);
-        posted[user] = posted[user].sub(tokenAmount);
-        delete debtYDai[maturity][user];
-        emit Settled(maturity, user, debt, tokenAmount);
-        return (tokenAmount, debt);
+        uint256 debt;
+        for (uint256 i = 0; i < seriesIterator.length; i += 1) {
+            debt = debt + debtDai(collateral, seriesIterator[i], user);
+            delete debtYDai[collateral][seriesIterator[i]][user];
+        } // We don't expect hundreds of maturities per dealer
+        uint256 tokens = posted[collateral][user];
+        delete posted[collateral][user];
+        returnBond((seriesIterator.length + 1) * 10); // 10 per series, and 10 for the collateral
+
+        emit Erased(user, collateral, tokens, debt);
+        return (tokens, debt);
     }
 
-    /// @dev Removes an amount from the user collateral records in dealer.
-    /// `to` needs to surround this call with `_vat.hope(address(_treasury))` and `_vat.nope(address(_treasury))`
-    function grab(address user, uint256 amount)
-        public onlyAuthorized("Dealer: Not Authorized") {
-
-        posted[user] = posted[user].sub(amount, "Dealer: Not enough collateral");
-
-        require(
-            isCollateralized(user),
-            "Dealer: Too much debt"
-        );
-
-        emit Grabbed(user, amount);
-    }
-
-    /// @dev Calculates the amount to repay and the amount by which to reduce the debt
-    function amounts(uint256 maturity, address user, uint256 yDaiAmount) internal view returns(uint256, uint256) {
-        uint256 toRepay = Math.min(yDaiAmount, debtDai(maturity, user));
+    /// @dev Calculates the amount to repay and the amount by which to reduce the debt for a given collateral and series
+    function repayProportion(bytes32 collateral, uint256 maturity, address user, uint256 yDaiAmount)
+        internal view returns(uint256, uint256) {
+        uint256 toRepay = Math.min(yDaiAmount, debtDai(collateral, maturity, user));
         // TODO: Check if this can be taken from DecimalMath.sol
         // uint256 debtProportion = debtYDai[user].mul(RAY.unit())
         //     .divdr(debtDai(user).mul(RAY.unit()), RAY);
         uint256 debtProportion = divdrup( // TODO: Check it works if we are not rounding.
-            debtYDai[maturity][user].mul(RAY.unit()),
-            debtDai(maturity, user).mul(RAY.unit()),
+            debtYDai[collateral][maturity][user].mul(RAY.unit()),
+            debtDai(collateral, maturity, user).mul(RAY.unit()),
             RAY
         );
         return (toRepay, toRepay.muld(debtProportion, RAY));

@@ -116,8 +116,9 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
             dai.address,
             weth.address,
             wethOracle.address,
+            chai.address,
+            chaiOracle.address,
             gasToken.address,
-            WETH,
             { from: owner },
         );
         treasury.grantAccess(dealer.address, { from: owner });

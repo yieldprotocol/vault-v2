@@ -33,6 +33,9 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
     IDaiJoin internal _daiJoin;
     IGemJoin internal _wethJoin;
     IVat internal _vat;
+    address internal _dssShutdown;
+
+    bool public live;
 
     constructor (
         address dai_,
@@ -56,12 +59,24 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
 
         _dai.approve(address(_chai), uint256(-1));      // Chai will never cheat on us
         _weth.approve(address(_wethJoin), uint256(-1)); // WethJoin will never cheat on us
+
+        live = true;
+    }
+
+    modifier onlyLive() {
+        require(live == true, "Treasury: Not available during shutdown");
+        _;
+    }
+
+    /// @dev Disables pulling and pushing. To be called only by shutdown management contracts.
+    function shutdown() public override onlyAuthorized("Treasury: Not Authorized") {
+        live = false;
     }
 
     /// @dev Returns the Treasury debt towards MakerDAO, as the dai borrowed times the stability fee for Weth.
     /// We have borrowed (rate * art)
     /// Borrowing Limit (rate * art) <= (ink * spot)
-    function debt() public view returns(uint256) {
+    function debt() public view override returns(uint256) {
         (, uint256 rate,,,) = _vat.ilks("ETH-A");            // Retrieve the MakerDAO stability fee for Weth
         (, uint256 art) = _vat.urns("ETH-A", address(this)); // Retrieve the Treasury debt in MakerDAO
         return art.muld(rate, RAY);
@@ -76,12 +91,12 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
     }
 
     /// @dev Returns the amount of Dai in this contract.
-    function savings() public returns(uint256){
+    function savings() public override returns(uint256){
         return _chai.dai(address(this));
     }
 
     /// @dev Pays as much system debt as possible from the Treasury dai balance, saving the rest as chai.
-    function pushDai() public override onlyAuthorized("Treasury: Not Authorized") {
+    function pushDai() public override onlyAuthorized("Treasury: Not Authorized") onlyLive  {
         uint256 dai = _dai.balanceOf(address(this));
 
         uint256 toRepay = Math.min(debt(), dai);
@@ -106,7 +121,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
     }
 
     /// @dev Pays as much system debt as possible from the Treasury chai balance, saving the rest as chai.
-    function pushChai() public override onlyAuthorized("Treasury: Not Authorized") {
+    function pushChai() public override onlyAuthorized("Treasury: Not Authorized") onlyLive  {
         uint256 dai = _chai.dai(address(this));
 
         uint256 toRepay = Math.min(debt(), dai);
@@ -128,7 +143,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
     }
 
     /// @dev Returns dai using chai savings as much as possible, and borrowing the rest.
-    function pullDai(address user, uint256 dai) public override onlyAuthorized("Treasury: Not Authorized") {
+    function pullDai(address to, uint256 dai) public override onlyAuthorized("Treasury: Not Authorized") onlyLive  {
         uint256 toRelease = Math.min(savings(), dai);
         if (toRelease > 0) {
             _chai.draw(address(this), toRelease);     // Grab dai from Chai, converted from chai
@@ -150,13 +165,13 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
         }
 
         require(                            // Give dai to user
-            _dai.transfer(user, dai),
+            _dai.transfer(to, dai),
             "Treasury: Dai transfer fail"
         );
     }
 
     /// @dev Returns chai using chai savings as much as possible, and borrowing the rest.
-    function pullChai(address user, uint256 chai) public override onlyAuthorized("Treasury: Not Authorized") {
+    function pullChai(address to, uint256 chai) public override onlyAuthorized("Treasury: Not Authorized") onlyLive  {
         uint256 dai = chai.muld(_chaiOracle.price(), RAY);   // dai = price * chai
         uint256 toRelease = Math.min(savings(), dai);
         // As much chai as the Treasury has, can be used, we borrwo dai and convert it to chai for the rest
@@ -178,13 +193,13 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
         }
 
         require(                            // Give dai to user
-            _chai.transfer(user, chai),
+            _chai.transfer(to, chai),
             "Treasury: Chai transfer fail"
         );
     }
 
     /// @dev Moves all Weth collateral from Treasury into Maker
-    function pushWeth() public override onlyAuthorized("Treasury: Not Authorized") {
+    function pushWeth() public override onlyAuthorized("Treasury: Not Authorized") onlyLive  {
         uint256 weth = _weth.balanceOf(address(this));
 
         _wethJoin.join(address(this), weth); // GemJoin reverts if anything goes wrong.
@@ -200,7 +215,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
     }
 
     /// @dev Moves Weth collateral from Treasury controlled Maker Eth vault to `to` address.
-    function pullWeth(address to, uint256 weth) public override onlyAuthorized("Treasury: Not Authorized") {
+    function pullWeth(address to, uint256 weth) public override onlyAuthorized("Treasury: Not Authorized") onlyLive  {
         // Remove collateral from vault using frob
         _vat.frob(
             collateralType,
@@ -245,5 +260,16 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
             dai.divd(rate, RAY).toInt()
         );
         _vat.nope(user);
+    }
+
+    /// @dev Registers the one contract that will shut down the Treasury if MakerDAO shuts down.
+    function registerDssShutdown(address dssShutdown_) public onlyOwner {
+        require(
+            _dssShutdown == address(0),
+            "Treasury: Shutdown already set"
+        );
+        _dssShutdown = dssShutdown_;
+        _chai.approve(address(_dssShutdown), uint256(-1)); // Shutdown will never cheat on us
+        _vat.hope(address(_dssShutdown));                  // Shutdown will never cheat on us
     }
 }

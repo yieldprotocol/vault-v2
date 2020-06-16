@@ -12,7 +12,7 @@ import "./Constants.sol";
 import "./UserProxy.sol";
 
 
-///@dev yDai is a yToken targeting Dai
+/// @dev yDai is a yToken targeting Dai.
 contract YDai is AuthorizedAccess(), UserProxy(), ERC20, Constants, IYDai  {
     using DecimalMath for uint256;
     using DecimalMath for uint8;
