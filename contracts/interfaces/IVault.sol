@@ -9,4 +9,6 @@ interface IVault {
     function totalDebtYDai(bytes32, address) external view returns (uint256);
     function erase(bytes32, address) external returns (uint256, uint256);
     function shutdown() external;
+    function post(bytes32, address, address, uint256) external;
+    function withdraw(bytes32, address, address, uint256) external;
 }
