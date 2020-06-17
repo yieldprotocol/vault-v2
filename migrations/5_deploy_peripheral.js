@@ -6,38 +6,21 @@ const DaiJoin = artifacts.require("DaiJoin");
 const End = artifacts.require("End");
 const Chai = artifacts.require("Chai");
 const GasToken = artifacts.require("GasToken1");
-
 const Treasury = artifacts.require("Treasury");
 const ChaiOracle = artifacts.require("ChaiOracle");
 const WethOracle = artifacts.require("WethOracle");
 const Dealer = artifacts.require("Dealer");
-
-const YDai = artifacts.require("YDai");
-
 const Splitter = artifacts.require("Splitter");
 const DssShutdown = artifacts.require("DssShutdown");
 const EthProxy = artifacts.require("EthProxy");
+const Weth = artifacts.require("WETH9");
+const ERC20 = artifacts.require("TestERC20");
 
-const Migrations = artifacts.require("Migrations");
+// const YDai = artifacts.require("YDai");
 
-const admin = require('firebase-admin');
-let serviceAccount = require('../firebaseKey.json');
-try {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    databaseURL: "https://yield-ydai.firebaseio.com"
-  });
-} catch (e) { console.log(e)}
 
 module.exports = async (deployer, network, accounts) => {
 
-  console.log( process.argv )
-
-  const db = admin.firestore();
-  const batch = db.batch();
-  const networkId = await web3.eth.net.getId();
-
-  const migration = await Migrations.deployed();
   let vatAddress;
   let wethAddress;
   let wethJoinAddress;
@@ -68,9 +51,9 @@ module.exports = async (deployer, network, accounts) => {
       : (chaiAddress = (await Chai.deployed()).address);
   } else {
       vatAddress = (await Vat.deployed()).address;
-      wethAddress = await migration.contracts.call('weth', (e,r)=> !e && r)
+      wethAddress = (await Weth.deployed()).address;
       wethJoinAddress = (await GemJoin.deployed()).address;
-      daiAddress = await migration.contracts.call('dai', (e,r)=> !e && r)
+      daiAddress = (await ERC20.deployed()).address;
       daiJoinAddress = (await DaiJoin.deployed()).address;
       potAddress = (await Pot.deployed()).address;
       endAddress = (await End.deployed()).address;
@@ -130,10 +113,5 @@ module.exports = async (deployer, network, accounts) => {
     'DssShutdown': dssShutdownAddress,
     'EthProxy': ethProxyAddress,
   }
-
-  let peripheralRef = db.collection(networkId.toString()).doc('deployedPeripheral')
-  batch.set(peripheralRef, deployedPeripheral);
-  await batch.commit();
-
   console.log(deployedPeripheral);
 };

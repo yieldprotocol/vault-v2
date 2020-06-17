@@ -5,30 +5,15 @@ const GemJoin = artifacts.require("GemJoin");
 const DaiJoin = artifacts.require("DaiJoin");
 const Chai = artifacts.require("Chai");
 const GasToken = artifacts.require("GasToken1");
-
 const WethOracle = artifacts.require("WethOracle");
 const ChaiOracle = artifacts.require("ChaiOracle");
 const Treasury = artifacts.require("Treasury");
 const Dealer = artifacts.require("Dealer");
-
-const Migrations = artifacts.require("Migrations");
-
-const admin = require('firebase-admin');
-let serviceAccount = require('../firebaseKey.json');
-try {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    databaseURL: "https://yield-ydai.firebaseio.com"
-  });
-} catch (e) { console.log(e)}
+const Weth = artifacts.require("WETH9");
+const ERC20 = artifacts.require("TestERC20");
 
 module.exports = async (deployer, network, accounts) => {
 
-  const db = admin.firestore();
-  const batch = db.batch();
-  const networkId = await web3.eth.net.getId();
-
-  const migration = await Migrations.deployed();
   let vatAddress;
   let wethAddress;
   let wethJoinAddress;
@@ -57,9 +42,9 @@ module.exports = async (deployer, network, accounts) => {
       : (gasTokenAddress = (await GasToken.deployed()).address);
  } else {
     vatAddress = (await Vat.deployed()).address;
-    wethAddress = await migration.contracts.call('weth', (e,r)=> !e && r)
+    wethAddress = (await Weth.deployed()).address;
     wethJoinAddress = (await GemJoin.deployed()).address;
-    daiAddress = await migration.contracts.call('dai', (e,r)=> !e && r)
+    daiAddress = (await ERC20.deployed()).address;
     daiJoinAddress = (await DaiJoin.deployed()).address;
     potAddress = (await Pot.deployed()).address;
     chaiAddress = (await Chai.deployed()).address;
@@ -111,10 +96,6 @@ module.exports = async (deployer, network, accounts) => {
     'Treasury': treasuryAddress,
     'Dealer': dealerAddress,
   }
-
-  let coreRef = db.collection(networkId.toString()).doc('deployedCore')
-  batch.set(coreRef, deployedCore);
-  await batch.commit();
 
   console.log(deployedCore)
 };
