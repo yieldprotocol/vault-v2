@@ -72,10 +72,10 @@ contract Liquidations is Constants {
             auctions[collateral][from] > 0,
             "Liquidations: User is not targeted"
         );
-        require(
+        /* require(
             !_dealer.isCollateralized(collateral, from),
             "Liquidations: User is not undercollateralized"
-        );
+        ); */ // Not checking for this, too expensive. Let the user stop the liquidations instead.
         require( // grab dai from liquidator and push to treasury
             _dai.transferFrom(from, address(_treasury), daiAmount),
             "Dealer: Dai transfer fail"
