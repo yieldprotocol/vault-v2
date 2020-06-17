@@ -29,13 +29,15 @@ contract('yDai', async (accounts) =>  {
     let linel = web3.utils.fromAscii("line")
 
     const limits =  toRad(10000);
-    const spot = toRay(1.5);
-    const rate1 = toRay(1.2);
-    const chi1 = toRay(1.3);
-    const rate2 = toRay(1.5);
-    const chi2 = toRay(1.82);
+    const spot = toRay(1.2);
 
-    const chiDifferential  = divRay(chi2, chi1); // 1.82 / 1.3 = 1.4
+    const rate1 = toRay(1.5);
+    const chi1 = toRay(1.2);
+    const rate2 = toRay(1.82);
+    const chi2 = toRay(1.5);
+
+
+    const chiDifferential  = divRay(chi2, chi1);
 
     const daiDebt1 = toWad(96);
     const daiTokens1 = mulRay(daiDebt1, rate1);
@@ -266,7 +268,7 @@ contract('yDai', async (accounts) =>  {
 
         // Chi increases
         await pot.setChi(chi2, { from: owner });
-        
+
         assert(
             await yDai.chi.call(),
             chiDifferential.toString(),
@@ -284,7 +286,7 @@ contract('yDai', async (accounts) =>  {
         assert.equal(
             await dai.balanceOf(owner),
             daiTokens2.toString(),
-            "Owner should have " + daiTokens2 + ", instead has " + (await dai.balanceOf(owner)),
+            "Owner should have " + daiTokens2 + " dai, instead has " + (await dai.balanceOf(owner)),
         );
         assert.equal(
             await yDai.balanceOf(owner),
