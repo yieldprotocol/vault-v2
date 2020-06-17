@@ -247,9 +247,9 @@ contract('DssShutdown - Dealer', async (accounts) =>  {
             await dealer.post(WETH, user2, wethTokens.add(1), { from: user2 });
             await dealer.borrow(WETH, maturity1, user2, daiTokens, { from: user2 });
 
-            await weth.deposit({ from: user3, value: wethTokens.mul(3) });
-            await weth.approve(dealer.address, wethTokens.mul(3), { from: user3 });
-            await dealer.post(WETH, user3, wethTokens.mul(3), { from: user3 });
+            await weth.deposit({ from: user3, value: wethTokens.mul(2) });
+            await weth.approve(dealer.address, wethTokens.mul(2), { from: user3 });
+            await dealer.post(WETH, user3, wethTokens.mul(2), { from: user3 });
             await dealer.borrow(WETH, maturity1, user3, daiTokens, { from: user3 });
             await dealer.borrow(WETH, maturity2, user3, daiTokens, { from: user3 });
 
@@ -408,6 +408,7 @@ contract('DssShutdown - Dealer', async (accounts) =>  {
             describe("with started auctions", () => {
                 beforeEach(async() => {
                     await liquidations.start(WETH, user2, { from: liquidator });
+                    await liquidations.start(WETH, user3, { from: liquidator });
                 });
     
                 it("doesn't allow to start auctions on vaults already in liquidation", async() => {
@@ -493,6 +494,35 @@ contract('DssShutdown - Dealer', async (accounts) =>  {
                         await weth.balanceOf(liquidator, { from: liquidator }),
                         divRay(wethTokens, toRay(3)).toString(),
                         "Liquidator whould have about " + divRay(wethTokens, toRay(3)) + " weth, instead has " + await weth.balanceOf(liquidator, { from: liquidator }),
+                    );
+                });
+
+                it("liquidations over several series are possible", async() => {
+                    const daiTokens = (await dealer.totalDebtDai(WETH, user3, { from: liquidator })).toString();
+                    // console.log(daiTokens); // 180
+                    const liquidatorDaiDebt = divRay(daiTokens, rate2);
+                    const liquidatorWethTokens = divRay(daiTokens, spot);
+                    // console.log(daiDebt.toString());
+                    // wethTokens = 100 ether + 1 wei
+
+                    await weth.deposit({ from: liquidator, value: liquidatorWethTokens });
+                    await weth.approve(wethJoin.address, liquidatorWethTokens, { from: liquidator });
+                    await wethJoin.join(liquidator, liquidatorWethTokens, { from: liquidator });
+                    await vat.frob(ilk, liquidator, liquidator, liquidator, liquidatorWethTokens, liquidatorDaiDebt, { from: liquidator });
+                    await daiJoin.exit(liquidator, daiTokens, { from: liquidator });
+
+                    await dai.approve(liquidations.address, daiTokens, { from: liquidator });
+                    await liquidations.liquidate(WETH, user3, liquidator, daiTokens, { from: liquidator });
+
+                    assert.equal(
+                        await dealer.totalDebtDai(WETH, user3, { from: liquidator }),
+                        0,
+                        "User debt should have been erased",
+                    );
+                    assert.equal(
+                        await weth.balanceOf(liquidator, { from: liquidator }),
+                        divRay(mulRay(wethTokens, toRay(4)), toRay(3)).toString(), // 2 * wethTokens * 2/3
+                        "Liquidator whould have about " + divRay(mulRay(wethTokens, toRay(4)), toRay(3)) + " weth, instead has " + await weth.balanceOf(liquidator, { from: liquidator }),
                     );
                 });
             });
