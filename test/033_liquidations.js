@@ -62,19 +62,18 @@ contract('DssShutdown - Dealer', async (accounts) =>  {
 
     const limits = toRad(10000);
     const spot  = toRay(1.5);
-    const rate  = toRay(1.25);
+    const rate1  = toRay(1.25);
+    const rate2  = toRay(1.5);
     const chi = toRay(1.2);
     const daiDebt = toWad(120);
-    const daiTokens = mulRay(daiDebt, rate);
+    const daiTokens = mulRay(daiDebt, rate1);
     const wethTokens = divRay(daiTokens, spot);
     const chaiTokens = divRay(daiTokens, chi);
     const yDaiTokens = daiTokens;
     let maturity1;
     let maturity2;
 
-    const tag  = divRay(toRay(1.0), spot); // Irrelevant to the final users
-    const fix  = divRay(toRay(1.0), mulRay(spot, toRay(1.1)));
-    const fixedWeth = mulRay(daiTokens, fix);
+    const auctionTime = 3600; // One hour
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
@@ -93,7 +92,7 @@ contract('DssShutdown - Dealer', async (accounts) =>  {
         await vat.file(ilk, spotName, spot, { from: owner });
         await vat.file(ilk, linel, limits, { from: owner });
         await vat.file(Line, limits); // TODO: Why can't we specify `, { from: owner }`?
-        await vat.fold(ilk, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
+        await vat.fold(ilk, vat.address, subBN(rate1, toRay(1)), { from: owner }); // Fold only the increase from 1.0
 
         // Setup pot
         pot = await Pot.new(vat.address);
@@ -211,6 +210,18 @@ contract('DssShutdown - Dealer', async (accounts) =>  {
         await yDai1.grantAccess(dssShutdown.address, { from: owner });
         await yDai2.grantAccess(dssShutdown.address, { from: owner });
 
+        // Setup Liquidations
+        liquidations = await Liquidations.new(
+            dai.address,
+            treasury.address,
+            dealer.address,
+            auctionTime,
+            { from: owner },
+        );
+        await dealer.grantAccess(liquidations.address, { from: owner });
+        await treasury.grantAccess(liquidations.address, { from: owner });
+
+
         // Testing permissions
         await vat.hope(daiJoin.address, { from: owner });
         await vat.hope(wethJoin.address, { from: owner });
@@ -301,16 +312,6 @@ contract('DssShutdown - Dealer', async (accounts) =>  {
 
         it("users are collateralized if rates don't change", async() => {
             assert.equal(
-                await dealer.isCollateralized.call(WETH, user1, { from: owner }),
-                true,
-                "User1 should be collateralized",
-            );
-            assert.equal(
-                await dealer.isCollateralized.call(CHAI, user1, { from: owner }),
-                true,
-                "User1 should be collateralized",
-            );
-            assert.equal(
                 await dealer.isCollateralized.call(WETH, user2, { from: owner }),
                 true,
                 "User2 should be collateralized",
@@ -320,13 +321,112 @@ contract('DssShutdown - Dealer', async (accounts) =>  {
                 true,
                 "User2 should be collateralized",
             );
+            assert.equal(
+                await dealer.isCollateralized.call(WETH, user3, { from: owner }),
+                true,
+                "User3 should be collateralized",
+            );
+            assert.equal(
+                await dealer.isCollateralized.call(CHAI, user3, { from: owner }),
+                true,
+                "User3 should be collateralized",
+            );
         });
 
-        it("users can become undercollateralized with a raise in rates", async() => {
+        it("doesn't allow to start auctions on collateralized users", async() => {
+            await expectRevert(
+                liquidations.start(WETH, user2, { from: owner }),
+                "Liquidations: User is not undercollateralized",
+            );
         });
 
-        describe("", () => {
+        // TODO: Learn of to retrieve a false value from a transaction.
+        /* it("after maturity, users can become undercollateralized with a raise in rates", async() => {
+            // yDai matures
+            await helper.advanceTime(1000);
+            await helper.advanceBlock();
+            await yDai1.mature();
+            
+            await vat.fold(ilk, vat.address, subBN(rate2, rate1), { from: owner });
+
+            assert.equal(
+                await dealer.isCollateralized.call(WETH, user2, { from: owner }),
+                false,
+                "User2 should be undercollateralized",
+            );
+            assert.equal(
+                await dealer.isCollateralized.call(CHAI, user2, { from: owner }),
+                false,
+                "User2 should be undercollateralized",
+            );
+            assert.equal(
+                await dealer.isCollateralized.call(WETH, user3, { from: owner }),
+                false,
+                "User2 should be undercollateralized",
+            );
+            assert.equal(
+                await dealer.isCollateralized.call(CHAI, user3, { from: owner }),
+                false,
+                "User2 should be undercollateralized",
+            );
+        }); */
+
+        describe("with uncollateralized users", () => {
             beforeEach(async() => {
+                // yDai matures
+                await helper.advanceTime(1000);
+                await helper.advanceBlock();
+                await yDai1.mature();
+            
+                await vat.fold(ilk, vat.address, subBN(rate2, rate1), { from: owner });
+            });
+
+            it("auctions can be started", async() => {
+                // Setup yDai
+                const block = await web3.eth.getBlockNumber();
+                now = (await web3.eth.getBlock(block)).timestamp;
+
+                await liquidations.start(WETH, user2, { from: owner });
+
+                assert.equal(
+                    await liquidations.auctions(WETH, user2, { from: owner }),
+                    now + 1, // TODO: Learn to test greater than instead
+                    "Auction time is " + (await liquidations.auctions(WETH, user2, { from: owner })),
+                );
+            });
+
+            describe("with started auctions", () => {
+                beforeEach(async() => {
+                    await liquidations.start(WETH, user2, { from: owner });
+                });
+    
+                it("doesn't allow to start auctions on users already in liquidation", async() => {
+                    await expectRevert(
+                        liquidations.start(WETH, user2, { from: owner }),
+                        "Liquidations: User is already in liquidation",
+                    );
+                });
+
+                it("doesn't allow to cancel auctions on undercollateralized users", async() => {
+                    await expectRevert(
+                        liquidations.cancel(WETH, user2, { from: owner }),
+                        "Liquidations: User is undercollateralized",
+                    );
+                });
+
+                it("liquidations can be cancelled for collateralized users", async() => {
+                    await weth.deposit({ from: user2, value: wethTokens });
+                    await weth.approve(dealer.address, wethTokens, { from: user2 });
+                    await dealer.post(WETH, user2, wethTokens, { from: user2 });
+    
+                    await liquidations.cancel(WETH, user2, { from: owner });
+
+                    assert.equal(
+                        await liquidations.auctions(WETH, user2, { from: owner }),
+                        0,
+                        "Auction should have been cancelled",
+                    );
+                });
             });
         });
     });

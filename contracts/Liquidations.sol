@@ -13,23 +13,24 @@ contract Liquidations is Constants {
     using DecimalMath for uint256;
     using DecimalMath for uint8;
 
-    IDealer internal _dealer;
-    ITreasury internal _treasury;
     IERC20 internal _dai;
+    ITreasury internal _treasury;
+    IDealer internal _dealer;
 
     uint256 public auctionTime;
 
     mapping(bytes32 => mapping(address => uint256)) public auctions;
 
     constructor (
-        address dealer_,
-        address treasury_,
         address dai_,
+        address treasury_,
+        address dealer_,
         uint256 auctionTime_
     ) public {
-        _dealer = IDealer(dealer_);
-        _treasury = ITreasury(treasury_);
         _dai = IERC20(dai_);
+        _treasury = ITreasury(treasury_);
+        _dealer = IDealer(dealer_);
+
         require(
             auctionTime_ > 0,
             "Liquidations: Auction time is zero"
@@ -40,10 +41,10 @@ contract Liquidations is Constants {
     function start(bytes32 collateral, address user) public {
         require(
             auctions[collateral][user] == 0,
-            "Liquidations: User is already targeted"
+            "Liquidations: User is already in liquidation"
         );
         require(
-            _dealer.isCollateralized(collateral, user),
+            !_dealer.isCollateralized(collateral, user),
             "Liquidations: User is not undercollateralized"
         );
         // solium-disable-next-line security/no-block-members
@@ -53,11 +54,7 @@ contract Liquidations is Constants {
     /// @dev Cancels a liquidation process
     function cancel(bytes32 collateral, address user) public {
         require(
-            auctions[collateral][user] > 0,
-            "Liquidations: User is not in liquidation"
-        );
-        require(
-            !_dealer.isCollateralized(collateral, user),
+            _dealer.isCollateralized(collateral, user),
             "Liquidations: User is undercollateralized"
         );
         // solium-disable-next-line security/no-block-members

@@ -13,7 +13,7 @@ import "./interfaces/ITreasury.sol";
 import "./interfaces/IYDai.sol";
 import "./Constants.sol";
 import "./UserProxy.sol";
-
+// import "@nomiclabs/buidler/console.sol";
 
 /// @dev A dealer takes collateral and issues yDai.
 contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
