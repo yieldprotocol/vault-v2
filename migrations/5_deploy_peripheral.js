@@ -16,8 +16,6 @@ const EthProxy = artifacts.require("EthProxy");
 const Weth = artifacts.require("WETH9");
 const ERC20 = artifacts.require("TestERC20");
 
-// const YDai = artifacts.require("YDai");
-
 
 module.exports = async (deployer, network, accounts) => {
 
