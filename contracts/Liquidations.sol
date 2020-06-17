@@ -82,10 +82,8 @@ contract Liquidations is Constants {
         _treasury.pushDai();
 
         // calculate collateral to grab
-        uint256 tokenAmount = daiAmount.divd(price(collateral, from), RAY);
+        uint256 tokenAmount = daiAmount.muld(price(collateral, from), RAY); // TODO: Might want to round up
         // grab collateral from dealer
-        console.log("");
-        console.log(tokenAmount);
         _dealer.grab(collateral, from, daiAmount, tokenAmount);
 
         if (collateral == WETH){
@@ -100,24 +98,18 @@ contract Liquidations is Constants {
     /// @dev Return price of a collateral unit, in dai, at the present moment, for a given user
     // collateral = price * dai - TODO: Consider reversing so that it matches the Oracles
     // TODO: Optimize this for gas
-    //                                             min(auction, elapsed)
-    // dai * debt = token * posted * (2/3 + 1/3 * ----------------------)
-    //                                                    auction
     //
-    //                           9 * debt * auction
-    // token = dai * ---------------------------------------------------------
-    //                2 * posted * auction + 3 * debt * min(auction, elapsed)
+    //                 2 * posted     min(auction, elapsed)
+    // token = dai * (------------ + -----------------------
+    //                  3 * debt          3 * auction
     function price(bytes32 collateral, address user) public view returns (uint256) {
         require(
             auctions[collateral][user] > 0,
             "Liquidations: Vault is not targeted"
         );
-        console.log("price");
-        console.log(_dealer.totalDebtDai(collateral, user));
-        console.log(_dealer.posted(collateral, user));
-        uint256 dividend = RAY.unit().muld(_dealer.totalDebtDai(collateral, user), RAY).mul(3);
-        uint256 divisor = RAY.unit().muld(_dealer.posted(collateral, user), RAY).mul(2);
-        console.log(dividend.divd(divisor, RAY));
+        // TODO: Add the time-dependant term
+        uint256 dividend = RAY.unit().muld(_dealer.posted(collateral, user), RAY).mul(2);
+        uint256 divisor = RAY.unit().muld(_dealer.totalDebtDai(collateral, user), RAY).mul(3);
         return dividend.divd(divisor, RAY);
     }
 }
