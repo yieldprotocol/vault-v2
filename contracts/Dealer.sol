@@ -176,14 +176,15 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
         _gasToken.transfer(msg.sender, value);
     }
 
-    /// @dev Takes collateral _token from `from` address
-    // from --- Token ---> us
-    function post(bytes32 collateral, address from, uint256 amount)
-        public onlyHolderOrProxy(from, "YDai: Only Holder Or Proxy") onlyLive {
+    /// @dev Takes collateral _token from `from` address, and credits it to `to` collateral account.
+    // from --- Token ---> us(to)
+    function post(bytes32 collateral, address from, address to, uint256 amount)
+        public override onlyHolderOrProxy(from, "YDai: Only Holder Or Proxy") onlyLive {
         require(
             _token[collateral].transferFrom(from, address(_treasury), amount),
             "Dealer: Collateral transfer fail"
         );
+
         if (collateral == WETH){ // TODO: Refactor Treasury to be `push(collateral, amount)`
             _treasury.pushWeth();                          // Have Treasury process the weth
         } else if (collateral == CHAI) {
@@ -192,32 +193,32 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
             revert("Dealer: Unsupported collateral");
         }
         
-        if (posted[collateral][from] == 0 && amount >= 0) {
+        if (posted[collateral][to] == 0 && amount >= 0) {
             lockBond(10);
         }
-        posted[collateral][from] = posted[collateral][from].add(amount);
+        posted[collateral][to] = posted[collateral][to].add(amount);
     }
 
-    /// @dev Returns collateral to `to` address
-    // us --- Token ---> to
-    function withdraw(bytes32 collateral, address to, uint256 amount)
-        public onlyHolderOrProxy(to, "YDai: Only Holder Or Proxy") onlyLive {
-        posted[collateral][to] = posted[collateral][to].sub(amount); // Will revert if not enough posted
+    /// @dev Returns collateral to `to` address, taking it from `from` collateral account.
+    // us(from) --- Token ---> to
+    function withdraw(bytes32 collateral, address from, address to, uint256 amount)
+        public override onlyHolderOrProxy(from, "YDai: Only Holder Or Proxy") onlyLive {
+        posted[collateral][from] = posted[collateral][from].sub(amount); // Will revert if not enough posted
 
         require(
-            isCollateralized(collateral, to),
+            isCollateralized(collateral, from),
             "Dealer: Too much debt"
         );
 
-        if (collateral == WETH){ // TODO: Refactor Treasury to be `pull(collateral, amount)`
-            _treasury.pullWeth(to, amount);                          // Take weth from Treasury and give it to `to`
+        if (collateral == WETH){
+            _treasury.pullWeth(to, amount);
         } else if (collateral == CHAI) {
             _treasury.pullChai(to, amount);
         } else {
             revert("Dealer: Unsupported collateral");
         }
 
-        if (posted[collateral][to] == 0 && amount >= 0) {
+        if (posted[collateral][from] == 0 && amount >= 0) {
             returnBond(10);
         }
     }

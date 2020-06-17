@@ -206,7 +206,7 @@ contract('Dealer - Chai', async (accounts) =>  {
         );
         
         await chai.approve(dealer.address, chaiTokens, { from: owner });
-        await dealer.post(CHAI, owner, chaiTokens, { from: owner });
+        await dealer.post(CHAI, owner, owner, chaiTokens, { from: owner });
 
         assert.equal(
             await chai.balanceOf(treasury.address),
@@ -223,7 +223,7 @@ contract('Dealer - Chai', async (accounts) =>  {
     describe("with posted chai", () => {
         beforeEach(async() => {
             await chai.approve(dealer.address, chaiTokens, { from: owner });
-            await dealer.post(CHAI, owner, chaiTokens, { from: owner });
+            await dealer.post(CHAI, owner, owner, chaiTokens, { from: owner });
         });
 
         it("allows user to withdraw chai", async() => {
@@ -243,7 +243,7 @@ contract('Dealer - Chai', async (accounts) =>  {
                 "Owner has collateral in hand"
             );
             
-            await dealer.withdraw(CHAI, owner, chaiTokens, { from: owner });
+            await dealer.withdraw(CHAI, owner, owner, chaiTokens, { from: owner });
 
             assert.equal(
                 await chai.balanceOf(owner),

@@ -195,7 +195,7 @@ contract('Dealer - Weth', async (accounts) =>  {
         
         await weth.deposit({ from: owner, value: wethTokens });
         await weth.approve(dealer.address, wethTokens, { from: owner }); 
-        await dealer.post(WETH, owner, wethTokens, { from: owner });
+        await dealer.post(WETH, owner, owner, wethTokens, { from: owner });
 
         assert.equal(
             (await vat.urns(ilk, treasury.address)).ink,
@@ -213,7 +213,7 @@ contract('Dealer - Weth', async (accounts) =>  {
         beforeEach(async() => {
             await weth.deposit({ from: owner, value: wethTokens });
             await weth.approve(dealer.address, wethTokens, { from: owner }); 
-            await dealer.post(WETH, owner, wethTokens, { from: owner });
+            await dealer.post(WETH, owner, owner, wethTokens, { from: owner });
 
             assert.equal(
                 (await vat.urns(ilk, treasury.address)).ink,
@@ -243,7 +243,7 @@ contract('Dealer - Weth', async (accounts) =>  {
         });
 
         it("allows user to withdraw weth", async() => {
-            await dealer.withdraw(WETH, owner, wethTokens, { from: owner });
+            await dealer.withdraw(WETH, owner, owner, wethTokens, { from: owner });
 
             assert.equal(
                 await weth.balanceOf(owner),
@@ -315,7 +315,7 @@ contract('Dealer - Weth', async (accounts) =>  {
             it("allows to borrow from a second series", async() => {
                 await weth.deposit({ from: owner, value: wethTokens });
                 await weth.approve(dealer.address, wethTokens, { from: owner }); 
-                await dealer.post(WETH, owner, wethTokens, { from: owner });
+                await dealer.post(WETH, owner, owner, wethTokens, { from: owner });
                 await dealer.borrow(WETH, maturity2, owner, daiTokens, { from: owner });
 
                 assert.equal(
@@ -349,7 +349,7 @@ contract('Dealer - Weth', async (accounts) =>  {
                 beforeEach(async() => {
                     await weth.deposit({ from: owner, value: wethTokens });
                     await weth.approve(dealer.address, wethTokens, { from: owner }); 
-                    await dealer.post(WETH, owner, wethTokens, { from: owner });
+                    await dealer.post(WETH, owner, owner, wethTokens, { from: owner });
                     await dealer.borrow(WETH, maturity2, owner, daiTokens, { from: owner });
                 });
 
