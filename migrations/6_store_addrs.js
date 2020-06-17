@@ -25,7 +25,7 @@ try {
   });
 } catch (e) { console.log(e)}
 
-module.exports = async (network, accounts) => {
+module.exports = async (deployer, network, accounts) => {
 
     const db = firebase.firestore();
     const batch = db.batch();
