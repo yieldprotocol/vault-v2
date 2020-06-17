@@ -5,6 +5,7 @@ const GemJoin = artifacts.require("GemJoin");
 const DaiJoin = artifacts.require("DaiJoin");
 const End = artifacts.require("End");
 const Chai = artifacts.require("Chai");
+const GasToken = artifacts.require("GasToken1");
 
 const Treasury = artifacts.require("Treasury");
 const ChaiOracle = artifacts.require("ChaiOracle");
@@ -15,6 +16,7 @@ const YDai = artifacts.require("YDai");
 
 const Splitter = artifacts.require("Splitter");
 const DssShutdown = artifacts.require("DssShutdown");
+const EthProxy = artifacts.require("EthProxy");
 
 const Migrations = artifacts.require("Migrations");
 
@@ -44,12 +46,14 @@ module.exports = async (deployer, network, accounts) => {
   let potAddress;
   let endAddress;
   let chaiAddress;
+  let gasTokenAddress;
   let treasuryAddress;
   let chaiOracleAddress;
   let wethOracleAddress;
   let dealerAddress;
   let splitterAddress;
   let dssShutdownAddress;
+  let ethProxyAddress;
 
   if (network !== 'development') {
     vatAddress = fixed_addrs[network].vatAddress ;
@@ -77,6 +81,7 @@ module.exports = async (deployer, network, accounts) => {
   treasuryAddress = treasury.address;
   wethOracleAddress = (await WethOracle.deployed()).address;
   chaiOracleAddress = (await ChaiOracle.deployed()).address;
+  gasTokenAddress = (await GasToken.deployed()).address;
   const dealer = await Dealer.deployed();
   dealerAddress = dealer.address;
 
@@ -111,9 +116,19 @@ module.exports = async (deployer, network, accounts) => {
   // await yDai1.grantAccess(dssShutdownAddress);
   // await yDai2.grantAccess(dssShutdownAddress);
 
+  // Setup EthProxy
+  await deployer.deploy(
+    EthProxy,
+    wethAddress,
+    gasTokenAddress,
+    dealerAddress,
+  );
+  ethProxyAddress = (await EthProxy.deployed()).address;
+
   const deployedPeripheral = {
     'Splitter': splitterAddress,
     'DssShutdown': dssShutdownAddress,
+    'EthProxy': ethProxyAddress,
   }
 
   let peripheralRef = db.collection(networkId.toString()).doc('deployedPeripheral')
