@@ -107,7 +107,6 @@ contract Liquidations is Constants {
             auctions[collateral][user] > 0,
             "Liquidations: Vault is not targeted"
         );
-        // TODO: Add the time-dependant term
         uint256 dividend1 = RAY.unit().mul(_dealer.posted(collateral, user));
         uint256 divisor1 = RAY.unit().mul(_dealer.totalDebtDai(collateral, user));
         uint256 dividend2 = RAY.unit().mul(2);

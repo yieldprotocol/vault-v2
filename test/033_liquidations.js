@@ -461,10 +461,16 @@ contract('DssShutdown - Dealer', async (accounts) =>  {
                         0,
                         "User debt should have been erased",
                     );
-                    assert.equal(
+                    // The liquidation will happen a few seconds after the start of the auction, so the collateral received will be slightly above the 2/3 of the total posted.
+                    expect(
+                        await weth.balanceOf(liquidator, { from: liquidator })
+                    ).to.be.bignumber.gt(
+                        divRay(mulRay(wethTokens, toRay(2)), toRay(3)).toString()
+                    );
+                    expect(
                         await weth.balanceOf(liquidator, { from: liquidator }),
-                        addBN(divRay(mulRay(wethTokens, toRay(2)), toRay(3)), 1).toString(),
-                        "Liquidator should have about " + addBN(divRay(mulRay(wethTokens, toRay(2)), toRay(3)), 1) + " weth, instead has " + await weth.balanceOf(liquidator, { from: liquidator }),
+                    ).to.be.bignumber.lt(
+                        mulRay(divRay(mulRay(wethTokens, toRay(2)), toRay(3)), toRay(1.01)).toString(),
                     );
                 });
 
@@ -490,10 +496,16 @@ contract('DssShutdown - Dealer', async (accounts) =>  {
                         divRay(daiTokens, toRay(2)).toString(),
                         "User debt should have been halved",
                     );
-                    assert.equal(
+                    // The liquidation will happen a few seconds after the start of the auction, so the collateral received will be slightly above the 1/3 of the total posted.
+                    expect(
+                        await weth.balanceOf(liquidator, { from: liquidator })
+                    ).to.be.bignumber.gt(
+                        divRay(wethTokens, toRay(3)).toString()
+                    );
+                    expect(
                         await weth.balanceOf(liquidator, { from: liquidator }),
-                        divRay(wethTokens, toRay(3)).toString(),
-                        "Liquidator should have about " + divRay(wethTokens, toRay(3)) + " weth, instead has " + await weth.balanceOf(liquidator, { from: liquidator }),
+                    ).to.be.bignumber.lt(
+                        mulRay(divRay(wethTokens, toRay(3)), toRay(1.01)).toString(),
                     );
                 });
 
@@ -519,10 +531,16 @@ contract('DssShutdown - Dealer', async (accounts) =>  {
                         0,
                         "User debt should have been erased",
                     );
-                    assert.equal(
+                    // The liquidation will happen a few seconds after the start of the auction, so the collateral received will be slightly above the 1/3 of the total posted.
+                    expect(
+                        await weth.balanceOf(liquidator, { from: liquidator })
+                    ).to.be.bignumber.gt(
+                        divRay(mulRay(wethTokens, toRay(4)), toRay(3)).toString()
+                    );
+                    expect(
                         await weth.balanceOf(liquidator, { from: liquidator }),
-                        divRay(mulRay(wethTokens, toRay(4)), toRay(3)).toString(), // 2 * wethTokens * 2/3
-                        "Liquidator should have about " + divRay(mulRay(wethTokens, toRay(4)), toRay(3)) + " weth, instead has " + await weth.balanceOf(liquidator, { from: liquidator }),
+                    ).to.be.bignumber.lt(
+                        mulRay(divRay(mulRay(wethTokens, toRay(4)), toRay(3)), toRay(1.01)).toString(),
                     );
                 });
 
@@ -534,11 +552,9 @@ contract('DssShutdown - Dealer', async (accounts) =>  {
 
                     it("liquidations retrieve all collateral", async() => {
                         const daiTokens = (await dealer.totalDebtDai(WETH, user2, { from: liquidator })).toString();
-                        // console.log(daiTokens); // 180
                         const liquidatorDaiDebt = divRay(daiTokens, rate2);
                         const liquidatorWethTokens = divRay(daiTokens, spot);
-                        // console.log(daiDebt.toString());
-                        // wethTokens = 100 ether + 1 wei
+                        const wethTokens = await dealer.posted(WETH, user2, { from: owner });
     
                         await weth.deposit({ from: liquidator, value: liquidatorWethTokens });
                         await weth.approve(wethJoin.address, liquidatorWethTokens, { from: liquidator });
@@ -557,17 +573,15 @@ contract('DssShutdown - Dealer', async (accounts) =>  {
                         assert.equal(
                             await weth.balanceOf(liquidator, { from: liquidator }),
                             wethTokens.toString(),
-                            "Liquidator should have about " + wethTokens + " weth, instead has " + await weth.balanceOf(liquidator, { from: liquidator }),
+                            "Liquidator should have " + wethTokens + " weth, instead has " + await weth.balanceOf(liquidator, { from: liquidator }),
                         );
                     });
     
                     it("partial liquidations are possible", async() => {
                         const daiTokens = (await dealer.totalDebtDai(WETH, user2, { from: liquidator })).toString();
-                        // console.log(daiTokens); // 180
                         const liquidatorDaiDebt = divRay(daiTokens, rate2);
                         const liquidatorWethTokens = divRay(daiTokens, spot);
-                        // console.log(daiDebt.toString());
-                        // wethTokens = 100 ether + 1 wei
+                        const wethTokens = new BN(await dealer.posted(WETH, user2, { from: owner }));
     
                         await weth.deposit({ from: liquidator, value: liquidatorWethTokens });
                         await weth.approve(wethJoin.address, liquidatorWethTokens, { from: liquidator });
@@ -585,18 +599,16 @@ contract('DssShutdown - Dealer', async (accounts) =>  {
                         );
                         assert.equal(
                             await weth.balanceOf(liquidator, { from: liquidator }),
-                            divRay(wethTokens, toRay(2)).toString(),
-                            "Liquidator should have about " + divRay(wethTokens, toRay(2)) + " weth, instead has " + await weth.balanceOf(liquidator, { from: liquidator }),
+                            wethTokens.div(2).toString(),
+                            "Liquidator should have " + wethTokens.div(2) + " weth, instead has " + await weth.balanceOf(liquidator, { from: liquidator }),
                         );
                     });
     
                     it("liquidations over several series are possible", async() => {
                         const daiTokens = (await dealer.totalDebtDai(WETH, user3, { from: liquidator })).toString();
-                        // console.log(daiTokens); // 180
                         const liquidatorDaiDebt = divRay(daiTokens, rate2);
                         const liquidatorWethTokens = divRay(daiTokens, spot);
-                        // console.log(daiDebt.toString());
-                        // wethTokens = 100 ether + 1 wei
+                        const wethTokens = await dealer.posted(WETH, user3, { from: owner });
     
                         await weth.deposit({ from: liquidator, value: liquidatorWethTokens });
                         await weth.approve(wethJoin.address, liquidatorWethTokens, { from: liquidator });
@@ -614,8 +626,8 @@ contract('DssShutdown - Dealer', async (accounts) =>  {
                         );
                         assert.equal(
                             await weth.balanceOf(liquidator, { from: liquidator }),
-                            wethTokens.mul(2).toString(),
-                            "Liquidator should have about " + wethTokens.mul(2) + " weth, instead has " + await weth.balanceOf(liquidator, { from: liquidator }),
+                            wethTokens.toString(),
+                            "Liquidator should have " + wethTokens + " weth, instead has " + await weth.balanceOf(liquidator, { from: liquidator }),
                         );
                     });                    
                 });
