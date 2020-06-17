@@ -55,7 +55,6 @@ module.exports = async (deployer, network, accounts) => {
 
     await deployer.deploy(ERC20, 0);
     daiAddress = (await ERC20.deployed()).address;
-    console.log(daiAddress)
 
     await deployer.deploy(DaiJoin, vatAddress, daiAddress);
     daiJoinAddress = (await DaiJoin.deployed()).address;
