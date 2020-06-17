@@ -82,7 +82,7 @@ contract Liquidations is Constants {
         _treasury.pushDai();
 
         // calculate collateral to grab
-        uint256 tokenAmount = daiAmount.muld(price(collateral, from), RAY); // TODO: Might want to round up
+        uint256 tokenAmount = daiAmount.muld(price(collateral, from), RAY);
         // grab collateral from dealer
         _dealer.grab(collateral, from, daiAmount, tokenAmount);
 
@@ -99,17 +99,24 @@ contract Liquidations is Constants {
     // collateral = price * dai - TODO: Consider reversing so that it matches the Oracles
     // TODO: Optimize this for gas
     //
-    //                 2 * posted     min(auction, elapsed)
-    // token = dai * (------------ + -----------------------
-    //                  3 * debt          3 * auction
+    //                posted      2      min(auction, elapsed)
+    // token = dai * -------- * (--- + -----------------------)
+    //                 debt       3       3 * auction
     function price(bytes32 collateral, address user) public view returns (uint256) {
         require(
             auctions[collateral][user] > 0,
             "Liquidations: Vault is not targeted"
         );
         // TODO: Add the time-dependant term
-        uint256 dividend = RAY.unit().muld(_dealer.posted(collateral, user), RAY).mul(2);
-        uint256 divisor = RAY.unit().muld(_dealer.totalDebtDai(collateral, user), RAY).mul(3);
-        return dividend.divd(divisor, RAY);
+        uint256 dividend1 = RAY.unit().mul(_dealer.posted(collateral, user));
+        uint256 divisor1 = RAY.unit().mul(_dealer.totalDebtDai(collateral, user));
+        uint256 dividend2 = RAY.unit().mul(2);
+        uint256 divisor2 = RAY.unit().mul(3);
+        uint256 dividend3 = RAY.unit().muld(Math.min(auctionTime, now - auctions[collateral][user]), RAY);
+        uint256 divisor3 = RAY.unit().muld(auctionTime, RAY).mul(3);
+        uint256 term1 = dividend1.divd(divisor1, RAY);
+        uint256 term2 = dividend2.divd(divisor2, RAY);
+        uint256 term3 = dividend3.divd(divisor3, RAY);
+        return term1.muld(term2.add(term3), RAY); // TODO: Might want to round up in the three previous terms
     }
 }
