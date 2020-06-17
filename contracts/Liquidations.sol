@@ -3,15 +3,18 @@ pragma solidity ^0.6.2;
 import "@openzeppelin/contracts/math/Math.sol";
 import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./interfaces/IDealer.sol";
 import "./interfaces/ITreasury.sol";
 import "./Constants.sol";
+import "@nomiclabs/buidler/console.sol";
 
 
 /// @dev The Liquidations contract for a Dealer allows to liquidate undercollateralized positions in a reverse Dutch auction.
 contract Liquidations is Constants {
     using DecimalMath for uint256;
     using DecimalMath for uint8;
+    using SafeMath for uint256;
 
     IERC20 internal _dai;
     ITreasury internal _treasury;
@@ -35,6 +38,7 @@ contract Liquidations is Constants {
             auctionTime_ > 0,
             "Liquidations: Auction time is zero"
         );
+        auctionTime = auctionTime_;
     }
 
     /// @dev Starts a liquidation process for a given collateral and user.
@@ -61,8 +65,8 @@ contract Liquidations is Constants {
         delete auctions[collateral][user];
     }
 
-    /// @dev Liquidates a position. The caller pays the debt of `from`, and `to` receives an amount of collateral.
-    function liquidate(bytes32 collateral, address from, address to, uint256 daiAmount) public {
+    /// @dev Liquidates a position. The caller pays the debt of `from`, and `liquidator` receives an amount of collateral.
+    function liquidate(bytes32 collateral, address from, address liquidator, uint256 daiAmount) public {
         require(
             auctions[collateral][from] > 0,
             "Liquidations: Vault is not in liquidation"
@@ -72,15 +76,25 @@ contract Liquidations is Constants {
             "Liquidations: Vault is not undercollateralized"
         ); */ // Not checking for this, too expensive. Let the user stop the liquidations instead.
         require( // grab dai from liquidator and push to treasury
-            _dai.transferFrom(from, address(_treasury), daiAmount),
+            _dai.transferFrom(liquidator, address(_treasury), daiAmount),
             "Dealer: Dai transfer fail"
         );
         _treasury.pushDai();
 
         // calculate collateral to grab
-        uint256 tokenAmount = daiAmount * price(collateral, from);
+        uint256 tokenAmount = daiAmount.divd(price(collateral, from), RAY);
         // grab collateral from dealer
+        console.log("");
+        console.log(tokenAmount);
         _dealer.grab(collateral, from, daiAmount, tokenAmount);
+
+        if (collateral == WETH){
+            _treasury.pullWeth(liquidator, tokenAmount);                          // Have Treasury process the weth
+        } else if (collateral == CHAI) {
+            _treasury.pullChai(liquidator, tokenAmount);
+        } else {
+            revert("Dealer: Unsupported collateral");
+        }
     }
 
     /// @dev Return price of a collateral unit, in dai, at the present moment, for a given user
@@ -98,9 +112,12 @@ contract Liquidations is Constants {
             auctions[collateral][user] > 0,
             "Liquidations: Vault is not targeted"
         );
-        uint256 userDebt = _dealer.totalDebtDai(collateral, user);
-        uint256 dividend = 9 * userDebt * auctionTime;
-        uint256 divisor = (2 * _dealer.posted(collateral, user) * auctionTime) + (3 * userDebt * Math.min(auctionTime, (now - auctions[collateral][user])));
-        return dividend / divisor;
+        console.log("price");
+        console.log(_dealer.totalDebtDai(collateral, user));
+        console.log(_dealer.posted(collateral, user));
+        uint256 dividend = RAY.unit().muld(_dealer.totalDebtDai(collateral, user), RAY).mul(3);
+        uint256 divisor = RAY.unit().muld(_dealer.posted(collateral, user), RAY).mul(2);
+        console.log(dividend.divd(divisor, RAY));
+        return dividend.divd(divisor, RAY);
     }
 }
