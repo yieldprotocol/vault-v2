@@ -54,11 +54,12 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
         _daiJoin = IDaiJoin(daiJoin_);
         _wethJoin = IGemJoin(wethJoin_);
         _vat = IVat(vat_);
-        _vat.hope(address(wethJoin_));
-        _vat.hope(address(daiJoin_));
+        _vat.hope(wethJoin_);
+        _vat.hope(daiJoin_);
 
-        _dai.approve(address(_chai), uint256(-1));      // Chai will never cheat on us
-        _weth.approve(address(_wethJoin), uint256(-1)); // WethJoin will never cheat on us
+        // TODO: Fix for migrations
+        _dai.approve(chai_, uint256(-1));      // Chai will never cheat on us
+        _weth.approve(wethJoin_, uint256(-1)); // WethJoin will never cheat on us
 
         live = true;
     }

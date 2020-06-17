@@ -4,14 +4,29 @@ const Vat = artifacts.require("Vat");
 const GemJoin = artifacts.require("GemJoin");
 const DaiJoin = artifacts.require("DaiJoin");
 const Chai = artifacts.require("Chai");
+const GasToken = artifacts.require("GasToken1");
 
-const Treasury = artifacts.require("Treasury");
-const ChaiOracle = artifacts.require("ChaiOracle");
 const WethOracle = artifacts.require("WethOracle");
+const ChaiOracle = artifacts.require("ChaiOracle");
+const Treasury = artifacts.require("Treasury");
+const Dealer = artifacts.require("Dealer");
 
 const Migrations = artifacts.require("Migrations");
 
+const admin = require('firebase-admin');
+let serviceAccount = require('../firebaseKey.json');
+try {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    databaseURL: "https://yield-ydai.firebaseio.com"
+  });
+} catch (e) { console.log(e)}
+
 module.exports = async (deployer, network, accounts) => {
+
+  const db = admin.firestore();
+  const batch = db.batch();
+  const networkId = await web3.eth.net.getId();
 
   const migration = await Migrations.deployed();
   let vatAddress;
@@ -21,9 +36,11 @@ module.exports = async (deployer, network, accounts) => {
   let daiJoinAddress;
   let potAddress;
   let chaiAddress;
-  let treasuryAddress;
-  let chaiOracleAddress;
+  let gasTokenAddress;
   let wethOracleAddress;
+  let chaiOracleAddress;
+  let treasuryAddress;
+  let dealerAddress;
 
   if (network !== 'development') {
     vatAddress = fixed_addrs[network].vatAddress ;
@@ -35,6 +52,9 @@ module.exports = async (deployer, network, accounts) => {
     fixed_addrs[network].chaiAddress ? 
       (chaiAddress = fixed_addrs[network].chaiAddress)
       : (chaiAddress = (await Chai.deployed()).address);
+    fixed_addrs[network].gasTokenAddress ? 
+      (gasTokenAddress = fixed_addrs[network].gasTokenAddress)
+      : (gasTokenAddress = (await GasToken.deployed()).address);
  } else {
     vatAddress = (await Vat.deployed()).address;
     wethAddress = await migration.contracts.call('weth', (e,r)=> !e && r)
@@ -43,6 +63,7 @@ module.exports = async (deployer, network, accounts) => {
     daiJoinAddress = (await DaiJoin.deployed()).address;
     potAddress = (await Pot.deployed()).address;
     chaiAddress = (await Chai.deployed()).address;
+    gasTokenAddress = (await GasToken.deployed()).address;
  }
 
   // Setup chaiOracle
@@ -53,6 +74,8 @@ module.exports = async (deployer, network, accounts) => {
   await deployer.deploy(WethOracle, vatAddress);
   wethOracleAddress = (await WethOracle.deployed()).address;
 
+  // Setup treasury
+  // TODO: The Treasury constructor reverts on `_dai.approve(chai_, uint256(-1));`
   await deployer.deploy(
     Treasury,
     daiAddress,        // dai
@@ -65,4 +88,33 @@ module.exports = async (deployer, network, accounts) => {
   );
   treasury = await Treasury.deployed();
   treasuryAddress = treasury.address;
+
+  // Setup dealer
+  await deployer.deploy(
+    Dealer,
+    treasuryAddress,
+    daiAddress,
+    wethAddress,
+    wethOracleAddress,
+    chaiAddress,
+    chaiOracleAddress,
+    gasTokenAddress,
+  );
+  const dealer = await Dealer.deployed();
+  dealerAddress = dealer.address;
+  await treasury.grantAccess(dealerAddress);
+
+  // Commit addresses to firebase
+  const deployedCore = {
+    'WethOracle': wethOracleAddress,
+    'ChaiOracle': chaiOracleAddress,
+    'Treasury': treasuryAddress,
+    'Dealer': dealerAddress,
+  }
+
+  let coreRef = db.collection(networkId.toString()).doc('deployedCore')
+  batch.set(coreRef, deployedCore);
+  await batch.commit();
+
+  console.log(deployedCore)
 };

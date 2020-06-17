@@ -22,6 +22,7 @@ contract EthProxy is UserProxy(), Constants {
         _weth = IWeth(weth_);
         _gasToken = IGasToken(gasToken_);
         _dealer = IVault(dealer_);
+        // TODO: Fix for migrations
         _weth.approve(address(_dealer), uint(-1));
     }
 
