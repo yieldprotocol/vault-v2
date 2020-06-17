@@ -1,32 +1,25 @@
 const fixed_addrs = require('./fixed_addrs.json');
 const Pot = artifacts.require("Pot");
 const Vat = artifacts.require("Vat");
-
 const Treasury = artifacts.require("Treasury");
 const Dealer = artifacts.require("Dealer");
-
 const YDai = artifacts.require("YDai");
 
-const Migrations = artifacts.require("Migrations");
-
-const admin = require('firebase-admin');
+const firebase = require('firebase-admin');
 let serviceAccount = require('../firebaseKey.json');
 try {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
+  firebase.initializeApp({
+    credential: firebase.credential.cert(serviceAccount),
     databaseURL: "https://yield-ydai.firebaseio.com"
   });
 } catch (e) { console.log(e)}
 
 module.exports = async (deployer, network, accounts) => {
 
-  console.log( process.argv )
-
-  const db = admin.firestore();
+  const db = firebase.firestore();
   const batch = db.batch();
   const networkId = await web3.eth.net.getId();
 
-  const migration = await Migrations.deployed();
   let vatAddress;
   let potAddress;
   let treasuryAddress;
@@ -54,7 +47,6 @@ module.exports = async (deployer, network, accounts) => {
     [1625097599, 'yDai-2021-06-30', 'yDai-2021-06-30'],
   ]);
 
-  const deployedMaturities = [];
   for (const [maturity, name, symbol] of maturitiesInput.values()) {
     // Setup YDai
     await deployer.deploy(
@@ -71,16 +63,11 @@ module.exports = async (deployer, network, accounts) => {
     await yDai.grantAccess(dealerAddress);
     await dealer.addSeries(yDai.address);
 
-    deployedMaturities.push({
-      maturity, 
-      name, 
-      symbol, 
-      'YDai': yDai.address,
-    })
-
-    let maturityRef = db.collection(networkId.toString()).doc(name);
-    batch.set(maturityRef, deployedMaturities[deployedMaturities.length -1]);
+    let maturityRef = db.collection(networkId.toString()).doc('deployedSeries').collection('deployedSeries').doc(name);
+    batch.set(maturityRef, { name, maturity, symbol, yDai: yDai.address })
+    console.log({ name, maturity, symbol, yDai: yDai.address })
   }
+  await batch.commit();
+  firebase.app().delete();
 
-  console.log(deployedMaturities);
 };

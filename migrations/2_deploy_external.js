@@ -9,24 +9,10 @@ const Pot = artifacts.require('Pot');
 const End = artifacts.require('End');
 const Chai = artifacts.require('Chai');
 const GasToken = artifacts.require('GasToken1');
-const Migrations = artifacts.require("Migrations");
-
-const admin = require('firebase-admin');
-let serviceAccount = require('../firebaseKey.json');
-try {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    databaseURL: "https://yield-ydai.firebaseio.com"
-  });
-} catch (e) { console.log(e)}
 
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('../test/shared/utils');
 
 module.exports = async (deployer, network, accounts) => {
-
-  const db = admin.firestore();
-  const batch = db.batch();
-  const networkId = await web3.eth.net.getId();
 
   const [owner] = accounts;
   let vatAddress;
@@ -122,17 +108,6 @@ module.exports = async (deployer, network, accounts) => {
     );
     chaiAddress = (await Chai.deployed()).address;
   };
-  
-  console.log("    External contract addresses");
-  console.log("    ---------------------------");
-  console.log("    vat:      " + vatAddress);
-  console.log("    weth:     " + wethAddress);
-  console.log("    wethJoin: " + wethJoinAddress);
-  console.log("    dai:      " + daiAddress);
-  console.log("    daiJoin:  " + daiJoinAddress);
-  console.log("    chai:     " + chaiAddress);
-  console.log("    gasToken: " + gasTokenAddress);
-
 
   const deployedExternal = {
     'Vat': vatAddress,
@@ -145,7 +120,6 @@ module.exports = async (deployer, network, accounts) => {
     'Chai': chaiAddress,
     'GasToken': gasTokenAddress,
   }
-  let externalRef = db.collection(networkId.toString()).doc('deployedExternal')
-  batch.set(externalRef, deployedExternal);
-  await batch.commit();
+
+  console.log(deployedExternal)
 }
