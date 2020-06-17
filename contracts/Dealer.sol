@@ -133,7 +133,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     }
 
     /// @dev Returns the total debt of an user, for a given collateral, across all series, in Dai
-    function totalDebtDai(bytes32 collateral, address user) public view returns (uint256) {
+    function totalDebtDai(bytes32 collateral, address user) public view override returns (uint256) {
         uint256 totalDebt;
         for (uint256 i = 0; i < seriesIterator.length; i += 1) {
             // TODO: Skip next line if debtYDai[collateral][maturity][user] == 0
@@ -313,7 +313,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     }
 
     /// @dev Removes collateral and debt for an user.
-    function grab(bytes32 collateral, uint256 maturity, address user, uint256 daiAmount, uint256 tokenAmount)
+    function grab(bytes32 collateral, address user, uint256 daiAmount, uint256 tokenAmount)
         public onlyAuthorized("Dealer: Not Authorized") override {
 
         posted[collateral][user] = posted[collateral][user].sub(
@@ -324,13 +324,21 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
             returnBond(10);
         }
 
-        debtYDai[collateral][maturity][user] = debtYDai[collateral][maturity][user].sub(
-            inYDai(maturity, daiAmount),
+        uint256 grabbed;
+        for (uint256 i = 0; i < seriesIterator.length; i += 1) {
+            uint256 maturity = seriesIterator[i];
+            uint256 thisGrab = Math.min(debtDai(collateral, maturity, user), daiAmount.sub(grabbed));
+            grabbed = grabbed.add(thisGrab); // SafeMath shouldn't be needed
+            debtYDai[collateral][maturity][user] = debtYDai[collateral][maturity][user].sub(inYDai(maturity, thisGrab)); // SafeMath shouldn't be needed
+            if (debtYDai[collateral][maturity][user] == 0){
+                returnBond(10);
+            }
+            if (grabbed == daiAmount) break;
+        } // We don't expect hundreds of maturities per dealer
+        require(
+            grabbed == daiAmount,
             "Dealer: Not enough user debt"
         );
-        if (debtYDai[collateral][maturity][user] == 0){
-            returnBond(10);
-        }
     }
 
 

@@ -67,7 +67,7 @@ contract Liquidations is Constants {
     /// @dev Liquidates a position. The caller pays the debt of `from`, and `to` receives an amount of collateral.
     /// @param from User vault to liquidate
     /// @param to Account paying the debt and receiving the collateral
-    function liquidate(bytes32 collateral, uint256 series, address from, address to, uint256 daiAmount) public {
+    function liquidate(bytes32 collateral, address from, address to, uint256 daiAmount) public {
         require(
             auctions[collateral][from] > 0,
             "Liquidations: User is not targeted"
@@ -83,25 +83,29 @@ contract Liquidations is Constants {
         _treasury.pushDai();
         
         // calculate collateral to grab
-        uint256 toGrab = daiAmount * price(collateral, from);
+        uint256 tokenAmount = daiAmount * price(collateral, from);
         // grab collateral from dealer
-        _dealer.grab(collateral, series, from, daiAmount, toGrab);
+        _dealer.grab(collateral, from, daiAmount, tokenAmount);
     }
 
-    /// @dev Return price of a collateral unit, in dai, at the present moment
+    /// @dev Return price of a collateral unit, in dai, at the present moment, for a given user
     // collateral = price * dai - TODO: Consider reversing so that it matches the Oracles
     // TODO: Optimize this for gas
-    //                     3 * auctionTime
-    // price = (3/2) +  * -----------------
-    //                       elapsedTime
-
+    //                                             min(auction, elapsed)
+    // dai * debt = token * posted * (2/3 + 1/3 * ----------------------)
+    //                                                    auction
+    //
+    //                           9 * debt * auction
+    // token = dai * ---------------------------------------------------------
+    //                2 * posted * auction + 3 * debt * min(auction, elapsed)
     function price(bytes32 collateral, address user) public view returns (uint256) {
         require(
             auctions[collateral][user] > 0,
             "Liquidations: User is not targeted"
         );
-        uint256 oneAndAHalf = RAY.unit() + RAY.unit() / 2;
-        uint256 elapsedTimeRay = (now - auctions[collateral][user]) * RAY.unit();
-        return oneAndAHalf + (3 * auctionTime * RAY.unit()).divd(elapsedTimeRay, RAY);
+        uint256 userDebt = _dealer.totalDebtDai(collateral, user);
+        uint256 dividend = 9 * userDebt * auctionTime;
+        uint256 divisor = (2 * _dealer.posted(collateral, user) * auctionTime) + (3 * userDebt * Math.min(auctionTime, (now - auctions[collateral][user])));
+        return dividend / divisor;
     }
 }
