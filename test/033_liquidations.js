@@ -310,7 +310,7 @@ contract('DssShutdown - Dealer', async (accounts) =>  {
             );
         });
 
-        it("users are collateralized if rates don't change", async() => {
+        it("vaults are collateralized if rates don't change", async() => {
             assert.equal(
                 await dealer.isCollateralized.call(WETH, user2, { from: owner }),
                 true,
@@ -333,10 +333,18 @@ contract('DssShutdown - Dealer', async (accounts) =>  {
             );
         });
 
-        it("doesn't allow to start auctions on collateralized users", async() => {
+        it("doesn't allow to start auctions on collateralized vaults", async() => {
             await expectRevert(
                 liquidations.start(WETH, user2, { from: owner }),
-                "Liquidations: User is not undercollateralized",
+                "Liquidations: Vault is not undercollateralized",
+            );
+        });
+
+        it("doesn't allow to liquidate vaults not under auction", async() => {
+            const debt = await dealer.totalDebtDai(WETH, user2, { from: owner });
+            await expectRevert(
+                liquidations.liquidate(WETH, user2, owner, debt, { from: owner }),
+                "Liquidations: Vault is not in liquidation",
             );
         });
 
@@ -371,7 +379,7 @@ contract('DssShutdown - Dealer', async (accounts) =>  {
             );
         }); */
 
-        describe("with uncollateralized users", () => {
+        describe("with uncollateralized vaults", () => {
             beforeEach(async() => {
                 // yDai matures
                 await helper.advanceTime(1000);
@@ -400,21 +408,21 @@ contract('DssShutdown - Dealer', async (accounts) =>  {
                     await liquidations.start(WETH, user2, { from: owner });
                 });
     
-                it("doesn't allow to start auctions on users already in liquidation", async() => {
+                it("doesn't allow to start auctions on vaults already in liquidation", async() => {
                     await expectRevert(
                         liquidations.start(WETH, user2, { from: owner }),
-                        "Liquidations: User is already in liquidation",
+                        "Liquidations: Vault is already in liquidation",
                     );
                 });
 
-                it("doesn't allow to cancel auctions on undercollateralized users", async() => {
+                it("doesn't allow to cancel auctions on undercollateralized vaults", async() => {
                     await expectRevert(
                         liquidations.cancel(WETH, user2, { from: owner }),
-                        "Liquidations: User is undercollateralized",
+                        "Liquidations: Vault is undercollateralized",
                     );
                 });
 
-                it("liquidations can be cancelled for collateralized users", async() => {
+                it("liquidations can be cancelled for collateralized vaults", async() => {
                     await weth.deposit({ from: user2, value: wethTokens });
                     await weth.approve(dealer.address, wethTokens, { from: user2 });
                     await dealer.post(WETH, user2, wethTokens, { from: user2 });

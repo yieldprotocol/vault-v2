@@ -41,11 +41,11 @@ contract Liquidations is Constants {
     function start(bytes32 collateral, address user) public {
         require(
             auctions[collateral][user] == 0,
-            "Liquidations: User is already in liquidation"
+            "Liquidations: Vault is already in liquidation"
         );
         require(
             !_dealer.isCollateralized(collateral, user),
-            "Liquidations: User is not undercollateralized"
+            "Liquidations: Vault is not undercollateralized"
         );
         // solium-disable-next-line security/no-block-members
         auctions[collateral][user] = now;
@@ -55,30 +55,28 @@ contract Liquidations is Constants {
     function cancel(bytes32 collateral, address user) public {
         require(
             _dealer.isCollateralized(collateral, user),
-            "Liquidations: User is undercollateralized"
+            "Liquidations: Vault is undercollateralized"
         );
         // solium-disable-next-line security/no-block-members
         delete auctions[collateral][user];
     }
 
     /// @dev Liquidates a position. The caller pays the debt of `from`, and `to` receives an amount of collateral.
-    /// @param from User vault to liquidate
-    /// @param to Account paying the debt and receiving the collateral
     function liquidate(bytes32 collateral, address from, address to, uint256 daiAmount) public {
         require(
             auctions[collateral][from] > 0,
-            "Liquidations: User is not targeted"
+            "Liquidations: Vault is not in liquidation"
         );
         /* require(
             !_dealer.isCollateralized(collateral, from),
-            "Liquidations: User is not undercollateralized"
+            "Liquidations: Vault is not undercollateralized"
         ); */ // Not checking for this, too expensive. Let the user stop the liquidations instead.
         require( // grab dai from liquidator and push to treasury
             _dai.transferFrom(from, address(_treasury), daiAmount),
             "Dealer: Dai transfer fail"
         );
         _treasury.pushDai();
-        
+
         // calculate collateral to grab
         uint256 tokenAmount = daiAmount * price(collateral, from);
         // grab collateral from dealer
@@ -98,7 +96,7 @@ contract Liquidations is Constants {
     function price(bytes32 collateral, address user) public view returns (uint256) {
         require(
             auctions[collateral][user] > 0,
-            "Liquidations: User is not targeted"
+            "Liquidations: Vault is not targeted"
         );
         uint256 userDebt = _dealer.totalDebtDai(collateral, user);
         uint256 dividend = 9 * userDebt * auctionTime;
