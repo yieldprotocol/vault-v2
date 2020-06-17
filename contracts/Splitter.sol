@@ -2,17 +2,17 @@ pragma solidity ^0.6.2;
 
 import "./Constants.sol";
 import "./interfaces/ITreasury.sol";
-import "./interfaces/IVault.sol";
+import "./interfaces/IDealer.sol";
 
 
-/// @dev A splitter moves positions and weth collateral from Dealers (using the IVault interface) to MakerDAO.
+/// @dev A splitter moves positions and weth collateral from Dealers (using the IDealer interface) to MakerDAO.
 contract Splitter is Constants {
     ITreasury internal _treasury;
-    IVault internal _vault;
+    IDealer internal _vault;
 
     constructor (address treasury_, address vault_) public {
         _treasury = ITreasury(treasury_);
-        _vault = IVault(vault_);
+        _vault = IDealer(vault_);
     }
 
     /// @dev Moves all WETH debt and collateral from `from` in YDai to `to` in MakerDAO.

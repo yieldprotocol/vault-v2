@@ -13,7 +13,7 @@ import "./interfaces/IEnd.sol";
 import "./interfaces/IChai.sol";
 import "./interfaces/IOracle.sol";
 import "./interfaces/ITreasury.sol";
-import "./interfaces/IVault.sol";
+import "./interfaces/IDealer.sol";
 import "./interfaces/IYDai.sol";
 import "./Constants.sol";
 import "@nomiclabs/buidler/console.sol";
@@ -37,7 +37,7 @@ contract DssShutdown is Constants {
     IChai internal _chai;
     IOracle internal _chaiOracle;
     ITreasury internal _treasury;
-    IVault internal _dealer;
+    IDealer internal _dealer;
 
     mapping(address => uint256) public posted; // Weth only
     mapping(uint256 => mapping(address => uint256)) public debtYDai;
@@ -69,7 +69,7 @@ contract DssShutdown is Constants {
         _chai = IChai(chai_);
         _chaiOracle = IOracle(chaiOracle_);
         _treasury = ITreasury(treasury_);
-        _dealer = IVault(dealer_);
+        _dealer = IDealer(dealer_);
 
         _vat.hope(address(_treasury));
         _vat.hope(address(_end));
