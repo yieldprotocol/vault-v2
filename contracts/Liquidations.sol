@@ -81,13 +81,13 @@ contract Liquidations is Constants {
         );
         _treasury.pushDai();
 
-        // calculate collateral to grab
-        uint256 tokenAmount = daiAmount.muld(price(collateral, from), RAY);
+        // calculate collateral to grab. Using divdrup stops rounding from leaving 1 stray wei in vaults.
+        uint256 tokenAmount = divdrup(daiAmount, price(collateral, from), RAY);
         // grab collateral from dealer
         _dealer.grab(collateral, from, daiAmount, tokenAmount);
 
         if (collateral == WETH){
-            _treasury.pullWeth(liquidator, tokenAmount);                          // Have Treasury process the weth
+            _treasury.pullWeth(liquidator, tokenAmount);
         } else if (collateral == CHAI) {
             _treasury.pullChai(liquidator, tokenAmount);
         } else {
@@ -96,12 +96,12 @@ contract Liquidations is Constants {
     }
 
     /// @dev Return price of a collateral unit, in dai, at the present moment, for a given user
-    // collateral = price * dai - TODO: Consider reversing so that it matches the Oracles
+    // dai = price * collateral
     // TODO: Optimize this for gas
     //
-    //                posted      2      min(auction, elapsed)
-    // token = dai * -------- * (--- + -----------------------)
-    //                 debt       3       3 * auction
+    //                 posted      2      min(auction, elapsed)
+    // price = 1 / (-------- * (--- + -----------------------))
+    //                  debt       3       3 * auction
     function price(bytes32 collateral, address user) public view returns (uint256) {
         require(
             auctions[collateral][user] > 0,
@@ -116,6 +116,17 @@ contract Liquidations is Constants {
         uint256 term1 = dividend1.divd(divisor1, RAY);
         uint256 term2 = dividend2.divd(divisor2, RAY);
         uint256 term3 = dividend3.divd(divisor3, RAY);
-        return term1.muld(term2.add(term3), RAY); // TODO: Might want to round up in the three previous terms
+        return RAY.unit().divd(term1.muld(term2.add(term3), RAY), RAY);
+    }
+
+    /// @dev Divides x between y, rounding up to the closest representable number.
+    /// Assumes x and y are both fixed point with `decimals` digits.
+     // TODO: Check if this needs to be taken from DecimalMath.sol
+    function divdrup(uint256 x, uint256 y, uint8 decimals)
+        internal pure returns (uint256)
+    {
+        uint256 z = x.mul((decimals + 1).unit()).div(y);
+        if (z % 10 > 0) return z / 10 + 1;
+        else return z / 10;
     }
 }

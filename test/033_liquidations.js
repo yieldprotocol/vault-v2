@@ -581,7 +581,7 @@ contract('DssShutdown - Dealer', async (accounts) =>  {
                         const daiTokens = (await dealer.totalDebtDai(WETH, user2, { from: liquidator })).toString();
                         const liquidatorDaiDebt = divRay(daiTokens, rate2);
                         const liquidatorWethTokens = divRay(daiTokens, spot);
-                        const wethTokens = new BN(await dealer.posted(WETH, user2, { from: owner }));
+                        const wethTokens = (await dealer.posted(WETH, user2, { from: owner })).toString();
     
                         await weth.deposit({ from: liquidator, value: liquidatorWethTokens });
                         await weth.approve(wethJoin.address, liquidatorWethTokens, { from: liquidator });
@@ -599,8 +599,8 @@ contract('DssShutdown - Dealer', async (accounts) =>  {
                         );
                         assert.equal(
                             await weth.balanceOf(liquidator, { from: liquidator }),
-                            wethTokens.div(2).toString(),
-                            "Liquidator should have " + wethTokens.div(2) + " weth, instead has " + await weth.balanceOf(liquidator, { from: liquidator }),
+                            addBN(divRay(wethTokens, toRay(2)), 1).toString(), // divRay should round up
+                            "Liquidator should have " + addBN(divRay(wethTokens, toRay(2)), 1) + " weth, instead has " + await weth.balanceOf(liquidator, { from: liquidator }),
                         );
                     });
     
