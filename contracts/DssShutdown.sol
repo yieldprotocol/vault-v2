@@ -1,10 +1,7 @@
 pragma solidity ^0.6.0;
 
-// import "@hq20/contracts/contracts/access/AuthorizedAccess.sol";
 import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@hq20/contracts/contracts/utils/SafeCast.sol";
-// import "@openzeppelin/contracts/access/Ownable.sol";
-// import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IVat.sol";
 import "./interfaces/IDaiJoin.sol";
@@ -15,17 +12,15 @@ import "./interfaces/IOracle.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IDealer.sol";
 import "./interfaces/IYDai.sol";
+import "./interfaces/ILiquidations.sol";
 import "./Constants.sol";
-import "@nomiclabs/buidler/console.sol";
+// import "@nomiclabs/buidler/console.sol";
 
 
 /// @dev Treasury manages the Dai, interacting with MakerDAO's vat and chai when needed.
 contract DssShutdown is Constants {
     using DecimalMath for uint256;
-    // using DecimalMath for int256;
-    // using DecimalMath for uint8;
     using SafeCast for uint256;
-    // using SafeCast for int256;
 
     bytes32 constant collateralType = "ETH-A";
 
@@ -38,6 +33,7 @@ contract DssShutdown is Constants {
     IOracle internal _chaiOracle;
     ITreasury internal _treasury;
     IDealer internal _dealer;
+    ILiquidations internal _liquidations;
 
     mapping(address => uint256) public posted; // Weth only
     mapping(uint256 => mapping(address => uint256)) public debtYDai;
@@ -45,9 +41,9 @@ contract DssShutdown is Constants {
     uint256 public _fix; // Dai to weth price on DSS Shutdown
     uint256 public _chi; // Chai to dai price on DSS Shutdown
 
-    bool public live;
     bool public settled;
     bool public cashedOut;
+    bool public live = true;
 
     constructor (
         address vat_,
@@ -58,7 +54,8 @@ contract DssShutdown is Constants {
         address chai_,
         address chaiOracle_,
         address treasury_,
-        address dealer_
+        address dealer_,
+        address liquidations_
     ) public {
         // These could be hardcoded for mainnet deployment.
         _vat = IVat(vat_);
@@ -70,10 +67,10 @@ contract DssShutdown is Constants {
         _chaiOracle = IOracle(chaiOracle_);
         _treasury = ITreasury(treasury_);
         _dealer = IDealer(dealer_);
+        _liquidations = ILiquidations(liquidations_);
 
         _vat.hope(address(_treasury));
         _vat.hope(address(_end));
-        live = true;
     }
 
     /// @dev Disables treasury and dealer.
@@ -85,6 +82,7 @@ contract DssShutdown is Constants {
         live = false;
         _treasury.shutdown();
         _dealer.shutdown();
+        _liquidations.shutdown();
     }
 
     /// @dev max(0, x - y)

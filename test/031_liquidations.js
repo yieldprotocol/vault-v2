@@ -20,8 +20,8 @@ const Dealer = artifacts.require('Dealer');
 
 // Peripheral
 const Splitter = artifacts.require('Splitter');
-const DssShutdown = artifacts.require('DssShutdown');
 const Liquidations = artifacts.require('Liquidations');
+const DssShutdown = artifacts.require('DssShutdown');
 
 const helper = require('ganache-time-traveler');
 const truffleAssert = require('truffle-assertions');
@@ -29,7 +29,7 @@ const { BN, expectRevert, expectEvent } = require('@openzeppelin/test-helpers');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
 const { assert } = require('chai');
 
-contract('DssShutdown - Dealer', async (accounts) =>  {
+contract('Liquidations', async (accounts) =>  {
     let [ owner, user1, user2, user3, liquidator ] = accounts;
     let vat;
     let weth;
@@ -47,8 +47,8 @@ contract('DssShutdown - Dealer', async (accounts) =>  {
     let yDai2;
     let dealer;
     let splitter;
-    let dssShutdown;
     let liquidations;
+    let dssShutdown;
 
     let WETH = web3.utils.fromAscii("WETH");
     let CHAI = web3.utils.fromAscii("CHAI");
@@ -191,25 +191,6 @@ contract('DssShutdown - Dealer', async (accounts) =>  {
         await dealer.grantAccess(splitter.address, { from: owner });
         await treasury.grantAccess(splitter.address, { from: owner });
 
-        // Setup DssShutdown
-        dssShutdown = await DssShutdown.new(
-            vat.address,
-            daiJoin.address,
-            weth.address,
-            wethJoin.address,
-            end.address,
-            chai.address,
-            chaiOracle.address,
-            treasury.address,
-            dealer.address,
-            { from: owner },
-        );
-        await dealer.grantAccess(dssShutdown.address, { from: owner });
-        await treasury.grantAccess(dssShutdown.address, { from: owner });
-        await treasury.registerDssShutdown(dssShutdown.address, { from: owner });
-        await yDai1.grantAccess(dssShutdown.address, { from: owner });
-        await yDai2.grantAccess(dssShutdown.address, { from: owner });
-
         // Setup Liquidations
         liquidations = await Liquidations.new(
             dai.address,
@@ -221,6 +202,26 @@ contract('DssShutdown - Dealer', async (accounts) =>  {
         await dealer.grantAccess(liquidations.address, { from: owner });
         await treasury.grantAccess(liquidations.address, { from: owner });
 
+        // Setup DssShutdown
+        dssShutdown = await DssShutdown.new(
+            vat.address,
+            daiJoin.address,
+            weth.address,
+            wethJoin.address,
+            end.address,
+            chai.address,
+            chaiOracle.address,
+            treasury.address,
+            dealer.address,
+            liquidations.address,
+            { from: owner },
+        );
+        await treasury.grantAccess(dssShutdown.address, { from: owner });
+        await treasury.registerDssShutdown(dssShutdown.address, { from: owner });
+        await dealer.grantAccess(dssShutdown.address, { from: owner });
+        await yDai1.grantAccess(dssShutdown.address, { from: owner });
+        await yDai2.grantAccess(dssShutdown.address, { from: owner });
+        await liquidations.grantAccess(dssShutdown.address, { from: owner });
 
         // Testing permissions
         await vat.hope(daiJoin.address, { from: owner });

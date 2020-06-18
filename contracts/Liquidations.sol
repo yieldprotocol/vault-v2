@@ -1,17 +1,19 @@
 pragma solidity ^0.6.2;
 
-import "@openzeppelin/contracts/math/Math.sol";
+import "@hq20/contracts/contracts/access/AuthorizedAccess.sol";
 import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./interfaces/IDealer.sol";
+import "./interfaces/ILiquidations.sol";
 import "./interfaces/ITreasury.sol";
 import "./Constants.sol";
 import "@nomiclabs/buidler/console.sol";
 
 
 /// @dev The Liquidations contract for a Dealer allows to liquidate undercollateralized positions in a reverse Dutch auction.
-contract Liquidations is Constants {
+contract Liquidations is ILiquidations, AuthorizedAccess(), Constants {
     using DecimalMath for uint256;
     using DecimalMath for uint8;
     using SafeMath for uint256;
@@ -21,8 +23,9 @@ contract Liquidations is Constants {
     IDealer internal _dealer;
 
     uint256 public auctionTime;
-
     mapping(bytes32 => mapping(address => uint256)) public auctions;
+
+    bool public live = true;
 
     constructor (
         address dai_,
@@ -39,6 +42,16 @@ contract Liquidations is Constants {
             "Liquidations: Auction time is zero"
         );
         auctionTime = auctionTime_;
+    }
+
+    modifier onlyLive() {
+        require(live == true, "Dealer: Not available during shutdown");
+        _;
+    }
+
+    /// @dev Disables post, withdraw, borrow and repay. To be called only by shutdown management contracts.
+    function shutdown() public override onlyAuthorized("Liquidations: Not Authorized") {
+        live = false;
     }
 
     /// @dev Starts a liquidation process for a given collateral and user.
@@ -66,7 +79,7 @@ contract Liquidations is Constants {
     }
 
     /// @dev Liquidates a position. The caller pays the debt of `from`, and `liquidator` receives an amount of collateral.
-    function liquidate(bytes32 collateral, address from, address liquidator, uint256 daiAmount) public {
+    function liquidate(bytes32 collateral, address from, address liquidator, uint256 daiAmount) public onlyLive {
         require(
             auctions[collateral][from] > 0,
             "Liquidations: Vault is not in liquidation"

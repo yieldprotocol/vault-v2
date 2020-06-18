@@ -34,7 +34,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     mapping(bytes32 => mapping(address => uint256)) public override posted;    // In Weth or Chai
     mapping(bytes32 => mapping(uint256 => mapping(address => uint256))) public debtYDai;  // By series, in yDai
 
-    bool public live;
+    bool public live = true;
 
     constructor (
         address treasury_,
@@ -52,8 +52,6 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
         _token[CHAI] = IERC20(chai_);
         _oracle[CHAI] = IOracle(chaiOracle_);
         _gasToken = IGasToken(gasToken_);
-
-        live = true;
     }
 
     modifier onlyLive() {
