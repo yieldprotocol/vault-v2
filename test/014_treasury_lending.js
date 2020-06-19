@@ -91,7 +91,7 @@ contract('Treasury - Lending', async (accounts) =>  {
             vat.address,
         );
         await treasury.grantAccess(owner, { from: owner });
-        await treasury.grantAccess(user, { from: owner });
+        // await treasury.grantAccess(user, { from: owner });
     });
 
     /* it("get the size of the contract", async() => {
@@ -118,7 +118,7 @@ contract('Treasury - Lending', async (accounts) =>  {
         // Let's check how WETH is implemented, maybe we can remove this one.
     });
 
-    it("allows user to post collateral", async() => {
+    it("allows to post collateral", async() => {
         assert.equal(
             (await weth.balanceOf(wethJoin.address)),
             web3.utils.toWei("0")
@@ -126,7 +126,7 @@ contract('Treasury - Lending', async (accounts) =>  {
         
         await weth.deposit({ from: user, value: wethTokens});
         await weth.transfer(treasury.address, wethTokens, { from: user }); 
-        await treasury.pushWeth({ from: user });
+        await treasury.pushWeth({ from: owner });
 
         // Test transfer of collateral
         assert.equal(
@@ -143,9 +143,9 @@ contract('Treasury - Lending', async (accounts) =>  {
 
     describe("with posted collateral", () => {
         beforeEach(async() => {
-            await weth.deposit({ from: user, value: wethTokens});
-            await weth.transfer(treasury.address, wethTokens, { from: user }); 
-            await treasury.pushWeth({ from: user });
+            await weth.deposit({ from: owner, value: wethTokens});
+            await weth.transfer(treasury.address, wethTokens, { from: owner }); 
+            await treasury.pushWeth({ from: owner });
         });
 
         it("returns borrowing power", async() => {
@@ -156,13 +156,13 @@ contract('Treasury - Lending', async (accounts) =>  {
             );
         });
 
-        it("allows user to withdraw collateral", async() => {
+        it("allows to withdraw collateral for user", async() => {
             assert.equal(
                 await weth.balanceOf(user),
                 0,
             );
             
-            await treasury.pullWeth(user, wethTokens, { from: user });
+            await treasury.pullWeth(user, wethTokens, { from: owner });
 
             // Test transfer of collateral
             assert.equal(
@@ -177,9 +177,9 @@ contract('Treasury - Lending', async (accounts) =>  {
             );
         });
 
-        it("pulls dai borrowed from MakerDAO", async() => {
+        it("pulls dai borrowed from MakerDAO for user", async() => {
             // Test with two different stability rates, if possible.
-            await treasury.pullDai(user, daiTokens, { from: user });
+            await treasury.pullDai(user, daiTokens, { from: owner });
 
             assert.equal(
                 await dai.balanceOf(user),
@@ -191,9 +191,9 @@ contract('Treasury - Lending', async (accounts) =>  {
             );
         });
 
-        it("pulls chai converted from dai borrowed from MakerDAO", async() => {
+        it("pulls chai converted from dai borrowed from MakerDAO for user", async() => {
             // Test with two different stability rates, if possible.
-            await treasury.pullChai(user, chaiTokens, { from: user });
+            await treasury.pullChai(user, chaiTokens, { from: owner });
 
             assert.equal(
                 await chai.balanceOf(user),
@@ -206,7 +206,7 @@ contract('Treasury - Lending', async (accounts) =>  {
         });
 
         it("shouldn't allow borrowing beyond power", async() => {
-            await treasury.pullDai(user, daiTokens, { from: user });
+            await treasury.pullDai(user, daiTokens, { from: owner });
             assert.equal(
                 await treasury.power(),
                 daiTokens.toString(),
@@ -218,14 +218,14 @@ contract('Treasury - Lending', async (accounts) =>  {
                 "We should have " + daiTokens + " dai debt.",
             );
             await expectRevert(
-                treasury.pullDai(user, 1, { from: user }), // Not a wei more borrowing
+                treasury.pullDai(user, 1, { from: owner }), // Not a wei more borrowing
                 "Vat/sub",
             );
         });
     
         describe("with a dai debt towards MakerDAO", () => {
             beforeEach(async() => {
-                await treasury.pullDai(user, daiTokens, { from: user });
+                await treasury.pullDai(user, daiTokens, { from: owner });
             });
 
             it("returns treasury debt", async() => {
@@ -239,8 +239,8 @@ contract('Treasury - Lending', async (accounts) =>  {
             it("pushes dai that repays debt towards MakerDAO", async() => {
                 // Test `normalizedAmount >= normalizedDebt`
                 //await dai.approve(treasury.address, daiTokens, { from: user });
-                dai.transfer(treasury.address, daiTokens, { from: user });
-                await treasury.pushDai({ from: user });
+                dai.transfer(treasury.address, daiTokens, { from: user }); // We can't stop donations
+                await treasury.pushDai({ from: owner });
 
                 assert.equal(
                     await dai.balanceOf(user),
@@ -260,7 +260,7 @@ contract('Treasury - Lending', async (accounts) =>  {
                 await dai.approve(chai.address, daiTokens, { from: user });
                 await chai.join(user, daiTokens, { from: user });
                 await chai.transfer(treasury.address, chaiTokens, { from: user }); 
-                await treasury.pushChai({ from: user });
+                await treasury.pushChai({ from: owner });
 
                 assert.equal(
                     await dai.balanceOf(user),
