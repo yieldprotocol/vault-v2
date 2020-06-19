@@ -27,6 +27,7 @@ contract YDai is AuthorizedAccess(), UserProxy(), ERC20, Constants, IYDai  {
     uint256 internal _maturity;
     uint256 internal _chi;      // Chi at maturity
     uint256 internal _rate;     // Rate at maturity
+    bool public broken;
 
     constructor(
         address vat_,
@@ -49,6 +50,21 @@ contract YDai is AuthorizedAccess(), UserProxy(), ERC20, Constants, IYDai  {
         return _isMature;
     }
 
+    /// @dev If the dai savings rate follows below the stability rate, and if the yDai has reached maturity, the yDai
+    /// contract can be hit, meaning it will break and stop accumulating savings (chi)
+    function hit() public {
+        require(
+            isMature(),
+            "YDai: yDai is not mature"
+        );
+        (, uint256 rate,,,) = _vat.ilks("ETH-A");
+        require(
+            _pot.dsr() > rate,
+            "YDai: rate >= dsr"
+        );
+        broken = true;
+    }
+
     /// @dev Programmed time for yDai maturity
     function maturity() public view override returns(uint256){
         return _maturity;
@@ -61,7 +77,7 @@ contract YDai is AuthorizedAccess(), UserProxy(), ERC20, Constants, IYDai  {
     //          chi_mat
     //
     function chi() public override returns(uint256){
-        if (!isMature()) return _chi;
+        if (!isMature() || broken) return _chi;
         uint256 chiNow = (now > _pot.rho()) ? _pot.drip() : _pot.chi();
         return chiNow.divd(_chi, RAY);
     }

@@ -77,6 +77,11 @@ contract Pot is LibNote {
         chi = chi_;
     }
 
+    /// @dev Set the DSR to an arbitrary value
+    function setDsr(uint dsr_) public {
+        dsr = dsr_;
+    }
+
     // --- Math ---
     uint256 constant ONE = 10 ** 27;
     function rpow(uint x, uint n, uint base) internal pure returns (uint z) {

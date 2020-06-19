@@ -23,10 +23,10 @@ contract('yDai', async (accounts) =>  {
     let treasury;
     let yDai;
     let maturity;
-    let ilk = web3.utils.fromAscii("ETH-A")
-    let Line = web3.utils.fromAscii("Line")
-    let spotName = web3.utils.fromAscii("spot")
-    let linel = web3.utils.fromAscii("line")
+    let ilk = web3.utils.fromAscii("ETH-A");
+    let Line = web3.utils.fromAscii("Line");
+    let spotName = web3.utils.fromAscii("spot");
+    let linel = web3.utils.fromAscii("line");
 
     const limits =  toRad(10000);
     const spot = toRay(1.2);
@@ -148,6 +148,20 @@ contract('yDai', async (accounts) =>  {
         );
     });
 
+    it("yDai can't be broken before maturity time", async() => {
+        await expectRevert(
+            yDai.hit({ from: owner }),
+            "YDai: yDai is not mature",
+        );
+    });
+
+    it("yDai can't be redeemed before maturity time", async() => {
+        await expectRevert(
+            yDai.redeem(owner, daiTokens1, { from: owner }),
+            "YDai: yDai is not mature",
+        );
+    });
+
     it("yDai cannot mature before maturity time", async() => {
         await expectRevert(
             yDai.mature(),
@@ -165,25 +179,23 @@ contract('yDai', async (accounts) =>  {
         );
     });
 
-    it("yDai can't mature more than once", async() => {
-        await helper.advanceTime(1000);
-        await helper.advanceBlock();
-        await yDai.mature();
-        await expectRevert(
-            yDai.mature(),
-            "YDai: Already mature",
-        );
-    });
-
     describe("once mature", () => {
         beforeEach(async() => {
             await helper.advanceTime(1000);
             await helper.advanceBlock();
+            await yDai.mature();
+        });
+
+        it("yDai can't mature more than once", async() => {
+            await expectRevert(
+                yDai.mature(),
+                "YDai: Already mature",
+            );
         });
 
         it("yDai chi gets fixed at maturity time", async() => {
-            await yDai.mature();
             await pot.setChi(chi2, { from: owner });
+            
             assert(
                 await yDai.chi.call(),
                 subBN(chi2, chi1).toString(),
@@ -192,12 +204,36 @@ contract('yDai', async (accounts) =>  {
         });
 
         it("yDai rate gets fixed at maturity time", async() => {
-            await yDai.mature();
             await vat.fold(ilk, vat.address, subBN(rate2, rate1), { from: owner });
+            
             assert(
                 await yDai.rate(),
                 subBN(rate2, rate1).toString(),
                 "Rate differential should be " + subBN(rate2, rate1),
+            );
+        });
+
+        it("yDai can't be broken if rate >= dsr", async() => {
+            await expectRevert(
+                yDai.hit({ from: owner }),
+                "YDai: rate >= dsr",
+            );
+        });
+
+        it("yDai can be broken if dsr > rate", async() => {
+            await pot.setDsr(toRay(2.0), { from: owner });
+            await yDai.hit({ from: owner });
+            await pot.setChi(chi2, { from: owner });
+
+            assert(
+                await yDai.broken(),
+                true,
+                "yDai should be broken",
+            );
+            assert(
+                await yDai.chi.call(),
+                chi1.toString(),
+                "Chi differential should be " + chi1,
             );
         });
     });
