@@ -214,11 +214,11 @@ contract('Dealer - Splitter', async (accounts) =>  {
             await dealer.grantAccess(owner, { from: owner }); // Only for testing
             expectEvent(
                 await dealer.erase(WETH, owner, { from: owner }),
-                "Erased",
+                "Posted",
                 {
+                    // collateral: WETH,
                     user: owner,
-                    debt: "0",
-                    tokens: wethTokens.toString(),
+                    amount: "0",
                 },
             );
 
@@ -273,7 +273,7 @@ contract('Dealer - Splitter', async (accounts) =>  {
             });
 
             it("allows to erase weth positions", async() => {
-                // We post an extra weth wei to te, uint256 debtst that only the needed collateral is taken
+                // We post an extra weth wei for testing
                 await weth.deposit({ from: owner, value: 1 });
                 await weth.approve(dealer.address, 1, { from: owner }); 
                 await dealer.post(WETH, owner, owner, 1, { from: owner });
@@ -281,11 +281,11 @@ contract('Dealer - Splitter', async (accounts) =>  {
                 await dealer.grantAccess(owner, { from: owner }); // Only for testing
                 expectEvent(
                     await dealer.erase(WETH, owner, { from: owner }),
-                    "Erased",
+                    "Borrowed",
                     {
+                        // collateral: WETH,
                         user: owner,
-                        tokens: wethTokens.add(1).toString(),
-                        debt: daiTokens.toString(),
+                        amount: "0",
                     },
                 );
                 // TODO: Test with several maturities

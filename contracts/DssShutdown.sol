@@ -39,9 +39,6 @@ contract DssShutdown is Constants {
     ITreasury internal _treasury;
     IVault internal _dealer;
 
-    mapping(address => uint256) public posted; // Weth only
-    mapping(uint256 => mapping(address => uint256)) public debtYDai;
-
     uint256 public _fix; // Dai to weth price on DSS Shutdown
     uint256 public _chi; // Chai to dai price on DSS Shutdown
 

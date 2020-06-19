@@ -16,6 +16,7 @@ const helper = require('ganache-time-traveler');
 const truffleAssert = require('truffle-assertions');
 const { BN, expectRevert } = require('@openzeppelin/test-helpers');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
+const { assert } = require('chai');
 
 contract('Dealer - Weth', async (accounts) =>  {
     let [ owner, user ] = accounts;
@@ -195,8 +196,24 @@ contract('Dealer - Weth', async (accounts) =>  {
         
         await weth.deposit({ from: owner, value: wethTokens });
         await weth.approve(dealer.address, wethTokens, { from: owner }); 
-        await dealer.post(WETH, owner, owner, wethTokens, { from: owner });
-
+        const event = (await dealer.post(WETH, owner, owner, wethTokens, { from: owner })).logs[0];
+        
+        assert.equal(
+            event.event,
+            "Posted",
+        );
+        assert.equal(
+            bytes32ToString(event.args.collateral),
+            "WETH",
+        );
+        assert.equal(
+            event.args.user,
+            owner,
+        );
+        assert.equal(
+            event.args.amount,
+            wethTokens.toString(),
+        );
         assert.equal(
             (await vat.urns(ilk, treasury.address)).ink,
             wethTokens.toString(),
@@ -243,8 +260,24 @@ contract('Dealer - Weth', async (accounts) =>  {
         });
 
         it("allows user to withdraw weth", async() => {
-            await dealer.withdraw(WETH, owner, owner, wethTokens, { from: owner });
+            const event = (await dealer.withdraw(WETH, owner, owner, wethTokens, { from: owner })).logs[0];
 
+            assert.equal(
+                event.event,
+                "Posted",
+            );
+            assert.equal(
+                bytes32ToString(event.args.collateral),
+                "WETH",
+            );
+            assert.equal(
+                event.args.user,
+                owner,
+            );
+            assert.equal(
+                event.args.amount,
+                0,
+            );
             assert.equal(
                 await weth.balanceOf(owner),
                 wethTokens.toString(),
@@ -263,8 +296,28 @@ contract('Dealer - Weth', async (accounts) =>  {
         });
 
         it("allows to borrow yDai", async() => {
-            await dealer.borrow(WETH, maturity1, owner, daiTokens, { from: owner });
+            event = (await dealer.borrow(WETH, maturity1, owner, daiTokens, { from: owner })).logs[0];
 
+            assert.equal(
+                event.event,
+                "Borrowed",
+            );
+            assert.equal(
+                bytes32ToString(event.args.collateral),
+                "WETH",
+            );
+            assert.equal(
+                event.args.maturity,
+                maturity1,
+            );
+            assert.equal(
+                event.args.user,
+                owner,
+            );
+            assert.equal(
+                event.args.amount,
+                daiTokens.toString(), // This is actually a yDai amount
+            );
             assert.equal(
                 await yDai1.balanceOf(owner),
                 daiTokens.toString(),
@@ -362,8 +415,28 @@ contract('Dealer - Weth', async (accounts) =>  {
     
                 it("allows to repay yDai", async() => {
                     await yDai1.approve(dealer.address, daiTokens, { from: owner });
-                    await dealer.repayYDai(WETH, maturity1, owner, daiTokens, { from: owner });
+                    const event = (await dealer.repayYDai(WETH, maturity1, owner, daiTokens, { from: owner })).logs[0];
         
+                    assert.equal(
+                        event.event,
+                        "Borrowed",
+                    );
+                    assert.equal(
+                        bytes32ToString(event.args.collateral),
+                        "WETH",
+                    );
+                    assert.equal(
+                        event.args.maturity,
+                        maturity1,
+                    );
+                    assert.equal(
+                        event.args.user,
+                        owner,
+                    );
+                    assert.equal(
+                        event.args.amount,
+                        0, // This is actually a yDai amount
+                    );
                     assert.equal(
                         await yDai1.balanceOf(owner),
                         0,
@@ -399,8 +472,28 @@ contract('Dealer - Weth', async (accounts) =>  {
                     );
     
                     await dai.approve(dealer.address, daiTokens, { from: owner });
-                    await dealer.repayDai(WETH, maturity1, owner, daiTokens, { from: owner });
+                    const event = (await dealer.repayDai(WETH, maturity1, owner, daiTokens, { from: owner })).logs[0];
         
+                    assert.equal(
+                        event.event,
+                        "Borrowed",
+                    );
+                    assert.equal(
+                        bytes32ToString(event.args.collateral),
+                        "WETH",
+                    );
+                    assert.equal(
+                        event.args.maturity,
+                        maturity1,
+                    );
+                    assert.equal(
+                        event.args.user,
+                        owner,
+                    );
+                    assert.equal(
+                        event.args.amount,
+                        0, // This is actually a yDai amount
+                    );
                     assert.equal(
                         await dai.balanceOf(owner),
                         0,
@@ -538,3 +631,7 @@ contract('Dealer - Weth', async (accounts) =>  {
         });
     });
 });
+
+function bytes32ToString(text) {
+    return web3.utils.toAscii(text).replace(/\0/g, '');
+}
