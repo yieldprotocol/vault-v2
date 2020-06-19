@@ -5,7 +5,7 @@ interface IYDai {
     function isMature() external view returns(bool);
     function maturity() external view returns(uint);
     function chi() external returns(uint);
-    function rate() external view returns(uint);
+    function rate() external returns(uint);
     function mature() external;
     function mint(address, uint) external;
     function burn(address, uint) external;

@@ -84,7 +84,7 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
 
     /// @dev Returns the total debt of the yDai system, across all series, in dai
     // TODO: Test
-    function systemDebt() public view override returns (uint256) {
+    function systemDebt() public override returns (uint256) {
         uint256 totalDebt;
         for (uint256 i = 0; i < seriesIterator.length; i += 1) {
             IYDai yDai = series[seriesIterator[i]];
@@ -95,7 +95,7 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
 
 
     /// @dev Returns the dai equivalent of an yDai amount, for a given series identified by maturity
-    function inDai(uint256 maturity, uint256 yDaiAmount) public view returns (uint256) {
+    function inDai(uint256 maturity, uint256 yDaiAmount) public returns (uint256) {
         require(
             containsSeries(maturity),
             "Dealer: Unrecognized series"
@@ -109,7 +109,7 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
     }
 
     /// @dev Returns the yDai equivalent of a dai amount, for a given series identified by maturity
-    function inYDai(uint256 maturity, uint256 daiAmount) public view returns (uint256) {
+    function inYDai(uint256 maturity, uint256 daiAmount) public returns (uint256) {
         require(
             containsSeries(maturity),
             "Dealer: Unrecognized series"
@@ -128,12 +128,12 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
     // debt_now = debt_mat * ----------
     //                        rate_mat
     //
-    function debtDai(bytes32 collateral, uint256 maturity, address user) public view returns (uint256) {
+    function debtDai(bytes32 collateral, uint256 maturity, address user) public returns (uint256) {
         return inDai(maturity, debtYDai[collateral][maturity][user]);
     }
 
     /// @dev Returns the total debt of an user, for a given collateral, across all series, in Dai
-    function totalDebtDai(bytes32 collateral, address user) public view returns (uint256) {
+    function totalDebtDai(bytes32 collateral, address user) public returns (uint256) {
         uint256 totalDebt;
         for (uint256 i = 0; i < seriesIterator.length; i += 1) {
             totalDebt = totalDebt + debtDai(collateral, seriesIterator[i], user);
@@ -314,7 +314,7 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
 
     /// @dev Calculates the amount to repay and the amount by which to reduce the debt for a given collateral and series
     function repayProportion(bytes32 collateral, uint256 maturity, address user, uint256 yDaiAmount)
-        internal view returns(uint256, uint256) {
+        internal returns(uint256, uint256) {
         uint256 toRepay = Math.min(yDaiAmount, debtDai(collateral, maturity, user));
         // TODO: Check if this can be taken from DecimalMath.sol
         // uint256 debtProportion = debtYDai[user].mul(RAY.unit())

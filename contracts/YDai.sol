@@ -5,11 +5,13 @@ import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./interfaces/IVat.sol";
+import "./interfaces/IJug.sol";
 import "./interfaces/IPot.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IYDai.sol";
 import "./Constants.sol";
 import "./UserProxy.sol";
+import "@nomiclabs/buidler/console.sol";
 
 
 /// @dev yDai is a yToken targeting Dai.
@@ -20,6 +22,7 @@ contract YDai is AuthorizedAccess(), UserProxy(), ERC20, Constants, IYDai  {
     event Matured(uint256 rate, uint256 chi);
 
     IVat internal _vat;
+    IJug internal _jug;
     IPot internal _pot;
     ITreasury internal _treasury;
 
@@ -27,10 +30,10 @@ contract YDai is AuthorizedAccess(), UserProxy(), ERC20, Constants, IYDai  {
     uint256 internal _maturity;
     uint256 internal _chi;      // Chi at maturity
     uint256 internal _rate;     // Rate at maturity
-    bool public broken;
 
     constructor(
         address vat_,
+        address jug_,
         address pot_,
         address treasury_,
         uint256 maturity_,
@@ -38,6 +41,7 @@ contract YDai is AuthorizedAccess(), UserProxy(), ERC20, Constants, IYDai  {
         string memory symbol
     ) public ERC20(name, symbol) {
         _vat = IVat(vat_);
+        _jug = IJug(jug_);
         _pot = IPot(pot_);
         _treasury = ITreasury(treasury_);
         _maturity = maturity_;
@@ -50,36 +54,22 @@ contract YDai is AuthorizedAccess(), UserProxy(), ERC20, Constants, IYDai  {
         return _isMature;
     }
 
-    /// @dev If the dai savings rate follows below the stability rate, and if the yDai has reached maturity, the yDai
-    /// contract can be hit, meaning it will break and stop accumulating savings (chi)
-    function hit() public {
-        require(
-            isMature(),
-            "YDai: yDai is not mature"
-        );
-        (, uint256 rate,,,) = _vat.ilks("ETH-A");
-        require(
-            _pot.dsr() > rate,
-            "YDai: rate >= dsr"
-        );
-        broken = true;
-    }
-
     /// @dev Programmed time for yDai maturity
     function maturity() public view override returns(uint256){
         return _maturity;
     }
 
     /// @dev Chi differential between maturity and now in RAY. Returns 1.0 if not mature.
+    /// If rateDelta < chiDelta, returns rate.
     //
     //          chi_now
     // chi() = ---------
     //          chi_mat
     //
     function chi() public override returns(uint256){
-        if (!isMature() || broken) return _chi;
+        if (!isMature()) return _chi;
         uint256 chiNow = (now > _pot.rho()) ? _pot.drip() : _pot.chi();
-        return chiNow.divd(_chi, RAY);
+        return Math.min(rate(), chiNow.divd(_chi, RAY));
     }
 
     /// @dev Rate differential between maturity and now in RAY. Returns 1.0 if not mature.
@@ -88,9 +78,16 @@ contract YDai is AuthorizedAccess(), UserProxy(), ERC20, Constants, IYDai  {
     // rate() = ----------
     //           rate_mat
     //
-    function rate() public view override returns(uint256){
+    function rate() public override returns(uint256){
         if (!isMature()) return _rate;
-        (, uint256 rateNow,,,) = _vat.ilks("ETH-A");
+        uint256 rateNow;
+        (, uint256 rho) = _jug.ilks("ETH-A"); // "WETH" for weth.sol, "ETH-A" for MakerDAO
+        if (now > rho) {
+            rateNow = _jug.drip("ETH-A");
+            // console.log(rateNow);
+        } else {
+            (, rateNow,,,) = _vat.ilks("ETH-A");
+        }
         return rateNow.divd(_rate, RAY);
     }
 
