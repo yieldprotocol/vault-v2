@@ -258,7 +258,7 @@ contract('Dealer - Weth', async (accounts) =>  {
                 "Owner has yDai",
             );
             assert.equal(
-                await dealer.debtDai(WETH, maturity1, owner),
+                await dealer.debtDai.call(WETH, maturity1, owner),
                 0,
                 "Owner has debt",
             );

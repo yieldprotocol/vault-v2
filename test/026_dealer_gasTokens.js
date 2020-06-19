@@ -306,7 +306,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
                 "Owner should have yDai",
             );
             assert.equal(
-                await dealer.debtDai(maturity1, owner),
+                await dealer.debtDai.call(maturity1, owner),
                 daiTokens.toString(),
                 "Owner should have debt",
             );
@@ -329,7 +329,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
                     "Owner does not have borrowing power",
                 );
                 assert.equal(
-                    await dealer.debtDai(maturity1, owner),
+                    await dealer.debtDai.call(maturity1, owner),
                     daiTokens.toString(),
                     "Owner does not have debt",
                 );
@@ -339,7 +339,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
                     "Owner does not have yDai",
                 );
                 assert.equal(
-                    await dealer.debtDai(maturity1, owner),
+                    await dealer.debtDai.call(maturity1, owner),
                     daiTokens.toString(),
                     "Owner does not have debt",
                 );
@@ -359,7 +359,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
                     "Owner should have yDai",
                 );
                 assert.equal(
-                    await dealer.debtDai(maturity1, owner),
+                    await dealer.debtDai.call(maturity1, owner),
                     daiTokens.toString(),
                     "Owner should have debt for series 1",
                 );
@@ -369,12 +369,12 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
                     "Owner should have yDai2",
                 );
                 assert.equal(
-                    await dealer.debtDai(maturity2, owner),
+                    await dealer.debtDai.call(maturity2, owner),
                     daiTokens.toString(),
                     "Owner should have debt for series 2",
                 );
                 assert.equal(
-                    await dealer.totalDebtDai(owner),
+                    await dealer.totalDebtDai.call(owner),
                     addBN(daiTokens, daiTokens).toString(),
                     "Owner should a combined debt",
                 );
@@ -405,7 +405,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
                         "Owner should not have yDai",
                     );
                     assert.equal(
-                        await dealer.debtDai(maturity1, owner),
+                        await dealer.debtDai.call(maturity1, owner),
                         0,
                         "Owner should not have debt",
                     );
@@ -428,7 +428,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
                         "Owner does not have dai",
                     );
                     assert.equal(
-                        await dealer.debtDai(maturity1, owner),
+                        await dealer.debtDai.call(maturity1, owner),
                         daiTokens.toString(),
                         "Owner does not have debt",
                     );
@@ -442,7 +442,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
                         "Owner should not have yDai",
                     );
                     assert.equal(
-                        await dealer.debtDai(maturity1, owner),
+                        await dealer.debtDai.call(maturity1, owner),
                         0,
                         "Owner should not have debt",
                     );
@@ -460,7 +460,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
                         "Owner does not have yDai",
                     );
                     assert.equal(
-                        await dealer.debtDai(maturity1, owner),
+                        await dealer.debtDai.call(maturity1, owner),
                         daiTokens.toString(),
                         "Owner does not have debt",
                     );
@@ -474,7 +474,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
                         "Owner should have yDai left",
                     );
                     assert.equal(
-                        await dealer.debtDai(maturity1, owner),
+                        await dealer.debtDai.call(maturity1, owner),
                         0,
                         "Owner should not have debt",
                     );
@@ -494,7 +494,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
                             "Owner does not have yDai",
                         );
                         assert.equal(
-                            await dealer.debtDai(maturity1, owner),
+                            await dealer.debtDai.call(maturity1, owner),
                             daiTokens.toString(),
                             "Owner does not have debt",
                         );
@@ -508,26 +508,26 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
     
                     it("as rate increases after maturity, so does the debt in when measured in dai", async() => {
                         assert.equal(
-                            await dealer.debtDai(maturity1, owner),
+                            await dealer.debtDai.call(maturity1, owner),
                             increasedDebt.toString(),
-                            "Owner should have " + increasedDebt + " debt after the rate change, instead has " + (await dealer.debtDai(maturity1, owner)),
+                            "Owner should have " + increasedDebt + " debt after the rate change, instead has " + (await dealer.debtDai.call(maturity1, owner)),
                         );
                     });
         
                     it("as rate increases after maturity, the debt doesn't in when measured in yDai", async() => {
-                        let debt = await dealer.debtDai(maturity1, owner);
+                        let debt = await dealer.debtDai.call(maturity1, owner);
                         assert.equal(
-                            await dealer.inYDai(maturity1, debt),
+                            await dealer.inYDai.call(maturity1, debt),
                             daiTokens.toString(),
-                            "Owner should have " + daiTokens + " debt after the rate change, instead has " + (await dealer.inYDai(maturity1, debt)),
+                            "Owner should have " + daiTokens + " debt after the rate change, instead has " + (await dealer.inYDai.call(maturity1, debt)),
                         );
                     });
      
                     it("borrowing from two series, dai debt is aggregated", async() => {
                         assert.equal(
-                            await dealer.totalDebtDai(owner),
+                            await dealer.totalDebtDai.call(owner),
                             addBN(increasedDebt, daiTokens).toString(),
-                            "Owner should have " + addBN(increasedDebt, daiTokens) + " debt after the rate change, instead has " + (await dealer.totalDebtDai(owner)),
+                            "Owner should have " + addBN(increasedDebt, daiTokens) + " debt after the rate change, instead has " + (await dealer.totalDebtDai.call(owner)),
                         );
                     });
     
@@ -543,9 +543,9 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
                             "Owner should not have yDai",
                         );
                         assert.equal(
-                            await dealer.debtDai(maturity1, owner),
+                            await dealer.debtDai.call(maturity1, owner),
                             debtIncrease.toString(),
-                            "Owner should have " + debtIncrease + " dai debt, instead has " + (await dealer.debtDai(maturity1, owner)),
+                            "Owner should have " + debtIncrease + " dai debt, instead has " + (await dealer.debtDai.call(maturity1, owner)),
                         );
                     });
         
@@ -563,7 +563,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
                             "Owner should not have yDai",
                         );
                         assert.equal(
-                            await dealer.debtDai(maturity1, owner),
+                            await dealer.debtDai.call(maturity1, owner),
                             0,
                             "Owner should have no remaining debt",
                         );

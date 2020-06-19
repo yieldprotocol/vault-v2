@@ -259,7 +259,7 @@ contract('Dealer - Splitter', async (accounts) =>  {
                 await dealer.borrow(WETH, maturity1, owner, daiTokens, { from: owner });
 
                 assert.equal(
-                    await dealer.debtDai(WETH, maturity1, owner),
+                    await dealer.debtDai.call(WETH, maturity1, owner),
                     daiTokens.toString(),
                     "Owner does not have debt",
                 );
@@ -293,7 +293,7 @@ contract('Dealer - Splitter', async (accounts) =>  {
                 // TODO: Test with different rates
 
                 assert.equal(
-                    await dealer.debtDai(WETH, maturity1, owner),
+                    await dealer.debtDai.call(WETH, maturity1, owner),
                     0,
                     "User should not have debt in Dealer",
                 );
