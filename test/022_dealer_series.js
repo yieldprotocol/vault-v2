@@ -3,6 +3,7 @@ const GemJoin = artifacts.require('GemJoin');
 const DaiJoin = artifacts.require('DaiJoin');
 const Weth = artifacts.require("WETH9");
 const ERC20 = artifacts.require("TestERC20");
+const Jug = artifacts.require('Jug');
 const Pot = artifacts.require('Pot');
 const Chai = artifacts.require('Chai');
 const GasToken = artifacts.require('GasToken1');
@@ -24,6 +25,7 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
     let wethJoin;
     let dai;
     let daiJoin;
+    let jug;
     let pot;
     let chai;
     let gasToken;
@@ -56,9 +58,9 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        // Setup vat
+        // Setup vat, join and weth
         vat = await Vat.new();
-        await vat.init(ilk, { from: owner });
+        await vat.init(ilk, { from: owner }); // Set ilk rate (stability fee accumulator) to 1.0
 
         weth = await Weth.new({ from: owner });
         wethJoin = await GemJoin.new(vat.address, ilk, weth.address, { from: owner });
@@ -68,8 +70,11 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
 
         await vat.file(ilk, spotName, spot, { from: owner });
         await vat.file(ilk, linel, limits, { from: owner });
-        await vat.file(Line, limits); // TODO: Why can't we specify `, { from: owner }`?
-        await vat.fold(ilk, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
+        await vat.file(Line, limits);
+
+        // Setup jug
+        jug = await Jug.new(vat.address);
+        await jug.init(ilk, { from: owner }); // Set ilk duty (stability fee) to 1.0
 
         // Setup pot
         pot = await Pot.new(vat.address);
@@ -78,9 +83,9 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
         await vat.rely(vat.address, { from: owner });
         await vat.rely(wethJoin.address, { from: owner });
         await vat.rely(daiJoin.address, { from: owner });
+        await vat.rely(jug.address, { from: owner });
         await vat.rely(pot.address, { from: owner });
         await vat.hope(daiJoin.address, { from: owner });
-        await vat.hope(wethJoin.address, { from: owner });
 
         // Setup chai
         chai = await Chai.new(
@@ -122,6 +127,9 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
             { from: owner },
         );
         treasury.grantAccess(dealer.address, { from: owner });
+        
+        // Test setup
+        await vat.fold(ilk, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
     });
 
     afterEach(async() => {
@@ -141,6 +149,7 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
 
         yDai1 = await YDai.new(
             vat.address,
+            jug.address,
             pot.address,
             treasury.address,
             maturity1,
@@ -166,6 +175,7 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
         yDai1 = await YDai.new(
             vat.address,
+            jug.address,
             pot.address,
             treasury.address,
             maturity1,
@@ -178,6 +188,7 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
         yDai2 = await YDai.new(
             vat.address,
+            jug.address,
             pot.address,
             treasury.address,
             maturity2,
@@ -221,6 +232,7 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
         yDai1 = await YDai.new(
             vat.address,
+            jug.address,
             pot.address,
             treasury.address,
             maturity1,

@@ -79,7 +79,7 @@ contract('yDai1', async (accounts) =>  {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        // Set up vat, join and weth
+        // Setup vat, join and weth
         vat = await Vat.new();
         await vat.init(ilk, { from: owner }); // Set ilk rate (stability fee accumulator) to 1.0
 
@@ -89,7 +89,6 @@ contract('yDai1', async (accounts) =>  {
         dai = await ERC20.new(0, { from: owner });
         daiJoin = await DaiJoin.new(vat.address, dai.address, { from: owner });
 
-        // Setup vat
         await vat.file(ilk, spotName, spot, { from: owner });
         await vat.file(ilk, linel, limits, { from: owner });
         await vat.file(Line, limits);
@@ -100,7 +99,6 @@ contract('yDai1', async (accounts) =>  {
 
         // Setup pot
         pot = await Pot.new(vat.address);
-        await pot.setChi(chi1, { from: owner });
 
         // Permissions
         await vat.rely(vat.address, { from: owner });
@@ -148,6 +146,7 @@ contract('yDai1', async (accounts) =>  {
         // Test setup
         // Increase the rate accumulator
         await vat.fold(ilk, vat.address, subBN(rate1, toRay(1)), { from: owner }); // Fold only the increase from 1.0
+        await pot.setChi(chi1, { from: owner }); // Set the savings accumulator
 
         // Deposit some weth to treasury so that redeem can pull some dai
         await weth.deposit({ from: owner, value: wethTokens2 });
