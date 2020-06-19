@@ -29,7 +29,7 @@ const helper = require('ganache-time-traveler');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
 const { expectRevert } = require('@openzeppelin/test-helpers');
 
-contract('yDai1', async (accounts) =>  {
+contract('yDai', async (accounts) =>  {
     let [ owner, user1, user2 ] = accounts;
     let vat;
     let weth;
@@ -162,7 +162,6 @@ contract('yDai1', async (accounts) =>  {
         // Mint some yDai1 the sneaky way, only difference is that the Dealer doesn't record the user debt.
         await yDai1.grantAccess(owner, { from: owner });
         await yDai1.mint(user1, daiTokens1, { from: owner });
-        await yDai1.mint(user2, daiTokens2, { from: owner });
     });
 
     afterEach(async() => {
@@ -273,20 +272,10 @@ contract('yDai1', async (accounts) =>  {
                 0,
                 "User1 has dai",
             );
-            /* assert.equal(
-                await treasury.savings.call(),
-                0,
-                "Treasury has no savings",
-            ); */
     
             await yDai1.approve(yDai1.address, daiTokens1, { from: user1 });
             await yDai1.redeem(user1, daiTokens1, { from: user1 });
     
-            /* assert.equal(
-                await treasury.debt(),
-                daiTokens1.toString(),
-                "Treasury should have debt",
-            ); */
             assert.equal(
                 await dai.balanceOf(user1),
                 daiTokens1.toString(),
@@ -311,34 +300,32 @@ contract('yDai1', async (accounts) =>  {
                 );
             });
     
-            // TODO: Fix. Seems to call `redeem` twice
-            /* it("redeem with increased chi returns more dai", async() => {
-                // User2 got `daiTokens2` yDai1, but after the chi raises he is going to redeem `daiTokens1`
-                // As a result, after redeeming, owner will have `daiTokens2` dai and another `yDaiSurplus` yDai1 left
+            it("redeem with increased chi returns more dai", async() => {
+                // Redeem `daiTokens1` yDai to obtain `daiTokens1` * `chiDifferential`
 
                 await vat.fold(ilk, vat.address, subBN(rate2, rate1), { from: owner }); // Keeping above chi
                 await pot.setChi(chi2, { from: owner });
 
                 assert.equal(
-                    await yDai1.balanceOf(user2),
-                    daiTokens2.toString(),
-                    "User2 does not have yDai1",
+                    await yDai1.balanceOf(user1),
+                    daiTokens1.toString(),
+                    "User1 does not have yDai1",
                 );
         
-                await yDai1.approve(yDai1.address, daiTokens1, { from: user2 });
-                await yDai1.redeem(user2, daiTokens1, { from: user2 });
+                await yDai1.approve(yDai1.address, daiTokens1, { from: user1 });
+                await yDai1.redeem(user1, daiTokens1, { from: user1 });
         
                 assert.equal(
-                    await dai.balanceOf(user2),
+                    await dai.balanceOf(user1),
                     daiTokens2.toString(),
-                    "User2 should have " + daiTokens2 + " dai, instead has " + (await dai.balanceOf(user2)),
+                    "User1 should have " + daiTokens2 + " dai, instead has " + (await dai.balanceOf(user1)),
                 );
                 assert.equal(
-                    await yDai1.balanceOf(user2),
-                    yDaiSurplus.toString(),
-                    "User2 should have " + yDaiSurplus + " dai surplus, instead has " + (await yDai1.balanceOf(user2)),
+                    await yDai1.balanceOf(user1),
+                    0,
+                    "User2 should have no yDai left, instead has " + (await yDai1.balanceOf(user1)),
                 );
-            }); */
+            });
         });
     });
 });

@@ -118,9 +118,9 @@ contract YDai is AuthorizedAccess(), UserProxy(), ERC20, Constants, IYDai  {
             isMature(),
             "YDai: yDai is not mature"
         );
-        _burn(user, yDaiAmount);                         // Burn yDai from user
+        _burn(user, yDaiAmount);                              // Burn yDai from user
         uint256 daiAmount = yDaiAmount.muld(chiDelta(), RAY); // User gets interest for holding after maturity
-        _treasury.pullDai(user, daiAmount);              // Give dai to user, from Treasury
+        _treasury.pullDai(user, daiAmount);                   // Give dai to user, from Treasury
     }
 
     /// @dev Mint yDai. Only callable by Dealer contracts.
