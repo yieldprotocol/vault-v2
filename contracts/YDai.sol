@@ -60,25 +60,25 @@ contract YDai is AuthorizedAccess(), UserProxy(), ERC20, Constants, IYDai  {
     }
 
     /// @dev Chi differential between maturity and now in RAY. Returns 1.0 if not mature.
-    /// If rateDelta < chiDelta, returns rate.
+    /// If rateGrowth < chiGrowth, returns rate.
     //
     //          chi_now
     // chi() = ---------
     //          chi_mat
     //
-    function chiDelta() public override returns(uint256){
+    function chiGrowth() public override returns(uint256){
         if (!isMature()) return _chi;
         uint256 chiNow = (now > _pot.rho()) ? _pot.drip() : _pot.chi();
-        return Math.min(rateDelta(), chiNow.divd(_chi, RAY));
+        return Math.min(rateGrowth(), chiNow.divd(_chi, RAY));
     }
 
     /// @dev Rate differential between maturity and now in RAY. Returns 1.0 if not mature.
     //
     //           rate_now
-    // rateDelta() = ----------
+    // rateGrowth() = ----------
     //           rate_mat
     //
-    function rateDelta() public override returns(uint256){
+    function rateGrowth() public override returns(uint256){
         if (!isMature()) return _rate;
         uint256 rateNow;
         (, uint256 rho) = _jug.ilks("ETH-A"); // "WETH" for weth.sol, "ETH-A" for MakerDAO
@@ -119,7 +119,7 @@ contract YDai is AuthorizedAccess(), UserProxy(), ERC20, Constants, IYDai  {
             "YDai: yDai is not mature"
         );
         _burn(user, yDaiAmount);                              // Burn yDai from user
-        uint256 daiAmount = yDaiAmount.muld(chiDelta(), RAY); // User gets interest for holding after maturity
+        uint256 daiAmount = yDaiAmount.muld(chiGrowth(), RAY); // User gets interest for holding after maturity
         _treasury.pullDai(user, daiAmount);                   // Give dai to user, from Treasury
     }
 
