@@ -157,7 +157,7 @@ contract DssShutdown is Constants {
         yDai.burn(user, yDaiAmount);
         _weth.transfer(
             user,
-            yDaiAmount.muld(yDai.chi(), RAY).muld(_fix, RAY)
+            yDaiAmount.muld(yDai.chiGrowth(), RAY).muld(_fix, RAY)
         );
     }
 
