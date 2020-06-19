@@ -394,15 +394,29 @@ contract('Liquidations', async (accounts) =>  {
 
             it("auctions can be started", async() => {
                 // Setup yDai
+                const event = (await liquidations.start(WETH, user2, { from: liquidator })).logs[0];
                 const block = await web3.eth.getBlockNumber();
                 now = (await web3.eth.getBlock(block)).timestamp;
 
-                await liquidations.start(WETH, user2, { from: liquidator });
-
+                assert.equal(
+                    event.event,
+                    "Auction",
+                );
+                assert.equal(
+                    bytes32ToString(event.args.collateral),
+                    "WETH",
+                );
+                assert.equal(
+                    event.args.user,
+                    user2,
+                );
+                assert.equal(
+                    event.args.started,
+                    now,
+                );
                 assert.equal(
                     await liquidations.auctions(WETH, user2, { from: liquidator }),
-                    now + 1, // TODO: Learn to test greater than instead
-                    "Auction time is " + (await liquidations.auctions(WETH, user2, { from: liquidator })),
+                    now,
                 );
             });
 
@@ -431,8 +445,24 @@ contract('Liquidations', async (accounts) =>  {
                     await weth.approve(dealer.address, wethTokens, { from: user2 });
                     await dealer.post(WETH, user2, wethTokens, { from: user2 });
     
-                    await liquidations.cancel(WETH, user2, { from: liquidator });
+                    const event = (await liquidations.cancel(WETH, user2, { from: liquidator })).logs[0];
 
+                    assert.equal(
+                        event.event,
+                        "Auction",
+                    );
+                    assert.equal(
+                        bytes32ToString(event.args.collateral),
+                        "WETH",
+                    );
+                    assert.equal(
+                        event.args.user,
+                        user2,
+                    );
+                    assert.equal(
+                        event.args.started,
+                        0,
+                    );
                     assert.equal(
                         await liquidations.auctions(WETH, user2, { from: liquidator }),
                         0,
@@ -636,3 +666,7 @@ contract('Liquidations', async (accounts) =>  {
         });
     });
 });
+
+function bytes32ToString(text) {
+    return web3.utils.toAscii(text).replace(/\0/g, '');
+}

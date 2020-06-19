@@ -18,6 +18,8 @@ contract Liquidations is ILiquidations, AuthorizedAccess(), Constants {
     using DecimalMath for uint8;
     using SafeMath for uint256;
 
+    event Auction(bytes32 indexed collateral, address indexed user, uint256 started);
+
     IERC20 internal _dai;
     ITreasury internal _treasury;
     IDealer internal _dealer;
@@ -66,6 +68,7 @@ contract Liquidations is ILiquidations, AuthorizedAccess(), Constants {
         );
         // solium-disable-next-line security/no-block-members
         auctions[collateral][user] = now;
+        emit Auction(collateral, user, auctions[collateral][user]);
     }
 
     /// @dev Cancels a liquidation process
@@ -76,6 +79,7 @@ contract Liquidations is ILiquidations, AuthorizedAccess(), Constants {
         );
         // solium-disable-next-line security/no-block-members
         delete auctions[collateral][user];
+        emit Auction(collateral, user, auctions[collateral][user]);
     }
 
     /// @dev Liquidates a position. The caller pays the debt of `from`, and `liquidator` receives an amount of collateral.
