@@ -1,3 +1,4 @@
+// External
 const Vat = artifacts.require('Vat');
 const GemJoin = artifacts.require('GemJoin');
 const DaiJoin = artifacts.require('DaiJoin');
@@ -5,14 +6,23 @@ const Weth = artifacts.require("WETH9");
 const ERC20 = artifacts.require("TestERC20");
 const Jug = artifacts.require('Jug');
 const Pot = artifacts.require('Pot');
+const End = artifacts.require('End');
 const Chai = artifacts.require('Chai');
 const GasToken = artifacts.require('GasToken1');
+
+// Common
 const ChaiOracle = artifacts.require('ChaiOracle');
 const WethOracle = artifacts.require('WethOracle');
 const Treasury = artifacts.require('Treasury');
+
+// YDai
 const YDai = artifacts.require('YDai');
 const Dealer = artifacts.require('Dealer');
+
+// Peripheral
 const Splitter = artifacts.require('Splitter');
+const EthProxy = artifacts.require('EthProxy');
+const DssShutdown = artifacts.require('DssShutdown');
 
 const truffleAssert = require('truffle-assertions');
 const helper = require('ganache-time-traveler');
@@ -112,7 +122,7 @@ contract('yDai - UserProxy', async (accounts) =>  {
         // Setup GasToken
         gasToken = await GasToken.new();
 
-        // Setup Oracle
+        // Setup WethOracle
         wethOracle = await WethOracle.new(vat.address, { from: owner });
 
         // Setup ChaiOracle

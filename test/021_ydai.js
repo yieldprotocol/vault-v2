@@ -19,6 +19,11 @@ const Treasury = artifacts.require('Treasury');
 const YDai = artifacts.require('YDai');
 const Dealer = artifacts.require('Dealer');
 
+// Peripheral
+const Splitter = artifacts.require('Splitter');
+const EthProxy = artifacts.require('EthProxy');
+const DssShutdown = artifacts.require('DssShutdown');
+
 const truffleAssert = require('truffle-assertions');
 const helper = require('ganache-time-traveler');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
