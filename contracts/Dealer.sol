@@ -88,7 +88,7 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
         uint256 totalDebt;
         for (uint256 i = 0; i < seriesIterator.length; i += 1) {
             IYDai yDai = series[seriesIterator[i]];
-            totalDebt = totalDebt + IERC20(address(yDai)).totalSupply().muld(yDai.rate(), RAY);
+            totalDebt = totalDebt + IERC20(address(yDai)).totalSupply().muld(yDai.rateDelta(), RAY);
         } // We don't expect hundreds of maturities per dealer
         return totalDebt;
     }
@@ -101,7 +101,7 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
             "Dealer: Unrecognized series"
         );
         if (series[maturity].isMature()){
-            return yDaiAmount.muld(series[maturity].rate(), RAY);
+            return yDaiAmount.muld(series[maturity].rateDelta(), RAY);
         }
         else {
             return yDaiAmount;
@@ -115,7 +115,7 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
             "Dealer: Unrecognized series"
         );
         if (series[maturity].isMature()){
-            return daiAmount.divd(series[maturity].rate(), RAY);
+            return daiAmount.divd(series[maturity].rateDelta(), RAY);
         }
         else {
             return daiAmount;

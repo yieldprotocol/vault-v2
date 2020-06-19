@@ -171,12 +171,12 @@ contract('yDai1', async (accounts) =>  {
 
     it("should setup yDai1", async() => {
         assert(
-            await yDai1.chi.call(),
+            await yDai1.chiDelta.call(),
             toRay(1.0).toString(),
             "chi not initialized",
         );
         assert(
-            await yDai1.rate(),
+            await yDai1.rateDelta(),
             toRay(1.0).toString(),
             "rate not initialized",
         );
@@ -236,7 +236,7 @@ contract('yDai1', async (accounts) =>  {
             await pot.setChi(chi2, { from: owner });
             
             assert(
-                await yDai1.chi.call(),
+                await yDai1.chiDelta.call(),
                 subBN(chi2, chi1).toString(),
                 "Chi differential should be " + subBN(chi2, chi1),
             );
@@ -246,7 +246,7 @@ contract('yDai1', async (accounts) =>  {
             await vat.fold(ilk, vat.address, subBN(rate2, rate1), { from: owner });
             
             assert(
-                await yDai1.rate(),
+                await yDai1.rateDelta(),
                 subBN(rate2, rate1).toString(),
                 "Rate differential should be " + subBN(rate2, rate1),
             );
@@ -256,9 +256,9 @@ contract('yDai1', async (accounts) =>  {
             await pot.setChi(chi2, { from: owner });
 
             assert(
-                await yDai1.chi.call(),
-                await yDai1.rate(),
-                "Chi differential should be " + await yDai1.rate(),
+                await yDai1.chiDelta.call(),
+                await yDai1.rateDelta(),
+                "Chi differential should be " + await yDai1.rateDelta(),
             );
         });
 
@@ -305,9 +305,9 @@ contract('yDai1', async (accounts) =>  {
                 await pot.setChi(chi2, { from: owner });
 
                 assert(
-                    await yDai1.chi.call(),
+                    await yDai1.chiDelta.call(),
                     chiDifferential.toString(),
-                    "chi differential should be " + chiDifferential + ", instead is " + (await yDai1.chi.call()),
+                    "chi differential should be " + chiDifferential + ", instead is " + (await yDai1.chiDelta.call()),
                 );
             });
     
