@@ -1,13 +1,18 @@
 const Vat = artifacts.require('Vat');
 const GemJoin = artifacts.require('GemJoin');
 const DaiJoin = artifacts.require('DaiJoin');
-const Weth = artifacts.require('WETH9');
+const Weth = artifacts.require("WETH9");
 const ERC20 = artifacts.require("TestERC20");
+const Jug = artifacts.require('Jug');
 const Pot = artifacts.require('Pot');
 const Chai = artifacts.require('Chai');
+const GasToken = artifacts.require('GasToken1');
 const ChaiOracle = artifacts.require('ChaiOracle');
+const WethOracle = artifacts.require('WethOracle');
 const Treasury = artifacts.require('Treasury');
 const YDai = artifacts.require('YDai');
+const Dealer = artifacts.require('Dealer');
+const Splitter = artifacts.require('Splitter');
 
 const truffleAssert = require('truffle-assertions');
 const helper = require('ganache-time-traveler');
@@ -17,11 +22,22 @@ const { expectRevert, expectEvent } = require('@openzeppelin/test-helpers');
 contract('yDai - UserProxy', async (accounts) =>  {
     let [ owner, holder, other ] = accounts;
     let vat;
+    let weth;
+    let wethJoin;
+    let dai;
+    let daiJoin;
+    let jug;
     let pot;
     let chai;
+    let gasToken;
     let chaiOracle;
+    let wethOracle;
     let treasury;
-    let yDai;
+    let yDai1;
+    let yDai2;
+    let dealer;
+    let splitter;
+    
     let maturity;
     let ilk = web3.utils.fromAscii("ETH-A")
     let Line = web3.utils.fromAscii("Line")
@@ -55,9 +71,9 @@ contract('yDai - UserProxy', async (accounts) =>  {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        // Set up vat, join and weth
+        // Setup vat, join and weth
         vat = await Vat.new();
-        await vat.init(ilk, { from: owner }); // Set ilk rate to 1.0
+        await vat.init(ilk, { from: owner }); // Set ilk rate (stability fee accumulator) to 1.0
 
         weth = await Weth.new({ from: owner });
         wethJoin = await GemJoin.new(vat.address, ilk, weth.address, { from: owner });
@@ -65,15 +81,24 @@ contract('yDai - UserProxy', async (accounts) =>  {
         dai = await ERC20.new(0, { from: owner });
         daiJoin = await DaiJoin.new(vat.address, dai.address, { from: owner });
 
-        // Setup vat
         await vat.file(ilk, spotName, spot, { from: owner });
         await vat.file(ilk, linel, limits, { from: owner });
-        await vat.file(Line, limits); // TODO: Why can't we specify `, { from: owner }`?
-        await vat.fold(ilk, vat.address, subBN(rate1, toRay(1)), { from: owner }); // Fold only the increase from 1.0
+        await vat.file(Line, limits);
+
+        // Setup jug
+        jug = await Jug.new(vat.address);
+        await jug.init(ilk, { from: owner }); // Set ilk duty (stability fee) to 1.0
 
         // Setup pot
         pot = await Pot.new(vat.address);
-        await pot.setChi(chi1, { from: owner });
+
+        // Permissions
+        await vat.rely(vat.address, { from: owner });
+        await vat.rely(wethJoin.address, { from: owner });
+        await vat.rely(daiJoin.address, { from: owner });
+        await vat.rely(jug.address, { from: owner });
+        await vat.rely(pot.address, { from: owner });
+        await vat.hope(daiJoin.address, { from: owner });
 
         // Setup chai
         chai = await Chai.new(
@@ -81,18 +106,19 @@ contract('yDai - UserProxy', async (accounts) =>  {
             pot.address,
             daiJoin.address,
             dai.address,
+            { from: owner },
         );
 
-        // Permissions
-        await vat.rely(vat.address, { from: owner });
-        await vat.rely(wethJoin.address, { from: owner });
-        await vat.rely(daiJoin.address, { from: owner });
-        await vat.rely(pot.address, { from: owner });
-        await vat.hope(daiJoin.address, { from: owner });
+        // Setup GasToken
+        gasToken = await GasToken.new();
 
-        // Setup chaiOracle
+        // Setup Oracle
+        wethOracle = await WethOracle.new(vat.address, { from: owner });
+
+        // Setup ChaiOracle
         chaiOracle = await ChaiOracle.new(pot.address, { from: owner });
 
+        // Set treasury
         treasury = await Treasury.new(
             dai.address,
             chai.address,
@@ -101,20 +127,66 @@ contract('yDai - UserProxy', async (accounts) =>  {
             daiJoin.address,
             wethJoin.address,
             vat.address,
+            { from: owner },
         );
-    
+
+        // Setup Dealer
+        dealer = await Dealer.new(
+            treasury.address,
+            dai.address,
+            weth.address,
+            wethOracle.address,
+            chai.address,
+            chaiOracle.address,
+            gasToken.address,
+            { from: owner },
+        );
+        treasury.grantAccess(dealer.address, { from: owner });
+
+        // Setup Splitter
+        splitter = await Splitter.new(
+            treasury.address,
+            dealer.address,
+            { from: owner },
+        );
+        dealer.grantAccess(splitter.address, { from: owner });
+        treasury.grantAccess(splitter.address, { from: owner });
+
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
-        maturity = (await web3.eth.getBlock(block)).timestamp + 1000;
-        yDai = await YDai.new(
+        maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
+        yDai1 = await YDai.new(
             vat.address,
+            jug.address,
             pot.address,
             treasury.address,
-            maturity,
+            maturity1,
             "Name",
-            "Symbol"
+            "Symbol",
+            { from: owner },
         );
-        await treasury.grantAccess(yDai.address, { from: owner });
+        dealer.addSeries(yDai1.address, { from: owner });
+        yDai1.grantAccess(dealer.address, { from: owner });
+        treasury.grantAccess(yDai1.address, { from: owner });
+
+        maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
+        yDai2 = await YDai.new(
+            vat.address,
+            jug.address,
+            pot.address,
+            treasury.address,
+            maturity2,
+            "Name2",
+            "Symbol2",
+            { from: owner },
+        );
+        dealer.addSeries(yDai2.address, { from: owner });
+        yDai2.grantAccess(dealer.address, { from: owner });
+        treasury.grantAccess(yDai2.address, { from: owner });
+
+        // Tests setup
+        await pot.setChi(chi1, { from: owner });
+        await vat.fold(ilk, vat.address, subBN(rate1, toRay(1)), { from: owner }); // Fold only the increase from 1.0
 
         // Post collateral to MakerDAO through Treasury
         await treasury.grantAccess(owner, { from: owner });
@@ -127,16 +199,16 @@ contract('yDai - UserProxy', async (accounts) =>  {
         );
 
         // Mint some yDai the sneaky way
-        await yDai.grantAccess(owner, { from: owner });
-        await yDai.mint(holder, daiTokens1, { from: owner });
+        await yDai1.grantAccess(owner, { from: owner });
+        await yDai1.mint(holder, daiTokens1, { from: owner });
 
         // yDai matures
         await helper.advanceTime(1000);
         await helper.advanceBlock();
-        await yDai.mature();
+        await yDai1.mature();
 
         assert.equal(
-            await yDai.balanceOf(holder),
+            await yDai1.balanceOf(holder),
             daiTokens1.toString(),
             "Holder does not have yDai",
         );
@@ -152,8 +224,8 @@ contract('yDai - UserProxy', async (accounts) =>  {
     });
 
     it("redeem is allowed for account holder", async() => {
-        await yDai.approve(yDai.address, daiTokens1, { from: holder });
-        await yDai.redeem(holder, daiTokens1, { from: holder });
+        await yDai1.approve(yDai1.address, daiTokens1, { from: holder });
+        await yDai1.redeem(holder, daiTokens1, { from: holder });
 
         assert.equal(
             await treasury.debt(),
@@ -168,17 +240,17 @@ contract('yDai - UserProxy', async (accounts) =>  {
     });
 
     it("redeem is not allowed for non designated accounts", async() => {
-        await yDai.approve(yDai.address, daiTokens1, { from: holder });
+        await yDai1.approve(yDai1.address, daiTokens1, { from: holder });
         await expectRevert(
-            yDai.redeem(holder, daiTokens1, { from: other }),
+            yDai1.redeem(holder, daiTokens1, { from: other }),
             "YDai: Only Holder Or Proxy",
         );
     });
 
     it("redeem is allowed for designated proxies", async() => {
-        await yDai.approve(yDai.address, daiTokens1, { from: holder });
+        await yDai1.approve(yDai1.address, daiTokens1, { from: holder });
         expectEvent(
-            await yDai.addProxy(other, { from: holder }),
+            await yDai1.addProxy(other, { from: holder }),
             "Proxy",
             {
                 user: holder,
@@ -186,7 +258,7 @@ contract('yDai - UserProxy', async (accounts) =>  {
                 enabled: true,
             },
         );
-        await yDai.redeem(holder, daiTokens1, { from: other });
+        await yDai1.redeem(holder, daiTokens1, { from: other });
 
         assert.equal(
             await treasury.debt(),
@@ -202,12 +274,12 @@ contract('yDai - UserProxy', async (accounts) =>  {
 
     describe("with designated proxies", async() => {
         beforeEach(async() => {
-            await yDai.addProxy(other, { from: holder });
+            await yDai1.addProxy(other, { from: holder });
         });
 
         it("redeem is not allowed if proxy revoked", async() => {
             expectEvent(
-                await yDai.revokeProxy(other, { from: holder }),
+                await yDai1.revokeProxy(other, { from: holder }),
                 "Proxy",
                 {
                     user: holder,
@@ -217,7 +289,7 @@ contract('yDai - UserProxy', async (accounts) =>  {
             );
 
             await expectRevert(
-                yDai.redeem(holder, daiTokens1, { from: other }),
+                yDai1.redeem(holder, daiTokens1, { from: other }),
                 "YDai: Only Holder Or Proxy",
             );
         });
