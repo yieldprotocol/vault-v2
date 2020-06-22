@@ -15,6 +15,8 @@ case $command in
     "lint")
     log "Running Lint"
     yarn run lint
+    local _retcode=$?
+    log "Yarn gave return code: $?"
     ;;
     "test")
     log "Running Tests"
