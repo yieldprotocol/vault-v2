@@ -182,11 +182,11 @@ contract('Dealer - Weth', async (accounts) =>  {
         await helper.revertToSnapshot(snapshotId);
     });
     
-    /* it("get the size of the contract", async() => {
+    it("get the size of the contract", async() => {
         console.log();
-        console.log("·--------------------|------------------|------------------|------------------·");
-        console.log("|  Contract          ·  Bytecode        ·  Deployed        ·  Constructor     |");
-        console.log("·····················|··················|··················|···················");
+        console.log("    ·--------------------|------------------|------------------|------------------·");
+        console.log("    |  Contract          ·  Bytecode        ·  Deployed        ·  Constructor     |");
+        console.log("    ·····················|··················|··················|···················");
         
         const bytecode = dealer.constructor._json.bytecode;
         const deployed = dealer.constructor._json.deployedBytecode;
@@ -194,13 +194,13 @@ contract('Dealer - Weth', async (accounts) =>  {
         const sizeOfD  = deployed.length / 2;
         const sizeOfC  = sizeOfB - sizeOfD;
         console.log(
-            "|  " + (dealer.constructor._json.contractName).padEnd(18, ' ') +
+            "    |  " + (dealer.constructor._json.contractName).padEnd(18, ' ') +
             "|" + ("" + sizeOfB).padStart(16, ' ') + "  " +
             "|" + ("" + sizeOfD).padStart(16, ' ') + "  " +
             "|" + ("" + sizeOfC).padStart(16, ' ') + "  |");
-        console.log("·--------------------|------------------|------------------|------------------·");
+        console.log("    ·--------------------|------------------|------------------|------------------·");
         console.log();
-    }); */
+    });
 
     it("allows user to post weth", async() => {
         assert.equal(
