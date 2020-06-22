@@ -17,12 +17,13 @@ case $command in
     yarn run lint
     local _retcode=$?
     log "Yarn gave return code: $?"
+    # TODO: Return the proper code
     ;;
     "test")
     log "Running Tests"
     # TODO: Add buidler
     ;;
-    "ganache")
+    "ganache") #This is bug
     log "Running Ganache"
     #npx ganache-cli \
     #    # --db "db_ganache/" \

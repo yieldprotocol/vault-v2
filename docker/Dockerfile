@@ -1,4 +1,4 @@
-FROM node:10.21.0-buster
+FROM node:10.18.0-buster
 
 RUN mkdir -p /srv/ytoken-mvp
 COPY docker/entrypoint.sh /srv/ytoken-mvp/entrypoint.sh
