@@ -12,3 +12,5 @@ jobs:
       run: docker build -t "yield/ytoken-mvp:${{ github.run_id}}" -f docker/Dockerfile .
     - name: Run Lint
       run: docker run -t "yield/ytoken-mvp:${{ github.run_id }}" lint
+    - name: Run Builder
+      run: docker run -t "yield/ytoken-mvp:${{ github.run_id }}" test
