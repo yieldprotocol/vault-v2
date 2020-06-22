@@ -163,18 +163,6 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
     function isCollateralized(bytes32 collateral, address user) public returns (bool) {
         return powerOf(collateral, user) >= totalDebtDai(collateral, user);
     }
-    
-    /// @dev Locks a liquidation bond in gas tokens
-    function lockBond(uint256 value) public {
-        if (!_gasToken.transferFrom(msg.sender, address(this), value)) {
-            _gasToken.mint(value);
-        }
-    }
-
-    /// @dev Frees a liquidation bond in gas tokens
-    function returnBond(uint256 value) public {
-        _gasToken.transfer(msg.sender, value);
-    }
 
     /// @dev Takes collateral _token from `from` address, and credits it to `to` collateral account.
     // from --- Token ---> us(to)
@@ -325,6 +313,18 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
             RAY
         );
         return (toRepay, toRepay.muld(debtProportion, RAY));
+    }
+
+    /// @dev Locks a liquidation bond in gas tokens
+    function lockBond(uint256 value) internal {
+        if (!_gasToken.transferFrom(msg.sender, address(this), value)) {
+            _gasToken.mint(value);
+        }
+    }
+
+    /// @dev Frees a liquidation bond in gas tokens
+    function returnBond(uint256 value) internal {
+        _gasToken.transfer(msg.sender, value);
     }
 
     /// @dev Divides x between y, rounding up to the closest representable number.
