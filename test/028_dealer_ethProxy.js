@@ -240,16 +240,11 @@ contract('Dealer - Weth', async (accounts) =>  {
             "Owner has borrowing power",
         );
         
+        const previousBalance = await balance.current(owner);
         await dealer.addProxy(ethProxy.address, { from: owner });
-        console.log((await balance.current(owner)).toString());
         await ethProxy.post(owner, owner, wethTokens, { from: owner, value: wethTokens });
-        console.log((await balance.current(owner)).toString());
 
-        /* assert.isBelow(
-            await balance.current(owner),
-            ownerEth,
-            "owner should have less Eth",
-        ) */ // TODO: Learn to compare BigNumber
+        expect(await balance.current(owner)).to.be.bignumber.lt(previousBalance);
         assert.equal(
             (await vat.urns(ilk, treasury.address)).ink,
             wethTokens.toString(),
@@ -295,15 +290,10 @@ contract('Dealer - Weth', async (accounts) =>  {
         });
 
         it("allows user to withdraw weth", async() => {
-            console.log((await balance.current(owner)).toString());
+            const previousBalance = await balance.current(owner);
             await ethProxy.withdraw(owner, owner, wethTokens, { from: owner });
-            console.log((await balance.current(owner)).toString());
 
-            /* assert.isBelow(
-                (await balance.current(owner)).toString(),
-                ownerEth.toString(),
-                "owner should have less Eth",
-            ) */ // TODO: Learn to compare BigNumber
+            expect(await balance.current(owner)).to.be.bignumber.gt(previousBalance);
             assert.equal(
                 (await vat.urns(ilk, treasury.address)).ink,
                 0,
