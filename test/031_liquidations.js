@@ -470,7 +470,7 @@ contract('Liquidations', async (accounts) =>  {
                     );
                 });
 
-                it("liquidations retrieve about 2/3 of collateral at the start", async() => {
+                it("liquidations retrieve about 1/2 of collateral at the start", async() => {
                     const daiTokens = (await dealer.totalDebtDai(WETH, user2, { from: buyer })).toString();
                     // console.log(daiTokens); // 180
                     const liquidatorDaiDebt = divRay(daiTokens, rate2);
@@ -496,12 +496,12 @@ contract('Liquidations', async (accounts) =>  {
                     expect(
                         await weth.balanceOf(buyer, { from: buyer })
                     ).to.be.bignumber.gt(
-                        divRay(mulRay(wethTokens, toRay(2)), toRay(3)).toString()
+                        divRay(wethTokens, toRay(2)).toString()
                     );
                     expect(
                         await weth.balanceOf(buyer, { from: buyer }),
                     ).to.be.bignumber.lt(
-                        mulRay(divRay(mulRay(wethTokens, toRay(2)), toRay(3)), toRay(1.01)).toString(),
+                        mulRay(divRay(wethTokens, toRay(2)), toRay(1.01)).toString(),
                     );
                 });
 
@@ -527,16 +527,16 @@ contract('Liquidations', async (accounts) =>  {
                         divRay(daiTokens, toRay(2)).toString(),
                         "User debt should have been halved",
                     );
-                    // The buy will happen a few seconds after the start of the liquidation, so the collateral received will be slightly above the 1/3 of the total posted.
+                    // The buy will happen a few seconds after the start of the liquidation, so the collateral received will be slightly above the 1/4 of the total posted.
                     expect(
                         await weth.balanceOf(buyer, { from: buyer })
                     ).to.be.bignumber.gt(
-                        divRay(wethTokens, toRay(3)).toString()
+                        divRay(wethTokens, toRay(4)).toString()
                     );
                     expect(
                         await weth.balanceOf(buyer, { from: buyer }),
                     ).to.be.bignumber.lt(
-                        mulRay(divRay(wethTokens, toRay(3)), toRay(1.01)).toString(),
+                        mulRay(divRay(wethTokens, toRay(4)), toRay(1.01)).toString(),
                     );
                 });
 
@@ -562,16 +562,16 @@ contract('Liquidations', async (accounts) =>  {
                         0,
                         "User debt should have been erased",
                     );
-                    // The buy will happen a few seconds after the start of the liquidation, so the collateral received will be slightly above the 1/3 of the total posted.
+                    // The buy will happen a few seconds after the start of the liquidation, so the collateral received will be slightly above the 1/2 of the total posted.
                     expect(
                         await weth.balanceOf(buyer, { from: buyer })
                     ).to.be.bignumber.gt(
-                        divRay(mulRay(wethTokens, toRay(4)), toRay(3)).toString()
+                        wethTokens.toString()
                     );
                     expect(
                         await weth.balanceOf(buyer, { from: buyer }),
                     ).to.be.bignumber.lt(
-                        mulRay(divRay(mulRay(wethTokens, toRay(4)), toRay(3)), toRay(1.01)).toString(),
+                        mulRay(wethTokens, toRay(1.01)).toString(),
                     );
                 });
 

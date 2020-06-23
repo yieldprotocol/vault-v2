@@ -116,9 +116,9 @@ contract Liquidations is ILiquidations, AuthorizedAccess(), Constants {
     // dai = price * collateral
     // TODO: Optimize this for gas
     //
-    //                 posted      2      min(auction, elapsed)
+    //               posted      1      min(auction, elapsed)
     // price = 1 / (-------- * (--- + -----------------------))
-    //                  debt       3       3 * auction
+    //                debt       2       2 * auction
     function price(bytes32 collateral, address user) public view returns (uint256) {
         require(
             liquidations[collateral][user] > 0,
@@ -126,10 +126,10 @@ contract Liquidations is ILiquidations, AuthorizedAccess(), Constants {
         );
         uint256 dividend1 = RAY.unit().mul(_dealer.posted(collateral, user));
         uint256 divisor1 = RAY.unit().mul(_dealer.totalDebtDai(collateral, user));
-        uint256 dividend2 = RAY.unit().mul(2);
-        uint256 divisor2 = RAY.unit().mul(3);
+        uint256 dividend2 = RAY.unit().mul(1);
+        uint256 divisor2 = RAY.unit().mul(2);
         uint256 dividend3 = RAY.unit().muld(Math.min(auctionTime, now - liquidations[collateral][user]), RAY);
-        uint256 divisor3 = RAY.unit().muld(auctionTime, RAY).mul(3);
+        uint256 divisor3 = RAY.unit().muld(auctionTime, RAY).mul(2);
         uint256 term1 = dividend1.divd(divisor1, RAY);
         uint256 term2 = dividend2.divd(divisor2, RAY);
         uint256 term3 = dividend3.divd(divisor3, RAY);
