@@ -119,7 +119,7 @@ contract Liquidations is ILiquidations, AuthorizedAccess(), Constants {
     //               posted      1      min(auction, elapsed)
     // price = 1 / (-------- * (--- + -----------------------))
     //                debt       2       2 * auction
-    function price(bytes32 collateral, address user) public view returns (uint256) {
+    function price(bytes32 collateral, address user) public returns (uint256) {
         require(
             liquidations[collateral][user] > 0,
             "Liquidations: Vault is not targeted"

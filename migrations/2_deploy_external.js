@@ -9,11 +9,11 @@ const Pot = artifacts.require('Pot');
 const End = artifacts.require('End');
 const Chai = artifacts.require('Chai');
 const GasToken = artifacts.require('GasToken1');
-const Migrations = artifacts.require("Migrations");
 
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('../test/shared/utils');
 
 module.exports = async (deployer, network, accounts) => {
+
   const [owner] = accounts;
   let vatAddress;
   let wethAddress;
@@ -108,14 +108,18 @@ module.exports = async (deployer, network, accounts) => {
     );
     chaiAddress = (await Chai.deployed()).address;
   };
-  
-  console.log("    External contract addresses");
-  console.log("    ---------------------------");
-  console.log("    vat:      " + vatAddress);
-  console.log("    weth:     " + wethAddress);
-  console.log("    wethJoin: " + wethJoinAddress);
-  console.log("    dai:      " + daiAddress);
-  console.log("    daiJoin:  " + daiJoinAddress);
-  console.log("    chai:     " + chaiAddress);
-  console.log("    gasToken: " + gasTokenAddress);
+
+  const deployedExternal = {
+    'Vat': vatAddress,
+    'Weth': wethAddress,
+    'WethJoin': wethJoinAddress,
+    'Dai': daiAddress,
+    'DaiJoin': daiJoinAddress,
+    'Pot': potAddress,
+    'End': endAddress,
+    'Chai': chaiAddress,
+    'GasToken': gasTokenAddress,
+  }
+
+  console.log(deployedExternal)
 }

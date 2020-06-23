@@ -4,6 +4,7 @@ const GemJoin = artifacts.require('GemJoin');
 const DaiJoin = artifacts.require('DaiJoin');
 const Weth = artifacts.require("WETH9");
 const ERC20 = artifacts.require("TestERC20");
+const Jug = artifacts.require('Jug');
 const Pot = artifacts.require('Pot');
 const End = artifacts.require('End');
 const Chai = artifacts.require('Chai');
@@ -21,6 +22,7 @@ const Dealer = artifacts.require('Dealer');
 // Peripheral
 const Splitter = artifacts.require('Splitter');
 const Liquidations = artifacts.require('Liquidations');
+const EthProxy = artifacts.require('EthProxy');
 const DssShutdown = artifacts.require('DssShutdown');
 
 const helper = require('ganache-time-traveler');
@@ -35,6 +37,7 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
     let wethJoin;
     let dai;
     let daiJoin;
+    let jug;
     let pot;
     let end;
     let chai;
@@ -47,6 +50,7 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
     let dealer;
     let splitter;
     let liquidations;
+    let ethProxy;
     let dssShutdown;
 
     let WETH = web3.utils.fromAscii("WETH");
@@ -81,9 +85,9 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        // Setup vat
+        // Setup vat, join and weth
         vat = await Vat.new();
-        await vat.init(ilk, { from: owner });
+        await vat.init(ilk, { from: owner }); // Set ilk rate (stability fee accumulator) to 1.0
 
         weth = await Weth.new({ from: owner });
         wethJoin = await GemJoin.new(vat.address, ilk, weth.address, { from: owner });
@@ -93,12 +97,14 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
 
         await vat.file(ilk, spotName, spot, { from: owner });
         await vat.file(ilk, linel, limits, { from: owner });
-        await vat.file(Line, limits); // TODO: Why can't we specify `, { from: owner }`?
-        await vat.fold(ilk, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
+        await vat.file(Line, limits);
+
+        // Setup jug
+        jug = await Jug.new(vat.address);
+        await jug.init(ilk, { from: owner }); // Set ilk duty (stability fee) to 1.0
 
         // Setup pot
         pot = await Pot.new(vat.address);
-        await pot.setChi(chi, { from: owner });
 
         // Setup end
         end = await End.new({ from: owner });
@@ -108,8 +114,10 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
         await vat.rely(vat.address, { from: owner });
         await vat.rely(wethJoin.address, { from: owner });
         await vat.rely(daiJoin.address, { from: owner });
+        await vat.rely(jug.address, { from: owner });
         await vat.rely(pot.address, { from: owner });
         await vat.rely(end.address, { from: owner });
+        await vat.hope(daiJoin.address, { from: owner });
 
         // Setup chai
         chai = await Chai.new(
@@ -141,7 +149,7 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             { from: owner },
         );
 
-        // Setup dealer
+        // Setup Dealer
         dealer = await Dealer.new(
             treasury.address,
             dai.address,
@@ -152,37 +160,7 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             gasToken.address,
             { from: owner },
         );
-        await treasury.grantAccess(dealer.address, { from: owner });
-
-        // Setup yDai
-        const block = await web3.eth.getBlockNumber();
-        maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
-        yDai1 = await YDai.new(
-            vat.address,
-            pot.address,
-            treasury.address,
-            maturity1,
-            "Name",
-            "Symbol",
-            { from: owner },
-        );
-        await dealer.addSeries(yDai1.address, { from: owner });
-        await yDai1.grantAccess(dealer.address, { from: owner });
-        await treasury.grantAccess(yDai1.address, { from: owner });
-
-        maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
-        yDai2 = await YDai.new(
-            vat.address,
-            pot.address,
-            treasury.address,
-            maturity2,
-            "Name2",
-            "Symbol2",
-            { from: owner },
-        );
-        await dealer.addSeries(yDai2.address, { from: owner });
-        await yDai2.grantAccess(dealer.address, { from: owner })
-        await treasury.grantAccess(yDai2.address, { from: owner });
+        treasury.grantAccess(dealer.address, { from: owner });
 
         // Setup Splitter
         splitter = await Splitter.new(
@@ -190,8 +168,48 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             dealer.address,
             { from: owner },
         );
-        await dealer.grantAccess(splitter.address, { from: owner });
-        await treasury.grantAccess(splitter.address, { from: owner });
+        dealer.grantAccess(splitter.address, { from: owner });
+        treasury.grantAccess(splitter.address, { from: owner });
+
+        // Setup yDai
+        const block = await web3.eth.getBlockNumber();
+        maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
+        yDai1 = await YDai.new(
+            vat.address,
+            jug.address,
+            pot.address,
+            treasury.address,
+            maturity1,
+            "Name",
+            "Symbol",
+            { from: owner },
+        );
+        dealer.addSeries(yDai1.address, { from: owner });
+        yDai1.grantAccess(dealer.address, { from: owner });
+        treasury.grantAccess(yDai1.address, { from: owner });
+
+        maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
+        yDai2 = await YDai.new(
+            vat.address,
+            jug.address,
+            pot.address,
+            treasury.address,
+            maturity2,
+            "Name2",
+            "Symbol2",
+            { from: owner },
+        );
+        dealer.addSeries(yDai2.address, { from: owner });
+        yDai2.grantAccess(dealer.address, { from: owner });
+        treasury.grantAccess(yDai2.address, { from: owner });
+
+        // Setup EthProxy
+        ethProxy = await EthProxy.new(
+            weth.address,
+            gasToken.address,
+            dealer.address,
+            { from: owner },
+        );
 
         // Setup Liquidations
         liquidations = await Liquidations.new(
@@ -225,7 +243,9 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
         await yDai2.grantAccess(dssShutdown.address, { from: owner });
         await liquidations.grantAccess(dssShutdown.address, { from: owner });
 
-        // Testing permissions
+        // Tests setup
+        await pot.setChi(chi, { from: owner });
+        await vat.fold(ilk, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
         await vat.hope(daiJoin.address, { from: owner });
         await vat.hope(wethJoin.address, { from: owner });
         await treasury.grantAccess(owner, { from: owner });

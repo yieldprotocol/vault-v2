@@ -82,24 +82,25 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
 
     /// @dev Returns the total debt of the yDai system, across all series, in dai
     // TODO: Test
-    function systemDebt() public view override returns (uint256) {
+    function systemDebt() public override returns (uint256) {
         uint256 totalDebt;
         for (uint256 i = 0; i < seriesIterator.length; i += 1) {
             IYDai yDai = series[seriesIterator[i]];
-            totalDebt = totalDebt + IERC20(address(yDai)).totalSupply().muld(yDai.rate(), RAY);
+            totalDebt = totalDebt + IERC20(address(yDai)).totalSupply().muld(yDai.rateGrowth(), RAY);
         } // We don't expect hundreds of maturities per dealer
         return totalDebt;
     }
 
 
     /// @dev Returns the dai equivalent of an yDai amount, for a given series identified by maturity
-    function inDai(uint256 maturity, uint256 yDaiAmount) public view returns (uint256) {
+    function inDai(uint256 maturity, uint256 yDaiAmount) public returns (uint256) {
         require(
             containsSeries(maturity),
             "Dealer: Unrecognized series"
         );
+        // if (now >= maturity) { // TODO: Consider using for gas savings
         if (series[maturity].isMature()){
-            return yDaiAmount.muld(series[maturity].rate(), RAY);
+            return yDaiAmount.muld(series[maturity].rateGrowth(), RAY);
         }
         else {
             return yDaiAmount;
@@ -107,13 +108,14 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     }
 
     /// @dev Returns the yDai equivalent of a dai amount, for a given series identified by maturity
-    function inYDai(uint256 maturity, uint256 daiAmount) public view returns (uint256) {
+    function inYDai(uint256 maturity, uint256 daiAmount) public returns (uint256) {
         require(
             containsSeries(maturity),
             "Dealer: Unrecognized series"
         );
+        // if (now >= maturity) { // TODO: Consider using for gas savings
         if (series[maturity].isMature()){
-            return daiAmount.divd(series[maturity].rate(), RAY);
+            return daiAmount.divd(series[maturity].rateGrowth(), RAY);
         }
         else {
             return daiAmount;
@@ -126,12 +128,12 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     // debt_now = debt_mat * ----------
     //                        rate_mat
     //
-    function debtDai(bytes32 collateral, uint256 maturity, address user) public view returns (uint256) {
+    function debtDai(bytes32 collateral, uint256 maturity, address user) public returns (uint256) {
         return inDai(maturity, debtYDai[collateral][maturity][user]);
     }
 
     /// @dev Returns the total debt of an user, for a given collateral, across all series, in Dai
-    function totalDebtDai(bytes32 collateral, address user) public view override returns (uint256) {
+    function totalDebtDai(bytes32 collateral, address user) public override returns (uint256) {
         uint256 totalDebt;
         for (uint256 i = 0; i < seriesIterator.length; i += 1) {
             // TODO: Skip next line if debtYDai[collateral][maturity][user] == 0
@@ -162,27 +164,16 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     function isCollateralized(bytes32 collateral, address user) public override returns (bool) {
         return powerOf(collateral, user) >= totalDebtDai(collateral, user);
     }
-    
-    /// @dev Locks a liquidation bond in gas tokens
-    function lockBond(uint256 value) public {
-        if (!_gasToken.transferFrom(msg.sender, address(this), value)) {
-            _gasToken.mint(value);
-        }
-    }
 
-    /// @dev Frees a liquidation bond in gas tokens
-    function returnBond(uint256 value) public {
-        _gasToken.transfer(msg.sender, value);
-    }
-
-    /// @dev Takes collateral _token from `from` address
-    // from --- Token ---> us
-    function post(bytes32 collateral, address from, uint256 amount)
-        public onlyHolderOrProxy(from, "YDai: Only Holder Or Proxy") onlyLive {
+    /// @dev Takes collateral _token from `from` address, and credits it to `to` collateral account.
+    // from --- Token ---> us(to)
+    function post(bytes32 collateral, address from, address to, uint256 amount)
+        public override onlyHolderOrProxy(from, "Dealer: Only Holder Or Proxy") onlyLive {
         require(
             _token[collateral].transferFrom(from, address(_treasury), amount),
             "Dealer: Collateral transfer fail"
         );
+
         if (collateral == WETH){ // TODO: Refactor Treasury to be `push(collateral, amount)`
             _treasury.pushWeth();                          // Have Treasury process the weth
         } else if (collateral == CHAI) {
@@ -191,32 +182,32 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
             revert("Dealer: Unsupported collateral");
         }
         
-        if (posted[collateral][from] == 0 && amount >= 0) {
+        if (posted[collateral][to] == 0 && amount >= 0) {
             lockBond(10);
         }
-        posted[collateral][from] = posted[collateral][from].add(amount);
+        posted[collateral][to] = posted[collateral][to].add(amount);
     }
 
-    /// @dev Returns collateral to `to` address
-    // us --- Token ---> to
-    function withdraw(bytes32 collateral, address to, uint256 amount)
-        public onlyHolderOrProxy(to, "YDai: Only Holder Or Proxy") onlyLive {
-        posted[collateral][to] = posted[collateral][to].sub(amount); // Will revert if not enough posted
+    /// @dev Returns collateral to `to` address, taking it from `from` collateral account.
+    // us(from) --- Token ---> to
+    function withdraw(bytes32 collateral, address from, address to, uint256 amount)
+        public override onlyHolderOrProxy(from, "Dealer: Only Holder Or Proxy") onlyLive {
+        posted[collateral][from] = posted[collateral][from].sub(amount); // Will revert if not enough posted
 
         require(
-            isCollateralized(collateral, to),
+            isCollateralized(collateral, from),
             "Dealer: Too much debt"
         );
 
-        if (collateral == WETH){ // TODO: Refactor Treasury to be `pull(collateral, amount)`
-            _treasury.pullWeth(to, amount);                          // Take weth from Treasury and give it to `to`
+        if (collateral == WETH){
+            _treasury.pullWeth(to, amount);
         } else if (collateral == CHAI) {
             _treasury.pullChai(to, amount);
         } else {
             revert("Dealer: Unsupported collateral");
         }
 
-        if (posted[collateral][to] == 0 && amount >= 0) {
+        if (posted[collateral][from] == 0 && amount >= 0) {
             returnBond(10);
         }
     }
@@ -228,7 +219,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     // us --- yDai ---> user
     // debt++
     function borrow(bytes32 collateral, uint256 maturity, address to, uint256 yDaiAmount)
-        public onlyHolderOrProxy(to, "YDai: Only Holder Or Proxy") onlyLive {
+        public onlyHolderOrProxy(to, "Dealer: Only Holder Or Proxy") onlyLive {
         require(
             containsSeries(maturity),
             "Dealer: Unrecognized series"
@@ -258,7 +249,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     // user --- yDai ---> us
     // debt--
     function repayYDai(bytes32 collateral, uint256 maturity, address from, uint256 yDaiAmount)
-        public onlyHolderOrProxy(from, "YDai: Only Holder Or Proxy") onlyLive {
+        public onlyHolderOrProxy(from, "Dealer: Only Holder Or Proxy") onlyLive {
         require(
             containsSeries(maturity),
             "Dealer: Unrecognized series"
@@ -279,7 +270,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     // user --- dai ---> us
     // debt--
     function repayDai(bytes32 collateral, uint256 maturity, address from, uint256 daiAmount)
-        public onlyHolderOrProxy(from, "YDai: Only Holder Or Proxy") onlyLive {
+        public onlyHolderOrProxy(from, "Dealer: Only Holder Or Proxy") onlyLive {
         (uint256 toRepay, uint256 debtDecrease) = repayProportion(collateral, maturity, from, inYDai(maturity, daiAmount));
         require(
             _dai.transferFrom(from, address(_treasury), toRepay),  // Take dai from user to Treasury
@@ -342,7 +333,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
 
     /// @dev Calculates the amount to repay and the amount by which to reduce the debt for a given collateral and series
     function repayProportion(bytes32 collateral, uint256 maturity, address user, uint256 yDaiAmount)
-        internal view returns(uint256, uint256) {
+        internal returns(uint256, uint256) {
         uint256 toRepay = Math.min(yDaiAmount, debtDai(collateral, maturity, user));
         // TODO: Check if this can be taken from DecimalMath.sol
         // uint256 debtProportion = debtYDai[user].mul(RAY.unit())
@@ -353,6 +344,18 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
             RAY
         );
         return (toRepay, toRepay.muld(debtProportion, RAY));
+    }
+
+    /// @dev Locks a liquidation bond in gas tokens
+    function lockBond(uint256 value) internal {
+        if (!_gasToken.transferFrom(msg.sender, address(this), value)) {
+            _gasToken.mint(value);
+        }
+    }
+
+    /// @dev Frees a liquidation bond in gas tokens
+    function returnBond(uint256 value) internal {
+        _gasToken.transfer(msg.sender, value);
     }
 
     /// @dev Divides x between y, rounding up to the closest representable number.

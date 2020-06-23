@@ -1,16 +1,28 @@
+// External
 const Vat = artifacts.require('Vat');
 const GemJoin = artifacts.require('GemJoin');
 const DaiJoin = artifacts.require('DaiJoin');
 const Weth = artifacts.require("WETH9");
 const ERC20 = artifacts.require("TestERC20");
+const Jug = artifacts.require('Jug');
 const Pot = artifacts.require('Pot');
+const End = artifacts.require('End');
 const Chai = artifacts.require('Chai');
 const GasToken = artifacts.require('GasToken1');
+
+// Common
 const ChaiOracle = artifacts.require('ChaiOracle');
 const WethOracle = artifacts.require('WethOracle');
 const Treasury = artifacts.require('Treasury');
+
+// YDai
 const YDai = artifacts.require('YDai');
 const Dealer = artifacts.require('Dealer');
+
+// Peripheral
+const Splitter = artifacts.require('Splitter');
+const EthProxy = artifacts.require('EthProxy');
+const DssShutdown = artifacts.require('DssShutdown');
 
 const helper = require('ganache-time-traveler');
 const truffleAssert = require('truffle-assertions');
@@ -24,6 +36,7 @@ contract('Dealer - Chai', async (accounts) =>  {
     let wethJoin;
     let dai;
     let daiJoin;
+    let jug;
     let pot;
     let chai;
     let gasToken;
@@ -59,9 +72,9 @@ contract('Dealer - Chai', async (accounts) =>  {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        // Setup vat
+        // Setup vat, join and weth
         vat = await Vat.new();
-        await vat.init(ilk, { from: owner });
+        await vat.init(ilk, { from: owner }); // Set ilk rate (stability fee accumulator) to 1.0
 
         weth = await Weth.new({ from: owner });
         wethJoin = await GemJoin.new(vat.address, ilk, weth.address, { from: owner });
@@ -71,20 +84,22 @@ contract('Dealer - Chai', async (accounts) =>  {
 
         await vat.file(ilk, spotName, spot, { from: owner });
         await vat.file(ilk, linel, limits, { from: owner });
-        await vat.file(Line, limits); // TODO: Why can't we specify `, { from: owner }`?
-        await vat.fold(ilk, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
+        await vat.file(Line, limits);
+
+        // Setup jug
+        jug = await Jug.new(vat.address);
+        await jug.init(ilk, { from: owner }); // Set ilk duty (stability fee) to 1.0
 
         // Setup pot
         pot = await Pot.new(vat.address);
-        await pot.setChi(chi, { from: owner });
 
         // Permissions
         await vat.rely(vat.address, { from: owner });
         await vat.rely(wethJoin.address, { from: owner });
         await vat.rely(daiJoin.address, { from: owner });
+        await vat.rely(jug.address, { from: owner });
         await vat.rely(pot.address, { from: owner });
         await vat.hope(daiJoin.address, { from: owner });
-        await vat.hope(wethJoin.address, { from: owner });
 
         // Setup chai
         chai = await Chai.new(
@@ -92,12 +107,13 @@ contract('Dealer - Chai', async (accounts) =>  {
             pot.address,
             daiJoin.address,
             dai.address,
+            { from: owner },
         );
 
         // Setup GasToken
         gasToken = await GasToken.new();
 
-        // Setup Oracle
+        // Setup WethOracle
         wethOracle = await WethOracle.new(vat.address, { from: owner });
 
         // Setup ChaiOracle
@@ -112,6 +128,7 @@ contract('Dealer - Chai', async (accounts) =>  {
             daiJoin.address,
             wethJoin.address,
             vat.address,
+            { from: owner },
         );
 
         // Setup Dealer
@@ -126,12 +143,13 @@ contract('Dealer - Chai', async (accounts) =>  {
             { from: owner },
         );
         treasury.grantAccess(dealer.address, { from: owner });
-        
+
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
         yDai1 = await YDai.new(
             vat.address,
+            jug.address,
             pot.address,
             treasury.address,
             maturity1,
@@ -146,6 +164,7 @@ contract('Dealer - Chai', async (accounts) =>  {
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
         yDai2 = await YDai.new(
             vat.address,
+            jug.address,
             pot.address,
             treasury.address,
             maturity2,
@@ -156,6 +175,10 @@ contract('Dealer - Chai', async (accounts) =>  {
         dealer.addSeries(yDai2.address, { from: owner });
         yDai2.grantAccess(dealer.address, { from: owner });
         treasury.grantAccess(yDai2.address, { from: owner });
+
+        // Tests setup
+        await pot.setChi(chi, { from: owner });
+        await vat.fold(ilk, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
 
         // Borrow dai
         await weth.deposit({ from: owner, value: wethTokens });
@@ -206,7 +229,7 @@ contract('Dealer - Chai', async (accounts) =>  {
         );
         
         await chai.approve(dealer.address, chaiTokens, { from: owner });
-        await dealer.post(CHAI, owner, chaiTokens, { from: owner });
+        await dealer.post(CHAI, owner, owner, chaiTokens, { from: owner });
 
         assert.equal(
             await chai.balanceOf(treasury.address),
@@ -223,7 +246,7 @@ contract('Dealer - Chai', async (accounts) =>  {
     describe("with posted chai", () => {
         beforeEach(async() => {
             await chai.approve(dealer.address, chaiTokens, { from: owner });
-            await dealer.post(CHAI, owner, chaiTokens, { from: owner });
+            await dealer.post(CHAI, owner, owner, chaiTokens, { from: owner });
         });
 
         it("allows user to withdraw chai", async() => {
@@ -243,7 +266,7 @@ contract('Dealer - Chai', async (accounts) =>  {
                 "Owner has collateral in hand"
             );
             
-            await dealer.withdraw(CHAI, owner, chaiTokens, { from: owner });
+            await dealer.withdraw(CHAI, owner, owner, chaiTokens, { from: owner });
 
             assert.equal(
                 await chai.balanceOf(owner),
@@ -274,7 +297,7 @@ contract('Dealer - Chai', async (accounts) =>  {
                 "Owner has yDai",
             );
             assert.equal(
-                await dealer.debtDai(CHAI, maturity1, owner),
+                await dealer.debtDai.call(CHAI, maturity1, owner),
                 0,
                 "Owner has debt",
             );
@@ -287,7 +310,7 @@ contract('Dealer - Chai', async (accounts) =>  {
                 "Owner should have yDai",
             );
             assert.equal(
-                await dealer.debtDai(CHAI, maturity1, owner),
+                await dealer.debtDai.call(CHAI, maturity1, owner),
                 daiTokens.toString(),
                 "Owner should have debt",
             );
@@ -300,7 +323,7 @@ contract('Dealer - Chai', async (accounts) =>  {
                 "Owner does not have borrowing power",
             );
             assert.equal(
-                await dealer.debtDai(CHAI, maturity1, owner),
+                await dealer.debtDai.call(CHAI, maturity1, owner),
                 0,
                 "Owner has debt",
             );
@@ -323,7 +346,7 @@ contract('Dealer - Chai', async (accounts) =>  {
                     "Owner does not have borrowing power",
                 );
                 assert.equal(
-                    await dealer.debtDai(CHAI, maturity1, owner),
+                    await dealer.debtDai.call(CHAI, maturity1, owner),
                     daiTokens.toString(),
                     "Owner does not have debt",
                 );
@@ -341,7 +364,7 @@ contract('Dealer - Chai', async (accounts) =>  {
                     "Owner does not have yDai",
                 );
                 assert.equal(
-                    await dealer.debtDai(CHAI, maturity1, owner),
+                    await dealer.debtDai.call(CHAI, maturity1, owner),
                     daiTokens.toString(),
                     "Owner does not have debt",
                 );
@@ -355,7 +378,7 @@ contract('Dealer - Chai', async (accounts) =>  {
                     "Owner should not have yDai",
                 );
                 assert.equal(
-                    await dealer.debtDai(CHAI, maturity1, owner),
+                    await dealer.debtDai.call(CHAI, maturity1, owner),
                     0,
                     "Owner should not have debt",
                 );
@@ -378,7 +401,7 @@ contract('Dealer - Chai', async (accounts) =>  {
                     "Owner does not have dai",
                 );
                 assert.equal(
-                    await dealer.debtDai(CHAI, maturity1, owner),
+                    await dealer.debtDai.call(CHAI, maturity1, owner),
                     daiTokens.toString(),
                     "Owner does not have debt",
                 );
@@ -392,7 +415,7 @@ contract('Dealer - Chai', async (accounts) =>  {
                     "Owner should not have yDai",
                 );
                 assert.equal(
-                    await dealer.debtDai(CHAI, maturity1, owner),
+                    await dealer.debtDai.call(CHAI, maturity1, owner),
                     0,
                     "Owner should not have debt",
                 );
@@ -410,7 +433,7 @@ contract('Dealer - Chai', async (accounts) =>  {
                     "Owner does not have yDai",
                 );
                 assert.equal(
-                    await dealer.debtDai(CHAI, maturity1, owner),
+                    await dealer.debtDai.call(CHAI, maturity1, owner),
                     daiTokens.toString(),
                     "Owner does not have debt",
                 );
@@ -424,7 +447,7 @@ contract('Dealer - Chai', async (accounts) =>  {
                     "Owner should have yDai left",
                 );
                 assert.equal(
-                    await dealer.debtDai(CHAI, maturity1, owner),
+                    await dealer.debtDai.call(CHAI, maturity1, owner),
                     0,
                     "Owner should not have debt",
                 );
@@ -444,7 +467,7 @@ contract('Dealer - Chai', async (accounts) =>  {
                         "Owner does not have yDai",
                     );
                     assert.equal(
-                        await dealer.debtDai(CHAI, maturity1, owner),
+                        await dealer.debtDai.call(CHAI, maturity1, owner),
                         daiTokens.toString(),
                         "Owner does not have debt",
                     );
@@ -458,18 +481,18 @@ contract('Dealer - Chai', async (accounts) =>  {
 
                 it("as rate increases after maturity, so does the debt in when measured in dai", async() => {
                     assert.equal(
-                        await dealer.debtDai(CHAI, maturity1, owner),
+                        await dealer.debtDai.call(CHAI, maturity1, owner),
                         increasedDebt.toString(),
-                        "Owner should have " + increasedDebt + " debt after the rate change, instead has " + (await dealer.debtDai(CHAI, maturity1, owner)),
+                        "Owner should have " + increasedDebt + " debt after the rate change, instead has " + (await dealer.debtDai.call(CHAI, maturity1, owner)),
                     );
                 });
     
                 it("as rate increases after maturity, the debt doesn't in when measured in yDai", async() => {
-                    let debt = await dealer.debtDai(CHAI, maturity1, owner);
+                    let debt = await dealer.debtDai.call(CHAI, maturity1, owner);
                     assert.equal(
-                        await dealer.inYDai(maturity1, debt),
+                        await dealer.inYDai.call(maturity1, debt),
                         daiTokens.toString(),
-                        "Owner should have " + daiTokens + " debt after the rate change, instead has " + (await dealer.inYDai(maturity1, debt)),
+                        "Owner should have " + daiTokens + " debt after the rate change, instead has " + (await dealer.inYDai.call(maturity1, debt)),
                     );
                 });
 
@@ -485,9 +508,9 @@ contract('Dealer - Chai', async (accounts) =>  {
                         "Owner should not have yDai",
                     );
                     assert.equal(
-                        await dealer.debtDai(CHAI, maturity1, owner),
+                        await dealer.debtDai.call(CHAI, maturity1, owner),
                         debtIncrease.toString(),
-                        "Owner should have " + debtIncrease + " dai debt, instead has " + (await dealer.debtDai(CHAI, maturity1, owner)),
+                        "Owner should have " + debtIncrease + " dai debt, instead has " + (await dealer.debtDai.call(CHAI, maturity1, owner)),
                     );
                 });
     
@@ -505,7 +528,7 @@ contract('Dealer - Chai', async (accounts) =>  {
                         "Owner should not have yDai",
                     );
                     assert.equal(
-                        await dealer.debtDai(CHAI, maturity1, owner),
+                        await dealer.debtDai.call(CHAI, maturity1, owner),
                         0,
                         "Owner should have no remaining debt",
                     );

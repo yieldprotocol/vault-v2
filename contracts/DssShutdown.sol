@@ -35,9 +35,6 @@ contract DssShutdown is Constants {
     IDealer internal _dealer;
     ILiquidations internal _liquidations;
 
-    mapping(address => uint256) public posted; // Weth only
-    mapping(uint256 => mapping(address => uint256)) public debtYDai;
-
     uint256 public _fix; // Dai to weth price on DSS Shutdown
     uint256 public _chi; // Chai to dai price on DSS Shutdown
 
@@ -155,7 +152,7 @@ contract DssShutdown is Constants {
         yDai.burn(user, yDaiAmount);
         _weth.transfer(
             user,
-            yDaiAmount.muld(yDai.chi(), RAY).muld(_fix, RAY)
+            yDaiAmount.muld(yDai.chiGrowth(), RAY).muld(_fix, RAY)
         );
     }
 
