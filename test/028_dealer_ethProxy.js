@@ -328,6 +328,23 @@ contract('Dealer - Weth', async (accounts) =>  {
             );
         });
 
+        it("allows user to withdraw weth to another account", async() => {
+            const previousBalance = await balance.current(user);
+            await ethProxy.withdraw(owner, user, wethTokens, { from: owner });
+
+            expect(await balance.current(user)).to.be.bignumber.gt(previousBalance);
+            assert.equal(
+                (await vat.urns(ilk, treasury.address)).ink,
+                0,
+                "Treasury should not not have weth in MakerDAO",
+            );
+            assert.equal(
+                await dealer.powerOf.call(WETH, owner),
+                0,
+                "Owner should not have borrowing power",
+            );
+        });
+
         it("gas tokens are passed on to user", async() => {
             await ethProxy.withdraw(owner, owner, wethTokens, { from: owner });
 

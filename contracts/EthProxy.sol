@@ -35,7 +35,7 @@ contract EthProxy is UserProxy(), Constants {
     }
 
     function withdraw(address from, address payable to, uint256 amount)
-        public onlyHolderOrProxy(to, "EthProxy: Only Holder Or Proxy") {
+        public onlyHolderOrProxy(from, "EthProxy: Only Holder Or Proxy") {
         _dealer.withdraw(WETH, from, address(this), amount);
         _weth.withdraw(amount);
         to.transfer(amount);
