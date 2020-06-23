@@ -1,7 +1,14 @@
+# Temp & IDE files
+.vscode/
+*~
+*.swp
+*.swo
+
 #Buidler files
 cache
 artifacts
 node_modules/
+output/
 
 #Truffle files
 .infuraKey

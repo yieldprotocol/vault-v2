@@ -1,5 +1,6 @@
 # Ignore Dockerfile
 docker/Dockerfile
+output/
 
 #Buidler files
 cache
