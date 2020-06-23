@@ -313,6 +313,12 @@ contract('DssShutdown - Dealers', async (accounts) =>  {
                     await dai.approve(dealer.address, daiTokens, { from: user3 });
                     await dealer.repayDai(WETH, maturities[i], user3, daiTokens, { from: user3 });
                 }
+
+                await dealer.withdraw(WETH, user2, user2, wethTokens, { from: user2 });
+                
+                for (let i = 0; i < maturities.length; i++) {
+                    await dealer.withdraw(WETH, user3, user3, wethTokens, { from: user3 });
+                }
             });
 
             describe("during dss shutdown", () => {
