@@ -29,13 +29,13 @@ contract EthProxy is UserProxy(), Constants {
     receive() external payable { }
 
     function post(address from, address to, uint256 amount)
-        public payable onlyHolderOrProxy(from, "YDai: Only Holder Or Proxy") {
+        public payable onlyHolderOrProxy(from, "EthProxy: Only Holder Or Proxy") {
         _weth.deposit.value(amount)();      // Specify the ether in both `amount` and `value`
         _dealer.post(WETH, address(this), from, amount);
     }
 
     function withdraw(address from, address payable to, uint256 amount)
-        public onlyHolderOrProxy(to, "YDai: Only Holder Or Proxy") {
+        public onlyHolderOrProxy(to, "EthProxy: Only Holder Or Proxy") {
         _dealer.withdraw(WETH, from, address(this), amount);
         _weth.withdraw(amount);
         to.transfer(amount);
