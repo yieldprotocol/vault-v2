@@ -7,16 +7,16 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IChai.sol";
 import "./interfaces/IGasToken.sol";
-import "./interfaces/IVault.sol";
+import "./interfaces/IDealer.sol";
 import "./interfaces/IOracle.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IYDai.sol";
 import "./Constants.sol";
 import "./UserProxy.sol";
-
+// import "@nomiclabs/buidler/console.sol";
 
 /// @dev A dealer takes collateral and issues yDai.
-contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
+contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     using SafeMath for uint256;
     using DecimalMath for uint256;
     using DecimalMath for uint8;
@@ -34,7 +34,7 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
     mapping(bytes32 => mapping(address => uint256)) public override posted;    // In Weth or Chai
     mapping(bytes32 => mapping(uint256 => mapping(address => uint256))) public debtYDai;  // By series, in yDai
 
-    bool public live;
+    bool public live = true;
 
     constructor (
         address treasury_,
@@ -52,8 +52,6 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
         _token[CHAI] = IERC20(chai_);
         _oracle[CHAI] = IOracle(chaiOracle_);
         _gasToken = IGasToken(gasToken_);
-
-        live = true;
     }
 
     modifier onlyLive() {
@@ -135,9 +133,10 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
     }
 
     /// @dev Returns the total debt of an user, for a given collateral, across all series, in Dai
-    function totalDebtDai(bytes32 collateral, address user) public returns (uint256) {
+    function totalDebtDai(bytes32 collateral, address user) public override returns (uint256) {
         uint256 totalDebt;
         for (uint256 i = 0; i < seriesIterator.length; i += 1) {
+            // TODO: Skip next line if debtYDai[collateral][maturity][user] == 0
             totalDebt = totalDebt + debtDai(collateral, seriesIterator[i], user);
         } // We don't expect hundreds of maturities per dealer
         return totalDebt;
@@ -162,7 +161,7 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
     }
 
     /// @dev Return if the borrowing power for a given collateral of an user is equal or greater than its debt for the same collateral
-    function isCollateralized(bytes32 collateral, address user) public returns (bool) {
+    function isCollateralized(bytes32 collateral, address user) public override returns (bool) {
         return powerOf(collateral, user) >= totalDebtDai(collateral, user);
     }
 
@@ -301,6 +300,36 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
         emit Erased(user, collateral, tokens, debt);
         return (tokens, debt);
     }
+
+    /// @dev Removes collateral and debt for an user.
+    function grab(bytes32 collateral, address user, uint256 daiAmount, uint256 tokenAmount)
+        public onlyAuthorized("Dealer: Not Authorized") override {
+
+        posted[collateral][user] = posted[collateral][user].sub(
+            tokenAmount,
+            "Dealer: Not enough collateral"
+        );
+        if (posted[collateral][user] == 0){
+            returnBond(10);
+        }
+
+        uint256 grabbed;
+        for (uint256 i = 0; i < seriesIterator.length; i += 1) {
+            uint256 maturity = seriesIterator[i];
+            uint256 thisGrab = Math.min(debtDai(collateral, maturity, user), daiAmount.sub(grabbed));
+            grabbed = grabbed.add(thisGrab); // SafeMath shouldn't be needed
+            debtYDai[collateral][maturity][user] = debtYDai[collateral][maturity][user].sub(inYDai(maturity, thisGrab)); // SafeMath shouldn't be needed
+            if (debtYDai[collateral][maturity][user] == 0){
+                returnBond(10);
+            }
+            if (grabbed == daiAmount) break;
+        } // We don't expect hundreds of maturities per dealer
+        require(
+            grabbed == daiAmount,
+            "Dealer: Not enough user debt"
+        );
+    }
+
 
     /// @dev Calculates the amount to repay and the amount by which to reduce the debt for a given collateral and series
     function repayProportion(bytes32 collateral, uint256 maturity, address user, uint256 yDaiAmount)

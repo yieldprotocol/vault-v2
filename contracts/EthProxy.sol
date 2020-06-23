@@ -1,7 +1,7 @@
 pragma solidity ^0.6.2;
 
 import "./interfaces/IGasToken.sol";
-import "./interfaces/IVault.sol";
+import "./interfaces/IDealer.sol";
 import "./interfaces/IWeth.sol";
 import "./Constants.sol";
 import "./UserProxy.sol";
@@ -12,7 +12,7 @@ contract EthProxy is UserProxy(), Constants {
 
     IWeth internal _weth;
     IGasToken internal _gasToken;
-    IVault internal _dealer;
+    IDealer internal _dealer;
 
     constructor (
         address payable weth_,
@@ -21,7 +21,7 @@ contract EthProxy is UserProxy(), Constants {
     ) public {
         _weth = IWeth(weth_);
         _gasToken = IGasToken(gasToken_);
-        _dealer = IVault(dealer_);
+        _dealer = IDealer(dealer_);
         // TODO: Fix for migrations
         _weth.approve(address(_dealer), uint(-1));
     }

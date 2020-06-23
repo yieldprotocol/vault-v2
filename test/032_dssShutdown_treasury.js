@@ -21,6 +21,7 @@ const Dealer = artifacts.require('Dealer');
 
 // Peripheral
 const Splitter = artifacts.require('Splitter');
+const Liquidations = artifacts.require('Liquidations');
 const EthProxy = artifacts.require('EthProxy');
 const DssShutdown = artifacts.require('DssShutdown');
 
@@ -48,6 +49,7 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
     let yDai2;
     let dealer;
     let splitter;
+    let liquidations;
     let ethProxy;
     let dssShutdown;
 
@@ -76,6 +78,8 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
     const taggedWeth = mulRay(daiTokens, tag);
     const fix  = divRay(toRay(1.1), spot);
     const fixedWeth = mulRay(daiTokens, fix);
+
+    const auctionTime = 3600; // One hour
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
@@ -207,6 +211,17 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             { from: owner },
         );
 
+        // Setup Liquidations
+        liquidations = await Liquidations.new(
+            dai.address,
+            treasury.address,
+            dealer.address,
+            auctionTime,
+            { from: owner },
+        );
+        await dealer.grantAccess(liquidations.address, { from: owner });
+        await treasury.grantAccess(liquidations.address, { from: owner });
+
         // Setup DssShutdown
         dssShutdown = await DssShutdown.new(
             vat.address,
@@ -218,13 +233,15 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             chaiOracle.address,
             treasury.address,
             dealer.address,
+            liquidations.address,
             { from: owner },
         );
-        await dealer.grantAccess(dssShutdown.address, { from: owner });
         await treasury.grantAccess(dssShutdown.address, { from: owner });
         await treasury.registerDssShutdown(dssShutdown.address, { from: owner });
+        await dealer.grantAccess(dssShutdown.address, { from: owner });
         await yDai1.grantAccess(dssShutdown.address, { from: owner });
         await yDai2.grantAccess(dssShutdown.address, { from: owner });
+        await liquidations.grantAccess(dssShutdown.address, { from: owner });
 
         // Tests setup
         await pot.setChi(chi, { from: owner });
@@ -297,6 +314,16 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                     await treasury.live.call(),
                     false,
                     'Treasury should not be live',
+                );
+                assert.equal(
+                    await dealer.live.call(),
+                    false,
+                    'Dealer should not be live',
+                );
+                assert.equal(
+                    await liquidations.live.call(),
+                    false,
+                    'Liquidations should not be live',
                 );
             });
 
