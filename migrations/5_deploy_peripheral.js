@@ -1,20 +1,21 @@
 const fixed_addrs = require('./fixed_addrs.json');
-const Pot = artifacts.require("Pot");
 const Vat = artifacts.require("Vat");
+const Weth = artifacts.require("WETH9");
 const GemJoin = artifacts.require("GemJoin");
+const ERC20 = artifacts.require("TestERC20");
 const DaiJoin = artifacts.require("DaiJoin");
+const Pot = artifacts.require("Pot");
 const End = artifacts.require("End");
 const Chai = artifacts.require("Chai");
 const GasToken = artifacts.require("GasToken1");
-const Treasury = artifacts.require("Treasury");
 const ChaiOracle = artifacts.require("ChaiOracle");
 const WethOracle = artifacts.require("WethOracle");
+const Treasury = artifacts.require("Treasury");
 const Dealer = artifacts.require("Dealer");
+const Liquidations = artifacts.require("Liquidations");
 const Splitter = artifacts.require("Splitter");
-const DssShutdown = artifacts.require("DssShutdown");
 const EthProxy = artifacts.require("EthProxy");
-const Weth = artifacts.require("WETH9");
-const ERC20 = artifacts.require("TestERC20");
+const DssShutdown = artifacts.require("DssShutdown");
 
 
 module.exports = async (deployer, network, accounts) => {
@@ -28,13 +29,16 @@ module.exports = async (deployer, network, accounts) => {
   let endAddress;
   let chaiAddress;
   let gasTokenAddress;
-  let treasuryAddress;
   let chaiOracleAddress;
   let wethOracleAddress;
+  let treasuryAddress;
   let dealerAddress;
   let splitterAddress;
-  let dssShutdownAddress;
+  let liquidationsAddress;
   let ethProxyAddress;
+  let dssShutdownAddress;
+
+  const auctionTime = 3600; // TODO: Think where to store this parameter.
 
   if (network !== 'development') {
     vatAddress = fixed_addrs[network].vatAddress ;
@@ -76,6 +80,18 @@ module.exports = async (deployer, network, accounts) => {
   await dealer.grantAccess(splitterAddress);
   await treasury.grantAccess(splitterAddress);
 
+  // Setup Liquidations
+  await deployer.deploy(
+    Liquidations,
+    daiAddress,
+    treasuryAddress,
+    dealerAddress,
+    auctionTime,
+  )
+  liquidationsAddress = (await Liquidations.deployed()).address;
+  await dealer.grantAccess(liquidationsAddress);
+  await treasury.grantAccess(liquidationsAddress);
+
   // Setup DssShutdown
   await deployer.deploy(
     DssShutdown,
@@ -88,6 +104,7 @@ module.exports = async (deployer, network, accounts) => {
     chaiOracleAddress,
     treasuryAddress,
     dealerAddress,
+    liquidationsAddress,
   );
   dssShutdownAddress = (await DssShutdown.deployed()).address;
   await dealer.grantAccess(dssShutdownAddress);
@@ -108,6 +125,7 @@ module.exports = async (deployer, network, accounts) => {
 
   const deployedPeripheral = {
     'Splitter': splitterAddress,
+    'Liquidations': liquidationsAddress,
     'DssShutdown': dssShutdownAddress,
     'EthProxy': ethProxyAddress,
   }
