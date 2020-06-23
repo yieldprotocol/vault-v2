@@ -44,7 +44,7 @@ contract('End', async (accounts) =>  {
 
         await vat.file(ilk, web3.utils.fromAscii('spot'), spot, { from: owner });
         await vat.file(ilk, web3.utils.fromAscii('line'), limits, { from: owner });
-        await vat.file(web3.utils.fromAscii('Line'), limits); // TODO: Why can't we specify `, { from: owner }`?
+        await vat.file(web3.utils.fromAscii('Line'), limits); 
         await vat.fold(ilk, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
 
         end = await End.new({ from: owner });
