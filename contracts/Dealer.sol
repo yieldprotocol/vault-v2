@@ -21,7 +21,8 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     using DecimalMath for uint256;
     using DecimalMath for uint8;
 
-    event Erased(address indexed user, bytes32 indexed collateral, uint256 tokens, uint256 debt);
+    event Posted(bytes32 indexed collateral, address indexed user, uint256 amount);
+    event Borrowed(bytes32 indexed collateral, uint256 indexed maturity, address indexed user, uint256 amount);
 
     ITreasury internal _treasury;
     IERC20 internal _dai;
@@ -186,6 +187,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
             lockBond(10);
         }
         posted[collateral][to] = posted[collateral][to].add(amount);
+        emit Posted(collateral, to, posted[collateral][to]);
     }
 
     /// @dev Returns collateral to `to` address, taking it from `from` collateral account.
@@ -210,6 +212,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
         if (posted[collateral][from] == 0 && amount >= 0) {
             returnBond(10);
         }
+        emit Posted(collateral, from, posted[collateral][to]);
     }
 
     /// @dev Mint yDai for a given series for address `to` by locking its market value in collateral, user debt is increased in the given collateral.
@@ -239,6 +242,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
             "Dealer: Too much debt"
         );
         series[maturity].mint(to, yDaiAmount);
+        emit Borrowed(collateral, maturity, to, debtYDai[collateral][maturity][to]);
     }
 
     /// @dev Burns yDai of a given series from `from` address, user debt is decreased for the given collateral and yDai series.
@@ -254,12 +258,14 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
             containsSeries(maturity),
             "Dealer: Unrecognized series"
         );
+
         (uint256 toRepay, uint256 debtDecrease) = repayProportion(collateral, maturity, from, yDaiAmount);
         series[maturity].burn(from, toRepay);
         debtYDai[collateral][maturity][from] = debtYDai[collateral][maturity][from].sub(debtDecrease);
         if (debtYDai[collateral][maturity][from] == 0 && debtDecrease >= 0) {
             returnBond(10);
         }
+        emit Borrowed(collateral, maturity, from, debtYDai[collateral][maturity][from]);
     }
 
     /// @dev Takes dai from `from` address, user debt is decreased for the given collateral and yDai series.
@@ -282,6 +288,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
         if (debtYDai[collateral][maturity][from] == 0 && debtDecrease >= 0) {
             returnBond(10);
         }
+        emit Borrowed(collateral, maturity, from, debtYDai[collateral][maturity][from]);
     }
 
     /// @dev Erases all collateral and debt for an user.
@@ -292,12 +299,13 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
         for (uint256 i = 0; i < seriesIterator.length; i += 1) {
             debt = debt + debtDai(collateral, seriesIterator[i], user);
             delete debtYDai[collateral][seriesIterator[i]][user];
+            emit Borrowed(collateral, seriesIterator[i], user, 0);
         } // We don't expect hundreds of maturities per dealer
         uint256 tokens = posted[collateral][user];
         delete posted[collateral][user];
+        emit Posted(collateral, user, 0);
+        
         returnBond((seriesIterator.length + 1) * 10); // 10 per series, and 10 for the collateral
-
-        emit Erased(user, collateral, tokens, debt);
         return (tokens, debt);
     }
 
