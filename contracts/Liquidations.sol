@@ -18,14 +18,14 @@ contract Liquidations is ILiquidations, AuthorizedAccess(), Constants {
     using DecimalMath for uint8;
     using SafeMath for uint256;
 
-    event Auction(bytes32 indexed collateral, address indexed user, uint256 started);
+    event Liquidation(bytes32 indexed collateral, address indexed user, uint256 started);
 
     IERC20 internal _dai;
     ITreasury internal _treasury;
     IDealer internal _dealer;
 
     uint256 public auctionTime;
-    mapping(bytes32 => mapping(address => uint256)) public auctions;
+    mapping(bytes32 => mapping(address => uint256)) public liquidations;
 
     bool public live = true;
 
@@ -57,9 +57,9 @@ contract Liquidations is ILiquidations, AuthorizedAccess(), Constants {
     }
 
     /// @dev Starts a liquidation process for a given collateral and user.
-    function start(bytes32 collateral, address user) public {
+    function liquidate(bytes32 collateral, address user) public {
         require(
-            auctions[collateral][user] == 0,
+            liquidations[collateral][user] == 0,
             "Liquidations: Vault is already in liquidation"
         );
         require(
@@ -67,8 +67,8 @@ contract Liquidations is ILiquidations, AuthorizedAccess(), Constants {
             "Liquidations: Vault is not undercollateralized"
         );
         // solium-disable-next-line security/no-block-members
-        auctions[collateral][user] = now;
-        emit Auction(collateral, user, auctions[collateral][user]);
+        liquidations[collateral][user] = now;
+        emit Liquidation(collateral, user, liquidations[collateral][user]);
     }
 
     /// @dev Cancels a liquidation process
@@ -78,22 +78,22 @@ contract Liquidations is ILiquidations, AuthorizedAccess(), Constants {
             "Liquidations: Vault is undercollateralized"
         );
         // solium-disable-next-line security/no-block-members
-        delete auctions[collateral][user];
-        emit Auction(collateral, user, auctions[collateral][user]);
+        delete liquidations[collateral][user];
+        emit Liquidation(collateral, user, liquidations[collateral][user]);
     }
 
-    /// @dev Liquidates a position. The caller pays the debt of `from`, and `liquidator` receives an amount of collateral.
-    function liquidate(bytes32 collateral, address from, address liquidator, uint256 daiAmount) public onlyLive {
+    /// @dev Liquidates a position. The caller pays the debt of `from`, and `buyer` receives an amount of collateral.
+    function buy(bytes32 collateral, address from, address buyer, uint256 daiAmount) public onlyLive {
         require(
-            auctions[collateral][from] > 0,
+            liquidations[collateral][from] > 0,
             "Liquidations: Vault is not in liquidation"
         );
         /* require(
             !_dealer.isCollateralized(collateral, from),
             "Liquidations: Vault is not undercollateralized"
         ); */ // Not checking for this, too expensive. Let the user stop the liquidations instead.
-        require( // grab dai from liquidator and push to treasury
-            _dai.transferFrom(liquidator, address(_treasury), daiAmount),
+        require( // grab dai from buyer and push to treasury
+            _dai.transferFrom(buyer, address(_treasury), daiAmount),
             "Dealer: Dai transfer fail"
         );
         _treasury.pushDai();
@@ -104,9 +104,9 @@ contract Liquidations is ILiquidations, AuthorizedAccess(), Constants {
         _dealer.grab(collateral, from, daiAmount, tokenAmount);
 
         if (collateral == WETH){
-            _treasury.pullWeth(liquidator, tokenAmount);
+            _treasury.pullWeth(buyer, tokenAmount);
         } else if (collateral == CHAI) {
-            _treasury.pullChai(liquidator, tokenAmount);
+            _treasury.pullChai(buyer, tokenAmount);
         } else {
             revert("Dealer: Unsupported collateral");
         }
@@ -121,14 +121,14 @@ contract Liquidations is ILiquidations, AuthorizedAccess(), Constants {
     //                  debt       3       3 * auction
     function price(bytes32 collateral, address user) public view returns (uint256) {
         require(
-            auctions[collateral][user] > 0,
+            liquidations[collateral][user] > 0,
             "Liquidations: Vault is not targeted"
         );
         uint256 dividend1 = RAY.unit().mul(_dealer.posted(collateral, user));
         uint256 divisor1 = RAY.unit().mul(_dealer.totalDebtDai(collateral, user));
         uint256 dividend2 = RAY.unit().mul(2);
         uint256 divisor2 = RAY.unit().mul(3);
-        uint256 dividend3 = RAY.unit().muld(Math.min(auctionTime, now - auctions[collateral][user]), RAY);
+        uint256 dividend3 = RAY.unit().muld(Math.min(auctionTime, now - liquidations[collateral][user]), RAY);
         uint256 divisor3 = RAY.unit().muld(auctionTime, RAY).mul(3);
         uint256 term1 = dividend1.divd(divisor1, RAY);
         uint256 term2 = dividend2.divd(divisor2, RAY);
