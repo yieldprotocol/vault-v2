@@ -194,6 +194,7 @@ contract('Dealer - Weth', async (accounts) =>  {
             dealer.address,
             { from: owner },
         );
+        await dealer.addProxy(ethProxy.address, { from: owner });
 
         // Tests setup
         await vat.fold(ilk, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
@@ -225,11 +226,6 @@ contract('Dealer - Weth', async (accounts) =>  {
 
     it("allows user to post eth", async() => {
         assert.equal(
-            await weth.balanceOf(owner),
-            0,
-            "Owner has weth",
-        );
-        assert.equal(
             (await vat.urns(ilk, treasury.address)).ink,
             0,
             "Treasury has weth in MakerDAO",
@@ -241,7 +237,6 @@ contract('Dealer - Weth', async (accounts) =>  {
         );
         
         const previousBalance = await balance.current(owner);
-        await dealer.addProxy(ethProxy.address, { from: owner });
         await ethProxy.post(owner, owner, wethTokens, { from: owner, value: wethTokens });
 
         expect(await balance.current(owner)).to.be.bignumber.lt(previousBalance);
@@ -257,9 +252,36 @@ contract('Dealer - Weth', async (accounts) =>  {
         );
     });
 
+    it("allows user to post eth to a different account", async() => {
+        assert.equal(
+            (await vat.urns(ilk, treasury.address)).ink,
+            0,
+            "Treasury has weth in MakerDAO",
+        );
+        assert.equal(
+            await dealer.powerOf.call(WETH, user),
+            0,
+            "User has borrowing power",
+        );
+        
+        const previousBalance = await balance.current(owner);
+        await ethProxy.post(owner, user, wethTokens, { from: owner, value: wethTokens });
+
+        expect(await balance.current(owner)).to.be.bignumber.lt(previousBalance);
+        assert.equal(
+            (await vat.urns(ilk, treasury.address)).ink,
+            wethTokens.toString(),
+            "Treasury should have weth in MakerDAO",
+        );
+        assert.equal(
+            await dealer.powerOf.call(WETH, user),
+            daiTokens.toString(),
+            "User should have " + daiTokens + " borrowing power, instead has " + await dealer.powerOf.call(WETH, user),
+        );
+    });
+
     describe("with posted eth", () => {
         beforeEach(async() => {
-            await dealer.addProxy(ethProxy.address, { from: owner });
             await ethProxy.post(owner, owner, wethTokens, { from: owner, value: wethTokens });
 
             assert.equal(

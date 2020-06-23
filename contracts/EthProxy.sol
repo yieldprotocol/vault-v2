@@ -31,7 +31,7 @@ contract EthProxy is UserProxy(), Constants {
     function post(address from, address to, uint256 amount)
         public payable onlyHolderOrProxy(from, "EthProxy: Only Holder Or Proxy") {
         _weth.deposit.value(amount)();      // Specify the ether in both `amount` and `value`
-        _dealer.post(WETH, address(this), from, amount);
+        _dealer.post(WETH, address(this), to, amount);
     }
 
     function withdraw(address from, address payable to, uint256 amount)
