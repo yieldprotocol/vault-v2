@@ -1,7 +1,7 @@
 pragma solidity ^0.6.2;
 
 import "./interfaces/IGasToken.sol";
-import "./interfaces/IVault.sol";
+import "./interfaces/IDealer.sol";
 import "./interfaces/IWeth.sol";
 import "./Constants.sol";
 import "./UserProxy.sol";
@@ -12,7 +12,7 @@ contract EthProxy is UserProxy(), Constants {
 
     IWeth internal _weth;
     IGasToken internal _gasToken;
-    IVault internal _dealer;
+    IDealer internal _dealer;
 
     constructor (
         address payable weth_,
@@ -21,7 +21,7 @@ contract EthProxy is UserProxy(), Constants {
     ) public {
         _weth = IWeth(weth_);
         _gasToken = IGasToken(gasToken_);
-        _dealer = IVault(dealer_);
+        _dealer = IDealer(dealer_);
         // TODO: Fix for migrations
         _weth.approve(address(_dealer), uint(-1));
     }
@@ -29,13 +29,13 @@ contract EthProxy is UserProxy(), Constants {
     receive() external payable { }
 
     function post(address from, address to, uint256 amount)
-        public payable onlyHolderOrProxy(from, "YDai: Only Holder Or Proxy") {
+        public payable onlyHolderOrProxy(from, "EthProxy: Only Holder Or Proxy") {
         _weth.deposit.value(amount)();      // Specify the ether in both `amount` and `value`
-        _dealer.post(WETH, address(this), from, amount);
+        _dealer.post(WETH, address(this), to, amount);
     }
 
     function withdraw(address from, address payable to, uint256 amount)
-        public onlyHolderOrProxy(to, "YDai: Only Holder Or Proxy") {
+        public onlyHolderOrProxy(from, "EthProxy: Only Holder Or Proxy") {
         _dealer.withdraw(WETH, from, address(this), amount);
         _weth.withdraw(amount);
         to.transfer(amount);

@@ -17,7 +17,7 @@ import "@nomiclabs/buidler/console.sol";
 
 
 /// @dev Treasury manages the Dai, interacting with MakerDAO's vat and chai when needed.
-contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
+contract Treasury is ITreasury, AuthorizedAccess(), Constants {
     using DecimalMath for uint256;
     using DecimalMath for int256;
     using DecimalMath for uint8;
@@ -35,7 +35,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
     IVat internal _vat;
     address internal _dssShutdown;
 
-    bool public live;
+    bool public live = true;
 
     constructor (
         address dai_,
@@ -57,11 +57,8 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants() {
         _vat.hope(wethJoin_);
         _vat.hope(daiJoin_);
 
-        // TODO: Fix for migrations
-        _dai.approve(chai_, uint256(-1));      // Chai will never cheat on us
-        _weth.approve(wethJoin_, uint256(-1)); // WethJoin will never cheat on us
-
-        live = true;
+        _dai.approve(address(_chai), uint256(-1));      // Chai will never cheat on us
+        _weth.approve(address(_wethJoin), uint256(-1)); // WethJoin will never cheat on us
     }
 
     modifier onlyLive() {

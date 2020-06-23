@@ -10,5 +10,4 @@ interface IPot {
     function drip() external returns (uint256);
     function join(uint256) external;
     function exit(uint256) external;
-    // function pie(address) public view returns (uint256);
 }
