@@ -50,6 +50,7 @@ contract YDai is AuthorizedAccess(), UserProxy(), ERC20, Constants, IYDai  {
     }
 
     /// @dev Whether the yDai has matured or not
+    // TODO: Consider removing and using `now > _maturity` instead of calls to `isMature()`, for gas savings.
     function isMature() public view override returns(bool){
         return _isMature;
     }

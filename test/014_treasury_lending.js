@@ -94,11 +94,11 @@ contract('Treasury - Lending', async (accounts) =>  {
         // await treasury.grantAccess(user, { from: owner });
     });
 
-    /* it("get the size of the contract", async() => {
+    it("get the size of the contract", async() => {
         console.log();
-        console.log("·--------------------|------------------|------------------|------------------·");
-        console.log("|  Contract          ·  Bytecode        ·  Deployed        ·  Constructor     |");
-        console.log("·····················|··················|··················|···················");
+        console.log("    ·--------------------|------------------|------------------|------------------·");
+        console.log("    |  Contract          ·  Bytecode        ·  Deployed        ·  Constructor     |");
+        console.log("    ·····················|··················|··················|···················");
         
         const bytecode = treasury.constructor._json.bytecode;
         const deployed = treasury.constructor._json.deployedBytecode;
@@ -106,13 +106,13 @@ contract('Treasury - Lending', async (accounts) =>  {
         const sizeOfD  = deployed.length / 2;
         const sizeOfC  = sizeOfB - sizeOfD;
         console.log(
-            "|  " + (treasury.constructor._json.contractName).padEnd(18, ' ') +
+            "    |  " + (treasury.constructor._json.contractName).padEnd(18, ' ') +
             "|" + ("" + sizeOfB).padStart(16, ' ') + "  " +
             "|" + ("" + sizeOfD).padStart(16, ' ') + "  " +
             "|" + ("" + sizeOfC).padStart(16, ' ') + "  |");
-        console.log("·--------------------|------------------|------------------|------------------·");
+        console.log("    ·--------------------|------------------|------------------|------------------·");
         console.log();
-    }); */
+    });
     
     it("should fail for failed weth transfers", async() => {
         // Let's check how WETH is implemented, maybe we can remove this one.
