@@ -167,7 +167,7 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
     /// @dev Takes collateral _token from `from` address, and credits it to `to` collateral account.
     // from --- Token ---> us(to)
     function post(bytes32 collateral, address from, address to, uint256 amount)
-        public override onlyHolderOrProxy(from, "YDai: Only Holder Or Proxy") onlyLive {
+        public override onlyHolderOrProxy(from, "Dealer: Only Holder Or Proxy") onlyLive {
         require(
             _token[collateral].transferFrom(from, address(_treasury), amount),
             "Dealer: Collateral transfer fail"
@@ -190,7 +190,7 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
     /// @dev Returns collateral to `to` address, taking it from `from` collateral account.
     // us(from) --- Token ---> to
     function withdraw(bytes32 collateral, address from, address to, uint256 amount)
-        public override onlyHolderOrProxy(from, "YDai: Only Holder Or Proxy") onlyLive {
+        public override onlyHolderOrProxy(from, "Dealer: Only Holder Or Proxy") onlyLive {
         posted[collateral][from] = posted[collateral][from].sub(amount); // Will revert if not enough posted
 
         require(
@@ -218,7 +218,7 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
     // us --- yDai ---> user
     // debt++
     function borrow(bytes32 collateral, uint256 maturity, address to, uint256 yDaiAmount)
-        public onlyHolderOrProxy(to, "YDai: Only Holder Or Proxy") onlyLive {
+        public onlyHolderOrProxy(to, "Dealer: Only Holder Or Proxy") onlyLive {
         require(
             containsSeries(maturity),
             "Dealer: Unrecognized series"
@@ -248,7 +248,7 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
     // user --- yDai ---> us
     // debt--
     function repayYDai(bytes32 collateral, uint256 maturity, address from, uint256 yDaiAmount)
-        public onlyHolderOrProxy(from, "YDai: Only Holder Or Proxy") onlyLive {
+        public onlyHolderOrProxy(from, "Dealer: Only Holder Or Proxy") onlyLive {
         require(
             containsSeries(maturity),
             "Dealer: Unrecognized series"
@@ -269,7 +269,7 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
     // user --- dai ---> us
     // debt--
     function repayDai(bytes32 collateral, uint256 maturity, address from, uint256 daiAmount)
-        public onlyHolderOrProxy(from, "YDai: Only Holder Or Proxy") onlyLive {
+        public onlyHolderOrProxy(from, "Dealer: Only Holder Or Proxy") onlyLive {
         (uint256 toRepay, uint256 debtDecrease) = repayProportion(collateral, maturity, from, inYDai(maturity, daiAmount));
         require(
             _dai.transferFrom(from, address(_treasury), toRepay),  // Take dai from user to Treasury
