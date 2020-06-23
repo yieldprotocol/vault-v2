@@ -71,6 +71,7 @@ contract('DssShutdown - Dealers', async (accounts) =>  {
     const chaiTokens = divRay(daiTokens, chi);
     const yDaiTokens = daiTokens;
     let maturities;
+    let series;
 
     const tag  = divRay(toRay(1.0), spot); // Irrelevant to the final users
     const fix  = divRay(toRay(1.0), mulRay(spot, toRay(1.1)));
@@ -134,6 +135,7 @@ contract('DssShutdown - Dealers', async (accounts) =>  {
         await yDai.grantAccess(dealer.address, { from: owner });
         await treasury.grantAccess(yDai.address, { from: owner });
         await yDai.grantAccess(dssShutdown.address, { from: owner });
+        return yDai;
     }
 
     beforeEach(async() => {
@@ -264,28 +266,23 @@ contract('DssShutdown - Dealers', async (accounts) =>  {
         await helper.revertToSnapshot(snapshotId);
     });
 
-    const m = 20; // Number of maturities to test. Use multiples of 10.
+    const m = 10; // Number of maturities to test. Use multiples of 10.
     describe("working with " + m + " maturities", () => {
         beforeEach(async() => {
             // Setup yDai
             const block = await web3.eth.getBlockNumber();
             maturities = []; // Clear the registry for each test
+            series = []; // Clear the registry for each test
             for (let i = 0; i < m; i++) {
                 const maturity = (await web3.eth.getBlock(block)).timestamp + (i*1000); 
                 maturities.push(maturity);
-                await addYDai(maturity);
+                series.push(await addYDai(maturity));
             }
         });
 
         describe("post and borrow", () => {
             beforeEach(async() => {
-                // TODO: Test post, withdraw, borrow and repay individually.
-                // TODO: Test with mature yDai as well.
                 // Set the scenario
-                await postWeth(user1, wethTokens);
-                
-                await postWeth(user2, wethTokens);
-                await dealer.borrow(WETH, maturities[0], user2, daiTokens, { from: user2 });
                 
                 for (let i = 0; i < maturities.length; i++) {
                     await postWeth(user3, wethTokens);
@@ -293,28 +290,23 @@ contract('DssShutdown - Dealers', async (accounts) =>  {
                 }
             });
 
-            /* it("repayYDai", async() => {
-                await yDai.approve(dealer.address, daiTokens, { from: user2 });
-                await dealer.repayYDai(WETH, maturities[0], user2, daiTokens, { from: user2 });
-                
+            it("repayYDai", async() => {
                 for (let i = 0; i < maturities.length; i++) {
-                    await yDai.approve(dealer.address, daiTokens, { from: user3 });
+                    await series[i].approve(dealer.address, daiTokens, { from: user3 });
                     await dealer.repayYDai(WETH, maturities[i], user3, daiTokens, { from: user3 });
                 }
-            }); */
+            });
 
-            it("repay and withdraw", async() => {
-                await getDai(user2, daiTokens);
-                await dai.approve(dealer.address, daiTokens, { from: user2 });
-                await dealer.repayDai(WETH, maturities[0], user2, daiTokens, { from: user2 });
+            it("repayDai and withdraw", async() => {
+                await helper.advanceTime(m * 1000);
+                await helper.advanceBlock();
                 
                 for (let i = 0; i < maturities.length; i++) {
                     await getDai(user3, daiTokens);
                     await dai.approve(dealer.address, daiTokens, { from: user3 });
+                    await series[i].mature();
                     await dealer.repayDai(WETH, maturities[i], user3, daiTokens, { from: user3 });
                 }
-
-                await dealer.withdraw(WETH, user2, user2, wethTokens, { from: user2 });
                 
                 for (let i = 0; i < maturities.length; i++) {
                     await dealer.withdraw(WETH, user3, user3, wethTokens, { from: user3 });
@@ -336,41 +328,12 @@ contract('DssShutdown - Dealers', async (accounts) =>  {
                     await dssShutdown.cashSavings({ from: owner });
                 });
 
-                it("allows user to settle weth surplus", async() => {
-                    await dssShutdown.settle(WETH, user1, { from: user1 });
-
-                    assert.equal(
-                        await weth.balanceOf(user1),
-                        wethTokens.toString(),
-                        'User1 should have ' + wethTokens.toString() + ' weth wei',
-                    );
-                });
-
-                it("allows user to settle weth debt", async() => {
-                    const fixedWeth = mulRay(daiTokens, fix);
-
-                    await dssShutdown.settle(WETH, user2, { from: user2 });
-
-                    assert.equal(
-                        await dealer.debtYDai(WETH, maturities[0], user2),
-                        0,
-                        'User1 should have no maturities[0] weth debt',
-                    );
-                    assert.equal(
-                        await weth.balanceOf(user2),
-                        wethTokens.sub(fixedWeth).toString(), // Each position settled substracts daiTokens * fix from the user collateral 
-                        'User2 should have ' + wethTokens.sub(fixedWeth) + ' weth wei, instead has ' + (await weth.balanceOf(user2)),
-                    );
-                });
-
-                it("allows user to settle mutiple weth positions", async() => {
+                it("single series settle", async() => {
                     await dssShutdown.settle(WETH, user3, { from: user3 });
+                });
 
-                    assert.equal(
-                        await weth.balanceOf(user3), // TODO: Check about the .sub((m/10)*9) correction factor.
-                        wethTokens.mul(m).sub((m/10)*9).sub(fixedWeth.mul(m)).toString(), // Each position settled substracts daiTokens * fix from the user collateral 
-                        'User3 should have ' + wethTokens.mul(m).sub((m/10)*9).sub(fixedWeth.mul(m)) + ' weth wei, instead has ' + (await weth.balanceOf(user3)),
-                    );
+                it("all series settle", async() => {
+                    await dssShutdown.settle(WETH, user3, { from: user3 });
                 });
             });
         });
