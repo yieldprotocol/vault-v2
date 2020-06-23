@@ -264,6 +264,7 @@ contract('DssShutdown - Dealers', async (accounts) =>  {
         await helper.revertToSnapshot(snapshotId);
     });
 
+    // TODO: Parameterize on number of maturities.
     describe("working with 8 maturities", () => {
         beforeEach(async() => {
             // Setup 8 yDai
@@ -275,6 +276,8 @@ contract('DssShutdown - Dealers', async (accounts) =>  {
                 await addYDai(maturity);
             }
 
+            // TODO: Test post, withdraw, borrow and repay individually.
+            // TODO: Test with mature yDai as well.
             // Set the scenario
             await postWeth(user1, wethTokens);
             

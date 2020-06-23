@@ -100,6 +100,7 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
             containsSeries(maturity),
             "Dealer: Unrecognized series"
         );
+        // if (now >= maturity) { // TODO: Consider using for gas savings
         if (series[maturity].isMature()){
             return yDaiAmount.muld(series[maturity].rateGrowth(), RAY);
         }
@@ -114,6 +115,7 @@ contract Dealer is IVault, AuthorizedAccess(), UserProxy(), Constants {
             containsSeries(maturity),
             "Dealer: Unrecognized series"
         );
+        // if (now >= maturity) { // TODO: Consider using for gas savings
         if (series[maturity].isMature()){
             return daiAmount.divd(series[maturity].rateGrowth(), RAY);
         }
