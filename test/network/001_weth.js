@@ -5,7 +5,7 @@ const truffleAssert = require('truffle-assertions');
 contract('WETH9', async (accounts) =>  {
     let [ owner ] = accounts;
     let weth;
-    const wethTokens = 100;
+    const wethTokens = 1;
 
     beforeEach(async() => {
         weth = await Weth.deployed(); 
@@ -20,18 +20,12 @@ contract('WETH9', async (accounts) =>  {
         );
     });
 
-    describe("with deposited eth", () => {
-        beforeEach(async() => {
-            await weth.deposit({ from: owner, value: wethTokens });
-        });
-
-        it("should withdraw ether", async() => {
-            await weth.withdraw(wethTokens, { from: owner });
-            
-            assert.equal(  
-                await weth.balanceOf(owner), 
-                0,
-            );
-        }); 
-    });
+    it("should withdraw ether", async() => {
+        await weth.withdraw(wethTokens, { from: owner });
+        
+        assert.equal(  
+            await weth.balanceOf(owner), 
+            0,
+        );
+    }); 
 });
