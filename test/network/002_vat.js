@@ -96,7 +96,7 @@ contract('Vat', async (accounts, network) =>  {
             0,
         );
 
-        await weth.deposit({ from: user, value: wethTokens});
+        await weth.deposit({ from: user, value: wethTokens });
         await weth.approve(wethJoin.address, wethTokens, { from: user }); 
         await wethJoin.join(user, wethTokens, { from: user });
 
@@ -166,5 +166,7 @@ contract('Vat', async (accounts, network) =>  {
             wethTokens.toString(),
             'User should have ' + wethTokens + ' weth.',
         );
+
+        await weth.withdraw(wethTokens, { from: user });
     });
 });
