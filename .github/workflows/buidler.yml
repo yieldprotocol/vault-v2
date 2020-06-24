@@ -21,6 +21,3 @@ jobs:
       with:
         name: builder-log
         path: output/buidler.log
-
-
-

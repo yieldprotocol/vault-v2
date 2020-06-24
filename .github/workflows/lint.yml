@@ -9,7 +9,6 @@ on:
 jobs:
   lint:
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
     - name: Checkout
       uses: actions/checkout@v2
@@ -17,3 +16,4 @@ jobs:
       run: docker build -t "yield/ytoken-mvp:${{ github.run_id}}" -f docker/Dockerfile .
     - name: Run Lint
       run: docker run -t "yield/ytoken-mvp:${{ github.run_id }}" lint
+      continue-on-error: true
