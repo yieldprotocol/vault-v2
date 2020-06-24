@@ -16,6 +16,8 @@ jobs:
       run: docker build -t "yield/ytoken-mvp:${{ github.run_id}}" -f docker/Dockerfile .
     - name: Run Builder
       run: docker run -v ${PWD}/output/:/srv/ytoken-mvp/output -t "yield/ytoken-mvp:${{ github.run_id }}" test
+    - name: Debug
+      run:  find .
     - name: Upload Buildler Log
       uses: actions/upload-artifact@v1
       with:
