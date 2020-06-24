@@ -1,3 +1,4 @@
+const Migrations = artifacts.require('Migrations');
 const Vat = artifacts.require("Vat");
 const Weth = artifacts.require("WETH9");
 const ERC20 = artifacts.require("TestERC20");
@@ -44,15 +45,17 @@ contract('Chai', async (accounts) =>  {
     let chaiTokens;
 
     beforeEach(async() => {
-        vat = await Vat.deployed();
-        weth = await Weth.deployed();
-        wethJoin = await GemJoin.deployed();
-        dai = await ERC20.deployed();
-        daiJoin = await DaiJoin.deployed();
-        jug = await Jug.deployed();
-        pot = await Pot.deployed();
-        chai = await Chai.deployed();
-        gasToken = await GasToken.deployed();
+        const migrations = await Migrations.deployed();
+
+        vat = await Vat.at(await migrations.contracts(web3.utils.fromAscii("Vat")));
+        weth = await Weth.at(await migrations.contracts(web3.utils.fromAscii("Weth")));
+        wethJoin = await GemJoin.at(await migrations.contracts(web3.utils.fromAscii("WethJoin")));
+        dai = await ERC20.at(await migrations.contracts(web3.utils.fromAscii("Dai")));
+        daiJoin = await DaiJoin.at(await migrations.contracts(web3.utils.fromAscii("DaiJoin")));
+        jug = await Jug.at(await migrations.contracts(web3.utils.fromAscii("Jug")));
+        pot = await Pot.at(await migrations.contracts(web3.utils.fromAscii("Pot")));
+        chai = await Chai.at(await migrations.contracts(web3.utils.fromAscii("Chai")));
+        gasToken = await GasToken.at(await migrations.contracts(web3.utils.fromAscii("GasToken")));
 
         spot  = (await vat.ilks(ilk)).spot;
         rate  = (await vat.ilks(ilk)).rate;

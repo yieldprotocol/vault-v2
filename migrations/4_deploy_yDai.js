@@ -1,4 +1,5 @@
 const fixed_addrs = require('./fixed_addrs.json');
+const Migrations = artifacts.require("Migrations");
 const Vat = artifacts.require("Vat");
 const Jug = artifacts.require("Jug");
 const Pot = artifacts.require("Pot");
@@ -6,20 +7,8 @@ const Treasury = artifacts.require("Treasury");
 const Dealer = artifacts.require("Dealer");
 const YDai = artifacts.require("YDai");
 
-const firebase = require('firebase-admin');
-let serviceAccount = require('../firebaseKey.json');
-try {
-  firebase.initializeApp({
-    credential: firebase.credential.cert(serviceAccount),
-    databaseURL: "https://yield-ydai.firebaseio.com"
-  });
-} catch (e) { console.log(e)}
-
 module.exports = async (deployer, network, accounts) => {
-
-  const db = firebase.firestore();
-  const batch = db.batch();
-  const networkId = await web3.eth.net.getId();
+  const migrations = await Migrations.deployed();
 
   let vatAddress;
   let jugAddress;
@@ -68,11 +57,6 @@ module.exports = async (deployer, network, accounts) => {
     await yDai.grantAccess(dealerAddress);
     await dealer.addSeries(yDai.address);
 
-    let maturityRef = db.collection(networkId.toString()).doc('deployedSeries').collection('deployedSeries').doc(name);
-    batch.set(maturityRef, { name, maturity, symbol, yDai: yDai.address })
-    console.log({ name, maturity, symbol, yDai: yDai.address })
+    await migrations.register(web3.utils.fromAscii(name), yDai.address);
   }
-  await batch.commit();
-  firebase.app().delete();
-
 };

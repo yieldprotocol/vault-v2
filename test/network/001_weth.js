@@ -1,3 +1,4 @@
+const Migrations = artifacts.require('Migrations');
 const Weth = artifacts.require('WETH9');
 
 const truffleAssert = require('truffle-assertions');
@@ -8,7 +9,8 @@ contract('WETH9', async (accounts) =>  {
     const wethTokens = 1;
 
     beforeEach(async() => {
-        weth = await Weth.deployed(); 
+        const migrations = await Migrations.deployed();
+        weth = await Weth.at(await migrations.contracts(web3.utils.fromAscii("Weth")));
     });
 
     it("should deposit ether", async() => {

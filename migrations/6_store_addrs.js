@@ -1,4 +1,5 @@
 const fixed_addrs = require('./fixed_addrs.json');
+const Migrations = artifacts.require("Migrations");
 const Vat = artifacts.require("Vat");
 const Weth = artifacts.require("WETH9");
 const GemJoin = artifacts.require("GemJoin");
@@ -18,122 +19,94 @@ const Splitter = artifacts.require("Splitter");
 const EthProxy = artifacts.require("EthProxy");
 const DssShutdown = artifacts.require("DssShutdown");
 
-const firebase = require('firebase-admin');
-let serviceAccount = require('../firebaseKey.json');
-try {
-  firebase.initializeApp({
-    credential: firebase.credential.cert(serviceAccount),
-    databaseURL: "https://yield-ydai.firebaseio.com"
-  });
-} catch (e) { console.log(e)}
-
 module.exports = async (deployer, network, accounts) => {
+  const migrations = await Migrations.deployed();
 
-    const db = firebase.firestore();
-    const batch = db.batch();
-    const networkId = await web3.eth.net.getId();
+  let vatAddress;
+  let wethAddress;
+  let wethJoinAddress;
+  let daiAddress;
+  let daiJoinAddress;
+  let jugAddress;
+  let potAddress;
+  let endAddress;
+  let chaiAddress;
+  let gasTokenAddress;
+  let chaiOracleAddress;
+  let wethOracleAddress;
+  let treasuryAddress;
+  let dealerAddress;
+  let splitterAddress;
+  let liquidationsAddress;
+  let ethProxyAddress;
+  let dssShutdownAddress;
 
-    let vatAddress;
-    let wethAddress;
-    let wethJoinAddress;
-    let daiAddress;
-    let daiJoinAddress;
-    let jugAddress;
-    let potAddress;
-    let endAddress;
-    let chaiAddress;
-    let gasTokenAddress;
-    let chaiOracleAddress;
-    let wethOracleAddress;
-    let treasuryAddress;
-    let dealerAddress;
-    let splitterAddress;
-    let liquidationsAddress;
-    let ethProxyAddress;
-    let dssShutdownAddress;
-  
-    if (network !== 'development') {
-      vatAddress = fixed_addrs[network].vatAddress ;
-      wethAddress = fixed_addrs[network].wethAddress;
-      wethJoinAddress = fixed_addrs[network].wethJoinAddress;
-      daiAddress = fixed_addrs[network].daiAddress;
-      daiJoinAddress = fixed_addrs[network].daiJoinAddress;
-      jugAddress = fixed_addrs[network].jugAddress;
-      potAddress = fixed_addrs[network].potAddress;
-      endAddress = fixed_addrs[network].endAddress;
-      fixed_addrs[network].chaiAddress ? 
-        (chaiAddress = fixed_addrs[network].chaiAddress)
-        : (chaiAddress = (await Chai.deployed()).address);
-    } else {
-        vatAddress = (await Vat.deployed()).address;
-        wethAddress = (await Weth.deployed()).address;
-        wethJoinAddress = (await GemJoin.deployed()).address;
-        daiAddress = (await ERC20.deployed()).address;
-        daiJoinAddress = (await DaiJoin.deployed()).address;
-        jugAddress = (await Jug.deployed()).address;
-        potAddress = (await Pot.deployed()).address;
-        endAddress = (await End.deployed()).address;
-        chaiAddress = (await Chai.deployed()).address;
-    }
-  
-    treasuryAddress = (await Treasury.deployed()).address;
-    dealerAddress = (await Dealer.deployed()).address;
-    wethOracleAddress = (await WethOracle.deployed()).address;
-    chaiOracleAddress = (await ChaiOracle.deployed()).address;
-    gasTokenAddress = (await GasToken.deployed()).address;
-    splitterAddress = (await Splitter.deployed()).address;
-    liquidationsAddress = (await Liquidations.deployed()).address;
-    ethProxyAddress = (await EthProxy.deployed()).address;
-    dssShutdownAddress = (await DssShutdown.deployed()).address;
+  if (network !== 'development') {
+    vatAddress = fixed_addrs[network].vatAddress ;
+    wethAddress = fixed_addrs[network].wethAddress;
+    wethJoinAddress = fixed_addrs[network].wethJoinAddress;
+    daiAddress = fixed_addrs[network].daiAddress;
+    daiJoinAddress = fixed_addrs[network].daiJoinAddress;
+    jugAddress = fixed_addrs[network].jugAddress;
+    potAddress = fixed_addrs[network].potAddress;
+    endAddress = fixed_addrs[network].endAddress;
+    fixed_addrs[network].chaiAddress ? 
+      (chaiAddress = fixed_addrs[network].chaiAddress)
+      : (chaiAddress = (await Chai.deployed()).address);
+  } else {
+      vatAddress = (await Vat.deployed()).address;
+      wethAddress = (await Weth.deployed()).address;
+      wethJoinAddress = (await GemJoin.deployed()).address;
+      daiAddress = (await ERC20.deployed()).address;
+      daiJoinAddress = (await DaiJoin.deployed()).address;
+      jugAddress = (await Jug.deployed()).address;
+      potAddress = (await Pot.deployed()).address;
+      endAddress = (await End.deployed()).address;
+      chaiAddress = (await Chai.deployed()).address;
+  }
 
-    try {
+  treasuryAddress = (await Treasury.deployed()).address;
+  dealerAddress = (await Dealer.deployed()).address;
+  wethOracleAddress = (await WethOracle.deployed()).address;
+  chaiOracleAddress = (await ChaiOracle.deployed()).address;
+  gasTokenAddress = (await GasToken.deployed()).address;
+  splitterAddress = (await Splitter.deployed()).address;
+  liquidationsAddress = (await Liquidations.deployed()).address;
+  ethProxyAddress = (await EthProxy.deployed()).address;
+  dssShutdownAddress = (await DssShutdown.deployed()).address;
 
-        // Store External contract addresses
-        const deployedExternal = {
-            'Vat': vatAddress,
-            'Weth': wethAddress,
-            'WethJoin': wethJoinAddress,
-            'Dai': daiAddress,
-            'DaiJoin': daiJoinAddress,
-            'Jug': jugAddress,
-            'Pot': potAddress,
-            'End': endAddress,
-            'Chai': chaiAddress,
-            'GasToken': gasTokenAddress,
-          }
-          let externalRef = db.collection(networkId.toString()).doc('deployedExternal')
-          batch.set(externalRef, deployedExternal);
-          console.log('Updated External contract addresses:');
-          console.log(deployedExternal);
+  // Store External contract addresses
+  const deployedExternal = {
+    'Vat': vatAddress,
+    'Weth': wethAddress,
+    'WethJoin': wethJoinAddress,
+    'Dai': daiAddress,
+    'DaiJoin': daiJoinAddress,
+    'Jug': jugAddress,
+    'Pot': potAddress,
+    'End': endAddress,
+    'Chai': chaiAddress,
+    'GasToken': gasTokenAddress,
+  }
 
-          // Store Core contract addresses
-          const deployedCore = {
-            'WethOracle': wethOracleAddress,
-            'ChaiOracle': chaiOracleAddress,
-            'Treasury': treasuryAddress,
-            'Dealer': dealerAddress,
-          }
-          let coreRef = db.collection(networkId.toString()).doc('deployedCore')
-          batch.set(coreRef, deployedCore);
-          console.log('Updated Core contract addresses:');
-          console.log(deployedCore);
+  // Store Core contract addresses
+  const deployedCore = {
+    'WethOracle': wethOracleAddress,
+    'ChaiOracle': chaiOracleAddress,
+    'Treasury': treasuryAddress,
+    'Dealer': dealerAddress,
+  }
 
-          // Store Peripheral contract addresses
-          const deployedPeripheral = {
-            'Splitter': splitterAddress,
-            'Liquidations': liquidationsAddress,
-            'EthProxy': ethProxyAddress,
-            'DssShutdown': dssShutdownAddress,
-          }
+  // Store Peripheral contract addresses
+  const deployedPeripheral = {
+    'Splitter': splitterAddress,
+    'Liquidations': liquidationsAddress,
+    'EthProxy': ethProxyAddress,
+    'DssShutdown': dssShutdownAddress,
+  }
 
-          let peripheralRef = db.collection(networkId.toString()).doc('deployedPeripheral')
-          batch.set(peripheralRef, deployedPeripheral);
-          console.log('Updated peripheral contract addresses:');
-          console.log(deployedPeripheral);
-
-          await batch.commit();
-          console.log('All address updates executed successfully');
-          firebase.app().delete();
-    } 
-    catch (e) {console.log(e)}
+  const contracts = Object.assign({}, deployedExternal, deployedCore, deployedPeripheral);
+  for (name in contracts) {
+    await migrations.register(web3.utils.fromAscii(name), contracts[name]);
+  }
 }

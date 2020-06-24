@@ -1,3 +1,4 @@
+const Migrations = artifacts.require('Migrations');
 const Vat = artifacts.require("Vat");
 const Weth = artifacts.require("WETH9");
 const ERC20 = artifacts.require("TestERC20");
@@ -17,7 +18,7 @@ const helper = require('ganache-time-traveler');
 const { expectRevert } = require('@openzeppelin/test-helpers');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('../shared/utils');
 
-contract('Treasury - Lending', async (accounts) =>  {
+contract('Treasury - Saving', async (accounts) =>  {
     let [ owner, user ] = accounts;
 
     let vat;
@@ -45,16 +46,19 @@ contract('Treasury - Lending', async (accounts) =>  {
     let chaiTokens;
 
     beforeEach(async() => {
-        vat = await Vat.deployed();
-        weth = await Weth.deployed();
-        wethJoin = await GemJoin.deployed();
-        dai = await ERC20.deployed();
-        daiJoin = await DaiJoin.deployed();
-        jug = await Jug.deployed();
-        pot = await Pot.deployed();
-        chai = await Chai.deployed();
-        gasToken = await GasToken.deployed();
+        const migrations = await Migrations.deployed();
 
+        vat = await Vat.at(await migrations.contracts(web3.utils.fromAscii("Vat")));
+        weth = await Weth.at(await migrations.contracts(web3.utils.fromAscii("Weth")));
+        wethJoin = await GemJoin.at(await migrations.contracts(web3.utils.fromAscii("WethJoin")));
+        dai = await ERC20.at(await migrations.contracts(web3.utils.fromAscii("Dai")));
+        daiJoin = await DaiJoin.at(await migrations.contracts(web3.utils.fromAscii("DaiJoin")));
+        jug = await Jug.at(await migrations.contracts(web3.utils.fromAscii("Jug")));
+        pot = await Pot.at(await migrations.contracts(web3.utils.fromAscii("Pot")));
+        chai = await Chai.at(await migrations.contracts(web3.utils.fromAscii("Chai")));
+        gasToken = await GasToken.at(await migrations.contracts(web3.utils.fromAscii("GasToken")));
+        treasury = await Treasury.at(await migrations.contracts(web3.utils.fromAscii("Treasury")));
+        
         spot  = (await vat.ilks(ilk)).spot;
         rate  = (await vat.ilks(ilk)).rate;
         wethTokens = toWad(1);
@@ -63,14 +67,7 @@ contract('Treasury - Lending', async (accounts) =>  {
 
         await pot.setChi(chi); // TODO: Set it up in migrations
         chaiTokens = divRay(daiTokens, chi);
-
-        // Setup chaiOracle
-        chaiOracle = await ChaiOracle.deployed();
-
-        // Set chi
-        await pot.setChi(chi, { from: owner });
         
-        treasury = await Treasury.deployed();
         await treasury.grantAccess(owner, { from: owner });
         await vat.hope(daiJoin.address, { from: owner });
     });
