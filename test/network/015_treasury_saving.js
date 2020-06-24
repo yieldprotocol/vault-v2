@@ -75,115 +75,108 @@ contract('Treasury - Lending', async (accounts) =>  {
         await vat.hope(daiJoin.address, { from: owner });
     });
 
-    it("allows to post collateral", async() => {
-        assert.equal(
-            (await weth.balanceOf(wethJoin.address)),
-            web3.utils.toWei("0")
-        );
+    it("allows to save dai", async() => {
+        // Borrow some dai
+        await weth.deposit({ from: owner, value: wethTokens});
+        await weth.approve(wethJoin.address, wethTokens, { from: owner }); 
+        await wethJoin.join(owner, wethTokens, { from: owner });
+        await vat.frob(ilk, owner, owner, owner, wethTokens, daiDebt, { from: owner });
+        await daiJoin.exit(owner, daiTokens, { from: owner });
         
-        await weth.deposit({ from: user, value: wethTokens});
-        await weth.transfer(treasury.address, wethTokens, { from: user }); 
-        await treasury.pushWeth({ from: owner });
-
-        // Test transfer of collateral
-        assert.equal(
-            await weth.balanceOf(wethJoin.address),
-            wethTokens.toString(),
-        );
-
-        // Test collateral registering via `frob`
-        assert.equal(
-            (await vat.urns(ilk, treasury.address)).ink,
-            wethTokens.toString(),
-        );
-    });
-
-    it("pulls dai borrowed from MakerDAO for user", async() => {
-        // Test with two different stability rates, if possible.
-        await treasury.pullDai(user, daiTokens, { from: owner });
-
-        assert.equal(
-            await dai.balanceOf(user),
-            daiTokens.toString(),
-        );
-        assert.equal(
-            (await vat.urns(ilk, treasury.address)).art,
-            daiDebt.toString(),
-        );
-    });
-
-    it("pushes dai that repays debt towards MakerDAO", async() => {
-        // Test `normalizedAmount >= normalizedDebt`
-        //await dai.approve(treasury.address, daiTokens, { from: user });
-        dai.transfer(treasury.address, daiTokens, { from: user }); // We can't stop donations
+        await dai.transfer(treasury.address, daiTokens, { from: owner }); 
         await treasury.pushDai({ from: owner });
 
+        // Test transfer of collateral
         assert.equal(
-            await dai.balanceOf(user),
-            0
-        );
-        assert.equal(
-            (await vat.urns(ilk, treasury.address)).art,
-            0,
-        );
-        assert.equal(
-            await vat.dai(treasury.address),
-            0
-        );
-    });
-
-    it("pulls chai converted from dai borrowed from MakerDAO for user", async() => {
-        await treasury.pullChai(user, chaiTokens, { from: owner });
-
-        assert.equal(
-            await chai.balanceOf(user),
+            await chai.balanceOf(treasury.address),
             chaiTokens.toString(),
+            "Treasury should have chai"
         );
         assert.equal(
-            (await vat.urns(ilk, treasury.address)).art,
-            daiDebt.toString(),
+            await treasury.savings.call(),
+            daiTokens.toString(),
+            "Treasury should have " + daiTokens + " savings in dai units, instead has " + await treasury.savings.call(),
+        );
+        assert.equal(
+            await dai.balanceOf(owner),
+            0,
+            "User should not have dai",
         );
     });
 
-    it("pushes chai that repays debt towards MakerDAO", async() => {
-        await chai.transfer(treasury.address, chaiTokens, { from: user }); 
+    it("pulls dai from savings", async() => {
+        await treasury.pullDai(owner, daiTokens, { from: owner });
+
+        assert.equal(
+            await chai.balanceOf(treasury.address),
+            0,
+            "Treasury should not have chai",
+        );
+        assert.equal(
+            await treasury.savings.call(),
+            0,
+            "Treasury should not have savings in dai units"
+        );
+        assert.equal(
+            await dai.balanceOf(owner),
+            daiTokens.toString(),
+            "User should have dai",
+        );
+    });
+
+    it("allows to save chai", async() => {
+        await dai.approve(chai.address, daiTokens, { from: owner });
+        await chai.join(owner, daiTokens, { from: owner });
+        await chai.transfer(treasury.address, chaiTokens, { from: owner }); 
         await treasury.pushChai({ from: owner });
-
-        assert.equal(
-            await dai.balanceOf(user),
-            0
-        );
-        assert.equal(
-            (await vat.urns(ilk, treasury.address)).art,
-            0,
-        );
-        assert.equal(
-            await vat.dai(treasury.address),
-            0
-        );
-    });
-
-    it("allows to withdraw collateral", async() => {
-        assert.equal(
-            await weth.balanceOf(owner),
-            0,
-        );
-        
-        await treasury.pullWeth(owner, wethTokens, { from: owner });
 
         // Test transfer of collateral
         assert.equal(
-            (await weth.balanceOf(owner)),
-            wethTokens.toString(),
+            await chai.balanceOf(treasury.address),
+            chaiTokens.toString(),
+            "Treasury should have chai"
         );
-
-        // Test collateral registering via `frob`
         assert.equal(
-            (await vat.urns(ilk, treasury.address)).ink,
-            0
+            await treasury.savings.call(),
+            daiTokens.toString(),
+            "Treasury should report savings in dai units"
+        );
+        assert.equal(
+            await chai.balanceOf(owner),
+            0,
+            "User should not have chai",
+        );
+    });
+
+    it("pulls chai from savings", async() => {
+        await treasury.pullChai(owner, chaiTokens, { from: owner });
+
+        assert.equal(
+            await chai.balanceOf(treasury.address),
+            0,
+            "Treasury should not have chai",
+        );
+        assert.equal(
+            await treasury.savings.call(),
+            0,
+            "Treasury should not have savings in dai units"
+        );
+        assert.equal(
+            await chai.balanceOf(owner),
+            chaiTokens.toString(),
+            "User should have chai",
         );
 
-        // Restore state
+        // Exchange the chai back
+        await chai.exit(owner, chaiTokens, { from: owner });
+
+        // Repay the dai
+        await dai.approve(daiJoin.address, daiTokens, { from: owner }); 
+        await daiJoin.join(owner, daiTokens, { from: owner });
+        await vat.frob(ilk, owner, owner, owner, wethTokens.mul(-1), daiDebt.mul(-1), { from: owner });
+        await wethJoin.exit(owner, wethTokens, { from: owner });
+
+        // Withdraw the eth
         await weth.withdraw(wethTokens, { from: owner });
     });
 });
