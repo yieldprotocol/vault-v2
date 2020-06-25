@@ -21,7 +21,7 @@ case $command in
     ;;
     "test")
     log "Running Tests"
-    npx buidler test  2>&1 | tee output/buidler.log
+    yarn test  2>&1 | tee output/buidler.log
     retcode=${PIPESTATUS[0]}
     log "Buidler gave return code: $retcode"
     ;;
