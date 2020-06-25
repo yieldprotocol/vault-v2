@@ -23,7 +23,7 @@ case $command in
     log "Running Tests"
     npx buidler test  2>&1 | tee output/buidler.log
     retcode=${PIPESTATUS[0]}
-    log "Buidler gave return code: $?"
+    log "Buidler gave return code: $retcode"
     ;;
     *)
     echo "Please use lint|test"
