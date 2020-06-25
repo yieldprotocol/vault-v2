@@ -58,7 +58,7 @@ module.exports = async (deployer, network, accounts) => {
     await yDai.grantAccess(dealerAddress);
     await dealer.addSeries(yDai.address);
 
-    await migrations.register(web3.utils.fromAscii('yDai') + index, yDai.address);
+    await migrations.register(web3.utils.fromAscii('yDai' + index), yDai.address);
     console.log('yDai' + index, yDai.address);
     index++;
   }
