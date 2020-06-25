@@ -136,7 +136,7 @@ contract Market is Constants {
         require(
             daiOut >= minDaiOut,
             "Market: Not enough Dai"
-        )yDaiPool;
+        );
 
         yDaiPool = newYDaiPool;
         daiPool = newDaiPool;
