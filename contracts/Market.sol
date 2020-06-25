@@ -97,6 +97,14 @@ contract Market is Constants {
         _daiToYDai(daiSold, minYDaiReceived);
     }
 
+    function yDaiToDai(uint256 yDaiSold, uint256 minDaiReceived, uint256 timeout) external {
+        require(
+            yDaiSold > 0 && minDaiReceived > 0 && now < timeout,
+            "Market: DaiToYDai Parameters"
+        );
+        _ydaiToDai(yDaiSold, minDaiReceived);
+    }
+
     function _daiToYDai(uint256 daiIn, uint256 minYDaiOut) internal {
         uint256 fee = daiIn.div(FEE_RATE);
         uint256 newDaiPool = daiPool.add(daiIn);
@@ -104,17 +112,66 @@ contract Market is Constants {
         uint256 newYDaiPool = invariant.div(tempDaiPool);
         uint256 yDaiOut = yDaiPool.sub(newYDaiPool);
 
-        daiPool = newDaiPool;
-        yDaiPool = newYDaiPool;
-        invariant = newYDaiPool.mul(newDaiPool);
-        dai.transferFrom(msg.sender, address(this), daiIn);
-        yDai.transfer(msg.sender, yDaiOut);
-
         require(
             yDaiOut >= minYDaiOut,
             "Market: Not enough YDai"
         );
 
+        daiPool = newDaiPool;
+        yDaiPool = newYDaiPool;
+        invariant = newYDaiPool.mul(newDaiPool); // TODO: Why do we do this?
+        dai.transferFrom(msg.sender, address(this), daiIn);
+        yDai.transfer(msg.sender, yDaiOut);
+
         emit DaiToYDai(msg.sender, daiIn, yDaiOut);
+    }
+
+    function _yDaiToDai(uint256 yDaiIn, uint256 minDaiOut) internal {
+        uint256 fee = yDaiIn.div(FEE_RATE);
+        uint256 newYDaiPool = yDaiPool.add(yDaiIn);
+        uint256 tempYDaiPool = newYDaiPool.sub(fee);
+        uint256 newDaiPool = invariant.div(tempYDaiPool);
+        uint256 daiOut = daiPool.sub(newDaiPool);
+
+        require(
+            daiOut >= minDaiOut,
+            "Market: Not enough Dai"
+        )yDaiPool;
+
+        yDaiPool = newYDaiPool;
+        daiPool = newDaiPool;
+        invariant = newDaiPool.mul(newYDaiPool); // TODO: Why do we do this?
+        yDai.transferFrom(msg.sender, address(this), yDaiIn);
+        dai.transfer(msg.sender, daiOut);
+
+        emit YDaiToDai(msg.sender, yDaiIn, daiOut);
+    }
+
+    // TODO: mapping(address => uint256) public pools;
+    function _swap(address t0, address t1, uint256 t0In, uint256 minT1Out) internal {
+        require(
+            t0 != t1 && pools[t0] != address(0) && pools[t1] != address(0),
+            revert("Market: Token parameters");
+        );
+
+        uint256 fee = t0In.div(FEE_RATE);
+        uint256 newT0Pool = pools[t0].add(t0In);
+        uint256 tempT0Pool = newT0Pool.sub(fee);
+        uint256 newT1Pool = invariant.div(tempT0Pool);
+        uint256 t1Out = t1Pool.sub(newT1Pool);
+
+        require(
+            t1Out >= minT1Out,
+            "Market: Not enough T1"
+        );
+
+        pools[t0] = newT0Pool;
+        pools[t1] = newT1Pool;
+
+        invariant = pools[t0].mul(pools[t1]); // TODO: Why do we do this?
+        IERC20(t0).transferFrom(msg.sender, address(this), t0In);
+        IERC20(t1).transfer(msg.sender, t1Out);
+
+        emit YDaiToDai(msg.sender, yDaiIn, daiOut);
     }
 }
