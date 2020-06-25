@@ -1,5 +1,6 @@
 // const { BN } = require('@openzeppelin/test-helpers');
 const fixed_addrs = require('./fixed_addrs.json');
+const Migrations = artifacts.require("Migrations");
 const Vat = artifacts.require('Vat');
 const GemJoin = artifacts.require('GemJoin');
 const DaiJoin = artifacts.require('DaiJoin');
@@ -14,6 +15,7 @@ const GasToken = artifacts.require('GasToken1');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('../test/shared/utils');
 
 module.exports = async (deployer, network, accounts) => {
+  const migrations = await Migrations.deployed();
 
   const [owner] = accounts;
   let vatAddress;
@@ -119,6 +121,7 @@ module.exports = async (deployer, network, accounts) => {
     chaiAddress = (await Chai.deployed()).address;
   };
 
+  // Commit addresses to migrations registry
   const deployedExternal = {
     'Vat': vatAddress,
     'Weth': wethAddress,
@@ -132,5 +135,8 @@ module.exports = async (deployer, network, accounts) => {
     'GasToken': gasTokenAddress,
   }
 
+  for (name in deployedExternal) {
+    await migrations.register(web3.utils.fromAscii(name), deployedExternal[name]);
+  }
   console.log(deployedExternal)
 }

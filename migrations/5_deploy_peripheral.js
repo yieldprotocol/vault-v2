@@ -1,4 +1,5 @@
 const fixed_addrs = require('./fixed_addrs.json');
+const Migrations = artifacts.require("Migrations");
 const Vat = artifacts.require("Vat");
 const Weth = artifacts.require("WETH9");
 const GemJoin = artifacts.require("GemJoin");
@@ -19,6 +20,7 @@ const DssShutdown = artifacts.require("DssShutdown");
 
 
 module.exports = async (deployer, network, accounts) => {
+  const migrations = await Migrations.deployed();
 
   let vatAddress;
   let wethAddress;
@@ -128,6 +130,10 @@ module.exports = async (deployer, network, accounts) => {
     'Liquidations': liquidationsAddress,
     'DssShutdown': dssShutdownAddress,
     'EthProxy': ethProxyAddress,
+  }
+
+  for (name in deployedPeripheral) {
+    await migrations.register(web3.utils.fromAscii(name), deployedPeripheral[name]);
   }
   console.log(deployedPeripheral);
 };

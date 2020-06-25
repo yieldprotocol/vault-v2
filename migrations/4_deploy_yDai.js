@@ -40,6 +40,7 @@ module.exports = async (deployer, network, accounts) => {
     [1625097599, 'yDai-2021-06-30', 'yDai-2021-06-30'],
   ]);
 
+  let index = 0;
   for (const [maturity, name, symbol] of maturitiesInput.values()) {
     // Setup YDai
     await deployer.deploy(
@@ -57,6 +58,8 @@ module.exports = async (deployer, network, accounts) => {
     await yDai.grantAccess(dealerAddress);
     await dealer.addSeries(yDai.address);
 
-    await migrations.register(web3.utils.fromAscii(name), yDai.address);
+    await migrations.register(web3.utils.fromAscii('yDai') + index, yDai.address);
+    console.log('yDai' + index, yDai.address);
+    index++;
   }
 };
