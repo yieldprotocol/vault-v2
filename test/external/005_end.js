@@ -6,7 +6,7 @@ const Weth = artifacts.require('WETH9');
 const End = artifacts.require('End');
 
 const { expectRevert } = require('@openzeppelin/test-helpers');
-const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
+const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('../shared/utils');
 
 contract('End', async (accounts) =>  {
     const [ owner, user ] = accounts;

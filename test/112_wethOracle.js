@@ -3,7 +3,7 @@ const WethOracle = artifacts.require('WethOracle');
 
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
 
-contract('Vat', async (accounts) =>  {
+contract('WethOracle', async (accounts) =>  {
     const [ owner, user ] = accounts;
     let vat;
     let wethOracle;

@@ -1,4 +1,4 @@
-const { toRay, toRad, toRay2, toRad2 } = require("./shared/utils")
+const { toRay, toRad, toRay2, toRad2 } = require("./utils")
 
 contract('Test', async (accounts) =>  {
     const spot  =  "1500000000000000000000000000";
