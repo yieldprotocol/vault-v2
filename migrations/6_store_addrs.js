@@ -1,20 +1,22 @@
 const fixed_addrs = require('./fixed_addrs.json');
-const Pot = artifacts.require("Pot");
 const Vat = artifacts.require("Vat");
+const Weth = artifacts.require("WETH9");
 const GemJoin = artifacts.require("GemJoin");
+const ERC20 = artifacts.require("TestERC20");
 const DaiJoin = artifacts.require("DaiJoin");
+const Jug = artifacts.require("Jug");
+const Pot = artifacts.require("Pot");
 const End = artifacts.require("End");
 const Chai = artifacts.require("Chai");
 const GasToken = artifacts.require("GasToken1");
-const Treasury = artifacts.require("Treasury");
 const ChaiOracle = artifacts.require("ChaiOracle");
 const WethOracle = artifacts.require("WethOracle");
+const Treasury = artifacts.require("Treasury");
 const Dealer = artifacts.require("Dealer");
+const Liquidations = artifacts.require("Liquidations");
 const Splitter = artifacts.require("Splitter");
-const DssShutdown = artifacts.require("DssShutdown");
 const EthProxy = artifacts.require("EthProxy");
-const Weth = artifacts.require("WETH9");
-const ERC20 = artifacts.require("TestERC20");
+const DssShutdown = artifacts.require("DssShutdown");
 
 const firebase = require('firebase-admin');
 let serviceAccount = require('../firebaseKey.json');
@@ -36,17 +38,19 @@ module.exports = async (deployer, network, accounts) => {
     let wethJoinAddress;
     let daiAddress;
     let daiJoinAddress;
+    let jugAddress;
     let potAddress;
     let endAddress;
     let chaiAddress;
     let gasTokenAddress;
-    let treasuryAddress;
     let chaiOracleAddress;
     let wethOracleAddress;
+    let treasuryAddress;
     let dealerAddress;
     let splitterAddress;
-    let dssShutdownAddress;
+    let liquidationsAddress;
     let ethProxyAddress;
+    let dssShutdownAddress;
   
     if (network !== 'development') {
       vatAddress = fixed_addrs[network].vatAddress ;
@@ -54,6 +58,7 @@ module.exports = async (deployer, network, accounts) => {
       wethJoinAddress = fixed_addrs[network].wethJoinAddress;
       daiAddress = fixed_addrs[network].daiAddress;
       daiJoinAddress = fixed_addrs[network].daiJoinAddress;
+      jugAddress = fixed_addrs[network].jugAddress;
       potAddress = fixed_addrs[network].potAddress;
       endAddress = fixed_addrs[network].endAddress;
       fixed_addrs[network].chaiAddress ? 
@@ -65,6 +70,7 @@ module.exports = async (deployer, network, accounts) => {
         wethJoinAddress = (await GemJoin.deployed()).address;
         daiAddress = (await ERC20.deployed()).address;
         daiJoinAddress = (await DaiJoin.deployed()).address;
+        jugAddress = (await Jug.deployed()).address;
         potAddress = (await Pot.deployed()).address;
         endAddress = (await End.deployed()).address;
         chaiAddress = (await Chai.deployed()).address;
@@ -76,8 +82,9 @@ module.exports = async (deployer, network, accounts) => {
     chaiOracleAddress = (await ChaiOracle.deployed()).address;
     gasTokenAddress = (await GasToken.deployed()).address;
     splitterAddress = (await Splitter.deployed()).address;
-    dssShutdownAddress = (await DssShutdown.deployed()).address;
+    liquidationsAddress = (await Liquidations.deployed()).address;
     ethProxyAddress = (await EthProxy.deployed()).address;
+    dssShutdownAddress = (await DssShutdown.deployed()).address;
 
     try {
 
@@ -88,6 +95,7 @@ module.exports = async (deployer, network, accounts) => {
             'WethJoin': wethJoinAddress,
             'Dai': daiAddress,
             'DaiJoin': daiJoinAddress,
+            'Jug': jugAddress,
             'Pot': potAddress,
             'End': endAddress,
             'Chai': chaiAddress,
@@ -113,8 +121,9 @@ module.exports = async (deployer, network, accounts) => {
           // Store Peripheral contract addresses
           const deployedPeripheral = {
             'Splitter': splitterAddress,
-            'DssShutdown': dssShutdownAddress,
+            'Liquidations': liquidationsAddress,
             'EthProxy': ethProxyAddress,
+            'DssShutdown': dssShutdownAddress,
           }
 
           let peripheralRef = db.collection(networkId.toString()).doc('deployedPeripheral')
