@@ -40,6 +40,12 @@ module.exports = async (deployer, network, accounts) => {
     [1625097599, 'yDai-2021-06-30', 'yDai-2021-06-30'],
   ]);
 
+  if (network === 'development') {
+    maturitiesInput.add(
+      [1, 'yDai-t0', 'yDai-t0'],
+    );
+  }
+
   let index = 0;
   for (const [maturity, name, symbol] of maturitiesInput.values()) {
     // Setup YDai
