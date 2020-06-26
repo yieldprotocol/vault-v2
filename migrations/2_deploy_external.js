@@ -38,8 +38,6 @@ module.exports = async (deployer, network, accounts) => {
 
     const limits = toRad(10000);
     const spot  = toRay(1.5);
-    const rate  = toRay(1.25);
-    const chi = toRay(1.2);
 
     // Setup vat
     await deployer.deploy(Vat);
@@ -49,7 +47,6 @@ module.exports = async (deployer, network, accounts) => {
     await vat.file(ilk, spotName, spot);
     await vat.file(ilk, linel, limits);
     await vat.file(Line, limits);
-    // await vat.fold(ilk, vatAddress, subBN(rate, toRay(1)));
 
     await deployer.deploy(Weth);
     wethAddress = (await Weth.deployed()).address;
@@ -73,7 +70,6 @@ module.exports = async (deployer, network, accounts) => {
     await deployer.deploy(Pot, vatAddress);
     const pot = await Pot.deployed();
     potAddress = pot.address;
-    // await pot.setChi(chi);
 
     // Setup end
     await deployer.deploy(End)
@@ -89,6 +85,11 @@ module.exports = async (deployer, network, accounts) => {
     await vat.rely(potAddress);
     await vat.rely(endAddress);
 
+    // Set development environment
+    const rate  = toRay(1.25);
+    const chi = toRay(1.2);
+    await vat.fold(ilk, vatAddress, subBN(rate, toRay(1)));
+    await pot.setChi(chi);
   };
 
   if (network !== 'development') {

@@ -38,7 +38,7 @@ contract('Treasury - Saving', async (accounts) =>  {
     let ilk = web3.utils.fromAscii('ETH-A');
     let spot;
     let rate;
-    const chi = toRay(1.2); // TODO: Set it up in migrations
+    let chi;
     
     let wethTokens;
     let daiTokens;
@@ -65,8 +65,8 @@ contract('Treasury - Saving', async (accounts) =>  {
         daiTokens = mulRay(wethTokens.toString(), spot.toString());
         daiDebt = divRay(daiTokens.toString(), rate.toString());
 
-        await pot.setChi(chi); // TODO: Set it up in migrations
-        chaiTokens = divRay(daiTokens, chi);
+        chi = await pot.chi(); // Good boys call drip()
+        chaiTokens = divRay(daiTokens, chi.toString());
         
         await treasury.grantAccess(owner, { from: owner });
         await vat.hope(daiJoin.address, { from: owner });
