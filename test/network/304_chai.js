@@ -14,7 +14,6 @@ const Treasury = artifacts.require("Treasury");
 const Dealer = artifacts.require("Dealer");
 
 const truffleAssert = require('truffle-assertions');
-const helper = require('ganache-time-traveler');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('../shared/utils');
 
 contract('Chai', async (accounts) =>  {

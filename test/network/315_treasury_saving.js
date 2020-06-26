@@ -14,7 +14,6 @@ const Treasury = artifacts.require("Treasury");
 const Dealer = artifacts.require("Dealer");
 
 const truffleAssert = require('truffle-assertions');
-const helper = require('ganache-time-traveler');
 const { expectRevert } = require('@openzeppelin/test-helpers');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('../shared/utils');
 
@@ -38,7 +37,7 @@ contract('Treasury - Saving', async (accounts) =>  {
     let ilk = web3.utils.fromAscii('ETH-A');
     let spot;
     let rate;
-    const chi = toRay(1.2); // TODO: Set it up in migrations
+    let chi;
     
     let wethTokens;
     let daiTokens;
@@ -61,12 +60,12 @@ contract('Treasury - Saving', async (accounts) =>  {
         
         spot  = (await vat.ilks(ilk)).spot;
         rate  = (await vat.ilks(ilk)).rate;
+        chi = await pot.chi(); // Good boys call drip()
+
         wethTokens = toWad(1);
         daiTokens = mulRay(wethTokens.toString(), spot.toString());
         daiDebt = divRay(daiTokens.toString(), rate.toString());
-
-        await pot.setChi(chi); // TODO: Set it up in migrations
-        chaiTokens = divRay(daiTokens, chi);
+        chaiTokens = divRay(daiTokens, chi.toString());
         
         await treasury.grantAccess(owner, { from: owner });
         await vat.hope(daiJoin.address, { from: owner });
