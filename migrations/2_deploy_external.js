@@ -17,7 +17,6 @@ const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('../test/s
 module.exports = async (deployer, network, accounts) => {
   const migrations = await Migrations.deployed();
 
-  const [owner] = accounts;
   let vatAddress;
   let wethAddress;
   let wethJoinAddress;
@@ -90,10 +89,8 @@ module.exports = async (deployer, network, accounts) => {
     const chi = toRay(1.2);
     await vat.fold(ilk, vatAddress, subBN(rate, toRay(1)));
     await pot.setChi(chi);
-  };
-
-  if (network !== 'development') {
-    vatAddress = fixed_addrs[network].vatAddress ;
+  } else {
+    vatAddress = fixed_addrs[network].vatAddress;
     wethAddress = fixed_addrs[network].wethAddress;
     wethJoinAddress = fixed_addrs[network].wethJoinAddress;
     daiAddress = fixed_addrs[network].daiAddress;
@@ -105,13 +102,15 @@ module.exports = async (deployer, network, accounts) => {
   };
 
   if (network === "development" || network === "goerli" && network === "goerli-fork") {
-    // Setup Chai
     await deployer.deploy(GasToken);
     gasTokenAddress = (await GasToken.deployed()).address;
+  } else {
+    gasTokenAddress = fixed_addrs[network].gasTokenAddress;
   };
 
-  if (network !== "mainnet" && network !== "kovan" && network !== "kovan-fork") {
-    // Setup Chai
+  if (network === "mainnet" && network === "kovan" && network === "kovan-fork") {
+    chaiAddress = fixed_addrs[network].chaiAddress;
+  } else {
     await deployer.deploy(
       Chai,
       vatAddress,
@@ -120,7 +119,7 @@ module.exports = async (deployer, network, accounts) => {
       daiAddress,
     );
     chaiAddress = (await Chai.deployed()).address;
-  };
+  }
 
   // Commit addresses to migrations registry
   const deployedExternal = {
