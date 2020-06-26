@@ -1,6 +1,5 @@
 pragma solidity ^0.6.2;
 
-import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -10,122 +9,124 @@ import "@nomiclabs/buidler/console.sol";
 
 /// @dev The Market contract exchanges Dai for yDai at a price defined by a specific formula.
 contract Market is ERC20, Constants {
-    using DecimalMath for uint256;
-    using DecimalMath for uint8;
     using SafeMath for uint256;
 
-    event Investment(address investor, uint256 sharesPurchased);
-    event Swap(
-        address indexed trader,
-        address indexed tokenSold,
-        address indexed tokenReceived,
-        uint256 tokensIn,
-        uint256 tokensOut
-    );
-
-    uint256 public constant FEE_RATE = 500;        // fee = 1/feeRate = 0.2%
-
-    IERC20 public t0; // Dai
-    IERC20 public t1; // yDai
-
-    uint256 internal _invariant;
-    bool setup = true;
-
-    mapping(address => uint256) public pools;
-
-    constructor(address t0_, address t1_) public ERC20("Name", "Symbol") {
-        t0 = IERC20(t0_);
-        t1 = IERC20(t1_);
+    struct State {
+        uint32 timestamp;    // last time contract was updated. wraps around after 2^32
+        uint32 prevRate;     // UQ16x16 interest rate last time the contract was updated
+        uint64 accumulator;  // interest rate oracle accumulator—32 bits for a UQ16x16, 32 bits for overflow
     }
 
-    function init(uint256 t0Amount, uint256 t1Amount) external {
-        /* require(
-            setup,
+    uint256 constant initialSupply = 1000;
+
+    IERC20 public chai;
+    IERC20 public yDai;
+
+    constructor(address chai_, address yDai_) public ERC20("Name", "Symbol") {
+        chai = IERC20(chai_);
+        yDai = IERC20(yDai_);
+    }
+
+    function init(uint256 chaiIn, uint256 yDaiIn) external {
+        require(
+            totalSupply() == 0,
             revert("Market: Already initialized")
-        ); */ // TODO: Find out syntax issue
-        require( // Prevents share cost from being too high or too low - potentially needs work
-            t0Amount >= 10000 && t1Amount >= 10000,
-            "Market: Initialization Parameters"
         );
-        delete setup;
-        pools[address(t0)] = t0Amount;
-        pools[address(t1)] = t1Amount;
 
-        _invariant = t0Amount.mul(t1Amount);
-        _mint(msg.sender, 1000);
+        chai.transferFrom(msg.sender, address(this), chaiIn);
+        yDai.transferFrom(msg.sender, address(this), yDaiIn);
+        _mint(msg.sender, initialSupply);
 
-        t0.transferFrom(msg.sender, address(this), t0Amount);
-        t1.transferFrom(msg.sender, address(this), t1Amount);
+        _updateState(chai.balanceOf(address(this)), yDai.balanceOf(address(this)));
     }
 
-    /// @dev Mint liquidity tokens in exchange for adding liquidity
-    /// The parameter passed is the amount of `t0` being invested, an appropriate amount of `t1` to be invested alongside will be calculated and taken by this function from the caller.
-    function mint(uint256 t0Amount, uint256 minShares) external {
+    /// @dev Mint liquidity tokens in exchange for adding chai and yDai
+    /// The parameter passed is the amount of `chai` being invested, an appropriate amount of `yDai` to be invested alongside will be calculated and taken by this function from the caller.
+    function mint(uint256 chaiOffered) external {
+        uint256 chaiPerToken = chai.balanceOf(address(this)).div(totalSupply());
         require(
-            t0Amount > 0 && minShares > 0,
-            "Market: InvestDai Parameters"
+            chaiOffered >= chaiPerToken,
+            "Market: Not enough chai to mint one token"
         );
-        address t0Address = address(t0);
-        address t1Address = address(t1);
+        uint256 tokensMinted = chaiOffered.div(chaiPerToken); // TODO: I'm just letting this revert if not initialized
+        uint256 yDaiPerToken = yDai.balanceOf(address(this)).div(totalSupply());
+        uint256 yDaiRequired = tokensMinted.mul(yDaiPerToken);
+        uint256 chaiTaken = tokensMinted.mul(chaiPerToken);
 
-        uint256 t0PerShare = pools[t0Address].div(totalSupply());
-        require(
-            t0Amount >= t0PerShare,
-            "Market: Not enough t0 tokens"
-        );
-        uint256 sharesPurchased = t0Amount.div(t0PerShare); // TODO: I'm just letting this revert if not initialized
-        require(
-            sharesPurchased >= minShares,
-            "Market: Not enough shares"
-        );
+        chai.transferFrom(msg.sender, address(this), chaiTaken);
+        yDai.transferFrom(msg.sender, address(this), yDaiRequired);
+        _mint(msg.sender, tokensMinted);
 
-        uint256 t1PerShare = pools[t1Address].div(totalSupply());
-        uint256 t1Required = sharesPurchased.mul(t1PerShare);
-        _mint(msg.sender, sharesPurchased);
-
-        uint256 t0Used = sharesPurchased.mul(t0PerShare);
-        pools[t0Address] = pools[t0Address].add(t0Used);
-        pools[t1Address] = pools[t1Address].add(t1Required);
-        _invariant = pools[t0Address].mul(pools[t1Address]);
-        t0.transferFrom(msg.sender, address(this), t0Used);
-        t1.transferFrom(msg.sender, address(this), t1Required);
-        emit Investment(msg.sender, sharesPurchased);
+        _updateState(chai.balanceOf(address(this)), yDai.balanceOf(address(this)));
     }
 
-    /// @dev The `tInAddress` and `tOutAddress` can match `t0` and `t1` to sell `t0` tokens for `t1` tokens, or they can be reversed to sell `t1` for `t0`
-    function swap(address tInAddress, address tOutAddress, uint256 tInAmount, uint256 minTOutAmount, uint256 timeout) external {
-        require(
-            now < timeout,
-            "Market: Timeout expired"
-        );
-        /* require(
-            tInAddress != tOutAddress && pools[tInAddress] != 0 && pools[tOutAddress] != 0,
-            revert("Market: Token parameters")
-        ); */ // TODO: Find out syntax issue
+    /// @dev Burn liquidity tokens in exchange for chai and yDai
+    function burn(uint256 tokensBurned) external {
+        uint256 chaiPerToken = chai.balanceOf(address(this)).div(totalSupply());
+        uint256 yDaiPerToken = yDai.balanceOf(address(this)).div(totalSupply());
 
-        uint256 fee = tInAmount.div(FEE_RATE);
-        uint256 newTInPool = pools[tInAddress].add(tInAmount);
-        uint256 tempTInPool = newTInPool.sub(fee);
-        uint256 newTOutPool = reciprocalPool(tempTInPool);
-        uint256 tOutAmount = pools[tOutAddress].sub(newTOutPool);
+        _burnFrom(msg.sender, tokensBurned);
+        chai.transfer(msg.sender, tokensBurned.mul(chaiPerToken));
+        yDai.transfer(msg.sender, tokensBurned.mul(yDaiPerToken));
 
-        require(
-            tOutAmount >= minTOutAmount,
-            "Market: Not enough TOut tokens"
-        );
-
-        pools[tInAddress] = newTInPool;
-        pools[tOutAddress] = newTOutPool;
-
-        _invariant = pools[tInAddress].mul(pools[tOutAddress]); // TODO: Why do we do this?
-        IERC20(tInAddress).transferFrom(msg.sender, address(this), tInAmount);
-        IERC20(tOutAddress).transfer(msg.sender, tOutAmount);
-
-        emit Swap(msg.sender, tInAddress, tOutAddress, tInAmount, tOutAmount);
+        _updateState(chai.balanceOf(address(this)), yDai.balanceOf(address(this)));
     }
 
-    /// @dev For the pool passed as an argument, returns the size of the reciprocal pool
-    function reciprocalPool(uint256 pool) public returns(uint256) {
-        return _invariant.div(pool);
+    /// @dev Swap Chai for yDai
+    function swapChaiForYDai(uint256 chaiIn) external { // TODO: Add `from` and `to` parameters
+
+        uint256 fee = feeChaiForYDai();
+        uint256 newChaiBalance = chai.balanceOf(address(this)).add(chaiIn).sub(fee);
+        uint256 newYDaiBalance = reciprocalBalance(newChaiBalance);
+        uint256 yDaiOut = yDai.balanceOf(address(this)).sub(newYDaiBalance);
+
+        chai.transferFrom(msg.sender, address(this), chaiIn);
+        yDai.transfer(msg.sender, yDaiOut);
+
+        _updateState(newChaiBalance, newYDaiBalance);
+    }
+
+    /// @dev Swap yDai for Chai
+    function swapYDaiForChai(uint256 yDaiIn) external { // TODO: Add `from` and `to` parameters
+
+        uint256 fee = feeYDaiForChai();
+        uint256 newYDaiBalance = yDai.balanceOf(address(this)).add(yDaiIn).sub(fee);
+        uint256 newChaiBalance = reciprocalBalance(newYDaiBalance);
+        uint256 chaiOut = chai.balanceOf(address(this)).sub(newChaiBalance);
+
+        yDai.transferFrom(msg.sender, address(this), yDaiIn);
+        chai.transfer(msg.sender, chaiOut);
+
+        _updateState(newChaiBalance, newYDaiBalance);
+    }
+
+    /// @dev For the balance passed as an argument, returns the size of the reciprocal balance
+    function reciprocalBalance(uint256 balance) public returns(uint256) {
+        return balance; // TODO: Magic!
+    }
+
+    /// @dev Returns the fee for an yDai to Chai swap
+    function feeYDaiForChai(uint256 yDaiIn) public returns(uint256) {
+        return yDaiIn / 1000; // TODO: Magic!
+    }
+
+    /// @dev Returns the fee for an Chai to yDai swap
+    function feeChaiForDai(chaiIn) public returns(uint256) {
+        return chaiIn / 1000; // TODO: Magic!
+    }
+
+    /// @dev For the balance passed as an argument, returns the size of the reciprocal balance
+    function reciprocalBalance(uint256 balance) public returns(uint256) {
+        return balance; // TODO: Magic!
+    }
+
+    // TODO: What is this?
+    function _updateState(uint256 x0, uint256 y0) internal {
+        State memory prevState = state;
+        state = State({
+            timestamp: uint32(block.timestamp % 2**32),
+            accumulator: uint64(prevState.prevRate + (prevState.prevRate * (block.timestamp - prevState.timestamp)) / RAY.unit()),
+            prevRate: uint32(y0 * RAY.unit() / x0)
+        });
     }
 }
