@@ -239,21 +239,11 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     // debt--
     function repayYDai(bytes32 collateral, uint256 maturity, address from, uint256 yDaiAmount)
         public onlyHolderOrProxy(from, "Dealer: Only Holder Or Proxy") onlyLive {
-        require(
-            containsSeries(maturity),
-            "Dealer: Unrecognized series"
-        );
-
         uint256 toRepay = Math.min(yDaiAmount, debtDai(collateral, maturity, from));
         series[maturity].burn(from, toRepay);
 
         uint256 repaidDebt = principalRepayment(maturity, toRepay);
-        debtYDai[collateral][maturity][from] = debtYDai[collateral][maturity][from].sub(repaidDebt);
-        systemDebtYDai[collateral][maturity] = systemDebtYDai[collateral][maturity].sub(repaidDebt);
-        if (debtYDai[collateral][maturity][from] == 0 && repaidDebt >= 0) {
-            returnBond(10);
-        }
-        emit Borrowed(collateral, maturity, from, debtYDai[collateral][maturity][from]);
+        _repay(collateral, maturity, from, repaidDebt);
     }
 
     /// @dev Takes dai from `from` address, user debt is decreased for the given collateral and yDai series.
@@ -273,9 +263,14 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
         _treasury.pushDai();                                      // Have Treasury process the dai
         
         uint256 repaidDebt = principalRepayment(maturity, inYDai(maturity, toRepay));
-        debtYDai[collateral][maturity][from] = debtYDai[collateral][maturity][from].sub(repaidDebt);
-        systemDebtYDai[collateral][maturity] = systemDebtYDai[collateral][maturity].sub(repaidDebt);
-        if (debtYDai[collateral][maturity][from] == 0 && repaidDebt >= 0) {
+        _repay(collateral, maturity, from, repaidDebt);
+    }
+
+    /// @dev Removes an amount of debt from an user's vault.
+    function _repay(bytes32 collateral, uint256 maturity, address from, uint256 yDaiAmount) internal {
+        debtYDai[collateral][maturity][from] = debtYDai[collateral][maturity][from].sub(yDaiAmount);
+        systemDebtYDai[collateral][maturity] = systemDebtYDai[collateral][maturity].sub(yDaiAmount);
+        if (debtYDai[collateral][maturity][from] == 0 && yDaiAmount >= 0) {
             returnBond(10);
         }
         emit Borrowed(collateral, maturity, from, debtYDai[collateral][maturity][from]);
