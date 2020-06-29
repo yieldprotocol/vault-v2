@@ -14,6 +14,7 @@ import "./Constants.sol";
 
 
 /// @dev A splitter moves positions and weth collateral from Dealers (using the IDealer interface) to MakerDAO.
+// TODO: Merge with DssShutdown
 contract Skimmer is Ownable(), Constants {
     using SafeMath for uint256;
     using DecimalMath for uint256;
@@ -73,7 +74,7 @@ contract Skimmer is Ownable(), Constants {
         for (uint256 i = 0; i < seriesIterator.length; i += 1) {
             uint256 maturity = seriesIterator[i];
             IYDai yDai = IYDai(series[seriesIterator[i]]);
-            require(
+            require( // TODO: Maybe you can allow skimming before maturity
                 yDai.isMature(),
                 "YDai: All yDai mature first"
             );
