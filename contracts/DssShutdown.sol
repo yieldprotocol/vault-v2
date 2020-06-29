@@ -155,17 +155,4 @@ contract DssShutdown is Constants {
             yDaiAmount.muld(yDai.chiGrowth(), RAY).muld(_fix, RAY)
         );
     }
-
-    /// @dev Removes any system profit. Can only be executed once all user debt has been resolved,
-    /// defined as the existing amount of yDai of all maturities combined.
-    /// TODO: Refactor os that it can be used at any time.
-    function profit(address user) public {
-        require(settled && cashedOut, "DssShutdown: Not ready");
-        require(
-            _dealer.systemDebt() == 0,
-            "DssShutdown: Redeem all yDai"
-        );
-        // TODO: Hardcode the address
-        _weth.transfer(user, _weth.balanceOf(address(this)));
-    }
 }

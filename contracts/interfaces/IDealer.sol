@@ -5,7 +5,8 @@ import "./IYDai.sol";
 
 interface IDealer {
     function series(uint256) external returns (IYDai);
-    function systemDebt() external returns (uint256);
+    function systemPosted(bytes32) external returns (uint256);
+    function systemDebtYDai(bytes32, uint256) external returns (uint256);
     function posted(bytes32, address) external view returns (uint256);
     function totalDebtDai(bytes32, address) external returns (uint256);
     function isCollateralized(bytes32, address) external returns (bool);

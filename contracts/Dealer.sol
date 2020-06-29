@@ -35,8 +35,8 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     mapping(bytes32 => mapping(address => uint256)) public override posted;               // Collateral posted by each user
     mapping(bytes32 => mapping(uint256 => mapping(address => uint256))) public debtYDai;  // Debt owed by each user, by series
 
-    mapping(bytes32 => uint256) public systemPosted;                        // Sum of collateral posted by all users
-    mapping(bytes32 => mapping(uint256 => uint256)) public systemDebtYDai;  // Sum of debt owed by all users, by series
+    mapping(bytes32 => uint256) public override systemPosted;                        // Sum of collateral posted by all users
+    mapping(bytes32 => mapping(uint256 => uint256)) public override systemDebtYDai;  // Sum of debt owed by all users, by series
 
     bool public live = true;
 
@@ -83,18 +83,6 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
         series[maturity] = IYDai(yDaiContract);
         seriesIterator.push(maturity);
     }
-
-    /// @dev Returns the total debt of the yDai system, across all series, in dai
-    // TODO: Remove
-    function systemDebt() public override returns (uint256) {
-        uint256 totalDebt;
-        for (uint256 i = 0; i < seriesIterator.length; i += 1) {
-            IYDai yDai = series[seriesIterator[i]];
-            totalDebt = totalDebt + IERC20(address(yDai)).totalSupply().muld(yDai.rateGrowth(), RAY);
-        } // We don't expect hundreds of maturities per dealer
-        return totalDebt;
-    }
-
 
     /// @dev Returns the dai equivalent of an yDai amount, for a given series identified by maturity
     function inDai(uint256 maturity, uint256 yDaiAmount) public returns (uint256) {
@@ -296,11 +284,12 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
 
         uint256 debt;
         for (uint256 i = 0; i < seriesIterator.length; i += 1) {
-            debt = debt + debtDai(collateral, seriesIterator[i], user);
-            systemDebtYDai[collateral][seriesIterator[i]] =
-                systemDebtYDai[collateral][seriesIterator[i]].sub(debtYDai[collateral][seriesIterator[i]][user]);
-            delete debtYDai[collateral][seriesIterator[i]][user];
-            emit Borrowed(collateral, seriesIterator[i], user, 0);
+            uint256 maturity = seriesIterator[i];
+            debt = debt + debtDai(collateral, maturity, user);
+            systemDebtYDai[collateral][maturity] =
+                systemDebtYDai[collateral][maturity].sub(debtYDai[collateral][maturity][user]);
+            delete debtYDai[collateral][maturity][user];
+            emit Borrowed(collateral, maturity, user, 0);
         } // We don't expect hundreds of maturities per dealer
         uint256 tokens = posted[collateral][user];
         systemPosted[collateral] = systemPosted[collateral].sub(posted[collateral][user]);
@@ -329,8 +318,10 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
             uint256 maturity = seriesIterator[i];
             uint256 thisGrab = Math.min(debtDai(collateral, maturity, user), daiAmount.sub(totalGrabbed));
             totalGrabbed = totalGrabbed.add(thisGrab); // SafeMath shouldn't be needed
-            debtYDai[collateral][maturity][user] = debtYDai[collateral][maturity][user].sub(inYDai(maturity, thisGrab)); // SafeMath shouldn't be needed
-            systemDebtYDai[collateral][maturity] = systemDebtYDai[collateral][maturity].sub(inYDai(maturity, thisGrab)); // SafeMath shouldn't be needed
+            debtYDai[collateral][maturity][user] =
+                debtYDai[collateral][maturity][user].sub(inYDai(maturity, thisGrab)); // SafeMath shouldn't be needed
+            systemDebtYDai[collateral][maturity] =
+                systemDebtYDai[collateral][maturity].sub(inYDai(maturity, thisGrab)); // SafeMath shouldn't be needed
             if (debtYDai[collateral][maturity][user] == 0){
                 returnBond(10);
             }
