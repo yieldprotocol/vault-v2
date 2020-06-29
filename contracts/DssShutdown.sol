@@ -158,6 +158,7 @@ contract DssShutdown is Constants {
 
     /// @dev Removes any system profit. Can only be executed once all user debt has been resolved,
     /// defined as the existing amount of yDai of all maturities combined.
+    /// TODO: Refactor os that it can be used at any time.
     function profit(address user) public {
         require(settled && cashedOut, "DssShutdown: Not ready");
         require(

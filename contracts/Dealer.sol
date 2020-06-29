@@ -29,11 +29,14 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     IGasToken internal _gasToken;
     mapping(bytes32 => IERC20) internal _token;                       // Weth or Chai
     mapping(bytes32 => IOracle) internal _oracle;                     // WethOracle or ChaiOracle
-    mapping(uint256 => IYDai) public override series;      // YDai series, indexed by maturity
-    uint256[] internal seriesIterator;            // We need to know all the series
+    mapping(uint256 => IYDai) public override series;                 // YDai series, indexed by maturity
+    uint256[] internal seriesIterator;                                // We need to know all the series
 
-    mapping(bytes32 => mapping(address => uint256)) public override posted;    // In Weth or Chai
-    mapping(bytes32 => mapping(uint256 => mapping(address => uint256))) public debtYDai;  // By series, in yDai
+    mapping(bytes32 => mapping(address => uint256)) public override posted;               // Collateral posted by each user
+    mapping(bytes32 => mapping(uint256 => mapping(address => uint256))) public debtYDai;  // Debt owed by each user, by series
+
+    mapping(bytes32 => uint256) public systemPosted;                        // Sum of collateral posted by all users
+    mapping(bytes32 => mapping(uint256 => uint256)) public systemDebtYDai;  // Sum of debt owed by all users, by series
 
     bool public live = true;
 
@@ -82,7 +85,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     }
 
     /// @dev Returns the total debt of the yDai system, across all series, in dai
-    // TODO: Test
+    // TODO: Remove
     function systemDebt() public override returns (uint256) {
         uint256 totalDebt;
         for (uint256 i = 0; i < seriesIterator.length; i += 1) {
@@ -143,15 +146,6 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
         return totalDebt;
     }
 
-    /// @dev Returns the total debt of an user, for a given collateral, across all series, in yDai
-    function totalDebtYDai(bytes32 collateral, address user) public view override returns (uint256) {
-        uint256 totalDebt;
-        for (uint256 i = 0; i < seriesIterator.length; i += 1) {
-            totalDebt = totalDebt + debtYDai[collateral][seriesIterator[i]][user];
-        } // We don't expect hundreds of maturities per dealer
-        return totalDebt;
-    }
-
     /// @dev Maximum borrowing power of an user in dai for a given collateral
     //
     // powerOf[user](wad) = posted[user](wad) * oracle.price()(ray)
@@ -187,6 +181,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
             lockBond(10);
         }
         posted[collateral][to] = posted[collateral][to].add(amount);
+        systemPosted[collateral] = systemPosted[collateral].add(amount);
         emit Posted(collateral, to, posted[collateral][to]);
     }
 
@@ -195,6 +190,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     function withdraw(bytes32 collateral, address from, address to, uint256 amount)
         public override onlyHolderOrProxy(from, "Dealer: Only Holder Or Proxy") onlyLive {
         posted[collateral][from] = posted[collateral][from].sub(amount); // Will revert if not enough posted
+        systemPosted[collateral] = systemPosted[collateral].sub(amount);
 
         require(
             isCollateralized(collateral, from),
@@ -236,6 +232,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
             lockBond(10);
         }
         debtYDai[collateral][maturity][to] = debtYDai[collateral][maturity][to].add(yDaiAmount);
+        systemDebtYDai[collateral][maturity] = systemDebtYDai[collateral][maturity].add(yDaiAmount);
 
         require(
             isCollateralized(collateral, to),
@@ -262,6 +259,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
         (uint256 toRepay, uint256 debtDecrease) = repayProportion(collateral, maturity, from, yDaiAmount);
         series[maturity].burn(from, toRepay);
         debtYDai[collateral][maturity][from] = debtYDai[collateral][maturity][from].sub(debtDecrease);
+        systemDebtYDai[collateral][maturity] = systemDebtYDai[collateral][maturity].sub(debtDecrease);
         if (debtYDai[collateral][maturity][from] == 0 && debtDecrease >= 0) {
             returnBond(10);
         }
@@ -285,6 +283,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
 
         _treasury.pushDai();                                      // Have Treasury process the dai
         debtYDai[collateral][maturity][from] = debtYDai[collateral][maturity][from].sub(debtDecrease);
+        systemDebtYDai[collateral][maturity] = systemDebtYDai[collateral][maturity].sub(debtDecrease);
         if (debtYDai[collateral][maturity][from] == 0 && debtDecrease >= 0) {
             returnBond(10);
         }
@@ -298,10 +297,13 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
         uint256 debt;
         for (uint256 i = 0; i < seriesIterator.length; i += 1) {
             debt = debt + debtDai(collateral, seriesIterator[i], user);
+            systemDebtYDai[collateral][seriesIterator[i]] =
+                systemDebtYDai[collateral][seriesIterator[i]].sub(debtYDai[collateral][seriesIterator[i]][user]);
             delete debtYDai[collateral][seriesIterator[i]][user];
             emit Borrowed(collateral, seriesIterator[i], user, 0);
         } // We don't expect hundreds of maturities per dealer
         uint256 tokens = posted[collateral][user];
+        systemPosted[collateral] = systemPosted[collateral].sub(posted[collateral][user]);
         delete posted[collateral][user];
         emit Posted(collateral, user, 0);
         
@@ -317,23 +319,25 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
             tokenAmount,
             "Dealer: Not enough collateral"
         );
+        systemPosted[collateral] = systemPosted[collateral].sub(tokenAmount);
         if (posted[collateral][user] == 0){
             returnBond(10);
         }
 
-        uint256 grabbed;
+        uint256 totalGrabbed;
         for (uint256 i = 0; i < seriesIterator.length; i += 1) {
             uint256 maturity = seriesIterator[i];
-            uint256 thisGrab = Math.min(debtDai(collateral, maturity, user), daiAmount.sub(grabbed));
-            grabbed = grabbed.add(thisGrab); // SafeMath shouldn't be needed
+            uint256 thisGrab = Math.min(debtDai(collateral, maturity, user), daiAmount.sub(totalGrabbed));
+            totalGrabbed = totalGrabbed.add(thisGrab); // SafeMath shouldn't be needed
             debtYDai[collateral][maturity][user] = debtYDai[collateral][maturity][user].sub(inYDai(maturity, thisGrab)); // SafeMath shouldn't be needed
+            systemDebtYDai[collateral][maturity] = systemDebtYDai[collateral][maturity].sub(inYDai(maturity, thisGrab)); // SafeMath shouldn't be needed
             if (debtYDai[collateral][maturity][user] == 0){
                 returnBond(10);
             }
-            if (grabbed == daiAmount) break;
+            if (totalGrabbed == daiAmount) break;
         } // We don't expect hundreds of maturities per dealer
         require(
-            grabbed == daiAmount,
+            totalGrabbed == daiAmount,
             "Dealer: Not enough user debt"
         );
     }
