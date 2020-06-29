@@ -92,6 +92,25 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
         return totalDebt;
     }
 
+    /// @dev Returns the Dai equivalent of an yDai amount, for a given series identified by maturity
+    function inDai(bytes32 collateral, uint256 maturity, uint256 yDaiAmount) public returns (uint256) {
+        require(
+            containsSeries(maturity),
+            "Dealer: Unrecognized series"
+        );
+        if (series[maturity].isMature()){
+            if (collateral == WETH){
+                return yDaiAmount.muld(series[maturity].rateGrowth(), RAY);
+            } else if (collateral == CHAI) {
+                return yDaiAmount.muld(series[maturity].chiGrowth(), RAY);
+            } else {
+                revert("Dealer: Unsupported collateral");
+            }
+        } else {
+            return yDaiAmount;
+        }
+    }
+
     /// @dev Returns the yDai equivalent of a dai amount, for a given series identified by maturity
     function inYDai(bytes32 collateral, uint256 maturity, uint256 daiAmount) public returns (uint256) {
         require(
@@ -107,8 +126,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
             } else {
                 revert("Dealer: Unsupported collateral");
             }
-        }
-        else {
+        } else {
             return daiAmount;
         }
     }
@@ -120,22 +138,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     //                        rate_mat
     //
     function debtDai(bytes32 collateral, uint256 maturity, address user) public returns (uint256) {
-        require(
-            containsSeries(maturity),
-            "Dealer: Unrecognized series"
-        );
-        if (series[maturity].isMature()){
-            if (collateral == WETH){
-                return debtYDai[collateral][maturity][user].muld(series[maturity].rateGrowth(), RAY);
-            } else if (collateral == CHAI) {
-                return debtYDai[collateral][maturity][user].muld(series[maturity].chiGrowth(), RAY);
-            } else {
-                revert("Dealer: Unsupported collateral");
-            }
-        }
-        else {
-            return debtYDai[collateral][maturity][user];
-        }
+        return inDai(collateral, maturity, debtYDai[collateral][maturity][user]);
     }
 
     /// @dev Returns the total debt of an user, for a given collateral, across all series, in Dai
