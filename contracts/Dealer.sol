@@ -108,25 +108,32 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
         return totalDebt;
     }
 
-
-    /// @dev Returns the dai equivalent of an yDai amount, for a given series identified by maturity
-    function inDai(uint256 maturity, uint256 yDaiAmount) public returns (uint256) {
-        // if (now >= maturity) { // TODO: Consider using for gas savings
+    /// @dev Returns the Dai equivalent of an yDai amount, for a given series identified by maturity
+    function inDai(bytes32 collateral, uint256 maturity, uint256 yDaiAmount) public returns (uint256) {
         if (series[maturity].isMature()){
-            return yDaiAmount.muld(series[maturity].rateGrowth(), RAY);
-        }
-        else {
+            if (collateral == WETH){
+                return yDaiAmount.muld(series[maturity].rateGrowth(), RAY);
+            } else if (collateral == CHAI) {
+                return yDaiAmount.muld(series[maturity].chiGrowth(), RAY);
+            } else {
+                revert("Dealer: Unsupported collateral");
+            }
+        } else {
             return yDaiAmount;
         }
     }
 
     /// @dev Returns the yDai equivalent of a dai amount, for a given series identified by maturity
-    function inYDai(uint256 maturity, uint256 daiAmount) public returns (uint256) {
-        // if (now >= maturity) { // TODO: Consider using for gas savings
+    function inYDai(bytes32 collateral, uint256 maturity, uint256 daiAmount) public returns (uint256) {
         if (series[maturity].isMature()){
-            return daiAmount.divd(series[maturity].rateGrowth(), RAY);
-        }
-        else {
+            if (collateral == WETH){
+                return daiAmount.divd(series[maturity].rateGrowth(), RAY);
+            } else if (collateral == CHAI) {
+                return daiAmount.divd(series[maturity].chiGrowth(), RAY);
+            } else {
+                revert("Dealer: Unsupported collateral");
+            }
+        } else {
             return daiAmount;
         }
     }
@@ -138,7 +145,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     //                        rate_mat
     //
     function debtDai(bytes32 collateral, uint256 maturity, address user) public returns (uint256) {
-        return inDai(maturity, debtYDai[collateral][maturity][user]);
+        return inDai(collateral, maturity, debtYDai[collateral][maturity][user]);
     }
 
     /// @dev Returns the total debt of an user, for a given collateral, across all series, in Dai
@@ -188,7 +195,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
         );
 
         if (collateral == WETH){ // TODO: Refactor Treasury to be `push(collateral, amount)`
-            _treasury.pushWeth();                          // Have Treasury process the weth
+            _treasury.pushWeth();
         } else if (collateral == CHAI) {
             _treasury.pushChai();
         }
@@ -215,7 +222,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
             "Dealer: Too much debt"
         );
 
-        if (collateral == WETH){
+        if (collateral == WETH){ // TODO: Refactor Treasury to be `pull(collateral, amount)`
             _treasury.pullWeth(to, amount);
         } else if (collateral == CHAI) {
             _treasury.pullChai(to, amount);
@@ -290,13 +297,8 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     // user --- dai ---> us
     // debt--
     function repayDai(bytes32 collateral, uint256 maturity, address from, uint256 daiAmount)
-        public
-        validCollateral(collateral)
-        validSeries(maturity)
-        onlyHolderOrProxy(from, "Dealer: Only Holder Or Proxy")
-        onlyLive
-    {
-        (uint256 toRepay, uint256 debtDecrease) = repayProportion(collateral, maturity, from, inYDai(maturity, daiAmount));
+        public onlyHolderOrProxy(from, "Dealer: Only Holder Or Proxy") onlyLive {
+        (uint256 toRepay, uint256 debtDecrease) = repayProportion(collateral, maturity, from, inYDai(collateral, maturity, daiAmount));
         require(
             _dai.transferFrom(from, address(_treasury), toRepay),  // Take dai from user to Treasury
             "Dealer: Dai transfer fail"
@@ -351,7 +353,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
             uint256 maturity = seriesIterator[i];
             uint256 thisGrab = Math.min(debtDai(collateral, maturity, user), daiAmount.sub(grabbed));
             grabbed = grabbed.add(thisGrab); // SafeMath shouldn't be needed
-            debtYDai[collateral][maturity][user] = debtYDai[collateral][maturity][user].sub(inYDai(maturity, thisGrab)); // SafeMath shouldn't be needed
+            debtYDai[collateral][maturity][user] = debtYDai[collateral][maturity][user].sub(inYDai(collateral, maturity, thisGrab)); // SafeMath shouldn't be needed
             if (debtYDai[collateral][maturity][user] == 0){
                 returnBond(10);
             }

@@ -596,9 +596,9 @@ contract('Dealer - Weth', async (accounts) =>  {
                     it("as rate increases after maturity, the debt doesn't in when measured in yDai", async() => {
                         let debt = await dealer.debtDai.call(WETH, maturity1, owner);
                         assert.equal(
-                            await dealer.inYDai.call(maturity1, debt),
+                            await dealer.inYDai.call(WETH, maturity1, debt),
                             daiTokens.toString(),
-                            "Owner should have " + daiTokens + " debt after the rate change, instead has " + (await dealer.inYDai.call(maturity1, debt)),
+                            "Owner should have " + daiTokens + " debt after the rate change, instead has " + (await dealer.inYDai.call(WETH, maturity1, debt)),
                         );
                     });
      

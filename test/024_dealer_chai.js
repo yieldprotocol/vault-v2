@@ -453,13 +453,15 @@ contract('Dealer - Chai', async (accounts) =>  {
                 );
             });
 
-            // Set rate to 1.5
-            const rateIncrease = toRay(0.25);
-            const rateDifferential = divRay(addBN(rate, rateIncrease), rate);
-            const increasedDebt = mulRay(daiTokens, rateDifferential);
+            // Set rate to 1.75
+            const rateIncrease = toRay(0.5);
+            // Set chi to 1.5
+            const chiIncrease = toRay(0.25);
+            const chiDifferential = divRay(addBN(chi, chiIncrease), chi);
+            const increasedDebt = mulRay(daiTokens, chiDifferential);
             const debtIncrease = subBN(increasedDebt, daiTokens);
 
-            describe("after maturity, with a rate increase", () => {
+            describe("after maturity, with a chi increase", () => {
                 beforeEach(async() => {
                     assert.equal(
                         await yDai1.balanceOf(owner),
@@ -476,29 +478,32 @@ contract('Dealer - Chai', async (accounts) =>  {
                     await helper.advanceBlock();
                     await yDai1.mature();
 
+                    // Increase rate
                     await vat.fold(ilk, vat.address, rateIncrease, { from: owner });
+                    // Increase chi
+                    await pot.setChi(addBN(chi, chiIncrease), { from: owner });
                 });
 
-                it("as rate increases after maturity, so does the debt in when measured in dai", async() => {
+                it("as chi increases after maturity, so does the debt in when measured in dai", async() => {
                     assert.equal(
                         await dealer.debtDai.call(CHAI, maturity1, owner),
                         increasedDebt.toString(),
-                        "Owner should have " + increasedDebt + " debt after the rate change, instead has " + (await dealer.debtDai.call(CHAI, maturity1, owner)),
+                        "Owner should have " + increasedDebt + " debt after the chi change, instead has " + (await dealer.debtDai.call(CHAI, maturity1, owner)),
                     );
                 });
     
-                it("as rate increases after maturity, the debt doesn't in when measured in yDai", async() => {
+                it("as chi increases after maturity, the debt doesn't in when measured in yDai", async() => {
                     let debt = await dealer.debtDai.call(CHAI, maturity1, owner);
                     assert.equal(
-                        await dealer.inYDai.call(maturity1, debt),
+                        await dealer.inYDai.call(CHAI, maturity1, debt),
                         daiTokens.toString(),
-                        "Owner should have " + daiTokens + " debt after the rate change, instead has " + (await dealer.inYDai.call(maturity1, debt)),
+                        "Owner should have " + daiTokens + " debt after the chi change, instead has " + (await dealer.inYDai.call(CHAI, maturity1, debt)),
                     );
                 });
 
                 // TODO: Test that when yDai is provided in excess for repayment, only the necessary amount is taken
     
-                it("more yDai is required to repay after maturity as rate increases", async() => {
+                it("more yDai is required to repay after maturity as chi increases", async() => {
                     await yDai1.approve(dealer.address, daiTokens, { from: owner });
                     await dealer.repayYDai(CHAI, maturity1, owner, daiTokens, { from: owner });
         
