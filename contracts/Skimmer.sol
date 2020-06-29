@@ -79,15 +79,14 @@ contract Skimmer is Ownable(), Constants {
             );
             uint256 chi0 = yDai.chi0();
             uint256 rate0 = yDai.rate0();
-            profit = profit + _dealer.systemDebtYDai(WETH, maturity).muld(rate.divd(rate0, RAY), RAY).divd(chi0, RAY);
-            profit = profit + _dealer.systemDebtYDai(CHAI, maturity).divd(chi0, RAY);
-            profit = profit - yDai.totalSupply().divd(chi0, RAY);
+            profit = profit.add(_dealer.systemDebtYDai(WETH, maturity).muld(rate.divd(rate0, RAY), RAY).divd(chi0, RAY));
+            profit = profit.add(_dealer.systemDebtYDai(CHAI, maturity).divd(chi0, RAY));
+            profit = profit.sub(yDai.totalSupply().divd(chi0, RAY));
         }
 
-        profit = profit -
-            _treasury.debt().divd(chi, RAY) -
-            _dealer.systemPosted(CHAI);
-        
+        profit = profit.sub(_treasury.debt().divd(chi, RAY));
+        profit = profit.sub(_dealer.systemPosted(CHAI));
+
         _treasury.pullChai(beneficiary, profit);
     }
 
