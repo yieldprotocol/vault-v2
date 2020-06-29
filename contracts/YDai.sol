@@ -26,10 +26,10 @@ contract YDai is AuthorizedAccess(), UserProxy(), ERC20, Constants, IYDai  {
     IPot internal _pot;
     ITreasury internal _treasury;
 
-    bool internal _isMature;
-    uint256 internal _maturity;
-    uint256 internal _chi;      // Chi at maturity
-    uint256 internal _rate;     // Rate at maturity
+    bool public override isMature;
+    uint256 public override maturity;
+    uint256 public override chi0;      // Chi at maturity
+    uint256 public override rate0;     // Rate at maturity
 
     constructor(
         address vat_,
@@ -44,20 +44,9 @@ contract YDai is AuthorizedAccess(), UserProxy(), ERC20, Constants, IYDai  {
         _jug = IJug(jug_);
         _pot = IPot(pot_);
         _treasury = ITreasury(treasury_);
-        _maturity = maturity_;
-        _chi = RAY.unit();
-        _rate = RAY.unit();
-    }
-
-    /// @dev Whether the yDai has matured or not
-    // TODO: Consider removing and using `now > _maturity` instead of calls to `isMature()`, for gas savings.
-    function isMature() public view override returns(bool){
-        return _isMature;
-    }
-
-    /// @dev Programmed time for yDai maturity
-    function maturity() public view override returns(uint256){
-        return _maturity;
+        maturity = maturity_;
+        chi0 = RAY.unit();
+        rate0 = RAY.unit();
     }
 
     /// @dev Chi differential between maturity and now in RAY. Returns 1.0 if not mature.
@@ -68,9 +57,9 @@ contract YDai is AuthorizedAccess(), UserProxy(), ERC20, Constants, IYDai  {
     //          chi_mat
     //
     function chiGrowth() public override returns(uint256){
-        if (!isMature()) return _chi;
+        if (isMature != true) return chi0;
         uint256 chiNow = (now > _pot.rho()) ? _pot.drip() : _pot.chi();
-        return Math.min(rateGrowth(), chiNow.divd(_chi, RAY));
+        return Math.min(rateGrowth(), chiNow.divd(chi0, RAY));
     }
 
     /// @dev Rate differential between maturity and now in RAY. Returns 1.0 if not mature.
@@ -80,7 +69,7 @@ contract YDai is AuthorizedAccess(), UserProxy(), ERC20, Constants, IYDai  {
     //           rate_mat
     //
     function rateGrowth() public override returns(uint256){
-        if (!isMature()) return _rate;
+        if (isMature != true) return rate0;
         uint256 rateNow;
         (, uint256 rho) = _jug.ilks("ETH-A"); // "WETH" for weth.sol, "ETH-A" for MakerDAO
         if (now > rho) {
@@ -89,25 +78,25 @@ contract YDai is AuthorizedAccess(), UserProxy(), ERC20, Constants, IYDai  {
         } else {
             (, rateNow,,,) = _vat.ilks("ETH-A");
         }
-        return rateNow.divd(_rate, RAY);
+        return rateNow.divd(rate0, RAY);
     }
 
     /// @dev Mature yDai and capture maturity data
     function mature() public override {
         require(
             // solium-disable-next-line security/no-block-members
-            now > _maturity,
+            now > maturity,
             "YDai: Too early to mature"
         );
         require(
-            !isMature(),
+            isMature != true,
             "YDai: Already matured"
         );
-        (, _rate,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO Vat
-        _rate = Math.max(_rate, RAY.unit()); // Floor it at 1.0
-        _chi = (now > _pot.rho()) ? _pot.drip() : _pot.chi();
-        _isMature = true;
-        emit Matured(_rate, _chi);
+        (, rate0,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO Vat
+        rate0 = Math.max(rate0, RAY.unit()); // Floor it at 1.0
+        chi0 = (now > _pot.rho()) ? _pot.drip() : _pot.chi();
+        isMature = true;
+        emit Matured(rate0, chi0);
     }
 
     /// @dev Burn yTokens and return their dai equivalent value, pulled from the Treasury
@@ -116,7 +105,7 @@ contract YDai is AuthorizedAccess(), UserProxy(), ERC20, Constants, IYDai  {
     function redeem(address user, uint256 yDaiAmount)
         public onlyHolderOrProxy(user, "YDai: Only Holder Or Proxy") {
         require(
-            isMature(),
+            isMature == true,
             "YDai: yDai is not mature"
         );
         _burn(user, yDaiAmount);                              // Burn yDai from user
