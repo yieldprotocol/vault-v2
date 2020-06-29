@@ -242,8 +242,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
         uint256 toRepay = Math.min(yDaiAmount, debtDai(collateral, maturity, from));
         series[maturity].burn(from, toRepay);
 
-        uint256 repaidDebt = principalRepayment(maturity, toRepay);
-        _repay(collateral, maturity, from, repaidDebt);
+        _repay(collateral, maturity, from, toRepay);
     }
 
     /// @dev Takes dai from `from` address, user debt is decreased for the given collateral and yDai series.
@@ -262,15 +261,22 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
         );
         _treasury.pushDai();                                      // Have Treasury process the dai
         
-        uint256 repaidDebt = principalRepayment(maturity, inYDai(maturity, toRepay));
-        _repay(collateral, maturity, from, repaidDebt);
+        _repay(collateral, maturity, from, inYDai(maturity, toRepay));
     }
 
-    /// @dev Removes an amount of debt from an user's vault.
+    /// @dev Removes an amount of debt from an user's vault. If interest was accrued debt is only paid proportionally.
+    //
+    //                                                principal
+    // principal_repayment = gross_repayment * ----------------------
+    //                                          principal + interest
+    //    
     function _repay(bytes32 collateral, uint256 maturity, address from, uint256 yDaiAmount) internal {
-        debtYDai[collateral][maturity][from] = debtYDai[collateral][maturity][from].sub(yDaiAmount);
-        systemDebtYDai[collateral][maturity] = systemDebtYDai[collateral][maturity].sub(yDaiAmount);
-        if (debtYDai[collateral][maturity][from] == 0 && yDaiAmount >= 0) {
+        // `inDai` calculates the interest accrued for a given amount and series
+        uint256 repaidDebt = yDaiAmount.muld(divdrup(RAY.unit(), inDai(maturity, RAY.unit()), RAY), RAY);
+
+        debtYDai[collateral][maturity][from] = debtYDai[collateral][maturity][from].sub(repaidDebt);
+        systemDebtYDai[collateral][maturity] = systemDebtYDai[collateral][maturity].sub(repaidDebt);
+        if (debtYDai[collateral][maturity][from] == 0 && repaidDebt >= 0) {
             returnBond(10);
         }
         emit Borrowed(collateral, maturity, from, debtYDai[collateral][maturity][from]);
@@ -329,19 +335,6 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
             totalGrabbed == daiAmount,
             "Dealer: Not enough user debt"
         );
-    }
-
-
-    /// @dev Calculates principal repaid for a given series
-    //                                                principal
-    // principal_repayment = gross_repayment * ----------------------
-    //                                          principal + interest
-    //    
-    function principalRepayment(uint256 maturity, uint256 yDaiAmount)
-        internal returns(uint256) {
-
-        // `inDai` calculates the interest accrued for a given amount and series
-        return yDaiAmount.muld(divdrup(RAY.unit(), inDai(maturity, RAY.unit()), RAY), RAY);
     }
 
     /// @dev Locks a liquidation bond in gas tokens
