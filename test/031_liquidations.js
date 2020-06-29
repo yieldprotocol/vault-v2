@@ -23,7 +23,7 @@ const Dealer = artifacts.require('Dealer');
 const Splitter = artifacts.require('Splitter');
 const Liquidations = artifacts.require('Liquidations');
 const EthProxy = artifacts.require('EthProxy');
-const DssShutdown = artifacts.require('DssShutdown');
+const Shutdown = artifacts.require('Shutdown');
 
 const helper = require('ganache-time-traveler');
 const truffleAssert = require('truffle-assertions');
@@ -51,7 +51,7 @@ contract('Liquidations', async (accounts) =>  {
     let dealer;
     let splitter;
     let liquidations;
-    let dssShutdown;
+    let shutdown;
 
     let WETH = web3.utils.fromAscii("WETH");
     let CHAI = web3.utils.fromAscii("CHAI");
@@ -210,12 +210,14 @@ contract('Liquidations', async (accounts) =>  {
         await dealer.grantAccess(liquidations.address, { from: owner });
         await treasury.grantAccess(liquidations.address, { from: owner });
 
-        // Setup DssShutdown
-        dssShutdown = await DssShutdown.new(
+        // Setup Shutdown
+        shutdown = await Shutdown.new(
             vat.address,
             daiJoin.address,
             weth.address,
             wethJoin.address,
+            jug.address,
+            pot.address,
             end.address,
             chai.address,
             chaiOracle.address,
@@ -224,12 +226,12 @@ contract('Liquidations', async (accounts) =>  {
             liquidations.address,
             { from: owner },
         );
-        await treasury.grantAccess(dssShutdown.address, { from: owner });
-        await treasury.registerDssShutdown(dssShutdown.address, { from: owner });
-        await dealer.grantAccess(dssShutdown.address, { from: owner });
-        await yDai1.grantAccess(dssShutdown.address, { from: owner });
-        await yDai2.grantAccess(dssShutdown.address, { from: owner });
-        await liquidations.grantAccess(dssShutdown.address, { from: owner });
+        await treasury.grantAccess(shutdown.address, { from: owner });
+        await treasury.registerShutdown(shutdown.address, { from: owner });
+        await dealer.grantAccess(shutdown.address, { from: owner });
+        await yDai1.grantAccess(shutdown.address, { from: owner });
+        await yDai2.grantAccess(shutdown.address, { from: owner });
+        await liquidations.grantAccess(shutdown.address, { from: owner });
 
         // Testing permissions
         await vat.hope(daiJoin.address, { from: owner });

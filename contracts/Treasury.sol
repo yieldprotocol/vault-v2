@@ -261,7 +261,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants {
     }
 
     /// @dev Registers the one contract that will shut down the Treasury if MakerDAO shuts down.
-    function registerDssShutdown(address dssShutdown_) public onlyOwner {
+    function registerShutdown(address dssShutdown_) public onlyOwner {
         require(
             _dssShutdown == address(0),
             "Treasury: Shutdown already set"

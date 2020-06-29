@@ -15,7 +15,7 @@ const Dealer = artifacts.require("Dealer");
 const Liquidations = artifacts.require("Liquidations");
 const Splitter = artifacts.require("Splitter");
 const EthProxy = artifacts.require("EthProxy");
-const DssShutdown = artifacts.require("DssShutdown");
+const Shutdown = artifacts.require("Shutdown");
 
 
 module.exports = async (deployer, network, accounts) => {
@@ -92,13 +92,15 @@ module.exports = async (deployer, network, accounts) => {
   await dealer.grantAccess(liquidationsAddress);
   await treasury.grantAccess(liquidationsAddress);
 
-  // Setup DssShutdown
+  // Setup Shutdown
   await deployer.deploy(
-    DssShutdown,
+    Shutdown,
     vatAddress,
     daiJoinAddress,
     wethAddress,
     wethJoinAddress,
+    // TODO: Add Jug
+    // TODO: Add Pot
     endAddress,
     chaiAddress,
     chaiOracleAddress,
@@ -106,10 +108,10 @@ module.exports = async (deployer, network, accounts) => {
     dealerAddress,
     liquidationsAddress,
   );
-  dssShutdownAddress = (await DssShutdown.deployed()).address;
+  dssShutdownAddress = (await Shutdown.deployed()).address;
   await dealer.grantAccess(dssShutdownAddress);
   await treasury.grantAccess(dssShutdownAddress);
-  await treasury.registerDssShutdown(dssShutdownAddress);
+  await treasury.registerShutdown(dssShutdownAddress);
   // TODO: Retrieve the addresses for yDai contracts
   // await yDai1.grantAccess(dssShutdownAddress);
   // await yDai2.grantAccess(dssShutdownAddress);
@@ -126,7 +128,7 @@ module.exports = async (deployer, network, accounts) => {
   const deployedPeripheral = {
     'Splitter': splitterAddress,
     'Liquidations': liquidationsAddress,
-    'DssShutdown': dssShutdownAddress,
+    'Shutdown': dssShutdownAddress,
     'EthProxy': ethProxyAddress,
   }
   console.log(deployedPeripheral);

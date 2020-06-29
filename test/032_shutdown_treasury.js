@@ -23,14 +23,14 @@ const Dealer = artifacts.require('Dealer');
 const Splitter = artifacts.require('Splitter');
 const Liquidations = artifacts.require('Liquidations');
 const EthProxy = artifacts.require('EthProxy');
-const DssShutdown = artifacts.require('DssShutdown');
+const Shutdown = artifacts.require('Shutdown');
 
 const helper = require('ganache-time-traveler');
 const truffleAssert = require('truffle-assertions');
 const { BN, expectRevert, expectEvent } = require('@openzeppelin/test-helpers');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
 
-contract('DssShutdown - Treasury', async (accounts) =>  {
+contract('Shutdown - Treasury', async (accounts) =>  {
     let [ owner, user ] = accounts;
     let vat;
     let weth;
@@ -51,7 +51,7 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
     let splitter;
     let liquidations;
     let ethProxy;
-    let dssShutdown;
+    let shutdown;
 
     let WETH = web3.utils.fromAscii("WETH");
     let CHAI = web3.utils.fromAscii("CHAI");
@@ -222,8 +222,8 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
         await dealer.grantAccess(liquidations.address, { from: owner });
         await treasury.grantAccess(liquidations.address, { from: owner });
 
-        // Setup DssShutdown
-        dssShutdown = await DssShutdown.new(
+        // Setup Shutdown
+        shutdown = await Shutdown.new(
             vat.address,
             daiJoin.address,
             weth.address,
@@ -236,12 +236,12 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             liquidations.address,
             { from: owner },
         );
-        await treasury.grantAccess(dssShutdown.address, { from: owner });
-        await treasury.registerDssShutdown(dssShutdown.address, { from: owner });
-        await dealer.grantAccess(dssShutdown.address, { from: owner });
-        await yDai1.grantAccess(dssShutdown.address, { from: owner });
-        await yDai2.grantAccess(dssShutdown.address, { from: owner });
-        await liquidations.grantAccess(dssShutdown.address, { from: owner });
+        await treasury.grantAccess(shutdown.address, { from: owner });
+        await treasury.registerShutdown(shutdown.address, { from: owner });
+        await dealer.grantAccess(shutdown.address, { from: owner });
+        await yDai1.grantAccess(shutdown.address, { from: owner });
+        await yDai2.grantAccess(shutdown.address, { from: owner });
+        await liquidations.grantAccess(shutdown.address, { from: owner });
 
         // Tests setup
         await pot.setChi(chi, { from: owner });
@@ -291,8 +291,8 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
 
         it("does not allow to shutdown if MakerDAO is live", async() => {
             await expectRevert(
-                dssShutdown.shutdown({ from: owner }),
-                "DssShutdown: MakerDAO not shutting down",
+                shutdown.shutdown({ from: owner }),
+                "Shutdown: MakerDAO not shutting down",
             );
         });
 
@@ -303,12 +303,12 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             });
 
             it("allows to shutdown", async() => {
-                await dssShutdown.shutdown({ from: owner });
+                await shutdown.shutdown({ from: owner });
                 
                 assert.equal(
-                    await dssShutdown.live.call(),
+                    await shutdown.live.call(),
                     false,
-                    'DssShutdown should be activated',
+                    'Shutdown should be activated',
                 );
                 assert.equal(
                     await treasury.live.call(),
@@ -329,16 +329,16 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
 
             describe("with yDai in shutdown", () => {
                 beforeEach(async() => {
-                    await dssShutdown.shutdown({ from: owner });
+                    await shutdown.shutdown({ from: owner });
                 });
 
                 it("allows to free system collateral without debt", async() => {
-                    await dssShutdown.settleTreasury({ from: owner });
+                    await shutdown.settleTreasury({ from: owner });
 
                     assert.equal(
-                        await weth.balanceOf(dssShutdown.address, { from: owner }),
+                        await weth.balanceOf(shutdown.address, { from: owner }),
                         wethTokens.toString(),
-                        'Treasury should have ' + wethTokens.toString() + ' weth in hand, instead has ' + (await weth.balanceOf(dssShutdown.address, { from: owner })),
+                        'Treasury should have ' + wethTokens.toString() + ' weth in hand, instead has ' + (await weth.balanceOf(shutdown.address, { from: owner })),
                     );
                 });
 
@@ -395,17 +395,17 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                 beforeEach(async() => {
                     await end.cage({ from: owner });
                     await end.setTag(ilk, tag, { from: owner });
-                    await dssShutdown.shutdown({ from: owner });
+                    await shutdown.shutdown({ from: owner });
                 });
 
 
                 it("allows to settle treasury debt", async() => {
-                    await dssShutdown.settleTreasury({ from: owner });
+                    await shutdown.settleTreasury({ from: owner });
 
                     assert.equal(
-                        await weth.balanceOf(dssShutdown.address, { from: owner }),
+                        await weth.balanceOf(shutdown.address, { from: owner }),
                         wethTokens.sub(taggedWeth).add(1).toString(),
-                        'DssShutdown should have ' + wethTokens.sub(taggedWeth).add(1).add(1) + ' weth in hand, instead has ' + (await weth.balanceOf(dssShutdown.address, { from: owner })),
+                        'Shutdown should have ' + wethTokens.sub(taggedWeth).add(1).add(1) + ' weth in hand, instead has ' + (await weth.balanceOf(shutdown.address, { from: owner })),
                     );
                 });
             });
@@ -449,17 +449,17 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                     // Settle some random guy's debt for end.sol to have weth
                     await end.skim(ilk, user, { from: user });
 
-                    await dssShutdown.shutdown({ from: owner });
+                    await shutdown.shutdown({ from: owner });
                 });
 
                 it("allows to cash dai for weth", async() => {
                     assert.equal(
-                        await vat.gem(ilk, dssShutdown.address),
+                        await vat.gem(ilk, shutdown.address),
                         0,
-                        'DssShutdown should have no weth in WethJoin',
+                        'Shutdown should have no weth in WethJoin',
                     );
 
-                    await dssShutdown.cashSavings({ from: owner });
+                    await shutdown.cashSavings({ from: owner });
 
                     // Fun fact, MakerDAO rounds in your favour when determining how much collateral to take to settle your debt.
                     assert.equal(
@@ -468,9 +468,9 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                         'Treasury should have no savings (as chai).',
                     );
                     assert.equal(
-                        await weth.balanceOf(dssShutdown.address, { from: owner }),
+                        await weth.balanceOf(shutdown.address, { from: owner }),
                         fixedWeth.toString(), // TODO: Unpack the calculations and round the same way in the tests for parameterization
-                        'DssShutdown should have ' + fixedWeth.toString() + ' weth in hand, instead has ' + (await weth.balanceOf(dssShutdown.address, { from: owner })),
+                        'Shutdown should have ' + fixedWeth.toString() + ' weth in hand, instead has ' + (await weth.balanceOf(shutdown.address, { from: owner })),
                     );
                 });
             });
