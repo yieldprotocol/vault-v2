@@ -29,7 +29,7 @@ const truffleAssert = require('truffle-assertions');
 const { BN, expectRevert, expectEvent } = require('@openzeppelin/test-helpers');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
 
-contract('Dealer - Splitter', async (accounts) =>  {
+contract('Dealer - Gas Tokens', async (accounts) =>  {
     let [ owner, user ] = accounts;
     let vat;
     let weth;

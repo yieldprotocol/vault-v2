@@ -60,6 +60,22 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
         _;
     }
 
+    modifier validSeries(uint256 maturity) {
+        require(
+            containsSeries(maturity),
+            "Dealer: Unrecognized series"
+        );
+        _;
+    }
+
+    modifier validCollateral(bytes32 collateral) {
+        require(
+            collateral == WETH || collateral == CHAI,
+            "Dealer: Unrecognized collateral"
+        );
+        _;
+    }
+
     /// @dev Disables post, withdraw, borrow and repay. To be called only by shutdown management contracts.
     function shutdown() public override onlyAuthorized("Dealer: Not Authorized") {
         live = false;
@@ -94,10 +110,6 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
 
     /// @dev Returns the Dai equivalent of an yDai amount, for a given series identified by maturity
     function inDai(bytes32 collateral, uint256 maturity, uint256 yDaiAmount) public returns (uint256) {
-        require(
-            containsSeries(maturity),
-            "Dealer: Unrecognized series"
-        );
         if (series[maturity].isMature()){
             if (collateral == WETH){
                 return yDaiAmount.muld(series[maturity].rateGrowth(), RAY);
@@ -113,11 +125,6 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
 
     /// @dev Returns the yDai equivalent of a dai amount, for a given series identified by maturity
     function inYDai(bytes32 collateral, uint256 maturity, uint256 daiAmount) public returns (uint256) {
-        require(
-            containsSeries(maturity),
-            "Dealer: Unrecognized series"
-        );
-        // if (now >= maturity) { // TODO: Consider using for gas savings
         if (series[maturity].isMature()){
             if (collateral == WETH){
                 return daiAmount.divd(series[maturity].rateGrowth(), RAY);
@@ -177,7 +184,11 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     /// @dev Takes collateral _token from `from` address, and credits it to `to` collateral account.
     // from --- Token ---> us(to)
     function post(bytes32 collateral, address from, address to, uint256 amount)
-        public override onlyHolderOrProxy(from, "Dealer: Only Holder Or Proxy") onlyLive {
+        public override 
+        validCollateral(collateral)
+        onlyHolderOrProxy(from, "Dealer: Only Holder Or Proxy")
+        onlyLive
+    {
         require(
             _token[collateral].transferFrom(from, address(_treasury), amount),
             "Dealer: Collateral transfer fail"
@@ -187,8 +198,6 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
             _treasury.pushWeth();
         } else if (collateral == CHAI) {
             _treasury.pushChai();
-        } else {
-            revert("Dealer: Unsupported collateral");
         }
         
         if (posted[collateral][to] == 0 && amount >= 0) {
@@ -201,7 +210,11 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     /// @dev Returns collateral to `to` address, taking it from `from` collateral account.
     // us(from) --- Token ---> to
     function withdraw(bytes32 collateral, address from, address to, uint256 amount)
-        public override onlyHolderOrProxy(from, "Dealer: Only Holder Or Proxy") onlyLive {
+        public override
+        validCollateral(collateral)
+        onlyHolderOrProxy(from, "Dealer: Only Holder Or Proxy")
+        onlyLive
+    {
         posted[collateral][from] = posted[collateral][from].sub(amount); // Will revert if not enough posted
 
         require(
@@ -213,8 +226,6 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
             _treasury.pullWeth(to, amount);
         } else if (collateral == CHAI) {
             _treasury.pullChai(to, amount);
-        } else {
-            revert("Dealer: Unsupported collateral");
         }
 
         if (posted[collateral][from] == 0 && amount >= 0) {
@@ -230,11 +241,12 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     // us --- yDai ---> user
     // debt++
     function borrow(bytes32 collateral, uint256 maturity, address to, uint256 yDaiAmount)
-        public onlyHolderOrProxy(to, "Dealer: Only Holder Or Proxy") onlyLive {
-        require(
-            containsSeries(maturity),
-            "Dealer: Unrecognized series"
-        );
+        public
+        validCollateral(collateral)
+        validSeries(maturity)
+        onlyHolderOrProxy(to, "Dealer: Only Holder Or Proxy")
+        onlyLive
+    {
         require(
             series[maturity].isMature() != true,
             "Dealer: No mature borrow"
@@ -261,11 +273,12 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     // user --- yDai ---> us
     // debt--
     function repayYDai(bytes32 collateral, uint256 maturity, address from, uint256 yDaiAmount)
-        public onlyHolderOrProxy(from, "Dealer: Only Holder Or Proxy") onlyLive {
-        require(
-            containsSeries(maturity),
-            "Dealer: Unrecognized series"
-        );
+        public
+        validCollateral(collateral)
+        validSeries(maturity)
+        onlyHolderOrProxy(from, "Dealer: Only Holder Or Proxy")
+        onlyLive
+    {
 
         (uint256 toRepay, uint256 debtDecrease) = repayProportion(collateral, maturity, from, yDaiAmount);
         series[maturity].burn(from, toRepay);
@@ -301,8 +314,11 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
 
     /// @dev Erases all collateral and debt for an user.
     function erase(bytes32 collateral, address user)
-        public onlyAuthorized("Dealer: Not Authorized") override returns (uint256, uint256) {
-
+        public override
+        validCollateral(collateral)
+        onlyAuthorized("Dealer: Not Authorized")
+        returns (uint256, uint256)
+    {
         uint256 debt;
         for (uint256 i = 0; i < seriesIterator.length; i += 1) {
             debt = debt + debtDai(collateral, seriesIterator[i], user);
@@ -319,7 +335,10 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
 
     /// @dev Removes collateral and debt for an user.
     function grab(bytes32 collateral, address user, uint256 daiAmount, uint256 tokenAmount)
-        public onlyAuthorized("Dealer: Not Authorized") override {
+        public override
+        validCollateral(collateral)
+        onlyAuthorized("Dealer: Not Authorized")
+    {
 
         posted[collateral][user] = posted[collateral][user].sub(
             tokenAmount,
