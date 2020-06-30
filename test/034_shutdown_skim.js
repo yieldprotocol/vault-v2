@@ -65,8 +65,8 @@ contract('Shutdown - Dealer', async (accounts) =>  {
 
     const limits = toRad(10000);
     const spot  = toRay(1.5);
-    const rate  = toRay(1.25);
-    const chi = toRay(1.2);
+    let rate  = toRay(1.25);
+    let chi = toRay(1.2);
     const daiDebt = toWad(120);
     const daiTokens = mulRay(daiDebt, rate);
     const wethTokens = divRay(daiTokens, spot);
@@ -415,7 +415,10 @@ contract('Shutdown - Dealer', async (accounts) =>  {
         describe("after maturity, with a rate increase", () => {
             // Set rate to 1.5
             const rateIncrease = toRay(0.25);
-            const rateDifferential = divRay(addBN(rate, rateIncrease), rate);
+            const rate0 = rate;
+            const rate1 = rate.add(rateIncrease);
+
+            const rateDifferential = divRay(rate1, rate0);
 
             beforeEach(async() => {
                 await postWeth(user2, wethTokens);
@@ -431,16 +434,17 @@ contract('Shutdown - Dealer', async (accounts) =>  {
                 await yDai1.mature();
 
                 await vat.fold(ilk, vat.address, rateIncrease, { from: owner });
+                // profit = 10 chai + 1 chai * (rate1/rate0 - 1)
             });
 
             it("there is an extra profit only from weth debt", async() => {
                 await shutdown.skim(user1, { from: owner });
 
-                const expectedProfit = chaiTokens.mul(9).add(mulRay(chaiTokens, rateDifferential));
+                const expectedProfit = chaiTokens.mul(10).add(mulRay(chaiTokens, rateDifferential.sub(toRay(1))));
     
                 assert.equal(
                     await chai.balanceOf(user1),
-                    expectedProfit.toString(), // + chaiTokens * divd(rate, rate0)
+                    expectedProfit.toString(),
                     'User1 should have ' + expectedProfit.toString() + ' chai wei, instead has ' + (await chai.balanceOf(user1)),
                 );
             });
