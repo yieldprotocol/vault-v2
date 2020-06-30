@@ -313,8 +313,11 @@ contract('Shutdown - Dealer', async (accounts) =>  {
         await vat.fold(ilk, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
         await vat.hope(daiJoin.address, { from: owner });
         await vat.hope(wethJoin.address, { from: owner });
-        await treasury.grantAccess(owner, { from: owner });
+
         await end.rely(owner, { from: owner });       // `owner` replaces MKR governance
+        await treasury.grantAccess(owner, { from: owner });
+        await yDai1.grantAccess(owner, { from: owner });
+        await yDai2.grantAccess(owner, { from: owner });
     });
 
     afterEach(async() => {
@@ -348,6 +351,32 @@ contract('Shutdown - Dealer', async (accounts) =>  {
             await getChai(user2, chaiTokens);
             await chai.approve(dealer.address, chaiTokens, { from: user2 });
             await dealer.post(CHAI, user2, user2, chaiTokens, { from: user2 });
+
+            await shutdown.skim(user1, { from: owner });
+
+            assert.equal(
+                await chai.balanceOf(user1),
+                chaiTokens.mul(10).toString(),
+                'User1 should have ' + chaiTokens.mul(10).toString() + ' chai wei',
+            );
+        });
+
+        it("unredeemed yDai and dealer weth debt cancel each other", async() => {
+            await postWeth(user2, wethTokens);
+            await dealer.borrow(WETH, await yDai1.maturity(), user2, daiTokens, { from: user2 }); // dealer debt assets == yDai liabilities 
+
+            await shutdown.skim(user1, { from: owner });
+
+            assert.equal(
+                await chai.balanceOf(user1),
+                chaiTokens.mul(10).toString(),
+                'User1 should have ' + chaiTokens.mul(10).toString() + ' chai wei',
+            );
+        });
+
+        it("unredeemed yDai and dealer chai debt cancel each other", async() => {
+            await postChai(user2, chaiTokens);
+            await dealer.borrow(CHAI, await yDai1.maturity(), user2, daiTokens, { from: user2 }); // dealer debt assets == yDai liabilities 
 
             await shutdown.skim(user1, { from: owner });
 
