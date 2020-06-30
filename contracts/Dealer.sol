@@ -265,10 +265,8 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
         onlyHolderOrProxy(from, "Dealer: Only Holder Or Proxy")
         onlyLive
     {
-
-        (uint256 toRepay, uint256 debtDecrease) = repayProportion(collateral, maturity, from, yDaiAmount);
+        uint256 toRepay = Math.min(yDaiAmount, debtDai(collateral, maturity, from));
         series[maturity].burn(from, toRepay);
-
         _repay(collateral, maturity, from, toRepay);
     }
 
@@ -281,14 +279,13 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     // debt--
     function repayDai(bytes32 collateral, uint256 maturity, address from, uint256 daiAmount)
         public onlyHolderOrProxy(from, "Dealer: Only Holder Or Proxy") onlyLive {
-        (uint256 toRepay, uint256 debtDecrease) = repayProportion(collateral, maturity, from, inYDai(collateral, maturity, daiAmount));
+        uint256 toRepay = Math.min(daiAmount, debtDai(collateral, maturity, from));
         require(
             _dai.transferFrom(from, address(_treasury), toRepay),  // Take dai from user to Treasury
             "Dealer: Dai transfer fail"
         );
         _treasury.pushDai();                                      // Have Treasury process the dai
-        
-        _repay(collateral, maturity, from, inYDai(maturity, toRepay));
+        _repay(collateral, maturity, from, inYDai(collateral, maturity, toRepay));
     }
 
     /// @dev Removes an amount of debt from an user's vault. If interest was accrued debt is only paid proportionally.
@@ -299,7 +296,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     //    
     function _repay(bytes32 collateral, uint256 maturity, address from, uint256 yDaiAmount) internal {
         // `inDai` calculates the interest accrued for a given amount and series
-        uint256 repaidDebt = yDaiAmount.muld(divdrup(RAY.unit(), inDai(maturity, RAY.unit()), RAY), RAY);
+        uint256 repaidDebt = yDaiAmount.muld(divdrup(RAY.unit(), inDai(collateral, maturity, RAY.unit()), RAY), RAY);
 
         debtYDai[collateral][maturity][from] = debtYDai[collateral][maturity][from].sub(repaidDebt);
         systemDebtYDai[collateral][maturity] = systemDebtYDai[collateral][maturity].sub(repaidDebt);
@@ -356,9 +353,9 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
             uint256 thisGrab = Math.min(debtDai(collateral, maturity, user), daiAmount.sub(totalGrabbed));
             totalGrabbed = totalGrabbed.add(thisGrab); // SafeMath shouldn't be needed
             debtYDai[collateral][maturity][user] =
-                debtYDai[collateral][maturity][user].sub(inYDai(maturity, thisGrab)); // SafeMath shouldn't be needed
+                debtYDai[collateral][maturity][user].sub(inYDai(collateral, maturity, thisGrab)); // SafeMath shouldn't be needed
             systemDebtYDai[collateral][maturity] =
-                systemDebtYDai[collateral][maturity].sub(inYDai(maturity, thisGrab)); // SafeMath shouldn't be needed
+                systemDebtYDai[collateral][maturity].sub(inYDai(collateral, maturity, thisGrab)); // SafeMath shouldn't be needed
             if (debtYDai[collateral][maturity][user] == 0){
                 returnBond(10);
             }
