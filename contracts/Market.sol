@@ -43,15 +43,10 @@ contract Market is ERC20, Constants {
     /// @dev Mint liquidity tokens in exchange for adding chai and yDai
     /// The parameter passed is the amount of `chai` being invested, an appropriate amount of `yDai` to be invested alongside will be calculated and taken by this function from the caller.
     function mint(uint256 chaiOffered) external {
-        uint256 chaiPerToken = chai.balanceOf(address(this)).div(totalSupply());
-        require(
-            chaiOffered >= chaiPerToken,
-            "Market: Not enough chai to mint one token"
-        );
-        uint256 tokensMinted = chaiOffered.div(chaiPerToken); // TODO: I'm just letting this revert if not initialized
-        uint256 yDaiPerToken = yDai.balanceOf(address(this)).div(totalSupply());
-        uint256 yDaiRequired = tokensMinted.mul(yDaiPerToken);
-        uint256 chaiTaken = tokensMinted.mul(chaiPerToken);
+        uint256 supply = totalSupply();
+        uint256 tokensMinted = supply.mul(chaiOffered).div(chai.balanceOf(address(this));
+        uint256 yDaiRequired = supply.mul(tokensMinted).div(yDai.balanceOf(address(this));
+        uint256 chaiTaken = tokensMinted.mul(chai.balanceOf(address(this)).div(supply);
 
         chai.transferFrom(msg.sender, address(this), chaiTaken);
         yDai.transferFrom(msg.sender, address(this), yDaiRequired);
@@ -62,12 +57,11 @@ contract Market is ERC20, Constants {
 
     /// @dev Burn liquidity tokens in exchange for chai and yDai
     function burn(uint256 tokensBurned) external {
-        uint256 chaiPerToken = chai.balanceOf(address(this)).div(totalSupply());
-        uint256 yDaiPerToken = yDai.balanceOf(address(this)).div(totalSupply());
+        uint256 supply = totalSupply();
 
         _burnFrom(msg.sender, tokensBurned);
-        chai.transfer(msg.sender, tokensBurned.mul(chaiPerToken));
-        yDai.transfer(msg.sender, tokensBurned.mul(yDaiPerToken));
+        chai.transfer(msg.sender, tokensBurned.mul(chai.balanceOf(address(this))).div(supply));
+        yDai.transfer(msg.sender, tokensBurned.mul(yDai.balanceOf(address(this))).div(supply));
 
         _updateState(chai.balanceOf(address(this)), yDai.balanceOf(address(this)));
     }
