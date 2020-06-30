@@ -37,7 +37,7 @@ contract Market is ERC20, Constants {
         yDai.transferFrom(msg.sender, address(this), yDaiIn);
         _mint(msg.sender, initialSupply);
 
-        _updateState(chai.balanceOf(address(this)), yDai.balanceOf(address(this)));
+        _updateState(chaiIn, yDaiIn);
     }
 
     /// @dev Mint liquidity tokens in exchange for adding chai and yDai
