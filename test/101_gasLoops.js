@@ -45,8 +45,8 @@ contract('Gas Usage', async (accounts) =>  {
     let chaiOracle;
     let wethOracle;
     let treasury;
-    // let yDai1;
-    // let yDai2;
+    let yDai1;
+    let yDai2;
     let dealer;
     let splitter;
     let liquidations;
@@ -223,6 +223,38 @@ contract('Gas Usage', async (accounts) =>  {
         );
         treasury.grantAccess(dealer.address, { from: owner });
 
+        // Setup yDai
+        const block = await web3.eth.getBlockNumber();
+        maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
+        yDai1 = await YDai.new(
+            vat.address,
+            jug.address,
+            pot.address,
+            treasury.address,
+            maturity1,
+            "Name",
+            "Symbol",
+            { from: owner },
+        );
+        await dealer.addSeries(yDai1.address, { from: owner });
+        await yDai1.grantAccess(dealer.address, { from: owner });
+        await treasury.grantAccess(yDai1.address, { from: owner });
+
+        maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
+        yDai2 = await YDai.new(
+            vat.address,
+            jug.address,
+            pot.address,
+            treasury.address,
+            maturity2,
+            "Name2",
+            "Symbol2",
+            { from: owner },
+        );
+        await dealer.addSeries(yDai2.address, { from: owner });
+        await yDai2.grantAccess(dealer.address, { from: owner });
+        await treasury.grantAccess(yDai2.address, { from: owner });
+
         // Setup Splitter
         splitter = await Splitter.new(
             treasury.address,
@@ -257,6 +289,8 @@ contract('Gas Usage', async (accounts) =>  {
             daiJoin.address,
             weth.address,
             wethJoin.address,
+            jug.address,
+            pot.address,
             end.address,
             chai.address,
             chaiOracle.address,
@@ -267,7 +301,11 @@ contract('Gas Usage', async (accounts) =>  {
         );
         await dealer.grantAccess(shutdown.address, { from: owner });
         await treasury.grantAccess(shutdown.address, { from: owner });
-        await treasury.registerDssShutdown(shutdown.address, { from: owner });
+        await treasury.registerShutdown(shutdown.address, { from: owner });
+        await yDai1.grantAccess(shutdown.address, { from: owner });
+        await yDai2.grantAccess(shutdown.address, { from: owner });
+        await shutdown.addSeries(yDai1.address, { from: owner });
+        await shutdown.addSeries(yDai2.address, { from: owner });
         await liquidations.grantAccess(shutdown.address, { from: owner });
 
         // Tests setup
