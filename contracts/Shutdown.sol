@@ -151,28 +151,40 @@ contract Shutdown is Ownable(), Constants {
             "Shutdown: Can only skim if live"
         );
 
+        uint256 profit = _chai.balanceOf(address(_treasury));
+        profit = profit.add(yDaiProfit());
+        profit = profit.sub(divd(_treasury.debt(), getChi()));
+        profit = profit.sub(_dealer.systemPosted(CHAI));
+
+        _treasury.pullChai(beneficiary, profit);
+    }
+
+    /// @dev Returns the profit accummulated in the system due to yDai supply and debt, in chai.
+    function yDaiProfit() public returns (uint256) {
+        uint256 profit;
         uint256 chi = getChi();
         uint256 rate = getRate();
-        uint256 profit = _chai.balanceOf(address(_treasury));
 
         for (uint256 i = 0; i < seriesIterator.length; i += 1) {
             uint256 maturity = seriesIterator[i];
             IYDai yDai = IYDai(series[seriesIterator[i]]);
-            require( // TODO: Maybe you can allow skimming before maturity
-                yDai.isMature(),
-                "YDai: All yDai mature first"
-            );
-            uint256 chi0 = yDai.chi0();
-            uint256 rate0 = yDai.rate0();
+
+            uint256 chi0;
+            uint256 rate0;
+            if (yDai.isMature()){
+                chi0 = yDai.chi0();
+                rate0 = yDai.rate0();
+            } else {
+                chi0 = chi;
+                rate0 = rate;
+            }
+
             profit = profit.add(divd(muld(_dealer.systemDebtYDai(WETH, maturity), divd(rate, rate0)), chi0));
             profit = profit.add(divd(_dealer.systemDebtYDai(CHAI, maturity), chi0));
             profit = profit.sub(divd(yDai.totalSupply(), chi0));
         }
 
-        profit = profit.sub(divd(_treasury.debt(), chi));
-        profit = profit.sub(_dealer.systemPosted(CHAI));
-
-        _treasury.pullChai(beneficiary, profit);
+        return profit;
     }
 
     /// @dev Settle system debt in MakerDAO and free remaining collateral.
@@ -248,22 +260,12 @@ contract Shutdown is Ownable(), Constants {
         require(settled && cashedOut, "Shutdown: Not ready");
 
         uint256 chi = getChi();
-        uint256 rate = getRate();
-        uint256 profit = _weth.balanceOf(address(this)) / (_fix * chi);
+        uint256 profit = _weth.balanceOf(address(this));
 
-        for (uint256 i = 0; i < seriesIterator.length; i += 1) {
-            uint256 maturity = seriesIterator[i];
-            IYDai yDai = IYDai(series[seriesIterator[i]]);
-            uint256 chi0 = yDai.chi0(); // TODO: If not mature, this should be chi, alternatively, make all yDAI mature.
-            uint256 rate0 = yDai.rate0(); // TODO: If not mature, this should be rate
-            profit = profit.add(divd(muld(_dealer.systemDebtYDai(WETH, maturity), divd(rate, rate0)), chi0));
-            profit = profit.add(divd(_dealer.systemDebtYDai(CHAI, maturity), chi0));
-            profit = profit.sub(divd(yDai.totalSupply(), chi0));
-        }
+        profit = profit.add(muld(muld(yDaiProfit(), _fix), chi));
+        profit = profit.sub(_dealer.systemPosted(WETH));
+        profit = profit.sub(muld(muld(_dealer.systemPosted(CHAI), _fix), chi));
 
-        profit = profit.sub(_dealer.systemPosted(WETH) / (_fix * chi));
-        profit = profit.sub(_dealer.systemPosted(CHAI));
-
-        _weth.transfer(beneficiary, profit * (_fix * chi));
+        _weth.transfer(beneficiary, profit);
     }
 }

@@ -100,6 +100,7 @@ contract YDai is AuthorizedAccess(), UserProxy(), ERC20, Constants, IYDai  {
     }
 
     /// @dev Burn yTokens and return their dai equivalent value, pulled from the Treasury
+    // TODO: Consider whether to allow this to be gracefully shutdown, instead of letting `_treasury.pullDai()` revert.
     // user --- yDai ---> us
     // us   --- Dai  ---> user
     function redeem(address user, uint256 yDaiAmount)
