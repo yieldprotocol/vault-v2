@@ -1,14 +1,11 @@
-# Temp & IDE files
-.vscode/
-*~
-*.swp
-*.swo
+# Ignore Dockerfile
+docker/Dockerfile
+output/
 
 #Buidler files
 cache
 artifacts
 node_modules/
-output/
 
 #Truffle files
 .infuraKey

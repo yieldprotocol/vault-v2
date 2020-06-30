@@ -21,6 +21,7 @@ const Dealer = artifacts.require('Dealer');
 
 // Peripheral
 const Splitter = artifacts.require('Splitter');
+const Liquidations = artifacts.require('Liquidations');
 const EthProxy = artifacts.require('EthProxy');
 const Liquidations = artifacts.require('Liquidations');
 const DssShutdown = artifacts.require('DssShutdown');
@@ -30,7 +31,7 @@ const truffleAssert = require('truffle-assertions');
 const { BN, expectRevert, expectEvent } = require('@openzeppelin/test-helpers');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('../shared/utils');
 
-contract('DssShutdown - Dealers', async (accounts) =>  {
+contract('Gas Usage', async (accounts) =>  {
     let [ owner, user1, user2, user3, user4 ] = accounts;
     let vat;
     let weth;
@@ -49,6 +50,7 @@ contract('DssShutdown - Dealers', async (accounts) =>  {
     // let yDai2;
     let dealer;
     let splitter;
+    let liquidations;
     let ethProxy;
     let liquidations;
     let dssShutdown;
@@ -80,6 +82,8 @@ contract('DssShutdown - Dealers', async (accounts) =>  {
     const tag  = divRay(toRay(1.0), spot); // Irrelevant to the final users
     const fix  = divRay(toRay(1.0), mulRay(spot, toRay(1.1)));
     const fixedWeth = mulRay(daiTokens, fix);
+
+    const auctionTime = 3600; // One hour
 
     // Convert eth to weth and use it to borrow `daiTokens` from MakerDAO
     // This function shadows and uses global variables, careful.
@@ -231,6 +235,17 @@ contract('DssShutdown - Dealers', async (accounts) =>  {
         );
         dealer.grantAccess(splitter.address, { from: owner });
         treasury.grantAccess(splitter.address, { from: owner });
+
+        // Setup Liquidations
+        liquidations = await Liquidations.new(
+            dai.address,
+            treasury.address,
+            dealer.address,
+            auctionTime,
+            { from: owner },
+        );
+        await dealer.grantAccess(liquidations.address, { from: owner });
+        await treasury.grantAccess(liquidations.address, { from: owner });
 
         // Setup EthProxy
         ethProxy = await EthProxy.new(
