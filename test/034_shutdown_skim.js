@@ -344,6 +344,20 @@ contract('Shutdown - Dealer', async (accounts) =>  {
             );
         });
 
+        it("chai held as collateral doesn't count as profits", async() => {
+            await getChai(user2, chaiTokens);
+            await chai.approve(dealer.address, chaiTokens, { from: user2 });
+            await dealer.post(CHAI, user2, user2, chaiTokens, { from: user2 });
+
+            await shutdown.skim(user1, { from: owner });
+
+            assert.equal(
+                await chai.balanceOf(user1),
+                chaiTokens.mul(10).toString(),
+                'User1 should have ' + chaiTokens.mul(10).toString() + ' chai wei',
+            );
+        });
+
         describe("with dai debt", () => {
             beforeEach(async() => {
                 await weth.deposit({ from: owner, value: wethTokens });
