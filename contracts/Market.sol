@@ -69,7 +69,7 @@ contract Market is ERC20, Constants {
     function swapChaiForYDai(uint256 chaiIn) external { // TODO: Add `from` and `to` parameters
 
         uint256 newChaiBalance = chai.balanceOf(address(this)).add(chaiIn);
-        uint256 newYDaiBalance = reciprocalBalance(newChaiBalance);
+        uint256 newYDaiBalance = targetYDaiBalance(newChaiBalance);
         uint256 yDaiOut = yDai.balanceOf(address(this)).sub(newYDaiBalance);
 
         chai.transferFrom(msg.sender, address(this), chaiIn);
@@ -82,7 +82,7 @@ contract Market is ERC20, Constants {
     function swapYDaiForChai(uint256 yDaiIn) external { // TODO: Add `from` and `to` parameters
 
         uint256 newYDaiBalance = yDai.balanceOf(address(this)).add(yDaiIn);
-        uint256 newChaiBalance = reciprocalBalance(newYDaiBalance);
+        uint256 newChaiBalance = targetChaiBalance(newYDaiBalance);
         uint256 chaiOut = chai.balanceOf(address(this)).sub(newChaiBalance);
 
         yDai.transferFrom(msg.sender, address(this), yDaiIn);
@@ -92,13 +92,13 @@ contract Market is ERC20, Constants {
     }
 
     /// @dev For the balance passed as an argument, returns the size of the reciprocal balance
-    function reciprocalBalance(uint256 balance) public returns(uint256) {
-        return balance; // TODO: Magic!
+    function targetYDaiBalance(uint256 newChaiBalance) public returns(uint256) {
+        return newChaiBalance; // TODO: Magic!
     }
 
     /// @dev For the balance passed as an argument, returns the size of the reciprocal balance
-    function reciprocalBalance(uint256 balance) public returns(uint256) {
-        return balance; // TODO: Magic!
+    function targetChaiBalance(uint256 newYDaiBalance) public returns(uint256) {
+        return newYDaiBalance; // TODO: Magic!
     }
 
     // TODO: What is this?
