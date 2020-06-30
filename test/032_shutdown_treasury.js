@@ -160,7 +160,7 @@ contract('Shutdown - Treasury', async (accounts) =>  {
             gasToken.address,
             { from: owner },
         );
-        treasury.grantAccess(dealer.address, { from: owner });
+        await treasury.grantAccess(dealer.address, { from: owner });
 
         // Setup Splitter
         splitter = await Splitter.new(
@@ -168,8 +168,8 @@ contract('Shutdown - Treasury', async (accounts) =>  {
             dealer.address,
             { from: owner },
         );
-        dealer.grantAccess(splitter.address, { from: owner });
-        treasury.grantAccess(splitter.address, { from: owner });
+        await dealer.grantAccess(splitter.address, { from: owner });
+        await treasury.grantAccess(splitter.address, { from: owner });
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
@@ -184,9 +184,9 @@ contract('Shutdown - Treasury', async (accounts) =>  {
             "Symbol",
             { from: owner },
         );
-        dealer.addSeries(yDai1.address, { from: owner });
-        yDai1.grantAccess(dealer.address, { from: owner });
-        treasury.grantAccess(yDai1.address, { from: owner });
+        await dealer.addSeries(yDai1.address, { from: owner });
+        await yDai1.grantAccess(dealer.address, { from: owner });
+        await treasury.grantAccess(yDai1.address, { from: owner });
 
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
         yDai2 = await YDai.new(
@@ -199,9 +199,9 @@ contract('Shutdown - Treasury', async (accounts) =>  {
             "Symbol2",
             { from: owner },
         );
-        dealer.addSeries(yDai2.address, { from: owner });
-        yDai2.grantAccess(dealer.address, { from: owner });
-        treasury.grantAccess(yDai2.address, { from: owner });
+        await dealer.addSeries(yDai2.address, { from: owner });
+        await yDai2.grantAccess(dealer.address, { from: owner });
+        await treasury.grantAccess(yDai2.address, { from: owner });
 
         // Setup EthProxy
         ethProxy = await EthProxy.new(
@@ -228,6 +228,8 @@ contract('Shutdown - Treasury', async (accounts) =>  {
             daiJoin.address,
             weth.address,
             wethJoin.address,
+            jug.address,
+            pot.address,
             end.address,
             chai.address,
             chaiOracle.address,
@@ -241,6 +243,8 @@ contract('Shutdown - Treasury', async (accounts) =>  {
         await dealer.grantAccess(shutdown.address, { from: owner });
         await yDai1.grantAccess(shutdown.address, { from: owner });
         await yDai2.grantAccess(shutdown.address, { from: owner });
+        await shutdown.addSeries(yDai1.address, { from: owner });
+        await shutdown.addSeries(yDai2.address, { from: owner });
         await liquidations.grantAccess(shutdown.address, { from: owner });
 
         // Tests setup

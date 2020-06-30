@@ -30,7 +30,7 @@ const truffleAssert = require('truffle-assertions');
 const { BN, expectRevert, expectEvent } = require('@openzeppelin/test-helpers');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
 
-contract('Shutdown - Treasury', async (accounts) =>  {
+contract('Shutdown - Dealer', async (accounts) =>  {
     let [ owner, user1, user2, user3, user4 ] = accounts;
     let vat;
     let weth;
@@ -160,7 +160,7 @@ contract('Shutdown - Treasury', async (accounts) =>  {
             gasToken.address,
             { from: owner },
         );
-        treasury.grantAccess(dealer.address, { from: owner });
+        await treasury.grantAccess(dealer.address, { from: owner });
 
         // Setup Splitter
         splitter = await Splitter.new(
@@ -168,8 +168,8 @@ contract('Shutdown - Treasury', async (accounts) =>  {
             dealer.address,
             { from: owner },
         );
-        dealer.grantAccess(splitter.address, { from: owner });
-        treasury.grantAccess(splitter.address, { from: owner });
+        await dealer.grantAccess(splitter.address, { from: owner });
+        await treasury.grantAccess(splitter.address, { from: owner });
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
@@ -184,9 +184,9 @@ contract('Shutdown - Treasury', async (accounts) =>  {
             "Symbol",
             { from: owner },
         );
-        dealer.addSeries(yDai1.address, { from: owner });
-        yDai1.grantAccess(dealer.address, { from: owner });
-        treasury.grantAccess(yDai1.address, { from: owner });
+        await dealer.addSeries(yDai1.address, { from: owner });
+        await yDai1.grantAccess(dealer.address, { from: owner });
+        await treasury.grantAccess(yDai1.address, { from: owner });
 
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
         yDai2 = await YDai.new(
@@ -199,9 +199,9 @@ contract('Shutdown - Treasury', async (accounts) =>  {
             "Symbol2",
             { from: owner },
         );
-        dealer.addSeries(yDai2.address, { from: owner });
-        yDai2.grantAccess(dealer.address, { from: owner });
-        treasury.grantAccess(yDai2.address, { from: owner });
+        await dealer.addSeries(yDai2.address, { from: owner });
+        await yDai2.grantAccess(dealer.address, { from: owner });
+        await treasury.grantAccess(yDai2.address, { from: owner });
 
         // Setup EthProxy
         ethProxy = await EthProxy.new(
@@ -210,7 +210,7 @@ contract('Shutdown - Treasury', async (accounts) =>  {
             dealer.address,
             { from: owner },
         );
-        
+
         // Setup Liquidations
         liquidations = await Liquidations.new(
             dai.address,
@@ -228,6 +228,8 @@ contract('Shutdown - Treasury', async (accounts) =>  {
             daiJoin.address,
             weth.address,
             wethJoin.address,
+            jug.address,
+            pot.address,
             end.address,
             chai.address,
             chaiOracle.address,
@@ -241,6 +243,8 @@ contract('Shutdown - Treasury', async (accounts) =>  {
         await dealer.grantAccess(shutdown.address, { from: owner });
         await yDai1.grantAccess(shutdown.address, { from: owner });
         await yDai2.grantAccess(shutdown.address, { from: owner });
+        await shutdown.addSeries(yDai1.address, { from: owner });
+        await shutdown.addSeries(yDai2.address, { from: owner });
         await liquidations.grantAccess(shutdown.address, { from: owner });
 
         // Tests setup
@@ -374,12 +378,12 @@ contract('Shutdown - Treasury', async (accounts) =>  {
             );
         });
 
-        it("does not allow to profit if treasury not settled and cashed", async() => {
+        /* it("does not allow to profit if treasury not settled and cashed", async() => {
             await expectRevert(
                 shutdown.profit(owner, { from: user2 }),
                 "Shutdown: Not ready",
             );
-        });
+        }); */
 
         describe("with Dss shutdown initiated and treasury settled", () => {
             beforeEach(async() => {
@@ -426,12 +430,12 @@ contract('Shutdown - Treasury', async (accounts) =>  {
                 );
             });
 
-            it("does not allow to profit if there is user debt", async() => {
+            /* it("does not allow to profit if there is user debt", async() => {
                 await expectRevert(
                     shutdown.profit(owner, { from: user2 }),
                     "Shutdown: Redeem all yDai",
                 );
-            });
+            }); */
 
             it("user can redeem YDai", async() => {
                 await shutdown.redeem(maturity1, yDaiTokens, user2, { from: user2 });
@@ -518,7 +522,7 @@ contract('Shutdown - Treasury', async (accounts) =>  {
                 // In the tests the settling nets zero surplus, which we tested above
             });
 
-            describe("with all yDai redeemed", () => {
+            /* describe("with all yDai redeemed", () => {
                 beforeEach(async() => {
                     await shutdown.redeem(maturity1, yDaiTokens.mul(2), user2, { from: user2 });
                     await shutdown.redeem(maturity1, yDaiTokens, user3, { from: user3 });
@@ -536,7 +540,7 @@ contract('Shutdown - Treasury', async (accounts) =>  {
                         'Owner should have ' + profit + ' weth, instead has ' + (await weth.balanceOf(owner)),
                     );
                 });
-            });
+            }); */
         });
     });
 });
