@@ -1,6 +1,5 @@
 pragma solidity ^0.6.0;
 
-import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@hq20/contracts/contracts/utils/SafeCast.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
@@ -23,12 +22,12 @@ import "./Constants.sol";
 
 /// @dev Treasury manages the Dai, interacting with MakerDAO's vat and chai when needed.
 contract Shutdown is Ownable(), Constants {
-    using DecimalMath for uint256;
     using SafeCast for uint256;
     using SafeMath for uint256;
 
-    bytes32 constant collateralType = "ETH-A";
-    address constant beneficiary = 0x0000000000000000000000000000000000000000;
+    bytes32 public constant collateralType = "ETH-A";
+    address public constant beneficiary = 0x0000000000000000000000000000000000000000;
+    uint256 public constant UNIT = 1000000000000000000000000000;
 
     IVat internal _vat;
     IDaiJoin internal _daiJoin;
@@ -84,6 +83,16 @@ contract Shutdown is Ownable(), Constants {
 
         _vat.hope(address(_treasury));
         _vat.hope(address(_end));
+    }
+
+    /// @dev Multiplies x and y, assuming they are both fixed point with 27 digits.
+    function muld(uint256 x, uint256 y) internal pure returns (uint256) {
+        return x.mul(y).div(UNIT);
+    }
+
+    /// @dev Divides x between y, assuming they are both fixed point with 18 digits.
+    function divd(uint256 x, uint256 y) internal pure returns (uint256) {
+        return x.mul(UNIT).div(y);
     }
 
     /// @dev max(0, x - y)
@@ -155,12 +164,12 @@ contract Shutdown is Ownable(), Constants {
             );
             uint256 chi0 = yDai.chi0();
             uint256 rate0 = yDai.rate0();
-            profit = profit.add(_dealer.systemDebtYDai(WETH, maturity).muld(rate.divd(rate0, RAY), RAY).divd(chi0, RAY));
-            profit = profit.add(_dealer.systemDebtYDai(CHAI, maturity).divd(chi0, RAY));
-            profit = profit.sub(yDai.totalSupply().divd(chi0, RAY));
+            profit = profit.add(divd(muld(_dealer.systemDebtYDai(WETH, maturity), divd(rate, rate0)), chi0));
+            profit = profit.add(divd(_dealer.systemDebtYDai(CHAI, maturity), chi0));
+            profit = profit.sub(divd(yDai.totalSupply(), chi0));
         }
 
-        profit = profit.sub(_treasury.debt().divd(chi, RAY));
+        profit = profit.sub(divd(_treasury.debt(), chi));
         profit = profit.sub(_dealer.systemPosted(CHAI));
 
         _treasury.pullChai(beneficiary, profit);
@@ -216,9 +225,9 @@ contract Shutdown is Ownable(), Constants {
         (uint256 tokenAmount, uint256 daiAmount) = _dealer.erase(collateral, user);
         uint256 remainder;
         if (collateral == WETH) {
-            remainder = subFloorZero(tokenAmount, daiAmount.muld(_fix, RAY));
+            remainder = subFloorZero(tokenAmount, muld(daiAmount, _fix));
         } else if (collateral == CHAI) {
-            remainder = subFloorZero(tokenAmount.muld(_chi, RAY), daiAmount).muld(_fix, RAY);
+            remainder = muld(subFloorZero(muld(tokenAmount, _chi), daiAmount), _fix);
         }
         _weth.transfer(user, remainder);
     }
@@ -230,7 +239,7 @@ contract Shutdown is Ownable(), Constants {
         yDai.burn(user, yDaiAmount);
         _weth.transfer(
             user,
-            yDaiAmount.muld(yDai.chiGrowth(), RAY).muld(_fix, RAY)
+            muld(muld(yDaiAmount, yDai.chiGrowth()), _fix)
         );
     }
 
@@ -247,9 +256,9 @@ contract Shutdown is Ownable(), Constants {
             IYDai yDai = IYDai(series[seriesIterator[i]]);
             uint256 chi0 = yDai.chi0(); // TODO: If not mature, this should be chi, alternatively, make all yDAI mature.
             uint256 rate0 = yDai.rate0(); // TODO: If not mature, this should be rate
-            profit = profit.add(_dealer.systemDebtYDai(WETH, maturity).muld(rate.divd(rate0, RAY), RAY).divd(chi0, RAY));
-            profit = profit.add(_dealer.systemDebtYDai(CHAI, maturity).divd(chi0, RAY));
-            profit = profit.sub(yDai.totalSupply().divd(chi0, RAY));
+            profit = profit.add(divd(muld(_dealer.systemDebtYDai(WETH, maturity), divd(rate, rate0)), chi0));
+            profit = profit.add(divd(_dealer.systemDebtYDai(CHAI, maturity), chi0));
+            profit = profit.sub(divd(yDai.totalSupply(), chi0));
         }
 
         profit = profit.sub(_dealer.systemPosted(WETH) / (_fix * chi));
