@@ -265,7 +265,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
         onlyHolderOrProxy(from, "Dealer: Only Holder Or Proxy")
         onlyLive
     {
-        uint256 toRepay = Math.min(yDaiAmount, debtDai(collateral, maturity, from));
+        uint256 toRepay = Math.min(yDaiAmount, debtYDai[collateral][maturity][from]);
         series[maturity].burn(from, toRepay);
         _repay(collateral, maturity, from, toRepay);
     }
@@ -296,11 +296,11 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     //    
     function _repay(bytes32 collateral, uint256 maturity, address from, uint256 yDaiAmount) internal {
         // `inDai` calculates the interest accrued for a given amount and series
-        uint256 repaidDebt = yDaiAmount.muld(divdrup(RAY.unit(), inDai(collateral, maturity, RAY.unit()), RAY), RAY);
+        // uint256 repaidDebt = yDaiAmount.muld(divdrup(RAY.unit(), inDai(collateral, maturity, RAY.unit()), RAY), RAY);
 
-        debtYDai[collateral][maturity][from] = debtYDai[collateral][maturity][from].sub(repaidDebt);
-        systemDebtYDai[collateral][maturity] = systemDebtYDai[collateral][maturity].sub(repaidDebt);
-        if (debtYDai[collateral][maturity][from] == 0 && repaidDebt >= 0) {
+        debtYDai[collateral][maturity][from] = debtYDai[collateral][maturity][from].sub(yDaiAmount);
+        systemDebtYDai[collateral][maturity] = systemDebtYDai[collateral][maturity].sub(yDaiAmount);
+        if (debtYDai[collateral][maturity][from] == 0 && yDaiAmount >= 0) {
             returnBond(10);
         }
         emit Borrowed(collateral, maturity, from, debtYDai[collateral][maturity][from]);

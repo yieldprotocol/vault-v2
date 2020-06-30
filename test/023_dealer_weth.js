@@ -60,16 +60,37 @@ contract('Dealer - Weth', async (accounts) =>  {
 
     const limits = toRad(10000);
     const spot  = toRay(1.5);
-    const rate  = toRay(1.25);
-    const daiDebt = toWad(120);
-    const daiTokens = mulRay(daiDebt, rate);
-    const wethTokens = divRay(daiTokens, spot);
+    let rate;
+    let daiDebt;
+    let daiTokens;
+    let wethTokens;
     let maturity1;
     let maturity2;
+
+    // Convert eth to weth and use it to borrow `daiTokens` from MakerDAO
+    // This function shadows and uses global variables, careful.
+    async function getDai(user, daiTokens){
+        await vat.hope(daiJoin.address, { from: user });
+        await vat.hope(wethJoin.address, { from: user });
+
+        const daiDebt = divRay(daiTokens, rate);
+        const wethTokens = divRay(daiTokens, spot);
+
+        await weth.deposit({ from: user, value: wethTokens });
+        await weth.approve(wethJoin.address, wethTokens, { from: user });
+        await wethJoin.join(user, wethTokens, { from: user });
+        await vat.frob(ilk, user, user, user, wethTokens, daiDebt, { from: user });
+        await daiJoin.exit(user, daiTokens, { from: user });
+    }
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
+
+        rate  = toRay(1.25);
+        daiDebt = toWad(120);
+        daiTokens = mulRay(daiDebt, rate);
+        wethTokens = divRay(daiTokens, spot);    
 
         // Setup vat, join and weth
         vat = await Vat.new();
@@ -477,15 +498,7 @@ contract('Dealer - Weth', async (accounts) =>  {
                 });
     
                 it("allows to repay yDai with dai", async() => {
-                    // Borrow dai
-                    await vat.hope(daiJoin.address, { from: user1 });
-                    await vat.hope(wethJoin.address, { from: user1 });
-                    let wethTokens = web3.utils.toWei("500");
-                    await weth.deposit({ from: user1, value: wethTokens });
-                    await weth.approve(wethJoin.address, wethTokens, { from: user1 });
-                    await wethJoin.join(user1, wethTokens, { from: user1 });
-                    await vat.frob(ilk, user1, user1, user1, wethTokens, daiTokens, { from: user1 });
-                    await daiJoin.exit(user1, daiTokens, { from: user1 });
+                    await getDai(user1, daiTokens);
     
                     assert.equal(
                         await dai.balanceOf(user1),
@@ -576,13 +589,20 @@ contract('Dealer - Weth', async (accounts) =>  {
                 });
     
                 // Set rate to 1.5
-                const rateIncrease = toRay(0.25);
-                const rateDifferential = divRay(addBN(rate, rateIncrease), rate);
-                const increasedDebt = mulRay(daiTokens, rateDifferential);
-                const debtIncrease = subBN(increasedDebt, daiTokens);
+                let rateIncrease;
+                let rateDifferential;
+                let increasedDebt;
+                let debtIncrease;
     
                 describe("after maturity, with a rate increase", () => {
                     beforeEach(async() => {
+                        // Set rate to 1.5
+                        rateIncrease = toRay(0.25);
+                        rateDifferential = divRay(rate.add(rateIncrease), rate);
+                        rate = rate.add(rateIncrease);
+                        increasedDebt = mulRay(daiTokens, rateDifferential);
+                        debtIncrease = subBN(increasedDebt, daiTokens);
+
                         assert.equal(
                             await yDai1.balanceOf(user1),
                             daiTokens.toString(),
@@ -627,8 +647,8 @@ contract('Dealer - Weth', async (accounts) =>  {
                     });
     
                     // TODO: Test that when yDai is provided in excess for repayment, only the necessary amount is taken
-        
-                    it("more yDai is required to repay after maturity as rate increases", async() => {
+
+                    it("the yDai required to repay doesn't change after maturity as rate increases", async() => {
                         await yDai1.approve(dealer.address, daiTokens, { from: user1 });
                         await dealer.repayYDai(WETH, maturity1, user1, daiTokens, { from: user1 });
             
@@ -639,30 +659,22 @@ contract('Dealer - Weth', async (accounts) =>  {
                         );
                         assert.equal(
                             await dealer.debtDai.call(WETH, maturity1, user1),
+                            0,
+                            "User1 should have no dai debt, instead has " + (await dealer.debtDai.call(WETH, maturity1, user1)),
+                        );
+                    });
+
+                    it("more Dai is required to repay after maturity as rate increases", async() => {
+                        await getDai(user1, daiTokens); // daiTokens is not going to be enough anymore
+                        await dai.approve(dealer.address, daiTokens, { from: user1 });
+                        await dealer.repayDai(WETH, maturity1, user1, daiTokens, { from: user1 });
+            
+                        assert.equal(
+                            await dealer.debtDai.call(WETH, maturity1, user1),
                             debtIncrease.toString(),
                             "User1 should have " + debtIncrease + " dai debt, instead has " + (await dealer.debtDai.call(WETH, maturity1, user1)),
                         );
                     });
-        
-                    it("all debt can be repaid after maturity", async() => {
-                        // Mint some yDai the sneaky way
-                        await yDai1.grantAccess(owner, { from: owner });
-                        await yDai1.mint(user1, debtIncrease, { from: owner });
-        
-                        await yDai1.approve(dealer.address, increasedDebt, { from: user1 });
-                        await dealer.repayYDai(WETH, maturity1, user1, increasedDebt, { from: user1 });
-            
-                        assert.equal(
-                            await yDai1.balanceOf(user1),
-                            0,
-                            "User1 should not have yDai",
-                        );
-                        assert.equal(
-                            await dealer.debtDai.call(WETH, maturity1, user1),
-                            0,
-                            "User1 should have no remaining debt",
-                        );
-                    });    
                 });    
             });
         });
