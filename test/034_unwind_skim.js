@@ -23,14 +23,14 @@ const Dealer = artifacts.require('Dealer');
 const Splitter = artifacts.require('Splitter');
 const Liquidations = artifacts.require('Liquidations');
 const EthProxy = artifacts.require('EthProxy');
-const Shutdown = artifacts.require('Shutdown');
+const Unwind = artifacts.require('Unwind');
 
 const helper = require('ganache-time-traveler');
 const truffleAssert = require('truffle-assertions');
 const { BN, expectRevert, expectEvent } = require('@openzeppelin/test-helpers');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
 
-contract('Shutdown - Dealer', async (accounts) =>  {
+contract('Unwind - Dealer', async (accounts) =>  {
     let [ owner, user1, user2, user3, user4 ] = accounts;
     let vat;
     let weth;
@@ -51,7 +51,7 @@ contract('Shutdown - Dealer', async (accounts) =>  {
     let splitter;
     let liquidations;
     let ethProxy;
-    let shutdown;
+    let unwind;
 
     let WETH = web3.utils.fromAscii("WETH");
     let CHAI = web3.utils.fromAscii("CHAI");
@@ -138,7 +138,7 @@ contract('Shutdown - Dealer', async (accounts) =>  {
         await dealer.addSeries(yDai.address, { from: owner });
         await yDai.grantAccess(dealer.address, { from: owner });
         await treasury.grantAccess(yDai.address, { from: owner });
-        await yDai.grantAccess(shutdown.address, { from: owner });
+        await yDai.grantAccess(unwind.address, { from: owner });
         return yDai;
     }
 
@@ -283,8 +283,8 @@ contract('Shutdown - Dealer', async (accounts) =>  {
         await dealer.grantAccess(liquidations.address, { from: owner });
         await treasury.grantAccess(liquidations.address, { from: owner });
 
-        // Setup Shutdown
-        shutdown = await Shutdown.new(
+        // Setup Unwind
+        unwind = await Unwind.new(
             vat.address,
             daiJoin.address,
             weth.address,
@@ -299,14 +299,14 @@ contract('Shutdown - Dealer', async (accounts) =>  {
             liquidations.address,
             { from: owner },
         );
-        await treasury.grantAccess(shutdown.address, { from: owner });
-        await treasury.registerShutdown(shutdown.address, { from: owner });
-        await dealer.grantAccess(shutdown.address, { from: owner });
-        await yDai1.grantAccess(shutdown.address, { from: owner });
-        await yDai2.grantAccess(shutdown.address, { from: owner });
-        await shutdown.addSeries(yDai1.address, { from: owner });
-        await shutdown.addSeries(yDai2.address, { from: owner });
-        await liquidations.grantAccess(shutdown.address, { from: owner });
+        await treasury.grantAccess(unwind.address, { from: owner });
+        await treasury.registerUnwind(unwind.address, { from: owner });
+        await dealer.grantAccess(unwind.address, { from: owner });
+        await yDai1.grantAccess(unwind.address, { from: owner });
+        await yDai2.grantAccess(unwind.address, { from: owner });
+        await unwind.addSeries(yDai1.address, { from: owner });
+        await unwind.addSeries(yDai2.address, { from: owner });
+        await liquidations.grantAccess(unwind.address, { from: owner });
 
         // Tests setup
         await pot.setChi(chi, { from: owner });
@@ -324,10 +324,10 @@ contract('Shutdown - Dealer', async (accounts) =>  {
         await helper.revertToSnapshot(snapshotId);
     });
 
-    /* it("does not attempt to settle treasury debt until Dss shutdown initiated", async() => {
+    /* it("does not attempt to settle treasury debt until Dss unwind initiated", async() => {
         await expectRevert(
-            shutdown.settleTreasury({ from: owner }),
-            "Shutdown: End.sol not caged",
+            unwind.settleTreasury({ from: owner }),
+            "Unwind: End.sol not caged",
         );
     }); */
 
@@ -339,7 +339,7 @@ contract('Shutdown - Dealer', async (accounts) =>  {
         });
 
         it("chai savings are added to profits", async() => {
-            await shutdown.skim(user1, { from: owner });
+            await unwind.skim(user1, { from: owner });
 
             assert.equal(
                 await chai.balanceOf(user1),
@@ -353,7 +353,7 @@ contract('Shutdown - Dealer', async (accounts) =>  {
             await chai.approve(dealer.address, chaiTokens, { from: user2 });
             await dealer.post(CHAI, user2, user2, chaiTokens, { from: user2 });
 
-            await shutdown.skim(user1, { from: owner });
+            await unwind.skim(user1, { from: owner });
 
             assert.equal(
                 await chai.balanceOf(user1),
@@ -367,7 +367,7 @@ contract('Shutdown - Dealer', async (accounts) =>  {
             await postWeth(user2, wethTokens);
             await dealer.borrow(WETH, await yDai1.maturity(), user2, daiTokens, { from: user2 }); // dealer debt assets == yDai liabilities 
 
-            await shutdown.skim(user1, { from: owner });
+            await unwind.skim(user1, { from: owner });
 
             assert.equal(
                 await chai.balanceOf(user1),
@@ -381,7 +381,7 @@ contract('Shutdown - Dealer', async (accounts) =>  {
             await postChai(user2, chaiTokens);
             await dealer.borrow(CHAI, await yDai1.maturity(), user2, daiTokens, { from: user2 }); // dealer debt assets == yDai liabilities 
 
-            await shutdown.skim(user1, { from: owner });
+            await unwind.skim(user1, { from: owner });
 
             assert.equal(
                 await chai.balanceOf(user1),
@@ -402,7 +402,7 @@ contract('Shutdown - Dealer', async (accounts) =>  {
             });
     
             it("dai debt is deduced from profits", async() => {
-                await shutdown.skim(user1, { from: owner });
+                await unwind.skim(user1, { from: owner });
     
                 assert.equal(
                     await chai.balanceOf(user1),
@@ -438,7 +438,7 @@ contract('Shutdown - Dealer', async (accounts) =>  {
             });
 
             it("there is an extra profit only from weth debt", async() => {
-                await shutdown.skim(user1, { from: owner });
+                await unwind.skim(user1, { from: owner });
 
                 const expectedProfit = chaiTokens.mul(10).add(mulRay(chaiTokens, rateDifferential.sub(toRay(1))));
     
@@ -490,7 +490,7 @@ contract('Shutdown - Dealer', async (accounts) =>  {
             });
 
             it("profit is acummulated from several series", async() => {
-                await shutdown.skim(user1, { from: owner });
+                await unwind.skim(user1, { from: owner });
 
                 const expectedProfit = chaiTokens.mul(10)
                     .add(mulRay(chaiTokens, rateDifferential1.sub(toRay(1)))) // yDai1

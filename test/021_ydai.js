@@ -22,7 +22,7 @@ const Dealer = artifacts.require('Dealer');
 // Peripheral
 const Splitter = artifacts.require('Splitter');
 const EthProxy = artifacts.require('EthProxy');
-const Shutdown = artifacts.require('Shutdown');
+const Unwind = artifacts.require('Unwind');
 
 const truffleAssert = require('truffle-assertions');
 const helper = require('ganache-time-traveler');

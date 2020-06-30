@@ -16,7 +16,7 @@ const Dealer = artifacts.require("Dealer");
 const Liquidations = artifacts.require("Liquidations");
 const Splitter = artifacts.require("Splitter");
 const EthProxy = artifacts.require("EthProxy");
-const Shutdown = artifacts.require("Shutdown");
+const Unwind = artifacts.require("Unwind");
 
 const firebase = require('firebase-admin');
 let serviceAccount = require('../firebaseKey.json');
@@ -50,7 +50,7 @@ module.exports = async (deployer, network, accounts) => {
     let splitterAddress;
     let liquidationsAddress;
     let ethProxyAddress;
-    let shutdownAddress;
+    let unwindAddress;
   
     if (network !== 'development') {
       vatAddress = fixed_addrs[network].vatAddress ;
@@ -84,7 +84,7 @@ module.exports = async (deployer, network, accounts) => {
     splitterAddress = (await Splitter.deployed()).address;
     liquidationsAddress = (await Liquidations.deployed()).address;
     ethProxyAddress = (await EthProxy.deployed()).address;
-    shutdownAddress = (await Shutdown.deployed()).address;
+    unwindAddress = (await Unwind.deployed()).address;
 
     try {
 
@@ -123,7 +123,7 @@ module.exports = async (deployer, network, accounts) => {
             'Splitter': splitterAddress,
             'Liquidations': liquidationsAddress,
             'EthProxy': ethProxyAddress,
-            'Shutdown': shutdownAddress,
+            'Unwind': unwindAddress,
           }
 
           let peripheralRef = db.collection(networkId.toString()).doc('deployedPeripheral')

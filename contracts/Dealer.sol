@@ -59,7 +59,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     }
 
     modifier onlyLive() {
-        require(live == true, "Dealer: Not available during shutdown");
+        require(live == true, "Dealer: Not available during unwind");
         _;
     }
 
@@ -79,8 +79,8 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
         _;
     }
 
-    /// @dev Disables post, withdraw, borrow and repay. To be called only by shutdown management contracts.
-    function shutdown() public override onlyAuthorized("Dealer: Not Authorized") {
+    /// @dev Disables post, withdraw, borrow and repay. To be called only by unwind management contracts.
+    function unwind() public override onlyAuthorized("Dealer: Not Authorized") {
         live = false;
     }
 

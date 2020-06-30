@@ -33,7 +33,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants {
     IDaiJoin internal _daiJoin;
     IGemJoin internal _wethJoin;
     IVat internal _vat;
-    address internal _dssShutdown;
+    address internal _unwind;
 
     bool public live = true;
 
@@ -62,12 +62,12 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants {
     }
 
     modifier onlyLive() {
-        require(live == true, "Treasury: Not available during shutdown");
+        require(live == true, "Treasury: Not available during unwind");
         _;
     }
 
-    /// @dev Disables pulling and pushing. To be called only by shutdown management contracts.
-    function shutdown() public override onlyAuthorized("Treasury: Not Authorized") {
+    /// @dev Disables pulling and pushing. To be called only by unwind management contracts.
+    function unwind() public override onlyAuthorized("Treasury: Not Authorized") {
         live = false;
     }
 
@@ -262,13 +262,13 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants {
     }
 
     /// @dev Registers the one contract that will shut down the Treasury if MakerDAO shuts down.
-    function registerShutdown(address dssShutdown_) public onlyOwner {
+    function registerUnwind(address unwind_) public onlyOwner {
         require(
-            _dssShutdown == address(0),
-            "Treasury: Shutdown already set"
+            _unwind == address(0),
+            "Treasury: Unwind already set"
         );
-        _dssShutdown = dssShutdown_;
-        _chai.approve(address(_dssShutdown), uint256(-1)); // Shutdown will never cheat on us
-        _vat.hope(address(_dssShutdown));                  // Shutdown will never cheat on us
+        _unwind = unwind_;
+        _chai.approve(address(_unwind), uint256(-1)); // Unwind will never cheat on us
+        _vat.hope(address(_unwind));                  // Unwind will never cheat on us
     }
 }

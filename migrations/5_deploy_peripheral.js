@@ -16,7 +16,7 @@ const Dealer = artifacts.require("Dealer");
 const Liquidations = artifacts.require("Liquidations");
 const Splitter = artifacts.require("Splitter");
 const EthProxy = artifacts.require("EthProxy");
-const Shutdown = artifacts.require("Shutdown");
+const Unwind = artifacts.require("Unwind");
 
 
 module.exports = async (deployer, network, accounts) => {
@@ -38,7 +38,7 @@ module.exports = async (deployer, network, accounts) => {
   let splitterAddress;
   let liquidationsAddress;
   let ethProxyAddress;
-  let shutdownAddress;
+  let unwindAddress;
 
   const auctionTime = 3600; // TODO: Think where to store this parameter.
 
@@ -96,9 +96,9 @@ module.exports = async (deployer, network, accounts) => {
   await dealer.grantAccess(liquidationsAddress);
   await treasury.grantAccess(liquidationsAddress);
 
-  // Setup Shutdown
+  // Setup Unwind
   await deployer.deploy(
-    Shutdown,
+    Unwind,
     vatAddress,
     daiJoinAddress,
     wethAddress,
@@ -112,16 +112,16 @@ module.exports = async (deployer, network, accounts) => {
     dealerAddress,
     liquidationsAddress,
   );
-  const shutdown = await Shutdown.deployed();
-  shutdownAddress = shutdown.address;
-  await dealer.grantAccess(shutdownAddress);
-  await treasury.grantAccess(shutdownAddress);
-  await treasury.registerShutdown(shutdownAddress);
+  const unwind = await Unwind.deployed();
+  unwindAddress = unwind.address;
+  await dealer.grantAccess(unwindAddress);
+  await treasury.grantAccess(unwindAddress);
+  await treasury.registerUnwind(unwindAddress);
   // TODO: Retrieve the addresses for yDai contracts
-  // await yDai1.grantAccess(shutdownAddress);
-  // await yDai2.grantAccess(shutdownAddress);
-  // await shutdown.addSeries(yDai1.address, { from: owner });
-  // await shutdown.addSeries(yDai2.address, { from: owner });
+  // await yDai1.grantAccess(unwindAddress);
+  // await yDai2.grantAccess(unwindAddress);
+  // await unwind.addSeries(yDai1.address, { from: owner });
+  // await unwind.addSeries(yDai2.address, { from: owner });
 
   // Setup EthProxy
   await deployer.deploy(
@@ -135,7 +135,7 @@ module.exports = async (deployer, network, accounts) => {
   const deployedPeripheral = {
     'Splitter': splitterAddress,
     'Liquidations': liquidationsAddress,
-    'Shutdown': shutdownAddress,
+    'Unwind': unwindAddress,
     'EthProxy': ethProxyAddress,
   }
   console.log(deployedPeripheral);

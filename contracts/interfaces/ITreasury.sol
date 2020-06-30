@@ -11,5 +11,5 @@ interface ITreasury {
     function pushWeth() external;
     function pullWeth(address to, uint256 weth) external;
     function fork(address to, uint256 weth, uint256 dai) external;
-    function shutdown() external;
+    function unwind() external;
 }

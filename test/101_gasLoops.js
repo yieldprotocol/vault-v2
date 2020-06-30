@@ -23,7 +23,7 @@ const Dealer = artifacts.require('Dealer');
 const Splitter = artifacts.require('Splitter');
 const Liquidations = artifacts.require('Liquidations');
 const EthProxy = artifacts.require('EthProxy');
-const Shutdown = artifacts.require('Shutdown');
+const Unwind = artifacts.require('Unwind');
 
 const helper = require('ganache-time-traveler');
 const truffleAssert = require('truffle-assertions');
@@ -51,7 +51,7 @@ contract('Gas Usage', async (accounts) =>  {
     let splitter;
     let liquidations;
     let ethProxy;
-    let shutdown;
+    let unwind;
 
     let WETH = web3.utils.fromAscii("WETH");
     let CHAI = web3.utils.fromAscii("CHAI");
@@ -138,7 +138,7 @@ contract('Gas Usage', async (accounts) =>  {
         await dealer.addSeries(yDai.address, { from: owner });
         await yDai.grantAccess(dealer.address, { from: owner });
         await treasury.grantAccess(yDai.address, { from: owner });
-        await yDai.grantAccess(shutdown.address, { from: owner });
+        await yDai.grantAccess(unwind.address, { from: owner });
         return yDai;
     }
 
@@ -283,8 +283,8 @@ contract('Gas Usage', async (accounts) =>  {
             { from: owner },
         );
 
-        // Setup Shutdown
-        shutdown = await Shutdown.new(
+        // Setup Unwind
+        unwind = await Unwind.new(
             vat.address,
             daiJoin.address,
             weth.address,
@@ -299,14 +299,14 @@ contract('Gas Usage', async (accounts) =>  {
             liquidations.address,
             { from: owner },
         );
-        await dealer.grantAccess(shutdown.address, { from: owner });
-        await treasury.grantAccess(shutdown.address, { from: owner });
-        await treasury.registerShutdown(shutdown.address, { from: owner });
-        await yDai1.grantAccess(shutdown.address, { from: owner });
-        await yDai2.grantAccess(shutdown.address, { from: owner });
-        await shutdown.addSeries(yDai1.address, { from: owner });
-        await shutdown.addSeries(yDai2.address, { from: owner });
-        await liquidations.grantAccess(shutdown.address, { from: owner });
+        await dealer.grantAccess(unwind.address, { from: owner });
+        await treasury.grantAccess(unwind.address, { from: owner });
+        await treasury.registerUnwind(unwind.address, { from: owner });
+        await yDai1.grantAccess(unwind.address, { from: owner });
+        await yDai2.grantAccess(unwind.address, { from: owner });
+        await unwind.addSeries(yDai1.address, { from: owner });
+        await unwind.addSeries(yDai2.address, { from: owner });
+        await liquidations.grantAccess(unwind.address, { from: owner });
 
         // Tests setup
         await pot.setChi(chi, { from: owner });
@@ -368,9 +368,9 @@ contract('Gas Usage', async (accounts) =>  {
                 }
             });
 
-            describe("during dss shutdown", () => {
+            describe("during dss unwind", () => {
                 beforeEach(async() => {
-                    // Shutdown
+                    // Unwind
                     await end.cage({ from: owner });
                     await end.setTag(ilk, tag, { from: owner });
                     await end.setDebt(1, { from: owner });
@@ -378,17 +378,17 @@ contract('Gas Usage', async (accounts) =>  {
                     await end.skim(ilk, user1, { from: owner });
                     await end.skim(ilk, user2, { from: owner });
                     await end.skim(ilk, owner, { from: owner });
-                    await shutdown.shutdown({ from: owner });
-                    await shutdown.settleTreasury({ from: owner });
-                    await shutdown.cashSavings({ from: owner });
+                    await unwind.unwind({ from: owner });
+                    await unwind.settleTreasury({ from: owner });
+                    await unwind.cashSavings({ from: owner });
                 });
 
                 it("single series settle", async() => {
-                    await shutdown.settle(WETH, user3, { from: user3 });
+                    await unwind.settle(WETH, user3, { from: user3 });
                 });
 
                 it("all series settle", async() => {
-                    await shutdown.settle(WETH, user3, { from: user3 });
+                    await unwind.settle(WETH, user3, { from: user3 });
                 });
             });
         });

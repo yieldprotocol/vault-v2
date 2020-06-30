@@ -23,7 +23,7 @@ const Dealer = artifacts.require('Dealer');
 const Splitter = artifacts.require('Splitter');
 const Liquidations = artifacts.require('Liquidations');
 const EthProxy = artifacts.require('EthProxy');
-const Shutdown = artifacts.require('Shutdown');
+const Unwind = artifacts.require('Unwind');
 
 const helper = require('ganache-time-traveler');
 const truffleAssert = require('truffle-assertions');
@@ -51,7 +51,7 @@ contract('Liquidations', async (accounts) =>  {
     let dealer;
     let splitter;
     let liquidations;
-    let shutdown;
+    let unwind;
 
     let WETH = web3.utils.fromAscii("WETH");
     let CHAI = web3.utils.fromAscii("CHAI");
@@ -210,8 +210,8 @@ contract('Liquidations', async (accounts) =>  {
         await dealer.grantAccess(liquidations.address, { from: owner });
         await treasury.grantAccess(liquidations.address, { from: owner });
 
-        // Setup Shutdown
-        shutdown = await Shutdown.new(
+        // Setup Unwind
+        unwind = await Unwind.new(
             vat.address,
             daiJoin.address,
             weth.address,
@@ -226,12 +226,12 @@ contract('Liquidations', async (accounts) =>  {
             liquidations.address,
             { from: owner },
         );
-        await treasury.grantAccess(shutdown.address, { from: owner });
-        await treasury.registerShutdown(shutdown.address, { from: owner });
-        await dealer.grantAccess(shutdown.address, { from: owner });
-        await yDai1.grantAccess(shutdown.address, { from: owner });
-        await yDai2.grantAccess(shutdown.address, { from: owner });
-        await liquidations.grantAccess(shutdown.address, { from: owner });
+        await treasury.grantAccess(unwind.address, { from: owner });
+        await treasury.registerUnwind(unwind.address, { from: owner });
+        await dealer.grantAccess(unwind.address, { from: owner });
+        await yDai1.grantAccess(unwind.address, { from: owner });
+        await yDai2.grantAccess(unwind.address, { from: owner });
+        await liquidations.grantAccess(unwind.address, { from: owner });
 
         // Testing permissions
         await vat.hope(daiJoin.address, { from: owner });

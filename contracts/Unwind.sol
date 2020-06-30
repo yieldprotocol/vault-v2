@@ -21,7 +21,7 @@ import "./Constants.sol";
 
 
 /// @dev Treasury manages the Dai, interacting with MakerDAO's vat and chai when needed.
-contract Shutdown is Ownable(), Constants {
+contract Unwind is Ownable(), Constants {
     using SafeCast for uint256;
     using SafeMath for uint256;
 
@@ -45,8 +45,8 @@ contract Shutdown is Ownable(), Constants {
     mapping(uint256 => IYDai) public series; // YDai series, indexed by maturity
     uint256[] internal seriesIterator;       // We need to know all the series
 
-    uint256 public _fix; // Dai to weth price on DSS Shutdown
-    uint256 public _chi; // Chai to dai price on DSS Shutdown
+    uint256 public _fix; // Dai to weth price on DSS Unwind
+    uint256 public _chi; // Chai to dai price on DSS Unwind
 
     bool public settled;
     bool public cashedOut;
@@ -117,15 +117,15 @@ contract Shutdown is Ownable(), Constants {
     }
 
     /// @dev Disables treasury and dealer.
-    function shutdown() public {
+    function unwind() public {
         require(
             _end.tag(collateralType) != 0,
-            "Shutdown: MakerDAO not shutting down"
+            "Unwind: MakerDAO not shutting down"
         );
         live = false;
-        _treasury.shutdown();
-        _dealer.shutdown();
-        _liquidations.shutdown();
+        _treasury.unwind();
+        _dealer.unwind();
+        _liquidations.unwind();
     }
 
     function getChi() public returns (uint256) {
@@ -147,7 +147,7 @@ contract Shutdown is Ownable(), Constants {
     function skim(address beneficiary) public { // TODO: Hardcode
         require(
             live == true,
-            "Shutdown: Can only skim if live"
+            "Unwind: Can only skim if live"
         );
 
         uint256 profit = _chai.balanceOf(address(_treasury));
@@ -190,7 +190,7 @@ contract Shutdown is Ownable(), Constants {
     function settleTreasury() public {
         require(
             live == false,
-            "Shutdown: Shutdown first"
+            "Unwind: Unwind first"
         );
         (uint256 ink, uint256 art) = _vat.urns("ETH-A", address(_treasury));
         _vat.fork(                                               // Take the treasury vault
@@ -211,11 +211,11 @@ contract Shutdown is Ownable(), Constants {
     function cashSavings() public {
         require(
             _end.tag(collateralType) != 0,
-            "Shutdown: End.sol not caged"
+            "Unwind: End.sol not caged"
         );
         require(
             _end.fix(collateralType) != 0,
-            "Shutdown: End.sol not ready"
+            "Unwind: End.sol not ready"
         );
         uint256 daiTokens = _chai.dai(address(_treasury));   // Find out how much is the chai worth
         _chai.draw(address(_treasury), _treasury.savings()); // Get the chai as dai
@@ -230,9 +230,9 @@ contract Shutdown is Ownable(), Constants {
         _chi = _chaiOracle.price();
     }
 
-    /// @dev Settles a series position in Dealer, and then returns any remaining collateral as weth using the shutdown Dai to Weth price.
+    /// @dev Settles a series position in Dealer, and then returns any remaining collateral as weth using the unwind Dai to Weth price.
     function settle(bytes32 collateral, address user) public {
-        require(settled && cashedOut, "Shutdown: Not ready");
+        require(settled && cashedOut, "Unwind: Not ready");
         (uint256 tokenAmount, uint256 daiAmount) = _dealer.erase(collateral, user);
         uint256 remainder;
         if (collateral == WETH) {
@@ -245,7 +245,7 @@ contract Shutdown is Ownable(), Constants {
 
     /// @dev Redeems YDai for weth
     function redeem(uint256 maturity, uint256 yDaiAmount, address user) public {
-        require(settled && cashedOut, "Shutdown: Not ready");
+        require(settled && cashedOut, "Unwind: Not ready");
         IYDai yDai = _dealer.series(maturity);
         yDai.burn(user, yDaiAmount);
         _weth.transfer(
@@ -255,8 +255,8 @@ contract Shutdown is Ownable(), Constants {
     }
 
     /// @dev Calculates how much profit is in the system and transfers it to the beneficiary
-    function skimShutdown(address beneficiary) public { // TODO: Hardcode
-        require(settled && cashedOut, "Shutdown: Not ready");
+    function skimUnwind(address beneficiary) public { // TODO: Hardcode
+        require(settled && cashedOut, "Unwind: Not ready");
 
         uint256 chi = getChi();
         uint256 profit = _weth.balanceOf(address(this));

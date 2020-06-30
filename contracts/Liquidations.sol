@@ -47,12 +47,12 @@ contract Liquidations is ILiquidations, AuthorizedAccess(), Constants {
     }
 
     modifier onlyLive() {
-        require(live == true, "Dealer: Not available during shutdown");
+        require(live == true, "Dealer: Not available during unwind");
         _;
     }
 
-    /// @dev Disables post, withdraw, borrow and repay. To be called only by shutdown management contracts.
-    function shutdown() public override onlyAuthorized("Liquidations: Not Authorized") {
+    /// @dev Disables post, withdraw, borrow and repay. To be called only by unwind management contracts.
+    function unwind() public override onlyAuthorized("Liquidations: Not Authorized") {
         live = false;
     }
 
