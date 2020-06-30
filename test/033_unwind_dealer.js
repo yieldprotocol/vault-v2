@@ -23,14 +23,14 @@ const Dealer = artifacts.require('Dealer');
 const Splitter = artifacts.require('Splitter');
 const Liquidations = artifacts.require('Liquidations');
 const EthProxy = artifacts.require('EthProxy');
-const DssShutdown = artifacts.require('DssShutdown');
+const Unwind = artifacts.require('Unwind');
 
 const helper = require('ganache-time-traveler');
 const truffleAssert = require('truffle-assertions');
 const { BN, expectRevert, expectEvent } = require('@openzeppelin/test-helpers');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
 
-contract('DssShutdown - Treasury', async (accounts) =>  {
+contract('Unwind - Dealer', async (accounts) =>  {
     let [ owner, user1, user2, user3, user4 ] = accounts;
     let vat;
     let weth;
@@ -51,7 +51,7 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
     let splitter;
     let liquidations;
     let ethProxy;
-    let dssShutdown;
+    let unwind;
 
     let WETH = web3.utils.fromAscii("WETH");
     let CHAI = web3.utils.fromAscii("CHAI");
@@ -160,7 +160,7 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             gasToken.address,
             { from: owner },
         );
-        treasury.grantAccess(dealer.address, { from: owner });
+        await treasury.grantAccess(dealer.address, { from: owner });
 
         // Setup Splitter
         splitter = await Splitter.new(
@@ -168,8 +168,8 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             dealer.address,
             { from: owner },
         );
-        dealer.grantAccess(splitter.address, { from: owner });
-        treasury.grantAccess(splitter.address, { from: owner });
+        await dealer.grantAccess(splitter.address, { from: owner });
+        await treasury.grantAccess(splitter.address, { from: owner });
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
@@ -184,9 +184,9 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             "Symbol",
             { from: owner },
         );
-        dealer.addSeries(yDai1.address, { from: owner });
-        yDai1.grantAccess(dealer.address, { from: owner });
-        treasury.grantAccess(yDai1.address, { from: owner });
+        await dealer.addSeries(yDai1.address, { from: owner });
+        await yDai1.grantAccess(dealer.address, { from: owner });
+        await treasury.grantAccess(yDai1.address, { from: owner });
 
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
         yDai2 = await YDai.new(
@@ -199,9 +199,9 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             "Symbol2",
             { from: owner },
         );
-        dealer.addSeries(yDai2.address, { from: owner });
-        yDai2.grantAccess(dealer.address, { from: owner });
-        treasury.grantAccess(yDai2.address, { from: owner });
+        await dealer.addSeries(yDai2.address, { from: owner });
+        await yDai2.grantAccess(dealer.address, { from: owner });
+        await treasury.grantAccess(yDai2.address, { from: owner });
 
         // Setup EthProxy
         ethProxy = await EthProxy.new(
@@ -210,7 +210,7 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             dealer.address,
             { from: owner },
         );
-        
+
         // Setup Liquidations
         liquidations = await Liquidations.new(
             dai.address,
@@ -222,12 +222,14 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
         await dealer.grantAccess(liquidations.address, { from: owner });
         await treasury.grantAccess(liquidations.address, { from: owner });
 
-        // Setup DssShutdown
-        dssShutdown = await DssShutdown.new(
+        // Setup Unwind
+        unwind = await Unwind.new(
             vat.address,
             daiJoin.address,
             weth.address,
             wethJoin.address,
+            jug.address,
+            pot.address,
             end.address,
             chai.address,
             chaiOracle.address,
@@ -236,12 +238,14 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             liquidations.address,
             { from: owner },
         );
-        await treasury.grantAccess(dssShutdown.address, { from: owner });
-        await treasury.registerDssShutdown(dssShutdown.address, { from: owner });
-        await dealer.grantAccess(dssShutdown.address, { from: owner });
-        await yDai1.grantAccess(dssShutdown.address, { from: owner });
-        await yDai2.grantAccess(dssShutdown.address, { from: owner });
-        await liquidations.grantAccess(dssShutdown.address, { from: owner });
+        await treasury.grantAccess(unwind.address, { from: owner });
+        await treasury.registerUnwind(unwind.address, { from: owner });
+        await dealer.grantAccess(unwind.address, { from: owner });
+        await yDai1.grantAccess(unwind.address, { from: owner });
+        await yDai2.grantAccess(unwind.address, { from: owner });
+        await unwind.addSeries(yDai1.address, { from: owner });
+        await unwind.addSeries(yDai2.address, { from: owner });
+        await liquidations.grantAccess(unwind.address, { from: owner });
 
         // Tests setup
         await pot.setChi(chi, { from: owner });
@@ -276,10 +280,10 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
         console.log();
     }); */
 
-    /* it("does not attempt to settle treasury debt until Dss shutdown initiated", async() => {
+    /* it("does not attempt to settle treasury debt until Dss unwind initiated", async() => {
         await expectRevert(
-            dssShutdown.settleTreasury({ from: owner }),
-            "DssShutdown: End.sol not caged",
+            unwind.settleTreasury({ from: owner }),
+            "Unwind: End.sol not caged",
         );
     }); */
 
@@ -362,26 +366,26 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
 
         it("does not allow to redeem YDai if treasury not settled and cashed", async() => {
             await expectRevert(
-                dssShutdown.redeem(maturity1, yDaiTokens, user2, { from: user2 }),
-                "DssShutdown: Not ready",
+                unwind.redeem(maturity1, yDaiTokens, user2, { from: user2 }),
+                "Unwind: Not ready",
             );
         });
 
         it("does not allow to settle users if treasury not settled and cashed", async() => {
             await expectRevert(
-                dssShutdown.settle(WETH, user2, { from: user2 }),
-                "DssShutdown: Not ready",
+                unwind.settle(WETH, user2, { from: user2 }),
+                "Unwind: Not ready",
             );
         });
 
-        it("does not allow to profit if treasury not settled and cashed", async() => {
+        /* it("does not allow to profit if treasury not settled and cashed", async() => {
             await expectRevert(
-                dssShutdown.profit(owner, { from: user2 }),
-                "DssShutdown: Not ready",
+                unwind.profit(owner, { from: user2 }),
+                "Unwind: Not ready",
             );
-        });
+        }); */
 
-        describe("with Dss shutdown initiated and treasury settled", () => {
+        describe("with Dss unwind initiated and treasury settled", () => {
             beforeEach(async() => {
                 await end.cage({ from: owner });
                 await end.setTag(ilk, tag, { from: owner });
@@ -390,9 +394,9 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                 await end.skim(ilk, user1, { from: owner });
                 await end.skim(ilk, user2, { from: owner });
                 await end.skim(ilk, owner, { from: owner });
-                await dssShutdown.shutdown({ from: owner });
-                await dssShutdown.settleTreasury({ from: owner });
-                await dssShutdown.cashSavings({ from: owner });
+                await unwind.unwind({ from: owner });
+                await unwind.settleTreasury({ from: owner });
+                await unwind.cashSavings({ from: owner });
             });
 
             it("dealer shuts down", async() => {
@@ -406,35 +410,35 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             it("does not allow to post, withdraw, borrow or repay assets", async() => {
                 await expectRevert(
                     dealer.post(WETH, owner, owner, wethTokens, { from: owner }),
-                    "Dealer: Not available during shutdown",
+                    "Dealer: Not available during unwind",
                 );
                 await expectRevert(
                     dealer.withdraw(WETH, owner, owner, wethTokens, { from: owner }),
-                    "Dealer: Not available during shutdown",
+                    "Dealer: Not available during unwind",
                 );
                 await expectRevert(
                     dealer.borrow(WETH, maturity1, owner, yDaiTokens, { from: owner }),
-                    "Dealer: Not available during shutdown",
+                    "Dealer: Not available during unwind",
                 );
                 await expectRevert(
                     dealer.repayDai(WETH, maturity1, owner, daiTokens, { from: owner }),
-                    "Dealer: Not available during shutdown",
+                    "Dealer: Not available during unwind",
                 );
                 await expectRevert(
                     dealer.repayYDai(WETH, maturity1, owner, yDaiTokens, { from: owner }),
-                    "Dealer: Not available during shutdown",
+                    "Dealer: Not available during unwind",
                 );
             });
 
-            it("does not allow to profit if there is user debt", async() => {
+            /* it("does not allow to profit if there is user debt", async() => {
                 await expectRevert(
-                    dssShutdown.profit(owner, { from: user2 }),
-                    "DssShutdown: Redeem all yDai",
+                    unwind.profit(owner, { from: user2 }),
+                    "Unwind: Redeem all yDai",
                 );
-            });
+            }); */
 
             it("user can redeem YDai", async() => {
-                await dssShutdown.redeem(maturity1, yDaiTokens, user2, { from: user2 });
+                await unwind.redeem(maturity1, yDaiTokens, user2, { from: user2 });
 
                 assert.equal(
                     await weth.balanceOf(user2),
@@ -444,7 +448,7 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             });
 
             it("allows user to settle weth surplus", async() => {
-                await dssShutdown.settle(WETH, user1, { from: user1 });
+                await unwind.settle(WETH, user1, { from: user1 });
 
                 assert.equal(
                     await weth.balanceOf(user1),
@@ -454,7 +458,7 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             });
 
             it("users can be forced to settle weth surplus", async() => {
-                await dssShutdown.settle(WETH, user1, { from: owner });
+                await unwind.settle(WETH, user1, { from: owner });
 
                 assert.equal(
                     await weth.balanceOf(user1),
@@ -464,7 +468,7 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             });
 
             it("allows user to settle chai surplus", async() => {
-                await dssShutdown.settle(CHAI, user1, { from: user1 });
+                await unwind.settle(CHAI, user1, { from: user1 });
 
                 // Remember that chai is converted to weth when withdrawing
                 assert.equal(
@@ -475,7 +479,7 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             });
 
             it("users can be forced to settle chai surplus", async() => {
-                await dssShutdown.settle(CHAI, user1, { from: owner });
+                await unwind.settle(CHAI, user1, { from: owner });
 
                 // Remember that chai is converted to weth when withdrawing
                 assert.equal(
@@ -486,7 +490,7 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             });
 
             it("allows user to settle weth debt", async() => {
-                await dssShutdown.settle(WETH, user2, { from: user2 });
+                await unwind.settle(WETH, user2, { from: user2 });
 
                 assert.equal(
                     await dealer.debtYDai(WETH, maturity1, user2),
@@ -497,7 +501,7 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             });
 
             it("allows user to settle chai debt", async() => {
-                await dssShutdown.settle(CHAI, user2, { from: user2 });
+                await unwind.settle(CHAI, user2, { from: user2 });
 
                 assert.equal(
                     await dealer.debtYDai(CHAI, maturity1, user2),
@@ -508,7 +512,7 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
             });
 
             it("allows user to settle mutiple weth positions", async() => {
-                await dssShutdown.settle(WETH, user3, { from: user3 });
+                await unwind.settle(WETH, user3, { from: user3 });
 
                 assert.equal(
                     await weth.balanceOf(user3),
@@ -518,17 +522,17 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                 // In the tests the settling nets zero surplus, which we tested above
             });
 
-            describe("with all yDai redeemed", () => {
+            /* describe("with all yDai redeemed", () => {
                 beforeEach(async() => {
-                    await dssShutdown.redeem(maturity1, yDaiTokens.mul(2), user2, { from: user2 });
-                    await dssShutdown.redeem(maturity1, yDaiTokens, user3, { from: user3 });
-                    await dssShutdown.redeem(maturity2, yDaiTokens, user3, { from: user3 });
+                    await unwind.redeem(maturity1, yDaiTokens.mul(2), user2, { from: user2 });
+                    await unwind.redeem(maturity1, yDaiTokens, user3, { from: user3 });
+                    await unwind.redeem(maturity2, yDaiTokens, user3, { from: user3 });
                 });
 
                 it("allows to extract profit", async() => {
-                    const profit = await weth.balanceOf(dssShutdown.address);
+                    const profit = await weth.balanceOf(unwind.address);
 
-                    await dssShutdown.profit(owner, { from: owner });
+                    await unwind.profit(owner, { from: owner });
     
                     assert.equal(
                         (await weth.balanceOf(owner)).toString(),
@@ -536,7 +540,7 @@ contract('DssShutdown - Treasury', async (accounts) =>  {
                         'Owner should have ' + profit + ' weth, instead has ' + (await weth.balanceOf(owner)),
                     );
                 });
-            });
+            }); */
         });
     });
 });

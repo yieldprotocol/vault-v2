@@ -1,9 +1,13 @@
 pragma solidity ^0.6.2;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-interface IYDai {
+
+interface IYDai is IERC20 {
     function isMature() external view returns(bool);
     function maturity() external view returns(uint);
+    function chi0() external view returns(uint);
+    function rate0() external view returns(uint);
     function chiGrowth() external returns(uint);
     function rateGrowth() external returns(uint);
     function mature() external;

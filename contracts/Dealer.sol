@@ -29,11 +29,14 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     IGasToken internal _gasToken;
     mapping(bytes32 => IERC20) internal _token;                       // Weth or Chai
     mapping(bytes32 => IOracle) internal _oracle;                     // WethOracle or ChaiOracle
-    mapping(uint256 => IYDai) public override series;      // YDai series, indexed by maturity
-    uint256[] internal seriesIterator;            // We need to know all the series
+    mapping(uint256 => IYDai) public override series;                 // YDai series, indexed by maturity
+    uint256[] internal seriesIterator;                                // We need to know all the series
 
-    mapping(bytes32 => mapping(address => uint256)) public override posted;    // In Weth or Chai
-    mapping(bytes32 => mapping(uint256 => mapping(address => uint256))) public debtYDai;  // By series, in yDai
+    mapping(bytes32 => mapping(address => uint256)) public override posted;               // Collateral posted by each user
+    mapping(bytes32 => mapping(uint256 => mapping(address => uint256))) public debtYDai;  // Debt owed by each user, by series
+
+    mapping(bytes32 => uint256) public override systemPosted;                        // Sum of collateral posted by all users
+    mapping(bytes32 => mapping(uint256 => uint256)) public override systemDebtYDai;  // Sum of debt owed by all users, by series
 
     bool public live = true;
 
@@ -56,7 +59,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     }
 
     modifier onlyLive() {
-        require(live == true, "Dealer: Not available during shutdown");
+        require(live == true, "Dealer: Not available during unwind");
         _;
     }
 
@@ -76,8 +79,8 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
         _;
     }
 
-    /// @dev Disables post, withdraw, borrow and repay. To be called only by shutdown management contracts.
-    function shutdown() public override onlyAuthorized("Dealer: Not Authorized") {
+    /// @dev Disables post, withdraw, borrow and repay. To be called only by unwind management contracts.
+    function unwind() public override onlyAuthorized("Dealer: Not Authorized") {
         live = false;
     }
 
@@ -97,18 +100,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
         seriesIterator.push(maturity);
     }
 
-    /// @dev Returns the total debt of the yDai system, across all series, in dai
-    // TODO: Test
-    function systemDebt() public override returns (uint256) {
-        uint256 totalDebt;
-        for (uint256 i = 0; i < seriesIterator.length; i += 1) {
-            IYDai yDai = series[seriesIterator[i]];
-            totalDebt = totalDebt + IERC20(address(yDai)).totalSupply().muld(yDai.rateGrowth(), RAY);
-        } // We don't expect hundreds of maturities per dealer
-        return totalDebt;
-    }
-
-    /// @dev Returns the Dai equivalent of an yDai amount, for a given series identified by maturity
+    /// @dev Returns the dai equivalent of an yDai amount, for a given series identified by maturity
     function inDai(bytes32 collateral, uint256 maturity, uint256 yDaiAmount) public returns (uint256) {
         if (series[maturity].isMature()){
             if (collateral == WETH){
@@ -158,15 +150,6 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
         return totalDebt;
     }
 
-    /// @dev Returns the total debt of an user, for a given collateral, across all series, in yDai
-    function totalDebtYDai(bytes32 collateral, address user) public view override returns (uint256) {
-        uint256 totalDebt;
-        for (uint256 i = 0; i < seriesIterator.length; i += 1) {
-            totalDebt = totalDebt + debtYDai[collateral][seriesIterator[i]][user];
-        } // We don't expect hundreds of maturities per dealer
-        return totalDebt;
-    }
-
     /// @dev Maximum borrowing power of an user in dai for a given collateral
     //
     // powerOf[user](wad) = posted[user](wad) * oracle.price()(ray)
@@ -204,6 +187,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
             lockBond(10);
         }
         posted[collateral][to] = posted[collateral][to].add(amount);
+        systemPosted[collateral] = systemPosted[collateral].add(amount);
         emit Posted(collateral, to, posted[collateral][to]);
     }
 
@@ -216,6 +200,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
         onlyLive
     {
         posted[collateral][from] = posted[collateral][from].sub(amount); // Will revert if not enough posted
+        systemPosted[collateral] = systemPosted[collateral].sub(amount);
 
         require(
             isCollateralized(collateral, from),
@@ -256,6 +241,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
             lockBond(10);
         }
         debtYDai[collateral][maturity][to] = debtYDai[collateral][maturity][to].add(yDaiAmount);
+        systemDebtYDai[collateral][maturity] = systemDebtYDai[collateral][maturity].add(yDaiAmount);
 
         require(
             isCollateralized(collateral, to),
@@ -279,14 +265,9 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
         onlyHolderOrProxy(from, "Dealer: Only Holder Or Proxy")
         onlyLive
     {
-
-        (uint256 toRepay, uint256 debtDecrease) = repayProportion(collateral, maturity, from, yDaiAmount);
+        uint256 toRepay = Math.min(yDaiAmount, debtYDai[collateral][maturity][from]);
         series[maturity].burn(from, toRepay);
-        debtYDai[collateral][maturity][from] = debtYDai[collateral][maturity][from].sub(debtDecrease);
-        if (debtYDai[collateral][maturity][from] == 0 && debtDecrease >= 0) {
-            returnBond(10);
-        }
-        emit Borrowed(collateral, maturity, from, debtYDai[collateral][maturity][from]);
+        _repay(collateral, maturity, from, toRepay);
     }
 
     /// @dev Takes dai from `from` address, user debt is decreased for the given collateral and yDai series.
@@ -298,15 +279,28 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     // debt--
     function repayDai(bytes32 collateral, uint256 maturity, address from, uint256 daiAmount)
         public onlyHolderOrProxy(from, "Dealer: Only Holder Or Proxy") onlyLive {
-        (uint256 toRepay, uint256 debtDecrease) = repayProportion(collateral, maturity, from, inYDai(collateral, maturity, daiAmount));
+        uint256 toRepay = Math.min(daiAmount, debtDai(collateral, maturity, from));
         require(
             _dai.transferFrom(from, address(_treasury), toRepay),  // Take dai from user to Treasury
             "Dealer: Dai transfer fail"
         );
-
         _treasury.pushDai();                                      // Have Treasury process the dai
-        debtYDai[collateral][maturity][from] = debtYDai[collateral][maturity][from].sub(debtDecrease);
-        if (debtYDai[collateral][maturity][from] == 0 && debtDecrease >= 0) {
+        _repay(collateral, maturity, from, inYDai(collateral, maturity, toRepay));
+    }
+
+    /// @dev Removes an amount of debt from an user's vault. If interest was accrued debt is only paid proportionally.
+    //
+    //                                                principal
+    // principal_repayment = gross_repayment * ----------------------
+    //                                          principal + interest
+    //    
+    function _repay(bytes32 collateral, uint256 maturity, address from, uint256 yDaiAmount) internal {
+        // `inDai` calculates the interest accrued for a given amount and series
+        // uint256 repaidDebt = yDaiAmount.muld(divdrup(RAY.unit(), inDai(collateral, maturity, RAY.unit()), RAY), RAY);
+
+        debtYDai[collateral][maturity][from] = debtYDai[collateral][maturity][from].sub(yDaiAmount);
+        systemDebtYDai[collateral][maturity] = systemDebtYDai[collateral][maturity].sub(yDaiAmount);
+        if (debtYDai[collateral][maturity][from] == 0 && yDaiAmount >= 0) {
             returnBond(10);
         }
         emit Borrowed(collateral, maturity, from, debtYDai[collateral][maturity][from]);
@@ -321,11 +315,15 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     {
         uint256 debt;
         for (uint256 i = 0; i < seriesIterator.length; i += 1) {
-            debt = debt + debtDai(collateral, seriesIterator[i], user);
-            delete debtYDai[collateral][seriesIterator[i]][user];
-            emit Borrowed(collateral, seriesIterator[i], user, 0);
+            uint256 maturity = seriesIterator[i];
+            debt = debt + debtDai(collateral, maturity, user);
+            systemDebtYDai[collateral][maturity] =
+                systemDebtYDai[collateral][maturity].sub(debtYDai[collateral][maturity][user]);
+            delete debtYDai[collateral][maturity][user];
+            emit Borrowed(collateral, maturity, user, 0);
         } // We don't expect hundreds of maturities per dealer
         uint256 tokens = posted[collateral][user];
+        systemPosted[collateral] = systemPosted[collateral].sub(posted[collateral][user]);
         delete posted[collateral][user];
         emit Posted(collateral, user, 0);
         
@@ -344,41 +342,29 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
             tokenAmount,
             "Dealer: Not enough collateral"
         );
+        systemPosted[collateral] = systemPosted[collateral].sub(tokenAmount);
         if (posted[collateral][user] == 0){
             returnBond(10);
         }
 
-        uint256 grabbed;
+        uint256 totalGrabbed;
         for (uint256 i = 0; i < seriesIterator.length; i += 1) {
             uint256 maturity = seriesIterator[i];
-            uint256 thisGrab = Math.min(debtDai(collateral, maturity, user), daiAmount.sub(grabbed));
-            grabbed = grabbed.add(thisGrab); // SafeMath shouldn't be needed
-            debtYDai[collateral][maturity][user] = debtYDai[collateral][maturity][user].sub(inYDai(collateral, maturity, thisGrab)); // SafeMath shouldn't be needed
+            uint256 thisGrab = Math.min(debtDai(collateral, maturity, user), daiAmount.sub(totalGrabbed));
+            totalGrabbed = totalGrabbed.add(thisGrab); // SafeMath shouldn't be needed
+            debtYDai[collateral][maturity][user] =
+                debtYDai[collateral][maturity][user].sub(inYDai(collateral, maturity, thisGrab)); // SafeMath shouldn't be needed
+            systemDebtYDai[collateral][maturity] =
+                systemDebtYDai[collateral][maturity].sub(inYDai(collateral, maturity, thisGrab)); // SafeMath shouldn't be needed
             if (debtYDai[collateral][maturity][user] == 0){
                 returnBond(10);
             }
-            if (grabbed == daiAmount) break;
+            if (totalGrabbed == daiAmount) break;
         } // We don't expect hundreds of maturities per dealer
         require(
-            grabbed == daiAmount,
+            totalGrabbed == daiAmount,
             "Dealer: Not enough user debt"
         );
-    }
-
-
-    /// @dev Calculates the amount to repay and the amount by which to reduce the debt for a given collateral and series
-    function repayProportion(bytes32 collateral, uint256 maturity, address user, uint256 yDaiAmount)
-        internal returns(uint256, uint256) {
-        uint256 toRepay = Math.min(yDaiAmount, debtDai(collateral, maturity, user));
-        // TODO: Check if this can be taken from DecimalMath.sol
-        // uint256 debtProportion = debtYDai[user].mul(RAY.unit())
-        //     .divdr(debtDai(user).mul(RAY.unit()), RAY);
-        uint256 debtProportion = divdrup( // TODO: Check it works if we are not rounding.
-            debtYDai[collateral][maturity][user].mul(RAY.unit()),
-            debtDai(collateral, maturity, user).mul(RAY.unit()),
-            RAY
-        );
-        return (toRepay, toRepay.muld(debtProportion, RAY));
     }
 
     /// @dev Locks a liquidation bond in gas tokens

@@ -4,6 +4,7 @@ const Weth = artifacts.require("WETH9");
 const GemJoin = artifacts.require("GemJoin");
 const ERC20 = artifacts.require("TestERC20");
 const DaiJoin = artifacts.require("DaiJoin");
+const Jug = artifacts.require("Jug");
 const Pot = artifacts.require("Pot");
 const End = artifacts.require("End");
 const Chai = artifacts.require("Chai");
@@ -15,7 +16,7 @@ const Dealer = artifacts.require("Dealer");
 const Liquidations = artifacts.require("Liquidations");
 const Splitter = artifacts.require("Splitter");
 const EthProxy = artifacts.require("EthProxy");
-const DssShutdown = artifacts.require("DssShutdown");
+const Unwind = artifacts.require("Unwind");
 
 
 module.exports = async (deployer, network, accounts) => {
@@ -25,6 +26,7 @@ module.exports = async (deployer, network, accounts) => {
   let wethJoinAddress;
   let daiAddress;
   let daiJoinAddress;
+  let jugAddress;
   let potAddress;
   let endAddress;
   let chaiAddress;
@@ -36,7 +38,7 @@ module.exports = async (deployer, network, accounts) => {
   let splitterAddress;
   let liquidationsAddress;
   let ethProxyAddress;
-  let dssShutdownAddress;
+  let unwindAddress;
 
   const auctionTime = 3600; // TODO: Think where to store this parameter.
 
@@ -46,6 +48,7 @@ module.exports = async (deployer, network, accounts) => {
     wethJoinAddress = fixed_addrs[network].wethJoinAddress;
     daiAddress = fixed_addrs[network].daiAddress;
     daiJoinAddress = fixed_addrs[network].daiJoinAddress;
+    jugAddress = fixed_addrs[network].jugAddress;
     potAddress = fixed_addrs[network].potAddress;
     endAddress = fixed_addrs[network].endAddress;
     fixed_addrs[network].chaiAddress ? 
@@ -57,6 +60,7 @@ module.exports = async (deployer, network, accounts) => {
       wethJoinAddress = (await GemJoin.deployed()).address;
       daiAddress = (await ERC20.deployed()).address;
       daiJoinAddress = (await DaiJoin.deployed()).address;
+      jugAddress = (await Jug.deployed()).address;
       potAddress = (await Pot.deployed()).address;
       endAddress = (await End.deployed()).address;
       chaiAddress = (await Chai.deployed()).address;
@@ -92,13 +96,15 @@ module.exports = async (deployer, network, accounts) => {
   await dealer.grantAccess(liquidationsAddress);
   await treasury.grantAccess(liquidationsAddress);
 
-  // Setup DssShutdown
+  // Setup Unwind
   await deployer.deploy(
-    DssShutdown,
+    Unwind,
     vatAddress,
     daiJoinAddress,
     wethAddress,
     wethJoinAddress,
+    jugAddress,
+    potAddress,
     endAddress,
     chaiAddress,
     chaiOracleAddress,
@@ -106,13 +112,16 @@ module.exports = async (deployer, network, accounts) => {
     dealerAddress,
     liquidationsAddress,
   );
-  dssShutdownAddress = (await DssShutdown.deployed()).address;
-  await dealer.grantAccess(dssShutdownAddress);
-  await treasury.grantAccess(dssShutdownAddress);
-  await treasury.registerDssShutdown(dssShutdownAddress);
+  const unwind = await Unwind.deployed();
+  unwindAddress = unwind.address;
+  await dealer.grantAccess(unwindAddress);
+  await treasury.grantAccess(unwindAddress);
+  await treasury.registerUnwind(unwindAddress);
   // TODO: Retrieve the addresses for yDai contracts
-  // await yDai1.grantAccess(dssShutdownAddress);
-  // await yDai2.grantAccess(dssShutdownAddress);
+  // await yDai1.grantAccess(unwindAddress);
+  // await yDai2.grantAccess(unwindAddress);
+  // await unwind.addSeries(yDai1.address, { from: owner });
+  // await unwind.addSeries(yDai2.address, { from: owner });
 
   // Setup EthProxy
   await deployer.deploy(
@@ -126,7 +135,7 @@ module.exports = async (deployer, network, accounts) => {
   const deployedPeripheral = {
     'Splitter': splitterAddress,
     'Liquidations': liquidationsAddress,
-    'DssShutdown': dssShutdownAddress,
+    'Unwind': unwindAddress,
     'EthProxy': ethProxyAddress,
   }
   console.log(deployedPeripheral);
