@@ -26,7 +26,6 @@ contract Shutdown is Ownable(), Constants {
     using SafeMath for uint256;
 
     bytes32 public constant collateralType = "ETH-A";
-    address public constant beneficiary = 0x0000000000000000000000000000000000000000;
     uint256 public constant UNIT = 1000000000000000000000000000;
 
     IVat internal _vat;
@@ -145,7 +144,7 @@ contract Shutdown is Ownable(), Constants {
     }
 
     /// @dev Calculates how much profit is in the system and transfers it to the beneficiary
-    function skim() public {
+    function skim(address beneficiary) public { // TODO: Hardcode
         require(
             live == true,
             "Shutdown: Can only skim if live"
@@ -256,7 +255,7 @@ contract Shutdown is Ownable(), Constants {
     }
 
     /// @dev Calculates how much profit is in the system and transfers it to the beneficiary
-    function skimShutdown() public {
+    function skimShutdown(address beneficiary) public { // TODO: Hardcode
         require(settled && cashedOut, "Shutdown: Not ready");
 
         uint256 chi = getChi();
