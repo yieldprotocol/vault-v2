@@ -46,9 +46,8 @@ contract Market is ERC20, Constants {
         uint256 supply = totalSupply();
         uint256 tokensMinted = supply.mul(chaiOffered).div(chai.balanceOf(address(this));
         uint256 yDaiRequired = supply.mul(tokensMinted).div(yDai.balanceOf(address(this));
-        uint256 chaiTaken = tokensMinted.mul(chai.balanceOf(address(this)).div(supply);
 
-        chai.transferFrom(msg.sender, address(this), chaiTaken);
+        chai.transferFrom(msg.sender, address(this), chaiOffered);
         yDai.transferFrom(msg.sender, address(this), yDaiRequired);
         _mint(msg.sender, tokensMinted);
 
