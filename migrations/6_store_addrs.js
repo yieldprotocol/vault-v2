@@ -50,7 +50,7 @@ module.exports = async (deployer, network, accounts) => {
     let splitterAddress;
     let liquidationsAddress;
     let ethProxyAddress;
-    let dssShutdownAddress;
+    let shutdownAddress;
   
     if (network !== 'development') {
       vatAddress = fixed_addrs[network].vatAddress ;
@@ -84,7 +84,7 @@ module.exports = async (deployer, network, accounts) => {
     splitterAddress = (await Splitter.deployed()).address;
     liquidationsAddress = (await Liquidations.deployed()).address;
     ethProxyAddress = (await EthProxy.deployed()).address;
-    dssShutdownAddress = (await Shutdown.deployed()).address;
+    shutdownAddress = (await Shutdown.deployed()).address;
 
     try {
 
@@ -123,7 +123,7 @@ module.exports = async (deployer, network, accounts) => {
             'Splitter': splitterAddress,
             'Liquidations': liquidationsAddress,
             'EthProxy': ethProxyAddress,
-            'Shutdown': dssShutdownAddress,
+            'Shutdown': shutdownAddress,
           }
 
           let peripheralRef = db.collection(networkId.toString()).doc('deployedPeripheral')
