@@ -449,5 +449,60 @@ contract('Shutdown - Dealer', async (accounts) =>  {
                 );
             });
         });
+
+        describe("after maturity, with a rate increase", () => {
+            // Set rate to 1.5
+            const rateIncrease = toRay(0.25);
+            const rate0 = rate;
+            const rate1 = rate.add(rateIncrease);
+            const rate2 = rate1.add(rateIncrease);
+
+            const rateDifferential1 = divRay(rate2, rate0);
+            const rateDifferential2 = divRay(rate2, rate1);
+
+            beforeEach(async() => {
+                await postWeth(user2, wethTokens);
+                await dealer.borrow(WETH, await yDai1.maturity(), user2, daiTokens, { from: user2 }); // dealer debt assets == yDai liabilities 
+
+                await postWeth(user2, wethTokens);
+                await dealer.borrow(WETH, await yDai2.maturity(), user2, daiTokens, { from: user2 }); // dealer debt assets == yDai liabilities 
+
+                await postChai(user2, chaiTokens);
+                await dealer.borrow(CHAI, await yDai1.maturity(), user2, daiTokens, { from: user2 }); // dealer debt assets == yDai liabilities 
+                // profit = 10 chai
+
+                // yDai1 matures
+                await helper.advanceTime(1000);
+                await helper.advanceBlock();
+                await yDai1.mature();
+
+                await vat.fold(ilk, vat.address, rateIncrease, { from: owner });
+
+                // profit = 10 chai + 1 chai * (rate1/rate0 - 1)
+
+                // yDai2 matures
+                await helper.advanceTime(2000);
+                await helper.advanceBlock();
+                await yDai2.mature();
+
+                await vat.fold(ilk, vat.address, rateIncrease, { from: owner });
+                // profit = 10 chai + 1 chai * (rate2/rate0 - 1) + 1 chai * (rate2/rate1 - 1)
+            });
+
+            it("profit is acummulated from several series", async() => {
+                await shutdown.skim(user1, { from: owner });
+
+                const expectedProfit = chaiTokens.mul(10)
+                    .add(mulRay(chaiTokens, rateDifferential1.sub(toRay(1)))) // yDai1
+                    .add(mulRay(chaiTokens, rateDifferential2.sub(toRay(1)))) // yDai2
+                    .sub(1); // Rounding somewhere
+    
+                assert.equal(
+                    await chai.balanceOf(user1),
+                    expectedProfit.toString(),
+                    'User1 should have ' + expectedProfit.toString() + ' chai wei, instead has ' + (await chai.balanceOf(user1)),
+                );
+            });
+        });
     });
 });
