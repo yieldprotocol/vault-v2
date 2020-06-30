@@ -19,6 +19,7 @@ contract Market is ERC20, Constants {
 
     uint256 constant initialSupply = 1000;
 
+    State internal state;
     IERC20 public chai;
     IERC20 public yDai;
 
@@ -30,7 +31,7 @@ contract Market is ERC20, Constants {
     function init(uint256 chaiIn, uint256 yDaiIn) external {
         require(
             totalSupply() == 0,
-            revert("Market: Already initialized")
+            "Market: Already initialized"
         );
 
         chai.transferFrom(msg.sender, address(this), chaiIn);
@@ -44,8 +45,8 @@ contract Market is ERC20, Constants {
     /// The parameter passed is the amount of `chai` being invested, an appropriate amount of `yDai` to be invested alongside will be calculated and taken by this function from the caller.
     function mint(uint256 chaiOffered) external {
         uint256 supply = totalSupply();
-        uint256 tokensMinted = supply.mul(chaiOffered).div(chai.balanceOf(address(this));
-        uint256 yDaiRequired = supply.mul(tokensMinted).div(yDai.balanceOf(address(this));
+        uint256 tokensMinted = supply.mul(chaiOffered).div(chai.balanceOf(address(this)));
+        uint256 yDaiRequired = supply.mul(tokensMinted).div(yDai.balanceOf(address(this)));
 
         chai.transferFrom(msg.sender, address(this), chaiOffered);
         yDai.transferFrom(msg.sender, address(this), yDaiRequired);
@@ -58,7 +59,7 @@ contract Market is ERC20, Constants {
     function burn(uint256 tokensBurned) external {
         uint256 supply = totalSupply();
 
-        _burnFrom(msg.sender, tokensBurned);
+        _burn(msg.sender, tokensBurned);
         chai.transfer(msg.sender, tokensBurned.mul(chai.balanceOf(address(this))).div(supply));
         yDai.transfer(msg.sender, tokensBurned.mul(yDai.balanceOf(address(this))).div(supply));
 
@@ -106,8 +107,8 @@ contract Market is ERC20, Constants {
         State memory prevState = state;
         state = State({
             timestamp: uint32(block.timestamp % 2**32),
-            accumulator: uint64(prevState.prevRate + (prevState.prevRate * (block.timestamp - prevState.timestamp)) / RAY.unit()),
-            prevRate: uint32(y0 * RAY.unit() / x0)
+            accumulator: uint64(prevState.prevRate + (prevState.prevRate * (block.timestamp - prevState.timestamp)) / 10**27),
+            prevRate: uint32(y0 * 10**27 / x0)
         });
     }
 }
