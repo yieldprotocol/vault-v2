@@ -1,6 +1,6 @@
 pragma solidity ^0.6.0;
 
-import "@hq20/contracts/contracts/access/AuthorizedAccess.sol";
+import "./helpers/Orchestrated.sol";
 import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@hq20/contracts/contracts/utils/SafeCast.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -17,7 +17,7 @@ import "@nomiclabs/buidler/console.sol";
 
 
 /// @dev Treasury manages the Dai, interacting with MakerDAO's vat and chai when needed.
-contract Treasury is ITreasury, AuthorizedAccess(), Constants {
+contract Treasury is ITreasury, Orchestrated(), Constants {
     using DecimalMath for uint256;
     using DecimalMath for int256;
     using DecimalMath for uint8;
@@ -67,7 +67,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants {
     }
 
     /// @dev Disables pulling and pushing. To be called only by unwind management contracts.
-    function unwind() public override onlyAuthorized("Treasury: Not Authorized") {
+    function unwind() public override onlyOrchestrated("Treasury: Not Authorized") {
         live = false;
     }
 
@@ -94,7 +94,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants {
     }
 
     /// @dev Pays as much system debt as possible from the Treasury dai balance, saving the rest as chai.
-    function pushDai() public override onlyAuthorized("Treasury: Not Authorized") onlyLive  {
+    function pushDai() public override onlyOrchestrated("Treasury: Not Authorized") onlyLive  {
         uint256 dai = _dai.balanceOf(address(this));
 
         uint256 toRepay = Math.min(debt(), dai);
@@ -119,7 +119,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants {
     }
 
     /// @dev Pays as much system debt as possible from the Treasury chai balance, saving the rest as chai.
-    function pushChai() public override onlyAuthorized("Treasury: Not Authorized") onlyLive  {
+    function pushChai() public override onlyOrchestrated("Treasury: Not Authorized") onlyLive  {
         uint256 dai = _chai.dai(address(this));
 
         uint256 toRepay = Math.min(debt(), dai);
@@ -141,7 +141,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants {
     }
 
     /// @dev Returns dai using chai savings as much as possible, and borrowing the rest.
-    function pullDai(address to, uint256 dai) public override onlyAuthorized("Treasury: Not Authorized") onlyLive  {
+    function pullDai(address to, uint256 dai) public override onlyOrchestrated("Treasury: Not Authorized") onlyLive  {
         uint256 toRelease = Math.min(savings(), dai);
         if (toRelease > 0) {
             _chai.draw(address(this), toRelease);     // Grab dai from Chai, converted from chai
@@ -169,7 +169,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants {
     }
 
     /// @dev Returns chai using chai savings as much as possible, and borrowing the rest.
-    function pullChai(address to, uint256 chai) public override onlyAuthorized("Treasury: Not Authorized") onlyLive  {
+    function pullChai(address to, uint256 chai) public override onlyOrchestrated("Treasury: Not Authorized") onlyLive  {
         uint256 dai = chai.muld(_chaiOracle.price(), RAY);   // dai = price * chai
         uint256 toRelease = Math.min(savings(), dai);
         // As much chai as the Treasury has, can be used, we borrwo dai and convert it to chai for the rest
@@ -197,7 +197,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants {
     }
 
     /// @dev Moves all Weth collateral from Treasury into Maker
-    function pushWeth() public override onlyAuthorized("Treasury: Not Authorized") onlyLive  {
+    function pushWeth() public override onlyOrchestrated("Treasury: Not Authorized") onlyLive  {
         uint256 weth = _weth.balanceOf(address(this));
 
         _wethJoin.join(address(this), weth); // GemJoin reverts if anything goes wrong.
@@ -213,7 +213,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants {
     }
 
     /// @dev Moves Weth collateral from Treasury controlled Maker Eth vault to `to` address.
-    function pullWeth(address to, uint256 weth) public override onlyAuthorized("Treasury: Not Authorized") onlyLive  {
+    function pullWeth(address to, uint256 weth) public override onlyOrchestrated("Treasury: Not Authorized") onlyLive  {
         // Remove collateral from vault using frob
         _vat.frob(
             collateralType,
@@ -232,7 +232,7 @@ contract Treasury is ITreasury, AuthorizedAccess(), Constants {
     /// The `dai` parameter is measured in normalized dai, not in the units used in `vat.urns(ilk, user)).art`.
     // TODO: Remove when Splitter is replaced by flash minting
     function fork(address user, uint256 weth, uint256 dai)
-        public override onlyAuthorized("Treasury: Not Authorized")
+        public override onlyOrchestrated("Treasury: Not Authorized")
     {
         // If the Treasury doesn't have enough debt, it needs to borrow dai, which becomes chai savings.
         (, uint256 rate,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee

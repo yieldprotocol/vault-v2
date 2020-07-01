@@ -81,8 +81,8 @@ module.exports = async (deployer, network, accounts) => {
     dealerAddress,
   );
   splitterAddress = (await Splitter.deployed()).address;
-  await dealer.grantAccess(splitterAddress);
-  await treasury.grantAccess(splitterAddress);
+  await dealer.orchestrate(splitterAddress);
+  await treasury.orchestrate(splitterAddress);
 
   // Setup Liquidations
   await deployer.deploy(
@@ -93,8 +93,8 @@ module.exports = async (deployer, network, accounts) => {
     auctionTime,
   )
   liquidationsAddress = (await Liquidations.deployed()).address;
-  await dealer.grantAccess(liquidationsAddress);
-  await treasury.grantAccess(liquidationsAddress);
+  await dealer.orchestrate(liquidationsAddress);
+  await treasury.orchestrate(liquidationsAddress);
 
   // Setup Unwind
   await deployer.deploy(
@@ -114,12 +114,12 @@ module.exports = async (deployer, network, accounts) => {
   );
   const unwind = await Unwind.deployed();
   unwindAddress = unwind.address;
-  await dealer.grantAccess(unwindAddress);
-  await treasury.grantAccess(unwindAddress);
+  await dealer.orchestrate(unwindAddress);
+  await treasury.orchestrate(unwindAddress);
   await treasury.registerUnwind(unwindAddress);
   // TODO: Retrieve the addresses for yDai contracts
-  // await yDai1.grantAccess(unwindAddress);
-  // await yDai2.grantAccess(unwindAddress);
+  // await yDai1.orchestrate(unwindAddress);
+  // await yDai2.orchestrate(unwindAddress);
   // await unwind.addSeries(yDai1.address, { from: owner });
   // await unwind.addSeries(yDai2.address, { from: owner });
 

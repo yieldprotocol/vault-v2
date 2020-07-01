@@ -1,6 +1,6 @@
 pragma solidity ^0.6.2;
 
-import "@hq20/contracts/contracts/access/AuthorizedAccess.sol";
+import "./helpers/Orchestrated.sol";
 import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
@@ -16,7 +16,7 @@ import "./helpers/Delegable.sol";
 // import "@nomiclabs/buidler/console.sol";
 
 /// @dev A dealer takes collateral and issues yDai.
-contract Dealer is IDealer, AuthorizedAccess(), Delegable(), Constants {
+contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
     using SafeMath for uint256;
     using DecimalMath for uint256;
     using DecimalMath for uint8;
@@ -80,7 +80,7 @@ contract Dealer is IDealer, AuthorizedAccess(), Delegable(), Constants {
     }
 
     /// @dev Disables post, withdraw, borrow and repay. To be called only by unwind management contracts.
-    function unwind() public override onlyAuthorized("Dealer: Not Authorized") {
+    function unwind() public override onlyOrchestrated("Dealer: Not Authorized") {
         live = false;
     }
 
@@ -310,7 +310,7 @@ contract Dealer is IDealer, AuthorizedAccess(), Delegable(), Constants {
     function erase(bytes32 collateral, address user)
         public override
         validCollateral(collateral)
-        onlyAuthorized("Dealer: Not Authorized")
+        onlyOrchestrated("Dealer: Not Authorized")
         returns (uint256, uint256)
     {
         uint256 debt;
@@ -335,7 +335,7 @@ contract Dealer is IDealer, AuthorizedAccess(), Delegable(), Constants {
     function grab(bytes32 collateral, address user, uint256 daiAmount, uint256 tokenAmount)
         public override
         validCollateral(collateral)
-        onlyAuthorized("Dealer: Not Authorized")
+        onlyOrchestrated("Dealer: Not Authorized")
     {
 
         posted[collateral][user] = posted[collateral][user].sub(

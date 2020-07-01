@@ -146,7 +146,7 @@ contract('yDai', async (accounts) =>  {
             "Name",
             "Symbol"
         );
-        await treasury.grantAccess(yDai1.address, { from: owner });
+        await treasury.orchestrate(yDai1.address, { from: owner });
 
         // Test setup
         // Increase the rate accumulator
@@ -156,11 +156,11 @@ contract('yDai', async (accounts) =>  {
         // Deposit some weth to treasury so that redeem can pull some dai
         await weth.deposit({ from: owner, value: wethTokens2 });
         await weth.transfer(treasury.address, wethTokens2, { from: owner });
-        await treasury.grantAccess(owner, { from: owner });
+        await treasury.orchestrate(owner, { from: owner });
         await treasury.pushWeth();
                 
         // Mint some yDai1 the sneaky way, only difference is that the Dealer doesn't record the user debt.
-        await yDai1.grantAccess(owner, { from: owner });
+        await yDai1.orchestrate(owner, { from: owner });
         await yDai1.mint(user1, daiTokens1, { from: owner });
     });
 
