@@ -28,7 +28,7 @@ const Unwind = artifacts.require('Unwind');
 const helper = require('ganache-time-traveler');
 const truffleAssert = require('truffle-assertions');
 const { BN, expectRevert, expectEvent } = require('@openzeppelin/test-helpers');
-const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
+const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('../shared/utils');
 
 contract('Gas Usage', async (accounts) =>  {
     let [ owner, user1, user2, user3, user4 ] = accounts;
