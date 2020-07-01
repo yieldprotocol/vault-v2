@@ -20,10 +20,9 @@ const YDai = artifacts.require('YDai');
 const Dealer = artifacts.require('Dealer');
 
 // Peripheral
-const Splitter = artifacts.require('Splitter');
 const Liquidations = artifacts.require('Liquidations');
 const EthProxy = artifacts.require('EthProxy');
-const DssShutdown = artifacts.require('DssShutdown');
+const Unwind = artifacts.require('Unwind');
 
 const helper = require('ganache-time-traveler');
 const truffleAssert = require('truffle-assertions');
@@ -49,9 +48,8 @@ contract('Liquidations', async (accounts) =>  {
     let yDai1;
     let yDai2;
     let dealer;
-    let splitter;
     let liquidations;
-    let dssShutdown;
+    let unwind;
 
     let WETH = web3.utils.fromAscii("WETH");
     let CHAI = web3.utils.fromAscii("CHAI");
@@ -156,7 +154,7 @@ contract('Liquidations', async (accounts) =>  {
             gasToken.address,
             { from: owner },
         );
-        await treasury.grantAccess(dealer.address, { from: owner });
+        await treasury.orchestrate(dealer.address, { from: owner });
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
@@ -172,8 +170,8 @@ contract('Liquidations', async (accounts) =>  {
             { from: owner },
         );
         await dealer.addSeries(yDai1.address, { from: owner });
-        await yDai1.grantAccess(dealer.address, { from: owner });
-        await treasury.grantAccess(yDai1.address, { from: owner });
+        await yDai1.orchestrate(dealer.address, { from: owner });
+        await treasury.orchestrate(yDai1.address, { from: owner });
 
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
         yDai2 = await YDai.new(
@@ -187,17 +185,8 @@ contract('Liquidations', async (accounts) =>  {
             { from: owner },
         );
         await dealer.addSeries(yDai2.address, { from: owner });
-        await yDai2.grantAccess(dealer.address, { from: owner })
-        await treasury.grantAccess(yDai2.address, { from: owner });
-
-        // Setup Splitter
-        splitter = await Splitter.new(
-            treasury.address,
-            dealer.address,
-            { from: owner },
-        );
-        await dealer.grantAccess(splitter.address, { from: owner });
-        await treasury.grantAccess(splitter.address, { from: owner });
+        await yDai2.orchestrate(dealer.address, { from: owner })
+        await treasury.orchestrate(yDai2.address, { from: owner });
 
         // Setup Liquidations
         liquidations = await Liquidations.new(
@@ -207,15 +196,17 @@ contract('Liquidations', async (accounts) =>  {
             auctionTime,
             { from: owner },
         );
-        await dealer.grantAccess(liquidations.address, { from: owner });
-        await treasury.grantAccess(liquidations.address, { from: owner });
+        await dealer.orchestrate(liquidations.address, { from: owner });
+        await treasury.orchestrate(liquidations.address, { from: owner });
 
-        // Setup DssShutdown
-        dssShutdown = await DssShutdown.new(
+        // Setup Unwind
+        unwind = await Unwind.new(
             vat.address,
             daiJoin.address,
             weth.address,
             wethJoin.address,
+            jug.address,
+            pot.address,
             end.address,
             chai.address,
             chaiOracle.address,
@@ -224,19 +215,19 @@ contract('Liquidations', async (accounts) =>  {
             liquidations.address,
             { from: owner },
         );
-        await treasury.grantAccess(dssShutdown.address, { from: owner });
-        await treasury.registerDssShutdown(dssShutdown.address, { from: owner });
-        await dealer.grantAccess(dssShutdown.address, { from: owner });
-        await yDai1.grantAccess(dssShutdown.address, { from: owner });
-        await yDai2.grantAccess(dssShutdown.address, { from: owner });
-        await liquidations.grantAccess(dssShutdown.address, { from: owner });
+        await treasury.orchestrate(unwind.address, { from: owner });
+        await treasury.registerUnwind(unwind.address, { from: owner });
+        await dealer.orchestrate(unwind.address, { from: owner });
+        await yDai1.orchestrate(unwind.address, { from: owner });
+        await yDai2.orchestrate(unwind.address, { from: owner });
+        await liquidations.orchestrate(unwind.address, { from: owner });
 
         // Testing permissions
         await vat.hope(daiJoin.address, { from: owner });
         await vat.hope(wethJoin.address, { from: owner });
         await vat.hope(daiJoin.address, { from: buyer });
         await vat.hope(wethJoin.address, { from: buyer });
-        await treasury.grantAccess(owner, { from: owner });
+        await treasury.orchestrate(owner, { from: owner });
         await end.rely(owner, { from: owner });       // `owner` replaces MKR governance
 
         // Setup tests

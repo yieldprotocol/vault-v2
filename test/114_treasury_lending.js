@@ -90,8 +90,8 @@ contract('Treasury - Lending', async (accounts) =>  {
             wethJoin.address,
             vat.address,
         );
-        await treasury.grantAccess(owner, { from: owner });
-        // await treasury.grantAccess(user, { from: owner });
+        await treasury.orchestrate(owner, { from: owner });
+        // await treasury.orchestrate(user, { from: owner });
     });
 
     it("get the size of the contract", async() => {

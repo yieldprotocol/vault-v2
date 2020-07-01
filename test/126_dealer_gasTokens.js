@@ -20,9 +20,8 @@ const YDai = artifacts.require('YDai');
 const Dealer = artifacts.require('Dealer');
 
 // Peripheral
-const Splitter = artifacts.require('Splitter');
 const EthProxy = artifacts.require('EthProxy');
-const DssShutdown = artifacts.require('DssShutdown');
+const Unwind = artifacts.require('Unwind');
 
 const helper = require('ganache-time-traveler');
 const truffleAssert = require('truffle-assertions');
@@ -46,7 +45,6 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
     let yDai1;
     let yDai2;
     let dealer;
-    let splitter;
 
     let WETH = web3.utils.fromAscii("WETH");
     let CHAI = web3.utils.fromAscii("CHAI");
@@ -144,16 +142,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
             gasToken.address,
             { from: owner },
         );
-        treasury.grantAccess(dealer.address, { from: owner });
-
-        // Setup Splitter
-        splitter = await Splitter.new(
-            treasury.address,
-            dealer.address,
-            { from: owner },
-        );
-        dealer.grantAccess(splitter.address, { from: owner });
-        treasury.grantAccess(splitter.address, { from: owner });
+        treasury.orchestrate(dealer.address, { from: owner });
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
@@ -169,8 +158,8 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
             { from: owner },
         );
         dealer.addSeries(yDai1.address, { from: owner });
-        yDai1.grantAccess(dealer.address, { from: owner });
-        treasury.grantAccess(yDai1.address, { from: owner });
+        yDai1.orchestrate(dealer.address, { from: owner });
+        treasury.orchestrate(yDai1.address, { from: owner });
 
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
         yDai2 = await YDai.new(
@@ -184,8 +173,8 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
             { from: owner },
         );
         dealer.addSeries(yDai2.address, { from: owner });
-        yDai2.grantAccess(dealer.address, { from: owner });
-        treasury.grantAccess(yDai2.address, { from: owner });
+        yDai2.orchestrate(dealer.address, { from: owner });
+        treasury.orchestrate(yDai2.address, { from: owner });
 
         // Tests setup
         await pot.setChi(chi, { from: owner });

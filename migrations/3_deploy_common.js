@@ -89,7 +89,7 @@ module.exports = async (deployer, network, accounts) => {
   );
   const dealer = await Dealer.deployed();
   dealerAddress = dealer.address;
-  await treasury.grantAccess(dealerAddress);
+  await treasury.orchestrate(dealerAddress);
 
   // Commit addresses to migrations registry
   const deployedCore = {

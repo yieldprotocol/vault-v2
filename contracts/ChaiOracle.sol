@@ -1,6 +1,6 @@
 pragma solidity ^0.6.2;
 import "@hq20/contracts/contracts/math/DecimalMath.sol";
-import "./Constants.sol";
+import "./helpers/Constants.sol";
 import "./interfaces/IPot.sol";
 import "./interfaces/IOracle.sol";
 

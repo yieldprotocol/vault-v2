@@ -60,8 +60,8 @@ module.exports = async (deployer, network, accounts) => {
       symbol,
     );
     const yDai = await YDai.deployed();
-    await treasury.grantAccess(yDai.address);
-    await yDai.grantAccess(dealerAddress);
+    await treasury.orchestrate(yDai.address);
+    await yDai.orchestrate(dealerAddress);
     await dealer.addSeries(yDai.address);
 
     await migrations.register(web3.utils.fromAscii('yDai' + index), yDai.address);
