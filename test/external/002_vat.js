@@ -15,7 +15,7 @@ contract('Vat', async (accounts) =>  {
     let dai;
     let daiJoin;
 
-    let ilk = web3.utils.fromAscii('weth')
+    let ilk = web3.utils.fromAscii('ETH-A')
     let Line = web3.utils.fromAscii('Line')
     let spotName = web3.utils.fromAscii('spot')
     let linel = web3.utils.fromAscii('line')
@@ -44,7 +44,7 @@ contract('Vat', async (accounts) =>  {
 
         await vat.file(ilk, spotName, spot, { from: owner });
         await vat.file(ilk, linel, limits, { from: owner });
-        await vat.file(Line, limits); // TODO: Why can't we specify `, { from: owner }`?
+        await vat.file(Line, limits); 
         await vat.fold(ilk, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
 
         // Vat permissions

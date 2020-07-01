@@ -29,7 +29,7 @@ const { balance, BN, expectRevert } = require('@openzeppelin/test-helpers');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
 const { assert } = require('chai');
 
-contract('Dealer - Weth', async (accounts) =>  {
+contract('Dealer - EthProxy', async (accounts) =>  {
     let [ owner, user ] = accounts;
     let vat;
     let weth;

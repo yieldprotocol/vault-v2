@@ -1,4 +1,5 @@
 const fixed_addrs = require('./fixed_addrs.json');
+const Migrations = artifacts.require("Migrations");
 const Pot = artifacts.require("Pot");
 const Vat = artifacts.require("Vat");
 const GemJoin = artifacts.require("GemJoin");
@@ -13,6 +14,7 @@ const Weth = artifacts.require("WETH9");
 const ERC20 = artifacts.require("TestERC20");
 
 module.exports = async (deployer, network, accounts) => {
+  const migrations = await Migrations.deployed();
 
   let vatAddress;
   let wethAddress;
@@ -89,7 +91,7 @@ module.exports = async (deployer, network, accounts) => {
   dealerAddress = dealer.address;
   await treasury.orchestrate(dealerAddress);
 
-  // Commit addresses to firebase
+  // Commit addresses to migrations registry
   const deployedCore = {
     'WethOracle': wethOracleAddress,
     'ChaiOracle': chaiOracleAddress,
@@ -97,5 +99,8 @@ module.exports = async (deployer, network, accounts) => {
     'Dealer': dealerAddress,
   }
 
+  for (name in deployedCore) {
+    await migrations.register(web3.utils.fromAscii(name), deployedCore[name]);
+  }
   console.log(deployedCore)
 };

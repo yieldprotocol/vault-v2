@@ -40,7 +40,7 @@ module.exports = async (callback) => {
         await vat.init(ilk);
         await vat.file(ilk, spotName, spot );
         await vat.file(ilk, linel, limits );
-        await vat.file(Line, limits); // TODO: Why can't we specify `, { from: owner }`?
+        await vat.file(Line, limits); 
 
         await vat.rely(vat.address );      // `owner` authorizing `vat` to operate for `vat`?
         await vat.rely(wethJoin.address ); // `owner` authorizing `wethJoin` to operate for `vat`

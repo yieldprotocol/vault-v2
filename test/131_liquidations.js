@@ -92,7 +92,7 @@ contract('Liquidations', async (accounts) =>  {
 
         await vat.file(ilk, spotName, spot, { from: owner });
         await vat.file(ilk, linel, limits, { from: owner });
-        await vat.file(Line, limits); // TODO: Why can't we specify `, { from: owner }`?
+        await vat.file(Line, limits); 
 
         // Setup pot
         pot = await Pot.new(vat.address);

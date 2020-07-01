@@ -8,8 +8,8 @@
 
 # start ganache
 npx ganache-cli \
-    # --db "db_ganache/" \
     --mnemonic "all your mnemonic are belong to us seed me up scotty over" \
+    --defaultBalanceEther 1000000 \
     --gasLimit 0xfffffffffff \
     --gasPrice 0 \
     --port 8545 \

@@ -20,8 +20,8 @@ const YDai = artifacts.require('YDai');
 const Dealer = artifacts.require('Dealer');
 
 // Peripheral
-const Liquidations = artifacts.require('Liquidations');
 const EthProxy = artifacts.require('EthProxy');
+const Liquidations = artifacts.require('Liquidations');
 const Unwind = artifacts.require('Unwind');
 
 const helper = require('ganache-time-traveler');
@@ -47,8 +47,8 @@ contract('Gas Usage', async (accounts) =>  {
     let yDai1;
     let yDai2;
     let dealer;
-    let liquidations;
     let ethProxy;
+    let liquidations;
     let unwind;
 
     let WETH = web3.utils.fromAscii("WETH");
@@ -271,6 +271,17 @@ contract('Gas Usage', async (accounts) =>  {
             dealer.address,
             { from: owner },
         );
+        
+        // Setup Liquidations
+        liquidations = await Liquidations.new(
+            dai.address,
+            treasury.address,
+            dealer.address,
+            auctionTime,
+            { from: owner },
+        );
+        await dealer.orchestrate(liquidations.address, { from: owner });
+        await treasury.orchestrate(liquidations.address, { from: owner });
 
         // Setup Unwind
         unwind = await Unwind.new(

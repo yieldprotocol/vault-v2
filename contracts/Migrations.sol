@@ -3,7 +3,8 @@ pragma solidity ^0.6.0;
 contract Migrations {
     address public owner;
     uint public last_completed_migration;
-    mapping(string => address) public contracts;
+    mapping(bytes32 => address) public contracts;
+    bytes32[] public names;
 
     constructor() public {
         owner = msg.sender;
@@ -13,6 +14,15 @@ contract Migrations {
         if (msg.sender == owner) _;
     }
 
+    function length() external view returns (uint) {
+        return names.length;
+    }
+
+    function register(bytes32 name, address addr ) external restricted {
+        contracts[name] = addr;
+        names.push(name);
+    }
+
     function setCompleted(uint completed) public restricted {
         last_completed_migration = completed;
     }
@@ -20,9 +30,5 @@ contract Migrations {
     function upgrade(address new_address) public restricted {
         Migrations upgraded = Migrations(new_address);
         upgraded.setCompleted(last_completed_migration);
-    }
-
-    function setDupAddr(string calldata dupNum, address dupAddr ) external restricted {
-        contracts[dupNum] = dupAddr;
     }
 }
