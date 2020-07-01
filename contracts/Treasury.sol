@@ -226,41 +226,6 @@ contract Treasury is ITreasury, Orchestrated(), Constants {
         _wethJoin.exit(to, weth); // `GemJoin` reverts on failures
     }
 
-    /// @dev Moves dai debt and weth collateral from Treasury to `user` in MakerDAO
-    /// Needs to be surrounded by `vat.hope(treasury.address)` and `vat.nope(treasury.address)`
-    /// Only the Dealer can call `transferPosition`, to avoid transferring more debt than an user has.
-    /// The `dai` parameter is measured in normalized dai, not in the units used in `vat.urns(ilk, user)).art`.
-    // TODO: Remove when Splitter is replaced by flash minting
-    function fork(address user, uint256 weth, uint256 dai)
-        public override onlyOrchestrated("Treasury: Not Authorized")
-    {
-        // If the Treasury doesn't have enough debt, it needs to borrow dai, which becomes chai savings.
-        (, uint256 rate,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
-        uint256 toBorrow = dai - Math.min(debt(), dai);
-        if (toBorrow > 0) {
-            _vat.frob(
-                collateralType,
-                address(this),
-                address(this),
-                address(this),
-                0,
-                toBorrow.divd(rate, RAY).toInt()
-            ); // `vat.frob` reverts on failure
-            _daiJoin.exit(address(this), toBorrow);  // `daiJoin` reverts on failures
-            _chai.join(address(this), toBorrow);     // Grab chai from Chai, converted from dai
-        }
-
-        _vat.hope(user);
-        _vat.fork( // Move the debt
-            collateralType,
-            address(this),
-            user,
-            weth.toInt(),
-            dai.divd(rate, RAY).toInt()
-        );
-        _vat.nope(user);
-    }
-
     /// @dev Registers the one contract that will shut down the Treasury if MakerDAO shuts down.
     function registerUnwind(address unwind_) public onlyOwner {
         require(
