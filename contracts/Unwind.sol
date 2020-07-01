@@ -144,10 +144,10 @@ contract Unwind is Ownable(), Constants {
     }
 
     /// @dev Calculates how much profit is in the system and transfers it to the beneficiary
-    function skim(address beneficiary) public { // TODO: Hardcode
+    function skimWhileLive(address beneficiary) public { // TODO: Hardcode
         require(
             live == true,
-            "Unwind: Can only skim if live"
+            "Unwind: Can only skimWhileLive if live"
         );
 
         uint256 profit = _chai.balanceOf(address(_treasury));
@@ -255,7 +255,8 @@ contract Unwind is Ownable(), Constants {
     }
 
     /// @dev Calculates how much profit is in the system and transfers it to the beneficiary
-    function skimUnwind(address beneficiary) public { // TODO: Hardcode
+    // TODO: Test
+    function skimDssShutdown(address beneficiary) public { // TODO: Hardcode
         require(settled && cashedOut, "Unwind: Not ready");
 
         uint256 chi = getChi();

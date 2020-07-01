@@ -339,7 +339,7 @@ contract('Unwind - Dealer', async (accounts) =>  {
         });
 
         it("chai savings are added to profits", async() => {
-            await unwind.skim(user1, { from: owner });
+            await unwind.skimWhileLive(user1, { from: owner });
 
             assert.equal(
                 await chai.balanceOf(user1),
@@ -353,7 +353,7 @@ contract('Unwind - Dealer', async (accounts) =>  {
             await chai.approve(dealer.address, chaiTokens, { from: user2 });
             await dealer.post(CHAI, user2, user2, chaiTokens, { from: user2 });
 
-            await unwind.skim(user1, { from: owner });
+            await unwind.skimWhileLive(user1, { from: owner });
 
             assert.equal(
                 await chai.balanceOf(user1),
@@ -367,7 +367,7 @@ contract('Unwind - Dealer', async (accounts) =>  {
             await postWeth(user2, wethTokens);
             await dealer.borrow(WETH, await yDai1.maturity(), user2, daiTokens, { from: user2 }); // dealer debt assets == yDai liabilities 
 
-            await unwind.skim(user1, { from: owner });
+            await unwind.skimWhileLive(user1, { from: owner });
 
             assert.equal(
                 await chai.balanceOf(user1),
@@ -381,7 +381,7 @@ contract('Unwind - Dealer', async (accounts) =>  {
             await postChai(user2, chaiTokens);
             await dealer.borrow(CHAI, await yDai1.maturity(), user2, daiTokens, { from: user2 }); // dealer debt assets == yDai liabilities 
 
-            await unwind.skim(user1, { from: owner });
+            await unwind.skimWhileLive(user1, { from: owner });
 
             assert.equal(
                 await chai.balanceOf(user1),
@@ -402,7 +402,7 @@ contract('Unwind - Dealer', async (accounts) =>  {
             });
     
             it("dai debt is deduced from profits", async() => {
-                await unwind.skim(user1, { from: owner });
+                await unwind.skimWhileLive(user1, { from: owner });
     
                 assert.equal(
                     await chai.balanceOf(user1),
@@ -438,7 +438,7 @@ contract('Unwind - Dealer', async (accounts) =>  {
             });
 
             it("there is an extra profit only from weth debt", async() => {
-                await unwind.skim(user1, { from: owner });
+                await unwind.skimWhileLive(user1, { from: owner });
 
                 const expectedProfit = chaiTokens.mul(10).add(mulRay(chaiTokens, rateDifferential.sub(toRay(1))));
     
@@ -490,7 +490,7 @@ contract('Unwind - Dealer', async (accounts) =>  {
             });
 
             it("profit is acummulated from several series", async() => {
-                await unwind.skim(user1, { from: owner });
+                await unwind.skimWhileLive(user1, { from: owner });
 
                 const expectedProfit = chaiTokens.mul(10)
                     .add(mulRay(chaiTokens, rateDifferential1.sub(toRay(1)))) // yDai1
