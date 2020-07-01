@@ -19,6 +19,7 @@ contract YDai is AuthorizedAccess(), UserProxy(), ERC20, Constants, IYDai  {
     using DecimalMath for uint256;
     using DecimalMath for uint8;
 
+    event Redeemed(address indexed user, uint256 yDaiIn, uint256 daiOut);
     event Matured(uint256 rate, uint256 chi);
 
     IVat internal _vat;
@@ -112,6 +113,7 @@ contract YDai is AuthorizedAccess(), UserProxy(), ERC20, Constants, IYDai  {
         _burn(user, yDaiAmount);                              // Burn yDai from user
         uint256 daiAmount = yDaiAmount.muld(chiGrowth(), RAY); // User gets interest for holding after maturity
         _treasury.pullDai(user, daiAmount);                   // Give dai to user, from Treasury
+        emit Redeemed(user, yDaiAmount, daiAmount);
     }
 
     /// @dev Mint yDai. Only callable by Dealer contracts.
