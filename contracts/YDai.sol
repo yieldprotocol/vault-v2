@@ -9,6 +9,7 @@ import "./interfaces/IJug.sol";
 import "./interfaces/IPot.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IYDai.sol";
+import "./interfaces/IFlashMinter";
 import "./Constants.sol";
 import "./UserProxy.sol";
 import "@nomiclabs/buidler/console.sol";
@@ -114,9 +115,15 @@ contract YDai is AuthorizedAccess(), UserProxy(), ERC20, Constants, IYDai  {
         _treasury.pullDai(user, daiAmount);                   // Give dai to user, from Treasury
     }
 
+    /// @dev Flash-mint yDai. Calls back on `IFlashMinter.executeOnFlashMint()`
+    function flashMint(address to, uint256 yDaiAmount) public {
+        _mint(to, yDaiAmount);
+        IFlashMinter(msg.sender).executeOnFlashMint();
+        _burn(to, yDaiAmount);
+    }
+
     /// @dev Mint yDai. Only callable by Dealer contracts.
-    function mint(address to, uint256 yDaiAmount) public override onlyAuthorized("YDai: Not Authorized")
-        {
+    function mint(address to, uint256 yDaiAmount) public override onlyAuthorized("YDai: Not Authorized") {
         _mint(to, yDaiAmount);
     }
 
