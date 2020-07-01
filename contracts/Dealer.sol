@@ -145,6 +145,7 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
     }
 
     /// @dev Returns the total debt of an user, for a given collateral, across all series, in Dai
+    // TODO: First to remove if we want to trim down this contract
     function totalDebtDai(bytes32 collateral, address user) public override returns (uint256) {
         uint256 totalDebt;
         for (uint256 i = 0; i < seriesIterator.length; i += 1) {
@@ -310,31 +311,6 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
             returnBond(10);
         }
         emit Borrowed(collateral, maturity, from, debtYDai[collateral][maturity][from]);
-    }
-
-    /// @dev Erases all collateral and debt for an user.
-    function erase(bytes32 collateral, address user)
-        public override
-        validCollateral(collateral)
-        onlyOrchestrated("Dealer: Not Authorized")
-        returns (uint256, uint256)
-    {
-        uint256 debt;
-        for (uint256 i = 0; i < seriesIterator.length; i += 1) {
-            uint256 maturity = seriesIterator[i];
-            debt = debt + debtDai(collateral, maturity, user);
-            systemDebtYDai[collateral][maturity] =
-                systemDebtYDai[collateral][maturity].sub(debtYDai[collateral][maturity][user]);
-            delete debtYDai[collateral][maturity][user];
-            emit Borrowed(collateral, maturity, user, 0);
-        } // We don't expect hundreds of maturities per dealer
-        uint256 tokens = posted[collateral][user];
-        systemPosted[collateral] = systemPosted[collateral].sub(posted[collateral][user]);
-        delete posted[collateral][user];
-        emit Posted(collateral, user, 0);
-        
-        returnBond((seriesIterator.length + 1) * 10); // 10 per series, and 10 for the collateral
-        return (tokens, debt);
     }
 
     /// @dev Removes collateral and debt for an user.

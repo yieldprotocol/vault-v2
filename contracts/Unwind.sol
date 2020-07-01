@@ -233,12 +233,20 @@ contract Unwind is Ownable(), Constants {
     /// @dev Settles a series position in Dealer, and then returns any remaining collateral as weth using the unwind Dai to Weth price.
     function settle(bytes32 collateral, address user) public {
         require(settled && cashedOut, "Unwind: Not ready");
-        (uint256 tokenAmount, uint256 daiAmount) = _dealer.erase(collateral, user);
+
+        /* uint256 debt;
+        for (uint256 i = 0; i < seriesIterator.length; i += 1) {
+            debt = debt.add(_dealer.debtDai(collateral, seriesIterator[i], user);
+        } */
+        uint256 debt = _dealer.totalDebtDai(collateral, user);
+        uint256 tokens = _dealer.posted(collateral, user);
+        _dealer.grab(collateral, user, debt, tokens);
+
         uint256 remainder;
         if (collateral == WETH) {
-            remainder = subFloorZero(tokenAmount, muld(daiAmount, _fix));
+            remainder = subFloorZero(tokens, muld(debt, _fix));
         } else if (collateral == CHAI) {
-            remainder = muld(subFloorZero(muld(tokenAmount, _chi), daiAmount), _fix);
+            remainder = muld(subFloorZero(muld(tokens, _chi), debt), _fix);
         }
         _weth.transfer(user, remainder);
     }
