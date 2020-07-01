@@ -1,0 +1,249 @@
+// External
+const Vat = artifacts.require('Vat');
+const GemJoin = artifacts.require('GemJoin');
+const DaiJoin = artifacts.require('DaiJoin');
+const Weth = artifacts.require("WETH9");
+const ERC20 = artifacts.require("TestERC20");
+const Jug = artifacts.require('Jug');
+const Pot = artifacts.require('Pot');
+const End = artifacts.require('End');
+const Chai = artifacts.require('Chai');
+const GasToken = artifacts.require('GasToken1');
+
+// Common
+const ChaiOracle = artifacts.require('ChaiOracle');
+const WethOracle = artifacts.require('WethOracle');
+const Treasury = artifacts.require('Treasury');
+
+// YDai
+const YDai = artifacts.require('YDai');
+const Dealer = artifacts.require('Dealer');
+
+// Peripheral
+const EthProxy = artifacts.require('EthProxy');
+const Unwind = artifacts.require('Unwind');
+
+// Mocks
+const FlashMinterMock = artifacts.require('FlashMinterMock');
+
+const truffleAssert = require('truffle-assertions');
+const helper = require('ganache-time-traveler');
+const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
+const { expectRevert, expectEvent } = require('@openzeppelin/test-helpers');
+
+contract('yDai - UserProxy', async (accounts) =>  {
+    let [ owner, user ] = accounts;
+    let vat;
+    let weth;
+    let wethJoin;
+    let dai;
+    let daiJoin;
+    let jug;
+    let pot;
+    let chai;
+    let gasToken;
+    let chaiOracle;
+    let wethOracle;
+    let treasury;
+    let yDai1;
+    let yDai2;
+    let dealer;
+    let flashMinter;
+    
+    let maturity;
+    let ilk = web3.utils.fromAscii("ETH-A")
+    let Line = web3.utils.fromAscii("Line")
+    let spotName = web3.utils.fromAscii("spot")
+    let linel = web3.utils.fromAscii("line")
+
+    const limits =  toRad(10000);
+    const spot = toRay(1.5);
+    const rate1 = toRay(1.2);
+    const chi1 = toRay(1.3);
+    const rate2 = toRay(1.5);
+    const chi2 = toRay(1.82);
+
+    const chiDifferential  = divRay(chi2, chi1); // 1.82 / 1.3 = 1.4
+
+    const daiDebt1 = toWad(96);
+    const daiTokens1 = mulRay(daiDebt1, rate1);
+    const wethTokens1 = divRay(daiTokens1, spot);
+
+    const daiTokens2 = mulRay(daiTokens1, chiDifferential);
+    const wethTokens2 = mulRay(wethTokens1, chiDifferential)
+
+    // Scenario in which the user mints daiTokens2 yDai, chi increases by a 25%, and user redeems daiTokens1 yDai
+    const daiDebt2 = mulRay(daiDebt1, chiDifferential);
+    const savings1 = daiTokens2;
+    const savings2 = mulRay(savings1, chiDifferential);
+    const yDaiSurplus = subBN(daiTokens2, daiTokens1);
+    const savingsSurplus = subBN(savings2, daiTokens2);
+
+    beforeEach(async() => {
+        snapshot = await helper.takeSnapshot();
+        snapshotId = snapshot['result'];
+
+        // Setup vat, join and weth
+        vat = await Vat.new();
+        await vat.init(ilk, { from: owner }); // Set ilk rate (stability fee accumulator) to 1.0
+
+        weth = await Weth.new({ from: owner });
+        wethJoin = await GemJoin.new(vat.address, ilk, weth.address, { from: owner });
+
+        dai = await ERC20.new(0, { from: owner });
+        daiJoin = await DaiJoin.new(vat.address, dai.address, { from: owner });
+
+        await vat.file(ilk, spotName, spot, { from: owner });
+        await vat.file(ilk, linel, limits, { from: owner });
+        await vat.file(Line, limits);
+
+        // Setup jug
+        jug = await Jug.new(vat.address);
+        await jug.init(ilk, { from: owner }); // Set ilk duty (stability fee) to 1.0
+
+        // Setup pot
+        pot = await Pot.new(vat.address);
+
+        // Permissions
+        await vat.rely(vat.address, { from: owner });
+        await vat.rely(wethJoin.address, { from: owner });
+        await vat.rely(daiJoin.address, { from: owner });
+        await vat.rely(jug.address, { from: owner });
+        await vat.rely(pot.address, { from: owner });
+        await vat.hope(daiJoin.address, { from: owner });
+
+        // Setup chai
+        chai = await Chai.new(
+            vat.address,
+            pot.address,
+            daiJoin.address,
+            dai.address,
+            { from: owner },
+        );
+
+        // Setup GasToken
+        gasToken = await GasToken.new();
+
+        // Setup WethOracle
+        wethOracle = await WethOracle.new(vat.address, { from: owner });
+
+        // Setup ChaiOracle
+        chaiOracle = await ChaiOracle.new(pot.address, { from: owner });
+
+        // Set treasury
+        treasury = await Treasury.new(
+            dai.address,
+            chai.address,
+            chaiOracle.address,
+            weth.address,
+            daiJoin.address,
+            wethJoin.address,
+            vat.address,
+            { from: owner },
+        );
+
+        // Setup Dealer
+        dealer = await Dealer.new(
+            treasury.address,
+            dai.address,
+            weth.address,
+            wethOracle.address,
+            chai.address,
+            chaiOracle.address,
+            gasToken.address,
+            { from: owner },
+        );
+        treasury.grantAccess(dealer.address, { from: owner });
+
+        // Setup yDai
+        const block = await web3.eth.getBlockNumber();
+        maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
+        yDai1 = await YDai.new(
+            vat.address,
+            jug.address,
+            pot.address,
+            treasury.address,
+            maturity1,
+            "Name",
+            "Symbol",
+            { from: owner },
+        );
+        dealer.addSeries(yDai1.address, { from: owner });
+        yDai1.grantAccess(dealer.address, { from: owner });
+        treasury.grantAccess(yDai1.address, { from: owner });
+
+        maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
+        yDai2 = await YDai.new(
+            vat.address,
+            jug.address,
+            pot.address,
+            treasury.address,
+            maturity2,
+            "Name2",
+            "Symbol2",
+            { from: owner },
+        );
+        dealer.addSeries(yDai2.address, { from: owner });
+        yDai2.grantAccess(dealer.address, { from: owner });
+        treasury.grantAccess(yDai2.address, { from: owner });
+
+        // Setup Flash Minter
+        flashMinter = await FlashMinterMock.new(
+            { from: owner },
+        );
+
+        // Tests setup
+        await pot.setChi(chi1, { from: owner });
+        await vat.fold(ilk, vat.address, subBN(rate1, toRay(1)), { from: owner }); // Fold only the increase from 1.0
+
+        // Post collateral to MakerDAO through Treasury
+        await treasury.grantAccess(owner, { from: owner });
+        await weth.deposit({ from: owner, value: wethTokens1 });
+        await weth.transfer(treasury.address, wethTokens1, { from: owner }); 
+        await treasury.pushWeth({ from: owner });
+        assert.equal(
+            (await vat.urns(ilk, treasury.address)).ink,
+            wethTokens1.toString(),
+        );
+
+        // Mint some yDai the sneaky way
+        await yDai1.grantAccess(owner, { from: owner });
+        await yDai1.mint(user, daiTokens1, { from: owner });
+
+        // yDai matures
+        await helper.advanceTime(1000);
+        await helper.advanceBlock();
+        await yDai1.mature();
+
+        assert.equal(
+            await yDai1.balanceOf(user),
+            daiTokens1.toString(),
+            "Holder does not have yDai",
+        );
+        assert.equal(
+            await treasury.savings.call(),
+            0,
+            "Treasury has no savings",
+        );
+    });
+
+    afterEach(async() => {
+        await helper.revertToSnapshot(snapshotId);
+    });
+
+    it("flash mints", async() => {
+        await flashMinter.flashMint(yDai1.address, daiTokens1, { from: user });
+        await yDai1.redeem(user, daiTokens1, { from: user });
+
+        assert.equal(
+            await flashMinter.flashBalance(),
+            daiTokens1.toString(),
+            "FlashMinter should have seen the tokens",
+        );
+        assert.equal(
+            await yDai1.totalSupply(),
+            0,
+            "There should be no yDai supply",
+        );
+    });
+});
