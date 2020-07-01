@@ -1,10 +1,10 @@
 pragma solidity ^0.6.2;
 
-import "./interfaces/IGasToken.sol";
-import "./interfaces/IDealer.sol";
-import "./interfaces/IWeth.sol";
-import "./Constants.sol";
-import "./UserProxy.sol";
+import "../interfaces/IGasToken.sol";
+import "../interfaces/IDealer.sol";
+import "../interfaces/IWeth.sol";
+import "../helpers/Constants.sol";
+import "../helpers/UserProxy.sol";
 
 
 /// @dev EthProxy allows users to post and withdraw Eth to the Dealer

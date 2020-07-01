@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./interfaces/IDealer.sol";
 import "./interfaces/ILiquidations.sol";
 import "./interfaces/ITreasury.sol";
-import "./Constants.sol";
+import "./helpers/Constants.sol";
 import "@nomiclabs/buidler/console.sol";
 
 

@@ -1,8 +1,8 @@
 pragma solidity ^0.6.2;
 
-import "./Constants.sol";
-import "./interfaces/ITreasury.sol";
-import "./interfaces/IDealer.sol";
+import "../helpers/Constants.sol";
+import "../interfaces/ITreasury.sol";
+import "../interfaces/IDealer.sol";
 
 
 /// @dev A splitter moves positions and weth collateral from Dealers (using the IDealer interface) to MakerDAO.

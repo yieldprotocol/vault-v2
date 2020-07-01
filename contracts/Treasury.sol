@@ -12,7 +12,7 @@ import "./interfaces/IVat.sol";
 import "./interfaces/IChai.sol";
 import "./interfaces/IOracle.sol";
 import "./interfaces/ITreasury.sol";
-import "./Constants.sol";
+import "./helpers/Constants.sol";
 import "@nomiclabs/buidler/console.sol";
 
 

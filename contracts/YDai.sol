@@ -9,8 +9,8 @@ import "./interfaces/IJug.sol";
 import "./interfaces/IPot.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IYDai.sol";
-import "./Constants.sol";
-import "./UserProxy.sol";
+import "./helpers/Constants.sol";
+import "./helpers/UserProxy.sol";
 import "@nomiclabs/buidler/console.sol";
 
 

@@ -16,7 +16,7 @@ import "./interfaces/ITreasury.sol";
 import "./interfaces/IDealer.sol";
 import "./interfaces/IYDai.sol";
 import "./interfaces/ILiquidations.sol";
-import "./Constants.sol";
+import "./helpers/Constants.sol";
 // import "@nomiclabs/buidler/console.sol";
 
 

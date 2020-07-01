@@ -11,8 +11,8 @@ import "./interfaces/IDealer.sol";
 import "./interfaces/IOracle.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IYDai.sol";
-import "./Constants.sol";
-import "./UserProxy.sol";
+import "./helpers/Constants.sol";
+import "./helpers/UserProxy.sol";
 // import "@nomiclabs/buidler/console.sol";
 
 /// @dev A dealer takes collateral and issues yDai.
