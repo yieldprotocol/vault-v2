@@ -21,8 +21,8 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
     using DecimalMath for uint256;
     using DecimalMath for uint8;
 
-    event Posted(bytes32 indexed collateral, address indexed user, uint256 amount);
-    event Borrowed(bytes32 indexed collateral, uint256 indexed maturity, address indexed user, uint256 amount);
+    event Posted(bytes32 indexed collateral, address indexed user, int256 amount);
+    event Borrowed(bytes32 indexed collateral, uint256 indexed maturity, address indexed user, int256 amount);
 
     ITreasury internal _treasury;
     IERC20 internal _dai;
@@ -191,7 +191,7 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
         }
         posted[collateral][to] = posted[collateral][to].add(amount);
         systemPosted[collateral] = systemPosted[collateral].add(amount);
-        emit Posted(collateral, to, posted[collateral][to]);
+        emit Posted(collateral, to, int256(amount)); // TODO: Watch for overflow
     }
 
     /// @dev Returns collateral to `to` address, taking it from `from` collateral account.
@@ -219,7 +219,7 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
         if (posted[collateral][from] == 0 && amount >= 0) {
             returnBond(10);
         }
-        emit Posted(collateral, from, posted[collateral][to]);
+        emit Posted(collateral, to, -int256(amount)); // TODO: Watch for overflow
     }
 
     /// @dev Mint yDai for a given series for address `to` by locking its market value in collateral, user debt is increased in the given collateral.
@@ -251,7 +251,7 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
             "Dealer: Too much debt"
         );
         series[maturity].mint(to, yDaiAmount);
-        emit Borrowed(collateral, maturity, to, debtYDai[collateral][maturity][to]);
+        emit Borrowed(collateral, maturity, to, int256(yDaiAmount)); // TODO: Watch for overflow
     }
 
     /// @dev Burns yDai of a given series from `from` address, user debt is decreased for the given collateral and yDai series.
@@ -309,7 +309,7 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
         if (debtYDai[collateral][maturity][from] == 0 && yDaiAmount >= 0) {
             returnBond(10);
         }
-        emit Borrowed(collateral, maturity, from, debtYDai[collateral][maturity][from]);
+        emit Borrowed(collateral, maturity, from, -int256(yDaiAmount)); // TODO: Watch for overflow
     }
 
     /// @dev Removes collateral and debt for an user.
