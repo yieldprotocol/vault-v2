@@ -24,10 +24,13 @@ const Splitter = artifacts.require('Splitter');
 const EthProxy = artifacts.require('EthProxy');
 const Unwind = artifacts.require('Unwind');
 
+// Mocks
+const FlashMinterMock = artifacts.require('FlashMinterMock');
+
 const truffleAssert = require('truffle-assertions');
 const helper = require('ganache-time-traveler');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
-const { expectRevert } = require('@openzeppelin/test-helpers');
+const { expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
 
 contract('yDai', async (accounts) =>  {
     let [ owner, user1, user2 ] = accounts;
@@ -48,6 +51,7 @@ contract('yDai', async (accounts) =>  {
     let yDai2;
     let dealer;
     let splitter;
+    let flashMinter;
 
     let ilk = web3.utils.fromAscii("ETH-A");
     let Line = web3.utils.fromAscii("Line");
@@ -149,6 +153,11 @@ contract('yDai', async (accounts) =>  {
         await treasury.grantAccess(yDai1.address, { from: owner });
 
         // Test setup
+        // Setup Flash Minter
+        flashMinter = await FlashMinterMock.new(
+            { from: owner },
+        );
+        
         // Increase the rate accumulator
         await vat.fold(ilk, vat.address, subBN(rate1, toRay(1)), { from: owner }); // Fold only the increase from 1.0
         await pot.setChi(chi1, { from: owner }); // Set the savings accumulator
@@ -214,6 +223,35 @@ contract('yDai', async (accounts) =>  {
         assert.equal(
             await yDai1.isMature(),
             true,
+        );
+    });
+
+    it("yDai flash mints", async() => {
+        expectEvent(
+            await flashMinter.flashMint(yDai1.address, daiTokens1, web3.utils.fromAscii("DATA"), { from: user1 }),
+            "Parameters",
+            {
+                user: flashMinter.address,
+                amount: daiTokens1.toString(),
+                data: web3.utils.fromAscii("DATA"),
+            },
+        );
+
+        await helper.advanceTime(1000);
+        await helper.advanceBlock();
+        await yDai1.mature();
+
+        await yDai1.redeem(user1, daiTokens1, { from: user1 });
+
+        assert.equal(
+            await flashMinter.flashBalance(),
+            daiTokens1.toString(),
+            "FlashMinter should have seen the tokens",
+        );
+        assert.equal(
+            await yDai1.totalSupply(),
+            0,
+            "There should be no yDai supply",
         );
     });
 
