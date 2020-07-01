@@ -9,7 +9,7 @@ import "./interfaces/IJug.sol";
 import "./interfaces/IPot.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IYDai.sol";
-import "./interfaces/IFlashMinter";
+import "./interfaces/IFlashMinter.sol";
 import "./Constants.sol";
 import "./UserProxy.sol";
 import "@nomiclabs/buidler/console.sol";
