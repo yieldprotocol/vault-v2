@@ -20,14 +20,9 @@ const YDai = artifacts.require('YDai');
 const Dealer = artifacts.require('Dealer');
 
 // Peripheral
-const Liquidations = artifacts.require('Liquidations');
 const EthProxy = artifacts.require('EthProxy');
-<<<<<<< HEAD:test/gas/201_gasLoops.js
 const Liquidations = artifacts.require('Liquidations');
-const DssShutdown = artifacts.require('DssShutdown');
-=======
 const Unwind = artifacts.require('Unwind');
->>>>>>> master:test/gas/201_gasLoops.js
 
 const helper = require('ganache-time-traveler');
 const truffleAssert = require('truffle-assertions');
@@ -52,14 +47,9 @@ contract('Gas Usage', async (accounts) =>  {
     let yDai1;
     let yDai2;
     let dealer;
-    let liquidations;
     let ethProxy;
-<<<<<<< HEAD:test/gas/201_gasLoops.js
     let liquidations;
-    let dssShutdown;
-=======
     let unwind;
->>>>>>> master:test/gas/201_gasLoops.js
 
     let WETH = web3.utils.fromAscii("WETH");
     let CHAI = web3.utils.fromAscii("CHAI");
@@ -82,8 +72,6 @@ contract('Gas Usage', async (accounts) =>  {
     const yDaiTokens = daiTokens;
     let maturities;
     let series;
-
-    const auctionTime = 3600;
 
     const tag  = divRay(toRay(1.0), spot); // Irrelevant to the final users
     const fix  = divRay(toRay(1.0), mulRay(spot, toRay(1.1)));
@@ -292,8 +280,8 @@ contract('Gas Usage', async (accounts) =>  {
             auctionTime,
             { from: owner },
         );
-        await dealer.grantAccess(liquidations.address, { from: owner });
-        await treasury.grantAccess(liquidations.address, { from: owner });
+        await dealer.orchestrate(liquidations.address, { from: owner });
+        await treasury.orchestrate(liquidations.address, { from: owner });
 
         // Setup Unwind
         unwind = await Unwind.new(

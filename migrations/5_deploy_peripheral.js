@@ -122,7 +122,7 @@ module.exports = async (deployer, network, accounts) => {
     dealerAddress,
   );
   ethProxyAddress = (await EthProxy.deployed()).address;
-  await dealer.addProxy(ethProxyAddress);
+  await dealer.addDelegate(ethProxyAddress);
   
   const deployedPeripheral = {
     'Liquidations': liquidationsAddress,

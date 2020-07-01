@@ -183,12 +183,7 @@ contract('Dealer - EthProxy', async (accounts) =>  {
             dealer.address,
             { from: owner },
         );
-<<<<<<< HEAD:test/128_dealer_ethProxy.js
-        await dealer.addProxy(ethProxy.address, { from: owner }); // TODO: Each user needs to allow ethProxy to transact for them
-        // TODO: Use a different account for deploying the contracts and testing them
-=======
         await dealer.addDelegate(ethProxy.address, { from: owner });
->>>>>>> master:test/128_dealer_ethProxy.js
 
         // Tests setup
         await vat.fold(ilk, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0

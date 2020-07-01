@@ -67,7 +67,7 @@ contract('Treasury - Lending', async (accounts) =>  {
         daiDebt = divRay(daiTokens.toString(), rate.toString());
         chaiTokens = divRay(daiTokens, chi.toString());
         
-        await treasury.grantAccess(owner, { from: owner });
+        await treasury.orchestrate(owner, { from: owner });
         await vat.hope(daiJoin.address, { from: owner });
     });
 

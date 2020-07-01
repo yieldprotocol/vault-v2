@@ -9,7 +9,7 @@
     "test": "buidler test test/*.js",
     "test:external": "buidler test test/external/*.js",
     "test:gas": "buidler test test/gas/*.js",
-    "test:network": "truffle test test/network/*.js",
+    "test:network": "npx truffle test test/network/*.js",
     "ganache": "./scripts/ganache.sh"
   },
   "devDependencies": {
