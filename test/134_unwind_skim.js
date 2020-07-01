@@ -20,7 +20,6 @@ const YDai = artifacts.require('YDai');
 const Dealer = artifacts.require('Dealer');
 
 // Peripheral
-const Splitter = artifacts.require('Splitter');
 const Liquidations = artifacts.require('Liquidations');
 const EthProxy = artifacts.require('EthProxy');
 const Unwind = artifacts.require('Unwind');
@@ -48,7 +47,6 @@ contract('Unwind - Dealer', async (accounts) =>  {
     let yDai1;
     let yDai2;
     let dealer;
-    let splitter;
     let liquidations;
     let ethProxy;
     let unwind;
@@ -222,15 +220,6 @@ contract('Unwind - Dealer', async (accounts) =>  {
             { from: owner },
         );
         await treasury.orchestrate(dealer.address, { from: owner });
-
-        // Setup Splitter
-        splitter = await Splitter.new(
-            treasury.address,
-            dealer.address,
-            { from: owner },
-        );
-        await dealer.orchestrate(splitter.address, { from: owner });
-        await treasury.orchestrate(splitter.address, { from: owner });
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();

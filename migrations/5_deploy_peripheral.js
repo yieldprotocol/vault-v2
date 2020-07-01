@@ -14,7 +14,6 @@ const WethOracle = artifacts.require("WethOracle");
 const Treasury = artifacts.require("Treasury");
 const Dealer = artifacts.require("Dealer");
 const Liquidations = artifacts.require("Liquidations");
-const Splitter = artifacts.require("Splitter");
 const EthProxy = artifacts.require("EthProxy");
 const Unwind = artifacts.require("Unwind");
 
@@ -74,16 +73,6 @@ module.exports = async (deployer, network, accounts) => {
   const dealer = await Dealer.deployed();
   dealerAddress = dealer.address;
 
-  // Setup Splitter
-  await deployer.deploy(
-    Splitter,
-    treasuryAddress,
-    dealerAddress,
-  );
-  splitterAddress = (await Splitter.deployed()).address;
-  await dealer.orchestrate(splitterAddress);
-  await treasury.orchestrate(splitterAddress);
-
   // Setup Liquidations
   await deployer.deploy(
     Liquidations,
@@ -133,7 +122,6 @@ module.exports = async (deployer, network, accounts) => {
   ethProxyAddress = (await EthProxy.deployed()).address;
 
   const deployedPeripheral = {
-    'Splitter': splitterAddress,
     'Liquidations': liquidationsAddress,
     'Unwind': unwindAddress,
     'EthProxy': ethProxyAddress,

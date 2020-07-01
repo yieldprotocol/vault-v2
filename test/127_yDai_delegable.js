@@ -20,7 +20,6 @@ const YDai = artifacts.require('YDai');
 const Dealer = artifacts.require('Dealer');
 
 // Peripheral
-const Splitter = artifacts.require('Splitter');
 const EthProxy = artifacts.require('EthProxy');
 const Unwind = artifacts.require('Unwind');
 
@@ -46,7 +45,6 @@ contract('yDai - Delegable', async (accounts) =>  {
     let yDai1;
     let yDai2;
     let dealer;
-    let splitter;
     
     let maturity;
     let ilk = web3.utils.fromAscii("ETH-A")
@@ -152,15 +150,6 @@ contract('yDai - Delegable', async (accounts) =>  {
             { from: owner },
         );
         treasury.orchestrate(dealer.address, { from: owner });
-
-        // Setup Splitter
-        splitter = await Splitter.new(
-            treasury.address,
-            dealer.address,
-            { from: owner },
-        );
-        dealer.orchestrate(splitter.address, { from: owner });
-        treasury.orchestrate(splitter.address, { from: owner });
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();

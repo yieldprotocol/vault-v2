@@ -20,7 +20,6 @@ const YDai = artifacts.require('YDai');
 const Dealer = artifacts.require('Dealer');
 
 // Peripheral
-const Splitter = artifacts.require('Splitter');
 const EthProxy = artifacts.require('EthProxy');
 const Unwind = artifacts.require('Unwind');
 
@@ -47,7 +46,6 @@ contract('yDai', async (accounts) =>  {
     let yDai1;
     let yDai2;
     let dealer;
-    let splitter;
 
     let ilk = web3.utils.fromAscii("ETH-A");
     let Line = web3.utils.fromAscii("Line");

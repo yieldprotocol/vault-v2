@@ -20,7 +20,6 @@ const YDai = artifacts.require('YDai');
 const Dealer = artifacts.require('Dealer');
 
 // Peripheral
-const Splitter = artifacts.require('Splitter');
 const Liquidations = artifacts.require('Liquidations');
 const EthProxy = artifacts.require('EthProxy');
 const Unwind = artifacts.require('Unwind');
@@ -48,7 +47,6 @@ contract('Gas Usage', async (accounts) =>  {
     let yDai1;
     let yDai2;
     let dealer;
-    let splitter;
     let liquidations;
     let ethProxy;
     let unwind;
@@ -254,15 +252,6 @@ contract('Gas Usage', async (accounts) =>  {
         await dealer.addSeries(yDai2.address, { from: owner });
         await yDai2.orchestrate(dealer.address, { from: owner });
         await treasury.orchestrate(yDai2.address, { from: owner });
-
-        // Setup Splitter
-        splitter = await Splitter.new(
-            treasury.address,
-            dealer.address,
-            { from: owner },
-        );
-        dealer.orchestrate(splitter.address, { from: owner });
-        treasury.orchestrate(splitter.address, { from: owner });
 
         // Setup Liquidations
         liquidations = await Liquidations.new(
