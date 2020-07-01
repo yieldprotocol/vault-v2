@@ -1,6 +1,6 @@
 pragma solidity ^0.6.0;
 
-import "@hq20/contracts/contracts/access/AuthorizedAccess.sol";
+import "./helpers/Orchestrated.sol";
 import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -10,13 +10,13 @@ import "./interfaces/IPot.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IYDai.sol";
 import "./interfaces/IFlashMinter.sol";
-import "./Constants.sol";
-import "./UserProxy.sol";
+import "./helpers/Constants.sol";
+import "./helpers/Delegable.sol";
 import "@nomiclabs/buidler/console.sol";
 
 
 /// @dev yDai is a yToken targeting Dai.
-contract YDai is AuthorizedAccess(), UserProxy(), ERC20, Constants, IYDai  {
+contract YDai is Orchestrated(), Delegable(), ERC20, Constants, IYDai  {
     using DecimalMath for uint256;
     using DecimalMath for uint8;
 
@@ -106,7 +106,7 @@ contract YDai is AuthorizedAccess(), UserProxy(), ERC20, Constants, IYDai  {
     // user --- yDai ---> us
     // us   --- Dai  ---> user
     function redeem(address user, uint256 yDaiAmount)
-        public onlyHolderOrProxy(user, "YDai: Only Holder Or Proxy") {
+        public onlyHolderOrDelegate(user, "YDai: Only Holder Or Delegate") {
         require(
             isMature == true,
             "YDai: yDai is not mature"
@@ -125,12 +125,13 @@ contract YDai is AuthorizedAccess(), UserProxy(), ERC20, Constants, IYDai  {
     }
 
     /// @dev Mint yDai. Only callable by Dealer contracts.
-    function mint(address to, uint256 yDaiAmount) public override onlyAuthorized("YDai: Not Authorized") {
+    function mint(address to, uint256 yDaiAmount) public override onlyOrchestrated("YDai: Not Authorized")
+        {
         _mint(to, yDaiAmount);
     }
 
     /// @dev Burn yDai. Only callable by Dealer contracts.
-    function burn(address from, uint256 yDaiAmount) public override onlyAuthorized("YDai: Not Authorized") {
+    function burn(address from, uint256 yDaiAmount) public override onlyOrchestrated("YDai: Not Authorized") {
         _burn(from, yDaiAmount);
     }
 }

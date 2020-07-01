@@ -16,7 +16,7 @@ import "./interfaces/ITreasury.sol";
 import "./interfaces/IDealer.sol";
 import "./interfaces/IYDai.sol";
 import "./interfaces/ILiquidations.sol";
-import "./Constants.sol";
+import "./helpers/Constants.sol";
 // import "@nomiclabs/buidler/console.sol";
 
 
@@ -123,9 +123,9 @@ contract Unwind is Ownable(), Constants {
             "Unwind: MakerDAO not shutting down"
         );
         live = false;
-        _treasury.unwind();
-        _dealer.unwind();
-        _liquidations.unwind();
+        _treasury.shutdown();
+        _dealer.shutdown();
+        _liquidations.shutdown();
     }
 
     function getChi() public returns (uint256) {
@@ -144,10 +144,10 @@ contract Unwind is Ownable(), Constants {
     }
 
     /// @dev Calculates how much profit is in the system and transfers it to the beneficiary
-    function skim(address beneficiary) public { // TODO: Hardcode
+    function skimWhileLive(address beneficiary) public { // TODO: Hardcode
         require(
             live == true,
-            "Unwind: Can only skim if live"
+            "Unwind: Can only skimWhileLive if live"
         );
 
         uint256 profit = _chai.balanceOf(address(_treasury));
@@ -233,12 +233,16 @@ contract Unwind is Ownable(), Constants {
     /// @dev Settles a series position in Dealer, and then returns any remaining collateral as weth using the unwind Dai to Weth price.
     function settle(bytes32 collateral, address user) public {
         require(settled && cashedOut, "Unwind: Not ready");
-        (uint256 tokenAmount, uint256 daiAmount) = _dealer.erase(collateral, user);
+
+        uint256 debt = _dealer.totalDebtDai(collateral, user);
+        uint256 tokens = _dealer.posted(collateral, user);
+        _dealer.grab(collateral, user, debt, tokens);
+
         uint256 remainder;
         if (collateral == WETH) {
-            remainder = subFloorZero(tokenAmount, muld(daiAmount, _fix));
+            remainder = subFloorZero(tokens, muld(debt, _fix));
         } else if (collateral == CHAI) {
-            remainder = muld(subFloorZero(muld(tokenAmount, _chi), daiAmount), _fix);
+            remainder = muld(subFloorZero(muld(tokens, _chi), debt), _fix);
         }
         _weth.transfer(user, remainder);
     }
@@ -255,7 +259,8 @@ contract Unwind is Ownable(), Constants {
     }
 
     /// @dev Calculates how much profit is in the system and transfers it to the beneficiary
-    function skimUnwind(address beneficiary) public { // TODO: Hardcode
+    // TODO: Test
+    function skimDssShutdown(address beneficiary) public { // TODO: Hardcode
         require(settled && cashedOut, "Unwind: Not ready");
 
         uint256 chi = getChi();

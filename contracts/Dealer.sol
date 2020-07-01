@@ -1,6 +1,6 @@
 pragma solidity ^0.6.2;
 
-import "@hq20/contracts/contracts/access/AuthorizedAccess.sol";
+import "./helpers/Orchestrated.sol";
 import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
@@ -11,12 +11,12 @@ import "./interfaces/IDealer.sol";
 import "./interfaces/IOracle.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IYDai.sol";
-import "./Constants.sol";
-import "./UserProxy.sol";
+import "./helpers/Constants.sol";
+import "./helpers/Delegable.sol";
 // import "@nomiclabs/buidler/console.sol";
 
 /// @dev A dealer takes collateral and issues yDai.
-contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
+contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
     using SafeMath for uint256;
     using DecimalMath for uint256;
     using DecimalMath for uint8;
@@ -79,8 +79,12 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
         _;
     }
 
-    /// @dev Disables post, withdraw, borrow and repay. To be called only by unwind management contracts.
-    function unwind() public override onlyAuthorized("Dealer: Not Authorized") {
+    /// @dev Disables post, withdraw, borrow and repay. To be called only when Treasury shuts down.
+    function shutdown() public override {
+        require(
+            _treasury.live() == false,
+            "Dealer: Treasury is live"
+        );
         live = false;
     }
 
@@ -169,7 +173,6 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     function post(bytes32 collateral, address from, address to, uint256 amount)
         public override 
         validCollateral(collateral)
-        onlyHolderOrProxy(from, "Dealer: Only Holder Or Proxy")
         onlyLive
     {
         require(
@@ -196,7 +199,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     function withdraw(bytes32 collateral, address from, address to, uint256 amount)
         public override
         validCollateral(collateral)
-        onlyHolderOrProxy(from, "Dealer: Only Holder Or Proxy")
+        onlyHolderOrDelegate(from, "Dealer: Only Holder Or Delegate")
         onlyLive
     {
         posted[collateral][from] = posted[collateral][from].sub(amount); // Will revert if not enough posted
@@ -229,7 +232,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
         public
         validCollateral(collateral)
         validSeries(maturity)
-        onlyHolderOrProxy(to, "Dealer: Only Holder Or Proxy")
+        onlyHolderOrDelegate(to, "Dealer: Only Holder Or Delegate")
         onlyLive
     {
         require(
@@ -262,7 +265,6 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
         public
         validCollateral(collateral)
         validSeries(maturity)
-        onlyHolderOrProxy(from, "Dealer: Only Holder Or Proxy")
         onlyLive
     {
         uint256 toRepay = Math.min(yDaiAmount, debtYDai[collateral][maturity][from]);
@@ -278,7 +280,11 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     // user --- dai ---> us
     // debt--
     function repayDai(bytes32 collateral, uint256 maturity, address from, uint256 daiAmount)
-        public onlyHolderOrProxy(from, "Dealer: Only Holder Or Proxy") onlyLive {
+        public
+        validCollateral(collateral)
+        validSeries(maturity)
+        onlyLive
+    {
         uint256 toRepay = Math.min(daiAmount, debtDai(collateral, maturity, from));
         require(
             _dai.transferFrom(from, address(_treasury), toRepay),  // Take dai from user to Treasury
@@ -306,36 +312,11 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
         emit Borrowed(collateral, maturity, from, -int256(yDaiAmount)); // TODO: Watch for overflow
     }
 
-    /// @dev Erases all collateral and debt for an user.
-    function erase(bytes32 collateral, address user)
-        public override
-        validCollateral(collateral)
-        onlyAuthorized("Dealer: Not Authorized")
-        returns (uint256, uint256)
-    {
-        uint256 debt;
-        for (uint256 i = 0; i < seriesIterator.length; i += 1) {
-            uint256 maturity = seriesIterator[i];
-            debt = debt + debtDai(collateral, maturity, user);
-            systemDebtYDai[collateral][maturity] =
-                systemDebtYDai[collateral][maturity].sub(debtYDai[collateral][maturity][user]);
-            delete debtYDai[collateral][maturity][user];
-            emit Borrowed(collateral, maturity, user, 0);
-        } // We don't expect hundreds of maturities per dealer
-        uint256 tokens = posted[collateral][user];
-        systemPosted[collateral] = systemPosted[collateral].sub(posted[collateral][user]);
-        delete posted[collateral][user];
-        emit Posted(collateral, user, 0);
-        
-        returnBond((seriesIterator.length + 1) * 10); // 10 per series, and 10 for the collateral
-        return (tokens, debt);
-    }
-
     /// @dev Removes collateral and debt for an user.
     function grab(bytes32 collateral, address user, uint256 daiAmount, uint256 tokenAmount)
         public override
         validCollateral(collateral)
-        onlyAuthorized("Dealer: Not Authorized")
+        onlyOrchestrated("Dealer: Not Authorized")
     {
 
         posted[collateral][user] = posted[collateral][user].sub(

@@ -14,7 +14,6 @@ const WethOracle = artifacts.require("WethOracle");
 const Treasury = artifacts.require("Treasury");
 const Dealer = artifacts.require("Dealer");
 const Liquidations = artifacts.require("Liquidations");
-const Splitter = artifacts.require("Splitter");
 const EthProxy = artifacts.require("EthProxy");
 const Unwind = artifacts.require("Unwind");
 
@@ -81,7 +80,6 @@ module.exports = async (deployer, network, accounts) => {
     wethOracleAddress = (await WethOracle.deployed()).address;
     chaiOracleAddress = (await ChaiOracle.deployed()).address;
     gasTokenAddress = (await GasToken.deployed()).address;
-    splitterAddress = (await Splitter.deployed()).address;
     liquidationsAddress = (await Liquidations.deployed()).address;
     ethProxyAddress = (await EthProxy.deployed()).address;
     unwindAddress = (await Unwind.deployed()).address;
@@ -120,7 +118,6 @@ module.exports = async (deployer, network, accounts) => {
 
           // Store Peripheral contract addresses
           const deployedPeripheral = {
-            'Splitter': splitterAddress,
             'Liquidations': liquidationsAddress,
             'EthProxy': ethProxyAddress,
             'Unwind': unwindAddress,

@@ -64,8 +64,8 @@ module.exports = async (deployer, network, accounts) => {
       symbol,
     );
     const yDai = await YDai.deployed();
-    await treasury.grantAccess(yDai.address);
-    await yDai.grantAccess(dealerAddress);
+    await treasury.orchestrate(yDai.address);
+    await yDai.orchestrate(dealerAddress);
     await dealer.addSeries(yDai.address);
 
     let maturityRef = db.collection(networkId.toString()).doc('deployedSeries').collection('deployedSeries').doc(name);

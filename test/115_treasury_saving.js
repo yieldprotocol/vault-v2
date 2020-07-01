@@ -96,7 +96,7 @@ contract('Treasury - Saving', async (accounts) =>  {
             wethJoin.address,
             vat.address,
         );
-        await treasury.grantAccess(owner, { from: owner });
+        await treasury.orchestrate(owner, { from: owner });
     });
 
     /* it("get the size of the contract", async() => {

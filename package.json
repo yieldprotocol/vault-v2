@@ -6,7 +6,7 @@
   "author": "",
   "scripts": {
     "lint": "solium -d contracts",
-    "test": "buidler test",
+    "test": "buidler test test/1*",
     "ganache": "./scripts/ganache.sh"
   },
   "devDependencies": {

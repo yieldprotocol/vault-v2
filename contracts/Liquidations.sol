@@ -1,6 +1,6 @@
 pragma solidity ^0.6.2;
 
-import "@hq20/contracts/contracts/access/AuthorizedAccess.sol";
+import "./helpers/Orchestrated.sol";
 import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/Math.sol";
@@ -8,12 +8,12 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./interfaces/IDealer.sol";
 import "./interfaces/ILiquidations.sol";
 import "./interfaces/ITreasury.sol";
-import "./Constants.sol";
+import "./helpers/Constants.sol";
 import "@nomiclabs/buidler/console.sol";
 
 
 /// @dev The Liquidations contract for a Dealer allows to liquidate undercollateralized positions in a reverse Dutch auction.
-contract Liquidations is ILiquidations, AuthorizedAccess(), Constants {
+contract Liquidations is ILiquidations, Orchestrated(), Constants {
     using DecimalMath for uint256;
     using DecimalMath for uint8;
     using SafeMath for uint256;
@@ -51,8 +51,12 @@ contract Liquidations is ILiquidations, AuthorizedAccess(), Constants {
         _;
     }
 
-    /// @dev Disables post, withdraw, borrow and repay. To be called only by unwind management contracts.
-    function unwind() public override onlyAuthorized("Liquidations: Not Authorized") {
+    /// @dev Disables buying at liquidations. To be called only when Treasury shuts down.
+    function shutdown() public override {
+        require(
+            _treasury.live() == false,
+            "Liquidations: Treasury is live"
+        );
         live = false;
     }
 

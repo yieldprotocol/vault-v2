@@ -20,7 +20,6 @@ const YDai = artifacts.require('YDai');
 const Dealer = artifacts.require('Dealer');
 
 // Peripheral
-const Splitter = artifacts.require('Splitter');
 const EthProxy = artifacts.require('EthProxy');
 const Unwind = artifacts.require('Unwind');
 
@@ -29,7 +28,7 @@ const helper = require('ganache-time-traveler');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
 const { expectRevert, expectEvent } = require('@openzeppelin/test-helpers');
 
-contract('yDai - UserProxy', async (accounts) =>  {
+contract('yDai - Delegable', async (accounts) =>  {
     let [ owner, holder, other ] = accounts;
     let vat;
     let weth;
@@ -46,7 +45,6 @@ contract('yDai - UserProxy', async (accounts) =>  {
     let yDai1;
     let yDai2;
     let dealer;
-    let splitter;
     
     let maturity;
     let ilk = web3.utils.fromAscii("ETH-A")
@@ -151,16 +149,7 @@ contract('yDai - UserProxy', async (accounts) =>  {
             gasToken.address,
             { from: owner },
         );
-        treasury.grantAccess(dealer.address, { from: owner });
-
-        // Setup Splitter
-        splitter = await Splitter.new(
-            treasury.address,
-            dealer.address,
-            { from: owner },
-        );
-        dealer.grantAccess(splitter.address, { from: owner });
-        treasury.grantAccess(splitter.address, { from: owner });
+        treasury.orchestrate(dealer.address, { from: owner });
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
@@ -176,8 +165,8 @@ contract('yDai - UserProxy', async (accounts) =>  {
             { from: owner },
         );
         dealer.addSeries(yDai1.address, { from: owner });
-        yDai1.grantAccess(dealer.address, { from: owner });
-        treasury.grantAccess(yDai1.address, { from: owner });
+        yDai1.orchestrate(dealer.address, { from: owner });
+        treasury.orchestrate(yDai1.address, { from: owner });
 
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
         yDai2 = await YDai.new(
@@ -191,15 +180,15 @@ contract('yDai - UserProxy', async (accounts) =>  {
             { from: owner },
         );
         dealer.addSeries(yDai2.address, { from: owner });
-        yDai2.grantAccess(dealer.address, { from: owner });
-        treasury.grantAccess(yDai2.address, { from: owner });
+        yDai2.orchestrate(dealer.address, { from: owner });
+        treasury.orchestrate(yDai2.address, { from: owner });
 
         // Tests setup
         await pot.setChi(chi1, { from: owner });
         await vat.fold(ilk, vat.address, subBN(rate1, toRay(1)), { from: owner }); // Fold only the increase from 1.0
 
         // Post collateral to MakerDAO through Treasury
-        await treasury.grantAccess(owner, { from: owner });
+        await treasury.orchestrate(owner, { from: owner });
         await weth.deposit({ from: owner, value: wethTokens1 });
         await weth.transfer(treasury.address, wethTokens1, { from: owner }); 
         await treasury.pushWeth({ from: owner });
@@ -209,7 +198,7 @@ contract('yDai - UserProxy', async (accounts) =>  {
         );
 
         // Mint some yDai the sneaky way
-        await yDai1.grantAccess(owner, { from: owner });
+        await yDai1.orchestrate(owner, { from: owner });
         await yDai1.mint(holder, daiTokens1, { from: owner });
 
         // yDai matures
@@ -253,18 +242,18 @@ contract('yDai - UserProxy', async (accounts) =>  {
         await yDai1.approve(yDai1.address, daiTokens1, { from: holder });
         await expectRevert(
             yDai1.redeem(holder, daiTokens1, { from: other }),
-            "YDai: Only Holder Or Proxy",
+            "YDai: Only Holder Or Delegate",
         );
     });
 
-    it("redeem is allowed for designated proxies", async() => {
+    it("redeem is allowed for delegates", async() => {
         await yDai1.approve(yDai1.address, daiTokens1, { from: holder });
         expectEvent(
-            await yDai1.addProxy(other, { from: holder }),
-            "Proxy",
+            await yDai1.addDelegate(other, { from: holder }),
+            "Delegate",
             {
                 user: holder,
-                proxy: other,
+                delegate: other,
                 enabled: true,
             },
         );
@@ -282,25 +271,25 @@ contract('yDai - UserProxy', async (accounts) =>  {
         );
     });
 
-    describe("with designated proxies", async() => {
+    describe("with delegates", async() => {
         beforeEach(async() => {
-            await yDai1.addProxy(other, { from: holder });
+            await yDai1.addDelegate(other, { from: holder });
         });
 
-        it("redeem is not allowed if proxy revoked", async() => {
+        it("redeem is not allowed if delegation revoked", async() => {
             expectEvent(
-                await yDai1.revokeProxy(other, { from: holder }),
-                "Proxy",
+                await yDai1.revokeDelegate(other, { from: holder }),
+                "Delegate",
                 {
                     user: holder,
-                    proxy: other,
+                    delegate: other,
                     enabled: false,
                 },
             );
 
             await expectRevert(
                 yDai1.redeem(holder, daiTokens1, { from: other }),
-                "YDai: Only Holder Or Proxy",
+                "YDai: Only Holder Or Delegate",
             );
         });
     });

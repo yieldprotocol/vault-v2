@@ -20,7 +20,6 @@ const YDai = artifacts.require('YDai');
 const Dealer = artifacts.require('Dealer');
 
 // Peripheral
-const Splitter = artifacts.require('Splitter');
 const EthProxy = artifacts.require('EthProxy');
 const Unwind = artifacts.require('Unwind');
 
@@ -137,7 +136,7 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
             gasToken.address,
             { from: owner },
         );
-        treasury.grantAccess(dealer.address, { from: owner });
+        treasury.orchestrate(dealer.address, { from: owner });
         
         // Test setup
         await vat.fold(ilk, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
@@ -168,10 +167,10 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
             "Symbol1",
             { from: owner },
         );
-        treasury.grantAccess(yDai1.address, { from: owner });
+        treasury.orchestrate(yDai1.address, { from: owner });
 
         await dealer.addSeries(yDai1.address, { from: owner });
-        yDai1.grantAccess(dealer.address, { from: owner });
+        yDai1.orchestrate(dealer.address, { from: owner });
 
         assert.equal(
             await dealer.containsSeries(maturity1),
@@ -194,7 +193,7 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
             "Symbol1",
             { from: owner },
         );
-        treasury.grantAccess(yDai1.address, { from: owner });
+        treasury.orchestrate(yDai1.address, { from: owner });
 
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
         yDai2 = await YDai.new(
@@ -207,12 +206,12 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
             "Symbol2",
             { from: owner },
         );
-        treasury.grantAccess(yDai2.address, { from: owner });
+        treasury.orchestrate(yDai2.address, { from: owner });
 
         await dealer.addSeries(yDai1.address, { from: owner });
-        yDai1.grantAccess(dealer.address, { from: owner });
+        yDai1.orchestrate(dealer.address, { from: owner });
         await dealer.addSeries(yDai2.address, { from: owner });
-        yDai2.grantAccess(dealer.address, { from: owner });
+        yDai2.orchestrate(dealer.address, { from: owner });
 
         assert.equal(
             await dealer.containsSeries(maturity1),
@@ -251,10 +250,10 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
             "Symbol1",
             { from: owner },
         );
-        treasury.grantAccess(yDai1.address, { from: owner });
+        treasury.orchestrate(yDai1.address, { from: owner });
 
         await dealer.addSeries(yDai1.address, { from: owner });
-        yDai1.grantAccess(dealer.address, { from: owner });
+        yDai1.orchestrate(dealer.address, { from: owner });
         await expectRevert(
             dealer.addSeries(yDai1.address, { from: owner }),
             "Dealer: Series already added",
