@@ -2,7 +2,6 @@ pragma solidity ^0.6.0;
 
 import "./helpers/Orchestrated.sol";
 import "@hq20/contracts/contracts/math/DecimalMath.sol";
-import "@hq20/contracts/contracts/utils/SafeCast.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -21,8 +20,6 @@ contract Treasury is ITreasury, Orchestrated(), Constants {
     using DecimalMath for uint256;
     using DecimalMath for int256;
     using DecimalMath for uint8;
-    using SafeCast for uint256;
-    using SafeCast for int256;
 
     bytes32 constant collateralType = "ETH-A";
 
@@ -64,6 +61,15 @@ contract Treasury is ITreasury, Orchestrated(), Constants {
     modifier onlyLive() {
         require(live == true, "Treasury: Not available during unwind");
         _;
+    }
+
+    /// @dev Safe casting from uint256 to int256
+    function toInt(uint256 x) internal pure returns(int256) {
+        require(
+            x <= 57896044618658097711785492504343953926634992332820282019728792003956564819967,
+            "Treasury: Cast overflow"
+        );
+        return int256(x);
     }
 
     /// @dev Disables pulling and pushing. Can only be called if MakerDAO shuts down.
@@ -112,7 +118,7 @@ contract Treasury is ITreasury, Orchestrated(), Constants {
                 address(this),
                 address(this),
                 0,                           // Weth collateral to add
-                -toRepay.divd(rate, RAY).toInt() // Dai debt to remove
+                -toInt(toRepay.divd(rate, RAY)) // Dai debt to remove
             );
         }
 
@@ -138,7 +144,7 @@ contract Treasury is ITreasury, Orchestrated(), Constants {
                 address(this),
                 address(this),
                 0,                           // Weth collateral to add
-                -toRepay.divd(rate, RAY).toInt() // Dai debt to remove
+                -toInt(toRepay.divd(rate, RAY)) // Dai debt to remove
             );
         }
         // Anything that is left from repaying, is chai savings
@@ -161,7 +167,7 @@ contract Treasury is ITreasury, Orchestrated(), Constants {
                 address(this),
                 address(this),
                 0,
-                toBorrow.divd(rate, RAY).toInt()
+                toInt(toBorrow.divd(rate, RAY))
             ); // `vat.frob` reverts on failure
             _daiJoin.exit(address(this), toBorrow); // `daiJoin` reverts on failures
         }
@@ -188,7 +194,7 @@ contract Treasury is ITreasury, Orchestrated(), Constants {
                 address(this),
                 address(this),
                 0,
-                toBorrow.divd(rate, RAY).toInt()
+                toInt(toBorrow.divd(rate, RAY))
             ); // `vat.frob` reverts on failure
             _daiJoin.exit(address(this), toBorrow);  // `daiJoin` reverts on failures
             _chai.join(address(this), toBorrow);     // Grab chai from Chai, converted from dai
@@ -211,7 +217,7 @@ contract Treasury is ITreasury, Orchestrated(), Constants {
             address(this),
             address(this),
             address(this),
-            weth.toInt(), // Collateral to add - WAD
+            toInt(weth), // Collateral to add - WAD
             0 // Normalized Dai to receive - WAD
         );
     }
@@ -224,7 +230,7 @@ contract Treasury is ITreasury, Orchestrated(), Constants {
             address(this),
             address(this),
             address(this),
-            -weth.toInt(), // Weth collateral to remove - WAD
+            -toInt(weth), // Weth collateral to remove - WAD
             0              // Dai debt to add - WAD
         );
         _wethJoin.exit(to, weth); // `GemJoin` reverts on failures
