@@ -318,7 +318,7 @@ contract('Dealer - Weth', async (accounts) =>  {
             );
             assert.equal(
                 event.args.amount,
-                0,
+                wethTokens.mul(-1).toString(),
             );
             assert.equal(
                 await weth.balanceOf(user1),
@@ -478,7 +478,7 @@ contract('Dealer - Weth', async (accounts) =>  {
                     );
                     assert.equal(
                         event.args.amount,
-                        0, // This is actually a yDai amount
+                        daiTokens.mul(-1).toString(), // This is actually a yDai amount
                     );
                     assert.equal(
                         await yDai1.balanceOf(user1),
@@ -532,7 +532,7 @@ contract('Dealer - Weth', async (accounts) =>  {
                     );
                     assert.equal(
                         event.args.amount,
-                        0, // This is actually a yDai amount
+                        daiTokens.mul(-1).toString(), // This is actually a yDai amount
                     );
                     assert.equal(
                         await dai.balanceOf(user1),
