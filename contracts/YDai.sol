@@ -116,9 +116,9 @@ contract YDai is AuthorizedAccess(), UserProxy(), ERC20, Constants, IYDai  {
     }
 
     /// @dev Flash-mint yDai. Calls back on `IFlashMinter.executeOnFlashMint()`
-    function flashMint(address to, uint256 yDaiAmount) public override {
+    function flashMint(address to, uint256 yDaiAmount, bytes calldata data) external override {
         _mint(to, yDaiAmount);
-        IFlashMinter(msg.sender).executeOnFlashMint();
+        IFlashMinter(msg.sender).executeOnFlashMint(to, yDaiAmount, data);
         _burn(to, yDaiAmount);
     }
 
