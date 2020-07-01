@@ -257,14 +257,14 @@ contract('yDai - Delegable', async (accounts) =>  {
         );
     });
 
-    it("redeem is allowed for designated delegated", async() => {
+    it("redeem is allowed for delegates", async() => {
         await yDai1.approve(yDai1.address, daiTokens1, { from: holder });
         expectEvent(
             await yDai1.addDelegate(other, { from: holder }),
             "Delegate",
             {
                 user: holder,
-                proxy: other,
+                delegate: other,
                 enabled: true,
             },
         );
@@ -282,18 +282,18 @@ contract('yDai - Delegable', async (accounts) =>  {
         );
     });
 
-    describe("with designated delegated", async() => {
+    describe("with delegates", async() => {
         beforeEach(async() => {
             await yDai1.addDelegate(other, { from: holder });
         });
 
-        it("redeem is not allowed if proxy revoked", async() => {
+        it("redeem is not allowed if delegation revoked", async() => {
             expectEvent(
-                await yDai1.revokeProxy(other, { from: holder }),
+                await yDai1.revokeDelegate(other, { from: holder }),
                 "Delegate",
                 {
                     user: holder,
-                    proxy: other,
+                    delegate: other,
                     enabled: false,
                 },
             );
