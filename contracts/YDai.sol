@@ -10,12 +10,12 @@ import "./interfaces/IPot.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IYDai.sol";
 import "./helpers/Constants.sol";
-import "./helpers/UserProxy.sol";
+import "./helpers/Delegable.sol";
 import "@nomiclabs/buidler/console.sol";
 
 
 /// @dev yDai is a yToken targeting Dai.
-contract YDai is AuthorizedAccess(), UserProxy(), ERC20, Constants, IYDai  {
+contract YDai is AuthorizedAccess(), Delegable(), ERC20, Constants, IYDai  {
     using DecimalMath for uint256;
     using DecimalMath for uint8;
 
@@ -104,7 +104,7 @@ contract YDai is AuthorizedAccess(), UserProxy(), ERC20, Constants, IYDai  {
     // user --- yDai ---> us
     // us   --- Dai  ---> user
     function redeem(address user, uint256 yDaiAmount)
-        public onlyHolderOrProxy(user, "YDai: Only Holder Or Proxy") {
+        public onlyHolderOrDelegate(user, "YDai: Only Holder Or Delegate") {
         require(
             isMature == true,
             "YDai: yDai is not mature"

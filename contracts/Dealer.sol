@@ -12,11 +12,11 @@ import "./interfaces/IOracle.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IYDai.sol";
 import "./helpers/Constants.sol";
-import "./helpers/UserProxy.sol";
+import "./helpers/Delegable.sol";
 // import "@nomiclabs/buidler/console.sol";
 
 /// @dev A dealer takes collateral and issues yDai.
-contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
+contract Dealer is IDealer, AuthorizedAccess(), Delegable(), Constants {
     using SafeMath for uint256;
     using DecimalMath for uint256;
     using DecimalMath for uint8;
@@ -169,7 +169,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     function post(bytes32 collateral, address from, address to, uint256 amount)
         public override 
         validCollateral(collateral)
-        onlyHolderOrProxy(from, "Dealer: Only Holder Or Proxy")
+        onlyHolderOrDelegate(from, "Dealer: Only Holder Or Delegate")
         onlyLive
     {
         require(
@@ -196,7 +196,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     function withdraw(bytes32 collateral, address from, address to, uint256 amount)
         public override
         validCollateral(collateral)
-        onlyHolderOrProxy(from, "Dealer: Only Holder Or Proxy")
+        onlyHolderOrDelegate(from, "Dealer: Only Holder Or Delegate")
         onlyLive
     {
         posted[collateral][from] = posted[collateral][from].sub(amount); // Will revert if not enough posted
@@ -229,7 +229,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
         public
         validCollateral(collateral)
         validSeries(maturity)
-        onlyHolderOrProxy(to, "Dealer: Only Holder Or Proxy")
+        onlyHolderOrDelegate(to, "Dealer: Only Holder Or Delegate")
         onlyLive
     {
         require(
@@ -262,7 +262,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
         public
         validCollateral(collateral)
         validSeries(maturity)
-        onlyHolderOrProxy(from, "Dealer: Only Holder Or Proxy")
+        onlyHolderOrDelegate(from, "Dealer: Only Holder Or Delegate")
         onlyLive
     {
         uint256 toRepay = Math.min(yDaiAmount, debtYDai[collateral][maturity][from]);
@@ -278,7 +278,7 @@ contract Dealer is IDealer, AuthorizedAccess(), UserProxy(), Constants {
     // user --- dai ---> us
     // debt--
     function repayDai(bytes32 collateral, uint256 maturity, address from, uint256 daiAmount)
-        public onlyHolderOrProxy(from, "Dealer: Only Holder Or Proxy") onlyLive {
+        public onlyHolderOrDelegate(from, "Dealer: Only Holder Or Delegate") onlyLive {
         uint256 toRepay = Math.min(daiAmount, debtDai(collateral, maturity, from));
         require(
             _dai.transferFrom(from, address(_treasury), toRepay),  // Take dai from user to Treasury

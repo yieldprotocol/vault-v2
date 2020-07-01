@@ -29,7 +29,7 @@ const helper = require('ganache-time-traveler');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
 const { expectRevert, expectEvent } = require('@openzeppelin/test-helpers');
 
-contract('yDai - UserProxy', async (accounts) =>  {
+contract('yDai - Delegable', async (accounts) =>  {
     let [ owner, holder, other ] = accounts;
     let vat;
     let weth;
@@ -253,15 +253,15 @@ contract('yDai - UserProxy', async (accounts) =>  {
         await yDai1.approve(yDai1.address, daiTokens1, { from: holder });
         await expectRevert(
             yDai1.redeem(holder, daiTokens1, { from: other }),
-            "YDai: Only Holder Or Proxy",
+            "YDai: Only Holder Or Delegate",
         );
     });
 
-    it("redeem is allowed for designated proxies", async() => {
+    it("redeem is allowed for designated delegated", async() => {
         await yDai1.approve(yDai1.address, daiTokens1, { from: holder });
         expectEvent(
             await yDai1.addProxy(other, { from: holder }),
-            "Proxy",
+            "Delegate",
             {
                 user: holder,
                 proxy: other,
@@ -282,7 +282,7 @@ contract('yDai - UserProxy', async (accounts) =>  {
         );
     });
 
-    describe("with designated proxies", async() => {
+    describe("with designated delegated", async() => {
         beforeEach(async() => {
             await yDai1.addProxy(other, { from: holder });
         });
@@ -290,7 +290,7 @@ contract('yDai - UserProxy', async (accounts) =>  {
         it("redeem is not allowed if proxy revoked", async() => {
             expectEvent(
                 await yDai1.revokeProxy(other, { from: holder }),
-                "Proxy",
+                "Delegate",
                 {
                     user: holder,
                     proxy: other,
@@ -300,7 +300,7 @@ contract('yDai - UserProxy', async (accounts) =>  {
 
             await expectRevert(
                 yDai1.redeem(holder, daiTokens1, { from: other }),
-                "YDai: Only Holder Or Proxy",
+                "YDai: Only Holder Or Delegate",
             );
         });
     });
