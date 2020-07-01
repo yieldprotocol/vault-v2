@@ -234,10 +234,6 @@ contract Unwind is Ownable(), Constants {
     function settle(bytes32 collateral, address user) public {
         require(settled && cashedOut, "Unwind: Not ready");
 
-        /* uint256 debt;
-        for (uint256 i = 0; i < seriesIterator.length; i += 1) {
-            debt = debt.add(_dealer.debtDai(collateral, seriesIterator[i], user);
-        } */
         uint256 debt = _dealer.totalDebtDai(collateral, user);
         uint256 tokens = _dealer.posted(collateral, user);
         _dealer.grab(collateral, user, debt, tokens);

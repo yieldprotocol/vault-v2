@@ -145,7 +145,6 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
     }
 
     /// @dev Returns the total debt of an user, for a given collateral, across all series, in Dai
-    // TODO: First to remove if we want to trim down this contract
     function totalDebtDai(bytes32 collateral, address user) public override returns (uint256) {
         uint256 totalDebt;
         for (uint256 i = 0; i < seriesIterator.length; i += 1) {
