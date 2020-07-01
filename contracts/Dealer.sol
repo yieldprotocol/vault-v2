@@ -173,7 +173,6 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
     function post(bytes32 collateral, address from, address to, uint256 amount)
         public override 
         validCollateral(collateral)
-        onlyHolderOrDelegate(from, "Dealer: Only Holder Or Delegate")
         onlyLive
     {
         require(
@@ -266,7 +265,6 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
         public
         validCollateral(collateral)
         validSeries(maturity)
-        onlyHolderOrDelegate(from, "Dealer: Only Holder Or Delegate")
         onlyLive
     {
         uint256 toRepay = Math.min(yDaiAmount, debtYDai[collateral][maturity][from]);
@@ -282,7 +280,11 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
     // user --- dai ---> us
     // debt--
     function repayDai(bytes32 collateral, uint256 maturity, address from, uint256 daiAmount)
-        public onlyHolderOrDelegate(from, "Dealer: Only Holder Or Delegate") onlyLive {
+        public
+        validCollateral(collateral)
+        validSeries(maturity)
+        onlyLive
+    {
         uint256 toRepay = Math.min(daiAmount, debtDai(collateral, maturity, from));
         require(
             _dai.transferFrom(from, address(_treasury), toRepay),  // Take dai from user to Treasury
