@@ -79,8 +79,12 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
         _;
     }
 
-    /// @dev Disables post, withdraw, borrow and repay. To be called only by unwind management contracts.
-    function unwind() public override onlyOrchestrated("Dealer: Not Authorized") {
+    /// @dev Disables post, withdraw, borrow and repay. To be called only when Treasury shuts down.
+    function shutdown() public override {
+        require(
+            _treasury.live() == false,
+            "Dealer: Treasury is live"
+        );
         live = false;
     }
 

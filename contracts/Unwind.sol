@@ -123,9 +123,9 @@ contract Unwind is Ownable(), Constants {
             "Unwind: MakerDAO not shutting down"
         );
         live = false;
-        _treasury.unwind();
-        _dealer.unwind();
-        _liquidations.unwind();
+        _treasury.shutdown();
+        _dealer.shutdown();
+        _liquidations.shutdown();
     }
 
     function getChi() public returns (uint256) {

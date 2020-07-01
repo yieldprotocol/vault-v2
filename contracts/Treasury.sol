@@ -35,7 +35,7 @@ contract Treasury is ITreasury, Orchestrated(), Constants {
     IVat internal _vat;
     address internal _unwind;
 
-    bool public live = true;
+    bool public override live = true;
 
     constructor (
         address dai_,
@@ -66,8 +66,12 @@ contract Treasury is ITreasury, Orchestrated(), Constants {
         _;
     }
 
-    /// @dev Disables pulling and pushing. To be called only by unwind management contracts.
-    function unwind() public override onlyOrchestrated("Treasury: Not Authorized") {
+    /// @dev Disables pulling and pushing. Can only be called if MakerDAO shuts down.
+    function shutdown() public override {
+        require(
+            _vat.live() == 0,
+            "Treasury: MakerDAO is live"
+        );
         live = false;
     }
 
@@ -226,7 +230,7 @@ contract Treasury is ITreasury, Orchestrated(), Constants {
         _wethJoin.exit(to, weth); // `GemJoin` reverts on failures
     }
 
-    /// @dev Registers the one contract that will shut down the Treasury if MakerDAO shuts down.
+    /// @dev Registers the one contract that will take assets from the Treasury if MakerDAO shuts down.
     function registerUnwind(address unwind_) public onlyOwner {
         require(
             _unwind == address(0),

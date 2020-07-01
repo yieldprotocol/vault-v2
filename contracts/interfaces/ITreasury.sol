@@ -10,5 +10,6 @@ interface ITreasury {
     function pullChai(address user, uint256 chai) external;
     function pushWeth() external;
     function pullWeth(address to, uint256 weth) external;
-    function unwind() external;
+    function shutdown() external;
+    function live() external view returns(bool);
 }

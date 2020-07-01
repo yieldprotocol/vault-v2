@@ -51,8 +51,12 @@ contract Liquidations is ILiquidations, Orchestrated(), Constants {
         _;
     }
 
-    /// @dev Disables post, withdraw, borrow and repay. To be called only by unwind management contracts.
-    function unwind() public override onlyOrchestrated("Liquidations: Not Authorized") {
+    /// @dev Disables buying at liquidations. To be called only when Treasury shuts down.
+    function shutdown() public override {
+        require(
+            _treasury.live() == false,
+            "Liquidations: Treasury is live"
+        );
         live = false;
     }
 
