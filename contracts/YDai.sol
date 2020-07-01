@@ -9,6 +9,7 @@ import "./interfaces/IJug.sol";
 import "./interfaces/IPot.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IYDai.sol";
+import "./interfaces/IFlashMinter.sol";
 import "./helpers/Constants.sol";
 import "./helpers/Delegable.sol";
 import "@nomiclabs/buidler/console.sol";
@@ -114,6 +115,13 @@ contract YDai is Orchestrated(), Delegable(), ERC20, Constants, IYDai  {
         uint256 daiAmount = yDaiAmount.muld(chiGrowth(), RAY); // User gets interest for holding after maturity
         _treasury.pullDai(user, daiAmount);                   // Give dai to user, from Treasury
         emit Redeemed(user, yDaiAmount, daiAmount);
+    }
+
+    /// @dev Flash-mint yDai. Calls back on `IFlashMinter.executeOnFlashMint()`
+    function flashMint(address to, uint256 yDaiAmount, bytes calldata data) external override {
+        _mint(to, yDaiAmount);
+        IFlashMinter(msg.sender).executeOnFlashMint(to, yDaiAmount, data);
+        _burn(to, yDaiAmount);
     }
 
     /// @dev Mint yDai. Only callable by Dealer contracts.
