@@ -6,7 +6,6 @@ const GemJoin = artifacts.require("GemJoin");
 const DaiJoin = artifacts.require("DaiJoin");
 const Chai = artifacts.require("Chai");
 const GasToken = artifacts.require("GasToken1");
-const ChaiOracle = artifacts.require("ChaiOracle");
 const Treasury = artifacts.require("Treasury");
 const Dealer = artifacts.require("Dealer");
 const Weth = artifacts.require("WETH9");

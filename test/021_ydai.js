@@ -11,8 +11,6 @@ const Chai = artifacts.require('Chai');
 const GasToken = artifacts.require('GasToken1');
 
 // Common
-const ChaiOracle = artifacts.require('ChaiOracle');
-const WethOracle = artifacts.require('WethOracle');
 const Treasury = artifacts.require('Treasury');
 
 // YDai
