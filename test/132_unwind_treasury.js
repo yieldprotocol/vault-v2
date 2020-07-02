@@ -149,13 +149,13 @@ contract('Unwind - Treasury', async (accounts) =>  {
 
         // Setup Dealer
         dealer = await Dealer.new(
-            treasury.address,
-            dai.address,
+            vat.address,
             weth.address,
-            wethOracle.address,
+            dai.address,
+            pot.address,
             chai.address,
-            chaiOracle.address,
             gasToken.address,
+            treasury.address,
             { from: owner },
         );
         await treasury.orchestrate(dealer.address, { from: owner });

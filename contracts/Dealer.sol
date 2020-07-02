@@ -5,11 +5,12 @@ import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./interfaces/IVat.sol";
+import "./interfaces/IPot.sol";
 import "./interfaces/IChai.sol";
 import "./interfaces/IGasToken.sol";
-import "./interfaces/IDealer.sol";
-import "./interfaces/IOracle.sol";
 import "./interfaces/ITreasury.sol";
+import "./interfaces/IDealer.sol";
 import "./interfaces/IYDai.sol";
 import "./helpers/Constants.sol";
 import "./helpers/Delegable.sol";
@@ -24,11 +25,13 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
     event Posted(bytes32 indexed collateral, address indexed user, int256 amount);
     event Borrowed(bytes32 indexed collateral, uint256 indexed maturity, address indexed user, int256 amount);
 
-    ITreasury internal _treasury;
+    IVat internal _vat;
     IERC20 internal _dai;
+    IPot internal _pot;
     IGasToken internal _gasToken;
+    ITreasury internal _treasury;
+
     mapping(bytes32 => IERC20) internal _token;                       // Weth or Chai
-    mapping(bytes32 => IOracle) internal _oracle;                     // WethOracle or ChaiOracle
     mapping(uint256 => IYDai) public override series;                 // YDai series, indexed by maturity
     uint256[] internal seriesIterator;                                // We need to know all the series
 
@@ -41,21 +44,21 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
     bool public live = true;
 
     constructor (
-        address treasury_,
-        address dai_,
+        address vat_,
         address weth_,
-        address wethOracle_,
+        address dai_,
+        address pot_,
         address chai_,
-        address chaiOracle_,
-        address gasToken_
+        address gasToken_,
+        address treasury_
     ) public {
-        _treasury = ITreasury(treasury_);
+        _vat = IVat(vat_);
         _dai = IERC20(dai_);
-        _token[WETH] = IERC20(weth_);
-        _oracle[WETH] = IOracle(wethOracle_);
-        _token[CHAI] = IERC20(chai_);
-        _oracle[CHAI] = IOracle(chaiOracle_);
+        _pot = IPot(pot_);
         _gasToken = IGasToken(gasToken_);
+        _treasury = ITreasury(treasury_);
+        _token[WETH] = IERC20(weth_);
+        _token[CHAI] = IERC20(chai_);
     }
 
     modifier onlyLive() {
@@ -160,7 +163,14 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
     //
     function powerOf(bytes32 collateral, address user) public returns (uint256) {
         // dai = price * collateral
-        return posted[collateral][user].muld(_oracle[collateral].price(), RAY);
+        if (collateral == WETH){ // TODO: Refactor Treasury to be `pull(collateral, amount)`
+            (,, uint256 spot,,) = _vat.ilks("ETH-A");  // Stability fee and collateralization ratio for Weth
+            return posted[collateral][user].muld(spot, RAY);
+        } else if (collateral == CHAI) {
+            uint256 chi = (now > _pot.rho()) ? _pot.drip() : _pot.chi();
+            return posted[collateral][user].muld(chi, RAY);
+        }
+        return 0;
     }
 
     /// @dev Return if the borrowing power for a given collateral of an user is equal or greater than its debt for the same collateral

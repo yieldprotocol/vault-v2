@@ -79,13 +79,13 @@ module.exports = async (deployer, network, accounts) => {
   // Setup dealer
   await deployer.deploy(
     Dealer,
-    treasuryAddress,
-    daiAddress,
+    vatAddress,
     wethAddress,
-    wethOracleAddress,
+    daiAddress,
+    potAddress,
     chaiAddress,
-    chaiOracleAddress,
     gasTokenAddress,
+    treasuryAddress,
   );
   const dealer = await Dealer.deployed();
   dealerAddress = dealer.address;

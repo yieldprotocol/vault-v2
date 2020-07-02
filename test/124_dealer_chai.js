@@ -165,13 +165,13 @@ contract('Dealer - Chai', async (accounts) =>  {
 
         // Setup Dealer
         dealer = await Dealer.new(
-            treasury.address,
-            dai.address,
+            vat.address,
             weth.address,
-            wethOracle.address,
+            dai.address,
+            pot.address,
             chai.address,
-            chaiOracle.address,
             gasToken.address,
+            treasury.address,
             { from: owner },
         );
         treasury.orchestrate(dealer.address, { from: owner });
