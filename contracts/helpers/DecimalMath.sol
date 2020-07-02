@@ -18,4 +18,14 @@ contract DecimalMath {
     function divd(uint256 x, uint256 y) internal pure returns (uint256) {
         return x.mul(UNIT).div(y);
     }
+
+    /// @dev Divides x between y, rounding up to the closest representable number.
+    /// Assumes x and y are both fixed point with `decimals` digits.
+    function divdrup(uint256 x, uint256 y)
+        internal pure returns (uint256)
+    {
+        uint256 z = x.mul(10000000000000000000000000000).div(y); // RAY * 10
+        if (z % 10 > 0) return z / 10 + 1;
+        else return z / 10;
+    }
 }
