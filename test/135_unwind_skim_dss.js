@@ -122,22 +122,17 @@ contract('Unwind - Dealer', async (accounts) =>  {
 
     // Add a new yDai series
     // This function uses global variables, careful.
-    async function addYDai(maturity){
-        yDai = await YDai.new(
-            vat.address,
-            jug.address,
-            pot.address,
-            treasury.address,
-            maturity,
-            "Name",
-            "Symbol",
-            { from: owner },
-        );
-        await dealer.addSeries(yDai.address, { from: owner });
-        await yDai.orchestrate(dealer.address, { from: owner });
-        await treasury.orchestrate(yDai.address, { from: owner });
-        await yDai.orchestrate(unwind.address, { from: owner });
-        return yDai;
+    async function shutdown(){
+        await end.cage({ from: owner });
+        await end.setTag(ilk, tag, { from: owner });
+        await end.setDebt(1, { from: owner });
+        await end.setFix(ilk, fix, { from: owner });
+        await end.skim(ilk, user1, { from: owner });
+        await end.skim(ilk, user2, { from: owner });
+        await end.skim(ilk, owner, { from: owner });
+        await unwind.unwind({ from: owner });
+        await unwind.settleTreasury({ from: owner });
+        await unwind.cashSavings({ from: owner });
     }
 
     beforeEach(async() => {
@@ -313,28 +308,30 @@ contract('Unwind - Dealer', async (accounts) =>  {
         await helper.revertToSnapshot(snapshotId);
     });
 
-    /* it("does not attempt to settle treasury debt until Dss unwind initiated", async() => {
+    it("does not allow to settle users if treasury not settled and cashed", async() => {
         await expectRevert(
-            unwind.settleTreasury({ from: owner }),
-            "Unwind: End.sol not caged",
+            unwind.skimDssShutdown(user3, { from: owner }),
+            "Unwind: Not ready",
         );
-    }); */
+    });
 
     describe("with chai savings", () => {
         beforeEach(async() => {
             await getChai(owner, chaiTokens.mul(10));
             await chai.transfer(treasury.address, chaiTokens.mul(10), { from: owner });
-            // profit = 10 chai
+            // profit = 10 dai * fix (in weth)
         });
 
         it("chai savings are added to profits", async() => {
-            await unwind.skimWhileLive(user1, { from: owner });
+            await shutdown();
+            await unwind.skimDssShutdown(user3, { from: owner });
 
             assert.equal(
-                await chai.balanceOf(user1),
-                chaiTokens.mul(10).toString(),
-                'User1 should have ' + chaiTokens.mul(10).toString() + ' chai wei',
+                await weth.balanceOf(user3),
+                fixedWeth.mul(10).add(9).toString(), // TODO: Check this correction factor
+                'User3 should have ' + fixedWeth.mul(10).add(9).toString() + ' weth wei, instead has ' + (await weth.balanceOf(user3)),
             );
+            // profit = 10 dai * fix (in weth)
         });
 
         it("chai held as collateral doesn't count as profits", async() => {
@@ -342,42 +339,45 @@ contract('Unwind - Dealer', async (accounts) =>  {
             await chai.approve(dealer.address, chaiTokens, { from: user2 });
             await dealer.post(CHAI, user2, user2, chaiTokens, { from: user2 });
 
-            await unwind.skimWhileLive(user1, { from: owner });
+            await shutdown();
+            await unwind.skimDssShutdown(user3, { from: owner });
 
             assert.equal(
-                await chai.balanceOf(user1),
-                chaiTokens.mul(10).toString(),
-                'User1 should have ' + chaiTokens.mul(10).toString() + ' chai wei',
+                await weth.balanceOf(user3),
+                fixedWeth.mul(10).add(9).toString(), // TODO: Check this correction factor
+                'User3 should have ' + fixedWeth.mul(10).add(9).toString() + ' weth wei',
             );
-            // profit = 10 chai
+            // profit = 10 dai * fix (in weth)
         });
 
         it("unredeemed yDai and dealer weth debt cancel each other", async() => {
             await postWeth(user2, wethTokens);
             await dealer.borrow(WETH, await yDai1.maturity(), user2, daiTokens, { from: user2 }); // dealer debt assets == yDai liabilities 
 
-            await unwind.skimWhileLive(user1, { from: owner });
+            await shutdown();
+            await unwind.skimDssShutdown(user3, { from: owner });
 
             assert.equal(
-                await chai.balanceOf(user1),
-                chaiTokens.mul(10).toString(),
-                'User1 should have ' + chaiTokens.mul(10).toString() + ' chai wei',
+                await weth.balanceOf(user3),
+                fixedWeth.mul(10).add(9).toString(), // TODO: Check this correction factor
+                'User3 should have ' + fixedWeth.mul(10).add(9).toString() + ' weth wei',
             );
-            // profit = 10 chai
+            // profit = 10 dai * fix (in weth)
         });
 
         it("unredeemed yDai and dealer chai debt cancel each other", async() => {
             await postChai(user2, chaiTokens);
             await dealer.borrow(CHAI, await yDai1.maturity(), user2, daiTokens, { from: user2 }); // dealer debt assets == yDai liabilities 
 
-            await unwind.skimWhileLive(user1, { from: owner });
+            await shutdown();
+            await unwind.skimDssShutdown(user3, { from: owner });
 
             assert.equal(
-                await chai.balanceOf(user1),
-                chaiTokens.mul(10).toString(),
-                'User1 should have ' + chaiTokens.mul(10).toString() + ' chai wei',
+                await weth.balanceOf(user3),
+                fixedWeth.mul(10).add(9).toString(), // TODO: Check this correction factor
+                'User3 should have ' + fixedWeth.mul(10).add(9).toString() + ' weth wei',
             );
-            // profit = 10 chai
+            // profit = 10 dai * fix (in weth)
         });
 
         describe("with dai debt", () => {
@@ -387,12 +387,13 @@ contract('Unwind - Dealer', async (accounts) =>  {
             });
     
             it("dai debt is deduced from profits", async() => {
-                await unwind.skimWhileLive(user1, { from: owner });
+                await shutdown();
+                await unwind.skimDssShutdown(user3, { from: owner });
     
                 assert.equal(
-                    await chai.balanceOf(user1),
-                    chaiTokens.mul(9).toString(),
-                    'User1 should have ' + chaiTokens.mul(9).toString() + ' chai wei',
+                    await weth.balanceOf(user3),
+                    fixedWeth.mul(9).add(8).toString(), // TODO: Check this correction factor
+                    'User3 should have ' + fixedWeth.mul(9).add(8).toString() + ' weth wei, instead has ' + (await weth.balanceOf(user3)),
                 );
             });
         });
@@ -423,14 +424,16 @@ contract('Unwind - Dealer', async (accounts) =>  {
             });
 
             it("there is an extra profit only from weth debt", async() => {
-                await unwind.skimWhileLive(user1, { from: owner });
+                await shutdown();
+                await unwind.skimDssShutdown(user3, { from: owner });
 
-                const expectedProfit = chaiTokens.mul(10).add(mulRay(chaiTokens, rateDifferential.sub(toRay(1))));
+                // TODO: Check this correction factor
+                const expectedProfit = fixedWeth.mul(10).add(9).add(mulRay(fixedWeth, rateDifferential.sub(toRay(1))));
     
                 assert.equal(
-                    await chai.balanceOf(user1),
+                    await weth.balanceOf(user3),
                     expectedProfit.toString(),
-                    'User1 should have ' + expectedProfit.toString() + ' chai wei, instead has ' + (await chai.balanceOf(user1)),
+                    'User3 should have ' + expectedProfit.toString() + ' chai wei, instead has ' + (await weth.balanceOf(user3)),
                 );
             });
         });
@@ -475,17 +478,18 @@ contract('Unwind - Dealer', async (accounts) =>  {
             });
 
             it("profit is acummulated from several series", async() => {
-                await unwind.skimWhileLive(user1, { from: owner });
+                await shutdown();
+                await unwind.skimDssShutdown(user3, { from: owner });
 
-                const expectedProfit = chaiTokens.mul(10)
-                    .add(mulRay(chaiTokens, rateDifferential1.sub(toRay(1)))) // yDai1
-                    .add(mulRay(chaiTokens, rateDifferential2.sub(toRay(1)))) // yDai2
-                    .sub(1); // Rounding somewhere
+                // TODO: Check this correction factor
+                const expectedProfit = fixedWeth.mul(10).add(9)
+                    .add(mulRay(fixedWeth, rateDifferential1.sub(toRay(1))))  // yDai1
+                    .add(mulRay(fixedWeth, rateDifferential2.sub(toRay(1)))); // yDai2
     
                 assert.equal(
-                    await chai.balanceOf(user1),
+                    await weth.balanceOf(user3),
                     expectedProfit.toString(),
-                    'User1 should have ' + expectedProfit.toString() + ' chai wei, instead has ' + (await chai.balanceOf(user1)),
+                    'User3 should have ' + expectedProfit.toString() + ' chai wei, instead has ' + (await weth.balanceOf(user3)),
                 );
             });
         });
