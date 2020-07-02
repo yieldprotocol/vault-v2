@@ -108,7 +108,7 @@ contract('Gas Usage', async (accounts) =>  {
     // This function shadows and uses global variables, careful.
     async function postWeth(user, wethTokens){
         await weth.deposit({ from: user, value: wethTokens });
-        await weth.approve(dealer.address, wethTokens, { from: user });
+        await weth.approve(treasury.address, wethTokens, { from: user });
         await dealer.post(WETH, user, user, wethTokens, { from: user });
     }
 
@@ -116,7 +116,7 @@ contract('Gas Usage', async (accounts) =>  {
     // This function shadows and uses global variables, careful.
     async function postChai(user, chaiTokens){
         await getChai(user, chaiTokens);
-        await chai.approve(dealer.address, chaiTokens, { from: user });
+        await chai.approve(treasury.address, chaiTokens, { from: user });
         await dealer.post(CHAI, user, user, chaiTokens, { from: user });
     }
 
@@ -267,7 +267,6 @@ contract('Gas Usage', async (accounts) =>  {
         // Setup EthProxy
         ethProxy = await EthProxy.new(
             weth.address,
-            gasToken.address,
             dealer.address,
             { from: owner },
         );
@@ -347,8 +346,8 @@ contract('Gas Usage', async (accounts) =>  {
 
             it("repayYDai", async() => {
                 for (let i = 0; i < maturities.length; i++) {
-                    await series[i].approve(dealer.address, daiTokens, { from: user3 });
-                    await dealer.repayYDai(WETH, maturities[i], user3, daiTokens, { from: user3 });
+                    await series[i].approve(treasury.address, daiTokens, { from: user3 });
+                    await dealer.repapprove(treasury.addresss[i], user3, daiTokens, { from: user3 });
                 }
             });
 
@@ -358,8 +357,8 @@ contract('Gas Usage', async (accounts) =>  {
                 
                 for (let i = 0; i < maturities.length; i++) {
                     await getDai(user3, daiTokens);
-                    await dai.approve(dealer.address, daiTokens, { from: user3 });
-                    await series[i].mature();
+                    await dai.approve(treasury.address, daiTokens, { from: user3 });
+                    await seriapprove(treasury.address
                     await dealer.repayDai(WETH, maturities[i], user3, daiTokens, { from: user3 });
                 }
                 

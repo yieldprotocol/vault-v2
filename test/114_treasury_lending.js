@@ -124,9 +124,8 @@ contract('Treasury - Lending', async (accounts) =>  {
             web3.utils.toWei("0")
         );
         
-        await weth.deposit({ from: user, value: wethTokens});
-        await weth.transfer(treasury.address, wethTokens, { from: user }); 
-        await treasury.pushWeth({ from: owner });
+        await weth.deposit({ from: owner, value: wethTokens});
+        await treasury.pushWeth(treasury.address, wethTokens, { from: owner });
 
         // Test transfer of collateral
         assert.equal(
@@ -144,8 +143,7 @@ contract('Treasury - Lending', async (accounts) =>  {
     describe("with posted collateral", () => {
         beforeEach(async() => {
             await weth.deposit({ from: owner, value: wethTokens});
-            await weth.transfer(treasury.address, wethTokens, { from: owner }); 
-            await treasury.pushWeth({ from: owner });
+            await treasury.pushWeth(treasury.address, wethTokens, { from: owner });
         });
 
         it("returns borrowing power", async() => {
@@ -238,9 +236,8 @@ contract('Treasury - Lending', async (accounts) =>  {
 
             it("pushes dai that repays debt towards MakerDAO", async() => {
                 // Test `normalizedAmount >= normalizedDebt`
-                //await dai.approve(treasury.address, daiTokens, { from: user });
-                dai.transfer(treasury.address, daiTokens, { from: user }); // We can't stop donations
-                await treasury.pushDai({ from: owner });
+                await dai.approve(treasury.address, daiTokens, { from: user });
+                await treasury.pushDai(user, daiTokens, { from: owner });
 
                 assert.equal(
                     await dai.balanceOf(user),
@@ -259,8 +256,8 @@ contract('Treasury - Lending', async (accounts) =>  {
             it("pushes chai that repays debt towards MakerDAO", async() => {
                 await dai.approve(chai.address, daiTokens, { from: user });
                 await chai.join(user, daiTokens, { from: user });
-                await chai.transfer(treasury.address, chaiTokens, { from: user }); 
-                await treasury.pushChai({ from: owner });
+                await chai.approve(treasury.address, chaiTokens, { from: user }); 
+                await treasury.pushChai(user, chaiTokens, { from: owner });
 
                 assert.equal(
                     await dai.balanceOf(user),

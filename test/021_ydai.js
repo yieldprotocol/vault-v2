@@ -162,9 +162,9 @@ contract('yDai', async (accounts) =>  {
 
         // Deposit some weth to treasury so that redeem can pull some dai
         await weth.deposit({ from: owner, value: wethTokens2 });
-        await weth.transfer(treasury.address, wethTokens2, { from: owner });
+        await weth.approve(treasury.address, wethTokens2, { from: owner });
+        await treasury.pushWeth(treasury.address, wethTokens2, { from: owner });
         await treasury.orchestrate(owner, { from: owner });
-        await treasury.pushWeth();
                 
         // Mint some yDai1 the sneaky way, only difference is that the Dealer doesn't record the user debt.
         await yDai1.orchestrate(owner, { from: owner });

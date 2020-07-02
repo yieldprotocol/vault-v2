@@ -207,7 +207,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
 
     it("mints gas tokens when posting", async() => {
         await weth.deposit({ from: owner, value: wethTokens });
-        await weth.approve(dealer.address, wethTokens, { from: owner }); 
+        await weth.approve(treasury.address, wethTokens, { from: owner }); 
         await dealer.post(WETH, owner, owner, wethTokens, { from: owner });
 
         assert.equal(
@@ -224,10 +224,10 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
             gasTokens,
             "User should have gasTokens",
         );
-        await gasToken.approve(dealer.address, gasTokens, { from: owner });
+        await gasToken.approve(treasury.address, gasTokens, { from: owner });
 
         await weth.deposit({ from: owner, value: wethTokens });
-        await weth.approve(dealer.address, wethTokens, { from: owner }); 
+        await weth.approve(treasury.address, wethTokens, { from: owner }); 
         await dealer.post(WETH, owner, owner, wethTokens, { from: owner });
 
         assert.equal(
@@ -255,7 +255,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
     describe("with posted collateral", () => {
         beforeEach(async() => {
             await weth.deposit({ from: owner, value: wethTokens });
-            await weth.approve(dealer.address, wethTokens, { from: owner }); 
+            await weth.approve(treasury.address, wethTokens, { from: owner }); 
             await dealer.post(WETH, owner, owner, wethTokens, { from: owner });
 
             assert.equal(
@@ -267,7 +267,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
 
         it("mints gas tokens when a new user posts for the first time", async() => {
             await weth.deposit({ from: user, value: wethTokens });
-            await weth.approve(dealer.address, wethTokens, { from: user }); 
+            await weth.approve(treasury.address, wethTokens, { from: user }); 
             await dealer.post(WETH, user, user, wethTokens, { from: user });
     
             assert.equal(
@@ -279,7 +279,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
 
         it("does not mint more gas tokens when same user posts again", async() => {
             await weth.deposit({ from: owner, value: wethTokens });
-            await weth.approve(dealer.address, wethTokens, { from: owner }); 
+            await weth.approve(treasury.address, wethTokens, { from: owner }); 
             await dealer.post(WETH, owner, owner, wethTokens, { from: owner });
     
             assert.equal(

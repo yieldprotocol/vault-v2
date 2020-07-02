@@ -236,7 +236,7 @@ contract('Dealer - Weth', async (accounts) =>  {
         );
         
         await weth.deposit({ from: user1, value: wethTokens });
-        await weth.approve(dealer.address, wethTokens, { from: user1 }); 
+        await weth.approve(treasury.address, wethTokens, { from: user1 }); 
         const event = (await dealer.post(WETH, user1, user1, wethTokens, { from: user1 })).logs[0];
         
         assert.equal(
@@ -280,17 +280,17 @@ contract('Dealer - Weth', async (accounts) =>  {
     describe("with posted weth", () => {
         beforeEach(async() => {
             await weth.deposit({ from: user1, value: wethTokens });
-            await weth.approve(dealer.address, wethTokens, { from: user1 }); 
+            await weth.approve(treasury.address, wethTokens, { from: user1 }); 
             await dealer.post(WETH, user1, user1, wethTokens, { from: user1 });
 
             await weth.deposit({ from: user2, value: wethTokens });
-            await weth.approve(dealer.address, wethTokens, { from: user2 }); 
+            await weth.approve(treasury.address, wethTokens, { from: user2 }); 
             await dealer.post(WETH, user2, user2, wethTokens, { from: user2 });
         });
 
         it("aggregates posted totals", async() => {
             await weth.deposit({ from: user1, value: wethTokens });
-            await weth.approve(dealer.address, wethTokens, { from: user1 }); 
+            await weth.approve(treasury.address, wethTokens, { from: user1 }); 
             await dealer.post(WETH, user1, user1, wethTokens, { from: user1 });
 
             assert.equal(
@@ -404,7 +404,7 @@ contract('Dealer - Weth', async (accounts) =>  {
 
             it("allows to borrow from a second series", async() => {
                 await weth.deposit({ from: user1, value: wethTokens });
-                await weth.approve(dealer.address, wethTokens, { from: user1 }); 
+                await weth.approve(treasury.address, wethTokens, { from: user1 }); 
                 await dealer.post(WETH, user1, user1, wethTokens, { from: user1 });
                 await dealer.borrow(WETH, maturity2, user1, daiTokens, { from: user1 });
 
@@ -443,7 +443,7 @@ contract('Dealer - Weth', async (accounts) =>  {
             describe("with borrowed yDai from two series", () => {
                 beforeEach(async() => {
                     await weth.deposit({ from: user1, value: wethTokens });
-                    await weth.approve(dealer.address, wethTokens, { from: user1 }); 
+                    await weth.approve(treasury.address, wethTokens, { from: user1 }); 
                     await dealer.post(WETH, user1, user1, wethTokens, { from: user1 });
                     await dealer.borrow(WETH, maturity2, user1, daiTokens, { from: user1 });
                 });
@@ -456,7 +456,7 @@ contract('Dealer - Weth', async (accounts) =>  {
                 });
     
                 it("allows to repay yDai", async() => {
-                    await yDai1.approve(dealer.address, daiTokens, { from: user1 });
+                    await yDai1.approve(treasury.address, daiTokens, { from: user1 });
                     const event = (await dealer.repayYDai(WETH, maturity1, user1, daiTokens, { from: user1 })).logs[0];
         
                     assert.equal(
@@ -510,7 +510,7 @@ contract('Dealer - Weth', async (accounts) =>  {
                         "User1 does not have debt",
                     );
     
-                    await dai.approve(dealer.address, daiTokens, { from: user1 });
+                    await dai.approve(treasury.address, daiTokens, { from: user1 });
                     const event = (await dealer.repayDai(WETH, maturity1, user1, daiTokens, { from: user1 })).logs[0];
         
                     assert.equal(
@@ -567,7 +567,7 @@ contract('Dealer - Weth', async (accounts) =>  {
                         "User1 does not have debt",
                     );
     
-                    await yDai1.approve(dealer.address, yDaiTokens, { from: user1 });
+                    await yDai1.approve(treasury.address, yDaiTokens, { from: user1 });
                     await dealer.repayYDai(WETH, maturity1, user1, yDaiTokens, { from: user1 });
         
                     assert.equal(
@@ -648,7 +648,7 @@ contract('Dealer - Weth', async (accounts) =>  {
                     // TODO: Test that when yDai is provided in excess for repayment, only the necessary amount is taken
 
                     it("the yDai required to repay doesn't change after maturity as rate increases", async() => {
-                        await yDai1.approve(dealer.address, daiTokens, { from: user1 });
+                        await yDai1.approve(treasury.address, daiTokens, { from: user1 });
                         await dealer.repayYDai(WETH, maturity1, user1, daiTokens, { from: user1 });
             
                         assert.equal(
@@ -665,7 +665,7 @@ contract('Dealer - Weth', async (accounts) =>  {
 
                     it("more Dai is required to repay after maturity as rate increases", async() => {
                         await getDai(user1, daiTokens); // daiTokens is not going to be enough anymore
-                        await dai.approve(dealer.address, daiTokens, { from: user1 });
+                        await dai.approve(treasury.address, daiTokens, { from: user1 });
                         await dealer.repayDai(WETH, maturity1, user1, daiTokens, { from: user1 });
             
                         assert.equal(

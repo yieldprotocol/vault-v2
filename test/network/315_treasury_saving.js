@@ -79,8 +79,8 @@ contract('Treasury - Saving', async (accounts) =>  {
         await vat.frob(ilk, owner, owner, owner, wethTokens, daiDebt, { from: owner });
         await daiJoin.exit(owner, daiTokens, { from: owner });
         
-        await dai.transfer(treasury.address, daiTokens, { from: owner }); 
-        await treasury.pushDai({ from: owner });
+        await dai.approve(treasury.address, daiTokens, { from: owner }); 
+        await treasury.pushDai(owner, daiTokens, { from: owner });
 
         // Test transfer of collateral
         assert.equal(
@@ -124,7 +124,7 @@ contract('Treasury - Saving', async (accounts) =>  {
         await dai.approve(chai.address, daiTokens, { from: owner });
         await chai.join(owner, daiTokens, { from: owner });
         await chai.transfer(treasury.address, chaiTokens, { from: owner }); 
-        await treasury.pushChai({ from: owner });
+        await treasury.pushChai(owner, chaiTokens, { from: owner });
 
         // Test transfer of collateral
         assert.equal(

@@ -175,15 +175,10 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
         validCollateral(collateral)
         onlyLive
     {
-        require(
-            _token[collateral].transferFrom(from, address(_treasury), amount),
-            "Dealer: Collateral transfer fail"
-        );
-
         if (collateral == WETH){ // TODO: Refactor Treasury to be `push(collateral, amount)`
-            _treasury.pushWeth();
+            _treasury.pushWeth(from, amount);
         } else if (collateral == CHAI) {
-            _treasury.pushChai();
+            _treasury.pushChai(from, amount);
         }
         
         if (posted[collateral][to] == 0 && amount >= 0) {
@@ -286,11 +281,7 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
         onlyLive
     {
         uint256 toRepay = Math.min(daiAmount, debtDai(collateral, maturity, from));
-        require(
-            _dai.transferFrom(from, address(_treasury), toRepay),  // Take dai from user to Treasury
-            "Dealer: Dai transfer fail"
-        );
-        _treasury.pushDai();                                      // Have Treasury process the dai
+        _treasury.pushDai(from, toRepay);                                      // Have Treasury process the dai
         _repay(collateral, maturity, from, inYDai(collateral, maturity, toRepay));
     }
 

@@ -272,8 +272,8 @@ contract('Unwind - Treasury', async (accounts) =>  {
     describe("with posted weth", () => {
         beforeEach(async() => {
             await weth.deposit({ from: owner, value: wethTokens });
-            await weth.transfer(treasury.address, wethTokens, { from: owner });
-            await treasury.pushWeth({ from: owner });
+            await weth.approve(treasury.address, wethTokens, { from: owner });
+            await treasury.pushWeth(treasury.address, wethTokens, { from: owner });
 
             assert.equal(
                 (await vat.urns(ilk, treasury.address)).ink,
@@ -337,15 +337,15 @@ contract('Unwind - Treasury', async (accounts) =>  {
 
                 it("does not allow to push or pull assets", async() => {
                     await expectRevert(
-                        treasury.pushWeth({ from: owner }),
+                        treasury.pushWeth(user, wethTokens, { from: owner }),
                         "Treasury: Not available during unwind",
                     );
                     await expectRevert(
-                        treasury.pushChai({ from: owner }),
+                        treasury.pushChai(user, chaiTokens, { from: owner }),
                         "Treasury: Not available during unwind",
                     );
                     await expectRevert(
-                        treasury.pushDai({ from: owner }),
+                        treasury.pushDai(user, daiTokens, { from: owner }),
                         "Treasury: Not available during unwind",
                     );
                     await expectRevert(
@@ -380,8 +380,8 @@ contract('Unwind - Treasury', async (accounts) =>  {
 
                 // Adding some extra unlocked collateral
                 await weth.deposit({ from: owner, value: 1 });
-                await weth.transfer(treasury.address, 1, { from: owner });
-                await treasury.pushWeth({ from: owner });
+                await weth.approve(treasury.address, 1, { from: owner });
+                await treasury.pushWeth(treasury.address, 1, { from: owner });
             });
 
             describe("with unwind initiated", () => {
@@ -413,8 +413,8 @@ contract('Unwind - Treasury', async (accounts) =>  {
                 await vat.frob(ilk, owner, owner, owner, wethTokens, daiDebt, { from: owner });
                 await daiJoin.exit(owner, daiTokens, { from: owner });
 
-                await dai.transfer(treasury.address, daiTokens, { from: owner });
-                await treasury.pushDai({ from: owner });
+                await dai.approve(treasury.address, daiTokens, { from: owner });
+                await treasury.pushDai(owner, daiTokens, { from: owner });
 
                 assert.equal(
                     await chai.balanceOf(treasury.address),

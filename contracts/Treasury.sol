@@ -103,11 +103,14 @@ contract Treasury is ITreasury, Orchestrated(), Constants {
         return _chai.dai(address(this));
     }
 
-    /// @dev Pays as much system debt as possible from the Treasury dai balance, saving the rest as chai.
-    function pushDai() public override onlyOrchestrated("Treasury: Not Authorized") onlyLive  {
-        uint256 dai = _dai.balanceOf(address(this));
+    /// @dev Takes dai from user and pays as much system debt as possible, saving the rest as chai.
+    function pushDai(address from, uint256 amount) public override onlyOrchestrated("Treasury: Not Authorized") onlyLive  {
+        require(
+            _dai.transferFrom(from, address(this), amount),  // Take dai from user to Treasury
+            "Dealer: Dai transfer fail"
+        );
 
-        uint256 toRepay = Math.min(debt(), dai);
+        uint256 toRepay = Math.min(debt(), amount);
         if (toRepay > 0) {
             _daiJoin.join(address(this), toRepay);
             // Remove debt from vault using frob
@@ -122,14 +125,18 @@ contract Treasury is ITreasury, Orchestrated(), Constants {
             );
         }
 
-        uint256 toSave = dai - toRepay;         // toRepay can't be greater than dai
+        uint256 toSave = amount - toRepay;         // toRepay can't be greater than dai
         if (toSave > 0) {
             _chai.join(address(this), toSave);    // Give dai to Chai, take chai back
         }
     }
 
-    /// @dev Pays as much system debt as possible from the Treasury chai balance, saving the rest as chai.
-    function pushChai() public override onlyOrchestrated("Treasury: Not Authorized") onlyLive  {
+    /// @dev Takes chai from user and pays as much system debt as possible, saving the rest as chai.
+    function pushChai(address from, uint256 amount) public override onlyOrchestrated("Treasury: Not Authorized") onlyLive  {
+        require(
+            _chai.transferFrom(from, address(this), amount),
+            "Treasury: Chai transfer fail"
+        );
         uint256 dai = _chai.dai(address(this));
 
         uint256 toRepay = Math.min(debt(), dai);
@@ -148,6 +155,25 @@ contract Treasury is ITreasury, Orchestrated(), Constants {
             );
         }
         // Anything that is left from repaying, is chai savings
+    }
+
+    /// @dev Takes Weth collateral from user into the system Maker vault
+    function pushWeth(address from, uint256 amount) public override onlyOrchestrated("Treasury: Not Authorized") onlyLive  {
+        require(
+            _weth.transferFrom(from, address(this), amount),
+            "Treasury: Weth transfer fail"
+        );
+
+        _wethJoin.join(address(this), amount); // GemJoin reverts if anything goes wrong.
+        // All added collateral should be locked into the vault using frob
+        _vat.frob(
+            collateralType,
+            address(this),
+            address(this),
+            address(this),
+            toInt(amount), // Collateral to add - WAD
+            0 // Normalized Dai to receive - WAD
+        );
     }
 
     /// @dev Returns dai using chai savings as much as possible, and borrowing the rest.
@@ -203,22 +229,6 @@ contract Treasury is ITreasury, Orchestrated(), Constants {
         require(                            // Give dai to user
             _chai.transfer(to, chai),
             "Treasury: Chai transfer fail"
-        );
-    }
-
-    /// @dev Moves all Weth collateral from Treasury into Maker
-    function pushWeth() public override onlyOrchestrated("Treasury: Not Authorized") onlyLive  {
-        uint256 weth = _weth.balanceOf(address(this));
-
-        _wethJoin.join(address(this), weth); // GemJoin reverts if anything goes wrong.
-        // All added collateral should be locked into the vault using frob
-        _vat.frob(
-            collateralType,
-            address(this),
-            address(this),
-            address(this),
-            toInt(weth), // Collateral to add - WAD
-            0 // Normalized Dai to receive - WAD
         );
     }
 

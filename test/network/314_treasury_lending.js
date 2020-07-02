@@ -78,8 +78,8 @@ contract('Treasury - Lending', async (accounts) =>  {
         );
         
         await weth.deposit({ from: user, value: wethTokens});
-        await weth.transfer(treasury.address, wethTokens, { from: user }); 
-        await treasury.pushWeth({ from: owner });
+        await weth.approve(treasury.address, wethTokens, { from: owner });
+        await treasury.pushWeth(treasury.address, wethTokens, { from: owner });
 
         // Test transfer of collateral
         assert.equal(
@@ -110,9 +110,8 @@ contract('Treasury - Lending', async (accounts) =>  {
 
     it("pushes dai that repays debt towards MakerDAO", async() => {
         // Test `normalizedAmount >= normalizedDebt`
-        //await dai.approve(treasury.address, daiTokens, { from: user });
-        dai.transfer(treasury.address, daiTokens, { from: user }); // We can't stop donations
-        await treasury.pushDai({ from: owner });
+        await dai.approve(treasury.address, daiTokens, { from: user });
+        await treasury.pushDai(user, daiTokens, { from: owner });
 
         assert.equal(
             await dai.balanceOf(user),
@@ -142,8 +141,8 @@ contract('Treasury - Lending', async (accounts) =>  {
     });
 
     it("pushes chai that repays debt towards MakerDAO", async() => {
-        await chai.transfer(treasury.address, chaiTokens, { from: user }); 
-        await treasury.pushChai({ from: owner });
+        await chai.approve(treasury.address, chaiTokens, { from: user }); 
+        await treasury.pushChai(user, chaiTokens, { from: owner });
 
         assert.equal(
             await dai.balanceOf(user),
