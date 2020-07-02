@@ -151,15 +151,30 @@ contract Unwind is Ownable(), Constants {
         );
 
         uint256 profit = _chai.balanceOf(address(_treasury));
-        profit = profit.add(yDaiProfit(getChi(), getRate()));
+        profit = profit.add(_yDaiProfit(getChi(), getRate()));
         profit = profit.sub(divd(_treasury.debt(), getChi()));
         profit = profit.sub(_dealer.systemPosted(CHAI));
 
         _treasury.pullChai(beneficiary, profit);
     }
 
-    /// @dev Returns the profit accummulated in the system due to yDai supply and debt, in chai.
-    function yDaiProfit(uint256 chi, uint256 rate) public returns (uint256) {
+    /// @dev Calculates how much profit is in the system and transfers it to the beneficiary
+    function skimDssShutdown(address beneficiary) public { // TODO: Hardcode
+        require(settled && cashedOut, "Unwind: Not ready");
+
+        uint256 chi = _pot.chi();
+        (, uint256 rate,,,) = _vat.ilks("ETH-A");
+        uint256 profit = _weth.balanceOf(address(this));
+
+        profit = profit.add(muld(muld(_yDaiProfit(chi, rate), _fix), chi));
+        profit = profit.sub(_dealer.systemPosted(WETH));
+        profit = profit.sub(muld(muld(_dealer.systemPosted(CHAI), _fix), chi));
+
+        _weth.transfer(beneficiary, profit);
+    }
+
+    /// @dev Returns the profit accummulated in the system due to yDai supply and debt, in chai, for a given chi and rate.
+    function _yDaiProfit(uint256 chi, uint256 rate) internal returns (uint256) {
         uint256 profit;
 
         for (uint256 i = 0; i < seriesIterator.length; i += 1) {
@@ -254,21 +269,5 @@ contract Unwind is Ownable(), Constants {
             user,
             muld(muld(yDaiAmount, yDai.chiGrowth()), _fix)
         );
-    }
-
-    /// @dev Calculates how much profit is in the system and transfers it to the beneficiary
-    // TODO: Test
-    function skimDssShutdown(address beneficiary) public { // TODO: Hardcode
-        require(settled && cashedOut, "Unwind: Not ready");
-
-        uint256 chi = _pot.chi();
-        (, uint256 rate,,,) = _vat.ilks("ETH-A");
-        uint256 profit = _weth.balanceOf(address(this));
-
-        profit = profit.add(muld(muld(yDaiProfit(chi, rate), _fix), chi));
-        profit = profit.sub(_dealer.systemPosted(WETH));
-        profit = profit.sub(muld(muld(_dealer.systemPosted(CHAI), _fix), chi));
-
-        _weth.transfer(beneficiary, profit);
     }
 }
