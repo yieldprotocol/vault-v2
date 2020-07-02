@@ -1,7 +1,5 @@
 pragma solidity ^0.6.0;
 
-import "./helpers/Orchestrated.sol";
-import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./interfaces/IVat.sol";
@@ -10,15 +8,14 @@ import "./interfaces/IPot.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IYDai.sol";
 import "./interfaces/IFlashMinter.sol";
-import "./helpers/Constants.sol";
 import "./helpers/Delegable.sol";
+import "./helpers/DecimalMath.sol";
+import "./helpers/Orchestrated.sol";
 import "@nomiclabs/buidler/console.sol";
 
 
 /// @dev yDai is a yToken targeting Dai.
-contract YDai is Orchestrated(), Delegable(), ERC20, Constants, IYDai  {
-    using DecimalMath for uint256;
-    using DecimalMath for uint8;
+contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20, IYDai  {
 
     event Redeemed(address indexed user, uint256 yDaiIn, uint256 daiOut);
     event Matured(uint256 rate, uint256 chi);
@@ -47,8 +44,8 @@ contract YDai is Orchestrated(), Delegable(), ERC20, Constants, IYDai  {
         _pot = IPot(pot_);
         _treasury = ITreasury(treasury_);
         maturity = maturity_;
-        chi0 = RAY.unit();
-        rate0 = RAY.unit();
+        chi0 = UNIT;
+        rate0 = UNIT;
     }
 
     /// @dev Chi differential between maturity and now in RAY. Returns 1.0 if not mature.
@@ -61,7 +58,7 @@ contract YDai is Orchestrated(), Delegable(), ERC20, Constants, IYDai  {
     function chiGrowth() public override returns(uint256){
         if (isMature != true) return chi0;
         uint256 chiNow = (now > _pot.rho()) ? _pot.drip() : _pot.chi();
-        return Math.min(rateGrowth(), chiNow.divd(chi0, RAY));
+        return Math.min(rateGrowth(), divd(chiNow, chi0));
     }
 
     /// @dev Rate differential between maturity and now in RAY. Returns 1.0 if not mature.
@@ -80,7 +77,7 @@ contract YDai is Orchestrated(), Delegable(), ERC20, Constants, IYDai  {
         } else {
             (, rateNow,,,) = _vat.ilks("ETH-A");
         }
-        return rateNow.divd(rate0, RAY);
+        return divd(rateNow, rate0);
     }
 
     /// @dev Mature yDai and capture maturity data
@@ -95,7 +92,7 @@ contract YDai is Orchestrated(), Delegable(), ERC20, Constants, IYDai  {
             "YDai: Already matured"
         );
         (, rate0,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO Vat
-        rate0 = Math.max(rate0, RAY.unit()); // Floor it at 1.0
+        rate0 = Math.max(rate0, UNIT); // Floor it at 1.0
         chi0 = (now > _pot.rho()) ? _pot.drip() : _pot.chi();
         isMature = true;
         emit Matured(rate0, chi0);
@@ -112,7 +109,7 @@ contract YDai is Orchestrated(), Delegable(), ERC20, Constants, IYDai  {
             "YDai: yDai is not mature"
         );
         _burn(user, yDaiAmount);                              // Burn yDai from user
-        uint256 daiAmount = yDaiAmount.muld(chiGrowth(), RAY); // User gets interest for holding after maturity
+        uint256 daiAmount = muld(yDaiAmount, chiGrowth());    // User gets interest for holding after maturity
         _treasury.pullDai(user, daiAmount);                   // Give dai to user, from Treasury
         emit Redeemed(user, yDaiAmount, daiAmount);
     }

@@ -1,14 +1,10 @@
 pragma solidity ^0.6.2;
-import "@hq20/contracts/contracts/math/DecimalMath.sol";
-import "./helpers/Constants.sol";
 import "./interfaces/IPot.sol";
 import "./interfaces/IOracle.sol";
 
 
 /// @dev ChaiOracle retrieves the price for Chai as the DSR fee from Pot
-contract ChaiOracle is IOracle, Constants {
-    using DecimalMath for uint256;
-    using DecimalMath for uint8;
+contract ChaiOracle is IOracle {
 
     IPot public _pot;
 
