@@ -118,7 +118,6 @@ module.exports = async (deployer, network, accounts) => {
   await deployer.deploy(
     EthProxy,
     wethAddress,
-    gasTokenAddress,
     dealerAddress,
   );
   ethProxyAddress = (await EthProxy.deployed()).address;

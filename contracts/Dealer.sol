@@ -186,9 +186,6 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
             _treasury.pushChai();
         }
         
-        if (posted[collateral][to] == 0 && amount >= 0) {
-            lockBond(10);
-        }
         posted[collateral][to] = posted[collateral][to].add(amount);
         systemPosted[collateral] = systemPosted[collateral].add(amount);
         emit Posted(collateral, to, int256(amount)); // TODO: Watch for overflow
@@ -216,9 +213,6 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
             _treasury.pullChai(to, amount);
         }
 
-        if (posted[collateral][from] == 0 && amount >= 0) {
-            returnBond(10);
-        }
         emit Posted(collateral, to, -int256(amount)); // TODO: Watch for overflow
     }
 
@@ -324,9 +318,6 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
             "Dealer: Not enough collateral"
         );
         systemPosted[collateral] = systemPosted[collateral].sub(tokenAmount);
-        if (posted[collateral][user] == 0){
-            returnBond(10);
-        }
 
         uint256 totalGrabbed;
         for (uint256 i = 0; i < seriesIterator.length; i += 1) {

@@ -256,7 +256,6 @@ contract('Unwind - Dealer', async (accounts) =>  {
         // Setup EthProxy
         ethProxy = await EthProxy.new(
             weth.address,
-            gasToken.address,
             dealer.address,
             { from: owner },
         );
