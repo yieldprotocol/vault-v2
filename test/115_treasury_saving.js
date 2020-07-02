@@ -5,7 +5,6 @@ const Weth = artifacts.require("WETH9");
 const ERC20 = artifacts.require("TestERC20");
 const Pot = artifacts.require('Pot');
 const Chai = artifacts.require('./Chai');
-const ChaiOracle = artifacts.require('./ChaiOracle');
 const Treasury = artifacts.require('Treasury');
 
 const truffleAssert = require('truffle-assertions');
@@ -67,9 +66,6 @@ contract('Treasury - Saving', async (accounts) =>  {
             dai.address,
         );
 
-        // Setup chaiOracle
-        chaiOracle = await ChaiOracle.new(pot.address, { from: owner });
-
         // Permissions
         await vat.rely(vat.address, { from: owner });
         await vat.rely(wethJoin.address, { from: owner });
@@ -88,13 +84,13 @@ contract('Treasury - Saving', async (accounts) =>  {
         await pot.setChi(chi, { from: owner });
         
         treasury = await Treasury.new(
-            dai.address,
-            chai.address,
-            chaiOracle.address,
-            weth.address,
-            daiJoin.address,
-            wethJoin.address,
             vat.address,
+            weth.address,
+            dai.address,
+            wethJoin.address,
+            daiJoin.address,
+            pot.address,
+            chai.address,
         );
         await treasury.orchestrate(owner, { from: owner });
     });

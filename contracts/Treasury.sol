@@ -5,11 +5,11 @@ import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./interfaces/IVat.sol";
 import "./interfaces/IDaiJoin.sol";
 import "./interfaces/IGemJoin.sol";
-import "./interfaces/IVat.sol";
+import "./interfaces/IPot.sol";
 import "./interfaces/IChai.sol";
-import "./interfaces/IOracle.sol";
 import "./interfaces/ITreasury.sol";
 import "./helpers/Constants.sol";
 import "@nomiclabs/buidler/console.sol";
@@ -25,7 +25,7 @@ contract Treasury is ITreasury, Orchestrated(), Constants {
 
     IERC20 internal _dai;
     IChai internal _chai;
-    IOracle internal _chaiOracle;
+    IPot internal _pot;
     IERC20 internal _weth;
     IDaiJoin internal _daiJoin;
     IGemJoin internal _wethJoin;
@@ -35,18 +35,18 @@ contract Treasury is ITreasury, Orchestrated(), Constants {
     bool public override live = true;
 
     constructor (
-        address dai_,
-        address chai_,
-        address chaiOracle_,
+        address vat_,
         address weth_,
-        address daiJoin_,
+        address dai_,
         address wethJoin_,
-        address vat_
+        address daiJoin_,
+        address pot_,
+        address chai_
     ) public {
         // These could be hardcoded for mainnet deployment.
         _dai = IERC20(dai_);
         _chai = IChai(chai_);
-        _chaiOracle = IOracle(chaiOracle_);
+        _pot = IPot(pot_);
         _weth = IERC20(weth_);
         _daiJoin = IDaiJoin(daiJoin_);
         _wethJoin = IGemJoin(wethJoin_);
@@ -180,7 +180,8 @@ contract Treasury is ITreasury, Orchestrated(), Constants {
 
     /// @dev Returns chai using chai savings as much as possible, and borrowing the rest.
     function pullChai(address to, uint256 chai) public override onlyOrchestrated("Treasury: Not Authorized") onlyLive  {
-        uint256 dai = chai.muld(_chaiOracle.price(), RAY);   // dai = price * chai
+        uint256 chi = (now > _pot.rho()) ? _pot.drip() : _pot.chi();
+        uint256 dai = chai.muld(chi, RAY);   // dai = price * chai
         uint256 toRelease = Math.min(savings(), dai);
         // As much chai as the Treasury has, can be used, we borrwo dai and convert it to chai for the rest
 

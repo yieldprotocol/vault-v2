@@ -6,7 +6,6 @@ const GemJoin = artifacts.require("GemJoin");
 const DaiJoin = artifacts.require("DaiJoin");
 const Chai = artifacts.require("Chai");
 const GasToken = artifacts.require("GasToken1");
-const WethOracle = artifacts.require("WethOracle");
 const ChaiOracle = artifacts.require("ChaiOracle");
 const Treasury = artifacts.require("Treasury");
 const Dealer = artifacts.require("Dealer");
@@ -24,8 +23,6 @@ module.exports = async (deployer, network, accounts) => {
   let potAddress;
   let chaiAddress;
   let gasTokenAddress;
-  let wethOracleAddress;
-  let chaiOracleAddress;
   let treasuryAddress;
   let dealerAddress;
 
@@ -53,25 +50,16 @@ module.exports = async (deployer, network, accounts) => {
     gasTokenAddress = (await GasToken.deployed()).address;
  }
 
-  // Setup chaiOracle
-  await deployer.deploy(ChaiOracle, potAddress);
-  chaiOracleAddress = (await ChaiOracle.deployed()).address;
-
-  // Setup wethOracle
-  await deployer.deploy(WethOracle, vatAddress);
-  wethOracleAddress = (await WethOracle.deployed()).address;
-
   // Setup treasury
-  // TODO: The Treasury constructor reverts on `_dai.approve(chai_, uint256(-1));`
   await deployer.deploy(
     Treasury,
-    daiAddress,        // dai
-    chaiAddress,       // chai
-    chaiOracleAddress, // chaiOracle
-    wethAddress,       // weth
-    daiJoinAddress,    // daiJoin
-    wethJoinAddress,   // wethJoin
-    vatAddress,        // vat
+    vatAddress,
+    wethAddress,
+    daiAddress,
+    wethJoinAddress,
+    daiJoinAddress,
+    potAddress,
+    chaiAddress,
   );
   treasury = await Treasury.deployed();
   treasuryAddress = treasury.address;
@@ -93,8 +81,6 @@ module.exports = async (deployer, network, accounts) => {
 
   // Commit addresses to migrations registry
   const deployedCore = {
-    'WethOracle': wethOracleAddress,
-    'ChaiOracle': chaiOracleAddress,
     'Treasury': treasuryAddress,
     'Dealer': dealerAddress,
   }
