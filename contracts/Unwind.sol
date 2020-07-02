@@ -17,16 +17,16 @@ import "./interfaces/IDealer.sol";
 import "./interfaces/IYDai.sol";
 import "./interfaces/ILiquidations.sol";
 import "./helpers/Constants.sol";
+import "./helpers/DecimalMath.sol";
 // import "@nomiclabs/buidler/console.sol";
 
 
 /// @dev Treasury manages the Dai, interacting with MakerDAO's vat and chai when needed.
-contract Unwind is Ownable(), Constants {
+contract Unwind is Ownable(), Constants, DecimalMath {
     using SafeCast for uint256;
     using SafeMath for uint256;
 
     bytes32 public constant collateralType = "ETH-A";
-    uint256 public constant UNIT = 1000000000000000000000000000;
 
     IVat internal _vat;
     IDaiJoin internal _daiJoin;
@@ -82,16 +82,6 @@ contract Unwind is Ownable(), Constants {
 
         _vat.hope(address(_treasury));
         _vat.hope(address(_end));
-    }
-
-    /// @dev Multiplies x and y, assuming they are both fixed point with 27 digits.
-    function muld(uint256 x, uint256 y) internal pure returns (uint256) {
-        return x.mul(y).div(UNIT);
-    }
-
-    /// @dev Divides x between y, assuming they are both fixed point with 18 digits.
-    function divd(uint256 x, uint256 y) internal pure returns (uint256) {
-        return x.mul(UNIT).div(y);
     }
 
     /// @dev max(0, x - y)
