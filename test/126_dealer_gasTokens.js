@@ -224,7 +224,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
             gasTokens,
             "User should have gasTokens",
         );
-        await gasToken.approve(treasury.address, gasTokens, { from: owner });
+        await gasToken.approve(dealer.address, gasTokens, { from: owner }); // TODO: Consider storing gas tokens in Treasury
 
         await weth.deposit({ from: owner, value: wethTokens });
         await weth.approve(treasury.address, wethTokens, { from: owner }); 

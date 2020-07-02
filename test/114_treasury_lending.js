@@ -124,8 +124,9 @@ contract('Treasury - Lending', async (accounts) =>  {
             web3.utils.toWei("0")
         );
         
-        await weth.deposit({ from: owner, value: wethTokens});
-        await treasury.pushWeth(treasury.address, wethTokens, { from: owner });
+        await weth.deposit({ from: owner, value: wethTokens });
+        await weth.approve(treasury.address, wethTokens, { from: owner });
+        await treasury.pushWeth(owner, wethTokens, { from: owner });
 
         // Test transfer of collateral
         assert.equal(
@@ -143,7 +144,8 @@ contract('Treasury - Lending', async (accounts) =>  {
     describe("with posted collateral", () => {
         beforeEach(async() => {
             await weth.deposit({ from: owner, value: wethTokens});
-            await treasury.pushWeth(treasury.address, wethTokens, { from: owner });
+            await weth.approve(treasury.address, wethTokens, { from: owner });
+            await treasury.pushWeth(owner, wethTokens, { from: owner });
         });
 
         it("returns borrowing power", async() => {

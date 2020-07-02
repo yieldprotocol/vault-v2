@@ -79,7 +79,7 @@ contract('Treasury - Lending', async (accounts) =>  {
         
         await weth.deposit({ from: user, value: wethTokens});
         await weth.approve(treasury.address, wethTokens, { from: owner });
-        await treasury.pushWeth(treasury.address, wethTokens, { from: owner });
+        await treasury.pushWeth(owner, wethTokens, { from: owner });
 
         // Test transfer of collateral
         assert.equal(

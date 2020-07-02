@@ -196,6 +196,7 @@ contract('Unwind - Treasury', async (accounts) =>  {
         ethProxy = await EthProxy.new(
             weth.address,
             gasToken.address,
+            treasury.address,
             dealer.address,
             { from: owner },
         );
@@ -273,7 +274,7 @@ contract('Unwind - Treasury', async (accounts) =>  {
         beforeEach(async() => {
             await weth.deposit({ from: owner, value: wethTokens });
             await weth.approve(treasury.address, wethTokens, { from: owner });
-            await treasury.pushWeth(treasury.address, wethTokens, { from: owner });
+            await treasury.pushWeth(owner, wethTokens, { from: owner });
 
             assert.equal(
                 (await vat.urns(ilk, treasury.address)).ink,
@@ -381,7 +382,7 @@ contract('Unwind - Treasury', async (accounts) =>  {
                 // Adding some extra unlocked collateral
                 await weth.deposit({ from: owner, value: 1 });
                 await weth.approve(treasury.address, 1, { from: owner });
-                await treasury.pushWeth(treasury.address, 1, { from: owner });
+                await treasury.pushWeth(owner, 1, { from: owner });
             });
 
             describe("with unwind initiated", () => {

@@ -17,13 +17,14 @@ contract EthProxy is Delegable(), Constants {
     constructor (
         address payable weth_,
         address gasToken_,
+        address treasury_,
         address dealer_
     ) public {
         _weth = IWeth(weth_);
         _gasToken = IGasToken(gasToken_);
         _dealer = IDealer(dealer_);
         // TODO: Fix for migrations
-        _weth.approve(address(_dealer), uint(-1));
+        _weth.approve(treasury_, uint(-1));
     }
 
     receive() external payable { }

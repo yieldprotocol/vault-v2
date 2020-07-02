@@ -195,6 +195,8 @@ contract('Unwind - Dealer', async (accounts) =>  {
         // Setup EthProxy
         ethProxy = await EthProxy.new(
             weth.address,
+            gasToken.address,
+            treasury.address,
             dealer.address,
             { from: owner },
         );
@@ -284,12 +286,12 @@ contract('Unwind - Dealer', async (accounts) =>  {
 
             await weth.deposit({ from: user2, value: wethTokens.add(1) });
             await weth.approve(treasury.address, wethTokens.add(1), { from: user2 });
-            await dealeapprove(treasury.addresser2, wethTokens.add(1), { from: user2 });
+            await dealer.post(WETH, user2, user2, wethTokens.add(1), { from: user2 });
             await dealer.borrow(WETH, maturity1, user2, daiTokens, { from: user2 });
 
             await weth.deposit({ from: user3, value: wethTokens.mul(3) });
             await weth.approve(treasury.address, wethTokens.mul(3), { from: user3 });
-            await dealeapprove(treasury.addresser3, wethTokens.mul(3), { from: user3 });
+            await dealer.post(WETH, user3, user3, wethTokens.mul(3), { from: user3 });
             await dealer.borrow(WETH, maturity1, user3, daiTokens, { from: user3 });
             await dealer.borrow(WETH, maturity2, user3, daiTokens, { from: user3 });
 
@@ -305,7 +307,7 @@ contract('Unwind - Dealer', async (accounts) =>  {
             await dai.approve(chai.address, daiTokens, { from: user1 });
             await chai.join(user1, daiTokens, { from: user1 });
             await chai.approve(treasury.address, chaiTokens, { from: user1 });
-            await dealeapprove(treasury.addresser1, chaiTokens, { from: user1 });
+            await dealer.post(CHAI, user1, user1, chaiTokens, { from: user1 });
 
             await vat.hope(daiJoin.address, { from: user2 });
             await vat.hope(wethJoin.address, { from: user2 });
@@ -322,7 +324,7 @@ contract('Unwind - Dealer', async (accounts) =>  {
             await dai.approve(chai.address, moreDai, { from: user2 });
             await chai.join(user2, moreDai, { from: user2 });
             await chai.approve(treasury.address, moreChai, { from: user2 });
-            await dealeapprove(treasury.addresser2, moreChai, { from: user2 });
+            await dealer.post(CHAI, user2, user2, moreChai, { from: user2 });
             await dealer.borrow(CHAI, maturity1, user2, daiTokens, { from: user2 });
 
             // user1 has chaiTokens in dealer and no debt.

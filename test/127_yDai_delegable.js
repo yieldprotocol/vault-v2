@@ -191,7 +191,7 @@ contract('yDai - Delegable', async (accounts) =>  {
         await treasury.orchestrate(owner, { from: owner });
         await weth.deposit({ from: owner, value: wethTokens1 });
         await weth.approve(treasury.address, wethTokens1, { from: owner });
-        await treasury.pushWeth(treasury.address, wethTokens1, { from: owner });
+        await treasury.pushWeth(owner, wethTokens1, { from: owner });
         assert.equal(
             (await vat.urns(ilk, treasury.address)).ink,
             wethTokens1.toString(),

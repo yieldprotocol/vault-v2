@@ -384,7 +384,7 @@ contract('Unwind - Dealer', async (accounts) =>  {
                 await weth.deposit({ from: owner, value: wethTokens });
                 await weth.approve(wethJoin.address, wethTokens, { from: owner });
                 await weth.approve(treasury.address, wethTokens, { from: owner });
-                await treasury.pushWeth(treasury.address, wethTokens, { from: owner });
+                await treasury.pushWeth(owner, wethTokens, { from: owner });
                 await treasury.pullDai(owner, daiTokens, { from: owner });
                 // profit = 9 chai
             });

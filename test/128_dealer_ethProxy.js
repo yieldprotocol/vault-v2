@@ -180,6 +180,7 @@ contract('Dealer - EthProxy', async (accounts) =>  {
         ethProxy = await EthProxy.new(
             weth.address,
             gasToken.address,
+            treasury.address,
             dealer.address,
             { from: owner },
         );

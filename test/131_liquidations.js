@@ -487,7 +487,7 @@ contract('Liquidations', async (accounts) =>  {
                     await vat.frob(ilk, buyer, buyer, buyer, liquidatorWethTokens, liquidatorDaiDebt, { from: buyer });
                     await daiJoin.exit(buyer, daiTokens, { from: buyer });
 
-                    await dai.approve(liquidations.address, daiTokens, { from: buyer });
+                    await dai.approve(treasury.address, daiTokens, { from: buyer });
                     await liquidations.buy(WETH, user2, buyer, daiTokens, { from: buyer });
 
                     assert.equal(
@@ -522,7 +522,7 @@ contract('Liquidations', async (accounts) =>  {
                     await vat.frob(ilk, buyer, buyer, buyer, liquidatorWethTokens, liquidatorDaiDebt, { from: buyer });
                     await daiJoin.exit(buyer, daiTokens, { from: buyer });
 
-                    await dai.approve(liquidations.address, divRay(daiTokens, toRay(2)), { from: buyer });
+                    await dai.approve(treasury.address, divRay(daiTokens, toRay(2)), { from: buyer });
                     await liquidations.buy(WETH, user2, buyer, divRay(daiTokens, toRay(2)), { from: buyer });
 
                     assert.equal(
@@ -557,7 +557,7 @@ contract('Liquidations', async (accounts) =>  {
                     await vat.frob(ilk, buyer, buyer, buyer, liquidatorWethTokens, liquidatorDaiDebt, { from: buyer });
                     await daiJoin.exit(buyer, daiTokens, { from: buyer });
 
-                    await dai.approve(liquidations.address, daiTokens, { from: buyer });
+                    await dai.approve(treasury.address, daiTokens, { from: buyer });
                     await liquidations.buy(WETH, user3, buyer, daiTokens, { from: buyer });
 
                     assert.equal(
@@ -596,7 +596,7 @@ contract('Liquidations', async (accounts) =>  {
                         await vat.frob(ilk, buyer, buyer, buyer, liquidatorWethTokens, liquidatorDaiDebt, { from: buyer });
                         await daiJoin.exit(buyer, daiTokens, { from: buyer });
     
-                        await dai.approve(liquidations.address, daiTokens, { from: buyer });
+                        await dai.approve(treasury.address, daiTokens, { from: buyer });
                         await liquidations.buy(WETH, user2, buyer, daiTokens, { from: buyer });
     
                         assert.equal(
@@ -623,7 +623,7 @@ contract('Liquidations', async (accounts) =>  {
                         await vat.frob(ilk, buyer, buyer, buyer, liquidatorWethTokens, liquidatorDaiDebt, { from: buyer });
                         await daiJoin.exit(buyer, daiTokens, { from: buyer });
     
-                        await dai.approve(liquidations.address, divRay(daiTokens, toRay(2)), { from: buyer });
+                        await dai.approve(treasury.address, divRay(daiTokens, toRay(2)), { from: buyer });
                         await liquidations.buy(WETH, user2, buyer, divRay(daiTokens, toRay(2)), { from: buyer });
     
                         assert.equal(
@@ -650,7 +650,7 @@ contract('Liquidations', async (accounts) =>  {
                         await vat.frob(ilk, buyer, buyer, buyer, liquidatorWethTokens, liquidatorDaiDebt, { from: buyer });
                         await daiJoin.exit(buyer, daiTokens, { from: buyer });
     
-                        await dai.approve(liquidations.address, daiTokens, { from: buyer });
+                        await dai.approve(treasury.address, daiTokens, { from: buyer });
                         await liquidations.buy(WETH, user3, buyer, daiTokens, { from: buyer });
     
                         assert.equal(
