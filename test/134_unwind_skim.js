@@ -256,6 +256,8 @@ contract('Unwind - Dealer', async (accounts) =>  {
         // Setup EthProxy
         ethProxy = await EthProxy.new(
             weth.address,
+            gasToken.address,
+            treasury.address,
             dealer.address,
             { from: owner },
         );
@@ -339,7 +341,7 @@ contract('Unwind - Dealer', async (accounts) =>  {
         it("chai held as collateral doesn't count as profits", async() => {
             await getChai(user2, chaiTokens);
             await chai.approve(treasury.address, chaiTokens, { from: user2 });
-            await dealeapprove(treasury.addresser2, chaiTokens, { from: user2 });
+            await dealer.post(CHAI, user2, user2, chaiTokens, { from: user2 });
 
             await unwind.skimWhileLive(user1, { from: owner });
 
