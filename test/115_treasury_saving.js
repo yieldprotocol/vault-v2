@@ -20,7 +20,6 @@ contract('Treasury - Saving', async (accounts) =>  {
     let daiJoin;
     let pot;
     let chai;
-    let chaiOracle;
     let treasury;
 
     let ilk = web3.utils.fromAscii("ETH-A")
