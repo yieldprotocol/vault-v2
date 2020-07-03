@@ -11,7 +11,6 @@ import "./interfaces/IJug.sol";
 import "./interfaces/IPot.sol";
 import "./interfaces/IEnd.sol";
 import "./interfaces/IChai.sol";
-import "./interfaces/IOracle.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IDealer.sol";
 import "./interfaces/IYDai.sol";
@@ -36,7 +35,6 @@ contract Unwind is Ownable(), Constants, DecimalMath {
     IPot internal _pot;
     IEnd internal _end;
     IChai internal _chai;
-    IOracle internal _chaiOracle;
     ITreasury internal _treasury;
     IDealer internal _dealer;
     ILiquidations internal _liquidations;
@@ -61,7 +59,6 @@ contract Unwind is Ownable(), Constants, DecimalMath {
         address pot_,
         address end_,
         address chai_,
-        address chaiOracle_,
         address treasury_,
         address dealer_,
         address liquidations_
@@ -75,7 +72,6 @@ contract Unwind is Ownable(), Constants, DecimalMath {
         _pot = IPot(pot_);
         _end = IEnd(end_);
         _chai = IChai(chai_);
-        _chaiOracle = IOracle(chaiOracle_);
         _treasury = ITreasury(treasury_);
         _dealer = IDealer(dealer_);
         _liquidations = ILiquidations(liquidations_);
@@ -230,7 +226,7 @@ contract Unwind is Ownable(), Constants, DecimalMath {
         cashedOut = true;
 
         _fix = _end.fix(collateralType);
-        _chi = _chaiOracle.price();
+        _chi = _pot.chi();
     }
 
     /// @dev Settles a series position in Dealer, and then returns any remaining collateral as weth using the unwind Dai to Weth price.
