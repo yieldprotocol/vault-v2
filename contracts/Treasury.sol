@@ -1,8 +1,5 @@
 pragma solidity ^0.6.0;
 
-import "./helpers/Orchestrated.sol";
-import "@hq20/contracts/contracts/math/DecimalMath.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IVat.sol";
@@ -11,16 +8,13 @@ import "./interfaces/IGemJoin.sol";
 import "./interfaces/IPot.sol";
 import "./interfaces/IChai.sol";
 import "./interfaces/ITreasury.sol";
-import "./helpers/Constants.sol";
+import "./helpers/DecimalMath.sol";
+import "./helpers/Orchestrated.sol";
 import "@nomiclabs/buidler/console.sol";
 
 
 /// @dev Treasury manages the Dai, interacting with MakerDAO's vat and chai when needed.
-contract Treasury is ITreasury, Orchestrated(), Constants {
-    using DecimalMath for uint256;
-    using DecimalMath for int256;
-    using DecimalMath for uint8;
-
+contract Treasury is ITreasury, Orchestrated(), DecimalMath {
     bytes32 constant collateralType = "ETH-A";
 
     IERC20 internal _dai;
@@ -87,7 +81,7 @@ contract Treasury is ITreasury, Orchestrated(), Constants {
     function debt() public view override returns(uint256) {
         (, uint256 rate,,,) = _vat.ilks("ETH-A");            // Retrieve the MakerDAO stability fee for Weth
         (, uint256 art) = _vat.urns("ETH-A", address(this)); // Retrieve the Treasury debt in MakerDAO
-        return art.muld(rate, RAY);
+        return muld(art, rate);
     }
 
     /// @dev Returns the Treasury borrowing capacity from MakerDAO, as the collateral posted times the collateralization ratio for Weth.
@@ -95,7 +89,7 @@ contract Treasury is ITreasury, Orchestrated(), Constants {
     function power() public view returns(uint256) {
         (,, uint256 spot,,) = _vat.ilks("ETH-A");            // Collateralization ratio for Weth
         (uint256 ink,) = _vat.urns("ETH-A", address(this));  // Treasury Weth collateral in MakerDAO
-        return ink.muld(spot, RAY);
+        return muld(ink, spot);
     }
 
     /// @dev Returns the amount of Dai in this contract.
@@ -118,7 +112,7 @@ contract Treasury is ITreasury, Orchestrated(), Constants {
                 address(this),
                 address(this),
                 0,                           // Weth collateral to add
-                -toInt(toRepay.divd(rate, RAY)) // Dai debt to remove
+                -toInt(divd(toRepay, rate))  // Dai debt to remove
             );
         }
 
@@ -144,7 +138,7 @@ contract Treasury is ITreasury, Orchestrated(), Constants {
                 address(this),
                 address(this),
                 0,                           // Weth collateral to add
-                -toInt(toRepay.divd(rate, RAY)) // Dai debt to remove
+                -toInt(divd(toRepay, rate))  // Dai debt to remove
             );
         }
         // Anything that is left from repaying, is chai savings
@@ -167,7 +161,7 @@ contract Treasury is ITreasury, Orchestrated(), Constants {
                 address(this),
                 address(this),
                 0,
-                toInt(toBorrow.divd(rate, RAY))
+                toInt(divd(toBorrow, rate))
             ); // `vat.frob` reverts on failure
             _daiJoin.exit(address(this), toBorrow); // `daiJoin` reverts on failures
         }
@@ -181,7 +175,7 @@ contract Treasury is ITreasury, Orchestrated(), Constants {
     /// @dev Returns chai using chai savings as much as possible, and borrowing the rest.
     function pullChai(address to, uint256 chai) public override onlyOrchestrated("Treasury: Not Authorized") onlyLive  {
         uint256 chi = (now > _pot.rho()) ? _pot.drip() : _pot.chi();
-        uint256 dai = chai.muld(chi, RAY);   // dai = price * chai
+        uint256 dai = muld(chai, chi);   // dai = price * chai
         uint256 toRelease = Math.min(savings(), dai);
         // As much chai as the Treasury has, can be used, we borrwo dai and convert it to chai for the rest
 
@@ -195,7 +189,7 @@ contract Treasury is ITreasury, Orchestrated(), Constants {
                 address(this),
                 address(this),
                 0,
-                toInt(toBorrow.divd(rate, RAY))
+                toInt(divd(toBorrow, rate))
             ); // `vat.frob` reverts on failure
             _daiJoin.exit(address(this), toBorrow);  // `daiJoin` reverts on failures
             _chai.join(address(this), toBorrow);     // Grab chai from Chai, converted from dai

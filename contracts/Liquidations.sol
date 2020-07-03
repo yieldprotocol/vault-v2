@@ -1,7 +1,5 @@
 pragma solidity ^0.6.2;
 
-import "./helpers/Orchestrated.sol";
-import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
@@ -9,13 +7,13 @@ import "./interfaces/IDealer.sol";
 import "./interfaces/ILiquidations.sol";
 import "./interfaces/ITreasury.sol";
 import "./helpers/Constants.sol";
+import "./helpers/DecimalMath.sol";
+import "./helpers/Orchestrated.sol";
 import "@nomiclabs/buidler/console.sol";
 
 
 /// @dev The Liquidations contract for a Dealer allows to liquidate undercollateralized positions in a reverse Dutch auction.
-contract Liquidations is ILiquidations, Orchestrated(), Constants {
-    using DecimalMath for uint256;
-    using DecimalMath for uint8;
+contract Liquidations is ILiquidations, Orchestrated(), Constants, DecimalMath {
     using SafeMath for uint256;
 
     event Liquidation(bytes32 indexed collateral, address indexed user, uint256 started);
@@ -103,7 +101,7 @@ contract Liquidations is ILiquidations, Orchestrated(), Constants {
         _treasury.pushDai();
 
         // calculate collateral to grab. Using divdrup stops rounding from leaving 1 stray wei in vaults.
-        uint256 tokenAmount = divdrup(daiAmount, price(collateral, from), RAY);
+        uint256 tokenAmount = divdrup(daiAmount, price(collateral, from));
         // grab collateral from dealer
         _dealer.grab(collateral, from, daiAmount, tokenAmount);
 
@@ -128,26 +126,15 @@ contract Liquidations is ILiquidations, Orchestrated(), Constants {
             liquidations[collateral][user] > 0,
             "Liquidations: Vault is not targeted"
         );
-        uint256 dividend1 = RAY.unit().mul(_dealer.posted(collateral, user));
-        uint256 divisor1 = RAY.unit().mul(_dealer.totalDebtDai(collateral, user));
-        uint256 dividend2 = RAY.unit().mul(1);
-        uint256 divisor2 = RAY.unit().mul(2);
-        uint256 dividend3 = RAY.unit().muld(Math.min(auctionTime, now - liquidations[collateral][user]), RAY);
-        uint256 divisor3 = RAY.unit().muld(auctionTime, RAY).mul(2);
-        uint256 term1 = dividend1.divd(divisor1, RAY);
-        uint256 term2 = dividend2.divd(divisor2, RAY);
-        uint256 term3 = dividend3.divd(divisor3, RAY);
-        return RAY.unit().divd(term1.muld(term2.add(term3), RAY), RAY);
-    }
-
-    /// @dev Divides x between y, rounding up to the closest representable number.
-    /// Assumes x and y are both fixed point with `decimals` digits.
-     // TODO: Check if this needs to be taken from DecimalMath.sol
-    function divdrup(uint256 x, uint256 y, uint8 decimals)
-        internal pure returns (uint256)
-    {
-        uint256 z = x.mul((decimals + 1).unit()).div(y);
-        if (z % 10 > 0) return z / 10 + 1;
-        else return z / 10;
+        uint256 dividend1 = UNIT.mul(_dealer.posted(collateral, user));
+        uint256 divisor1 = UNIT.mul(_dealer.totalDebtDai(collateral, user));
+        uint256 dividend2 = UNIT.mul(1);
+        uint256 divisor2 = UNIT.mul(2);
+        uint256 dividend3 = UNIT.mul(Math.min(auctionTime, now - liquidations[collateral][user]));
+        uint256 divisor3 = UNIT.mul(auctionTime.mul(2));
+        uint256 term1 = divd(dividend1, divisor1);
+        uint256 term2 = divd(dividend2, divisor2);
+        uint256 term3 = divd(dividend3, divisor3);
+        return divd(UNIT, muld(term1, term2.add(term3)));
     }
 }
