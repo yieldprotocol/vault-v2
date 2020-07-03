@@ -227,7 +227,7 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), DecimalMath, Constants 
         if (posted[collateral][from] == 0 && amount >= 0) {
             returnBond(10);
         }
-        emit Posted(collateral, to, -int256(amount)); // TODO: Watch for overflow
+        emit Posted(collateral, from, -int256(amount)); // TODO: Watch for overflow
     }
 
     /// @dev Mint yDai for a given series for address `to` by locking its market value in collateral, user debt is increased in the given collateral.
