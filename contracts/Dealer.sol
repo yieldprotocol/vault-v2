@@ -1,7 +1,5 @@
 pragma solidity ^0.6.2;
 
-import "./helpers/Orchestrated.sol";
-import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -13,13 +11,13 @@ import "./interfaces/ITreasury.sol";
 import "./interfaces/IYDai.sol";
 import "./helpers/Constants.sol";
 import "./helpers/Delegable.sol";
+import "./helpers/DecimalMath.sol";
+import "./helpers/Orchestrated.sol";
 // import "@nomiclabs/buidler/console.sol";
 
 /// @dev A dealer takes collateral and issues yDai.
-contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
+contract Dealer is IDealer, Orchestrated(), Delegable(), DecimalMath, Constants {
     using SafeMath for uint256;
-    using DecimalMath for uint256;
-    using DecimalMath for uint8;
 
     event Posted(bytes32 indexed collateral, address indexed user, int256 amount);
     event Borrowed(bytes32 indexed collateral, uint256 indexed maturity, address indexed user, int256 amount);
@@ -108,9 +106,9 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
     function inDai(bytes32 collateral, uint256 maturity, uint256 yDaiAmount) public returns (uint256) {
         if (series[maturity].isMature()){
             if (collateral == WETH){
-                return yDaiAmount.muld(series[maturity].rateGrowth(), RAY);
+                return muld(yDaiAmount, series[maturity].rateGrowth());
             } else if (collateral == CHAI) {
-                return yDaiAmount.muld(series[maturity].chiGrowth(), RAY);
+                return muld(yDaiAmount, series[maturity].chiGrowth());
             } else {
                 revert("Dealer: Unsupported collateral");
             }
@@ -123,9 +121,9 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
     function inYDai(bytes32 collateral, uint256 maturity, uint256 daiAmount) public returns (uint256) {
         if (series[maturity].isMature()){
             if (collateral == WETH){
-                return daiAmount.divd(series[maturity].rateGrowth(), RAY);
+                return divd(daiAmount, series[maturity].rateGrowth());
             } else if (collateral == CHAI) {
-                return daiAmount.divd(series[maturity].chiGrowth(), RAY);
+                return divd(daiAmount, series[maturity].chiGrowth());
             } else {
                 revert("Dealer: Unsupported collateral");
             }
@@ -160,7 +158,7 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
     //
     function powerOf(bytes32 collateral, address user) public returns (uint256) {
         // dai = price * collateral
-        return posted[collateral][user].muld(_oracle[collateral].price(), RAY);
+        return muld(posted[collateral][user], _oracle[collateral].price());
     }
 
     /// @dev Return if the borrowing power for a given collateral of an user is equal or greater than its debt for the same collateral
@@ -302,7 +300,6 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
     //    
     function _repay(bytes32 collateral, uint256 maturity, address from, uint256 yDaiAmount) internal {
         // `inDai` calculates the interest accrued for a given amount and series
-        // uint256 repaidDebt = yDaiAmount.muld(divdrup(RAY.unit(), inDai(collateral, maturity, RAY.unit()), RAY), RAY);
 
         debtYDai[collateral][maturity][from] = debtYDai[collateral][maturity][from].sub(yDaiAmount);
         systemDebtYDai[collateral][maturity] = systemDebtYDai[collateral][maturity].sub(yDaiAmount);
@@ -358,16 +355,5 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
     /// @dev Frees a liquidation bond in gas tokens
     function returnBond(uint256 value) internal {
         _gasToken.transfer(msg.sender, value);
-    }
-
-    /// @dev Divides x between y, rounding up to the closest representable number.
-    /// Assumes x and y are both fixed point with `decimals` digits.
-     // TODO: Check if this needs to be taken from DecimalMath.sol
-    function divdrup(uint256 x, uint256 y, uint8 decimals)
-        internal pure returns (uint256)
-    {
-        uint256 z = x.mul((decimals + 1).unit()).div(y);
-        if (z % 10 > 0) return z / 10 + 1;
-        else return z / 10;
     }
 }
