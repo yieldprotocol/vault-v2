@@ -8,8 +8,6 @@ const Jug = artifacts.require("Jug");
 const Pot = artifacts.require("Pot");
 const Chai = artifacts.require("Chai");
 const GasToken = artifacts.require("GasToken1");
-const WethOracle = artifacts.require("WethOracle");
-const ChaiOracle = artifacts.require("ChaiOracle");
 const Treasury = artifacts.require("Treasury");
 const Dealer = artifacts.require("Dealer");
 
@@ -29,8 +27,6 @@ contract('Treasury - Saving', async (accounts) =>  {
     let pot;
     let chai;
     let gasToken;
-    let wethOracle;
-    let chaiOracle;
     let treasury;
     let dealer;
 
@@ -123,7 +119,7 @@ contract('Treasury - Saving', async (accounts) =>  {
     it("allows to save chai", async() => {
         await dai.approve(chai.address, daiTokens, { from: owner });
         await chai.join(owner, daiTokens, { from: owner });
-        await chai.transfer(treasury.address, chaiTokens, { from: owner }); 
+        await chai.approve(treasury.address, chaiTokens, { from: owner }); 
         await treasury.pushChai(owner, chaiTokens, { from: owner });
 
         // Test transfer of collateral

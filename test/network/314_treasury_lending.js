@@ -8,8 +8,6 @@ const Jug = artifacts.require("Jug");
 const Pot = artifacts.require("Pot");
 const Chai = artifacts.require("Chai");
 const GasToken = artifacts.require("GasToken1");
-const WethOracle = artifacts.require("WethOracle");
-const ChaiOracle = artifacts.require("ChaiOracle");
 const Treasury = artifacts.require("Treasury");
 const Dealer = artifacts.require("Dealer");
 
@@ -29,8 +27,6 @@ contract('Treasury - Lending', async (accounts) =>  {
     let pot;
     let chai;
     let gasToken;
-    let wethOracle;
-    let chaiOracle;
     let treasury;
     let dealer;
 
@@ -77,7 +73,7 @@ contract('Treasury - Lending', async (accounts) =>  {
             web3.utils.toWei("0")
         );
         
-        await weth.deposit({ from: user, value: wethTokens});
+        await weth.deposit({ from: owner, value: wethTokens });
         await weth.approve(treasury.address, wethTokens, { from: owner });
         await treasury.pushWeth(owner, wethTokens, { from: owner });
 
