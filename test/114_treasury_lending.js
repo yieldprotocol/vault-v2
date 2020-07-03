@@ -4,7 +4,7 @@ const DaiJoin = artifacts.require('DaiJoin');
 const Weth = artifacts.require("WETH9");
 const ERC20 = artifacts.require("TestERC20");
 const Pot = artifacts.require('Pot');
-const Chai = artifacts.require('./Chai');
+const Chai = artifacts.require('Chai');
 const Treasury = artifacts.require('Treasury');
 
 const truffleAssert = require('truffle-assertions');
@@ -21,7 +21,6 @@ contract('Treasury - Lending', async (accounts) =>  {
     let daiJoin;
     let pot;
     let chai;
-    let chaiOracle;
     let treasury;
 
     let ilk = web3.utils.fromAscii("ETH-A")
