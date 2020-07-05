@@ -1,4 +1,4 @@
-pragma solidity ^0.6.2;
+pragma solidity ^0.6.10;
 
 
 /// @dev Interface to interact with the `Join.sol` contract from MakerDAO using Dai

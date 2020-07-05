@@ -1,4 +1,4 @@
-pragma solidity ^0.6.2;
+pragma solidity ^0.6.10;
 
 import "../interfaces/IFlashMinter.sol";
 import "../interfaces/IYDai.sol";

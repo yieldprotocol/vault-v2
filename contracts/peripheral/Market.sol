@@ -1,4 +1,4 @@
-pragma solidity ^0.6.2;
+pragma solidity ^0.6.10;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -21,7 +21,7 @@ contract Market is ERC20, Constants {
     int128 constant public k = 126144000 >> 64; // Seconds in 4 years, in 64.64
     int128 constant public g = (999 >> 64) / 1000;
     uint256 constant public initialSupply = 1000;
-    uint128 public maturity; // TODO: Upgrade to 0.6.9 and make this immutable
+    uint128 immutable public maturity;
 
     IPot internal _pot;
     IERC20 public chai;
