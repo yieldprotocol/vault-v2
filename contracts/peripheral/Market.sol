@@ -1,15 +1,16 @@
 pragma solidity ^0.6.2;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../helpers/Constants.sol";
+import "../helpers/YieldMath.sol";
+import "../interfaces/IPot.sol";
+import "../interfaces/IYDai.sol";
 import "@nomiclabs/buidler/console.sol";
 
 
 /// @dev The Market contract exchanges Dai for yDai at a price defined by a specific formula.
 contract Market is ERC20, Constants {
-    using SafeMath for uint256;
 
     struct State {
         uint32 timestamp;    // last time contract was updated. wraps around after 2^32
@@ -17,17 +18,26 @@ contract Market is ERC20, Constants {
         uint64 accumulator;  // interest rate oracle accumulator—32 bits for a UQ16x16, 32 bits for overflow
     }
 
-    uint256 constant initialSupply = 1000;
+    int128 constant public k = 126144000 >> 64; // Seconds in 4 years, in 64.64
+    int128 constant public g = (999 >> 64) / 1000;
+    uint256 constant public initialSupply = 1000;
+    uint128 public maturity; // TODO: Upgrade to 0.6.9 and make this immutable
+
+    IPot internal _pot;
+    IERC20 public chai;
+    IYDai public yDai;
 
     State internal state;
-    IERC20 public chai;
-    IERC20 public yDai;
 
-    constructor(address chai_, address yDai_) public ERC20("Name", "Symbol") {
+    constructor(address pot_, address chai_, address yDai_) public ERC20("Name", "Symbol") {
+        _pot = IPot(pot_);
         chai = IERC20(chai_);
-        yDai = IERC20(yDai_);
+        yDai = IYDai(yDai_);
+
+        maturity = uint128(yDai.maturity()); // TODO: Consider SafeCast
     }
 
+    /// @dev Mint initial liquidity tokens
     function init(uint256 chaiIn, uint256 yDaiIn) external {
         require(
             totalSupply() == 0,
@@ -66,43 +76,75 @@ contract Market is ERC20, Constants {
         _updateState(chai.balanceOf(address(this)), yDai.balanceOf(address(this)));
     }
 
-    /// @dev Swap Chai for yDai
-    function swapChaiForYDai(uint256 chaiIn) external { // TODO: Add `from` and `to` parameters
-
-        uint256 newChaiBalance = chai.balanceOf(address(this)).add(chaiIn);
-        uint256 newYDaiBalance = targetYDaiBalance(newChaiBalance);
-        uint256 yDaiOut = yDai.balanceOf(address(this)).sub(newYDaiBalance);
+    /// @dev Sell Chai for yDai
+    function sellChai(uint128 chaiIn) external { // TODO: Add `from` and `to` parameters
+        int128 c = int128((((now > _pot.rho()) ? _pot.drip() : _pot.chi()) >> 64) / 10**27); // TODO: Conside SafeCast
+        uint128 chaiReserves = uint128(chai.balanceOf(address(this)));  // TODO: Conside SafeCast
+        uint128 yDaiReserves = uint128(yDai.balanceOf(address(this)));  // TODO: Conside SafeCast
+        uint256 yDaiOut = YieldMath.yDaiOutForChaiIn(
+            chaiReserves, yDaiReserves,
+            chaiIn,
+            uint128(maturity - now), k, c, g                            // TODO: Conside SafeCast
+        );
 
         chai.transferFrom(msg.sender, address(this), chaiIn);
         yDai.transfer(msg.sender, yDaiOut);
 
-        _updateState(newChaiBalance, newYDaiBalance);
+        _updateState(chaiReserves + chaiIn, yDaiReserves - yDaiOut);    // TODO: Conside SafeMath
     }
 
-    /// @dev Swap yDai for Chai
-    function swapYDaiForChai(uint256 yDaiIn) external { // TODO: Add `from` and `to` parameters
-
-        uint256 newYDaiBalance = yDai.balanceOf(address(this)).add(yDaiIn);
-        uint256 newChaiBalance = targetChaiBalance(newYDaiBalance);
-        uint256 chaiOut = chai.balanceOf(address(this)).sub(newChaiBalance);
+    /// @dev Buy Chai for yDai
+    function buyChai(uint128 chaiOut) external { // TODO: Add `from` and `to` parameters
+        int128 c = int128((((now > _pot.rho()) ? _pot.drip() : _pot.chi()) >> 64) / 10**27); // TODO: Conside SafeCast
+        uint128 chaiReserves = uint128(chai.balanceOf(address(this)));  // TODO: Conside SafeCast
+        uint128 yDaiReserves = uint128(yDai.balanceOf(address(this)));  // TODO: Conside SafeCast
+        uint256 yDaiIn = YieldMath.yDaiInForChaiOut(
+            chaiReserves, yDaiReserves,
+            chaiOut,
+            uint128(maturity - now), k, c, g                             // TODO: Conside SafeCast
+        );
 
         yDai.transferFrom(msg.sender, address(this), yDaiIn);
         chai.transfer(msg.sender, chaiOut);
 
-        _updateState(newChaiBalance, newYDaiBalance);
+        _updateState(chaiReserves - chaiOut, yDaiReserves + yDaiIn);    // TODO: Conside SafeMath
     }
 
-    /// @dev For the balance passed as an argument, returns the size of the reciprocal balance
-    function targetYDaiBalance(uint256 newChaiBalance) public returns(uint256) {
-        return newChaiBalance; // TODO: Magic!
+    /// @dev Sell yDai for Chai
+    function sellYDai(uint128 yDaiIn) external { // TODO: Add `from` and `to` parameters
+        int128 c = int128((((now > _pot.rho()) ? _pot.drip() : _pot.chi()) >> 64) / 10**27); // TODO: Conside SafeCast
+        uint128 chaiReserves = uint128(chai.balanceOf(address(this)));  // TODO: Conside SafeCast
+        uint128 yDaiReserves = uint128(yDai.balanceOf(address(this)));  // TODO: Conside SafeCast
+        uint256 chaiOut = YieldMath.chaiOutForYDaiIn(
+            chaiReserves, yDaiReserves,
+            yDaiIn,
+            uint128(maturity - now), k, c, g                             // TODO: Conside SafeCast
+        );
+
+        yDai.transferFrom(msg.sender, address(this), yDaiIn);
+        chai.transfer(msg.sender, chaiOut);
+
+        _updateState(chaiReserves - chaiOut, yDaiReserves + yDaiIn);    // TODO: Conside SafeMath
     }
 
-    /// @dev For the balance passed as an argument, returns the size of the reciprocal balance
-    function targetChaiBalance(uint256 newYDaiBalance) public returns(uint256) {
-        return newYDaiBalance; // TODO: Magic!
+    /// @dev Buy yDai for chai
+    function buyYDai(uint128 yDaiOut) external { // TODO: Add `from` and `to` parameters
+        int128 c = int128((((now > _pot.rho()) ? _pot.drip() : _pot.chi()) >> 64) / 10**27); // TODO: Conside SafeCast
+        uint128 chaiReserves = uint128(chai.balanceOf(address(this)));  // TODO: Conside SafeCast
+        uint128 yDaiReserves = uint128(yDai.balanceOf(address(this)));  // TODO: Conside SafeCast
+        uint256 chaiIn = YieldMath.chaiInForYDaiOut(
+            chaiReserves, yDaiReserves,
+            yDaiOut,
+            uint128(maturity - now), k, c, g                             // TODO: Conside SafeCast
+        );
+
+        chai.transferFrom(msg.sender, address(this), chaiIn);
+        yDai.transfer(msg.sender, yDaiOut);
+
+        _updateState(chaiReserves + chaiIn, yDaiReserves - yDaiOut);    // TODO: Conside SafeMath
     }
 
-    // TODO: What is this?
+    /// @dev Maintain the price oracle
     function _updateState(uint256 x0, uint256 y0) internal {
         State memory prevState = state;
         state = State({
