@@ -55,25 +55,31 @@ contract Market is ERC20, Constants {
     /// The parameter passed is the amount of `chai` being invested, an appropriate amount of `yDai` to be invested alongside will be calculated and taken by this function from the caller.
     function mint(uint256 chaiOffered) external {
         uint256 supply = totalSupply();
-        uint256 tokensMinted = supply.mul(chaiOffered).div(chai.balanceOf(address(this)));
-        uint256 yDaiRequired = supply.mul(tokensMinted).div(yDai.balanceOf(address(this)));
+        uint256 chaiReserves = chai.balanceOf(address(this));
+        uint256 yDaiReserves = yDai.balanceOf(address(this));
+        uint256 tokensMinted = supply.mul(chaiOffered).div(chaiReserves);
+        uint256 yDaiRequired = supply.mul(tokensMinted).div(yDaiReserves);
 
         chai.transferFrom(msg.sender, address(this), chaiOffered);
         yDai.transferFrom(msg.sender, address(this), yDaiRequired);
         _mint(msg.sender, tokensMinted);
 
-        _updateState(chai.balanceOf(address(this)), yDai.balanceOf(address(this)));
+        _updateState(chaiReserves + chaiOffered, yDaiReserves + yDaiRequired);
     }
 
     /// @dev Burn liquidity tokens in exchange for chai and yDai
     function burn(uint256 tokensBurned) external {
         uint256 supply = totalSupply();
+        uint256 chaiReserves = chai.balanceOf(address(this));
+        uint256 yDaiReserves = yDai.balanceOf(address(this));
+        uint256 chaiReturned = tokensBurned.mul(chaiReserves).div(supply);
+        uint256 yDaiReturned = tokensBurned.mul(yDaiReserves).div(supply);
 
         _burn(msg.sender, tokensBurned);
-        chai.transfer(msg.sender, tokensBurned.mul(chai.balanceOf(address(this))).div(supply));
-        yDai.transfer(msg.sender, tokensBurned.mul(yDai.balanceOf(address(this))).div(supply));
+        chai.transfer(msg.sender, chaiReturned);
+        yDai.transfer(msg.sender, yDaiReturned);
 
-        _updateState(chai.balanceOf(address(this)), yDai.balanceOf(address(this)));
+        _updateState(chaiReserves - chaiReturned, yDaiReserves - yDaiReturned);
     }
 
     /// @dev Sell Chai for yDai
