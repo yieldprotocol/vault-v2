@@ -4,7 +4,11 @@ usePlugin("buidler-gas-reporter");
 
 module.exports = {
     solc: {
-        version: "0.6.2"
+        version: "0.6.2",
+        optimizer: {
+            enabled: true,
+            runs: 20000
+        },
     },
     gasReporter: {
         enabled: true
