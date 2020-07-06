@@ -10,8 +10,6 @@ const Pot = artifacts.require("Pot");
 const End = artifacts.require("End");
 const Chai = artifacts.require("Chai");
 const GasToken = artifacts.require("GasToken1");
-const ChaiOracle = artifacts.require("ChaiOracle");
-const WethOracle = artifacts.require("WethOracle");
 const Treasury = artifacts.require("Treasury");
 const Dealer = artifacts.require("Dealer");
 const Liquidations = artifacts.require("Liquidations");
@@ -32,8 +30,6 @@ module.exports = async (deployer, network, accounts) => {
   let endAddress;
   let chaiAddress;
   let gasTokenAddress;
-  let chaiOracleAddress;
-  let wethOracleAddress;
   let treasuryAddress;
   let dealerAddress;
   let splitterAddress;
@@ -69,8 +65,6 @@ module.exports = async (deployer, network, accounts) => {
 
   const treasury = await Treasury.deployed();
   treasuryAddress = treasury.address;
-  wethOracleAddress = (await WethOracle.deployed()).address;
-  chaiOracleAddress = (await ChaiOracle.deployed()).address;
   gasTokenAddress = (await GasToken.deployed()).address;
   const dealer = await Dealer.deployed();
   dealerAddress = dealer.address;
@@ -98,7 +92,6 @@ module.exports = async (deployer, network, accounts) => {
     potAddress,
     endAddress,
     chaiAddress,
-    chaiOracleAddress,
     treasuryAddress,
     dealerAddress,
     liquidationsAddress,

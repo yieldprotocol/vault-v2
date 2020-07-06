@@ -4,8 +4,7 @@ const DaiJoin = artifacts.require('DaiJoin');
 const Weth = artifacts.require("WETH9");
 const ERC20 = artifacts.require("TestERC20");
 const Pot = artifacts.require('Pot');
-const Chai = artifacts.require('./Chai');
-const ChaiOracle = artifacts.require('./ChaiOracle');
+const Chai = artifacts.require('Chai');
 const Treasury = artifacts.require('Treasury');
 
 const truffleAssert = require('truffle-assertions');
@@ -22,7 +21,6 @@ contract('Treasury - Lending', async (accounts) =>  {
     let daiJoin;
     let pot;
     let chai;
-    let chaiOracle;
     let treasury;
 
     let ilk = web3.utils.fromAscii("ETH-A")
@@ -68,9 +66,6 @@ contract('Treasury - Lending', async (accounts) =>  {
             dai.address,
         );
 
-        // Setup chaiOracle
-        chaiOracle = await ChaiOracle.new(pot.address, { from: owner });
-
         // Permissions
         await vat.rely(vat.address, { from: owner });
         await vat.rely(wethJoin.address, { from: owner });
@@ -82,13 +77,13 @@ contract('Treasury - Lending', async (accounts) =>  {
         await pot.setChi(chi, { from: owner });
         
         treasury = await Treasury.new(
-            dai.address,
-            chai.address,
-            chaiOracle.address,
-            weth.address,
-            daiJoin.address,
-            wethJoin.address,
             vat.address,
+            weth.address,
+            dai.address,
+            wethJoin.address,
+            daiJoin.address,
+            pot.address,
+            chai.address,
         );
         await treasury.orchestrate(owner, { from: owner });
         // await treasury.orchestrate(user, { from: owner });
@@ -124,9 +119,9 @@ contract('Treasury - Lending', async (accounts) =>  {
             web3.utils.toWei("0")
         );
         
-        await weth.deposit({ from: user, value: wethTokens});
-        await weth.transfer(treasury.address, wethTokens, { from: user }); 
-        await treasury.pushWeth({ from: owner });
+        await weth.deposit({ from: owner, value: wethTokens });
+        await weth.approve(treasury.address, wethTokens, { from: owner });
+        await treasury.pushWeth(owner, wethTokens, { from: owner });
 
         // Test transfer of collateral
         assert.equal(
@@ -144,8 +139,8 @@ contract('Treasury - Lending', async (accounts) =>  {
     describe("with posted collateral", () => {
         beforeEach(async() => {
             await weth.deposit({ from: owner, value: wethTokens});
-            await weth.transfer(treasury.address, wethTokens, { from: owner }); 
-            await treasury.pushWeth({ from: owner });
+            await weth.approve(treasury.address, wethTokens, { from: owner });
+            await treasury.pushWeth(owner, wethTokens, { from: owner });
         });
 
         it("returns borrowing power", async() => {
@@ -238,9 +233,8 @@ contract('Treasury - Lending', async (accounts) =>  {
 
             it("pushes dai that repays debt towards MakerDAO", async() => {
                 // Test `normalizedAmount >= normalizedDebt`
-                //await dai.approve(treasury.address, daiTokens, { from: user });
-                dai.transfer(treasury.address, daiTokens, { from: user }); // We can't stop donations
-                await treasury.pushDai({ from: owner });
+                await dai.approve(treasury.address, daiTokens, { from: user });
+                await treasury.pushDai(user, daiTokens, { from: owner });
 
                 assert.equal(
                     await dai.balanceOf(user),
@@ -259,8 +253,8 @@ contract('Treasury - Lending', async (accounts) =>  {
             it("pushes chai that repays debt towards MakerDAO", async() => {
                 await dai.approve(chai.address, daiTokens, { from: user });
                 await chai.join(user, daiTokens, { from: user });
-                await chai.transfer(treasury.address, chaiTokens, { from: user }); 
-                await treasury.pushChai({ from: owner });
+                await chai.approve(treasury.address, chaiTokens, { from: user }); 
+                await treasury.pushChai(user, chaiTokens, { from: owner });
 
                 assert.equal(
                     await dai.balanceOf(user),

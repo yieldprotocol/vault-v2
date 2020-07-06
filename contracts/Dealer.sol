@@ -1,34 +1,35 @@
 pragma solidity ^0.6.2;
 
-import "./helpers/Orchestrated.sol";
-import "@hq20/contracts/contracts/math/DecimalMath.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./interfaces/IVat.sol";
+import "./interfaces/IPot.sol";
 import "./interfaces/IChai.sol";
 import "./interfaces/IGasToken.sol";
-import "./interfaces/IDealer.sol";
-import "./interfaces/IOracle.sol";
 import "./interfaces/ITreasury.sol";
+import "./interfaces/IDealer.sol";
 import "./interfaces/IYDai.sol";
 import "./helpers/Constants.sol";
 import "./helpers/Delegable.sol";
+import "./helpers/DecimalMath.sol";
+import "./helpers/Orchestrated.sol";
 // import "@nomiclabs/buidler/console.sol";
 
 /// @dev A dealer takes collateral and issues yDai.
-contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
+contract Dealer is IDealer, Orchestrated(), Delegable(), DecimalMath, Constants {
     using SafeMath for uint256;
-    using DecimalMath for uint256;
-    using DecimalMath for uint8;
 
     event Posted(bytes32 indexed collateral, address indexed user, int256 amount);
     event Borrowed(bytes32 indexed collateral, uint256 indexed maturity, address indexed user, int256 amount);
 
-    ITreasury internal _treasury;
+    IVat internal _vat;
     IERC20 internal _dai;
+    IPot internal _pot;
     IGasToken internal _gasToken;
+    ITreasury internal _treasury;
+
     mapping(bytes32 => IERC20) internal _token;                       // Weth or Chai
-    mapping(bytes32 => IOracle) internal _oracle;                     // WethOracle or ChaiOracle
     mapping(uint256 => IYDai) public override series;                 // YDai series, indexed by maturity
     uint256[] internal seriesIterator;                                // We need to know all the series
 
@@ -41,21 +42,21 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
     bool public live = true;
 
     constructor (
-        address treasury_,
-        address dai_,
+        address vat_,
         address weth_,
-        address wethOracle_,
+        address dai_,
+        address pot_,
         address chai_,
-        address chaiOracle_,
-        address gasToken_
+        address gasToken_,
+        address treasury_
     ) public {
-        _treasury = ITreasury(treasury_);
+        _vat = IVat(vat_);
         _dai = IERC20(dai_);
-        _token[WETH] = IERC20(weth_);
-        _oracle[WETH] = IOracle(wethOracle_);
-        _token[CHAI] = IERC20(chai_);
-        _oracle[CHAI] = IOracle(chaiOracle_);
+        _pot = IPot(pot_);
         _gasToken = IGasToken(gasToken_);
+        _treasury = ITreasury(treasury_);
+        _token[WETH] = IERC20(weth_);
+        _token[CHAI] = IERC20(chai_);
     }
 
     modifier onlyLive() {
@@ -108,9 +109,9 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
     function inDai(bytes32 collateral, uint256 maturity, uint256 yDaiAmount) public returns (uint256) {
         if (series[maturity].isMature()){
             if (collateral == WETH){
-                return yDaiAmount.muld(series[maturity].rateGrowth(), RAY);
+                return muld(yDaiAmount, series[maturity].rateGrowth());
             } else if (collateral == CHAI) {
-                return yDaiAmount.muld(series[maturity].chiGrowth(), RAY);
+                return muld(yDaiAmount, series[maturity].chiGrowth());
             } else {
                 revert("Dealer: Unsupported collateral");
             }
@@ -123,9 +124,9 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
     function inYDai(bytes32 collateral, uint256 maturity, uint256 daiAmount) public returns (uint256) {
         if (series[maturity].isMature()){
             if (collateral == WETH){
-                return daiAmount.divd(series[maturity].rateGrowth(), RAY);
+                return divd(daiAmount, series[maturity].rateGrowth());
             } else if (collateral == CHAI) {
-                return daiAmount.divd(series[maturity].chiGrowth(), RAY);
+                return divd(daiAmount, series[maturity].chiGrowth());
             } else {
                 revert("Dealer: Unsupported collateral");
             }
@@ -148,8 +149,9 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
     function totalDebtDai(bytes32 collateral, address user) public override returns (uint256) {
         uint256 totalDebt;
         for (uint256 i = 0; i < seriesIterator.length; i += 1) {
-            // TODO: Skip next line if debtYDai[collateral][maturity][user] == 0
-            totalDebt = totalDebt + debtDai(collateral, seriesIterator[i], user);
+            if (debtYDai[collateral][seriesIterator[i]][user] > 0) {
+                totalDebt = totalDebt + debtDai(collateral, seriesIterator[i], user);
+            }
         } // We don't expect hundreds of maturities per dealer
         return totalDebt;
     }
@@ -160,7 +162,14 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
     //
     function powerOf(bytes32 collateral, address user) public returns (uint256) {
         // dai = price * collateral
-        return posted[collateral][user].muld(_oracle[collateral].price(), RAY);
+        if (collateral == WETH){
+            (,, uint256 spot,,) = _vat.ilks("ETH-A");  // Stability fee and collateralization ratio for Weth
+            return muld(posted[collateral][user], spot);
+        } else if (collateral == CHAI) {
+            uint256 chi = (now > _pot.rho()) ? _pot.drip() : _pot.chi();
+            return muld(posted[collateral][user], chi);
+        }
+        return 0;
     }
 
     /// @dev Return if the borrowing power for a given collateral of an user is equal or greater than its debt for the same collateral
@@ -175,15 +184,10 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
         validCollateral(collateral)
         onlyLive
     {
-        require(
-            _token[collateral].transferFrom(from, address(_treasury), amount),
-            "Dealer: Collateral transfer fail"
-        );
-
         if (collateral == WETH){ // TODO: Refactor Treasury to be `push(collateral, amount)`
-            _treasury.pushWeth();
+            _treasury.pushWeth(from, amount);
         } else if (collateral == CHAI) {
-            _treasury.pushChai();
+            _treasury.pushChai(from, amount);
         }
         
         posted[collateral][to] = posted[collateral][to].add(amount);
@@ -213,7 +217,10 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
             _treasury.pullChai(to, amount);
         }
 
-        emit Posted(collateral, to, -int256(amount)); // TODO: Watch for overflow
+        if (posted[collateral][from] == 0 && amount >= 0) {
+            returnBond(10);
+        }
+        emit Posted(collateral, from, -int256(amount)); // TODO: Watch for overflow
     }
 
     /// @dev Mint yDai for a given series for address `to` by locking its market value in collateral, user debt is increased in the given collateral.
@@ -280,11 +287,7 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
         onlyLive
     {
         uint256 toRepay = Math.min(daiAmount, debtDai(collateral, maturity, from));
-        require(
-            _dai.transferFrom(from, address(_treasury), toRepay),  // Take dai from user to Treasury
-            "Dealer: Dai transfer fail"
-        );
-        _treasury.pushDai();                                      // Have Treasury process the dai
+        _treasury.pushDai(from, toRepay);                                      // Have Treasury process the dai
         _repay(collateral, maturity, from, inYDai(collateral, maturity, toRepay));
     }
 
@@ -296,7 +299,6 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
     //    
     function _repay(bytes32 collateral, uint256 maturity, address from, uint256 yDaiAmount) internal {
         // `inDai` calculates the interest accrued for a given amount and series
-        // uint256 repaidDebt = yDaiAmount.muld(divdrup(RAY.unit(), inDai(collateral, maturity, RAY.unit()), RAY), RAY);
 
         debtYDai[collateral][maturity][from] = debtYDai[collateral][maturity][from].sub(yDaiAmount);
         systemDebtYDai[collateral][maturity] = systemDebtYDai[collateral][maturity].sub(yDaiAmount);
@@ -349,16 +351,5 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), Constants {
     /// @dev Frees a liquidation bond in gas tokens
     function returnBond(uint256 value) internal {
         _gasToken.transfer(msg.sender, value);
-    }
-
-    /// @dev Divides x between y, rounding up to the closest representable number.
-    /// Assumes x and y are both fixed point with `decimals` digits.
-     // TODO: Check if this needs to be taken from DecimalMath.sol
-    function divdrup(uint256 x, uint256 y, uint8 decimals)
-        internal pure returns (uint256)
-    {
-        uint256 z = x.mul((decimals + 1).unit()).div(y);
-        if (z % 10 > 0) return z / 10 + 1;
-        else return z / 10;
     }
 }

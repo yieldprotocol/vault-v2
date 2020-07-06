@@ -11,8 +11,6 @@ const Chai = artifacts.require('Chai');
 const GasToken = artifacts.require('GasToken1');
 
 // Common
-const ChaiOracle = artifacts.require('ChaiOracle');
-const WethOracle = artifacts.require('WethOracle');
 const Treasury = artifacts.require('Treasury');
 
 // YDai
@@ -39,8 +37,6 @@ contract('yDai - Delegable', async (accounts) =>  {
     let pot;
     let chai;
     let gasToken;
-    let chaiOracle;
-    let wethOracle;
     let treasury;
     let yDai1;
     let yDai2;
@@ -120,33 +116,27 @@ contract('yDai - Delegable', async (accounts) =>  {
         // Setup GasToken
         gasToken = await GasToken.new();
 
-        // Setup WethOracle
-        wethOracle = await WethOracle.new(vat.address, { from: owner });
-
-        // Setup ChaiOracle
-        chaiOracle = await ChaiOracle.new(pot.address, { from: owner });
-
         // Set treasury
         treasury = await Treasury.new(
-            dai.address,
-            chai.address,
-            chaiOracle.address,
-            weth.address,
-            daiJoin.address,
-            wethJoin.address,
             vat.address,
+            weth.address,
+            dai.address,
+            wethJoin.address,
+            daiJoin.address,
+            pot.address,
+            chai.address,
             { from: owner },
         );
 
         // Setup Dealer
         dealer = await Dealer.new(
-            treasury.address,
-            dai.address,
+            vat.address,
             weth.address,
-            wethOracle.address,
+            dai.address,
+            pot.address,
             chai.address,
-            chaiOracle.address,
             gasToken.address,
+            treasury.address,
             { from: owner },
         );
         treasury.orchestrate(dealer.address, { from: owner });
@@ -190,8 +180,8 @@ contract('yDai - Delegable', async (accounts) =>  {
         // Post collateral to MakerDAO through Treasury
         await treasury.orchestrate(owner, { from: owner });
         await weth.deposit({ from: owner, value: wethTokens1 });
-        await weth.transfer(treasury.address, wethTokens1, { from: owner }); 
-        await treasury.pushWeth({ from: owner });
+        await weth.approve(treasury.address, wethTokens1, { from: owner });
+        await treasury.pushWeth(owner, wethTokens1, { from: owner });
         assert.equal(
             (await vat.urns(ilk, treasury.address)).ink,
             wethTokens1.toString(),

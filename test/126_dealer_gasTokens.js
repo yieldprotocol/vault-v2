@@ -11,8 +11,6 @@ const Chai = artifacts.require('Chai');
 const GasToken = artifacts.require('GasToken1');
 
 // Common
-const ChaiOracle = artifacts.require('ChaiOracle');
-const WethOracle = artifacts.require('WethOracle');
 const Treasury = artifacts.require('Treasury');
 
 // YDai
@@ -39,8 +37,6 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
     let pot;
     let chai;
     let gasToken;
-    let chaiOracle;
-    let wethOracle;
     let treasury;
     let yDai1;
     let yDai2;
@@ -86,7 +82,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
     // This function shadows and uses global variables, careful.
     async function postWeth(user, wethTokens){
         await weth.deposit({ from: user, value: wethTokens });
-        await weth.approve(dealer.address, wethTokens, { from: user });
+        await weth.approve(treasury.address, wethTokens, { from: user });
         await dealer.post(WETH, user, user, wethTokens, { from: user });
     }
 
@@ -135,33 +131,27 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
         // Setup GasToken
         gasToken = await GasToken.new();
 
-        // Setup WethOracle
-        wethOracle = await WethOracle.new(vat.address, { from: owner });
-
-        // Setup ChaiOracle
-        chaiOracle = await ChaiOracle.new(pot.address, { from: owner });
-
         // Set treasury
         treasury = await Treasury.new(
-            dai.address,
-            chai.address,
-            chaiOracle.address,
-            weth.address,
-            daiJoin.address,
-            wethJoin.address,
             vat.address,
+            weth.address,
+            dai.address,
+            wethJoin.address,
+            daiJoin.address,
+            pot.address,
+            chai.address,
             { from: owner },
         );
 
         // Setup Dealer
         dealer = await Dealer.new(
-            treasury.address,
-            dai.address,
+            vat.address,
             weth.address,
-            wethOracle.address,
+            dai.address,
+            pot.address,
             chai.address,
-            chaiOracle.address,
             gasToken.address,
+            treasury.address,
             { from: owner },
         );
         treasury.orchestrate(dealer.address, { from: owner });
@@ -232,7 +222,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
     }); */
 
     it("mints gas tokens when borrowing", async() => {
-        await dai.approve(dealer.address, daiTokens, { from: user1 });
+        await dai.approve(treasury.address, daiTokens, { from: user1 });
         await dealer.borrow(WETH, maturity1, user1, daiTokens, { from: user1 });
 
         assert.equal(
@@ -251,7 +241,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
         );
         await gasToken.approve(dealer.address, gasTokens, { from: user1 });
 
-        await dai.approve(dealer.address, daiTokens, { from: user1 });
+        await dai.approve(treasury.address, daiTokens, { from: user1 });
         await dealer.borrow(WETH, maturity1, user1, daiTokens, { from: user1 });
 
         assert.equal(
@@ -278,7 +268,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
 
     describe("with debt", () => {
         beforeEach(async() => {
-            await dai.approve(dealer.address, daiTokens, { from: user1 });
+            await dai.approve(treasury.address, daiTokens, { from: user1 });
             await dealer.borrow(WETH, maturity1, user1, daiTokens, { from: user1 });
 
             assert.equal(
@@ -289,7 +279,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
         });
 
         it("mints gas tokens when a new user borrows for the first time", async() => {
-            await dai.approve(dealer.address, daiTokens, { from: user2 });
+            await dai.approve(treasury.address, daiTokens, { from: user2 });
             await dealer.borrow(WETH, maturity1, user2, daiTokens, { from: user2 });
     
             assert.equal(
@@ -300,7 +290,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
         });
 
         it("does not mint more gas tokens when same user borrows again", async() => {
-            await dai.approve(dealer.address, daiTokens, { from: user1 });
+            await dai.approve(treasury.address, daiTokens, { from: user1 });
             await dealer.borrow(WETH, maturity1, user1, daiTokens, { from: user1 });
     
             assert.equal(

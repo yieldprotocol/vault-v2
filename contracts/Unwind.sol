@@ -11,22 +11,21 @@ import "./interfaces/IJug.sol";
 import "./interfaces/IPot.sol";
 import "./interfaces/IEnd.sol";
 import "./interfaces/IChai.sol";
-import "./interfaces/IOracle.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IDealer.sol";
 import "./interfaces/IYDai.sol";
 import "./interfaces/ILiquidations.sol";
 import "./helpers/Constants.sol";
+import "./helpers/DecimalMath.sol";
 // import "@nomiclabs/buidler/console.sol";
 
 
 /// @dev Treasury manages the Dai, interacting with MakerDAO's vat and chai when needed.
-contract Unwind is Ownable(), Constants {
+contract Unwind is Ownable(), Constants, DecimalMath {
     using SafeCast for uint256;
     using SafeMath for uint256;
 
     bytes32 public constant collateralType = "ETH-A";
-    uint256 public constant UNIT = 1000000000000000000000000000;
 
     IVat internal _vat;
     IDaiJoin internal _daiJoin;
@@ -36,7 +35,6 @@ contract Unwind is Ownable(), Constants {
     IPot internal _pot;
     IEnd internal _end;
     IChai internal _chai;
-    IOracle internal _chaiOracle;
     ITreasury internal _treasury;
     IDealer internal _dealer;
     ILiquidations internal _liquidations;
@@ -61,7 +59,6 @@ contract Unwind is Ownable(), Constants {
         address pot_,
         address end_,
         address chai_,
-        address chaiOracle_,
         address treasury_,
         address dealer_,
         address liquidations_
@@ -75,23 +72,12 @@ contract Unwind is Ownable(), Constants {
         _pot = IPot(pot_);
         _end = IEnd(end_);
         _chai = IChai(chai_);
-        _chaiOracle = IOracle(chaiOracle_);
         _treasury = ITreasury(treasury_);
         _dealer = IDealer(dealer_);
         _liquidations = ILiquidations(liquidations_);
 
         _vat.hope(address(_treasury));
         _vat.hope(address(_end));
-    }
-
-    /// @dev Multiplies x and y, assuming they are both fixed point with 27 digits.
-    function muld(uint256 x, uint256 y) internal pure returns (uint256) {
-        return x.mul(y).div(UNIT);
-    }
-
-    /// @dev Divides x between y, assuming they are both fixed point with 18 digits.
-    function divd(uint256 x, uint256 y) internal pure returns (uint256) {
-        return x.mul(UNIT).div(y);
     }
 
     /// @dev max(0, x - y)
@@ -146,23 +132,36 @@ contract Unwind is Ownable(), Constants {
     /// @dev Calculates how much profit is in the system and transfers it to the beneficiary
     function skimWhileLive(address beneficiary) public { // TODO: Hardcode
         require(
-            live == true,
+            live == true, // If DSS is not live this method will fail later on.
             "Unwind: Can only skimWhileLive if live"
         );
 
         uint256 profit = _chai.balanceOf(address(_treasury));
-        profit = profit.add(yDaiProfit());
+        profit = profit.add(_yDaiProfit(getChi(), getRate()));
         profit = profit.sub(divd(_treasury.debt(), getChi()));
         profit = profit.sub(_dealer.systemPosted(CHAI));
 
         _treasury.pullChai(beneficiary, profit);
     }
 
-    /// @dev Returns the profit accummulated in the system due to yDai supply and debt, in chai.
-    function yDaiProfit() public returns (uint256) {
+    /// @dev Calculates how much profit is in the system and transfers it to the beneficiary
+    function skimDssShutdown(address beneficiary) public { // TODO: Hardcode
+        require(settled && cashedOut, "Unwind: Not ready");
+
+        uint256 chi = _pot.chi();
+        (, uint256 rate,,,) = _vat.ilks("ETH-A");
+        uint256 profit = _weth.balanceOf(address(this));
+
+        profit = profit.add(muld(muld(_yDaiProfit(chi, rate), _fix), chi));
+        profit = profit.sub(_dealer.systemPosted(WETH));
+        profit = profit.sub(muld(muld(_dealer.systemPosted(CHAI), _fix), chi));
+
+        _weth.transfer(beneficiary, profit);
+    }
+
+    /// @dev Returns the profit accummulated in the system due to yDai supply and debt, in chai, for a given chi and rate.
+    function _yDaiProfit(uint256 chi, uint256 rate) internal returns (uint256) {
         uint256 profit;
-        uint256 chi = getChi();
-        uint256 rate = getRate();
 
         for (uint256 i = 0; i < seriesIterator.length; i += 1) {
             uint256 maturity = seriesIterator[i];
@@ -227,7 +226,7 @@ contract Unwind is Ownable(), Constants {
         cashedOut = true;
 
         _fix = _end.fix(collateralType);
-        _chi = _chaiOracle.price();
+        _chi = _pot.chi();
     }
 
     /// @dev Settles a series position in Dealer, and then returns any remaining collateral as weth using the unwind Dai to Weth price.
@@ -256,20 +255,5 @@ contract Unwind is Ownable(), Constants {
             user,
             muld(muld(yDaiAmount, yDai.chiGrowth()), _fix)
         );
-    }
-
-    /// @dev Calculates how much profit is in the system and transfers it to the beneficiary
-    // TODO: Test
-    function skimDssShutdown(address beneficiary) public { // TODO: Hardcode
-        require(settled && cashedOut, "Unwind: Not ready");
-
-        uint256 chi = getChi();
-        uint256 profit = _weth.balanceOf(address(this));
-
-        profit = profit.add(muld(muld(yDaiProfit(), _fix), chi));
-        profit = profit.sub(_dealer.systemPosted(WETH));
-        profit = profit.sub(muld(muld(_dealer.systemPosted(CHAI), _fix), chi));
-
-        _weth.transfer(beneficiary, profit);
     }
 }

@@ -10,15 +10,17 @@ import "../helpers/Delegable.sol";
 contract EthProxy is Delegable(), Constants {
 
     IWeth internal _weth;
+    address internal _treasury;
     IDealer internal _dealer;
 
     constructor (
         address payable weth_,
+        address treasury_,
         address dealer_
     ) public {
         _weth = IWeth(weth_);
         _dealer = IDealer(dealer_);
-        _weth.approve(address(_dealer), uint(-1));
+        _weth.approve(address(treasury_), uint(-1));
     }
 
     receive() external payable { }

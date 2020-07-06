@@ -11,8 +11,6 @@ const Chai = artifacts.require('Chai');
 const GasToken = artifacts.require('GasToken1');
 
 // Common
-const ChaiOracle = artifacts.require('ChaiOracle');
-const WethOracle = artifacts.require('WethOracle');
 const Treasury = artifacts.require('Treasury');
 
 // YDai
@@ -43,8 +41,6 @@ contract('yDai', async (accounts) =>  {
     let end;
     let chai;
     let gasToken;
-    let chaiOracle;
-    let wethOracle;
     let treasury;
     let yDai1;
     let yDai2;
@@ -124,17 +120,14 @@ contract('yDai', async (accounts) =>  {
             dai.address,
         );
 
-        // Setup chaiOracle
-        chaiOracle = await ChaiOracle.new(pot.address, { from: owner });
-
         treasury = await Treasury.new(
-            dai.address,
-            chai.address,
-            chaiOracle.address,
-            weth.address,
-            daiJoin.address,
-            wethJoin.address,
             vat.address,
+            weth.address,
+            dai.address,
+            wethJoin.address,
+            daiJoin.address,
+            pot.address,
+            chai.address,
         );
     
         // Setup yDai1
@@ -162,11 +155,11 @@ contract('yDai', async (accounts) =>  {
         await pot.setChi(chi1, { from: owner }); // Set the savings accumulator
 
         // Deposit some weth to treasury so that redeem can pull some dai
-        await weth.deposit({ from: owner, value: wethTokens2 });
-        await weth.transfer(treasury.address, wethTokens2, { from: owner });
         await treasury.orchestrate(owner, { from: owner });
-        await treasury.pushWeth();
-                
+        await weth.deposit({ from: owner, value: wethTokens2 });
+        await weth.approve(treasury.address, wethTokens2, { from: owner });
+        await treasury.pushWeth(owner, wethTokens2, { from: owner });
+
         // Mint some yDai1 the sneaky way, only difference is that the Dealer doesn't record the user debt.
         await yDai1.orchestrate(owner, { from: owner });
         await yDai1.mint(user1, daiTokens1, { from: owner });

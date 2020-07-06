@@ -11,8 +11,6 @@ const Chai = artifacts.require('Chai');
 const GasToken = artifacts.require('GasToken1');
 
 // Common
-const ChaiOracle = artifacts.require('ChaiOracle');
-const WethOracle = artifacts.require('WethOracle');
 const Treasury = artifacts.require('Treasury');
 
 // YDai
@@ -29,7 +27,7 @@ const truffleAssert = require('truffle-assertions');
 const { BN, expectRevert, expectEvent } = require('@openzeppelin/test-helpers');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
 
-contract('Unwind - Dealer', async (accounts) =>  {
+contract('Unwind - Skim', async (accounts) =>  {
     let [ owner, user1, user2, user3, user4 ] = accounts;
     let vat;
     let weth;
@@ -41,8 +39,6 @@ contract('Unwind - Dealer', async (accounts) =>  {
     let end;
     let chai;
     let gasToken;
-    let chaiOracle;
-    let wethOracle;
     let treasury;
     let yDai1;
     let yDai2;
@@ -108,7 +104,7 @@ contract('Unwind - Dealer', async (accounts) =>  {
     // This function shadows and uses global variables, careful.
     async function postWeth(user, wethTokens){
         await weth.deposit({ from: user, value: wethTokens });
-        await weth.approve(dealer.address, wethTokens, { from: user });
+        await weth.approve(treasury.address, wethTokens, { from: user });
         await dealer.post(WETH, user, user, wethTokens, { from: user });
     }
 
@@ -116,7 +112,7 @@ contract('Unwind - Dealer', async (accounts) =>  {
     // This function shadows and uses global variables, careful.
     async function postChai(user, chaiTokens){
         await getChai(user, chaiTokens);
-        await chai.approve(dealer.address, chaiTokens, { from: user });
+        await chai.approve(treasury.address, chaiTokens, { from: user });
         await dealer.post(CHAI, user, user, chaiTokens, { from: user });
     }
 
@@ -190,33 +186,27 @@ contract('Unwind - Dealer', async (accounts) =>  {
         // Setup GasToken
         gasToken = await GasToken.new();
 
-        // Setup WethOracle
-        wethOracle = await WethOracle.new(vat.address, { from: owner });
-
-        // Setup ChaiOracle
-        chaiOracle = await ChaiOracle.new(pot.address, { from: owner });
-
         // Set treasury
         treasury = await Treasury.new(
-            dai.address,
-            chai.address,
-            chaiOracle.address,
-            weth.address,
-            daiJoin.address,
-            wethJoin.address,
             vat.address,
+            weth.address,
+            dai.address,
+            wethJoin.address,
+            daiJoin.address,
+            pot.address,
+            chai.address,
             { from: owner },
         );
 
         // Setup Dealer
         dealer = await Dealer.new(
-            treasury.address,
-            dai.address,
+            vat.address,
             weth.address,
-            wethOracle.address,
+            dai.address,
+            pot.address,
             chai.address,
-            chaiOracle.address,
             gasToken.address,
+            treasury.address,
             { from: owner },
         );
         await treasury.orchestrate(dealer.address, { from: owner });
@@ -256,6 +246,7 @@ contract('Unwind - Dealer', async (accounts) =>  {
         // Setup EthProxy
         ethProxy = await EthProxy.new(
             weth.address,
+            treasury.address,
             dealer.address,
             { from: owner },
         );
@@ -281,7 +272,6 @@ contract('Unwind - Dealer', async (accounts) =>  {
             pot.address,
             end.address,
             chai.address,
-            chaiOracle.address,
             treasury.address,
             dealer.address,
             liquidations.address,
@@ -338,7 +328,7 @@ contract('Unwind - Dealer', async (accounts) =>  {
 
         it("chai held as collateral doesn't count as profits", async() => {
             await getChai(user2, chaiTokens);
-            await chai.approve(dealer.address, chaiTokens, { from: user2 });
+            await chai.approve(treasury.address, chaiTokens, { from: user2 });
             await dealer.post(CHAI, user2, user2, chaiTokens, { from: user2 });
 
             await unwind.skimWhileLive(user1, { from: owner });
@@ -381,10 +371,6 @@ contract('Unwind - Dealer', async (accounts) =>  {
 
         describe("with dai debt", () => {
             beforeEach(async() => {
-                await weth.deposit({ from: owner, value: wethTokens });
-                await weth.approve(wethJoin.address, wethTokens, { from: owner });
-                await weth.transfer(treasury.address, wethTokens, { from: owner });
-                await treasury.pushWeth({ from: owner });
                 await treasury.pullDai(owner, daiTokens, { from: owner });
                 // profit = 9 chai
             });
