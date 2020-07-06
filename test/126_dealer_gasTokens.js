@@ -27,7 +27,7 @@ const { BN, expectRevert, expectEvent } = require('@openzeppelin/test-helpers');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
 
 contract('Dealer - Gas Tokens', async (accounts) =>  {
-    let [ owner, user ] = accounts;
+    let [ owner, user1, user2 ] = accounts;
     let vat;
     let weth;
     let wethJoin;
@@ -63,6 +63,28 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
     let maturity2;
 
     const gasTokens = 10;
+
+    async function getDai(user, daiTokens){
+        await vat.hope(daiJoin.address, { from: user });
+        await vat.hope(wethJoin.address, { from: user });
+
+        const daiDebt = divRay(daiTokens, rate);
+        const wethTokens = divRay(daiTokens, spot);
+
+        await weth.deposit({ from: user, value: wethTokens });
+        await weth.approve(wethJoin.address, wethTokens, { from: user });
+        await wethJoin.join(user, wethTokens, { from: user });
+        await vat.frob(ilk, user, user, user, wethTokens, daiDebt, { from: user });
+        await daiJoin.exit(user, daiTokens, { from: user });
+    }
+
+    // Convert eth to weth and post it to yDai
+    // This function shadows and uses global variables, careful.
+    async function postWeth(user, wethTokens){
+        await weth.deposit({ from: user, value: wethTokens });
+        await weth.approve(treasury.address, wethTokens, { from: user });
+        await dealer.post(WETH, user, user, wethTokens, { from: user });
+    }
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
@@ -169,6 +191,10 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
         // Tests setup
         await pot.setChi(chi, { from: owner });
         await vat.fold(ilk, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
+        await getDai(user1, daiTokens.mul(2));
+        await getDai(user2, daiTokens);
+        await postWeth(user1, wethTokens.mul(2));
+        await postWeth(user2, wethTokens);
     });
 
     afterEach(async() => {
@@ -195,10 +221,9 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
         console.log();
     }); */
 
-    it("mints gas tokens when posting", async() => {
-        await weth.deposit({ from: owner, value: wethTokens });
-        await weth.approve(dealer.address, wethTokens, { from: owner }); 
-        await dealer.post(WETH, owner, owner, wethTokens, { from: owner });
+    it("mints gas tokens when borrowing", async() => {
+        await dai.approve(treasury.address, daiTokens, { from: user1 });
+        await dealer.borrow(WETH, maturity1, user1, daiTokens, { from: user1 });
 
         assert.equal(
             await gasToken.balanceOf(dealer.address),
@@ -207,21 +232,20 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
         );
     });
 
-    it("takes gas tokens when a new user posts for the first time, if available", async() => {
-        await gasToken.mint(gasTokens, { from: owner });
+    it("takes gas tokens when a new user1 posts for the first time, if available", async() => {
+        await gasToken.mint(gasTokens, { from: user1 });
         assert.equal(
-            await gasToken.balanceOf(owner),
+            await gasToken.balanceOf(user1),
             gasTokens,
             "User should have gasTokens",
         );
-        await gasToken.approve(dealer.address, gasTokens, { from: owner });
+        await gasToken.approve(dealer.address, gasTokens, { from: user1 });
 
-        await weth.deposit({ from: owner, value: wethTokens });
-        await weth.approve(dealer.address, wethTokens, { from: owner }); 
-        await dealer.post(WETH, owner, owner, wethTokens, { from: owner });
+        await dai.approve(treasury.address, daiTokens, { from: user1 });
+        await dealer.borrow(WETH, maturity1, user1, daiTokens, { from: user1 });
 
         assert.equal(
-            await gasToken.balanceOf(owner),
+            await gasToken.balanceOf(user1),
             0,
             "User should have no gasTokens",
         );
@@ -232,21 +256,20 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
         );
     });
 
-    it("does not transfer gas tokens if withdrawal amount and posted collateral are zero", async() => {
-        await dealer.withdraw(WETH, owner, owner, 0, { from: owner });
+    it("does not transfer gas tokens if borrowing amount and debt are zero", async() => {
+        await dealer.borrow(WETH, maturity1, user1, 0, { from: user1 });
 
         assert.equal(
-            await gasToken.balanceOf(owner),
+            await gasToken.balanceOf(user1),
             0,
-            "Owner should not have gasTokens",
+            "User should not have gasTokens",
         );
     });
 
-    describe("with posted collateral", () => {
+    describe("with debt", () => {
         beforeEach(async() => {
-            await weth.deposit({ from: owner, value: wethTokens });
-            await weth.approve(dealer.address, wethTokens, { from: owner }); 
-            await dealer.post(WETH, owner, owner, wethTokens, { from: owner });
+            await dai.approve(treasury.address, daiTokens, { from: user1 });
+            await dealer.borrow(WETH, maturity1, user1, daiTokens, { from: user1 });
 
             assert.equal(
                 await gasToken.balanceOf(dealer.address),
@@ -255,10 +278,9 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
             );
         });
 
-        it("mints gas tokens when a new user posts for the first time", async() => {
-            await weth.deposit({ from: user, value: wethTokens });
-            await weth.approve(dealer.address, wethTokens, { from: user }); 
-            await dealer.post(WETH, user, user, wethTokens, { from: user });
+        it("mints gas tokens when a new user borrows for the first time", async() => {
+            await dai.approve(treasury.address, daiTokens, { from: user2 });
+            await dealer.borrow(WETH, maturity1, user2, daiTokens, { from: user2 });
     
             assert.equal(
                 await gasToken.balanceOf(dealer.address),
@@ -267,10 +289,9 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
             );
         });
 
-        it("does not mint more gas tokens when same user posts again", async() => {
-            await weth.deposit({ from: owner, value: wethTokens });
-            await weth.approve(dealer.address, wethTokens, { from: owner }); 
-            await dealer.post(WETH, owner, owner, wethTokens, { from: owner });
+        it("does not mint more gas tokens when same user borrows again", async() => {
+            await dai.approve(treasury.address, daiTokens, { from: user1 });
+            await dealer.borrow(WETH, maturity1, user1, daiTokens, { from: user1 });
     
             assert.equal(
                 await gasToken.balanceOf(dealer.address),
@@ -279,24 +300,26 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
             );
         });
 
-        it("does not transfer gas tokens on partial withdrawals", async() => {
-            await dealer.withdraw(WETH, owner, owner, wethTokens.sub(1), { from: owner });
+        it("does not transfer gas tokens on partial repayments", async() => {
+            await dealer.repayYDai(WETH, maturity1, user1, daiTokens.sub(1), { from: user1 });
 
             assert.equal(
-                await gasToken.balanceOf(owner),
+                await gasToken.balanceOf(user1),
                 0,
-                "Owner should not have gasTokens",
+                "User should not have gasTokens",
             );
         });
 
-        it("transfers gas tokens on withdrawal to zero", async() => {
-            await dealer.withdraw(WETH, owner, owner, wethTokens, { from: owner });
+        it("transfers gas tokens on repayment of all debt", async() => {
+            await dealer.repayYDai(WETH, maturity1, user1, daiTokens, { from: user1 });
 
             assert.equal(
-                await gasToken.balanceOf(owner),
+                await gasToken.balanceOf(user1),
                 gasTokens.toString(),
-                "Owner should have gasTokens",
+                "User should have gasTokens",
             );
         });
+
+        // TODO: Test gas tokens for `grab`
     });
 });

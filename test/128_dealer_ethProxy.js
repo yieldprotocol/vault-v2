@@ -169,7 +169,7 @@ contract('Dealer - EthProxy', async (accounts) =>  {
         // Setup EthProxy
         ethProxy = await EthProxy.new(
             weth.address,
-            gasToken.address,
+            treasury.address,
             dealer.address,
             { from: owner },
         );
@@ -321,16 +321,6 @@ contract('Dealer - EthProxy', async (accounts) =>  {
                 await dealer.powerOf.call(WETH, owner),
                 0,
                 "Owner should not have borrowing power",
-            );
-        });
-
-        it("gas tokens are passed on to user", async() => {
-            await ethProxy.withdraw(owner, owner, wethTokens, { from: owner });
-
-            assert.equal(
-                await gasToken.balanceOf(owner),
-                10,
-                "Owner should have gas tokens",
             );
         });
     });

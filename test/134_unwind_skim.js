@@ -27,7 +27,7 @@ const truffleAssert = require('truffle-assertions');
 const { BN, expectRevert, expectEvent } = require('@openzeppelin/test-helpers');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
 
-contract('Unwind - Dealer', async (accounts) =>  {
+contract('Unwind - Skim', async (accounts) =>  {
     let [ owner, user1, user2, user3, user4 ] = accounts;
     let vat;
     let weth;
@@ -104,7 +104,7 @@ contract('Unwind - Dealer', async (accounts) =>  {
     // This function shadows and uses global variables, careful.
     async function postWeth(user, wethTokens){
         await weth.deposit({ from: user, value: wethTokens });
-        await weth.approve(dealer.address, wethTokens, { from: user });
+        await weth.approve(treasury.address, wethTokens, { from: user });
         await dealer.post(WETH, user, user, wethTokens, { from: user });
     }
 
@@ -112,7 +112,7 @@ contract('Unwind - Dealer', async (accounts) =>  {
     // This function shadows and uses global variables, careful.
     async function postChai(user, chaiTokens){
         await getChai(user, chaiTokens);
-        await chai.approve(dealer.address, chaiTokens, { from: user });
+        await chai.approve(treasury.address, chaiTokens, { from: user });
         await dealer.post(CHAI, user, user, chaiTokens, { from: user });
     }
 
@@ -246,7 +246,7 @@ contract('Unwind - Dealer', async (accounts) =>  {
         // Setup EthProxy
         ethProxy = await EthProxy.new(
             weth.address,
-            gasToken.address,
+            treasury.address,
             dealer.address,
             { from: owner },
         );
@@ -328,7 +328,7 @@ contract('Unwind - Dealer', async (accounts) =>  {
 
         it("chai held as collateral doesn't count as profits", async() => {
             await getChai(user2, chaiTokens);
-            await chai.approve(dealer.address, chaiTokens, { from: user2 });
+            await chai.approve(treasury.address, chaiTokens, { from: user2 });
             await dealer.post(CHAI, user2, user2, chaiTokens, { from: user2 });
 
             await unwind.skimWhileLive(user1, { from: owner });

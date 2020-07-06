@@ -180,8 +180,8 @@ contract('yDai - Delegable', async (accounts) =>  {
         // Post collateral to MakerDAO through Treasury
         await treasury.orchestrate(owner, { from: owner });
         await weth.deposit({ from: owner, value: wethTokens1 });
-        await weth.transfer(treasury.address, wethTokens1, { from: owner }); 
-        await treasury.pushWeth({ from: owner });
+        await weth.approve(treasury.address, wethTokens1, { from: owner });
+        await treasury.pushWeth(owner, wethTokens1, { from: owner });
         assert.equal(
             (await vat.urns(ilk, treasury.address)).ink,
             wethTokens1.toString(),

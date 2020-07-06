@@ -1,6 +1,5 @@
 pragma solidity ^0.6.10;
 
-import "../interfaces/IGasToken.sol";
 import "../interfaces/IDealer.sol";
 import "../interfaces/IWeth.sol";
 import "../helpers/Constants.sol";
@@ -11,19 +10,17 @@ import "../helpers/Delegable.sol";
 contract EthProxy is Delegable(), Constants {
 
     IWeth internal _weth;
-    IGasToken internal _gasToken;
+    address internal _treasury;
     IDealer internal _dealer;
 
     constructor (
         address payable weth_,
-        address gasToken_,
+        address treasury_,
         address dealer_
     ) public {
         _weth = IWeth(weth_);
-        _gasToken = IGasToken(gasToken_);
         _dealer = IDealer(dealer_);
-        // TODO: Fix for migrations
-        _weth.approve(address(_dealer), uint(-1));
+        _weth.approve(address(treasury_), uint(-1));
     }
 
     receive() external payable { }
@@ -39,10 +36,5 @@ contract EthProxy is Delegable(), Constants {
         _dealer.withdraw(WETH, from, address(this), amount);
         _weth.withdraw(amount);
         to.transfer(amount);
-
-        uint256 gasRefund = _gasToken.balanceOf(address(this));
-        if (gasRefund > 0) {
-            _gasToken.transfer(msg.sender, gasRefund);
-        }
     }
 }

@@ -242,7 +242,7 @@ contract('Dealer - Chai', async (accounts) =>  {
             "User1 has borrowing power",
         );
         
-        await chai.approve(dealer.address, chaiTokens, { from: user1 });
+        await chai.approve(treasury.address, chaiTokens, { from: user1 });
         await dealer.post(CHAI, user1, user1, chaiTokens, { from: user1 });
 
         assert.equal(
@@ -259,7 +259,7 @@ contract('Dealer - Chai', async (accounts) =>  {
 
     describe("with posted chai", () => {
         beforeEach(async() => {
-            await chai.approve(dealer.address, chaiTokens, { from: user1 });
+            await chai.approve(treasury.address, chaiTokens, { from: user1 });
             await dealer.post(CHAI, user1, user1, chaiTokens, { from: user1 });
         });
 
@@ -383,7 +383,7 @@ contract('Dealer - Chai', async (accounts) =>  {
                     "User1 does not have debt",
                 );
 
-                await yDai1.approve(dealer.address, daiTokens, { from: user1 });
+                await yDai1.approve(treasury.address, daiTokens, { from: user1 });
                 await dealer.repayYDai(CHAI, maturity1, user1, daiTokens, { from: user1 });
     
                 assert.equal(
@@ -413,7 +413,7 @@ contract('Dealer - Chai', async (accounts) =>  {
                     "User1 does not have debt",
                 );
 
-                await dai.approve(dealer.address, daiTokens, { from: user1 });
+                await dai.approve(treasury.address, daiTokens, { from: user1 });
                 await dealer.repayDai(CHAI, maturity1, user1, daiTokens, { from: user1 });
     
                 assert.equal(
@@ -445,7 +445,7 @@ contract('Dealer - Chai', async (accounts) =>  {
                     "User1 does not have debt",
                 );
 
-                await yDai1.approve(dealer.address, yDaiTokens, { from: user1 });
+                await yDai1.approve(treasury.address, yDaiTokens, { from: user1 });
                 await dealer.repayYDai(CHAI, maturity1, user1, yDaiTokens, { from: user1 });
     
                 assert.equal(
@@ -522,7 +522,7 @@ contract('Dealer - Chai', async (accounts) =>  {
                 // TODO: Fix whatever makes `getDai` to be Vat/not-safe
                 /* it("more Dai is required to repay after maturity as chi increases", async() => {
                     await getDai(user1, daiTokens); // daiTokens is not going to be enough anymore
-                    await dai.approve(dealer.address, daiTokens, { from: user1 });
+                    await dai.approve(treasury.address, daiTokens, { from: user1 });
                     await dealer.repayDai(CHAI, maturity1, user1, daiTokens, { from: user1 });
         
                     assert.equal(
