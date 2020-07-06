@@ -65,15 +65,13 @@ contract Splitter is IFlashMinter, Constants, DecimalMath {
     }
 
     function encode(bool direction, uint112 wethAmount, uint112 daiAmount) internal returns (bytes32) {
-        bytes32 data;
+        uint256 data;
 
-        /* assembly {
-            data := mstore(data, and(data, direction))              // Store `direction` at the beginning of data
-            data := mstore(data, and(data, shr(0xf, wethAmount)))   // Store `wethAmount` 16 bits to the right of the data start
-            data := mstore(data, and(data, shr(0x80, daiAmount)))   // Store `daiAmount` 128 bites to the right of the data start
-        } */
+        data = direction ? 1 : 0;
+        data = data & (uint256(wethAmount) << 16);
+        data = data & (uint256(daiAmount) << 128);
 
-        return data;
+        return bytes32(data);
     }
 
     function decode(bytes32 data) internal returns (bool, uint112, uint112) {
@@ -81,11 +79,9 @@ contract Splitter is IFlashMinter, Constants, DecimalMath {
         uint112 wethAmount;
         uint112 daiAmount;
 
-        /* assembly {
-            direction := and(mload(data), 0xf000000000000000)
-            wethAmount := shl(0xf, and(mload(data), 0x0fffffff00000000))
-            daiAmount := shl(0x80, and(mload(data), 0x00000000fffffff0))
-        } */
+        direction = (uint256(data) & 0xF) == 1 ? true : false;
+        wethAmount = uint112((uint256(data) & 0x0000000000000000FFFFFFFFFFFFFFF0) >> 16);
+        daiAmount = uint112((uint256(data) & 0x0FFFFFFFFFFFFFFF0000000000000000) >> 128);
 
         return (direction, wethAmount, daiAmount);
     }
