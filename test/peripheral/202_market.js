@@ -29,6 +29,7 @@ const truffleAssert = require('truffle-assertions');
 const helper = require('ganache-time-traveler');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('../shared/utils');
 const { BN, expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
+const { assert } = require('chai');
 
 contract('Market', async (accounts) =>  {
     let [ owner, user1, user2 ] = accounts;
@@ -68,6 +69,7 @@ contract('Market', async (accounts) =>  {
     const daiDebt1 = toWad(96);
     const daiTokens1 = mulRay(daiDebt1, rate1);
     const wethTokens1 = divRay(daiTokens1, spot);
+    const chaiTokens1 = divRay(daiTokens1, chi1);
 
     const daiTokens2 = mulRay(daiTokens1, chiDifferential);
     const wethTokens2 = mulRay(wethTokens1, chiDifferential)
@@ -80,6 +82,31 @@ contract('Market', async (accounts) =>  {
     const savings2 = mulRay(savings1, chiDifferential);
     const yDaiSurplus = subBN(daiTokens2, daiTokens1);
     const savingsSurplus = subBN(savings2, daiTokens2);
+
+    // Convert eth to weth and use it to borrow `daiTokens` from MakerDAO
+    // This function shadows and uses global variables, careful.
+    async function getDai(user, daiTokens){
+        await vat.hope(daiJoin.address, { from: user });
+        await vat.hope(wethJoin.address, { from: user });
+
+        const daiDebt = divRay(daiTokens, rate1);
+        const wethTokens = divRay(daiTokens, spot);
+
+        await weth.deposit({ from: user, value: wethTokens });
+        await weth.approve(wethJoin.address, wethTokens, { from: user });
+        await wethJoin.join(user, wethTokens, { from: user });
+        await vat.frob(ilk, user, user, user, wethTokens, daiDebt, { from: user });
+        await daiJoin.exit(user, daiTokens, { from: user });
+    }
+
+    // From eth, borrow `daiTokens` from MakerDAO and convert them to chai
+    // This function shadows and uses global variables, careful.
+    async function getChai(user, chaiTokens){
+        const daiTokens = mulRay(chaiTokens, chi1);
+        await getDai(user, daiTokens);
+        await dai.approve(chai.address, daiTokens, { from: user });
+        await chai.join(user, daiTokens, { from: user });
+    }
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
@@ -160,6 +187,9 @@ contract('Market', async (accounts) =>  {
         await vat.fold(ilk, vat.address, subBN(rate1, toRay(1)), { from: owner }); // Fold only the increase from 1.0
         await pot.setChi(chi1, { from: owner }); // Set the savings accumulator
 
+        // Allow owner to mint yDai the sneaky way, without recording a debt in dealer
+        await yDai1.orchestrate(owner, { from: owner });
+
     });
 
     afterEach(async() => {
@@ -194,5 +224,20 @@ contract('Market', async (accounts) =>  {
 
         const g = (new BN('999')).mul(b).div(new BN('1000')).add(new BN(1)); // Close enough
         expect(new BN(await market.g())).to.be.bignumber.equal(g);
+    });
+
+    it("adds initial liquidity", async() => {
+        await getChai(user1, chaiTokens1)
+        await yDai1.mint(user1, daiTokens1, { from: owner });
+
+        await chai.approve(market.address, chaiTokens1, { from: user1 });
+        await yDai1.approve(market.address, daiTokens1, { from: user1 });
+        await market.init(chaiTokens1, daiTokens1, { from: user1 });
+
+        assert.equal(
+            await market.balanceOf(user1),
+            1000,
+            "User1 should have 1000 liquidity tokens",
+        );
     });
 });
