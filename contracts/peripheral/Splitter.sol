@@ -64,7 +64,7 @@ contract Splitter is IFlashMinter, Constants, DecimalMath {
         return int256(x);
     }
 
-    function encode(bool direction, uint112 wethAmount, uint112 daiAmount) internal returns (bytes32) {
+    /*f unction encode(bool direction, uint112 wethAmount, uint112 daiAmount) internal returns (bytes32) {
         uint256 data;
 
         data = direction ? 1 : 0;
@@ -84,22 +84,22 @@ contract Splitter is IFlashMinter, Constants, DecimalMath {
         daiAmount = uint112((uint256(data) & 0x0FFFFFFFFFFFFFFF0000000000000000) >> 128);
 
         return (direction, wethAmount, daiAmount);
-    }
+    } */
 
-    function makerToYield(address user, uint256 yDaiAmount, uint112 wethAmount, uint112 daiAmount) public {
+    function makerToYield(address user, uint256 yDaiAmount, uint256 wethAmount, uint256 daiAmount) public {
         // The user specifies the yDai he wants to mint to cover his maker debt, the weth to be passed on as collateral, and the dai debt to move
         // Flash mint the yDai
-        yDai.flashMint(user, yDaiAmount, encode(MTY, wethAmount, daiAmount));
+        yDai.flashMint(user, yDaiAmount, abi.encode(MTY, wethAmount, daiAmount));
     }
 
-    function yieldToMaker(address user, uint256 yDaiAmount, uint112 wethAmount) public {
+    function yieldToMaker(address user, uint256 yDaiAmount, uint256 wethAmount) public {
         // The user specifies the yDai he wants to move, and the weth to be passed on as collateral
         // Flash mint the yDai
-        yDai.flashMint(user, yDaiAmount, encode(YTM, wethAmount, 0)); // The daiAmount encoded is ignored
+        yDai.flashMint( user, yDaiAmount, abi.encode(YTM, wethAmount, 0)); // The daiAmount encoded is ignored
     }
 
-    function executeOnFlashMint(address user, uint256 yDaiAmount, bytes32 data) external override {
-        (bool direction, uint112 wethAmount, uint112 daiAmount) = decode(data);
+    function executeOnFlashMint(address user, uint256 yDaiAmount, bytes calldata data) external override {
+        (bool direction, uint256 wethAmount, uint256 daiAmount) = abi.decode(data, (bool, uint256, uint256));
         if(direction == MTY) _makerToYield(user, yDaiAmount, wethAmount, daiAmount); // TODO: Consider parameter order
         if(direction == YTM) _yieldToMaker(user, yDaiAmount, wethAmount, daiAmount); // TODO: Consider parameter order
     }

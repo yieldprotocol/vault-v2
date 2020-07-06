@@ -13,7 +13,7 @@ interface IYDai is IERC20 {
     function mature() external;
     function mint(address, uint) external;
     function burn(address, uint) external;
-    function flashMint(address, uint, bytes32) external;
+    function flashMint(address, uint, bytes calldata) external;
     // function transfer(address, uint) external returns (bool);
     // function transferFrom(address, address, uint) external returns (bool);
     // function approve(address, uint) external returns (bool);

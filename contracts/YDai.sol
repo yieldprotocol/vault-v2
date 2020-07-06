@@ -115,7 +115,7 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20, IYDai  {
     }
 
     /// @dev Flash-mint yDai. Calls back on `IFlashMinter.executeOnFlashMint()`
-    function flashMint(address to, uint256 yDaiAmount, bytes32 data) external override {
+    function flashMint(address to, uint256 yDaiAmount, bytes calldata data) external override {
         _mint(to, yDaiAmount);
         IFlashMinter(msg.sender).executeOnFlashMint(to, yDaiAmount, data);
         _burn(to, yDaiAmount);
