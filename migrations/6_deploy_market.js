@@ -28,14 +28,14 @@ module.exports = async (deployer, network, accounts) => {
   for (yDaiName of yDaiNames) {
     yDaiAddress = migrations.contracts(web3.utils.fromAscii(yDaiName));
     // TODO: Fix out of gas
-    /* await deployer.deploy(
+    await deployer.deploy(
       Market,
       potAddress,
       chaiAddress,
       yDaiAddress,
     );
     market = await Market.deployed();
-    await migrations.register(web3.utils.fromAscii('market' + index), market.address);
-    console.log('market' + index, market.address); */
+    await migrations.register(web3.utils.fromAscii('Market-' + yDaiName), market.address);
+    console.log('Market-' + yDaiName, market.address);
   }
 };
