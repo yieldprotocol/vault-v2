@@ -94,11 +94,7 @@ contract Liquidations is ILiquidations, Orchestrated(), Constants, DecimalMath {
             !_dealer.isCollateralized(collateral, from),
             "Liquidations: Vault is not undercollateralized"
         ); */ // Not checking for this, too expensive. Let the user stop the liquidations instead.
-        require( // grab dai from buyer and push to treasury
-            _dai.transferFrom(buyer, address(_treasury), daiAmount),
-            "Dealer: Dai transfer fail"
-        );
-        _treasury.pushDai();
+        _treasury.pushDai(buyer, daiAmount);
 
         // calculate collateral to grab. Using divdrup stops rounding from leaving 1 stray wei in vaults.
         uint256 tokenAmount = divdrup(daiAmount, price(collateral, from));
