@@ -17,8 +17,8 @@ import "../interfaces/IFlashMinter.sol";
 /// @dev The Market contract exchanges Dai for yDai at a price defined by a specific formula.
 contract Splitter is IFlashMinter, Constants, DecimalMath {
 
-    bytes32 constant public MTY = "MakerToYield";
-    bytes32 constant public YTM = "YieldToMaker";
+    bool constant public MTY = true;
+    bool constant public YTM = false;
 
     IVat public vat;
     IERC20 public weth;
@@ -64,37 +64,34 @@ contract Splitter is IFlashMinter, Constants, DecimalMath {
         return int256(x);
     }
 
-    function makerToYield(address user) public {
-        // Get dai debt from vat
-        (, uint256 rate,,,) = vat.ilks("ETH-A");            // Retrieve the MakerDAO stability fee for Weth
-        (, uint256 debt) = vat.urns("ETH-A", user);          // Retrieve the user debt in MakerDAO
-
-        // 1 dai == 1 yDai
+    function makerToYield(address user, uint112 daiAmount, uint112 wethAmount) public {
+        // TODO: Get the dai to yDai price from the AMM
         // Flash mint the yDai
-        yDai.flashMint(user, muld(debt, rate), MTY);
+        yDai.flashMint(user, yDaiAmount, abi.encode(bytes32, (MTY, daiAmount, wethAmount)));
     }
 
-    function yieldToMaker(address user) public {
-        uint256 yDaiAmount = dealer.debtYDai(WETH, yDai.maturity(), user);
-        yDai.flashMint(user, yDaiAmount, YTM);
+    function yieldToMaker(address user, uint112 daiAmount, uint112 wethAmount) public {
+        // TODO: Get the dai to yDai price from the AMM
+        // Flash mint the yDai
+        yDai.flashMint(user, yDaiAmount, abi.encode(bytes32, (YTM, daiAmount, wethAmount)));
     }
 
     function executeOnFlashMint(address user, uint256 yDaiAmount, bytes32 data) external override {
-        if(data == MTY) _makerToYield(user, yDaiAmount);
-        if(data == YTM) _yieldToMaker(user, yDaiAmount);
+        (bool direction, uint112 daiAmount, uint112 wethAmount) = abi.decode((bool, uint112, uint112), data)
+        if(direction == MTY) _makerToYield(user, yDaiAmount, wethAmount, daiAmount); // TODO: Consider parameter order
+        if(direction == YTM) _yieldToMaker(user, yDaiAmount, wethAmount, daiAmount); // TODO: Consider parameter order
     }
 
-    function _makerToYield(address user, uint256 yDaiAmount) internal {
+    function _makerToYield(address user, uint256 yDaiAmount, uint256 wethAmount, uint256 daiAmount) internal {
         // Sell the YDai for Chai
         market.sellYDai(uint128(yDaiAmount)); // Splitter will hold the chai temporarily - TODO: Consider SafeCast
         // Unpack the Chai into Dai
         chai.exit(address(this), chai.balanceOf(address(this)));
         // Put the Dai in Maker
         // TODO: daiJoin.hope(splitter.address, { from: user });
-        daiJoin.join(user, yDaiAmount);
+        daiJoin.join(user, daiAmount);
         // Pay the debt in Maker
         (, uint256 rate,,,) = vat.ilks("ETH-A");            // Retrieve the MakerDAO stability fee for Weth
-        (uint256 wethAmount,) = vat.urns("ETH-A", user);          // Retrieve the user collateral in MakerDAO
         // TODO: vat.hope(splitter.address, { from: user });
         vat.frob(
             "ETH-A",
@@ -102,7 +99,7 @@ contract Splitter is IFlashMinter, Constants, DecimalMath {
             user,
             user,
             -toInt(wethAmount),                           // Weth collateral to add
-            -toInt(divd(yDaiAmount, rate))  // Dai debt to remove
+            -toInt(divd(daiAmount, rate))  // Dai debt to remove
         );
         // Remove the collateral from Maker
         vat.flux("ETH-A", user, address(this), wethAmount);
@@ -114,7 +111,7 @@ contract Splitter is IFlashMinter, Constants, DecimalMath {
         dealer.borrow(WETH, yDai.maturity(), user, yDaiAmount);
     }
 
-    function _yieldToMaker(address user, uint256 yDaiAmount) internal {
+    function _yieldToMaker(address user, uint256 yDaiAmount, uint256 wethAmount, uint256 daiAmount) internal {
         // Pay the Yield debt
         dealer.repayYDai(WETH, yDai.maturity(), user, yDaiAmount);
         // Withdraw the collateral from Yield
@@ -133,10 +130,10 @@ contract Splitter is IFlashMinter, Constants, DecimalMath {
             user,
             user,
             toInt(wethAmount),                           // Weth collateral to add
-            toInt(divd(yDaiAmount, rate))  // Dai debt to remove
+            toInt(divd(daiAmount, rate))  // Dai debt to remove
         );
-        vat.move(user, address(this), yDaiAmount);
-        daiJoin.exit(address(this), yDaiAmount); // Splitter will hold the dai temporarily
+        vat.move(user, address(this), daiAmount);
+        daiJoin.exit(address(this), daiAmount); // Splitter will hold the dai temporarily
         // Wrap the Dai into Chai
         chai.join(address(this), dai.balanceOf(address(this)));
         // Sell the Chai for YDai at Market
