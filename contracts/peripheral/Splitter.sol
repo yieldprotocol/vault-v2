@@ -64,26 +64,54 @@ contract Splitter is IFlashMinter, Constants, DecimalMath {
         return int256(x);
     }
 
-    function makerToYield(address user, uint112 daiAmount, uint112 wethAmount) public {
-        // TODO: Get the dai to yDai price from the AMM
-        // Flash mint the yDai
-        yDai.flashMint(user, yDaiAmount, abi.encode(bytes32, (MTY, daiAmount, wethAmount)));
+    function encode(bool direction, uint120 wethAmount, uint120 daiAmount) internal returns (bytes32) {
+        bytes32 data;
+
+        /* assembly {
+            data := mstore(data, and(data, direction))              // Store `direction` at the beginning of data
+            data := mstore(data, and(data, shr(0x8, wethAmount)))  // Store `wethAmount` 8 bits to the right of the data start
+            data := mstore(data, and(data, shr(0x80, daiAmount)))  // Store `daiAmount` 128 bites to the right of the data start
+        } */
+
+        return data;
     }
 
-    function yieldToMaker(address user, uint112 daiAmount, uint112 wethAmount) public {
+    function decode(bytes32 data) internal returns (bool, uint120, uint120) {
+        bool direction;
+        uint120 wethAmount;
+        uint120 daiAmount;
+
+        /* assembly {
+            direction := mload(0x0, data)
+            wethAmount := mload(0x8, data)
+            daiAmount := mload(0x80, data)
+        } */
+
+        return (direction, wethAmount, daiAmount);
+    }
+
+    function makerToYield(address user, uint120 wethAmount, uint120 daiAmount) public {
         // TODO: Get the dai to yDai price from the AMM
+        uint256 yDaiAmount;
         // Flash mint the yDai
-        yDai.flashMint(user, yDaiAmount, abi.encode(bytes32, (YTM, daiAmount, wethAmount)));
+        yDai.flashMint(user, yDaiAmount, encode(MTY, wethAmount, daiAmount));
+    }
+
+    function yieldToMaker(address user, uint120 wethAmount, uint120 yDaiAmount) public {
+        // TODO: The user specifies the yDai he wants to move, and the weth to be passed on as collateral
+        // Flash mint the yDai
+        yDai.flashMint(user, yDaiAmount, encode(YTM, wethAmount, 0)); // The daiAmount encoded is ignored
     }
 
     function executeOnFlashMint(address user, uint256 yDaiAmount, bytes32 data) external override {
-        (bool direction, uint112 daiAmount, uint112 wethAmount) = abi.decode((bool, uint112, uint112), data)
+        (bool direction, uint120 wethAmount, uint120 daiAmount) = decode(data);
         if(direction == MTY) _makerToYield(user, yDaiAmount, wethAmount, daiAmount); // TODO: Consider parameter order
         if(direction == YTM) _yieldToMaker(user, yDaiAmount, wethAmount, daiAmount); // TODO: Consider parameter order
     }
 
     function _makerToYield(address user, uint256 yDaiAmount, uint256 wethAmount, uint256 daiAmount) internal {
         // Sell the YDai for Chai
+        // TODO: Calculate how much dai, then chai is needed, and use buyChai
         market.sellYDai(uint128(yDaiAmount)); // Splitter will hold the chai temporarily - TODO: Consider SafeCast
         // Unpack the Chai into Dai
         chai.exit(address(this), chai.balanceOf(address(this)));
@@ -113,7 +141,7 @@ contract Splitter is IFlashMinter, Constants, DecimalMath {
 
     function _yieldToMaker(address user, uint256 yDaiAmount, uint256 wethAmount, uint256 daiAmount) internal {
         // Pay the Yield debt
-        dealer.repayYDai(WETH, yDai.maturity(), user, yDaiAmount);
+        dealer.repayYDai(WETH, yDai.maturity(), user, yDaiAmount); // repayYDai wil only take what is needed
         // Withdraw the collateral from Yield
         uint256 wethAmount = dealer.posted(WETH, user);
         // TODO: dealer.addProxy(splitter.address, { from: user });
@@ -136,7 +164,7 @@ contract Splitter is IFlashMinter, Constants, DecimalMath {
         daiJoin.exit(address(this), daiAmount); // Splitter will hold the dai temporarily
         // Wrap the Dai into Chai
         chai.join(address(this), dai.balanceOf(address(this)));
-        // Sell the Chai for YDai at Market
+        // Sell the Chai for YDai at Market - It should make up for what was taken with repayYdai
         market.sellChai(uint128(chai.balanceOf(address(this)))); // Splitter will hold the chai temporarily - TODO: Consider SafeCast
         yDai.transfer(user, yDai.balanceOf(address(this)));
     }
