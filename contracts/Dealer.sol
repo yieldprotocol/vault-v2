@@ -34,7 +34,7 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), DecimalMath, Constants 
     uint256[] internal seriesIterator;                                // We need to know all the series
 
     mapping(bytes32 => mapping(address => uint256)) public override posted;               // Collateral posted by each user
-    mapping(bytes32 => mapping(uint256 => mapping(address => uint256))) public debtYDai;  // Debt owed by each user, by series
+    mapping(bytes32 => mapping(uint256 => mapping(address => uint256))) public override debtYDai;  // Debt owed by each user, by series
 
     mapping(bytes32 => uint256) public override systemPosted;                        // Sum of collateral posted by all users
     mapping(bytes32 => mapping(uint256 => uint256)) public override systemDebtYDai;  // Sum of debt owed by all users, by series
@@ -238,7 +238,7 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), DecimalMath, Constants 
     // us --- yDai ---> user
     // debt++
     function borrow(bytes32 collateral, uint256 maturity, address to, uint256 yDaiAmount)
-        public
+        public override
         validCollateral(collateral)
         validSeries(maturity)
         onlyHolderOrDelegate(to, "Dealer: Only Holder Or Delegate")
@@ -271,7 +271,7 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), DecimalMath, Constants 
     // user --- yDai ---> us
     // debt--
     function repayYDai(bytes32 collateral, uint256 maturity, address from, uint256 yDaiAmount)
-        public
+        public override
         validCollateral(collateral)
         validSeries(maturity)
         onlyLive
@@ -289,7 +289,7 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), DecimalMath, Constants 
     // user --- dai ---> us
     // debt--
     function repayDai(bytes32 collateral, uint256 maturity, address from, uint256 daiAmount)
-        public
+        public override
         validCollateral(collateral)
         validSeries(maturity)
         onlyLive

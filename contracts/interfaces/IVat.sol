@@ -14,5 +14,6 @@ interface IVat {
     // function dai(address) external view returns (uint);
     function frob(bytes32, address, address, address, int, int) external;
     function fork(bytes32, address, address, int, int) external;
-    // function move(address, address, uint) external;
+    function move(address, address, uint) external;
+    function flux(bytes32, address, address, uint) external;
 }

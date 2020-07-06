@@ -6,11 +6,12 @@ import "../helpers/Constants.sol";
 import "../helpers/YieldMath.sol";
 import "../interfaces/IPot.sol";
 import "../interfaces/IYDai.sol";
+import "../interfaces/IMarket.sol";
 // import "@nomiclabs/buidler/console.sol";
 
 
 /// @dev The Market contract exchanges Dai for yDai at a price defined by a specific formula.
-contract Market is ERC20, Constants {
+contract Market is IMarket, ERC20, Constants {
 
     struct State {
         uint32 timestamp;    // last time contract was updated. wraps around after 2^32
@@ -83,7 +84,7 @@ contract Market is ERC20, Constants {
     }
 
     /// @dev Sell Chai for yDai
-    function sellChai(uint128 chaiIn) external { // TODO: Add `from` and `to` parameters
+    function sellChai(uint128 chaiIn) external override { // TODO: Add `from` and `to` parameters
         int128 c = int128((((now > _pot.rho()) ? _pot.drip() : _pot.chi()) >> 64) / 10**27); // TODO: Conside SafeCast
         uint128 chaiReserves = uint128(chai.balanceOf(address(this)));  // TODO: Conside SafeCast
         uint128 yDaiReserves = uint128(yDai.balanceOf(address(this)));  // TODO: Conside SafeCast
@@ -100,7 +101,7 @@ contract Market is ERC20, Constants {
     }
 
     /// @dev Buy Chai for yDai
-    function buyChai(uint128 chaiOut) external { // TODO: Add `from` and `to` parameters
+    function buyChai(uint128 chaiOut) external override { // TODO: Add `from` and `to` parameters
         int128 c = int128((((now > _pot.rho()) ? _pot.drip() : _pot.chi()) >> 64) / 10**27); // TODO: Conside SafeCast
         uint128 chaiReserves = uint128(chai.balanceOf(address(this)));  // TODO: Conside SafeCast
         uint128 yDaiReserves = uint128(yDai.balanceOf(address(this)));  // TODO: Conside SafeCast
@@ -117,7 +118,7 @@ contract Market is ERC20, Constants {
     }
 
     /// @dev Sell yDai for Chai
-    function sellYDai(uint128 yDaiIn) external { // TODO: Add `from` and `to` parameters
+    function sellYDai(uint128 yDaiIn) external override { // TODO: Add `from` and `to` parameters
         int128 c = int128((((now > _pot.rho()) ? _pot.drip() : _pot.chi()) >> 64) / 10**27); // TODO: Conside SafeCast
         uint128 chaiReserves = uint128(chai.balanceOf(address(this)));  // TODO: Conside SafeCast
         uint128 yDaiReserves = uint128(yDai.balanceOf(address(this)));  // TODO: Conside SafeCast
@@ -134,7 +135,7 @@ contract Market is ERC20, Constants {
     }
 
     /// @dev Buy yDai for chai
-    function buyYDai(uint128 yDaiOut) external { // TODO: Add `from` and `to` parameters
+    function buyYDai(uint128 yDaiOut) external override { // TODO: Add `from` and `to` parameters
         int128 c = int128((((now > _pot.rho()) ? _pot.drip() : _pot.chi()) >> 64) / 10**27); // TODO: Conside SafeCast
         uint128 chaiReserves = uint128(chai.balanceOf(address(this)));  // TODO: Conside SafeCast
         uint128 yDaiReserves = uint128(yDai.balanceOf(address(this)));  // TODO: Conside SafeCast
