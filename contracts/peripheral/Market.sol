@@ -85,7 +85,7 @@ contract Market is IMarket, ERC20, Constants {
 
     /// @dev Sell Chai for yDai
     function sellChai(uint128 chaiIn) external override { // TODO: Add `from` and `to` parameters
-        int128 c = int128((((now > _pot.rho()) ? _pot.drip() : _pot.chi()) >> 64) / 10**27); // TODO: Conside SafeCast
+        int128 c = int128((((now > _pot.rho()) ? _pot.drip() : _pot.chi()) << 64) / 10**27); // TODO: Conside SafeCast
         uint128 chaiReserves = uint128(chai.balanceOf(address(this)));  // TODO: Conside SafeCast
         uint128 yDaiReserves = uint128(yDai.balanceOf(address(this)));  // TODO: Conside SafeCast
         uint256 yDaiOut = YieldMath.yDaiOutForChaiIn(
