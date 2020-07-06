@@ -64,28 +64,6 @@ contract Splitter is IFlashMinter, Constants, DecimalMath {
         return int256(x);
     }
 
-    /*f unction encode(bool direction, uint112 wethAmount, uint112 daiAmount) internal returns (bytes32) {
-        uint256 data;
-
-        data = direction ? 1 : 0;
-        data = data & (uint256(wethAmount) << 16);
-        data = data & (uint256(daiAmount) << 128);
-
-        return bytes32(data);
-    }
-
-    function decode(bytes32 data) internal returns (bool, uint112, uint112) {
-        bool direction;
-        uint112 wethAmount;
-        uint112 daiAmount;
-
-        direction = (uint256(data) & 0xF) == 1 ? true : false;
-        wethAmount = uint112((uint256(data) & 0x0000000000000000FFFFFFFFFFFFFFF0) >> 16);
-        daiAmount = uint112((uint256(data) & 0x0FFFFFFFFFFFFFFF0000000000000000) >> 128);
-
-        return (direction, wethAmount, daiAmount);
-    } */
-
     function makerToYield(address user, uint256 yDaiAmount, uint256 wethAmount, uint256 daiAmount) public {
         // The user specifies the yDai he wants to mint to cover his maker debt, the weth to be passed on as collateral, and the dai debt to move
         // Flash mint the yDai
