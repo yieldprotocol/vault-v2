@@ -19,7 +19,7 @@ contract Market is IMarket, ERC20, Constants {
         uint64 accumulator;  // interest rate oracle accumulator—32 bits for a UQ16x16, 32 bits for overflow
     }
 
-    int128 constant public k = 126144000 >> 64; // Seconds in 4 years, in 64.64
+    int128 constant public k = 126144000 << 64; // Seconds in 4 years, in 64.64
     int128 constant public g = (999 >> 64) / 1000;
     uint256 constant public initialSupply = 1000;
     uint128 immutable public maturity;
