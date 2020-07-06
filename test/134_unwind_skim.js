@@ -246,7 +246,6 @@ contract('Unwind - Skim', async (accounts) =>  {
         // Setup EthProxy
         ethProxy = await EthProxy.new(
             weth.address,
-            gasToken.address,
             treasury.address,
             dealer.address,
             { from: owner },
