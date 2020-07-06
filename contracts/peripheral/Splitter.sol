@@ -64,46 +64,46 @@ contract Splitter is IFlashMinter, Constants, DecimalMath {
         return int256(x);
     }
 
-    function encode(bool direction, uint120 wethAmount, uint120 daiAmount) internal returns (bytes32) {
+    function encode(bool direction, uint112 wethAmount, uint112 daiAmount) internal returns (bytes32) {
         bytes32 data;
 
         /* assembly {
             data := mstore(data, and(data, direction))              // Store `direction` at the beginning of data
-            data := mstore(data, and(data, shr(0x8, wethAmount)))  // Store `wethAmount` 8 bits to the right of the data start
-            data := mstore(data, and(data, shr(0x80, daiAmount)))  // Store `daiAmount` 128 bites to the right of the data start
+            data := mstore(data, and(data, shr(0xf, wethAmount)))   // Store `wethAmount` 16 bits to the right of the data start
+            data := mstore(data, and(data, shr(0x80, daiAmount)))   // Store `daiAmount` 128 bites to the right of the data start
         } */
 
         return data;
     }
 
-    function decode(bytes32 data) internal returns (bool, uint120, uint120) {
+    function decode(bytes32 data) internal returns (bool, uint112, uint112) {
         bool direction;
-        uint120 wethAmount;
-        uint120 daiAmount;
+        uint112 wethAmount;
+        uint112 daiAmount;
 
         /* assembly {
-            direction := mload(0x0, data)
-            wethAmount := mload(0x8, data)
-            daiAmount := mload(0x80, data)
+            direction := and(mload(data), 0xf000000000000000)
+            wethAmount := shl(0xf, and(mload(data), 0x0fffffff00000000))
+            daiAmount := shl(0x80, and(mload(data), 0x00000000fffffff0))
         } */
 
         return (direction, wethAmount, daiAmount);
     }
 
-    function makerToYield(address user, uint256 yDaiAmount, uint120 wethAmount, uint120 daiAmount) public {
+    function makerToYield(address user, uint256 yDaiAmount, uint112 wethAmount, uint112 daiAmount) public {
         // The user specifies the yDai he wants to mint to cover his maker debt, the weth to be passed on as collateral, and the dai debt to move
         // Flash mint the yDai
         yDai.flashMint(user, yDaiAmount, encode(MTY, wethAmount, daiAmount));
     }
 
-    function yieldToMaker(address user, uint256 yDaiAmount, uint120 wethAmount) public {
+    function yieldToMaker(address user, uint256 yDaiAmount, uint112 wethAmount) public {
         // The user specifies the yDai he wants to move, and the weth to be passed on as collateral
         // Flash mint the yDai
         yDai.flashMint(user, yDaiAmount, encode(YTM, wethAmount, 0)); // The daiAmount encoded is ignored
     }
 
     function executeOnFlashMint(address user, uint256 yDaiAmount, bytes32 data) external override {
-        (bool direction, uint120 wethAmount, uint120 daiAmount) = decode(data);
+        (bool direction, uint112 wethAmount, uint112 daiAmount) = decode(data);
         if(direction == MTY) _makerToYield(user, yDaiAmount, wethAmount, daiAmount); // TODO: Consider parameter order
         if(direction == YTM) _yieldToMaker(user, yDaiAmount, wethAmount, daiAmount); // TODO: Consider parameter order
     }
