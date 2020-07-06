@@ -28,7 +28,7 @@ const FlashMinterMock = artifacts.require('FlashMinterMock');
 const truffleAssert = require('truffle-assertions');
 const helper = require('ganache-time-traveler');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('../shared/utils');
-const { expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
+const { BN, expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
 
 contract('Market', async (accounts) =>  {
     let [ owner, user1, user2 ] = accounts;
@@ -186,21 +186,13 @@ contract('Market', async (accounts) =>  {
         console.log();
     });
 
-    it("should setup yDai1", async() => {
-        assert(
-            await yDai1.chiGrowth.call(),
-            toRay(1.0).toString(),
-            "chi not initialized",
-        );
-        assert(
-            await yDai1.rateGrowth(),
-            toRay(1.0).toString(),
-            "rate not initialized",
-        );
-        assert(
-            await yDai1.maturity(),
-            maturity.toString(),
-            "maturity not initialized",
-        );
+    it("should setup market", async() => {
+        // const k = new BN(await market.k());
+        const b = new BN('18446744073709551615');
+        const k = (new BN('126144000'));
+        expect(new BN(await market.k()).div(b)).to.be.bignumber.equal(k);
+
+        const g = (new BN('999')).mul(b).div(new BN('1000')).add(new BN(1)); // Close enough
+        expect(new BN(await market.g())).to.be.bignumber.equal(g);
     });
 });
