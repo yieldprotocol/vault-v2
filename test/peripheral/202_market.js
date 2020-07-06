@@ -240,4 +240,47 @@ contract('Market', async (accounts) =>  {
             "User1 should have 1000 liquidity tokens",
         );
     });
+
+    describe("with posted chai", () => {
+        beforeEach(async() => {
+            await getChai(user1, chaiTokens1)
+            await yDai1.mint(user1, daiTokens1, { from: owner });
+    
+            await chai.approve(market.address, chaiTokens1, { from: user1 });
+            await yDai1.approve(market.address, daiTokens1, { from: user1 });
+            await market.init(chaiTokens1, daiTokens1, { from: user1 });
+        });
+
+        it("mints liquidity tokens", async() => {
+            await getChai(user2, chaiTokens1)
+            await yDai1.mint(user2, daiTokens1, { from: owner });
+
+            await chai.approve(market.address, chaiTokens1, { from: user2 });
+            await yDai1.approve(market.address, daiTokens1, { from: user2 });
+            await market.mint(chaiTokens1, { from: user2 });
+
+            assert.equal(
+                await market.balanceOf(user2),
+                1000,
+                "User2 should have 1000 liquidity tokens",
+            );
+        });
+
+        it("burns liquidity tokens", async() => {
+            await market.approve(market.address, 500, { from: user1 });
+            await market.burn(500, { from: user1 });
+
+            assert.equal(
+                await chai.balanceOf(user1),
+                chaiTokens1.div(2).toString(),
+                "User2 should have chai tokens",
+            );
+            assert.equal(
+                await yDai1.balanceOf(user1),
+                daiTokens1.div(2).toString(),
+                "User2 should have yDai tokens",
+            );
+        });
+    });
+
 });

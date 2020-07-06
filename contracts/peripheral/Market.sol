@@ -59,7 +59,7 @@ contract Market is IMarket, ERC20, Constants {
         uint256 chaiReserves = chai.balanceOf(address(this));
         uint256 yDaiReserves = yDai.balanceOf(address(this));
         uint256 tokensMinted = supply.mul(chaiOffered).div(chaiReserves);
-        uint256 yDaiRequired = supply.mul(tokensMinted).div(yDaiReserves);
+        uint256 yDaiRequired = yDaiReserves.mul(tokensMinted).div(supply);
 
         chai.transferFrom(msg.sender, address(this), chaiOffered);
         yDai.transferFrom(msg.sender, address(this), yDaiRequired);
