@@ -90,15 +90,14 @@ contract Splitter is IFlashMinter, Constants, DecimalMath {
         return (direction, wethAmount, daiAmount);
     }
 
-    function makerToYield(address user, uint120 wethAmount, uint120 daiAmount) public {
-        // TODO: Get the dai to yDai price from the AMM
-        uint256 yDaiAmount;
+    function makerToYield(address user, uint256 yDaiAmount, uint120 wethAmount, uint120 daiAmount) public {
+        // The user specifies the yDai he wants to mint to cover his maker debt, the weth to be passed on as collateral, and the dai debt to move
         // Flash mint the yDai
         yDai.flashMint(user, yDaiAmount, encode(MTY, wethAmount, daiAmount));
     }
 
-    function yieldToMaker(address user, uint120 wethAmount, uint120 yDaiAmount) public {
-        // TODO: The user specifies the yDai he wants to move, and the weth to be passed on as collateral
+    function yieldToMaker(address user, uint256 yDaiAmount, uint120 wethAmount) public {
+        // The user specifies the yDai he wants to move, and the weth to be passed on as collateral
         // Flash mint the yDai
         yDai.flashMint(user, yDaiAmount, encode(YTM, wethAmount, 0)); // The daiAmount encoded is ignored
     }
