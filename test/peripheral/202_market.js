@@ -217,7 +217,6 @@ contract('Market', async (accounts) =>  {
     });
 
     it("should setup market", async() => {
-        // const k = new BN(await market.k());
         const b = new BN('18446744073709551615');
         const k = (new BN('126144000'));
         expect(new BN(await market.k()).div(b)).to.be.bignumber.equal(k);
@@ -241,7 +240,7 @@ contract('Market', async (accounts) =>  {
         );
     });
 
-    describe("with posted chai", () => {
+    describe("with liquidity", () => {
         beforeEach(async() => {
             await getChai(user1, chaiTokens1)
             await yDai1.mint(user1, daiTokens1, { from: owner });
@@ -252,17 +251,17 @@ contract('Market', async (accounts) =>  {
         });
 
         it("mints liquidity tokens", async() => {
-            await getChai(user2, chaiTokens1)
-            await yDai1.mint(user2, daiTokens1, { from: owner });
+            await getChai(user1, chaiTokens1)
+            await yDai1.mint(user1, daiTokens1, { from: owner });
 
-            await chai.approve(market.address, chaiTokens1, { from: user2 });
-            await yDai1.approve(market.address, daiTokens1, { from: user2 });
-            await market.mint(chaiTokens1, { from: user2 });
+            await chai.approve(market.address, chaiTokens1, { from: user1 });
+            await yDai1.approve(market.address, daiTokens1, { from: user1 });
+            await market.mint(chaiTokens1, { from: user1 });
 
             assert.equal(
-                await market.balanceOf(user2),
-                1000,
-                "User2 should have 1000 liquidity tokens",
+                await market.balanceOf(user1),
+                2000,
+                "User1 should have 2000 liquidity tokens",
             );
         });
 
@@ -273,14 +272,33 @@ contract('Market', async (accounts) =>  {
             assert.equal(
                 await chai.balanceOf(user1),
                 chaiTokens1.div(2).toString(),
-                "User2 should have chai tokens",
+                "User1 should have chai tokens",
             );
             assert.equal(
                 await yDai1.balanceOf(user1),
                 daiTokens1.div(2).toString(),
-                "User2 should have yDai tokens",
+                "User1 should have yDai tokens",
             );
         });
-    });
 
+        /* it("sells chai", async() => {
+            const oneChai = toWad(1);
+            await getChai(user2, chaiTokens1);
+            await chai.approve(market.address, oneChai, { from: user2 });
+            const t = (await web3.eth.getBlock(await web3.eth.getBlockNumber())).timestamp;
+            console.log((new BN(await yDai1.maturity())).sub(new BN(t)).toString());
+            await market.sellChai(oneChai, { from: user2 });
+
+            assert.equal(
+                await chai.balanceOf(user2),
+                chaiTokens1.sub(oneChai).toString(),
+                "User2 should not have chai tokens",
+            );
+            assert.equal(
+                await yDai1.balanceOf(user2),
+                oneChai.toString(), // TODO: Find the exact value
+                "User2 should have yDai tokens",
+            );
+        }); */
+    });
 });
