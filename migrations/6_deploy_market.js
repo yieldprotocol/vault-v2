@@ -4,7 +4,7 @@ const Pot = artifacts.require("Pot");
 const Chai = artifacts.require("Chai");
 const YDai = artifacts.require("YDai");
 const Market = artifacts.require("Market");
-
+const YieldMath = artifacts.require("YieldMath.sol");
 
 module.exports = async (deployer, network, accounts) => {
   const migrations = await Migrations.deployed();
@@ -23,6 +23,10 @@ module.exports = async (deployer, network, accounts) => {
       potAddress = (await Pot.deployed()).address;
       chaiAddress = (await Chai.deployed()).address;
   }
+
+  // Deploy and link YieldMath
+  await deployer.deploy(YieldMath)
+  await deployer.link(YieldMath, Market);  
 
   let yDaiNames = ['yDai1', 'yDai2', 'yDai3', 'yDai4']; // TODO: Consider iterating until the address returned is 0
   for (yDaiName of yDaiNames) {
