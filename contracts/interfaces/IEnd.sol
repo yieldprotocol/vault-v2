@@ -1,4 +1,4 @@
-pragma solidity ^0.6.2;
+pragma solidity ^0.6.10;
 
 
 /// @dev interface for the End contract from MakerDAO

@@ -1,4 +1,4 @@
-pragma solidity ^0.6.2;
+pragma solidity ^0.6.10;
 
 
 /// @dev Interface to interact with the vat contract from MakerDAO
@@ -14,5 +14,6 @@ interface IVat {
     // function dai(address) external view returns (uint);
     function frob(bytes32, address, address, address, int, int) external;
     function fork(bytes32, address, address, int, int) external;
-    // function move(address, address, uint) external;
+    function move(address, address, uint) external;
+    function flux(bytes32, address, address, uint) external;
 }

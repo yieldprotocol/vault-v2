@@ -1,4 +1,4 @@
-pragma solidity ^0.6.2;
+pragma solidity ^0.6.10;
 
 
 /// @dev Delegable enables users to delegate their account management to delegated
