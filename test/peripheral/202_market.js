@@ -29,7 +29,7 @@ const truffleAssert = require('truffle-assertions');
 const helper = require('ganache-time-traveler');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('../shared/utils');
 const { BN, expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
-const { assert } = require('chai');
+const { assert, expect } = require('chai');
 
 contract('Market', async (accounts) =>  {
     let [ owner, user1, user2 ] = accounts;
@@ -68,6 +68,7 @@ contract('Market', async (accounts) =>  {
 
     const daiDebt1 = toWad(96);
     const daiTokens1 = mulRay(daiDebt1, rate1);
+    const yDaiTokens1 = daiTokens1;
     const wethTokens1 = divRay(daiTokens1, spot);
     const chaiTokens1 = divRay(daiTokens1, chi1);
 
@@ -161,7 +162,7 @@ contract('Market', async (accounts) =>  {
     
         // Setup yDai1
         const block = await web3.eth.getBlockNumber();
-        maturity = (await web3.eth.getBlock(block)).timestamp + 1000;
+        maturity = (await web3.eth.getBlock(block)).timestamp + 31556952; // One year
         yDai1 = await YDai.new(
             vat.address,
             jug.address,
@@ -227,11 +228,11 @@ contract('Market', async (accounts) =>  {
 
     it("adds initial liquidity", async() => {
         await getChai(user1, chaiTokens1)
-        await yDai1.mint(user1, daiTokens1, { from: owner });
+        await yDai1.mint(user1, yDaiTokens1, { from: owner });
 
         await chai.approve(market.address, chaiTokens1, { from: user1 });
-        await yDai1.approve(market.address, daiTokens1, { from: user1 });
-        await market.init(chaiTokens1, daiTokens1, { from: user1 });
+        await yDai1.approve(market.address, yDaiTokens1, { from: user1 });
+        await market.init(chaiTokens1, yDaiTokens1, { from: user1 });
 
         assert.equal(
             await market.balanceOf(user1),
@@ -243,19 +244,19 @@ contract('Market', async (accounts) =>  {
     describe("with liquidity", () => {
         beforeEach(async() => {
             await getChai(user1, chaiTokens1)
-            await yDai1.mint(user1, daiTokens1, { from: owner });
+            await yDai1.mint(user1, yDaiTokens1, { from: owner });
     
             await chai.approve(market.address, chaiTokens1, { from: user1 });
-            await yDai1.approve(market.address, daiTokens1, { from: user1 });
-            await market.init(chaiTokens1, daiTokens1, { from: user1 });
+            await yDai1.approve(market.address, yDaiTokens1, { from: user1 });
+            await market.init(chaiTokens1, yDaiTokens1, { from: user1 });
         });
 
         it("mints liquidity tokens", async() => {
             await getChai(user1, chaiTokens1)
-            await yDai1.mint(user1, daiTokens1, { from: owner });
+            await yDai1.mint(user1, yDaiTokens1, { from: owner });
 
             await chai.approve(market.address, chaiTokens1, { from: user1 });
-            await yDai1.approve(market.address, daiTokens1, { from: user1 });
+            await yDai1.approve(market.address, yDaiTokens1, { from: user1 });
             await market.mint(chaiTokens1, { from: user1 });
 
             assert.equal(
@@ -276,29 +277,105 @@ contract('Market', async (accounts) =>  {
             );
             assert.equal(
                 await yDai1.balanceOf(user1),
-                daiTokens1.div(2).toString(),
+                yDaiTokens1.div(2).toString(),
                 "User1 should have yDai tokens",
             );
         });
 
-        /* it("sells chai", async() => {
-            const oneChai = toWad(1);
+        it("sells chai", async() => {
+            const b = new BN('18446744073709551615');
+            const r = new BN('1000000000000000000000000000');
+            const oneToken = toWad(1);
             await getChai(user2, chaiTokens1);
-            await chai.approve(market.address, oneChai, { from: user2 });
-            const t = (await web3.eth.getBlock(await web3.eth.getBlockNumber())).timestamp;
-            console.log((new BN(await yDai1.maturity())).sub(new BN(t)).toString());
-            await market.sellChai(oneChai, { from: user2 });
+
+            // yDaiOutForChaiIn formula: https://www.desmos.com/calculator/dcjuj5lmmc
+            // uint256 yDaiOut = YieldMath.yDaiOutForChaiIn(
+            //   chaiReserves, yDaiReserves,
+            //   chaiIn,
+            //   uint128(maturity - now), k, c, g
+            // );
+
+            console.log("          chaiReserves: %d", await chai.balanceOf(market.address));
+            console.log("          yDaiReserves: %d", await yDai1.balanceOf(market.address));
+            console.log("          chaiIn: %d", oneToken.toString());
+            console.log("          k: %d", await market.k());
+            console.log("          c: %d", (new BN(await pot.chi()).mul(b).div(r)).toString());
+            console.log("          g: %d", await market.g());
+            const t = new BN((await web3.eth.getBlock(await web3.eth.getBlockNumber())).timestamp);
+            console.log("          timeTillMaturity: %d", (new BN(maturity).sub(t).toString()));
+
+            assert.equal(
+                await yDai1.balanceOf(user2),
+                0,
+                "User2 should have no yDai, instead has " + await yDai1.balanceOf(user2),
+            );
+
+            await chai.approve(market.address, oneToken, { from: user2 });
+            await market.sellChai(oneToken, { from: user2 });
+
+            const yDaiOut = (new BN(oneToken.toString())).mul(new BN('1436')).div(new BN('1000')); // I just hate javascript
 
             assert.equal(
                 await chai.balanceOf(user2),
-                chaiTokens1.sub(oneChai).toString(),
+                chaiTokens1.sub(oneToken).toString(),
+                "User2 should not have chai tokens",
+            );
+            expect(new BN(await yDai1.balanceOf(user2))).to.be.bignumber.gt(yDaiOut.mul(new BN('99')).div(new BN('100')));
+            expect(new BN(await yDai1.balanceOf(user2))).to.be.bignumber.lt(yDaiOut.mul(new BN('101')).div(new BN('100')));
+            /* assert.equal(
+                await yDai1.balanceOf(user2),
+                yDaiOut.toString(),
+                "User2 should have " + yDaiOut + " yDai, instead has " + await yDai1.balanceOf(user2),
+            ); */
+        });
+
+        it("buys chai", async() => {
+            const b = new BN('18446744073709551615');
+            const r = new BN('1000000000000000000000000000');
+            const oneToken = toWad(1);
+            await yDai1.mint(user2, yDaiTokens1, { from: owner });
+
+            // yDaiInForChaiOut formula: https://www.desmos.com/calculator/16c4dgxhst
+            
+            // uint256 yDaiIn = YieldMath.yDaiInForChaiOut(
+            //   chaiReserves, yDaiReserves,
+            //   chaiOut,
+            //   uint128(maturity - now), k, c, g
+            // );
+
+            console.log("          chaiReserves: %d", await chai.balanceOf(market.address));
+            console.log("          yDaiReserves: %d", await yDai1.balanceOf(market.address));
+            console.log("          chaiOut: %d", oneToken.toString());
+            console.log("          k: %d", await market.k());
+            console.log("          c: %d", (new BN(await pot.chi()).mul(b).div(r)).toString());
+            console.log("          g: %d", await market.g());
+            const t = new BN((await web3.eth.getBlock(await web3.eth.getBlockNumber())).timestamp);
+            console.log("          timeTillMaturity: %d", (new BN(maturity).sub(t).toString()));
+
+            assert.equal(
+                await yDai1.balanceOf(user2),
+                yDaiTokens1.toString(),
+                "User2 should have " + yDaiTokens1 + " yDai, instead has " + await yDai1.balanceOf(user2),
+            );
+
+            await yDai1.approve(market.address, yDaiTokens1, { from: user2 });
+            await market.buyChai(oneToken, { from: user2 });
+
+            const yDaiIn = (new BN(oneToken.toString())).mul(new BN('1318')).div(new BN('1000')); // I just hate javascript
+
+            assert.equal(
+                await chai.balanceOf(user2),
+                oneToken.toString(),
                 "User2 should not have chai tokens",
             );
             assert.equal(
-                await yDai1.balanceOf(user2),
-                oneChai.toString(), // TODO: Find the exact value
-                "User2 should have yDai tokens",
+                yDaiTokens1.sub(await yDai1.balanceOf(user2)),
+                yDaiIn.toString(),
+                "User2 should have spent " + yDaiIn + " yDai, instead has spent " + yDaiTokens1.sub(await yDai1.balanceOf(user2)),
             );
-        }); */
+        });
+
+        // chaiOutForYDaiIn formula: https://www.desmos.com/calculator/avmxfau7j0
+        // chaiInForYDaiOut formula: https://www.desmos.com/calculator/meuwnwtmc0
     });
 });
