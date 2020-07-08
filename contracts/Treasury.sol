@@ -15,7 +15,7 @@ import "@nomiclabs/buidler/console.sol";
 
 /// @dev Treasury manages the Dai, interacting with MakerDAO's vat and chai when needed.
 contract Treasury is ITreasury, Orchestrated(), DecimalMath {
-    bytes32 constant collateralType = "ETH-A";
+    bytes32 constant WETH = "ETH-A";
 
     IERC20 internal _dai;
     IChai internal _chai;
@@ -110,7 +110,7 @@ contract Treasury is ITreasury, Orchestrated(), DecimalMath {
             // Remove debt from vault using frob
             (, uint256 rate,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
             _vat.frob(
-                collateralType,
+                WETH,
                 address(this),
                 address(this),
                 address(this),
@@ -140,7 +140,7 @@ contract Treasury is ITreasury, Orchestrated(), DecimalMath {
             // Remove debt from vault using frob
             (, uint256 rate,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
             _vat.frob(
-                collateralType,
+                WETH,
                 address(this),
                 address(this),
                 address(this),
@@ -161,7 +161,7 @@ contract Treasury is ITreasury, Orchestrated(), DecimalMath {
         _wethJoin.join(address(this), amount); // GemJoin reverts if anything goes wrong.
         // All added collateral should be locked into the vault using frob
         _vat.frob(
-            collateralType,
+            WETH,
             address(this),
             address(this),
             address(this),
@@ -182,7 +182,7 @@ contract Treasury is ITreasury, Orchestrated(), DecimalMath {
             (, uint256 rate,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
             // Increase the dai debt by the dai to receive divided by the stability fee
             _vat.frob(
-                collateralType,
+                WETH,
                 address(this),
                 address(this),
                 address(this),
@@ -210,7 +210,7 @@ contract Treasury is ITreasury, Orchestrated(), DecimalMath {
             (, uint256 rate,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee
             // Increase the dai debt by the dai to receive divided by the stability fee
             _vat.frob(
-                collateralType,
+                WETH,
                 address(this),
                 address(this),
                 address(this),
@@ -231,7 +231,7 @@ contract Treasury is ITreasury, Orchestrated(), DecimalMath {
     function pullWeth(address to, uint256 weth) public override onlyOrchestrated("Treasury: Not Authorized") onlyLive  {
         // Remove collateral from vault using frob
         _vat.frob(
-            collateralType,
+            WETH,
             address(this),
             address(this),
             address(this),
