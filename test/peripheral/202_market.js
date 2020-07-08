@@ -295,6 +295,7 @@ contract('Market', async (accounts) =>  {
             //   uint128(maturity - now), k, c, g
             // );
 
+            console.log("          selling chai...");
             console.log("          chaiReserves: %d", await chai.balanceOf(market.address));
             console.log("          yDaiReserves: %d", await yDai1.balanceOf(market.address));
             console.log("          chaiIn: %d", oneToken.toString());
@@ -313,20 +314,16 @@ contract('Market', async (accounts) =>  {
             await chai.approve(market.address, oneToken, { from: user2 });
             await market.sellChai(oneToken, { from: user2 });
 
-            const yDaiOut = (new BN(oneToken.toString())).mul(new BN('1436')).div(new BN('1000')); // I just hate javascript
-
             assert.equal(
                 await chai.balanceOf(user2),
                 chaiTokens1.sub(oneToken).toString(),
                 "User2 should not have chai tokens",
             );
-            expect(new BN(await yDai1.balanceOf(user2))).to.be.bignumber.gt(yDaiOut.mul(new BN('99')).div(new BN('100')));
-            expect(new BN(await yDai1.balanceOf(user2))).to.be.bignumber.lt(yDaiOut.mul(new BN('101')).div(new BN('100')));
-            /* assert.equal(
-                await yDai1.balanceOf(user2),
-                yDaiOut.toString(),
-                "User2 should have " + yDaiOut + " yDai, instead has " + await yDai1.balanceOf(user2),
-            ); */
+
+            const expectedYDaiOut = (new BN(oneToken.toString())).mul(new BN('1436')).div(new BN('1000')); // I just hate javascript
+            const yDaiOut = new BN(await yDai1.balanceOf(user2));
+            expect(yDaiOut).to.be.bignumber.gt(expectedYDaiOut.mul(new BN('99')).div(new BN('100')));
+            expect(yDaiOut).to.be.bignumber.lt(expectedYDaiOut.mul(new BN('101')).div(new BN('100')));
         });
 
         it("buys chai", async() => {
@@ -343,6 +340,7 @@ contract('Market', async (accounts) =>  {
             //   uint128(maturity - now), k, c, g
             // );
 
+            console.log("          buying chai...");
             console.log("          chaiReserves: %d", await chai.balanceOf(market.address));
             console.log("          yDaiReserves: %d", await yDai1.balanceOf(market.address));
             console.log("          chaiOut: %d", oneToken.toString());
@@ -361,18 +359,16 @@ contract('Market', async (accounts) =>  {
             await yDai1.approve(market.address, yDaiTokens1, { from: user2 });
             await market.buyChai(oneToken, { from: user2 });
 
-            const yDaiIn = (new BN(oneToken.toString())).mul(new BN('1318')).div(new BN('1000')); // I just hate javascript
-
             assert.equal(
                 await chai.balanceOf(user2),
                 oneToken.toString(),
                 "User2 should not have chai tokens",
             );
-            assert.equal(
-                yDaiTokens1.sub(await yDai1.balanceOf(user2)),
-                yDaiIn.toString(),
-                "User2 should have spent " + yDaiIn + " yDai, instead has spent " + yDaiTokens1.sub(await yDai1.balanceOf(user2)),
-            );
+
+            const expectedYDaiIn = (new BN(oneToken.toString())).mul(new BN('14435')).div(new BN('10000')); // I just hate javascript
+            const yDaiIn = (new BN(yDaiTokens1.toString())).sub(new BN(await yDai1.balanceOf(user2)));
+            expect(yDaiIn).to.be.bignumber.gt(expectedYDaiIn.mul(new BN('99')).div(new BN('100')));
+            expect(yDaiIn).to.be.bignumber.lt(expectedYDaiIn.mul(new BN('101')).div(new BN('100')));
         });
 
         // chaiOutForYDaiIn formula: https://www.desmos.com/calculator/avmxfau7j0
