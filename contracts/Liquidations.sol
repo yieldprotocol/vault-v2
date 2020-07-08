@@ -122,15 +122,13 @@ contract Liquidations is ILiquidations, Orchestrated(), Constants, DecimalMath {
             liquidations[collateral][user] > 0,
             "Liquidations: Vault is not targeted"
         );
-        uint256 dividend1 = UNIT.mul(_dealer.posted(collateral, user));
-        uint256 divisor1 = UNIT.mul(_dealer.totalDebtDai(collateral, user));
-        uint256 dividend2 = UNIT.mul(1);
-        uint256 divisor2 = UNIT.mul(2);
-        uint256 dividend3 = UNIT.mul(Math.min(auctionTime, now - liquidations[collateral][user]));
-        uint256 divisor3 = UNIT.mul(auctionTime.mul(2));
-        uint256 term1 = divd(dividend1, divisor1);
-        uint256 term2 = divd(dividend2, divisor2);
-        uint256 term3 = divd(dividend3, divisor3);
+        uint256 dividend1 = _dealer.posted(collateral, user);
+        uint256 divisor1 = _dealer.totalDebtDai(collateral, user);
+        uint256 term1 = dividend1.mul(UNIT).div(divisor1);
+        uint256 dividend3 = Math.min(auctionTime, now - liquidations[collateral][user]);
+        uint256 divisor3 = auctionTime.mul(2);
+        uint256 term2 = UNIT.div(2);
+        uint256 term3 = dividend3.mul(UNIT).div(divisor3);
         return divd(UNIT, muld(term1, term2.add(term3)));
     }
 }
