@@ -2,12 +2,13 @@ pragma solidity ^0.6.2;
 
 import "../interfaces/IDealer.sol";
 import "../interfaces/IWeth.sol";
-import "../helpers/Constants.sol";
 import "../helpers/Delegable.sol";
 
 
 /// @dev EthProxy allows users to post and withdraw Eth to the Dealer
-contract EthProxy is Delegable(), Constants {
+contract EthProxy is Delegable() {
+
+    bytes32 public constant WETH = "WETH";
 
     IWeth internal _weth;
     address internal _treasury;

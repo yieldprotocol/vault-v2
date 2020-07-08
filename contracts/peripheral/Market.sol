@@ -3,12 +3,11 @@ pragma solidity ^0.6.2;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "../helpers/Constants.sol";
 import "@nomiclabs/buidler/console.sol";
 
 
 /// @dev The Market contract exchanges Dai for yDai at a price defined by a specific formula.
-contract Market is ERC20, Constants {
+contract Market is ERC20 {
     using SafeMath for uint256;
 
     struct State {

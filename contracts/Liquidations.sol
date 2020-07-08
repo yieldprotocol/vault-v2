@@ -6,17 +6,19 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./interfaces/IDealer.sol";
 import "./interfaces/ILiquidations.sol";
 import "./interfaces/ITreasury.sol";
-import "./helpers/Constants.sol";
 import "./helpers/DecimalMath.sol";
 import "./helpers/Orchestrated.sol";
 import "@nomiclabs/buidler/console.sol";
 
 
 /// @dev The Liquidations contract for a Dealer allows to liquidate undercollateralized positions in a reverse Dutch auction.
-contract Liquidations is ILiquidations, Orchestrated(), Constants, DecimalMath {
+contract Liquidations is ILiquidations, Orchestrated(), DecimalMath {
     using SafeMath for uint256;
 
     event Liquidation(bytes32 indexed collateral, address indexed user, uint256 started);
+
+    bytes32 public constant CHAI = "CHAI";
+    bytes32 public constant WETH = "WETH";
 
     IERC20 internal _dai;
     ITreasury internal _treasury;

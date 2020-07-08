@@ -15,16 +15,18 @@ import "./interfaces/ITreasury.sol";
 import "./interfaces/IDealer.sol";
 import "./interfaces/IYDai.sol";
 import "./interfaces/ILiquidations.sol";
-import "./helpers/Constants.sol";
 import "./helpers/DecimalMath.sol";
 // import "@nomiclabs/buidler/console.sol";
 
 
 /// @dev Treasury manages the Dai, interacting with MakerDAO's vat and chai when needed.
-contract Unwind is Ownable(), Constants, DecimalMath {
+contract Unwind is Ownable(), DecimalMath {
     using SafeCast for uint256;
     using SafeMath for uint256;
 
+
+    bytes32 public constant CHAI = "CHAI";
+    bytes32 public constant WETH = "WETH";
     bytes32 public constant collateralType = "ETH-A";
 
     IVat internal _vat;

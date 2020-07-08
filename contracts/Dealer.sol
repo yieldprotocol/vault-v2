@@ -10,18 +10,20 @@ import "./interfaces/IGasToken.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IDealer.sol";
 import "./interfaces/IYDai.sol";
-import "./helpers/Constants.sol";
 import "./helpers/Delegable.sol";
 import "./helpers/DecimalMath.sol";
 import "./helpers/Orchestrated.sol";
 // import "@nomiclabs/buidler/console.sol";
 
 /// @dev A dealer takes collateral and issues yDai.
-contract Dealer is IDealer, Orchestrated(), Delegable(), DecimalMath, Constants {
+contract Dealer is IDealer, Orchestrated(), Delegable(), DecimalMath {
     using SafeMath for uint256;
 
     event Posted(bytes32 indexed collateral, address indexed user, int256 amount);
     event Borrowed(bytes32 indexed collateral, uint256 indexed maturity, address indexed user, int256 amount);
+
+    bytes32 public constant CHAI = "CHAI";
+    bytes32 public constant WETH = "WETH";
 
     IVat internal _vat;
     IERC20 internal _dai;
