@@ -88,7 +88,10 @@ contract Market is IMarket, ERC20, Delegable, Constants {
     /// @param from Wallet providing the chai being sold
     /// @param to Wallet receiving the yDai being bought
     /// @param chaiIn Amount of chai being sold that will be taken from the user's wallet
-    function sellChai(address from, address to, uint128 chaiIn) external override { // TODO: Add `from` and `to` parameters
+    function sellChai(address from, address to, uint128 chaiIn)
+        external override
+        onlyHolderOrDelegate(from, "Market: Only Holder Or Delegate")
+    {
         int128 c = int128((((now > _pot.rho()) ? _pot.drip() : _pot.chi()) << 64) / 10**27); // TODO: Conside SafeCast
         uint128 chaiReserves = uint128(chai.balanceOf(address(this)));  // TODO: Conside SafeCast
         uint128 yDaiReserves = uint128(yDai.balanceOf(address(this)));  // TODO: Conside SafeCast
@@ -108,7 +111,10 @@ contract Market is IMarket, ERC20, Delegable, Constants {
     /// @param from Wallet providing the yDai being sold
     /// @param to Wallet receiving the chai being bought
     /// @param chaiOut Amount of chai being bought that will be deposited in `to` wallet
-    function buyChai(address from, address to, uint128 chaiOut) external override { // TODO: Add `from` and `to` parameters
+    function buyChai(address from, address to, uint128 chaiOut)
+        external override
+        onlyHolderOrDelegate(from, "Market: Only Holder Or Delegate")
+    {
         int128 c = int128((((now > _pot.rho()) ? _pot.drip() : _pot.chi()) << 64) / 10**27); // TODO: Conside SafeCast
         uint128 chaiReserves = uint128(chai.balanceOf(address(this)));  // TODO: Conside SafeCast
         uint128 yDaiReserves = uint128(yDai.balanceOf(address(this)));  // TODO: Conside SafeCast
@@ -128,7 +134,10 @@ contract Market is IMarket, ERC20, Delegable, Constants {
     /// @param from Wallet providing the yDai being sold
     /// @param to Wallet receiving the chai being bought
     /// @param yDaiIn Amount of yDai being sold that will be taken from the user's wallet
-    function sellYDai(address from, address to, uint128 yDaiIn) external override { // TODO: Add `from` and `to` parameters
+    function sellYDai(address from, address to, uint128 yDaiIn)
+        external override
+        onlyHolderOrDelegate(from, "Market: Only Holder Or Delegate")
+    {
         int128 c = int128((((now > _pot.rho()) ? _pot.drip() : _pot.chi()) << 64) / 10**27); // TODO: Conside SafeCast
         uint128 chaiReserves = uint128(chai.balanceOf(address(this)));  // TODO: Conside SafeCast
         uint128 yDaiReserves = uint128(yDai.balanceOf(address(this)));  // TODO: Conside SafeCast
@@ -148,7 +157,10 @@ contract Market is IMarket, ERC20, Delegable, Constants {
     /// @param from Wallet providing the chai being sold
     /// @param to Wallet receiving the yDai being bought
     /// @param yDaiOut Amount of yDai being bought that will be deposited in `to` wallet
-    function buyYDai(address from, address to, uint128 yDaiOut) external override { // TODO: Add `from` and `to` parameters
+    function buyYDai(address from, address to, uint128 yDaiOut)
+        external override
+        onlyHolderOrDelegate(from, "Market: Only Holder Or Delegate")
+    {
         int128 c = int128((((now > _pot.rho()) ? _pot.drip() : _pot.chi()) << 64) / 10**27); // TODO: Conside SafeCast
         uint128 chaiReserves = uint128(chai.balanceOf(address(this)));  // TODO: Conside SafeCast
         uint128 yDaiReserves = uint128(yDai.balanceOf(address(this)));  // TODO: Conside SafeCast
