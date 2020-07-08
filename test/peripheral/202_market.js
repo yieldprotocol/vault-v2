@@ -218,8 +218,8 @@ contract('Market', async (accounts) =>  {
 
     it("should setup market", async() => {
         const b = new BN('18446744073709551615');
-        const k = (new BN('126144000'));
-        expect(new BN(await market.k()).div(b)).to.be.bignumber.equal(k);
+        const k = b.div((new BN('126144000')));
+        expect(await market.k()).to.be.bignumber.equal(k);
 
         const g = (new BN('999')).mul(b).div(new BN('1000')).add(new BN(1)); // Close enough
         expect(new BN(await market.g())).to.be.bignumber.equal(g);
