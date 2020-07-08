@@ -112,7 +112,6 @@ contract Liquidations is ILiquidations, Orchestrated(), Constants, DecimalMath {
 
     /// @dev Return price of a collateral unit, in dai, at the present moment, for a given user
     // dai = price * collateral
-    // TODO: Optimize this for gas
     //
     //               posted      1      min(auction, elapsed)
     // price = 1 / (-------- * (--- + -----------------------))
