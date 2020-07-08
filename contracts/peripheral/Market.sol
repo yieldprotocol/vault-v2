@@ -85,7 +85,7 @@ contract Market is IMarket, ERC20, Delegable, Constants {
     }
 
     /// @dev Sell Chai for yDai
-    /// @param from Wallet providing the chai being sold
+    /// @param from Wallet providing the chai being sold. Must have approved the operator with `market.addDelegate(operator)`.
     /// @param to Wallet receiving the yDai being bought
     /// @param chaiIn Amount of chai being sold that will be taken from the user's wallet
     function sellChai(address from, address to, uint128 chaiIn)
@@ -108,7 +108,7 @@ contract Market is IMarket, ERC20, Delegable, Constants {
     }
 
     /// @dev Buy Chai for yDai
-    /// @param from Wallet providing the yDai being sold
+    /// @param from Wallet providing the yDai being sold. Must have approved the operator with `market.addDelegate(operator)`.
     /// @param to Wallet receiving the chai being bought
     /// @param chaiOut Amount of chai being bought that will be deposited in `to` wallet
     function buyChai(address from, address to, uint128 chaiOut)
@@ -131,7 +131,7 @@ contract Market is IMarket, ERC20, Delegable, Constants {
     }
 
     /// @dev Sell yDai for Chai
-    /// @param from Wallet providing the yDai being sold
+    /// @param from Wallet providing the yDai being sold. Must have approved the operator with `market.addDelegate(operator)`.
     /// @param to Wallet receiving the chai being bought
     /// @param yDaiIn Amount of yDai being sold that will be taken from the user's wallet
     function sellYDai(address from, address to, uint128 yDaiIn)
@@ -154,7 +154,7 @@ contract Market is IMarket, ERC20, Delegable, Constants {
     }
 
     /// @dev Buy yDai for chai
-    /// @param from Wallet providing the chai being sold
+    /// @param from Wallet providing the chai being sold. Must have approved the operator with `market.addDelegate(operator)`.
     /// @param to Wallet receiving the yDai being bought
     /// @param yDaiOut Amount of yDai being bought that will be deposited in `to` wallet
     function buyYDai(address from, address to, uint128 yDaiOut)
