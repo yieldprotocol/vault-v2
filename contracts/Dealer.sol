@@ -23,7 +23,7 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), DecimalMath {
     event Borrowed(bytes32 indexed collateral, uint256 indexed maturity, address indexed user, int256 amount);
 
     bytes32 public constant CHAI = "CHAI";
-    bytes32 public constant WETH = "WETH";
+    bytes32 public constant WETH = "ETH-A";
 
     IVat internal _vat;
     IERC20 internal _dai;
@@ -165,7 +165,7 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), DecimalMath {
     function powerOf(bytes32 collateral, address user) public returns (uint256) {
         // dai = price * collateral
         if (collateral == WETH){
-            (,, uint256 spot,,) = _vat.ilks("ETH-A");  // Stability fee and collateralization ratio for Weth
+            (,, uint256 spot,,) = _vat.ilks(WETH);  // Stability fee and collateralization ratio for Weth
             return muld(posted[collateral][user], spot);
         } else if (collateral == CHAI) {
             uint256 chi = (now > _pot.rho()) ? _pot.drip() : _pot.chi();

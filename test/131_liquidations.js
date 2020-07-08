@@ -47,9 +47,8 @@ contract('Liquidations', async (accounts) =>  {
     let liquidations;
     let unwind;
 
-    let WETH = web3.utils.fromAscii("WETH");
+    let WETH = web3.utils.fromAscii("ETH-A");
     let CHAI = web3.utils.fromAscii("CHAI");
-    let ilk = web3.utils.fromAscii("ETH-A");
     let Line = web3.utils.fromAscii("Line");
     let spotName = web3.utils.fromAscii("spot");
     let linel = web3.utils.fromAscii("line");
@@ -78,16 +77,16 @@ contract('Liquidations', async (accounts) =>  {
 
         // Setup vat
         vat = await Vat.new();
-        await vat.init(ilk, { from: owner });
+        await vat.init(WETH, { from: owner });
 
         weth = await Weth.new({ from: owner });
-        wethJoin = await GemJoin.new(vat.address, ilk, weth.address, { from: owner });
+        wethJoin = await GemJoin.new(vat.address, WETH, weth.address, { from: owner });
 
         dai = await ERC20.new(0, { from: owner });
         daiJoin = await DaiJoin.new(vat.address, dai.address, { from: owner });
 
-        await vat.file(ilk, spotName, spot, { from: owner });
-        await vat.file(ilk, linel, limits, { from: owner });
+        await vat.file(WETH, spotName, spot, { from: owner });
+        await vat.file(WETH, linel, limits, { from: owner });
         await vat.file(Line, limits); 
 
         // Setup pot
@@ -95,7 +94,7 @@ contract('Liquidations', async (accounts) =>  {
 
         // Setup jug
         jug = await Jug.new(vat.address);
-        await jug.init(ilk, { from: owner }); // Set ilk duty (stability fee) to 1.0
+        await jug.init(WETH, { from: owner }); // Set WETH duty (stability fee) to 1.0
 
         // Setup end
         end = await End.new({ from: owner });
@@ -220,7 +219,7 @@ contract('Liquidations', async (accounts) =>  {
         await end.rely(owner, { from: owner });       // `owner` replaces MKR governance
 
         // Setup tests
-        await vat.fold(ilk, vat.address, subBN(rate1, toRay(1)), { from: owner }); // Fold only the increase from 1.0
+        await vat.fold(WETH, vat.address, subBN(rate1, toRay(1)), { from: owner }); // Fold only the increase from 1.0
         await pot.setChi(chi, { from: owner });
     });
 
@@ -253,7 +252,7 @@ contract('Liquidations', async (accounts) =>  {
             await weth.deposit({ from: user1, value: wethTokens });
             await weth.approve(wethJoin.address, wethTokens, { from: user1 });
             await wethJoin.join(user1, wethTokens, { from: user1 });
-            await vat.frob(ilk, user1, user1, user1, wethTokens, daiDebt, { from: user1 });
+            await vat.frob(WETH, user1, user1, user1, wethTokens, daiDebt, { from: user1 });
             await daiJoin.exit(user1, daiTokens, { from: user1 });
             await dai.approve(chai.address, daiTokens, { from: user1 });
             await chai.join(user1, daiTokens, { from: user1 });
@@ -270,7 +269,7 @@ contract('Liquidations', async (accounts) =>  {
             await weth.deposit({ from: user2, value: moreWeth });
             await weth.approve(wethJoin.address, moreWeth, { from: user2 });
             await wethJoin.join(user2, moreWeth, { from: user2 });
-            await vat.frob(ilk, user2, user2, user2, moreWeth, moreDebt, { from: user2 });
+            await vat.frob(WETH, user2, user2, user2, moreWeth, moreDebt, { from: user2 });
             await daiJoin.exit(user2, moreDai, { from: user2 });
             await dai.approve(chai.address, moreDai, { from: user2 });
             await chai.join(user2, moreDai, { from: user2 });
@@ -285,7 +284,7 @@ contract('Liquidations', async (accounts) =>  {
             await weth.deposit({ from: owner, value: wethTokens.mul(10) });
             await weth.approve(wethJoin.address, wethTokens.mul(10), { from: owner });
             await wethJoin.join(owner, wethTokens.mul(10), { from: owner });
-            await vat.frob(ilk, owner, owner, owner, wethTokens.mul(10), daiDebt.mul(10), { from: owner });
+            await vat.frob(WETH, owner, owner, owner, wethTokens.mul(10), daiDebt.mul(10), { from: owner });
             await daiJoin.exit(owner, daiTokens.mul(10), { from: owner });
 
             assert.equal(
@@ -350,7 +349,7 @@ contract('Liquidations', async (accounts) =>  {
             await helper.advanceBlock();
             await yDai1.mature();
             
-            await vat.fold(ilk, vat.address, subBN(rate2, rate1), { from: owner });
+            await vat.fold(WETH, vat.address, subBN(rate2, rate1), { from: owner });
 
             assert.equal(
                 await dealer.isCollateralized.call(WETH, user2, { from: buyer }),
@@ -381,7 +380,7 @@ contract('Liquidations', async (accounts) =>  {
                 await helper.advanceBlock();
                 await yDai1.mature();
             
-                await vat.fold(ilk, vat.address, subBN(rate2, rate1), { from: owner });
+                await vat.fold(WETH, vat.address, subBN(rate2, rate1), { from: owner });
             });
 
             it("liquidations can be started", async() => {
@@ -396,7 +395,7 @@ contract('Liquidations', async (accounts) =>  {
                 );
                 assert.equal(
                     bytes32ToString(event.args.collateral),
-                    "WETH",
+                    bytes32ToString(WETH),
                 );
                 assert.equal(
                     event.args.user,
@@ -445,7 +444,7 @@ contract('Liquidations', async (accounts) =>  {
                     );
                     assert.equal(
                         bytes32ToString(event.args.collateral),
-                        "WETH",
+                        bytes32ToString(WETH),
                     );
                     assert.equal(
                         event.args.user,
@@ -473,7 +472,7 @@ contract('Liquidations', async (accounts) =>  {
                     await weth.deposit({ from: buyer, value: liquidatorWethTokens });
                     await weth.approve(wethJoin.address, liquidatorWethTokens, { from: buyer });
                     await wethJoin.join(buyer, liquidatorWethTokens, { from: buyer });
-                    await vat.frob(ilk, buyer, buyer, buyer, liquidatorWethTokens, liquidatorDaiDebt, { from: buyer });
+                    await vat.frob(WETH, buyer, buyer, buyer, liquidatorWethTokens, liquidatorDaiDebt, { from: buyer });
                     await daiJoin.exit(buyer, daiTokens, { from: buyer });
 
                     await dai.approve(treasury.address, daiTokens, { from: buyer });
@@ -508,7 +507,7 @@ contract('Liquidations', async (accounts) =>  {
                     await weth.deposit({ from: buyer, value: liquidatorWethTokens });
                     await weth.approve(wethJoin.address, liquidatorWethTokens, { from: buyer });
                     await wethJoin.join(buyer, liquidatorWethTokens, { from: buyer });
-                    await vat.frob(ilk, buyer, buyer, buyer, liquidatorWethTokens, liquidatorDaiDebt, { from: buyer });
+                    await vat.frob(WETH, buyer, buyer, buyer, liquidatorWethTokens, liquidatorDaiDebt, { from: buyer });
                     await daiJoin.exit(buyer, daiTokens, { from: buyer });
 
                     await dai.approve(treasury.address, divRay(daiTokens, toRay(2)), { from: buyer });
@@ -543,7 +542,7 @@ contract('Liquidations', async (accounts) =>  {
                     await weth.deposit({ from: buyer, value: liquidatorWethTokens });
                     await weth.approve(wethJoin.address, liquidatorWethTokens, { from: buyer });
                     await wethJoin.join(buyer, liquidatorWethTokens, { from: buyer });
-                    await vat.frob(ilk, buyer, buyer, buyer, liquidatorWethTokens, liquidatorDaiDebt, { from: buyer });
+                    await vat.frob(WETH, buyer, buyer, buyer, liquidatorWethTokens, liquidatorDaiDebt, { from: buyer });
                     await daiJoin.exit(buyer, daiTokens, { from: buyer });
 
                     await dai.approve(treasury.address, daiTokens, { from: buyer });
@@ -582,7 +581,7 @@ contract('Liquidations', async (accounts) =>  {
                         await weth.deposit({ from: buyer, value: liquidatorWethTokens });
                         await weth.approve(wethJoin.address, liquidatorWethTokens, { from: buyer });
                         await wethJoin.join(buyer, liquidatorWethTokens, { from: buyer });
-                        await vat.frob(ilk, buyer, buyer, buyer, liquidatorWethTokens, liquidatorDaiDebt, { from: buyer });
+                        await vat.frob(WETH, buyer, buyer, buyer, liquidatorWethTokens, liquidatorDaiDebt, { from: buyer });
                         await daiJoin.exit(buyer, daiTokens, { from: buyer });
     
                         await dai.approve(treasury.address, daiTokens, { from: buyer });
@@ -609,7 +608,7 @@ contract('Liquidations', async (accounts) =>  {
                         await weth.deposit({ from: buyer, value: liquidatorWethTokens });
                         await weth.approve(wethJoin.address, liquidatorWethTokens, { from: buyer });
                         await wethJoin.join(buyer, liquidatorWethTokens, { from: buyer });
-                        await vat.frob(ilk, buyer, buyer, buyer, liquidatorWethTokens, liquidatorDaiDebt, { from: buyer });
+                        await vat.frob(WETH, buyer, buyer, buyer, liquidatorWethTokens, liquidatorDaiDebt, { from: buyer });
                         await daiJoin.exit(buyer, daiTokens, { from: buyer });
     
                         await dai.approve(treasury.address, divRay(daiTokens, toRay(2)), { from: buyer });
@@ -636,7 +635,7 @@ contract('Liquidations', async (accounts) =>  {
                         await weth.deposit({ from: buyer, value: liquidatorWethTokens });
                         await weth.approve(wethJoin.address, liquidatorWethTokens, { from: buyer });
                         await wethJoin.join(buyer, liquidatorWethTokens, { from: buyer });
-                        await vat.frob(ilk, buyer, buyer, buyer, liquidatorWethTokens, liquidatorDaiDebt, { from: buyer });
+                        await vat.frob(WETH, buyer, buyer, buyer, liquidatorWethTokens, liquidatorDaiDebt, { from: buyer });
                         await daiJoin.exit(buyer, daiTokens, { from: buyer });
     
                         await dai.approve(treasury.address, daiTokens, { from: buyer });

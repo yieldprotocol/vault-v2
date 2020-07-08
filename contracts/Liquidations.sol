@@ -18,7 +18,7 @@ contract Liquidations is ILiquidations, Orchestrated(), DecimalMath {
     event Liquidation(bytes32 indexed collateral, address indexed user, uint256 started);
 
     bytes32 public constant CHAI = "CHAI";
-    bytes32 public constant WETH = "WETH";
+    bytes32 public constant WETH = "ETH-A";
 
     IERC20 internal _dai;
     ITreasury internal _treasury;

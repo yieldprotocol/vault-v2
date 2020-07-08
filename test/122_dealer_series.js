@@ -42,9 +42,8 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
     let yDai2;
     let dealer;
 
-    let WETH = web3.utils.fromAscii("WETH");
+    let WETH = web3.utils.fromAscii("ETH-A");
     let CHAI = web3.utils.fromAscii("CHAI");
-    let ilk = web3.utils.fromAscii("ETH-A");
     let Line = web3.utils.fromAscii("Line");
     let spotName = web3.utils.fromAscii("spot");
     let linel = web3.utils.fromAscii("line");
@@ -66,21 +65,21 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
 
         // Setup vat, join and weth
         vat = await Vat.new();
-        await vat.init(ilk, { from: owner }); // Set ilk rate (stability fee accumulator) to 1.0
+        await vat.init(WETH, { from: owner }); // Set WETH rate (stability fee accumulator) to 1.0
 
         weth = await Weth.new({ from: owner });
-        wethJoin = await GemJoin.new(vat.address, ilk, weth.address, { from: owner });
+        wethJoin = await GemJoin.new(vat.address, WETH, weth.address, { from: owner });
 
         dai = await ERC20.new(0, { from: owner });
         daiJoin = await DaiJoin.new(vat.address, dai.address, { from: owner });
 
-        await vat.file(ilk, spotName, spot, { from: owner });
-        await vat.file(ilk, linel, limits, { from: owner });
+        await vat.file(WETH, spotName, spot, { from: owner });
+        await vat.file(WETH, linel, limits, { from: owner });
         await vat.file(Line, limits);
 
         // Setup jug
         jug = await Jug.new(vat.address);
-        await jug.init(ilk, { from: owner }); // Set ilk duty (stability fee) to 1.0
+        await jug.init(WETH, { from: owner }); // Set WETH duty (stability fee) to 1.0
 
         // Setup pot
         pot = await Pot.new(vat.address);
@@ -129,7 +128,7 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
         treasury.orchestrate(dealer.address, { from: owner });
         
         // Test setup
-        await vat.fold(ilk, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
+        await vat.fold(WETH, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
     });
 
     afterEach(async() => {

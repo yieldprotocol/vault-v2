@@ -8,7 +8,7 @@ import "../helpers/Delegable.sol";
 /// @dev EthProxy allows users to post and withdraw Eth to the Dealer
 contract EthProxy is Delegable() {
 
-    bytes32 public constant WETH = "WETH";
+    bytes32 public constant WETH = "ETH-A";
 
     IWeth internal _weth;
     address internal _treasury;

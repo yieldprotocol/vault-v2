@@ -16,7 +16,7 @@ contract('End', async (accounts) =>  {
     let dai;
     let daiJoin;
     let end;
-    let ilk = web3.utils.fromAscii("ETH-A")
+    let WETH = web3.utils.fromAscii("ETH-A")
     const limits =  toRad(10000);
     const spot  = toRay(1.5);
     const tag  = divRay(toRay(1), spot);
@@ -34,18 +34,18 @@ contract('End', async (accounts) =>  {
 
     beforeEach(async() => {
         vat = await Vat.new();
-        await vat.init(ilk, { from: owner });
+        await vat.init(WETH, { from: owner });
 
         weth = await Weth.new({ from: owner });
-        wethJoin = await GemJoin.new(vat.address, ilk, weth.address, { from: owner });
+        wethJoin = await GemJoin.new(vat.address, WETH, weth.address, { from: owner });
 
         dai = await ERC20.new(0, { from: owner });
         daiJoin = await DaiJoin.new(vat.address, dai.address, { from: owner });
 
-        await vat.file(ilk, web3.utils.fromAscii('spot'), spot, { from: owner });
-        await vat.file(ilk, web3.utils.fromAscii('line'), limits, { from: owner });
+        await vat.file(WETH, web3.utils.fromAscii('spot'), spot, { from: owner });
+        await vat.file(WETH, web3.utils.fromAscii('line'), limits, { from: owner });
         await vat.file(web3.utils.fromAscii('Line'), limits); 
-        await vat.fold(ilk, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
+        await vat.fold(WETH, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
 
         end = await End.new({ from: owner });
         await end.file(web3.utils.fromAscii("vat"), vat.address);
@@ -61,12 +61,12 @@ contract('End', async (accounts) =>  {
 
     it('should setup vat', async() => {
         assert(
-            (await vat.ilks(ilk)).spot,
+            (await vat.ilks(WETH)).spot,
             spot,
             'spot not initialized',
         );
         assert(
-            (await vat.ilks(ilk)).rate,
+            (await vat.ilks(WETH)).rate,
             rate,
             'rate not initialized',
         );
@@ -88,7 +88,7 @@ contract('End', async (accounts) =>  {
             await weth.deposit({ from: owner, value: wethTokens});
             await weth.approve(wethJoin.address, wethTokens, { from: owner });
             await wethJoin.join(owner, wethTokens, { from: owner });
-            await vat.frob(ilk, owner, owner, owner, wethTokens, daiDebt, { from: owner });
+            await vat.frob(WETH, owner, owner, owner, wethTokens, daiDebt, { from: owner });
             await daiJoin.exit(owner, daiTokens, { from: owner });
             // Deposit one extra wei
             await weth.deposit({ from: owner, value: 1});
@@ -117,10 +117,10 @@ contract('End', async (accounts) =>  {
             });
     
             it('can set tag manually', async() => {
-                await end.setTag(ilk, tag, { from: owner });
+                await end.setTag(WETH, tag, { from: owner });
                 
                 assert(
-                    await end.tag(ilk),
+                    await end.tag(WETH),
                     tag,
                     'tag not set',
                 );
@@ -128,19 +128,19 @@ contract('End', async (accounts) =>  {
 
             describe('With tag set', () => {
                 beforeEach(async() => {
-                    await end.setTag(ilk, tag, { from: owner });
+                    await end.setTag(WETH, tag, { from: owner });
                 });
         
                 it('can settle debts', async() => {
-                    await end.skim(ilk, owner, { from: owner });
+                    await end.skim(WETH, owner, { from: owner });
                     
                     assert.equal(
-                        (await vat.urns(ilk, owner)).ink,
+                        (await vat.urns(WETH, owner)).ink,
                         1,
                         'Owner should have 1 wei weth as collateral.',
                     );
                     assert.equal(
-                        (await vat.urns(ilk, owner)).art,
+                        (await vat.urns(WETH, owner)).art,
                         0,
                         'Owner should have no dai debt.',
                     );
@@ -148,15 +148,15 @@ contract('End', async (accounts) =>  {
 
                 describe('With debts settled', () => {
                     beforeEach(async() => {
-                        await end.skim(ilk, owner, { from: owner });
+                        await end.skim(WETH, owner, { from: owner });
                     });
             
                     it('can free collateral', async() => {
-                        await end.free(ilk, { from: owner });
+                        await end.free(WETH, { from: owner });
                         await wethJoin.exit(owner, 1, { from: owner });
                         
                         assert.equal(
-                            (await vat.urns(ilk, owner)).ink,
+                            (await vat.urns(WETH, owner)).ink,
                             0,
                             'Owner should have no collateral in vat',
                         );
@@ -202,10 +202,10 @@ contract('End', async (accounts) =>  {
                             });
                     
                             it('can set fix manually', async() => {
-                                await end.setFix(ilk, fix, { from: owner });
+                                await end.setFix(WETH, fix, { from: owner });
                                 
                                 assert(
-                                    await end.fix(ilk),
+                                    await end.fix(WETH),
                                     fix,
                                     'fix not set',
                                 );
@@ -213,11 +213,11 @@ contract('End', async (accounts) =>  {
 
                             describe('With fix set', () => {
                                 beforeEach(async() => {
-                                    await end.setFix(ilk, fix, { from: owner });
+                                    await end.setFix(WETH, fix, { from: owner });
                                 });
                         
                                 it('can cash weth', async() => {
-                                    await end.cash(ilk, daiTokens, { from: owner });
+                                    await end.cash(WETH, daiTokens, { from: owner });
                                     await wethJoin.exit(owner, wethTokens, { from: owner });
                                     
                                     assert.equal(

@@ -29,7 +29,7 @@ contract('Chai', async (accounts) =>  {
     let treasury;
     let dealer;
 
-    let ilk = web3.utils.fromAscii('ETH-A');
+    let WETH = web3.utils.fromAscii('ETH-A');
     let spot;
     let rate;
     const chi = toRay(1.2); // TODO: Set it up in migrations
@@ -52,8 +52,8 @@ contract('Chai', async (accounts) =>  {
         chai = await Chai.at(await migrations.contracts(web3.utils.fromAscii("Chai")));
         gasToken = await GasToken.at(await migrations.contracts(web3.utils.fromAscii("GasToken")));
 
-        spot  = (await vat.ilks(ilk)).spot;
-        rate  = (await vat.ilks(ilk)).rate;
+        spot  = (await vat.ilks(WETH)).spot;
+        rate  = (await vat.ilks(WETH)).rate;
         wethTokens = toWad(1);
         daiTokens = mulRay(wethTokens.toString(), spot.toString());
         daiDebt = divRay(daiTokens.toString(), rate.toString());
@@ -69,7 +69,7 @@ contract('Chai', async (accounts) =>  {
         await weth.deposit({ from: user, value: wethTokens});
         await weth.approve(wethJoin.address, wethTokens, { from: user }); 
         await wethJoin.join(user, wethTokens, { from: user });
-        await vat.frob(ilk, user, user, user, wethTokens, daiDebt, { from: user });
+        await vat.frob(WETH, user, user, user, wethTokens, daiDebt, { from: user });
         await daiJoin.exit(user, daiTokens, { from: user });
 
         // Convert dai to chai
@@ -107,7 +107,7 @@ contract('Chai', async (accounts) =>  {
         // Repay the dai
         await dai.approve(daiJoin.address, daiTokens, { from: user }); 
         await daiJoin.join(user, daiTokens, { from: user });
-        await vat.frob(ilk, user, user, user, wethTokens.mul(-1), daiDebt.mul(-1), { from: user });
+        await vat.frob(WETH, user, user, user, wethTokens.mul(-1), daiDebt.mul(-1), { from: user });
         await wethJoin.exit(user, wethTokens, { from: user });
         await weth.withdraw(wethTokens, { from: user });
     });

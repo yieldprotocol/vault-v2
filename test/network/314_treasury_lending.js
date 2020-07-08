@@ -30,7 +30,7 @@ contract('Treasury - Lending', async (accounts) =>  {
     let treasury;
     let dealer;
 
-    let ilk = web3.utils.fromAscii('ETH-A');
+    let WETH = web3.utils.fromAscii('ETH-A');
     let spot;
     let rate;
     let chi;
@@ -54,8 +54,8 @@ contract('Treasury - Lending', async (accounts) =>  {
         gasToken = await GasToken.at(await migrations.contracts(web3.utils.fromAscii("GasToken")));
         treasury = await Treasury.at(await migrations.contracts(web3.utils.fromAscii("Treasury")));
         
-        spot  = (await vat.ilks(ilk)).spot;
-        rate  = (await vat.ilks(ilk)).rate;
+        spot  = (await vat.ilks(WETH)).spot;
+        rate  = (await vat.ilks(WETH)).rate;
         chi = await pot.chi(); // Good boys call drip()
 
         wethTokens = toWad(1);
@@ -85,7 +85,7 @@ contract('Treasury - Lending', async (accounts) =>  {
 
         // Test collateral registering via `frob`
         assert.equal(
-            (await vat.urns(ilk, treasury.address)).ink,
+            (await vat.urns(WETH, treasury.address)).ink,
             wethTokens.toString(),
         );
     });
@@ -99,7 +99,7 @@ contract('Treasury - Lending', async (accounts) =>  {
             daiTokens.toString(),
         );
         assert.equal(
-            (await vat.urns(ilk, treasury.address)).art,
+            (await vat.urns(WETH, treasury.address)).art,
             daiDebt.toString(),
         );
     });
@@ -114,7 +114,7 @@ contract('Treasury - Lending', async (accounts) =>  {
             0
         );
         assert.equal(
-            (await vat.urns(ilk, treasury.address)).art,
+            (await vat.urns(WETH, treasury.address)).art,
             0,
         );
         assert.equal(
@@ -131,7 +131,7 @@ contract('Treasury - Lending', async (accounts) =>  {
             chaiTokens.toString(),
         );
         assert.equal(
-            (await vat.urns(ilk, treasury.address)).art,
+            (await vat.urns(WETH, treasury.address)).art,
             daiDebt.toString(),
         );
     });
@@ -145,7 +145,7 @@ contract('Treasury - Lending', async (accounts) =>  {
             0
         );
         assert.equal(
-            (await vat.urns(ilk, treasury.address)).art,
+            (await vat.urns(WETH, treasury.address)).art,
             0,
         );
         assert.equal(
@@ -170,7 +170,7 @@ contract('Treasury - Lending', async (accounts) =>  {
 
         // Test collateral registering via `frob`
         assert.equal(
-            (await vat.urns(ilk, treasury.address)).ink,
+            (await vat.urns(WETH, treasury.address)).ink,
             0
         );
 

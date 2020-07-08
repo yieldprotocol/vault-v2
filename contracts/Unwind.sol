@@ -26,8 +26,7 @@ contract Unwind is Ownable(), DecimalMath {
 
 
     bytes32 public constant CHAI = "CHAI";
-    bytes32 public constant WETH = "WETH";
-    bytes32 public constant collateralType = "ETH-A";
+    bytes32 public constant WETH = "ETH-A";
 
     IVat internal _vat;
     IDaiJoin internal _daiJoin;
@@ -107,7 +106,7 @@ contract Unwind is Ownable(), DecimalMath {
     /// @dev Disables treasury and dealer.
     function unwind() public {
         require(
-            _end.tag(collateralType) != 0,
+            _end.tag(WETH) != 0,
             "Unwind: MakerDAO not shutting down"
         );
         live = false;
@@ -122,11 +121,11 @@ contract Unwind is Ownable(), DecimalMath {
 
     function getRate() public returns (uint256) {
         uint256 rate;
-        (, uint256 rho) = _jug.ilks("ETH-A"); // "WETH" for weth.sol, "ETH-A" for MakerDAO
+        (, uint256 rho) = _jug.ilks(WETH);
         if (now > rho) {
-            rate = _jug.drip("ETH-A");
+            rate = _jug.drip(WETH);
         } else {
-            (, rate,,,) = _vat.ilks("ETH-A");
+            (, rate,,,) = _vat.ilks(WETH);
         }
         return rate;
     }
@@ -151,7 +150,7 @@ contract Unwind is Ownable(), DecimalMath {
         require(settled && cashedOut, "Unwind: Not ready");
 
         uint256 chi = _pot.chi();
-        (, uint256 rate,,,) = _vat.ilks("ETH-A");
+        (, uint256 rate,,,) = _vat.ilks(WETH);
         uint256 profit = _weth.balanceOf(address(this));
 
         profit = profit.add(muld(muld(_yDaiProfit(chi, rate), _fix), chi));
@@ -193,17 +192,17 @@ contract Unwind is Ownable(), DecimalMath {
             live == false,
             "Unwind: Unwind first"
         );
-        (uint256 ink, uint256 art) = _vat.urns("ETH-A", address(_treasury));
+        (uint256 ink, uint256 art) = _vat.urns(WETH, address(_treasury));
         _vat.fork(                                               // Take the treasury vault
-            collateralType,
+            WETH,
             address(_treasury),
             address(this),
             ink.toInt(),
             art.toInt()
         );
-        _end.skim(collateralType, address(this));                // Settle debts
-        _end.free(collateralType);                               // Free collateral
-        uint256 gem = _vat.gem("ETH-A", address(this));          // Find out how much collateral we have now
+        _end.skim(WETH, address(this));                // Settle debts
+        _end.free(WETH);                               // Free collateral
+        uint256 gem = _vat.gem(WETH, address(this));          // Find out how much collateral we have now
         _wethJoin.exit(address(this), gem);                      // Take collateral out
         settled = true;
     }
@@ -211,23 +210,23 @@ contract Unwind is Ownable(), DecimalMath {
     /// @dev Put all chai savings in MakerDAO and exchange them for weth
     function cashSavings() public {
         require(
-            _end.tag(collateralType) != 0,
+            _end.tag(WETH) != 0,
             "Unwind: End.sol not caged"
         );
         require(
-            _end.fix(collateralType) != 0,
+            _end.fix(WETH) != 0,
             "Unwind: End.sol not ready"
         );
         uint256 daiTokens = _chai.dai(address(_treasury));   // Find out how much is the chai worth
         _chai.draw(address(_treasury), _treasury.savings()); // Get the chai as dai
         _daiJoin.join(address(this), daiTokens);             // Put the dai into MakerDAO
         _end.pack(daiTokens);                                // Into End.sol, more exactly
-        _end.cash(collateralType, daiTokens);                // Exchange the dai for weth
-        uint256 gem = _vat.gem("ETH-A", address(this));      // Find out how much collateral we have now
+        _end.cash(WETH, daiTokens);                // Exchange the dai for weth
+        uint256 gem = _vat.gem(WETH, address(this));      // Find out how much collateral we have now
         _wethJoin.exit(address(this), gem);                  // Take collateral out
         cashedOut = true;
 
-        _fix = _end.fix(collateralType);
+        _fix = _end.fix(WETH);
         _chi = _pot.chi();
     }
 

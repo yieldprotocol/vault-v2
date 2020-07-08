@@ -47,9 +47,8 @@ contract('Unwind - Treasury', async (accounts) =>  {
     let ethProxy;
     let unwind;
 
-    let WETH = web3.utils.fromAscii("WETH");
+    let WETH = web3.utils.fromAscii("ETH-A");
     let CHAI = web3.utils.fromAscii("CHAI");
-    let ilk = web3.utils.fromAscii("ETH-A");
     let Line = web3.utils.fromAscii("Line");
     let spotName = web3.utils.fromAscii("spot");
     let linel = web3.utils.fromAscii("line");
@@ -81,21 +80,21 @@ contract('Unwind - Treasury', async (accounts) =>  {
 
         // Setup vat, join and weth
         vat = await Vat.new();
-        await vat.init(ilk, { from: owner }); // Set ilk rate (stability fee accumulator) to 1.0
+        await vat.init(WETH, { from: owner }); // Set WETH rate (stability fee accumulator) to 1.0
 
         weth = await Weth.new({ from: owner });
-        wethJoin = await GemJoin.new(vat.address, ilk, weth.address, { from: owner });
+        wethJoin = await GemJoin.new(vat.address, WETH, weth.address, { from: owner });
 
         dai = await ERC20.new(0, { from: owner });
         daiJoin = await DaiJoin.new(vat.address, dai.address, { from: owner });
 
-        await vat.file(ilk, spotName, spot, { from: owner });
-        await vat.file(ilk, linel, limits, { from: owner });
+        await vat.file(WETH, spotName, spot, { from: owner });
+        await vat.file(WETH, linel, limits, { from: owner });
         await vat.file(Line, limits);
 
         // Setup jug
         jug = await Jug.new(vat.address);
-        await jug.init(ilk, { from: owner }); // Set ilk duty (stability fee) to 1.0
+        await jug.init(WETH, { from: owner }); // Set WETH duty (stability fee) to 1.0
 
         // Setup pot
         pot = await Pot.new(vat.address);
@@ -227,7 +226,7 @@ contract('Unwind - Treasury', async (accounts) =>  {
 
         // Tests setup
         await pot.setChi(chi, { from: owner });
-        await vat.fold(ilk, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
+        await vat.fold(WETH, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
         await vat.hope(daiJoin.address, { from: owner });
         await vat.hope(wethJoin.address, { from: owner });
         await treasury.orchestrate(owner, { from: owner });
@@ -265,7 +264,7 @@ contract('Unwind - Treasury', async (accounts) =>  {
             await treasury.pushWeth(owner, wethTokens, { from: owner });
 
             assert.equal(
-                (await vat.urns(ilk, treasury.address)).ink,
+                (await vat.urns(WETH, treasury.address)).ink,
                 wethTokens.toString(),
                 'Treasury should have ' + wethTokens.toString() + ' weth wei as collateral',
             );
@@ -281,7 +280,7 @@ contract('Unwind - Treasury', async (accounts) =>  {
         describe("with Dss unwind initiated and tag defined", () => {
             beforeEach(async() => {
                 await end.cage({ from: owner });
-                await end.setTag(ilk, tag, { from: owner });
+                await end.setTag(WETH, tag, { from: owner });
             });
 
             it("allows to unwind", async() => {
@@ -357,7 +356,7 @@ contract('Unwind - Treasury', async (accounts) =>  {
             beforeEach(async() => {
                 await treasury.pullDai(owner, daiTokens, { from: owner });
                 assert.equal(
-                    (await vat.urns(ilk, treasury.address)).art,
+                    (await vat.urns(WETH, treasury.address)).art,
                     daiDebt.toString(),
                     'Treasury should have ' + daiDebt.toString() + ' dai debt.',
                 );
@@ -376,7 +375,7 @@ contract('Unwind - Treasury', async (accounts) =>  {
             describe("with unwind initiated", () => {
                 beforeEach(async() => {
                     await end.cage({ from: owner });
-                    await end.setTag(ilk, tag, { from: owner });
+                    await end.setTag(WETH, tag, { from: owner });
                     await unwind.unwind({ from: owner });
                 });
 
@@ -399,7 +398,7 @@ contract('Unwind - Treasury', async (accounts) =>  {
                 await weth.deposit({ from: owner, value: wethTokens});
                 await weth.approve(wethJoin.address, wethTokens, { from: owner });
                 await wethJoin.join(owner, wethTokens, { from: owner });
-                await vat.frob(ilk, owner, owner, owner, wethTokens, daiDebt, { from: owner });
+                await vat.frob(WETH, owner, owner, owner, wethTokens, daiDebt, { from: owner });
                 await daiJoin.exit(owner, daiTokens, { from: owner });
 
                 await dai.approve(treasury.address, daiTokens, { from: owner });
@@ -420,23 +419,23 @@ contract('Unwind - Treasury', async (accounts) =>  {
                     await weth.deposit({ from: user, value: wethTokens.mul(2)});
                     await weth.approve(wethJoin.address, wethTokens.mul(2), { from: user });
                     await wethJoin.join(user, wethTokens.mul(2), { from: user });
-                    await vat.frob(ilk, user, user, user, wethTokens.mul(2), daiDebt.mul(2), { from: user });
+                    await vat.frob(WETH, user, user, user, wethTokens.mul(2), daiDebt.mul(2), { from: user });
                     await daiJoin.exit(user, daiTokens.mul(2), { from: user });
 
                     await end.cage({ from: owner });
-                    await end.setTag(ilk, tag, { from: owner });
+                    await end.setTag(WETH, tag, { from: owner });
                     await end.setDebt(1, { from: owner });
-                    await end.setFix(ilk, fix, { from: owner });
+                    await end.setFix(WETH, fix, { from: owner });
 
                     // Settle some random guy's debt for end.sol to have weth
-                    await end.skim(ilk, user, { from: user });
+                    await end.skim(WETH, user, { from: user });
 
                     await unwind.unwind({ from: owner });
                 });
 
                 it("allows to cash dai for weth", async() => {
                     assert.equal(
-                        await vat.gem(ilk, unwind.address),
+                        await vat.gem(WETH, unwind.address),
                         0,
                         'Unwind should have no weth in WethJoin',
                     );

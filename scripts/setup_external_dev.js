@@ -11,7 +11,7 @@ module.exports = async (callback) => {
     let dai;
     let daiJoin;
 
-    let ilk = web3.utils.fromAscii("ETH-A")
+    let WETH = web3.utils.fromAscii("ETH-A")
     let Line = web3.utils.fromAscii("Line")
     let spotName = web3.utils.fromAscii("spot")
     let linel = web3.utils.fromAscii("line")
@@ -37,9 +37,9 @@ module.exports = async (callback) => {
         daiJoin = await DaiJoin.deployed();
 
         // run operations
-        await vat.init(ilk);
-        await vat.file(ilk, spotName, spot );
-        await vat.file(ilk, linel, limits );
+        await vat.init(WETH);
+        await vat.file(WETH, spotName, spot );
+        await vat.file(WETH, linel, limits );
         await vat.file(Line, limits); 
 
         await vat.rely(vat.address );      // `owner` authorizing `vat` to operate for `vat`?
@@ -48,7 +48,7 @@ module.exports = async (callback) => {
         await vat.hope(daiJoin.address ); // `owner` allowing daiJoin to move his dai.
 
         const rateIncrease  = "250000000000000000000000000";
-        await vat.fold(ilk, vat.address, rateIncrease ); // 1 + 0.25
+        await vat.fold(WETH, vat.address, rateIncrease ); // 1 + 0.25
 
         console.log('Executed successfully')
 

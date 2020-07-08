@@ -20,6 +20,8 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20, IYDai  {
     event Redeemed(address indexed user, uint256 yDaiIn, uint256 daiOut);
     event Matured(uint256 rate, uint256 chi);
 
+    bytes32 public constant WETH = "ETH-A";
+
     IVat internal _vat;
     IJug internal _jug;
     IPot internal _pot;
@@ -70,12 +72,12 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20, IYDai  {
     function rateGrowth() public override returns(uint256){
         if (isMature != true) return rate0;
         uint256 rateNow;
-        (, uint256 rho) = _jug.ilks("ETH-A"); // "WETH" for weth.sol, "ETH-A" for MakerDAO
+        (, uint256 rho) = _jug.ilks(WETH);
         if (now > rho) {
-            rateNow = _jug.drip("ETH-A");
+            rateNow = _jug.drip(WETH);
             // console.log(rateNow);
         } else {
-            (, rateNow,,,) = _vat.ilks("ETH-A");
+            (, rateNow,,,) = _vat.ilks(WETH);
         }
         return divd(rateNow, rate0);
     }
@@ -91,7 +93,7 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20, IYDai  {
             isMature != true,
             "YDai: Already matured"
         );
-        (, rate0,,,) = _vat.ilks("ETH-A"); // Retrieve the MakerDAO Vat
+        (, rate0,,,) = _vat.ilks(WETH); // Retrieve the MakerDAO Vat
         rate0 = Math.max(rate0, UNIT); // Floor it at 1.0
         chi0 = (now > _pot.rho()) ? _pot.drip() : _pot.chi();
         isMature = true;

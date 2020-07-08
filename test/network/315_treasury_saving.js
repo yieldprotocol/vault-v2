@@ -30,7 +30,7 @@ contract('Treasury - Saving', async (accounts) =>  {
     let treasury;
     let dealer;
 
-    let ilk = web3.utils.fromAscii('ETH-A');
+    let WETH = web3.utils.fromAscii('ETH-A');
     let spot;
     let rate;
     let chi;
@@ -54,8 +54,8 @@ contract('Treasury - Saving', async (accounts) =>  {
         gasToken = await GasToken.at(await migrations.contracts(web3.utils.fromAscii("GasToken")));
         treasury = await Treasury.at(await migrations.contracts(web3.utils.fromAscii("Treasury")));
         
-        spot  = (await vat.ilks(ilk)).spot;
-        rate  = (await vat.ilks(ilk)).rate;
+        spot  = (await vat.ilks(WETH)).spot;
+        rate  = (await vat.ilks(WETH)).rate;
         chi = await pot.chi(); // Good boys call drip()
 
         wethTokens = toWad(1);
@@ -72,7 +72,7 @@ contract('Treasury - Saving', async (accounts) =>  {
         await weth.deposit({ from: owner, value: wethTokens});
         await weth.approve(wethJoin.address, wethTokens, { from: owner }); 
         await wethJoin.join(owner, wethTokens, { from: owner });
-        await vat.frob(ilk, owner, owner, owner, wethTokens, daiDebt, { from: owner });
+        await vat.frob(WETH, owner, owner, owner, wethTokens, daiDebt, { from: owner });
         await daiJoin.exit(owner, daiTokens, { from: owner });
         
         await dai.approve(treasury.address, daiTokens, { from: owner }); 
@@ -165,7 +165,7 @@ contract('Treasury - Saving', async (accounts) =>  {
         // Repay the dai
         await dai.approve(daiJoin.address, daiTokens, { from: owner }); 
         await daiJoin.join(owner, daiTokens, { from: owner });
-        await vat.frob(ilk, owner, owner, owner, wethTokens.mul(-1), daiDebt.mul(-1), { from: owner });
+        await vat.frob(WETH, owner, owner, owner, wethTokens.mul(-1), daiDebt.mul(-1), { from: owner });
         await wethJoin.exit(owner, wethTokens, { from: owner });
 
         // Withdraw the eth

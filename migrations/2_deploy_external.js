@@ -30,7 +30,7 @@ module.exports = async (deployer, network, accounts) => {
 
   if (network === "development") {
     // Setting up Vat
-    const ilk = web3.utils.fromAscii("ETH-A");
+    const WETH = web3.utils.fromAscii("ETH-A");
     const Line = web3.utils.fromAscii("Line");
     const spotName = web3.utils.fromAscii("spot");
     const linel = web3.utils.fromAscii("line");
@@ -42,15 +42,15 @@ module.exports = async (deployer, network, accounts) => {
     await deployer.deploy(Vat);
     const vat = await Vat.deployed();
     vatAddress = vat.address;
-    await vat.init(ilk);
-    await vat.file(ilk, spotName, spot);
-    await vat.file(ilk, linel, limits);
+    await vat.init(WETH);
+    await vat.file(WETH, spotName, spot);
+    await vat.file(WETH, linel, limits);
     await vat.file(Line, limits);
 
     await deployer.deploy(Weth);
     wethAddress = (await Weth.deployed()).address;
 
-    await deployer.deploy(GemJoin, vatAddress, ilk, wethAddress);
+    await deployer.deploy(GemJoin, vatAddress, WETH, wethAddress);
     wethJoinAddress = (await GemJoin.deployed()).address;
 
     await deployer.deploy(ERC20, 0);
@@ -63,7 +63,7 @@ module.exports = async (deployer, network, accounts) => {
     await deployer.deploy(Jug, vatAddress);
     const jug = await Jug.deployed();
     jugAddress = jug.address;
-    await jug.init(ilk); // Set ilk duty (stability fee) to 1.0
+    await jug.init(WETH); // Set WETH duty (stability fee) to 1.0
 
     // Setup pot
     await deployer.deploy(Pot, vatAddress);
@@ -87,7 +87,7 @@ module.exports = async (deployer, network, accounts) => {
     // Set development environment
     const rate  = toRay(1.25);
     const chi = toRay(1.2);
-    await vat.fold(ilk, vatAddress, subBN(rate, toRay(1)));
+    await vat.fold(WETH, vatAddress, subBN(rate, toRay(1)));
     await pot.setChi(chi);
   } else {
     vatAddress = fixed_addrs[network].vatAddress;

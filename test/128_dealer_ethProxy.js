@@ -45,9 +45,8 @@ contract('Dealer - EthProxy', async (accounts) =>  {
     let ethProxy;
 
     let ETH = web3.utils.fromAscii("ETH");
-    let WETH = web3.utils.fromAscii("WETH");
+    let WETH = web3.utils.fromAscii("ETH-A");
     let CHAI = web3.utils.fromAscii("CHAI");
-    let ilk = web3.utils.fromAscii("ETH-A");
     let Line = web3.utils.fromAscii("Line");
     let spotName = web3.utils.fromAscii("spot");
     let linel = web3.utils.fromAscii("line");
@@ -70,21 +69,21 @@ contract('Dealer - EthProxy', async (accounts) =>  {
 
         // Setup vat, join and weth
         vat = await Vat.new();
-        await vat.init(ilk, { from: owner }); // Set ilk rate (stability fee accumulator) to 1.0
+        await vat.init(WETH, { from: owner }); // Set WETH rate (stability fee accumulator) to 1.0
 
         weth = await Weth.new({ from: owner });
-        wethJoin = await GemJoin.new(vat.address, ilk, weth.address, { from: owner });
+        wethJoin = await GemJoin.new(vat.address, WETH, weth.address, { from: owner });
 
         dai = await ERC20.new(0, { from: owner });
         daiJoin = await DaiJoin.new(vat.address, dai.address, { from: owner });
 
-        await vat.file(ilk, spotName, spot, { from: owner });
-        await vat.file(ilk, linel, limits, { from: owner });
+        await vat.file(WETH, spotName, spot, { from: owner });
+        await vat.file(WETH, linel, limits, { from: owner });
         await vat.file(Line, limits);
 
         // Setup jug
         jug = await Jug.new(vat.address);
-        await jug.init(ilk, { from: owner }); // Set ilk duty (stability fee) to 1.0
+        await jug.init(WETH, { from: owner }); // Set WETH duty (stability fee) to 1.0
 
         // Setup pot
         pot = await Pot.new(vat.address);
@@ -176,7 +175,7 @@ contract('Dealer - EthProxy', async (accounts) =>  {
         await dealer.addDelegate(ethProxy.address, { from: owner });
 
         // Tests setup
-        await vat.fold(ilk, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
+        await vat.fold(WETH, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
     });
 
     afterEach(async() => {
@@ -205,7 +204,7 @@ contract('Dealer - EthProxy', async (accounts) =>  {
 
     it("allows user to post eth", async() => {
         assert.equal(
-            (await vat.urns(ilk, treasury.address)).ink,
+            (await vat.urns(WETH, treasury.address)).ink,
             0,
             "Treasury has weth in MakerDAO",
         );
@@ -220,7 +219,7 @@ contract('Dealer - EthProxy', async (accounts) =>  {
 
         expect(await balance.current(owner)).to.be.bignumber.lt(previousBalance);
         assert.equal(
-            (await vat.urns(ilk, treasury.address)).ink,
+            (await vat.urns(WETH, treasury.address)).ink,
             wethTokens.toString(),
             "Treasury should have weth in MakerDAO",
         );
@@ -233,7 +232,7 @@ contract('Dealer - EthProxy', async (accounts) =>  {
 
     it("allows user to post eth to a different account", async() => {
         assert.equal(
-            (await vat.urns(ilk, treasury.address)).ink,
+            (await vat.urns(WETH, treasury.address)).ink,
             0,
             "Treasury has weth in MakerDAO",
         );
@@ -248,7 +247,7 @@ contract('Dealer - EthProxy', async (accounts) =>  {
 
         expect(await balance.current(owner)).to.be.bignumber.lt(previousBalance);
         assert.equal(
-            (await vat.urns(ilk, treasury.address)).ink,
+            (await vat.urns(WETH, treasury.address)).ink,
             wethTokens.toString(),
             "Treasury should have weth in MakerDAO",
         );
@@ -264,7 +263,7 @@ contract('Dealer - EthProxy', async (accounts) =>  {
             await ethProxy.post(owner, owner, wethTokens, { from: owner, value: wethTokens });
 
             assert.equal(
-                (await vat.urns(ilk, treasury.address)).ink,
+                (await vat.urns(WETH, treasury.address)).ink,
                 wethTokens.toString(),
                 "Treasury does not have weth in MakerDAO",
             );
@@ -296,7 +295,7 @@ contract('Dealer - EthProxy', async (accounts) =>  {
 
             expect(await balance.current(owner)).to.be.bignumber.gt(previousBalance);
             assert.equal(
-                (await vat.urns(ilk, treasury.address)).ink,
+                (await vat.urns(WETH, treasury.address)).ink,
                 0,
                 "Treasury should not not have weth in MakerDAO",
             );
@@ -313,7 +312,7 @@ contract('Dealer - EthProxy', async (accounts) =>  {
 
             expect(await balance.current(user)).to.be.bignumber.gt(previousBalance);
             assert.equal(
-                (await vat.urns(ilk, treasury.address)).ink,
+                (await vat.urns(WETH, treasury.address)).ink,
                 0,
                 "Treasury should not not have weth in MakerDAO",
             );

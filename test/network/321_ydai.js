@@ -45,7 +45,7 @@ contract('yDai', async (accounts) =>  {
     let dealer;
     let splitter;
 
-    let ilk = web3.utils.fromAscii("ETH-A");
+    let WETH = web3.utils.fromAscii("ETH-A");
 
     let rate1;
     let chi1;
@@ -70,8 +70,8 @@ contract('yDai', async (accounts) =>  {
         gasToken = await GasToken.at(await migrations.contracts(web3.utils.fromAscii("GasToken")));
         treasury = await Treasury.at(await migrations.contracts(web3.utils.fromAscii("Treasury")));
         
-        spot  = (await vat.ilks(ilk)).spot;
-        rate1  = (await vat.ilks(ilk)).rate;
+        spot  = (await vat.ilks(WETH)).spot;
+        rate1  = (await vat.ilks(WETH)).rate;
         chi1 = await pot.chi(); // Good boys call drip()
 
         wethTokens1 = toWad(1);
@@ -129,7 +129,7 @@ contract('yDai', async (accounts) =>  {
     });
 
     it("yDai rate gets fixed at maturity time", async() => {
-        await vat.fold(ilk, vat.address, subBN(rate2.toString(), rate1.toString()), { from: owner });
+        await vat.fold(WETH, vat.address, subBN(rate2.toString(), rate1.toString()), { from: owner });
         
         assert(
             await yDai4.rateGrowth(),
@@ -180,7 +180,7 @@ contract('yDai', async (accounts) =>  {
             const yDaiSurplus = subBN(daiTokens2, daiTokens1);
             const savingsSurplus = subBN(savings2, daiTokens2);
             
-            await vat.fold(ilk, vat.address, subBN(rate2, rate1), { from: owner }); // Keeping above chi
+            await vat.fold(WETH, vat.address, subBN(rate2, rate1), { from: owner }); // Keeping above chi
             await pot.setChi(chi2, { from: owner });
 
             assert(
@@ -193,7 +193,7 @@ contract('yDai', async (accounts) =>  {
         it("redeem with increased chi returns more dai", async() => {
             // Redeem `daiTokens1` yDai to obtain `daiTokens1` * `chiDifferential`
 
-            await vat.fold(ilk, vat.address, subBN(rate2, rate1), { from: owner }); // Keeping above chi
+            await vat.fold(WETH, vat.address, subBN(rate2, rate1), { from: owner }); // Keeping above chi
             await pot.setChi(chi2, { from: owner });
 
             assert.equal(
