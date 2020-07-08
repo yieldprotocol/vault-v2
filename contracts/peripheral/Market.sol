@@ -3,6 +3,7 @@ pragma solidity ^0.6.10;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../helpers/Constants.sol";
+import "../helpers/Delegable.sol";
 import "../helpers/YieldMath.sol";
 import "../interfaces/IPot.sol";
 import "../interfaces/IYDai.sol";
@@ -11,7 +12,7 @@ import "@nomiclabs/buidler/console.sol";
 
 
 /// @dev The Market contract exchanges Dai for yDai at a price defined by a specific formula.
-contract Market is IMarket, ERC20, Constants {
+contract Market is IMarket, ERC20, Delegable, Constants {
 
     struct State {
         uint32 timestamp;    // last time contract was updated. wraps around after 2^32
@@ -30,7 +31,7 @@ contract Market is IMarket, ERC20, Constants {
 
     State internal state;
 
-    constructor(address pot_, address chai_, address yDai_) public ERC20("Name", "Symbol") {
+    constructor(address pot_, address chai_, address yDai_) public ERC20("Name", "Symbol") Delegable() {
         _pot = IPot(pot_);
         chai = IERC20(chai_);
         yDai = IYDai(yDai_);
@@ -84,9 +85,10 @@ contract Market is IMarket, ERC20, Constants {
     }
 
     /// @dev Sell Chai for yDai
-    /// @param to Wallet receiving the resulting yDai
+    /// @param from Wallet providing the chai being sold
+    /// @param to Wallet receiving the yDai being bought
     /// @param chaiIn Amount of chai being sold that will be taken from the user's wallet
-    function sellChai(address to, uint128 chaiIn) external override { // TODO: Add `from` and `to` parameters
+    function sellChai(address from, address to, uint128 chaiIn) external override { // TODO: Add `from` and `to` parameters
         int128 c = int128((((now > _pot.rho()) ? _pot.drip() : _pot.chi()) << 64) / 10**27); // TODO: Conside SafeCast
         uint128 chaiReserves = uint128(chai.balanceOf(address(this)));  // TODO: Conside SafeCast
         uint128 yDaiReserves = uint128(yDai.balanceOf(address(this)));  // TODO: Conside SafeCast
@@ -96,16 +98,17 @@ contract Market is IMarket, ERC20, Constants {
             uint128(maturity - now), k, c, g                            // TODO: Conside SafeCast
         );
 
-        chai.transferFrom(msg.sender, address(this), chaiIn);
+        chai.transferFrom(from, address(this), chaiIn);
         yDai.transfer(to, yDaiOut);
 
         _updateState(chaiReserves + chaiIn, yDaiReserves - yDaiOut);    // TODO: Conside SafeMath
     }
 
     /// @dev Buy Chai for yDai
-    /// @param to Wallet receiving the resulting chai
+    /// @param from Wallet providing the yDai being sold
+    /// @param to Wallet receiving the chai being bought
     /// @param chaiOut Amount of chai being bought that will be deposited in `to` wallet
-    function buyChai(address to, uint128 chaiOut) external override { // TODO: Add `from` and `to` parameters
+    function buyChai(address from, address to, uint128 chaiOut) external override { // TODO: Add `from` and `to` parameters
         int128 c = int128((((now > _pot.rho()) ? _pot.drip() : _pot.chi()) << 64) / 10**27); // TODO: Conside SafeCast
         uint128 chaiReserves = uint128(chai.balanceOf(address(this)));  // TODO: Conside SafeCast
         uint128 yDaiReserves = uint128(yDai.balanceOf(address(this)));  // TODO: Conside SafeCast
@@ -115,16 +118,17 @@ contract Market is IMarket, ERC20, Constants {
             uint128(maturity - now), k, c, g                             // TODO: Conside SafeCast
         );
 
-        yDai.transferFrom(msg.sender, address(this), yDaiIn);
+        yDai.transferFrom(from, address(this), yDaiIn);
         chai.transfer(to, chaiOut);
 
         _updateState(chaiReserves - chaiOut, yDaiReserves + yDaiIn);    // TODO: Conside SafeMath
     }
 
     /// @dev Sell yDai for Chai
-    /// @param to Wallet receiving the resulting chai
+    /// @param from Wallet providing the yDai being sold
+    /// @param to Wallet receiving the chai being bought
     /// @param yDaiIn Amount of yDai being sold that will be taken from the user's wallet
-    function sellYDai(address to, uint128 yDaiIn) external override { // TODO: Add `from` and `to` parameters
+    function sellYDai(address from, address to, uint128 yDaiIn) external override { // TODO: Add `from` and `to` parameters
         int128 c = int128((((now > _pot.rho()) ? _pot.drip() : _pot.chi()) << 64) / 10**27); // TODO: Conside SafeCast
         uint128 chaiReserves = uint128(chai.balanceOf(address(this)));  // TODO: Conside SafeCast
         uint128 yDaiReserves = uint128(yDai.balanceOf(address(this)));  // TODO: Conside SafeCast
@@ -134,16 +138,17 @@ contract Market is IMarket, ERC20, Constants {
             uint128(maturity - now), k, c, g                             // TODO: Conside SafeCast
         );
 
-        yDai.transferFrom(msg.sender, address(this), yDaiIn);
+        yDai.transferFrom(from, address(this), yDaiIn);
         chai.transfer(to, chaiOut);
 
         _updateState(chaiReserves - chaiOut, yDaiReserves + yDaiIn);    // TODO: Conside SafeMath
     }
 
     /// @dev Buy yDai for chai
-    /// @param to Wallet receiving the resulting yDai
+    /// @param from Wallet providing the chai being sold
+    /// @param to Wallet receiving the yDai being bought
     /// @param yDaiOut Amount of yDai being bought that will be deposited in `to` wallet
-    function buyYDai(address to, uint128 yDaiOut) external override { // TODO: Add `from` and `to` parameters
+    function buyYDai(address from, address to, uint128 yDaiOut) external override { // TODO: Add `from` and `to` parameters
         int128 c = int128((((now > _pot.rho()) ? _pot.drip() : _pot.chi()) << 64) / 10**27); // TODO: Conside SafeCast
         uint128 chaiReserves = uint128(chai.balanceOf(address(this)));  // TODO: Conside SafeCast
         uint128 yDaiReserves = uint128(yDai.balanceOf(address(this)));  // TODO: Conside SafeCast
@@ -153,7 +158,7 @@ contract Market is IMarket, ERC20, Constants {
             uint128(maturity - now), k, c, g                             // TODO: Conside SafeCast
         );
 
-        chai.transferFrom(msg.sender, address(this), chaiIn);
+        chai.transferFrom(from, address(this), chaiIn);
         yDai.transfer(to, yDaiOut);
 
         _updateState(chaiReserves + chaiIn, yDaiReserves - yDaiOut);    // TODO: Conside SafeMath
