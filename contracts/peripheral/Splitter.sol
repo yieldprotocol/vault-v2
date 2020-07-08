@@ -85,7 +85,7 @@ contract Splitter is IFlashMinter, Constants, DecimalMath {
     function _makerToYield(address user, uint256 yDaiAmount, uint256 wethAmount, uint256 daiAmount) internal {
         // Sell the YDai for Chai
         // TODO: Calculate how much dai, then chai is needed, and use buyChai
-        market.sellYDai(uint128(yDaiAmount)); // Splitter will hold the chai temporarily - TODO: Consider SafeCast
+        market.sellYDai(address(this), uint128(yDaiAmount)); // Splitter will hold the chai temporarily - TODO: Consider SafeCast
         // Unpack the Chai into Dai
         chai.exit(address(this), chai.balanceOf(address(this)));
         // Put the Dai in Maker
@@ -138,7 +138,7 @@ contract Splitter is IFlashMinter, Constants, DecimalMath {
         // Wrap the Dai into Chai
         chai.join(address(this), dai.balanceOf(address(this)));
         // Sell the Chai for YDai at Market - It should make up for what was taken with repayYdai
-        market.sellChai(uint128(chai.balanceOf(address(this)))); // Splitter will hold the chai temporarily - TODO: Consider SafeCast
+        market.sellChai(address(this), uint128(chai.balanceOf(address(this)))); // Splitter will hold the chai temporarily - TODO: Consider SafeCast
         yDai.transfer(user, yDai.balanceOf(address(this)));
     }
 }
