@@ -214,7 +214,7 @@ contract('yDai - Delegable', async (accounts) =>  {
 
     it("redeem is allowed for account holder", async() => {
         await yDai1.approve(yDai1.address, daiTokens1, { from: holder });
-        await yDai1.redeem(holder, daiTokens1, { from: holder });
+        await yDai1.redeem(holder, holder, daiTokens1, { from: holder });
 
         assert.equal(
             await treasury.debt(),
@@ -231,7 +231,7 @@ contract('yDai - Delegable', async (accounts) =>  {
     it("redeem is not allowed for non designated accounts", async() => {
         await yDai1.approve(yDai1.address, daiTokens1, { from: holder });
         await expectRevert(
-            yDai1.redeem(holder, daiTokens1, { from: other }),
+            yDai1.redeem(holder, holder, daiTokens1, { from: other }),
             "YDai: Only Holder Or Delegate",
         );
     });
@@ -247,7 +247,7 @@ contract('yDai - Delegable', async (accounts) =>  {
                 enabled: true,
             },
         );
-        await yDai1.redeem(holder, daiTokens1, { from: other });
+        await yDai1.redeem(holder, holder, daiTokens1, { from: other });
 
         assert.equal(
             await treasury.debt(),
@@ -278,7 +278,7 @@ contract('yDai - Delegable', async (accounts) =>  {
             );
 
             await expectRevert(
-                yDai1.redeem(holder, daiTokens1, { from: other }),
+                yDai1.redeem(holder, holder, daiTokens1, { from: other }),
                 "YDai: Only Holder Or Delegate",
             );
         });
