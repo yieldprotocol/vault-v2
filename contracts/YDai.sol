@@ -17,7 +17,7 @@ import "@nomiclabs/buidler/console.sol";
 /// @dev yDai is a yToken targeting Dai.
 contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20, IYDai  {
 
-    event Redeemed(address indexed user, uint256 yDaiIn, uint256 daiOut);
+    event Redeemed(address indexed from, address indexed to, uint256 yDaiIn, uint256 daiOut);
     event Matured(uint256 rate, uint256 chi);
 
     IVat internal _vat;
@@ -100,18 +100,18 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20, IYDai  {
 
     /// @dev Burn yTokens and return their dai equivalent value, pulled from the Treasury
     // TODO: Consider whether to allow this to be gracefully unwind, instead of letting `_treasury.pullDai()` revert.
-    // user --- yDai ---> us
-    // us   --- Dai  ---> user
-    function redeem(address user, uint256 yDaiAmount)
-        public onlyHolderOrDelegate(user, "YDai: Only Holder Or Delegate") {
+    // from --- yDai ---> us
+    // us   --- Dai  ---> to
+    function redeem(address from, address to, uint256 yDaiAmount)
+        public onlyHolderOrDelegate(from, "YDai: Only Holder Or Delegate") {
         require(
             isMature == true,
             "YDai: yDai is not mature"
         );
-        _burn(user, yDaiAmount);                              // Burn yDai from user
+        _burn(from, yDaiAmount);                              // Burn yDai from `from`
         uint256 daiAmount = muld(yDaiAmount, chiGrowth());    // User gets interest for holding after maturity
-        _treasury.pullDai(user, daiAmount);                   // Give dai to user, from Treasury
-        emit Redeemed(user, yDaiAmount, daiAmount);
+        _treasury.pullDai(to, daiAmount);                     // Give dai to `to`, from Treasury
+        emit Redeemed(from, to, yDaiAmount, daiAmount);
     }
 
     /// @dev Flash-mint yDai. Calls back on `IFlashMinter.executeOnFlashMint()`

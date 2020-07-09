@@ -91,7 +91,7 @@ contract('yDai', async (accounts) =>  {
 
     it("yDai can't be redeemed if not mature", async() => {
         await expectRevert(
-            yDai4.redeem(owner, daiTokens1, { from: owner }),
+            yDai4.redeem(owner, owner, daiTokens1, { from: owner }),
             "YDai: yDai is not mature",
         );
     });
@@ -151,7 +151,7 @@ contract('yDai', async (accounts) =>  {
         );
 
         await yDai.approve(yDai4.address, daiTokens1, { from: user1 });
-        await yDai.redeem(user1, daiTokens1, { from: user1 });
+        await yDai.redeem(user1, user1, daiTokens1, { from: user1 });
 
         assert.equal(
             await dai.balanceOf(user1),
@@ -203,7 +203,7 @@ contract('yDai', async (accounts) =>  {
             );
     
             await yDai4.approve(yDai4.address, daiTokens1, { from: user1 });
-            await yDai4.redeem(user1, daiTokens1, { from: user1 });
+            await yDai4.redeem(user1, user1, daiTokens1, { from: user1 });
     
             assert.equal(
                 await dai.balanceOf(user1),

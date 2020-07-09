@@ -30,7 +30,7 @@ const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/
 const { expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
 
 contract('yDai', async (accounts) =>  {
-    let [ owner, user1, user2 ] = accounts;
+    let [ owner, user1, other ] = accounts;
     let vat;
     let weth;
     let wethJoin;
@@ -196,7 +196,7 @@ contract('yDai', async (accounts) =>  {
 
     it("yDai1 can't be redeemed before maturity time", async() => {
         await expectRevert(
-            yDai1.redeem(owner, daiTokens1, { from: owner }),
+            yDai1.redeem(user1, user1, daiTokens1, { from: user1 }),
             "YDai: yDai is not mature",
         );
     });
@@ -233,7 +233,7 @@ contract('yDai', async (accounts) =>  {
         await helper.advanceBlock();
         await yDai1.mature();
 
-        await yDai1.redeem(user1, daiTokens1, { from: user1 });
+        await yDai1.redeem(user1, user1, daiTokens1, { from: user1 });
 
         assert.equal(
             await flashMinter.flashBalance(),
@@ -304,12 +304,39 @@ contract('yDai', async (accounts) =>  {
             );
     
             await yDai1.approve(yDai1.address, daiTokens1, { from: user1 });
-            await yDai1.redeem(user1, daiTokens1, { from: user1 });
+            await yDai1.redeem(user1, user1, daiTokens1, { from: user1 });
     
             assert.equal(
                 await dai.balanceOf(user1),
                 daiTokens1.toString(),
                 "User1 should have dai",
+            );
+            assert.equal(
+                await yDai1.balanceOf(user1),
+                0,
+                "User1 should not have yDai1",
+            );
+        });
+
+        it("yDai can be redeemed in favour of others", async() => {
+            assert.equal(
+                await yDai1.balanceOf(user1),
+                daiTokens1.toString(),
+                "User1 does not have yDai1",
+            );
+            assert.equal(
+                await dai.balanceOf(other),
+                0,
+                "Other has dai",
+            );
+    
+            await yDai1.approve(yDai1.address, daiTokens1, { from: user1 });
+            await yDai1.redeem(user1, other, daiTokens1, { from: user1 });
+    
+            assert.equal(
+                await dai.balanceOf(other),
+                daiTokens1.toString(),
+                "Other should have dai",
             );
             assert.equal(
                 await yDai1.balanceOf(user1),
@@ -343,7 +370,7 @@ contract('yDai', async (accounts) =>  {
                 );
         
                 await yDai1.approve(yDai1.address, daiTokens1, { from: user1 });
-                await yDai1.redeem(user1, daiTokens1, { from: user1 });
+                await yDai1.redeem(user1, user1, daiTokens1, { from: user1 });
         
                 assert.equal(
                     await dai.balanceOf(user1),
