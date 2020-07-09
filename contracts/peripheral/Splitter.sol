@@ -110,7 +110,7 @@ contract Splitter is IFlashMinter, DecimalMath {
         dealer.post(WETH, address(this), user, wethAmount);
         // Borrow the Dai
         // TODO: dealer.addProxy(splitter.address, { from: user });
-        dealer.borrow(WETH, yDai.maturity(), user, yDaiAmount);
+        dealer.borrow(WETH, yDai.maturity(), user, user, yDaiAmount);
     }
 
     function _yieldToMaker(address user, uint256 yDaiAmount, uint256 wethAmount, uint256 daiAmount) internal {

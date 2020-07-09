@@ -315,7 +315,7 @@ contract('Dealer - Chai', async (accounts) =>  {
                 "User1 has debt",
             );
     
-            await dealer.borrow(CHAI, maturity1, user1, daiTokens, { from: user1 });
+            await dealer.borrow(CHAI, maturity1, user1, user1, daiTokens, { from: user1 });
 
             assert.equal(
                 await yDai1.balanceOf(user1),
@@ -342,14 +342,14 @@ contract('Dealer - Chai', async (accounts) =>  {
             );
     
             await expectRevert(
-                dealer.borrow(CHAI, maturity1, user1, addBN(daiTokens, 1), { from: user1 }),
+                dealer.borrow(CHAI, maturity1, user1, user1, addBN(daiTokens, 1), { from: user1 }),
                 "Dealer: Too much debt",
             );
         });
 
         describe("with borrowed yDai", () => {
             beforeEach(async() => {
-                await dealer.borrow(CHAI, maturity1, user1, daiTokens, { from: user1 });
+                await dealer.borrow(CHAI, maturity1, user1, user1, daiTokens, { from: user1 });
             });
 
             it("doesn't allow to withdraw and become undercollateralized", async() => {
@@ -365,7 +365,7 @@ contract('Dealer - Chai', async (accounts) =>  {
                 );
 
                 await expectRevert(
-                    dealer.borrow(CHAI, maturity1, user1, chaiTokens, { from: user1 }),
+                    dealer.borrow(CHAI, maturity1, user1, user1, chaiTokens, { from: user1 }),
                     "Dealer: Too much debt",
                 );
             });

@@ -229,13 +229,13 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), DecimalMath {
     //
     // posted[user](wad) >= (debtYDai[user](wad)) * amount (wad)) * collateralization (ray)
     //
-    // us --- yDai ---> user
+    // us(from) --- yDai ---> to
     // debt++
-    function borrow(bytes32 collateral, uint256 maturity, address to, uint256 yDaiAmount)
+    function borrow(bytes32 collateral, uint256 maturity, address from, address to, uint256 yDaiAmount)
         public override
         validCollateral(collateral)
         validSeries(maturity)
-        onlyHolderOrDelegate(to, "Dealer: Only Holder Or Delegate")
+        onlyHolderOrDelegate(from, "Dealer: Only Holder Or Delegate")
         onlyLive
     {
         require(
@@ -243,18 +243,18 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), DecimalMath {
             "Dealer: No mature borrow"
         );
 
-        if (debtYDai[collateral][maturity][to] == 0 && yDaiAmount >= 0) {
+        if (debtYDai[collateral][maturity][from] == 0 && yDaiAmount >= 0) {
             lockBond(10);
         }
-        debtYDai[collateral][maturity][to] = debtYDai[collateral][maturity][to].add(yDaiAmount);
+        debtYDai[collateral][maturity][from] = debtYDai[collateral][maturity][from].add(yDaiAmount);
         systemDebtYDai[collateral][maturity] = systemDebtYDai[collateral][maturity].add(yDaiAmount);
 
         require(
-            isCollateralized(collateral, to),
+            isCollateralized(collateral, from),
             "Dealer: Too much debt"
         );
         series[maturity].mint(to, yDaiAmount);
-        emit Borrowed(collateral, maturity, to, int256(yDaiAmount)); // TODO: Watch for overflow
+        emit Borrowed(collateral, maturity, from, int256(yDaiAmount)); // TODO: Watch for overflow
     }
 
     /// @dev Burns yDai of a given series from `from` address, user debt is decreased for the given collateral and yDai series.
@@ -307,6 +307,7 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), DecimalMath {
         if (debtYDai[collateral][maturity][from] == 0 && yDaiAmount >= 0) {
             returnBond(10);
         }
+        // TODO: The address in the event should be `to`, the vault being affected.
         emit Borrowed(collateral, maturity, from, -int256(yDaiAmount)); // TODO: Watch for overflow
     }
 

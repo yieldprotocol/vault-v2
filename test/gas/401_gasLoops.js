@@ -329,14 +329,14 @@ contract('Gas Usage', async (accounts) =>  {
                 
                 for (let i = 0; i < maturities.length; i++) {
                     await postWeth(user3, wethTokens);
-                    await dealer.borrow(WETH, maturities[i], user3, daiTokens, { from: user3 });
+                    await dealer.borrow(WETH, maturities[i], user3, user3, daiTokens, { from: user3 });
                 }
             });
 
             it("borrow a second time (no gas bond)", async() => {
                 for (let i = 0; i < maturities.length; i++) {
                     await postWeth(user3, wethTokens);
-                    await dealer.borrow(WETH, maturities[i], user3, daiTokens, { from: user3 });
+                    await dealer.borrow(WETH, maturities[i], user3, user3, daiTokens, { from: user3 });
                 }
             });
 

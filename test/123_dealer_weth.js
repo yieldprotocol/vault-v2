@@ -331,7 +331,7 @@ contract('Dealer - Weth', async (accounts) =>  {
         });
 
         it("allows to borrow yDai", async() => {
-            event = (await dealer.borrow(WETH, maturity1, user1, daiTokens, { from: user1 })).logs[0];
+            event = (await dealer.borrow(WETH, maturity1, user1, user1, daiTokens, { from: user1 })).logs[0];
 
             assert.equal(
                 event.event,
@@ -372,15 +372,15 @@ contract('Dealer - Weth', async (accounts) =>  {
 
         it("doesn't allow to borrow yDai beyond borrowing power", async() => {
             await expectRevert(
-                dealer.borrow(WETH, maturity1, user1, addBN(daiTokens, 1), { from: user1 }), // Borrow 1 wei beyond power
+                dealer.borrow(WETH, maturity1, user1, user1, addBN(daiTokens, 1), { from: user1 }), // Borrow 1 wei beyond power
                 "Dealer: Too much debt",
             );
         });
 
         describe("with borrowed yDai", () => {
             beforeEach(async() => {
-                await dealer.borrow(WETH, maturity1, user1, daiTokens, { from: user1 });
-                await dealer.borrow(WETH, maturity1, user2, daiTokens, { from: user2 });
+                await dealer.borrow(WETH, maturity1, user1, user1, daiTokens, { from: user1 });
+                await dealer.borrow(WETH, maturity1, user2, user2, daiTokens, { from: user2 });
             });
 
             it("aggregates debt totals", async() => {
@@ -395,7 +395,7 @@ contract('Dealer - Weth', async (accounts) =>  {
                 await weth.deposit({ from: user1, value: wethTokens });
                 await weth.approve(treasury.address, wethTokens, { from: user1 }); 
                 await dealer.post(WETH, user1, user1, wethTokens, { from: user1 });
-                await dealer.borrow(WETH, maturity2, user1, daiTokens, { from: user1 });
+                await dealer.borrow(WETH, maturity2, user1, user1, daiTokens, { from: user1 });
 
                 assert.equal(
                     await yDai1.balanceOf(user1),
@@ -434,12 +434,12 @@ contract('Dealer - Weth', async (accounts) =>  {
                     await weth.deposit({ from: user1, value: wethTokens });
                     await weth.approve(treasury.address, wethTokens, { from: user1 }); 
                     await dealer.post(WETH, user1, user1, wethTokens, { from: user1 });
-                    await dealer.borrow(WETH, maturity2, user1, daiTokens, { from: user1 });
+                    await dealer.borrow(WETH, maturity2, user1, user1, daiTokens, { from: user1 });
                 });
 
                 it("doesn't allow to withdraw and become undercollateralized", async() => {
                     await expectRevert(
-                        dealer.borrow(WETH, maturity1, user1, wethTokens, { from: user1 }),
+                        dealer.borrow(WETH, maturity1, user1, user1, wethTokens, { from: user1 }),
                         "Dealer: Too much debt",
                     );
                 });

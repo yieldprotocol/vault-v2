@@ -342,7 +342,7 @@ contract('Unwind - Skim', async (accounts) =>  {
 
         it("unredeemed yDai and dealer weth debt cancel each other", async() => {
             await postWeth(user2, wethTokens);
-            await dealer.borrow(WETH, await yDai1.maturity(), user2, daiTokens, { from: user2 }); // dealer debt assets == yDai liabilities 
+            await dealer.borrow(WETH, await yDai1.maturity(), user2, user2, daiTokens, { from: user2 }); // dealer debt assets == yDai liabilities 
 
             await unwind.skimWhileLive(user1, { from: owner });
 
@@ -356,7 +356,7 @@ contract('Unwind - Skim', async (accounts) =>  {
 
         it("unredeemed yDai and dealer chai debt cancel each other", async() => {
             await postChai(user2, chaiTokens);
-            await dealer.borrow(CHAI, await yDai1.maturity(), user2, daiTokens, { from: user2 }); // dealer debt assets == yDai liabilities 
+            await dealer.borrow(CHAI, await yDai1.maturity(), user2, user2, daiTokens, { from: user2 }); // dealer debt assets == yDai liabilities 
 
             await unwind.skimWhileLive(user1, { from: owner });
 
@@ -395,10 +395,10 @@ contract('Unwind - Skim', async (accounts) =>  {
 
             beforeEach(async() => {
                 await postWeth(user2, wethTokens);
-                await dealer.borrow(WETH, await yDai1.maturity(), user2, daiTokens, { from: user2 }); // dealer debt assets == yDai liabilities 
+                await dealer.borrow(WETH, await yDai1.maturity(), user2, user2, daiTokens, { from: user2 }); // dealer debt assets == yDai liabilities 
 
                 await postChai(user2, chaiTokens);
-                await dealer.borrow(CHAI, await yDai1.maturity(), user2, daiTokens, { from: user2 }); // dealer debt assets == yDai liabilities 
+                await dealer.borrow(CHAI, await yDai1.maturity(), user2, user2, daiTokens, { from: user2 }); // dealer debt assets == yDai liabilities 
                 // profit = 10 chai
 
                 // yDai matures
@@ -435,13 +435,13 @@ contract('Unwind - Skim', async (accounts) =>  {
 
             beforeEach(async() => {
                 await postWeth(user2, wethTokens);
-                await dealer.borrow(WETH, await yDai1.maturity(), user2, daiTokens, { from: user2 }); // dealer debt assets == yDai liabilities 
+                await dealer.borrow(WETH, await yDai1.maturity(), user2, user2, daiTokens, { from: user2 }); // dealer debt assets == yDai liabilities 
 
                 await postWeth(user2, wethTokens);
-                await dealer.borrow(WETH, await yDai2.maturity(), user2, daiTokens, { from: user2 }); // dealer debt assets == yDai liabilities 
+                await dealer.borrow(WETH, await yDai2.maturity(), user2, user2, daiTokens, { from: user2 }); // dealer debt assets == yDai liabilities 
 
                 await postChai(user2, chaiTokens);
-                await dealer.borrow(CHAI, await yDai1.maturity(), user2, daiTokens, { from: user2 }); // dealer debt assets == yDai liabilities 
+                await dealer.borrow(CHAI, await yDai1.maturity(), user2, user2, daiTokens, { from: user2 }); // dealer debt assets == yDai liabilities 
                 // profit = 10 chai
 
                 // yDai1 matures
