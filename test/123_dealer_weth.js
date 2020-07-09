@@ -266,6 +266,122 @@ contract('Dealer - Weth', async (accounts) =>  {
         );
     });
 
+    it("allows users to post weth for others", async() => {
+        assert.equal(
+            (await vat.urns(WETH, treasury.address)).ink,
+            0,
+            "Treasury has weth in MakerDAO",
+        );
+        assert.equal(
+            await dealer.powerOf.call(WETH, user1),
+            0,
+            "User1 has borrowing power",
+        );
+        
+        await weth.deposit({ from: user1, value: wethTokens });
+        await weth.approve(treasury.address, wethTokens, { from: user1 }); 
+        const event = (await dealer.post(WETH, user1, user2, wethTokens, { from: user1 })).logs[0];
+        
+        assert.equal(
+            event.event,
+            "Posted",
+        );
+        assert.equal(
+            bytes32ToString(event.args.collateral),
+            bytes32ToString(WETH),
+        );
+        assert.equal(
+            event.args.user,
+            user2,
+        );
+        assert.equal(
+            event.args.amount,
+            wethTokens.toString(),
+        );
+        assert.equal(
+            (await vat.urns(WETH, treasury.address)).ink,
+            wethTokens.toString(),
+            "Treasury should have weth in MakerDAO",
+        );
+        assert.equal(
+            await dealer.powerOf.call(WETH, user2),
+            daiTokens.toString(),
+            "User2 should have " + daiTokens + " borrowing power, instead has " + await dealer.powerOf.call(WETH, user2),
+        );
+        assert.equal(
+            await dealer.posted(WETH, user2),
+            wethTokens.toString(),
+            "User2 should have " + wethTokens + " weth posted, instead has " + await dealer.posted(WETH, user2),
+        );
+        assert.equal(
+            await dealer.systemPosted(WETH),
+            wethTokens.toString(),
+            "System should have " + wethTokens + " weth posted, instead has " + await dealer.systemPosted(WETH),
+        );
+    });
+
+    it("doesn't allow to post from others if not a delegate", async() => {
+        await expectRevert(
+            dealer.post(WETH, user1, user2, daiTokens, { from: user2 }),
+            "Dealer: Only Holder Or Delegate",
+        );
+    });
+
+    it("allows delegates to post weth from others", async() => {
+        assert.equal(
+            (await vat.urns(WETH, treasury.address)).ink,
+            0,
+            "Treasury has weth in MakerDAO",
+        );
+        assert.equal(
+            await dealer.powerOf.call(WETH, user1),
+            0,
+            "User1 has borrowing power",
+        );
+        
+        await weth.deposit({ from: user1, value: wethTokens });
+        await dealer.addDelegate(user2, { from: user1 });
+        await weth.approve(treasury.address, wethTokens, { from: user1 }); 
+        const event = (await dealer.post(WETH, user1, user2, wethTokens, { from: user2 })).logs[0];
+        
+        assert.equal(
+            event.event,
+            "Posted",
+        );
+        assert.equal(
+            bytes32ToString(event.args.collateral),
+            bytes32ToString(WETH),
+        );
+        assert.equal(
+            event.args.user,
+            user2,
+        );
+        assert.equal(
+            event.args.amount,
+            wethTokens.toString(),
+        );
+        assert.equal(
+            (await vat.urns(WETH, treasury.address)).ink,
+            wethTokens.toString(),
+            "Treasury should have weth in MakerDAO",
+        );
+        assert.equal(
+            await dealer.powerOf.call(WETH, user2),
+            daiTokens.toString(),
+            "User2 should have " + daiTokens + " borrowing power, instead has " + await dealer.powerOf.call(WETH, user2),
+        );
+        assert.equal(
+            await dealer.posted(WETH, user2),
+            wethTokens.toString(),
+            "User2 should have " + wethTokens + " weth posted, instead has " + await dealer.posted(WETH, user2),
+        );
+        assert.equal(
+            await dealer.systemPosted(WETH),
+            wethTokens.toString(),
+            "System should have " + wethTokens + " weth posted, instead has " + await dealer.systemPosted(WETH),
+        );
+    });
+
     describe("with posted weth", () => {
         beforeEach(async() => {
             await weth.deposit({ from: user1, value: wethTokens });

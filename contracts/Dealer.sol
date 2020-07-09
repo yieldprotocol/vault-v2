@@ -184,7 +184,7 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), DecimalMath {
     function post(bytes32 collateral, address from, address to, uint256 amount)
         public override 
         validCollateral(collateral)
-        // TODO: onlyHolderOrDelegate(from, "Dealer: Only Holder Or Delegate")
+        onlyHolderOrDelegate(from, "Dealer: Only Holder Or Delegate")
         onlyLive
     {
         if (collateral == WETH){ // TODO: Refactor Treasury to be `push(collateral, amount)`
