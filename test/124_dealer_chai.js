@@ -383,7 +383,7 @@ contract('Dealer - Chai', async (accounts) =>  {
                 );
 
                 await yDai1.approve(treasury.address, daiTokens, { from: user1 });
-                await dealer.repayYDai(CHAI, maturity1, user1, daiTokens, { from: user1 });
+                await dealer.repayYDai(CHAI, maturity1, user1, user1, daiTokens, { from: user1 });
     
                 assert.equal(
                     await yDai1.balanceOf(user1),
@@ -413,7 +413,7 @@ contract('Dealer - Chai', async (accounts) =>  {
                 );
 
                 await dai.approve(treasury.address, daiTokens, { from: user1 });
-                await dealer.repayDai(CHAI, maturity1, user1, daiTokens, { from: user1 });
+                await dealer.repayDai(CHAI, maturity1, user1, user1, daiTokens, { from: user1 });
     
                 assert.equal(
                     await dai.balanceOf(user1),
@@ -445,7 +445,7 @@ contract('Dealer - Chai', async (accounts) =>  {
                 );
 
                 await yDai1.approve(treasury.address, yDaiTokens, { from: user1 });
-                await dealer.repayYDai(CHAI, maturity1, user1, yDaiTokens, { from: user1 });
+                await dealer.repayYDai(CHAI, maturity1, user1, user1, yDaiTokens, { from: user1 });
     
                 assert.equal(
                     await yDai1.balanceOf(user1),

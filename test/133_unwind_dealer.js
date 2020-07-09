@@ -398,11 +398,11 @@ contract('Unwind - Dealer', async (accounts) =>  {
                     "Dealer: Not available during unwind",
                 );
                 await expectRevert(
-                    dealer.repayDai(WETH, maturity1, owner, daiTokens, { from: owner }),
+                    dealer.repayDai(WETH, maturity1, owner, owner, daiTokens, { from: owner }),
                     "Dealer: Not available during unwind",
                 );
                 await expectRevert(
-                    dealer.repayYDai(WETH, maturity1, owner, yDaiTokens, { from: owner }),
+                    dealer.repayYDai(WETH, maturity1, owner, owner, yDaiTokens, { from: owner }),
                     "Dealer: Not available during unwind",
                 );
             });

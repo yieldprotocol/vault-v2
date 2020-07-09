@@ -300,7 +300,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
         });
 
         it("does not transfer gas tokens on partial repayments", async() => {
-            await dealer.repayYDai(WETH, maturity1, user1, daiTokens.sub(1), { from: user1 });
+            await dealer.repayYDai(WETH, maturity1, user1, user1, daiTokens.sub(1), { from: user1 });
 
             assert.equal(
                 await gasToken.balanceOf(user1),
@@ -310,7 +310,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
         });
 
         it("transfers gas tokens on repayment of all debt", async() => {
-            await dealer.repayYDai(WETH, maturity1, user1, daiTokens, { from: user1 });
+            await dealer.repayYDai(WETH, maturity1, user1, user1, daiTokens, { from: user1 });
 
             assert.equal(
                 await gasToken.balanceOf(user1),

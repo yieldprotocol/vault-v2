@@ -16,6 +16,6 @@ interface IDealer {
     function post(bytes32, address, address, uint256) external;
     function withdraw(bytes32, address, address, uint256) external;
     function borrow(bytes32, uint256, address, address, uint256) external;
-    function repayYDai(bytes32, uint256, address, uint256) external;
-    function repayDai(bytes32, uint256, address, uint256) external;
+    function repayYDai(bytes32, uint256, address, address, uint256) external;
+    function repayDai(bytes32, uint256, address, address, uint256) external;
 }
