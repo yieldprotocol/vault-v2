@@ -1,7 +1,6 @@
 pragma solidity ^0.6.10;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "../helpers/Constants.sol";
 import "../helpers/DecimalMath.sol";
 import "../interfaces/IVat.sol";
 import "../interfaces/IGemJoin.sol";
@@ -15,8 +14,9 @@ import "../interfaces/IFlashMinter.sol";
 
 
 /// @dev The Market contract exchanges Dai for yDai at a price defined by a specific formula.
-contract Splitter is IFlashMinter, Constants, DecimalMath {
+contract Splitter is IFlashMinter, DecimalMath {
 
+    bytes32 public constant WETH = "ETH-A";
     bool constant public MTY = true;
     bool constant public YTM = false;
 

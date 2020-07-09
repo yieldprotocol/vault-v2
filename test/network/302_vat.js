@@ -29,7 +29,7 @@ contract('Vat', async (accounts, network) =>  {
     let treasury;
     let dealer;
 
-    let ilk = web3.utils.fromAscii('ETH-A');
+    let WETH = web3.utils.fromAscii('ETH-A');
     let spot;
     let rate;
     let wethTokens;
@@ -49,8 +49,8 @@ contract('Vat', async (accounts, network) =>  {
         chai = await Chai.at(await migrations.contracts(web3.utils.fromAscii("Chai")));
         gasToken = await GasToken.at(await migrations.contracts(web3.utils.fromAscii("GasToken")));
 
-        spot  = (await vat.ilks(ilk)).spot;
-        rate  = (await vat.ilks(ilk)).rate;
+        spot  = (await vat.ilks(WETH)).spot;
+        rate  = (await vat.ilks(WETH)).rate;
         wethTokens = toWad(1);
         daiTokens = mulRay(wethTokens.toString(), spot.toString());
         daiDebt = divRay(daiTokens.toString(), rate.toString());
@@ -60,8 +60,8 @@ contract('Vat', async (accounts, network) =>  {
 
     it('should setup vat', async() => {
         console.log("    Limits: " + await vat.Line());
-        console.log("    Spot: " + (await vat.ilks(ilk)).spot);
-        console.log("    Rate: " + (await vat.ilks(ilk)).rate);
+        console.log("    Spot: " + (await vat.ilks(WETH)).spot);
+        console.log("    Rate: " + (await vat.ilks(WETH)).rate);
     });
 
     it('should deposit collateral', async() => {
@@ -80,20 +80,20 @@ contract('Vat', async (accounts, network) =>  {
             'User should have joined ' + wethTokens + ' weth.'
         );
 
-        await vat.frob(ilk, user, user, user, wethTokens, 0, { from: user });
+        await vat.frob(WETH, user, user, user, wethTokens, 0, { from: user });
         
         assert.equal(
-            (await vat.urns(ilk, user)).ink,   
+            (await vat.urns(WETH, user)).ink,   
             wethTokens.toString(),
             'User should have ' + wethTokens + ' weth as collateral.',
         );
     });
 
     it('should borrow Dai', async() => {
-        await vat.frob(ilk, user, user, user, 0, daiDebt, { from: user });
+        await vat.frob(WETH, user, user, user, 0, daiDebt, { from: user });
 
         assert.equal(
-            (await vat.urns(ilk, user)).art,   
+            (await vat.urns(WETH, user)).art,   
             daiDebt.toString(),
             'User should have ' + daiDebt + ' dai debt.',
         );
@@ -115,20 +115,20 @@ contract('Vat', async (accounts, network) =>  {
             'User should have no dai.',
         );
 
-        await vat.frob(ilk, user, user, user, 0, daiDebt.mul(-1), { from: user });
+        await vat.frob(WETH, user, user, user, 0, daiDebt.mul(-1), { from: user });
 
         assert.equal(
-            (await vat.urns(ilk, user)).art,   
+            (await vat.urns(WETH, user)).art,   
             0,
             'Owner should have no dai debt.',
         );
     });
 
     it('should withdraw collateral', async() => {
-        await vat.frob(ilk, user, user, user, wethTokens.mul(-1), 0, { from: user });
+        await vat.frob(WETH, user, user, user, wethTokens.mul(-1), 0, { from: user });
 
         assert.equal(
-            (await vat.urns(ilk, user)).ink,   
+            (await vat.urns(WETH, user)).ink,   
             0,
             'User should have no weth as collateral.',
         );

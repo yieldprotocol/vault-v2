@@ -47,9 +47,8 @@ contract('Gas Usage', async (accounts) =>  {
     let liquidations;
     let unwind;
 
-    let WETH = web3.utils.fromAscii("WETH");
+    let WETH = web3.utils.fromAscii("ETH-A");
     let CHAI = web3.utils.fromAscii("CHAI");
-    let ilk = web3.utils.fromAscii("ETH-A");
     let Line = web3.utils.fromAscii("Line");
     let spotName = web3.utils.fromAscii("spot");
     let linel = web3.utils.fromAscii("line");
@@ -87,7 +86,7 @@ contract('Gas Usage', async (accounts) =>  {
         await weth.deposit({ from: user, value: wethTokens });
         await weth.approve(wethJoin.address, wethTokens, { from: user });
         await wethJoin.join(user, wethTokens, { from: user });
-        await vat.frob(ilk, user, user, user, wethTokens, daiDebt, { from: user });
+        await vat.frob(WETH, user, user, user, wethTokens, daiDebt, { from: user });
         await daiJoin.exit(user, daiTokens, { from: user });
     }
 
@@ -142,21 +141,21 @@ contract('Gas Usage', async (accounts) =>  {
 
         // Setup vat, join and weth
         vat = await Vat.new();
-        await vat.init(ilk, { from: owner }); // Set ilk rate (stability fee accumulator) to 1.0
+        await vat.init(WETH, { from: owner }); // Set WETH rate (stability fee accumulator) to 1.0
 
         weth = await Weth.new({ from: owner });
-        wethJoin = await GemJoin.new(vat.address, ilk, weth.address, { from: owner });
+        wethJoin = await GemJoin.new(vat.address, WETH, weth.address, { from: owner });
 
         dai = await ERC20.new(0, { from: owner });
         daiJoin = await DaiJoin.new(vat.address, dai.address, { from: owner });
 
-        await vat.file(ilk, spotName, spot, { from: owner });
-        await vat.file(ilk, linel, limits, { from: owner });
+        await vat.file(WETH, spotName, spot, { from: owner });
+        await vat.file(WETH, linel, limits, { from: owner });
         await vat.file(Line, limits);
 
         // Setup jug
         jug = await Jug.new(vat.address);
-        await jug.init(ilk, { from: owner }); // Set ilk duty (stability fee) to 1.0
+        await jug.init(WETH, { from: owner }); // Set WETH duty (stability fee) to 1.0
 
         // Setup pot
         pot = await Pot.new(vat.address);
@@ -299,7 +298,7 @@ contract('Gas Usage', async (accounts) =>  {
 
         // Tests setup
         await pot.setChi(chi, { from: owner });
-        await vat.fold(ilk, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
+        await vat.fold(WETH, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
         await vat.hope(daiJoin.address, { from: owner });
         await vat.hope(wethJoin.address, { from: owner });
         await treasury.orchestrate(owner, { from: owner });
@@ -344,7 +343,7 @@ contract('Gas Usage', async (accounts) =>  {
             it("repayYDai", async() => {
                 for (let i = 0; i < maturities.length; i++) {
                     await series[i].approve(treasury.address, daiTokens, { from: user3 });
-                    await dealer.repapprove(treasury.addresss[i], user3, daiTokens, { from: user3 });
+                    await dealer.repayYDai(WETH, maturities[i], user3, daiTokens, { from: user3 });
                 }
             });
 
@@ -362,7 +361,6 @@ contract('Gas Usage', async (accounts) =>  {
                 for (let i = 0; i < maturities.length; i++) {
                     await getDai(user3, daiTokens);
                     await dai.approve(treasury.address, daiTokens, { from: user3 });
-                    await seriapprove(treasury.address
                     await dealer.repayDai(WETH, maturities[i], user3, daiTokens, { from: user3 });
                 }
                 
@@ -375,12 +373,12 @@ contract('Gas Usage', async (accounts) =>  {
                 beforeEach(async() => {
                     // Unwind
                     await end.cage({ from: owner });
-                    await end.setTag(ilk, tag, { from: owner });
+                    await end.setTag(WETH, tag, { from: owner });
                     await end.setDebt(1, { from: owner });
-                    await end.setFix(ilk, fix, { from: owner });
-                    await end.skim(ilk, user1, { from: owner });
-                    await end.skim(ilk, user2, { from: owner });
-                    await end.skim(ilk, owner, { from: owner });
+                    await end.setFix(WETH, fix, { from: owner });
+                    await end.skim(WETH, user1, { from: owner });
+                    await end.skim(WETH, user2, { from: owner });
+                    await end.skim(WETH, owner, { from: owner });
                     await unwind.unwind({ from: owner });
                     await unwind.settleTreasury({ from: owner });
                     await unwind.cashSavings({ from: owner });

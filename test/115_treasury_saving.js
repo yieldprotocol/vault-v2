@@ -22,7 +22,7 @@ contract('Treasury - Saving', async (accounts) =>  {
     let chai;
     let treasury;
 
-    let ilk = web3.utils.fromAscii("ETH-A")
+    let WETH = web3.utils.fromAscii("ETH-A")
     let Line = web3.utils.fromAscii("Line")
     let spotName = web3.utils.fromAscii("spot")
     let linel = web3.utils.fromAscii("line")
@@ -40,19 +40,19 @@ contract('Treasury - Saving', async (accounts) =>  {
     beforeEach(async() => {
         // Set up vat, join and weth
         vat = await Vat.new();
-        await vat.init(ilk, { from: owner }); // Set ilk rate to 1.0
+        await vat.init(WETH, { from: owner }); // Set WETH rate to 1.0
 
         weth = await Weth.new({ from: owner });
-        wethJoin = await GemJoin.new(vat.address, ilk, weth.address, { from: owner });
+        wethJoin = await GemJoin.new(vat.address, WETH, weth.address, { from: owner });
 
         dai = await ERC20.new(0, { from: owner });
         daiJoin = await DaiJoin.new(vat.address, dai.address, { from: owner });
 
         // Setup vat
-        await vat.file(ilk, spotName, spot, { from: owner });
-        await vat.file(ilk, linel, limits, { from: owner });
+        await vat.file(WETH, spotName, spot, { from: owner });
+        await vat.file(WETH, linel, limits, { from: owner });
         await vat.file(Line, limits); 
-        await vat.fold(ilk, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
+        await vat.fold(WETH, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
 
         // Setup pot
         pot = await Pot.new(vat.address);
@@ -76,7 +76,7 @@ contract('Treasury - Saving', async (accounts) =>  {
         await weth.deposit({ from: user, value: wethTokens});
         await weth.approve(wethJoin.address, wethTokens, { from: user }); 
         await wethJoin.join(user, wethTokens, { from: user });
-        await vat.frob(ilk, user, user, user, wethTokens, daiDebt, { from: user });
+        await vat.frob(WETH, user, user, user, wethTokens, daiDebt, { from: user });
         await daiJoin.exit(user, daiTokens, { from: user });
 
         // Set chi

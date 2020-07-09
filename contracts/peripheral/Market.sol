@@ -2,7 +2,6 @@ pragma solidity ^0.6.10;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "../helpers/Constants.sol";
 import "../helpers/Delegable.sol";
 import "../helpers/YieldMath.sol";
 import "../interfaces/IPot.sol";
@@ -12,7 +11,7 @@ import "@nomiclabs/buidler/console.sol";
 
 
 /// @dev The Market contract exchanges Dai for yDai at a price defined by a specific formula.
-contract Market is IMarket, ERC20, Delegable, Constants {
+contract Market is IMarket, ERC20, Delegable {
 
     struct State {
         uint32 timestamp;    // last time contract was updated. wraps around after 2^32

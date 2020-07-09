@@ -43,9 +43,8 @@ contract('Dealer - Weth', async (accounts) =>  {
     let yDai2;
     let dealer;
 
-    let WETH = web3.utils.fromAscii("WETH");
+    let WETH = web3.utils.fromAscii("ETH-A");
     let CHAI = web3.utils.fromAscii("CHAI");
-    let ilk = web3.utils.fromAscii("ETH-A");
     let Line = web3.utils.fromAscii("Line");
     let spotName = web3.utils.fromAscii("spot");
     let linel = web3.utils.fromAscii("line");
@@ -74,7 +73,7 @@ contract('Dealer - Weth', async (accounts) =>  {
         await weth.deposit({ from: user, value: wethTokens });
         await weth.approve(wethJoin.address, wethTokens, { from: user });
         await wethJoin.join(user, wethTokens, { from: user });
-        await vat.frob(ilk, user, user, user, wethTokens, daiDebt, { from: user });
+        await vat.frob(WETH, user, user, user, wethTokens, daiDebt, { from: user });
         await daiJoin.exit(user, daiTokens, { from: user });
     }
 
@@ -89,21 +88,21 @@ contract('Dealer - Weth', async (accounts) =>  {
 
         // Setup vat, join and weth
         vat = await Vat.new();
-        await vat.init(ilk, { from: owner }); // Set ilk rate (stability fee accumulator) to 1.0
+        await vat.init(WETH, { from: owner }); // Set WETH rate (stability fee accumulator) to 1.0
 
         weth = await Weth.new({ from: owner });
-        wethJoin = await GemJoin.new(vat.address, ilk, weth.address, { from: owner });
+        wethJoin = await GemJoin.new(vat.address, WETH, weth.address, { from: owner });
 
         dai = await ERC20.new(0, { from: owner });
         daiJoin = await DaiJoin.new(vat.address, dai.address, { from: owner });
 
-        await vat.file(ilk, spotName, spot, { from: owner });
-        await vat.file(ilk, linel, limits, { from: owner });
+        await vat.file(WETH, spotName, spot, { from: owner });
+        await vat.file(WETH, linel, limits, { from: owner });
         await vat.file(Line, limits);
 
         // Setup jug
         jug = await Jug.new(vat.address);
-        await jug.init(ilk, { from: owner }); // Set ilk duty (stability fee) to 1.0
+        await jug.init(WETH, { from: owner }); // Set WETH duty (stability fee) to 1.0
 
         // Setup pot
         pot = await Pot.new(vat.address);
@@ -186,7 +185,7 @@ contract('Dealer - Weth', async (accounts) =>  {
         treasury.orchestrate(yDai2.address, { from: owner });
 
         // Tests setup
-        await vat.fold(ilk, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
+        await vat.fold(WETH, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
     });
 
     afterEach(async() => {
@@ -215,7 +214,7 @@ contract('Dealer - Weth', async (accounts) =>  {
 
     it("allows users to post weth", async() => {
         assert.equal(
-            (await vat.urns(ilk, treasury.address)).ink,
+            (await vat.urns(WETH, treasury.address)).ink,
             0,
             "Treasury has weth in MakerDAO",
         );
@@ -235,7 +234,7 @@ contract('Dealer - Weth', async (accounts) =>  {
         );
         assert.equal(
             bytes32ToString(event.args.collateral),
-            "WETH",
+            bytes32ToString(WETH),
         );
         assert.equal(
             event.args.user,
@@ -246,7 +245,7 @@ contract('Dealer - Weth', async (accounts) =>  {
             wethTokens.toString(),
         );
         assert.equal(
-            (await vat.urns(ilk, treasury.address)).ink,
+            (await vat.urns(WETH, treasury.address)).ink,
             wethTokens.toString(),
             "Treasury should have weth in MakerDAO",
         );
@@ -299,7 +298,7 @@ contract('Dealer - Weth', async (accounts) =>  {
             );
             assert.equal(
                 bytes32ToString(event.args.collateral),
-                "WETH",
+                bytes32ToString(WETH),
             );
             assert.equal(
                 event.args.user,
@@ -315,7 +314,7 @@ contract('Dealer - Weth', async (accounts) =>  {
                 "User1 should have collateral in hand"
             );
             assert.equal(
-                (await vat.urns(ilk, treasury.address)).ink,
+                (await vat.urns(WETH, treasury.address)).ink,
                 wethTokens.toString(),
                 "Treasury should have " + wethTokens + " weth in MakerDAO",
             );
@@ -340,7 +339,7 @@ contract('Dealer - Weth', async (accounts) =>  {
             );
             assert.equal(
                 bytes32ToString(event.args.collateral),
-                "WETH",
+                bytes32ToString(WETH),
             );
             assert.equal(
                 event.args.maturity,
@@ -455,7 +454,7 @@ contract('Dealer - Weth', async (accounts) =>  {
                     );
                     assert.equal(
                         bytes32ToString(event.args.collateral),
-                        "WETH",
+                        bytes32ToString(WETH),
                     );
                     assert.equal(
                         event.args.maturity,
@@ -509,7 +508,7 @@ contract('Dealer - Weth', async (accounts) =>  {
                     );
                     assert.equal(
                         bytes32ToString(event.args.collateral),
-                        "WETH",
+                        bytes32ToString(WETH),
                     );
                     assert.equal(
                         event.args.maturity,
@@ -607,7 +606,7 @@ contract('Dealer - Weth', async (accounts) =>  {
                         await helper.advanceBlock();
                         await yDai1.mature();
     
-                        await vat.fold(ilk, vat.address, rateIncrease, { from: owner });
+                        await vat.fold(WETH, vat.address, rateIncrease, { from: owner });
                     });
     
                     it("as rate increases after maturity, so does the debt in when measured in dai", async() => {
