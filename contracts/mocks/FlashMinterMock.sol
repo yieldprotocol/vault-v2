@@ -1,4 +1,4 @@
-pragma solidity ^0.6.2;
+pragma solidity ^0.6.10;
 
 import "../interfaces/IFlashMinter.sol";
 import "../interfaces/IYDai.sol";
@@ -15,7 +15,7 @@ contract FlashMinterMock is IFlashMinter {
         emit Parameters(to, yDaiAmount, data);
     }
 
-    function flashMint(address yDai, uint256 amount, bytes memory data) public {
+    function flashMint(address yDai, uint256 amount, bytes calldata data) public {
         IYDai(yDai).flashMint(address(this), amount, data);
     }
 }

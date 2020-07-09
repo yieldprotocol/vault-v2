@@ -343,7 +343,7 @@ contract('Gas Usage', async (accounts) =>  {
             it("repayYDai", async() => {
                 for (let i = 0; i < maturities.length; i++) {
                     await series[i].approve(treasury.address, daiTokens, { from: user3 });
-                    await dealer.repapprove(treasury.addresss[i], user3, daiTokens, { from: user3 });
+                    await dealer.repayYDai(WETH, maturities[i], user3, daiTokens, { from: user3 });
                 }
             });
 
@@ -361,7 +361,6 @@ contract('Gas Usage', async (accounts) =>  {
                 for (let i = 0; i < maturities.length; i++) {
                     await getDai(user3, daiTokens);
                     await dai.approve(treasury.address, daiTokens, { from: user3 });
-                    await seriapprove(treasury.address
                     await dealer.repayDai(WETH, maturities[i], user3, daiTokens, { from: user3 });
                 }
                 
