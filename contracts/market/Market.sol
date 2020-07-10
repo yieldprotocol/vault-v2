@@ -2,8 +2,8 @@ pragma solidity ^0.6.10;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./YieldMath.sol";
 import "../helpers/Delegable.sol";
-import "../helpers/YieldMath.sol";
 import "../interfaces/IPot.sol";
 import "../interfaces/IYDai.sol";
 import "../interfaces/IMarket.sol";
