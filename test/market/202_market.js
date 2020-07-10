@@ -306,6 +306,9 @@ contract('Market', async (accounts) =>  {
                 "'To' wallet should have no yDai, instead has " + await yDai1.balanceOf(operator),
             );
 
+            // Test preview since we are here
+            const yDaiOutPreview = await market.sellChaiPreview(oneToken, { from: operator });
+
             await market.addDelegate(operator, { from: from });
             await chai.approve(market.address, oneToken, { from: from });
             await market.sellChai(from, to, oneToken, { from: operator });
@@ -320,6 +323,8 @@ contract('Market', async (accounts) =>  {
             const yDaiOut = new BN(await yDai1.balanceOf(to));
             expect(yDaiOut).to.be.bignumber.gt(expectedYDaiOut.mul(new BN('99')).div(new BN('100')));
             expect(yDaiOut).to.be.bignumber.lt(expectedYDaiOut.mul(new BN('101')).div(new BN('100')));
+            expect(yDaiOut).to.be.bignumber.gt(yDaiOutPreview.mul(new BN('99')).div(new BN('100')));
+            expect(yDaiOut).to.be.bignumber.lt(yDaiOutPreview.mul(new BN('101')).div(new BN('100')));
         });
 
         it("buys chai", async() => {
@@ -346,6 +351,9 @@ contract('Market', async (accounts) =>  {
                 "'From' wallet should have " + yDaiTokens1 + " yDai, instead has " + await yDai1.balanceOf(from),
             );
 
+            // Test preview since we are here
+            const yDaiInPreview = await market.buyChaiPreview(oneToken, { from: operator });
+
             await market.addDelegate(operator, { from: from });
             await yDai1.approve(market.address, yDaiTokens1, { from: from });
             await market.buyChai(from, to, oneToken, { from: operator });
@@ -360,6 +368,8 @@ contract('Market', async (accounts) =>  {
             const yDaiIn = (new BN(yDaiTokens1.toString())).sub(new BN(await yDai1.balanceOf(from)));
             expect(yDaiIn).to.be.bignumber.gt(expectedYDaiIn.mul(new BN('99')).div(new BN('100')));
             expect(yDaiIn).to.be.bignumber.lt(expectedYDaiIn.mul(new BN('101')).div(new BN('100')));
+            expect(yDaiIn).to.be.bignumber.gt(yDaiInPreview.mul(new BN('99')).div(new BN('100')));
+            expect(yDaiIn).to.be.bignumber.lt(yDaiInPreview.mul(new BN('101')).div(new BN('100')));
         });
 
         it("sells yDai", async() => {
@@ -386,6 +396,9 @@ contract('Market', async (accounts) =>  {
                 "'To' wallet should have no chai, instead has " + await chai.balanceOf(to),
             );
 
+            // Test preview since we are here
+            const chaiOutPreview = await market.sellYDaiPreview(oneToken, { from: operator });
+
             await market.addDelegate(operator, { from: from });
             await yDai1.approve(market.address, oneToken, { from: from });
             await market.sellYDai(from, to, oneToken, { from: operator });
@@ -400,6 +413,8 @@ contract('Market', async (accounts) =>  {
             const chaiOut = new BN(await chai.balanceOf(to));
             expect(chaiOut).to.be.bignumber.gt(expectedChaiOut.mul(new BN('99')).div(new BN('100')));
             expect(chaiOut).to.be.bignumber.lt(expectedChaiOut.mul(new BN('101')).div(new BN('100')));
+            expect(chaiOut).to.be.bignumber.gt(chaiOutPreview.mul(new BN('99')).div(new BN('100')));
+            expect(chaiOut).to.be.bignumber.lt(chaiOutPreview.mul(new BN('101')).div(new BN('100')));
         });
 
         it("buys yDai", async() => {
@@ -426,6 +441,9 @@ contract('Market', async (accounts) =>  {
                 "'To' wallet should have no yDai, instead has " + await yDai1.balanceOf(to),
             );
 
+            // Test preview since we are here
+            const chaiInPreview = await market.buyYDaiPreview(oneToken, { from: operator });
+
             await market.addDelegate(operator, { from: from });
             await chai.approve(market.address, chaiTokens1, { from: from });
             await market.buyYDai(from, to, oneToken, { from: operator });
@@ -440,6 +458,8 @@ contract('Market', async (accounts) =>  {
             const chaiIn = (new BN(chaiTokens1.toString())).sub(new BN(await chai.balanceOf(from)));
             expect(chaiIn).to.be.bignumber.gt(expectedChaiIn.mul(new BN('99')).div(new BN('100')));
             expect(chaiIn).to.be.bignumber.lt(expectedChaiIn.mul(new BN('101')).div(new BN('100')));
+            expect(chaiIn).to.be.bignumber.gt(chaiInPreview.mul(new BN('99')).div(new BN('100')));
+            expect(chaiIn).to.be.bignumber.lt(chaiInPreview.mul(new BN('101')).div(new BN('100')));
         });
 
         // --- DELEGATION TESTS ---
