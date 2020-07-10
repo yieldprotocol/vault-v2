@@ -184,6 +184,7 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), DecimalMath {
     function post(bytes32 collateral, address from, address to, uint256 amount)
         public override 
         validCollateral(collateral)
+        onlyHolderOrDelegate(from, "Dealer: Only Holder Or Delegate")
         onlyLive
     {
         if (collateral == WETH){ // TODO: Refactor Treasury to be `push(collateral, amount)`
@@ -229,13 +230,13 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), DecimalMath {
     //
     // posted[user](wad) >= (debtYDai[user](wad)) * amount (wad)) * collateralization (ray)
     //
-    // us --- yDai ---> user
+    // us(from) --- yDai ---> to
     // debt++
-    function borrow(bytes32 collateral, uint256 maturity, address to, uint256 yDaiAmount)
+    function borrow(bytes32 collateral, uint256 maturity, address from, address to, uint256 yDaiAmount)
         public override
         validCollateral(collateral)
         validSeries(maturity)
-        onlyHolderOrDelegate(to, "Dealer: Only Holder Or Delegate")
+        onlyHolderOrDelegate(from, "Dealer: Only Holder Or Delegate")
         onlyLive
     {
         require(
@@ -243,18 +244,18 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), DecimalMath {
             "Dealer: No mature borrow"
         );
 
-        if (debtYDai[collateral][maturity][to] == 0 && yDaiAmount >= 0) {
+        if (debtYDai[collateral][maturity][from] == 0 && yDaiAmount >= 0) {
             lockBond(10);
         }
-        debtYDai[collateral][maturity][to] = debtYDai[collateral][maturity][to].add(yDaiAmount);
+        debtYDai[collateral][maturity][from] = debtYDai[collateral][maturity][from].add(yDaiAmount);
         systemDebtYDai[collateral][maturity] = systemDebtYDai[collateral][maturity].add(yDaiAmount);
 
         require(
-            isCollateralized(collateral, to),
+            isCollateralized(collateral, from),
             "Dealer: Too much debt"
         );
         series[maturity].mint(to, yDaiAmount);
-        emit Borrowed(collateral, maturity, to, int256(yDaiAmount)); // TODO: Watch for overflow
+        emit Borrowed(collateral, maturity, from, int256(yDaiAmount)); // TODO: Watch for overflow
     }
 
     /// @dev Burns yDai of a given series from `from` address, user debt is decreased for the given collateral and yDai series.
@@ -262,17 +263,18 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), DecimalMath {
     // debt_discounted = debt_nominal - repay_amount * ---------------
     //                                                  debt_now
     //
-    // user --- yDai ---> us
+    // user(from) --- yDai ---> us(to)
     // debt--
-    function repayYDai(bytes32 collateral, uint256 maturity, address from, uint256 yDaiAmount)
+    function repayYDai(bytes32 collateral, uint256 maturity, address from, address to, uint256 yDaiAmount)
         public override
         validCollateral(collateral)
         validSeries(maturity)
+        onlyHolderOrDelegate(from, "Dealer: Only Holder Or Delegate")
         onlyLive
     {
-        uint256 toRepay = Math.min(yDaiAmount, debtYDai[collateral][maturity][from]);
+        uint256 toRepay = Math.min(yDaiAmount, debtYDai[collateral][maturity][to]);
         series[maturity].burn(from, toRepay);
-        _repay(collateral, maturity, from, toRepay);
+        _repay(collateral, maturity, to, toRepay);
     }
 
     /// @dev Takes dai from `from` address, user debt is decreased for the given collateral and yDai series.
@@ -282,15 +284,16 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), DecimalMath {
     //
     // user --- dai ---> us
     // debt--
-    function repayDai(bytes32 collateral, uint256 maturity, address from, uint256 daiAmount)
+    function repayDai(bytes32 collateral, uint256 maturity, address from, address to, uint256 daiAmount)
         public override
         validCollateral(collateral)
         validSeries(maturity)
+        onlyHolderOrDelegate(from, "Dealer: Only Holder Or Delegate")
         onlyLive
     {
-        uint256 toRepay = Math.min(daiAmount, debtDai(collateral, maturity, from));
+        uint256 toRepay = Math.min(daiAmount, debtDai(collateral, maturity, to));
         _treasury.pushDai(from, toRepay);                                      // Have Treasury process the dai
-        _repay(collateral, maturity, from, inYDai(collateral, maturity, toRepay));
+        _repay(collateral, maturity, to, inYDai(collateral, maturity, toRepay));
     }
 
     /// @dev Removes an amount of debt from an user's vault. If interest was accrued debt is only paid proportionally.
@@ -299,15 +302,15 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), DecimalMath {
     // principal_repayment = gross_repayment * ----------------------
     //                                          principal + interest
     //    
-    function _repay(bytes32 collateral, uint256 maturity, address from, uint256 yDaiAmount) internal {
+    function _repay(bytes32 collateral, uint256 maturity, address user, uint256 yDaiAmount) internal {
         // `inDai` calculates the interest accrued for a given amount and series
 
-        debtYDai[collateral][maturity][from] = debtYDai[collateral][maturity][from].sub(yDaiAmount);
+        debtYDai[collateral][maturity][user] = debtYDai[collateral][maturity][user].sub(yDaiAmount);
         systemDebtYDai[collateral][maturity] = systemDebtYDai[collateral][maturity].sub(yDaiAmount);
-        if (debtYDai[collateral][maturity][from] == 0 && yDaiAmount >= 0) {
+        if (debtYDai[collateral][maturity][user] == 0 && yDaiAmount >= 0) {
             returnBond(10);
         }
-        emit Borrowed(collateral, maturity, from, -int256(yDaiAmount)); // TODO: Watch for overflow
+        emit Borrowed(collateral, maturity, user, -int256(yDaiAmount)); // TODO: Watch for overflow
     }
 
     /// @dev Removes collateral and debt for an user.

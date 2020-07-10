@@ -274,13 +274,13 @@ contract('Unwind - Dealer', async (accounts) =>  {
             await weth.deposit({ from: user2, value: wethTokens.add(1) });
             await weth.approve(treasury.address, wethTokens.add(1), { from: user2 });
             await dealer.post(WETH, user2, user2, wethTokens.add(1), { from: user2 });
-            await dealer.borrow(WETH, maturity1, user2, daiTokens, { from: user2 });
+            await dealer.borrow(WETH, maturity1, user2, user2, daiTokens, { from: user2 });
 
             await weth.deposit({ from: user3, value: wethTokens.mul(3) });
             await weth.approve(treasury.address, wethTokens.mul(3), { from: user3 });
             await dealer.post(WETH, user3, user3, wethTokens.mul(3), { from: user3 });
-            await dealer.borrow(WETH, maturity1, user3, daiTokens, { from: user3 });
-            await dealer.borrow(WETH, maturity2, user3, daiTokens, { from: user3 });
+            await dealer.borrow(WETH, maturity1, user3, user3, daiTokens, { from: user3 });
+            await dealer.borrow(WETH, maturity2, user3, user3, daiTokens, { from: user3 });
 
             // Chai setup
             await vat.hope(daiJoin.address, { from: user1 });
@@ -312,7 +312,7 @@ contract('Unwind - Dealer', async (accounts) =>  {
             await chai.join(user2, moreDai, { from: user2 });
             await chai.approve(treasury.address, moreChai, { from: user2 });
             await dealer.post(CHAI, user2, user2, moreChai, { from: user2 });
-            await dealer.borrow(CHAI, maturity1, user2, daiTokens, { from: user2 });
+            await dealer.borrow(CHAI, maturity1, user2, user2, daiTokens, { from: user2 });
 
             // user1 has chaiTokens in dealer and no debt.
             // user2 has chaiTokens * 1.1 in dealer and daiTokens debt.
@@ -394,15 +394,15 @@ contract('Unwind - Dealer', async (accounts) =>  {
                     "Dealer: Not available during unwind",
                 );
                 await expectRevert(
-                    dealer.borrow(WETH, maturity1, owner, yDaiTokens, { from: owner }),
+                    dealer.borrow(WETH, maturity1, owner, owner, yDaiTokens, { from: owner }),
                     "Dealer: Not available during unwind",
                 );
                 await expectRevert(
-                    dealer.repayDai(WETH, maturity1, owner, daiTokens, { from: owner }),
+                    dealer.repayDai(WETH, maturity1, owner, owner, daiTokens, { from: owner }),
                     "Dealer: Not available during unwind",
                 );
                 await expectRevert(
-                    dealer.repayYDai(WETH, maturity1, owner, yDaiTokens, { from: owner }),
+                    dealer.repayYDai(WETH, maturity1, owner, owner, yDaiTokens, { from: owner }),
                     "Dealer: Not available during unwind",
                 );
             });

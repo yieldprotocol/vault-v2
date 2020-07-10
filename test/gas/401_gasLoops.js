@@ -329,28 +329,28 @@ contract('Gas Usage', async (accounts) =>  {
                 
                 for (let i = 0; i < maturities.length; i++) {
                     await postWeth(user3, wethTokens);
-                    await dealer.borrow(WETH, maturities[i], user3, daiTokens, { from: user3 });
+                    await dealer.borrow(WETH, maturities[i], user3, user3, daiTokens, { from: user3 });
                 }
             });
 
             it("borrow a second time (no gas bond)", async() => {
                 for (let i = 0; i < maturities.length; i++) {
                     await postWeth(user3, wethTokens);
-                    await dealer.borrow(WETH, maturities[i], user3, daiTokens, { from: user3 });
+                    await dealer.borrow(WETH, maturities[i], user3, user3, daiTokens, { from: user3 });
                 }
             });
 
             it("repayYDai", async() => {
                 for (let i = 0; i < maturities.length; i++) {
                     await series[i].approve(treasury.address, daiTokens, { from: user3 });
-                    await dealer.repayYDai(WETH, maturities[i], user3, daiTokens, { from: user3 });
+                    await dealer.repayYDai(WETH, maturities[i], user3, user3, daiTokens, { from: user3 });
                 }
             });
 
             it("repayYDai and retrieve gas bond", async() => {
                 for (let i = 0; i < maturities.length; i++) {
                     await series[i].approve(dealer.address, daiTokens.mul(2), { from: user3 });
-                    await dealer.repayYDai(WETH, maturities[i], user3, daiTokens.mul(2), { from: user3 });
+                    await dealer.repayYDai(WETH, maturities[i], user3, user3, daiTokens.mul(2), { from: user3 });
                 }
             });
 

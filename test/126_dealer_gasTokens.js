@@ -222,7 +222,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
 
     it("mints gas tokens when borrowing", async() => {
         await dai.approve(treasury.address, daiTokens, { from: user1 });
-        await dealer.borrow(WETH, maturity1, user1, daiTokens, { from: user1 });
+        await dealer.borrow(WETH, maturity1, user1, user1, daiTokens, { from: user1 });
 
         assert.equal(
             await gasToken.balanceOf(dealer.address),
@@ -241,7 +241,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
         await gasToken.approve(dealer.address, gasTokens, { from: user1 });
 
         await dai.approve(treasury.address, daiTokens, { from: user1 });
-        await dealer.borrow(WETH, maturity1, user1, daiTokens, { from: user1 });
+        await dealer.borrow(WETH, maturity1, user1, user1, daiTokens, { from: user1 });
 
         assert.equal(
             await gasToken.balanceOf(user1),
@@ -256,7 +256,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
     });
 
     it("does not transfer gas tokens if borrowing amount and debt are zero", async() => {
-        await dealer.borrow(WETH, maturity1, user1, 0, { from: user1 });
+        await dealer.borrow(WETH, maturity1, user1, user1, 0, { from: user1 });
 
         assert.equal(
             await gasToken.balanceOf(user1),
@@ -268,7 +268,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
     describe("with debt", () => {
         beforeEach(async() => {
             await dai.approve(treasury.address, daiTokens, { from: user1 });
-            await dealer.borrow(WETH, maturity1, user1, daiTokens, { from: user1 });
+            await dealer.borrow(WETH, maturity1, user1, user1, daiTokens, { from: user1 });
 
             assert.equal(
                 await gasToken.balanceOf(dealer.address),
@@ -279,7 +279,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
 
         it("mints gas tokens when a new user borrows for the first time", async() => {
             await dai.approve(treasury.address, daiTokens, { from: user2 });
-            await dealer.borrow(WETH, maturity1, user2, daiTokens, { from: user2 });
+            await dealer.borrow(WETH, maturity1, user2, user2, daiTokens, { from: user2 });
     
             assert.equal(
                 await gasToken.balanceOf(dealer.address),
@@ -290,7 +290,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
 
         it("does not mint more gas tokens when same user borrows again", async() => {
             await dai.approve(treasury.address, daiTokens, { from: user1 });
-            await dealer.borrow(WETH, maturity1, user1, daiTokens, { from: user1 });
+            await dealer.borrow(WETH, maturity1, user1, user1, daiTokens, { from: user1 });
     
             assert.equal(
                 await gasToken.balanceOf(dealer.address),
@@ -300,7 +300,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
         });
 
         it("does not transfer gas tokens on partial repayments", async() => {
-            await dealer.repayYDai(WETH, maturity1, user1, daiTokens.sub(1), { from: user1 });
+            await dealer.repayYDai(WETH, maturity1, user1, user1, daiTokens.sub(1), { from: user1 });
 
             assert.equal(
                 await gasToken.balanceOf(user1),
@@ -310,7 +310,7 @@ contract('Dealer - Gas Tokens', async (accounts) =>  {
         });
 
         it("transfers gas tokens on repayment of all debt", async() => {
-            await dealer.repayYDai(WETH, maturity1, user1, daiTokens, { from: user1 });
+            await dealer.repayYDai(WETH, maturity1, user1, user1, daiTokens, { from: user1 });
 
             assert.equal(
                 await gasToken.balanceOf(user1),
