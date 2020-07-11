@@ -378,7 +378,7 @@ contract('Market', async (accounts) =>  {
             const oneToken = toWad(1);
             await yDai1.mint(from, oneToken, { from: owner });
 
-            // chaiOutForYDaiIn formula: https://www.desmos.com/calculator/6ylefi7fv7
+            // chaiOutForYDaiIn formula: https://www.desmos.com/calculator/9gi4atvazv
 
             console.log("          selling yDai...");
             console.log("          chaiReserves: %d", await chai.balanceOf(market.address));
@@ -462,152 +462,126 @@ contract('Market', async (accounts) =>  {
             expect(chaiIn).to.be.bignumber.lt(chaiInPreview.mul(new BN('101')).div(new BN('100')));
         });
 
-        // --- DELEGATION TESTS ---
+        describe("once mature", () => {
+            beforeEach(async() => {
+                await helper.advanceTime(31556952);
+                await helper.advanceBlock();
+                // await yDai1.mature(); // TODO: Does it matter if the yDai is marked as mature?
+            });
 
-        it("sells chai without delegation", async() => {
-            const b = new BN('18446744073709551615');
-            const r = new BN('1000000000000000000000000000');
-            const oneToken = toWad(1);
-            await getChai(from, chaiTokens1);
+            it("sells chai", async() => {
+                const oneToken = toWad(1);
+                await getChai(from, chaiTokens1);
+    
+                // yDaiOutForChaiIn formula: https://www.desmos.com/calculator/dcjuj5lmmc
+    
+                // Use preview to test price point at maturity as well
+                const yDaiOutPreview = await market.sellChaiPreview(oneToken, { from: operator });
 
-            // yDaiOutForChaiIn formula: https://www.desmos.com/calculator/dcjuj5lmmc
+                // Let's advance another year to make sure the prices didn't change
+                await helper.advanceTime(31556952);
+                await helper.advanceBlock();
 
-            assert.equal(
-                await yDai1.balanceOf(to),
-                0,
-                "'To' wallet should have no yDai, instead has " + await yDai1.balanceOf(operator),
-            );
+                await chai.approve(market.address, oneToken, { from: from });
+                await market.sellChai(from, to, oneToken, { from: from });
+    
+                const expectedYDaiOut = (new BN(oneToken.toString())).mul(new BN('1440')).div(new BN('1000')); // I just hate javascript
+                const yDaiOut = new BN(await yDai1.balanceOf(to));
+                expect(yDaiOut).to.be.bignumber.gt(expectedYDaiOut.mul(new BN('999')).div(new BN('1000')));
+                expect(yDaiOut).to.be.bignumber.lt(expectedYDaiOut.mul(new BN('1001')).div(new BN('1000')));
+                expect(yDaiOut).to.be.bignumber.gt(yDaiOutPreview.mul(new BN('999')).div(new BN('1000')));
+                expect(yDaiOut).to.be.bignumber.lt(yDaiOutPreview.mul(new BN('1001')).div(new BN('1000')));
+            });
+    
+            it("buys chai", async() => {
+                const oneToken = toWad(1);
+                await yDai1.mint(from, yDaiTokens1, { from: owner });
+    
+                // yDaiInForChaiOut formula: https://www.desmos.com/calculator/16c4dgxhst
+    
+                // Use preview to test price point at maturity as well
+                const yDaiInPreview = await market.buyChaiPreview(oneToken, { from: operator });
+    
+                // Let's advance another year to make sure the prices didn't change
+                await helper.advanceTime(31556952);
+                await helper.advanceBlock();
 
-            await chai.approve(market.address, oneToken, { from: from });
-            await market.sellChai(from, to, oneToken, { from: from });
+                await yDai1.approve(market.address, yDaiTokens1, { from: from });
+                await market.buyChai(from, to, oneToken, { from: from });
+    
+                assert.equal(
+                    await chai.balanceOf(to),
+                    oneToken.toString(),
+                    "Receiver account should have 1 chai token",
+                );
+    
+                const expectedYDaiIn = (new BN(oneToken.toString())).mul(new BN('1440')).div(new BN('1000')); // I just hate javascript
+                const yDaiIn = (new BN(yDaiTokens1.toString())).sub(new BN(await yDai1.balanceOf(from)));
+                expect(yDaiIn).to.be.bignumber.gt(expectedYDaiIn.mul(new BN('999')).div(new BN('1000')));
+                expect(yDaiIn).to.be.bignumber.lt(expectedYDaiIn.mul(new BN('1001')).div(new BN('1000')));
+                expect(yDaiIn).to.be.bignumber.gt(yDaiInPreview.mul(new BN('999')).div(new BN('1000')));
+                expect(yDaiIn).to.be.bignumber.lt(yDaiInPreview.mul(new BN('1001')).div(new BN('1000')));
+            });
+    
+            it("sells yDai", async() => {
+                const oneToken = toWad(1);
+                await yDai1.mint(from, oneToken, { from: owner });
+    
+                // chaiOutForYDaiIn formula: https://www.desmos.com/calculator/9gi4atvazv
+        
+                // Use preview to test price point at maturity as well
+                const chaiOutPreview = await market.sellYDaiPreview(oneToken, { from: operator });
+    
+                // Let's advance another year to make sure the prices didn't change
+                await helper.advanceTime(31556952);
+                await helper.advanceBlock();
 
-            assert.equal(
-                await chai.balanceOf(from),
-                chaiTokens1.sub(oneToken).toString(),
-                "'From' wallet should have " + chaiTokens1.sub(oneToken) + " chai tokens",
-            );
+                await yDai1.approve(market.address, oneToken, { from: from });
+                await market.sellYDai(from, to, oneToken, { from: from });
+    
+                assert.equal(
+                    await yDai1.balanceOf(from),
+                    0,
+                    "'From' wallet should have no yDai tokens",
+                );
+    
+                const expectedChaiOut = (new BN(oneToken.toString())).mul(new BN('69444')).div(new BN('100000')); // I just hate javascript
+                const chaiOut = new BN(await chai.balanceOf(to));
+                expect(chaiOut).to.be.bignumber.gt(expectedChaiOut.mul(new BN('999')).div(new BN('1000')));
+                expect(chaiOut).to.be.bignumber.lt(expectedChaiOut.mul(new BN('1001')).div(new BN('1000')));
+                expect(chaiOut).to.be.bignumber.gt(chaiOutPreview.mul(new BN('999')).div(new BN('1000')));
+                expect(chaiOut).to.be.bignumber.lt(chaiOutPreview.mul(new BN('1001')).div(new BN('1000')));
+            });
+    
+            it("buys yDai", async() => {
+                const oneToken = toWad(1);
+                await getChai(from, chaiTokens1);
+    
+                // chaiInForYDaiOut formula: https://www.desmos.com/calculator/cgpfpqe3fq
 
-            const expectedYDaiOut = (new BN(oneToken.toString())).mul(new BN('1436')).div(new BN('1000')); // I just hate javascript
-            const yDaiOut = new BN(await yDai1.balanceOf(to));
-            expect(yDaiOut).to.be.bignumber.gt(expectedYDaiOut.mul(new BN('99')).div(new BN('100')));
-            expect(yDaiOut).to.be.bignumber.lt(expectedYDaiOut.mul(new BN('101')).div(new BN('100')));
-        });
+                // Use preview to test price point at maturity as well
+                const chaiInPreview = await market.buyYDaiPreview(oneToken, { from: operator });
+    
+                // Let's advance another year to make sure the prices didn't change
+                await helper.advanceTime(31556952);
+                await helper.advanceBlock();
 
-        it("buys chai without delegation", async() => {
-            const b = new BN('18446744073709551615');
-            const r = new BN('1000000000000000000000000000');
-            const oneToken = toWad(1);
-            await yDai1.mint(from, yDaiTokens1, { from: owner });
-
-            // yDaiInForChaiOut formula: https://www.desmos.com/calculator/16c4dgxhst
-
-            assert.equal(
-                await yDai1.balanceOf(from),
-                yDaiTokens1.toString(),
-                "'From' wallet should have " + yDaiTokens1 + " yDai, instead has " + await yDai1.balanceOf(from),
-            );
-
-            await yDai1.approve(market.address, yDaiTokens1, { from: from });
-            await market.buyChai(from, to, oneToken, { from: from });
-
-            assert.equal(
-                await chai.balanceOf(to),
-                oneToken.toString(),
-                "Receiver account should have 1 chai token",
-            );
-
-            const expectedYDaiIn = (new BN(oneToken.toString())).mul(new BN('14435')).div(new BN('10000')); // I just hate javascript
-            const yDaiIn = (new BN(yDaiTokens1.toString())).sub(new BN(await yDai1.balanceOf(from)));
-            expect(yDaiIn).to.be.bignumber.gt(expectedYDaiIn.mul(new BN('99')).div(new BN('100')));
-            expect(yDaiIn).to.be.bignumber.lt(expectedYDaiIn.mul(new BN('101')).div(new BN('100')));
-        });
-
-        it("sells yDai without delegation", async() => {
-            const b = new BN('18446744073709551615');
-            const r = new BN('1000000000000000000000000000');
-            const oneToken = toWad(1);
-            await yDai1.mint(from, oneToken, { from: owner });
-
-            // chaiOutForYDaiIn formula: https://www.desmos.com/calculator/6ylefi7fv7
-
-            assert.equal(
-                await chai.balanceOf(to),
-                0,
-                "'To' wallet should have no chai, instead has " + await chai.balanceOf(to),
-            );
-
-            await yDai1.approve(market.address, oneToken, { from: from });
-            await market.sellYDai(from, to, oneToken, { from: from });
-
-            assert.equal(
-                await yDai1.balanceOf(from),
-                0,
-                "'From' wallet should have no yDai tokens",
-            );
-
-            const expectedChaiOut = (new BN(oneToken.toString())).mul(new BN('6933')).div(new BN('10000')); // I just hate javascript
-            const chaiOut = new BN(await chai.balanceOf(to));
-            expect(chaiOut).to.be.bignumber.gt(expectedChaiOut.mul(new BN('99')).div(new BN('100')));
-            expect(chaiOut).to.be.bignumber.lt(expectedChaiOut.mul(new BN('101')).div(new BN('100')));
-        });
-
-        it("buys yDai without delegation", async() => {
-            const b = new BN('18446744073709551615');
-            const r = new BN('1000000000000000000000000000');
-            const oneToken = toWad(1);
-            await getChai(from, chaiTokens1);
-
-            // chaiInForYDaiOut formula: https://www.desmos.com/calculator/cgpfpqe3fq
-
-            assert.equal(
-                await yDai1.balanceOf(to),
-                0,
-                "'To' wallet should have no yDai, instead has " + await yDai1.balanceOf(to),
-            );
-
-            await chai.approve(market.address, chaiTokens1, { from: from });
-            await market.buyYDai(from, to, oneToken, { from: from });
-
-            assert.equal(
-                await yDai1.balanceOf(to),
-                oneToken.toString(),
-                "'To' wallet should have 1 yDai token",
-            );
-
-            const expectedChaiIn = (new BN(oneToken.toString())).mul(new BN('6933')).div(new BN('10000')); // I just hate javascript
-            const chaiIn = (new BN(chaiTokens1.toString())).sub(new BN(await chai.balanceOf(from)));
-            expect(chaiIn).to.be.bignumber.gt(expectedChaiIn.mul(new BN('99')).div(new BN('100')));
-            expect(chaiIn).to.be.bignumber.lt(expectedChaiIn.mul(new BN('101')).div(new BN('100')));
-        });
-
-        // --- ONLY HOLDER OR DELEGATE TESTS ---
-
-        it("sells chai without delegation", async() => {
-            await expectRevert(
-                market.sellChai(from, to, 1, { from: operator }),
-                "Market: Only Holder Or Delegate",
-            );
-        });
-
-        it("buys chai without delegation", async() => {
-            await expectRevert(
-                market.buyChai(from, to, 1, { from: operator }),
-                "Market: Only Holder Or Delegate",
-            );
-        });
-
-        it("sells yDai without delegation", async() => {
-            await expectRevert(
-                market.sellYDai(from, to, 1, { from: operator }),
-                "Market: Only Holder Or Delegate",
-            );
-        });
-
-        it("buys yDai without delegation", async() => {
-            await expectRevert(
-                market.buyYDai(from, to, 1, { from: operator }),
-                "Market: Only Holder Or Delegate",
-            );
+                await chai.approve(market.address, chaiTokens1, { from: from });
+                await market.buyYDai(from, to, oneToken, { from: from });
+    
+                assert.equal(
+                    await yDai1.balanceOf(to),
+                    oneToken.toString(),
+                    "'To' wallet should have 1 yDai token",
+                );
+    
+                const expectedChaiIn = (new BN(oneToken.toString())).mul(new BN('6944')).div(new BN('10000')); // I just hate javascript
+                const chaiIn = (new BN(chaiTokens1.toString())).sub(new BN(await chai.balanceOf(from)));
+                expect(chaiIn).to.be.bignumber.gt(expectedChaiIn.mul(new BN('999')).div(new BN('1000')));
+                expect(chaiIn).to.be.bignumber.lt(expectedChaiIn.mul(new BN('1001')).div(new BN('1000')));
+                expect(chaiIn).to.be.bignumber.gt(chaiInPreview.mul(new BN('999')).div(new BN('1000')));
+                expect(chaiIn).to.be.bignumber.lt(chaiInPreview.mul(new BN('1001')).div(new BN('1000')));
+            });
         });
     });
 });
