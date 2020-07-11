@@ -7,7 +7,7 @@ module.exports = {
         version: "0.6.10",
         optimizer: {
             enabled: true,
-            runs: 1000
+            runs: 200
         },
     },
     gasReporter: {

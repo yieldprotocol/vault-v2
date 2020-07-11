@@ -48,6 +48,12 @@ contract Market is IMarket, ERC20, Delegable {
         return uint128(x);
     }
 
+    /// @dev max(0, x - y)
+    function subFloorZero(uint256 x, uint256 y) public pure returns(uint256) {
+        if (y >= x) return 0;
+        else return x - y;
+    }
+
     /// @dev Mint initial liquidity tokens
     function init(uint256 chaiIn, uint256 yDaiIn) external {
         require(
@@ -101,13 +107,16 @@ contract Market is IMarket, ERC20, Delegable {
         external override
         onlyHolderOrDelegate(from, "Market: Only Holder Or Delegate")
     {
-        int128 c = int128((((now > _pot.rho()) ? _pot.drip() : _pot.chi()) << 64) / 10**27); // Chi can't be higher than 2**64
         uint128 chaiReserves = toUint128(chai.balanceOf(address(this)));
         uint128 yDaiReserves = toUint128(yDai.balanceOf(address(this)));
         uint256 yDaiOut = YieldMath.yDaiOutForChaiIn(
-            chaiReserves, yDaiReserves,
+            chaiReserves,
+            yDaiReserves,
             chaiIn,
-            toUint128(maturity - now), k, c, g
+            toUint128(subFloorZero(maturity, now)),
+            k,
+            int128((((now > _pot.rho()) ? _pot.drip() : _pot.chi()) << 64) / 10**27), // Chi can't be higher than 2**64
+            g
         );
 
         chai.transferFrom(from, address(this), chaiIn);
@@ -122,7 +131,7 @@ contract Market is IMarket, ERC20, Delegable {
             toUint128(chai.balanceOf(address(this))),
             toUint128(yDai.balanceOf(address(this))),
             chaiIn,
-            toUint128(maturity - now),
+            toUint128(subFloorZero(maturity, now)),
             k,
             int128((_pot.chi() << 64) / 10**27),
             g
@@ -137,13 +146,16 @@ contract Market is IMarket, ERC20, Delegable {
         external override
         onlyHolderOrDelegate(from, "Market: Only Holder Or Delegate")
     {
-        int128 c = int128((((now > _pot.rho()) ? _pot.drip() : _pot.chi()) << 64) / 10**27);
         uint128 chaiReserves = toUint128(chai.balanceOf(address(this)));
         uint128 yDaiReserves = toUint128(yDai.balanceOf(address(this)));
         uint256 yDaiIn = YieldMath.yDaiInForChaiOut(
-            chaiReserves, yDaiReserves,
+            chaiReserves,
+            yDaiReserves,
             chaiOut,
-            toUint128(maturity - now), k, c, g
+            toUint128(subFloorZero(maturity, now)),
+            k,
+            int128((((now > _pot.rho()) ? _pot.drip() : _pot.chi()) << 64) / 10**27), // Chi can't be higher than 2**64
+            g
         );
 
         yDai.transferFrom(from, address(this), yDaiIn);
@@ -158,7 +170,7 @@ contract Market is IMarket, ERC20, Delegable {
             toUint128(chai.balanceOf(address(this))),
             toUint128(yDai.balanceOf(address(this))),
             chaiOut,
-            toUint128(maturity - now),
+            toUint128(subFloorZero(maturity, now)),
             k,
             int128((_pot.chi() << 64) / 10**27),
             g
@@ -173,13 +185,15 @@ contract Market is IMarket, ERC20, Delegable {
         external override
         onlyHolderOrDelegate(from, "Market: Only Holder Or Delegate")
     {
-        int128 c = int128((((now > _pot.rho()) ? _pot.drip() : _pot.chi()) << 64) / 10**27);
         uint128 chaiReserves = toUint128(chai.balanceOf(address(this)));
         uint128 yDaiReserves = toUint128(yDai.balanceOf(address(this)));
         uint256 chaiOut = YieldMath.chaiOutForYDaiIn(
             chaiReserves, yDaiReserves,
             yDaiIn,
-            toUint128(maturity - now), k, c, g
+            toUint128(subFloorZero(maturity, now)),
+            k,
+            int128((((now > _pot.rho()) ? _pot.drip() : _pot.chi()) << 64) / 10**27), // Chi can't be higher than 2**64
+            g
         );
 
         yDai.transferFrom(from, address(this), yDaiIn);
@@ -194,7 +208,7 @@ contract Market is IMarket, ERC20, Delegable {
             toUint128(chai.balanceOf(address(this))),
             toUint128(yDai.balanceOf(address(this))),
             yDaiIn,
-            toUint128(maturity - now),
+            toUint128(subFloorZero(maturity, now)),
             k,
             int128((_pot.chi() << 64) / 10**27),
             g
@@ -209,13 +223,15 @@ contract Market is IMarket, ERC20, Delegable {
         external override
         onlyHolderOrDelegate(from, "Market: Only Holder Or Delegate")
     {
-        int128 c = int128((((now > _pot.rho()) ? _pot.drip() : _pot.chi()) << 64) / 10**27);
         uint128 chaiReserves = toUint128(chai.balanceOf(address(this)));
         uint128 yDaiReserves = toUint128(yDai.balanceOf(address(this)));
         uint256 chaiIn = YieldMath.chaiInForYDaiOut(
             chaiReserves, yDaiReserves,
             yDaiOut,
-            toUint128(maturity - now), k, c, g
+            toUint128(subFloorZero(maturity, now)),
+            k,
+            int128((((now > _pot.rho()) ? _pot.drip() : _pot.chi()) << 64) / 10**27), // Chi can't be higher than 2**64
+            g
         );
 
         chai.transferFrom(from, address(this), chaiIn);
@@ -231,7 +247,7 @@ contract Market is IMarket, ERC20, Delegable {
             toUint128(chai.balanceOf(address(this))),
             toUint128(yDai.balanceOf(address(this))),
             yDaiOut,
-            toUint128(maturity - now),
+            toUint128(subFloorZero(maturity, now)),
             k,
             int128((_pot.chi() << 64) / 10**27),
             g
