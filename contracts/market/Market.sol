@@ -103,9 +103,11 @@ contract Market is IMarket, ERC20, Delegable {
     /// @param from Wallet providing the chai being sold. Must have approved the operator with `market.addDelegate(operator)`.
     /// @param to Wallet receiving the yDai being bought
     /// @param chaiIn Amount of chai being sold that will be taken from the user's wallet
+    /// @return Amount of yDai that will be deposited on `to` wallet
     function sellChai(address from, address to, uint128 chaiIn)
         external override
         onlyHolderOrDelegate(from, "Market: Only Holder Or Delegate")
+        returns(uint256)
     {
         uint128 chaiReserves = toUint128(chai.balanceOf(address(this)));
         uint128 yDaiReserves = toUint128(yDai.balanceOf(address(this)));
@@ -123,6 +125,8 @@ contract Market is IMarket, ERC20, Delegable {
         yDai.transfer(to, yDaiOut);
 
         _updateState(uint256(chaiReserves).add(chaiIn), uint256(yDaiReserves).sub(yDaiOut));
+
+        return yDaiOut;
     }
 
     /// @dev Returns how much yDai would be obtained by selling `chaiIn` chai
@@ -142,9 +146,11 @@ contract Market is IMarket, ERC20, Delegable {
     /// @param from Wallet providing the yDai being sold. Must have approved the operator with `market.addDelegate(operator)`.
     /// @param to Wallet receiving the chai being bought
     /// @param chaiOut Amount of chai being bought that will be deposited in `to` wallet
+    /// @return Amount of yDai that will be taken from `from` wallet
     function buyChai(address from, address to, uint128 chaiOut)
         external override
         onlyHolderOrDelegate(from, "Market: Only Holder Or Delegate")
+        returns(uint256)
     {
         uint128 chaiReserves = toUint128(chai.balanceOf(address(this)));
         uint128 yDaiReserves = toUint128(yDai.balanceOf(address(this)));
@@ -162,6 +168,8 @@ contract Market is IMarket, ERC20, Delegable {
         chai.transfer(to, chaiOut);
 
         _updateState(uint256(chaiReserves).sub(chaiOut), uint256(yDaiReserves).add(yDaiIn));
+
+        return yDaiIn;
     }
 
     /// @dev Returns how much yDai would be required to buy `chaiOut` chai
@@ -181,9 +189,11 @@ contract Market is IMarket, ERC20, Delegable {
     /// @param from Wallet providing the yDai being sold. Must have approved the operator with `market.addDelegate(operator)`.
     /// @param to Wallet receiving the chai being bought
     /// @param yDaiIn Amount of yDai being sold that will be taken from the user's wallet
+    /// @return Amount of chai that will be deposited on `to` wallet
     function sellYDai(address from, address to, uint128 yDaiIn)
         external override
         onlyHolderOrDelegate(from, "Market: Only Holder Or Delegate")
+        returns(uint256)
     {
         uint128 chaiReserves = toUint128(chai.balanceOf(address(this)));
         uint128 yDaiReserves = toUint128(yDai.balanceOf(address(this)));
@@ -200,6 +210,8 @@ contract Market is IMarket, ERC20, Delegable {
         chai.transfer(to, chaiOut);
 
         _updateState(uint256(chaiReserves).sub(chaiOut), uint256(yDaiReserves).add(yDaiIn));
+
+        return chaiOut;
     }
 
     /// @dev Returns how much chai would be obtained by selling `yDaiIn` yDai
@@ -219,9 +231,11 @@ contract Market is IMarket, ERC20, Delegable {
     /// @param from Wallet providing the chai being sold. Must have approved the operator with `market.addDelegate(operator)`.
     /// @param to Wallet receiving the yDai being bought
     /// @param yDaiOut Amount of yDai being bought that will be deposited in `to` wallet
+    /// @return Amount of chai that will be taken from `from` wallet
     function buyYDai(address from, address to, uint128 yDaiOut)
         external override
         onlyHolderOrDelegate(from, "Market: Only Holder Or Delegate")
+        returns(uint256)
     {
         uint128 chaiReserves = toUint128(chai.balanceOf(address(this)));
         uint128 yDaiReserves = toUint128(yDai.balanceOf(address(this)));
@@ -238,6 +252,8 @@ contract Market is IMarket, ERC20, Delegable {
         yDai.transfer(to, yDaiOut);
 
         _updateState(uint256(chaiReserves).add(chaiIn), uint256(yDaiReserves).sub(yDaiOut));
+
+        return chaiIn;
     }
 
 

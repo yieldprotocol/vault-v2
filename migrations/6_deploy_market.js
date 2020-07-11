@@ -4,6 +4,7 @@ const Pot = artifacts.require("Pot");
 const Chai = artifacts.require("Chai");
 const YDai = artifacts.require("YDai");
 const Market = artifacts.require("Market");
+const LimitMarket = artifacts.require("LimitMarket");
 const YieldMath = artifacts.require("YieldMath.sol");
 
 module.exports = async (deployer, network, accounts) => {
@@ -24,7 +25,7 @@ module.exports = async (deployer, network, accounts) => {
       chaiAddress = (await Chai.deployed()).address;
   }
 
-  // Deploy and link YieldMath
+  // Deploy and link YieldMath - TODO: Is this needed?
   await deployer.deploy(YieldMath)
   await deployer.link(YieldMath, Market);  
 
@@ -41,5 +42,15 @@ module.exports = async (deployer, network, accounts) => {
     market = await Market.deployed();
     await migrations.register(web3.utils.fromAscii('Market-' + yDaiName), market.address);
     console.log('Market-' + yDaiName, market.address);
+
+    await deployer.deploy(
+      LimitMarket,
+      chaiAddress,
+      yDaiAddress,
+      market.address,
+    );
+    limitMarket = await LimitMarket.deployed();
+    await migrations.register(web3.utils.fromAscii('LimitMarket-' + yDaiName), limitMarket.address);
+    console.log('LimitMarket-' + yDaiName, limitMarket.address);
   }
 };
