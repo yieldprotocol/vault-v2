@@ -423,7 +423,7 @@ contract('Market', async (accounts) =>  {
             const oneToken = toWad(1);
             await getChai(from, chaiTokens1);
 
-            // chaiInForYDaiOut formula: https://www.desmos.com/calculator/cgpfpqe3fq
+            // chaiInForYDaiOut formula: https://www.desmos.com/calculator/gko3hvn5dd
 
             console.log("          buying yDai...");
             console.log("          chaiReserves: %d", await chai.balanceOf(market.address));
@@ -557,7 +557,7 @@ contract('Market', async (accounts) =>  {
                 const oneToken = toWad(1);
                 await getChai(from, chaiTokens1);
     
-                // chaiInForYDaiOut formula: https://www.desmos.com/calculator/cgpfpqe3fq
+                // chaiInForYDaiOut formula: https://www.desmos.com/calculator/gko3hvn5dd
 
                 // Use preview to test price point at maturity as well
                 const chaiInPreview = await market.buyYDaiPreview(oneToken, { from: operator });
