@@ -22,37 +22,6 @@ contract LimitMarket is Delegable {
         market = IMarket(market_);
     }
 
-/*    /// @dev Mint liquidity tokens in exchange for adding chai and yDai
-    /// The parameter passed is the amount of `chai` being invested, an appropriate amount of `yDai` to be invested alongside will be calculated and taken by this function from the caller.
-    function mint(uint256 chaiOffered) external {
-        uint256 supply = totalSupply();
-        uint256 chaiReserves = chai.balanceOf(address(this));
-        uint256 yDaiReserves = yDai.balanceOf(address(this));
-        uint256 tokensMinted = supply.mul(chaiOffered).div(chaiReserves);
-        uint256 yDaiRequired = yDaiReserves.mul(tokensMinted).div(supply);
-
-        chai.transferFrom(msg.sender, address(this), chaiOffered);
-        yDai.transferFrom(msg.sender, address(this), yDaiRequired);
-        _mint(msg.sender, tokensMinted);
-
-        _updateState(chaiReserves.add(chaiOffered), yDaiReserves.add(yDaiRequired));
-    }
-
-    /// @dev Burn liquidity tokens in exchange for chai and yDai
-    function burn(uint256 tokensBurned) external {
-        uint256 supply = totalSupply();
-        uint256 chaiReserves = chai.balanceOf(address(this));
-        uint256 yDaiReserves = yDai.balanceOf(address(this));
-        uint256 chaiReturned = tokensBurned.mul(chaiReserves).div(supply);
-        uint256 yDaiReturned = tokensBurned.mul(yDaiReserves).div(supply);
-
-        _burn(msg.sender, tokensBurned);
-        chai.transfer(msg.sender, chaiReturned);
-        yDai.transfer(msg.sender, yDaiReturned);
-
-        _updateState(chaiReserves.sub(chaiReturned), yDaiReserves.sub(yDaiReturned));
-    } */
-
     /// @dev Sell Chai for yDai
     /// @param from Wallet providing the chai being sold. Must have approved the operator with `market.addDelegate(operator)`.
     /// @param to Wallet receiving the yDai being bought
@@ -61,13 +30,14 @@ contract LimitMarket is Delegable {
     function sellChai(address from, address to, uint128 chaiIn, uint128 minYDaiOut)
         external
         onlyHolderOrDelegate(from, "LimitMarket: Only Holder Or Delegate")
+        returns(uint256)
     {
-        uint256 previousBalance = yDai.balanceOf(to);
-        market.sellChai(from, to, chaiIn);
+        uint256 yDaiOut = market.sellChai(from, to, chaiIn);
         require(
-            yDai.balanceOf(to) >= previousBalance.add(minYDaiOut),
+            yDaiOut >= minYDaiOut,
             "LimitMarket: Limit not reached"
         );
+        return yDaiOut;
     }
 
     /// @dev Buy Chai for yDai
@@ -78,13 +48,14 @@ contract LimitMarket is Delegable {
     function buyChai(address from, address to, uint128 chaiOut, uint128 maxYDaiIn)
         external
         onlyHolderOrDelegate(from, "LimitMarket: Only Holder Or Delegate")
+        returns(uint256)
     {
-        uint256 previousBalance = yDai.balanceOf(from);
-        market.buyChai(from, to, chaiOut);
+        uint256 yDaiIn = market.buyChai(from, to, chaiOut);
         require(
-            yDai.balanceOf(from) >= previousBalance.sub(maxYDaiIn),
+            maxYDaiIn >= yDaiIn,
             "LimitMarket: Limit exceeded"
         );
+        return yDaiIn;
     }
 
     /// @dev Sell yDai for Chai
@@ -95,13 +66,14 @@ contract LimitMarket is Delegable {
     function sellYDai(address from, address to, uint128 yDaiIn, uint128 minChaiOut)
         external
         onlyHolderOrDelegate(from, "LimitMarket: Only Holder Or Delegate")
+        returns(uint256)
     {
-        uint256 previousBalance = chai.balanceOf(to);
-        market.sellYDai(from, to, yDaiIn);
+        uint256 chaiOut = market.sellYDai(from, to, yDaiIn);
         require(
-            chai.balanceOf(to) >= previousBalance.add(minChaiOut),
+            chaiOut >= minChaiOut,
             "LimitMarket: Limit not reached"
         );
+        return chaiOut;
     }
 
     /// @dev Buy yDai for chai
@@ -112,12 +84,13 @@ contract LimitMarket is Delegable {
     function buyYDai(address from, address to, uint128 yDaiOut, uint128 maxChaiIn)
         external
         onlyHolderOrDelegate(from, "LimitMarket: Only Holder Or Delegate")
+        returns(uint256)
     {
-        uint256 previousBalance = chai.balanceOf(from);
-        market.buyYDai(from, to, yDaiOut);
+        uint256 chaiIn = market.buyYDai(from, to, yDaiOut);
         require(
-            chai.balanceOf(from) >= previousBalance.sub(maxChaiIn),
+            maxChaiIn >= chaiIn,
             "LimitMarket: Limit exceeded"
         );
+        return chaiIn;
     }
 }
