@@ -116,6 +116,19 @@ contract Market is IMarket, ERC20, Delegable {
         _updateState(uint256(chaiReserves).add(chaiIn), uint256(yDaiReserves).sub(yDaiOut));
     }
 
+    /// @dev Returns how much yDai would be obtained by selling `chaiIn` chai
+    function sellChaiPreview(uint128 chaiIn) external view returns(uint256) {
+        return YieldMath.yDaiOutForChaiIn(
+            toUint128(chai.balanceOf(address(this))),
+            toUint128(yDai.balanceOf(address(this))),
+            chaiIn,
+            toUint128(maturity - now),
+            k,
+            int128((_pot.chi() << 64) / 10**27),
+            g
+        );
+    }
+
     /// @dev Buy Chai for yDai
     /// @param from Wallet providing the yDai being sold. Must have approved the operator with `market.addDelegate(operator)`.
     /// @param to Wallet receiving the chai being bought
@@ -137,6 +150,19 @@ contract Market is IMarket, ERC20, Delegable {
         chai.transfer(to, chaiOut);
 
         _updateState(uint256(chaiReserves).sub(chaiOut), uint256(yDaiReserves).add(yDaiIn));
+    }
+
+    /// @dev Returns how much yDai would be required to buy `chaiOut` chai
+    function buyChaiPreview(uint128 chaiOut) external view returns(uint256) {
+        return YieldMath.yDaiInForChaiOut(
+            toUint128(chai.balanceOf(address(this))),
+            toUint128(yDai.balanceOf(address(this))),
+            chaiOut,
+            toUint128(maturity - now),
+            k,
+            int128((_pot.chi() << 64) / 10**27),
+            g
+        );
     }
 
     /// @dev Sell yDai for Chai
@@ -162,6 +188,19 @@ contract Market is IMarket, ERC20, Delegable {
         _updateState(uint256(chaiReserves).sub(chaiOut), uint256(yDaiReserves).add(yDaiIn));
     }
 
+    /// @dev Returns how much chai would be obtained by selling `yDaiIn` yDai
+    function sellYDaiPreview(uint128 yDaiIn) external view returns(uint256) {
+        return YieldMath.chaiOutForYDaiIn(
+            toUint128(chai.balanceOf(address(this))),
+            toUint128(yDai.balanceOf(address(this))),
+            yDaiIn,
+            toUint128(maturity - now),
+            k,
+            int128((_pot.chi() << 64) / 10**27),
+            g
+        );
+    }
+
     /// @dev Buy yDai for chai
     /// @param from Wallet providing the chai being sold. Must have approved the operator with `market.addDelegate(operator)`.
     /// @param to Wallet receiving the yDai being bought
@@ -183,6 +222,20 @@ contract Market is IMarket, ERC20, Delegable {
         yDai.transfer(to, yDaiOut);
 
         _updateState(uint256(chaiReserves).add(chaiIn), uint256(yDaiReserves).sub(yDaiOut));
+    }
+
+
+    /// @dev Returns how much chai would be required to buy `yDaiOut` yDai
+    function buyYDaiPreview(uint128 yDaiOut) external view returns(uint256) {
+        return YieldMath.chaiInForYDaiOut(
+            toUint128(chai.balanceOf(address(this))),
+            toUint128(yDai.balanceOf(address(this))),
+            yDaiOut,
+            toUint128(maturity - now),
+            k,
+            int128((_pot.chi() << 64) / 10**27),
+            g
+        );
     }
 
     /// @dev Maintain the price oracle
