@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.6.10;
 
-import "@hq20/contracts/contracts/utils/SafeCast.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -22,9 +21,7 @@ import "./helpers/DecimalMath.sol";
 
 /// @dev Treasury manages the Dai, interacting with MakerDAO's vat and chai when needed.
 contract Unwind is Ownable(), DecimalMath {
-    using SafeCast for uint256;
     using SafeMath for uint256;
-
 
     bytes32 public constant CHAI = "CHAI";
     bytes32 public constant WETH = "ETH-A";
@@ -86,6 +83,15 @@ contract Unwind is Ownable(), DecimalMath {
     function subFloorZero(uint256 x, uint256 y) public pure returns(uint256) {
         if (y >= x) return 0;
         else return x - y;
+    }
+
+    /// @dev Safe casting from uint256 to int256
+    function toInt(uint256 x) internal pure returns(int256) {
+        require(
+            x <= 57896044618658097711785492504343953926634992332820282019728792003956564819967,
+            "Treasury: Cast overflow"
+        );
+        return int256(x);
     }
 
     /// @dev Returns if a series has been added to the Dealer, for a given series identified by maturity
@@ -198,8 +204,8 @@ contract Unwind is Ownable(), DecimalMath {
             WETH,
             address(_treasury),
             address(this),
-            ink.toInt(),
-            art.toInt()
+            toInt(ink),
+            toInt(art)
         );
         _end.skim(WETH, address(this));                // Settle debts
         _end.free(WETH);                               // Free collateral
