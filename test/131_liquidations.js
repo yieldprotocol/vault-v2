@@ -15,7 +15,7 @@ const Treasury = artifacts.require('Treasury');
 
 // YDai
 const YDai = artifacts.require('YDai');
-const Dealer = artifacts.require('Dealer');
+const Controller = artifacts.require('Controller');
 
 // Peripheral
 const Liquidations = artifacts.require('Liquidations');
@@ -43,7 +43,7 @@ contract('Liquidations', async (accounts) =>  {
     let treasury;
     let yDai1;
     let yDai2;
-    let dealer;
+    let controller;
     let liquidations;
     let unwind;
 
@@ -132,8 +132,8 @@ contract('Liquidations', async (accounts) =>  {
             { from: owner },
         );
 
-        // Setup dealer
-        dealer = await Dealer.new(
+        // Setup controller
+        controller = await Controller.new(
             vat.address,
             weth.address,
             dai.address,
@@ -143,7 +143,7 @@ contract('Liquidations', async (accounts) =>  {
             treasury.address,
             { from: owner },
         );
-        await treasury.orchestrate(dealer.address, { from: owner });
+        await treasury.orchestrate(controller.address, { from: owner });
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
@@ -158,8 +158,8 @@ contract('Liquidations', async (accounts) =>  {
             "Symbol",
             { from: owner },
         );
-        await dealer.addSeries(yDai1.address, { from: owner });
-        await yDai1.orchestrate(dealer.address, { from: owner });
+        await controller.addSeries(yDai1.address, { from: owner });
+        await yDai1.orchestrate(controller.address, { from: owner });
         await treasury.orchestrate(yDai1.address, { from: owner });
 
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
@@ -173,19 +173,19 @@ contract('Liquidations', async (accounts) =>  {
             "Symbol2",
             { from: owner },
         );
-        await dealer.addSeries(yDai2.address, { from: owner });
-        await yDai2.orchestrate(dealer.address, { from: owner })
+        await controller.addSeries(yDai2.address, { from: owner });
+        await yDai2.orchestrate(controller.address, { from: owner })
         await treasury.orchestrate(yDai2.address, { from: owner });
 
         // Setup Liquidations
         liquidations = await Liquidations.new(
             dai.address,
             treasury.address,
-            dealer.address,
+            controller.address,
             auctionTime,
             { from: owner },
         );
-        await dealer.orchestrate(liquidations.address, { from: owner });
+        await controller.orchestrate(liquidations.address, { from: owner });
         await treasury.orchestrate(liquidations.address, { from: owner });
 
         // Setup Unwind
@@ -199,13 +199,13 @@ contract('Liquidations', async (accounts) =>  {
             end.address,
             chai.address,
             treasury.address,
-            dealer.address,
+            controller.address,
             liquidations.address,
             { from: owner },
         );
         await treasury.orchestrate(unwind.address, { from: owner });
         await treasury.registerUnwind(unwind.address, { from: owner });
-        await dealer.orchestrate(unwind.address, { from: owner });
+        await controller.orchestrate(unwind.address, { from: owner });
         await yDai1.orchestrate(unwind.address, { from: owner });
         await yDai2.orchestrate(unwind.address, { from: owner });
         await liquidations.orchestrate(unwind.address, { from: owner });
@@ -232,18 +232,18 @@ contract('Liquidations', async (accounts) =>  {
             // Weth setup
             await weth.deposit({ from: user1, value: wethTokens });
             await weth.approve(treasury.address, wethTokens, { from: user1 });
-            await dealer.post(WETH, user1, user1, wethTokens, { from: user1 });
+            await controller.post(WETH, user1, user1, wethTokens, { from: user1 });
 
             await weth.deposit({ from: user2, value: wethTokens.add(1) });
             await weth.approve(treasury.address, wethTokens.add(1), { from: user2 });
-            await dealer.post(WETH, user2, user2, wethTokens.add(1), { from: user2 });
-            await dealer.borrow(WETH, maturity1, user2, user2, daiTokens, { from: user2 });
+            await controller.post(WETH, user2, user2, wethTokens.add(1), { from: user2 });
+            await controller.borrow(WETH, maturity1, user2, user2, daiTokens, { from: user2 });
 
             await weth.deposit({ from: user3, value: wethTokens.mul(2) });
             await weth.approve(treasury.address, wethTokens.mul(2), { from: user3 });
-            await dealer.post(WETH, user3, user3, wethTokens.mul(2), { from: user3 });
-            await dealer.borrow(WETH, maturity1, user3, user3, daiTokens, { from: user3 });
-            await dealer.borrow(WETH, maturity2, user3, user3, daiTokens, { from: user3 });
+            await controller.post(WETH, user3, user3, wethTokens.mul(2), { from: user3 });
+            await controller.borrow(WETH, maturity1, user3, user3, daiTokens, { from: user3 });
+            await controller.borrow(WETH, maturity2, user3, user3, daiTokens, { from: user3 });
 
             // Chai setup
             await vat.hope(daiJoin.address, { from: user1 });
@@ -257,7 +257,7 @@ contract('Liquidations', async (accounts) =>  {
             await dai.approve(chai.address, daiTokens, { from: user1 });
             await chai.join(user1, daiTokens, { from: user1 });
             await chai.approve(treasury.address, chaiTokens, { from: user1 });
-            await dealer.post(CHAI, user1, user1, chaiTokens, { from: user1 });
+            await controller.post(CHAI, user1, user1, chaiTokens, { from: user1 });
 
             await vat.hope(daiJoin.address, { from: user2 });
             await vat.hope(wethJoin.address, { from: user2 });
@@ -274,11 +274,11 @@ contract('Liquidations', async (accounts) =>  {
             await dai.approve(chai.address, moreDai, { from: user2 });
             await chai.join(user2, moreDai, { from: user2 });
             await chai.approve(treasury.address, moreChai, { from: user2 });
-            await dealer.post(CHAI, user2, user2, moreChai, { from: user2 });
-            await dealer.borrow(CHAI, maturity1, user2, user2, daiTokens, { from: user2 });
+            await controller.post(CHAI, user2, user2, moreChai, { from: user2 });
+            await controller.borrow(CHAI, maturity1, user2, user2, daiTokens, { from: user2 });
 
-            // user1 has chaiTokens in dealer and no debt.
-            // user2 has chaiTokens * 1.1 in dealer and daiTokens debt.
+            // user1 has chaiTokens in controller and no debt.
+            // user2 has chaiTokens * 1.1 in controller and daiTokens debt.
 
             // Make sure that end.sol will have enough weth to cash chai savings
             await weth.deposit({ from: owner, value: wethTokens.mul(10) });
@@ -298,30 +298,30 @@ contract('Liquidations', async (accounts) =>  {
                 'User2 should have no weth',
             );
             assert.equal(
-                await dealer.debtYDai(WETH, maturity1, user2),
+                await controller.debtYDai(WETH, maturity1, user2),
                 yDaiTokens.toString(),
-                'User2 should have ' + yDaiTokens.toString() + ' maturity1 weth debt, instead has ' + (await dealer.debtYDai(WETH, maturity1, user2)).toString(),
+                'User2 should have ' + yDaiTokens.toString() + ' maturity1 weth debt, instead has ' + (await controller.debtYDai(WETH, maturity1, user2)).toString(),
             );
         });
 
         it("vaults are collateralized if rates don't change", async() => {
             assert.equal(
-                await dealer.isCollateralized.call(WETH, user2, { from: buyer }),
+                await controller.isCollateralized.call(WETH, user2, { from: buyer }),
                 true,
                 "User2 should be collateralized",
             );
             assert.equal(
-                await dealer.isCollateralized.call(CHAI, user2, { from: buyer }),
+                await controller.isCollateralized.call(CHAI, user2, { from: buyer }),
                 true,
                 "User2 should be collateralized",
             );
             assert.equal(
-                await dealer.isCollateralized.call(WETH, user3, { from: buyer }),
+                await controller.isCollateralized.call(WETH, user3, { from: buyer }),
                 true,
                 "User3 should be collateralized",
             );
             assert.equal(
-                await dealer.isCollateralized.call(CHAI, user3, { from: buyer }),
+                await controller.isCollateralized.call(CHAI, user3, { from: buyer }),
                 true,
                 "User3 should be collateralized",
             );
@@ -335,7 +335,7 @@ contract('Liquidations', async (accounts) =>  {
         });
 
         it("doesn't allow to buy from vaults not under liquidation", async() => {
-            const debt = await dealer.totalDebtDai.call(WETH, user2, { from: buyer });
+            const debt = await controller.totalDebtDai.call(WETH, user2, { from: buyer });
             await expectRevert(
                 liquidations.buy(WETH, user2, buyer, debt, { from: buyer }),
                 "Liquidations: Vault is not in liquidation",
@@ -352,22 +352,22 @@ contract('Liquidations', async (accounts) =>  {
             await vat.fold(WETH, vat.address, subBN(rate2, rate1), { from: owner });
 
             assert.equal(
-                await dealer.isCollateralized.call(WETH, user2, { from: buyer }),
+                await controller.isCollateralized.call(WETH, user2, { from: buyer }),
                 false,
                 "User2 should be undercollateralized",
             );
             assert.equal(
-                await dealer.isCollateralized.call(CHAI, user2, { from: buyer }),
+                await controller.isCollateralized.call(CHAI, user2, { from: buyer }),
                 false,
                 "User2 should be undercollateralized",
             );
             assert.equal(
-                await dealer.isCollateralized.call(WETH, user3, { from: buyer }),
+                await controller.isCollateralized.call(WETH, user3, { from: buyer }),
                 false,
                 "User2 should be undercollateralized",
             );
             assert.equal(
-                await dealer.isCollateralized.call(CHAI, user3, { from: buyer }),
+                await controller.isCollateralized.call(CHAI, user3, { from: buyer }),
                 false,
                 "User2 should be undercollateralized",
             );
@@ -434,7 +434,7 @@ contract('Liquidations', async (accounts) =>  {
                 it("liquidations can be cancelled for collateralized vaults", async() => {
                     await weth.deposit({ from: user2, value: wethTokens });
                     await weth.approve(treasury.address, wethTokens, { from: user2 });
-                    await dealer.post(WETH, user2, user2, wethTokens, { from: user2 });
+                    await controller.post(WETH, user2, user2, wethTokens, { from: user2 });
     
                     const event = (await liquidations.cancel(WETH, user2, { from: buyer })).logs[0];
 
@@ -462,7 +462,7 @@ contract('Liquidations', async (accounts) =>  {
                 });
 
                 it("liquidations retrieve about 1/2 of collateral at the start", async() => {
-                    const daiTokens = (await dealer.totalDebtDai.call(WETH, user2, { from: buyer })).toString();
+                    const daiTokens = (await controller.totalDebtDai.call(WETH, user2, { from: buyer })).toString();
                     // console.log(daiTokens); // 180
                     const liquidatorDaiDebt = divRay(daiTokens, rate2);
                     const liquidatorWethTokens = divRay(daiTokens, spot);
@@ -479,7 +479,7 @@ contract('Liquidations', async (accounts) =>  {
                     await liquidations.buy(WETH, user2, buyer, daiTokens, { from: buyer });
 
                     assert.equal(
-                        await dealer.totalDebtDai.call(WETH, user2, { from: buyer }),
+                        await controller.totalDebtDai.call(WETH, user2, { from: buyer }),
                         0,
                         "User debt should have been erased",
                     );
@@ -497,7 +497,7 @@ contract('Liquidations', async (accounts) =>  {
                 });
 
                 it("partial liquidations are possible", async() => {
-                    const daiTokens = (await dealer.totalDebtDai.call(WETH, user2, { from: buyer })).toString();
+                    const daiTokens = (await controller.totalDebtDai.call(WETH, user2, { from: buyer })).toString();
                     // console.log(daiTokens); // 180
                     const liquidatorDaiDebt = divRay(daiTokens, rate2);
                     const liquidatorWethTokens = divRay(daiTokens, spot);
@@ -514,7 +514,7 @@ contract('Liquidations', async (accounts) =>  {
                     await liquidations.buy(WETH, user2, buyer, divRay(daiTokens, toRay(2)), { from: buyer });
 
                     assert.equal(
-                        await dealer.totalDebtDai.call(WETH, user2, { from: buyer }),
+                        await controller.totalDebtDai.call(WETH, user2, { from: buyer }),
                         divRay(daiTokens, toRay(2)).toString(),
                         "User debt should have been halved",
                     );
@@ -532,7 +532,7 @@ contract('Liquidations', async (accounts) =>  {
                 });
 
                 it("liquidations over several series are possible", async() => {
-                    const daiTokens = (await dealer.totalDebtDai.call(WETH, user3, { from: buyer })).toString();
+                    const daiTokens = (await controller.totalDebtDai.call(WETH, user3, { from: buyer })).toString();
                     // console.log(daiTokens); // 180
                     const liquidatorDaiDebt = divRay(daiTokens, rate2);
                     const liquidatorWethTokens = divRay(daiTokens, spot);
@@ -549,7 +549,7 @@ contract('Liquidations', async (accounts) =>  {
                     await liquidations.buy(WETH, user3, buyer, daiTokens, { from: buyer });
 
                     assert.equal(
-                        await dealer.totalDebtDai.call(WETH, user3, { from: buyer }),
+                        await controller.totalDebtDai.call(WETH, user3, { from: buyer }),
                         0,
                         "User debt should have been erased",
                     );
@@ -573,10 +573,10 @@ contract('Liquidations', async (accounts) =>  {
                     });
 
                     it("liquidations retrieve all collateral", async() => {
-                        const daiTokens = (await dealer.totalDebtDai.call(WETH, user2, { from: buyer })).toString();
+                        const daiTokens = (await controller.totalDebtDai.call(WETH, user2, { from: buyer })).toString();
                         const liquidatorDaiDebt = divRay(daiTokens, rate2);
                         const liquidatorWethTokens = divRay(daiTokens, spot);
-                        const wethTokens = await dealer.posted(WETH, user2, { from: owner });
+                        const wethTokens = await controller.posted(WETH, user2, { from: owner });
     
                         await weth.deposit({ from: buyer, value: liquidatorWethTokens });
                         await weth.approve(wethJoin.address, liquidatorWethTokens, { from: buyer });
@@ -588,7 +588,7 @@ contract('Liquidations', async (accounts) =>  {
                         await liquidations.buy(WETH, user2, buyer, daiTokens, { from: buyer });
     
                         assert.equal(
-                            await dealer.totalDebtDai.call(WETH, user2, { from: buyer }),
+                            await controller.totalDebtDai.call(WETH, user2, { from: buyer }),
                             0,
                             "User debt should have been erased",
                         );
@@ -600,10 +600,10 @@ contract('Liquidations', async (accounts) =>  {
                     });
     
                     it("partial liquidations are possible", async() => {
-                        const daiTokens = (await dealer.totalDebtDai.call(WETH, user2, { from: buyer })).toString();
+                        const daiTokens = (await controller.totalDebtDai.call(WETH, user2, { from: buyer })).toString();
                         const liquidatorDaiDebt = divRay(daiTokens, rate2);
                         const liquidatorWethTokens = divRay(daiTokens, spot);
-                        const wethTokens = (await dealer.posted(WETH, user2, { from: owner })).toString();
+                        const wethTokens = (await controller.posted(WETH, user2, { from: owner })).toString();
     
                         await weth.deposit({ from: buyer, value: liquidatorWethTokens });
                         await weth.approve(wethJoin.address, liquidatorWethTokens, { from: buyer });
@@ -615,7 +615,7 @@ contract('Liquidations', async (accounts) =>  {
                         await liquidations.buy(WETH, user2, buyer, divRay(daiTokens, toRay(2)), { from: buyer });
     
                         assert.equal(
-                            await dealer.totalDebtDai.call(WETH, user2, { from: buyer }),
+                            await controller.totalDebtDai.call(WETH, user2, { from: buyer }),
                             divRay(daiTokens, toRay(2)).toString(),
                             "User debt should have been halved",
                         );
@@ -627,10 +627,10 @@ contract('Liquidations', async (accounts) =>  {
                     });
     
                     it("liquidations over several series are possible", async() => {
-                        const daiTokens = (await dealer.totalDebtDai.call(WETH, user3, { from: buyer })).toString();
+                        const daiTokens = (await controller.totalDebtDai.call(WETH, user3, { from: buyer })).toString();
                         const liquidatorDaiDebt = divRay(daiTokens, rate2);
                         const liquidatorWethTokens = divRay(daiTokens, spot);
-                        const wethTokens = await dealer.posted(WETH, user3, { from: owner });
+                        const wethTokens = await controller.posted(WETH, user3, { from: owner });
     
                         await weth.deposit({ from: buyer, value: liquidatorWethTokens });
                         await weth.approve(wethJoin.address, liquidatorWethTokens, { from: buyer });
@@ -642,7 +642,7 @@ contract('Liquidations', async (accounts) =>  {
                         await liquidations.buy(WETH, user3, buyer, daiTokens, { from: buyer });
     
                         assert.equal(
-                            await dealer.totalDebtDai.call(WETH, user3, { from: buyer }),
+                            await controller.totalDebtDai.call(WETH, user3, { from: buyer }),
                             0,
                             "User debt should have been erased",
                         );

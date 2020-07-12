@@ -15,7 +15,7 @@ const Treasury = artifacts.require('Treasury');
 
 // YDai
 const YDai = artifacts.require('YDai');
-const Dealer = artifacts.require('Dealer');
+const Controller = artifacts.require('Controller');
 
 // Peripheral
 const EthProxy = artifacts.require('EthProxy');
@@ -40,7 +40,7 @@ contract('yDai - Delegable', async (accounts) =>  {
     let treasury;
     let yDai1;
     let yDai2;
-    let dealer;
+    let controller;
     
     let maturity;
     let WETH = web3.utils.fromAscii("ETH-A")
@@ -128,8 +128,8 @@ contract('yDai - Delegable', async (accounts) =>  {
             { from: owner },
         );
 
-        // Setup Dealer
-        dealer = await Dealer.new(
+        // Setup Controller
+        controller = await Controller.new(
             vat.address,
             weth.address,
             dai.address,
@@ -139,7 +139,7 @@ contract('yDai - Delegable', async (accounts) =>  {
             treasury.address,
             { from: owner },
         );
-        treasury.orchestrate(dealer.address, { from: owner });
+        treasury.orchestrate(controller.address, { from: owner });
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
@@ -154,8 +154,8 @@ contract('yDai - Delegable', async (accounts) =>  {
             "Symbol",
             { from: owner },
         );
-        dealer.addSeries(yDai1.address, { from: owner });
-        yDai1.orchestrate(dealer.address, { from: owner });
+        controller.addSeries(yDai1.address, { from: owner });
+        yDai1.orchestrate(controller.address, { from: owner });
         treasury.orchestrate(yDai1.address, { from: owner });
 
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
@@ -169,8 +169,8 @@ contract('yDai - Delegable', async (accounts) =>  {
             "Symbol2",
             { from: owner },
         );
-        dealer.addSeries(yDai2.address, { from: owner });
-        yDai2.orchestrate(dealer.address, { from: owner });
+        controller.addSeries(yDai2.address, { from: owner });
+        yDai2.orchestrate(controller.address, { from: owner });
         treasury.orchestrate(yDai2.address, { from: owner });
 
         // Tests setup

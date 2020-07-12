@@ -9,7 +9,7 @@ const Pot = artifacts.require("Pot");
 const Chai = artifacts.require("Chai");
 const GasToken = artifacts.require("GasToken1");
 const Treasury = artifacts.require("Treasury");
-const Dealer = artifacts.require("Dealer");
+const Controller = artifacts.require("Controller");
 
 const truffleAssert = require('truffle-assertions');
 const { expectRevert } = require('@openzeppelin/test-helpers');
@@ -28,7 +28,7 @@ contract('Treasury - Saving', async (accounts) =>  {
     let chai;
     let gasToken;
     let treasury;
-    let dealer;
+    let controller;
 
     let WETH = web3.utils.fromAscii('ETH-A');
     let spot;

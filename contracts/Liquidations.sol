@@ -3,7 +3,7 @@ pragma solidity ^0.6.10;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "./interfaces/IDealer.sol";
+import "./interfaces/IController.sol";
 import "./interfaces/ILiquidations.sol";
 import "./interfaces/ITreasury.sol";
 import "./helpers/DecimalMath.sol";
@@ -11,7 +11,7 @@ import "./helpers/Orchestrated.sol";
 import "@nomiclabs/buidler/console.sol";
 
 
-/// @dev The Liquidations contract for a Dealer allows to liquidate undercollateralized positions in a reverse Dutch auction.
+/// @dev The Liquidations contract for a Controller allows to liquidate undercollateralized positions in a reverse Dutch auction.
 contract Liquidations is ILiquidations, Orchestrated(), DecimalMath {
     using SafeMath for uint256;
 
@@ -22,7 +22,7 @@ contract Liquidations is ILiquidations, Orchestrated(), DecimalMath {
 
     IERC20 internal _dai;
     ITreasury internal _treasury;
-    IDealer internal _dealer;
+    IController internal _controller;
 
     uint256 public auctionTime;
     mapping(bytes32 => mapping(address => uint256)) public liquidations;
@@ -32,12 +32,12 @@ contract Liquidations is ILiquidations, Orchestrated(), DecimalMath {
     constructor (
         address dai_,
         address treasury_,
-        address dealer_,
+        address controller_,
         uint256 auctionTime_
     ) public {
         _dai = IERC20(dai_);
         _treasury = ITreasury(treasury_);
-        _dealer = IDealer(dealer_);
+        _controller = IController(controller_);
 
         require(
             auctionTime_ > 0,
@@ -47,7 +47,7 @@ contract Liquidations is ILiquidations, Orchestrated(), DecimalMath {
     }
 
     modifier onlyLive() {
-        require(live == true, "Dealer: Not available during unwind");
+        require(live == true, "Controller: Not available during unwind");
         _;
     }
 
@@ -67,7 +67,7 @@ contract Liquidations is ILiquidations, Orchestrated(), DecimalMath {
             "Liquidations: Vault is already in liquidation"
         );
         require(
-            !_dealer.isCollateralized(collateral, user),
+            !_controller.isCollateralized(collateral, user),
             "Liquidations: Vault is not undercollateralized"
         );
         // solium-disable-next-line security/no-block-members
@@ -78,7 +78,7 @@ contract Liquidations is ILiquidations, Orchestrated(), DecimalMath {
     /// @dev Cancels a liquidation process
     function cancel(bytes32 collateral, address user) public {
         require(
-            _dealer.isCollateralized(collateral, user),
+            _controller.isCollateralized(collateral, user),
             "Liquidations: Vault is undercollateralized"
         );
         // solium-disable-next-line security/no-block-members
@@ -93,22 +93,22 @@ contract Liquidations is ILiquidations, Orchestrated(), DecimalMath {
             "Liquidations: Vault is not in liquidation"
         );
         /* require(
-            !_dealer.isCollateralized(collateral, from),
+            !_controller.isCollateralized(collateral, from),
             "Liquidations: Vault is not undercollateralized"
         ); */ // Not checking for this, too expensive. Let the user stop the liquidations instead.
         _treasury.pushDai(buyer, daiAmount);
 
         // calculate collateral to grab. Using divdrup stops rounding from leaving 1 stray wei in vaults.
         uint256 tokenAmount = divdrup(daiAmount, price(collateral, from));
-        // grab collateral from dealer
-        _dealer.grab(collateral, from, daiAmount, tokenAmount);
+        // grab collateral from controller
+        _controller.grab(collateral, from, daiAmount, tokenAmount);
 
         if (collateral == WETH){
             _treasury.pullWeth(buyer, tokenAmount);
         } else if (collateral == CHAI) {
             _treasury.pullChai(buyer, tokenAmount);
         } else {
-            revert("Dealer: Unsupported collateral");
+            revert("Controller: Unsupported collateral");
         }
     }
 
@@ -123,8 +123,8 @@ contract Liquidations is ILiquidations, Orchestrated(), DecimalMath {
             liquidations[collateral][user] > 0,
             "Liquidations: Vault is not targeted"
         );
-        uint256 dividend1 = _dealer.posted(collateral, user);
-        uint256 divisor1 = _dealer.totalDebtDai(collateral, user);
+        uint256 dividend1 = _controller.posted(collateral, user);
+        uint256 divisor1 = _controller.totalDebtDai(collateral, user);
         uint256 term1 = dividend1.mul(UNIT).div(divisor1);
         uint256 dividend3 = Math.min(auctionTime, now - liquidations[collateral][user]);
         uint256 divisor3 = auctionTime.mul(2);

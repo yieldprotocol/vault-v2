@@ -15,7 +15,7 @@ const Treasury = artifacts.require('Treasury');
 
 // YDai
 const YDai = artifacts.require('YDai');
-const Dealer = artifacts.require('Dealer');
+const Controller = artifacts.require('Controller');
 
 // Peripheral
 const Liquidations = artifacts.require('Liquidations');
@@ -42,7 +42,7 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
     let treasury;
     let yDai1;
     let yDai2;
-    let dealer;
+    let controller;
     let liquidations;
     let ethProxy;
     let unwind;
@@ -104,7 +104,7 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
     async function postWeth(user, wethTokens){
         await weth.deposit({ from: user, value: wethTokens });
         await weth.approve(treasury.address, wethTokens, { from: user });
-        await dealer.post(WETH, user, user, wethTokens, { from: user });
+        await controller.post(WETH, user, user, wethTokens, { from: user });
     }
 
     // Convert eth to chai and post it to yDai
@@ -112,7 +112,7 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
     async function postChai(user, chaiTokens){
         await getChai(user, chaiTokens);
         await chai.approve(treasury.address, chaiTokens, { from: user });
-        await dealer.post(CHAI, user, user, chaiTokens, { from: user });
+        await controller.post(CHAI, user, user, chaiTokens, { from: user });
     }
 
     // Add a new yDai series
@@ -192,8 +192,8 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
             { from: owner },
         );
 
-        // Setup Dealer
-        dealer = await Dealer.new(
+        // Setup Controller
+        controller = await Controller.new(
             vat.address,
             weth.address,
             dai.address,
@@ -203,7 +203,7 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
             treasury.address,
             { from: owner },
         );
-        await treasury.orchestrate(dealer.address, { from: owner });
+        await treasury.orchestrate(controller.address, { from: owner });
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
@@ -218,8 +218,8 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
             "Symbol",
             { from: owner },
         );
-        await dealer.addSeries(yDai1.address, { from: owner });
-        await yDai1.orchestrate(dealer.address, { from: owner });
+        await controller.addSeries(yDai1.address, { from: owner });
+        await yDai1.orchestrate(controller.address, { from: owner });
         await treasury.orchestrate(yDai1.address, { from: owner });
 
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
@@ -233,15 +233,15 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
             "Symbol2",
             { from: owner },
         );
-        await dealer.addSeries(yDai2.address, { from: owner });
-        await yDai2.orchestrate(dealer.address, { from: owner });
+        await controller.addSeries(yDai2.address, { from: owner });
+        await yDai2.orchestrate(controller.address, { from: owner });
         await treasury.orchestrate(yDai2.address, { from: owner });
 
         // Setup EthProxy
         ethProxy = await EthProxy.new(
             weth.address,
             treasury.address,
-            dealer.address,
+            controller.address,
             { from: owner },
         );
 
@@ -249,11 +249,11 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
         liquidations = await Liquidations.new(
             dai.address,
             treasury.address,
-            dealer.address,
+            controller.address,
             auctionTime,
             { from: owner },
         );
-        await dealer.orchestrate(liquidations.address, { from: owner });
+        await controller.orchestrate(liquidations.address, { from: owner });
         await treasury.orchestrate(liquidations.address, { from: owner });
 
         // Setup Unwind
@@ -267,13 +267,13 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
             end.address,
             chai.address,
             treasury.address,
-            dealer.address,
+            controller.address,
             liquidations.address,
             { from: owner },
         );
         await treasury.orchestrate(unwind.address, { from: owner });
         await treasury.registerUnwind(unwind.address, { from: owner });
-        await dealer.orchestrate(unwind.address, { from: owner });
+        await controller.orchestrate(unwind.address, { from: owner });
         await yDai1.orchestrate(unwind.address, { from: owner });
         await yDai2.orchestrate(unwind.address, { from: owner });
         await unwind.addSeries(yDai1.address, { from: owner });
@@ -336,9 +336,9 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
             // profit = 10 dai * fix (in weth)
         });
 
-        it("unredeemed yDai and dealer weth debt cancel each other", async() => {
+        it("unredeemed yDai and controller weth debt cancel each other", async() => {
             await postWeth(user2, wethTokens);
-            await dealer.borrow(WETH, await yDai1.maturity(), user2, user2, daiTokens, { from: user2 }); // dealer debt assets == yDai liabilities 
+            await controller.borrow(WETH, await yDai1.maturity(), user2, user2, daiTokens, { from: user2 }); // controller debt assets == yDai liabilities 
 
             await shutdown();
             await unwind.skimDssShutdown(user3, { from: owner });
@@ -351,9 +351,9 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
             // profit = 10 dai * fix (in weth)
         });
 
-        it("unredeemed yDai and dealer chai debt cancel each other", async() => {
+        it("unredeemed yDai and controller chai debt cancel each other", async() => {
             await postChai(user2, chaiTokens);
-            await dealer.borrow(CHAI, await yDai1.maturity(), user2, user2, daiTokens, { from: user2 }); // dealer debt assets == yDai liabilities 
+            await controller.borrow(CHAI, await yDai1.maturity(), user2, user2, daiTokens, { from: user2 }); // controller debt assets == yDai liabilities 
 
             await shutdown();
             await unwind.skimDssShutdown(user3, { from: owner });
@@ -394,10 +394,10 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
 
             beforeEach(async() => {
                 await postWeth(user2, wethTokens);
-                await dealer.borrow(WETH, await yDai1.maturity(), user2, user2, daiTokens, { from: user2 }); // dealer debt assets == yDai liabilities 
+                await controller.borrow(WETH, await yDai1.maturity(), user2, user2, daiTokens, { from: user2 }); // controller debt assets == yDai liabilities 
 
                 await postChai(user2, chaiTokens);
-                await dealer.borrow(CHAI, await yDai1.maturity(), user2, user2, daiTokens, { from: user2 }); // dealer debt assets == yDai liabilities 
+                await controller.borrow(CHAI, await yDai1.maturity(), user2, user2, daiTokens, { from: user2 }); // controller debt assets == yDai liabilities 
                 // profit = 10 chai
 
                 // yDai matures
@@ -436,13 +436,13 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
 
             beforeEach(async() => {
                 await postWeth(user2, wethTokens);
-                await dealer.borrow(WETH, await yDai1.maturity(), user2, user2, daiTokens, { from: user2 }); // dealer debt assets == yDai liabilities 
+                await controller.borrow(WETH, await yDai1.maturity(), user2, user2, daiTokens, { from: user2 }); // controller debt assets == yDai liabilities 
 
                 await postWeth(user2, wethTokens);
-                await dealer.borrow(WETH, await yDai2.maturity(), user2, user2, daiTokens, { from: user2 }); // dealer debt assets == yDai liabilities 
+                await controller.borrow(WETH, await yDai2.maturity(), user2, user2, daiTokens, { from: user2 }); // controller debt assets == yDai liabilities 
 
                 await postChai(user2, chaiTokens);
-                await dealer.borrow(CHAI, await yDai1.maturity(), user2, user2, daiTokens, { from: user2 }); // dealer debt assets == yDai liabilities 
+                await controller.borrow(CHAI, await yDai1.maturity(), user2, user2, daiTokens, { from: user2 }); // controller debt assets == yDai liabilities 
                 // profit = 10 chai
 
                 // yDai1 matures

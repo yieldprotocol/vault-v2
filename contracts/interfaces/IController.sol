@@ -3,7 +3,7 @@ pragma solidity ^0.6.10;
 import "./IYDai.sol";
 
 
-interface IDealer {
+interface IController {
     function series(uint256) external returns (IYDai);
     function systemPosted(bytes32) external returns (uint256);
     function systemDebtYDai(bytes32, uint256) external returns (uint256);

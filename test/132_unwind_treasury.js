@@ -15,7 +15,7 @@ const Treasury = artifacts.require('Treasury');
 
 // YDai
 const YDai = artifacts.require('YDai');
-const Dealer = artifacts.require('Dealer');
+const Controller = artifacts.require('Controller');
 
 // Peripheral
 const Liquidations = artifacts.require('Liquidations');
@@ -42,7 +42,7 @@ contract('Unwind - Treasury', async (accounts) =>  {
     let treasury;
     let yDai1;
     let yDai2;
-    let dealer;
+    let controller;
     let liquidations;
     let ethProxy;
     let unwind;
@@ -136,8 +136,8 @@ contract('Unwind - Treasury', async (accounts) =>  {
             { from: owner },
         );
 
-        // Setup Dealer
-        dealer = await Dealer.new(
+        // Setup Controller
+        controller = await Controller.new(
             vat.address,
             weth.address,
             dai.address,
@@ -147,7 +147,7 @@ contract('Unwind - Treasury', async (accounts) =>  {
             treasury.address,
             { from: owner },
         );
-        await treasury.orchestrate(dealer.address, { from: owner });
+        await treasury.orchestrate(controller.address, { from: owner });
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
@@ -162,8 +162,8 @@ contract('Unwind - Treasury', async (accounts) =>  {
             "Symbol",
             { from: owner },
         );
-        await dealer.addSeries(yDai1.address, { from: owner });
-        await yDai1.orchestrate(dealer.address, { from: owner });
+        await controller.addSeries(yDai1.address, { from: owner });
+        await yDai1.orchestrate(controller.address, { from: owner });
         await treasury.orchestrate(yDai1.address, { from: owner });
 
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
@@ -177,15 +177,15 @@ contract('Unwind - Treasury', async (accounts) =>  {
             "Symbol2",
             { from: owner },
         );
-        await dealer.addSeries(yDai2.address, { from: owner });
-        await yDai2.orchestrate(dealer.address, { from: owner });
+        await controller.addSeries(yDai2.address, { from: owner });
+        await yDai2.orchestrate(controller.address, { from: owner });
         await treasury.orchestrate(yDai2.address, { from: owner });
 
         // Setup EthProxy
         ethProxy = await EthProxy.new(
             weth.address,
             treasury.address,
-            dealer.address,
+            controller.address,
             { from: owner },
         );
 
@@ -193,11 +193,11 @@ contract('Unwind - Treasury', async (accounts) =>  {
         liquidations = await Liquidations.new(
             dai.address,
             treasury.address,
-            dealer.address,
+            controller.address,
             auctionTime,
             { from: owner },
         );
-        await dealer.orchestrate(liquidations.address, { from: owner });
+        await controller.orchestrate(liquidations.address, { from: owner });
         await treasury.orchestrate(liquidations.address, { from: owner });
 
         // Setup Unwind
@@ -211,13 +211,13 @@ contract('Unwind - Treasury', async (accounts) =>  {
             end.address,
             chai.address,
             treasury.address,
-            dealer.address,
+            controller.address,
             liquidations.address,
             { from: owner },
         );
         await treasury.orchestrate(unwind.address, { from: owner });
         await treasury.registerUnwind(unwind.address, { from: owner });
-        await dealer.orchestrate(unwind.address, { from: owner });
+        await controller.orchestrate(unwind.address, { from: owner });
         await yDai1.orchestrate(unwind.address, { from: owner });
         await yDai2.orchestrate(unwind.address, { from: owner });
         await unwind.addSeries(yDai1.address, { from: owner });
@@ -243,13 +243,13 @@ contract('Unwind - Treasury', async (accounts) =>  {
         console.log("|  Contract          ·  Bytecode        ·  Deployed        ·  Constructor     |");
         console.log("·····················|··················|··················|···················");
 
-        const bytecode = dealer.constructor._json.bytecode;
-        const deployed = dealer.constructor._json.deployedBytecode;
+        const bytecode = controller.constructor._json.bytecode;
+        const deployed = controller.constructor._json.deployedBytecode;
         const sizeOfB  = bytecode.length / 2;
         const sizeOfD  = deployed.length / 2;
         const sizeOfC  = sizeOfB - sizeOfD;
         console.log(
-            "|  " + (dealer.constructor._json.contractName).padEnd(18, ' ') +
+            "|  " + (controller.constructor._json.contractName).padEnd(18, ' ') +
             "|" + ("" + sizeOfB).padStart(16, ' ') + "  " +
             "|" + ("" + sizeOfD).padStart(16, ' ') + "  " +
             "|" + ("" + sizeOfC).padStart(16, ' ') + "  |");
@@ -297,9 +297,9 @@ contract('Unwind - Treasury', async (accounts) =>  {
                     'Treasury should not be live',
                 );
                 assert.equal(
-                    await dealer.live.call(),
+                    await controller.live.call(),
                     false,
-                    'Dealer should not be live',
+                    'Controller should not be live',
                 );
                 assert.equal(
                     await liquidations.live.call(),
