@@ -48,8 +48,8 @@ contract Splitter is IFlashMinter, DecimalMath {
         wethJoin = IGemJoin(wethJoin_);
         daiJoin = IDaiJoin(daiJoin_);
         chai = IChai(chai_);
-        yDai = IYDai(chai_);
-        dealer = IDealer(yDai_);
+        yDai = IYDai(yDai_);
+        dealer = IDealer(dealer_);
         market = IMarket(market_);
 
         vat.hope(daiJoin_);
@@ -118,7 +118,6 @@ contract Splitter is IFlashMinter, DecimalMath {
         // Pay the Yield debt
         dealer.repayYDai(WETH, yDai.maturity(), user, user, yDaiAmount); // repayYDai wil only take what is needed
         // Withdraw the collateral from Yield
-        uint256 wethAmount = dealer.posted(WETH, user);
         // TODO: dealer.addProxy(splitter.address, { from: user });
         dealer.withdraw(WETH, user, address(this), wethAmount);
         // Post the collateral to Maker
