@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // chai.sol -- a dai savings token
 // Copyright (C) 2017, 2018, 2019 dbrock, rain, mrchico, lucasvo, livnev
 

@@ -1,4 +1,5 @@
-pragma solidity ^0.6.0;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.6.10;
 
 import "@hq20/contracts/contracts/utils/SafeCast.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
