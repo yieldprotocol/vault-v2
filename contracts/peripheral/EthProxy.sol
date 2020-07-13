@@ -29,7 +29,7 @@ contract EthProxy is Delegable() {
 
     function post(address from, address to, uint256 amount)
         public payable onlyHolderOrDelegate(from, "EthProxy: Only Holder Or Delegate") {
-        _weth.deposit.value(amount)();      // Specify the ether in both `amount` and `value`
+        _weth.deposit{ value: amount }();
         _dealer.post(WETH, address(this), to, amount);
     }
 
