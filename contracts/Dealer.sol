@@ -16,7 +16,19 @@ import "./helpers/DecimalMath.sol";
 import "./helpers/Orchestrated.sol";
 // import "@nomiclabs/buidler/console.sol";
 
-/// @dev A dealer takes collateral and issues yDai.
+/**
+ * @dev The Controller manages collateral and debt levels for all users, and it is a major user entry point for the Yield protocol.
+ * Controller keeps track of a number of yDai contracts.
+ * Controller allows users to post and withdraw Chai and Weth collateral.
+ * Controller allows users to borrow yDai against their Chai and Weth collateral.
+ * Controller allows users to repay their yDai debt with yDai or with Dai.
+ * Controller integrates with yDai contracts for minting yDai on borrowing, and burning yDai on repaying debt with yDai.
+ * Controller relies on Treasury for all other asset transfers.
+ * Controller allows orchestrated contracts to erase any amount of debt or collateral for an user. This is to be used during liquidations or during unwind.
+ * Users can delegate the control of their accounts in Controllers to any address.
+ * Controller takes a bond in GasTokens from users on their first borrow.
+ * This bond is released to the account causing the user debt to drop to zero. This could be the users themselves closing their positions, or liquidators.
+ */
 contract Dealer is IDealer, Orchestrated(), Delegable(), DecimalMath {
     using SafeMath for uint256;
 
@@ -67,6 +79,7 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), DecimalMath {
         _;
     }
 
+    /// @dev Only series added through `addSeries` are valid.
     modifier validSeries(uint256 maturity) {
         require(
             containsSeries(maturity),
@@ -75,21 +88,13 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), DecimalMath {
         _;
     }
 
+    /// @dev Only valid collateral types are Weth and Chai.
     modifier validCollateral(bytes32 collateral) {
         require(
             collateral == WETH || collateral == CHAI,
             "Dealer: Unrecognized collateral"
         );
         _;
-    }
-
-    /// @dev Disables post, withdraw, borrow and repay. To be called only when Treasury shuts down.
-    function shutdown() public override {
-        require(
-            _treasury.live() == false,
-            "Dealer: Treasury is live"
-        );
-        live = false;
     }
 
     /// @dev Returns if a series has been added to the Dealer, for a given series identified by maturity
@@ -106,6 +111,15 @@ contract Dealer is IDealer, Orchestrated(), Delegable(), DecimalMath {
         );
         series[maturity] = IYDai(yDaiContract);
         seriesIterator.push(maturity);
+    }
+
+    /// @dev Disables post, withdraw, borrow and repay. To be called only when Treasury shuts down.
+    function shutdown() public override {
+        require(
+            _treasury.live() == false,
+            "Dealer: Treasury is live"
+        );
+        live = false;
     }
 
     /// @dev Returns the dai equivalent of an yDai amount, for a given series identified by maturity
