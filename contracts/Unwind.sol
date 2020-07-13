@@ -19,7 +19,15 @@ import "./helpers/DecimalMath.sol";
 // import "@nomiclabs/buidler/console.sol";
 
 
-/// @dev Treasury manages the Dai, interacting with MakerDAO's vat and chai when needed.
+/**
+ * @dev Unwind allows everyone to recover their assets from the Yield protocol in the event of a MakerDAO shutdown.
+ * Unwind also allows to remove any protocol profits at any time to the beneficiary address using `skimWhileLive`.
+ * During the unwind process, the system debt to MakerDAO is settled first with `settleTreasury`, extracting all free weth.
+ * Once the Treasury is settled, any system savings are converted from Chai to Weth using `cashSavings`.
+ * At this point, users can settle their positions using `settle`. The MakerDAO rates will be used to convert all debt and collateral to a Weth payout.
+ * Users can also redeem here their yDai for a Weth payout, using `redeem`.
+ * Protocol profits can be transferred to the beneficiary also at this point, using `skimDssShutdown`.
+ */
 contract Unwind is Ownable(), DecimalMath {
     using SafeMath for uint256;
 

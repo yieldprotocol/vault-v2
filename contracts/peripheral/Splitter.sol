@@ -14,7 +14,7 @@ import "../interfaces/IFlashMinter.sol";
 // import "@nomiclabs/buidler/console.sol";
 
 
-/// @dev The Market contract exchanges Dai for yDai at a price defined by a specific formula.
+/// @dev Splitter migrates vaults between MakerDAO and Yield using flash minting.
 contract Splitter is IFlashMinter, DecimalMath {
 
     bytes32 public constant WETH = "ETH-A";
