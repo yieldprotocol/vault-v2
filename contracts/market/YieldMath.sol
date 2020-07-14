@@ -12,20 +12,19 @@ import "./ABDKMath64x64.sol";
  */
 library YieldMath {
   /**
-   * Calculate the amount of yDAI a user would get for given amount of Chai.
+   * Calculate the amount of yDAI a user would get for given amount of Dai.
    *
-   * @param chaiReserves Chai reserves amount
+   * @param daiReserves Dai reserves amount
    * @param yDAIReserves yDAI reserves amount
-   * @param chaiAmount Chai amount to be traded
+   * @param daiAmount Dai amount to be traded
    * @param timeTillMaturity time till maturity in seconds
    * @param k time till maturity coefficient, multiplied by 2^64
-   * @param c price of Chai in terms of DAI, multiplied by 2^64
    * @param g fee coefficient, multiplied by 2^64
-   * @return the amount of yDAI a user would get for given amount of Chai
+   * @return the amount of yDAI a user would get for given amount of Dai
    */
-  function yDaiOutForChaiIn (
-    uint128 chaiReserves, uint128 yDAIReserves, uint128 chaiAmount,
-    uint128 timeTillMaturity, int128 k, int128 c, int128 g)
+  function yDaiOutForDaiIn (
+    uint128 daiReserves, uint128 yDAIReserves, uint128 daiAmount,
+    uint128 timeTillMaturity, int128 k, int128 g)
   internal pure returns (uint128) {
     // t = k * timeTillMaturity
     int128 t = ABDKMath64x64.mul (k, ABDKMath64x64.fromUInt (timeTillMaturity));
@@ -34,18 +33,14 @@ library YieldMath {
     int128 a = ABDKMath64x64.sub (0x10000000000000000, ABDKMath64x64.mul (g, t));
     require (a > 0);
 
-    // cz = c * chaiReserves
-    uint256 cz = ABDKMath64x64.mulu (c, chaiReserves);
-    require (cz < 0x100000000000000000000000000000000);
-
-    // czdz = c * (chaiReserves + chaiAmount)
-    uint256 czdz = ABDKMath64x64.mulu (c, uint256 (chaiReserves) + uint256 (chaiAmount));
-    require (czdz < 0x100000000000000000000000000000000);
+    // xdx = daiReserves + daiAmount
+    uint256 xdx = uint256 (daiReserves) + uint256 (daiAmount);
+    require (xdx < 0x100000000000000000000000000000000);
 
     uint256 sum =
-      ABDKMath64x64.mulu (c, pow (uint128 (cz), uint128 (a), 0x10000000000000000)) +
+      pow (daiReserves, uint128 (a), 0x10000000000000000) +
       pow (yDAIReserves, uint128 (a), 0x10000000000000000) -
-      ABDKMath64x64.mulu (c, pow (uint128 (czdz), uint128 (a), 0x10000000000000000));
+      pow (uint128(xdx), uint128 (a), 0x10000000000000000);
     require (sum < 0x100000000000000000000000000000000);
 
     uint256 result = yDAIReserves - pow (uint128 (sum), 0x10000000000000000, uint128 (a));
@@ -55,20 +50,19 @@ library YieldMath {
   }
 
   /**
-   * Calculate the amount of Chai a user would get for certain amount of yDAI.
+   * Calculate the amount of Dai a user would get for certain amount of yDAI.
    *
-   * @param chaiReserves Chai reserves amount
+   * @param daiReserves Dai reserves amount
    * @param yDAIReserves yDAI reserves amount
    * @param yDAIAmount yDAI amount to be traded
    * @param timeTillMaturity time till maturity in seconds
    * @param k time till maturity coefficient, multiplied by 2^64
-   * @param c price of Chai in terms of DAI, multiplied by 2^64
    * @param g fee coefficient, multiplied by 2^64
-   * @return the amount of Chai a user would get for given amount of yDAI
+   * @return the amount of Dai a user would get for given amount of yDAI
    */
-  function chaiOutForYDaiIn (
-    uint128 chaiReserves, uint128 yDAIReserves, uint128 yDAIAmount,
-    uint128 timeTillMaturity, int128 k, int128 c, int128 g)
+  function daiOutForYDaiIn (
+    uint128 daiReserves, uint128 yDAIReserves, uint128 yDAIAmount,
+    uint128 timeTillMaturity, int128 k, int128 g)
   internal pure returns (uint128) {
     // t = k * timeTillMaturity
     int128 t = ABDKMath64x64.mul (k, ABDKMath64x64.fromUInt (timeTillMaturity));
@@ -76,52 +70,41 @@ library YieldMath {
     // a = (1 - gt)
     int128 a = ABDKMath64x64.sub (0x10000000000000000, ABDKMath64x64.mul (g, t));
     require (a > 0);
-
-    // invC = 1 / c
-    int128 invC = ABDKMath64x64.inv (c);
-
-    // cz = c * chaiReserves
-    uint256 cz = ABDKMath64x64.mulu (c, chaiReserves);
-    require (cz < 0x100000000000000000000000000000000);
 
     // ydy = yDAIReserves + yDAIAmount;
     uint256 ydy = uint256 (yDAIReserves) + uint256 (yDAIAmount);
     require (ydy < 0x100000000000000000000000000000000);
 
     uint256 sum =
-      pow (uint128 (cz), uint128 (a), 0x10000000000000000) -
-      ABDKMath64x64.mulu (
-        invC,
-        pow (uint128 (ydy), uint128 (a), 0x10000000000000000) -
-        pow (yDAIReserves, uint128 (a), 0x10000000000000000));
+      pow (uint128 (daiReserves), uint128 (a), 0x10000000000000000) -
+      pow (uint128 (ydy), uint128 (a), 0x10000000000000000) +
+      pow (yDAIReserves, uint128 (a), 0x10000000000000000);
     require (sum < 0x100000000000000000000000000000000);
 
     uint256 result =
-      chaiReserves -
-      ABDKMath64x64.mulu (
-        invC, pow (uint128 (sum), 0x10000000000000000, uint128 (a)));
+      daiReserves -
+      pow (uint128 (sum), 0x10000000000000000, uint128 (a));
     require (result < 0x100000000000000000000000000000000);
 
     return uint128 (result);
   }
 
   /**
-   * Calculate the amount of yDAI a user could sell for given amount of Chai.
+   * Calculate the amount of yDAI a user could sell for given amount of Dai.
    *
-   * @param chaiReserves Chai reserves amount
+   * @param daiReserves Dai reserves amount
    * @param yDAIReserves yDAI reserves amount
-   * @param chaiAmount Chai amount to be traded
+   * @param daiAmount Dai amount to be traded
    * @param timeTillMaturity time till maturity in seconds
    * @param k time till maturity coefficient, multiplied by 2^64
-   * @param c price of Chai in terms of DAI, multiplied by 2^64
    * @param g fee coefficient, multiplied by 2^64
-   * @return the amount of yDAI a user could sell for given amount of Chai
+   * @return the amount of yDAI a user could sell for given amount of Dai
    */
-  function yDaiInForChaiOut (
-    uint128 chaiReserves, uint128 yDAIReserves, uint128 chaiAmount,
-    uint128 timeTillMaturity, int128 k, int128 c, int128 g)
+  function yDaiInForDaiOut (
+    uint128 daiReserves, uint128 yDAIReserves, uint128 daiAmount,
+    uint128 timeTillMaturity, int128 k, int128 g)
   internal pure returns (uint128) {
-    require (chaiAmount <= chaiReserves);
+    require (daiAmount <= daiReserves);
 
     // t = k * timeTillMaturity
     int128 t = ABDKMath64x64.mul (k, ABDKMath64x64.fromUInt (timeTillMaturity));
@@ -130,18 +113,14 @@ library YieldMath {
     int128 a = ABDKMath64x64.sub (0x10000000000000000, ABDKMath64x64.mul (g, t));
     require (a > 0);
 
-    // cz = c * chaiReserves
-    uint256 cz = ABDKMath64x64.mulu (c, chaiReserves);
-    require (cz < 0x100000000000000000000000000000000);
-
-    // czdz = c * (chaiReserves - chaiAmount)
-    uint256 czdz = ABDKMath64x64.mulu (c, uint256 (chaiReserves) - uint256 (chaiAmount));
-    require (czdz < 0x100000000000000000000000000000000);
+    // xdx = daiReserves - daiAmount
+    uint256 xdx = uint256 (daiReserves) - uint256 (daiAmount);
+    require (xdx < 0x100000000000000000000000000000000);
 
     uint256 sum =
-      ABDKMath64x64.mulu (c, pow (uint128 (cz), uint128 (a), 0x10000000000000000)) +
+      pow (uint128 (daiReserves), uint128 (a), 0x10000000000000000) +
       pow (yDAIReserves, uint128 (a), 0x10000000000000000) -
-      ABDKMath64x64.mulu (c, pow (uint128 (czdz), uint128 (a), 0x10000000000000000));
+      pow (uint128 (xdx), uint128 (a), 0x10000000000000000);
     require (sum < 0x100000000000000000000000000000000);
 
     uint256 result = pow (uint128 (sum), 0x10000000000000000, uint128 (a)) - yDAIReserves;
@@ -151,22 +130,21 @@ library YieldMath {
   }
 
   /**
-   * Calculate the amount of Chai a user would have to pay for certain amount of
+   * Calculate the amount of Dai a user would have to pay for certain amount of
    * yDAI.
    *
-   * @param chaiReserves Chai reserves amount
+   * @param daiReserves Dai reserves amount
    * @param yDAIReserves yDAI reserves amount
    * @param yDAIAmount yDAI amount to be traded
    * @param timeTillMaturity time till maturity in seconds
    * @param k time till maturity coefficient, multiplied by 2^64
-   * @param c price of Chai in terms of DAI, multiplied by 2^64
    * @param g fee coefficient, multiplied by 2^64
-   * @return the amount of Chai a user would have to pay for given amount of
+   * @return the amount of Dai a user would have to pay for given amount of
    *         yDAI
    */
-  function chaiInForYDaiOut (
-    uint128 chaiReserves, uint128 yDAIReserves, uint128 yDAIAmount,
-    uint128 timeTillMaturity, int128 k, int128 c, int128 g)
+  function daiInForYDaiOut (
+    uint128 daiReserves, uint128 yDAIReserves, uint128 yDAIAmount,
+    uint128 timeTillMaturity, int128 k, int128 g)
   internal pure returns (uint128) {
     require (yDAIAmount <= yDAIReserves);
 
@@ -174,29 +152,19 @@ library YieldMath {
     int128 a = ABDKMath64x64.sub (0x10000000000000000, ABDKMath64x64.mul (g, ABDKMath64x64.mul (k, ABDKMath64x64.fromUInt (timeTillMaturity))));
     require (a > 0);
 
-    // invC = 1 / c
-    int128 invC = ABDKMath64x64.inv (c);
-
-    // cz = c * chaiReserves
-    uint256 cz = ABDKMath64x64.mulu (c, chaiReserves);
-    require (cz < 0x100000000000000000000000000000000);
-
     // ydy = yDAIReserves - yDAIAmount;
     uint256 ydy = uint256 (yDAIReserves) - uint256 (yDAIAmount);
     require (ydy < 0x100000000000000000000000000000000);
 
     uint256 sum =
-      pow (uint128 (cz), uint128 (a), 0x10000000000000000) +
-      ABDKMath64x64.mulu (
-        invC,
-        pow (yDAIReserves, uint128 (a), 0x10000000000000000) -
-        pow (uint128 (ydy), uint128 (a), 0x10000000000000000));
+      pow (daiReserves, uint128 (a), 0x10000000000000000) +
+      pow (yDAIReserves, uint128 (a), 0x10000000000000000) -
+        pow (uint128 (ydy), uint128 (a), 0x10000000000000000);
     require (sum < 0x100000000000000000000000000000000);
 
     uint256 result =
-      ABDKMath64x64.mulu (
-        invC, pow (uint128 (sum), 0x10000000000000000, uint128 (a))) -
-      chaiReserves;
+      pow (uint128 (sum), 0x10000000000000000, uint128 (a)) -
+      daiReserves;
     require (result < 0x100000000000000000000000000000000);
 
     return uint128 (result);
