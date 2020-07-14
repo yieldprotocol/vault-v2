@@ -9,7 +9,7 @@
     "lint": "solium -d contracts",
     "test": "buidler test test/*.js test/market/*.js",
     "test:external": "buidler test test/external/*.js",
-    "test:gas": "buidler test test/gas/*.js",
+    "test:non-functional": "buidler test test/non-functional/*.js",
     "test:network": "npx truffle test test/network/*.js",
     "ganache": "./scripts/ganache.sh"
   },

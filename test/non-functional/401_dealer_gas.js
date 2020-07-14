@@ -361,7 +361,7 @@ contract('Gas Usage', async (accounts) =>  {
                 for (let i = 0; i < maturities.length; i++) {
                     await getDai(user3, daiTokens);
                     await dai.approve(treasury.address, daiTokens, { from: user3 });
-                    await controller.repayDai(WETH, maturities[i], user3, daiTokens, { from: user3 });
+                    await controller.repayDai(WETH, maturities[i], user3, user3, daiTokens, { from: user3 });
                 }
                 
                 for (let i = 0; i < maturities.length; i++) {
