@@ -1,14 +1,14 @@
 pragma solidity ^0.6.10;
 
 
-/// @dev Delegable enables users to delegate their account management to delegated
+/// @dev Delegable enables users to delegate their account management to other users
 contract Delegable {
     // All delegated can be known from events for audit purposes
     event Delegate(address indexed user, address indexed delegate, bool enabled);
 
     mapping(address => mapping(address => bool)) internal delegated;
 
-    /// @dev Require that tx.origin is the account holder or a delegate
+    /// @dev Require that msg.sender is the account holder or a delegate
     modifier onlyHolderOrDelegate(address holder, string memory errorMessage) {
         require(
             msg.sender == holder || delegated[holder][msg.sender],

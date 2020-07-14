@@ -13,7 +13,7 @@ import "../interfaces/IFlashMinter.sol";
 // import "@nomiclabs/buidler/console.sol";
 
 
-/// @dev The Market contract exchanges Dai for yDai at a price defined by a specific formula.
+/// @dev Splitter migrates vaults between MakerDAO and Yield using flash minting.
 contract Splitter is IFlashMinter, DecimalMath {
 
     bytes32 public constant WETH = "ETH-A";
@@ -47,8 +47,8 @@ contract Splitter is IFlashMinter, DecimalMath {
         wethJoin = IGemJoin(wethJoin_);
         daiJoin = IDaiJoin(daiJoin_);
         chai = IChai(chai_);
-        yDai = IYDai(chai_);
-        controller = IController(yDai_);
+        yDai = IYDai(yDai_);
+        controller = IController(controller_);
         market = IMarket(market_);
 
         vat.hope(daiJoin_);
@@ -117,8 +117,7 @@ contract Splitter is IFlashMinter, DecimalMath {
         // Pay the Yield debt
         controller.repayYDai(WETH, yDai.maturity(), user, user, yDaiAmount); // repayYDai wil only take what is needed
         // Withdraw the collateral from Yield
-        uint256 wethAmount = controller.posted(WETH, user);
-        // TODO: controller.addProxy(splitter.address, { from: user });
+        // TODO: dealer.addProxy(splitter.address, { from: user });
         controller.withdraw(WETH, user, address(this), wethAmount);
         // Post the collateral to Maker
         // TODO: wethJoin.hope(splitter.address, { from: user });

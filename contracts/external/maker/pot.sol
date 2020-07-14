@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /// pot.sol -- Dai Savings Rate
 
 // Copyright (C) 2018 Rain <rainbreak@riseup.net>
@@ -104,18 +105,18 @@ contract Pot is LibNote {
     }
 
     function rmul(uint x, uint y) internal pure returns (uint z) {
-        z = mul(x, y) / ONE;
+        z = mul_(x, y) / ONE;
     }
 
-    function add(uint x, uint y) internal pure returns (uint z) {
+    function add_(uint x, uint y) internal pure returns (uint z) {
         require((z = x + y) >= x);
     }
 
-    function sub(uint x, uint y) internal pure returns (uint z) {
+    function sub_(uint x, uint y) internal pure returns (uint z) {
         require((z = x - y) <= x);
     }
 
-    function mul(uint x, uint y) internal pure returns (uint z) {
+    function mul_(uint x, uint y) internal pure returns (uint z) {
         require(y == 0 || (z = x * y) / y == x);
     }
 
@@ -141,31 +142,31 @@ contract Pot is LibNote {
     function drip() external note returns (uint tmp) {
         require(now >= rho, "Pot/invalid-now");
         tmp = rmul(rpow(dsr, now - rho, ONE), chi);
-        uint chi_ = sub(tmp, chi);
+        uint chi_ = sub_(tmp, chi);
         chi = tmp;
         rho = now;
-        vat.suck(address(vow), address(this), mul(Pie, chi_));
+        vat.suck(address(vow), address(this), mul_(Pie, chi_));
     }
 
     // --- Savings Dai Management ---
     function join(uint wad) external note {
         require(now == rho, "Pot/rho-not-updated");
-        pie[msg.sender] = add(pie[msg.sender], wad);
-        Pie             = add(Pie,             wad);
-        vat.move(msg.sender, address(this), mul(chi, wad));
+        pie[msg.sender] = add_(pie[msg.sender], wad);
+        Pie             = add_(Pie,             wad);
+        vat.move(msg.sender, address(this), mul_(chi, wad));
     }
 
     // --- Savings Dai Management ---
     function mockJoin(uint wad) external note {
         // require(now == rho, "Pot/rho-not-updated");
-        pie[msg.sender] = add(pie[msg.sender], wad);
-        Pie             = add(Pie,             wad);
-        vat.move(msg.sender, address(this), mul(chi, wad));
+        pie[msg.sender] = add_(pie[msg.sender], wad);
+        Pie             = add_(Pie,             wad);
+        vat.move(msg.sender, address(this), mul_(chi, wad));
     }
 
     function exit(uint wad) external note {
-        pie[msg.sender] = sub(pie[msg.sender], wad);
-        Pie             = sub(Pie,             wad);
-        vat.move(address(this), msg.sender, mul(chi, wad));
+        pie[msg.sender] = sub_(pie[msg.sender], wad);
+        Pie             = sub_(Pie,             wad);
+        vat.move(address(this), msg.sender, mul_(chi, wad));
     }
 }

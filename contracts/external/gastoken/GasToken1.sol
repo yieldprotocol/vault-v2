@@ -1,10 +1,10 @@
+// SPDX-License-Identifier: UNLICENSED
+// No standard license, but explicit permission to use: https://github.com/projectchicago/gastoken
 pragma solidity ^0.6.0;
 
 
 contract GasToken1 {
-    //////////////////////////////////////////////////////////////////////////
     // Generic ERC20
-    //////////////////////////////////////////////////////////////////////////
 
     // owner -> amount
     mapping(address => uint256) s_balances;
@@ -70,9 +70,7 @@ contract GasToken1 {
         return s_allowances[owner][spender];
     }
 
-    //////////////////////////////////////////////////////////////////////////
     // GasToken specifics
-    //////////////////////////////////////////////////////////////////////////
 
     uint8 constant public decimals = 2;
     string constant public name = "Gastoken.io";

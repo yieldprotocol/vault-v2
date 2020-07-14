@@ -1,9 +1,10 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /*
  * Yield Math Smart Contract Library.
  * Copyright © 2020 by ABDK Consulting.
  * Author: Mikhail Vladimirov <mikhail.vladimirov@gmail.com>
  */
-pragma solidity ^0.5.0 || ^0.6.0;
+pragma solidity ^0.6.0;
 
 import "./ABDKMath64x64.sol";
 

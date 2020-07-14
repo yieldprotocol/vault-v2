@@ -5,10 +5,10 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./Market.sol";
 import "../helpers/Delegable.sol";
 import "../interfaces/IMarket.sol";
-import "@nomiclabs/buidler/console.sol";
+// import "@nomiclabs/buidler/console.sol";
 
 
-/// @dev The Market contract exchanges Dai for yDai at a price defined by a specific formula.
+/// @dev LimitMarket is a proxy contract to Market that implements limit orders.
 contract LimitMarket is Delegable {
     using SafeMath for uint256;
 
