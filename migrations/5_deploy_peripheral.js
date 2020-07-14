@@ -11,7 +11,7 @@ const End = artifacts.require("End");
 const Chai = artifacts.require("Chai");
 const GasToken = artifacts.require("GasToken1");
 const Treasury = artifacts.require("Treasury");
-const Dealer = artifacts.require("Dealer");
+const Controller = artifacts.require("Controller");
 const Liquidations = artifacts.require("Liquidations");
 const EthProxy = artifacts.require("EthProxy");
 const Unwind = artifacts.require("Unwind");
@@ -31,7 +31,7 @@ module.exports = async (deployer, network, accounts) => {
   let chaiAddress;
   let gasTokenAddress;
   let treasuryAddress;
-  let dealerAddress;
+  let controllerAddress;
   let splitterAddress;
   let liquidationsAddress;
   let ethProxyAddress;
@@ -66,19 +66,19 @@ module.exports = async (deployer, network, accounts) => {
   const treasury = await Treasury.deployed();
   treasuryAddress = treasury.address;
   gasTokenAddress = (await GasToken.deployed()).address;
-  const dealer = await Dealer.deployed();
-  dealerAddress = dealer.address;
+  const controller = await Controller.deployed();
+  controllerAddress = controller.address;
 
   // Setup Liquidations
   await deployer.deploy(
     Liquidations,
     daiAddress,
     treasuryAddress,
-    dealerAddress,
+    controllerAddress,
     auctionTime,
   )
   liquidationsAddress = (await Liquidations.deployed()).address;
-  await dealer.orchestrate(liquidationsAddress);
+  await controller.orchestrate(liquidationsAddress);
   await treasury.orchestrate(liquidationsAddress);
 
   // Setup Unwind
@@ -93,12 +93,12 @@ module.exports = async (deployer, network, accounts) => {
     endAddress,
     chaiAddress,
     treasuryAddress,
-    dealerAddress,
+    controllerAddress,
     liquidationsAddress,
   );
   const unwind = await Unwind.deployed();
   unwindAddress = unwind.address;
-  await dealer.orchestrate(unwindAddress);
+  await controller.orchestrate(unwindAddress);
   await treasury.orchestrate(unwindAddress);
   await treasury.registerUnwind(unwindAddress);
   // TODO: Retrieve the addresses for yDai contracts
@@ -112,10 +112,10 @@ module.exports = async (deployer, network, accounts) => {
     EthProxy,
     wethAddress,
     treasuryAddress,
-    dealerAddress,
+    controllerAddress,
   );
   ethProxyAddress = (await EthProxy.deployed()).address;
-  await dealer.addDelegate(ethProxyAddress);
+  await controller.addDelegate(ethProxyAddress);
   
   const deployedPeripheral = {
     'Liquidations': liquidationsAddress,

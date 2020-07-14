@@ -15,7 +15,7 @@ const Treasury = artifacts.require('Treasury');
 
 // YDai
 const YDai = artifacts.require('YDai');
-const Dealer = artifacts.require('Dealer');
+const Controller = artifacts.require('Controller');
 
 // Peripheral
 const EthProxy = artifacts.require('EthProxy');
@@ -44,7 +44,7 @@ contract('yDai', async (accounts) =>  {
     let treasury;
     let yDai1;
     let yDai2;
-    let dealer;
+    let controller;
     let splitter;
     let flashMinter;
 
@@ -160,7 +160,7 @@ contract('yDai', async (accounts) =>  {
         await weth.approve(treasury.address, wethTokens2, { from: owner });
         await treasury.pushWeth(owner, wethTokens2, { from: owner });
 
-        // Mint some yDai1 the sneaky way, only difference is that the Dealer doesn't record the user debt.
+        // Mint some yDai1 the sneaky way, only difference is that the Controller doesn't record the user debt.
         await yDai1.orchestrate(owner, { from: owner });
         await yDai1.mint(user1, daiTokens1, { from: owner });
     });

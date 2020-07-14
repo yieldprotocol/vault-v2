@@ -123,13 +123,13 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20, IYDai  {
         _burn(to, yDaiAmount);
     }
 
-    /// @dev Mint yDai. Only callable by Dealer contracts.
+    /// @dev Mint yDai. Only callable by Controller contracts.
     function mint(address to, uint256 yDaiAmount) public override onlyOrchestrated("YDai: Not Authorized")
         {
         _mint(to, yDaiAmount);
     }
 
-    /// @dev Burn yDai. Only callable by Dealer contracts.
+    /// @dev Burn yDai. Only callable by Controller contracts.
     function burn(address from, uint256 yDaiAmount) public override onlyOrchestrated("YDai: Not Authorized") {
         _burn(from, yDaiAmount);
     }

@@ -101,7 +101,7 @@ contract Treasury is ITreasury, Orchestrated(), DecimalMath {
     function pushDai(address from, uint256 amount) public override onlyOrchestrated("Treasury: Not Authorized") onlyLive  {
         require(
             _dai.transferFrom(from, address(this), amount),  // Take dai from user to Treasury
-            "Dealer: Dai transfer fail"
+            "Controller: Dai transfer fail"
         );
 
         uint256 toRepay = Math.min(debt(), amount);

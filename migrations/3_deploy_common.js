@@ -7,7 +7,7 @@ const DaiJoin = artifacts.require("DaiJoin");
 const Chai = artifacts.require("Chai");
 const GasToken = artifacts.require("GasToken1");
 const Treasury = artifacts.require("Treasury");
-const Dealer = artifacts.require("Dealer");
+const Controller = artifacts.require("Controller");
 const Weth = artifacts.require("WETH9");
 const ERC20 = artifacts.require("TestERC20");
 
@@ -23,7 +23,7 @@ module.exports = async (deployer, network, accounts) => {
   let chaiAddress;
   let gasTokenAddress;
   let treasuryAddress;
-  let dealerAddress;
+  let controllerAddress;
 
   if (network !== 'development') {
     vatAddress = fixed_addrs[network].vatAddress ;
@@ -63,9 +63,9 @@ module.exports = async (deployer, network, accounts) => {
   treasury = await Treasury.deployed();
   treasuryAddress = treasury.address;
 
-  // Setup dealer
+  // Setup controller
   await deployer.deploy(
-    Dealer,
+    Controller,
     vatAddress,
     wethAddress,
     daiAddress,
@@ -74,14 +74,14 @@ module.exports = async (deployer, network, accounts) => {
     gasTokenAddress,
     treasuryAddress,
   );
-  const dealer = await Dealer.deployed();
-  dealerAddress = dealer.address;
-  await treasury.orchestrate(dealerAddress);
+  const controller = await Controller.deployed();
+  controllerAddress = controller.address;
+  await treasury.orchestrate(controllerAddress);
 
   // Commit addresses to migrations registry
   const deployedCore = {
     'Treasury': treasuryAddress,
-    'Dealer': dealerAddress,
+    'Controller': controllerAddress,
   }
 
   for (name in deployedCore) {

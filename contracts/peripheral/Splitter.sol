@@ -7,7 +7,7 @@ import "../interfaces/IGemJoin.sol";
 import "../interfaces/IDaiJoin.sol";
 import "../interfaces/IChai.sol";
 import "../interfaces/IYDai.sol";
-import "../interfaces/IDealer.sol";
+import "../interfaces/IController.sol";
 import "../interfaces/IMarket.sol";
 import "../interfaces/IFlashMinter.sol";
 // import "@nomiclabs/buidler/console.sol";
@@ -27,7 +27,7 @@ contract Splitter is IFlashMinter, DecimalMath {
     IDaiJoin public daiJoin;
     IChai public chai;
     IYDai public yDai;
-    IDealer public dealer;
+    IController public controller;
     IMarket public market;
 
     constructor(
@@ -38,7 +38,7 @@ contract Splitter is IFlashMinter, DecimalMath {
         address daiJoin_,
         address chai_,
         address yDai_,
-        address dealer_,
+        address controller_,
         address market_
     ) public {
         vat = IVat(vat_);
@@ -48,7 +48,7 @@ contract Splitter is IFlashMinter, DecimalMath {
         daiJoin = IDaiJoin(daiJoin_);
         chai = IChai(chai_);
         yDai = IYDai(chai_);
-        dealer = IDealer(yDai_);
+        controller = IController(yDai_);
         market = IMarket(market_);
 
         vat.hope(daiJoin_);
@@ -107,19 +107,19 @@ contract Splitter is IFlashMinter, DecimalMath {
         vat.flux("ETH-A", user, address(this), wethAmount);
         wethJoin.exit(address(this), wethAmount); // Splitter will hold the weth temporarily
         // Add the collateral to Yield
-        dealer.post(WETH, address(this), user, wethAmount);
+        controller.post(WETH, address(this), user, wethAmount);
         // Borrow the Dai
-        // TODO: dealer.addProxy(splitter.address, { from: user });
-        dealer.borrow(WETH, yDai.maturity(), user, user, yDaiAmount);
+        // TODO: controller.addProxy(splitter.address, { from: user });
+        controller.borrow(WETH, yDai.maturity(), user, user, yDaiAmount);
     }
 
     function _yieldToMaker(address user, uint256 yDaiAmount, uint256 wethAmount, uint256 daiAmount) internal {
         // Pay the Yield debt
-        dealer.repayYDai(WETH, yDai.maturity(), user, user, yDaiAmount); // repayYDai wil only take what is needed
+        controller.repayYDai(WETH, yDai.maturity(), user, user, yDaiAmount); // repayYDai wil only take what is needed
         // Withdraw the collateral from Yield
-        uint256 wethAmount = dealer.posted(WETH, user);
-        // TODO: dealer.addProxy(splitter.address, { from: user });
-        dealer.withdraw(WETH, user, address(this), wethAmount);
+        uint256 wethAmount = controller.posted(WETH, user);
+        // TODO: controller.addProxy(splitter.address, { from: user });
+        controller.withdraw(WETH, user, address(this), wethAmount);
         // Post the collateral to Maker
         // TODO: wethJoin.hope(splitter.address, { from: user });
         wethJoin.join(user, wethAmount);
