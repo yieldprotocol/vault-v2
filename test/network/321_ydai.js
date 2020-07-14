@@ -16,7 +16,7 @@ const Treasury = artifacts.require('Treasury');
 
 // YDai
 const YDai = artifacts.require('YDai');
-const Dealer = artifacts.require('Dealer');
+const Controller = artifacts.require('Controller');
 
 // Peripheral
 const EthProxy = artifacts.require('EthProxy');
@@ -42,7 +42,7 @@ contract('yDai', async (accounts) =>  {
     let treasury;
     let yDai0; // yDai0 matures on 2020-09-30
     let yDai4; // yDai4 is a test yDai that passed the maturity date
-    let dealer;
+    let controller;
     let splitter;
 
     let WETH = web3.utils.fromAscii("ETH-A");

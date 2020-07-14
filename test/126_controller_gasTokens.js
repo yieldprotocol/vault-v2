@@ -15,7 +15,7 @@ const Treasury = artifacts.require('Treasury');
 
 // YDai
 const YDai = artifacts.require('YDai');
-const Dealer = artifacts.require('Dealer');
+const Controller = artifacts.require('Controller');
 
 // Peripheral
 const EthProxy = artifacts.require('EthProxy');
@@ -23,12 +23,11 @@ const Unwind = artifacts.require('Unwind');
 
 const helper = require('ganache-time-traveler');
 const truffleAssert = require('truffle-assertions');
-const { balance, BN, expectRevert } = require('@openzeppelin/test-helpers');
+const { BN, expectRevert, expectEvent } = require('@openzeppelin/test-helpers');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
-const { assert } = require('chai');
 
-contract('Dealer - EthProxy', async (accounts) =>  {
-    let [ owner, user ] = accounts;
+contract('Controller - Gas Tokens', async (accounts) =>  {
+    let [ owner, user1, user2 ] = accounts;
     let vat;
     let weth;
     let wethJoin;
@@ -41,10 +40,8 @@ contract('Dealer - EthProxy', async (accounts) =>  {
     let treasury;
     let yDai1;
     let yDai2;
-    let dealer;
-    let ethProxy;
+    let controller;
 
-    let ETH = web3.utils.fromAscii("ETH");
     let WETH = web3.utils.fromAscii("ETH-A");
     let CHAI = web3.utils.fromAscii("CHAI");
     let Line = web3.utils.fromAscii("Line");
@@ -57,11 +54,36 @@ contract('Dealer - EthProxy', async (accounts) =>  {
     const limits = toRad(10000);
     const spot  = toRay(1.5);
     const rate  = toRay(1.25);
+    const chi  = toRay(1.25);
     const daiDebt = toWad(120);
     const daiTokens = mulRay(daiDebt, rate);
     const wethTokens = divRay(daiTokens, spot);
     let maturity1;
     let maturity2;
+
+    const gasTokens = 10;
+
+    async function getDai(user, daiTokens){
+        await vat.hope(daiJoin.address, { from: user });
+        await vat.hope(wethJoin.address, { from: user });
+
+        const daiDebt = divRay(daiTokens, rate);
+        const wethTokens = divRay(daiTokens, spot);
+
+        await weth.deposit({ from: user, value: wethTokens });
+        await weth.approve(wethJoin.address, wethTokens, { from: user });
+        await wethJoin.join(user, wethTokens, { from: user });
+        await vat.frob(WETH, user, user, user, wethTokens, daiDebt, { from: user });
+        await daiJoin.exit(user, daiTokens, { from: user });
+    }
+
+    // Convert eth to weth and post it to yDai
+    // This function shadows and uses global variables, careful.
+    async function postWeth(user, wethTokens){
+        await weth.deposit({ from: user, value: wethTokens });
+        await weth.approve(treasury.address, wethTokens, { from: user });
+        await controller.post(WETH, user, user, wethTokens, { from: user });
+    }
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
@@ -120,8 +142,8 @@ contract('Dealer - EthProxy', async (accounts) =>  {
             { from: owner },
         );
 
-        // Setup Dealer
-        dealer = await Dealer.new(
+        // Setup Controller
+        controller = await Controller.new(
             vat.address,
             weth.address,
             dai.address,
@@ -131,7 +153,7 @@ contract('Dealer - EthProxy', async (accounts) =>  {
             treasury.address,
             { from: owner },
         );
-        treasury.orchestrate(dealer.address, { from: owner });
+        treasury.orchestrate(controller.address, { from: owner });
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
@@ -146,8 +168,8 @@ contract('Dealer - EthProxy', async (accounts) =>  {
             "Symbol",
             { from: owner },
         );
-        dealer.addSeries(yDai1.address, { from: owner });
-        yDai1.orchestrate(dealer.address, { from: owner });
+        controller.addSeries(yDai1.address, { from: owner });
+        yDai1.orchestrate(controller.address, { from: owner });
         treasury.orchestrate(yDai1.address, { from: owner });
 
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
@@ -161,21 +183,17 @@ contract('Dealer - EthProxy', async (accounts) =>  {
             "Symbol2",
             { from: owner },
         );
-        dealer.addSeries(yDai2.address, { from: owner });
-        yDai2.orchestrate(dealer.address, { from: owner });
+        controller.addSeries(yDai2.address, { from: owner });
+        yDai2.orchestrate(controller.address, { from: owner });
         treasury.orchestrate(yDai2.address, { from: owner });
 
-        // Setup EthProxy
-        ethProxy = await EthProxy.new(
-            weth.address,
-            treasury.address,
-            dealer.address,
-            { from: owner },
-        );
-        await dealer.addDelegate(ethProxy.address, { from: owner });
-
         // Tests setup
+        await pot.setChi(chi, { from: owner });
         await vat.fold(WETH, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
+        await getDai(user1, daiTokens.mul(2));
+        await getDai(user2, daiTokens);
+        await postWeth(user1, wethTokens.mul(2));
+        await postWeth(user2, wethTokens);
     });
 
     afterEach(async() => {
@@ -188,13 +206,13 @@ contract('Dealer - EthProxy', async (accounts) =>  {
         console.log("|  Contract          ·  Bytecode        ·  Deployed        ·  Constructor     |");
         console.log("·····················|··················|··················|···················");
         
-        const bytecode = dealer.constructor._json.bytecode;
-        const deployed = dealer.constructor._json.deployedBytecode;
+        const bytecode = controller.constructor._json.bytecode;
+        const deployed = controller.constructor._json.deployedBytecode;
         const sizeOfB  = bytecode.length / 2;
         const sizeOfD  = deployed.length / 2;
         const sizeOfC  = sizeOfB - sizeOfD;
         console.log(
-            "|  " + (dealer.constructor._json.contractName).padEnd(18, ' ') +
+            "|  " + (controller.constructor._json.contractName).padEnd(18, ' ') +
             "|" + ("" + sizeOfB).padStart(16, ' ') + "  " +
             "|" + ("" + sizeOfD).padStart(16, ' ') + "  " +
             "|" + ("" + sizeOfC).padStart(16, ' ') + "  |");
@@ -202,125 +220,105 @@ contract('Dealer - EthProxy', async (accounts) =>  {
         console.log();
     }); */
 
-    it("allows user to post eth", async() => {
-        assert.equal(
-            (await vat.urns(WETH, treasury.address)).ink,
-            0,
-            "Treasury has weth in MakerDAO",
-        );
-        assert.equal(
-            await dealer.powerOf.call(WETH, owner),
-            0,
-            "Owner has borrowing power",
-        );
-        
-        const previousBalance = await balance.current(owner);
-        await ethProxy.post(owner, owner, wethTokens, { from: owner, value: wethTokens });
+    it("mints gas tokens when borrowing", async() => {
+        await dai.approve(treasury.address, daiTokens, { from: user1 });
+        await controller.borrow(WETH, maturity1, user1, user1, daiTokens, { from: user1 });
 
-        expect(await balance.current(owner)).to.be.bignumber.lt(previousBalance);
         assert.equal(
-            (await vat.urns(WETH, treasury.address)).ink,
-            wethTokens.toString(),
-            "Treasury should have weth in MakerDAO",
-        );
-        assert.equal(
-            await dealer.powerOf.call(WETH, owner),
-            daiTokens.toString(),
-            "Owner should have " + daiTokens + " borrowing power, instead has " + await dealer.powerOf.call(WETH, owner),
+            await gasToken.balanceOf(controller.address),
+            gasTokens,
+            "Controller should have gasTokens",
         );
     });
 
-    it("allows user to post eth to a different account", async() => {
+    it("takes gas tokens when a new user1 posts for the first time, if available", async() => {
+        await gasToken.mint(gasTokens, { from: user1 });
         assert.equal(
-            (await vat.urns(WETH, treasury.address)).ink,
-            0,
-            "Treasury has weth in MakerDAO",
+            await gasToken.balanceOf(user1),
+            gasTokens,
+            "User should have gasTokens",
         );
-        assert.equal(
-            await dealer.powerOf.call(WETH, user),
-            0,
-            "User has borrowing power",
-        );
-        
-        const previousBalance = await balance.current(owner);
-        await ethProxy.post(owner, user, wethTokens, { from: owner, value: wethTokens });
+        await gasToken.approve(controller.address, gasTokens, { from: user1 });
 
-        expect(await balance.current(owner)).to.be.bignumber.lt(previousBalance);
+        await dai.approve(treasury.address, daiTokens, { from: user1 });
+        await controller.borrow(WETH, maturity1, user1, user1, daiTokens, { from: user1 });
+
         assert.equal(
-            (await vat.urns(WETH, treasury.address)).ink,
-            wethTokens.toString(),
-            "Treasury should have weth in MakerDAO",
+            await gasToken.balanceOf(user1),
+            0,
+            "User should have no gasTokens",
         );
         assert.equal(
-            await dealer.powerOf.call(WETH, user),
-            daiTokens.toString(),
-            "User should have " + daiTokens + " borrowing power, instead has " + await dealer.powerOf.call(WETH, user),
+            await gasToken.balanceOf(controller.address),
+            gasTokens,
+            "Controller should have gasTokens",
         );
     });
 
-    describe("with posted eth", () => {
+    it("does not transfer gas tokens if borrowing amount and debt are zero", async() => {
+        await controller.borrow(WETH, maturity1, user1, user1, 0, { from: user1 });
+
+        assert.equal(
+            await gasToken.balanceOf(user1),
+            0,
+            "User should not have gasTokens",
+        );
+    });
+
+    describe("with debt", () => {
         beforeEach(async() => {
-            await ethProxy.post(owner, owner, wethTokens, { from: owner, value: wethTokens });
+            await dai.approve(treasury.address, daiTokens, { from: user1 });
+            await controller.borrow(WETH, maturity1, user1, user1, daiTokens, { from: user1 });
 
             assert.equal(
-                (await vat.urns(WETH, treasury.address)).ink,
-                wethTokens.toString(),
-                "Treasury does not have weth in MakerDAO",
-            );
-            assert.equal(
-                await dealer.powerOf.call(WETH, owner),
-                daiTokens.toString(),
-                "Owner does not have borrowing power",
-            );
-            assert.equal(
-                await weth.balanceOf(owner),
-                0,
-                "Owner has collateral in hand"
-            );
-            assert.equal(
-                await yDai1.balanceOf(owner),
-                0,
-                "Owner has yDai",
-            );
-            assert.equal(
-                await dealer.debtDai.call(WETH, maturity1, owner),
-                0,
-                "Owner has debt",
+                await gasToken.balanceOf(controller.address),
+                gasTokens,
+                "Controller should have gasTokens",
             );
         });
 
-        it("allows user to withdraw weth", async() => {
-            const previousBalance = await balance.current(owner);
-            await ethProxy.withdraw(owner, owner, wethTokens, { from: owner });
-
-            expect(await balance.current(owner)).to.be.bignumber.gt(previousBalance);
+        it("mints gas tokens when a new user borrows for the first time", async() => {
+            await dai.approve(treasury.address, daiTokens, { from: user2 });
+            await controller.borrow(WETH, maturity1, user2, user2, daiTokens, { from: user2 });
+    
             assert.equal(
-                (await vat.urns(WETH, treasury.address)).ink,
-                0,
-                "Treasury should not not have weth in MakerDAO",
-            );
-            assert.equal(
-                await dealer.powerOf.call(WETH, owner),
-                0,
-                "Owner should not have borrowing power",
+                await gasToken.balanceOf(controller.address),
+                gasTokens * 2,
+                "Controller should have more gasTokens",
             );
         });
 
-        it("allows user to withdraw weth to another account", async() => {
-            const previousBalance = await balance.current(user);
-            await ethProxy.withdraw(owner, user, wethTokens, { from: owner });
-
-            expect(await balance.current(user)).to.be.bignumber.gt(previousBalance);
+        it("does not mint more gas tokens when same user borrows again", async() => {
+            await dai.approve(treasury.address, daiTokens, { from: user1 });
+            await controller.borrow(WETH, maturity1, user1, user1, daiTokens, { from: user1 });
+    
             assert.equal(
-                (await vat.urns(WETH, treasury.address)).ink,
-                0,
-                "Treasury should not not have weth in MakerDAO",
-            );
-            assert.equal(
-                await dealer.powerOf.call(WETH, owner),
-                0,
-                "Owner should not have borrowing power",
+                await gasToken.balanceOf(controller.address),
+                gasTokens.toString(),
+                "Controller should have gasTokens",
             );
         });
+
+        it("does not transfer gas tokens on partial repayments", async() => {
+            await controller.repayYDai(WETH, maturity1, user1, user1, daiTokens.sub(1), { from: user1 });
+
+            assert.equal(
+                await gasToken.balanceOf(user1),
+                0,
+                "User should not have gasTokens",
+            );
+        });
+
+        it("transfers gas tokens on repayment of all debt", async() => {
+            await controller.repayYDai(WETH, maturity1, user1, user1, daiTokens, { from: user1 });
+
+            assert.equal(
+                await gasToken.balanceOf(user1),
+                gasTokens.toString(),
+                "User should have gasTokens",
+            );
+        });
+
+        // TODO: Test gas tokens for `grab`
     });
 });

@@ -15,7 +15,7 @@ const Treasury = artifacts.require('Treasury');
 
 // YDai
 const YDai = artifacts.require('YDai');
-const Dealer = artifacts.require('Dealer');
+const Controller = artifacts.require('Controller');
 
 // Peripheral
 const EthProxy = artifacts.require('EthProxy');
@@ -42,7 +42,7 @@ contract('Gas Usage', async (accounts) =>  {
     let treasury;
     let yDai1;
     let yDai2;
-    let dealer;
+    let controller;
     let ethProxy;
     let liquidations;
     let unwind;
@@ -104,7 +104,7 @@ contract('Gas Usage', async (accounts) =>  {
     async function postWeth(user, wethTokens){
         await weth.deposit({ from: user, value: wethTokens });
         await weth.approve(treasury.address, wethTokens, { from: user });
-        await dealer.post(WETH, user, user, wethTokens, { from: user });
+        await controller.post(WETH, user, user, wethTokens, { from: user });
     }
 
     // Convert eth to chai and post it to yDai
@@ -112,7 +112,7 @@ contract('Gas Usage', async (accounts) =>  {
     async function postChai(user, chaiTokens){
         await getChai(user, chaiTokens);
         await chai.approve(treasury.address, chaiTokens, { from: user });
-        await dealer.post(CHAI, user, user, chaiTokens, { from: user });
+        await controller.post(CHAI, user, user, chaiTokens, { from: user });
     }
 
     // Add a new yDai series
@@ -128,8 +128,8 @@ contract('Gas Usage', async (accounts) =>  {
             "Symbol",
             { from: owner },
         );
-        await dealer.addSeries(yDai.address, { from: owner });
-        await yDai.orchestrate(dealer.address, { from: owner });
+        await controller.addSeries(yDai.address, { from: owner });
+        await yDai.orchestrate(controller.address, { from: owner });
         await treasury.orchestrate(yDai.address, { from: owner });
         await yDai.orchestrate(unwind.address, { from: owner });
         return yDai;
@@ -197,8 +197,8 @@ contract('Gas Usage', async (accounts) =>  {
             { from: owner },
         );
 
-        // Setup Dealer
-        dealer = await Dealer.new(
+        // Setup Controller
+        controller = await Controller.new(
             vat.address,
             weth.address,
             dai.address,
@@ -208,7 +208,7 @@ contract('Gas Usage', async (accounts) =>  {
             treasury.address,
             { from: owner },
         );
-        treasury.orchestrate(dealer.address, { from: owner });
+        treasury.orchestrate(controller.address, { from: owner });
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
@@ -223,8 +223,8 @@ contract('Gas Usage', async (accounts) =>  {
             "Symbol",
             { from: owner },
         );
-        await dealer.addSeries(yDai1.address, { from: owner });
-        await yDai1.orchestrate(dealer.address, { from: owner });
+        await controller.addSeries(yDai1.address, { from: owner });
+        await yDai1.orchestrate(controller.address, { from: owner });
         await treasury.orchestrate(yDai1.address, { from: owner });
 
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
@@ -238,26 +238,26 @@ contract('Gas Usage', async (accounts) =>  {
             "Symbol2",
             { from: owner },
         );
-        await dealer.addSeries(yDai2.address, { from: owner });
-        await yDai2.orchestrate(dealer.address, { from: owner });
+        await controller.addSeries(yDai2.address, { from: owner });
+        await yDai2.orchestrate(controller.address, { from: owner });
         await treasury.orchestrate(yDai2.address, { from: owner });
 
         // Setup Liquidations
         liquidations = await Liquidations.new(
             dai.address,
             treasury.address,
-            dealer.address,
+            controller.address,
             auctionTime,
             { from: owner },
         );
-        await dealer.orchestrate(liquidations.address, { from: owner });
+        await controller.orchestrate(liquidations.address, { from: owner });
         await treasury.orchestrate(liquidations.address, { from: owner });
 
         // Setup EthProxy
         ethProxy = await EthProxy.new(
             weth.address,
             treasury.address,
-            dealer.address,
+            controller.address,
             { from: owner },
         );
         
@@ -265,11 +265,11 @@ contract('Gas Usage', async (accounts) =>  {
         liquidations = await Liquidations.new(
             dai.address,
             treasury.address,
-            dealer.address,
+            controller.address,
             auctionTime,
             { from: owner },
         );
-        await dealer.orchestrate(liquidations.address, { from: owner });
+        await controller.orchestrate(liquidations.address, { from: owner });
         await treasury.orchestrate(liquidations.address, { from: owner });
 
         // Setup Unwind
@@ -283,11 +283,11 @@ contract('Gas Usage', async (accounts) =>  {
             end.address,
             chai.address,
             treasury.address,
-            dealer.address,
+            controller.address,
             liquidations.address,
             { from: owner },
         );
-        await dealer.orchestrate(unwind.address, { from: owner });
+        await controller.orchestrate(unwind.address, { from: owner });
         await treasury.orchestrate(unwind.address, { from: owner });
         await treasury.registerUnwind(unwind.address, { from: owner });
         await yDai1.orchestrate(unwind.address, { from: owner });
@@ -329,28 +329,28 @@ contract('Gas Usage', async (accounts) =>  {
                 
                 for (let i = 0; i < maturities.length; i++) {
                     await postWeth(user3, wethTokens);
-                    await dealer.borrow(WETH, maturities[i], user3, user3, daiTokens, { from: user3 });
+                    await controller.borrow(WETH, maturities[i], user3, user3, daiTokens, { from: user3 });
                 }
             });
 
             it("borrow a second time (no gas bond)", async() => {
                 for (let i = 0; i < maturities.length; i++) {
                     await postWeth(user3, wethTokens);
-                    await dealer.borrow(WETH, maturities[i], user3, user3, daiTokens, { from: user3 });
+                    await controller.borrow(WETH, maturities[i], user3, user3, daiTokens, { from: user3 });
                 }
             });
 
             it("repayYDai", async() => {
                 for (let i = 0; i < maturities.length; i++) {
                     await series[i].approve(treasury.address, daiTokens, { from: user3 });
-                    await dealer.repayYDai(WETH, maturities[i], user3, user3, daiTokens, { from: user3 });
+                    await controller.repayYDai(WETH, maturities[i], user3, user3, daiTokens, { from: user3 });
                 }
             });
 
             it("repayYDai and retrieve gas bond", async() => {
                 for (let i = 0; i < maturities.length; i++) {
-                    await series[i].approve(dealer.address, daiTokens.mul(2), { from: user3 });
-                    await dealer.repayYDai(WETH, maturities[i], user3, user3, daiTokens.mul(2), { from: user3 });
+                    await series[i].approve(controller.address, daiTokens.mul(2), { from: user3 });
+                    await controller.repayYDai(WETH, maturities[i], user3, user3, daiTokens.mul(2), { from: user3 });
                 }
             });
 
@@ -361,11 +361,11 @@ contract('Gas Usage', async (accounts) =>  {
                 for (let i = 0; i < maturities.length; i++) {
                     await getDai(user3, daiTokens);
                     await dai.approve(treasury.address, daiTokens, { from: user3 });
-                    await dealer.repayDai(WETH, maturities[i], user3, daiTokens, { from: user3 });
+                    await controller.repayDai(WETH, maturities[i], user3, daiTokens, { from: user3 });
                 }
                 
                 for (let i = 0; i < maturities.length; i++) {
-                    await dealer.withdraw(WETH, user3, user3, wethTokens, { from: user3 });
+                    await controller.withdraw(WETH, user3, user3, wethTokens, { from: user3 });
                 }
             });
 

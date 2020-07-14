@@ -9,7 +9,7 @@ const Pot = artifacts.require("Pot");
 const Chai = artifacts.require("Chai");
 const GasToken = artifacts.require("GasToken1");
 const Treasury = artifacts.require("Treasury");
-const Dealer = artifacts.require("Dealer");
+const Controller = artifacts.require("Controller");
 
 const { expectRevert } = require('@openzeppelin/test-helpers');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('../shared/utils');
@@ -27,7 +27,7 @@ contract('Vat', async (accounts, network) =>  {
     let chai;
     let gasToken;
     let treasury;
-    let dealer;
+    let controller;
 
     let WETH = web3.utils.fromAscii('ETH-A');
     let spot;

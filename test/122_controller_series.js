@@ -15,7 +15,7 @@ const Treasury = artifacts.require('Treasury');
 
 // YDai
 const YDai = artifacts.require('YDai');
-const Dealer = artifacts.require('Dealer');
+const Controller = artifacts.require('Controller');
 
 // Peripheral
 const EthProxy = artifacts.require('EthProxy');
@@ -26,7 +26,7 @@ const truffleAssert = require('truffle-assertions');
 const { BN, expectRevert } = require('@openzeppelin/test-helpers');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
 
-contract('Dealer: Multi-Series', async (accounts) =>  {
+contract('Controller: Multi-Series', async (accounts) =>  {
     let [ owner, user ] = accounts;
     let vat;
     let weth;
@@ -40,7 +40,7 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
     let treasury;
     let yDai1;
     let yDai2;
-    let dealer;
+    let controller;
 
     let WETH = web3.utils.fromAscii("ETH-A");
     let CHAI = web3.utils.fromAscii("CHAI");
@@ -114,8 +114,8 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
             chai.address,
         );
 
-        // Setup Dealer
-        dealer = await Dealer.new(
+        // Setup Controller
+        controller = await Controller.new(
             vat.address,
             weth.address,
             dai.address,
@@ -125,7 +125,7 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
             treasury.address,
             { from: owner },
         );
-        treasury.orchestrate(dealer.address, { from: owner });
+        treasury.orchestrate(controller.address, { from: owner });
         
         // Test setup
         await vat.fold(WETH, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
@@ -141,9 +141,9 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
         
         assert.equal(
-            await dealer.containsSeries(maturity1),
+            await controller.containsSeries(maturity1),
             false,
-            "Dealer should not contain any maturity",
+            "Controller should not contain any maturity",
         );
 
         yDai1 = await YDai.new(
@@ -158,13 +158,13 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
         );
         treasury.orchestrate(yDai1.address, { from: owner });
 
-        await dealer.addSeries(yDai1.address, { from: owner });
-        yDai1.orchestrate(dealer.address, { from: owner });
+        await controller.addSeries(yDai1.address, { from: owner });
+        yDai1.orchestrate(controller.address, { from: owner });
 
         assert.equal(
-            await dealer.containsSeries(maturity1),
+            await controller.containsSeries(maturity1),
             true,
-            "Dealer should contain " + (await yDai1.name.call()),
+            "Controller should contain " + (await yDai1.name.call()),
         );
     });
 
@@ -197,30 +197,30 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
         );
         treasury.orchestrate(yDai2.address, { from: owner });
 
-        await dealer.addSeries(yDai1.address, { from: owner });
-        yDai1.orchestrate(dealer.address, { from: owner });
-        await dealer.addSeries(yDai2.address, { from: owner });
-        yDai2.orchestrate(dealer.address, { from: owner });
+        await controller.addSeries(yDai1.address, { from: owner });
+        yDai1.orchestrate(controller.address, { from: owner });
+        await controller.addSeries(yDai2.address, { from: owner });
+        yDai2.orchestrate(controller.address, { from: owner });
 
         assert.equal(
-            await dealer.containsSeries(maturity1),
+            await controller.containsSeries(maturity1),
             true,
-            "Dealer should contain " + (await yDai1.name.call()),
+            "Controller should contain " + (await yDai1.name.call()),
         );
         assert.equal(
-            await dealer.containsSeries(maturity2),
+            await controller.containsSeries(maturity2),
             true,
-            "Dealer should contain " + (await yDai2.name.call()),
+            "Controller should contain " + (await yDai2.name.call()),
         );
         assert.equal(
-            await dealer.series(maturity1),
+            await controller.series(maturity1),
             yDai1.address,
-            "Dealer should have the contract for " + (await yDai1.name.call()),
+            "Controller should have the contract for " + (await yDai1.name.call()),
         );
         assert.equal(
-            await dealer.series(maturity2),
+            await controller.series(maturity2),
             yDai2.address,
-            "Dealer should have the contract for " + (await yDai2.name.call()),
+            "Controller should have the contract for " + (await yDai2.name.call()),
         );
     });
 
@@ -241,11 +241,11 @@ contract('Dealer: Multi-Series', async (accounts) =>  {
         );
         treasury.orchestrate(yDai1.address, { from: owner });
 
-        await dealer.addSeries(yDai1.address, { from: owner });
-        yDai1.orchestrate(dealer.address, { from: owner });
+        await controller.addSeries(yDai1.address, { from: owner });
+        yDai1.orchestrate(controller.address, { from: owner });
         await expectRevert(
-            dealer.addSeries(yDai1.address, { from: owner }),
-            "Dealer: Series already added",
+            controller.addSeries(yDai1.address, { from: owner }),
+            "Controller: Series already added",
         );
     });
 });
