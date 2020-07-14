@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: GPL-3.0-or-later
 /*
  * Yield Math Smart Contract Library.
  * Copyright © 2020 by ABDK Consulting.
