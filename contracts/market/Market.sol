@@ -13,12 +13,6 @@ import "../interfaces/IMarket.sol";
 /// @dev The Market contract exchanges Dai for yDai at a price defined by a specific formula.
 contract Market is IMarket, ERC20, Delegable {
 
-    struct State {
-        uint32 timestamp;    // last time contract was updated. wraps around after 2^32
-        uint32 prevRate;     // UQ16x16 interest rate last time the contract was updated
-        uint64 accumulator;  // interest rate oracle accumulator—32 bits for a UQ16x16, 32 bits for overflow
-    }
-
     int128 constant public k = int128(uint256((1 << 64)) / 126144000); // 1 / Seconds in 4 years, in 64.64
     int128 constant public g = int128(uint256((999 << 64)) / 1000); // All constants are `ufixed`, to divide them they must be converted to uint256
     uint256 constant public initialSupply = 1000;
@@ -27,8 +21,6 @@ contract Market is IMarket, ERC20, Delegable {
     IPot internal _pot;
     IERC20 public chai;
     IYDai public yDai;
-
-    State internal state;
 
     // TODO: Choose liquidity token name
     constructor(address pot_, address chai_, address yDai_) public ERC20("Name", "Symbol") Delegable() {
@@ -64,8 +56,6 @@ contract Market is IMarket, ERC20, Delegable {
         chai.transferFrom(msg.sender, address(this), chaiIn);
         yDai.transferFrom(msg.sender, address(this), yDaiIn);
         _mint(msg.sender, initialSupply);
-
-        _updateState(chaiIn, yDaiIn);
     }
 
     /// @dev Mint liquidity tokens in exchange for adding chai and yDai
@@ -80,8 +70,6 @@ contract Market is IMarket, ERC20, Delegable {
         chai.transferFrom(msg.sender, address(this), chaiOffered);
         yDai.transferFrom(msg.sender, address(this), yDaiRequired);
         _mint(msg.sender, tokensMinted);
-
-        _updateState(chaiReserves.add(chaiOffered), yDaiReserves.add(yDaiRequired));
     }
 
     /// @dev Burn liquidity tokens in exchange for chai and yDai
@@ -95,8 +83,6 @@ contract Market is IMarket, ERC20, Delegable {
         _burn(msg.sender, tokensBurned);
         chai.transfer(msg.sender, chaiReturned);
         yDai.transfer(msg.sender, yDaiReturned);
-
-        _updateState(chaiReserves.sub(chaiReturned), yDaiReserves.sub(yDaiReturned));
     }
 
     /// @dev Sell Chai for yDai
@@ -123,8 +109,6 @@ contract Market is IMarket, ERC20, Delegable {
 
         chai.transferFrom(from, address(this), chaiIn);
         yDai.transfer(to, yDaiOut);
-
-        _updateState(uint256(chaiReserves).add(chaiIn), uint256(yDaiReserves).sub(yDaiOut));
 
         return yDaiOut;
     }
@@ -167,8 +151,6 @@ contract Market is IMarket, ERC20, Delegable {
         yDai.transferFrom(from, address(this), yDaiIn);
         chai.transfer(to, chaiOut);
 
-        _updateState(uint256(chaiReserves).sub(chaiOut), uint256(yDaiReserves).add(yDaiIn));
-
         return yDaiIn;
     }
 
@@ -208,8 +190,6 @@ contract Market is IMarket, ERC20, Delegable {
 
         yDai.transferFrom(from, address(this), yDaiIn);
         chai.transfer(to, chaiOut);
-
-        _updateState(uint256(chaiReserves).sub(chaiOut), uint256(yDaiReserves).add(yDaiIn));
 
         return chaiOut;
     }
@@ -251,8 +231,6 @@ contract Market is IMarket, ERC20, Delegable {
         chai.transferFrom(from, address(this), chaiIn);
         yDai.transfer(to, yDaiOut);
 
-        _updateState(uint256(chaiReserves).add(chaiIn), uint256(yDaiReserves).sub(yDaiOut));
-
         return chaiIn;
     }
 
@@ -268,15 +246,5 @@ contract Market is IMarket, ERC20, Delegable {
             int128((_pot.chi() << 64) / 10**27),
             g
         );
-    }
-
-    /// @dev Maintain the price oracle
-    function _updateState(uint256 x0, uint256 y0) internal {
-        State memory prevState = state;
-        state = State({
-            timestamp: uint32(block.timestamp % 2**32),
-            accumulator: uint64(prevState.prevRate + (prevState.prevRate * (block.timestamp - prevState.timestamp)) / 10**27),
-            prevRate: uint32(y0 * 10**27 / x0)
-        });
     }
 }
