@@ -10,7 +10,6 @@ const Jug = artifacts.require('Jug');
 const Pot = artifacts.require('Pot');
 const End = artifacts.require('End');
 const Chai = artifacts.require('Chai');
-const GasToken = artifacts.require('GasToken1');
 
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('../test/shared/utils');
 
@@ -26,7 +25,6 @@ module.exports = async (deployer, network, accounts) => {
   let potAddress;
   let endAddress;
   let chaiAddress;
-  let gasTokenAddress;
 
   if (network === "development") {
     // Setting up Vat
@@ -101,13 +99,6 @@ module.exports = async (deployer, network, accounts) => {
     fixed_addrs[network].chaiAddress && (chaiAddress = fixed_addrs[network].chaiAddress);
   };
 
-  if (network === "development" || network === "goerli" && network === "goerli-fork") {
-    await deployer.deploy(GasToken);
-    gasTokenAddress = (await GasToken.deployed()).address;
-  } else {
-    gasTokenAddress = fixed_addrs[network].gasTokenAddress;
-  };
-
   if (network === "mainnet" && network === "kovan" && network === "kovan-fork") {
     chaiAddress = fixed_addrs[network].chaiAddress;
   } else {
@@ -132,7 +123,6 @@ module.exports = async (deployer, network, accounts) => {
     'Pot': potAddress,
     'End': endAddress,
     'Chai': chaiAddress,
-    'GasToken': gasTokenAddress,
   }
 
   for (name in deployedExternal) {

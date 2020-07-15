@@ -7,7 +7,6 @@ const DaiJoin = artifacts.require("DaiJoin");
 const Jug = artifacts.require("Jug");
 const Pot = artifacts.require("Pot");
 const Chai = artifacts.require("Chai");
-const GasToken = artifacts.require("GasToken1");
 const Treasury = artifacts.require("Treasury");
 const Controller = artifacts.require("Controller");
 
@@ -25,7 +24,6 @@ contract('Vat', async (accounts, network) =>  {
     let jug;
     let pot;
     let chai;
-    let gasToken;
     let treasury;
     let controller;
 
@@ -47,7 +45,6 @@ contract('Vat', async (accounts, network) =>  {
         jug = await Jug.at(await migrations.contracts(web3.utils.fromAscii("Jug")));
         pot = await Pot.at(await migrations.contracts(web3.utils.fromAscii("Pot")));
         chai = await Chai.at(await migrations.contracts(web3.utils.fromAscii("Chai")));
-        gasToken = await GasToken.at(await migrations.contracts(web3.utils.fromAscii("GasToken")));
 
         spot  = (await vat.ilks(WETH)).spot;
         rate  = (await vat.ilks(WETH)).rate;

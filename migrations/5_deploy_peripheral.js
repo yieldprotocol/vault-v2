@@ -9,7 +9,6 @@ const Jug = artifacts.require("Jug");
 const Pot = artifacts.require("Pot");
 const End = artifacts.require("End");
 const Chai = artifacts.require("Chai");
-const GasToken = artifacts.require("GasToken1");
 const Treasury = artifacts.require("Treasury");
 const Controller = artifacts.require("Controller");
 const Liquidations = artifacts.require("Liquidations");
@@ -29,7 +28,6 @@ module.exports = async (deployer, network, accounts) => {
   let potAddress;
   let endAddress;
   let chaiAddress;
-  let gasTokenAddress;
   let treasuryAddress;
   let controllerAddress;
   let splitterAddress;
@@ -65,7 +63,6 @@ module.exports = async (deployer, network, accounts) => {
 
   const treasury = await Treasury.deployed();
   treasuryAddress = treasury.address;
-  gasTokenAddress = (await GasToken.deployed()).address;
   const controller = await Controller.deployed();
   controllerAddress = controller.address;
 

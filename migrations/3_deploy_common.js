@@ -5,7 +5,6 @@ const Vat = artifacts.require("Vat");
 const GemJoin = artifacts.require("GemJoin");
 const DaiJoin = artifacts.require("DaiJoin");
 const Chai = artifacts.require("Chai");
-const GasToken = artifacts.require("GasToken1");
 const Treasury = artifacts.require("Treasury");
 const Controller = artifacts.require("Controller");
 const Weth = artifacts.require("WETH9");
@@ -21,7 +20,6 @@ module.exports = async (deployer, network, accounts) => {
   let daiJoinAddress;
   let potAddress;
   let chaiAddress;
-  let gasTokenAddress;
   let treasuryAddress;
   let controllerAddress;
 
@@ -35,9 +33,6 @@ module.exports = async (deployer, network, accounts) => {
     fixed_addrs[network].chaiAddress ? 
       (chaiAddress = fixed_addrs[network].chaiAddress)
       : (chaiAddress = (await Chai.deployed()).address);
-    fixed_addrs[network].gasTokenAddress ? 
-      (gasTokenAddress = fixed_addrs[network].gasTokenAddress)
-      : (gasTokenAddress = (await GasToken.deployed()).address);
  } else {
     vatAddress = (await Vat.deployed()).address;
     wethAddress = (await Weth.deployed()).address;
@@ -46,7 +41,6 @@ module.exports = async (deployer, network, accounts) => {
     daiJoinAddress = (await DaiJoin.deployed()).address;
     potAddress = (await Pot.deployed()).address;
     chaiAddress = (await Chai.deployed()).address;
-    gasTokenAddress = (await GasToken.deployed()).address;
  }
 
   // Setup treasury
@@ -71,7 +65,6 @@ module.exports = async (deployer, network, accounts) => {
     daiAddress,
     potAddress,
     chaiAddress,
-    gasTokenAddress,
     treasuryAddress,
   );
   const controller = await Controller.deployed();

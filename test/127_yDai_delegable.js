@@ -8,7 +8,6 @@ const Jug = artifacts.require('Jug');
 const Pot = artifacts.require('Pot');
 const End = artifacts.require('End');
 const Chai = artifacts.require('Chai');
-const GasToken = artifacts.require('GasToken1');
 
 // Common
 const Treasury = artifacts.require('Treasury');
@@ -36,7 +35,6 @@ contract('yDai - Delegable', async (accounts) =>  {
     let jug;
     let pot;
     let chai;
-    let gasToken;
     let treasury;
     let yDai1;
     let yDai2;
@@ -113,9 +111,6 @@ contract('yDai - Delegable', async (accounts) =>  {
             { from: owner },
         );
 
-        // Setup GasToken
-        gasToken = await GasToken.new();
-
         // Set treasury
         treasury = await Treasury.new(
             vat.address,
@@ -135,7 +130,6 @@ contract('yDai - Delegable', async (accounts) =>  {
             dai.address,
             pot.address,
             chai.address,
-            gasToken.address,
             treasury.address,
             { from: owner },
         );
