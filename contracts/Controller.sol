@@ -259,14 +259,18 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         debtYDai[collateral][maturity][from] = debtYDai[collateral][maturity][from].add(yDaiAmount);
         systemDebtYDai[collateral][maturity] = systemDebtYDai[collateral][maturity].add(yDaiAmount);
 
-        require(
-            isCollateralized(collateral, from),
+        // Both isCollateralized and aboveDustOrZero require knowing the total dai debt
+        // We are unpacking here both functions to iterate over the maturities only once
+        uint256 totalUserDebtDai = totalDebtDai(collateral, from);
+        require( // Require user is collateralized
+            powerOf(collateral, from) >= totalUserDebtDai,
             "Controller: Too much debt"
         );
-        require(
-            debtAboveDustOrZero(collateral, from),
+        require( // Require user debt above dust
+            DUST < totalUserDebtDai,
             "Controller: Below dust"
         );
+
         series[maturity].mint(to, yDaiAmount);
         emit Borrowed(collateral, maturity, from, int256(yDaiAmount)); // TODO: Watch for overflow
     }
