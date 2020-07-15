@@ -179,6 +179,26 @@ contract('Market', async (accounts) =>  {
         await helper.revertToSnapshot(snapshotId);
     });
 
+    it("get the size of the contract", async() => {
+        console.log();
+        console.log("    ·--------------------|------------------|------------------|------------------·");
+        console.log("    |  Contract          ·  Bytecode        ·  Deployed        ·  Constructor     |");
+        console.log("    ·····················|··················|··················|···················");
+        
+        const bytecode = market.constructor._json.bytecode;
+        const deployed = market.constructor._json.deployedBytecode;
+        const sizeOfB  = bytecode.length / 2;
+        const sizeOfD  = deployed.length / 2;
+        const sizeOfC  = sizeOfB - sizeOfD;
+        console.log(
+            "    |  " + (market.constructor._json.contractName).padEnd(18, ' ') +
+            "|" + ("" + sizeOfB).padStart(16, ' ') + "  " +
+            "|" + ("" + sizeOfD).padStart(16, ' ') + "  " +
+            "|" + ("" + sizeOfC).padStart(16, ' ') + "  |");
+        console.log("    ·--------------------|------------------|------------------|------------------·");
+        console.log();
+    });
+
     describe("with liquidity", () => {
         beforeEach(async() => {
             await getDai(user1, daiReserves)
