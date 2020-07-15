@@ -201,20 +201,19 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         onlyHolderOrDelegate(from, "Controller: Only Holder Or Delegate")
         onlyLive
     {
+        posted[collateral][to] = posted[collateral][to].add(amount);
+        systemPosted[collateral] = systemPosted[collateral].add(amount);
+
         if (collateral == WETH){ // TODO: Refactor Treasury to be `push(collateral, amount)`
+            require(
+                aboveDustOrZero(collateral, to),
+                "Controller: Below dust"
+            );
             _treasury.pushWeth(from, amount);
         } else if (collateral == CHAI) {
             _treasury.pushChai(from, amount);
         }
         
-        posted[collateral][to] = posted[collateral][to].add(amount);
-        systemPosted[collateral] = systemPosted[collateral].add(amount);
-
-        require(
-            aboveDustOrZero(collateral, to),
-            "Controller: Below dust"
-        );
-
         emit Posted(collateral, to, int256(amount)); // TODO: Watch for overflow
     }
 
@@ -233,12 +232,12 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
             isCollateralized(collateral, from),
             "Controller: Too much debt"
         );
-        require(
-            aboveDustOrZero(collateral, to),
-            "Controller: Below dust"
-        );
 
         if (collateral == WETH){ // TODO: Refactor Treasury to be `pull(collateral, amount)`
+            require(
+                aboveDustOrZero(collateral, to),
+                "Controller: Below dust"
+            );
             _treasury.pullWeth(to, amount);
         } else if (collateral == CHAI) {
             _treasury.pullChai(to, amount);
@@ -357,8 +356,8 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
             "Controller: Not enough user debt"
         );
 
-        require( // TODO: Untested, but to be moved to Liquidations first
-            aboveDustOrZero(collateral, user),
+        require( // TODO: Untested, but to be moved to Liquidations and refactored there
+            collateral != WETH || aboveDustOrZero(collateral, user),
             "Controller: Below dust"
         );
     }
