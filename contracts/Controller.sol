@@ -18,6 +18,7 @@ import "@nomiclabs/buidler/console.sol";
  * @dev The Controller manages collateral and debt levels for all users, and it is a major user entry point for the Yield protocol.
  * Controller keeps track of a number of yDai contracts.
  * Controller allows users to post and withdraw Chai and Weth collateral.
+ * Any transactions resulting in a user weth collateral below dust are reverted.
  * Controller allows users to borrow yDai against their Chai and Weth collateral.
  * Controller allows users to repay their yDai debt with yDai or with Dai.
  * Controller integrates with yDai contracts for minting yDai on borrowing, and burning yDai on repaying debt with yDai.
@@ -188,7 +189,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         return powerOf(collateral, user) >= totalDebtDai(collateral, user);
     }
 
-    /// @dev Return if the debt of an user is below the dust level
+    /// @dev Return if the debt of an user is between zero and the dust level
     function aboveDustOrZero(bytes32 collateral, address user) public returns (bool) {
         return posted[collateral][user] == 0 || DUST < posted[collateral][user];
     }
