@@ -51,7 +51,7 @@ contract('Controller - Weth', async (accounts) =>  {
     let snapshotId;
 
     const limits = toRad(10000);
-    const spot  = toRay(1.5);
+    const spot  = toRay(150);
     let rate;
     let daiDebt;
     let daiTokens;
@@ -61,18 +61,18 @@ contract('Controller - Weth', async (accounts) =>  {
 
     // Convert eth to weth and use it to borrow `daiTokens` from MakerDAO
     // This function shadows and uses global variables, careful.
-    async function getDai(user, daiTokens){
+    async function getDai(user, _daiTokens){
         await vat.hope(daiJoin.address, { from: user });
         await vat.hope(wethJoin.address, { from: user });
 
-        const daiDebt = divRay(daiTokens, rate);
-        const wethTokens = divRay(daiTokens, spot);
+        const _daiDebt = divRay(_daiTokens, rate);
+        const _wethTokens = addBN(divRay(_daiTokens, spot), 1);
 
-        await weth.deposit({ from: user, value: wethTokens });
-        await weth.approve(wethJoin.address, wethTokens, { from: user });
-        await wethJoin.join(user, wethTokens, { from: user });
-        await vat.frob(WETH, user, user, user, wethTokens, daiDebt, { from: user });
-        await daiJoin.exit(user, daiTokens, { from: user });
+        await weth.deposit({ from: user, value: _wethTokens });
+        await weth.approve(wethJoin.address, _wethTokens, { from: user });
+        await wethJoin.join(user, _wethTokens, { from: user });
+        await vat.frob(WETH, user, user, user, _wethTokens, _daiDebt, { from: user });
+        await daiJoin.exit(user, _daiTokens, { from: user });
     }
 
     beforeEach(async() => {
@@ -437,6 +437,13 @@ contract('Controller - Weth', async (accounts) =>  {
                 await controller.systemPosted(WETH),
                 wethTokens.toString(),
                 "System should have " + wethTokens + " weth posted, instead has " + await controller.systemPosted(WETH),
+            );
+        });
+
+        it("it doesn't allow to borrow yDai below dust level", async() => {
+            await expectRevert(
+                controller.borrow(WETH, maturity1, user1, user1, 1, { from: user1 }),
+                "Controller: Below dust",
             );
         });
 
@@ -915,6 +922,28 @@ contract('Controller - Weth', async (accounts) =>  {
                     );
                 });
 
+                it("doesn't allow to repay and leave debt under dust", async() => {
+                    // Repay maturity1 completely
+                    let debt = (await controller.debtDai.call(WETH, maturity1, user1, { from: user1 })).toString();
+                    let toRepay = debt;
+                    
+                    await getDai(user1, toRepay);
+                    await dai.approve(treasury.address, toRepay, { from: user1 });
+
+                    await controller.repayDai(WETH, maturity1, user1, user1, toRepay, { from: user1 });
+
+                    // Repay maturity2 almost completely
+                    debt = (await controller.debtDai.call(WETH, maturity2, user1, { from: user1 })).toString();
+                    toRepay = (new BN(debt)).sub(new BN('1000')).toString();
+                    
+                    await getDai(user1, toRepay);
+                    await dai.approve(treasury.address, toRepay, { from: user1 });
+
+                    await expectRevert(
+                        controller.repayDai(WETH, maturity2, user1, user1, toRepay, { from: user1 }),
+                        "Controller: Below dust",
+                    );
+                });
 
                 it("allows to repay dai debt for others with own funds", async() => {
                     await getDai(user2, daiTokens);

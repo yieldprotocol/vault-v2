@@ -12,7 +12,7 @@ import "./interfaces/IYDai.sol";
 import "./helpers/Delegable.sol";
 import "./helpers/DecimalMath.sol";
 import "./helpers/Orchestrated.sol";
-// import "@nomiclabs/buidler/console.sol";
+import "@nomiclabs/buidler/console.sol";
 
 /**
  * @dev The Controller manages collateral and debt levels for all users, and it is a major user entry point for the Yield protocol.
@@ -33,6 +33,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
 
     bytes32 public constant CHAI = "CHAI";
     bytes32 public constant WETH = "ETH-A";
+    uint256 public constant DUST = 10000000000000000000; // 10 Dai
 
     IVat internal _vat;
     IERC20 internal _dai;
@@ -187,6 +188,11 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         return powerOf(collateral, user) >= totalDebtDai(collateral, user);
     }
 
+    /// @dev Return if the debt of an user is below the dust level
+    function isAboveDust(bytes32 collateral, address user) public returns (bool) {
+        return DUST < totalDebtDai(collateral, user);
+    }
+
     /// @dev Takes collateral _token from `from` address, and credits it to `to` collateral account.
     // from --- Token ---> us(to)
     function post(bytes32 collateral, address from, address to, uint256 amount)
@@ -256,6 +262,10 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
             isCollateralized(collateral, from),
             "Controller: Too much debt"
         );
+        require(
+            isAboveDust(collateral, from),
+            "Controller: Below dust"
+        );
         series[maturity].mint(to, yDaiAmount);
         emit Borrowed(collateral, maturity, from, int256(yDaiAmount)); // TODO: Watch for overflow
     }
@@ -308,6 +318,11 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         debtYDai[collateral][maturity][user] = debtYDai[collateral][maturity][user].sub(yDaiAmount);
         systemDebtYDai[collateral][maturity] = systemDebtYDai[collateral][maturity].sub(yDaiAmount);
 
+        require(
+            isAboveDust(collateral, user),
+            "Controller: Below dust"
+        );
+
         emit Borrowed(collateral, maturity, user, -int256(yDaiAmount)); // TODO: Watch for overflow
     }
 
@@ -338,6 +353,10 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         require(
             totalGrabbed == daiAmount,
             "Controller: Not enough user debt"
+        );
+        require(
+            isAboveDust(collateral, user),
+            "Controller: Below dust"
         );
     }
 }
