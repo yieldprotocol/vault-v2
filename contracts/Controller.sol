@@ -189,8 +189,9 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     }
 
     /// @dev Return if the debt of an user is below the dust level
-    function isAboveDust(bytes32 collateral, address user) public returns (bool) {
-        return DUST < totalDebtDai(collateral, user);
+    function debtAboveDustOrZero(bytes32 collateral, address user) public returns (bool) {
+        uint256 debt = totalDebtDai(collateral, user);
+        return debt == 0 || DUST < debt;
     }
 
     /// @dev Takes collateral _token from `from` address, and credits it to `to` collateral account.
@@ -263,7 +264,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
             "Controller: Too much debt"
         );
         require(
-            isAboveDust(collateral, from),
+            debtAboveDustOrZero(collateral, from),
             "Controller: Below dust"
         );
         series[maturity].mint(to, yDaiAmount);
@@ -319,7 +320,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         systemDebtYDai[collateral][maturity] = systemDebtYDai[collateral][maturity].sub(yDaiAmount);
 
         require(
-            isAboveDust(collateral, user),
+            debtAboveDustOrZero(collateral, user),
             "Controller: Below dust"
         );
 
@@ -354,8 +355,9 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
             totalGrabbed == daiAmount,
             "Controller: Not enough user debt"
         );
+
         require(
-            isAboveDust(collateral, user),
+            debtAboveDustOrZero(collateral, user),
             "Controller: Below dust"
         );
     }
