@@ -17,17 +17,16 @@ contract('Market', async (accounts) =>  {
 
     const oneToken =             '1000000000000000000';
     const yDaiReserves = '112000000000000000000000000';
-    const chaiReserves = '134400000000000000000000000';
+    const daiReserves = '134400000000000000000000000';
 
     const oneYear = '31556952';
     const k = '146235604338';
     const g = '18428297329635842000';
-    const c = '22136092888451460000';
 
     let timeTillMaturity;
 
     const results = new Set();
-    results.add(['trade', 'chaiReserves', 'yDaiReserves', 'tokensIn', 'tokensOut']);
+    results.add(['trade', 'daiReserves', 'yDaiReserves', 'tokensIn', 'tokensOut']);
 
     beforeEach(async() => {
         // Setup YieldMathMock
@@ -40,163 +39,151 @@ contract('Market', async (accounts) =>  {
             timeTillMaturity = oneYear;
         });
 
-        it("sells chai", async() => {
+        it("sells dai", async() => {
             for (let trade of ['10000000000000000000', '1000000000000000000000', '1000000000000000000000000']) {
-                let yDaiOut = await yieldMath.yDaiOutForChaiIn(
-                    chaiReserves,
+                let yDaiOut = await yieldMath.yDaiOutForDaiIn(
+                    daiReserves,
                     yDaiReserves,
                     trade,
                     timeTillMaturity,
                     k,
-                    c,
                     g,
                 );
     
-                results.add(['sellChai128', chaiReserves, yDaiReserves, trade, yDaiOut]);
+                results.add(['sellDai128', daiReserves, yDaiReserves, trade, yDaiOut]);
 
-                yDaiOut = await yieldMath.yDaiOutForChaiIn64(
-                    chaiReserves,
+                yDaiOut = await yieldMath.yDaiOutForDaiIn64(
+                    daiReserves,
                     yDaiReserves,
                     trade,
                     timeTillMaturity,
                     k,
-                    c,
                     g,
                 );
 
-                results.add(['sellChai64', chaiReserves, yDaiReserves, trade, yDaiOut]);
+                results.add(['sellDai64', daiReserves, yDaiReserves, trade, yDaiOut]);
 
-                yDaiOut = await yieldMath.yDaiOutForChaiIn48(
-                    chaiReserves,
+                yDaiOut = await yieldMath.yDaiOutForDaiIn48(
+                    daiReserves,
                     yDaiReserves,
                     trade,
                     timeTillMaturity,
                     k,
-                    c,
                     g,
                 );
 
-                results.add(['sellChai48', chaiReserves, yDaiReserves, trade, yDaiOut]);
+                results.add(['sellDai48', daiReserves, yDaiReserves, trade, yDaiOut]);
             }
         });
 
-        it("buys chai", async() => {
+        it("buys dai", async() => {
             for (let trade of ['10000000000000000000', '1000000000000000000000', '1000000000000000000000000']) {
-                let yDaiIn = await yieldMath.yDaiInForChaiOut(
-                    chaiReserves,
+                let yDaiIn = await yieldMath.yDaiInForDaiOut(
+                    daiReserves,
                     yDaiReserves,
                     trade,
                     timeTillMaturity,
                     k,
-                    c,
                     g,
                 );
 
-                results.add(['buyChai128', chaiReserves, yDaiReserves, yDaiIn, trade]);
+                results.add(['buyDai128', daiReserves, yDaiReserves, yDaiIn, trade]);
 
-                yDaiIn = await yieldMath.yDaiInForChaiOut64(
-                    chaiReserves,
+                yDaiIn = await yieldMath.yDaiInForDaiOut64(
+                    daiReserves,
                     yDaiReserves,
                     trade,
                     timeTillMaturity,
                     k,
-                    c,
                     g,
                 );
 
-                results.add(['buyChai64', chaiReserves, yDaiReserves, yDaiIn, trade]);
+                results.add(['buyDai64', daiReserves, yDaiReserves, yDaiIn, trade]);
 
-                yDaiIn = await yieldMath.yDaiInForChaiOut48(
-                    chaiReserves,
+                yDaiIn = await yieldMath.yDaiInForDaiOut48(
+                    daiReserves,
                     yDaiReserves,
                     trade,
                     timeTillMaturity,
                     k,
-                    c,
                     g,
                 );
 
-                results.add(['buyChai64', chaiReserves, yDaiReserves, yDaiIn, trade]);
+                results.add(['buyDai64', daiReserves, yDaiReserves, yDaiIn, trade]);
             };
         });
 
         it("sells yDai", async() => {
             for (let trade of ['10000000000000000000', '1000000000000000000000', '1000000000000000000000000']) {
-                let chaiOut = await yieldMath.chaiOutForYDaiIn(
-                    chaiReserves,
+                let daiOut = await yieldMath.daiOutForYDaiIn(
+                    daiReserves,
                     yDaiReserves,
                     trade,
                     timeTillMaturity,
                     k,
-                    c,
                     g,
                 );
 
-                results.add(['sellChai128', chaiReserves, yDaiReserves, trade, chaiOut]);
+                results.add(['sellDai128', daiReserves, yDaiReserves, trade, daiOut]);
 
-                chaiOut = await yieldMath.chaiOutForYDaiIn64(
-                    chaiReserves,
+                daiOut = await yieldMath.daiOutForYDaiIn64(
+                    daiReserves,
                     yDaiReserves,
                     trade,
                     timeTillMaturity,
                     k,
-                    c,
                     g,
                 );
 
-                results.add(['sellChai64', chaiReserves, yDaiReserves, trade, chaiOut]);
+                results.add(['sellDai64', daiReserves, yDaiReserves, trade, daiOut]);
 
-                chaiOut = await yieldMath.chaiOutForYDaiIn48(
-                    chaiReserves,
+                daiOut = await yieldMath.daiOutForYDaiIn48(
+                    daiReserves,
                     yDaiReserves,
                     trade,
                     timeTillMaturity,
                     k,
-                    c,
                     g,
                 );
 
-                results.add(['sellChai48', chaiReserves, yDaiReserves, trade, chaiOut]);
+                results.add(['sellDai48', daiReserves, yDaiReserves, trade, daiOut]);
             };
         });
 
         it("buys yDai", async() => {
             for (let trade of ['10000000000000000000', '1000000000000000000000', '1000000000000000000000000']) {
-                let chaiIn = await yieldMath.chaiInForYDaiOut(
-                    chaiReserves,
+                let daiIn = await yieldMath.daiInForYDaiOut(
+                    daiReserves,
                     yDaiReserves,
                     trade,
                     timeTillMaturity,
                     k,
-                    c,
                     g,
                 );
 
-                results.add(['buyChai128', chaiReserves, yDaiReserves, chaiIn, trade]);
+                results.add(['buyDai128', daiReserves, yDaiReserves, daiIn, trade]);
 
-                chaiIn = await yieldMath.chaiInForYDaiOut64(
-                    chaiReserves,
+                daiIn = await yieldMath.daiInForYDaiOut64(
+                    daiReserves,
                     yDaiReserves,
                     trade,
                     timeTillMaturity,
                     k,
-                    c,
                     g,
                 );
 
-                results.add(['buyChai64', chaiReserves, yDaiReserves, chaiIn, trade]);
+                results.add(['buyDai64', daiReserves, yDaiReserves, daiIn, trade]);
 
-                chaiIn = await yieldMath.chaiInForYDaiOut48(
-                    chaiReserves,
+                daiIn = await yieldMath.daiInForYDaiOut48(
+                    daiReserves,
                     yDaiReserves,
                     trade,
                     timeTillMaturity,
                     k,
-                    c,
                     g,
                 );
 
-                results.add(['buyChai48', chaiReserves, yDaiReserves, chaiIn, trade]);
+                results.add(['buyDai48', daiReserves, yDaiReserves, daiIn, trade]);
             };
         });
         
@@ -211,65 +198,4 @@ contract('Market', async (accounts) =>  {
             }
         });
     });
-
-    /* describe("with liquidity", () => {
-        beforeEach(async() => {
-            await getChai(user1, chaiReserves)
-            await yDai1.mint(user1, yDaiReserves, { from: owner });
-    
-            await chai.approve(market.address, chaiReserves, { from: user1 });
-            await yDai1.approve(market.address, yDaiReserves, { from: user1 });
-            await market.init(chaiReserves, yDaiReserves, { from: user1 });
-        });
-
-        it("sells chai", async() => {
-            const trade = toWad(1).div(1000);
-            await getChai(from, chaiTokens1);
-
-            await market.addDelegate(operator, { from: from });
-            await chai.approve(market.address, trade, { from: from });
-            await market.sellChai(from, to, trade, { from: operator });
-
-            const yDaiOut = new BN(await yDai1.balanceOf(to));
-
-            results.add(['sellChai', chaiReserves, yDaiReserves, trade, yDaiOut]);
-        });
-
-        it("buys chai", async() => {
-            const trade = toWad(1).div(1000);
-            await yDai1.mint(from, yDaiTokens1.div(1000), { from: owner });
-
-            await market.addDelegate(operator, { from: from });
-            await yDai1.approve(market.address, yDaiTokens1.div(1000), { from: from });
-            await market.buyChai(from, to, trade, { from: operator });
-
-            const yDaiIn = (new BN(yDaiTokens1.div(1000).toString())).sub(new BN(await yDai1.balanceOf(from)));
-
-            results.add(['buyChai', chaiReserves, yDaiReserves, yDaiIn, trade]);
-        });
-
-        it("sells yDai", async() => {
-            const trade = toWad(1).div(1000);
-            await yDai1.mint(from, trade, { from: owner });
-
-            await market.addDelegate(operator, { from: from });
-            await yDai1.approve(market.address, trade, { from: from });
-            await market.sellYDai(from, to, trade, { from: operator });
-
-            const chaiOut = new BN(await chai.balanceOf(to));
-            results.add(['sellYDai', chaiReserves, yDaiReserves, trade, chaiOut]);
-        });
-
-        it("buys yDai", async() => {
-            const trade = toWad(1).div(1000);
-            await getChai(from, chaiTokens1.div(1000));
-
-            await market.addDelegate(operator, { from: from });
-            await chai.approve(market.address, chaiTokens1.div(1000), { from: from });
-            await market.buyYDai(from, to, trade, { from: operator });
-
-            const chaiIn = (new BN(chaiTokens1.div(1000).toString())).sub(new BN(await chai.balanceOf(from)));
-            results.add(['buyYDai', chaiReserves, yDaiReserves, chaiIn, trade]);
-        });
-    }); */
 });

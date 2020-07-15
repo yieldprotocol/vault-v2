@@ -25,7 +25,6 @@ contract Splitter is IFlashMinter, DecimalMath {
     IERC20 public dai;
     IGemJoin public wethJoin;
     IDaiJoin public daiJoin;
-    IChai public chai;
     IYDai public yDai;
     IController public controller;
     IMarket public market;
@@ -36,7 +35,6 @@ contract Splitter is IFlashMinter, DecimalMath {
         address dai_,
         address wethJoin_,
         address daiJoin_,
-        address chai_,
         address yDai_,
         address controller_,
         address market_
@@ -46,7 +44,6 @@ contract Splitter is IFlashMinter, DecimalMath {
         dai = IERC20(dai_);
         wethJoin = IGemJoin(wethJoin_);
         daiJoin = IDaiJoin(daiJoin_);
-        chai = IChai(chai_);
         yDai = IYDai(yDai_);
         controller = IController(controller_);
         market = IMarket(market_);
@@ -83,12 +80,10 @@ contract Splitter is IFlashMinter, DecimalMath {
     }
 
     function _makerToYield(address user, uint256 yDaiAmount, uint256 wethAmount, uint256 daiAmount) internal {
-        // Sell the YDai for Chai
-        // TODO: Calculate how much dai, then chai is needed, and use buyChai
+        // Sell the YDai for Dai
+        // TODO: Calculate how much dai is needed and use buyDai?
         // Splitter will hold the chai temporarily - TODO: Consider SafeCast
         market.sellYDai(address(this), address(this), uint128(yDaiAmount));
-        // Unpack the Chai into Dai
-        chai.exit(address(this), chai.balanceOf(address(this)));
         // Put the Dai in Maker
         // TODO: daiJoin.hope(splitter.address, { from: user });
         daiJoin.join(user, daiAmount);
@@ -135,11 +130,9 @@ contract Splitter is IFlashMinter, DecimalMath {
         );
         vat.move(user, address(this), daiAmount);
         daiJoin.exit(address(this), daiAmount); // Splitter will hold the dai temporarily
-        // Wrap the Dai into Chai
-        chai.join(address(this), dai.balanceOf(address(this)));
-        // Sell the Chai for YDai at Market - It should make up for what was taken with repayYdai
-        // Splitter will hold the chai temporarily - TODO: Consider SafeCast
-        market.sellChai(address(this), address(this), uint128(chai.balanceOf(address(this))));
+        // Sell the Dai for YDai at Market - It should make up for what was taken with repayYdai
+        // Splitter will hold the dai temporarily - TODO: Consider SafeCast
+        market.sellDai(address(this), address(this), uint128(dai.balanceOf(address(this))));
         yDai.transfer(user, yDai.balanceOf(address(this)));
     }
 }

@@ -64,53 +64,30 @@ contract('LimitMarket', async (accounts) =>  {
     const spot = toRay(1.2);
 
     const rate1 = toRay(1.4);
-    const chi1 = toRay(1.2);
     const rate2 = toRay(1.82);
-    const chi2 = toRay(1.5);
-
-    const chiDifferential  = divRay(chi2, chi1);
+    const chi1 = toRay(1.2);
 
     const daiDebt1 = toWad(96);
     const daiTokens1 = mulRay(daiDebt1, rate1);
     const yDaiTokens1 = daiTokens1;
     const wethTokens1 = divRay(daiTokens1, spot);
-    const chaiTokens1 = divRay(daiTokens1, chi1);
-
-    const daiTokens2 = mulRay(daiTokens1, chiDifferential);
-    const wethTokens2 = mulRay(wethTokens1, chiDifferential)
 
     let maturity;
 
-    // Scenario in which the user mints daiTokens2 yDai1, chi increases by a 25%, and user redeems daiTokens1 yDai1
-    const daiDebt2 = mulRay(daiDebt1, chiDifferential);
-    const savings1 = daiTokens2;
-    const savings2 = mulRay(savings1, chiDifferential);
-    const yDaiSurplus = subBN(daiTokens2, daiTokens1);
-    const savingsSurplus = subBN(savings2, daiTokens2);
-
     // Convert eth to weth and use it to borrow `daiTokens` from MakerDAO
     // This function shadows and uses global variables, careful.
-    async function getDai(user, daiTokens){
+    async function getDai(user, _daiTokens){
         await vat.hope(daiJoin.address, { from: user });
         await vat.hope(wethJoin.address, { from: user });
 
-        const daiDebt = divRay(daiTokens, rate1);
-        const wethTokens = divRay(daiTokens, spot);
+        const _daiDebt = divRay(_daiTokens, rate1);
+        const _wethTokens = divRay(_daiTokens, spot);
 
-        await weth.deposit({ from: user, value: wethTokens });
-        await weth.approve(wethJoin.address, wethTokens, { from: user });
-        await wethJoin.join(user, wethTokens, { from: user });
-        await vat.frob(ilk, user, user, user, wethTokens, daiDebt, { from: user });
-        await daiJoin.exit(user, daiTokens, { from: user });
-    }
-
-    // From eth, borrow `daiTokens` from MakerDAO and convert them to chai
-    // This function shadows and uses global variables, careful.
-    async function getChai(user, chaiTokens){
-        const daiTokens = mulRay(chaiTokens, chi1);
-        await getDai(user, daiTokens);
-        await dai.approve(chai.address, daiTokens, { from: user });
-        await chai.join(user, daiTokens, { from: user });
+        await weth.deposit({ from: user, value: _wethTokens });
+        await weth.approve(wethJoin.address, _wethTokens, { from: user });
+        await wethJoin.join(user, _wethTokens, { from: user });
+        await vat.frob(ilk, user, user, user, _wethTokens, _daiDebt, { from: user });
+        await daiJoin.exit(user, _daiTokens, { from: user });
     }
 
     beforeEach(async() => {
@@ -180,15 +157,14 @@ contract('LimitMarket', async (accounts) =>  {
 
         // Setup Market
         market = await Market.new(
-            pot.address,
-            chai.address,
+            dai.address,
             yDai1.address,
             { from: owner }
         );
 
         // Setup LimitMarket
         limitMarket = await LimitMarket.new(
-            chai.address,
+            dai.address,
             yDai1.address,
             market.address,
             { from: owner }
@@ -211,93 +187,64 @@ contract('LimitMarket', async (accounts) =>  {
 
     describe("with liquidity", () => {
         beforeEach(async() => {
-            await getChai(user1, chaiTokens1)
-            await yDai1.mint(user1, yDaiTokens1, { from: owner });
+            const daiReserves = daiTokens1;
+            const yDaiReserves = yDaiTokens1;
+            await getDai(user1, daiReserves)
+            await yDai1.mint(user1, yDaiReserves, { from: owner });
     
-            await chai.approve(market.address, chaiTokens1, { from: user1 });
-            await yDai1.approve(market.address, yDaiTokens1, { from: user1 });
-            await market.init(chaiTokens1, yDaiTokens1, { from: user1 });
+            await dai.approve(market.address, daiReserves, { from: user1 });
+            await yDai1.approve(market.address, yDaiReserves, { from: user1 });
+            await market.init(daiReserves, yDaiReserves, { from: user1 });
         });
 
-        it("mints liquidity tokens", async() => {
-            await getChai(user1, chaiTokens1)
-            await yDai1.mint(user1, yDaiTokens1, { from: owner });
-
-            await chai.approve(market.address, chaiTokens1, { from: user1 });
-            await yDai1.approve(market.address, yDaiTokens1, { from: user1 });
-            await market.mint(chaiTokens1, { from: user1 });
-
-            assert.equal(
-                await market.balanceOf(user1),
-                2000,
-                "User1 should have 2000 liquidity tokens",
-            );
-        });
-
-        it("burns liquidity tokens", async() => {
-            await market.approve(market.address, 500, { from: user1 });
-            await market.burn(500, { from: user1 });
-
-            assert.equal(
-                await chai.balanceOf(user1),
-                chaiTokens1.div(2).toString(),
-                "User1 should have chai tokens",
-            );
-            assert.equal(
-                await yDai1.balanceOf(user1),
-                yDaiTokens1.div(2).toString(),
-                "User1 should have yDai tokens",
-            );
-        });
-
-        it("sells chai", async() => {
+        it("sells dai", async() => {
             const oneToken = toWad(1);
-            await getChai(from, chaiTokens1);
+            await getDai(from, daiTokens1);
 
             await market.addDelegate(limitMarket.address, { from: from });
-            await chai.approve(market.address, oneToken, { from: from });
-            await limitMarket.sellChai(from, to, oneToken, oneToken.div(2), { from: from });
+            await dai.approve(market.address, oneToken, { from: from });
+            await limitMarket.sellDai(from, to, oneToken, oneToken.div(2), { from: from });
 
             assert.equal(
-                await chai.balanceOf(from),
-                chaiTokens1.sub(oneToken).toString(),
-                "'From' wallet should have " + chaiTokens1.sub(oneToken) + " chai tokens",
+                await dai.balanceOf(from),
+                daiTokens1.sub(oneToken).toString(),
+                "'From' wallet should have " + daiTokens1.sub(oneToken) + " dai tokens",
             );
 
-            const expectedYDaiOut = (new BN(oneToken.toString())).mul(new BN('1436')).div(new BN('1000')); // I just hate javascript
+            const expectedYDaiOut = (new BN(oneToken.toString())).mul(new BN('99814')).div(new BN('100000')); // I just hate javascript
             const yDaiOut = new BN(await yDai1.balanceOf(to));
-            expect(yDaiOut).to.be.bignumber.gt(expectedYDaiOut.mul(new BN('99')).div(new BN('100')));
-            expect(yDaiOut).to.be.bignumber.lt(expectedYDaiOut.mul(new BN('101')).div(new BN('100')));
+            expect(yDaiOut).to.be.bignumber.gt(expectedYDaiOut.mul(new BN('9999')).div(new BN('10000')));
+            expect(yDaiOut).to.be.bignumber.lt(expectedYDaiOut.mul(new BN('10001')).div(new BN('10000')));
         });
 
-        it("doesn't sell chai if limit not reached", async() => {
+        it("doesn't sell dai if limit not reached", async() => {
             const oneToken = toWad(1);
-            await getChai(from, chaiTokens1);
+            await getDai(from, daiTokens1);
 
             await market.addDelegate(limitMarket.address, { from: from });
-            await chai.approve(market.address, oneToken, { from: from });
+            await dai.approve(market.address, oneToken, { from: from });
 
             await expectRevert(
-                limitMarket.sellChai(from, to, oneToken, oneToken.mul(2), { from: from }),
+                limitMarket.sellDai(from, to, oneToken, oneToken.mul(2), { from: from }),
                 "LimitMarket: Limit not reached",
             );
         });
 
-        it("buys chai", async() => {
+        it("buys dai", async() => {
             const oneToken = toWad(1);
             await yDai1.mint(from, yDaiTokens1, { from: owner });
 
             await market.addDelegate(limitMarket.address, { from: from });
             await yDai1.approve(market.address, yDaiTokens1, { from: from });
-            await limitMarket.buyChai(from, to, oneToken, oneToken.mul(2), { from: from });
+            await limitMarket.buyDai(from, to, oneToken, oneToken.mul(2), { from: from });
 
-            const expectedYDaiIn = (new BN(oneToken.toString())).mul(new BN('14435')).div(new BN('10000')); // I just hate javascript
+            const expectedYDaiIn = (new BN(oneToken.toString())).mul(new BN('10019')).div(new BN('10000')); // I just hate javascript
             const yDaiIn = (new BN(yDaiTokens1.toString())).sub(new BN(await yDai1.balanceOf(from)));
-            expect(yDaiIn).to.be.bignumber.gt(expectedYDaiIn.mul(new BN('99')).div(new BN('100')));
-            expect(yDaiIn).to.be.bignumber.lt(expectedYDaiIn.mul(new BN('101')).div(new BN('100')));
+            expect(yDaiIn).to.be.bignumber.gt(expectedYDaiIn.mul(new BN('9999')).div(new BN('10000')));
+            expect(yDaiIn).to.be.bignumber.lt(expectedYDaiIn.mul(new BN('10001')).div(new BN('10000')));
         });
 
-        it("doesn't buy chai if limit exceeded", async() => {
+        it("doesn't buy dai if limit exceeded", async() => {
             const oneToken = toWad(1);
             await yDai1.mint(from, yDaiTokens1, { from: owner });
 
@@ -305,7 +252,7 @@ contract('LimitMarket', async (accounts) =>  {
             await yDai1.approve(market.address, yDaiTokens1, { from: from });
 
             await expectRevert(
-                limitMarket.buyChai(from, to, oneToken, oneToken.div(2), { from: from }),
+                limitMarket.buyDai(from, to, oneToken, oneToken.div(2), { from: from }),
                 "LimitMarket: Limit exceeded",
             );
         });
@@ -324,10 +271,10 @@ contract('LimitMarket', async (accounts) =>  {
                 "'From' wallet should have no yDai tokens",
             );
 
-            const expectedChaiOut = (new BN(oneToken.toString())).mul(new BN('6933')).div(new BN('10000')); // I just hate javascript
-            const chaiOut = new BN(await chai.balanceOf(to));
-            expect(chaiOut).to.be.bignumber.gt(expectedChaiOut.mul(new BN('99')).div(new BN('100')));
-            expect(chaiOut).to.be.bignumber.lt(expectedChaiOut.mul(new BN('101')).div(new BN('100')));
+            const expectedDaiOut = (new BN(oneToken.toString())).mul(new BN('99814')).div(new BN('100000')); // I just hate javascript
+            const daiOut = new BN(await dai.balanceOf(to));
+            expect(daiOut).to.be.bignumber.gt(expectedDaiOut.mul(new BN('9999')).div(new BN('10000')));
+            expect(daiOut).to.be.bignumber.lt(expectedDaiOut.mul(new BN('10001')).div(new BN('10000')));
         });
 
         it("doesn't sell yDai if limit not reached", async() => {
@@ -345,10 +292,10 @@ contract('LimitMarket', async (accounts) =>  {
 
         it("buys yDai", async() => {
             const oneToken = toWad(1);
-            await getChai(from, chaiTokens1);
+            await getDai(from, daiTokens1);
 
             await market.addDelegate(limitMarket.address, { from: from });
-            await chai.approve(market.address, chaiTokens1, { from: from });
+            await dai.approve(market.address, daiTokens1, { from: from });
             await limitMarket.buyYDai(from, to, oneToken, oneToken.mul(2), { from: from });
 
             assert.equal(
@@ -357,18 +304,18 @@ contract('LimitMarket', async (accounts) =>  {
                 "'To' wallet should have 1 yDai token",
             );
 
-            const expectedChaiIn = (new BN(oneToken.toString())).mul(new BN('6933')).div(new BN('10000')); // I just hate javascript
-            const chaiIn = (new BN(chaiTokens1.toString())).sub(new BN(await chai.balanceOf(from)));
-            expect(chaiIn).to.be.bignumber.gt(expectedChaiIn.mul(new BN('99')).div(new BN('100')));
-            expect(chaiIn).to.be.bignumber.lt(expectedChaiIn.mul(new BN('101')).div(new BN('100')));
+            const expectedDaiIn = (new BN(oneToken.toString())).mul(new BN('10019')).div(new BN('10000')); // I just hate javascript
+            const daiIn = (new BN(daiTokens1.toString())).sub(new BN(await dai.balanceOf(from)));
+            expect(daiIn).to.be.bignumber.gt(expectedDaiIn.mul(new BN('9999')).div(new BN('10000')));
+            expect(daiIn).to.be.bignumber.lt(expectedDaiIn.mul(new BN('10001')).div(new BN('10000')));
         });
 
         it("doesn't buy yDai if limit exceeded", async() => {
             const oneToken = toWad(1);
-            await getChai(from, chaiTokens1);
+            await getDai(from, daiTokens1);
 
             await market.addDelegate(limitMarket.address, { from: from });
-            await chai.approve(market.address, chaiTokens1, { from: from });
+            await dai.approve(market.address, daiTokens1, { from: from });
 
             await expectRevert(
                 limitMarket.buyYDai(from, to, oneToken, oneToken.div(2), { from: from }),
