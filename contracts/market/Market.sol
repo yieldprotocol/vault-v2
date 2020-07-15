@@ -138,7 +138,7 @@ contract Market is IMarket, ERC20, Delegable {
         );
 
         require(
-            yDaiReserves >= add(daiReserves, yDaiOut),
+            yDaiReserves >= add(daiReserves, daiIn),
             "Market: yDai reserves too low"
         );
 
@@ -244,11 +244,6 @@ contract Market is IMarket, ERC20, Delegable {
         uint128 daiReserves = toUint128(dai.balanceOf(address(this)));
         uint128 yDaiReserves = toUint128(yDai.balanceOf(address(this)));
 
-        require(
-            yDaiReserves >= add(daiReserves, yDaiOut),
-            "Market: yDai reserves too low"
-        );
-
         uint128 daiIn = YieldMath.daiInForYDaiOut(
             daiReserves,
             yDaiReserves,
@@ -256,6 +251,11 @@ contract Market is IMarket, ERC20, Delegable {
             toUint128(maturity - now), // This can't be called after maturity
             k,
             g
+        );
+
+        require(
+            yDaiReserves >= add(daiReserves, daiIn),
+            "Market: yDai reserves too low"
         );
 
         return daiIn;
