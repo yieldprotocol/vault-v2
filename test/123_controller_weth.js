@@ -206,6 +206,15 @@ contract('Controller - Weth', async (accounts) =>  {
         console.log();
     });
 
+    it("it doesn't allow to post weth below dust level", async() => {
+        await weth.deposit({ from: user1, value: 1 });
+        await weth.approve(treasury.address, 1, { from: user1 }); 
+        await expectRevert(
+            controller.post(WETH, user1, user1, 1, { from: user1 }),
+            "Controller: Below dust",
+        );
+    });
+
     it("allows users to post weth", async() => {
         assert.equal(
             (await vat.urns(WETH, treasury.address)).ink,
@@ -399,6 +408,17 @@ contract('Controller - Weth', async (accounts) =>  {
             );
         });
 
+        it("doesn't allow to withdraw weth and leave collateral under dust", async() => {
+            // Repay maturity1 completely
+            const posted = (await controller.posted(WETH, user1, { from: user1 })).toString();
+            const toWithdraw = (new BN(posted)).sub(new BN('1000')).toString();
+
+            await expectRevert(
+                controller.withdraw(WETH, user1, user1, toWithdraw, { from: user1 }),
+                "Controller: Below dust",
+            );
+        });
+
         it("allows users to withdraw weth", async() => {
             const event = (await controller.withdraw(WETH, user1, user1, wethTokens, { from: user1 })).logs[0];
 
@@ -437,13 +457,6 @@ contract('Controller - Weth', async (accounts) =>  {
                 await controller.systemPosted(WETH),
                 wethTokens.toString(),
                 "System should have " + wethTokens + " weth posted, instead has " + await controller.systemPosted(WETH),
-            );
-        });
-
-        it("it doesn't allow to borrow yDai below dust level", async() => {
-            await expectRevert(
-                controller.borrow(WETH, maturity1, user1, user1, 1, { from: user1 }),
-                "Controller: Below dust",
             );
         });
 
@@ -919,29 +932,6 @@ contract('Controller - Weth', async (accounts) =>  {
                         await controller.systemDebtYDai(WETH, maturity1),
                         daiTokens.toString(), // Dai == yDai before maturity. We borrowed twice this.
                         "System should have debt",
-                    );
-                });
-
-                it("doesn't allow to repay and leave debt under dust", async() => {
-                    // Repay maturity1 completely
-                    let debt = (await controller.debtDai.call(WETH, maturity1, user1, { from: user1 })).toString();
-                    let toRepay = debt;
-                    
-                    await getDai(user1, toRepay);
-                    await dai.approve(treasury.address, toRepay, { from: user1 });
-
-                    await controller.repayDai(WETH, maturity1, user1, user1, toRepay, { from: user1 });
-
-                    // Repay maturity2 almost completely
-                    debt = (await controller.debtDai.call(WETH, maturity2, user1, { from: user1 })).toString();
-                    toRepay = (new BN(debt)).sub(new BN('1000')).toString();
-                    
-                    await getDai(user1, toRepay);
-                    await dai.approve(treasury.address, toRepay, { from: user1 });
-
-                    await expectRevert(
-                        controller.repayDai(WETH, maturity2, user1, user1, toRepay, { from: user1 }),
-                        "Controller: Below dust",
                     );
                 });
 
