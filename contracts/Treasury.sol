@@ -1,4 +1,4 @@
-pragma solidity ^0.6.0;
+pragma solidity ^0.6.10;
 
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -10,10 +10,17 @@ import "./interfaces/IChai.sol";
 import "./interfaces/ITreasury.sol";
 import "./helpers/DecimalMath.sol";
 import "./helpers/Orchestrated.sol";
-import "@nomiclabs/buidler/console.sol";
+// import "@nomiclabs/buidler/console.sol";
 
 
-/// @dev Treasury manages the Dai, interacting with MakerDAO's vat and chai when needed.
+/**
+ * @dev Treasury manages asset transfers between all contracts in the Yield Protocol and other external contracts such as Chai and MakerDAO.
+ * Treasury doesn't have any transactional functions available for regular users.
+ * All transactional methods are to be available only for orchestrated contracts.
+ * Treasury will ensure that all Weth is always stored as collateral in MAkerDAO.
+ * Treasury will use all Dai to pay off system debt in MakerDAO first, and if there is no system debt the surplus Dai will be wrapped as Chai.
+ * Treasury will use any Chai it holds when requested to provide Dai. If there isn't enough Chai, it will borrow Dai from MakerDAO.
+ */
 contract Treasury is ITreasury, Orchestrated(), DecimalMath {
     bytes32 constant WETH = "ETH-A";
 

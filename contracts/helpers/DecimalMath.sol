@@ -1,9 +1,8 @@
-pragma solidity ^0.6.0;
+pragma solidity ^0.6.10;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 
-/// @dev Implements simple fixed point math mul and div operations.
-/// @author Alberto Cuesta Cañada
+/// @dev Implements simple fixed point math mul and div operations for 27 decimals.
 contract DecimalMath {
     using SafeMath for uint256;
 

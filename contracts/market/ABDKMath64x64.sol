@@ -1,8 +1,9 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /*
  * ABDK Math 64.64 Smart Contract Library.  Copyright © 2019 by ABDK Consulting.
  * Author: Mikhail Vladimirov <mikhail.vladimirov@gmail.com>
  */
-pragma solidity ^0.5.0 || ^0.6.0;
+pragma solidity ^0.6.0;
 
 /**
  * Smart contract library of mathematical functions operating with signed
@@ -14,17 +15,17 @@ pragma solidity ^0.5.0 || ^0.6.0;
  */
 library ABDKMath64x64 {
   /**
-   * Minimum value signed 64.64-bit fixed point number may have. 
+   * @dev Minimum value signed 64.64-bit fixed point number may have. 
    */
   int128 private constant MIN_64x64 = -0x80000000000000000000000000000000;
 
   /**
-   * Maximum value signed 64.64-bit fixed point number may have. 
+   * @dev Maximum value signed 64.64-bit fixed point number may have. 
    */
   int128 private constant MAX_64x64 = 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
 
   /**
-   * Convert signed 256-bit integer number into signed 64.64-bit fixed point
+   * @dev Convert signed 256-bit integer number into signed 64.64-bit fixed point
    * number.  Revert on overflow.
    *
    * @param x signed 256-bit integer number
@@ -36,7 +37,7 @@ library ABDKMath64x64 {
   }
 
   /**
-   * Convert signed 64.64 fixed point number into signed 64-bit integer number
+   * @dev Convert signed 64.64 fixed point number into signed 64-bit integer number
    * rounding down.
    *
    * @param x signed 64.64-bit fixed point number
@@ -47,7 +48,7 @@ library ABDKMath64x64 {
   }
 
   /**
-   * Convert unsigned 256-bit integer number into signed 64.64-bit fixed point
+   * @dev Convert unsigned 256-bit integer number into signed 64.64-bit fixed point
    * number.  Revert on overflow.
    *
    * @param x unsigned 256-bit integer number
@@ -59,7 +60,7 @@ library ABDKMath64x64 {
   }
 
   /**
-   * Convert signed 64.64 fixed point number into unsigned 64-bit integer
+   * @dev Convert signed 64.64 fixed point number into unsigned 64-bit integer
    * number rounding down.  Revert on underflow.
    *
    * @param x signed 64.64-bit fixed point number
@@ -71,7 +72,7 @@ library ABDKMath64x64 {
   }
 
   /**
-   * Convert signed 128.128 fixed point number into signed 64.64-bit fixed point
+   * @dev Convert signed 128.128 fixed point number into signed 64.64-bit fixed point
    * number rounding down.  Revert on overflow.
    *
    * @param x signed 128.128-bin fixed point number
@@ -84,7 +85,7 @@ library ABDKMath64x64 {
   }
 
   /**
-   * Convert signed 64.64 fixed point number into signed 128.128 fixed point
+   * @dev Convert signed 64.64 fixed point number into signed 128.128 fixed point
    * number.
    *
    * @param x signed 64.64-bit fixed point number
@@ -95,7 +96,7 @@ library ABDKMath64x64 {
   }
 
   /**
-   * Calculate x + y.  Revert on overflow.
+   * @dev Calculate x + y.  Revert on overflow.
    *
    * @param x signed 64.64-bit fixed point number
    * @param y signed 64.64-bit fixed point number
@@ -108,7 +109,7 @@ library ABDKMath64x64 {
   }
 
   /**
-   * Calculate x - y.  Revert on overflow.
+   * @dev Calculate x - y.  Revert on overflow.
    *
    * @param x signed 64.64-bit fixed point number
    * @param y signed 64.64-bit fixed point number
@@ -121,7 +122,7 @@ library ABDKMath64x64 {
   }
 
   /**
-   * Calculate x * y rounding down.  Revert on overflow.
+   * @dev Calculate x * y rounding down.  Revert on overflow.
    *
    * @param x signed 64.64-bit fixed point number
    * @param y signed 64.64-bit fixed point number
@@ -134,7 +135,7 @@ library ABDKMath64x64 {
   }
 
   /**
-   * Calculate x * y rounding towards zero, where x is signed 64.64 fixed point
+   * @dev Calculate x * y rounding towards zero, where x is signed 64.64 fixed point
    * number and y is signed 256-bit integer number.  Revert on overflow.
    *
    * @param x signed 64.64 fixed point number
@@ -170,7 +171,7 @@ library ABDKMath64x64 {
   }
 
   /**
-   * Calculate x * y rounding down, where x is signed 64.64 fixed point number
+   * @dev Calculate x * y rounding down, where x is signed 64.64 fixed point number
    * and y is unsigned 256-bit integer number.  Revert on overflow.
    *
    * @param x signed 64.64 fixed point number
@@ -194,7 +195,7 @@ library ABDKMath64x64 {
   }
 
   /**
-   * Calculate x / y rounding towards zero.  Revert on overflow or when y is
+   * @dev Calculate x / y rounding towards zero.  Revert on overflow or when y is
    * zero.
    *
    * @param x signed 64.64-bit fixed point number
@@ -209,7 +210,7 @@ library ABDKMath64x64 {
   }
 
   /**
-   * Calculate x / y rounding towards zero, where x and y are signed 256-bit
+   * @dev Calculate x / y rounding towards zero, where x and y are signed 256-bit
    * integer numbers.  Revert on overflow or when y is zero.
    *
    * @param x signed 256-bit integer number
@@ -239,7 +240,7 @@ library ABDKMath64x64 {
   }
 
   /**
-   * Calculate x / y rounding towards zero, where x and y are unsigned 256-bit
+   * @dev Calculate x / y rounding towards zero, where x and y are unsigned 256-bit
    * integer numbers.  Revert on overflow or when y is zero.
    *
    * @param x unsigned 256-bit integer number
@@ -254,7 +255,7 @@ library ABDKMath64x64 {
   }
 
   /**
-   * Calculate -x.  Revert on overflow.
+   * @dev Calculate -x.  Revert on overflow.
    *
    * @param x signed 64.64-bit fixed point number
    * @return signed 64.64-bit fixed point number
@@ -265,7 +266,7 @@ library ABDKMath64x64 {
   }
 
   /**
-   * Calculate |x|.  Revert on overflow.
+   * @dev Calculate |x|.  Revert on overflow.
    *
    * @param x signed 64.64-bit fixed point number
    * @return signed 64.64-bit fixed point number
@@ -276,7 +277,7 @@ library ABDKMath64x64 {
   }
 
   /**
-   * Calculate 1 / x rounding towards zero.  Revert on overflow or when x is
+   * @dev Calculate 1 / x rounding towards zero.  Revert on overflow or when x is
    * zero.
    *
    * @param x signed 64.64-bit fixed point number
@@ -290,7 +291,7 @@ library ABDKMath64x64 {
   }
 
   /**
-   * Calculate arithmetics average of x and y, i.e. (x + y) / 2 rounding down.
+   * @dev Calculate arithmetics average of x and y, i.e. (x + y) / 2 rounding down.
    *
    * @param x signed 64.64-bit fixed point number
    * @param y signed 64.64-bit fixed point number
@@ -301,7 +302,7 @@ library ABDKMath64x64 {
   }
 
   /**
-   * Calculate geometric average of x and y, i.e. sqrt (x * y) rounding down.
+   * @dev Calculate geometric average of x and y, i.e. sqrt (x * y) rounding down.
    * Revert on overflow or in case x * y is negative.
    *
    * @param x signed 64.64-bit fixed point number
@@ -317,7 +318,7 @@ library ABDKMath64x64 {
   }
 
   /**
-   * Calculate x^y assuming 0^0 is 1, where x is signed 64.64 fixed point number
+   * @dev Calculate x^y assuming 0^0 is 1, where x is signed 64.64 fixed point number
    * and y is unsigned 256-bit integer number.  Revert on overflow.
    *
    * @param x signed 64.64-bit fixed point number
@@ -347,7 +348,7 @@ library ABDKMath64x64 {
   }
 
   /**
-   * Calculate sqrt (x) rounding down.  Revert if x < 0.
+   * @dev Calculate sqrt (x) rounding down.  Revert if x < 0.
    *
    * @param x signed 64.64-bit fixed point number
    * @return signed 64.64-bit fixed point number
@@ -358,7 +359,7 @@ library ABDKMath64x64 {
   }
 
   /**
-   * Calculate binary logarithm of x.  Revert if x <= 0.
+   * @dev Calculate binary logarithm of x.  Revert if x <= 0.
    *
    * @param x signed 64.64-bit fixed point number
    * @return signed 64.64-bit fixed point number
@@ -389,7 +390,7 @@ library ABDKMath64x64 {
   }
 
   /**
-   * Calculate natural logarithm of x.  Revert if x <= 0.
+   * @dev Calculate natural logarithm of x.  Revert if x <= 0.
    *
    * @param x signed 64.64-bit fixed point number
    * @return signed 64.64-bit fixed point number
@@ -402,7 +403,7 @@ library ABDKMath64x64 {
   }
 
   /**
-   * Calculate binary exponent of x.  Revert on overflow.
+   * @dev Calculate binary exponent of x.  Revert on overflow.
    *
    * @param x signed 64.64-bit fixed point number
    * @return signed 64.64-bit fixed point number
@@ -550,7 +551,7 @@ library ABDKMath64x64 {
   }
 
   /**
-   * Calculate natural exponent of x.  Revert on overflow.
+   * @dev Calculate natural exponent of x.  Revert on overflow.
    *
    * @param x signed 64.64-bit fixed point number
    * @return signed 64.64-bit fixed point number
@@ -565,7 +566,7 @@ library ABDKMath64x64 {
   }
 
   /**
-   * Calculate x / y rounding towards zero, where x and y are unsigned 256-bit
+   * @dev Calculate x / y rounding towards zero, where x and y are unsigned 256-bit
    * integer numbers.  Revert on overflow or when y is zero.
    *
    * @param x unsigned 256-bit integer number
@@ -614,7 +615,7 @@ library ABDKMath64x64 {
   }
 
   /**
-   * Calculate x^y assuming 0^0 is 1, where x is unsigned 129.127 fixed point
+   * @dev Calculate x^y assuming 0^0 is 1, where x is unsigned 129.127 fixed point
    * number and y is unsigned 256-bit integer number.  Revert on overflow.
    *
    * @param x unsigned 129.127-bit fixed point number
@@ -677,7 +678,7 @@ library ABDKMath64x64 {
   }
 
   /**
-   * Calculate sqrt (x) rounding down, where x is unsigned 256-bit integer
+   * @dev Calculate sqrt (x) rounding down, where x is unsigned 256-bit integer
    * number.
    *
    * @param x unsigned 256-bit integer number

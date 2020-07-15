@@ -8,10 +8,17 @@ import "./interfaces/ILiquidations.sol";
 import "./interfaces/ITreasury.sol";
 import "./helpers/DecimalMath.sol";
 import "./helpers/Orchestrated.sol";
-import "@nomiclabs/buidler/console.sol";
+// import "@nomiclabs/buidler/console.sol";
 
 
-/// @dev The Liquidations contract for a Controller allows to liquidate undercollateralized positions in a reverse Dutch auction.
+/**
+ * @dev The Liquidations contract allows to liquidate undercollateralized vaults in a reverse Dutch auction.
+ * Undercollateralized vaults can be liquidated by calling `liquidate`.
+ * Collateral from vaults can be bought with Dai using `buy`.
+ * Debt and collateral records will be adjusted in the Controller using `controller.grab`.
+ * Dai taken in payment will be handed over to Treasury, and collateral assets bought will be taken from Treasury as well.
+ * If a vault becomes colalteralized, the liquidation can be stopped with `cancel`.
+ */
 contract Liquidations is ILiquidations, Orchestrated(), DecimalMath {
     using SafeMath for uint256;
 

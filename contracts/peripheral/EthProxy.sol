@@ -5,7 +5,7 @@ import "../interfaces/IWeth.sol";
 import "../helpers/Delegable.sol";
 
 
-/// @dev EthProxy allows users to post and withdraw Eth to the Controller
+/// @dev EthProxy allows users to post and withdraw Eth to the Controller, which will be converted to and from Weth in the process.
 contract EthProxy is Delegable() {
 
     bytes32 public constant WETH = "ETH-A";
@@ -24,14 +24,19 @@ contract EthProxy is Delegable() {
         _weth.approve(address(treasury_), uint(-1));
     }
 
+    /// @dev The WETH9 contract will send ether to EthProxy on `_weth.withdraw` using this function.
     receive() external payable { }
 
+    /// @dev Users use `post` in EthProxy to post ETH to the Controller, which will be converted to Weth here.
+    /// Users must have called `controller.addDelegate(ethProxy.address)` to authorize EthProxy to act in their behalf.
     function post(address from, address to, uint256 amount)
         public payable onlyHolderOrDelegate(from, "EthProxy: Only Holder Or Delegate") {
-        _weth.deposit.value(amount)();      // Specify the ether in both `amount` and `value`
+        _weth.deposit{ value: amount }();
         _controller.post(WETH, address(this), to, amount);
     }
 
+    /// @dev Users wishing to withdraw their Weth as ETH from the Controller should use this function.
+    /// Users must have called `controller.addDelegate(ethProxy.address)` to authorize EthProxy to act in their behalf.
     function withdraw(address from, address payable to, uint256 amount)
         public onlyHolderOrDelegate(from, "EthProxy: Only Holder Or Delegate") {
         _controller.withdraw(WETH, from, address(this), amount);

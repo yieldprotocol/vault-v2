@@ -1,4 +1,4 @@
-pragma solidity ^0.6.0;
+pragma solidity ^0.6.10;
 
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -11,10 +11,18 @@ import "./interfaces/IFlashMinter.sol";
 import "./helpers/Delegable.sol";
 import "./helpers/DecimalMath.sol";
 import "./helpers/Orchestrated.sol";
-import "@nomiclabs/buidler/console.sol";
+// import "@nomiclabs/buidler/console.sol";
 
 
-/// @dev yDai is a yToken targeting Dai.
+/**
+ * @dev yDai is a yToken targeting Chai.
+ * Each yDai contract has a specific maturity time. One yDai is worth one Chai at or after maturity time.
+ * At maturity, the yDai can be triggered to mature, which records the current rate and chi from MakerDAO and enables redemption.
+ * Redeeming an yDai means burning it, and the contract will retrieve Dai from Treasury equal to one Dai times the growth in chi since maturity.
+ * yDai also tracks the MakerDAO stability fee accumulator at the time of maturity, and the growth since. This is not used internally.
+ * Minting and burning of yDai is restricted to orchestrated contracts. Redeeming and flash-minting is allowed to anyone.
+ */
+
 contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20, IYDai  {
 
     event Redeemed(address indexed from, address indexed to, uint256 yDaiIn, uint256 daiOut);
