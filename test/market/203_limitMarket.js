@@ -213,8 +213,8 @@ contract('LimitMarket', async (accounts) =>  {
 
             const expectedYDaiOut = (new BN(oneToken.toString())).mul(new BN('99814')).div(new BN('100000')); // I just hate javascript
             const yDaiOut = new BN(await yDai1.balanceOf(to));
-            expect(yDaiOut).to.be.bignumber.gt(expectedYDaiOut.mul(new BN('99')).div(new BN('100')));
-            expect(yDaiOut).to.be.bignumber.lt(expectedYDaiOut.mul(new BN('101')).div(new BN('100')));
+            expect(yDaiOut).to.be.bignumber.gt(expectedYDaiOut.mul(new BN('9999')).div(new BN('10000')));
+            expect(yDaiOut).to.be.bignumber.lt(expectedYDaiOut.mul(new BN('10001')).div(new BN('10000')));
         });
 
         it("doesn't sell dai if limit not reached", async() => {
@@ -240,8 +240,8 @@ contract('LimitMarket', async (accounts) =>  {
 
             const expectedYDaiIn = (new BN(oneToken.toString())).mul(new BN('10019')).div(new BN('10000')); // I just hate javascript
             const yDaiIn = (new BN(yDaiTokens1.toString())).sub(new BN(await yDai1.balanceOf(from)));
-            expect(yDaiIn).to.be.bignumber.gt(expectedYDaiIn.mul(new BN('99')).div(new BN('100')));
-            expect(yDaiIn).to.be.bignumber.lt(expectedYDaiIn.mul(new BN('101')).div(new BN('100')));
+            expect(yDaiIn).to.be.bignumber.gt(expectedYDaiIn.mul(new BN('9999')).div(new BN('10000')));
+            expect(yDaiIn).to.be.bignumber.lt(expectedYDaiIn.mul(new BN('10001')).div(new BN('10000')));
         });
 
         it("doesn't buy dai if limit exceeded", async() => {
@@ -273,8 +273,8 @@ contract('LimitMarket', async (accounts) =>  {
 
             const expectedDaiOut = (new BN(oneToken.toString())).mul(new BN('99814')).div(new BN('100000')); // I just hate javascript
             const daiOut = new BN(await dai.balanceOf(to));
-            expect(daiOut).to.be.bignumber.gt(expectedDaiOut.mul(new BN('99')).div(new BN('100')));
-            expect(daiOut).to.be.bignumber.lt(expectedDaiOut.mul(new BN('101')).div(new BN('100')));
+            expect(daiOut).to.be.bignumber.gt(expectedDaiOut.mul(new BN('9999')).div(new BN('10000')));
+            expect(daiOut).to.be.bignumber.lt(expectedDaiOut.mul(new BN('10001')).div(new BN('10000')));
         });
 
         it("doesn't sell yDai if limit not reached", async() => {
@@ -306,8 +306,8 @@ contract('LimitMarket', async (accounts) =>  {
 
             const expectedDaiIn = (new BN(oneToken.toString())).mul(new BN('10019')).div(new BN('10000')); // I just hate javascript
             const daiIn = (new BN(daiTokens1.toString())).sub(new BN(await dai.balanceOf(from)));
-            expect(daiIn).to.be.bignumber.gt(expectedDaiIn.mul(new BN('99')).div(new BN('100')));
-            expect(daiIn).to.be.bignumber.lt(expectedDaiIn.mul(new BN('101')).div(new BN('100')));
+            expect(daiIn).to.be.bignumber.gt(expectedDaiIn.mul(new BN('9999')).div(new BN('10000')));
+            expect(daiIn).to.be.bignumber.lt(expectedDaiIn.mul(new BN('10001')).div(new BN('10000')));
         });
 
         it("doesn't buy yDai if limit exceeded", async() => {
