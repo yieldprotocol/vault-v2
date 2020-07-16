@@ -115,7 +115,6 @@ contract Market is IMarket, ERC20, Delegable {
     /// @return Amount of yDai that will be deposited on `to` wallet
     function sellDai(address from, address to, uint128 daiIn)
         external override
-        beforeMaturity
         onlyHolderOrDelegate(from, "Market: Only Holder Or Delegate")
         returns(uint128)
     {
@@ -160,7 +159,6 @@ contract Market is IMarket, ERC20, Delegable {
     /// @return Amount of yDai that will be taken from `from` wallet
     function buyDai(address from, address to, uint128 daiOut)
         external override
-        beforeMaturity
         onlyHolderOrDelegate(from, "Market: Only Holder Or Delegate")
         returns(uint128)
     {
@@ -195,7 +193,6 @@ contract Market is IMarket, ERC20, Delegable {
     /// @return Amount of dai that will be deposited on `to` wallet
     function sellYDai(address from, address to, uint128 yDaiIn)
         external override
-        beforeMaturity
         onlyHolderOrDelegate(from, "Market: Only Holder Or Delegate")
         returns(uint128)
     {
@@ -230,7 +227,6 @@ contract Market is IMarket, ERC20, Delegable {
     /// @return Amount of dai that will be taken from `from` wallet
     function buyYDai(address from, address to, uint128 yDaiOut)
         external override
-        beforeMaturity
         onlyHolderOrDelegate(from, "Market: Only Holder Or Delegate")
         returns(uint128)
     {
