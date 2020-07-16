@@ -12,6 +12,8 @@ module.exports = async (deployer, network, accounts) => {
   let yDaiAddress;
   let marketAddress;
 
+  const yDaiNames = ['yDai1', 'yDai2', 'yDai3', 'yDai4']; // TODO: Consider iterating until the address returned is 0
+
   if (network !== 'development') {
     daiAddress = fixed_addrs[network].daiAddress;
   } else {
@@ -22,7 +24,6 @@ module.exports = async (deployer, network, accounts) => {
   await deployer.deploy(YieldMath)
   await deployer.link(YieldMath, Market);  
 
-  let yDaiNames = ['yDai1', 'yDai2', 'yDai3', 'yDai4']; // TODO: Consider iterating until the address returned is 0
   for (yDaiName of yDaiNames) {
     yDaiAddress = migrations.contracts(web3.utils.fromAscii(yDaiName));
 
