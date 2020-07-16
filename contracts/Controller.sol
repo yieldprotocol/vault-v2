@@ -362,4 +362,27 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
             "Controller: Below dust"
         );
     }
+
+    /// @dev Removes all collateral and debt for an user, for a given collateral type.
+    function erase(bytes32 collateral, address user)
+        public /* override */
+        validCollateral(collateral)
+        onlyOrchestrated("Controller: Not Authorized")
+        returns (uint256, uint256)
+    {
+        uint256 userCollateral = posted[collateral][user];
+        systemPosted[collateral] = systemPosted[collateral].sub(userCollateral);
+        delete posted[collateral][user];
+
+        uint256 userDebt;
+        for (uint256 i = 0; i < seriesIterator.length; i += 1) {
+            uint256 maturity = seriesIterator[i];
+            userDebt = userDebt.add(debtDai(collateral, maturity, user)); // SafeMath shouldn't be needed
+            systemDebtYDai[collateral][maturity] =
+                systemDebtYDai[collateral][maturity].sub(debtYDai[collateral][maturity][user]); // SafeMath shouldn't be needed
+            delete debtYDai[collateral][maturity][user];
+        } // We don't expect hundreds of maturities per controller
+
+        return (userCollateral, userDebt);
+    }
 }
