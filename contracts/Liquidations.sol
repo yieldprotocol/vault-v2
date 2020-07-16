@@ -8,7 +8,7 @@ import "./interfaces/ILiquidations.sol";
 import "./interfaces/ITreasury.sol";
 import "./helpers/DecimalMath.sol";
 import "./helpers/Orchestrated.sol";
-// import "@nomiclabs/buidler/console.sol";
+import "@nomiclabs/buidler/console.sol";
 
 
 /**
@@ -30,8 +30,10 @@ contract Liquidations is ILiquidations, Orchestrated(), DecimalMath {
     IERC20 internal _dai;
     ITreasury internal _treasury;
     IController internal _controller;
-    
+
     mapping(address => uint256) public liquidations;
+    mapping(address => uint256) public collateral;
+    mapping(address => uint256) public debt;
 
     bool public live = true;
 
@@ -72,29 +74,26 @@ contract Liquidations is ILiquidations, Orchestrated(), DecimalMath {
         // solium-disable-next-line security/no-block-members
         liquidations[user] = now;
 
-        // (uint256 userCollateral, uint256 userDebt) = _controller.erase(WETH, user);
-        // collateral[user] = userCollateral;
-        // debt[user] = userDebt;
+        (uint256 userCollateral, uint256 userDebt) = _controller.erase(WETH, user);
+        collateral[user] = userCollateral;
+        debt[user] = userDebt;
 
-        emit Liquidation(user, liquidations[user], 0, 0); /* , userCollateral, userDebt); */
+        emit Liquidation(user, liquidations[user], userCollateral, userDebt);
     }
 
     /// @dev Liquidates a position. The caller pays the debt of `from`, and `buyer` receives an amount of collateral.
     function buy(address from, address buyer, uint256 daiAmount) public onlyLive {
         require(
-            liquidations[from] > 0,
+            debt[from] > 0,
             "Liquidations: Vault is not in liquidation"
         );
-        /* require(
-            !_controller.isCollateralized(WETH, from),
-            "Liquidations: Vault is not undercollateralized"
-        ); */ // Not checking for this, too expensive. Let the user stop the liquidations instead.
         _treasury.pushDai(buyer, daiAmount);
 
         // calculate collateral to grab. Using divdrup stops rounding from leaving 1 stray wei in vaults.
         uint256 tokenAmount = divdrup(daiAmount, price(from));
-        // grab collateral from controller
-        _controller.grab(WETH, from, daiAmount, tokenAmount);
+
+        collateral[from] = collateral[from].sub(tokenAmount);
+        debt[from] = debt[from].sub(daiAmount);
 
         _treasury.pullWeth(buyer, tokenAmount);
     }
@@ -102,16 +101,16 @@ contract Liquidations is ILiquidations, Orchestrated(), DecimalMath {
     /// @dev Return price of a collateral unit, in dai, at the present moment, for a given user
     // dai = price * collateral
     //
-    //               posted      1      min(auction, elapsed)
-    // price = 1 / (-------- * (--- + -----------------------))
-    //                debt       2       2 * auction
+    //                collateral      1      min(auction, elapsed)
+    // price = 1 / (------------- * (--- + -----------------------))
+    //                   debt         2       2 * auction
     function price(address user) public returns (uint256) {
         require(
             liquidations[user] > 0,
             "Liquidations: Vault is not targeted"
         );
-        uint256 dividend1 = _controller.posted(WETH, user);
-        uint256 divisor1 = _controller.totalDebtDai(WETH, user);
+        uint256 dividend1 = collateral[user];
+        uint256 divisor1 = debt[user];
         uint256 term1 = dividend1.mul(UNIT).div(divisor1);
         uint256 dividend3 = Math.min(AUCTION_TIME, now - liquidations[user]);
         uint256 divisor3 = AUCTION_TIME.mul(2);

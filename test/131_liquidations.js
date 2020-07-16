@@ -326,7 +326,7 @@ contract('Liquidations', async (accounts) =>  {
         });
 
         it("doesn't allow to buy from vaults not under liquidation", async() => {
-            const debt = await controller.totalDebtDai.call(WETH, user2, { from: buyer });
+            const debt = await liquidations.debt(user2, { from: buyer });
             await expectRevert(
                 liquidations.buy(user2, buyer, debt, { from: buyer }),
                 "Liquidations: Vault is not in liquidation",
@@ -412,7 +412,7 @@ contract('Liquidations', async (accounts) =>  {
                 });
 
                 it("liquidations retrieve about 1/2 of collateral at the start", async() => {
-                    const daiTokens = (await controller.totalDebtDai.call(WETH, user2, { from: buyer })).toString();
+                    const daiTokens = (await liquidations.debt(user2, { from: buyer })).toString();
                     // console.log(daiTokens); // 180
                     const liquidatorDaiDebt = divRay(daiTokens, rate2);
                     const liquidatorWethTokens = divRay(daiTokens, spot);
@@ -429,7 +429,7 @@ contract('Liquidations', async (accounts) =>  {
                     await liquidations.buy(user2, buyer, daiTokens, { from: buyer });
 
                     assert.equal(
-                        await controller.totalDebtDai.call(WETH, user2, { from: buyer }),
+                        await liquidations.debt(user2, { from: buyer }),
                         0,
                         "User debt should have been erased",
                     );
@@ -447,7 +447,7 @@ contract('Liquidations', async (accounts) =>  {
                 });
 
                 it("partial liquidations are possible", async() => {
-                    const daiTokens = (await controller.totalDebtDai.call(WETH, user2, { from: buyer })).toString();
+                    const daiTokens = (await liquidations.debt(user2, { from: buyer })).toString();
                     // console.log(daiTokens); // 180
                     const liquidatorDaiDebt = divRay(daiTokens, rate2);
                     const liquidatorWethTokens = divRay(daiTokens, spot);
@@ -464,7 +464,7 @@ contract('Liquidations', async (accounts) =>  {
                     await liquidations.buy(user2, buyer, divRay(daiTokens, toRay(2)), { from: buyer });
 
                     assert.equal(
-                        await controller.totalDebtDai.call(WETH, user2, { from: buyer }),
+                        await liquidations.debt(user2, { from: buyer }),
                         divRay(daiTokens, toRay(2)).toString(),
                         "User debt should have been halved",
                     );
@@ -481,41 +481,6 @@ contract('Liquidations', async (accounts) =>  {
                     );
                 });
 
-                it("liquidations over several series are possible", async() => {
-                    const daiTokens = (await controller.totalDebtDai.call(WETH, user3, { from: buyer })).toString();
-                    // console.log(daiTokens); // 180
-                    const liquidatorDaiDebt = divRay(daiTokens, rate2);
-                    const liquidatorWethTokens = divRay(daiTokens, spot);
-                    // console.log(daiDebt.toString());
-                    // wethTokens = 100 ether + 1 wei
-
-                    await weth.deposit({ from: buyer, value: liquidatorWethTokens });
-                    await weth.approve(wethJoin.address, liquidatorWethTokens, { from: buyer });
-                    await wethJoin.join(buyer, liquidatorWethTokens, { from: buyer });
-                    await vat.frob(WETH, buyer, buyer, buyer, liquidatorWethTokens, liquidatorDaiDebt, { from: buyer });
-                    await daiJoin.exit(buyer, daiTokens, { from: buyer });
-
-                    await dai.approve(treasury.address, daiTokens, { from: buyer });
-                    await liquidations.buy(user3, buyer, daiTokens, { from: buyer });
-
-                    assert.equal(
-                        await controller.totalDebtDai.call(WETH, user3, { from: buyer }),
-                        0,
-                        "User debt should have been erased",
-                    );
-                    // The buy will happen a few seconds after the start of the liquidation, so the collateral received will be slightly above the 1/2 of the total posted.
-                    expect(
-                        await weth.balanceOf(buyer, { from: buyer })
-                    ).to.be.bignumber.gt(
-                        wethTokens.toString()
-                    );
-                    expect(
-                        await weth.balanceOf(buyer, { from: buyer }),
-                    ).to.be.bignumber.lt(
-                        mulRay(wethTokens, toRay(1.01)).toString(),
-                    );
-                });
-
                 describe("once the liquidation time is complete", () => {
                     beforeEach(async() => {
                         await helper.advanceTime(5000); // Better to test well beyond the limit
@@ -523,10 +488,10 @@ contract('Liquidations', async (accounts) =>  {
                     });
 
                     it("liquidations retrieve all collateral", async() => {
-                        const daiTokens = (await controller.totalDebtDai.call(WETH, user2, { from: buyer })).toString();
+                        const daiTokens = (await liquidations.debt(user2, { from: buyer })).toString();
                         const liquidatorDaiDebt = divRay(daiTokens, rate2);
                         const liquidatorWethTokens = divRay(daiTokens, spot);
-                        const wethTokens = await controller.posted(WETH, user2, { from: owner });
+                        const wethTokens = await liquidations.collateral(user2, { from: owner });
     
                         await weth.deposit({ from: buyer, value: liquidatorWethTokens });
                         await weth.approve(wethJoin.address, liquidatorWethTokens, { from: buyer });
@@ -538,7 +503,7 @@ contract('Liquidations', async (accounts) =>  {
                         await liquidations.buy(user2, buyer, daiTokens, { from: buyer });
     
                         assert.equal(
-                            await controller.totalDebtDai.call(WETH, user2, { from: buyer }),
+                            await liquidations.debt(user2, { from: buyer }),
                             0,
                             "User debt should have been erased",
                         );
@@ -550,10 +515,10 @@ contract('Liquidations', async (accounts) =>  {
                     });
     
                     it("partial liquidations are possible", async() => {
-                        const daiTokens = (await controller.totalDebtDai.call(WETH, user2, { from: buyer })).toString();
+                        const daiTokens = (await liquidations.debt(user2, { from: buyer })).toString();
                         const liquidatorDaiDebt = divRay(daiTokens, rate2);
                         const liquidatorWethTokens = divRay(daiTokens, spot);
-                        const wethTokens = (await controller.posted(WETH, user2, { from: owner })).toString();
+                        const wethTokens = (await liquidations.collateral(user2, { from: owner })).toString();
     
                         await weth.deposit({ from: buyer, value: liquidatorWethTokens });
                         await weth.approve(wethJoin.address, liquidatorWethTokens, { from: buyer });
@@ -565,7 +530,7 @@ contract('Liquidations', async (accounts) =>  {
                         await liquidations.buy(user2, buyer, divRay(daiTokens, toRay(2)), { from: buyer });
     
                         assert.equal(
-                            await controller.totalDebtDai.call(WETH, user2, { from: buyer }),
+                            await liquidations.debt(user2, { from: buyer }),
                             divRay(daiTokens, toRay(2)).toString(),
                             "User debt should have been halved",
                         );
@@ -574,34 +539,7 @@ contract('Liquidations', async (accounts) =>  {
                             addBN(divRay(wethTokens, toRay(2)), 1).toString(), // divRay should round up
                             "Liquidator should have " + addBN(divRay(wethTokens, toRay(2)), 1) + " weth, instead has " + await weth.balanceOf(buyer, { from: buyer }),
                         );
-                    });
-    
-                    it("liquidations over several series are possible", async() => {
-                        const daiTokens = (await controller.totalDebtDai.call(WETH, user3, { from: buyer })).toString();
-                        const liquidatorDaiDebt = divRay(daiTokens, rate2);
-                        const liquidatorWethTokens = divRay(daiTokens, spot);
-                        const wethTokens = await controller.posted(WETH, user3, { from: owner });
-    
-                        await weth.deposit({ from: buyer, value: liquidatorWethTokens });
-                        await weth.approve(wethJoin.address, liquidatorWethTokens, { from: buyer });
-                        await wethJoin.join(buyer, liquidatorWethTokens, { from: buyer });
-                        await vat.frob(WETH, buyer, buyer, buyer, liquidatorWethTokens, liquidatorDaiDebt, { from: buyer });
-                        await daiJoin.exit(buyer, daiTokens, { from: buyer });
-    
-                        await dai.approve(treasury.address, daiTokens, { from: buyer });
-                        await liquidations.buy(user3, buyer, daiTokens, { from: buyer });
-    
-                        assert.equal(
-                            await controller.totalDebtDai.call(WETH, user3, { from: buyer }),
-                            0,
-                            "User debt should have been erased",
-                        );
-                        assert.equal(
-                            await weth.balanceOf(buyer, { from: buyer }),
-                            wethTokens.toString(),
-                            "Liquidator should have " + wethTokens + " weth, instead has " + await weth.balanceOf(buyer, { from: buyer }),
-                        );
-                    });                    
+                    });                 
                 });
             });
         });
