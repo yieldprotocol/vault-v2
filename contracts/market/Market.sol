@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.6.10;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -29,6 +30,33 @@ contract Market is IMarket, ERC20, Delegable {
         maturity = toUint128(yDai.maturity());
     }
 
+    /// @dev Trading can only be done before maturity
+    modifier beforeMaturity() {
+        require(
+            now < maturity,
+            "Market: Too late"
+        );
+        _;
+    }
+
+    /// @dev Overflow-protected addition, from OpenZeppelin
+    function add(uint128 a, uint128 b)
+        internal pure returns (uint128)
+    {
+        uint128 c = a + b;
+        require(c >= a, "Market: Dai reserves too high");
+
+        return c;
+    }
+
+    /// @dev Overflow-protected substraction, from OpenZeppelin
+    function sub(uint128 a, uint128 b) internal pure returns (uint128) {
+        require(b <= a, "Market: yDai reserves too low");
+        uint128 c = a - b;
+
+        return c;
+    }
+
     /// @dev Safe casting from uint256 to uint128
     function toUint128(uint256 x) internal pure returns(uint128) {
         require(
@@ -36,12 +64,6 @@ contract Market is IMarket, ERC20, Delegable {
             "Market: Cast overflow"
         );
         return uint128(x);
-    }
-
-    /// @dev max(0, x - y)
-    function subFloorZero(uint256 x, uint256 y) public pure returns(uint256) {
-        if (y >= x) return 0;
-        else return x - y;
     }
 
     /// @dev Mint initial liquidity tokens
@@ -58,7 +80,9 @@ contract Market is IMarket, ERC20, Delegable {
 
     /// @dev Mint liquidity tokens in exchange for adding dai and yDai
     /// The parameter passed is the amount of `dai` being invested, an appropriate amount of `yDai` to be invested alongside will be calculated and taken by this function from the caller.
-    function mint(uint256 daiOffered) external {
+    function mint(uint256 daiOffered)
+        external
+    {
         uint256 supply = totalSupply();
         uint256 daiReserves = dai.balanceOf(address(this));
         uint256 yDaiReserves = yDai.balanceOf(address(this));
@@ -71,7 +95,9 @@ contract Market is IMarket, ERC20, Delegable {
     }
 
     /// @dev Burn liquidity tokens in exchange for dai and yDai
-    function burn(uint256 tokensBurned) external {
+    function burn(uint256 tokensBurned)
+        external
+    {
         uint256 supply = totalSupply();
         uint256 daiReserves = dai.balanceOf(address(this));
         uint256 yDaiReserves = yDai.balanceOf(address(this));
@@ -91,18 +117,9 @@ contract Market is IMarket, ERC20, Delegable {
     function sellDai(address from, address to, uint128 daiIn)
         external override
         onlyHolderOrDelegate(from, "Market: Only Holder Or Delegate")
-        returns(uint256)
+        returns(uint128)
     {
-        uint128 daiReserves = toUint128(dai.balanceOf(address(this)));
-        uint128 yDaiReserves = toUint128(yDai.balanceOf(address(this)));
-        uint256 yDaiOut = YieldMath.yDaiOutForDaiIn(
-            daiReserves,
-            yDaiReserves,
-            daiIn,
-            toUint128(subFloorZero(maturity, now)),
-            k,
-            g
-        );
+        uint128 yDaiOut = sellDaiPreview(daiIn);
 
         dai.transferFrom(from, address(this), daiIn);
         yDai.transfer(to, yDaiOut);
@@ -111,15 +128,29 @@ contract Market is IMarket, ERC20, Delegable {
     }
 
     /// @dev Returns how much yDai would be obtained by selling `daiIn` dai
-    function sellDaiPreview(uint128 daiIn) external view returns(uint256) {
-        return YieldMath.yDaiOutForDaiIn(
-            toUint128(dai.balanceOf(address(this))),
-            toUint128(yDai.balanceOf(address(this))),
+    function sellDaiPreview(uint128 daiIn)
+        public view
+        beforeMaturity
+        returns(uint128)
+    {
+        uint128 daiReserves = toUint128(dai.balanceOf(address(this)));
+        uint128 yDaiReserves = toUint128(yDai.balanceOf(address(this)));
+
+        uint128 yDaiOut = YieldMath.yDaiOutForDaiIn(
+            daiReserves,
+            yDaiReserves,
             daiIn,
-            toUint128(subFloorZero(maturity, now)),
+            toUint128(maturity - now), // This can't be called after maturity
             k,
             g
         );
+
+        require(
+            sub(yDaiReserves, yDaiOut) >= add(daiReserves, daiIn),
+            "Market: yDai reserves too low"
+        );
+
+        return yDaiOut;
     }
 
     /// @dev Buy Dai for yDai
@@ -130,18 +161,9 @@ contract Market is IMarket, ERC20, Delegable {
     function buyDai(address from, address to, uint128 daiOut)
         external override
         onlyHolderOrDelegate(from, "Market: Only Holder Or Delegate")
-        returns(uint256)
+        returns(uint128)
     {
-        uint128 daiReserves = toUint128(dai.balanceOf(address(this)));
-        uint128 yDaiReserves = toUint128(yDai.balanceOf(address(this)));
-        uint256 yDaiIn = YieldMath.yDaiInForDaiOut(
-            daiReserves,
-            yDaiReserves,
-            daiOut,
-            toUint128(subFloorZero(maturity, now)),
-            k,
-            g
-        );
+        uint128 yDaiIn = buyDaiPreview(daiOut);
 
         yDai.transferFrom(from, address(this), yDaiIn);
         dai.transfer(to, daiOut);
@@ -150,12 +172,16 @@ contract Market is IMarket, ERC20, Delegable {
     }
 
     /// @dev Returns how much yDai would be required to buy `daiOut` dai
-    function buyDaiPreview(uint128 daiOut) external view returns(uint256) {
+    function buyDaiPreview(uint128 daiOut)
+        public view
+        beforeMaturity
+        returns(uint128)
+    {
         return YieldMath.yDaiInForDaiOut(
             toUint128(dai.balanceOf(address(this))),
             toUint128(yDai.balanceOf(address(this))),
             daiOut,
-            toUint128(subFloorZero(maturity, now)),
+            toUint128(maturity - now), // This can't be called after maturity
             k,
             g
         );
@@ -169,17 +195,9 @@ contract Market is IMarket, ERC20, Delegable {
     function sellYDai(address from, address to, uint128 yDaiIn)
         external override
         onlyHolderOrDelegate(from, "Market: Only Holder Or Delegate")
-        returns(uint256)
+        returns(uint128)
     {
-        uint128 daiReserves = toUint128(dai.balanceOf(address(this)));
-        uint128 yDaiReserves = toUint128(yDai.balanceOf(address(this)));
-        uint256 daiOut = YieldMath.daiOutForYDaiIn(
-            daiReserves, yDaiReserves,
-            yDaiIn,
-            toUint128(subFloorZero(maturity, now)),
-            k,
-            g
-        );
+        uint128 daiOut = sellYDaiPreview(yDaiIn);
 
         yDai.transferFrom(from, address(this), yDaiIn);
         dai.transfer(to, daiOut);
@@ -188,12 +206,16 @@ contract Market is IMarket, ERC20, Delegable {
     }
 
     /// @dev Returns how much dai would be obtained by selling `yDaiIn` yDai
-    function sellYDaiPreview(uint128 yDaiIn) external view returns(uint256) {
+    function sellYDaiPreview(uint128 yDaiIn)
+        public view
+        beforeMaturity
+        returns(uint128)
+    {
         return YieldMath.daiOutForYDaiIn(
             toUint128(dai.balanceOf(address(this))),
             toUint128(yDai.balanceOf(address(this))),
             yDaiIn,
-            toUint128(subFloorZero(maturity, now)),
+            toUint128(maturity - now), // This can't be called after maturity
             k,
             g
         );
@@ -207,17 +229,9 @@ contract Market is IMarket, ERC20, Delegable {
     function buyYDai(address from, address to, uint128 yDaiOut)
         external override
         onlyHolderOrDelegate(from, "Market: Only Holder Or Delegate")
-        returns(uint256)
+        returns(uint128)
     {
-        uint128 daiReserves = toUint128(dai.balanceOf(address(this)));
-        uint128 yDaiReserves = toUint128(yDai.balanceOf(address(this)));
-        uint256 daiIn = YieldMath.daiInForYDaiOut(
-            daiReserves, yDaiReserves,
-            yDaiOut,
-            toUint128(subFloorZero(maturity, now)),
-            k,
-            g
-        );
+        uint128 daiIn = buyYDaiPreview(yDaiOut);
 
         dai.transferFrom(from, address(this), daiIn);
         yDai.transfer(to, yDaiOut);
@@ -227,14 +241,28 @@ contract Market is IMarket, ERC20, Delegable {
 
 
     /// @dev Returns how much dai would be required to buy `yDaiOut` yDai
-    function buyYDaiPreview(uint128 yDaiOut) external view returns(uint256) {
-        return YieldMath.daiInForYDaiOut(
-            toUint128(dai.balanceOf(address(this))),
-            toUint128(yDai.balanceOf(address(this))),
+    function buyYDaiPreview(uint128 yDaiOut)
+        public view
+        beforeMaturity
+        returns(uint128)
+    {
+        uint128 daiReserves = toUint128(dai.balanceOf(address(this)));
+        uint128 yDaiReserves = toUint128(yDai.balanceOf(address(this)));
+
+        uint128 daiIn = YieldMath.daiInForYDaiOut(
+            daiReserves,
+            yDaiReserves,
             yDaiOut,
-            toUint128(subFloorZero(maturity, now)),
+            toUint128(maturity - now), // This can't be called after maturity
             k,
             g
         );
+
+        require(
+            sub(yDaiReserves, yDaiOut) >= add(daiReserves, daiIn),
+            "Market: yDai reserves too low"
+        );
+
+        return daiIn;
     }
 }

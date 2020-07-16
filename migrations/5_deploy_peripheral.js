@@ -10,11 +10,12 @@ const Pot = artifacts.require("Pot");
 const End = artifacts.require("End");
 const Chai = artifacts.require("Chai");
 const Treasury = artifacts.require("Treasury");
+const YDai = artifacts.require("YDai");
 const Controller = artifacts.require("Controller");
 const Liquidations = artifacts.require("Liquidations");
 const EthProxy = artifacts.require("EthProxy");
 const Unwind = artifacts.require("Unwind");
-
+const ControllerView = artifacts.require("ControllerView");
 
 module.exports = async (deployer, network, accounts) => {
   const migrations = await Migrations.deployed();
@@ -34,6 +35,9 @@ module.exports = async (deployer, network, accounts) => {
   let liquidationsAddress;
   let ethProxyAddress;
   let unwindAddress;
+  let controlerViewAddress;
+
+  const yDaiNames = ['yDai1', 'yDai2', 'yDai3', 'yDai4']; // TODO: Consider iterating until the address returned is 0
 
   if (network !== 'development') {
     vatAddress = fixed_addrs[network].vatAddress ;
@@ -95,11 +99,13 @@ module.exports = async (deployer, network, accounts) => {
   await controller.orchestrate(unwindAddress);
   await treasury.orchestrate(unwindAddress);
   await treasury.registerUnwind(unwindAddress);
-  // TODO: Retrieve the addresses for yDai contracts
-  // await yDai1.orchestrate(unwindAddress);
-  // await yDai2.orchestrate(unwindAddress);
-  // await unwind.addSeries(yDai1.address, { from: owner });
-  // await unwind.addSeries(yDai2.address, { from: owner });
+  
+  for (yDaiName of yDaiNames) {
+    yDaiAddress = await migrations.contracts(web3.utils.fromAscii(yDaiName));
+    const yDai = await YDai.at(yDaiAddress);
+    await yDai.orchestrate(unwindAddress);
+    await unwind.addSeries(yDaiAddress);
+  }
 
   // Setup EthProxy
   await deployer.deploy(
@@ -111,10 +117,27 @@ module.exports = async (deployer, network, accounts) => {
   ethProxyAddress = (await EthProxy.deployed()).address;
   await controller.addDelegate(ethProxyAddress);
   
+  // Setup ControllerView
+  await deployer.deploy(
+    ControllerView,
+    vatAddress,
+    potAddress,
+    controllerAddress,
+  );
+  const controllerView = await ControllerView.deployed();
+  controllerViewAddress = controllerView.address;
+
+  for (yDaiName of yDaiNames) {
+    yDaiAddress = await migrations.contracts(web3.utils.fromAscii(yDaiName));
+    const yDai = await YDai.at(yDaiAddress);
+    await controllerView.addSeries(yDaiAddress);
+  }
+
   const deployedPeripheral = {
     'Liquidations': liquidationsAddress,
     'Unwind': unwindAddress,
     'EthProxy': ethProxyAddress,
+    'ControllerView': ethProxyAddress,
   }
 
   for (name in deployedPeripheral) {

@@ -1,14 +1,15 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.6.10;
 
 import "./IYDai.sol";
 
 
 interface IController {
-    function series(uint256) external returns (IYDai);
-    function systemPosted(bytes32) external returns (uint256);
-    function systemDebtYDai(bytes32, uint256) external returns (uint256);
+    function series(uint256) external view returns (IYDai);
+    function systemPosted(bytes32) external view returns (uint256);
+    function systemDebtYDai(bytes32, uint256) external view returns (uint256);
     function posted(bytes32, address) external view returns (uint256);
-    function debtYDai(bytes32, uint256, address) external returns (uint256);
+    function debtYDai(bytes32, uint256, address) external view returns (uint256);
     function totalDebtDai(bytes32, address) external returns (uint256);
     function isCollateralized(bytes32, address) external returns (bool);
     function erase(bytes32, address) external returns (uint256, uint256);
