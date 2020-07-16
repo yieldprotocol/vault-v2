@@ -33,7 +33,7 @@ contract Market is IMarket, ERC20, Delegable {
     modifier beforeMaturity() {
         require(
             now < maturity,
-            "Market: After maturity"
+            "Market: Too late"
         );
         _;
     }

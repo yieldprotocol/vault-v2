@@ -633,35 +633,35 @@ contract('Market', async (accounts) =>  {
 
                 await expectRevert(
                     market.sellDaiPreview(oneToken, { from: operator }),
-                    "Market: After maturity",
+                    "Market: Too late",
                 );
                 await expectRevert(
                     market.sellDai(from, to, oneToken, { from: from }),
-                    "Market: After maturity",
+                    "Market: Too late",
                 );
                 await expectRevert(
                     market.buyDaiPreview(oneToken, { from: operator }),
-                    "Market: After maturity",
+                    "Market: Too late",
                 );
                 await expectRevert(
                     market.buyDai(from, to, oneToken, { from: from }),
-                    "Market: After maturity",
+                    "Market: Too late",
                 );
                 await expectRevert(
                     market.sellYDaiPreview(oneToken, { from: operator }),
-                    "Market: After maturity",
+                    "Market: Too late",
                 );
                 await expectRevert(
                     market.sellYDai(from, to, oneToken, { from: from }),
-                    "Market: After maturity",
+                    "Market: Too late",
                 );
                 await expectRevert(
                     market.buyYDaiPreview(oneToken, { from: operator }),
-                    "Market: After maturity",
+                    "Market: Too late",
                 );
                 await expectRevert(
                     market.buyYDai(from, to, oneToken, { from: from }),
-                    "Market: After maturity",
+                    "Market: Too late",
                 );
             });
         });
