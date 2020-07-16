@@ -320,7 +320,7 @@ contract('Liquidations', async (accounts) =>  {
 
         it("doesn't allow to liquidate collateralized vaults", async() => {
             await expectRevert(
-                liquidations.liquidate(user2, { from: buyer }),
+                liquidations.liquidate(user2, buyer, { from: buyer }),
                 "Liquidations: Vault is not undercollateralized",
             );
         });
@@ -376,7 +376,7 @@ contract('Liquidations', async (accounts) =>  {
 
             it("liquidations can be started", async() => {
                 // Setup yDai
-                const event = (await liquidations.liquidate(user2, { from: buyer })).logs[0];
+                const event = (await liquidations.liquidate(user2, buyer, { from: buyer })).logs[0];
                 const block = await web3.eth.getBlockNumber();
                 now = (await web3.eth.getBlock(block)).timestamp;
 
@@ -400,13 +400,13 @@ contract('Liquidations', async (accounts) =>  {
 
             describe("with started liquidations", () => {
                 beforeEach(async() => {
-                    await liquidations.liquidate(user2, { from: buyer });
-                    await liquidations.liquidate(user3, { from: buyer });
+                    await liquidations.liquidate(user2, buyer, { from: buyer });
+                    await liquidations.liquidate(user3, buyer, { from: buyer });
                 });
     
                 it("doesn't allow to liquidate vaults already in liquidation", async() => {
                     await expectRevert(
-                        liquidations.liquidate(user2, { from: buyer }),
+                        liquidations.liquidate(user2, buyer, { from: buyer }),
                         "Liquidations: Vault is already in liquidation",
                     );
                 });

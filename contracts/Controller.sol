@@ -189,7 +189,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         return powerOf(collateral, user) >= totalDebtDai(collateral, user);
     }
 
-    /// @dev Return if the debt of an user is between zero and the dust level
+    /// @dev Return if the collateral of an user is between zero and the dust level
     function aboveDustOrZero(bytes32 collateral, address user) public returns (bool) {
         return posted[collateral][user] == 0 || DUST < posted[collateral][user];
     }

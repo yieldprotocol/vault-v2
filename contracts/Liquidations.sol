@@ -27,6 +27,7 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
 
     bytes32 public constant WETH = "ETH-A";
     uint256 public constant AUCTION_TIME = 3600;
+    uint256 public constant DUST = 50000000000000000; // 0.05 ETH
 
     IERC20 internal _dai;
     ITreasury internal _treasury;
@@ -62,8 +63,15 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
         live = false;
     }
 
+
+    /// @dev Return if the collateral of an user is between zero and the dust level
+    function aboveDustOrZero(address user) public returns (bool) {
+        return collateral[user] == 0 || DUST < collateral[user];
+    }
+
     /// @dev Starts a liquidation process for a given user.
-    function liquidate(address user) public {
+    /// A liquidation fee is transferred from the liquidated user to a designated account as payment.
+    function liquidate(address user, address to) public {
         require(
             liquidations[user] == 0,
             "Liquidations: Vault is already in liquidation"
@@ -76,7 +84,8 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
         liquidations[user] = now;
 
         (uint256 userCollateral, uint256 userDebt) = _controller.erase(WETH, user);
-        collateral[user] = userCollateral;
+        collateral[user] = userCollateral.sub(DUST);
+        collateral[to] = collateral[to].add(DUST);
         debt[user] = userDebt;
 
         emit Liquidation(user, liquidations[user], userCollateral, userDebt);
@@ -101,7 +110,10 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
 
         _treasury.pullWeth(buyer, tokenAmount);
 
-        // TODO: Implement dust
+        require(
+            aboveDustOrZero(user),
+            "Controller: Below dust"
+        );
     }
 
     /// @dev Liquidates a position. The caller pays the debt of `from`, and `buyer` receives an amount of collateral.
