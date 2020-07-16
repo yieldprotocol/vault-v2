@@ -346,7 +346,7 @@ contract('Liquidations', async (accounts) =>  {
             it("liquidations can be started", async() => {
                 const userCollateral = new BN(await controller.posted(WETH, user2, { from: buyer }));
                 const userDebt = (await controller.totalDebtDai.call(WETH, user2, { from: buyer }));
-                const dust = '50000000000000000'; // 0.05 ETH
+                const dust = '25000000000000000'; // 0.025 ETH
                 
                 const event = (await liquidations.liquidate(user2, buyer, { from: buyer })).logs[0];
                 const block = await web3.eth.getBlockNumber();
@@ -470,6 +470,28 @@ contract('Liquidations', async (accounts) =>  {
                         await weth.balanceOf(buyer, { from: buyer }),
                     ).to.be.bignumber.lt(
                         mulRay(divRay(wethTokens, toRay(4)), toRay(1.01)).toString(),
+                    );
+                });
+
+                it("liquidations leaving dust revert", async() => {
+                    const daiTokens = (await liquidations.debt(user2, { from: buyer })).toString();
+                    // console.log(daiTokens); // 180
+                    const liquidatorDaiDebt = divRay(daiTokens, rate2);
+                    const liquidatorWethTokens = divRay(daiTokens, spot);
+                    // console.log(daiDebt.toString());
+                    // wethTokens = 100 ether + 1 wei
+
+                    await weth.deposit({ from: buyer, value: liquidatorWethTokens });
+                    await weth.approve(wethJoin.address, liquidatorWethTokens, { from: buyer });
+                    await wethJoin.join(buyer, liquidatorWethTokens, { from: buyer });
+                    await vat.frob(WETH, buyer, buyer, buyer, liquidatorWethTokens, liquidatorDaiDebt, { from: buyer });
+                    await daiJoin.exit(buyer, daiTokens, { from: buyer });
+
+                    await dai.approve(treasury.address, daiTokens, { from: buyer });
+
+                    await expectRevert(
+                        liquidations.buy(buyer, user2, subBN(daiTokens, 1000), { from: buyer }),
+                        "Liquidations: Below dust",
                     );
                 });
 

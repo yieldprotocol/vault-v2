@@ -27,7 +27,8 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
 
     bytes32 public constant WETH = "ETH-A";
     uint256 public constant AUCTION_TIME = 3600;
-    uint256 public constant DUST = 50000000000000000; // 0.05 ETH
+    uint256 public constant DUST = 5000000000000000000; // 5 DAI
+    uint256 public constant FEE = 25000000000000000; // 0.025 ETH
 
     IERC20 internal _dai;
     ITreasury internal _treasury;
@@ -64,9 +65,9 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
     }
 
 
-    /// @dev Return if the collateral of an user is between zero and the dust level
+    /// @dev Return if the debt of an user is between zero and the dust level
     function aboveDustOrZero(address user) public returns (bool) {
-        return collateral[user] == 0 || DUST < collateral[user];
+        return debt[user] == 0 || DUST < debt[user];
     }
 
     /// @dev Starts a liquidation process for a given user.
@@ -84,8 +85,8 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
         liquidations[user] = now;
 
         (uint256 userCollateral, uint256 userDebt) = _controller.erase(WETH, user);
-        collateral[user] = userCollateral.sub(DUST);
-        collateral[to] = collateral[to].add(DUST);
+        collateral[user] = userCollateral.sub(FEE);
+        collateral[to] = collateral[to].add(FEE);
         debt[user] = userDebt;
 
         emit Liquidation(user, liquidations[user], userCollateral, userDebt);
@@ -112,7 +113,7 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
 
         require(
             aboveDustOrZero(user),
-            "Controller: Below dust"
+            "Liquidations: Below dust"
         );
     }
 
