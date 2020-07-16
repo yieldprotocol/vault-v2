@@ -1,6 +1,7 @@
 pragma solidity ^0.6.10;
 
 import "@openzeppelin/contracts/math/Math.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../interfaces/IVat.sol";
 import "../interfaces/IPot.sol";
 import "../interfaces/IController.sol";
@@ -9,6 +10,8 @@ import "../helpers/SeriesRegistry.sol";
 import "@nomiclabs/buidler/console.sol";
 
 contract ControllerView is DecimalMath, SeriesRegistry {
+    using SafeMath for uint256;
+
     bytes32 public constant CHAI = "CHAI";
     bytes32 public constant WETH = "ETH-A";
 
@@ -17,9 +20,9 @@ contract ControllerView is DecimalMath, SeriesRegistry {
     IController internal _controller;
 
     constructor (
-        address controller_,
         address vat_,
-        address pot_
+        address pot_,
+        address controller_
     ) public {
         _vat = IVat(vat_);
         _pot = IPot(pot_);
@@ -35,20 +38,66 @@ contract ControllerView is DecimalMath, SeriesRegistry {
         _;
     }
 
+    /// @dev Posted collateral for an user
+    /// Adding this one so that this contract can be used to display all data in Controller
+    function posted(bytes32 collateral, address user)
+        public view
+        validCollateral(collateral)
+        returns (uint256)
+    {
+        return _controller.posted(collateral, user);
+    }
+
+    /// @dev Posted collateral for the overall system
+    /// Adding this one so that this contract can be used to display all data in Controller
+    function systemPosted(bytes32 collateral)
+        public view
+        validCollateral(collateral)
+        returns (uint256)
+    {
+        return _controller.systemPosted(collateral);
+    }
+
+    /// @dev Debt for a collateral, maturity and user, in YDai
+    /// Adding this one so that this contract can be used to display all data in Controller
+    function debtYDai(bytes32 collateral, uint256 maturity, address user)
+        public view
+        validCollateral(collateral)
+        returns (uint256)
+    {
+        return _controller.debtYDai(collateral, maturity, user);
+    }
+
+    /// @dev Overall Debt for a collateral and maturity, in YDai
+    /// Adding this one so that this contract can be used to display all data in Controller
+    function systemDebtYDai(bytes32 collateral, uint256 maturity)
+        public view
+        validCollateral(collateral)
+        returns (uint256)
+    {
+        return _controller.systemDebtYDai(collateral, maturity);
+    }
+
     /// @dev Maximum borrowing power of an user in dai for a given collateral
-    function powerOf(bytes32 collateral, address user) public view returns (uint256) {
+    function powerOf(bytes32 collateral, address user)
+        public view
+        validCollateral(collateral)
+        returns (uint256)
+    {
         // dai = price * collateral
-        uint256 posted = _controller.posted(collateral, user);
         if (collateral == WETH){
             (,, uint256 spot,,) = _vat.ilks(WETH);  // Stability fee and collateralization ratio for Weth
-            return muld(posted, spot);
+            return muld(posted(collateral, user), spot);
         } else if (collateral == CHAI) {
-            return muld(posted, _pot.chi());
+            return muld(posted(collateral, user), _pot.chi());
         }
         return 0;
     }
 
-    function chiGrowth(uint256 maturity) public view returns(uint256){
+    function chiGrowth(uint256 maturity)
+        public view
+        returns(uint256)
+    {
         if (series[maturity].isMature() != true) return series[maturity].chi0();
         return Math.min(rateGrowth(maturity), divd(_pot.chi(), series[maturity].chi0()));
     }
@@ -59,7 +108,10 @@ contract ControllerView is DecimalMath, SeriesRegistry {
     // rateGrowth() = ----------
     //           rate_mat
     //
-    function rateGrowth(uint256 maturity) public view returns(uint256){
+    function rateGrowth(uint256 maturity)
+        public view
+        returns(uint256)
+    {
         if (series[maturity].isMature() != true) return series[maturity].rate0();
         else {
             (, uint256 rateNow,,,) = _vat.ilks(WETH);
@@ -67,14 +119,12 @@ contract ControllerView is DecimalMath, SeriesRegistry {
         }
     }
 
-    /// @dev Debt for a collateral, maturity and user, in YDai
-    /// Adding this one so that this contract can be used to display all data in Controller
-    function debtYDai(bytes32 collateral, uint256 maturity, address user) public view returns (uint256) {
-        return _controller.debtYDai(collateral, maturity, user);
-    }
-
     /// @dev Debt for a collateral, maturity and user, in Dai
-    function debtDai(bytes32 collateral, uint256 maturity, address user) public view returns (uint256) {
+    function debtDai(bytes32 collateral, uint256 maturity, address user)
+        public view
+        validCollateral(collateral)
+        returns (uint256)
+    {
         if (series[maturity].isMature()){
             if (collateral == WETH){
                 return muld(debtYDai(collateral, maturity, user), rateGrowth(maturity));
@@ -89,7 +139,11 @@ contract ControllerView is DecimalMath, SeriesRegistry {
     }
 
     /// @dev Returns the total debt of an user, for a given collateral, across all series, in Dai
-    function totalDebtDai(bytes32 collateral, address user) public view returns (uint256) {
+    function totalDebtDai(bytes32 collateral, address user)
+        public view
+        validCollateral(collateral)
+        returns (uint256)
+    {
         uint256 totalDebt;
         for (uint256 i = 0; i < seriesIterator.length; i += 1) {
             totalDebt = totalDebt + debtDai(collateral, seriesIterator[i], user);
@@ -97,13 +151,16 @@ contract ControllerView is DecimalMath, SeriesRegistry {
         return totalDebt;
     }
 
-    function locked(bytes32 collateral, address user) public view returns (uint256) {
-        uint256 remainingPower = powerOf(collateral, user) - totalDebtDai(collateral, user);
+    function locked(bytes32 collateral, address user)
+        public view
+        validCollateral(collateral)
+        returns (uint256)
+    {
         if (collateral == WETH){
             (,, uint256 spot,,) = _vat.ilks(WETH);  // Stability fee and collateralization ratio for Weth
-            return divd(remainingPower, spot);
+            return divd(totalDebtDai(collateral, user), spot);
         } else if (collateral == CHAI) {
-            return divd(remainingPower, _pot.chi());
+            return divd(totalDebtDai(collateral, user), _pot.chi());
         }
     }
 }
