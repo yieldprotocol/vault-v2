@@ -27,7 +27,7 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
 
     bytes32 public constant WETH = "ETH-A";
     uint256 public constant AUCTION_TIME = 3600;
-    uint256 public constant DUST = 5000000000000000000; // 5 DAI
+    uint256 public constant DUST = 25000000000000000; // 0.025 ETH
     uint256 public constant FEE = 25000000000000000; // 0.025 ETH
 
     IERC20 internal _dai;
@@ -67,7 +67,7 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
 
     /// @dev Return if the debt of an user is between zero and the dust level
     function aboveDustOrZero(address user) public returns (bool) {
-        return debt[user] == 0 || DUST < debt[user];
+        return collateral[user] == 0 || DUST < collateral[user];
     }
 
     /// @dev Starts a liquidation process for a given user.

@@ -473,28 +473,6 @@ contract('Liquidations', async (accounts) =>  {
                     );
                 });
 
-                it("liquidations leaving dust revert", async() => {
-                    const daiTokens = (await liquidations.debt(user2, { from: buyer })).toString();
-                    // console.log(daiTokens); // 180
-                    const liquidatorDaiDebt = divRay(daiTokens, rate2);
-                    const liquidatorWethTokens = divRay(daiTokens, spot);
-                    // console.log(daiDebt.toString());
-                    // wethTokens = 100 ether + 1 wei
-
-                    await weth.deposit({ from: buyer, value: liquidatorWethTokens });
-                    await weth.approve(wethJoin.address, liquidatorWethTokens, { from: buyer });
-                    await wethJoin.join(buyer, liquidatorWethTokens, { from: buyer });
-                    await vat.frob(WETH, buyer, buyer, buyer, liquidatorWethTokens, liquidatorDaiDebt, { from: buyer });
-                    await daiJoin.exit(buyer, daiTokens, { from: buyer });
-
-                    await dai.approve(treasury.address, daiTokens, { from: buyer });
-
-                    await expectRevert(
-                        liquidations.buy(buyer, user2, subBN(daiTokens, 1000), { from: buyer }),
-                        "Liquidations: Below dust",
-                    );
-                });
-
                 describe("once the liquidation time is complete", () => {
                     beforeEach(async() => {
                         await helper.advanceTime(5000); // Better to test well beyond the limit
@@ -553,7 +531,29 @@ contract('Liquidations', async (accounts) =>  {
                             addBN(divRay(wethTokens, toRay(2)), 1).toString(), // divRay should round up
                             "Liquidator should have " + addBN(divRay(wethTokens, toRay(2)), 1) + " weth, instead has " + await weth.balanceOf(buyer, { from: buyer }),
                         );
-                    });                 
+                    });
+
+                    it("liquidations leaving dust revert", async() => {
+                        const daiTokens = (await liquidations.debt(user2, { from: buyer })).toString();
+                        // console.log(daiTokens); // 180
+                        const liquidatorDaiDebt = divRay(daiTokens, rate2);
+                        const liquidatorWethTokens = divRay(daiTokens, spot);
+                        // console.log(daiDebt.toString());
+                        // wethTokens = 100 ether + 1 wei
+
+                        await weth.deposit({ from: buyer, value: liquidatorWethTokens });
+                        await weth.approve(wethJoin.address, liquidatorWethTokens, { from: buyer });
+                        await wethJoin.join(buyer, liquidatorWethTokens, { from: buyer });
+                        await vat.frob(WETH, buyer, buyer, buyer, liquidatorWethTokens, liquidatorDaiDebt, { from: buyer });
+                        await daiJoin.exit(buyer, daiTokens, { from: buyer });
+
+                        await dai.approve(treasury.address, daiTokens, { from: buyer });
+
+                        await expectRevert(
+                            liquidations.buy(buyer, user2, subBN(daiTokens, 1000), { from: buyer }),
+                            "Liquidations: Below dust",
+                        );
+                    });
                 });
 
                 describe("with completed liquidations", () => {
