@@ -190,10 +190,7 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
         // Setup Controller
         controller = await Controller.new(
             vat.address,
-            weth.address,
-            dai.address,
             pot.address,
-            chai.address,
             treasury.address,
             { from: owner },
         );

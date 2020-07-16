@@ -3,10 +3,8 @@ pragma solidity ^0.6.10;
 
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IVat.sol";
 import "./interfaces/IPot.sol";
-import "./interfaces/IChai.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IController.sol";
 import "./interfaces/IYDai.sol";
@@ -38,11 +36,9 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     uint256 public constant DUST = 50000000000000000; // 0.05 ETH
 
     IVat internal _vat;
-    IERC20 internal _dai;
     IPot internal _pot;
     ITreasury internal _treasury;
 
-    mapping(bytes32 => IERC20) internal _token;                       // Weth or Chai
     mapping(uint256 => IYDai) public override series;                 // YDai series, indexed by maturity
     uint256[] public seriesIterator;                                // We need to know all the series
 
@@ -56,18 +52,12 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
 
     constructor (
         address vat_,
-        address weth_,
-        address dai_,
         address pot_,
-        address chai_,
         address treasury_
     ) public {
         _vat = IVat(vat_);
-        _dai = IERC20(dai_);
         _pot = IPot(pot_);
         _treasury = ITreasury(treasury_);
-        _token[WETH] = IERC20(weth_);
-        _token[CHAI] = IERC20(chai_);
     }
 
     modifier onlyLive() {
