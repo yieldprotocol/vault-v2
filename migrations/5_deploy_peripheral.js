@@ -35,8 +35,6 @@ module.exports = async (deployer, network, accounts) => {
   let ethProxyAddress;
   let unwindAddress;
 
-  const auctionTime = 3600; // TODO: Think where to store this parameter.
-
   if (network !== 'development') {
     vatAddress = fixed_addrs[network].vatAddress ;
     wethAddress = fixed_addrs[network].wethAddress;
@@ -72,7 +70,6 @@ module.exports = async (deployer, network, accounts) => {
     daiAddress,
     treasuryAddress,
     controllerAddress,
-    auctionTime,
   )
   liquidationsAddress = (await Liquidations.deployed()).address;
   await controller.orchestrate(liquidationsAddress);

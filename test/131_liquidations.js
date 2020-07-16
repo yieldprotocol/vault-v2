@@ -67,8 +67,6 @@ contract('Liquidations', async (accounts) =>  {
     let maturity1;
     let maturity2;
 
-    const auctionTime = 3600; // One hour
-
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
@@ -176,7 +174,6 @@ contract('Liquidations', async (accounts) =>  {
             dai.address,
             treasury.address,
             controller.address,
-            auctionTime,
             { from: owner },
         );
         await controller.orchestrate(liquidations.address, { from: owner });
@@ -411,39 +408,6 @@ contract('Liquidations', async (accounts) =>  {
                     await expectRevert(
                         liquidations.liquidate(user2, { from: buyer }),
                         "Liquidations: Vault is already in liquidation",
-                    );
-                });
-
-                it("doesn't allow to cancel liquidations on undercollateralized vaults", async() => {
-                    await expectRevert(
-                        liquidations.cancel(user2, { from: buyer }),
-                        "Liquidations: Vault is undercollateralized",
-                    );
-                });
-
-                it("liquidations can be cancelled for collateralized vaults", async() => {
-                    await weth.deposit({ from: user2, value: wethTokens });
-                    await weth.approve(treasury.address, wethTokens, { from: user2 });
-                    await controller.post(WETH, user2, user2, wethTokens, { from: user2 });
-    
-                    const event = (await liquidations.cancel(user2, { from: buyer })).logs[0];
-
-                    assert.equal(
-                        event.event,
-                        "Liquidation",
-                    );
-                    assert.equal(
-                        event.args.user,
-                        user2,
-                    );
-                    assert.equal(
-                        event.args.started,
-                        0,
-                    );
-                    assert.equal(
-                        await liquidations.liquidations(user2, { from: buyer }),
-                        0,
-                        "Liquidation should have been cancelled",
                     );
                 });
 

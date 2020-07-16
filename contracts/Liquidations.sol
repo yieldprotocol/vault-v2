@@ -22,15 +22,15 @@ import "./helpers/Orchestrated.sol";
 contract Liquidations is ILiquidations, Orchestrated(), DecimalMath {
     using SafeMath for uint256;
 
-    event Liquidation(address indexed user, uint256 started);
+    event Liquidation(address indexed user, uint256 started, uint256 collateral, uint256 debt);
 
     bytes32 public constant WETH = "ETH-A";
+    uint256 public constant AUCTION_TIME = 3600;
 
     IERC20 internal _dai;
     ITreasury internal _treasury;
     IController internal _controller;
-
-    uint256 public auctionTime;
+    
     mapping(address => uint256) public liquidations;
 
     bool public live = true;
@@ -38,18 +38,11 @@ contract Liquidations is ILiquidations, Orchestrated(), DecimalMath {
     constructor (
         address dai_,
         address treasury_,
-        address controller_,
-        uint256 auctionTime_
+        address controller_
     ) public {
         _dai = IERC20(dai_);
         _treasury = ITreasury(treasury_);
         _controller = IController(controller_);
-
-        require(
-            auctionTime_ > 0,
-            "Liquidations: Auction time is zero"
-        );
-        auctionTime = auctionTime_;
     }
 
     modifier onlyLive() {
@@ -80,19 +73,10 @@ contract Liquidations is ILiquidations, Orchestrated(), DecimalMath {
         liquidations[user] = now;
 
         // (uint256 userCollateral, uint256 userDebt) = _controller.erase(WETH, user);
+        // collateral[user] = userCollateral;
+        // debt[user] = userDebt;
 
-        emit Liquidation(user, liquidations[user]);
-    }
-
-    /// @dev Cancels a liquidation process
-    function cancel(address user) public {
-        require(
-            _controller.isCollateralized(WETH, user),
-            "Liquidations: Vault is undercollateralized"
-        );
-
-        delete liquidations[user];
-        emit Liquidation(user, liquidations[user]);
+        emit Liquidation(user, liquidations[user], 0, 0); /* , userCollateral, userDebt); */
     }
 
     /// @dev Liquidates a position. The caller pays the debt of `from`, and `buyer` receives an amount of collateral.
@@ -129,8 +113,8 @@ contract Liquidations is ILiquidations, Orchestrated(), DecimalMath {
         uint256 dividend1 = _controller.posted(WETH, user);
         uint256 divisor1 = _controller.totalDebtDai(WETH, user);
         uint256 term1 = dividend1.mul(UNIT).div(divisor1);
-        uint256 dividend3 = Math.min(auctionTime, now - liquidations[user]);
-        uint256 divisor3 = auctionTime.mul(2);
+        uint256 dividend3 = Math.min(AUCTION_TIME, now - liquidations[user]);
+        uint256 divisor3 = AUCTION_TIME.mul(2);
         uint256 term2 = UNIT.div(2);
         uint256 term3 = dividend3.mul(UNIT).div(divisor3);
         return divd(UNIT, muld(term1, term2.add(term3)));
