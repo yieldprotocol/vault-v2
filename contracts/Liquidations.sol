@@ -82,7 +82,10 @@ contract Liquidations is ILiquidations, Orchestrated(), DecimalMath {
     }
 
     /// @dev Liquidates a position. The caller pays the debt of `from`, and `buyer` receives an amount of collateral.
-    function buy(address from, address buyer, uint256 daiAmount) public onlyLive {
+    function buy(address from, address buyer, uint256 daiAmount)
+        public onlyLive
+        // TODO: onlyHolderOrDelegate
+    {
         require(
             debt[from] > 0,
             "Liquidations: Vault is not in liquidation"
@@ -96,7 +99,25 @@ contract Liquidations is ILiquidations, Orchestrated(), DecimalMath {
         debt[from] = debt[from].sub(daiAmount);
 
         _treasury.pullWeth(buyer, tokenAmount);
+
+        // TODO: Implement dust
     }
+
+    /// @dev Liquidates a position. The caller pays the debt of `from`, and `buyer` receives an amount of collateral.
+    function withdraw(address from, uint256 tokenAmount)
+        public onlyLive
+        // TODO: onlyHolderOrDelegate
+    {
+        require(
+            debt[from] == 0,
+            "Liquidations: User still in liquidation"
+        );
+
+        collateral[from] = collateral[from].sub(tokenAmount);
+
+        _treasury.pullWeth(from, tokenAmount);
+    }
+
 
     /// @dev Return price of a collateral unit, in dai, at the present moment, for a given user
     // dai = price * collateral
@@ -112,7 +133,7 @@ contract Liquidations is ILiquidations, Orchestrated(), DecimalMath {
         uint256 dividend1 = collateral[user];
         uint256 divisor1 = debt[user];
         uint256 term1 = dividend1.mul(UNIT).div(divisor1);
-        uint256 dividend3 = Math.min(AUCTION_TIME, now - liquidations[user]);
+        uint256 dividend3 = Math.min(AUCTION_TIME, now.sub(liquidations[user]));
         uint256 divisor3 = AUCTION_TIME.mul(2);
         uint256 term2 = UNIT.div(2);
         uint256 term3 = dividend3.mul(UNIT).div(divisor3);

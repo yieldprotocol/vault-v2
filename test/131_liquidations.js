@@ -541,6 +541,42 @@ contract('Liquidations', async (accounts) =>  {
                         );
                     });                 
                 });
+
+                describe("with completed liquidations", () => {
+                    beforeEach(async() => {
+                        const daiTokens = (await liquidations.debt(user2, { from: buyer })).toString();
+                        // console.log(daiTokens); // 180
+                        const liquidatorDaiDebt = divRay(daiTokens, rate2);
+                        const liquidatorWethTokens = divRay(daiTokens, spot);
+                        // console.log(daiDebt.toString());
+                        // wethTokens = 100 ether + 1 wei
+    
+                        await weth.deposit({ from: buyer, value: liquidatorWethTokens });
+                        await weth.approve(wethJoin.address, liquidatorWethTokens, { from: buyer });
+                        await wethJoin.join(buyer, liquidatorWethTokens, { from: buyer });
+                        await vat.frob(WETH, buyer, buyer, buyer, liquidatorWethTokens, liquidatorDaiDebt, { from: buyer });
+                        await daiJoin.exit(buyer, daiTokens, { from: buyer });
+    
+                        await dai.approve(treasury.address, daiTokens, { from: buyer });
+                        await liquidations.buy(user2, buyer, daiTokens, { from: buyer });
+                    });
+    
+                    it("liquidated users can retrieve any remaining collateral", async() => {
+                        const wethTokens = (await liquidations.collateral(user2, { from: buyer })).toString();
+                        await liquidations.withdraw(user2, wethTokens, { from: user2 });
+
+                        assert.equal(
+                            await liquidations.collateral(user2, { from: buyer }),
+                            0,
+                            "User collateral records should have been erased",
+                        );
+                        assert.equal(
+                            await weth.balanceOf(user2, { from: buyer }),
+                            wethTokens,
+                            "User should have the remaining weth",
+                        );
+                    });
+                });
             });
         });
     });
