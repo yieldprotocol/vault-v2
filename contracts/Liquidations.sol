@@ -7,6 +7,7 @@ import "./interfaces/IController.sol";
 import "./interfaces/ILiquidations.sol";
 import "./interfaces/ITreasury.sol";
 import "./helpers/DecimalMath.sol";
+import "./helpers/Delegable.sol";
 import "./helpers/Orchestrated.sol";
 import "@nomiclabs/buidler/console.sol";
 
@@ -19,7 +20,7 @@ import "@nomiclabs/buidler/console.sol";
  * Dai taken in payment will be handed over to Treasury, and collateral assets bought will be taken from Treasury as well.
  * If a vault becomes colalteralized, the liquidation can be stopped with `cancel`.
  */
-contract Liquidations is ILiquidations, Orchestrated(), DecimalMath {
+contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath {
     using SafeMath for uint256;
 
     event Liquidation(address indexed user, uint256 started, uint256 collateral, uint256 debt);
@@ -81,22 +82,22 @@ contract Liquidations is ILiquidations, Orchestrated(), DecimalMath {
         emit Liquidation(user, liquidations[user], userCollateral, userDebt);
     }
 
-    /// @dev Liquidates a position. The caller pays the debt of `from`, and `buyer` receives an amount of collateral.
-    function buy(address from, address buyer, uint256 daiAmount)
+    /// @dev Liquidates a position. The caller pays the debt of `user`, and `buyer` receives an amount of collateral.
+    function buy(address buyer, address user, uint256 daiAmount)
         public onlyLive
-        // TODO: onlyHolderOrDelegate
+        onlyHolderOrDelegate(buyer, "Controller: Only Holder Or Delegate")
     {
         require(
-            debt[from] > 0,
+            debt[user] > 0,
             "Liquidations: Vault is not in liquidation"
         );
         _treasury.pushDai(buyer, daiAmount);
 
         // calculate collateral to grab. Using divdrup stops rounding from leaving 1 stray wei in vaults.
-        uint256 tokenAmount = divdrup(daiAmount, price(from));
+        uint256 tokenAmount = divdrup(daiAmount, price(user));
 
-        collateral[from] = collateral[from].sub(tokenAmount);
-        debt[from] = debt[from].sub(daiAmount);
+        collateral[user] = collateral[user].sub(tokenAmount);
+        debt[user] = debt[user].sub(daiAmount);
 
         _treasury.pullWeth(buyer, tokenAmount);
 
@@ -104,9 +105,9 @@ contract Liquidations is ILiquidations, Orchestrated(), DecimalMath {
     }
 
     /// @dev Liquidates a position. The caller pays the debt of `from`, and `buyer` receives an amount of collateral.
-    function withdraw(address from, uint256 tokenAmount)
+    function withdraw(address from, address to, uint256 tokenAmount)
         public onlyLive
-        // TODO: onlyHolderOrDelegate
+        onlyHolderOrDelegate(from, "Controller: Only Holder Or Delegate")
     {
         require(
             debt[from] == 0,
@@ -115,7 +116,7 @@ contract Liquidations is ILiquidations, Orchestrated(), DecimalMath {
 
         collateral[from] = collateral[from].sub(tokenAmount);
 
-        _treasury.pullWeth(from, tokenAmount);
+        _treasury.pullWeth(to, tokenAmount);
     }
 
 
