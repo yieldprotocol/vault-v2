@@ -626,118 +626,41 @@ contract('Market', async (accounts) =>  {
                 // await yDai1.mature(); // TODO: Does it matter if the yDai is marked as mature?
             });
 
-            it("sells dai", async() => {
+            it("doesn't allow trading", async() => {
                 const oneToken = toWad(1);
-                await getDai(from, daiTokens1);
-    
-                // yDaiOutForDaiIn formula: https://www.desmos.com/calculator/dcjuj5lmmc - Set c to 1.0 to obtain Dai
-    
-                // Use preview to test price point at maturity as well
-                const yDaiOutPreview = await market.sellDaiPreview(oneToken, { from: operator });
 
-                // Let's advance another year to make sure the prices didn't change
-                await helper.advanceTime(31556952);
-                await helper.advanceBlock();
-
-                await dai.approve(market.address, oneToken, { from: from });
-                await market.sellDai(from, to, oneToken, { from: from });
-    
-                const expectedYDaiOut = (new BN(oneToken.toString())); // I just hate javascript
-                const yDaiOut = new BN(await yDai1.balanceOf(to));
-                expect(yDaiOut).to.be.bignumber.gt(expectedYDaiOut.mul(new BN('999')).div(new BN('1000')));
-                expect(yDaiOut).to.be.bignumber.lt(expectedYDaiOut.mul(new BN('1001')).div(new BN('1000')));
-                expect(yDaiOut).to.be.bignumber.gt(yDaiOutPreview.mul(new BN('999')).div(new BN('1000')));
-                expect(yDaiOut).to.be.bignumber.lt(yDaiOutPreview.mul(new BN('1001')).div(new BN('1000')));
-            });
-    
-            it("buys dai", async() => {
-                const oneToken = toWad(1);
-                await yDai1.mint(from, yDaiTokens1, { from: owner });
-    
-                // yDaiInForDaiOut formula: https://www.desmos.com/calculator/16c4dgxhst - Set c to 1.0 to obtain Dai
-    
-                // Use preview to test price point at maturity as well
-                const yDaiInPreview = await market.buyDaiPreview(oneToken, { from: operator });
-    
-                // Let's advance another year to make sure the prices didn't change
-                await helper.advanceTime(31556952);
-                await helper.advanceBlock();
-
-                await yDai1.approve(market.address, yDaiTokens1, { from: from });
-                await market.buyDai(from, to, oneToken, { from: from });
-    
-                assert.equal(
-                    await dai.balanceOf(to),
-                    oneToken.toString(),
-                    "Receiver account should have 1 dai token",
+                await expectRevert(
+                    market.sellDaiPreview(oneToken, { from: operator }),
+                    "Market: Too late",
                 );
-    
-                const expectedYDaiIn = (new BN(oneToken.toString())); // I just hate javascript
-                const yDaiIn = (new BN(yDaiTokens1.toString())).sub(new BN(await yDai1.balanceOf(from)));
-                expect(yDaiIn).to.be.bignumber.gt(expectedYDaiIn.mul(new BN('999')).div(new BN('1000')));
-                expect(yDaiIn).to.be.bignumber.lt(expectedYDaiIn.mul(new BN('1001')).div(new BN('1000')));
-                expect(yDaiIn).to.be.bignumber.gt(yDaiInPreview.mul(new BN('999')).div(new BN('1000')));
-                expect(yDaiIn).to.be.bignumber.lt(yDaiInPreview.mul(new BN('1001')).div(new BN('1000')));
-            });
-    
-            it("sells yDai", async() => {
-                const oneToken = toWad(1);
-                await yDai1.mint(from, oneToken, { from: owner });
-    
-                // daiOutForYDaiIn formula: https://www.desmos.com/calculator/9gi4atvazv - Set c to 1.0 to obtain Dai
-        
-                // Use preview to test price point at maturity as well
-                const daiOutPreview = await market.sellYDaiPreview(oneToken, { from: operator });
-    
-                // Let's advance another year to make sure the prices didn't change
-                await helper.advanceTime(31556952);
-                await helper.advanceBlock();
-
-                await yDai1.approve(market.address, oneToken, { from: from });
-                await market.sellYDai(from, to, oneToken, { from: from });
-    
-                assert.equal(
-                    await yDai1.balanceOf(from),
-                    0,
-                    "'From' wallet should have no yDai tokens",
+                await expectRevert(
+                    market.sellDai(from, to, oneToken, { from: from }),
+                    "Market: Too late",
                 );
-    
-                const expectedDaiOut = (new BN(oneToken.toString())); // I just hate javascript
-                const daiOut = new BN(await dai.balanceOf(to));
-                expect(daiOut).to.be.bignumber.gt(expectedDaiOut.mul(new BN('999')).div(new BN('1000')));
-                expect(daiOut).to.be.bignumber.lt(expectedDaiOut.mul(new BN('1001')).div(new BN('1000')));
-                expect(daiOut).to.be.bignumber.gt(daiOutPreview.mul(new BN('999')).div(new BN('1000')));
-                expect(daiOut).to.be.bignumber.lt(daiOutPreview.mul(new BN('1001')).div(new BN('1000')));
-            });
-    
-            it("buys yDai", async() => {
-                const oneToken = toWad(1);
-                await getDai(from, daiTokens1);
-    
-                // daiInForYDaiOut formula: https://www.desmos.com/calculator/gko3hvn5dd - Set c to 1.0 to obtain Dai
-
-                // Use preview to test price point at maturity as well
-                const daiInPreview = await market.buyYDaiPreview(oneToken, { from: operator });
-    
-                // Let's advance another year to make sure the prices didn't change
-                await helper.advanceTime(31556952);
-                await helper.advanceBlock();
-
-                await dai.approve(market.address, daiTokens1, { from: from });
-                await market.buyYDai(from, to, oneToken, { from: from });
-    
-                assert.equal(
-                    await yDai1.balanceOf(to),
-                    oneToken.toString(),
-                    "'To' wallet should have 1 yDai token",
+                await expectRevert(
+                    market.buyDaiPreview(oneToken, { from: operator }),
+                    "Market: Too late",
                 );
-    
-                const expectedDaiIn = (new BN(oneToken.toString())); // I just hate javascript
-                const daiIn = (new BN(daiTokens1.toString())).sub(new BN(await dai.balanceOf(from)));
-                expect(daiIn).to.be.bignumber.gt(expectedDaiIn.mul(new BN('999')).div(new BN('1000')));
-                expect(daiIn).to.be.bignumber.lt(expectedDaiIn.mul(new BN('1001')).div(new BN('1000')));
-                expect(daiIn).to.be.bignumber.gt(daiInPreview.mul(new BN('999')).div(new BN('1000')));
-                expect(daiIn).to.be.bignumber.lt(daiInPreview.mul(new BN('1001')).div(new BN('1000')));
+                await expectRevert(
+                    market.buyDai(from, to, oneToken, { from: from }),
+                    "Market: Too late",
+                );
+                await expectRevert(
+                    market.sellYDaiPreview(oneToken, { from: operator }),
+                    "Market: Too late",
+                );
+                await expectRevert(
+                    market.sellYDai(from, to, oneToken, { from: from }),
+                    "Market: Too late",
+                );
+                await expectRevert(
+                    market.buyYDaiPreview(oneToken, { from: operator }),
+                    "Market: Too late",
+                );
+                await expectRevert(
+                    market.buyYDai(from, to, oneToken, { from: from }),
+                    "Market: Too late",
+                );
             });
         });
     });
