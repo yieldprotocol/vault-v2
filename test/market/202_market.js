@@ -206,9 +206,18 @@ contract('Market', async (accounts) =>  {
         await getDai(user1, daiTokens1)
         await yDai1.mint(user1, yDaiTokens1, { from: owner });
 
+        console.log("        initial liquidity...");
+        console.log("        daiReserves: %d", daiTokens1.toString());
+        console.log("        yDaiReserves: %d", yDaiTokens1.toString());
+        console.log("        k: %d", await market.k());
+        const t = new BN((await web3.eth.getBlock(await web3.eth.getBlockNumber())).timestamp);
+        console.log("        timeTillMaturity: %d", (new BN(maturity).sub(t).toString()));
+
         await dai.approve(market.address, daiTokens1, { from: user1 });
         await yDai1.approve(market.address, yDaiTokens1, { from: user1 });
         await market.init(daiTokens1, yDaiTokens1, { from: user1 });
+
+        // Test with https://www.desmos.com/calculator/rvmg7soarl
 
         // TODO: How much should this be?
         /* assert.equal(
@@ -228,7 +237,12 @@ contract('Market', async (accounts) =>  {
             await dai.approve(market.address, daiReserves, { from: user1 });
             await yDai1.approve(market.address, yDaiReserves, { from: user1 });
             await market.init(daiReserves, yDaiReserves, { from: user1 });
-        });
+
+            const liquidityTokens = new BN(await market.balanceOf(user1));
+            const expectedLiquidityTokens = new BN(addBN(yDaiReserves, daiReserves).toString());
+            expect(expectedLiquidityTokens).to.be.bignumber.gt(liquidityTokens.mul(new BN('9999')).div(new BN('10000')));
+            expect(expectedLiquidityTokens).to.be.bignumber.lt(liquidityTokens.mul(new BN('10001')).div(new BN('10000')));
+        }); // TODO: Test with reserves at different levels.
 
         it("mints liquidity tokens", async() => {
             const liquidityTokens = new BN(await market.balanceOf(user1, { from: user1 }));
