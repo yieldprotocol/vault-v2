@@ -36,9 +36,6 @@ contract ControllerView is DecimalMath, SeriesRegistry {
     }
 
     /// @dev Maximum borrowing power of an user in dai for a given collateral
-    //
-    // powerOf[user](wad) = posted[user](wad) * oracle.price()(ray)
-    //
     function powerOf(bytes32 collateral, address user) public view returns (uint256) {
         // dai = price * collateral
         uint256 posted = _controller.posted(collateral, user);
@@ -70,18 +67,24 @@ contract ControllerView is DecimalMath, SeriesRegistry {
         }
     }
 
+    /// @dev Debt for a collateral, maturity and user, in YDai
+    /// Adding this one so that this contract can be used to display all data in Controller
+    function debtYDai(bytes32 collateral, uint256 maturity, address user) public view returns (uint256) {
+        return _controller.debtYDai(collateral, maturity, user);
+    }
+
+    /// @dev Debt for a collateral, maturity and user, in Dai
     function debtDai(bytes32 collateral, uint256 maturity, address user) public view returns (uint256) {
-        uint256 debtYDai = _controller.debtYDai(collateral, maturity, user);
         if (series[maturity].isMature()){
             if (collateral == WETH){
-                return muld(debtYDai, rateGrowth(maturity));
+                return muld(debtYDai(collateral, maturity, user), rateGrowth(maturity));
             } else if (collateral == CHAI) {
-                return muld(debtYDai, chiGrowth(maturity));
+                return muld(debtYDai(collateral, maturity, user), chiGrowth(maturity));
             } else {
                 revert("Controller: Unsupported collateral");
             }
         } else {
-            return debtYDai;
+            return debtYDai(collateral, maturity, user);
         }
     }
 

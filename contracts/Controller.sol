@@ -170,7 +170,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
 
     /// @dev Maximum borrowing power of an user in dai for a given collateral
     //
-    // powerOf[user](wad) = posted[user](wad) * oracle.price()(ray)
+    // powerOf[user](wad) = posted[user](wad) * price()(ray)
     //
     function powerOf(bytes32 collateral, address user) public returns (uint256) {
         // dai = price * collateral
