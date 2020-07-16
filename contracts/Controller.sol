@@ -328,41 +328,6 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         emit Borrowed(collateral, maturity, user, -int256(yDaiAmount)); // TODO: Watch for overflow
     }
 
-    /// @dev Removes collateral and debt for an user.
-    function grab(bytes32 collateral, address user, uint256 daiAmount, uint256 tokenAmount)
-        public override
-        validCollateral(collateral)
-        onlyOrchestrated("Controller: Not Authorized")
-    {
-
-        posted[collateral][user] = posted[collateral][user].sub(
-            tokenAmount,
-            "Controller: Not enough collateral"
-        );
-        systemPosted[collateral] = systemPosted[collateral].sub(tokenAmount);
-
-        uint256 totalGrabbed;
-        for (uint256 i = 0; i < seriesIterator.length; i += 1) {
-            uint256 maturity = seriesIterator[i];
-            uint256 thisGrab = Math.min(debtDai(collateral, maturity, user), daiAmount.sub(totalGrabbed));
-            totalGrabbed = totalGrabbed.add(thisGrab); // SafeMath shouldn't be needed
-            debtYDai[collateral][maturity][user] =
-                debtYDai[collateral][maturity][user].sub(inYDai(collateral, maturity, thisGrab)); // SafeMath shouldn't be needed
-            systemDebtYDai[collateral][maturity] =
-                systemDebtYDai[collateral][maturity].sub(inYDai(collateral, maturity, thisGrab)); // SafeMath shouldn't be needed
-            if (totalGrabbed == daiAmount) break;
-        } // We don't expect hundreds of maturities per controller
-        require(
-            totalGrabbed == daiAmount,
-            "Controller: Not enough user debt"
-        );
-
-        require( // TODO: Untested, but to be moved to Liquidations and refactored there
-            collateral != WETH || aboveDustOrZero(collateral, user),
-            "Controller: Below dust"
-        );
-    }
-
     /// @dev Removes all collateral and debt for an user, for a given collateral type.
     function erase(bytes32 collateral, address user)
         public override
