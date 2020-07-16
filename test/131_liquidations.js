@@ -323,7 +323,7 @@ contract('Liquidations', async (accounts) =>  {
 
         it("doesn't allow to liquidate collateralized vaults", async() => {
             await expectRevert(
-                liquidations.liquidate(WETH, user2, { from: buyer }),
+                liquidations.liquidate(user2, { from: buyer }),
                 "Liquidations: Vault is not undercollateralized",
             );
         });
@@ -331,7 +331,7 @@ contract('Liquidations', async (accounts) =>  {
         it("doesn't allow to buy from vaults not under liquidation", async() => {
             const debt = await controller.totalDebtDai.call(WETH, user2, { from: buyer });
             await expectRevert(
-                liquidations.buy(WETH, user2, buyer, debt, { from: buyer }),
+                liquidations.buy(user2, buyer, debt, { from: buyer }),
                 "Liquidations: Vault is not in liquidation",
             );
         });
@@ -379,17 +379,13 @@ contract('Liquidations', async (accounts) =>  {
 
             it("liquidations can be started", async() => {
                 // Setup yDai
-                const event = (await liquidations.liquidate(WETH, user2, { from: buyer })).logs[0];
+                const event = (await liquidations.liquidate(user2, { from: buyer })).logs[0];
                 const block = await web3.eth.getBlockNumber();
                 now = (await web3.eth.getBlock(block)).timestamp;
 
                 assert.equal(
                     event.event,
                     "Liquidation",
-                );
-                assert.equal(
-                    bytes32ToString(event.args.collateral),
-                    bytes32ToString(WETH),
                 );
                 assert.equal(
                     event.args.user,
@@ -400,27 +396,27 @@ contract('Liquidations', async (accounts) =>  {
                     now,
                 );
                 assert.equal(
-                    await liquidations.liquidations(WETH, user2, { from: buyer }),
+                    await liquidations.liquidations(user2, { from: buyer }),
                     now,
                 );
             });
 
             describe("with started liquidations", () => {
                 beforeEach(async() => {
-                    await liquidations.liquidate(WETH, user2, { from: buyer });
-                    await liquidations.liquidate(WETH, user3, { from: buyer });
+                    await liquidations.liquidate(user2, { from: buyer });
+                    await liquidations.liquidate(user3, { from: buyer });
                 });
     
                 it("doesn't allow to liquidate vaults already in liquidation", async() => {
                     await expectRevert(
-                        liquidations.liquidate(WETH, user2, { from: buyer }),
+                        liquidations.liquidate(user2, { from: buyer }),
                         "Liquidations: Vault is already in liquidation",
                     );
                 });
 
                 it("doesn't allow to cancel liquidations on undercollateralized vaults", async() => {
                     await expectRevert(
-                        liquidations.cancel(WETH, user2, { from: buyer }),
+                        liquidations.cancel(user2, { from: buyer }),
                         "Liquidations: Vault is undercollateralized",
                     );
                 });
@@ -430,15 +426,11 @@ contract('Liquidations', async (accounts) =>  {
                     await weth.approve(treasury.address, wethTokens, { from: user2 });
                     await controller.post(WETH, user2, user2, wethTokens, { from: user2 });
     
-                    const event = (await liquidations.cancel(WETH, user2, { from: buyer })).logs[0];
+                    const event = (await liquidations.cancel(user2, { from: buyer })).logs[0];
 
                     assert.equal(
                         event.event,
                         "Liquidation",
-                    );
-                    assert.equal(
-                        bytes32ToString(event.args.collateral),
-                        bytes32ToString(WETH),
                     );
                     assert.equal(
                         event.args.user,
@@ -449,7 +441,7 @@ contract('Liquidations', async (accounts) =>  {
                         0,
                     );
                     assert.equal(
-                        await liquidations.liquidations(WETH, user2, { from: buyer }),
+                        await liquidations.liquidations(user2, { from: buyer }),
                         0,
                         "Liquidation should have been cancelled",
                     );
@@ -470,7 +462,7 @@ contract('Liquidations', async (accounts) =>  {
                     await daiJoin.exit(buyer, daiTokens, { from: buyer });
 
                     await dai.approve(treasury.address, daiTokens, { from: buyer });
-                    await liquidations.buy(WETH, user2, buyer, daiTokens, { from: buyer });
+                    await liquidations.buy(user2, buyer, daiTokens, { from: buyer });
 
                     assert.equal(
                         await controller.totalDebtDai.call(WETH, user2, { from: buyer }),
@@ -505,7 +497,7 @@ contract('Liquidations', async (accounts) =>  {
                     await daiJoin.exit(buyer, daiTokens, { from: buyer });
 
                     await dai.approve(treasury.address, divRay(daiTokens, toRay(2)), { from: buyer });
-                    await liquidations.buy(WETH, user2, buyer, divRay(daiTokens, toRay(2)), { from: buyer });
+                    await liquidations.buy(user2, buyer, divRay(daiTokens, toRay(2)), { from: buyer });
 
                     assert.equal(
                         await controller.totalDebtDai.call(WETH, user2, { from: buyer }),
@@ -540,7 +532,7 @@ contract('Liquidations', async (accounts) =>  {
                     await daiJoin.exit(buyer, daiTokens, { from: buyer });
 
                     await dai.approve(treasury.address, daiTokens, { from: buyer });
-                    await liquidations.buy(WETH, user3, buyer, daiTokens, { from: buyer });
+                    await liquidations.buy(user3, buyer, daiTokens, { from: buyer });
 
                     assert.equal(
                         await controller.totalDebtDai.call(WETH, user3, { from: buyer }),
@@ -579,7 +571,7 @@ contract('Liquidations', async (accounts) =>  {
                         await daiJoin.exit(buyer, daiTokens, { from: buyer });
     
                         await dai.approve(treasury.address, daiTokens, { from: buyer });
-                        await liquidations.buy(WETH, user2, buyer, daiTokens, { from: buyer });
+                        await liquidations.buy(user2, buyer, daiTokens, { from: buyer });
     
                         assert.equal(
                             await controller.totalDebtDai.call(WETH, user2, { from: buyer }),
@@ -606,7 +598,7 @@ contract('Liquidations', async (accounts) =>  {
                         await daiJoin.exit(buyer, daiTokens, { from: buyer });
     
                         await dai.approve(treasury.address, divRay(daiTokens, toRay(2)), { from: buyer });
-                        await liquidations.buy(WETH, user2, buyer, divRay(daiTokens, toRay(2)), { from: buyer });
+                        await liquidations.buy(user2, buyer, divRay(daiTokens, toRay(2)), { from: buyer });
     
                         assert.equal(
                             await controller.totalDebtDai.call(WETH, user2, { from: buyer }),
@@ -633,7 +625,7 @@ contract('Liquidations', async (accounts) =>  {
                         await daiJoin.exit(buyer, daiTokens, { from: buyer });
     
                         await dai.approve(treasury.address, daiTokens, { from: buyer });
-                        await liquidations.buy(WETH, user3, buyer, daiTokens, { from: buyer });
+                        await liquidations.buy(user3, buyer, daiTokens, { from: buyer });
     
                         assert.equal(
                             await controller.totalDebtDai.call(WETH, user3, { from: buyer }),
