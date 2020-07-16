@@ -333,37 +333,6 @@ contract('Liquidations', async (accounts) =>  {
             );
         });
 
-        // TODO: Learn of to retrieve a false value from a transaction.
-        /* it("after maturity, users can become undercollateralized with a raise in rates", async() => {
-            // yDai matures
-            await helper.advanceTime(1000);
-            await helper.advanceBlock();
-            await yDai1.mature();
-            
-            await vat.fold(WETH, vat.address, subBN(rate2, rate1), { from: owner });
-
-            assert.equal(
-                await controller.isCollateralized.call(WETH, user2, { from: buyer }),
-                false,
-                "User2 should be undercollateralized",
-            );
-            assert.equal(
-                await controller.isCollateralized.call(CHAI, user2, { from: buyer }),
-                false,
-                "User2 should be undercollateralized",
-            );
-            assert.equal(
-                await controller.isCollateralized.call(WETH, user3, { from: buyer }),
-                false,
-                "User2 should be undercollateralized",
-            );
-            assert.equal(
-                await controller.isCollateralized.call(CHAI, user3, { from: buyer }),
-                false,
-                "User2 should be undercollateralized",
-            );
-        }); */
-
         describe("with uncollateralized vaults", () => {
             beforeEach(async() => {
                 // yDai matures
@@ -375,7 +344,10 @@ contract('Liquidations', async (accounts) =>  {
             });
 
             it("liquidations can be started", async() => {
-                // Setup yDai
+                const userCollateral = new BN(await controller.posted(WETH, user2, { from: buyer }));
+                const userDebt = (await controller.totalDebtDai.call(WETH, user2, { from: buyer }));
+                const dust = '50000000000000000'; // 0.05 ETH
+                
                 const event = (await liquidations.liquidate(user2, buyer, { from: buyer })).logs[0];
                 const block = await web3.eth.getBlockNumber();
                 now = (await web3.eth.getBlock(block)).timestamp;
@@ -395,6 +367,26 @@ contract('Liquidations', async (accounts) =>  {
                 assert.equal(
                     await liquidations.liquidations(user2, { from: buyer }),
                     now,
+                );
+                assert.equal(
+                    await liquidations.collateral(user2, { from: buyer }),
+                    subBN(userCollateral.toString(), dust).toString(),
+                );
+                assert.equal(
+                    await liquidations.debt(user2, { from: buyer }),
+                    userDebt.toString(),
+                );
+                assert.equal(
+                    await controller.posted(WETH, user2, { from: buyer }),
+                    0,
+                );
+                assert.equal(
+                    await controller.totalDebtDai.call(WETH, user2, { from: buyer }),
+                    0,
+                );
+                assert.equal(
+                    await liquidations.collateral(buyer, { from: buyer }),
+                    dust,
                 );
             });
 
