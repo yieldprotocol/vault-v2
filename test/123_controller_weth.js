@@ -8,7 +8,6 @@ const Jug = artifacts.require('Jug');
 const Pot = artifacts.require('Pot');
 const End = artifacts.require('End');
 const Chai = artifacts.require('Chai');
-const GasToken = artifacts.require('GasToken1');
 
 // Common
 const Treasury = artifacts.require('Treasury');
@@ -37,7 +36,6 @@ contract('Controller - Weth', async (accounts) =>  {
     let jug;
     let pot;
     let chai;
-    let gasToken;
     let treasury;
     let yDai1;
     let yDai2;
@@ -53,7 +51,7 @@ contract('Controller - Weth', async (accounts) =>  {
     let snapshotId;
 
     const limits = toRad(10000);
-    const spot  = toRay(1.5);
+    const spot  = toRay(150);
     let rate;
     let daiDebt;
     let daiTokens;
@@ -63,18 +61,18 @@ contract('Controller - Weth', async (accounts) =>  {
 
     // Convert eth to weth and use it to borrow `daiTokens` from MakerDAO
     // This function shadows and uses global variables, careful.
-    async function getDai(user, daiTokens){
+    async function getDai(user, _daiTokens){
         await vat.hope(daiJoin.address, { from: user });
         await vat.hope(wethJoin.address, { from: user });
 
-        const daiDebt = divRay(daiTokens, rate);
-        const wethTokens = divRay(daiTokens, spot);
+        const _daiDebt = divRay(_daiTokens, rate);
+        const _wethTokens = addBN(divRay(_daiTokens, spot), 1);
 
-        await weth.deposit({ from: user, value: wethTokens });
-        await weth.approve(wethJoin.address, wethTokens, { from: user });
-        await wethJoin.join(user, wethTokens, { from: user });
-        await vat.frob(WETH, user, user, user, wethTokens, daiDebt, { from: user });
-        await daiJoin.exit(user, daiTokens, { from: user });
+        await weth.deposit({ from: user, value: _wethTokens });
+        await weth.approve(wethJoin.address, _wethTokens, { from: user });
+        await wethJoin.join(user, _wethTokens, { from: user });
+        await vat.frob(WETH, user, user, user, _wethTokens, _daiDebt, { from: user });
+        await daiJoin.exit(user, _daiTokens, { from: user });
     }
 
     beforeEach(async() => {
@@ -124,9 +122,6 @@ contract('Controller - Weth', async (accounts) =>  {
             { from: owner },
         );
 
-        // Setup GasToken
-        gasToken = await GasToken.new();
-
         // Set treasury
         treasury = await Treasury.new(
             vat.address,
@@ -146,7 +141,6 @@ contract('Controller - Weth', async (accounts) =>  {
             dai.address,
             pot.address,
             chai.address,
-            gasToken.address,
             treasury.address,
             { from: owner },
         );
@@ -210,6 +204,15 @@ contract('Controller - Weth', async (accounts) =>  {
             "|" + ("" + sizeOfC).padStart(16, ' ') + "  |");
         console.log("    ·--------------------|------------------|------------------|------------------·");
         console.log();
+    });
+
+    it("it doesn't allow to post weth below dust level", async() => {
+        await weth.deposit({ from: user1, value: 1 });
+        await weth.approve(treasury.address, 1, { from: user1 }); 
+        await expectRevert(
+            controller.post(WETH, user1, user1, 1, { from: user1 }),
+            "Controller: Below dust",
+        );
     });
 
     it("allows users to post weth", async() => {
@@ -402,6 +405,17 @@ contract('Controller - Weth', async (accounts) =>  {
                 await controller.systemPosted(WETH),
                 wethTokens.mul(3).toString(),
                 "System should have " + wethTokens.mul(3) + " weth posted, instead has " + await controller.systemPosted(WETH),
+            );
+        });
+
+        it("doesn't allow to withdraw weth and leave collateral under dust", async() => {
+            // Repay maturity1 completely
+            const posted = (await controller.posted(WETH, user1, { from: user1 })).toString();
+            const toWithdraw = (new BN(posted)).sub(new BN('1000')).toString();
+
+            await expectRevert(
+                controller.withdraw(WETH, user1, user1, toWithdraw, { from: user1 }),
+                "Controller: Below dust",
             );
         });
 
@@ -920,7 +934,6 @@ contract('Controller - Weth', async (accounts) =>  {
                         "System should have debt",
                     );
                 });
-
 
                 it("allows to repay dai debt for others with own funds", async() => {
                     await getDai(user2, daiTokens);

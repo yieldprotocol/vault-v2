@@ -9,7 +9,6 @@ const Jug = artifacts.require('Jug');
 const Pot = artifacts.require('Pot');
 const End = artifacts.require('End');
 const Chai = artifacts.require('Chai');
-const GasToken = artifacts.require('GasToken1');
 
 // Common
 const Treasury = artifacts.require('Treasury');
@@ -38,7 +37,6 @@ contract('yDai', async (accounts) =>  {
     let pot;
     let end;
     let chai;
-    let gasToken;
     let treasury;
     let yDai0; // yDai0 matures on 2020-09-30
     let yDai4; // yDai4 is a test yDai that passed the maturity date
@@ -67,7 +65,6 @@ contract('yDai', async (accounts) =>  {
         jug = await Jug.at(await migrations.contracts(web3.utils.fromAscii("Jug")));
         pot = await Pot.at(await migrations.contracts(web3.utils.fromAscii("Pot")));
         chai = await Chai.at(await migrations.contracts(web3.utils.fromAscii("Chai")));
-        gasToken = await GasToken.at(await migrations.contracts(web3.utils.fromAscii("GasToken")));
         treasury = await Treasury.at(await migrations.contracts(web3.utils.fromAscii("Treasury")));
         
         spot  = (await vat.ilks(WETH)).spot;

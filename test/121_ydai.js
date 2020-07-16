@@ -8,7 +8,6 @@ const Jug = artifacts.require('Jug');
 const Pot = artifacts.require('Pot');
 const End = artifacts.require('End');
 const Chai = artifacts.require('Chai');
-const GasToken = artifacts.require('GasToken1');
 
 // Common
 const Treasury = artifacts.require('Treasury');
@@ -40,7 +39,6 @@ contract('yDai', async (accounts) =>  {
     let pot;
     let end;
     let chai;
-    let gasToken;
     let treasury;
     let yDai1;
     let yDai2;

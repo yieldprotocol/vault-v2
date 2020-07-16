@@ -6,27 +6,25 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IVat.sol";
 import "./interfaces/IPot.sol";
 import "./interfaces/IChai.sol";
-import "./interfaces/IGasToken.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IController.sol";
 import "./interfaces/IYDai.sol";
 import "./helpers/Delegable.sol";
 import "./helpers/DecimalMath.sol";
 import "./helpers/Orchestrated.sol";
-// import "@nomiclabs/buidler/console.sol";
+import "@nomiclabs/buidler/console.sol";
 
 /**
  * @dev The Controller manages collateral and debt levels for all users, and it is a major user entry point for the Yield protocol.
  * Controller keeps track of a number of yDai contracts.
  * Controller allows users to post and withdraw Chai and Weth collateral.
+ * Any transactions resulting in a user weth collateral below dust are reverted.
  * Controller allows users to borrow yDai against their Chai and Weth collateral.
  * Controller allows users to repay their yDai debt with yDai or with Dai.
  * Controller integrates with yDai contracts for minting yDai on borrowing, and burning yDai on repaying debt with yDai.
  * Controller relies on Treasury for all other asset transfers.
  * Controller allows orchestrated contracts to erase any amount of debt or collateral for an user. This is to be used during liquidations or during unwind.
  * Users can delegate the control of their accounts in Controllers to any address.
- * Controller takes a bond in GasTokens from users on their first borrow.
- * This bond is released to the account causing the user debt to drop to zero. This could be the users themselves closing their positions, or liquidators.
  */
 contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     using SafeMath for uint256;
@@ -36,11 +34,11 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
 
     bytes32 public constant CHAI = "CHAI";
     bytes32 public constant WETH = "ETH-A";
+    uint256 public constant DUST = 50000000000000000; // 0.05 ETH
 
     IVat internal _vat;
     IERC20 internal _dai;
     IPot internal _pot;
-    IGasToken internal _gasToken;
     ITreasury internal _treasury;
 
     mapping(bytes32 => IERC20) internal _token;                       // Weth or Chai
@@ -61,13 +59,11 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         address dai_,
         address pot_,
         address chai_,
-        address gasToken_,
         address treasury_
     ) public {
         _vat = IVat(vat_);
         _dai = IERC20(dai_);
         _pot = IPot(pot_);
-        _gasToken = IGasToken(gasToken_);
         _treasury = ITreasury(treasury_);
         _token[WETH] = IERC20(weth_);
         _token[CHAI] = IERC20(chai_);
@@ -193,6 +189,11 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         return powerOf(collateral, user) >= totalDebtDai(collateral, user);
     }
 
+    /// @dev Return if the debt of an user is between zero and the dust level
+    function aboveDustOrZero(bytes32 collateral, address user) public returns (bool) {
+        return posted[collateral][user] == 0 || DUST < posted[collateral][user];
+    }
+
     /// @dev Takes collateral _token from `from` address, and credits it to `to` collateral account.
     // from --- Token ---> us(to)
     function post(bytes32 collateral, address from, address to, uint256 amount)
@@ -201,14 +202,19 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         onlyHolderOrDelegate(from, "Controller: Only Holder Or Delegate")
         onlyLive
     {
+        posted[collateral][to] = posted[collateral][to].add(amount);
+        systemPosted[collateral] = systemPosted[collateral].add(amount);
+
         if (collateral == WETH){ // TODO: Refactor Treasury to be `push(collateral, amount)`
+            require(
+                aboveDustOrZero(collateral, to),
+                "Controller: Below dust"
+            );
             _treasury.pushWeth(from, amount);
         } else if (collateral == CHAI) {
             _treasury.pushChai(from, amount);
         }
         
-        posted[collateral][to] = posted[collateral][to].add(amount);
-        systemPosted[collateral] = systemPosted[collateral].add(amount);
         emit Posted(collateral, to, int256(amount)); // TODO: Watch for overflow
     }
 
@@ -229,14 +235,15 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         );
 
         if (collateral == WETH){ // TODO: Refactor Treasury to be `pull(collateral, amount)`
+            require(
+                aboveDustOrZero(collateral, to),
+                "Controller: Below dust"
+            );
             _treasury.pullWeth(to, amount);
         } else if (collateral == CHAI) {
             _treasury.pullChai(to, amount);
         }
 
-        if (posted[collateral][from] == 0 && amount >= 0) {
-            returnBond(10);
-        }
         emit Posted(collateral, from, -int256(amount)); // TODO: Watch for overflow
     }
 
@@ -258,9 +265,6 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
             "Controller: No mature borrow"
         );
 
-        if (debtYDai[collateral][maturity][from] == 0 && yDaiAmount >= 0) {
-            lockBond(10);
-        }
         debtYDai[collateral][maturity][from] = debtYDai[collateral][maturity][from].add(yDaiAmount);
         systemDebtYDai[collateral][maturity] = systemDebtYDai[collateral][maturity].add(yDaiAmount);
 
@@ -268,6 +272,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
             isCollateralized(collateral, from),
             "Controller: Too much debt"
         );
+
         series[maturity].mint(to, yDaiAmount);
         emit Borrowed(collateral, maturity, from, int256(yDaiAmount)); // TODO: Watch for overflow
     }
@@ -317,13 +322,9 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     //                                          principal + interest
     //    
     function _repay(bytes32 collateral, uint256 maturity, address user, uint256 yDaiAmount) internal {
-        // `inDai` calculates the interest accrued for a given amount and series
-
         debtYDai[collateral][maturity][user] = debtYDai[collateral][maturity][user].sub(yDaiAmount);
         systemDebtYDai[collateral][maturity] = systemDebtYDai[collateral][maturity].sub(yDaiAmount);
-        if (debtYDai[collateral][maturity][user] == 0 && yDaiAmount >= 0) {
-            returnBond(10);
-        }
+
         emit Borrowed(collateral, maturity, user, -int256(yDaiAmount)); // TODO: Watch for overflow
     }
 
@@ -349,26 +350,16 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
                 debtYDai[collateral][maturity][user].sub(inYDai(collateral, maturity, thisGrab)); // SafeMath shouldn't be needed
             systemDebtYDai[collateral][maturity] =
                 systemDebtYDai[collateral][maturity].sub(inYDai(collateral, maturity, thisGrab)); // SafeMath shouldn't be needed
-            if (debtYDai[collateral][maturity][user] == 0){
-                returnBond(10);
-            }
             if (totalGrabbed == daiAmount) break;
         } // We don't expect hundreds of maturities per controller
         require(
             totalGrabbed == daiAmount,
             "Controller: Not enough user debt"
         );
-    }
 
-    /// @dev Locks a liquidation bond in gas tokens
-    function lockBond(uint256 value) internal {
-        if (!_gasToken.transferFrom(msg.sender, address(this), value)) {
-            _gasToken.mint(value);
-        }
-    }
-
-    /// @dev Frees a liquidation bond in gas tokens
-    function returnBond(uint256 value) internal {
-        _gasToken.transfer(msg.sender, value);
+        require( // TODO: Untested, but to be moved to Liquidations and refactored there
+            collateral != WETH || aboveDustOrZero(collateral, user),
+            "Controller: Below dust"
+        );
     }
 }
