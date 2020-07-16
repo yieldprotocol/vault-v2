@@ -43,7 +43,15 @@ contract Market is IMarket, ERC20, Delegable {
         internal pure returns (uint128)
     {
         uint128 c = a + b;
-        require(c >= a, "Market: Addition overflow");
+        require(c >= a, "Market: Dai reserves too high");
+
+        return c;
+    }
+
+    /// @dev Overflow-protected substraction, from OpenZeppelin
+    function sub(uint128 a, uint128 b) internal pure returns (uint128) {
+        require(b <= a, "Market: yDai reserves too low");
+        uint128 c = a - b;
 
         return c;
     }
@@ -138,7 +146,7 @@ contract Market is IMarket, ERC20, Delegable {
         );
 
         require(
-            yDaiReserves >= add(daiReserves, daiIn),
+            sub(yDaiReserves, yDaiOut) >= add(daiReserves, daiIn),
             "Market: yDai reserves too low"
         );
 
@@ -254,7 +262,7 @@ contract Market is IMarket, ERC20, Delegable {
         );
 
         require(
-            yDaiReserves >= add(daiReserves, daiIn),
+            sub(yDaiReserves, yDaiOut) >= add(daiReserves, daiIn),
             "Market: yDai reserves too low"
         );
 
