@@ -365,7 +365,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
 
     /// @dev Removes all collateral and debt for an user, for a given collateral type.
     function erase(bytes32 collateral, address user)
-        public /* override */
+        public override
         validCollateral(collateral)
         onlyOrchestrated("Controller: Not Authorized")
         returns (uint256, uint256)
