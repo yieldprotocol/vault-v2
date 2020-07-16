@@ -43,7 +43,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
 
     mapping(bytes32 => IERC20) internal _token;                       // Weth or Chai
     mapping(uint256 => IYDai) public override series;                 // YDai series, indexed by maturity
-    uint256[] internal seriesIterator;                                // We need to know all the series
+    uint256[] public seriesIterator;                                // We need to know all the series
 
     mapping(bytes32 => mapping(address => uint256)) public override posted;               // Collateral posted by each user
     mapping(bytes32 => mapping(uint256 => mapping(address => uint256))) public override debtYDai;  // Debt owed by each user, by series

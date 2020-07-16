@@ -5,7 +5,7 @@ import "../interfaces/IYDai.sol";
 
 contract SeriesRegistry is Ownable() {
     mapping(uint256 => IYDai) public series;                 // YDai series, indexed by maturity
-    uint256[] internal seriesIterator;                                // We need to know all the series
+    uint256[] public seriesIterator;                                // We need to know all the series
 
     /// @dev Only series added through `addSeries` are valid.
     modifier validSeries(uint256 maturity) {
