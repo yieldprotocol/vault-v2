@@ -156,7 +156,7 @@ contract Unwind is Ownable(), DecimalMath {
     }
 
     /// @dev Returns the profit accummulated in the system due to yDai supply and debt, in chai, for a given chi and rate.
-    function _yDaiProfit(uint256 chi, uint256 rate) internal returns (uint256) {
+    function _yDaiProfit(uint256 chi, uint256 rate) internal view returns (uint256) {
         uint256 profit;
 
         for (uint256 i = 0; i < _controller.totalSeries(); i += 1) {
