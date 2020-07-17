@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.6.10;
 
 import "@openzeppelin/contracts/math/Math.sol";
@@ -5,10 +6,8 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../interfaces/IVat.sol";
 import "../interfaces/IPot.sol";
 import "../interfaces/IController.sol";
-import "../interfaces/ISeriesRegistry.sol";
 import "../interfaces/IYDai.sol";
 import "../helpers/DecimalMath.sol";
-import "../helpers/SeriesRegistry.sol";
 import "@nomiclabs/buidler/console.sol";
 
 contract ControllerView is DecimalMath {
@@ -20,7 +19,6 @@ contract ControllerView is DecimalMath {
     IVat internal _vat;
     IPot internal _pot;
     IController internal _controller;
-    ISeriesRegistry internal _seriesRegistry;
 
     constructor (
         address vat_,
@@ -30,7 +28,6 @@ contract ControllerView is DecimalMath {
         _vat = IVat(vat_);
         _pot = IPot(pot_);
         _controller = IController(controller_);
-        _seriesRegistry = ISeriesRegistry(controller_);
     }
 
     /// @dev Only valid collateral types are Weth and Chai.
@@ -102,7 +99,7 @@ contract ControllerView is DecimalMath {
         public view
         returns(uint256)
     {
-        IYDai yDai = _seriesRegistry.series(maturity);
+        IYDai yDai = _controller.series(maturity);
         if (yDai.isMature() != true) return yDai.chi0();
         return Math.min(rateGrowth(maturity), divd(_pot.chi(), yDai.chi0()));
     }
@@ -117,7 +114,7 @@ contract ControllerView is DecimalMath {
         public view
         returns(uint256)
     {
-        IYDai yDai = _seriesRegistry.series(maturity);
+        IYDai yDai = _controller.series(maturity);
         if (yDai.isMature() != true) return yDai.rate0();
         else {
             (, uint256 rateNow,,,) = _vat.ilks(WETH);
@@ -131,7 +128,7 @@ contract ControllerView is DecimalMath {
         validCollateral(collateral)
         returns (uint256)
     {
-        IYDai yDai = _seriesRegistry.series(maturity);
+        IYDai yDai = _controller.series(maturity);
         if (yDai.isMature()){
             if (collateral == WETH){
                 return muld(debtYDai(collateral, maturity, user), rateGrowth(maturity));
@@ -152,8 +149,8 @@ contract ControllerView is DecimalMath {
         returns (uint256)
     {
         uint256 totalDebt;
-        for (uint256 i = 0; i < _seriesRegistry.totalSeries(); i += 1) {
-            uint256 maturity = _seriesRegistry.seriesIterator(i);
+        for (uint256 i = 0; i < _controller.totalSeries(); i += 1) {
+            uint256 maturity = _controller.seriesIterator(i);
             totalDebt = totalDebt + debtDai(collateral, maturity, user);
         }
         return totalDebt;

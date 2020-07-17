@@ -5,6 +5,10 @@ import "./IYDai.sol";
 
 
 interface IController {
+    function series(uint256) external view returns (IYDai);
+    function seriesIterator(uint256) external view returns (uint256);
+    function totalSeries() external view returns (uint256);
+    function containsSeries(uint256) external view returns (bool);
     function systemPosted(bytes32) external view returns (uint256);
     function systemDebtYDai(bytes32, uint256) external view returns (uint256);
     function posted(bytes32, address) external view returns (uint256);

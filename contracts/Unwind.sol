@@ -4,7 +4,6 @@ pragma solidity ^0.6.10;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./helpers/SeriesRegistry.sol";
 import "./interfaces/IVat.sol";
 import "./interfaces/IDaiJoin.sol";
 import "./interfaces/IGemJoin.sol";
@@ -45,7 +44,6 @@ contract Unwind is Ownable(), DecimalMath {
     IChai internal _chai;
     ITreasury internal _treasury;
     IController internal _controller;
-    ISeriesRegistry internal _seriesRegistry;
     ILiquidations internal _liquidations;
 
     uint256 public _fix; // Dai to weth price on DSS Unwind
@@ -79,7 +77,6 @@ contract Unwind is Ownable(), DecimalMath {
         _chai = IChai(chai_);
         _treasury = ITreasury(treasury_);
         _controller = IController(controller_);
-        _seriesRegistry = ISeriesRegistry(controller_); // Controller is also the series registry
         _liquidations = ILiquidations(liquidations_);
 
         _vat.hope(address(_treasury));
@@ -162,9 +159,9 @@ contract Unwind is Ownable(), DecimalMath {
     function _yDaiProfit(uint256 chi, uint256 rate) internal returns (uint256) {
         uint256 profit;
 
-        for (uint256 i = 0; i < _seriesRegistry.totalSeries(); i += 1) {
-            uint256 maturity = _seriesRegistry.seriesIterator(i);
-            IYDai yDai = _seriesRegistry.series(maturity);
+        for (uint256 i = 0; i < _controller.totalSeries(); i += 1) {
+            uint256 maturity = _controller.seriesIterator(i);
+            IYDai yDai = _controller.series(maturity);
 
             uint256 chi0;
             uint256 rate0;
@@ -248,7 +245,7 @@ contract Unwind is Ownable(), DecimalMath {
     /// @dev Redeems YDai for weth
     function redeem(uint256 maturity, uint256 yDaiAmount, address user) public {
         require(settled && cashedOut, "Unwind: Not ready");
-        IYDai yDai = _seriesRegistry.series(maturity);
+        IYDai yDai = _controller.series(maturity);
         yDai.burn(user, yDaiAmount);
         _weth.transfer(
             user,

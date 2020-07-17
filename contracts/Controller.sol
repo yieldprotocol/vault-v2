@@ -13,7 +13,6 @@ import "./interfaces/IYDai.sol";
 import "./helpers/Delegable.sol";
 import "./helpers/DecimalMath.sol";
 import "./helpers/Orchestrated.sol";
-import "./helpers/SeriesRegistry.sol";
 import "@nomiclabs/buidler/console.sol";
 
 /**
@@ -28,7 +27,7 @@ import "@nomiclabs/buidler/console.sol";
  * Controller allows orchestrated contracts to erase any amount of debt or collateral for an user. This is to be used during liquidations or during unwind.
  * Users can delegate the control of their accounts in Controllers to any address.
  */
-contract Controller is IController, Orchestrated(), Delegable(), DecimalMath, SeriesRegistry {
+contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     using SafeMath for uint256;
 
     event Posted(bytes32 indexed collateral, address indexed user, int256 amount);
@@ -44,6 +43,9 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath, Se
     ITreasury internal _treasury;
 
     mapping(bytes32 => IERC20) internal _token;                       // Weth or Chai
+
+    mapping(uint256 => IYDai) public override series;                 // YDai series, indexed by maturity
+    uint256[] public override seriesIterator;                         // We need to know all the series
 
     mapping(bytes32 => mapping(address => uint256)) public override posted;               // Collateral posted by each user
     mapping(bytes32 => mapping(uint256 => mapping(address => uint256))) public override debtYDai;  // Debt owed by each user, by series
@@ -81,6 +83,36 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath, Se
             "Controller: Unrecognized collateral"
         );
         _;
+    }
+
+    /// @dev Only series added through `addSeries` are valid.
+    modifier validSeries(uint256 maturity) {
+        require(
+            containsSeries(maturity),
+            "Controller: Unrecognized series"
+        );
+        _;
+    }
+
+    /// @dev Return the total number of series registered
+    function totalSeries() public view override returns (uint256) {
+        return seriesIterator.length;
+    }
+
+    /// @dev Returns if a series has been added to the Controller, for a given series identified by maturity
+    function containsSeries(uint256 maturity) public view override returns (bool) {
+        return address(series[maturity]) != address(0);
+    }
+
+    /// @dev Adds an yDai series to this Controller
+    function addSeries(address yDaiContract) public onlyOwner {
+        uint256 maturity = IYDai(yDaiContract).maturity();
+        require(
+            !containsSeries(maturity),
+            "Controller: Series already added"
+        );
+        series[maturity] = IYDai(yDaiContract);
+        seriesIterator.push(maturity);
     }
 
     /// @dev Disables post, withdraw, borrow and repay. To be called only when Treasury shuts down.
@@ -165,7 +197,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath, Se
     }
 
     /// @dev Return if the debt of an user is between zero and the dust level
-    function aboveDustOrZero(bytes32 collateral, address user) public returns (bool) {
+    function aboveDustOrZero(bytes32 collateral, address user) public view returns (bool) {
         return posted[collateral][user] == 0 || DUST < posted[collateral][user];
     }
 
