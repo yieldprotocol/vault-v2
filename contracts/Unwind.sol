@@ -4,6 +4,7 @@ pragma solidity ^0.6.10;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./helpers/SeriesRegistry.sol";
 import "./interfaces/IVat.sol";
 import "./interfaces/IDaiJoin.sol";
 import "./interfaces/IGemJoin.sol";
@@ -28,7 +29,7 @@ import "./helpers/DecimalMath.sol";
  * Users can also redeem here their yDai for a Weth payout, using `redeem`.
  * Protocol profits can be transferred to the beneficiary also at this point, using `skimDssShutdown`.
  */
-contract Unwind is Ownable(), DecimalMath {
+contract Unwind is Ownable(), DecimalMath, SeriesRegistry {
     using SafeMath for uint256;
 
     bytes32 public constant CHAI = "CHAI";
@@ -45,10 +46,6 @@ contract Unwind is Ownable(), DecimalMath {
     ITreasury internal _treasury;
     IController internal _controller;
     ILiquidations internal _liquidations;
-
-    // TODO: Series related code is repeated with Controller, can be extracted into a parent class.
-    mapping(uint256 => IYDai) public series; // YDai series, indexed by maturity
-    uint256[] internal seriesIterator;       // We need to know all the series
 
     uint256 public _fix; // Dai to weth price on DSS Unwind
     uint256 public _chi; // Chai to dai price on DSS Unwind
@@ -100,22 +97,6 @@ contract Unwind is Ownable(), DecimalMath {
             "Treasury: Cast overflow"
         );
         return int256(x);
-    }
-
-    /// @dev Returns if a series has been added to the Controller, for a given series identified by maturity
-    function containsSeries(uint256 maturity) public view returns (bool) {
-        return address(series[maturity]) != address(0);
-    }
-
-    /// @dev Adds an yDai series to this Controller
-    function addSeries(address yDaiContract) public onlyOwner {
-        uint256 maturity = IYDai(yDaiContract).maturity();
-        require(
-            !containsSeries(maturity),
-            "Controller: Series already added"
-        );
-        series[maturity] = IYDai(yDaiContract);
-        seriesIterator.push(maturity);
     }
 
     /// @dev Disables treasury and controller.
@@ -265,7 +246,7 @@ contract Unwind is Ownable(), DecimalMath {
     /// @dev Redeems YDai for weth
     function redeem(uint256 maturity, uint256 yDaiAmount, address user) public {
         require(settled && cashedOut, "Unwind: Not ready");
-        IYDai yDai = _controller.series(maturity);
+        IYDai yDai = series[maturity];
         yDai.burn(user, yDaiAmount);
         _weth.transfer(
             user,

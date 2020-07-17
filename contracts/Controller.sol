@@ -13,6 +13,7 @@ import "./interfaces/IYDai.sol";
 import "./helpers/Delegable.sol";
 import "./helpers/DecimalMath.sol";
 import "./helpers/Orchestrated.sol";
+import "./helpers/SeriesRegistry.sol";
 import "@nomiclabs/buidler/console.sol";
 
 /**
@@ -27,7 +28,7 @@ import "@nomiclabs/buidler/console.sol";
  * Controller allows orchestrated contracts to erase any amount of debt or collateral for an user. This is to be used during liquidations or during unwind.
  * Users can delegate the control of their accounts in Controllers to any address.
  */
-contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
+contract Controller is IController, Orchestrated(), Delegable(), DecimalMath, SeriesRegistry {
     using SafeMath for uint256;
 
     event Posted(bytes32 indexed collateral, address indexed user, int256 amount);
@@ -43,8 +44,6 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     ITreasury internal _treasury;
 
     mapping(bytes32 => IERC20) internal _token;                       // Weth or Chai
-    mapping(uint256 => IYDai) public override series;                 // YDai series, indexed by maturity
-    uint256[] public seriesIterator;                                // We need to know all the series
 
     mapping(bytes32 => mapping(address => uint256)) public override posted;               // Collateral posted by each user
     mapping(bytes32 => mapping(uint256 => mapping(address => uint256))) public override debtYDai;  // Debt owed by each user, by series
@@ -75,15 +74,6 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         _;
     }
 
-    /// @dev Only series added through `addSeries` are valid.
-    modifier validSeries(uint256 maturity) {
-        require(
-            containsSeries(maturity),
-            "Controller: Unrecognized series"
-        );
-        _;
-    }
-
     /// @dev Only valid collateral types are Weth and Chai.
     modifier validCollateral(bytes32 collateral) {
         require(
@@ -91,22 +81,6 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
             "Controller: Unrecognized collateral"
         );
         _;
-    }
-
-    /// @dev Returns if a series has been added to the Controller, for a given series identified by maturity
-    function containsSeries(uint256 maturity) public view returns (bool) {
-        return address(series[maturity]) != address(0);
-    }
-
-    /// @dev Adds an yDai series to this Controller
-    function addSeries(address yDaiContract) public onlyOwner {
-        uint256 maturity = IYDai(yDaiContract).maturity();
-        require(
-            !containsSeries(maturity),
-            "Controller: Series already added"
-        );
-        series[maturity] = IYDai(yDaiContract);
-        seriesIterator.push(maturity);
     }
 
     /// @dev Disables post, withdraw, borrow and repay. To be called only when Treasury shuts down.
