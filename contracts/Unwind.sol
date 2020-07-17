@@ -29,7 +29,7 @@ import "./helpers/DecimalMath.sol";
  * Users can also redeem here their yDai for a Weth payout, using `redeem`.
  * Protocol profits can be transferred to the beneficiary also at this point, using `skimDssShutdown`.
  */
-contract Unwind is Ownable(), DecimalMath, SeriesRegistry {
+contract Unwind is Ownable(), DecimalMath {
     using SafeMath for uint256;
 
     bytes32 public constant CHAI = "CHAI";

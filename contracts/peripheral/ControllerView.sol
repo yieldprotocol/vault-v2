@@ -5,11 +5,13 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../interfaces/IVat.sol";
 import "../interfaces/IPot.sol";
 import "../interfaces/IController.sol";
+import "../interfaces/ISeriesRegistry.sol";
+import "../interfaces/IYDai.sol";
 import "../helpers/DecimalMath.sol";
 import "../helpers/SeriesRegistry.sol";
 import "@nomiclabs/buidler/console.sol";
 
-contract ControllerView is DecimalMath, SeriesRegistry {
+contract ControllerView is DecimalMath {
     using SafeMath for uint256;
 
     bytes32 public constant CHAI = "CHAI";
@@ -18,6 +20,7 @@ contract ControllerView is DecimalMath, SeriesRegistry {
     IVat internal _vat;
     IPot internal _pot;
     IController internal _controller;
+    ISeriesRegistry internal _seriesRegistry;
 
     constructor (
         address vat_,
@@ -27,6 +30,7 @@ contract ControllerView is DecimalMath, SeriesRegistry {
         _vat = IVat(vat_);
         _pot = IPot(pot_);
         _controller = IController(controller_);
+        _seriesRegistry = ISeriesRegistry(controller_);
     }
 
     /// @dev Only valid collateral types are Weth and Chai.
@@ -98,8 +102,9 @@ contract ControllerView is DecimalMath, SeriesRegistry {
         public view
         returns(uint256)
     {
-        if (series[maturity].isMature() != true) return series[maturity].chi0();
-        return Math.min(rateGrowth(maturity), divd(_pot.chi(), series[maturity].chi0()));
+        IYDai yDai = _seriesRegistry.series(maturity);
+        if (yDai.isMature() != true) return yDai.chi0();
+        return Math.min(rateGrowth(maturity), divd(_pot.chi(), yDai.chi0()));
     }
 
     /// @dev Rate differential between maturity and now in RAY. Returns 1.0 if not mature.
@@ -112,10 +117,11 @@ contract ControllerView is DecimalMath, SeriesRegistry {
         public view
         returns(uint256)
     {
-        if (series[maturity].isMature() != true) return series[maturity].rate0();
+        IYDai yDai = _seriesRegistry.series(maturity);
+        if (yDai.isMature() != true) return yDai.rate0();
         else {
             (, uint256 rateNow,,,) = _vat.ilks(WETH);
-            return divd(rateNow, series[maturity].rate0());
+            return divd(rateNow, yDai.rate0());
         }
     }
 
@@ -125,7 +131,8 @@ contract ControllerView is DecimalMath, SeriesRegistry {
         validCollateral(collateral)
         returns (uint256)
     {
-        if (series[maturity].isMature()){
+        IYDai yDai = _seriesRegistry.series(maturity);
+        if (yDai.isMature()){
             if (collateral == WETH){
                 return muld(debtYDai(collateral, maturity, user), rateGrowth(maturity));
             } else if (collateral == CHAI) {
@@ -145,8 +152,9 @@ contract ControllerView is DecimalMath, SeriesRegistry {
         returns (uint256)
     {
         uint256 totalDebt;
-        for (uint256 i = 0; i < seriesIterator.length; i += 1) {
-            totalDebt = totalDebt + debtDai(collateral, seriesIterator[i], user);
+        for (uint256 i = 0; i < _seriesRegistry.totalSeries(); i += 1) {
+            uint256 maturity = _seriesRegistry.seriesIterator(i);
+            totalDebt = totalDebt + debtDai(collateral, maturity, user);
         }
         return totalDebt;
     }
