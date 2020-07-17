@@ -42,6 +42,6 @@ contract EthProxy is Delegable() {
         public onlyHolderOrDelegate(from, "EthProxy: Only Holder Or Delegate") {
         _controller.withdraw(WETH, from, address(this), amount);
         _weth.withdraw(amount);
-        require(to.transfer(amount));
+        to.transfer(amount);
     }
 }
