@@ -97,16 +97,6 @@ contract('ERC20Permit', async (accounts) =>  {
     })
 })
 
-// Signs a message with the provided account and returns the signature in {v,r,s} form
-async function sign(web3, account, msg) {
-    const sig = await web3.eth.sign(msg, account);
-    return {
-        r: sig.slice(0, 66),
-        s: "0x" + sig.slice(66, 130),
-        v: "0x" + sig.slice(130, 132),
-    }
-}
-
 // Returns the EIP712 hash which should be signed by the user
 // in order to make a call to `permit`
 function getPermitDigest(
