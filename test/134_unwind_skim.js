@@ -70,8 +70,6 @@ contract('Unwind - Skim', async (accounts) =>  {
     const fix  = divRay(toRay(1.0), mulRay(spot, toRay(1.1)));
     const fixedWeth = mulRay(daiTokens, fix);
 
-    const auctionTime = 3600; // One hour
-
     // Convert eth to weth and use it to borrow `daiTokens` from MakerDAO
     // This function shadows and uses global variables, careful.
     async function getDai(user, daiTokens){
@@ -195,10 +193,7 @@ contract('Unwind - Skim', async (accounts) =>  {
         // Setup Controller
         controller = await Controller.new(
             vat.address,
-            weth.address,
-            dai.address,
             pot.address,
-            chai.address,
             treasury.address,
             { from: owner },
         );
@@ -249,7 +244,6 @@ contract('Unwind - Skim', async (accounts) =>  {
             dai.address,
             treasury.address,
             controller.address,
-            auctionTime,
             { from: owner },
         );
         await controller.orchestrate(liquidations.address, { from: owner });

@@ -70,8 +70,6 @@ contract('Unwind - Treasury', async (accounts) =>  {
     const fix  = divRay(toRay(1.1), spot);
     const fixedWeth = mulRay(daiTokens, fix);
 
-    const auctionTime = 3600; // One hour
-
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
@@ -134,10 +132,7 @@ contract('Unwind - Treasury', async (accounts) =>  {
         // Setup Controller
         controller = await Controller.new(
             vat.address,
-            weth.address,
-            dai.address,
             pot.address,
-            chai.address,
             treasury.address,
             { from: owner },
         );
@@ -188,7 +183,6 @@ contract('Unwind - Treasury', async (accounts) =>  {
             dai.address,
             treasury.address,
             controller.address,
-            auctionTime,
             { from: owner },
         );
         await controller.orchestrate(liquidations.address, { from: owner });
