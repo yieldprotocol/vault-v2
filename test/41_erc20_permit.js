@@ -15,7 +15,8 @@ const { ecsign } = require('ethereumjs-util')
 const PERMIT_TYPEHASH = keccak256(toUtf8Bytes('Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)'));
 
 contract('ERC20Permit', async (accounts) =>  {
-    // this is the first account that buidler craetes
+    // this is the first account that buidler creates
+    // https://github.com/nomiclabs/buidler/blob/d399a60452f80a6e88d974b2b9205f4894a60d29/packages/buidler-core/src/internal/core/config/default-config.ts#L41
     const ownerPrivateKey = Buffer.from("c5e8f61d1ab959b397eecc0a37a6517b8e67a0e7cf1f4bce5591f3ed80199122", 'hex')
 
     let [ owner, user ] = accounts;
@@ -80,11 +81,17 @@ contract('ERC20Permit', async (accounts) =>  {
             approve.value,
         );
 
-
         // Re-using the same sig doesn't work since the nonce has been incremented
         // on the contract level for replay-protection
         await expectRevert(
             token.permit(approve.owner, approve.spender, approve.value, deadline, v, r, s),
+            "ERC20Permit: invalid signature",
+        )
+
+        // invalid ecrecover's return address(0x0), so we must also guarantee that
+        // this case fails
+        await expectRevert(
+            token.permit("0x0000000000000000000000000000000000000000", approve.spender, approve.value, deadline, "0x99", r, s),
             "ERC20Permit: invalid signature",
         )
     })

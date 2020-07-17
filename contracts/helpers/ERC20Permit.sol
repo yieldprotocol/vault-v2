@@ -66,7 +66,10 @@ abstract contract ERC20Permit is ERC20, IERC2612 {
         );
 
         address signer = ecrecover(hash, v, r, s);
-        require(signer == owner, "ERC20Permit: invalid signature");
+        require(
+            signer != address(0) && signer == owner,
+            "ERC20Permit: invalid signature"
+        );
 
         _approve(owner, spender, amount);
     }
