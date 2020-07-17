@@ -180,7 +180,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         return powerOf(collateral, user) >= totalDebtDai(collateral, user);
     }
 
-    /// @dev Return if the debt of an user is between zero and the dust level
+    /// @dev Return if the collateral of an user is between zero and the dust level
     function aboveDustOrZero(bytes32 collateral, address user) public returns (bool) {
         return posted[collateral][user] == 0 || DUST < posted[collateral][user];
     }
@@ -319,38 +319,26 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         emit Borrowed(collateral, maturity, user, -int256(yDaiAmount)); // TODO: Watch for overflow
     }
 
-    /// @dev Removes collateral and debt for an user.
-    function grab(bytes32 collateral, address user, uint256 daiAmount, uint256 tokenAmount)
+    /// @dev Removes all collateral and debt for an user, for a given collateral type.
+    function erase(bytes32 collateral, address user)
         public override
         validCollateral(collateral)
         onlyOrchestrated("Controller: Not Authorized")
+        returns (uint256, uint256)
     {
+        uint256 userCollateral = posted[collateral][user];
+        systemPosted[collateral] = systemPosted[collateral].sub(userCollateral);
+        delete posted[collateral][user];
 
-        posted[collateral][user] = posted[collateral][user].sub(
-            tokenAmount,
-            "Controller: Not enough collateral"
-        );
-        systemPosted[collateral] = systemPosted[collateral].sub(tokenAmount);
-
-        uint256 totalGrabbed;
+        uint256 userDebt;
         for (uint256 i = 0; i < seriesIterator.length; i += 1) {
             uint256 maturity = seriesIterator[i];
-            uint256 thisGrab = Math.min(debtDai(collateral, maturity, user), daiAmount.sub(totalGrabbed));
-            totalGrabbed = totalGrabbed.add(thisGrab); // SafeMath shouldn't be needed
-            debtYDai[collateral][maturity][user] =
-                debtYDai[collateral][maturity][user].sub(inYDai(collateral, maturity, thisGrab)); // SafeMath shouldn't be needed
+            userDebt = userDebt.add(debtDai(collateral, maturity, user)); // SafeMath shouldn't be needed
             systemDebtYDai[collateral][maturity] =
-                systemDebtYDai[collateral][maturity].sub(inYDai(collateral, maturity, thisGrab)); // SafeMath shouldn't be needed
-            if (totalGrabbed == daiAmount) break;
+                systemDebtYDai[collateral][maturity].sub(debtYDai[collateral][maturity][user]); // SafeMath shouldn't be needed
+            delete debtYDai[collateral][maturity][user];
         } // We don't expect hundreds of maturities per controller
-        require(
-            totalGrabbed == daiAmount,
-            "Controller: Not enough user debt"
-        );
 
-        require( // TODO: Untested, but to be moved to Liquidations and refactored there
-            collateral != WETH || aboveDustOrZero(collateral, user),
-            "Controller: Below dust"
-        );
+        return (userCollateral, userDebt);
     }
 }
