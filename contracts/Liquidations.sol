@@ -67,7 +67,7 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
 
 
     /// @dev Return if the debt of an user is between zero and the dust level
-    function aboveDustOrZero(address user) public returns (bool) {
+    function aboveDustOrZero(address user) public view returns (bool) {
         return collateral[user] == 0 || DUST < collateral[user];
     }
 
@@ -140,7 +140,7 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
     //                collateral      1      min(auction, elapsed)
     // price = 1 / (------------- * (--- + -----------------------))
     //                   debt         2       2 * auction
-    function price(address user) public returns (uint256) {
+    function price(address user) public view returns (uint256) {
         require(
             liquidations[user] > 0,
             "Liquidations: Vault is not targeted"

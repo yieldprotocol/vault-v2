@@ -181,7 +181,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     }
 
     /// @dev Return if the collateral of an user is between zero and the dust level
-    function aboveDustOrZero(bytes32 collateral, address user) public returns (bool) {
+    function aboveDustOrZero(bytes32 collateral, address user) public view returns (bool) {
         return posted[collateral][user] == 0 || DUST < posted[collateral][user];
     }
 
