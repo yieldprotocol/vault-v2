@@ -27,7 +27,7 @@ const { BN, expectRevert } = require('@openzeppelin/test-helpers');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('../shared/utils');
 const { assert } = require('chai');
 
-contract('Controller - Weth', async (accounts) =>  {
+contract('ControllerView', async (accounts) =>  {
     let [ owner, user1, user2, user3 ] = accounts;
     let vat;
     let weth;
