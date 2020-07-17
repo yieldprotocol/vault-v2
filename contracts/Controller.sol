@@ -44,13 +44,13 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
 
     mapping(bytes32 => IERC20) internal _token;                       // Weth or Chai
     mapping(uint256 => IYDai) public override series;                 // YDai series, indexed by maturity
-    uint256[] public seriesIterator;                                // We need to know all the series
+    uint256[] public seriesIterator;                                  // We need to know all the series
 
-    mapping(bytes32 => mapping(address => uint256)) public override posted;               // Collateral posted by each user
+    mapping(bytes32 => mapping(address => uint256)) public override posted;                        // Collateral posted by each user
     mapping(bytes32 => mapping(uint256 => mapping(address => uint256))) public override debtYDai;  // Debt owed by each user, by series
 
-    mapping(bytes32 => uint256) public override systemPosted;                        // Sum of collateral posted by all users
-    mapping(bytes32 => mapping(uint256 => uint256)) public override systemDebtYDai;  // Sum of debt owed by all users, by series
+    uint256 public override totalChaiPosted;                                         // Sum of Chai posted by all users. Needed for skimming profits
+    mapping(bytes32 => mapping(uint256 => uint256)) public override totalDebtYDai;  // Sum of debt owed by all users, by series
 
     bool public live = true;
 
@@ -204,7 +204,6 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         onlyLive
     {
         posted[collateral][to] = posted[collateral][to].add(amount);
-        systemPosted[collateral] = systemPosted[collateral].add(amount);
 
         if (collateral == WETH){ // TODO: Refactor Treasury to be `push(collateral, amount)`
             require(
@@ -213,6 +212,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
             );
             _treasury.pushWeth(from, amount);
         } else if (collateral == CHAI) {
+            totalChaiPosted = totalChaiPosted.add(amount);
             _treasury.pushChai(from, amount);
         }
         
@@ -228,7 +228,6 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         onlyLive
     {
         posted[collateral][from] = posted[collateral][from].sub(amount); // Will revert if not enough posted
-        systemPosted[collateral] = systemPosted[collateral].sub(amount);
 
         require(
             isCollateralized(collateral, from),
@@ -242,6 +241,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
             );
             _treasury.pullWeth(to, amount);
         } else if (collateral == CHAI) {
+            totalChaiPosted = totalChaiPosted.sub(amount);
             _treasury.pullChai(to, amount);
         }
 
@@ -267,7 +267,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         );
 
         debtYDai[collateral][maturity][from] = debtYDai[collateral][maturity][from].add(yDaiAmount);
-        systemDebtYDai[collateral][maturity] = systemDebtYDai[collateral][maturity].add(yDaiAmount);
+        totalDebtYDai[collateral][maturity] = totalDebtYDai[collateral][maturity].add(yDaiAmount);
 
         require(
             isCollateralized(collateral, from),
@@ -324,7 +324,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     //    
     function _repay(bytes32 collateral, uint256 maturity, address user, uint256 yDaiAmount) internal {
         debtYDai[collateral][maturity][user] = debtYDai[collateral][maturity][user].sub(yDaiAmount);
-        systemDebtYDai[collateral][maturity] = systemDebtYDai[collateral][maturity].sub(yDaiAmount);
+        totalDebtYDai[collateral][maturity] = totalDebtYDai[collateral][maturity].sub(yDaiAmount);
 
         emit Borrowed(collateral, maturity, user, -int256(yDaiAmount)); // TODO: Watch for overflow
     }
@@ -340,7 +340,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
             tokenAmount,
             "Controller: Not enough collateral"
         );
-        systemPosted[collateral] = systemPosted[collateral].sub(tokenAmount);
+        // totalChaiPosted = totalChaiPosted.sub(tokenAmount);
 
         uint256 totalGrabbed;
         for (uint256 i = 0; i < seriesIterator.length; i += 1) {
@@ -349,8 +349,8 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
             totalGrabbed = totalGrabbed.add(thisGrab); // SafeMath shouldn't be needed
             debtYDai[collateral][maturity][user] =
                 debtYDai[collateral][maturity][user].sub(inYDai(collateral, maturity, thisGrab)); // SafeMath shouldn't be needed
-            systemDebtYDai[collateral][maturity] =
-                systemDebtYDai[collateral][maturity].sub(inYDai(collateral, maturity, thisGrab)); // SafeMath shouldn't be needed
+            totalDebtYDai[collateral][maturity] =
+                totalDebtYDai[collateral][maturity].sub(inYDai(collateral, maturity, thisGrab)); // SafeMath shouldn't be needed
             if (totalGrabbed == daiAmount) break;
         } // We don't expect hundreds of maturities per controller
         require(
