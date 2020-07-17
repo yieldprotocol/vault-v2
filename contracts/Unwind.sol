@@ -229,9 +229,7 @@ contract Unwind is Ownable(), DecimalMath {
     function settle(bytes32 collateral, address user) public {
         require(settled && cashedOut, "Unwind: Not ready");
 
-        uint256 debt = _controller.totalDebtDai(collateral, user);
-        uint256 tokens = _controller.posted(collateral, user);
-        _controller.grab(collateral, user, debt, tokens);
+        (uint256 tokens, uint256 debt) = _controller.erase(collateral, user);
 
         uint256 remainder;
         if (collateral == WETH) {

@@ -61,10 +61,7 @@ module.exports = async (deployer, network, accounts) => {
   await deployer.deploy(
     Controller,
     vatAddress,
-    wethAddress,
-    daiAddress,
     potAddress,
-    chaiAddress,
     treasuryAddress,
   );
   const controller = await Controller.deployed();

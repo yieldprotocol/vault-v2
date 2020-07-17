@@ -38,7 +38,6 @@ module.exports = async (deployer, network, accounts) => {
   let controlerViewAddress;
 
   const yDaiNames = ['yDai1', 'yDai2', 'yDai3', 'yDai4']; // TODO: Consider iterating until the address returned is 0
-  const auctionTime = 3600; // TODO: Think where to store this parameter.
 
   if (network !== 'development') {
     vatAddress = fixed_addrs[network].vatAddress ;
@@ -75,7 +74,6 @@ module.exports = async (deployer, network, accounts) => {
     daiAddress,
     treasuryAddress,
     controllerAddress,
-    auctionTime,
   )
   liquidationsAddress = (await Liquidations.deployed()).address;
   await controller.orchestrate(liquidationsAddress);
