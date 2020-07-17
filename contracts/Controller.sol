@@ -119,7 +119,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     function shutdown() public override {
         require(
             _treasury.live() == false,
-            "Dealer: Treasury is live"
+            "Controller: Treasury is live"
         );
         live = false;
     }

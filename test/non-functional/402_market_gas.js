@@ -14,7 +14,7 @@ const Treasury = artifacts.require('Treasury');
 
 // YDai
 const YDai = artifacts.require('YDai');
-const Dealer = artifacts.require('Dealer');
+const Controller = artifacts.require('Controller');
 
 // Peripheral
 const EthProxy = artifacts.require('EthProxy');
@@ -44,7 +44,7 @@ contract('Market', async (accounts) =>  {
     let treasury;
     let yDai1;
     let yDai2;
-    let dealer;
+    let controller;
     let splitter;
     let market;
     let flashMinter;
@@ -168,7 +168,7 @@ contract('Market', async (accounts) =>  {
         await vat.fold(ilk, vat.address, subBN(rate1, toRay(1)), { from: owner }); // Fold only the increase from 1.0
         await pot.setChi(chi1, { from: owner }); // Set the savings accumulator
 
-        // Allow owner to mint yDai the sneaky way, without recording a debt in dealer
+        // Allow owner to mint yDai the sneaky way, without recording a debt in controller
         await yDai1.orchestrate(owner, { from: owner });
 
     });
