@@ -172,7 +172,7 @@ contract Unwind is Ownable(), DecimalMath {
         profit = profit.sub(_controller.systemPosted(WETH));
         profit = profit.sub(muld(muld(_controller.systemPosted(CHAI), _fix), chi));
 
-        _weth.transfer(beneficiary, profit);
+        require(_weth.transfer(beneficiary, profit));
     }
 
     /// @dev Returns the profit accummulated in the system due to yDai supply and debt, in chai, for a given chi and rate.
@@ -257,7 +257,7 @@ contract Unwind is Ownable(), DecimalMath {
         } else if (collateral == CHAI) {
             remainder = muld(subFloorZero(muld(tokens, _chi), debt), _fix);
         }
-        _weth.transfer(user, remainder);
+        require(_weth.transfer(user, remainder));
     }
 
     /// @dev Redeems YDai for weth
@@ -265,9 +265,11 @@ contract Unwind is Ownable(), DecimalMath {
         require(settled && cashedOut, "Unwind: Not ready");
         IYDai yDai = _controller.series(maturity);
         yDai.burn(user, yDaiAmount);
-        _weth.transfer(
-            user,
-            muld(muld(yDaiAmount, yDai.chiGrowth()), _fix)
+        require(
+            _weth.transfer(
+                user,
+                muld(muld(yDaiAmount, yDai.chiGrowth()), _fix)
+            )
         );
     }
 }

@@ -73,8 +73,8 @@ contract Market is IMarket, ERC20, Delegable {
             "Market: Already initialized"
         );
 
-        dai.transferFrom(msg.sender, address(this), daiIn);
-        yDai.transferFrom(msg.sender, address(this), yDaiIn);
+        require(dai.transferFrom(msg.sender, address(this), daiIn));
+        require(yDai.transferFrom(msg.sender, address(this), yDaiIn));
         _mint(msg.sender, initialSupply);
     }
 
@@ -89,8 +89,8 @@ contract Market is IMarket, ERC20, Delegable {
         uint256 tokensMinted = supply.mul(daiOffered).div(daiReserves);
         uint256 yDaiRequired = yDaiReserves.mul(tokensMinted).div(supply);
 
-        dai.transferFrom(msg.sender, address(this), daiOffered);
-        yDai.transferFrom(msg.sender, address(this), yDaiRequired);
+        require(dai.transferFrom(msg.sender, address(this), daiOffered));
+        require(yDai.transferFrom(msg.sender, address(this), yDaiRequired));
         _mint(msg.sender, tokensMinted);
     }
 
@@ -105,8 +105,8 @@ contract Market is IMarket, ERC20, Delegable {
         uint256 yDaiReturned = tokensBurned.mul(yDaiReserves).div(supply);
 
         _burn(msg.sender, tokensBurned);
-        dai.transfer(msg.sender, daiReturned);
-        yDai.transfer(msg.sender, yDaiReturned);
+        require(dai.transfer(msg.sender, daiReturned));
+        require(yDai.transfer(msg.sender, yDaiReturned));
     }
 
     /// @dev Sell Dai for yDai
@@ -121,8 +121,8 @@ contract Market is IMarket, ERC20, Delegable {
     {
         uint128 yDaiOut = sellDaiPreview(daiIn);
 
-        dai.transferFrom(from, address(this), daiIn);
-        yDai.transfer(to, yDaiOut);
+        require(dai.transferFrom(from, address(this), daiIn));
+        require(yDai.transfer(to, yDaiOut));
 
         return yDaiOut;
     }
@@ -165,8 +165,8 @@ contract Market is IMarket, ERC20, Delegable {
     {
         uint128 yDaiIn = buyDaiPreview(daiOut);
 
-        yDai.transferFrom(from, address(this), yDaiIn);
-        dai.transfer(to, daiOut);
+        require(yDai.transferFrom(from, address(this), yDaiIn));
+        require(dai.transfer(to, daiOut));
 
         return yDaiIn;
     }
@@ -199,8 +199,8 @@ contract Market is IMarket, ERC20, Delegable {
     {
         uint128 daiOut = sellYDaiPreview(yDaiIn);
 
-        yDai.transferFrom(from, address(this), yDaiIn);
-        dai.transfer(to, daiOut);
+        require(yDai.transferFrom(from, address(this), yDaiIn));
+        require(dai.transfer(to, daiOut));
 
         return daiOut;
     }
@@ -233,8 +233,8 @@ contract Market is IMarket, ERC20, Delegable {
     {
         uint128 daiIn = buyYDaiPreview(yDaiOut);
 
-        dai.transferFrom(from, address(this), daiIn);
-        yDai.transfer(to, yDaiOut);
+        require(dai.transferFrom(from, address(this), daiIn));
+        require(yDai.transfer(to, yDaiOut));
 
         return daiIn;
     }
