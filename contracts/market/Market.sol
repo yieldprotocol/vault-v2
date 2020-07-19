@@ -268,7 +268,7 @@ contract Market is IMarket, ERC20, Delegable {
         returns(uint128)
     {
         uint128 daiReserves = toUint128(dai.balanceOf(address(this)));
-        uint128 yDaiReserves = getYDaiReserves;
+        uint128 yDaiReserves = getYDaiReserves();
 
         uint128 daiIn = YieldMath.daiInForYDaiOut(
             daiReserves,
@@ -292,6 +292,6 @@ contract Market is IMarket, ERC20, Delegable {
         public view
         returns(uint128)
     {
-        return toUint128(yDai.balanceOf(address(this) + totalSupply());
+        return toUint128(yDai.balanceOf(address(this)) + totalSupply());
     }
 }
