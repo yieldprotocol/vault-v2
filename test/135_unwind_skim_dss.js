@@ -264,8 +264,6 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
         await controller.orchestrate(unwind.address, { from: owner });
         await yDai1.orchestrate(unwind.address, { from: owner });
         await yDai2.orchestrate(unwind.address, { from: owner });
-        await unwind.addSeries(yDai1.address, { from: owner });
-        await unwind.addSeries(yDai2.address, { from: owner });
         await liquidations.orchestrate(unwind.address, { from: owner });
 
         // Tests setup

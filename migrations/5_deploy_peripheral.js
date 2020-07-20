@@ -104,7 +104,6 @@ module.exports = async (deployer, network, accounts) => {
     yDaiAddress = await migrations.contracts(web3.utils.fromAscii(yDaiName));
     const yDai = await YDai.at(yDaiAddress);
     await yDai.orchestrate(unwindAddress);
-    await unwind.addSeries(yDaiAddress);
   }
 
   // Setup EthProxy
@@ -127,17 +126,11 @@ module.exports = async (deployer, network, accounts) => {
   const controllerView = await ControllerView.deployed();
   controllerViewAddress = controllerView.address;
 
-  for (yDaiName of yDaiNames) {
-    yDaiAddress = await migrations.contracts(web3.utils.fromAscii(yDaiName));
-    const yDai = await YDai.at(yDaiAddress);
-    await controllerView.addSeries(yDaiAddress);
-  }
-
   const deployedPeripheral = {
     'Liquidations': liquidationsAddress,
     'Unwind': unwindAddress,
     'EthProxy': ethProxyAddress,
-    'ControllerView': ethProxyAddress,
+    'ControllerView': controllerViewAddress,
   }
 
   for (name in deployedPeripheral) {

@@ -27,7 +27,7 @@ const { BN, expectRevert } = require('@openzeppelin/test-helpers');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('../shared/utils');
 const { assert } = require('chai');
 
-contract('Controller - Weth', async (accounts) =>  {
+contract('ControllerView', async (accounts) =>  {
     let [ owner, user1, user2, user3 ] = accounts;
     let vat;
     let weth;
@@ -167,7 +167,6 @@ contract('Controller - Weth', async (accounts) =>  {
             { from: owner },
         );
         controller.addSeries(yDai1.address, { from: owner });
-        controllerView.addSeries(yDai1.address, { from: owner });
         yDai1.orchestrate(controller.address, { from: owner });
         treasury.orchestrate(yDai1.address, { from: owner });
 
@@ -183,7 +182,6 @@ contract('Controller - Weth', async (accounts) =>  {
             { from: owner },
         );
         controller.addSeries(yDai2.address, { from: owner });
-        controllerView.addSeries(yDai2.address, { from: owner });
         yDai2.orchestrate(controller.address, { from: owner });
         treasury.orchestrate(yDai2.address, { from: owner });
 

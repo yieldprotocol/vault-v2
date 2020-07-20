@@ -40,12 +40,12 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     ITreasury internal _treasury;
 
     mapping(uint256 => IYDai) public override series;                 // YDai series, indexed by maturity
-    uint256[] public seriesIterator;                                  // We need to know all the series
+    uint256[] public override seriesIterator;                         // We need to know all the series
 
     mapping(bytes32 => mapping(address => uint256)) public override posted;                        // Collateral posted by each user
     mapping(bytes32 => mapping(uint256 => mapping(address => uint256))) public override debtYDai;  // Debt owed by each user, by series
 
-    uint256 public override totalChaiPosted;                                         // Sum of Chai posted by all users. Needed for skimming profits
+    uint256 public override totalChaiPosted;                                        // Sum of Chai posted by all users. Needed for skimming profits
     mapping(bytes32 => mapping(uint256 => uint256)) public override totalDebtYDai;  // Sum of debt owed by all users, by series
 
     bool public live = true;
@@ -65,15 +65,6 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         _;
     }
 
-    /// @dev Only series added through `addSeries` are valid.
-    modifier validSeries(uint256 maturity) {
-        require(
-            containsSeries(maturity),
-            "Controller: Unrecognized series"
-        );
-        _;
-    }
-
     /// @dev Only valid collateral types are Weth and Chai.
     modifier validCollateral(bytes32 collateral) {
         require(
@@ -83,8 +74,22 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         _;
     }
 
+    /// @dev Only series added through `addSeries` are valid.
+    modifier validSeries(uint256 maturity) {
+        require(
+            containsSeries(maturity),
+            "Controller: Unrecognized series"
+        );
+        _;
+    }
+
+    /// @dev Return the total number of series registered
+    function totalSeries() public view override returns (uint256) {
+        return seriesIterator.length;
+    }
+
     /// @dev Returns if a series has been added to the Controller, for a given series identified by maturity
-    function containsSeries(uint256 maturity) public view returns (bool) {
+    function containsSeries(uint256 maturity) public view override returns (bool) {
         return address(series[maturity]) != address(0);
     }
 
@@ -103,7 +108,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     function shutdown() public override {
         require(
             _treasury.live() == false,
-            "Dealer: Treasury is live"
+            "Controller: Treasury is live"
         );
         live = false;
     }

@@ -46,10 +46,6 @@ contract Unwind is Ownable(), DecimalMath {
     IController internal _controller;
     ILiquidations internal _liquidations;
 
-    // TODO: Series related code is repeated with Controller, can be extracted into a parent class.
-    mapping(uint256 => IYDai) public series; // YDai series, indexed by maturity
-    uint256[] internal seriesIterator;       // We need to know all the series
-
     uint256 public _fix; // Dai to weth price on DSS Unwind
     uint256 public _chi; // Chai to dai price on DSS Unwind
 
@@ -102,22 +98,6 @@ contract Unwind is Ownable(), DecimalMath {
             "Treasury: Cast overflow"
         );
         return int256(x);
-    }
-
-    /// @dev Returns if a series has been added to the Controller, for a given series identified by maturity
-    function containsSeries(uint256 maturity) public view returns (bool) {
-        return address(series[maturity]) != address(0);
-    }
-
-    /// @dev Adds an yDai series to this Controller
-    function addSeries(address yDaiContract) public onlyOwner {
-        uint256 maturity = IYDai(yDaiContract).maturity();
-        require(
-            !containsSeries(maturity),
-            "Controller: Series already added"
-        );
-        series[maturity] = IYDai(yDaiContract);
-        seriesIterator.push(maturity);
     }
 
     /// @dev Disables treasury and controller.
@@ -181,9 +161,9 @@ contract Unwind is Ownable(), DecimalMath {
     function _yDaiProfit(uint256 chi, uint256 rate) internal view returns (uint256) {
         uint256 profit;
 
-        for (uint256 i = 0; i < seriesIterator.length; i += 1) {
-            uint256 maturity = seriesIterator[i];
-            IYDai yDai = IYDai(series[seriesIterator[i]]);
+        for (uint256 i = 0; i < _controller.totalSeries(); i += 1) {
+            uint256 maturity = _controller.seriesIterator(i);
+            IYDai yDai = _controller.series(maturity);
 
             uint256 chi0;
             uint256 rate0;
