@@ -27,7 +27,7 @@ const { BN, expectRevert } = require('@openzeppelin/test-helpers');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('../shared/utils');
 const { assert } = require('chai');
 
-contract('Controller - Weth', async (accounts) =>  {
+contract('ControllerView', async (accounts) =>  {
     let [ owner, user1, user2, user3 ] = accounts;
     let vat;
     let weth;
@@ -167,7 +167,6 @@ contract('Controller - Weth', async (accounts) =>  {
             { from: owner },
         );
         controller.addSeries(yDai1.address, { from: owner });
-        controllerView.addSeries(yDai1.address, { from: owner });
         yDai1.orchestrate(controller.address, { from: owner });
         treasury.orchestrate(yDai1.address, { from: owner });
 
@@ -183,7 +182,6 @@ contract('Controller - Weth', async (accounts) =>  {
             { from: owner },
         );
         controller.addSeries(yDai2.address, { from: owner });
-        controllerView.addSeries(yDai2.address, { from: owner });
         yDai2.orchestrate(controller.address, { from: owner });
         treasury.orchestrate(yDai2.address, { from: owner });
 
@@ -215,11 +213,6 @@ contract('Controller - Weth', async (accounts) =>  {
             wethTokens.toString(),
             "User1 should have " + wethTokens + " weth posted, instead has " + await controllerView.posted(WETH, user1),
         );
-        assert.equal(
-            await controllerView.systemPosted(WETH),
-            wethTokens.toString(),
-            "System should have " + wethTokens + " weth posted, instead has " + await controllerView.systemPosted(WETH),
-        );
     });
 
     describe("with posted weth", () => {
@@ -247,7 +240,7 @@ contract('Controller - Weth', async (accounts) =>  {
                 "User1 should have " + wethTokens + " locked collateral, instead has " + await controllerView.locked(WETH, user1),
             );
             assert.equal(
-                await controllerView.systemDebtYDai(WETH, maturity1),
+                await controllerView.totalDebtYDai(WETH, maturity1),
                 daiTokens.toString(), // Dai == yDai before maturity
                 "System should have debt",
             );
@@ -281,7 +274,7 @@ contract('Controller - Weth', async (accounts) =>  {
                     "User1 should have a combined debt",
                 );
                 assert.equal(
-                    await controllerView.systemDebtYDai(WETH, maturity1),
+                    await controllerView.totalDebtYDai(WETH, maturity1),
                     daiTokens.mul(2).toString(), // Dai == yDai before maturity
                     "System should have debt",
                 );

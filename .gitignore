@@ -13,9 +13,15 @@ output/
 #Truffle files
 .infuraKey
 .secret
-firebaseKey.json
 build/
 
 #Solidity-coverage
 coverage/
+.coverage_contracts/
 coverage.json
+
+# Yarn
+yarn-error.log
+
+#NPM
+package-lock.json

@@ -46,12 +46,10 @@ contract Unwind is Ownable(), DecimalMath {
     IController internal _controller;
     ILiquidations internal _liquidations;
 
-    // TODO: Series related code is repeated with Controller, can be extracted into a parent class.
-    mapping(uint256 => IYDai) public series; // YDai series, indexed by maturity
-    uint256[] internal seriesIterator;       // We need to know all the series
-
     uint256 public _fix; // Dai to weth price on DSS Unwind
     uint256 public _chi; // Chai to dai price on DSS Unwind
+
+    uint256 internal _treasuryWeth; // Weth that was held by treasury before settling
 
     bool public settled;
     bool public cashedOut;
@@ -102,22 +100,6 @@ contract Unwind is Ownable(), DecimalMath {
         return int256(x);
     }
 
-    /// @dev Returns if a series has been added to the Controller, for a given series identified by maturity
-    function containsSeries(uint256 maturity) public view returns (bool) {
-        return address(series[maturity]) != address(0);
-    }
-
-    /// @dev Adds an yDai series to this Controller
-    function addSeries(address yDaiContract) public onlyOwner {
-        uint256 maturity = IYDai(yDaiContract).maturity();
-        require(
-            !containsSeries(maturity),
-            "Controller: Series already added"
-        );
-        series[maturity] = IYDai(yDaiContract);
-        seriesIterator.push(maturity);
-    }
-
     /// @dev Disables treasury and controller.
     function unwind() public {
         require(
@@ -155,7 +137,7 @@ contract Unwind is Ownable(), DecimalMath {
         uint256 profit = _chai.balanceOf(address(_treasury));
         profit = profit.add(_yDaiProfit(getChi(), getRate()));
         profit = profit.sub(divd(_treasury.debt(), getChi()));
-        profit = profit.sub(_controller.systemPosted(CHAI));
+        profit = profit.sub(_controller.totalChaiPosted());
 
         _treasury.pullChai(beneficiary, profit);
     }
@@ -169,19 +151,19 @@ contract Unwind is Ownable(), DecimalMath {
         uint256 profit = _weth.balanceOf(address(this));
 
         profit = profit.add(muld(muld(_yDaiProfit(chi, rate), _fix), chi));
-        profit = profit.sub(_controller.systemPosted(WETH));
-        profit = profit.sub(muld(muld(_controller.systemPosted(CHAI), _fix), chi));
+        profit = profit.sub(_treasuryWeth);
+        profit = profit.sub(muld(muld(_controller.totalChaiPosted(), _fix), chi));
 
         require(_weth.transfer(beneficiary, profit));
     }
 
     /// @dev Returns the profit accummulated in the system due to yDai supply and debt, in chai, for a given chi and rate.
-    function _yDaiProfit(uint256 chi, uint256 rate) internal returns (uint256) {
+    function _yDaiProfit(uint256 chi, uint256 rate) internal view returns (uint256) {
         uint256 profit;
 
-        for (uint256 i = 0; i < seriesIterator.length; i += 1) {
-            uint256 maturity = seriesIterator[i];
-            IYDai yDai = IYDai(series[seriesIterator[i]]);
+        for (uint256 i = 0; i < _controller.totalSeries(); i += 1) {
+            uint256 maturity = _controller.seriesIterator(i);
+            IYDai yDai = _controller.series(maturity);
 
             uint256 chi0;
             uint256 rate0;
@@ -193,8 +175,8 @@ contract Unwind is Ownable(), DecimalMath {
                 rate0 = rate;
             }
 
-            profit = profit.add(divd(muld(_controller.systemDebtYDai(WETH, maturity), divd(rate, rate0)), chi0));
-            profit = profit.add(divd(_controller.systemDebtYDai(CHAI, maturity), chi0));
+            profit = profit.add(divd(muld(_controller.totalDebtYDai(WETH, maturity), divd(rate, rate0)), chi0));
+            profit = profit.add(divd(_controller.totalDebtYDai(CHAI, maturity), chi0));
             profit = profit.sub(divd(yDai.totalSupply(), chi0));
         }
 
@@ -208,7 +190,8 @@ contract Unwind is Ownable(), DecimalMath {
             "Unwind: Unwind first"
         );
         (uint256 ink, uint256 art) = _vat.urns(WETH, address(_treasury));
-        _vat.fork(                                               // Take the treasury vault
+        _treasuryWeth = ink;                            // We will need this to skim profits
+        _vat.fork(                                      // Take the treasury vault
             WETH,
             address(_treasury),
             address(this),
@@ -217,8 +200,8 @@ contract Unwind is Ownable(), DecimalMath {
         );
         _end.skim(WETH, address(this));                // Settle debts
         _end.free(WETH);                               // Free collateral
-        uint256 gem = _vat.gem(WETH, address(this));          // Find out how much collateral we have now
-        _wethJoin.exit(address(this), gem);                      // Take collateral out
+        uint256 gem = _vat.gem(WETH, address(this));   // Find out how much collateral we have now
+        _wethJoin.exit(address(this), gem);            // Take collateral out
         settled = true;
     }
 
@@ -236,8 +219,8 @@ contract Unwind is Ownable(), DecimalMath {
         _chai.draw(address(_treasury), _treasury.savings()); // Get the chai as dai
         _daiJoin.join(address(this), daiTokens);             // Put the dai into MakerDAO
         _end.pack(daiTokens);                                // Into End.sol, more exactly
-        _end.cash(WETH, daiTokens);                // Exchange the dai for weth
-        uint256 gem = _vat.gem(WETH, address(this));      // Find out how much collateral we have now
+        _end.cash(WETH, daiTokens);                          // Exchange the dai for weth
+        uint256 gem = _vat.gem(WETH, address(this));         // Find out how much collateral we have now
         _wethJoin.exit(address(this), gem);                  // Take collateral out
         cashedOut = true;
 

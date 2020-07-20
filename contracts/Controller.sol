@@ -40,13 +40,13 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     ITreasury internal _treasury;
 
     mapping(uint256 => IYDai) public override series;                 // YDai series, indexed by maturity
-    uint256[] public seriesIterator;                                // We need to know all the series
+    uint256[] public override seriesIterator;                         // We need to know all the series
 
-    mapping(bytes32 => mapping(address => uint256)) public override posted;               // Collateral posted by each user
+    mapping(bytes32 => mapping(address => uint256)) public override posted;                        // Collateral posted by each user
     mapping(bytes32 => mapping(uint256 => mapping(address => uint256))) public override debtYDai;  // Debt owed by each user, by series
 
-    mapping(bytes32 => uint256) public override systemPosted;                        // Sum of collateral posted by all users
-    mapping(bytes32 => mapping(uint256 => uint256)) public override systemDebtYDai;  // Sum of debt owed by all users, by series
+    uint256 public override totalChaiPosted;                                        // Sum of Chai posted by all users. Needed for skimming profits
+    mapping(bytes32 => mapping(uint256 => uint256)) public override totalDebtYDai;  // Sum of debt owed by all users, by series
 
     bool public live = true;
 
@@ -65,15 +65,6 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         _;
     }
 
-    /// @dev Only series added through `addSeries` are valid.
-    modifier validSeries(uint256 maturity) {
-        require(
-            containsSeries(maturity),
-            "Controller: Unrecognized series"
-        );
-        _;
-    }
-
     /// @dev Only valid collateral types are Weth and Chai.
     modifier validCollateral(bytes32 collateral) {
         require(
@@ -83,8 +74,22 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         _;
     }
 
+    /// @dev Only series added through `addSeries` are valid.
+    modifier validSeries(uint256 maturity) {
+        require(
+            containsSeries(maturity),
+            "Controller: Unrecognized series"
+        );
+        _;
+    }
+
+    /// @dev Return the total number of series registered
+    function totalSeries() public view override returns (uint256) {
+        return seriesIterator.length;
+    }
+
     /// @dev Returns if a series has been added to the Controller, for a given series identified by maturity
-    function containsSeries(uint256 maturity) public view returns (bool) {
+    function containsSeries(uint256 maturity) public view override returns (bool) {
         return address(series[maturity]) != address(0);
     }
 
@@ -103,7 +108,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     function shutdown() public override {
         require(
             _treasury.live() == false,
-            "Dealer: Treasury is live"
+            "Controller: Treasury is live"
         );
         live = false;
     }
@@ -181,7 +186,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     }
 
     /// @dev Return if the collateral of an user is between zero and the dust level
-    function aboveDustOrZero(bytes32 collateral, address user) public returns (bool) {
+    function aboveDustOrZero(bytes32 collateral, address user) public view returns (bool) {
         return posted[collateral][user] == 0 || DUST < posted[collateral][user];
     }
 
@@ -194,7 +199,6 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         onlyLive
     {
         posted[collateral][to] = posted[collateral][to].add(amount);
-        systemPosted[collateral] = systemPosted[collateral].add(amount);
 
         if (collateral == WETH){ // TODO: Refactor Treasury to be `push(collateral, amount)`
             require(
@@ -203,6 +207,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
             );
             _treasury.pushWeth(from, amount);
         } else if (collateral == CHAI) {
+            totalChaiPosted = totalChaiPosted.add(amount);
             _treasury.pushChai(from, amount);
         }
         
@@ -218,7 +223,6 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         onlyLive
     {
         posted[collateral][from] = posted[collateral][from].sub(amount); // Will revert if not enough posted
-        systemPosted[collateral] = systemPosted[collateral].sub(amount);
 
         require(
             isCollateralized(collateral, from),
@@ -232,6 +236,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
             );
             _treasury.pullWeth(to, amount);
         } else if (collateral == CHAI) {
+            totalChaiPosted = totalChaiPosted.sub(amount);
             _treasury.pullChai(to, amount);
         }
 
@@ -257,7 +262,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         );
 
         debtYDai[collateral][maturity][from] = debtYDai[collateral][maturity][from].add(yDaiAmount);
-        systemDebtYDai[collateral][maturity] = systemDebtYDai[collateral][maturity].add(yDaiAmount);
+        totalDebtYDai[collateral][maturity] = totalDebtYDai[collateral][maturity].add(yDaiAmount);
 
         require(
             isCollateralized(collateral, from),
@@ -314,7 +319,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     //    
     function _repay(bytes32 collateral, uint256 maturity, address user, uint256 yDaiAmount) internal {
         debtYDai[collateral][maturity][user] = debtYDai[collateral][maturity][user].sub(yDaiAmount);
-        systemDebtYDai[collateral][maturity] = systemDebtYDai[collateral][maturity].sub(yDaiAmount);
+        totalDebtYDai[collateral][maturity] = totalDebtYDai[collateral][maturity].sub(yDaiAmount);
 
         emit Borrowed(collateral, maturity, user, -int256(yDaiAmount)); // TODO: Watch for overflow
     }
@@ -327,15 +332,15 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         returns (uint256, uint256)
     {
         uint256 userCollateral = posted[collateral][user];
-        systemPosted[collateral] = systemPosted[collateral].sub(userCollateral);
         delete posted[collateral][user];
+        if (collateral == CHAI) totalChaiPosted = totalChaiPosted.sub(userCollateral);
 
         uint256 userDebt;
         for (uint256 i = 0; i < seriesIterator.length; i += 1) {
             uint256 maturity = seriesIterator[i];
             userDebt = userDebt.add(debtDai(collateral, maturity, user)); // SafeMath shouldn't be needed
-            systemDebtYDai[collateral][maturity] =
-                systemDebtYDai[collateral][maturity].sub(debtYDai[collateral][maturity][user]); // SafeMath shouldn't be needed
+            totalDebtYDai[collateral][maturity] =
+                totalDebtYDai[collateral][maturity].sub(debtYDai[collateral][maturity][user]); // SafeMath shouldn't be needed
             delete debtYDai[collateral][maturity][user];
         } // We don't expect hundreds of maturities per controller
 

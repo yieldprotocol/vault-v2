@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.6.10;
 
 import "@openzeppelin/contracts/math/Math.sol";
@@ -5,11 +6,11 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../interfaces/IVat.sol";
 import "../interfaces/IPot.sol";
 import "../interfaces/IController.sol";
+import "../interfaces/IYDai.sol";
 import "../helpers/DecimalMath.sol";
-import "../helpers/SeriesRegistry.sol";
 import "@nomiclabs/buidler/console.sol";
 
-contract ControllerView is DecimalMath, SeriesRegistry {
+contract ControllerView is DecimalMath {
     using SafeMath for uint256;
 
     bytes32 public constant CHAI = "CHAI";
@@ -48,14 +49,13 @@ contract ControllerView is DecimalMath, SeriesRegistry {
         return _controller.posted(collateral, user);
     }
 
-    /// @dev Posted collateral for the overall system
+    /// @dev Posted chai for the overall system
     /// Adding this one so that this contract can be used to display all data in Controller
-    function systemPosted(bytes32 collateral)
+    function totalChaiPosted()
         public view
-        validCollateral(collateral)
         returns (uint256)
     {
-        return _controller.systemPosted(collateral);
+        return _controller.totalChaiPosted();
     }
 
     /// @dev Debt for a collateral, maturity and user, in YDai
@@ -70,12 +70,12 @@ contract ControllerView is DecimalMath, SeriesRegistry {
 
     /// @dev Overall Debt for a collateral and maturity, in YDai
     /// Adding this one so that this contract can be used to display all data in Controller
-    function systemDebtYDai(bytes32 collateral, uint256 maturity)
+    function totalDebtYDai(bytes32 collateral, uint256 maturity)
         public view
         validCollateral(collateral)
         returns (uint256)
     {
-        return _controller.systemDebtYDai(collateral, maturity);
+        return _controller.totalDebtYDai(collateral, maturity);
     }
 
     /// @dev Maximum borrowing power of an user in dai for a given collateral
@@ -98,8 +98,9 @@ contract ControllerView is DecimalMath, SeriesRegistry {
         public view
         returns(uint256)
     {
-        if (series[maturity].isMature() != true) return series[maturity].chi0();
-        return Math.min(rateGrowth(maturity), divd(_pot.chi(), series[maturity].chi0()));
+        IYDai yDai = _controller.series(maturity);
+        if (yDai.isMature() != true) return yDai.chi0();
+        return Math.min(rateGrowth(maturity), divd(_pot.chi(), yDai.chi0()));
     }
 
     /// @dev Rate differential between maturity and now in RAY. Returns 1.0 if not mature.
@@ -112,10 +113,11 @@ contract ControllerView is DecimalMath, SeriesRegistry {
         public view
         returns(uint256)
     {
-        if (series[maturity].isMature() != true) return series[maturity].rate0();
+        IYDai yDai = _controller.series(maturity);
+        if (yDai.isMature() != true) return yDai.rate0();
         else {
             (, uint256 rateNow,,,) = _vat.ilks(WETH);
-            return divd(rateNow, series[maturity].rate0());
+            return divd(rateNow, yDai.rate0());
         }
     }
 
@@ -125,7 +127,8 @@ contract ControllerView is DecimalMath, SeriesRegistry {
         validCollateral(collateral)
         returns (uint256)
     {
-        if (series[maturity].isMature()){
+        IYDai yDai = _controller.series(maturity);
+        if (yDai.isMature()){
             if (collateral == WETH){
                 return muld(debtYDai(collateral, maturity, user), rateGrowth(maturity));
             } else if (collateral == CHAI) {
@@ -145,8 +148,9 @@ contract ControllerView is DecimalMath, SeriesRegistry {
         returns (uint256)
     {
         uint256 totalDebt;
-        for (uint256 i = 0; i < seriesIterator.length; i += 1) {
-            totalDebt = totalDebt + debtDai(collateral, seriesIterator[i], user);
+        for (uint256 i = 0; i < _controller.totalSeries(); i += 1) {
+            uint256 maturity = _controller.seriesIterator(i);
+            totalDebt = totalDebt + debtDai(collateral, maturity, user);
         }
         return totalDebt;
     }

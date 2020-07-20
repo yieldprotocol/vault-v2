@@ -7,7 +7,7 @@
   "scripts": {
     "eslint": "node_modules/eslint/bin/eslint.js . ",
     "lint": "solium -d contracts",
-    "test": "buidler test test/*.js test/market/*.js",
+    "test": "buidler test test/*.js test/market/*.js test/peripheral/*.js",
     "test:external": "buidler test test/external/*.js",
     "test:non-functional": "buidler test test/non-functional/*.js",
     "test:network": "npx truffle test test/network/*.js",
