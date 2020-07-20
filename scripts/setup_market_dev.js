@@ -23,38 +23,23 @@ module.exports = async (callback) => {
     let [ owner, user1, operator, from, to ] = await web3.eth.getAccounts()
     const migrations = await Migrations.deployed();
 
-    let seriesNames = ['yDai1', 'yDai2', 'yDai3', 'yDai4'];
-
     let vat = await Vat.deployed()
     let weth = await Weth.deployed()
     let wethJoin= await GemJoin.deployed();
     let dai = await ERC20.deployed();
     let daiJoin = await DaiJoin.deployed();
 
-    let ilk = web3.utils.fromAscii("ETH-A");
-    let Line = web3.utils.fromAscii("Line");
-    let spotName = web3.utils.fromAscii("spot");
-    let linel = web3.utils.fromAscii("line");
+    let WETH = web3.utils.fromAscii("ETH-A");
 
-    const limits =  toRad(10000);
-
-    let ilks = await vat.ilks(web3.utils.fromAscii('ETH-A'))
+    let ilks = await vat.ilks(web3.utils.fromAscii(WETH))
+    let spot = ilks.spot;
+    let rate1 = ilks.rate;
     console.log(ilks.spot.toString())
     console.log(ilks.rate.toString())
 
-    let spot = toRay(150);
-    let rate1 = toRay(1.25);
-
-    const chi1 = toRay(1.2);
-    const rate2 = toRay(1.82);
-    const chi2 = toRay(1.5);
-
-    const chiDifferential  = divRay(chi2, chi1);
-
-    const daiDebt1 = toWad(90);
-    const daiTokens1 = mulRay(daiDebt1, rate1);
-    const yDaiTokens1 = daiTokens1;
-    const wethTokens1 = divRay(daiTokens1, spot);
+    const daiDebt1 = toWad(100);
+    const daiReserves = mulRay(daiDebt1, rate1);
+    const yDaiReserves = daiTokens1.mul(2);
 
     let maturity;
 
@@ -74,14 +59,14 @@ module.exports = async (callback) => {
         console.log('Passed approve');
         await wethJoin.join(user, _wethTokens, { from: user });
         console.log('Passed WethJoin');
-        await vat.frob(ilk, user, user, user, _wethTokens, _daiDebt, { from: user });
+        await vat.frob(WETH, user, user, user, _wethTokens, _daiDebt, { from: user });
         console.log('Passed Frob');
         await daiJoin.exit(user, _daiTokens, { from: user });
         console.log('Passed Daijoin exit');
     }
 
     // Increase the rate accumulator
-    // await vat.fold(ilk, vat.address, subBN(rate1, toRay(1)), { from: owner }); // Fold only the increase from 1.0
+    // await vat.fold(WETH, vat.address, subBN(rate1, toRay(1)), { from: owner }); // Fold only the increase from 1.0
     // await pot.setChi(chi1, { from: owner }); // Set the savings accumulator
 
     let yDaiAddr = await migrations.contracts(web3.utils.fromAscii(`yDai1`))
@@ -93,8 +78,6 @@ module.exports = async (callback) => {
         // Allow owner to mint yDai the sneaky way, without recording a debt in dealer
         await yDai1.orchestrate(owner, { from: owner });
 
-        const daiReserves = daiTokens1;
-        const yDaiReserves = yDaiTokens1.mul(2);
         await getDai(user1, daiReserves)
         await yDai1.mint(user1, yDaiReserves, { from: owner });
         console.log("        initial liquidity...");
