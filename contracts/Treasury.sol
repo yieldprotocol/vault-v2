@@ -107,10 +107,7 @@ contract Treasury is ITreasury, Orchestrated(), DecimalMath {
 
     /// @dev Takes dai from user and pays as much system debt as possible, saving the rest as chai.
     function pushDai(address from, uint256 amount) public override onlyOrchestrated("Treasury: Not Authorized") onlyLive  {
-        require(
-            _dai.transferFrom(from, address(this), amount),  // Take dai from user to Treasury
-            "Controller: Dai transfer fail"
-        );
+        require(_dai.transferFrom(from, address(this), amount));  // Take dai from user to Treasury
 
         uint256 toRepay = Math.min(debt(), amount);
         if (toRepay > 0) {
@@ -135,10 +132,7 @@ contract Treasury is ITreasury, Orchestrated(), DecimalMath {
 
     /// @dev Takes chai from user and pays as much system debt as possible, saving the rest as chai.
     function pushChai(address from, uint256 amount) public override onlyOrchestrated("Treasury: Not Authorized") onlyLive  {
-        require(
-            _chai.transferFrom(from, address(this), amount),
-            "Treasury: Chai transfer fail"
-        );
+        require(_chai.transferFrom(from, address(this), amount));
         uint256 dai = _chai.dai(address(this));
 
         uint256 toRepay = Math.min(debt(), dai);
@@ -161,10 +155,7 @@ contract Treasury is ITreasury, Orchestrated(), DecimalMath {
 
     /// @dev Takes Weth collateral from user into the system Maker vault
     function pushWeth(address from, uint256 amount) public override onlyOrchestrated("Treasury: Not Authorized") onlyLive  {
-        require(
-            _weth.transferFrom(from, address(this), amount),
-            "Treasury: Weth transfer fail"
-        );
+        require(_weth.transferFrom(from, address(this), amount));
 
         _wethJoin.join(address(this), amount); // GemJoin reverts if anything goes wrong.
         // All added collateral should be locked into the vault using frob
@@ -200,10 +191,7 @@ contract Treasury is ITreasury, Orchestrated(), DecimalMath {
             _daiJoin.exit(address(this), toBorrow); // `daiJoin` reverts on failures
         }
 
-        require(                            // Give dai to user
-            _dai.transfer(to, dai),
-            "Treasury: Dai transfer fail"
-        );
+        require(_dai.transfer(to, dai));                            // Give dai to user
     }
 
     /// @dev Returns chai using chai savings as much as possible, and borrowing the rest.
@@ -229,10 +217,7 @@ contract Treasury is ITreasury, Orchestrated(), DecimalMath {
             _chai.join(address(this), toBorrow);     // Grab chai from Chai, converted from dai
         }
 
-        require(                            // Give dai to user
-            _chai.transfer(to, chai),
-            "Treasury: Chai transfer fail"
-        );
+        require(_chai.transfer(to, chai));                            // Give dai to user
     }
 
     /// @dev Moves Weth collateral from Treasury controlled Maker Eth vault to `to` address.

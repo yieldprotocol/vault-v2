@@ -111,8 +111,8 @@ contract Market is IMarket, ERC20, Delegable {
         uint256 tokensMinted = supply.mul(daiOffered).div(daiReserves);
         uint256 yDaiRequired = yDaiReserves.mul(tokensMinted).div(supply);
 
-        dai.transferFrom(msg.sender, address(this), daiOffered);
-        yDai.transferFrom(msg.sender, address(this), yDaiRequired);
+        require(dai.transferFrom(msg.sender, address(this), daiOffered));
+        require(yDai.transferFrom(msg.sender, address(this), yDaiRequired));
         _mint(msg.sender, tokensMinted);
         emit Liquidity(maturity, msg.sender, msg.sender, -toInt256(daiOffered), -toInt256(yDaiRequired), toInt256(tokensMinted));
     }
