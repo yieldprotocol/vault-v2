@@ -14,6 +14,9 @@ import "../interfaces/IMarket.sol";
 /// @dev The Market contract exchanges Dai for yDai at a price defined by a specific formula.
 contract Market is IMarket, ERC20, Delegable {
 
+    event Trade(uint256 maturity, address indexed from, address indexed to, int256 daiTokens, int256 yDaiTokens);
+    event Liquidity(uint256 maturity, address indexed from, address indexed to, int256 daiTokens, int256 yDaiTokens, int256 poolTokens);
+
     int128 constant public k = int128(uint256((1 << 64)) / 126144000); // 1 / Seconds in 4 years, in 64.64
     int128 constant public g = int128(uint256((999 << 64)) / 1000); // All constants are `ufixed`, to divide them they must be converted to uint256
     uint128 immutable public maturity;
@@ -65,6 +68,15 @@ contract Market is IMarket, ERC20, Delegable {
         return uint128(x);
     }
 
+    /// @dev Safe casting from uint256 to int256
+    function toInt256(uint256 x) internal pure returns(int256) {
+        require(
+            x <= 57896044618658097711785492504343953926634992332820282019728792003956564819967,
+            "Market: Cast overflow"
+        );
+        return int256(x);
+    }
+
     /// @dev Mint initial liquidity tokens
     function init(uint128 daiIn, uint128 yDaiIn)
         external
@@ -85,6 +97,7 @@ contract Market is IMarket, ERC20, Delegable {
             k
         );
         _mint(msg.sender, initialSupply);
+        emit Liquidity(maturity, msg.sender, msg.sender, -toInt256(daiIn), -toInt256(yDaiIn), toInt256(initialSupply));
     }
 
     /// @dev Mint liquidity tokens in exchange for adding dai and yDai
@@ -101,6 +114,7 @@ contract Market is IMarket, ERC20, Delegable {
         require(dai.transferFrom(msg.sender, address(this), daiOffered));
         require(yDai.transferFrom(msg.sender, address(this), yDaiRequired));
         _mint(msg.sender, tokensMinted);
+        emit Liquidity(maturity, msg.sender, msg.sender, -toInt256(daiOffered), -toInt256(yDaiRequired), toInt256(tokensMinted));
     }
 
     /// @dev Burn liquidity tokens in exchange for dai and yDai
@@ -114,8 +128,9 @@ contract Market is IMarket, ERC20, Delegable {
         uint256 yDaiReturned = tokensBurned.mul(yDaiReserves).div(supply);
 
         _burn(msg.sender, tokensBurned);
-        require(dai.transfer(msg.sender, daiReturned));
-        require(yDai.transfer(msg.sender, yDaiReturned));
+        dai.transfer(msg.sender, daiReturned);
+        yDai.transfer(msg.sender, yDaiReturned);
+        emit Liquidity(maturity, msg.sender, msg.sender, toInt256(daiReturned), toInt256(yDaiReturned), -toInt256(tokensBurned));
     }
 
     /// @dev Sell Dai for yDai
@@ -130,8 +145,9 @@ contract Market is IMarket, ERC20, Delegable {
     {
         uint128 yDaiOut = sellDaiPreview(daiIn);
 
-        require(dai.transferFrom(from, address(this), daiIn));
-        require(yDai.transfer(to, yDaiOut));
+        dai.transferFrom(from, address(this), daiIn);
+        yDai.transfer(to, yDaiOut);
+        emit Trade(maturity, from, to, -toInt256(daiIn), toInt256(yDaiOut));
 
         return yDaiOut;
     }
@@ -174,8 +190,9 @@ contract Market is IMarket, ERC20, Delegable {
     {
         uint128 yDaiIn = buyDaiPreview(daiOut);
 
-        require(yDai.transferFrom(from, address(this), yDaiIn));
-        require(dai.transfer(to, daiOut));
+        yDai.transferFrom(from, address(this), yDaiIn);
+        dai.transfer(to, daiOut);
+        emit Trade(maturity, from, to, toInt256(daiOut), -toInt256(yDaiIn));
 
         return yDaiIn;
     }
@@ -208,8 +225,9 @@ contract Market is IMarket, ERC20, Delegable {
     {
         uint128 daiOut = sellYDaiPreview(yDaiIn);
 
-        require(yDai.transferFrom(from, address(this), yDaiIn));
-        require(dai.transfer(to, daiOut));
+        yDai.transferFrom(from, address(this), yDaiIn);
+        dai.transfer(to, daiOut);
+        emit Trade(maturity, from, to, toInt256(daiOut), -toInt256(yDaiIn));
 
         return daiOut;
     }
@@ -242,8 +260,9 @@ contract Market is IMarket, ERC20, Delegable {
     {
         uint128 daiIn = buyYDaiPreview(yDaiOut);
 
-        require(dai.transferFrom(from, address(this), daiIn));
-        require(yDai.transfer(to, yDaiOut));
+        dai.transferFrom(from, address(this), daiIn);
+        yDai.transfer(to, yDaiOut);
+        emit Trade(maturity, from, to, -toInt256(daiIn), toInt256(yDaiOut));
 
         return daiIn;
     }
