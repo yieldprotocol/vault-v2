@@ -76,6 +76,7 @@ contract Market is IMarket, ERC20, Delegable {
 
         dai.transferFrom(msg.sender, address(this), daiIn);
         yDai.transferFrom(msg.sender, address(this), yDaiIn);
+        // TODO: Allow the below to be replaced by the approach in PR184
         uint128 initialSupply = YieldMath.initialReservesValue(
             daiIn,
             yDaiIn,
