@@ -22,3 +22,6 @@ coverage.json
 
 # Yarn
 yarn-error.log
+
+#NPM
+package-lock.json

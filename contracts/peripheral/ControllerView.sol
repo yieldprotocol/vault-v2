@@ -49,14 +49,13 @@ contract ControllerView is DecimalMath {
         return _controller.posted(collateral, user);
     }
 
-    /// @dev Posted collateral for the overall system
+    /// @dev Posted chai for the overall system
     /// Adding this one so that this contract can be used to display all data in Controller
-    function systemPosted(bytes32 collateral)
+    function totalChaiPosted()
         public view
-        validCollateral(collateral)
         returns (uint256)
     {
-        return _controller.systemPosted(collateral);
+        return _controller.totalChaiPosted();
     }
 
     /// @dev Debt for a collateral, maturity and user, in YDai
@@ -71,12 +70,12 @@ contract ControllerView is DecimalMath {
 
     /// @dev Overall Debt for a collateral and maturity, in YDai
     /// Adding this one so that this contract can be used to display all data in Controller
-    function systemDebtYDai(bytes32 collateral, uint256 maturity)
+    function totalDebtYDai(bytes32 collateral, uint256 maturity)
         public view
         validCollateral(collateral)
         returns (uint256)
     {
-        return _controller.systemDebtYDai(collateral, maturity);
+        return _controller.totalDebtYDai(collateral, maturity);
     }
 
     /// @dev Maximum borrowing power of an user in dai for a given collateral

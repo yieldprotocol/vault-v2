@@ -14,7 +14,7 @@ contract DecimalMath {
         return x.mul(y).div(UNIT);
     }
 
-    /// @dev Divides x between y, assuming they are both fixed point with 18 digits.
+    /// @dev Divides x between y, assuming they are both fixed point with 27 digits.
     function divd(uint256 x, uint256 y) internal pure returns (uint256) {
         return x.mul(UNIT).div(y);
     }

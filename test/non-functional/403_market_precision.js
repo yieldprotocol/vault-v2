@@ -16,8 +16,8 @@ contract('Market', async (accounts) =>  {
     const chi2 = toRay(1.5);
 
     const oneToken =             '1000000000000000000';
-    const yDaiReserves = '112000000000000000000000000';
-    const daiReserves = '134400000000000000000000000';
+    const yDaiReserves = '200000000000000000000000000';
+    const daiReserves = '100000000000000000000000000';
 
     const oneYear = '31556952';
     const k = '146235604338';
@@ -109,7 +109,7 @@ contract('Market', async (accounts) =>  {
                     g,
                 );
 
-                results.add(['buyDai64', daiReserves, yDaiReserves, yDaiIn, trade]);
+                results.add(['buyDai48', daiReserves, yDaiReserves, yDaiIn, trade]);
             };
         });
 
