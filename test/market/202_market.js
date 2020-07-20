@@ -23,6 +23,7 @@ const Market = artifacts.require('Market');
 
 // Mocks
 const FlashMinterMock = artifacts.require('FlashMinterMock');
+const YieldMathMock = artifacts.require('YieldMathMock');
 
 const truffleAssert = require('truffle-assertions');
 const helper = require('ganache-time-traveler');
@@ -48,6 +49,7 @@ contract('Market', async (accounts) =>  {
     let splitter;
     let market;
     let flashMinter;
+    let yieldMath;
 
     let ilk = web3.utils.fromAscii("ETH-A");
     let Line = web3.utils.fromAscii("Line");
@@ -67,6 +69,10 @@ contract('Market', async (accounts) =>  {
     const wethTokens1 = divRay(daiTokens1, spot);
 
     let maturity1;
+
+    const oneYear = '31556952';
+    const k = '146235604338';
+    const g = '18428297329635842000';
 
     // Convert eth to weth and use it to borrow `daiTokens` from MakerDAO
     // This function shadows and uses global variables, careful.
@@ -156,6 +162,9 @@ contract('Market', async (accounts) =>  {
             { from: owner }
         );
 
+        // Setup YieldMathMock
+        yieldMath = await YieldMathMock.new();
+
         // Test setup
         
         // Increase the rate accumulator
@@ -204,84 +213,86 @@ contract('Market', async (accounts) =>  {
         await getDai(user1, daiTokens1)
         await yDai1.mint(user1, yDaiTokens1, { from: owner });
 
+        console.log("        initial liquidity...");
+        console.log("        daiReserves: %d", daiTokens1.toString());
+        console.log("        yDaiReserves: %d", yDaiTokens1.toString());
+        console.log("        k: %d", await market.k());
+        const t = new BN((await web3.eth.getBlock(await web3.eth.getBlockNumber())).timestamp);
+        console.log("        timeTillMaturity: %d", (new BN(maturity1).sub(t).toString()));
+
         await dai.approve(market.address, daiTokens1, { from: user1 });
         await yDai1.approve(market.address, yDaiTokens1, { from: user1 });
         await market.init(daiTokens1, yDaiTokens1, { from: user1 });
 
-        assert.equal(
+        // Test with https://www.desmos.com/calculator/rvmg7soarl
+
+        // TODO: How much should this be?
+        /* assert.equal(
             await market.balanceOf(user1),
             1000,
             "User1 should have 1000 liquidity tokens",
-        );
+        ); */
     });
 
     describe("with liquidity", () => {
         beforeEach(async() => {
             const daiReserves = daiTokens1;
-            const yDaiReserves = yDaiTokens1;
+            const yDaiReserves = yDaiTokens1.mul(2);
             await getDai(user1, daiReserves)
             await yDai1.mint(user1, yDaiReserves, { from: owner });
     
             await dai.approve(market.address, daiReserves, { from: user1 });
             await yDai1.approve(market.address, yDaiReserves, { from: user1 });
-            expectEvent(
-                await market.init(daiReserves, yDaiReserves, { from: user1 }),
-                "Liquidity",
-                {
-                    maturity: maturity1.toString(),
-                    from: user1,
-                    to: user1,
-                    daiTokens: daiReserves.toString(),
-                    yDaiTokens: yDaiReserves.toString(),
-                    // poolTokens: (await market.balanceOf(user1)), // TODO: Fix after merging https://github.com/yieldprotocol/ytoken-mvp/pull/173
-                },
-            );
-        });
+            await market.init(daiReserves, yDaiReserves, { from: user1 });
+        }); // TODO: Test with reserves at different levels.
 
         it("mints liquidity tokens", async() => {
             await getDai(user1, daiTokens1)
-            await yDai1.mint(user1, yDaiTokens1, { from: owner });
+            await yDai1.mint(user1, yDaiTokens1.mul(2), { from: owner });
 
             await dai.approve(market.address, daiTokens1, { from: user1 });
-            await yDai1.approve(market.address, yDaiTokens1, { from: user1 });
+            await yDai1.approve(market.address, yDaiTokens1.mul(2), { from: user1 });
 
-            expectEvent(
-                await market.mint(daiTokens1, { from: user1 }),
-                "Liquidity",
-                {
-                    maturity: maturity1.toString(),
-                    from: user1,
-                    to: user1,
-                    daiTokens: daiTokens1.mul(-1).toString(),
-                    yDaiTokens: yDaiTokens1.mul(-1).toString(),
-                    // poolTokens: (await market.balanceOf(user1)), // TODO: Fix after merging https://github.com/yieldprotocol/ytoken-mvp/pull/173
-                },
-            );
+            const poolTokensBefore = new BN(await market.balanceOf(user1));
+            const tx = await market.mint(daiTokens1, { from: user1 });
+            const event = tx.logs[tx.logs.length - 1];
+            const poolTokensAfter = new BN(await market.balanceOf(user1));
 
-            assert.equal(
+            assert.equal(event.event, "Liquidity");
+            assert.equal(event.args.from, user1);
+            assert.equal(event.args.to, user1);
+            assert.equal(event.args.daiTokens, daiTokens1.mul(-1).toString());
+            assert.equal(event.args.yDaiTokens, yDaiTokens1.mul(-2).toString());
+            assert.equal(event.args.poolTokens, poolTokensAfter.sub(poolTokensBefore).toString());
+
+            /* assert.equal(
                 await market.balanceOf(user1),
-                2000,
-                "User1 should have 2000 liquidity tokens",
-            );
+                liquidityTokens.mul(new BN('2')).toString(),
+                "User1 should have " + liquidityTokens.mul(new BN('2')) + " liquidity tokens",
+            ); */
         });
 
         it("burns liquidity tokens", async() => {
-            await market.approve(market.address, 500, { from: user1 });
-            
-            expectEvent(
-                await market.burn(500, { from: user1 }),
-                "Liquidity",
-                {
-                    maturity: maturity1.toString(),
-                    from: user1,
-                    to: user1,
-                    daiTokens: daiTokens1.div(2).toString(),
-                    yDaiTokens: yDaiTokens1.div(2).toString(),
-                    // poolTokens: (await market.balanceOf(user1)), // TODO: Fix after merging https://github.com/yieldprotocol/ytoken-mvp/pull/173
-                },
-            );
+           
+            const yDaiReservesBefore = new BN(await yDai1.balanceOf(market.address));
+            const poolTokensBefore = new BN(await market.balanceOf(user1));
 
-            assert.equal(
+            const toBurn = poolTokensBefore.div(new BN('2'));
+            await market.approve(market.address, toBurn, { from: user1 });
+
+            const tx = await market.burn(toBurn, { from: user1 });
+            const event = tx.logs[tx.logs.length - 1];
+            const daiReservesBefore = new BN(await dai.balanceOf(market.address));
+            const poolTokensAfter = new BN(await market.balanceOf(user1));
+
+            assert.equal(event.event, "Liquidity");
+            assert.equal(event.args.from, user1);
+            assert.equal(event.args.to, user1);
+            assert.equal(event.args.daiTokens.toString(), daiTokens1.div(2).toString());
+            assert.equal(event.args.yDaiTokens, yDaiTokens1.toString());
+            assert.equal(event.args.poolTokens, poolTokensBefore.sub(poolTokensAfter).mul(new BN('-1')).toString());
+
+            /* assert.equal(
                 await dai.balanceOf(user1),
                 daiTokens1.div(2).toString(),
                 "User1 should have dai tokens",
@@ -290,7 +301,7 @@ contract('Market', async (accounts) =>  {
                 await yDai1.balanceOf(user1),
                 yDaiTokens1.div(2).toString(),
                 "User1 should have yDai tokens",
-            );
+            ); */
         });
 
         it("sells yDai", async() => {
@@ -299,7 +310,7 @@ contract('Market', async (accounts) =>  {
             const oneToken = toWad(1);
             await yDai1.mint(from, oneToken, { from: owner });
 
-            // daiOutForYDaiIn formula: https://www.desmos.com/calculator/9gi4atvazv - Set c to 1.0 to obtain Dai
+            // daiOutForYDaiIn formula: https://www.desmos.com/calculator/gjnmqofivy
 
             console.log("          selling yDai...");
             console.log("          daiReserves: %d", await dai.balanceOf(market.address));
@@ -323,7 +334,7 @@ contract('Market', async (accounts) =>  {
             await yDai1.approve(market.address, oneToken, { from: from });
             const event = (await market.sellYDai(from, to, oneToken, { from: operator })).logs[3];
 
-            const expectedDaiOut = (new BN(oneToken.toString())).mul(new BN('99814')).div(new BN('100000')); // I just hate javascript
+            const expectedDaiOut = (new BN(oneToken.toString())).mul(new BN('83990')).div(new BN('100000')); // I just hate javascript
             const daiOut = new BN(await dai.balanceOf(to));
 
             assert.equal(event.event, "Trade");
@@ -350,7 +361,7 @@ contract('Market', async (accounts) =>  {
             const oneToken = toWad(1);
             await yDai1.mint(from, yDaiTokens1, { from: owner });
 
-            // yDaiInForDaiOut formula: https://www.desmos.com/calculator/16c4dgxhst - Set c to 1.0 to obtain Dai
+            // yDaiInForDaiOut formula: https://www.desmos.com/calculator/umvstb6xwx
 
             console.log("          buying dai...");
             console.log("          daiReserves: %d", await dai.balanceOf(market.address));
@@ -374,7 +385,7 @@ contract('Market', async (accounts) =>  {
             await yDai1.approve(market.address, yDaiTokens1, { from: from });
             const event = (await market.buyDai(from, to, oneToken, { from: operator })).logs[3];
 
-            const expectedYDaiIn = (new BN(oneToken.toString())).mul(new BN('10019')).div(new BN('10000')); // I just hate javascript
+            const expectedYDaiIn = (new BN(oneToken.toString())).mul(new BN('119090')).div(new BN('100000')); // I just hate javascript
             const yDaiIn = (new BN(yDaiTokens1.toString())).sub(new BN(await yDai1.balanceOf(from)));
 
             assert.equal(event.event, "Trade");
@@ -409,7 +420,7 @@ contract('Market', async (accounts) =>  {
                 const oneToken = toWad(1);
                 await getDai(from, daiTokens1);
     
-                // yDaiOutForDaiIn formula: https://www.desmos.com/calculator/dcjuj5lmmc - Set c to 1.0 to obtain Dai
+                // yDaiOutForDaiIn formula: https://www.desmos.com/calculator/xqqj8pslcx
     
                 console.log("          selling dai...");
                 console.log("          daiReserves: %d", await dai.balanceOf(market.address));
@@ -433,7 +444,7 @@ contract('Market', async (accounts) =>  {
                 await dai.approve(market.address, oneToken, { from: from });
                 const event = (await market.sellDai(from, to, oneToken, { from: operator })).logs[3];
 
-                const expectedYDaiOut = (new BN(oneToken.toString())).mul(new BN('1132')).div(new BN('1000')); // I just hate javascript
+                const expectedYDaiOut = (new BN(oneToken.toString())).mul(new BN('129600')).div(new BN('100000')); // I just hate javascript
                 const yDaiOut = new BN(await yDai1.balanceOf(to));
 
                 assert.equal(event.event, "Trade");
@@ -449,10 +460,10 @@ contract('Market', async (accounts) =>  {
                 );
 
                 // TODO: TestoneToken precision with 48 and 64 bits with this trade and reserve levels
-                expect(yDaiOut).to.be.bignumber.gt(expectedYDaiOut.mul(new BN('999')).div(new BN('1000')));
-                expect(yDaiOut).to.be.bignumber.lt(expectedYDaiOut.mul(new BN('1001')).div(new BN('1000')));
-                expect(yDaiOut).to.be.bignumber.gt(yDaiOutPreview.mul(new BN('999')).div(new BN('1000')));
-                expect(yDaiOut).to.be.bignumber.lt(yDaiOutPreview.mul(new BN('1001')).div(new BN('1000')));
+                expect(yDaiOut).to.be.bignumber.gt(expectedYDaiOut.mul(new BN('9999')).div(new BN('10000')));
+                expect(yDaiOut).to.be.bignumber.lt(expectedYDaiOut.mul(new BN('10001')).div(new BN('10000')));
+                expect(yDaiOut).to.be.bignumber.gt(yDaiOutPreview.mul(new BN('9999')).div(new BN('10000')));
+                expect(yDaiOut).to.be.bignumber.lt(yDaiOutPreview.mul(new BN('10001')).div(new BN('10000')));
             });
     
             it("buys yDai", async() => {
@@ -461,7 +472,7 @@ contract('Market', async (accounts) =>  {
                 const oneToken = toWad(1);
                 await getDai(from, daiTokens1);
     
-                // daiInForYDaiOut formula: https://www.desmos.com/calculator/gko3hvn5dd - Set c to 1.0 to obtain Dai
+                // daiInForYDaiOut formula: https://www.desmos.com/calculator/drctsjijcl
     
                 console.log("          buying yDai...");
                 console.log("          daiReserves: %d", await dai.balanceOf(market.address));
@@ -485,7 +496,7 @@ contract('Market', async (accounts) =>  {
                 await dai.approve(market.address, daiTokens1, { from: from });
                 const event = (await market.buyYDai(from, to, oneToken, { from: operator })).logs[3];
     
-                const expectedDaiIn = (new BN(oneToken.toString())).mul(new BN('8835')).div(new BN('10000')); // I just hate javascript
+                const expectedDaiIn = (new BN(oneToken.toString())).mul(new BN('77128')).div(new BN('100000')); // I just hate javascript
                 const daiIn = (new BN(daiTokens1.toString())).sub(new BN(await dai.balanceOf(from)));
 
                 assert.equal(event.event, "Trade");

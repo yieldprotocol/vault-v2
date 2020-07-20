@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.6.10;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "../helpers/ERC20Permit.sol";
 
-
-contract TestERC20 is ERC20("Test", "TST") {
-    constructor (uint256 supply) public {
+contract TestERC20 is ERC20Permit {
+    constructor (uint256 supply) public ERC20("Test", "TST") {
         _mint(msg.sender, supply);
     }
 

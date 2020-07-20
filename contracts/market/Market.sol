@@ -19,7 +19,6 @@ contract Market is IMarket, ERC20, Delegable {
 
     int128 constant public k = int128(uint256((1 << 64)) / 126144000); // 1 / Seconds in 4 years, in 64.64
     int128 constant public g = int128(uint256((999 << 64)) / 1000); // All constants are `ufixed`, to divide them they must be converted to uint256
-    uint256 constant public initialSupply = 1000;
     uint128 immutable public maturity;
 
     IERC20 public dai;
@@ -79,7 +78,10 @@ contract Market is IMarket, ERC20, Delegable {
     }
 
     /// @dev Mint initial liquidity tokens
-    function init(uint256 daiIn, uint256 yDaiIn) external {
+    function init(uint128 daiIn, uint128 yDaiIn)
+        external
+        beforeMaturity
+    {
         require(
             totalSupply() == 0,
             "Market: Already initialized"
@@ -87,6 +89,13 @@ contract Market is IMarket, ERC20, Delegable {
 
         dai.transferFrom(msg.sender, address(this), daiIn);
         yDai.transferFrom(msg.sender, address(this), yDaiIn);
+        // TODO: Allow the below to be replaced by the approach in PR184
+        uint128 initialSupply = YieldMath.initialReservesValue(
+            daiIn,
+            yDaiIn,
+            toUint128(maturity - now), // This can't be called after maturity
+            k
+        );
         _mint(msg.sender, initialSupply);
         emit Liquidity(maturity, msg.sender, msg.sender, toInt256(daiIn), toInt256(yDaiIn), toInt256(0)); // TODO: Fix after merging https://github.com/yieldprotocol/ytoken-mvp/pull/173
     }

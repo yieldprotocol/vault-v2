@@ -9,19 +9,20 @@ pragma solidity ^0.6.0;
 import "./ABDKMath64x64.sol";
 
 /**
- * Ethereum smart contract library implementing Yield Math model.
+ * Ethereum smart contract library implementing Yield Math model for DAI/yDAI
+ * swaps.
  */
 library YieldMath {
   /**
-   * Calculate the amount of yDAI a user would get for given amount of Dai.
+   * Calculate the amount of yDAI a user would get for given amount of DAI.
    *
-   * @param daiReserves Dai reserves amount
+   * @param daiReserves DAI reserves amount
    * @param yDAIReserves yDAI reserves amount
-   * @param daiAmount Dai amount to be traded
+   * @param daiAmount DAI amount to be traded
    * @param timeTillMaturity time till maturity in seconds
    * @param k time till maturity coefficient, multiplied by 2^64
    * @param g fee coefficient, multiplied by 2^64
-   * @return the amount of yDAI a user would get for given amount of Dai
+   * @return the amount of yDAI a user would get for given amount of DAI
    */
   function yDaiOutForDaiIn (
     uint128 daiReserves, uint128 yDAIReserves, uint128 daiAmount,
@@ -34,14 +35,14 @@ library YieldMath {
     int128 a = ABDKMath64x64.sub (0x10000000000000000, ABDKMath64x64.mul (g, t));
     require (a > 0);
 
-    // xdx = daiReserves + daiAmount
-    uint256 xdx = uint256 (daiReserves) + uint256 (daiAmount);
-    require (xdx < 0x100000000000000000000000000000000);
+    // zdz = daiReserves + daiAmount
+    uint256 zdz = uint256 (daiReserves) + uint256 (daiAmount);
+    require (zdz < 0x100000000000000000000000000000000);
 
     uint256 sum =
       pow (daiReserves, uint128 (a), 0x10000000000000000) +
-      pow (yDAIReserves, uint128 (a), 0x10000000000000000) -
-      pow (uint128(xdx), uint128 (a), 0x10000000000000000);
+      uint256 (pow (yDAIReserves, uint128 (a), 0x10000000000000000)) -
+      pow (uint128 (zdz), uint128 (a), 0x10000000000000000);
     require (sum < 0x100000000000000000000000000000000);
 
     uint256 result = yDAIReserves - pow (uint128 (sum), 0x10000000000000000, uint128 (a));
@@ -51,15 +52,15 @@ library YieldMath {
   }
 
   /**
-   * Calculate the amount of Dai a user would get for certain amount of yDAI.
+   * Calculate the amount of DAI a user would get for certain amount of yDAI.
    *
-   * @param daiReserves Dai reserves amount
+   * @param daiReserves DAI reserves amount
    * @param yDAIReserves yDAI reserves amount
    * @param yDAIAmount yDAI amount to be traded
    * @param timeTillMaturity time till maturity in seconds
    * @param k time till maturity coefficient, multiplied by 2^64
    * @param g fee coefficient, multiplied by 2^64
-   * @return the amount of Dai a user would get for given amount of yDAI
+   * @return the amount of DAI a user would get for given amount of yDAI
    */
   function daiOutForYDaiIn (
     uint128 daiReserves, uint128 yDAIReserves, uint128 yDAIAmount,
@@ -77,9 +78,9 @@ library YieldMath {
     require (ydy < 0x100000000000000000000000000000000);
 
     uint256 sum =
-      pow (uint128 (daiReserves), uint128 (a), 0x10000000000000000) -
-      pow (uint128 (ydy), uint128 (a), 0x10000000000000000) +
-      pow (yDAIReserves, uint128 (a), 0x10000000000000000);
+      uint256 (pow (daiReserves, uint128 (a), 0x10000000000000000)) -
+      (uint256 (pow (uint128 (ydy), uint128 (a), 0x10000000000000000)) -
+      uint256 (pow (yDAIReserves, uint128 (a), 0x10000000000000000)));
     require (sum < 0x100000000000000000000000000000000);
 
     uint256 result =
@@ -91,15 +92,15 @@ library YieldMath {
   }
 
   /**
-   * Calculate the amount of yDAI a user could sell for given amount of Dai.
+   * Calculate the amount of yDAI a user could sell for given amount of DAI.
    *
-   * @param daiReserves Dai reserves amount
+   * @param daiReserves DAI reserves amount
    * @param yDAIReserves yDAI reserves amount
-   * @param daiAmount Dai amount to be traded
+   * @param daiAmount DAI amount to be traded
    * @param timeTillMaturity time till maturity in seconds
    * @param k time till maturity coefficient, multiplied by 2^64
    * @param g fee coefficient, multiplied by 2^64
-   * @return the amount of yDAI a user could sell for given amount of Dai
+   * @return the amount of yDAI a user could sell for given amount of DAI
    */
   function yDaiInForDaiOut (
     uint128 daiReserves, uint128 yDAIReserves, uint128 daiAmount,
@@ -114,14 +115,14 @@ library YieldMath {
     int128 a = ABDKMath64x64.sub (0x10000000000000000, ABDKMath64x64.mul (g, t));
     require (a > 0);
 
-    // xdx = daiReserves - daiAmount
-    uint256 xdx = uint256 (daiReserves) - uint256 (daiAmount);
-    require (xdx < 0x100000000000000000000000000000000);
+    // zdz = daiReserves - daiAmount
+    uint256 zdz = uint256 (daiReserves) - uint256 (daiAmount);
+    require (zdz < 0x100000000000000000000000000000000);
 
     uint256 sum =
-      pow (uint128 (daiReserves), uint128 (a), 0x10000000000000000) +
-      pow (yDAIReserves, uint128 (a), 0x10000000000000000) -
-      pow (uint128 (xdx), uint128 (a), 0x10000000000000000);
+      pow (daiReserves, uint128 (a), 0x10000000000000000) +
+      uint256 (pow (yDAIReserves, uint128 (a), 0x10000000000000000)) -
+      pow (uint128 (zdz), uint128 (a), 0x10000000000000000);
     require (sum < 0x100000000000000000000000000000000);
 
     uint256 result = pow (uint128 (sum), 0x10000000000000000, uint128 (a)) - yDAIReserves;
@@ -131,16 +132,16 @@ library YieldMath {
   }
 
   /**
-   * Calculate the amount of Dai a user would have to pay for certain amount of
+   * Calculate the amount of DAI a user would have to pay for certain amount of
    * yDAI.
    *
-   * @param daiReserves Dai reserves amount
+   * @param daiReserves DAI reserves amount
    * @param yDAIReserves yDAI reserves amount
    * @param yDAIAmount yDAI amount to be traded
    * @param timeTillMaturity time till maturity in seconds
    * @param k time till maturity coefficient, multiplied by 2^64
    * @param g fee coefficient, multiplied by 2^64
-   * @return the amount of Dai a user would have to pay for given amount of
+   * @return the amount of DAI a user would have to pay for given amount of
    *         yDAI
    */
   function daiInForYDaiOut (
@@ -158,14 +159,42 @@ library YieldMath {
     require (ydy < 0x100000000000000000000000000000000);
 
     uint256 sum =
-      pow (daiReserves, uint128 (a), 0x10000000000000000) +
-      pow (yDAIReserves, uint128 (a), 0x10000000000000000) -
-        pow (uint128 (ydy), uint128 (a), 0x10000000000000000);
+      uint256 (pow (daiReserves, uint128 (a), 0x10000000000000000)) +
+      uint256 (pow (yDAIReserves, uint128 (a), 0x10000000000000000)) -
+      uint256 (pow (uint128 (ydy), uint128 (a), 0x10000000000000000));
     require (sum < 0x100000000000000000000000000000000);
 
     uint256 result =
       pow (uint128 (sum), 0x10000000000000000, uint128 (a)) -
       daiReserves;
+    require (result < 0x100000000000000000000000000000000);
+
+    return uint128 (result);
+  }
+
+  /**
+   * Estimate in DAI the value of reserves at protocol initialization time.
+   *
+   * @param daiReserves DAI reserves amount
+   * @param yDAIReserves yDAI reserves amount
+   * @param timeTillMaturity time till maturity in seconds
+   * @param k time till maturity coefficient, multiplied by 2^64
+   * @return estimated value of reserves
+   */
+  function initialReservesValue (
+    uint128 daiReserves, uint128 yDAIReserves, uint128 timeTillMaturity,
+    int128 k)
+  internal pure returns (uint128) {
+    // a = (1 - k * timeTillMaturity)
+    int128 a = ABDKMath64x64.sub (0x10000000000000000, ABDKMath64x64.mul (k, ABDKMath64x64.fromUInt (timeTillMaturity)));
+    require (a > 0);
+
+    uint256 sum =
+      uint256 (pow (daiReserves, uint128 (a), 0x10000000000000000)) +
+      uint256 (pow (yDAIReserves, uint128 (a), 0x10000000000000000)) >> 1;
+    require (sum < 0x100000000000000000000000000000000);
+
+    uint256 result = uint256 (pow (uint128 (sum), 0x10000000000000000, uint128 (a))) << 1;
     require (result < 0x100000000000000000000000000000000);
 
     return uint128 (result);
