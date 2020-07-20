@@ -31,15 +31,18 @@ module.exports = async (callback) => {
 
     let WETH = web3.utils.fromAscii("ETH-A");
 
-    let ilks = await vat.ilks(web3.utils.fromAscii(WETH))
-    let spot = ilks.spot;
-    let rate1 = ilks.rate;
-    console.log(ilks.spot.toString())
-    console.log(ilks.rate.toString())
+    // let ilks = await vat.ilks(web3.utils.fromAscii(WETH))
+    // let spot = ilks.spot;
+    // let rate1 = ilks.rate;
+    // console.log(ilks.spot.toString())
+    // console.log(ilks.rate.toString())
 
-    const daiDebt1 = toWad(100);
-    const daiReserves = mulRay(daiDebt1, rate1);
-    const yDaiReserves = daiTokens1.mul(2);
+    let spot = toRay(150);
+    let rate1 = toRay(1.25);
+
+    const daiDebt1 = toWad(90);
+    const daiTokens1 = mulRay(daiDebt1, rate1);
+    const yDaiTokens1 = daiTokens1;
 
     let maturity;
 
@@ -65,28 +68,27 @@ module.exports = async (callback) => {
         console.log('Passed Daijoin exit');
     }
 
-    // Increase the rate accumulator
-    // await vat.fold(WETH, vat.address, subBN(rate1, toRay(1)), { from: owner }); // Fold only the increase from 1.0
-    // await pot.setChi(chi1, { from: owner }); // Set the savings accumulator
-
-    let yDaiAddr = await migrations.contracts(web3.utils.fromAscii(`yDai1`))
-    let yDai1 = await YDai.at(yDaiAddr);
-    let marketAddr = await migrations.contracts(web3.utils.fromAscii(`Market-yDai1`));
+    let yDaiAddr = await migrations.contracts(web3.utils.fromAscii(`yDai0`))
+    let yDai0 = await YDai.at(yDaiAddr);
+    let marketAddr = await migrations.contracts(web3.utils.fromAscii(`Market-yDai0`));
     let market = await Market.at(marketAddr);
 
     try { 
         // Allow owner to mint yDai the sneaky way, without recording a debt in dealer
-        await yDai1.orchestrate(owner, { from: owner });
+        await yDai0.orchestrate(owner, { from: owner });
+
+        const daiReserves = daiTokens1;
+        const yDaiReserves = yDaiTokens1.mul(2);
 
         await getDai(user1, daiReserves)
-        await yDai1.mint(user1, yDaiReserves, { from: owner });
+        await yDai0.mint(user1, yDaiReserves, { from: owner });
         console.log("        initial liquidity...");
         console.log("        daiReserves: %d", daiReserves.toString());
         console.log("        yDaiReserves: %d", yDaiReserves.toString());
         const t = new BN((await web3.eth.getBlock(await web3.eth.getBlockNumber())).timestamp);
         console.log("        timeTillMaturity: %d", (new BN(maturity).sub(t).toString()));
         await dai.approve(market.address, daiReserves, { from: user1 });
-        await yDai1.approve(market.address, yDaiReserves, { from: user1 });
+        await yDai0.approve(market.address, yDaiReserves, { from: user1 });
         console.log();
         console.log();
         await market.init(daiReserves, yDaiReserves, { from: user1 });
