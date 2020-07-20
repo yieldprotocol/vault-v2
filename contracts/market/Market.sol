@@ -97,7 +97,7 @@ contract Market is IMarket, ERC20, Delegable {
             k
         );
         _mint(msg.sender, initialSupply);
-        emit Liquidity(maturity, msg.sender, msg.sender, toInt256(daiIn), toInt256(yDaiIn), toInt256(0)); // TODO: Fix after merging https://github.com/yieldprotocol/ytoken-mvp/pull/173
+        emit Liquidity(maturity, msg.sender, msg.sender, -toInt256(daiIn), -toInt256(yDaiIn), toInt256(initialSupply));
     }
 
     /// @dev Mint liquidity tokens in exchange for adding dai and yDai
@@ -114,7 +114,7 @@ contract Market is IMarket, ERC20, Delegable {
         dai.transferFrom(msg.sender, address(this), daiOffered);
         yDai.transferFrom(msg.sender, address(this), yDaiRequired);
         _mint(msg.sender, tokensMinted);
-        emit Liquidity(maturity, msg.sender, msg.sender, -toInt256(daiOffered), -toInt256(yDaiRequired), toInt256(tokensMinted)); // TODO: Fix after merging https://github.com/yieldprotocol/ytoken-mvp/pull/173
+        emit Liquidity(maturity, msg.sender, msg.sender, -toInt256(daiOffered), -toInt256(yDaiRequired), toInt256(tokensMinted));
     }
 
     /// @dev Burn liquidity tokens in exchange for dai and yDai
@@ -130,7 +130,7 @@ contract Market is IMarket, ERC20, Delegable {
         _burn(msg.sender, tokensBurned);
         dai.transfer(msg.sender, daiReturned);
         yDai.transfer(msg.sender, yDaiReturned);
-        emit Liquidity(maturity, msg.sender, msg.sender, toInt256(daiReturned), toInt256(yDaiReturned), -toInt256(tokensBurned)); // TODO: Fix after merging https://github.com/yieldprotocol/ytoken-mvp/pull/173
+        emit Liquidity(maturity, msg.sender, msg.sender, toInt256(daiReturned), toInt256(yDaiReturned), -toInt256(tokensBurned));
     }
 
     /// @dev Sell Dai for yDai

@@ -222,7 +222,15 @@ contract('Market', async (accounts) =>  {
 
         await dai.approve(market.address, daiTokens1, { from: user1 });
         await yDai1.approve(market.address, yDaiTokens1, { from: user1 });
-        await market.init(daiTokens1, yDaiTokens1, { from: user1 });
+        const tx = await market.init(daiTokens1, yDaiTokens1, { from: user1 });
+        const event = tx.logs[tx.logs.length - 1];
+
+        assert.equal(event.event, "Liquidity");
+        assert.equal(event.args.from, user1);
+        assert.equal(event.args.to, user1);
+        assert.equal(event.args.daiTokens.toString(), daiTokens1.mul(-1).toString());
+        assert.equal(event.args.yDaiTokens.toString(), yDaiTokens1.mul(-1).toString());
+        assert.equal(event.args.poolTokens.toString(), daiTokens1.add(yDaiTokens1).sub(2).toString()); // TODO: Should YieldMath.initialReserves() round up?
 
         // Test with https://www.desmos.com/calculator/rvmg7soarl
 
