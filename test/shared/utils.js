@@ -1,4 +1,5 @@
 const ethers = require("ethers");
+const toBytes32 = ethers.utils.formatBytes32String;
 const bigNumberify = ethers.utils.bigNumberify;
 
 // Helper functions
@@ -65,16 +66,15 @@ const divRay = function(x, ray) {
 }
 
 // Constants
-
-const WETH = web3.utils.fromAscii("ETH-A")
-const Line = web3.utils.fromAscii("Line")
-const spotName = web3.utils.fromAscii("spot")
-const linel = web3.utils.fromAscii("line")
+const WETH = toBytes32("ETH-A");
+const Line = toBytes32("Line");
+const spotName = toBytes32("spot");
+const linel = toBytes32("line");
 
 const limits =  toRad(10000);
 const spot = toRay(1.5);
 const chi = toRay(1.2);
-const rate = toRay(1.4); // NB: If this is changed to 1.2, the `redeem with increased chi returns more dai` test fails
+const rate = toRay(1.4); // TODO: If this is changed to 1.2, the `redeem with increased chi returns more dai` test fails
 
 const daiDebt = toWad(120);
 const daiTokens = mulRay(daiDebt, rate);
