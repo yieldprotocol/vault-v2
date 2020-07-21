@@ -173,34 +173,6 @@ library YieldMath {
   }
 
   /**
-   * Estimate in DAI the value of reserves at protocol initialization time.
-   *
-   * @param daiReserves DAI reserves amount
-   * @param yDAIReserves yDAI reserves amount
-   * @param timeTillMaturity time till maturity in seconds
-   * @param k time till maturity coefficient, multiplied by 2^64
-   * @return estimated value of reserves
-   */
-  function initialReservesValue (
-    uint128 daiReserves, uint128 yDAIReserves, uint128 timeTillMaturity,
-    int128 k)
-  internal pure returns (uint128) {
-    // a = (1 - k * timeTillMaturity)
-    int128 a = ABDKMath64x64.sub (0x10000000000000000, ABDKMath64x64.mul (k, ABDKMath64x64.fromUInt (timeTillMaturity)));
-    require (a > 0);
-
-    uint256 sum =
-      uint256 (pow (daiReserves, uint128 (a), 0x10000000000000000)) +
-      uint256 (pow (yDAIReserves, uint128 (a), 0x10000000000000000)) >> 1;
-    require (sum < 0x100000000000000000000000000000000);
-
-    uint256 result = uint256 (pow (uint128 (sum), 0x10000000000000000, uint128 (a))) << 1;
-    require (result < 0x100000000000000000000000000000000);
-
-    return uint128 (result);
-  }
-
-  /**
    * Raise given number x into power specified as a simple fraction y/z and then
    * multiply the result by the normalization factor 2^(128 * (1 - y/z)).
    * Revert if z is zero, or if both x and y are zeros.
