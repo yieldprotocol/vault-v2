@@ -22,4 +22,5 @@ interface IController {
     function borrow(bytes32, uint256, address, address, uint256) external;
     function repayYDai(bytes32, uint256, address, address, uint256) external;
     function repayDai(bytes32, uint256, address, address, uint256) external;
+    function skimStart() external view returns (uint256);
 }

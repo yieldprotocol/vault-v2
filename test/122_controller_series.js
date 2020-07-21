@@ -24,6 +24,7 @@ const helper = require('ganache-time-traveler');
 const truffleAssert = require('truffle-assertions');
 const { BN, expectRevert } = require('@openzeppelin/test-helpers');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
+const { assert } = require('chai');
 
 contract('Controller: Multi-Series', async (accounts) =>  {
     let [ owner, user ] = accounts;
@@ -55,6 +56,7 @@ contract('Controller: Multi-Series', async (accounts) =>  {
     const daiDebt = toWad(120);
     const daiTokens = mulRay(daiDebt, rate);
     const wethTokens = divRay(daiTokens, spot);
+    const THREE_MONTHS = 7776000;
     let maturity;
 
     beforeEach(async() => {
@@ -157,6 +159,11 @@ contract('Controller: Multi-Series', async (accounts) =>  {
             true,
             "Controller should contain " + (await yDai1.name.call()),
         );
+
+        assert.equal(
+            await controller.skimStart(),
+            maturity1 + THREE_MONTHS
+        );
     });
 
     it("adds several series", async() => {
@@ -212,6 +219,10 @@ contract('Controller: Multi-Series', async (accounts) =>  {
             await controller.series(maturity2),
             yDai2.address,
             "Controller should have the contract for " + (await yDai2.name.call()),
+        );
+        assert.equal(
+            await controller.skimStart(),
+            maturity2 + THREE_MONTHS
         );
     });
 

@@ -133,6 +133,10 @@ contract Unwind is Ownable(), DecimalMath {
             live == true, // If DSS is not live this method will fail later on.
             "Unwind: Can only skimWhileLive if live"
         );
+        require(
+            now >= _controller.skimStart(),
+            "Unwind: Only after skimStart"
+        );
 
         uint256 profit = _chai.balanceOf(address(_treasury));
         profit = profit.add(_yDaiProfit(getChi(), getRate()));
