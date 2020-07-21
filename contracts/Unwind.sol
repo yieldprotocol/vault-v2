@@ -2,6 +2,7 @@
 pragma solidity ^0.6.10;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IVat.sol";
@@ -179,9 +180,22 @@ contract Unwind is Ownable(), DecimalMath {
                 rate0 = rate;
             }
 
-            profit = profit.add(divd(muld(_controller.totalDebtYDai(WETH, maturity), divd(rate, rate0)), chi0));
-            profit = profit.add(divd(_controller.totalDebtYDai(CHAI, maturity), chi0));
-            profit = profit.sub(divd(yDai.totalSupply(), chi0));
+            profit = profit.add(
+                divd(
+                    muld(
+                        _controller.totalDebtYDai(WETH, maturity),
+                        Math.max(UNIT, divd(rate, rate0)) // rate growth since maturity, floored at 1.0
+                    ),                                    // muld(yDaiDebt, rateGrowth) - Convert Weth collateralized YDai debt to Dai debt
+                    chi                                   // divd(daiDebt, chi) - Convert Dai debt to Chai debt
+                )
+            );
+            profit = profit.add(
+                divd(
+                    _controller.totalDebtYDai(CHAI, maturity),
+                    chi0                                  // divd(yDaiDebt, chi0) - Convert Chai collateralized YDai debt to Chai debt
+                )
+            );
+            profit = profit.sub(divd(yDai.totalSupply(), chi0)); // divd(yDai, chi0) - Convert YDai to Chai
         }
 
         return profit;
