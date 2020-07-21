@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Code adapted from https://github.com/OpenZeppelin/openzeppelin-contracts/pull/2237/
 pragma solidity ^0.6.0;
 
