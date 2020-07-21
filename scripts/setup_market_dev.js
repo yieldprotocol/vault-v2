@@ -44,8 +44,6 @@ module.exports = async (callback) => {
     const daiTokens1 = mulRay(daiDebt1, rate1);
     const yDaiTokens1 = daiTokens1;
 
-    let maturity;
-
     // Convert eth to weth and use it to borrow `daiTokens` from MakerDAO
     // This function shadows and uses global variables, careful.
     async function getDai(user, _daiTokens){
@@ -72,26 +70,29 @@ module.exports = async (callback) => {
     let yDai0 = await YDai.at(yDaiAddr);
     let marketAddr = await migrations.contracts(web3.utils.fromAscii(`Market-yDai0`));
     let market = await Market.at(marketAddr);
+    let maturity = await yDai0.maturity();
 
     try { 
         // Allow owner to mint yDai the sneaky way, without recording a debt in dealer
         await yDai0.orchestrate(owner, { from: owner });
 
         const daiReserves = daiTokens1;
-        const yDaiReserves = yDaiTokens1.mul(2);
+        await getDai(user1, daiReserves);
+    
+        await dai.approve(market.address, daiReserves, { from: user1 });
+        await market.init(daiReserves, { from: user1 });
 
-        await getDai(user1, daiReserves)
-        await yDai0.mint(user1, yDaiReserves, { from: owner });
+        const additionalYDaiReserves = toWad(34.4);
+        await yDai0.mint(user1, additionalYDaiReserves, { from: owner });
+        await yDai0.approve(market.address, additionalYDaiReserves, { from: user1 });
+        await market.sellYDai(user1, user1, additionalYDaiReserves, { from: user1 });
+
         console.log("        initial liquidity...");
-        console.log("        daiReserves: %d", daiReserves.toString());
-        console.log("        yDaiReserves: %d", yDaiReserves.toString());
+        console.log("        daiReserves: %d", (await market.getDaiReserves()).toString());
+        console.log("        yDaiReserves: %d", (await market.getYDaiReserves()).toString());
         const t = new BN((await web3.eth.getBlock(await web3.eth.getBlockNumber())).timestamp);
         console.log("        timeTillMaturity: %d", (new BN(maturity).sub(t).toString()));
-        await dai.approve(market.address, daiReserves, { from: user1 });
-        await yDai0.approve(market.address, yDaiReserves, { from: user1 });
         console.log();
-        console.log();
-        await market.init(daiReserves, yDaiReserves, { from: user1 });
         console.log('market initiated')
         callback()
     } catch (e) {console.log(e)}
