@@ -73,10 +73,11 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
     }
 
     /// @dev Rate differential between maturity and now in RAY. Returns 1.0 if not mature.
+    /// rateGrowth is floored to 1.0.
     //
-    //           rate_now
+    //                 rate_now
     // rateGrowth() = ----------
-    //           rate_mat
+    //                 rate_mat
     //
     function rateGrowth() public override returns(uint256){
         if (isMature != true) return rate0;
@@ -88,7 +89,7 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
         } else {
             (, rateNow,,,) = _vat.ilks(WETH);
         }
-        return divd(rateNow, rate0);
+        return Math.max(UNIT, divd(rateNow, rate0));
     }
 
     /// @dev Mature yDai and capture maturity data
