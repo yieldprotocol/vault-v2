@@ -186,13 +186,10 @@ contract('LimitMarket', async (accounts) =>  {
     describe("with liquidity", () => {
         beforeEach(async() => {
             const daiReserves = daiTokens1;
-            const yDaiReserves = yDaiTokens1;
             await getDai(user1, daiReserves)
-            await yDai1.mint(user1, yDaiReserves, { from: owner });
     
             await dai.approve(market.address, daiReserves, { from: user1 });
-            await yDai1.approve(market.address, yDaiReserves, { from: user1 });
-            await market.init(daiReserves, yDaiReserves, { from: user1 });
+            await market.init(daiReserves, { from: user1 });
         });
 
         it("buys dai", async() => {
