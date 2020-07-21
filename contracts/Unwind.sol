@@ -2,6 +2,7 @@
 pragma solidity ^0.6.10;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IVat.sol";
@@ -133,6 +134,10 @@ contract Unwind is Ownable(), DecimalMath {
             live == true, // If DSS is not live this method will fail later on.
             "Unwind: Can only skimWhileLive if live"
         );
+        require(
+            now >= _controller.skimStart(),
+            "Unwind: Only after skimStart"
+        );
 
         uint256 profit = _chai.balanceOf(address(_treasury));
         profit = profit.add(_yDaiProfit(getChi(), getRate()));
@@ -154,7 +159,7 @@ contract Unwind is Ownable(), DecimalMath {
         profit = profit.sub(_treasuryWeth);
         profit = profit.sub(muld(muld(_controller.totalChaiPosted(), _fix), chi));
 
-        _weth.transfer(beneficiary, profit);
+        require(_weth.transfer(beneficiary, profit));
     }
 
     /// @dev Returns the profit accummulated in the system due to yDai supply and debt, in chai, for a given chi and rate.
@@ -175,9 +180,22 @@ contract Unwind is Ownable(), DecimalMath {
                 rate0 = rate;
             }
 
-            profit = profit.add(divd(muld(_controller.totalDebtYDai(WETH, maturity), divd(rate, rate0)), chi0));
-            profit = profit.add(divd(_controller.totalDebtYDai(CHAI, maturity), chi0));
-            profit = profit.sub(divd(yDai.totalSupply(), chi0));
+            profit = profit.add(
+                divd(
+                    muld(
+                        _controller.totalDebtYDai(WETH, maturity),
+                        Math.max(UNIT, divd(rate, rate0)) // rate growth since maturity, floored at 1.0
+                    ),                                    // muld(yDaiDebt, rateGrowth) - Convert Weth collateralized YDai debt to Dai debt
+                    chi                                   // divd(daiDebt, chi) - Convert Dai debt to Chai debt
+                )
+            );
+            profit = profit.add(
+                divd(
+                    _controller.totalDebtYDai(CHAI, maturity),
+                    chi0                                  // divd(yDaiDebt, chi0) - Convert Chai collateralized YDai debt to Chai debt
+                )
+            );
+            profit = profit.sub(divd(yDai.totalSupply(), chi0)); // divd(yDai, chi0) - Convert YDai to Chai
         }
 
         return profit;
@@ -240,7 +258,7 @@ contract Unwind is Ownable(), DecimalMath {
         } else if (collateral == CHAI) {
             remainder = muld(subFloorZero(muld(tokens, _chi), debt), _fix);
         }
-        _weth.transfer(user, remainder);
+        require(_weth.transfer(user, remainder));
     }
 
     /// @dev Redeems YDai for weth
@@ -248,9 +266,11 @@ contract Unwind is Ownable(), DecimalMath {
         require(settled && cashedOut, "Unwind: Not ready");
         IYDai yDai = _controller.series(maturity);
         yDai.burn(user, yDaiAmount);
-        _weth.transfer(
-            user,
-            muld(muld(yDaiAmount, yDai.chiGrowth()), _fix)
+        require(
+            _weth.transfer(
+                user,
+                muld(muld(yDaiAmount, yDai.chiGrowth()), _fix)
+            )
         );
     }
 }

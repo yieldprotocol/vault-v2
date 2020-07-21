@@ -134,6 +134,6 @@ contract Splitter is IFlashMinter, DecimalMath {
         // Sell the Dai for YDai at Market - It should make up for what was taken with repayYdai
         // Splitter will hold the dai temporarily - TODO: Consider SafeCast
         market.sellDai(address(this), address(this), uint128(dai.balanceOf(address(this))));
-        yDai.transfer(user, yDai.balanceOf(address(this)));
+        require(yDai.transfer(user, yDai.balanceOf(address(this))));
     }
 }

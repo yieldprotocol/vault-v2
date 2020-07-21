@@ -1,16 +1,12 @@
-const Vat = artifacts.require('Vat');
-const GemJoin = artifacts.require('GemJoin');
-const DaiJoin = artifacts.require('DaiJoin');
-const Weth = artifacts.require("WETH9");
-const ERC20 = artifacts.require("TestERC20");
-const Pot = artifacts.require('Pot');
-const Chai = artifacts.require('Chai');
-const Treasury = artifacts.require('Treasury');
-
-const truffleAssert = require('truffle-assertions');
-const helper = require('ganache-time-traveler');
 const { expectRevert } = require('@openzeppelin/test-helpers');
-const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
+const { setupYield } = require("./shared/fixtures");
+const {
+    WETH,
+    daiDebt,
+    daiTokens,
+    wethTokens,
+    chaiTokens,
+} = require ("./shared/utils");
 
 contract('Treasury - Lending', async (accounts) =>  {
     let [ owner, user ] = accounts;
@@ -18,75 +14,21 @@ contract('Treasury - Lending', async (accounts) =>  {
     let weth;
     let wethJoin;
     let dai;
-    let daiJoin;
-    let pot;
     let chai;
     let treasury;
 
-    let WETH = web3.utils.fromAscii("ETH-A")
-    let Line = web3.utils.fromAscii("Line")
-    let spotName = web3.utils.fromAscii("spot")
-    let linel = web3.utils.fromAscii("line")
-
-    const limits =  toRad(10000);
-    const spot = toRay(1.5);
-    const rate = toRay(1.25);
-    const chi = toRay(1.2);
-    
-    const daiDebt = toWad(120);
-    const daiTokens = mulRay(daiDebt, rate);
-    const wethTokens = divRay(daiTokens, spot);
-    const chaiTokens = divRay(daiTokens, chi);
-
     beforeEach(async() => {
-        // Set up vat, join and weth
-        vat = await Vat.new();
-        await vat.init(WETH, { from: owner }); // Set WETH rate to 1.0
-
-        weth = await Weth.new({ from: owner });
-        wethJoin = await GemJoin.new(vat.address, WETH, weth.address, { from: owner });
-
-        dai = await ERC20.new(0, { from: owner });
-        daiJoin = await DaiJoin.new(vat.address, dai.address, { from: owner });
-
-        // Setup vat
-        await vat.file(WETH, spotName, spot, { from: owner });
-        await vat.file(WETH, linel, limits, { from: owner });
-        await vat.file(Line, limits); 
-        await vat.fold(WETH, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
-
-        // Setup pot
-        pot = await Pot.new(vat.address);
-
-        // Setup chai
-        chai = await Chai.new(
-            vat.address,
-            pot.address,
-            daiJoin.address,
-            dai.address,
-        );
-
-        // Permissions
-        await vat.rely(vat.address, { from: owner });
-        await vat.rely(wethJoin.address, { from: owner });
-        await vat.rely(daiJoin.address, { from: owner });
-        await vat.rely(pot.address, { from: owner });
-        await vat.hope(daiJoin.address, { from: owner });
-
-        // Set chi
-        await pot.setChi(chi, { from: owner });
-        
-        treasury = await Treasury.new(
-            vat.address,
-            weth.address,
-            dai.address,
-            wethJoin.address,
-            daiJoin.address,
-            pot.address,
-            chai.address,
-        );
-        await treasury.orchestrate(owner, { from: owner });
-        // await treasury.orchestrate(user, { from: owner });
+        ({
+            vat,
+            weth,
+            wethJoin,
+            dai,
+            daiJoin,
+            pot,
+            jug,
+            chai,
+            treasury
+        } = await setupYield(owner, owner))
     });
 
     it("get the size of the contract", async() => {

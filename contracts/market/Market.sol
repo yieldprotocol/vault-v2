@@ -14,6 +14,9 @@ import "../interfaces/IMarket.sol";
 /// @dev The Market contract exchanges Dai for yDai at a price defined by a specific formula.
 contract Market is IMarket, ERC20, Delegable {
 
+    event Trade(uint256 maturity, address indexed from, address indexed to, int256 daiTokens, int256 yDaiTokens);
+    event Liquidity(uint256 maturity, address indexed from, address indexed to, int256 daiTokens, int256 yDaiTokens, int256 poolTokens);
+
     int128 constant public k = int128(uint256((1 << 64)) / 126144000); // 1 / Seconds in 4 years, in 64.64
     int128 constant public g = int128(uint256((999 << 64)) / 1000); // All constants are `ufixed`, to divide them they must be converted to uint256
     uint128 immutable public maturity;
@@ -65,8 +68,17 @@ contract Market is IMarket, ERC20, Delegable {
         return uint128(x);
     }
 
+    /// @dev Safe casting from uint256 to int256
+    function toInt256(uint256 x) internal pure returns(int256) {
+        require(
+            x <= 57896044618658097711785492504343953926634992332820282019728792003956564819967,
+            "Market: Cast overflow"
+        );
+        return int256(x);
+    }
+
     /// @dev Mint initial liquidity tokens
-    function init(uint128 daiIn, uint128 yDaiIn)
+    function init(uint128 daiIn)
         external
         beforeMaturity
     {
@@ -74,17 +86,10 @@ contract Market is IMarket, ERC20, Delegable {
             totalSupply() == 0,
             "Market: Already initialized"
         );
-
+        // no yDai transferred, because initial yDai deposit is entirely virtual
         dai.transferFrom(msg.sender, address(this), daiIn);
-        yDai.transferFrom(msg.sender, address(this), yDaiIn);
-        // TODO: Allow the below to be replaced by the approach in PR184
-        uint128 initialSupply = YieldMath.initialReservesValue(
-            daiIn,
-            yDaiIn,
-            toUint128(maturity - now), // This can't be called after maturity
-            k
-        );
-        _mint(msg.sender, initialSupply);
+        _mint(msg.sender, daiIn);
+        emit Liquidity(maturity, msg.sender, msg.sender, -toInt256(daiIn), 0, toInt256(daiIn));
     }
 
     /// @dev Mint liquidity tokens in exchange for adding dai and yDai
@@ -94,13 +99,15 @@ contract Market is IMarket, ERC20, Delegable {
     {
         uint256 supply = totalSupply();
         uint256 daiReserves = dai.balanceOf(address(this));
+        // use the actual reserves rather than the virtual reserves
         uint256 yDaiReserves = yDai.balanceOf(address(this));
         uint256 tokensMinted = supply.mul(daiOffered).div(daiReserves);
         uint256 yDaiRequired = yDaiReserves.mul(tokensMinted).div(supply);
 
-        dai.transferFrom(msg.sender, address(this), daiOffered);
-        yDai.transferFrom(msg.sender, address(this), yDaiRequired);
+        require(dai.transferFrom(msg.sender, address(this), daiOffered));
+        require(yDai.transferFrom(msg.sender, address(this), yDaiRequired));
         _mint(msg.sender, tokensMinted);
+        emit Liquidity(maturity, msg.sender, msg.sender, -toInt256(daiOffered), -toInt256(yDaiRequired), toInt256(tokensMinted));
     }
 
     /// @dev Burn liquidity tokens in exchange for dai and yDai
@@ -109,6 +116,7 @@ contract Market is IMarket, ERC20, Delegable {
     {
         uint256 supply = totalSupply();
         uint256 daiReserves = dai.balanceOf(address(this));
+        // use the actual reserves rather than the virtual reserves
         uint256 yDaiReserves = yDai.balanceOf(address(this));
         uint256 daiReturned = tokensBurned.mul(daiReserves).div(supply);
         uint256 yDaiReturned = tokensBurned.mul(yDaiReserves).div(supply);
@@ -116,6 +124,7 @@ contract Market is IMarket, ERC20, Delegable {
         _burn(msg.sender, tokensBurned);
         dai.transfer(msg.sender, daiReturned);
         yDai.transfer(msg.sender, yDaiReturned);
+        emit Liquidity(maturity, msg.sender, msg.sender, toInt256(daiReturned), toInt256(yDaiReturned), -toInt256(tokensBurned));
     }
 
     /// @dev Sell Dai for yDai
@@ -132,6 +141,7 @@ contract Market is IMarket, ERC20, Delegable {
 
         dai.transferFrom(from, address(this), daiIn);
         yDai.transfer(to, yDaiOut);
+        emit Trade(maturity, from, to, -toInt256(daiIn), toInt256(yDaiOut));
 
         return yDaiOut;
     }
@@ -142,8 +152,8 @@ contract Market is IMarket, ERC20, Delegable {
         beforeMaturity
         returns(uint128)
     {
-        uint128 daiReserves = toUint128(dai.balanceOf(address(this)));
-        uint128 yDaiReserves = toUint128(yDai.balanceOf(address(this)));
+        uint128 daiReserves = getDaiReserves();
+        uint128 yDaiReserves = getYDaiReserves();
 
         uint128 yDaiOut = YieldMath.yDaiOutForDaiIn(
             daiReserves,
@@ -176,6 +186,7 @@ contract Market is IMarket, ERC20, Delegable {
 
         yDai.transferFrom(from, address(this), yDaiIn);
         dai.transfer(to, daiOut);
+        emit Trade(maturity, from, to, toInt256(daiOut), -toInt256(yDaiIn));
 
         return yDaiIn;
     }
@@ -187,8 +198,8 @@ contract Market is IMarket, ERC20, Delegable {
         returns(uint128)
     {
         return YieldMath.yDaiInForDaiOut(
-            toUint128(dai.balanceOf(address(this))),
-            toUint128(yDai.balanceOf(address(this))),
+            getDaiReserves(),
+            getYDaiReserves(),
             daiOut,
             toUint128(maturity - now), // This can't be called after maturity
             k,
@@ -210,6 +221,7 @@ contract Market is IMarket, ERC20, Delegable {
 
         yDai.transferFrom(from, address(this), yDaiIn);
         dai.transfer(to, daiOut);
+        emit Trade(maturity, from, to, toInt256(daiOut), -toInt256(yDaiIn));
 
         return daiOut;
     }
@@ -221,8 +233,8 @@ contract Market is IMarket, ERC20, Delegable {
         returns(uint128)
     {
         return YieldMath.daiOutForYDaiIn(
-            toUint128(dai.balanceOf(address(this))),
-            toUint128(yDai.balanceOf(address(this))),
+            getDaiReserves(),
+            getYDaiReserves(),
             yDaiIn,
             toUint128(maturity - now), // This can't be called after maturity
             k,
@@ -244,6 +256,7 @@ contract Market is IMarket, ERC20, Delegable {
 
         dai.transferFrom(from, address(this), daiIn);
         yDai.transfer(to, yDaiOut);
+        emit Trade(maturity, from, to, -toInt256(daiIn), toInt256(yDaiOut));
 
         return daiIn;
     }
@@ -255,8 +268,8 @@ contract Market is IMarket, ERC20, Delegable {
         beforeMaturity
         returns(uint128)
     {
-        uint128 daiReserves = toUint128(dai.balanceOf(address(this)));
-        uint128 yDaiReserves = toUint128(yDai.balanceOf(address(this)));
+        uint128 daiReserves = getDaiReserves();
+        uint128 yDaiReserves = getYDaiReserves();
 
         uint128 daiIn = YieldMath.daiInForYDaiOut(
             daiReserves,
@@ -273,5 +286,21 @@ contract Market is IMarket, ERC20, Delegable {
         );
 
         return daiIn;
+    }
+
+    /// @dev Returns the "virtual" yDai reserves
+    function getYDaiReserves()
+        public view
+        returns(uint128)
+    {
+        return toUint128(yDai.balanceOf(address(this)) + totalSupply());
+    }
+
+    /// @dev Returns the Dai reserves
+    function getDaiReserves()
+        public view
+        returns(uint128)
+    {
+        return toUint128(dai.balanceOf(address(this)));
     }
 }

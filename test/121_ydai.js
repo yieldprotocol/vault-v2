@@ -1,132 +1,58 @@
 // External
-const Vat = artifacts.require('Vat');
-const GemJoin = artifacts.require('GemJoin');
-const DaiJoin = artifacts.require('DaiJoin');
-const Weth = artifacts.require("WETH9");
-const ERC20 = artifacts.require("TestERC20");
 const Jug = artifacts.require('Jug');
-const Pot = artifacts.require('Pot');
-const End = artifacts.require('End');
-const Chai = artifacts.require('Chai');
-
-// Common
-const Treasury = artifacts.require('Treasury');
+const { setupYield } = require("./shared/fixtures");
 
 // YDai
 const YDai = artifacts.require('YDai');
-const Controller = artifacts.require('Controller');
-
-// Peripheral
-const EthProxy = artifacts.require('EthProxy');
-const Unwind = artifacts.require('Unwind');
 
 // Mocks
 const FlashMinterMock = artifacts.require('FlashMinterMock');
 
-const truffleAssert = require('truffle-assertions');
 const helper = require('ganache-time-traveler');
-const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
+const { WETH, chi, rate, daiTokens, wethTokens, toRay, mulRay, divRay, subBN } = require('./shared/utils');
 const { expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
 
 contract('yDai', async (accounts) =>  {
     let [ owner, user1, other ] = accounts;
     let vat;
     let weth;
-    let wethJoin;
     let dai;
-    let daiJoin;
     let jug;
     let pot;
-    let end;
-    let chai;
     let treasury;
     let yDai1;
-    let yDai2;
-    let controller;
-    let splitter;
     let flashMinter;
 
-    let WETH = web3.utils.fromAscii("ETH-A");
-    let Line = web3.utils.fromAscii("Line");
-    let spotName = web3.utils.fromAscii("spot");
-    let linel = web3.utils.fromAscii("line");
-
-    const limits =  toRad(10000);
-    const spot = toRay(1.2);
-
-    const rate1 = toRay(1.4);
-    const chi1 = toRay(1.2);
     const rate2 = toRay(1.82);
     const chi2 = toRay(1.5);
 
-    const chiDifferential  = divRay(chi2, chi1);
+    const chiDifferential  = divRay(chi2, chi);
 
-    const daiDebt1 = toWad(96);
-    const daiTokens1 = mulRay(daiDebt1, rate1);
-    const wethTokens1 = divRay(daiTokens1, spot);
-
-    const daiTokens2 = mulRay(daiTokens1, chiDifferential);
-    const wethTokens2 = mulRay(wethTokens1, chiDifferential)
+    const daiTokens2 = mulRay(daiTokens, chiDifferential);
+    const wethTokens2 = mulRay(wethTokens, chiDifferential)
 
     let maturity;
-
-    // Scenario in which the user mints daiTokens2 yDai1, chi increases by a 25%, and user redeems daiTokens1 yDai1
-    const daiDebt2 = mulRay(daiDebt1, chiDifferential);
-    const savings1 = daiTokens2;
-    const savings2 = mulRay(savings1, chiDifferential);
-    const yDaiSurplus = subBN(daiTokens2, daiTokens1);
-    const savingsSurplus = subBN(savings2, daiTokens2);
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        // Setup vat, join and weth
-        vat = await Vat.new();
-        await vat.init(WETH, { from: owner }); // Set WETH rate (stability fee accumulator) to 1.0
-
-        weth = await Weth.new({ from: owner });
-        wethJoin = await GemJoin.new(vat.address, WETH, weth.address, { from: owner });
-
-        dai = await ERC20.new(0, { from: owner });
-        daiJoin = await DaiJoin.new(vat.address, dai.address, { from: owner });
-
-        await vat.file(WETH, spotName, spot, { from: owner });
-        await vat.file(WETH, linel, limits, { from: owner });
-        await vat.file(Line, limits);
+        ({
+            vat,
+            weth,
+            wethJoin,
+            dai,
+            daiJoin,
+            pot,
+            jug,
+            chai,
+            treasury
+        } = await setupYield(owner, owner))
 
         // Setup jug
         jug = await Jug.new(vat.address);
         await jug.init(WETH, { from: owner }); // Set WETH duty (stability fee) to 1.0
-
-        // Setup pot
-        pot = await Pot.new(vat.address);
-
-        // Permissions
-        await vat.rely(vat.address, { from: owner });
-        await vat.rely(wethJoin.address, { from: owner });
-        await vat.rely(daiJoin.address, { from: owner });
         await vat.rely(jug.address, { from: owner });
-        await vat.rely(pot.address, { from: owner });
-        await vat.hope(daiJoin.address, { from: owner });
-
-        // Setup chai
-        chai = await Chai.new(
-            vat.address,
-            pot.address,
-            daiJoin.address,
-            dai.address,
-        );
-
-        treasury = await Treasury.new(
-            vat.address,
-            weth.address,
-            dai.address,
-            wethJoin.address,
-            daiJoin.address,
-            pot.address,
-            chai.address,
-        );
     
         // Setup yDai1
         const block = await web3.eth.getBlockNumber();
@@ -148,19 +74,14 @@ contract('yDai', async (accounts) =>  {
             { from: owner },
         );
         
-        // Increase the rate accumulator
-        await vat.fold(WETH, vat.address, subBN(rate1, toRay(1)), { from: owner }); // Fold only the increase from 1.0
-        await pot.setChi(chi1, { from: owner }); // Set the savings accumulator
-
         // Deposit some weth to treasury so that redeem can pull some dai
-        await treasury.orchestrate(owner, { from: owner });
         await weth.deposit({ from: owner, value: wethTokens2 });
         await weth.approve(treasury.address, wethTokens2, { from: owner });
         await treasury.pushWeth(owner, wethTokens2, { from: owner });
 
         // Mint some yDai1 the sneaky way, only difference is that the Controller doesn't record the user debt.
         await yDai1.orchestrate(owner, { from: owner });
-        await yDai1.mint(user1, daiTokens1, { from: owner });
+        await yDai1.mint(user1, daiTokens, { from: owner });
     });
 
     afterEach(async() => {
@@ -194,7 +115,7 @@ contract('yDai', async (accounts) =>  {
 
     it("yDai1 can't be redeemed before maturity time", async() => {
         await expectRevert(
-            yDai1.redeem(user1, user1, daiTokens1, { from: user1 }),
+            yDai1.redeem(user1, user1, daiTokens, { from: user1 }),
             "YDai: yDai is not mature",
         );
     });
@@ -218,11 +139,11 @@ contract('yDai', async (accounts) =>  {
 
     it("yDai flash mints", async() => {
         expectEvent(
-            await flashMinter.flashMint(yDai1.address, daiTokens1, web3.utils.fromAscii("DATA"), { from: user1 }),
+            await flashMinter.flashMint(yDai1.address, daiTokens, web3.utils.fromAscii("DATA"), { from: user1 }),
             "Parameters",
             {
                 user: flashMinter.address,
-                amount: daiTokens1.toString(),
+                amount: daiTokens.toString(),
                 data: web3.utils.fromAscii("DATA"),
             },
         );
@@ -231,11 +152,11 @@ contract('yDai', async (accounts) =>  {
         await helper.advanceBlock();
         await yDai1.mature();
 
-        await yDai1.redeem(user1, user1, daiTokens1, { from: user1 });
+        await yDai1.redeem(user1, user1, daiTokens, { from: user1 });
 
         assert.equal(
             await flashMinter.flashBalance(),
-            daiTokens1.toString(),
+            daiTokens.toString(),
             "FlashMinter should have seen the tokens",
         );
         assert.equal(
@@ -264,18 +185,18 @@ contract('yDai', async (accounts) =>  {
             
             assert(
                 await yDai1.chiGrowth.call(),
-                subBN(chi2, chi1).toString(),
-                "Chi differential should be " + subBN(chi2, chi1),
+                subBN(chi2, chi).toString(),
+                "Chi differential should be " + subBN(chi2, chi),
             );
         });
 
         it("yDai1 rate gets fixed at maturity time", async() => {
-            await vat.fold(WETH, vat.address, subBN(rate2, rate1), { from: owner });
+            await vat.fold(WETH, vat.address, subBN(rate2, rate), { from: owner });
             
             assert(
                 await yDai1.rateGrowth(),
-                subBN(rate2, rate1).toString(),
-                "Rate differential should be " + subBN(rate2, rate1),
+                subBN(rate2, rate).toString(),
+                "Rate differential should be " + subBN(rate2, rate),
             );
         });
 
@@ -292,7 +213,7 @@ contract('yDai', async (accounts) =>  {
         it("redeem burns yDai1 to return dai, pulls dai from Treasury", async() => {
             assert.equal(
                 await yDai1.balanceOf(user1),
-                daiTokens1.toString(),
+                daiTokens.toString(),
                 "User1 does not have yDai1",
             );
             assert.equal(
@@ -301,12 +222,12 @@ contract('yDai', async (accounts) =>  {
                 "User1 has dai",
             );
     
-            await yDai1.approve(yDai1.address, daiTokens1, { from: user1 });
-            await yDai1.redeem(user1, user1, daiTokens1, { from: user1 });
+            await yDai1.approve(yDai1.address, daiTokens, { from: user1 });
+            await yDai1.redeem(user1, user1, daiTokens, { from: user1 });
     
             assert.equal(
                 await dai.balanceOf(user1),
-                daiTokens1.toString(),
+                daiTokens.toString(),
                 "User1 should have dai",
             );
             assert.equal(
@@ -319,7 +240,7 @@ contract('yDai', async (accounts) =>  {
         it("yDai can be redeemed in favour of others", async() => {
             assert.equal(
                 await yDai1.balanceOf(user1),
-                daiTokens1.toString(),
+                daiTokens.toString(),
                 "User1 does not have yDai1",
             );
             assert.equal(
@@ -328,12 +249,12 @@ contract('yDai', async (accounts) =>  {
                 "Other has dai",
             );
     
-            await yDai1.approve(yDai1.address, daiTokens1, { from: user1 });
-            await yDai1.redeem(user1, other, daiTokens1, { from: user1 });
+            await yDai1.approve(yDai1.address, daiTokens, { from: user1 });
+            await yDai1.redeem(user1, other, daiTokens, { from: user1 });
     
             assert.equal(
                 await dai.balanceOf(other),
-                daiTokens1.toString(),
+                daiTokens.toString(),
                 "Other should have dai",
             );
             assert.equal(
@@ -345,7 +266,7 @@ contract('yDai', async (accounts) =>  {
 
         describe("once chi increases", () => {
             beforeEach(async() => {
-                await vat.fold(WETH, vat.address, subBN(rate2, rate1), { from: owner }); // Keeping above chi
+                await vat.fold(WETH, vat.address, subBN(rate2, rate), { from: owner }); // Keeping above chi
                 await pot.setChi(chi2, { from: owner });
 
                 assert(
@@ -356,19 +277,18 @@ contract('yDai', async (accounts) =>  {
             });
     
             it("redeem with increased chi returns more dai", async() => {
-                // Redeem `daiTokens1` yDai to obtain `daiTokens1` * `chiDifferential`
-
-                await vat.fold(WETH, vat.address, subBN(rate2, rate1), { from: owner }); // Keeping above chi
+                // Redeem `daiTokens` yDai to obtain `daiTokens` * `chiDifferential`
+                await vat.fold(WETH, vat.address, subBN(rate2, rate), { from: owner }); // Keeping above chi
                 await pot.setChi(chi2, { from: owner });
 
                 assert.equal(
                     await yDai1.balanceOf(user1),
-                    daiTokens1.toString(),
+                    daiTokens.toString(),
                     "User1 does not have yDai1",
                 );
         
-                await yDai1.approve(yDai1.address, daiTokens1, { from: user1 });
-                await yDai1.redeem(user1, user1, daiTokens1, { from: user1 });
+                await yDai1.approve(yDai1.address, daiTokens, { from: user1 });
+                await yDai1.redeem(user1, user1, daiTokens, { from: user1 });
         
                 assert.equal(
                     await dai.balanceOf(user1),

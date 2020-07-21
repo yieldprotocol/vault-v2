@@ -34,6 +34,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     bytes32 public constant CHAI = "CHAI";
     bytes32 public constant WETH = "ETH-A";
     uint256 public constant DUST = 50000000000000000; // 0.05 ETH
+    uint256 public constant THREE_MONTHS = 7776000;
 
     IVat internal _vat;
     IPot internal _pot;
@@ -48,6 +49,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     uint256 public override totalChaiPosted;                                        // Sum of Chai posted by all users. Needed for skimming profits
     mapping(bytes32 => mapping(uint256 => uint256)) public override totalDebtYDai;  // Sum of debt owed by all users, by series
 
+    uint256 public override skimStart;                                // Time that skim operations can start, defined as 90 days after the last maturity
     bool public live = true;
 
     constructor (
@@ -94,6 +96,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     }
 
     /// @dev Adds an yDai series to this Controller
+    /// After deployment, ownership will be renounced, so that no more series can be added.
     function addSeries(address yDaiContract) public onlyOwner {
         uint256 maturity = IYDai(yDaiContract).maturity();
         require(
@@ -102,6 +105,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         );
         series[maturity] = IYDai(yDaiContract);
         seriesIterator.push(maturity);
+        skimStart = Math.max(skimStart, maturity.add(THREE_MONTHS));
     }
 
     /// @dev Disables post, withdraw, borrow and repay. To be called only when Treasury shuts down.
