@@ -61,8 +61,8 @@ const spot = toRay(150);
 const chi1 = toRay(1.2);
 const rate1 = toRay(1.4);
 
-const daiDebt = toWad(120);
-const daiTokens1 = mulRay(daiDebt, rate1);
+const daiDebt1 = toWad(120);
+const daiTokens1 = mulRay(daiDebt1, rate1);
 const wethTokens1 = divRay(daiTokens1, spot);
 const chaiTokens1 = divRay(daiTokens1, chi1);
 
@@ -86,7 +86,7 @@ module.exports = {
     spot,
     rate1,
     chi1,
-    daiDebt,
+    daiDebt1,
     daiTokens1,
     wethTokens1,
     chaiTokens1,
