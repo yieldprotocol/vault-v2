@@ -1,30 +1,7 @@
-// External
-const Vat = artifacts.require('Vat');
-const GemJoin = artifacts.require('GemJoin');
-const DaiJoin = artifacts.require('DaiJoin');
-const Weth = artifacts.require("WETH9");
-const ERC20 = artifacts.require("TestERC20");
-const Jug = artifacts.require('Jug');
-const Pot = artifacts.require('Pot');
-const End = artifacts.require('End');
-const Chai = artifacts.require('Chai');
-
-// Common
-const Treasury = artifacts.require('Treasury');
-
-// YDai
-const YDai = artifacts.require('YDai');
-const Controller = artifacts.require('Controller');
-
-// Peripheral
-const Liquidations = artifacts.require('Liquidations');
-const EthProxy = artifacts.require('EthProxy');
-const Unwind = artifacts.require('Unwind');
-
 const helper = require('ganache-time-traveler');
-const truffleAssert = require('truffle-assertions');
-const { BN, expectRevert, expectEvent } = require('@openzeppelin/test-helpers');
-const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
+const { expectRevert } = require('@openzeppelin/test-helpers');
+const { daiDebt, WETH, daiTokens1: daiTokens, wethTokens1: wethTokens, chaiTokens1: chaiTokens, spot, toRay, mulRay, divRay } = require('./shared/utils');
+const { setupMaker, newTreasury, newController, newYDai, newUnwind, newLiquidations } = require("./shared/fixtures");
 
 contract('Unwind - Treasury', async (accounts) =>  {
     let [ owner, user ] = accounts;
@@ -42,26 +19,11 @@ contract('Unwind - Treasury', async (accounts) =>  {
     let yDai2;
     let controller;
     let liquidations;
-    let ethProxy;
     let unwind;
-
-    let WETH = web3.utils.fromAscii("ETH-A");
-    let CHAI = web3.utils.fromAscii("CHAI");
-    let Line = web3.utils.fromAscii("Line");
-    let spotName = web3.utils.fromAscii("spot");
-    let linel = web3.utils.fromAscii("line");
 
     let snapshot;
     let snapshotId;
 
-    const limits = toRad(10000);
-    const spot  = toRay(1.5);
-    const rate  = toRay(1.25);
-    const chi = toRay(1.2);
-    const daiDebt = toWad(120);
-    const daiTokens = mulRay(daiDebt, rate);
-    const wethTokens = divRay(daiTokens, spot);
-    const chaiTokens = divRay(daiTokens, chi);
     let maturity1;
     let maturity2;
 
@@ -74,174 +36,46 @@ contract('Unwind - Treasury', async (accounts) =>  {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        // Setup vat, join and weth
-        vat = await Vat.new();
-        await vat.init(WETH, { from: owner }); // Set WETH rate (stability fee accumulator) to 1.0
-
-        weth = await Weth.new({ from: owner });
-        wethJoin = await GemJoin.new(vat.address, WETH, weth.address, { from: owner });
-
-        dai = await ERC20.new(0, { from: owner });
-        daiJoin = await DaiJoin.new(vat.address, dai.address, { from: owner });
-
-        await vat.file(WETH, spotName, spot, { from: owner });
-        await vat.file(WETH, linel, limits, { from: owner });
-        await vat.file(Line, limits);
-
-        // Setup jug
-        jug = await Jug.new(vat.address);
-        await jug.init(WETH, { from: owner }); // Set WETH duty (stability fee) to 1.0
-
-        // Setup pot
-        pot = await Pot.new(vat.address);
-
-        // Setup end
-        end = await End.new({ from: owner });
-        await end.file(web3.utils.fromAscii("vat"), vat.address);
-
-        // Permissions
-        await vat.rely(vat.address, { from: owner });
-        await vat.rely(wethJoin.address, { from: owner });
-        await vat.rely(daiJoin.address, { from: owner });
-        await vat.rely(jug.address, { from: owner });
-        await vat.rely(pot.address, { from: owner });
-        await vat.rely(end.address, { from: owner });
+        ({
+            vat,
+            weth,
+            wethJoin,
+            dai,
+            daiJoin,
+            pot,
+            jug,
+            chai,
+            end,
+        } = await setupMaker());
         await vat.hope(daiJoin.address, { from: owner });
 
-        // Setup chai
-        chai = await Chai.new(
-            vat.address,
-            pot.address,
-            daiJoin.address,
-            dai.address,
-            { from: owner },
-        );
-
-        // Set treasury
-        treasury = await Treasury.new(
-            vat.address,
-            weth.address,
-            dai.address,
-            wethJoin.address,
-            daiJoin.address,
-            pot.address,
-            chai.address,
-            { from: owner },
-        );
-
-        // Setup Controller
-        controller = await Controller.new(
-            vat.address,
-            pot.address,
-            treasury.address,
-            { from: owner },
-        );
-        await treasury.orchestrate(controller.address, { from: owner });
+        treasury = await newTreasury();
+        await treasury.orchestrate(owner, { from: owner });
+        controller = await newController();
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
-        yDai1 = await YDai.new(
-            vat.address,
-            jug.address,
-            pot.address,
-            treasury.address,
-            maturity1,
-            "Name",
-            "Symbol",
-            { from: owner },
-        );
-        await controller.addSeries(yDai1.address, { from: owner });
-        await yDai1.orchestrate(controller.address, { from: owner });
-        await treasury.orchestrate(yDai1.address, { from: owner });
-
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
-        yDai2 = await YDai.new(
-            vat.address,
-            jug.address,
-            pot.address,
-            treasury.address,
-            maturity2,
-            "Name2",
-            "Symbol2",
-            { from: owner },
-        );
-        await controller.addSeries(yDai2.address, { from: owner });
-        await yDai2.orchestrate(controller.address, { from: owner });
-        await treasury.orchestrate(yDai2.address, { from: owner });
-
-        // Setup EthProxy
-        ethProxy = await EthProxy.new(
-            weth.address,
-            treasury.address,
-            controller.address,
-            { from: owner },
-        );
+        yDai1 = await newYDai(maturity1, "Name1", "Symbol1");
+        yDai2 = await newYDai(maturity2, "Name2", "Symbol2");
 
         // Setup Liquidations
-        liquidations = await Liquidations.new(
-            dai.address,
-            treasury.address,
-            controller.address,
-            { from: owner },
-        );
-        await controller.orchestrate(liquidations.address, { from: owner });
-        await treasury.orchestrate(liquidations.address, { from: owner });
+        liquidations = await newLiquidations();
 
         // Setup Unwind
-        unwind = await Unwind.new(
-            vat.address,
-            daiJoin.address,
-            weth.address,
-            wethJoin.address,
-            jug.address,
-            pot.address,
-            end.address,
-            chai.address,
-            treasury.address,
-            controller.address,
-            liquidations.address,
-            { from: owner },
-        );
-        await treasury.orchestrate(unwind.address, { from: owner });
-        await treasury.registerUnwind(unwind.address, { from: owner });
-        await controller.orchestrate(unwind.address, { from: owner });
-        await yDai1.orchestrate(unwind.address, { from: owner });
-        await yDai2.orchestrate(unwind.address, { from: owner });
-        await liquidations.orchestrate(unwind.address, { from: owner });
+        unwind = await newUnwind();
+        await yDai1.orchestrate(unwind.address);
+        await yDai2.orchestrate(unwind.address);
 
-        // Tests setup
-        await pot.setChi(chi, { from: owner });
-        await vat.fold(WETH, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
         await vat.hope(daiJoin.address, { from: owner });
         await vat.hope(wethJoin.address, { from: owner });
-        await treasury.orchestrate(owner, { from: owner });
         await end.rely(owner, { from: owner });       // `owner` replaces MKR governance
     });
 
     afterEach(async() => {
         await helper.revertToSnapshot(snapshotId);
     });
-
-    /* it("get the size of the contract", async() => {
-        console.log();
-        console.log("·--------------------|------------------|------------------|------------------·");
-        console.log("|  Contract          ·  Bytecode        ·  Deployed        ·  Constructor     |");
-        console.log("·····················|··················|··················|···················");
-
-        const bytecode = controller.constructor._json.bytecode;
-        const deployed = controller.constructor._json.deployedBytecode;
-        const sizeOfB  = bytecode.length / 2;
-        const sizeOfD  = deployed.length / 2;
-        const sizeOfC  = sizeOfB - sizeOfD;
-        console.log(
-            "|  " + (controller.constructor._json.contractName).padEnd(18, ' ') +
-            "|" + ("" + sizeOfB).padStart(16, ' ') + "  " +
-            "|" + ("" + sizeOfD).padStart(16, ' ') + "  " +
-            "|" + ("" + sizeOfC).padStart(16, ' ') + "  |");
-        console.log("·--------------------|------------------|------------------|------------------·");
-        console.log();
-    }); */
 
     describe("with posted weth", () => {
         beforeEach(async() => {

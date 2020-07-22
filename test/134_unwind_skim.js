@@ -1,33 +1,10 @@
-// External
-const Vat = artifacts.require('Vat');
-const GemJoin = artifacts.require('GemJoin');
-const DaiJoin = artifacts.require('DaiJoin');
-const Weth = artifacts.require("WETH9");
-const ERC20 = artifacts.require("TestERC20");
-const Jug = artifacts.require('Jug');
-const Pot = artifacts.require('Pot');
-const End = artifacts.require('End');
-const Chai = artifacts.require('Chai');
-
-// Common
-const Treasury = artifacts.require('Treasury');
-
-// YDai
-const YDai = artifacts.require('YDai');
-const Controller = artifacts.require('Controller');
-
-// Peripheral
-const Liquidations = artifacts.require('Liquidations');
-const EthProxy = artifacts.require('EthProxy');
-const Unwind = artifacts.require('Unwind');
-
+const { chi1: chi, rate1: rate, daiDebt, CHAI, WETH, daiTokens1: daiTokens, wethTokens1: wethTokens, chaiTokens1: chaiTokens, spot, toRay, mulRay, divRay } = require('./shared/utils');
+const { setupMaker, newTreasury, newController, newYDai, newUnwind, newLiquidations, getChai, postChai, postWeth } = require("./shared/fixtures");
 const helper = require('ganache-time-traveler');
-const truffleAssert = require('truffle-assertions');
-const { BN, expectRevert, expectEvent } = require('@openzeppelin/test-helpers');
-const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
+const { expectRevert } = require('@openzeppelin/test-helpers');
 
 contract('Unwind - Skim', async (accounts) =>  {
-    let [ owner, user1, user2, user3, user4 ] = accounts;
+    let [ owner, user1, user2 ] = accounts;
     let vat;
     let weth;
     let wethJoin;
@@ -45,243 +22,52 @@ contract('Unwind - Skim', async (accounts) =>  {
     let ethProxy;
     let unwind;
 
-    let WETH = web3.utils.fromAscii("ETH-A");
-    let CHAI = web3.utils.fromAscii("CHAI");
-    let Line = web3.utils.fromAscii("Line");
-    let spotName = web3.utils.fromAscii("spot");
-    let linel = web3.utils.fromAscii("line");
-
     let snapshot;
     let snapshotId;
 
-    const limits = toRad(10000);
-    const spot  = toRay(1.5);
-    let rate  = toRay(1.25);
-    let chi = toRay(1.2);
-    const daiDebt = toWad(120);
-    const daiTokens = mulRay(daiDebt, rate);
-    const wethTokens = divRay(daiTokens, spot);
-    const chaiTokens = divRay(daiTokens, chi);
-    const yDaiTokens = daiTokens;
     const THREE_MONTHS = 7776000;
     let maturity1;
     let maturity2;
-
-    const tag  = divRay(toRay(1.0), spot); // Irrelevant to the final users
-    const fix  = divRay(toRay(1.0), mulRay(spot, toRay(1.1)));
-    const fixedWeth = mulRay(daiTokens, fix);
-
-    // Convert eth to weth and use it to borrow `daiTokens` from MakerDAO
-    // This function shadows and uses global variables, careful.
-    async function getDai(user, daiTokens){
-        await vat.hope(daiJoin.address, { from: user });
-        await vat.hope(wethJoin.address, { from: user });
-
-        const daiDebt = divRay(daiTokens, rate);
-        const wethTokens = divRay(daiTokens, spot);
-
-        await weth.deposit({ from: user, value: wethTokens });
-        await weth.approve(wethJoin.address, wethTokens, { from: user });
-        await wethJoin.join(user, wethTokens, { from: user });
-        await vat.frob(WETH, user, user, user, wethTokens, daiDebt, { from: user });
-        await daiJoin.exit(user, daiTokens, { from: user });
-    }
-
-    // From eth, borrow `daiTokens` from MakerDAO and convert them to chai
-    // This function shadows and uses global variables, careful.
-    async function getChai(user, chaiTokens){
-        const daiTokens = mulRay(chaiTokens, chi);
-        await getDai(user, daiTokens);
-        await dai.approve(chai.address, daiTokens, { from: user });
-        await chai.join(user, daiTokens, { from: user });
-    }
-
-    // Convert eth to weth and post it to yDai
-    // This function shadows and uses global variables, careful.
-    async function postWeth(user, wethTokens){
-        await weth.deposit({ from: user, value: wethTokens });
-        await weth.approve(treasury.address, wethTokens, { from: user });
-        await controller.post(WETH, user, user, wethTokens, { from: user });
-    }
-
-    // Convert eth to chai and post it to yDai
-    // This function shadows and uses global variables, careful.
-    async function postChai(user, chaiTokens){
-        await getChai(user, chaiTokens);
-        await chai.approve(treasury.address, chaiTokens, { from: user });
-        await controller.post(CHAI, user, user, chaiTokens, { from: user });
-    }
-
-    // Add a new yDai series
-    // This function uses global variables, careful.
-    async function addYDai(maturity){
-        yDai = await YDai.new(
-            vat.address,
-            jug.address,
-            pot.address,
-            treasury.address,
-            maturity,
-            "Name",
-            "Symbol",
-            { from: owner },
-        );
-        await controller.addSeries(yDai.address, { from: owner });
-        await yDai.orchestrate(controller.address, { from: owner });
-        await treasury.orchestrate(yDai.address, { from: owner });
-        await yDai.orchestrate(unwind.address, { from: owner });
-        return yDai;
-    }
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        // Setup vat, join and weth
-        vat = await Vat.new();
-        await vat.init(WETH, { from: owner }); // Set WETH rate (stability fee accumulator) to 1.0
-
-        weth = await Weth.new({ from: owner });
-        wethJoin = await GemJoin.new(vat.address, WETH, weth.address, { from: owner });
-
-        dai = await ERC20.new(0, { from: owner });
-        daiJoin = await DaiJoin.new(vat.address, dai.address, { from: owner });
-
-        await vat.file(WETH, spotName, spot, { from: owner });
-        await vat.file(WETH, linel, limits, { from: owner });
-        await vat.file(Line, limits);
-
-        // Setup jug
-        jug = await Jug.new(vat.address);
-        await jug.init(WETH, { from: owner }); // Set WETH duty (stability fee) to 1.0
-
-        // Setup pot
-        pot = await Pot.new(vat.address);
-
-        // Setup end
-        end = await End.new({ from: owner });
-        await end.file(web3.utils.fromAscii("vat"), vat.address);
-
-        // Permissions
-        await vat.rely(vat.address, { from: owner });
-        await vat.rely(wethJoin.address, { from: owner });
-        await vat.rely(daiJoin.address, { from: owner });
-        await vat.rely(jug.address, { from: owner });
-        await vat.rely(pot.address, { from: owner });
-        await vat.rely(end.address, { from: owner });
+        ({
+            vat,
+            weth,
+            wethJoin,
+            dai,
+            daiJoin,
+            pot,
+            jug,
+            chai,
+            end,
+        } = await setupMaker());
         await vat.hope(daiJoin.address, { from: owner });
 
-        // Setup chai
-        chai = await Chai.new(
-            vat.address,
-            pot.address,
-            daiJoin.address,
-            dai.address,
-            { from: owner },
-        );
-
-        // Set treasury
-        treasury = await Treasury.new(
-            vat.address,
-            weth.address,
-            dai.address,
-            wethJoin.address,
-            daiJoin.address,
-            pot.address,
-            chai.address,
-            { from: owner },
-        );
-
-        // Setup Controller
-        controller = await Controller.new(
-            vat.address,
-            pot.address,
-            treasury.address,
-            { from: owner },
-        );
-        await treasury.orchestrate(controller.address, { from: owner });
+        treasury = await newTreasury();
+        await treasury.orchestrate(owner, { from: owner });
+        controller = await newController();
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
-        yDai1 = await YDai.new(
-            vat.address,
-            jug.address,
-            pot.address,
-            treasury.address,
-            maturity1,
-            "Name",
-            "Symbol",
-            { from: owner },
-        );
-        await controller.addSeries(yDai1.address, { from: owner });
-        await yDai1.orchestrate(controller.address, { from: owner });
-        await treasury.orchestrate(yDai1.address, { from: owner });
-
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
-        yDai2 = await YDai.new(
-            vat.address,
-            jug.address,
-            pot.address,
-            treasury.address,
-            maturity2,
-            "Name2",
-            "Symbol2",
-            { from: owner },
-        );
-        await controller.addSeries(yDai2.address, { from: owner });
-        await yDai2.orchestrate(controller.address, { from: owner });
-        await treasury.orchestrate(yDai2.address, { from: owner });
-
-        // Setup EthProxy
-        ethProxy = await EthProxy.new(
-            weth.address,
-            treasury.address,
-            controller.address,
-            { from: owner },
-        );
+        yDai1 = await newYDai(maturity1, "Name1", "Symbol1");
+        yDai2 = await newYDai(maturity2, "Name2", "Symbol2");
 
         // Setup Liquidations
-        liquidations = await Liquidations.new(
-            dai.address,
-            treasury.address,
-            controller.address,
-            { from: owner },
-        );
-        await controller.orchestrate(liquidations.address, { from: owner });
-        await treasury.orchestrate(liquidations.address, { from: owner });
+        liquidations = await newLiquidations();
 
         // Setup Unwind
-        unwind = await Unwind.new(
-            vat.address,
-            daiJoin.address,
-            weth.address,
-            wethJoin.address,
-            jug.address,
-            pot.address,
-            end.address,
-            chai.address,
-            treasury.address,
-            controller.address,
-            liquidations.address,
-            { from: owner },
-        );
-        await treasury.orchestrate(unwind.address, { from: owner });
-        await treasury.registerUnwind(unwind.address, { from: owner });
-        await controller.orchestrate(unwind.address, { from: owner });
-        await yDai1.orchestrate(unwind.address, { from: owner });
-        await yDai2.orchestrate(unwind.address, { from: owner });
-        await liquidations.orchestrate(unwind.address, { from: owner });
+        unwind = await newUnwind();
+        await yDai1.orchestrate(unwind.address);
+        await yDai2.orchestrate(unwind.address);
 
-        // Tests setup
-        await pot.setChi(chi, { from: owner });
-        await vat.fold(WETH, vat.address, subBN(rate, toRay(1)), { from: owner }); // Fold only the increase from 1.0
         await vat.hope(daiJoin.address, { from: owner });
         await vat.hope(wethJoin.address, { from: owner });
-
         await end.rely(owner, { from: owner });       // `owner` replaces MKR governance
-        await treasury.orchestrate(owner, { from: owner });
-        await yDai1.orchestrate(owner, { from: owner });
-        await yDai2.orchestrate(owner, { from: owner });
     });
 
     afterEach(async() => {
@@ -303,7 +89,7 @@ contract('Unwind - Skim', async (accounts) =>  {
 
         describe("with chai savings", () => {
             beforeEach(async() => {
-                await getChai(owner, chaiTokens.mul(10));
+                await getChai(owner, chaiTokens.mul(10), chi, rate);
                 await chai.transfer(treasury.address, chaiTokens.mul(10), { from: owner });
                 // profit = 10 chai
             });
@@ -319,7 +105,7 @@ contract('Unwind - Skim', async (accounts) =>  {
             });
 
             it("chai held as collateral doesn't count as profits", async() => {
-                await getChai(user2, chaiTokens);
+                await getChai(user2, chaiTokens, chi, rate);
                 await chai.approve(treasury.address, chaiTokens, { from: user2 });
                 await controller.post(CHAI, user2, user2, chaiTokens, { from: user2 });
 
@@ -348,7 +134,7 @@ contract('Unwind - Skim', async (accounts) =>  {
             });
 
             it("unredeemed yDai and controller chai debt cancel each other", async() => {
-                await postChai(user2, chaiTokens);
+                await postChai(user2, chaiTokens, chi, rate);
                 await controller.borrow(CHAI, await yDai1.maturity(), user2, user2, daiTokens, { from: user2 }); // controller debt assets == yDai liabilities 
 
                 await unwind.skimWhileLive(user1, { from: owner });
@@ -390,7 +176,7 @@ contract('Unwind - Skim', async (accounts) =>  {
                     await postWeth(user2, wethTokens);
                     await controller.borrow(WETH, await yDai1.maturity(), user2, user2, daiTokens, { from: user2 }); // controller debt assets == yDai liabilities 
 
-                    await postChai(user2, chaiTokens);
+                    await postChai(user2, chaiTokens, chi, rate);
                     await controller.borrow(CHAI, await yDai1.maturity(), user2, user2, daiTokens, { from: user2 }); // controller debt assets == yDai liabilities 
                     // profit = 10 chai
 
@@ -433,7 +219,7 @@ contract('Unwind - Skim', async (accounts) =>  {
                     await postWeth(user2, wethTokens);
                     await controller.borrow(WETH, await yDai2.maturity(), user2, user2, daiTokens, { from: user2 }); // controller debt assets == yDai liabilities 
 
-                    await postChai(user2, chaiTokens);
+                    await postChai(user2, chaiTokens, chi, rate);
                     await controller.borrow(CHAI, await yDai1.maturity(), user2, user2, daiTokens, { from: user2 }); // controller debt assets == yDai liabilities 
                     // profit = 10 chai
 

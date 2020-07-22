@@ -186,7 +186,7 @@ contract Treasury is ITreasury, Orchestrated(), DecimalMath {
                 address(this),
                 address(this),
                 0,
-                toInt(divd(toBorrow, rate))
+                toInt(divdrup(toBorrow, rate))      // We need to round up, otherwise we won't exit toBorrow
             ); // `vat.frob` reverts on failure
             _daiJoin.exit(address(this), toBorrow); // `daiJoin` reverts on failures
         }
@@ -211,7 +211,7 @@ contract Treasury is ITreasury, Orchestrated(), DecimalMath {
                 address(this),
                 address(this),
                 0,
-                toInt(divd(toBorrow, rate))
+                toInt(divdrup(toBorrow, rate))       // We need to round up, otherwise we won't exit toBorrow
             ); // `vat.frob` reverts on failure
             _daiJoin.exit(address(this), toBorrow);  // `daiJoin` reverts on failures
             _chai.join(address(this), toBorrow);     // Grab chai from Chai, converted from dai
