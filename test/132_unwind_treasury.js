@@ -68,8 +68,6 @@ contract('Unwind - Treasury', async (accounts) =>  {
         await yDai2.orchestrate(unwind.address);
 
         await treasury.orchestrate(owner, { from: owner });
-        await vat.hope(daiJoin.address, { from: owner });
-        await vat.hope(wethJoin.address, { from: owner });
         await end.rely(owner, { from: owner });       // `owner` replaces MKR governance
     });
 
