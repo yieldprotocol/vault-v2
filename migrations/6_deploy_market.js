@@ -12,7 +12,7 @@ module.exports = async (deployer, network, accounts) => {
   let yDaiAddress;
   let marketAddress;
 
-  const yDaiNames = ['yDai1', 'yDai2', 'yDai3', 'yDai4']; // TODO: Consider iterating until the address returned is 0
+  const yDaiNames = ['yDai0', 'yDai1', 'yDai2', 'yDai3']; // TODO: Consider iterating until the address returned is 0
 
   if (network !== 'development') {
     daiAddress = fixed_addrs[network].daiAddress;

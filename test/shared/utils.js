@@ -50,6 +50,7 @@ const divRay = function(x, ray) {
 
 // Constants
 const WETH = toBytes32("ETH-A");
+
 const CHAI = toBytes32("CHAI");
 
 const Line = toBytes32("Line");
@@ -57,6 +58,7 @@ const spotName = toBytes32("spot");
 const linel = toBytes32("line");
 
 const limits =  toRad(10000);
+
 const spot = toRay(150);
 const chi1 = toRay(1.2);
 const rate1 = toRay(1.4);

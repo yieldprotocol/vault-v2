@@ -34,7 +34,7 @@ module.exports = async (deployer, network, accounts) => {
     const linel = web3.utils.fromAscii("line");
 
     const limits = toRad(10000);
-    const spot  = toRay(1.5);
+    const spot  = toRay(150);
 
     // Setup vat
     await deployer.deploy(Vat);
