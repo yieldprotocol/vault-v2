@@ -1,10 +1,10 @@
-const { setupYield } = require("./shared/fixtures");
+const { setupMaker, newTreasury } = require("./shared/fixtures");
 const {
     WETH,
     daiDebt,
-    daiTokens,
-    wethTokens,
-    chaiTokens,
+    daiTokens1,
+    wethTokens1,
+    chaiTokens1,
 } = require ("./shared/utils");
 
 contract('Treasury - Saving', async (accounts) =>  {
@@ -26,16 +26,20 @@ contract('Treasury - Saving', async (accounts) =>  {
             daiJoin,
             pot,
             jug,
-            chai,
-            treasury
-        } = await setupYield(owner, user))
+            chai
+        } = await setupMaker());
+        treasury = await newTreasury();
+
+        // Setup tests - Allow owner to interact directly with Treasury, not for production
+        treasury.orchestrate(owner, { from: owner });
 
         // Borrow some dai
-        await weth.deposit({ from: user, value: wethTokens});
-        await weth.approve(wethJoin.address, wethTokens, { from: user }); 
-        await wethJoin.join(user, wethTokens, { from: user });
-        await vat.frob(WETH, user, user, user, wethTokens, daiDebt, { from: user });
-        await daiJoin.exit(user, daiTokens, { from: user });
+        await weth.deposit({ from: user, value: wethTokens1});
+        await weth.approve(wethJoin.address, wethTokens1, { from: user }); 
+        await wethJoin.join(user, wethTokens1, { from: user });
+        await vat.frob(WETH, user, user, user, wethTokens1, daiDebt, { from: user });
+        await vat.hope(daiJoin.address, { from: user });
+        await daiJoin.exit(user, daiTokens1, { from: user });
     });
 
     it("allows to save dai", async() => {
@@ -51,23 +55,23 @@ contract('Treasury - Saving', async (accounts) =>  {
         );
         assert.equal(
             await dai.balanceOf(user),
-            daiTokens.toString(),
+            daiTokens1.toString(),
             "User does not have dai",
         );
         
-        await dai.approve(treasury.address, daiTokens, { from: user }); 
-        await treasury.pushDai(user, daiTokens, { from: owner });
+        await dai.approve(treasury.address, daiTokens1, { from: user }); 
+        await treasury.pushDai(user, daiTokens1, { from: owner });
 
         // Test transfer of collateral
         assert.equal(
             await chai.balanceOf(treasury.address),
-            chaiTokens.toString(),
+            chaiTokens1.toString(),
             "Treasury should have chai"
         );
         assert.equal(
             await treasury.savings.call(),
-            daiTokens.toString(),
-            "Treasury should have " + daiTokens + " savings in dai units, instead has " + await treasury.savings.call(),
+            daiTokens1.toString(),
+            "Treasury should have " + daiTokens1 + " savings in dai units, instead has " + await treasury.savings.call(),
         );
         assert.equal(
             await dai.balanceOf(user),
@@ -89,24 +93,24 @@ contract('Treasury - Saving', async (accounts) =>  {
         );
         assert.equal(
             await dai.balanceOf(user),
-            daiTokens.toString(),
+            daiTokens1.toString(),
             "User does not have dai",
         );
         
-        await dai.approve(chai.address, daiTokens, { from: user });
-        await chai.join(user, daiTokens, { from: user });
-        await chai.approve(treasury.address, chaiTokens, { from: user }); 
-        await treasury.pushChai(user, chaiTokens, { from: owner });
+        await dai.approve(chai.address, daiTokens1, { from: user });
+        await chai.join(user, daiTokens1, { from: user });
+        await chai.approve(treasury.address, chaiTokens1, { from: user }); 
+        await treasury.pushChai(user, chaiTokens1, { from: owner });
 
         // Test transfer of collateral
         assert.equal(
             await chai.balanceOf(treasury.address),
-            chaiTokens.toString(),
+            chaiTokens1.toString(),
             "Treasury should have chai"
         );
         assert.equal(
             await treasury.savings.call(),
-            daiTokens.toString(),
+            daiTokens1.toString(),
             "Treasury should report savings in dai units"
         );
         assert.equal(
@@ -118,19 +122,19 @@ contract('Treasury - Saving', async (accounts) =>  {
 
     describe("with savings", () => {
         beforeEach(async() => {
-            await dai.approve(treasury.address, daiTokens, { from: user }); 
-            await treasury.pushDai(user, daiTokens, { from: owner });
+            await dai.approve(treasury.address, daiTokens1, { from: user }); 
+            await treasury.pushDai(user, daiTokens1, { from: owner });
         });
 
         it("pulls dai from savings", async() => {
             assert.equal(
                 await chai.balanceOf(treasury.address),
-                chaiTokens.toString(),
+                chaiTokens1.toString(),
                 "Treasury does not have chai"
             );
             assert.equal(
                 await treasury.savings.call(),
-                daiTokens.toString(),
+                daiTokens1.toString(),
                 "Treasury does not report savings in dai units"
             );
             assert.equal(
@@ -139,7 +143,7 @@ contract('Treasury - Saving', async (accounts) =>  {
                 "User has dai",
             );
             
-            await treasury.pullDai(user, daiTokens, { from: owner });
+            await treasury.pullDai(user, daiTokens1, { from: owner });
 
             assert.equal(
                 await chai.balanceOf(treasury.address),
@@ -153,7 +157,7 @@ contract('Treasury - Saving', async (accounts) =>  {
             );
             assert.equal(
                 await dai.balanceOf(user),
-                daiTokens.toString(),
+                daiTokens1.toString(),
                 "User should have dai",
             );
         });
@@ -162,12 +166,12 @@ contract('Treasury - Saving', async (accounts) =>  {
         it("pulls chai from savings", async() => {
             assert.equal(
                 await chai.balanceOf(treasury.address),
-                chaiTokens.toString(),
+                chaiTokens1.toString(),
                 "Treasury does not have chai"
             );
             assert.equal(
                 await treasury.savings.call(),
-                daiTokens.toString(),
+                daiTokens1.toString(),
                 "Treasury does not report savings in dai units"
             );
             assert.equal(
@@ -176,7 +180,7 @@ contract('Treasury - Saving', async (accounts) =>  {
                 "User has dai",
             );
             
-            await treasury.pullChai(user, chaiTokens, { from: owner });
+            await treasury.pullChai(user, chaiTokens1, { from: owner });
 
             assert.equal(
                 await chai.balanceOf(treasury.address),
@@ -190,7 +194,7 @@ contract('Treasury - Saving', async (accounts) =>  {
             );
             assert.equal(
                 await chai.balanceOf(user),
-                chaiTokens.toString(),
+                chaiTokens1.toString(),
                 "User should have chai",
             );
         });

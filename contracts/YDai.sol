@@ -69,7 +69,7 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
     function chiGrowth() public override returns(uint256){
         if (isMature != true) return chi0;
         uint256 chiNow = (now > _pot.rho()) ? _pot.drip() : _pot.chi();
-        return Math.min(rateGrowth(), divd(chiNow, chi0));
+        return Math.min(rateGrowth(), divd(chiNow, chi0)); // Rounding in favour of the protocol
     }
 
     /// @dev Rate differential between maturity and now in RAY. Returns 1.0 if not mature.
@@ -89,7 +89,7 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
         } else {
             (, rateNow,,,) = _vat.ilks(WETH);
         }
-        return Math.max(UNIT, divd(rateNow, rate0));
+        return Math.max(UNIT, divdrup(rateNow, rate0)); // Rounding in favour of the protocol
     }
 
     /// @dev Mature yDai and capture maturity data
