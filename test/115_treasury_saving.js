@@ -1,7 +1,7 @@
 const { setupMaker, newTreasury } = require("./shared/fixtures");
 const {
     WETH,
-    daiDebt,
+    daiDebt1,
     daiTokens1,
     wethTokens1,
     chaiTokens1,
@@ -37,7 +37,7 @@ contract('Treasury - Saving', async (accounts) =>  {
         await weth.deposit({ from: user, value: wethTokens1});
         await weth.approve(wethJoin.address, wethTokens1, { from: user }); 
         await wethJoin.join(user, wethTokens1, { from: user });
-        await vat.frob(WETH, user, user, user, wethTokens1, daiDebt, { from: user });
+        await vat.frob(WETH, user, user, user, wethTokens1, daiDebt1, { from: user });
         await vat.hope(daiJoin.address, { from: user });
         await daiJoin.exit(user, daiTokens1, { from: user });
     });
