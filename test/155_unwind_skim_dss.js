@@ -84,8 +84,7 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
         await yDai1.orchestrate(unwind.address);
         await yDai2.orchestrate(unwind.address);
 
-        await vat.hope(daiJoin.address, { from: owner });
-        await vat.hope(wethJoin.address, { from: owner });
+        await treasury.orchestrate(owner, { from: owner });
         await end.rely(owner, { from: owner });       // `owner` replaces MKR governance
     });
 
@@ -113,8 +112,8 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
 
             assert.equal(
                 await weth.balanceOf(user3),
-                fixedWeth.mul(10).add(9).toString(), // TODO: Check this correction factor
-                'User3 should have ' + fixedWeth.mul(10).add(9).toString() + ' weth wei, instead has ' + (await weth.balanceOf(user3)),
+                fixedWeth.mul(10).add(8).toString(), // A few wei won't make a difference
+                'User3 should have ' + fixedWeth.add(8).toString() + ' weth wei, instead has ' + (await weth.balanceOf(user3)),
             );
             // profit = 10 dai * fix (in weth)
         });
@@ -127,8 +126,8 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
 
             assert.equal(
                 await weth.balanceOf(user3),
-                fixedWeth.mul(10).add(9).toString(), // TODO: Check this correction factor
-                'User3 should have ' + fixedWeth.mul(10).add(9).toString() + ' weth wei',
+                fixedWeth.mul(10).add(9).toString(), // A few wei won't make a difference
+                'User3 should have ' + fixedWeth.mul(10).add(9).toString() + ' weth wei, instead has ' + await weth.balanceOf(user3),
             );
             // profit = 10 dai * fix (in weth)
         });
@@ -142,8 +141,8 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
 
             assert.equal(
                 await weth.balanceOf(user3),
-                fixedWeth.mul(10).add(9).toString(), // TODO: Check this correction factor
-                'User3 should have ' + fixedWeth.mul(10).add(9).toString() + ' weth wei',
+                fixedWeth.mul(10).add(8).toString(), // A few wei won't make a difference
+                'User3 should have ' + fixedWeth.mul(10).add(8).toString() + ' weth wei, instead has ' + await weth.balanceOf(user3),
             );
             // profit = 10 dai * fix (in weth)
         });
@@ -157,7 +156,7 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
 
             assert.equal(
                 await weth.balanceOf(user3),
-                fixedWeth.mul(10).add(9).toString(), // TODO: Check this correction factor
+                fixedWeth.mul(10).add(9).toString(), // A few wei won't make a difference
                 'User3 should have ' + fixedWeth.mul(10).add(9).toString() + ' weth wei',
             );
             // profit = 10 dai * fix (in weth)
@@ -175,8 +174,8 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
     
                 assert.equal(
                     await weth.balanceOf(user3),
-                    fixedWeth.mul(9).add(8).toString(), // TODO: Check this correction factor
-                    'User3 should have ' + fixedWeth.mul(9).add(8).toString() + ' weth wei, instead has ' + (await weth.balanceOf(user3)),
+                    fixedWeth.mul(9).add(7).toString(), // A few wei won't make a difference
+                    'User3 should have ' + fixedWeth.mul(9).add(7).toString() + ' weth wei, instead has ' + (await weth.balanceOf(user3)),
                 );
             });
         });
@@ -208,8 +207,8 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
                 await shutdown();
                 await unwind.skimDssShutdown(user3, { from: owner });
 
-                // TODO: Check this correction factor
-                const expectedProfit = fixedWeth.mul(10).add(9).add(mulRay(fixedWeth, rateDifferential.sub(toRay(1))));
+                // A few wei won't make a difference
+                const expectedProfit = fixedWeth.mul(10).add(mulRay(fixedWeth, rateDifferential.sub(toRay(1)))).add(9);
     
                 assert.equal(
                     await weth.balanceOf(user3),
@@ -260,10 +259,10 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
                 await shutdown();
                 await unwind.skimDssShutdown(user3, { from: owner });
 
-                // TODO: Check this correction factor
-                const expectedProfit = fixedWeth.mul(10).add(9)
+                const expectedProfit = fixedWeth.mul(10)
                     .add(mulRay(fixedWeth, rateDifferential1.sub(toRay(1))))  // yDai1
-                    .add(mulRay(fixedWeth, rateDifferential2.sub(toRay(1)))); // yDai2
+                    .add(mulRay(fixedWeth, rateDifferential2.sub(toRay(1))))  // yDai2
+                    .add(8); // A few wei won't make a difference
     
                 assert.equal(
                     await weth.balanceOf(user3),
