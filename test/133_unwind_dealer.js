@@ -1,7 +1,7 @@
 const helper = require('ganache-time-traveler');
 const { expectRevert } = require('@openzeppelin/test-helpers');
 const { daiDebt1, CHAI, WETH, daiTokens1, wethTokens1, chaiTokens1, spot, toRay, mulRay, divRay } = require('./shared/utils');
-const { setupMaker, newTreasury, newController, newYDai, newUnwind, newLiquidations } = require("./shared/fixtures");
+const { setupMaker, newTreasury, newController, newYDai, newUnwind, newLiquidations, postWeth } = require("./shared/fixtures");
 
 contract('Unwind - Controller', async (accounts) =>  {
     let [ owner, user1, user2, user3 ] = accounts;
@@ -81,18 +81,21 @@ contract('Unwind - Controller', async (accounts) =>  {
     describe("with posted collateral and borrowed yDai", () => {
         beforeEach(async() => {
             // Weth setup
-            await weth.deposit({ from: user1, value: wethTokens1 });
-            await weth.approve(treasury.address, wethTokens1, { from: user1 });
-            await controller.post(WETH, user1, user1, wethTokens1, { from: user1 });
+            await postWeth(user1, wethTokens1);
+            // await weth.deposit({ from: user1, value: wethTokens1 });
+            // await weth.approve(treasury.address, wethTokens1, { from: user1 });
+            // await controller.post(WETH, user1, user1, wethTokens1, { from: user1 });
 
-            await weth.deposit({ from: user2, value: wethTokens1.add(1) });
-            await weth.approve(treasury.address, wethTokens1.add(1), { from: user2 });
-            await controller.post(WETH, user2, user2, wethTokens1.add(1), { from: user2 });
+            await postWeth(user2, wethTokens1.add(1));
+            // await weth.deposit({ from: user2, value: wethTokens1.add(1) });
+            // await weth.approve(treasury.address, wethTokens1.add(1), { from: user2 });
+            // await controller.post(WETH, user2, user2, wethTokens1.add(1), { from: user2 });
             await controller.borrow(WETH, maturity1, user2, user2, daiTokens1, { from: user2 });
 
-            await weth.deposit({ from: user3, value: wethTokens1.mul(3) });
-            await weth.approve(treasury.address, wethTokens1.mul(3), { from: user3 });
-            await controller.post(WETH, user3, user3, wethTokens1.mul(3), { from: user3 });
+            await postWeth(user3, wethTokens1.mul(3));
+            // await weth.deposit({ from: user3, value: wethTokens1.mul(3) });
+            // await weth.approve(treasury.address, wethTokens1.mul(3), { from: user3 });
+            // await controller.post(WETH, user3, user3, wethTokens1.mul(3), { from: user3 });
             await controller.borrow(WETH, maturity1, user3, user3, daiTokens1, { from: user3 });
             await controller.borrow(WETH, maturity2, user3, user3, daiTokens1, { from: user3 });
 
