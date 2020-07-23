@@ -41,6 +41,11 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
     uint256 public override chi0;      // Chi at maturity
     uint256 public override rate0;     // Rate at maturity
 
+    /// @dev The constructor:
+    /// Sets the name and symbol for the yDai token.
+    /// Connects to Vat, Jug, Pot and Treasury.
+    /// Sets the maturity date for the yDai, in unix time.
+    /// Initializes chi and rate at maturity time as 1.0 with 27 decimals.
     constructor(
         address vat_,
         address jug_,
@@ -92,7 +97,7 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
         return Math.max(UNIT, divdrup(rateNow, rate0)); // Rounding in favour of the protocol
     }
 
-    /// @dev Mature yDai and capture maturity data
+    /// @dev Mature yDai and capture chi and rate
     function mature() public override {
         require(
             // solium-disable-next-line security/no-block-members
@@ -111,7 +116,13 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
     }
 
     /// @dev Burn yTokens and return their dai equivalent value, pulled from the Treasury
-    // TODO: Consider whether to allow this to be gracefully unwind, instead of letting `_treasury.pullDai()` revert.
+    /// During unwind, `_treasury.pullDai()` will revert which is right.
+    /// `from` needs to tell yDai to approve the burning of the yDai tokens.
+    /// `from` can delegate to other addresses to redeem his yDai and put the Dai proceeds in the `to` wallet.
+    /// The collateral needed changes according to series maturity and MakerDAO rate and chi, depending on collateral type.
+    /// @param from Wallet to burn yDai from.
+    /// @param to Wallet to put the Dai in.
+    /// @param yDaiAmount Amount of yDai to burn.
     // from --- yDai ---> us
     // us   --- Dai  ---> to
     function redeem(address from, address to, uint256 yDaiAmount)
@@ -127,6 +138,9 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
     }
 
     /// @dev Flash-mint yDai. Calls back on `IFlashMinter.executeOnFlashMint()`
+    /// @param to Wallet to mint the yDai in.
+    /// @param yDaiAmount Amount of yDai to mint.
+    /// @param data User-defined data to pass on to `executeOnFlashMint()`
     function flashMint(address to, uint256 yDaiAmount, bytes calldata data) external override {
         _mint(to, yDaiAmount);
         IFlashMinter(msg.sender).executeOnFlashMint(to, yDaiAmount, data);
@@ -134,12 +148,18 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
     }
 
     /// @dev Mint yDai. Only callable by Controller contracts.
+    /// This function can only be called by other Yield contracts, not users directly.
+    /// @param to Wallet to mint the yDai in.
+    /// @param yDaiAmount Amount of yDai to mint.
     function mint(address to, uint256 yDaiAmount) public override onlyOrchestrated("YDai: Not Authorized")
         {
         _mint(to, yDaiAmount);
     }
 
     /// @dev Burn yDai. Only callable by Controller contracts.
+    /// This function can only be called by other Yield contracts, not users directly.
+    /// @param from Wallet to burn the yDai from.
+    /// @param yDaiAmount Amount of yDai to burn.
     function burn(address from, uint256 yDaiAmount) public override onlyOrchestrated("YDai: Not Authorized") {
         _burn(from, yDaiAmount);
     }
