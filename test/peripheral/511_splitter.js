@@ -227,6 +227,12 @@ contract('Splitter', async (accounts) =>  {
         await getDai(owner, daiReserves)
         await dai.approve(market1.address, daiReserves, { from: owner });
         await market1.init(daiReserves, { from: owner });
+
+        // Add yDai
+        const additionalYDaiReserves = yDaiTokens1.mul(2);
+        await yDai1.mint(owner, additionalYDaiReserves, { from: owner });
+        await yDai1.approve(market1.address, additionalYDaiReserves, { from: owner });
+        await market1.sellYDai(owner, owner, additionalYDaiReserves, { from: owner });
     });
 
     afterEach(async() => {

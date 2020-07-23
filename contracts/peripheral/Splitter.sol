@@ -171,8 +171,8 @@ contract Splitter is IFlashMinter, DecimalMath {
             user,
             user,
             user,
-            -toInt(wethAmount),            // Removing Weth collateral
-            -toInt(divd(daiAmount, rate))  // Removing Dai debt
+            -toInt(wethAmount),               // Removing Weth collateral
+            -toInt(divdrup(daiAmount, rate))  // Removing Dai debt
         );
 
         vat.flux("ETH-A", user, address(this), wethAmount);             // Remove the collateral from Maker
@@ -211,7 +211,7 @@ contract Splitter is IFlashMinter, DecimalMath {
             user,
             user,
             toInt(wethAmount),                   // Adding Weth collateral
-            toInt(divd(daiAmount, rate))         // Adding Dai debt
+            toInt(divdrup(daiAmount, rate))      // Adding Dai debt
         );
         vat.move(user, address(this), daiAmount.mul(UNIT)); // Transfer the Dai to Splitter within MakerDAO, in RAD
         daiJoin.exit(address(this), daiAmount);             // Splitter will hold the dai temporarily
