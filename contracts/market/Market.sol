@@ -77,7 +77,9 @@ contract Market is IMarket, ERC20, Delegable {
         return int256(x);
     }
 
-    /// @dev Mint initial liquidity tokens
+    /// @dev Mint initial liquidity tokens.
+    /// The liquidity provider needs to have called `dai.approve`
+    /// @param daiIn The initial Dai liquidity to provide.
     function init(uint128 daiIn)
         external
         beforeMaturity
@@ -93,9 +95,12 @@ contract Market is IMarket, ERC20, Delegable {
     }
 
     /// @dev Mint liquidity tokens in exchange for adding dai and yDai
-    /// The parameter passed is the amount of `dai` being invested, an appropriate amount of `yDai` to be invested alongside will be calculated and taken by this function from the caller.
+    /// The liquidity provider needs to have called `dai.approve` and `yDai.approve`.
+    /// @param daiOffered Amount of `dai` being invested, an appropriate amount of `yDai` to be invested alongside will be calculated and taken by this function from the caller.
+    /// @return The amount of liquidity tokens minted.
     function mint(uint256 daiOffered)
         external
+        returns (uint256)
     {
         uint256 supply = totalSupply();
         uint256 daiReserves = dai.balanceOf(address(this));
@@ -108,11 +113,17 @@ contract Market is IMarket, ERC20, Delegable {
         require(yDai.transferFrom(msg.sender, address(this), yDaiRequired));
         _mint(msg.sender, tokensMinted);
         emit Liquidity(maturity, msg.sender, msg.sender, -toInt256(daiOffered), -toInt256(yDaiRequired), toInt256(tokensMinted));
+
+        return tokensMinted;
     }
 
-    /// @dev Burn liquidity tokens in exchange for dai and yDai
+    /// @dev Burn liquidity tokens in exchange for dai and yDai.
+    /// The liquidity provider needs to have called `market.approve`.
+    /// @param tokensBurned Amount of liquidity tokens being burned.
+    /// @return The amount of reserve tokens returned (daiTokens, yDaiTokens).
     function burn(uint256 tokensBurned)
         external
+        returns (uint256, uint256)
     {
         uint256 supply = totalSupply();
         uint256 daiReserves = dai.balanceOf(address(this));
@@ -125,9 +136,12 @@ contract Market is IMarket, ERC20, Delegable {
         dai.transfer(msg.sender, daiReturned);
         yDai.transfer(msg.sender, yDaiReturned);
         emit Liquidity(maturity, msg.sender, msg.sender, toInt256(daiReturned), toInt256(yDaiReturned), -toInt256(tokensBurned));
+
+        return (daiReturned, yDaiReturned);
     }
 
     /// @dev Sell Dai for yDai
+    /// The trader needs to have called `dai.approve`
     /// @param from Wallet providing the dai being sold. Must have approved the operator with `market.addDelegate(operator)`.
     /// @param to Wallet receiving the yDai being bought
     /// @param daiIn Amount of dai being sold that will be taken from the user's wallet
@@ -147,6 +161,8 @@ contract Market is IMarket, ERC20, Delegable {
     }
 
     /// @dev Returns how much yDai would be obtained by selling `daiIn` dai
+    /// @param daiIn Amount of dai hypothetically sold.
+    /// @return Amount of yDai hypothetically bought.
     function sellDaiPreview(uint128 daiIn)
         public view
         beforeMaturity
@@ -173,6 +189,7 @@ contract Market is IMarket, ERC20, Delegable {
     }
 
     /// @dev Buy Dai for yDai
+    /// The trader needs to have called `yDai.approve`
     /// @param from Wallet providing the yDai being sold. Must have approved the operator with `market.addDelegate(operator)`.
     /// @param to Wallet receiving the dai being bought
     /// @param daiOut Amount of dai being bought that will be deposited in `to` wallet
@@ -191,7 +208,9 @@ contract Market is IMarket, ERC20, Delegable {
         return yDaiIn;
     }
 
-    /// @dev Returns how much yDai would be required to buy `daiOut` dai
+    /// @dev Returns how much yDai would be required to buy `daiOut` dai.
+    /// @param daiOut Amount of dai hypothetically desired.
+    /// @return Amount of yDai hypothetically required.
     function buyDaiPreview(uint128 daiOut)
         public view
         beforeMaturity
@@ -208,6 +227,7 @@ contract Market is IMarket, ERC20, Delegable {
     }
 
     /// @dev Sell yDai for Dai
+    /// The trader needs to have called `yDai.approve`
     /// @param from Wallet providing the yDai being sold. Must have approved the operator with `market.addDelegate(operator)`.
     /// @param to Wallet receiving the dai being bought
     /// @param yDaiIn Amount of yDai being sold that will be taken from the user's wallet
@@ -226,7 +246,9 @@ contract Market is IMarket, ERC20, Delegable {
         return daiOut;
     }
 
-    /// @dev Returns how much dai would be obtained by selling `yDaiIn` yDai
+    /// @dev Returns how much dai would be obtained by selling `yDaiIn` yDai.
+    /// @param yDaiIn Amount of yDai hypothetically sold.
+    /// @return Amount of Dai hypothetically bought.
     function sellYDaiPreview(uint128 yDaiIn)
         public view
         beforeMaturity
@@ -243,6 +265,7 @@ contract Market is IMarket, ERC20, Delegable {
     }
 
     /// @dev Buy yDai for dai
+    /// The trader needs to have called `dai.approve`
     /// @param from Wallet providing the dai being sold. Must have approved the operator with `market.addDelegate(operator)`.
     /// @param to Wallet receiving the yDai being bought
     /// @param yDaiOut Amount of yDai being bought that will be deposited in `to` wallet
@@ -262,7 +285,9 @@ contract Market is IMarket, ERC20, Delegable {
     }
 
 
-    /// @dev Returns how much dai would be required to buy `yDaiOut` yDai
+    /// @dev Returns how much dai would be required to buy `yDaiOut` yDai.
+    /// @param yDaiOut Amount of yDai hypothetically desired.
+    /// @return Amount of Dai hypothetically required.
     function buyYDaiPreview(uint128 yDaiOut)
         public view
         beforeMaturity
