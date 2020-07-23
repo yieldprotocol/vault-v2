@@ -37,7 +37,7 @@ module.exports = async (deployer, network, accounts) => {
   let unwindAddress;
   let controlerViewAddress;
 
-  const yDaiNames = ['yDai1', 'yDai2', 'yDai3', 'yDai4']; // TODO: Consider iterating until the address returned is 0
+  const yDaiNames = ['yDai0', 'yDai1', 'yDai2', 'yDai3']; // TODO: Consider iterating until the address returned is 0
 
   if (network !== 'development') {
     vatAddress = fixed_addrs[network].vatAddress ;
