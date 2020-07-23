@@ -1,7 +1,5 @@
 const Weth = artifacts.require('WETH9');
 
-const truffleAssert = require('truffle-assertions');
-
 contract('WETH9', async (accounts) =>  {
     let [ owner ] = accounts;
     let weth;

@@ -161,8 +161,8 @@ async function getDai(user, _daiTokens, _rate) {
     await vat.hope(daiJoin.address, { from: user });
     await vat.hope(wethJoin.address, { from: user });
 
-    const _daiDebt = addBN(divRay(_daiTokens, _rate), 1);
-    const _wethTokens = divRay(_daiTokens, spot).mul(2);
+    const _daiDebt = addBN(divRay(_daiTokens, _rate), 1).toString();
+    const _wethTokens = divRay(_daiTokens, spot).mul(2).toString();
 
     await weth.deposit({ from: user, value: _wethTokens });
     await weth.approve(wethJoin.address, _wethTokens, { from: user });
@@ -180,7 +180,7 @@ async function getChai(user, _chaiTokens, _chi, _rate) {
 
 // Convert eth to weth and post it to yDai
 async function postWeth(user, _wethTokens) {
-    await weth.deposit({ from: user, value: _wethTokens });
+    await weth.deposit({ from: user, value: _wethTokens.toString() });
     await weth.approve(treasury.address, _wethTokens, { from: user });
     await controller.post(WETH, user, user, _wethTokens, { from: user });
 }

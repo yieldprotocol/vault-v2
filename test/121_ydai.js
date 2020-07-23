@@ -65,7 +65,7 @@ contract('yDai', async (accounts) =>  {
         
         // Deposit some weth to treasury the sneaky way so that redeem can pull some dai
         await treasury.orchestrate(owner, { from: owner });
-        await weth.deposit({ from: owner, value: wethTokens2.mul(2) });
+        await weth.deposit({ from: owner, value: wethTokens2.mul(2).toString() });
         await weth.approve(treasury.address, wethTokens2.mul(2), { from: owner });
         await treasury.pushWeth(owner, wethTokens2.mul(2), { from: owner });
 

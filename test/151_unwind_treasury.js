@@ -1,4 +1,5 @@
 const helper = require('ganache-time-traveler');
+const { BigNumber } = require('ethers')
 const { expectRevert } = require('@openzeppelin/test-helpers');
 const { rate1, daiDebt1, WETH, daiTokens1, wethTokens1, chaiTokens1, spot, toRay, mulRay, divRay } = require('./shared/utils');
 const { setupMaker, newTreasury, newController, newYDai, newUnwind, newLiquidations, getDai } = require("./shared/fixtures");
@@ -203,8 +204,8 @@ contract('Unwind - Treasury', async (accounts) =>  {
 
                     assert.equal(
                         await weth.balanceOf(unwind.address, { from: owner }),
-                        wethTokens1.sub(taggedWeth).add(1).toString(),
-                        'Unwind should have ' + wethTokens1.sub(taggedWeth).add(1).add(1) + ' weth in hand, instead has ' + (await weth.balanceOf(unwind.address, { from: owner })),
+                        BigNumber.from(wethTokens1).sub(taggedWeth).add(1).toString(),
+                        'Unwind should have ' + BigNumber.from(wethTokens1).sub(taggedWeth).add(1).add(1) + ' weth in hand, instead has ' + (await weth.balanceOf(unwind.address, { from: owner })),
                     );
                 });
             });

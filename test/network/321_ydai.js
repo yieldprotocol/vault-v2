@@ -21,7 +21,6 @@ const Controller = artifacts.require('Controller');
 const EthProxy = artifacts.require('EthProxy');
 const Unwind = artifacts.require('Unwind');
 
-const truffleAssert = require('truffle-assertions');
 const helper = require('ganache-time-traveler');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('../shared/utils');
 const { expectRevert } = require('@openzeppelin/test-helpers');

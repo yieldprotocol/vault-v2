@@ -10,7 +10,6 @@ const Chai = artifacts.require("Chai");
 const Treasury = artifacts.require("Treasury");
 const Controller = artifacts.require("Controller");
 
-const truffleAssert = require('truffle-assertions');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('../shared/utils');
 
 contract('Chai', async (accounts) =>  {
@@ -63,7 +62,7 @@ contract('Chai', async (accounts) =>  {
         // Borrow some dai
         await vat.hope(daiJoin.address, { from: user }); // `user` allowing daiJoin to move his dai.
         await vat.hope(wethJoin.address, { from: user }); // `user` allowing wethJoin to move his weth.
-        await weth.deposit({ from: user, value: wethTokens});
+        await weth.deposit({ from: user, value: wethTokens.toString()});
         await weth.approve(wethJoin.address, wethTokens, { from: user }); 
         await wethJoin.join(user, wethTokens, { from: user });
         await vat.frob(WETH, user, user, user, wethTokens, daiDebt, { from: user });

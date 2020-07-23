@@ -273,12 +273,12 @@ contract('Controller - Weth', async (accounts) =>  {
                 user1,
             );
             assert.equal(
-                event.args.amount,
-                wethTokens1.mul(-1).toString(),
+                event.args.amount.toString(),
+                "-" + wethTokens1,
             );
             assert.equal(
                 await weth.balanceOf(user1),
-                wethTokens1.toString(),
+                wethTokens1,
                 "User1 should have collateral in hand"
             );
             assert.equal(

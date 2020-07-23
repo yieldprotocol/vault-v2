@@ -5,10 +5,8 @@ const {
   defaultAbiCoder,
   toUtf8Bytes,
   solidityPack
-} = require('ethers/utils')
+} = require('ethers/lib/utils')
 const { ecsign } = require('ethereumjs-util')
-
-
 
 const PERMIT_TYPEHASH = keccak256(toUtf8Bytes('Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)'));
 
@@ -16,18 +14,16 @@ contract('ERC20Permit', async (accounts) =>  {
     // this is the first account that buidler creates
     // https://github.com/nomiclabs/buidler/blob/d399a60452f80a6e88d974b2b9205f4894a60d29/packages/buidler-core/src/internal/core/config/default-config.ts#L41
     const ownerPrivateKey = Buffer.from("c5e8f61d1ab959b397eecc0a37a6517b8e67a0e7cf1f4bce5591f3ed80199122", 'hex')
+    const chainId = 31337; // buidlerevm chain id
 
     let [ owner, user ] = accounts;
     let token;
-    let chainId;
     let name;
 
 
     beforeEach(async() => {
         token = await ERC20.new(1000, { from: owner });
-        chainId = await web3.eth.getChainId();
         name = await token.name();
-
     })
 
     it('initializes DOMAIN_SEPARATOR and PERMIT_TYPEHASH correctly', async () => {

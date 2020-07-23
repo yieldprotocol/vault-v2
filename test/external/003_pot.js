@@ -54,7 +54,7 @@ contract('Pot', async (accounts) =>  {
         await vat.hope(daiJoin.address, { from: owner });
 
         // Borrow some dai
-        await weth.deposit({ from: owner, value: wethTokens});
+        await weth.deposit({ from: owner, value: wethTokens.toString()});
         await weth.approve(wethJoin.address, wethTokens, { from: owner }); 
         await wethJoin.join(owner, wethTokens, { from: owner });
         await vat.frob(WETH, owner, owner, owner, wethTokens, daiDebt, { from: owner });

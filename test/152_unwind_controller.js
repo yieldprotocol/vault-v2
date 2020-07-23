@@ -1,4 +1,5 @@
 const helper = require('ganache-time-traveler');
+const { BigNumber } = require('ethers')
 const { expectRevert } = require('@openzeppelin/test-helpers');
 const { CHAI, WETH, spot, rate1, chi1, daiDebt1, daiTokens1, wethTokens1, chaiTokens1, toRay, mulRay, divRay } = require('./shared/utils');
 const { setupMaker, newTreasury, newController, newYDai, newUnwind, newLiquidations, postWeth, postChai, getDai } = require("./shared/fixtures");
@@ -74,10 +75,10 @@ contract('Unwind - Controller', async (accounts) =>  {
             // Weth setup
             await postWeth(user1, wethTokens1);
 
-            await postWeth(user2, wethTokens1.add(1));
+            await postWeth(user2, BigNumber.from(wethTokens1).add(1));
             await controller.borrow(WETH, maturity1, user2, user2, daiTokens1, { from: user2 });
 
-            await postWeth(user3, wethTokens1.mul(3));
+            await postWeth(user3, BigNumber.from(wethTokens1).mul(3));
             await controller.borrow(WETH, maturity1, user3, user3, daiTokens1, { from: user3 });
             await controller.borrow(WETH, maturity2, user3, user3, daiTokens1, { from: user3 });
 
@@ -88,7 +89,7 @@ contract('Unwind - Controller', async (accounts) =>  {
             await controller.borrow(CHAI, maturity1, user2, user2, daiTokens1, { from: user2 });
 
             // Make sure that end.sol will have enough weth to cash chai savings
-            await getDai(owner, wethTokens1.mul(10), rate1);
+            await getDai(owner, BigNumber.from(wethTokens1).mul(10), rate1);
 
             assert.equal(
                 await weth.balanceOf(user1),
@@ -245,8 +246,8 @@ contract('Unwind - Controller', async (accounts) =>  {
 
                 assert.equal(
                     await weth.balanceOf(user3),
-                    wethTokens1.mul(3).sub(fixedWeth.mul(2)).sub(1).toString(), // Each position settled substracts daiTokens1 * fix from the user collateral 
-                    'User1 should have ' + wethTokens1.mul(3).sub(fixedWeth.mul(2)).sub(1).toString() + ' weth wei, instead has ' + (await weth.balanceOf(user3)),
+                    BigNumber.from(wethTokens1).mul(3).sub(fixedWeth.mul(2)).sub(1).toString(), // Each position settled substracts daiTokens1 * fix from the user collateral 
+                    'User1 should have ' + BigNumber.from(wethTokens1).mul(3).sub(fixedWeth.mul(2)).sub(1).toString() + ' weth wei, instead has ' + (await weth.balanceOf(user3)),
                 );
                 // In the tests the settling nets zero surplus, which we tested above
             });
