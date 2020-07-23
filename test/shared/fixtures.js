@@ -16,7 +16,7 @@ const Controller = artifacts.require('Controller');
 const Liquidations = artifacts.require('Liquidations');
 const Unwind = artifacts.require('Unwind');
 
-const { WETH, CHAI, Line, spotName, linel, limits, spot, rate1, chi1, toRay, addBN, subBN, divRay, mulRay } = require("./utils");
+const { WETH, CHAI, Line, spotName, linel, limits, spot, rate1, chi1, tag, fix, toRay, addBN, subBN, divRay, mulRay } = require("./utils");
 
 const setupMaker = async() => {
     // Set up vat, join and weth
@@ -157,7 +157,7 @@ async function newUnwind() {
     return unwind
 }
 
-async function getDai(user, _daiTokens, _rate){
+async function getDai(user, _daiTokens, _rate) {
     await vat.hope(daiJoin.address, { from: user });
     await vat.hope(wethJoin.address, { from: user });
 
@@ -171,7 +171,7 @@ async function getDai(user, _daiTokens, _rate){
     await daiJoin.exit(user, _daiTokens, { from: user });
 }
 
-async function getChai(user, _chaiTokens, _chi, _rate){
+async function getChai(user, _chaiTokens, _chi, _rate) {
     const _daiTokens = mulRay(_chaiTokens, _chi);
     await getDai(user, _daiTokens, _rate);
     await dai.approve(chai.address, _daiTokens, { from: user });
@@ -179,17 +179,30 @@ async function getChai(user, _chaiTokens, _chi, _rate){
 }
 
 // Convert eth to weth and post it to yDai
-async function postWeth(user, _wethTokens){
+async function postWeth(user, _wethTokens) {
     await weth.deposit({ from: user, value: _wethTokens });
     await weth.approve(treasury.address, _wethTokens, { from: user });
     await controller.post(WETH, user, user, _wethTokens, { from: user });
 }
 
 // Convert eth to chai and post it to yDai
-async function postChai(user, _chaiTokens, _chi, _rate){
+async function postChai(user, _chaiTokens, _chi, _rate) {
     await getChai(user, _chaiTokens, _chi, _rate);
     await chai.approve(treasury.address, _chaiTokens, { from: user });
     await controller.post(CHAI, user, user, _chaiTokens, { from: user });
+}
+
+async function shutdown(owner, user1, user2) {
+    await end.cage();
+    await end.setTag(WETH, tag);
+    await end.setDebt(1);
+    await end.setFix(WETH, fix);
+    await end.skim(WETH, user1);
+    await end.skim(WETH, user2);
+    await end.skim(WETH, owner);
+    await unwind.unwind();
+    await unwind.settleTreasury();
+    await unwind.cashSavings();
 }
 
 module.exports = {
@@ -203,4 +216,5 @@ module.exports = {
     getChai,
     postWeth,
     postChai,
+    shutdown,
 }

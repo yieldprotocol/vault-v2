@@ -1,5 +1,5 @@
 const { CHAI, WETH, spot, chi1, rate1, daiTokens1, wethTokens1, chaiTokens1, toRay, mulRay, divRay } = require('./shared/utils');
-const { setupMaker, newTreasury, newController, newYDai, newUnwind, newLiquidations, getChai, postChai, postWeth } = require("./shared/fixtures");
+const { shutdown, setupMaker, newTreasury, newController, newYDai, newUnwind, newLiquidations, getChai, postChai, postWeth } = require("./shared/fixtures");
 const helper = require('ganache-time-traveler');
 const { expectRevert } = require('@openzeppelin/test-helpers');
 
@@ -25,28 +25,11 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
     let snapshot;
     let snapshotId;
 
-    const yDaiTokens = daiTokens1;
     let maturity1;
     let maturity2;
 
-    const tag  = divRay(toRay(1.0), spot); // Irrelevant to the final users
     const fix  = divRay(toRay(1.0), mulRay(spot, toRay(1.1)));
     const fixedWeth = mulRay(daiTokens1, fix);
-
-    // Add a new yDai series
-    // This function uses global variables, careful.
-    async function shutdown(){
-        await end.cage({ from: owner });
-        await end.setTag(WETH, tag, { from: owner });
-        await end.setDebt(1, { from: owner });
-        await end.setFix(WETH, fix, { from: owner });
-        await end.skim(WETH, user1, { from: owner });
-        await end.skim(WETH, user2, { from: owner });
-        await end.skim(WETH, owner, { from: owner });
-        await unwind.unwind({ from: owner });
-        await unwind.settleTreasury({ from: owner });
-        await unwind.cashSavings({ from: owner });
-    }
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
@@ -107,7 +90,7 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
         });
 
         it("chai savings are added to profits", async() => {
-            await shutdown();
+            await shutdown(owner, user1, user2);
             await unwind.skimDssShutdown(user3, { from: owner });
 
             assert.equal(
@@ -121,7 +104,7 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
         it("chai held as collateral doesn't count as profits", async() => {
             await postChai(user2, chaiTokens1, chi1, rate1);
 
-            await shutdown();
+            await shutdown(owner, user1, user2);
             await unwind.skimDssShutdown(user3, { from: owner });
 
             assert.equal(
@@ -136,7 +119,7 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
             await postWeth(user2, wethTokens1);
             await controller.borrow(WETH, await yDai1.maturity(), user2, user2, daiTokens1, { from: user2 }); // controller debt assets == yDai liabilities 
 
-            await shutdown();
+            await shutdown(owner, user1, user2);
             await unwind.skimDssShutdown(user3, { from: owner });
 
             assert.equal(
@@ -151,7 +134,7 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
             await postChai(user2, chaiTokens1, chi1, rate1);
             await controller.borrow(CHAI, await yDai1.maturity(), user2, user2, daiTokens1, { from: user2 }); // controller debt assets == yDai liabilities 
 
-            await shutdown();
+            await shutdown(owner, user1, user2);
             await unwind.skimDssShutdown(user3, { from: owner });
 
             assert.equal(
@@ -169,7 +152,7 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
             });
     
             it("dai debt is deduced from profits", async() => {
-                await shutdown();
+                await shutdown(owner, user1, user2);
                 await unwind.skimDssShutdown(user3, { from: owner });
     
                 assert.equal(
@@ -204,7 +187,7 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
             });
 
             it("there is an extra profit only from weth debt", async() => {
-                await shutdown();
+                await shutdown(owner, user1, user2);
                 await unwind.skimDssShutdown(user3, { from: owner });
 
                 // A few wei won't make a difference
@@ -256,7 +239,7 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
             });
 
             it("profit is acummulated from several series", async() => {
-                await shutdown();
+                await shutdown(owner, user1, user2);
                 await unwind.skimDssShutdown(user3, { from: owner });
 
                 const expectedProfit = fixedWeth.mul(10)

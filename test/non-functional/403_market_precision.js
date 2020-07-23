@@ -1,19 +1,7 @@
 const YieldMathMock = artifacts.require('YieldMathMock');
 
-const truffleAssert = require('truffle-assertions');
-const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('../shared/utils');
-const { BN, expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
-
 contract('Market', async (accounts) =>  {
     let yieldMath;
-
-    const limits =  toRad(10000);
-    const spot = toRay(1.2);
-
-    const rate1 = toRay(1.4);
-    const chi1 = toRay(1.2);
-    const rate2 = toRay(1.82);
-    const chi2 = toRay(1.5);
 
     const oneToken =             '1000000000000000000';
     const yDaiReserves = '200000000000000000000000000';

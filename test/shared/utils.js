@@ -67,7 +67,8 @@ const daiDebt1 = toWad(120);
 const daiTokens1 = mulRay(daiDebt1, rate1);
 const wethTokens1 = divRay(daiTokens1, spot);
 const chaiTokens1 = divRay(daiTokens1, chi1);
-
+const tag  = divRay(toRay(1.0), spot);
+const fix  = divRay(toRay(1.0), mulRay(spot, toRay(1.1)));
 
 module.exports = {
     toWad,
@@ -92,4 +93,6 @@ module.exports = {
     daiTokens1,
     wethTokens1,
     chaiTokens1,
+    tag,
+    fix,
 }
