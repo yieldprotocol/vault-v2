@@ -148,7 +148,7 @@ contract Market is IMarket, ERC20, Delegable {
 
     /// @dev Returns how much yDai would be obtained by selling `daiIn` dai
     function sellDaiPreview(uint128 daiIn)
-        public view
+        public view override
         beforeMaturity
         returns(uint128)
     {
@@ -193,7 +193,7 @@ contract Market is IMarket, ERC20, Delegable {
 
     /// @dev Returns how much yDai would be required to buy `daiOut` dai
     function buyDaiPreview(uint128 daiOut)
-        public view
+        public view override
         beforeMaturity
         returns(uint128)
     {
@@ -228,7 +228,7 @@ contract Market is IMarket, ERC20, Delegable {
 
     /// @dev Returns how much dai would be obtained by selling `yDaiIn` yDai
     function sellYDaiPreview(uint128 yDaiIn)
-        public view
+        public view override
         beforeMaturity
         returns(uint128)
     {
@@ -264,7 +264,7 @@ contract Market is IMarket, ERC20, Delegable {
 
     /// @dev Returns how much dai would be required to buy `yDaiOut` yDai
     function buyYDaiPreview(uint128 yDaiOut)
-        public view
+        public view override
         beforeMaturity
         returns(uint128)
     {
