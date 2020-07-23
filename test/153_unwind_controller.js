@@ -1,25 +1,19 @@
 const helper = require('ganache-time-traveler');
 const { expectRevert } = require('@openzeppelin/test-helpers');
-const { daiDebt, CHAI, WETH, daiTokens1: daiTokens, wethTokens1: wethTokens, chaiTokens1: chaiTokens, spot, toRay, mulRay, divRay } = require('./shared/utils');
-const { setupMaker, newTreasury, newController, newYDai, newUnwind, newLiquidations } = require("./shared/fixtures");
+const { CHAI, WETH, spot, rate1, chi1, daiDebt1, daiTokens1, wethTokens1, chaiTokens1, toRay, mulRay, divRay } = require('./shared/utils');
+const { setupMaker, newTreasury, newController, newYDai, newUnwind, newLiquidations, postWeth, postChai, getDai } = require("./shared/fixtures");
 
 contract('Unwind - Controller', async (accounts) =>  {
     let [ owner, user1, user2, user3 ] = accounts;
     let vat;
     let weth;
-    let wethJoin;
-    let dai;
     let daiJoin;
-    let jug;
-    let pot;
     let end;
-    let chai;
     let treasury;
     let yDai1;
     let yDai2;
     let controller;
     let liquidations;
-    let ethProxy;
     let unwind;
 
     let snapshot;
@@ -30,8 +24,8 @@ contract('Unwind - Controller', async (accounts) =>  {
 
     const tag  = divRay(toRay(1.0), spot); // Irrelevant to the final users
     const fix  = divRay(toRay(1.0), mulRay(spot, toRay(1.1)));
-    const fixedWeth = mulRay(daiTokens, fix);
-    const yDaiTokens = daiTokens;
+    const fixedWeth = mulRay(daiTokens1, fix);
+    const yDaiTokens = daiTokens1;
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
@@ -51,7 +45,6 @@ contract('Unwind - Controller', async (accounts) =>  {
         await vat.hope(daiJoin.address, { from: owner });
 
         treasury = await newTreasury();
-        await treasury.orchestrate(owner, { from: owner });
         controller = await newController();
 
         // Setup yDai
@@ -69,8 +62,6 @@ contract('Unwind - Controller', async (accounts) =>  {
         await yDai1.orchestrate(unwind.address);
         await yDai2.orchestrate(unwind.address);
 
-        await vat.hope(daiJoin.address, { from: owner });
-        await vat.hope(wethJoin.address, { from: owner });
         await end.rely(owner, { from: owner });       // `owner` replaces MKR governance
     });
 
@@ -81,62 +72,23 @@ contract('Unwind - Controller', async (accounts) =>  {
     describe("with posted collateral and borrowed yDai", () => {
         beforeEach(async() => {
             // Weth setup
-            await weth.deposit({ from: user1, value: wethTokens });
-            await weth.approve(treasury.address, wethTokens, { from: user1 });
-            await controller.post(WETH, user1, user1, wethTokens, { from: user1 });
+            await postWeth(user1, wethTokens1);
 
-            await weth.deposit({ from: user2, value: wethTokens.add(1) });
-            await weth.approve(treasury.address, wethTokens.add(1), { from: user2 });
-            await controller.post(WETH, user2, user2, wethTokens.add(1), { from: user2 });
-            await controller.borrow(WETH, maturity1, user2, user2, daiTokens, { from: user2 });
+            await postWeth(user2, wethTokens1.add(1));
+            await controller.borrow(WETH, maturity1, user2, user2, daiTokens1, { from: user2 });
 
-            await weth.deposit({ from: user3, value: wethTokens.mul(3) });
-            await weth.approve(treasury.address, wethTokens.mul(3), { from: user3 });
-            await controller.post(WETH, user3, user3, wethTokens.mul(3), { from: user3 });
-            await controller.borrow(WETH, maturity1, user3, user3, daiTokens, { from: user3 });
-            await controller.borrow(WETH, maturity2, user3, user3, daiTokens, { from: user3 });
+            await postWeth(user3, wethTokens1.mul(3));
+            await controller.borrow(WETH, maturity1, user3, user3, daiTokens1, { from: user3 });
+            await controller.borrow(WETH, maturity2, user3, user3, daiTokens1, { from: user3 });
 
-            // Chai setup
-            await vat.hope(daiJoin.address, { from: user1 });
-            await vat.hope(wethJoin.address, { from: user1 });
+            await postChai(user1, chaiTokens1, chi1, rate1);
 
-            await weth.deposit({ from: user1, value: wethTokens });
-            await weth.approve(wethJoin.address, wethTokens, { from: user1 });
-            await wethJoin.join(user1, wethTokens, { from: user1 });
-            await vat.frob(WETH, user1, user1, user1, wethTokens, daiDebt, { from: user1 });
-            await daiJoin.exit(user1, daiTokens, { from: user1 });
-            await dai.approve(chai.address, daiTokens, { from: user1 });
-            await chai.join(user1, daiTokens, { from: user1 });
-            await chai.approve(treasury.address, chaiTokens, { from: user1 });
-            await controller.post(CHAI, user1, user1, chaiTokens, { from: user1 });
-
-            await vat.hope(daiJoin.address, { from: user2 });
-            await vat.hope(wethJoin.address, { from: user2 });
-
-            const moreDebt = mulRay(daiDebt, toRay(1.1));
-            const moreDai = mulRay(daiTokens, toRay(1.1));
-            const moreWeth = mulRay(wethTokens, toRay(1.1));
-            const moreChai = mulRay(chaiTokens, toRay(1.1));
-            await weth.deposit({ from: user2, value: moreWeth });
-            await weth.approve(wethJoin.address, moreWeth, { from: user2 });
-            await wethJoin.join(user2, moreWeth, { from: user2 });
-            await vat.frob(WETH, user2, user2, user2, moreWeth, moreDebt, { from: user2 });
-            await daiJoin.exit(user2, moreDai, { from: user2 });
-            await dai.approve(chai.address, moreDai, { from: user2 });
-            await chai.join(user2, moreDai, { from: user2 });
-            await chai.approve(treasury.address, moreChai, { from: user2 });
-            await controller.post(CHAI, user2, user2, moreChai, { from: user2 });
-            await controller.borrow(CHAI, maturity1, user2, user2, daiTokens, { from: user2 });
-
-            // user1 has chaiTokens in controller and no debt.
-            // user2 has chaiTokens * 1.1 in controller and daiTokens debt.
+            const moreChai = mulRay(chaiTokens1, toRay(1.1));
+            await postChai(user2, moreChai, chi1, rate1);
+            await controller.borrow(CHAI, maturity1, user2, user2, daiTokens1, { from: user2 });
 
             // Make sure that end.sol will have enough weth to cash chai savings
-            await weth.deposit({ from: owner, value: wethTokens.mul(10) });
-            await weth.approve(wethJoin.address, wethTokens.mul(10), { from: owner });
-            await wethJoin.join(owner, wethTokens.mul(10), { from: owner });
-            await vat.frob(WETH, owner, owner, owner, wethTokens.mul(10), daiDebt.mul(10), { from: owner });
-            await daiJoin.exit(owner, daiTokens.mul(10), { from: owner });
+            await getDai(owner, wethTokens1.mul(10), rate1);
 
             assert.equal(
                 await weth.balanceOf(user1),
@@ -169,13 +121,6 @@ contract('Unwind - Controller', async (accounts) =>  {
             );
         });
 
-        /* it("does not allow to profit if treasury not settled and cashed", async() => {
-            await expectRevert(
-                unwind.profit(owner, { from: user2 }),
-                "Unwind: Not ready",
-            );
-        }); */
-
         describe("with Dss unwind initiated and treasury settled", () => {
             beforeEach(async() => {
                 await end.cage({ from: owner });
@@ -200,11 +145,11 @@ contract('Unwind - Controller', async (accounts) =>  {
 
             it("does not allow to post, withdraw, borrow or repay assets", async() => {
                 await expectRevert(
-                    controller.post(WETH, owner, owner, wethTokens, { from: owner }),
+                    controller.post(WETH, owner, owner, wethTokens1, { from: owner }),
                     "Controller: Not available during unwind",
                 );
                 await expectRevert(
-                    controller.withdraw(WETH, owner, owner, wethTokens, { from: owner }),
+                    controller.withdraw(WETH, owner, owner, wethTokens1, { from: owner }),
                     "Controller: Not available during unwind",
                 );
                 await expectRevert(
@@ -212,7 +157,7 @@ contract('Unwind - Controller', async (accounts) =>  {
                     "Controller: Not available during unwind",
                 );
                 await expectRevert(
-                    controller.repayDai(WETH, maturity1, owner, owner, daiTokens, { from: owner }),
+                    controller.repayDai(WETH, maturity1, owner, owner, daiTokens1, { from: owner }),
                     "Controller: Not available during unwind",
                 );
                 await expectRevert(
@@ -220,13 +165,6 @@ contract('Unwind - Controller', async (accounts) =>  {
                     "Controller: Not available during unwind",
                 );
             });
-
-            /* it("does not allow to profit if there is user debt", async() => {
-                await expectRevert(
-                    unwind.profit(owner, { from: user2 }),
-                    "Unwind: Redeem all yDai",
-                );
-            }); */
 
             it("user can redeem YDai", async() => {
                 await unwind.redeem(maturity1, yDaiTokens, user2, { from: user2 });
@@ -243,8 +181,8 @@ contract('Unwind - Controller', async (accounts) =>  {
 
                 assert.equal(
                     await weth.balanceOf(user1),
-                    wethTokens.toString(),
-                    'User1 should have ' + wethTokens.toString() + ' weth wei',
+                    wethTokens1.toString(),
+                    'User1 should have ' + wethTokens1.toString() + ' weth wei',
                 );
             });
 
@@ -253,8 +191,8 @@ contract('Unwind - Controller', async (accounts) =>  {
 
                 assert.equal(
                     await weth.balanceOf(user1),
-                    wethTokens.toString(),
-                    'User1 should have ' + wethTokens.toString() + ' weth wei',
+                    wethTokens1.toString(),
+                    'User1 should have ' + wethTokens1.toString() + ' weth wei',
                 );
             });
 
@@ -307,31 +245,11 @@ contract('Unwind - Controller', async (accounts) =>  {
 
                 assert.equal(
                     await weth.balanceOf(user3),
-                    wethTokens.mul(3).sub(fixedWeth.mul(2)).sub(1).toString(), // Each position settled substracts daiTokens * fix from the user collateral 
-                    'User1 should have ' + wethTokens.mul(3).sub(fixedWeth.mul(2)).sub(1).toString() + ' weth wei, instead has ' + (await weth.balanceOf(user3)),
+                    wethTokens1.mul(3).sub(fixedWeth.mul(2)).sub(1).toString(), // Each position settled substracts daiTokens1 * fix from the user collateral 
+                    'User1 should have ' + wethTokens1.mul(3).sub(fixedWeth.mul(2)).sub(1).toString() + ' weth wei, instead has ' + (await weth.balanceOf(user3)),
                 );
                 // In the tests the settling nets zero surplus, which we tested above
             });
-
-            /* describe("with all yDai redeemed", () => {
-                beforeEach(async() => {
-                    await unwind.redeem(maturity1, yDaiTokens.mul(2), user2, { from: user2 });
-                    await unwind.redeem(maturity1, yDaiTokens, user3, { from: user3 });
-                    await unwind.redeem(maturity2, yDaiTokens, user3, { from: user3 });
-                });
-
-                it("allows to extract profit", async() => {
-                    const profit = await weth.balanceOf(unwind.address);
-
-                    await unwind.profit(owner, { from: owner });
-    
-                    assert.equal(
-                        (await weth.balanceOf(owner)).toString(),
-                        profit,
-                        'Owner should have ' + profit + ' weth, instead has ' + (await weth.balanceOf(owner)),
-                    );
-                });
-            }); */
         });
     });
 });

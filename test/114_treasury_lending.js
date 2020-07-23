@@ -2,7 +2,7 @@ const { expectRevert } = require('@openzeppelin/test-helpers');
 const { setupMaker, newTreasury } = require("./shared/fixtures");
 const {
     WETH,
-    daiDebt,
+    daiDebt1,
     daiTokens1,
     wethTokens1,
     chaiTokens1,
@@ -127,7 +127,7 @@ contract('Treasury - Lending', async (accounts) =>  {
             );
             assert.equal(
                 (await vat.urns(WETH, treasury.address)).art,
-                daiDebt.toString(),
+                daiDebt1.toString(),
             );
         });
 
@@ -141,7 +141,7 @@ contract('Treasury - Lending', async (accounts) =>  {
             );
             assert.equal(
                 (await vat.urns(WETH, treasury.address)).art,
-                daiDebt.toString(),
+                daiDebt1.toString(),
             );
         });
 

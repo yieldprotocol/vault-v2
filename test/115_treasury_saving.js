@@ -1,7 +1,8 @@
-const { setupMaker, newTreasury } = require("./shared/fixtures");
+const { setupMaker, newTreasury, getDai } = require("./shared/fixtures");
 const {
     WETH,
-    daiDebt,
+    rate1,
+    daiDebt1,
     daiTokens1,
     wethTokens1,
     chaiTokens1,
@@ -31,15 +32,10 @@ contract('Treasury - Saving', async (accounts) =>  {
         treasury = await newTreasury();
 
         // Setup tests - Allow owner to interact directly with Treasury, not for production
-        treasury.orchestrate(owner, { from: owner });
+        await treasury.orchestrate(owner, { from: owner });
 
         // Borrow some dai
-        await weth.deposit({ from: user, value: wethTokens1});
-        await weth.approve(wethJoin.address, wethTokens1, { from: user }); 
-        await wethJoin.join(user, wethTokens1, { from: user });
-        await vat.frob(WETH, user, user, user, wethTokens1, daiDebt, { from: user });
-        await vat.hope(daiJoin.address, { from: user });
-        await daiJoin.exit(user, daiTokens1, { from: user });
+        await getDai(user, daiTokens1, rate1);
     });
 
     it("allows to save dai", async() => {

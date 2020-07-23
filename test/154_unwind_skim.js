@@ -1,4 +1,4 @@
-const { chi1: chi, rate1: rate, daiDebt, CHAI, WETH, daiTokens1: daiTokens, wethTokens1: wethTokens, chaiTokens1: chaiTokens, spot, toRay, mulRay, divRay } = require('./shared/utils');
+const { CHAI, WETH, chi1, rate1, daiTokens1, wethTokens1, chaiTokens1, toRay, mulRay, divRay } = require('./shared/utils');
 const { setupMaker, newTreasury, newController, newYDai, newUnwind, newLiquidations, getChai, postChai, postWeth } = require("./shared/fixtures");
 const helper = require('ganache-time-traveler');
 const { expectRevert } = require('@openzeppelin/test-helpers');
@@ -6,12 +6,6 @@ const { expectRevert } = require('@openzeppelin/test-helpers');
 contract('Unwind - Skim', async (accounts) =>  {
     let [ owner, user1, user2 ] = accounts;
     let vat;
-    let weth;
-    let wethJoin;
-    let dai;
-    let daiJoin;
-    let jug;
-    let pot;
     let end;
     let chai;
     let treasury;
@@ -19,7 +13,6 @@ contract('Unwind - Skim', async (accounts) =>  {
     let yDai2;
     let controller;
     let liquidations;
-    let ethProxy;
     let unwind;
 
     let snapshot;
@@ -44,10 +37,8 @@ contract('Unwind - Skim', async (accounts) =>  {
             chai,
             end,
         } = await setupMaker());
-        await vat.hope(daiJoin.address, { from: owner });
 
         treasury = await newTreasury();
-        await treasury.orchestrate(owner, { from: owner });
         controller = await newController();
 
         // Setup yDai
@@ -65,8 +56,8 @@ contract('Unwind - Skim', async (accounts) =>  {
         await yDai1.orchestrate(unwind.address);
         await yDai2.orchestrate(unwind.address);
 
-        await vat.hope(daiJoin.address, { from: owner });
-        await vat.hope(wethJoin.address, { from: owner });
+        // Test setup - Not for production
+        await treasury.orchestrate(owner, { from: owner });
         await end.rely(owner, { from: owner });       // `owner` replaces MKR governance
     });
 
@@ -89,8 +80,8 @@ contract('Unwind - Skim', async (accounts) =>  {
 
         describe("with chai savings", () => {
             beforeEach(async() => {
-                await getChai(owner, chaiTokens.mul(10), chi, rate);
-                await chai.transfer(treasury.address, chaiTokens.mul(10), { from: owner });
+                await getChai(owner, chaiTokens1.mul(10), chi1, rate1);
+                await chai.transfer(treasury.address, chaiTokens1.mul(10), { from: owner });
                 // profit = 10 chai
             });
 
@@ -99,57 +90,57 @@ contract('Unwind - Skim', async (accounts) =>  {
 
                 assert.equal(
                     await chai.balanceOf(user1),
-                    chaiTokens.mul(10).toString(),
-                    'User1 should have ' + chaiTokens.mul(10).toString() + ' chai wei',
+                    chaiTokens1.mul(10).toString(),
+                    'User1 should have ' + chaiTokens1.mul(10).toString() + ' chai wei',
                 );
             });
 
             it("chai held as collateral doesn't count as profits", async() => {
-                await getChai(user2, chaiTokens, chi, rate);
-                await chai.approve(treasury.address, chaiTokens, { from: user2 });
-                await controller.post(CHAI, user2, user2, chaiTokens, { from: user2 });
+                await getChai(user2, chaiTokens1, chi1, rate1);
+                await chai.approve(treasury.address, chaiTokens1, { from: user2 });
+                await controller.post(CHAI, user2, user2, chaiTokens1, { from: user2 });
 
                 await unwind.skimWhileLive(user1, { from: owner });
 
                 assert.equal(
                     await chai.balanceOf(user1),
-                    chaiTokens.mul(10).toString(),
-                    'User1 should have ' + chaiTokens.mul(10).toString() + ' chai wei',
+                    chaiTokens1.mul(10).toString(),
+                    'User1 should have ' + chaiTokens1.mul(10).toString() + ' chai wei',
                 );
                 // profit = 10 chai
             });
 
             it("unredeemed yDai and controller weth debt cancel each other", async() => {
-                await postWeth(user2, wethTokens);
-                await controller.borrow(WETH, await yDai1.maturity(), user2, user2, daiTokens, { from: user2 }); // controller debt assets == yDai liabilities 
+                await postWeth(user2, wethTokens1);
+                await controller.borrow(WETH, await yDai1.maturity(), user2, user2, daiTokens1, { from: user2 }); // controller debt assets == yDai liabilities 
 
                 await unwind.skimWhileLive(user1, { from: owner });
 
                 assert.equal(
                     await chai.balanceOf(user1),
-                    chaiTokens.mul(10).toString(),
-                    'User1 should have ' + chaiTokens.mul(10).toString() + ' chai wei',
+                    chaiTokens1.mul(10).toString(),
+                    'User1 should have ' + chaiTokens1.mul(10).toString() + ' chai wei',
                 );
                 // profit = 10 chai
             });
 
             it("unredeemed yDai and controller chai debt cancel each other", async() => {
-                await postChai(user2, chaiTokens, chi, rate);
-                await controller.borrow(CHAI, await yDai1.maturity(), user2, user2, daiTokens, { from: user2 }); // controller debt assets == yDai liabilities 
+                await postChai(user2, chaiTokens1, chi1, rate1);
+                await controller.borrow(CHAI, await yDai1.maturity(), user2, user2, daiTokens1, { from: user2 }); // controller debt assets == yDai liabilities 
 
                 await unwind.skimWhileLive(user1, { from: owner });
 
                 assert.equal(
                     await chai.balanceOf(user1),
-                    chaiTokens.mul(10).toString(),
-                    'User1 should have ' + chaiTokens.mul(10).toString() + ' chai wei',
+                    chaiTokens1.mul(10).toString(),
+                    'User1 should have ' + chaiTokens1.mul(10).toString() + ' chai wei',
                 );
                 // profit = 10 chai
             });
 
             describe("with dai debt", () => {
                 beforeEach(async() => {
-                    await treasury.pullDai(owner, daiTokens, { from: owner });
+                    await treasury.pullDai(owner, daiTokens1, { from: owner });
                     // profit = 9 chai
                 });
         
@@ -158,26 +149,24 @@ contract('Unwind - Skim', async (accounts) =>  {
         
                     assert.equal(
                         await chai.balanceOf(user1),
-                        chaiTokens.mul(9).toString(),
-                        'User1 should have ' + chaiTokens.mul(9).toString() + ' chai wei',
+                        chaiTokens1.mul(9).toString(),
+                        'User1 should have ' + chaiTokens1.mul(9).toString() + ' chai wei',
                     );
                 });
             });
 
             describe("after maturity, with a rate increase", () => {
-                // Set rate to 1.5
                 const rateIncrease = toRay(0.25);
-                const rate0 = rate;
-                const rate1 = rate.add(rateIncrease);
+                const rate2 = rate1.add(rateIncrease);
 
-                const rateDifferential = divRay(rate1, rate0);
+                const rateDifferential = divRay(rate2, rate1);
 
                 beforeEach(async() => {
-                    await postWeth(user2, wethTokens);
-                    await controller.borrow(WETH, await yDai1.maturity(), user2, user2, daiTokens, { from: user2 }); // controller debt assets == yDai liabilities 
+                    await postWeth(user2, wethTokens1);
+                    await controller.borrow(WETH, await yDai1.maturity(), user2, user2, daiTokens1, { from: user2 }); // controller debt assets == yDai liabilities 
 
-                    await postChai(user2, chaiTokens, chi, rate);
-                    await controller.borrow(CHAI, await yDai1.maturity(), user2, user2, daiTokens, { from: user2 }); // controller debt assets == yDai liabilities 
+                    await postChai(user2, chaiTokens1, chi1, rate1);
+                    await controller.borrow(CHAI, await yDai1.maturity(), user2, user2, daiTokens1, { from: user2 }); // controller debt assets == yDai liabilities 
                     // profit = 10 chai
 
                     // yDai matures
@@ -186,13 +175,13 @@ contract('Unwind - Skim', async (accounts) =>  {
                     await yDai1.mature();
 
                     await vat.fold(WETH, vat.address, rateIncrease, { from: owner });
-                    // profit = 10 chai + 1 chai * (rate1/rate0 - 1)
+                    // profit = 10 chai + 1 chai * (rate2/rate0 - 1)
                 });
 
                 it("there is an extra profit only from weth debt", async() => {
                     await unwind.skimWhileLive(user1, { from: owner });
 
-                    const expectedProfit = chaiTokens.mul(10).add(mulRay(chaiTokens, rateDifferential.sub(toRay(1))));
+                    const expectedProfit = chaiTokens1.mul(10).add(mulRay(chaiTokens1, rateDifferential.sub(toRay(1))));
         
                     assert.equal(
                         await chai.balanceOf(user1),
@@ -203,24 +192,22 @@ contract('Unwind - Skim', async (accounts) =>  {
             });
 
             describe("after maturity, with a rate increase", () => {
-                // Set rate to 1.5
                 const rateIncrease = toRay(0.25);
-                const rate0 = rate;
-                const rate1 = rate.add(rateIncrease);
                 const rate2 = rate1.add(rateIncrease);
+                const rate3 = rate2.add(rateIncrease);
 
-                const rateDifferential1 = divRay(rate2, rate0);
-                const rateDifferential2 = divRay(rate2, rate1);
+                const rateDifferential1 = divRay(rate3, rate1);
+                const rateDifferential2 = divRay(rate3, rate2);
 
                 beforeEach(async() => {
-                    await postWeth(user2, wethTokens);
-                    await controller.borrow(WETH, await yDai1.maturity(), user2, user2, daiTokens, { from: user2 }); // controller debt assets == yDai liabilities 
+                    await postWeth(user2, wethTokens1);
+                    await controller.borrow(WETH, await yDai1.maturity(), user2, user2, daiTokens1, { from: user2 }); // controller debt assets == yDai liabilities 
 
-                    await postWeth(user2, wethTokens);
-                    await controller.borrow(WETH, await yDai2.maturity(), user2, user2, daiTokens, { from: user2 }); // controller debt assets == yDai liabilities 
+                    await postWeth(user2, wethTokens1);
+                    await controller.borrow(WETH, await yDai2.maturity(), user2, user2, daiTokens1, { from: user2 }); // controller debt assets == yDai liabilities 
 
-                    await postChai(user2, chaiTokens, chi, rate);
-                    await controller.borrow(CHAI, await yDai1.maturity(), user2, user2, daiTokens, { from: user2 }); // controller debt assets == yDai liabilities 
+                    await postChai(user2, chaiTokens1, chi1, rate1);
+                    await controller.borrow(CHAI, await yDai1.maturity(), user2, user2, daiTokens1, { from: user2 }); // controller debt assets == yDai liabilities 
                     // profit = 10 chai
 
                     // yDai1 matures
@@ -230,7 +217,7 @@ contract('Unwind - Skim', async (accounts) =>  {
 
                     await vat.fold(WETH, vat.address, rateIncrease, { from: owner });
 
-                    // profit = 10 chai + 1 chai * (rate1/rate0 - 1)
+                    // profit = 10 chai + 1 chai * (rate3/rate1 - 1)
 
                     // yDai2 matures
                     // await helper.advanceTime(2000);
@@ -238,15 +225,15 @@ contract('Unwind - Skim', async (accounts) =>  {
                     await yDai2.mature();
 
                     await vat.fold(WETH, vat.address, rateIncrease, { from: owner });
-                    // profit = 10 chai + 1 chai * (rate2/rate0 - 1) + 1 chai * (rate2/rate1 - 1)
+                    // profit = 10 chai + 1 chai * (rate2/rate1 - 1) + 1 chai * (rate3/rate2 - 1)
                 });
 
                 it("profit is acummulated from several series", async() => {
                     await unwind.skimWhileLive(user1, { from: owner });
 
-                    const expectedProfit = chaiTokens.mul(10)
-                        .add(mulRay(chaiTokens, rateDifferential1.sub(toRay(1)))) // yDai1
-                        .add(mulRay(chaiTokens, rateDifferential2.sub(toRay(1)))) // yDai2
+                    const expectedProfit = chaiTokens1.mul(10)
+                        .add(mulRay(chaiTokens1, rateDifferential1.sub(toRay(1)))) // yDai1
+                        .add(mulRay(chaiTokens1, rateDifferential2.sub(toRay(1)))) // yDai2
                         .sub(1); // Rounding somewhere
         
                     assert.equal(
