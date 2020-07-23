@@ -109,7 +109,7 @@ contract('Unwind - Controller', async (accounts) =>  {
 
         it("does not allow to redeem YDai if treasury not settled and cashed", async() => {
             await expectRevert(
-                unwind.redeem(maturity1, yDaiTokens, user2, { from: user2 }),
+                unwind.redeem(maturity1, user2, yDaiTokens, { from: user2 }),
                 "Unwind: Not ready",
             );
         });
@@ -167,7 +167,7 @@ contract('Unwind - Controller', async (accounts) =>  {
             });
 
             it("user can redeem YDai", async() => {
-                await unwind.redeem(maturity1, yDaiTokens, user2, { from: user2 });
+                await unwind.redeem(maturity1, user2, yDaiTokens, { from: user2 });
 
                 assert.equal(
                     await weth.balanceOf(user2),

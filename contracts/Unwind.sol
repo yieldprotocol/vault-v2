@@ -262,7 +262,7 @@ contract Unwind is Ownable(), DecimalMath {
     }
 
     /// @dev Redeems YDai for weth
-    function redeem(uint256 maturity, uint256 yDaiAmount, address user) public {
+    function redeem(uint256 maturity, address user, uint256 yDaiAmount) public {
         require(settled && cashedOut, "Unwind: Not ready");
         IYDai yDai = _controller.series(maturity);
         yDai.burn(user, yDaiAmount);
