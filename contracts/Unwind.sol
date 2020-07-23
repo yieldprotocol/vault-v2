@@ -56,6 +56,9 @@ contract Unwind is Ownable(), DecimalMath {
     bool public cashedOut;
     bool public live = true;
 
+    /// @dev The constructor links to vat, daiJoin, weth, wethJoin, jug, pot, end, chai, treasury, controller and liquidations.
+    /// Liquidations should have privileged access to treasury, controller and liquidations using orchestration.
+    /// The constructor gives treasury and end permission on unwind's MakerDAO vaults.
     constructor (
         address vat_,
         address daiJoin_,
@@ -101,7 +104,7 @@ contract Unwind is Ownable(), DecimalMath {
         return int256(x);
     }
 
-    /// @dev Disables treasury and controller.
+    /// @dev Disables treasury, controller and liquidations.
     function unwind() public {
         require(
             _end.tag(WETH) != 0,
@@ -113,10 +116,13 @@ contract Unwind is Ownable(), DecimalMath {
         _liquidations.shutdown();
     }
 
+    /// @dev Updates and obtains chi from pot.
     function getChi() public returns (uint256) {
         return (now > _pot.rho()) ? _pot.drip() : _pot.chi();
     }
 
+    /// @dev Update Jug and obtain rate from Vat.
+    // TODO: Consider not updating the rate. 
     function getRate() public returns (uint256) {
         uint256 rate;
         (, uint256 rho) = _jug.ilks(WETH);
@@ -129,6 +135,7 @@ contract Unwind is Ownable(), DecimalMath {
     }
 
     /// @dev Calculates how much profit is in the system and transfers it to the beneficiary
+    // TODO: Pass the beneficiary on the constructor
     function skimWhileLive(address beneficiary) public { // TODO: Hardcode
         require(
             live == true, // If DSS is not live this method will fail later on.
@@ -148,6 +155,7 @@ contract Unwind is Ownable(), DecimalMath {
     }
 
     /// @dev Calculates how much profit is in the system and transfers it to the beneficiary
+    // TODO: Pass the beneficiary on the constructor
     function skimDssShutdown(address beneficiary) public { // TODO: Hardcode
         require(settled && cashedOut, "Unwind: Not ready");
 
@@ -162,7 +170,10 @@ contract Unwind is Ownable(), DecimalMath {
         require(_weth.transfer(beneficiary, profit));
     }
 
-    /// @dev Returns the profit accummulated in the system due to yDai supply and debt, in chai, for a given chi and rate.
+    /// @dev Returns the profit accummulated in the system due to yDai supply and debt, in chai.
+    /// Chi and rate are passed on as parameters to avoid multiple calls that retrieve the same values.
+    /// @param chi The chi value from MakerDAO
+    /// @param rate The rate value from MakerDAO
     function _yDaiProfit(uint256 chi, uint256 rate) internal view returns (uint256) {
         uint256 profit;
 
@@ -247,6 +258,8 @@ contract Unwind is Ownable(), DecimalMath {
     }
 
     /// @dev Settles a series position in Controller, and then returns any remaining collateral as weth using the unwind Dai to Weth price.
+    /// @param collateral Valid collateral type.
+    /// @param user User vault to settle, and wallet to receive the corresponding weth.
     function settle(bytes32 collateral, address user) public {
         require(settled && cashedOut, "Unwind: Not ready");
 
@@ -261,7 +274,12 @@ contract Unwind is Ownable(), DecimalMath {
         require(_weth.transfer(user, remainder));
     }
 
-    /// @dev Redeems YDai for weth
+    /// @dev Redeems YDai for weth. YDai.redeem won't work if MakerDAO is in shutdown.
+    /// yDai holder must call yDai.approve before calling this function.
+    /// @param maturity Maturity of an added series
+    /// @param user Wallet containing the yDai to burn.
+    /// @param yDaiAmount Amount of yDai to burn.
+    // TODO: Swap parameter order
     function redeem(uint256 maturity, uint256 yDaiAmount, address user) public {
         require(settled && cashedOut, "Unwind: Not ready");
         IYDai yDai = _controller.series(maturity);

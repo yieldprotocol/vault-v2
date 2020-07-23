@@ -63,7 +63,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         _treasury = ITreasury(treasury_);
     }
 
-    /// @dev Only while the Treasury is not unwinding due to a MakerDAO shutdown.
+    /// @dev Only while the Controller is not unwinding due to a MakerDAO shutdown.
     modifier onlyLive() {
         require(live == true, "Controller: Not available during unwind");
         _;
