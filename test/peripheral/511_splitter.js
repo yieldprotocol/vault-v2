@@ -1,37 +1,9 @@
-// External
-const Vat = artifacts.require('Vat');
-const GemJoin = artifacts.require('GemJoin');
-const DaiJoin = artifacts.require('DaiJoin');
-const Weth = artifacts.require("WETH9");
-const ERC20 = artifacts.require("TestERC20");
-const Jug = artifacts.require('Jug');
-const Pot = artifacts.require('Pot');
-const End = artifacts.require('End');
-const Chai = artifacts.require('Chai');
-const GasToken = artifacts.require('GasToken1');
-
-// Common
-const Treasury = artifacts.require('Treasury');
-
-// YDai
-const YDai = artifacts.require('YDai');
-const Controller = artifacts.require('Controller');
-
-// Market
 const Market = artifacts.require('Market');
-
-// Peripheral
-const EthProxy = artifacts.require('EthProxy');
-const Unwind = artifacts.require('Unwind');
 const Splitter = artifacts.require('Splitter');
 
-// Mocks
-const FlashMinterMock = artifacts.require('FlashMinterMock');
-
-const truffleAssert = require('truffle-assertions');
-const helper = require('ganache-time-traveler');
-const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('../shared/utils');
-const { BN, expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
+const { BN, expectRevert } = require('@openzeppelin/test-helpers');
+const { WETH, rate1, daiTokens1, wethTokens1, addBN, mulRay, divRay } = require('../shared/utils');
+const { setupMaker, newTreasury, newController, newYDai, getDai, postWeth } = require("../shared/fixtures");
 const { assert, expect } = require('chai');
 
 contract('Splitter', async (accounts) =>  {
@@ -41,156 +13,35 @@ contract('Splitter', async (accounts) =>  {
     let wethJoin;
     let dai;
     let daiJoin;
-    let jug;
-    let pot;
-    let end;
-    let chai;
-    let gasToken;
     let treasury;
     let yDai1;
-    let yDai2;
     let controller;
     let market1;
     let splitter1;
-    let flashMinter;
 
-    let WETH = web3.utils.fromAscii("ETH-A");
-    let ilk = web3.utils.fromAscii("ETH-A");
-    let Line = web3.utils.fromAscii("Line");
-    let spotName = web3.utils.fromAscii("spot");
-    let linel = web3.utils.fromAscii("line");
-
-    const limits =  toRad(10000);
-    const spot = toRay(1.2);
-
-    const rate1 = toRay(1.4);
-    const chi1 = toRay(1.2);
-    const rate2 = toRay(1.82);
-    const chi2 = toRay(1.5);
-
-    const chiDifferential  = divRay(chi2, chi1);
-
-    const daiDebt1 = toWad(96);
-    const daiTokens1 = mulRay(daiDebt1, rate1);
     const yDaiTokens1 = daiTokens1;
-    const wethTokens1 = divRay(daiTokens1, spot);
-    const chaiTokens1 = divRay(daiTokens1, chi1);
-
-    const daiTokens2 = mulRay(daiTokens1, chiDifferential);
-    const wethTokens2 = mulRay(wethTokens1, chiDifferential)
-
     let maturity1;
 
-    // Scenario in which the user mints daiTokens2 yDai1, chi increases by a 25%, and user redeems daiTokens1 yDai1
-    const daiDebt2 = mulRay(daiDebt1, chiDifferential);
-    const savings1 = daiTokens2;
-    const savings2 = mulRay(savings1, chiDifferential);
-    const yDaiSurplus = subBN(daiTokens2, daiTokens1);
-    const savingsSurplus = subBN(savings2, daiTokens2);
-
-    // Convert eth to weth and use it to borrow `daiTokens` from MakerDAO
-    // This function shadows and uses global variables, careful.
-    async function getDai(user, daiTokens_){
-        await vat.hope(daiJoin.address, { from: user });
-        await vat.hope(wethJoin.address, { from: user });
-
-        const daiDebt_ = divRay(daiTokens_, rate1);
-        const wethTokens_ = divRay(daiTokens_, spot);
-
-        await weth.deposit({ from: user, value: wethTokens_ });
-        await weth.approve(wethJoin.address, wethTokens_, { from: user });
-        await wethJoin.join(user, wethTokens_, { from: user });
-        await vat.frob(ilk, user, user, user, wethTokens_, daiDebt_, { from: user });
-        await daiJoin.exit(user, daiTokens_, { from: user });
-    }
-
-    // Convert eth to weth and post it to yDai
-    // This function shadows and uses global variables, careful.
-    async function postWeth(user, wethTokens){
-        await weth.deposit({ from: user, value: wethTokens });
-        await weth.approve(treasury.address, wethTokens, { from: user });
-        await controller.post(WETH, user, user, wethTokens, { from: user });
-    }
-
     beforeEach(async() => {
-        snapshot = await helper.takeSnapshot();
-        snapshotId = snapshot['result'];
+        ({
+            vat,
+            weth,
+            wethJoin,
+            dai,
+            daiJoin,
+            pot,
+            jug,
+            end,
+            chai
+        } = await setupMaker());
 
-        // Setup vat, join and weth
-        vat = await Vat.new();
-        await vat.init(ilk, { from: owner }); // Set ilk rate (stability fee accumulator) to 1.0
+        treasury = await newTreasury();
+        controller = await newController();
 
-        weth = await Weth.new({ from: owner });
-        wethJoin = await GemJoin.new(vat.address, ilk, weth.address, { from: owner });
-
-        dai = await ERC20.new(0, { from: owner });
-        daiJoin = await DaiJoin.new(vat.address, dai.address, { from: owner });
-
-        await vat.file(ilk, spotName, spot, { from: owner });
-        await vat.file(ilk, linel, limits, { from: owner });
-        await vat.file(Line, limits);
-
-        // Setup jug
-        jug = await Jug.new(vat.address);
-        await jug.init(ilk, { from: owner }); // Set ilk duty (stability fee) to 1.0
-
-        // Setup pot
-        pot = await Pot.new(vat.address);
-
-        // Permissions
-        await vat.rely(vat.address, { from: owner });
-        await vat.rely(wethJoin.address, { from: owner });
-        await vat.rely(daiJoin.address, { from: owner });
-        await vat.rely(jug.address, { from: owner });
-        await vat.rely(pot.address, { from: owner });
-        await vat.hope(daiJoin.address, { from: owner });
-
-        // Setup chai
-        chai = await Chai.new(
-            vat.address,
-            pot.address,
-            daiJoin.address,
-            dai.address,
-        );
-
-        // Setup Treasury
-        treasury = await Treasury.new(
-            vat.address,
-            weth.address,
-            dai.address,
-            wethJoin.address,
-            daiJoin.address,
-            pot.address,
-            chai.address,
-        );
-
-        // Setup GasToken
-        gasToken = await GasToken.new();
-
-        // Setup Controller
-        controller = await Controller.new(
-            vat.address,
-            pot.address,
-            treasury.address,
-            { from: owner },
-        );
-        treasury.orchestrate(controller.address, { from: owner });
-        
-        // Setup yDai1
+        // Setup yDai
         const block = await web3.eth.getBlockNumber();
-        maturity1 = (await web3.eth.getBlock(block)).timestamp + 31556952; // One year
-        yDai1 = await YDai.new(
-            vat.address,
-            jug.address,
-            pot.address,
-            treasury.address,
-            maturity1,
-            "Name",
-            "Symbol"
-        );
-        await treasury.orchestrate(yDai1.address, { from: owner });
-        controller.addSeries(yDai1.address, { from: owner });
-        yDai1.orchestrate(controller.address, { from: owner });
+        maturity1 = (await web3.eth.getBlock(block)).timestamp + 30000000; // Far enough so that the extra weth to borrow is above dust
+        yDai1 = await newYDai(maturity1, "Name", "Symbol");
 
         // Setup Market
         market1 = await Market.new(
@@ -214,17 +65,13 @@ contract('Splitter', async (accounts) =>  {
         );
 
         // Test setup
-        
-        // Increase the rate accumulator
-        await vat.fold(ilk, vat.address, subBN(rate1, toRay(1)), { from: owner }); // Fold only the increase from 1.0
-        await pot.setChi(chi1, { from: owner }); // Set the savings accumulator
 
         // Allow owner to mint yDai the sneaky way, without recording a debt in controller
         await yDai1.orchestrate(owner, { from: owner });
 
         // Initialize Market1
         const daiReserves = daiTokens1.mul(5);
-        await getDai(owner, daiReserves)
+        await getDai(owner, daiReserves, rate1);
         await dai.approve(market1.address, daiReserves, { from: owner });
         await market1.init(daiReserves, { from: owner });
 
@@ -235,22 +82,18 @@ contract('Splitter', async (accounts) =>  {
         await market1.sellYDai(owner, owner, additionalYDaiReserves, { from: owner });
     });
 
-    afterEach(async() => {
-        await helper.revertToSnapshot(snapshotId);
-    });
-
     it("does not allow to move more debt than existing in maker", async() => {
         await expectRevert(
-            splitter1.makerToYield(user, wethTokens1, daiTokens1, { from: user }),
+            splitter1.makerToYield(user, wethTokens1, daiTokens1.mul(10), { from: user }),
             "Splitter: Not enough debt in Maker",
         );
     });
 
     it("does not allow to move more weth than posted in maker", async() => {
-        await getDai(user, daiTokens1);
+        await getDai(user, daiTokens1, rate1);
 
         await expectRevert(
-            splitter1.makerToYield(user, wethTokens1.mul(2), daiTokens1, { from: user }),
+            splitter1.makerToYield(user, wethTokens1.mul(10), daiTokens1, { from: user }),
             "Splitter: Not enough collateral in Maker",
         );
     });
@@ -258,7 +101,7 @@ contract('Splitter', async (accounts) =>  {
     it("moves maker vault to yield", async() => {
         // console.log("      Dai: " + daiTokens1.toString());
         // console.log("      Weth: " + wethTokens1.toString());
-        await getDai(user, daiTokens1);
+        await getDai(user, daiTokens1, rate1);
 
         // This lot can be avoided if the user is certain that he has enough Weth in Controller
         // The amount of yDai to be borrowed can be obtained from Market through Splitter
@@ -281,11 +124,11 @@ contract('Splitter', async (accounts) =>  {
         // Go!!!
         assert.equal(
             (await vat.urns(WETH, user)).ink,
-            wethTokens1.toString(),
+            wethTokens1.mul(2).toString(), // `getDai` puts in vat twice as much weth as needed to borrow the dai
         );
         assert.equal(
             (await vat.urns(WETH, user)).art,
-            divRay(daiTokens1, rate1).toString(),
+            addBN(divRay(daiTokens1, rate1), 1).toString(), // TODO: Check rounding in `getDai` and Splitter:175
         );
         assert.equal(
             (await controller.posted(WETH, user)).toString(),
@@ -312,11 +155,11 @@ contract('Splitter', async (accounts) =>  {
         );
         assert.equal(
             (await vat.urns(WETH, user)).ink,
-            0,
+            wethTokens1.toString(),
         );
         assert.equal(
             (await vat.urns(WETH, user)).art,
-            0,
+            1,
         );
         assert.equal(
             (await controller.posted(WETH, user)).toString(),
