@@ -1,9 +1,6 @@
 // External
 const { setupMaker, newTreasury, newYDai, newController } = require("./shared/fixtures");
 
-// YDai
-const YDai = artifacts.require('YDai');
-
 // Mocks
 const FlashMinterMock = artifacts.require('FlashMinterMock');
 
@@ -13,12 +10,6 @@ const { expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
 
 contract('yDai', async (accounts) =>  {
     let [ owner, user1, other ] = accounts;
-    let vat;
-    let weth;
-    let dai;
-    let jug;
-    let pot;
-    let treasury;
     let yDai1;
     let flashMinter;
 

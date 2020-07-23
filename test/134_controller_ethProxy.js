@@ -8,13 +8,6 @@ const { setupMaker, newTreasury, newController, newYDai } = require("./shared/fi
 
 contract('Controller - EthProxy', async (accounts) =>  {
     let [ owner, user ] = accounts;
-    let vat;
-    let weth;
-    let treasury;
-    let yDai1;
-    let yDai2;
-    let controller;
-    let ethProxy;
 
     let snapshot;
     let snapshotId;

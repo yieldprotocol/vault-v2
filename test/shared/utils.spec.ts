@@ -1,3 +1,5 @@
+// Ignoring it because it conflicts with the globally declared `chai` smart contract
+// @ts-ignore
 import { assert } from 'chai'
 import { toRay, toRad } from './utils'
 

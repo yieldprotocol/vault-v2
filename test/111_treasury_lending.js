@@ -10,12 +10,6 @@ const {
 
 contract('Treasury - Lending', async (accounts) =>  {
     let [ owner, user ] = accounts;
-    let vat;
-    let weth;
-    let wethJoin;
-    let dai;
-    let chai;
-    let treasury;
 
     beforeEach(async() => {
         ({

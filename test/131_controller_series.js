@@ -8,14 +8,6 @@ const { setupMaker, newTreasury, newController } = require("./shared/fixtures");
 
 contract('Controller: Multi-Series', async (accounts) =>  {
     let [ owner ] = accounts;
-    let vat;
-    let jug;
-    let pot;
-    let treasury;
-    let yDai1;
-    let yDai2;
-    let controller;
-
     const THREE_MONTHS = 7776000;
 
     let snapshot;

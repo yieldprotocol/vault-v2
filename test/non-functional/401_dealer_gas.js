@@ -4,13 +4,6 @@ const { shutdown, setupMaker, newTreasury, newController, newYDai, getDai, postW
 
 contract('Gas Usage', async (accounts) =>  {
     let [ owner, user1, user2, user3 ] = accounts;
-    let dai;
-    let treasury;
-    let yDai1;
-    let yDai2;
-    let controller;
-    let liquidations;
-    let unwind;
 
     let snapshot;
     let snapshotId;

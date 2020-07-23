@@ -22,7 +22,6 @@
     "@nomiclabs/buidler-web3": "^1.3.4",
     "@openzeppelin/contracts": "^3.1.0",
     "@openzeppelin/test-helpers": "^0.5.6",
-    "@types/chai": "^4.2.11",
     "@types/mocha": "^8.0.0",
     "buidler-gas-reporter": "^0.1.3",
     "chai": "4.2.0",
@@ -32,6 +31,7 @@
     "mocha": "^7.1.0",
     "prettier": "^2.0.5",
     "solidity-coverage": "^0.7.9",
-    "ts-node": "^8.10.2"
+    "ts-node": "^8.10.2",
+    "typescript": "^3.9.7"
   }
 }

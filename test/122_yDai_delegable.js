@@ -5,13 +5,6 @@ const { setupMaker, newTreasury, newController, newYDai } = require("./shared/fi
 
 contract('yDai - Delegable', async (accounts) =>  {
     let [ owner, holder, other ] = accounts;
-    let vat;
-    let weth;
-    let dai;
-    let treasury;
-    let yDai1;
-    let yDai2;
-    let controller;
     
     let maturity1;
     let maturity2;

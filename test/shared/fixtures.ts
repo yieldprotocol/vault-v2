@@ -1,33 +1,68 @@
-const ethers = require("ethers");
-const toBytes32 = ethers.utils.formatBytes32String;
+import { formatBytes32String as toBytes32 } from "ethers/lib/utils";
+import { BigNumber, Contract } from "ethers";
 
+// TODO: Replace these with buidler-style JSON imports & `waffle.deployContract`
+// once we move away from Truffle testing
+
+// @ts-ignore
 const Vat = artifacts.require('Vat');
+// @ts-ignore
 const Jug = artifacts.require('Jug');
+// @ts-ignore
 const GemJoin = artifacts.require('GemJoin');
+// @ts-ignore
 const DaiJoin = artifacts.require('DaiJoin');
+// @ts-ignore
 const Weth = artifacts.require("WETH9");
+// @ts-ignore
 const ERC20 = artifacts.require("TestERC20");
+// @ts-ignore
 const Pot = artifacts.require('Pot');
+// @ts-ignore
 const End = artifacts.require('End');
+// @ts-ignore
 const Chai = artifacts.require('Chai');
+// @ts-ignore
 const Treasury = artifacts.require('Treasury');
+// @ts-ignore
 const YDai = artifacts.require('YDai');
+// @ts-ignore
 const Controller = artifacts.require('Controller');
+// @ts-ignore
 const Liquidations = artifacts.require('Liquidations');
+// @ts-ignore
 const Unwind = artifacts.require('Unwind');
 
-const { WETH, CHAI, Line, spotName, linel, limits, spot, rate1, chi1, tag, fix, toRay, addBN, subBN, divRay, mulRay } = require("./utils");
+import { WETH, CHAI, Line, spotName, linel, limits, spot, rate1, chi1, tag, fix, toRay, addBN, subBN, divRay, mulRay } from "./utils";
+
+declare global {
+   var vat: Contract;
+   var weth: Contract;
+   var wethJoin: Contract;
+   var dai: Contract;
+   var daiJoin: Contract;
+   var chai: Contract;
+   var pot: Contract;
+   var treasury: Contract;
+   var controller: Contract;
+   var jug: Contract;
+   var end: Contract;
+   var liquidations: Contract;
+   var unwind: Contract;
+   var yDai1: Contract;
+   var yDai1: Contract;
+}
 
 const setupMaker = async() => {
     // Set up vat, join and weth
-    vat = await Vat.new();
+    globalThis.vat = await Vat.new();
     await vat.init(WETH); // Set WETH rate to 1.0
 
-    weth = await Weth.new();
-    wethJoin = await GemJoin.new(vat.address, WETH, weth.address);
+    globalThis.weth = await Weth.new();
+    globalThis.wethJoin = await GemJoin.new(vat.address, WETH, weth.address);
 
-    dai = await ERC20.new(0);
-    daiJoin = await DaiJoin.new(vat.address, dai.address);
+    globalThis.dai = await ERC20.new(0);
+    globalThis.daiJoin = await DaiJoin.new(vat.address, dai.address);
 
     // Setup vat
     await vat.file(WETH, spotName, spot);
@@ -36,11 +71,11 @@ const setupMaker = async() => {
     await vat.fold(WETH, vat.address, subBN(rate1, toRay(1))); // Fold only the increase from 1.0
 
     // Setup pot
-    pot = await Pot.new(vat.address);
+    globalThis.pot = await Pot.new(vat.address);
     await pot.setChi(chi1);
 
     // Setup chai
-    chai = await Chai.new(
+    globalThis.chai = await Chai.new(
         vat.address,
         pot.address,
         daiJoin.address,
@@ -48,11 +83,11 @@ const setupMaker = async() => {
     );
 
     // Setup jug
-    jug = await Jug.new(vat.address);
+    globalThis.jug = await Jug.new(vat.address);
     await jug.init(WETH); // Set WETH duty (stability fee) to 1.0
 
     // Setup end
-    end = await End.new();
+    globalThis.end = await End.new();
     await end.file(toBytes32("vat"), vat.address);
 
     // Permissions
@@ -73,13 +108,12 @@ const setupMaker = async() => {
         jug,
         end,
         chai,
-        end,
     }
 }
 
 // Helper for deploying Treasury
 async function newTreasury() {
-    treasury = await Treasury.new(
+    globalThis.treasury = await Treasury.new(
         vat.address,
         weth.address,
         dai.address,
@@ -92,7 +126,7 @@ async function newTreasury() {
 }
 
 // Helper for deploying YDai
-async function newYDai(maturity, name, symbol) {
+async function newYDai(maturity: number, name: string, symbol: string) {
     const yDai = await YDai.new(
         vat.address,
         jug.address,
@@ -112,7 +146,7 @@ async function newYDai(maturity, name, symbol) {
 // 2000 blocks from now
 async function newController() {
     // Setup Controller
-    controller = await Controller.new(
+    globalThis.controller = await Controller.new(
         vat.address,
         pot.address,
         treasury.address,
@@ -123,7 +157,7 @@ async function newController() {
 }
 
 async function newLiquidations() {
-    liquidations = await Liquidations.new(
+    globalThis.liquidations = await Liquidations.new(
         dai.address,
         treasury.address,
         controller.address,
@@ -136,7 +170,7 @@ async function newLiquidations() {
 
 async function newUnwind() {
     // Setup Unwind
-    unwind = await Unwind.new(
+    globalThis.unwind = await Unwind.new(
         vat.address,
         daiJoin.address,
         weth.address,
@@ -157,7 +191,7 @@ async function newUnwind() {
     return unwind
 }
 
-async function getDai(user, _daiTokens, _rate) {
+async function getDai(user: string, _daiTokens: BigNumber, _rate: number) {
     await vat.hope(daiJoin.address, { from: user });
     await vat.hope(wethJoin.address, { from: user });
 
@@ -171,7 +205,7 @@ async function getDai(user, _daiTokens, _rate) {
     await daiJoin.exit(user, _daiTokens, { from: user });
 }
 
-async function getChai(user, _chaiTokens, _chi, _rate) {
+async function getChai(user: string, _chaiTokens: number, _chi: number, _rate: number) {
     const _daiTokens = mulRay(_chaiTokens, _chi);
     await getDai(user, _daiTokens, _rate);
     await dai.approve(chai.address, _daiTokens, { from: user });
@@ -179,20 +213,20 @@ async function getChai(user, _chaiTokens, _chi, _rate) {
 }
 
 // Convert eth to weth and post it to yDai
-async function postWeth(user, _wethTokens) {
+async function postWeth(user: string, _wethTokens: number) {
     await weth.deposit({ from: user, value: _wethTokens.toString() });
     await weth.approve(treasury.address, _wethTokens, { from: user });
     await controller.post(WETH, user, user, _wethTokens, { from: user });
 }
 
 // Convert eth to chai and post it to yDai
-async function postChai(user, _chaiTokens, _chi, _rate) {
+async function postChai(user: string, _chaiTokens: number, _chi: number, _rate: number) {
     await getChai(user, _chaiTokens, _chi, _rate);
     await chai.approve(treasury.address, _chaiTokens, { from: user });
     await controller.post(CHAI, user, user, _chaiTokens, { from: user });
 }
 
-async function shutdown(owner, user1, user2) {
+async function shutdown(owner: string, user1: string, user2: string) {
     await end.cage();
     await end.setTag(WETH, tag);
     await end.setDebt(1);

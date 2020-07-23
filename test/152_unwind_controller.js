@@ -6,16 +6,6 @@ const { setupMaker, newTreasury, newController, newYDai, newUnwind, newLiquidati
 
 contract('Unwind - Controller', async (accounts) =>  {
     let [ owner, user1, user2, user3 ] = accounts;
-    let vat;
-    let weth;
-    let daiJoin;
-    let end;
-    let treasury;
-    let yDai1;
-    let yDai2;
-    let controller;
-    let liquidations;
-    let unwind;
 
     let snapshot;
     let snapshotId;

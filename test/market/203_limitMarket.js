@@ -8,12 +8,6 @@ const { assert, expect } = require('chai');
 
 contract('LimitMarket', async (accounts) =>  {
     let [ owner, user1, operator, from, to ] = accounts;
-    let dai;
-    let treasury;
-    let yDai1;
-    let controller;
-    let market;
-    let limitMarket;
 
     // These values impact the market results
     const rate1 = toRay(1.4);

@@ -5,15 +5,6 @@ const { setupMaker, newTreasury, newController, newYDai, getDai } = require("./s
 
 contract('Controller - Weth', async (accounts) =>  {
     let [ owner, user1, user2, user3 ] = accounts;
-    let vat;
-    let weth;
-    let wethJoin;
-    let dai;
-    let daiJoin;
-    let treasury;
-    let yDai1;
-    let yDai2;
-    let controller;
 
     let snapshot;
     let snapshotId;

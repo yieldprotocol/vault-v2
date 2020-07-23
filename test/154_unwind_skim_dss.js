@@ -5,22 +5,6 @@ const { expectRevert } = require('@openzeppelin/test-helpers');
 
 contract('Unwind - DSS Skim', async (accounts) =>  {
     let [ owner, user1, user2, user3, user4 ] = accounts;
-    let vat;
-    let weth;
-    let wethJoin;
-    let dai;
-    let daiJoin;
-    let jug;
-    let pot;
-    let end;
-    let chai;
-    let treasury;
-    let yDai1;
-    let yDai2;
-    let controller;
-    let liquidations;
-    let ethProxy;
-    let unwind;
 
     let snapshot;
     let snapshotId;

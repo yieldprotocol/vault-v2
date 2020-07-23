@@ -9,17 +9,6 @@ const { setupMaker, newTreasury, newController, newYDai, getDai, postWeth, postC
 
 contract('Liquidations', async (accounts) =>  {
     let [ owner, user1, user2, user3, buyer ] = accounts;
-    let vat;
-    let weth;
-    let wethJoin;
-    let dai;
-    let daiJoin;
-    let chai;
-    let treasury;
-    let yDai1;
-    let yDai2;
-    let controller;
-    let liquidations;
 
     let snapshot;
     let snapshotId;

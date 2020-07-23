@@ -9,12 +9,6 @@ const { assert, expect } = require('chai');
 
 contract('Market', async (accounts) =>  {
     let [ owner, user1, operator, from, to ] = accounts;
-    let dai;
-    let treasury;
-    let yDai1;
-    let controller;
-    let market;
-    let yieldMath;
 
     // These values impact the market results
     const rate1 = toRay(1.4);

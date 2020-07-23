@@ -1,23 +1,10 @@
 const ControllerView = artifacts.require("ControllerView")
 const helper = require('ganache-time-traveler');
-const { BN } = require('@openzeppelin/test-helpers');
-const { WETH, rate1, daiTokens1: daiTokens, toWad, wethTokens1: wethTokens, addBN, subBN, toRay, divRay, mulRay } = require('./../shared/utils');
+const { WETH, rate1, daiTokens1: daiTokens, wethTokens1: wethTokens, addBN, subBN, toRay, divRay, mulRay } = require('./../shared/utils');
 const { setupMaker, newTreasury, newController, newYDai, getDai } = require("./../shared/fixtures");
 
 contract('ControllerView', async (accounts) =>  {
     let [ owner, user1, user2, user3 ] = accounts;
-    let vat;
-    let weth;
-    let wethJoin;
-    let dai;
-    let daiJoin;
-    let jug;
-    let pot;
-    let chai;
-    let treasury;
-    let yDai1;
-    let yDai2;
-    let controller;
     let controllerView;
 
     let snapshot;
