@@ -7,7 +7,7 @@ contract Delegable {
     // All delegated can be known from events for audit purposes
     event Delegate(address indexed user, address indexed delegate, bool enabled);
 
-    mapping(address => mapping(address => bool)) internal delegated;
+    mapping(address => mapping(address => bool)) public delegated;
 
     /// @dev Require that msg.sender is the account holder or a delegate
     modifier onlyHolderOrDelegate(address holder, string memory errorMessage) {
