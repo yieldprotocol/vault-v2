@@ -1,7 +1,7 @@
 const ControllerView = artifacts.require("ControllerView")
 const helper = require('ganache-time-traveler');
 const { WETH, rate1, daiTokens1: daiTokens, wethTokens1: wethTokens, addBN, subBN, toRay, divRay, mulRay } = require('./../shared/utils');
-const { setupMaker, newTreasury, newController, newYDai, getDai } = require("./../shared/fixtures");
+const { YieldEnvironmentLite } = require("./../shared/fixtures");
 
 contract('ControllerView', async (accounts) =>  {
     let [ owner, user1, user2, user3 ] = accounts;
@@ -17,28 +17,21 @@ contract('ControllerView', async (accounts) =>  {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        ({
-            vat,
-            weth,
-            wethJoin,
-            dai,
-            daiJoin,
-            pot,
-            jug,
-            chai,
-            end,
-        } = await setupMaker());
+        yield = await YieldEnvironmentLite.setup();
+        controller = yield.controller;
+        treasury = yield.treasury;
+        vat = yield.maker.vat;
+        dai = yield.maker.dai;
+        weth = yield.maker.weth;
+        pot = yield.maker.pot;
 
-
-        treasury = await newTreasury();
-        controller = await newController();
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
-        yDai1 = await newYDai(maturity1, "Name1", "Symbol1");
-        yDai2 = await newYDai(maturity2, "Name2", "Symbol2");
+        yDai1 = await yield.newYDai(maturity1, "Name1", "Symbol1");
+        yDai2 = await yield.newYDai(maturity2, "Name2", "Symbol2");
         rate = rate1;
 
          // Setup ControllerView
@@ -216,7 +209,7 @@ contract('ControllerView', async (accounts) =>  {
                     });
 
                     it("more Dai is required to repay after maturity as rate increases", async() => {
-                        await getDai(user1, daiTokens, rate); // daiTokens is not going to be enough anymore
+                        await yield.maker.getDai(user1, daiTokens, rate); // daiTokens is not going to be enough anymore
                         await dai.approve(treasury.address, daiTokens, { from: user1 });
                         await controller.repayDai(WETH, maturity1, user1, user1, daiTokens, { from: user1 });
             

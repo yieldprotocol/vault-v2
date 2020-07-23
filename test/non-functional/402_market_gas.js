@@ -2,7 +2,7 @@ const Market = artifacts.require("Market")
 const helper = require('ganache-time-traveler');
 const { BN } = require('@openzeppelin/test-helpers');
 const { rate1, daiTokens1, toWad } = require('./../shared/utils');
-const { setupMaker, newTreasury, newController, newYDai, getDai } = require("./../shared/fixtures");
+const { YieldEnvironmentLite } = require("./../shared/fixtures");
 
 contract('Market', async (accounts) =>  {
     let [ owner, user1, operator, from, to ] = accounts;
@@ -11,8 +11,6 @@ contract('Market', async (accounts) =>  {
     const yDaiTokens1 = daiTokens1;
     const yDaiReserves = yDaiTokens1;
 
-    let maturity;
-
     const results = new Set();
     results.add(['trade', 'daiReserves', 'yDaiReserves', 'tokensIn', 'tokensOut']);
 
@@ -20,24 +18,15 @@ contract('Market', async (accounts) =>  {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        ({
-            vat,
-            weth,
-            wethJoin,
-            dai,
-            daiJoin,
-            pot,
-            jug,
-            chai
-        } = await setupMaker());
+        yield = await YieldEnvironmentLite.setup();
+        controller = yield.controller;
+        treasury = yield.treasury;
+        dai = yield.maker.dai;
 
-        treasury = await newTreasury();
-        controller = await newController();
-    
-        // Setup yDai1
+        // Setup yDai
         const block = await web3.eth.getBlockNumber();
-        maturity = (await web3.eth.getBlock(block)).timestamp + 31556952; // One year
-        yDai1 = await newYDai(maturity, "Name", "Symbol");
+        maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
+        yDai1 = await yield.newYDai(maturity1, "Name", "Symbol");
         await yDai1.orchestrate(owner);
 
         // Setup Market
@@ -74,7 +63,7 @@ contract('Market', async (accounts) =>  {
 
     describe("with liquidity", () => {
         beforeEach(async() => {
-            await getDai(user1, daiReserves, rate1)
+            await yield.maker.getDai(user1, daiReserves, rate1)
             await yDai1.mint(user1, yDaiReserves, { from: owner });
     
             await dai.approve(market.address, daiReserves, { from: user1 });
@@ -117,7 +106,7 @@ contract('Market', async (accounts) =>  {
 
             it("sells dai", async() => {
                 const tradeSize = toWad(1).div(1000);
-                await getDai(from, daiTokens1, rate1);
+                await yield.maker.getDai(from, daiTokens1, rate1);
     
                 await market.addDelegate(operator, { from: from });
                 await dai.approve(market.address, tradeSize, { from: from });
@@ -130,7 +119,7 @@ contract('Market', async (accounts) =>  {
 
             it("buys yDai", async() => {
                 const tradeSize = toWad(1).div(1000);
-                await getDai(from, daiTokens1.div(1000), rate1);
+                await yield.maker.getDai(from, daiTokens1.div(1000), rate1);
     
                 await market.addDelegate(operator, { from: from });
                 await dai.approve(market.address, daiTokens1.div(1000), { from: from });

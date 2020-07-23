@@ -1,10 +1,6 @@
-// YDai
-const YDai = artifacts.require('YDai');
-
 const helper = require('ganache-time-traveler');
 const { expectRevert } = require('@openzeppelin/test-helpers');
-
-const { setupMaker, newTreasury, newController } = require("./shared/fixtures");
+const { YieldEnvironmentLite } = require("./shared/fixtures");
 
 contract('Controller: Multi-Series', async (accounts) =>  {
     let [ owner ] = accounts;
@@ -17,41 +13,19 @@ contract('Controller: Multi-Series', async (accounts) =>  {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        ({
-            vat,
-            weth,
-            wethJoin,
-            dai,
-            daiJoin,
-            pot,
-            jug,
-            chai
-        } = await setupMaker());
-        treasury = await newTreasury();
-        controller = await newController();
+        const yield = await YieldEnvironmentLite.setup();
+        controller = yield.controller;
+        weth = yield.maker.weth;
+        pot = yield.maker.pot;
+        vat = yield.maker.vat;
+        dai = yield.maker.dai;
 
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
-        yDai1 = await YDai.new(
-            vat.address,
-            jug.address,
-            pot.address,
-            treasury.address,
-            maturity1,
-            "Name",
-            "Symbol",
-        );
+        yDai1 = await yield.newYDai(maturity1, "Name", "Symbol", true);
 
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
-        yDai2 = await YDai.new(
-            vat.address,
-            jug.address,
-            pot.address,
-            treasury.address,
-            maturity2,
-            "Name",
-            "Symbol",
-        );
+        yDai2 = await yield.newYDai(maturity2, "Name", "Symbol", true);
     });
 
     afterEach(async() => {

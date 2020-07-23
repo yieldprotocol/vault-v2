@@ -1,13 +1,14 @@
 const helper = require('ganache-time-traveler');
 const { BN, expectRevert } = require('@openzeppelin/test-helpers');
-const { WETH, spot, rate1, daiTokens1, wethTokens1, toRay, mulRay, divRay, addBN, subBN } = require('./shared/utils');
-const { setupMaker, newTreasury, newController, newYDai, getDai } = require("./shared/fixtures");
+const { WETH, rate1, daiTokens1, wethTokens1, toRay, mulRay, divRay, addBN, subBN } = require('./shared/utils');
+const { YieldEnvironmentLite } = require("./shared/fixtures");
 
 contract('Controller - Weth', async (accounts) =>  {
     let [ owner, user1, user2, user3 ] = accounts;
 
     let snapshot;
     let snapshotId;
+    let maker;
 
     let maturity1;
     let maturity2;
@@ -16,25 +17,21 @@ contract('Controller - Weth', async (accounts) =>  {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        ({
-            vat,
-            weth,
-            wethJoin,
-            dai,
-            daiJoin,
-            pot,
-            jug,
-            chai
-        } = await setupMaker());
-        treasury = await newTreasury();
-        controller = await newController();
+        const yield = await YieldEnvironmentLite.setup();
+        maker = yield.maker;
+        controller = yield.controller;
+        treasury = yield.treasury;
+        weth = yield.maker.weth;
+        pot = yield.maker.pot;
+        vat = yield.maker.vat;
+        dai = yield.maker.dai;
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
-        yDai1 = await newYDai(maturity1, "Name", "Symbol");
-        yDai2 = await newYDai(maturity2, "Name", "Symbol");
+        yDai1 = await yield.newYDai(maturity1, "Name", "Symbol");
+        yDai2 = await yield.newYDai(maturity2, "Name", "Symbol");
     });
 
     afterEach(async() => {
@@ -706,7 +703,7 @@ contract('Controller - Weth', async (accounts) =>  {
                 });
 
                 it("allows to repay yDai with dai", async() => {
-                    await getDai(user1, daiTokens1, rate1);
+                    await maker.getDai(user1, daiTokens1, rate1);
     
                     assert.equal(
                         await dai.balanceOf(user1),
@@ -760,7 +757,7 @@ contract('Controller - Weth', async (accounts) =>  {
                 });
 
                 it("allows to repay dai debt for others with own funds", async() => {
-                    await getDai(user2, daiTokens1, rate1);
+                    await maker.getDai(user2, daiTokens1, rate1);
                     await dai.approve(treasury.address, daiTokens1, { from: user2 });
                     const event = (await controller.repayDai(WETH, maturity1, user2, user1, daiTokens1, { from: user2 })).logs[0];
         
@@ -809,7 +806,7 @@ contract('Controller - Weth', async (accounts) =>  {
                 });
 
                 it("allows delegates to use funds to repay dai debts", async() => {
-                    await getDai(user1, daiTokens1, rate1);
+                    await maker.getDai(user1, daiTokens1, rate1);
                     await controller.addDelegate(user2, { from: user1 });
                     await dai.approve(treasury.address, daiTokens1, { from: user1 });
                     const event = (await controller.repayDai(WETH, maturity1, user1, user1, daiTokens1, { from: user2 })).logs[0];
@@ -853,7 +850,7 @@ contract('Controller - Weth', async (accounts) =>  {
 
                 it("delegates are allowed to use dai funds to pay debts of any user", async() => {
                     await controller.addDelegate(user2, { from: user1 });
-                    await getDai(user1, daiTokens1, rate1);
+                    await maker.getDai(user1, daiTokens1, rate1);
                     await dai.approve(treasury.address, daiTokens1, { from: user1 });
                     const event = (await controller.repayDai(WETH, maturity1, user1, user2, daiTokens1, { from: user2 })).logs[0];
         
@@ -1008,7 +1005,7 @@ contract('Controller - Weth', async (accounts) =>  {
                     });
 
                     it("more Dai is required to repay after maturity as rate increases", async() => {
-                        await getDai(user1, daiTokens1, rate2); // daiTokens1 is not going to be enough anymore
+                        await maker.getDai(user1, daiTokens1, rate2); // daiTokens1 is not going to be enough anymore
                         await dai.approve(treasury.address, daiTokens1, { from: user1 });
                         await controller.repayDai(WETH, maturity1, user1, user1, daiTokens1, { from: user1 });
             

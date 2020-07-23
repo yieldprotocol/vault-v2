@@ -1,5 +1,5 @@
 const { expectRevert } = require('@openzeppelin/test-helpers');
-const { setupMaker, newTreasury } = require("./shared/fixtures");
+const { MakerEnvironment } = require("./shared/fixtures");
 const {
     WETH,
     daiDebt1,
@@ -12,17 +12,13 @@ contract('Treasury - Lending', async (accounts) =>  {
     let [ owner, user ] = accounts;
 
     beforeEach(async() => {
-        ({
-            vat,
-            weth,
-            wethJoin,
-            dai,
-            daiJoin,
-            pot,
-            jug,
-            chai
-        } = await setupMaker());
-        treasury = await newTreasury();
+        const maker = await MakerEnvironment.setup();
+        treasury = await maker.setupTreasury();
+        vat = maker.vat;
+        weth = maker.weth;
+        wethJoin = maker.wethJoin;
+        chai = maker.chai;
+        dai = maker.dai;
 
         // Setup tests - Allow owner to interact directly with Treasury, not for production
         treasury.orchestrate(owner, { from: owner });
