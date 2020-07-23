@@ -8,8 +8,11 @@ import "../interfaces/IPot.sol";
 import "../interfaces/IController.sol";
 import "../interfaces/IYDai.sol";
 import "../helpers/DecimalMath.sol";
-import "@nomiclabs/buidler/console.sol";
+// import "@nomiclabs/buidler/console.sol";
 
+/// @dev Many of the functions in Controller are transactional due to `pot.drip()`.
+/// ControllerView offers an option to retrieve the data in Controller, in a non-transactional mode,
+/// provided that the caller doesn't mind that the values might be not exact.
 contract ControllerView is DecimalMath {
     using SafeMath for uint256;
 
@@ -41,6 +44,8 @@ contract ControllerView is DecimalMath {
 
     /// @dev Posted collateral for an user
     /// Adding this one so that this contract can be used to display all data in Controller
+    /// @param collateral Valid collateral type
+    /// @param user Address of the user vault
     function posted(bytes32 collateral, address user)
         public view
         validCollateral(collateral)
@@ -60,6 +65,9 @@ contract ControllerView is DecimalMath {
 
     /// @dev Debt for a collateral, maturity and user, in YDai
     /// Adding this one so that this contract can be used to display all data in Controller
+    /// @param collateral Valid collateral type.
+    /// @param maturity Maturity of an added series.
+    /// @param user Address of the user vault.
     function debtYDai(bytes32 collateral, uint256 maturity, address user)
         public view
         validCollateral(collateral)
@@ -69,7 +77,9 @@ contract ControllerView is DecimalMath {
     }
 
     /// @dev Overall Debt for a collateral and maturity, in YDai
-    /// Adding this one so that this contract can be used to display all data in Controller
+    /// Adding this one so that this contract can be used to display all data in Controller.
+    /// @param collateral Valid collateral type
+    /// @param maturity Maturity of an added series.
     function totalDebtYDai(bytes32 collateral, uint256 maturity)
         public view
         validCollateral(collateral)
@@ -78,7 +88,9 @@ contract ControllerView is DecimalMath {
         return _controller.totalDebtYDai(collateral, maturity);
     }
 
-    /// @dev Maximum borrowing power of an user in dai for a given collateral
+    /// @dev Borrowing power of an user in dai for a given collateral.
+    /// @param collateral Valid collateral type.
+    /// @param user Address of the user vault.
     function powerOf(bytes32 collateral, address user)
         public view
         validCollateral(collateral)
@@ -94,6 +106,13 @@ contract ControllerView is DecimalMath {
         return 0;
     }
 
+    /// @dev Chi differential between maturity and now in RAY. Returns 1.0 if not mature. Not transactional.
+    /// If rateGrowth < chiGrowth, returns rate.
+    //
+    //          chi_now
+    // chi() = ---------
+    //          chi_mat
+    //
     function chiGrowth(uint256 maturity)
         public view
         returns(uint256)
@@ -103,11 +122,11 @@ contract ControllerView is DecimalMath {
         return Math.min(rateGrowth(maturity), divd(_pot.chi(), yDai.chi0()));
     }
 
-    /// @dev Rate differential between maturity and now in RAY. Returns 1.0 if not mature.
+    /// @dev Rate differential between maturity and now in RAY. Returns 1.0 if not mature. Not transactional.
     //
-    //           rate_now
+    //                 rate_now
     // rateGrowth() = ----------
-    //           rate_mat
+    //                 rate_mat
     //
     function rateGrowth(uint256 maturity)
         public view
@@ -122,6 +141,9 @@ contract ControllerView is DecimalMath {
     }
 
     /// @dev Debt for a collateral, maturity and user, in Dai
+    /// @param collateral Valid collateral type.
+    /// @param maturity Maturity of an added series.
+    /// @param user Address of the user vault.
     function debtDai(bytes32 collateral, uint256 maturity, address user)
         public view
         validCollateral(collateral)
@@ -142,6 +164,8 @@ contract ControllerView is DecimalMath {
     }
 
     /// @dev Returns the total debt of an user, for a given collateral, across all series, in Dai
+    /// @param collateral Valid collateral type.
+    /// @param user Address of the user vault.
     function totalDebtDai(bytes32 collateral, address user)
         public view
         validCollateral(collateral)
@@ -155,6 +179,9 @@ contract ControllerView is DecimalMath {
         return totalDebt;
     }
 
+    /// @dev Returns the amount of collateral locked in borrowing operations.
+    /// @param collateral Valid collateral type.
+    /// @param user Address of the user vault.
     function locked(bytes32 collateral, address user)
         public view
         validCollateral(collateral)
