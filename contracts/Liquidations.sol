@@ -94,28 +94,31 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
     }
 
     /// @dev Liquidates a position. The caller pays the debt of `user`, and `buyer` receives an amount of collateral.
-    function buy(address buyer, address user, uint256 daiAmount)
+    function buy(address from, address to, address liquidated, uint256 daiAmount)
         public onlyLive
-        onlyHolderOrDelegate(buyer, "Controller: Only Holder Or Delegate")
+        onlyHolderOrDelegate(from, "Controller: Only Holder Or Delegate")
+        returns (uint256)
     {
         require(
-            debt[user] > 0,
+            debt[liquidated] > 0,
             "Liquidations: Vault is not in liquidation"
         );
-        _treasury.pushDai(buyer, daiAmount);
+        _treasury.pushDai(from, daiAmount);
 
         // calculate collateral to grab. Using divdrup stops rounding from leaving 1 stray wei in vaults.
-        uint256 tokenAmount = divdrup(daiAmount, price(user));
+        uint256 tokenAmount = divdrup(daiAmount, price(liquidated));
 
-        collateral[user] = collateral[user].sub(tokenAmount);
-        debt[user] = debt[user].sub(daiAmount);
+        collateral[liquidated] = collateral[liquidated].sub(tokenAmount);
+        debt[liquidated] = debt[liquidated].sub(daiAmount);
 
-        _treasury.pullWeth(buyer, tokenAmount);
+        _treasury.pullWeth(to, tokenAmount);
 
         require(
-            aboveDustOrZero(user),
+            aboveDustOrZero(liquidated),
             "Liquidations: Below dust"
         );
+
+        return tokenAmount;
     }
 
     /// @dev Liquidates a position. The caller pays the debt of `from`, and `buyer` receives an amount of collateral.

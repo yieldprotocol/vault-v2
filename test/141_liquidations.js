@@ -142,7 +142,7 @@ contract('Liquidations', async (accounts) =>  {
         it("doesn't allow to buy from vaults not under liquidation", async() => {
             const debt = await liquidations.debt(user2, { from: buyer });
             await expectRevert(
-                liquidations.buy(buyer, user2, debt, { from: buyer }),
+                liquidations.buy(buyer, buyer, user2, debt, { from: buyer }),
                 "Liquidations: Vault is not in liquidation",
             );
         });
@@ -227,7 +227,7 @@ contract('Liquidations', async (accounts) =>  {
                     const liquidatorBuys = userDebt;
 
                     await dai.approve(treasury.address, liquidatorBuys, { from: buyer });
-                    await liquidations.buy(buyer, user2, liquidatorBuys, { from: buyer });
+                    await liquidations.buy(buyer, buyer, user2, liquidatorBuys, { from: buyer });
 
                     assert.equal(
                         await liquidations.debt(user2, { from: buyer }),
@@ -251,7 +251,7 @@ contract('Liquidations', async (accounts) =>  {
                     const liquidatorBuys = divRay(userDebt, toRay(2));
 
                     await dai.approve(treasury.address, liquidatorBuys, { from: buyer });
-                    await liquidations.buy(buyer, user2, liquidatorBuys, { from: buyer });
+                    await liquidations.buy(buyer, buyer, user2, liquidatorBuys, { from: buyer });
 
                     assert.equal(
                         await liquidations.debt(user2, { from: buyer }),
@@ -281,7 +281,7 @@ contract('Liquidations', async (accounts) =>  {
                         const liquidatorBuys = userDebt;
     
                         await dai.approve(treasury.address, liquidatorBuys, { from: buyer });
-                        await liquidations.buy(buyer, user2, liquidatorBuys, { from: buyer });
+                        await liquidations.buy(buyer, buyer, user2, liquidatorBuys, { from: buyer });
     
                         assert.equal(
                             await liquidations.debt(user2, { from: buyer }),
@@ -299,7 +299,7 @@ contract('Liquidations', async (accounts) =>  {
                         const liquidatorBuys = divRay(userDebt, toRay(2));
     
                         await dai.approve(treasury.address, liquidatorBuys, { from: buyer });
-                        await liquidations.buy(buyer, user2, liquidatorBuys, { from: buyer });
+                        await liquidations.buy(buyer, buyer, user2, liquidatorBuys, { from: buyer });
     
                         assert.equal(
                             await liquidations.debt(user2, { from: buyer }),
@@ -319,7 +319,7 @@ contract('Liquidations', async (accounts) =>  {
                         await dai.approve(treasury.address, liquidatorBuys, { from: buyer });
 
                         await expectRevert(
-                            liquidations.buy(buyer, user2, liquidatorBuys, { from: buyer }),
+                            liquidations.buy(buyer, buyer, user2, liquidatorBuys, { from: buyer }),
                             "Liquidations: Below dust",
                         );
                     });
@@ -332,7 +332,7 @@ contract('Liquidations', async (accounts) =>  {
                         await getDai(buyer, userDebt, rate2);
     
                         await dai.approve(treasury.address, userDebt, { from: buyer });
-                        await liquidations.buy(buyer, user2, userDebt, { from: buyer });
+                        await liquidations.buy(buyer, buyer, user2, userDebt, { from: buyer });
                     });
     
                     it("liquidated users can retrieve any remaining collateral", async() => {
