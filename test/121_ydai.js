@@ -32,6 +32,9 @@ contract('yDai', async (accounts) =>  {
 
     let maturity;
 
+    let snapshot;
+    let snapshotId;
+
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
