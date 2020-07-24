@@ -19,7 +19,7 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        yield = await YieldEnvironment.setup()
+        yield = await YieldEnvironment.setup(user3)
         controller = yield.controller;
         treasury = yield.treasury;
         unwind = yield.unwind;
@@ -47,7 +47,7 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
 
     it("does not allow to settle users if treasury not settled and cashed", async() => {
         await expectRevert(
-            unwind.skimDssShutdown(user3, { from: owner }),
+            unwind.skimDssShutdown({ from: owner }),
             "Unwind: Not ready",
         );
     });
@@ -61,7 +61,7 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
 
         it("chai savings are added to profits", async() => {
             await yield.shutdown(owner, user1, user2);
-            await unwind.skimDssShutdown(user3, { from: owner });
+            await unwind.skimDssShutdown({ from: owner });
 
             assert.equal(
                 await weth.balanceOf(user3),
@@ -75,7 +75,7 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
             await yield.postChai(user2, chaiTokens1, chi1, rate1);
 
             await yield.shutdown(owner, user1, user2);
-            await unwind.skimDssShutdown(user3, { from: owner });
+            await unwind.skimDssShutdown({ from: owner });
 
             assert.equal(
                 await weth.balanceOf(user3),
@@ -90,7 +90,7 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
             await controller.borrow(WETH, await yDai1.maturity(), user2, user2, daiTokens1, { from: user2 }); // controller debt assets == yDai liabilities 
 
             await yield.shutdown(owner, user1, user2);
-            await unwind.skimDssShutdown(user3, { from: owner });
+            await unwind.skimDssShutdown({ from: owner });
 
             assert.equal(
                 await weth.balanceOf(user3),
@@ -105,7 +105,7 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
             await controller.borrow(CHAI, await yDai1.maturity(), user2, user2, daiTokens1, { from: user2 }); // controller debt assets == yDai liabilities 
 
             await yield.shutdown(owner, user1, user2);
-            await unwind.skimDssShutdown(user3, { from: owner });
+            await unwind.skimDssShutdown({ from: owner });
 
             assert.equal(
                 await weth.balanceOf(user3),
@@ -123,7 +123,7 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
     
             it("dai debt is deduced from profits", async() => {
                 await yield.shutdown(owner, user1, user2);
-                await unwind.skimDssShutdown(user3, { from: owner });
+                await unwind.skimDssShutdown({ from: owner });
     
                 assert.equal(
                     await weth.balanceOf(user3),
@@ -158,7 +158,7 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
 
             it("there is an extra profit only from weth debt", async() => {
                 await yield.shutdown(owner, user1, user2);
-                await unwind.skimDssShutdown(user3, { from: owner });
+                await unwind.skimDssShutdown({ from: owner });
 
                 // A few wei won't make a difference
                 const expectedProfit = fixedWeth.mul(10).add(mulRay(fixedWeth, rateDifferential.sub(toRay(1)))).add(9);
@@ -210,7 +210,7 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
 
             it("profit is acummulated from several series", async() => {
                 await yield.shutdown(owner, user1, user2);
-                await unwind.skimDssShutdown(user3, { from: owner });
+                await unwind.skimDssShutdown({ from: owner });
 
                 const expectedProfit = fixedWeth.mul(10)
                     .add(mulRay(fixedWeth, rateDifferential1.sub(toRay(1))))  // yDai1

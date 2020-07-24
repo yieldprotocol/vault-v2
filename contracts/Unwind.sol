@@ -56,6 +56,8 @@ contract Unwind is Ownable(), DecimalMath {
     bool public cashedOut;
     bool public live = true;
 
+    address public beneficiary;
+
     constructor (
         address vat_,
         address daiJoin_,
@@ -67,7 +69,8 @@ contract Unwind is Ownable(), DecimalMath {
         address chai_,
         address treasury_,
         address controller_,
-        address liquidations_
+        address liquidations_,
+        address beneficiary_
     ) public {
         // These could be hardcoded for mainnet deployment.
         _vat = IVat(vat_);
@@ -81,6 +84,7 @@ contract Unwind is Ownable(), DecimalMath {
         _treasury = ITreasury(treasury_);
         _controller = IController(controller_);
         _liquidations = ILiquidations(liquidations_);
+        beneficiary = beneficiary_;
 
         _vat.hope(address(_treasury));
         _vat.hope(address(_end));
@@ -129,7 +133,7 @@ contract Unwind is Ownable(), DecimalMath {
     }
 
     /// @dev Calculates how much profit is in the system and transfers it to the beneficiary
-    function skimWhileLive(address beneficiary) public { // TODO: Hardcode
+    function skimWhileLive() public {
         require(
             live == true, // If DSS is not live this method will fail later on.
             "Unwind: Can only skimWhileLive if live"
@@ -148,7 +152,7 @@ contract Unwind is Ownable(), DecimalMath {
     }
 
     /// @dev Calculates how much profit is in the system and transfers it to the beneficiary
-    function skimDssShutdown(address beneficiary) public { // TODO: Hardcode
+    function skimDssShutdown() public {
         require(settled && cashedOut, "Unwind: Not ready");
 
         uint256 chi = _pot.chi();
