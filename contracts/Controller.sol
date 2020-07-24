@@ -118,7 +118,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     }
 
     /// @dev Returns the dai equivalent of an yDai amount, for a given series identified by maturity
-    function inDai(bytes32 collateral, uint256 maturity, uint256 yDaiAmount) public returns (uint256) {
+    function inDai(bytes32 collateral, uint256 maturity, uint256 yDaiAmount) public override returns (uint256) {
         if (series[maturity].isMature()){
             if (collateral == WETH){
                 return muld(yDaiAmount, series[maturity].rateGrowth());
@@ -133,7 +133,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     }
 
     /// @dev Returns the yDai equivalent of a dai amount, for a given series identified by maturity
-    function inYDai(bytes32 collateral, uint256 maturity, uint256 daiAmount) public returns (uint256) {
+    function inYDai(bytes32 collateral, uint256 maturity, uint256 daiAmount) public override returns (uint256) {
         if (series[maturity].isMature()){
             if (collateral == WETH){
                 return divd(daiAmount, series[maturity].rateGrowth());
