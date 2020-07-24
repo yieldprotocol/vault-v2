@@ -114,7 +114,7 @@ contract('Splitter', async (accounts) =>  {
         );
         assert.equal(
             (await vat.urns(WETH, user)).art,
-            addBN(divRay(daiTokens1, rate1), 1).toString(), // TODO: Check rounding in `getDai` and Splitter:175
+            divRay(daiTokens1, rate1).toString(),
         );
         assert.equal(
             (await controller.posted(WETH, user)).toString(),
@@ -145,7 +145,7 @@ contract('Splitter', async (accounts) =>  {
         );
         assert.equal(
             (await vat.urns(WETH, user)).art,
-            1,
+            0,
         );
         assert.equal(
             (await controller.posted(WETH, user)).toString(),

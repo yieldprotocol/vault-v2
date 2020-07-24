@@ -43,6 +43,15 @@ export function divRay(x: BigNumberish, ray: BigNumberish): BigNumber {
   return UNIT.mul(BigNumber.from(x)).div(BigNumber.from(ray))
 }
 
+/// @dev Divides a BigNumberish in any precision by a BigNumberish in RAY precision, with the output in the first parameter's precision.
+/// Rounds up, careful if using negative numbers.
+/// I.e. divRay(wad(x), ray(y)) = wad(x/y)
+export function divrupRay(x: BigNumberish, ray: BigNumberish): BigNumber {
+  const z = UNIT.mul(10).mul(BigNumber.from(x)).div(BigNumber.from(ray))
+  if (z.mod(10).gt(0)) return z.div(10).add(1);
+  return z.div(10)
+}
+
 export const CHAI = formatBytes32String('CHAI')
 export const WETH = formatBytes32String('ETH-A')
 export const Line = formatBytes32String('Line')
