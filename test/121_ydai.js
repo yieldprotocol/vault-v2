@@ -146,30 +146,51 @@ contract('yDai', async (accounts) =>  {
         it("yDai1 chi gets fixed at maturity time", async() => {
             await pot.setChi(chi2, { from: owner });
             
-            assert(
-                await yDai1.chiGrowth.call(),
-                subBN(chi2, chi1).toString(),
-                "Chi differential should be " + subBN(chi2, chi1),
+            assert.equal(
+                (await yDai1.chi0()).toString(),
+                chi1.toString(),
+                "Chi at maturity should be " + chi1,
             );
         });
 
         it("yDai1 rate gets fixed at maturity time", async() => {
             await vat.fold(WETH, vat.address, subBN(rate2, rate1), { from: owner });
             
-            assert(
-                await yDai1.rateGrowth(),
-                subBN(rate2, rate1).toString(),
-                "Rate differential should be " + subBN(rate2, rate1),
+            assert.equal(
+                (await yDai1.rate0()).toString(),
+                rate1.toString(),
+                "Rate at maturity should be " + rate1,
+            );
+        });
+
+        it("rateGrowth returns the rate differential between now and maturity", async() => {
+            await vat.fold(WETH, vat.address, subBN(rate2, rate1), { from: owner });
+            
+            assert.equal(
+                (await yDai1.rateGrowth.call()).toString(),
+                divRay(rate2, rate1).toString(),
+                "Rate differential should be " + divRay(rate2, rate1),
             );
         });
 
         it("chiGrowth always <= rateGrowth", async() => {
             await pot.setChi(chi2, { from: owner });
 
-            assert(
-                await yDai1.chiGrowth.call(),
-                await yDai1.rateGrowth(),
-                "Chi differential should be " + await yDai1.rateGrowth(),
+            assert.equal(
+                (await yDai1.chiGrowth.call()).toString(),
+                (await yDai1.rateGrowth.call()).toString(),
+                "Chi differential should be " + await yDai1.rateGrowth.call() + ", instead is " + await yDai1.chiGrowth.call(),
+            );
+        });
+
+        it("chiGrowth returns the chi differential between now and maturity", async() => {
+            await vat.fold(WETH, vat.address, subBN(rate2, rate1), { from: owner });
+            await pot.setChi(chi2, { from: owner });
+            
+            assert.equal(
+                (await yDai1.chiGrowth.call()).toString(),
+                divRay(chi2, chi1).toString(),
+                "Chi differential should be " + divRay(chi2, chi1),
             );
         });
 
