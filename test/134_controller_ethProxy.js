@@ -63,7 +63,7 @@ contract('Controller - EthProxy', async (accounts) =>  {
         );
         
         const previousBalance = await balance.current(owner);
-        await ethProxy.post(owner, owner, wethTokens1, { from: owner, value: wethTokens1 });
+        await ethProxy.post(wethTokens1, { from: owner, value: wethTokens1 });
 
         expect(await balance.current(owner)).to.be.bignumber.lt(previousBalance);
         assert.equal(
@@ -78,37 +78,9 @@ contract('Controller - EthProxy', async (accounts) =>  {
         );
     });
 
-    it("allows user to post eth to a different account", async() => {
-        assert.equal(
-            (await vat.urns(WETH, treasury.address)).ink,
-            0,
-            "Treasury has weth in MakerDAO",
-        );
-        assert.equal(
-            await controller.powerOf.call(WETH, user),
-            0,
-            "User has borrowing power",
-        );
-        
-        const previousBalance = await balance.current(owner);
-        await ethProxy.post(owner, user, wethTokens1, { from: owner, value: wethTokens1 });
-
-        expect(await balance.current(owner)).to.be.bignumber.lt(previousBalance);
-        assert.equal(
-            (await vat.urns(WETH, treasury.address)).ink,
-            wethTokens1.toString(),
-            "Treasury should have weth in MakerDAO",
-        );
-        assert.equal(
-            await controller.powerOf.call(WETH, user),
-            daiTokens1.toString(),
-            "User should have " + daiTokens1 + " borrowing power, instead has " + await controller.powerOf.call(WETH, user),
-        );
-    });
-
     describe("with posted eth", () => {
         beforeEach(async() => {
-            await ethProxy.post(owner, owner, wethTokens1, { from: owner, value: wethTokens1 });
+            await ethProxy.post(wethTokens1, { from: owner, value: wethTokens1 });
 
             assert.equal(
                 (await vat.urns(WETH, treasury.address)).ink,
@@ -139,26 +111,9 @@ contract('Controller - EthProxy', async (accounts) =>  {
 
         it("allows user to withdraw weth", async() => {
             const previousBalance = await balance.current(owner);
-            await ethProxy.withdraw(owner, owner, wethTokens1, { from: owner });
+            await ethProxy.withdraw(wethTokens1, { from: owner });
 
             expect(await balance.current(owner)).to.be.bignumber.gt(previousBalance);
-            assert.equal(
-                (await vat.urns(WETH, treasury.address)).ink,
-                0,
-                "Treasury should not not have weth in MakerDAO",
-            );
-            assert.equal(
-                await controller.powerOf.call(WETH, owner),
-                0,
-                "Owner should not have borrowing power",
-            );
-        });
-
-        it("allows user to withdraw weth to another account", async() => {
-            const previousBalance = await balance.current(user);
-            await ethProxy.withdraw(owner, user, wethTokens1, { from: owner });
-
-            expect(await balance.current(user)).to.be.bignumber.gt(previousBalance);
             assert.equal(
                 (await vat.urns(WETH, treasury.address)).ink,
                 0,
