@@ -149,8 +149,8 @@ export class MakerEnvironment {
     await this.vat.hope(this.daiJoin.address, { from: user })
     await this.vat.hope(this.wethJoin.address, { from: user })
 
-    const _daiDebt = addBN(divRay(_daiTokens, _rate), 1).toString()
-    const _wethTokens = divRay(_daiTokens, spot).mul(2).toString()
+    const _daiDebt = addBN(divRay(_daiTokens, _rate), 1).toString() // TODO: Round up and remove the `addBN(x, 1)
+    const _wethTokens = divRay(_daiTokens, spot).mul(2).toString() // We post twice the amount of weth needed to remain collateralized after future rate increases
 
     await this.weth.deposit({ from: user, value: _wethTokens })
     await this.weth.approve(this.wethJoin.address, _wethTokens, { from: user })
