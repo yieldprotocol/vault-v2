@@ -93,7 +93,7 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
         emit Liquidation(user, liquidations[user], userCollateral, userDebt);
     }
 
-    /// @dev Liquidates a position. The caller pays the debt of `user`, and `buyer` receives an amount of collateral.
+    /// @dev Liquidates a position. The `from` address pays the debt of `liquidated`, and the `to` address receives an amount of collateral.
     function buy(address from, address to, address liquidated, uint256 daiAmount)
         public onlyLive
         onlyHolderOrDelegate(from, "Controller: Only Holder Or Delegate")
