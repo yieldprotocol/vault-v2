@@ -7,7 +7,7 @@
   "scripts": {
     "eslint": "node_modules/eslint/bin/eslint.js . ",
     "lint": "solium -d contracts",
-    "test": "buidler test test/*.js test/market/*.js test/peripheral/*.js",
+    "test": "buidler test test/*.ts test/*.js test/market/*.js test/peripheral/*.js",
     "test:external": "buidler test test/external/*.js",
     "test:non-functional": "buidler test test/non-functional/*.js",
     "test:network": "npx truffle test test/network/*.js",
@@ -31,6 +31,7 @@
     "mocha": "^7.1.0",
     "prettier": "^2.0.5",
     "solidity-coverage": "^0.7.9",
+    "truffle-typings": "^1.0.8",
     "ts-node": "^8.10.2",
     "typescript": "^3.9.7"
   }

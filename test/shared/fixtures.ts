@@ -145,7 +145,7 @@ export class MakerEnvironment {
       return controller;
   }
 
-  public async getDai(user: string, _daiTokens: BigNumber, _rate: number) {
+  public async getDai(user: string, _daiTokens: BigNumber, _rate: number | BigNumber) {
     await this.vat.hope(this.daiJoin.address, { from: user })
     await this.vat.hope(this.wethJoin.address, { from: user })
 
@@ -191,7 +191,7 @@ export class YieldEnvironmentLite {
     return new YieldEnvironmentLite(maker, treasury, controller)
   }
 
-  public async newYDai(maturity: number, name: string, symbol: string, dontAdd: boolean) {
+  public async newYDai(maturity: number, name: string, symbol: string, dontAdd?: boolean) {
     const yDai = await YDai.new(
       this.maker.vat.address,
       this.maker.jug.address,

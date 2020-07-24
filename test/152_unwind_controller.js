@@ -100,7 +100,7 @@ contract('Unwind - Controller', async (accounts) =>  {
 
         describe("with Dss unwind initiated and treasury settled", () => {
             beforeEach(async() => {
-                await yield.maker.shutdown();
+                await yield.shutdown(owner, user1, user2);
             });
 
             it("controller shuts down", async() => {

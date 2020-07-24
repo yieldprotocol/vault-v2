@@ -1,15 +1,23 @@
-const { expectRevert } = require('@openzeppelin/test-helpers');
-const { MakerEnvironment } = require("./shared/fixtures");
-const {
+// @ts-ignore
+import { expectRevert } from '@openzeppelin/test-helpers';
+import { MakerEnvironment } from "./shared/fixtures";
+import {
     WETH,
     daiDebt1,
     daiTokens1,
     wethTokens1,
     chaiTokens1,
-} = require ("./shared/utils");
+} from "./shared/utils";
 
-contract('Treasury - Lending', async (accounts) =>  {
+contract('Treasury - Lending', async (accounts: string[]) =>  {
     let [ owner, user ] = accounts;
+
+    let treasury: any;
+    let vat: any;
+    let weth: any;
+    let wethJoin: any;
+    let chai: any;
+    let dai: any;
 
     beforeEach(async() => {
         const maker = await MakerEnvironment.setup();

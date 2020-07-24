@@ -1,12 +1,19 @@
-const { MakerEnvironment } = require("./shared/fixtures");
-const {
+import { MakerEnvironment } from "./shared/fixtures";
+import {
     rate1,
     daiTokens1,
     chaiTokens1,
-} = require ("./shared/utils");
+} from "./shared/utils";
 
 contract('Treasury - Saving', async (accounts) =>  {
     let [ owner, user ] = accounts;
+
+    let treasury: any;
+    let vat: any;
+    let weth: any;
+    let wethJoin: any;
+    let chai: any;
+    let dai: any;
 
     beforeEach(async() => {
         const maker = await MakerEnvironment.setup();
