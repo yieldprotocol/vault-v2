@@ -1,6 +1,7 @@
 const fixed_addrs = require('./fixed_addrs.json');
 const Migrations = artifacts.require("Migrations");
 const ERC20 = artifacts.require("TestERC20");
+const YDai = artifacts.require("YDai");
 const Market = artifacts.require("Market");
 const LimitMarket = artifacts.require("LimitMarket");
 const YieldMath = artifacts.require("YieldMath.sol");
@@ -26,13 +27,17 @@ module.exports = async (deployer, network, accounts) => {
 
   for (yDaiName of yDaiNames) {
     yDaiAddress = migrations.contracts(web3.utils.fromAscii(yDaiName));
+    yDai = await YDai.at(yDaiAddress);
 
     await deployer.deploy(
       Market,
       daiAddress,
       yDaiAddress,
+      (await yDai.name()) + '-Pool',
+      (await yDai.symbol()) + '-Symbol',
     );
     market = await Market.deployed();
+    // TODO: Consider registering with the market token name
     await migrations.register(web3.utils.fromAscii('Market-' + yDaiName), market.address);
     console.log('Market-' + yDaiName, market.address);
 

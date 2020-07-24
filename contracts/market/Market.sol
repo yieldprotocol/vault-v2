@@ -24,8 +24,11 @@ contract Market is IMarket, ERC20, Delegable {
     IERC20 public dai;
     IYDai public yDai;
 
-    // TODO: Choose liquidity token name
-    constructor(address dai_, address yDai_) public ERC20("Name", "Symbol") Delegable() {
+    constructor(address dai_, address yDai_, string memory name_, string memory symbol_)
+        public
+        ERC20(name_, symbol_)
+        Delegable()
+    {
         dai = IERC20(dai_);
         yDai = IYDai(yDai_);
 

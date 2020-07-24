@@ -33,6 +33,8 @@ contract('Splitter', async (accounts) =>  {
         market1 = await Market.new(
             dai.address,
             yDai1.address,
+            "Name",
+            "Symbol",
             { from: owner }
         );
 
