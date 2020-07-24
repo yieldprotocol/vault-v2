@@ -1,8 +1,11 @@
+import { usePlugin } from "@nomiclabs/buidler/config";
+
 usePlugin("@nomiclabs/buidler-truffle5");
 usePlugin("solidity-coverage");
 usePlugin("buidler-gas-reporter");
 
-module.exports = {
+export default {
+    defaultNetwork: "buidlerevm",
     solc: {
         version: "0.6.10",
         optimizer: {
@@ -11,6 +14,10 @@ module.exports = {
         },
     },
     gasReporter: {
-        enabled: true
+        // TODO: Figure out why this fails
+        enabled: false
     },
+    paths: {
+        artifacts: "./build"
+    }
 };

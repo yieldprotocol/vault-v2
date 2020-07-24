@@ -10,7 +10,6 @@ const Chai = artifacts.require("Chai");
 const Treasury = artifacts.require("Treasury");
 const Controller = artifacts.require("Controller");
 
-const truffleAssert = require('truffle-assertions');
 const { expectRevert } = require('@openzeppelin/test-helpers');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('../shared/utils');
 

@@ -72,7 +72,7 @@ contract('Vat', async (accounts) =>  {
             0,
         );
 
-        await weth.deposit({ from: owner, value: wethTokens});
+        await weth.deposit({ from: owner, value: wethTokens.toString()});
         await weth.approve(wethJoin.address, wethTokens, { from: owner }); 
         await wethJoin.join(owner, wethTokens, { from: owner });
 
@@ -85,7 +85,7 @@ contract('Vat', async (accounts) =>  {
 
     describe('with funds joined', () => {
         beforeEach(async() => {
-            await weth.deposit({ from: owner, value: wethTokens});
+            await weth.deposit({ from: owner, value: wethTokens.toString()});
             await weth.approve(wethJoin.address, wethTokens, { from: owner }); 
             await wethJoin.join(owner, wethTokens, { from: owner });
         });

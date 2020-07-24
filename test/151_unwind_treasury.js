@@ -1,25 +1,11 @@
 const helper = require('ganache-time-traveler');
+const { BigNumber } = require('ethers')
 const { expectRevert } = require('@openzeppelin/test-helpers');
 const { rate1, daiDebt1, WETH, daiTokens1, wethTokens1, chaiTokens1, spot, toRay, mulRay, divRay } = require('./shared/utils');
-const { setupMaker, newTreasury, newController, newYDai, newUnwind, newLiquidations, getDai } = require("./shared/fixtures");
+const { YieldEnvironment } = require("./shared/fixtures");
 
 contract('Unwind - Treasury', async (accounts) =>  {
     let [ owner, user ] = accounts;
-    let vat;
-    let weth;
-    let wethJoin;
-    let dai;
-    let daiJoin;
-    let jug;
-    let pot;
-    let end;
-    let chai;
-    let treasury;
-    let yDai1;
-    let yDai2;
-    let controller;
-    let liquidations;
-    let unwind;
 
     let snapshot;
     let snapshotId;
@@ -36,38 +22,27 @@ contract('Unwind - Treasury', async (accounts) =>  {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        ({
-            vat,
-            weth,
-            wethJoin,
-            dai,
-            daiJoin,
-            pot,
-            jug,
-            chai,
-            end,
-        } = await setupMaker());
+        yield = await YieldEnvironment.setup()
+        controller = yield.controller;
+        treasury = yield.treasury;
+        liquidations = yield.liquidations;
+        unwind = yield.unwind;
 
-
-        treasury = await newTreasury();
-        controller = await newController();
+        vat = yield.maker.vat;
+        dai = yield.maker.dai;
+        weth = yield.maker.weth;
+        end = yield.maker.end;
+        chai = yield.maker.chai;
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
-        yDai1 = await newYDai(maturity1, "Name1", "Symbol1");
-        yDai2 = await newYDai(maturity2, "Name2", "Symbol2");
-
-        // Setup Liquidations
-        liquidations = await newLiquidations();
-
-        // Setup Unwind
-        unwind = await newUnwind();
-        await yDai1.orchestrate(unwind.address);
-        await yDai2.orchestrate(unwind.address);
-
-        await treasury.orchestrate(owner, { from: owner });
+        yDai1 = await yield.newYDai(maturity1, "Name", "Symbol");
+        yDai2 = await yield.newYDai(maturity2, "Name", "Symbol");
+        await yDai1.orchestrate(unwind.address)
+        await yDai2.orchestrate(unwind.address)
+        await treasury.orchestrate(owner)
         await end.rely(owner, { from: owner });       // `owner` replaces MKR governance
     });
 
@@ -203,8 +178,8 @@ contract('Unwind - Treasury', async (accounts) =>  {
 
                     assert.equal(
                         await weth.balanceOf(unwind.address, { from: owner }),
-                        wethTokens1.sub(taggedWeth).add(1).toString(),
-                        'Unwind should have ' + wethTokens1.sub(taggedWeth).add(1).add(1) + ' weth in hand, instead has ' + (await weth.balanceOf(unwind.address, { from: owner })),
+                        BigNumber.from(wethTokens1).sub(taggedWeth).add(1).toString(),
+                        'Unwind should have ' + BigNumber.from(wethTokens1).sub(taggedWeth).add(1).add(1) + ' weth in hand, instead has ' + (await weth.balanceOf(unwind.address, { from: owner })),
                     );
                 });
             });
@@ -212,7 +187,7 @@ contract('Unwind - Treasury', async (accounts) =>  {
 
         describe("with savings", () => {
             beforeEach(async() => {
-                await getDai(owner, daiTokens1, rate1);
+                await yield.maker.getDai(owner, daiTokens1, rate1);
 
                 await dai.approve(treasury.address, daiTokens1, { from: owner });
                 await treasury.pushDai(owner, daiTokens1, { from: owner });
@@ -226,7 +201,7 @@ contract('Unwind - Treasury', async (accounts) =>  {
 
             describe("with Dss unwind initiated and fix defined", () => {
                 beforeEach(async() => {
-                    await getDai(user, daiTokens1.mul(2), rate1);
+                    await yield.maker.getDai(user, daiTokens1.mul(2), rate1);
 
                     await end.cage({ from: owner });
                     await end.setTag(WETH, tag, { from: owner });

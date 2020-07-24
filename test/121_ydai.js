@@ -1,10 +1,4 @@
-// External
-const { setupMaker, newTreasury, newYDai, newController } = require("./shared/fixtures");
-
-// YDai
-const YDai = artifacts.require('YDai');
-
-// Mocks
+const { YieldEnvironmentLite } = require("./shared/fixtures");
 const FlashMinterMock = artifacts.require('FlashMinterMock');
 
 const helper = require('ganache-time-traveler');
@@ -13,25 +7,14 @@ const { expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
 
 contract('yDai', async (accounts) =>  {
     let [ owner, user1, other ] = accounts;
-    let vat;
-    let weth;
-    let dai;
-    let jug;
-    let pot;
-    let treasury;
-    let yDai1;
-    let flashMinter;
 
     const rate2 = toRay(1.82);
     const chi2 = toRay(1.5);
-
     const chiDifferential  = divRay(chi2, chi1);
-
     const daiTokens2 = mulRay(daiTokens1, chiDifferential);
     const wethTokens2 = mulRay(wethTokens1, chiDifferential)
 
     let maturity;
-
     let snapshot;
     let snapshotId;
 
@@ -39,23 +22,18 @@ contract('yDai', async (accounts) =>  {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        ({
-            vat,
-            weth,
-            wethJoin,
-            dai,
-            daiJoin,
-            pot,
-            jug,
-            chai
-        } = await setupMaker());
-        treasury = await newTreasury();
-        controller = await newController();
+        const yield = await YieldEnvironmentLite.setup();
+        treasury = yield.treasury;
+        controller = yield.controller;
+        weth = yield.maker.weth;
+        pot = yield.maker.pot;
+        vat = yield.maker.vat;
+        dai = yield.maker.dai;
 
         // Setup yDai1
         const block = await web3.eth.getBlockNumber();
         maturity = (await web3.eth.getBlock(block)).timestamp + 1000;
-        yDai1 = await newYDai(maturity, "Name", "Symbol");
+        yDai1 = await yield.newYDai(maturity, "Name", "Symbol");
 
         // Test setup
         // Setup Flash Minter
@@ -65,7 +43,7 @@ contract('yDai', async (accounts) =>  {
         
         // Deposit some weth to treasury the sneaky way so that redeem can pull some dai
         await treasury.orchestrate(owner, { from: owner });
-        await weth.deposit({ from: owner, value: wethTokens2.mul(2) });
+        await weth.deposit({ from: owner, value: wethTokens2.mul(2).toString() });
         await weth.approve(treasury.address, wethTokens2.mul(2), { from: owner });
         await treasury.pushWeth(owner, wethTokens2.mul(2), { from: owner });
 

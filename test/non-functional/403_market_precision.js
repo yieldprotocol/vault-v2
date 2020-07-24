@@ -1,6 +1,6 @@
 const YieldMathMock = artifacts.require('YieldMathMock');
 
-contract('Market', async (accounts) =>  {
+contract('Market', async () =>  {
     let yieldMath;
 
     const oneToken =             '1000000000000000000';
