@@ -40,6 +40,8 @@ contract('Market', async (accounts) =>  {
         market = await Market.new(
             dai.address,
             yDai1.address,
+            "Name",
+            "Symbol",
             { from: owner }
         );
 
