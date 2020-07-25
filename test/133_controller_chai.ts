@@ -1,37 +1,48 @@
-const helper = require('ganache-time-traveler');
-const { expectRevert } = require('@openzeppelin/test-helpers');
-const { WETH, CHAI, rate1, chi1, daiTokens1, chaiTokens1, toRay, addBN, subBN, mulRay, divRay } = require('./shared/utils');
-const { YieldEnvironmentLite } = require("./shared/fixtures");
+// @ts-ignore
+import helper from 'ganache-time-traveler';
+// @ts-ignore
+import { expectRevert } from '@openzeppelin/test-helpers';
+import { WETH, CHAI, rate1, chi1, daiTokens1, chaiTokens1, toRay, addBN, subBN, mulRay, divRay } from './shared/utils';
+import { YieldEnvironmentLite, MakerEnvironment, Contract } from "./shared/fixtures";
+import { BigNumber } from 'ethers'
 
 contract('Controller - Chai', async (accounts) =>  {
     let [ owner, user1 ] = accounts;
 
-    let snapshot;
-    let snapshotId;
-    let maker;
+    let snapshot: any;
+    let snapshotId: string;
+    let maker: MakerEnvironment;
 
-    let maturity1;
-    let maturity2;
+    let dai: Contract;
+    let vat: Contract;
+    let pot: Contract;
+    let controller: Contract;
+    let yDai1: Contract;
+    let chai: Contract;
+    let treasury: Contract;
+
+    let maturity1: number;
+    let maturity2: number;
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        const yield = await YieldEnvironmentLite.setup();
-        maker = yield.maker;
-        controller = yield.controller;
-        treasury = yield.treasury;
-        pot = yield.maker.pot;
-        vat = yield.maker.vat;
-        dai = yield.maker.dai;
-        chai = yield.maker.chai;
+        const env = await YieldEnvironmentLite.setup();
+        maker = env.maker;
+        controller = env.controller;
+        treasury = env.treasury;
+        pot = env.maker.pot;
+        vat = env.maker.vat;
+        dai = env.maker.dai;
+        chai = env.maker.chai;
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
-        yDai1 = await yield.newYDai(maturity1, "Name", "Symbol");
-        yDai2 = await yield.newYDai(maturity2, "Name", "Symbol");
+        yDai1 = await env.newYDai(maturity1, "Name", "Symbol");
+        await env.newYDai(maturity2, "Name", "Symbol");
 
         // Tests setup
         await maker.getChai(user1, chaiTokens1, chi1, rate1);
@@ -271,13 +282,13 @@ contract('Controller - Chai', async (accounts) =>  {
                 );
             });
 
-            let rateIncrease;
-            let chiIncrease;
-            let chiDifferential;
-            let increasedDebt;
-            let debtIncrease;
-            let rate2;
-            let chi2
+            let rateIncrease: BigNumber;
+            let chiIncrease: BigNumber;
+            let chiDifferential: BigNumber;
+            let increasedDebt: BigNumber;
+            let debtIncrease: BigNumber;
+            let rate2: BigNumber;
+            let chi2: BigNumber;
 
             describe("after maturity, with a chi increase", () => {
                 beforeEach(async() => {
