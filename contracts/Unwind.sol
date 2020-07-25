@@ -8,7 +8,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IVat.sol";
 import "./interfaces/IDaiJoin.sol";
 import "./interfaces/IGemJoin.sol";
-import "./interfaces/IJug.sol";
 import "./interfaces/IPot.sol";
 import "./interfaces/IEnd.sol";
 import "./interfaces/IChai.sol";
@@ -39,7 +38,6 @@ contract Unwind is Ownable(), DecimalMath {
     IDaiJoin internal _daiJoin;
     IERC20 internal _weth;
     IGemJoin internal _wethJoin;
-    IJug internal _jug;
     IPot internal _pot;
     IEnd internal _end;
     IChai internal _chai;
@@ -61,7 +59,6 @@ contract Unwind is Ownable(), DecimalMath {
         address daiJoin_,
         address weth_,
         address wethJoin_,
-        address jug_,
         address pot_,
         address end_,
         address chai_,
@@ -74,7 +71,6 @@ contract Unwind is Ownable(), DecimalMath {
         _daiJoin = IDaiJoin(daiJoin_);
         _weth = IERC20(weth_);
         _wethJoin = IGemJoin(wethJoin_);
-        _jug = IJug(jug_);
         _pot = IPot(pot_);
         _end = IEnd(end_);
         _chai = IChai(chai_);

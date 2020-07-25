@@ -253,7 +253,6 @@ export class YieldEnvironment extends YieldEnvironmentLite {
       maker.daiJoin.address,
       maker.weth.address,
       maker.wethJoin.address,
-      maker.jug.address,
       maker.pot.address,
       maker.end.address,
       maker.chai.address,
