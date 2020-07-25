@@ -8,7 +8,6 @@ import "../interfaces/IPot.sol";
 import "../interfaces/IController.sol";
 import "../interfaces/IYDai.sol";
 import "../helpers/DecimalMath.sol";
-// import "@nomiclabs/buidler/console.sol";
 
 /// @dev Many of the functions in Controller are transactional due to `pot.drip()`.
 /// ControllerView offers an option to retrieve the data in Controller, in a non-transactional mode,
