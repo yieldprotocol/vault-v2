@@ -4,7 +4,6 @@ const Weth = artifacts.require("WETH9");
 const ERC20 = artifacts.require("TestERC20");
 const GemJoin = artifacts.require("GemJoin");
 const DaiJoin = artifacts.require("DaiJoin");
-const Jug = artifacts.require("Jug");
 const Pot = artifacts.require("Pot");
 const Chai = artifacts.require("Chai");
 const Treasury = artifacts.require("Treasury");
@@ -21,7 +20,6 @@ contract('Treasury - Saving', async (accounts) =>  {
     let wethJoin;
     let dai;
     let daiJoin;
-    let jug;
     let pot;
     let chai;
     let treasury;
@@ -45,7 +43,6 @@ contract('Treasury - Saving', async (accounts) =>  {
         wethJoin = await GemJoin.at(await migrations.contracts(web3.utils.fromAscii("WethJoin")));
         dai = await ERC20.at(await migrations.contracts(web3.utils.fromAscii("Dai")));
         daiJoin = await DaiJoin.at(await migrations.contracts(web3.utils.fromAscii("DaiJoin")));
-        jug = await Jug.at(await migrations.contracts(web3.utils.fromAscii("Jug")));
         pot = await Pot.at(await migrations.contracts(web3.utils.fromAscii("Pot")));
         chai = await Chai.at(await migrations.contracts(web3.utils.fromAscii("Chai")));
         treasury = await Treasury.at(await migrations.contracts(web3.utils.fromAscii("Treasury")));

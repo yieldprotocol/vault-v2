@@ -6,8 +6,6 @@ type Contract = any
 // @ts-ignore
 const Vat = artifacts.require('Vat')
 // @ts-ignore
-const Jug = artifacts.require('Jug')
-// @ts-ignore
 const GemJoin = artifacts.require('GemJoin')
 // @ts-ignore
 const DaiJoin = artifacts.require('DaiJoin')
@@ -60,7 +58,6 @@ export class MakerEnvironment {
   daiJoin: Contract
   chai: Contract
   pot: Contract
-  jug: Contract
   end: Contract
 
   constructor(
@@ -71,7 +68,6 @@ export class MakerEnvironment {
     daiJoin: Contract,
     chai: Contract,
     pot: Contract,
-    jug: Contract,
     end: Contract
   ) {
     this.vat = vat
@@ -81,7 +77,6 @@ export class MakerEnvironment {
     this.daiJoin = daiJoin
     this.chai = chai
     this.pot = pot
-    this.jug = jug
     this.end = end
   }
 
@@ -109,10 +104,6 @@ export class MakerEnvironment {
     // Setup chai
     const chai = await Chai.new(vat.address, pot.address, daiJoin.address, dai.address)
 
-    // Setup jug
-    const jug = await Jug.new(vat.address)
-    await jug.init(WETH) // Set WETH duty (stability fee) to 1.0
-
     // Setup end
     const end = await End.new()
     await end.file(toBytes32('vat'), vat.address)
@@ -122,10 +113,9 @@ export class MakerEnvironment {
     await vat.rely(wethJoin.address)
     await vat.rely(daiJoin.address)
     await vat.rely(pot.address)
-    await vat.rely(jug.address)
     await vat.rely(end.address)
 
-    return new MakerEnvironment(vat, weth, wethJoin, dai, daiJoin, chai, pot, jug, end)
+    return new MakerEnvironment(vat, weth, wethJoin, dai, daiJoin, chai, pot, end)
   }
 
   public async setupTreasury() {
