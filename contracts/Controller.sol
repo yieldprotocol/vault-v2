@@ -242,7 +242,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     {
         posted[collateral][to] = posted[collateral][to].add(amount);
 
-        if (collateral == WETH){ // TODO: Refactor Treasury to be `push(collateral, amount)`
+        if (collateral == WETH){
             require(
                 aboveDustOrZero(collateral, to),
                 "Controller: Below dust"
@@ -276,7 +276,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
             "Controller: Too much debt"
         );
 
-        if (collateral == WETH){ // TODO: Refactor Treasury to be `pull(collateral, amount)`
+        if (collateral == WETH){
             require(
                 aboveDustOrZero(collateral, to),
                 "Controller: Below dust"
