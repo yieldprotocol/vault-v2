@@ -114,6 +114,11 @@ contract('Controller - Weth', async (accounts) =>  {
             wethTokens1.toString(),
             "User1 should have " + wethTokens1 + " weth posted, instead has " + await controller.posted(WETH, user1),
         );
+        assert.equal(
+            await controller.locked(WETH, user1),
+            0,
+            "User1 should have no locked collateral, instead has " + await controller.locked(WETH, user1),
+        );
     });
 
     it("allows users to post weth for others", async() => {
@@ -318,6 +323,11 @@ contract('Controller - Weth', async (accounts) =>  {
                 await controller.totalDebtYDai(WETH, maturity1),
                 daiTokens1.toString(), // Dai == yDai before maturity
                 "System should have debt",
+            );
+            assert.equal(
+                await controller.locked(WETH, user1),
+                wethTokens1.toString(),
+                "User1 should have " + wethTokens1 + " locked weth, instead has " + await controller.locked(WETH, user1),
             );
         });
 

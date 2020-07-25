@@ -193,6 +193,22 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         return 0;
     }
 
+    /// @dev Returns the amount of collateral locked in borrowing operations.
+    /// @param collateral Valid collateral type.
+    /// @param user Address of the user vault.
+    function locked(bytes32 collateral, address user)
+        public view
+        validCollateral(collateral)
+        returns (uint256)
+    {
+        if (collateral == WETH){
+            (,, uint256 spot,,) = _vat.ilks(WETH);  // Stability fee and collateralization ratio for Weth
+            return divd(totalDebtDai(collateral, user), spot);
+        } else if (collateral == CHAI) {
+            return divd(totalDebtDai(collateral, user), _pot.chi());
+        }
+    }
+
     /// @dev Return if the borrowing power for a given collateral of an user is equal or greater than its debt for the same collateral
     function isCollateralized(bytes32 collateral, address user) public view override returns (bool) {
         return powerOf(collateral, user) >= totalDebtDai(collateral, user);

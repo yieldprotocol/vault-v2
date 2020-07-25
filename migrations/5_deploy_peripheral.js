@@ -5,7 +5,6 @@ const Weth = artifacts.require("WETH9");
 const GemJoin = artifacts.require("GemJoin");
 const ERC20 = artifacts.require("TestERC20");
 const DaiJoin = artifacts.require("DaiJoin");
-const Jug = artifacts.require("Jug");
 const Pot = artifacts.require("Pot");
 const End = artifacts.require("End");
 const Chai = artifacts.require("Chai");
@@ -25,7 +24,6 @@ module.exports = async (deployer, network, accounts) => {
   let wethJoinAddress;
   let daiAddress;
   let daiJoinAddress;
-  let jugAddress;
   let potAddress;
   let endAddress;
   let chaiAddress;
@@ -45,7 +43,6 @@ module.exports = async (deployer, network, accounts) => {
     wethJoinAddress = fixed_addrs[network].wethJoinAddress;
     daiAddress = fixed_addrs[network].daiAddress;
     daiJoinAddress = fixed_addrs[network].daiJoinAddress;
-    jugAddress = fixed_addrs[network].jugAddress;
     potAddress = fixed_addrs[network].potAddress;
     endAddress = fixed_addrs[network].endAddress;
     fixed_addrs[network].chaiAddress ? 
@@ -57,7 +54,6 @@ module.exports = async (deployer, network, accounts) => {
       wethJoinAddress = (await GemJoin.deployed()).address;
       daiAddress = (await ERC20.deployed()).address;
       daiJoinAddress = (await DaiJoin.deployed()).address;
-      jugAddress = (await Jug.deployed()).address;
       potAddress = (await Pot.deployed()).address;
       endAddress = (await End.deployed()).address;
       chaiAddress = (await Chai.deployed()).address;
@@ -86,7 +82,6 @@ module.exports = async (deployer, network, accounts) => {
     daiJoinAddress,
     wethAddress,
     wethJoinAddress,
-    jugAddress,
     potAddress,
     endAddress,
     chaiAddress,
@@ -115,22 +110,11 @@ module.exports = async (deployer, network, accounts) => {
   );
   ethProxyAddress = (await EthProxy.deployed()).address;
   await controller.addDelegate(ethProxyAddress);
-  
-  // Setup ControllerView
-  await deployer.deploy(
-    ControllerView,
-    vatAddress,
-    potAddress,
-    controllerAddress,
-  );
-  const controllerView = await ControllerView.deployed();
-  controllerViewAddress = controllerView.address;
 
   const deployedPeripheral = {
     'Liquidations': liquidationsAddress,
     'Unwind': unwindAddress,
     'EthProxy': ethProxyAddress,
-    'ControllerView': controllerViewAddress,
   }
 
   for (name in deployedPeripheral) {
