@@ -63,7 +63,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         _treasury = ITreasury(treasury_);
     }
 
-    /// @dev Only while the Controller is not unwinding due to a MakerDAO shutdown.
+    /// @dev Modified functions only callable while the Controller is not unwinding due to a MakerDAO shutdown.
     modifier onlyLive() {
         require(live == true, "Controller: Not available during unwind");
         _;
@@ -96,7 +96,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         live = false;
     }
 
-    /// @dev Return if the borrowing power for a given collateral of an user is equal or greater
+    /// @dev Return if the borrowing power for a given collateral of a user is equal or greater
     /// than its debt for the same collateral
     /// @param collateral Valid collateral type
     /// @param user Address of the user vault
@@ -136,8 +136,8 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         skimStart = Math.max(skimStart, maturity.add(THREE_MONTHS));
     }
 
-    /// @dev Dai equivalent of an yDai amount.
-    /// This changes according to series maturity and MakerDAO rate and chi, depending on collateral.
+    /// @dev Dai equivalent of a yDai amount.
+    /// After maturity, the Dai value of a yDai grows according to either the stability fee (for WETH collateral) or the Dai Saving Rate (for Chai collateral).
     /// @param collateral Valid collateral type
     /// @param maturity Maturity of an added series
     /// @param yDaiAmount Amount of yDai to convert.
@@ -157,7 +157,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     }
 
     /// @dev yDai equivalent of a Dai amount.
-    /// This changes according to series maturity and MakerDAO rate and chi, depending on collateral.
+    /// After maturity, the yDai value of a Dai decreases according to either the stability fee (for WETH collateral) or the Dai Saving Rate (for Chai collateral).
     /// @param collateral Valid collateral type
     /// @param maturity Maturity of an added series
     /// @param daiAmount Amount of Dai to convert.
@@ -177,7 +177,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     }
 
     /// @dev Debt in dai of an user
-    /// This changes according to series maturity and MakerDAO rate and chi.
+    /// After maturity, the Dai debt of a position grows according to either the stability fee (for WETH collateral) or the Dai Saving Rate (for Chai collateral).
     /// @param collateral Valid collateral type
     /// @param maturity Maturity of an added series
     /// @param user Address of the user vault
@@ -192,7 +192,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     }
 
     /// @dev Total debt of an user across all series, in Dai
-    /// This changes according to series maturity and MakerDAO rate and chi, depending on collateral.
+    /// The debt is summed across all series, taking into account interest on the debt after a series matures.
     /// This function loops through all maturities, limiting the contract to hundreds of maturities.
     /// @param collateral Valid collateral type
     /// @param user Address of the user vault
@@ -207,8 +207,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         return totalDebt;
     }
 
-    /// @dev Borrowing power of an user in dai.
-    /// This changes according to series maturity and MakerDAO rate and chi, depending on collateral.
+    /// @dev Borrowing power (in dai) of a user for a specific series and collateral.
     /// @param collateral Valid collateral type
     /// @param user Address of the user vault
     /// @return Borrowing power of an user in dai.
@@ -229,6 +228,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
 
     /// @dev Takes collateral assets from `from` address, and credits them to `to` collateral account.
     /// `from` can delegate to other addresses to take assets from him. Also needs to use `ERC20.approve`.
+    /// Calling ERC20.approve for Treasury contract is a prerequisite to this function
     /// @param collateral Valid collateral type.
     /// @param from Wallet to take collateral from.
     /// @param to Yield vault to put the collateral in.
@@ -330,6 +330,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     /// @dev Burns yDai from `from` wallet to repay debt in a Yield Vault.
     /// User debt is decreased for the given collateral and yDai series, in Yield vault `to`.
     /// `from` can delegate to other addresses to take yDai from him for the repayment.
+    /// Calling yDai.approve for Controller contract is a prerequisite to this function
     /// @param collateral Valid collateral type.
     /// @param maturity Maturity of an added series
     /// @param from Wallet providing the yDai for repayment.
@@ -358,6 +359,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     /// User debt is decreased for the given collateral and yDai series, in Yield vault `to`.
     /// The amount of debt repaid changes according to series maturity and MakerDAO rate and chi, depending on collateral type.
     /// `from` can delegate to other addresses to take Dai from him for the repayment.
+    /// Calling ERC20.approve for Treasury contract is a prerequisite to this function
     /// @param collateral Valid collateral type.
     /// @param maturity Maturity of an added series
     /// @param from Wallet providing the Dai for repayment.
