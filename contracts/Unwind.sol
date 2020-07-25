@@ -113,21 +113,6 @@ contract Unwind is Ownable(), DecimalMath {
         _liquidations.shutdown();
     }
 
-    function getChi() public returns (uint256) {
-        return (now > _pot.rho()) ? _pot.drip() : _pot.chi();
-    }
-
-    function getRate() public returns (uint256) {
-        uint256 rate;
-        (, uint256 rho) = _jug.ilks(WETH);
-        if (now > rho) {
-            rate = _jug.drip(WETH);
-        } else {
-            (, rate,,,) = _vat.ilks(WETH);
-        }
-        return rate;
-    }
-
     /// @dev Calculates how much profit is in the system and transfers it to the beneficiary
     function skimWhileLive(address beneficiary) public { // TODO: Hardcode
         require(
@@ -139,9 +124,11 @@ contract Unwind is Ownable(), DecimalMath {
             "Unwind: Only after skimStart"
         );
 
+        uint256 chi = _pot.chi();
+        (, uint256 rate,,,) = _vat.ilks(WETH);
         uint256 profit = _chai.balanceOf(address(_treasury));
-        profit = profit.add(_yDaiProfit(getChi(), getRate()));
-        profit = profit.sub(divd(_treasury.debt(), getChi()));
+        profit = profit.add(_yDaiProfit(chi, rate));
+        profit = profit.sub(divd(_treasury.debt(), chi));
         profit = profit.sub(_controller.totalChaiPosted());
 
         _treasury.pullChai(beneficiary, profit);

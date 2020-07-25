@@ -127,7 +127,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     }
 
     /// @dev Returns the dai equivalent of an yDai amount, for a given series identified by maturity
-    function inDai(bytes32 collateral, uint256 maturity, uint256 yDaiAmount) public returns (uint256) {
+    function inDai(bytes32 collateral, uint256 maturity, uint256 yDaiAmount) public view returns (uint256) {
         if (series[maturity].isMature()){
             if (collateral == WETH){
                 return muld(yDaiAmount, series[maturity].rateGrowth());
@@ -142,7 +142,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     }
 
     /// @dev Returns the yDai equivalent of a dai amount, for a given series identified by maturity
-    function inYDai(bytes32 collateral, uint256 maturity, uint256 daiAmount) public returns (uint256) {
+    function inYDai(bytes32 collateral, uint256 maturity, uint256 daiAmount) public view returns (uint256) {
         if (series[maturity].isMature()){
             if (collateral == WETH){
                 return divd(daiAmount, series[maturity].rateGrowth());
@@ -162,12 +162,12 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     // debt_now = debt_mat * ----------
     //                        rate_mat
     //
-    function debtDai(bytes32 collateral, uint256 maturity, address user) public returns (uint256) {
+    function debtDai(bytes32 collateral, uint256 maturity, address user) public view returns (uint256) {
         return inDai(collateral, maturity, debtYDai[collateral][maturity][user]);
     }
 
     /// @dev Returns the total debt of an user, for a given collateral, across all series, in Dai
-    function totalDebtDai(bytes32 collateral, address user) public override returns (uint256) {
+    function totalDebtDai(bytes32 collateral, address user) public view override returns (uint256) {
         uint256 totalDebt;
         for (uint256 i = 0; i < seriesIterator.length; i += 1) {
             if (debtYDai[collateral][seriesIterator[i]][user] > 0) {
@@ -181,20 +181,20 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     //
     // powerOf[user](wad) = posted[user](wad) * price()(ray)
     //
-    function powerOf(bytes32 collateral, address user) public returns (uint256) {
+    function powerOf(bytes32 collateral, address user) public view returns (uint256) {
         // dai = price * collateral
         if (collateral == WETH){
             (,, uint256 spot,,) = _vat.ilks(WETH);  // Stability fee and collateralization ratio for Weth
             return muld(posted[collateral][user], spot);
         } else if (collateral == CHAI) {
-            uint256 chi = (now > _pot.rho()) ? _pot.drip() : _pot.chi();
+            uint256 chi = _pot.chi();
             return muld(posted[collateral][user], chi);
         }
         return 0;
     }
 
     /// @dev Return if the borrowing power for a given collateral of an user is equal or greater than its debt for the same collateral
-    function isCollateralized(bytes32 collateral, address user) public override returns (bool) {
+    function isCollateralized(bytes32 collateral, address user) public view override returns (bool) {
         return powerOf(collateral, user) >= totalDebtDai(collateral, user);
     }
 

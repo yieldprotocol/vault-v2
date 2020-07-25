@@ -196,7 +196,7 @@ contract Treasury is ITreasury, Orchestrated(), DecimalMath {
 
     /// @dev Returns chai using chai savings as much as possible, and borrowing the rest.
     function pullChai(address to, uint256 chai) public override onlyOrchestrated("Treasury: Not Authorized") onlyLive  {
-        uint256 chi = (now > _pot.rho()) ? _pot.drip() : _pot.chi();
+        uint256 chi = _pot.chi();
         uint256 dai = muld(chai, chi);   // dai = price * chai
         uint256 toRelease = Math.min(savings(), dai);
         // As much chai as the Treasury has, can be used, we borrwo dai and convert it to chai for the rest
