@@ -195,7 +195,6 @@ export class YieldEnvironmentLite {
   public async newYDai(maturity: number, name: string, symbol: string, dontAdd?: boolean) {
     const yDai = await YDai.new(
       this.maker.vat.address,
-      this.maker.jug.address,
       this.maker.pot.address,
       this.treasury.address,
       maturity,

@@ -3,7 +3,6 @@ pragma solidity ^0.6.10;
 
 import "@openzeppelin/contracts/math/Math.sol";
 import "./interfaces/IVat.sol";
-import "./interfaces/IJug.sol";
 import "./interfaces/IPot.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IYDai.sol";
@@ -32,7 +31,6 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
     bytes32 public constant WETH = "ETH-A";
 
     IVat internal _vat;
-    IJug internal _jug;
     IPot internal _pot;
     ITreasury internal _treasury;
 
@@ -43,7 +41,6 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
 
     constructor(
         address vat_,
-        address jug_,
         address pot_,
         address treasury_,
         uint256 maturity_,
@@ -51,7 +48,6 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
         string memory symbol
     ) public ERC20(name, symbol) {
         _vat = IVat(vat_);
-        _jug = IJug(jug_);
         _pot = IPot(pot_);
         _treasury = ITreasury(treasury_);
         maturity = maturity_;
