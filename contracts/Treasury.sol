@@ -101,8 +101,8 @@ contract Treasury is ITreasury, Orchestrated(), DecimalMath {
     }
 
     /// @dev Returns the amount of Dai in this contract.
-    function savings() public override returns(uint256){
-        return _chai.dai(address(this));
+    function savings() public view override returns(uint256){
+        return muld(_chai.balanceOf(address(this)), _pot.chi());
     }
 
     /// @dev Takes dai from user and pays as much system debt as possible, saving the rest as chai.
