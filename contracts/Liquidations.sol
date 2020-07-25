@@ -98,7 +98,8 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
         emit Liquidation(user, liquidations[user], userCollateral, userDebt);
     }
 
-    /// @dev Liquidates a position. The caller pays the debt of `user`, and `buyer` receives an amount of collateral.
+    /// @dev Buy a portion of a position under liquidation.
+    /// The caller pays the debt of `user`, and `buyer` receives an amount of collateral.
     /// `buyer` can delegate to other addresses to buy for him. Also needs to use `ERC20.approve`.
     /// @param user Address of the user vault to liquidate.
     /// @param buyer Address of the wallet paying Dai for liquidated collateral.
