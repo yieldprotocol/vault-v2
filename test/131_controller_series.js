@@ -44,7 +44,7 @@ contract('Controller: Multi-Series', async (accounts) =>  {
         assert.equal(
             await controller.containsSeries(maturity1),
             true,
-            "Controller should contain " + (await yDai1.name.call()),
+            "Controller should contain " + (await yDai1.name()),
         );
 
         assert.equal(
@@ -60,22 +60,22 @@ contract('Controller: Multi-Series', async (accounts) =>  {
         assert.equal(
             await controller.containsSeries(maturity1),
             true,
-            "Controller should contain " + (await yDai1.name.call()),
+            "Controller should contain " + (await yDai1.name()),
         );
         assert.equal(
             await controller.containsSeries(maturity2),
             true,
-            "Controller should contain " + (await yDai2.name.call()),
+            "Controller should contain " + (await yDai2.name()),
         );
         assert.equal(
             await controller.series(maturity1),
             yDai1.address,
-            "Controller should have the contract for " + (await yDai1.name.call()),
+            "Controller should have the contract for " + (await yDai1.name()),
         );
         assert.equal(
             await controller.series(maturity2),
             yDai2.address,
-            "Controller should have the contract for " + (await yDai2.name.call()),
+            "Controller should have the contract for " + (await yDai2.name()),
         );
         assert.equal(
             await controller.skimStart(),

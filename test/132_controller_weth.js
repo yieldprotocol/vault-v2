@@ -74,7 +74,7 @@ contract('Controller - Weth', async (accounts) =>  {
             "Treasury has weth in MakerDAO",
         );
         assert.equal(
-            await controller.powerOf.call(WETH, user1),
+            await controller.powerOf(WETH, user1),
             0,
             "User1 has borrowing power",
         );
@@ -105,9 +105,9 @@ contract('Controller - Weth', async (accounts) =>  {
             "Treasury should have weth in MakerDAO",
         );
         assert.equal(
-            await controller.powerOf.call(WETH, user1),
+            await controller.powerOf(WETH, user1),
             daiTokens1.toString(),
-            "User1 should have " + daiTokens1 + " borrowing power, instead has " + await controller.powerOf.call(WETH, user1),
+            "User1 should have " + daiTokens1 + " borrowing power, instead has " + await controller.powerOf(WETH, user1),
         );
         assert.equal(
             await controller.posted(WETH, user1),
@@ -128,7 +128,7 @@ contract('Controller - Weth', async (accounts) =>  {
             "Treasury has weth in MakerDAO",
         );
         assert.equal(
-            await controller.powerOf.call(WETH, user1),
+            await controller.powerOf(WETH, user1),
             0,
             "User1 has borrowing power",
         );
@@ -159,9 +159,9 @@ contract('Controller - Weth', async (accounts) =>  {
             "Treasury should have weth in MakerDAO",
         );
         assert.equal(
-            await controller.powerOf.call(WETH, user2),
+            await controller.powerOf(WETH, user2),
             daiTokens1.toString(),
-            "User2 should have " + daiTokens1 + " borrowing power, instead has " + await controller.powerOf.call(WETH, user2),
+            "User2 should have " + daiTokens1 + " borrowing power, instead has " + await controller.powerOf(WETH, user2),
         );
         assert.equal(
             await controller.posted(WETH, user2),
@@ -184,7 +184,7 @@ contract('Controller - Weth', async (accounts) =>  {
             "Treasury has weth in MakerDAO",
         );
         assert.equal(
-            await controller.powerOf.call(WETH, user1),
+            await controller.powerOf(WETH, user1),
             0,
             "User1 has borrowing power",
         );
@@ -216,9 +216,9 @@ contract('Controller - Weth', async (accounts) =>  {
             "Treasury should have weth in MakerDAO",
         );
         assert.equal(
-            await controller.powerOf.call(WETH, user2),
+            await controller.powerOf(WETH, user2),
             daiTokens1.toString(),
-            "User2 should have " + daiTokens1 + " borrowing power, instead has " + await controller.powerOf.call(WETH, user2),
+            "User2 should have " + daiTokens1 + " borrowing power, instead has " + await controller.powerOf(WETH, user2),
         );
         assert.equal(
             await controller.posted(WETH, user2),
@@ -280,7 +280,7 @@ contract('Controller - Weth', async (accounts) =>  {
                 "Treasury should have " + wethTokens1 + " weth in MakerDAO",
             );
             assert.equal(
-                await controller.powerOf.call(WETH, user1),
+                await controller.powerOf(WETH, user1),
                 0,
                 "User1 should not have borrowing power",
             );
@@ -315,7 +315,7 @@ contract('Controller - Weth', async (accounts) =>  {
                 "User1 should have yDai",
             );
             assert.equal(
-                await controller.debtDai.call(WETH, maturity1, user1),
+                await controller.debtDai(WETH, maturity1, user1),
                 daiTokens1.toString(),
                 "User1 should have debt",
             );
@@ -360,7 +360,7 @@ contract('Controller - Weth', async (accounts) =>  {
                 "User2 should have yDai",
             );
             assert.equal(
-                await controller.debtDai.call(WETH, maturity1, user1),
+                await controller.debtDai(WETH, maturity1, user1),
                 daiTokens1.toString(),
                 "User1 should have debt",
             );
@@ -408,7 +408,7 @@ contract('Controller - Weth', async (accounts) =>  {
                 "User2 should have yDai",
             );
             assert.equal(
-                await controller.debtDai.call(WETH, maturity1, user1),
+                await controller.debtDai(WETH, maturity1, user1),
                 daiTokens1.toString(),
                 "User1 should have debt",
             );
@@ -449,7 +449,7 @@ contract('Controller - Weth', async (accounts) =>  {
                 "User3 should have yDai",
             );
             assert.equal(
-                await controller.debtDai.call(WETH, maturity1, user1),
+                await controller.debtDai(WETH, maturity1, user1),
                 daiTokens1.toString(),
                 "User1 should have debt",
             );
@@ -493,7 +493,7 @@ contract('Controller - Weth', async (accounts) =>  {
                     "User1 should have yDai",
                 );
                 assert.equal(
-                    await controller.debtDai.call(WETH, maturity1, user1),
+                    await controller.debtDai(WETH, maturity1, user1),
                     daiTokens1.toString(),
                     "User1 should have debt for series 1",
                 );
@@ -503,12 +503,12 @@ contract('Controller - Weth', async (accounts) =>  {
                     "User1 should have yDai2",
                 );
                 assert.equal(
-                    await controller.debtDai.call(WETH, maturity2, user1),
+                    await controller.debtDai(WETH, maturity2, user1),
                     daiTokens1.toString(),
                     "User1 should have debt for series 2",
                 );
                 assert.equal(
-                    await controller.totalDebtDai.call(WETH, user1),
+                    await controller.totalDebtDai(WETH, user1),
                     addBN(daiTokens1, daiTokens1).toString(),
                     "User1 should a combined debt",
                 );
@@ -569,7 +569,7 @@ contract('Controller - Weth', async (accounts) =>  {
                         "User1 should not have yDai",
                     );
                     assert.equal(
-                        await controller.debtDai.call(WETH, maturity1, user1),
+                        await controller.debtDai(WETH, maturity1, user1),
                         0,
                         "User1 should not have debt",
                     );
@@ -610,7 +610,7 @@ contract('Controller - Weth', async (accounts) =>  {
                         "User2 should not have yDai",
                     );
                     assert.equal(
-                        await controller.debtDai.call(WETH, maturity1, user1),
+                        await controller.debtDai(WETH, maturity1, user1),
                         0,
                         "User1 should not have debt",
                     );
@@ -659,7 +659,7 @@ contract('Controller - Weth', async (accounts) =>  {
                         "User1 should not have yDai",
                     );
                     assert.equal(
-                        await controller.debtDai.call(WETH, maturity1, user1),
+                        await controller.debtDai(WETH, maturity1, user1),
                         0,
                         "User1 should not have debt",
                     );
@@ -701,7 +701,7 @@ contract('Controller - Weth', async (accounts) =>  {
                         "User1 should not have yDai",
                     );
                     assert.equal(
-                        await controller.debtDai.call(WETH, maturity1, user2),
+                        await controller.debtDai(WETH, maturity1, user2),
                         0,
                         "User2 should not have debt",
                     );
@@ -721,7 +721,7 @@ contract('Controller - Weth', async (accounts) =>  {
                         "User1 does not have dai",
                     );
                     assert.equal(
-                        await controller.debtDai.call(WETH, maturity1, user1),
+                        await controller.debtDai(WETH, maturity1, user1),
                         daiTokens1.toString(),
                         "User1 does not have debt",
                     );
@@ -755,7 +755,7 @@ contract('Controller - Weth', async (accounts) =>  {
                         "User1 should not have yDai",
                     );
                     assert.equal(
-                        await controller.debtDai.call(WETH, maturity1, user1),
+                        await controller.debtDai(WETH, maturity1, user1),
                         0,
                         "User1 should not have debt",
                     );
@@ -797,7 +797,7 @@ contract('Controller - Weth', async (accounts) =>  {
                         "User2 should not have yDai",
                     );
                     assert.equal(
-                        await controller.debtDai.call(WETH, maturity1, user1),
+                        await controller.debtDai(WETH, maturity1, user1),
                         0,
                         "User1 should not have debt",
                     );
@@ -847,7 +847,7 @@ contract('Controller - Weth', async (accounts) =>  {
                         "User1 should not have yDai",
                     );
                     assert.equal(
-                        await controller.debtDai.call(WETH, maturity1, user1),
+                        await controller.debtDai(WETH, maturity1, user1),
                         0,
                         "User1 should not have debt",
                     );
@@ -890,7 +890,7 @@ contract('Controller - Weth', async (accounts) =>  {
                         "User1 should not have yDai",
                     );
                     assert.equal(
-                        await controller.debtDai.call(WETH, maturity1, user2),
+                        await controller.debtDai(WETH, maturity1, user2),
                         0,
                         "User2 should not have debt",
                     );
@@ -913,7 +913,7 @@ contract('Controller - Weth', async (accounts) =>  {
                         "User1 does not have yDai",
                     );
                     assert.equal(
-                        await controller.debtDai.call(WETH, maturity1, user1),
+                        await controller.debtDai(WETH, maturity1, user1),
                         daiTokens1.toString(),
                         "User1 does not have debt",
                     );
@@ -927,7 +927,7 @@ contract('Controller - Weth', async (accounts) =>  {
                         "User1 should have yDai left",
                     );
                     assert.equal(
-                        await controller.debtDai.call(WETH, maturity1, user1),
+                        await controller.debtDai(WETH, maturity1, user1),
                         0,
                         "User1 should not have debt",
                     );
@@ -960,7 +960,7 @@ contract('Controller - Weth', async (accounts) =>  {
                             "User1 does not have yDai",
                         );
                         assert.equal(
-                            await controller.debtDai.call(WETH, maturity1, user1),
+                            await controller.debtDai(WETH, maturity1, user1),
                             daiTokens1.toString(),
                             "User1 does not have debt",
                         );
@@ -974,9 +974,9 @@ contract('Controller - Weth', async (accounts) =>  {
     
                     it("as rate increases after maturity, so does the debt in when measured in dai", async() => {
                         assert.equal(
-                            await controller.debtDai.call(WETH, maturity1, user1),
+                            await controller.debtDai(WETH, maturity1, user1),
                             increasedDebt.toString(),
-                            "User1 should have " + increasedDebt + " debt after the rate change, instead has " + (await controller.debtDai.call(WETH, maturity1, user1)),
+                            "User1 should have " + increasedDebt + " debt after the rate change, instead has " + (await controller.debtDai(WETH, maturity1, user1)),
                         );
                     });
         
@@ -990,9 +990,9 @@ contract('Controller - Weth', async (accounts) =>  {
      
                     it("borrowing from two series, dai debt is aggregated", async() => {
                         assert.equal(
-                            await controller.totalDebtDai.call(WETH, user1),
+                            await controller.totalDebtDai(WETH, user1),
                             addBN(increasedDebt, daiTokens1).toString(),
-                            "User1 should have " + addBN(increasedDebt, daiTokens1) + " debt after the rate change, instead has " + (await controller.totalDebtDai.call(WETH, user1)),
+                            "User1 should have " + addBN(increasedDebt, daiTokens1) + " debt after the rate change, instead has " + (await controller.totalDebtDai(WETH, user1)),
                         );
                     });
     
@@ -1008,9 +1008,9 @@ contract('Controller - Weth', async (accounts) =>  {
                             "User1 should not have yDai",
                         );
                         assert.equal(
-                            await controller.debtDai.call(WETH, maturity1, user1),
+                            await controller.debtDai(WETH, maturity1, user1),
                             0,
-                            "User1 should have no dai debt, instead has " + (await controller.debtDai.call(WETH, maturity1, user1)),
+                            "User1 should have no dai debt, instead has " + (await controller.debtDai(WETH, maturity1, user1)),
                         );
                     });
 
@@ -1020,9 +1020,9 @@ contract('Controller - Weth', async (accounts) =>  {
                         await controller.repayDai(WETH, maturity1, user1, user1, daiTokens1, { from: user1 });
             
                         assert.equal(
-                            await controller.debtDai.call(WETH, maturity1, user1),
+                            await controller.debtDai(WETH, maturity1, user1),
                             debtIncrease.toString(),
-                            "User1 should have " + debtIncrease + " dai debt, instead has " + (await controller.debtDai.call(WETH, maturity1, user1)),
+                            "User1 should have " + debtIncrease + " dai debt, instead has " + (await controller.debtDai(WETH, maturity1, user1)),
                         );
                     });
                 });    

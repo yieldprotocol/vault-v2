@@ -115,7 +115,7 @@ contract('yDai', async (accounts) =>  {
         await pot.setChi(chi2, { from: owner });
         
         assert(
-            await yDai4.chiGrowth.call(),
+            await yDai4.chiGrowth(),
             subBN(chi2.toString(), chi1.toString()).toString(),
             "Chi differential should be " + subBN(chi2.toString(), chi1.toString()),
         );
@@ -177,9 +177,9 @@ contract('yDai', async (accounts) =>  {
             await pot.setChi(chi2, { from: owner });
 
             assert(
-                await yDai4.chiGrowth.call(),
+                await yDai4.chiGrowth(),
                 chiDifferential.toString(),
-                "chi differential should be " + chiDifferential + ", instead is " + (await yDai4.chiGrowth.call()),
+                "chi differential should be " + chiDifferential + ", instead is " + (await yDai4.chiGrowth()),
             );
         });
 

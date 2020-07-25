@@ -57,7 +57,7 @@ contract('Controller - EthProxy', async (accounts) =>  {
             "Treasury has weth in MakerDAO",
         );
         assert.equal(
-            await controller.powerOf.call(WETH, owner),
+            await controller.powerOf(WETH, owner),
             0,
             "Owner has borrowing power",
         );
@@ -72,9 +72,9 @@ contract('Controller - EthProxy', async (accounts) =>  {
             "Treasury should have weth in MakerDAO",
         );
         assert.equal(
-            await controller.powerOf.call(WETH, owner),
+            await controller.powerOf(WETH, owner),
             daiTokens1.toString(),
-            "Owner should have " + daiTokens1 + " borrowing power, instead has " + await controller.powerOf.call(WETH, owner),
+            "Owner should have " + daiTokens1 + " borrowing power, instead has " + await controller.powerOf(WETH, owner),
         );
     });
 
@@ -88,7 +88,7 @@ contract('Controller - EthProxy', async (accounts) =>  {
                 "Treasury does not have weth in MakerDAO",
             );
             assert.equal(
-                await controller.powerOf.call(WETH, owner),
+                await controller.powerOf(WETH, owner),
                 daiTokens1.toString(),
                 "Owner does not have borrowing power",
             );
@@ -103,7 +103,7 @@ contract('Controller - EthProxy', async (accounts) =>  {
                 "Owner has yDai",
             );
             assert.equal(
-                await controller.debtDai.call(WETH, maturity1, owner),
+                await controller.debtDai(WETH, maturity1, owner),
                 0,
                 "Owner has debt",
             );
@@ -120,7 +120,7 @@ contract('Controller - EthProxy', async (accounts) =>  {
                 "Treasury should not not have weth in MakerDAO",
             );
             assert.equal(
-                await controller.powerOf.call(WETH, owner),
+                await controller.powerOf(WETH, owner),
                 0,
                 "Owner should not have borrowing power",
             );

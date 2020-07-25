@@ -80,22 +80,22 @@ contract('Unwind - Treasury', async (accounts) =>  {
                 await unwind.unwind({ from: owner });
                 
                 assert.equal(
-                    await unwind.live.call(),
+                    await unwind.live(),
                     false,
                     'Unwind should be activated',
                 );
                 assert.equal(
-                    await treasury.live.call(),
+                    await treasury.live(),
                     false,
                     'Treasury should not be live',
                 );
                 assert.equal(
-                    await controller.live.call(),
+                    await controller.live(),
                     false,
                     'Controller should not be live',
                 );
                 assert.equal(
-                    await liquidations.live.call(),
+                    await liquidations.live(),
                     false,
                     'Liquidations should not be live',
                 );

@@ -168,7 +168,7 @@ contract('ControllerView', async (accounts) =>  {
                             "User1 does not have yDai",
                         );
                         assert.equal(
-                            await controller.debtDai.call(WETH, maturity1, user1),
+                            await controller.debtDai(WETH, maturity1, user1),
                             daiTokens.toString(),
                             "User1 does not have debt",
                         );
@@ -184,16 +184,16 @@ contract('ControllerView', async (accounts) =>  {
                         assert.equal(
                             await controllerView.debtDai(WETH, maturity1, user1),
                             increasedDebt.toString(),
-                            "User1 should have " + increasedDebt + " debt after the rate change, instead has " + (await controller.debtDai.call(WETH, maturity1, user1)),
+                            "User1 should have " + increasedDebt + " debt after the rate change, instead has " + (await controller.debtDai(WETH, maturity1, user1)),
                         );
                     });
         
                     it("as rate increases after maturity, the debt doesn't in when measured in yDai", async() => {
                         let debt = await controllerView.debtDai(WETH, maturity1, user1);
                         assert.equal(
-                            await controller.inYDai.call(WETH, maturity1, debt),
+                            await controller.inYDai(WETH, maturity1, debt),
                             daiTokens.sub(1).toString(), // 1 wei rounding error. TODO: Ensure that the error doesn't get bigger
-                            "User1 should have " + daiTokens + " debt after the rate change, instead has " + (await controller.inYDai.call(WETH, maturity1, debt)),
+                            "User1 should have " + daiTokens + " debt after the rate change, instead has " + (await controller.inYDai(WETH, maturity1, debt)),
                         );
                     });
 
@@ -204,7 +204,7 @@ contract('ControllerView', async (accounts) =>  {
                         assert.equal(
                             await controllerView.debtDai(WETH, maturity1, user1),
                             0,
-                            "User1 should have no dai debt, instead has " + (await controller.debtDai.call(WETH, maturity1, user1)),
+                            "User1 should have no dai debt, instead has " + (await controller.debtDai(WETH, maturity1, user1)),
                         );
                     });
 
@@ -216,7 +216,7 @@ contract('ControllerView', async (accounts) =>  {
                         assert.equal(
                             await controllerView.debtDai(WETH, maturity1, user1),
                             debtIncrease.add(1).toString(), // 1 wei rounding error. TODO: Ensure that the error doesn't get bigger
-                            "User1 should have " + debtIncrease + " dai debt, instead has " + (await controller.debtDai.call(WETH, maturity1, user1)),
+                            "User1 should have " + debtIncrease + " dai debt, instead has " + (await controller.debtDai(WETH, maturity1, user1)),
                         );
                     });
                 });

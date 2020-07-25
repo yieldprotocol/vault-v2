@@ -105,7 +105,7 @@ contract('Unwind - Controller', async (accounts) =>  {
 
             it("controller shuts down", async() => {
                 assert.equal(
-                    await controller.live.call(),
+                    await controller.live(),
                     false,
                     'Controller should not be live',
                 );
