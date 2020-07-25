@@ -199,8 +199,8 @@ contract Treasury is ITreasury, Orchestrated(), DecimalMath {
 
     /// @dev Returns dai using chai savings as much as possible, and borrowing the rest.
     /// This function can only be called by other Yield contracts, not users directly.
-    /// @param to Wallet to put Dai on.
-    /// @param daiAmount Dai quantity to give.
+    /// @param to Wallet to send Dai to.
+    /// @param daiAmount Dai quantity to send.
     function pullDai(address to, uint256 daiAmount)
         public override
         onlyOrchestrated("Treasury: Not Authorized")
@@ -231,8 +231,8 @@ contract Treasury is ITreasury, Orchestrated(), DecimalMath {
 
     /// @dev Returns chai using chai savings as much as possible, and borrowing the rest.
     /// This function can only be called by other Yield contracts, not users directly.
-    /// @param to Wallet to put Chai on.
-    /// @param chaiAmount Chai quantity to give.
+    /// @param to Wallet to send Chai to.
+    /// @param chaiAmount Chai quantity to send.
     function pullChai(address to, uint256 chaiAmount)
         public override
         onlyOrchestrated("Treasury: Not Authorized")
@@ -264,8 +264,8 @@ contract Treasury is ITreasury, Orchestrated(), DecimalMath {
 
     /// @dev Moves Weth collateral from Treasury controlled Maker Eth vault to `to` address.
     /// This function can only be called by other Yield contracts, not users directly.
-    /// @param to Wallet to put Weth on.
-    /// @param wethAmount Weth quantity to give.
+    /// @param to Wallet to send Weth to.
+    /// @param wethAmount Weth quantity to send.
     function pullWeth(address to, uint256 wethAmount)
         public override
         onlyOrchestrated("Treasury: Not Authorized")
