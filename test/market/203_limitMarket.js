@@ -66,7 +66,7 @@ contract('LimitMarket', async (accounts) =>  {
 
             await market.addDelegate(limitMarket.address, { from: from });
             await yDai1.approve(market.address, yDaiTokens1, { from: from });
-            await limitMarket.buyDai(from, to, oneToken, oneToken.mul(2), { from: from });
+            await limitMarket.buyDai(to, oneToken, oneToken.mul(2), { from: from });
 
             const expectedYDaiIn = (new BN(oneToken.toString())).mul(new BN('10019')).div(new BN('10000')); // I just hate javascript
             const yDaiIn = (new BN(yDaiTokens1.toString())).sub(new BN(await yDai1.balanceOf(from)));
@@ -82,7 +82,7 @@ contract('LimitMarket', async (accounts) =>  {
             await yDai1.approve(market.address, yDaiTokens1, { from: from });
 
             await expectRevert(
-                limitMarket.buyDai(from, to, oneToken, oneToken.div(2), { from: from }),
+                limitMarket.buyDai(to, oneToken, oneToken.div(2), { from: from }),
                 "LimitMarket: Limit exceeded",
             );
         });
@@ -93,7 +93,7 @@ contract('LimitMarket', async (accounts) =>  {
 
             await market.addDelegate(limitMarket.address, { from: from });
             await yDai1.approve(market.address, oneToken, { from: from });
-            await limitMarket.sellYDai(from, to, oneToken, oneToken.div(2), { from: from });
+            await limitMarket.sellYDai(to, oneToken, oneToken.div(2), { from: from });
 
             assert.equal(
                 await yDai1.balanceOf(from),
@@ -115,7 +115,7 @@ contract('LimitMarket', async (accounts) =>  {
             await yDai1.approve(market.address, oneToken, { from: from });
 
             await expectRevert(
-                limitMarket.sellYDai(from, to, oneToken, oneToken.mul(2), { from: from }),
+                limitMarket.sellYDai(to, oneToken, oneToken.mul(2), { from: from }),
                 "LimitMarket: Limit not reached",
             );
         });
@@ -134,7 +134,7 @@ contract('LimitMarket', async (accounts) =>  {
 
                 await market.addDelegate(limitMarket.address, { from: from });
                 await dai.approve(market.address, oneToken, { from: from });
-                await limitMarket.sellDai(from, to, oneToken, oneToken.div(2), { from: from });
+                await limitMarket.sellDai(to, oneToken, oneToken.div(2), { from: from });
 
                 assert.equal(
                     await dai.balanceOf(from),
@@ -157,7 +157,7 @@ contract('LimitMarket', async (accounts) =>  {
                 await dai.approve(market.address, oneToken, { from: from });
 
                 await expectRevert(
-                    limitMarket.sellDai(from, to, oneToken, oneToken.mul(2), { from: from }),
+                    limitMarket.sellDai(to, oneToken, oneToken.mul(2), { from: from }),
                     "LimitMarket: Limit not reached",
                 );
             });
@@ -168,7 +168,7 @@ contract('LimitMarket', async (accounts) =>  {
 
                 await market.addDelegate(limitMarket.address, { from: from });
                 await dai.approve(market.address, daiTokens1, { from: from });
-                await limitMarket.buyYDai(from, to, oneToken, oneToken.mul(2), { from: from });
+                await limitMarket.buyYDai(to, oneToken, oneToken.mul(2), { from: from });
 
                 assert.equal(
                     await yDai1.balanceOf(to),
@@ -190,7 +190,7 @@ contract('LimitMarket', async (accounts) =>  {
                 await dai.approve(market.address, daiTokens1, { from: from });
 
                 await expectRevert(
-                    limitMarket.buyYDai(from, to, oneToken, oneToken.div(2), { from: from }),
+                    limitMarket.buyYDai(to, oneToken, oneToken.div(2), { from: from }),
                     "LimitMarket: Limit exceeded",
                 );
             });
