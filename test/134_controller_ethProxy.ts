@@ -1,40 +1,53 @@
 // Peripheral
 const EthProxy = artifacts.require('EthProxy');
 
-const helper = require('ganache-time-traveler');
-const { balance } = require('@openzeppelin/test-helpers');
-const { WETH, daiTokens1, wethTokens1 } = require('./shared/utils');
-const { YieldEnvironmentLite } = require("./shared/fixtures");
+// @ts-ignore
+import helper  from 'ganache-time-traveler';
+// @ts-ignore
+import { balance } from '@openzeppelin/test-helpers';
+import { WETH, daiTokens1, wethTokens1 } from './shared/utils';
+import { Contract, YieldEnvironmentLite, MakerEnvironment } from "./shared/fixtures";
 
 contract('Controller - EthProxy', async (accounts) =>  {
     let [ owner, user ] = accounts;
 
-    let snapshot;
-    let snapshotId;
+    let snapshot: any;
+    let snapshotId: string;
+    let maker: MakerEnvironment;
 
-    let maturity1;
-    let maturity2;
+    let dai: Contract;
+    let vat: Contract;
+    let pot: Contract;
+    let controller: Contract;
+    let yDai1: Contract;
+    let chai: Contract;
+    let treasury: Contract;
+    let ethProxy: Contract;
+    let weth: Contract;
+
+    let maturity1: number;
+    let maturity2: number;
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        const yield = await YieldEnvironmentLite.setup();
-        maker = yield.maker;
-        controller = yield.controller;
-        treasury = yield.treasury;
-        pot = yield.maker.pot;
-        vat = yield.maker.vat;
-        dai = yield.maker.dai;
-        chai = yield.maker.chai;
-        weth = yield.maker.weth;
+        const env = await YieldEnvironmentLite.setup();
+        maker = env.maker;
+        controller = env.controller;
+        treasury = env.treasury;
+        pot = env.maker.pot;
+        vat = env.maker.vat;
+        dai = env.maker.dai;
+        chai = env.maker.chai;
+        weth = env.maker.weth;
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
-        yDai1 = await yield.newYDai(maturity1, "Name", "Symbol");
-        yDai2 = await yield.newYDai(maturity2, "Name", "Symbol");
+        yDai1 = await env.newYDai(maturity1, "Name", "Symbol");
+        await env.newYDai(maturity2, "Name", "Symbol");
 
         // Setup EthProxy
         ethProxy = await EthProxy.new(
@@ -65,6 +78,7 @@ contract('Controller - EthProxy', async (accounts) =>  {
         const previousBalance = await balance.current(owner);
         await ethProxy.post(wethTokens1, { from: owner, value: wethTokens1 });
 
+        // @ts-ignore
         expect(await balance.current(owner)).to.be.bignumber.lt(previousBalance);
         assert.equal(
             (await vat.urns(WETH, treasury.address)).ink,
@@ -113,6 +127,7 @@ contract('Controller - EthProxy', async (accounts) =>  {
             const previousBalance = await balance.current(owner);
             await ethProxy.withdraw(wethTokens1, { from: owner });
 
+            // @ts-ignore
             expect(await balance.current(owner)).to.be.bignumber.gt(previousBalance);
             assert.equal(
                 (await vat.urns(WETH, treasury.address)).ink,
