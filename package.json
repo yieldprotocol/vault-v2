@@ -8,12 +8,12 @@
     "eslint": "node_modules/eslint/bin/eslint.js . ",
     "lint": "solium -d contracts",
     "test": "buidler test test/*.ts test/market/*.ts test/peripheral/*.ts",
-    "test:non-functional": "buidler test test/non-functional/*.js",
+    "test:non-functional": "buidler test test/non-functional/*.ts",
     "test:network": "npx truffle test test/network/*.js",
     "ganache": "./scripts/ganache.sh",
     "coverage": "buidler coverage",
-    "fmt": "prettier ./test/**/*.js ./test/**/*.ts --check",
-    "fmt:fix": "prettier ./test/**/*.js ./test/**/*.ts --write"
+    "fmt": "prettier ./test/**/*.ts --check",
+    "fmt:fix": "prettier ./test/**/*.ts --write"
   },
   "devDependencies": {
     "@nomiclabs/buidler": "^1.3.8",
