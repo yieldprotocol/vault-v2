@@ -1,6 +1,6 @@
 const ControllerView = artifacts.require("ControllerView")
 // @ts-ignore
-import helper = require('ganache-time-traveler');
+import helper from 'ganache-time-traveler';
 import { WETH, rate1, daiTokens1 as daiTokens, wethTokens1 as wethTokens, addBN, subBN, toRay, divRay, mulRay } from './../shared/utils';
 import { YieldEnvironmentLite, Contract } from "./../shared/fixtures";
 import { BigNumber } from 'ethers';

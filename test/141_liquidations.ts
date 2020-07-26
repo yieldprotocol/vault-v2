@@ -221,11 +221,13 @@ contract('Liquidations', async (accounts) =>  {
                     expect(
                         await weth.balanceOf(buyer, { from: buyer })
                     ).to.be.bignumber.gt(
+                        // @ts-ignore
                         divRay(userCollateral, toRay(2)).toString()
                     );
                     expect(
                         await weth.balanceOf(buyer, { from: buyer }),
                     ).to.be.bignumber.lt(
+                        // @ts-ignore
                         mulRay(divRay(userCollateral, toRay(2)), toRay(1.01)).toString(),
                     );
                 });
@@ -244,12 +246,15 @@ contract('Liquidations', async (accounts) =>  {
                     // The buy will happen a few seconds after the start of the liquidation, so the collateral received will be slightly above the 1/4 of the total posted.
                     expect(
                         await weth.balanceOf(buyer, { from: buyer })
+                    // @ts-ignore
                     ).to.be.bignumber.gt(
+                        // @ts-ignore
                         divRay(userCollateral, toRay(4)).toString()
                     );
                     expect(
                         await weth.balanceOf(buyer, { from: buyer }),
                     ).to.be.bignumber.lt(
+                        // @ts-ignore
                         mulRay(divRay(userCollateral, toRay(4)), toRay(1.01)).toString(),
                     );
                 });
