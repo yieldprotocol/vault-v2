@@ -92,11 +92,9 @@ contract('Market', async (accounts) =>  {
     it("should setup market", async() => {
         const b = new BN('18446744073709551615');
         const k = b.div((new BN('126144000')));
-        // @ts-ignore
         expect(await market.k()).to.be.bignumber.equal(k);
 
         const g = (new BN('999')).mul(b).div(new BN('1000')).add(new BN(1)); // Close enough
-        // @ts-ignore
         expect(new BN(await market.g())).to.be.bignumber.equal(g);
     });
 
@@ -176,13 +174,9 @@ contract('Market', async (accounts) =>  {
                 "'From' wallet should have no yDai tokens",
             );
 
-            // @ts-ignore
             expect(daiOut).to.be.bignumber.gt(expectedDaiOut.mul(new BN('9999')).div(new BN('10000')));
-            // @ts-ignore
             expect(daiOut).to.be.bignumber.lt(expectedDaiOut.mul(new BN('10001')).div(new BN('10000')));
-            // @ts-ignore
             expect(daiOut).to.be.bignumber.gt(daiOutPreview.mul(new BN('9999')).div(new BN('10000')));
-            // @ts-ignore
             expect(daiOut).to.be.bignumber.lt(daiOutPreview.mul(new BN('10001')).div(new BN('10000')));
         });
 
@@ -229,13 +223,9 @@ contract('Market', async (accounts) =>  {
                 "Receiver account should have 1 dai token",
             );
 
-            // @ts-ignore
             expect(yDaiIn).to.be.bignumber.gt(expectedYDaiIn.mul(new BN('9999')).div(new BN('10000')));
-            // @ts-ignore
             expect(yDaiIn).to.be.bignumber.lt(expectedYDaiIn.mul(new BN('10001')).div(new BN('10000')));
-            // @ts-ignore
             expect(yDaiIn).to.be.bignumber.gt(yDaiInPreview.mul(new BN('9999')).div(new BN('10000')));
-            // @ts-ignore
             expect(yDaiIn).to.be.bignumber.lt(yDaiInPreview.mul(new BN('10001')).div(new BN('10000')));
         });
 
@@ -279,14 +269,10 @@ contract('Market', async (accounts) =>  {
                 assert.equal(event.args.to, user1);
                 assert.equal(event.args.daiTokens, oneToken.mul(-1).toString());
 
-                // @ts-ignore
                 expect(minted).to.be.bignumber.gt(expectedMinted.mul(new BN('9999')).div(new BN('10000')));
-                // @ts-ignore
                 expect(minted).to.be.bignumber.lt(expectedMinted.mul(new BN('10001')).div(new BN('10000')));
 
-                // @ts-ignore
                 expect(yDaiIn).to.be.bignumber.gt(expectedYDaiIn.mul(new BN('9999')).div(new BN('10000')));
-                // @ts-ignore
                 expect(yDaiIn).to.be.bignumber.lt(expectedYDaiIn.mul(new BN('10001')).div(new BN('10000')));
 
                 assert.equal(event.args.yDaiTokens, yDaiIn.mul(new BN('-1')).toString());
@@ -320,14 +306,10 @@ contract('Market', async (accounts) =>  {
                 assert.equal(event.args.to, user1);
                 assert.equal(event.args.poolTokens, oneToken.mul(-1).toString());
 
-                // @ts-ignore
                 expect(yDaiOut).to.be.bignumber.gt(expectedYDaiOut.mul(new BN('9999')).div(new BN('10000')));
-                // @ts-ignore
                 expect(yDaiOut).to.be.bignumber.lt(expectedYDaiOut.mul(new BN('10001')).div(new BN('10000')));
 
-                // @ts-ignore
                 expect(daiOut).to.be.bignumber.gt(expectedDaiOut.mul(new BN('9999')).div(new BN('10000')));
-                // @ts-ignore
                 expect(daiOut).to.be.bignumber.lt(expectedDaiOut.mul(new BN('10001')).div(new BN('10000')));
 
                 assert.equal(event.args.yDaiTokens, yDaiOut.toString());
@@ -377,13 +359,9 @@ contract('Market', async (accounts) =>  {
                     "'From' wallet should have " + daiTokens1.sub(oneToken) + " dai tokens",
                 );
 
-                // @ts-ignore
                 expect(yDaiOut).to.be.bignumber.gt(expectedYDaiOut.mul(new BN('9999')).div(new BN('10000')));
-                // @ts-ignore
                 expect(yDaiOut).to.be.bignumber.lt(expectedYDaiOut.mul(new BN('10001')).div(new BN('10000')));
-                // @ts-ignore
                 expect(yDaiOut).to.be.bignumber.gt(yDaiOutPreview.mul(new BN('9999')).div(new BN('10000')));
-                // @ts-ignore
                 expect(yDaiOut).to.be.bignumber.lt(yDaiOutPreview.mul(new BN('10001')).div(new BN('10000')));
             });
     
@@ -430,13 +408,9 @@ contract('Market', async (accounts) =>  {
                     "'To' wallet should have 1 yDai token",
                 );
     
-                // @ts-ignore
                 expect(daiIn).to.be.bignumber.gt(expectedDaiIn.mul(new BN('9999')).div(new BN('10000')));
-                // @ts-ignore
                 expect(daiIn).to.be.bignumber.lt(expectedDaiIn.mul(new BN('10001')).div(new BN('10000')));
-                // @ts-ignore
                 expect(daiIn).to.be.bignumber.gt(daiInPreview.mul(new BN('9999')).div(new BN('10000')));
-                // @ts-ignore
                 expect(daiIn).to.be.bignumber.lt(daiInPreview.mul(new BN('10001')).div(new BN('10000')));
             });    
         });

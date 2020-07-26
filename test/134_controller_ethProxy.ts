@@ -78,7 +78,6 @@ contract('Controller - EthProxy', async (accounts) =>  {
         const previousBalance = await balance.current(owner);
         await ethProxy.post(wethTokens1, { from: owner, value: wethTokens1 });
 
-        // @ts-ignore
         expect(await balance.current(owner)).to.be.bignumber.lt(previousBalance);
         assert.equal(
             (await vat.urns(WETH, treasury.address)).ink,
@@ -127,7 +126,6 @@ contract('Controller - EthProxy', async (accounts) =>  {
             const previousBalance = await balance.current(owner);
             await ethProxy.withdraw(wethTokens1, { from: owner });
 
-            // @ts-ignore
             expect(await balance.current(owner)).to.be.bignumber.gt(previousBalance);
             assert.equal(
                 (await vat.urns(WETH, treasury.address)).ink,

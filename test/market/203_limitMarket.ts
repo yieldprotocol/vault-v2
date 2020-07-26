@@ -76,9 +76,7 @@ contract('LimitMarket', async (accounts) =>  {
 
             const expectedYDaiIn = (new BN(oneToken.toString())).mul(new BN('10019')).div(new BN('10000')); // I just hate javascript
             const yDaiIn = (new BN(yDaiTokens1.toString())).sub(new BN(await yDai1.balanceOf(from)));
-            // @ts-ignore
             expect(yDaiIn).to.be.bignumber.gt(expectedYDaiIn.mul(new BN('9999')).div(new BN('10000')));
-            // @ts-ignore
             expect(yDaiIn).to.be.bignumber.lt(expectedYDaiIn.mul(new BN('10001')).div(new BN('10000')));
         });
 
@@ -111,9 +109,7 @@ contract('LimitMarket', async (accounts) =>  {
 
             const expectedDaiOut = (new BN(oneToken.toString())).mul(new BN('99814')).div(new BN('100000')); // I just hate javascript
             const daiOut = new BN(await dai.balanceOf(to));
-            // @ts-ignore
             expect(daiOut).to.be.bignumber.gt(expectedDaiOut.mul(new BN('9999')).div(new BN('10000')));
-            // @ts-ignore
             expect(daiOut).to.be.bignumber.lt(expectedDaiOut.mul(new BN('10001')).div(new BN('10000')));
         });
 
@@ -155,9 +151,7 @@ contract('LimitMarket', async (accounts) =>  {
                 const expectedYDaiOut = (new BN(oneToken.toString())).mul(new BN('1132')).div(new BN('1000')); // I just hate javascript
                 const yDaiOut = new BN(await yDai1.balanceOf(to));
                 // TODO: Test precision with 48 and 64 bits with this trade and reserve levels
-                // @ts-ignore
                 expect(yDaiOut).to.be.bignumber.gt(expectedYDaiOut.mul(new BN('999')).div(new BN('1000')));
-                // @ts-ignore
                 expect(yDaiOut).to.be.bignumber.lt(expectedYDaiOut.mul(new BN('1001')).div(new BN('1000')));
             });
 
@@ -190,9 +184,7 @@ contract('LimitMarket', async (accounts) =>  {
 
                 const expectedDaiIn = (new BN(oneToken.toString())).mul(new BN('8835')).div(new BN('10000')); // I just hate javascript
                 const daiIn = (new BN(daiTokens1.toString())).sub(new BN(await dai.balanceOf(from)));
-                // @ts-ignore
                 expect(daiIn).to.be.bignumber.gt(expectedDaiIn.mul(new BN('9999')).div(new BN('10000')));
-                // @ts-ignore
                 expect(daiIn).to.be.bignumber.lt(expectedDaiIn.mul(new BN('10001')).div(new BN('10000')));
             });
 
