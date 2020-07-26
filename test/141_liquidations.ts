@@ -1,21 +1,32 @@
-const helper = require('ganache-time-traveler');
-const { BigNumber } = require('ethers')
-const { BN, expectRevert } = require('@openzeppelin/test-helpers');
-const { WETH, CHAI, spot, rate1, chi1, daiTokens1, wethTokens1, chaiTokens1, toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('./shared/utils');
-const { YieldEnvironment } = require("./shared/fixtures");
+// @ts-ignore
+import helper from 'ganache-time-traveler';
+// @ts-ignore
+import { BN, expectRevert } from '@openzeppelin/test-helpers';
+import { BigNumber } from 'ethers';
+import { WETH, CHAI, spot, rate1, chi1, daiTokens1, wethTokens1, chaiTokens1, toWad, toRay, toRad, addBN, subBN, mulRay, divRay } from './shared/utils';
+import { YieldEnvironment, Contract } from "./shared/fixtures";
 
 contract('Liquidations', async (accounts) =>  {
     let [ owner, user1, user2, user3, buyer ] = accounts;
 
-    let snapshot;
-    let snapshotId;
-    let yield;
+    let snapshot: any;
+    let snapshotId: string;
+
+    let dai: Contract;
+    let vat: Contract;
+    let controller: Contract;
+    let yDai1: Contract;
+    let treasury: Contract;
+    let weth: Contract;
+    let liquidations: Contract;
+
+    let maturity1: number;
+    let maturity2: number;
+
+    let env: YieldEnvironment;
 
     const rate2  = toRay(1.5);
-
     const yDaiTokens1 = daiTokens1;
-    let maturity1;
-    let maturity2;
 
     const dust = '25000000000000000'; // 0.025 ETH
 
@@ -23,21 +34,21 @@ contract('Liquidations', async (accounts) =>  {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        yield = await YieldEnvironment.setup(owner)
-        controller = yield.controller;
-        treasury = yield.treasury;
-        liquidations = yield.liquidations;
+        env = await YieldEnvironment.setup(owner)
+        controller = env.controller;
+        treasury = env.treasury;
+        liquidations = env.liquidations;
 
-        vat = yield.maker.vat;
-        dai = yield.maker.dai;
-        weth = yield.maker.weth;
+        vat = env.maker.vat;
+        dai = env.maker.dai;
+        weth = env.maker.weth;
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
-        yDai1 = await yield.newYDai(maturity1, "Name", "Symbol");
-        yDai2 = await yield.newYDai(maturity2, "Name", "Symbol");
+        yDai1 = await env.newYDai(maturity1, "Name", "Symbol");
+        await env.newYDai(maturity2, "Name", "Symbol");
     });
 
     afterEach(async() => {
@@ -46,19 +57,19 @@ contract('Liquidations', async (accounts) =>  {
 
     describe("with posted collateral and borrowed yDai", () => {
         beforeEach(async() => {
-            await yield.postWeth(user1, wethTokens1);
+            await env.postWeth(user1, wethTokens1);
 
-            await yield.postWeth(user2, BigNumber.from(wethTokens1).add(1));
+            await env.postWeth(user2, BigNumber.from(wethTokens1).add(1));
             await controller.borrow(WETH, maturity1, user2, user2, daiTokens1, { from: user2 });
 
-            await yield.postWeth(user3, BigNumber.from(wethTokens1).mul(2));
+            await env.postWeth(user3, BigNumber.from(wethTokens1).mul(2));
             await controller.borrow(WETH, maturity1, user3, user3, daiTokens1, { from: user3 });
             await controller.borrow(WETH, maturity2, user3, user3, daiTokens1, { from: user3 });
 
-            await yield.postChai(user1, chaiTokens1, chi1, rate1);
+            await env.postChai(user1, chaiTokens1, chi1, rate1);
 
             const moreChai = mulRay(chaiTokens1, toRay(1.1));
-            await yield.postChai(user2, moreChai, chi1, rate1);
+            await env.postChai(user2, moreChai, chi1, rate1);
             await controller.borrow(CHAI, maturity1, user2, user2, daiTokens1, { from: user2 });
 
             // user1 has chaiTokens1 in controller and no debt.
@@ -119,8 +130,8 @@ contract('Liquidations', async (accounts) =>  {
             );
         });
 
-        let userDebt;
-        let userCollateral;
+        let userDebt: number;
+        let userCollateral: number;
 
         describe("with uncollateralized vaults", () => {
             beforeEach(async() => {
@@ -138,7 +149,7 @@ contract('Liquidations', async (accounts) =>  {
             it("liquidations can be started", async() => {
                 const event = (await liquidations.liquidate(user2, buyer, { from: buyer })).logs[0];
                 const block = await web3.eth.getBlockNumber();
-                now = (await web3.eth.getBlock(block)).timestamp;
+                const now = (await web3.eth.getBlock(block)).timestamp;
 
                 assert.equal(
                     event.event,
@@ -185,7 +196,7 @@ contract('Liquidations', async (accounts) =>  {
 
                     userCollateral = new BN(await liquidations.collateral(user2, { from: buyer })).toString();
                     userDebt = new BN(await liquidations.debt(user2, { from: buyer })).toString();
-                    await yield.maker.getDai(buyer, userDebt, rate2);
+                    await env.maker.getDai(buyer, userDebt, rate2);
                 });
     
                 it("doesn't allow to liquidate vaults already in liquidation", async() => {
@@ -209,11 +220,13 @@ contract('Liquidations', async (accounts) =>  {
                     // The buy will happen a few seconds after the start of the liquidation, so the collateral received will be slightly above the 2/3 of the total posted.
                     expect(
                         await weth.balanceOf(buyer, { from: buyer })
+                    // @ts-ignore
                     ).to.be.bignumber.gt(
                         divRay(userCollateral, toRay(2)).toString()
                     );
                     expect(
                         await weth.balanceOf(buyer, { from: buyer }),
+                    // @ts-ignore
                     ).to.be.bignumber.lt(
                         mulRay(divRay(userCollateral, toRay(2)), toRay(1.01)).toString(),
                     );
@@ -233,11 +246,13 @@ contract('Liquidations', async (accounts) =>  {
                     // The buy will happen a few seconds after the start of the liquidation, so the collateral received will be slightly above the 1/4 of the total posted.
                     expect(
                         await weth.balanceOf(buyer, { from: buyer })
+                    // @ts-ignore
                     ).to.be.bignumber.gt(
                         divRay(userCollateral, toRay(4)).toString()
                     );
                     expect(
                         await weth.balanceOf(buyer, { from: buyer }),
+                    // @ts-ignore
                     ).to.be.bignumber.lt(
                         mulRay(divRay(userCollateral, toRay(4)), toRay(1.01)).toString(),
                     );
@@ -301,7 +316,7 @@ contract('Liquidations', async (accounts) =>  {
                     beforeEach(async() => {
                         userCollateral = new BN(await liquidations.collateral(user2, { from: buyer })).toString();
                         userDebt = new BN(await liquidations.debt(user2, { from: buyer })).toString();
-                        await yield.maker.getDai(buyer, userDebt, rate2);
+                        await env.maker.getDai(buyer, userDebt, rate2);
     
                         await dai.approve(treasury.address, userDebt, { from: buyer });
                         await liquidations.buy(buyer, buyer, user2, userDebt, { from: buyer });

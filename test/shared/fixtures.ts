@@ -197,14 +197,14 @@ export class YieldEnvironmentLite {
   }
 
   // Convert eth to weth and post it to yDai
-  public async postWeth(user: string, _wethTokens: number) {
+  public async postWeth(user: string, _wethTokens: BigNumberish) {
     await this.maker.weth.deposit({ from: user, value: _wethTokens.toString() })
     await this.maker.weth.approve(this.treasury.address, _wethTokens, { from: user })
     await this.controller.post(WETH, user, user, _wethTokens, { from: user })
   }
 
   // Convert eth to chai and post it to yDai
-  public async postChai(user: string, _chaiTokens: number, _chi: number, _rate: number) {
+  public async postChai(user: string, _chaiTokens: BigNumberish, _chi: BigNumberish, _rate: BigNumberish) {
     await this.maker.getChai(user, _chaiTokens, _chi, _rate)
     await this.maker.chai.approve(this.treasury.address, _chaiTokens, { from: user })
     await this.controller.post(CHAI, user, user, _chaiTokens, { from: user })
