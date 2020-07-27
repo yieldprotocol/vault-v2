@@ -245,9 +245,9 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     {
         if (collateral == WETH){
             (,, uint256 spot,,) = _vat.ilks(WETH);  // Stability fee and collateralization ratio for Weth
-            return divd(totalDebtDai(collateral, user), spot);
+            return divdrup(totalDebtDai(collateral, user), spot);
         } else if (collateral == CHAI) {
-            return divd(totalDebtDai(collateral, user), _pot.chi());
+            return divdrup(totalDebtDai(collateral, user), _pot.chi());
         }
     }
 
