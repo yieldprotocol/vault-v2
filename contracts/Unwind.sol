@@ -8,7 +8,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IVat.sol";
 import "./interfaces/IDaiJoin.sol";
 import "./interfaces/IGemJoin.sol";
-import "./interfaces/IJug.sol";
 import "./interfaces/IPot.sol";
 import "./interfaces/IEnd.sol";
 import "./interfaces/IChai.sol";
@@ -39,7 +38,6 @@ contract Unwind is Ownable(), DecimalMath {
     IDaiJoin internal _daiJoin;
     IERC20 internal _weth;
     IGemJoin internal _wethJoin;
-    IJug internal _jug;
     IPot internal _pot;
     IEnd internal _end;
     IChai internal _chai;
@@ -66,7 +64,6 @@ contract Unwind is Ownable(), DecimalMath {
         address daiJoin_,
         address weth_,
         address wethJoin_,
-        address jug_,
         address pot_,
         address end_,
         address chai_,
@@ -80,7 +77,6 @@ contract Unwind is Ownable(), DecimalMath {
         _daiJoin = IDaiJoin(daiJoin_);
         _weth = IERC20(weth_);
         _wethJoin = IGemJoin(wethJoin_);
-        _jug = IJug(jug_);
         _pot = IPot(pot_);
         _end = IEnd(end_);
         _chai = IChai(chai_);
@@ -120,24 +116,6 @@ contract Unwind is Ownable(), DecimalMath {
         _liquidations.shutdown();
     }
 
-    /// @dev Updates and obtains chi from pot.
-    function getChi() public returns (uint256) {
-        return (now > _pot.rho()) ? _pot.drip() : _pot.chi();
-    }
-
-    /// @dev Update Jug and obtain rate from Vat.
-    // TODO: Consider not updating the rate. 
-    function getRate() public returns (uint256) {
-        uint256 rate;
-        (, uint256 rho) = _jug.ilks(WETH);
-        if (now > rho) {
-            rate = _jug.drip(WETH);
-        } else {
-            (, rate,,,) = _vat.ilks(WETH);
-        }
-        return rate;
-    }
-
     /// @dev Calculates how much profit is in the system and transfers it to the beneficiary
     function skimWhileLive() public {
         require(
@@ -149,9 +127,11 @@ contract Unwind is Ownable(), DecimalMath {
             "Unwind: Only after skimStart"
         );
 
+        uint256 chi = _pot.chi();
+        (, uint256 rate,,,) = _vat.ilks(WETH);
         uint256 profit = _chai.balanceOf(address(_treasury));
-        profit = profit.add(_yDaiProfit(getChi(), getRate()));
-        profit = profit.sub(divd(_treasury.debt(), getChi()));
+        profit = profit.add(_yDaiProfit(chi, rate));
+        profit = profit.sub(divd(_treasury.debt(), chi));
         profit = profit.sub(_controller.totalChaiPosted());
 
         _treasury.pullChai(beneficiary, profit);

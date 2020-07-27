@@ -62,7 +62,7 @@ contract('yDai - Delegable', async (accounts) =>  {
             "Holder does not have yDai",
         );
         assert.equal(
-            await treasury.savings.call(),
+            await treasury.savings(),
             0,
             "Treasury has no savings",
         );

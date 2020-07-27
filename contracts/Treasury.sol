@@ -104,9 +104,9 @@ contract Treasury is ITreasury, Orchestrated(), DecimalMath {
         return muld(ink, spot);
     }
 
-    /// @dev Returns the amount of chai in this contract, coverted to Dai.
-    function savings() public override returns(uint256){
-        return _chai.dai(address(this));
+    /// @dev Returns the amount of chai in this contract, converted to Dai.
+    function savings() public view override returns(uint256){
+        return muld(_chai.balanceOf(address(this)), _pot.chi());
     }
 
     /// @dev Takes dai from user and pays as much system debt as possible, saving the rest as chai.
@@ -238,12 +238,12 @@ contract Treasury is ITreasury, Orchestrated(), DecimalMath {
         onlyOrchestrated("Treasury: Not Authorized")
         onlyLive
     {
-        uint256 chi = (now > _pot.rho()) ? _pot.drip() : _pot.chi();
-        uint256 dai = muld(chaiAmount, chi);   // dai = price * chai
-        uint256 toRelease = Math.min(savings(), dai);
+        uint256 chi = _pot.chi();
+        uint256 daiAmount = muld(chaiAmount, chi);   // dai = price * chai
+        uint256 toRelease = Math.min(savings(), daiAmount);
         // As much chai as the Treasury has, can be used, we borrwo dai and convert it to chai for the rest
 
-        uint256 toBorrow = dai - toRelease;    // toRelease can't be greater than dai
+        uint256 toBorrow = daiAmount - toRelease;    // toRelease can't be greater than daiAmount
         if (toBorrow > 0) {
             (, uint256 rate,,,) = _vat.ilks(WETH); // Retrieve the MakerDAO stability fee
             // Increase the dai debt by the dai to receive divided by the stability fee

@@ -6,7 +6,6 @@ const GemJoin = artifacts.require('GemJoin');
 const DaiJoin = artifacts.require('DaiJoin');
 const Weth = artifacts.require("WETH9");
 const ERC20 = artifacts.require("TestERC20");
-const Jug = artifacts.require('Jug');
 const Pot = artifacts.require('Pot');
 const End = artifacts.require('End');
 const Chai = artifacts.require('Chai');
@@ -21,7 +20,6 @@ module.exports = async (deployer, network, accounts) => {
   let wethJoinAddress;
   let daiAddress;
   let daiJoinAddress;
-  let jugAddress;
   let potAddress;
   let endAddress;
   let chaiAddress;
@@ -57,12 +55,6 @@ module.exports = async (deployer, network, accounts) => {
     await deployer.deploy(DaiJoin, vatAddress, daiAddress);
     daiJoinAddress = (await DaiJoin.deployed()).address;
 
-    // Setup jug
-    await deployer.deploy(Jug, vatAddress);
-    const jug = await Jug.deployed();
-    jugAddress = jug.address;
-    await jug.init(WETH); // Set WETH duty (stability fee) to 1.0
-
     // Setup pot
     await deployer.deploy(Pot, vatAddress);
     const pot = await Pot.deployed();
@@ -78,7 +70,6 @@ module.exports = async (deployer, network, accounts) => {
     await vat.rely(vatAddress);
     await vat.rely(wethJoinAddress);
     await vat.rely(daiJoinAddress);
-    await vat.rely(jugAddress);
     await vat.rely(potAddress);
     await vat.rely(endAddress);
 
@@ -93,7 +84,6 @@ module.exports = async (deployer, network, accounts) => {
     wethJoinAddress = fixed_addrs[network].wethJoinAddress;
     daiAddress = fixed_addrs[network].daiAddress;
     daiJoinAddress = fixed_addrs[network].daiJoinAddress;
-    jugAddress = fixed_addrs[network].jugAddress;
     potAddress = fixed_addrs[network].potAddress;
     endAddress = fixed_addrs[network].endAddress;
     fixed_addrs[network].chaiAddress && (chaiAddress = fixed_addrs[network].chaiAddress);
@@ -119,7 +109,6 @@ module.exports = async (deployer, network, accounts) => {
     'WethJoin': wethJoinAddress,
     'Dai': daiAddress,
     'DaiJoin': daiJoinAddress,
-    'Jug': jugAddress,
     'Pot': potAddress,
     'End': endAddress,
     'Chai': chaiAddress,

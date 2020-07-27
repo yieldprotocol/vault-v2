@@ -1,7 +1,6 @@
 const fixed_addrs = require('./fixed_addrs.json');
 const Migrations = artifacts.require("Migrations");
 const Vat = artifacts.require("Vat");
-const Jug = artifacts.require("Jug");
 const Pot = artifacts.require("Pot");
 const Treasury = artifacts.require("Treasury");
 const Controller = artifacts.require("Controller");
@@ -11,18 +10,15 @@ module.exports = async (deployer, network, accounts) => {
   const migrations = await Migrations.deployed();
 
   let vatAddress;
-  let jugAddress;
   let potAddress;
   let treasuryAddress;
   let controllerAddress;
 
   if (network !== 'development') {
     vatAddress = fixed_addrs[network].vatAddress;
-    jugAddress = fixed_addrs[network].jugAddress;
     potAddress = fixed_addrs[network].potAddress;
   } else {
     vatAddress = (await Vat.deployed()).address;
-    jugAddress = (await Jug.deployed()).address;
     potAddress = (await Pot.deployed()).address;
   }
 
@@ -52,7 +48,6 @@ module.exports = async (deployer, network, accounts) => {
     await deployer.deploy(
       YDai,
       vatAddress,
-      jugAddress,
       potAddress,
       treasuryAddress,
       maturity,

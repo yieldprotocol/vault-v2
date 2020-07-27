@@ -13,8 +13,8 @@ interface IController {
     function totalDebtYDai(bytes32, uint256) external view returns (uint256);
     function posted(bytes32, address) external view returns (uint256);
     function debtYDai(bytes32, uint256, address) external view returns (uint256);
-    function totalDebtDai(bytes32, address) external returns (uint256);
-    function isCollateralized(bytes32, address) external returns (bool);
+    function totalDebtDai(bytes32, address) external view returns (uint256);
+    function isCollateralized(bytes32, address) external view returns (bool);
     function erase(bytes32, address) external returns (uint256, uint256);
     function shutdown() external;
     function post(bytes32, address, address, uint256) external;

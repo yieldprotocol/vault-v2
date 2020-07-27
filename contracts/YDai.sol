@@ -3,7 +3,6 @@ pragma solidity ^0.6.10;
 
 import "@openzeppelin/contracts/math/Math.sol";
 import "./interfaces/IVat.sol";
-import "./interfaces/IJug.sol";
 import "./interfaces/IPot.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IYDai.sol";
@@ -32,7 +31,6 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
     bytes32 public constant WETH = "ETH-A";
 
     IVat internal _vat;
-    IJug internal _jug;
     IPot internal _pot;
     ITreasury internal _treasury;
 
@@ -48,7 +46,6 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
     /// Initializes chi and rate at maturity time as 1.0 with 27 decimals.
     constructor(
         address vat_,
-        address jug_,
         address pot_,
         address treasury_,
         uint256 maturity_,
@@ -56,7 +53,6 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
         string memory symbol
     ) public ERC20(name, symbol) {
         _vat = IVat(vat_);
-        _jug = IJug(jug_);
         _pot = IPot(pot_);
         _treasury = ITreasury(treasury_);
         maturity = maturity_;
@@ -71,10 +67,9 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
     // chi() = ---------
     //          chi_mat
     //
-    function chiGrowth() public override returns(uint256){
+    function chiGrowth() public view override returns(uint256){
         if (isMature != true) return chi0;
-        uint256 chiNow = (now > _pot.rho()) ? _pot.drip() : _pot.chi();
-        return Math.min(rateGrowth(), divd(chiNow, chi0)); // Rounding in favour of the protocol
+        return Math.min(rateGrowth(), divd(_pot.chi(), chi0)); // Rounding in favour of the protocol
     }
 
     /// @dev Rate differential between maturity and now in RAY. Returns 1.0 if not mature.
@@ -84,17 +79,10 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
     // rateGrowth() = ----------
     //                 rate_mat
     //
-    function rateGrowth() public override returns(uint256){
+    function rateGrowth() public view override returns(uint256){
         if (isMature != true) return rate0;
-        uint256 rateNow;
-        (, uint256 rho) = _jug.ilks(WETH);
-        if (now > rho) {
-            rateNow = _jug.drip(WETH);
-            // console.log(rateNow);
-        } else {
-            (, rateNow,,,) = _vat.ilks(WETH);
-        }
-        return Math.max(UNIT, divdrup(rateNow, rate0)); // Rounding in favour of the protocol
+        (, uint256 rate,,,) = _vat.ilks(WETH);
+        return Math.max(UNIT, divdrup(rate, rate0)); // Rounding in favour of the protocol
     }
 
     /// @dev Mature yDai and capture chi and rate
@@ -110,7 +98,7 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
         );
         (, rate0,,,) = _vat.ilks(WETH); // Retrieve the MakerDAO Vat
         rate0 = Math.max(rate0, UNIT); // Floor it at 1.0
-        chi0 = (now > _pot.rho()) ? _pot.drip() : _pot.chi();
+        chi0 = _pot.chi();
         isMature = true;
         emit Matured(rate0, chi0);
     }

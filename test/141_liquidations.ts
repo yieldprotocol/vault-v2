@@ -94,22 +94,22 @@ contract('Liquidations', async (accounts) =>  {
 
         it("vaults are collateralized if rates don't change", async() => {
             assert.equal(
-                await controller.isCollateralized.call(WETH, user2, { from: buyer }),
+                await controller.isCollateralized(WETH, user2, { from: buyer }),
                 true,
                 "User2 should be collateralized",
             );
             assert.equal(
-                await controller.isCollateralized.call(CHAI, user2, { from: buyer }),
+                await controller.isCollateralized(CHAI, user2, { from: buyer }),
                 true,
                 "User2 should be collateralized",
             );
             assert.equal(
-                await controller.isCollateralized.call(WETH, user3, { from: buyer }),
+                await controller.isCollateralized(WETH, user3, { from: buyer }),
                 true,
                 "User3 should be collateralized",
             );
             assert.equal(
-                await controller.isCollateralized.call(CHAI, user3, { from: buyer }),
+                await controller.isCollateralized(CHAI, user3, { from: buyer }),
                 true,
                 "User3 should be collateralized",
             );
@@ -143,7 +143,7 @@ contract('Liquidations', async (accounts) =>  {
                 await vat.fold(WETH, vat.address, subBN(rate2, rate1), { from: owner });
 
                 userCollateral = new BN(await controller.posted(WETH, user2, { from: buyer }));
-                userDebt = (await controller.totalDebtDai.call(WETH, user2, { from: buyer }));
+                userDebt = (await controller.totalDebtDai(WETH, user2, { from: buyer }));
             });
 
             it("liquidations can be started", async() => {
@@ -180,7 +180,7 @@ contract('Liquidations', async (accounts) =>  {
                     0,
                 );
                 assert.equal(
-                    await controller.totalDebtDai.call(WETH, user2, { from: buyer }),
+                    await controller.totalDebtDai(WETH, user2, { from: buyer }),
                     0,
                 );
                 assert.equal(
