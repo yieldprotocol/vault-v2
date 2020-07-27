@@ -4,20 +4,19 @@ pragma solidity ^0.6.10;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./Market.sol";
-import "../helpers/Delegable.sol";
 import "../interfaces/IMarket.sol";
 
 
 
 /// @dev LimitMarket is a proxy contract to Market that implements limit orders.
-contract LimitMarket is Delegable {
+contract LimitMarket {
     using SafeMath for uint256;
 
     IERC20 public dai;
     IERC20 public yDai;
     IMarket public market;
 
-    constructor(address dai_, address yDai_, address market_) public Delegable() {
+    constructor(address dai_, address yDai_, address market_) public {
         dai = IERC20(dai_);
         yDai = IERC20(yDai_);
         market = IMarket(market_);
@@ -31,7 +30,6 @@ contract LimitMarket is Delegable {
     /// @param minYDaiOut Minimum amount of yDai being bought
     function sellDai(address from, address to, uint128 daiIn, uint128 minYDaiOut)
         external
-        onlyHolderOrDelegate(from, "LimitMarket: Only Holder Or Delegate")
         returns(uint256)
     {
         uint256 yDaiOut = market.sellDai(from, to, daiIn);
@@ -50,7 +48,6 @@ contract LimitMarket is Delegable {
     /// @param maxYDaiIn Maximum amount of yDai being sold
     function buyDai(address from, address to, uint128 daiOut, uint128 maxYDaiIn)
         external
-        onlyHolderOrDelegate(from, "LimitMarket: Only Holder Or Delegate")
         returns(uint256)
     {
         uint256 yDaiIn = market.buyDai(from, to, daiOut);
@@ -69,7 +66,6 @@ contract LimitMarket is Delegable {
     /// @param minDaiOut Minimum amount of dai being bought
     function sellYDai(address from, address to, uint128 yDaiIn, uint128 minDaiOut)
         external
-        onlyHolderOrDelegate(from, "LimitMarket: Only Holder Or Delegate")
         returns(uint256)
     {
         uint256 daiOut = market.sellYDai(from, to, yDaiIn);
@@ -88,7 +84,6 @@ contract LimitMarket is Delegable {
     /// @param maxDaiIn Maximum amount of dai being sold
     function buyYDai(address from, address to, uint128 yDaiOut, uint128 maxDaiIn)
         external
-        onlyHolderOrDelegate(from, "LimitMarket: Only Holder Or Delegate")
         returns(uint256)
     {
         uint256 daiIn = market.buyYDai(from, to, yDaiOut);
