@@ -66,7 +66,7 @@ contract DaiProxy is DecimalMath {
         _controller.borrow(collateral, maturity, msg.sender, address(this), yDaiToBorrow);
         _market.buyDai(address(this), to, toUint128(daiToBorrow));
 
-        return requiredCollateral;
+        return yDaiToBorrow;
     }
 
     /// @dev Borrow yDai from Controller and sell it immediately for Dai, if a minimum amount of Dai can be obtained such.
