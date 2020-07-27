@@ -151,7 +151,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     /// @param maturity Maturity of an added series
     /// @param yDaiAmount Amount of yDai to convert.
     /// @return Dai equivalent of an yDai amount.
-    function inDai(bytes32 collateral, uint256 maturity, uint256 yDaiAmount) public view returns (uint256) {
+    function inDai(bytes32 collateral, uint256 maturity, uint256 yDaiAmount) public view override returns (uint256) {
         if (series[maturity].isMature()){
             if (collateral == WETH){
                 return muld(yDaiAmount, series[maturity].rateGrowth());
@@ -171,7 +171,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     /// @param maturity Maturity of an added series
     /// @param daiAmount Amount of Dai to convert.
     /// @return yDai equivalent of a Dai amount.
-    function inYDai(bytes32 collateral, uint256 maturity, uint256 daiAmount) public view returns (uint256) {
+    function inYDai(bytes32 collateral, uint256 maturity, uint256 daiAmount) public view override returns (uint256) {
         if (series[maturity].isMature()){
             if (collateral == WETH){
                 return divd(daiAmount, series[maturity].rateGrowth());
