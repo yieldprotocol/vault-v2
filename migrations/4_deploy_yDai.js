@@ -3,8 +3,9 @@ const Migrations = artifacts.require("Migrations");
 const Vat = artifacts.require("Vat");
 const Pot = artifacts.require("Pot");
 const Treasury = artifacts.require("Treasury");
-const Controller = artifacts.require("Controller");
 const YDai = artifacts.require("YDai");
+const Controller = artifacts.require("Controller");
+const Unwind = artifacts.require("Unwind");
 
 module.exports = async (deployer, network, accounts) => {
   const migrations = await Migrations.deployed();
@@ -13,6 +14,7 @@ module.exports = async (deployer, network, accounts) => {
   let potAddress;
   let treasuryAddress;
   let controllerAddress;
+  let unwindAddress;
 
   if (network !== 'development') {
     vatAddress = fixed_addrs[network].vatAddress;
@@ -26,6 +28,8 @@ module.exports = async (deployer, network, accounts) => {
   treasuryAddress = treasury.address;
   const controller = await Controller.deployed();
   controllerAddress = controller.address;
+  const unwind = await Unwind.deployed();
+  unwindAddress = unwind.address;
   
   // const block = await web3.eth.getBlockNumber();
   const maturitiesInput = new Set([
@@ -56,8 +60,9 @@ module.exports = async (deployer, network, accounts) => {
     );
     const yDai = await YDai.deployed();
     await treasury.orchestrate(yDai.address);
-    await yDai.orchestrate(controllerAddress);
     await controller.addSeries(yDai.address);
+    await yDai.orchestrate(controllerAddress);
+    await yDai.orchestrate(unwindAddress);
 
     await migrations.register(web3.utils.fromAscii('yDai' + index), yDai.address);
     console.log('yDai' + index, yDai.address);

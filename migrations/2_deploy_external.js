@@ -9,8 +9,21 @@ const ERC20 = artifacts.require("TestERC20");
 const Pot = artifacts.require('Pot');
 const End = artifacts.require('End');
 const Chai = artifacts.require('Chai');
+const { BigNumber } = require("ethers");
 
-const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('../test/shared/utils');
+function toRay(value) {
+  let exponent = BigNumber.from(10).pow(BigNumber.from(17))
+  return BigNumber.from((value) * 10 ** 10).mul(exponent)
+}
+
+function toRad(value) {
+  let exponent = BigNumber.from(10).pow(BigNumber.from(35))
+  return BigNumber.from((value) * 10 ** 10).mul(exponent)
+}
+
+function subBN(x, y) {
+  return BigNumber.from(x).sub(BigNumber.from(y))
+}
 
 module.exports = async (deployer, network, accounts) => {
   const migrations = await Migrations.deployed();

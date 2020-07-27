@@ -26,7 +26,7 @@ module.exports = async (deployer, network, accounts) => {
   await deployer.link(YieldMath, Market);  
 
   for (yDaiName of yDaiNames) {
-    yDaiAddress = migrations.contracts(web3.utils.fromAscii(yDaiName));
+    yDaiAddress = await migrations.contracts(web3.utils.fromAscii(yDaiName));
     yDai = await YDai.at(yDaiAddress);
 
     await deployer.deploy(
@@ -34,12 +34,11 @@ module.exports = async (deployer, network, accounts) => {
       daiAddress,
       yDaiAddress,
       (await yDai.name()) + '-Pool',
-      (await yDai.symbol()) + '-Symbol',
+      (await yDai.symbol()) + '-Pool',
     );
     market = await Market.deployed();
-    // TODO: Consider registering with the market token name
-    await migrations.register(web3.utils.fromAscii('Market-' + yDaiName), market.address);
-    console.log('Market-' + yDaiName, market.address);
+    await migrations.register(web3.utils.fromAscii((await yDai.name()) + '-Pool'), market.address);
+    console.log((await yDai.name()) + '-Pool', market.address);
 
     await deployer.deploy(
       LimitMarket,
@@ -48,7 +47,7 @@ module.exports = async (deployer, network, accounts) => {
       market.address,
     );
     limitMarket = await LimitMarket.deployed();
-    await migrations.register(web3.utils.fromAscii('LimitMarket-' + yDaiName), limitMarket.address);
-    console.log('LimitMarket-' + yDaiName, limitMarket.address);
+    await migrations.register(web3.utils.fromAscii((await yDai.name()) + '-Limit'), limitMarket.address);
+    console.log((await yDai.name()) + '-Limit', limitMarket.address);
   }
 };
