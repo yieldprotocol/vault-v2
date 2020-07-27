@@ -3,11 +3,10 @@ pragma solidity ^0.6.10;
 
 import "../interfaces/IController.sol";
 import "../interfaces/IWeth.sol";
-import "../helpers/Delegable.sol";
 
 
 /// @dev EthProxy allows users to post and withdraw Eth to the Controller, which will be converted to and from Weth in the process.
-contract EthProxy is Delegable() {
+contract EthProxy {
 
     bytes32 public constant WETH = "ETH-A";
 
@@ -30,18 +29,22 @@ contract EthProxy is Delegable() {
 
     /// @dev Users use `post` in EthProxy to post ETH to the Controller, which will be converted to Weth here.
     /// Users must have called `controller.addDelegate(ethProxy.address)` to authorize EthProxy to act in their behalf.
-    function post(address from, address to, uint256 amount)
-        public payable onlyHolderOrDelegate(from, "EthProxy: Only Holder Or Delegate") {
+    /// Use of EthProxy cannot be delegated further.
+    /// @param amount Amount of collateral to move.
+    function post(uint256 amount)
+        public payable {
         _weth.deposit{ value: amount }();
-        _controller.post(WETH, address(this), to, amount);
+        _controller.post(WETH, address(this), msg.sender, amount);
     }
 
     /// @dev Users wishing to withdraw their Weth as ETH from the Controller should use this function.
     /// Users must have called `controller.addDelegate(ethProxy.address)` to authorize EthProxy to act in their behalf.
-    function withdraw(address from, address payable to, uint256 amount)
-        public onlyHolderOrDelegate(from, "EthProxy: Only Holder Or Delegate") {
-        _controller.withdraw(WETH, from, address(this), amount);
+    /// Use of EthProxy cannot be delegated further.
+    /// @param amount Amount of weth to move.
+    function withdraw(uint256 amount)
+        public {
+        _controller.withdraw(WETH, msg.sender, address(this), amount);
         _weth.withdraw(amount);
-        to.transfer(amount);
+        msg.sender.transfer(amount);
     }
 }

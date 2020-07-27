@@ -1,22 +1,29 @@
 const Market = artifacts.require("Market")
-const helper = require('ganache-time-traveler');
-const { BN } = require('@openzeppelin/test-helpers');
-const { rate1, daiTokens1, toWad } = require('./../shared/utils');
-const { setupMaker, newTreasury, newController, newYDai, getDai } = require("./../shared/fixtures");
+
+// @ts-ignore
+import helper from 'ganache-time-traveler';
+// @ts-ignore
+import { BN } from '@openzeppelin/test-helpers';
+import { rate1, daiTokens1, toWad } from './../shared/utils';
+import { YieldEnvironmentLite, Contract } from "./../shared/fixtures";
 
 contract('Market', async (accounts) =>  {
     let [ owner, user1, operator, from, to ] = accounts;
-    let dai;
-    let treasury;
-    let yDai1;
-    let controller;
-    let market;
     
     const daiReserves = daiTokens1;
     const yDaiTokens1 = daiTokens1;
     const yDaiReserves = yDaiTokens1;
 
-    let maturity;
+    let env: YieldEnvironmentLite;
+    let controller: Contract;
+    let treasury: Contract;
+    let dai: Contract;
+    let yDai1: Contract;
+    let market: Contract;
+
+    let maturity1: number;
+    let snapshot: any;
+    let snapshotId: string;
 
     const results = new Set();
     results.add(['trade', 'daiReserves', 'yDaiReserves', 'tokensIn', 'tokensOut']);
@@ -25,30 +32,23 @@ contract('Market', async (accounts) =>  {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        ({
-            vat,
-            weth,
-            wethJoin,
-            dai,
-            daiJoin,
-            pot,
-            jug,
-            chai
-        } = await setupMaker());
+        env = await YieldEnvironmentLite.setup();
+        controller = env.controller;
+        treasury = env.treasury;
+        dai = env.maker.dai;
 
-        treasury = await newTreasury();
-        controller = await newController();
-    
-        // Setup yDai1
+        // Setup yDai
         const block = await web3.eth.getBlockNumber();
-        maturity = (await web3.eth.getBlock(block)).timestamp + 31556952; // One year
-        yDai1 = await newYDai(maturity, "Name", "Symbol");
+        maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
+        yDai1 = await env.newYDai(maturity1, "Name", "Symbol");
         await yDai1.orchestrate(owner);
 
         // Setup Market
         market = await Market.new(
             dai.address,
             yDai1.address,
+            "Name",
+            "Symbol",
             { from: owner }
         );
     });
@@ -79,7 +79,7 @@ contract('Market', async (accounts) =>  {
 
     describe("with liquidity", () => {
         beforeEach(async() => {
-            await getDai(user1, daiReserves, rate1)
+            await env.maker.getDai(user1, daiReserves, rate1)
             await yDai1.mint(user1, yDaiReserves, { from: owner });
     
             await dai.approve(market.address, daiReserves, { from: user1 });
@@ -122,7 +122,7 @@ contract('Market', async (accounts) =>  {
 
             it("sells dai", async() => {
                 const tradeSize = toWad(1).div(1000);
-                await getDai(from, daiTokens1, rate1);
+                await env.maker.getDai(from, daiTokens1, rate1);
     
                 await market.addDelegate(operator, { from: from });
                 await dai.approve(market.address, tradeSize, { from: from });
@@ -135,7 +135,7 @@ contract('Market', async (accounts) =>  {
 
             it("buys yDai", async() => {
                 const tradeSize = toWad(1).div(1000);
-                await getDai(from, daiTokens1.div(1000), rate1);
+                await env.maker.getDai(from, daiTokens1.div(1000), rate1);
     
                 await market.addDelegate(operator, { from: from });
                 await dai.approve(market.address, daiTokens1.div(1000), { from: from });
@@ -146,6 +146,8 @@ contract('Market', async (accounts) =>  {
             });
             
             it("prints results", async() => {
+                let line: string[];
+                // @ts-ignore
                 for (line of results.values()) {
                     console.log("| " + 
                         line[0].padEnd(10, ' ') + "· " +

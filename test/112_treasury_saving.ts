@@ -1,41 +1,34 @@
-const { setupMaker, newTreasury, getDai } = require("./shared/fixtures");
-const {
-    WETH,
+import { MakerEnvironment, Contract } from "./shared/fixtures";
+import {
     rate1,
-    daiDebt1,
     daiTokens1,
-    wethTokens1,
     chaiTokens1,
-} = require ("./shared/utils");
+} from "./shared/utils";
 
 contract('Treasury - Saving', async (accounts) =>  {
     let [ owner, user ] = accounts;
-    let vat;
-    let weth;
-    let wethJoin;
-    let dai;
-    let daiJoin;
-    let chai;
-    let treasury;
+
+    let treasury: Contract;
+    let vat: Contract;
+    let weth: Contract;
+    let wethJoin: Contract;
+    let chai: Contract;
+    let dai: Contract;
 
     beforeEach(async() => {
-        ({
-            vat,
-            weth,
-            wethJoin,
-            dai,
-            daiJoin,
-            pot,
-            jug,
-            chai
-        } = await setupMaker());
-        treasury = await newTreasury();
+        const maker = await MakerEnvironment.setup();
+        treasury = await maker.setupTreasury();
+        vat = maker.vat;
+        weth = maker.weth;
+        wethJoin = maker.wethJoin;
+        chai = maker.chai;
+        dai = maker.dai;
 
         // Setup tests - Allow owner to interact directly with Treasury, not for production
         await treasury.orchestrate(owner, { from: owner });
 
         // Borrow some dai
-        await getDai(user, daiTokens1, rate1);
+        await maker.getDai(user, daiTokens1, rate1);
     });
 
     it("allows to save dai", async() => {
@@ -45,7 +38,7 @@ contract('Treasury - Saving', async (accounts) =>  {
             "Treasury has chai",
         );
         assert.equal(
-            await treasury.savings.call(),
+            await treasury.savings(),
             0,
             "Treasury has savings in dai units"
         );
@@ -65,9 +58,9 @@ contract('Treasury - Saving', async (accounts) =>  {
             "Treasury should have chai"
         );
         assert.equal(
-            await treasury.savings.call(),
+            await treasury.savings(),
             daiTokens1.toString(),
-            "Treasury should have " + daiTokens1 + " savings in dai units, instead has " + await treasury.savings.call(),
+            "Treasury should have " + daiTokens1 + " savings in dai units, instead has " + await treasury.savings(),
         );
         assert.equal(
             await dai.balanceOf(user),
@@ -83,7 +76,7 @@ contract('Treasury - Saving', async (accounts) =>  {
             "Treasury has chai",
         );
         assert.equal(
-            await treasury.savings.call(),
+            await treasury.savings(),
             0,
             "Treasury has savings in dai units"
         );
@@ -105,7 +98,7 @@ contract('Treasury - Saving', async (accounts) =>  {
             "Treasury should have chai"
         );
         assert.equal(
-            await treasury.savings.call(),
+            await treasury.savings(),
             daiTokens1.toString(),
             "Treasury should report savings in dai units"
         );
@@ -129,7 +122,7 @@ contract('Treasury - Saving', async (accounts) =>  {
                 "Treasury does not have chai"
             );
             assert.equal(
-                await treasury.savings.call(),
+                await treasury.savings(),
                 daiTokens1.toString(),
                 "Treasury does not report savings in dai units"
             );
@@ -147,7 +140,7 @@ contract('Treasury - Saving', async (accounts) =>  {
                 "Treasury should not have chai",
             );
             assert.equal(
-                await treasury.savings.call(),
+                await treasury.savings(),
                 0,
                 "Treasury should not have savings in dai units"
             );
@@ -166,7 +159,7 @@ contract('Treasury - Saving', async (accounts) =>  {
                 "Treasury does not have chai"
             );
             assert.equal(
-                await treasury.savings.call(),
+                await treasury.savings(),
                 daiTokens1.toString(),
                 "Treasury does not report savings in dai units"
             );
@@ -184,7 +177,7 @@ contract('Treasury - Saving', async (accounts) =>  {
                 "Treasury should not have chai",
             );
             assert.equal(
-                await treasury.savings.call(),
+                await treasury.savings(),
                 0,
                 "Treasury should not have savings in dai units"
             );

@@ -1,7 +1,5 @@
 const Migrations = artifacts.require('Migrations');
 
-const truffleAssert = require('truffle-assertions');
-
 contract('Migrations', async (accounts) =>  {
 
     let [ owner ] = accounts;

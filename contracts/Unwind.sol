@@ -8,7 +8,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IVat.sol";
 import "./interfaces/IDaiJoin.sol";
 import "./interfaces/IGemJoin.sol";
-import "./interfaces/IJug.sol";
 import "./interfaces/IPot.sol";
 import "./interfaces/IEnd.sol";
 import "./interfaces/IChai.sol";
@@ -17,7 +16,7 @@ import "./interfaces/IController.sol";
 import "./interfaces/IYDai.sol";
 import "./interfaces/ILiquidations.sol";
 import "./helpers/DecimalMath.sol";
-// import "@nomiclabs/buidler/console.sol";
+
 
 
 /**
@@ -39,7 +38,6 @@ contract Unwind is Ownable(), DecimalMath {
     IDaiJoin internal _daiJoin;
     IERC20 internal _weth;
     IGemJoin internal _wethJoin;
-    IJug internal _jug;
     IPot internal _pot;
     IEnd internal _end;
     IChai internal _chai;
@@ -56,31 +54,36 @@ contract Unwind is Ownable(), DecimalMath {
     bool public cashedOut;
     bool public live = true;
 
+    address public beneficiary;
+
+    /// @dev The constructor links to vat, daiJoin, weth, wethJoin, jug, pot, end, chai, treasury, controller and liquidations.
+    /// Liquidations should have privileged access to treasury, controller and liquidations using orchestration.
+    /// The constructor gives treasury and end permission on unwind's MakerDAO vaults.
     constructor (
         address vat_,
         address daiJoin_,
         address weth_,
         address wethJoin_,
-        address jug_,
         address pot_,
         address end_,
         address chai_,
         address treasury_,
         address controller_,
-        address liquidations_
+        address liquidations_,
+        address beneficiary_
     ) public {
         // These could be hardcoded for mainnet deployment.
         _vat = IVat(vat_);
         _daiJoin = IDaiJoin(daiJoin_);
         _weth = IERC20(weth_);
         _wethJoin = IGemJoin(wethJoin_);
-        _jug = IJug(jug_);
         _pot = IPot(pot_);
         _end = IEnd(end_);
         _chai = IChai(chai_);
         _treasury = ITreasury(treasury_);
         _controller = IController(controller_);
         _liquidations = ILiquidations(liquidations_);
+        beneficiary = beneficiary_;
 
         _vat.hope(address(_treasury));
         _vat.hope(address(_end));
@@ -101,7 +104,7 @@ contract Unwind is Ownable(), DecimalMath {
         return int256(x);
     }
 
-    /// @dev Disables treasury and controller.
+    /// @dev Disables treasury, controller and liquidations.
     function unwind() public {
         require(
             _end.tag(WETH) != 0,
@@ -113,23 +116,8 @@ contract Unwind is Ownable(), DecimalMath {
         _liquidations.shutdown();
     }
 
-    function getChi() public returns (uint256) {
-        return (now > _pot.rho()) ? _pot.drip() : _pot.chi();
-    }
-
-    function getRate() public returns (uint256) {
-        uint256 rate;
-        (, uint256 rho) = _jug.ilks(WETH);
-        if (now > rho) {
-            rate = _jug.drip(WETH);
-        } else {
-            (, rate,,,) = _vat.ilks(WETH);
-        }
-        return rate;
-    }
-
     /// @dev Calculates how much profit is in the system and transfers it to the beneficiary
-    function skimWhileLive(address beneficiary) public { // TODO: Hardcode
+    function skimWhileLive() public {
         require(
             live == true, // If DSS is not live this method will fail later on.
             "Unwind: Can only skimWhileLive if live"
@@ -139,16 +127,18 @@ contract Unwind is Ownable(), DecimalMath {
             "Unwind: Only after skimStart"
         );
 
+        uint256 chi = _pot.chi();
+        (, uint256 rate,,,) = _vat.ilks(WETH);
         uint256 profit = _chai.balanceOf(address(_treasury));
-        profit = profit.add(_yDaiProfit(getChi(), getRate()));
-        profit = profit.sub(divd(_treasury.debt(), getChi()));
+        profit = profit.add(_yDaiProfit(chi, rate));
+        profit = profit.sub(divd(_treasury.debt(), chi));
         profit = profit.sub(_controller.totalChaiPosted());
 
         _treasury.pullChai(beneficiary, profit);
     }
 
     /// @dev Calculates how much profit is in the system and transfers it to the beneficiary
-    function skimDssShutdown(address beneficiary) public { // TODO: Hardcode
+    function skimDssShutdown() public {
         require(settled && cashedOut, "Unwind: Not ready");
 
         uint256 chi = _pot.chi();
@@ -162,7 +152,10 @@ contract Unwind is Ownable(), DecimalMath {
         require(_weth.transfer(beneficiary, profit));
     }
 
-    /// @dev Returns the profit accummulated in the system due to yDai supply and debt, in chai, for a given chi and rate.
+    /// @dev Returns the profit accummulated in the system due to yDai supply and debt, in chai.
+    /// Chi and rate are passed on as parameters to avoid multiple calls that retrieve the same values.
+    /// @param chi The chi value from MakerDAO
+    /// @param rate The rate value from MakerDAO
     function _yDaiProfit(uint256 chi, uint256 rate) internal view returns (uint256) {
         uint256 profit;
 
@@ -247,6 +240,8 @@ contract Unwind is Ownable(), DecimalMath {
     }
 
     /// @dev Settles a series position in Controller, and then returns any remaining collateral as weth using the unwind Dai to Weth price.
+    /// @param collateral Valid collateral type.
+    /// @param user User vault to settle, and wallet to receive the corresponding weth.
     function settle(bytes32 collateral, address user) public {
         require(settled && cashedOut, "Unwind: Not ready");
 
@@ -261,8 +256,12 @@ contract Unwind is Ownable(), DecimalMath {
         require(_weth.transfer(user, remainder));
     }
 
-    /// @dev Redeems YDai for weth
-    function redeem(uint256 maturity, uint256 yDaiAmount, address user) public {
+    /// @dev Redeems YDai for weth. YDai.redeem won't work if MakerDAO is in shutdown.
+    /// yDai holder must call yDai.approve before calling this function.
+    /// @param maturity Maturity of an added series
+    /// @param user Wallet containing the yDai to burn.
+    /// @param yDaiAmount Amount of yDai to burn.
+    function redeem(uint256 maturity, address user, uint256 yDaiAmount) public {
         require(settled && cashedOut, "Unwind: Not ready");
         IYDai yDai = _controller.series(maturity);
         yDai.burn(user, yDaiAmount);
