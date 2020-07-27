@@ -1,37 +1,55 @@
 const ControllerView = artifacts.require("ControllerView")
-const helper = require('ganache-time-traveler');
-const { WETH, rate1, daiTokens1: daiTokens, wethTokens1: wethTokens, addBN, subBN, toRay, divRay, mulRay } = require('./../shared/utils');
-const { YieldEnvironmentLite } = require("./../shared/fixtures");
+// @ts-ignore
+import helper from 'ganache-time-traveler';
+import { WETH, rate1, daiTokens1 as daiTokens, wethTokens1 as wethTokens, addBN, subBN, toRay, divRay, mulRay } from './../shared/utils';
+import { YieldEnvironmentLite, Contract } from "./../shared/fixtures";
+import { BigNumber } from 'ethers';
 
 contract('ControllerView', async (accounts) =>  {
     let [ owner, user1, user2, user3 ] = accounts;
-    let controllerView;
 
-    let snapshot;
-    let snapshotId;
+    let snapshot: any;
+    let snapshotId: string;
 
-    let maturity1;
-    let maturity2;
+    let env: YieldEnvironmentLite;
+
+    let dai: Contract;
+    let vat: Contract;
+    let controller: Contract;
+    let treasury: Contract;
+    let weth: Contract;
+    let liquidations: Contract;
+    let unwind: Contract;
+    let end: Contract;
+    let chai: Contract;
+    let yDai1: Contract;
+    let controllerView: Contract;
+    let pot: Contract;
+
+    let rate: BigNumber;
+
+    let maturity1: number;
+    let maturity2: number;
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        yield = await YieldEnvironmentLite.setup();
-        controller = yield.controller;
-        treasury = yield.treasury;
-        vat = yield.maker.vat;
-        dai = yield.maker.dai;
-        weth = yield.maker.weth;
-        pot = yield.maker.pot;
+        env = await YieldEnvironmentLite.setup();
+        controller = env.controller;
+        treasury = env.treasury;
+        vat = env.maker.vat;
+        dai = env.maker.dai;
+        weth = env.maker.weth;
+        pot = env.maker.pot;
 
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
-        yDai1 = await yield.newYDai(maturity1, "Name1", "Symbol1");
-        yDai2 = await yield.newYDai(maturity2, "Name2", "Symbol2");
+        yDai1 = await env.newYDai(maturity1, "Name1", "Symbol1");
+        await env.newYDai(maturity2, "Name2", "Symbol2");
         rate = rate1;
 
          // Setup ControllerView
@@ -148,10 +166,10 @@ contract('ControllerView', async (accounts) =>  {
                 });
 
                 // Set rate to 1.5
-                let rateIncrease;
-                let rateDifferential;
-                let increasedDebt;
-                let debtIncrease;
+                let rateIncrease: BigNumber;
+                let rateDifferential: BigNumber;
+                let increasedDebt: BigNumber;
+                let debtIncrease: BigNumber;
     
                 describe("after maturity, with a rate increase", () => {
                     beforeEach(async() => {
@@ -209,7 +227,7 @@ contract('ControllerView', async (accounts) =>  {
                     });
 
                     it("more Dai is required to repay after maturity as rate increases", async() => {
-                        await yield.maker.getDai(user1, daiTokens, rate); // daiTokens is not going to be enough anymore
+                        await env.maker.getDai(user1, daiTokens, rate); // daiTokens is not going to be enough anymore
                         await dai.approve(treasury.address, daiTokens, { from: user1 });
                         await controller.repayDai(WETH, maturity1, user1, user1, daiTokens, { from: user1 });
             

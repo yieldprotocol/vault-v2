@@ -1,17 +1,31 @@
-const helper = require('ganache-time-traveler');
-const { BigNumber } = require('ethers')
-const { expectRevert } = require('@openzeppelin/test-helpers');
-const { CHAI, WETH, spot, rate1, chi1, daiTokens1, wethTokens1, chaiTokens1, toRay, mulRay, divRay } = require('./shared/utils');
-const { YieldEnvironment } = require("./shared/fixtures");
+// @ts-ignore
+import helper from 'ganache-time-traveler';
+import { BigNumber } from 'ethers'
+// @ts-ignore
+import { expectRevert } from '@openzeppelin/test-helpers';
+import { CHAI, WETH, spot, rate1, chi1, daiTokens1, wethTokens1, chaiTokens1, toRay, mulRay, divRay } from './shared/utils';
+import { YieldEnvironment, Contract } from "./shared/fixtures";
 
 contract('Unwind - Controller', async (accounts) =>  {
     let [ owner, user1, user2, user3 ] = accounts;
 
-    let snapshot;
-    let snapshotId;
+    let snapshot: any;
+    let snapshotId: string;
 
-    let maturity1;
-    let maturity2;
+    let env: YieldEnvironment;
+
+    let dai: Contract;
+    let vat: Contract;
+    let controller: Contract;
+    let treasury: Contract;
+    let weth: Contract;
+    let liquidations: Contract;
+    let unwind: Contract;
+    let end: Contract;
+    let chai: Contract;
+
+    let maturity1: number;
+    let maturity2: number;
 
     const fix  = divRay(toRay(1.0), mulRay(spot, toRay(1.1)));
     const fixedWeth = mulRay(daiTokens1, fix);
@@ -21,21 +35,21 @@ contract('Unwind - Controller', async (accounts) =>  {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        yield = await YieldEnvironment.setup(owner)
-        controller = yield.controller;
-        treasury = yield.treasury;
-        unwind = yield.unwind;
+        env = await YieldEnvironment.setup(owner)
+        controller = env.controller;
+        treasury = env.treasury;
+        unwind = env.unwind;
 
-        weth = yield.maker.weth;
-        end = yield.maker.end;
-        chai = yield.maker.chai;
+        weth = env.maker.weth;
+        end = env.maker.end;
+        chai = env.maker.chai;
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
-        yDai1 = await yield.newYDai(maturity1, "Name", "Symbol");
-        yDai2 = await yield.newYDai(maturity2, "Name", "Symbol");
+        const yDai1 = await env.newYDai(maturity1, "Name", "Symbol");
+        const yDai2 = await env.newYDai(maturity2, "Name", "Symbol");
         await yDai1.orchestrate(unwind.address)
         await yDai2.orchestrate(unwind.address)
         await treasury.orchestrate(owner)
@@ -49,23 +63,23 @@ contract('Unwind - Controller', async (accounts) =>  {
     describe("with posted collateral and borrowed yDai", () => {
         beforeEach(async() => {
             // Weth setup
-            await yield.postWeth(user1, wethTokens1);
+            await env.postWeth(user1, wethTokens1);
 
-            await yield.postWeth(user2, BigNumber.from(wethTokens1).add(1));
+            await env.postWeth(user2, BigNumber.from(wethTokens1).add(1));
             await controller.borrow(WETH, maturity1, user2, user2, daiTokens1, { from: user2 });
 
-            await yield.postWeth(user3, BigNumber.from(wethTokens1).mul(3));
+            await env.postWeth(user3, BigNumber.from(wethTokens1).mul(3));
             await controller.borrow(WETH, maturity1, user3, user3, daiTokens1, { from: user3 });
             await controller.borrow(WETH, maturity2, user3, user3, daiTokens1, { from: user3 });
 
-            await yield.postChai(user1, chaiTokens1, chi1, rate1);
+            await env.postChai(user1, chaiTokens1, chi1, rate1);
 
             const moreChai = mulRay(chaiTokens1, toRay(1.1));
-            await yield.postChai(user2, moreChai, chi1, rate1);
+            await env.postChai(user2, moreChai, chi1, rate1);
             await controller.borrow(CHAI, maturity1, user2, user2, daiTokens1, { from: user2 });
 
             // Make sure that end.sol will have enough weth to cash chai savings
-            await yield.maker.getDai(owner, BigNumber.from(wethTokens1).mul(10), rate1);
+            await env.maker.getDai(owner, BigNumber.from(wethTokens1).mul(10), rate1);
 
             assert.equal(
                 await weth.balanceOf(user1),
@@ -100,7 +114,7 @@ contract('Unwind - Controller', async (accounts) =>  {
 
         describe("with Dss unwind initiated and treasury settled", () => {
             beforeEach(async() => {
-                await yield.shutdown(owner, user1, user2);
+                await env.shutdown(owner, user1, user2);
             });
 
             it("controller shuts down", async() => {
