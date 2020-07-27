@@ -6,7 +6,7 @@
  */
 pragma solidity ^0.6.0;
 
-import "../market/ABDKMath64x64.sol";
+import "../pool/ABDKMath64x64.sol";
 
 /**
  * Ethereum smart contract library implementing Yield Math model.

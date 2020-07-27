@@ -4,11 +4,11 @@ pragma solidity ^0.6.10;
 import "../interfaces/IVat.sol";
 import "../interfaces/IPot.sol";
 import "../interfaces/IController.sol";
-import "../interfaces/IMarket.sol";
+import "../interfaces/IPool.sol";
 import "../helpers/DecimalMath.sol";
 
 /**
- * @dev The ControllerDai is a proxy contract of Controller that allows users to immediately sell borrowed yDai for Dai, and to sell Dai at market rates to repay YDai debt.
+ * @dev The ControllerDai is a proxy contract of Controller that allows users to immediately sell borrowed yDai for Dai, and to sell Dai at pool rates to repay YDai debt.
  */
 contract DaiProxy is DecimalMath {
 
@@ -18,26 +18,26 @@ contract DaiProxy is DecimalMath {
     IVat internal _vat;
     IPot internal _pot;
     IController internal _controller;
-    IMarket internal _market;
+    IPool internal _pool;
 
-    /// @dev The constructor links ControllerDai to vat, pot, controller and market.
+    /// @dev The constructor links ControllerDai to vat, pot, controller and pool.
     constructor (
         address vat_,
         address pot_,
         address controller_,
-        address market_
+        address pool_
     ) public {
         _vat = IVat(vat_);
         _pot = IPot(pot_);
         _controller = IController(controller_);
-        _market = IMarket(market_);
+        _pool = IPool(pool_);
     }
 
     /// @dev Safe casting from uint256 to uint128
     function toUint128(uint256 x) internal pure returns(uint128) {
         require(
             x <= 340282366920938463463374607431768211455,
-            "Market: Cast overflow"
+            "Pool: Cast overflow"
         );
         return uint128(x);
     }
@@ -59,12 +59,12 @@ contract DaiProxy is DecimalMath {
         public
         returns (uint256)
     {
-        uint256 yDaiToBorrow = _market.buyDaiPreview(toUint128(daiToBorrow));
+        uint256 yDaiToBorrow = _pool.buyDaiPreview(toUint128(daiToBorrow));
         require (yDaiToBorrow <= maximumYDai);
 
         // The collateral for this borrow needs to have been posted beforehand
         _controller.borrow(collateral, maturity, msg.sender, address(this), yDaiToBorrow);
-        _market.buyDai(address(this), to, toUint128(daiToBorrow));
+        _pool.buyDai(address(this), to, toUint128(daiToBorrow));
 
         return yDaiToBorrow;
     }
@@ -88,13 +88,13 @@ contract DaiProxy is DecimalMath {
     {
         // The collateral for this borrow needs to have been posted beforehand
         _controller.borrow(collateral, maturity, msg.sender, address(this), yDaiToBorrow);
-        uint256 boughtDai = _market.sellYDai(address(this), to, toUint128(yDaiToBorrow));
+        uint256 boughtDai = _pool.sellYDai(address(this), to, toUint128(yDaiToBorrow));
         require (boughtDai >= minimumDaiToBorrow);
 
         return boughtDai;
     }
 
-    /// @dev Repay an amount of yDai debt in Controller using Dai exchanged for yDai at market rates, up to a maximum amount of Dai spent.
+    /// @dev Repay an amount of yDai debt in Controller using Dai exchanged for yDai at pool rates, up to a maximum amount of Dai spent.
     /// Must have approved the operator with `controller.addDelegate(controllerDai.address)`.
     /// @param collateral Valid collateral type.
     /// @param maturity Maturity of an added series
@@ -111,14 +111,14 @@ contract DaiProxy is DecimalMath {
         public
         returns (uint256)
     {
-        uint256 repaymentInDai = _market.buyYDai(msg.sender, address(this), toUint128(yDaiRepayment));
+        uint256 repaymentInDai = _pool.buyYDai(msg.sender, address(this), toUint128(yDaiRepayment));
         require (repaymentInDai <= maximumRepaymentInDai);
         _controller.repayYDai(collateral, maturity, address(this), to, yDaiRepayment);
 
         return repaymentInDai;
     }
 
-    /// @dev Repay an amount of yDai debt in Controller using a given amount of Dai exchanged for yDai at market rates, with a minimum of yDai debt required to be paid.
+    /// @dev Repay an amount of yDai debt in Controller using a given amount of Dai exchanged for yDai at pool rates, with a minimum of yDai debt required to be paid.
     /// Must have approved the operator with `controller.addDelegate(controllerDai.address)`.
     /// @param collateral Valid collateral type.
     /// @param maturity Maturity of an added series
@@ -135,7 +135,7 @@ contract DaiProxy is DecimalMath {
         public
         returns (uint256)
     {
-        uint256 yDaiRepayment = _market.sellDai(msg.sender, address(this), toUint128(repaymentInDai));
+        uint256 yDaiRepayment = _pool.sellDai(msg.sender, address(this), toUint128(repaymentInDai));
         require (yDaiRepayment >= minimumYDaiRepayment);
         _controller.repayYDai(collateral, maturity, address(this), to, yDaiRepayment);
 

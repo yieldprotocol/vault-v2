@@ -1,4 +1,4 @@
-const Market = artifacts.require('Market');
+const Pool = artifacts.require('Pool');
 const Splitter = artifacts.require('Splitter');
 
 import { BigNumber } from "ethers";
@@ -29,7 +29,7 @@ contract('Splitter', async (accounts) =>  {
     let controllerView: Contract;
     let pot: Contract;
     let splitter1: Contract;
-    let market1: Contract;
+    let pool1: Contract;
 
     beforeEach(async() => {
         env = await YieldEnvironmentLite.setup();
@@ -46,8 +46,8 @@ contract('Splitter', async (accounts) =>  {
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 30000000; // Far enough so that the extra weth to borrow is above dust
         yDai1 = await env.newYDai(maturity1, "Name", "Symbol");
 
-        // Setup Market
-        market1 = await Market.new(
+        // Setup Pool
+        pool1 = await Pool.new(
             dai.address,
             yDai1.address,
             "Name",
@@ -65,7 +65,7 @@ contract('Splitter', async (accounts) =>  {
             treasury.address,
             yDai1.address,
             controller.address,
-            market1.address,
+            pool1.address,
             { from: owner }
         );
 
@@ -74,17 +74,17 @@ contract('Splitter', async (accounts) =>  {
         // Allow owner to mint yDai the sneaky way, without recording a debt in controller
         await yDai1.orchestrate(owner, { from: owner });
 
-        // Initialize Market1
+        // Initialize Pool1
         const daiReserves = daiTokens1.mul(5);
         await env.maker.getDai(owner, daiReserves, rate1);
-        await dai.approve(market1.address, daiReserves, { from: owner });
-        await market1.init(daiReserves, { from: owner });
+        await dai.approve(pool1.address, daiReserves, { from: owner });
+        await pool1.init(daiReserves, { from: owner });
 
         // Add yDai
         const additionalYDaiReserves = yDaiTokens1.mul(2);
         await yDai1.mint(owner, additionalYDaiReserves, { from: owner });
-        await yDai1.approve(market1.address, additionalYDaiReserves, { from: owner });
-        await market1.sellYDai(owner, owner, additionalYDaiReserves, { from: owner });
+        await yDai1.approve(pool1.address, additionalYDaiReserves, { from: owner });
+        await pool1.sellYDai(owner, owner, additionalYDaiReserves, { from: owner });
     });
 
     it("does not allow to move more debt than existing in maker", async() => {
@@ -109,7 +109,7 @@ contract('Splitter', async (accounts) =>  {
         await env.maker.getDai(user, daiTokens1, rate1);
 
         // This lot can be avoided if the user is certain that he has enough Weth in Controller
-        // The amount of yDai to be borrowed can be obtained from Market through Splitter
+        // The amount of yDai to be borrowed can be obtained from Pool through Splitter
         // As time passes, the amount of yDai required decreases, so this value will always be slightly higher than needed
         const yDaiNeeded = await splitter1.yDaiForDai(daiTokens1);
         // console.log("      YDai: " + yDaiNeeded.toString());

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.6.10;
 
-import "../market/YieldMath.sol";
+import "../pool/YieldMath.sol";
 import "../mocks/YieldMath64.sol";
 import "../mocks/YieldMath48.sol";
 

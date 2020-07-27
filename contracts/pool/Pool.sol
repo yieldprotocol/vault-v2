@@ -7,12 +7,12 @@ import "./YieldMath.sol";
 import "../helpers/Delegable.sol";
 import "../interfaces/IPot.sol";
 import "../interfaces/IYDai.sol";
-import "../interfaces/IMarket.sol";
+import "../interfaces/IPool.sol";
 
 
 
-/// @dev The Market contract exchanges Dai for yDai at a price defined by a specific formula.
-contract Market is IMarket, ERC20, Delegable {
+/// @dev The Pool contract exchanges Dai for yDai at a price defined by a specific formula.
+contract Pool is IPool, ERC20, Delegable {
 
     event Trade(uint256 maturity, address indexed from, address indexed to, int256 daiTokens, int256 yDaiTokens);
     event Liquidity(uint256 maturity, address indexed from, address indexed to, int256 daiTokens, int256 yDaiTokens, int256 poolTokens);
@@ -39,7 +39,7 @@ contract Market is IMarket, ERC20, Delegable {
     modifier beforeMaturity() {
         require(
             now < maturity,
-            "Market: Too late"
+            "Pool: Too late"
         );
         _;
     }
@@ -49,14 +49,14 @@ contract Market is IMarket, ERC20, Delegable {
         internal pure returns (uint128)
     {
         uint128 c = a + b;
-        require(c >= a, "Market: Dai reserves too high");
+        require(c >= a, "Pool: Dai reserves too high");
 
         return c;
     }
 
     /// @dev Overflow-protected substraction, from OpenZeppelin
     function sub(uint128 a, uint128 b) internal pure returns (uint128) {
-        require(b <= a, "Market: yDai reserves too low");
+        require(b <= a, "Pool: yDai reserves too low");
         uint128 c = a - b;
 
         return c;
@@ -66,7 +66,7 @@ contract Market is IMarket, ERC20, Delegable {
     function toUint128(uint256 x) internal pure returns(uint128) {
         require(
             x <= 340282366920938463463374607431768211455,
-            "Market: Cast overflow"
+            "Pool: Cast overflow"
         );
         return uint128(x);
     }
@@ -75,7 +75,7 @@ contract Market is IMarket, ERC20, Delegable {
     function toInt256(uint256 x) internal pure returns(int256) {
         require(
             x <= 57896044618658097711785492504343953926634992332820282019728792003956564819967,
-            "Market: Cast overflow"
+            "Pool: Cast overflow"
         );
         return int256(x);
     }
@@ -89,7 +89,7 @@ contract Market is IMarket, ERC20, Delegable {
     {
         require(
             totalSupply() == 0,
-            "Market: Already initialized"
+            "Pool: Already initialized"
         );
         // no yDai transferred, because initial yDai deposit is entirely virtual
         dai.transferFrom(msg.sender, address(this), daiIn);
@@ -121,7 +121,7 @@ contract Market is IMarket, ERC20, Delegable {
     }
 
     /// @dev Burn liquidity tokens in exchange for dai and yDai.
-    /// The liquidity provider needs to have called `market.approve`.
+    /// The liquidity provider needs to have called `pool.approve`.
     /// @param tokensBurned Amount of liquidity tokens being burned.
     /// @return The amount of reserve tokens returned (daiTokens, yDaiTokens).
     function burn(uint256 tokensBurned)
@@ -145,13 +145,13 @@ contract Market is IMarket, ERC20, Delegable {
 
     /// @dev Sell Dai for yDai
     /// The trader needs to have called `dai.approve`
-    /// @param from Wallet providing the dai being sold. Must have approved the operator with `market.addDelegate(operator)`.
+    /// @param from Wallet providing the dai being sold. Must have approved the operator with `pool.addDelegate(operator)`.
     /// @param to Wallet receiving the yDai being bought
     /// @param daiIn Amount of dai being sold that will be taken from the user's wallet
     /// @return Amount of yDai that will be deposited on `to` wallet
     function sellDai(address from, address to, uint128 daiIn)
         external override
-        onlyHolderOrDelegate(from, "Market: Only Holder Or Delegate")
+        onlyHolderOrDelegate(from, "Pool: Only Holder Or Delegate")
         returns(uint128)
     {
         uint128 yDaiOut = sellDaiPreview(daiIn);
@@ -185,7 +185,7 @@ contract Market is IMarket, ERC20, Delegable {
 
         require(
             sub(yDaiReserves, yDaiOut) >= add(daiReserves, daiIn),
-            "Market: yDai reserves too low"
+            "Pool: yDai reserves too low"
         );
 
         return yDaiOut;
@@ -193,13 +193,13 @@ contract Market is IMarket, ERC20, Delegable {
 
     /// @dev Buy Dai for yDai
     /// The trader needs to have called `yDai.approve`
-    /// @param from Wallet providing the yDai being sold. Must have approved the operator with `market.addDelegate(operator)`.
+    /// @param from Wallet providing the yDai being sold. Must have approved the operator with `pool.addDelegate(operator)`.
     /// @param to Wallet receiving the dai being bought
     /// @param daiOut Amount of dai being bought that will be deposited in `to` wallet
     /// @return Amount of yDai that will be taken from `from` wallet
     function buyDai(address from, address to, uint128 daiOut)
         external override
-        onlyHolderOrDelegate(from, "Market: Only Holder Or Delegate")
+        onlyHolderOrDelegate(from, "Pool: Only Holder Or Delegate")
         returns(uint128)
     {
         uint128 yDaiIn = buyDaiPreview(daiOut);
@@ -231,13 +231,13 @@ contract Market is IMarket, ERC20, Delegable {
 
     /// @dev Sell yDai for Dai
     /// The trader needs to have called `yDai.approve`
-    /// @param from Wallet providing the yDai being sold. Must have approved the operator with `market.addDelegate(operator)`.
+    /// @param from Wallet providing the yDai being sold. Must have approved the operator with `pool.addDelegate(operator)`.
     /// @param to Wallet receiving the dai being bought
     /// @param yDaiIn Amount of yDai being sold that will be taken from the user's wallet
     /// @return Amount of dai that will be deposited on `to` wallet
     function sellYDai(address from, address to, uint128 yDaiIn)
         external override
-        onlyHolderOrDelegate(from, "Market: Only Holder Or Delegate")
+        onlyHolderOrDelegate(from, "Pool: Only Holder Or Delegate")
         returns(uint128)
     {
         uint128 daiOut = sellYDaiPreview(yDaiIn);
@@ -269,13 +269,13 @@ contract Market is IMarket, ERC20, Delegable {
 
     /// @dev Buy yDai for dai
     /// The trader needs to have called `dai.approve`
-    /// @param from Wallet providing the dai being sold. Must have approved the operator with `market.addDelegate(operator)`.
+    /// @param from Wallet providing the dai being sold. Must have approved the operator with `pool.addDelegate(operator)`.
     /// @param to Wallet receiving the yDai being bought
     /// @param yDaiOut Amount of yDai being bought that will be deposited in `to` wallet
     /// @return Amount of dai that will be taken from `from` wallet
     function buyYDai(address from, address to, uint128 yDaiOut)
         external override
-        onlyHolderOrDelegate(from, "Market: Only Holder Or Delegate")
+        onlyHolderOrDelegate(from, "Pool: Only Holder Or Delegate")
         returns(uint128)
     {
         uint128 daiIn = buyYDaiPreview(yDaiOut);
@@ -310,7 +310,7 @@ contract Market is IMarket, ERC20, Delegable {
 
         require(
             sub(yDaiReserves, yDaiOut) >= add(daiReserves, daiIn),
-            "Market: yDai reserves too low"
+            "Pool: yDai reserves too low"
         );
 
         return daiIn;

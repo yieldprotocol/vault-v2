@@ -11,7 +11,7 @@ import "../interfaces/IPot.sol";
 import "../interfaces/IChai.sol";
 import "../interfaces/IYDai.sol";
 import "../interfaces/IController.sol";
-import "../interfaces/IMarket.sol";
+import "../interfaces/IPool.sol";
 import "../interfaces/IFlashMinter.sol";
 
 
@@ -30,7 +30,7 @@ contract Splitter is IFlashMinter, DecimalMath {
     IDaiJoin public daiJoin;
     IYDai public yDai;
     IController public controller;
-    IMarket public market;
+    IPool public pool;
 
     constructor(
         address vat_,
@@ -41,7 +41,7 @@ contract Splitter is IFlashMinter, DecimalMath {
         address treasury_,
         address yDai_,
         address controller_,
-        address market_
+        address pool_
     ) public {
         vat = IVat(vat_);
         weth = IERC20(weth_);
@@ -50,13 +50,13 @@ contract Splitter is IFlashMinter, DecimalMath {
         daiJoin = IDaiJoin(daiJoin_);
         yDai = IYDai(yDai_);
         controller = IController(controller_);
-        market = IMarket(market_);
+        pool = IPool(pool_);
 
         vat.hope(daiJoin_);
         vat.hope(wethJoin_);
 
-        dai.approve(market_, uint256(-1));
-        yDai.approve(market_, uint256(-1));
+        dai.approve(pool_, uint256(-1));
+        yDai.approve(pool_, uint256(-1));
         dai.approve(daiJoin_, uint(-1));
         weth.approve(wethJoin_, uint(-1));
         weth.approve(treasury_, uint(-1));
@@ -144,12 +144,12 @@ contract Splitter is IFlashMinter, DecimalMath {
 
     /// @dev Amount of yDai debt that will result from migrating Dai debt from MakerDAO to Yield
     function yDaiForDai(uint256 daiAmount) public view returns (uint256) {
-        return market.buyDaiPreview(uint128(daiAmount));
+        return pool.buyDaiPreview(uint128(daiAmount));
     }
 
     /// @dev Amount of dai debt that will result from migrating yDai debt from Yield to MakerDAO
     function daiForYDai(uint256 yDaiAmount) public view returns (uint256) {
-        return market.buyYDaiPreview(uint128(yDaiAmount));
+        return pool.buyYDaiPreview(uint128(yDaiAmount));
     }
 
     /// @dev Internal function to transfer debt and collateral from MakerDAO to Yield
@@ -161,8 +161,8 @@ contract Splitter is IFlashMinter, DecimalMath {
     /// Needs controller.addDelegate(splitter.address, { from: user });
     function _makerToYield(address user, uint256 wethAmount, uint256 daiAmount) internal {
 
-        // Market should take exactly all yDai flash minted. Splitter will hold the dai temporarily
-        uint256 yDaiSold = market.buyDai(address(this), address(this), uint128(daiAmount)); // TODO: Consider SafeCast
+        // Pool should take exactly all yDai flash minted. Splitter will hold the dai temporarily
+        uint256 yDaiSold = pool.buyDai(address(this), address(this), uint128(daiAmount)); // TODO: Consider SafeCast
 
         daiJoin.join(user, daiAmount);      // Put the Dai in Maker
         (, uint256 rate,,,) = vat.ilks("ETH-A");
@@ -201,7 +201,7 @@ contract Splitter is IFlashMinter, DecimalMath {
         wethJoin.join(user, wethAmount);
 
         // We are going to need to buy the YDai back with Dai borrowed from Maker
-        uint256 daiAmount = market.buyYDaiPreview(uint128(yDaiAmount)); // TODO: Consider SafeCast
+        uint256 daiAmount = pool.buyYDaiPreview(uint128(yDaiAmount)); // TODO: Consider SafeCast
 
         // Borrow the Dai from Maker
         (, uint256 rate,,,) = vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee for Weth
@@ -216,7 +216,7 @@ contract Splitter is IFlashMinter, DecimalMath {
         vat.move(user, address(this), daiAmount.mul(UNIT)); // Transfer the Dai to Splitter within MakerDAO, in RAD
         daiJoin.exit(address(this), daiAmount);             // Splitter will hold the dai temporarily
 
-        // Sell the Dai for YDai at Market - It should make up for what was taken with repayYdai
-        market.sellDai(address(this), address(this), uint128(dai.balanceOf(address(this)))); // TODO: Consider SafeCast
+        // Sell the Dai for YDai at Pool - It should make up for what was taken with repayYdai
+        pool.sellDai(address(this), address(this), uint128(dai.balanceOf(address(this)))); // TODO: Consider SafeCast
     }
 }

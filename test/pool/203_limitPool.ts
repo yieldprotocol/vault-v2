@@ -1,4 +1,5 @@
-const Market = artifacts.require('Market');
+const Pool = artifacts.require('Pool');
+const LimitPool = artifacts.require('LimitPool');
 
 import { toWad, toRay, mulRay } from '../shared/utils';
 import { YieldEnvironmentLite, Contract } from "../shared/fixtures";
@@ -6,10 +7,10 @@ import { YieldEnvironmentLite, Contract } from "../shared/fixtures";
 import { BN, expectRevert } from '@openzeppelin/test-helpers';
 import { assert, expect } from 'chai';
 
-contract('LimitMarket', async (accounts) =>  {
+contract('LimitPool', async (accounts) =>  {
     let [ owner, user1, operator, from, to ] = accounts;
 
-    // These values impact the market results
+    // These values impact the pool results
     const rate1 = toRay(1.4);
     const daiDebt1 = toWad(96);
     const daiTokens1 = mulRay(daiDebt1, rate1);
@@ -17,9 +18,10 @@ contract('LimitMarket', async (accounts) =>  {
 
     let maturity1: number;
     let yDai1: Contract;
+    let limitPool: Contract;
+    let pool: Contract;
     let dai: Contract;
-    let market: Contract;
-    let env: Contract;
+    let env: YieldEnvironmentLite;
 
     beforeEach(async() => {
         env = await YieldEnvironmentLite.setup();
@@ -31,12 +33,20 @@ contract('LimitMarket', async (accounts) =>  {
         yDai1 = await env.newYDai(maturity1, "Name", "Symbol");
 
 
-        // Setup Market
-        market = await Market.new(
+        // Setup Pool
+        pool = await Pool.new(
             dai.address,
             yDai1.address,
             "Name",
             "Symbol",
+            { from: owner }
+        );
+
+        // Setup LimitPool
+        limitPool = await LimitPool.new(
+            dai.address,
+            yDai1.address,
+            pool.address,
             { from: owner }
         );
 
@@ -50,54 +60,46 @@ contract('LimitMarket', async (accounts) =>  {
     describe("with liquidity", () => {
         beforeEach(async() => {
             const daiReserves = daiTokens1;
-            await env.maker.getDai(user1, daiReserves, rate1)
+            await env.maker.getDai(user1, daiReserves, rate1);
     
-            await dai.approve(market.address, daiReserves, { from: user1 });
-            await market.init(daiReserves, { from: user1 });
+            await dai.approve(pool.address, daiReserves, { from: user1 });
+            await pool.init(daiReserves, { from: user1 });
         });
 
-        it("buys dai without delegation", async() => {
+        it("buys dai", async() => {
             const oneToken = toWad(1);
             await yDai1.mint(from, yDaiTokens1, { from: owner });
 
-            // yDaiInForChaiOut formula: https://www.desmos.com/calculator/16c4dgxhst
-
-            assert.equal(
-                await yDai1.balanceOf(from),
-                yDaiTokens1.toString(),
-                "'From' wallet should have " + yDaiTokens1 + " yDai, instead has " + await yDai1.balanceOf(from),
-            );
-
-            await yDai1.approve(market.address, yDaiTokens1, { from: from });
-            await market.buyDai(from, to, oneToken, { from: from });
-
-            assert.equal(
-                await dai.balanceOf(to),
-                oneToken.toString(),
-                "Receiver account should have 1 dai token",
-            );
+            await pool.addDelegate(limitPool.address, { from: from });
+            await yDai1.approve(pool.address, yDaiTokens1, { from: from });
+            await limitPool.buyDai(from, to, oneToken, oneToken.mul(2), { from: from });
 
             const expectedYDaiIn = (new BN(oneToken.toString())).mul(new BN('10019')).div(new BN('10000')); // I just hate javascript
             const yDaiIn = (new BN(yDaiTokens1.toString())).sub(new BN(await yDai1.balanceOf(from)));
             expect(yDaiIn).to.be.bignumber.gt(expectedYDaiIn.mul(new BN('9999')).div(new BN('10000')));
-            // @ts-ignore
             expect(yDaiIn).to.be.bignumber.lt(expectedYDaiIn.mul(new BN('10001')).div(new BN('10000')));
         });
 
-        it("sells yDai without delegation", async() => {
+        it("doesn't buy dai if limit exceeded", async() => {
+            const oneToken = toWad(1);
+            await yDai1.mint(from, yDaiTokens1, { from: owner });
+
+            await pool.addDelegate(limitPool.address, { from: from });
+            await yDai1.approve(pool.address, yDaiTokens1, { from: from });
+
+            await expectRevert(
+                limitPool.buyDai(from, to, oneToken, oneToken.div(2), { from: from }),
+                "LimitPool: Limit exceeded",
+            );
+        });
+
+        it("sells yDai", async() => {
             const oneToken = toWad(1);
             await yDai1.mint(from, oneToken, { from: owner });
 
-            // chaiOutForYDaiIn formula: https://www.desmos.com/calculator/6ylefi7fv7
-
-            assert.equal(
-                await dai.balanceOf(to),
-                0,
-                "'To' wallet should have no dai, instead has " + await dai.balanceOf(to),
-            );
-
-            await yDai1.approve(market.address, oneToken, { from: from });
-            await market.sellYDai(from, to, oneToken, { from: from });
+            await pool.addDelegate(limitPool.address, { from: from });
+            await yDai1.approve(pool.address, oneToken, { from: from });
+            await limitPool.sellYDai(from, to, oneToken, oneToken.div(2), { from: from });
 
             assert.equal(
                 await yDai1.balanceOf(from),
@@ -107,64 +109,72 @@ contract('LimitMarket', async (accounts) =>  {
 
             const expectedDaiOut = (new BN(oneToken.toString())).mul(new BN('99814')).div(new BN('100000')); // I just hate javascript
             const daiOut = new BN(await dai.balanceOf(to));
-            // @ts-ignore
             expect(daiOut).to.be.bignumber.gt(expectedDaiOut.mul(new BN('9999')).div(new BN('10000')));
-            // @ts-ignore
             expect(daiOut).to.be.bignumber.lt(expectedDaiOut.mul(new BN('10001')).div(new BN('10000')));
+        });
+
+        it("doesn't sell yDai if limit not reached", async() => {
+            const oneToken = toWad(1);
+            await yDai1.mint(from, oneToken, { from: owner });
+
+            await pool.addDelegate(limitPool.address, { from: from });
+            await yDai1.approve(pool.address, oneToken, { from: from });
+
+            await expectRevert(
+                limitPool.sellYDai(from, to, oneToken, oneToken.mul(2), { from: from }),
+                "LimitPool: Limit not reached",
+            );
         });
 
         describe("with extra yDai reserves", () => {
             beforeEach(async() => {
                 const additionalYDaiReserves = toWad(34.4);
                 await yDai1.mint(operator, additionalYDaiReserves, { from: owner });
-                await yDai1.approve(market.address, additionalYDaiReserves, { from: operator });
-                await market.sellYDai(operator, operator, additionalYDaiReserves, { from: operator });
+                await yDai1.approve(pool.address, additionalYDaiReserves, { from: operator });
+                await pool.sellYDai(operator, operator, additionalYDaiReserves, { from: operator });
             });
 
-            it("sells dai without delegation", async() => {
+            it("sells dai", async() => {
                 const oneToken = toWad(1);
                 await env.maker.getDai(from, daiTokens1, rate1);
-    
-                // yDaiOutForChaiIn formula: https://www.desmos.com/calculator/dcjuj5lmmc
-    
-                assert.equal(
-                    await yDai1.balanceOf(to),
-                    0,
-                    "'To' wallet should have no yDai, instead has " + await yDai1.balanceOf(operator),
-                );
-    
-                await dai.approve(market.address, oneToken, { from: from });
-                await market.sellDai(from, to, oneToken, { from: from });
-    
+
+                await pool.addDelegate(limitPool.address, { from: from });
+                await dai.approve(pool.address, oneToken, { from: from });
+                await limitPool.sellDai(from, to, oneToken, oneToken.div(2), { from: from });
+
                 assert.equal(
                     await dai.balanceOf(from),
                     daiTokens1.sub(oneToken).toString(),
                     "'From' wallet should have " + daiTokens1.sub(oneToken) + " dai tokens",
                 );
-    
+
                 const expectedYDaiOut = (new BN(oneToken.toString())).mul(new BN('1132')).div(new BN('1000')); // I just hate javascript
                 const yDaiOut = new BN(await yDai1.balanceOf(to));
                 // TODO: Test precision with 48 and 64 bits with this trade and reserve levels
-                // @ts-ignore
                 expect(yDaiOut).to.be.bignumber.gt(expectedYDaiOut.mul(new BN('999')).div(new BN('1000')));
-                // @ts-ignore
                 expect(yDaiOut).to.be.bignumber.lt(expectedYDaiOut.mul(new BN('1001')).div(new BN('1000')));
             });
 
-            it("buys yDai without delegation", async() => {
+            it("doesn't sell dai if limit not reached", async() => {
                 const oneToken = toWad(1);
                 await env.maker.getDai(from, daiTokens1, rate1);
 
-                // chaiInForYDaiOut formula: https://www.desmos.com/calculator/cgpfpqe3fq
+                await pool.addDelegate(limitPool.address, { from: from });
+                await dai.approve(pool.address, oneToken, { from: from });
 
-                assert.equal(
-                    await yDai1.balanceOf(to),
-                    0,
-                    "'To' wallet should have no yDai, instead has " + await yDai1.balanceOf(to),
+                await expectRevert(
+                    limitPool.sellDai(from, to, oneToken, oneToken.mul(2), { from: from }),
+                    "LimitPool: Limit not reached",
                 );
+            });
 
-                await dai.approve(market.address, daiTokens1, { from: from });
-                await market.buyYDai(from, to, oneToken, { from: from });
+            it("buys yDai", async() => {
+                const oneToken = toWad(1);
+                await env.maker.getDai(from, daiTokens1, rate1);
+
+                await pool.addDelegate(limitPool.address, { from: from });
+                await dai.approve(pool.address, daiTokens1, { from: from });
+                await limitPool.buyYDai(from, to, oneToken, oneToken.mul(2), { from: from });
 
                 assert.equal(
                     await yDai1.balanceOf(to),
@@ -174,41 +184,22 @@ contract('LimitMarket', async (accounts) =>  {
 
                 const expectedDaiIn = (new BN(oneToken.toString())).mul(new BN('8835')).div(new BN('10000')); // I just hate javascript
                 const daiIn = (new BN(daiTokens1.toString())).sub(new BN(await dai.balanceOf(from)));
-                // @ts-ignore
                 expect(daiIn).to.be.bignumber.gt(expectedDaiIn.mul(new BN('9999')).div(new BN('10000')));
-                // @ts-ignore
                 expect(daiIn).to.be.bignumber.lt(expectedDaiIn.mul(new BN('10001')).div(new BN('10000')));
             });
-        });
 
-        // --- ONLY HOLDER OR DELEGATE TESTS ---
+            it("doesn't buy yDai if limit exceeded", async() => {
+                const oneToken = toWad(1);
+                await env.maker.getDai(from, daiTokens1, rate1);
 
-        it("doesn't sell dai without delegation", async() => {
-            await expectRevert(
-                market.sellDai(from, to, 1, { from: operator }),
-                "Market: Only Holder Or Delegate",
-            );
-        });
+                await pool.addDelegate(limitPool.address, { from: from });
+                await dai.approve(pool.address, daiTokens1, { from: from });
 
-        it("doesn't buy dai without delegation", async() => {
-            await expectRevert(
-                market.buyDai(from, to, 1, { from: operator }),
-                "Market: Only Holder Or Delegate",
-            );
-        });
-
-        it("doesn't sell yDai without delegation", async() => {
-            await expectRevert(
-                market.sellYDai(from, to, 1, { from: operator }),
-                "Market: Only Holder Or Delegate",
-            );
-        });
-
-        it("doesn't buy yDai without delegation", async() => {
-            await expectRevert(
-                market.buyYDai(from, to, 1, { from: operator }),
-                "Market: Only Holder Or Delegate",
-            );
+                await expectRevert(
+                    limitPool.buyYDai(from, to, oneToken, oneToken.div(2), { from: from }),
+                    "LimitPool: Limit exceeded",
+                );
+            });
         });
     });
 });

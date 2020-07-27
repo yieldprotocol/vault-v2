@@ -13,7 +13,7 @@ const Chai = artifacts.require('Chai');
 const YDai = artifacts.require('YDai');
 
 // Peripheral
-const Market = artifacts.require('Market');
+const Pool = artifacts.require('Pool');
 
 module.exports = async (callback) => {
 
@@ -68,8 +68,8 @@ module.exports = async (callback) => {
 
     let yDaiAddr = await migrations.contracts(web3.utils.fromAscii(`yDai0`))
     let yDai0 = await YDai.at(yDaiAddr);
-    let marketAddr = await migrations.contracts(web3.utils.fromAscii(`Market-yDai0`));
-    let market = await Market.at(marketAddr);
+    let poolAddr = await migrations.contracts(web3.utils.fromAscii(`Pool-yDai0`));
+    let pool = await Pool.at(poolAddr);
     let maturity = await yDai0.maturity();
 
     try { 
@@ -79,21 +79,21 @@ module.exports = async (callback) => {
         const daiReserves = daiTokens1;
         await getDai(user1, daiReserves);
     
-        await dai.approve(market.address, daiReserves, { from: user1 });
-        await market.init(daiReserves, { from: user1 });
+        await dai.approve(pool.address, daiReserves, { from: user1 });
+        await pool.init(daiReserves, { from: user1 });
 
         const additionalYDaiReserves = toWad(34.4);
         await yDai0.mint(user1, additionalYDaiReserves, { from: owner });
-        await yDai0.approve(market.address, additionalYDaiReserves, { from: user1 });
-        await market.sellYDai(user1, user1, additionalYDaiReserves, { from: user1 });
+        await yDai0.approve(pool.address, additionalYDaiReserves, { from: user1 });
+        await pool.sellYDai(user1, user1, additionalYDaiReserves, { from: user1 });
 
         console.log("        initial liquidity...");
-        console.log("        daiReserves: %d", (await market.getDaiReserves()).toString());
-        console.log("        yDaiReserves: %d", (await market.getYDaiReserves()).toString());
+        console.log("        daiReserves: %d", (await pool.getDaiReserves()).toString());
+        console.log("        yDaiReserves: %d", (await pool.getYDaiReserves()).toString());
         const t = new BN((await web3.eth.getBlock(await web3.eth.getBlockNumber())).timestamp);
         console.log("        timeTillMaturity: %d", (new BN(maturity).sub(t).toString()));
         console.log();
-        console.log('market initiated')
+        console.log('pool initiated')
         callback()
     } catch (e) {console.log(e)}
 
