@@ -109,7 +109,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     /// than its debt for the same collateral
     /// @param collateral Valid collateral type
     /// @param user Address of the user vault
-    function isCollateralized(bytes32 collateral, address user) public override returns (bool) {
+    function isCollateralized(bytes32 collateral, address user) public view override returns (bool) {
         return powerOf(collateral, user) >= totalDebtDai(collateral, user);
     }
 
