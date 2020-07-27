@@ -41,6 +41,7 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
 
     bool public live = true;
 
+    /// @dev The Liquidations constructor links it to the Dai, Treasury and Controller contracts.
     constructor (
         address dai_,
         address treasury_,
@@ -51,6 +52,7 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
         _controller = IController(controller_);
     }
 
+    /// @dev Only while Liquidations is not unwinding due to a MakerDAO shutdown.
     modifier onlyLive() {
         require(live == true, "Controller: Not available during unwind");
         _;
@@ -67,12 +69,15 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
 
 
     /// @dev Return if the debt of an user is between zero and the dust level
+    /// @param user Address of the user vault
     function aboveDustOrZero(address user) public view returns (bool) {
         return collateral[user] == 0 || DUST < collateral[user];
     }
 
-    /// @dev Starts a liquidation process for a given user.
+    /// @dev Starts a liquidation process for an undercollateralized vault.
     /// A liquidation fee is transferred from the liquidated user to a designated account as payment.
+    /// @param user Address of the user vault to liquidate.
+    /// @param to Address of the liquidations account to receive the liquidation fee.
     function liquidate(address user, address to) public {
         require(
             liquidations[user] == 0,
@@ -93,8 +98,15 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
         emit Liquidation(user, liquidations[user], userCollateral, userDebt);
     }
 
-    /// @dev Liquidates a position. The `from` address pays the debt of `liquidated`, and the `to` address receives an amount of collateral.
-    function buy(address from, address to, address liquidated, uint256 daiAmount)
+    /// @dev Buy a portion of a position under liquidation.
+    /// The caller pays the debt of `user`, and `from` receives an amount of collateral.
+    /// `from` can delegate to other addresses to buy for him. Also needs to use `ERC20.approve`.
+    /// @param liquidated Address of the user vault to liquidate.
+    /// @param from Address of the wallet paying Dai for liquidated collateral.
+    /// @param to Address of the wallet to send the obtained collateral to.
+    /// @param daiAmount Amount of Dai to give in exchange for liquidated collateral.
+    /// @return The amount of collateral obtained.
+    function buy(address from, address to, address liquidated, uint256 daiAmount) // TODO: make Address parameters be `from`, `to` and `vault`
         public onlyLive
         onlyHolderOrDelegate(from, "Controller: Only Holder Or Delegate")
         returns (uint256)
@@ -121,7 +133,11 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
         return tokenAmount;
     }
 
-    /// @dev Liquidates a position. The caller pays the debt of `from`, and `buyer` receives an amount of collateral.
+    /// @dev Retrieve weth from a liquidations account. This weth could come from liquidator fees or as remainders of liquidations.
+    /// `from` can delegate to other addresses to withdraw from him.
+    /// @param from Address of the liquidations user vault to withdraw weth from.
+    /// @param to Address of the wallet receiving the withdrawn weth.
+    /// @param tokenAmount Amount of Weth to withdraw.
     function withdraw(address from, address to, uint256 tokenAmount)
         public onlyLive
         onlyHolderOrDelegate(from, "Controller: Only Holder Or Delegate")
@@ -138,6 +154,7 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
 
 
     /// @dev Return price of a collateral unit, in dai, at the present moment, for a given user
+    /// @param user Address of the user vault in liquidation.
     // dai = price * collateral
     //
     //                collateral      1      min(auction, elapsed)

@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./Market.sol";
 import "../helpers/Delegable.sol";
 import "../interfaces/IMarket.sol";
-// import "@nomiclabs/buidler/console.sol";
+
 
 
 /// @dev LimitMarket is a proxy contract to Market that implements limit orders.
@@ -24,10 +24,11 @@ contract LimitMarket is Delegable {
     }
 
     /// @dev Sell Dai for yDai
-    /// @param from Wallet providing the dai being sold. Must have approved the operator with `market.addDelegate(operator)`.
+    /// @param from Wallet providing the dai being sold.
+    /// Must have approved the operator with `market.addDelegate(limitMarket.address, { from: from })`.
     /// @param to Wallet receiving the yDai being bought
-    /// @param daiIn Amount of dai being sold that will be taken from the user's wallet
-    /// @param minYDaiOut Amount of yDai being received that will be accepted as a minimum for the trade to execute
+    /// @param daiIn Amount of dai being sold
+    /// @param minYDaiOut Minimum amount of yDai being bought
     function sellDai(address from, address to, uint128 daiIn, uint128 minYDaiOut)
         external
         onlyHolderOrDelegate(from, "LimitMarket: Only Holder Or Delegate")
@@ -42,10 +43,11 @@ contract LimitMarket is Delegable {
     }
 
     /// @dev Buy Dai for yDai
-    /// @param from Wallet providing the yDai being sold. Must have approved the operator with `market.addDelegate(operator)`.
+    /// @param from Wallet providing the yDai being sold.
+    /// Must have approved the operator with `market.addDelegate(limitMarket.address, { from: from })`.
     /// @param to Wallet receiving the dai being bought
-    /// @param daiOut Amount of dai being bought that will be deposited in `to` wallet
-    /// @param maxYDaiIn Amount of yDai being paid that will be accepted as a maximum for the trade to execute
+    /// @param daiOut Amount of dai being bought
+    /// @param maxYDaiIn Maximum amount of yDai being sold
     function buyDai(address from, address to, uint128 daiOut, uint128 maxYDaiIn)
         external
         onlyHolderOrDelegate(from, "LimitMarket: Only Holder Or Delegate")
@@ -60,10 +62,11 @@ contract LimitMarket is Delegable {
     }
 
     /// @dev Sell yDai for Dai
-    /// @param from Wallet providing the yDai being sold. Must have approved the operator with `market.addDelegate(operator)`.
+    /// @param from Wallet providing the yDai being sold.
+    /// Must have approved the operator with `market.addDelegate(limitMarket.address, { from: from })`.
     /// @param to Wallet receiving the dai being bought
-    /// @param yDaiIn Amount of yDai being sold that will be taken from the user's wallet
-    /// @param minDaiOut Amount of dai being received that will be accepted as a minimum for the trade to execute
+    /// @param yDaiIn Amount of yDai being sold
+    /// @param minDaiOut Minimum amount of dai being bought
     function sellYDai(address from, address to, uint128 yDaiIn, uint128 minDaiOut)
         external
         onlyHolderOrDelegate(from, "LimitMarket: Only Holder Or Delegate")
@@ -78,10 +81,11 @@ contract LimitMarket is Delegable {
     }
 
     /// @dev Buy yDai for dai
-    /// @param from Wallet providing the dai being sold. Must have approved the operator with `market.addDelegate(operator)`.
+    /// @param from Wallet providing the dai being sold.
+    /// Must have approved the operator with `market.addDelegate(limitMarket.address, { from: from })`.
     /// @param to Wallet receiving the yDai being bought
-    /// @param yDaiOut Amount of yDai being bought that will be deposited in `to` wallet
-    /// @param maxDaiIn Amount of dai being paid that will be accepted as a maximum for the trade to execute
+    /// @param yDaiOut Amount of yDai being bought
+    /// @param maxDaiIn Maximum amount of dai being sold
     function buyYDai(address from, address to, uint128 yDaiOut, uint128 maxDaiIn)
         external
         onlyHolderOrDelegate(from, "LimitMarket: Only Holder Or Delegate")
