@@ -1,9 +1,13 @@
-const { YieldEnvironmentLite } = require("./shared/fixtures");
+import { YieldEnvironmentLite, Contract } from "./shared/fixtures";
 const FlashMinterMock = artifacts.require('FlashMinterMock');
 
-const helper = require('ganache-time-traveler');
-const { WETH, chi1, rate1, daiTokens1, wethTokens1, toRay, mulRay, divRay, subBN } = require('./shared/utils');
-const { expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
+import { WETH, chi1, rate1, daiTokens1, wethTokens1, toRay, mulRay, divRay, subBN } from './shared/utils';
+
+// @ts-ignore
+import helper from 'ganache-time-traveler';
+
+// @ts-ignore
+import { expectEvent, expectRevert } from '@openzeppelin/test-helpers';
 
 contract('yDai', async (accounts) =>  {
     let [ owner, user1, other ] = accounts;
@@ -14,26 +18,33 @@ contract('yDai', async (accounts) =>  {
     const daiTokens2 = mulRay(daiTokens1, chiDifferential);
     const wethTokens2 = mulRay(wethTokens1, chiDifferential)
 
-    let maturity;
-    let snapshot;
-    let snapshotId;
+    let maturity: number;
+    let snapshot: any;
+    let snapshotId: string;
+
+    let treasury: Contract;
+    let vat: Contract;
+    let weth: Contract;
+    let pot: Contract;
+    let dai: Contract;
+    let yDai1: Contract;
+    let flashMinter: Contract;
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        const yield = await YieldEnvironmentLite.setup();
-        treasury = yield.treasury;
-        controller = yield.controller;
-        weth = yield.maker.weth;
-        pot = yield.maker.pot;
-        vat = yield.maker.vat;
-        dai = yield.maker.dai;
+        const env = await YieldEnvironmentLite.setup();
+        treasury = env.treasury;
+        weth = env.maker.weth;
+        pot = env.maker.pot;
+        vat = env.maker.vat;
+        dai = env.maker.dai;
 
         // Setup yDai1
         const block = await web3.eth.getBlockNumber();
         maturity = (await web3.eth.getBlock(block)).timestamp + 1000;
-        yDai1 = await yield.newYDai(maturity, "Name", "Symbol");
+        yDai1 = await env.newYDai(maturity, "Name", "Symbol");
 
         // Test setup
         // Setup Flash Minter
@@ -57,17 +68,17 @@ contract('yDai', async (accounts) =>  {
     });
 
     it("should setup yDai1", async() => {
-        assert(
+        assert.equal(
             await yDai1.chiGrowth(),
             toRay(1.0).toString(),
             "chi not initialized",
         );
-        assert(
+        assert.equal(
             await yDai1.rateGrowth(),
             toRay(1.0).toString(),
             "rate not initialized",
         );
-        assert(
+        assert.equal(
             await yDai1.maturity(),
             maturity.toString(),
             "maturity not initialized",
@@ -253,7 +264,7 @@ contract('yDai', async (accounts) =>  {
                 await vat.fold(WETH, vat.address, subBN(rate2, rate1), { from: owner }); // Keeping above chi
                 await pot.setChi(chi2, { from: owner });
 
-                assert(
+                assert.equal(
                     await yDai1.chiGrowth(),
                     chiDifferential.toString(),
                     "chi differential should be " + chiDifferential + ", instead is " + (await yDai1.chiGrowth()),

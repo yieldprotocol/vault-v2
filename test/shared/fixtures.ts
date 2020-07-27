@@ -1,33 +1,20 @@
 import { formatBytes32String as toBytes32 } from 'ethers/lib/utils'
-import { BigNumber } from 'ethers'
+import { BigNumber, BigNumberish } from 'ethers'
 
-type Contract = any
+export type Contract = any
 
-// @ts-ignore
 const Vat = artifacts.require('Vat')
-// @ts-ignore
 const GemJoin = artifacts.require('GemJoin')
-// @ts-ignore
 const DaiJoin = artifacts.require('DaiJoin')
-// @ts-ignore
 const Weth = artifacts.require('WETH9')
-// @ts-ignore
 const ERC20 = artifacts.require('TestERC20')
-// @ts-ignore
 const Pot = artifacts.require('Pot')
-// @ts-ignore
 const End = artifacts.require('End')
-// @ts-ignore
 const Chai = artifacts.require('Chai')
-// @ts-ignore
 const Treasury = artifacts.require('Treasury')
-// @ts-ignore
 const YDai = artifacts.require('YDai')
-// @ts-ignore
 const Controller = artifacts.require('Controller')
-// @ts-ignore
 const Liquidations = artifacts.require('Liquidations')
-// @ts-ignore
 const Unwind = artifacts.require('Unwind')
 
 import {
@@ -43,7 +30,6 @@ import {
   tag,
   fix,
   toRay,
-  addBN,
   subBN,
   divRay,
   divrupRay,
@@ -136,7 +122,7 @@ export class MakerEnvironment {
       return controller;
   }
 
-  public async getDai(user: string, _daiTokens: BigNumber, _rate: number | BigNumber) {
+  public async getDai(user: string, _daiTokens: BigNumberish, _rate: BigNumberish) {
     await this.vat.hope(this.daiJoin.address, { from: user })
     await this.vat.hope(this.wethJoin.address, { from: user })
 
@@ -150,7 +136,7 @@ export class MakerEnvironment {
     await this.daiJoin.exit(user, _daiTokens, { from: user })
   }
 
-  public async getChai(user: string, _chaiTokens: number, _chi: number, _rate: number) {
+  public async getChai(user: string, _chaiTokens: BigNumberish, _chi: BigNumberish, _rate: BigNumberish) {
     const _daiTokens = mulRay(_chaiTokens, _chi)
     await this.getDai(user, _daiTokens, _rate)
     await this.dai.approve(this.chai.address, _daiTokens, { from: user })
@@ -173,7 +159,7 @@ export class YieldEnvironmentLite {
     this.controller = controller
   }
 
-  public static async setup() {
+  public static async setup(_beneficiary?: string) {
     const maker = await MakerEnvironment.setup()
     const treasury = await maker.setupTreasury()
 
@@ -231,7 +217,7 @@ export class YieldEnvironment extends YieldEnvironmentLite {
       this.unwind = unwind;
   }
 
-  public static async setup() {
+  public static async setup(beneficiary: string) {
     const { maker, treasury, controller } = await YieldEnvironmentLite.setup();
 
     const liquidations = await Liquidations.new(maker.dai.address, treasury.address, controller.address)
@@ -248,7 +234,8 @@ export class YieldEnvironment extends YieldEnvironmentLite {
       maker.chai.address,
       treasury.address,
       controller.address,
-      liquidations.address
+      liquidations.address,
+      beneficiary,
     )
     await treasury.orchestrate(unwind.address)
     await treasury.registerUnwind(unwind.address)
