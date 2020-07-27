@@ -1,61 +1,50 @@
-// External
-const { setupMaker, newTreasury, newYDai, newController } = require("./shared/fixtures");
-
-// YDai
-const YDai = artifacts.require('YDai');
-
-// Mocks
+import { YieldEnvironmentLite, Contract } from "./shared/fixtures";
 const FlashMinterMock = artifacts.require('FlashMinterMock');
 
-const helper = require('ganache-time-traveler');
-const { WETH, chi1, rate1, daiTokens1, wethTokens1, toRay, mulRay, divRay, subBN } = require('./shared/utils');
-const { expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
+import { WETH, chi1, rate1, daiTokens1, wethTokens1, toRay, mulRay, divRay, subBN } from './shared/utils';
+
+// @ts-ignore
+import helper from 'ganache-time-traveler';
+
+// @ts-ignore
+import { expectEvent, expectRevert } from '@openzeppelin/test-helpers';
 
 contract('yDai', async (accounts) =>  {
     let [ owner, user1, other ] = accounts;
-    let vat;
-    let weth;
-    let dai;
-    let jug;
-    let pot;
-    let treasury;
-    let yDai1;
-    let flashMinter;
 
     const rate2 = toRay(1.82);
     const chi2 = toRay(1.5);
-
     const chiDifferential  = divRay(chi2, chi1);
-
     const daiTokens2 = mulRay(daiTokens1, chiDifferential);
     const wethTokens2 = mulRay(wethTokens1, chiDifferential)
 
-    let maturity;
+    let maturity: number;
+    let snapshot: any;
+    let snapshotId: string;
 
-    let snapshot;
-    let snapshotId;
+    let treasury: Contract;
+    let vat: Contract;
+    let weth: Contract;
+    let pot: Contract;
+    let dai: Contract;
+    let yDai1: Contract;
+    let flashMinter: Contract;
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        ({
-            vat,
-            weth,
-            wethJoin,
-            dai,
-            daiJoin,
-            pot,
-            jug,
-            chai
-        } = await setupMaker());
-        treasury = await newTreasury();
-        controller = await newController();
+        const env = await YieldEnvironmentLite.setup();
+        treasury = env.treasury;
+        weth = env.maker.weth;
+        pot = env.maker.pot;
+        vat = env.maker.vat;
+        dai = env.maker.dai;
 
         // Setup yDai1
         const block = await web3.eth.getBlockNumber();
         maturity = (await web3.eth.getBlock(block)).timestamp + 1000;
-        yDai1 = await newYDai(maturity, "Name", "Symbol");
+        yDai1 = await env.newYDai(maturity, "Name", "Symbol");
 
         // Test setup
         // Setup Flash Minter
@@ -65,7 +54,7 @@ contract('yDai', async (accounts) =>  {
         
         // Deposit some weth to treasury the sneaky way so that redeem can pull some dai
         await treasury.orchestrate(owner, { from: owner });
-        await weth.deposit({ from: owner, value: wethTokens2.mul(2) });
+        await weth.deposit({ from: owner, value: wethTokens2.mul(2).toString() });
         await weth.approve(treasury.address, wethTokens2.mul(2), { from: owner });
         await treasury.pushWeth(owner, wethTokens2.mul(2), { from: owner });
 
@@ -79,17 +68,17 @@ contract('yDai', async (accounts) =>  {
     });
 
     it("should setup yDai1", async() => {
-        assert(
-            await yDai1.chiGrowth.call(),
+        assert.equal(
+            await yDai1.chiGrowth(),
             toRay(1.0).toString(),
             "chi not initialized",
         );
-        assert(
+        assert.equal(
             await yDai1.rateGrowth(),
             toRay(1.0).toString(),
             "rate not initialized",
         );
-        assert(
+        assert.equal(
             await yDai1.maturity(),
             maturity.toString(),
             "maturity not initialized",
@@ -168,30 +157,51 @@ contract('yDai', async (accounts) =>  {
         it("yDai1 chi gets fixed at maturity time", async() => {
             await pot.setChi(chi2, { from: owner });
             
-            assert(
-                await yDai1.chiGrowth.call(),
-                subBN(chi2, chi1).toString(),
-                "Chi differential should be " + subBN(chi2, chi1),
+            assert.equal(
+                (await yDai1.chi0()).toString(),
+                chi1.toString(),
+                "Chi at maturity should be " + chi1,
             );
         });
 
         it("yDai1 rate gets fixed at maturity time", async() => {
             await vat.fold(WETH, vat.address, subBN(rate2, rate1), { from: owner });
             
-            assert(
-                await yDai1.rateGrowth(),
-                subBN(rate2, rate1).toString(),
-                "Rate differential should be " + subBN(rate2, rate1),
+            assert.equal(
+                (await yDai1.rate0()).toString(),
+                rate1.toString(),
+                "Rate at maturity should be " + rate1,
+            );
+        });
+
+        it("rateGrowth returns the rate differential between now and maturity", async() => {
+            await vat.fold(WETH, vat.address, subBN(rate2, rate1), { from: owner });
+            
+            assert.equal(
+                (await yDai1.rateGrowth()).toString(),
+                divRay(rate2, rate1).toString(),
+                "Rate differential should be " + divRay(rate2, rate1),
             );
         });
 
         it("chiGrowth always <= rateGrowth", async() => {
             await pot.setChi(chi2, { from: owner });
 
-            assert(
-                await yDai1.chiGrowth.call(),
-                await yDai1.rateGrowth(),
-                "Chi differential should be " + await yDai1.rateGrowth(),
+            assert.equal(
+                (await yDai1.chiGrowth()).toString(),
+                (await yDai1.rateGrowth()).toString(),
+                "Chi differential should be " + await yDai1.rateGrowth() + ", instead is " + await yDai1.chiGrowth(),
+            );
+        });
+
+        it("chiGrowth returns the chi differential between now and maturity", async() => {
+            await vat.fold(WETH, vat.address, subBN(rate2, rate1), { from: owner });
+            await pot.setChi(chi2, { from: owner });
+            
+            assert.equal(
+                (await yDai1.chiGrowth()).toString(),
+                divRay(chi2, chi1).toString(),
+                "Chi differential should be " + divRay(chi2, chi1),
             );
         });
 
@@ -254,10 +264,10 @@ contract('yDai', async (accounts) =>  {
                 await vat.fold(WETH, vat.address, subBN(rate2, rate1), { from: owner }); // Keeping above chi
                 await pot.setChi(chi2, { from: owner });
 
-                assert(
-                    await yDai1.chiGrowth.call(),
+                assert.equal(
+                    await yDai1.chiGrowth(),
                     chiDifferential.toString(),
-                    "chi differential should be " + chiDifferential + ", instead is " + (await yDai1.chiGrowth.call()),
+                    "chi differential should be " + chiDifferential + ", instead is " + (await yDai1.chiGrowth()),
                 );
             });
     

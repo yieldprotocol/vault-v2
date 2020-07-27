@@ -1,31 +1,31 @@
-const helper = require('ganache-time-traveler');
-const { expectRevert } = require('@openzeppelin/test-helpers');
-const { rate1, daiDebt1, WETH, daiTokens1, wethTokens1, chaiTokens1, spot, toRay, mulRay, divRay } = require('./shared/utils');
-const { setupMaker, newTreasury, newController, newYDai, newUnwind, newLiquidations, getDai } = require("./shared/fixtures");
+// @ts-ignore
+import helper from 'ganache-time-traveler';
+import { BigNumber } from 'ethers' 
+// @ts-ignore
+import { expectRevert } from '@openzeppelin/test-helpers' ;
+import { rate1, daiDebt1, WETH, daiTokens1, wethTokens1, chaiTokens1, spot, toRay, mulRay, divRay } from './shared/utils';
+import { YieldEnvironment, Contract } from "./shared/fixtures";
 
 contract('Unwind - Treasury', async (accounts) =>  {
     let [ owner, user ] = accounts;
-    let vat;
-    let weth;
-    let wethJoin;
-    let dai;
-    let daiJoin;
-    let jug;
-    let pot;
-    let end;
-    let chai;
-    let treasury;
-    let yDai1;
-    let yDai2;
-    let controller;
-    let liquidations;
-    let unwind;
 
-    let snapshot;
-    let snapshotId;
+    let snapshot: any;
+    let snapshotId: string;
 
-    let maturity1;
-    let maturity2;
+    let env: YieldEnvironment;
+
+    let dai: Contract;
+    let vat: Contract;
+    let controller: Contract;
+    let treasury: Contract;
+    let weth: Contract;
+    let liquidations: Contract;
+    let unwind: Contract;
+    let end: Contract;
+    let chai: Contract;
+
+    let maturity1: number;
+    let maturity2: number;
 
     const tag  = divRay(toRay(0.9), spot);
     const taggedWeth = mulRay(daiTokens1, tag);
@@ -36,38 +36,27 @@ contract('Unwind - Treasury', async (accounts) =>  {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        ({
-            vat,
-            weth,
-            wethJoin,
-            dai,
-            daiJoin,
-            pot,
-            jug,
-            chai,
-            end,
-        } = await setupMaker());
+        env = await YieldEnvironment.setup(owner)
+        controller = env.controller;
+        treasury = env.treasury;
+        liquidations = env.liquidations;
+        unwind = env.unwind;
 
-
-        treasury = await newTreasury();
-        controller = await newController();
+        vat = env.maker.vat;
+        dai = env.maker.dai;
+        weth = env.maker.weth;
+        end = env.maker.end;
+        chai = env.maker.chai;
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
-        yDai1 = await newYDai(maturity1, "Name1", "Symbol1");
-        yDai2 = await newYDai(maturity2, "Name2", "Symbol2");
-
-        // Setup Liquidations
-        liquidations = await newLiquidations();
-
-        // Setup Unwind
-        unwind = await newUnwind();
-        await yDai1.orchestrate(unwind.address);
-        await yDai2.orchestrate(unwind.address);
-
-        await treasury.orchestrate(owner, { from: owner });
+        const yDai1 = await env.newYDai(maturity1, "Name", "Symbol");
+        const yDai2 = await env.newYDai(maturity2, "Name", "Symbol");
+        await yDai1.orchestrate(unwind.address)
+        await yDai2.orchestrate(unwind.address)
+        await treasury.orchestrate(owner)
         await end.rely(owner, { from: owner });       // `owner` replaces MKR governance
     });
 
@@ -105,22 +94,22 @@ contract('Unwind - Treasury', async (accounts) =>  {
                 await unwind.unwind({ from: owner });
                 
                 assert.equal(
-                    await unwind.live.call(),
+                    await unwind.live(),
                     false,
                     'Unwind should be activated',
                 );
                 assert.equal(
-                    await treasury.live.call(),
+                    await treasury.live(),
                     false,
                     'Treasury should not be live',
                 );
                 assert.equal(
-                    await controller.live.call(),
+                    await controller.live(),
                     false,
                     'Controller should not be live',
                 );
                 assert.equal(
-                    await liquidations.live.call(),
+                    await liquidations.live(),
                     false,
                     'Liquidations should not be live',
                 );
@@ -203,8 +192,8 @@ contract('Unwind - Treasury', async (accounts) =>  {
 
                     assert.equal(
                         await weth.balanceOf(unwind.address, { from: owner }),
-                        wethTokens1.sub(taggedWeth).add(1).toString(),
-                        'Unwind should have ' + wethTokens1.sub(taggedWeth).add(1).add(1) + ' weth in hand, instead has ' + (await weth.balanceOf(unwind.address, { from: owner })),
+                        BigNumber.from(wethTokens1).sub(taggedWeth).add(1).toString(),
+                        'Unwind should have ' + BigNumber.from(wethTokens1).sub(taggedWeth).add(1).add(1) + ' weth in hand, instead has ' + (await weth.balanceOf(unwind.address, { from: owner })),
                     );
                 });
             });
@@ -212,7 +201,7 @@ contract('Unwind - Treasury', async (accounts) =>  {
 
         describe("with savings", () => {
             beforeEach(async() => {
-                await getDai(owner, daiTokens1, rate1);
+                await env.maker.getDai(owner, daiTokens1, rate1);
 
                 await dai.approve(treasury.address, daiTokens1, { from: owner });
                 await treasury.pushDai(owner, daiTokens1, { from: owner });
@@ -226,7 +215,7 @@ contract('Unwind - Treasury', async (accounts) =>  {
 
             describe("with Dss unwind initiated and fix defined", () => {
                 beforeEach(async() => {
-                    await getDai(user, daiTokens1.mul(2), rate1);
+                    await env.maker.getDai(user, daiTokens1.mul(2), rate1);
 
                     await end.cage({ from: owner });
                     await end.setTag(WETH, tag, { from: owner });

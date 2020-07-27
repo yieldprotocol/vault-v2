@@ -1,49 +1,44 @@
-const helper = require('ganache-time-traveler');
-const { WETH, rate1: rate, daiTokens1, wethTokens1: wethTokens1 } = require('./../shared/utils');
-const { shutdown, setupMaker, newTreasury, newController, newYDai, getDai, postWeth, newUnwind, newLiquidations } = require("./../shared/fixtures");
+// @ts-ignore
+import helper from 'ganache-time-traveler';
+import { WETH, rate1 as rate, daiTokens1, wethTokens1 as wethTokens1 } from './../shared/utils';
+import { YieldEnvironment, Contract } from "./../shared/fixtures";
 
 contract('Gas Usage', async (accounts) =>  {
     let [ owner, user1, user2, user3 ] = accounts;
-    let dai;
-    let treasury;
-    let yDai1;
-    let yDai2;
-    let controller;
-    let liquidations;
-    let unwind;
 
-    let snapshot;
-    let snapshotId;
+    let snapshot: any;
+    let snapshotId: string;
 
-    let maturities;
-    let series;
+    let maturities: number[];
+    let series: Contract[];
+
+    let env: YieldEnvironment;
+    let controller: Contract;
+    let treasury: Contract;
+    let dai: Contract;
+    let unwind: Contract;
+
+    let maturity1: number;
+    let maturity2: number;
+
+
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        ({
-            vat,
-            weth,
-            wethJoin,
-            dai,
-            daiJoin,
-            pot,
-            jug,
-            chai
-        } = await setupMaker());
-
-        treasury = await newTreasury();
-        controller = await newController();
-        liquidations = await newLiquidations()
-        unwind = await newUnwind()
+        env = await YieldEnvironment.setup(owner);
+        controller = env.controller;
+        treasury = env.treasury;
+        dai = env.maker.dai;
+        unwind = env.unwind;
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
-        yDai1 = await newYDai(maturity1, "Name", "Symbol");
-        yDai2 = await newYDai(maturity2, "Name", "Symbol");
+        await env.newYDai(maturity1, "Name", "Symbol");
+        await env.newYDai(maturity2, "Name", "Symbol");
     });
 
     afterEach(async() => {
@@ -60,7 +55,7 @@ contract('Gas Usage', async (accounts) =>  {
             for (let i = 0; i < m; i++) {
                 const maturity = (await web3.eth.getBlock(block)).timestamp + (i*1000); 
                 maturities.push(maturity);
-                series.push(await newYDai(maturity, "Name", "Symbol"));
+                series.push(await env.newYDai(maturity, "Name", "Symbol"));
             }
         });
 
@@ -69,14 +64,14 @@ contract('Gas Usage', async (accounts) =>  {
                 // Set the scenario
                 
                 for (let i = 0; i < maturities.length; i++) {
-                    await postWeth(user3, wethTokens1);
+                    await env.postWeth(user3, wethTokens1);
                     await controller.borrow(WETH, maturities[i], user3, user3, daiTokens1, { from: user3 });
                 }
             });
 
             it("borrow a second time", async() => {
                 for (let i = 0; i < maturities.length; i++) {
-                    await postWeth(user3, wethTokens1);
+                    await env.postWeth(user3, wethTokens1);
                     await controller.borrow(WETH, maturities[i], user3, user3, daiTokens1, { from: user3 });
                 }
             });
@@ -100,7 +95,7 @@ contract('Gas Usage', async (accounts) =>  {
                 await helper.advanceBlock();
                 
                 for (let i = 0; i < maturities.length; i++) {
-                    await getDai(user3, daiTokens1, rate);
+                    await env.maker.getDai(user3, daiTokens1, rate);
                     await dai.approve(treasury.address, daiTokens1, { from: user3 });
                     await controller.repayDai(WETH, maturities[i], user3, user3, daiTokens1, { from: user3 });
                 }
@@ -112,7 +107,7 @@ contract('Gas Usage', async (accounts) =>  {
 
             describe("during dss unwind", () => {
                 beforeEach(async() => {
-                    await shutdown(owner, user1, user2)
+                    await env.shutdown(owner, user1, user2)
                 });
 
                 it("single series settle", async() => {

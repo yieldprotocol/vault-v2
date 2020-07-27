@@ -4,13 +4,11 @@ const Weth = artifacts.require("WETH9");
 const ERC20 = artifacts.require("TestERC20");
 const GemJoin = artifacts.require("GemJoin");
 const DaiJoin = artifacts.require("DaiJoin");
-const Jug = artifacts.require("Jug");
 const Pot = artifacts.require("Pot");
 const Chai = artifacts.require("Chai");
 const Treasury = artifacts.require("Treasury");
 const Controller = artifacts.require("Controller");
 
-const truffleAssert = require('truffle-assertions');
 const { expectRevert } = require('@openzeppelin/test-helpers');
 const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('../shared/utils');
 
@@ -22,7 +20,6 @@ contract('Treasury - Saving', async (accounts) =>  {
     let wethJoin;
     let dai;
     let daiJoin;
-    let jug;
     let pot;
     let chai;
     let treasury;
@@ -46,7 +43,6 @@ contract('Treasury - Saving', async (accounts) =>  {
         wethJoin = await GemJoin.at(await migrations.contracts(web3.utils.fromAscii("WethJoin")));
         dai = await ERC20.at(await migrations.contracts(web3.utils.fromAscii("Dai")));
         daiJoin = await DaiJoin.at(await migrations.contracts(web3.utils.fromAscii("DaiJoin")));
-        jug = await Jug.at(await migrations.contracts(web3.utils.fromAscii("Jug")));
         pot = await Pot.at(await migrations.contracts(web3.utils.fromAscii("Pot")));
         chai = await Chai.at(await migrations.contracts(web3.utils.fromAscii("Chai")));
         treasury = await Treasury.at(await migrations.contracts(web3.utils.fromAscii("Treasury")));
@@ -82,9 +78,9 @@ contract('Treasury - Saving', async (accounts) =>  {
             "Treasury should have chai"
         );
         assert.equal(
-            await treasury.savings.call(),
+            await treasury.savings(),
             daiTokens.toString(),
-            "Treasury should have " + daiTokens + " savings in dai units, instead has " + await treasury.savings.call(),
+            "Treasury should have " + daiTokens + " savings in dai units, instead has " + await treasury.savings(),
         );
         assert.equal(
             await dai.balanceOf(owner),
@@ -102,7 +98,7 @@ contract('Treasury - Saving', async (accounts) =>  {
             "Treasury should not have chai",
         );
         assert.equal(
-            await treasury.savings.call(),
+            await treasury.savings(),
             0,
             "Treasury should not have savings in dai units"
         );
@@ -126,7 +122,7 @@ contract('Treasury - Saving', async (accounts) =>  {
             "Treasury should have chai"
         );
         assert.equal(
-            await treasury.savings.call(),
+            await treasury.savings(),
             daiTokens.toString(),
             "Treasury should report savings in dai units"
         );
@@ -146,7 +142,7 @@ contract('Treasury - Saving', async (accounts) =>  {
             "Treasury should not have chai",
         );
         assert.equal(
-            await treasury.savings.call(),
+            await treasury.savings(),
             0,
             "Treasury should not have savings in dai units"
         );

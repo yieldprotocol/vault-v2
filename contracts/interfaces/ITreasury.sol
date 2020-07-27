@@ -4,7 +4,7 @@ pragma solidity ^0.6.10;
 
 interface ITreasury {
     function debt() external view returns(uint256);
-    function savings() external returns(uint256);
+    function savings() external view returns(uint256);
     function pushDai(address user, uint256 dai) external;
     function pullDai(address user, uint256 dai) external;
     function pushChai(address user, uint256 chai) external;

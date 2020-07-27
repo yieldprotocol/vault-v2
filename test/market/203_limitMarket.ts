@@ -1,19 +1,14 @@
 const Market = artifacts.require('Market');
 const LimitMarket = artifacts.require('LimitMarket');
 
-const { toWad, toRay, mulRay } = require('../shared/utils');
-const { setupMaker, newTreasury, newController, newYDai, getDai } = require("../shared/fixtures");
-const { BN, expectRevert } = require('@openzeppelin/test-helpers');
-const { assert, expect } = require('chai');
+import { toWad, toRay, mulRay } from '../shared/utils';
+import { YieldEnvironmentLite, Contract } from "../shared/fixtures";
+// @ts-ignore
+import { BN, expectRevert } from '@openzeppelin/test-helpers';
+import { assert, expect } from 'chai';
 
 contract('LimitMarket', async (accounts) =>  {
     let [ owner, user1, operator, from, to ] = accounts;
-    let dai;
-    let treasury;
-    let yDai1;
-    let controller;
-    let market;
-    let limitMarket;
 
     // These values impact the market results
     const rate1 = toRay(1.4);
@@ -21,33 +16,29 @@ contract('LimitMarket', async (accounts) =>  {
     const daiTokens1 = mulRay(daiDebt1, rate1);
     const yDaiTokens1 = daiTokens1;
 
-    let maturity1;
+    let maturity1: number;
+    let yDai1: Contract;
+    let limitMarket: Contract;
+    let market: Contract;
+    let dai: Contract;
+    let env: YieldEnvironmentLite;
 
     beforeEach(async() => {
-        ({
-            vat,
-            weth,
-            wethJoin,
-            dai,
-            daiJoin,
-            pot,
-            jug,
-            end,
-            chai
-        } = await setupMaker());
-
-        treasury = await newTreasury();
-        controller = await newController();
+        env = await YieldEnvironmentLite.setup();
+        dai = env.maker.dai;
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 31556952; // One year
-        yDai1 = await newYDai(maturity1, "Name", "Symbol");
+        yDai1 = await env.newYDai(maturity1, "Name", "Symbol");
+
 
         // Setup Market
         market = await Market.new(
             dai.address,
             yDai1.address,
+            "Name",
+            "Symbol",
             { from: owner }
         );
 
@@ -69,7 +60,7 @@ contract('LimitMarket', async (accounts) =>  {
     describe("with liquidity", () => {
         beforeEach(async() => {
             const daiReserves = daiTokens1;
-            await getDai(user1, daiReserves, rate1);
+            await env.maker.getDai(user1, daiReserves, rate1);
     
             await dai.approve(market.address, daiReserves, { from: user1 });
             await market.init(daiReserves, { from: user1 });
@@ -145,7 +136,7 @@ contract('LimitMarket', async (accounts) =>  {
 
             it("sells dai", async() => {
                 const oneToken = toWad(1);
-                await getDai(from, daiTokens1, rate1);
+                await env.maker.getDai(from, daiTokens1, rate1);
 
                 await market.addDelegate(limitMarket.address, { from: from });
                 await dai.approve(market.address, oneToken, { from: from });
@@ -166,7 +157,7 @@ contract('LimitMarket', async (accounts) =>  {
 
             it("doesn't sell dai if limit not reached", async() => {
                 const oneToken = toWad(1);
-                await getDai(from, daiTokens1, rate1);
+                await env.maker.getDai(from, daiTokens1, rate1);
 
                 await market.addDelegate(limitMarket.address, { from: from });
                 await dai.approve(market.address, oneToken, { from: from });
@@ -179,7 +170,7 @@ contract('LimitMarket', async (accounts) =>  {
 
             it("buys yDai", async() => {
                 const oneToken = toWad(1);
-                await getDai(from, daiTokens1, rate1);
+                await env.maker.getDai(from, daiTokens1, rate1);
 
                 await market.addDelegate(limitMarket.address, { from: from });
                 await dai.approve(market.address, daiTokens1, { from: from });
@@ -199,7 +190,7 @@ contract('LimitMarket', async (accounts) =>  {
 
             it("doesn't buy yDai if limit exceeded", async() => {
                 const oneToken = toWad(1);
-                await getDai(from, daiTokens1, rate1);
+                await env.maker.getDai(from, daiTokens1, rate1);
 
                 await market.addDelegate(limitMarket.address, { from: from });
                 await dai.approve(market.address, daiTokens1, { from: from });

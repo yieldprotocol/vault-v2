@@ -1,17 +1,13 @@
 const Market = artifacts.require('Market');
 
-const { toWad, toRay, mulRay } = require('../shared/utils');
-const { setupMaker, newTreasury, newController, newYDai, getDai } = require("../shared/fixtures");
-const { BN, expectRevert } = require('@openzeppelin/test-helpers');
-const { assert, expect } = require('chai');
+import { toWad, toRay, mulRay } from '../shared/utils';
+import { YieldEnvironmentLite, Contract } from "../shared/fixtures";
+// @ts-ignore
+import { BN, expectRevert } from '@openzeppelin/test-helpers';
+import { assert, expect } from 'chai';
 
 contract('LimitMarket', async (accounts) =>  {
     let [ owner, user1, operator, from, to ] = accounts;
-    let dai;
-    let treasury;
-    let yDai1;
-    let controller;
-    let market;
 
     // These values impact the market results
     const rate1 = toRay(1.4);
@@ -19,33 +15,28 @@ contract('LimitMarket', async (accounts) =>  {
     const daiTokens1 = mulRay(daiDebt1, rate1);
     const yDaiTokens1 = daiTokens1;
 
-    let maturity1;
+    let maturity1: number;
+    let yDai1: Contract;
+    let dai: Contract;
+    let market: Contract;
+    let env: Contract;
 
     beforeEach(async() => {
-        ({
-            vat,
-            weth,
-            wethJoin,
-            dai,
-            daiJoin,
-            pot,
-            jug,
-            end,
-            chai
-        } = await setupMaker());
-
-        treasury = await newTreasury();
-        controller = await newController();
+        env = await YieldEnvironmentLite.setup();
+        dai = env.maker.dai;
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 31556952; // One year
-        yDai1 = await newYDai(maturity1, "Name", "Symbol");
+        yDai1 = await env.newYDai(maturity1, "Name", "Symbol");
+
 
         // Setup Market
         market = await Market.new(
             dai.address,
             yDai1.address,
+            "Name",
+            "Symbol",
             { from: owner }
         );
 
@@ -59,7 +50,7 @@ contract('LimitMarket', async (accounts) =>  {
     describe("with liquidity", () => {
         beforeEach(async() => {
             const daiReserves = daiTokens1;
-            await getDai(user1, daiReserves, rate1)
+            await env.maker.getDai(user1, daiReserves, rate1)
     
             await dai.approve(market.address, daiReserves, { from: user1 });
             await market.init(daiReserves, { from: user1 });
@@ -89,6 +80,7 @@ contract('LimitMarket', async (accounts) =>  {
             const expectedYDaiIn = (new BN(oneToken.toString())).mul(new BN('10019')).div(new BN('10000')); // I just hate javascript
             const yDaiIn = (new BN(yDaiTokens1.toString())).sub(new BN(await yDai1.balanceOf(from)));
             expect(yDaiIn).to.be.bignumber.gt(expectedYDaiIn.mul(new BN('9999')).div(new BN('10000')));
+            // @ts-ignore
             expect(yDaiIn).to.be.bignumber.lt(expectedYDaiIn.mul(new BN('10001')).div(new BN('10000')));
         });
 
@@ -115,7 +107,9 @@ contract('LimitMarket', async (accounts) =>  {
 
             const expectedDaiOut = (new BN(oneToken.toString())).mul(new BN('99814')).div(new BN('100000')); // I just hate javascript
             const daiOut = new BN(await dai.balanceOf(to));
+            // @ts-ignore
             expect(daiOut).to.be.bignumber.gt(expectedDaiOut.mul(new BN('9999')).div(new BN('10000')));
+            // @ts-ignore
             expect(daiOut).to.be.bignumber.lt(expectedDaiOut.mul(new BN('10001')).div(new BN('10000')));
         });
 
@@ -129,7 +123,7 @@ contract('LimitMarket', async (accounts) =>  {
 
             it("sells dai without delegation", async() => {
                 const oneToken = toWad(1);
-                await getDai(from, daiTokens1, rate1);
+                await env.maker.getDai(from, daiTokens1, rate1);
     
                 // yDaiOutForChaiIn formula: https://www.desmos.com/calculator/dcjuj5lmmc
     
@@ -151,13 +145,15 @@ contract('LimitMarket', async (accounts) =>  {
                 const expectedYDaiOut = (new BN(oneToken.toString())).mul(new BN('1132')).div(new BN('1000')); // I just hate javascript
                 const yDaiOut = new BN(await yDai1.balanceOf(to));
                 // TODO: Test precision with 48 and 64 bits with this trade and reserve levels
+                // @ts-ignore
                 expect(yDaiOut).to.be.bignumber.gt(expectedYDaiOut.mul(new BN('999')).div(new BN('1000')));
+                // @ts-ignore
                 expect(yDaiOut).to.be.bignumber.lt(expectedYDaiOut.mul(new BN('1001')).div(new BN('1000')));
             });
 
             it("buys yDai without delegation", async() => {
                 const oneToken = toWad(1);
-                await getDai(from, daiTokens1, rate1);
+                await env.maker.getDai(from, daiTokens1, rate1);
 
                 // chaiInForYDaiOut formula: https://www.desmos.com/calculator/cgpfpqe3fq
 
@@ -178,7 +174,9 @@ contract('LimitMarket', async (accounts) =>  {
 
                 const expectedDaiIn = (new BN(oneToken.toString())).mul(new BN('8835')).div(new BN('10000')); // I just hate javascript
                 const daiIn = (new BN(daiTokens1.toString())).sub(new BN(await dai.balanceOf(from)));
+                // @ts-ignore
                 expect(daiIn).to.be.bignumber.gt(expectedDaiIn.mul(new BN('9999')).div(new BN('10000')));
+                // @ts-ignore
                 expect(daiIn).to.be.bignumber.lt(expectedDaiIn.mul(new BN('10001')).div(new BN('10000')));
             });
         });

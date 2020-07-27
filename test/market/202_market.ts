@@ -1,20 +1,16 @@
 const Market = artifacts.require('Market');
 const YieldMathMock = artifacts.require('YieldMathMock');
 
-const helper = require('ganache-time-traveler');
-const { toWad, toRay, mulRay } = require('../shared/utils');
-const { setupMaker, newTreasury, newController, newYDai, getDai } = require("../shared/fixtures");
-const { BN, expectRevert } = require('@openzeppelin/test-helpers');
-const { assert, expect } = require('chai');
+// @ts-ignore
+import helper from 'ganache-time-traveler';
+import { toWad, toRay, mulRay } from '../shared/utils';
+import { YieldEnvironmentLite, Contract } from "../shared/fixtures";
+// @ts-ignore
+import { BN, expectRevert } from '@openzeppelin/test-helpers';
+import { assert, expect } from 'chai';
 
 contract('Market', async (accounts) =>  {
     let [ owner, user1, operator, from, to ] = accounts;
-    let dai;
-    let treasury;
-    let yDai1;
-    let controller;
-    let market;
-    let yieldMath;
 
     // These values impact the market results
     const rate1 = toRay(1.4);
@@ -25,39 +21,36 @@ contract('Market', async (accounts) =>  {
     const oneToken = toWad(1);
     const initialDai = daiTokens1;
 
-    let maturity1;
+    let snapshot: any;
+    let snapshotId: string;
 
-    let snapshot;
-    let snapshotId;
+    let env: YieldEnvironmentLite;
+
+    let dai: Contract;
+    let market: Contract;
+    let yDai1: Contract;
+    let yieldMath: Contract;
+
+    let maturity1: number;
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        ({
-            vat,
-            weth,
-            wethJoin,
-            dai,
-            daiJoin,
-            pot,
-            jug,
-            end,
-            chai
-        } = await setupMaker());
-
-        treasury = await newTreasury();
-        controller = await newController();
+        env = await YieldEnvironmentLite.setup();
+        dai = env.maker.dai;
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 31556952; // One year
-        yDai1 = await newYDai(maturity1, "Name", "Symbol");
+        yDai1 = await env.newYDai(maturity1, "Name", "Symbol");
 
         // Setup Market
         market = await Market.new(
             dai.address,
             yDai1.address,
+            "Name",
+            "Symbol",
             { from: owner }
         );
 
@@ -106,7 +99,7 @@ contract('Market', async (accounts) =>  {
     });
 
     it("adds initial liquidity", async() => {
-        await getDai(user1, initialDai, rate1);
+        await env.maker.getDai(user1, initialDai, rate1);
 
         console.log("        initial liquidity...");
         console.log("        daiReserves: %d", initialDai.toString());
@@ -132,7 +125,7 @@ contract('Market', async (accounts) =>  {
 
     describe("with initial liquidity", () => {
         beforeEach(async() => {
-            await getDai(user1, initialDai, rate1);
+            await env.maker.getDai(user1, initialDai, rate1);
     
             await dai.approve(market.address, initialDai, { from: user1 });
             await market.init(initialDai, { from: user1 });
@@ -325,7 +318,7 @@ contract('Market', async (accounts) =>  {
 
             it("sells dai", async() => {
                 const oneToken = toWad(1);
-                await getDai(from, daiTokens1, rate1);
+                await env.maker.getDai(from, daiTokens1, rate1);
     
                 // yDaiOutForDaiIn formula: https://www.desmos.com/calculator/xqqj8pslcx
     
@@ -374,7 +367,7 @@ contract('Market', async (accounts) =>  {
     
             it("buys yDai", async() => {
                 const oneToken = toWad(1);
-                await getDai(from, daiTokens1, rate1);
+                await env.maker.getDai(from, daiTokens1, rate1);
     
                 // daiInForYDaiOut formula: https://www.desmos.com/calculator/drctsjijcl
     
