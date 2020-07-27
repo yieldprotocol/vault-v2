@@ -1,176 +1,42 @@
-// External
-const Vat = artifacts.require('Vat');
-const GemJoin = artifacts.require('GemJoin');
-const DaiJoin = artifacts.require('DaiJoin');
-const Weth = artifacts.require("WETH9");
-const ERC20 = artifacts.require("TestERC20");
-const Jug = artifacts.require('Jug');
-const Pot = artifacts.require('Pot');
-const End = artifacts.require('End');
-const Chai = artifacts.require('Chai');
-
-// Common
-const Treasury = artifacts.require('Treasury');
-
-// YDai
-const YDai = artifacts.require('YDai');
-const Controller = artifacts.require('Controller');
-
-// Peripheral
-const EthProxy = artifacts.require('EthProxy');
-const Unwind = artifacts.require('Unwind');
-const Market = artifacts.require('Market');
-
-// Mocks
-const FlashMinterMock = artifacts.require('FlashMinterMock');
-
-const truffleAssert = require('truffle-assertions');
+const Market = artifacts.require("Market")
 const helper = require('ganache-time-traveler');
-const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('../shared/utils');
-const { BN, expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
-const { assert, expect } = require('chai');
+const { BN } = require('@openzeppelin/test-helpers');
+const { rate1, daiTokens1, toWad } = require('./../shared/utils');
+const { YieldEnvironmentLite } = require("./../shared/fixtures");
 
 contract('Market', async (accounts) =>  {
     let [ owner, user1, operator, from, to ] = accounts;
-    let vat;
-    let weth;
-    let wethJoin;
-    let dai;
-    let daiJoin;
-    let jug;
-    let pot;
-    let end;
-    let chai;
-    let treasury;
-    let yDai1;
-    let yDai2;
-    let controller;
-    let splitter;
-    let market;
-    let flashMinter;
-
-    let ilk = web3.utils.fromAscii("ETH-A");
-    let Line = web3.utils.fromAscii("Line");
-    let spotName = web3.utils.fromAscii("spot");
-    let linel = web3.utils.fromAscii("line");
-
-    const limits =  toRad(10000);
-    const spot = toRay(1.2);
-
-    const rate1 = toRay(1.4);
-    const rate2 = toRay(1.82);
-    const chi1 = toRay(1.2);
-
-    const daiDebt1 = toWad(96);
-    const daiTokens1 = mulRay(daiDebt1, rate1);
-    const yDaiTokens1 = daiTokens1;
-    const wethTokens1 = divRay(daiTokens1, spot);
-
+    
     const daiReserves = daiTokens1;
+    const yDaiTokens1 = daiTokens1;
     const yDaiReserves = yDaiTokens1;
-
-    let maturity;
 
     const results = new Set();
     results.add(['trade', 'daiReserves', 'yDaiReserves', 'tokensIn', 'tokensOut']);
-
-    // Convert eth to weth and use it to borrow `daiTokens` from MakerDAO
-    // This function shadows and uses global variables, careful.
-    async function getDai(user, _daiTokens){
-        await vat.hope(daiJoin.address, { from: user });
-        await vat.hope(wethJoin.address, { from: user });
-
-        const _daiDebt = divRay(_daiTokens, rate1);
-        const _wethTokens = divRay(_daiTokens, spot);
-
-        await weth.deposit({ from: user, value: _wethTokens });
-        await weth.approve(wethJoin.address, _wethTokens, { from: user });
-        await wethJoin.join(user, _wethTokens, { from: user });
-        await vat.frob(ilk, user, user, user, _wethTokens, _daiDebt, { from: user });
-        await daiJoin.exit(user, _daiTokens, { from: user });
-    }
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        // Setup vat, join and weth
-        vat = await Vat.new();
-        await vat.init(ilk, { from: owner }); // Set ilk rate (stability fee accumulator) to 1.0
+        yield = await YieldEnvironmentLite.setup();
+        controller = yield.controller;
+        treasury = yield.treasury;
+        dai = yield.maker.dai;
 
-        weth = await Weth.new({ from: owner });
-        wethJoin = await GemJoin.new(vat.address, ilk, weth.address, { from: owner });
-
-        dai = await ERC20.new(0, { from: owner });
-        daiJoin = await DaiJoin.new(vat.address, dai.address, { from: owner });
-
-        await vat.file(ilk, spotName, spot, { from: owner });
-        await vat.file(ilk, linel, limits, { from: owner });
-        await vat.file(Line, limits);
-
-        // Setup jug
-        jug = await Jug.new(vat.address);
-        await jug.init(ilk, { from: owner }); // Set ilk duty (stability fee) to 1.0
-
-        // Setup pot
-        pot = await Pot.new(vat.address);
-
-        // Permissions
-        await vat.rely(vat.address, { from: owner });
-        await vat.rely(wethJoin.address, { from: owner });
-        await vat.rely(daiJoin.address, { from: owner });
-        await vat.rely(jug.address, { from: owner });
-        await vat.rely(pot.address, { from: owner });
-        await vat.hope(daiJoin.address, { from: owner });
-
-        // Setup chai
-        chai = await Chai.new(
-            vat.address,
-            pot.address,
-            daiJoin.address,
-            dai.address,
-        );
-
-        treasury = await Treasury.new(
-            vat.address,
-            weth.address,
-            dai.address,
-            wethJoin.address,
-            daiJoin.address,
-            pot.address,
-            chai.address,
-        );
-    
-        // Setup yDai1
+        // Setup yDai
         const block = await web3.eth.getBlockNumber();
-        maturity = (await web3.eth.getBlock(block)).timestamp + 31556952; // One year
-        yDai1 = await YDai.new(
-            vat.address,
-            jug.address,
-            pot.address,
-            treasury.address,
-            maturity,
-            "Name",
-            "Symbol"
-        );
-        await treasury.orchestrate(yDai1.address, { from: owner });
+        maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
+        yDai1 = await yield.newYDai(maturity1, "Name", "Symbol");
+        await yDai1.orchestrate(owner);
 
         // Setup Market
         market = await Market.new(
             dai.address,
             yDai1.address,
+            "Name",
+            "Symbol",
             { from: owner }
         );
-
-        // Test setup
-        
-        // Increase the rate accumulator
-        await vat.fold(ilk, vat.address, subBN(rate1, toRay(1)), { from: owner }); // Fold only the increase from 1.0
-        await pot.setChi(chi1, { from: owner }); // Set the savings accumulator
-
-        // Allow owner to mint yDai the sneaky way, without recording a debt in controller
-        await yDai1.orchestrate(owner, { from: owner });
-
     });
 
     afterEach(async() => {
@@ -199,12 +65,12 @@ contract('Market', async (accounts) =>  {
 
     describe("with liquidity", () => {
         beforeEach(async() => {
-            await getDai(user1, daiReserves)
+            await yield.maker.getDai(user1, daiReserves, rate1)
             await yDai1.mint(user1, yDaiReserves, { from: owner });
     
             await dai.approve(market.address, daiReserves, { from: user1 });
             await yDai1.approve(market.address, yDaiReserves, { from: user1 });
-            await market.init(daiReserves, yDaiReserves, { from: user1 });
+            await market.init(daiReserves, { from: user1 });
         });
 
         it("buys dai", async() => {
@@ -242,7 +108,7 @@ contract('Market', async (accounts) =>  {
 
             it("sells dai", async() => {
                 const tradeSize = toWad(1).div(1000);
-                await getDai(from, daiTokens1);
+                await yield.maker.getDai(from, daiTokens1, rate1);
     
                 await market.addDelegate(operator, { from: from });
                 await dai.approve(market.address, tradeSize, { from: from });
@@ -255,7 +121,7 @@ contract('Market', async (accounts) =>  {
 
             it("buys yDai", async() => {
                 const tradeSize = toWad(1).div(1000);
-                await getDai(from, daiTokens1.div(1000));
+                await yield.maker.getDai(from, daiTokens1.div(1000), rate1);
     
                 await market.addDelegate(operator, { from: from });
                 await dai.approve(market.address, daiTokens1.div(1000), { from: from });

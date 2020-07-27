@@ -1,17 +1,12 @@
 const Market = artifacts.require('Market');
 
 const { toWad, toRay, mulRay } = require('../shared/utils');
-const { setupMaker, newTreasury, newController, newYDai, getDai } = require("../shared/fixtures");
+const { YieldEnvironmentLite } = require("../shared/fixtures");
 const { BN, expectRevert } = require('@openzeppelin/test-helpers');
 const { assert, expect } = require('chai');
 
 contract('LimitMarket', async (accounts) =>  {
     let [ owner, user1, operator, from, to ] = accounts;
-    let dai;
-    let treasury;
-    let yDai1;
-    let controller;
-    let market;
 
     // These values impact the market results
     const rate1 = toRay(1.4);
@@ -22,30 +17,21 @@ contract('LimitMarket', async (accounts) =>  {
     let maturity1;
 
     beforeEach(async() => {
-        ({
-            vat,
-            weth,
-            wethJoin,
-            dai,
-            daiJoin,
-            pot,
-            jug,
-            end,
-            chai
-        } = await setupMaker());
-
-        treasury = await newTreasury();
-        controller = await newController();
+        yield = await YieldEnvironmentLite.setup();
+        dai = yield.maker.dai;
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 31556952; // One year
-        yDai1 = await newYDai(maturity1, "Name", "Symbol");
+        yDai1 = await yield.newYDai(maturity1, "Name", "Symbol");
+
 
         // Setup Market
         market = await Market.new(
             dai.address,
             yDai1.address,
+            "Name",
+            "Symbol",
             { from: owner }
         );
 
@@ -59,7 +45,7 @@ contract('LimitMarket', async (accounts) =>  {
     describe("with liquidity", () => {
         beforeEach(async() => {
             const daiReserves = daiTokens1;
-            await getDai(user1, daiReserves, rate1)
+            await yield.maker.getDai(user1, daiReserves, rate1)
     
             await dai.approve(market.address, daiReserves, { from: user1 });
             await market.init(daiReserves, { from: user1 });
@@ -129,7 +115,7 @@ contract('LimitMarket', async (accounts) =>  {
 
             it("sells dai without delegation", async() => {
                 const oneToken = toWad(1);
-                await getDai(from, daiTokens1, rate1);
+                await yield.maker.getDai(from, daiTokens1, rate1);
     
                 // yDaiOutForChaiIn formula: https://www.desmos.com/calculator/dcjuj5lmmc
     
@@ -157,7 +143,7 @@ contract('LimitMarket', async (accounts) =>  {
 
             it("buys yDai without delegation", async() => {
                 const oneToken = toWad(1);
-                await getDai(from, daiTokens1, rate1);
+                await yield.maker.getDai(from, daiTokens1, rate1);
 
                 // chaiInForYDaiOut formula: https://www.desmos.com/calculator/cgpfpqe3fq
 

@@ -1,33 +1,32 @@
 const ERC20 = artifacts.require("TestERC20");
-const { expectRevert } = require('@openzeppelin/test-helpers');
-const {
+
+// @ts-ignore
+import { expectRevert } from '@openzeppelin/test-helpers';
+import { Contract } from "./shared/fixtures"
+import {
   keccak256,
   defaultAbiCoder,
   toUtf8Bytes,
   solidityPack
-} = require('ethers/utils')
-const { ecsign } = require('ethereumjs-util')
-
-
+} from 'ethers/lib/utils'
+import { ecsign } from 'ethereumjs-util'
 
 const PERMIT_TYPEHASH = keccak256(toUtf8Bytes('Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)'));
 
-contract('ERC20Permit', async (accounts) =>  {
+contract('ERC20Permit', async (accounts: string[]) =>  {
     // this is the first account that buidler creates
     // https://github.com/nomiclabs/buidler/blob/d399a60452f80a6e88d974b2b9205f4894a60d29/packages/buidler-core/src/internal/core/config/default-config.ts#L41
     const ownerPrivateKey = Buffer.from("c5e8f61d1ab959b397eecc0a37a6517b8e67a0e7cf1f4bce5591f3ed80199122", 'hex')
+    const chainId = 31337; // buidlerevm chain id
 
     let [ owner, user ] = accounts;
-    let token;
-    let chainId;
-    let name;
 
+    let token: Contract;
+    let name: string;
 
     beforeEach(async() => {
         token = await ERC20.new(1000, { from: owner });
-        chainId = await web3.eth.getChainId();
         name = await token.name();
-
     })
 
     it('initializes DOMAIN_SEPARATOR and PERMIT_TYPEHASH correctly', async () => {
@@ -98,12 +97,16 @@ contract('ERC20Permit', async (accounts) =>  {
 // Returns the EIP712 hash which should be signed by the user
 // in order to make a call to `permit`
 function getPermitDigest(
-  name,
-  address,
-  chainId,
-  approve,
-  nonce,
-  deadline
+  name: string,
+  address: string,
+  chainId: number,
+  approve: {
+      owner: string,
+      spender: string,
+      value: number,
+  },
+  nonce: number,
+  deadline: number,
 ) {
   const DOMAIN_SEPARATOR = getDomainSeparator(name, address, chainId)
   return keccak256(
@@ -116,7 +119,7 @@ function getPermitDigest(
         keccak256(
           defaultAbiCoder.encode(
             ['bytes32', 'address', 'address', 'uint256', 'uint256', 'uint256'],
-            [PERMIT_TYPEHASH, approve.owner, approve.spender, approve.value, nonce.toNumber(), deadline]
+            [PERMIT_TYPEHASH, approve.owner, approve.spender, approve.value, nonce, deadline]
           )
         )
       ]
@@ -125,7 +128,7 @@ function getPermitDigest(
 }
 
 // Gets the EIP712 domain separator
-function getDomainSeparator(name, tokenAddress, chainId) {
+function getDomainSeparator(name: string, tokenAddress: string, chainId: number) {
   return keccak256(
     defaultAbiCoder.encode(
       ['bytes32', 'bytes32', 'bytes32', 'uint256', 'address'],

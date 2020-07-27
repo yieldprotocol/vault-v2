@@ -87,6 +87,15 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         _;
     }
 
+    /// @dev Safe casting from uint256 to int256
+    function toInt256(uint256 x) internal pure returns(int256) {
+        require(
+            x <= 57896044618658097711785492504343953926634992332820282019728792003956564819967,
+            "Controller: Cast overflow"
+        );
+        return int256(x);
+    }
+
     /// @dev Disables post, withdraw, borrow and repay. To be called only when Treasury shuts down.
     function shutdown() public override {
         require(
@@ -253,7 +262,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
             _treasury.pushChai(from, amount);
         }
         
-        emit Posted(collateral, to, int256(amount)); // TODO: Watch for overflow
+        emit Posted(collateral, to, toInt256(amount));
     }
 
     /// @dev Returns collateral to `to` wallet, taking it from `from` Yield vault account.
@@ -287,7 +296,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
             _treasury.pullChai(to, amount);
         }
 
-        emit Posted(collateral, from, -int256(amount)); // TODO: Watch for overflow
+        emit Posted(collateral, from, -toInt256(amount));
     }
 
     /// @dev Mint yDai for a given series for wallet `to` by increasing the user debt in Yield vault `from`
@@ -324,7 +333,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         );
 
         series[maturity].mint(to, yDaiAmount);
-        emit Borrowed(collateral, maturity, from, int256(yDaiAmount)); // TODO: Watch for overflow
+        emit Borrowed(collateral, maturity, from, toInt256(yDaiAmount));
     }
 
     /// @dev Burns yDai from `from` wallet to repay debt in a Yield Vault.
@@ -400,7 +409,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         debtYDai[collateral][maturity][user] = debtYDai[collateral][maturity][user].sub(yDaiAmount);
         totalDebtYDai[collateral][maturity] = totalDebtYDai[collateral][maturity].sub(yDaiAmount);
 
-        emit Borrowed(collateral, maturity, user, -int256(yDaiAmount)); // TODO: Watch for overflow
+        emit Borrowed(collateral, maturity, user, -toInt256(yDaiAmount));
     }
 
     /// @dev Removes all collateral and debt for an user, for a given collateral type.

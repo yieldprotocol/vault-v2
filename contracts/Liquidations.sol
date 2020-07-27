@@ -99,37 +99,38 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
     }
 
     /// @dev Buy a portion of a position under liquidation.
-    /// The caller pays the debt of `user`, and `buyer` receives an amount of collateral.
-    /// `buyer` can delegate to other addresses to buy for him. Also needs to use `ERC20.approve`.
-    /// @param user Address of the user vault to liquidate.
-    /// @param buyer Address of the wallet paying Dai for liquidated collateral.
+    /// The caller pays the debt of `user`, and `from` receives an amount of collateral.
+    /// `from` can delegate to other addresses to buy for him. Also needs to use `ERC20.approve`.
+    /// @param liquidated Address of the user vault to liquidate.
+    /// @param from Address of the wallet paying Dai for liquidated collateral.
+    /// @param to Address of the wallet to send the obtained collateral to.
     /// @param daiAmount Amount of Dai to give in exchange for liquidated collateral.
     /// @return The amount of collateral obtained.
-    function buy(address buyer, address user, uint256 daiAmount) // TODO: make Address parameters be `from`, `to` and `vault`
+    function buy(address from, address to, address liquidated, uint256 daiAmount) // TODO: make Address parameters be `from`, `to` and `vault`
         public onlyLive
-        onlyHolderOrDelegate(buyer, "Controller: Only Holder Or Delegate")
+        onlyHolderOrDelegate(from, "Controller: Only Holder Or Delegate")
         returns (uint256)
     {
         require(
-            debt[user] > 0,
+            debt[liquidated] > 0,
             "Liquidations: Vault is not in liquidation"
         );
-        _treasury.pushDai(buyer, daiAmount);
+        _treasury.pushDai(from, daiAmount);
 
         // calculate collateral to grab. Using divdrup stops rounding from leaving 1 stray wei in vaults.
-        uint256 tokenAmount = divdrup(daiAmount, price(user));
+        uint256 tokenAmount = divdrup(daiAmount, price(liquidated));
 
-        collateral[user] = collateral[user].sub(tokenAmount);
-        debt[user] = debt[user].sub(daiAmount);
+        collateral[liquidated] = collateral[liquidated].sub(tokenAmount);
+        debt[liquidated] = debt[liquidated].sub(daiAmount);
 
-        _treasury.pullWeth(buyer, tokenAmount);
+        _treasury.pullWeth(to, tokenAmount);
 
         require(
-            aboveDustOrZero(user),
+            aboveDustOrZero(liquidated),
             "Liquidations: Below dust"
         );
 
-        // TODO: return tokenAmount
+        return tokenAmount;
     }
 
     /// @dev Retrieve weth from a liquidations account. This weth could come from liquidator fees or as remainders of liquidations.

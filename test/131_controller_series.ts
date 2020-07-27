@@ -1,65 +1,44 @@
-// YDai
-const YDai = artifacts.require('YDai');
-
-const helper = require('ganache-time-traveler');
-const { expectRevert } = require('@openzeppelin/test-helpers');
-
-const { setupMaker, newTreasury, newController } = require("./shared/fixtures");
+// @ts-ignore
+import helper from 'ganache-time-traveler';
+// @ts-ignore
+import { expectRevert } from '@openzeppelin/test-helpers';
+import { YieldEnvironmentLite, Contract } from "./shared/fixtures";
 
 contract('Controller: Multi-Series', async (accounts) =>  {
     let [ owner ] = accounts;
-    let vat;
-    let jug;
-    let pot;
-    let treasury;
-    let yDai1;
-    let yDai2;
-    let controller;
-
     const THREE_MONTHS = 7776000;
 
-    let snapshot;
-    let snapshotId;
+    let snapshot: any;
+    let snapshotId: string;
+
+    let weth: Contract;
+    let dai: Contract;
+    let vat: Contract;
+    let pot: Contract;
+    let controller: Contract;
+    let yDai1: Contract;
+    let yDai2: Contract;
+
+    let maturity1: number;
+    let maturity2: number;
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        ({
-            vat,
-            weth,
-            wethJoin,
-            dai,
-            daiJoin,
-            pot,
-            jug,
-            chai
-        } = await setupMaker());
-        treasury = await newTreasury();
-        controller = await newController();
+        const env = await YieldEnvironmentLite.setup();
+        controller = env.controller;
+        weth = env.maker.weth;
+        pot = env.maker.pot;
+        vat = env.maker.vat;
+        dai = env.maker.dai;
 
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
-        yDai1 = await YDai.new(
-            vat.address,
-            jug.address,
-            pot.address,
-            treasury.address,
-            maturity1,
-            "Name",
-            "Symbol",
-        );
+        yDai1 = await env.newYDai(maturity1, "Name", "Symbol", true);
 
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
-        yDai2 = await YDai.new(
-            vat.address,
-            jug.address,
-            pot.address,
-            treasury.address,
-            maturity2,
-            "Name",
-            "Symbol",
-        );
+        yDai2 = await env.newYDai(maturity2, "Name", "Symbol", true);
     });
 
     afterEach(async() => {

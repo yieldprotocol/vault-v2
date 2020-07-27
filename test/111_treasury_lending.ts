@@ -1,34 +1,32 @@
-const { expectRevert } = require('@openzeppelin/test-helpers');
-const { setupMaker, newTreasury } = require("./shared/fixtures");
-const {
+// @ts-ignore
+import { expectRevert } from '@openzeppelin/test-helpers';
+import { MakerEnvironment, Contract } from "./shared/fixtures";
+import {
     WETH,
     daiDebt1,
     daiTokens1,
     wethTokens1,
     chaiTokens1,
-} = require ("./shared/utils");
+} from "./shared/utils";
 
-contract('Treasury - Lending', async (accounts) =>  {
+contract('Treasury - Lending', async (accounts: string[]) =>  {
     let [ owner, user ] = accounts;
-    let vat;
-    let weth;
-    let wethJoin;
-    let dai;
-    let chai;
-    let treasury;
+
+    let treasury: Contract;
+    let vat: Contract;
+    let weth: Contract;
+    let wethJoin: Contract;
+    let chai: Contract;
+    let dai: Contract;
 
     beforeEach(async() => {
-        ({
-            vat,
-            weth,
-            wethJoin,
-            dai,
-            daiJoin,
-            pot,
-            jug,
-            chai
-        } = await setupMaker());
-        treasury = await newTreasury();
+        const maker = await MakerEnvironment.setup();
+        treasury = await maker.setupTreasury();
+        vat = maker.vat;
+        weth = maker.weth;
+        wethJoin = maker.wethJoin;
+        chai = maker.chai;
+        dai = maker.dai;
 
         // Setup tests - Allow owner to interact directly with Treasury, not for production
         treasury.orchestrate(owner, { from: owner });

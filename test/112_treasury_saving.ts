@@ -1,41 +1,34 @@
-const { setupMaker, newTreasury, getDai } = require("./shared/fixtures");
-const {
-    WETH,
+import { MakerEnvironment, Contract } from "./shared/fixtures";
+import {
     rate1,
-    daiDebt1,
     daiTokens1,
-    wethTokens1,
     chaiTokens1,
-} = require ("./shared/utils");
+} from "./shared/utils";
 
 contract('Treasury - Saving', async (accounts) =>  {
     let [ owner, user ] = accounts;
-    let vat;
-    let weth;
-    let wethJoin;
-    let dai;
-    let daiJoin;
-    let chai;
-    let treasury;
+
+    let treasury: Contract;
+    let vat: Contract;
+    let weth: Contract;
+    let wethJoin: Contract;
+    let chai: Contract;
+    let dai: Contract;
 
     beforeEach(async() => {
-        ({
-            vat,
-            weth,
-            wethJoin,
-            dai,
-            daiJoin,
-            pot,
-            jug,
-            chai
-        } = await setupMaker());
-        treasury = await newTreasury();
+        const maker = await MakerEnvironment.setup();
+        treasury = await maker.setupTreasury();
+        vat = maker.vat;
+        weth = maker.weth;
+        wethJoin = maker.wethJoin;
+        chai = maker.chai;
+        dai = maker.dai;
 
         // Setup tests - Allow owner to interact directly with Treasury, not for production
         await treasury.orchestrate(owner, { from: owner });
 
         // Borrow some dai
-        await getDai(user, daiTokens1, rate1);
+        await maker.getDai(user, daiTokens1, rate1);
     });
 
     it("allows to save dai", async() => {
