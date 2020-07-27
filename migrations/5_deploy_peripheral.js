@@ -17,6 +17,7 @@ const Unwind = artifacts.require("Unwind");
 
 module.exports = async (deployer, network, accounts) => {
   const migrations = await Migrations.deployed();
+  const beneficiary = "0x0000000000000000000000000000000000000000"; // TODO: Make sure you change this for production
 
   let vatAddress;
   let wethAddress;
@@ -87,6 +88,7 @@ module.exports = async (deployer, network, accounts) => {
     treasuryAddress,
     controllerAddress,
     liquidationsAddress,
+    beneficiary,
   );
   const unwind = await Unwind.deployed();
   unwindAddress = unwind.address;
