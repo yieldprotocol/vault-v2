@@ -45,21 +45,21 @@ contract ControllerDai is Delegable(), DecimalMath {
         return uint128(x);
     }
 
-    /// @dev Borrow yDai from Controller and sell it immediately for Dai, for a maximum cost in collateral.
+    /// @dev Borrow yDai from Controller and sell it immediately for Dai, for a maximum yDai debt.
     /// Must have approved the operator with `controller.addDelegate(controllerDai.address, { from: from })`.
     /// `from` can delegate to other addresses to use his vault with this proxy, with `controllerDai.addDelegate(someone, { from: from })`.
     /// @param collateral Valid collateral type.
     /// @param maturity Maturity of an added series
-    /// @param from Yield vault to lock collateral from.
-    /// @param to Wallet to put the resulting Dai in.
-    /// @param maximumCollateral Maximum amount of collateral to lock.
-    /// @param daiToBorrow Exact amount of Dai that should be borrowed.
-    function borrowDaiForMaximumCollateral(
+    /// @param from Yield vault to borrow yDai from.
+    /// @param to Wallet to send the resulting Dai to.
+    /// @param maximumYDai Maximum amount of YDai to borrow.
+    /// @param daiToBorrow Exact amount of Dai that should be obtained.
+    function borrowDaiForMaximumYDai(
         bytes32 collateral,
         uint256 maturity,
         address from,
         address to,
-        uint256 maximumCollateral,
+        uint256 maximumYDai,
         uint256 daiToBorrow
     )
         public
@@ -67,9 +67,7 @@ contract ControllerDai is Delegable(), DecimalMath {
         returns (uint256)
     {
         uint256 yDaiToBorrow = _market.buyDaiPreview(toUint128(daiToBorrow));
-        uint256 yDaiInDai = _controller.inDai(collateral, maturity, yDaiToBorrow);
-        uint256 requiredCollateral = daiToCollateral(collateral, yDaiInDai);
-        require (requiredCollateral <= maximumCollateral);
+        require (yDaiToBorrow <= maximumYDai);
 
         // The collateral for this borrow needs to have been posted beforehand
         _controller.borrow(collateral, maturity, from, address(this), yDaiToBorrow);
@@ -78,33 +76,30 @@ contract ControllerDai is Delegable(), DecimalMath {
         return requiredCollateral;
     }
 
-    /// @dev Use a given amount of collateral to borrow yDai from Controller and sell it immediately for Dai, if a minimum amount of Dai can be obtained such.
+    /// @dev Borrow yDai from Controller and sell it immediately for Dai, if a minimum amount of Dai can be obtained such.
     /// Must have approved the operator with `controller.addDelegate(controllerDai.address, { from: from })`.
     /// `from` can delegate to other addresses to use his vault with this proxy, with `controllerDai.addDelegate(someone, { from: from })`.
     /// @param collateral Valid collateral type.
     /// @param maturity Maturity of an added series
     /// @param from Yield vault to lock collateral from.
-    /// @param to Wallet to put the resulting Dai in.
-    /// @param collateralToLock Amount of collateral to lock.
+    /// @param to Wallet to sent the resulting Dai to.
+    /// @param yDaiToBorrow Amount of yDai to borrow.
     /// @param minimumDaiToBorrow Minimum amount of Dai that should be borrowed.
     function borrowMinimumDaiForCollateral(
         bytes32 collateral,
         uint256 maturity,
         address from,
         address to,
-        uint256 collateralToLock,
+        uint256 yDaiToBorrow,
         uint256 minimumDaiToBorrow
     )
         public
         onlyHolderOrDelegate(from, "Controller: Only Holder Or Delegate")
         returns (uint256)
     {
-        // This is actually debt in Dai, not redeemable
-        uint256 daiBorrowingPower = collateralToDai(collateral, collateralToLock);
-        uint256 yDaiBorrowingPower = _controller.inYDai(collateral, maturity, daiBorrowingPower);
         // The collateral for this borrow needs to have been posted beforehand
-        _controller.borrow(collateral, maturity, from, address(this), yDaiBorrowingPower);
-        uint256 boughtDai = _market.sellYDai(address(this), to, toUint128(yDaiBorrowingPower));
+        _controller.borrow(collateral, maturity, from, address(this), yDaiToBorrow);
+        uint256 boughtDai = _market.sellYDai(address(this), to, toUint128(yDaiToBorrow));
         require (boughtDai >= minimumDaiToBorrow);
 
         return boughtDai;
@@ -164,38 +159,5 @@ contract ControllerDai is Delegable(), DecimalMath {
         _controller.repayYDai(collateral, maturity, from, to, yDaiRepayment);
 
         return yDaiRepayment;
-    }
-
-
-    // TODO: Collapse the inDai(), inCollateral() and *Growth() functions.
-    // TODO: Consider moving these functions to Controller
-    /// @dev Calculate the amount of Dai that some collateral is worth at MakerDAO rates.
-    /// @param collateral Valid collateral type.
-    /// @param daiAmount Amount of Dai to convert into collateral.
-    function daiToCollateral(bytes32 collateral, uint256 daiAmount) public returns (uint256) {
-        if (collateral == WETH){
-            (,, uint256 spot,,) = _vat.ilks(WETH);
-            return divd(daiAmount, spot);
-        } else if (collateral == CHAI) {
-            uint256 chi = (now > _pot.rho()) ? _pot.drip() : _pot.chi();
-            return divd(daiAmount, chi);
-        } else {
-            revert("Controller: Unsupported collateral");
-        }
-    }
-
-    /// @dev Calculate the amount of collateral that some Dai is worth at MakerDAO rates.
-    /// @param collateral Valid collateral type.
-    /// @param collateralAmount Amount of collateral to convert into Dai.
-    function collateralToDai(bytes32 collateral, uint256 collateralAmount) public returns (uint256) {
-        if (collateral == WETH){
-            (,, uint256 spot,,) = _vat.ilks(WETH);
-            return muld(collateralAmount, spot);
-        } else if (collateral == CHAI) {
-            uint256 chi = (now > _pot.rho()) ? _pot.drip() : _pot.chi();
-            return muld(collateralAmount, chi);
-        } else {
-            revert("Controller: Unsupported collateral");
-        }
     }
 }
