@@ -3,7 +3,6 @@ pragma solidity ^0.6.10;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/Math.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./interfaces/IController.sol";
 import "./interfaces/ILiquidations.sol";
 import "./interfaces/ITreasury.sol";
@@ -22,22 +21,25 @@ import "@nomiclabs/buidler/console.sol";
  * If a vault becomes colalteralized, the liquidation can be stopped with `cancel`.
  */
 contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath {
-    using SafeMath for uint256;
 
     event Liquidation(address indexed user, uint256 started, uint256 collateral, uint256 debt);
 
     bytes32 public constant WETH = "ETH-A";
     uint256 public constant AUCTION_TIME = 3600;
     uint256 public constant DUST = 25000000000000000; // 0.025 ETH
-    uint256 public constant FEE = 25000000000000000; // 0.025 ETH
+    uint128 public constant FEE = 25000000000000000; // 0.025 ETH
 
     IERC20 internal _dai;
     ITreasury internal _treasury;
     IController internal _controller;
 
+    struct Vault {
+        uint128 collateral;
+        uint128 debt;
+    }
+
     mapping(address => uint256) public liquidations;
-    mapping(address => uint256) public collateral;
-    mapping(address => uint256) public debt;
+    mapping(address => Vault) public vaults;
 
     bool public live = true;
 
@@ -58,6 +60,33 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
         _;
     }
 
+    /// @dev Overflow-protected addition, from OpenZeppelin
+    function add(uint128 a, uint128 b)
+        internal pure returns (uint128)
+    {
+        uint128 c = a + b;
+        require(c >= a, "Market: Dai reserves too high");
+
+        return c;
+    }
+
+    /// @dev Overflow-protected substraction, from OpenZeppelin
+    function sub(uint128 a, uint128 b) internal pure returns (uint128) {
+        require(b <= a, "Market: yDai reserves too low");
+        uint128 c = a - b;
+
+        return c;
+    }
+
+    /// @dev Safe casting from uint256 to uint128
+    function toUint128(uint256 x) internal pure returns(uint128) {
+        require(
+            x <= 340282366920938463463374607431768211455,
+            "Market: Cast overflow"
+        );
+        return uint128(x);
+    }
+
     /// @dev Disables buying at liquidations. To be called only when Treasury shuts down.
     function shutdown() public override {
         require(
@@ -71,7 +100,7 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
     /// @dev Return if the debt of an user is between zero and the dust level
     /// @param user Address of the user vault
     function aboveDustOrZero(address user) public view returns (bool) {
-        return collateral[user] == 0 || DUST < collateral[user];
+        return vaults[user].collateral == 0 || DUST < vaults[user].collateral;
     }
 
     /// @dev Starts a liquidation process for an undercollateralized vault.
@@ -91,9 +120,12 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
         liquidations[user] = now;
 
         (uint256 userCollateral, uint256 userDebt) = _controller.erase(WETH, user);
-        collateral[user] = userCollateral.sub(FEE);
-        collateral[to] = collateral[to].add(FEE);
-        debt[user] = userDebt;
+        Vault memory vault = Vault({
+            collateral: sub(toUint128(userCollateral), FEE),
+            debt: toUint128(userDebt)
+        });
+        vaults[user] = vault;
+        vaults[to].collateral = add(vaults[to].collateral, FEE);
 
         emit Liquidation(user, liquidations[user], userCollateral, userDebt);
     }
@@ -106,13 +138,13 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
     /// @param to Address of the wallet to send the obtained collateral to.
     /// @param daiAmount Amount of Dai to give in exchange for liquidated collateral.
     /// @return The amount of collateral obtained.
-    function buy(address from, address to, address liquidated, uint256 daiAmount) // TODO: make Address parameters be `from`, `to` and `vault`
+    function buy(address from, address to, address liquidated, uint256 daiAmount)
         public onlyLive
         onlyHolderOrDelegate(from, "Controller: Only Holder Or Delegate")
         returns (uint256)
     {
         require(
-            debt[liquidated] > 0,
+            vaults[liquidated].debt > 0,
             "Liquidations: Vault is not in liquidation"
         );
         _treasury.pushDai(from, daiAmount);
@@ -120,8 +152,11 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
         // calculate collateral to grab. Using divdrup stops rounding from leaving 1 stray wei in vaults.
         uint256 tokenAmount = divdrup(daiAmount, price(liquidated));
 
-        collateral[liquidated] = collateral[liquidated].sub(tokenAmount);
-        debt[liquidated] = debt[liquidated].sub(daiAmount);
+        Vault memory vault = Vault({
+            collateral: sub(vaults[liquidated].collateral, toUint128(tokenAmount)),
+            debt: sub(vaults[liquidated].debt, toUint128(daiAmount))
+        });
+        vaults[liquidated] = vault;
 
         _treasury.pullWeth(to, tokenAmount);
 
@@ -143,11 +178,11 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
         onlyHolderOrDelegate(from, "Controller: Only Holder Or Delegate")
     {
         require(
-            debt[from] == 0,
+            vaults[from].debt == 0,
             "Liquidations: User still in liquidation"
         );
 
-        collateral[from] = collateral[from].sub(tokenAmount);
+        vaults[from].collateral = sub(vaults[from].collateral, toUint128(tokenAmount));
 
         _treasury.pullWeth(to, tokenAmount);
     }
@@ -165,13 +200,13 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
             liquidations[user] > 0,
             "Liquidations: Vault is not targeted"
         );
-        uint256 dividend1 = collateral[user];
-        uint256 divisor1 = debt[user];
+        uint256 dividend1 = uint256(vaults[user].collateral);
+        uint256 divisor1 = uint256(vaults[user].debt);
         uint256 term1 = dividend1.mul(UNIT).div(divisor1);
-        uint256 dividend3 = Math.min(AUCTION_TIME, now.sub(liquidations[user]));
+        uint256 dividend3 = Math.min(AUCTION_TIME, now - liquidations[user]); // - unlikely to overflow
         uint256 divisor3 = AUCTION_TIME.mul(2);
         uint256 term2 = UNIT.div(2);
         uint256 term3 = dividend3.mul(UNIT).div(divisor3);
-        return divd(UNIT, muld(term1, term2.add(term3)));
+        return divd(UNIT, muld(term1, term2 + term3)); // + unlikely to overflow
     }
 }
