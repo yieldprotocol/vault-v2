@@ -14,7 +14,6 @@ const Controller = artifacts.require("Controller");
 const Liquidations = artifacts.require("Liquidations");
 const EthProxy = artifacts.require("EthProxy");
 const Unwind = artifacts.require("Unwind");
-const ControllerView = artifacts.require("ControllerView");
 
 module.exports = async (deployer, network, accounts) => {
   const migrations = await Migrations.deployed();
