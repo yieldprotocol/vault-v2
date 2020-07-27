@@ -1,30 +1,41 @@
-const helper = require('ganache-time-traveler');
-const { expectRevert, expectEvent } = require('@openzeppelin/test-helpers');
-const { WETH, daiTokens1, wethTokens1 } = require('./shared/utils');
-const { YieldEnvironmentLite } = require("./shared/fixtures");
+// @ts-ignore
+import helper from 'ganache-time-traveler';
+// @ts-ignore
+import { expectRevert, expectEvent } from '@openzeppelin/test-helpers';
+import { WETH, daiTokens1, wethTokens1 } from "./shared/utils";
+import { YieldEnvironmentLite, Contract } from "./shared/fixtures";
 
 contract('yDai - Delegable', async (accounts) =>  {
     let [ owner, holder, other ] = accounts;
     
-    let maturity1;
-    let maturity2;
+    let maturity1: number;
+    let maturity2: number;
+
+    let snapshot: any;
+    let snapshotId: string;
+
+    let treasury: Contract;
+    let vat: Contract;
+    let weth: Contract;
+    let dai: Contract;
+    let yDai1: Contract;
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        const yield = await YieldEnvironmentLite.setup();
-        treasury = yield.treasury;
-        weth = yield.maker.weth;
-        vat = yield.maker.vat;
-        dai = yield.maker.dai;
+        const env = await YieldEnvironmentLite.setup();
+        treasury = env.treasury;
+        weth = env.maker.weth;
+        vat = env.maker.vat;
+        dai = env.maker.dai;
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
-        yDai1 = await yield.newYDai(maturity1, "Name", "Symbol");
-        yDai2 = await yield.newYDai(maturity2, "Name", "Symbol");
+        yDai1 = await env.newYDai(maturity1, "Name", "Symbol");
+        await env.newYDai(maturity2, "Name", "Symbol");
 
         // Post collateral to MakerDAO through Treasury
         await treasury.orchestrate(owner, { from: owner });

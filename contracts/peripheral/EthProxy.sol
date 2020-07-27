@@ -29,6 +29,8 @@ contract EthProxy {
 
     /// @dev Users use `post` in EthProxy to post ETH to the Controller, which will be converted to Weth here.
     /// Users must have called `controller.addDelegate(ethProxy.address)` to authorize EthProxy to act in their behalf.
+    /// Use of EthProxy cannot be delegated further.
+    /// @param amount Amount of collateral to move.
     function post(uint256 amount)
         public payable {
         _weth.deposit{ value: amount }();
@@ -37,8 +39,10 @@ contract EthProxy {
 
     /// @dev Users wishing to withdraw their Weth as ETH from the Controller should use this function.
     /// Users must have called `controller.addDelegate(ethProxy.address)` to authorize EthProxy to act in their behalf.
+    /// Use of EthProxy cannot be delegated further.
+    /// @param amount Amount of weth to move.
     function withdraw(uint256 amount)
-        public  {
+        public {
         _controller.withdraw(WETH, msg.sender, address(this), amount);
         _weth.withdraw(amount);
         msg.sender.transfer(amount);

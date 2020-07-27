@@ -1,37 +1,49 @@
-const helper = require('ganache-time-traveler');
-const { BN, expectRevert } = require('@openzeppelin/test-helpers');
-const { WETH, rate1, daiTokens1, wethTokens1, toRay, mulRay, divRay, addBN, subBN } = require('./shared/utils');
-const { YieldEnvironmentLite } = require("./shared/fixtures");
+// @ts-ignore
+import helper from 'ganache-time-traveler';
+// @ts-ignore
+import { BN, expectRevert } from '@openzeppelin/test-helpers';
+import { WETH, rate1, daiTokens1, wethTokens1, toRay, mulRay, divRay, addBN, subBN } from './shared/utils';
+import { MakerEnvironment, YieldEnvironmentLite, Contract } from "./shared/fixtures";
+import { BigNumber } from 'ethers'
 
 contract('Controller - Weth', async (accounts) =>  {
     let [ owner, user1, user2, user3 ] = accounts;
 
-    let snapshot;
-    let snapshotId;
-    let maker;
+    let snapshot: any;
+    let snapshotId: string;
+    let maker: MakerEnvironment;
 
-    let maturity1;
-    let maturity2;
+    let weth: Contract;
+    let dai: Contract;
+    let vat: Contract;
+    let pot: Contract;
+    let treasury: Contract;
+    let controller: Contract;
+    let yDai1: Contract;
+    let yDai2: Contract;
+
+    let maturity1: number;
+    let maturity2: number;
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        const yield = await YieldEnvironmentLite.setup();
-        maker = yield.maker;
-        controller = yield.controller;
-        treasury = yield.treasury;
-        weth = yield.maker.weth;
-        pot = yield.maker.pot;
-        vat = yield.maker.vat;
-        dai = yield.maker.dai;
+        const env = await YieldEnvironmentLite.setup();
+        maker = env.maker;
+        controller = env.controller;
+        treasury = env.treasury;
+        weth = env.maker.weth;
+        pot = env.maker.pot;
+        vat = env.maker.vat;
+        dai = env.maker.dai;
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
-        yDai1 = await yield.newYDai(maturity1, "Name", "Symbol");
-        yDai2 = await yield.newYDai(maturity2, "Name", "Symbol");
+        yDai1 = await env.newYDai(maturity1, "Name", "Symbol");
+        yDai2 = await env.newYDai(maturity2, "Name", "Symbol");
     });
 
     afterEach(async() => {
@@ -81,7 +93,7 @@ contract('Controller - Weth', async (accounts) =>  {
         
         await weth.deposit({ from: user1, value: wethTokens1 });
         await weth.approve(treasury.address, wethTokens1, { from: user1 }); 
-        const event = (await controller.post(WETH, user1, user1, wethTokens1, { from: user1 })).logs[0];
+        const event: any = (await controller.post(WETH, user1, user1, wethTokens1, { from: user1 })).logs[0];
         
         assert.equal(
             event.event,
@@ -282,7 +294,7 @@ contract('Controller - Weth', async (accounts) =>  {
         });
 
         it("allows to borrow yDai", async() => {
-            event = (await controller.borrow(WETH, maturity1, user1, user1, daiTokens1, { from: user1 })).logs[0];
+            const event: any = (await controller.borrow(WETH, maturity1, user1, user1, daiTokens1, { from: user1 })).logs[0];
 
             assert.equal(
                 event.event,
@@ -322,7 +334,7 @@ contract('Controller - Weth', async (accounts) =>  {
         });
 
         it("allows to borrow yDai for others", async() => {
-            event = (await controller.borrow(WETH, maturity1, user1, user2, daiTokens1, { from: user1 })).logs[0];
+            const event: any = (await controller.borrow(WETH, maturity1, user1, user2, daiTokens1, { from: user1 })).logs[0];
 
             assert.equal(
                 event.event,
@@ -370,7 +382,7 @@ contract('Controller - Weth', async (accounts) =>  {
 
         it("allows to borrow yDai from others", async() => {
             await controller.addDelegate(user2, { from: user1 })
-            event = (await controller.borrow(WETH, maturity1, user1, user2, daiTokens1, { from: user2 })).logs[0];
+            const event: any = (await controller.borrow(WETH, maturity1, user1, user2, daiTokens1, { from: user2 })).logs[0];
 
             assert.equal(
                 event.event,
@@ -411,7 +423,7 @@ contract('Controller - Weth', async (accounts) =>  {
 
         it("allows to borrow yDai from others, for others", async() => {
             await controller.addDelegate(user2, { from: user1 })
-            event = (await controller.borrow(WETH, maturity1, user1, user3, daiTokens1, { from: user2 })).logs[0];
+            const event: any = (await controller.borrow(WETH, maturity1, user1, user3, daiTokens1, { from: user2 })).logs[0];
 
             assert.equal(
                 event.event,
@@ -929,11 +941,11 @@ contract('Controller - Weth', async (accounts) =>  {
                 });
     
                 // Set rate to 1.5
-                let rateIncrease;
-                let rateDifferential;
-                let increasedDebt;
-                let debtIncrease;
-                let rate2;
+                let rateIncrease: BigNumber;
+                let rateDifferential: BigNumber;
+                let increasedDebt: BigNumber;
+                let debtIncrease: BigNumber;
+                let rate2: BigNumber;
 
                 describe("after maturity, with a rate increase", () => {
                     beforeEach(async() => {
@@ -1021,6 +1033,6 @@ contract('Controller - Weth', async (accounts) =>  {
     });
 });
 
-function bytes32ToString(text) {
+function bytes32ToString(text: string) {
     return web3.utils.toAscii(text).replace(/\0/g, '');
 }

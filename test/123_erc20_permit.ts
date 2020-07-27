@@ -2,6 +2,7 @@ const ERC20 = artifacts.require("TestERC20");
 
 // @ts-ignore
 import { expectRevert } from '@openzeppelin/test-helpers';
+import { Contract } from "./shared/fixtures"
 import {
   keccak256,
   defaultAbiCoder,
@@ -20,7 +21,7 @@ contract('ERC20Permit', async (accounts: string[]) =>  {
 
     let [ owner, user ] = accounts;
 
-    let token: any;
+    let token: Contract;
     let name: string;
 
     beforeEach(async() => {

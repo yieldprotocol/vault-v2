@@ -4,7 +4,6 @@ pragma solidity ^0.6.10;
 
 /// @dev Delegable enables users to delegate their account management to other users
 contract Delegable {
-    // All delegated can be known from events for audit purposes
     event Delegate(address indexed user, address indexed delegate, bool enabled);
 
     mapping(address => mapping(address => bool)) public delegated;

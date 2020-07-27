@@ -1,4 +1,4 @@
-import { MakerEnvironment } from "./shared/fixtures";
+import { MakerEnvironment, Contract } from "./shared/fixtures";
 import {
     rate1,
     daiTokens1,
@@ -8,12 +8,12 @@ import {
 contract('Treasury - Saving', async (accounts) =>  {
     let [ owner, user ] = accounts;
 
-    let treasury: any;
-    let vat: any;
-    let weth: any;
-    let wethJoin: any;
-    let chai: any;
-    let dai: any;
+    let treasury: Contract;
+    let vat: Contract;
+    let weth: Contract;
+    let wethJoin: Contract;
+    let chai: Contract;
+    let dai: Contract;
 
     beforeEach(async() => {
         const maker = await MakerEnvironment.setup();
