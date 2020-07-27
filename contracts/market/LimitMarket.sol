@@ -32,7 +32,7 @@ contract LimitMarket {
         external
         returns(uint256)
     {
-        uint256 yDaiOut = market.sellDai(msg.sender, to, daiIn);
+        uint256 yDaiOut = market.sellDai(from, to, daiIn);
         require(
             yDaiOut >= minYDaiOut,
             "LimitMarket: Limit not reached"
@@ -50,7 +50,7 @@ contract LimitMarket {
         external
         returns(uint256)
     {
-        uint256 yDaiIn = market.buyDai(msg.sender, to, daiOut);
+        uint256 yDaiIn = market.buyDai(from, to, daiOut);
         require(
             maxYDaiIn >= yDaiIn,
             "LimitMarket: Limit exceeded"
@@ -68,7 +68,7 @@ contract LimitMarket {
         external
         returns(uint256)
     {
-        uint256 daiOut = market.sellYDai(msg.sender, to, yDaiIn);
+        uint256 daiOut = market.sellYDai(from, to, yDaiIn);
         require(
             daiOut >= minDaiOut,
             "LimitMarket: Limit not reached"
@@ -86,7 +86,7 @@ contract LimitMarket {
         external
         returns(uint256)
     {
-        uint256 daiIn = market.buyYDai(msg.sender, to, yDaiOut);
+        uint256 daiIn = market.buyYDai(from, to, yDaiOut);
         require(
             maxDaiIn >= daiIn,
             "LimitMarket: Limit exceeded"
