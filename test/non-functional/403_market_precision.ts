@@ -1,17 +1,19 @@
 const YieldMathMock = artifacts.require('YieldMathMock');
+import { Contract } from "../shared/fixtures"
 
 contract('Market', async () =>  {
-    let yieldMath;
+    let yieldMath: Contract;
 
     const oneToken =             '1000000000000000000';
     const yDaiReserves = '200000000000000000000000000';
     const daiReserves = '100000000000000000000000000';
 
-    const oneYear = '31556952';
+    const oneYear = 31556952;
     const k = '146235604338';
     const g = '18428297329635842000';
 
-    let timeTillMaturity;
+    let timeTillMaturity: number;
+    let trade: string;
 
     const results = new Set();
     results.add(['trade', 'daiReserves', 'yDaiReserves', 'tokensIn', 'tokensOut']);
@@ -176,6 +178,8 @@ contract('Market', async () =>  {
         });
         
         it("prints results", async() => {
+            let line: string[];
+            // @ts-ignore
             for (line of results.values()) {
                 console.log("| " + 
                     line[0].padEnd(12, ' ') + "· " +

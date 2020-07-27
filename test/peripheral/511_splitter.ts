@@ -1,33 +1,50 @@
 const Market = artifacts.require('Market');
 const Splitter = artifacts.require('Splitter');
 
-const { BigNumber } = require("ethers");
-const { BN, expectRevert } = require('@openzeppelin/test-helpers');
-const { WETH, rate1, daiTokens1, wethTokens1, addBN, mulRay, divRay } = require('../shared/utils');
-const { YieldEnvironmentLite } = require("../shared/fixtures");
-const { assert, expect } = require('chai');
+import { BigNumber } from "ethers";
+// @ts-ignore
+import { BN, expectRevert } from '@openzeppelin/test-helpers';
+import { WETH, rate1, daiTokens1, wethTokens1, addBN, mulRay, divRay } from '../shared/utils';
+import { YieldEnvironmentLite, Contract } from "../shared/fixtures";
+import { assert, expect } from 'chai';
 
 contract('Splitter', async (accounts) =>  {
     let [ owner, user ] = accounts;
 
     const yDaiTokens1 = daiTokens1;
-    let maturity1;
+    let maturity1: number;
+    let env: YieldEnvironmentLite;
+    let dai: Contract;
+    let daiJoin: Contract;
+    let vat: Contract;
+    let controller: Contract;
+    let treasury: Contract;
+    let weth: Contract;
+    let wethJoin: Contract;
+    let liquidations: Contract;
+    let unwind: Contract;
+    let end: Contract;
+    let chai: Contract;
+    let yDai1: Contract;
+    let controllerView: Contract;
+    let pot: Contract;
+    let splitter1: Contract;
+    let market1: Contract;
 
     beforeEach(async() => {
-        yield = await YieldEnvironmentLite.setup();
-        maker = yield.maker;
-        controller = yield.controller;
-        treasury = yield.treasury;
-        vat = yield.maker.vat;
-        dai = yield.maker.dai;
-        weth = yield.maker.weth;
-        wethJoin = yield.maker.wethJoin;
-        daiJoin = yield.maker.daiJoin;
+        env = await YieldEnvironmentLite.setup();
+        controller = env.controller;
+        treasury = env.treasury;
+        vat = env.maker.vat;
+        dai = env.maker.dai;
+        weth = env.maker.weth;
+        wethJoin = env.maker.wethJoin;
+        daiJoin = env.maker.daiJoin;
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 30000000; // Far enough so that the extra weth to borrow is above dust
-        yDai1 = await yield.newYDai(maturity1, "Name", "Symbol");
+        yDai1 = await env.newYDai(maturity1, "Name", "Symbol");
 
         // Setup Market
         market1 = await Market.new(
@@ -59,7 +76,7 @@ contract('Splitter', async (accounts) =>  {
 
         // Initialize Market1
         const daiReserves = daiTokens1.mul(5);
-        await yield.maker.getDai(owner, daiReserves, rate1);
+        await env.maker.getDai(owner, daiReserves, rate1);
         await dai.approve(market1.address, daiReserves, { from: owner });
         await market1.init(daiReserves, { from: owner });
 
@@ -78,7 +95,7 @@ contract('Splitter', async (accounts) =>  {
     });
 
     it("does not allow to move more weth than posted in maker", async() => {
-        await yield.maker.getDai(user, daiTokens1, rate1);
+        await env.maker.getDai(user, daiTokens1, rate1);
 
         await expectRevert(
             splitter1.makerToYield(user, BigNumber.from(wethTokens1).mul(10), daiTokens1, { from: user }),
@@ -86,10 +103,10 @@ contract('Splitter', async (accounts) =>  {
         );
     });
 
-    it("moves maker vault to yield", async() => {
+    it("moves maker vault to env", async() => {
         // console.log("      Dai: " + daiTokens1.toString());
         // console.log("      Weth: " + wethTokens1.toString());
-        await yield.maker.getDai(user, daiTokens1, rate1);
+        await env.maker.getDai(user, daiTokens1, rate1);
 
         // This lot can be avoided if the user is certain that he has enough Weth in Controller
         // The amount of yDai to be borrowed can be obtained from Market through Splitter
@@ -158,15 +175,15 @@ contract('Splitter', async (accounts) =>  {
         expect(yDaiDebt).to.be.bignumber.gt(yDaiNeeded.mul(new BN('9999')).div(new BN('10000')));
     });
 
-    it("does not allow to move more debt than existing in yield", async() => {
+    it("does not allow to move more debt than existing in env", async() => {
         await expectRevert(
             splitter1.yieldToMaker(user, yDaiTokens1, wethTokens1, { from: user }),
             "Splitter: Not enough debt in Yield",
         );
     });
 
-    it("does not allow to move more weth than posted in yield", async() => {
-        await yield.postWeth(user, wethTokens1);
+    it("does not allow to move more weth than posted in env", async() => {
+        await env.postWeth(user, wethTokens1);
         await controller.borrow(WETH, maturity1, user, user, yDaiTokens1, { from: user });
 
         await expectRevert(
@@ -175,10 +192,10 @@ contract('Splitter', async (accounts) =>  {
         );
     });
 
-    it("moves yield vault to maker", async() => {
+    it("moves env vault to maker", async() => {
         // console.log("      Dai: " + daiTokens1.toString());
         // console.log("      Weth: " + wethTokens1.toString());
-        await yield.postWeth(user, wethTokens1);
+        await env.postWeth(user, wethTokens1);
         await controller.borrow(WETH, maturity1, user, user, yDaiTokens1, { from: user });
         // console.log("      YDai: " + yDaiTokens1.toString());
         

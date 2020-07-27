@@ -16,7 +16,7 @@ import "./interfaces/IController.sol";
 import "./interfaces/IYDai.sol";
 import "./interfaces/ILiquidations.sol";
 import "./helpers/DecimalMath.sol";
-// import "@nomiclabs/buidler/console.sol";
+
 
 
 /**
@@ -56,6 +56,9 @@ contract Unwind is Ownable(), DecimalMath {
 
     address public beneficiary;
 
+    /// @dev The constructor links to vat, daiJoin, weth, wethJoin, jug, pot, end, chai, treasury, controller and liquidations.
+    /// Liquidations should have privileged access to treasury, controller and liquidations using orchestration.
+    /// The constructor gives treasury and end permission on unwind's MakerDAO vaults.
     constructor (
         address vat_,
         address daiJoin_,
@@ -101,7 +104,7 @@ contract Unwind is Ownable(), DecimalMath {
         return int256(x);
     }
 
-    /// @dev Disables treasury and controller.
+    /// @dev Disables treasury, controller and liquidations.
     function unwind() public {
         require(
             _end.tag(WETH) != 0,
@@ -149,7 +152,10 @@ contract Unwind is Ownable(), DecimalMath {
         require(_weth.transfer(beneficiary, profit));
     }
 
-    /// @dev Returns the profit accummulated in the system due to yDai supply and debt, in chai, for a given chi and rate.
+    /// @dev Returns the profit accummulated in the system due to yDai supply and debt, in chai.
+    /// Chi and rate are passed on as parameters to avoid multiple calls that retrieve the same values.
+    /// @param chi The chi value from MakerDAO
+    /// @param rate The rate value from MakerDAO
     function _yDaiProfit(uint256 chi, uint256 rate) internal view returns (uint256) {
         uint256 profit;
 
@@ -234,6 +240,8 @@ contract Unwind is Ownable(), DecimalMath {
     }
 
     /// @dev Settles a series position in Controller, and then returns any remaining collateral as weth using the unwind Dai to Weth price.
+    /// @param collateral Valid collateral type.
+    /// @param user User vault to settle, and wallet to receive the corresponding weth.
     function settle(bytes32 collateral, address user) public {
         require(settled && cashedOut, "Unwind: Not ready");
 
@@ -248,7 +256,11 @@ contract Unwind is Ownable(), DecimalMath {
         require(_weth.transfer(user, remainder));
     }
 
-    /// @dev Redeems YDai for weth
+    /// @dev Redeems YDai for weth. YDai.redeem won't work if MakerDAO is in shutdown.
+    /// yDai holder must call yDai.approve before calling this function.
+    /// @param maturity Maturity of an added series
+    /// @param user Wallet containing the yDai to burn.
+    /// @param yDaiAmount Amount of yDai to burn.
     function redeem(uint256 maturity, address user, uint256 yDaiAmount) public {
         require(settled && cashedOut, "Unwind: Not ready");
         IYDai yDai = _controller.series(maturity);

@@ -1,38 +1,55 @@
-const { CHAI, WETH, chi1, rate1, daiTokens1, wethTokens1, chaiTokens1, toRay, mulRay, divRay } = require('./shared/utils');
-const { YieldEnvironment } = require("./shared/fixtures");
-const helper = require('ganache-time-traveler');
-const { expectRevert } = require('@openzeppelin/test-helpers');
+import { CHAI, WETH, chi1, rate1, daiTokens1, wethTokens1, chaiTokens1, toRay, mulRay, divRay } from './shared/utils';
+import { YieldEnvironment, Contract } from "./shared/fixtures";
+// @ts-ignore
+import helper from 'ganache-time-traveler';
+// @ts-ignore
+import { expectRevert } from '@openzeppelin/test-helpers';
 
 contract('Unwind - Skim', async (accounts) =>  {
     let [ owner, user1, user2 ] = accounts;
 
-    let snapshot;
-    let snapshotId;
+    let snapshot: any;
+    let snapshotId: string;
+
+    let env: YieldEnvironment;
+
+    let dai: Contract;
+    let vat: Contract;
+    let controller: Contract;
+    let treasury: Contract;
+    let weth: Contract;
+    let liquidations: Contract;
+    let unwind: Contract;
+    let end: Contract;
+    let chai: Contract;
+    let yDai1: Contract;
+    let yDai2: Contract;
+
+    let maturity1: number;
+    let maturity2: number;
 
     const THREE_MONTHS = 7776000;
-    let maturity1;
-    let maturity2;
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        yield = await YieldEnvironment.setup(user1)
-        controller = yield.controller;
-        treasury = yield.treasury;
-        unwind = yield.unwind;
+        env = await YieldEnvironment.setup(user1)
+        controller = env.controller;
+        treasury = env.treasury;
+        unwind = env.unwind;
 
-        vat = yield.maker.vat;
-        weth = yield.maker.weth;
-        end = yield.maker.end;
-        chai = yield.maker.chai;
+        vat = env.maker.vat;
+        weth = env.maker.weth;
+        end = env.maker.end;
+        chai = env.maker.chai;
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
-        yDai1 = await yield.newYDai(maturity1, "Name", "Symbol");
-        yDai2 = await yield.newYDai(maturity2, "Name", "Symbol");
+        yDai1 = await env.newYDai(maturity1, "Name", "Symbol");
+        yDai2 = await env.newYDai(maturity2, "Name", "Symbol");
         await yDai1.orchestrate(unwind.address)
         await yDai2.orchestrate(unwind.address)
         await treasury.orchestrate(owner)
@@ -58,7 +75,7 @@ contract('Unwind - Skim', async (accounts) =>  {
 
         describe("with chai savings", () => {
             beforeEach(async() => {
-                await yield.maker.getChai(owner, chaiTokens1.mul(10), chi1, rate1);
+                await env.maker.getChai(owner, chaiTokens1.mul(10), chi1, rate1);
                 await chai.transfer(treasury.address, chaiTokens1.mul(10), { from: owner });
                 // profit = 10 chai
             });
@@ -74,7 +91,7 @@ contract('Unwind - Skim', async (accounts) =>  {
             });
 
             it("chai held as collateral doesn't count as profits", async() => {
-                await yield.maker.getChai(user2, chaiTokens1, chi1, rate1);
+                await env.maker.getChai(user2, chaiTokens1, chi1, rate1);
                 await chai.approve(treasury.address, chaiTokens1, { from: user2 });
                 await controller.post(CHAI, user2, user2, chaiTokens1, { from: user2 });
 
@@ -89,7 +106,7 @@ contract('Unwind - Skim', async (accounts) =>  {
             });
 
             it("unredeemed yDai and controller weth debt cancel each other", async() => {
-                await yield.postWeth(user2, wethTokens1);
+                await env.postWeth(user2, wethTokens1);
                 await controller.borrow(WETH, await yDai1.maturity(), user2, user2, daiTokens1, { from: user2 }); // controller debt assets == yDai liabilities 
 
                 await unwind.skimWhileLive({ from: owner });
@@ -103,7 +120,7 @@ contract('Unwind - Skim', async (accounts) =>  {
             });
 
             it("unredeemed yDai and controller chai debt cancel each other", async() => {
-                await yield.postChai(user2, chaiTokens1, chi1, rate1);
+                await env.postChai(user2, chaiTokens1, chi1, rate1);
                 await controller.borrow(CHAI, await yDai1.maturity(), user2, user2, daiTokens1, { from: user2 }); // controller debt assets == yDai liabilities 
 
                 await unwind.skimWhileLive({ from: owner });
@@ -140,10 +157,10 @@ contract('Unwind - Skim', async (accounts) =>  {
                 const rateDifferential = divRay(rate2, rate1);
 
                 beforeEach(async() => {
-                    await yield.postWeth(user2, wethTokens1);
+                    await env.postWeth(user2, wethTokens1);
                     await controller.borrow(WETH, await yDai1.maturity(), user2, user2, daiTokens1, { from: user2 }); // controller debt assets == yDai liabilities 
 
-                    await yield.postChai(user2, chaiTokens1, chi1, rate1);
+                    await env.postChai(user2, chaiTokens1, chi1, rate1);
                     await controller.borrow(CHAI, await yDai1.maturity(), user2, user2, daiTokens1, { from: user2 }); // controller debt assets == yDai liabilities 
                     // profit = 10 chai
 
@@ -178,13 +195,13 @@ contract('Unwind - Skim', async (accounts) =>  {
                 const rateDifferential2 = divRay(rate3, rate2);
 
                 beforeEach(async() => {
-                    await yield.postWeth(user2, wethTokens1);
+                    await env.postWeth(user2, wethTokens1);
                     await controller.borrow(WETH, await yDai1.maturity(), user2, user2, daiTokens1, { from: user2 }); // controller debt assets == yDai liabilities 
 
-                    await yield.postWeth(user2, wethTokens1);
+                    await env.postWeth(user2, wethTokens1);
                     await controller.borrow(WETH, await yDai2.maturity(), user2, user2, daiTokens1, { from: user2 }); // controller debt assets == yDai liabilities 
 
-                    await yield.postChai(user2, chaiTokens1, chi1, rate1);
+                    await env.postChai(user2, chaiTokens1, chi1, rate1);
                     await controller.borrow(CHAI, await yDai1.maturity(), user2, user2, daiTokens1, { from: user2 }); // controller debt assets == yDai liabilities 
                     // profit = 10 chai
 

@@ -14,7 +14,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract Orchestrated is Ownable {
     event GrantedAccess(address access);
 
-    mapping(address => bool) private authorized;
+    mapping(address => bool) public authorized;
 
     constructor () public Ownable() {}
 
