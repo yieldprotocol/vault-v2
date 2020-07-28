@@ -8,7 +8,7 @@ import "../interfaces/IPool.sol";
 import "../helpers/DecimalMath.sol";
 
 /**
- * @dev The ControllerDai is a proxy contract of Controller that allows users to immediately sell borrowed yDai for Dai, and to sell Dai at pool rates to repay YDai debt.
+ * @dev The DaiProxy is a proxy contract of Controller that allows users to immediately sell borrowed yDai for Dai, and to sell Dai at pool rates to repay YDai debt.
  */
 contract DaiProxy is DecimalMath {
 
