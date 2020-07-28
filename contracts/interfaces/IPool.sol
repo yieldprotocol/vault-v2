@@ -2,7 +2,7 @@
 pragma solidity ^0.6.10;
 
 
-interface IMarket {
+interface IPool {
     function sellDai(address from, address to, uint128 daiIn) external returns(uint128);
     function buyDai(address from, address to, uint128 daiOut) external returns(uint128);
     function sellYDai(address from, address to, uint128 yDaiIn) external returns(uint128);

@@ -2,8 +2,8 @@ const fixed_addrs = require('./fixed_addrs.json');
 const Migrations = artifacts.require("Migrations");
 const ERC20 = artifacts.require("TestERC20");
 const YDai = artifacts.require("YDai");
-const Market = artifacts.require("Market");
-const LimitMarket = artifacts.require("LimitMarket");
+const Pool = artifacts.require("Pool");
+const LimitPool = artifacts.require("LimitPool");
 const YieldMath = artifacts.require("YieldMath.sol");
 
 module.exports = async (deployer, network, accounts) => {
@@ -11,7 +11,7 @@ module.exports = async (deployer, network, accounts) => {
 
   let daiAddress;
   let yDaiAddress;
-  let marketAddress;
+  let poolAddress;
 
   const yDaiNames = ['yDai0', 'yDai1', 'yDai2', 'yDai3']; // TODO: Consider iterating until the address returned is 0
 
@@ -23,31 +23,31 @@ module.exports = async (deployer, network, accounts) => {
 
   // Deploy and link YieldMath - TODO: Is this needed?
   await deployer.deploy(YieldMath)
-  await deployer.link(YieldMath, Market);  
+  await deployer.link(YieldMath, Pool);  
 
   for (yDaiName of yDaiNames) {
     yDaiAddress = await migrations.contracts(web3.utils.fromAscii(yDaiName));
     yDai = await YDai.at(yDaiAddress);
 
     await deployer.deploy(
-      Market,
+      Pool,
       daiAddress,
       yDaiAddress,
       (await yDai.name()) + '-Pool',
       (await yDai.symbol()) + '-Pool',
     );
-    market = await Market.deployed();
-    await migrations.register(web3.utils.fromAscii((await yDai.name()) + '-Pool'), market.address);
-    console.log((await yDai.name()) + '-Pool', market.address);
+    pool = await Pool.deployed();
+    await migrations.register(web3.utils.fromAscii((await yDai.name()) + '-Pool'), pool.address);
+    console.log((await yDai.name()) + '-Pool', pool.address);
 
     await deployer.deploy(
-      LimitMarket,
+      LimitPool,
       daiAddress,
       yDaiAddress,
-      market.address,
+      pool.address,
     );
-    limitMarket = await LimitMarket.deployed();
-    await migrations.register(web3.utils.fromAscii((await yDai.name()) + '-Limit'), limitMarket.address);
-    console.log((await yDai.name()) + '-Limit', limitMarket.address);
+    limitPool = await LimitPool.deployed();
+    await migrations.register(web3.utils.fromAscii((await yDai.name()) + '-Limit'), limitPool.address);
+    console.log((await yDai.name()) + '-Limit', limitPool.address);
   }
 };
