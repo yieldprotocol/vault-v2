@@ -338,7 +338,7 @@ contract('Controller - Chai', async (accounts) =>  {
                     );
                 });
 
-                it.only("borrowing after maturity is still allowed", async() => {
+                it("borrowing after maturity is still allowed", async() => {
                     const yDaiDebt: BigNumber = daiTokens1;
                     const increasedChai: BigNumber = mulRay(chaiTokens1, chiDifferential);
                     await maker.getChai(user2, addBN(increasedChai, 1), chi2, rate2);
