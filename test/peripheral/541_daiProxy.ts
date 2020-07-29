@@ -2,14 +2,14 @@ const Pool = artifacts.require('Pool');
 const DaiProxy = artifacts.require('DaiProxy');
 
 import { BigNumber, BigNumberish } from 'ethers';
-import { WETH, wethTokens1, toWad, toRay, mulRay } from '../shared/utils';
+import { WETH, wethTokens1, toWad, toRay, subBN, mulRay } from '../shared/utils';
 import { YieldEnvironmentLite, Contract } from "../shared/fixtures";
 // @ts-ignore
 import { BN, expectRevert } from '@openzeppelin/test-helpers';
 import { assert, expect } from 'chai';
 
 contract('DaiProxy', async (accounts) =>  {
-    let [ owner, user1, operator, from, to ] = accounts;
+    let [ owner, user1, user2, operator ] = accounts;
 
     // These values impact the pool results
     const rate1 = toRay(1.4);
@@ -95,17 +95,17 @@ contract('DaiProxy', async (accounts) =>  {
         it("borrows dai for maximum yDai", async() => {
             const oneToken = toWad(1);
 
-            await daiProxy.borrowDaiForMaximumYDai(WETH, maturity1, to, yDaiTokens1, oneToken, { from: user1 });
+            await daiProxy.borrowDaiForMaximumYDai(WETH, maturity1, user2, yDaiTokens1, oneToken, { from: user1 });
 
             assert.equal(
-                await dai.balanceOf(to),
+                await dai.balanceOf(user2),
                 oneToken.toString(),
             );
         });
 
         it("doesn't borrow dai if limit exceeded", async() => {
             await expectRevert(
-                daiProxy.borrowDaiForMaximumYDai(WETH, maturity1, to, yDaiTokens1, daiTokens1, { from: user1 }),
+                daiProxy.borrowDaiForMaximumYDai(WETH, maturity1, user2, yDaiTokens1, daiTokens1, { from: user1 }),
                 "DaiProxy: Too much yDai required",
             );
         });
@@ -113,16 +113,20 @@ contract('DaiProxy', async (accounts) =>  {
         it("borrows minimum dai for yDai", async() => {
             const oneToken = new BN(toWad(1).toString());
 
-            await daiProxy.borrowMinimumDaiForYDai(WETH, maturity1, to, yDaiTokens1, oneToken, { from: user1 });
+            await daiProxy.borrowMinimumDaiForYDai(WETH, maturity1, user2, yDaiTokens1, oneToken, { from: user1 });
 
-            expect(await dai.balanceOf(to)).to.be.bignumber.gt(oneToken);
+            expect(await dai.balanceOf(user2)).to.be.bignumber.gt(oneToken);
+            assert.equal(
+                await yDai1.balanceOf(user1),
+                subBN(yDaiTokens1, oneToken).toString(),
+            );
         });
 
         it("doesn't borrow dai if limit not reached", async() => {
             const oneToken = new BN(toWad(1).toString());
 
             await expectRevert(
-                daiProxy.borrowMinimumDaiForYDai(WETH, maturity1, to, oneToken, daiTokens1, { from: user1 }),
+                daiProxy.borrowMinimumDaiForYDai(WETH, maturity1, user2, oneToken, daiTokens1, { from: user1 }),
                 "DaiProxy: Not enough Dai obtained",
             );
         });
@@ -135,8 +139,11 @@ contract('DaiProxy', async (accounts) =>  {
                 await yDai1.approve(pool.address, additionalYDaiReserves, { from: operator });
                 await pool.sellYDai(operator, operator, additionalYDaiReserves, { from: operator });
 
-                // Create some yDai debt for `user1`
-                await controller.borrow(WETH, maturity1, user1, user1, daiTokens1, { from: user1 });
+                // Create some yDai debt for `user2`
+                await weth.deposit({ from: user2, value: wethTokens1 });
+                await weth.approve(treasury.address, wethTokens1, { from: user2 });
+                await controller.post(WETH, user2, user2, wethTokens1, { from: user2 });
+                await controller.borrow(WETH, maturity1, user2, user2, daiTokens1, { from: user2 });
 
                 // Give some Dai to `user1`
                 await env.maker.getDai(user1, daiTokens1, rate1);
@@ -148,9 +155,13 @@ contract('DaiProxy', async (accounts) =>  {
                 const yDaiDebt = new BN(daiTokens1.toString());
 
                 await dai.approve(pool.address, daiTokens1, { from: user1 });
-                await daiProxy.repayMinimumYDaiDebtForDai(WETH, maturity1, to, oneYDai, twoDai, { from: user1 });
+                await daiProxy.repayMinimumYDaiDebtForDai(WETH, maturity1, user2, oneYDai, twoDai, { from: user1 });
 
-                expect(await controller.debtYDai(WETH, maturity1, to)).to.be.bignumber.lt(yDaiDebt);
+                expect(await controller.debtYDai(WETH, maturity1, user2)).to.be.bignumber.lt(yDaiDebt);
+                assert.equal(
+                    await dai.balanceOf(user1),
+                    subBN(daiTokens1, twoDai).toString(),
+                );
             });
 
             it("doesn't repay debt if limit not reached", async() => {
@@ -160,7 +171,7 @@ contract('DaiProxy', async (accounts) =>  {
                 await dai.approve(pool.address, daiTokens1, { from: user1 });
 
                 await expectRevert(
-                    daiProxy.repayMinimumYDaiDebtForDai(WETH, maturity1, to, twoYDai, oneDai, { from: user1 }),
+                    daiProxy.repayMinimumYDaiDebtForDai(WETH, maturity1, user2, twoYDai, oneDai, { from: user1 }),
                     "DaiProxy: Not enough yDai debt repaid",
                 );
             });
@@ -168,12 +179,16 @@ contract('DaiProxy', async (accounts) =>  {
             it("repays yDai debt with maximum dai", async() => {
                 const oneYDai = toWad(1);
                 const twoDai = toWad(2);
-                const yDaiDebt = new BN(daiTokens1.toString());
+                const yDaiDebt = daiTokens1;
 
                 await dai.approve(pool.address, daiTokens1, { from: user1 });
-                await daiProxy.repayYDaiDebtForMaximumDai(WETH, maturity1, to, oneYDai, twoDai, { from: user1 });
+                await daiProxy.repayYDaiDebtForMaximumDai(WETH, maturity1, user2, oneYDai, twoDai, { from: user1 });
 
-                expect(await controller.debtYDai(WETH, maturity1, to)).to.be.bignumber.lt(yDaiDebt);
+                expect(await dai.balanceOf(user1)).to.be.bignumber.lt(new BN(daiTokens1.toString()));
+                assert.equal(
+                    await controller.debtYDai(WETH, maturity1, user2),
+                    subBN(yDaiDebt, oneYDai).toString(),
+                );
             });
 
             it("doesn't repay debt if limit not reached", async() => {
@@ -183,7 +198,7 @@ contract('DaiProxy', async (accounts) =>  {
                 await dai.approve(pool.address, daiTokens1, { from: user1 });
 
                 await expectRevert(
-                    daiProxy.repayYDaiDebtForMaximumDai(WETH, maturity1, to, twoYDai, oneDai, { from: user1 }),
+                    daiProxy.repayYDaiDebtForMaximumDai(WETH, maturity1, user2, twoYDai, oneDai, { from: user1 }),
                     "DaiProxy: Too much Dai required",
                 );
             });
