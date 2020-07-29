@@ -6,7 +6,7 @@ import { YieldEnvironmentLite, Contract } from "../shared/fixtures";
 import { BN, expectRevert } from '@openzeppelin/test-helpers';
 import { assert, expect } from 'chai';
 
-contract('LimitPool', async (accounts) =>  {
+contract('Pool - Delegation', async (accounts) =>  {
     let [ owner, user1, operator, from, to ] = accounts;
 
     // These values impact the pool results

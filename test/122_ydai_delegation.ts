@@ -5,7 +5,7 @@ import { expectRevert, expectEvent } from '@openzeppelin/test-helpers';
 import { WETH, daiTokens1, wethTokens1 } from "./shared/utils";
 import { YieldEnvironmentLite, Contract } from "./shared/fixtures";
 
-contract('yDai - Delegable', async (accounts) =>  {
+contract('yDai - Delegation', async (accounts) =>  {
     let [ owner, holder, other ] = accounts;
     
     let maturity1: number;

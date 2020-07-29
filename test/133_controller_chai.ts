@@ -343,8 +343,6 @@ contract('Controller - Chai', async (accounts) =>  {
                     const increasedChai: BigNumber = mulRay(chaiTokens1, chiDifferential);
                     await maker.getChai(user2, addBN(increasedChai, 1), chi2, rate2);
                     await chai.approve(treasury.address, increasedChai, { from: user2 });
-                    console.log((await chai.balanceOf(user2)).toString());
-                    console.log((await chai.allowance(user2, treasury.address)).toString());
                     await controller.post(CHAI, user2, user2, increasedChai, { from: user2 });
                     await controller.borrow(CHAI, maturity1, user2, user2, yDaiDebt, { from: user2 });
 
