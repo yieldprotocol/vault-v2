@@ -92,7 +92,7 @@ contract('DaiProxy', async (accounts) =>  {
             await yDai1.mint(user1, yDaiTokens1, { from: owner });
         });
 
-        it("borrows dai for maximum yDai", async() => { // borrowDaiForMaximumYDai
+        it("borrows dai for maximum yDai", async() => {
             const oneToken = toWad(1);
 
             await daiProxy.borrowDaiForMaximumYDai(WETH, maturity1, to, yDaiTokens1, oneToken, { from: user1 });
@@ -103,14 +103,14 @@ contract('DaiProxy', async (accounts) =>  {
             );
         });
 
-        it("doesn't borrow dai if limit exceeded", async() => { // borrowDaiForMaximumYDai
+        it("doesn't borrow dai if limit exceeded", async() => {
             await expectRevert(
                 daiProxy.borrowDaiForMaximumYDai(WETH, maturity1, to, yDaiTokens1, daiTokens1, { from: user1 }),
                 "DaiProxy: Too much yDai required",
             );
         });
 
-        it("borrows minimum dai for yDai", async() => { // borrowMinimumDaiForYDai
+        it("borrows minimum dai for yDai", async() => {
             const oneToken = new BN(toWad(1).toString());
 
             await daiProxy.borrowMinimumDaiForYDai(WETH, maturity1, to, yDaiTokens1, oneToken, { from: user1 });
@@ -118,7 +118,7 @@ contract('DaiProxy', async (accounts) =>  {
             expect(await dai.balanceOf(to)).to.be.bignumber.gt(oneToken);
         });
 
-        it("doesn't borrow dai if limit not reached", async() => { // borrowMinimumDaiForYDai
+        it("doesn't borrow dai if limit not reached", async() => {
             const oneToken = new BN(toWad(1).toString());
 
             await expectRevert(
@@ -142,7 +142,7 @@ contract('DaiProxy', async (accounts) =>  {
                 await env.maker.getDai(user1, daiTokens1, rate1);
             });
 
-            it("repays minimum yDai debt with dai", async() => { // repayMinimumYDaiDebtForDai
+            it("repays minimum yDai debt with dai", async() => {
                 const oneYDai = toWad(1);
                 const twoDai = toWad(2);
                 const yDaiDebt = new BN(daiTokens1.toString());
@@ -153,7 +153,7 @@ contract('DaiProxy', async (accounts) =>  {
                 expect(await controller.debtYDai(WETH, maturity1, to)).to.be.bignumber.lt(yDaiDebt);
             });
 
-            it("doesn't repay debt if limit not reached", async() => { // repayMinimumYDaiDebtForDai
+            it("doesn't repay debt if limit not reached", async() => {
                 const oneDai = toWad(1);
                 const twoYDai = toWad(2);
 
@@ -165,38 +165,28 @@ contract('DaiProxy', async (accounts) =>  {
                 );
             });
 
-            /* it("repays yDai debt for maximum dai", async() => { // repayYDaiDebtForMaximumDai
-                const oneToken = toWad(1);
-                await env.maker.getDai(from, daiTokens1, rate1);
+            it("repays yDai debt with maximum dai", async() => {
+                const oneYDai = toWad(1);
+                const twoDai = toWad(2);
+                const yDaiDebt = new BN(daiTokens1.toString());
 
-                await pool.addDelegate(daiProxy.address, { from: user1 });
                 await dai.approve(pool.address, daiTokens1, { from: user1 });
-                await daiProxy.buyYDai(from, to, oneToken, oneToken.mul(2), { from: user1 });
+                await daiProxy.repayYDaiDebtForMaximumDai(WETH, maturity1, to, oneYDai, twoDai, { from: user1 });
 
-                assert.equal(
-                    await yDai1.balanceOf(to),
-                    oneToken.toString(),
-                    "'To' wallet should have 1 yDai token",
-                );
-
-                const expectedDaiIn = (new BN(oneToken.toString())).mul(new BN('8835')).div(new BN('10000')); // I just hate javascript
-                const daiIn = (new BN(daiTokens1.toString())).sub(new BN(await dai.balanceOf(from)));
-                expect(daiIn).to.be.bignumber.gt(expectedDaiIn.mul(new BN('9999')).div(new BN('10000')));
-                expect(daiIn).to.be.bignumber.lt(expectedDaiIn.mul(new BN('10001')).div(new BN('10000')));
+                expect(await controller.debtYDai(WETH, maturity1, to)).to.be.bignumber.lt(yDaiDebt);
             });
 
-            it("doesn't repay debt if limit exceeded", async() => { // repayYDaiDebtForMaximumDai
-                const oneToken = toWad(1);
-                await env.maker.getDai(from, daiTokens1, rate1);
+            it("doesn't repay debt if limit not reached", async() => {
+                const oneDai = toWad(1);
+                const twoYDai = toWad(2);
 
-                await pool.addDelegate(daiProxy.address, { from: user1 });
                 await dai.approve(pool.address, daiTokens1, { from: user1 });
 
                 await expectRevert(
-                    daiProxy.buyYDai(from, to, oneToken, oneToken.div(2), { from: user1 }),
-                    "daiProxy: Limit exceeded",
+                    daiProxy.repayYDaiDebtForMaximumDai(WETH, maturity1, to, twoYDai, oneDai, { from: user1 }),
+                    "DaiProxy: Too much Dai required",
                 );
-            });*/
+            });
         });
     });
 });
