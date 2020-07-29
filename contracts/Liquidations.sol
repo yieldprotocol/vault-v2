@@ -120,11 +120,10 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
         liquidations[user] = now;
 
         (uint256 userCollateral, uint256 userDebt) = _controller.erase(WETH, user);
-        Vault memory vault = Vault({
+        vaults[user] = Vault({
             collateral: sub(toUint128(userCollateral), FEE),
             debt: toUint128(userDebt)
         });
-        vaults[user] = vault;
         vaults[to].collateral = add(vaults[to].collateral, FEE);
 
         emit Liquidation(user, liquidations[user], userCollateral, userDebt);
