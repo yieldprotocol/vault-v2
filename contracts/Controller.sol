@@ -447,8 +447,9 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         if (collateral == CHAI) totalChaiPosted = totalChaiPosted.sub(userCollateral);
 
         uint256 userDebt;
-        for (uint256 i = 0; i < seriesIterator.length; i += 1) {
-            uint256 maturity = seriesIterator[i];
+        uint256[] memory _seriesIterator = seriesIterator;
+        for (uint256 i = 0; i < _seriesIterator.length; i += 1) {
+            uint256 maturity = _seriesIterator[i];
             userDebt = userDebt.add(debtDai(collateral, maturity, user)); // SafeMath shouldn't be needed
             totalDebtYDai[collateral][maturity] =
                 totalDebtYDai[collateral][maturity].sub(debtYDai[collateral][maturity][user]); // SafeMath shouldn't be needed
