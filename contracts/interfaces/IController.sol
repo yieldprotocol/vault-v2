@@ -25,4 +25,5 @@ interface IController {
     function repayYDai(bytes32, uint256, address, address, uint256) external;
     function repayDai(bytes32, uint256, address, address, uint256) external;
     function skimStart() external view returns (uint256);
+    function allSeries() external view returns (IYDai[] memory, uint256[] memory);
 }

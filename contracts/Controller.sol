@@ -146,6 +146,18 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         skimStart = Math.max(skimStart, maturity.add(THREE_MONTHS));
     }
 
+    /// @dev Returns all the available YDai series
+    function allSeries() public view override returns (IYDai[] memory, uint256[] memory) {
+        uint256[] memory _seriesIterator = seriesIterator;
+        IYDai[] memory _series = new IYDai[](_seriesIterator.length);
+        uint256[] memory _maturities = new uint256[](_seriesIterator.length);
+        for (uint256 i = 0; i < _seriesIterator.length; i += 1) {
+            _maturities[i] = seriesIterator[i];
+            _series[i] = series[seriesIterator[i]];
+        }
+        return (_series, _maturities);
+    }
+
     /// @dev Dai equivalent of a yDai amount.
     /// After maturity, the Dai value of a yDai grows according to either the stability fee (for WETH collateral) or the Dai Saving Rate (for Chai collateral).
     /// @param collateral Valid collateral type
