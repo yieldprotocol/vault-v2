@@ -1,6 +1,7 @@
 const Pool = artifacts.require('Pool');
 const DaiProxy = artifacts.require('DaiProxy');
 
+import { BigNumber, BigNumberish } from 'ethers';
 import { WETH, wethTokens1, toWad, toRay, mulRay } from '../shared/utils';
 import { YieldEnvironmentLite, Contract } from "../shared/fixtures";
 // @ts-ignore
@@ -92,7 +93,7 @@ contract('DaiProxy', async (accounts) =>  {
             const oneToken = toWad(1);
             await yDai1.mint(from, yDaiTokens1, { from: owner });
 
-            const yDaiPaid = await daiProxy.borrowDaiForMaximumYDai(WETH, maturity1, to, yDaiTokens1, oneToken, { from: from });
+            await daiProxy.borrowDaiForMaximumYDai(WETH, maturity1, to, yDaiTokens1, oneToken, { from: from });
 
             assert.equal(
                 await dai.balanceOf(to),
@@ -107,40 +108,26 @@ contract('DaiProxy', async (accounts) =>  {
             );
         });
 
-        /* it("borrows minimum dai for yDai", async() => { // borrowMinimumDaiForYDai
-            const oneToken = toWad(1);
-            await yDai1.mint(from, oneToken, { from: owner });
+        it("borrows minimum dai for yDai", async() => { // borrowMinimumDaiForYDai
+            const oneToken = new BN(toWad(1).toString());
+            await yDai1.mint(from, yDaiTokens1, { from: owner });
 
-            await pool.addDelegate(daiProxy.address, { from: from });
-            await yDai1.approve(pool.address, oneToken, { from: from });
-            await daiProxy.sellYDai(from, to, oneToken, oneToken.div(2), { from: from });
+            await daiProxy.borrowMinimumDaiForYDai(WETH, maturity1, to, yDaiTokens1, oneToken, { from: from });
 
-            assert.equal(
-                await yDai1.balanceOf(from),
-                0,
-                "'From' wallet should have no yDai tokens",
-            );
-
-            const expectedDaiOut = (new BN(oneToken.toString())).mul(new BN('99814')).div(new BN('100000')); // I just hate javascript
-            const daiOut = new BN(await dai.balanceOf(to));
-            expect(daiOut).to.be.bignumber.gt(expectedDaiOut.mul(new BN('9999')).div(new BN('10000')));
-            expect(daiOut).to.be.bignumber.lt(expectedDaiOut.mul(new BN('10001')).div(new BN('10000')));
+            expect(await dai.balanceOf(to)).to.be.bignumber.gt(oneToken);
         });
 
         it("doesn't borrow dai if limit not reached", async() => { // borrowMinimumDaiForYDai
-            const oneToken = toWad(1);
-            await yDai1.mint(from, oneToken, { from: owner });
-
-            await pool.addDelegate(daiProxy.address, { from: from });
-            await yDai1.approve(pool.address, oneToken, { from: from });
+            const oneToken = new BN(toWad(1).toString());
+            await yDai1.mint(from, yDaiTokens1, { from: owner });
 
             await expectRevert(
-                daiProxy.sellYDai(from, to, oneToken, oneToken.mul(2), { from: from }),
-                "daiProxy: Limit not reached",
+                daiProxy.borrowMinimumDaiForYDai(WETH, maturity1, to, oneToken, daiTokens1, { from: from }),
+                "DaiProxy: Not enough Dai obtained",
             );
         });
 
-        describe("with extra yDai reserves", () => {
+        /* describe("with extra yDai reserves", () => {
             beforeEach(async() => {
                 const additionalYDaiReserves = toWad(34.4);
                 await yDai1.mint(operator, additionalYDaiReserves, { from: owner });

@@ -99,7 +99,7 @@ contract DaiProxy is DecimalMath {
         // The collateral for this borrow needs to have been posted beforehand
         _controller.borrow(collateral, maturity, msg.sender, address(this), yDaiToBorrow);
         uint256 boughtDai = _pool.sellYDai(address(this), to, toUint128(yDaiToBorrow));
-        require (boughtDai >= minimumDaiToBorrow);
+        require (boughtDai >= minimumDaiToBorrow, "DaiProxy: Not enough Dai obtained");
 
         return boughtDai;
     }
