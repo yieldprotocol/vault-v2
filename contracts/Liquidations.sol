@@ -100,7 +100,8 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
     /// @dev Return if the debt of an user is between zero and the dust level
     /// @param user Address of the user vault
     function aboveDustOrZero(address user) public view returns (bool) {
-        return vaults[user].collateral == 0 || DUST < vaults[user].collateral;
+        uint256 collateral = vaults[user].collateral;
+        return collateral == 0 || DUST < collateral;
     }
 
     /// @dev Starts a liquidation process for an undercollateralized vault.
