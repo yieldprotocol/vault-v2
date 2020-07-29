@@ -177,12 +177,13 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
         public onlyLive
         onlyHolderOrDelegate(from, "Controller: Only Holder Or Delegate")
     {
+        Vault storage vault = vaults[from];
         require(
-            vaults[from].debt == 0,
+            vault.debt == 0,
             "Liquidations: User still in liquidation"
         );
 
-        vaults[from].collateral = sub(vaults[from].collateral, toUint128(tokenAmount));
+        vault.collateral = sub(vault.collateral, toUint128(tokenAmount));
 
         _treasury.pullWeth(to, tokenAmount);
     }
