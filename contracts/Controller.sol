@@ -208,9 +208,10 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     /// @return Total debt of an user across all series, in Dai
     function totalDebtDai(bytes32 collateral, address user) public view override returns (uint256) {
         uint256 totalDebt;
-        for (uint256 i = 0; i < seriesIterator.length; i += 1) {
-            if (debtYDai[collateral][seriesIterator[i]][user] > 0) {
-                totalDebt = totalDebt + debtDai(collateral, seriesIterator[i], user);
+        uint256[] memory _seriesIterator = seriesIterator;
+        for (uint256 i = 0; i < _seriesIterator.length; i += 1) {
+            if (debtYDai[collateral][_seriesIterator[i]][user] > 0) {
+                totalDebt = totalDebt + debtDai(collateral, _seriesIterator[i], user);
             }
         } // We don't expect hundreds of maturities per controller
         return totalDebt;
