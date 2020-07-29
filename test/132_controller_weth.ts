@@ -2,7 +2,7 @@
 import helper from 'ganache-time-traveler';
 // @ts-ignore
 import { BN, expectRevert } from '@openzeppelin/test-helpers';
-import { WETH, rate1, daiTokens1, wethTokens1, toRay, mulRay, divRay, addBN, subBN } from './shared/utils';
+import { WETH, rate1, daiTokens1, wethTokens1, toRay, mulRay, divRay, divrupRay, addBN, subBN } from './shared/utils';
 import { MakerEnvironment, YieldEnvironmentLite, Contract } from "./shared/fixtures";
 import { BigNumber } from 'ethers'
 
@@ -961,9 +961,9 @@ contract('Controller - Weth', async (accounts) =>  {
                     beforeEach(async() => {
                         // Set rate to 1.5
                         rateIncrease = toRay(0.25);
-                        rateDifferential = divRay(rate1.add(rateIncrease), rate1);
+                        rateDifferential = divrupRay(rate1.add(rateIncrease), rate1);  // YDai.rateGrowth() rounds up.
                         rate2 = rate1.add(rateIncrease);
-                        increasedDebt = addBN(mulRay(daiTokens1, rateDifferential), 1); // YDai.rateGrowth() rounds up.
+                        increasedDebt = mulRay(daiTokens1, rateDifferential);
                         debtIncrease = subBN(increasedDebt, daiTokens1);
 
                         assert.equal(
@@ -999,12 +999,32 @@ contract('Controller - Weth', async (accounts) =>  {
                             "User1 should have " + daiTokens1 + " debt after the rate change, instead has " + (await controller.debtYDai(WETH, maturity1, user1)),
                         );
                     });
-     
+
+                    it("borrowing after maturity is still allowed", async() => {
+                        const yDaiDebt: BigNumber = daiTokens1;
+                        const increasedWeth: BigNumber = addBN(mulRay(wethTokens1, rateDifferential), 1);
+                        await weth.deposit({ from: user3, value: increasedWeth.toString() });
+                        await weth.approve(treasury.address, increasedWeth, { from: user3 }); 
+                        await controller.post(WETH, user3, user3, increasedWeth, { from: user3 });
+                        await controller.borrow(WETH, maturity1, user3, user3, yDaiDebt, { from: user3 });
+
+                        assert.equal(
+                            await controller.debtYDai(WETH, maturity1, user3),
+                            yDaiDebt.toString(),
+                            "User3 should have " + yDaiDebt + " yDai debt, instead has " + (await controller.debtYDai(WETH, maturity1, user3)),
+                        );
+                        assert.equal(
+                            await controller.debtDai(WETH, maturity1, user3),
+                            increasedDebt.toString(),
+                            "User3 should have " + addBN(increasedDebt, daiTokens1) + " Dai debt, instead has " + (await controller.debtDai(WETH, maturity1, user3)),
+                        );
+                    });
+
                     it("borrowing from two series, dai debt is aggregated", async() => {
                         assert.equal(
                             await controller.totalDebtDai(WETH, user1),
                             addBN(increasedDebt, daiTokens1).toString(),
-                            "User1 should have " + addBN(increasedDebt, daiTokens1) + " debt after the rate change, instead has " + (await controller.totalDebtDai(WETH, user1)),
+                            "User1 should have " + increasedDebt + " debt after the rate change, instead has " + (await controller.totalDebtDai(WETH, user1)),
                         );
                     });
     
