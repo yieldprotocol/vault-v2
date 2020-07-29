@@ -337,8 +337,9 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         onlyHolderOrDelegate(from, "Controller: Only Holder Or Delegate")
         onlyLive
     {
+        IYDai ydai = series[maturity];
         require(
-            series[maturity].isMature() != true,
+            ydai.isMature() != true,
             "Controller: No mature borrow"
         );
 
@@ -350,7 +351,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
             "Controller: Too much debt"
         );
 
-        series[maturity].mint(to, yDaiAmount);
+        ydai.mint(to, yDaiAmount);
         emit Borrowed(collateral, maturity, from, toInt256(yDaiAmount));
     }
 
