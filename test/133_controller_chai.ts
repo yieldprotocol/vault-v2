@@ -7,7 +7,7 @@ import { YieldEnvironmentLite, MakerEnvironment, Contract } from "./shared/fixtu
 import { BigNumber } from 'ethers'
 
 contract('Controller - Chai', async (accounts) =>  {
-    let [ owner, user1 ] = accounts;
+    let [ owner, user1, user2 ] = accounts;
 
     let snapshot: any;
     let snapshotId: string;
@@ -335,6 +335,26 @@ contract('Controller - Chai', async (accounts) =>  {
                         await controller.debtYDai(CHAI, maturity1, user1),
                         daiTokens1.toString(),
                         "User1 should have " + daiTokens1 + " debt after the chi change, instead has " + (await controller.debtYDai(CHAI, maturity1, user1)),
+                    );
+                });
+
+                it("borrowing after maturity is still allowed", async() => {
+                    const yDaiDebt: BigNumber = daiTokens1;
+                    const increasedChai: BigNumber = mulRay(chaiTokens1, chiDifferential);
+                    await maker.getChai(user2, addBN(increasedChai, 1), chi2, rate2);
+                    await chai.approve(treasury.address, increasedChai, { from: user2 });
+                    await controller.post(CHAI, user2, user2, increasedChai, { from: user2 });
+                    await controller.borrow(CHAI, maturity1, user2, user2, yDaiDebt, { from: user2 });
+
+                    assert.equal(
+                        await controller.debtYDai(CHAI, maturity1, user2),
+                        yDaiDebt.toString(),
+                        "User2 should have " + yDaiDebt + " yDai debt, instead has " + (await controller.debtYDai(CHAI, maturity1, user2)),
+                    );
+                    assert.equal(
+                        await controller.debtDai(CHAI, maturity1, user2),
+                        increasedDebt.toString(),
+                        "User2 should have " + increasedDebt + " Dai debt, instead has " + (await controller.debtDai(CHAI, maturity1, user2)),
                     );
                 });
 

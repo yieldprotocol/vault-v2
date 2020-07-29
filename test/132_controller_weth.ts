@@ -2,7 +2,7 @@
 import helper from 'ganache-time-traveler';
 // @ts-ignore
 import { BN, expectRevert } from '@openzeppelin/test-helpers';
-import { WETH, rate1, daiTokens1, wethTokens1, toRay, mulRay, divRay, addBN, subBN } from './shared/utils';
+import { WETH, rate1, daiTokens1, wethTokens1, toRay, mulRay, divRay, divrupRay, addBN, subBN } from './shared/utils';
 import { MakerEnvironment, YieldEnvironmentLite, Contract } from "./shared/fixtures";
 import { BigNumber } from 'ethers'
 
@@ -182,63 +182,6 @@ contract('Controller - Weth', async (accounts) =>  {
         );
     });
 
-    it("doesn't allow to post from others if not a delegate", async() => {
-        await expectRevert(
-            controller.post(WETH, user1, user2, daiTokens1, { from: user2 }),
-            "Controller: Only Holder Or Delegate",
-        );
-    });
-
-    it("allows delegates to post weth from others", async() => {
-        assert.equal(
-            (await vat.urns(WETH, treasury.address)).ink,
-            0,
-            "Treasury has weth in MakerDAO",
-        );
-        assert.equal(
-            await controller.powerOf(WETH, user1),
-            0,
-            "User1 has borrowing power",
-        );
-        
-        await weth.deposit({ from: user1, value: wethTokens1 });
-        await controller.addDelegate(user2, { from: user1 });
-        await weth.approve(treasury.address, wethTokens1, { from: user1 }); 
-        const event = (await controller.post(WETH, user1, user2, wethTokens1, { from: user2 })).logs[0];
-        
-        assert.equal(
-            event.event,
-            "Posted",
-        );
-        assert.equal(
-            bytes32ToString(event.args.collateral),
-            bytes32ToString(WETH),
-        );
-        assert.equal(
-            event.args.user,
-            user2,
-        );
-        assert.equal(
-            event.args.amount,
-            wethTokens1.toString(),
-        );
-        assert.equal(
-            (await vat.urns(WETH, treasury.address)).ink,
-            wethTokens1.toString(),
-            "Treasury should have weth in MakerDAO",
-        );
-        assert.equal(
-            await controller.powerOf(WETH, user2),
-            daiTokens1.toString(),
-            "User2 should have " + daiTokens1 + " borrowing power, instead has " + await controller.powerOf(WETH, user2),
-        );
-        assert.equal(
-            await controller.posted(WETH, user2),
-            wethTokens1.toString(),
-            "User2 should have " + wethTokens1 + " weth posted, instead has " + await controller.posted(WETH, user2),
-        );
-    });
-
     describe("with posted weth", () => {
         beforeEach(async() => {
             await weth.deposit({ from: user1, value: wethTokens1 });
@@ -370,95 +313,6 @@ contract('Controller - Weth', async (accounts) =>  {
                 await yDai1.balanceOf(user2),
                 daiTokens1.toString(),
                 "User2 should have yDai",
-            );
-            assert.equal(
-                await controller.debtDai(WETH, maturity1, user1),
-                daiTokens1.toString(),
-                "User1 should have debt",
-            );
-            assert.equal(
-                await controller.totalDebtYDai(WETH, maturity1),
-                daiTokens1.toString(), // Dai == yDai before maturity
-                "System should have debt",
-            );
-        });
-
-        it("doesn't allow to borrow yDai from others if not a delegate", async() => {
-            await expectRevert(
-                controller.borrow(WETH, maturity1, user1, user2, daiTokens1, { from: user2 }),
-                "Controller: Only Holder Or Delegate",
-            );
-        });
-
-        it("allows to borrow yDai from others", async() => {
-            await controller.addDelegate(user2, { from: user1 })
-            const event: any = (await controller.borrow(WETH, maturity1, user1, user2, daiTokens1, { from: user2 })).logs[0];
-
-            assert.equal(
-                event.event,
-                "Borrowed",
-            );
-            assert.equal(
-                bytes32ToString(event.args.collateral),
-                bytes32ToString(WETH),
-            );
-            assert.equal(
-                event.args.maturity,
-                maturity1,
-            );
-            assert.equal(
-                event.args.user,
-                user1,
-            );
-            assert.equal(
-                event.args.amount,
-                daiTokens1.toString(), // This is actually a yDai amount
-            );
-            assert.equal(
-                await yDai1.balanceOf(user2),
-                daiTokens1.toString(),
-                "User2 should have yDai",
-            );
-            assert.equal(
-                await controller.debtDai(WETH, maturity1, user1),
-                daiTokens1.toString(),
-                "User1 should have debt",
-            );
-            assert.equal(
-                await controller.totalDebtYDai(WETH, maturity1),
-                daiTokens1.toString(), // Dai == yDai before maturity
-                "System should have debt",
-            );
-        });
-
-        it("allows to borrow yDai from others, for others", async() => {
-            await controller.addDelegate(user2, { from: user1 })
-            const event: any = (await controller.borrow(WETH, maturity1, user1, user3, daiTokens1, { from: user2 })).logs[0];
-
-            assert.equal(
-                event.event,
-                "Borrowed",
-            );
-            assert.equal(
-                bytes32ToString(event.args.collateral),
-                bytes32ToString(WETH),
-            );
-            assert.equal(
-                event.args.maturity,
-                maturity1,
-            );
-            assert.equal(
-                event.args.user,
-                user1,
-            );
-            assert.equal(
-                event.args.amount,
-                daiTokens1.toString(), // This is actually a yDai amount
-            );
-            assert.equal(
-                await yDai1.balanceOf(user3),
-                daiTokens1.toString(),
-                "User3 should have yDai",
             );
             assert.equal(
                 await controller.debtDai(WETH, maturity1, user1),
@@ -633,97 +487,6 @@ contract('Controller - Weth', async (accounts) =>  {
                     );
                 });
 
-                it("others need to be added as delegates to repay yDai with others' funds", async() => {
-                    await expectRevert(
-                        controller.repayYDai(WETH, maturity1, user1, user1, daiTokens1, { from: user2 }),
-                        "Controller: Only Holder Or Delegate",
-                    );
-                });
-
-                it("allows delegates to use funds to repay yDai debts", async() => {
-                    await controller.addDelegate(user2, { from: user1 });
-                    await yDai1.approve(treasury.address, daiTokens1, { from: user1 });
-                    const event = (await controller.repayYDai(WETH, maturity1, user1, user1, daiTokens1, { from: user2 })).logs[0];
-        
-                    assert.equal(
-                        event.event,
-                        "Borrowed",
-                    );
-                    assert.equal(
-                        bytes32ToString(event.args.collateral),
-                        bytes32ToString(WETH),
-                    );
-                    assert.equal(
-                        event.args.maturity,
-                        maturity1,
-                    );
-                    assert.equal(
-                        event.args.user,
-                        user1,
-                    );
-                    assert.equal(
-                        event.args.amount,
-                        daiTokens1.mul(-1).toString(), // This is actually a yDai amount
-                    );
-                    assert.equal(
-                        await yDai1.balanceOf(user1),
-                        0,
-                        "User1 should not have yDai",
-                    );
-                    assert.equal(
-                        await controller.debtDai(WETH, maturity1, user1),
-                        0,
-                        "User1 should not have debt",
-                    );
-                    assert.equal(
-                        await controller.totalDebtYDai(WETH, maturity1),
-                        daiTokens1.toString(), // Dai == yDai before maturity. We borrowed twice this.
-                        "System should have debt",
-                    );
-                });
-
-                it("delegates are allowed to use fund to pay debts of any user", async() => {
-                    await controller.addDelegate(user2, { from: user1 });
-                    await yDai1.approve(treasury.address, daiTokens1, { from: user1 });
-                    const event = (await controller.repayYDai(WETH, maturity1, user1, user2, daiTokens1, { from: user2 })).logs[0];
-        
-                    assert.equal(
-                        event.event,
-                        "Borrowed",
-                    );
-                    assert.equal(
-                        bytes32ToString(event.args.collateral),
-                        bytes32ToString(WETH),
-                    );
-                    assert.equal(
-                        event.args.maturity,
-                        maturity1,
-                    );
-                    assert.equal(
-                        event.args.user,
-                        user2,
-                    );
-                    assert.equal(
-                        event.args.amount,
-                        daiTokens1.mul(-1).toString(), // This is actually a yDai amount
-                    );
-                    assert.equal(
-                        await yDai1.balanceOf(user1),
-                        0,
-                        "User1 should not have yDai",
-                    );
-                    assert.equal(
-                        await controller.debtDai(WETH, maturity1, user2),
-                        0,
-                        "User2 should not have debt",
-                    );
-                    assert.equal(
-                        await controller.totalDebtYDai(WETH, maturity1),
-                        daiTokens1.toString(), // Dai == yDai before maturity. We borrowed twice this.
-                        "System should have debt",
-                    );
-                });
-
                 it("allows to repay yDai with dai", async() => {
                     await maker.getDai(user1, daiTokens1, rate1);
     
@@ -820,99 +583,6 @@ contract('Controller - Weth', async (accounts) =>  {
                     );
                 });
 
-                it("others need to be added as delegates to repay dai with others' funds", async() => {
-                    await expectRevert(
-                        controller.repayDai(WETH, maturity1, user1, user1, daiTokens1, { from: user2 }),
-                        "Controller: Only Holder Or Delegate",
-                    );
-                });
-
-                it("allows delegates to use funds to repay dai debts", async() => {
-                    await maker.getDai(user1, daiTokens1, rate1);
-                    await controller.addDelegate(user2, { from: user1 });
-                    await dai.approve(treasury.address, daiTokens1, { from: user1 });
-                    const event = (await controller.repayDai(WETH, maturity1, user1, user1, daiTokens1, { from: user2 })).logs[0];
-        
-                    assert.equal(
-                        event.event,
-                        "Borrowed",
-                    );
-                    assert.equal(
-                        bytes32ToString(event.args.collateral),
-                        bytes32ToString(WETH),
-                    );
-                    assert.equal(
-                        event.args.maturity,
-                        maturity1,
-                    );
-                    assert.equal(
-                        event.args.user,
-                        user1,
-                    );
-                    assert.equal(
-                        event.args.amount,
-                        daiTokens1.mul(-1).toString(), // This is actually a yDai amount
-                    );
-                    assert.equal(
-                        await dai.balanceOf(user1),
-                        0,
-                        "User1 should not have yDai",
-                    );
-                    assert.equal(
-                        await controller.debtDai(WETH, maturity1, user1),
-                        0,
-                        "User1 should not have debt",
-                    );
-                    assert.equal(
-                        await controller.totalDebtYDai(WETH, maturity1),
-                        daiTokens1.toString(), // Dai == yDai before maturity. We borrowed twice this.
-                        "System should have debt",
-                    );
-                });
-
-                it("delegates are allowed to use dai funds to pay debts of any user", async() => {
-                    await controller.addDelegate(user2, { from: user1 });
-                    await maker.getDai(user1, daiTokens1, rate1);
-                    await dai.approve(treasury.address, daiTokens1, { from: user1 });
-                    const event = (await controller.repayDai(WETH, maturity1, user1, user2, daiTokens1, { from: user2 })).logs[0];
-        
-                    assert.equal(
-                        event.event,
-                        "Borrowed",
-                    );
-                    assert.equal(
-                        bytes32ToString(event.args.collateral),
-                        bytes32ToString(WETH),
-                    );
-                    assert.equal(
-                        event.args.maturity,
-                        maturity1,
-                    );
-                    assert.equal(
-                        event.args.user,
-                        user2,
-                    );
-                    assert.equal(
-                        event.args.amount,
-                        daiTokens1.mul(-1).toString(), // This is actually a yDai amount
-                    );
-                    assert.equal(
-                        await dai.balanceOf(user1),
-                        0,
-                        "User1 should not have yDai",
-                    );
-                    assert.equal(
-                        await controller.debtDai(WETH, maturity1, user2),
-                        0,
-                        "User2 should not have debt",
-                    );
-                    assert.equal(
-                        await controller.totalDebtYDai(WETH, maturity1),
-                        daiTokens1.toString(), // Dai == yDai before maturity. We borrowed twice this.
-                        "System should have debt",
-                    );
-                });
-
                 it("when dai is provided in excess for repayment, only the necessary amount is taken", async() => {
                     // Mint some yDai the sneaky way
                     await yDai1.orchestrate(owner, { from: owner });
@@ -961,9 +631,9 @@ contract('Controller - Weth', async (accounts) =>  {
                     beforeEach(async() => {
                         // Set rate to 1.5
                         rateIncrease = toRay(0.25);
-                        rateDifferential = divRay(rate1.add(rateIncrease), rate1);
+                        rateDifferential = divrupRay(rate1.add(rateIncrease), rate1);  // YDai.rateGrowth() rounds up.
                         rate2 = rate1.add(rateIncrease);
-                        increasedDebt = addBN(mulRay(daiTokens1, rateDifferential), 1); // YDai.rateGrowth() rounds up.
+                        increasedDebt = mulRay(daiTokens1, rateDifferential);
                         debtIncrease = subBN(increasedDebt, daiTokens1);
 
                         assert.equal(
@@ -999,12 +669,32 @@ contract('Controller - Weth', async (accounts) =>  {
                             "User1 should have " + daiTokens1 + " debt after the rate change, instead has " + (await controller.debtYDai(WETH, maturity1, user1)),
                         );
                     });
-     
+
+                    it("borrowing after maturity is still allowed", async() => {
+                        const yDaiDebt: BigNumber = daiTokens1;
+                        const increasedWeth: BigNumber = addBN(mulRay(wethTokens1, rateDifferential), 1);
+                        await weth.deposit({ from: user3, value: increasedWeth.toString() });
+                        await weth.approve(treasury.address, increasedWeth, { from: user3 }); 
+                        await controller.post(WETH, user3, user3, increasedWeth, { from: user3 });
+                        await controller.borrow(WETH, maturity1, user3, user3, yDaiDebt, { from: user3 });
+
+                        assert.equal(
+                            await controller.debtYDai(WETH, maturity1, user3),
+                            yDaiDebt.toString(),
+                            "User3 should have " + yDaiDebt + " yDai debt, instead has " + (await controller.debtYDai(WETH, maturity1, user3)),
+                        );
+                        assert.equal(
+                            await controller.debtDai(WETH, maturity1, user3),
+                            increasedDebt.toString(),
+                            "User3 should have " + addBN(increasedDebt, daiTokens1) + " Dai debt, instead has " + (await controller.debtDai(WETH, maturity1, user3)),
+                        );
+                    });
+
                     it("borrowing from two series, dai debt is aggregated", async() => {
                         assert.equal(
                             await controller.totalDebtDai(WETH, user1),
                             addBN(increasedDebt, daiTokens1).toString(),
-                            "User1 should have " + addBN(increasedDebt, daiTokens1) + " debt after the rate change, instead has " + (await controller.totalDebtDai(WETH, user1)),
+                            "User1 should have " + increasedDebt + " debt after the rate change, instead has " + (await controller.totalDebtDai(WETH, user1)),
                         );
                     });
     

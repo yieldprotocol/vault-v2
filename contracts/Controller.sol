@@ -165,12 +165,12 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     /// @param yDaiAmount Amount of yDai to convert.
     /// @return Dai equivalent of an yDai amount.
     function inDai(bytes32 collateral, uint256 maturity, uint256 yDaiAmount) public view override returns (uint256) {
-        IYDai ydai = series[maturity];
-        if (ydai.isMature()){
+        IYDai yDai = series[maturity];
+        if (yDai.isMature()){
             if (collateral == WETH){
-                return muld(yDaiAmount, ydai.rateGrowth());
+                return muld(yDaiAmount, yDai.rateGrowth());
             } else if (collateral == CHAI) {
-                return muld(yDaiAmount, ydai.chiGrowth());
+                return muld(yDaiAmount, yDai.chiGrowth());
             } else {
                 revert("Controller: Unsupported collateral");
             }
@@ -186,12 +186,12 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     /// @param daiAmount Amount of Dai to convert.
     /// @return yDai equivalent of a Dai amount.
     function inYDai(bytes32 collateral, uint256 maturity, uint256 daiAmount) public view override returns (uint256) {
-        IYDai ydai = series[maturity];
-        if (ydai.isMature()){
+        IYDai yDai = series[maturity];
+        if (yDai.isMature()){
             if (collateral == WETH){
-                return divd(daiAmount, ydai.rateGrowth());
+                return divd(daiAmount, yDai.rateGrowth());
             } else if (collateral == CHAI) {
-                return divd(daiAmount, ydai.chiGrowth());
+                return divd(daiAmount, yDai.chiGrowth());
             } else {
                 revert("Controller: Unsupported collateral");
             }
@@ -351,11 +351,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         onlyHolderOrDelegate(from, "Controller: Only Holder Or Delegate")
         onlyLive
     {
-        IYDai ydai = series[maturity];
-        require(
-            ydai.isMature() != true,
-            "Controller: No mature borrow"
-        );
+        IYDai yDai = series[maturity];
 
         debtYDai[collateral][maturity][from] = debtYDai[collateral][maturity][from].add(yDaiAmount);
         totalDebtYDai[collateral][maturity] = totalDebtYDai[collateral][maturity].add(yDaiAmount);
@@ -365,7 +361,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
             "Controller: Too much debt"
         );
 
-        ydai.mint(to, yDaiAmount);
+        yDai.mint(to, yDaiAmount);
         emit Borrowed(collateral, maturity, from, toInt256(yDaiAmount));
     }
 
