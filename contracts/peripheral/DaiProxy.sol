@@ -122,7 +122,7 @@ contract DaiProxy is DecimalMath {
         returns (uint256)
     {
         uint256 repaymentInDai = _pool.buyYDai(msg.sender, address(this), toUint128(yDaiRepayment));
-        require (repaymentInDai <= maximumRepaymentInDai);
+        require (repaymentInDai <= maximumRepaymentInDai, "DaiProxy: Too much Dai required");
         _controller.repayYDai(collateral, maturity, address(this), to, yDaiRepayment);
 
         return repaymentInDai;
@@ -146,7 +146,7 @@ contract DaiProxy is DecimalMath {
         returns (uint256)
     {
         uint256 yDaiRepayment = _pool.sellDai(msg.sender, address(this), toUint128(repaymentInDai));
-        require (yDaiRepayment >= minimumYDaiRepayment);
+        require (yDaiRepayment >= minimumYDaiRepayment, "DaiProxy: Not enough yDai debt repaid");
         _controller.repayYDai(collateral, maturity, address(this), to, yDaiRepayment);
 
         return yDaiRepayment;
