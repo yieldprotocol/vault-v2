@@ -72,7 +72,7 @@ contract('LimitPool', async (accounts) =>  {
 
             await pool.addDelegate(limitPool.address, { from: from });
             await yDai1.approve(pool.address, yDaiTokens1, { from: from });
-            await limitPool.buyDai(from, to, oneToken, oneToken.mul(2), { from: from });
+            await limitPool.buyDai(to, oneToken, oneToken.mul(2), { from: from });
 
             const expectedYDaiIn = (new BN(oneToken.toString())).mul(new BN('10019')).div(new BN('10000')); // I just hate javascript
             const yDaiIn = (new BN(yDaiTokens1.toString())).sub(new BN(await yDai1.balanceOf(from)));
@@ -88,7 +88,7 @@ contract('LimitPool', async (accounts) =>  {
             await yDai1.approve(pool.address, yDaiTokens1, { from: from });
 
             await expectRevert(
-                limitPool.buyDai(from, to, oneToken, oneToken.div(2), { from: from }),
+                limitPool.buyDai(to, oneToken, oneToken.div(2), { from: from }),
                 "LimitPool: Limit exceeded",
             );
         });
@@ -99,7 +99,7 @@ contract('LimitPool', async (accounts) =>  {
 
             await pool.addDelegate(limitPool.address, { from: from });
             await yDai1.approve(pool.address, oneToken, { from: from });
-            await limitPool.sellYDai(from, to, oneToken, oneToken.div(2), { from: from });
+            await limitPool.sellYDai(to, oneToken, oneToken.div(2), { from: from });
 
             assert.equal(
                 await yDai1.balanceOf(from),
@@ -121,7 +121,7 @@ contract('LimitPool', async (accounts) =>  {
             await yDai1.approve(pool.address, oneToken, { from: from });
 
             await expectRevert(
-                limitPool.sellYDai(from, to, oneToken, oneToken.mul(2), { from: from }),
+                limitPool.sellYDai(to, oneToken, oneToken.mul(2), { from: from }),
                 "LimitPool: Limit not reached",
             );
         });
@@ -140,7 +140,7 @@ contract('LimitPool', async (accounts) =>  {
 
                 await pool.addDelegate(limitPool.address, { from: from });
                 await dai.approve(pool.address, oneToken, { from: from });
-                await limitPool.sellDai(from, to, oneToken, oneToken.div(2), { from: from });
+                await limitPool.sellDai(to, oneToken, oneToken.div(2), { from: from });
 
                 assert.equal(
                     await dai.balanceOf(from),
@@ -163,7 +163,7 @@ contract('LimitPool', async (accounts) =>  {
                 await dai.approve(pool.address, oneToken, { from: from });
 
                 await expectRevert(
-                    limitPool.sellDai(from, to, oneToken, oneToken.mul(2), { from: from }),
+                    limitPool.sellDai(to, oneToken, oneToken.mul(2), { from: from }),
                     "LimitPool: Limit not reached",
                 );
             });
@@ -174,7 +174,7 @@ contract('LimitPool', async (accounts) =>  {
 
                 await pool.addDelegate(limitPool.address, { from: from });
                 await dai.approve(pool.address, daiTokens1, { from: from });
-                await limitPool.buyYDai(from, to, oneToken, oneToken.mul(2), { from: from });
+                await limitPool.buyYDai(to, oneToken, oneToken.mul(2), { from: from });
 
                 assert.equal(
                     await yDai1.balanceOf(to),
@@ -196,7 +196,7 @@ contract('LimitPool', async (accounts) =>  {
                 await dai.approve(pool.address, daiTokens1, { from: from });
 
                 await expectRevert(
-                    limitPool.buyYDai(from, to, oneToken, oneToken.div(2), { from: from }),
+                    limitPool.buyYDai(to, oneToken, oneToken.div(2), { from: from }),
                     "LimitPool: Limit exceeded",
                 );
             });

@@ -23,16 +23,14 @@ contract LimitPool {
     }
 
     /// @dev Sell Dai for yDai
-    /// @param from Wallet providing the dai being sold.
-    /// Must have approved the operator with `pool.addDelegate(limitPool.address, { from: from })`.
     /// @param to Wallet receiving the yDai being bought
     /// @param daiIn Amount of dai being sold
     /// @param minYDaiOut Minimum amount of yDai being bought
-    function sellDai(address from, address to, uint128 daiIn, uint128 minYDaiOut)
+    function sellDai(address to, uint128 daiIn, uint128 minYDaiOut)
         external
         returns(uint256)
     {
-        uint256 yDaiOut = pool.sellDai(from, to, daiIn);
+        uint256 yDaiOut = pool.sellDai(msg.sender, to, daiIn);
         require(
             yDaiOut >= minYDaiOut,
             "LimitPool: Limit not reached"
@@ -41,16 +39,14 @@ contract LimitPool {
     }
 
     /// @dev Buy Dai for yDai
-    /// @param from Wallet providing the yDai being sold.
-    /// Must have approved the operator with `pool.addDelegate(limitPool.address, { from: from })`.
     /// @param to Wallet receiving the dai being bought
     /// @param daiOut Amount of dai being bought
     /// @param maxYDaiIn Maximum amount of yDai being sold
-    function buyDai(address from, address to, uint128 daiOut, uint128 maxYDaiIn)
+    function buyDai(address to, uint128 daiOut, uint128 maxYDaiIn)
         external
         returns(uint256)
     {
-        uint256 yDaiIn = pool.buyDai(from, to, daiOut);
+        uint256 yDaiIn = pool.buyDai(msg.sender, to, daiOut);
         require(
             maxYDaiIn >= yDaiIn,
             "LimitPool: Limit exceeded"
@@ -59,16 +55,14 @@ contract LimitPool {
     }
 
     /// @dev Sell yDai for Dai
-    /// @param from Wallet providing the yDai being sold.
-    /// Must have approved the operator with `pool.addDelegate(limitPool.address, { from: from })`.
     /// @param to Wallet receiving the dai being bought
     /// @param yDaiIn Amount of yDai being sold
     /// @param minDaiOut Minimum amount of dai being bought
-    function sellYDai(address from, address to, uint128 yDaiIn, uint128 minDaiOut)
+    function sellYDai(address to, uint128 yDaiIn, uint128 minDaiOut)
         external
         returns(uint256)
     {
-        uint256 daiOut = pool.sellYDai(from, to, yDaiIn);
+        uint256 daiOut = pool.sellYDai(msg.sender, to, yDaiIn);
         require(
             daiOut >= minDaiOut,
             "LimitPool: Limit not reached"
@@ -77,16 +71,14 @@ contract LimitPool {
     }
 
     /// @dev Buy yDai for dai
-    /// @param from Wallet providing the dai being sold.
-    /// Must have approved the operator with `pool.addDelegate(limitPool.address, { from: from })`.
     /// @param to Wallet receiving the yDai being bought
     /// @param yDaiOut Amount of yDai being bought
     /// @param maxDaiIn Maximum amount of dai being sold
-    function buyYDai(address from, address to, uint128 yDaiOut, uint128 maxDaiIn)
+    function buyYDai(address to, uint128 yDaiOut, uint128 maxDaiIn)
         external
         returns(uint256)
     {
-        uint256 daiIn = pool.buyYDai(from, to, yDaiOut);
+        uint256 daiIn = pool.buyYDai(msg.sender, to, yDaiOut);
         require(
             maxDaiIn >= daiIn,
             "LimitPool: Limit exceeded"
