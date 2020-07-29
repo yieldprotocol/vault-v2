@@ -117,7 +117,8 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     /// @param collateral Valid collateral type
     /// @param user Address of the user vault
     function aboveDustOrZero(bytes32 collateral, address user) public view returns (bool) {
-        return posted[collateral][user] == 0 || DUST < posted[collateral][user];
+        uint256 postedCollateral = posted[collateral][user];
+        return postedCollateral == 0 || DUST < postedCollateral;
     }
 
     /// @dev Return the total number of series registered
@@ -145,6 +146,18 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         skimStart = Math.max(skimStart, maturity.add(THREE_MONTHS));
     }
 
+    /// @dev Returns all the available YDai series
+    function allSeries() public view override returns (IYDai[] memory, uint256[] memory) {
+        uint256[] memory _seriesIterator = seriesIterator;
+        IYDai[] memory _series = new IYDai[](_seriesIterator.length);
+        uint256[] memory _maturities = new uint256[](_seriesIterator.length);
+        for (uint256 i = 0; i < _seriesIterator.length; i += 1) {
+            _maturities[i] = seriesIterator[i];
+            _series[i] = series[seriesIterator[i]];
+        }
+        return (_series, _maturities);
+    }
+
     /// @dev Dai equivalent of a yDai amount.
     /// After maturity, the Dai value of a yDai grows according to either the stability fee (for WETH collateral) or the Dai Saving Rate (for Chai collateral).
     /// @param collateral Valid collateral type
@@ -152,11 +165,12 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     /// @param yDaiAmount Amount of yDai to convert.
     /// @return Dai equivalent of an yDai amount.
     function inDai(bytes32 collateral, uint256 maturity, uint256 yDaiAmount) public view override returns (uint256) {
-        if (series[maturity].isMature()){
+        IYDai ydai = series[maturity];
+        if (ydai.isMature()){
             if (collateral == WETH){
-                return muld(yDaiAmount, series[maturity].rateGrowth());
+                return muld(yDaiAmount, ydai.rateGrowth());
             } else if (collateral == CHAI) {
-                return muld(yDaiAmount, series[maturity].chiGrowth());
+                return muld(yDaiAmount, ydai.chiGrowth());
             } else {
                 revert("Controller: Unsupported collateral");
             }
@@ -172,11 +186,12 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     /// @param daiAmount Amount of Dai to convert.
     /// @return yDai equivalent of a Dai amount.
     function inYDai(bytes32 collateral, uint256 maturity, uint256 daiAmount) public view override returns (uint256) {
-        if (series[maturity].isMature()){
+        IYDai ydai = series[maturity];
+        if (ydai.isMature()){
             if (collateral == WETH){
-                return divd(daiAmount, series[maturity].rateGrowth());
+                return divd(daiAmount, ydai.rateGrowth());
             } else if (collateral == CHAI) {
-                return divd(daiAmount, series[maturity].chiGrowth());
+                return divd(daiAmount, ydai.chiGrowth());
             } else {
                 revert("Controller: Unsupported collateral");
             }
@@ -208,9 +223,10 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     /// @return Total debt of an user across all series, in Dai
     function totalDebtDai(bytes32 collateral, address user) public view override returns (uint256) {
         uint256 totalDebt;
-        for (uint256 i = 0; i < seriesIterator.length; i += 1) {
-            if (debtYDai[collateral][seriesIterator[i]][user] > 0) {
-                totalDebt = totalDebt + debtDai(collateral, seriesIterator[i], user);
+        uint256[] memory _seriesIterator = seriesIterator;
+        for (uint256 i = 0; i < _seriesIterator.length; i += 1) {
+            if (debtYDai[collateral][_seriesIterator[i]][user] > 0) {
+                totalDebt = totalDebt + debtDai(collateral, _seriesIterator[i], user);
             }
         } // We don't expect hundreds of maturities per controller
         return totalDebt;
@@ -335,8 +351,9 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         onlyHolderOrDelegate(from, "Controller: Only Holder Or Delegate")
         onlyLive
     {
+        IYDai ydai = series[maturity];
         require(
-            series[maturity].isMature() != true,
+            ydai.isMature() != true,
             "Controller: No mature borrow"
         );
 
@@ -348,7 +365,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
             "Controller: Too much debt"
         );
 
-        series[maturity].mint(to, yDaiAmount);
+        ydai.mint(to, yDaiAmount);
         emit Borrowed(collateral, maturity, from, toInt256(yDaiAmount));
     }
 
@@ -444,8 +461,9 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         if (collateral == CHAI) totalChaiPosted = totalChaiPosted.sub(userCollateral);
 
         uint256 userDebt;
-        for (uint256 i = 0; i < seriesIterator.length; i += 1) {
-            uint256 maturity = seriesIterator[i];
+        uint256[] memory _seriesIterator = seriesIterator;
+        for (uint256 i = 0; i < _seriesIterator.length; i += 1) {
+            uint256 maturity = _seriesIterator[i];
             userDebt = userDebt.add(debtDai(collateral, maturity, user)); // SafeMath shouldn't be needed
             totalDebtYDai[collateral][maturity] =
                 totalDebtYDai[collateral][maturity].sub(debtYDai[collateral][maturity][user]); // SafeMath shouldn't be needed

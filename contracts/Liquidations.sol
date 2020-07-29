@@ -100,7 +100,8 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
     /// @dev Return if the debt of an user is between zero and the dust level
     /// @param user Address of the user vault
     function aboveDustOrZero(address user) public view returns (bool) {
-        return vaults[user].collateral == 0 || DUST < vaults[user].collateral;
+        uint256 collateral = vaults[user].collateral;
+        return collateral == 0 || DUST < collateral;
     }
 
     /// @dev Starts a liquidation process for an undercollateralized vault.
@@ -120,14 +121,13 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
         liquidations[user] = now;
 
         (uint256 userCollateral, uint256 userDebt) = _controller.erase(WETH, user);
-        Vault memory vault = Vault({
+        vaults[user] = Vault({
             collateral: sub(toUint128(userCollateral), FEE),
             debt: toUint128(userDebt)
         });
-        vaults[user] = vault;
         vaults[to].collateral = add(vaults[to].collateral, FEE);
 
-        emit Liquidation(user, liquidations[user], userCollateral, userDebt);
+        emit Liquidation(user, now, userCollateral, userDebt);
     }
 
     /// @dev Buy a portion of a position under liquidation.
@@ -177,12 +177,13 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
         public onlyLive
         onlyHolderOrDelegate(from, "Controller: Only Holder Or Delegate")
     {
+        Vault storage vault = vaults[from];
         require(
-            vaults[from].debt == 0,
+            vault.debt == 0,
             "Liquidations: User still in liquidation"
         );
 
-        vaults[from].collateral = sub(vaults[from].collateral, toUint128(tokenAmount));
+        vault.collateral = sub(vault.collateral, toUint128(tokenAmount));
 
         _treasury.pullWeth(to, tokenAmount);
     }

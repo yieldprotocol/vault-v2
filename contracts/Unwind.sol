@@ -159,37 +159,47 @@ contract Unwind is Ownable(), DecimalMath {
     function _yDaiProfit(uint256 chi, uint256 rate) internal view returns (uint256) {
         uint256 profit;
 
-        for (uint256 i = 0; i < _controller.totalSeries(); i += 1) {
-            uint256 maturity = _controller.seriesIterator(i);
-            IYDai yDai = _controller.series(maturity);
-
-            uint256 chi0;
-            uint256 rate0;
-            if (yDai.isMature()){
-                chi0 = yDai.chi0();
-                rate0 = yDai.rate0();
-            } else {
-                chi0 = chi;
-                rate0 = rate;
-            }
-
-            profit = profit.add(
-                divd(
-                    muld(
-                        _controller.totalDebtYDai(WETH, maturity),
-                        Math.max(UNIT, divd(rate, rate0)) // rate growth since maturity, floored at 1.0
-                    ),                                    // muld(yDaiDebt, rateGrowth) - Convert Weth collateralized YDai debt to Dai debt
-                    chi                                   // divd(daiDebt, chi) - Convert Dai debt to Chai debt
-                )
-            );
-            profit = profit.add(
-                divd(
-                    _controller.totalDebtYDai(CHAI, maturity),
-                    chi0                                  // divd(yDaiDebt, chi0) - Convert Chai collateralized YDai debt to Chai debt
-                )
-            );
-            profit = profit.sub(divd(yDai.totalSupply(), chi0)); // divd(yDai, chi0) - Convert YDai to Chai
+        (IYDai[] memory series, uint256[] memory maturities) = _controller.allSeries();
+        for (uint256 i = 0; i < series.length; i += 1) {
+            uint256 maturity = maturities[i];
+            IYDai yDai = series[i];
+            profit = profit.add(getProfit(yDai, maturity, chi, rate));
         }
+
+        return profit;
+    }
+
+    /// @dev Returns the profit accumulated for a specific yDai token
+    // NB: this funciton is required due to `Stack Too Deep` errors.
+    function getProfit(IYDai yDai, uint256 maturity, uint256 chi, uint256 rate) private view returns (uint256) {
+        uint256 profit;
+
+        uint256 chi0;
+        uint256 rate0;
+        if (yDai.isMature()){
+            chi0 = yDai.chi0();
+            rate0 = yDai.rate0();
+        } else {
+            chi0 = chi;
+            rate0 = rate;
+        }
+
+        profit = profit.add(
+            divd(
+                muld(
+                    _controller.totalDebtYDai(WETH, maturity),
+                    Math.max(UNIT, divd(rate, rate0)) // rate growth since maturity, floored at 1.0
+                ),                                    // muld(yDaiDebt, rateGrowth) - Convert Weth collateralized YDai debt to Dai debt
+                chi                                   // divd(daiDebt, chi) - Convert Dai debt to Chai debt
+            )
+        );
+        profit = profit.add(
+            divd(
+                _controller.totalDebtYDai(CHAI, maturity),
+                chi0                                  // divd(yDaiDebt, chi0) - Convert Chai collateralized YDai debt to Chai debt
+            )
+        );
+        profit = profit.sub(divd(yDai.totalSupply(), chi0)); // divd(yDai, chi0) - Convert YDai to Chai
 
         return profit;
     }
