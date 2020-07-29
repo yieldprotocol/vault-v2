@@ -126,7 +126,7 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
         });
         vaults[to].collateral = add(vaults[to].collateral, FEE);
 
-        emit Liquidation(user, liquidations[user], userCollateral, userDebt);
+        emit Liquidation(user, now, userCollateral, userDebt);
     }
 
     /// @dev Buy a portion of a position under liquidation.
