@@ -100,20 +100,14 @@ contract('DaiProxy', async (accounts) =>  {
             );
         });
 
-        /* it("doesn't borrow dai if limit exceeded", async() => { // borrowDaiForMaximumYDai
-            const oneToken = toWad(1);
-            await yDai1.mint(from, yDaiTokens1, { from: owner });
-
-            await pool.addDelegate(daiProxy.address, { from: from });
-            await yDai1.approve(pool.address, yDaiTokens1, { from: from });
-
+        it("doesn't borrow dai if limit exceeded", async() => { // borrowDaiForMaximumYDai
             await expectRevert(
-                daiProxy.buyDai(from, to, oneToken, oneToken.div(2), { from: from }),
-                "daiProxy: Limit exceeded",
+                daiProxy.borrowDaiForMaximumYDai(WETH, maturity1, to, yDaiTokens1, daiTokens1, { from: from }),
+                "DaiProxy: Too much yDai required",
             );
         });
 
-        it("borrows minimum dai for yDai", async() => { // borrowMinimumDaiForYDai
+        /* it("borrows minimum dai for yDai", async() => { // borrowMinimumDaiForYDai
             const oneToken = toWad(1);
             await yDai1.mint(from, oneToken, { from: owner });
 

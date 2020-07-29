@@ -70,7 +70,7 @@ contract DaiProxy is DecimalMath {
         returns (uint256)
     {
         uint256 yDaiToBorrow = _pool.buyDaiPreview(toUint128(daiToBorrow));
-        require (yDaiToBorrow <= maximumYDai);
+        require (yDaiToBorrow <= maximumYDai, "DaiProxy: Too much yDai required");
 
         // The collateral for this borrow needs to have been posted beforehand
         _controller.borrow(collateral, maturity, msg.sender, address(this), yDaiToBorrow);
