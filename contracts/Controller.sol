@@ -117,7 +117,8 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     /// @param collateral Valid collateral type
     /// @param user Address of the user vault
     function aboveDustOrZero(bytes32 collateral, address user) public view returns (bool) {
-        return posted[collateral][user] == 0 || DUST < posted[collateral][user];
+        uint256 postedCollateral = posted[collateral][user];
+        return postedCollateral == 0 || DUST < postedCollateral;
     }
 
     /// @dev Return the total number of series registered
