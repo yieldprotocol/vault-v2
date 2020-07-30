@@ -184,7 +184,7 @@ contract Unwind is Ownable(), DecimalMath {
 
         uint256 chi = _pot.chi();
         (, uint256 rate,,,) = _vat.ilks(WETH);
-        (uint256 liquidationsCollauint256 liquidationsDebt) = _liquidations.totals();
+        (, uint256 liquidationsDebt) = _liquidations.totals();
         // TODO: Test profit skimming from liquidations
 
         uint256 profit = _weth.balanceOf(address(this));         // Results of settling Treasury
