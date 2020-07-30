@@ -273,6 +273,18 @@ contract Unwind is Ownable(), DecimalMath {
         require(_weth.transfer(user, remainder));
     }
 
+    /// @dev Settles a user vault in Liquidations, and then returns any remaining collateral as weth using the unwind Dai to Weth price.
+    /// @param user User vault to settle, and wallet to receive the corresponding weth.
+    function settleLiquidations(address user) public {
+        require(settled && cashedOut, "Unwind: Not ready");
+
+        (uint256 weth, uint256 debt) = _liquidations.erase(user);
+
+        uint256 remainder = subFloorZero(weth, muld(debt, _fix));
+
+        require(_weth.transfer(user, remainder));
+    }
+
     /// @dev Redeems YDai for weth. YDai.redeem won't work if MakerDAO is in shutdown.
     /// yDai holder must call yDai.approve before calling this function.
     /// @param maturity Maturity of an added series
