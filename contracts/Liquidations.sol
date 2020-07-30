@@ -113,15 +113,12 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
         public onlyLive
     {
         require(
-            liquidations[user] == 0,
-            "Liquidations: Vault is already in liquidation"
-        );
-        require(
             !_controller.isCollateralized(WETH, user),
             "Liquidations: Vault is not undercollateralized"
         );
+        // A user in liquidation can be liquidated again, but doesn't restart the auction clock
         // solium-disable-next-line security/no-block-members
-        liquidations[user] = now;
+        if (liquidations[user] == 0) liquidations[user] = now;
 
         (uint256 userCollateral, uint256 userDebt) = _controller.erase(WETH, user);
         totals = Vault({

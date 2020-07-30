@@ -206,14 +206,6 @@ contract('Liquidations', async (accounts) =>  {
                     userDebt = new BN((await liquidations.vaults(user2, { from: buyer })).debt).toString();
                     await env.maker.getDai(buyer, userDebt, rate2);
                 });
-    
-                // TODO: It should, but it doesn't restart the auction time
-                it("doesn't allow to liquidate vaults already in liquidation", async() => {
-                    await expectRevert(
-                        liquidations.liquidate(user2, buyer, { from: buyer }),
-                        "Liquidations: Vault is already in liquidation",
-                    );
-                });
 
                 it("liquidations retrieve about 1/2 of collateral at the start", async() => {
                     const liquidatorBuys = userDebt;
