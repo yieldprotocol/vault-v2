@@ -124,9 +124,9 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
         liquidations[user] = now;
 
         (uint256 userCollateral, uint256 userDebt) = _controller.erase(WETH, user);
-        totals = Vault({ // TODO: Test totals aggregation
-            collateral: add(toUint128(userCollateral), totals.collateral),
-            debt: add(toUint128(userDebt), totals.debt)
+        totals = Vault({
+            collateral: add(totals.collateral, toUint128(userCollateral)),
+            debt: add(totals.debt, toUint128(userDebt))
         });
 
         Vault memory vault = Vault({ // TODO: Test a user that is liquidated twice
@@ -135,10 +135,6 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
         });
         vaults[user] = vault;
 
-        /* vaults[user] = Vault({
-            collateral: sub(toUint128(userCollateral), FEE),
-            debt: toUint128(userDebt)
-        }); */
         vaults[to].collateral = add(vaults[to].collateral, FEE);
 
         emit Liquidation(user, now, userCollateral, userDebt);
@@ -165,6 +161,11 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
 
         // calculate collateral to grab. Using divdrup stops rounding from leaving 1 stray wei in vaults.
         uint256 tokenAmount = divdrup(daiAmount, price(liquidated));
+
+        totals = Vault({
+            collateral: sub(totals.collateral, toUint128(tokenAmount)),
+            debt: sub(totals.debt, toUint128(daiAmount))
+        });
 
         Vault memory vault = Vault({
             collateral: sub(vaults[liquidated].collateral, toUint128(tokenAmount)),
