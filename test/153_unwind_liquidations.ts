@@ -125,5 +125,28 @@ contract('Unwind - Controller', async (accounts) =>  {
                 "Total collateral should have been " + totalRemainingCollateral + ", instead is " + (await liquidations.totals({ from: owner })).collateral,
             );
         });
+
+        describe("once shutdown", () => {
+            beforeEach(async() => {
+                await env.shutdown(owner, user1, user2);
+            });
+
+            it("allows users to settle liquidations vaults", async() => {
+                const userBalance = await weth.balanceOf(user2, { from: user2 });
+                assert.equal(
+                    userBalance,
+                    0,
+                    "User2 should have no weth",
+                );
+
+                await unwind.settleLiquidations(user2, { from: owner });
+
+                expect(
+                    new BN(await weth.balanceOf(user2, { from: user2 }))
+                ).to.be.bignumber.gt(
+                    new BN(0)
+                );
+            });
+        });
     });
 });

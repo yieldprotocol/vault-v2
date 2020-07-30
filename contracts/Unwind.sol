@@ -279,7 +279,6 @@ contract Unwind is Ownable(), DecimalMath {
         require(settled && cashedOut, "Unwind: Not ready");
 
         (uint256 weth, uint256 debt) = _liquidations.erase(user);
-
         uint256 remainder = subFloorZero(weth, muld(debt, _fix));
 
         require(_weth.transfer(user, remainder));
