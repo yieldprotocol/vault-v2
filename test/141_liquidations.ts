@@ -268,7 +268,11 @@ contract('Liquidations', async (accounts) =>  {
 
                     it("liquidations retrieve all collateral", async() => {
                         const liquidatorBuys = userDebt;
-    
+                        const user2Vault = await liquidations.vaults(user2, { from: buyer});
+                        const totals = await liquidations.totals({ from: buyer});
+                        const totalRemainingDebt = subBN(totals.debt.toString(), user2Vault.debt.toString());
+                        const totalRemainingCollateral = subBN(totals.collateral.toString(), user2Vault.collateral.toString());
+
                         await dai.approve(treasury.address, liquidatorBuys, { from: buyer });
                         await liquidations.buy(buyer, buyer, user2, liquidatorBuys, { from: buyer });
     
@@ -277,24 +281,21 @@ contract('Liquidations', async (accounts) =>  {
                             0,
                             "User debt should have been erased",
                         );
-                        // TODO: Outstanding daiTokens1 of matured yDay1 plus daiTokens1 of non-matured yDai2
-                        /* const totalDebt = addBN(daiTokens1, divRay(mulRay(daiTokens1, rate2), rate1));
                         assert.equal(
                             (await liquidations.totals({ from: buyer })).debt,
-                            totalDebt.toString(),
-                            "Total debt should have been " + mulRay(daiTokens1, toRay(2)) + ", instead is " + (await liquidations.totals({ from: buyer })).debt,
-                        ); */
+                            totalRemainingDebt.toString(),
+                            "Total debt should have been " + totalRemainingDebt + ", instead is " + (await liquidations.totals({ from: buyer })).debt,
+                        );
                         assert.equal(
                             await weth.balanceOf(buyer, { from: buyer }),
                             userCollateral.toString(),
                             "Liquidator should have " + userCollateral + " weth, instead has " + await weth.balanceOf(buyer, { from: buyer }),
                         );
-                        // TODO: Work out why does it add the fee to the totals
-                        /* assert.equal(
+                        assert.equal(
                             (await liquidations.totals({ from: buyer })).collateral,
-                            mulRay(wethTokens1, toRay(2)).toString(),
-                            "Total collateral should have been " + mulRay(wethTokens1, toRay(2)) + ", instead is " + (await liquidations.totals({ from: buyer })).collateral,
-                        ); */
+                            totalRemainingCollateral.toString(),
+                            "Total collateral should have been " + totalRemainingCollateral + ", instead is " + (await liquidations.totals({ from: buyer })).collateral,
+                        );
                     });
     
                     it("partial liquidations are possible", async() => {
