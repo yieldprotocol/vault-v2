@@ -340,12 +340,20 @@ contract('Liquidations', async (accounts) =>  {
     
                     it("liquidated users can retrieve any remaining collateral", async() => {
                         const remainingWeth = ((await liquidations.vaults(user2, { from: buyer })).collateral).toString();
+                        const totals = await liquidations.totals({ from: buyer});
+                        const totalRemainingWeth = subBN(totals.collateral.toString(), remainingWeth.toString());
+
                         await liquidations.withdraw(user2, user2, remainingWeth, { from: user2 });
 
                         assert.equal(
                             (await liquidations.vaults(user2, { from: buyer })).collateral,
                             0,
                             "User collateral records should have been erased",
+                        );
+                        assert.equal(
+                            (await liquidations.totals({ from: buyer })).collateral,
+                            totalRemainingWeth.toString(),
+                            "Withdrawal should have been deduced from totals",
                         );
                         assert.equal(
                             await weth.balanceOf(user2, { from: buyer }),
