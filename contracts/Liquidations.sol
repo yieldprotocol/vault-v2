@@ -40,7 +40,7 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
 
     mapping(address => uint256) public liquidations;
     mapping(address => Vault) public vaults;
-    Vault public totals;
+    Vault public override totals;
 
     bool public live = true;
 
