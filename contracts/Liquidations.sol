@@ -195,6 +195,7 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
             "Liquidations: User still in liquidation"
         );
 
+        totals.collateral = sub(totals.collateral, toUint128(tokenAmount));
         vault.collateral = sub(vault.collateral, toUint128(tokenAmount));
 
         _treasury.pullWeth(to, tokenAmount);

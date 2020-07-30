@@ -266,7 +266,7 @@ contract('Liquidations', async (accounts) =>  {
                         await helper.advanceBlock();
                     });
 
-                    it.only("liquidations retrieve all collateral", async() => {
+                    it("liquidations retrieve all collateral", async() => {
                         const liquidatorBuys = userDebt;
     
                         await dai.approve(treasury.address, liquidatorBuys, { from: buyer });
