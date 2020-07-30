@@ -164,15 +164,17 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     /// @param maturity Maturity of an added series
     /// @param yDaiAmount Amount of yDai to convert.
     /// @return Dai equivalent of an yDai amount.
-    function inDai(bytes32 collateral, uint256 maturity, uint256 yDaiAmount) public view override returns (uint256) {
+    function inDai(bytes32 collateral, uint256 maturity, uint256 yDaiAmount)
+        public view override
+        validCollateral(collateral)
+        returns (uint256)
+    {
         IYDai yDai = series[maturity];
         if (yDai.isMature()){
             if (collateral == WETH){
                 return muld(yDaiAmount, yDai.rateGrowth());
             } else if (collateral == CHAI) {
                 return muld(yDaiAmount, yDai.chiGrowth());
-            } else {
-                revert("Controller: Unsupported collateral");
             }
         } else {
             return yDaiAmount;
@@ -185,15 +187,17 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     /// @param maturity Maturity of an added series
     /// @param daiAmount Amount of Dai to convert.
     /// @return yDai equivalent of a Dai amount.
-    function inYDai(bytes32 collateral, uint256 maturity, uint256 daiAmount) public view override returns (uint256) {
+    function inYDai(bytes32 collateral, uint256 maturity, uint256 daiAmount)
+        public view override
+        validCollateral(collateral)
+        returns (uint256)
+    {
         IYDai yDai = series[maturity];
         if (yDai.isMature()){
             if (collateral == WETH){
                 return divd(daiAmount, yDai.rateGrowth());
             } else if (collateral == CHAI) {
                 return divd(daiAmount, yDai.chiGrowth());
-            } else {
-                revert("Controller: Unsupported collateral");
             }
         } else {
             return daiAmount;
