@@ -116,7 +116,43 @@ contract Unwind is Ownable(), DecimalMath {
         _liquidations.shutdown();
     }
 
-    /// @dev Calculates how much profit is in the system and transfers it to the beneficiary
+    /// @dev Return the Chai equivalent value to a Dai amount.
+    /// @param daiAmount The Dai value to convert.
+    /// @param chi The `chi` value from `Pot`.
+    function daiToChai(uint256 daiAmount, uint256 chi) public pure returns(uint256) {
+        return divd(daiAmount, chi);
+    }
+
+    /// @dev Return the Dai equivalent value to a Chai amount.
+    /// @param chaiAmount The Chai value to convert.
+    /// @param chi The `chi` value from `Pot`.
+    function chaiToDai(uint256 chaiAmount, uint256 chi) public pure returns(uint256) {
+        return muld(chaiAmount, chi);
+    }
+
+    /// @dev Return the Weth equivalent value to a Dai amount.
+    /// @param daiAmount The Dai value to convert.
+    /// @param spot The `spot` value from `Vat`.
+    function daiToWeth(uint256 daiAmount, uint256 spot) public pure returns(uint256) {
+        return divd(daiAmount, spot);
+    }
+
+    /// @dev Return the Dai equivalent value to a Weth amount.
+    /// @param wethAmount The Weth value to convert.
+    /// @param spot The `spot` value from `Vat`.
+    function wethToDai(uint256 wethAmount, uint256 spot) public pure returns(uint256) {
+        return muld(wethAmount, spot);
+    }
+
+    /// @dev Return the Weth equivalent value to a Dai amount, during Dss Shutdown
+    /// @param daiAmount The Dai value to convert.
+    /// @param fix The `fix` value from `End`.
+    function daiToFixWeth(uint256 daiAmount, uint256 fix) public pure returns(uint256) {
+        return muld(daiAmount, fix);
+    }
+
+
+    /// @dev Calculates how much profit is in the system (in Chai) and transfers it to the beneficiary
     function skimWhileLive() public {
         require(
             live == true, // If DSS is not live this method will fail later on.
@@ -132,17 +168,17 @@ contract Unwind is Ownable(), DecimalMath {
         (uint256 liquidationsCollateral,) = _liquidations.totals();
         // TODO: Test profit skimming from liquidations
 
-        uint256 profit = _chai.balanceOf(address(_treasury));
-        profit = profit.add(_yDaiProfit(chi, rate));
+        uint256 profit = _chai.balanceOf(address(_treasury));   // Treasury savings add to profit
+        profit = profit.add(_yDaiProfit(chi, rate));            // yDai profit due to user debt with rate increases
         // At worst, we will have to give away half of the collateral in the liquidations vaults.
-        profit = profit.sub(divd(muld(liquidationsCollateral.div(2), spot), chi));
-        profit = profit.sub(divd(_treasury.debt(), chi));
-        profit = profit.sub(_controller.totalChaiPosted());
+        profit = profit.sub(daiToChai(wethToDai(liquidationsCollateral.div(2), spot), chi)); // Maximum cost of resolving auctions
+        profit = profit.sub(daiToChai(_treasury.debt(), chi));  // Cost of paying down MakerDAO debt
+        profit = profit.sub(_controller.totalChaiPosted());     // Posted Chai needs to be returned to users
 
         _treasury.pullChai(beneficiary, profit);
     }
 
-    /// @dev Calculates how much profit is in the system and transfers it to the beneficiary
+    /// @dev Calculates how much profit is in the system (in Weth) and transfers it to the beneficiary
     function skimDssShutdown() public {
         require(settled && cashedOut, "Unwind: Not ready");
 
@@ -151,13 +187,12 @@ contract Unwind is Ownable(), DecimalMath {
         (uint256 liquidationsCollateral, uint256 liquidationsDebt) = _liquidations.totals();
         // TODO: Test profit skimming from liquidations
 
-        uint256 profit = _weth.balanceOf(address(this));
-
-        profit = profit.add(liquidationsCollateral);
-        profit = profit.add(muld(muld(_yDaiProfit(chi, rate), chi), _fix));
-        profit = profit.sub(muld(liquidationsDebt, _fix));
-        profit = profit.sub(_treasuryWeth);
-        profit = profit.sub(muld(muld(_controller.totalChaiPosted(), chi), _fix));
+        uint256 profit = _weth.balanceOf(address(this));         // Results of settling Treasury
+        profit = profit.add(liquidationsCollateral);             // Collateral in liquidations
+        profit = profit.add(daiToFixWeth(chaiToDai(_yDaiProfit(chi, rate), chi), _fix)); // yDai profit due to user debt with rate increases
+        profit = profit.sub(daiToFixWeth(liquidationsDebt, _fix)); // Cost of settling ongoing auctions
+        profit = profit.sub(_treasuryWeth);                      // Cost of returning posted Weth to users
+        profit = profit.sub(daiToFixWeth(chaiToDai(_controller.totalChaiPosted(), chi), _fix)); // Cost of returning posted Chai to users
 
         require(_weth.transfer(beneficiary, profit));
     }
@@ -194,9 +229,10 @@ contract Unwind is Ownable(), DecimalMath {
             rate0 = rate;
         }
 
+        // Add debt across all collaterals, converted to Chai
         profit = profit.add(
-            divd(
-                muld(
+            daiToChai(
+                muld(                                 // YDai to Dai, for Weth collateralized debt
                     _controller.totalDebtYDai(WETH, maturity),
                     Math.max(UNIT, divd(rate, rate0)) // rate growth since maturity, floored at 1.0
                 ),                                    // muld(yDaiDebt, rateGrowth) - Convert Weth collateralized YDai debt to Dai debt
@@ -204,12 +240,18 @@ contract Unwind is Ownable(), DecimalMath {
             )
         );
         profit = profit.add(
-            divd(
+            divd(                                     // YDai to Chai, for Chai collateralized debt
                 _controller.totalDebtYDai(CHAI, maturity),
-                chi0                                  // divd(yDaiDebt, chi0) - Convert Chai collateralized YDai debt to Chai debt
+                chi0                                  // divd(yDaiDebt, chi0) - Convert YDai to Chai
             )
         );
-        profit = profit.sub(divd(yDai.totalSupply(), chi0)); // divd(yDai, chi0) - Convert YDai to Chai
+        // Subtract yDai liable to be redeemed, converted to Chai
+        profit = profit.sub(
+            divd(
+                yDai.totalSupply(),
+                chi0                                  // divd(yDai, chi0) - Convert YDai to Chai
+            )
+        );
 
         return profit;
     }
@@ -269,9 +311,9 @@ contract Unwind is Ownable(), DecimalMath {
 
         uint256 remainder;
         if (collateral == WETH) {
-            remainder = subFloorZero(tokens, muld(debt, _fix));
+            remainder = subFloorZero(tokens, daiToFixWeth(debt, _fix));
         } else if (collateral == CHAI) {
-            remainder = muld(subFloorZero(muld(tokens, _chi), debt), _fix);
+            remainder = daiToFixWeth(subFloorZero(chaiToDai(tokens, _chi), debt), _fix);
         }
         require(_weth.transfer(user, remainder));
     }
@@ -282,7 +324,7 @@ contract Unwind is Ownable(), DecimalMath {
         require(settled && cashedOut, "Unwind: Not ready");
 
         (uint256 weth, uint256 debt) = _liquidations.erase(user);
-        uint256 remainder = subFloorZero(weth, muld(debt, _fix));
+        uint256 remainder = subFloorZero(weth, daiToFixWeth(debt, _fix));
 
         require(_weth.transfer(user, remainder));
     }
@@ -299,7 +341,7 @@ contract Unwind is Ownable(), DecimalMath {
         require(
             _weth.transfer(
                 user,
-                muld(muld(yDaiAmount, yDai.chiGrowth()), _fix)
+                daiToFixWeth(muld(yDaiAmount, yDai.chiGrowth()), _fix)
             )
         );
     }
