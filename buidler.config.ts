@@ -17,6 +17,13 @@ export default {
         enabled: true
     },
     paths: {
-        artifacts: "./build"
-    }
+        artifacts: "./build",
+        coverage: "./coverage",
+        coverageJson: "./coverage.json",
+    },
+    networks: {
+        coverage: {
+            url: "http://127.0.0.1:8555",
+        },
+    },
 };
