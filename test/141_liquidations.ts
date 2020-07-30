@@ -172,7 +172,15 @@ contract('Liquidations', async (accounts) =>  {
                     subBN(userCollateral.toString(), dust).toString(),
                 );
                 assert.equal(
+                    (await liquidations.totals({ from: buyer })).collateral,
+                    userCollateral.toString(),
+                );
+                assert.equal(
                     (await liquidations.vaults(user2, { from: buyer })).debt,
+                    userDebt.toString(),
+                );
+                assert.equal(
+                    (await liquidations.totals({ from: buyer })).debt,
                     userDebt.toString(),
                 );
                 assert.equal(

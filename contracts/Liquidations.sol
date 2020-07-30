@@ -40,6 +40,7 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
 
     mapping(address => uint256) public liquidations;
     mapping(address => Vault) public vaults;
+    Vault public totals;
 
     bool public live = true;
 
@@ -123,6 +124,11 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
         liquidations[user] = now;
 
         (uint256 userCollateral, uint256 userDebt) = _controller.erase(WETH, user);
+        totals = Vault({ // TODO: Test totals aggregation
+            collateral: add(toUint128(userCollateral), totals.collateral),
+            debt: add(toUint128(userDebt), totals.debt)
+        });
+
         Vault memory vault = Vault({ // TODO: Test a user that is liquidated twice
             collateral: add(vaults[user].collateral, sub(toUint128(userCollateral), FEE)),
             debt: add(vaults[user].debt, toUint128(userDebt))
