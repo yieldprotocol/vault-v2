@@ -108,7 +108,9 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
     /// A liquidation fee is transferred from the liquidated user to a designated account as payment.
     /// @param user Address of the user vault to liquidate.
     /// @param to Address of the liquidations account to receive the liquidation fee.
-    function liquidate(address user, address to) public {
+    function liquidate(address user, address to)
+        public onlyLive
+    {
         require(
             liquidations[user] == 0,
             "Liquidations: Vault is already in liquidation"
