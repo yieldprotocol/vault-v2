@@ -129,11 +129,12 @@ contract Unwind is Ownable(), DecimalMath {
 
         uint256 chi = _pot.chi();
         (, uint256 rate,,,) = _vat.ilks(WETH);
+        // At worst, we would recover no collateral from Liquidations, so we ignore it.
+
         uint256 profit = _chai.balanceOf(address(_treasury));
         profit = profit.add(_yDaiProfit(chi, rate));
         profit = profit.sub(divd(_treasury.debt(), chi));
         profit = profit.sub(_controller.totalChaiPosted());
-        // TODO: How do ongoing auctions affect this function? Do we use `spot`?
 
         _treasury.pullChai(beneficiary, profit);
     }
@@ -149,10 +150,10 @@ contract Unwind is Ownable(), DecimalMath {
         uint256 profit = _weth.balanceOf(address(this));
 
         profit = profit.add(liquidationsCollateral);
-        profit = profit.add(muld(muld(_yDaiProfit(chi, rate), _fix), chi));
+        profit = profit.add(muld(muld(_yDaiProfit(chi, rate), chi), _fix));
         profit = profit.sub(muld(liquidationsDebt, _fix));
         profit = profit.sub(_treasuryWeth);
-        profit = profit.sub(muld(muld(_controller.totalChaiPosted(), _fix), chi));
+        profit = profit.sub(muld(muld(_controller.totalChaiPosted(), chi), _fix));
 
         require(_weth.transfer(beneficiary, profit));
     }
