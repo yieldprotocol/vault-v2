@@ -165,12 +165,11 @@ contract Unwind is Ownable(), DecimalMath {
 
         uint256 chi = _pot.chi();
         (, uint256 rate, uint256 spot,,) = _vat.ilks(WETH);
-        (uint256 liquidationsCollateral, uint256 liquidationsDebt) = _liquidations.totals();
+        (uint256 liquidationsCollateral, ) = _liquidations.totals();
         // TODO: Test profit skimming from liquidations
 
         uint256 profit = _chai.balanceOf(address(_treasury));   // Treasury savings add to profit
         profit = profit.add(_yDaiProfit(chi, rate));            // yDai profit due to user debt with rate increases
-        profit = profit.add(daiToChai(liquidationsDebt, chi));  // We should get all the dai in liquidation
         // At worst, we will have to give away all the collateral in the liquidations vaults.
         profit = profit.sub(daiToChai(wethToDai(liquidationsCollateral, spot), chi)); // Maximum cost of resolving auctions
         profit = profit.sub(daiToChai(_treasury.debt(), chi));  // Cost of paying down MakerDAO debt
@@ -185,7 +184,7 @@ contract Unwind is Ownable(), DecimalMath {
 
         uint256 chi = _pot.chi();
         (, uint256 rate,,,) = _vat.ilks(WETH);
-        (uint256 liquidationsCollateral, uint256 liquidationsDebt) = _liquidations.totals();
+        (uint256 liquidationsCollauint256 liquidationsDebt) = _liquidations.totals();
         // TODO: Test profit skimming from liquidations
 
         uint256 profit = _weth.balanceOf(address(this));         // Results of settling Treasury
