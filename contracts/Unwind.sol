@@ -128,11 +128,14 @@ contract Unwind is Ownable(), DecimalMath {
         );
 
         uint256 chi = _pot.chi();
-        (, uint256 rate,,,) = _vat.ilks(WETH);
-        // At worst, we would recover no collateral from Liquidations, so we ignore it.
+        (, uint256 rate, uint256 spot,,) = _vat.ilks(WETH);
+        (uint256 liquidationsCollateral,) = _liquidations.totals();
+        // TODO: Test profit skimming from liquidations
 
         uint256 profit = _chai.balanceOf(address(_treasury));
         profit = profit.add(_yDaiProfit(chi, rate));
+        // At worst, we will have to give away half of the collateral in the liquidations vaults.
+        profit = profit.sub(divd(muld(liquidationsCollateral.div(2), spot), chi));
         profit = profit.sub(divd(_treasury.debt(), chi));
         profit = profit.sub(_controller.totalChaiPosted());
 
