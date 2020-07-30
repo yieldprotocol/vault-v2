@@ -201,6 +201,27 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
         _treasury.pullWeth(to, tokenAmount);
     }
 
+    /// @dev Removes all collateral and debt for an user.
+    /// This function can only be called by other Yield contracts, not users directly.
+    /// @param user Address of the user vault
+    /// @return The amounts of collateral and debt removed from Liquidations.
+    function erase(address user)
+        public override
+        onlyOrchestrated("Liquidations: Not Authorized")
+        returns (uint128, uint128)
+    {
+        Vault storage vault = vaults[user];
+        uint128 collateral = vault.collateral;
+        uint128 debt = vault.debt;
+
+        totals = Vault({
+            collateral: sub(totals.collateral, collateral),
+            debt: sub(totals.debt, debt)
+        });
+        delete vaults[user];
+
+        return (collateral, debt);
+    }
 
     /// @dev Return price of a collateral unit, in dai, at the present moment, for a given user
     /// @param user Address of the user vault in liquidation.
