@@ -95,8 +95,8 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
 
             assert.equal(
                 await weth.balanceOf(user3),
-                fixedWeth.mul(10).add(9).toString(), // A few wei won't make a difference
-                'User3 should have ' + fixedWeth.mul(10).add(9).toString() + ' weth wei, instead has ' + await weth.balanceOf(user3),
+                fixedWeth.mul(10).add(8).toString(), // A few wei won't make a difference
+                'User3 should have ' + fixedWeth.mul(10).add(8).toString() + ' weth wei, instead has ' + await weth.balanceOf(user3),
             );
             // profit = 10 dai * fix (in weth)
         });
@@ -125,8 +125,8 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
 
             assert.equal(
                 await weth.balanceOf(user3),
-                fixedWeth.mul(10).add(9).toString(), // A few wei won't make a difference
-                'User3 should have ' + fixedWeth.mul(10).add(9).toString() + ' weth wei',
+                fixedWeth.mul(10).add(8).toString(), // A few wei won't make a difference
+                'User3 should have ' + fixedWeth.mul(10).add(8).toString() + ' weth wei',
             );
             // profit = 10 dai * fix (in weth)
         });
@@ -177,7 +177,7 @@ contract('Unwind - DSS Skim', async (accounts) =>  {
                 await unwind.skimDssShutdown({ from: owner });
 
                 // A few wei won't make a difference
-                const expectedProfit = fixedWeth.mul(10).add(mulRay(fixedWeth, rateDifferential.sub(toRay(1)))).add(9);
+                const expectedProfit = fixedWeth.mul(10).add(mulRay(fixedWeth, rateDifferential.sub(toRay(1)))).add(8);
     
                 assert.equal(
                     await weth.balanceOf(user3),
