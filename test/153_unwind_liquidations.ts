@@ -94,8 +94,8 @@ contract('Unwind - Controller', async (accounts) =>  {
         });
 
         it("allows orchestrated contracts to erase liquidations vaults", async() => {
-            const userVault = await liquidations.vaults(user2, { from: owner});
-            const totals = await liquidations.totals({ from: owner});
+            const userVault = await liquidations.vaults(user2, { from: owner });
+            const totals = await liquidations.totals({ from: owner });
             const totalRemainingDebt = subBN(totals.debt.toString(), userVault.debt.toString());
             const totalRemainingCollateral = subBN(totals.collateral.toString(), userVault.collateral.toString());
 
@@ -133,6 +133,10 @@ contract('Unwind - Controller', async (accounts) =>  {
 
             it("allows users to settle liquidations vaults", async() => {
                 const userBalance = await weth.balanceOf(user2, { from: user2 });
+                const userVault = await liquidations.vaults(user2, { from: owner });
+                const settlingCost = mulRay(userVault.debt.toString(), fix);
+                const wethRemainder = subBN(userVault.collateral.toString(), settlingCost);
+
                 assert.equal(
                     userBalance,
                     0,
@@ -141,10 +145,10 @@ contract('Unwind - Controller', async (accounts) =>  {
 
                 await unwind.settleLiquidations(user2, { from: owner });
 
-                expect(
-                    new BN(await weth.balanceOf(user2, { from: user2 }))
-                ).to.be.bignumber.gt(
-                    new BN(0)
+                assert.equal(
+                    await weth.balanceOf(user2, { from: user2 }),
+                    wethRemainder.toString(),
+                    "User2 should have " + wethRemainder + " weth, instead has " + await weth.balanceOf(user2, { from: user2 }),
                 );
             });
         });
