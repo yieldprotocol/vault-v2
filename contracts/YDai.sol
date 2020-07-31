@@ -131,7 +131,6 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
     /// @param data User-defined data to pass on to `executeOnFlashMint()`
     function flashMint(address to, uint256 yDaiAmount, bytes calldata data) external override {
         _mint(to, yDaiAmount);
-        require(totalSupply() <= 5192296858534827628530496329220096, "YDai: Total supply limit exceeded"); // 2**112
         IFlashMinter(msg.sender).executeOnFlashMint(to, yDaiAmount, data);
         _burn(to, yDaiAmount);
     }
@@ -143,6 +142,7 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
     function mint(address to, uint256 yDaiAmount) public override onlyOrchestrated("YDai: Not Authorized")
         {
         _mint(to, yDaiAmount);
+        require(totalSupply() <= 5192296858534827628530496329220096, "YDai: Total supply limit exceeded"); // 2**112
     }
 
     /// @dev Burn yDai. Only callable by Controller contracts.
