@@ -31,7 +31,7 @@ contract('Pool', async () =>  {
 
         it("sells dai", async() => {
             for (let trade of ['10000000000000000000', '1000000000000000000000', '1000000000000000000000000']) {
-                let yDaiOut = await yieldMath.yDaiOutForDaiIn(
+                let yDaiOut = await yieldMath.yDaiOutForDaiIn128(
                     daiReserves,
                     yDaiReserves,
                     trade,
@@ -53,7 +53,7 @@ contract('Pool', async () =>  {
 
                 results.add(['sellDai64', daiReserves, yDaiReserves, trade, yDaiOut]);
 
-                yDaiOut = await yieldMath.yDaiOutForDaiIn48(
+                yDaiOut = await yieldMath.yDaiOutForDaiIn(
                     daiReserves,
                     yDaiReserves,
                     trade,
@@ -68,7 +68,7 @@ contract('Pool', async () =>  {
 
         it("buys dai", async() => {
             for (let trade of ['10000000000000000000', '1000000000000000000000', '1000000000000000000000000']) {
-                let yDaiIn = await yieldMath.yDaiInForDaiOut(
+                let yDaiIn = await yieldMath.yDaiInForDaiOut128(
                     daiReserves,
                     yDaiReserves,
                     trade,
@@ -90,7 +90,7 @@ contract('Pool', async () =>  {
 
                 results.add(['buyDai64', daiReserves, yDaiReserves, yDaiIn, trade]);
 
-                yDaiIn = await yieldMath.yDaiInForDaiOut48(
+                yDaiIn = await yieldMath.yDaiInForDaiOut(
                     daiReserves,
                     yDaiReserves,
                     trade,
@@ -105,7 +105,7 @@ contract('Pool', async () =>  {
 
         it("sells yDai", async() => {
             for (let trade of ['10000000000000000000', '1000000000000000000000', '1000000000000000000000000']) {
-                let daiOut = await yieldMath.daiOutForYDaiIn(
+                let daiOut = await yieldMath.daiOutForYDaiIn128(
                     daiReserves,
                     yDaiReserves,
                     trade,
@@ -127,7 +127,7 @@ contract('Pool', async () =>  {
 
                 results.add(['sellDai64', daiReserves, yDaiReserves, trade, daiOut]);
 
-                daiOut = await yieldMath.daiOutForYDaiIn48(
+                daiOut = await yieldMath.daiOutForYDaiIn(
                     daiReserves,
                     yDaiReserves,
                     trade,
@@ -142,7 +142,7 @@ contract('Pool', async () =>  {
 
         it("buys yDai", async() => {
             for (let trade of ['10000000000000000000', '1000000000000000000000', '1000000000000000000000000']) {
-                let daiIn = await yieldMath.daiInForYDaiOut(
+                let daiIn = await yieldMath.daiInForYDaiOut128(
                     daiReserves,
                     yDaiReserves,
                     trade,
@@ -164,7 +164,7 @@ contract('Pool', async () =>  {
 
                 results.add(['buyDai64', daiReserves, yDaiReserves, daiIn, trade]);
 
-                daiIn = await yieldMath.daiInForYDaiOut48(
+                daiIn = await yieldMath.daiInForYDaiOut(
                     daiReserves,
                     yDaiReserves,
                     trade,
