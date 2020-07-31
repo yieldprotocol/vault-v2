@@ -172,7 +172,15 @@ contract('Liquidations', async (accounts) =>  {
                     subBN(userCollateral.toString(), dust).toString(),
                 );
                 assert.equal(
+                    (await liquidations.totals({ from: buyer })).collateral,
+                    userCollateral.toString(),
+                );
+                assert.equal(
                     (await liquidations.vaults(user2, { from: buyer })).debt,
+                    userDebt.toString(),
+                );
+                assert.equal(
+                    (await liquidations.totals({ from: buyer })).debt,
                     userDebt.toString(),
                 );
                 assert.equal(
@@ -197,13 +205,6 @@ contract('Liquidations', async (accounts) =>  {
                     userCollateral = new BN((await liquidations.vaults(user2, { from: buyer })).collateral).toString();
                     userDebt = new BN((await liquidations.vaults(user2, { from: buyer })).debt).toString();
                     await env.maker.getDai(buyer, userDebt, rate2);
-                });
-    
-                it("doesn't allow to liquidate vaults already in liquidation", async() => {
-                    await expectRevert(
-                        liquidations.liquidate(user2, buyer, { from: buyer }),
-                        "Liquidations: Vault is already in liquidation",
-                    );
                 });
 
                 it("liquidations retrieve about 1/2 of collateral at the start", async() => {
@@ -267,7 +268,11 @@ contract('Liquidations', async (accounts) =>  {
 
                     it("liquidations retrieve all collateral", async() => {
                         const liquidatorBuys = userDebt;
-    
+                        const user2Vault = await liquidations.vaults(user2, { from: buyer});
+                        const totals = await liquidations.totals({ from: buyer});
+                        const totalRemainingDebt = subBN(totals.debt.toString(), user2Vault.debt.toString());
+                        const totalRemainingCollateral = subBN(totals.collateral.toString(), user2Vault.collateral.toString());
+
                         await dai.approve(treasury.address, liquidatorBuys, { from: buyer });
                         await liquidations.buy(buyer, buyer, user2, liquidatorBuys, { from: buyer });
     
@@ -277,9 +282,19 @@ contract('Liquidations', async (accounts) =>  {
                             "User debt should have been erased",
                         );
                         assert.equal(
+                            (await liquidations.totals({ from: buyer })).debt,
+                            totalRemainingDebt.toString(),
+                            "Total debt should have been " + totalRemainingDebt + ", instead is " + (await liquidations.totals({ from: buyer })).debt,
+                        );
+                        assert.equal(
                             await weth.balanceOf(buyer, { from: buyer }),
                             userCollateral.toString(),
                             "Liquidator should have " + userCollateral + " weth, instead has " + await weth.balanceOf(buyer, { from: buyer }),
+                        );
+                        assert.equal(
+                            (await liquidations.totals({ from: buyer })).collateral,
+                            totalRemainingCollateral.toString(),
+                            "Total collateral should have been " + totalRemainingCollateral + ", instead is " + (await liquidations.totals({ from: buyer })).collateral,
                         );
                     });
     
@@ -325,12 +340,20 @@ contract('Liquidations', async (accounts) =>  {
     
                     it("liquidated users can retrieve any remaining collateral", async() => {
                         const remainingWeth = ((await liquidations.vaults(user2, { from: buyer })).collateral).toString();
+                        const totals = await liquidations.totals({ from: buyer});
+                        const totalRemainingWeth = subBN(totals.collateral.toString(), remainingWeth.toString());
+
                         await liquidations.withdraw(user2, user2, remainingWeth, { from: user2 });
 
                         assert.equal(
                             (await liquidations.vaults(user2, { from: buyer })).collateral,
                             0,
                             "User collateral records should have been erased",
+                        );
+                        assert.equal(
+                            (await liquidations.totals({ from: buyer })).collateral,
+                            totalRemainingWeth.toString(),
+                            "Withdrawal should have been deduced from totals",
                         );
                         assert.equal(
                             await weth.balanceOf(user2, { from: buyer }),
