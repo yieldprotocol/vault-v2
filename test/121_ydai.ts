@@ -7,7 +7,7 @@ import { WETH, chi1, rate1, daiTokens1, wethTokens1, toRay, mulRay, divRay, subB
 import helper from 'ganache-time-traveler';
 
 // @ts-ignore
-import { expectEvent, expectRevert } from '@openzeppelin/test-helpers';
+import { BN, expectEvent, expectRevert } from '@openzeppelin/test-helpers';
 
 contract('yDai', async (accounts) =>  {
     let [ owner, user1, other ] = accounts;
@@ -137,6 +137,15 @@ contract('yDai', async (accounts) =>  {
             await yDai1.totalSupply(),
             yDaiSupply.toString(),
             "There should be no change in yDai supply",
+        );
+    });
+
+    it("yDai1 can't reach more than 2**112 supply on flash mint", async() => {
+        const halfLimit = (new BN('2')).pow(new BN('111'));
+        await yDai1.mint(user1, halfLimit, { from: owner });
+        await expectRevert(
+            flashMinter.flashMint(yDai1.address, halfLimit, web3.utils.fromAscii("DATA"), { from: user1 }),
+            "YDai: Total supply limit exceeded",
         );
     });
 
