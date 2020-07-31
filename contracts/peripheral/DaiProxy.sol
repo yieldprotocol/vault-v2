@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.6.10;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../interfaces/IVat.sol";
 import "../interfaces/IPot.sol";
 import "../interfaces/IController.sol";
@@ -16,21 +17,30 @@ contract DaiProxy is DecimalMath {
     bytes32 public constant WETH = "ETH-A";
 
     IVat internal _vat;
+    IERC20 internal _dai;
     IPot internal _pot;
+    IERC20 internal _yDai;
     IController internal _controller;
     IPool internal _pool;
 
     /// @dev The constructor links ControllerDai to vat, pot, controller and pool.
     constructor (
         address vat_,
+        address dai_,
         address pot_,
+        address yDai_,
         address controller_,
         address pool_
     ) public {
         _vat = IVat(vat_);
+        _dai = IERC20(dai_);
         _pot = IPot(pot_);
+        _yDai = IERC20(yDai_);
         _controller = IController(controller_);
         _pool = IPool(pool_);
+
+        _dai.approve(address(_pool), uint256(-1));
+        _yDai.approve(address(_pool), uint256(-1));
     }
 
     /// @dev Safe casting from uint256 to uint128
@@ -60,7 +70,7 @@ contract DaiProxy is DecimalMath {
         returns (uint256)
     {
         uint256 yDaiToBorrow = _pool.buyDaiPreview(toUint128(daiToBorrow));
-        require (yDaiToBorrow <= maximumYDai);
+        require (yDaiToBorrow <= maximumYDai, "DaiProxy: Too much yDai required");
 
         // The collateral for this borrow needs to have been posted beforehand
         _controller.borrow(collateral, maturity, msg.sender, address(this), yDaiToBorrow);
@@ -76,7 +86,7 @@ contract DaiProxy is DecimalMath {
     /// @param to Wallet to sent the resulting Dai to.
     /// @param yDaiToBorrow Amount of yDai to borrow.
     /// @param minimumDaiToBorrow Minimum amount of Dai that should be borrowed.
-    function borrowMinimumDaiForCollateral(
+    function borrowMinimumDaiForYDai(
         bytes32 collateral,
         uint256 maturity,
         address to,
@@ -89,7 +99,7 @@ contract DaiProxy is DecimalMath {
         // The collateral for this borrow needs to have been posted beforehand
         _controller.borrow(collateral, maturity, msg.sender, address(this), yDaiToBorrow);
         uint256 boughtDai = _pool.sellYDai(address(this), to, toUint128(yDaiToBorrow));
-        require (boughtDai >= minimumDaiToBorrow);
+        require (boughtDai >= minimumDaiToBorrow, "DaiProxy: Not enough Dai obtained");
 
         return boughtDai;
     }
@@ -112,7 +122,7 @@ contract DaiProxy is DecimalMath {
         returns (uint256)
     {
         uint256 repaymentInDai = _pool.buyYDai(msg.sender, address(this), toUint128(yDaiRepayment));
-        require (repaymentInDai <= maximumRepaymentInDai);
+        require (repaymentInDai <= maximumRepaymentInDai, "DaiProxy: Too much Dai required");
         _controller.repayYDai(collateral, maturity, address(this), to, yDaiRepayment);
 
         return repaymentInDai;
@@ -136,7 +146,7 @@ contract DaiProxy is DecimalMath {
         returns (uint256)
     {
         uint256 yDaiRepayment = _pool.sellDai(msg.sender, address(this), toUint128(repaymentInDai));
-        require (yDaiRepayment >= minimumYDaiRepayment);
+        require (yDaiRepayment >= minimumYDaiRepayment, "DaiProxy: Not enough yDai debt repaid");
         _controller.repayYDai(collateral, maturity, address(this), to, yDaiRepayment);
 
         return yDaiRepayment;
