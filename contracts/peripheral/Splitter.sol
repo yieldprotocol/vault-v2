@@ -63,12 +63,21 @@ contract Splitter is IFlashMinter, DecimalMath {
     }
 
     /// @dev Safe casting from uint256 to int256
-    function toInt(uint256 x) internal pure returns(int256) {
+    function toInt256(uint256 x) internal pure returns(int256) {
         require(
             x <= 57896044618658097711785492504343953926634992332820282019728792003956564819967,
             "Treasury: Cast overflow"
         );
         return int256(x);
+    }
+    
+    /// @dev Safe casting from uint256 to uint128
+    function toUint128(uint256 x) internal pure returns(uint128) {
+        require(
+            x <= 340282366920938463463374607431768211455,
+            "Pool: Cast overflow"
+        );
+        return uint128(x);
     }
 
     /// @dev Transfer debt and collateral from MakerDAO to Yield
@@ -144,12 +153,12 @@ contract Splitter is IFlashMinter, DecimalMath {
 
     /// @dev Amount of yDai debt that will result from migrating Dai debt from MakerDAO to Yield
     function yDaiForDai(uint256 daiAmount) public view returns (uint256) {
-        return pool.buyDaiPreview(uint128(daiAmount));
+        return pool.buyDaiPreview(toUint128(daiAmount));
     }
 
     /// @dev Amount of dai debt that will result from migrating yDai debt from Yield to MakerDAO
     function daiForYDai(uint256 yDaiAmount) public view returns (uint256) {
-        return pool.buyYDaiPreview(uint128(yDaiAmount));
+        return pool.buyYDaiPreview(toUint128(yDaiAmount));
     }
 
     /// @dev Internal function to transfer debt and collateral from MakerDAO to Yield
@@ -162,7 +171,7 @@ contract Splitter is IFlashMinter, DecimalMath {
     function _makerToYield(address user, uint256 wethAmount, uint256 daiAmount) internal {
 
         // Pool should take exactly all yDai flash minted. Splitter will hold the dai temporarily
-        uint256 yDaiSold = pool.buyDai(address(this), address(this), uint128(daiAmount)); // TODO: Consider SafeCast
+        uint256 yDaiSold = pool.buyDai(address(this), address(this), toUint128(daiAmount));
 
         daiJoin.join(user, daiAmount);      // Put the Dai in Maker
         (, uint256 rate,,,) = vat.ilks("ETH-A");
@@ -171,8 +180,8 @@ contract Splitter is IFlashMinter, DecimalMath {
             user,
             user,
             user,
-            -toInt(wethAmount),               // Removing Weth collateral
-            -toInt(divdrup(daiAmount, rate))  // Removing Dai debt
+            -toInt256(wethAmount),               // Removing Weth collateral
+            -toInt256(divdrup(daiAmount, rate))  // Removing Dai debt
         );
 
         vat.flux("ETH-A", user, address(this), wethAmount);             // Remove the collateral from Maker
@@ -201,7 +210,7 @@ contract Splitter is IFlashMinter, DecimalMath {
         wethJoin.join(user, wethAmount);
 
         // We are going to need to buy the YDai back with Dai borrowed from Maker
-        uint256 daiAmount = pool.buyYDaiPreview(uint128(yDaiAmount)); // TODO: Consider SafeCast
+        uint256 daiAmount = pool.buyYDaiPreview(toUint128(yDaiAmount));
 
         // Borrow the Dai from Maker
         (, uint256 rate,,,) = vat.ilks("ETH-A"); // Retrieve the MakerDAO stability fee for Weth
@@ -210,13 +219,13 @@ contract Splitter is IFlashMinter, DecimalMath {
             user,
             user,
             user,
-            toInt(wethAmount),                   // Adding Weth collateral
-            toInt(divdrup(daiAmount, rate))      // Adding Dai debt
+            toInt256(wethAmount),                   // Adding Weth collateral
+            toInt256(divdrup(daiAmount, rate))      // Adding Dai debt
         );
         vat.move(user, address(this), daiAmount.mul(UNIT)); // Transfer the Dai to Splitter within MakerDAO, in RAD
         daiJoin.exit(address(this), daiAmount);             // Splitter will hold the dai temporarily
 
         // Sell the Dai for YDai at Pool - It should make up for what was taken with repayYdai
-        pool.sellDai(address(this), address(this), uint128(dai.balanceOf(address(this)))); // TODO: Consider SafeCast
+        pool.sellDai(address(this), address(this), toUint128(dai.balanceOf(address(this))));
     }
 }

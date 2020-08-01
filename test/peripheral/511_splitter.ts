@@ -103,7 +103,7 @@ contract('Splitter', async (accounts) =>  {
         );
     });
 
-    it("moves maker vault to env", async() => {
+    it("moves maker vault to yield", async() => {
         // console.log("      Dai: " + daiTokens1.toString());
         // console.log("      Weth: " + wethTokens1.toString());
         await env.maker.getDai(user, daiTokens1, rate1);
@@ -192,7 +192,7 @@ contract('Splitter', async (accounts) =>  {
         );
     });
 
-    it("moves env vault to maker", async() => {
+    it.only("moves yield vault to maker", async() => {
         // console.log("      Dai: " + daiTokens1.toString());
         // console.log("      Weth: " + wethTokens1.toString());
         await env.postWeth(user, wethTokens1);
@@ -225,10 +225,6 @@ contract('Splitter', async (accounts) =>  {
 
         await splitter1.yieldToMaker(user, yDaiTokens1, wethTokens1, { from: user });
 
-        assert.equal(
-            await yDai1.balanceOf(splitter1.address),
-            0,
-        );
         assert.equal(
             await dai.balanceOf(splitter1.address),
             0,
