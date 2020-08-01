@@ -150,7 +150,7 @@ contract('LimitPool', async (accounts) =>  {
 
                 const expectedYDaiOut = (new BN(oneToken.toString())).mul(new BN('1132')).div(new BN('1000')); // I just hate javascript
                 const yDaiOut = new BN(await yDai1.balanceOf(to));
-                // TODO: Test precision with 48 and 64 bits with this trade and reserve levels
+                // This is the lowest precision achieved.
                 expect(yDaiOut).to.be.bignumber.gt(expectedYDaiOut.mul(new BN('999')).div(new BN('1000')));
                 expect(yDaiOut).to.be.bignumber.lt(expectedYDaiOut.mul(new BN('1001')).div(new BN('1000')));
             });

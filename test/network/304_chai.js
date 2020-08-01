@@ -51,7 +51,7 @@ contract('Chai', async (accounts) =>  {
         daiTokens = mulRay(wethTokens.toString(), spot.toString());
         daiDebt = divRay(daiTokens.toString(), rate.toString());
 
-        await pot.setChi(chi); // TODO: Set it up in migrations
+        await pot.setChi(chi);
         chaiTokens = divRay(daiTokens, chi);
     });
 
