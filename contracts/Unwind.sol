@@ -21,12 +21,10 @@ import "./helpers/DecimalMath.sol";
 
 /**
  * @dev Unwind allows everyone to recover their assets from the Yield protocol in the event of a MakerDAO shutdown.
- * Unwind also allows to remove any protocol profits at any time to the beneficiary address using `skimWhileLive`.
  * During the unwind process, the system debt to MakerDAO is settled first with `settleTreasury`, extracting all free weth.
  * Once the Treasury is settled, any system savings are converted from Chai to Weth using `cashSavings`.
  * At this point, users can settle their positions using `settle`. The MakerDAO rates will be used to convert all debt and collateral to a Weth payout.
  * Users can also redeem here their yDai for a Weth payout, using `redeem`.
- * Protocol profits can be transferred to the beneficiary also at this point, using `skimDssShutdown`.
  */
 contract Unwind is Ownable(), DecimalMath {
     using SafeMath for uint256;
@@ -54,8 +52,6 @@ contract Unwind is Ownable(), DecimalMath {
     bool public cashedOut;
     bool public live = true;
 
-    address public beneficiary;
-
     /// @dev The constructor links to vat, daiJoin, weth, wethJoin, jug, pot, end, chai, treasury, controller and liquidations.
     /// Liquidations should have privileged access to treasury, controller and liquidations using orchestration.
     /// The constructor gives treasury and end permission on unwind's MakerDAO vaults.
@@ -69,8 +65,7 @@ contract Unwind is Ownable(), DecimalMath {
         address chai_,
         address treasury_,
         address controller_,
-        address liquidations_,
-        address beneficiary_
+        address liquidations_
     ) public {
         // These could be hardcoded for mainnet deployment.
         _vat = IVat(vat_);
@@ -83,7 +78,6 @@ contract Unwind is Ownable(), DecimalMath {
         _treasury = ITreasury(treasury_);
         _controller = IController(controller_);
         _liquidations = ILiquidations(liquidations_);
-        beneficiary = beneficiary_;
 
         _vat.hope(address(_treasury));
         _vat.hope(address(_end));
@@ -116,92 +110,18 @@ contract Unwind is Ownable(), DecimalMath {
         _liquidations.shutdown();
     }
 
-    /// @dev Calculates how much profit is in the system and transfers it to the beneficiary
-    function skimWhileLive() public {
-        require(
-            live == true, // If DSS is not live this method will fail later on.
-            "Unwind: Can only skimWhileLive if live"
-        );
-        require(
-            now >= _controller.skimStart(),
-            "Unwind: Only after skimStart"
-        );
-
-        uint256 chi = _pot.chi();
-        (, uint256 rate,,,) = _vat.ilks(WETH);
-        uint256 profit = _chai.balanceOf(address(_treasury));
-        profit = profit.add(_yDaiProfit(chi, rate));
-        profit = profit.sub(divd(_treasury.debt(), chi));
-        profit = profit.sub(_controller.totalChaiPosted());
-
-        _treasury.pullChai(beneficiary, profit);
+    /// @dev Return the Dai equivalent value to a Chai amount.
+    /// @param chaiAmount The Chai value to convert.
+    /// @param chi The `chi` value from `Pot`.
+    function chaiToDai(uint256 chaiAmount, uint256 chi) public pure returns(uint256) {
+        return muld(chaiAmount, chi);
     }
 
-    /// @dev Calculates how much profit is in the system and transfers it to the beneficiary
-    function skimDssShutdown() public {
-        require(settled && cashedOut, "Unwind: Not ready");
-
-        uint256 chi = _pot.chi();
-        (, uint256 rate,,,) = _vat.ilks(WETH);
-        uint256 profit = _weth.balanceOf(address(this));
-
-        profit = profit.add(muld(muld(_yDaiProfit(chi, rate), _fix), chi));
-        profit = profit.sub(_treasuryWeth);
-        profit = profit.sub(muld(muld(_controller.totalChaiPosted(), _fix), chi));
-
-        require(_weth.transfer(beneficiary, profit));
-    }
-
-    /// @dev Returns the profit accummulated in the system due to yDai supply and debt, in chai.
-    /// Chi and rate are passed on as parameters to avoid multiple calls that retrieve the same values.
-    /// @param chi The chi value from MakerDAO
-    /// @param rate The rate value from MakerDAO
-    function _yDaiProfit(uint256 chi, uint256 rate) internal view returns (uint256) {
-        uint256 profit;
-
-        (IYDai[] memory series, uint256[] memory maturities) = _controller.allSeries();
-        for (uint256 i = 0; i < series.length; i += 1) {
-            uint256 maturity = maturities[i];
-            IYDai yDai = series[i];
-            profit = profit.add(getProfit(yDai, maturity, chi, rate));
-        }
-
-        return profit;
-    }
-
-    /// @dev Returns the profit accumulated for a specific yDai token
-    // NB: this funciton is required due to `Stack Too Deep` errors.
-    function getProfit(IYDai yDai, uint256 maturity, uint256 chi, uint256 rate) private view returns (uint256) {
-        uint256 profit;
-
-        uint256 chi0;
-        uint256 rate0;
-        if (yDai.isMature()){
-            chi0 = yDai.chi0();
-            rate0 = yDai.rate0();
-        } else {
-            chi0 = chi;
-            rate0 = rate;
-        }
-
-        profit = profit.add(
-            divd(
-                muld(
-                    _controller.totalDebtYDai(WETH, maturity),
-                    Math.max(UNIT, divd(rate, rate0)) // rate growth since maturity, floored at 1.0
-                ),                                    // muld(yDaiDebt, rateGrowth) - Convert Weth collateralized YDai debt to Dai debt
-                chi                                   // divd(daiDebt, chi) - Convert Dai debt to Chai debt
-            )
-        );
-        profit = profit.add(
-            divd(
-                _controller.totalDebtYDai(CHAI, maturity),
-                chi0                                  // divd(yDaiDebt, chi0) - Convert Chai collateralized YDai debt to Chai debt
-            )
-        );
-        profit = profit.sub(divd(yDai.totalSupply(), chi0)); // divd(yDai, chi0) - Convert YDai to Chai
-
-        return profit;
+    /// @dev Return the Weth equivalent value to a Dai amount, during Dss Shutdown
+    /// @param daiAmount The Dai value to convert.
+    /// @param fix The `fix` value from `End`.
+    function daiToFixWeth(uint256 daiAmount, uint256 fix) public pure returns(uint256) {
+        return muld(daiAmount, fix);
     }
 
     /// @dev Settle system debt in MakerDAO and free remaining collateral.
@@ -259,10 +179,21 @@ contract Unwind is Ownable(), DecimalMath {
 
         uint256 remainder;
         if (collateral == WETH) {
-            remainder = subFloorZero(tokens, muld(debt, _fix));
+            remainder = subFloorZero(tokens, daiToFixWeth(debt, _fix));
         } else if (collateral == CHAI) {
-            remainder = muld(subFloorZero(muld(tokens, _chi), debt), _fix);
+            remainder = daiToFixWeth(subFloorZero(chaiToDai(tokens, _chi), debt), _fix);
         }
+        require(_weth.transfer(user, remainder));
+    }
+
+    /// @dev Settles a user vault in Liquidations, and then returns any remaining collateral as weth using the unwind Dai to Weth price.
+    /// @param user User vault to settle, and wallet to receive the corresponding weth.
+    function settleLiquidations(address user) public {
+        require(settled && cashedOut, "Unwind: Not ready");
+
+        (uint256 weth, uint256 debt) = _liquidations.erase(user);
+        uint256 remainder = subFloorZero(weth, daiToFixWeth(debt, _fix));
+
         require(_weth.transfer(user, remainder));
     }
 
@@ -278,7 +209,7 @@ contract Unwind is Ownable(), DecimalMath {
         require(
             _weth.transfer(
                 user,
-                muld(muld(yDaiAmount, yDai.chiGrowth()), _fix)
+                daiToFixWeth(muld(yDaiAmount, yDai.chiGrowth()), _fix)
             )
         );
     }

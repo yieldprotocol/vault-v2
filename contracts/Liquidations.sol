@@ -39,6 +39,7 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
 
     mapping(address => uint256) public liquidations;
     mapping(address => Vault) public vaults;
+    Vault public override totals;
 
     bool public live = true;
 
@@ -107,23 +108,29 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
     /// A liquidation fee is transferred from the liquidated user to a designated account as payment.
     /// @param user Address of the user vault to liquidate.
     /// @param to Address of the liquidations account to receive the liquidation fee.
-    function liquidate(address user, address to) public {
-        require(
-            liquidations[user] == 0,
-            "Liquidations: Vault is already in liquidation"
-        );
+    function liquidate(address user, address to)
+        public onlyLive
+    {
         require(
             !_controller.isCollateralized(WETH, user),
             "Liquidations: Vault is not undercollateralized"
         );
+        // A user in liquidation can be liquidated again, but doesn't restart the auction clock
         // solium-disable-next-line security/no-block-members
-        liquidations[user] = now;
+        if (liquidations[user] == 0) liquidations[user] = now;
 
         (uint256 userCollateral, uint256 userDebt) = _controller.erase(WETH, user);
-        vaults[user] = Vault({
-            collateral: sub(toUint128(userCollateral), FEE),
-            debt: toUint128(userDebt)
+        totals = Vault({
+            collateral: add(totals.collateral, toUint128(userCollateral)),
+            debt: add(totals.debt, toUint128(userDebt))
         });
+
+        Vault memory vault = Vault({ // TODO: Test a user that is liquidated twice
+            collateral: add(vaults[user].collateral, sub(toUint128(userCollateral), FEE)),
+            debt: add(vaults[user].debt, toUint128(userDebt))
+        });
+        vaults[user] = vault;
+
         vaults[to].collateral = add(vaults[to].collateral, FEE);
 
         emit Liquidation(user, now, userCollateral, userDebt);
@@ -150,6 +157,11 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
 
         // calculate collateral to grab. Using divdrup stops rounding from leaving 1 stray wei in vaults.
         uint256 tokenAmount = divdrup(daiAmount, price(liquidated));
+
+        totals = Vault({
+            collateral: sub(totals.collateral, toUint128(tokenAmount)),
+            debt: sub(totals.debt, toUint128(daiAmount))
+        });
 
         Vault memory vault = Vault({
             collateral: sub(vaults[liquidated].collateral, toUint128(tokenAmount)),
@@ -182,11 +194,33 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
             "Liquidations: User still in liquidation"
         );
 
+        totals.collateral = sub(totals.collateral, toUint128(tokenAmount));
         vault.collateral = sub(vault.collateral, toUint128(tokenAmount));
 
         _treasury.pullWeth(to, tokenAmount);
     }
 
+    /// @dev Removes all collateral and debt for an user.
+    /// This function can only be called by other Yield contracts, not users directly.
+    /// @param user Address of the user vault
+    /// @return The amounts of collateral and debt removed from Liquidations.
+    function erase(address user)
+        public override
+        onlyOrchestrated("Liquidations: Not Authorized")
+        returns (uint128, uint128)
+    {
+        Vault storage vault = vaults[user];
+        uint128 collateral = vault.collateral;
+        uint128 debt = vault.debt;
+
+        totals = Vault({
+            collateral: sub(totals.collateral, collateral),
+            debt: sub(totals.debt, debt)
+        });
+        delete vaults[user];
+
+        return (collateral, debt);
+    }
 
     /// @dev Return price of a collateral unit, in dai, at the present moment, for a given user
     /// @param user Address of the user vault in liquidation.

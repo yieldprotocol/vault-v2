@@ -36,7 +36,7 @@ contract('Unwind - Treasury', async (accounts) =>  {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        env = await YieldEnvironment.setup(owner)
+        env = await YieldEnvironment.setup()
         controller = env.controller;
         treasury = env.treasury;
         liquidations = env.liquidations;

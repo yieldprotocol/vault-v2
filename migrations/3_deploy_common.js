@@ -14,7 +14,6 @@ const Weth = artifacts.require("WETH9");
 const ERC20 = artifacts.require("TestERC20");
 
 module.exports = async (deployer, network, accounts) => {
-  const beneficiary = "0x0000000000000000000000000000000000000000"; // TODO: Make sure you change this for production
   const migrations = await Migrations.deployed();
   
   let vatAddress;
@@ -102,7 +101,6 @@ module.exports = async (deployer, network, accounts) => {
     treasuryAddress,
     controllerAddress,
     liquidationsAddress,
-    beneficiary,
   );
   const unwind = await Unwind.deployed();
   unwindAddress = unwind.address;

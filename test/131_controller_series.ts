@@ -59,11 +59,6 @@ contract('Controller: Multi-Series', async (accounts) =>  {
             true,
             "Controller should contain " + (await yDai1.name()),
         );
-
-        assert.equal(
-            await controller.skimStart(),
-            maturity1 + THREE_MONTHS
-        );
     });
 
     it("adds several series", async() => {
@@ -89,10 +84,6 @@ contract('Controller: Multi-Series', async (accounts) =>  {
             await controller.series(maturity2),
             yDai2.address,
             "Controller should have the contract for " + (await yDai2.name()),
-        );
-        assert.equal(
-            await controller.skimStart(),
-            maturity2 + THREE_MONTHS
         );
     });
 

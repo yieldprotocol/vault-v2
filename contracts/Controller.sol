@@ -46,10 +46,6 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     mapping(bytes32 => mapping(address => uint256)) public override posted;                        // Collateral posted by each user
     mapping(bytes32 => mapping(uint256 => mapping(address => uint256))) public override debtYDai;  // Debt owed by each user, by series
 
-    uint256 public override totalChaiPosted;                                        // Sum of Chai posted by all users. Needed for skimming profits
-    mapping(bytes32 => mapping(uint256 => uint256)) public override totalDebtYDai;  // Sum of debt owed by all users, by series
-
-    uint256 public override skimStart;                                // Time that skim operations can start, defined as 90 days after the last maturity
     bool public live = true;
 
     /// @dev Set up addresses for vat, pot and Treasury.
@@ -143,19 +139,6 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         );
         series[maturity] = IYDai(yDaiContract);
         seriesIterator.push(maturity);
-        skimStart = Math.max(skimStart, maturity.add(THREE_MONTHS));
-    }
-
-    /// @dev Returns all the available YDai series
-    function allSeries() public view override returns (IYDai[] memory, uint256[] memory) {
-        uint256[] memory _seriesIterator = seriesIterator;
-        IYDai[] memory _series = new IYDai[](_seriesIterator.length);
-        uint256[] memory _maturities = new uint256[](_seriesIterator.length);
-        for (uint256 i = 0; i < _seriesIterator.length; i += 1) {
-            _maturities[i] = seriesIterator[i];
-            _series[i] = series[seriesIterator[i]];
-        }
-        return (_series, _maturities);
     }
 
     /// @dev Dai equivalent of a yDai amount.
@@ -294,7 +277,6 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
             );
             _treasury.pushWeth(from, amount);
         } else if (collateral == CHAI) {
-            totalChaiPosted = totalChaiPosted.add(amount);
             _treasury.pushChai(from, amount);
         }
         
@@ -328,7 +310,6 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
             );
             _treasury.pullWeth(to, amount);
         } else if (collateral == CHAI) {
-            totalChaiPosted = totalChaiPosted.sub(amount);
             _treasury.pullChai(to, amount);
         }
 
@@ -358,7 +339,6 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         IYDai yDai = series[maturity];
 
         debtYDai[collateral][maturity][from] = debtYDai[collateral][maturity][from].add(yDaiAmount);
-        totalDebtYDai[collateral][maturity] = totalDebtYDai[collateral][maturity].add(yDaiAmount);
 
         require(
             isCollateralized(collateral, from),
@@ -440,7 +420,6 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     //    
     function _repay(bytes32 collateral, uint256 maturity, address user, uint256 yDaiAmount) internal {
         debtYDai[collateral][maturity][user] = debtYDai[collateral][maturity][user].sub(yDaiAmount);
-        totalDebtYDai[collateral][maturity] = totalDebtYDai[collateral][maturity].sub(yDaiAmount);
 
         emit Borrowed(collateral, maturity, user, -toInt256(yDaiAmount));
     }
@@ -458,15 +437,12 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     {
         uint256 userCollateral = posted[collateral][user];
         delete posted[collateral][user];
-        if (collateral == CHAI) totalChaiPosted = totalChaiPosted.sub(userCollateral);
 
         uint256 userDebt;
         uint256[] memory _seriesIterator = seriesIterator;
         for (uint256 i = 0; i < _seriesIterator.length; i += 1) {
             uint256 maturity = _seriesIterator[i];
             userDebt = userDebt.add(debtDai(collateral, maturity, user)); // SafeMath shouldn't be needed
-            totalDebtYDai[collateral][maturity] =
-                totalDebtYDai[collateral][maturity].sub(debtYDai[collateral][maturity][user]); // SafeMath shouldn't be needed
             delete debtYDai[collateral][maturity][user];
         } // We don't expect hundreds of maturities per controller
 

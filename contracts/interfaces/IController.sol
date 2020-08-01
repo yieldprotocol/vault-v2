@@ -9,8 +9,6 @@ interface IController {
     function seriesIterator(uint256) external view returns (uint256);
     function totalSeries() external view returns (uint256);
     function containsSeries(uint256) external view returns (bool);
-    function totalChaiPosted() external view returns (uint256);
-    function totalDebtYDai(bytes32, uint256) external view returns (uint256);
     function posted(bytes32, address) external view returns (uint256);
     function debtYDai(bytes32, uint256, address) external view returns (uint256);
     function totalDebtDai(bytes32, address) external view returns (uint256);
@@ -24,6 +22,4 @@ interface IController {
     function borrow(bytes32, uint256, address, address, uint256) external;
     function repayYDai(bytes32, uint256, address, address, uint256) external;
     function repayDai(bytes32, uint256, address, address, uint256) external;
-    function skimStart() external view returns (uint256);
-    function allSeries() external view returns (IYDai[] memory, uint256[] memory);
 }

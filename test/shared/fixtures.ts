@@ -160,7 +160,7 @@ export class YieldEnvironmentLite {
     this.controller = controller
   }
 
-  public static async setup(_beneficiary?: string) {
+  public static async setup() {
     const maker = await MakerEnvironment.setup()
     const treasury = await maker.setupTreasury()
 
@@ -218,7 +218,7 @@ export class YieldEnvironment extends YieldEnvironmentLite {
       this.unwind = unwind;
   }
 
-  public static async setup(beneficiary: string) {
+  public static async setup() {
     const { maker, treasury, controller } = await YieldEnvironmentLite.setup();
 
     const liquidations = await Liquidations.new(maker.dai.address, treasury.address, controller.address)
@@ -236,7 +236,6 @@ export class YieldEnvironment extends YieldEnvironmentLite {
       treasury.address,
       controller.address,
       liquidations.address,
-      beneficiary,
     )
     await treasury.orchestrate(unwind.address)
     await treasury.registerUnwind(unwind.address)

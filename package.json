@@ -11,7 +11,8 @@
     "test:non-functional": "buidler test test/non-functional/*.ts",
     "test:network": "npx truffle test test/network/*.js",
     "ganache": "./scripts/ganache.sh",
-    "coverage": "buidler coverage",
+    "coverage": "buidler coverage --network coverage --temp build --testfiles 'test/*.ts test/pool/*.ts test/peripheral/*.ts'",
+
     "fmt": "prettier ./test/**/*.ts --check",
     "fmt:fix": "prettier ./test/**/*.ts --write"
   },
