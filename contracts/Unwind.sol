@@ -198,7 +198,6 @@ contract Unwind is Ownable(), DecimalMath {
     }
 
     /// @dev Redeems YDai for weth. YDai.redeem won't work if MakerDAO is in shutdown.
-    /// yDai holder must call yDai.approve before calling this function.
     /// @param maturity Maturity of an added series
     /// @param user Wallet containing the yDai to burn.
     /// @param yDaiAmount Amount of yDai to burn.
