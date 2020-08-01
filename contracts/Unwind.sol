@@ -169,7 +169,7 @@ contract Unwind is Ownable(), DecimalMath {
         _chi = _pot.chi();
     }
 
-    /// @dev Settles a series position in Controller, and then returns any remaining collateral as weth using the unwind Dai to Weth price.
+    /// @dev Settles a series position in Controller for any user, and then returns any remaining collateral as weth using the unwind Dai to Weth price.
     /// @param collateral Valid collateral type.
     /// @param user User vault to settle, and wallet to receive the corresponding weth.
     function settle(bytes32 collateral, address user) public {
@@ -197,14 +197,13 @@ contract Unwind is Ownable(), DecimalMath {
         require(_weth.transfer(user, remainder));
     }
 
-    /// @dev Redeems YDai for weth. YDai.redeem won't work if MakerDAO is in shutdown.
-    /// yDai holder must call yDai.approve before calling this function.
+    /// @dev Redeems YDai for weth for any user. YDai.redeem won't work if MakerDAO is in shutdown.
     /// @param maturity Maturity of an added series
     /// @param user Wallet containing the yDai to burn.
-    /// @param yDaiAmount Amount of yDai to burn.
-    function redeem(uint256 maturity, address user, uint256 yDaiAmount) public {
+    function redeem(uint256 maturity, address user) public {
         require(settled && cashedOut, "Unwind: Not ready");
         IYDai yDai = _controller.series(maturity);
+        uint256 yDaiAmount = yDai.balanceOf(user);
         yDai.burn(user, yDaiAmount);
         require(
             _weth.transfer(

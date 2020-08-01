@@ -18,6 +18,8 @@ contract('Unwind - Controller', async (accounts) =>  {
     let vat: Contract;
     let controller: Contract;
     let treasury: Contract;
+    let yDai1: Contract;
+    let yDai2: Contract;
     let weth: Contract;
     let liquidations: Contract;
     let unwind: Contract;
@@ -48,8 +50,8 @@ contract('Unwind - Controller', async (accounts) =>  {
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
-        const yDai1 = await env.newYDai(maturity1, "Name", "Symbol");
-        const yDai2 = await env.newYDai(maturity2, "Name", "Symbol");
+        yDai1 = await env.newYDai(maturity1, "Name", "Symbol");
+        yDai2 = await env.newYDai(maturity2, "Name", "Symbol");
         await yDai1.orchestrate(unwind.address)
         await yDai2.orchestrate(unwind.address)
         await treasury.orchestrate(owner)
@@ -100,7 +102,7 @@ contract('Unwind - Controller', async (accounts) =>  {
 
         it("does not allow to redeem YDai if treasury not settled and cashed", async() => {
             await expectRevert(
-                unwind.redeem(maturity1, user2, yDaiTokens, { from: user2 }),
+                unwind.redeem(maturity1, user2, { from: user2 }),
                 "Unwind: Not ready",
             );
         });
@@ -149,12 +151,17 @@ contract('Unwind - Controller', async (accounts) =>  {
             });
 
             it("user can redeem YDai", async() => {
-                await unwind.redeem(maturity1, user2, yDaiTokens, { from: user2 });
+                assert.equal(
+                    await yDai1.balanceOf(user2),
+                    yDaiTokens.mul(2).toString(),
+                    'User2 should have ' + yDaiTokens.mul(2) + ' yDai, instead has ' + (await yDai1.balanceOf(user2)).toString(),
+                );
+                await unwind.redeem(maturity1, user2, { from: user2 });
 
                 assert.equal(
                     await weth.balanceOf(user2),
-                    fixedWeth.toString(),
-                    'User2 should have ' + fixedWeth.toString() + ' weth wei, instead has ' + (await weth.balanceOf(user2)).toString(),
+                    fixedWeth.mul(2).add(1).toString(),
+                    'User2 should have ' + fixedWeth.mul(2).add(1).toString() + ' weth wei, instead has ' + (await weth.balanceOf(user2)).toString(),
                 );
             });
 
