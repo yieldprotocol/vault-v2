@@ -419,7 +419,7 @@ contract('Pool', async (accounts) =>  {
             beforeEach(async() => {
                 await helper.advanceTime(31556952);
                 await helper.advanceBlock();
-                // await yDai1.mature(); // TODO: Does it matter if the yDai is marked as mature?
+                // await yDai1.mature(); // It doesn't matter if the yDai is marked as mature
             });
 
             it("doesn't allow trading", async() => {

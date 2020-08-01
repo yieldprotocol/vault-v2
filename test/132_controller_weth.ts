@@ -697,8 +697,6 @@ contract('Controller - Weth', async (accounts) =>  {
                             "User1 should have " + increasedDebt + " debt after the rate change, instead has " + (await controller.totalDebtDai(WETH, user1)),
                         );
                     });
-    
-                    // TODO: Test that when yDai is provided in excess for repayment, only the necessary amount is taken
 
                     it("the yDai required to repay doesn't change after maturity as rate increases", async() => {
                         await yDai1.approve(treasury.address, daiTokens1, { from: user1 });

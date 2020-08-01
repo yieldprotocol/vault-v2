@@ -357,8 +357,6 @@ contract('Controller - Chai', async (accounts) =>  {
                         "User2 should have " + increasedDebt + " Dai debt, instead has " + (await controller.debtDai(CHAI, maturity1, user2)),
                     );
                 });
-
-                // TODO: Test that when yDai is provided in excess for repayment, only the necessary amount is taken
     
                 it("more Dai is required to repay after maturity as chi increases", async() => {
                     await maker.getDai(user1, daiTokens1, rate2); // daiTokens1 is not going to be enough anymore

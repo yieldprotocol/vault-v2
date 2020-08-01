@@ -245,7 +245,7 @@ contract('Unwind - Treasury', async (accounts) =>  {
                     );
                     assert.equal(
                         await weth.balanceOf(unwind.address, { from: owner }),
-                        fixedWeth.toString(), // TODO: Unpack the calculations and round the same way in the tests for parameterization
+                        fixedWeth.toString(),
                         'Unwind should have ' + fixedWeth.toString() + ' weth in hand, instead has ' + (await weth.balanceOf(unwind.address, { from: owner })),
                     );
                 });
