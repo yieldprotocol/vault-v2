@@ -161,11 +161,6 @@ contract('Controller - Delegation', async (accounts) =>  {
                 daiTokens1.toString(),
                 "User1 should have debt",
             );
-            assert.equal(
-                await controller.totalDebtYDai(WETH, maturity1),
-                daiTokens1.toString(), // Dai == yDai before maturity
-                "System should have debt",
-            );
         });
 
         it("allows to borrow yDai from others, for others", async() => {
@@ -201,11 +196,6 @@ contract('Controller - Delegation', async (accounts) =>  {
                 await controller.debtDai(WETH, maturity1, user1),
                 daiTokens1.toString(),
                 "User1 should have debt",
-            );
-            assert.equal(
-                await controller.totalDebtYDai(WETH, maturity1),
-                daiTokens1.toString(), // Dai == yDai before maturity
-                "System should have debt",
             );
         });
 
@@ -270,11 +260,6 @@ contract('Controller - Delegation', async (accounts) =>  {
                         0,
                         "User1 should not have debt",
                     );
-                    assert.equal(
-                        await controller.totalDebtYDai(WETH, maturity1),
-                        daiTokens1.toString(), // Dai == yDai before maturity. We borrowed twice this.
-                        "System should have debt",
-                    );
                 });
 
                 it("delegates are allowed to use fund to pay debts of any user", async() => {
@@ -311,11 +296,6 @@ contract('Controller - Delegation', async (accounts) =>  {
                         await controller.debtDai(WETH, maturity1, user2),
                         0,
                         "User2 should not have debt",
-                    );
-                    assert.equal(
-                        await controller.totalDebtYDai(WETH, maturity1),
-                        daiTokens1.toString(), // Dai == yDai before maturity. We borrowed twice this.
-                        "System should have debt",
                     );
                 });
 
@@ -362,11 +342,6 @@ contract('Controller - Delegation', async (accounts) =>  {
                         0,
                         "User1 should not have debt",
                     );
-                    assert.equal(
-                        await controller.totalDebtYDai(WETH, maturity1),
-                        daiTokens1.toString(), // Dai == yDai before maturity. We borrowed twice this.
-                        "System should have debt",
-                    );
                 });
 
                 it("delegates are allowed to use dai funds to pay debts of any user", async() => {
@@ -404,11 +379,6 @@ contract('Controller - Delegation', async (accounts) =>  {
                         await controller.debtDai(WETH, maturity1, user2),
                         0,
                         "User2 should not have debt",
-                    );
-                    assert.equal(
-                        await controller.totalDebtYDai(WETH, maturity1),
-                        daiTokens1.toString(), // Dai == yDai before maturity. We borrowed twice this.
-                        "System should have debt",
                     );
                 });
             });
