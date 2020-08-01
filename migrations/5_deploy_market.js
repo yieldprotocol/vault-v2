@@ -13,7 +13,7 @@ module.exports = async (deployer, network, accounts) => {
   let yDaiAddress;
   let poolAddress;
 
-  const yDaiNames = ['yDai0', 'yDai1', 'yDai2', 'yDai3']; // TODO: Consider iterating until the address returned is 0
+  const yDaiNames = ['yDai0', 'yDai1', 'yDai2', 'yDai3'];
 
   if (network !== 'development') {
     daiAddress = fixed_addrs[network].daiAddress;
@@ -21,7 +21,7 @@ module.exports = async (deployer, network, accounts) => {
     daiAddress = (await ERC20.deployed()).address;
   }
 
-  // Deploy and link YieldMath - TODO: Is this needed?
+  // Deploy and link YieldMath
   await deployer.deploy(YieldMath)
   await deployer.link(YieldMath, Pool);  
 

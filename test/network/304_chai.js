@@ -27,7 +27,7 @@ contract('Chai', async (accounts) =>  {
     let WETH = web3.utils.fromAscii('ETH-A');
     let spot;
     let rate;
-    const chi = toRay(1.2); // TODO: Set it up in migrations
+    const chi = toRay(1.2);
 
     let wethTokens;
     let daiTokens;
@@ -51,7 +51,7 @@ contract('Chai', async (accounts) =>  {
         daiTokens = mulRay(wethTokens.toString(), spot.toString());
         daiDebt = divRay(daiTokens.toString(), rate.toString());
 
-        await pot.setChi(chi); // TODO: Set it up in migrations
+        await pot.setChi(chi);
         chaiTokens = divRay(daiTokens, chi);
     });
 

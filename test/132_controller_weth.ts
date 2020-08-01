@@ -93,60 +93,6 @@ contract('Controller - Weth', async (accounts) =>  {
         
         await weth.deposit({ from: user1, value: wethTokens1 });
         await weth.approve(treasury.address, wethTokens1, { from: user1 }); 
-        const event: any = (await controller.post(WETH, user1, user1, wethTokens1, { from: user1 })).logs[0];
-        
-        assert.equal(
-            event.event,
-            "Posted",
-        );
-        assert.equal(
-            bytes32ToString(event.args.collateral),
-            bytes32ToString(WETH),
-        );
-        assert.equal(
-            event.args.user,
-            user1,
-        );
-        assert.equal(
-            event.args.amount,
-            wethTokens1.toString(),
-        );
-        assert.equal(
-            (await vat.urns(WETH, treasury.address)).ink,
-            wethTokens1.toString(),
-            "Treasury should have weth in MakerDAO",
-        );
-        assert.equal(
-            await controller.powerOf(WETH, user1),
-            daiTokens1.toString(),
-            "User1 should have " + daiTokens1 + " borrowing power, instead has " + await controller.powerOf(WETH, user1),
-        );
-        assert.equal(
-            await controller.posted(WETH, user1),
-            wethTokens1.toString(),
-            "User1 should have " + wethTokens1 + " weth posted, instead has " + await controller.posted(WETH, user1),
-        );
-        assert.equal(
-            await controller.locked(WETH, user1),
-            0,
-            "User1 should have no locked collateral, instead has " + await controller.locked(WETH, user1),
-        );
-    });
-
-    it("allows users to post weth for others", async() => {
-        assert.equal(
-            (await vat.urns(WETH, treasury.address)).ink,
-            0,
-            "Treasury has weth in MakerDAO",
-        );
-        assert.equal(
-            await controller.powerOf(WETH, user1),
-            0,
-            "User1 has borrowing power",
-        );
-        
-        await weth.deposit({ from: user1, value: wethTokens1 });
-        await weth.approve(treasury.address, wethTokens1, { from: user1 }); 
         const event = (await controller.post(WETH, user1, user2, wethTokens1, { from: user1 })).logs[0];
         
         assert.equal(
@@ -206,7 +152,7 @@ contract('Controller - Weth', async (accounts) =>  {
         });
 
         it("allows users to withdraw weth", async() => {
-            const event = (await controller.withdraw(WETH, user1, user1, wethTokens1, { from: user1 })).logs[0];
+            const event = (await controller.withdraw(WETH, user1, user2, wethTokens1, { from: user1 })).logs[0];
 
             assert.equal(
                 event.event,
@@ -225,9 +171,9 @@ contract('Controller - Weth', async (accounts) =>  {
                 "-" + wethTokens1,
             );
             assert.equal(
-                await weth.balanceOf(user1),
+                await weth.balanceOf(user2),
                 wethTokens1,
-                "User1 should have collateral in hand"
+                "User2 should have collateral in hand"
             );
             assert.equal(
                 (await vat.urns(WETH, treasury.address)).ink,
@@ -242,46 +188,6 @@ contract('Controller - Weth', async (accounts) =>  {
         });
 
         it("allows to borrow yDai", async() => {
-            const event: any = (await controller.borrow(WETH, maturity1, user1, user1, daiTokens1, { from: user1 })).logs[0];
-
-            assert.equal(
-                event.event,
-                "Borrowed",
-            );
-            assert.equal(
-                bytes32ToString(event.args.collateral),
-                bytes32ToString(WETH),
-            );
-            assert.equal(
-                event.args.maturity,
-                maturity1,
-            );
-            assert.equal(
-                event.args.user,
-                user1,
-            );
-            assert.equal(
-                event.args.amount,
-                daiTokens1.toString(), // This is actually a yDai amount
-            );
-            assert.equal(
-                await yDai1.balanceOf(user1),
-                daiTokens1.toString(),
-                "User1 should have yDai",
-            );
-            assert.equal(
-                await controller.debtDai(WETH, maturity1, user1),
-                daiTokens1.toString(),
-                "User1 should have debt",
-            );
-            assert.equal(
-                await controller.locked(WETH, user1),
-                wethTokens1.toString(),
-                "User1 should have " + wethTokens1 + " locked weth, instead has " + await controller.locked(WETH, user1),
-            );
-        });
-
-        it("allows to borrow yDai for others", async() => {
             const event: any = (await controller.borrow(WETH, maturity1, user1, user2, daiTokens1, { from: user1 })).logs[0];
 
             assert.equal(
@@ -383,42 +289,6 @@ contract('Controller - Weth', async (accounts) =>  {
                 });
     
                 it("allows to repay yDai", async() => {
-                    await yDai1.approve(treasury.address, daiTokens1, { from: user1 });
-                    const event = (await controller.repayYDai(WETH, maturity1, user1, user1, daiTokens1, { from: user1 })).logs[0];
-        
-                    assert.equal(
-                        event.event,
-                        "Borrowed",
-                    );
-                    assert.equal(
-                        bytes32ToString(event.args.collateral),
-                        bytes32ToString(WETH),
-                    );
-                    assert.equal(
-                        event.args.maturity,
-                        maturity1,
-                    );
-                    assert.equal(
-                        event.args.user,
-                        user1,
-                    );
-                    assert.equal(
-                        event.args.amount,
-                        daiTokens1.mul(-1).toString(), // This is actually a yDai amount
-                    );
-                    assert.equal(
-                        await yDai1.balanceOf(user1),
-                        0,
-                        "User1 should not have yDai",
-                    );
-                    assert.equal(
-                        await controller.debtDai(WETH, maturity1, user1),
-                        0,
-                        "User1 should not have debt",
-                    );
-                });
-
-                it("allows to repay yDai for others with own funds", async() => {
                     await yDai1.approve(treasury.address, daiTokens1, { from: user2 });
                     const event = (await controller.repayYDai(WETH, maturity1, user2, user1, daiTokens1, { from: user2 })).logs[0];
         
@@ -454,56 +324,7 @@ contract('Controller - Weth', async (accounts) =>  {
                     );
                 });
 
-                it("allows to repay yDai with dai", async() => {
-                    await maker.getDai(user1, daiTokens1, rate1);
-    
-                    assert.equal(
-                        await dai.balanceOf(user1),
-                        daiTokens1.toString(),
-                        "User1 does not have dai",
-                    );
-                    assert.equal(
-                        await controller.debtDai(WETH, maturity1, user1),
-                        daiTokens1.toString(),
-                        "User1 does not have debt",
-                    );
-    
-                    await dai.approve(treasury.address, daiTokens1, { from: user1 });
-                    const event = (await controller.repayDai(WETH, maturity1, user1, user1, daiTokens1, { from: user1 })).logs[0];
-        
-                    assert.equal(
-                        event.event,
-                        "Borrowed",
-                    );
-                    assert.equal(
-                        bytes32ToString(event.args.collateral),
-                        bytes32ToString(WETH),
-                    );
-                    assert.equal(
-                        event.args.maturity,
-                        maturity1,
-                    );
-                    assert.equal(
-                        event.args.user,
-                        user1,
-                    );
-                    assert.equal(
-                        event.args.amount,
-                        daiTokens1.mul(-1).toString(), // This is actually a yDai amount
-                    );
-                    assert.equal(
-                        await dai.balanceOf(user1),
-                        0,
-                        "User1 should not have yDai",
-                    );
-                    assert.equal(
-                        await controller.debtDai(WETH, maturity1, user1),
-                        0,
-                        "User1 should not have debt",
-                    );
-                });
-
-                it("allows to repay dai debt for others with own funds", async() => {
+                it("allows to repay yDai debt with Dai", async() => {
                     await maker.getDai(user2, daiTokens1, rate1);
                     await dai.approve(treasury.address, daiTokens1, { from: user2 });
                     const event = (await controller.repayDai(WETH, maturity1, user2, user1, daiTokens1, { from: user2 })).logs[0];
@@ -649,8 +470,6 @@ contract('Controller - Weth', async (accounts) =>  {
                             "User1 should have " + increasedDebt + " debt after the rate change, instead has " + (await controller.totalDebtDai(WETH, user1)),
                         );
                     });
-    
-                    // TODO: Test that when yDai is provided in excess for repayment, only the necessary amount is taken
 
                     it("the yDai required to repay doesn't change after maturity as rate increases", async() => {
                         await yDai1.approve(treasury.address, daiTokens1, { from: user1 });
