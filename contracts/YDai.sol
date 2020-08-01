@@ -130,9 +130,9 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
     /// @param yDaiAmount Amount of yDai to mint.
     /// @param data User-defined data to pass on to `executeOnFlashMint()`
     function flashMint(address to, uint256 yDaiAmount, bytes calldata data) external override {
-        _mint(to, yDaiAmount);
+        mint(to, yDaiAmount);
         IFlashMinter(msg.sender).executeOnFlashMint(to, yDaiAmount, data);
-        _burn(to, yDaiAmount);
+        burn(to, yDaiAmount);
     }
 
     /// @dev Mint yDai. Only callable by Controller contracts.
