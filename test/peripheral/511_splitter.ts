@@ -192,7 +192,7 @@ contract('Splitter', async (accounts) =>  {
         );
     });
 
-    it.only("moves yield vault to maker", async() => {
+    it("moves yield vault to maker", async() => {
         // console.log("      Dai: " + daiTokens1.toString());
         // console.log("      Weth: " + wethTokens1.toString());
         await env.postWeth(user, wethTokens1);
@@ -219,12 +219,20 @@ contract('Splitter', async (accounts) =>  {
             (await vat.urns(WETH, user)).art,
             0,
         );
+        assert.equal(
+            await yDai1.balanceOf(splitter1.address),
+            0,
+        );
 
         // Will need this one for testing. As time passes, even for one block, the resulting dai debt will be higher than this value
         const makerDebtEstimate = new BN(await splitter1.daiForYDai(yDaiTokens1));
 
         await splitter1.yieldToMaker(user, yDaiTokens1, wethTokens1, { from: user });
 
+        assert.equal(
+            await yDai1.balanceOf(splitter1.address),
+            0,
+        );
         assert.equal(
             await dai.balanceOf(splitter1.address),
             0,
