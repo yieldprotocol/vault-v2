@@ -135,8 +135,8 @@ contract Splitter is IFlashMinter, DecimalMath {
     /// @dev Callback from `YDai.flashMint()`
     function executeOnFlashMint(address, uint256 yDaiAmount, bytes calldata data) external override {
         (bool direction, address user, uint256 wethAmount, uint256 daiAmount) = abi.decode(data, (bool, address, uint256, uint256));
-        if(direction == MTY) _makerToYield(user, wethAmount, daiAmount); // TODO: Consider parameter order
-        if(direction == YTM) _yieldToMaker(user, yDaiAmount, wethAmount); // TODO: Consider parameter order
+        if(direction == MTY) _makerToYield(user, wethAmount, daiAmount);
+        if(direction == YTM) _yieldToMaker(user, yDaiAmount, wethAmount);
     }
 
     /// @dev Minimum weth needed to collateralize an amount of dai in MakerDAO
