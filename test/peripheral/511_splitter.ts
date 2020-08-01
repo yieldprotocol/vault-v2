@@ -104,15 +104,12 @@ contract('Splitter', async (accounts) =>  {
     });
 
     it("moves maker vault to yield", async() => {
-        // console.log("      Dai: " + daiTokens1.toString());
-        // console.log("      Weth: " + wethTokens1.toString());
         await env.maker.getDai(user, daiTokens1, rate1);
 
         // This lot can be avoided if the user is certain that he has enough Weth in Controller
         // The amount of yDai to be borrowed can be obtained from Pool through Splitter
         // As time passes, the amount of yDai required decreases, so this value will always be slightly higher than needed
         const yDaiNeeded = await splitter1.yDaiForDai(daiTokens1);
-        // console.log("      YDai: " + yDaiNeeded.toString());
 
         // Once we know how much yDai debt we will have, we can see how much weth we need to move
         const wethInController = new BN(await splitter1.wethForYDai(yDaiNeeded, { from: user }));
@@ -193,11 +190,8 @@ contract('Splitter', async (accounts) =>  {
     });
 
     it("moves yield vault to maker", async() => {
-        // console.log("      Dai: " + daiTokens1.toString());
-        // console.log("      Weth: " + wethTokens1.toString());
         await env.postWeth(user, wethTokens1);
         await controller.borrow(WETH, maturity1, user, user, yDaiTokens1, { from: user });
-        // console.log("      YDai: " + yDaiTokens1.toString());
         
         // Add permissions for vault migration
         await controller.addDelegate(splitter1.address, { from: user }); // Allowing Splitter to create debt for use in Yield

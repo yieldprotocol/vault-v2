@@ -13,7 +13,6 @@ import "../interfaces/IYDai.sol";
 import "../interfaces/IController.sol";
 import "../interfaces/IPool.sol";
 import "../interfaces/IFlashMinter.sol";
-import "@nomiclabs/buidler/console.sol";
 
 
 /// @dev Splitter migrates vaults between MakerDAO and Yield using flash minting.
@@ -201,7 +200,6 @@ contract Splitter is IFlashMinter, DecimalMath {
     function _yieldToMaker(address user, uint256 yDaiAmount, uint256 wethAmount) internal {
         // Pay the Yield debt - Splitter pays YDai to remove the debt of `user`
         // Controller should take exactly all yDai flash minted.
-        console.log(yDai.balanceOf(address(this)));
         controller.repayYDai(WETH, yDai.maturity(), address(this), user, yDaiAmount);
 
         // Withdraw the collateral from Yield, Splitter will hold it
@@ -228,6 +226,5 @@ contract Splitter is IFlashMinter, DecimalMath {
 
         // Sell the Dai for YDai at Pool - It should make up for what was taken with repayYdai
         pool.buyYDai(address(this), address(this), toUint128(yDaiAmount));
-        console.log(yDai.balanceOf(address(this)));
     }
 }
