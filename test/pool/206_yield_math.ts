@@ -104,7 +104,7 @@ contract('YieldMath', async (accounts) =>  {
               "log_2 (" + xValue + ")[1]",
               Math.abs (
                 Math.log (Number (x)) / Math.LN2 -
-                Number (result [1]) / Number (toBigNumber ('0x2000000000000000000000000000000'))) < 0.0000000000001);
+                Number (result [1]) / Number (toBigNumber ('0x2000000000000000000000000000000'))) < 0.00000000001);
           } else {
             assert ("!log_2 (" + xValue + ")[0]", !result [0]);
           }
@@ -154,8 +154,7 @@ contract('YieldMath', async (accounts) =>  {
           '0x1',
           '0x2',
           '0xFEDCBA9876543210',
-          '0xFEDCBA9876543210FEDCBA9876543210',
-          '0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'
+          '0xFEDCBA9876543210FEDCBA9876543210'
         ];
         var yzValues = [
           ['0x0', '0x0'],
@@ -165,7 +164,7 @@ contract('YieldMath', async (accounts) =>  {
           ['0x2', '0x1'],
           ['0x3', '0x1'],
           ['0x7F', '0x1'],
-          ['0xFEDCBA9876543210', '0x1'],
+          ['0xFEDCBA987', '0x1'],
           ['0xFEDCBA9876543210FEDCBA9876543210', '0x1'],
           ['0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF', '0x1'],
           ['0x1', '0x2'],
@@ -203,7 +202,7 @@ contract('YieldMath', async (accounts) =>  {
               if (resultLog < 0.0) resultLog = -1.0;
               assert (
                 "pow (" + xValue + ", " + yValue + ", " + zValue + ")[1]",
-                Math.abs (expectedLog - resultLog) <= 0.00000000001);
+                Math.abs (expectedLog - resultLog) <= 0.000000001);
             } else {
               assert ("!pow (" + xValue + ", " + yValue + ", " + zValue + ")[0]", !result [0]);
             }
@@ -222,7 +221,7 @@ contract('YieldMath', async (accounts) =>  {
           ['0x0', '0x0', '0x0', '0x0', '0x0', '0x0', true],
           ['0x0', '0x0', '0x1', '0x0', '0x0', '0x0', false],
           ['0x0', '0x80000000000000000000000000000000', '0x80000000000000000000000000000000', '0x0', '0x0', '0x0', true],
-          ['0x0', '0x80000000000000000000000000000000', '0x8000000000000000000000000000002D', '0x0', '0x0', '0x0', false],
+          ['0x0', '0x80000000000000000000000000000000', '0x8000000002000000000000000000000D', '0x0', '0x0', '0x0', false],
           ['0xFEDCBA9876543210', '0x123456789ABCDEF0', '0x123456789ABC', '0x1', '0x8000000000000000', '0xFEDCBA9876543210', true]
         ];
 
@@ -283,7 +282,7 @@ contract('YieldMath', async (accounts) =>  {
               timeTillMaturityValue + ", " + 
               kValue + ", " + 
               gValue + ")[1]",
-              Math.abs (expected - Number (result[1])) <= Math.max (0.00000001, expected / 10000000.0));
+              Math.abs (expected - Number (result[1])) <= Math.max (0.000001, expected / 100000.0));
           } else {
             assert ("!yDaiOutForDaiIn (" + 
               daiReservesValue + ", " + 
@@ -306,7 +305,7 @@ contract('YieldMath', async (accounts) =>  {
           ['0x0', '0x0', '0x0', '0x0', '0x0', '0x0', true],
           ['0x0', '0x0', '0x1', '0x0', '0x0', '0x0', false],
           ['0x80000000000000000000000000000000', '0x0', '0x80000000000000000000000000000000', '0x0', '0x0', '0x0', true],
-          ['0x80000000000000000000000000000000', '0x0', '0x8000000000000000000000000000002D', '0x0', '0x0', '0x0', false],
+          ['0x80000000000000000000000000000000', '0x0', '0x8000000002000000000000000000000D', '0x0', '0x0', '0x0', false],
           ['0xFEDCBA9876543210', '0x123456789ABCDEF0', '0x123456789ABC', '0x1', '0x8000000000000000', '0xFEDCBA9876543210', true]
         ];
 
@@ -367,7 +366,7 @@ contract('YieldMath', async (accounts) =>  {
               timeTillMaturityValue + ", " + 
               kValue + ", " + 
               gValue + ")[1]",
-              Math.abs (expected - Number (result[1])) <= Math.max (0.00000001, expected / 10000000.0));
+              Math.abs (expected - Number (result[1])) <= Math.max (0.000001, expected / 100000.0));
           } else {
             assert ("!daiOutForYDaiIn (" + 
               daiReservesValue + ", " + 
@@ -450,7 +449,7 @@ contract('YieldMath', async (accounts) =>  {
               timeTillMaturityValue + ", " + 
               kValue + ", " + 
               gValue + ")[1]",
-              Math.abs (expected - Number (result[1])) <= Math.max (0.00000001, expected / 10000000.0));
+              Math.abs (expected - Number (result[1])) <= Math.max (0.000001, expected / 100000.0));
           } else {
             assert ("!yDaiInForDaiOut (" + 
               daiReservesValue + ", " + 
@@ -530,7 +529,7 @@ contract('YieldMath', async (accounts) =>  {
               timeTillMaturityValue + ", " + 
               kValue + ", " + 
               gValue + ")[1]",
-              Math.abs (expected - Number (result[1])) <= Math.max (0.00000001, expected / 10000000.0));
+              Math.abs (expected - Number (result[1])) <= Math.max (0.000001, expected / 100000.0));
           } else {
             assert ("!daiInForYDaiOut (" + 
               daiReservesValue + ", " + 
