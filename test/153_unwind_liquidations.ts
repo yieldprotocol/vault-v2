@@ -2,8 +2,8 @@
 import helper from 'ganache-time-traveler';
 import { BigNumber } from 'ethers'
 // @ts-ignore
-import { BN, expectRevert } from '@openzeppelin/test-helpers';
-import { CHAI, WETH, spot, rate1, chi1, daiTokens1, wethTokens1, chaiTokens1, toRay, subBN, mulRay, divRay } from './shared/utils';
+import { BN } from '@openzeppelin/test-helpers';
+import { WETH, spot, rate1, daiTokens1, wethTokens1, toRay, subBN, mulRay, divRay } from './shared/utils';
 import { YieldEnvironment, Contract } from "./shared/fixtures";
 
 contract('Unwind - Controller', async (accounts) =>  {
@@ -14,7 +14,6 @@ contract('Unwind - Controller', async (accounts) =>  {
 
     let env: YieldEnvironment;
 
-    let dai: Contract;
     let vat: Contract;
     let yDai1: Contract;
     let yDai2: Contract;
@@ -24,7 +23,6 @@ contract('Unwind - Controller', async (accounts) =>  {
     let liquidations: Contract;
     let unwind: Contract;
     let end: Contract;
-    let chai: Contract;
 
     let maturity1: number;
     let maturity2: number;
@@ -32,8 +30,6 @@ contract('Unwind - Controller', async (accounts) =>  {
     const rate2  = toRay(1.5);
 
     const fix  = divRay(toRay(1.0), mulRay(spot, toRay(1.1)));
-    const fixedWeth = mulRay(daiTokens1, fix);
-    const yDaiTokens = daiTokens1;
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
@@ -48,7 +44,6 @@ contract('Unwind - Controller', async (accounts) =>  {
         vat = env.maker.vat;
         weth = env.maker.weth;
         end = env.maker.end;
-        chai = env.maker.chai;
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();

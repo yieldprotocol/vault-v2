@@ -3,7 +3,7 @@ import helper from 'ganache-time-traveler';
 // @ts-ignore
 import { BN, expectRevert } from '@openzeppelin/test-helpers';
 import { BigNumber } from 'ethers';
-import { WETH, CHAI, spot, rate1, chi1, daiTokens1, wethTokens1, chaiTokens1, toWad, toRay, toRad, addBN, subBN, mulRay, divRay } from './shared/utils';
+import { WETH, CHAI, rate1, chi1, daiTokens1, wethTokens1, chaiTokens1, toRay, addBN, subBN, mulRay, divRay } from './shared/utils';
 import { YieldEnvironment, Contract } from "./shared/fixtures";
 
 contract('Liquidations', async (accounts) =>  {

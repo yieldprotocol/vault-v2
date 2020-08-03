@@ -4,7 +4,7 @@ const Splitter = artifacts.require('Splitter');
 import { BigNumber } from "ethers";
 // @ts-ignore
 import { BN, expectRevert } from '@openzeppelin/test-helpers';
-import { WETH, rate1, daiTokens1, wethTokens1, addBN, mulRay, divRay } from '../shared/utils';
+import { WETH, rate1, daiTokens1, wethTokens1, mulRay, divRay } from '../shared/utils';
 import { YieldEnvironmentLite, Contract } from "../shared/fixtures";
 import { assert, expect } from 'chai';
 
@@ -21,13 +21,7 @@ contract('Splitter', async (accounts) =>  {
     let treasury: Contract;
     let weth: Contract;
     let wethJoin: Contract;
-    let liquidations: Contract;
-    let unwind: Contract;
-    let end: Contract;
-    let chai: Contract;
     let yDai1: Contract;
-    let controllerView: Contract;
-    let pot: Contract;
     let splitter1: Contract;
     let pool1: Contract;
 

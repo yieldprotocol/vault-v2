@@ -6,21 +6,16 @@ import helper  from 'ganache-time-traveler';
 // @ts-ignore
 import { balance } from '@openzeppelin/test-helpers';
 import { WETH, daiTokens1, wethTokens1 } from '../shared/utils';
-import { Contract, YieldEnvironmentLite, MakerEnvironment } from "../shared/fixtures";
+import { Contract, YieldEnvironmentLite } from "../shared/fixtures";
 
 contract('Controller - EthProxy', async (accounts) =>  {
     let [ owner, user1, user2 ] = accounts;
 
     let snapshot: any;
     let snapshotId: string;
-    let maker: MakerEnvironment;
 
-    let dai: Contract;
     let vat: Contract;
-    let pot: Contract;
     let controller: Contract;
-    let yDai1: Contract;
-    let chai: Contract;
     let treasury: Contract;
     let ethProxy: Contract;
     let weth: Contract;
@@ -33,20 +28,16 @@ contract('Controller - EthProxy', async (accounts) =>  {
         snapshotId = snapshot['result'];
 
         const env = await YieldEnvironmentLite.setup();
-        maker = env.maker;
         controller = env.controller;
         treasury = env.treasury;
-        pot = env.maker.pot;
         vat = env.maker.vat;
-        dai = env.maker.dai;
-        chai = env.maker.chai;
         weth = env.maker.weth;
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
-        yDai1 = await env.newYDai(maturity1, "Name", "Symbol");
+        await env.newYDai(maturity1, "Name", "Symbol");
         await env.newYDai(maturity2, "Name", "Symbol");
 
         // Setup EthProxy

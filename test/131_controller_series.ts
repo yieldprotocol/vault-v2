@@ -6,15 +6,10 @@ import { YieldEnvironmentLite, Contract } from "./shared/fixtures";
 
 contract('Controller: Multi-Series', async (accounts) =>  {
     let [ owner ] = accounts;
-    const THREE_MONTHS = 7776000;
 
     let snapshot: any;
     let snapshotId: string;
 
-    let weth: Contract;
-    let dai: Contract;
-    let vat: Contract;
-    let pot: Contract;
     let controller: Contract;
     let yDai1: Contract;
     let yDai2: Contract;
@@ -28,10 +23,6 @@ contract('Controller: Multi-Series', async (accounts) =>  {
 
         const env = await YieldEnvironmentLite.setup();
         controller = env.controller;
-        weth = env.maker.weth;
-        pot = env.maker.pot;
-        vat = env.maker.vat;
-        dai = env.maker.dai;
 
         const block = await web3.eth.getBlockNumber();
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;

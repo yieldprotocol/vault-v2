@@ -2,7 +2,7 @@
 import helper from 'ganache-time-traveler';
 // @ts-ignore
 import { BN, expectRevert } from '@openzeppelin/test-helpers';
-import { WETH, rate1, daiTokens1, wethTokens1, toRay, mulRay, divRay, divrupRay, addBN, subBN } from './shared/utils';
+import { WETH, rate1, daiTokens1, wethTokens1, toRay, mulRay, divrupRay, addBN, subBN } from './shared/utils';
 import { MakerEnvironment, YieldEnvironmentLite, Contract } from "./shared/fixtures";
 import { BigNumber } from 'ethers'
 
@@ -16,7 +16,6 @@ contract('Controller - Weth', async (accounts) =>  {
     let weth: Contract;
     let dai: Contract;
     let vat: Contract;
-    let pot: Contract;
     let treasury: Contract;
     let controller: Contract;
     let yDai1: Contract;
@@ -34,7 +33,6 @@ contract('Controller - Weth', async (accounts) =>  {
         controller = env.controller;
         treasury = env.treasury;
         weth = env.maker.weth;
-        pot = env.maker.pot;
         vat = env.maker.vat;
         dai = env.maker.dai;
 

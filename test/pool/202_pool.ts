@@ -1,5 +1,4 @@
 const Pool = artifacts.require('Pool');
-const YieldMathMock = artifacts.require('YieldMathMock');
 
 // @ts-ignore
 import helper from 'ganache-time-traveler';
@@ -29,7 +28,6 @@ contract('Pool', async (accounts) =>  {
     let dai: Contract;
     let pool: Contract;
     let yDai1: Contract;
-    let yieldMath: Contract;
 
     let maturity1: number;
 
@@ -53,11 +51,6 @@ contract('Pool', async (accounts) =>  {
             "Symbol",
             { from: owner }
         );
-
-        // Setup YieldMathMock
-        yieldMath = await YieldMathMock.new();
-
-        // Test setup
 
         // Allow owner to mint yDai the sneaky way, without recording a debt in controller
         await yDai1.orchestrate(owner, { from: owner });

@@ -4,7 +4,6 @@ import { Contract } from "../shared/fixtures"
 contract('Pool', async () =>  {
     let yieldMath: Contract;
 
-    const oneToken =             '1000000000000000000';
     const yDaiReserves = '200000000000000000000000000';
     const daiReserves = '100000000000000000000000000';
 
@@ -13,7 +12,6 @@ contract('Pool', async () =>  {
     const g = '18428297329635842000';
 
     let timeTillMaturity: number;
-    let trade: string;
 
     const results = new Set();
     results.add(['trade', 'daiReserves', 'yDaiReserves', 'tokensIn', 'tokensOut']);
@@ -25,7 +23,6 @@ contract('Pool', async () =>  {
 
     describe("using values from the library", () => {
         beforeEach(async() => {
-            trade = oneToken;
             timeTillMaturity = oneYear;
         });
 

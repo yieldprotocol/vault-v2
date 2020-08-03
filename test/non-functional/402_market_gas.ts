@@ -15,8 +15,6 @@ contract('Pool', async (accounts) =>  {
     const yDaiReserves = yDaiTokens1;
 
     let env: YieldEnvironmentLite;
-    let controller: Contract;
-    let treasury: Contract;
     let dai: Contract;
     let yDai1: Contract;
     let pool: Contract;
@@ -33,8 +31,6 @@ contract('Pool', async (accounts) =>  {
         snapshotId = snapshot['result'];
 
         env = await YieldEnvironmentLite.setup();
-        controller = env.controller;
-        treasury = env.treasury;
         dai = env.maker.dai;
 
         // Setup yDai

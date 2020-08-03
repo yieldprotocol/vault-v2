@@ -14,17 +14,13 @@ contract('Unwind - Controller', async (accounts) =>  {
 
     let env: YieldEnvironment;
 
-    let dai: Contract;
-    let vat: Contract;
     let controller: Contract;
     let treasury: Contract;
     let yDai1: Contract;
     let yDai2: Contract;
     let weth: Contract;
-    let liquidations: Contract;
     let unwind: Contract;
     let end: Contract;
-    let chai: Contract;
 
     let maturity1: number;
     let maturity2: number;
@@ -44,7 +40,6 @@ contract('Unwind - Controller', async (accounts) =>  {
 
         weth = env.maker.weth;
         end = env.maker.end;
-        chai = env.maker.chai;
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();

@@ -121,6 +121,11 @@ contract Treasury is ITreasury, Orchestrated(), DecimalMath {
     {
         require(_dai.transferFrom(from, address(this), daiAmount));  // Take dai from user to Treasury
 
+        // Due to the DSR being mostly lower than the SF, it is better for us to
+        // immediately pay back as much as possible from the current debt to
+        // minimize our future stability fee liabilities. If we didn't do this,
+        // the treasury would simultaneously owe DAI (and need to pay the SF) and
+        // hold Chai, which is inefficient.
         uint256 toRepay = Math.min(debt(), daiAmount);
         if (toRepay > 0) {
             _daiJoin.join(address(this), toRepay);
@@ -215,6 +220,14 @@ contract Treasury is ITreasury, Orchestrated(), DecimalMath {
         if (toBorrow > 0) {
             (, uint256 rate,,,) = _vat.ilks(WETH); // Retrieve the MakerDAO stability fee
             // Increase the dai debt by the dai to receive divided by the stability fee
+            // `frob` deals with "normalized debt", instead of DAI.
+            // "normalized debt" is used to account for the fact that debt grows
+            // by the stability fee. The stability fee is accumulated by the "rate"
+            // variable, so if you store Dai balances in "normalized dai" you can
+            // deal with the stability fee accumulation with just a multiplication.
+            // This means that the `frob` call needs to be divided by the `rate`
+            // while the `GemJoin.exit` call can be done with the raw `toBorrow`
+            // number.
             _vat.frob(
                 WETH,
                 address(this),
@@ -222,7 +235,7 @@ contract Treasury is ITreasury, Orchestrated(), DecimalMath {
                 address(this),
                 0,
                 toInt(divdrup(toBorrow, rate))      // We need to round up, otherwise we won't exit toBorrow
-            ); // `vat.frob` reverts on failure
+            );
             _daiJoin.exit(address(this), toBorrow); // `daiJoin` reverts on failures
         }
 

@@ -139,8 +139,7 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
     /// This function can only be called by other Yield contracts, not users directly.
     /// @param to Wallet to mint the yDai in.
     /// @param yDaiAmount Amount of yDai to mint.
-    function mint(address to, uint256 yDaiAmount) public override onlyOrchestrated("YDai: Not Authorized")
-        {
+    function mint(address to, uint256 yDaiAmount) public override onlyOrchestrated("YDai: Not Authorized") {
         _mint(to, yDaiAmount);
     }
 

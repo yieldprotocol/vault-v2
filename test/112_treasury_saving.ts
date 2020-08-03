@@ -9,18 +9,12 @@ contract('Treasury - Saving', async (accounts) =>  {
     let [ owner, user ] = accounts;
 
     let treasury: Contract;
-    let vat: Contract;
-    let weth: Contract;
-    let wethJoin: Contract;
     let chai: Contract;
     let dai: Contract;
 
     beforeEach(async() => {
         const maker = await MakerEnvironment.setup();
         treasury = await maker.setupTreasury();
-        vat = maker.vat;
-        weth = maker.weth;
-        wethJoin = maker.wethJoin;
         chai = maker.chai;
         dai = maker.dai;
 

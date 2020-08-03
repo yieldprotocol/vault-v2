@@ -105,7 +105,6 @@ module.exports = async (deployer, network, accounts) => {
   const unwind = await Unwind.deployed();
   unwindAddress = unwind.address;
   await controller.orchestrate(unwindAddress);
-  await treasury.orchestrate(unwindAddress);
   await treasury.registerUnwind(unwindAddress);
 
   // Commit addresses to migrations registry

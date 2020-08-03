@@ -1,7 +1,6 @@
 const Pool = artifacts.require('Pool');
 const DaiProxy = artifacts.require('DaiProxy');
 
-import { BigNumber, BigNumberish } from 'ethers';
 import { WETH, wethTokens1, toWad, toRay, subBN, mulRay } from '../shared/utils';
 import { YieldEnvironmentLite, Contract } from "../shared/fixtures";
 // @ts-ignore

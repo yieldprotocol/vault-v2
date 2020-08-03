@@ -1,13 +1,12 @@
 // @ts-ignore
 import helper from 'ganache-time-traveler';
 // @ts-ignore
-import { BN, expectRevert } from '@openzeppelin/test-helpers';
-import { WETH, rate1, daiTokens1, wethTokens1, toRay, mulRay, divRay, divrupRay, addBN, subBN } from './shared/utils';
+import { expectRevert } from '@openzeppelin/test-helpers';
+import { WETH, rate1, daiTokens1, wethTokens1 } from './shared/utils';
 import { MakerEnvironment, YieldEnvironmentLite, Contract } from "./shared/fixtures";
-import { BigNumber } from 'ethers'
 
 contract('Controller - Delegation', async (accounts) =>  {
-    let [ owner, user1, user2, user3 ] = accounts;
+    let [ user1, user2 ] = accounts;
 
     let snapshot: any;
     let snapshotId: string;
@@ -15,12 +14,9 @@ contract('Controller - Delegation', async (accounts) =>  {
 
     let weth: Contract;
     let dai: Contract;
-    let vat: Contract;
-    let pot: Contract;
     let treasury: Contract;
     let controller: Contract;
     let yDai1: Contract;
-    let yDai2: Contract;
 
     let maturity1: number;
     let maturity2: number;
@@ -34,8 +30,6 @@ contract('Controller - Delegation', async (accounts) =>  {
         controller = env.controller;
         treasury = env.treasury;
         weth = env.maker.weth;
-        pot = env.maker.pot;
-        vat = env.maker.vat;
         dai = env.maker.dai;
 
         // Setup yDai
@@ -43,7 +37,7 @@ contract('Controller - Delegation', async (accounts) =>  {
         maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000;
         maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000;
         yDai1 = await env.newYDai(maturity1, "Name", "Symbol");
-        yDai2 = await env.newYDai(maturity2, "Name", "Symbol");
+        await env.newYDai(maturity2, "Name", "Symbol");
     });
 
     afterEach(async() => {
