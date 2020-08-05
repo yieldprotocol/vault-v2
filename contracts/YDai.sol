@@ -39,6 +39,14 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
     uint256 public override chi0;      // Chi at maturity
     uint256 public override rate0;     // Rate at maturity
 
+    uint private unlocked = 1;
+    modifier lock() {
+        require(unlocked == 1, 'YDai: Locked');
+        unlocked = 0;
+        _;
+        unlocked = 1;
+    }
+    
     /// @dev The constructor:
     /// Sets the name and symbol for the yDai token.
     /// Connects to Vat, Jug, Pot and Treasury.
@@ -114,7 +122,7 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
     // from --- yDai ---> us
     // us   --- Dai  ---> to
     function redeem(address from, address to, uint256 yDaiAmount)
-        public onlyHolderOrDelegate(from, "YDai: Only Holder Or Delegate") {
+        public onlyHolderOrDelegate(from, "YDai: Only Holder Or Delegate") lock override {
         require(
             isMature == true,
             "YDai: yDai is not mature"
@@ -129,7 +137,7 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
     /// @param to Wallet to mint the yDai in.
     /// @param yDaiAmount Amount of yDai to mint.
     /// @param data User-defined data to pass on to `executeOnFlashMint()`
-    function flashMint(address to, uint256 yDaiAmount, bytes calldata data) external override {
+    function flashMint(address to, uint256 yDaiAmount, bytes calldata data) external lock override {
         _mint(to, yDaiAmount);
         IFlashMinter(msg.sender).executeOnFlashMint(to, yDaiAmount, data);
         _burn(to, yDaiAmount);
