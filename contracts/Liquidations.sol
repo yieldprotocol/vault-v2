@@ -26,7 +26,6 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
     bytes32 public constant WETH = "ETH-A";
     uint256 public constant AUCTION_TIME = 3600;
     uint256 public constant DUST = 25000000000000000; // 0.025 ETH
-    uint128 public constant FEE = 25000000000000000; // 0.025 ETH
 
     IERC20 internal _dai;
     ITreasury internal _treasury;
@@ -105,10 +104,8 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
     }
 
     /// @dev Starts a liquidation process for an undercollateralized vault.
-    /// A liquidation fee is transferred from the liquidated user to a designated account as payment.
     /// @param user Address of the user vault to liquidate.
-    /// @param to Address of the liquidations account to receive the liquidation fee.
-    function liquidate(address user, address to)
+    function liquidate(address user)
         public onlyLive
     {
         require(
@@ -126,12 +123,10 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
         });
 
         Vault memory vault = Vault({ // TODO: Test a user that is liquidated twice
-            collateral: add(vaults[user].collateral, sub(toUint128(userCollateral), FEE)),
+            collateral: add(vaults[user].collateral, toUint128(userCollateral)),
             debt: add(vaults[user].debt, toUint128(userDebt))
         });
         vaults[user] = vault;
-
-        vaults[to].collateral = add(vaults[to].collateral, FEE);
 
         emit Liquidation(user, now, userCollateral, userDebt);
     }
@@ -179,7 +174,7 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
         return tokenAmount;
     }
 
-    /// @dev Retrieve weth from a liquidations account. This weth could come from liquidator fees or as remainders of liquidations.
+    /// @dev Retrieve weth from a liquidations account. This weth could be a remainder from liquidations.
     /// `from` can delegate to other addresses to withdraw from him.
     /// @param from Address of the liquidations user vault to withdraw weth from.
     /// @param to Address of the wallet receiving the withdrawn weth.

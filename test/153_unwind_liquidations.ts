@@ -84,8 +84,8 @@ contract('Unwind - Controller', async (accounts) =>  {
             await helper.advanceBlock();
             await yDai1.mature();
             await vat.fold(WETH, vat.address, subBN(rate2, rate1), { from: owner });
-            await liquidations.liquidate(user2, user1, { from: user1 });
-            await liquidations.liquidate(user3, user1, { from: user1 });
+            await liquidations.liquidate(user2, { from: user1 });
+            await liquidations.liquidate(user3, { from: user1 });
         });
 
         it("allows orchestrated contracts to erase liquidations vaults", async() => {

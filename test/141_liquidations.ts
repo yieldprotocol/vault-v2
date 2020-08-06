@@ -117,7 +117,7 @@ contract('Liquidations', async (accounts) =>  {
 
         it("doesn't allow to liquidate collateralized vaults", async() => {
             await expectRevert(
-                liquidations.liquidate(user2, buyer, { from: buyer }),
+                liquidations.liquidate(user2, { from: buyer }),
                 "Liquidations: Vault is not undercollateralized",
             );
         });
@@ -147,7 +147,7 @@ contract('Liquidations', async (accounts) =>  {
             });
 
             it("liquidations can be started", async() => {
-                const event = (await liquidations.liquidate(user2, buyer, { from: buyer })).logs[0];
+                const event = (await liquidations.liquidate(user2, { from: buyer })).logs[0];
                 const block = await web3.eth.getBlockNumber();
                 const now = (await web3.eth.getBlock(block)).timestamp;
 
@@ -169,7 +169,7 @@ contract('Liquidations', async (accounts) =>  {
                 );
                 assert.equal(
                     (await liquidations.vaults(user2, { from: buyer })).collateral,
-                    subBN(userCollateral.toString(), dust).toString(),
+                    userCollateral.toString(),
                 );
                 assert.equal(
                     (await liquidations.totals({ from: buyer })).collateral,
@@ -191,16 +191,12 @@ contract('Liquidations', async (accounts) =>  {
                     await controller.totalDebtDai(WETH, user2, { from: buyer }),
                     0,
                 );
-                assert.equal(
-                    (await liquidations.vaults(buyer, { from: buyer })).collateral,
-                    dust,
-                );
             });
 
             describe("with started liquidations", () => {
                 beforeEach(async() => {
-                    await liquidations.liquidate(user2, buyer, { from: buyer });
-                    await liquidations.liquidate(user3, buyer, { from: buyer });
+                    await liquidations.liquidate(user2, { from: buyer });
+                    await liquidations.liquidate(user3, { from: buyer });
 
                     userCollateral = new BN((await liquidations.vaults(user2, { from: buyer })).collateral).toString();
                     userDebt = new BN((await liquidations.vaults(user2, { from: buyer })).debt).toString();
