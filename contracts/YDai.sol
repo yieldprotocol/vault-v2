@@ -30,6 +30,8 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
 
     bytes32 public constant WETH = "ETH-A";
 
+    uint256 constant internal MAX_TIME_TO_MATURITY = 126144000; // seconds in four years
+
     IVat internal _vat;
     IPot internal _pot;
     ITreasury internal _treasury;
@@ -52,6 +54,8 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
         string memory name,
         string memory symbol
     ) public ERC20(name, symbol) {
+        // solium-disable-next-line security/no-block-members
+        require(maturity_ > now && maturity_ < now + MAX_TIME_TO_MATURITY, "YDai: Invalid maturity");
         _vat = IVat(vat_);
         _pot = IPot(pot_);
         _treasury = ITreasury(treasury_);

@@ -29,12 +29,13 @@ contract('yDai', async (accounts) =>  {
     let dai: Contract;
     let yDai1: Contract;
     let flashMinter: Contract;
+    let env: YieldEnvironmentLite;
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
         snapshotId = snapshot['result'];
 
-        const env = await YieldEnvironmentLite.setup();
+        env = await YieldEnvironmentLite.setup();
         treasury = env.treasury;
         weth = env.maker.weth;
         pot = env.maker.pot;
@@ -82,6 +83,23 @@ contract('yDai', async (accounts) =>  {
             await yDai1.maturity(),
             maturity.toString(),
             "maturity not initialized",
+        );
+    });
+
+    it("should fail to set up yDai with an invalid maturity date", async() => {
+        const block = await web3.eth.getBlockNumber();
+        const timestamp = (await web3.eth.getBlock(block)).timestamp;
+        const earlyMaturity = timestamp - 1000;
+        const lateMaturity = timestamp + 126144000 + 15;
+
+        await expectRevert(
+            env.newYDai(earlyMaturity, "Name", "Symbol", true),
+            "YDai: Invalid maturity"
+        );
+
+        await expectRevert(
+            env.newYDai(lateMaturity, "Name", "Symbol", true),
+            "YDai: Invalid maturity"
         );
     });
 
