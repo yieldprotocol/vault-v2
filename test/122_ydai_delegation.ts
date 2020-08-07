@@ -121,6 +121,7 @@ contract('yDai - Delegation', async (accounts) =>  {
         );
     });
 
+    
     describe("with delegates", async() => {
         beforeEach(async() => {
             await yDai1.addDelegate(other, { from: holder });
@@ -140,6 +141,28 @@ contract('yDai - Delegation', async (accounts) =>  {
             await expectRevert(
                 yDai1.redeem(holder, holder, daiTokens1, { from: other }),
                 "YDai: Only Holder Or Delegate",
+            );
+        });
+
+        it("cannot add delegate again or remove delegate twice", async() => {
+            await expectRevert(
+                yDai1.addDelegate(other, { from: holder }),
+                "Delegable: Already delegated",
+            );
+
+            expectEvent(
+                await yDai1.revokeDelegate(other, { from: holder }),
+                "Delegate",
+                {
+                    user: holder,
+                    delegate: other,
+                    enabled: false,
+                },
+            );
+
+            await expectRevert(
+                yDai1.revokeDelegate(other, { from: holder }),
+                "Delegable: Already undelegated",
             );
         });
     });
