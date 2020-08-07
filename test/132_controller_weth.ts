@@ -2,7 +2,7 @@
 import helper from 'ganache-time-traveler';
 // @ts-ignore
 import { BN, expectRevert } from '@openzeppelin/test-helpers';
-import { WETH, rate1, daiTokens1, wethTokens1, toRay, mulRay, divrupRay, addBN, subBN } from './shared/utils';
+import { WETH, INVALID_COLLATERAL, rate1, daiTokens1, wethTokens1, toRay, mulRay, divrupRay, addBN, subBN } from './shared/utils';
 import { MakerEnvironment, YieldEnvironmentLite, Contract } from "./shared/fixtures";
 import { BigNumber } from 'ethers'
 
@@ -66,6 +66,13 @@ contract('Controller - Weth', async (accounts) =>  {
             "|" + ("" + sizeOfC).padStart(16, ' ') + "  |");
         console.log("    ·--------------------|------------------|------------------|------------------·");
         console.log();
+    });
+
+    it("reverts on invalid collateral types", async () => {
+        await expectRevert(
+            controller.powerOf(INVALID_COLLATERAL, user1),
+            "Controller: Invalid collateral type",
+        );
     });
 
     it("it doesn't allow to post weth below dust level", async() => {

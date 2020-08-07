@@ -54,6 +54,7 @@ export function divrupRay(x: BigNumberish, ray: BigNumberish): BigNumber {
 
 export const CHAI = formatBytes32String('CHAI')
 export const WETH = formatBytes32String('ETH-A')
+export const INVALID_COLLATERAL = formatBytes32String('INVALID')
 export const Line = formatBytes32String('Line')
 export const spotName = formatBytes32String('spot')
 export const linel = formatBytes32String('line')
