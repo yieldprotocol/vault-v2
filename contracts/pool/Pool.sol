@@ -102,7 +102,7 @@ contract Pool is IPool, ERC20, Delegable {
     /// @param daiOffered Amount of `dai` being invested, an appropriate amount of `yDai` to be invested alongside will be calculated and taken by this function from the caller.
     /// @return The amount of liquidity tokens minted.
     function mint(uint256 daiOffered)
-        external
+        external override
         returns (uint256)
     {
         uint256 supply = totalSupply();

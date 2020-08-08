@@ -12,36 +12,39 @@ contract LiquidityProxy {
     uint256 constant public ONE = 1000000000000000000;
     IController public controller;
     IChai public chai;
+    IERC20 public dai;
+    IYDai public yDai;
+    IPool public pool;
 
     /// @dev The constructor links ControllerDai to vat, pot, controller and pool.
     constructor (
         address controller_,
-        address chai_
+        address chai_,
+        address dai_,
+        address yDai_,
+        address pool_
     ) public {
-        _vat = IVat(vat_);
-        _dai = IERC20(dai_);
-        _pot = IPot(pot_);
-        _yDai = IERC20(yDai_);
-        _controller = IController(controller_);
-        _pool = IPool(pool_);
-
-
+        controller = IController(controller_);
+        chai = IChai(chai_);
+        dai = IERC20(dai_);
+        yDai = IYDai(yDai_);
+        pool = IPool(pool_);
     }
 
     /// @dev Overflow-protected addition, from OpenZeppelin
-    function add(uint128 a, uint128 b)
-        internal pure returns (uint128)
+    function add(uint256 a, uint256 b)
+        internal pure returns (uint256)
     {
-        uint128 c = a + b;
+        uint256 c = a + b;
         require(c >= a, "Liquidity Proxy: add overflow");
 
         return c;
     }
 
     /// @dev Overflow-protected substraction, from OpenZeppelin
-    function sub(uint128 a, uint128 b) internal pure returns (uint128) {
+    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
         require(b <= a, "Liquidity Proxy: sub overflow");
-        uint128 c = a - b;
+        uint256 c = a - b;
 
         return c;
     }
@@ -60,22 +63,20 @@ contract LiquidityProxy {
     /// @param daiUsed Amount of `dai` to use in minting liquidity tokens
     /// @return The amount of liquidity tokens minted.  
      
-    function addLiquidity(address from, address pool_, uint256 daiUsed) external
+    function addLiquidity(address from,  uint256 daiUsed) external returns (uint256)
     {
-        IPool pool = IPool(pool_);
-        IERC20 dai = pool.dai;
-        IYDai yDai = pool.yDai;
-        uint256 daiReserves = dai.balanceOf(pool_);
-        uint256 yDaiReserves = yDai.balanceOf(pool_);
-        uint256 divisor = ONE.add(div(yDaiReserves, daiReserves));
+        uint256 daiReserves = dai.balanceOf(address(pool));
+        uint256 yDaiReserves = yDai.balanceOf(address(pool));
+        uint256 divisor = add(ONE, div(yDaiReserves, daiReserves));
         uint256 daiToAdd = div(daiUsed, divisor);
         uint256 DaiToChai = sub(daiUsed, daiToAdd);
         // borrow yDai
-        require(dai.transferFrom(fromr, address(this), DaiToChai));
+        require(dai.transferFrom(from, address(this), DaiToChai), "addLiquidity: Transfer Failed");
         chai.join(address(this), DaiToChai);
-        controller.post(CHAI, msg.sender, msg.sender, amount);
-        controller.borrow(CHAI, yDai.maturity, address(this), address(this), DaiToChai);
-        pool.mint(daiToAdd);
+        uint256 balance = chai.balanceOf(address(this));
+        controller.post("CHAI", msg.sender, msg.sender, balance);
+        controller.borrow("CHAI", yDai.maturity(), address(this), address(this), DaiToChai);
+        return pool.mint(daiToAdd);
     }
 
 }

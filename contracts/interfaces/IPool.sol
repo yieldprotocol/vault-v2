@@ -15,4 +15,5 @@ interface IPool {
     function buyDaiPreview(uint128 daiOut) external view returns(uint128);
     function sellYDaiPreview(uint128 yDaiIn) external view returns(uint128);
     function buyYDaiPreview(uint128 yDaiOut) external view returns(uint128);
+    function mint(uint256 daiOffered) external returns (uint256);
 }
