@@ -234,8 +234,9 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         } else if (collateral == CHAI) {
             uint256 chi = _pot.chi();
             return muld(posted[collateral][user], chi);
+        } else {
+            revert("Controller: Invalid collateral type");
         }
-        return 0;
     }
 
     /// @dev Returns the amount of collateral locked in borrowing operations.
