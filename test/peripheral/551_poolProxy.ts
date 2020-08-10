@@ -33,6 +33,8 @@ contract('LiquidityProxy', async (accounts) =>  {
     let pool: Contract;
     let yDai1: Contract;
     let proxy: Contract;
+    let treasury: Contract;
+    
 
     let maturity1: number;
 
@@ -45,6 +47,7 @@ contract('LiquidityProxy', async (accounts) =>  {
         chai = env.maker.chai;
         dai = env.maker.dai;
         controller = env.controller;
+        treasury = env.treasury;
 
         // Setup yDai
         const block = await web3.eth.getBlockNumber();
@@ -70,6 +73,7 @@ contract('LiquidityProxy', async (accounts) =>  {
             dai.address,
             yDai1.address,
             pool.address,
+            treasury.address,
             { from: owner }
         )
 
@@ -289,6 +293,15 @@ contract('LiquidityProxy', async (accounts) =>  {
                 assert.equal(event.args.yDaiTokens, yDaiIn.mul(new BN('-1')).toString());
                 assert.equal(event.args.poolTokens, minted.toString());
             });
+
+            it("mints liquidity tokens with Proxy", async() => {
+                await dai.mint(user1, oneToken, { from: owner });
+                await dai.approve(proxy.address, oneToken, { from: user1 });
+                //await yDai1.approve(pool.address, yDaiTokens1, { from: user1 });
+                await controller.addDelegate(proxy.address, { from: user1 });
+                const tx = await proxy.addLiquidity(user1, oneToken, { from: user1 });
+                console.log(tx);
+            });   
     
             it("burns liquidity tokens", async() => {   
                 // Use this to test: https://www.desmos.com/calculator/ubsalzunpo

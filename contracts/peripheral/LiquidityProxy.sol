@@ -5,6 +5,7 @@ import "../interfaces/IPool.sol";
 import "../interfaces/IController.sol";
 import "../interfaces/IChai.sol";
 import "@openzeppelin/contracts/math/Math.sol";
+
 /**
  * @dev The LiquidityProxy is a proxy contract of Pool that allows users to mint liquidity tokens with just Dai. 
  */
@@ -22,13 +23,19 @@ contract LiquidityProxy {
         address chai_,
         address dai_,
         address yDai_,
-        address pool_
+        address pool_,
+        address treasury_
     ) public {
         controller = IController(controller_);
         chai = IChai(chai_);
         dai = IERC20(dai_);
         yDai = IYDai(yDai_);
         pool = IPool(pool_);
+
+        dai.approve(address(pool), uint256(-1));
+        yDai.approve(address(pool), uint256(-1));
+        dai.approve(address(chai), uint256(-1));
+        chai.approve(address(treasury_), uint256(-1));
     }
 
     /// @dev Overflow-protected addition, from OpenZeppelin
@@ -71,11 +78,12 @@ contract LiquidityProxy {
         uint256 daiToAdd = div(daiUsed, divisor);
         uint256 DaiToChai = sub(daiUsed, daiToAdd);
         // borrow yDai
-        require(dai.transferFrom(from, address(this), DaiToChai), "addLiquidity: Transfer Failed");
+        require(dai.transferFrom(from, address(this), daiUsed), "addLiquidity: Transfer Failed");
         chai.join(address(this), DaiToChai);
         uint256 balance = chai.balanceOf(address(this));
-        controller.post("CHAI", msg.sender, msg.sender, balance);
+        controller.post("CHAI", address(this), msg.sender, balance);
         controller.borrow("CHAI", yDai.maturity(), address(this), address(this), DaiToChai);
+        dai.approve(address(pool), daiToAdd);
         return pool.mint(daiToAdd);
     }
 
