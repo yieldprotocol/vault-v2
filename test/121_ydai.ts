@@ -1,5 +1,6 @@
 import { YieldEnvironmentLite, Contract } from "./shared/fixtures";
 const FlashMinterMock = artifacts.require('FlashMinterMock');
+const FlashMintRedeemerMock = artifacts.require('FlashMintRedeemerMock');
 
 import { WETH, chi1, rate1, daiTokens1, wethTokens1, toRay, mulRay, divRay, subBN } from './shared/utils';
 
@@ -30,6 +31,7 @@ contract('yDai', async (accounts) =>  {
     let yDai1: Contract;
     let flashMinter: Contract;
     let env: YieldEnvironmentLite;
+    let flashMintRedeemer: Contract;
 
     beforeEach(async() => {
         snapshot = await helper.takeSnapshot();
@@ -50,6 +52,10 @@ contract('yDai', async (accounts) =>  {
         // Test setup
         // Setup Flash Minter
         flashMinter = await FlashMinterMock.new(
+            { from: owner },
+        );
+
+        flashMintRedeemer = await FlashMintRedeemerMock.new(
             { from: owner },
         );
         
@@ -134,7 +140,7 @@ contract('yDai', async (accounts) =>  {
         );
     });
 
-    it("yDai flash mints", async() => {
+    it("yDai1 flash mints", async() => {
         const yDaiSupply = await yDai1.totalSupply();
         expectEvent(
             await flashMinter.flashMint(yDai1.address, daiTokens1, web3.utils.fromAscii("DATA"), { from: user1 }),
@@ -191,6 +197,38 @@ contract('yDai', async (accounts) =>  {
             );
         });
 
+        it("yDai1 still flash mints", async() => {
+            const yDaiSupply = await yDai1.totalSupply();
+            expectEvent(
+                await flashMinter.flashMint(yDai1.address, daiTokens1, web3.utils.fromAscii("DATA"), { from: user1 }),
+                "Parameters",
+                {
+                    user: flashMinter.address,
+                    amount: daiTokens1.toString(),
+                    data: web3.utils.fromAscii("DATA"),
+                },
+            );
+    
+            assert.equal(
+                await flashMinter.flashBalance(),
+                daiTokens1.toString(),
+                "FlashMinter should have seen the tokens",
+            );
+            assert.equal(
+                await yDai1.totalSupply(),
+                yDaiSupply.toString(),
+                "There should be no change in yDai supply",
+            );
+        });
+
+        it("yDai1 cannot redeem during flash mint", async() => {
+            const yDaiSupply = await yDai1.totalSupply();
+            await expectRevert(
+                flashMintRedeemer.flashMint(yDai1.address, daiTokens1, web3.utils.fromAscii("DATA"), { from: user1 }),
+                "YDai: Locked"
+            );
+        });
+    
         it("yDai1 rate gets fixed at maturity time", async() => {
             await vat.fold(WETH, vat.address, subBN(rate2, rate1), { from: owner });
             
