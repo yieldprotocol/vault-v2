@@ -1,10 +1,24 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.6.10;
 
-import "../interfaces/IPool.sol";
 import "../interfaces/IController.sol";
 import "../interfaces/IChai.sol";
 import "@openzeppelin/contracts/math/Math.sol";
+
+
+interface IPool {
+    function transfer(address recipient, uint256 amount) external returns (bool);
+    function sellDai(address from, address to, uint128 daiIn) external returns(uint128);
+    function buyDai(address from, address to, uint128 daiOut) external returns(uint128);
+    function sellYDai(address from, address to, uint128 yDaiIn) external returns(uint128);
+    function buyYDai(address from, address to, uint128 yDaiOut) external returns(uint128);
+    function sellDaiPreview(uint128 daiIn) external view returns(uint128);
+    function buyDaiPreview(uint128 daiOut) external view returns(uint128);
+    function sellYDaiPreview(uint128 yDaiIn) external view returns(uint128);
+    function buyYDaiPreview(uint128 yDaiOut) external view returns(uint128);
+    function mint(uint256 daiOffered) external returns (uint256);
+}
+
 
 /**
  * @dev The LiquidityProxy is a proxy contract of Pool that allows users to mint liquidity tokens with just Dai. 
@@ -72,19 +86,28 @@ contract LiquidityProxy {
      
     function addLiquidity(address from,  uint256 daiUsed) external returns (uint256)
     {
+        require(dai.transferFrom(from, address(this), daiUsed), "addLiquidity: Transfer Failed");
+        
+        // calculate needed yDai
         uint256 daiReserves = dai.balanceOf(address(pool));
         uint256 yDaiReserves = yDai.balanceOf(address(pool));
         uint256 divisor = add(ONE, div(yDaiReserves, daiReserves));
         uint256 daiToAdd = div(daiUsed, divisor);
         uint256 DaiToChai = sub(daiUsed, daiToAdd);
-        // borrow yDai
-        require(dai.transferFrom(from, address(this), daiUsed), "addLiquidity: Transfer Failed");
+        
+        // borrow needed yDai
         chai.join(address(this), DaiToChai);
         uint256 balance = chai.balanceOf(address(this));
+        // look at the balance of chai in dai to avoid rounding issues
+        uint256 toBorrow = chai.dai(address(this));
         controller.post("CHAI", address(this), msg.sender, balance);
-        controller.borrow("CHAI", yDai.maturity(), address(this), address(this), DaiToChai);
+        controller.borrow("CHAI", yDai.maturity(), msg.sender, address(this), toBorrow);
+        
+        // mint liquidity tokens
         dai.approve(address(pool), daiToAdd);
-        return pool.mint(daiToAdd);
+        uint256 minted = pool.mint(daiToAdd);
+        pool.transfer(msg.sender, minted);
+        return minted; 
     }
 
 }
