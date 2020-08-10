@@ -27,7 +27,6 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
     uint256 public constant AUCTION_TIME = 3600;
     uint256 public constant DUST = 25000000000000000; // 0.025 ETH
 
-    IERC20 internal _dai;
     ITreasury internal _treasury;
     IController internal _controller;
 
@@ -44,11 +43,9 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
 
     /// @dev The Liquidations constructor links it to the Dai, Treasury and Controller contracts.
     constructor (
-        address dai_,
         address treasury_,
         address controller_
     ) public {
-        _dai = IERC20(dai_);
         _treasury = ITreasury(treasury_);
         _controller = IController(controller_);
     }

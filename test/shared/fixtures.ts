@@ -221,7 +221,7 @@ export class YieldEnvironment extends YieldEnvironmentLite {
   public static async setup() {
     const { maker, treasury, controller } = await YieldEnvironmentLite.setup();
 
-    const liquidations = await Liquidations.new(maker.dai.address, treasury.address, controller.address)
+    const liquidations = await Liquidations.new(treasury.address, controller.address)
     await controller.orchestrate(liquidations.address)
     await treasury.orchestrate(liquidations.address)
 
