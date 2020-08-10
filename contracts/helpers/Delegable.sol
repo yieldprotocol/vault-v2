@@ -19,12 +19,14 @@ contract Delegable {
 
     /// @dev Enable a delegate to act on the behalf of caller
     function addDelegate(address delegate) public {
+        require(!delegated[msg.sender][delegate], "Delegable: Already delegated");
         delegated[msg.sender][delegate] = true;
         emit Delegate(msg.sender, delegate, true);
     }
 
     /// @dev Stop a delegate from acting on the behalf of caller
     function revokeDelegate(address delegate) public {
+        require(delegated[msg.sender][delegate], "Delegable: Already undelegated");
         delegated[msg.sender][delegate] = false;
         emit Delegate(msg.sender, delegate, false);
     }
