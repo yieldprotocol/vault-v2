@@ -1,4 +1,4 @@
-const { BN } = require('@openzeppelin/test-helpers');
+const { BigNumber } = require("ethers");
 
 // External
 const Migrations = artifacts.require('Migrations');
@@ -15,9 +15,25 @@ const YDai = artifacts.require('YDai');
 // Peripheral
 const Pool = artifacts.require('Pool');
 
-module.exports = async (callback) => {
+// Maths brought in cos
+const UNIT = BigNumber.from(10).pow(BigNumber.from(27))
+function toRay(value) {
+    let exponent = BigNumber.from(10).pow(BigNumber.from(17))
+    return BigNumber.from((value) * 10 ** 10).mul(exponent)
+  }
+function toWad(value){
+    let exponent = BigNumber.from(10).pow(BigNumber.from(8))
+    return BigNumber.from((value) * 10 ** 10).mul(exponent)
+}
+function mulRay(x, ray){
+    return BigNumber.from(x).mul(BigNumber.from(ray)).div(UNIT)
+  }
+function divRay(x, ray){
+    console.log(x,ray)
+    return UNIT.mul(BigNumber.from(x)).div(BigNumber.from(ray))
+}
 
-    const { toWad, toRay, toRad, addBN, subBN, mulRay, divRay } = require('../test/shared/utils');
+module.exports = async (callback) => {
 
     // const { assert, expect } = require('chai');
     let [ owner, user1, operator, from, to ] = await web3.eth.getAccounts()
@@ -30,12 +46,6 @@ module.exports = async (callback) => {
     let daiJoin = await DaiJoin.deployed();
 
     let WETH = web3.utils.fromAscii("ETH-A");
-
-    // let ilks = await vat.ilks(web3.utils.fromAscii(WETH))
-    // let spot = ilks.spot;
-    // let rate1 = ilks.rate;
-    // console.log(ilks.spot.toString())
-    // console.log(ilks.rate.toString())
 
     let spot = toRay(150);
     let rate1 = toRay(1.25);
@@ -54,7 +64,7 @@ module.exports = async (callback) => {
         const _daiDebt = divRay(_daiTokens, rate1);
         const _wethTokens = divRay(_daiTokens, spot);
 
-        await weth.deposit({ from: user, value: _wethTokens });
+        await weth.deposit({ from: user, value: _wethTokens.toString() });
         console.log('Passed deposit');
         await weth.approve(wethJoin.address, _wethTokens, { from: user });
         console.log('Passed approve');
@@ -68,19 +78,19 @@ module.exports = async (callback) => {
 
     let yDaiAddr = await migrations.contracts(web3.utils.fromAscii(`yDai0`))
     let yDai0 = await YDai.at(yDaiAddr);
-    let poolAddr = await migrations.contracts(web3.utils.fromAscii(`Pool-yDai0`));
+    let yDai0Name = await yDai0.name();
+    let poolAddr = await migrations.contracts(web3.utils.fromAscii(`${yDai0Name}-Pool`));
     let pool = await Pool.at(poolAddr);
     let maturity = await yDai0.maturity();
 
-    try { 
+    try {        
         // Allow owner to mint yDai the sneaky way, without recording a debt in dealer
         await yDai0.orchestrate(owner, { from: owner });
 
         const daiReserves = daiTokens1;
-        await getDai(user1, daiReserves);
-    
-        await dai.approve(pool.address, daiReserves, { from: user1 });
-        await pool.init(daiReserves, { from: user1 });
+        await getDai(user1, daiReserves);       console.log('0')
+        await dai.approve(pool.address, daiReserves, { from: user1 });       console.log('1')
+        await pool.init(daiReserves, { from: user1 });     console.log('2')
 
         const additionalYDaiReserves = toWad(34.4);
         await yDai0.mint(user1, additionalYDaiReserves, { from: owner });
@@ -90,13 +100,9 @@ module.exports = async (callback) => {
         console.log("        initial liquidity...");
         console.log("        daiReserves: %d", (await pool.getDaiReserves()).toString());
         console.log("        yDaiReserves: %d", (await pool.getYDaiReserves()).toString());
-        const t = new BN((await web3.eth.getBlock(await web3.eth.getBlockNumber())).timestamp);
-        console.log("        timeTillMaturity: %d", (new BN(maturity).sub(t).toString()));
         console.log();
         console.log('pool initiated')
         callback()
     } catch (e) {console.log(e)}
 
 }
-
-
