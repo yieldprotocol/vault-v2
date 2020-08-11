@@ -4,14 +4,14 @@ const LiquidityProxy = artifacts.require('LiquidityProxy');
 
 // @ts-ignore
 import helper from 'ganache-time-traveler';
-import { toWad, toRay, mulRay } from '../shared/utils';
+import { CHAI, toWad, toRay, mulRay } from '../shared/utils';
 import { YieldEnvironmentLite, Contract } from "../shared/fixtures";
 // @ts-ignore
 import { BN, expectRevert } from '@openzeppelin/test-helpers';
 import { assert, expect } from 'chai';
 
 contract('LiquidityProxy', async (accounts) =>  {
-    let [ owner, user1, operator, from, to ] = accounts;
+    let [ owner, user1, operator, user2, to ] = accounts;
 
     // These values impact the pool results
     const rate1 = toRay(1.4);
@@ -119,21 +119,43 @@ contract('LiquidityProxy', async (accounts) =>  {
         it("mints liquidity tokens with Proxy", async() => {
             const oneToken = toWad(1);
 
-            const poolTokensBefore = new BN(await pool.balanceOf(user1));
-            const expectedMinted = new BN('984749191303759736');
+            const poolTokensBefore = new BN(await pool.balanceOf(user2));
+            const expectedMinted = new BN('984749191303759738');
+            const expectedCollateral = new BN('210040750129274150');
+            const expectedDebt = new BN('252048900155128980');
 
-            await dai.mint(user1, oneToken, { from: owner });
-            await dai.approve(proxy.address, oneToken, { from: user1 });
-            await controller.addDelegate(proxy.address, { from: user1 });
-            const tx = await proxy.addLiquidity(user1, oneToken, { from: user1 });
+            await dai.mint(user2, oneToken, { from: owner });
+            await dai.approve(proxy.address, oneToken, { from: user2 });
+            await controller.addDelegate(proxy.address, { from: user2 });
+            const tx = await proxy.addLiquidity(user2, oneToken, { from: user2 });
 
-            const minted = (new BN(await pool.balanceOf(user1))).sub(poolTokensBefore);
+            const minted = (new BN(await pool.balanceOf(user2))).sub(poolTokensBefore);
+            const collateral = new BN(await controller.posted(CHAI, user2));
+            const debt = new BN(await controller.debtYDai(CHAI, maturity1, user2));
 
             //asserts
             assert.equal(
                 minted.toString(),
-                expectedMinted
+                expectedMinted,
+                "User1 should have pool Tokens"
             );
+
+            assert.equal(
+                collateral.toString(),
+                expectedCollateral,
+                "User1 should have posted Collateral"
+            );
+
+            console.log(debt.toString());
+            console.log((expectedMinted.add(debt)).toString());      
+            assert.equal(
+                debt.toString(),
+                expectedDebt,
+                "User1 should have Debt"
+            );
+            //console.log(collateral.toString());
+            
+
         });   
     });
 });

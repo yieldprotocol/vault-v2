@@ -4,7 +4,7 @@ pragma solidity ^0.6.10;
 import "../interfaces/IController.sol";
 import "../interfaces/IChai.sol";
 import "@openzeppelin/contracts/math/Math.sol";
-
+import "@nomiclabs/buidler/console.sol";
 
 interface IPool {
     function transfer(address recipient, uint256 amount) external returns (bool);
@@ -76,9 +76,9 @@ contract LiquidityProxy {
     }
 
     /// @dev Divides x by y, where x and y are fixed point with 18 decimals
-    function div(uint x, uint y) internal pure returns (uint z) {
-        z = mul(x, ONE) / y;
-    }
+    //function div(uint x, uint y) internal pure returns (uint z) {
+    //    z = mul(x, ONE) / y;
+    //}
 
     // @dev mints liquidity with provided Dai by borrowing yDai with some of the Dai
     /// @param daiUsed Amount of `dai` to use in minting liquidity tokens
@@ -91,10 +91,9 @@ contract LiquidityProxy {
         // calculate needed yDai
         uint256 daiReserves = dai.balanceOf(address(pool));
         uint256 yDaiReserves = yDai.balanceOf(address(pool));
-        uint256 divisor = add(ONE, div(yDaiReserves, daiReserves));
-        uint256 daiToAdd = div(daiUsed, divisor);
-        uint256 DaiToChai = sub(daiUsed, daiToAdd);
-        
+        uint256 DaiToChai = mul(daiUsed, yDaiReserves) / add(yDaiReserves, daiReserves);
+        uint256 daiToAdd = sub(daiUsed, DaiToChai);
+
         // borrow needed yDai
         chai.join(address(this), DaiToChai);
         uint256 balance = chai.balanceOf(address(this));
