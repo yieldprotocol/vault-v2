@@ -83,9 +83,10 @@ contract LiquidityProxy {
     //}
 
     // @dev mints liquidity with provided Dai by borrowing yDai with some of the Dai
-    /// @param daiUsed Amount of `dai` to use in minting liquidity tokens
+    /// @param from Wallet providing the dai being used. Must have approved the operator with `dai.approve(operator)` and `controller..addDelegate(operator)`.
+    /// @param daiUsed amount of Dai to use to mint liquidity. 
+    /// @param maxYDai maximum amount of yDai to be borrowed to mint liquidity. 
     /// @return The amount of liquidity tokens minted.  
-     
     function addLiquidity(address from,  uint256 daiUsed, uint256 maxYDai) external returns (uint256)
     {
         require(dai.transferFrom(from, address(this), daiUsed), "addLiquidity: Transfer Failed");
@@ -113,7 +114,10 @@ contract LiquidityProxy {
     }
 
     /// @dev burns tokens and repays yDai debt. Buys needed yDai or sells any excess, and all Dai is returned. 
-    function removeLiquidityEarly(address from, uint256 poolTokens, uint256 DaiLimit) external returns (uint256)
+    /// @param from Wallet providing the dai being burned. Must have approved the operator with `pool.approve(operator)` and `controller.addDelegate(operator)`.
+    /// @param poolTokens amount of pool tokens to burn. 
+    /// @param daiLimit maximum amount of Dai to be bought or sold with yDai when burning. 
+    function removeLiquidityEarly(address from, uint256 poolTokens, uint256 daiLimit) external returns (uint256)
     {
         require(pool.transferFrom(from, address(this), poolTokens), "removeLiquidityEarlySell: Transfer Failed");
         pool.burn(poolTokens);
@@ -123,10 +127,10 @@ contract LiquidityProxy {
         uint256 result;
         if (balance >= debt){
             result = pool.sellYDai(address(this), address(this), uint128(sub(balance, debt)));
-            require(result >= DaiLimit, "removeLiquidityEarlySell: insufficient Dai purchased");
+            require(result >= daiLimit, "removeLiquidityEarlySell: insufficient Dai purchased");
         } else {
             result = pool.buyYDai(address(this), address(this), uint128(sub(debt, balance)));
-            require(result <= DaiLimit, "removeLiquidityEarlySell: excessive Dai sold");
+            require(result <= daiLimit, "removeLiquidityEarlySell: excessive Dai sold");
         }
         // repay debt
         controller.repayYDai("CHAI", mat, address(this), from, debt);
@@ -137,7 +141,9 @@ contract LiquidityProxy {
         
     }
 
-    /// @dev burns tokens and repays yDai debt after Maturity. Buys needed yDai or sells any excess, and all Dai is returned. 
+    /// @dev burns tokens and repays yDai debt after Maturity. 
+    /// @param from Wallet providing the dai being burned. Must have approved the operator with `pool.approve(operator)` and `controller.addDelegate(operator)`.
+    /// @param poolTokens amount of pool tokens to burn. 
     function removeLiquidityMature(address from, uint256 poolTokens) external returns (uint256)
     {
         require(pool.transferFrom(from, address(this), poolTokens), "removeLiquidityMature: Transfer Failed");
