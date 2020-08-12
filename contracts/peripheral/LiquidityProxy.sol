@@ -4,9 +4,11 @@ pragma solidity ^0.6.10;
 import "../interfaces/IController.sol";
 import "../interfaces/IChai.sol";
 import "@openzeppelin/contracts/math/Math.sol";
+import "@nomiclabs/buidler/console.sol";
 
 interface IPool {
     function transfer(address recipient, uint256 amount) external returns (bool);
+    function transferFrom(address src, address dst, uint wad) external returns (bool);
     function sellDai(address from, address to, uint128 daiIn) external returns(uint128);
     function buyDai(address from, address to, uint128 daiOut) external returns(uint128);
     function sellYDai(address from, address to, uint128 yDaiIn) external returns(uint128);
@@ -16,6 +18,7 @@ interface IPool {
     function sellYDaiPreview(uint128 yDaiIn) external view returns(uint128);
     function buyYDaiPreview(uint128 yDaiOut) external view returns(uint128);
     function mint(uint256 daiOffered) external returns (uint256);
+    function burn(uint256 tokensBurned) external returns (uint256, uint256);
 }
 
 
@@ -109,4 +112,48 @@ contract LiquidityProxy {
         return minted; 
     }
 
+    /// @dev burns tokens and repays yDai debt. Buys needed yDai or sells any excess, and all Dai is returned. 
+    function removeLiquidityEarly(address from, uint256 poolTokens, uint256 DaiLimit) external returns (uint256)
+    {
+        require(pool.transferFrom(from, address(this), poolTokens), "removeLiquidityEarlySell: Transfer Failed");
+        pool.burn(poolTokens);
+        uint256 mat = yDai.maturity();
+        uint256 balance = yDai.balanceOf(address(this));
+        uint256 debt = controller.debtYDai("CHAI", mat , from);
+        uint256 result;
+        if (balance >= debt){
+            result = pool.sellYDai(address(this), address(this), uint128(sub(balance, debt)));
+            require(result >= DaiLimit, "removeLiquidityEarlySell: insufficient Dai purchased");
+        } else {
+            result = pool.buyYDai(address(this), address(this), uint128(sub(debt, balance)));
+            require(result <= DaiLimit, "removeLiquidityEarlySell: excessive Dai sold");
+        }
+        // repay debt
+        controller.repayYDai("CHAI", mat, address(this), from, debt);
+        controller.withdraw("CHAI", from, address(this), controller.posted("CHAI", from));
+        // unwrap Chai
+        chai.exit(address(this), chai.balanceOf(address(this)));
+        require(dai.transfer(from, dai.balanceOf(address(this))), "removeLiquidityEarlySell: Dai Transfer Failed");
+        
+    }
+
+    /// @dev burns tokens and repays yDai debt after Maturity. Buys needed yDai or sells any excess, and all Dai is returned. 
+    function removeLiquidityMature(address from, uint256 poolTokens) external returns (uint256)
+    {
+        require(pool.transferFrom(from, address(this), poolTokens), "removeLiquidityMature: Transfer Failed");
+        pool.burn(poolTokens);
+        uint256 mat = yDai.maturity();
+        uint256 balance = yDai.balanceOf(address(this));
+        if (balance > 0){
+            yDai.redeem(address(this), address(this), balance);
+        }
+        uint256 daiBalance = dai.balanceOf(address(this));
+        // repay debt
+        controller.repayDai("CHAI", mat, address(this), from, daiBalance);
+        controller.withdraw("CHAI", from, from, controller.posted("CHAI", from));
+        // unwrap Chai
+        chai.exit(address(this), chai.balanceOf(address(this)));
+        require(dai.transfer(from, dai.balanceOf(address(this))), "removeLiquidityMature: Dai Transfer Failed");
+        
+    }
 }
