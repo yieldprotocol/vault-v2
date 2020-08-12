@@ -47,7 +47,6 @@ contract('Controller - EthProxy', async (accounts) =>  {
             controller.address,
             { from: owner },
         );
-        await controller.addDelegate(ethProxy.address, { from: user1 });
     });
 
     afterEach(async() => {
@@ -104,6 +103,7 @@ contract('Controller - EthProxy', async (accounts) =>  {
         });
 
         it("allows user to withdraw weth", async() => {
+            await controller.addDelegate(ethProxy.address, { from: user1 });
             const previousBalance = await balance.current(user2);
             await ethProxy.withdraw(user2, wethTokens1, { from: user1 });
 

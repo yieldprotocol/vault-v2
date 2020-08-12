@@ -28,7 +28,6 @@ contract EthProxy {
     receive() external payable { }
 
     /// @dev Users use `post` in EthProxy to post ETH to the Controller, which will be converted to Weth here.
-    /// Users must have called `controller.addDelegate(ethProxy.address)` to authorize EthProxy to act in their behalf.
     /// @param to Yield Vault to deposit collateral in.
     /// @param amount Amount of collateral to move.
     function post(address to, uint256 amount)
