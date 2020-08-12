@@ -4,7 +4,6 @@ pragma solidity ^0.6.10;
 import "../interfaces/IController.sol";
 import "../interfaces/IChai.sol";
 import "@openzeppelin/contracts/math/Math.sol";
-import "@nomiclabs/buidler/console.sol";
 
 interface IPool {
     function transfer(address recipient, uint256 amount) external returns (bool);
@@ -84,7 +83,7 @@ contract LiquidityProxy {
     /// @param daiUsed Amount of `dai` to use in minting liquidity tokens
     /// @return The amount of liquidity tokens minted.  
      
-    function addLiquidity(address from,  uint256 daiUsed) external returns (uint256)
+    function addLiquidity(address from,  uint256 daiUsed, uint256 maxYDai) external returns (uint256)
     {
         require(dai.transferFrom(from, address(this), daiUsed), "addLiquidity: Transfer Failed");
         
@@ -92,6 +91,7 @@ contract LiquidityProxy {
         uint256 daiReserves = dai.balanceOf(address(pool));
         uint256 yDaiReserves = yDai.balanceOf(address(pool));
         uint256 DaiToChai = mul(daiUsed, yDaiReserves) / add(yDaiReserves, daiReserves);
+        require(DaiToChai <= maxYDai, "LiquidityProxy: maxYDai exceeded");
         uint256 daiToAdd = sub(daiUsed, DaiToChai);
 
         // borrow needed yDai

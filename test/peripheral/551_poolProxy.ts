@@ -118,7 +118,7 @@ contract('LiquidityProxy', async (accounts) =>  {
 
         it("mints liquidity tokens with Proxy", async() => {
             const oneToken = toWad(1);
-
+            const maxBorrow = toWad(10);
             const poolTokensBefore = new BN(await pool.balanceOf(user2));
             const expectedMinted = new BN('984749191303759738');
             const expectedCollateral = new BN('210040750129274150');
@@ -127,7 +127,7 @@ contract('LiquidityProxy', async (accounts) =>  {
             await dai.mint(user2, oneToken, { from: owner });
             await dai.approve(proxy.address, oneToken, { from: user2 });
             await controller.addDelegate(proxy.address, { from: user2 });
-            const tx = await proxy.addLiquidity(user2, oneToken, { from: user2 });
+            const tx = await proxy.addLiquidity(user2, oneToken, maxBorrow, { from: user2 });
 
             const minted = (new BN(await pool.balanceOf(user2))).sub(poolTokensBefore);
             const collateral = new BN(await controller.posted(CHAI, user2));
@@ -137,25 +137,38 @@ contract('LiquidityProxy', async (accounts) =>  {
             assert.equal(
                 minted.toString(),
                 expectedMinted,
-                "User1 should have pool Tokens"
+                "User2 should have pool Tokens"
             );
 
             assert.equal(
                 collateral.toString(),
                 expectedCollateral,
-                "User1 should have posted Collateral"
-            );
-
-            console.log(debt.toString());
-            console.log((expectedMinted.add(debt)).toString());      
+                "User2 should have posted Collateral"
+            ); 
             assert.equal(
                 debt.toString(),
                 expectedDebt,
-                "User1 should have Debt"
+                "User2 should have Debt"
             );
-            //console.log(collateral.toString());
-            
-
         });   
+
+        it("does not allow borrowing more than max amount", async() => {
+            const oneToken = toWad(1);
+            const one = new BN(oneToken.toString());
+            const poolDai = new BN(await dai.balanceOf(pool.address));
+            const poolyDai = new BN(await yDai1.balanceOf(pool.address));
+            const daiToAdd = poolyDai.mul(one).div(poolyDai.add(poolDai));
+            const maxBorrow = daiToAdd.sub(new BN('1')); //subract 1 wei from expected
+
+            await dai.mint(user2, oneToken, { from: owner });
+            await dai.approve(proxy.address, oneToken, { from: user2 });
+            await controller.addDelegate(proxy.address, { from: user2 });
+
+            await expectRevert(
+                proxy.addLiquidity(user2, oneToken, maxBorrow, { from: user2 }),
+                "LiquidityProxy: maxYDai exceeded",
+            );
+        });
+
     });
 });
