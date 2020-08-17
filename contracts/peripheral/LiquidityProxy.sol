@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.6.10;
 
+import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../interfaces/IController.sol";
 import "../interfaces/IChai.sol";
 import "../interfaces/IPool.sol";
-import "@openzeppelin/contracts/math/Math.sol";
 import "@nomiclabs/buidler/console.sol";
 
 /**
  * @dev The LiquidityProxy is a proxy contract of Pool that allows users to mint liquidity tokens with just Dai. 
  */
 contract LiquidityProxy {
+    using SafeMath for uint256;
+
     IController public controller;
     IChai public chai;
     IERC20 public dai;
@@ -38,29 +40,6 @@ contract LiquidityProxy {
         chai.approve(address(treasury_), uint256(-1));
     }
 
-    /// @dev Overflow-protected addition, from OpenZeppelin
-    function add(uint256 a, uint256 b)
-        internal pure returns (uint256)
-    {
-        uint256 c = a + b;
-        require(c >= a, "Liquidity Proxy: add overflow");
-
-        return c;
-    }
-
-    /// @dev Overflow-protected substraction, from OpenZeppelin
-    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-        require(b <= a, "Liquidity Proxy: sub overflow");
-        uint256 c = a - b;
-
-        return c;
-    }
-
-    /// @dev Overflow-protected addition, from DappHub
-    function mul(uint x, uint y) internal pure returns (uint z) {
-        require(y == 0 || (z = x * y) / y == x);
-    }
-
     /// @dev mints liquidity with provided Dai by borrowing yDai with some of the Dai.
     /// Caller must have approved the proxy using`controller.addDelegate(liquidityProxy)` and `pool.addDelegate(liquidityProxy)`
     /// Caller must have approved the dai transfer with `dai.approve(daiUsed)`
@@ -74,9 +53,9 @@ contract LiquidityProxy {
         // calculate needed yDai
         uint256 daiReserves = dai.balanceOf(address(pool));
         uint256 yDaiReserves = yDai.balanceOf(address(pool));
-        uint256 daiToChai = mul(daiUsed, yDaiReserves) / add(yDaiReserves, daiReserves);
+        uint256 daiToChai = daiUsed.mul(yDaiReserves).div(yDaiReserves.add(daiReserves));
         require(daiToChai <= maxYDai, "LiquidityProxy: maxYDai exceeded");
-        uint256 daiToAdd = sub(daiUsed, daiToChai);
+        uint256 daiToAdd = daiUsed.sub(daiToChai);
 
         // borrow needed yDai
         chai.join(address(this), daiToChai);
