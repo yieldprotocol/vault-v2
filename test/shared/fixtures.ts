@@ -105,21 +105,21 @@ export class MakerEnvironment {
   }
 
   public async setupTreasury() {
-      return Treasury.new(
-          this.vat.address,
-          this.weth.address,
-          this.dai.address,
-          this.wethJoin.address,
-          this.daiJoin.address,
-          this.pot.address,
-          this.chai.address
-      )
+    return Treasury.new(
+      this.vat.address,
+      this.weth.address,
+      this.dai.address,
+      this.wethJoin.address,
+      this.daiJoin.address,
+      this.pot.address,
+      this.chai.address
+    )
   }
 
   public async setupController(treasury: Contract) {
-      const controller = await Controller.new(this.vat.address, this.pot.address, treasury.address)
-      await treasury.orchestrate(controller.address)
-      return controller;
+    const controller = await Controller.new(this.vat.address, this.pot.address, treasury.address)
+    await treasury.orchestrate(controller.address)
+    return controller
   }
 
   public async getDai(user: string, _daiTokens: BigNumberish, _rate: BigNumberish) {
@@ -150,11 +150,7 @@ export class YieldEnvironmentLite {
   treasury: Contract
   controller: Contract
 
-  constructor(
-    maker: MakerEnvironment,
-    treasury: Contract,
-    controller: Contract,
-  ) {
+  constructor(maker: MakerEnvironment, treasury: Contract, controller: Contract) {
     this.maker = maker
     this.treasury = treasury
     this.controller = controller
@@ -164,7 +160,7 @@ export class YieldEnvironmentLite {
     const maker = await MakerEnvironment.setup()
     const treasury = await maker.setupTreasury()
 
-    const controller = await maker.setupController(treasury);
+    const controller = await maker.setupController(treasury)
 
     return new YieldEnvironmentLite(maker, treasury, controller)
   }
@@ -179,9 +175,9 @@ export class YieldEnvironmentLite {
       symbol
     )
     if (!dontAdd) {
-        await this.controller.addSeries(yDai.address)
-        await yDai.orchestrate(this.controller.address)
-        await this.treasury.orchestrate(yDai.address)
+      await this.controller.addSeries(yDai.address)
+      await yDai.orchestrate(this.controller.address)
+      await this.treasury.orchestrate(yDai.address)
     }
 
     return yDai
@@ -213,13 +209,13 @@ export class YieldEnvironment extends YieldEnvironmentLite {
     liquidations: Contract,
     unwind: Contract
   ) {
-      super(maker, treasury, controller);
-      this.liquidations = liquidations;
-      this.unwind = unwind;
+    super(maker, treasury, controller)
+    this.liquidations = liquidations
+    this.unwind = unwind
   }
 
   public static async setup() {
-    const { maker, treasury, controller } = await YieldEnvironmentLite.setup();
+    const { maker, treasury, controller } = await YieldEnvironmentLite.setup()
 
     const liquidations = await Liquidations.new(treasury.address, controller.address)
     await controller.orchestrate(liquidations.address)
@@ -235,7 +231,7 @@ export class YieldEnvironment extends YieldEnvironmentLite {
       maker.chai.address,
       treasury.address,
       controller.address,
-      liquidations.address,
+      liquidations.address
     )
     await treasury.orchestrate(unwind.address)
     await treasury.registerUnwind(unwind.address)

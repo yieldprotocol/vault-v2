@@ -48,7 +48,7 @@ export function divRay(x: BigNumberish, ray: BigNumberish): BigNumber {
 /// I.e. divRay(wad(x), ray(y)) = wad(x/y)
 export function divrupRay(x: BigNumberish, ray: BigNumberish): BigNumber {
   const z = UNIT.mul(10).mul(BigNumber.from(x)).div(BigNumber.from(ray))
-  if (z.mod(10).gt(0)) return z.div(10).add(1);
+  if (z.mod(10).gt(0)) return z.div(10).add(1)
   return z.div(10)
 }
 

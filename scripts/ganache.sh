@@ -14,4 +14,4 @@ npx ganache-cli \
     --gasPrice 0 \
     --port 8545 \
     --networkId 5777 \
-    --host 0.0.0.0
+    --host 0.0.0.0 &

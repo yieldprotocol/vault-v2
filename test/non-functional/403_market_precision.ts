@@ -1,190 +1,113 @@
-const YieldMathMock = artifacts.require('YieldMathMock');
-import { Contract } from "../shared/fixtures"
+const YieldMathMock = artifacts.require('YieldMathMock')
+import { Contract } from '../shared/fixtures'
 
-contract('Pool', async () =>  {
-    let yieldMath: Contract;
+contract('Pool', async () => {
+  let yieldMath: Contract
 
-    const yDaiReserves = '200000000000000000000000000';
-    const daiReserves = '100000000000000000000000000';
+  const yDaiReserves = '200000000000000000000000000'
+  const daiReserves = '100000000000000000000000000'
 
-    const oneYear = 31556952;
-    const k = '146235604338';
-    const g = '18428297329635842000';
+  const oneYear = 31556952
+  const k = '146235604338'
+  const g = '18428297329635842000'
 
-    let timeTillMaturity: number;
+  let timeTillMaturity: number
 
-    const results = new Set();
-    results.add(['trade', 'daiReserves', 'yDaiReserves', 'tokensIn', 'tokensOut']);
+  const results = new Set()
+  results.add(['trade', 'daiReserves', 'yDaiReserves', 'tokensIn', 'tokensOut'])
 
-    beforeEach(async() => {
-        // Setup YieldMathMock
-        yieldMath = await YieldMathMock.new();
-    });
+  beforeEach(async () => {
+    // Setup YieldMathMock
+    yieldMath = await YieldMathMock.new()
+  })
 
-    describe("using values from the library", () => {
-        beforeEach(async() => {
-            timeTillMaturity = oneYear;
-        });
+  describe('using values from the library', () => {
+    beforeEach(async () => {
+      timeTillMaturity = oneYear
+    })
 
-        it("sells dai", async() => {
-            for (let trade of ['10000000000000000000', '1000000000000000000000', '1000000000000000000000000']) {
-                let yDaiOut = await yieldMath.yDaiOutForDaiIn128(
-                    daiReserves,
-                    yDaiReserves,
-                    trade,
-                    timeTillMaturity,
-                    k,
-                    g,
-                );
-    
-                results.add(['sellDai128', daiReserves, yDaiReserves, trade, yDaiOut]);
+    it('sells dai', async () => {
+      for (let trade of ['10000000000000000000', '1000000000000000000000', '1000000000000000000000000']) {
+        let yDaiOut = await yieldMath.yDaiOutForDaiIn128(daiReserves, yDaiReserves, trade, timeTillMaturity, k, g)
 
-                yDaiOut = await yieldMath.yDaiOutForDaiIn64(
-                    daiReserves,
-                    yDaiReserves,
-                    trade,
-                    timeTillMaturity,
-                    k,
-                    g,
-                );
+        results.add(['sellDai128', daiReserves, yDaiReserves, trade, yDaiOut])
 
-                results.add(['sellDai64', daiReserves, yDaiReserves, trade, yDaiOut]);
+        yDaiOut = await yieldMath.yDaiOutForDaiIn64(daiReserves, yDaiReserves, trade, timeTillMaturity, k, g)
 
-                yDaiOut = await yieldMath.yDaiOutForDaiIn(
-                    daiReserves,
-                    yDaiReserves,
-                    trade,
-                    timeTillMaturity,
-                    k,
-                    g,
-                );
+        results.add(['sellDai64', daiReserves, yDaiReserves, trade, yDaiOut])
 
-                results.add(['sellDai48', daiReserves, yDaiReserves, trade, yDaiOut]);
-            }
-        });
+        yDaiOut = await yieldMath.yDaiOutForDaiIn(daiReserves, yDaiReserves, trade, timeTillMaturity, k, g)
 
-        it("buys dai", async() => {
-            for (let trade of ['10000000000000000000', '1000000000000000000000', '1000000000000000000000000']) {
-                let yDaiIn = await yieldMath.yDaiInForDaiOut128(
-                    daiReserves,
-                    yDaiReserves,
-                    trade,
-                    timeTillMaturity,
-                    k,
-                    g,
-                );
+        results.add(['sellDai48', daiReserves, yDaiReserves, trade, yDaiOut])
+      }
+    })
 
-                results.add(['buyDai128', daiReserves, yDaiReserves, yDaiIn, trade]);
+    it('buys dai', async () => {
+      for (let trade of ['10000000000000000000', '1000000000000000000000', '1000000000000000000000000']) {
+        let yDaiIn = await yieldMath.yDaiInForDaiOut128(daiReserves, yDaiReserves, trade, timeTillMaturity, k, g)
 
-                yDaiIn = await yieldMath.yDaiInForDaiOut64(
-                    daiReserves,
-                    yDaiReserves,
-                    trade,
-                    timeTillMaturity,
-                    k,
-                    g,
-                );
+        results.add(['buyDai128', daiReserves, yDaiReserves, yDaiIn, trade])
 
-                results.add(['buyDai64', daiReserves, yDaiReserves, yDaiIn, trade]);
+        yDaiIn = await yieldMath.yDaiInForDaiOut64(daiReserves, yDaiReserves, trade, timeTillMaturity, k, g)
 
-                yDaiIn = await yieldMath.yDaiInForDaiOut(
-                    daiReserves,
-                    yDaiReserves,
-                    trade,
-                    timeTillMaturity,
-                    k,
-                    g,
-                );
+        results.add(['buyDai64', daiReserves, yDaiReserves, yDaiIn, trade])
 
-                results.add(['buyDai48', daiReserves, yDaiReserves, yDaiIn, trade]);
-            };
-        });
+        yDaiIn = await yieldMath.yDaiInForDaiOut(daiReserves, yDaiReserves, trade, timeTillMaturity, k, g)
 
-        it("sells yDai", async() => {
-            for (let trade of ['10000000000000000000', '1000000000000000000000', '1000000000000000000000000']) {
-                let daiOut = await yieldMath.daiOutForYDaiIn128(
-                    daiReserves,
-                    yDaiReserves,
-                    trade,
-                    timeTillMaturity,
-                    k,
-                    g,
-                );
+        results.add(['buyDai48', daiReserves, yDaiReserves, yDaiIn, trade])
+      }
+    })
 
-                results.add(['sellDai128', daiReserves, yDaiReserves, trade, daiOut]);
+    it('sells yDai', async () => {
+      for (let trade of ['10000000000000000000', '1000000000000000000000', '1000000000000000000000000']) {
+        let daiOut = await yieldMath.daiOutForYDaiIn128(daiReserves, yDaiReserves, trade, timeTillMaturity, k, g)
 
-                daiOut = await yieldMath.daiOutForYDaiIn64(
-                    daiReserves,
-                    yDaiReserves,
-                    trade,
-                    timeTillMaturity,
-                    k,
-                    g,
-                );
+        results.add(['sellDai128', daiReserves, yDaiReserves, trade, daiOut])
 
-                results.add(['sellDai64', daiReserves, yDaiReserves, trade, daiOut]);
+        daiOut = await yieldMath.daiOutForYDaiIn64(daiReserves, yDaiReserves, trade, timeTillMaturity, k, g)
 
-                daiOut = await yieldMath.daiOutForYDaiIn(
-                    daiReserves,
-                    yDaiReserves,
-                    trade,
-                    timeTillMaturity,
-                    k,
-                    g,
-                );
+        results.add(['sellDai64', daiReserves, yDaiReserves, trade, daiOut])
 
-                results.add(['sellDai48', daiReserves, yDaiReserves, trade, daiOut]);
-            };
-        });
+        daiOut = await yieldMath.daiOutForYDaiIn(daiReserves, yDaiReserves, trade, timeTillMaturity, k, g)
 
-        it("buys yDai", async() => {
-            for (let trade of ['10000000000000000000', '1000000000000000000000', '1000000000000000000000000']) {
-                let daiIn = await yieldMath.daiInForYDaiOut128(
-                    daiReserves,
-                    yDaiReserves,
-                    trade,
-                    timeTillMaturity,
-                    k,
-                    g,
-                );
+        results.add(['sellDai48', daiReserves, yDaiReserves, trade, daiOut])
+      }
+    })
 
-                results.add(['buyDai128', daiReserves, yDaiReserves, daiIn, trade]);
+    it('buys yDai', async () => {
+      for (let trade of ['10000000000000000000', '1000000000000000000000', '1000000000000000000000000']) {
+        let daiIn = await yieldMath.daiInForYDaiOut128(daiReserves, yDaiReserves, trade, timeTillMaturity, k, g)
 
-                daiIn = await yieldMath.daiInForYDaiOut64(
-                    daiReserves,
-                    yDaiReserves,
-                    trade,
-                    timeTillMaturity,
-                    k,
-                    g,
-                );
+        results.add(['buyDai128', daiReserves, yDaiReserves, daiIn, trade])
 
-                results.add(['buyDai64', daiReserves, yDaiReserves, daiIn, trade]);
+        daiIn = await yieldMath.daiInForYDaiOut64(daiReserves, yDaiReserves, trade, timeTillMaturity, k, g)
 
-                daiIn = await yieldMath.daiInForYDaiOut(
-                    daiReserves,
-                    yDaiReserves,
-                    trade,
-                    timeTillMaturity,
-                    k,
-                    g,
-                );
+        results.add(['buyDai64', daiReserves, yDaiReserves, daiIn, trade])
 
-                results.add(['buyDai48', daiReserves, yDaiReserves, daiIn, trade]);
-            };
-        });
-        
-        it("prints results", async() => {
-            let line: string[];
-            // @ts-ignore
-            for (line of results.values()) {
-                console.log("| " + 
-                    line[0].padEnd(12, ' ') + "· " +
-                    line[1].toString().padEnd(30, ' ') + "· " +
-                    line[2].toString().padEnd(30, ' ') + "· " +
-                    line[3].toString().padEnd(30, ' ') + "· " +
-                    line[4].toString().padEnd(30, ' ') + "|");
-            }
-        });
-    });
-});
+        daiIn = await yieldMath.daiInForYDaiOut(daiReserves, yDaiReserves, trade, timeTillMaturity, k, g)
+
+        results.add(['buyDai48', daiReserves, yDaiReserves, daiIn, trade])
+      }
+    })
+
+    it('prints results', async () => {
+      let line: string[]
+      // @ts-ignore
+      for (line of results.values()) {
+        console.log(
+          '| ' +
+            line[0].padEnd(12, ' ') +
+            '· ' +
+            line[1].toString().padEnd(30, ' ') +
+            '· ' +
+            line[2].toString().padEnd(30, ' ') +
+            '· ' +
+            line[3].toString().padEnd(30, ' ') +
+            '· ' +
+            line[4].toString().padEnd(30, ' ') +
+            '|'
+        )
+      }
+    })
+  })
+})

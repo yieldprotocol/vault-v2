@@ -20,9 +20,13 @@
 
 //
 const fs = require('fs');
-const mnemonic = fs.readFileSync(".secret").toString().trim();
-const infuraKey = fs.readFileSync(".infuraKey").toString().trim();
-var HDWalletProvider = require("@truffle/hdwallet-provider");
+const HDWalletProvider = require("@truffle/hdwallet-provider");
+
+const getProvider = (network) => {
+    const mnemonic = fs.readFileSync(".secret").toString().trim();
+    const infuraKey = fs.readFileSync(".infuraKey").toString().trim();
+    return new HDWalletProvider(mnemonic, `https://${network}.infura.io/v3/${infuraKey}`)
+}
 
 module.exports = {
   /**
@@ -70,7 +74,7 @@ module.exports = {
     // NB: It's important to wrap the provider as a function.
 
     kovan: {
-      provider: () => new HDWalletProvider(mnemonic, `https://kovan.infura.io/v3/${infuraKey}`),
+      provider: () => getProvider("kovan"),
       network_id: 42,         // Kovan's id
       confirmations: 2,       // # of confs to wait between deployments. (default: 0)
       timeoutBlocks: 200,     // # of blocks before a deployment times out  (minimum/default: 50)
@@ -79,7 +83,7 @@ module.exports = {
     },
 
     goerli: {
-      provider: () => new HDWalletProvider(mnemonic, `https://goerli.infura.io/v3/${infuraKey}`),
+      provider: () => getProvider("goerli"),
       network_id: 5,          // Goerli's id
       confirmations: 2,       // # of confs to wait between deployments. (default: 0)
       timeoutBlocks: 200,     // # of blocks before a deployment times out  (minimum/default: 50)
@@ -88,7 +92,7 @@ module.exports = {
     },
 
     rinkeby: {
-      provider: () => new HDWalletProvider(mnemonic, `https://rinkeby.infura.io/v3/${infuraKey}`),
+      provider: () => getProvider("rinkeby"),
       network_id: 4,          // Rinkeby's id
       confirmations: 2,       // # of confs to wait between deployments. (default: 0)
       timeoutBlocks: 200,     // # of blocks before a deployment times out  (minimum/default: 50)
@@ -97,7 +101,7 @@ module.exports = {
     },
 
     ropsten: {
-      provider: () => new HDWalletProvider(mnemonic, `https://ropsten.infura.io/v3/${infuraKey}`),
+      provider: () => getProvider("ropsten"),
       network_id: 3,          // Ropsten's id
       gas: 5500000,           // Ropsten has a lower block limit than mainnet
       confirmations: 2,       // # of confs to wait between deployments. (default: 0)
