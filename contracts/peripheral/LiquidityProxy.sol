@@ -11,7 +11,6 @@ import "@nomiclabs/buidler/console.sol";
  * @dev The LiquidityProxy is a proxy contract of Pool that allows users to mint liquidity tokens with just Dai. 
  */
 contract LiquidityProxy {
-    uint256 constant public ONE = 1000000000000000000;
     IController public controller;
     IChai public chai;
     IERC20 public dai;
@@ -61,11 +60,6 @@ contract LiquidityProxy {
     function mul(uint x, uint y) internal pure returns (uint z) {
         require(y == 0 || (z = x * y) / y == x);
     }
-
-    /// @dev Divides x by y, where x and y are fixed point with 18 decimals
-    //function div(uint x, uint y) internal pure returns (uint z) {
-    //    z = mul(x, ONE) / y;
-    //}
 
     /// @dev mints liquidity with provided Dai by borrowing yDai with some of the Dai.
     /// Caller must have approved the proxy using`controller.addDelegate(liquidityProxy)` and `pool.addDelegate(liquidityProxy)`
