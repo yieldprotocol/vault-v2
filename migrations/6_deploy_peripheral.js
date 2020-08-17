@@ -75,7 +75,6 @@ module.exports = async (deployer, network, accounts) => {
       vatAddress,
       daiAddress,
       potAddress,
-      yDaiAddress,
       controllerAddress,
       pool.address,
     );

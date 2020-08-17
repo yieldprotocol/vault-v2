@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.6.10;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "../interfaces/IYDai.sol";
 
 interface IPool {
+    function dai() external view returns(IERC20);
+    function yDai() external view returns(IYDai);
     function sellDai(address from, address to, uint128 daiIn) external returns(uint128);
     function buyDai(address from, address to, uint128 daiOut) external returns(uint128);
     function sellYDai(address from, address to, uint128 yDaiIn) external returns(uint128);

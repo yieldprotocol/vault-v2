@@ -6,6 +6,7 @@ import "../interfaces/IVat.sol";
 import "../interfaces/IPot.sol";
 import "../interfaces/IController.sol";
 import "../interfaces/IPool.sol";
+import "../interfaces/IYDai.sol";
 import "../helpers/DecimalMath.sol";
 
 /**
@@ -19,7 +20,7 @@ contract DaiProxy is DecimalMath {
     IVat internal _vat;
     IERC20 internal _dai;
     IPot internal _pot;
-    IERC20 internal _yDai;
+    IYDai internal _yDai;
     IController internal _controller;
     IPool internal _pool;
 
@@ -28,17 +29,20 @@ contract DaiProxy is DecimalMath {
         address vat_,
         address dai_,
         address pot_,
-        address yDai_,
         address controller_,
         address pool_
     ) public {
         _vat = IVat(vat_);
         _dai = IERC20(dai_);
         _pot = IPot(pot_);
-        _yDai = IERC20(yDai_);
         _controller = IController(controller_);
         _pool = IPool(pool_);
 
+        _yDai = _pool.yDai();
+        require(
+            _controller.containsSeries(_yDai.maturity()),
+            "DaiProxy: Mismatched Pool and Controller"
+        );
         _dai.approve(address(_pool), uint256(-1));
         _yDai.approve(address(_pool), uint256(-1));
     }

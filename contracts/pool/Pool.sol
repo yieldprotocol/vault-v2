@@ -21,8 +21,8 @@ contract Pool is IPool, ERC20, Delegable {
     int128 constant public g = int128(uint256((999 << 64)) / 1000); // All constants are `ufixed`, to divide them they must be converted to uint256
     uint128 immutable public maturity;
 
-    IERC20 public dai;
-    IYDai public yDai;
+    IERC20 public override dai;
+    IYDai public override yDai;
 
     constructor(address dai_, address yDai_, string memory name_, string memory symbol_)
         public

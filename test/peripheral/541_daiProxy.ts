@@ -46,15 +46,9 @@ contract('DaiProxy', async (accounts) => {
     pool = await Pool.new(dai.address, yDai1.address, 'Name', 'Symbol', { from: owner })
 
     // Setup DaiProxy
-    daiProxy = await DaiProxy.new(
-      vat.address,
-      dai.address,
-      pot.address,
-      yDai1.address,
-      controller.address,
-      pool.address,
-      { from: owner }
-    )
+    daiProxy = await DaiProxy.new(vat.address, dai.address, pot.address, controller.address, pool.address, {
+      from: owner,
+    })
 
     // Test setup
 
