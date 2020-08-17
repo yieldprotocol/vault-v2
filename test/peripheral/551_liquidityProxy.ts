@@ -92,22 +92,20 @@ contract('LiquidityProxy', async (accounts) => {
       const maxYDai = oneToken
 
       console.log('          adding liquidity...')
-      console.log('          daiReserves: %d', await pool.getDaiReserves())
-      console.log('          yDaiReserves: %d', await pool.getYDaiReserves())
-      console.log('          Pool supply: %d', await pool.totalSupply())
-      console.log('          daiUsed: %d', daiUsed)
+      console.log('          daiReserves: %d', await pool.getDaiReserves())    // d_0
+      console.log('          yDaiReserves: %d', await pool.getYDaiReserves())  // y_0
+      console.log('          Pool supply: %d', await pool.totalSupply())       // s
+      console.log('          daiUsed: %d', daiUsed)                            // d_used
 
       await dai.mint(user2, oneToken, { from: owner })
       await dai.approve(proxy.address, oneToken, { from: user2 })
       await controller.addDelegate(proxy.address, { from: user2 })
       await proxy.addLiquidity(daiUsed, maxYDai, { from: user2 })
 
-      // https://www.desmos.com/calculator/i7cmyiws29
-      const expectedDebt = new BN('376849177280000000')
-      const expectedPosted = new BN('314040981060000000')
-      
-      // https://www.desmos.com/calculator/w9qorhrjbw
-      const expectedMinted = new BN('820437684840000000')
+      // https://www.desmos.com/calculator/bl2knrktlt
+      const expectedDebt = new BN('376849177280000000')                        // y_in
+      const expectedPosted = new BN('314040981060000000')                      // p
+      const expectedMinted = new BN('820437684840000000')                      // m
 
       const posted = new BN(await controller.posted(CHAI, user2))
       const debt = new BN(await controller.debtYDai(CHAI, maturity1, user2))
