@@ -92,9 +92,7 @@ contract LiquidityProxy {
         controller.borrow("CHAI", yDai.maturity(), msg.sender, address(this), toBorrow);
         
         // mint liquidity tokens
-        uint256 minted = pool.mint(address(this), address(this), daiToAdd);
-        pool.transfer(msg.sender, minted);
-        return minted; 
+        return pool.mint(address(this), msg.sender, daiToAdd);
     }
 
     /// @dev burns tokens and repays yDai debt. Buys needed yDai or sells any excess, and all Dai is returned. 
@@ -103,8 +101,7 @@ contract LiquidityProxy {
     /// @param daiLimit maximum amount of Dai to be bought or sold with yDai when burning. 
     function removeLiquidityEarly(address from, uint256 poolTokens, uint256 daiLimit) external returns (uint256)
     {
-        require(pool.transferFrom(from, address(this), poolTokens), "removeLiquidityEarlySell: Transfer Failed");
-        pool.burn(address(this), address(this), poolTokens);
+        pool.burn(from, address(this), poolTokens);
         uint256 mat = yDai.maturity();
         uint256 balance = yDai.balanceOf(address(this));
         uint256 debt = controller.debtYDai("CHAI", mat , from);

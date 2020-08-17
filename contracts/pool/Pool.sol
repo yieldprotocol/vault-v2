@@ -140,9 +140,9 @@ contract Pool is IPool, ERC20, Delegable {
         uint256 daiReturned;
         uint256 yDaiReturned;
         { // avoiding stack too deep
-        uint256 yDaiReserves = yDai.balanceOf(address(this));
-        daiReturned = tokensBurned.mul(daiReserves).div(supply);
-        yDaiReturned = tokensBurned.mul(yDaiReserves).div(supply);
+            uint256 yDaiReserves = yDai.balanceOf(address(this));
+            daiReturned = tokensBurned.mul(daiReserves).div(supply);
+            yDaiReturned = tokensBurned.mul(yDaiReserves).div(supply);
         }
 
         _burn(from, tokensBurned);

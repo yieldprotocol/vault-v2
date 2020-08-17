@@ -186,6 +186,7 @@ contract('LiquidityProxy', async (accounts) => {
         assert.equal(debt.toString(), expectedDebt, 'User2 should have debt')
         assert.equal(collateral.toString(), expectedCollateral, 'User2 should have posted Collateral')
 
+        await pool.addDelegate(proxy.address, { from: user2 })
         await proxy.removeLiquidityEarly(user2, poolTokens, '0')
 
         const poolTokensAfter = new BN(await pool.balanceOf(user2))
