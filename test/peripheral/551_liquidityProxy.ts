@@ -60,11 +60,11 @@ contract('LiquidityProxy', async (accounts) => {
 
     // Setup LiquidityProxy
     proxy = await LiquidityProxy.new(
-      controller.address,
-      chai.address,
       dai.address,
-      pool.address,
+      chai.address,
       treasury.address,
+      controller.address,
+      pool.address,
       { from: owner }
     )
   })

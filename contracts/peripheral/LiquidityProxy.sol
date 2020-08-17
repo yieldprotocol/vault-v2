@@ -13,23 +13,23 @@ import "@nomiclabs/buidler/console.sol";
 contract LiquidityProxy {
     using SafeMath for uint256;
 
-    IController public controller;
-    IChai public chai;
     IERC20 public dai;
+    IChai public chai;
+    IController public controller;
     IYDai public yDai;
     IPool public pool;
 
     /// @dev The constructor links ControllerDai to vat, pot, controller and pool.
     constructor (
-        address controller_,
-        address chai_,
         address dai_,
-        address pool_,
-        address treasury_
+        address chai_,
+        address treasury_,
+        address controller_,
+        address pool_
     ) public {
-        controller = IController(controller_);
-        chai = IChai(chai_);
         dai = IERC20(dai_);
+        chai = IChai(chai_);
+        controller = IController(controller_);
         pool = IPool(pool_);
 
         yDai = pool.yDai();
