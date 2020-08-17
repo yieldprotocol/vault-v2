@@ -84,28 +84,51 @@ contract('LiquidityProxy', async (accounts) => {
       await pool.sellYDai(operator, operator, additionalYDaiReserves, { from: operator })
     })
 
-    it('mints liquidity tokens with Proxy', async () => {
+    it('mints liquidity tokens with dai only', async () => {
       const oneToken = toWad(1)
-      const maxBorrow = toWad(1)
+      
       const poolTokensBefore = new BN(await pool.balanceOf(user2))
-      const expectedMinted = new BN('984749191303759738')
-      const expectedCollateral = new BN('210040750129274150')
-      const expectedDebt = new BN('252048900155128980')
+      const daiUsed = oneToken;
+      const maxYDai = oneToken
+
+      console.log('          adding liquidity...')
+      console.log('          daiReserves: %d', await pool.getDaiReserves())
+      console.log('          yDaiReserves: %d', await pool.getYDaiReserves())
+      console.log('          Pool supply: %d', await pool.totalSupply())
+      console.log('          daiUsed: %d', daiUsed)
 
       await dai.mint(user2, oneToken, { from: owner })
       await dai.approve(proxy.address, oneToken, { from: user2 })
       await controller.addDelegate(proxy.address, { from: user2 })
-      const tx = await proxy.addLiquidity(oneToken, maxBorrow, { from: user2 })
+      await proxy.addLiquidity(daiUsed, maxYDai, { from: user2 })
 
-      const minted = new BN(await pool.balanceOf(user2)).sub(poolTokensBefore)
-      const collateral = new BN(await controller.posted(CHAI, user2))
+      // https://www.desmos.com/calculator/i7cmyiws29
+      const expectedDebt = new BN('376849177280000000')
+      const expectedPosted = new BN('314040981060000000')
+      
+      // https://www.desmos.com/calculator/w9qorhrjbw
+      const expectedMinted = new BN('820437684840000000')
+
+      const posted = new BN(await controller.posted(CHAI, user2))
       const debt = new BN(await controller.debtYDai(CHAI, maturity1, user2))
+      const minted = new BN(await pool.balanceOf(user2)).sub(poolTokensBefore)
 
       //asserts
-      assert.equal(minted.toString(), expectedMinted, 'User2 should have pool Tokens')
-
-      assert.equal(collateral.toString(), expectedCollateral, 'User2 should have posted Collateral')
-      assert.equal(debt.toString(), expectedDebt, 'User2 should have Debt')
+      assert.equal(
+        posted.toString(),
+        expectedPosted,
+        'User2 should have ' + expectedPosted + ' posted chai, instead has ' + posted.toString()
+      )
+      assert.equal(
+        debt.toString(),
+        expectedDebt,
+        'User2 should have ' + expectedDebt + ' yDai debt, instead has ' + debt.toString()
+      )
+      assert.equal(
+        minted.toString(),
+        expectedMinted,
+        'User2 should have ' + expectedMinted + ' pool tokens, instead has ' + minted.toString()
+      )
     })
 
     it('does not allow borrowing more than max amount', async () => {

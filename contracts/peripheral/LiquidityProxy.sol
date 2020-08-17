@@ -51,24 +51,24 @@ contract LiquidityProxy {
 
     /// @dev Mints liquidity with provided Dai by borrowing yDai with some of the Dai.
     /// Caller must have approved the proxy using`controller.addDelegate(liquidityProxy)` and `pool.addDelegate(liquidityProxy)`
-    /// Caller must have approved the dai transfer with `dai.approve(daiOffered)`
-    /// @param daiOffered amount of Dai to use to mint liquidity. 
+    /// Caller must have approved the dai transfer with `dai.approve(daiUsed)`
+    /// @param daiUsed amount of Dai to use to mint liquidity. 
     /// @param maxYDai maximum amount of yDai to be borrowed to mint liquidity. 
     /// @return The amount of liquidity tokens minted.  
-    function addLiquidity(uint256 daiOffered, uint256 maxYDai) external returns (uint256)
+    function addLiquidity(uint256 daiUsed, uint256 maxYDai) external returns (uint256)
     {
-        require(dai.transferFrom(msg.sender, address(this), daiOffered), "addLiquidity: Transfer Failed");
+        require(dai.transferFrom(msg.sender, address(this), daiUsed), "addLiquidity: Transfer Failed");
         
         // calculate needed yDai
         uint256 daiReserves = dai.balanceOf(address(pool));
         uint256 yDaiReserves = yDai.balanceOf(address(pool));
-        uint256 daiToConvert = daiOffered.mul(yDaiReserves).div(yDaiReserves.add(daiReserves));
+        uint256 daiToConvert = daiUsed.mul(yDaiReserves).div(yDaiReserves.add(daiReserves));
         require(
             daiToConvert <= maxYDai,
             "LiquidityProxy: maxYDai exceeded"
         ); // 1 Dai == 1 yDai
-        uint256 daiToAdd = daiOffered.sub(daiToConvert);
-        uint256 yDaiToAdd = controller.inYDai(CHAI, maturity, daiToConvert);
+        uint256 daiToAdd = daiUsed.sub(daiToConvert);
+        uint256 yDaiToAdd = controller.inYDai(CHAI, maturity, daiToConvert); // If we can't add liquidity for mature yDai, then yDaiToAdd = daiToConvert
 
         // convert dai to chai and borrow needed yDai
         chai.join(address(this), daiToConvert);
