@@ -40,7 +40,7 @@ contract LiquidityProxy {
         maturity = yDai.maturity();
         require(
             controller.containsSeries(yDai.maturity()),
-            "DaiProxy: Mismatched Pool and Controller"
+            "LiquidityProxy: Mismatched Pool and Controller"
         );
 
         dai.approve(address(chai), uint256(-1));
@@ -51,28 +51,31 @@ contract LiquidityProxy {
 
     /// @dev mints liquidity with provided Dai by borrowing yDai with some of the Dai.
     /// Caller must have approved the proxy using`controller.addDelegate(liquidityProxy)` and `pool.addDelegate(liquidityProxy)`
-    /// Caller must have approved the dai transfer with `dai.approve(daiUsed)`
-    /// @param daiUsed amount of Dai to use to mint liquidity. 
+    /// Caller must have approved the dai transfer with `dai.approve(daiOffered)`
+    /// @param daiOffered amount of Dai to use to mint liquidity. 
     /// @param maxYDai maximum amount of yDai to be borrowed to mint liquidity. 
     /// @return The amount of liquidity tokens minted.  
-    function addLiquidity(uint256 daiUsed, uint256 maxYDai) external returns (uint256)
+    function addLiquidity(uint256 daiOffered, uint256 maxYDai) external returns (uint256)
     {
-        require(dai.transferFrom(msg.sender, address(this), daiUsed), "addLiquidity: Transfer Failed");
+        require(dai.transferFrom(msg.sender, address(this), daiOffered), "addLiquidity: Transfer Failed");
         
         // calculate needed yDai
         uint256 daiReserves = dai.balanceOf(address(pool));
         uint256 yDaiReserves = yDai.balanceOf(address(pool));
-        uint256 daiToChai = daiUsed.mul(yDaiReserves).div(yDaiReserves.add(daiReserves));
-        require(daiToChai <= maxYDai, "LiquidityProxy: maxYDai exceeded");
-        uint256 daiToAdd = daiUsed.sub(daiToChai);
+        uint256 daiToConvert = daiOffered.mul(yDaiReserves).div(yDaiReserves.add(daiReserves));
+        require(
+            daiToConvert <= maxYDai,
+            "LiquidityProxy: maxYDai exceeded"
+        ); // 1 Dai == 1 yDai
+        uint256 daiToAdd = daiOffered.sub(daiToConvert);
+        uint256 yDaiToAdd = controller.inYDai(CHAI, maturity, daiToConvert);
 
-        // borrow needed yDai
-        chai.join(address(this), daiToChai);
-        uint256 balance = chai.balanceOf(address(this));
-        // look at the balance of chai in dai to avoid rounding issues
-        uint256 toBorrow = chai.dai(address(this));
-        controller.post(CHAI, address(this), msg.sender, balance);
-        controller.borrow(CHAI, maturity, msg.sender, address(this), toBorrow);
+        // convert dai to chai and borrow needed yDai
+        chai.join(address(this), daiToConvert);
+        // look at the balance of chai in dai to avoid rounding issues?
+        // uint256 toBorrow = chai.dai(address(this));
+        controller.post(CHAI, address(this), msg.sender, chai.balanceOf(address(this)));
+        controller.borrow(CHAI, maturity, msg.sender, address(this), yDaiToAdd);
         
         // mint liquidity tokens
         return pool.mint(address(this), msg.sender, daiToAdd);
@@ -82,14 +85,19 @@ contract LiquidityProxy {
     /// Caller must have approved the proxy using`controller.addDelegate(liquidityProxy)` and `pool.addDelegate(liquidityProxy)`
     /// Caller must have approved the liquidity burn with `pool.approve(poolTokens)`
     /// @param poolTokens amount of pool tokens to burn. 
-    /// @param daiLimit maximum amount of Dai to be bought or sold with yDai when burning. 
-    function removeLiquidityEarly(uint256 poolTokens, uint256 daiLimit) external
+    /// @param minimumDai minimum amount of Dai to be bought with yDai when burning. 
+    function removeLiquidityEarly(uint256 poolTokens, uint256 minimumDai) external
     {
         (, uint256 yDaiObtained) = pool.burn(msg.sender, address(this), poolTokens);
 
         controller.repayYDai(CHAI, maturity, address(this), msg.sender, yDaiObtained);
         uint256 remainingYDai = yDai.balanceOf(address(this));
-        if (remainingYDai > 0) pool.sellYDai(address(this), address(this), uint128(remainingYDai));
+        if (remainingYDai > 0) {
+            require(
+                pool.sellYDai(address(this), address(this), uint128(remainingYDai)) >= minimumDai,
+                "LiquidityProxy: minimumDai not reached"
+            );
+        }
         if (controller.debtYDai(CHAI, maturity, msg.sender) == 0) withdrawDai();
     }
 
