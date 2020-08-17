@@ -79,12 +79,12 @@ contract LiquidityProxy {
         // calculate needed yDai
         uint256 daiReserves = dai.balanceOf(address(pool));
         uint256 yDaiReserves = yDai.balanceOf(address(pool));
-        uint256 DaiToChai = mul(daiUsed, yDaiReserves) / add(yDaiReserves, daiReserves);
-        require(DaiToChai <= maxYDai, "LiquidityProxy: maxYDai exceeded");
-        uint256 daiToAdd = sub(daiUsed, DaiToChai);
+        uint256 daiToChai = mul(daiUsed, yDaiReserves) / add(yDaiReserves, daiReserves);
+        require(daiToChai <= maxYDai, "LiquidityProxy: maxYDai exceeded");
+        uint256 daiToAdd = sub(daiUsed, daiToChai);
 
         // borrow needed yDai
-        chai.join(address(this), DaiToChai);
+        chai.join(address(this), daiToChai);
         uint256 balance = chai.balanceOf(address(this));
         // look at the balance of chai in dai to avoid rounding issues
         uint256 toBorrow = chai.dai(address(this));
