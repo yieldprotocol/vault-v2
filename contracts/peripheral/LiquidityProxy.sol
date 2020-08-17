@@ -92,7 +92,6 @@ contract LiquidityProxy {
         controller.borrow("CHAI", yDai.maturity(), msg.sender, address(this), toBorrow);
         
         // mint liquidity tokens
-        dai.approve(address(pool), daiToAdd);
         uint256 minted = pool.mint(address(this), address(this), daiToAdd);
         pool.transfer(msg.sender, minted);
         return minted; 
