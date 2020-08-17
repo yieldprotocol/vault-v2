@@ -11,7 +11,6 @@ contract EthProxy {
     bytes32 public constant WETH = "ETH-A";
 
     IWeth internal _weth;
-    address internal _treasury;
     IController internal _controller;
 
     constructor (
