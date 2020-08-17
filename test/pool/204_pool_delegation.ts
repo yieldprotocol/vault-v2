@@ -48,7 +48,13 @@ contract('Pool - Delegation', async (accounts) => {
       await pool.init(daiReserves, { from: from })
     })
 
-    // --- ONLY HOLDER OR DELEGATE TESTS ---
+    it("doesn't mint liquidity without delegation", async () => {
+      await expectRevert(pool.mint(from, to, 1, { from: operator }), 'Pool: Only Holder Or Delegate')
+    })
+
+    it("doesn't burn liquidity without delegation", async () => {
+      await expectRevert(pool.burn(from, to, 1, { from: operator }), 'Pool: Only Holder Or Delegate')
+    })
 
     it("doesn't sell dai without delegation", async () => {
       await expectRevert(pool.sellDai(from, to, 1, { from: operator }), 'Pool: Only Holder Or Delegate')
@@ -135,7 +141,7 @@ contract('Pool - Delegation', async (accounts) => {
 
         await dai.approve(pool.address, oneToken, { from: from })
         await yDai1.approve(pool.address, yDaiTokens1, { from: from })
-        // await pool.addDelegate(operator, { from: from })
+        await pool.addDelegate(operator, { from: from })
         await pool.mint(from, to, oneToken, { from: operator })
 
         const expectedMinted = new BN('1316595685900000000')
@@ -157,7 +163,7 @@ contract('Pool - Delegation', async (accounts) => {
         const daiReservesBefore = new BN(await dai.balanceOf(pool.address))
 
         await pool.approve(pool.address, oneToken, { from: from })
-        // await pool.addDelegate(operator, { from: from })
+        await pool.addDelegate(operator, { from: from })
         await pool.burn(from, to, oneToken, { from: operator })
 
         const expectedYDaiOut = new BN('255952380950000000')
