@@ -74,34 +74,6 @@ contract('LiquidityProxy', async (accounts) => {
     await helper.revertToSnapshot(snapshotId)
   })
 
-  it('get the size of the contract', async () => {
-    console.log()
-    console.log('    ·--------------------|------------------|------------------|------------------·')
-    console.log('    |  Contract          ·  Bytecode        ·  Deployed        ·  Constructor     |')
-    console.log('    ·····················|··················|··················|···················')
-
-    const bytecode = proxy.constructor._json.bytecode
-    const deployed = proxy.constructor._json.deployedBytecode
-    const sizeOfB = bytecode.length / 2
-    const sizeOfD = deployed.length / 2
-    const sizeOfC = sizeOfB - sizeOfD
-    console.log(
-      '    |  ' +
-        proxy.constructor._json.contractName.padEnd(18, ' ') +
-        '|' +
-        ('' + sizeOfB).padStart(16, ' ') +
-        '  ' +
-        '|' +
-        ('' + sizeOfD).padStart(16, ' ') +
-        '  ' +
-        '|' +
-        ('' + sizeOfC).padStart(16, ' ') +
-        '  |'
-    )
-    console.log('    ·--------------------|------------------|------------------|------------------·')
-    console.log()
-  })
-
   describe('with initial liquidity', () => {
     beforeEach(async () => {
       await env.maker.getDai(user1, initialDai, rate1)
@@ -124,7 +96,7 @@ contract('LiquidityProxy', async (accounts) => {
       await dai.mint(user2, oneToken, { from: owner })
       await dai.approve(proxy.address, oneToken, { from: user2 })
       await controller.addDelegate(proxy.address, { from: user2 })
-      const tx = await proxy.addLiquidity(user2, oneToken, maxBorrow, { from: user2 })
+      const tx = await proxy.addLiquidity(oneToken, maxBorrow, { from: user2 })
 
       const minted = new BN(await pool.balanceOf(user2)).sub(poolTokensBefore)
       const collateral = new BN(await controller.posted(CHAI, user2))
@@ -150,7 +122,7 @@ contract('LiquidityProxy', async (accounts) => {
       await controller.addDelegate(proxy.address, { from: user2 })
 
       await expectRevert(
-        proxy.addLiquidity(user2, oneToken, maxBorrow, { from: user2 }),
+        proxy.addLiquidity(oneToken, maxBorrow, { from: user2 }),
         'LiquidityProxy: maxYDai exceeded'
       )
     })
@@ -162,7 +134,7 @@ contract('LiquidityProxy', async (accounts) => {
         await dai.mint(user2, oneToken, { from: owner })
         await dai.approve(proxy.address, oneToken, { from: user2 })
         await controller.addDelegate(proxy.address, { from: user2 })
-        await proxy.addLiquidity(user2, oneToken, maxBorrow, { from: user2 })
+        await proxy.addLiquidity(oneToken, maxBorrow, { from: user2 })
       })
 
       it('removes liquidity early by selling', async () => {
@@ -187,7 +159,7 @@ contract('LiquidityProxy', async (accounts) => {
         assert.equal(collateral.toString(), expectedCollateral, 'User2 should have posted Collateral')
 
         await pool.addDelegate(proxy.address, { from: user2 })
-        await proxy.removeLiquidityEarly(user2, poolTokens, '0')
+        await proxy.removeLiquidityEarly(poolTokens, '0', { from: user2 })
 
         const poolTokensAfter = new BN(await pool.balanceOf(user2))
         const DaiAfter = new BN(await dai.balanceOf(user2))

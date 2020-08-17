@@ -67,14 +67,15 @@ contract LiquidityProxy {
     //    z = mul(x, ONE) / y;
     //}
 
-    // @dev mints liquidity with provided Dai by borrowing yDai with some of the Dai
-    /// @param from Wallet providing the dai being used. Must have approved the operator with `dai.approve(operator)` and `controller..addDelegate(operator)`.
+    /// @dev mints liquidity with provided Dai by borrowing yDai with some of the Dai.
+    /// Caller must have approved the proxy using`controller.addDelegate(liquidityProxy)` and `pool.addDelegate(liquidityProxy)`
+    /// Caller must have approved the dai transfer with `dai.approve(daiUsed)`
     /// @param daiUsed amount of Dai to use to mint liquidity. 
     /// @param maxYDai maximum amount of yDai to be borrowed to mint liquidity. 
     /// @return The amount of liquidity tokens minted.  
-    function addLiquidity(address from,  uint256 daiUsed, uint256 maxYDai) external returns (uint256)
+    function addLiquidity(uint256 daiUsed, uint256 maxYDai) external returns (uint256)
     {
-        require(dai.transferFrom(from, address(this), daiUsed), "addLiquidity: Transfer Failed");
+        require(dai.transferFrom(msg.sender, address(this), daiUsed), "addLiquidity: Transfer Failed");
         
         // calculate needed yDai
         uint256 daiReserves = dai.balanceOf(address(pool));
@@ -95,44 +96,45 @@ contract LiquidityProxy {
         return pool.mint(address(this), msg.sender, daiToAdd);
     }
 
-    /// @dev burns tokens and repays yDai debt. Buys needed yDai or sells any excess, and all Dai is returned. 
-    /// @param from Wallet providing the dai being burned. Must have approved the operator with `pool.approve(operator)` and `controller.addDelegate(operator)`.
+    /// @dev burns tokens and repays yDai debt. Buys needed yDai or sells any excess, and all Dai is returned.
+    /// Caller must have approved the proxy using`controller.addDelegate(liquidityProxy)` and `pool.addDelegate(liquidityProxy)`
+    /// Caller must have approved the liquidity burn with `pool.approve(poolTokens)`
     /// @param poolTokens amount of pool tokens to burn. 
     /// @param daiLimit maximum amount of Dai to be bought or sold with yDai when burning. 
-    function removeLiquidityEarly(address from, uint256 poolTokens, uint256 daiLimit) external returns (uint256)
+    function removeLiquidityEarly(uint256 poolTokens, uint256 daiLimit) external returns (uint256)
     {
-        (, uint256 yDaiObtained) = pool.burn(from, address(this), poolTokens);
+        (, uint256 yDaiObtained) = pool.burn(msg.sender, address(this), poolTokens);
 
-        controller.repayYDai("CHAI", yDai.maturity(), address(this), from, yDaiObtained);
+        controller.repayYDai("CHAI", yDai.maturity(), address(this), msg.sender, yDaiObtained);
         uint256 remainingYDai = yDai.balanceOf(address(this));
         if (remainingYDai > 0) {
             pool.sellYDai(address(this), address(this), uint128(remainingYDai));
         }
 
         // Doing this is quite dangerous, I would do it only if there is no debt left
-        // controller.withdraw("CHAI", from, address(this), controller.posted("CHAI", from));
+        // controller.withdraw("CHAI", msg.sender, address(this), controller.posted("CHAI", msg.sender));
         // unwrap Chai
         // chai.exit(address(this), chai.balanceOf(address(this)));
-        require(dai.transfer(from, dai.balanceOf(address(this))), "removeLiquidityEarlySell: Dai Transfer Failed");
+        require(dai.transfer(msg.sender, dai.balanceOf(address(this))), "removeLiquidityEarlySell: Dai Transfer Failed");
         
     }
 
     /// @dev burns tokens and repays yDai debt after Maturity. 
-    /// @param from Wallet providing the dai being burned. Must have approved the operator with `pool.approve(operator)` and `controller.addDelegate(operator)`.
+    /// Caller must have approved the proxy using`controller.addDelegate(liquidityProxy)`
+    /// Caller must have approved the liquidity burn with `pool.approve(poolTokens)`
     /// @param poolTokens amount of pool tokens to burn. 
-    function removeLiquidityMature(address from, uint256 poolTokens) external returns (uint256)
+    function removeLiquidityMature(uint256 poolTokens) external returns (uint256)
     {
-        (, uint256 yDaiObtained) = pool.burn(from, address(this), poolTokens);
+        (, uint256 yDaiObtained) = pool.burn(msg.sender, address(this), poolTokens);
         if (yDaiObtained > 0){
             yDai.redeem(address(this), address(this), yDaiObtained);
         }
 
-        controller.repayDai("CHAI", yDai.maturity(), address(this), from, dai.balanceOf(address(this)));
+        controller.repayDai("CHAI", yDai.maturity(), address(this), msg.sender, dai.balanceOf(address(this)));
         // Doing this is quite dangerous, I would do it only if there is no debt left
-        // controller.withdraw("CHAI", from, from, controller.posted("CHAI", from));
+        // controller.withdraw("CHAI", msg.sender, address(this), controller.posted("CHAI", msg.sender));
         // unwrap Chai
         // chai.exit(address(this), chai.balanceOf(address(this)));
-        require(dai.transfer(from, dai.balanceOf(address(this))), "removeLiquidityMature: Dai Transfer Failed");
-        
+        require(dai.transfer(msg.sender, dai.balanceOf(address(this))), "removeLiquidityMature: Dai Transfer Failed");
     }
 }
