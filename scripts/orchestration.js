@@ -48,13 +48,13 @@ const CONTRACTS = [
 
         // Get the logs
         const logs = await contract.queryFilter("GrantedAccess", START_BLOCK)
-        const admins = logs.map(log => log.args.user)
+        const privileged = logs.map(log => log.args.user)
 
         // save the data
         data[name] = {
             "address" : address,
             "owner" : await contract.owner(),
-            "admins": admins,
+            "privileged": privileged,
         }
     }
 
