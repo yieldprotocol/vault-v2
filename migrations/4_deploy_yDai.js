@@ -31,9 +31,7 @@ module.exports = async (deployer, network, accounts) => {
   const unwind = await Unwind.deployed();
   unwindAddress = unwind.address;
   
-  // const block = await web3.eth.getBlockNumber();
   const maturitiesInput = new Set([
-    // [(await web3.eth.getBlock(block)).timestamp + 1000, 'Name1','Symbol1'],
     [1601510399, 'yDai-2020-09-30', 'yDai-2020-09-30'],
     [1609459199, 'yDai-2020-12-31', 'yDai-2020-12-31'],
     [1617235199, 'yDai-2021-03-31', 'yDai-2021-03-31'],
@@ -41,8 +39,9 @@ module.exports = async (deployer, network, accounts) => {
   ]);
 
   if (network === 'development') {
+    const block = await web3.eth.getBlockNumber();
     maturitiesInput.add(
-      [1, 'yDai-t0', 'yDai-t0'],
+      [(await web3.eth.getBlock(block)).timestamp + 100, 'yDai-t0', 'yDai-t0'],
     );
   }
 
