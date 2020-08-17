@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 contract DecimalMath {
     using SafeMath for uint256;
 
-    uint256 constant public UNIT = 1000000000000000000000000000;
+    uint256 constant public UNIT = 1e27;
 
     /// @dev Multiplies x and y, assuming they are both fixed point with 27 digits.
     function muld(uint256 x, uint256 y) internal pure returns (uint256) {
@@ -24,7 +24,7 @@ contract DecimalMath {
     function divdrup(uint256 x, uint256 y)
         internal pure returns (uint256)
     {
-        uint256 z = x.mul(10000000000000000000000000000).div(y); // RAY * 10
+        uint256 z = x.mul(1e28).div(y); // RAY * 10
         if (z % 10 > 0) return z / 10 + 1;
         else return z / 10;
     }

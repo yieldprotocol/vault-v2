@@ -46,7 +46,7 @@ contract DaiProxy is DecimalMath {
     /// @dev Safe casting from uint256 to uint128
     function toUint128(uint256 x) internal pure returns(uint128) {
         require(
-            x <= 340282366920938463463374607431768211455,
+            x <= type(uint128).max,
             "Pool: Cast overflow"
         );
         return uint128(x);

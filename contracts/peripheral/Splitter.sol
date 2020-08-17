@@ -64,7 +64,7 @@ contract Splitter is IFlashMinter, DecimalMath {
     /// @dev Safe casting from uint256 to int256
     function toInt256(uint256 x) internal pure returns(int256) {
         require(
-            x <= 57896044618658097711785492504343953926634992332820282019728792003956564819967,
+            x <= uint256(type(int256).max),
             "Treasury: Cast overflow"
         );
         return int256(x);
@@ -73,7 +73,7 @@ contract Splitter is IFlashMinter, DecimalMath {
     /// @dev Safe casting from uint256 to uint128
     function toUint128(uint256 x) internal pure returns(uint128) {
         require(
-            x <= 340282366920938463463374607431768211455,
+            x <= type(uint128).max,
             "Pool: Cast overflow"
         );
         return uint128(x);

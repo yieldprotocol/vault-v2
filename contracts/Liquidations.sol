@@ -25,7 +25,7 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
 
     bytes32 public constant WETH = "ETH-A";
     uint256 public constant AUCTION_TIME = 3600;
-    uint256 public constant DUST = 25000000000000000; // 0.025 ETH
+    uint256 public constant DUST = 25e15; // 0.025 ETH
 
     ITreasury internal _treasury;
     IController internal _controller;
@@ -77,7 +77,7 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
     /// @dev Safe casting from uint256 to uint128
     function toUint128(uint256 x) internal pure returns(uint128) {
         require(
-            x <= 340282366920938463463374607431768211455,
+            x <= type(uint128).max,
             "Market: Cast overflow"
         );
         return uint128(x);

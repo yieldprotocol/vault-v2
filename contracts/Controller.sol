@@ -33,7 +33,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
 
     bytes32 public constant CHAI = "CHAI";
     bytes32 public constant WETH = "ETH-A";
-    uint256 public constant DUST = 50000000000000000; // 0.05 ETH
+    uint256 public constant DUST = 50e15; // 0.05 ETH
     uint256 public constant THREE_MONTHS = 7776000;
 
     IVat internal _vat;
@@ -86,7 +86,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     /// @dev Safe casting from uint256 to int256
     function toInt256(uint256 x) internal pure returns(int256) {
         require(
-            x <= 57896044618658097711785492504343953926634992332820282019728792003956564819967,
+            x <= uint256(type(int256).max),
             "Controller: Cast overflow"
         );
         return int256(x);
