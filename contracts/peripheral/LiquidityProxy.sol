@@ -24,20 +24,24 @@ contract LiquidityProxy {
         address controller_,
         address chai_,
         address dai_,
-        address yDai_,
         address pool_,
         address treasury_
     ) public {
         controller = IController(controller_);
         chai = IChai(chai_);
         dai = IERC20(dai_);
-        yDai = IYDai(yDai_);
         pool = IPool(pool_);
 
+        yDai = pool.yDai();
+        require(
+            controller.containsSeries(yDai.maturity()),
+            "DaiProxy: Mismatched Pool and Controller"
+        );
+
+        dai.approve(address(chai), uint256(-1));
         dai.approve(address(pool), uint256(-1));
         yDai.approve(address(pool), uint256(-1));
-        dai.approve(address(chai), uint256(-1));
-        chai.approve(address(treasury_), uint256(-1));
+        chai.approve(treasury_, uint256(-1));
     }
 
     /// @dev mints liquidity with provided Dai by borrowing yDai with some of the Dai.

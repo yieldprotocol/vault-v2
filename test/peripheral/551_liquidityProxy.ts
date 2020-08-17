@@ -63,7 +63,6 @@ contract('LiquidityProxy', async (accounts) => {
       controller.address,
       chai.address,
       dai.address,
-      yDai1.address,
       pool.address,
       treasury.address,
       { from: owner }
