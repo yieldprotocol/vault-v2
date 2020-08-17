@@ -101,23 +101,18 @@ contract LiquidityProxy {
     /// @param daiLimit maximum amount of Dai to be bought or sold with yDai when burning. 
     function removeLiquidityEarly(address from, uint256 poolTokens, uint256 daiLimit) external returns (uint256)
     {
-        pool.burn(from, address(this), poolTokens);
-        uint256 mat = yDai.maturity();
-        uint256 balance = yDai.balanceOf(address(this));
-        uint256 debt = controller.debtYDai("CHAI", mat , from);
-        uint256 result;
-        if (balance >= debt){
-            result = pool.sellYDai(address(this), address(this), uint128(sub(balance, debt)));
-            require(result >= daiLimit, "removeLiquidityEarlySell: insufficient Dai purchased");
-        } else {
-            result = pool.buyYDai(address(this), address(this), uint128(sub(debt, balance)));
-            require(result <= daiLimit, "removeLiquidityEarlySell: excessive Dai sold");
+        (uint256 daiObtained, uint256 yDaiObtained) = pool.burn(from, address(this), poolTokens);
+
+        controller.repayYDai("CHAI", yDai.maturity(), address(this), from, yDaiObtained);
+        uint256 remainingYDai = yDai.balanceOf(address(this));
+        if (remainingYDai > 0) {
+            pool.sellYDai(address(this), address(this), uint128(remainingYDai));
         }
-        // repay debt
-        controller.repayYDai("CHAI", mat, address(this), from, debt);
-        controller.withdraw("CHAI", from, address(this), controller.posted("CHAI", from));
+
+        // Doing this is quite dangerous, I would do it only if there is no debt left
+        // controller.withdraw("CHAI", from, address(this), controller.posted("CHAI", from));
         // unwrap Chai
-        chai.exit(address(this), chai.balanceOf(address(this)));
+        // chai.exit(address(this), chai.balanceOf(address(this)));
         require(dai.transfer(from, dai.balanceOf(address(this))), "removeLiquidityEarlySell: Dai Transfer Failed");
         
     }
