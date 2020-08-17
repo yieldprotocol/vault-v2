@@ -101,7 +101,7 @@ contract LiquidityProxy {
     /// @param daiLimit maximum amount of Dai to be bought or sold with yDai when burning. 
     function removeLiquidityEarly(address from, uint256 poolTokens, uint256 daiLimit) external returns (uint256)
     {
-        (uint256 daiObtained, uint256 yDaiObtained) = pool.burn(from, address(this), poolTokens);
+        (, uint256 yDaiObtained) = pool.burn(from, address(this), poolTokens);
 
         controller.repayYDai("CHAI", yDai.maturity(), address(this), from, yDaiObtained);
         uint256 remainingYDai = yDai.balanceOf(address(this));
@@ -122,19 +122,16 @@ contract LiquidityProxy {
     /// @param poolTokens amount of pool tokens to burn. 
     function removeLiquidityMature(address from, uint256 poolTokens) external returns (uint256)
     {
-        require(pool.transferFrom(from, address(this), poolTokens), "removeLiquidityMature: Transfer Failed");
-        pool.burn(address(this), address(this), poolTokens);
-        uint256 mat = yDai.maturity();
-        uint256 balance = yDai.balanceOf(address(this));
-        if (balance > 0){
-            yDai.redeem(address(this), address(this), balance);
+        (, uint256 yDaiObtained) = pool.burn(from, address(this), poolTokens);
+        if (yDaiObtained > 0){
+            yDai.redeem(address(this), address(this), yDaiObtained);
         }
-        uint256 daiBalance = dai.balanceOf(address(this));
-        // repay debt
-        controller.repayDai("CHAI", mat, address(this), from, daiBalance);
-        controller.withdraw("CHAI", from, from, controller.posted("CHAI", from));
+
+        controller.repayDai("CHAI", yDai.maturity(), address(this), from, dai.balanceOf(address(this)));
+        // Doing this is quite dangerous, I would do it only if there is no debt left
+        // controller.withdraw("CHAI", from, from, controller.posted("CHAI", from));
         // unwrap Chai
-        chai.exit(address(this), chai.balanceOf(address(this)));
+        // chai.exit(address(this), chai.balanceOf(address(this)));
         require(dai.transfer(from, dai.balanceOf(address(this))), "removeLiquidityMature: Dai Transfer Failed");
         
     }
