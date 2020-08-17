@@ -49,7 +49,7 @@ contract LiquidityProxy {
         chai.approve(treasury_, uint256(-1));
     }
 
-    /// @dev mints liquidity with provided Dai by borrowing yDai with some of the Dai.
+    /// @dev Mints liquidity with provided Dai by borrowing yDai with some of the Dai.
     /// Caller must have approved the proxy using`controller.addDelegate(liquidityProxy)` and `pool.addDelegate(liquidityProxy)`
     /// Caller must have approved the dai transfer with `dai.approve(daiOffered)`
     /// @param daiOffered amount of Dai to use to mint liquidity. 
@@ -81,7 +81,7 @@ contract LiquidityProxy {
         return pool.mint(address(this), msg.sender, daiToAdd);
     }
 
-    /// @dev burns tokens and repays yDai debt. Buys needed yDai or sells any excess, and all Dai is returned.
+    /// @dev Burns tokens and repays yDai debt. Buys needed yDai or sells any excess, and all Dai is returned.
     /// Caller must have approved the proxy using`controller.addDelegate(liquidityProxy)` and `pool.addDelegate(liquidityProxy)`
     /// Caller must have approved the liquidity burn with `pool.approve(poolTokens)`
     /// @param poolTokens amount of pool tokens to burn. 
@@ -101,7 +101,7 @@ contract LiquidityProxy {
         if (controller.debtYDai(CHAI, maturity, msg.sender) == 0) withdrawDai();
     }
 
-    /// @dev burns tokens and repays yDai debt after Maturity. 
+    /// @dev Burns tokens and repays yDai debt after Maturity. 
     /// Caller must have approved the proxy using`controller.addDelegate(liquidityProxy)`
     /// Caller must have approved the liquidity burn with `pool.approve(poolTokens)`
     /// @param poolTokens amount of pool tokens to burn. 
