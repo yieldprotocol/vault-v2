@@ -88,10 +88,10 @@ contract LiquidityProxy {
             pool.sellYDai(address(this), address(this), uint128(remainingYDai));
         }
 
-        // Doing this is quite dangerous, I would do it only if there is no debt left
-        // controller.withdraw("CHAI", msg.sender, address(this), controller.posted("CHAI", msg.sender));
-        // unwrap Chai
-        // chai.exit(address(this), chai.balanceOf(address(this)));
+        if (controller.debtYDai("CHAI", yDai.maturity(), msg.sender) == 0) {
+            controller.withdraw("CHAI", msg.sender, address(this), controller.posted("CHAI", msg.sender));
+            chai.exit(address(this), chai.balanceOf(address(this)));
+        }
         require(dai.transfer(msg.sender, dai.balanceOf(address(this))), "removeLiquidityEarlySell: Dai Transfer Failed");
         
     }
@@ -108,10 +108,11 @@ contract LiquidityProxy {
         }
 
         controller.repayDai("CHAI", yDai.maturity(), address(this), msg.sender, dai.balanceOf(address(this)));
-        // Doing this is quite dangerous, I would do it only if there is no debt left
-        // controller.withdraw("CHAI", msg.sender, address(this), controller.posted("CHAI", msg.sender));
-        // unwrap Chai
-        // chai.exit(address(this), chai.balanceOf(address(this)));
+
+        if (controller.debtYDai("CHAI", yDai.maturity(), msg.sender) == 0) {
+            controller.withdraw("CHAI", msg.sender, address(this), controller.posted("CHAI", msg.sender));
+            chai.exit(address(this), chai.balanceOf(address(this)));
+        }
         require(dai.transfer(msg.sender, dai.balanceOf(address(this))), "removeLiquidityMature: Dai Transfer Failed");
     }
 }
