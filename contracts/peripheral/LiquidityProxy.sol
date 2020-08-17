@@ -83,41 +83,32 @@ contract LiquidityProxy {
     /// Caller must have approved the liquidity burn with `pool.approve(poolTokens)`
     /// @param poolTokens amount of pool tokens to burn. 
     /// @param daiLimit maximum amount of Dai to be bought or sold with yDai when burning. 
-    function removeLiquidityEarly(uint256 poolTokens, uint256 daiLimit) external returns (uint256)
+    function removeLiquidityEarly(uint256 poolTokens, uint256 daiLimit) external
     {
         (, uint256 yDaiObtained) = pool.burn(msg.sender, address(this), poolTokens);
 
         controller.repayYDai(CHAI, maturity, address(this), msg.sender, yDaiObtained);
         uint256 remainingYDai = yDai.balanceOf(address(this));
-        if (remainingYDai > 0) {
-            pool.sellYDai(address(this), address(this), uint128(remainingYDai));
-        }
-
-        if (controller.debtYDai(CHAI, maturity, msg.sender) == 0) {
-            controller.withdraw(CHAI, msg.sender, address(this), controller.posted(CHAI, msg.sender));
-            chai.exit(address(this), chai.balanceOf(address(this)));
-        }
-        require(dai.transfer(msg.sender, dai.balanceOf(address(this))), "removeLiquidityEarlySell: Dai Transfer Failed");
-        
+        if (remainingYDai > 0) pool.sellYDai(address(this), address(this), uint128(remainingYDai));
+        if (controller.debtYDai(CHAI, maturity, msg.sender) == 0) withdrawDai();
     }
 
     /// @dev burns tokens and repays yDai debt after Maturity. 
     /// Caller must have approved the proxy using`controller.addDelegate(liquidityProxy)`
     /// Caller must have approved the liquidity burn with `pool.approve(poolTokens)`
     /// @param poolTokens amount of pool tokens to burn. 
-    function removeLiquidityMature(uint256 poolTokens) external returns (uint256)
+    function removeLiquidityMature(uint256 poolTokens) external
     {
         (, uint256 yDaiObtained) = pool.burn(msg.sender, address(this), poolTokens);
-        if (yDaiObtained > 0){
-            yDai.redeem(address(this), address(this), yDaiObtained);
-        }
-
+        if (yDaiObtained > 0) yDai.redeem(address(this), address(this), yDaiObtained);
         controller.repayDai(CHAI, maturity, address(this), msg.sender, dai.balanceOf(address(this)));
+        if (controller.debtYDai(CHAI, maturity, msg.sender) == 0) withdrawDai();
+    }
 
-        if (controller.debtYDai(CHAI, maturity, msg.sender) == 0) {
-            controller.withdraw(CHAI, msg.sender, address(this), controller.posted(CHAI, msg.sender));
-            chai.exit(address(this), chai.balanceOf(address(this)));
-        }
+    /// @dev Return to caller all posted chai, converted to dai.
+    function withdrawDai() internal {
+        controller.withdraw(CHAI, msg.sender, address(this), controller.posted(CHAI, msg.sender));
+        chai.exit(address(this), chai.balanceOf(address(this)));
         require(dai.transfer(msg.sender, dai.balanceOf(address(this))), "removeLiquidityMature: Dai Transfer Failed");
     }
 }
