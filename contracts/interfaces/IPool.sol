@@ -15,6 +15,6 @@ interface IPool is IERC20 {
     function buyDaiPreview(uint128 daiOut) external view returns(uint128);
     function sellYDaiPreview(uint128 yDaiIn) external view returns(uint128);
     function buyYDaiPreview(uint128 yDaiOut) external view returns(uint128);
-    function mint(uint256 daiOffered) external returns (uint256);
-    function burn(uint256 tokensBurned) external returns (uint256, uint256);
+    function mint(address from, address to, uint256 daiOffered) external returns (uint256);
+    function burn(address from, address to, uint256 tokensBurned) external returns (uint256, uint256);
 }

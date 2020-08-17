@@ -93,7 +93,7 @@ contract LiquidityProxy {
         
         // mint liquidity tokens
         dai.approve(address(pool), daiToAdd);
-        uint256 minted = pool.mint(daiToAdd);
+        uint256 minted = pool.mint(address(this), address(this), daiToAdd);
         pool.transfer(msg.sender, minted);
         return minted; 
     }
@@ -105,7 +105,7 @@ contract LiquidityProxy {
     function removeLiquidityEarly(address from, uint256 poolTokens, uint256 daiLimit) external returns (uint256)
     {
         require(pool.transferFrom(from, address(this), poolTokens), "removeLiquidityEarlySell: Transfer Failed");
-        pool.burn(poolTokens);
+        pool.burn(address(this), address(this), poolTokens);
         uint256 mat = yDai.maturity();
         uint256 balance = yDai.balanceOf(address(this));
         uint256 debt = controller.debtYDai("CHAI", mat , from);
@@ -132,7 +132,7 @@ contract LiquidityProxy {
     function removeLiquidityMature(address from, uint256 poolTokens) external returns (uint256)
     {
         require(pool.transferFrom(from, address(this), poolTokens), "removeLiquidityMature: Transfer Failed");
-        pool.burn(poolTokens);
+        pool.burn(address(this), address(this), poolTokens);
         uint256 mat = yDai.maturity();
         uint256 balance = yDai.balanceOf(address(this));
         if (balance > 0){
