@@ -28,6 +28,10 @@ const CONTRACTS = [
     "yDai1",
     "yDai2",
     "yDai3",
+    "yDai-2020-09-30-Pool",
+    "yDai-2020-12-31-Pool",
+    "yDai-2021-03-31-Pool",
+    "yDai-2021-06-30-Pool",
 ];
 
 (async () => {
@@ -50,10 +54,18 @@ const CONTRACTS = [
         const logs = await contract.queryFilter("GrantedAccess", START_BLOCK)
         const privileged = logs.map(log => log.args.user)
 
+        let owner;
+        try {
+            owner = await contract.owner()
+        } catch(e) {
+            owner = ''
+        }
+
+
         // save the data
         data[name] = {
             "address" : address,
-            "owner" : await contract.owner(),
+            "owner" : owner,
             "privileged": privileged,
         }
     }
