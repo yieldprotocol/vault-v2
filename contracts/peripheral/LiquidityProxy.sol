@@ -13,11 +13,15 @@ import "@nomiclabs/buidler/console.sol";
 contract LiquidityProxy {
     using SafeMath for uint256;
 
+    bytes32 public constant CHAI = "CHAI";
+
     IERC20 public dai;
     IChai public chai;
     IController public controller;
     IYDai public yDai;
     IPool public pool;
+
+    uint256 public immutable maturity;
 
     /// @dev The constructor links ControllerDai to vat, pot, controller and pool.
     constructor (
@@ -33,6 +37,7 @@ contract LiquidityProxy {
         pool = IPool(pool_);
 
         yDai = pool.yDai();
+        maturity = yDai.maturity();
         require(
             controller.containsSeries(yDai.maturity()),
             "DaiProxy: Mismatched Pool and Controller"
@@ -66,8 +71,8 @@ contract LiquidityProxy {
         uint256 balance = chai.balanceOf(address(this));
         // look at the balance of chai in dai to avoid rounding issues
         uint256 toBorrow = chai.dai(address(this));
-        controller.post("CHAI", address(this), msg.sender, balance);
-        controller.borrow("CHAI", yDai.maturity(), msg.sender, address(this), toBorrow);
+        controller.post(CHAI, address(this), msg.sender, balance);
+        controller.borrow(CHAI, maturity, msg.sender, address(this), toBorrow);
         
         // mint liquidity tokens
         return pool.mint(address(this), msg.sender, daiToAdd);
@@ -82,14 +87,14 @@ contract LiquidityProxy {
     {
         (, uint256 yDaiObtained) = pool.burn(msg.sender, address(this), poolTokens);
 
-        controller.repayYDai("CHAI", yDai.maturity(), address(this), msg.sender, yDaiObtained);
+        controller.repayYDai(CHAI, maturity, address(this), msg.sender, yDaiObtained);
         uint256 remainingYDai = yDai.balanceOf(address(this));
         if (remainingYDai > 0) {
             pool.sellYDai(address(this), address(this), uint128(remainingYDai));
         }
 
-        if (controller.debtYDai("CHAI", yDai.maturity(), msg.sender) == 0) {
-            controller.withdraw("CHAI", msg.sender, address(this), controller.posted("CHAI", msg.sender));
+        if (controller.debtYDai(CHAI, maturity, msg.sender) == 0) {
+            controller.withdraw(CHAI, msg.sender, address(this), controller.posted(CHAI, msg.sender));
             chai.exit(address(this), chai.balanceOf(address(this)));
         }
         require(dai.transfer(msg.sender, dai.balanceOf(address(this))), "removeLiquidityEarlySell: Dai Transfer Failed");
@@ -107,10 +112,10 @@ contract LiquidityProxy {
             yDai.redeem(address(this), address(this), yDaiObtained);
         }
 
-        controller.repayDai("CHAI", yDai.maturity(), address(this), msg.sender, dai.balanceOf(address(this)));
+        controller.repayDai(CHAI, maturity, address(this), msg.sender, dai.balanceOf(address(this)));
 
-        if (controller.debtYDai("CHAI", yDai.maturity(), msg.sender) == 0) {
-            controller.withdraw("CHAI", msg.sender, address(this), controller.posted("CHAI", msg.sender));
+        if (controller.debtYDai(CHAI, maturity, msg.sender) == 0) {
+            controller.withdraw(CHAI, msg.sender, address(this), controller.posted(CHAI, msg.sender));
             chai.exit(address(this), chai.balanceOf(address(this)));
         }
         require(dai.transfer(msg.sender, dai.balanceOf(address(this))), "removeLiquidityMature: Dai Transfer Failed");
