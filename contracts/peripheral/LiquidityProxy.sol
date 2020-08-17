@@ -3,24 +3,9 @@ pragma solidity ^0.6.10;
 
 import "../interfaces/IController.sol";
 import "../interfaces/IChai.sol";
+import "../interfaces/IPool.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@nomiclabs/buidler/console.sol";
-
-interface IPool {
-    function transfer(address recipient, uint256 amount) external returns (bool);
-    function transferFrom(address src, address dst, uint wad) external returns (bool);
-    function sellDai(address from, address to, uint128 daiIn) external returns(uint128);
-    function buyDai(address from, address to, uint128 daiOut) external returns(uint128);
-    function sellYDai(address from, address to, uint128 yDaiIn) external returns(uint128);
-    function buyYDai(address from, address to, uint128 yDaiOut) external returns(uint128);
-    function sellDaiPreview(uint128 daiIn) external view returns(uint128);
-    function buyDaiPreview(uint128 daiOut) external view returns(uint128);
-    function sellYDaiPreview(uint128 yDaiIn) external view returns(uint128);
-    function buyYDaiPreview(uint128 yDaiOut) external view returns(uint128);
-    function mint(uint256 daiOffered) external returns (uint256);
-    function burn(uint256 tokensBurned) external returns (uint256, uint256);
-}
-
 
 /**
  * @dev The LiquidityProxy is a proxy contract of Pool that allows users to mint liquidity tokens with just Dai. 

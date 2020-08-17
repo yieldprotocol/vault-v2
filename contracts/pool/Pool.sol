@@ -125,7 +125,7 @@ contract Pool is IPool, ERC20, Delegable {
     /// @param tokensBurned Amount of liquidity tokens being burned.
     /// @return The amount of reserve tokens returned (daiTokens, yDaiTokens).
     function burn(uint256 tokensBurned)
-        external
+        external override
         returns (uint256, uint256)
     {
         uint256 supply = totalSupply();

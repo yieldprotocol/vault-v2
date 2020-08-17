@@ -4,7 +4,7 @@ pragma solidity ^0.6.10;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../interfaces/IYDai.sol";
 
-interface IPool {
+interface IPool is IERC20 {
     function dai() external view returns(IERC20);
     function yDai() external view returns(IYDai);
     function sellDai(address from, address to, uint128 daiIn) external returns(uint128);
@@ -16,4 +16,5 @@ interface IPool {
     function sellYDaiPreview(uint128 yDaiIn) external view returns(uint128);
     function buyYDaiPreview(uint128 yDaiOut) external view returns(uint128);
     function mint(uint256 daiOffered) external returns (uint256);
+    function burn(uint256 tokensBurned) external returns (uint256, uint256);
 }
