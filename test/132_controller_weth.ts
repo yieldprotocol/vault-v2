@@ -79,7 +79,7 @@ contract('Controller - Weth', async (accounts) =>  {
         await weth.deposit({ from: user1, value: 1 });
         await weth.approve(treasury.address, 1, { from: user1 }); 
         await expectRevert(
-            controller.post(WETH, user1, user1, 1, { from: user1 }),
+            controller.post(WETH, user1, user2, 1, { from: user1 }),
             "Controller: Below dust",
         );
     });
@@ -151,7 +151,7 @@ contract('Controller - Weth', async (accounts) =>  {
             const toWithdraw = (new BN(posted)).sub(new BN('1000')).toString();
 
             await expectRevert(
-                controller.withdraw(WETH, user1, user1, toWithdraw, { from: user1 }),
+                controller.withdraw(WETH, user1, user2, toWithdraw, { from: user1 }),
                 "Controller: Below dust",
             );
         });
@@ -229,7 +229,7 @@ contract('Controller - Weth', async (accounts) =>  {
 
         it("doesn't allow to borrow yDai beyond borrowing power", async() => {
             await expectRevert(
-                controller.borrow(WETH, maturity1, user1, user1, addBN(daiTokens1, 1), { from: user1 }), // Borrow 1 wei beyond power
+                controller.borrow(WETH, maturity1, user1, user2, addBN(daiTokens1, 1), { from: user1 }), // Borrow 1 wei beyond power
                 "Controller: Too much debt",
             );
         });
@@ -288,7 +288,7 @@ contract('Controller - Weth', async (accounts) =>  {
 
                 it("doesn't allow to withdraw and become undercollateralized", async() => {
                     await expectRevert(
-                        controller.borrow(WETH, maturity1, user1, user1, wethTokens1, { from: user1 }),
+                        controller.borrow(WETH, maturity1, user1, user2, wethTokens1, { from: user1 }),
                         "Controller: Too much debt",
                     );
                 });

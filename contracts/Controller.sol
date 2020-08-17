@@ -306,7 +306,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
 
         if (collateral == WETH){
             require(
-                aboveDustOrZero(collateral, to),
+                aboveDustOrZero(collateral, from),
                 "Controller: Below dust"
             );
             _treasury.pullWeth(to, amount);

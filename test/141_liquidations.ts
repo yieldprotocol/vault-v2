@@ -7,7 +7,7 @@ import { WETH, CHAI, rate1, chi1, daiTokens1, wethTokens1, chaiTokens1, toRay, a
 import { YieldEnvironment, Contract } from "./shared/fixtures";
 
 contract('Liquidations', async (accounts) =>  {
-    let [ owner, user1, user2, user3, buyer ] = accounts;
+    let [ owner, user1, user2, user3, buyer, receiver ] = accounts;
 
     let snapshot: any;
     let snapshotId: string;
@@ -125,7 +125,7 @@ contract('Liquidations', async (accounts) =>  {
         it("doesn't allow to buy from vaults not under liquidation", async() => {
             const debt = (await liquidations.vaults(user2, { from: buyer })).debt;
             await expectRevert(
-                liquidations.buy(buyer, buyer, user2, debt, { from: buyer }),
+                liquidations.buy(buyer, receiver, user2, debt, { from: buyer }),
                 "Liquidations: Vault is not in liquidation",
             );
         });
@@ -207,7 +207,7 @@ contract('Liquidations', async (accounts) =>  {
                     const liquidatorBuys = userDebt;
 
                     await dai.approve(treasury.address, liquidatorBuys, { from: buyer });
-                    await liquidations.buy(buyer, buyer, user2, liquidatorBuys, { from: buyer });
+                    await liquidations.buy(buyer, receiver, user2, liquidatorBuys, { from: buyer });
 
                     assert.equal(
                         (await liquidations.vaults(user2, { from: buyer })).debt,
@@ -216,13 +216,13 @@ contract('Liquidations', async (accounts) =>  {
                     );
                     // The buy will happen a few seconds after the start of the liquidation, so the collateral received will be slightly above the 2/3 of the total posted.
                     expect(
-                        await weth.balanceOf(buyer, { from: buyer })
+                        await weth.balanceOf(receiver, { from: buyer })
                     ).to.be.bignumber.gt(
                         // @ts-ignore
                         divRay(userCollateral, toRay(2)).toString()
                     );
                     expect(
-                        await weth.balanceOf(buyer, { from: buyer }),
+                        await weth.balanceOf(receiver, { from: buyer }),
                     ).to.be.bignumber.lt(
                         // @ts-ignore
                         mulRay(divRay(userCollateral, toRay(2)), toRay(1.01)).toString(),
@@ -233,7 +233,7 @@ contract('Liquidations', async (accounts) =>  {
                     const liquidatorBuys = divRay(userDebt, toRay(2));
 
                     await dai.approve(treasury.address, liquidatorBuys, { from: buyer });
-                    await liquidations.buy(buyer, buyer, user2, liquidatorBuys, { from: buyer });
+                    await liquidations.buy(buyer, receiver, user2, liquidatorBuys, { from: buyer });
 
                     assert.equal(
                         (await liquidations.vaults(user2, { from: buyer })).debt,
@@ -242,14 +242,14 @@ contract('Liquidations', async (accounts) =>  {
                     );
                     // The buy will happen a few seconds after the start of the liquidation, so the collateral received will be slightly above the 1/4 of the total posted.
                     expect(
-                        await weth.balanceOf(buyer, { from: buyer })
+                        await weth.balanceOf(receiver, { from: buyer })
                     // @ts-ignore
                     ).to.be.bignumber.gt(
                         // @ts-ignore
                         divRay(userCollateral, toRay(4)).toString()
                     );
                     expect(
-                        await weth.balanceOf(buyer, { from: buyer }),
+                        await weth.balanceOf(receiver, { from: buyer }),
                     ).to.be.bignumber.lt(
                         // @ts-ignore
                         mulRay(divRay(userCollateral, toRay(4)), toRay(1.01)).toString(),
@@ -270,7 +270,7 @@ contract('Liquidations', async (accounts) =>  {
                         const totalRemainingCollateral = subBN(totals.collateral.toString(), user2Vault.collateral.toString());
 
                         await dai.approve(treasury.address, liquidatorBuys, { from: buyer });
-                        await liquidations.buy(buyer, buyer, user2, liquidatorBuys, { from: buyer });
+                        await liquidations.buy(buyer, receiver, user2, liquidatorBuys, { from: buyer });
     
                         assert.equal(
                             (await liquidations.vaults(user2, { from: buyer })).debt,
@@ -283,9 +283,9 @@ contract('Liquidations', async (accounts) =>  {
                             "Total debt should have been " + totalRemainingDebt + ", instead is " + (await liquidations.totals({ from: buyer })).debt,
                         );
                         assert.equal(
-                            await weth.balanceOf(buyer, { from: buyer }),
+                            await weth.balanceOf(receiver, { from: buyer }),
                             userCollateral.toString(),
-                            "Liquidator should have " + userCollateral + " weth, instead has " + await weth.balanceOf(buyer, { from: buyer }),
+                            "Receiver should have " + userCollateral + " weth, instead has " + await weth.balanceOf(buyer, { from: buyer }),
                         );
                         assert.equal(
                             (await liquidations.totals({ from: buyer })).collateral,
@@ -298,7 +298,7 @@ contract('Liquidations', async (accounts) =>  {
                         const liquidatorBuys = divRay(userDebt, toRay(2));
     
                         await dai.approve(treasury.address, liquidatorBuys, { from: buyer });
-                        await liquidations.buy(buyer, buyer, user2, liquidatorBuys, { from: buyer });
+                        await liquidations.buy(buyer, receiver, user2, liquidatorBuys, { from: buyer });
     
                         assert.equal(
                             (await liquidations.vaults(user2, { from: buyer })).debt,
@@ -306,7 +306,7 @@ contract('Liquidations', async (accounts) =>  {
                             "User debt should have been halved",
                         );
                         assert.equal(
-                            await weth.balanceOf(buyer, { from: buyer }),
+                            await weth.balanceOf(receiver, { from: buyer }),
                             addBN(divRay(userCollateral, toRay(2)), 1).toString(), // divRay should round up
                             "Liquidator should have " + addBN(divRay(userCollateral, toRay(2)), 1) + " weth, instead has " + await weth.balanceOf(buyer, { from: buyer }),
                         );
@@ -318,7 +318,7 @@ contract('Liquidations', async (accounts) =>  {
                         await dai.approve(treasury.address, liquidatorBuys, { from: buyer });
 
                         await expectRevert(
-                            liquidations.buy(buyer, buyer, user2, liquidatorBuys, { from: buyer }),
+                            liquidations.buy(buyer, receiver, user2, liquidatorBuys, { from: buyer }),
                             "Liquidations: Below dust",
                         );
                     });
@@ -331,7 +331,7 @@ contract('Liquidations', async (accounts) =>  {
                         await env.maker.getDai(buyer, userDebt, rate2);
     
                         await dai.approve(treasury.address, userDebt, { from: buyer });
-                        await liquidations.buy(buyer, buyer, user2, userDebt, { from: buyer });
+                        await liquidations.buy(buyer, receiver, user2, userDebt, { from: buyer });
                     });
     
                     it("liquidated users can retrieve any remaining collateral", async() => {
