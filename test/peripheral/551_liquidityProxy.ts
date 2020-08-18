@@ -8,6 +8,7 @@ import { YieldEnvironmentLite, Contract } from '../shared/fixtures'
 // @ts-ignore
 import { BN, expectRevert } from '@openzeppelin/test-helpers'
 import { assert, expect } from 'chai'
+import { BigNumber } from 'ethers'
 
 contract('LiquidityProxy', async (accounts) => {
   let [owner, user1, operator, user2, to] = accounts
@@ -35,6 +36,10 @@ contract('LiquidityProxy', async (accounts) => {
   let treasury: Contract
 
   let maturity1: number
+
+  const yDaiIn = (daiReserves: BigNumber, yDaiReserves: BigNumber, daiUsed: BigNumber): BigNumber => {
+    return daiReserves.mul(daiUsed.div(daiReserves.add(yDaiReserves)))
+  }
 
   beforeEach(async () => {
     snapshot = await helper.takeSnapshot()
