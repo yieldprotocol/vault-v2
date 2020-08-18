@@ -6,10 +6,10 @@ pragma solidity ^0.6.10;
 contract Delegable {
     event Delegate(address indexed user, address indexed delegate, bool enabled);
 
-    bytes32 public DOMAIN_SEPARATOR;
+    bytes32 public DELEGABLE_DOMAIN;
     // keccak256("Permit(address user,address delegate,uint256 nonce,uint256 deadline)");
-    bytes32 public constant PERMIT_TYPEHASH = 0x0000000000000000000000000000000;
-    mapping(address => uint) public nonces;
+    bytes32 public constant SIGNATURE_TYPEHASH = 0x0000000000000000000000000000000;
+    mapping(address => uint) public signatureCount;
 
     mapping(address => mapping(address => bool)) public delegated;
 
@@ -19,7 +19,7 @@ contract Delegable {
             chainId := chainid()
         }
 
-        DOMAIN_SEPARATOR = keccak256(
+        DELEGABLE_DOMAIN = keccak256(
             abi.encode(
                 keccak256('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)'),
                 keccak256(bytes('Yield')), // Can we get the name of the inheriting contract somehow?
@@ -53,14 +53,14 @@ contract Delegable {
         emit Delegate(msg.sender, delegate, false);
     }
 
-    /// @dev Add a delegate through a permit
-    function permit(address user, address delegate, uint deadline, uint8 v, bytes32 r, bytes32 s) external {
+    /// @dev Add a delegate through an encoded signature
+    function addDelegateBySignature(address user, address delegate, uint deadline, uint8 v, bytes32 r, bytes32 s) external {
         require(deadline >= block.timestamp, 'Yield: EXPIRED');
         bytes32 digest = keccak256(
             abi.encodePacked(
                 '\x19\x01',
-                DOMAIN_SEPARATOR,
-                keccak256(abi.encode(PERMIT_TYPEHASH, user, delegate, nonces[user]++, deadline))
+                DELEGABLE_DOMAIN,
+                keccak256(abi.encode(SIGNATURE_TYPEHASH, user, delegate, signatureCount[user]++, deadline))
             )
         );
         address recoveredAddress = ecrecover(digest, v, r, s);
