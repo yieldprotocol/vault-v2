@@ -3,7 +3,7 @@ const LiquidityProxy = artifacts.require('LiquidityProxy')
 
 // @ts-ignore
 import helper from 'ganache-time-traveler'
-import { CHAI, toWad, toRay, mulRay } from '../shared/utils'
+import { CHAI, chi1, toWad, toRay, mulRay } from '../shared/utils'
 import { YieldEnvironmentLite, Contract } from '../shared/fixtures'
 // @ts-ignore
 import { BN, expectRevert } from '@openzeppelin/test-helpers'
@@ -38,7 +38,15 @@ contract('LiquidityProxy', async (accounts) => {
   let maturity1: number
 
   const yDaiIn = (daiReserves: BigNumber, yDaiReserves: BigNumber, daiUsed: BigNumber): BigNumber => {
-    return daiReserves.mul(daiUsed.div(daiReserves.add(yDaiReserves)))
+    return (daiUsed.mul(daiReserves)).div(daiReserves.add(yDaiReserves))
+  }
+
+  const postedIn = (expectedDebt: BigNumber, chi: BigNumber): BigNumber => {
+    return expectedDebt.mul(toRay(1)).div((BigNumber.from(chi)))
+  }
+
+  const mintedOut = (poolSupply: BigNumber, daiIn: BigNumber, daiReserves: BigNumber): BigNumber => {
+    return poolSupply.mul(daiIn).div(daiReserves)
   }
 
   beforeEach(async () => {
@@ -92,44 +100,58 @@ contract('LiquidityProxy', async (accounts) => {
     it('mints liquidity tokens with dai only', async () => {
       const oneToken = toWad(1)
       
-      const poolTokensBefore = new BN(await pool.balanceOf(user2))
-      const daiUsed = oneToken;
+      const poolTokensBefore = BigNumber.from((await pool.balanceOf(user2)).toString())
       const maxYDai = oneToken
 
+      const daiReserves = BigNumber.from((await pool.getDaiReserves()).toString())
+      const yDaiReserves = BigNumber.from((await pool.getYDaiReserves()).toString())
+      const daiUsed = BigNumber.from(oneToken)
+      const poolSupply = BigNumber.from((await pool.totalSupply()).toString())
+
       console.log('          adding liquidity...')
-      console.log('          daiReserves: %d', await pool.getDaiReserves())    // d_0
-      console.log('          yDaiReserves: %d', await pool.getYDaiReserves())  // y_0
-      console.log('          Pool supply: %d', await pool.totalSupply())       // s
-      console.log('          daiUsed: %d', daiUsed)                            // d_used
+      console.log('          daiReserves: %d', daiReserves.toString())    // d_0
+      console.log('          yDaiReserves: %d', yDaiReserves.toString())  // y_0
+      console.log('          daiUsed: %d', daiUsed.toString())            // d_used
+
+      // https://www.desmos.com/calculator/bl2knrktlt
+      const expectedDebt = yDaiIn(daiReserves, yDaiReserves, daiUsed)     // y_in
+      console.log('          expected yDaiIn: %d', expectedDebt)
+      const daiIn = daiUsed.sub(expectedDebt)                             // d_in
+      console.log('          expected daiIn: %d', daiIn)
+
+      console.log('          chi: %d', chi1)
+      const expectedPosted = postedIn(expectedDebt, chi1)
+      console.log('          expected posted: %d', expectedPosted)         // p_chai
+
+      // https://www.desmos.com/calculator/w9qorhrjbw
+      console.log('          Pool supply: %d', poolSupply)                 // s
+      const expectedMinted = mintedOut(poolSupply, daiIn, daiReserves)     // m
+      console.log('          expected minted: %d', expectedMinted)
 
       await dai.mint(user2, oneToken, { from: owner })
       await dai.approve(proxy.address, oneToken, { from: user2 })
       await controller.addDelegate(proxy.address, { from: user2 })
       await proxy.addLiquidity(daiUsed, maxYDai, { from: user2 })
 
-      // https://www.desmos.com/calculator/bl2knrktlt
-      const expectedDebt = new BN('376849177280000000')                        // y_in
-      const expectedPosted = new BN('314040981060000000')                      // p
-      const expectedMinted = new BN('820437684840000000')                      // m
 
-      const posted = new BN(await controller.posted(CHAI, user2))
-      const debt = new BN(await controller.debtYDai(CHAI, maturity1, user2))
-      const minted = new BN(await pool.balanceOf(user2)).sub(poolTokensBefore)
+      const posted = BigNumber.from((await controller.posted(CHAI, user2)).toString())
+      const debt = BigNumber.from((await controller.debtYDai(CHAI, maturity1, user2)).toString())
+      const minted = BigNumber.from((await pool.balanceOf(user2)).toString()).sub(poolTokensBefore)
 
       //asserts
       assert.equal(
         posted.toString(),
-        expectedPosted,
+        expectedPosted.toString(),
         'User2 should have ' + expectedPosted + ' posted chai, instead has ' + posted.toString()
       )
       assert.equal(
         debt.toString(),
-        expectedDebt,
+        expectedDebt.toString(),
         'User2 should have ' + expectedDebt + ' yDai debt, instead has ' + debt.toString()
       )
       assert.equal(
         minted.toString(),
-        expectedMinted,
+        expectedMinted.toString(),
         'User2 should have ' + expectedMinted + ' pool tokens, instead has ' + minted.toString()
       )
     })
