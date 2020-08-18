@@ -7,6 +7,8 @@ import "../interfaces/IYDai.sol";
 interface IPool is IERC20 {
     function dai() external view returns(IERC20);
     function yDai() external view returns(IYDai);
+    function getDaiReserves() external view returns(uint128);
+    function getYDaiReserves() external view returns(uint128);
     function sellDai(address from, address to, uint128 daiIn) external returns(uint128);
     function buyDai(address from, address to, uint128 daiOut) external returns(uint128);
     function sellYDai(address from, address to, uint128 yDaiIn) external returns(uint128);

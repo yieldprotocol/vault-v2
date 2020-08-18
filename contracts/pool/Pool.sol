@@ -328,7 +328,7 @@ contract Pool is IPool, ERC20, Delegable {
 
     /// @dev Returns the "virtual" yDai reserves
     function getYDaiReserves()
-        public view
+        public view override
         returns(uint128)
     {
         return toUint128(yDai.balanceOf(address(this)) + totalSupply());
@@ -336,7 +336,7 @@ contract Pool is IPool, ERC20, Delegable {
 
     /// @dev Returns the Dai reserves
     function getDaiReserves()
-        public view
+        public view override
         returns(uint128)
     {
         return toUint128(dai.balanceOf(address(this)));

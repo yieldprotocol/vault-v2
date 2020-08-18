@@ -37,16 +37,22 @@ contract('LiquidityProxy', async (accounts) => {
 
   let maturity1: number
 
+  function divrup(x: BigNumber, y: BigNumber): BigNumber {
+    const z = ((BigNumber.from(x)).mul(10)).div(BigNumber.from(y))
+    if (z.mod(10).gt(0)) return z.div(10).add(1)
+    return z.div(10)
+  }
+
   const yDaiIn = (daiReserves: BigNumber, yDaiReserves: BigNumber, daiUsed: BigNumber): BigNumber => {
-    return (daiUsed.mul(daiReserves)).div(daiReserves.add(yDaiReserves))
+    return (daiUsed.mul(daiReserves)).div(daiReserves.add(yDaiReserves)).sub(1) // rounding?
   }
 
   const postedIn = (expectedDebt: BigNumber, chi: BigNumber): BigNumber => {
-    return expectedDebt.mul(toRay(1)).div((BigNumber.from(chi)))
+    return divrup(expectedDebt.mul(toRay(1)), (BigNumber.from(chi)))
   }
 
   const mintedOut = (poolSupply: BigNumber, daiIn: BigNumber, daiReserves: BigNumber): BigNumber => {
-    return poolSupply.mul(daiIn).div(daiReserves)
+    return poolSupply.mul(daiIn).div(daiReserves).sub(1) // rounding?
   }
 
   beforeEach(async () => {
@@ -108,46 +114,45 @@ contract('LiquidityProxy', async (accounts) => {
       const daiUsed = BigNumber.from(oneToken)
       const poolSupply = BigNumber.from((await pool.totalSupply()).toString())
 
-      console.log('          adding liquidity...')
-      console.log('          daiReserves: %d', daiReserves.toString())    // d_0
-      console.log('          yDaiReserves: %d', yDaiReserves.toString())  // y_0
-      console.log('          daiUsed: %d', daiUsed.toString())            // d_used
+      // console.log('          adding liquidity...')
+      // console.log('          daiReserves: %d', daiReserves.toString())    // d_0
+      // console.log('          yDaiReserves: %d', yDaiReserves.toString())  // y_0
+      // console.log('          daiUsed: %d', daiUsed.toString())            // d_used
 
       // https://www.desmos.com/calculator/bl2knrktlt
       const expectedDebt = yDaiIn(daiReserves, yDaiReserves, daiUsed)     // y_in
-      console.log('          expected yDaiIn: %d', expectedDebt)
+      // console.log('          expected yDaiIn: %d', expectedDebt)
       const daiIn = daiUsed.sub(expectedDebt)                             // d_in
-      console.log('          expected daiIn: %d', daiIn)
+      // console.log('          expected daiIn: %d', daiIn)
 
-      console.log('          chi: %d', chi1)
+      // console.log('          chi: %d', chi1)
       const expectedPosted = postedIn(expectedDebt, chi1)
-      console.log('          expected posted: %d', expectedPosted)         // p_chai
+      // console.log('          expected posted: %d', expectedPosted)         // p_chai
 
       // https://www.desmos.com/calculator/w9qorhrjbw
-      console.log('          Pool supply: %d', poolSupply)                 // s
+      // console.log('          Pool supply: %d', poolSupply)                 // s
       const expectedMinted = mintedOut(poolSupply, daiIn, daiReserves)     // m
-      console.log('          expected minted: %d', expectedMinted)
+      // console.log('          expected minted: %d', expectedMinted)
 
       await dai.mint(user2, oneToken, { from: owner })
       await dai.approve(proxy.address, oneToken, { from: user2 })
       await controller.addDelegate(proxy.address, { from: user2 })
       await proxy.addLiquidity(daiUsed, maxYDai, { from: user2 })
 
-
-      const posted = BigNumber.from((await controller.posted(CHAI, user2)).toString())
       const debt = BigNumber.from((await controller.debtYDai(CHAI, maturity1, user2)).toString())
+      const posted = BigNumber.from((await controller.posted(CHAI, user2)).toString())
       const minted = BigNumber.from((await pool.balanceOf(user2)).toString()).sub(poolTokensBefore)
 
       //asserts
       assert.equal(
-        posted.toString(),
-        expectedPosted.toString(),
-        'User2 should have ' + expectedPosted + ' posted chai, instead has ' + posted.toString()
-      )
-      assert.equal(
         debt.toString(),
         expectedDebt.toString(),
         'User2 should have ' + expectedDebt + ' yDai debt, instead has ' + debt.toString()
+      )
+      assert.equal(
+        posted.toString(),
+        expectedPosted.toString(),
+        'User2 should have ' + expectedPosted + ' posted chai, instead has ' + posted.toString()
       )
       assert.equal(
         minted.toString(),
