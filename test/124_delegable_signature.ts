@@ -14,12 +14,12 @@ import { ecsign } from 'ethereumjs-util'
 const SIGNATURE_TYPEHASH = keccak256(toUtf8Bytes('Signature(address user,address delegate,uint256 nonce,uint256 deadline)'));
 
 contract('Delegable with signatures', async (accounts: string[]) =>  {
-    // this is the first account that buidler creates
-    // https://github.com/nomiclabs/buidler/blob/d399a60452f80a6e88d974b2b9205f4894a60d29/packages/buidler-core/src/internal/core/config/default-config.ts#L41
-    const ownerPrivateKey = Buffer.from("c5e8f61d1ab959b397eecc0a37a6517b8e67a0e7cf1f4bce5591f3ed80199122", 'hex')
+    // this is the SECOND account that buidler creates
+    // https://github.com/nomiclabs/buidler/blob/d399a60452f80a6e88d974b2b9205f4894a60d29/packages/buidler-core/src/internal/core/config/default-config.ts#L46
+    const userPrivateKey = Buffer.from("d49743deccbccc5dc7baa8e69e5be03298da8688a15dd202e20f15d5e0e9a9fb", 'hex')
     const chainId = 31337; // buidlerevm chain id
 
-    let [ owner, user1, delegate1 ] = accounts;
+    let [ owner, user, delegate ] = accounts;
 
     let delegableContract: Contract;
     let name: string;
@@ -43,15 +43,15 @@ contract('Delegable with signatures', async (accounts: string[]) =>  {
     it('permits and emits Delegate (replay safe)', async() => {
         // Create the signature request
         const signature = {
-            user: user1,
-            delegate: delegate1,
+            user: user,
+            delegate: delegate,
         };
 
         // deadline as much as you want in the future
         const deadline = 100000000000000;
 
         // Get the user's signatureCount
-        const signatureCount = await delegableContract.signatureCount(user1);
+        const signatureCount = await delegableContract.signatureCount(user);
 
         // Get the EIP712 digest
         const digest = getPermitDigest(name, delegableContract.address, chainId, signature, signatureCount, deadline);
@@ -59,10 +59,10 @@ contract('Delegable with signatures', async (accounts: string[]) =>  {
         // Sign it
         // NOTE: Using web3.eth.sign will hash the message internally again which
         // we do not want, so we're manually signing here
-        const { v, r, s } = ecsign(Buffer.from(digest.slice(2), 'hex'), ownerPrivateKey)
+        const { v, r, s } = ecsign(Buffer.from(digest.slice(2), 'hex'), userPrivateKey)
 
         // Approve it
-        const receipt = await delegableContract.addDelegateBySignature(signature.user, signature.delegate, deadline, v, r, s, { from: user1 });
+        const receipt = await delegableContract.addDelegateBySignature(signature.user, signature.delegate, deadline, v, r, s, { from: user });
         const event = receipt.logs[0];
 
         // It worked!
@@ -71,7 +71,7 @@ contract('Delegable with signatures', async (accounts: string[]) =>  {
             "Delegate",
         );
         assert.equal(
-            await delegableContract.signatureCount(user1),
+            await delegableContract.signatureCount(user),
             1
         );
         assert.equal(
