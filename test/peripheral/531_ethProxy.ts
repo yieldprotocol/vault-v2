@@ -118,7 +118,15 @@ contract('Controller - EthProxy', async (accounts) => {
       const signatureCount = await controller.signatureCount(user1)
 
       // Get the EIP712 digest
-      const digest = getSignatureDigest(SIGNATURE_TYPEHASH, name, controller.address, chainId, signature, signatureCount, deadline)
+      const digest = getSignatureDigest(
+        SIGNATURE_TYPEHASH,
+        name,
+        controller.address,
+        chainId,
+        signature,
+        signatureCount,
+        deadline
+      )
 
       // Sign it
       // NOTE: Using web3.eth.sign will hash the message internally again which
@@ -134,4 +142,3 @@ contract('Controller - EthProxy', async (accounts) => {
     })
   })
 })
-
