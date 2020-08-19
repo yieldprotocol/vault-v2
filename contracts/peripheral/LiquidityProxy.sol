@@ -47,6 +47,7 @@ contract LiquidityProxy {
         dai.approve(address(pool), uint256(-1));
         yDai.approve(address(pool), uint256(-1));
         chai.approve(treasury_, uint256(-1));
+        dai.approve(treasury_, uint256(-1));
     }
 
     /// @dev Mints liquidity with provided Dai by borrowing yDai with some of the Dai.
@@ -88,9 +89,8 @@ contract LiquidityProxy {
     /// @param minimumDai minimum amount of Dai to be bought with yDai when burning. 
     function removeLiquidityEarly(uint256 poolTokens, uint256 minimumDai) external
     {
-        (, uint256 yDaiObtained) = pool.burn(msg.sender, address(this), poolTokens);
-
-        controller.repayYDai(CHAI, maturity, address(this), msg.sender, yDaiObtained);
+        (uint256 daiObtained, uint256 yDaiObtained) = pool.burn(msg.sender, address(this), poolTokens);
+        repayDebt(daiObtained, yDaiObtained);
         uint256 remainingYDai = yDai.balanceOf(address(this));
         if (remainingYDai > 0) {
             require(
@@ -107,13 +107,23 @@ contract LiquidityProxy {
     /// @param poolTokens amount of pool tokens to burn. 
     function removeLiquidityMature(uint256 poolTokens) external
     {
-        (, uint256 yDaiObtained) = pool.burn(msg.sender, address(this), poolTokens);
+        (uint256 daiObtained, uint256 yDaiObtained) = pool.burn(msg.sender, address(this), poolTokens);
         if (yDaiObtained > 0) yDai.redeem(address(this), address(this), yDaiObtained);
-        controller.repayDai(CHAI, maturity, address(this), msg.sender, dai.balanceOf(address(this)));
+        repayDebt(daiObtained, 0);
         withdrawAssets();
     }
 
-    /// @dev Return to caller all posted chai, converted to dai, plus any dai remaining in the contract.
+    /// @dev Repay debt from the caller using the dai and yDai supplied
+    function repayDebt(uint256 daiAvailable, uint256 yDaiAvailable) internal {
+        if (yDaiAvailable > 0 && controller.debtYDai(CHAI, maturity, msg.sender) > 0) {
+            controller.repayYDai(CHAI, maturity, address(this), msg.sender, yDaiAvailable);
+        }
+        if (daiAvailable > 0 && controller.debtYDai(CHAI, maturity, msg.sender) > 0) {
+            controller.repayDai(CHAI, maturity, address(this), msg.sender, daiAvailable);
+        }
+    }
+
+    /// @dev Return to caller all posted chai if there is no debt, converted to dai, plus any dai remaining in the contract.
     function withdrawAssets() internal {
         if (controller.debtYDai(CHAI, maturity, msg.sender) == 0) {
             controller.withdraw(CHAI, msg.sender, address(this), controller.posted(CHAI, msg.sender));

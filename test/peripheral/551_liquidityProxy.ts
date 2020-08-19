@@ -172,21 +172,12 @@ contract('LiquidityProxy', async (accounts) => {
         expectedMinted.toString(),
         'User2 should have ' + expectedMinted + ' pool tokens, instead has ' + minted.toString()
       )
-      assert.equal(
-        (await dai.balanceOf(proxy.address)).toString(),
-        0,
-        'LiquidityProxy should keep no dai'
-      )
-      assert.equal(
-        (await yDai1.balanceOf(proxy.address)).toString(),
-        0,
-        'LiquidityProxy should keep no yDai'
-      )
-      assert.equal(
-        (await pool.balanceOf(proxy.address)).toString(),
-        0,
-        'LiquidityProxy should keep no liquidity tokens'
-      )
+      // Proxy doesn't keep dai (beyond rounding)
+      expect(await dai.balanceOf(proxy.address)).to.be.bignumber.lt(new BN('10'));
+      // Proxy doesn't keep yDai (beyond rounding)
+      expect(await yDai1.balanceOf(proxy.address)).to.be.bignumber.lt(new BN('10'));
+      // Proxy doesn't keep liquidity (beyond rounding)
+      expect(await pool.balanceOf(proxy.address)).to.be.bignumber.lt(new BN('10'));
     })
 
     it('does not allow borrowing more than max amount', async () => {
@@ -220,6 +211,43 @@ contract('LiquidityProxy', async (accounts) => {
         const poolTokens = await pool.balanceOf(user2)
         const debt = await controller.debtYDai(CHAI, maturity1, user2)
         const daiBalance = await dai.balanceOf(user2)
+
+        // Has pool tokens
+        expect(poolTokens).to.be.bignumber.gt(new BN('0'));
+        // Has yDai debt
+        expect(debt).to.be.bignumber.gt(new BN('0'));
+        // Doesn't have dai
+        expect(daiBalance).to.be.bignumber.eq(new BN('0'));
+        // Doesn't have yDai
+        expect(await yDai1.balanceOf(user2)).to.be.bignumber.eq(new BN('0'));
+
+        await pool.approve(proxy.address, poolTokens, { from: user2 })
+        await proxy.removeLiquidityEarly(poolTokens, '0', { from: user2 })
+        
+        // Doesn't have pool tokens
+        expect(await pool.balanceOf(user2)).to.be.bignumber.eq(new BN('0'));
+        // Has less yDai debt
+        expect(await controller.debtYDai(CHAI, maturity1, user2)).to.be.bignumber.lt(debt);
+        // Has more dai
+        expect(await dai.balanceOf(user2)).to.be.bignumber.gt(daiBalance);
+        // Doesn't have yDai
+        expect(await yDai1.balanceOf(user2)).to.be.bignumber.eq(new BN('0'));
+        // Proxy doesn't keep dai (beyond rounding)
+        expect(await dai.balanceOf(proxy.address)).to.be.bignumber.lt(new BN('10'));
+        // Proxy doesn't keep yDai (beyond rounding)
+        expect(await yDai1.balanceOf(proxy.address)).to.be.bignumber.lt(new BN('10'));
+        // Proxy doesn't keep liquidity (beyond rounding)
+        expect(await pool.balanceOf(proxy.address)).to.be.bignumber.lt(new BN('10'));
+      })
+
+      it('removes liquidity after maturity by redeeming', async () => {
+        await helper.advanceTime(31556952);
+        await helper.advanceBlock();
+        await yDai1.mature();
+
+        const poolTokens = await pool.balanceOf(user2)
+        const debt = await controller.debtYDai(CHAI, maturity1, user2)
+        const daiBalance = await dai.balanceOf(user2)
         await pool.approve(proxy.address, poolTokens, { from: user2 })
 
         // Has pool tokens
@@ -231,7 +259,7 @@ contract('LiquidityProxy', async (accounts) => {
         // Doesn't have yDai
         expect(await yDai1.balanceOf(user2)).to.be.bignumber.eq(new BN('0'));
 
-        await proxy.removeLiquidityEarly(poolTokens, '0', { from: user2 })
+        await proxy.removeLiquidityMature(poolTokens, { from: user2 })
         
         // Doesn't have pool tokens
         expect(await pool.balanceOf(user2)).to.be.bignumber.eq(new BN('0'));
@@ -241,22 +269,12 @@ contract('LiquidityProxy', async (accounts) => {
         expect(await dai.balanceOf(user2)).to.be.bignumber.gt(daiBalance);
         // Doesn't have yDai
         expect(await yDai1.balanceOf(user2)).to.be.bignumber.eq(new BN('0'));
-
-        assert.equal(
-          (await dai.balanceOf(proxy.address)).toString(),
-          0,
-          'LiquidityProxy should keep no dai'
-        )
-        assert.equal(
-          (await yDai1.balanceOf(proxy.address)).toString(),
-          0,
-          'LiquidityProxy should keep no yDai'
-        )
-        assert.equal(
-          (await pool.balanceOf(proxy.address)).toString(),
-          0,
-          'LiquidityProxy should keep no liquidity tokens'
-        )
+        // Proxy doesn't keep dai (beyond rounding)
+        expect(await dai.balanceOf(proxy.address)).to.be.bignumber.lt(new BN('10'));
+        // Proxy doesn't keep yDai (beyond rounding)
+        expect(await yDai1.balanceOf(proxy.address)).to.be.bignumber.lt(new BN('10'));
+        // Proxy doesn't keep liquidity (beyond rounding)
+        expect(await pool.balanceOf(proxy.address)).to.be.bignumber.lt(new BN('10'));
       })
     })
   })
