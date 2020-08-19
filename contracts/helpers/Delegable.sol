@@ -53,7 +53,7 @@ contract Delegable {
     }
 
     /// @dev Add a delegate through an encoded signature
-    function addDelegateBySignature(address user, address delegate, uint deadline, uint8 v, bytes32 r, bytes32 s) external {
+    function addDelegateBySignature(address user, address delegate, uint deadline, uint8 v, bytes32 r, bytes32 s) public {
         require(deadline >= block.timestamp, 'Delegable: Signature expired');
 
         bytes32 hashStruct = keccak256(
