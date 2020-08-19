@@ -5,11 +5,10 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../interfaces/IController.sol";
 import "../interfaces/IChai.sol";
 import "../interfaces/IPool.sol";
-import "@nomiclabs/buidler/console.sol";
 
-/**
- * @dev The LiquidityProxy is a proxy contract of Pool that allows users to mint liquidity tokens with just Dai. 
- */
+
+/// @dev The LiquidityProxy is a proxy contract of Pool that allows users to mint liquidity tokens with just Dai.
+/// Likewise, allows users to burn liquidity tokens and receive only Dai, either by paying yDai debt or by selling yDai on the Pool.
 contract LiquidityProxy {
     using SafeMath for uint256;
 
@@ -104,7 +103,7 @@ contract LiquidityProxy {
     /// @dev Burns tokens and repays yDai debt after Maturity. 
     /// Caller must have approved the proxy using`controller.addDelegate(liquidityProxy)`
     /// Caller must have approved the liquidity burn with `pool.approve(poolTokens)`
-    /// @param poolTokens amount of pool tokens to burn. 
+    /// @param poolTokens amount of pool tokens to burn.
     function removeLiquidityMature(uint256 poolTokens) external
     {
         (uint256 daiObtained, uint256 yDaiObtained) = pool.burn(msg.sender, address(this), poolTokens);
@@ -114,6 +113,8 @@ contract LiquidityProxy {
     }
 
     /// @dev Repay debt from the caller using the dai and yDai supplied
+    /// @param daiAvailable amount of dai to use for repayments.
+    /// @param yDaiAvailable amount of yDai to use for repayments.
     function repayDebt(uint256 daiAvailable, uint256 yDaiAvailable) internal {
         if (yDaiAvailable > 0 && controller.debtYDai(CHAI, maturity, msg.sender) > 0) {
             controller.repayYDai(CHAI, maturity, address(this), msg.sender, yDaiAvailable);
