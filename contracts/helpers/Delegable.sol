@@ -2,13 +2,14 @@
 pragma solidity ^0.6.10;
 
 
-/// @dev Delegable enables users to delegate their account management to other users
+/// @dev Delegable enables users to delegate their account management to other users.
+/// Delegable implements addDelegateBySignature, to add delegates using a signature instead of a separate transaction.
 contract Delegable {
     event Delegate(address indexed user, address indexed delegate, bool enabled);
 
-    bytes32 public DELEGABLE_DOMAIN;
     // keccak256("Signature(address user,address delegate,uint256 nonce,uint256 deadline)");
-    bytes32 public constant SIGNATURE_TYPEHASH = 0x0d077601844dd17f704bafff948229d27f33b57445915754dfe3d095fda2beb7;
+    bytes32 public immutable SIGNATURE_TYPEHASH = 0x0d077601844dd17f704bafff948229d27f33b57445915754dfe3d095fda2beb7;
+    bytes32 public immutable DELEGABLE_DOMAIN;
     mapping(address => uint) public signatureCount;
 
     mapping(address => mapping(address => bool)) public delegated;
@@ -54,15 +55,30 @@ contract Delegable {
     /// @dev Add a delegate through an encoded signature
     function addDelegateBySignature(address user, address delegate, uint deadline, uint8 v, bytes32 r, bytes32 s) external {
         require(deadline >= block.timestamp, 'Delegable: Signature expired');
+
+        bytes32 hashStruct = keccak256(
+            abi.encode(
+                SIGNATURE_TYPEHASH,
+                user,
+                delegate,
+                signatureCount[user]++,
+                deadline
+            )
+        );
+
         bytes32 digest = keccak256(
             abi.encodePacked(
                 '\x19\x01',
                 DELEGABLE_DOMAIN,
-                keccak256(abi.encode(SIGNATURE_TYPEHASH, user, delegate, signatureCount[user]++, deadline))
+                hashStruct
             )
         );
-        address recoveredAddress = ecrecover(digest, v, r, s);
-        require(recoveredAddress != address(0) && recoveredAddress == user, 'Delegable: Invalid signature');
+        address signer = ecrecover(digest, v, r, s);
+        require(
+            signer != address(0) && signer == user,
+            'Delegable: Invalid signature'
+        );
+
         _addDelegate(user, delegate);
     }
 
