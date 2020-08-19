@@ -7,10 +7,25 @@ import helper from 'ganache-time-traveler'
 import { balance } from '@openzeppelin/test-helpers'
 import { WETH, daiTokens1, wethTokens1 } from '../shared/utils'
 import { Contract, YieldEnvironmentLite } from '../shared/fixtures'
+import {
+  keccak256,
+  defaultAbiCoder,
+  toUtf8Bytes,
+  solidityPack
+} from 'ethers/lib/utils'
+import { ecsign } from 'ethereumjs-util'
+
+const SIGNATURE_TYPEHASH = keccak256(toUtf8Bytes('Signature(address user,address delegate,uint256 nonce,uint256 deadline)'));
 
 contract('Controller - EthProxy', async (accounts) => {
   let [owner, user1, user2] = accounts
 
+  // this is the SECOND account that buidler creates
+  // https://github.com/nomiclabs/buidler/blob/d399a60452f80a6e88d974b2b9205f4894a60d29/packages/buidler-core/src/internal/core/config/default-config.ts#L46
+  const userPrivateKey = Buffer.from("d49743deccbccc5dc7baa8e69e5be03298da8688a15dd202e20f15d5e0e9a9fb", 'hex')
+  const chainId = 31337; // buidlerevm chain id
+  const name = 'Yield';
+  
   let snapshot: any
   let snapshotId: string
 
@@ -90,5 +105,82 @@ contract('Controller - EthProxy', async (accounts) => {
       assert.equal((await vat.urns(WETH, treasury.address)).ink, 0, 'Treasury should not not have weth in MakerDAO')
       assert.equal(await controller.powerOf(WETH, user1), 0, 'User1 should not have borrowing power')
     })
+
+    it('allows user to withdraw weth with an encoded signature', async () => {
+      // Create the signature request
+      const signature = {
+        user: user1,
+        delegate: ethProxy.address,
+      };
+
+      // deadline as much as you want in the future
+      const deadline = 100000000000000;
+
+      // Get the user's signatureCount
+      const signatureCount = await controller.signatureCount(user1);
+
+      // Get the EIP712 digest
+      const digest = getPermitDigest(name, controller.address, chainId, signature, signatureCount, deadline);
+
+      // Sign it
+      // NOTE: Using web3.eth.sign will hash the message internally again which
+      // we do not want, so we're manually signing here
+      const { v, r, s } = ecsign(Buffer.from(digest.slice(2), 'hex'), userPrivateKey)
+      
+      const previousBalance = await balance.current(user2)
+      await ethProxy.withdrawBySignature(user2, wethTokens1, deadline, v, r, s, { from: user1 })
+
+      expect(await balance.current(user2)).to.be.bignumber.gt(previousBalance)
+      assert.equal((await vat.urns(WETH, treasury.address)).ink, 0, 'Treasury should not not have weth in MakerDAO')
+      assert.equal(await controller.powerOf(WETH, user1), 0, 'User1 should not have borrowing power')
+    })
   })
 })
+
+// Returns the EIP712 hash which should be signed by the user
+// in order to make a call to `permit`
+function getPermitDigest(
+  name: string,
+  address: string,
+  chainId: number,
+  signature: {
+      user: string,
+      delegate: string,
+  },
+  signatureCount: number,
+  deadline: number,
+) {
+  const DELEGABLE_DOMAIN = getDomainSeparator(name, address, chainId)
+  return keccak256(
+    solidityPack(
+      ['bytes1', 'bytes1', 'bytes32', 'bytes32'],
+      [
+        '0x19',
+        '0x01',
+        DELEGABLE_DOMAIN,
+        keccak256(
+          defaultAbiCoder.encode(
+            ['bytes32', 'address', 'address', 'uint256', 'uint256'],
+            [SIGNATURE_TYPEHASH, signature.user, signature.delegate, signatureCount, deadline]
+          )
+        )
+      ]
+    )
+  )
+}
+
+// Gets the EIP712 domain separator
+function getDomainSeparator(name: string, contractAddress: string, chainId: number) {
+  return keccak256(
+    defaultAbiCoder.encode(
+      ['bytes32', 'bytes32', 'bytes32', 'uint256', 'address'],
+      [
+        keccak256(toUtf8Bytes('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)')),
+        keccak256(toUtf8Bytes(name)),
+        keccak256(toUtf8Bytes('1')),
+        chainId,
+        contractAddress
+      ]
+    )
+  )
+}
