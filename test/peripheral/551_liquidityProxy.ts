@@ -128,25 +128,25 @@ contract('LiquidityProxy', async (accounts) => {
       const daiUsed = BigNumber.from(oneToken)
       const poolSupply = BigNumber.from((await pool.totalSupply()).toString())
 
-      console.log('          adding liquidity...')
-      console.log('          daiReserves: %d', daiReserves.toString())    // d_0
-      console.log('          yDaiReserves: %d', yDaiReserves.toString())  // y_0
-      console.log('          daiUsed: %d', daiUsed.toString())            // d_used
+      // console.log('          adding liquidity...')
+      // console.log('          daiReserves: %d', daiReserves.toString())    // d_0
+      // console.log('          yDaiReserves: %d', yDaiReserves.toString())  // y_0
+      // console.log('          daiUsed: %d', daiUsed.toString())            // d_used
 
       // https://www.desmos.com/calculator/bl2knrktlt
       const expectedDaiIn = daiIn(daiReserves, yDaiReserves, daiUsed)     // d_in
       const expectedDebt = yDaiIn(daiReserves, yDaiReserves, daiUsed)     // y_in
-      console.log('          expected daiIn: %d', expectedDaiIn)
-      console.log('          expected yDaiIn: %d', expectedDebt)
+      // console.log('          expected daiIn: %d', expectedDaiIn)
+      // console.log('          expected yDaiIn: %d', expectedDebt)
 
-      console.log('          chi: %d', chi1)
+      // console.log('          chi: %d', chi1)
       const expectedPosted = postedIn(expectedDebt, chi1)
-      console.log('          expected posted: %d', expectedPosted)         // p_chai
+      // console.log('          expected posted: %d', expectedPosted)         // p_chai
 
       // https://www.desmos.com/calculator/w9qorhrjbw
-      console.log('          Pool supply: %d', poolSupply)                 // s
+      // console.log('          Pool supply: %d', poolSupply)                 // s
       const expectedMinted = mintedOut(poolSupply, expectedDaiIn, daiReserves)     // m
-      console.log('          expected minted: %d', expectedMinted)
+      // console.log('          expected minted: %d', expectedMinted)
 
       await dai.mint(user2, oneToken, { from: owner })
       await dai.approve(proxy.address, oneToken, { from: user2 })
