@@ -63,7 +63,8 @@ contract LiquidityProxy {
         // calculate needed yDai
         uint256 daiReserves = dai.balanceOf(address(pool));
         uint256 yDaiReserves = yDai.balanceOf(address(pool));
-        uint256 daiToConvert = daiUsed.mul(yDaiReserves).div(yDaiReserves.add(daiReserves));
+        uint256 daiToAdd = daiUsed.mul(daiReserves).div(yDaiReserves.add(daiReserves));
+        uint256 daiToConvert = daiUsed.sub(daiToAdd);
         require(
             daiToConvert <= maxYDai,
             "LiquidityProxy: maxYDai exceeded"
@@ -77,7 +78,6 @@ contract LiquidityProxy {
         controller.borrow(CHAI, maturity, msg.sender, address(this), toBorrow);
         
         // mint liquidity tokens
-        uint256 daiToAdd = daiUsed.sub(daiToConvert);
         return pool.mint(address(this), msg.sender, daiToAdd);
     }
 
@@ -98,7 +98,7 @@ contract LiquidityProxy {
                 "LiquidityProxy: minimumDai not reached"
             );
         }
-        if (controller.debtYDai(CHAI, maturity, msg.sender) == 0) withdrawDai();
+        withdrawAssets();
     }
 
     /// @dev Burns tokens and repays yDai debt after Maturity. 
@@ -110,13 +110,15 @@ contract LiquidityProxy {
         (, uint256 yDaiObtained) = pool.burn(msg.sender, address(this), poolTokens);
         if (yDaiObtained > 0) yDai.redeem(address(this), address(this), yDaiObtained);
         controller.repayDai(CHAI, maturity, address(this), msg.sender, dai.balanceOf(address(this)));
-        if (controller.debtYDai(CHAI, maturity, msg.sender) == 0) withdrawDai();
+        withdrawAssets();
     }
 
-    /// @dev Return to caller all posted chai, converted to dai.
-    function withdrawDai() internal {
-        controller.withdraw(CHAI, msg.sender, address(this), controller.posted(CHAI, msg.sender));
-        chai.exit(address(this), chai.balanceOf(address(this)));
+    /// @dev Return to caller all posted chai, converted to dai, plus any dai remaining in the contract.
+    function withdrawAssets() internal {
+        if (controller.debtYDai(CHAI, maturity, msg.sender) == 0) {
+            controller.withdraw(CHAI, msg.sender, address(this), controller.posted(CHAI, msg.sender));
+            chai.exit(address(this), chai.balanceOf(address(this)));
+        }
         require(dai.transfer(msg.sender, dai.balanceOf(address(this))), "LiquidityProxy: Dai Transfer Failed");
     }
 }

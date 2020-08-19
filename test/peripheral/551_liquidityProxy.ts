@@ -56,7 +56,14 @@ contract('LiquidityProxy', async (accounts) => {
   }
 
   const mintedOut = (poolSupply: BigNumber, daiIn: BigNumber, daiReserves: BigNumber): BigNumber => {
-    return poolSupply.mul(daiIn).div(daiReserves).add(2) // rounding?
+    return poolSupply.mul(daiIn).div(daiReserves)
+  }
+
+  const burnedOut = (burned: BigNumber, poolSupply: BigNumber, daiReserves: BigNumber, yDaiReserves: BigNumber): [BigNumber, BigNumber] => {
+    return [
+      (daiReserves.mul(burned)).div(poolSupply),
+      (yDaiReserves.mul(burned)).div(poolSupply)
+    ]
   }
 
   beforeEach(async () => {
@@ -105,6 +112,9 @@ contract('LiquidityProxy', async (accounts) => {
       await yDai1.mint(operator, additionalYDaiReserves, { from: owner })
       await yDai1.approve(pool.address, additionalYDaiReserves, { from: operator })
       await pool.sellYDai(operator, operator, additionalYDaiReserves, { from: operator })
+
+      await controller.addDelegate(proxy.address, { from: user2 })
+      await pool.addDelegate(proxy.address, { from: user2 })
     })
 
     it('mints liquidity tokens with dai only', async () => {
@@ -140,7 +150,6 @@ contract('LiquidityProxy', async (accounts) => {
 
       await dai.mint(user2, oneToken, { from: owner })
       await dai.approve(proxy.address, oneToken, { from: user2 })
-      await controller.addDelegate(proxy.address, { from: user2 })
       await proxy.addLiquidity(daiUsed, maxYDai, { from: user2 })
 
       const debt = BigNumber.from((await controller.debtYDai(CHAI, maturity1, user2)).toString())
@@ -182,15 +191,9 @@ contract('LiquidityProxy', async (accounts) => {
 
     it('does not allow borrowing more than max amount', async () => {
       const oneToken = BigNumber.from(toWad(1))
-      const daiReserves = BigNumber.from((await dai.balanceOf(pool.address)).toString())
-      const yDaiReserves = BigNumber.from((await yDai1.balanceOf(pool.address)).toString())
-      const daiToAdd = daiIn(daiReserves, yDaiReserves, oneToken)
-      const maxBorrow = 1
 
       await dai.mint(user2, oneToken, { from: owner })
       await dai.approve(proxy.address, oneToken, { from: user2 })
-      await controller.addDelegate(proxy.address, { from: user2 })
-
       await expectRevert(
         proxy.addLiquidity(oneToken, 1, { from: user2 }),
         'LiquidityProxy: maxYDai exceeded'
@@ -199,46 +202,61 @@ contract('LiquidityProxy', async (accounts) => {
 
     describe('with proxied liquidity', () => {
       beforeEach(async () => {
+        // Add liquidity to the pool
+        const additionalYDai = toWad(34.4)
+        await yDai1.mint(operator, additionalYDai, { from: owner })
+        await yDai1.approve(pool.address, additionalYDai, { from: operator })
+        await pool.sellYDai(operator, operator, additionalYDai, { from: operator })
+
+        // Give some pool tokens to user2
         const oneToken = BigNumber.from(toWad(1))
         const maxBorrow = oneToken
         await dai.mint(user2, oneToken, { from: owner })
         await dai.approve(proxy.address, oneToken, { from: user2 })
-        await controller.addDelegate(proxy.address, { from: user2 })
         await proxy.addLiquidity(oneToken, maxBorrow, { from: user2 })
       })
 
       it('removes liquidity early by selling', async () => {
-        const additionalYDai = toWad(34.4)
-        const expectedPoolTokens = '984749191303759738'
-        const expectedDai = '986879831174029159'
-        const expectedDebt = new BN('252048900155128980')
-        const expectedCollateral = new BN('210040750129274150')
-
-        await yDai1.mint(operator, additionalYDai, { from: owner })
-        await yDai1.approve(pool.address, additionalYDai, { from: operator })
-        await pool.sellYDai(operator, operator, additionalYDai, { from: operator })
-        const poolTokens = new BN(await pool.balanceOf(user2))
+        const poolTokens = await pool.balanceOf(user2)
+        const debt = await controller.debtYDai(CHAI, maturity1, user2)
+        const daiBalance = await dai.balanceOf(user2)
         await pool.approve(proxy.address, poolTokens, { from: user2 })
 
-        const DaiBefore = new BN(await dai.balanceOf(user2))
-        const debt = new BN(await controller.debtYDai(CHAI, maturity1, user2))
-        const collateral = new BN(await controller.posted(CHAI, user2))
-        assert.equal(poolTokens.toString(), expectedPoolTokens, 'User2 should have poolTokens')
-        assert.equal(DaiBefore.toString(), '0', 'User2 should not have Dai')
-        assert.equal(debt.toString(), expectedDebt, 'User2 should have debt')
-        assert.equal(collateral.toString(), expectedCollateral, 'User2 should have posted Collateral')
+        // Has pool tokens
+        expect(poolTokens).to.be.bignumber.gt(new BN('0'));
+        // Has yDai debt
+        expect(debt).to.be.bignumber.gt(new BN('0'));
+        // Doesn't have dai
+        expect(daiBalance).to.be.bignumber.eq(new BN('0'));
+        // Doesn't have yDai
+        expect(await yDai1.balanceOf(user2)).to.be.bignumber.eq(new BN('0'));
 
-        await pool.addDelegate(proxy.address, { from: user2 })
         await proxy.removeLiquidityEarly(poolTokens, '0', { from: user2 })
+        
+        // Doesn't have pool tokens
+        expect(await pool.balanceOf(user2)).to.be.bignumber.eq(new BN('0'));
+        // Has less yDai debt
+        expect(await controller.debtYDai(CHAI, maturity1, user2)).to.be.bignumber.lt(debt);
+        // Has more dai
+        expect(await dai.balanceOf(user2)).to.be.bignumber.gt(daiBalance);
+        // Doesn't have yDai
+        expect(await yDai1.balanceOf(user2)).to.be.bignumber.eq(new BN('0'));
 
-        const poolTokensAfter = new BN(await pool.balanceOf(user2))
-        const DaiAfter = new BN(await dai.balanceOf(user2))
-        const debtAfter = new BN(await controller.debtYDai(CHAI, maturity1, user2))
-        const collateralAfter = new BN(await controller.posted(CHAI, user2))
-        assert.equal(poolTokensAfter, '0', 'User2 should not have poolTokens')
-        assert.equal(DaiAfter.toString(), expectedDai, 'User2 should have Dai')
-        assert.equal(debtAfter.toString(), '0', 'User2 should not have debt')
-        assert.equal(collateralAfter.toString(), '0', 'User2 should not have Collateral')
+        assert.equal(
+          (await dai.balanceOf(proxy.address)).toString(),
+          0,
+          'LiquidityProxy should keep no dai'
+        )
+        assert.equal(
+          (await yDai1.balanceOf(proxy.address)).toString(),
+          0,
+          'LiquidityProxy should keep no yDai'
+        )
+        assert.equal(
+          (await pool.balanceOf(proxy.address)).toString(),
+          0,
+          'LiquidityProxy should keep no liquidity tokens'
+        )
       })
     })
   })
