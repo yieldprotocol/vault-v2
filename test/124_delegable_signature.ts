@@ -3,12 +3,8 @@ const Delegable = artifacts.require("Delegable");
 // @ts-ignore
 import { expectRevert } from '@openzeppelin/test-helpers';
 import { Contract } from "./shared/fixtures"
-import {
-  keccak256,
-  defaultAbiCoder,
-  toUtf8Bytes,
-  solidityPack
-} from 'ethers/lib/utils'
+import { getSignatureDigest, getDomainSeparator } from './shared/signatures'
+import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
 import { ecsign } from 'ethereumjs-util'
 
 const SIGNATURE_TYPEHASH = keccak256(toUtf8Bytes('Signature(address user,address delegate,uint256 nonce,uint256 deadline)'));
@@ -54,7 +50,7 @@ contract('Delegable with signatures', async (accounts: string[]) =>  {
         const signatureCount = await delegableContract.signatureCount(user);
 
         // Get the EIP712 digest
-        const digest = getPermitDigest(name, delegableContract.address, chainId, signature, signatureCount, deadline);
+        const digest = getSignatureDigest(SIGNATURE_TYPEHASH, name, delegableContract.address, chainId, signature, signatureCount, deadline);
 
         // Sign it
         // NOTE: Using web3.eth.sign will hash the message internally again which
@@ -94,52 +90,3 @@ contract('Delegable with signatures', async (accounts: string[]) =>  {
         )
     })
 })
-
-// Returns the EIP712 hash which should be signed by the user
-// in order to make a call to `permit`
-function getPermitDigest(
-  name: string,
-  address: string,
-  chainId: number,
-  signature: {
-      user: string,
-      delegate: string,
-  },
-  signatureCount: number,
-  deadline: number,
-) {
-  const DELEGABLE_DOMAIN = getDomainSeparator(name, address, chainId)
-  return keccak256(
-    solidityPack(
-      ['bytes1', 'bytes1', 'bytes32', 'bytes32'],
-      [
-        '0x19',
-        '0x01',
-        DELEGABLE_DOMAIN,
-        keccak256(
-          defaultAbiCoder.encode(
-            ['bytes32', 'address', 'address', 'uint256', 'uint256'],
-            [SIGNATURE_TYPEHASH, signature.user, signature.delegate, signatureCount, deadline]
-          )
-        )
-      ]
-    )
-  )
-}
-
-// Gets the EIP712 domain separator
-function getDomainSeparator(name: string, contractAddress: string, chainId: number) {
-  return keccak256(
-    defaultAbiCoder.encode(
-      ['bytes32', 'bytes32', 'bytes32', 'uint256', 'address'],
-      [
-        keccak256(toUtf8Bytes('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)')),
-        keccak256(toUtf8Bytes(name)),
-        keccak256(toUtf8Bytes('1')),
-        chainId,
-        contractAddress
-      ]
-    )
-  )
-}
-
