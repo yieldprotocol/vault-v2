@@ -43,8 +43,12 @@ contract('LiquidityProxy', async (accounts) => {
     return z.div(10)
   }
 
+  const daiIn = (daiReserves: BigNumber, yDaiReserves: BigNumber, daiUsed: BigNumber): BigNumber => {
+    return (daiUsed.mul(daiReserves)).div(daiReserves.add(yDaiReserves))
+  }
+
   const yDaiIn = (daiReserves: BigNumber, yDaiReserves: BigNumber, daiUsed: BigNumber): BigNumber => {
-    return (daiUsed.mul(daiReserves)).div(daiReserves.add(yDaiReserves)).sub(1) // rounding?
+    return (daiUsed.mul(yDaiReserves)).div(daiReserves.add(yDaiReserves))
   }
 
   const postedIn = (expectedDebt: BigNumber, chi: BigNumber): BigNumber => {
@@ -52,7 +56,7 @@ contract('LiquidityProxy', async (accounts) => {
   }
 
   const mintedOut = (poolSupply: BigNumber, daiIn: BigNumber, daiReserves: BigNumber): BigNumber => {
-    return poolSupply.mul(daiIn).div(daiReserves).sub(1) // rounding?
+    return poolSupply.mul(daiIn).div(daiReserves).add(2) // rounding?
   }
 
   beforeEach(async () => {
@@ -109,30 +113,30 @@ contract('LiquidityProxy', async (accounts) => {
       const poolTokensBefore = BigNumber.from((await pool.balanceOf(user2)).toString())
       const maxYDai = oneToken
 
-      const daiReserves = BigNumber.from((await pool.getDaiReserves()).toString())
-      const yDaiReserves = BigNumber.from((await pool.getYDaiReserves()).toString())
+      const daiReserves = BigNumber.from((await dai.balanceOf(pool.address)).toString())
+      const yDaiReserves = BigNumber.from((await yDai1.balanceOf(pool.address)).toString())
       const daiUsed = BigNumber.from(oneToken)
       const poolSupply = BigNumber.from((await pool.totalSupply()).toString())
 
-      // console.log('          adding liquidity...')
-      // console.log('          daiReserves: %d', daiReserves.toString())    // d_0
-      // console.log('          yDaiReserves: %d', yDaiReserves.toString())  // y_0
-      // console.log('          daiUsed: %d', daiUsed.toString())            // d_used
+      console.log('          adding liquidity...')
+      console.log('          daiReserves: %d', daiReserves.toString())    // d_0
+      console.log('          yDaiReserves: %d', yDaiReserves.toString())  // y_0
+      console.log('          daiUsed: %d', daiUsed.toString())            // d_used
 
       // https://www.desmos.com/calculator/bl2knrktlt
+      const expectedDaiIn = daiIn(daiReserves, yDaiReserves, daiUsed)     // d_in
       const expectedDebt = yDaiIn(daiReserves, yDaiReserves, daiUsed)     // y_in
-      // console.log('          expected yDaiIn: %d', expectedDebt)
-      const daiIn = daiUsed.sub(expectedDebt)                             // d_in
-      // console.log('          expected daiIn: %d', daiIn)
+      console.log('          expected daiIn: %d', expectedDaiIn)
+      console.log('          expected yDaiIn: %d', expectedDebt)
 
-      // console.log('          chi: %d', chi1)
+      console.log('          chi: %d', chi1)
       const expectedPosted = postedIn(expectedDebt, chi1)
-      // console.log('          expected posted: %d', expectedPosted)         // p_chai
+      console.log('          expected posted: %d', expectedPosted)         // p_chai
 
       // https://www.desmos.com/calculator/w9qorhrjbw
-      // console.log('          Pool supply: %d', poolSupply)                 // s
-      const expectedMinted = mintedOut(poolSupply, daiIn, daiReserves)     // m
-      // console.log('          expected minted: %d', expectedMinted)
+      console.log('          Pool supply: %d', poolSupply)                 // s
+      const expectedMinted = mintedOut(poolSupply, expectedDaiIn, daiReserves)     // m
+      console.log('          expected minted: %d', expectedMinted)
 
       await dai.mint(user2, oneToken, { from: owner })
       await dai.approve(proxy.address, oneToken, { from: user2 })
@@ -159,30 +163,44 @@ contract('LiquidityProxy', async (accounts) => {
         expectedMinted.toString(),
         'User2 should have ' + expectedMinted + ' pool tokens, instead has ' + minted.toString()
       )
+      assert.equal(
+        (await dai.balanceOf(proxy.address)).toString(),
+        0,
+        'LiquidityProxy should keep no dai'
+      )
+      assert.equal(
+        (await yDai1.balanceOf(proxy.address)).toString(),
+        0,
+        'LiquidityProxy should keep no yDai'
+      )
+      assert.equal(
+        (await pool.balanceOf(proxy.address)).toString(),
+        0,
+        'LiquidityProxy should keep no liquidity tokens'
+      )
     })
 
     it('does not allow borrowing more than max amount', async () => {
-      const oneToken = toWad(1)
-      const one = new BN(oneToken.toString())
-      const poolDai = new BN(await dai.balanceOf(pool.address))
-      const poolyDai = new BN(await yDai1.balanceOf(pool.address))
-      const daiToAdd = poolyDai.mul(one).div(poolyDai.add(poolDai))
-      const maxBorrow = daiToAdd.sub(new BN('1')) //subract 1 wei from expected
+      const oneToken = BigNumber.from(toWad(1))
+      const daiReserves = BigNumber.from((await dai.balanceOf(pool.address)).toString())
+      const yDaiReserves = BigNumber.from((await yDai1.balanceOf(pool.address)).toString())
+      const daiToAdd = daiIn(daiReserves, yDaiReserves, oneToken)
+      const maxBorrow = 1
 
       await dai.mint(user2, oneToken, { from: owner })
       await dai.approve(proxy.address, oneToken, { from: user2 })
       await controller.addDelegate(proxy.address, { from: user2 })
 
       await expectRevert(
-        proxy.addLiquidity(oneToken, maxBorrow, { from: user2 }),
+        proxy.addLiquidity(oneToken, 1, { from: user2 }),
         'LiquidityProxy: maxYDai exceeded'
       )
     })
 
     describe('with proxied liquidity', () => {
       beforeEach(async () => {
-        const oneToken = toWad(1)
-        const maxBorrow = toWad(1)
+        const oneToken = BigNumber.from(toWad(1))
+        const maxBorrow = oneToken
         await dai.mint(user2, oneToken, { from: owner })
         await dai.approve(proxy.address, oneToken, { from: user2 })
         await controller.addDelegate(proxy.address, { from: user2 })

@@ -61,9 +61,9 @@ contract LiquidityProxy {
         require(dai.transferFrom(msg.sender, address(this), daiUsed), "LiquidityProxy: Transfer Failed");
         
         // calculate needed yDai
-        uint256 daiReserves = pool.getDaiReserves();
-        uint256 yDaiReserves = pool.getYDaiReserves();
-        uint256 daiToConvert = daiUsed.mul(daiReserves).div(yDaiReserves.add(daiReserves));
+        uint256 daiReserves = dai.balanceOf(address(pool));
+        uint256 yDaiReserves = yDai.balanceOf(address(pool));
+        uint256 daiToConvert = daiUsed.mul(yDaiReserves).div(yDaiReserves.add(daiReserves));
         require(
             daiToConvert <= maxYDai,
             "LiquidityProxy: maxYDai exceeded"

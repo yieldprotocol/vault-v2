@@ -10,7 +10,6 @@ import "../interfaces/IYDai.sol";
 import "../interfaces/IPool.sol";
 
 
-
 /// @dev The Pool contract exchanges Dai for yDai at a price defined by a specific formula.
 contract Pool is IPool, ERC20, Delegable {
 
