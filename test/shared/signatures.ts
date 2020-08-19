@@ -41,12 +41,12 @@ export function getPermitDigest(
   address: string,
   chainId: number,
   approve: {
-      owner: string,
-      spender: string,
-      value: number,
+    owner: string
+    spender: string
+    value: number
   },
   nonce: number,
-  deadline: number,
+  deadline: number
 ) {
   const DOMAIN_SEPARATOR = getDomainSeparator(name, address, chainId)
   return keccak256(
@@ -61,7 +61,7 @@ export function getPermitDigest(
             ['bytes32', 'address', 'address', 'uint256', 'uint256', 'uint256'],
             [permitTypehash, approve.owner, approve.spender, approve.value, nonce, deadline]
           )
-        )
+        ),
       ]
     )
   )
