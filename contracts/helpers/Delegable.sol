@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.6.10;
 
+import "../interfaces/IDelegable.sol";
+
 
 /// @dev Delegable enables users to delegate their account management to other users.
 /// Delegable implements addDelegateBySignature, to add delegates using a signature instead of a separate transaction.
-contract Delegable {
+contract Delegable is IDelegable {
     event Delegate(address indexed user, address indexed delegate, bool enabled);
 
     // keccak256("Signature(address user,address delegate,uint256 nonce,uint256 deadline)");
@@ -53,7 +55,7 @@ contract Delegable {
     }
 
     /// @dev Add a delegate through an encoded signature
-    function addDelegateBySignature(address user, address delegate, uint deadline, uint8 v, bytes32 r, bytes32 s) public {
+    function addDelegateBySignature(address user, address delegate, uint deadline, uint8 v, bytes32 r, bytes32 s) public override {
         require(deadline >= block.timestamp, 'Delegable: Signature expired');
 
         bytes32 hashStruct = keccak256(

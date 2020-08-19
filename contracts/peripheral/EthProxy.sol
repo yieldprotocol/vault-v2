@@ -45,4 +45,18 @@ contract EthProxy {
         _weth.withdraw(amount);
         to.transfer(amount);
     }
+
+    /// @dev Users wishing to withdraw their Weth as ETH from the Controller should use this function.
+    /// Users must supply an encoded signature for Controller add EthProxy as a delegate.
+    /// @param to Wallet to send Eth to.
+    /// @param amount Amount of weth to move.
+    /// @param deadline Latest block timestamp for which the signature is valid
+    /// @param v Signature parameter
+    /// @param r Signature parameter
+    /// @param s Signature parameter
+    function withdrawBySignature(address payable to, uint256 amount, uint deadline, uint8 v, bytes32 r, bytes32 s)
+        public {
+        _controller.addDelegateBySignature(msg.sender, address(this), deadline, v, r, s);
+        withdraw(to, amount);
+    }
 }

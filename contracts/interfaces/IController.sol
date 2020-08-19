@@ -2,9 +2,10 @@
 pragma solidity ^0.6.10;
 
 import "./IYDai.sol";
+import "./IDelegable.sol";
 
 
-interface IController {
+interface IController is IDelegable {
     function series(uint256) external view returns (IYDai);
     function seriesIterator(uint256) external view returns (uint256);
     function totalSeries() external view returns (uint256);
