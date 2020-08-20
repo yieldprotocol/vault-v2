@@ -156,7 +156,7 @@ contract Splitter is IFlashMinter, DecimalMath {
     /// @param v Signature parameter
     /// @param r Signature parameter
     /// @param s Signature parameter
-    function yieldToMaker(address user, uint256 yDaiAmount, uint256 wethAmount, uint deadline, uint8 v, bytes32 r, bytes32 s) public {
+    function yieldToMakerBySignature(address user, uint256 yDaiAmount, uint256 wethAmount, uint deadline, uint8 v, bytes32 r, bytes32 s) public {
         controller.addDelegateBySignature(msg.sender, address(this), deadline, v, r, s);
         yieldToMaker(user, yDaiAmount, wethAmount);
     }
