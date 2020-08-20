@@ -67,11 +67,10 @@ contract('Splitter', async (accounts) => {
       wethJoin.address,
       daiJoin.address,
       treasury.address,
-      yDai1.address,
       controller.address,
-      pool1.address,
       { from: owner }
     )
+    await splitter1.approvePool(pool1.address, { from: owner })
 
     // Create the signature request
     const signature = {
@@ -111,7 +110,7 @@ contract('Splitter', async (accounts) => {
 
   it('does not allow to move more debt than existing in maker', async () => {
     await expectRevert(
-      splitter1.makerToYield(user, wethTokens1, daiTokens1.mul(10), { from: user }),
+      splitter1.makerToYield(pool1.address, user, wethTokens1, daiTokens1.mul(10), { from: user }),
       'Splitter: Not enough debt in Maker'
     )
   })
@@ -120,7 +119,7 @@ contract('Splitter', async (accounts) => {
     await env.maker.getDai(user, daiTokens1, rate1)
 
     await expectRevert(
-      splitter1.makerToYield(user, BigNumber.from(wethTokens1).mul(10), daiTokens1, { from: user }),
+      splitter1.makerToYield(pool1.address, user, BigNumber.from(wethTokens1).mul(10), daiTokens1, { from: user }),
       'Splitter: Not enough collateral in Maker'
     )
   })
@@ -131,7 +130,7 @@ contract('Splitter', async (accounts) => {
     // This lot can be avoided if the user is certain that he has enough Weth in Controller
     // The amount of yDai to be borrowed can be obtained from Pool through Splitter
     // As time passes, the amount of yDai required decreases, so this value will always be slightly higher than needed
-    const yDaiNeeded = await splitter1.yDaiForDai(daiTokens1)
+    const yDaiNeeded = await splitter1.yDaiForDai(pool1.address, daiTokens1)
 
     // Once we know how much yDai debt we will have, we can see how much weth we need to move
     const wethInController = new BN(await splitter1.wethForYDai(yDaiNeeded, { from: user }))
@@ -154,7 +153,7 @@ contract('Splitter', async (accounts) => {
     assert.equal((await controller.posted(WETH, user)).toString(), extraWethNeeded.toString())
     assert.equal((await controller.debtYDai(WETH, maturity1, user)).toString(), 0)
 
-    await splitter1.makerToYield(user, wethTokens1, daiTokens1, { from: user })
+    await splitter1.makerToYield(pool1.address, user, wethTokens1, daiTokens1, { from: user })
 
     assert.equal(await yDai1.balanceOf(splitter1.address), 0)
     assert.equal(await dai.balanceOf(splitter1.address), 0)
@@ -173,7 +172,7 @@ contract('Splitter', async (accounts) => {
     // This lot can be avoided if the user is certain that he has enough Weth in Controller
     // The amount of yDai to be borrowed can be obtained from Pool through Splitter
     // As time passes, the amount of yDai required decreases, so this value will always be slightly higher than needed
-    const yDaiNeeded = await splitter1.yDaiForDai(daiTokens1)
+    const yDaiNeeded = await splitter1.yDaiForDai(pool1.address, daiTokens1)
 
     // Once we know how much yDai debt we will have, we can see how much weth we need to move
     const wethInController = new BN(await splitter1.wethForYDai(yDaiNeeded, { from: user }))
@@ -196,7 +195,7 @@ contract('Splitter', async (accounts) => {
     assert.equal((await controller.posted(WETH, user)).toString(), extraWethNeeded.toString())
     assert.equal((await controller.debtYDai(WETH, maturity1, user)).toString(), 0)
 
-    await splitter1.makerToYieldBySignature(user, wethTokens1, daiTokens1, deadline, v, r, s, { from: user })
+    await splitter1.makerToYieldBySignature(pool1.address, user, wethTokens1, daiTokens1, deadline, v, r, s, { from: user })
 
     assert.equal(await yDai1.balanceOf(splitter1.address), 0)
     assert.equal(await dai.balanceOf(splitter1.address), 0)
@@ -211,7 +210,7 @@ contract('Splitter', async (accounts) => {
 
   it('does not allow to move more debt than existing in env', async () => {
     await expectRevert(
-      splitter1.yieldToMaker(user, yDaiTokens1, wethTokens1, { from: user }),
+      splitter1.yieldToMaker(pool1.address, user, yDaiTokens1, wethTokens1, { from: user }),
       'Splitter: Not enough debt in Yield'
     )
   })
@@ -221,7 +220,7 @@ contract('Splitter', async (accounts) => {
     await controller.borrow(WETH, maturity1, user, user, yDaiTokens1, { from: user })
 
     await expectRevert(
-      splitter1.yieldToMaker(user, yDaiTokens1, BigNumber.from(wethTokens1).mul(2), { from: user }),
+      splitter1.yieldToMaker(pool1.address, user, yDaiTokens1, BigNumber.from(wethTokens1).mul(2), { from: user }),
       'Splitter: Not enough collateral in Yield'
     )
   })
@@ -241,9 +240,9 @@ contract('Splitter', async (accounts) => {
     assert.equal(await yDai1.balanceOf(splitter1.address), 0)
 
     // Will need this one for testing. As time passes, even for one block, the resulting dai debt will be higher than this value
-    const makerDebtEstimate = new BN(await splitter1.daiForYDai(yDaiTokens1))
+    const makerDebtEstimate = new BN(await splitter1.daiForYDai(pool1.address, yDaiTokens1))
 
-    await splitter1.yieldToMaker(user, yDaiTokens1, wethTokens1, { from: user })
+    await splitter1.yieldToMaker(pool1.address, user, yDaiTokens1, wethTokens1, { from: user })
 
     assert.equal(await yDai1.balanceOf(splitter1.address), 0)
     assert.equal(await dai.balanceOf(splitter1.address), 0)
@@ -271,9 +270,9 @@ contract('Splitter', async (accounts) => {
     assert.equal(await yDai1.balanceOf(splitter1.address), 0)
 
     // Will need this one for testing. As time passes, even for one block, the resulting dai debt will be higher than this value
-    const makerDebtEstimate = new BN(await splitter1.daiForYDai(yDaiTokens1))
+    const makerDebtEstimate = new BN(await splitter1.daiForYDai(pool1.address, yDaiTokens1))
 
-    await splitter1.yieldToMakerBySignature(user, yDaiTokens1, wethTokens1, deadline, v, r, s, { from: user })
+    await splitter1.yieldToMakerBySignature(pool1.address, user, yDaiTokens1, wethTokens1, deadline, v, r, s, { from: user })
 
     assert.equal(await yDai1.balanceOf(splitter1.address), 0)
     assert.equal(await dai.balanceOf(splitter1.address), 0)
