@@ -58,9 +58,8 @@ contract('DaiProxy', async (accounts) => {
     pool = await Pool.new(dai.address, yDai1.address, 'Name', 'Symbol', { from: owner })
 
     // Setup DaiProxy
-    daiProxy = await DaiProxy.new(dai.address, controller.address, pool.address, {
-      from: owner,
-    })
+    daiProxy = await DaiProxy.new(dai.address, controller.address, { from: owner })
+    await daiProxy.approvePool(pool.address, { from: owner })
 
     // Create the signature request
     const signature = {
@@ -121,7 +120,7 @@ contract('DaiProxy', async (accounts) => {
       const oneToken = toWad(1)
 
       await controller.addDelegate(daiProxy.address, { from: user1 })
-      await daiProxy.borrowDaiForMaximumYDai(WETH, maturity1, user2, yDaiTokens1, oneToken, { from: user1 })
+      await daiProxy.borrowDaiForMaximumYDai(pool.address, WETH, maturity1, user2, yDaiTokens1, oneToken, { from: user1 })
 
       assert.equal(await dai.balanceOf(user2), oneToken.toString())
     })
@@ -131,6 +130,7 @@ contract('DaiProxy', async (accounts) => {
 
       const { v, r, s } = ecsign(Buffer.from(digestController.slice(2), 'hex'), userPrivateKey)
       await daiProxy.borrowDaiForMaximumYDaiBySignature(
+        pool.address, 
         WETH,
         maturity1,
         user2,
@@ -150,7 +150,7 @@ contract('DaiProxy', async (accounts) => {
       await controller.addDelegate(daiProxy.address, { from: user1 })
 
       await expectRevert(
-        daiProxy.borrowDaiForMaximumYDai(WETH, maturity1, user2, yDaiTokens1, daiTokens1, { from: user1 }),
+        daiProxy.borrowDaiForMaximumYDai(pool.address, WETH, maturity1, user2, yDaiTokens1, daiTokens1, { from: user1 }),
         'DaiProxy: Too much yDai required'
       )
     })
@@ -159,7 +159,7 @@ contract('DaiProxy', async (accounts) => {
       const oneToken = new BN(toWad(1).toString())
 
       await controller.addDelegate(daiProxy.address, { from: user1 })
-      await daiProxy.borrowMinimumDaiForYDai(WETH, maturity1, user2, yDaiTokens1, oneToken, { from: user1 })
+      await daiProxy.borrowMinimumDaiForYDai(pool.address, WETH, maturity1, user2, yDaiTokens1, oneToken, { from: user1 })
 
       expect(await dai.balanceOf(user2)).to.be.bignumber.gt(oneToken)
       assert.equal(await yDai1.balanceOf(user1), subBN(yDaiTokens1, oneToken).toString())
@@ -170,6 +170,7 @@ contract('DaiProxy', async (accounts) => {
 
       const { v, r, s } = ecsign(Buffer.from(digestController.slice(2), 'hex'), userPrivateKey)
       await daiProxy.borrowMinimumDaiForYDaiBySignature(
+        pool.address, 
         WETH,
         maturity1,
         user2,
@@ -191,7 +192,7 @@ contract('DaiProxy', async (accounts) => {
       await controller.addDelegate(daiProxy.address, { from: user1 })
 
       await expectRevert(
-        daiProxy.borrowMinimumDaiForYDai(WETH, maturity1, user2, oneToken, daiTokens1, { from: user1 }),
+        daiProxy.borrowMinimumDaiForYDai(pool.address, WETH, maturity1, user2, oneToken, daiTokens1, { from: user1 }),
         'DaiProxy: Not enough Dai obtained'
       )
     })
@@ -221,7 +222,7 @@ contract('DaiProxy', async (accounts) => {
 
         await pool.addDelegate(daiProxy.address, { from: user1 })
         await dai.approve(pool.address, daiTokens1, { from: user1 })
-        await daiProxy.repayMinimumYDaiDebtForDai(WETH, maturity1, user2, oneYDai, twoDai, { from: user1 })
+        await daiProxy.repayMinimumYDaiDebtForDai(pool.address, WETH, maturity1, user2, oneYDai, twoDai, { from: user1 })
 
         expect(await controller.debtYDai(WETH, maturity1, user2)).to.be.bignumber.lt(yDaiDebt)
         assert.equal(await dai.balanceOf(user1), subBN(daiTokens1, twoDai).toString())
@@ -235,6 +236,7 @@ contract('DaiProxy', async (accounts) => {
         const { v, r, s } = ecsign(Buffer.from(digestPool.slice(2), 'hex'), userPrivateKey)
         await dai.approve(pool.address, daiTokens1, { from: user1 })
         await daiProxy.repayMinimumYDaiDebtForDaiBySignature(
+          pool.address, 
           WETH,
           maturity1,
           user2,
@@ -259,7 +261,7 @@ contract('DaiProxy', async (accounts) => {
         await dai.approve(pool.address, daiTokens1, { from: user1 })
 
         await expectRevert(
-          daiProxy.repayMinimumYDaiDebtForDai(WETH, maturity1, user2, twoYDai, oneDai, { from: user1 }),
+          daiProxy.repayMinimumYDaiDebtForDai(pool.address, WETH, maturity1, user2, twoYDai, oneDai, { from: user1 }),
           'DaiProxy: Not enough yDai debt repaid'
         )
       })
@@ -271,7 +273,7 @@ contract('DaiProxy', async (accounts) => {
 
         await pool.addDelegate(daiProxy.address, { from: user1 })
         await dai.approve(pool.address, daiTokens1, { from: user1 })
-        await daiProxy.repayYDaiDebtForMaximumDai(WETH, maturity1, user2, oneYDai, twoDai, { from: user1 })
+        await daiProxy.repayYDaiDebtForMaximumDai(pool.address, WETH, maturity1, user2, oneYDai, twoDai, { from: user1 })
 
         expect(await dai.balanceOf(user1)).to.be.bignumber.lt(new BN(daiTokens1.toString()))
         assert.equal(await controller.debtYDai(WETH, maturity1, user2), subBN(yDaiDebt, oneYDai).toString())
@@ -285,6 +287,7 @@ contract('DaiProxy', async (accounts) => {
         const { v, r, s } = ecsign(Buffer.from(digestPool.slice(2), 'hex'), userPrivateKey)
         await dai.approve(pool.address, daiTokens1, { from: user1 })
         await daiProxy.repayYDaiDebtForMaximumDaiBySignature(
+          pool.address, 
           WETH,
           maturity1,
           user2,
@@ -309,7 +312,7 @@ contract('DaiProxy', async (accounts) => {
         await dai.approve(pool.address, daiTokens1, { from: user1 })
 
         await expectRevert(
-          daiProxy.repayYDaiDebtForMaximumDai(WETH, maturity1, user2, twoYDai, oneDai, { from: user1 }),
+          daiProxy.repayYDaiDebtForMaximumDai(pool.address, WETH, maturity1, user2, twoYDai, oneDai, { from: user1 }),
           'DaiProxy: Too much Dai required'
         )
       })
