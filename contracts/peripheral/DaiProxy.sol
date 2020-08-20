@@ -17,34 +17,28 @@ contract DaiProxy is DecimalMath {
     bytes32 public constant CHAI = "CHAI";
     bytes32 public constant WETH = "ETH-A";
 
-    IVat internal _vat;
-    IERC20 internal _dai;
-    IPot internal _pot;
-    IYDai internal _yDai;
-    IController internal _controller;
-    IPool internal _pool;
+    IERC20 public dai;
+    IYDai public yDai;
+    IController public controller;
+    IPool public pool;
 
-    /// @dev The constructor links ControllerDai to vat, pot, controller and pool.
+    /// @dev The constructor links DaiProxy to dai, yDai, controller and pool.
     constructor (
-        address vat_,
         address dai_,
-        address pot_,
         address controller_,
         address pool_
     ) public {
-        _vat = IVat(vat_);
-        _dai = IERC20(dai_);
-        _pot = IPot(pot_);
-        _controller = IController(controller_);
-        _pool = IPool(pool_);
+        dai = IERC20(dai_);
+        controller = IController(controller_);
+        pool = IPool(pool_);
 
-        _yDai = _pool.yDai();
+        yDai = pool.yDai();
         require(
-            _controller.containsSeries(_yDai.maturity()),
+            controller.containsSeries(yDai.maturity()),
             "DaiProxy: Mismatched Pool and Controller"
         );
-        _dai.approve(address(_pool), uint256(-1));
-        _yDai.approve(address(_pool), uint256(-1));
+        dai.approve(address(pool), uint256(-1));
+        yDai.approve(address(pool), uint256(-1));
     }
 
     /// @dev Safe casting from uint256 to uint128
@@ -57,7 +51,7 @@ contract DaiProxy is DecimalMath {
     }
 
     /// @dev Borrow yDai from Controller and sell it immediately for Dai, for a maximum yDai debt.
-    /// Must have approved the operator with `controller.addDelegate(controllerDai.address)`.
+    /// Must have approved the operator with `controller.addDelegate(daiProxy.address)`.
     /// @param collateral Valid collateral type.
     /// @param maturity Maturity of an added series
     /// @param to Wallet to send the resulting Dai to.
@@ -73,18 +67,47 @@ contract DaiProxy is DecimalMath {
         public
         returns (uint256)
     {
-        uint256 yDaiToBorrow = _pool.buyDaiPreview(toUint128(daiToBorrow));
+        uint256 yDaiToBorrow = pool.buyDaiPreview(toUint128(daiToBorrow));
         require (yDaiToBorrow <= maximumYDai, "DaiProxy: Too much yDai required");
 
         // The collateral for this borrow needs to have been posted beforehand
-        _controller.borrow(collateral, maturity, msg.sender, address(this), yDaiToBorrow);
-        _pool.buyDai(address(this), to, toUint128(daiToBorrow));
+        controller.borrow(collateral, maturity, msg.sender, address(this), yDaiToBorrow);
+        pool.buyDai(address(this), to, toUint128(daiToBorrow));
 
         return yDaiToBorrow;
     }
 
+    /// @dev Borrow yDai from Controller and sell it immediately for Dai, for a maximum yDai debt.
+    /// Uses an encoded signature for controller
+    /// @param collateral Valid collateral type.
+    /// @param maturity Maturity of an added series
+    /// @param to Wallet to send the resulting Dai to.
+    /// @param maximumYDai Maximum amount of YDai to borrow.
+    /// @param daiToBorrow Exact amount of Dai that should be obtained.
+    /// @param deadline Latest block timestamp for which the signature is valid
+    /// @param v Signature parameter
+    /// @param r Signature parameter
+    /// @param s Signature parameter
+    function borrowDaiForMaximumYDaiBySignature(
+        bytes32 collateral,
+        uint256 maturity,
+        address to,
+        uint256 maximumYDai,
+        uint256 daiToBorrow,
+        uint deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    )
+        public
+        returns (uint256)
+    {
+        controller.addDelegateBySignature(msg.sender, address(this), deadline, v, r, s);
+        return borrowDaiForMaximumYDai(collateral, maturity, to, maximumYDai, daiToBorrow);
+    }
+
     /// @dev Borrow yDai from Controller and sell it immediately for Dai, if a minimum amount of Dai can be obtained such.
-    /// Must have approved the operator with `controller.addDelegate(controllerDai.address)`.
+    /// Must have approved the operator with `controller.addDelegate(daiProxy.address)`.
     /// @param collateral Valid collateral type.
     /// @param maturity Maturity of an added series
     /// @param to Wallet to sent the resulting Dai to.
@@ -101,15 +124,44 @@ contract DaiProxy is DecimalMath {
         returns (uint256)
     {
         // The collateral for this borrow needs to have been posted beforehand
-        _controller.borrow(collateral, maturity, msg.sender, address(this), yDaiToBorrow);
-        uint256 boughtDai = _pool.sellYDai(address(this), to, toUint128(yDaiToBorrow));
+        controller.borrow(collateral, maturity, msg.sender, address(this), yDaiToBorrow);
+        uint256 boughtDai = pool.sellYDai(address(this), to, toUint128(yDaiToBorrow));
         require (boughtDai >= minimumDaiToBorrow, "DaiProxy: Not enough Dai obtained");
 
         return boughtDai;
     }
 
+    /// @dev Borrow yDai from Controller and sell it immediately for Dai, if a minimum amount of Dai can be obtained such.
+    /// Uses an encoded signature for controller
+    /// @param collateral Valid collateral type.
+    /// @param maturity Maturity of an added series
+    /// @param to Wallet to sent the resulting Dai to.
+    /// @param yDaiToBorrow Amount of yDai to borrow.
+    /// @param minimumDaiToBorrow Minimum amount of Dai that should be borrowed.
+    /// @param deadline Latest block timestamp for which the signature is valid
+    /// @param v Signature parameter
+    /// @param r Signature parameter
+    /// @param s Signature parameter
+    function borrowMinimumDaiForYDaiBySignature(
+        bytes32 collateral,
+        uint256 maturity,
+        address to,
+        uint256 yDaiToBorrow,
+        uint256 minimumDaiToBorrow,
+        uint deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    )
+        public
+        returns (uint256)
+    {
+        controller.addDelegateBySignature(msg.sender, address(this), deadline, v, r, s);
+        return borrowMinimumDaiForYDai(collateral, maturity, to, yDaiToBorrow, minimumDaiToBorrow);
+    }
+
     /// @dev Repay an amount of yDai debt in Controller using Dai exchanged for yDai at pool rates, up to a maximum amount of Dai spent.
-    /// Must have approved the operator with `controller.addDelegate(controllerDai.address)`.
+    /// Must have approved the operator with `pool.addDelegate(daiProxy.address)`.
     /// @param collateral Valid collateral type.
     /// @param maturity Maturity of an added series
     /// @param to Yield Vault to repay yDai debt for.
@@ -125,15 +177,44 @@ contract DaiProxy is DecimalMath {
         public
         returns (uint256)
     {
-        uint256 repaymentInDai = _pool.buyYDai(msg.sender, address(this), toUint128(yDaiRepayment));
+        uint256 repaymentInDai = pool.buyYDai(msg.sender, address(this), toUint128(yDaiRepayment));
         require (repaymentInDai <= maximumRepaymentInDai, "DaiProxy: Too much Dai required");
-        _controller.repayYDai(collateral, maturity, address(this), to, yDaiRepayment);
+        controller.repayYDai(collateral, maturity, address(this), to, yDaiRepayment);
 
         return repaymentInDai;
     }
 
+    /// @dev Repay an amount of yDai debt in Controller using Dai exchanged for yDai at pool rates, up to a maximum amount of Dai spent.
+    /// Uses an encoded signature for pool
+    /// @param collateral Valid collateral type.
+    /// @param maturity Maturity of an added series
+    /// @param to Yield Vault to repay yDai debt for.
+    /// @param yDaiRepayment Amount of yDai debt to repay.
+    /// @param maximumRepaymentInDai Maximum amount of Dai that should be spent on the repayment.
+    /// @param deadline Latest block timestamp for which the signature is valid
+    /// @param v Signature parameter
+    /// @param r Signature parameter
+    /// @param s Signature parameter
+    function repayYDaiDebtForMaximumDaiBySignature(
+        bytes32 collateral,
+        uint256 maturity,
+        address to,
+        uint256 yDaiRepayment,
+        uint256 maximumRepaymentInDai,
+        uint deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    )
+        public
+        returns (uint256)
+    {
+        pool.addDelegateBySignature(msg.sender, address(this), deadline, v, r, s);
+        return repayYDaiDebtForMaximumDai(collateral, maturity, to, yDaiRepayment, maximumRepaymentInDai);
+    }
+
     /// @dev Repay an amount of yDai debt in Controller using a given amount of Dai exchanged for yDai at pool rates, with a minimum of yDai debt required to be paid.
-    /// Must have approved the operator with `controller.addDelegate(controllerDai.address)`.
+    /// Must have approved the operator with `pool.addDelegate(daiProxy.address)`.
     /// @param collateral Valid collateral type.
     /// @param maturity Maturity of an added series
     /// @param to Yield Vault to repay yDai debt for.
@@ -149,10 +230,39 @@ contract DaiProxy is DecimalMath {
         public
         returns (uint256)
     {
-        uint256 yDaiRepayment = _pool.sellDai(msg.sender, address(this), toUint128(repaymentInDai));
+        uint256 yDaiRepayment = pool.sellDai(msg.sender, address(this), toUint128(repaymentInDai));
         require (yDaiRepayment >= minimumYDaiRepayment, "DaiProxy: Not enough yDai debt repaid");
-        _controller.repayYDai(collateral, maturity, address(this), to, yDaiRepayment);
+        controller.repayYDai(collateral, maturity, address(this), to, yDaiRepayment);
 
         return yDaiRepayment;
+    }
+
+    /// @dev Repay an amount of yDai debt in Controller using a given amount of Dai exchanged for yDai at pool rates, with a minimum of yDai debt required to be paid.
+    /// Uses an encoded signature for pool
+    /// @param collateral Valid collateral type.
+    /// @param maturity Maturity of an added series
+    /// @param to Yield Vault to repay yDai debt for.
+    /// @param minimumYDaiRepayment Minimum amount of yDai debt to repay.
+    /// @param repaymentInDai Exact amount of Dai that should be spent on the repayment.
+    /// @param deadline Latest block timestamp for which the signature is valid
+    /// @param v Signature parameter
+    /// @param r Signature parameter
+    /// @param s Signature parameter
+    function repayMinimumYDaiDebtForDaiBySignature(
+        bytes32 collateral,
+        uint256 maturity,
+        address to,
+        uint256 minimumYDaiRepayment,
+        uint256 repaymentInDai,
+        uint deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    )
+        public
+        returns (uint256)
+    {
+        pool.addDelegateBySignature(msg.sender, address(this), deadline, v, r, s);
+        return repayMinimumYDaiDebtForDai(collateral, maturity, to, minimumYDaiRepayment, repaymentInDai);
     }
 }
