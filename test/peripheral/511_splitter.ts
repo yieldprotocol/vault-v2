@@ -195,7 +195,9 @@ contract('Splitter', async (accounts) => {
     assert.equal((await controller.posted(WETH, user)).toString(), extraWethNeeded.toString())
     assert.equal((await controller.debtYDai(WETH, maturity1, user)).toString(), 0)
 
-    await splitter1.makerToYieldBySignature(pool1.address, user, wethTokens1, daiTokens1, deadline, v, r, s, { from: user })
+    await splitter1.makerToYieldBySignature(pool1.address, user, wethTokens1, daiTokens1, deadline, v, r, s, {
+      from: user,
+    })
 
     assert.equal(await yDai1.balanceOf(splitter1.address), 0)
     assert.equal(await dai.balanceOf(splitter1.address), 0)
@@ -272,7 +274,9 @@ contract('Splitter', async (accounts) => {
     // Will need this one for testing. As time passes, even for one block, the resulting dai debt will be higher than this value
     const makerDebtEstimate = new BN(await splitter1.daiForYDai(pool1.address, yDaiTokens1))
 
-    await splitter1.yieldToMakerBySignature(pool1.address, user, yDaiTokens1, wethTokens1, deadline, v, r, s, { from: user })
+    await splitter1.yieldToMakerBySignature(pool1.address, user, yDaiTokens1, wethTokens1, deadline, v, r, s, {
+      from: user,
+    })
 
     assert.equal(await yDai1.balanceOf(splitter1.address), 0)
     assert.equal(await dai.balanceOf(splitter1.address), 0)
