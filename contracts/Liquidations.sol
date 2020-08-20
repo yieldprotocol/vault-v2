@@ -27,8 +27,8 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
     uint256 public constant AUCTION_TIME = 3600;
     uint256 public constant DUST = 25e15; // 0.025 ETH
 
-    ITreasury internal _treasury;
-    IController internal _controller;
+    ITreasury public treasury;
+    IController public controller;
 
     struct Vault {
         uint128 collateral;
@@ -46,8 +46,8 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
         address treasury_,
         address controller_
     ) public {
-        _treasury = ITreasury(treasury_);
-        _controller = IController(controller_);
+        treasury = ITreasury(treasury_);
+        controller = IController(controller_);
     }
 
     /// @dev Only while Liquidations is not unwinding due to a MakerDAO shutdown.
@@ -86,7 +86,7 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
     /// @dev Disables buying at liquidations. To be called only when Treasury shuts down.
     function shutdown() public override {
         require(
-            _treasury.live() == false,
+            treasury.live() == false,
             "Liquidations: Treasury is live"
         );
         live = false;
@@ -106,14 +106,14 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
         public onlyLive
     {
         require(
-            !_controller.isCollateralized(WETH, user),
+            !controller.isCollateralized(WETH, user),
             "Liquidations: Vault is not undercollateralized"
         );
         // A user in liquidation can be liquidated again, but doesn't restart the auction clock
         // solium-disable-next-line security/no-block-members
         if (liquidations[user] == 0) liquidations[user] = now;
 
-        (uint256 userCollateral, uint256 userDebt) = _controller.erase(WETH, user);
+        (uint256 userCollateral, uint256 userDebt) = controller.erase(WETH, user);
         totals = Vault({
             collateral: add(totals.collateral, toUint128(userCollateral)),
             debt: add(totals.debt, toUint128(userDebt))
@@ -145,7 +145,7 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
             vaults[liquidated].debt > 0,
             "Liquidations: Vault is not in liquidation"
         );
-        _treasury.pushDai(from, daiAmount);
+        treasury.pushDai(from, daiAmount);
 
         // calculate collateral to grab. Using divdrup stops rounding from leaving 1 stray wei in vaults.
         uint256 tokenAmount = divdrup(daiAmount, price(liquidated));
@@ -161,7 +161,7 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
         });
         vaults[liquidated] = vault;
 
-        _treasury.pullWeth(to, tokenAmount);
+        treasury.pullWeth(to, tokenAmount);
 
         require(
             aboveDustOrZero(liquidated),
@@ -189,7 +189,7 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
         totals.collateral = sub(totals.collateral, toUint128(tokenAmount));
         vault.collateral = sub(vault.collateral, toUint128(tokenAmount));
 
-        _treasury.pullWeth(to, tokenAmount);
+        treasury.pullWeth(to, tokenAmount);
     }
 
     /// @dev Removes all collateral and debt for an user.
