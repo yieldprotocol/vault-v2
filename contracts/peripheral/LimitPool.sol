@@ -12,13 +12,9 @@ import "../interfaces/IPool.sol";
 contract LimitPool {
     using SafeMath for uint256;
 
-    IERC20 public dai;
-    IERC20 public yDai;
     IPool public pool;
 
-    constructor(address dai_, address yDai_, address pool_) public {
-        dai = IERC20(dai_);
-        yDai = IERC20(yDai_);
+    constructor(address pool_) public {
         pool = IPool(pool_);
     }
 

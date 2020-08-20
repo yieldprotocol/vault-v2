@@ -36,7 +36,7 @@ contract('LimitPool', async (accounts) => {
     pool = await Pool.new(dai.address, yDai1.address, 'Name', 'Symbol', { from: owner })
 
     // Setup LimitPool
-    limitPool = await LimitPool.new(dai.address, yDai1.address, pool.address, { from: owner })
+    limitPool = await LimitPool.new(pool.address, { from: owner })
 
     // Test setup
 
