@@ -23,7 +23,7 @@ import "./helpers/ERC20Permit.sol";
  * Minting and burning of yDai is restricted to orchestrated contracts. Redeeming and flash-minting is allowed to anyone.
  */
 
-contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
+contract YDai is IYDai, Orchestrated(), Delegable(), DecimalMath, ERC20Permit  {
 
     event Redeemed(address indexed from, address indexed to, uint256 yDaiIn, uint256 daiOut);
     event Matured(uint256 rate, uint256 chi);
@@ -32,9 +32,9 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
 
     uint256 constant internal MAX_TIME_TO_MATURITY = 126144000; // seconds in four years
 
-    IVat internal _vat;
-    IPot internal _pot;
-    ITreasury internal _treasury;
+    IVat public vat;
+    IPot public pot;
+    ITreasury public treasury;
 
     bool public override isMature;
     uint256 public override maturity;
@@ -61,12 +61,12 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
         uint256 maturity_,
         string memory name,
         string memory symbol
-    ) public ERC20(name, symbol) {
+    ) public ERC20Permit(name, symbol) {
         // solium-disable-next-line security/no-block-members
         require(maturity_ > now && maturity_ < now + MAX_TIME_TO_MATURITY, "YDai: Invalid maturity");
-        _vat = IVat(vat_);
-        _pot = IPot(pot_);
-        _treasury = ITreasury(treasury_);
+        vat = IVat(vat_);
+        pot = IPot(pot_);
+        treasury = ITreasury(treasury_);
         maturity = maturity_;
         chi0 = UNIT;
         rate0 = UNIT;
@@ -81,7 +81,7 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
     //
     function chiGrowth() public view override returns(uint256){
         if (isMature != true) return chi0;
-        return Math.min(rateGrowth(), divd(_pot.chi(), chi0)); // Rounding in favour of the protocol
+        return Math.min(rateGrowth(), divd(pot.chi(), chi0)); // Rounding in favour of the protocol
     }
 
     /// @dev Rate differential between maturity and now in RAY. Returns 1.0 if not mature.
@@ -93,7 +93,7 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
     //
     function rateGrowth() public view override returns(uint256){
         if (isMature != true) return rate0;
-        (, uint256 rate,,,) = _vat.ilks(WETH);
+        (, uint256 rate,,,) = vat.ilks(WETH);
         return Math.max(UNIT, divdrup(rate, rate0)); // Rounding in favour of the protocol
     }
 
@@ -108,15 +108,15 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
             isMature != true,
             "YDai: Already matured"
         );
-        (, rate0,,,) = _vat.ilks(WETH); // Retrieve the MakerDAO Vat
+        (, rate0,,,) = vat.ilks(WETH); // Retrieve the MakerDAO Vat
         rate0 = Math.max(rate0, UNIT); // Floor it at 1.0
-        chi0 = _pot.chi();
+        chi0 = pot.chi();
         isMature = true;
         emit Matured(rate0, chi0);
     }
 
     /// @dev Burn yTokens and return their dai equivalent value, pulled from the Treasury
-    /// During unwind, `_treasury.pullDai()` will revert which is right.
+    /// During unwind, `treasury.pullDai()` will revert which is right.
     /// `from` needs to tell yDai to approve the burning of the yDai tokens.
     /// `from` can delegate to other addresses to redeem his yDai and put the Dai proceeds in the `to` wallet.
     /// The collateral needed changes according to series maturity and MakerDAO rate and chi, depending on collateral type.
@@ -133,7 +133,7 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
         );
         _burn(from, yDaiAmount);                              // Burn yDai from `from`
         uint256 daiAmount = muld(yDaiAmount, chiGrowth());    // User gets interest for holding after maturity
-        _treasury.pullDai(to, daiAmount);                     // Give dai to `to`, from Treasury
+        treasury.pullDai(to, daiAmount);                     // Give dai to `to`, from Treasury
         emit Redeemed(from, to, yDaiAmount, daiAmount);
     }
 

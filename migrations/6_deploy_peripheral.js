@@ -4,6 +4,7 @@ const Weth = artifacts.require("WETH9");
 const Treasury = artifacts.require("Treasury");
 const Controller = artifacts.require("Controller");
 const EthProxy = artifacts.require("EthProxy");
+const LimitPool = artifacts.require("LimitPool");
 const DaiProxy = artifacts.require("DaiProxy");
 const Vat  = artifacts.require("Vat");
 const Pot = artifacts.require("Pot");
@@ -50,8 +51,13 @@ module.exports = async (deployer, network, accounts) => {
   ethProxyAddress = (await EthProxy.deployed()).address;
   await controller.addDelegate(ethProxyAddress);
 
+  // Setup LimitPool
+  await deployer.deploy(LimitPool);
+  limitPoolAddress = (await LimitPool.deployed()).address;
+
   const deployedPeripheral = {
     'EthProxy': ethProxyAddress,
+    'LimitPool': limitPoolAddress,
   }
 
   for (name in deployedPeripheral) {

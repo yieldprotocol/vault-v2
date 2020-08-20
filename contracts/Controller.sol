@@ -36,9 +36,9 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     uint256 public constant DUST = 50e15; // 0.05 ETH
     uint256 public constant THREE_MONTHS = 7776000;
 
-    IVat internal _vat;
-    IPot internal _pot;
-    ITreasury internal _treasury;
+    IVat public vat;
+    IPot public pot;
+    ITreasury public override treasury;
 
     mapping(uint256 => IYDai) public override series;                 // YDai series, indexed by maturity
     uint256[] public override seriesIterator;                         // We need to know all the series
@@ -54,9 +54,9 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         address pot_,
         address treasury_
     ) public {
-        _vat = IVat(vat_);
-        _pot = IPot(pot_);
-        _treasury = ITreasury(treasury_);
+        vat = IVat(vat_);
+        pot = IPot(pot_);
+        treasury = ITreasury(treasury_);
     }
 
     /// @dev Modified functions only callable while the Controller is not unwinding due to a MakerDAO shutdown.
@@ -95,7 +95,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     /// @dev Disables post, withdraw, borrow and repay. To be called only when Treasury shuts down.
     function shutdown() public override {
         require(
-            _treasury.live() == false,
+            treasury.live() == false,
             "Controller: Treasury is live"
         );
         live = false;
@@ -229,10 +229,10 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     function powerOf(bytes32 collateral, address user) public view returns (uint256) {
         // dai = price * collateral
         if (collateral == WETH){
-            (,, uint256 spot,,) = _vat.ilks(WETH);  // Stability fee and collateralization ratio for Weth
+            (,, uint256 spot,,) = vat.ilks(WETH);  // Stability fee and collateralization ratio for Weth
             return muld(posted[collateral][user], spot);
         } else if (collateral == CHAI) {
-            uint256 chi = _pot.chi();
+            uint256 chi = pot.chi();
             return muld(posted[collateral][user], chi);
         } else {
             revert("Controller: Invalid collateral type");
@@ -248,10 +248,10 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         returns (uint256)
     {
         if (collateral == WETH){
-            (,, uint256 spot,,) = _vat.ilks(WETH);  // Stability fee and collateralization ratio for Weth
+            (,, uint256 spot,,) = vat.ilks(WETH);  // Stability fee and collateralization ratio for Weth
             return divdrup(totalDebtDai(collateral, user), spot);
         } else if (collateral == CHAI) {
-            return divdrup(totalDebtDai(collateral, user), _pot.chi());
+            return divdrup(totalDebtDai(collateral, user), pot.chi());
         }
     }
 
@@ -276,9 +276,9 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
                 aboveDustOrZero(collateral, to),
                 "Controller: Below dust"
             );
-            _treasury.pushWeth(from, amount);
+            treasury.pushWeth(from, amount);
         } else if (collateral == CHAI) {
-            _treasury.pushChai(from, amount);
+            treasury.pushChai(from, amount);
         }
         
         emit Posted(collateral, to, toInt256(amount));
@@ -309,9 +309,9 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
                 aboveDustOrZero(collateral, from),
                 "Controller: Below dust"
             );
-            _treasury.pullWeth(to, amount);
+            treasury.pullWeth(to, amount);
         } else if (collateral == CHAI) {
-            _treasury.pullChai(to, amount);
+            treasury.pullChai(to, amount);
         }
 
         emit Posted(collateral, from, -toInt256(amount));
@@ -403,7 +403,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         onlyLive
     {
         uint256 toRepay = Math.min(daiAmount, debtDai(collateral, maturity, to));
-        _treasury.pushDai(from, toRepay);                                      // Have Treasury process the dai
+        treasury.pushDai(from, toRepay);                                      // Have Treasury process the dai
         _repay(collateral, maturity, to, inYDai(collateral, maturity, toRepay));
     }
 
