@@ -198,7 +198,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     // debt_now = debt_mat * ----------
     //                        rate_mat
     //
-    function debtDai(bytes32 collateral, uint256 maturity, address user) public view returns (uint256) {
+    function debtDai(bytes32 collateral, uint256 maturity, address user) public view override returns (uint256) {
         return inDai(collateral, maturity, debtYDai[collateral][maturity][user]);
     }
 

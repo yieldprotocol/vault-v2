@@ -9,7 +9,7 @@ import { BN, expectRevert } from '@openzeppelin/test-helpers'
 import { assert, expect } from 'chai'
 
 contract('Pool', async (accounts) => {
-  let [owner, user1, operator, from, to] = accounts
+  let [owner, user1, user2, operator, from, to] = accounts
 
   // These values impact the pool results
   const rate1 = toRay(1.4)
@@ -235,22 +235,22 @@ contract('Pool', async (accounts) => {
         await yDai1.mint(user1, yDaiTokens1, { from: owner })
 
         const yDaiBefore = new BN(await yDai1.balanceOf(user1))
-        const poolTokensBefore = new BN(await pool.balanceOf(user1))
+        const poolTokensBefore = new BN(await pool.balanceOf(user2))
 
         await dai.approve(pool.address, oneToken, { from: user1 })
         await yDai1.approve(pool.address, yDaiTokens1, { from: user1 })
-        const tx = await pool.mint(oneToken, { from: user1 })
+        const tx = await pool.mint(user1, user2, oneToken, { from: user1 })
         const event = tx.logs[tx.logs.length - 1]
 
         const expectedMinted = new BN('1316595685900000000')
         const expectedYDaiIn = new BN('336985800550000000')
 
-        const minted = new BN(await pool.balanceOf(user1)).sub(poolTokensBefore)
+        const minted = new BN(await pool.balanceOf(user2)).sub(poolTokensBefore)
         const yDaiIn = yDaiBefore.sub(new BN(await yDai1.balanceOf(user1)))
 
         assert.equal(event.event, 'Liquidity')
         assert.equal(event.args.from, user1)
-        assert.equal(event.args.to, user1)
+        assert.equal(event.args.to, user2)
         assert.equal(event.args.daiTokens, oneToken.mul(-1).toString())
 
         expect(minted).to.be.bignumber.gt(expectedMinted.mul(new BN('9999')).div(new BN('10000')))
@@ -276,7 +276,7 @@ contract('Pool', async (accounts) => {
         const daiReservesBefore = new BN(await dai.balanceOf(pool.address))
 
         await pool.approve(pool.address, oneToken, { from: user1 })
-        const tx = await pool.burn(oneToken, { from: user1 })
+        const tx = await pool.burn(user1, user2, oneToken, { from: user1 })
         const event = tx.logs[tx.logs.length - 1]
 
         const expectedYDaiOut = new BN('255952380950000000')
@@ -287,7 +287,7 @@ contract('Pool', async (accounts) => {
 
         assert.equal(event.event, 'Liquidity')
         assert.equal(event.args.from, user1)
-        assert.equal(event.args.to, user1)
+        assert.equal(event.args.to, user2)
         assert.equal(event.args.poolTokens, oneToken.mul(-1).toString())
 
         expect(yDaiOut).to.be.bignumber.gt(expectedYDaiOut.mul(new BN('9999')).div(new BN('10000')))

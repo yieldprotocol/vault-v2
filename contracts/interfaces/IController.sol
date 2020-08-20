@@ -14,6 +14,7 @@ interface IController is IDelegable {
     function containsSeries(uint256) external view returns (bool);
     function posted(bytes32, address) external view returns (uint256);
     function debtYDai(bytes32, uint256, address) external view returns (uint256);
+    function debtDai(bytes32, uint256, address) external view returns (uint256);
     function totalDebtDai(bytes32, address) external view returns (uint256);
     function isCollateralized(bytes32, address) external view returns (bool);
     function inDai(bytes32, uint256, uint256) external view returns (uint256);

@@ -11,7 +11,6 @@ import "../interfaces/IYDai.sol";
 import "../interfaces/IPool.sol";
 
 
-
 /// @dev The Pool contract exchanges Dai for yDai at a price defined by a specific formula.
 contract Pool is IPool, Delegable(), ERC20Permit {
 
@@ -99,10 +98,13 @@ contract Pool is IPool, Delegable(), ERC20Permit {
 
     /// @dev Mint liquidity tokens in exchange for adding dai and yDai
     /// The liquidity provider needs to have called `dai.approve` and `yDai.approve`.
+    /// @param from Wallet providing the dai and yDai. Must have approved the operator with `pool.addDelegate(operator)`.
+    /// @param to Wallet receiving the minted liquidity tokens.
     /// @param daiOffered Amount of `dai` being invested, an appropriate amount of `yDai` to be invested alongside will be calculated and taken by this function from the caller.
     /// @return The amount of liquidity tokens minted.
-    function mint(uint256 daiOffered)
-        external
+    function mint(address from, address to, uint256 daiOffered)
+        external override
+        onlyHolderOrDelegate(from, "Pool: Only Holder Or Delegate")
         returns (uint256)
     {
         uint256 supply = totalSupply();
@@ -112,33 +114,40 @@ contract Pool is IPool, Delegable(), ERC20Permit {
         uint256 tokensMinted = supply.mul(daiOffered).div(daiReserves);
         uint256 yDaiRequired = yDaiReserves.mul(tokensMinted).div(supply);
 
-        require(dai.transferFrom(msg.sender, address(this), daiOffered));
-        require(yDai.transferFrom(msg.sender, address(this), yDaiRequired));
-        _mint(msg.sender, tokensMinted);
-        emit Liquidity(maturity, msg.sender, msg.sender, -toInt256(daiOffered), -toInt256(yDaiRequired), toInt256(tokensMinted));
+        require(dai.transferFrom(from, address(this), daiOffered));
+        require(yDai.transferFrom(from, address(this), yDaiRequired));
+        _mint(to, tokensMinted);
+        emit Liquidity(maturity, from, to, -toInt256(daiOffered), -toInt256(yDaiRequired), toInt256(tokensMinted));
 
         return tokensMinted;
     }
 
     /// @dev Burn liquidity tokens in exchange for dai and yDai.
     /// The liquidity provider needs to have called `pool.approve`.
+    /// @param from Wallet providing the liquidity tokens. Must have approved the operator with `pool.addDelegate(operator)`.
+    /// @param to Wallet receiving the dai and yDai.
     /// @param tokensBurned Amount of liquidity tokens being burned.
     /// @return The amount of reserve tokens returned (daiTokens, yDaiTokens).
-    function burn(uint256 tokensBurned)
-        external
+    function burn(address from, address to, uint256 tokensBurned)
+        external override
+        onlyHolderOrDelegate(from, "Pool: Only Holder Or Delegate")
         returns (uint256, uint256)
     {
         uint256 supply = totalSupply();
         uint256 daiReserves = dai.balanceOf(address(this));
         // use the actual reserves rather than the virtual reserves
-        uint256 yDaiReserves = yDai.balanceOf(address(this));
-        uint256 daiReturned = tokensBurned.mul(daiReserves).div(supply);
-        uint256 yDaiReturned = tokensBurned.mul(yDaiReserves).div(supply);
+        uint256 daiReturned;
+        uint256 yDaiReturned;
+        { // avoiding stack too deep
+            uint256 yDaiReserves = yDai.balanceOf(address(this));
+            daiReturned = tokensBurned.mul(daiReserves).div(supply);
+            yDaiReturned = tokensBurned.mul(yDaiReserves).div(supply);
+        }
 
-        _burn(msg.sender, tokensBurned);
-        dai.transfer(msg.sender, daiReturned);
-        yDai.transfer(msg.sender, yDaiReturned);
-        emit Liquidity(maturity, msg.sender, msg.sender, toInt256(daiReturned), toInt256(yDaiReturned), -toInt256(tokensBurned));
+        _burn(from, tokensBurned);
+        dai.transfer(to, daiReturned);
+        yDai.transfer(to, yDaiReturned);
+        emit Liquidity(maturity, from, to, toInt256(daiReturned), toInt256(yDaiReturned), -toInt256(tokensBurned));
 
         return (daiReturned, yDaiReturned);
     }
@@ -318,7 +327,7 @@ contract Pool is IPool, Delegable(), ERC20Permit {
 
     /// @dev Returns the "virtual" yDai reserves
     function getYDaiReserves()
-        public view
+        public view override
         returns(uint128)
     {
         return toUint128(yDai.balanceOf(address(this)) + totalSupply());
@@ -326,7 +335,7 @@ contract Pool is IPool, Delegable(), ERC20Permit {
 
     /// @dev Returns the Dai reserves
     function getDaiReserves()
-        public view
+        public view override
         returns(uint128)
     {
         return toUint128(dai.balanceOf(address(this)));
