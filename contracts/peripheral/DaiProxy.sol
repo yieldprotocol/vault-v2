@@ -57,7 +57,7 @@ contract DaiProxy is DecimalMath {
     }
 
     /// @dev Borrow yDai from Controller and sell it immediately for Dai, for a maximum yDai debt.
-    /// Must have approved the operator with `controller.addDelegate(controllerDai.address)`.
+    /// Must have approved the operator with `controller.addDelegate(daiProxy.address)`.
     /// @param collateral Valid collateral type.
     /// @param maturity Maturity of an added series
     /// @param to Wallet to send the resulting Dai to.
@@ -113,7 +113,7 @@ contract DaiProxy is DecimalMath {
     }
 
     /// @dev Borrow yDai from Controller and sell it immediately for Dai, if a minimum amount of Dai can be obtained such.
-    /// Must have approved the operator with `controller.addDelegate(controllerDai.address)`.
+    /// Must have approved the operator with `controller.addDelegate(daiProxy.address)`.
     /// @param collateral Valid collateral type.
     /// @param maturity Maturity of an added series
     /// @param to Wallet to sent the resulting Dai to.
@@ -167,7 +167,7 @@ contract DaiProxy is DecimalMath {
     }
 
     /// @dev Repay an amount of yDai debt in Controller using Dai exchanged for yDai at pool rates, up to a maximum amount of Dai spent.
-    /// Must have approved the operator with `controller.addDelegate(controllerDai.address)`.
+    /// Must have approved the operator with `pool.addDelegate(daiProxy.address)`.
     /// @param collateral Valid collateral type.
     /// @param maturity Maturity of an added series
     /// @param to Yield Vault to repay yDai debt for.
@@ -220,7 +220,7 @@ contract DaiProxy is DecimalMath {
     }
 
     /// @dev Repay an amount of yDai debt in Controller using a given amount of Dai exchanged for yDai at pool rates, with a minimum of yDai debt required to be paid.
-    /// Must have approved the operator with `controller.addDelegate(controllerDai.address)`.
+    /// Must have approved the operator with `pool.addDelegate(daiProxy.address)`.
     /// @param collateral Valid collateral type.
     /// @param maturity Maturity of an added series
     /// @param to Yield Vault to repay yDai debt for.
