@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./YieldMath.sol";
 import "../helpers/Delegable.sol";
+import "../helpers/ERC20Permit.sol";
 import "../interfaces/IPot.sol";
 import "../interfaces/IYDai.sol";
 import "../interfaces/IPool.sol";
@@ -12,7 +13,7 @@ import "../interfaces/IPool.sol";
 
 
 /// @dev The Pool contract exchanges Dai for yDai at a price defined by a specific formula.
-contract Pool is IPool, ERC20, Delegable {
+contract Pool is IPool, Delegable(), ERC20Permit {
 
     event Trade(uint256 maturity, address indexed from, address indexed to, int256 daiTokens, int256 yDaiTokens);
     event Liquidity(uint256 maturity, address indexed from, address indexed to, int256 daiTokens, int256 yDaiTokens, int256 poolTokens);
@@ -26,8 +27,7 @@ contract Pool is IPool, ERC20, Delegable {
 
     constructor(address dai_, address yDai_, string memory name_, string memory symbol_)
         public
-        ERC20(name_, symbol_)
-        Delegable()
+        ERC20Permit(name_, symbol_)
     {
         dai = IERC20(dai_);
         yDai = IYDai(yDai_);
