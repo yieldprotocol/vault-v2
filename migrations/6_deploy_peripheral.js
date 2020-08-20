@@ -60,7 +60,16 @@ module.exports = async (deployer, network, accounts) => {
 
   console.log(deployedPeripheral);
 
-  // Setup Dai proxies for each series
+
+  // Setup DaiProxy
+  await deployer.deploy(
+    DaiProxy,
+    daiAddress,
+    controllerAddress,
+  );
+  daiProxy = await DaiProxy.deployed();
+  
+  // Approve transfers for all pools
   const yDaiNames = ['yDai0', 'yDai1', 'yDai2', 'yDai3'];
 
   for (yDaiName of yDaiNames) {
@@ -68,16 +77,8 @@ module.exports = async (deployer, network, accounts) => {
     yDai = await YDai.at(yDaiAddress);
     yDaiFullName = await yDai.name();
     poolAddress = await migrations.contracts(web3.utils.fromAscii( yDaiFullName + '-Pool') );
-    pool = await Pool.at(poolAddress);
-
-    await deployer.deploy(
-      DaiProxy,
-      daiAddress,
-      controllerAddress,
-      pool.address,
-    );
-    daiProxy = await DaiProxy.deployed();
-    await migrations.register(web3.utils.fromAscii((await yDai.name()) + '-DaiProxy'), daiProxy.address);
-    console.log((await yDai.name()) + '-DaiProxy', daiProxy.address);
+    await daiProxy.approvePool(poolAddress);
   }
+  await migrations.register(web3.utils.fromAscii('DaiProxy'), daiProxy.address);
+  console.log('DaiProxy', daiProxy.address);
 };
