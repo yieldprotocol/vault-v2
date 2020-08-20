@@ -80,12 +80,12 @@ contract Splitter is IFlashMinter, DecimalMath {
     }
 
     /// @dev Transfer debt and collateral from MakerDAO to Yield
+    /// Needs vat.hope(splitter.address, { from: user });
+    /// Needs controller.addDelegate(splitter.address, { from: user });
     /// @param user Vault to migrate.
     /// @param wethAmount weth to move from MakerDAO to Yield. Needs to be high enough to collateralize the dai debt in Yield,
     /// and low enough to make sure that debt left in MakerDAO is also collateralized.
     /// @param daiAmount dai debt to move from MakerDAO to Yield. Denominated in Dai (= art * rate)
-    /// Needs vat.hope(splitter.address, { from: user });
-    /// Needs controller.addDelegate(splitter.address, { from: user });
     function makerToYield(address user, uint256 wethAmount, uint256 daiAmount) public {
         // The user specifies the yDai he wants to mint to cover his maker debt, the weth to be passed on as collateral, and the dai debt to move
         (uint256 ink, uint256 art) = vat.urns(WETH, user);
@@ -106,13 +106,28 @@ contract Splitter is IFlashMinter, DecimalMath {
         );
     }
 
+    /// @dev Transfer debt and collateral from MakerDAO to Yield using an encoded signature for controller
+    /// Needs vat.hope(splitter.address, { from: user });
+    /// @param user Vault to migrate.
+    /// @param wethAmount weth to move from MakerDAO to Yield. Needs to be high enough to collateralize the dai debt in Yield,
+    /// and low enough to make sure that debt left in MakerDAO is also collateralized.
+    /// @param daiAmount dai debt to move from MakerDAO to Yield. Denominated in Dai (= art * rate)
+    /// @param deadline Latest block timestamp for which the signature is valid
+    /// @param v Signature parameter
+    /// @param r Signature parameter
+    /// @param s Signature parameter
+    function makerToYieldBySignature(address user, uint256 wethAmount, uint256 daiAmount, uint deadline, uint8 v, bytes32 r, bytes32 s) public {
+        controller.addDelegateBySignature(msg.sender, address(this), deadline, v, r, s);
+        makerToYield(user, wethAmount, daiAmount);
+    }
+
     /// @dev Transfer debt and collateral from Yield to MakerDAO
+    /// Needs vat.hope(splitter.address, { from: user });
+    /// Needs controller.addDelegate(splitter.address, { from: user });
     /// @param user Vault to migrate.
     /// @param yDaiAmount yDai debt to move from Yield to MakerDAO.
     /// @param wethAmount weth to move from Yield to MakerDAO. Needs to be high enough to collateralize the dai debt in MakerDAO,
     /// and low enough to make sure that debt left in Yield is also collateralized.
-    /// Needs vat.hope(splitter.address, { from: user });
-    /// Needs controller.addDelegate(splitter.address, { from: user });
     function yieldToMaker(address user, uint256 yDaiAmount, uint256 wethAmount) public {
         // The user specifies the yDai he wants to move, and the weth to be passed on as collateral
         require(
@@ -129,6 +144,21 @@ contract Splitter is IFlashMinter, DecimalMath {
             yDaiAmount,
             abi.encode(YTM, user, wethAmount, 0)
         ); // The daiAmount encoded is ignored
+    }
+
+    /// @dev Transfer debt and collateral from Yield to MakerDAO using an encoded signature for controller
+    /// Needs vat.hope(splitter.address, { from: user });
+    /// @param user Vault to migrate.
+    /// @param yDaiAmount yDai debt to move from Yield to MakerDAO.
+    /// @param wethAmount weth to move from Yield to MakerDAO. Needs to be high enough to collateralize the dai debt in MakerDAO,
+    /// and low enough to make sure that debt left in Yield is also collateralized.
+    /// @param deadline Latest block timestamp for which the signature is valid
+    /// @param v Signature parameter
+    /// @param r Signature parameter
+    /// @param s Signature parameter
+    function yieldToMakerBySignature(address user, uint256 yDaiAmount, uint256 wethAmount, uint deadline, uint8 v, bytes32 r, bytes32 s) public {
+        controller.addDelegateBySignature(msg.sender, address(this), deadline, v, r, s);
+        yieldToMaker(user, yDaiAmount, wethAmount);
     }
 
     /// @dev Callback from `YDai.flashMint()`
