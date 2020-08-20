@@ -33,8 +33,6 @@ contract('DaiProxy', async (accounts) => {
   const yDaiTokens1 = daiTokens1
 
   let maturity1: number
-  let vat: Contract
-  let pot: Contract
   let weth: Contract
   let dai: Contract
   let treasury: Contract
@@ -46,10 +44,8 @@ contract('DaiProxy', async (accounts) => {
 
   beforeEach(async () => {
     env = await YieldEnvironmentLite.setup()
-    vat = env.maker.vat
     weth = env.maker.weth
     dai = env.maker.dai
-    pot = env.maker.pot
     treasury = env.treasury
     controller = env.controller
 
@@ -62,7 +58,7 @@ contract('DaiProxy', async (accounts) => {
     pool = await Pool.new(dai.address, yDai1.address, 'Name', 'Symbol', { from: owner })
 
     // Setup DaiProxy
-    daiProxy = await DaiProxy.new(vat.address, dai.address, pot.address, controller.address, pool.address, {
+    daiProxy = await DaiProxy.new(dai.address, controller.address, pool.address, {
       from: owner,
     })
 

@@ -17,34 +17,28 @@ contract DaiProxy is DecimalMath {
     bytes32 public constant CHAI = "CHAI";
     bytes32 public constant WETH = "ETH-A";
 
-    IVat internal _vat;
-    IERC20 internal _dai;
-    IPot internal _pot;
-    IYDai internal _yDai;
-    IController internal _controller;
-    IPool internal _pool;
+    IERC20 public dai;
+    IYDai public yDai;
+    IController public controller;
+    IPool public pool;
 
-    /// @dev The constructor links ControllerDai to vat, pot, controller and pool.
+    /// @dev The constructor links DaiProxy to dai, yDai, controller and pool.
     constructor (
-        address vat_,
         address dai_,
-        address pot_,
         address controller_,
         address pool_
     ) public {
-        _vat = IVat(vat_);
-        _dai = IERC20(dai_);
-        _pot = IPot(pot_);
-        _controller = IController(controller_);
-        _pool = IPool(pool_);
+        dai = IERC20(dai_);
+        controller = IController(controller_);
+        pool = IPool(pool_);
 
-        _yDai = _pool.yDai();
+        yDai = pool.yDai();
         require(
-            _controller.containsSeries(_yDai.maturity()),
+            controller.containsSeries(yDai.maturity()),
             "DaiProxy: Mismatched Pool and Controller"
         );
-        _dai.approve(address(_pool), uint256(-1));
-        _yDai.approve(address(_pool), uint256(-1));
+        dai.approve(address(pool), uint256(-1));
+        yDai.approve(address(pool), uint256(-1));
     }
 
     /// @dev Safe casting from uint256 to uint128
@@ -73,12 +67,12 @@ contract DaiProxy is DecimalMath {
         public
         returns (uint256)
     {
-        uint256 yDaiToBorrow = _pool.buyDaiPreview(toUint128(daiToBorrow));
+        uint256 yDaiToBorrow = pool.buyDaiPreview(toUint128(daiToBorrow));
         require (yDaiToBorrow <= maximumYDai, "DaiProxy: Too much yDai required");
 
         // The collateral for this borrow needs to have been posted beforehand
-        _controller.borrow(collateral, maturity, msg.sender, address(this), yDaiToBorrow);
-        _pool.buyDai(address(this), to, toUint128(daiToBorrow));
+        controller.borrow(collateral, maturity, msg.sender, address(this), yDaiToBorrow);
+        pool.buyDai(address(this), to, toUint128(daiToBorrow));
 
         return yDaiToBorrow;
     }
@@ -108,7 +102,7 @@ contract DaiProxy is DecimalMath {
         public
         returns (uint256)
     {
-        _controller.addDelegateBySignature(msg.sender, address(this), deadline, v, r, s);
+        controller.addDelegateBySignature(msg.sender, address(this), deadline, v, r, s);
         return borrowDaiForMaximumYDai(collateral, maturity, to, maximumYDai, daiToBorrow);
     }
 
@@ -130,8 +124,8 @@ contract DaiProxy is DecimalMath {
         returns (uint256)
     {
         // The collateral for this borrow needs to have been posted beforehand
-        _controller.borrow(collateral, maturity, msg.sender, address(this), yDaiToBorrow);
-        uint256 boughtDai = _pool.sellYDai(address(this), to, toUint128(yDaiToBorrow));
+        controller.borrow(collateral, maturity, msg.sender, address(this), yDaiToBorrow);
+        uint256 boughtDai = pool.sellYDai(address(this), to, toUint128(yDaiToBorrow));
         require (boughtDai >= minimumDaiToBorrow, "DaiProxy: Not enough Dai obtained");
 
         return boughtDai;
@@ -162,7 +156,7 @@ contract DaiProxy is DecimalMath {
         public
         returns (uint256)
     {
-        _controller.addDelegateBySignature(msg.sender, address(this), deadline, v, r, s);
+        controller.addDelegateBySignature(msg.sender, address(this), deadline, v, r, s);
         return borrowMinimumDaiForYDai(collateral, maturity, to, yDaiToBorrow, minimumDaiToBorrow);
     }
 
@@ -183,9 +177,9 @@ contract DaiProxy is DecimalMath {
         public
         returns (uint256)
     {
-        uint256 repaymentInDai = _pool.buyYDai(msg.sender, address(this), toUint128(yDaiRepayment));
+        uint256 repaymentInDai = pool.buyYDai(msg.sender, address(this), toUint128(yDaiRepayment));
         require (repaymentInDai <= maximumRepaymentInDai, "DaiProxy: Too much Dai required");
-        _controller.repayYDai(collateral, maturity, address(this), to, yDaiRepayment);
+        controller.repayYDai(collateral, maturity, address(this), to, yDaiRepayment);
 
         return repaymentInDai;
     }
@@ -215,7 +209,7 @@ contract DaiProxy is DecimalMath {
         public
         returns (uint256)
     {
-        _pool.addDelegateBySignature(msg.sender, address(this), deadline, v, r, s);
+        pool.addDelegateBySignature(msg.sender, address(this), deadline, v, r, s);
         return repayYDaiDebtForMaximumDai(collateral, maturity, to, yDaiRepayment, maximumRepaymentInDai);
     }
 
@@ -236,9 +230,9 @@ contract DaiProxy is DecimalMath {
         public
         returns (uint256)
     {
-        uint256 yDaiRepayment = _pool.sellDai(msg.sender, address(this), toUint128(repaymentInDai));
+        uint256 yDaiRepayment = pool.sellDai(msg.sender, address(this), toUint128(repaymentInDai));
         require (yDaiRepayment >= minimumYDaiRepayment, "DaiProxy: Not enough yDai debt repaid");
-        _controller.repayYDai(collateral, maturity, address(this), to, yDaiRepayment);
+        controller.repayYDai(collateral, maturity, address(this), to, yDaiRepayment);
 
         return yDaiRepayment;
     }
@@ -268,7 +262,7 @@ contract DaiProxy is DecimalMath {
         public
         returns (uint256)
     {
-        _pool.addDelegateBySignature(msg.sender, address(this), deadline, v, r, s);
+        pool.addDelegateBySignature(msg.sender, address(this), deadline, v, r, s);
         return repayMinimumYDaiDebtForDai(collateral, maturity, to, minimumYDaiRepayment, repaymentInDai);
     }
 }
