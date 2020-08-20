@@ -78,9 +78,7 @@ module.exports = async (deployer, network, accounts) => {
 
     await deployer.deploy(
       DaiProxy,
-      vatAddress,
       daiAddress,
-      potAddress,
       controllerAddress,
       pool.address,
     );
