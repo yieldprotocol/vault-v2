@@ -23,7 +23,7 @@ import "./helpers/ERC20Permit.sol";
  * Minting and burning of yDai is restricted to orchestrated contracts. Redeeming and flash-minting is allowed to anyone.
  */
 
-contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
+contract YDai is IYDai, Orchestrated(), Delegable(), DecimalMath, ERC20Permit  {
 
     event Redeemed(address indexed from, address indexed to, uint256 yDaiIn, uint256 daiOut);
     event Matured(uint256 rate, uint256 chi);
@@ -61,7 +61,7 @@ contract YDai is Orchestrated(), Delegable(), DecimalMath, ERC20Permit, IYDai  {
         uint256 maturity_,
         string memory name,
         string memory symbol
-    ) public ERC20(name, symbol) {
+    ) public ERC20Permit(name, symbol) {
         // solium-disable-next-line security/no-block-members
         require(maturity_ > now && maturity_ < now + MAX_TIME_TO_MATURITY, "YDai: Invalid maturity");
         _vat = IVat(vat_);
