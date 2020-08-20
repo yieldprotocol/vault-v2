@@ -74,7 +74,10 @@ contract('LimitPool', async (accounts) => {
       await pool.addDelegate(limitPool.address, { from: from })
       await yDai1.approve(pool.address, yDaiTokens1, { from: from })
 
-      await expectRevert(limitPool.buyDai(pool.address, to, oneToken, oneToken.div(2), { from: from }), 'LimitPool: Limit exceeded')
+      await expectRevert(
+        limitPool.buyDai(pool.address, to, oneToken, oneToken.div(2), { from: from }),
+        'LimitPool: Limit exceeded'
+      )
     })
 
     it('sells yDai', async () => {
