@@ -3,7 +3,6 @@ const Migrations = artifacts.require("Migrations");
 const ERC20 = artifacts.require("TestERC20");
 const YDai = artifacts.require("YDai");
 const Pool = artifacts.require("Pool");
-const LimitPool = artifacts.require("LimitPool");
 const YieldMath = artifacts.require("YieldMath.sol");
 
 module.exports = async (deployer, network, accounts) => {
@@ -39,15 +38,5 @@ module.exports = async (deployer, network, accounts) => {
     pool = await Pool.deployed();
     await migrations.register(web3.utils.fromAscii((await yDai.name()) + '-Pool'), pool.address);
     console.log((await yDai.name()) + '-Pool', pool.address);
-
-    await deployer.deploy(
-      LimitPool,
-      daiAddress,
-      yDaiAddress,
-      pool.address,
-    );
-    limitPool = await LimitPool.deployed();
-    await migrations.register(web3.utils.fromAscii((await yDai.name()) + '-Limit'), limitPool.address);
-    console.log((await yDai.name()) + '-Limit', limitPool.address);
   }
 };
