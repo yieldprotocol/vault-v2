@@ -23,10 +23,16 @@ contract DaiProxy is DecimalMath {
     /// @dev The constructor links DaiProxy to dai and controller.
     constructor (
         address dai_,
-        address controller_
+        address controller_,
+        address[] memory pools
     ) public {
         dai = IERC20(dai_);
         controller = IController(controller_);
+        for (uint i = 0; i < pools.length; i++) {
+            IYDai yDai = IPool(pools[i]).yDai();
+            yDai.approve(pools[i], uint256(-1));
+            dai.approve(pools[i], uint256(-1));            
+        }
     }
 
     /// @dev Safe casting from uint256 to uint128
@@ -36,16 +42,6 @@ contract DaiProxy is DecimalMath {
             "Pool: Cast overflow"
         );
         return uint128(x);
-    }
-
-    /// @dev This function authorizes a contract to take all Dai and yDai from DaiProxy.
-    /// This is only reasonable because DaiProxy doesn't hold any assets between transactions.
-    /// This function is to be called at deployment for all known pools, to remove the need for approvals later on.
-    /// @param pool The contract to approve
-    function approvePool(address pool) public {
-        IYDai yDai = IPool(pool).yDai();
-        yDai.approve(pool, uint256(-1));
-        dai.approve(pool, uint256(-1));
     }
 
     /// @dev Borrow yDai from Controller and sell it immediately for Dai, for a maximum yDai debt.

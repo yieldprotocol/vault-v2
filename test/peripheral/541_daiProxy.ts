@@ -58,8 +58,7 @@ contract('DaiProxy', async (accounts) => {
     pool = await Pool.new(dai.address, yDai1.address, 'Name', 'Symbol', { from: owner })
 
     // Setup DaiProxy
-    daiProxy = await DaiProxy.new(dai.address, controller.address, { from: owner })
-    await daiProxy.approvePool(pool.address, { from: owner })
+    daiProxy = await DaiProxy.new(dai.address, controller.address, [pool.address], { from: owner })
 
     // Create the signature request
     const signature = {
