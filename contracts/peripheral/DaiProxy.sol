@@ -30,6 +30,10 @@ contract DaiProxy is DecimalMath {
         controller = IController(controller_);
         for (uint i = 0; i < pools.length; i++) {
             IYDai yDai = IPool(pools[i]).yDai();
+            require(
+                controller.containsSeries(yDai.maturity()),
+                "DaiProxy: Mismatched Pool and Controller"
+            );
             yDai.approve(pools[i], uint256(-1));
             dai.approve(pools[i], uint256(-1));            
         }
