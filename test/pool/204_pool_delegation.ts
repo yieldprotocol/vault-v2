@@ -42,13 +42,37 @@ contract('Pool - Delegation', async (accounts) => {
   describe('with liquidity', () => {
     beforeEach(async () => {
       const daiReserves = daiTokens1
-      await env.maker.getDai(user1, daiReserves, rate1)
+      await env.maker.getDai(from, daiReserves, rate1)
 
-      await dai.approve(pool.address, daiReserves, { from: user1 })
-      await pool.init(daiReserves, { from: user1 })
+      await dai.approve(pool.address, daiReserves, { from: from })
+      await pool.init(daiReserves, { from: from })
     })
 
-    it('buys dai without delegation', async () => {
+    it("doesn't mint liquidity without delegation", async () => {
+      await expectRevert(pool.mint(from, to, 1, { from: operator }), 'Pool: Only Holder Or Delegate')
+    })
+
+    it("doesn't burn liquidity without delegation", async () => {
+      await expectRevert(pool.burn(from, to, 1, { from: operator }), 'Pool: Only Holder Or Delegate')
+    })
+
+    it("doesn't sell dai without delegation", async () => {
+      await expectRevert(pool.sellDai(from, to, 1, { from: operator }), 'Pool: Only Holder Or Delegate')
+    })
+
+    it("doesn't buy dai without delegation", async () => {
+      await expectRevert(pool.buyDai(from, to, 1, { from: operator }), 'Pool: Only Holder Or Delegate')
+    })
+
+    it("doesn't sell yDai without delegation", async () => {
+      await expectRevert(pool.sellYDai(from, to, 1, { from: operator }), 'Pool: Only Holder Or Delegate')
+    })
+
+    it("doesn't buy yDai without delegation", async () => {
+      await expectRevert(pool.buyYDai(from, to, 1, { from: operator }), 'Pool: Only Holder Or Delegate')
+    })
+
+    it('buys dai with delegation', async () => {
       const oneToken = toWad(1)
       await yDai1.mint(from, yDaiTokens1, { from: owner })
 
@@ -61,7 +85,8 @@ contract('Pool - Delegation', async (accounts) => {
       )
 
       await yDai1.approve(pool.address, yDaiTokens1, { from: from })
-      await pool.buyDai(from, to, oneToken, { from: from })
+      await pool.addDelegate(operator, { from: from })
+      await pool.buyDai(from, to, oneToken, { from: operator })
 
       assert.equal(await dai.balanceOf(to), oneToken.toString(), 'Receiver account should have 1 dai token')
 
@@ -72,7 +97,7 @@ contract('Pool - Delegation', async (accounts) => {
       expect(yDaiIn).to.be.bignumber.lt(expectedYDaiIn.mul(new BN('10001')).div(new BN('10000')))
     })
 
-    it('sells yDai without delegation', async () => {
+    it('sells yDai with delegation', async () => {
       const oneToken = toWad(1)
       await yDai1.mint(from, oneToken, { from: owner })
 
@@ -85,7 +110,8 @@ contract('Pool - Delegation', async (accounts) => {
       )
 
       await yDai1.approve(pool.address, oneToken, { from: from })
-      await pool.sellYDai(from, to, oneToken, { from: from })
+      await pool.addDelegate(operator, { from: from })
+      await pool.sellYDai(from, to, oneToken, { from: operator })
 
       assert.equal(await yDai1.balanceOf(from), 0, "'From' wallet should have no yDai tokens")
 
@@ -105,7 +131,55 @@ contract('Pool - Delegation', async (accounts) => {
         await pool.sellYDai(operator, operator, additionalYDaiReserves, { from: operator })
       })
 
-      it('sells dai without delegation', async () => {
+      it('mints liquidity tokens with delegation', async () => {
+        const oneToken = toWad(1)
+        await dai.mint(from, oneToken, { from: owner })
+        await yDai1.mint(from, yDaiTokens1, { from: owner })
+
+        const yDaiBefore = new BN(await yDai1.balanceOf(from))
+        const poolTokensBefore = new BN(await pool.balanceOf(to))
+
+        await dai.approve(pool.address, oneToken, { from: from })
+        await yDai1.approve(pool.address, yDaiTokens1, { from: from })
+        await pool.addDelegate(operator, { from: from })
+        await pool.mint(from, to, oneToken, { from: operator })
+
+        const expectedMinted = new BN('1316595685900000000')
+        const expectedYDaiIn = new BN('336985800550000000')
+
+        const minted = new BN(await pool.balanceOf(to)).sub(poolTokensBefore)
+        const yDaiIn = yDaiBefore.sub(new BN(await yDai1.balanceOf(from)))
+
+        expect(minted).to.be.bignumber.gt(expectedMinted.mul(new BN('9999')).div(new BN('10000')))
+        expect(minted).to.be.bignumber.lt(expectedMinted.mul(new BN('10001')).div(new BN('10000')))
+
+        expect(yDaiIn).to.be.bignumber.gt(expectedYDaiIn.mul(new BN('9999')).div(new BN('10000')))
+        expect(yDaiIn).to.be.bignumber.lt(expectedYDaiIn.mul(new BN('10001')).div(new BN('10000')))
+      })
+
+      it('burns liquidity tokens', async () => {
+        const oneToken = toWad(1)
+        const yDaiReservesBefore = new BN(await yDai1.balanceOf(pool.address))
+        const daiReservesBefore = new BN(await dai.balanceOf(pool.address))
+
+        await pool.approve(pool.address, oneToken, { from: from })
+        await pool.addDelegate(operator, { from: from })
+        await pool.burn(from, to, oneToken, { from: operator })
+
+        const expectedYDaiOut = new BN('255952380950000000')
+        const expectedDaiOut = new BN('759534616990000000')
+
+        const yDaiOut = yDaiReservesBefore.sub(new BN(await yDai1.balanceOf(pool.address)))
+        const daiOut = daiReservesBefore.sub(new BN(await dai.balanceOf(pool.address)))
+
+        expect(yDaiOut).to.be.bignumber.gt(expectedYDaiOut.mul(new BN('9999')).div(new BN('10000')))
+        expect(yDaiOut).to.be.bignumber.lt(expectedYDaiOut.mul(new BN('10001')).div(new BN('10000')))
+
+        expect(daiOut).to.be.bignumber.gt(expectedDaiOut.mul(new BN('9999')).div(new BN('10000')))
+        expect(daiOut).to.be.bignumber.lt(expectedDaiOut.mul(new BN('10001')).div(new BN('10000')))
+      })
+
+      it('sells dai with delegation', async () => {
         const oneToken = toWad(1)
         await env.maker.getDai(from, daiTokens1, rate1)
 
@@ -118,7 +192,8 @@ contract('Pool - Delegation', async (accounts) => {
         )
 
         await dai.approve(pool.address, oneToken, { from: from })
-        await pool.sellDai(from, to, oneToken, { from: from })
+        await pool.addDelegate(operator, { from: from })
+        await pool.sellDai(from, to, oneToken, { from: operator })
 
         assert.equal(
           await dai.balanceOf(from),
@@ -135,7 +210,7 @@ contract('Pool - Delegation', async (accounts) => {
         expect(yDaiOut).to.be.bignumber.lt(expectedYDaiOut.mul(new BN('1001')).div(new BN('1000')))
       })
 
-      it('buys yDai without delegation', async () => {
+      it('buys yDai with delegation', async () => {
         const oneToken = toWad(1)
         await env.maker.getDai(from, daiTokens1, rate1)
 
@@ -148,7 +223,8 @@ contract('Pool - Delegation', async (accounts) => {
         )
 
         await dai.approve(pool.address, daiTokens1, { from: from })
-        await pool.buyYDai(from, to, oneToken, { from: from })
+        await pool.addDelegate(operator, { from: from })
+        await pool.buyYDai(from, to, oneToken, { from: operator })
 
         assert.equal(await yDai1.balanceOf(to), oneToken.toString(), "'To' wallet should have 1 yDai token")
 
@@ -159,24 +235,6 @@ contract('Pool - Delegation', async (accounts) => {
         // @ts-ignore
         expect(daiIn).to.be.bignumber.lt(expectedDaiIn.mul(new BN('10001')).div(new BN('10000')))
       })
-    })
-
-    // --- ONLY HOLDER OR DELEGATE TESTS ---
-
-    it("doesn't sell dai without delegation", async () => {
-      await expectRevert(pool.sellDai(from, to, 1, { from: operator }), 'Pool: Only Holder Or Delegate')
-    })
-
-    it("doesn't buy dai without delegation", async () => {
-      await expectRevert(pool.buyDai(from, to, 1, { from: operator }), 'Pool: Only Holder Or Delegate')
-    })
-
-    it("doesn't sell yDai without delegation", async () => {
-      await expectRevert(pool.sellYDai(from, to, 1, { from: operator }), 'Pool: Only Holder Or Delegate')
-    })
-
-    it("doesn't buy yDai without delegation", async () => {
-      await expectRevert(pool.buyYDai(from, to, 1, { from: operator }), 'Pool: Only Holder Or Delegate')
     })
   })
 })

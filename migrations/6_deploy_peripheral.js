@@ -4,6 +4,7 @@ const Weth = artifacts.require("WETH9");
 const Treasury = artifacts.require("Treasury");
 const Controller = artifacts.require("Controller");
 const EthProxy = artifacts.require("EthProxy");
+const LimitPool = artifacts.require("LimitPool");
 const DaiProxy = artifacts.require("DaiProxy");
 const Vat  = artifacts.require("Vat");
 const Pot = artifacts.require("Pot");
@@ -49,8 +50,15 @@ module.exports = async (deployer, network, accounts) => {
   );
   ethProxyAddress = (await EthProxy.deployed()).address;
   await migrations.register(web3.utils.fromAscii('EthProxy'), ethProxyAddress);
+  console.log('EthProxy', ethProxyAddress);
 
-  // Setup DaiProxy
+  // Setup LimitPool
+  await deployer.deploy(LimitPool);
+  limitPoolAddress = (await LimitPool.deployed()).address;
+  await migrations.register(web3.utils.fromAscii('LimitPool'), limitPoolAddress);
+  console.log('LimitPool', limitPoolAddress);
+
+  // Setup Dai proxies for each series
   const yDaiNames = ['yDai0', 'yDai1', 'yDai2', 'yDai3'];
   const poolAddresses = []
 
@@ -67,8 +75,8 @@ module.exports = async (deployer, network, accounts) => {
     controllerAddress,
     poolAddresses,
   );
-  daiProxy = await DaiProxy.deployed();
+  daiProxyAddress = (await DaiProxy.deployed()).address;
 
-  await migrations.register(web3.utils.fromAscii('DaiProxy'), daiProxy.address);
-  console.log('DaiProxy', daiProxy.address);
+  await migrations.register(web3.utils.fromAscii('DaiProxy'), daiProxyAddress);
+  console.log('DaiProxy', daiProxyAddress);
 };

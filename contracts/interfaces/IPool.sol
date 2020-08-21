@@ -2,12 +2,15 @@
 pragma solidity ^0.6.10;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "../interfaces/IYDai.sol";
 import "./IDelegable.sol";
+import "./IERC2612.sol";
+import "./IYDai.sol";
 
-interface IPool is IDelegable {
+interface IPool is IDelegable, IERC20, IERC2612 {
     function dai() external view returns(IERC20);
     function yDai() external view returns(IYDai);
+    function getDaiReserves() external view returns(uint128);
+    function getYDaiReserves() external view returns(uint128);
     function sellDai(address from, address to, uint128 daiIn) external returns(uint128);
     function buyDai(address from, address to, uint128 daiOut) external returns(uint128);
     function sellYDai(address from, address to, uint128 yDaiIn) external returns(uint128);
@@ -16,4 +19,6 @@ interface IPool is IDelegable {
     function buyDaiPreview(uint128 daiOut) external view returns(uint128);
     function sellYDaiPreview(uint128 yDaiIn) external view returns(uint128);
     function buyYDaiPreview(uint128 yDaiOut) external view returns(uint128);
+    function mint(address from, address to, uint256 daiOffered) external returns (uint256);
+    function burn(address from, address to, uint256 tokensBurned) external returns (uint256, uint256);
 }
