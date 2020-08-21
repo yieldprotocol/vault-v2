@@ -49,41 +49,34 @@ module.exports = async (deployer, network, accounts) => {
     controllerAddress,
   );
   ethProxyAddress = (await EthProxy.deployed()).address;
-  await controller.addDelegate(ethProxyAddress);
+  await migrations.register(web3.utils.fromAscii('EthProxy'), ethProxyAddress);
+  console.log('EthProxy', ethProxyAddress);
 
   // Setup LimitPool
   await deployer.deploy(LimitPool);
   limitPoolAddress = (await LimitPool.deployed()).address;
-
-  const deployedPeripheral = {
-    'EthProxy': ethProxyAddress,
-    'LimitPool': limitPoolAddress,
-  }
-
-  for (name in deployedPeripheral) {
-    await migrations.register(web3.utils.fromAscii(name), deployedPeripheral[name]);
-  }
-
-  console.log(deployedPeripheral);
+  await migrations.register(web3.utils.fromAscii('LimitPool'), limitPoolAddress);
+  console.log('LimitPool', limitPoolAddress);
 
   // Setup Dai proxies for each series
   const yDaiNames = ['yDai0', 'yDai1', 'yDai2', 'yDai3'];
+  const poolAddresses = []
 
   for (yDaiName of yDaiNames) {
     yDaiAddress = await migrations.contracts(web3.utils.fromAscii(yDaiName));
     yDai = await YDai.at(yDaiAddress);
     yDaiFullName = await yDai.name();
     poolAddress = await migrations.contracts(web3.utils.fromAscii( yDaiFullName + '-Pool') );
-    pool = await Pool.at(poolAddress);
-
-    await deployer.deploy(
-      DaiProxy,
-      daiAddress,
-      controllerAddress,
-      pool.address,
-    );
-    daiProxy = await DaiProxy.deployed();
-    await migrations.register(web3.utils.fromAscii((await yDai.name()) + '-DaiProxy'), daiProxy.address);
-    console.log((await yDai.name()) + '-DaiProxy', daiProxy.address);
+    poolAddresses.push(poolAddress)
   }
+  await deployer.deploy(
+    DaiProxy,
+    daiAddress,
+    controllerAddress,
+    poolAddresses,
+  );
+  daiProxyAddress = (await DaiProxy.deployed()).address;
+
+  await migrations.register(web3.utils.fromAscii('DaiProxy'), daiProxyAddress);
+  console.log('DaiProxy', daiProxyAddress);
 };
