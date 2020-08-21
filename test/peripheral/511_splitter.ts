@@ -68,9 +68,9 @@ contract('Splitter', async (accounts) => {
       daiJoin.address,
       treasury.address,
       controller.address,
+      [pool1.address],
       { from: owner }
     )
-    await splitter1.approvePool(pool1.address, { from: owner })
 
     // Create the signature request
     const signature = {

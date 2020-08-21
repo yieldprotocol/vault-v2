@@ -36,7 +36,8 @@ contract Splitter is IFlashMinter, DecimalMath {
         address wethJoin_,
         address daiJoin_,
         address treasury_,
-        address controller_
+        address controller_,
+        address[] memory pools
     ) public {
         vat = IVat(vat_);
         weth = IERC20(weth_);
@@ -51,6 +52,12 @@ contract Splitter is IFlashMinter, DecimalMath {
         dai.approve(daiJoin_, uint(-1));
         weth.approve(wethJoin_, uint(-1));
         weth.approve(treasury_, uint(-1));
+
+        for (uint i = 0; i < pools.length; i++) {
+            IYDai yDai = IPool(pools[i]).yDai();
+            yDai.approve(pools[i], uint256(-1));
+            dai.approve(pools[i], uint256(-1));            
+        }
     }
 
     /// @dev Safe casting from uint256 to int256
@@ -69,16 +76,6 @@ contract Splitter is IFlashMinter, DecimalMath {
             "Pool: Cast overflow"
         );
         return uint128(x);
-    }
-
-    /// @dev This function authorizes a contract to take all Dai and yDai from Splitter.
-    /// This is only reasonable because Splitter doesn't hold any assets between transactions.
-    /// This function is to be called at deployment for all known pools, to remove the need for approvals later on.
-    /// @param pool The contract to approve
-    function approvePool(address pool) public {
-        IYDai yDai = IPool(pool).yDai();
-        yDai.approve(pool, uint256(-1));
-        dai.approve(pool, uint256(-1));
     }
 
     /// @dev Transfer debt and collateral from MakerDAO to Yield
