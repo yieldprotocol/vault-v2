@@ -179,8 +179,8 @@ export class YieldEnvironmentLite {
     if (!dontAdd) {
       await this.controller.addSeries(yDai.address)
       await yDai.orchestrate(this.controller.address, keccak256(toUtf8Bytes('mint(address,uint256)')))
-      await yDai.orchestrate(this.controller.address, keccak256(toUtf8Bytes('burn(address,uint256)'))) // TODO: How is this not needed?
-      await yDai.orchestrate(this.unwind.address, keccak256(toUtf8Bytes('burn(address,uint256)')))
+      await yDai.orchestrate(this.controller.address, keccak256(toUtf8Bytes('burn(address,uint256)')))
+      // await yDai.orchestrate(this.unwind.address, keccak256(toUtf8Bytes('burn(address,uint256)'))) // This is needed but it is set manually in tests
       await this.treasury.orchestrate(yDai.address, keccak256(toUtf8Bytes('pullDai(address,uint256)')))
     }
 
