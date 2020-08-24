@@ -1,3 +1,4 @@
+import { id } from 'ethers/lib/utils'
 // @ts-ignore
 import helper from 'ganache-time-traveler'
 import { BigNumber } from 'ethers'
@@ -16,7 +17,6 @@ contract('Unwind - Controller', async (accounts) => {
 
   let vat: Contract
   let yDai1: Contract
-  let yDai2: Contract
   let controller: Contract
   let treasury: Contract
   let weth: Contract
@@ -50,14 +50,8 @@ contract('Unwind - Controller', async (accounts) => {
     maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000
     maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000
     yDai1 = await env.newYDai(maturity1, 'Name', 'Symbol')
-    yDai2 = await env.newYDai(maturity2, 'Name', 'Symbol')
-    await yDai1.orchestrate(unwind.address)
-    await yDai2.orchestrate(unwind.address)
-    await treasury.orchestrate(owner)
+    await env.newYDai(maturity2, 'Name', 'Symbol')
     await end.rely(owner, { from: owner }) // `owner` replaces MKR governance
-
-    // Allow `owner` to bypass orchestration restrictions
-    await liquidations.orchestrate(owner, { from: owner })
   })
 
   afterEach(async () => {
@@ -89,6 +83,8 @@ contract('Unwind - Controller', async (accounts) => {
     })
 
     it('allows orchestrated contracts to erase liquidations vaults', async () => {
+      // Allow `owner` to bypass orchestration restrictions
+      await liquidations.orchestrate(owner, id('erase(address)'), { from: owner })
       const userVault = await liquidations.vaults(user2, { from: owner })
       const totals = await liquidations.totals({ from: owner })
       const totalRemainingDebt = subBN(totals.debt.toString(), userVault.debt.toString())

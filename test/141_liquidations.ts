@@ -62,6 +62,7 @@ contract('Liquidations', async (accounts) => {
     maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000
     yDai1 = await env.newYDai(maturity1, 'Name', 'Symbol')
     await env.newYDai(maturity2, 'Name', 'Symbol')
+
   })
 
   afterEach(async () => {

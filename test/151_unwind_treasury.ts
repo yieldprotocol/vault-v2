@@ -1,3 +1,4 @@
+import { id } from 'ethers/lib/utils'
 // @ts-ignore
 import helper from 'ganache-time-traveler'
 import { BigNumber } from 'ethers'
@@ -58,16 +59,10 @@ contract('Unwind - Treasury', async (accounts) => {
     weth = env.maker.weth
     end = env.maker.end
     chai = env.maker.chai
-
-    // Setup yDai
-    const block = await web3.eth.getBlockNumber()
-    maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000
-    maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000
-    const yDai1 = await env.newYDai(maturity1, 'Name', 'Symbol')
-    const yDai2 = await env.newYDai(maturity2, 'Name', 'Symbol')
-    await yDai1.orchestrate(unwind.address)
-    await yDai2.orchestrate(unwind.address)
-    await treasury.orchestrate(owner)
+    
+    // Allow owner to interact directly with Treasury, not for production
+    const treasuryFunctions = ['pushDai', 'pullDai', 'pushChai', 'pullChai', 'pushWeth', 'pullWeth'].map(func => id(func + '(address,uint256)'))
+    await treasury.batchOrchestrate(owner, treasuryFunctions)
     await end.rely(owner, { from: owner }) // `owner` replaces MKR governance
   })
 

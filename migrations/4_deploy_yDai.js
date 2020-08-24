@@ -1,3 +1,4 @@
+const { id } = require('ethers/lib/utils')
 const fixed_addrs = require('./fixed_addrs.json');
 const Migrations = artifacts.require("Migrations");
 const Vat = artifacts.require("Vat");
@@ -7,14 +8,12 @@ const YDai = artifacts.require("YDai");
 const Controller = artifacts.require("Controller");
 const Unwind = artifacts.require("Unwind");
 
-module.exports = async (deployer, network, accounts) => {
+module.exports = async (deployer, network) => {
   const migrations = await Migrations.deployed();
 
   let vatAddress;
   let potAddress;
   let treasuryAddress;
-  let controllerAddress;
-  let unwindAddress;
 
   if (network !== 'development') {
     vatAddress = fixed_addrs[network].vatAddress;
@@ -58,10 +57,17 @@ module.exports = async (deployer, network, accounts) => {
       symbol,
     );
     const yDai = await YDai.deployed();
-    await treasury.orchestrate(yDai.address);
+    await treasury.orchestrate(yDai.address, id('pullDai(address,uint256)'))
     await controller.addSeries(yDai.address);
-    await yDai.orchestrate(controllerAddress);
-    await yDai.orchestrate(unwindAddress);
+
+    await yDai.batchOrchestrate(
+        controller.address,
+        [
+            id('mint(address,uint256)'),
+            id('burn(address,uint256)'),
+        ]
+    )
+    await yDai.orchestrate(unwind.address, id('burn(address,uint256)'))
 
     await migrations.register(web3.utils.fromAscii('yDai' + index), yDai.address);
     console.log('yDai' + index, yDai.address);

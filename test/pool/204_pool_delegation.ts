@@ -1,5 +1,6 @@
 const Pool = artifacts.require('Pool')
 
+import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
 import { toWad, toRay, mulRay } from '../shared/utils'
 import { YieldEnvironmentLite, Contract } from '../shared/fixtures'
 // @ts-ignore
@@ -36,7 +37,7 @@ contract('Pool - Delegation', async (accounts) => {
     // Test setup
 
     // Allow owner to mint yDai the sneaky way, without recording a debt in controller
-    await yDai1.orchestrate(owner, { from: owner })
+    await yDai1.orchestrate(owner, keccak256(toUtf8Bytes('mint(address,uint256)')), { from: owner })
   })
 
   describe('with liquidity', () => {

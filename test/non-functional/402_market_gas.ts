@@ -1,5 +1,6 @@
 const Pool = artifacts.require('Pool')
 
+import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
 // @ts-ignore
 import helper from 'ganache-time-traveler'
 // @ts-ignore
@@ -37,7 +38,7 @@ contract('Pool', async (accounts) => {
     const block = await web3.eth.getBlockNumber()
     maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000
     yDai1 = await env.newYDai(maturity1, 'Name', 'Symbol')
-    await yDai1.orchestrate(owner)
+    await yDai1.orchestrate(owner, keccak256(toUtf8Bytes('mint(address,uint256)')))
 
     // Setup Pool
     pool = await Pool.new(dai.address, yDai1.address, 'Name', 'Symbol', { from: owner })

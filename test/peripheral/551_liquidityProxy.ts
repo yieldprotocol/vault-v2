@@ -1,6 +1,7 @@
 const Pool = artifacts.require('Pool')
 const LiquidityProxy = artifacts.require('LiquidityProxy')
 
+import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
 // @ts-ignore
 import helper from 'ganache-time-traveler'
 import { CHAI, chi1, toWad, toRay, mulRay } from '../shared/utils'
@@ -88,7 +89,7 @@ contract('LiquidityProxy', async (accounts) => {
     pool = await Pool.new(dai.address, yDai1.address, 'Name', 'Symbol', { from: owner })
 
     // Allow owner to mint yDai the sneaky way, without recording a debt in controller
-    await yDai1.orchestrate(owner, { from: owner })
+    await yDai1.orchestrate(owner, keccak256(toUtf8Bytes('mint(address,uint256)')), { from: owner })
 
     // Setup LiquidityProxy
     proxy = await LiquidityProxy.new(dai.address, chai.address, treasury.address, controller.address, pool.address, {
