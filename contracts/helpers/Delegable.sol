@@ -44,13 +44,11 @@ contract Delegable is IDelegable {
 
     /// @dev Enable a delegate to act on the behalf of caller
     function addDelegate(address delegate) public {
-        require(!delegated[msg.sender][delegate], "Delegable: Already delegated");
         _addDelegate(msg.sender, delegate);
     }
 
     /// @dev Stop a delegate from acting on the behalf of caller
     function revokeDelegate(address delegate) public {
-        require(delegated[msg.sender][delegate], "Delegable: Already undelegated");
         _revokeDelegate(msg.sender, delegate);
     }
 
@@ -86,12 +84,14 @@ contract Delegable is IDelegable {
 
     /// @dev Enable a delegate to act on the behalf of an user
     function _addDelegate(address user, address delegate) internal {
+        require(!delegated[user][delegate], "Delegable: Already delegated");
         delegated[user][delegate] = true;
         emit Delegate(user, delegate, true);
     }
 
     /// @dev Stop a delegate from acting on the behalf of an user
     function _revokeDelegate(address user, address delegate) internal {
+        require(delegated[user][delegate], "Delegable: Already undelegated");
         delegated[user][delegate] = false;
         emit Delegate(user, delegate, false);
     }
