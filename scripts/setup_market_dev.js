@@ -1,3 +1,4 @@
+import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
 const { BigNumber } = require("ethers");
 
 // External
@@ -85,7 +86,7 @@ module.exports = async (callback) => {
 
     try {        
         // Allow owner to mint yDai the sneaky way, without recording a debt in dealer
-        await yDai0.orchestrate(owner, { from: owner });
+        await yDai0.orchestrate(owner, keccak256(toUtf8Bytes('mint(address,uint256)')), { from: owner });
 
         const daiReserves = daiTokens1;
         await getDai(user1, daiReserves);       console.log('0')

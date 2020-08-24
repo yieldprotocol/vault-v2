@@ -1,3 +1,5 @@
+import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
+
 const fixed_addrs = require('./fixed_addrs.json');
 const Migrations = artifacts.require("Migrations");
 const Vat = artifacts.require("Vat");
@@ -58,10 +60,11 @@ module.exports = async (deployer, network, accounts) => {
       symbol,
     );
     const yDai = await YDai.deployed();
-    await treasury.orchestrate(yDai.address);
+    await treasury.orchestrate(yDai.address, keccak256(toUtf8Bytes('pullDai(address,uint256)')))
     await controller.addSeries(yDai.address);
-    await yDai.orchestrate(controllerAddress);
-    await yDai.orchestrate(unwindAddress);
+    await yDai.orchestrate(controller.address, keccak256(toUtf8Bytes('mint(address,uint256)')))
+    await yDai.orchestrate(controller.address, keccak256(toUtf8Bytes('burn(address,uint256)')))
+    await yDai.orchestrate(unwind.address, keccak256(toUtf8Bytes('burn(address,uint256)')))
 
     await migrations.register(web3.utils.fromAscii('yDai' + index), yDai.address);
     console.log('yDai' + index, yDai.address);

@@ -1,3 +1,5 @@
+import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
+
 const fixed_addrs = require('./fixed_addrs.json');
 const Migrations = artifacts.require("Migrations");
 const Vat = artifacts.require("Vat");
@@ -74,7 +76,10 @@ module.exports = async (deployer, network, accounts) => {
   );
   const controller = await Controller.deployed();
   controllerAddress = controller.address;
-  await treasury.orchestrate(controllerAddress);
+  const treasuryFunctions = ['pushDai', 'pullDai', 'pushChai', 'pullChai', 'pushWeth', 'pullWeth']
+  for (let f of treasuryFunctions) {
+    await treasury.orchestrate(controllerAddress, keccak256(toUtf8Bytes(f + '(address,uint256)')))
+  }
 
 
   // Setup Liquidations
@@ -84,8 +89,8 @@ module.exports = async (deployer, network, accounts) => {
     controllerAddress,
   )
   liquidationsAddress = (await Liquidations.deployed()).address;
-  await controller.orchestrate(liquidationsAddress);
-  await treasury.orchestrate(liquidationsAddress);
+  await controller.orchestrate(liquidationsAddress, keccak256(toUtf8Bytes('erase(bytes32,address)')))
+  await treasury.orchestrate(liquidationsAddress, keccak256(toUtf8Bytes('erase(address)')));
 
   // Setup Unwind
   await deployer.deploy(
@@ -103,7 +108,8 @@ module.exports = async (deployer, network, accounts) => {
   );
   const unwind = await Unwind.deployed();
   unwindAddress = unwind.address;
-  await controller.orchestrate(unwindAddress);
+  await controller.orchestrate(unwind.address, keccak256(toUtf8Bytes('erase(bytes32,address)')))
+  await liquidations.orchestrate(unwind.address, keccak256(toUtf8Bytes('erase(address)')))
   await treasury.registerUnwind(unwindAddress);
 
   // Commit addresses to migrations registry
