@@ -1,3 +1,4 @@
+import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
 // @ts-ignore
 import helper from 'ganache-time-traveler'
 import { BigNumber } from 'ethers'
@@ -49,15 +50,15 @@ contract('Unwind - Controller', async (accounts) => {
     const block = await web3.eth.getBlockNumber()
     maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000
     maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000
-    yDai1 = await env.newYDai(maturity1, 'Name', 'Symbol')
-    yDai2 = await env.newYDai(maturity2, 'Name', 'Symbol')
-    await yDai1.orchestrate(unwind.address)
-    await yDai2.orchestrate(unwind.address)
-    await treasury.orchestrate(owner)
+    const yDai1 = await env.newYDai(maturity1, 'Name', 'Symbol')
+    const yDai2 = await env.newYDai(maturity2, 'Name', 'Symbol')
+    // await yDai1.orchestrate(unwind.address, keccak256(toUtf8Bytes('burn(address,uint256)'))) // TODO: Needed?
+    // await yDai2.orchestrate(unwind.address, keccak256(toUtf8Bytes('burn(address,uint256)')))
+    await treasury.orchestrate(owner, keccak256(toUtf8Bytes('pushWeth(address,uint256)')))
     await end.rely(owner, { from: owner }) // `owner` replaces MKR governance
 
     // Allow `owner` to bypass orchestration restrictions
-    await liquidations.orchestrate(owner, { from: owner })
+    await liquidations.orchestrate(owner, keccak256(toUtf8Bytes('erase(address)')), { from: owner })
   })
 
   afterEach(async () => {

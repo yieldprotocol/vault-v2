@@ -6,27 +6,31 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 /**
  * @dev Orchestrated allows to define static access control between multiple contracts.
  * This contract would be used as a parent contract of any contract that needs to restrict access to some methods,
- * which would be marked with the `onlyOrchestrated modifier.
+ * which would be marked with the `onlyOrchestrated` modifier.
  * During deployment, the contract deployer (`owner`) can register any contracts that have privileged access by calling `orchestrate`.
- * Once deployment is completed, `owner` can call `transferOwnership(address(0))` to avoid any more contracts ever gaining privileged access.
+ * Once deployment is completed, `owner` should call `transferOwnership(address(0))` to avoid any more contracts ever gaining privileged access.
  */
 
 contract Orchestrated is Ownable {
     event GrantedAccess(address access);
 
-    mapping(address => bool) public authorized;
+    mapping(address => mapping (bytes4 => bool)) public orchestration;
 
     constructor () public Ownable() {}
 
     /// @dev Restrict usage to authorized users
+    /// @param err The error to display if the validation fails 
     modifier onlyOrchestrated(string memory err) {
-        require(authorized[msg.sender], err);
+        require(orchestration[msg.sender][msg.sig], err);
         _;
     }
 
-    /// @dev Add user to the authorized users list
-    function orchestrate(address user) public onlyOwner {
-        authorized[user] = true;
+    /// @dev Add orchestration
+    /// @param user Address of user or contract having access to this contract.
+    /// @param signature bytes4 signature of the function we are giving orchestrated access to.
+    /// It seems to me a bad idea to give access to humans, and would use this only for predictable smart contracts.
+    function orchestrate(address user, bytes4 signature) public onlyOwner {
+        orchestration[user][signature] = true;
         emit GrantedAccess(user);
     }
 }

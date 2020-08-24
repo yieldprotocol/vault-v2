@@ -1,5 +1,6 @@
 const Pool = artifacts.require('Pool')
 
+import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
 // @ts-ignore
 import helper from 'ganache-time-traveler'
 import { toWad, toRay, mulRay } from '../shared/utils'
@@ -47,7 +48,7 @@ contract('Pool', async (accounts) => {
     pool = await Pool.new(dai.address, yDai1.address, 'Name', 'Symbol', { from: owner })
 
     // Allow owner to mint yDai the sneaky way, without recording a debt in controller
-    await yDai1.orchestrate(owner, { from: owner })
+    await yDai1.orchestrate(owner, keccak256(toUtf8Bytes('mint(address,uint256)')), { from: owner })
   })
 
   afterEach(async () => {

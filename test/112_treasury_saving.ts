@@ -1,3 +1,4 @@
+import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
 import { MakerEnvironment, Contract } from './shared/fixtures'
 import { rate1, daiTokens1, chaiTokens1 } from './shared/utils'
 
@@ -15,7 +16,10 @@ contract('Treasury - Saving', async (accounts) => {
     dai = maker.dai
 
     // Setup tests - Allow owner to interact directly with Treasury, not for production
-    await treasury.orchestrate(owner, { from: owner })
+    const treasuryFunctions = ['pushDai', 'pullDai', 'pushChai', 'pullChai', 'pushWeth', 'pullWeth']
+    for (let f of treasuryFunctions) {
+      await treasury.orchestrate(owner, keccak256(toUtf8Bytes(f + '(address,uint256)')), { from: owner })
+    }
 
     // Borrow some dai
     await maker.getDai(user, daiTokens1, rate1)

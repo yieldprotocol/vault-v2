@@ -95,7 +95,7 @@ contract('DaiProxy', async (accounts) => {
     )
 
     // Allow owner to mint yDai the sneaky way, without recording a debt in controller
-    await yDai1.orchestrate(owner, { from: owner })
+    await yDai1.orchestrate(owner, keccak256(toUtf8Bytes('mint(address,uint256)')), { from: owner })
   })
 
   describe('with liquidity', () => {

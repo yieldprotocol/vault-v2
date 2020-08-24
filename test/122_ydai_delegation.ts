@@ -1,3 +1,4 @@
+import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
 // @ts-ignore
 import helper from 'ganache-time-traveler'
 // @ts-ignore
@@ -38,14 +39,14 @@ contract('yDai - Delegation', async (accounts) => {
     await env.newYDai(maturity2, 'Name', 'Symbol')
 
     // Post collateral to MakerDAO through Treasury
-    await treasury.orchestrate(owner, { from: owner })
+    await treasury.orchestrate(owner, keccak256(toUtf8Bytes('pushWeth(address,uint256)')), { from: owner })
     await weth.deposit({ from: owner, value: wethTokens1 })
     await weth.approve(treasury.address, wethTokens1, { from: owner })
     await treasury.pushWeth(owner, wethTokens1, { from: owner })
     assert.equal((await vat.urns(WETH, treasury.address)).ink, wethTokens1.toString())
 
     // Mint some yDai the sneaky way
-    await yDai1.orchestrate(owner, { from: owner })
+    await yDai1.orchestrate(owner, keccak256(toUtf8Bytes('mint(address,uint256)')), { from: owner })
     await yDai1.mint(holder, daiTokens1, { from: owner })
 
     // yDai matures

@@ -1,3 +1,4 @@
+import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
 import { YieldEnvironmentLite, Contract } from './shared/fixtures'
 const FlashMinterMock = artifacts.require('FlashMinterMock')
 const FlashMintRedeemerMock = artifacts.require('FlashMintRedeemerMock')
@@ -56,13 +57,13 @@ contract('yDai', async (accounts) => {
     flashMintRedeemer = await FlashMintRedeemerMock.new({ from: owner })
 
     // Deposit some weth to treasury the sneaky way so that redeem can pull some dai
-    await treasury.orchestrate(owner, { from: owner })
+    await treasury.orchestrate(owner, keccak256(toUtf8Bytes('pushWeth(address,uint256)')), { from: owner })
     await weth.deposit({ from: owner, value: wethTokens2.mul(2).toString() })
     await weth.approve(treasury.address, wethTokens2.mul(2), { from: owner })
     await treasury.pushWeth(owner, wethTokens2.mul(2), { from: owner })
 
     // Mint some yDai1 the sneaky way, only difference is that the Controller doesn't record the user debt.
-    await yDai1.orchestrate(owner, { from: owner })
+    await yDai1.orchestrate(owner, keccak256(toUtf8Bytes('mint(address,uint256)')), { from: owner })
     await yDai1.mint(user1, daiTokens1, { from: owner })
   })
 
