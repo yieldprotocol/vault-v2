@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  * For yDai, we have updated it and added functionality that enables it as well to work as a deployed contract registry.
  */
 contract Migrations is Ownable() {
+    event Registered(bytes32 name, address addr);
     uint public lastCompletedMigration;
 
     /// @dev Deployed contract to deployment address
@@ -24,6 +25,7 @@ contract Migrations is Ownable() {
     function register(bytes32 name, address addr ) external onlyOwner {
         contracts[name] = addr;
         names.push(name);
+        emit Registered(name, addr);
     }
 
     /// @dev Register the index of the last completed migration
