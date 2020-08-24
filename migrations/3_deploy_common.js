@@ -75,7 +75,7 @@ module.exports = async (deployer, network, accounts) => {
   );
   const controller = await Controller.deployed();
   controllerAddress = controller.address;
-  const treasuryFunctions = ['pushDai', 'pullDai', 'pushChai', 'pullChai', 'pushWeth', 'pullWeth'].map(func => id(func + '(address,uin256)'))
+  const treasuryFunctions = ['pushDai', 'pullDai', 'pushChai', 'pullChai', 'pushWeth', 'pullWeth'].map(func => id(func + '(address,uint256)'))
   await treasury.batchOrchestrate(controllerAddress, treasuryFunctions)
 
   // Setup Liquidations
