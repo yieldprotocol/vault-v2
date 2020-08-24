@@ -64,8 +64,8 @@ const NAMES = [
     "PUSH_WETH",
     "PULL_WETH",
 
-    "ERASE_ALL",
-    "ERASE",
+    "ERASE_AUCTION",
+    "ERASE_VAULT",
 ];
 
 (async () => {
