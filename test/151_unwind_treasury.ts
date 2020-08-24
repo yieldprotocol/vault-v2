@@ -1,4 +1,4 @@
-import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
+import { id } from 'ethers/lib/utils'
 // @ts-ignore
 import helper from 'ganache-time-traveler'
 import { BigNumber } from 'ethers'
@@ -61,10 +61,8 @@ contract('Unwind - Treasury', async (accounts) => {
     chai = env.maker.chai
     
     // Allow owner to interact directly with Treasury, not for production
-    const treasuryFunctions = ['pushDai', 'pullDai', 'pushChai', 'pullChai', 'pushWeth', 'pullWeth']
-    for (let f of treasuryFunctions) {
-      await treasury.orchestrate(owner, keccak256(toUtf8Bytes(f + '(address,uint256)')), { from: owner })
-    }
+    const treasuryFunctions = ['pushDai', 'pullDai', 'pushChai', 'pullChai', 'pushWeth', 'pullWeth'].map(func => id(func + '(address,uint256)'))
+    await treasury.batchOrchestrate(owner, treasuryFunctions)
     await end.rely(owner, { from: owner }) // `owner` replaces MKR governance
   })
 

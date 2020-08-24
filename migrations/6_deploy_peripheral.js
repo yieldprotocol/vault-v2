@@ -25,7 +25,6 @@ module.exports = async (deployer, network, accounts) => {
   let ethProxyAddress;
 
   let vatAddress;
-  let potAddress;
   let daiAddress;
 
   if (network !== 'development') {

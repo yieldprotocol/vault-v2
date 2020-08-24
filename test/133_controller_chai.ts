@@ -1,4 +1,4 @@
-import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
+import { id } from 'ethers/lib/utils'
 // @ts-ignore
 import helper from 'ganache-time-traveler'
 // @ts-ignore
@@ -165,7 +165,7 @@ contract('Controller - Chai', async (accounts) => {
 
       it('when dai is provided in excess for repayment, only the necessary amount is taken', async () => {
         // Mint some yDai the sneaky way
-        await yDai1.orchestrate(owner, keccak256(toUtf8Bytes('mint(address,uint256)')), { from: owner })
+        await yDai1.orchestrate(owner, id('mint(address,uint256)'), { from: owner })
         await yDai1.mint(user1, 1, { from: owner }) // 1 extra yDai wei
         const yDaiTokens = addBN(daiTokens1, 1) // daiTokens1 + 1 wei
 

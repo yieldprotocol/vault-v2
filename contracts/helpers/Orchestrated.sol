@@ -12,7 +12,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  */
 
 contract Orchestrated is Ownable {
-    event GrantedAccess(address access);
+    event GrantedAccess(address access, bytes4 signature);
 
     mapping(address => mapping (bytes4 => bool)) public orchestration;
 
@@ -31,6 +31,13 @@ contract Orchestrated is Ownable {
     /// It seems to me a bad idea to give access to humans, and would use this only for predictable smart contracts.
     function orchestrate(address user, bytes4 signature) public onlyOwner {
         orchestration[user][signature] = true;
-        emit GrantedAccess(user);
+        emit GrantedAccess(user, signature);
+    }
+
+    /// @dev Adds orchestration for the provided function signatures
+    function batchOrchestrate(address user, bytes4[] memory signatures) public onlyOwner {
+        for (uint256 i = 0; i < signatures.length; i++) {
+            orchestrate(user, signatures[i]);
+        }
     }
 }

@@ -50,7 +50,7 @@ contract('Gas Usage', async (accounts) => {
       const block = await web3.eth.getBlockNumber()
       maturities = [] // Clear the registry for each test
       series = [] // Clear the registry for each test
-      for (let i = 0; i < m; i++) {
+      for (let i = 1; i <= m; i++) {
         const maturity = (await web3.eth.getBlock(block)).timestamp + i * 1000
         maturities.push(maturity)
         series.push(await env.newYDai(maturity, 'Name', 'Symbol'))

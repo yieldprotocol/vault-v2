@@ -1,5 +1,4 @@
-import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
-
+const { id } = require('ethers/lib/utils')
 const fixed_addrs = require('./fixed_addrs.json');
 const Migrations = artifacts.require("Migrations");
 const Vat = artifacts.require("Vat");
@@ -76,11 +75,8 @@ module.exports = async (deployer, network, accounts) => {
   );
   const controller = await Controller.deployed();
   controllerAddress = controller.address;
-  const treasuryFunctions = ['pushDai', 'pullDai', 'pushChai', 'pullChai', 'pushWeth', 'pullWeth']
-  for (let f of treasuryFunctions) {
-    await treasury.orchestrate(controllerAddress, keccak256(toUtf8Bytes(f + '(address,uint256)')))
-  }
-
+  const treasuryFunctions = ['pushDai', 'pullDai', 'pushChai', 'pullChai', 'pushWeth', 'pullWeth'].map(func => id(func + '(address,uin256)'))
+  await treasury.batchOrchestrate(controllerAddress, treasuryFunctions)
 
   // Setup Liquidations
   await deployer.deploy(
@@ -88,9 +84,10 @@ module.exports = async (deployer, network, accounts) => {
     treasuryAddress,
     controllerAddress,
   )
-  liquidationsAddress = (await Liquidations.deployed()).address;
-  await controller.orchestrate(liquidationsAddress, keccak256(toUtf8Bytes('erase(bytes32,address)')))
-  await treasury.orchestrate(liquidationsAddress, keccak256(toUtf8Bytes('erase(address)')));
+  const liquidations = await Liquidations.deployed()
+  liquidationsAddress = liquidations.address;
+  await controller.orchestrate(liquidationsAddress, id('erase(bytes32,address)'))
+  await treasury.orchestrate(liquidationsAddress, id('erase(address)'));
 
   // Setup Unwind
   await deployer.deploy(
@@ -108,8 +105,8 @@ module.exports = async (deployer, network, accounts) => {
   );
   const unwind = await Unwind.deployed();
   unwindAddress = unwind.address;
-  await controller.orchestrate(unwind.address, keccak256(toUtf8Bytes('erase(bytes32,address)')))
-  await liquidations.orchestrate(unwind.address, keccak256(toUtf8Bytes('erase(address)')))
+  await controller.orchestrate(unwind.address, id('erase(bytes32,address)'))
+  await liquidations.orchestrate(unwind.address, id('erase(address)'))
   await treasury.registerUnwind(unwindAddress);
 
   // Commit addresses to migrations registry

@@ -1,42 +1,35 @@
-const ERC20 = artifacts.require('OrchestratedERC20')
-const Minter = artifacts.require('Minter')
+const Orchestrated = artifacts.require('Orchestrated')
 
 // @ts-ignore
 import { expectRevert } from '@openzeppelin/test-helpers'
-import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
+import { id } from 'ethers/lib/utils'
 import { assert } from 'chai'
 
 contract('Orchestrated', async (accounts: string[]) => {
-  let [owner, user] = accounts
+  let [owner, other] = accounts
 
-  let erc20: any
-  let minter: any
+  let orchestrated: any
 
   beforeEach(async () => {
-    erc20 = await ERC20.new('Name', 'Symbol', { from: owner })
-    minter = await Minter.new({ from: owner })
+    orchestrated = await Orchestrated.new()
   })
 
-  it('does not allow minting to unknown addresses', async () => {
-    await expectRevert(
-        minter.mint(erc20.address, owner, 1, { from: owner }),
-        'OrchestratedERC20: mint'
-      )
+  it('non-admin cannot orchestrate', async () => {
+    const mintSignature = id('mint(address,uint256)')
+    await expectRevert.unspecified(orchestrated.orchestrate(owner, mintSignature, { from: other }))
   })
 
-  it('allows minting to orchestrated addresses for specified function', async () => {
-    const mintSignature = keccak256(toUtf8Bytes('mint(address,uint256)')).slice(0,10) // 0x + 2 * 4 bytes
-    await erc20.orchestrate(minter.address, mintSignature, { from: owner })
-    await minter.mint(erc20.address, owner, 1, { from: owner })
-    assert.equal(await erc20.balanceOf(owner), 1)
+  it('can orchestrate', async () => {
+    const mintSignature = id('mint(address,uint256)')
+    await orchestrated.orchestrate(owner, mintSignature)
+    expect(await orchestrated.orchestration(owner, mintSignature)).to.be.true
   })
 
-  it('does not allow minting if given different permission', async () => {
-    const burnSignature = keccak256(toUtf8Bytes('burn(address,uint256)')).slice(0,10)
-    await erc20.orchestrate(minter.address, burnSignature, { from: owner })
-    await expectRevert(
-        minter.mint(erc20.address, owner, 1, { from: owner }),
-        'OrchestratedERC20: mint'
-      )
+  it('can batch orchestrate', async () => {
+    const sigs = ['mint', 'burn', 'transfer'].map((sig) => id(sig + '(address,uint256)'))
+    await orchestrated.batchOrchestrate(owner, sigs)
+    for (const sig of sigs) {
+      expect(await orchestrated.orchestration(owner, sig)).to.be.true
+    }
   })
 })

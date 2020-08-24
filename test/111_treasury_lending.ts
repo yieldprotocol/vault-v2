@@ -1,6 +1,6 @@
 // @ts-ignore
 import { expectRevert } from '@openzeppelin/test-helpers'
-import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
+import { id } from 'ethers/lib/utils'
 import { MakerEnvironment, Contract } from './shared/fixtures'
 import { WETH, daiDebt1, daiTokens1, wethTokens1, chaiTokens1 } from './shared/utils'
 
@@ -24,10 +24,8 @@ contract('Treasury - Lending', async (accounts: string[]) => {
     dai = maker.dai
 
     // Setup tests - Allow owner to interact directly with Treasury, not for production
-    const treasuryFunctions = ['pushDai', 'pullDai', 'pushChai', 'pullChai', 'pushWeth', 'pullWeth']
-    for (let f of treasuryFunctions) {
-      await treasury.orchestrate(owner, keccak256(toUtf8Bytes(f + '(address,uint256)')), { from: owner })
-    }
+    const treasuryFunctions = ['pushDai', 'pullDai', 'pushChai', 'pullChai', 'pushWeth', 'pullWeth'].map(func => id(func + '(address,uint256)'))
+    await treasury.batchOrchestrate(owner, treasuryFunctions)
   })
 
   it('get the size of the contract', async () => {

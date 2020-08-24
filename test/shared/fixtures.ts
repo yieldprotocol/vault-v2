@@ -1,4 +1,4 @@
-import { formatBytes32String as toBytes32, keccak256, toUtf8Bytes } from 'ethers/lib/utils'
+import { formatBytes32String as toBytes32, id } from 'ethers/lib/utils'
 import { BigNumber, BigNumberish } from 'ethers'
 
 export type Contract = any
@@ -118,10 +118,10 @@ export class MakerEnvironment {
 
   public async setupController(treasury: Contract) {
     const controller = await Controller.new(this.vat.address, this.pot.address, treasury.address)
-    const treasuryFunctions = ['pushDai', 'pullDai', 'pushChai', 'pullChai', 'pushWeth', 'pullWeth']
-    for (let f of treasuryFunctions) {
-      await treasury.orchestrate(controller.address, keccak256(toUtf8Bytes(f + '(address,uint256)')))
-    }
+    const treasuryFunctions = ['pushDai', 'pullDai', 'pushChai', 'pullChai', 'pushWeth', 'pullWeth'].map((func) =>
+      id(func + '(address,uint256)')
+    )
+    await treasury.batchOrchestrate(controller.address, treasuryFunctions)
     return controller
   }
 
@@ -178,10 +178,9 @@ export class YieldEnvironmentLite {
     )
     if (!dontAdd) {
       await this.controller.addSeries(yDai.address)
-      await yDai.orchestrate(this.controller.address, keccak256(toUtf8Bytes('mint(address,uint256)')))
-      await yDai.orchestrate(this.controller.address, keccak256(toUtf8Bytes('burn(address,uint256)')))
+      await yDai.batchOrchestrate(this.controller.address, [id('mint(address,uint256)'), id('burn(address,uint256)')])
       // await yDai.orchestrate(this.unwind.address, keccak256(toUtf8Bytes('burn(address,uint256)'))) // This is needed but it is set manually in tests
-      await this.treasury.orchestrate(yDai.address, keccak256(toUtf8Bytes('pullDai(address,uint256)')))
+      await this.treasury.orchestrate(yDai.address, id('pullDai(address,uint256)'))
     }
 
     return yDai
@@ -222,9 +221,9 @@ export class YieldEnvironment extends YieldEnvironmentLite {
     const { maker, treasury, controller } = await YieldEnvironmentLite.setup()
 
     const liquidations = await Liquidations.new(treasury.address, controller.address)
-    await controller.orchestrate(liquidations.address, keccak256(toUtf8Bytes('erase(bytes32,address)')))
-    await treasury.orchestrate(liquidations.address, keccak256(toUtf8Bytes('pushDai(bytes32,address)')))
-    await treasury.orchestrate(liquidations.address, keccak256(toUtf8Bytes('pullWeth(bytes32,address)')))
+    await controller.orchestrate(liquidations.address, id('erase(bytes32,address)'))
+    await treasury.orchestrate(liquidations.address, id('pushDai(address,uint256)'))
+    await treasury.orchestrate(liquidations.address, id('pullWeth(address,uint256)'))
 
     const unwind = await Unwind.new(
       maker.vat.address,
@@ -239,8 +238,8 @@ export class YieldEnvironment extends YieldEnvironmentLite {
       liquidations.address
     )
     await treasury.registerUnwind(unwind.address)
-    await controller.orchestrate(unwind.address, keccak256(toUtf8Bytes('erase(bytes32,address)')))
-    await liquidations.orchestrate(unwind.address, keccak256(toUtf8Bytes('erase(address)')))
+    await controller.orchestrate(unwind.address, id('erase(bytes32,address)'))
+    await liquidations.orchestrate(unwind.address, id('erase(address)'))
 
     return new YieldEnvironment(maker, treasury, controller, liquidations, unwind)
   }

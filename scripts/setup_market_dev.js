@@ -1,4 +1,4 @@
-import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
+const { id } = require('ethers/lib/utils')
 const { BigNumber } = require("ethers");
 
 // External
@@ -8,7 +8,6 @@ const GemJoin = artifacts.require('GemJoin');
 const DaiJoin = artifacts.require('DaiJoin');
 const Weth = artifacts.require("WETH9");
 const ERC20 = artifacts.require("TestERC20");
-const Chai = artifacts.require('Chai');
 
 // YDai
 const YDai = artifacts.require('YDai');
@@ -36,8 +35,7 @@ function divRay(x, ray){
 
 module.exports = async (callback) => {
 
-    // const { assert, expect } = require('chai');
-    let [ owner, user1, operator, from, to ] = await web3.eth.getAccounts()
+    let [ owner, user1 ] = await web3.eth.getAccounts()
     const migrations = await Migrations.deployed();
 
     let vat = await Vat.deployed()
@@ -53,7 +51,6 @@ module.exports = async (callback) => {
 
     const daiDebt1 = toWad(90);
     const daiTokens1 = mulRay(daiDebt1, rate1);
-    const yDaiTokens1 = daiTokens1;
 
     // Convert eth to weth and use it to borrow `daiTokens` from MakerDAO
     // This function shadows and uses global variables, careful.
@@ -82,11 +79,10 @@ module.exports = async (callback) => {
     let yDai0Name = await yDai0.name();
     let poolAddr = await migrations.contracts(web3.utils.fromAscii(`${yDai0Name}-Pool`));
     let pool = await Pool.at(poolAddr);
-    let maturity = await yDai0.maturity();
 
     try {        
         // Allow owner to mint yDai the sneaky way, without recording a debt in dealer
-        await yDai0.orchestrate(owner, keccak256(toUtf8Bytes('mint(address,uint256)')), { from: owner });
+        await yDai0.orchestrate(owner, id('mint(address,uint256)'), { from: owner });
 
         const daiReserves = daiTokens1;
         await getDai(user1, daiReserves);       console.log('0')
