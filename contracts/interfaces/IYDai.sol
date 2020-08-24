@@ -12,6 +12,7 @@ interface IYDai is IERC20, IERC2612 {
     function chiGrowth() external view returns(uint);
     function rateGrowth() external view returns(uint);
     function mature() external;
+    function unlocked() external view returns (uint);
     function mint(address, uint) external;
     function burn(address, uint) external;
     function flashMint(address, uint, bytes calldata) external;

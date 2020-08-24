@@ -41,7 +41,7 @@ contract YDai is IYDai, Orchestrated(), Delegable(), DecimalMath, ERC20Permit  {
     uint256 public override chi0;      // Chi at maturity
     uint256 public override rate0;     // Rate at maturity
 
-    uint private unlocked = 1;
+    uint public override unlocked = 1;
     modifier lock() {
         require(unlocked == 1, 'YDai: Locked');
         unlocked = 0;

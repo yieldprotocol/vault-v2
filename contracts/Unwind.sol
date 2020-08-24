@@ -18,7 +18,6 @@ import "./interfaces/ILiquidations.sol";
 import "./helpers/DecimalMath.sol";
 
 
-
 /**
  * @dev Unwind allows everyone to recover their assets from the Yield protocol in the event of a MakerDAO shutdown.
  * During the unwind process, the system debt to MakerDAO is settled first with `settleTreasury`, extracting all free weth.
@@ -203,6 +202,7 @@ contract Unwind is Ownable(), DecimalMath {
     function redeem(uint256 maturity, address user) public {
         require(settled && cashedOut, "Unwind: Not ready");
         IYDai yDai = controller.series(maturity);
+        require(yDai.unlocked() == 1, "YDAI is still locked");
         uint256 yDaiAmount = yDai.balanceOf(user);
         yDai.burn(user, yDaiAmount);
         require(
