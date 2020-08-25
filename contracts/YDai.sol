@@ -55,8 +55,6 @@ contract YDai is IYDai, Orchestrated(), Delegable(), DecimalMath, ERC20Permit  {
     /// Sets the maturity date for the yDai, in unix time.
     /// Initializes chi and rate at maturity time as 1.0 with 27 decimals.
     constructor(
-        address vat_,
-        address pot_,
         address treasury_,
         uint256 maturity_,
         string memory name,
@@ -64,9 +62,9 @@ contract YDai is IYDai, Orchestrated(), Delegable(), DecimalMath, ERC20Permit  {
     ) public ERC20Permit(name, symbol) {
         // solium-disable-next-line security/no-block-members
         require(maturity_ > now && maturity_ < now + MAX_TIME_TO_MATURITY, "YDai: Invalid maturity");
-        vat = IVat(vat_);
-        pot = IPot(pot_);
         treasury = ITreasury(treasury_);
+        vat = treasury.vat();
+        pot = treasury.pot();
         maturity = maturity_;
         chi0 = UNIT;
         rate0 = UNIT;

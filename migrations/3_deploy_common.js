@@ -69,8 +69,6 @@ module.exports = async (deployer, network, accounts) => {
   // Setup controller
   await deployer.deploy(
     Controller,
-    vatAddress,
-    potAddress,
     treasuryAddress,
   );
   const controller = await Controller.deployed();
@@ -81,7 +79,6 @@ module.exports = async (deployer, network, accounts) => {
   // Setup Liquidations
   await deployer.deploy(
     Liquidations,
-    treasuryAddress,
     controllerAddress,
   )
   const liquidations = await Liquidations.deployed()
@@ -91,15 +88,7 @@ module.exports = async (deployer, network, accounts) => {
   // Setup Unwind
   await deployer.deploy(
     Unwind,
-    vatAddress,
-    daiJoinAddress,
-    wethAddress,
-    wethJoinAddress,
-    potAddress,
     endAddress,
-    chaiAddress,
-    treasuryAddress,
-    controllerAddress,
     liquidationsAddress,
   );
   const unwind = await Unwind.deployed();

@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IVat.sol";
+import "./interfaces/IWeth.sol";
 import "./interfaces/IDaiJoin.sol";
 import "./interfaces/IGemJoin.sol";
 import "./interfaces/IPot.sol";
@@ -33,7 +34,7 @@ contract Unwind is Ownable(), DecimalMath {
 
     IVat public vat;
     IDaiJoin public daiJoin;
-    IERC20 public weth;
+    IWeth public weth;
     IGemJoin public wethJoin;
     IPot public pot;
     IEnd public end;
@@ -52,31 +53,23 @@ contract Unwind is Ownable(), DecimalMath {
     bool public live = true;
 
     /// @dev The constructor links to vat, daiJoin, weth, wethJoin, jug, pot, end, chai, treasury, controller and liquidations.
-    /// Liquidations should have privileged access to treasury, controller and liquidations using orchestration.
+    /// Liquidations should have privileged access to controller and liquidations using orchestration.
     /// The constructor gives treasury and end permission on unwind's MakerDAO vaults.
     constructor (
-        address vat_,
-        address daiJoin_,
-        address weth_,
-        address wethJoin_,
-        address pot_,
         address end_,
-        address chai_,
-        address treasury_,
-        address controller_,
         address liquidations_
     ) public {
-        // These could be hardcoded for mainnet deployment.
-        vat = IVat(vat_);
-        daiJoin = IDaiJoin(daiJoin_);
-        weth = IERC20(weth_);
-        wethJoin = IGemJoin(wethJoin_);
-        pot = IPot(pot_);
         end = IEnd(end_);
-        chai = IChai(chai_);
-        treasury = ITreasury(treasury_);
-        controller = IController(controller_);
         liquidations = ILiquidations(liquidations_);
+        controller = liquidations.controller();
+        treasury = controller.treasury();
+        vat = treasury.vat();
+        daiJoin = treasury.daiJoin();
+        weth = treasury.weth();
+        wethJoin = treasury.wethJoin();
+        pot = treasury.pot();
+        chai = treasury.chai();
+
 
         vat.hope(address(treasury));
         vat.hope(address(end));

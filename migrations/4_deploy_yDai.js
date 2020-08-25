@@ -49,8 +49,6 @@ module.exports = async (deployer, network) => {
     // Setup YDai
     await deployer.deploy(
       YDai,
-      vatAddress,
-      potAddress,
       treasuryAddress,
       maturity,
       name,
