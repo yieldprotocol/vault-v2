@@ -40,20 +40,19 @@ contract('Controller - Weth', async (accounts) => {
     snapshot = await helper.takeSnapshot()
     snapshotId = snapshot['result']
 
-    const env = await YieldEnvironmentLite.setup()
+    const block = await web3.eth.getBlockNumber()
+    maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000
+    maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000
+
+    const env = await YieldEnvironmentLite.setup([maturity1, maturity2])
     maker = env.maker
     controller = env.controller
     treasury = env.treasury
     weth = env.maker.weth
     vat = env.maker.vat
     dai = env.maker.dai
-
-    // Setup yDai
-    const block = await web3.eth.getBlockNumber()
-    maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000
-    maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000
-    yDai1 = await env.newYDai(maturity1, 'Name', 'Symbol')
-    yDai2 = await env.newYDai(maturity2, 'Name', 'Symbol')
+    yDai1 = env.yDais[0]
+    yDai2 = env.yDais[1]
   })
 
   afterEach(async () => {

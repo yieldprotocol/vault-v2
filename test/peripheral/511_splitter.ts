@@ -42,7 +42,10 @@ contract('Splitter', async (accounts) => {
   let pool1: Contract
 
   beforeEach(async () => {
-    env = await YieldEnvironmentLite.setup()
+    const block = await web3.eth.getBlockNumber()
+    maturity1 = (await web3.eth.getBlock(block)).timestamp + 30000000 // Far enough so that the extra weth to borrow is above dust
+
+    env = await YieldEnvironmentLite.setup([maturity1])
     controller = env.controller
     treasury = env.treasury
     vat = env.maker.vat
@@ -51,10 +54,7 @@ contract('Splitter', async (accounts) => {
     wethJoin = env.maker.wethJoin
     daiJoin = env.maker.daiJoin
 
-    // Setup yDai
-    const block = await web3.eth.getBlockNumber()
-    maturity1 = (await web3.eth.getBlock(block)).timestamp + 30000000 // Far enough so that the extra weth to borrow is above dust
-    yDai1 = await env.newYDai(maturity1, 'Name', 'Symbol')
+    yDai1 = env.yDais[0]
 
     // Setup Pool
     pool1 = await Pool.new(dai.address, yDai1.address, 'Name', 'Symbol', { from: owner })

@@ -50,11 +50,16 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
 
     /// @dev Set up addresses for vat, pot and Treasury.
     constructor (
-        address treasury_
+        address treasury_,
+        address[] memory yDais
+
     ) public {
         treasury = ITreasury(treasury_);
         vat = treasury.vat();
         pot = treasury.pot();
+        for (uint256 i = 0; i < yDais.length; i += 1) {
+            addSeries(yDais[i]);
+        }
     }
 
     /// @dev Modified functions only callable while the Controller is not unwinding due to a MakerDAO shutdown.
@@ -129,7 +134,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     /// @dev Adds an yDai series to this Controller
     /// After deployment, ownership should be renounced, so that no more series can be added.
     /// @param yDaiContract Address of the yDai series to add.
-    function addSeries(address yDaiContract) public onlyOwner {
+    function addSeries(address yDaiContract) private {
         uint256 maturity = IYDai(yDaiContract).maturity();
         require(
             !containsSeries(maturity),

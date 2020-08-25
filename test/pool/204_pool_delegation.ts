@@ -23,13 +23,13 @@ contract('Pool - Delegation', async (accounts) => {
   let env: Contract
 
   beforeEach(async () => {
-    env = await YieldEnvironmentLite.setup()
-    dai = env.maker.dai
-
     // Setup yDai
     const block = await web3.eth.getBlockNumber()
     maturity1 = (await web3.eth.getBlock(block)).timestamp + 31556952 // One year
-    yDai1 = await env.newYDai(maturity1, 'Name', 'Symbol')
+
+    env = await YieldEnvironmentLite.setup([maturity1])
+    dai = env.maker.dai
+    yDai1 = env.yDais[0]
 
     // Setup Pool
     pool = await Pool.new(dai.address, yDai1.address, 'Name', 'Symbol', { from: owner })

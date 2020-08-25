@@ -43,16 +43,15 @@ contract('DaiProxy', async (accounts) => {
   let env: YieldEnvironmentLite
 
   beforeEach(async () => {
-    env = await YieldEnvironmentLite.setup()
+    const block = await web3.eth.getBlockNumber()
+    maturity1 = (await web3.eth.getBlock(block)).timestamp + 31556952 // One year
+    env = await YieldEnvironmentLite.setup([maturity1])
     weth = env.maker.weth
     dai = env.maker.dai
     treasury = env.treasury
     controller = env.controller
 
-    // Setup yDai
-    const block = await web3.eth.getBlockNumber()
-    maturity1 = (await web3.eth.getBlock(block)).timestamp + 31556952 // One year
-    yDai1 = await env.newYDai(maturity1, 'Name', 'Symbol')
+    yDai1 = env.yDais[0]
 
     // Setup Pool
     pool = await Pool.new(dai.address, yDai1.address, 'Name', 'Symbol', { from: owner })

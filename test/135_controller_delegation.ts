@@ -25,19 +25,18 @@ contract('Controller - Delegation', async (accounts) => {
     snapshot = await helper.takeSnapshot()
     snapshotId = snapshot['result']
 
-    const env = await YieldEnvironmentLite.setup()
+    // Setup yDai
+    const block = await web3.eth.getBlockNumber()
+    maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000
+    maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000
+
+    const env = await YieldEnvironmentLite.setup([maturity1, maturity2])
     maker = env.maker
     controller = env.controller
     treasury = env.treasury
     weth = env.maker.weth
     dai = env.maker.dai
-
-    // Setup yDai
-    const block = await web3.eth.getBlockNumber()
-    maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000
-    maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000
-    yDai1 = await env.newYDai(maturity1, 'Name', 'Symbol')
-    await env.newYDai(maturity2, 'Name', 'Symbol')
+    yDai1 = env.yDais[0]
   })
 
   afterEach(async () => {

@@ -46,22 +46,20 @@ contract('Unwind - Controller', async (accounts) => {
     snapshot = await helper.takeSnapshot()
     snapshotId = snapshot['result']
 
-    env = await YieldEnvironment.setup()
+    const block = await web3.eth.getBlockNumber()
+    maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000
+    maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000
+
+    env = await YieldEnvironment.setup([maturity1, maturity2])
     controller = env.controller
     treasury = env.treasury
     unwind = env.unwind
+    yDai1 = env.yDais[0]
+    yDai2 = env.yDais[1]
 
     weth = env.maker.weth
     end = env.maker.end
 
-    // Setup yDai
-    const block = await web3.eth.getBlockNumber()
-    maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000
-    maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000
-    yDai1 = await env.newYDai(maturity1, 'Name', 'Symbol')
-    yDai2 = await env.newYDai(maturity2, 'Name', 'Symbol')
-    await yDai1.orchestrate(unwind.address, id('burn(address,uint256)'))
-    await yDai2.orchestrate(unwind.address, id('burn(address,uint256)'))
     await end.rely(owner, { from: owner }) // `owner` replaces MKR governance
   })
 

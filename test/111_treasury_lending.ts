@@ -1,7 +1,7 @@
 // @ts-ignore
 import { expectRevert } from '@openzeppelin/test-helpers'
 import { id } from 'ethers/lib/utils'
-import { MakerEnvironment, Contract } from './shared/fixtures'
+import { YieldEnvironment, MakerEnvironment, Contract } from './shared/fixtures'
 import { WETH, daiDebt1, daiTokens1, wethTokens1, chaiTokens1 } from './shared/utils'
 
 contract('Treasury - Lending', async (accounts: string[]) => {
@@ -16,7 +16,7 @@ contract('Treasury - Lending', async (accounts: string[]) => {
 
   beforeEach(async () => {
     const maker = await MakerEnvironment.setup()
-    treasury = await maker.setupTreasury()
+    treasury = await YieldEnvironment.setupTreasury(maker)
     vat = maker.vat
     weth = maker.weth
     wethJoin = maker.wethJoin

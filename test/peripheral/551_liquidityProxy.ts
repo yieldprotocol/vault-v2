@@ -73,17 +73,17 @@ contract('LiquidityProxy', async (accounts) => {
     snapshot = await helper.takeSnapshot()
     snapshotId = snapshot['result']
 
-    env = await YieldEnvironmentLite.setup()
+    // Setup yDai
+    const block = await web3.eth.getBlockNumber()
+    maturity1 = (await web3.eth.getBlock(block)).timestamp + 31556952 // One year
+
+    env = await YieldEnvironmentLite.setup([maturity1])
     dai = env.maker.dai
     chai = env.maker.chai
     dai = env.maker.dai
     controller = env.controller
     treasury = env.treasury
-
-    // Setup yDai
-    const block = await web3.eth.getBlockNumber()
-    maturity1 = (await web3.eth.getBlock(block)).timestamp + 31556952 // One year
-    yDai1 = await env.newYDai(maturity1, 'Name', 'Symbol')
+    yDai1 = env.yDais[0]
 
     // Setup Pool
     pool = await Pool.new(dai.address, yDai1.address, 'Name', 'Symbol', { from: owner })

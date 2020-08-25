@@ -38,17 +38,17 @@ contract('yDai', async (accounts) => {
     snapshot = await helper.takeSnapshot()
     snapshotId = snapshot['result']
 
-    env = await YieldEnvironmentLite.setup()
+    const block = await web3.eth.getBlockNumber()
+    maturity = (await web3.eth.getBlock(block)).timestamp + 1000
+
+    env = await YieldEnvironmentLite.setup([maturity])
     treasury = env.treasury
     weth = env.maker.weth
     pot = env.maker.pot
     vat = env.maker.vat
     dai = env.maker.dai
 
-    // Setup yDai1
-    const block = await web3.eth.getBlockNumber()
-    maturity = (await web3.eth.getBlock(block)).timestamp + 1000
-    yDai1 = await env.newYDai(maturity, 'Name', 'Symbol')
+    yDai1 = env.yDais[0]
 
     // Test setup
     // Setup Flash Minter
@@ -83,9 +83,9 @@ contract('yDai', async (accounts) => {
     const earlyMaturity = timestamp - 1000
     const lateMaturity = timestamp + 126144000 + 15
 
-    await expectRevert(env.newYDai(earlyMaturity, 'Name', 'Symbol', true), 'YDai: Invalid maturity')
+    await expectRevert(env.newYDai(earlyMaturity, 'Name', 'Symbol'), 'YDai: Invalid maturity')
 
-    await expectRevert(env.newYDai(lateMaturity, 'Name', 'Symbol', true), 'YDai: Invalid maturity')
+    await expectRevert(env.newYDai(lateMaturity, 'Name', 'Symbol'), 'YDai: Invalid maturity')
   })
 
   it('yDai1 is not mature before maturity', async () => {

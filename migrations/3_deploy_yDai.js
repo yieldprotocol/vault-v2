@@ -1,34 +1,64 @@
-const { id } = require('ethers/lib/utils')
 const fixed_addrs = require('./fixed_addrs.json');
+
 const Migrations = artifacts.require("Migrations");
+
 const Vat = artifacts.require("Vat");
+const Weth = artifacts.require("WETH9");
+const ERC20 = artifacts.require("TestERC20");
+const GemJoin = artifacts.require("GemJoin");
+const DaiJoin = artifacts.require("DaiJoin");
 const Pot = artifacts.require("Pot");
+const Chai = artifacts.require("Chai");
+
 const Treasury = artifacts.require("Treasury");
 const YDai = artifacts.require("YDai");
-const Controller = artifacts.require("Controller");
-const Unwind = artifacts.require("Unwind");
 
 module.exports = async (deployer, network) => {
   const migrations = await Migrations.deployed();
 
   let vatAddress;
+  let wethAddress;
+  let wethJoinAddress;
+  let daiAddress;
+  let daiJoinAddress;
   let potAddress;
+  let chaiAddress;
   let treasuryAddress;
 
   if (network !== 'development') {
-    vatAddress = fixed_addrs[network].vatAddress;
+    vatAddress = fixed_addrs[network].vatAddress ;
+    wethAddress = fixed_addrs[network].wethAddress;
+    wethJoinAddress = fixed_addrs[network].wethJoinAddress;
+    daiAddress = fixed_addrs[network].daiAddress;
+    daiJoinAddress = fixed_addrs[network].daiJoinAddress;
     potAddress = fixed_addrs[network].potAddress;
-  } else {
+    fixed_addrs[network].chaiAddress ?
+      (chaiAddress = fixed_addrs[network].chaiAddress)
+      : (chaiAddress = (await Chai.deployed()).address);
+ } else {
     vatAddress = (await Vat.deployed()).address;
+    wethAddress = (await Weth.deployed()).address;
+    wethJoinAddress = (await GemJoin.deployed()).address;
+    daiAddress = (await ERC20.deployed()).address;
+    daiJoinAddress = (await DaiJoin.deployed()).address;
     potAddress = (await Pot.deployed()).address;
-  }
+    chaiAddress = (await Chai.deployed()).address;
+ }
+
+  // Setup treasury
+  await deployer.deploy(
+    Treasury,
+    vatAddress,
+    wethAddress,
+    daiAddress,
+    wethJoinAddress,
+    daiJoinAddress,
+    potAddress,
+    chaiAddress,
+  );
 
   const treasury = await Treasury.deployed();
   treasuryAddress = treasury.address;
-  const controller = await Controller.deployed();
-  controllerAddress = controller.address;
-  const unwind = await Unwind.deployed();
-  unwindAddress = unwind.address;
   
   const maturitiesInput = new Set([
     [1601510399, 'yDai-2020-09-30', 'yDai-2020-09-30'],
@@ -54,18 +84,7 @@ module.exports = async (deployer, network) => {
       name,
       symbol,
     );
-    const yDai = await YDai.deployed();
-    await treasury.orchestrate(yDai.address, id('pullDai(address,uint256)'))
-    await controller.addSeries(yDai.address);
-
-    await yDai.batchOrchestrate(
-        controller.address,
-        [
-            id('mint(address,uint256)'),
-            id('burn(address,uint256)'),
-        ]
-    )
-    await yDai.orchestrate(unwind.address, id('burn(address,uint256)'))
+    const yDai = await YDai.deployed()
 
     await migrations.register(web3.utils.fromAscii('yDai' + index), yDai.address);
     console.log('yDai' + index, yDai.address);

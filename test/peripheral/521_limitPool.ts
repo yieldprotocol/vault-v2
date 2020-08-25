@@ -25,21 +25,17 @@ contract('LimitPool', async (accounts) => {
   let env: YieldEnvironmentLite
 
   beforeEach(async () => {
-    env = await YieldEnvironmentLite.setup()
-    dai = env.maker.dai
-
-    // Setup yDai
     const block = await web3.eth.getBlockNumber()
     maturity1 = (await web3.eth.getBlock(block)).timestamp + 31556952 // One year
-    yDai1 = await env.newYDai(maturity1, 'Name', 'Symbol')
+    env = await YieldEnvironmentLite.setup([maturity1])
+    dai = env.maker.dai
+    yDai1 = env.yDais[0]
 
     // Setup Pool
     pool = await Pool.new(dai.address, yDai1.address, 'Name', 'Symbol', { from: owner })
 
     // Setup LimitPool
     limitPool = await LimitPool.new(pool.address, { from: owner })
-
-    // Test setup
 
     // Allow owner to mint yDai the sneaky way, without recording a debt in controller
     await yDai1.orchestrate(owner, keccak256(toUtf8Bytes('mint(address,uint256)')), { from: owner })

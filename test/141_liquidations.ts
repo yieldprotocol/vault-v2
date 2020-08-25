@@ -47,7 +47,12 @@ contract('Liquidations', async (accounts) => {
     snapshot = await helper.takeSnapshot()
     snapshotId = snapshot['result']
 
-    env = await YieldEnvironment.setup()
+    // Setup yDai
+    const block = await web3.eth.getBlockNumber()
+    maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000
+    maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000
+
+    env = await YieldEnvironment.setup([maturity1, maturity2])
     controller = env.controller
     treasury = env.treasury
     liquidations = env.liquidations
@@ -56,13 +61,7 @@ contract('Liquidations', async (accounts) => {
     dai = env.maker.dai
     weth = env.maker.weth
 
-    // Setup yDai
-    const block = await web3.eth.getBlockNumber()
-    maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000
-    maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000
-    yDai1 = await env.newYDai(maturity1, 'Name', 'Symbol')
-    await env.newYDai(maturity2, 'Name', 'Symbol')
-
+    yDai1 = env.yDais[0]
   })
 
   afterEach(async () => {
