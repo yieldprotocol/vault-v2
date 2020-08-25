@@ -43,7 +43,7 @@ contract Delegable is IDelegable {
     }
 
     /// @dev Enable a delegate to act on the behalf of caller
-    function addDelegate(address delegate) public {
+    function addDelegate(address delegate) public override {
         _addDelegate(msg.sender, delegate);
     }
 

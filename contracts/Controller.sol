@@ -356,7 +356,6 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     /// @dev Burns yDai from `from` wallet to repay debt in a Yield Vault.
     /// User debt is decreased for the given collateral and yDai series, in Yield vault `to`.
     /// `from` can delegate to other addresses to take yDai from him for the repayment.
-    /// Calling yDai.approve for Controller contract is a prerequisite to this function
     /// @param collateral Valid collateral type.
     /// @param maturity Maturity of an added series
     /// @param from Wallet providing the yDai for repayment.

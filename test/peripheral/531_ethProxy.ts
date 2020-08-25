@@ -1,5 +1,5 @@
 // Peripheral
-const EthProxy = artifacts.require('EthProxy')
+const EthProxy = artifacts.require('YieldProxy')
 
 // @ts-ignore
 import helper from 'ganache-time-traveler'
@@ -15,7 +15,7 @@ const SIGNATURE_TYPEHASH = keccak256(
   toUtf8Bytes('Signature(address user,address delegate,uint256 nonce,uint256 deadline)')
 )
 
-contract('Controller - EthProxy', async (accounts) => {
+contract('YieldProxy - EthProxy', async (accounts) => {
   let [owner, user1, user2] = accounts
 
   // this is the SECOND account that buidler creates
@@ -52,7 +52,7 @@ contract('Controller - EthProxy', async (accounts) => {
     weth = env.maker.weth
 
     // Setup EthProxy
-    ethProxy = await EthProxy.new(weth.address, treasury.address, controller.address, { from: owner })
+    ethProxy = await EthProxy.new(env.controller.address, [])
   })
 
   afterEach(async () => {
@@ -64,7 +64,7 @@ contract('Controller - EthProxy', async (accounts) => {
     assert.equal(await controller.powerOf(WETH, user2), 0, 'User2 has borrowing power')
 
     const previousBalance = await balance.current(user1)
-    await ethProxy.post(user2, wethTokens1, { from: user1, value: wethTokens1 })
+    await ethProxy.post(user2, { from: user1, value: wethTokens1 })
 
     expect(await balance.current(user1)).to.be.bignumber.lt(previousBalance)
     assert.equal(
@@ -81,7 +81,7 @@ contract('Controller - EthProxy', async (accounts) => {
 
   describe('with posted eth', () => {
     beforeEach(async () => {
-      await ethProxy.post(user1, wethTokens1, { from: user1, value: wethTokens1 })
+      await ethProxy.post(user1, { from: user1, value: wethTokens1 })
 
       assert.equal(
         (await vat.urns(WETH, treasury.address)).ink,
@@ -96,43 +96,6 @@ contract('Controller - EthProxy', async (accounts) => {
       await controller.addDelegate(ethProxy.address, { from: user1 })
       const previousBalance = await balance.current(user2)
       await ethProxy.withdraw(user2, wethTokens1, { from: user1 })
-
-      expect(await balance.current(user2)).to.be.bignumber.gt(previousBalance)
-      assert.equal((await vat.urns(WETH, treasury.address)).ink, 0, 'Treasury should not not have weth in MakerDAO')
-      assert.equal(await controller.powerOf(WETH, user1), 0, 'User1 should not have borrowing power')
-    })
-
-    it('allows user to withdraw weth with an encoded signature', async () => {
-      // Create the signature request
-      const signature = {
-        user: user1,
-        delegate: ethProxy.address,
-      }
-
-      // deadline as much as you want in the future
-      const deadline = 100000000000000
-
-      // Get the user's signatureCount
-      const signatureCount = await controller.signatureCount(user1)
-
-      // Get the EIP712 digest
-      const digest = getSignatureDigest(
-        SIGNATURE_TYPEHASH,
-        name,
-        controller.address,
-        chainId,
-        signature,
-        signatureCount,
-        deadline
-      )
-
-      // Sign it
-      // NOTE: Using web3.eth.sign will hash the message internally again which
-      // we do not want, so we're manually signing here
-      const { v, r, s } = ecsign(Buffer.from(digest.slice(2), 'hex'), userPrivateKey)
-
-      const previousBalance = await balance.current(user2)
-      await ethProxy.withdrawBySignature(user2, wethTokens1, deadline, v, r, s, { from: user1 })
 
       expect(await balance.current(user2)).to.be.bignumber.gt(previousBalance)
       assert.equal((await vat.urns(WETH, treasury.address)).ink, 0, 'Treasury should not not have weth in MakerDAO')

@@ -8,6 +8,7 @@ const GemJoin = artifacts.require('GemJoin')
 const DaiJoin = artifacts.require('DaiJoin')
 const Weth = artifacts.require('WETH9')
 const ERC20 = artifacts.require('TestERC20')
+const Dai = artifacts.require('TestDai')
 const Pot = artifacts.require('Pot')
 const End = artifacts.require('End')
 const Chai = artifacts.require('Chai')
@@ -74,7 +75,7 @@ export class MakerEnvironment {
     const weth = await Weth.new()
     const wethJoin = await GemJoin.new(vat.address, WETH, weth.address)
 
-    const dai = await ERC20.new(0)
+    const dai = await Dai.new(0)
     const daiJoin = await DaiJoin.new(vat.address, dai.address)
 
     // Setup vat

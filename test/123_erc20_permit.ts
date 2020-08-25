@@ -3,13 +3,9 @@ const ERC20 = artifacts.require('TestERC20')
 // @ts-ignore
 import { expectRevert } from '@openzeppelin/test-helpers'
 import { Contract } from './shared/fixtures'
-import { getPermitDigest, getDomainSeparator } from './shared/signatures'
+import { PERMIT_TYPEHASH, getPermitDigest, getDomainSeparator } from './shared/signatures'
 import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
 import { ecsign } from 'ethereumjs-util'
-
-const PERMIT_TYPEHASH = keccak256(
-  toUtf8Bytes('Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)')
-)
 
 contract('ERC20Permit', async (accounts: string[]) => {
   // this is the first account that buidler creates
@@ -48,7 +44,7 @@ contract('ERC20Permit', async (accounts: string[]) => {
     const nonce = await token.nonces(owner)
 
     // Get the EIP712 digest
-    const digest = getPermitDigest(PERMIT_TYPEHASH, name, token.address, chainId, approve, nonce, deadline)
+    const digest = getPermitDigest(name, token.address, chainId, approve, nonce, deadline)
 
     // Sign it
     // NOTE: Using web3.eth.sign will hash the message internally again which

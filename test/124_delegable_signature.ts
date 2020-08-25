@@ -53,7 +53,6 @@ contract('Delegable with signatures', async (accounts: string[]) => {
 
     // Get the EIP712 digest
     const digest = getSignatureDigest(
-      SIGNATURE_TYPEHASH,
       name,
       delegableContract.address,
       chainId,

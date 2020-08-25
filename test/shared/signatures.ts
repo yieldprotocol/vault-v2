@@ -1,9 +1,20 @@
 import { keccak256, defaultAbiCoder, toUtf8Bytes, solidityPack } from 'ethers/lib/utils'
+import { BigNumberish } from 'ethers'
+
+export const SIGNATURE_TYPEHASH = keccak256(
+  toUtf8Bytes('Signature(address user,address delegate,uint256 nonce,uint256 deadline)')
+)
+
+export const PERMIT_TYPEHASH = keccak256(
+  toUtf8Bytes('Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)')
+)
+
+export const DAI_TYPEHASH = '0xea2aa0a1be11a07ed86d755c93467f4f82362b452371d1ba94d1715123511acb'
+export const CHAI_SEPARATOR = '0x0b50407de9fa158c2cba01a99633329490dfd22989a150c20e8c7b4c1fb0fcc3'
 
 // Returns the EIP712 hash which should be signed by the user
 // in order to make a call to `addDelegateBySignature`
 export function getSignatureDigest(
-  signatureTypehash: string,
   name: string,
   address: string,
   chainId: number,
@@ -11,8 +22,8 @@ export function getSignatureDigest(
     user: string
     delegate: string
   },
-  signatureCount: number,
-  deadline: number
+  signatureCount: BigNumberish,
+  deadline: BigNumberish
 ) {
   const DOMAIN_SEPARATOR = getDomainSeparator(name, address, chainId)
   return keccak256(
@@ -25,7 +36,7 @@ export function getSignatureDigest(
         keccak256(
           defaultAbiCoder.encode(
             ['bytes32', 'address', 'address', 'uint256', 'uint256'],
-            [signatureTypehash, signature.user, signature.delegate, signatureCount, deadline]
+            [SIGNATURE_TYPEHASH, signature.user, signature.delegate, signatureCount, deadline]
           )
         ),
       ]
@@ -36,17 +47,16 @@ export function getSignatureDigest(
 // Returns the EIP712 hash which should be signed by the user
 // in order to make a call to `permit`
 export function getPermitDigest(
-  permitTypehash: string,
   name: string,
   address: string,
   chainId: number,
   approve: {
     owner: string
     spender: string
-    value: number
+    value: BigNumberish
   },
-  nonce: number,
-  deadline: number
+  nonce: BigNumberish,
+  deadline: BigNumberish
 ) {
   const DOMAIN_SEPARATOR = getDomainSeparator(name, address, chainId)
   return keccak256(
@@ -59,7 +69,38 @@ export function getPermitDigest(
         keccak256(
           defaultAbiCoder.encode(
             ['bytes32', 'address', 'address', 'uint256', 'uint256', 'uint256'],
-            [permitTypehash, approve.owner, approve.spender, approve.value, nonce, deadline]
+            [PERMIT_TYPEHASH, approve.owner, approve.spender, approve.value, nonce, deadline]
+          )
+        ),
+      ]
+    )
+  )
+}
+
+export function getDaiDigest(
+  name: string,
+  address: string,
+  chainId: number,
+  approve: {
+    owner: string
+    spender: string
+    can: boolean
+  },
+  nonce: BigNumberish,
+  deadline: BigNumberish
+) {
+  const DOMAIN_SEPARATOR = getDomainSeparator(name, address, chainId)
+  return keccak256(
+    solidityPack(
+      ['bytes1', 'bytes1', 'bytes32', 'bytes32'],
+      [
+        '0x19',
+        '0x01',
+        DOMAIN_SEPARATOR,
+        keccak256(
+          defaultAbiCoder.encode(
+            ['bytes32', 'address', 'address', 'uint256', 'uint256', 'bool'],
+            [DAI_TYPEHASH, approve.owner, approve.spender, nonce, deadline, approve.can]
           )
         ),
       ]
@@ -78,6 +119,33 @@ export function getDomainSeparator(name: string, contractAddress: string, chainI
         keccak256(toUtf8Bytes('1')),
         chainId,
         contractAddress,
+      ]
+    )
+  )
+}
+
+export function getChaiDigest(
+  approve: {
+    owner: string
+    spender: string
+    can: boolean
+  },
+  nonce: BigNumberish,
+  deadline: BigNumberish
+) {
+  return keccak256(
+    solidityPack(
+      ['bytes1', 'bytes1', 'bytes32', 'bytes32'],
+      [
+        '0x19',
+        '0x01',
+        CHAI_SEPARATOR,
+        keccak256(
+          defaultAbiCoder.encode(
+            ['bytes32', 'address', 'address', 'uint256', 'uint256', 'bool'],
+            [DAI_TYPEHASH, approve.owner, approve.spender, nonce, deadline, approve.can]
+          )
+        ),
       ]
     )
   )

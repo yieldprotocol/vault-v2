@@ -14,4 +14,6 @@ interface IChai {
     function join(address dst, uint wad) external;
     function exit(address src, uint wad) external;
     function draw(address src, uint wad) external;
+    function permit(address holder, address spender, uint256 nonce, uint256 expiry, bool allowed, uint8 v, bytes32 r, bytes32 s) external;
+    function nonces(address account) external view returns (uint256);
 }
