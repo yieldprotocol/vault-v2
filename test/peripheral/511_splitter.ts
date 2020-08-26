@@ -123,17 +123,19 @@ contract('YieldProxy - Splitter', async (accounts) => {
 
   it('does not allow to move more weth than posted in env', async () => {
     await env.postWeth(user, wethTokens1)
-    await controller.borrow(WETH, maturity1, user, user, yDaiTokens1, { from: user })
+    const toBorrow = await env.unlockedOf(WETH, user)
+    await controller.borrow(WETH, maturity1, user, user, toBorrow, { from: user })
 
     await expectRevert(
-      splitter1.yieldToMaker(pool1.address, user, yDaiTokens1, BigNumber.from(wethTokens1).mul(2), { from: user }),
+      splitter1.yieldToMaker(pool1.address, user, toBorrow, BigNumber.from(wethTokens1).mul(2), { from: user }),
       'YieldProxy: Not enough collateral in Yield'
     )
   })
 
   it('moves yield vault to maker', async () => {
     await env.postWeth(user, wethTokens1)
-    await controller.borrow(WETH, maturity1, user, user, yDaiTokens1, { from: user })
+    const toBorrow = await env.unlockedOf(WETH, user)
+    await controller.borrow(WETH, maturity1, user, user, toBorrow, { from: user })
 
     // Add permissions for vault migration
     await controller.addDelegate(splitter1.address, { from: user }) // Allowing Splitter to create debt for use in Yield
