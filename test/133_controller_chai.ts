@@ -13,6 +13,7 @@ contract('Controller - Chai', async (accounts) => {
   let snapshot: any
   let snapshotId: string
   let maker: MakerEnvironment
+  let env: YieldEnvironmentLite
 
   let dai: Contract
   let vat: Contract
@@ -33,7 +34,7 @@ contract('Controller - Chai', async (accounts) => {
     maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000
     maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000
 
-    const env = await YieldEnvironmentLite.setup([maturity1, maturity2])
+    env = await YieldEnvironmentLite.setup([maturity1, maturity2])
     maker = env.maker
     controller = env.controller
     treasury = env.treasury
@@ -105,15 +106,17 @@ contract('Controller - Chai', async (accounts) => {
       assert.equal(await controller.powerOf(CHAI, user1), daiTokens1.toString(), 'User1 does not have borrowing power')
       assert.equal(await controller.debtDai(CHAI, maturity1, user1), 0, 'User1 has debt')
 
+      const toBorrow = await env.unlockedOf(CHAI, user1)
       await expectRevert(
-        controller.borrow(CHAI, maturity1, user1, user1, addBN(daiTokens1, 1), { from: user1 }),
+        controller.borrow(CHAI, maturity1, user1, user1, addBN(toBorrow, 1), { from: user1 }),
         'Controller: Too much debt'
       )
     })
 
     describe('with borrowed yDai', () => {
       beforeEach(async () => {
-        await controller.borrow(CHAI, maturity1, user1, user1, daiTokens1, { from: user1 })
+        const toBorrow = await env.unlockedOf(CHAI, user1)
+        await controller.borrow(CHAI, maturity1, user1, user1, toBorrow, { from: user1 })
       })
 
       it("doesn't allow to withdraw and become undercollateralized", async () => {
