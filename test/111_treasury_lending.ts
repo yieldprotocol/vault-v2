@@ -1,8 +1,9 @@
 // @ts-ignore
 import { expectRevert } from '@openzeppelin/test-helpers'
+import { BigNumber } from 'ethers'
 import { id } from 'ethers/lib/utils'
 import { YieldEnvironment, MakerEnvironment, Contract } from './shared/fixtures'
-import { WETH, daiDebt1, daiTokens1, wethTokens1, chaiTokens1 } from './shared/utils'
+import { WETH, daiDebt1, daiTokens1, wethTokens1, chaiTokens1, addBN } from './shared/utils'
 
 contract('Treasury - Lending', async (accounts: string[]) => {
   let [owner, user] = accounts
@@ -13,6 +14,8 @@ contract('Treasury - Lending', async (accounts: string[]) => {
   let wethJoin: Contract
   let chai: Contract
   let dai: Contract
+
+  const bnify = (num: any) => BigNumber.from(num.toString())
 
   beforeEach(async () => {
     const maker = await MakerEnvironment.setup()
@@ -76,9 +79,10 @@ contract('Treasury - Lending', async (accounts: string[]) => {
 
   describe('with posted collateral', () => {
     beforeEach(async () => {
-      await weth.deposit({ from: owner, value: wethTokens1 })
-      await weth.approve(treasury.address, wethTokens1, { from: owner })
-      await treasury.pushWeth(owner, wethTokens1, { from: owner })
+      const posted = (bnify(wethTokens1).add(1000)).toString() // Add 1000 wei to cover rounding losses
+      await weth.deposit({ from: owner, value: posted })
+      await weth.approve(treasury.address, posted, { from: owner })
+      await treasury.pushWeth(owner, posted, { from: owner })
     })
 
     it('returns borrowing power', async () => {
@@ -103,6 +107,7 @@ contract('Treasury - Lending', async (accounts: string[]) => {
 
     it('pulls dai borrowed from MakerDAO for user', async () => {
       // Test with two different stability rates, if possible.
+      console.log(daiTokens1.toString())
       await treasury.pullDai(user, daiTokens1, { from: owner })
 
       assert.equal(await dai.balanceOf(user), daiTokens1.toString())
