@@ -160,7 +160,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
             if (collateral == WETH){
                 return muld(yDaiAmount, yDai.rateGrowth());
             } else if (collateral == CHAI) {
-                return muld(yDaiAmount, yDai.chiGrowth());
+                return muldrup(yDaiAmount, yDai.chiGrowth());
             }
         } else {
             return yDaiAmount;
@@ -236,7 +236,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
             return muld(posted[collateral][user], spot);
         } else if (collateral == CHAI) {
             uint256 chi = pot.chi();
-            return muld(posted[collateral][user], chi);
+            return muldrup(posted[collateral][user], chi);
         } else {
             revert("Controller: Invalid collateral type");
         }
