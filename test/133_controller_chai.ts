@@ -179,11 +179,7 @@ contract('Controller - Chai', async (accounts) => {
         assert.equal(await controller.debtDai(CHAI, maturity1, user1), 0, 'User1 should not have debt')
       })
 
-      let rateIncrease: BigNumber
-      let chiIncrease: BigNumber
       let chiDifferential: BigNumber
-      let increasedDebt: BigNumber
-      let debtIncrease: BigNumber
       let rate2: BigNumber
       let chi2: BigNumber
 
@@ -201,7 +197,7 @@ contract('Controller - Chai', async (accounts) => {
           await yDai1.mature()
 
           // Increase chi
-          chiIncrease = toRay(0.25)
+          const chiIncrease = toRay(0.25)
           chiDifferential = divRay(addBN(chi1, chiIncrease), chi1)
           chi2 = chi1.add(chiIncrease)
           await pot.setChi(chi2, { from: owner })
@@ -209,13 +205,14 @@ contract('Controller - Chai', async (accounts) => {
           // Increase rate by a factor larger than chi
           rate2 = mulRay(rate1, chiDifferential).add(toRay(0.1))
           await vat.fold(WETH, vat.address, subBN(rate2, rate1), { from: owner }) // Keeping above chi
-
-          increasedDebt = mulRay(daiTokens1, chiDifferential)
-          debtIncrease = addBN(subBN(increasedDebt, daiTokens1), 1) // Rounding is different with JavaScript
         })
 
         it('as chi increases after maturity, so does the debt in when measured in dai', async () => {
-            almostEqual(await controller.debtDai(CHAI, maturity1, user1), increasedDebt)
+            almostEqual(
+              await controller.debtDai(CHAI, maturity1, user1),
+              mulRay(daiTokens1, chiDifferential),
+              precision
+            )
         })
 
         it("as chi increases after maturity, the debt doesn't in when measured in yDai", async () => {
@@ -244,19 +241,7 @@ contract('Controller - Chai', async (accounts) => {
           )
           almostEqual(
             await controller.debtDai(CHAI, maturity1, user2),
-            increasedDebt,
-          )
-        })
-
-        it('more Dai is required to repay after maturity as chi increases', async () => {
-          await maker.getDai(user1, daiTokens1, rate2) // daiTokens1 is not going to be enough anymore
-          await dai.approve(treasury.address, daiTokens1, { from: user1 })
-          await controller.repayDai(CHAI, maturity1, user1, user1, daiTokens1, { from: user1 })
-
-          almostEqual(
-            await controller.debtDai(CHAI, maturity1, user1),
-            debtIncrease.toString(),
-            precision
+            mulRay(daiTokens1, chiDifferential),
           )
         })
       })
