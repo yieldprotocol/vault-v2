@@ -1,9 +1,10 @@
 // @ts-ignore
 import helper from 'ganache-time-traveler'
 // @ts-ignore
-import { expectRevert } from '@openzeppelin/test-helpers'
+import { BN, expectRevert } from '@openzeppelin/test-helpers'
 import { WETH, rate1, daiTokens1, wethTokens1 } from './shared/utils'
 import { MakerEnvironment, YieldEnvironmentLite, Contract } from './shared/fixtures'
+import { expect } from 'chai'
 
 contract('Controller - Delegation', async (accounts) => {
   let [user1, user2] = accounts
@@ -99,17 +100,24 @@ contract('Controller - Delegation', async (accounts) => {
     })
 
     it('allows to borrow yDai from others', async () => {
+      const power1 = (await controller.powerOf(WETH, user1))
+      expect(power1).to.be.bignumber.gt(new BN('0'));
       await controller.addDelegate(user2, { from: user1 })
-      await controller.borrow(WETH, maturity1, user1, user2, daiTokens1, { from: user2 })
+      await controller.borrow(WETH, maturity1, user1, user2, power1, { from: user2 })
 
       assert.equal(await yDai1.balanceOf(user2), daiTokens1.toString(), 'User2 should have yDai')
-      assert.equal(await controller.debtDai(WETH, maturity1, user1), daiTokens1.toString(), 'User1 should have debt')
+      assert.equal(await controller.debtDai(WETH, maturity1, user1), power1.toString(), 'User1 should have debt')
     })
 
     describe('with borrowed yDai', () => {
       beforeEach(async () => {
-        await controller.borrow(WETH, maturity1, user1, user1, daiTokens1, { from: user1 })
-        await controller.borrow(WETH, maturity1, user2, user2, daiTokens1, { from: user2 })
+        const power1 = (await controller.powerOf(WETH, user1))
+        expect(power1).to.be.bignumber.gt(new BN('0'));
+        await controller.borrow(WETH, maturity1, user1, user1, power1, { from: user1 })
+
+        const power2 = (await controller.powerOf(WETH, user2))
+        expect(power2).to.be.bignumber.gt(new BN('0'));
+        await controller.borrow(WETH, maturity1, user2, user2, power2, { from: user2 })
       })
 
       describe('with borrowed yDai from two series', () => {
@@ -117,12 +125,20 @@ contract('Controller - Delegation', async (accounts) => {
           await weth.deposit({ from: user1, value: wethTokens1 })
           await weth.approve(treasury.address, wethTokens1, { from: user1 })
           await controller.post(WETH, user1, user1, wethTokens1, { from: user1 })
-          await controller.borrow(WETH, maturity2, user1, user1, daiTokens1, { from: user1 })
+          const debt1 = await controller.debtDai(WETH, maturity1, user1)
+          expect(debt1).to.be.bignumber.gt(new BN('0'));
+          const power1 = (await controller.powerOf(WETH, user1)).sub(debt1)
+          expect(power1).to.be.bignumber.gt(new BN('0'));
+          await controller.borrow(WETH, maturity2, user1, user1, power1, { from: user1 })
 
           await weth.deposit({ from: user2, value: wethTokens1 })
           await weth.approve(treasury.address, wethTokens1, { from: user2 })
           await controller.post(WETH, user2, user2, wethTokens1, { from: user2 })
-          await controller.borrow(WETH, maturity2, user2, user2, daiTokens1, { from: user2 })
+          const debt2 = await controller.debtDai(WETH, maturity1, user2)
+          expect(debt2).to.be.bignumber.gt(new BN('0'));
+          const power2 = (await controller.powerOf(WETH, user2)).sub(debt2)
+          expect(power2).to.be.bignumber.gt(new BN('0'));
+          await controller.borrow(WETH, maturity2, user2, user2, power2, { from: user2 })
         })
 
         it("others need to be added as delegates to repay yDai with others' funds", async () => {
