@@ -1,6 +1,6 @@
 import { id } from 'ethers/lib/utils'
 import { YieldEnvironment, MakerEnvironment, Contract } from './shared/fixtures'
-import { rate1, daiTokens1, chaiTokens1, almostEqual } from './shared/utils'
+import { chi1, rate1, daiTokens1, chaiTokens1, almostEqual, divRay } from './shared/utils'
 
 contract('Treasury - Saving', async (accounts) => {
   let [owner, user] = accounts
@@ -79,10 +79,10 @@ contract('Treasury - Saving', async (accounts) => {
       almostEqual(await treasury.savings(), daiTokens1.toString(), precision)
       assert.equal(await dai.balanceOf(user), 0, 'User has dai')
 
-      const toPull = await chai.balanceOf(treasury.address)
+      const toPull = divRay((await treasury.savings()).toString(), chi1)
       await treasury.pullChai(user, toPull, { from: owner })
 
-      assert.equal(await chai.balanceOf(treasury.address), 0, 'Treasury should not have chai')
+      almostEqual(await chai.balanceOf(treasury.address), 0, precision)
       almostEqual(await treasury.savings(), 0, precision)
       assert.equal(await chai.balanceOf(user), toPull.toString(), 'User should have chai')
     })
