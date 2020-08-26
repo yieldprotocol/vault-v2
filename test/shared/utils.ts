@@ -1,5 +1,9 @@
 import { BigNumber, BigNumberish } from 'ethers'
 import { formatBytes32String } from 'ethers/lib/utils'
+import { expect } from 'chai'
+
+/// @dev Converts a bignumberish to a BigNumber (this is useful for compatibility between BN and BigNumber)
+export const bnify = (num: BigNumberish) => BigNumber.from(num.toString())
 
 /// @dev Converts a BigNumberish to WAD precision, for BigNumberish up to 10 decimal places
 export function toWad(value: BigNumberish): BigNumber {
@@ -36,6 +40,19 @@ export function subBN(x: BigNumberish, y: BigNumberish): BigNumber {
 export function mulRay(x: BigNumberish, ray: BigNumberish): BigNumber {
   return BigNumber.from(x).mul(BigNumber.from(ray)).div(UNIT)
 }
+
+// Checks if 2 bignumberish are almost-equal with up to `precision` room for wiggle which by default is 1
+export function almostEqual(x: BigNumberish, y: BigNumberish, precision: BigNumberish = 1) {
+    x = bnify(x);
+    y = bnify(y);
+
+    if (x.gt(y)) {
+        expect(x.sub(y).eq(precision)).to.be.true
+    } else {
+        expect(y.sub(x).eq(precision)).to.be.true
+    }
+}
+
 
 /// @dev Divides a BigNumberish in any precision by a BigNumberish in RAY precision, with the output in the first parameter's precision.
 /// I.e. divRay(wad(x), ray(y)) = wad(x/y)

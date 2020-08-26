@@ -3,7 +3,7 @@ import { id } from 'ethers/lib/utils'
 import helper from 'ganache-time-traveler'
 // @ts-ignore
 import { expectRevert } from '@openzeppelin/test-helpers'
-import { WETH, CHAI, rate1, chi1, daiTokens1, chaiTokens1, toRay, addBN, subBN, mulRay, divRay } from './shared/utils'
+import { WETH, CHAI, rate1, chi1, daiTokens1, chaiTokens1, toRay, addBN, subBN, mulRay, divRay, almostEqual } from './shared/utils'
 import { YieldEnvironmentLite, MakerEnvironment, Contract } from './shared/fixtures'
 import { BigNumber } from 'ethers'
 
@@ -86,7 +86,7 @@ contract('Controller - Chai', async (accounts) => {
       await controller.withdraw(CHAI, user1, user1, chaiTokens1, { from: user1 })
 
       assert.equal(await chai.balanceOf(user1), chaiTokens1.toString(), 'User1 should have collateral in hand')
-      assert.equal(await chai.balanceOf(treasury.address), 0, 'Treasury should not have chai')
+      almostEqual(await chai.balanceOf(treasury.address), 0, 1000)
       assert.equal(await controller.powerOf(CHAI, user1), 0, 'User1 should not have borrowing power')
     })
 
@@ -224,14 +224,7 @@ contract('Controller - Chai', async (accounts) => {
         })
 
         it('as chi increases after maturity, so does the debt in when measured in dai', async () => {
-          assert.equal(
-            await controller.debtDai(CHAI, maturity1, user1),
-            increasedDebt.toString(),
-            'User1 should have ' +
-              increasedDebt +
-              ' debt after the chi change, instead has ' +
-              (await controller.debtDai(CHAI, maturity1, user1))
-          )
+            almostEqual(await controller.debtDai(CHAI, maturity1, user1), increasedDebt)
         })
 
         it("as chi increases after maturity, the debt doesn't in when measured in yDai", async () => {
@@ -261,13 +254,9 @@ contract('Controller - Chai', async (accounts) => {
               ' yDai debt, instead has ' +
               (await controller.debtYDai(CHAI, maturity1, user2))
           )
-          assert.equal(
+          almostEqual(
             await controller.debtDai(CHAI, maturity1, user2),
-            increasedDebt.toString(),
-            'User2 should have ' +
-              increasedDebt +
-              ' Dai debt, instead has ' +
-              (await controller.debtDai(CHAI, maturity1, user2))
+            increasedDebt,
           )
         })
 
