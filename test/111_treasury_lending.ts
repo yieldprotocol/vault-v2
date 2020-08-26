@@ -24,7 +24,9 @@ contract('Treasury - Lending', async (accounts: string[]) => {
     dai = maker.dai
 
     // Setup tests - Allow owner to interact directly with Treasury, not for production
-    const treasuryFunctions = ['pushDai', 'pullDai', 'pushChai', 'pullChai', 'pushWeth', 'pullWeth'].map(func => id(func + '(address,uint256)'))
+    const treasuryFunctions = ['pushDai', 'pullDai', 'pushChai', 'pullChai', 'pushWeth', 'pullWeth'].map((func) =>
+      id(func + '(address,uint256)')
+    )
     await treasury.batchOrchestrate(owner, treasuryFunctions)
   })
 

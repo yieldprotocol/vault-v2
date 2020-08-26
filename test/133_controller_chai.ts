@@ -3,7 +3,21 @@ import { id } from 'ethers/lib/utils'
 import helper from 'ganache-time-traveler'
 // @ts-ignore
 import { expectRevert } from '@openzeppelin/test-helpers'
-import { WETH, CHAI, rate1, chi1, daiTokens1, chaiTokens1, toRay, addBN, subBN, mulRay, divRay, almostEqual, bnify } from './shared/utils'
+import {
+  WETH,
+  CHAI,
+  rate1,
+  chi1,
+  daiTokens1,
+  chaiTokens1,
+  toRay,
+  addBN,
+  subBN,
+  mulRay,
+  divRay,
+  almostEqual,
+  bnify,
+} from './shared/utils'
 import { YieldEnvironmentLite, MakerEnvironment, Contract } from './shared/fixtures'
 import { BigNumber } from 'ethers'
 
@@ -117,16 +131,8 @@ contract('Controller - Chai', async (accounts) => {
       })
 
       it("doesn't allow to withdraw and become undercollateralized", async () => {
-        almostEqual(
-          await controller.powerOf(CHAI, user1),
-          daiTokens1.toString(),
-          precision
-        )
-        almostEqual(
-          await controller.debtDai(CHAI, maturity1, user1),
-          daiTokens1.toString(),
-          precision
-        )
+        almostEqual(await controller.powerOf(CHAI, user1), daiTokens1.toString(), precision)
+        almostEqual(await controller.debtDai(CHAI, maturity1, user1), daiTokens1.toString(), precision)
 
         await expectRevert(
           controller.borrow(CHAI, maturity1, user1, user1, chaiTokens1, { from: user1 }),
@@ -150,7 +156,7 @@ contract('Controller - Chai', async (accounts) => {
         await maker.getDai(user1, daiTokens1, rate1)
 
         assert.equal(await dai.balanceOf(user1), daiTokens1.toString(), 'User1 does not have dai')
-        const debt = await controller.debtDai(CHAI, maturity1, user1);
+        const debt = await controller.debtDai(CHAI, maturity1, user1)
 
         await dai.approve(treasury.address, debt, { from: user1 })
         await controller.repayDai(CHAI, maturity1, user1, user1, debt, { from: user1 })
@@ -166,11 +172,7 @@ contract('Controller - Chai', async (accounts) => {
         const yDaiTokens = addBN(daiTokens1, 1) // daiTokens1 + 1 wei
 
         almostEqual(await yDai1.balanceOf(user1), yDaiTokens.toString(), precision)
-        almostEqual(
-          await controller.debtDai(CHAI, maturity1, user1),
-          daiTokens1.toString(),
-          precision,
-        )
+        almostEqual(await controller.debtDai(CHAI, maturity1, user1), daiTokens1.toString(), precision)
 
         await yDai1.approve(treasury.address, yDaiTokens, { from: user1 })
         await controller.repayYDai(CHAI, maturity1, user1, user1, yDaiTokens, { from: user1 })
@@ -186,11 +188,7 @@ contract('Controller - Chai', async (accounts) => {
       describe('after maturity, with a chi increase', () => {
         beforeEach(async () => {
           almostEqual(await yDai1.balanceOf(user1), daiTokens1.toString(), precision)
-          almostEqual(
-            await controller.debtDai(CHAI, maturity1, user1),
-            daiTokens1.toString(),
-            precision,
-          )
+          almostEqual(await controller.debtDai(CHAI, maturity1, user1), daiTokens1.toString(), precision)
           // yDai matures
           await helper.advanceTime(1000)
           await helper.advanceBlock()
@@ -208,19 +206,11 @@ contract('Controller - Chai', async (accounts) => {
         })
 
         it('as chi increases after maturity, so does the debt in when measured in dai', async () => {
-            almostEqual(
-              await controller.debtDai(CHAI, maturity1, user1),
-              mulRay(daiTokens1, chiDifferential),
-              precision
-            )
+          almostEqual(await controller.debtDai(CHAI, maturity1, user1), mulRay(daiTokens1, chiDifferential), precision)
         })
 
         it("as chi increases after maturity, the debt doesn't in when measured in yDai", async () => {
-          almostEqual(
-            await controller.debtYDai(CHAI, maturity1, user1),
-            daiTokens1.toString(),
-            precision
-          )
+          almostEqual(await controller.debtYDai(CHAI, maturity1, user1), daiTokens1.toString(), precision)
         })
 
         it('borrowing after maturity is still allowed', async () => {
@@ -239,10 +229,7 @@ contract('Controller - Chai', async (accounts) => {
               ' yDai debt, instead has ' +
               (await controller.debtYDai(CHAI, maturity1, user2))
           )
-          almostEqual(
-            await controller.debtDai(CHAI, maturity1, user2),
-            mulRay(daiTokens1, chiDifferential),
-          )
+          almostEqual(await controller.debtDai(CHAI, maturity1, user2), mulRay(daiTokens1, chiDifferential))
         })
       })
     })

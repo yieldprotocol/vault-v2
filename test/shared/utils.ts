@@ -43,16 +43,15 @@ export function mulRay(x: BigNumberish, ray: BigNumberish): BigNumber {
 
 // Checks if 2 bignumberish are almost-equal with up to `precision` room for wiggle which by default is 1
 export function almostEqual(x: BigNumberish, y: BigNumberish, precision: BigNumberish = 1) {
-    x = bnify(x);
-    y = bnify(y);
+  x = bnify(x)
+  y = bnify(y)
 
-    if (x.gt(y)) {
-        expect(x.sub(y).lte(precision)).to.be.true
-    } else {
-        expect(y.sub(x).lte(precision)).to.be.true
-    }
+  if (x.gt(y)) {
+    expect(x.sub(y).lte(precision)).to.be.true
+  } else {
+    expect(y.sub(x).lte(precision)).to.be.true
+  }
 }
-
 
 /// @dev Divides a BigNumberish in any precision by a BigNumberish in RAY precision, with the output in the first parameter's precision.
 /// I.e. divRay(wad(x), ray(y)) = wad(x/y)

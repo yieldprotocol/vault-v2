@@ -59,9 +59,11 @@ contract('Unwind - Treasury', async (accounts) => {
     weth = env.maker.weth
     end = env.maker.end
     chai = env.maker.chai
-    
+
     // Allow owner to interact directly with Treasury, not for production
-    const treasuryFunctions = ['pushDai', 'pullDai', 'pushChai', 'pullChai', 'pushWeth', 'pullWeth'].map(func => id(func + '(address,uint256)'))
+    const treasuryFunctions = ['pushDai', 'pullDai', 'pushChai', 'pullChai', 'pushWeth', 'pullWeth'].map((func) =>
+      id(func + '(address,uint256)')
+    )
     await treasury.batchOrchestrate(owner, treasuryFunctions)
     await end.rely(owner, { from: owner }) // `owner` replaces MKR governance
   })
