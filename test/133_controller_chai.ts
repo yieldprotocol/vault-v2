@@ -13,6 +13,7 @@ contract('Controller - Chai', async (accounts) => {
   let snapshot: any
   let snapshotId: string
   let maker: MakerEnvironment
+  let env: YieldEnvironmentLite
 
   let dai: Contract
   let vat: Contract
@@ -33,7 +34,7 @@ contract('Controller - Chai', async (accounts) => {
     maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000
     maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000
 
-    const env = await YieldEnvironmentLite.setup([maturity1, maturity2])
+    env = await YieldEnvironmentLite.setup([maturity1, maturity2])
     maker = env.maker
     controller = env.controller
     treasury = env.treasury
