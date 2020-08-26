@@ -156,8 +156,7 @@ contract('Treasury - Lending', async (accounts: string[]) => {
         await treasury.pushChai(user, chaiTokens1, { from: owner })
 
         assert.equal(await dai.balanceOf(user), 0)
-        // assert.equal((await vat.urns(WETH, treasury.address)).art, 0)
-        expect((await vat.urns(WETH, treasury.address)).art).to.be.bignumber.lt(new BN('3')) // We get a wei less than expected
+        assert.equal((await vat.urns(WETH, treasury.address)).art, 0)
       })
     })
   })
