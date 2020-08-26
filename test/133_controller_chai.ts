@@ -3,7 +3,7 @@ import { id } from 'ethers/lib/utils'
 import helper from 'ganache-time-traveler'
 // @ts-ignore
 import { expectRevert } from '@openzeppelin/test-helpers'
-import { WETH, CHAI, rate1, chi1, daiTokens1, chaiTokens1, toRay, addBN, subBN, mulRay, divRay, almostEqual } from './shared/utils'
+import { WETH, CHAI, rate1, chi1, daiTokens1, chaiTokens1, toRay, addBN, subBN, mulRay, divRay, almostEqual, bnify } from './shared/utils'
 import { YieldEnvironmentLite, MakerEnvironment, Contract } from './shared/fixtures'
 import { BigNumber } from 'ethers'
 
@@ -25,6 +25,8 @@ contract('Controller - Chai', async (accounts) => {
 
   let maturity1: number
   let maturity2: number
+
+  const precision = 1000
 
   beforeEach(async () => {
     snapshot = await helper.takeSnapshot()
@@ -61,11 +63,7 @@ contract('Controller - Chai', async (accounts) => {
     await controller.post(CHAI, user1, user1, chaiTokens1, { from: user1 })
 
     assert.equal(await chai.balanceOf(treasury.address), chaiTokens1.toString(), 'Treasury should have chai')
-    assert.equal(
-      await controller.powerOf(CHAI, user1),
-      daiTokens1.toString(),
-      'User1 should have ' + daiTokens1 + ' borrowing power, instead has ' + (await controller.powerOf(CHAI, user1))
-    )
+    almostEqual(await controller.powerOf(CHAI, user1), daiTokens1.toString())
   })
 
   describe('with posted chai', () => {
@@ -80,35 +78,34 @@ contract('Controller - Chai', async (accounts) => {
     })
 
     it('allows user to withdraw chai', async () => {
-      // assert.equal(await chai.balanceOf(treasury.address), chaiTokens1.toString(), 'Treasury does not have chai')
-      assert.equal(await controller.powerOf(CHAI, user1), daiTokens1.toString(), 'User1 does not have borrowing power')
-      // assert.equal(await chai.balanceOf(user1), 0, 'User1 has collateral in hand')
+      almostEqual(await controller.powerOf(CHAI, user1), daiTokens1.toString(), precision)
+      assert.equal(await chai.balanceOf(user1), 0, 'User1 has collateral in hand')
 
       await controller.withdraw(CHAI, user1, user1, chaiTokens1, { from: user1 })
 
       assert.equal(await chai.balanceOf(user1), chaiTokens1.toString(), 'User1 should have collateral in hand')
-      almostEqual(await chai.balanceOf(treasury.address), 0, 1000)
       assert.equal(await controller.powerOf(CHAI, user1), 0, 'User1 should not have borrowing power')
     })
 
     it('allows to borrow yDai', async () => {
-      assert.equal(await controller.powerOf(CHAI, user1), daiTokens1.toString(), 'User1 does not have borrowing power')
-      assert.equal(await yDai1.balanceOf(user1), 0, 'User1 has yDai')
-      assert.equal(await controller.debtDai(CHAI, maturity1, user1), 0, 'User1 has debt')
+      almostEqual(await controller.powerOf(CHAI, user1), daiTokens1.toString(), precision)
+      almostEqual(await yDai1.balanceOf(user1), 0, precision)
+      almostEqual(await controller.debtDai(CHAI, maturity1, user1), 0, precision)
 
-      await controller.borrow(CHAI, maturity1, user1, user1, daiTokens1, { from: user1 })
+      const toBorrow = await controller.powerOf(CHAI, user1)
+      await controller.borrow(CHAI, maturity1, user1, user1, toBorrow, { from: user1 })
 
-      assert.equal(await yDai1.balanceOf(user1), daiTokens1.toString(), 'User1 should have yDai')
-      assert.equal(await controller.debtDai(CHAI, maturity1, user1), daiTokens1.toString(), 'User1 should have debt')
+      almostEqual(await yDai1.balanceOf(user1), daiTokens1.toString(), precision)
+      almostEqual(await controller.debtDai(CHAI, maturity1, user1), daiTokens1.toString(), precision)
     })
 
     it("doesn't allow to borrow yDai beyond borrowing power", async () => {
-      assert.equal(await controller.powerOf(CHAI, user1), daiTokens1.toString(), 'User1 does not have borrowing power')
-      assert.equal(await controller.debtDai(CHAI, maturity1, user1), 0, 'User1 has debt')
+      almostEqual(await controller.powerOf(CHAI, user1), daiTokens1.toString(), precision)
+      almostEqual(await controller.debtDai(CHAI, maturity1, user1), 0, precision)
 
-      const toBorrow = await env.unlockedOf(CHAI, user1)
+      const toBorrow = bnify(await env.unlockedOf(CHAI, user1)).add(precision)
       await expectRevert(
-        controller.borrow(CHAI, maturity1, user1, user1, addBN(toBorrow, 1), { from: user1 }),
+        controller.borrow(CHAI, maturity1, user1, user1, toBorrow, { from: user1 }),
         'Controller: Too much debt'
       )
     })
@@ -120,15 +117,15 @@ contract('Controller - Chai', async (accounts) => {
       })
 
       it("doesn't allow to withdraw and become undercollateralized", async () => {
-        assert.equal(
+        almostEqual(
           await controller.powerOf(CHAI, user1),
           daiTokens1.toString(),
-          'User1 does not have borrowing power'
+          precision
         )
-        assert.equal(
+        almostEqual(
           await controller.debtDai(CHAI, maturity1, user1),
           daiTokens1.toString(),
-          'User1 does not have debt'
+          precision
         )
 
         await expectRevert(
@@ -138,17 +135,13 @@ contract('Controller - Chai', async (accounts) => {
       })
 
       it('allows to repay yDai', async () => {
-        assert.equal(await yDai1.balanceOf(user1), daiTokens1.toString(), 'User1 does not have yDai')
-        assert.equal(
-          await controller.debtDai(CHAI, maturity1, user1),
-          daiTokens1.toString(),
-          'User1 does not have debt'
-        )
+        almostEqual(await yDai1.balanceOf(user1), daiTokens1.toString(), precision)
+        const debt = await controller.debtYDai(CHAI, maturity1, user1)
 
-        await yDai1.approve(treasury.address, daiTokens1, { from: user1 })
-        await controller.repayYDai(CHAI, maturity1, user1, user1, daiTokens1, { from: user1 })
+        await yDai1.approve(treasury.address, debt, { from: user1 })
+        await controller.repayYDai(CHAI, maturity1, user1, user1, debt, { from: user1 })
 
-        assert.equal(await yDai1.balanceOf(user1), 0, 'User1 should not have yDai')
+        almostEqual(await yDai1.balanceOf(user1), 0, precision)
         assert.equal(await controller.debtDai(CHAI, maturity1, user1), 0, 'User1 should not have debt')
       })
 
@@ -157,16 +150,12 @@ contract('Controller - Chai', async (accounts) => {
         await maker.getDai(user1, daiTokens1, rate1)
 
         assert.equal(await dai.balanceOf(user1), daiTokens1.toString(), 'User1 does not have dai')
-        assert.equal(
-          await controller.debtDai(CHAI, maturity1, user1),
-          daiTokens1.toString(),
-          'User1 does not have debt'
-        )
+        const debt = await controller.debtDai(CHAI, maturity1, user1);
 
-        await dai.approve(treasury.address, daiTokens1, { from: user1 })
-        await controller.repayDai(CHAI, maturity1, user1, user1, daiTokens1, { from: user1 })
+        await dai.approve(treasury.address, debt, { from: user1 })
+        await controller.repayDai(CHAI, maturity1, user1, user1, debt, { from: user1 })
 
-        assert.equal(await dai.balanceOf(user1), 0, 'User1 should not have yDai')
+        almostEqual(await dai.balanceOf(user1), 0, precision)
         assert.equal(await controller.debtDai(CHAI, maturity1, user1), 0, 'User1 should not have debt')
       })
 
@@ -176,11 +165,11 @@ contract('Controller - Chai', async (accounts) => {
         await yDai1.mint(user1, 1, { from: owner }) // 1 extra yDai wei
         const yDaiTokens = addBN(daiTokens1, 1) // daiTokens1 + 1 wei
 
-        assert.equal(await yDai1.balanceOf(user1), yDaiTokens.toString(), 'User1 does not have yDai')
-        assert.equal(
+        almostEqual(await yDai1.balanceOf(user1), yDaiTokens.toString(), precision)
+        almostEqual(
           await controller.debtDai(CHAI, maturity1, user1),
           daiTokens1.toString(),
-          'User1 does not have debt'
+          precision,
         )
 
         await yDai1.approve(treasury.address, yDaiTokens, { from: user1 })
@@ -200,11 +189,11 @@ contract('Controller - Chai', async (accounts) => {
 
       describe('after maturity, with a chi increase', () => {
         beforeEach(async () => {
-          assert.equal(await yDai1.balanceOf(user1), daiTokens1.toString(), 'User1 does not have yDai')
-          assert.equal(
+          almostEqual(await yDai1.balanceOf(user1), daiTokens1.toString(), precision)
+          almostEqual(
             await controller.debtDai(CHAI, maturity1, user1),
             daiTokens1.toString(),
-            'User1 does not have debt'
+            precision,
           )
           // yDai matures
           await helper.advanceTime(1000)
@@ -231,13 +220,10 @@ contract('Controller - Chai', async (accounts) => {
         })
 
         it("as chi increases after maturity, the debt doesn't in when measured in yDai", async () => {
-          assert.equal(
+          almostEqual(
             await controller.debtYDai(CHAI, maturity1, user1),
             daiTokens1.toString(),
-            'User1 should have ' +
-              daiTokens1 +
-              ' debt after the chi change, instead has ' +
-              (await controller.debtYDai(CHAI, maturity1, user1))
+            precision
           )
         })
 
@@ -268,13 +254,10 @@ contract('Controller - Chai', async (accounts) => {
           await dai.approve(treasury.address, daiTokens1, { from: user1 })
           await controller.repayDai(CHAI, maturity1, user1, user1, daiTokens1, { from: user1 })
 
-          assert.equal(
+          almostEqual(
             await controller.debtDai(CHAI, maturity1, user1),
             debtIncrease.toString(),
-            'User1 should have ' +
-              debtIncrease +
-              ' dai debt, instead has ' +
-              (await controller.debtDai(CHAI, maturity1, user1))
+            precision
           )
         })
       })
