@@ -63,7 +63,7 @@ const UNIT: BigNumber = BigNumber.from(10).pow(BigNumber.from(27))
 
 export const limits = toRad(10000)
 
-export const spot = toRay(150)
+export const spot = toRay(155)
 export const chi1 = toRay(1.2)
 export const rate1 = toRay(1.4)
 
