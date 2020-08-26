@@ -200,16 +200,15 @@ contract('Controller - Chai', async (accounts) => {
           await helper.advanceBlock()
           await yDai1.mature()
 
-          // Set rate to 1.75
-          rateIncrease = toRay(0.5)
-          rate2 = rate1.add(rateIncrease)
-          await vat.fold(WETH, vat.address, rateIncrease, { from: owner })
-
-          // Set chi to 1.5
+          // Increase chi
           chiIncrease = toRay(0.25)
           chiDifferential = divRay(addBN(chi1, chiIncrease), chi1)
           chi2 = chi1.add(chiIncrease)
           await pot.setChi(chi2, { from: owner })
+
+          // Increase rate by a factor larger than chi
+          rate2 = mulRay(rate1, chiDifferential).add(toRay(0.1))
+          await vat.fold(WETH, vat.address, subBN(rate2, rate1), { from: owner }) // Keeping above chi
 
           increasedDebt = mulRay(daiTokens1, chiDifferential)
           debtIncrease = addBN(subBN(increasedDebt, daiTokens1), 1) // Rounding is different with JavaScript
