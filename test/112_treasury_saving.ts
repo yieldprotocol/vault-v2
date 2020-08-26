@@ -1,6 +1,6 @@
 import { id } from 'ethers/lib/utils'
 import { YieldEnvironment, MakerEnvironment, Contract } from './shared/fixtures'
-import { chi1, rate1, daiTokens1, chaiTokens1, almostEqual, divRay } from './shared/utils'
+import { precision, chi1, rate1, daiTokens1, chaiTokens1, almostEqual, divRay } from './shared/utils'
 
 contract('Treasury - Saving', async (accounts) => {
   let [owner, user] = accounts
@@ -8,8 +8,6 @@ contract('Treasury - Saving', async (accounts) => {
   let treasury: Contract
   let chai: Contract
   let dai: Contract
-
-  const precision = 1000
 
   beforeEach(async () => {
     const maker = await MakerEnvironment.setup()

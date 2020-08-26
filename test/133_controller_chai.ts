@@ -6,6 +6,7 @@ import { expectRevert } from '@openzeppelin/test-helpers'
 import {
   WETH,
   CHAI,
+  precision,
   rate1,
   chi1,
   daiTokens1,
@@ -39,8 +40,6 @@ contract('Controller - Chai', async (accounts) => {
 
   let maturity1: number
   let maturity2: number
-
-  const precision = 1000
 
   beforeEach(async () => {
     snapshot = await helper.takeSnapshot()

@@ -2,7 +2,7 @@
 import { expectRevert } from '@openzeppelin/test-helpers'
 import { id } from 'ethers/lib/utils'
 import { YieldEnvironment, MakerEnvironment, Contract } from './shared/fixtures'
-import { WETH, daiDebt1, daiTokens1, wethTokens1, chaiTokens1, almostEqual } from './shared/utils'
+import { WETH, precision, daiDebt1, daiTokens1, wethTokens1, chaiTokens1, almostEqual } from './shared/utils'
 
 contract('Treasury - Lending', async (accounts: string[]) => {
   let [owner, user] = accounts
@@ -148,7 +148,7 @@ contract('Treasury - Lending', async (accounts: string[]) => {
         await treasury.pushDai(user, daiTokens1, { from: owner })
 
         assert.equal(await dai.balanceOf(user), 0)
-        almostEqual((await vat.urns(WETH, treasury.address)).art, 0, 1)
+        almostEqual((await vat.urns(WETH, treasury.address)).art, 0, precision)
       })
 
       it('pushes chai that repays debt towards MakerDAO', async () => {
@@ -158,7 +158,7 @@ contract('Treasury - Lending', async (accounts: string[]) => {
         await treasury.pushChai(user, chaiTokens1, { from: owner })
 
         assert.equal(await dai.balanceOf(user), 0)
-        almostEqual((await vat.urns(WETH, treasury.address)).art, 0, 1)
+        almostEqual((await vat.urns(WETH, treasury.address)).art, 0, precision)
       })
     })
   })
