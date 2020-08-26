@@ -1,6 +1,6 @@
 import { id } from 'ethers/lib/utils'
 import { YieldEnvironment, MakerEnvironment, Contract } from './shared/fixtures'
-import { rate1, daiTokens1, chaiTokens1 } from './shared/utils'
+import { rate1, daiTokens1, chaiTokens1, almostEqual } from './shared/utils'
 
 contract('Treasury - Saving', async (accounts) => {
   let [owner, user] = accounts
@@ -8,6 +8,8 @@ contract('Treasury - Saving', async (accounts) => {
   let treasury: Contract
   let chai: Contract
   let dai: Contract
+
+  const precision = 1000
 
   beforeEach(async () => {
     const maker = await MakerEnvironment.setup()
@@ -33,11 +35,7 @@ contract('Treasury - Saving', async (accounts) => {
 
     // Test transfer of collateral
     assert.equal(await chai.balanceOf(treasury.address), chaiTokens1.toString(), 'Treasury should have chai')
-    assert.equal(
-      await treasury.savings(),
-      daiTokens1.toString(),
-      'Treasury should have ' + daiTokens1 + ' savings in dai units, instead has ' + (await treasury.savings())
-    )
+    almostEqual(await treasury.savings(), daiTokens1.toString(), precision)
     assert.equal(await dai.balanceOf(user), 0, 'User should not have dai')
   })
 
@@ -53,7 +51,7 @@ contract('Treasury - Saving', async (accounts) => {
 
     // Test transfer of collateral
     assert.equal(await chai.balanceOf(treasury.address), chaiTokens1.toString(), 'Treasury should have chai')
-    assert.equal(await treasury.savings(), daiTokens1.toString(), 'Treasury should report savings in dai units')
+    almostEqual(await treasury.savings(), daiTokens1.toString(), precision)
     assert.equal(await chai.balanceOf(user), 0, 'User should not have chai')
   })
 
@@ -65,26 +63,28 @@ contract('Treasury - Saving', async (accounts) => {
 
     it('pulls dai from savings', async () => {
       assert.equal(await chai.balanceOf(treasury.address), chaiTokens1.toString(), 'Treasury does not have chai')
-      assert.equal(await treasury.savings(), daiTokens1.toString(), 'Treasury does not report savings in dai units')
+      almostEqual(await treasury.savings(), daiTokens1.toString(), precision)
       assert.equal(await dai.balanceOf(user), 0, 'User has dai')
 
-      await treasury.pullDai(user, daiTokens1, { from: owner })
+      const toPull = await treasury.savings()
+      await treasury.pullDai(user, toPull, { from: owner })
 
       assert.equal(await chai.balanceOf(treasury.address), 0, 'Treasury should not have chai')
-      assert.equal(await treasury.savings(), 0, 'Treasury should not have savings in dai units')
-      assert.equal(await dai.balanceOf(user), daiTokens1.toString(), 'User should have dai')
+      almostEqual(await treasury.savings(), 0, precision)
+      assert.equal(await dai.balanceOf(user), toPull.toString(), 'User should have dai')
     })
 
     it('pulls chai from savings', async () => {
       assert.equal(await chai.balanceOf(treasury.address), chaiTokens1.toString(), 'Treasury does not have chai')
-      assert.equal(await treasury.savings(), daiTokens1.toString(), 'Treasury does not report savings in dai units')
+      almostEqual(await treasury.savings(), daiTokens1.toString(), precision)
       assert.equal(await dai.balanceOf(user), 0, 'User has dai')
 
-      await treasury.pullChai(user, chaiTokens1, { from: owner })
+      const toPull = await chai.balanceOf(treasury.address)
+      await treasury.pullChai(user, toPull, { from: owner })
 
       assert.equal(await chai.balanceOf(treasury.address), 0, 'Treasury should not have chai')
-      assert.equal(await treasury.savings(), 0, 'Treasury should not have savings in dai units')
-      assert.equal(await chai.balanceOf(user), chaiTokens1.toString(), 'User should have chai')
+      almostEqual(await treasury.savings(), 0, precision)
+      assert.equal(await chai.balanceOf(user), toPull.toString(), 'User should have chai')
     })
   })
 })
