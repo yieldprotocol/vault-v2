@@ -45,7 +45,7 @@ contract('Controller - Chai', async (accounts) => {
     yDai1 = env.yDais[0]
 
     // Tests setup
-    await maker.getChai(user1, chaiTokens1, chi1, rate1)
+    await maker.getChai(user1, chaiTokens1.add(1), chi1, rate1)
   })
 
   afterEach(async () => {

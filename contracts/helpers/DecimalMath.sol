@@ -19,6 +19,16 @@ contract DecimalMath {
         return x.mul(UNIT).div(y);
     }
 
+    /// @dev Multiplies x and y, rounding up to the closest representable number.
+    /// Assumes x and y are both fixed point with `decimals` digits.
+    function muldrup(uint256 x, uint256 y)
+        internal pure returns (uint256)
+    {
+        uint256 z = x.mul(y).div(1e26); // RAY / 10
+        if (z % 10 > 0) return z / 10 + 1;
+        else return z / 10;
+    }
+
     /// @dev Divides x between y, rounding up to the closest representable number.
     /// Assumes x and y are both fixed point with `decimals` digits.
     function divdrup(uint256 x, uint256 y)
