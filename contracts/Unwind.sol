@@ -106,7 +106,7 @@ contract Unwind is Ownable(), DecimalMath {
     /// @param chaiAmount The Chai value to convert.
     /// @param chi The `chi` value from `Pot`.
     function chaiToDai(uint256 chaiAmount, uint256 chi) public pure returns(uint256) {
-        return muldrup(chaiAmount, chi);
+        return muld(chaiAmount, chi);
     }
 
     /// @dev Return the Weth equivalent value to a Dai amount, during Dss Shutdown
