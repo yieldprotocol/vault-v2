@@ -1,5 +1,5 @@
 // @ts-ignore
-import { BN, expectRevert } from '@openzeppelin/test-helpers'
+import { expectRevert } from '@openzeppelin/test-helpers'
 import { id } from 'ethers/lib/utils'
 import { YieldEnvironment, MakerEnvironment, Contract } from './shared/fixtures'
 import { WETH, daiDebt1, daiTokens1, wethTokens1, chaiTokens1 } from './shared/utils'
@@ -147,6 +147,7 @@ contract('Treasury - Lending', async (accounts: string[]) => {
 
         assert.equal(await dai.balanceOf(user), 0)
         assert.equal((await vat.urns(WETH, treasury.address)).art, 0)
+        assert.equal(await vat.dai(treasury.address), 0)
       })
 
       it('pushes chai that repays debt towards MakerDAO', async () => {
@@ -157,6 +158,7 @@ contract('Treasury - Lending', async (accounts: string[]) => {
 
         assert.equal(await dai.balanceOf(user), 0)
         assert.equal((await vat.urns(WETH, treasury.address)).art, 0)
+        assert.equal(await vat.dai(treasury.address), 0)
       })
     })
   })
