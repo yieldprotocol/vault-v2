@@ -45,7 +45,7 @@ contract('Controller - Chai', async (accounts) => {
     yDai1 = env.yDais[0]
 
     // Tests setup
-    await maker.getChai(user1, chaiTokens1.add(1), chi1, rate1)
+    await maker.getChai(user1, chaiTokens1, chi1, rate1)
   })
 
   afterEach(async () => {
@@ -70,7 +70,7 @@ contract('Controller - Chai', async (accounts) => {
   describe('with posted chai', () => {
     beforeEach(async () => {
       // Add some funds to the system to allow for rounding losses
-      await maker.getChai(owner, chaiTokens1.add(1), chi1, rate1)
+      await maker.getChai(owner, chaiTokens1, chi1, rate1)
       await chai.approve(treasury.address, chaiTokens1, { from: owner })
       await controller.post(CHAI, owner, owner, chaiTokens1, { from: owner })
 
