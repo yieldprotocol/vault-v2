@@ -5,7 +5,7 @@ import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
 // @ts-ignore
 import helper from 'ganache-time-traveler'
 import { CHAI, chi1, toWad, toRay, mulRay } from '../shared/utils'
-import { YieldEnvironmentLite, Contract } from '../shared/fixtures'
+import { MakerEnvironment, YieldEnvironmentLite, Contract } from '../shared/fixtures'
 // @ts-ignore
 import { BN, expectRevert } from '@openzeppelin/test-helpers'
 import { assert, expect } from 'chai'
@@ -23,10 +23,13 @@ contract('YieldProxy - LiquidityProxy', async (accounts) => {
   let snapshot: any
   let snapshotId: string
 
+  let maker: MakerEnvironment
   let env: YieldEnvironmentLite
+  let treasury: Contract
   let controller: Contract
 
   let dai: Contract
+  let chai: Contract
   let pool: Contract
   let yDai1: Contract
   let proxy: Contract
@@ -64,7 +67,10 @@ contract('YieldProxy - LiquidityProxy', async (accounts) => {
     maturity1 = (await web3.eth.getBlock(block)).timestamp + 31556952 // One year
 
     env = await YieldEnvironmentLite.setup([maturity1])
+    maker = env.maker
     dai = env.maker.dai
+    chai = env.maker.chai
+    treasury = env.treasury
     controller = env.controller
     yDai1 = env.yDais[0]
 
@@ -82,6 +88,11 @@ contract('YieldProxy - LiquidityProxy', async (accounts) => {
     await dai.approve(proxy.address, MAX, { from: user1 })
     await dai.approve(pool.address, MAX, { from: user1 })
     await controller.addDelegate(proxy.address, { from: user1 })
+
+    // Add some funds to the system to allow for rounding losses
+    await maker.getChai(owner, 1000, chi1, rate1)
+    await chai.approve(treasury.address, 1000, { from: owner })
+    await controller.post(CHAI, owner, owner, 1000, { from: owner })
   })
 
   afterEach(async () => {
