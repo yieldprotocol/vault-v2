@@ -47,9 +47,9 @@ export function almostEqual(x: BigNumberish, y: BigNumberish, precision: BigNumb
     y = bnify(y);
 
     if (x.gt(y)) {
-        expect(x.sub(y).eq(precision)).to.be.true
+        expect(x.sub(y).lte(precision)).to.be.true
     } else {
-        expect(y.sub(x).eq(precision)).to.be.true
+        expect(y.sub(x).lte(precision)).to.be.true
     }
 }
 
