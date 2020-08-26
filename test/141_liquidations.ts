@@ -79,9 +79,9 @@ contract('Liquidations', async (accounts) => {
       await controller.borrow(WETH, maturity1, user2, user2, toBorrow, { from: user2 })
 
       await env.postWeth(user3, BigNumber.from(wethTokens1).mul(2))
-      toBorrow = bnify(await env.unlockedOf(WETH, user3))
-      await controller.borrow(WETH, maturity1, user3, user3, (BigNumber.from(toBorrow).div(2)).toString(), { from: user3 })
-      await controller.borrow(WETH, maturity2, user3, user3, (BigNumber.from(toBorrow).div(2)).toString(), { from: user3 })
+      toBorrow = bnify(await env.unlockedOf(WETH, user3)).div(2)
+      await controller.borrow(WETH, maturity1, user3, user3, toBorrow, { from: user3 })
+      await controller.borrow(WETH, maturity2, user3, user3, toBorrow, { from: user3 })
 
       await env.postChai(user1, chaiTokens1, chi1, rate1)
 

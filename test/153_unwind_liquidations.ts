@@ -7,7 +7,7 @@ import { BN } from '@openzeppelin/test-helpers'
 import { WETH, spot, rate1, daiTokens1, wethTokens1, toRay, subBN, mulRay, divRay } from './shared/utils'
 import { YieldEnvironment, Contract } from './shared/fixtures'
 
-contract('Unwind - Controller', async (accounts) => {
+contract('Unwind - Liquidations', async (accounts) => {
   let [owner, user1, user2, user3] = accounts
 
   let snapshot: any
@@ -30,6 +30,8 @@ contract('Unwind - Controller', async (accounts) => {
   const rate2 = toRay(1.5)
 
   const fix = divRay(toRay(1.0), mulRay(spot, toRay(1.1)))
+
+  const bnify = (num: any) => BigNumber.from(num.toString())
 
   beforeEach(async () => {
     snapshot = await helper.takeSnapshot()
@@ -64,11 +66,13 @@ contract('Unwind - Controller', async (accounts) => {
       // await env.postWeth(user1, wethTokens1);
 
       await env.postWeth(user2, BigNumber.from(wethTokens1).add(1))
+      let toBorrow = await env.unlockedOf(WETH, user2)
       await controller.borrow(WETH, maturity1, user2, user2, daiTokens1, { from: user2 })
 
       await env.postWeth(user3, BigNumber.from(wethTokens1).mul(2))
-      await controller.borrow(WETH, maturity1, user3, user3, daiTokens1, { from: user3 })
-      await controller.borrow(WETH, maturity2, user3, user3, daiTokens1, { from: user3 })
+      toBorrow = bnify(await env.unlockedOf(WETH, user3)).div(2)
+      await controller.borrow(WETH, maturity1, user3, user3, toBorrow, { from: user3 })
+      await controller.borrow(WETH, maturity2, user3, user3, toBorrow, { from: user3 })
 
       // Make sure that end.sol will have enough weth to cash chai savings
       await env.maker.getDai(owner, BigNumber.from(wethTokens1).mul(10), rate1)
