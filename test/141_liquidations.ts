@@ -177,7 +177,7 @@ contract('Liquidations', async (accounts) => {
         assert.equal(await controller.totalDebtDai(WETH, user2, { from: buyer }), 0)
       })
 
-      describe.only('with started liquidations', () => {
+      describe('with started liquidations', () => {
         beforeEach(async () => {
           await liquidations.liquidate(user2, { from: buyer })
           await liquidations.liquidate(user3, { from: buyer })
@@ -282,8 +282,10 @@ contract('Liquidations', async (accounts) => {
           })
 
           it('partial liquidations are possible', async () => {
-            const liquidatorBuys = bnify(userDebt).div(2)
-            const remainingDebt = bnify(userDebt).sub(liquidatorBuys)
+            const initialDebt = bnify((await liquidations.vaults(user2)).debt)
+            const initialCollateral = bnify((await liquidations.vaults(user2)).collateral)
+            const liquidatorBuys = bnify(initialDebt).div(2)
+            const remainingDebt = bnify(initialDebt).sub(liquidatorBuys)
 
             await dai.approve(treasury.address, liquidatorBuys, { from: buyer })
             await liquidations.buy(buyer, receiver, user2, liquidatorBuys, { from: buyer })
@@ -295,11 +297,11 @@ contract('Liquidations', async (accounts) => {
             )
             assert.equal(
               await weth.balanceOf(receiver, { from: buyer }),
-              addBN(divRay(userCollateral, toRay(2)), 1).toString(), // divRay should round up
-              'Liquidator should have ' +
-                addBN(divRay(userCollateral, toRay(2)), 1) +
+              initialCollateral.div(2).toString(),
+              'Receiver should have ' +
+              initialCollateral.div(2) +
                 ' weth, instead has ' +
-                (await weth.balanceOf(buyer, { from: buyer }))
+                (await weth.balanceOf(receiver, { from: buyer }))
             )
           })
 
