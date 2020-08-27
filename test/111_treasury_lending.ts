@@ -2,7 +2,7 @@
 import { expectRevert } from '@openzeppelin/test-helpers'
 import { id } from 'ethers/lib/utils'
 import { YieldEnvironment, MakerEnvironment, Contract } from './shared/fixtures'
-import { WETH, precision, spot, daiDebt1, daiTokens1, wethTokens1, chaiTokens1, addBN, mulRay, almostEqual } from './shared/utils'
+import { WETH, precision, spot, daiDebt1, daiTokens1, wethTokens1, chaiTokens1, addBN, subBN, mulRay, almostEqual } from './shared/utils'
 
 contract('Treasury - Lending', async (accounts: string[]) => {
   let [owner, user] = accounts
@@ -117,10 +117,12 @@ contract('Treasury - Lending', async (accounts: string[]) => {
     })
 
     it("shouldn't allow borrowing beyond power", async () => {
-      await treasury.pullDai(user, daiTokens1, { from: owner })
-      assert.equal(await treasury.debt(), daiTokens1, 'We should have ' + daiTokens1 + ' dai debt.')
-      await expectRevert( // We only posted wethTokens1 + 1000 wei, not enough to pull daiTokens1 twice
-        treasury.pullDai(user, daiTokens1, { from: owner }),
+      const ink = ((await vat.urns(WETH, treasury.address)).ink).toString()
+      const toBorrow = subBN(mulRay(ink, spot), 1000).toString() // Rounding means that ink * spot is a few wei (2) above what we can actually borrow
+      await treasury.pullDai(user, toBorrow, { from: owner })
+      assert.equal(await treasury.debt(), toBorrow, 'We should have ' + toBorrow + ' dai debt.')
+      await expectRevert(
+        treasury.pullDai(user, 1000, { from: owner }),
         'Vat/not-safe'
       )
     })
