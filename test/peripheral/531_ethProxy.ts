@@ -5,7 +5,7 @@ const EthProxy = artifacts.require('YieldProxy')
 import helper from 'ganache-time-traveler'
 // @ts-ignore
 import { balance } from '@openzeppelin/test-helpers'
-import { WETH, daiTokens1, wethTokens1 } from '../shared/utils'
+import { WETH, spot, daiTokens1, wethTokens1, mulRay } from '../shared/utils'
 import { Contract, YieldEnvironmentLite } from '../shared/fixtures'
 import { getSignatureDigest } from '../shared/signatures'
 import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
@@ -74,8 +74,8 @@ contract('YieldProxy - EthProxy', async (accounts) => {
     )
     assert.equal(
       await controller.powerOf(WETH, user2),
-      daiTokens1.toString(),
-      'User2 should have ' + daiTokens1 + ' borrowing power, instead has ' + (await controller.powerOf(WETH, user2))
+      mulRay(wethTokens1, spot).toString(),
+      'User2 should have ' + mulRay(wethTokens1, spot) + ' borrowing power, instead has ' + (await controller.powerOf(WETH, user2))
     )
   })
 
@@ -88,7 +88,7 @@ contract('YieldProxy - EthProxy', async (accounts) => {
         wethTokens1.toString(),
         'Treasury does not have weth in MakerDAO'
       )
-      assert.equal(await controller.powerOf(WETH, user1), daiTokens1.toString(), 'User1 does not have borrowing power')
+      assert.equal(await controller.powerOf(WETH, user1), mulRay(wethTokens1, spot).toString(), 'User1 does not have borrowing power')
       assert.equal(await weth.balanceOf(user2), 0, 'User2 has collateral in hand')
     })
 
