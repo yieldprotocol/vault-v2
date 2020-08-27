@@ -18,6 +18,8 @@ import {
   mulRay,
   divRay,
   bnify,
+  precision,
+  almostEqual,
 } from './shared/utils'
 import { YieldEnvironment, Contract } from './shared/fixtures'
 
@@ -295,13 +297,10 @@ contract('Liquidations', async (accounts) => {
               remainingDebt.toString(),
               'User debt should have been halved'
             )
-            assert.equal(
+            almostEqual(
               await weth.balanceOf(receiver, { from: buyer }),
               initialCollateral.div(2).toString(),
-              'Receiver should have ' +
-              initialCollateral.div(2) +
-                ' weth, instead has ' +
-                (await weth.balanceOf(receiver, { from: buyer }))
+              precision
             )
           })
 
