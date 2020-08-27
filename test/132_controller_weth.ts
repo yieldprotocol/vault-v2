@@ -173,7 +173,7 @@ contract('Controller - Weth', async (accounts) => {
       assert.equal(event.args.user, user1)
       assert.equal(
         event.args.amount,
-        power.toString() // This is actually a yDai amount
+        toBorrow.toString() // This is actually a yDai amount
       )
       assert.equal(await yDai1.balanceOf(user2), toBorrow.toString(), 'User2 should have yDai')
       assert.equal(await controller.debtDai(WETH, maturity1, user1), toBorrow.toString(), 'User1 should have debt')
