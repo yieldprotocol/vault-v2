@@ -6,6 +6,7 @@ import { BigNumber } from 'ethers'
 import {
   WETH,
   CHAI,
+  spot,
   rate1,
   chi1,
   daiTokens1,
@@ -16,6 +17,7 @@ import {
   subBN,
   mulRay,
   divRay,
+  bnify,
 } from './shared/utils'
 import { YieldEnvironment, Contract } from './shared/fixtures'
 
@@ -72,12 +74,14 @@ contract('Liquidations', async (accounts) => {
     beforeEach(async () => {
       await env.postWeth(user1, wethTokens1)
 
-      await env.postWeth(user2, BigNumber.from(wethTokens1).add(1))
-      await controller.borrow(WETH, maturity1, user2, user2, daiTokens1, { from: user2 })
+      await env.postWeth(user2, wethTokens1)
+      let toBorrow = await env.unlockedOf(WETH, user2)
+      await controller.borrow(WETH, maturity1, user2, user2, toBorrow, { from: user2 })
 
-      await env.postWeth(user3, BigNumber.from(wethTokens1).mul(2))
-      await controller.borrow(WETH, maturity1, user3, user3, daiTokens1, { from: user3 })
-      await controller.borrow(WETH, maturity2, user3, user3, daiTokens1, { from: user3 })
+      await env.postWeth(user3, bnify(wethTokens1).mul(2))
+      toBorrow = bnify(await env.unlockedOf(WETH, user3)).div(2).toString()
+      await controller.borrow(WETH, maturity1, user3, user3, toBorrow, { from: user3 })
+      await controller.borrow(WETH, maturity2, user3, user3, toBorrow, { from: user3 })
 
       await env.postChai(user1, chaiTokens1, chi1, rate1)
 
@@ -92,9 +96,9 @@ contract('Liquidations', async (accounts) => {
       assert.equal(await weth.balanceOf(user2), 0, 'User2 should have no weth')
       assert.equal(
         await controller.debtYDai(WETH, maturity1, user2),
-        yDaiTokens1.toString(),
+        mulRay(wethTokens1, spot).toString(),
         'User2 should have ' +
-          yDaiTokens1.toString() +
+        mulRay(wethTokens1, spot).toString() +
           ' maturity1 weth debt, instead has ' +
           (await controller.debtYDai(WETH, maturity1, user2)).toString()
       )
@@ -171,7 +175,7 @@ contract('Liquidations', async (accounts) => {
         assert.equal(await controller.totalDebtDai(WETH, user2, { from: buyer }), 0)
       })
 
-      describe('with started liquidations', () => {
+      describe.only('with started liquidations', () => {
         beforeEach(async () => {
           await liquidations.liquidate(user2, { from: buyer })
           await liquidations.liquidate(user3, { from: buyer })
@@ -200,16 +204,17 @@ contract('Liquidations', async (accounts) => {
         })
 
         it('partial liquidations are possible', async () => {
-          const liquidatorBuys = divRay(userDebt, toRay(2))
+          const liquidatorBuys = bnify(userDebt).div(2)
+          const remainingDebt = bnify(userDebt).sub(liquidatorBuys)
 
           await dai.approve(treasury.address, liquidatorBuys, { from: buyer })
           await liquidations.buy(buyer, receiver, user2, liquidatorBuys, { from: buyer })
 
           assert.equal(
             (await liquidations.vaults(user2, { from: buyer })).debt,
-            divRay(userDebt, toRay(2)).toString(),
+            remainingDebt.toString(),
             'User debt should be ' +
-              addBN(divRay(userDebt, toRay(2)), 1) +
+              remainingDebt +
               ', instead is ' +
               (await liquidations.vaults(user2, { from: buyer })).debt
           )
@@ -275,14 +280,15 @@ contract('Liquidations', async (accounts) => {
           })
 
           it('partial liquidations are possible', async () => {
-            const liquidatorBuys = divRay(userDebt, toRay(2))
+            const liquidatorBuys = bnify(userDebt).div(2)
+            const remainingDebt = bnify(userDebt).sub(liquidatorBuys)
 
             await dai.approve(treasury.address, liquidatorBuys, { from: buyer })
             await liquidations.buy(buyer, receiver, user2, liquidatorBuys, { from: buyer })
 
             assert.equal(
               (await liquidations.vaults(user2, { from: buyer })).debt,
-              divRay(userDebt, toRay(2)).toString(),
+              remainingDebt.toString(),
               'User debt should have been halved'
             )
             assert.equal(
