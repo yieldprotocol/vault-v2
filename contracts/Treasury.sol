@@ -11,7 +11,7 @@ import "./interfaces/IChai.sol";
 import "./interfaces/ITreasury.sol";
 import "./helpers/DecimalMath.sol";
 import "./helpers/Orchestrated.sol";
-
+import "@nomiclabs/buidler/console.sol";
 
 
 /**
@@ -94,14 +94,6 @@ contract Treasury is ITreasury, Orchestrated(), DecimalMath {
         (, uint256 rate,,,) = vat.ilks(WETH);            // Retrieve the MakerDAO stability fee for Weth
         (, uint256 art) = vat.urns(WETH, address(this)); // Retrieve the Treasury debt in MakerDAO
         return muld(art, rate);
-    }
-
-    /// @dev Returns the Treasury borrowing capacity from MakerDAO, in Dai.
-    /// We can borrow (ink * spot)
-    function power() public view returns(uint256) {
-        (,, uint256 spot,,) = vat.ilks(WETH);            // Collateralization ratio for Weth
-        (uint256 ink,) = vat.urns(WETH, address(this));  // Treasury Weth collateral in MakerDAO
-        return muld(ink, spot);
     }
 
     /// @dev Returns the amount of chai in this contract, converted to Dai.
