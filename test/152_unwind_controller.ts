@@ -154,9 +154,9 @@ contract('Unwind - Controller', async (accounts) => {
 
         assert.equal(
           await weth.balanceOf(user2),
-          fixedWeth.mul(2).add(1).toString(),
+          fixedWeth.mul(2).toString(),
           'User2 should have ' +
-            fixedWeth.mul(2).add(1).toString() +
+            fixedWeth.mul(2).toString() +
             ' weth wei, instead has ' +
             (await weth.balanceOf(user2)).toString()
         )
@@ -223,9 +223,9 @@ contract('Unwind - Controller', async (accounts) => {
 
         assert.equal(
           await weth.balanceOf(user3),
-          BigNumber.from(wethTokens1).mul(3).sub(fixedWeth.mul(2)).sub(1).toString(), // Each position settled substracts daiTokens1 * fix from the user collateral
+          BigNumber.from(wethTokens1).mul(3).sub(fixedWeth.mul(2)).toString(), // Each position settled substracts daiTokens1 * fix from the user collateral
           'User1 should have ' +
-            BigNumber.from(wethTokens1).mul(3).sub(fixedWeth.mul(2)).sub(1).toString() +
+            BigNumber.from(wethTokens1).mul(3).sub(fixedWeth.mul(2)).toString() +
             ' weth wei, instead has ' +
             (await weth.balanceOf(user3))
         )
