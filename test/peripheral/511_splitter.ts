@@ -123,32 +123,34 @@ contract('YieldProxy - Splitter', async (accounts) => {
 
   it('does not allow to move more weth than posted in env', async () => {
     await env.postWeth(user, wethTokens1)
-    await controller.borrow(WETH, maturity1, user, user, yDaiTokens1, { from: user })
+    const toBorrow = (await env.unlockedOf(WETH, user)).toString()
+    await controller.borrow(WETH, maturity1, user, user, toBorrow, { from: user })
 
     await expectRevert(
-      splitter1.yieldToMaker(pool1.address, user, yDaiTokens1, BigNumber.from(wethTokens1).mul(2), { from: user }),
+      splitter1.yieldToMaker(pool1.address, user, toBorrow, BigNumber.from(wethTokens1).mul(2), { from: user }),
       'YieldProxy: Not enough collateral in Yield'
     )
   })
 
   it('moves yield vault to maker', async () => {
     await env.postWeth(user, wethTokens1)
-    await controller.borrow(WETH, maturity1, user, user, yDaiTokens1, { from: user })
+    const toBorrow = (await env.unlockedOf(WETH, user)).toString()
+    await controller.borrow(WETH, maturity1, user, user, toBorrow, { from: user })
 
     // Add permissions for vault migration
     await controller.addDelegate(splitter1.address, { from: user }) // Allowing Splitter to create debt for use in Yield
     await vat.hope(splitter1.address, { from: user }) // Allowing Splitter to manipulate debt for user in MakerDAO
     // Go!!!
     assert.equal((await controller.posted(WETH, user)).toString(), wethTokens1.toString())
-    assert.equal((await controller.debtYDai(WETH, maturity1, user)).toString(), yDaiTokens1.toString())
+    assert.equal((await controller.debtYDai(WETH, maturity1, user)).toString(), toBorrow.toString())
     assert.equal((await vat.urns(WETH, user)).ink, 0)
     assert.equal((await vat.urns(WETH, user)).art, 0)
     assert.equal(await yDai1.balanceOf(splitter1.address), 0)
 
     // Will need this one for testing. As time passes, even for one block, the resulting dai debt will be higher than this value
-    const makerDebtEstimate = new BN(await splitter1.daiForYDai(pool1.address, yDaiTokens1))
+    const makerDebtEstimate = new BN(await splitter1.daiForYDai(pool1.address, toBorrow))
 
-    await splitter1.yieldToMaker(pool1.address, user, yDaiTokens1, wethTokens1, { from: user })
+    await splitter1.yieldToMaker(pool1.address, user, toBorrow, wethTokens1, { from: user })
 
     assert.equal(await yDai1.balanceOf(splitter1.address), 0)
     assert.equal(await dai.balanceOf(splitter1.address), 0)
