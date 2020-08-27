@@ -79,14 +79,14 @@ const UNIT: BigNumber = BigNumber.from(10).pow(BigNumber.from(27))
 
 export const limits = toRad(10000)
 
-export const spot = toRay(150)
+export const spot = toRay(155)
 export const chi1 = toRay(1.1)
 export const rate1 = toRay(1.4)
 export const precision = 2 // Loss in wei that is tolerated with each operation
 
-export const daiDebt1 = toWad(120)
-export const daiTokens1 = mulRay(daiDebt1, rate1)
+export const daiDebt1 = toWad(120).toString()
+export const daiTokens1 = mulRay(daiDebt1, rate1).toString()
 export const wethTokens1 = divRay(daiTokens1, spot).toString()
-export const chaiTokens1 = divRay(daiTokens1, chi1)
+export const chaiTokens1 = divRay(daiTokens1, chi1).toString()
 export const tag = divRay(toRay(1.0), spot)
 export const fix = divRay(toRay(1.0), mulRay(spot, toRay(1.1)))
