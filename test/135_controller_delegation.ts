@@ -61,7 +61,7 @@ contract('Controller - Delegation', async (accounts) => {
 
     assert.equal(
       await controller.posted(WETH, user2),
-      wethTokens1.toString(),
+      wethTokens1,
       'User2 should have ' + wethTokens1 + ' weth posted, instead has ' + (await controller.posted(WETH, user2))
     )
   })

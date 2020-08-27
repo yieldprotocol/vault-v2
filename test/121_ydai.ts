@@ -114,12 +114,12 @@ contract('yDai', async (accounts) => {
       'Parameters',
       {
         user: flashMinter.address,
-        amount: daiTokens1.toString(),
+        amount: daiTokens1,
         data: web3.utils.fromAscii('DATA'),
       }
     )
 
-    assert.equal(await flashMinter.flashBalance(), daiTokens1.toString(), 'FlashMinter should have seen the tokens')
+    assert.equal(await flashMinter.flashBalance(), daiTokens1, 'FlashMinter should have seen the tokens')
     assert.equal(await yDai1.totalSupply(), yDaiSupply.toString(), 'There should be no change in yDai supply')
   })
 
@@ -156,12 +156,12 @@ contract('yDai', async (accounts) => {
         'Parameters',
         {
           user: flashMinter.address,
-          amount: daiTokens1.toString(),
+          amount: daiTokens1,
           data: web3.utils.fromAscii('DATA'),
         }
       )
 
-      assert.equal(await flashMinter.flashBalance(), daiTokens1.toString(), 'FlashMinter should have seen the tokens')
+      assert.equal(await flashMinter.flashBalance(), daiTokens1, 'FlashMinter should have seen the tokens')
       assert.equal(await yDai1.totalSupply(), yDaiSupply.toString(), 'There should be no change in yDai supply')
     })
 
@@ -214,13 +214,13 @@ contract('yDai', async (accounts) => {
     })
 
     it('redeem burns yDai1 to return dai, pulls dai from Treasury', async () => {
-      assert.equal(await yDai1.balanceOf(user1), daiTokens1.toString(), 'User1 does not have yDai1')
+      assert.equal(await yDai1.balanceOf(user1), daiTokens1, 'User1 does not have yDai1')
       assert.equal(await dai.balanceOf(user2), 0, 'User2 has dai')
 
       await yDai1.approve(yDai1.address, daiTokens1, { from: user1 })
       await yDai1.redeem(user1, user2, daiTokens1, { from: user1 })
 
-      assert.equal(await dai.balanceOf(user2), daiTokens1.toString(), 'User2 should have dai')
+      assert.equal(await dai.balanceOf(user2), daiTokens1, 'User2 should have dai')
       assert.equal(await yDai1.balanceOf(user1), 0, 'User1 should not have yDai1')
     })
 
@@ -240,7 +240,7 @@ contract('yDai', async (accounts) => {
       it('redeem with increased chi returns more dai', async () => {
         // Redeem `daiTokens1` yDai to obtain `daiTokens1` * `chiDifferential`
 
-        assert.equal(await yDai1.balanceOf(user1), daiTokens1.toString(), 'User1 does not have yDai1')
+        assert.equal(await yDai1.balanceOf(user1), daiTokens1, 'User1 does not have yDai1')
 
         await yDai1.approve(yDai1.address, daiTokens1, { from: user1 })
         await yDai1.redeem(user1, user1, daiTokens1, { from: user1 })

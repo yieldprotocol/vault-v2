@@ -69,7 +69,7 @@ contract('YieldProxy - Splitter', async (accounts) => {
     await env.maker.getDai(user, daiTokens1, rate1)
 
     await expectRevert(
-      splitter1.makerToYield(pool1.address, user, BigNumber.from(wethTokens1).mul(10), daiTokens1, { from: user }),
+      splitter1.makerToYield(pool1.address, user, bnify(wethTokens1).mul(10), daiTokens1, { from: user }),
       'YieldProxy: Not enough collateral in Maker'
     )
   })
@@ -86,7 +86,7 @@ contract('YieldProxy - Splitter', async (accounts) => {
     const wethInController = new BN(await splitter1.wethForYDai(yDaiNeeded, { from: user }))
 
     // If we need any extra, we are posting it directly on Controller
-    const extraWethNeeded = wethInController.sub(new BN(wethTokens1.toString())) // It will always be zero or more
+    const extraWethNeeded = wethInController.sub(new BN(wethTokens1)) // It will always be zero or more
     await splitter1.post(user, { from: user, value: extraWethNeeded.toString() })
 
     // Add permissions for vault migration
@@ -95,7 +95,7 @@ contract('YieldProxy - Splitter', async (accounts) => {
     // Go!!!
     assert.equal(
       (await vat.urns(WETH, user)).ink,
-      BigNumber.from(wethTokens1).mul(2).toString() // `getDai` puts in vat twice as much weth as needed to borrow the dai
+      bnify(wethTokens1).mul(2).toString() // `getDai` puts in vat twice as much weth as needed to borrow the dai
     )
     assert.equal((await vat.urns(WETH, user)).art, divRay(daiTokens1, rate1).toString())
     assert.equal((await controller.posted(WETH, user)).toString(), extraWethNeeded.toString())
@@ -106,7 +106,7 @@ contract('YieldProxy - Splitter', async (accounts) => {
     assert.equal(await yDai1.balanceOf(splitter1.address), 0)
     assert.equal(await dai.balanceOf(splitter1.address), 0)
     assert.equal(await weth.balanceOf(splitter1.address), 0)
-    assert.equal((await vat.urns(WETH, user)).ink, wethTokens1.toString())
+    assert.equal((await vat.urns(WETH, user)).ink, wethTokens1)
     assert.equal((await vat.urns(WETH, user)).art, 0)
     assert.equal((await controller.posted(WETH, user)).toString(), wethInController.toString())
     const yDaiDebt = await controller.debtYDai(WETH, maturity1, user)
@@ -127,7 +127,7 @@ contract('YieldProxy - Splitter', async (accounts) => {
     await controller.borrow(WETH, maturity1, user, user, toBorrow, { from: user })
 
     await expectRevert(
-      splitter1.yieldToMaker(pool1.address, user, toBorrow, BigNumber.from(wethTokens1).mul(2), { from: user }),
+      splitter1.yieldToMaker(pool1.address, user, toBorrow, bnify(wethTokens1).mul(2), { from: user }),
       'YieldProxy: Not enough collateral in Yield'
     )
   })
@@ -141,7 +141,7 @@ contract('YieldProxy - Splitter', async (accounts) => {
     await controller.addDelegate(splitter1.address, { from: user }) // Allowing Splitter to create debt for use in Yield
     await vat.hope(splitter1.address, { from: user }) // Allowing Splitter to manipulate debt for user in MakerDAO
     // Go!!!
-    assert.equal((await controller.posted(WETH, user)).toString(), wethTokens1.toString())
+    assert.equal((await controller.posted(WETH, user)).toString(), wethTokens1)
     assert.equal((await controller.debtYDai(WETH, maturity1, user)).toString(), toBorrow.toString())
     assert.equal((await vat.urns(WETH, user)).ink, 0)
     assert.equal((await vat.urns(WETH, user)).art, 0)
@@ -157,7 +157,7 @@ contract('YieldProxy - Splitter', async (accounts) => {
     assert.equal(await weth.balanceOf(splitter1.address), 0)
     assert.equal((await controller.posted(WETH, user)).toString(), 0)
     assert.equal((await controller.debtYDai(WETH, maturity1, user)).toString(), 0)
-    assert.equal((await vat.urns(WETH, user)).ink, wethTokens1.toString())
+    assert.equal((await vat.urns(WETH, user)).ink, wethTokens1)
     const makerDebt = mulRay((await vat.urns(WETH, user)).art.toString(), rate1).toString()
     expect(makerDebt).to.be.bignumber.gt(makerDebtEstimate)
     expect(makerDebt).to.be.bignumber.lt(makerDebtEstimate.mul(new BN('10001')).div(new BN('10000')))

@@ -41,6 +41,13 @@ export function mulRay(x: BigNumberish, ray: BigNumberish): BigNumber {
   return BigNumber.from(x).mul(BigNumber.from(ray)).div(UNIT)
 }
 
+/// @dev Divides x by y, rounding up
+export function divrup(x: BigNumber, y: BigNumber): BigNumber {
+  const z = BigNumber.from(x).mul(10).div(BigNumber.from(y))
+  if (z.mod(10).gt(0)) return z.div(10).add(1)
+  return z.div(10)
+}
+
 // Checks if 2 bignumberish are almost-equal with up to `precision` room for wiggle which by default is 1
 export function almostEqual(x: BigNumberish, y: BigNumberish, precision: BigNumberish = 1) {
   x = bnify(x)
@@ -79,7 +86,7 @@ const UNIT: BigNumber = BigNumber.from(10).pow(BigNumber.from(27))
 
 export const limits = toRad(10000)
 
-export const spot = toRay(150)
+export const spot = toRay(95)
 export const chi1 = toRay(1.1)
 export const rate1 = toRay(1.4)
 export const precision = 2 // Loss in wei that is tolerated with each operation

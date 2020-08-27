@@ -83,8 +83,8 @@ contract('Unwind - Treasury', async (accounts) => {
 
       assert.equal(
         (await vat.urns(WETH, treasury.address)).ink,
-        wethTokens1.toString(),
-        'Treasury should have ' + wethTokens1.toString() + ' weth wei as collateral'
+        wethTokens1,
+        'Treasury should have ' + wethTokens1 + ' weth wei as collateral'
       )
     })
 
@@ -117,9 +117,9 @@ contract('Unwind - Treasury', async (accounts) => {
 
           assert.equal(
             await weth.balanceOf(unwind.address, { from: owner }),
-            wethTokens1.toString(),
+            wethTokens1,
             'Treasury should have ' +
-              wethTokens1.toString() +
+              wethTokens1 +
               ' weth in hand, instead has ' +
               (await weth.balanceOf(unwind.address, { from: owner }))
           )
@@ -186,8 +186,8 @@ contract('Unwind - Treasury', async (accounts) => {
 
         assert.equal(
           await chai.balanceOf(treasury.address),
-          chaiTokens1.toString(),
-          'Treasury should have ' + daiTokens1.toString() + ' savings (as chai).'
+          chaiTokens1,
+          'Treasury should have ' + daiTokens1 + ' savings (as chai).'
         )
       })
 

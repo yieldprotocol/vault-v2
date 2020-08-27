@@ -67,11 +67,7 @@ contract('YieldProxy - EthProxy', async (accounts) => {
     await ethProxy.post(user2, { from: user1, value: wethTokens1 })
 
     expect(await balance.current(user1)).to.be.bignumber.lt(previousBalance)
-    assert.equal(
-      (await vat.urns(WETH, treasury.address)).ink,
-      wethTokens1.toString(),
-      'Treasury should have weth in MakerDAO'
-    )
+    assert.equal((await vat.urns(WETH, treasury.address)).ink, wethTokens1, 'Treasury should have weth in MakerDAO')
     assert.equal(
       await controller.powerOf(WETH, user2),
       mulRay(wethTokens1, spot).toString(),
@@ -86,11 +82,7 @@ contract('YieldProxy - EthProxy', async (accounts) => {
     beforeEach(async () => {
       await ethProxy.post(user1, { from: user1, value: wethTokens1 })
 
-      assert.equal(
-        (await vat.urns(WETH, treasury.address)).ink,
-        wethTokens1.toString(),
-        'Treasury does not have weth in MakerDAO'
-      )
+      assert.equal((await vat.urns(WETH, treasury.address)).ink, wethTokens1, 'Treasury does not have weth in MakerDAO')
       assert.equal(
         await controller.powerOf(WETH, user1),
         mulRay(wethTokens1, spot).toString(),

@@ -297,11 +297,7 @@ contract('Liquidations', async (accounts) => {
               remainingDebt.toString(),
               'User debt should have been halved'
             )
-            almostEqual(
-              await weth.balanceOf(receiver, { from: buyer }),
-              initialCollateral.div(2).toString(),
-              precision
-            )
+            almostEqual(await weth.balanceOf(receiver, { from: buyer }), initialCollateral.div(2).toString(), precision)
           })
 
           it('liquidations leaving dust revert', async () => {

@@ -55,7 +55,7 @@ contract('yDai - Delegation', async (accounts) => {
     await helper.advanceBlock()
     await yDai1.mature()
 
-    assert.equal(await yDai1.balanceOf(holder), daiTokens1.toString(), 'Holder does not have yDai')
+    assert.equal(await yDai1.balanceOf(holder), daiTokens1, 'Holder does not have yDai')
     assert.equal(await treasury.savings(), 0, 'Treasury has no savings')
   })
 
@@ -67,8 +67,8 @@ contract('yDai - Delegation', async (accounts) => {
     await yDai1.approve(yDai1.address, daiTokens1, { from: holder })
     await yDai1.redeem(holder, holder, daiTokens1, { from: holder })
 
-    assert.equal(await treasury.debt(), daiTokens1.toString(), 'Treasury should have debt')
-    assert.equal(await dai.balanceOf(holder), daiTokens1.toString(), 'Holder should have dai')
+    assert.equal(await treasury.debt(), daiTokens1, 'Treasury should have debt')
+    assert.equal(await dai.balanceOf(holder), daiTokens1, 'Holder should have dai')
   })
 
   it('redeem is not allowed for non designated accounts', async () => {
@@ -85,8 +85,8 @@ contract('yDai - Delegation', async (accounts) => {
     })
     await yDai1.redeem(holder, holder, daiTokens1, { from: other })
 
-    assert.equal(await treasury.debt(), daiTokens1.toString(), 'Treasury should have debt')
-    assert.equal(await dai.balanceOf(holder), daiTokens1.toString(), 'Holder should have dai')
+    assert.equal(await treasury.debt(), daiTokens1, 'Treasury should have debt')
+    assert.equal(await dai.balanceOf(holder), daiTokens1, 'Holder should have dai')
   })
 
   describe('with delegates', async () => {

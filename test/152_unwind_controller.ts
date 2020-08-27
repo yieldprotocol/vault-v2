@@ -153,31 +153,19 @@ contract('Unwind - Controller', async (accounts) => {
         )
         await unwind.redeem(maturity1, user2, { from: user2 })
 
-        almostEqual(
-          await weth.balanceOf(user2),
-          fixedWeth.mul(2).toString(),
-          precision
-        )
+        almostEqual(await weth.balanceOf(user2), fixedWeth.mul(2).toString(), precision)
       })
 
       it('allows user to settle weth surplus', async () => {
         await unwind.settle(WETH, user1, { from: user1 })
 
-        assert.equal(
-          await weth.balanceOf(user1),
-          wethTokens1.toString(),
-          'User1 should have ' + wethTokens1.toString() + ' weth wei'
-        )
+        assert.equal(await weth.balanceOf(user1), wethTokens1, 'User1 should have ' + wethTokens1 + ' weth wei')
       })
 
       it('users can be forced to settle weth surplus', async () => {
         await unwind.settle(WETH, user1, { from: owner })
 
-        assert.equal(
-          await weth.balanceOf(user1),
-          wethTokens1.toString(),
-          'User1 should have ' + wethTokens1.toString() + ' weth wei'
-        )
+        assert.equal(await weth.balanceOf(user1), wethTokens1, 'User1 should have ' + wethTokens1 + ' weth wei')
       })
 
       it('allows user to settle chai surplus', async () => {
