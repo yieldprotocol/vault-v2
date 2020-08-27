@@ -132,7 +132,7 @@ contract('Treasury - Lending', async (accounts: string[]) => {
       const ink = (await vat.urns(WETH, treasury.address)).ink.toString()
       const toBorrow = subBN(mulRay(ink, spot), 10).toString() // Rounding means that ink * spot is a few wei (2) above what we can actually borrow
       await treasury.pullDai(user, toBorrow, { from: owner })
-      assert.equal(await treasury.debt(), toBorrow, 'We should have ' + toBorrow + ' dai debt.')
+      almostEqual(await treasury.debt(), toBorrow, precision)
       await expectRevert(treasury.pullDai(user, 10, { from: owner }), 'Vat/not-safe')
     })
 

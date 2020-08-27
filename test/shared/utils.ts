@@ -79,7 +79,7 @@ const UNIT: BigNumber = BigNumber.from(10).pow(BigNumber.from(27))
 
 export const limits = toRad(10000)
 
-export const spot = toRay(155)
+export const spot = toRay(150)
 export const chi1 = toRay(1.1)
 export const rate1 = toRay(1.4)
 export const precision = 2 // Loss in wei that is tolerated with each operation

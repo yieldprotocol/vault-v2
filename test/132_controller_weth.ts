@@ -283,7 +283,7 @@ contract('Controller - Weth', async (accounts) => {
         })
 
         it('when dai is provided in excess for repayment, only the necessary amount is taken', async () => {
-          await maker.getDai(user2, daiTokens1, rate1)
+          await maker.getDai(user2, bnify(daiTokens1).mul(2), rate1)
           const balance = (await dai.balanceOf(user2)).toString()
           await dai.approve(treasury.address, balance, { from: user2 })
           await controller.repayDai(WETH, maturity1, user2, user1, balance, { from: user2 })

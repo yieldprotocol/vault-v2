@@ -1,7 +1,6 @@
 import { id } from 'ethers/lib/utils'
 // @ts-ignore
 import helper from 'ganache-time-traveler'
-import { BigNumber } from 'ethers'
 // @ts-ignore
 import { expectRevert } from '@openzeppelin/test-helpers'
 import {
@@ -17,6 +16,8 @@ import {
   mulRay,
   divRay,
   bnify,
+  almostEqual,
+  precision,
 } from './shared/utils'
 import { YieldEnvironment, Contract } from './shared/fixtures'
 
@@ -73,10 +74,10 @@ contract('Unwind - Controller', async (accounts) => {
       // Weth setup
       await env.postWeth(user1, wethTokens1)
 
-      await env.postWeth(user2, BigNumber.from(wethTokens1).add(1))
+      await env.postWeth(user2, bnify(wethTokens1).add(1))
       await controller.borrow(WETH, maturity1, user2, user2, daiTokens1, { from: user2 })
 
-      await env.postWeth(user3, BigNumber.from(wethTokens1).mul(3))
+      await env.postWeth(user3, bnify(wethTokens1).mul(3))
       await controller.borrow(WETH, maturity1, user3, user3, daiTokens1, { from: user3 })
       await controller.borrow(WETH, maturity2, user3, user3, daiTokens1, { from: user3 })
 
@@ -87,7 +88,7 @@ contract('Unwind - Controller', async (accounts) => {
       await controller.borrow(CHAI, maturity1, user2, user2, daiTokens1, { from: user2 })
 
       // Make sure that end.sol will have enough weth to cash chai savings
-      await env.maker.getDai(owner, BigNumber.from(wethTokens1).mul(10), rate1)
+      await env.maker.getDai(owner, bnify(wethTokens1).mul(10), rate1)
 
       assert.equal(await weth.balanceOf(user1), 0, 'User1 should have no weth')
       assert.equal(await weth.balanceOf(user2), 0, 'User2 should have no weth')
@@ -152,13 +153,10 @@ contract('Unwind - Controller', async (accounts) => {
         )
         await unwind.redeem(maturity1, user2, { from: user2 })
 
-        assert.equal(
+        almostEqual(
           await weth.balanceOf(user2),
           fixedWeth.mul(2).toString(),
-          'User2 should have ' +
-            fixedWeth.mul(2).toString() +
-            ' weth wei, instead has ' +
-            (await weth.balanceOf(user2)).toString()
+          precision
         )
       })
 
@@ -221,13 +219,10 @@ contract('Unwind - Controller', async (accounts) => {
       it('allows user to settle mutiple weth positions', async () => {
         await unwind.settle(WETH, user3, { from: user3 })
 
-        assert.equal(
+        almostEqual(
           await weth.balanceOf(user3),
-          BigNumber.from(wethTokens1).mul(3).sub(fixedWeth.mul(2)).toString(), // Each position settled substracts daiTokens1 * fix from the user collateral
-          'User1 should have ' +
-            BigNumber.from(wethTokens1).mul(3).sub(fixedWeth.mul(2)).toString() +
-            ' weth wei, instead has ' +
-            (await weth.balanceOf(user3))
+          bnify(wethTokens1).mul(3).sub(fixedWeth.mul(2)).toString(), // Each position settled substracts daiTokens1 * fix from the user collateral
+          precision
         )
         // In the tests the settling nets zero surplus, which we tested above
       })
