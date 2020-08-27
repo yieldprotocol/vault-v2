@@ -83,8 +83,8 @@ contract('Controller - Chai', async (accounts) => {
     beforeEach(async () => {
       // Add some funds to the system to allow for rounding losses
       await maker.getChai(owner, 1000, chi1, rate1)
-      await chai.approve(treasury.address, 1000, { from: owner })
-      await controller.post(CHAI, owner, owner, 1000, { from: owner })
+      await chai.approve(treasury.address, 10, { from: owner })
+      await controller.post(CHAI, owner, owner, 10, { from: owner })
 
       await chai.approve(treasury.address, chaiTokens1, { from: user1 })
       await controller.post(CHAI, user1, user1, chaiTokens1, { from: user1 })
@@ -214,7 +214,7 @@ contract('Controller - Chai', async (accounts) => {
         })
 
         it('borrowing after maturity is still allowed', async () => {
-          const yDaiDebt: BigNumber = daiTokens1
+          const yDaiDebt = daiTokens1
           const increasedChai: BigNumber = mulRay(chaiTokens1, chiDifferential)
           await maker.getChai(user2, addBN(increasedChai, 1), chi2, rate2)
           await chai.approve(treasury.address, increasedChai, { from: user2 })
