@@ -156,6 +156,7 @@ contract('Controller - Chai', async (accounts) => {
 
         assert.equal(await dai.balanceOf(user1), daiTokens1.toString(), 'User1 does not have dai')
         const debt = await controller.debtDai(CHAI, maturity1, user1)
+        almostEqual(debt.toString(), daiTokens1.toString(), precision)
 
         await dai.approve(treasury.address, debt, { from: user1 })
         await controller.repayDai(CHAI, maturity1, user1, user1, debt, { from: user1 })
