@@ -159,7 +159,7 @@ contract('Controller - Delegation', async (accounts) => {
           await controller.addDelegate(user2, { from: user1 })
           const debt = bnify(await controller.debtDai(WETH, maturity1, user1))
           const balance = bnify(await dai.balanceOf(user1))
-          
+
           await dai.approve(treasury.address, daiTokens1, { from: user1 })
           await controller.repayDai(WETH, maturity1, user1, user1, daiTokens1, { from: user2 })
 

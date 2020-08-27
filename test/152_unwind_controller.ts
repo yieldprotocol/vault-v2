@@ -145,7 +145,10 @@ contract('Unwind - Controller', async (accounts) => {
         assert.equal(
           await yDai1.balanceOf(user2),
           bnify(yDaiTokens).mul(2).toString(),
-          'User2 should have ' + bnify(yDaiTokens).mul(2) + ' yDai, instead has ' + (await yDai1.balanceOf(user2)).toString()
+          'User2 should have ' +
+            bnify(yDaiTokens).mul(2) +
+            ' yDai, instead has ' +
+            (await yDai1.balanceOf(user2)).toString()
         )
         await unwind.redeem(maturity1, user2, { from: user2 })
 

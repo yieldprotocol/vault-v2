@@ -75,7 +75,10 @@ contract('YieldProxy - EthProxy', async (accounts) => {
     assert.equal(
       await controller.powerOf(WETH, user2),
       mulRay(wethTokens1, spot).toString(),
-      'User2 should have ' + mulRay(wethTokens1, spot) + ' borrowing power, instead has ' + (await controller.powerOf(WETH, user2))
+      'User2 should have ' +
+        mulRay(wethTokens1, spot) +
+        ' borrowing power, instead has ' +
+        (await controller.powerOf(WETH, user2))
     )
   })
 
@@ -88,7 +91,11 @@ contract('YieldProxy - EthProxy', async (accounts) => {
         wethTokens1.toString(),
         'Treasury does not have weth in MakerDAO'
       )
-      assert.equal(await controller.powerOf(WETH, user1), mulRay(wethTokens1, spot).toString(), 'User1 does not have borrowing power')
+      assert.equal(
+        await controller.powerOf(WETH, user1),
+        mulRay(wethTokens1, spot).toString(),
+        'User1 does not have borrowing power'
+      )
       assert.equal(await weth.balanceOf(user2), 0, 'User2 has collateral in hand')
     })
 

@@ -116,15 +116,14 @@ contract('Controller - Weth', async (accounts) => {
     assert.equal(bytes32ToString(event.args.collateral), bytes32ToString(WETH))
     assert.equal(event.args.user, user2)
     assert.equal(event.args.amount, wethTokens1)
-    assert.equal(
-      (await vat.urns(WETH, treasury.address)).ink,
-      wethTokens1,
-      'Treasury should have weth in MakerDAO'
-    )
+    assert.equal((await vat.urns(WETH, treasury.address)).ink, wethTokens1, 'Treasury should have weth in MakerDAO')
     assert.equal(
       await controller.powerOf(WETH, user2),
       mulRay(wethTokens1, spot).toString(),
-      'User2 should have ' + mulRay(wethTokens1, spot) + ' borrowing power, instead has ' + (await controller.powerOf(WETH, user2))
+      'User2 should have ' +
+        mulRay(wethTokens1, spot) +
+        ' borrowing power, instead has ' +
+        (await controller.powerOf(WETH, user2))
     )
     assert.equal(
       await controller.posted(WETH, user2),
@@ -146,7 +145,7 @@ contract('Controller - Weth', async (accounts) => {
 
     it("doesn't allow to withdraw weth and leave collateral under dust", async () => {
       // Repay maturity1 completely
-      const posted = (await controller.posted(WETH, user1, { from: user1 }))
+      const posted = await controller.posted(WETH, user1, { from: user1 })
       const toWithdraw = bnify(posted).sub('1000')
 
       await expectRevert(controller.withdraw(WETH, user1, user2, toWithdraw, { from: user1 }), 'Controller: Below dust')
@@ -338,7 +337,7 @@ contract('Controller - Weth', async (accounts) => {
               await controller.debtYDai(WETH, maturity1, user1),
               debt.toString(),
               'User1 should have ' +
-              debt +
+                debt +
                 ' debt after the rate change, instead has ' +
                 (await controller.debtYDai(WETH, maturity1, user1))
             )
@@ -350,7 +349,7 @@ contract('Controller - Weth', async (accounts) => {
             await weth.deposit({ from: user3, value: toPost })
             await weth.approve(treasury.address, toPost, { from: user3 })
             await controller.post(WETH, user3, user3, toPost, { from: user3 })
-            const toBorrow = oneToken.toString();
+            const toBorrow = oneToken.toString()
             await controller.borrow(WETH, maturity1, user3, user3, toBorrow, { from: user3 })
 
             assert.equal(
@@ -376,7 +375,7 @@ contract('Controller - Weth', async (accounts) => {
             const debt2 = mulRay(wethTokens1, spot)
             assert.equal(
               await controller.totalDebtDai(WETH, user1),
-              (debt1.add(debt2)).toString(),
+              debt1.add(debt2).toString(),
               'User1 should have ' +
                 debt1.add(debt2) +
                 ' debt after the rate change, instead has ' +
