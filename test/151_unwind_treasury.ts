@@ -1,9 +1,8 @@
 import { id } from 'ethers/lib/utils'
 // @ts-ignore
 import helper from 'ganache-time-traveler'
-import { BigNumber } from 'ethers'
 // @ts-ignore
-import { expectRevert } from '@openzeppelin/test-helpers'
+import { BN, expectRevert } from '@openzeppelin/test-helpers'
 import {
   rate1,
   daiDebt1,
@@ -16,8 +15,11 @@ import {
   mulRay,
   divRay,
   bnify,
+  almostEqual,
+  precision,
 } from './shared/utils'
 import { YieldEnvironment, Contract } from './shared/fixtures'
+import { assert, expect } from 'chai'
 
 contract('Unwind - Treasury', async (accounts) => {
   let [owner, user] = accounts
@@ -145,17 +147,10 @@ contract('Unwind - Treasury', async (accounts) => {
 
     describe('with debt', () => {
       beforeEach(async () => {
-        await treasury.pullDai(owner, daiTokens1, { from: owner })
-        assert.equal(
-          (await vat.urns(WETH, treasury.address)).art,
-          daiDebt1.toString(),
-          'Treasury should have ' + daiDebt1.toString() + ' dai debt.'
-        )
-        assert.equal(
-          await treasury.debt(),
-          daiTokens1.toString(),
-          'Treasury should have ' + daiTokens1.toString() + ' dai debt (in Dai).'
-        )
+        const toPull = mulRay(wethTokens1, spot).sub(2).toString()
+        await treasury.pullDai(owner, toPull, { from: owner })
+        expect((await vat.urns(WETH, treasury.address)).art).to.be.bignumber.gt(new BN('0'))
+        expect(await treasury.debt()).to.be.bignumber.gt(new BN('0'))
 
         // Adding some extra unlocked collateral
         await weth.deposit({ from: owner, value: 1 })
@@ -173,13 +168,10 @@ contract('Unwind - Treasury', async (accounts) => {
         it('allows to settle treasury debt', async () => {
           await unwind.settleTreasury({ from: owner })
 
-          assert.equal(
+          almostEqual(
             await weth.balanceOf(unwind.address, { from: owner }),
-            BigNumber.from(wethTokens1).sub(taggedWeth).add(1).toString(),
-            'Unwind should have ' +
-              BigNumber.from(wethTokens1).sub(taggedWeth).add(1).add(1) +
-              ' weth in hand, instead has ' +
-              (await weth.balanceOf(unwind.address, { from: owner }))
+            bnify(wethTokens1).sub(taggedWeth).toString(),
+            precision
           )
         })
       })
