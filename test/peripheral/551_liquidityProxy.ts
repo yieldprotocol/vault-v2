@@ -4,7 +4,7 @@ const LiquidityProxy = artifacts.require('YieldProxy')
 import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
 // @ts-ignore
 import helper from 'ganache-time-traveler'
-import { CHAI, chi1, toWad, toRay, mulRay } from '../shared/utils'
+import { CHAI, chi1, toWad, toRay, mulRay, precision } from '../shared/utils'
 import { MakerEnvironment, YieldEnvironmentLite, Contract } from '../shared/fixtures'
 // @ts-ignore
 import { BN, expectRevert } from '@openzeppelin/test-helpers'
@@ -88,11 +88,6 @@ contract('YieldProxy - LiquidityProxy', async (accounts) => {
     await dai.approve(proxy.address, MAX, { from: user1 })
     await dai.approve(pool.address, MAX, { from: user1 })
     await controller.addDelegate(proxy.address, { from: user1 })
-
-    // Add some funds to the system to allow for rounding losses
-    await maker.getChai(owner, 1000, chi1, rate1)
-    await chai.approve(treasury.address, 1000, { from: owner })
-    await controller.post(CHAI, owner, owner, 1000, { from: owner })
   })
 
   afterEach(async () => {
@@ -197,6 +192,11 @@ contract('YieldProxy - LiquidityProxy', async (accounts) => {
         await dai.mint(user2, oneToken, { from: owner })
         await dai.approve(proxy.address, oneToken, { from: user2 })
         await proxy.addLiquidity(pool.address, oneToken, maxBorrow, { from: user2 })
+
+        // Add some funds to the system to allow for rounding losses when withdrawing chai
+        await maker.getChai(owner, 1000, chi1, rate1) // getChai can't get very small amounts
+        await chai.approve(treasury.address, precision, { from: owner })
+        await controller.post(CHAI, owner, owner, precision, { from: owner })
       })
 
       it('removes liquidity early by selling', async () => {
