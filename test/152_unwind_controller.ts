@@ -16,6 +16,7 @@ import {
   toRay,
   mulRay,
   divRay,
+  bnify,
 } from './shared/utils'
 import { YieldEnvironment, Contract } from './shared/fixtures'
 
@@ -143,8 +144,8 @@ contract('Unwind - Controller', async (accounts) => {
       it('user can redeem YDai', async () => {
         assert.equal(
           await yDai1.balanceOf(user2),
-          yDaiTokens.mul(2).toString(),
-          'User2 should have ' + yDaiTokens.mul(2) + ' yDai, instead has ' + (await yDai1.balanceOf(user2)).toString()
+          bnify(yDaiTokens).mul(2).toString(),
+          'User2 should have ' + bnify(yDaiTokens).mul(2) + ' yDai, instead has ' + (await yDai1.balanceOf(user2)).toString()
         )
         await unwind.redeem(maturity1, user2, { from: user2 })
 

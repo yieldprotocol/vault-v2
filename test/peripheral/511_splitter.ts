@@ -5,7 +5,7 @@ import { BigNumber } from 'ethers'
 import { id } from 'ethers/lib/utils'
 // @ts-ignore
 import { BN, expectRevert } from '@openzeppelin/test-helpers'
-import { WETH, rate1, daiTokens1, wethTokens1, mulRay, divRay } from '../shared/utils'
+import { WETH, rate1, daiTokens1, wethTokens1, mulRay, divRay, bnify } from '../shared/utils'
 import { YieldEnvironmentLite, Contract } from '../shared/fixtures'
 
 import { assert, expect } from 'chai'
@@ -46,13 +46,13 @@ contract('YieldProxy - Splitter', async (accounts) => {
     await yDai1.orchestrate(owner, id('mint(address,uint256)'), { from: owner })
 
     // Initialize Pool1
-    const daiReserves = daiTokens1.mul(5)
+    const daiReserves = bnify(daiTokens1).mul(5)
     await env.maker.getDai(owner, daiReserves, rate1)
     await dai.approve(pool1.address, daiReserves, { from: owner })
     await pool1.init(daiReserves, { from: owner })
 
     // Add yDai
-    const additionalYDaiReserves = yDaiTokens1.mul(2)
+    const additionalYDaiReserves = bnify(yDaiTokens1).mul(2)
     await yDai1.mint(owner, additionalYDaiReserves, { from: owner })
     await yDai1.approve(pool1.address, additionalYDaiReserves, { from: owner })
     await pool1.sellYDai(owner, owner, additionalYDaiReserves, { from: owner })
@@ -60,7 +60,7 @@ contract('YieldProxy - Splitter', async (accounts) => {
 
   it('does not allow to move more debt than existing in maker', async () => {
     await expectRevert(
-      splitter1.makerToYield(pool1.address, user, wethTokens1, daiTokens1.mul(10), { from: user }),
+      splitter1.makerToYield(pool1.address, user, wethTokens1, bnify(daiTokens1).mul(10), { from: user }),
       'YieldProxy: Not enough debt in Maker'
     )
   })

@@ -15,6 +15,7 @@ import {
   toRay,
   mulRay,
   divRay,
+  bnify,
 } from './shared/utils'
 import { YieldEnvironment, Contract } from './shared/fixtures'
 
@@ -200,7 +201,7 @@ contract('Unwind - Treasury', async (accounts) => {
 
       describe('with Dss unwind initiated and fix defined', () => {
         beforeEach(async () => {
-          await env.maker.getDai(user, daiTokens1.mul(2), rate1)
+          await env.maker.getDai(user, bnify(daiTokens1).mul(2), rate1)
 
           await end.cage({ from: owner })
           await end.setTag(WETH, tag, { from: owner })
