@@ -14,7 +14,7 @@ import { BN, expectEvent, expectRevert } from '@openzeppelin/test-helpers'
 contract('yDai', async (accounts) => {
   let [owner, user1, user2] = accounts
 
-  const rate2 = toRay(1.82)
+  // const rate2 = toRay(1.82)
   const chi2 = toRay(1.5)
   const chiDifferential = divRay(chi2, chi1)
   const daiTokens2 = mulRay(daiTokens1, chiDifferential)
@@ -174,12 +174,14 @@ contract('yDai', async (accounts) => {
     })
 
     it('yDai1 rate gets fixed at maturity time', async () => {
+      const rate2 = toRay(1.82)
       await vat.fold(WETH, vat.address, subBN(rate2, rate1), { from: owner })
 
       assert.equal((await yDai1.rate0()).toString(), rate1.toString(), 'Rate at maturity should be ' + rate1)
     })
 
     it('rateGrowth returns the rate differential between now and maturity', async () => {
+      const rate2 = toRay(1.82)
       await vat.fold(WETH, vat.address, subBN(rate2, rate1), { from: owner })
 
       assert.equal(
@@ -200,6 +202,7 @@ contract('yDai', async (accounts) => {
     })
 
     it('chiGrowth returns the chi differential between now and maturity', async () => {
+      const rate2 = mulRay(rate1, chiDifferential).add(toRay(0.1))
       await vat.fold(WETH, vat.address, subBN(rate2, rate1), { from: owner })
       await pot.setChi(chi2, { from: owner })
 
@@ -223,6 +226,7 @@ contract('yDai', async (accounts) => {
 
     describe('once chi increases', () => {
       beforeEach(async () => {
+        const rate2 = mulRay(rate1, chiDifferential).add(toRay(0.1))
         await vat.fold(WETH, vat.address, subBN(rate2, rate1), { from: owner }) // Keeping above chi
         await pot.setChi(chi2, { from: owner })
 

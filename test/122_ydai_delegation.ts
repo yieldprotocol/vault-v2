@@ -1,5 +1,4 @@
 import { id } from 'ethers/lib/utils'
-import { BigNumber } from 'ethers'
 // @ts-ignore
 import helper from 'ganache-time-traveler'
 // @ts-ignore
@@ -22,8 +21,6 @@ contract('yDai - Delegation', async (accounts) => {
   let dai: Contract
   let yDai1: Contract
 
-  const bnify = (num: any) => BigNumber.from(num.toString())
-
   beforeEach(async () => {
     snapshot = await helper.takeSnapshot()
     snapshotId = snapshot['result']
@@ -43,11 +40,10 @@ contract('yDai - Delegation', async (accounts) => {
 
     // Post collateral to MakerDAO through Treasury
     await treasury.orchestrate(owner, id('pushWeth(address,uint256)'), { from: owner })
-    const posted = (bnify(wethTokens1).add(1000)).toString() // Add 1000 wei to cover rounding losses
-    await weth.deposit({ from: owner, value: posted })
-    await weth.approve(treasury.address, posted, { from: owner })
-    await treasury.pushWeth(owner, posted, { from: owner })
-    assert.equal((await vat.urns(WETH, treasury.address)).ink, posted)
+    await weth.deposit({ from: owner, value: wethTokens1 })
+    await weth.approve(treasury.address, wethTokens1, { from: owner })
+    await treasury.pushWeth(owner, wethTokens1, { from: owner })
+    assert.equal((await vat.urns(WETH, treasury.address)).ink, wethTokens1.toString())
 
     // Mint some yDai the sneaky way
     await yDai1.orchestrate(owner, id('mint(address,uint256)'), { from: owner })

@@ -43,8 +43,6 @@ contract('Liquidations', async (accounts) => {
 
   const dust = '25000000000000000' // 0.025 ETH
 
-  const bnify = (num: any) => BigNumber.from(num.toString())
-
   beforeEach(async () => {
     snapshot = await helper.takeSnapshot()
     snapshotId = snapshot['result']
@@ -75,34 +73,31 @@ contract('Liquidations', async (accounts) => {
       await env.postWeth(user1, wethTokens1)
 
       await env.postWeth(user2, BigNumber.from(wethTokens1).add(1))
-      let toBorrow = await env.unlockedOf(WETH, user2)
-      await controller.borrow(WETH, maturity1, user2, user2, toBorrow, { from: user2 })
+      await controller.borrow(WETH, maturity1, user2, user2, daiTokens1, { from: user2 })
 
       await env.postWeth(user3, BigNumber.from(wethTokens1).mul(2))
-      toBorrow = bnify(await env.unlockedOf(WETH, user3)).div(2)
-      await controller.borrow(WETH, maturity1, user3, user3, toBorrow, { from: user3 })
-      await controller.borrow(WETH, maturity2, user3, user3, toBorrow, { from: user3 })
+      await controller.borrow(WETH, maturity1, user3, user3, daiTokens1, { from: user3 })
+      await controller.borrow(WETH, maturity2, user3, user3, daiTokens1, { from: user3 })
 
       await env.postChai(user1, chaiTokens1, chi1, rate1)
 
       const moreChai = mulRay(chaiTokens1, toRay(1.1))
       await env.postChai(user2, moreChai, chi1, rate1)
-      toBorrow = await env.unlockedOf(CHAI, user2)
-      await controller.borrow(CHAI, maturity1, user2, user2, toBorrow, { from: user2 })
+      await controller.borrow(CHAI, maturity1, user2, user2, daiTokens1, { from: user2 })
 
       // user1 has chaiTokens1 in controller and no debt.
       // user2 has chaiTokens1 * 1.1 in controller and daiTokens1 debt.
 
       assert.equal(await weth.balanceOf(user1), 0, 'User1 should have no weth')
       assert.equal(await weth.balanceOf(user2), 0, 'User2 should have no weth')
-      /* assert.equal(
+      assert.equal(
         await controller.debtYDai(WETH, maturity1, user2),
         yDaiTokens1.toString(),
         'User2 should have ' +
           yDaiTokens1.toString() +
           ' maturity1 weth debt, instead has ' +
           (await controller.debtYDai(WETH, maturity1, user2)).toString()
-      ) */
+      )
     })
 
     it("vaults are collateralized if rates don't change", async () => {

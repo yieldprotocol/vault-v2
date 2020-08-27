@@ -121,7 +121,7 @@ export class MakerEnvironment {
 
   // With rounding somewhere, this might get one less chai wei than expected
   public async getChai(user: string, _chaiTokens: BigNumberish, _chi: BigNumberish, _rate: BigNumberish) {
-    const _daiTokens = mulRay(_chaiTokens, _chi)
+    const _daiTokens = mulRay(_chaiTokens, _chi).add(1)
     await this.getDai(user, _daiTokens, _rate)
     await this.dai.approve(this.chai.address, _daiTokens, { from: user })
     await this.chai.join(user, _daiTokens, { from: user })
