@@ -84,8 +84,8 @@ contract('Treasury - Lending', async (accounts: string[]) => {
 
       // Add some funds to the system to allow for rounding losses
       await weth.deposit({ from: owner, value: 1000 })
-      await weth.approve(treasury.address, 1000, { from: owner })
-      await treasury.pushWeth(owner, 1000, { from: owner })
+      await weth.approve(treasury.address, 2, { from: owner })
+      await treasury.pushWeth(owner, 2, { from: owner })
     })
 
     it('allows to withdraw collateral for user', async () => {
@@ -118,11 +118,11 @@ contract('Treasury - Lending', async (accounts: string[]) => {
 
     it("shouldn't allow borrowing beyond power", async () => {
       const ink = ((await vat.urns(WETH, treasury.address)).ink).toString()
-      const toBorrow = subBN(mulRay(ink, spot), 1000).toString() // Rounding means that ink * spot is a few wei (2) above what we can actually borrow
+      const toBorrow = subBN(mulRay(ink, spot), 10).toString() // Rounding means that ink * spot is a few wei (2) above what we can actually borrow
       await treasury.pullDai(user, toBorrow, { from: owner })
       assert.equal(await treasury.debt(), toBorrow, 'We should have ' + toBorrow + ' dai debt.')
       await expectRevert(
-        treasury.pullDai(user, 1000, { from: owner }),
+        treasury.pullDai(user, 10, { from: owner }),
         'Vat/not-safe'
       )
     })
