@@ -11,7 +11,7 @@ contract('Pool - Delegation', async (accounts) => {
   let [owner, user1, operator, from, to] = accounts
 
   // These values impact the pool results
-  const rate1 = toRay(1.4)
+  const rate1 = toRay(1.02)
   const daiDebt1 = toWad(96)
   const daiTokens1 = mulRay(daiDebt1, rate1)
   const yDaiTokens1 = daiTokens1
@@ -91,7 +91,7 @@ contract('Pool - Delegation', async (accounts) => {
 
       assert.equal(await dai.balanceOf(to), oneToken.toString(), 'Receiver account should have 1 dai token')
 
-      const expectedYDaiIn = new BN(oneToken.toString()).mul(new BN('10019')).div(new BN('10000')) // I just hate javascript
+      const expectedYDaiIn = new BN(oneToken.toString()).mul(new BN('100260')).div(new BN('100000'))
       const yDaiIn = new BN(yDaiTokens1.toString()).sub(new BN(await yDai1.balanceOf(from)))
       expect(yDaiIn).to.be.bignumber.gt(expectedYDaiIn.mul(new BN('9999')).div(new BN('10000')))
       // @ts-ignore
@@ -116,7 +116,7 @@ contract('Pool - Delegation', async (accounts) => {
 
       assert.equal(await yDai1.balanceOf(from), 0, "'From' wallet should have no yDai tokens")
 
-      const expectedDaiOut = new BN(oneToken.toString()).mul(new BN('99814')).div(new BN('100000')) // I just hate javascript
+      const expectedDaiOut = new BN(oneToken.toString()).mul(new BN('99745')).div(new BN('100000'))
       const daiOut = new BN(await dai.balanceOf(to))
       // @ts-ignore
       expect(daiOut).to.be.bignumber.gt(expectedDaiOut.mul(new BN('9999')).div(new BN('10000')))
@@ -145,8 +145,8 @@ contract('Pool - Delegation', async (accounts) => {
         await pool.addDelegate(operator, { from: from })
         await pool.mint(from, to, oneToken, { from: operator })
 
-        const expectedMinted = new BN('1316595685900000000')
-        const expectedYDaiIn = new BN('336985800550000000')
+        const expectedMinted = new BN('1476276421990000000')
+        const expectedYDaiIn = new BN('518626520770000000')
 
         const minted = new BN(await pool.balanceOf(to)).sub(poolTokensBefore)
         const yDaiIn = yDaiBefore.sub(new BN(await yDai1.balanceOf(from)))
@@ -167,8 +167,8 @@ contract('Pool - Delegation', async (accounts) => {
         await pool.addDelegate(operator, { from: from })
         await pool.burn(from, to, oneToken, { from: operator })
 
-        const expectedYDaiOut = new BN('255952380950000000')
-        const expectedDaiOut = new BN('759534616990000000')
+        const expectedYDaiOut = new BN('351307189540000000')
+        const expectedDaiOut = new BN('677379916900000000')
 
         const yDaiOut = yDaiReservesBefore.sub(new BN(await yDai1.balanceOf(pool.address)))
         const daiOut = daiReservesBefore.sub(new BN(await dai.balanceOf(pool.address)))
@@ -202,7 +202,7 @@ contract('Pool - Delegation', async (accounts) => {
           "'From' wallet should have " + daiTokens1.sub(oneToken) + ' dai tokens'
         )
 
-        const expectedYDaiOut = new BN(oneToken.toString()).mul(new BN('1132')).div(new BN('1000')) // I just hate javascript
+        const expectedYDaiOut = new BN(oneToken.toString()).mul(new BN('118480')).div(new BN('100000'))
         const yDaiOut = new BN(await yDai1.balanceOf(to))
         // This is the lowest precision achieved.
         // @ts-ignore
@@ -229,7 +229,7 @@ contract('Pool - Delegation', async (accounts) => {
 
         assert.equal(await yDai1.balanceOf(to), oneToken.toString(), "'To' wallet should have 1 yDai token")
 
-        const expectedDaiIn = new BN(oneToken.toString()).mul(new BN('8835')).div(new BN('10000')) // I just hate javascript
+        const expectedDaiIn = new BN(oneToken.toString()).mul(new BN('84361')).div(new BN('100000'))
         const daiIn = new BN(daiTokens1.toString()).sub(new BN(await dai.balanceOf(from)))
         // @ts-ignore
         expect(daiIn).to.be.bignumber.gt(expectedDaiIn.mul(new BN('9999')).div(new BN('10000')))

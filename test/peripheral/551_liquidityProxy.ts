@@ -4,7 +4,7 @@ const LiquidityProxy = artifacts.require('YieldProxy')
 import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
 // @ts-ignore
 import helper from 'ganache-time-traveler'
-import { CHAI, chi1, toWad, toRay, mulRay, divrup, precision, bnify } from '../shared/utils'
+import { CHAI, chi1, rate1, daiTokens1, toWad, toRay, divrup, precision, bnify } from '../shared/utils'
 import { MakerEnvironment, YieldEnvironmentLite, Contract } from '../shared/fixtures'
 // @ts-ignore
 import { BN, expectRevert } from '@openzeppelin/test-helpers'
@@ -14,10 +14,6 @@ import { BigNumber } from 'ethers'
 contract('YieldProxy - LiquidityProxy', async (accounts) => {
   let [owner, user1, operator, user2, to] = accounts
 
-  // These values impact the pool results
-  const rate1 = toRay(1.4)
-  const daiDebt1 = toWad(96)
-  const daiTokens1 = mulRay(daiDebt1, rate1)
   const initialDai = daiTokens1
 
   let snapshot: any

@@ -13,7 +13,7 @@ contract('Pool', async (accounts) => {
   let [owner, user1, user2, operator, from, to] = accounts
 
   // These values impact the pool results
-  const rate1 = toRay(1.4)
+  const rate1 = toRay(1.02)
   const daiDebt1 = toWad(96)
   const daiTokens1 = mulRay(daiDebt1, rate1)
   const yDaiTokens1 = daiTokens1
@@ -152,7 +152,7 @@ contract('Pool', async (accounts) => {
       await yDai1.approve(pool.address, oneToken, { from: from })
       const event = (await pool.sellYDai(from, to, oneToken, { from: operator })).logs[3]
 
-      const expectedDaiOut = new BN(oneToken.toString()).mul(new BN('99814')).div(new BN('100000')) // I just hate javascript
+      const expectedDaiOut = new BN(oneToken.toString()).mul(new BN('99745')).div(new BN('100000'))
       const daiOut = new BN(await dai.balanceOf(to))
 
       assert.equal(event.event, 'Trade')
@@ -197,7 +197,7 @@ contract('Pool', async (accounts) => {
       await yDai1.approve(pool.address, yDaiTokens1, { from: from })
       const event = (await pool.buyDai(from, to, oneToken, { from: operator })).logs[3]
 
-      const expectedYDaiIn = new BN(oneToken.toString()).mul(new BN('100190')).div(new BN('100000')) // I just hate javascript
+      const expectedYDaiIn = new BN(oneToken.toString()).mul(new BN('100260')).div(new BN('100000'))
       const yDaiIn = new BN(yDaiTokens1.toString()).sub(new BN(await yDai1.balanceOf(from)))
 
       assert.equal(event.event, 'Trade')
@@ -242,8 +242,8 @@ contract('Pool', async (accounts) => {
         const tx = await pool.mint(user1, user2, oneToken, { from: user1 })
         const event = tx.logs[tx.logs.length - 1]
 
-        const expectedMinted = new BN('1316595685900000000')
-        const expectedYDaiIn = new BN('336985800550000000')
+        const expectedMinted = new BN('1476276421990000000')
+        const expectedYDaiIn = new BN('518626520770000000')
 
         const minted = new BN(await pool.balanceOf(user2)).sub(poolTokensBefore)
         const yDaiIn = yDaiBefore.sub(new BN(await yDai1.balanceOf(user1)))
@@ -279,8 +279,8 @@ contract('Pool', async (accounts) => {
         const tx = await pool.burn(user1, user2, oneToken, { from: user1 })
         const event = tx.logs[tx.logs.length - 1]
 
-        const expectedYDaiOut = new BN('255952380950000000')
-        const expectedDaiOut = new BN('759534616990000000')
+        const expectedYDaiOut = new BN('351307189540000000')
+        const expectedDaiOut = new BN('677379916900000000')
 
         const yDaiOut = yDaiReservesBefore.sub(new BN(await yDai1.balanceOf(pool.address)))
         const daiOut = daiReservesBefore.sub(new BN(await dai.balanceOf(pool.address)))
@@ -328,7 +328,7 @@ contract('Pool', async (accounts) => {
         await dai.approve(pool.address, oneToken, { from: from })
         const event = (await pool.sellDai(from, to, oneToken, { from: operator })).logs[3]
 
-        const expectedYDaiOut = new BN(oneToken.toString()).mul(new BN('113160')).div(new BN('100000')) // I just hate javascript
+        const expectedYDaiOut = new BN(oneToken.toString()).mul(new BN('118480')).div(new BN('100000'))
         const yDaiOut = new BN(await yDai1.balanceOf(to))
 
         assert.equal(event.event, 'Trade')
@@ -377,7 +377,7 @@ contract('Pool', async (accounts) => {
         await dai.approve(pool.address, daiTokens1, { from: from })
         const event = (await pool.buyYDai(from, to, oneToken, { from: operator })).logs[3]
 
-        const expectedDaiIn = new BN(oneToken.toString()).mul(new BN('88349')).div(new BN('100000')) // I just hate javascript
+        const expectedDaiIn = new BN(oneToken.toString()).mul(new BN('84361')).div(new BN('100000'))
         const daiIn = new BN(daiTokens1.toString()).sub(new BN(await dai.balanceOf(from)))
 
         assert.equal(event.event, 'Trade')

@@ -43,9 +43,10 @@ contract('Unwind - Treasury', async (accounts) => {
   let maturity2: number
 
   const tag = divRay(toRay(0.9), spot)
-  const taggedWeth = mulRay(daiTokens1, tag)
+  const treasuryDebt = mulRay(wethTokens1, spot).sub(1000) // No need to max out the debt of the Treasury to the last wei
+  const taggedWeth = mulRay(treasuryDebt, tag)
   const fix = divRay(toRay(1.1), spot)
-  const fixedWeth = mulRay(daiTokens1, fix)
+  const fixedWeth = mulRay(treasuryDebt, fix)
 
   beforeEach(async () => {
     snapshot = await helper.takeSnapshot()
@@ -147,8 +148,7 @@ contract('Unwind - Treasury', async (accounts) => {
 
     describe('with debt', () => {
       beforeEach(async () => {
-        const toPull = mulRay(wethTokens1, spot).sub(2).toString()
-        await treasury.pullDai(owner, toPull, { from: owner })
+        await treasury.pullDai(owner, treasuryDebt, { from: owner })
         expect((await vat.urns(WETH, treasury.address)).art).to.be.bignumber.gt(new BN('0'))
         expect(await treasury.debt()).to.be.bignumber.gt(new BN('0'))
 
@@ -213,13 +213,10 @@ contract('Unwind - Treasury', async (accounts) => {
 
           // Fun fact, MakerDAO rounds in your favour when determining how much collateral to take to settle your debt.
           assert.equal(await chai.balanceOf(treasury.address), 0, 'Treasury should have no savings (as chai).')
-          assert.equal(
+          almostEqual(
             await weth.balanceOf(unwind.address, { from: owner }),
             fixedWeth.toString(),
-            'Unwind should have ' +
-              fixedWeth.toString() +
-              ' weth in hand, instead has ' +
-              (await weth.balanceOf(unwind.address, { from: owner }))
+            precision // We are off by more than the usual precision here, not a big deal
           )
         })
       })

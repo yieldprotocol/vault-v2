@@ -26,7 +26,7 @@ contract('Unwind - Liquidations', async (accounts) => {
   let maturity1: number
   let maturity2: number
 
-  const rate2 = toRay(1.5)
+  const rate2 = toRay(1.3) // At the time of writing, rate is 1.02004188
 
   const fix = divRay(toRay(1.0), mulRay(spot, toRay(1.1)))
 
@@ -129,17 +129,28 @@ contract('Unwind - Liquidations', async (accounts) => {
         const userBalance = await weth.balanceOf(user2, { from: user2 })
         const userVault = await liquidations.vaults(user2, { from: owner })
         const settlingCost = mulRay(userVault.debt.toString(), fix)
-        const wethRemainder = subBN(userVault.collateral.toString(), settlingCost)
+        const wethRemainder = bnify(userVault.collateral.toString()).sub(settlingCost)
 
         assert.equal(userBalance, 0, 'User2 should have no weth')
 
         await unwind.settleLiquidations(user2, { from: owner })
 
-        assert.equal(
-          await weth.balanceOf(user2, { from: user2 }),
-          wethRemainder.toString(),
-          'User2 should have ' + wethRemainder + ' weth, instead has ' + (await weth.balanceOf(user2, { from: user2 }))
-        )
+        if (wethRemainder.lt(new BN('0'))) {
+          assert.equal(
+            await weth.balanceOf(user2, { from: user2 }),
+            0,
+            'User2 should have no weth, instead has ' + (await weth.balanceOf(user2, { from: user2 }))
+          )
+        } else {
+          assert.equal(
+            await weth.balanceOf(user2, { from: user2 }),
+            wethRemainder.toString(),
+            'User2 should have ' +
+              wethRemainder +
+              ' weth, instead has ' +
+              (await weth.balanceOf(user2, { from: user2 }))
+          )
+        }
       })
     })
   })

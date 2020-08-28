@@ -12,7 +12,7 @@ contract('YieldProxy - LimitPool', async (accounts) => {
   let [owner, user1, operator, from, to] = accounts
 
   // These values impact the pool results
-  const rate1 = toRay(1.4)
+  const rate1 = toRay(1.02)
   const daiDebt1 = toWad(96)
   const daiTokens1 = mulRay(daiDebt1, rate1)
   const yDaiTokens1 = daiTokens1
@@ -61,7 +61,7 @@ contract('YieldProxy - LimitPool', async (accounts) => {
       await yDai1.mint(from, yDaiTokens1, { from: owner })
       await limitPool.buyDai(pool.address, to, oneToken, oneToken.mul(2), { from: from })
 
-      const expectedYDaiIn = new BN(oneToken.toString()).mul(new BN('10019')).div(new BN('10000')) // I just hate javascript
+      const expectedYDaiIn = new BN(oneToken.toString()).mul(new BN('100260')).div(new BN('100000'))
       const yDaiIn = new BN(yDaiTokens1.toString()).sub(new BN(await yDai1.balanceOf(from)))
       expect(yDaiIn).to.be.bignumber.gt(expectedYDaiIn.mul(new BN('9999')).div(new BN('10000')))
       expect(yDaiIn).to.be.bignumber.lt(expectedYDaiIn.mul(new BN('10001')).div(new BN('10000')))
@@ -84,7 +84,7 @@ contract('YieldProxy - LimitPool', async (accounts) => {
 
       assert.equal(await yDai1.balanceOf(from), 0, "'From' wallet should have no yDai tokens")
 
-      const expectedDaiOut = new BN(oneToken.toString()).mul(new BN('99814')).div(new BN('100000')) // I just hate javascript
+      const expectedDaiOut = new BN(oneToken.toString()).mul(new BN('99745')).div(new BN('100000'))
       const daiOut = new BN(await dai.balanceOf(to))
       expect(daiOut).to.be.bignumber.gt(expectedDaiOut.mul(new BN('9999')).div(new BN('10000')))
       expect(daiOut).to.be.bignumber.lt(expectedDaiOut.mul(new BN('10001')).div(new BN('10000')))
@@ -117,7 +117,7 @@ contract('YieldProxy - LimitPool', async (accounts) => {
           "'From' wallet should have " + daiTokens1.sub(oneToken) + ' dai tokens'
         )
 
-        const expectedYDaiOut = new BN(oneToken.toString()).mul(new BN('1132')).div(new BN('1000')) // I just hate javascript
+        const expectedYDaiOut = new BN(oneToken.toString()).mul(new BN('118480')).div(new BN('100000'))
         const yDaiOut = new BN(await yDai1.balanceOf(to))
         // This is the lowest precision achieved.
         expect(yDaiOut).to.be.bignumber.gt(expectedYDaiOut.mul(new BN('999')).div(new BN('1000')))
@@ -136,7 +136,7 @@ contract('YieldProxy - LimitPool', async (accounts) => {
 
         assert.equal(await yDai1.balanceOf(to), oneToken.toString(), "'To' wallet should have 1 yDai token")
 
-        const expectedDaiIn = new BN(oneToken.toString()).mul(new BN('8835')).div(new BN('10000')) // I just hate javascript
+        const expectedDaiIn = new BN(oneToken.toString()).mul(new BN('84361')).div(new BN('100000'))
         const daiIn = new BN(daiTokens1.toString()).sub(new BN(await dai.balanceOf(from)))
         expect(daiIn).to.be.bignumber.gt(expectedDaiIn.mul(new BN('9999')).div(new BN('10000')))
         expect(daiIn).to.be.bignumber.lt(expectedDaiIn.mul(new BN('10001')).div(new BN('10000')))

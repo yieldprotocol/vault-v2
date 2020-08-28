@@ -108,7 +108,7 @@ export class MakerEnvironment {
     await this.vat.hope(this.daiJoin.address, { from: user })
     await this.vat.hope(this.wethJoin.address, { from: user })
 
-    const _daiDebt = divrupRay(_daiTokens, _rate).toString()
+    const _daiDebt = divrupRay(_daiTokens, _rate).add(2).toString() // For very low values of rate, we can lose up to two wei dai debt, reverting the exit below
     const _wethTokens = divRay(_daiTokens, spot).mul(2).toString() // We post twice the amount of weth needed to remain collateralized after future rate increases
 
     await this.weth.deposit({ from: user, value: _wethTokens })
