@@ -1,5 +1,9 @@
 import { BigNumber, BigNumberish } from 'ethers'
 import { formatBytes32String } from 'ethers/lib/utils'
+import { expect } from 'chai'
+
+/// @dev Converts a bignumberish to a BigNumber (this is useful for compatibility between BN and BigNumber)
+export const bnify = (num: BigNumberish) => BigNumber.from(num.toString())
 
 /// @dev Converts a BigNumberish to WAD precision, for BigNumberish up to 10 decimal places
 export function toWad(value: BigNumberish): BigNumber {
@@ -37,6 +41,25 @@ export function mulRay(x: BigNumberish, ray: BigNumberish): BigNumber {
   return BigNumber.from(x).mul(BigNumber.from(ray)).div(UNIT)
 }
 
+/// @dev Divides x by y, rounding up
+export function divrup(x: BigNumber, y: BigNumber): BigNumber {
+  const z = BigNumber.from(x).mul(10).div(BigNumber.from(y))
+  if (z.mod(10).gt(0)) return z.div(10).add(1)
+  return z.div(10)
+}
+
+// Checks if 2 bignumberish are almost-equal with up to `precision` room for wiggle which by default is 1
+export function almostEqual(x: BigNumberish, y: BigNumberish, precision: BigNumberish = 1) {
+  x = bnify(x)
+  y = bnify(y)
+
+  if (x.gt(y)) {
+    expect(x.sub(y).lte(precision)).to.be.true
+  } else {
+    expect(y.sub(x).lte(precision)).to.be.true
+  }
+}
+
 /// @dev Divides a BigNumberish in any precision by a BigNumberish in RAY precision, with the output in the first parameter's precision.
 /// I.e. divRay(wad(x), ray(y)) = wad(x/y)
 export function divRay(x: BigNumberish, ray: BigNumberish): BigNumber {
@@ -63,13 +86,14 @@ const UNIT: BigNumber = BigNumber.from(10).pow(BigNumber.from(27))
 
 export const limits = toRad(10000)
 
-export const spot = toRay(150)
-export const chi1 = toRay(1.2)
+export const spot = toRay(353)
+export const chi1 = toRay(1.1)
 export const rate1 = toRay(1.4)
+export const precision = 2 // Loss in wei that is tolerated with each operation
 
-export const daiDebt1 = toWad(120)
-export const daiTokens1 = mulRay(daiDebt1, rate1)
+export const daiDebt1 = toWad(120).toString()
+export const daiTokens1 = mulRay(daiDebt1, rate1).toString()
 export const wethTokens1 = divRay(daiTokens1, spot).toString()
-export const chaiTokens1 = divRay(daiTokens1, chi1)
+export const chaiTokens1 = divRay(daiTokens1, chi1).toString()
 export const tag = divRay(toRay(1.0), spot)
 export const fix = divRay(toRay(1.0), mulRay(spot, toRay(1.1)))

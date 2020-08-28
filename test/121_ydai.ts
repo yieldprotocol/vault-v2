@@ -14,7 +14,7 @@ import { BN, expectEvent, expectRevert } from '@openzeppelin/test-helpers'
 contract('yDai', async (accounts) => {
   let [owner, user1, user2] = accounts
 
-  const rate2 = toRay(1.82)
+  // const rate2 = toRay(1.82)
   const chi2 = toRay(1.5)
   const chiDifferential = divRay(chi2, chi1)
   const daiTokens2 = mulRay(daiTokens1, chiDifferential)
@@ -114,12 +114,12 @@ contract('yDai', async (accounts) => {
       'Parameters',
       {
         user: flashMinter.address,
-        amount: daiTokens1.toString(),
+        amount: daiTokens1,
         data: web3.utils.fromAscii('DATA'),
       }
     )
 
-    assert.equal(await flashMinter.flashBalance(), daiTokens1.toString(), 'FlashMinter should have seen the tokens')
+    assert.equal(await flashMinter.flashBalance(), daiTokens1, 'FlashMinter should have seen the tokens')
     assert.equal(await yDai1.totalSupply(), yDaiSupply.toString(), 'There should be no change in yDai supply')
   })
 
@@ -156,12 +156,12 @@ contract('yDai', async (accounts) => {
         'Parameters',
         {
           user: flashMinter.address,
-          amount: daiTokens1.toString(),
+          amount: daiTokens1,
           data: web3.utils.fromAscii('DATA'),
         }
       )
 
-      assert.equal(await flashMinter.flashBalance(), daiTokens1.toString(), 'FlashMinter should have seen the tokens')
+      assert.equal(await flashMinter.flashBalance(), daiTokens1, 'FlashMinter should have seen the tokens')
       assert.equal(await yDai1.totalSupply(), yDaiSupply.toString(), 'There should be no change in yDai supply')
     })
 
@@ -174,12 +174,14 @@ contract('yDai', async (accounts) => {
     })
 
     it('yDai1 rate gets fixed at maturity time', async () => {
+      const rate2 = toRay(1.82)
       await vat.fold(WETH, vat.address, subBN(rate2, rate1), { from: owner })
 
       assert.equal((await yDai1.rate0()).toString(), rate1.toString(), 'Rate at maturity should be ' + rate1)
     })
 
     it('rateGrowth returns the rate differential between now and maturity', async () => {
+      const rate2 = toRay(1.82)
       await vat.fold(WETH, vat.address, subBN(rate2, rate1), { from: owner })
 
       assert.equal(
@@ -200,6 +202,7 @@ contract('yDai', async (accounts) => {
     })
 
     it('chiGrowth returns the chi differential between now and maturity', async () => {
+      const rate2 = mulRay(rate1, chiDifferential).add(toRay(0.1))
       await vat.fold(WETH, vat.address, subBN(rate2, rate1), { from: owner })
       await pot.setChi(chi2, { from: owner })
 
@@ -211,18 +214,19 @@ contract('yDai', async (accounts) => {
     })
 
     it('redeem burns yDai1 to return dai, pulls dai from Treasury', async () => {
-      assert.equal(await yDai1.balanceOf(user1), daiTokens1.toString(), 'User1 does not have yDai1')
+      assert.equal(await yDai1.balanceOf(user1), daiTokens1, 'User1 does not have yDai1')
       assert.equal(await dai.balanceOf(user2), 0, 'User2 has dai')
 
       await yDai1.approve(yDai1.address, daiTokens1, { from: user1 })
       await yDai1.redeem(user1, user2, daiTokens1, { from: user1 })
 
-      assert.equal(await dai.balanceOf(user2), daiTokens1.toString(), 'User2 should have dai')
+      assert.equal(await dai.balanceOf(user2), daiTokens1, 'User2 should have dai')
       assert.equal(await yDai1.balanceOf(user1), 0, 'User1 should not have yDai1')
     })
 
     describe('once chi increases', () => {
       beforeEach(async () => {
+        const rate2 = mulRay(rate1, chiDifferential).add(toRay(0.1))
         await vat.fold(WETH, vat.address, subBN(rate2, rate1), { from: owner }) // Keeping above chi
         await pot.setChi(chi2, { from: owner })
 
@@ -236,7 +240,7 @@ contract('yDai', async (accounts) => {
       it('redeem with increased chi returns more dai', async () => {
         // Redeem `daiTokens1` yDai to obtain `daiTokens1` * `chiDifferential`
 
-        assert.equal(await yDai1.balanceOf(user1), daiTokens1.toString(), 'User1 does not have yDai1')
+        assert.equal(await yDai1.balanceOf(user1), daiTokens1, 'User1 does not have yDai1')
 
         await yDai1.approve(yDai1.address, daiTokens1, { from: user1 })
         await yDai1.redeem(user1, user1, daiTokens1, { from: user1 })

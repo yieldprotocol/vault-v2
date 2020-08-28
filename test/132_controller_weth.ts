@@ -6,17 +6,23 @@ import { BN, expectRevert } from '@openzeppelin/test-helpers'
 import {
   WETH,
   INVALID_COLLATERAL,
+  spot,
   rate1,
   daiTokens1,
   wethTokens1,
+  toWad,
   toRay,
   mulRay,
   divrupRay,
   addBN,
   subBN,
+  bnify,
+  precision,
+  almostEqual,
 } from './shared/utils'
 import { MakerEnvironment, YieldEnvironmentLite, Contract } from './shared/fixtures'
 import { BigNumber } from 'ethers'
+import { assert, expect } from 'chai'
 
 contract('Controller - Weth', async (accounts) => {
   let [owner, user1, user2, user3] = accounts
@@ -24,6 +30,7 @@ contract('Controller - Weth', async (accounts) => {
   let snapshot: any
   let snapshotId: string
   let maker: MakerEnvironment
+  let env: YieldEnvironmentLite
 
   let weth: Contract
   let dai: Contract
@@ -44,7 +51,7 @@ contract('Controller - Weth', async (accounts) => {
     maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000
     maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000
 
-    const env = await YieldEnvironmentLite.setup([maturity1, maturity2])
+    env = await YieldEnvironmentLite.setup([maturity1, maturity2])
     maker = env.maker
     controller = env.controller
     treasury = env.treasury
@@ -108,20 +115,19 @@ contract('Controller - Weth', async (accounts) => {
     assert.equal(event.event, 'Posted')
     assert.equal(bytes32ToString(event.args.collateral), bytes32ToString(WETH))
     assert.equal(event.args.user, user2)
-    assert.equal(event.args.amount, wethTokens1.toString())
-    assert.equal(
-      (await vat.urns(WETH, treasury.address)).ink,
-      wethTokens1.toString(),
-      'Treasury should have weth in MakerDAO'
-    )
+    assert.equal(event.args.amount, wethTokens1)
+    assert.equal((await vat.urns(WETH, treasury.address)).ink, wethTokens1, 'Treasury should have weth in MakerDAO')
     assert.equal(
       await controller.powerOf(WETH, user2),
-      daiTokens1.toString(),
-      'User2 should have ' + daiTokens1 + ' borrowing power, instead has ' + (await controller.powerOf(WETH, user2))
+      mulRay(wethTokens1, spot).toString(),
+      'User2 should have ' +
+        mulRay(wethTokens1, spot) +
+        ' borrowing power, instead has ' +
+        (await controller.powerOf(WETH, user2))
     )
     assert.equal(
       await controller.posted(WETH, user2),
-      wethTokens1.toString(),
+      wethTokens1,
       'User2 should have ' + wethTokens1 + ' weth posted, instead has ' + (await controller.posted(WETH, user2))
     )
   })
@@ -139,8 +145,8 @@ contract('Controller - Weth', async (accounts) => {
 
     it("doesn't allow to withdraw weth and leave collateral under dust", async () => {
       // Repay maturity1 completely
-      const posted = (await controller.posted(WETH, user1, { from: user1 })).toString()
-      const toWithdraw = new BN(posted).sub(new BN('1000')).toString()
+      const posted = await controller.posted(WETH, user1, { from: user1 })
+      const toWithdraw = bnify(posted).sub('1000')
 
       await expectRevert(controller.withdraw(WETH, user1, user2, toWithdraw, { from: user1 }), 'Controller: Below dust')
     })
@@ -151,18 +157,19 @@ contract('Controller - Weth', async (accounts) => {
       assert.equal(event.event, 'Posted')
       assert.equal(bytes32ToString(event.args.collateral), bytes32ToString(WETH))
       assert.equal(event.args.user, user1)
-      assert.equal(event.args.amount.toString(), '-' + wethTokens1)
+      assert.equal(event.args.amount, '-' + wethTokens1)
       assert.equal(await weth.balanceOf(user2), wethTokens1, 'User2 should have collateral in hand')
       assert.equal(
         (await vat.urns(WETH, treasury.address)).ink,
-        wethTokens1.toString(),
+        wethTokens1,
         'Treasury should have ' + wethTokens1 + ' weth in MakerDAO'
       )
       assert.equal(await controller.powerOf(WETH, user1), 0, 'User1 should not have borrowing power')
     })
 
     it('allows to borrow yDai', async () => {
-      const event: any = (await controller.borrow(WETH, maturity1, user1, user2, daiTokens1, { from: user1 })).logs[0]
+      const toBorrow = (await controller.powerOf(WETH, user1)).toString()
+      const event: any = (await controller.borrow(WETH, maturity1, user1, user2, toBorrow, { from: user1 })).logs[0]
 
       assert.equal(event.event, 'Borrowed')
       assert.equal(bytes32ToString(event.args.collateral), bytes32ToString(WETH))
@@ -170,10 +177,10 @@ contract('Controller - Weth', async (accounts) => {
       assert.equal(event.args.user, user1)
       assert.equal(
         event.args.amount,
-        daiTokens1.toString() // This is actually a yDai amount
+        toBorrow // This is actually a yDai amount
       )
-      assert.equal(await yDai1.balanceOf(user2), daiTokens1.toString(), 'User2 should have yDai')
-      assert.equal(await controller.debtDai(WETH, maturity1, user1), daiTokens1.toString(), 'User1 should have debt')
+      assert.equal(await yDai1.balanceOf(user2), toBorrow, 'User2 should have yDai')
+      assert.equal(await controller.debtDai(WETH, maturity1, user1), toBorrow, 'User1 should have debt')
     })
 
     it("doesn't allow to borrow yDai beyond borrowing power", async () => {
@@ -185,31 +192,35 @@ contract('Controller - Weth', async (accounts) => {
 
     describe('with borrowed yDai', () => {
       beforeEach(async () => {
-        await controller.borrow(WETH, maturity1, user1, user1, daiTokens1, { from: user1 })
-        await controller.borrow(WETH, maturity1, user2, user2, daiTokens1, { from: user2 })
+        let toBorrow = (await controller.powerOf(WETH, user1)).toString()
+        await controller.borrow(WETH, maturity1, user1, user1, toBorrow, { from: user1 })
+        toBorrow = (await controller.powerOf(WETH, user2)).toString()
+        await controller.borrow(WETH, maturity1, user2, user2, toBorrow, { from: user2 })
       })
 
       it('allows to borrow from a second series', async () => {
         await weth.deposit({ from: user1, value: wethTokens1 })
         await weth.approve(treasury.address, wethTokens1, { from: user1 })
         await controller.post(WETH, user1, user1, wethTokens1, { from: user1 })
-        await controller.borrow(WETH, maturity2, user1, user1, daiTokens1, { from: user1 })
+        const debt = bnify(await controller.totalDebtDai(WETH, user1))
+        const toBorrow = bnify(await controller.powerOf(WETH, user1)).sub(debt)
+        await controller.borrow(WETH, maturity2, user1, user1, toBorrow, { from: user1 })
 
-        assert.equal(await yDai1.balanceOf(user1), daiTokens1.toString(), 'User1 should have yDai')
+        assert.equal(await yDai1.balanceOf(user1), debt.toString(), 'User1 should have yDai')
         assert.equal(
           await controller.debtDai(WETH, maturity1, user1),
-          daiTokens1.toString(),
+          debt.toString(),
           'User1 should have debt for series 1'
         )
-        assert.equal(await yDai2.balanceOf(user1), daiTokens1.toString(), 'User1 should have yDai2')
+        assert.equal(await yDai2.balanceOf(user1), toBorrow.toString(), 'User1 should have yDai2')
         assert.equal(
           await controller.debtDai(WETH, maturity2, user1),
-          daiTokens1.toString(),
+          toBorrow.toString(),
           'User1 should have debt for series 2'
         )
         assert.equal(
           await controller.totalDebtDai(WETH, user1),
-          addBN(daiTokens1, daiTokens1).toString(),
+          debt.add(toBorrow).toString(),
           'User1 should a combined debt'
         )
       })
@@ -219,12 +230,14 @@ contract('Controller - Weth', async (accounts) => {
           await weth.deposit({ from: user1, value: wethTokens1 })
           await weth.approve(treasury.address, wethTokens1, { from: user1 })
           await controller.post(WETH, user1, user1, wethTokens1, { from: user1 })
-          await controller.borrow(WETH, maturity2, user1, user1, daiTokens1, { from: user1 })
+          let toBorrow = (await env.unlockedOf(WETH, user1)).toString()
+          await controller.borrow(WETH, maturity2, user1, user1, toBorrow, { from: user1 })
 
           await weth.deposit({ from: user2, value: wethTokens1 })
           await weth.approve(treasury.address, wethTokens1, { from: user2 })
           await controller.post(WETH, user2, user2, wethTokens1, { from: user2 })
-          await controller.borrow(WETH, maturity2, user2, user2, daiTokens1, { from: user2 })
+          toBorrow = (await env.unlockedOf(WETH, user2)).toString()
+          await controller.borrow(WETH, maturity2, user2, user2, toBorrow, { from: user2 })
         })
 
         it("doesn't allow to withdraw and become undercollateralized", async () => {
@@ -235,8 +248,9 @@ contract('Controller - Weth', async (accounts) => {
         })
 
         it('allows to repay yDai', async () => {
-          await yDai1.approve(treasury.address, daiTokens1, { from: user2 })
-          const event = (await controller.repayYDai(WETH, maturity1, user2, user1, daiTokens1, { from: user2 })).logs[0]
+          const debt = bnify(await controller.debtDai(WETH, maturity1, user1)).toString()
+          await yDai1.approve(treasury.address, debt, { from: user2 })
+          const event = (await controller.repayYDai(WETH, maturity1, user2, user1, debt, { from: user2 })).logs[0]
 
           assert.equal(event.event, 'Borrowed')
           assert.equal(bytes32ToString(event.args.collateral), bytes32ToString(WETH))
@@ -244,7 +258,7 @@ contract('Controller - Weth', async (accounts) => {
           assert.equal(event.args.user, user1)
           assert.equal(
             event.args.amount,
-            daiTokens1.mul(-1).toString() // This is actually a yDai amount
+            '-' + debt // This is actually a yDai amount
           )
           assert.equal(await yDai1.balanceOf(user2), 0, 'User2 should not have yDai')
           assert.equal(await controller.debtDai(WETH, maturity1, user1), 0, 'User1 should not have debt')
@@ -252,8 +266,9 @@ contract('Controller - Weth', async (accounts) => {
 
         it('allows to repay yDai debt with Dai', async () => {
           await maker.getDai(user2, daiTokens1, rate1)
-          await dai.approve(treasury.address, daiTokens1, { from: user2 })
-          const event = (await controller.repayDai(WETH, maturity1, user2, user1, daiTokens1, { from: user2 })).logs[0]
+          const debt = (await controller.debtDai(WETH, maturity1, user1)).toString()
+          await dai.approve(treasury.address, debt, { from: user2 })
+          const event = (await controller.repayDai(WETH, maturity1, user2, user1, debt, { from: user2 })).logs[0]
 
           assert.equal(event.event, 'Borrowed')
           assert.equal(bytes32ToString(event.args.collateral), bytes32ToString(WETH))
@@ -261,29 +276,19 @@ contract('Controller - Weth', async (accounts) => {
           assert.equal(event.args.user, user1)
           assert.equal(
             event.args.amount,
-            daiTokens1.mul(-1).toString() // This is actually a yDai amount
+            '-' + debt // This is actually a yDai amount
           )
-          assert.equal(await dai.balanceOf(user2), 0, 'User2 should not have yDai')
+          assert.equal(await dai.balanceOf(user2), bnify(daiTokens1).sub(debt).toString(), 'User should have less Dai')
           assert.equal(await controller.debtDai(WETH, maturity1, user1), 0, 'User1 should not have debt')
         })
 
         it('when dai is provided in excess for repayment, only the necessary amount is taken', async () => {
-          // Mint some yDai the sneaky way
-          await yDai1.orchestrate(owner, id('mint(address,uint256)'), { from: owner })
-          await yDai1.mint(user1, 1, { from: owner }) // 1 extra yDai wei
-          const yDaiTokens = addBN(daiTokens1, 1) // daiTokens1 + 1 wei
+          await maker.getDai(user2, bnify(daiTokens1).mul(2), rate1)
+          const balance = (await dai.balanceOf(user2)).toString()
+          await dai.approve(treasury.address, balance, { from: user2 })
+          await controller.repayDai(WETH, maturity1, user2, user1, balance, { from: user2 })
 
-          assert.equal(await yDai1.balanceOf(user1), yDaiTokens.toString(), 'User1 does not have yDai')
-          assert.equal(
-            await controller.debtDai(WETH, maturity1, user1),
-            daiTokens1.toString(),
-            'User1 does not have debt'
-          )
-
-          await yDai1.approve(treasury.address, yDaiTokens, { from: user1 })
-          await controller.repayYDai(WETH, maturity1, user1, user1, yDaiTokens, { from: user1 })
-
-          assert.equal(await yDai1.balanceOf(user1), 1, 'User1 should have yDai left')
+          expect(await dai.balanceOf(user2)).to.be.bignumber.gt(new BN('0'))
           assert.equal(await controller.debtDai(WETH, maturity1, user1), 0, 'User1 should not have debt')
         })
 
@@ -291,6 +296,7 @@ contract('Controller - Weth', async (accounts) => {
         let rateIncrease: BigNumber
         let rateDifferential: BigNumber
         let increasedDebt: BigNumber
+        let debt: BigNumber
         let debtIncrease: BigNumber
         let rate2: BigNumber
 
@@ -300,15 +306,13 @@ contract('Controller - Weth', async (accounts) => {
             rateIncrease = toRay(0.25)
             rateDifferential = divrupRay(rate1.add(rateIncrease), rate1) // YDai.rateGrowth() rounds up.
             rate2 = rate1.add(rateIncrease)
-            increasedDebt = mulRay(daiTokens1, rateDifferential)
-            debtIncrease = subBN(increasedDebt, daiTokens1)
+            debt = mulRay(wethTokens1, spot)
+            increasedDebt = mulRay(debt, rateDifferential)
+            debtIncrease = subBN(increasedDebt, debt)
 
-            assert.equal(await yDai1.balanceOf(user1), daiTokens1.toString(), 'User1 does not have yDai')
-            assert.equal(
-              await controller.debtDai(WETH, maturity1, user1),
-              daiTokens1.toString(),
-              'User1 does not have debt'
-            )
+            expect(await yDai1.balanceOf(user1)).to.be.bignumber.gt(new BN('0'))
+            expect(await controller.debtDai(WETH, maturity1, user1)).to.be.bignumber.gt(new BN('0'))
+
             // yDai matures
             await helper.advanceTime(1000)
             await helper.advanceBlock()
@@ -331,75 +335,51 @@ contract('Controller - Weth', async (accounts) => {
           it("as rate increases after maturity, the debt doesn't in when measured in yDai", async () => {
             assert.equal(
               await controller.debtYDai(WETH, maturity1, user1),
-              daiTokens1.toString(),
+              debt.toString(),
               'User1 should have ' +
-                daiTokens1 +
+                debt +
                 ' debt after the rate change, instead has ' +
                 (await controller.debtYDai(WETH, maturity1, user1))
             )
           })
 
           it('borrowing after maturity is still allowed', async () => {
-            const yDaiDebt: BigNumber = daiTokens1
-            const increasedWeth: BigNumber = addBN(mulRay(wethTokens1, rateDifferential), 1)
-            await weth.deposit({ from: user3, value: increasedWeth.toString() })
-            await weth.approve(treasury.address, increasedWeth, { from: user3 })
-            await controller.post(WETH, user3, user3, increasedWeth, { from: user3 })
-            await controller.borrow(WETH, maturity1, user3, user3, yDaiDebt, { from: user3 })
+            const oneToken = toWad(1)
+            const toPost = mulRay(mulRay(oneToken, spot), rateDifferential).toString()
+            await weth.deposit({ from: user3, value: toPost })
+            await weth.approve(treasury.address, toPost, { from: user3 })
+            await controller.post(WETH, user3, user3, toPost, { from: user3 })
+            const toBorrow = oneToken.toString()
+            await controller.borrow(WETH, maturity1, user3, user3, toBorrow, { from: user3 })
 
             assert.equal(
               await controller.debtYDai(WETH, maturity1, user3),
-              yDaiDebt.toString(),
+              toBorrow.toString(),
               'User3 should have ' +
-                yDaiDebt +
+                toBorrow +
                 ' yDai debt, instead has ' +
                 (await controller.debtYDai(WETH, maturity1, user3))
             )
             assert.equal(
               await controller.debtDai(WETH, maturity1, user3),
-              increasedDebt.toString(),
+              mulRay(toBorrow, rateDifferential).toString(),
               'User3 should have ' +
-                addBN(increasedDebt, daiTokens1) +
+                mulRay(toBorrow, rateDifferential) +
                 ' Dai debt, instead has ' +
                 (await controller.debtDai(WETH, maturity1, user3))
             )
           })
 
           it('borrowing from two series, dai debt is aggregated', async () => {
+            const debt1 = mulRay(mulRay(wethTokens1, spot), rateDifferential)
+            const debt2 = mulRay(wethTokens1, spot)
             assert.equal(
               await controller.totalDebtDai(WETH, user1),
-              addBN(increasedDebt, daiTokens1).toString(),
+              debt1.add(debt2).toString(),
               'User1 should have ' +
-                increasedDebt +
+                debt1.add(debt2) +
                 ' debt after the rate change, instead has ' +
                 (await controller.totalDebtDai(WETH, user1))
-            )
-          })
-
-          it("the yDai required to repay doesn't change after maturity as rate increases", async () => {
-            await yDai1.approve(treasury.address, daiTokens1, { from: user1 })
-            await controller.repayYDai(WETH, maturity1, user1, user1, daiTokens1, { from: user1 })
-
-            assert.equal(await yDai1.balanceOf(user1), 0, 'User1 should not have yDai')
-            assert.equal(
-              await controller.debtDai(WETH, maturity1, user1),
-              0,
-              'User1 should have no dai debt, instead has ' + (await controller.debtDai(WETH, maturity1, user1))
-            )
-          })
-
-          it('more Dai is required to repay after maturity as rate increases', async () => {
-            await maker.getDai(user1, daiTokens1, rate2) // daiTokens1 is not going to be enough anymore
-            await dai.approve(treasury.address, daiTokens1, { from: user1 })
-            await controller.repayDai(WETH, maturity1, user1, user1, daiTokens1, { from: user1 })
-
-            assert.equal(
-              await controller.debtDai(WETH, maturity1, user1),
-              debtIncrease.toString(),
-              'User1 should have ' +
-                debtIncrease +
-                ' dai debt, instead has ' +
-                (await controller.debtDai(WETH, maturity1, user1))
             )
           })
         })

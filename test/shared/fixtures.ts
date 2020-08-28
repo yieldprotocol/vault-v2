@@ -120,7 +120,7 @@ export class MakerEnvironment {
 
   // With rounding somewhere, this might get one less chai wei than expected
   public async getChai(user: string, _chaiTokens: BigNumberish, _chi: BigNumberish, _rate: BigNumberish) {
-    const _daiTokens = mulRay(_chaiTokens, _chi)
+    const _daiTokens = mulRay(_chaiTokens, _chi).add(1)
     await this.getDai(user, _daiTokens, _rate)
     await this.dai.approve(this.chai.address, _daiTokens, { from: user })
     await this.chai.join(user, _daiTokens, { from: user })
@@ -203,6 +203,12 @@ export class YieldEnvironmentLite {
     await this.maker.getChai(user, _chaiTokens, _chi, _rate)
     await this.maker.chai.approve(this.treasury.address, _chaiTokens, { from: user })
     await this.controller.post(CHAI, user, user, _chaiTokens, { from: user })
+  }
+
+  // Retrieve the available yDai borrowing power - only works before rate increases
+  public async unlockedOf(collateral: string, user: string): Promise<BigNumberish> {
+    const debt = await this.controller.totalDebtDai(collateral, user)
+    return (await this.controller.powerOf(collateral, user)).sub(debt)
   }
 }
 

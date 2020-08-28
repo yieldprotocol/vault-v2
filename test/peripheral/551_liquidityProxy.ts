@@ -4,8 +4,8 @@ const LiquidityProxy = artifacts.require('YieldProxy')
 import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
 // @ts-ignore
 import helper from 'ganache-time-traveler'
-import { CHAI, chi1, toWad, toRay, mulRay } from '../shared/utils'
-import { YieldEnvironmentLite, Contract } from '../shared/fixtures'
+import { CHAI, chi1, toWad, toRay, mulRay, divrup, precision, bnify } from '../shared/utils'
+import { MakerEnvironment, YieldEnvironmentLite, Contract } from '../shared/fixtures'
 // @ts-ignore
 import { BN, expectRevert } from '@openzeppelin/test-helpers'
 import { assert, expect } from 'chai'
@@ -23,21 +23,18 @@ contract('YieldProxy - LiquidityProxy', async (accounts) => {
   let snapshot: any
   let snapshotId: string
 
+  let maker: MakerEnvironment
   let env: YieldEnvironmentLite
+  let treasury: Contract
   let controller: Contract
 
   let dai: Contract
+  let chai: Contract
   let pool: Contract
   let yDai1: Contract
   let proxy: Contract
 
   let maturity1: number
-
-  function divrup(x: BigNumber, y: BigNumber): BigNumber {
-    const z = BigNumber.from(x).mul(10).div(BigNumber.from(y))
-    if (z.mod(10).gt(0)) return z.div(10).add(1)
-    return z.div(10)
-  }
 
   const daiIn = (daiReserves: BigNumber, yDaiReserves: BigNumber, daiUsed: BigNumber): BigNumber => {
     return daiUsed.mul(daiReserves).div(daiReserves.add(yDaiReserves))
@@ -48,7 +45,7 @@ contract('YieldProxy - LiquidityProxy', async (accounts) => {
   }
 
   const postedIn = (expectedDebt: BigNumber, chi: BigNumber): BigNumber => {
-    return divrup(expectedDebt.mul(toRay(1)), BigNumber.from(chi))
+    return divrup(expectedDebt.mul(toRay(1)), bnify(chi))
   }
 
   const mintedOut = (poolSupply: BigNumber, daiIn: BigNumber, daiReserves: BigNumber): BigNumber => {
@@ -64,7 +61,10 @@ contract('YieldProxy - LiquidityProxy', async (accounts) => {
     maturity1 = (await web3.eth.getBlock(block)).timestamp + 31556952 // One year
 
     env = await YieldEnvironmentLite.setup([maturity1])
+    maker = env.maker
     dai = env.maker.dai
+    chai = env.maker.chai
+    treasury = env.treasury
     controller = env.controller
     yDai1 = env.yDais[0]
 
@@ -77,7 +77,7 @@ contract('YieldProxy - LiquidityProxy', async (accounts) => {
     // Setup LiquidityProxy
     proxy = await LiquidityProxy.new(env.controller.address, [pool.address])
 
-    const MAX = BigNumber.from('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')
+    const MAX = bnify('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')
     await env.maker.chai.approve(proxy.address, MAX, { from: user1 })
     await dai.approve(proxy.address, MAX, { from: user1 })
     await dai.approve(pool.address, MAX, { from: user1 })
@@ -104,13 +104,13 @@ contract('YieldProxy - LiquidityProxy', async (accounts) => {
     it('mints liquidity tokens with dai only', async () => {
       const oneToken = toWad(1)
 
-      const poolTokensBefore = BigNumber.from((await pool.balanceOf(user2)).toString())
+      const poolTokensBefore = bnify((await pool.balanceOf(user2)).toString())
       const maxYDai = oneToken
 
-      const daiReserves = BigNumber.from((await dai.balanceOf(pool.address)).toString())
-      const yDaiReserves = BigNumber.from((await yDai1.balanceOf(pool.address)).toString())
-      const daiUsed = BigNumber.from(oneToken)
-      const poolSupply = BigNumber.from((await pool.totalSupply()).toString())
+      const daiReserves = bnify((await dai.balanceOf(pool.address)).toString())
+      const yDaiReserves = bnify((await yDai1.balanceOf(pool.address)).toString())
+      const daiUsed = bnify(oneToken)
+      const poolSupply = bnify((await pool.totalSupply()).toString())
 
       // console.log('          adding liquidity...')
       // console.log('          daiReserves: %d', daiReserves.toString())    // d_0
@@ -136,9 +136,9 @@ contract('YieldProxy - LiquidityProxy', async (accounts) => {
       await dai.approve(proxy.address, oneToken, { from: user2 })
       await proxy.addLiquidity(pool.address, daiUsed, maxYDai, { from: user2 })
 
-      const debt = BigNumber.from((await controller.debtYDai(CHAI, maturity1, user2)).toString())
-      const posted = BigNumber.from((await controller.posted(CHAI, user2)).toString())
-      const minted = BigNumber.from((await pool.balanceOf(user2)).toString()).sub(poolTokensBefore)
+      const debt = bnify((await controller.debtYDai(CHAI, maturity1, user2)).toString())
+      const posted = bnify((await controller.posted(CHAI, user2)).toString())
+      const minted = bnify((await pool.balanceOf(user2)).toString()).sub(poolTokensBefore)
 
       //asserts
       assert.equal(
@@ -165,7 +165,7 @@ contract('YieldProxy - LiquidityProxy', async (accounts) => {
     })
 
     it('does not allow borrowing more than max amount', async () => {
-      const oneToken = BigNumber.from(toWad(1))
+      const oneToken = bnify(toWad(1))
 
       await dai.mint(user2, oneToken, { from: owner })
       await dai.approve(proxy.address, oneToken, { from: user2 })
@@ -181,11 +181,16 @@ contract('YieldProxy - LiquidityProxy', async (accounts) => {
         await pool.sellYDai(operator, operator, additionalYDai, { from: operator })
 
         // Give some pool tokens to user2
-        const oneToken = BigNumber.from(toWad(1))
+        const oneToken = bnify(toWad(1))
         const maxBorrow = oneToken
         await dai.mint(user2, oneToken, { from: owner })
         await dai.approve(proxy.address, oneToken, { from: user2 })
         await proxy.addLiquidity(pool.address, oneToken, maxBorrow, { from: user2 })
+
+        // Add some funds to the system to allow for rounding losses when withdrawing chai
+        await maker.getChai(owner, 1000, chi1, rate1) // getChai can't get very small amounts
+        await chai.approve(treasury.address, precision, { from: owner })
+        await controller.post(CHAI, owner, owner, precision, { from: owner })
       })
 
       it('removes liquidity early by selling', async () => {

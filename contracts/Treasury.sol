@@ -13,7 +13,6 @@ import "./helpers/DecimalMath.sol";
 import "./helpers/Orchestrated.sol";
 
 
-
 /**
  * @dev Treasury manages asset transfers between all contracts in the Yield Protocol and other external contracts such as Chai and MakerDAO.
  * Treasury doesn't have any transactional functions available for regular users.
@@ -94,14 +93,6 @@ contract Treasury is ITreasury, Orchestrated(), DecimalMath {
         (, uint256 rate,,,) = vat.ilks(WETH);            // Retrieve the MakerDAO stability fee for Weth
         (, uint256 art) = vat.urns(WETH, address(this)); // Retrieve the Treasury debt in MakerDAO
         return muld(art, rate);
-    }
-
-    /// @dev Returns the Treasury borrowing capacity from MakerDAO, in Dai.
-    /// We can borrow (ink * spot)
-    function power() public view returns(uint256) {
-        (,, uint256 spot,,) = vat.ilks(WETH);            // Collateralization ratio for Weth
-        (uint256 ink,) = vat.urns(WETH, address(this));  // Treasury Weth collateral in MakerDAO
-        return muld(ink, spot);
     }
 
     /// @dev Returns the amount of chai in this contract, converted to Dai.
@@ -252,9 +243,9 @@ contract Treasury is ITreasury, Orchestrated(), DecimalMath {
         onlyLive
     {
         uint256 chi = pot.chi();
-        uint256 daiAmount = muld(chaiAmount, chi);   // dai = price * chai
+        uint256 daiAmount = muldrup(chaiAmount, chi);   // dai = price * chai, we round up, otherwise we won't borrow enough dai
         uint256 toRelease = Math.min(savings(), daiAmount);
-        // As much chai as the Treasury has, can be used, we borrwo dai and convert it to chai for the rest
+        // As much chai as the Treasury has, can be used, we borrow dai and convert it to chai for the rest
 
         uint256 toBorrow = daiAmount - toRelease;    // toRelease can't be greater than daiAmount
         if (toBorrow > 0) {

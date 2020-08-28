@@ -52,14 +52,7 @@ contract('Delegable with signatures', async (accounts: string[]) => {
     const signatureCount = await delegableContract.signatureCount(user)
 
     // Get the EIP712 digest
-    const digest = getSignatureDigest(
-      name,
-      delegableContract.address,
-      chainId,
-      signature,
-      signatureCount,
-      deadline
-    )
+    const digest = getSignatureDigest(name, delegableContract.address, chainId, signature, signatureCount, deadline)
 
     // Sign it
     // NOTE: Using web3.eth.sign will hash the message internally again which

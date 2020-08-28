@@ -1,7 +1,7 @@
 const Pool = artifacts.require('Pool')
 const DaiProxy = artifacts.require('YieldProxy')
 
-import { WETH, wethTokens1, toWad, toRay, subBN, mulRay } from '../shared/utils'
+import { WETH, wethTokens1, toWad, toRay, subBN, mulRay, bnify } from '../shared/utils'
 import { YieldEnvironmentLite, Contract } from '../shared/fixtures'
 import { getSignatureDigest, getPermitDigest, getDaiDigest, getChaiDigest } from '../shared/signatures'
 import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
@@ -34,8 +34,7 @@ contract('YieldProxy - DaiProxy', async (accounts) => {
   const two = toWad(2)
   const yDaiDebt = daiTokens1
 
-  const MAX = BigNumber.from('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')
-  const bnify = (num: any) => BigNumber.from(num.toString())
+  const MAX = bnify('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')
 
   const userPrivateKey = Buffer.from('d49743deccbccc5dc7baa8e69e5be03298da8688a15dd202e20f15d5e0e9a9fb', 'hex')
   const chainId = 31337 // buidlerevm chain id
@@ -244,7 +243,7 @@ contract('YieldProxy - DaiProxy', async (accounts) => {
           from: user1,
         })
 
-        const debt = BigNumber.from((await controller.debtYDai(WETH, maturity1, user2)).toString())
+        const debt = bnify((await controller.debtYDai(WETH, maturity1, user2)).toString())
         expect(debt.lt(yDaiDebt)).to.be.true
         assert.equal(await dai.balanceOf(user1), subBN(daiTokens1, two).toString())
       })

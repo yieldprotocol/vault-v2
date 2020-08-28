@@ -1,13 +1,12 @@
 import { id } from 'ethers/lib/utils'
 // @ts-ignore
 import helper from 'ganache-time-traveler'
-import { BigNumber } from 'ethers'
 // @ts-ignore
 import { BN } from '@openzeppelin/test-helpers'
-import { WETH, spot, rate1, daiTokens1, wethTokens1, toRay, subBN, mulRay, divRay } from './shared/utils'
+import { WETH, spot, rate1, daiTokens1, wethTokens1, toRay, subBN, mulRay, divRay, bnify } from './shared/utils'
 import { YieldEnvironment, Contract } from './shared/fixtures'
 
-contract('Unwind - Controller', async (accounts) => {
+contract('Unwind - Liquidations', async (accounts) => {
   let [owner, user1, user2, user3] = accounts
 
   let snapshot: any
@@ -61,17 +60,19 @@ contract('Unwind - Controller', async (accounts) => {
   describe('with posted collateral and borrowed yDai', () => {
     beforeEach(async () => {
       // Weth setup
-      // await env.postWeth(user1, wethTokens1);
+      await env.postWeth(user2, wethTokens1)
+      let toBorrow = await env.unlockedOf(WETH, user2)
+      await controller.borrow(WETH, maturity1, user2, user2, toBorrow, { from: user2 })
 
-      await env.postWeth(user2, BigNumber.from(wethTokens1).add(1))
-      await controller.borrow(WETH, maturity1, user2, user2, daiTokens1, { from: user2 })
-
-      await env.postWeth(user3, BigNumber.from(wethTokens1).mul(2))
-      await controller.borrow(WETH, maturity1, user3, user3, daiTokens1, { from: user3 })
-      await controller.borrow(WETH, maturity2, user3, user3, daiTokens1, { from: user3 })
+      await env.postWeth(user3, bnify(wethTokens1).mul(2))
+      toBorrow = bnify(await env.unlockedOf(WETH, user3))
+        .div(2)
+        .toString()
+      await controller.borrow(WETH, maturity1, user3, user3, toBorrow, { from: user3 })
+      await controller.borrow(WETH, maturity2, user3, user3, toBorrow, { from: user3 })
 
       // Make sure that end.sol will have enough weth to cash chai savings
-      await env.maker.getDai(owner, BigNumber.from(wethTokens1).mul(10), rate1)
+      await env.maker.getDai(owner, bnify(wethTokens1).mul(10), rate1)
 
       // Make yDai1 borrowers go under by raising the rate, then liquidate them
       await helper.advanceTime(1000)
