@@ -3,7 +3,7 @@ import { id } from 'ethers/lib/utils'
 import helper from 'ganache-time-traveler'
 // @ts-ignore
 import { expectRevert, expectEvent } from '@openzeppelin/test-helpers'
-import { WETH, daiTokens1, wethTokens1 } from './shared/utils'
+import { WETH, daiTokens1, wethTokens1, bnify } from './shared/utils'
 import { YieldEnvironmentLite, Contract } from './shared/fixtures'
 
 contract('yDai - Delegation', async (accounts) => {
@@ -40,10 +40,11 @@ contract('yDai - Delegation', async (accounts) => {
 
     // Post collateral to MakerDAO through Treasury
     await treasury.orchestrate(owner, id('pushWeth(address,uint256)'), { from: owner })
-    await weth.deposit({ from: owner, value: wethTokens1 })
-    await weth.approve(treasury.address, wethTokens1, { from: owner })
-    await treasury.pushWeth(owner, wethTokens1, { from: owner })
-    assert.equal((await vat.urns(WETH, treasury.address)).ink, wethTokens1.toString())
+    const initialCapital = bnify(wethTokens1).add(10).toString()
+    await weth.deposit({ from: owner, value: initialCapital })
+    await weth.approve(treasury.address, initialCapital, { from: owner })
+    await treasury.pushWeth(owner, initialCapital, { from: owner })
+    assert.equal((await vat.urns(WETH, treasury.address)).ink, initialCapital.toString())
 
     // Mint some yDai the sneaky way
     await yDai1.orchestrate(owner, id('mint(address,uint256)'), { from: owner })
@@ -54,7 +55,7 @@ contract('yDai - Delegation', async (accounts) => {
     await helper.advanceBlock()
     await yDai1.mature()
 
-    assert.equal(await yDai1.balanceOf(holder), daiTokens1.toString(), 'Holder does not have yDai')
+    assert.equal(await yDai1.balanceOf(holder), daiTokens1, 'Holder does not have yDai')
     assert.equal(await treasury.savings(), 0, 'Treasury has no savings')
   })
 
@@ -66,8 +67,8 @@ contract('yDai - Delegation', async (accounts) => {
     await yDai1.approve(yDai1.address, daiTokens1, { from: holder })
     await yDai1.redeem(holder, holder, daiTokens1, { from: holder })
 
-    assert.equal(await treasury.debt(), daiTokens1.toString(), 'Treasury should have debt')
-    assert.equal(await dai.balanceOf(holder), daiTokens1.toString(), 'Holder should have dai')
+    assert.equal(await treasury.debt(), daiTokens1, 'Treasury should have debt')
+    assert.equal(await dai.balanceOf(holder), daiTokens1, 'Holder should have dai')
   })
 
   it('redeem is not allowed for non designated accounts', async () => {
@@ -84,8 +85,8 @@ contract('yDai - Delegation', async (accounts) => {
     })
     await yDai1.redeem(holder, holder, daiTokens1, { from: other })
 
-    assert.equal(await treasury.debt(), daiTokens1.toString(), 'Treasury should have debt')
-    assert.equal(await dai.balanceOf(holder), daiTokens1.toString(), 'Holder should have dai')
+    assert.equal(await treasury.debt(), daiTokens1, 'Treasury should have debt')
+    assert.equal(await dai.balanceOf(holder), daiTokens1, 'Holder should have dai')
   })
 
   describe('with delegates', async () => {

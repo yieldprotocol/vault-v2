@@ -1,9 +1,8 @@
 import { id } from 'ethers/lib/utils'
 // @ts-ignore
 import helper from 'ganache-time-traveler'
-import { BigNumber } from 'ethers'
 // @ts-ignore
-import { expectRevert } from '@openzeppelin/test-helpers'
+import { BN, expectRevert } from '@openzeppelin/test-helpers'
 import {
   rate1,
   daiDebt1,
@@ -15,8 +14,12 @@ import {
   toRay,
   mulRay,
   divRay,
+  bnify,
+  almostEqual,
+  precision,
 } from './shared/utils'
 import { YieldEnvironment, Contract } from './shared/fixtures'
+import { assert, expect } from 'chai'
 
 contract('Unwind - Treasury', async (accounts) => {
   let [owner, user] = accounts
@@ -80,8 +83,8 @@ contract('Unwind - Treasury', async (accounts) => {
 
       assert.equal(
         (await vat.urns(WETH, treasury.address)).ink,
-        wethTokens1.toString(),
-        'Treasury should have ' + wethTokens1.toString() + ' weth wei as collateral'
+        wethTokens1,
+        'Treasury should have ' + wethTokens1 + ' weth wei as collateral'
       )
     })
 
@@ -114,9 +117,9 @@ contract('Unwind - Treasury', async (accounts) => {
 
           assert.equal(
             await weth.balanceOf(unwind.address, { from: owner }),
-            wethTokens1.toString(),
+            wethTokens1,
             'Treasury should have ' +
-              wethTokens1.toString() +
+              wethTokens1 +
               ' weth in hand, instead has ' +
               (await weth.balanceOf(unwind.address, { from: owner }))
           )
@@ -144,17 +147,10 @@ contract('Unwind - Treasury', async (accounts) => {
 
     describe('with debt', () => {
       beforeEach(async () => {
-        await treasury.pullDai(owner, daiTokens1, { from: owner })
-        assert.equal(
-          (await vat.urns(WETH, treasury.address)).art,
-          daiDebt1.toString(),
-          'Treasury should have ' + daiDebt1.toString() + ' dai debt.'
-        )
-        assert.equal(
-          await treasury.debt(),
-          daiTokens1.toString(),
-          'Treasury should have ' + daiTokens1.toString() + ' dai debt (in Dai).'
-        )
+        const toPull = mulRay(wethTokens1, spot).sub(2).toString()
+        await treasury.pullDai(owner, toPull, { from: owner })
+        expect((await vat.urns(WETH, treasury.address)).art).to.be.bignumber.gt(new BN('0'))
+        expect(await treasury.debt()).to.be.bignumber.gt(new BN('0'))
 
         // Adding some extra unlocked collateral
         await weth.deposit({ from: owner, value: 1 })
@@ -172,13 +168,10 @@ contract('Unwind - Treasury', async (accounts) => {
         it('allows to settle treasury debt', async () => {
           await unwind.settleTreasury({ from: owner })
 
-          assert.equal(
+          almostEqual(
             await weth.balanceOf(unwind.address, { from: owner }),
-            BigNumber.from(wethTokens1).sub(taggedWeth).add(1).toString(),
-            'Unwind should have ' +
-              BigNumber.from(wethTokens1).sub(taggedWeth).add(1).add(1) +
-              ' weth in hand, instead has ' +
-              (await weth.balanceOf(unwind.address, { from: owner }))
+            bnify(wethTokens1).sub(taggedWeth).toString(),
+            precision
           )
         })
       })
@@ -193,14 +186,14 @@ contract('Unwind - Treasury', async (accounts) => {
 
         assert.equal(
           await chai.balanceOf(treasury.address),
-          chaiTokens1.toString(),
-          'Treasury should have ' + daiTokens1.toString() + ' savings (as chai).'
+          chaiTokens1,
+          'Treasury should have ' + daiTokens1 + ' savings (as chai).'
         )
       })
 
       describe('with Dss unwind initiated and fix defined', () => {
         beforeEach(async () => {
-          await env.maker.getDai(user, daiTokens1.mul(2), rate1)
+          await env.maker.getDai(user, bnify(daiTokens1).mul(2), rate1)
 
           await end.cage({ from: owner })
           await end.setTag(WETH, tag, { from: owner })

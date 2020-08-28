@@ -206,7 +206,7 @@ export class YieldEnvironmentLite {
     await this.controller.post(CHAI, user, user, _chaiTokens, { from: user })
   }
 
-  // With rounding somewhere, this might get one less chai wei than expected
+  // Retrieve the available yDai borrowing power - only works before rate increases
   public async unlockedOf(collateral: string, user: string): Promise<BigNumberish> {
     const debt = await this.controller.totalDebtDai(collateral, user)
     return (await this.controller.powerOf(collateral, user)).sub(debt)
