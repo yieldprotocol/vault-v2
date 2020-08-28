@@ -1,18 +1,11 @@
 const { id } = require('ethers/lib/utils')
 const fixed_addrs = require('./fixed_addrs.json');
 const Migrations = artifacts.require("Migrations");
-const Vat = artifacts.require("Vat");
-const GemJoin = artifacts.require("GemJoin");
-const DaiJoin = artifacts.require("DaiJoin");
-const Pot = artifacts.require("Pot");
 const End = artifacts.require("End");
-const Chai = artifacts.require("Chai");
 const Treasury = artifacts.require("Treasury");
 const Controller = artifacts.require("Controller");
 const Unwind = artifacts.require("Unwind");
 const Liquidations = artifacts.require("Liquidations");
-const Weth = artifacts.require("WETH9");
-const ERC20 = artifacts.require("TestERC20");
 const YDai = artifacts.require("YDai");
 
 module.exports = async (deployer, network, accounts) => {

@@ -1,6 +1,6 @@
 const fixed_addrs = require('./fixed_addrs.json');
 const Migrations = artifacts.require("Migrations");
-const ERC20 = artifacts.require("TestERC20");
+const ERC20 = artifacts.require("TestDai");
 const YDai = artifacts.require("YDai");
 const Pool = artifacts.require("Pool");
 const YieldMath = artifacts.require("YieldMath.sol");
@@ -10,7 +10,6 @@ module.exports = async (deployer, network, accounts) => {
 
   let daiAddress;
   let yDaiAddress;
-  let poolAddress;
 
   const yDaiNames = ['yDai0', 'yDai1', 'yDai2', 'yDai3'];
 

@@ -7,7 +7,7 @@ const Vat = artifacts.require('Vat');
 const GemJoin = artifacts.require('GemJoin');
 const DaiJoin = artifacts.require('DaiJoin');
 const Weth = artifacts.require("WETH9");
-const ERC20 = artifacts.require("TestERC20");
+const ERC20 = artifacts.require("TestDai");
 
 // YDai
 const YDai = artifacts.require('YDai');

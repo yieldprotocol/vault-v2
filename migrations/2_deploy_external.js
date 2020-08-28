@@ -5,7 +5,7 @@ const Vat = artifacts.require('Vat');
 const GemJoin = artifacts.require('GemJoin');
 const DaiJoin = artifacts.require('DaiJoin');
 const Weth = artifacts.require("WETH9");
-const ERC20 = artifacts.require("TestERC20");
+const Dai = artifacts.require("TestDai");
 const Pot = artifacts.require('Pot');
 const End = artifacts.require('End');
 const Chai = artifacts.require('Chai');
@@ -62,8 +62,8 @@ module.exports = async (deployer, network, accounts) => {
     await deployer.deploy(GemJoin, vatAddress, WETH, wethAddress);
     wethJoinAddress = (await GemJoin.deployed()).address;
 
-    await deployer.deploy(ERC20, 0);
-    daiAddress = (await ERC20.deployed()).address;
+    await deployer.deploy(Dai, 0);
+    daiAddress = (await Dai.deployed()).address;
 
     await deployer.deploy(DaiJoin, vatAddress, daiAddress);
     daiJoinAddress = (await DaiJoin.deployed()).address;
