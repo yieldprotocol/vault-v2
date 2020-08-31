@@ -18,13 +18,13 @@
  *
  */
 
-//
+const path = require('path')
 const fs = require('fs');
 const HDWalletProvider = require("@truffle/hdwallet-provider");
 
-const getProvider = (network) => {
-    const mnemonic = fs.readFileSync(".secret").toString().trim();
-    const infuraKey = fs.readFileSync(".infuraKey").toString().trim();
+function getProvider(network){
+    const mnemonic = fs.readFileSync(path.resolve(__dirname, ".secret")).toString().trim();
+    const infuraKey = fs.readFileSync(path.resolve(__dirname, ".infuraKey")).toString().trim();
     return new HDWalletProvider(mnemonic, `https://${network}.infura.io/v3/${infuraKey}`)
 }
 
@@ -94,7 +94,7 @@ module.exports = {
     rinkeby: {
       provider: () => getProvider("rinkeby"),
       network_id: 4,          // Rinkeby's id
-      confirmations: 2,       // # of confs to wait between deployments. (default: 0)
+      confirmations: 0,       // # of confs to wait between deployments. (default: 0)
       timeoutBlocks: 200,     // # of blocks before a deployment times out  (minimum/default: 50)
       gasPrice: 10000000000,  // 10 gwei
       skipDryRun: false       // Skip dry run before migrations? (default: false for public nets )
