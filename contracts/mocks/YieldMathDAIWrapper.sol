@@ -1,9 +1,4 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-/*
- * Wrapper for Yield Math Smart Contract Library.
- * Copyright © 2020 by ABDK Consulting.
- * Author: Mikhail Vladimirov <mikhail.vladimirov@gmail.com>
- */
 pragma solidity ^0.5.0 || ^0.6.0;
 
 import "../pool/YieldMath.sol";

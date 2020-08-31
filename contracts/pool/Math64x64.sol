@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 /*
- * ABDK Math 64.64 Smart Contract Library.  Copyright © 2019 by ABDK Consulting.
+ *  Math 64.64 Smart Contract Library.  Copyright © 2019 by  Consulting.
  * Author: Mikhail Vladimirov <mikhail.vladimirov@gmail.com>
  */
 pragma solidity ^0.6.0;
@@ -13,7 +13,7 @@ pragma solidity ^0.6.0;
  * need to store it, thus in Solidity signed 64.64-bit fixed point numbers are
  * represented by int128 type holding only the numerator.
  */
-library ABDKMath64x64 {
+library Math64x64 {
   /**
    * @dev Minimum value signed 64.64-bit fixed point number may have. 
    */

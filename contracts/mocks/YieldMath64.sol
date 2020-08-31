@@ -1,12 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-/*
- * Yield Math Smart Contract Library.
- * Copyright © 2020 by ABDK Consulting.
- * Author: Mikhail Vladimirov <mikhail.vladimirov@gmail.com>
- */
 pragma solidity ^0.6.0;
 
-import "../pool/ABDKMath64x64.sol";
+import "../pool/Math64x64.sol";
 
 /**
  * Ethereum smart contract library implementing Yield Math model.
@@ -28,10 +23,10 @@ library YieldMath64 {
     uint128 timeTillMaturity, int128 k, int128 g)
   internal pure returns (uint128) {
     // t = k * timeTillMaturity
-    int128 t = ABDKMath64x64.mul (k, ABDKMath64x64.fromUInt (timeTillMaturity));
+    int128 t = Math64x64.mul (k, Math64x64.fromUInt (timeTillMaturity));
 
     // a = (1 - gt)
-    int128 a = ABDKMath64x64.sub (0x10000000000000000, ABDKMath64x64.mul (g, t));
+    int128 a = Math64x64.sub (0x10000000000000000, Math64x64.mul (g, t));
     require (a > 0);
 
     // xdx = daiReserves + daiAmount
@@ -66,10 +61,10 @@ library YieldMath64 {
     uint128 timeTillMaturity, int128 k, int128 g)
   internal pure returns (uint128) {
     // t = k * timeTillMaturity
-    int128 t = ABDKMath64x64.mul (k, ABDKMath64x64.fromUInt (timeTillMaturity));
+    int128 t = Math64x64.mul (k, Math64x64.fromUInt (timeTillMaturity));
 
     // a = (1 - gt)
-    int128 a = ABDKMath64x64.sub (0x10000000000000000, ABDKMath64x64.mul (g, t));
+    int128 a = Math64x64.sub (0x10000000000000000, Math64x64.mul (g, t));
     require (a > 0);
 
     // ydy = yDAIReserves + yDAIAmount;
@@ -108,10 +103,10 @@ library YieldMath64 {
     require (daiAmount <= daiReserves);
 
     // t = k * timeTillMaturity
-    int128 t = ABDKMath64x64.mul (k, ABDKMath64x64.fromUInt (timeTillMaturity));
+    int128 t = Math64x64.mul (k, Math64x64.fromUInt (timeTillMaturity));
 
     // a = (1 - gt)
-    int128 a = ABDKMath64x64.sub (0x10000000000000000, ABDKMath64x64.mul (g, t));
+    int128 a = Math64x64.sub (0x10000000000000000, Math64x64.mul (g, t));
     require (a > 0);
 
     // xdx = daiReserves - daiAmount
@@ -150,7 +145,7 @@ library YieldMath64 {
     require (yDAIAmount <= yDAIReserves);
 
     // a = (1 - g * k * timeTillMaturity)
-    int128 a = ABDKMath64x64.sub (0x10000000000000000, ABDKMath64x64.mul (g, ABDKMath64x64.mul (k, ABDKMath64x64.fromUInt (timeTillMaturity))));
+    int128 a = Math64x64.sub (0x10000000000000000, Math64x64.mul (g, Math64x64.mul (k, Math64x64.fromUInt (timeTillMaturity))));
     require (a > 0);
 
     // ydy = yDAIReserves - yDAIAmount;
