@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.5.0 || ^0.6.0;
 
-import "../pool/YieldMath.sol";
+import "../mocks/YieldMath128.sol";
 
 /**
  * Wrapper for Yield Math Smart Contract Library.
@@ -24,7 +24,7 @@ contract YieldMathDAIWrapper {
   public pure returns (bool, uint128) {
     return (
       true,
-      YieldMath.yDaiOutForDaiIn (
+      YieldMath128.yDaiOutForDaiIn (
         daiReserves, yDAIReserves, daiAmount, timeTillMaturity, k, g));
   }
 
@@ -45,7 +45,7 @@ contract YieldMathDAIWrapper {
   public pure returns (bool, uint128) {
     return (
       true,
-      YieldMath.daiOutForYDaiIn (
+      YieldMath128.daiOutForYDaiIn (
         daiReserves, yDAIReserves, yDAIAmount, timeTillMaturity, k, g));
   }
 
@@ -66,7 +66,7 @@ contract YieldMathDAIWrapper {
   public pure returns (bool, uint128) {
     return (
       true,
-      YieldMath.yDaiInForDaiOut (
+      YieldMath128.yDaiInForDaiOut (
         daiReserves, yDAIReserves, daiAmount, timeTillMaturity, k, g));
   }
 
@@ -89,7 +89,7 @@ contract YieldMathDAIWrapper {
   public pure returns (bool, uint128) {
     return (
       true,
-      YieldMath.daiInForYDaiOut (
+      YieldMath128.daiInForYDaiOut (
         daiReserves, yDAIReserves, yDAIAmount, timeTillMaturity, k, g));
   }
 
@@ -107,7 +107,7 @@ contract YieldMathDAIWrapper {
   public pure returns (bool, uint128) {
     return (
       true,
-      YieldMath.pow (x, y, z));
+      YieldMath128.pow (x, y, z));
   }
 
   /**
@@ -121,7 +121,7 @@ contract YieldMathDAIWrapper {
   public pure returns (bool, uint128) {
     return (
       true,
-      YieldMath.log_2 (x));
+      YieldMath128.log_2 (x));
   }
 
   /**
@@ -134,6 +134,6 @@ contract YieldMathDAIWrapper {
   public pure returns (bool, uint128) {
     return (
       true,
-      YieldMath.pow_2 (x));
+      YieldMath128.pow_2 (x));
   }
 }

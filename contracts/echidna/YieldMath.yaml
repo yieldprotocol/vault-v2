@@ -3,6 +3,6 @@ testLimit: 20000
 prefix: "crytic_"
 deployer: "0x41414141"
 sender: ["0x42424242", "0x43434343"]
-cryticArgs: ["--compile-force-framework", "Buidler", "--buidler-ignore-compile"]
+cryticArgs: ["--compile-force-framework", "Buidler"]
 coverage: true
 checkAsserts: true
