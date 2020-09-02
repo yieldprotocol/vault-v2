@@ -224,7 +224,7 @@ contract('YieldProxy - LiquidityProxy', async (accounts) => {
         expect(await pool.balanceOf(proxy.address)).to.be.bignumber.lt(new BN('10'))
       })
 
-      it('doesn\'t remove liquidity if minimum prices not achieved', async () => {
+      it("doesn't remove liquidity if minimum prices not achieved", async () => {
         const poolTokens = await pool.balanceOf(user2)
         const debt = await controller.debtYDai(CHAI, maturity1, user2)
         const daiBalance = await dai.balanceOf(user2)
@@ -243,11 +243,11 @@ contract('YieldProxy - LiquidityProxy', async (accounts) => {
         await pool.addDelegate(proxy.address, { from: user2 })
         await expectRevert(
           proxy.removeLiquidityEarly(pool.address, poolTokens, toRay(2), '0', { from: user2 }),
-          "YieldProxy: minimumDaiPrice not reached",
+          'YieldProxy: minimumDaiPrice not reached'
         )
         await expectRevert(
           proxy.removeLiquidityEarly(pool.address, poolTokens, '0', toRay(2), { from: user2 }),
-          "YieldProxy: minimumYDaiPrice not reached",
+          'YieldProxy: minimumYDaiPrice not reached'
         )
       })
 
