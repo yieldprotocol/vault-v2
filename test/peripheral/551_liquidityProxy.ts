@@ -206,7 +206,7 @@ contract('YieldProxy - LiquidityProxy', async (accounts) => {
         // the proxy must be a delegate in the pool because in order to remove
         // liquidity via the proxy we must authorize the proxy to burn from our balance
         await pool.addDelegate(proxy.address, { from: user2 })
-        await proxy.removeLiquidityEarly(pool.address, poolTokens, '0', { from: user2 })
+        await proxy.removeLiquidityEarly(pool.address, poolTokens, '0', '0', { from: user2 }) // TODO: Test limits
 
         // Doesn't have pool tokens
         expect(await pool.balanceOf(user2)).to.be.bignumber.eq(new BN('0'))
