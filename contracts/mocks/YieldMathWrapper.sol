@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.5.0 || ^0.6.0;
 
-import "../mocks/YieldMath128.sol";
+import "../pool/YieldMath.sol";
 
 /**
- * Wrapper for Yield Math Smart Contract Library.
+ * Wrapper for Yield Math Smart Contract Library, with return values for reverts.
  */
-contract YieldMathDAIWrapper {
+contract YieldMathWrapper {
   /**
    * Calculate the amount of yDAI a user would get for given amount of DAI.
    *
@@ -24,7 +24,7 @@ contract YieldMathDAIWrapper {
   public pure returns (bool, uint128) {
     return (
       true,
-      YieldMath128.yDaiOutForDaiIn (
+      YieldMath.yDaiOutForDaiIn (
         daiReserves, yDAIReserves, daiAmount, timeTillMaturity, k, g));
   }
 
@@ -45,7 +45,7 @@ contract YieldMathDAIWrapper {
   public pure returns (bool, uint128) {
     return (
       true,
-      YieldMath128.daiOutForYDaiIn (
+      YieldMath.daiOutForYDaiIn (
         daiReserves, yDAIReserves, yDAIAmount, timeTillMaturity, k, g));
   }
 
@@ -66,7 +66,7 @@ contract YieldMathDAIWrapper {
   public pure returns (bool, uint128) {
     return (
       true,
-      YieldMath128.yDaiInForDaiOut (
+      YieldMath.yDaiInForDaiOut (
         daiReserves, yDAIReserves, daiAmount, timeTillMaturity, k, g));
   }
 
@@ -89,7 +89,7 @@ contract YieldMathDAIWrapper {
   public pure returns (bool, uint128) {
     return (
       true,
-      YieldMath128.daiInForYDaiOut (
+      YieldMath.daiInForYDaiOut (
         daiReserves, yDAIReserves, yDAIAmount, timeTillMaturity, k, g));
   }
 
@@ -107,7 +107,7 @@ contract YieldMathDAIWrapper {
   public pure returns (bool, uint128) {
     return (
       true,
-      YieldMath128.pow (x, y, z));
+      YieldMath.pow (x, y, z));
   }
 
   /**
@@ -121,7 +121,7 @@ contract YieldMathDAIWrapper {
   public pure returns (bool, uint128) {
     return (
       true,
-      YieldMath128.log_2 (x));
+      YieldMath.log_2 (x));
   }
 
   /**
@@ -134,6 +134,6 @@ contract YieldMathDAIWrapper {
   public pure returns (bool, uint128) {
     return (
       true,
-      YieldMath128.pow_2 (x));
+      YieldMath.pow_2 (x));
   }
 }

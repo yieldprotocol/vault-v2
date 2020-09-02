@@ -95,10 +95,10 @@ contract('YieldMath', async (accounts) => {
         '0xFEDCBA9876543210FEDCBA9876543210',
         '0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF',
       ]
-  
+
       for (var i = 0; i < xValues.length; i++) {
         var xValue = xValues[i]
-        console.log('    log_2 (' + xValue + ')')
+        // console.log('    log_2 (' + xValue + ')')
         var x = toBigNumber(xValue)
         var result
         try {
@@ -120,7 +120,7 @@ contract('YieldMath', async (accounts) => {
         }
       }
     })
-  
+
     it('Test `pow_2` function', async () => {
       var xValues = [
         '0x0',
@@ -137,10 +137,10 @@ contract('YieldMath', async (accounts) => {
         '0xFEDCBA9876543210FEDCBA9876543210',
         '0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF',
       ]
-  
+
       for (var i = 0; i < xValues.length; i++) {
         var xValue = xValues[i]
-        console.log('    pow_2 (' + xValue + ')')
+        // console.log('    pow_2 (' + xValue + ')')
         var x = toBigNumber(xValue)
         var result
         try {
@@ -156,7 +156,7 @@ contract('YieldMath', async (accounts) => {
         )
       }
     })
-  
+
     it('Test `pow` function', async () => {
       var xValues = ['0x0', '0x1', '0x2', '0xFEDCBA9876543210', '0xFEDCBA9876543210FEDCBA9876543210']
       var yzValues = [
@@ -177,13 +177,13 @@ contract('YieldMath', async (accounts) => {
         ['0x1', '0xFEDCBA9876543210FEDCBA9876543210'],
         ['0x1', '0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'],
       ]
-  
+
       for (var i = 0; i < xValues.length; i++) {
         var xValue = xValues[i]
         for (var j = 0; j < yzValues.length; j++) {
           var yValue = yzValues[j][0]
           var zValue = yzValues[j][1]
-          console.log('    pow (' + xValue + ', ' + yValue + ', ' + zValue + ')')
+          // console.log('    pow (' + xValue + ', ' + yValue + ', ' + zValue + ')')
           var x = toBigNumber(xValue)
           var y = toBigNumber(yValue)
           var z = toBigNumber(zValue)
@@ -193,7 +193,7 @@ contract('YieldMath', async (accounts) => {
           } catch (e) {
             result = [false, undefined]
           }
-  
+
           if (!z.eq(toBigNumber('0x0')) && (!x.eq(toBigNumber('0x0')) || !y.eq(toBigNumber('0x0')))) {
             assert('pow (' + xValue + ', ' + yValue + ', ' + zValue + ')[0]', result[0])
             var expectedLog =
@@ -211,17 +211,27 @@ contract('YieldMath', async (accounts) => {
           }
         }
       }
-    })  
+    })
   })
 
-  describe.only('Test trading functions', async () => {
+  describe('Test trading functions', async () => {
     var timeTillMaturityValues = ['0x0', '0xf', '0xff', '0xfff', '0xffff', '0xfffff', '0xffffff', '0x784ce00']
-    var daiReserveValues = ['0x52b7d2dcc80cd2e4000000', '0xa56fa5b99019a5c8000000', '0x14adf4b7320334b90000000', '0x295be96e640669720000000']
-    var yDaiReserveValues = ['0x52b7d2dcc80cd2e4000001', '0xa56fa5b99019a5c8000001', '0x14adf4b7320334b90000001', '0x295be96e640669720000001']
+    var daiReserveValues = [
+      '0x52b7d2dcc80cd2e4000000',
+      '0xa56fa5b99019a5c8000000',
+      '0x14adf4b7320334b90000000',
+      '0x295be96e640669720000000',
+    ]
+    var yDaiReserveValues = [
+      '0x52b7d2dcc80cd2e4000001',
+      '0xa56fa5b99019a5c8000001',
+      '0x14adf4b7320334b90000001',
+      '0x295be96e640669720000001',
+    ]
 
     it('Test `yDaiOutForDaiIn` function', async () => {
       var values = [
-        /*['0x0', '0x0', '0x0', '0x0', '0x0', '0x0', true],
+        ['0x0', '0x0', '0x0', '0x0', '0x0', '0x0', true],
         ['0x0', '0x0', '0x0', '0x1', '0xFFFFFFFFFFFFFFFF', '0x10000000000000000', true, 0.0],
         ['0x0', '0x0', '0x0', '0x1', '0x10000000000000000', '0x10000000000000000', false],
         ['0x80000000000000000000000000000000', '0x0', '0x0', '0x0', '0x0', '0x0', true],
@@ -239,8 +249,9 @@ contract('YieldMath', async (accounts) => {
           '0x8000000000000000',
           '0xFEDCBA9876543210',
           true,
-        ],*/
-        [
+        ],
+        // Use this to debug
+        /* [
           '0x3635c9adc5dea00000', // d0 = 10**21
           '0x3635c9adc5dea00000', // d1 = 10**21
           '0xde0b6b3a8640000',    // tradeSize ~= 1e18
@@ -248,14 +259,14 @@ contract('YieldMath', async (accounts) => {
           '0x220c523d73',         // k = 1 / 126144000 in 64.64
           '0xffbe76c8b4395810',   // g = 999 / 1000 in 64.64
           true,                   // ?
-        ],
+        ], */
       ]
-  
-      // for (var i = 0; i < values.length; i++) {
-      for (var j = 0; j < daiReserveValues.length; j++) {
-        var i = 0 // !
-        var daiReservesValue = daiReserveValues[j]
-        var yDAIReservesValue = yDaiReserveValues[j]
+
+      for (var i = 0; i < values.length; i++) {
+        // for (var j = 0; j < daiReserveValues.length; j++) {
+        // var i = 0 // !
+        var daiReservesValue = values[i][0]
+        var yDAIReservesValue = values[i][1]
         var daiAmountValue = values[i][2]
         var timeTillMaturityValue = values[i][3]
         var kValue = values[i][4]
@@ -289,8 +300,8 @@ contract('YieldMath', async (accounts) => {
         } catch (e) {
           result = [false, undefined]
         }
-  
-        console.log(
+
+        /* console.log(
           '    yDaiOutForDaiIn (' +
             daiReserves.toString() +
             ', ' +
@@ -301,11 +312,12 @@ contract('YieldMath', async (accounts) => {
             timeTillMaturity.toString() +
             ') = ' +
             result[1].toString()
-        )
-  
+        ) */
+
         var nk = Number(k) / Number(toBigNumber('0x10000000000000000'))
         var ng = Number(g) / Number(toBigNumber('0x10000000000000000'))
-  
+        var fee = Number(toBigNumber('1000000000000'))
+
         var a = 1.0 - ng * nk * Number(timeTillMaturity)
         var expected: any =
           values[i][7] !== undefined
@@ -316,8 +328,10 @@ contract('YieldMath', async (accounts) => {
                   Math.pow(Number(yDAIReserves), a) -
                   Math.pow(Number(daiReserves.add(daiAmount)), a),
                 1.0 / a
-              )
-  
+              ) -
+              fee
+        expected = expected < 0 ? 0 : expected // Floor at zero
+
         if (values[i][6]) {
           assert(
             'yDaiOutForDaiIn (' +
@@ -371,10 +385,10 @@ contract('YieldMath', async (accounts) => {
         }
       }
     })
-  
+
     it('Test `daiOutForYDaiIn` function', async () => {
       var values = [
-        /*['0x0', '0x0', '0x0', '0x0', '0x0', '0x0', true],
+        ['0x0', '0x0', '0x0', '0x0', '0x0', '0x0', true],
         ['0x0', '0x0', '0x0', '0x1', '0xFFFFFFFFFFFFFFFF', '0x10000000000000000', true, 0.0],
         ['0x0', '0x0', '0x0', '0x1', '0x10000000000000000', '0x10000000000000000', false],
         ['0x0', '0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF', '0x0', '0x0', '0x0', '0x0', true],
@@ -391,8 +405,9 @@ contract('YieldMath', async (accounts) => {
           '0x8000000000000000',
           '0xFEDCBA9876543210',
           true,
-        ],*/
-        [
+        ],
+        // Use this to debug
+        /* [
           '0x3635c9adc5dea00000', // d0 = 10**21
           '0x3635c9adc5dea00000', // d1 = 10**21
           '0xde0b6b3a8640000',    // tradeSize ~= 1e18
@@ -400,14 +415,14 @@ contract('YieldMath', async (accounts) => {
           '0x220c523d73',         // k = 1 / 126144000 in 64.64
           '0xffbe76c8b4395810',   // g = 999 / 1000 in 64.64
           true,                   // ?
-        ],
+        ], */
       ]
-  
-      // for (var i = 0; i < values.length; i++) {
-      for (var j = 0; j < daiReserveValues.length; j++) {
-        var i = 0 // !
-        var daiReservesValue = daiReserveValues[j]
-        var yDAIReservesValue = yDaiReserveValues[j]
+
+      for (var i = 0; i < values.length; i++) {
+        //for (var j = 0; j < daiReserveValues.length; j++) {
+        // var i = 0 // !
+        var daiReservesValue = values[i][0]
+        var yDAIReservesValue = values[i][1]
         var yDAIAmountValue = values[i][2]
         var timeTillMaturityValue = values[i][3]
         var kValue = values[i][4]
@@ -439,8 +454,8 @@ contract('YieldMath', async (accounts) => {
         } catch (e) {
           result = [false, undefined]
         }
-    
-        console.log(
+
+        /* console.log(
           '    daiOutForYDaiIn (' +
             daiReserves.toString() +
             ', ' +
@@ -451,11 +466,12 @@ contract('YieldMath', async (accounts) => {
             timeTillMaturity.toString() +
             ') = ' +
             result[1].toString()
-        )
+        ) */
 
         var nk = Number(k) / Number(toBigNumber('0x10000000000000000'))
         var ng = Number(g) / Number(toBigNumber('0x10000000000000000'))
-  
+        var fee = Number(toBigNumber('1000000000000'))
+
         var a = 1.0 - ng * nk * Number(timeTillMaturity)
         var expected: any =
           values[i][7] !== undefined
@@ -466,8 +482,10 @@ contract('YieldMath', async (accounts) => {
                   Math.pow(Number(yDAIReserves), a) -
                   Math.pow(Number(yDAIReserves.add(yDAIAmount)), a),
                 1.0 / a
-              )
-  
+              ) -
+              fee
+        expected = expected < 0 ? 0 : expected // Floor at zero
+
         if (values[i][6]) {
           assert(
             'daiOutForYDaiIn (' +
@@ -521,15 +539,14 @@ contract('YieldMath', async (accounts) => {
         }
       }
     })
-  
+
     it('Test `yDaiInForDaiOut` function', async () => {
       var values = [
-        /*['0x0', '0x0', '0x0', '0x0', '0x0', '0x0', true],
+        ['0x0', '0x0', '0x0', '0x0', '0x0', '0x0', true],
         ['0x0', '0x0', '0x1', '0x0', '0x0', '0x0', false],
-        ['0x0', '0x0', '0x0', '0x1', '0xFFFFFFFFFFFFFFFF', '0x10000000000000000', true, 0.0],
+        // ['0x0', '0x0', '0x0', '0x1', '0xFFFFFFFFFFFFFFFF', '0x10000000000000000', true, 0.0], // Testing too far from reality
         ['0x0', '0x0', '0x0', '0x1', '0x10000000000000000', '0x10000000000000000', false],
         ['0x80000000000000000000000000000000', '0x0', '0x0', '0x0', '0x0', '0x0', true],
-        ['0x0', '0x0', '0x0', '0x0', '0x0', '0x0', true],
         ['0x0', '0x0', '0x1', '0x0', '0x0', '0x0', false],
         [
           '0x80000000000000000000000000000000',
@@ -557,8 +574,9 @@ contract('YieldMath', async (accounts) => {
           '0x8000000000000000',
           '0xFEDCBA9876543210',
           true,
-        ],*/
-        [
+        ],
+        // Use this to debug
+        /* [
           '0x3635c9adc5dea00000', // d0 = 10**21
           '0x3635c9adc5dea00000', // d1 = 10**21
           '0xde0b6b3a8640000',    // tradeSize ~= 1e18
@@ -566,14 +584,14 @@ contract('YieldMath', async (accounts) => {
           '0x220c523d73',         // k = 1 / 126144000 in 64.64
           '0xffbe76c8b4395810',   // g = 999 / 1000 in 64.64
           true,                   // ?
-        ],
+        ], */
       ]
-  
-      // for (var i = 0; i < values.length; i++) {
-      for (var j = 0; j < daiReserveValues.length; j++) {
-        var i = 0 // !
-        var daiReservesValue = daiReserveValues[j]
-        var yDAIReservesValue = yDaiReserveValues[j]
+
+      for (var i = 0; i < values.length; i++) {
+        // for (var j = 0; j < daiReserveValues.length; j++) {
+        // var i = 0 // !
+        var daiReservesValue = values[i][0]
+        var yDAIReservesValue = values[i][1]
         var daiAmountValue = values[i][2]
         var timeTillMaturityValue = values[i][3]
         var kValue = values[i][4]
@@ -606,7 +624,7 @@ contract('YieldMath', async (accounts) => {
           result = [false, undefined]
         }
 
-        console.log(
+        /* console.log(
           '    yDaiInForDaiOut (' +
             daiReserves.toString() +
             ', ' +
@@ -617,11 +635,12 @@ contract('YieldMath', async (accounts) => {
             timeTillMaturity.toString() +
             ') = ' +
             result[1].toString()
-        )
+        ) */
 
         var nk = Number(k) / Number(toBigNumber('0x10000000000000000'))
         var ng = Number(g) / Number(toBigNumber('0x10000000000000000'))
-  
+        var fee = Number(toBigNumber('1000000000000'))
+
         var a = 1.0 - ng * nk * Number(timeTillMaturity)
         var expected: any =
           values[i][7] !== undefined
@@ -631,8 +650,10 @@ contract('YieldMath', async (accounts) => {
                   Math.pow(Number(yDAIReserves), a) -
                   Math.pow(Number(daiReserves.sub(daiAmount)), a),
                 1.0 / a
-              ) - Number(yDAIReserves)
-  
+              ) -
+              Number(yDAIReserves) +
+              fee
+
         if (values[i][6]) {
           assert(
             'yDaiInForDaiOut (' +
@@ -686,12 +707,12 @@ contract('YieldMath', async (accounts) => {
         }
       }
     })
-  
+
     it('Test `daiInForYDaiOut` function', async () => {
       var values = [
-        /*['0x0', '0x0', '0x0', '0x0', '0x0', '0x0', true],
+        ['0x0', '0x0', '0x0', '0x0', '0x0', '0x0', true],
         ['0x0', '0x0', '0x1', '0x0', '0x0', '0x0', false],
-        ['0x0', '0x0', '0x0', '0x1', '0xFFFFFFFFFFFFFFFF', '0x10000000000000000', true, 0.0],
+        // ['0x0', '0x0', '0x0', '0x1', '0xFFFFFFFFFFFFFFFF', '0x10000000000000000', true, 0.0], // Testing too far from reality
         ['0x0', '0x0', '0x0', '0x1', '0x10000000000000000', '0x10000000000000000', false],
         [
           '0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF',
@@ -712,6 +733,7 @@ contract('YieldMath', async (accounts) => {
           false,
         ],
         [
+          // TODO: Consider fixing
           '0xFEDCBA9876543210',
           '0x123456789ABCDEF0',
           '0x123456789ABC',
@@ -719,8 +741,9 @@ contract('YieldMath', async (accounts) => {
           '0x8000000000000000',
           '0xFEDCBA9876543210',
           true,
-        ],*/
-        [
+        ],
+        // Use this to debug
+        /* [
           '0x3635c9adc5dea00000', // d0 = 10**21
           '0x3635c9adc5dea00000', // d1 = 10**21
           '0xde0b6b3a8640000',    // tradeSize ~= 1e18
@@ -728,14 +751,14 @@ contract('YieldMath', async (accounts) => {
           '0x220c523d73',         // k = 1 / 126144000 in 64.64
           '0xffbe76c8b4395810',   // g = 999 / 1000 in 64.64
           true,                   // ?
-        ],
+        ], */
       ]
-  
-      // for (var i = 0; i < values.length; i++) {
-      for (var j = 0; j < daiReserveValues.length; j++) {
-        var i = 0 // !
-        var daiReservesValue = daiReserveValues[j]
-        var yDAIReservesValue = yDaiReserveValues[j]
+
+      for (var i = 0; i < values.length; i++) {
+        // for (var j = 0; j < daiReserveValues.length; j++) {
+        // var i = 0 // !
+        var daiReservesValue = values[i][0]
+        var yDAIReservesValue = values[i][1]
         var yDAIAmountValue = values[i][2]
         var timeTillMaturityValue = values[i][3]
         var kValue = values[i][4]
@@ -768,7 +791,7 @@ contract('YieldMath', async (accounts) => {
           result = [false, undefined]
         }
 
-        console.log(
+        /* console.log(
           '    daiInForYDaiOut (' +
             daiReserves.toString() +
             ', ' +
@@ -779,11 +802,12 @@ contract('YieldMath', async (accounts) => {
             timeTillMaturity.toString() +
             ') = ' +
             result[1].toString()
-        )
-  
+        ) */
+
         var nk = Number(k) / Number(toBigNumber('0x10000000000000000'))
         var ng = Number(g) / Number(toBigNumber('0x10000000000000000'))
-  
+        var fee = Number(toBigNumber('1000000000000'))
+
         var a = 1.0 - ng * nk * Number(timeTillMaturity)
         var expected: any =
           values[i][7] !== undefined
@@ -793,8 +817,10 @@ contract('YieldMath', async (accounts) => {
                   Math.pow(Number(yDAIReserves), a) -
                   Math.pow(Number(yDAIReserves.sub(yDAIAmount)), a),
                 1.0 / a
-              ) - Number(daiReserves)
-  
+              ) -
+              Number(daiReserves) +
+              fee
+
         if (values[i][6]) {
           assert(
             'daiInForYDaiOut (' +
@@ -847,6 +873,6 @@ contract('YieldMath', async (accounts) => {
           )
         }
       }
-    })  
-  });
+    })
+  })
 })

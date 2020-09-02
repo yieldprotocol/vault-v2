@@ -5,7 +5,7 @@ import "../pool/YieldMath.sol";
 import "../mocks/YieldMath64.sol";
 import "../mocks/YieldMath128.sol";
 
-
+/// @dev Gives access to the YieldMath functions for several precisions
 contract YieldMathMock {
 
     // --- 128 ---

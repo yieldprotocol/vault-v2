@@ -5,7 +5,7 @@ import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
 import helper from 'ganache-time-traveler'
 // @ts-ignore
 import { BN } from '@openzeppelin/test-helpers'
-import { rate1, daiTokens1, toWad } from './../shared/utils'
+import { rate1, daiTokens1, toWad, bnify } from './../shared/utils'
 import { YieldEnvironmentLite, Contract } from './../shared/fixtures'
 
 contract('Pool', async (accounts) => {
@@ -88,13 +88,13 @@ contract('Pool', async (accounts) => {
 
     it('buys dai', async () => {
       const tradeSize = toWad(1).div(1000)
-      await yDai1.mint(from, yDaiTokens1.div(1000), { from: owner })
+      await yDai1.mint(from, bnify(yDaiTokens1).div(1000), { from: owner })
 
       await pool.addDelegate(operator, { from: from })
-      await yDai1.approve(pool.address, yDaiTokens1.div(1000), { from: from })
+      await yDai1.approve(pool.address, bnify(yDaiTokens1).div(1000), { from: from })
       await pool.buyDai(from, to, tradeSize, { from: operator })
 
-      const yDaiIn = new BN(yDaiTokens1.div(1000).toString()).sub(new BN(await yDai1.balanceOf(from)))
+      const yDaiIn = new BN(bnify(yDaiTokens1).div(1000).toString()).sub(new BN(await yDai1.balanceOf(from)))
 
       results.add(['buyDai', daiReserves, yDaiReserves, yDaiIn, tradeSize])
     })
@@ -134,13 +134,13 @@ contract('Pool', async (accounts) => {
 
       it('buys yDai', async () => {
         const tradeSize = toWad(1).div(1000)
-        await env.maker.getDai(from, daiTokens1.div(1000), rate1)
+        await env.maker.getDai(from, bnify(daiTokens1).div(1000), rate1)
 
         await pool.addDelegate(operator, { from: from })
-        await dai.approve(pool.address, daiTokens1.div(1000), { from: from })
+        await dai.approve(pool.address, bnify(daiTokens1).div(1000), { from: from })
         await pool.buyYDai(from, to, tradeSize, { from: operator })
 
-        const daiIn = new BN(daiTokens1.div(1000).toString()).sub(new BN(await dai.balanceOf(from)))
+        const daiIn = new BN(bnify(daiTokens1).div(1000).toString()).sub(new BN(await dai.balanceOf(from)))
         results.add(['buyYDai', daiReserves, yDaiReserves, daiIn, tradeSize])
       })
 
