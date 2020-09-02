@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.6.10;
 import "../pool/YieldMath.sol"; // 64 bits
-import "../pool/ABDKMath64x64.sol";
+import "../pool/Math64x64.sol";
 import "@nomiclabs/buidler/console.sol";
 
 
@@ -179,7 +179,7 @@ contract YieldMathEchidna {
         internal pure returns (uint128)
     {
         // a = (1 - k * timeTillMaturity)
-        int128 a = ABDKMath64x64.sub (0x10000000000000000, ABDKMath64x64.mul (k, ABDKMath64x64.fromUInt (timeTillMaturity)));
+        int128 a = Math64x64.sub (0x10000000000000000, Math64x64.mul (k, Math64x64.fromUInt (timeTillMaturity)));
         require (a > 0);
 
         uint256 sum =
