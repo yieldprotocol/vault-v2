@@ -1,4 +1,4 @@
-const YieldMath = artifacts.require('YieldMathDAIWrapper')
+const YieldMath = artifacts.require('YieldMathWrapper')
 
 // @ts-ignore
 import helper from 'ganache-time-traveler'
