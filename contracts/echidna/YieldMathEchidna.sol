@@ -36,6 +36,7 @@ contract YieldMathEchidna {
         return c;
     }
 
+    /// @dev Ensures that if we sell yDAI for DAI and back we get less yDAI than we had
     function testSellYDaiAndReverse(uint128 daiReserves, uint128 yDAIReserves, uint128 yDaiIn, uint128 timeTillMaturity)
         public view returns (bool)
     {
@@ -48,6 +49,7 @@ contract YieldMathEchidna {
         assert(yDaiOut <= yDaiIn);
     }
 
+    /// @dev Ensures that if we buy yDAI for DAI and back we get less DAI than we had
     function testBuyYDaiAndReverse(uint128 daiReserves, uint128 yDAIReserves, uint128 yDaiOut, uint128 timeTillMaturity)
         public view returns (bool)
     {
@@ -60,6 +62,7 @@ contract YieldMathEchidna {
         assert(yDaiOut <= yDaiIn);
     }
 
+    /// @dev Ensures that if we sell DAI for yDAI and back we get less DAI than we had
     function testSellDaiAndReverse(uint128 daiReserves, uint128 yDAIReserves, uint128 daiIn, uint128 timeTillMaturity)
         public view returns (bool)
     {
@@ -70,11 +73,10 @@ contract YieldMathEchidna {
 
         console.log(daiIn);
         uint128 daiOut = _sellDaiAndReverse(daiReserves, yDAIReserves, daiIn, timeTillMaturity);
-        // assert(daiOut <= daiIn);
-        // console.log(daiOut);
-        return(daiOut <= daiIn);
+        assert(daiOut <= daiIn);
     }
 
+    /// @dev Ensures that if we buy DAI for yDAI and back we get less yDAI than we had
     function testBuyDaiAndReverse(uint128 daiReserves, uint128 yDAIReserves, uint128 daiOut, uint128 timeTillMaturity)
         public view returns (bool)
     {
@@ -87,10 +89,11 @@ contract YieldMathEchidna {
         assert(daiOut <= daiIn);
     }
 
+    /// @dev Ensures that reserves grow with any daiOutForYDaiIn trade.
     function testLiquidityDaiOutForYDaiIn(uint128 daiReserves, uint128 yDAIReserves, uint128 yDaiIn, uint128 timeTillMaturity)
-        public view returns (bool)
+        internal view returns (bool)
     {
-        if (daiReserves > yDAIReserves) return true;
+        require (daiReserves <= yDAIReserves);
         daiReserves = minDaiReserves + daiReserves % maxDaiReserves;
         yDAIReserves = minYDaiReserves + yDAIReserves % maxYDaiReserves;
         timeTillMaturity = minTimeTillMaturity + timeTillMaturity % maxTimeTillMaturity;
@@ -102,10 +105,11 @@ contract YieldMathEchidna {
         return reserves_0 < reserves_1;
     }
 
+    /// @dev Ensures that reserves grow with any yDaiInForDaiOut trade.
     function testLiquidityDaiInForYDaiOut(uint128 daiReserves, uint128 yDAIReserves, uint128 yDaiOut, uint128 timeTillMaturity)
-        public view returns (bool)
+        internal view returns (bool)
     {
-        if (daiReserves > yDAIReserves - yDaiOut) return true;
+        require (daiReserves <= yDAIReserves - yDaiOut);
         daiReserves = minDaiReserves + daiReserves % maxDaiReserves;
         yDAIReserves = minYDaiReserves + yDAIReserves % maxYDaiReserves;
         timeTillMaturity = minTimeTillMaturity + timeTillMaturity % maxTimeTillMaturity;
@@ -117,10 +121,11 @@ contract YieldMathEchidna {
         return reserves_0 < reserves_1;
     }
 
+    /// @dev Ensures that reserves grow with any yDaiOutForDaiIn trade.
     function testLiquidityYDaiOutForDaiIn(uint128 daiReserves, uint128 yDAIReserves, uint128 daiIn, uint128 timeTillMaturity)
-        public view returns (bool)
+        internal view returns (bool)
     {
-        if (daiReserves + daiIn > yDAIReserves) return true;
+        require (daiReserves + daiIn <= yDAIReserves);
         daiReserves = minDaiReserves + daiReserves % maxDaiReserves;
         yDAIReserves = minYDaiReserves + yDAIReserves % maxYDaiReserves;
         timeTillMaturity = minTimeTillMaturity + timeTillMaturity % maxTimeTillMaturity;
@@ -132,10 +137,11 @@ contract YieldMathEchidna {
         return reserves_0 < reserves_1;
     }
 
+    /// @dev Ensures that reserves grow with any yDaiInForDaiOut trade.
     function testLiquidityYDaiInForDaiOut(uint128 daiReserves, uint128 yDAIReserves, uint128 daiOut, uint128 timeTillMaturity)
-        public view returns (bool)
+        internal view returns (bool)
     {
-        if (daiReserves > yDAIReserves) return true;
+        require (daiReserves <= yDAIReserves);
         daiReserves = minDaiReserves + daiReserves % maxDaiReserves;
         yDAIReserves = minYDaiReserves + yDAIReserves % maxYDaiReserves;
         timeTillMaturity = minTimeTillMaturity + timeTillMaturity % maxTimeTillMaturity;
@@ -147,24 +153,12 @@ contract YieldMathEchidna {
         return reserves_0 < reserves_1;
     }
 
-    /*
-    function testLog2MonotonicallyGrows(uint128 x) internal view {
+    /// @dev Ensures log_2 grows as x grows
+    function testLog2MonotonicallyGrows(uint128 x) internal pure {
         uint128 z1= YieldMath.log_2(x);
         uint128 z2= YieldMath.log_2(x + 1);
         assert(z2 >= z1);
     }
-
-    function testLog2PrecisionLossRoundsDown(uint128 x) internal view {
-        uint128 z1 = YieldMath.log_2(x);
-        uint128 z2= YieldMath.log_2(x);
-        assert(z2 >= z1);portugal
-    }
-
-    function testPow2PrecisionLossRoundsDown(uint128 x) internal view {
-        uint128 z1 = YieldMath.pow_2(x);
-        uint128 z2= YieldMath.pow_2(x);
-        assert(z2 >= z1);
-    } */
 
     /**
      * Estimate in DAI the value of reserves at protocol initialization time.
