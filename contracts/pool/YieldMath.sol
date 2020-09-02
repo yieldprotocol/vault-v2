@@ -41,7 +41,7 @@ library YieldMath {
 
     uint256 result = yDAIReserves - pow (uint128 (sum), 0x10000000000000000, uint128 (a));
     require (result < 0x100000000000000000000000000000000, "YieldMath: Rounding induced error");
-    result > 1e12 ? result = result - 1e12 : result = 0; // Substract error guard, flooring the result at zero
+    result = result > 1e12 ? result - 1e12 : 0; // Substract error guard, flooring the result at zero
 
     return uint128 (result);
   }
@@ -82,7 +82,7 @@ library YieldMath {
       daiReserves -
       pow (uint128 (sum), 0x10000000000000000, uint128 (a));
     require (result < 0x100000000000000000000000000000000, "YieldMath: Rounding induced error");
-    result > 1e12 ? result = result - 1e12 : result = 0; // Substract error guard, flooring the result at zero
+    result = result > 1e12 ? result - 1e12 : 0; // Substract error guard, flooring the result at zero
 
     return uint128 (result);
   }
@@ -121,7 +121,7 @@ library YieldMath {
 
     uint256 result = pow (uint128 (sum), 0x10000000000000000, uint128 (a)) - yDAIReserves;
     require (result < 0x100000000000000000000000000000000, "YieldMath: Rounding induced error");
-    result < type(uint256).max - 1e12 ? result = result + 1e12 : result = type(uint256).max; // Add error guard, ceiling the result at max
+    result = result < type(uint256).max - 1e12 ? result + 1e12 : type(uint256).max; // Add error guard, ceiling the result at max
 
     return uint128 (result);
   }
@@ -161,7 +161,7 @@ library YieldMath {
       pow (uint128 (sum), 0x10000000000000000, uint128 (a)) -
       daiReserves;
     require (result < 0x100000000000000000000000000000000, "YieldMath: Rounding induced error");
-    result < type(uint256).max - 1e12 ? result = result + 1e12 : result = type(uint256).max; // Add error guard, ceiling the result at max
+    result = result < type(uint256).max - 1e12 ? result + 1e12 : type(uint256).max; // Add error guard, ceiling the result at max
 
     return uint128 (result);
   }
