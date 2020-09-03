@@ -2,14 +2,15 @@ const Pool = artifacts.require('Pool')
 const YieldProxy = artifacts.require('YieldProxy')
 
 import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
-import { toWad, toRay, mulRay } from '../shared/utils'
+import { toWad, toRay, mulRay, chainId, bnify, MAX, name } from '../shared/utils'
+import { getPermitDigest, sign, userPrivateKey } from '../shared/signatures'
 import { YieldEnvironmentLite, Contract } from '../shared/fixtures'
 // @ts-ignore
 import { BN, expectRevert } from '@openzeppelin/test-helpers'
 import { assert, expect } from 'chai'
 
 contract('YieldProxy - LimitPool', async (accounts) => {
-  let [owner, user1, operator, from, to] = accounts
+  let [owner, user1, operator, from, to, user2] = accounts
 
   // These values impact the pool results
   const rate1 = toRay(1.02)
@@ -65,6 +66,29 @@ contract('YieldProxy - LimitPool', async (accounts) => {
       const yDaiIn = new BN(yDaiTokens1.toString()).sub(new BN(await yDai1.balanceOf(from)))
       expect(yDaiIn).to.be.bignumber.gt(expectedYDaiIn.mul(new BN('9999')).div(new BN('10000')))
       expect(yDaiIn).to.be.bignumber.lt(expectedYDaiIn.mul(new BN('10001')).div(new BN('10000')))
+    })
+
+    it('buys dai with permit', async () => {
+      await pool.addDelegate(limitPool.address, { from: user1 })
+      await yDai1.approve(pool.address, 0, { from: user1 })
+      await yDai1.mint(user1, yDaiTokens1, { from: owner })
+
+      const digest = getPermitDigest(
+        await yDai1.name(),
+        await pool.yDai(),
+        chainId,
+        {
+          owner: user1,
+          spender: pool.address,
+          value: MAX,
+        },
+        bnify(await yDai1.nonces(user1)),
+        MAX
+      )
+      const sig = sign(digest, userPrivateKey)
+
+      // can use the permit signature to avoid having an `approve` transaction
+      await limitPool.buyDaiWithSignature(pool.address, to, oneToken, oneToken.mul(2), sig, { from: user1 })
     })
 
     it("doesn't buy dai if limit exceeded", async () => {
