@@ -2,8 +2,14 @@ import { BigNumber, BigNumberish } from 'ethers'
 import { formatBytes32String } from 'ethers/lib/utils'
 import { expect } from 'chai'
 
+export const chainId = 31337 // buidlerevm chain id
+export const name = 'Yield'
+
 /// @dev Converts a bignumberish to a BigNumber (this is useful for compatibility between BN and BigNumber)
 export const bnify = (num: BigNumberish) => BigNumber.from(num.toString())
+
+/// @dev 2^256 -1
+export const MAX = bnify('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')
 
 /// @dev Converts a BigNumberish to WAD precision, for BigNumberish up to 10 decimal places
 export function toWad(value: BigNumberish): BigNumber {

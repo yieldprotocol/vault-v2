@@ -373,7 +373,7 @@ contract YieldProxy is DecimalMath, IFlashMinter {
     /// @param daiOut Amount of dai being bought
     /// @param maxYDaiIn Maximum amount of yDai being sold
     function buyDai(address pool, address to, uint128 daiOut, uint128 maxYDaiIn)
-        external
+        public
         returns(uint256)
     {
         uint256 yDaiIn = IPool(pool).buyDai(msg.sender, to, daiOut);
@@ -382,6 +382,21 @@ contract YieldProxy is DecimalMath, IFlashMinter {
             "YieldProxy: Limit exceeded"
         );
         return yDaiIn;
+    }
+
+    /// @dev Buy Dai for yDai and permits infinite yDAI to the pool
+    /// @param to Wallet receiving the dai being bought
+    /// @param daiOut Amount of dai being bought
+    /// @param maxYDaiIn Maximum amount of yDai being sold
+    /// @param signature The `permit` call's signature
+    function buyDaiWithSignature(address pool, address to, uint128 daiOut, uint128 maxYDaiIn, bytes memory signature)
+        external
+        returns(uint256)
+    {
+        (bytes32 r, bytes32 s, uint8 v) = unpack(signature);
+        IPool(pool).yDai().permit(msg.sender, address(pool), uint(-1), uint(-1), v, r, s);
+
+        return buyDai(pool, to, daiOut, maxYDaiIn);
     }
 
     /// @dev Sell yDai for Dai

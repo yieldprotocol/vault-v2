@@ -1,22 +1,19 @@
 const Pool = artifacts.require('Pool')
 const DaiProxy = artifacts.require('YieldProxy')
 
-import { WETH, rate1, daiTokens1, wethTokens1, toWad, toRay, subBN, mulRay, bnify } from '../shared/utils'
+import { WETH, rate1, daiTokens1, wethTokens1, toWad, subBN, bnify, MAX, chainId, name } from '../shared/utils'
 import { YieldEnvironmentLite, Contract } from '../shared/fixtures'
-import { getSignatureDigest, getPermitDigest, getDaiDigest, getChaiDigest } from '../shared/signatures'
+import { getSignatureDigest, getPermitDigest, getDaiDigest, userPrivateKey, sign } from '../shared/signatures'
 import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
-import { ecsign } from 'ethereumjs-util'
 
 // @ts-ignore
 import { expectRevert } from '@openzeppelin/test-helpers'
 import { assert, expect } from 'chai'
-import { BigNumber } from 'ethers'
 
 contract('YieldProxy - DaiProxy', async (accounts) => {
   let [owner, user1, user2, operator] = accounts
 
   let maturity1: number
-  let weth: Contract
   let dai: Contract
   let controller: Contract
   let yDai1: Contract
@@ -29,18 +26,12 @@ contract('YieldProxy - DaiProxy', async (accounts) => {
   const yDaiTokens1 = daiTokens1
   const yDaiDebt = daiTokens1
 
-  const MAX = bnify('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')
-
-  const userPrivateKey = Buffer.from('d49743deccbccc5dc7baa8e69e5be03298da8688a15dd202e20f15d5e0e9a9fb', 'hex')
-  const chainId = 31337 // buidlerevm chain id
-  const name = 'Yield'
   let digest: any
 
   beforeEach(async () => {
     const block = await web3.eth.getBlockNumber()
     maturity1 = (await web3.eth.getBlock(block)).timestamp + 31556952 // One year
     env = await YieldEnvironmentLite.setup([maturity1])
-    weth = env.maker.weth
     dai = env.maker.dai
     controller = env.controller
 
@@ -54,11 +45,6 @@ contract('YieldProxy - DaiProxy', async (accounts) => {
 
     // Allow owner to mint yDai the sneaky way, without recording a debt in controller
     await yDai1.orchestrate(owner, keccak256(toUtf8Bytes('mint(address,uint256)')), { from: owner })
-
-    const sign = (digest: any, privateKey: any) => {
-      const { v, r, s } = ecsign(Buffer.from(digest.slice(2), 'hex'), privateKey)
-      return '0x' + r.toString('hex') + s.toString('hex') + v.toString(16)
-    }
 
     const deadline = MAX
 
