@@ -17,8 +17,7 @@ import {
   addBN,
   subBN,
   bnify,
-  precision,
-  almostEqual,
+  ZERO,
 } from './shared/utils'
 import { MakerEnvironment, YieldEnvironmentLite, Contract } from './shared/fixtures'
 import { BigNumber } from 'ethers'
@@ -288,7 +287,7 @@ contract('Controller - Weth', async (accounts) => {
           await dai.approve(treasury.address, balance, { from: user2 })
           await controller.repayDai(WETH, maturity1, user2, user1, balance, { from: user2 })
 
-          expect(await dai.balanceOf(user2)).to.be.bignumber.gt(new BN('0'))
+          expect(await dai.balanceOf(user2)).to.be.bignumber.gt(ZERO)
           assert.equal(await controller.debtDai(WETH, maturity1, user1), 0, 'User1 should not have debt')
         })
 
@@ -310,8 +309,8 @@ contract('Controller - Weth', async (accounts) => {
             increasedDebt = mulRay(debt, rateDifferential)
             debtIncrease = subBN(increasedDebt, debt)
 
-            expect(await yDai1.balanceOf(user1)).to.be.bignumber.gt(new BN('0'))
-            expect(await controller.debtDai(WETH, maturity1, user1)).to.be.bignumber.gt(new BN('0'))
+            expect(await yDai1.balanceOf(user1)).to.be.bignumber.gt(ZERO)
+            expect(await controller.debtDai(WETH, maturity1, user1)).to.be.bignumber.gt(ZERO)
 
             // yDai matures
             await helper.advanceTime(1000)
