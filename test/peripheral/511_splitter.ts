@@ -5,7 +5,7 @@ import { BigNumber } from 'ethers'
 import { id } from 'ethers/lib/utils'
 // @ts-ignore
 import { BN, expectRevert } from '@openzeppelin/test-helpers'
-import { WETH, rate1, daiTokens1, wethTokens1, mulRay, divRay, bnify, almostEqual, precision } from '../shared/utils'
+import { WETH, rate1, daiTokens1, wethTokens1, mulRay, divRay, bnify, almostEqual, precision, ZERO } from '../shared/utils'
 import { YieldEnvironmentLite, Contract } from '../shared/fixtures'
 
 import { assert, expect } from 'chai'
@@ -78,8 +78,8 @@ contract('YieldProxy - Splitter', async (accounts) => {
     await env.maker.getDai(user, daiTokens1, rate1)
     const daiDebt = mulRay(bnify((await vat.urns(WETH, user)).art), rate1).toString()
     const wethCollateral = bnify((await vat.urns(WETH, user)).ink).toString()
-    expect(daiDebt).to.be.bignumber.gt(new BN('0'))
-    expect(wethCollateral).to.be.bignumber.gt(new BN('0'))
+    expect(daiDebt).to.be.bignumber.gt(ZERO)
+    expect(wethCollateral).to.be.bignumber.gt(ZERO)
 
     // This lot can be avoided if the user is certain that he has enough Weth in Controller
     // The amount of yDai to be borrowed can be obtained from Pool through Splitter

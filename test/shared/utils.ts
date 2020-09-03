@@ -1,6 +1,10 @@
+// @ts-ignore
+import { BN } from '@openzeppelin/test-helpers'
 import { BigNumber, BigNumberish } from 'ethers'
 import { formatBytes32String } from 'ethers/lib/utils'
 import { expect } from 'chai'
+
+export const ZERO = new BN('0')
 
 /// @dev Converts a bignumberish to a BigNumber (this is useful for compatibility between BN and BigNumber)
 export const bnify = (num: BigNumberish) => BigNumber.from(num.toString())
