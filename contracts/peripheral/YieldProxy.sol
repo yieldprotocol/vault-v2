@@ -216,7 +216,9 @@ contract YieldProxy is DecimalMath, IFlashMinter {
         require(poolsMap[address(pool)], "YieldProxy: Unknown pool");
         IYDai yDai = pool.yDai();
         (uint256 daiObtained, uint256 yDaiObtained) = pool.burn(msg.sender, address(this), poolTokens);
-        if (yDaiObtained > 0) yDai.redeem(address(this), address(this), yDaiObtained);
+        if (yDaiObtained > 0) {
+            daiObtained = daiObtained.add(yDai.redeem(address(this), address(this), yDaiObtained));
+        }
         repayDebt(yDai, daiObtained, 0);
         withdrawAssets(yDai);
     }
