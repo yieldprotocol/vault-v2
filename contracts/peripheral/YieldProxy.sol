@@ -39,14 +39,14 @@ library SafeCast {
 contract YieldProxy is DecimalMath, IFlashMinter {
     using SafeCast for uint256;
 
-    IController public controller;
-
     IVat public vat;
-    IDai public dai;
-    IChai public chai;
     IWeth public weth;
+    IDai public dai;
     IGemJoin public wethJoin;
     IDaiJoin public daiJoin;
+    IChai public chai;
+    IController public controller;
+    ITreasury public treasury;
 
     IPool[] public pools;
     mapping (address => bool) public poolsMap;
@@ -59,7 +59,7 @@ contract YieldProxy is DecimalMath, IFlashMinter {
 
     constructor(address controller_, IPool[] memory _pools) public {
         controller = IController(controller_);
-        ITreasury treasury = controller.treasury();
+        treasury = controller.treasury();
 
         weth = treasury.weth();
         dai = IDai(address(treasury.dai()));
@@ -432,6 +432,25 @@ contract YieldProxy is DecimalMath, IFlashMinter {
         );
         return daiIn;
     }
+
+    /// @dev Burns Dai from caller to repay debt in a Yield Vault.
+    /// User debt is decreased for the given collateral and yDai series, in Yield vault `to`.
+    /// The amount of debt repaid changes according to series maturity and MakerDAO rate and chi, depending on collateral type.
+    /// `A signature is provided as a parameter to this function, so that `dai.approve()` doesn't need to be called.
+    /// @param collateral Valid collateral type.
+    /// @param maturity Maturity of an added series
+    /// @param to Yield vault to repay debt for.
+    /// @param daiAmount Amount of Dai to use for debt repayment.
+    /// @param signature The `permit` call's signature
+    function repayDaiWithSignature(bytes32 collateral, uint256 maturity, address to, uint256 daiAmount, bytes memory signature)
+        external
+        returns(uint256)
+    {
+        (bytes32 r, bytes32 s, uint8 v) = unpack(signature);
+        dai.permit(msg.sender, address(treasury), dai.nonces(msg.sender), uint(-1), true, v, r, s);
+        controller.repayDai(collateral, maturity, msg.sender, to, daiAmount);
+    }
+
 
     // YieldProxy: Maker to Yield proxy
 

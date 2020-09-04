@@ -4,7 +4,7 @@ import { BigNumber, BigNumberish } from 'ethers'
 import { formatBytes32String } from 'ethers/lib/utils'
 import { expect } from 'chai'
 
-export const ZERO = new BN('0')
+export const ZERO = new BN('0').toString()
 export const chainId = 31337 // buidlerevm chain id
 export const name = 'Yield'
 

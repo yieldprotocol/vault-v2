@@ -1,8 +1,8 @@
 const Pool = artifacts.require('Pool')
 const DaiProxy = artifacts.require('YieldProxy')
 
-import { WETH, rate1, daiTokens1, wethTokens1, toWad, subBN, bnify, MAX, chainId, name } from '../shared/utils'
-import { YieldEnvironmentLite, Contract } from '../shared/fixtures'
+import { WETH, rate1, daiTokens1, wethTokens1, toWad, subBN, bnify, MAX, chainId, name, ZERO } from '../shared/utils'
+import { MakerEnvironment, YieldEnvironmentLite, Contract } from '../shared/fixtures'
 import { getSignatureDigest, getPermitDigest, getDaiDigest, userPrivateKey, sign } from '../shared/signatures'
 import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
 
@@ -19,6 +19,7 @@ contract('YieldProxy - DaiProxy', async (accounts) => {
   let yDai1: Contract
   let pool: Contract
   let daiProxy: Contract
+  let maker: MakerEnvironment
   let env: YieldEnvironmentLite
 
   const one = toWad(1)
@@ -32,6 +33,7 @@ contract('YieldProxy - DaiProxy', async (accounts) => {
     const block = await web3.eth.getBlockNumber()
     maturity1 = (await web3.eth.getBlock(block)).timestamp + 31556952 // One year
     env = await YieldEnvironmentLite.setup([maturity1])
+    maker = env.maker
     dai = env.maker.dai
     controller = env.controller
 
@@ -125,6 +127,39 @@ contract('YieldProxy - DaiProxy', async (accounts) => {
     const daiSig2 = sign(digest, userPrivateKey)
     // Send it!
     await daiProxy.authorizePool(pool.address, user1, daiSig2, ydaiSig, poolSig, { from: operator })
+  })
+
+  describe('on controller', () => {
+    beforeEach(async () => {
+      // Get some debt
+      await env.postWeth(user1, wethTokens1)
+      const toBorrow = (await env.unlockedOf(WETH, user1)).toString()
+      await controller.borrow(WETH, maturity1, user1, user1, toBorrow, { from: user1 })
+    })
+
+    it('repays debt with Dai and with signature', async () => {
+      await maker.getDai(user1, daiTokens1, rate1)
+      const debt = (await controller.debtDai(WETH, maturity1, user1)).toString()
+
+      const deadline = MAX
+      // Authorize DAI
+      digest = getDaiDigest(
+        await dai.name(),
+        dai.address,
+        chainId,
+        {
+          owner: user1,
+          spender: env.treasury.address,
+          can: true,
+        },
+        bnify(await dai.nonces(user1)),
+        deadline
+      )
+      let daiSig = sign(digest, userPrivateKey)
+
+      await daiProxy.repayDaiWithSignature(WETH, maturity1, user1, debt, daiSig, { from: user1 })
+      assert.equal((await controller.debtDai(WETH, maturity1, user1)).toString(), ZERO)
+    })
   })
 
   describe('with liquidity', () => {
