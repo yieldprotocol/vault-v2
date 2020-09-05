@@ -4,9 +4,9 @@ pragma solidity ^0.5.0 || ^0.6.0;
 import "../pool/YieldMath.sol";
 
 /**
- * Wrapper for Yield Math Smart Contract Library.
+ * Wrapper for Yield Math Smart Contract Library, with return values for reverts.
  */
-contract YieldMathDAIWrapper {
+contract YieldMathWrapper {
   /**
    * Calculate the amount of yDAI a user would get for given amount of DAI.
    *
