@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.6.10;
 import "./TradeReversalInvariant.sol";
+import "./ReservesValueInvariant.sol";
 
-contract EchidnaWrapper is TradeReversalInvariant {
+
+contract TradeReversalInvariantWrapper is TradeReversalInvariant {
 
     /// @dev Sell yDai and sell the obtained Dai back for yDai
     function sellYDaiAndReverse(uint128 daiReserves, uint128 yDAIReserves, uint128 yDaiIn, uint128 timeTillMaturity)
@@ -30,5 +32,14 @@ contract EchidnaWrapper is TradeReversalInvariant {
         public pure returns (uint128)
     {
         _buyDaiAndReverse(daiReserves, yDAIReserves, daiOut, timeTillMaturity);
+    }
+}
+
+contract ReservesValueInvariantWrapper is ReservesValueInvariant {
+    /// @dev Calculates the value of the reserves
+    function reservesValue(uint128 daiReserves, uint128 yDAIReserves, uint128 timeTillMaturity)
+        public pure returns (uint128)
+    {
+        _reservesValue(daiReserves, yDAIReserves, timeTillMaturity);
     }
 }
