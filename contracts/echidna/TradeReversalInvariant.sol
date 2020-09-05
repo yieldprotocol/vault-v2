@@ -5,7 +5,7 @@ import "../pool/Math64x64.sol";
 import "@nomiclabs/buidler/console.sol";
 
 
-contract YieldMathEchidna {
+contract TradeReversalInvariant {
     uint128 constant internal precision = 1e12;
     int128 constant internal k = int128(uint256((1 << 64)) / 126144000); // 1 / Seconds in 4 years, in 64.64
     int128 constant internal g = int128(uint256((95 << 64)) / 100); // All constants are `ufixed`, to divide them they must be converted to uint256
@@ -21,7 +21,7 @@ contract YieldMathEchidna {
 
     constructor() public {}
     
-    /// @dev Bali Overflow-protected addition, from OpenZeppelin
+    /// @dev Overflow-protected addition, from OpenZeppelin
     function add(uint128 a, uint128 b)
         internal pure returns (uint128)
     {
@@ -29,7 +29,7 @@ contract YieldMathEchidna {
         require(c >= a, "Pool: Dai reserves too high");
         return c;
     }
-    /// @dev Bali Overflow-protected substraction, from OpenZeppelin
+    /// @dev Overflow-protected substraction, from OpenZeppelin
     function sub(uint128 a, uint128 b) internal pure returns (uint128) {
         require(b <= a, "Pool: yDai reserves too low");
         uint128 c = a - b;

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.6.10;
-import "./YieldMathEchidna.sol";
+import "./TradeReversalInvariant.sol";
 
-contract YieldMathEchidnaWrapper is YieldMathEchidna {
+contract EchidnaWrapper is TradeReversalInvariant {
 
     /// @dev Sell yDai and sell the obtained Dai back for yDai
     function sellYDaiAndReverse(uint128 daiReserves, uint128 yDAIReserves, uint128 yDaiIn, uint128 timeTillMaturity)

@@ -1,4 +1,4 @@
-const Test = artifacts.require('YieldMathEchidnaWrapper')
+const Test = artifacts.require('EchidnaWrapper')
 const YieldMath = artifacts.require('YieldMathMock')
 
 // @ts-ignore
@@ -7,7 +7,7 @@ import { bnify } from '../shared/utils'
 import { Contract } from '../shared/fixtures'
 // @ts-ignore
 
-contract('YieldMath - Liquidity Invariant', async (accounts) => {
+contract('YieldMath - Trade Reversal Invariant', async (accounts) => {
   let snapshot: any
   let snapshotId: string
 
