@@ -27,49 +27,6 @@ contract('YieldMath - Trade Reversal Invariant', async (accounts) => {
     yieldMath = await YieldMath.new()
   })
 
-  it('Outputs the invariant for two consecutive seconds', async () => {
-    // maxDaiReserves = 10**27; // $1B
-    // maxYDaiReserves = 10**27; // $1B
-    // maxTrade = 10**26; // $100M
-    // maxTimeTillMaturity = 31556952;
-
-    // const minDaiReserves = '1000000000000000000000' // 10**21; // $1000
-    // const minYDaiReserves = '1000000000000000000000' // 10**21; // $1000
-    // const minTrade = '1000000000000000000' // 10**18; // $1
-    // const minTimeTillMaturity = 1;
-
-    // const daiReserves = minDaiReserves
-    // const yDaiReserves = minYDaiReserves
-    // const yDaiIn = minTrade
-    // const timeTillMaturity = minTimeTillMaturity
-
-    const daiReserves = '998999999999999999998'
-    const yDaiReserves = '1001000000000000000001'
-    const yDaiIn = '1000000000000000000'
-    const timeTillMaturity = '43199'
-
-    console.log('yDai Reserves:       ' + yDaiReserves.toString())
-    console.log('Dai Reserves:        ' + daiReserves.toString())
-    console.log('Time until maturity: ' + timeTillMaturity.toString())
-    console.log('yDai in:             ' + yDaiIn.toString())
-    console.log(
-      'Reserves value:      ' + (await test.initialReservesValue(daiReserves, yDaiReserves, timeTillMaturity))
-    )
-    const daiOut = bnify(await yieldMath.daiOutForYDaiIn(daiReserves, yDaiReserves, yDaiIn, timeTillMaturity, k, g))
-    console.log('Dai out:             ' + daiOut.toString())
-    console.log(
-      'Reserves value:      ' +
-        (await test
-          .initialReservesValue(
-            bnify(daiReserves).sub(daiOut).toString(),
-            bnify(yDaiReserves).add(yDaiIn).toString(),
-            bnify(timeTillMaturity).sub(1).toString()
-          )
-          .toString())
-    )
-    // console.log((await test.testLiquidityInvariant('66329041300990984000', '34400000000000000000', '10000000000000000000', '31556951')).toString());
-  })
-
   it('Sells yDai and reverses the trade', async () => {
     // maxDaiReserves = 10**27; // $1B
     // maxYDaiReserves = 10**27; // $1B

@@ -2,7 +2,6 @@
 pragma solidity ^0.6.10;
 import "../pool/YieldMath.sol"; // 64 bits
 import "../pool/Math64x64.sol";
-import "@nomiclabs/buidler/console.sol";
 
 
 contract TradeReversalInvariant {
@@ -89,102 +88,11 @@ contract TradeReversalInvariant {
         assert(daiOut <= daiIn);
     }
 
-    /// @dev Ensures that reserves grow with any daiOutForYDaiIn trade.
-    function testLiquidityDaiOutForYDaiIn(uint128 daiReserves, uint128 yDAIReserves, uint128 yDaiIn, uint128 timeTillMaturity)
-        internal view returns (bool)
-    {
-        require (daiReserves <= yDAIReserves);
-        daiReserves = minDaiReserves + daiReserves % maxDaiReserves;
-        yDAIReserves = minYDaiReserves + yDAIReserves % maxYDaiReserves;
-        timeTillMaturity = minTimeTillMaturity + timeTillMaturity % maxTimeTillMaturity;
-
-        uint128 reserves_0 = _initialReservesValue(daiReserves, yDAIReserves, timeTillMaturity);
-        uint128 daiOut= YieldMath.daiOutForYDaiIn(daiReserves, yDAIReserves, yDaiIn, timeTillMaturity, k, g);
-        uint128 reserves_1 = _initialReservesValue(sub(daiReserves, daiOut), add(yDAIReserves, yDaiIn), sub(timeTillMaturity, 1));
-        assert(reserves_0 < reserves_1);
-        return reserves_0 < reserves_1;
-    }
-
-    /// @dev Ensures that reserves grow with any yDaiInForDaiOut trade.
-    function testLiquidityDaiInForYDaiOut(uint128 daiReserves, uint128 yDAIReserves, uint128 yDaiOut, uint128 timeTillMaturity)
-        internal view returns (bool)
-    {
-        require (daiReserves <= yDAIReserves - yDaiOut);
-        daiReserves = minDaiReserves + daiReserves % maxDaiReserves;
-        yDAIReserves = minYDaiReserves + yDAIReserves % maxYDaiReserves;
-        timeTillMaturity = minTimeTillMaturity + timeTillMaturity % maxTimeTillMaturity;
-
-        uint128 reserves_0 = _initialReservesValue(daiReserves, yDAIReserves, timeTillMaturity);
-        uint128 daiIn= YieldMath.daiInForYDaiOut(daiReserves, yDAIReserves, yDaiOut, timeTillMaturity, k, g);
-        uint128 reserves_1 = _initialReservesValue(add(daiReserves, daiIn), sub(yDAIReserves, yDaiOut), sub(timeTillMaturity, 1));
-        assert(reserves_0 < reserves_1);
-        return reserves_0 < reserves_1;
-    }
-
-    /// @dev Ensures that reserves grow with any yDaiOutForDaiIn trade.
-    function testLiquidityYDaiOutForDaiIn(uint128 daiReserves, uint128 yDAIReserves, uint128 daiIn, uint128 timeTillMaturity)
-        internal view returns (bool)
-    {
-        require (daiReserves + daiIn <= yDAIReserves);
-        daiReserves = minDaiReserves + daiReserves % maxDaiReserves;
-        yDAIReserves = minYDaiReserves + yDAIReserves % maxYDaiReserves;
-        timeTillMaturity = minTimeTillMaturity + timeTillMaturity % maxTimeTillMaturity;
-
-        uint128 reserves_0 = _initialReservesValue(daiReserves, yDAIReserves, timeTillMaturity);
-        uint128 yDaiOut= YieldMath.yDaiOutForDaiIn(daiReserves, yDAIReserves, daiIn, timeTillMaturity, k, g);
-        uint128 reserves_1 = _initialReservesValue(add(daiReserves, daiIn), sub(yDAIReserves, yDaiOut), sub(timeTillMaturity, 1));
-        assert(reserves_0 < reserves_1);
-        return reserves_0 < reserves_1;
-    }
-
-    /// @dev Ensures that reserves grow with any yDaiInForDaiOut trade.
-    function testLiquidityYDaiInForDaiOut(uint128 daiReserves, uint128 yDAIReserves, uint128 daiOut, uint128 timeTillMaturity)
-        internal view returns (bool)
-    {
-        require (daiReserves <= yDAIReserves);
-        daiReserves = minDaiReserves + daiReserves % maxDaiReserves;
-        yDAIReserves = minYDaiReserves + yDAIReserves % maxYDaiReserves;
-        timeTillMaturity = minTimeTillMaturity + timeTillMaturity % maxTimeTillMaturity;
-
-        uint128 reserves_0 = _initialReservesValue(daiReserves, yDAIReserves, timeTillMaturity);
-        uint128 yDaiIn= YieldMath.yDaiInForDaiOut(daiReserves, yDAIReserves, daiOut, timeTillMaturity, k, g);
-        uint128 reserves_1 = _initialReservesValue(sub(daiReserves, daiOut), add(yDAIReserves, yDaiIn), sub(timeTillMaturity, 1));
-        assert(reserves_0 < reserves_1);
-        return reserves_0 < reserves_1;
-    }
-
     /// @dev Ensures log_2 grows as x grows
     function testLog2MonotonicallyGrows(uint128 x) internal pure {
         uint128 z1= YieldMath.log_2(x);
         uint128 z2= YieldMath.log_2(x + 1);
         assert(z2 >= z1);
-    }
-
-    /**
-     * Estimate in DAI the value of reserves at protocol initialization time.
-     *
-     * @param daiReserves DAI reserves amount
-     * @param yDAIReserves yDAI reserves amount
-     * @param timeTillMaturity time till maturity in seconds
-     * @return estimated value of reserves
-     */
-    function _initialReservesValue (
-        uint128 daiReserves, uint128 yDAIReserves, uint128 timeTillMaturity)
-        internal pure returns (uint128)
-    {
-        // a = (1 - k * timeTillMaturity)
-        int128 a = Math64x64.sub (0x10000000000000000, Math64x64.mul (k, Math64x64.fromUInt (timeTillMaturity)));
-        require (a > 0);
-
-        uint256 sum =
-        uint256 (YieldMath.pow (daiReserves, uint128 (a), 0x10000000000000000)) +
-        uint256 (YieldMath.pow (yDAIReserves, uint128 (a), 0x10000000000000000)) >> 1;
-        require (sum < 0x100000000000000000000000000000000);
-
-        uint256 result = uint256 (YieldMath.pow (uint128 (sum), 0x10000000000000000, uint128 (a))) << 1;
-        require (result < 0x100000000000000000000000000000000);
-
-        return uint128 (result);
     }
 
     /// @dev Sell yDai and sell the obtained Dai back for yDai
