@@ -54,7 +54,7 @@ contract ReservesValueInvariant {
 
     /// @dev Ensures that reserves grow with any yDaiInForDaiOut trade.
     function testLiquidityDaiInForYDaiOut(uint128 daiReserves, uint128 yDAIReserves, uint128 yDaiOut, uint128 timeTillMaturity)
-        internal view returns (bool)
+        public view returns (bool)
     {
         require (daiReserves <= yDAIReserves - yDaiOut);
         daiReserves = minDaiReserves + daiReserves % maxDaiReserves;
@@ -70,7 +70,7 @@ contract ReservesValueInvariant {
 
     /// @dev Ensures that reserves grow with any yDaiOutForDaiIn trade.
     function testLiquidityYDaiOutForDaiIn(uint128 daiReserves, uint128 yDAIReserves, uint128 daiIn, uint128 timeTillMaturity)
-        internal view returns (bool)
+        public view returns (bool)
     {
         require (daiReserves + daiIn <= yDAIReserves);
         daiReserves = minDaiReserves + daiReserves % maxDaiReserves;
@@ -86,7 +86,7 @@ contract ReservesValueInvariant {
 
     /// @dev Ensures that reserves grow with any yDaiInForDaiOut trade.
     function testLiquidityYDaiInForDaiOut(uint128 daiReserves, uint128 yDAIReserves, uint128 daiOut, uint128 timeTillMaturity)
-        internal view returns (bool)
+        public view returns (bool)
     {
         require (daiReserves <= yDAIReserves);
         daiReserves = minDaiReserves + daiReserves % maxDaiReserves;
@@ -117,7 +117,7 @@ contract ReservesValueInvariant {
      */
     function _reservesValue (
         uint128 daiReserves, uint128 yDAIReserves, uint128 timeTillMaturity)
-        internal pure returns (uint128)
+        internal view returns (uint128)
     {
         // a = (1 - k * timeTillMaturity)
         int128 a = Math64x64.sub (0x10000000000000000, Math64x64.mul (k, Math64x64.fromUInt (timeTillMaturity)));
@@ -131,6 +131,7 @@ contract ReservesValueInvariant {
         uint256 result = uint256 (YieldMath.pow (uint128 (sum), 0x10000000000000000, uint128 (a))) << 1;
         require (result < 0x100000000000000000000000000000000);
 
+        console.log(result);
         return uint128 (result);
     }
 }

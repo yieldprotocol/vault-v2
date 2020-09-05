@@ -38,8 +38,8 @@ contract TradeReversalInvariantWrapper is TradeReversalInvariant {
 contract ReservesValueInvariantWrapper is ReservesValueInvariant {
     /// @dev Calculates the value of the reserves
     function reservesValue(uint128 daiReserves, uint128 yDAIReserves, uint128 timeTillMaturity)
-        public pure returns (uint128)
+        public view returns (uint128)
     {
-        _reservesValue(daiReserves, yDAIReserves, timeTillMaturity);
+        return _reservesValue(daiReserves, yDAIReserves, timeTillMaturity);
     }
 }
