@@ -31,10 +31,4 @@ contract EchidnaWrapper is TradeReversalInvariant {
     {
         _buyDaiAndReverse(daiReserves, yDAIReserves, daiOut, timeTillMaturity);
     }
-
-    function initialReservesValue (uint128 daiReserves, uint128 yDAIReserves, uint128 timeTillMaturity)
-        public pure returns (uint128)
-    {
-        _initialReservesValue (daiReserves, yDAIReserves, timeTillMaturity);
-    }
 }

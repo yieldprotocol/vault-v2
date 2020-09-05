@@ -70,7 +70,6 @@ contract TradeReversalInvariant {
         yDAIReserves = minYDaiReserves + yDAIReserves % maxYDaiReserves;
         timeTillMaturity = minTimeTillMaturity + timeTillMaturity % maxTimeTillMaturity;
 
-        console.log(daiIn);
         uint128 daiOut = _sellDaiAndReverse(daiReserves, yDAIReserves, daiIn, timeTillMaturity);
         assert(daiOut <= daiIn);
     }
