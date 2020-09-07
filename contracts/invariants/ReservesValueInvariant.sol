@@ -40,13 +40,13 @@ contract ReservesValueInvariant {
     function testLiquidityDaiOutForYDaiIn(uint128 daiReserves, uint128 yDAIReserves, uint128 yDaiIn, uint128 timeTillMaturity)
         public view returns (bool)
     {
-        require (daiReserves <= yDAIReserves);
         daiReserves = minDaiReserves + daiReserves % maxDaiReserves;
         yDAIReserves = minYDaiReserves + yDAIReserves % maxYDaiReserves;
         timeTillMaturity = minTimeTillMaturity + timeTillMaturity % maxTimeTillMaturity;
+        require (daiReserves <= yDAIReserves);
 
         uint128 reservesValue_0 = _reservesValue(daiReserves, yDAIReserves, timeTillMaturity);
-        uint128 daiOut= YieldMath.daiOutForYDaiIn(daiReserves, yDAIReserves, yDaiIn, timeTillMaturity, k, g);
+        uint128 daiOut = YieldMath.daiOutForYDaiIn(daiReserves, yDAIReserves, yDaiIn, timeTillMaturity, k, g);
         uint128 reservesValue_1 = _reservesValue(sub(daiReserves, daiOut), add(yDAIReserves, yDaiIn), sub(timeTillMaturity, 1));
         assert(reservesValue_0 < reservesValue_1);
         return reservesValue_0 < reservesValue_1;
@@ -56,13 +56,13 @@ contract ReservesValueInvariant {
     function testLiquidityDaiInForYDaiOut(uint128 daiReserves, uint128 yDAIReserves, uint128 yDaiOut, uint128 timeTillMaturity)
         public view returns (bool)
     {
-        require (daiReserves <= yDAIReserves - yDaiOut);
         daiReserves = minDaiReserves + daiReserves % maxDaiReserves;
         yDAIReserves = minYDaiReserves + yDAIReserves % maxYDaiReserves;
         timeTillMaturity = minTimeTillMaturity + timeTillMaturity % maxTimeTillMaturity;
+        require (daiReserves <= yDAIReserves - yDaiOut);
 
         uint128 reservesValue_0 = _reservesValue(daiReserves, yDAIReserves, timeTillMaturity);
-        uint128 daiIn= YieldMath.daiInForYDaiOut(daiReserves, yDAIReserves, yDaiOut, timeTillMaturity, k, g);
+        uint128 daiIn = YieldMath.daiInForYDaiOut(daiReserves, yDAIReserves, yDaiOut, timeTillMaturity, k, g);
         uint128 reservesValue_1 = _reservesValue(add(daiReserves, daiIn), sub(yDAIReserves, yDaiOut), sub(timeTillMaturity, 1));
         assert(reservesValue_0 < reservesValue_1);
         return reservesValue_0 < reservesValue_1;
@@ -72,13 +72,13 @@ contract ReservesValueInvariant {
     function testLiquidityYDaiOutForDaiIn(uint128 daiReserves, uint128 yDAIReserves, uint128 daiIn, uint128 timeTillMaturity)
         public view returns (bool)
     {
-        require (daiReserves + daiIn <= yDAIReserves);
         daiReserves = minDaiReserves + daiReserves % maxDaiReserves;
         yDAIReserves = minYDaiReserves + yDAIReserves % maxYDaiReserves;
         timeTillMaturity = minTimeTillMaturity + timeTillMaturity % maxTimeTillMaturity;
+        require (daiReserves + daiIn <= yDAIReserves);
 
         uint128 reservesValue_0 = _reservesValue(daiReserves, yDAIReserves, timeTillMaturity);
-        uint128 yDaiOut= YieldMath.yDaiOutForDaiIn(daiReserves, yDAIReserves, daiIn, timeTillMaturity, k, g);
+        uint128 yDaiOut = YieldMath.yDaiOutForDaiIn(daiReserves, yDAIReserves, daiIn, timeTillMaturity, k, g);
         uint128 reservesValue_1 = _reservesValue(add(daiReserves, daiIn), sub(yDAIReserves, yDaiOut), sub(timeTillMaturity, 1));
         assert(reservesValue_0 < reservesValue_1);
         return reservesValue_0 < reservesValue_1;
@@ -88,13 +88,13 @@ contract ReservesValueInvariant {
     function testLiquidityYDaiInForDaiOut(uint128 daiReserves, uint128 yDAIReserves, uint128 daiOut, uint128 timeTillMaturity)
         public view returns (bool)
     {
-        require (daiReserves <= yDAIReserves);
         daiReserves = minDaiReserves + daiReserves % maxDaiReserves;
         yDAIReserves = minYDaiReserves + yDAIReserves % maxYDaiReserves;
         timeTillMaturity = minTimeTillMaturity + timeTillMaturity % maxTimeTillMaturity;
-
+        require (daiReserves <= yDAIReserves);
+        
         uint128 reservesValue_0 = _reservesValue(daiReserves, yDAIReserves, timeTillMaturity);
-        uint128 yDaiIn= YieldMath.yDaiInForDaiOut(daiReserves, yDAIReserves, daiOut, timeTillMaturity, k, g);
+        uint128 yDaiIn = YieldMath.yDaiInForDaiOut(daiReserves, yDAIReserves, daiOut, timeTillMaturity, k, g);
         uint128 reservesValue_1 = _reservesValue(sub(daiReserves, daiOut), add(yDAIReserves, yDaiIn), sub(timeTillMaturity, 1));
         assert(reservesValue_0 < reservesValue_1);
         return reservesValue_0 < reservesValue_1;

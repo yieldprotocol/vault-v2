@@ -43,10 +43,10 @@ contract('YieldMath - Trade Reversal Invariant', async (accounts) => {
     // const yDaiIn = minTrade
     // const timeTillMaturity = minTimeTillMaturity
 
-    const daiReserves = '996046632372301188284076'
-    const yDaiReserves = '1000000000000000000001'
-    const yDaiIn = '1000000000432404785'
-    const timeTillMaturity = '1994870'
+    let daiReserves = '1000000000000000000000'
+    let yDaiReserves = '1000000000000000000001'
+    let yDaiIn = '1000000000000000000'
+    let timeTillMaturity = '0'
 
     console.log('yDai Reserves:       ' + yDaiReserves.toString())
     console.log('Dai Reserves:        ' + daiReserves.toString())
@@ -105,10 +105,10 @@ contract('YieldMath - Trade Reversal Invariant', async (accounts) => {
     // const yDaiIn = minTrade
     // const timeTillMaturity = minTimeTillMaturity
 
-    let daiReserves = '1000000000000001133485'
-    let yDaiReserves = '1000000000000000000084'
-    let daiIn = '1000001001108599807'
-    let timeTillMaturity = '770'
+    let daiReserves = '1000000000000000000000'
+    let yDaiReserves = '1000000000000000000001'
+    let daiIn = '1000000000000000000'
+    let timeTillMaturity = '0'
 
     console.log('yDai Reserves:       ' + yDaiReserves.toString())
     console.log('Dai Reserves:        ' + daiReserves.toString())
@@ -145,10 +145,10 @@ contract('YieldMath - Trade Reversal Invariant', async (accounts) => {
     // const yDaiIn = minTrade
     // const timeTillMaturity = minTimeTillMaturity
 
-    const daiReserves = '925173878424482809107308121'
-    const yDaiReserves = '623579633693919687679844805'
-    const daiOut = '1001078616452680644'
-    const timeTillMaturity = '33'
+    const daiReserves = '786100583545859324586665'
+    const yDaiReserves = '21446358147545110233910802'
+    const daiOut = '1000000001781921161'
+    const timeTillMaturity = '94105225'
 
     console.log('yDai Reserves:       ' + yDaiReserves.toString())
     console.log('Dai Reserves:        ' + daiReserves.toString())
