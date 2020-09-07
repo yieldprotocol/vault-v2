@@ -8,7 +8,7 @@ import "@nomiclabs/buidler/console.sol";
 contract TradeReversalInvariant {
     uint128 constant internal precision = 1e12;
     int128 constant internal k = int128(uint256((1 << 64)) / 126144000); // 1 / Seconds in 4 years, in 64.64
-    int128 constant internal g = int128(uint256((95 << 64)) / 100); // All constants are `ufixed`, to divide them they must be converted to uint256
+    int128 constant internal g = int128(uint256((999 << 64)) / 1000); // All constants are `ufixed`, to divide them they must be converted to uint256
 
     uint128 minDaiReserves = 10**21; // $1000
     uint128 minYDaiReserves = minDaiReserves + 1;

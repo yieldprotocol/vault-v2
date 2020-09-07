@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.6.10;
-import "../pool/YieldMath.sol"; // 64 bits
+import "../pool/YieldMath.sol";     // 64 bits (for trading)
+import "../mocks/YieldMath128.sol"; // 128 bits (for reserves calculation)
 import "../pool/Math64x64.sol";
 import "@nomiclabs/buidler/console.sol";
 
@@ -8,7 +9,7 @@ import "@nomiclabs/buidler/console.sol";
 contract ReservesValueInvariant {
     uint128 constant internal precision = 1e12;
     int128 constant internal k = int128(uint256((1 << 64)) / 126144000); // 1 / Seconds in 4 years, in 64.64
-    int128 constant internal g = int128(uint256((95 << 64)) / 100); // All constants are `ufixed`, to divide them they must be converted to uint256
+    int128 constant internal g = int128(uint256((999 << 64)) / 1000); // All constants are `ufixed`, to divide them they must be converted to uint256
 
     uint128 minDaiReserves = 10**21; // $1000
     uint128 minYDaiReserves = minDaiReserves + 1;
@@ -47,6 +48,7 @@ contract ReservesValueInvariant {
 
         uint128 reservesValue_0 = _reservesValue(daiReserves, yDAIReserves, timeTillMaturity);
         uint128 daiOut = YieldMath.daiOutForYDaiIn(daiReserves, yDAIReserves, yDaiIn, timeTillMaturity, k, g);
+        require(add(yDAIReserves, yDaiIn) >= sub(daiReserves, daiOut));
         uint128 reservesValue_1 = _reservesValue(sub(daiReserves, daiOut), add(yDAIReserves, yDaiIn), sub(timeTillMaturity, 1));
         assert(reservesValue_0 < reservesValue_1);
         return reservesValue_0 < reservesValue_1;
@@ -63,6 +65,7 @@ contract ReservesValueInvariant {
 
         uint128 reservesValue_0 = _reservesValue(daiReserves, yDAIReserves, timeTillMaturity);
         uint128 daiIn = YieldMath.daiInForYDaiOut(daiReserves, yDAIReserves, yDaiOut, timeTillMaturity, k, g);
+        require(sub(yDAIReserves, yDaiOut) >= add(daiReserves, daiIn));
         uint128 reservesValue_1 = _reservesValue(add(daiReserves, daiIn), sub(yDAIReserves, yDaiOut), sub(timeTillMaturity, 1));
         assert(reservesValue_0 < reservesValue_1);
         return reservesValue_0 < reservesValue_1;
@@ -79,6 +82,7 @@ contract ReservesValueInvariant {
 
         uint128 reservesValue_0 = _reservesValue(daiReserves, yDAIReserves, timeTillMaturity);
         uint128 yDaiOut = YieldMath.yDaiOutForDaiIn(daiReserves, yDAIReserves, daiIn, timeTillMaturity, k, g);
+        require(sub(yDAIReserves, yDaiOut) >= add(daiReserves, daiIn));
         uint128 reservesValue_1 = _reservesValue(add(daiReserves, daiIn), sub(yDAIReserves, yDaiOut), sub(timeTillMaturity, 1));
         assert(reservesValue_0 < reservesValue_1);
         return reservesValue_0 < reservesValue_1;
@@ -95,6 +99,7 @@ contract ReservesValueInvariant {
         
         uint128 reservesValue_0 = _reservesValue(daiReserves, yDAIReserves, timeTillMaturity);
         uint128 yDaiIn = YieldMath.yDaiInForDaiOut(daiReserves, yDAIReserves, daiOut, timeTillMaturity, k, g);
+        require(add(yDAIReserves, yDaiIn) >= sub(daiReserves, daiOut));
         uint128 reservesValue_1 = _reservesValue(sub(daiReserves, daiOut), add(yDAIReserves, yDaiIn), sub(timeTillMaturity, 1));
         assert(reservesValue_0 < reservesValue_1);
         return reservesValue_0 < reservesValue_1;
@@ -124,14 +129,13 @@ contract ReservesValueInvariant {
         require (a > 0);
 
         uint256 sum =
-        uint256 (YieldMath.pow (daiReserves, uint128 (a), 0x10000000000000000)) +
-        uint256 (YieldMath.pow (yDAIReserves, uint128 (a), 0x10000000000000000)) >> 1;
+        uint256 (YieldMath128.pow (daiReserves, uint128 (a), 0x10000000000000000)) +
+        uint256 (YieldMath128.pow (yDAIReserves, uint128 (a), 0x10000000000000000)) >> 1;
         require (sum < 0x100000000000000000000000000000000);
 
-        uint256 result = uint256 (YieldMath.pow (uint128 (sum), 0x10000000000000000, uint128 (a))) << 1;
+        uint256 result = uint256 (YieldMath128.pow (uint128 (sum), 0x10000000000000000, uint128 (a))) << 1;
         require (result < 0x100000000000000000000000000000000);
 
-        console.log(result);
         return uint128 (result);
     }
 }
