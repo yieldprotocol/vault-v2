@@ -64,8 +64,8 @@ library YieldMath {
     // t = k * timeTillMaturity
     int128 t = Math64x64.mul (k, Math64x64.fromUInt (timeTillMaturity));
 
-    // a = (1 - gt)
-    int128 a = Math64x64.sub (0x10000000000000000, Math64x64.mul (g, t));
+    // a = (1 - t/g)
+    int128 a = Math64x64.sub (0x10000000000000000, Math64x64.div (t, g));
     require (a > 0, "YieldMath: Too far from maturity");
 
     // ydy = yDAIReserves + yDAIAmount;
@@ -105,8 +105,8 @@ library YieldMath {
     // t = k * timeTillMaturity
     int128 t = Math64x64.mul (k, Math64x64.fromUInt (timeTillMaturity));
 
-    // a = (1 - gt)
-    int128 a = Math64x64.sub (0x10000000000000000, Math64x64.mul (g, t));
+    // a = (1 - t/g)
+    int128 a = Math64x64.sub (0x10000000000000000, Math64x64.div (t, g));
     require (a > 0, "YieldMath: Too far from maturity");
 
     // xdx = daiReserves - daiAmount
