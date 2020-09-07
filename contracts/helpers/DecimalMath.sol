@@ -24,9 +24,9 @@ contract DecimalMath {
     function muldrup(uint256 x, uint256 y)
         internal pure returns (uint256)
     {
-        uint256 z = x.mul(y).div(1e26); // RAY / 10
-        if (z % 10 > 0) return z / 10 + 1;
-        else return z / 10;
+        uint256 z = x.mul(y).div(UNIT);
+        if (divd(z, y) < x) return z.add(1);
+        else return z;
     }
 
     /// @dev Divides x between y, rounding up to the closest representable number.
@@ -34,8 +34,8 @@ contract DecimalMath {
     function divdrup(uint256 x, uint256 y)
         internal pure returns (uint256)
     {
-        uint256 z = x.mul(1e28).div(y); // RAY * 10
-        if (z % 10 > 0) return z / 10 + 1;
-        else return z / 10;
+        uint256 z = x.mul(UNIT).div(y);
+        if (muld(z, y) < x) return z.add(1);
+        else return z;
     }
 }
