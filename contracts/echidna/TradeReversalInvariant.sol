@@ -2,6 +2,7 @@
 pragma solidity ^0.6.10;
 import "../pool/YieldMath.sol"; // 64 bits
 import "../pool/Math64x64.sol";
+import "@nomiclabs/buidler/console.sol";
 
 
 contract TradeReversalInvariant {
@@ -37,54 +38,54 @@ contract TradeReversalInvariant {
 
     /// @dev Ensures that if we sell yDAI for DAI and back we get less yDAI than we had
     function testSellYDaiAndReverse(uint128 daiReserves, uint128 yDAIReserves, uint128 yDaiIn, uint128 timeTillMaturity)
-        public view returns (bool)
+        public view returns (uint128)
     {
-        require(daiReserves > yDAIReserves);
         daiReserves = minDaiReserves + daiReserves % maxDaiReserves;
         yDAIReserves = minYDaiReserves + yDAIReserves % maxYDaiReserves;
         timeTillMaturity = minTimeTillMaturity + timeTillMaturity % maxTimeTillMaturity;
 
         uint128 yDaiOut = _sellYDaiAndReverse(daiReserves, yDAIReserves, yDaiIn, timeTillMaturity);
         assert(yDaiOut <= yDaiIn);
+        return yDaiOut;
     }
 
     /// @dev Ensures that if we buy yDAI for DAI and back we get less DAI than we had
     function testBuyYDaiAndReverse(uint128 daiReserves, uint128 yDAIReserves, uint128 yDaiOut, uint128 timeTillMaturity)
-        public view returns (bool)
+        public view returns (uint128)
     {
-        require(daiReserves > yDAIReserves);
         daiReserves = minDaiReserves + daiReserves % maxDaiReserves;
         yDAIReserves = minYDaiReserves + yDAIReserves % maxYDaiReserves;
         timeTillMaturity = minTimeTillMaturity + timeTillMaturity % maxTimeTillMaturity;
 
         uint128 yDaiIn = _buyYDaiAndReverse(daiReserves, yDAIReserves, yDaiOut, timeTillMaturity);
         assert(yDaiOut <= yDaiIn);
+        return yDaiIn;
     }
 
     /// @dev Ensures that if we sell DAI for yDAI and back we get less DAI than we had
     function testSellDaiAndReverse(uint128 daiReserves, uint128 yDAIReserves, uint128 daiIn, uint128 timeTillMaturity)
-        public view returns (bool)
+        public view returns (uint128)
     {
-        require(daiReserves > yDAIReserves);
         daiReserves = minDaiReserves + daiReserves % maxDaiReserves;
         yDAIReserves = minYDaiReserves + yDAIReserves % maxYDaiReserves;
         timeTillMaturity = minTimeTillMaturity + timeTillMaturity % maxTimeTillMaturity;
 
         uint128 daiOut = _sellDaiAndReverse(daiReserves, yDAIReserves, daiIn, timeTillMaturity);
         assert(daiOut <= daiIn);
+        return daiOut;
     }
 
     /// @dev Ensures that if we buy DAI for yDAI and back we get less yDAI than we had
     function testBuyDaiAndReverse(uint128 daiReserves, uint128 yDAIReserves, uint128 daiOut, uint128 timeTillMaturity)
-        public view returns (bool)
+        public view returns (uint128)
     {
-        require(daiReserves > yDAIReserves);
         daiReserves = minDaiReserves + daiReserves % maxDaiReserves;
         yDAIReserves = minYDaiReserves + yDAIReserves % maxYDaiReserves;
         timeTillMaturity = minTimeTillMaturity + timeTillMaturity % maxTimeTillMaturity;
 
         uint128 daiIn = _buyYDaiAndReverse(daiReserves, yDAIReserves, daiOut, timeTillMaturity);
         assert(daiOut <= daiIn);
+        return daiIn;
     }
 
     /// @dev Ensures log_2 grows as x grows
@@ -99,7 +100,10 @@ contract TradeReversalInvariant {
         internal pure returns (uint128)
     {
         uint128 daiAmount = YieldMath.daiOutForYDaiIn(daiReserves, yDAIReserves, yDaiIn, timeTillMaturity, k, g);
-        return YieldMath.yDaiOutForDaiIn(sub(daiReserves, daiAmount), add(yDAIReserves, yDaiIn), daiAmount, timeTillMaturity, k, g);
+        require(add(yDAIReserves, yDaiIn) >= sub(daiReserves, daiAmount));
+        uint128 yDaiOut = YieldMath.yDaiOutForDaiIn(sub(daiReserves, daiAmount), add(yDAIReserves, yDaiIn), daiAmount, timeTillMaturity, k, g);
+        require(sub(add(yDAIReserves, yDaiIn), yDaiOut) >= daiReserves);
+        return yDaiOut;
     }
 
     /// @dev Buy yDai and sell it back
@@ -107,7 +111,10 @@ contract TradeReversalInvariant {
         internal pure returns (uint128)
     {
         uint128 daiAmount = YieldMath.daiInForYDaiOut(daiReserves, yDAIReserves, yDaiOut, timeTillMaturity, k, g);
-        return YieldMath.yDaiInForDaiOut(add(daiReserves, daiAmount), sub(yDAIReserves, yDaiOut), daiAmount, timeTillMaturity, k, g);
+        require(sub(yDAIReserves, yDaiOut) >= add(daiReserves, daiAmount));
+        uint128 yDaiIn = YieldMath.yDaiInForDaiOut(add(daiReserves, daiAmount), sub(yDAIReserves, yDaiOut), daiAmount, timeTillMaturity, k, g);
+        require(add(sub(yDAIReserves, yDaiOut), yDaiIn) >= daiReserves);
+        return yDaiIn;
     }
 
     /// @dev Sell yDai and sell the obtained Dai back for yDai
@@ -115,7 +122,10 @@ contract TradeReversalInvariant {
         internal pure returns (uint128)
     {
         uint128 yDaiAmount = YieldMath.yDaiOutForDaiIn(daiReserves, yDAIReserves, daiIn, timeTillMaturity, k, g);
-        return YieldMath.daiOutForYDaiIn(add(daiReserves, daiIn), sub(yDAIReserves, yDaiAmount), yDaiAmount, timeTillMaturity, k, g);
+        require(sub(yDAIReserves, yDaiAmount) >= add(daiReserves, daiIn));
+        uint128 daiOut = YieldMath.daiOutForYDaiIn(add(daiReserves, daiIn), sub(yDAIReserves, yDaiAmount), yDaiAmount, timeTillMaturity, k, g);
+        require(yDAIReserves >= sub(add(daiReserves, daiIn), daiOut));
+        return daiOut;
     }
 
     /// @dev Buy yDai and sell it back
@@ -123,6 +133,9 @@ contract TradeReversalInvariant {
         internal pure returns (uint128)
     {
         uint128 yDaiAmount = YieldMath.yDaiInForDaiOut(daiReserves, yDAIReserves, daiOut, timeTillMaturity, k, g);
-        return YieldMath.daiInForYDaiOut(sub(daiReserves, daiOut), add(yDAIReserves, yDaiAmount), yDaiAmount, timeTillMaturity, k, g);
+        require(add(yDAIReserves, yDaiAmount) >= sub(daiReserves, daiOut));
+        uint128 daiIn = YieldMath.daiInForYDaiOut(sub(daiReserves, daiOut), add(yDAIReserves, yDaiAmount), yDaiAmount, timeTillMaturity, k, g);
+        require(yDAIReserves >= add(sub(daiReserves, daiOut), daiIn));
+        return daiIn;
     }
 }
