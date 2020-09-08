@@ -87,8 +87,8 @@ contract('Pool', async (accounts) => {
     const k = b.div(new BN('126144000'))
     expect(await pool.k()).to.be.bignumber.equal(k)
 
-    const g = new BN('999').mul(b).div(new BN('1000')).add(new BN(1)) // Close enough
-    expect(new BN(await pool.g())).to.be.bignumber.equal(g)
+    const g1 = new BN('999').mul(b).div(new BN('1000')).add(new BN(1)) // Sell Dai to the pool
+    const g2 = new BN('1000').mul(b).div(new BN('999')).add(new BN(1)) // Sell yDai to the pool
   })
 
   it('adds initial liquidity', async () => {
@@ -135,7 +135,7 @@ contract('Pool', async (accounts) => {
       console.log('          yDaiReserves: %d', await pool.getYDaiReserves())
       console.log('          yDaiIn: %d', oneToken.toString())
       console.log('          k: %d', await pool.k())
-      console.log('          g: %d', await pool.g())
+      console.log('          g2: %d', await pool.g2())
       const t = new BN((await web3.eth.getBlock(await web3.eth.getBlockNumber())).timestamp)
       console.log('          timeTillMaturity: %d', new BN(maturity1).sub(t).toString())
 
@@ -180,7 +180,7 @@ contract('Pool', async (accounts) => {
       console.log('          yDaiReserves: %d', await pool.getYDaiReserves())
       console.log('          daiOut: %d', oneToken.toString())
       console.log('          k: %d', await pool.k())
-      console.log('          g: %d', await pool.g())
+      console.log('          g2: %d', await pool.g2())
       const t = new BN((await web3.eth.getBlock(await web3.eth.getBlockNumber())).timestamp)
       console.log('          timeTillMaturity: %d', new BN(maturity1).sub(t).toString())
 
@@ -311,7 +311,7 @@ contract('Pool', async (accounts) => {
         console.log('          yDaiReserves: %d', await pool.getYDaiReserves())
         console.log('          daiIn: %d', oneToken.toString())
         console.log('          k: %d', await pool.k())
-        console.log('          g: %d', await pool.g())
+        console.log('          g1: %d', await pool.g1())
         const t = new BN((await web3.eth.getBlock(await web3.eth.getBlockNumber())).timestamp)
         console.log('          timeTillMaturity: %d', new BN(maturity1).sub(t).toString())
 
@@ -360,7 +360,7 @@ contract('Pool', async (accounts) => {
         console.log('          yDaiReserves: %d', await pool.getYDaiReserves())
         console.log('          yDaiOut: %d', oneToken.toString())
         console.log('          k: %d', await pool.k())
-        console.log('          g: %d', await pool.g())
+        console.log('          g1: %d', await pool.g1())
         const t = new BN((await web3.eth.getBlock(await web3.eth.getBlockNumber())).timestamp)
         console.log('          timeTillMaturity: %d', new BN(maturity1).sub(t).toString())
 
