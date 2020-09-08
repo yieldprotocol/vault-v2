@@ -23,17 +23,15 @@ contract DecimalMath {
     /// Assumes x and y are both fixed point with `decimals` digits.
     function muldrup(uint256 x, uint256 y) internal pure returns (uint256)
     {
-        uint256 z = muld(x, y);
-        if (divd(z, y) < x) return z.add(1);
-        else return z;
+        uint256 z = x.mul(y);
+        return z.mod(UNIT) == 0 ? z.div(UNIT) : z.div(UNIT).add(1);
     }
 
     /// @dev Divides x between y, rounding up to the closest representable number.
     /// Assumes x and y are both fixed point with `decimals` digits.
     function divdrup(uint256 x, uint256 y) internal pure returns (uint256)
     {
-        uint256 z = divd(x, y);
-        if (muld(z, y) < x) return z.add(1);
-        else return z;
+        uint256 z = x.mul(UNIT);
+        return z.mod(y) == 0 ? z.div(y) : z.div(y).add(1);
     }
 }
