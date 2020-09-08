@@ -16,7 +16,8 @@ contract('YieldMath - Reserves Value Invariant', async (accounts) => {
 
   const b = new BN('18446744073709551615')
   const k = b.div(new BN('126144000'))
-  const g = new BN('999').mul(b).div(new BN('1000'))
+  const g1 = new BN('999').mul(b).div(new BN('1000')) // Sell Dai to the pool
+  const g2 = new BN('1000').mul(b).div(new BN('999')) // Sell yDai to the pool
 
   beforeEach(async () => {
     snapshot = await helper.takeSnapshot()
@@ -96,7 +97,7 @@ contract('YieldMath - Reserves Value Invariant', async (accounts) => {
     console.log(
       'Reserves value:      ' + (await test.reservesValue(daiReserves, yDaiReserves, timeTillMaturity)).toString()
     )
-    const yDaiAmount = await yieldMath.yDaiInForDaiOut64(daiReserves, yDaiReserves, daiOut, timeTillMaturity, k, g)
+    const yDaiAmount = await yieldMath.yDaiInForDaiOut64(daiReserves, yDaiReserves, daiOut, timeTillMaturity, k, g2)
     console.log('yDai intermediate:   ' + yDaiAmount.toString())
     console.log(
       'Reserves value:      ' +
@@ -108,7 +109,7 @@ contract('YieldMath - Reserves Value Invariant', async (accounts) => {
       yDaiAmount,
       timeTillMaturity,
       k,
-      g
+      g1
     )
     console.log('Dai in:              ' + daiIn.toString())
     console.log(

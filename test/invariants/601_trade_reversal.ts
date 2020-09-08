@@ -14,10 +14,6 @@ contract('YieldMath - Trade Reversal Invariant', async (accounts) => {
   let test: Contract
   let yieldMath: Contract
 
-  const b = bnify('18446744073709551615')
-  const k = bnify('126144000').div(b)
-  const g = bnify('999').mul(b).div(1000)
-
   beforeEach(async () => {
     snapshot = await helper.takeSnapshot()
     snapshotId = snapshot['result']

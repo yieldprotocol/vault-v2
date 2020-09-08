@@ -8,7 +8,8 @@ import "@nomiclabs/buidler/console.sol";
 contract TradeReversalInvariant {
     uint128 constant internal precision = 1e12;
     int128 constant internal k = int128(uint256((1 << 64)) / 126144000); // 1 / Seconds in 4 years, in 64.64
-    int128 constant internal g = int128(uint256((999 << 64)) / 1000); // All constants are `ufixed`, to divide them they must be converted to uint256
+    int128 constant internal g1 = int128(uint256((999 << 64)) / 1000); // To be used when selling Dai to the pool. All constants are `ufixed`, to divide them they must be converted to uint256
+    int128 constant internal g2 = int128(uint256((1000 << 64)) / 999); // To be used when selling yDai to the pool. All constants are `ufixed`, to divide them they must be converted to uint256
 
     uint128 minDaiReserves = 10**21; // $1000
     uint128 minYDaiReserves = minDaiReserves + 1;
@@ -99,9 +100,9 @@ contract TradeReversalInvariant {
     function _sellYDaiAndReverse(uint128 daiReserves, uint128 yDAIReserves, uint128 yDaiIn, uint128 timeTillMaturity)
         internal pure returns (uint128)
     {
-        uint128 daiAmount = YieldMath.daiOutForYDaiIn(daiReserves, yDAIReserves, yDaiIn, timeTillMaturity, k, g);
+        uint128 daiAmount = YieldMath.daiOutForYDaiIn(daiReserves, yDAIReserves, yDaiIn, timeTillMaturity, k, g2);
         require(add(yDAIReserves, yDaiIn) >= sub(daiReserves, daiAmount));
-        uint128 yDaiOut = YieldMath.yDaiOutForDaiIn(sub(daiReserves, daiAmount), add(yDAIReserves, yDaiIn), daiAmount, timeTillMaturity, k, g);
+        uint128 yDaiOut = YieldMath.yDaiOutForDaiIn(sub(daiReserves, daiAmount), add(yDAIReserves, yDaiIn), daiAmount, timeTillMaturity, k, g1);
         require(sub(add(yDAIReserves, yDaiIn), yDaiOut) >= daiReserves);
         return yDaiOut;
     }
@@ -110,9 +111,9 @@ contract TradeReversalInvariant {
     function _buyYDaiAndReverse(uint128 daiReserves, uint128 yDAIReserves, uint128 yDaiOut, uint128 timeTillMaturity)
         internal pure returns (uint128)
     {
-        uint128 daiAmount = YieldMath.daiInForYDaiOut(daiReserves, yDAIReserves, yDaiOut, timeTillMaturity, k, g);
+        uint128 daiAmount = YieldMath.daiInForYDaiOut(daiReserves, yDAIReserves, yDaiOut, timeTillMaturity, k, g1);
         require(sub(yDAIReserves, yDaiOut) >= add(daiReserves, daiAmount));
-        uint128 yDaiIn = YieldMath.yDaiInForDaiOut(add(daiReserves, daiAmount), sub(yDAIReserves, yDaiOut), daiAmount, timeTillMaturity, k, g);
+        uint128 yDaiIn = YieldMath.yDaiInForDaiOut(add(daiReserves, daiAmount), sub(yDAIReserves, yDaiOut), daiAmount, timeTillMaturity, k, g2);
         require(add(sub(yDAIReserves, yDaiOut), yDaiIn) >= daiReserves);
         return yDaiIn;
     }
@@ -121,9 +122,9 @@ contract TradeReversalInvariant {
     function _sellDaiAndReverse(uint128 daiReserves, uint128 yDAIReserves, uint128 daiIn, uint128 timeTillMaturity)
         internal pure returns (uint128)
     {
-        uint128 yDaiAmount = YieldMath.yDaiOutForDaiIn(daiReserves, yDAIReserves, daiIn, timeTillMaturity, k, g);
+        uint128 yDaiAmount = YieldMath.yDaiOutForDaiIn(daiReserves, yDAIReserves, daiIn, timeTillMaturity, k, g1);
         require(sub(yDAIReserves, yDaiAmount) >= add(daiReserves, daiIn));
-        uint128 daiOut = YieldMath.daiOutForYDaiIn(add(daiReserves, daiIn), sub(yDAIReserves, yDaiAmount), yDaiAmount, timeTillMaturity, k, g);
+        uint128 daiOut = YieldMath.daiOutForYDaiIn(add(daiReserves, daiIn), sub(yDAIReserves, yDaiAmount), yDaiAmount, timeTillMaturity, k, g2);
         require(yDAIReserves >= sub(add(daiReserves, daiIn), daiOut));
         return daiOut;
     }
@@ -132,9 +133,9 @@ contract TradeReversalInvariant {
     function _buyDaiAndReverse(uint128 daiReserves, uint128 yDAIReserves, uint128 daiOut, uint128 timeTillMaturity)
         internal pure returns (uint128)
     {
-        uint128 yDaiAmount = YieldMath.yDaiInForDaiOut(daiReserves, yDAIReserves, daiOut, timeTillMaturity, k, g);
+        uint128 yDaiAmount = YieldMath.yDaiInForDaiOut(daiReserves, yDAIReserves, daiOut, timeTillMaturity, k, g2);
         require(add(yDAIReserves, yDaiAmount) >= sub(daiReserves, daiOut));
-        uint128 daiIn = YieldMath.daiInForYDaiOut(sub(daiReserves, daiOut), add(yDAIReserves, yDaiAmount), yDaiAmount, timeTillMaturity, k, g);
+        uint128 daiIn = YieldMath.daiInForYDaiOut(sub(daiReserves, daiOut), add(yDAIReserves, yDaiAmount), yDaiAmount, timeTillMaturity, k, g1);
         require(yDAIReserves >= add(sub(daiReserves, daiOut), daiIn));
         return daiIn;
     }
