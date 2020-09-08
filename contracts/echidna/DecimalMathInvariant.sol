@@ -11,6 +11,7 @@ contract DecimalMathInvariant is DecimalMath {
     function muld_(uint256 x, uint256 y) public pure returns (uint256) {
         uint z = muld(x, y);
         assert((x * y) / UNIT == z); // Assert math
+        assert (divd(z, y) <= x);    // We are rounding down
         // Assert revert on overflow
         if(y > UNIT) assert(z >= x); // x could be zero
         if(y < UNIT) assert(z <= x); // y could be zero
@@ -19,6 +20,7 @@ contract DecimalMathInvariant is DecimalMath {
     function divd_(uint256 x, uint256 y) public pure returns (uint256) {
         uint z = divd(x, y);
         assert((x * UNIT) / y == z); // Assert math
+        assert (muld(z, y) <= x);    // We are rounding down
         // Assert revert on overflow
         if(y > UNIT) assert(z <= x); // x could be zero
         if(y < UNIT) assert(z >= x); // x or y could be zero
@@ -27,7 +29,9 @@ contract DecimalMathInvariant is DecimalMath {
     function divdrup_(uint256 x, uint256 y) public pure returns (uint256) {
         uint z = divdrup(x, y);
 
-        assert (muld(z - 1, y) <= x && muld(z, y) >= x);
+        assert (muld(z, y) >= x); // We are rounding up
+        if (muld(z, y) > x) assert (divd(x, y) == z - 1); // Unless z * y is exactly x, we have rounded up.
+
         if(y > UNIT) assert(z <= x); // x could be zero
         if(y < UNIT) assert(z >= x); // x or y could be zero
     }
@@ -35,7 +39,9 @@ contract DecimalMathInvariant is DecimalMath {
     function muldrup_(uint256 x, uint256 y) public pure returns (uint256) {
         uint z = muldrup(x, y);
         
-        assert (divd(z - 1, y) <= x && divd(z, y) >= x);
+        assert (divd(z, y) >= x); // We are rounding up
+        if (divd(z, y) > x) assert (muld(x, y) == z - 1);  // Unless z / y is exactly x, we have rounded up.
+
         if(y > UNIT) assert(z >= x); // x could be zero
         if(y < UNIT) assert(z <= x); // x or y could be zero
     }
