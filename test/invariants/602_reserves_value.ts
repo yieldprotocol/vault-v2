@@ -1,4 +1,4 @@
-const Test = artifacts.require('ReservesValueInvariantWrapper')
+const Test = artifacts.require('WhitepaperInvariantWrapper')
 const YieldMath = artifacts.require('YieldMathMock')
 
 // @ts-ignore
@@ -53,7 +53,7 @@ contract('YieldMath - Reserves Value Invariant', async (accounts) => {
     console.log('Dai Reserves:        ' + daiReserves.toString())
     console.log('Time until maturity: ' + timeTillMaturity.toString())
     console.log(
-      'Reserves value:      ' + (await test.reservesValue(daiReserves, yDaiReserves, timeTillMaturity)).toString()
+      'Reserves value:      ' + (await test.whitepaperInvariant(daiReserves, yDaiReserves, timeTillMaturity)).toString()
     )
     const daiOut = await yieldMath.daiOutForYDaiIn64(daiReserves, yDaiReserves, yDaiIn, timeTillMaturity, k, g)
     console.log('yDai in:             ' + yDaiIn.toString())
@@ -63,7 +63,7 @@ contract('YieldMath - Reserves Value Invariant', async (accounts) => {
     // console.log('Time until maturity: ' + timeTillMaturity.toString())
     console.log(
       'Reserves value:      ' +
-        (await test.reservesValue(daiReserves.sub(daiOut), yDaiReserves.add(yDaiIn), timeTillMaturity)).toString()
+        (await test.whitepaperInvariant(daiReserves.sub(daiOut), yDaiReserves.add(yDaiIn), timeTillMaturity)).toString()
     )
     // console.log((await test.testLiquidityInvariant('66329041300990984000', '34400000000000000000', '10000000000000000000', '31556951')).toString());
   })
@@ -95,13 +95,13 @@ contract('YieldMath - Reserves Value Invariant', async (accounts) => {
     console.log('Dai out:             ' + daiOut.toString())
 
     console.log(
-      'Reserves value:      ' + (await test.reservesValue(daiReserves, yDaiReserves, timeTillMaturity)).toString()
+      'Reserves value:      ' + (await test.whitepaperInvariant(daiReserves, yDaiReserves, timeTillMaturity)).toString()
     )
     const yDaiAmount = await yieldMath.yDaiInForDaiOut64(daiReserves, yDaiReserves, daiOut, timeTillMaturity, k, g2)
     console.log('yDai intermediate:   ' + yDaiAmount.toString())
     console.log(
       'Reserves value:      ' +
-        (await test.reservesValue(daiReserves.sub(daiOut), yDaiReserves.add(yDaiAmount), timeTillMaturity)).toString()
+        (await test.whitepaperInvariant(daiReserves.sub(daiOut), yDaiReserves.add(yDaiAmount), timeTillMaturity)).toString()
     )
     const daiIn = await yieldMath.daiInForYDaiOut64(
       daiReserves.sub(daiOut),
@@ -114,7 +114,7 @@ contract('YieldMath - Reserves Value Invariant', async (accounts) => {
     console.log('Dai in:              ' + daiIn.toString())
     console.log(
       'Reserves value:      ' +
-        (await test.reservesValue(daiReserves.add(daiIn).sub(daiOut), yDaiReserves, timeTillMaturity)).toString()
+        (await test.whitepaperInvariant(daiReserves.add(daiIn).sub(daiOut), yDaiReserves, timeTillMaturity)).toString()
     )
   })
 })

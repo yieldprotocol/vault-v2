@@ -6,7 +6,7 @@ import "../pool/Math64x64.sol";
 import "@nomiclabs/buidler/console.sol";
 
 
-contract ReservesValueInvariant {
+contract WhitepaperInvariant {
     uint128 constant internal precision = 1e12;
     int128 constant internal k = int128(uint256((1 << 64)) / 126144000); // 1 / Seconds in 4 years, in 64.64
     int128 constant internal g1 = int128(uint256((999 << 64)) / 1000); // To be used when selling Dai to the pool. All constants are `ufixed`, to divide them they must be converted to uint256
@@ -47,12 +47,12 @@ contract ReservesValueInvariant {
         timeTillMaturity = minTimeTillMaturity + timeTillMaturity % maxTimeTillMaturity;
         require (daiReserves <= yDAIReserves);
 
-        uint128 reservesValue_0 = _reservesValue(daiReserves, yDAIReserves, timeTillMaturity);
+        uint128 whitepaperInvariant_0 = _whitepaperInvariant(daiReserves, yDAIReserves, timeTillMaturity);
         uint128 daiOut = YieldMath.daiOutForYDaiIn(daiReserves, yDAIReserves, yDaiIn, timeTillMaturity, k, g2);
         require(add(yDAIReserves, yDaiIn) >= sub(daiReserves, daiOut));
-        uint128 reservesValue_1 = _reservesValue(sub(daiReserves, daiOut), add(yDAIReserves, yDaiIn), sub(timeTillMaturity, 1));
-        assert(reservesValue_0 < reservesValue_1);
-        return reservesValue_0 < reservesValue_1;
+        uint128 whitepaperInvariant_1 = _whitepaperInvariant(sub(daiReserves, daiOut), add(yDAIReserves, yDaiIn), sub(timeTillMaturity, 1));
+        assert(whitepaperInvariant_0 < whitepaperInvariant_1);
+        return whitepaperInvariant_0 < whitepaperInvariant_1;
     }
 
     /// @dev Ensures that reserves grow with any yDaiInForDaiOut trade.
@@ -64,12 +64,12 @@ contract ReservesValueInvariant {
         timeTillMaturity = minTimeTillMaturity + timeTillMaturity % maxTimeTillMaturity;
         require (daiReserves <= yDAIReserves - yDaiOut);
 
-        uint128 reservesValue_0 = _reservesValue(daiReserves, yDAIReserves, timeTillMaturity);
+        uint128 whitepaperInvariant_0 = _whitepaperInvariant(daiReserves, yDAIReserves, timeTillMaturity);
         uint128 daiIn = YieldMath.daiInForYDaiOut(daiReserves, yDAIReserves, yDaiOut, timeTillMaturity, k, g1);
         require(sub(yDAIReserves, yDaiOut) >= add(daiReserves, daiIn));
-        uint128 reservesValue_1 = _reservesValue(add(daiReserves, daiIn), sub(yDAIReserves, yDaiOut), sub(timeTillMaturity, 1));
-        assert(reservesValue_0 < reservesValue_1);
-        return reservesValue_0 < reservesValue_1;
+        uint128 whitepaperInvariant_1 = _whitepaperInvariant(add(daiReserves, daiIn), sub(yDAIReserves, yDaiOut), sub(timeTillMaturity, 1));
+        assert(whitepaperInvariant_0 < whitepaperInvariant_1);
+        return whitepaperInvariant_0 < whitepaperInvariant_1;
     }
 
     /// @dev Ensures that reserves grow with any yDaiOutForDaiIn trade.
@@ -81,12 +81,12 @@ contract ReservesValueInvariant {
         timeTillMaturity = minTimeTillMaturity + timeTillMaturity % maxTimeTillMaturity;
         require (daiReserves + daiIn <= yDAIReserves);
 
-        uint128 reservesValue_0 = _reservesValue(daiReserves, yDAIReserves, timeTillMaturity);
+        uint128 whitepaperInvariant_0 = _whitepaperInvariant(daiReserves, yDAIReserves, timeTillMaturity);
         uint128 yDaiOut = YieldMath.yDaiOutForDaiIn(daiReserves, yDAIReserves, daiIn, timeTillMaturity, k, g1);
         require(sub(yDAIReserves, yDaiOut) >= add(daiReserves, daiIn));
-        uint128 reservesValue_1 = _reservesValue(add(daiReserves, daiIn), sub(yDAIReserves, yDaiOut), sub(timeTillMaturity, 1));
-        assert(reservesValue_0 < reservesValue_1);
-        return reservesValue_0 < reservesValue_1;
+        uint128 whitepaperInvariant_1 = _whitepaperInvariant(add(daiReserves, daiIn), sub(yDAIReserves, yDaiOut), sub(timeTillMaturity, 1));
+        assert(whitepaperInvariant_0 < whitepaperInvariant_1);
+        return whitepaperInvariant_0 < whitepaperInvariant_1;
     }
 
     /// @dev Ensures that reserves grow with any yDaiInForDaiOut trade.
@@ -98,12 +98,12 @@ contract ReservesValueInvariant {
         timeTillMaturity = minTimeTillMaturity + timeTillMaturity % maxTimeTillMaturity;
         require (daiReserves <= yDAIReserves);
         
-        uint128 reservesValue_0 = _reservesValue(daiReserves, yDAIReserves, timeTillMaturity);
+        uint128 whitepaperInvariant_0 = _whitepaperInvariant(daiReserves, yDAIReserves, timeTillMaturity);
         uint128 yDaiIn = YieldMath.yDaiInForDaiOut(daiReserves, yDAIReserves, daiOut, timeTillMaturity, k, g2);
         require(add(yDAIReserves, yDaiIn) >= sub(daiReserves, daiOut));
-        uint128 reservesValue_1 = _reservesValue(sub(daiReserves, daiOut), add(yDAIReserves, yDaiIn), sub(timeTillMaturity, 1));
-        assert(reservesValue_0 < reservesValue_1);
-        return reservesValue_0 < reservesValue_1;
+        uint128 whitepaperInvariant_1 = _whitepaperInvariant(sub(daiReserves, daiOut), add(yDAIReserves, yDaiIn), sub(timeTillMaturity, 1));
+        assert(whitepaperInvariant_0 < whitepaperInvariant_1);
+        return whitepaperInvariant_0 < whitepaperInvariant_1;
     }
 
     /// @dev Ensures log_2 grows as x grows
@@ -121,7 +121,7 @@ contract ReservesValueInvariant {
      * @param timeTillMaturity time till maturity in seconds
      * @return estimated value of reserves
      */
-    function _reservesValue (
+    function _whitepaperInvariant (
         uint128 daiReserves, uint128 yDAIReserves, uint128 timeTillMaturity)
         internal view returns (uint128)
     {

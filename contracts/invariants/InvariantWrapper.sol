@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.6.10;
 import "./TradeReversalInvariant.sol";
-import "./ReservesValueInvariant.sol";
+import "./WhitepaperInvariant.sol";
 
 
 contract TradeReversalInvariantWrapper is TradeReversalInvariant {
@@ -35,11 +35,11 @@ contract TradeReversalInvariantWrapper is TradeReversalInvariant {
     }
 }
 
-contract ReservesValueInvariantWrapper is ReservesValueInvariant {
+contract WhitepaperInvariantWrapper is WhitepaperInvariant {
     /// @dev Calculates the value of the reserves
-    function reservesValue(uint128 daiReserves, uint128 yDAIReserves, uint128 timeTillMaturity)
+    function whitepaperInvariant(uint128 daiReserves, uint128 yDAIReserves, uint128 timeTillMaturity)
         public view returns (uint128)
     {
-        return _reservesValue(daiReserves, yDAIReserves, timeTillMaturity);
+        return _whitepaperInvariant(daiReserves, yDAIReserves, timeTillMaturity);
     }
 }
