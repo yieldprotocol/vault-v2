@@ -64,8 +64,8 @@ library YieldMath128 {
     // t = k * timeTillMaturity
     int128 t = Math64x64.mul (k, Math64x64.fromUInt (timeTillMaturity));
 
-    // a = (1 - t/g)
-    int128 a = Math64x64.sub (0x10000000000000000, Math64x64.div (t, g));
+    // a = (1 - gt)
+    int128 a = Math64x64.sub (0x10000000000000000, Math64x64.mul (g, t));
     require (a > 0);
 
     // ydy = yDAIReserves + yDAIAmount;
@@ -106,8 +106,8 @@ library YieldMath128 {
     // t = k * timeTillMaturity
     int128 t = Math64x64.mul (k, Math64x64.fromUInt (timeTillMaturity));
 
-    // a = (1 - t/g)
-    int128 a = Math64x64.sub (0x10000000000000000, Math64x64.div (t, g));
+    // a = (1 - gt)
+    int128 a = Math64x64.sub (0x10000000000000000, Math64x64.mul (g, t));
     require (a > 0);
 
     // zdz = daiReserves - daiAmount
