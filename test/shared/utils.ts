@@ -79,9 +79,9 @@ export function divRay(x: BigNumberish, ray: BigNumberish): BigNumber {
 /// Rounds up, careful if using negative numbers.
 /// I.e. divRay(wad(x), ray(y)) = wad(x/y)
 export function divrupRay(x: BigNumberish, ray: BigNumberish): BigNumber {
-  const z = UNIT.mul(10).mul(BigNumber.from(x)).div(BigNumber.from(ray))
-  if (z.mod(10).gt(0)) return z.div(10).add(1)
-  return z.div(10)
+  const z = UNIT.mul(BigNumber.from(x)).div(BigNumber.from(ray))
+  if (z.mul(ray).div(UNIT) < x) return z.add('1')
+  return z
 }
 
 export const CHAI = formatBytes32String('CHAI')
