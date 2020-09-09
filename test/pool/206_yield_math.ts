@@ -45,17 +45,17 @@ contract('YieldMath', async (accounts) => {
   })
 
   it('get the size of the contract', async () => {
-    console.log()
-    console.log('    ·--------------------|------------------|------------------|------------------·')
-    console.log('    |  Contract          ·  Bytecode        ·  Deployed        ·  Constructor     |')
-    console.log('    ·····················|··················|··················|···················')
+    // console.log()
+    // console.log('    ·--------------------|------------------|------------------|------------------·')
+    // console.log('    |  Contract          ·  Bytecode        ·  Deployed        ·  Constructor     |')
+    // console.log('    ·····················|··················|··················|···················')
 
     const bytecode = yieldMath.constructor._json.bytecode
     const deployed = yieldMath.constructor._json.deployedBytecode
     const sizeOfB = bytecode.length / 2
     const sizeOfD = deployed.length / 2
     const sizeOfC = sizeOfB - sizeOfD
-    console.log(
+    // console.log(
       '    |  ' +
         yieldMath.constructor._json.contractName.padEnd(18, ' ') +
         '|' +
@@ -68,8 +68,8 @@ contract('YieldMath', async (accounts) => {
         ('' + sizeOfC).padStart(16, ' ') +
         '  |'
     )
-    console.log('    ·--------------------|------------------|------------------|------------------·')
-    console.log()
+    // console.log('    ·--------------------|------------------|------------------|------------------·')
+    // console.log()
   })
 
   describe('Test pure math functions', async () => {
@@ -273,7 +273,7 @@ contract('YieldMath', async (accounts) => {
         var kValue = values[i][4]
         var gValue = values[i][5]
         /*
-        console.log(
+        // console.log(
           '    yDaiOutForDaiIn (' +
             daiReservesValue +
             ', ' +
@@ -426,6 +426,52 @@ contract('YieldMath', async (accounts) => {
 
         expect(result[1]).to.be.bignumber.gt(previousResult.toString())
         previousResult = result[1]
+      }
+    })
+
+    it('As we approach maturity, price grows to 1 for `yDaiOutForDaiIn`', async () => {
+      var values = [
+        ['100000000000000000000', '10000000000000000000', '1000000000000000000', '1000000'],
+        ['10000000000000000000000', '1000000000000000000000', '10000000000000000000', '1000000'],
+        ['1000000000000000000000000', '100000000000000000000000', '100000000000000000000', '1000000'],
+      ]
+      var timeTillMaturity = ['40', '4000', '400000', '40000000']
+      var b = new BN('18446744073709551615')
+      var k = b.div(new BN('126144000'))
+      var g = new BN('999').mul(b).div(new BN('1000'))
+
+      for (var i = 0; i < values.length; i++) {
+        // console.log("")
+        var daiReservesValue = values[i][0]
+        var yDAIReservesValue = values[i][1]
+        var daiAmountValue = values[i][2]
+        
+        var daiReserves = toBigNumber(daiReservesValue)
+        var yDAIReserves = toBigNumber(yDAIReservesValue)
+        var daiAmount = toBigNumber(daiAmountValue)
+
+        const flatFee = new BN('1000000000000')
+        const maximum = daiAmount.sub(flatFee)
+        var previousResult = maximum
+        for (var j = 0; j < g.length; j++) {
+          var t = timeTillMaturity[j]
+
+          var result
+          try {
+            result = await yieldMath.yDaiOutForDaiIn(daiReserves, yDAIReserves, daiAmount, t, k, g)
+          } catch (e) {
+            result = [false, undefined]
+          }
+
+          // console.log("      " + result[1].toString())
+          if (j == 0) { // Test that when we are very close to maturity, price is very close but under 1 (minus flat fee).
+            expect(result[1]).to.be.bignumber.lt(maximum.toString())
+            expect(result[1]).to.be.bignumber.gt(maximum.mul(new BN('999999')).div(new BN('1000000')).toString())  
+          }
+          // Easier to test prices diverging from 1
+          expect(result[1]).to.be.bignumber.lt(previousResult.toString())
+          previousResult = result[1]
+        }
       }
     })
 
@@ -622,6 +668,52 @@ contract('YieldMath', async (accounts) => {
 
         expect(result[1]).to.be.bignumber.gt(previousResult.toString())
         previousResult = result[1]
+      }
+    })
+
+    it('As we approach maturity, price drops to 1 for `daiOutForYDaiIn`', async () => {
+      var values = [
+        ['100000000000000000000', '10000000000000000000', '1000000000000000000', '1000000'],
+        ['10000000000000000000000', '1000000000000000000000', '10000000000000000000', '1000000'],
+        ['1000000000000000000000000', '100000000000000000000000', '100000000000000000000', '1000000'],
+      ]
+      var timeTillMaturity = ['40', '4000', '400000', '40000000']
+      var b = new BN('18446744073709551615')
+      var k = b.div(new BN('126144000'))
+      var g = new BN('1000').mul(b).div(new BN('999'))
+
+      for (var i = 0; i < values.length; i++) {
+        // console.log("")
+        var daiReservesValue = values[i][0]
+        var yDAIReservesValue = values[i][1]
+        var daiAmountValue = values[i][2]
+        
+        var daiReserves = toBigNumber(daiReservesValue)
+        var yDAIReserves = toBigNumber(yDAIReservesValue)
+        var daiAmount = toBigNumber(daiAmountValue)
+
+        const flatFee = new BN('1000000000000')
+        const minimum = daiAmount.sub(flatFee)
+        var previousResult = minimum
+        for (var j = 0; j < g.length; j++) {
+          var t = timeTillMaturity[j]
+
+          var result
+          try {
+            result = await yieldMath.daiOutForYDaiIn(daiReserves, yDAIReserves, daiAmount, t, k, g)
+          } catch (e) {
+            result = [false, undefined]
+          }
+
+          // console.log("      " + result[1].toString())
+          if (j == 0) { // Test that when we are very close to maturity, price is very close but over 1 (minus flat fee).
+            expect(result[1]).to.be.bignumber.gt(minimum.toString())
+            expect(result[1]).to.be.bignumber.lt(minimum.mul(new BN('1000000')).div(new BN('999999')).toString())  
+          }
+          // Easier to test prices diverging from 1
+          expect(result[1]).to.be.bignumber.gt(previousResult.toString())
+          previousResult = result[1]
+        }
       }
     })
 
@@ -835,6 +927,52 @@ contract('YieldMath', async (accounts) => {
       }
     })
 
+    it('As we approach maturity, price grows to 1 for `yDaiInForDaiOut`', async () => {
+      var values = [
+        ['100000000000000000000', '10000000000000000000', '1000000000000000000', '1000000'],
+        ['10000000000000000000000', '1000000000000000000000', '10000000000000000000', '1000000'],
+        ['1000000000000000000000000', '100000000000000000000000', '100000000000000000000', '1000000'],
+      ]
+      var timeTillMaturity = ['40', '4000', '400000', '40000000']
+      var b = new BN('18446744073709551615')
+      var k = b.div(new BN('126144000'))
+      var g = new BN('1000').mul(b).div(new BN('999'))
+
+      for (var i = 0; i < values.length; i++) {
+        // console.log("")
+        var daiReservesValue = values[i][0]
+        var yDAIReservesValue = values[i][1]
+        var daiAmountValue = values[i][2]
+        
+        var daiReserves = toBigNumber(daiReservesValue)
+        var yDAIReserves = toBigNumber(yDAIReservesValue)
+        var daiAmount = toBigNumber(daiAmountValue)
+
+        const flatFee = new BN('1000000000000')
+        const maximum = daiAmount.add(flatFee)
+        var previousResult = maximum
+        for (var j = 0; j < g.length; j++) {
+          var t = timeTillMaturity[j]
+
+          var result
+          try {
+            result = await yieldMath.yDaiInForDaiOut(daiReserves, yDAIReserves, daiAmount, t, k, g)
+          } catch (e) {
+            result = [false, undefined]
+          }
+
+          // console.log("      " + result[1].toString())
+          if (j == 0) { // Test that when we are very close to maturity, price is very close but under 1 (plus flat fee).
+            expect(result[1]).to.be.bignumber.lt(maximum.toString())
+            expect(result[1]).to.be.bignumber.gt(maximum.mul(new BN('999999')).div(new BN('1000000')).toString())  
+          }
+          // Easier to test prices diverging from 1
+          expect(result[1]).to.be.bignumber.lt(previousResult.toString())
+          previousResult = result[1]
+        }
+      }
+    })
+
     it('Test `daiInForYDaiOut` function', async () => {
       var values = [
         ['0x0', '0x0', '0x0', '0x0', '0x0', '0x0', true],
@@ -1041,6 +1179,52 @@ contract('YieldMath', async (accounts) => {
 
         expect(result[1]).to.be.bignumber.gt(previousResult.toString())
         previousResult = result[1]
+      }
+    })
+
+    it('As we approach maturity, price drops to 1 for `daiInForYDaiOut`', async () => {
+      var values = [
+        ['100000000000000000000', '10000000000000000000', '1000000000000000000', '1000000'],
+        ['10000000000000000000000', '1000000000000000000000', '10000000000000000000', '1000000'],
+        ['1000000000000000000000000', '100000000000000000000000', '100000000000000000000', '1000000'],
+      ]
+      var timeTillMaturity = ['40', '4000', '400000', '40000000']
+      var b = new BN('18446744073709551615')
+      var k = b.div(new BN('126144000'))
+      var g = new BN('999').mul(b).div(new BN('1000'))
+
+      for (var i = 0; i < values.length; i++) {
+        // console.log("")
+        var daiReservesValue = values[i][0]
+        var yDAIReservesValue = values[i][1]
+        var daiAmountValue = values[i][2]
+        
+        var daiReserves = toBigNumber(daiReservesValue)
+        var yDAIReserves = toBigNumber(yDAIReservesValue)
+        var daiAmount = toBigNumber(daiAmountValue)
+
+        const flatFee = new BN('1000000000000')
+        const minimum = daiAmount.add(flatFee)
+        var previousResult = minimum
+        for (var j = 0; j < g.length; j++) {
+          var t = timeTillMaturity[j]
+
+          var result
+          try {
+            result = await yieldMath.daiInForYDaiOut(daiReserves, yDAIReserves, daiAmount, t, k, g)
+          } catch (e) {
+            result = [false, undefined]
+          }
+
+          // console.log("      " + result[1].toString())
+          if (j == 0) { // Test that when we are very close to maturity, price is very close but over 1 (plus flat fee).
+            expect(result[1]).to.be.bignumber.gt(minimum.toString())
+            expect(result[1]).to.be.bignumber.lt(minimum.mul(new BN('1000000')).div(new BN('999999')).toString())  
+          }
+          // Easier to test prices diverging from 1
+          expect(result[1]).to.be.bignumber.gt(previousResult.toString())
+          previousResult = result[1]
+        }
       }
     })
   })
