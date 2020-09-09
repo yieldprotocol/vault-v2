@@ -45,17 +45,17 @@ contract('YieldMath', async (accounts) => {
   })
 
   it('get the size of the contract', async () => {
-    // console.log()
-    // console.log('    ·--------------------|------------------|------------------|------------------·')
-    // console.log('    |  Contract          ·  Bytecode        ·  Deployed        ·  Constructor     |')
-    // console.log('    ·····················|··················|··················|···················')
+    console.log()
+    console.log('    ·--------------------|------------------|------------------|------------------·')
+    console.log('    |  Contract          ·  Bytecode        ·  Deployed        ·  Constructor     |')
+    console.log('    ·····················|··················|··················|···················')
 
     const bytecode = yieldMath.constructor._json.bytecode
     const deployed = yieldMath.constructor._json.deployedBytecode
     const sizeOfB = bytecode.length / 2
     const sizeOfD = deployed.length / 2
     const sizeOfC = sizeOfB - sizeOfD
-    // console.log(
+    console.log(
       '    |  ' +
         yieldMath.constructor._json.contractName.padEnd(18, ' ') +
         '|' +
@@ -68,8 +68,8 @@ contract('YieldMath', async (accounts) => {
         ('' + sizeOfC).padStart(16, ' ') +
         '  |'
     )
-    // console.log('    ·--------------------|------------------|------------------|------------------·')
-    // console.log()
+    console.log('    ·--------------------|------------------|------------------|------------------·')
+    console.log()
   })
 
   describe('Test pure math functions', async () => {
@@ -445,7 +445,7 @@ contract('YieldMath', async (accounts) => {
         var daiReservesValue = values[i][0]
         var yDAIReservesValue = values[i][1]
         var daiAmountValue = values[i][2]
-        
+
         var daiReserves = toBigNumber(daiReservesValue)
         var yDAIReserves = toBigNumber(yDAIReservesValue)
         var daiAmount = toBigNumber(daiAmountValue)
@@ -464,9 +464,10 @@ contract('YieldMath', async (accounts) => {
           }
 
           // console.log("      " + result[1].toString())
-          if (j == 0) { // Test that when we are very close to maturity, price is very close but under 1 (minus flat fee).
+          if (j == 0) {
+            // Test that when we are very close to maturity, price is very close but under 1 (minus flat fee).
             expect(result[1]).to.be.bignumber.lt(maximum.toString())
-            expect(result[1]).to.be.bignumber.gt(maximum.mul(new BN('999999')).div(new BN('1000000')).toString())  
+            expect(result[1]).to.be.bignumber.gt(maximum.mul(new BN('999999')).div(new BN('1000000')).toString())
           }
           // Easier to test prices diverging from 1
           expect(result[1]).to.be.bignumber.lt(previousResult.toString())
@@ -687,7 +688,7 @@ contract('YieldMath', async (accounts) => {
         var daiReservesValue = values[i][0]
         var yDAIReservesValue = values[i][1]
         var daiAmountValue = values[i][2]
-        
+
         var daiReserves = toBigNumber(daiReservesValue)
         var yDAIReserves = toBigNumber(yDAIReservesValue)
         var daiAmount = toBigNumber(daiAmountValue)
@@ -706,9 +707,10 @@ contract('YieldMath', async (accounts) => {
           }
 
           // console.log("      " + result[1].toString())
-          if (j == 0) { // Test that when we are very close to maturity, price is very close but over 1 (minus flat fee).
+          if (j == 0) {
+            // Test that when we are very close to maturity, price is very close but over 1 (minus flat fee).
             expect(result[1]).to.be.bignumber.gt(minimum.toString())
-            expect(result[1]).to.be.bignumber.lt(minimum.mul(new BN('1000000')).div(new BN('999999')).toString())  
+            expect(result[1]).to.be.bignumber.lt(minimum.mul(new BN('1000000')).div(new BN('999999')).toString())
           }
           // Easier to test prices diverging from 1
           expect(result[1]).to.be.bignumber.gt(previousResult.toString())
@@ -943,7 +945,7 @@ contract('YieldMath', async (accounts) => {
         var daiReservesValue = values[i][0]
         var yDAIReservesValue = values[i][1]
         var daiAmountValue = values[i][2]
-        
+
         var daiReserves = toBigNumber(daiReservesValue)
         var yDAIReserves = toBigNumber(yDAIReservesValue)
         var daiAmount = toBigNumber(daiAmountValue)
@@ -962,9 +964,10 @@ contract('YieldMath', async (accounts) => {
           }
 
           // console.log("      " + result[1].toString())
-          if (j == 0) { // Test that when we are very close to maturity, price is very close but under 1 (plus flat fee).
+          if (j == 0) {
+            // Test that when we are very close to maturity, price is very close but under 1 (plus flat fee).
             expect(result[1]).to.be.bignumber.lt(maximum.toString())
-            expect(result[1]).to.be.bignumber.gt(maximum.mul(new BN('999999')).div(new BN('1000000')).toString())  
+            expect(result[1]).to.be.bignumber.gt(maximum.mul(new BN('999999')).div(new BN('1000000')).toString())
           }
           // Easier to test prices diverging from 1
           expect(result[1]).to.be.bignumber.lt(previousResult.toString())
@@ -1198,7 +1201,7 @@ contract('YieldMath', async (accounts) => {
         var daiReservesValue = values[i][0]
         var yDAIReservesValue = values[i][1]
         var daiAmountValue = values[i][2]
-        
+
         var daiReserves = toBigNumber(daiReservesValue)
         var yDAIReserves = toBigNumber(yDAIReservesValue)
         var daiAmount = toBigNumber(daiAmountValue)
@@ -1217,9 +1220,10 @@ contract('YieldMath', async (accounts) => {
           }
 
           // console.log("      " + result[1].toString())
-          if (j == 0) { // Test that when we are very close to maturity, price is very close but over 1 (plus flat fee).
+          if (j == 0) {
+            // Test that when we are very close to maturity, price is very close but over 1 (plus flat fee).
             expect(result[1]).to.be.bignumber.gt(minimum.toString())
-            expect(result[1]).to.be.bignumber.lt(minimum.mul(new BN('1000000')).div(new BN('999999')).toString())  
+            expect(result[1]).to.be.bignumber.lt(minimum.mul(new BN('1000000')).div(new BN('999999')).toString())
           }
           // Easier to test prices diverging from 1
           expect(result[1]).to.be.bignumber.gt(previousResult.toString())
