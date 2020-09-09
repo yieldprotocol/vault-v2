@@ -200,7 +200,7 @@ contract('YieldProxy - LiquidityProxy', async (accounts) => {
         await controller.post(CHAI, user2, user2, chaiTokens1, { from: user2 })
         const toBorrow = (await env.unlockedOf(CHAI, user2)).toString()
         await controller.borrow(CHAI, maturity1, user2, user2, toBorrow, { from: user2 })
-        
+
         const poolTokens = await pool.balanceOf(user2)
         const debt = await controller.debtYDai(CHAI, maturity1, user2)
         const daiBalance = await dai.balanceOf(user2)
