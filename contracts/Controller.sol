@@ -374,10 +374,12 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         validSeries(maturity)
         onlyHolderOrDelegate(from, "Controller: Only Holder Or Delegate")
         onlyLive
+        returns (uint256)
     {
         uint256 toRepay = Math.min(yDaiAmount, debtYDai[collateral][maturity][to]);
         series[maturity].burn(from, toRepay);
         _repay(collateral, maturity, to, toRepay);
+        return toRepay;
     }
 
     /// @dev Burns Dai from `from` wallet to repay debt in a Yield Vault.
@@ -403,10 +405,12 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         validSeries(maturity)
         onlyHolderOrDelegate(from, "Controller: Only Holder Or Delegate")
         onlyLive
+        returns (uint256)
     {
         uint256 toRepay = Math.min(daiAmount, debtDai(collateral, maturity, to));
         treasury.pushDai(from, toRepay);                                      // Have Treasury process the dai
         _repay(collateral, maturity, to, inYDai(collateral, maturity, toRepay));
+        return toRepay;
     }
 
     /// @dev Removes an amount of debt from an user's vault.
