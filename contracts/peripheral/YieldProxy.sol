@@ -13,7 +13,6 @@ import "../interfaces/IYDai.sol";
 import "../interfaces/IChai.sol";
 import "../interfaces/IFlashMinter.sol";
 import "../helpers/DecimalMath.sol";
-import "@nomiclabs/buidler/console.sol";
 
 
 library SafeCast {
@@ -202,7 +201,6 @@ contract YieldProxy is DecimalMath, IFlashMinter {
         (uint256 daiObtained, uint256 yDaiObtained) = pool.burn(msg.sender, address(this), poolTokens);
 
         // Exchange Dai for yDai to pay as much debt as possible
-        console.log("sellDai");
         uint256 yDaiBought = pool.sellDai(address(this), address(this), daiObtained.toUint128());
         require(
             yDaiBought >= muld(daiObtained, minimumDaiPrice),
@@ -212,13 +210,11 @@ contract YieldProxy is DecimalMath, IFlashMinter {
         
         uint256 yDaiUsed;
         if (yDaiObtained > 0 && controller.debtYDai(CHAI, maturity, msg.sender) > 0) {
-            console.log("repayYDai");
             yDaiUsed = controller.repayYDai(CHAI, maturity, address(this), msg.sender, yDaiObtained);
         }
         uint256 yDaiRemaining = yDaiObtained.sub(yDaiUsed);
 
         if (yDaiRemaining > 0) {// There is yDai left, so exchange it for Dai to withdraw only Dai and Chai
-            console.log("sellYDai");
             require(
                 pool.sellYDai(address(this), address(this), uint128(yDaiRemaining)) >= muld(yDaiRemaining, minimumYDaiPrice),
                 "YieldProxy: minimumYDaiPrice not reached"
@@ -241,18 +237,15 @@ contract YieldProxy is DecimalMath, IFlashMinter {
 
         uint256 yDaiUsed;
         if (yDaiObtained > 0 && controller.debtYDai(CHAI, maturity, msg.sender) > 0) {
-            console.log("repayYDai");
             yDaiUsed = controller.repayYDai(CHAI, maturity, address(this), msg.sender, yDaiObtained);
         }
 
         uint256 yDaiRemaining = yDaiObtained.sub(yDaiUsed);
         if (yDaiRemaining == 0) { // We used all the yDai, so probably there is debt left, so pay with Dai
             if (daiObtained > 0 && controller.debtYDai(CHAI, maturity, msg.sender) > 0) {
-                console.log("repayDai");
                 controller.repayDai(CHAI, maturity, address(this), msg.sender, daiObtained);
             }
         } else { // Exchange remaining yDai for Dai to withdraw only Dai and Chai
-            console.log("sellYDai");
             require(
                 pool.sellYDai(address(this), address(this), uint128(yDaiRemaining)) >= muld(yDaiRemaining, minimumYDaiPrice),
                 "YieldProxy: minimumYDaiPrice not reached"
@@ -282,7 +275,6 @@ contract YieldProxy is DecimalMath, IFlashMinter {
     /// @dev Return to caller all posted chai if there is no debt, converted to dai, plus any dai remaining in the contract.
     function withdrawAssets(IYDai yDai) internal {
         if (controller.debtYDai(CHAI, yDai.maturity(), msg.sender) == 0) {
-            console.log("withdraw");
             controller.withdraw(CHAI, msg.sender, address(this), controller.posted(CHAI, msg.sender));
             chai.exit(address(this), chai.balanceOf(address(this)));
         }
