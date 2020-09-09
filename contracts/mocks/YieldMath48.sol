@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+/*
+ * Yield Math Smart Contract Library.
+ */
 pragma solidity ^0.6.0;
 
 import "../pool/Math64x64.sol";
@@ -6,7 +9,7 @@ import "../pool/Math64x64.sol";
 /**
  * Ethereum smart contract library implementing Yield Math model.
  */
-library YieldMath64 {
+library YieldMath48 {
   /**
    * Calculate the amount of yDAI a user would get for given amount of Dai.
    *
@@ -27,20 +30,21 @@ library YieldMath64 {
 
     // a = (1 - gt)
     int128 a = Math64x64.sub (0x10000000000000000, Math64x64.mul (g, t));
-    require (a > 0);
+    require (a > 0, "YieldMath: Too far from maturity");
 
     // xdx = daiReserves + daiAmount
     uint256 xdx = uint256 (daiReserves) + uint256 (daiAmount);
-    require (xdx < 0x100000000000000000000000000000000);
+    require (xdx < 0x100000000000000000000000000000000, "YieldMath: Too much Dai in");
 
     uint256 sum =
-      pow (daiReserves, uint128 (a), 0x10000000000000000) +
-      pow (yDAIReserves, uint128 (a), 0x10000000000000000) -
-      pow (uint128(xdx), uint128 (a), 0x10000000000000000);
-    require (sum < 0x100000000000000000000000000000000);
+      uint256 (pow (daiReserves, uint128 (a), 0x10000000000000000)) +
+      uint256 (pow (yDAIReserves, uint128 (a), 0x10000000000000000)) -
+      uint256 (pow (uint128(xdx), uint128 (a), 0x10000000000000000));
+    require (sum < 0x100000000000000000000000000000000, "YieldMath: Insufficient yDAI reserves");
 
     uint256 result = yDAIReserves - pow (uint128 (sum), 0x10000000000000000, uint128 (a));
-    require (result < 0x100000000000000000000000000000000);
+    require (result < 0x100000000000000000000000000000000, "YieldMath: Rounding induced error");
+    result > 1e12 ? result = result - 1e12 : result = 0; // Substract error guard, flooring the result at zero
 
     return uint128 (result);
   }
@@ -65,22 +69,23 @@ library YieldMath64 {
 
     // a = (1 - gt)
     int128 a = Math64x64.sub (0x10000000000000000, Math64x64.mul (g, t));
-    require (a > 0);
+    require (a > 0, "YieldMath: Too far from maturity");
 
     // ydy = yDAIReserves + yDAIAmount;
     uint256 ydy = uint256 (yDAIReserves) + uint256 (yDAIAmount);
-    require (ydy < 0x100000000000000000000000000000000);
+    require (ydy < 0x100000000000000000000000000000000, "YieldMath: Too much yDai in");
 
     uint256 sum =
-      pow (uint128 (daiReserves), uint128 (a), 0x10000000000000000) -
-      pow (uint128 (ydy), uint128 (a), 0x10000000000000000) +
-      pow (yDAIReserves, uint128 (a), 0x10000000000000000);
-    require (sum < 0x100000000000000000000000000000000);
+      uint256 (pow (uint128 (daiReserves), uint128 (a), 0x10000000000000000)) -
+      uint256 (pow (uint128 (ydy), uint128 (a), 0x10000000000000000)) +
+      uint256 (pow (yDAIReserves, uint128 (a), 0x10000000000000000));
+    require (sum < 0x100000000000000000000000000000000, "YieldMath: Insufficient Dai reserves");
 
     uint256 result =
       daiReserves -
       pow (uint128 (sum), 0x10000000000000000, uint128 (a));
-    require (result < 0x100000000000000000000000000000000);
+    require (result < 0x100000000000000000000000000000000, "YieldMath: Rounding induced error");
+    result > 1e12 ? result = result - 1e12 : result = 0; // Substract error guard, flooring the result at zero
 
     return uint128 (result);
   }
@@ -100,27 +105,26 @@ library YieldMath64 {
     uint128 daiReserves, uint128 yDAIReserves, uint128 daiAmount,
     uint128 timeTillMaturity, int128 k, int128 g)
   internal pure returns (uint128) {
-    require (daiAmount <= daiReserves);
-
     // t = k * timeTillMaturity
     int128 t = Math64x64.mul (k, Math64x64.fromUInt (timeTillMaturity));
 
     // a = (1 - gt)
     int128 a = Math64x64.sub (0x10000000000000000, Math64x64.mul (g, t));
-    require (a > 0);
+    require (a > 0, "YieldMath: Too far from maturity");
 
     // xdx = daiReserves - daiAmount
     uint256 xdx = uint256 (daiReserves) - uint256 (daiAmount);
-    require (xdx < 0x100000000000000000000000000000000);
+    require (xdx < 0x100000000000000000000000000000000, "YieldMath: Too much Dai out");
 
     uint256 sum =
-      pow (uint128 (daiReserves), uint128 (a), 0x10000000000000000) +
-      pow (yDAIReserves, uint128 (a), 0x10000000000000000) -
-      pow (uint128 (xdx), uint128 (a), 0x10000000000000000);
-    require (sum < 0x100000000000000000000000000000000);
+      uint256 (pow (uint128 (daiReserves), uint128 (a), 0x10000000000000000)) +
+      uint256 (pow (yDAIReserves, uint128 (a), 0x10000000000000000)) -
+      uint256 (pow (uint128 (xdx), uint128 (a), 0x10000000000000000));
+    require (sum < 0x100000000000000000000000000000000, "YieldMath: Resulting yDai reserves too high");
 
     uint256 result = pow (uint128 (sum), 0x10000000000000000, uint128 (a)) - yDAIReserves;
-    require (result < 0x100000000000000000000000000000000);
+    require (result < 0x100000000000000000000000000000000, "YieldMath: Rounding induced error");
+    result < type(uint256).max - 1e12 ? result = result + 1e12 : result = type(uint256).max; // Add error guard, ceiling the result at max
 
     return uint128 (result);
   }
@@ -142,26 +146,25 @@ library YieldMath64 {
     uint128 daiReserves, uint128 yDAIReserves, uint128 yDAIAmount,
     uint128 timeTillMaturity, int128 k, int128 g)
   internal pure returns (uint128) {
-    require (yDAIAmount <= yDAIReserves);
-
     // a = (1 - g * k * timeTillMaturity)
     int128 a = Math64x64.sub (0x10000000000000000, Math64x64.mul (g, Math64x64.mul (k, Math64x64.fromUInt (timeTillMaturity))));
-    require (a > 0);
+    require (a > 0, "YieldMath: Too far from maturity");
 
     // ydy = yDAIReserves - yDAIAmount;
     uint256 ydy = uint256 (yDAIReserves) - uint256 (yDAIAmount);
-    require (ydy < 0x100000000000000000000000000000000);
+    require (ydy < 0x100000000000000000000000000000000, "YieldMath: Too much yDai out");
 
     uint256 sum =
-      pow (daiReserves, uint128 (a), 0x10000000000000000) +
-      pow (yDAIReserves, uint128 (a), 0x10000000000000000) -
-        pow (uint128 (ydy), uint128 (a), 0x10000000000000000);
-    require (sum < 0x100000000000000000000000000000000);
+      uint256 (pow (daiReserves, uint128 (a), 0x10000000000000000)) +
+      uint256 (pow (yDAIReserves, uint128 (a), 0x10000000000000000)) -
+      uint256 (pow (uint128 (ydy), uint128 (a), 0x10000000000000000));
+    require (sum < 0x100000000000000000000000000000000, "YieldMath: Resulting Dai reserves too high");
 
     uint256 result =
       pow (uint128 (sum), 0x10000000000000000, uint128 (a)) -
       daiReserves;
-    require (result < 0x100000000000000000000000000000000);
+    require (result < 0x100000000000000000000000000000000, "YieldMath: Rounding induced error");
+    result < type(uint256).max - 1e12 ? result = result + 1e12 : result = type(uint256).max; // Add error guard, ceiling the result at max
 
     return uint128 (result);
   }
@@ -255,6 +258,7 @@ library YieldMath64 {
     b = b * b >> 127; if (b >= 0x100000000000000000000000000000000) {b >>= 1; l |= 0x400000000000000000000;}
     b = b * b >> 127; if (b >= 0x100000000000000000000000000000000) {b >>= 1; l |= 0x200000000000000000000;}
     b = b * b >> 127; if (b >= 0x100000000000000000000000000000000) {b >>= 1; l |= 0x100000000000000000000;}
+    /* Precision reduced to 64 bits
     b = b * b >> 127; if (b >= 0x100000000000000000000000000000000) {b >>= 1; l |= 0x80000000000000000000;}
     b = b * b >> 127; if (b >= 0x100000000000000000000000000000000) {b >>= 1; l |= 0x40000000000000000000;}
     b = b * b >> 127; if (b >= 0x100000000000000000000000000000000) {b >>= 1; l |= 0x20000000000000000000;}
@@ -270,7 +274,6 @@ library YieldMath64 {
     b = b * b >> 127; if (b >= 0x100000000000000000000000000000000) {b >>= 1; l |= 0x80000000000000000;}
     b = b * b >> 127; if (b >= 0x100000000000000000000000000000000) {b >>= 1; l |= 0x40000000000000000;}
     b = b * b >> 127; if (b >= 0x100000000000000000000000000000000) {b >>= 1; l |= 0x20000000000000000;}
-    /*
     b = b * b >> 127; if (b >= 0x100000000000000000000000000000000) {b >>= 1; l |= 0x10000000000000000;}
     b = b * b >> 127; if (b >= 0x100000000000000000000000000000000) {b >>= 1; l |= 0x8000000000000000;}
     b = b * b >> 127; if (b >= 0x100000000000000000000000000000000) {b >>= 1; l |= 0x4000000000000000;}
@@ -391,6 +394,7 @@ library YieldMath64 {
     if (x & 0x400000000000000000000 > 0) r = r * 0x8000000000b17217f7d24a78a3c7ef02 >> 127;
     if (x & 0x200000000000000000000 > 0) r = r * 0x800000000058b90bfbe9067c93e474a6 >> 127;
     if (x & 0x100000000000000000000 > 0) r = r * 0x80000000002c5c85fdf47b8e5a72599f >> 127;
+    /* Precision reduced to 48 bits
     if (x & 0x80000000000000000000 > 0) r = r * 0x8000000000162e42fefa3bdb315934a2 >> 127;
     if (x & 0x40000000000000000000 > 0) r = r * 0x80000000000b17217f7d1d7299b49c46 >> 127;
     if (x & 0x20000000000000000000 > 0) r = r * 0x8000000000058b90bfbe8e9a8d1c4ea0 >> 127;
@@ -413,7 +417,6 @@ library YieldMath64 {
     if (x & 0x1000000000000000 > 0) r = r * 0x8000000000000002c5c85fdf473de6b6 >> 127;
     if (x & 0x800000000000000 > 0) r = r * 0x800000000000000162e42fefa39ef359 >> 127;
     if (x & 0x400000000000000 > 0) r = r * 0x8000000000000000b17217f7d1cf79ac >> 127;
-    /*
     if (x & 0x200000000000000 > 0) r = r * 0x800000000000000058b90bfbe8e7bcd6 >> 127;
     if (x & 0x100000000000000 > 0) r = r * 0x80000000000000002c5c85fdf473de6a >> 127;
     if (x & 0x80000000000000 > 0) r = r * 0x8000000000000000162e42fefa39ef35 >> 127;

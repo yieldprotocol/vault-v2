@@ -17,6 +17,7 @@ import {
   bnify,
   almostEqual,
   precision,
+  ZERO,
 } from './shared/utils'
 import { YieldEnvironment, Contract } from './shared/fixtures'
 import { assert, expect } from 'chai'
@@ -149,8 +150,8 @@ contract('Unwind - Treasury', async (accounts) => {
     describe('with debt', () => {
       beforeEach(async () => {
         await treasury.pullDai(owner, treasuryDebt, { from: owner })
-        expect((await vat.urns(WETH, treasury.address)).art).to.be.bignumber.gt(new BN('0'))
-        expect(await treasury.debt()).to.be.bignumber.gt(new BN('0'))
+        expect((await vat.urns(WETH, treasury.address)).art).to.be.bignumber.gt(ZERO)
+        expect(await treasury.debt()).to.be.bignumber.gt(ZERO)
 
         // Adding some extra unlocked collateral
         await weth.deposit({ from: owner, value: 1 })

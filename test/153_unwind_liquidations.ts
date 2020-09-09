@@ -3,7 +3,7 @@ import { id } from 'ethers/lib/utils'
 import helper from 'ganache-time-traveler'
 // @ts-ignore
 import { BN } from '@openzeppelin/test-helpers'
-import { WETH, spot, rate1, daiTokens1, wethTokens1, toRay, subBN, mulRay, divRay, bnify } from './shared/utils'
+import { WETH, spot, rate1, daiTokens1, wethTokens1, toRay, subBN, mulRay, divRay, bnify, ZERO } from './shared/utils'
 import { YieldEnvironment, Contract } from './shared/fixtures'
 
 contract('Unwind - Liquidations', async (accounts) => {
@@ -135,7 +135,7 @@ contract('Unwind - Liquidations', async (accounts) => {
 
         await unwind.settleLiquidations(user2, { from: owner })
 
-        if (wethRemainder.lt(new BN('0'))) {
+        if (wethRemainder.lt(ZERO)) {
           assert.equal(
             await weth.balanceOf(user2, { from: user2 }),
             0,

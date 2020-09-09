@@ -124,7 +124,9 @@ contract YDai is IYDai, Orchestrated(), Delegable(), DecimalMath, ERC20Permit  {
     // from --- yDai ---> us
     // us   --- Dai  ---> to
     function redeem(address from, address to, uint256 yDaiAmount)
-        public onlyHolderOrDelegate(from, "YDai: Only Holder Or Delegate") lock override {
+        public onlyHolderOrDelegate(from, "YDai: Only Holder Or Delegate") lock override 
+        returns (uint256)
+    {
         require(
             isMature == true,
             "YDai: yDai is not mature"
@@ -133,6 +135,7 @@ contract YDai is IYDai, Orchestrated(), Delegable(), DecimalMath, ERC20Permit  {
         uint256 daiAmount = muld(yDaiAmount, chiGrowth());    // User gets interest for holding after maturity
         treasury.pullDai(to, daiAmount);                     // Give dai to `to`, from Treasury
         emit Redeemed(from, to, yDaiAmount, daiAmount);
+        return daiAmount;
     }
 
     /// @dev Flash-mint yDai. Calls back on `IFlashMinter.executeOnFlashMint()`

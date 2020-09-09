@@ -1,9 +1,18 @@
+// @ts-ignore
+import { BN } from '@openzeppelin/test-helpers'
 import { BigNumber, BigNumberish } from 'ethers'
 import { formatBytes32String } from 'ethers/lib/utils'
 import { expect } from 'chai'
 
+export const ZERO = new BN('0').toString()
+export const chainId = 31337 // buidlerevm chain id
+export const name = 'Yield'
+
 /// @dev Converts a bignumberish to a BigNumber (this is useful for compatibility between BN and BigNumber)
 export const bnify = (num: BigNumberish) => BigNumber.from(num.toString())
+
+/// @dev 2^256 -1
+export const MAX = bnify('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')
 
 /// @dev Converts a BigNumberish to WAD precision, for BigNumberish up to 10 decimal places
 export function toWad(value: BigNumberish): BigNumber {
@@ -70,9 +79,9 @@ export function divRay(x: BigNumberish, ray: BigNumberish): BigNumber {
 /// Rounds up, careful if using negative numbers.
 /// I.e. divRay(wad(x), ray(y)) = wad(x/y)
 export function divrupRay(x: BigNumberish, ray: BigNumberish): BigNumber {
-  const z = UNIT.mul(10).mul(BigNumber.from(x)).div(BigNumber.from(ray))
-  if (z.mod(10).gt(0)) return z.div(10).add(1)
-  return z.div(10)
+  const z = UNIT.mul(BigNumber.from(x)).div(BigNumber.from(ray))
+  if (z.mul(ray).div(UNIT) < x) return z.add('1')
+  return z
 }
 
 export const CHAI = formatBytes32String('CHAI')

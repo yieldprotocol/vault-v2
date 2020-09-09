@@ -1,27 +1,25 @@
 const Pool = artifacts.require('Pool')
 const DaiProxy = artifacts.require('YieldProxy')
 
-import { WETH, rate1, daiTokens1, wethTokens1, toWad, toRay, subBN, mulRay, bnify } from '../shared/utils'
-import { YieldEnvironmentLite, Contract } from '../shared/fixtures'
-import { getSignatureDigest, getPermitDigest, getDaiDigest, getChaiDigest } from '../shared/signatures'
+import { WETH, rate1, daiTokens1, wethTokens1, toWad, subBN, bnify, MAX, chainId, name, ZERO } from '../shared/utils'
+import { MakerEnvironment, YieldEnvironmentLite, Contract } from '../shared/fixtures'
+import { getSignatureDigest, getPermitDigest, getDaiDigest, userPrivateKey, sign } from '../shared/signatures'
 import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
-import { ecsign } from 'ethereumjs-util'
 
 // @ts-ignore
 import { expectRevert } from '@openzeppelin/test-helpers'
 import { assert, expect } from 'chai'
-import { BigNumber } from 'ethers'
 
 contract('YieldProxy - DaiProxy', async (accounts) => {
   let [owner, user1, user2, operator] = accounts
 
   let maturity1: number
-  let weth: Contract
   let dai: Contract
   let controller: Contract
   let yDai1: Contract
   let pool: Contract
   let daiProxy: Contract
+  let maker: MakerEnvironment
   let env: YieldEnvironmentLite
 
   const one = toWad(1)
@@ -29,18 +27,13 @@ contract('YieldProxy - DaiProxy', async (accounts) => {
   const yDaiTokens1 = daiTokens1
   const yDaiDebt = daiTokens1
 
-  const MAX = bnify('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')
-
-  const userPrivateKey = Buffer.from('d49743deccbccc5dc7baa8e69e5be03298da8688a15dd202e20f15d5e0e9a9fb', 'hex')
-  const chainId = 31337 // buidlerevm chain id
-  const name = 'Yield'
   let digest: any
 
   beforeEach(async () => {
     const block = await web3.eth.getBlockNumber()
     maturity1 = (await web3.eth.getBlock(block)).timestamp + 31556952 // One year
     env = await YieldEnvironmentLite.setup([maturity1])
-    weth = env.maker.weth
+    maker = env.maker
     dai = env.maker.dai
     controller = env.controller
 
@@ -54,11 +47,6 @@ contract('YieldProxy - DaiProxy', async (accounts) => {
 
     // Allow owner to mint yDai the sneaky way, without recording a debt in controller
     await yDai1.orchestrate(owner, keccak256(toUtf8Bytes('mint(address,uint256)')), { from: owner })
-
-    const sign = (digest: any, privateKey: any) => {
-      const { v, r, s } = ecsign(Buffer.from(digest.slice(2), 'hex'), privateKey)
-      return '0x' + r.toString('hex') + s.toString('hex') + v.toString(16)
-    }
 
     const deadline = MAX
 
@@ -141,6 +129,39 @@ contract('YieldProxy - DaiProxy', async (accounts) => {
     await daiProxy.authorizePool(pool.address, user1, daiSig2, ydaiSig, poolSig, { from: operator })
   })
 
+  describe('on controller', () => {
+    beforeEach(async () => {
+      // Get some debt
+      await env.postWeth(user1, wethTokens1)
+      const toBorrow = (await env.unlockedOf(WETH, user1)).toString()
+      await controller.borrow(WETH, maturity1, user1, user1, toBorrow, { from: user1 })
+    })
+
+    it('repays debt with Dai and with signature', async () => {
+      await maker.getDai(user1, daiTokens1, rate1)
+      const debt = (await controller.debtDai(WETH, maturity1, user1)).toString()
+
+      const deadline = MAX
+      // Authorize DAI
+      digest = getDaiDigest(
+        await dai.name(),
+        dai.address,
+        chainId,
+        {
+          owner: user1,
+          spender: env.treasury.address,
+          can: true,
+        },
+        bnify(await dai.nonces(user1)),
+        deadline
+      )
+      let daiSig = sign(digest, userPrivateKey)
+
+      await daiProxy.repayDaiWithSignature(WETH, maturity1, user1, debt, daiSig, { from: user1 })
+      assert.equal((await controller.debtDai(WETH, maturity1, user1)).toString(), ZERO)
+    })
+  })
+
   describe('with liquidity', () => {
     beforeEach(async () => {
       // Init pool
@@ -163,7 +184,8 @@ contract('YieldProxy - DaiProxy', async (accounts) => {
       const fakePool = fakePoolContract.address
 
       await expectRevert(daiProxy.addLiquidity(fakePool, 1, 1), 'YieldProxy: Unknown pool')
-      await expectRevert(daiProxy.removeLiquidityEarly(fakePool, 1, 1, 1), 'YieldProxy: Unknown pool')
+      await expectRevert(daiProxy.removeLiquidityEarlyDaiPool(fakePool, 1, 1, 1), 'YieldProxy: Unknown pool')
+      await expectRevert(daiProxy.removeLiquidityEarlyDaiFixed(fakePool, 1, 1), 'YieldProxy: Unknown pool')
       await expectRevert(daiProxy.removeLiquidityMature(fakePool, 1), 'YieldProxy: Unknown pool')
       await expectRevert(daiProxy.borrowDaiForMaximumYDai(fakePool, WETH, 1, owner, 1, 1), 'YieldProxy: Unknown pool')
       await expectRevert(daiProxy.borrowMinimumDaiForYDai(fakePool, WETH, 1, owner, 1, 1), 'YieldProxy: Unknown pool')

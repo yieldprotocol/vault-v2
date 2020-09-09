@@ -38,14 +38,14 @@ library SafeCast {
 contract YieldProxy is DecimalMath, IFlashMinter {
     using SafeCast for uint256;
 
-    IController public controller;
-
     IVat public vat;
-    IDai public dai;
-    IChai public chai;
     IWeth public weth;
+    IDai public dai;
     IGemJoin public wethJoin;
     IDaiJoin public daiJoin;
+    IChai public chai;
+    IController public controller;
+    ITreasury public treasury;
 
     IPool[] public pools;
     mapping (address => bool) public poolsMap;
@@ -58,7 +58,7 @@ contract YieldProxy is DecimalMath, IFlashMinter {
 
     constructor(address controller_, IPool[] memory _pools) public {
         controller = IController(controller_);
-        ITreasury treasury = controller.treasury();
+        treasury = controller.treasury();
 
         weth = treasury.weth();
         dai = IDai(address(treasury.dai()));
@@ -227,9 +227,8 @@ contract YieldProxy is DecimalMath, IFlashMinter {
     /// Caller must have approved the proxy using`controller.addDelegate(yieldProxy)` and `pool.addDelegate(yieldProxy)`
     /// Caller must have approved the liquidity burn with `pool.approve(poolTokens)`
     /// @param poolTokens amount of pool tokens to burn. 
-    /// @param minimumDaiPrice minimum yDai/Dai price to be accepted when internally selling Dai.
     /// @param minimumYDaiPrice minimum Dai/yDai price to be accepted when internally selling yDai.
-    function removeLiquidityEarlyDaiFixed(IPool pool, uint256 poolTokens, uint256 minimumDaiPrice, uint256 minimumYDaiPrice) external {
+    function removeLiquidityEarlyDaiFixed(IPool pool, uint256 poolTokens, uint256 minimumYDaiPrice) external {
         require(poolsMap[address(pool)], "YieldProxy: Unknown pool");
         IYDai yDai = pool.yDai();
         uint256 maturity = yDai.maturity();
@@ -263,7 +262,9 @@ contract YieldProxy is DecimalMath, IFlashMinter {
         IYDai yDai = pool.yDai();
         uint256 maturity = yDai.maturity();
         (uint256 daiObtained, uint256 yDaiObtained) = pool.burn(msg.sender, address(this), poolTokens);
-        if (yDaiObtained > 0) yDai.redeem(address(this), address(this), yDaiObtained);
+        if (yDaiObtained > 0) {
+            daiObtained = daiObtained.add(yDai.redeem(address(this), address(this), yDaiObtained));
+        }
         
         // Repay debt
         if (daiObtained > 0 && controller.debtYDai(CHAI, maturity, msg.sender) > 0) {
@@ -411,7 +412,7 @@ contract YieldProxy is DecimalMath, IFlashMinter {
     /// @param daiOut Amount of dai being bought
     /// @param maxYDaiIn Maximum amount of yDai being sold
     function buyDai(address pool, address to, uint128 daiOut, uint128 maxYDaiIn)
-        external
+        public
         returns(uint256)
     {
         uint256 yDaiIn = IPool(pool).buyDai(msg.sender, to, daiOut);
@@ -420,6 +421,21 @@ contract YieldProxy is DecimalMath, IFlashMinter {
             "YieldProxy: Limit exceeded"
         );
         return yDaiIn;
+    }
+
+    /// @dev Buy Dai for yDai and permits infinite yDAI to the pool
+    /// @param to Wallet receiving the dai being bought
+    /// @param daiOut Amount of dai being bought
+    /// @param maxYDaiIn Maximum amount of yDai being sold
+    /// @param signature The `permit` call's signature
+    function buyDaiWithSignature(address pool, address to, uint128 daiOut, uint128 maxYDaiIn, bytes memory signature)
+        external
+        returns(uint256)
+    {
+        (bytes32 r, bytes32 s, uint8 v) = unpack(signature);
+        IPool(pool).yDai().permit(msg.sender, address(pool), uint(-1), uint(-1), v, r, s);
+
+        return buyDai(pool, to, daiOut, maxYDaiIn);
     }
 
     /// @dev Sell yDai for Dai
@@ -453,6 +469,25 @@ contract YieldProxy is DecimalMath, IFlashMinter {
         );
         return daiIn;
     }
+
+    /// @dev Burns Dai from caller to repay debt in a Yield Vault.
+    /// User debt is decreased for the given collateral and yDai series, in Yield vault `to`.
+    /// The amount of debt repaid changes according to series maturity and MakerDAO rate and chi, depending on collateral type.
+    /// `A signature is provided as a parameter to this function, so that `dai.approve()` doesn't need to be called.
+    /// @param collateral Valid collateral type.
+    /// @param maturity Maturity of an added series
+    /// @param to Yield vault to repay debt for.
+    /// @param daiAmount Amount of Dai to use for debt repayment.
+    /// @param signature The `permit` call's signature
+    function repayDaiWithSignature(bytes32 collateral, uint256 maturity, address to, uint256 daiAmount, bytes memory signature)
+        external
+        returns(uint256)
+    {
+        (bytes32 r, bytes32 s, uint8 v) = unpack(signature);
+        dai.permit(msg.sender, address(treasury), dai.nonces(msg.sender), uint(-1), true, v, r, s);
+        controller.repayDai(collateral, maturity, msg.sender, to, daiAmount);
+    }
+
 
     // YieldProxy: Maker to Yield proxy
 

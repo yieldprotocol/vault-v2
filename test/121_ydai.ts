@@ -3,7 +3,7 @@ import { YieldEnvironmentLite, Contract } from './shared/fixtures'
 const FlashMinterMock = artifacts.require('FlashMinterMock')
 const FlashMintRedeemerMock = artifacts.require('FlashMintRedeemerMock')
 
-import { WETH, chi1, rate1, daiTokens1, wethTokens1, toRay, mulRay, divRay, subBN } from './shared/utils'
+import { WETH, chi1, rate1, daiTokens1, wethTokens1, toRay, mulRay, divRay, divrupRay, subBN } from './shared/utils'
 
 // @ts-ignore
 import helper from 'ganache-time-traveler'
@@ -186,8 +186,8 @@ contract('yDai', async (accounts) => {
 
       assert.equal(
         (await yDai1.rateGrowth()).toString(),
-        divRay(rate2, rate1).toString(),
-        'Rate differential should be ' + divRay(rate2, rate1)
+        divrupRay(rate2, rate1).toString(),
+        'Rate differential should be ' + divrupRay(rate2, rate1)
       )
     })
 

@@ -4,18 +4,18 @@
 *.swp
 *.swo
 
-#Buidler files
+# Buidler files
 cache
 artifacts
 node_modules/
 output/
 
-#Truffle files
+# Truffle files
 .infuraKey
 .secret
 build/
 
-#Solidity-coverage
+# Solidity-coverage
 coverage/
 .coverage_contracts/
 coverage.json
@@ -23,5 +23,8 @@ coverage.json
 # Yarn
 yarn-error.log
 
-#NPM
+# NPM
 package-lock.json
+
+# Crytic
+crytic-export/
