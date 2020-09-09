@@ -5,6 +5,7 @@ import helper from 'ganache-time-traveler'
 import { Contract } from '../shared/fixtures'
 // @ts-ignore
 import { BN } from '@openzeppelin/test-helpers'
+import { expect } from 'chai'
 
 /**
  * Throws given message unless given condition is true.
@@ -386,6 +387,48 @@ contract('YieldMath', async (accounts) => {
       }
     })
 
+    it('A higher g means more yDai out with `yDaiOutForDaiIn`', async () => {
+      var values = [
+        ['100000000000000000000', '10000000000000000000', '1000000000000000000', '1000000'],
+        ['10000000000000000000000', '1000000000000000000000', '10000000000000000000', '1000000'],
+        ['1000000000000000000000000', '100000000000000000000000', '100000000000000000000', '1000000'],
+      ]
+
+      for (var i = 0; i < values.length; i++) {
+        // for (var j = 0; j < daiReserveValues.length; j++) {
+        // var i = 0 // !
+        var daiReservesValue = values[i][0]
+        var yDAIReservesValue = values[i][1]
+        var daiAmountValue = values[i][2]
+        var timeTillMaturityValue = values[i][3]
+
+        var daiReserves = toBigNumber(daiReservesValue)
+        var yDAIReserves = toBigNumber(yDAIReservesValue)
+        var daiAmount = toBigNumber(daiAmountValue)
+        var timeTillMaturity = toBigNumber(timeTillMaturityValue)
+        var b = new BN('18446744073709551615')
+        var k = b.div(new BN('126144000'))
+        var g = [
+          ['9', '10'],
+          ['95', '100'],
+          ['999', '1000'],
+        ]
+        var previousResult = new BN('0')
+        for (var j = 0; j < g.length; j++) {
+          var g_ = new BN(g[j][0]).mul(b).div(new BN(g[j][1]))
+          var result
+          try {
+            result = await yieldMath.yDaiOutForDaiIn(daiReserves, yDAIReserves, daiAmount, timeTillMaturity, k, g_)
+          } catch (e) {
+            result = [false, undefined]
+          }
+        }
+
+        expect(result[1]).to.be.bignumber.gt(previousResult.toString())
+        previousResult = result[1]
+      }
+    })
+
     it('Test `daiOutForYDaiIn` function', async () => {
       var values = [
         ['0x0', '0x0', '0x0', '0x0', '0x0', '0x0', true],
@@ -537,6 +580,48 @@ contract('YieldMath', async (accounts) => {
             !result[0]
           )
         }
+      }
+    })
+
+    it('A lower g means more Dai out with `daiOutForYDaiIn`', async () => {
+      var values = [
+        ['100000000000000000000', '10000000000000000000', '1000000000000000000', '1000000'],
+        ['10000000000000000000000', '1000000000000000000000', '10000000000000000000', '1000000'],
+        ['1000000000000000000000000', '100000000000000000000000', '100000000000000000000', '1000000'],
+      ]
+
+      for (var i = 0; i < values.length; i++) {
+        // for (var j = 0; j < daiReserveValues.length; j++) {
+        // var i = 0 // !
+        var daiReservesValue = values[i][0]
+        var yDAIReservesValue = values[i][1]
+        var daiAmountValue = values[i][2]
+        var timeTillMaturityValue = values[i][3]
+
+        var daiReserves = toBigNumber(daiReservesValue)
+        var yDAIReserves = toBigNumber(yDAIReservesValue)
+        var daiAmount = toBigNumber(daiAmountValue)
+        var timeTillMaturity = toBigNumber(timeTillMaturityValue)
+        var b = new BN('18446744073709551615')
+        var k = b.div(new BN('126144000'))
+        var g = [
+          ['999', '1000'],
+          ['95', '100'],
+          ['9', '10'],
+        ]
+        var previousResult = new BN('0')
+        for (var j = 0; j < g.length; j++) {
+          var g_ = new BN(g[j][0]).mul(b).div(new BN(g[j][1]))
+          var result
+          try {
+            result = await yieldMath.daiOutForYDaiIn(daiReserves, yDAIReserves, daiAmount, timeTillMaturity, k, g_)
+          } catch (e) {
+            result = [false, undefined]
+          }
+        }
+
+        expect(result[1]).to.be.bignumber.gt(previousResult.toString())
+        previousResult = result[1]
       }
     })
 
@@ -708,6 +793,48 @@ contract('YieldMath', async (accounts) => {
       }
     })
 
+    it('A higher g means more yDai in with `yDaiInForDaiOut`', async () => {
+      var values = [
+        ['100000000000000000000', '10000000000000000000', '1000000000000000000', '1000000'],
+        ['10000000000000000000000', '1000000000000000000000', '10000000000000000000', '1000000'],
+        ['1000000000000000000000000', '100000000000000000000000', '100000000000000000000', '1000000'],
+      ]
+
+      for (var i = 0; i < values.length; i++) {
+        // for (var j = 0; j < daiReserveValues.length; j++) {
+        // var i = 0 // !
+        var daiReservesValue = values[i][0]
+        var yDAIReservesValue = values[i][1]
+        var daiAmountValue = values[i][2]
+        var timeTillMaturityValue = values[i][3]
+
+        var daiReserves = toBigNumber(daiReservesValue)
+        var yDAIReserves = toBigNumber(yDAIReservesValue)
+        var daiAmount = toBigNumber(daiAmountValue)
+        var timeTillMaturity = toBigNumber(timeTillMaturityValue)
+        var b = new BN('18446744073709551615')
+        var k = b.div(new BN('126144000'))
+        var g = [
+          ['9', '10'],
+          ['95', '100'],
+          ['999', '1000'],
+        ]
+        var previousResult = new BN('0')
+        for (var j = 0; j < g.length; j++) {
+          var g_ = new BN(g[j][0]).mul(b).div(new BN(g[j][1]))
+          var result
+          try {
+            result = await yieldMath.yDaiInForDaiOut(daiReserves, yDAIReserves, daiAmount, timeTillMaturity, k, g_)
+          } catch (e) {
+            result = [false, undefined]
+          }
+        }
+
+        expect(result[1]).to.be.bignumber.gt(previousResult.toString())
+        previousResult = result[1]
+      }
+    })
+
     it('Test `daiInForYDaiOut` function', async () => {
       var values = [
         ['0x0', '0x0', '0x0', '0x0', '0x0', '0x0', true],
@@ -872,6 +999,48 @@ contract('YieldMath', async (accounts) => {
             !result[0]
           )
         }
+      }
+    })
+
+    it('A lower g means more Dai in with `daiInForYDaiOut`', async () => {
+      var values = [
+        ['100000000000000000000', '10000000000000000000', '1000000000000000000', '1000000'],
+        ['10000000000000000000000', '1000000000000000000000', '10000000000000000000', '1000000'],
+        ['1000000000000000000000000', '100000000000000000000000', '100000000000000000000', '1000000'],
+      ]
+
+      for (var i = 0; i < values.length; i++) {
+        // for (var j = 0; j < daiReserveValues.length; j++) {
+        // var i = 0 // !
+        var daiReservesValue = values[i][0]
+        var yDAIReservesValue = values[i][1]
+        var daiAmountValue = values[i][2]
+        var timeTillMaturityValue = values[i][3]
+
+        var daiReserves = toBigNumber(daiReservesValue)
+        var yDAIReserves = toBigNumber(yDAIReservesValue)
+        var daiAmount = toBigNumber(daiAmountValue)
+        var timeTillMaturity = toBigNumber(timeTillMaturityValue)
+        var b = new BN('18446744073709551615')
+        var k = b.div(new BN('126144000'))
+        var g = [
+          ['999', '1000'],
+          ['95', '100'],
+          ['9', '10'],
+        ]
+        var previousResult = new BN('0')
+        for (var j = 0; j < g.length; j++) {
+          var g_ = new BN(g[j][0]).mul(b).div(new BN(g[j][1]))
+          var result
+          try {
+            result = await yieldMath.daiInForYDaiOut(daiReserves, yDAIReserves, daiAmount, timeTillMaturity, k, g_)
+          } catch (e) {
+            result = [false, undefined]
+          }
+        }
+
+        expect(result[1]).to.be.bignumber.gt(previousResult.toString())
+        previousResult = result[1]
       }
     })
   })
