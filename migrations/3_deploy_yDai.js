@@ -11,7 +11,7 @@ const Pot = artifacts.require("Pot");
 const Chai = artifacts.require("Chai");
 
 const Treasury = artifacts.require("Treasury");
-const YDai = artifacts.require("YDai");
+const EDai = artifacts.require("EDai");
 
 module.exports = async (deployer, network) => {
   const migrations = await Migrations.deployed();
@@ -78,18 +78,18 @@ module.exports = async (deployer, network) => {
 
   let index = 0;
   for (const i in maturities) {
-    // Setup YDai
+    // Setup EDai
     await deployer.deploy(
-      YDai,
+      EDai,
       treasuryAddress,
       maturities[i],
       `Yield Dai - ${dates[i]}`,
-      `yDAI-${dates[i]}`,
+      `eDai-${dates[i]}`,
     );
-    const yDai = await YDai.deployed()
+    const eDai = await EDai.deployed()
 
-    await migrations.register(web3.utils.fromAscii('yDai' + index), yDai.address);
-    console.log('yDai' + index, yDai.address);
+    await migrations.register(web3.utils.fromAscii('eDai' + index), eDai.address);
+    console.log('eDai' + index, eDai.address);
     index++;
   }
 };

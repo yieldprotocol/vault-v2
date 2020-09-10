@@ -11,18 +11,18 @@ import "../pool/Math64x64.sol";
  */
 library YieldMath48 {
   /**
-   * Calculate the amount of yDAI a user would get for given amount of Dai.
+   * Calculate the amount of eDai a user would get for given amount of Dai.
    *
    * @param daiReserves Dai reserves amount
-   * @param yDAIReserves yDAI reserves amount
+   * @param eDaiReserves eDai reserves amount
    * @param daiAmount Dai amount to be traded
    * @param timeTillMaturity time till maturity in seconds
    * @param k time till maturity coefficient, multiplied by 2^64
    * @param g fee coefficient, multiplied by 2^64
-   * @return the amount of yDAI a user would get for given amount of Dai
+   * @return the amount of eDai a user would get for given amount of Dai
    */
-  function yDaiOutForDaiIn (
-    uint128 daiReserves, uint128 yDAIReserves, uint128 daiAmount,
+  function eDaiOutForDaiIn (
+    uint128 daiReserves, uint128 eDaiReserves, uint128 daiAmount,
     uint128 timeTillMaturity, int128 k, int128 g)
   internal pure returns (uint128) {
     // t = k * timeTillMaturity
@@ -38,11 +38,11 @@ library YieldMath48 {
 
     uint256 sum =
       uint256 (pow (daiReserves, uint128 (a), 0x10000000000000000)) +
-      uint256 (pow (yDAIReserves, uint128 (a), 0x10000000000000000)) -
+      uint256 (pow (eDaiReserves, uint128 (a), 0x10000000000000000)) -
       uint256 (pow (uint128(xdx), uint128 (a), 0x10000000000000000));
-    require (sum < 0x100000000000000000000000000000000, "YieldMath: Insufficient yDAI reserves");
+    require (sum < 0x100000000000000000000000000000000, "YieldMath: Insufficient eDai reserves");
 
-    uint256 result = yDAIReserves - pow (uint128 (sum), 0x10000000000000000, uint128 (a));
+    uint256 result = eDaiReserves - pow (uint128 (sum), 0x10000000000000000, uint128 (a));
     require (result < 0x100000000000000000000000000000000, "YieldMath: Rounding induced error");
     result > 1e12 ? result = result - 1e12 : result = 0; // Substract error guard, flooring the result at zero
 
@@ -50,18 +50,18 @@ library YieldMath48 {
   }
 
   /**
-   * Calculate the amount of Dai a user would get for certain amount of yDAI.
+   * Calculate the amount of Dai a user would get for certain amount of eDai.
    *
    * @param daiReserves Dai reserves amount
-   * @param yDAIReserves yDAI reserves amount
-   * @param yDAIAmount yDAI amount to be traded
+   * @param eDaiReserves eDai reserves amount
+   * @param eDaiAmount eDai amount to be traded
    * @param timeTillMaturity time till maturity in seconds
    * @param k time till maturity coefficient, multiplied by 2^64
    * @param g fee coefficient, multiplied by 2^64
-   * @return the amount of Dai a user would get for given amount of yDAI
+   * @return the amount of Dai a user would get for given amount of eDai
    */
-  function daiOutForYDaiIn (
-    uint128 daiReserves, uint128 yDAIReserves, uint128 yDAIAmount,
+  function daiOutForEDaiIn (
+    uint128 daiReserves, uint128 eDaiReserves, uint128 eDaiAmount,
     uint128 timeTillMaturity, int128 k, int128 g)
   internal pure returns (uint128) {
     // t = k * timeTillMaturity
@@ -71,14 +71,14 @@ library YieldMath48 {
     int128 a = Math64x64.sub (0x10000000000000000, Math64x64.mul (g, t));
     require (a > 0, "YieldMath: Too far from maturity");
 
-    // ydy = yDAIReserves + yDAIAmount;
-    uint256 ydy = uint256 (yDAIReserves) + uint256 (yDAIAmount);
-    require (ydy < 0x100000000000000000000000000000000, "YieldMath: Too much yDai in");
+    // ydy = eDaiReserves + eDaiAmount;
+    uint256 ydy = uint256 (eDaiReserves) + uint256 (eDaiAmount);
+    require (ydy < 0x100000000000000000000000000000000, "YieldMath: Too much eDai in");
 
     uint256 sum =
       uint256 (pow (uint128 (daiReserves), uint128 (a), 0x10000000000000000)) -
       uint256 (pow (uint128 (ydy), uint128 (a), 0x10000000000000000)) +
-      uint256 (pow (yDAIReserves, uint128 (a), 0x10000000000000000));
+      uint256 (pow (eDaiReserves, uint128 (a), 0x10000000000000000));
     require (sum < 0x100000000000000000000000000000000, "YieldMath: Insufficient Dai reserves");
 
     uint256 result =
@@ -91,18 +91,18 @@ library YieldMath48 {
   }
 
   /**
-   * Calculate the amount of yDAI a user could sell for given amount of Dai.
+   * Calculate the amount of eDai a user could sell for given amount of Dai.
    *
    * @param daiReserves Dai reserves amount
-   * @param yDAIReserves yDAI reserves amount
+   * @param eDaiReserves eDai reserves amount
    * @param daiAmount Dai amount to be traded
    * @param timeTillMaturity time till maturity in seconds
    * @param k time till maturity coefficient, multiplied by 2^64
    * @param g fee coefficient, multiplied by 2^64
-   * @return the amount of yDAI a user could sell for given amount of Dai
+   * @return the amount of eDai a user could sell for given amount of Dai
    */
-  function yDaiInForDaiOut (
-    uint128 daiReserves, uint128 yDAIReserves, uint128 daiAmount,
+  function eDaiInForDaiOut (
+    uint128 daiReserves, uint128 eDaiReserves, uint128 daiAmount,
     uint128 timeTillMaturity, int128 k, int128 g)
   internal pure returns (uint128) {
     // t = k * timeTillMaturity
@@ -118,11 +118,11 @@ library YieldMath48 {
 
     uint256 sum =
       uint256 (pow (uint128 (daiReserves), uint128 (a), 0x10000000000000000)) +
-      uint256 (pow (yDAIReserves, uint128 (a), 0x10000000000000000)) -
+      uint256 (pow (eDaiReserves, uint128 (a), 0x10000000000000000)) -
       uint256 (pow (uint128 (xdx), uint128 (a), 0x10000000000000000));
-    require (sum < 0x100000000000000000000000000000000, "YieldMath: Resulting yDai reserves too high");
+    require (sum < 0x100000000000000000000000000000000, "YieldMath: Resulting eDai reserves too high");
 
-    uint256 result = pow (uint128 (sum), 0x10000000000000000, uint128 (a)) - yDAIReserves;
+    uint256 result = pow (uint128 (sum), 0x10000000000000000, uint128 (a)) - eDaiReserves;
     require (result < 0x100000000000000000000000000000000, "YieldMath: Rounding induced error");
     result < type(uint256).max - 1e12 ? result = result + 1e12 : result = type(uint256).max; // Add error guard, ceiling the result at max
 
@@ -131,32 +131,32 @@ library YieldMath48 {
 
   /**
    * Calculate the amount of Dai a user would have to pay for certain amount of
-   * yDAI.
+   * eDai.
    *
    * @param daiReserves Dai reserves amount
-   * @param yDAIReserves yDAI reserves amount
-   * @param yDAIAmount yDAI amount to be traded
+   * @param eDaiReserves eDai reserves amount
+   * @param eDaiAmount eDai amount to be traded
    * @param timeTillMaturity time till maturity in seconds
    * @param k time till maturity coefficient, multiplied by 2^64
    * @param g fee coefficient, multiplied by 2^64
    * @return the amount of Dai a user would have to pay for given amount of
-   *         yDAI
+   *         eDai
    */
-  function daiInForYDaiOut (
-    uint128 daiReserves, uint128 yDAIReserves, uint128 yDAIAmount,
+  function daiInForEDaiOut (
+    uint128 daiReserves, uint128 eDaiReserves, uint128 eDaiAmount,
     uint128 timeTillMaturity, int128 k, int128 g)
   internal pure returns (uint128) {
     // a = (1 - g * k * timeTillMaturity)
     int128 a = Math64x64.sub (0x10000000000000000, Math64x64.mul (g, Math64x64.mul (k, Math64x64.fromUInt (timeTillMaturity))));
     require (a > 0, "YieldMath: Too far from maturity");
 
-    // ydy = yDAIReserves - yDAIAmount;
-    uint256 ydy = uint256 (yDAIReserves) - uint256 (yDAIAmount);
-    require (ydy < 0x100000000000000000000000000000000, "YieldMath: Too much yDai out");
+    // ydy = eDaiReserves - eDaiAmount;
+    uint256 ydy = uint256 (eDaiReserves) - uint256 (eDaiAmount);
+    require (ydy < 0x100000000000000000000000000000000, "YieldMath: Too much eDai out");
 
     uint256 sum =
       uint256 (pow (daiReserves, uint128 (a), 0x10000000000000000)) +
-      uint256 (pow (yDAIReserves, uint128 (a), 0x10000000000000000)) -
+      uint256 (pow (eDaiReserves, uint128 (a), 0x10000000000000000)) -
       uint256 (pow (uint128 (ydy), uint128 (a), 0x10000000000000000));
     require (sum < 0x100000000000000000000000000000000, "YieldMath: Resulting Dai reserves too high");
 

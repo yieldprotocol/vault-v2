@@ -6,7 +6,7 @@ import { expectRevert, expectEvent } from '@openzeppelin/test-helpers'
 import { WETH, daiTokens1, wethTokens1, bnify } from './shared/utils'
 import { YieldEnvironmentLite, Contract } from './shared/fixtures'
 
-contract('yDai - Delegation', async (accounts) => {
+contract('eDai - Delegation', async (accounts) => {
   let [owner, holder, other] = accounts
 
   let maturity1: number
@@ -19,13 +19,13 @@ contract('yDai - Delegation', async (accounts) => {
   let vat: Contract
   let weth: Contract
   let dai: Contract
-  let yDai1: Contract
+  let eDai1: Contract
 
   beforeEach(async () => {
     snapshot = await helper.takeSnapshot()
     snapshotId = snapshot['result']
 
-    // Setup yDai
+    // Setup eDai
     const block = await web3.eth.getBlockNumber()
     maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000
     maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000
@@ -36,7 +36,7 @@ contract('yDai - Delegation', async (accounts) => {
     vat = env.maker.vat
     dai = env.maker.dai
 
-    yDai1 = env.yDais[0]
+    eDai1 = env.eDais[0]
 
     // Post collateral to MakerDAO through Treasury
     await treasury.orchestrate(owner, id('pushWeth(address,uint256)'), { from: owner })
@@ -46,16 +46,16 @@ contract('yDai - Delegation', async (accounts) => {
     await treasury.pushWeth(owner, initialCapital, { from: owner })
     assert.equal((await vat.urns(WETH, treasury.address)).ink, initialCapital.toString())
 
-    // Mint some yDai the sneaky way
-    await yDai1.orchestrate(owner, id('mint(address,uint256)'), { from: owner })
-    await yDai1.mint(holder, daiTokens1, { from: owner })
+    // Mint some eDai the sneaky way
+    await eDai1.orchestrate(owner, id('mint(address,uint256)'), { from: owner })
+    await eDai1.mint(holder, daiTokens1, { from: owner })
 
-    // yDai matures
+    // eDai matures
     await helper.advanceTime(1000)
     await helper.advanceBlock()
-    await yDai1.mature()
+    await eDai1.mature()
 
-    assert.equal(await yDai1.balanceOf(holder), daiTokens1, 'Holder does not have yDai')
+    assert.equal(await eDai1.balanceOf(holder), daiTokens1, 'Holder does not have eDai')
     assert.equal(await treasury.savings(), 0, 'Treasury has no savings')
   })
 
@@ -64,26 +64,26 @@ contract('yDai - Delegation', async (accounts) => {
   })
 
   it('redeem is allowed for account holder', async () => {
-    await yDai1.approve(yDai1.address, daiTokens1, { from: holder })
-    await yDai1.redeem(holder, holder, daiTokens1, { from: holder })
+    await eDai1.approve(eDai1.address, daiTokens1, { from: holder })
+    await eDai1.redeem(holder, holder, daiTokens1, { from: holder })
 
     assert.equal(await treasury.debt(), daiTokens1, 'Treasury should have debt')
     assert.equal(await dai.balanceOf(holder), daiTokens1, 'Holder should have dai')
   })
 
   it('redeem is not allowed for non designated accounts', async () => {
-    await yDai1.approve(yDai1.address, daiTokens1, { from: holder })
-    await expectRevert(yDai1.redeem(holder, holder, daiTokens1, { from: other }), 'YDai: Only Holder Or Delegate')
+    await eDai1.approve(eDai1.address, daiTokens1, { from: holder })
+    await expectRevert(eDai1.redeem(holder, holder, daiTokens1, { from: other }), 'EDai: Only Holder Or Delegate')
   })
 
   it('redeem is allowed for delegates', async () => {
-    await yDai1.approve(yDai1.address, daiTokens1, { from: holder })
-    expectEvent(await yDai1.addDelegate(other, { from: holder }), 'Delegate', {
+    await eDai1.approve(eDai1.address, daiTokens1, { from: holder })
+    expectEvent(await eDai1.addDelegate(other, { from: holder }), 'Delegate', {
       user: holder,
       delegate: other,
       enabled: true,
     })
-    await yDai1.redeem(holder, holder, daiTokens1, { from: other })
+    await eDai1.redeem(holder, holder, daiTokens1, { from: other })
 
     assert.equal(await treasury.debt(), daiTokens1, 'Treasury should have debt')
     assert.equal(await dai.balanceOf(holder), daiTokens1, 'Holder should have dai')
@@ -91,29 +91,29 @@ contract('yDai - Delegation', async (accounts) => {
 
   describe('with delegates', async () => {
     beforeEach(async () => {
-      await yDai1.addDelegate(other, { from: holder })
+      await eDai1.addDelegate(other, { from: holder })
     })
 
     it('redeem is not allowed if delegation revoked', async () => {
-      expectEvent(await yDai1.revokeDelegate(other, { from: holder }), 'Delegate', {
+      expectEvent(await eDai1.revokeDelegate(other, { from: holder }), 'Delegate', {
         user: holder,
         delegate: other,
         enabled: false,
       })
 
-      await expectRevert(yDai1.redeem(holder, holder, daiTokens1, { from: other }), 'YDai: Only Holder Or Delegate')
+      await expectRevert(eDai1.redeem(holder, holder, daiTokens1, { from: other }), 'EDai: Only Holder Or Delegate')
     })
 
     it('cannot add delegate again or remove delegate twice', async () => {
-      await expectRevert(yDai1.addDelegate(other, { from: holder }), 'Delegable: Already delegated')
+      await expectRevert(eDai1.addDelegate(other, { from: holder }), 'Delegable: Already delegated')
 
-      expectEvent(await yDai1.revokeDelegate(other, { from: holder }), 'Delegate', {
+      expectEvent(await eDai1.revokeDelegate(other, { from: holder }), 'Delegate', {
         user: holder,
         delegate: other,
         enabled: false,
       })
 
-      await expectRevert(yDai1.revokeDelegate(other, { from: holder }), 'Delegable: Already undelegated')
+      await expectRevert(eDai1.revokeDelegate(other, { from: holder }), 'Delegable: Already undelegated')
     })
   })
 })

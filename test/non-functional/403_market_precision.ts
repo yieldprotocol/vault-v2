@@ -4,7 +4,7 @@ import { Contract } from '../shared/fixtures'
 contract('Pool', async () => {
   let yieldMath: Contract
 
-  const yDaiReserves = '200000000000000000000000000'
+  const eDaiReserves = '200000000000000000000000000'
   const daiReserves = '100000000000000000000000000'
 
   const oneYear = 31556952
@@ -14,7 +14,7 @@ contract('Pool', async () => {
   let timeTillMaturity: number
 
   const results = new Set()
-  results.add(['trade', 'daiReserves', 'yDaiReserves', 'tokensIn', 'tokensOut'])
+  results.add(['trade', 'daiReserves', 'eDaiReserves', 'tokensIn', 'tokensOut'])
 
   beforeEach(async () => {
     // Setup YieldMathMock
@@ -28,65 +28,65 @@ contract('Pool', async () => {
 
     it('sells dai', async () => {
       for (let trade of ['10000000000000000000', '1000000000000000000000', '1000000000000000000000000']) {
-        let yDaiOut = await yieldMath.yDaiOutForDaiIn128(daiReserves, yDaiReserves, trade, timeTillMaturity, k, g)
+        let eDaiOut = await yieldMath.eDaiOutForDaiIn128(daiReserves, eDaiReserves, trade, timeTillMaturity, k, g)
 
-        results.add(['sellDai128', daiReserves, yDaiReserves, trade, yDaiOut])
+        results.add(['sellDai128', daiReserves, eDaiReserves, trade, eDaiOut])
 
-        yDaiOut = await yieldMath.yDaiOutForDaiIn64(daiReserves, yDaiReserves, trade, timeTillMaturity, k, g)
+        eDaiOut = await yieldMath.eDaiOutForDaiIn64(daiReserves, eDaiReserves, trade, timeTillMaturity, k, g)
 
-        results.add(['sellDai64', daiReserves, yDaiReserves, trade, yDaiOut])
+        results.add(['sellDai64', daiReserves, eDaiReserves, trade, eDaiOut])
 
-        yDaiOut = await yieldMath.yDaiOutForDaiIn(daiReserves, yDaiReserves, trade, timeTillMaturity, k, g)
+        eDaiOut = await yieldMath.eDaiOutForDaiIn(daiReserves, eDaiReserves, trade, timeTillMaturity, k, g)
 
-        results.add(['sellDai48', daiReserves, yDaiReserves, trade, yDaiOut])
+        results.add(['sellDai48', daiReserves, eDaiReserves, trade, eDaiOut])
       }
     })
 
     it('buys dai', async () => {
       for (let trade of ['10000000000000000000', '1000000000000000000000', '1000000000000000000000000']) {
-        let yDaiIn = await yieldMath.yDaiInForDaiOut128(daiReserves, yDaiReserves, trade, timeTillMaturity, k, g)
+        let eDaiIn = await yieldMath.eDaiInForDaiOut128(daiReserves, eDaiReserves, trade, timeTillMaturity, k, g)
 
-        results.add(['buyDai128', daiReserves, yDaiReserves, yDaiIn, trade])
+        results.add(['bueDai128', daiReserves, eDaiReserves, eDaiIn, trade])
 
-        yDaiIn = await yieldMath.yDaiInForDaiOut64(daiReserves, yDaiReserves, trade, timeTillMaturity, k, g)
+        eDaiIn = await yieldMath.eDaiInForDaiOut64(daiReserves, eDaiReserves, trade, timeTillMaturity, k, g)
 
-        results.add(['buyDai64', daiReserves, yDaiReserves, yDaiIn, trade])
+        results.add(['bueDai64', daiReserves, eDaiReserves, eDaiIn, trade])
 
-        yDaiIn = await yieldMath.yDaiInForDaiOut(daiReserves, yDaiReserves, trade, timeTillMaturity, k, g)
+        eDaiIn = await yieldMath.eDaiInForDaiOut(daiReserves, eDaiReserves, trade, timeTillMaturity, k, g)
 
-        results.add(['buyDai48', daiReserves, yDaiReserves, yDaiIn, trade])
+        results.add(['bueDai48', daiReserves, eDaiReserves, eDaiIn, trade])
       }
     })
 
-    it('sells yDai', async () => {
+    it('sells eDai', async () => {
       for (let trade of ['10000000000000000000', '1000000000000000000000', '1000000000000000000000000']) {
-        let daiOut = await yieldMath.daiOutForYDaiIn128(daiReserves, yDaiReserves, trade, timeTillMaturity, k, g)
+        let daiOut = await yieldMath.daiOutForEDaiIn128(daiReserves, eDaiReserves, trade, timeTillMaturity, k, g)
 
-        results.add(['sellDai128', daiReserves, yDaiReserves, trade, daiOut])
+        results.add(['sellDai128', daiReserves, eDaiReserves, trade, daiOut])
 
-        daiOut = await yieldMath.daiOutForYDaiIn64(daiReserves, yDaiReserves, trade, timeTillMaturity, k, g)
+        daiOut = await yieldMath.daiOutForEDaiIn64(daiReserves, eDaiReserves, trade, timeTillMaturity, k, g)
 
-        results.add(['sellDai64', daiReserves, yDaiReserves, trade, daiOut])
+        results.add(['sellDai64', daiReserves, eDaiReserves, trade, daiOut])
 
-        daiOut = await yieldMath.daiOutForYDaiIn(daiReserves, yDaiReserves, trade, timeTillMaturity, k, g)
+        daiOut = await yieldMath.daiOutForEDaiIn(daiReserves, eDaiReserves, trade, timeTillMaturity, k, g)
 
-        results.add(['sellDai48', daiReserves, yDaiReserves, trade, daiOut])
+        results.add(['sellDai48', daiReserves, eDaiReserves, trade, daiOut])
       }
     })
 
-    it('buys yDai', async () => {
+    it('buys eDai', async () => {
       for (let trade of ['10000000000000000000', '1000000000000000000000', '1000000000000000000000000']) {
-        let daiIn = await yieldMath.daiInForYDaiOut128(daiReserves, yDaiReserves, trade, timeTillMaturity, k, g)
+        let daiIn = await yieldMath.daiInForEDaiOut128(daiReserves, eDaiReserves, trade, timeTillMaturity, k, g)
 
-        results.add(['buyDai128', daiReserves, yDaiReserves, daiIn, trade])
+        results.add(['bueDai128', daiReserves, eDaiReserves, daiIn, trade])
 
-        daiIn = await yieldMath.daiInForYDaiOut64(daiReserves, yDaiReserves, trade, timeTillMaturity, k, g)
+        daiIn = await yieldMath.daiInForEDaiOut64(daiReserves, eDaiReserves, trade, timeTillMaturity, k, g)
 
-        results.add(['buyDai64', daiReserves, yDaiReserves, daiIn, trade])
+        results.add(['bueDai64', daiReserves, eDaiReserves, daiIn, trade])
 
-        daiIn = await yieldMath.daiInForYDaiOut(daiReserves, yDaiReserves, trade, timeTillMaturity, k, g)
+        daiIn = await yieldMath.daiInForEDaiOut(daiReserves, eDaiReserves, trade, timeTillMaturity, k, g)
 
-        results.add(['buyDai48', daiReserves, yDaiReserves, daiIn, trade])
+        results.add(['bueDai48', daiReserves, eDaiReserves, daiIn, trade])
       }
     })
 

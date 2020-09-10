@@ -4,7 +4,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @dev The Migrations contract is a standard truffle contract that keeps track of which migrations were done on the current network.
- * For yDai, we have updated it and added functionality that enables it as well to work as a deployed contract registry.
+ * For eDai, we have updated it and added functionality that enables it as well to work as a deployed contract registry.
  */
 contract Migrations is Ownable() {
     event Registered(bytes32 name, address addr);

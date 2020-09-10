@@ -14,7 +14,7 @@ import "./interfaces/IEnd.sol";
 import "./interfaces/IChai.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IController.sol";
-import "./interfaces/IYDai.sol";
+import "./interfaces/IEDai.sol";
 import "./interfaces/ILiquidations.sol";
 import "./helpers/DecimalMath.sol";
 
@@ -24,7 +24,7 @@ import "./helpers/DecimalMath.sol";
  * During the unwind process, the system debt to MakerDAO is settled first with `settleTreasury`, extracting all free weth.
  * Once the Treasury is settled, any system savings are converted from Chai to Weth using `cashSavings`.
  * At this point, users can settle their positions using `settle`. The MakerDAO rates will be used to convert all debt and collateral to a Weth payout.
- * Users can also redeem here their yDai for a Weth payout, using `redeem`.
+ * Users can also redeem here their eDai for a Weth payout, using `redeem`.
  */
 contract Unwind is Ownable(), DecimalMath {
     using SafeMath for uint256;
@@ -189,19 +189,19 @@ contract Unwind is Ownable(), DecimalMath {
         require(weth.transfer(user, remainder));
     }
 
-    /// @dev Redeems YDai for weth for any user. YDai.redeem won't work if MakerDAO is in shutdown.
+    /// @dev Redeems EDai for weth for any user. EDai.redeem won't work if MakerDAO is in shutdown.
     /// @param maturity Maturity of an added series
-    /// @param user Wallet containing the yDai to burn.
+    /// @param user Wallet containing the eDai to burn.
     function redeem(uint256 maturity, address user) public {
         require(settled && cashedOut, "Unwind: Not ready");
-        IYDai yDai = controller.series(maturity);
-        require(yDai.unlocked() == 1, "YDAI is still locked");
-        uint256 yDaiAmount = yDai.balanceOf(user);
-        yDai.burn(user, yDaiAmount);
+        IEDai eDai = controller.series(maturity);
+        require(eDai.unlocked() == 1, "eDai is still locked");
+        uint256 eDaiAmount = eDai.balanceOf(user);
+        eDai.burn(user, eDaiAmount);
         require(
             weth.transfer(
                 user,
-                daiToFixWeth(muld(yDaiAmount, yDai.chiGrowth()), _fix)
+                daiToFixWeth(muld(eDaiAmount, eDai.chiGrowth()), _fix)
             )
         );
     }

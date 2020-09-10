@@ -8,89 +8,89 @@ import "../pool/YieldMath.sol";
  */
 contract YieldMathWrapper {
   /**
-   * Calculate the amount of yDAI a user would get for given amount of DAI.
+   * Calculate the amount of eDai a user would get for given amount of DAI.
    *
    * @param daiReserves DAI reserves amount
-   * @param yDAIReserves yDAI reserves amount
+   * @param eDaiReserves eDai reserves amount
    * @param daiAmount DAI amount to be traded
    * @param timeTillMaturity time till maturity in seconds
    * @param k time till maturity coefficient, multiplied by 2^64
    * @param g fee coefficient, multiplied by 2^64
-   * @return the amount of yDAI a user would get for given amount of DAI
+   * @return the amount of eDai a user would get for given amount of DAI
    */
-  function yDaiOutForDaiIn (
-    uint128 daiReserves, uint128 yDAIReserves, uint128 daiAmount,
+  function eDaiOutForDaiIn (
+    uint128 daiReserves, uint128 eDaiReserves, uint128 daiAmount,
     uint128 timeTillMaturity, int128 k, int128 g)
   public pure returns (bool, uint128) {
     return (
       true,
-      YieldMath.yDaiOutForDaiIn (
-        daiReserves, yDAIReserves, daiAmount, timeTillMaturity, k, g));
+      YieldMath.eDaiOutForDaiIn (
+        daiReserves, eDaiReserves, daiAmount, timeTillMaturity, k, g));
   }
 
   /**
-   * Calculate the amount of DAI a user would get for certain amount of yDAI.
+   * Calculate the amount of DAI a user would get for certain amount of eDai.
    *
    * @param daiReserves DAI reserves amount
-   * @param yDAIReserves yDAI reserves amount
-   * @param yDAIAmount yDAI amount to be traded
+   * @param eDaiReserves eDai reserves amount
+   * @param eDaiAmount eDai amount to be traded
    * @param timeTillMaturity time till maturity in seconds
    * @param k time till maturity coefficient, multiplied by 2^64
    * @param g fee coefficient, multiplied by 2^64
-   * @return the amount of DAI a user would get for given amount of yDAI
+   * @return the amount of DAI a user would get for given amount of eDai
    */
-  function daiOutForYDaiIn (
-    uint128 daiReserves, uint128 yDAIReserves, uint128 yDAIAmount,
+  function daiOutForEDaiIn (
+    uint128 daiReserves, uint128 eDaiReserves, uint128 eDaiAmount,
     uint128 timeTillMaturity, int128 k, int128 g)
   public pure returns (bool, uint128) {
     return (
       true,
-      YieldMath.daiOutForYDaiIn (
-        daiReserves, yDAIReserves, yDAIAmount, timeTillMaturity, k, g));
+      YieldMath.daiOutForEDaiIn (
+        daiReserves, eDaiReserves, eDaiAmount, timeTillMaturity, k, g));
   }
 
   /**
-   * Calculate the amount of yDAI a user could sell for given amount of DAI.
+   * Calculate the amount of eDai a user could sell for given amount of DAI.
    *
    * @param daiReserves DAI reserves amount
-   * @param yDAIReserves yDAI reserves amount
+   * @param eDaiReserves eDai reserves amount
    * @param daiAmount DAI amount to be traded
    * @param timeTillMaturity time till maturity in seconds
    * @param k time till maturity coefficient, multiplied by 2^64
    * @param g fee coefficient, multiplied by 2^64
-   * @return the amount of yDAI a user could sell for given amount of DAI
+   * @return the amount of eDai a user could sell for given amount of DAI
    */
-  function yDaiInForDaiOut (
-    uint128 daiReserves, uint128 yDAIReserves, uint128 daiAmount,
+  function eDaiInForDaiOut (
+    uint128 daiReserves, uint128 eDaiReserves, uint128 daiAmount,
     uint128 timeTillMaturity, int128 k, int128 g)
   public pure returns (bool, uint128) {
     return (
       true,
-      YieldMath.yDaiInForDaiOut (
-        daiReserves, yDAIReserves, daiAmount, timeTillMaturity, k, g));
+      YieldMath.eDaiInForDaiOut (
+        daiReserves, eDaiReserves, daiAmount, timeTillMaturity, k, g));
   }
 
   /**
    * Calculate the amount of DAI a user would have to pay for certain amount of
-   * yDAI.
+   * eDai.
    *
    * @param daiReserves DAI reserves amount
-   * @param yDAIReserves yDAI reserves amount
-   * @param yDAIAmount yDAI amount to be traded
+   * @param eDaiReserves eDai reserves amount
+   * @param eDaiAmount eDai amount to be traded
    * @param timeTillMaturity time till maturity in seconds
    * @param k time till maturity coefficient, multiplied by 2^64
    * @param g fee coefficient, multiplied by 2^64
    * @return the amount of DAI a user would have to pay for given amount of
-   *         yDAI
+   *         eDai
    */
-  function daiInForYDaiOut (
-    uint128 daiReserves, uint128 yDAIReserves, uint128 yDAIAmount,
+  function daiInForEDaiOut (
+    uint128 daiReserves, uint128 eDaiReserves, uint128 eDaiAmount,
     uint128 timeTillMaturity, int128 k, int128 g)
   public pure returns (bool, uint128) {
     return (
       true,
-      YieldMath.daiInForYDaiOut (
-        daiReserves, yDAIReserves, yDAIAmount, timeTillMaturity, k, g));
+      YieldMath.daiInForEDaiOut (
+        daiReserves, eDaiReserves, eDaiAmount, timeTillMaturity, k, g));
   }
 
   /**
