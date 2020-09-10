@@ -462,10 +462,12 @@ contract('YieldMath', async (accounts) => {
           }
 
           // console.log("      " + result[1].toString())
-          if (j == 0) { // Test that when we are very close to maturity, price is very close to 1 minus flat fee.
+          if (j == 0) {
+            // Test that when we are very close to maturity, price is very close to 1 minus flat fee.
             expect(result[1]).to.be.bignumber.lt(maximum.mul(new BN('1000000')).div(new BN('999999')).toString())
             expect(result[1]).to.be.bignumber.gt(maximum.mul(new BN('999999')).div(new BN('1000000')).toString())
-          } else { // Easier to test prices diverging from 1
+          } else {
+            // Easier to test prices diverging from 1
             expect(result[1]).to.be.bignumber.lt(previousResult.toString())
           }
           previousResult = result[1]
@@ -704,10 +706,12 @@ contract('YieldMath', async (accounts) => {
           }
 
           // console.log("      " + result[1].toString())
-          if (j == 0) { // Test that when we are very close to maturity, price is very close to 1 minus flat fee.
+          if (j == 0) {
+            // Test that when we are very close to maturity, price is very close to 1 minus flat fee.
             expect(result[1]).to.be.bignumber.gt(minimum.mul(new BN('999999')).div(new BN('1000000')).toString())
             expect(result[1]).to.be.bignumber.lt(minimum.mul(new BN('1000000')).div(new BN('999999')).toString())
-          } else { // Easier to test prices diverging from 1
+          } else {
+            // Easier to test prices diverging from 1
             expect(result[1]).to.be.bignumber.gt(previousResult.toString())
           }
           previousResult = result[1]
@@ -964,7 +968,8 @@ contract('YieldMath', async (accounts) => {
             // Test that when we are very close to maturity, price is very close to 1 plus flat fee.
             expect(result[1]).to.be.bignumber.lt(maximum.mul(new BN('1000000')).div(new BN('999999')).toString())
             expect(result[1]).to.be.bignumber.gt(maximum.mul(new BN('999999')).div(new BN('1000000')).toString())
-          } else { // Easier to test prices diverging from 1
+          } else {
+            // Easier to test prices diverging from 1
             expect(result[1]).to.be.bignumber.lt(previousResult.toString())
           }
           previousResult = result[1]
@@ -1216,10 +1221,12 @@ contract('YieldMath', async (accounts) => {
           }
 
           // console.log("      " + result[1].toString())
-          if (j == 0) { // Test that when we are very close to maturity, price is very close to 1 plus flat fee.
+          if (j == 0) {
+            // Test that when we are very close to maturity, price is very close to 1 plus flat fee.
             expect(result[1]).to.be.bignumber.gt(minimum.mul(new BN('999999')).div(new BN('1000000')).toString())
             expect(result[1]).to.be.bignumber.lt(minimum.mul(new BN('1000000')).div(new BN('999999')).toString())
-          } else { // Easier to test prices diverging from 1
+          } else {
+            // Easier to test prices diverging from 1
             expect(result[1]).to.be.bignumber.gt(previousResult.toString())
           }
           previousResult = result[1]
