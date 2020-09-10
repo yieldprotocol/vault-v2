@@ -258,7 +258,7 @@ contract('YieldMath - Base', async (accounts) => {
           '0xde0b6b3a8640000',    // tradeSize ~= 1e18
           '0x4c4b40',             // timeTillMaturity
           '0x220c523d73',         // k = 1 / 126144000 in 64.64
-          '0xffbe76c8b4395810',   // g = 999 / 1000 in 64.64
+          '0xf333333333333333',   // g = 950 / 1000 in 64.64
           true,                   // ?
         ], */
       ]
@@ -412,7 +412,7 @@ contract('YieldMath - Base', async (accounts) => {
           '0xde0b6b3a8640000',    // tradeSize ~= 1e18
           '0x4c4b40',             // timeTillMaturity
           '0x220c523d73',         // k = 1 / 126144000 in 64.64
-          '0xffbe76c8b4395810',   // g = 999 / 1000 in 64.64
+          '0xf333333333333333',   // g = 950 / 1000 in 64.64
           true,                   // ?
         ], */
       ]
@@ -581,7 +581,7 @@ contract('YieldMath - Base', async (accounts) => {
           '0xde0b6b3a8640000',    // tradeSize ~= 1e18
           '0x4c4b40',             // timeTillMaturity
           '0x220c523d73',         // k = 1 / 126144000 in 64.64
-          '0xffbe76c8b4395810',   // g = 999 / 1000 in 64.64
+          '0xf333333333333333',   // g = 950 / 1000 in 64.64
           true,                   // ?
         ], */
       ]
@@ -748,7 +748,7 @@ contract('YieldMath - Base', async (accounts) => {
           '0xde0b6b3a8640000',    // tradeSize ~= 1e18
           '0x4c4b40',             // timeTillMaturity
           '0x220c523d73',         // k = 1 / 126144000 in 64.64
-          '0xffbe76c8b4395810',   // g = 999 / 1000 in 64.64
+          '0xf333333333333333',   // g = 950 / 1000 in 64.64
           true,                   // ?
         ], */
       ]

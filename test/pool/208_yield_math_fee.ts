@@ -16,8 +16,8 @@ contract('YieldMath - Reserves Value Invariant', async (accounts) => {
 
   const b = new BN('18446744073709551615')
   const k = b.div(new BN('126144000'))
-  const g1 = new BN('999').mul(b).div(new BN('1000')) // Sell Dai to the pool
-  const g2 = new BN('1000').mul(b).div(new BN('999')) // Sell yDai to the pool
+  const g1 = new BN('950').mul(b).div(new BN('1000')) // Sell Dai to the pool
+  const g2 = new BN('1000').mul(b).div(new BN('950')) // Sell yDai to the pool
 
   beforeEach(async () => {
     snapshot = await helper.takeSnapshot()
@@ -44,7 +44,6 @@ contract('YieldMath - Reserves Value Invariant', async (accounts) => {
       var k = b.div(new BN('126144000'))
       var g = [
         ['1000', '1000'],
-        ['999', '1000'],
         ['990', '1000'],
         ['950', '1000'],
       ]
@@ -82,7 +81,6 @@ contract('YieldMath - Reserves Value Invariant', async (accounts) => {
       var k = b.div(new BN('126144000'))
       var g = [
         ['1000', '1000'],
-        ['999', '1000'],
         ['990', '1000'],
         ['950', '1000'],
       ]
@@ -120,7 +118,6 @@ contract('YieldMath - Reserves Value Invariant', async (accounts) => {
       var k = b.div(new BN('126144000'))
       var g = [
         ['1000', '1000'],
-        ['1000', '999'],
         ['1000', '990'],
         ['1000', '950'],
       ]
@@ -158,7 +155,6 @@ contract('YieldMath - Reserves Value Invariant', async (accounts) => {
       var k = b.div(new BN('126144000'))
       var g = [
         ['1000', '1000'],
-        ['1000', '999'],
         ['1000', '990'],
         ['1000', '950'],
       ]

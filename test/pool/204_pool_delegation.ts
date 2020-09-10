@@ -77,7 +77,7 @@ contract('Pool - Delegation', async (accounts) => {
       const oneToken = toWad(1)
       await yDai1.mint(from, yDaiTokens1, { from: owner })
 
-      // yDaiInForChaiOut formula: https://www.desmos.com/calculator/16c4dgxhst
+      // yDaiInForChaiOut formula: https://www.desmos.com/calculator/c1scsshbzh
 
       assert.equal(
         await yDai1.balanceOf(from),
@@ -91,7 +91,7 @@ contract('Pool - Delegation', async (accounts) => {
 
       assert.equal(await dai.balanceOf(to), oneToken.toString(), 'Receiver account should have 1 dai token')
 
-      const expectedYDaiIn = new BN(oneToken.toString()).mul(new BN('100260')).div(new BN('100000'))
+      const expectedYDaiIn = new BN(oneToken.toString()).mul(new BN('100270')).div(new BN('100000'))
       const yDaiIn = new BN(yDaiTokens1.toString()).sub(new BN(await yDai1.balanceOf(from)))
       expect(yDaiIn).to.be.bignumber.gt(expectedYDaiIn.mul(new BN('9999')).div(new BN('10000')))
       // @ts-ignore
@@ -102,7 +102,7 @@ contract('Pool - Delegation', async (accounts) => {
       const oneToken = toWad(1)
       await yDai1.mint(from, oneToken, { from: owner })
 
-      // chaiOutForYDaiIn formula: https://www.desmos.com/calculator/6ylefi7fv7
+      // chaiOutForYDaiIn formula: https://www.desmos.com/calculator/7knilsjycu
 
       assert.equal(
         await dai.balanceOf(to),
@@ -116,7 +116,7 @@ contract('Pool - Delegation', async (accounts) => {
 
       assert.equal(await yDai1.balanceOf(from), 0, "'From' wallet should have no yDai tokens")
 
-      const expectedDaiOut = new BN(oneToken.toString()).mul(new BN('99745')).div(new BN('100000'))
+      const expectedDaiOut = new BN(oneToken.toString()).mul(new BN('99732')).div(new BN('100000'))
       const daiOut = new BN(await dai.balanceOf(to))
       // @ts-ignore
       expect(daiOut).to.be.bignumber.gt(expectedDaiOut.mul(new BN('9999')).div(new BN('10000')))
@@ -133,6 +133,8 @@ contract('Pool - Delegation', async (accounts) => {
       })
 
       it('mints liquidity tokens with delegation', async () => {
+        // Use this to test: https://www.desmos.com/calculator/mllhtohxfx
+
         const oneToken = toWad(1)
         await dai.mint(from, oneToken, { from: owner })
         await yDai1.mint(from, yDaiTokens1, { from: owner })
@@ -145,8 +147,8 @@ contract('Pool - Delegation', async (accounts) => {
         await pool.addDelegate(operator, { from: from })
         await pool.mint(from, to, oneToken, { from: operator })
 
-        const expectedMinted = new BN('1476276421990000000')
-        const expectedYDaiIn = new BN('518626520770000000')
+        const expectedMinted = new BN('1473236946700000000')
+        const expectedYDaiIn = new BN('517558731280000000')
 
         const minted = new BN(await pool.balanceOf(to)).sub(poolTokensBefore)
         const yDaiIn = yDaiBefore.sub(new BN(await yDai1.balanceOf(from)))
@@ -159,6 +161,8 @@ contract('Pool - Delegation', async (accounts) => {
       })
 
       it('burns liquidity tokens', async () => {
+        // Use this to test: https://www.desmos.com/calculator/ubsalzunpo
+        
         const oneToken = toWad(1)
         const yDaiReservesBefore = new BN(await yDai1.balanceOf(pool.address))
         const daiReservesBefore = new BN(await dai.balanceOf(pool.address))
@@ -168,7 +172,7 @@ contract('Pool - Delegation', async (accounts) => {
         await pool.burn(from, to, oneToken, { from: operator })
 
         const expectedYDaiOut = new BN('351307189540000000')
-        const expectedDaiOut = new BN('677379916900000000')
+        const expectedDaiOut = new BN('678777437820000000')
 
         const yDaiOut = yDaiReservesBefore.sub(new BN(await yDai1.balanceOf(pool.address)))
         const daiOut = daiReservesBefore.sub(new BN(await dai.balanceOf(pool.address)))
@@ -184,7 +188,7 @@ contract('Pool - Delegation', async (accounts) => {
         const oneToken = toWad(1)
         await env.maker.getDai(from, daiTokens1, rate1)
 
-        // yDaiOutForChaiIn formula: https://www.desmos.com/calculator/dcjuj5lmmc
+        // yDaiOutForChaiIn formula: https://www.desmos.com/calculator/8eczy19er3
 
         assert.equal(
           await yDai1.balanceOf(to),
@@ -202,7 +206,7 @@ contract('Pool - Delegation', async (accounts) => {
           "'From' wallet should have " + daiTokens1.sub(oneToken) + ' dai tokens'
         )
 
-        const expectedYDaiOut = new BN(oneToken.toString()).mul(new BN('118480')).div(new BN('100000'))
+        const expectedYDaiOut = new BN(oneToken.toString()).mul(new BN('117440')).div(new BN('100000'))
         const yDaiOut = new BN(await yDai1.balanceOf(to))
         // This is the lowest precision achieved.
         // @ts-ignore
@@ -215,7 +219,7 @@ contract('Pool - Delegation', async (accounts) => {
         const oneToken = toWad(1)
         await env.maker.getDai(from, daiTokens1, rate1)
 
-        // chaiInForYDaiOut formula: https://www.desmos.com/calculator/cgpfpqe3fq
+        // chaiInForYDaiOut formula: https://www.desmos.com/calculator/grjod0grzp
 
         assert.equal(
           await yDai1.balanceOf(to),
@@ -229,7 +233,7 @@ contract('Pool - Delegation', async (accounts) => {
 
         assert.equal(await yDai1.balanceOf(to), oneToken.toString(), "'To' wallet should have 1 yDai token")
 
-        const expectedDaiIn = new BN(oneToken.toString()).mul(new BN('84361')).div(new BN('100000'))
+        const expectedDaiIn = new BN(oneToken.toString()).mul(new BN('85110')).div(new BN('100000'))
         const daiIn = new BN(daiTokens1.toString()).sub(new BN(await dai.balanceOf(from)))
         // @ts-ignore
         expect(daiIn).to.be.bignumber.gt(expectedDaiIn.mul(new BN('9999')).div(new BN('10000')))

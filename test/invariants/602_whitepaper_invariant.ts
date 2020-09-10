@@ -16,8 +16,8 @@ contract('YieldMath - Reserves Value Invariant', async (accounts) => {
 
   const b = new BN('18446744073709551615')
   const k = b.div(new BN('126144000'))
-  const g1 = new BN('999').mul(b).div(new BN('1000')) // Sell Dai to the pool
-  const g2 = new BN('1000').mul(b).div(new BN('999')) // Sell yDai to the pool
+  const g1 = new BN('950').mul(b).div(new BN('1000')) // Sell Dai to the pool
+  const g2 = new BN('1000').mul(b).div(new BN('950')) // Sell yDai to the pool
 
   beforeEach(async () => {
     snapshot = await helper.takeSnapshot()
@@ -28,7 +28,7 @@ contract('YieldMath - Reserves Value Invariant', async (accounts) => {
     yieldMath = await YieldMath.new()
   })
 
-  it('Outputs the invariant for daiOutForYDaiIn', async () => {
+  it.only('Outputs the invariant for daiOutForYDaiIn', async () => {
     // maxDaiReserves = 10**27; // $1B
     // maxYDaiReserves = 10**27; // $1B
     // maxTrade = 10**26; // $100M
@@ -47,7 +47,7 @@ contract('YieldMath - Reserves Value Invariant', async (accounts) => {
     const daiReserves = new BN('1000000000000000000000')
     const yDaiReserves = new BN('1000000000000000000001')
     const yDaiIn = new BN('1000000000000000000')
-    const timeTillMaturity = new BN('126144000')
+    const timeTillMaturity = new BN('1')
 
     console.log('yDai Reserves:       ' + yDaiReserves.toString())
     console.log('Dai Reserves:        ' + daiReserves.toString())
@@ -55,7 +55,7 @@ contract('YieldMath - Reserves Value Invariant', async (accounts) => {
     console.log(
       'Reserves value:      ' + (await test.whitepaperInvariant(daiReserves, yDaiReserves, timeTillMaturity)).toString()
     )
-    const daiOut = await yieldMath.daiOutForYDaiIn64(daiReserves, yDaiReserves, yDaiIn, timeTillMaturity, k, g)
+    const daiOut = await yieldMath.daiOutForYDaiIn64(daiReserves, yDaiReserves, yDaiIn, timeTillMaturity, k, g2)
     console.log('yDai in:             ' + yDaiIn.toString())
     console.log('Dai out:             ' + daiOut.toString())
     // console.log('yDai Reserves:       ' + yDaiReserves.add(yDaiIn).toString())

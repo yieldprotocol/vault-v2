@@ -69,7 +69,7 @@ contract('YieldMath - Curve', async (accounts) => {
         var g = [
           ['9', '10'],
           ['95', '100'],
-          ['999', '1000'],
+          ['950', '1000'],
         ]
         var previousResult = new BN('0')
         for (var j = 0; j < g.length; j++) {
@@ -96,7 +96,7 @@ contract('YieldMath - Curve', async (accounts) => {
       var timeTillMaturity = ['0', '40', '4000', '400000', '40000000']
       var b = new BN('18446744073709551615')
       var k = b.div(new BN('126144000'))
-      var g = new BN('999').mul(b).div(new BN('1000'))
+      var g = new BN('950').mul(b).div(new BN('1000'))
 
       for (var i = 0; i < values.length; i++) {
         // console.log("")
@@ -157,7 +157,7 @@ contract('YieldMath - Curve', async (accounts) => {
         var b = new BN('18446744073709551615')
         var k = b.div(new BN('126144000'))
         var g = [
-          ['999', '1000'],
+          ['950', '1000'],
           ['95', '100'],
           ['9', '10'],
         ]
@@ -186,7 +186,7 @@ contract('YieldMath - Curve', async (accounts) => {
       var timeTillMaturity = ['0', '40', '4000', '400000', '40000000']
       var b = new BN('18446744073709551615')
       var k = b.div(new BN('126144000'))
-      var g = new BN('1000').mul(b).div(new BN('999'))
+      var g = new BN('1000').mul(b).div(new BN('950'))
 
       for (var i = 0; i < values.length; i++) {
         // console.log("")
@@ -249,7 +249,7 @@ contract('YieldMath - Curve', async (accounts) => {
         var g = [
           ['9', '10'],
           ['95', '100'],
-          ['999', '1000'],
+          ['950', '1000'],
         ]
         var previousResult = new BN('0')
         for (var j = 0; j < g.length; j++) {
@@ -276,7 +276,7 @@ contract('YieldMath - Curve', async (accounts) => {
       var timeTillMaturity = ['0', '40', '4000', '400000', '40000000']
       var b = new BN('18446744073709551615')
       var k = b.div(new BN('126144000'))
-      var g = new BN('1000').mul(b).div(new BN('999'))
+      var g = new BN('1000').mul(b).div(new BN('950'))
 
       for (var i = 0; i < values.length; i++) {
         // console.log("")
@@ -337,7 +337,7 @@ contract('YieldMath - Curve', async (accounts) => {
         var b = new BN('18446744073709551615')
         var k = b.div(new BN('126144000'))
         var g = [
-          ['999', '1000'],
+          ['950', '1000'],
           ['95', '100'],
           ['9', '10'],
         ]
@@ -366,7 +366,7 @@ contract('YieldMath - Curve', async (accounts) => {
       var timeTillMaturity = ['0', '40', '4000', '400000', '40000000']
       var b = new BN('18446744073709551615')
       var k = b.div(new BN('126144000'))
-      var g = new BN('999').mul(b).div(new BN('1000'))
+      var g = new BN('950').mul(b).div(new BN('1000'))
 
       for (var i = 0; i < values.length; i++) {
         // console.log("")
