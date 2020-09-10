@@ -162,7 +162,7 @@ contract('Pool - Delegation', async (accounts) => {
 
       it('burns liquidity tokens', async () => {
         // Use this to test: https://www.desmos.com/calculator/ubsalzunpo
-        
+
         const oneToken = toWad(1)
         const yDaiReservesBefore = new BN(await yDai1.balanceOf(pool.address))
         const daiReservesBefore = new BN(await dai.balanceOf(pool.address))
