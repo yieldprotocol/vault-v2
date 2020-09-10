@@ -18,8 +18,8 @@ contract Pool is IPool, Delegable(), ERC20Permit {
     event Liquidity(uint256 maturity, address indexed from, address indexed to, int256 daiTokens, int256 yDaiTokens, int256 poolTokens);
 
     int128 constant public k = int128(uint256((1 << 64)) / 126144000); // 1 / Seconds in 4 years, in 64.64
-    int128 constant public g1 = int128(uint256((999 << 64)) / 1000); // To be used when selling Dai to the pool. All constants are `ufixed`, to divide them they must be converted to uint256
-    int128 constant public g2 = int128(uint256((1000 << 64)) / 999); // To be used when selling yDai to the pool. All constants are `ufixed`, to divide them they must be converted to uint256
+    int128 constant public g1 = int128(uint256((950 << 64)) / 1000); // To be used when selling Dai to the pool. All constants are `ufixed`, to divide them they must be converted to uint256
+    int128 constant public g2 = int128(uint256((1000 << 64)) / 950); // To be used when selling yDai to the pool. All constants are `ufixed`, to divide them they must be converted to uint256
     uint128 immutable public maturity;
 
     IERC20 public override dai;
