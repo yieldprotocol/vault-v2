@@ -144,8 +144,8 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         seriesIterator.push(maturity);
     }
 
-    /// @dev Dai equivalent of a eDai amount.
-    /// After maturity, the Dai value of a eDai grows according to either the stability fee (for WETH collateral) or the Dai Saving Rate (for Chai collateral).
+    /// @dev Dai equivalent of an eDai amount.
+    /// After maturity, the Dai value of an eDai grows according to either the stability fee (for WETH collateral) or the Dai Saving Rate (for Chai collateral).
     /// @param collateral Valid collateral type
     /// @param maturity Maturity of an added series
     /// @param eDaiAmount Amount of eDai to convert.

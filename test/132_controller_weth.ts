@@ -176,7 +176,7 @@ contract('Controller - Weth', async (accounts) => {
       assert.equal(event.args.user, user1)
       assert.equal(
         event.args.amount,
-        toBorrow // This is actually a eDai amount
+        toBorrow // This is actually an eDai amount
       )
       assert.equal(await eDai1.balanceOf(user2), toBorrow, 'User2 should have eDai')
       assert.equal(await controller.debtDai(WETH, maturity1, user1), toBorrow, 'User1 should have debt')
@@ -257,7 +257,7 @@ contract('Controller - Weth', async (accounts) => {
           assert.equal(event.args.user, user1)
           assert.equal(
             event.args.amount,
-            '-' + debt // This is actually a eDai amount
+            '-' + debt // This is actually an eDai amount
           )
           assert.equal(await eDai1.balanceOf(user2), 0, 'User2 should not have eDai')
           assert.equal(await controller.debtDai(WETH, maturity1, user1), 0, 'User1 should not have debt')
@@ -275,7 +275,7 @@ contract('Controller - Weth', async (accounts) => {
           assert.equal(event.args.user, user1)
           assert.equal(
             event.args.amount,
-            '-' + debt // This is actually a eDai amount
+            '-' + debt // This is actually an eDai amount
           )
           assert.equal(await dai.balanceOf(user2), bnify(daiTokens1).sub(debt).toString(), 'User should have less Dai')
           assert.equal(await controller.debtDai(WETH, maturity1, user1), 0, 'User1 should not have debt')
