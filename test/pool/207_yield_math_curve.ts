@@ -32,6 +32,18 @@ contract('YieldMath - Curve', async (accounts) => {
 
   let yieldMath: Contract
 
+  const b = new BN('18446744073709551615')
+  const k = b.div(new BN('126144000'))
+  const g1 = new BN('950').mul(b).div(new BN('1000')) // Sell Dai to the pool
+  const g2 = new BN('1000').mul(b).div(new BN('950')) // Sell yDai to the pool
+
+  const values = [
+    ['10000000000000000000000', '1000000000000000000000', '10000000000000000000', '1000000'],
+    ['100000000000000000000000000', '10000000000000000000000000', '1000000000000000000000', '1000000'],
+    ['1000000000000000000000000000000', '100000000000000000000000000000', '100000000000000000000000', '1000000'],
+  ]
+  const timeTillMaturity = ['0', '40', '4000', '400000', '40000000']
+
   beforeEach(async () => {
     snapshot = await helper.takeSnapshot()
     snapshotId = snapshot['result']
@@ -46,15 +58,7 @@ contract('YieldMath - Curve', async (accounts) => {
 
   describe('Test trading functions', async () => {
     it('A higher g means more eDai out with `eDaiOutForDaiIn`', async () => {
-      var values = [
-        ['10000000000000000000000', '1000000000000000000000', '10000000000000000000', '1000000'],
-        ['100000000000000000000000000', '10000000000000000000000000', '1000000000000000000000', '1000000'],
-        ['1000000000000000000000000000000', '100000000000000000000000000000', '100000000000000000000000', '1000000'],
-      ]
-
       for (var i = 0; i < values.length; i++) {
-        // for (var j = 0; j < daiReserveValues.length; j++) {
-        // var i = 0 // !
         var daiReservesValue = values[i][0]
         var eDaiReservesValue = values[i][1]
         var daiAmountValue = values[i][2]
@@ -64,8 +68,6 @@ contract('YieldMath - Curve', async (accounts) => {
         var eDaiReserves = toBigNumber(eDaiReservesValue)
         var daiAmount = toBigNumber(daiAmountValue)
         var timeTillMaturity = toBigNumber(timeTillMaturityValue)
-        var b = new BN('18446744073709551615')
-        var k = b.div(new BN('126144000'))
         var g = [
           ['9', '10'],
           ['95', '100'],
@@ -88,16 +90,6 @@ contract('YieldMath - Curve', async (accounts) => {
     })
 
     it('As we approach maturity, price grows to 1 for `eDaiOutForDaiIn`', async () => {
-      var values = [
-        ['10000000000000000000000', '1000000000000000000000', '10000000000000000000', '1000000'],
-        ['100000000000000000000000000', '10000000000000000000000000', '1000000000000000000000', '1000000'],
-        ['1000000000000000000000000000000', '100000000000000000000000000000', '100000000000000000000000', '1000000'],
-      ]
-      var timeTillMaturity = ['0', '40', '4000', '400000', '40000000']
-      var b = new BN('18446744073709551615')
-      var k = b.div(new BN('126144000'))
-      var g = new BN('950').mul(b).div(new BN('1000'))
-
       for (var i = 0; i < values.length; i++) {
         // console.log("")
         var daiReservesValue = values[i][0]
@@ -116,7 +108,7 @@ contract('YieldMath - Curve', async (accounts) => {
 
           var result
           try {
-            result = await yieldMath.eDaiOutForDaiIn(daiReserves, eDaiReserves, daiAmount, t, k, g)
+            result = await yieldMath.eDaiOutForDaiIn(daiReserves, eDaiReserves, daiAmount, t, k, g1)
           } catch (e) {
             result = [false, undefined]
           }
@@ -136,15 +128,7 @@ contract('YieldMath - Curve', async (accounts) => {
     })
 
     it('A lower g means more Dai out with `daiOutForEDaiIn`', async () => {
-      var values = [
-        ['10000000000000000000000', '1000000000000000000000', '10000000000000000000', '1000000'],
-        ['100000000000000000000000000', '10000000000000000000000000', '1000000000000000000000', '1000000'],
-        ['1000000000000000000000000000000', '100000000000000000000000000000', '100000000000000000000000', '1000000'],
-      ]
-
       for (var i = 0; i < values.length; i++) {
-        // for (var j = 0; j < daiReserveValues.length; j++) {
-        // var i = 0 // !
         var daiReservesValue = values[i][0]
         var eDaiReservesValue = values[i][1]
         var daiAmountValue = values[i][2]
@@ -154,8 +138,7 @@ contract('YieldMath - Curve', async (accounts) => {
         var eDaiReserves = toBigNumber(eDaiReservesValue)
         var daiAmount = toBigNumber(daiAmountValue)
         var timeTillMaturity = toBigNumber(timeTillMaturityValue)
-        var b = new BN('18446744073709551615')
-        var k = b.div(new BN('126144000'))
+
         var g = [
           ['950', '1000'],
           ['95', '100'],
@@ -178,16 +161,6 @@ contract('YieldMath - Curve', async (accounts) => {
     })
 
     it('As we approach maturity, price drops to 1 for `daiOutForEDaiIn`', async () => {
-      var values = [
-        ['10000000000000000000000', '1000000000000000000000', '10000000000000000000', '1000000'],
-        ['100000000000000000000000000', '10000000000000000000000000', '1000000000000000000000', '1000000'],
-        ['1000000000000000000000000000000', '100000000000000000000000000000', '100000000000000000000000', '1000000'],
-      ]
-      var timeTillMaturity = ['0', '40', '4000', '400000', '40000000']
-      var b = new BN('18446744073709551615')
-      var k = b.div(new BN('126144000'))
-      var g = new BN('1000').mul(b).div(new BN('950'))
-
       for (var i = 0; i < values.length; i++) {
         // console.log("")
         var daiReservesValue = values[i][0]
@@ -203,10 +176,9 @@ contract('YieldMath - Curve', async (accounts) => {
         var previousResult = minimum
         for (var j = 0; j < timeTillMaturity.length; j++) {
           var t = timeTillMaturity[j]
-
           var result
           try {
-            result = await yieldMath.daiOutForEDaiIn(daiReserves, eDaiReserves, daiAmount, t, k, g)
+            result = await yieldMath.daiOutForEDaiIn(daiReserves, eDaiReserves, daiAmount, t, k, g2)
           } catch (e) {
             result = [false, undefined]
           }
@@ -226,15 +198,7 @@ contract('YieldMath - Curve', async (accounts) => {
     })
 
     it('A higher g means more eDai in with `eDaiInForDaiOut`', async () => {
-      var values = [
-        ['10000000000000000000000', '1000000000000000000000', '10000000000000000000', '1000000'],
-        ['100000000000000000000000000', '10000000000000000000000000', '1000000000000000000000', '1000000'],
-        ['1000000000000000000000000000000', '100000000000000000000000000000', '100000000000000000000000', '1000000'],
-      ]
-
       for (var i = 0; i < values.length; i++) {
-        // for (var j = 0; j < daiReserveValues.length; j++) {
-        // var i = 0 // !
         var daiReservesValue = values[i][0]
         var eDaiReservesValue = values[i][1]
         var daiAmountValue = values[i][2]
@@ -244,8 +208,7 @@ contract('YieldMath - Curve', async (accounts) => {
         var eDaiReserves = toBigNumber(eDaiReservesValue)
         var daiAmount = toBigNumber(daiAmountValue)
         var timeTillMaturity = toBigNumber(timeTillMaturityValue)
-        var b = new BN('18446744073709551615')
-        var k = b.div(new BN('126144000'))
+
         var g = [
           ['9', '10'],
           ['95', '100'],
@@ -268,16 +231,6 @@ contract('YieldMath - Curve', async (accounts) => {
     })
 
     it('As we approach maturity, price grows to 1 for `eDaiInForDaiOut`', async () => {
-      var values = [
-        ['10000000000000000000000', '1000000000000000000000', '10000000000000000000', '1000000'],
-        ['100000000000000000000000000', '10000000000000000000000000', '1000000000000000000000', '1000000'],
-        ['1000000000000000000000000000000', '100000000000000000000000000000', '100000000000000000000000', '1000000'],
-      ]
-      var timeTillMaturity = ['0', '40', '4000', '400000', '40000000']
-      var b = new BN('18446744073709551615')
-      var k = b.div(new BN('126144000'))
-      var g = new BN('1000').mul(b).div(new BN('950'))
-
       for (var i = 0; i < values.length; i++) {
         // console.log("")
         var daiReservesValue = values[i][0]
@@ -293,10 +246,9 @@ contract('YieldMath - Curve', async (accounts) => {
         var previousResult = maximum
         for (var j = 0; j < timeTillMaturity.length; j++) {
           var t = timeTillMaturity[j]
-
           var result
           try {
-            result = await yieldMath.eDaiInForDaiOut(daiReserves, eDaiReserves, daiAmount, t, k, g)
+            result = await yieldMath.eDaiInForDaiOut(daiReserves, eDaiReserves, daiAmount, t, k, g2)
           } catch (e) {
             result = [false, undefined]
           }
@@ -316,15 +268,7 @@ contract('YieldMath - Curve', async (accounts) => {
     })
 
     it('A lower g means more Dai in with `daiInForEDaiOut`', async () => {
-      var values = [
-        ['10000000000000000000000', '1000000000000000000000', '10000000000000000000', '1000000'],
-        ['100000000000000000000000000', '10000000000000000000000000', '1000000000000000000000', '1000000'],
-        ['1000000000000000000000000000000', '100000000000000000000000000000', '100000000000000000000000', '1000000'],
-      ]
-
       for (var i = 0; i < values.length; i++) {
-        // for (var j = 0; j < daiReserveValues.length; j++) {
-        // var i = 0 // !
         var daiReservesValue = values[i][0]
         var eDaiReservesValue = values[i][1]
         var daiAmountValue = values[i][2]
@@ -334,8 +278,7 @@ contract('YieldMath - Curve', async (accounts) => {
         var eDaiReserves = toBigNumber(eDaiReservesValue)
         var daiAmount = toBigNumber(daiAmountValue)
         var timeTillMaturity = toBigNumber(timeTillMaturityValue)
-        var b = new BN('18446744073709551615')
-        var k = b.div(new BN('126144000'))
+
         var g = [
           ['950', '1000'],
           ['95', '100'],
@@ -358,16 +301,6 @@ contract('YieldMath - Curve', async (accounts) => {
     })
 
     it('As we approach maturity, price drops to 1 for `daiInForEDaiOut`', async () => {
-      var values = [
-        ['10000000000000000000000', '1000000000000000000000', '10000000000000000000', '1000000'],
-        ['100000000000000000000000000', '10000000000000000000000000', '1000000000000000000000', '1000000'],
-        ['1000000000000000000000000000000', '100000000000000000000000000000', '100000000000000000000000', '1000000'],
-      ]
-      var timeTillMaturity = ['0', '40', '4000', '400000', '40000000']
-      var b = new BN('18446744073709551615')
-      var k = b.div(new BN('126144000'))
-      var g = new BN('950').mul(b).div(new BN('1000'))
-
       for (var i = 0; i < values.length; i++) {
         // console.log("")
         var daiReservesValue = values[i][0]
@@ -383,10 +316,9 @@ contract('YieldMath - Curve', async (accounts) => {
         var previousResult = minimum
         for (var j = 0; j < timeTillMaturity.length; j++) {
           var t = timeTillMaturity[j]
-
           var result
           try {
-            result = await yieldMath.daiInForEDaiOut(daiReserves, eDaiReserves, daiAmount, t, k, g)
+            result = await yieldMath.daiInForEDaiOut(daiReserves, eDaiReserves, daiAmount, t, k, g1)
           } catch (e) {
             result = [false, undefined]
           }
