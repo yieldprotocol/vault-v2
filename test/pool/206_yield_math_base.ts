@@ -223,14 +223,14 @@ contract('YieldMath - Base', async (accounts) => {
       '0x14adf4b7320334b90000000',
       '0x295be96e640669720000000',
     ]
-    var yDaiReserveValues = [
+    var eDaiReserveValues = [
       '0x52b7d2dcc80cd2e4000001',
       '0xa56fa5b99019a5c8000001',
       '0x14adf4b7320334b90000001',
       '0x295be96e640669720000001',
     ]
 
-    it('Test `yDaiOutForDaiIn` function', async () => {
+    it('Test `eDaiOutForDaiIn` function', async () => {
       var values = [
         ['0x0', '0x0', '0x0', '0x0', '0x0', '0x0', true],
         ['0x0', '0x0', '0x0', '0x1', '0xFFFFFFFFFFFFFFFF', '0x10000000000000000', true, 0.0],
@@ -267,16 +267,16 @@ contract('YieldMath - Base', async (accounts) => {
         // for (var j = 0; j < daiReserveValues.length; j++) {
         // var i = 0 // !
         var daiReservesValue = values[i][0]
-        var yDAIReservesValue = values[i][1]
+        var eDaiReservesValue = values[i][1]
         var daiAmountValue = values[i][2]
         var timeTillMaturityValue = values[i][3]
         var kValue = values[i][4]
         var gValue = values[i][5]
         /* console.log(
-          '    yDaiOutForDaiIn (' +
+          '    eDaiOutForDaiIn (' +
             daiReservesValue +
             ', ' +
-            yDAIReservesValue +
+            eDaiReservesValue +
             ', ' +
             daiAmountValue +
             ', ' +
@@ -288,23 +288,23 @@ contract('YieldMath - Base', async (accounts) => {
             ')'
         ) */
         var daiReserves = toBigNumber(daiReservesValue)
-        var yDAIReserves = toBigNumber(yDAIReservesValue)
+        var eDaiReserves = toBigNumber(eDaiReservesValue)
         var daiAmount = toBigNumber(daiAmountValue)
         var timeTillMaturity = toBigNumber(timeTillMaturityValue)
         var k = toBigNumber(kValue)
         var g = toBigNumber(gValue)
         var result
         try {
-          result = await yieldMath.yDaiOutForDaiIn(daiReserves, yDAIReserves, daiAmount, timeTillMaturity, k, g)
+          result = await yieldMath.eDaiOutForDaiIn(daiReserves, eDaiReserves, daiAmount, timeTillMaturity, k, g)
         } catch (e) {
           result = [false, undefined]
         }
 
         /* console.log(
-          '    yDaiOutForDaiIn (' +
+          '    eDaiOutForDaiIn (' +
             daiReserves.toString() +
             ', ' +
-            yDAIReserves.toString() +
+            eDaiReserves.toString() +
             ', ' +
             daiAmount.toString() +
             ', ' +
@@ -321,10 +321,10 @@ contract('YieldMath - Base', async (accounts) => {
         var expected: any =
           values[i][7] !== undefined
             ? values[i][7]
-            : Number(yDAIReserves) -
+            : Number(eDaiReserves) -
               Math.pow(
                 Math.pow(Number(daiReserves), a) +
-                  Math.pow(Number(yDAIReserves), a) -
+                  Math.pow(Number(eDaiReserves), a) -
                   Math.pow(Number(daiReserves.add(daiAmount)), a),
                 1.0 / a
               ) -
@@ -333,10 +333,10 @@ contract('YieldMath - Base', async (accounts) => {
 
         if (values[i][6]) {
           assert(
-            'yDaiOutForDaiIn (' +
+            'eDaiOutForDaiIn (' +
               daiReservesValue +
               ', ' +
-              yDAIReservesValue +
+              eDaiReservesValue +
               ', ' +
               daiAmountValue +
               ', ' +
@@ -349,10 +349,10 @@ contract('YieldMath - Base', async (accounts) => {
             result[0]
           )
           assert(
-            'yDaiOutForDaiIn (' +
+            'eDaiOutForDaiIn (' +
               daiReservesValue +
               ', ' +
-              yDAIReservesValue +
+              eDaiReservesValue +
               ', ' +
               daiAmountValue +
               ', ' +
@@ -366,10 +366,10 @@ contract('YieldMath - Base', async (accounts) => {
           )
         } else {
           assert(
-            '!yDaiOutForDaiIn (' +
+            '!eDaiOutForDaiIn (' +
               daiReservesValue +
               ', ' +
-              yDAIReservesValue +
+              eDaiReservesValue +
               ', ' +
               daiAmountValue +
               ', ' +
@@ -385,7 +385,7 @@ contract('YieldMath - Base', async (accounts) => {
       }
     })
 
-    it('Test `daiOutForYDaiIn` function', async () => {
+    it('Test `daiOutForEDaiIn` function', async () => {
       var values = [
         ['0x0', '0x0', '0x0', '0x0', '0x0', '0x0', true],
         ['0x0', '0x0', '0x0', '0x1', '0xFFFFFFFFFFFFFFFF', '0x10000000000000000', true, 0.0],
@@ -421,18 +421,18 @@ contract('YieldMath - Base', async (accounts) => {
         //for (var j = 0; j < daiReserveValues.length; j++) {
         // var i = 0 // !
         var daiReservesValue = values[i][0]
-        var yDAIReservesValue = values[i][1]
-        var yDAIAmountValue = values[i][2]
+        var eDaiReservesValue = values[i][1]
+        var eDaiAmountValue = values[i][2]
         var timeTillMaturityValue = values[i][3]
         var kValue = values[i][4]
         var gValue = values[i][5]
         /* console.log(
-          '    daiOutForYDaiIn (' +
+          '    daiOutForEDaiIn (' +
             daiReservesValue +
             ', ' +
-            yDAIReservesValue +
+            eDaiReservesValue +
             ', ' +
-            yDAIAmountValue +
+            eDaiAmountValue +
             ', ' +
             timeTillMaturityValue +
             ', ' +
@@ -442,25 +442,25 @@ contract('YieldMath - Base', async (accounts) => {
             ')'
         ) */
         var daiReserves = toBigNumber(daiReservesValue)
-        var yDAIReserves = toBigNumber(yDAIReservesValue)
-        var yDAIAmount = toBigNumber(yDAIAmountValue)
+        var eDaiReserves = toBigNumber(eDaiReservesValue)
+        var eDaiAmount = toBigNumber(eDaiAmountValue)
         var timeTillMaturity = toBigNumber(timeTillMaturityValue)
         var k = toBigNumber(kValue)
         var g = toBigNumber(gValue)
         var result
         try {
-          result = await yieldMath.daiOutForYDaiIn(daiReserves, yDAIReserves, yDAIAmount, timeTillMaturity, k, g)
+          result = await yieldMath.daiOutForEDaiIn(daiReserves, eDaiReserves, eDaiAmount, timeTillMaturity, k, g)
         } catch (e) {
           result = [false, undefined]
         }
 
         /* console.log(
-          '    daiOutForYDaiIn (' +
+          '    daiOutForEDaiIn (' +
             daiReserves.toString() +
             ', ' +
-            yDAIReserves.toString() +
+            eDaiReserves.toString() +
             ', ' +
-            yDAIAmount.toString() +
+            eDaiAmount.toString() +
             ', ' +
             timeTillMaturity.toString() +
             ') = ' +
@@ -478,8 +478,8 @@ contract('YieldMath - Base', async (accounts) => {
             : Number(daiReserves) -
               Math.pow(
                 Math.pow(Number(daiReserves), a) +
-                  Math.pow(Number(yDAIReserves), a) -
-                  Math.pow(Number(yDAIReserves.add(yDAIAmount)), a),
+                  Math.pow(Number(eDaiReserves), a) -
+                  Math.pow(Number(eDaiReserves.add(eDaiAmount)), a),
                 1.0 / a
               ) -
               fee
@@ -487,12 +487,12 @@ contract('YieldMath - Base', async (accounts) => {
 
         if (values[i][6]) {
           assert(
-            'daiOutForYDaiIn (' +
+            'daiOutForEDaiIn (' +
               daiReservesValue +
               ', ' +
-              yDAIReservesValue +
+              eDaiReservesValue +
               ', ' +
-              yDAIAmountValue +
+              eDaiAmountValue +
               ', ' +
               timeTillMaturityValue +
               ', ' +
@@ -503,12 +503,12 @@ contract('YieldMath - Base', async (accounts) => {
             result[0]
           )
           assert(
-            'daiOutForYDaiIn (' +
+            'daiOutForEDaiIn (' +
               daiReservesValue +
               ', ' +
-              yDAIReservesValue +
+              eDaiReservesValue +
               ', ' +
-              yDAIAmountValue +
+              eDaiAmountValue +
               ', ' +
               timeTillMaturityValue +
               ', ' +
@@ -520,12 +520,12 @@ contract('YieldMath - Base', async (accounts) => {
           )
         } else {
           assert(
-            '!daiOutForYDaiIn (' +
+            '!daiOutForEDaiIn (' +
               daiReservesValue +
               ', ' +
-              yDAIReservesValue +
+              eDaiReservesValue +
               ', ' +
-              yDAIAmountValue +
+              eDaiAmountValue +
               ', ' +
               timeTillMaturityValue +
               ', ' +
@@ -539,7 +539,7 @@ contract('YieldMath - Base', async (accounts) => {
       }
     })
 
-    it('Test `yDaiInForDaiOut` function', async () => {
+    it('Test `eDaiInForDaiOut` function', async () => {
       var values = [
         ['0x0', '0x0', '0x0', '0x0', '0x0', '0x0', true],
         ['0x0', '0x0', '0x1', '0x0', '0x0', '0x0', false],
@@ -590,16 +590,16 @@ contract('YieldMath - Base', async (accounts) => {
         // for (var j = 0; j < daiReserveValues.length; j++) {
         // var i = 0 // !
         var daiReservesValue = values[i][0]
-        var yDAIReservesValue = values[i][1]
+        var eDaiReservesValue = values[i][1]
         var daiAmountValue = values[i][2]
         var timeTillMaturityValue = values[i][3]
         var kValue = values[i][4]
         var gValue = values[i][5]
         /* console.log(
-          '    yDaiInForDaiOut (' +
+          '    eDaiInForDaiOut (' +
             daiReservesValue +
             ', ' +
-            yDAIReservesValue +
+            eDaiReservesValue +
             ', ' +
             daiAmountValue +
             ', ' +
@@ -611,23 +611,23 @@ contract('YieldMath - Base', async (accounts) => {
             ')'
         ) */
         var daiReserves = toBigNumber(daiReservesValue)
-        var yDAIReserves = toBigNumber(yDAIReservesValue)
+        var eDaiReserves = toBigNumber(eDaiReservesValue)
         var daiAmount = toBigNumber(daiAmountValue)
         var timeTillMaturity = toBigNumber(timeTillMaturityValue)
         var k = toBigNumber(kValue)
         var g = toBigNumber(gValue)
         var result
         try {
-          result = await yieldMath.yDaiInForDaiOut(daiReserves, yDAIReserves, daiAmount, timeTillMaturity, k, g)
+          result = await yieldMath.eDaiInForDaiOut(daiReserves, eDaiReserves, daiAmount, timeTillMaturity, k, g)
         } catch (e) {
           result = [false, undefined]
         }
 
         /* console.log(
-          '    yDaiInForDaiOut (' +
+          '    eDaiInForDaiOut (' +
             daiReserves.toString() +
             ', ' +
-            yDAIReserves.toString() +
+            eDaiReserves.toString() +
             ', ' +
             daiAmount.toString() +
             ', ' +
@@ -646,19 +646,19 @@ contract('YieldMath - Base', async (accounts) => {
             ? values[i][7]
             : Math.pow(
                 Math.pow(Number(daiReserves), a) +
-                  Math.pow(Number(yDAIReserves), a) -
+                  Math.pow(Number(eDaiReserves), a) -
                   Math.pow(Number(daiReserves.sub(daiAmount)), a),
                 1.0 / a
               ) -
-              Number(yDAIReserves) +
+              Number(eDaiReserves) +
               fee
 
         if (values[i][6]) {
           assert(
-            'yDaiInForDaiOut (' +
+            'eDaiInForDaiOut (' +
               daiReservesValue +
               ', ' +
-              yDAIReservesValue +
+              eDaiReservesValue +
               ', ' +
               daiAmountValue +
               ', ' +
@@ -671,10 +671,10 @@ contract('YieldMath - Base', async (accounts) => {
             result[0]
           )
           assert(
-            'yDaiInForDaiOut (' +
+            'eDaiInForDaiOut (' +
               daiReservesValue +
               ', ' +
-              yDAIReservesValue +
+              eDaiReservesValue +
               ', ' +
               daiAmountValue +
               ', ' +
@@ -688,10 +688,10 @@ contract('YieldMath - Base', async (accounts) => {
           )
         } else {
           assert(
-            '!yDaiInForDaiOut (' +
+            '!eDaiInForDaiOut (' +
               daiReservesValue +
               ', ' +
-              yDAIReservesValue +
+              eDaiReservesValue +
               ', ' +
               daiAmountValue +
               ', ' +
@@ -707,7 +707,7 @@ contract('YieldMath - Base', async (accounts) => {
       }
     })
 
-    it('Test `daiInForYDaiOut` function', async () => {
+    it('Test `daiInForEDaiOut` function', async () => {
       var values = [
         ['0x0', '0x0', '0x0', '0x0', '0x0', '0x0', true],
         ['0x0', '0x0', '0x1', '0x0', '0x0', '0x0', false],
@@ -757,18 +757,18 @@ contract('YieldMath - Base', async (accounts) => {
         // for (var j = 0; j < daiReserveValues.length; j++) {
         // var i = 0 // !
         var daiReservesValue = values[i][0]
-        var yDAIReservesValue = values[i][1]
-        var yDAIAmountValue = values[i][2]
+        var eDaiReservesValue = values[i][1]
+        var eDaiAmountValue = values[i][2]
         var timeTillMaturityValue = values[i][3]
         var kValue = values[i][4]
         var gValue = values[i][5]
         /* console.log(
-          '    daiInForYDaiOut (' +
+          '    daiInForEDaiOut (' +
             daiReservesValue +
             ', ' +
-            yDAIReservesValue +
+            eDaiReservesValue +
             ', ' +
-            yDAIAmountValue +
+            eDaiAmountValue +
             ', ' +
             timeTillMaturityValue +
             ', ' +
@@ -778,25 +778,25 @@ contract('YieldMath - Base', async (accounts) => {
             ')'
         ) */
         var daiReserves = toBigNumber(daiReservesValue)
-        var yDAIReserves = toBigNumber(yDAIReservesValue)
-        var yDAIAmount = toBigNumber(yDAIAmountValue)
+        var eDaiReserves = toBigNumber(eDaiReservesValue)
+        var eDaiAmount = toBigNumber(eDaiAmountValue)
         var timeTillMaturity = toBigNumber(timeTillMaturityValue)
         var k = toBigNumber(kValue)
         var g = toBigNumber(gValue)
         var result
         try {
-          result = await yieldMath.daiInForYDaiOut(daiReserves, yDAIReserves, yDAIAmount, timeTillMaturity, k, g)
+          result = await yieldMath.daiInForEDaiOut(daiReserves, eDaiReserves, eDaiAmount, timeTillMaturity, k, g)
         } catch (e) {
           result = [false, undefined]
         }
 
         /* console.log(
-          '    daiInForYDaiOut (' +
+          '    daiInForEDaiOut (' +
             daiReserves.toString() +
             ', ' +
-            yDAIReserves.toString() +
+            eDaiReserves.toString() +
             ', ' +
-            yDAIAmount.toString() +
+            eDaiAmount.toString() +
             ', ' +
             timeTillMaturity.toString() +
             ') = ' +
@@ -813,8 +813,8 @@ contract('YieldMath - Base', async (accounts) => {
             ? values[i][7]
             : Math.pow(
                 Math.pow(Number(daiReserves), a) +
-                  Math.pow(Number(yDAIReserves), a) -
-                  Math.pow(Number(yDAIReserves.sub(yDAIAmount)), a),
+                  Math.pow(Number(eDaiReserves), a) -
+                  Math.pow(Number(eDaiReserves.sub(eDaiAmount)), a),
                 1.0 / a
               ) -
               Number(daiReserves) +
@@ -822,12 +822,12 @@ contract('YieldMath - Base', async (accounts) => {
 
         if (values[i][6]) {
           assert(
-            'daiInForYDaiOut (' +
+            'daiInForEDaiOut (' +
               daiReservesValue +
               ', ' +
-              yDAIReservesValue +
+              eDaiReservesValue +
               ', ' +
-              yDAIAmountValue +
+              eDaiAmountValue +
               ', ' +
               timeTillMaturityValue +
               ', ' +
@@ -838,12 +838,12 @@ contract('YieldMath - Base', async (accounts) => {
             result[0]
           )
           assert(
-            'daiInForYDaiOut (' +
+            'daiInForEDaiOut (' +
               daiReservesValue +
               ', ' +
-              yDAIReservesValue +
+              eDaiReservesValue +
               ', ' +
-              yDAIAmountValue +
+              eDaiAmountValue +
               ', ' +
               timeTillMaturityValue +
               ', ' +
@@ -855,12 +855,12 @@ contract('YieldMath - Base', async (accounts) => {
           )
         } else {
           assert(
-            '!daiInForYDaiOut (' +
+            '!daiInForEDaiOut (' +
               daiReservesValue +
               ', ' +
-              yDAIReservesValue +
+              eDaiReservesValue +
               ', ' +
-              yDAIAmountValue +
+              eDaiAmountValue +
               ', ' +
               timeTillMaturityValue +
               ', ' +

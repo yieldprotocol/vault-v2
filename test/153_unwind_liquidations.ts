@@ -15,7 +15,7 @@ contract('Unwind - Liquidations', async (accounts) => {
   let env: YieldEnvironment
 
   let vat: Contract
-  let yDai1: Contract
+  let eDai1: Contract
   let controller: Contract
   let treasury: Contract
   let weth: Contract
@@ -48,8 +48,8 @@ contract('Unwind - Liquidations', async (accounts) => {
     weth = env.maker.weth
     end = env.maker.end
 
-    // Setup yDai
-    yDai1 = env.yDais[0]
+    // Setup eDai
+    eDai1 = env.eDais[0]
     await end.rely(owner, { from: owner }) // `owner` replaces MKR governance
   })
 
@@ -57,7 +57,7 @@ contract('Unwind - Liquidations', async (accounts) => {
     await helper.revertToSnapshot(snapshotId)
   })
 
-  describe('with posted collateral and borrowed yDai', () => {
+  describe('with posted collateral and borrowed eDai', () => {
     beforeEach(async () => {
       // Weth setup
       await env.postWeth(user2, wethTokens1)
@@ -74,10 +74,10 @@ contract('Unwind - Liquidations', async (accounts) => {
       // Make sure that end.sol will have enough weth to cash chai savings
       await env.maker.getDai(owner, bnify(wethTokens1).mul(10), rate1)
 
-      // Make yDai1 borrowers go under by raising the rate, then liquidate them
+      // Make eDai1 borrowers go under by raising the rate, then liquidate them
       await helper.advanceTime(1000)
       await helper.advanceBlock()
-      await yDai1.mature()
+      await eDai1.mature()
       await vat.fold(WETH, vat.address, subBN(rate2, rate1), { from: owner })
       await liquidations.liquidate(user2, { from: user1 })
       await liquidations.liquidate(user3, { from: user1 })

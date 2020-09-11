@@ -7,7 +7,7 @@ import "./interfaces/IVat.sol";
 import "./interfaces/IPot.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IController.sol";
-import "./interfaces/IYDai.sol";
+import "./interfaces/IEDai.sol";
 import "./helpers/Delegable.sol";
 import "./helpers/DecimalMath.sol";
 import "./helpers/Orchestrated.sol";
@@ -15,12 +15,12 @@ import "./helpers/Orchestrated.sol";
 
 /**
  * @dev The Controller manages collateral and debt levels for all users, and it is a major user entry point for the Yield protocol.
- * Controller keeps track of a number of yDai contracts.
+ * Controller keeps track of a number of eDai contracts.
  * Controller allows users to post and withdraw Chai and Weth collateral.
  * Any transactions resulting in a user weth collateral below dust are reverted.
- * Controller allows users to borrow yDai against their Chai and Weth collateral.
- * Controller allows users to repay their yDai debt with yDai or with Dai.
- * Controller integrates with yDai contracts for minting yDai on borrowing, and burning yDai on repaying debt with yDai.
+ * Controller allows users to borrow eDai against their Chai and Weth collateral.
+ * Controller allows users to repay their eDai debt with eDai or with Dai.
+ * Controller integrates with eDai contracts for minting eDai on borrowing, and burning eDai on repaying debt with eDai.
  * Controller relies on Treasury for all other asset transfers.
  * Controller allows orchestrated contracts to erase any amount of debt or collateral for an user. This is to be used during liquidations or during unwind.
  * Users can delegate the control of their accounts in Controllers to any address.
@@ -40,25 +40,25 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     IPot public pot;
     ITreasury public override treasury;
 
-    mapping(uint256 => IYDai) public override series;                 // YDai series, indexed by maturity
+    mapping(uint256 => IEDai) public override series;                 // EDai series, indexed by maturity
     uint256[] public override seriesIterator;                         // We need to know all the series
 
     mapping(bytes32 => mapping(address => uint256)) public override posted;                        // Collateral posted by each user
-    mapping(bytes32 => mapping(uint256 => mapping(address => uint256))) public override debtYDai;  // Debt owed by each user, by series
+    mapping(bytes32 => mapping(uint256 => mapping(address => uint256))) public override debtEDai;  // Debt owed by each user, by series
 
     bool public live = true;
 
     /// @dev Set up addresses for vat, pot and Treasury.
     constructor (
         address treasury_,
-        address[] memory yDais
+        address[] memory eDais
 
     ) public {
         treasury = ITreasury(treasury_);
         vat = treasury.vat();
         pot = treasury.pot();
-        for (uint256 i = 0; i < yDais.length; i += 1) {
-            addSeries(yDais[i]);
+        for (uint256 i = 0; i < eDais.length; i += 1) {
+            addSeries(eDais[i]);
         }
     }
 
@@ -131,59 +131,59 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         return address(series[maturity]) != address(0);
     }
 
-    /// @dev Adds an yDai series to this Controller
+    /// @dev Adds an eDai series to this Controller
     /// After deployment, ownership should be renounced, so that no more series can be added.
-    /// @param yDaiContract Address of the yDai series to add.
-    function addSeries(address yDaiContract) private {
-        uint256 maturity = IYDai(yDaiContract).maturity();
+    /// @param eDaiContract Address of the eDai series to add.
+    function addSeries(address eDaiContract) private {
+        uint256 maturity = IEDai(eDaiContract).maturity();
         require(
             !containsSeries(maturity),
             "Controller: Series already added"
         );
-        series[maturity] = IYDai(yDaiContract);
+        series[maturity] = IEDai(eDaiContract);
         seriesIterator.push(maturity);
     }
 
-    /// @dev Dai equivalent of a yDai amount.
-    /// After maturity, the Dai value of a yDai grows according to either the stability fee (for WETH collateral) or the Dai Saving Rate (for Chai collateral).
+    /// @dev Dai equivalent of an eDai amount.
+    /// After maturity, the Dai value of an eDai grows according to either the stability fee (for WETH collateral) or the Dai Saving Rate (for Chai collateral).
     /// @param collateral Valid collateral type
     /// @param maturity Maturity of an added series
-    /// @param yDaiAmount Amount of yDai to convert.
-    /// @return Dai equivalent of an yDai amount.
-    function inDai(bytes32 collateral, uint256 maturity, uint256 yDaiAmount)
+    /// @param eDaiAmount Amount of eDai to convert.
+    /// @return Dai equivalent of an eDai amount.
+    function inDai(bytes32 collateral, uint256 maturity, uint256 eDaiAmount)
         public view override
         validCollateral(collateral)
         returns (uint256)
     {
-        IYDai yDai = series[maturity];
-        if (yDai.isMature()){
+        IEDai eDai = series[maturity];
+        if (eDai.isMature()){
             if (collateral == WETH){
-                return muld(yDaiAmount, yDai.rateGrowth());
+                return muld(eDaiAmount, eDai.rateGrowth());
             } else if (collateral == CHAI) {
-                return muld(yDaiAmount, yDai.chiGrowth());
+                return muld(eDaiAmount, eDai.chiGrowth());
             }
         } else {
-            return yDaiAmount;
+            return eDaiAmount;
         }
     }
 
-    /// @dev yDai equivalent of a Dai amount.
-    /// After maturity, the yDai value of a Dai decreases according to either the stability fee (for WETH collateral) or the Dai Saving Rate (for Chai collateral).
+    /// @dev eDai equivalent of a Dai amount.
+    /// After maturity, the eDai value of a Dai decreases according to either the stability fee (for WETH collateral) or the Dai Saving Rate (for Chai collateral).
     /// @param collateral Valid collateral type
     /// @param maturity Maturity of an added series
     /// @param daiAmount Amount of Dai to convert.
-    /// @return yDai equivalent of a Dai amount.
-    function inYDai(bytes32 collateral, uint256 maturity, uint256 daiAmount)
+    /// @return eDai equivalent of a Dai amount.
+    function inEDai(bytes32 collateral, uint256 maturity, uint256 daiAmount)
         public view override
         validCollateral(collateral)
         returns (uint256)
     {
-        IYDai yDai = series[maturity];
-        if (yDai.isMature()){
+        IEDai eDai = series[maturity];
+        if (eDai.isMature()){
             if (collateral == WETH){
-                return divd(daiAmount, yDai.rateGrowth());
+                return divd(daiAmount, eDai.rateGrowth());
             } else if (collateral == CHAI) {
-                return divd(daiAmount, yDai.chiGrowth());
+                return divd(daiAmount, eDai.chiGrowth());
             }
         } else {
             return daiAmount;
@@ -202,7 +202,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     //                        rate_mat
     //
     function debtDai(bytes32 collateral, uint256 maturity, address user) public view override returns (uint256) {
-        return inDai(collateral, maturity, debtYDai[collateral][maturity][user]);
+        return inDai(collateral, maturity, debtEDai[collateral][maturity][user]);
     }
 
     /// @dev Total debt of an user across all series, in Dai
@@ -215,7 +215,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         uint256 totalDebt;
         uint256[] memory _seriesIterator = seriesIterator;
         for (uint256 i = 0; i < _seriesIterator.length; i += 1) {
-            if (debtYDai[collateral][_seriesIterator[i]][user] > 0) {
+            if (debtEDai[collateral][_seriesIterator[i]][user] > 0) {
                 totalDebt = totalDebt + debtDai(collateral, _seriesIterator[i], user);
             }
         } // We don't expect hundreds of maturities per controller
@@ -320,55 +320,55 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         emit Posted(collateral, from, -toInt256(amount));
     }
 
-    /// @dev Mint yDai for a given series for wallet `to` by increasing the user debt in Yield vault `from`
+    /// @dev Mint eDai for a given series for wallet `to` by increasing the user debt in Yield vault `from`
     /// `from` can delegate to other addresses to borrow using his vault.
     /// The collateral needed changes according to series maturity and MakerDAO rate and chi, depending on collateral type.
     /// @param collateral Valid collateral type.
     /// @param maturity Maturity of an added series
     /// @param from Yield vault that gets an increased debt.
-    /// @param to Wallet to put the yDai in.
-    /// @param yDaiAmount Amount of yDai to borrow.
+    /// @param to Wallet to put the eDai in.
+    /// @param eDaiAmount Amount of eDai to borrow.
     //
-    // posted[user](wad) >= (debtYDai[user](wad)) * amount (wad)) * collateralization (ray)
+    // posted[user](wad) >= (debtEDai[user](wad)) * amount (wad)) * collateralization (ray)
     //
-    // us(from) --- yDai ---> to
+    // us(from) --- eDai ---> to
     // debt++
-    function borrow(bytes32 collateral, uint256 maturity, address from, address to, uint256 yDaiAmount)
+    function borrow(bytes32 collateral, uint256 maturity, address from, address to, uint256 eDaiAmount)
         public override
         validCollateral(collateral)
         validSeries(maturity)
         onlyHolderOrDelegate(from, "Controller: Only Holder Or Delegate")
         onlyLive
     {
-        IYDai yDai = series[maturity];
+        IEDai eDai = series[maturity];
 
-        debtYDai[collateral][maturity][from] = debtYDai[collateral][maturity][from].add(yDaiAmount);
+        debtEDai[collateral][maturity][from] = debtEDai[collateral][maturity][from].add(eDaiAmount);
 
         require(
             isCollateralized(collateral, from),
             "Controller: Too much debt"
         );
 
-        yDai.mint(to, yDaiAmount);
-        emit Borrowed(collateral, maturity, from, toInt256(yDaiAmount));
+        eDai.mint(to, eDaiAmount);
+        emit Borrowed(collateral, maturity, from, toInt256(eDaiAmount));
     }
 
-    /// @dev Burns yDai from `from` wallet to repay debt in a Yield Vault.
-    /// User debt is decreased for the given collateral and yDai series, in Yield vault `to`.
-    /// `from` can delegate to other addresses to take yDai from him for the repayment.
+    /// @dev Burns eDai from `from` wallet to repay debt in a Yield Vault.
+    /// User debt is decreased for the given collateral and eDai series, in Yield vault `to`.
+    /// `from` can delegate to other addresses to take eDai from him for the repayment.
     /// @param collateral Valid collateral type.
     /// @param maturity Maturity of an added series
-    /// @param from Wallet providing the yDai for repayment.
+    /// @param from Wallet providing the eDai for repayment.
     /// @param to Yield vault to repay debt for.
-    /// @param yDaiAmount Amount of yDai to use for debt repayment.
+    /// @param eDaiAmount Amount of eDai to use for debt repayment.
     //
     //                                                  debt_nominal
     // debt_discounted = debt_nominal - repay_amount * ---------------
     //                                                  debt_now
     //
-    // user(from) --- yDai ---> us(to)
+    // user(from) --- eDai ---> us(to)
     // debt--
-    function repayYDai(bytes32 collateral, uint256 maturity, address from, address to, uint256 yDaiAmount)
+    function repayEDai(bytes32 collateral, uint256 maturity, address from, address to, uint256 eDaiAmount)
         public override
         validCollateral(collateral)
         validSeries(maturity)
@@ -376,14 +376,14 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         onlyLive
         returns (uint256)
     {
-        uint256 toRepay = Math.min(yDaiAmount, debtYDai[collateral][maturity][to]);
+        uint256 toRepay = Math.min(eDaiAmount, debtEDai[collateral][maturity][to]);
         series[maturity].burn(from, toRepay);
         _repay(collateral, maturity, to, toRepay);
         return toRepay;
     }
 
     /// @dev Burns Dai from `from` wallet to repay debt in a Yield Vault.
-    /// User debt is decreased for the given collateral and yDai series, in Yield vault `to`.
+    /// User debt is decreased for the given collateral and eDai series, in Yield vault `to`.
     /// The amount of debt repaid changes according to series maturity and MakerDAO rate and chi, depending on collateral type.
     /// `from` can delegate to other addresses to take Dai from him for the repayment.
     /// Calling ERC20.approve for Treasury contract is a prerequisite to this function
@@ -409,7 +409,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     {
         uint256 toRepay = Math.min(daiAmount, debtDai(collateral, maturity, to));
         treasury.pushDai(from, toRepay);                                      // Have Treasury process the dai
-        _repay(collateral, maturity, to, inYDai(collateral, maturity, toRepay));
+        _repay(collateral, maturity, to, inEDai(collateral, maturity, toRepay));
         return toRepay;
     }
 
@@ -418,17 +418,17 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     /// @param collateral Valid collateral type.
     /// @param maturity Maturity of an added series
     /// @param user Yield vault to repay debt for.
-    /// @param yDaiAmount Amount of yDai to use for debt repayment.
+    /// @param eDaiAmount Amount of eDai to use for debt repayment.
 
     //
     //                                                principal
     // principal_repayment = gross_repayment * ----------------------
     //                                          principal + interest
     //    
-    function _repay(bytes32 collateral, uint256 maturity, address user, uint256 yDaiAmount) internal {
-        debtYDai[collateral][maturity][user] = debtYDai[collateral][maturity][user].sub(yDaiAmount);
+    function _repay(bytes32 collateral, uint256 maturity, address user, uint256 eDaiAmount) internal {
+        debtEDai[collateral][maturity][user] = debtEDai[collateral][maturity][user].sub(eDaiAmount);
 
-        emit Borrowed(collateral, maturity, user, -toInt256(yDaiAmount));
+        emit Borrowed(collateral, maturity, user, -toInt256(eDaiAmount));
     }
 
     /// @dev Removes all collateral and debt for an user, for a given collateral type.
@@ -450,7 +450,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         for (uint256 i = 0; i < _seriesIterator.length; i += 1) {
             uint256 maturity = _seriesIterator[i];
             userDebt = userDebt.add(debtDai(collateral, maturity, user)); // SafeMath shouldn't be needed
-            delete debtYDai[collateral][maturity][user];
+            delete debtEDai[collateral][maturity][user];
         } // We don't expect hundreds of maturities per controller
 
         return (userCollateral, userDebt);

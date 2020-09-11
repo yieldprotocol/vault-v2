@@ -67,7 +67,7 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
 
     /// @dev Overflow-protected substraction, from OpenZeppelin
     function sub(uint128 a, uint128 b) internal pure returns (uint128) {
-        require(b <= a, "Market: yDai reserves too low");
+        require(b <= a, "Market: eDai reserves too low");
         uint128 c = a - b;
 
         return c;
