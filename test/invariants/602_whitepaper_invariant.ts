@@ -28,7 +28,7 @@ contract('YieldMath - Reserves Value Invariant', async (accounts) => {
     yieldMath = await YieldMath.new()
   })
 
-  it.only('Outputs the invariant for daiOutForYDaiIn', async () => {
+  it('Outputs the invariant for daiOutForYDaiIn', async () => {
     // maxDaiReserves = 10**27; // $1B
     // maxYDaiReserves = 10**27; // $1B
     // maxTrade = 10**26; // $100M
