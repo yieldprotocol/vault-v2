@@ -35,7 +35,7 @@ contract('YieldMath - Curve', async (accounts) => {
   const b = new BN('18446744073709551615')
   const k = b.div(new BN('126144000'))
   const g1 = new BN('950').mul(b).div(new BN('1000')) // Sell Dai to the pool
-  const g2 = new BN('1000').mul(b).div(new BN('950')) // Sell yDai to the pool
+  const g2 = new BN('1000').mul(b).div(new BN('950')) // Sell eDai to the pool
 
   const values = [
     ['10000000000000000000000', '1000000000000000000000', '10000000000000000000', '1000000'],

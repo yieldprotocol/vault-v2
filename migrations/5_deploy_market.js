@@ -13,7 +13,7 @@ module.exports = async (deployer, network, accounts) => {
 
   const eDaiNames = ['eDai0', 'eDai1', 'eDai2', 'eDai3'];
 
-  if (network !== 'development') {
+  if (network !== 'development' && network !== 'rinkeby' && network !== 'rinkeby-fork') {
     daiAddress = fixed_addrs[network].daiAddress;
   } else {
     daiAddress = (await ERC20.deployed()).address;

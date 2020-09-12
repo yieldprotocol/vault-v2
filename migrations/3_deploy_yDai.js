@@ -25,7 +25,7 @@ module.exports = async (deployer, network) => {
   let chaiAddress;
   let treasuryAddress;
 
-  if (network !== 'development') {
+  if (network !== 'development' && network !== 'rinkeby' && network !== 'rinkeby-fork') {
     vatAddress = fixed_addrs[network].vatAddress ;
     wethAddress = fixed_addrs[network].wethAddress;
     wethJoinAddress = fixed_addrs[network].wethJoinAddress;
@@ -61,12 +61,22 @@ module.exports = async (deployer, network) => {
   treasuryAddress = treasury.address;
     
   const toTimestamp = (date) => (new Date(date)).getTime() / 1000
-  const dates = [
-        '2020-10-01',
-        '2021-01-01',
-        '2021-04-01',
-        '2021-07-01',
-  ]
+  let dates;
+  if (network === 'rinkeby') {
+      dates = [
+          '2020-09-06',
+          '2021-10-01',
+          '2021-01-01',
+          '2021-12-31',
+      ]
+  } else {
+      dates = [
+          '2020-10-01',
+          '2021-01-01',
+          '2021-04-01',
+          '2021-07-01',
+      ]
+  }
   let maturities = dates.map(toTimestamp)
 
   if (network === 'development') {
