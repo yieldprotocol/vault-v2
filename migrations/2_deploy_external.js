@@ -37,7 +37,7 @@ module.exports = async (deployer, network, accounts) => {
   let endAddress;
   let chaiAddress;
 
-  if (network === "development" || network === "rinkeby" || network === "rinkeby-fork") {
+  if (network === "development" || network === "rinkeby" || network === "rinkeby-fork" || network === "kovan" || network === "kovan-fork") {
     // Setting up Vat
     const WETH = web3.utils.fromAscii("ETH-A");
     const Line = web3.utils.fromAscii("Line");
@@ -102,7 +102,7 @@ module.exports = async (deployer, network, accounts) => {
     fixed_addrs[network].chaiAddress && (chaiAddress = fixed_addrs[network].chaiAddress);
   };
 
-  if (network === "mainnet" || network === "kovan" || network === "kovan-fork") {
+  if (network === "mainnet") {
     chaiAddress = fixed_addrs[network].chaiAddress;
   } else {
     await deployer.deploy(

@@ -25,7 +25,7 @@ module.exports = async (deployer, network) => {
   let chaiAddress;
   let treasuryAddress;
 
-  if (network !== 'development' && network !== 'rinkeby' && network !== 'rinkeby-fork') {
+  if (network !== 'development' && network !== 'rinkeby' && network !== 'rinkeby-fork' && network !== 'kovan' && network !== 'kovan-fork') {
     vatAddress = fixed_addrs[network].vatAddress ;
     wethAddress = fixed_addrs[network].wethAddress;
     wethJoinAddress = fixed_addrs[network].wethJoinAddress;
