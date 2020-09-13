@@ -11,7 +11,7 @@ const Pot = artifacts.require("Pot");
 const Chai = artifacts.require("Chai");
 
 const Treasury = artifacts.require("Treasury");
-const YDai = artifacts.require("YDai");
+const EDai = artifacts.require("EDai");
 
 module.exports = async (deployer, network) => {
   const migrations = await Migrations.deployed();
@@ -25,7 +25,7 @@ module.exports = async (deployer, network) => {
   let chaiAddress;
   let treasuryAddress;
 
-  if (network !== 'development') {
+  if (network !== 'development' && network !== 'rinkeby' && network !== 'rinkeby-fork' && network !== 'kovan' && network !== 'kovan-fork') {
     vatAddress = fixed_addrs[network].vatAddress ;
     wethAddress = fixed_addrs[network].wethAddress;
     wethJoinAddress = fixed_addrs[network].wethJoinAddress;
@@ -61,12 +61,22 @@ module.exports = async (deployer, network) => {
   treasuryAddress = treasury.address;
     
   const toTimestamp = (date) => (new Date(date)).getTime() / 1000
-  const dates = [
-        '2020-10-01',
-        '2021-01-01',
-        '2021-04-01',
-        '2021-07-01',
-  ]
+  let dates;
+  if (network === 'rinkeby') {
+      dates = [
+          '2020-09-06',
+          '2021-10-01',
+          '2021-01-01',
+          '2021-12-31',
+      ]
+  } else {
+      dates = [
+          '2020-10-01',
+          '2021-01-01',
+          '2021-04-01',
+          '2021-07-01',
+      ]
+  }
   let maturities = dates.map(toTimestamp)
 
   if (network === 'development') {
@@ -78,18 +88,18 @@ module.exports = async (deployer, network) => {
 
   let index = 0;
   for (const i in maturities) {
-    // Setup YDai
+    // Setup EDai
     await deployer.deploy(
-      YDai,
+      EDai,
       treasuryAddress,
       maturities[i],
       `Yield Dai - ${dates[i]}`,
-      `yDAI-${dates[i]}`,
+      `eDai-${dates[i]}`,
     );
-    const yDai = await YDai.deployed()
+    const eDai = await EDai.deployed()
 
-    await migrations.register(web3.utils.fromAscii('yDai' + index), yDai.address);
-    console.log('yDai' + index, yDai.address);
+    await migrations.register(web3.utils.fromAscii('eDai' + index), eDai.address);
+    console.log('eDai' + index, eDai.address);
     index++;
   }
 };

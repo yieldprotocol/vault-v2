@@ -6,7 +6,7 @@ const Treasury = artifacts.require("Treasury");
 const Controller = artifacts.require("Controller");
 const Unwind = artifacts.require("Unwind");
 const Liquidations = artifacts.require("Liquidations");
-const YDai = artifacts.require("YDai");
+const EDai = artifacts.require("EDai");
 
 module.exports = async (deployer, network, accounts) => {
   const migrations = await Migrations.deployed();
@@ -17,7 +17,7 @@ module.exports = async (deployer, network, accounts) => {
   let unwindAddress;
   let liquidationsAddress;
 
-  if (network !== 'development') {
+  if (network !== 'development' && network !== 'rinkeby' && network !== 'rinkeby-fork' && network !== 'kovan' && network !== 'kovan-fork') {
     endAddress = fixed_addrs[network].endAddress;
  } else {
     endAddress = (await End.deployed()).address;
@@ -26,16 +26,16 @@ module.exports = async (deployer, network, accounts) => {
   treasury = await Treasury.deployed();
   treasuryAddress = treasury.address;
 
-  let numYDais = network === 'development' ? 5 : 4
-  let yDais = await Promise.all([...Array(numYDais).keys()].map(async (index) => {
-      return await migrations.contracts(web3.utils.fromAscii('yDai' + index))
+  let numEDais = network === 'development' ? 5 : 4
+  let eDais = await Promise.all([...Array(numEDais).keys()].map(async (index) => {
+      return await migrations.contracts(web3.utils.fromAscii('eDai' + index))
   }))
 
   // Setup controller
   await deployer.deploy(
     Controller,
     treasuryAddress,
-    yDais,
+    eDais,
   );
   const controller = await Controller.deployed();
   controllerAddress = controller.address;
@@ -63,19 +63,19 @@ module.exports = async (deployer, network, accounts) => {
   await liquidations.orchestrate(unwind.address, id('erase(address)'))
   await treasury.registerUnwind(unwindAddress);
 
-  // YDai orchestration
-  for (const addr of yDais) {
-      const yDai = await YDai.at(addr)
+  // EDai orchestration
+  for (const addr of eDais) {
+      const eDai = await EDai.at(addr)
       await treasury.orchestrate(addr, id('pullDai(address,uint256)'))
 
-      await yDai.batchOrchestrate(
+      await eDai.batchOrchestrate(
           controller.address,
           [
               id('mint(address,uint256)'),
               id('burn(address,uint256)'),
           ]
       )
-      await yDai.orchestrate(unwind.address, id('burn(address,uint256)'))
+      await eDai.orchestrate(unwind.address, id('burn(address,uint256)'))
   }
 
   // Commit addresses to migrations registry

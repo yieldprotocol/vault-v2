@@ -11,7 +11,7 @@ This project is built with [buidler](buidler.dev). We also use [Truffle](https:/
 for migrations.
 
 ```
-git clone https://github.com/yieldprotocol/yDai/pull/242
+git clone https://github.com/yieldprotocol/eDai/pull/242
 yarn
 yarn build
 yarn test

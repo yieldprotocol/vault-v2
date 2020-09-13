@@ -16,7 +16,7 @@ contract('YieldProxy - DaiProxy', async (accounts) => {
   let maturity1: number
   let dai: Contract
   let controller: Contract
-  let yDai1: Contract
+  let eDai1: Contract
   let pool: Contract
   let daiProxy: Contract
   let maker: MakerEnvironment
@@ -24,8 +24,8 @@ contract('YieldProxy - DaiProxy', async (accounts) => {
 
   const one = toWad(1)
   const two = toWad(2)
-  const yDaiTokens1 = daiTokens1
-  const yDaiDebt = daiTokens1
+  const eDaiTokens1 = daiTokens1
+  const eDaiDebt = daiTokens1
 
   let digest: any
 
@@ -37,16 +37,16 @@ contract('YieldProxy - DaiProxy', async (accounts) => {
     dai = env.maker.dai
     controller = env.controller
 
-    yDai1 = env.yDais[0]
+    eDai1 = env.eDais[0]
 
     // Setup Pool
-    pool = await Pool.new(dai.address, yDai1.address, 'Name', 'Symbol', { from: owner })
+    pool = await Pool.new(dai.address, eDai1.address, 'Name', 'Symbol', { from: owner })
 
     // Setup DaiProxy
     daiProxy = await DaiProxy.new(env.controller.address, [pool.address])
 
-    // Allow owner to mint yDai the sneaky way, without recording a debt in controller
-    await yDai1.orchestrate(owner, keccak256(toUtf8Bytes('mint(address,uint256)')), { from: owner })
+    // Allow owner to mint eDai the sneaky way, without recording a debt in controller
+    await eDai1.orchestrate(owner, keccak256(toUtf8Bytes('mint(address,uint256)')), { from: owner })
 
     const deadline = MAX
 
@@ -96,20 +96,20 @@ contract('YieldProxy - DaiProxy', async (accounts) => {
     )
     const poolSig = sign(digest, userPrivateKey)
 
-    // Authorize YDai for the pool
+    // Authorize EDai for the pool
     digest = getPermitDigest(
-      await yDai1.name(),
-      await pool.yDai(),
+      await eDai1.name(),
+      await pool.eDai(),
       chainId,
       {
         owner: user1,
         spender: daiProxy.address,
         value: MAX,
       },
-      bnify(await yDai1.nonces(user1)),
+      bnify(await eDai1.nonces(user1)),
       MAX
     )
-    const ydaiSig = sign(digest, userPrivateKey)
+    const eDaiSig = sign(digest, userPrivateKey)
 
     // Authorize DAI for the pool
     digest = getDaiDigest(
@@ -126,7 +126,7 @@ contract('YieldProxy - DaiProxy', async (accounts) => {
     )
     const daiSig2 = sign(digest, userPrivateKey)
     // Send it!
-    await daiProxy.authorizePool(pool.address, user1, daiSig2, ydaiSig, poolSig, { from: operator })
+    await daiProxy.authorizePool(pool.address, user1, daiSig2, eDaiSig, poolSig, { from: operator })
   })
 
   describe('on controller', () => {
@@ -168,39 +168,39 @@ contract('YieldProxy - DaiProxy', async (accounts) => {
       const daiReserves = daiTokens1
       await env.maker.getDai(user1, daiReserves, rate1)
       await dai.approve(pool.address, MAX, { from: user1 })
-      await yDai1.approve(pool.address, MAX, { from: user1 })
+      await eDai1.approve(pool.address, MAX, { from: user1 })
       await pool.init(daiReserves, { from: user1 })
 
       // Post some weth to controller via the proxy to be able to borrow
       // without requiring an `approve`!
       await daiProxy.post(user1, { from: user1, value: bnify(wethTokens1).mul(2).toString() })
 
-      // Give some yDai to user1
-      await yDai1.mint(user1, yDaiTokens1, { from: owner })
+      // Give some eDai to user1
+      await eDai1.mint(user1, eDaiTokens1, { from: owner })
     })
 
     it('fails on unknown pools', async () => {
-      const fakePoolContract = await Pool.new(dai.address, yDai1.address, 'Fake', 'Fake')
+      const fakePoolContract = await Pool.new(dai.address, eDai1.address, 'Fake', 'Fake')
       const fakePool = fakePoolContract.address
 
       await expectRevert(daiProxy.addLiquidity(fakePool, 1, 1), 'YieldProxy: Unknown pool')
-      await expectRevert(daiProxy.removeLiquidityEarlyDaiPool(fakePool, 1, 1, 1), 'YieldProxy: Unknown pool')
-      await expectRevert(daiProxy.removeLiquidityEarlyDaiFixed(fakePool, 1, 1), 'YieldProxy: Unknown pool')
+      await expectRevert(daiProxy.removeLiquidityEarleDaiPool(fakePool, 1, 1, 1), 'YieldProxy: Unknown pool')
+      await expectRevert(daiProxy.removeLiquidityEarleDaiFixed(fakePool, 1, 1), 'YieldProxy: Unknown pool')
       await expectRevert(daiProxy.removeLiquidityMature(fakePool, 1), 'YieldProxy: Unknown pool')
-      await expectRevert(daiProxy.borrowDaiForMaximumYDai(fakePool, WETH, 1, owner, 1, 1), 'YieldProxy: Unknown pool')
-      await expectRevert(daiProxy.borrowMinimumDaiForYDai(fakePool, WETH, 1, owner, 1, 1), 'YieldProxy: Unknown pool')
+      await expectRevert(daiProxy.borrowDaiForMaximumEDai(fakePool, WETH, 1, owner, 1, 1), 'YieldProxy: Unknown pool')
+      await expectRevert(daiProxy.borrowMinimumDaiForEDai(fakePool, WETH, 1, owner, 1, 1), 'YieldProxy: Unknown pool')
       await expectRevert(
-        daiProxy.repayMinimumYDaiDebtForDai(fakePool, WETH, 1, owner, 1, 1),
+        daiProxy.repayMinimumEDaiDebtForDai(fakePool, WETH, 1, owner, 1, 1),
         'YieldProxy: Unknown pool'
       )
       await expectRevert(
-        daiProxy.repayYDaiDebtForMaximumDai(fakePool, WETH, 1, owner, 1, 1),
+        daiProxy.repayEDaiDebtForMaximumDai(fakePool, WETH, 1, owner, 1, 1),
         'YieldProxy: Unknown pool'
       )
     })
 
-    it('borrows dai for maximum yDai', async () => {
-      await daiProxy.borrowDaiForMaximumYDai(pool.address, WETH, maturity1, user2, yDaiTokens1, one, {
+    it('borrows dai for maximum eDai', async () => {
+      await daiProxy.borrowDaiForMaximumEDai(pool.address, WETH, maturity1, user2, eDaiTokens1, one, {
         from: user1,
       })
 
@@ -209,20 +209,20 @@ contract('YieldProxy - DaiProxy', async (accounts) => {
 
     it("doesn't borrow dai if limit exceeded", async () => {
       await expectRevert(
-        daiProxy.borrowDaiForMaximumYDai(pool.address, WETH, maturity1, user2, yDaiTokens1, daiTokens1, {
+        daiProxy.borrowDaiForMaximumEDai(pool.address, WETH, maturity1, user2, eDaiTokens1, daiTokens1, {
           from: user1,
         }),
-        'YieldProxy: Too much yDai required'
+        'YieldProxy: Too much eDai required'
       )
     })
 
-    it('borrows minimum dai for yDai', async () => {
-      const balanceBefore = bnify(await yDai1.balanceOf(user1))
+    it('borrows minimum dai for eDai', async () => {
+      const balanceBefore = bnify(await eDai1.balanceOf(user1))
       const balanceBefore2 = bnify(await dai.balanceOf(user2))
-      await daiProxy.borrowMinimumDaiForYDai(pool.address, WETH, maturity1, user2, yDaiTokens1, one, {
+      await daiProxy.borrowMinimumDaiForEDai(pool.address, WETH, maturity1, user2, eDaiTokens1, one, {
         from: user1,
       })
-      const balanceAfter = bnify(await yDai1.balanceOf(user1))
+      const balanceAfter = bnify(await eDai1.balanceOf(user1))
       const balanceAfter2 = bnify(await dai.balanceOf(user2))
 
       // user1's balance remains the same
@@ -234,20 +234,20 @@ contract('YieldProxy - DaiProxy', async (accounts) => {
 
     it("doesn't borrow dai if limit not reached", async () => {
       await expectRevert(
-        daiProxy.borrowMinimumDaiForYDai(pool.address, WETH, maturity1, user2, one, daiTokens1, { from: user1 }),
+        daiProxy.borrowMinimumDaiForEDai(pool.address, WETH, maturity1, user2, one, daiTokens1, { from: user1 }),
         'YieldProxy: Not enough Dai obtained'
       )
     })
 
-    describe('with extra yDai reserves', () => {
+    describe('with extra eDai reserves', () => {
       beforeEach(async () => {
-        // Set up the pool to allow buying yDai
-        const additionalYDaiReserves = toWad(34.4)
-        await yDai1.mint(operator, additionalYDaiReserves, { from: owner })
-        await yDai1.approve(pool.address, additionalYDaiReserves, { from: operator })
-        await pool.sellYDai(operator, operator, additionalYDaiReserves, { from: operator })
+        // Set up the pool to allow buying eDai
+        const additionalEDaiReserves = toWad(34.4)
+        await eDai1.mint(operator, additionalEDaiReserves, { from: owner })
+        await eDai1.approve(pool.address, additionalEDaiReserves, { from: operator })
+        await pool.sellEDai(operator, operator, additionalEDaiReserves, { from: operator })
 
-        // Create some yDai debt for `user2`
+        // Create some eDai debt for `user2`
         await daiProxy.post(user2, { from: user2, value: bnify(wethTokens1).mul(2).toString() })
         await controller.borrow(WETH, maturity1, user2, user2, daiTokens1, { from: user2 })
 
@@ -255,36 +255,36 @@ contract('YieldProxy - DaiProxy', async (accounts) => {
         await env.maker.getDai(user1, daiTokens1, rate1)
       })
 
-      it('repays minimum yDai debt with dai', async () => {
-        await daiProxy.repayMinimumYDaiDebtForDai(pool.address, WETH, maturity1, user2, one, two, {
+      it('repays minimum eDai debt with dai', async () => {
+        await daiProxy.repayMinimumEDaiDebtForDai(pool.address, WETH, maturity1, user2, one, two, {
           from: user1,
         })
 
-        const debt = bnify((await controller.debtYDai(WETH, maturity1, user2)).toString())
-        expect(debt.lt(yDaiDebt)).to.be.true
+        const debt = bnify((await controller.debtEDai(WETH, maturity1, user2)).toString())
+        expect(debt.lt(eDaiDebt)).to.be.true
         assert.equal(await dai.balanceOf(user1), subBN(daiTokens1, two).toString())
       })
 
       it("doesn't repay debt if limit not reached", async () => {
         await expectRevert(
-          daiProxy.repayMinimumYDaiDebtForDai(pool.address, WETH, maturity1, user2, two, one, { from: user1 }),
-          'YieldProxy: Not enough yDai debt repaid'
+          daiProxy.repayMinimumEDaiDebtForDai(pool.address, WETH, maturity1, user2, two, one, { from: user1 }),
+          'YieldProxy: Not enough eDai debt repaid'
         )
       })
 
-      it('repays yDai debt with maximum dai', async () => {
-        await daiProxy.repayYDaiDebtForMaximumDai(pool.address, WETH, maturity1, user2, one, two, {
+      it('repays eDai debt with maximum dai', async () => {
+        await daiProxy.repayEDaiDebtForMaximumDai(pool.address, WETH, maturity1, user2, one, two, {
           from: user1,
         })
 
         const balance = bnify(await dai.balanceOf(user1))
         expect(balance.lt(daiTokens1)).to.be.true
-        assert.equal(await controller.debtYDai(WETH, maturity1, user2), subBN(yDaiDebt, one).toString())
+        assert.equal(await controller.debtEDai(WETH, maturity1, user2), subBN(eDaiDebt, one).toString())
       })
 
       it("doesn't repay debt if limit not reached", async () => {
         await expectRevert(
-          daiProxy.repayYDaiDebtForMaximumDai(pool.address, WETH, maturity1, user2, two, one, { from: user1 }),
+          daiProxy.repayEDaiDebtForMaximumDai(pool.address, WETH, maturity1, user2, two, one, { from: user1 }),
           'YieldProxy: Too much Dai required'
         )
       })

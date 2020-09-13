@@ -2,7 +2,7 @@
 pragma solidity ^0.6.10;
 
 import "../interfaces/IFlashMinter.sol";
-import "../interfaces/IYDai.sol";
+import "../interfaces/IEDai.sol";
 
 
 contract FlashMinterMock is IFlashMinter {
@@ -11,12 +11,12 @@ contract FlashMinterMock is IFlashMinter {
 
     uint256 public flashBalance;
 
-    function executeOnFlashMint(address to, uint256 yDaiAmount, bytes calldata data) external override {
-        flashBalance = IYDai(msg.sender).balanceOf(address(this));
-        emit Parameters(to, yDaiAmount, data);
+    function executeOnFlashMint(address to, uint256 eDaiAmount, bytes calldata data) external override {
+        flashBalance = IEDai(msg.sender).balanceOf(address(this));
+        emit Parameters(to, eDaiAmount, data);
     }
 
-    function flashMint(address yDai, uint256 amount, bytes calldata data) public {
-        IYDai(yDai).flashMint(address(this), amount, data);
+    function flashMint(address eDai, uint256 amount, bytes calldata data) public {
+        IEDai(eDai).flashMint(address(this), amount, data);
     }
 }

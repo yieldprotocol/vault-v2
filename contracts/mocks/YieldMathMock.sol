@@ -10,32 +10,32 @@ contract YieldMathMock {
 
     // --- 128 ---
 
-    function yDaiOutForDaiIn128 (
-        uint128 daiReserves, uint128 yDAIReserves, uint128 daiAmount,
+    function eDaiOutForDaiIn128 (
+        uint128 daiReserves, uint128 eDaiReserves, uint128 daiAmount,
         uint128 timeTillMaturity, int128 k, int128 g)
     external pure returns (uint128) {
-        return YieldMath128.yDaiOutForDaiIn(daiReserves, yDAIReserves, daiAmount, timeTillMaturity, k, g);
+        return YieldMath128.eDaiOutForDaiIn(daiReserves, eDaiReserves, daiAmount, timeTillMaturity, k, g);
     }
 
-    function daiOutForYDaiIn128 (
-        uint128 daiReserves, uint128 yDAIReserves, uint128 yDAIAmount,
+    function daiOutForEDaiIn128 (
+        uint128 daiReserves, uint128 eDaiReserves, uint128 eDaiAmount,
         uint128 timeTillMaturity, int128 k, int128 g)
     external pure returns (uint128) {
-        return YieldMath128.daiOutForYDaiIn(daiReserves, yDAIReserves, yDAIAmount, timeTillMaturity, k, g);
+        return YieldMath128.daiOutForEDaiIn(daiReserves, eDaiReserves, eDaiAmount, timeTillMaturity, k, g);
     }
 
-    function yDaiInForDaiOut128 (
-        uint128 daiReserves, uint128 yDAIReserves, uint128 daiAmount,
+    function eDaiInForDaiOut128 (
+        uint128 daiReserves, uint128 eDaiReserves, uint128 daiAmount,
         uint128 timeTillMaturity, int128 k, int128 g)
     external pure returns (uint128) {
-        return YieldMath128.yDaiInForDaiOut(daiReserves, yDAIReserves, daiAmount, timeTillMaturity, k, g);
+        return YieldMath128.eDaiInForDaiOut(daiReserves, eDaiReserves, daiAmount, timeTillMaturity, k, g);
     }
 
-    function daiInForYDaiOut128 (
-        uint128 daiReserves, uint128 yDAIReserves, uint128 yDAIAmount,
+    function daiInForEDaiOut128 (
+        uint128 daiReserves, uint128 eDaiReserves, uint128 eDaiAmount,
         uint128 timeTillMaturity, int128 k, int128 g)
     external pure returns (uint128) {
-        return YieldMath128.daiInForYDaiOut(daiReserves, yDAIReserves, yDAIAmount, timeTillMaturity, k, g);
+        return YieldMath128.daiInForEDaiOut(daiReserves, eDaiReserves, eDaiAmount, timeTillMaturity, k, g);
     }
 
     function log_2_128 (uint128 x) external pure returns (uint128) {
@@ -44,32 +44,32 @@ contract YieldMathMock {
 
     // --- 64 ---
 
-    function yDaiOutForDaiIn64 (
-        uint128 daiReserves, uint128 yDAIReserves, uint128 daiAmount,
+    function eDaiOutForDaiIn64 (
+        uint128 daiReserves, uint128 eDaiReserves, uint128 daiAmount,
         uint128 timeTillMaturity, int128 k, int128 g)
     external pure returns (uint128) {
-        return YieldMath.yDaiOutForDaiIn(daiReserves, yDAIReserves, daiAmount, timeTillMaturity, k, g);
+        return YieldMath.eDaiOutForDaiIn(daiReserves, eDaiReserves, daiAmount, timeTillMaturity, k, g);
     }
 
-    function daiOutForYDaiIn64 (
-        uint128 daiReserves, uint128 yDAIReserves, uint128 yDAIAmount,
+    function daiOutForEDaiIn64 (
+        uint128 daiReserves, uint128 eDaiReserves, uint128 eDaiAmount,
         uint128 timeTillMaturity, int128 k, int128 g)
     external pure returns (uint128) {
-        return YieldMath.daiOutForYDaiIn(daiReserves, yDAIReserves, yDAIAmount, timeTillMaturity, k, g);
+        return YieldMath.daiOutForEDaiIn(daiReserves, eDaiReserves, eDaiAmount, timeTillMaturity, k, g);
     }
 
-    function yDaiInForDaiOut64 (
-        uint128 daiReserves, uint128 yDAIReserves, uint128 daiAmount,
+    function eDaiInForDaiOut64 (
+        uint128 daiReserves, uint128 eDaiReserves, uint128 daiAmount,
         uint128 timeTillMaturity, int128 k, int128 g)
     external pure returns (uint128) {
-        return YieldMath.yDaiInForDaiOut(daiReserves, yDAIReserves, daiAmount, timeTillMaturity, k, g);
+        return YieldMath.eDaiInForDaiOut(daiReserves, eDaiReserves, daiAmount, timeTillMaturity, k, g);
     }
 
-    function daiInForYDaiOut64 (
-        uint128 daiReserves, uint128 yDAIReserves, uint128 yDAIAmount,
+    function daiInForEDaiOut64 (
+        uint128 daiReserves, uint128 eDaiReserves, uint128 eDaiAmount,
         uint128 timeTillMaturity, int128 k, int128 g)
     external pure returns (uint128) {
-        return YieldMath.daiInForYDaiOut(daiReserves, yDAIReserves, yDAIAmount, timeTillMaturity, k, g);
+        return YieldMath.daiInForEDaiOut(daiReserves, eDaiReserves, eDaiAmount, timeTillMaturity, k, g);
     }
 
     function log_2_64 (uint128 x) external pure returns (uint128) {
@@ -78,32 +78,32 @@ contract YieldMathMock {
 
     // --- 48 ---
 
-    function yDaiOutForDaiIn48 (
-        uint128 daiReserves, uint128 yDAIReserves, uint128 daiAmount,
+    function eDaiOutForDaiIn48 (
+        uint128 daiReserves, uint128 eDaiReserves, uint128 daiAmount,
         uint128 timeTillMaturity, int128 k, int128 g)
     external pure returns (uint128) {
-        return YieldMath48.yDaiOutForDaiIn(daiReserves, yDAIReserves, daiAmount, timeTillMaturity, k, g);
+        return YieldMath48.eDaiOutForDaiIn(daiReserves, eDaiReserves, daiAmount, timeTillMaturity, k, g);
     }
 
-    function daiOutForYDaiIn48 (
-        uint128 daiReserves, uint128 yDAIReserves, uint128 yDAIAmount,
+    function daiOutForEDaiIn48 (
+        uint128 daiReserves, uint128 eDaiReserves, uint128 eDaiAmount,
         uint128 timeTillMaturity, int128 k, int128 g)
     external pure returns (uint128) {
-        return YieldMath48.daiOutForYDaiIn(daiReserves, yDAIReserves, yDAIAmount, timeTillMaturity, k, g);
+        return YieldMath48.daiOutForEDaiIn(daiReserves, eDaiReserves, eDaiAmount, timeTillMaturity, k, g);
     }
 
-    function yDaiInForDaiOut48 (
-        uint128 daiReserves, uint128 yDAIReserves, uint128 daiAmount,
+    function eDaiInForDaiOut48 (
+        uint128 daiReserves, uint128 eDaiReserves, uint128 daiAmount,
         uint128 timeTillMaturity, int128 k, int128 g)
     external pure returns (uint128) {
-        return YieldMath48.yDaiInForDaiOut(daiReserves, yDAIReserves, daiAmount, timeTillMaturity, k, g);
+        return YieldMath48.eDaiInForDaiOut(daiReserves, eDaiReserves, daiAmount, timeTillMaturity, k, g);
     }
 
-    function daiInForYDaiOut48 (
-        uint128 daiReserves, uint128 yDAIReserves, uint128 yDAIAmount,
+    function daiInForEDaiOut48 (
+        uint128 daiReserves, uint128 eDaiReserves, uint128 eDaiAmount,
         uint128 timeTillMaturity, int128 k, int128 g)
     external pure returns (uint128) {
-        return YieldMath48.daiInForYDaiOut(daiReserves, yDAIReserves, yDAIAmount, timeTillMaturity, k, g);
+        return YieldMath48.daiInForEDaiOut(daiReserves, eDaiReserves, eDaiAmount, timeTillMaturity, k, g);
     }
 
     function log_2 (uint128 x) external pure returns (uint128) {

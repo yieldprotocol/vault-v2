@@ -1,7 +1,7 @@
 const fixed_addrs = require('./fixed_addrs.json');
 const Migrations = artifacts.require("Migrations");
 const ERC20 = artifacts.require("TestDai");
-const YDai = artifacts.require("YDai");
+const EDai = artifacts.require("EDai");
 const Pool = artifacts.require("Pool");
 const YieldMath = artifacts.require("YieldMath.sol");
 
@@ -9,11 +9,11 @@ module.exports = async (deployer, network, accounts) => {
   const migrations = await Migrations.deployed();
 
   let daiAddress;
-  let yDaiAddress;
+  let eDaiAddress;
 
-  const yDaiNames = ['yDai0', 'yDai1', 'yDai2', 'yDai3'];
+  const eDaiNames = ['eDai0', 'eDai1', 'eDai2', 'eDai3'];
 
-  if (network !== 'development') {
+  if (network !== 'development' && network !== 'rinkeby' && network !== 'rinkeby-fork' && network !== 'kovan' && network !== 'kovan-fork') {
     daiAddress = fixed_addrs[network].daiAddress;
   } else {
     daiAddress = (await ERC20.deployed()).address;
@@ -23,19 +23,19 @@ module.exports = async (deployer, network, accounts) => {
   await deployer.deploy(YieldMath)
   await deployer.link(YieldMath, Pool);  
 
-  for (yDaiName of yDaiNames) {
-    yDaiAddress = await migrations.contracts(web3.utils.fromAscii(yDaiName));
-    yDai = await YDai.at(yDaiAddress);
+  for (eDaiName of eDaiNames) {
+    eDaiAddress = await migrations.contracts(web3.utils.fromAscii(eDaiName));
+    eDai = await EDai.at(eDaiAddress);
 
     await deployer.deploy(
       Pool,
       daiAddress,
-      yDaiAddress,
-      (await yDai.name()) + '-Pool',
-      (await yDai.symbol()) + '-Pool',
+      eDaiAddress,
+      (await eDai.name()) + '-Pool',
+      (await eDai.symbol()) + '-Pool',
     );
     pool = await Pool.deployed();
-    await migrations.register(web3.utils.fromAscii((await yDai.name()) + '-Pool'), pool.address);
-    console.log((await yDai.name()) + '-Pool', pool.address);
+    await migrations.register(web3.utils.fromAscii((await eDai.name()) + '-Pool'), pool.address);
+    console.log((await eDai.name()) + '-Pool', pool.address);
   }
 };

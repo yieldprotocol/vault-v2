@@ -1,7 +1,7 @@
 const Migrations = artifacts.require("Migrations");
 const Controller = artifacts.require("Controller");
 const YieldProxy = artifacts.require("YieldProxy");
-const YDai = artifacts.require("YDai");
+const EDai = artifacts.require("EDai");
 
 module.exports = async (deployer) => {
   const migrations = await Migrations.deployed();
@@ -9,12 +9,12 @@ module.exports = async (deployer) => {
   const controller = await Controller.deployed();
   const controllerAddress = controller.address;
 
-  const pools = await Promise.all(['yDai0', 'yDai1', 'yDai2', 'yDai3'].map(async (yDaiName) => {
-    yDaiAddress = await migrations.contracts(web3.utils.fromAscii(yDaiName));
-    yDai = await YDai.at(yDaiAddress);
-    yDaiFullName = await yDai.name();
+  const pools = await Promise.all(['eDai0', 'eDai1', 'eDai2', 'eDai3'].map(async (eDaiName) => {
+    eDaiAddress = await migrations.contracts(web3.utils.fromAscii(eDaiName));
+    eDai = await EDai.at(eDaiAddress);
+    eDaiFullName = await eDai.name();
 
-    return await migrations.contracts(web3.utils.fromAscii( yDaiFullName + '-Pool') );
+    return await migrations.contracts(web3.utils.fromAscii( eDaiFullName + '-Pool') );
   }));
 
   await deployer.deploy(YieldProxy, controllerAddress, pools);
