@@ -28,10 +28,10 @@ contract TradeReversalInvariantWrapper is TradeReversalInvariant {
     }
 
     /// @dev Buy eDai and sell it back
-    function bueDaiAndReverse(uint128 daiReserves, uint128 eDaiReserves, uint128 daiOut, uint128 timeTillMaturity)
+    function buyDaiAndReverse(uint128 daiReserves, uint128 eDaiReserves, uint128 daiOut, uint128 timeTillMaturity)
         public pure returns (uint128)
     {
-        return _bueDaiAndReverse(daiReserves, eDaiReserves, daiOut, timeTillMaturity);
+        return _buyDaiAndReverse(daiReserves, eDaiReserves, daiOut, timeTillMaturity);
     }
 }
 
