@@ -7,7 +7,7 @@ const Vat = artifacts.require('Vat');
 const GemJoin = artifacts.require('GemJoin');
 const DaiJoin = artifacts.require('DaiJoin');
 const Weth = artifacts.require("WETH9");
-const ERC20 = artifacts.require("TestDai");
+const Dai = artifacts.require("Dai");
 
 // EDai
 const EDai = artifacts.require('EDai');
@@ -41,7 +41,7 @@ module.exports = async (callback) => {
     let vat = await Vat.deployed()
     let weth = await Weth.deployed()
     let wethJoin= await GemJoin.deployed();
-    let dai = await ERC20.deployed();
+    let dai = await Dai.deployed();
     let daiJoin = await DaiJoin.deployed();
 
     let WETH = web3.utils.fromAscii("ETH-A");
