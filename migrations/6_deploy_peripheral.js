@@ -10,11 +10,7 @@ module.exports = async (deployer) => {
   const controllerAddress = controller.address;
 
   const pools = await Promise.all(['eDai0', 'eDai1', 'eDai2', 'eDai3'].map(async (eDaiName) => {
-    eDaiAddress = await migrations.contracts(web3.utils.fromAscii(eDaiName));
-    eDai = await EDai.at(eDaiAddress);
-    eDaiFullName = await eDai.name();
-
-    return await migrations.contracts(web3.utils.fromAscii( eDaiFullName + '-Pool') );
+    return await migrations.contracts(web3.utils.fromAscii( eDaiName + '-Pool') );
   }));
 
   await deployer.deploy(YieldProxy, controllerAddress, pools);

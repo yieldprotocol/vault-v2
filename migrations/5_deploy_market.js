@@ -35,7 +35,7 @@ module.exports = async (deployer, network, accounts) => {
       (await eDai.symbol()) + '-Pool',
     );
     pool = await Pool.deployed();
-    await migrations.register(web3.utils.fromAscii((await eDai.name()) + '-Pool'), pool.address);
-    console.log((await eDai.name()) + '-Pool', pool.address);
+    await migrations.register(web3.utils.fromAscii(`${eDaiName}-Pool`), pool.address);
+    console.log(`${eDaiName}-Pool`, pool.address);
   }
 };
