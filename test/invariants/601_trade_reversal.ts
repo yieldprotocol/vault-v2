@@ -152,7 +152,7 @@ contract('YieldMath - Trade Reversal Invariant', async (accounts) => {
     console.log('Dai out:             ' + daiOut.toString())
     console.log(
       'Dai in:            ' +
-        (await test.bueDaiAndReverse(daiReserves, eDaiReserves, daiOut, timeTillMaturity)).toString()
+        (await test.buyDaiAndReverse(daiReserves, eDaiReserves, daiOut, timeTillMaturity)).toString()
     )
   })
 })

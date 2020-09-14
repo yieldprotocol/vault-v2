@@ -62,7 +62,7 @@ contract('Pool - Delegation', async (accounts) => {
     })
 
     it("doesn't buy dai without delegation", async () => {
-      await expectRevert(pool.bueDai(from, to, 1, { from: operator }), 'Pool: Only Holder Or Delegate')
+      await expectRevert(pool.buyDai(from, to, 1, { from: operator }), 'Pool: Only Holder Or Delegate')
     })
 
     it("doesn't sell eDai without delegation", async () => {
@@ -87,7 +87,7 @@ contract('Pool - Delegation', async (accounts) => {
 
       await eDai1.approve(pool.address, eDaiTokens1, { from: from })
       await pool.addDelegate(operator, { from: from })
-      await pool.bueDai(from, to, oneToken, { from: operator })
+      await pool.buyDai(from, to, oneToken, { from: operator })
 
       assert.equal(await dai.balanceOf(to), oneToken.toString(), 'Receiver account should have 1 dai token')
 

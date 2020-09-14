@@ -229,7 +229,7 @@ contract('YieldProxy - LiquidityProxy', async (accounts) => {
         // the proxy must be a delegate in the pool because in order to remove
         // liquidity via the proxy we must authorize the proxy to burn from our balance
         await pool.addDelegate(proxy.address, { from: user2 })
-        await proxy.removeLiquidityEarleDaiPool(pool.address, poolTokens, '0', '0', { from: user2 }) // TODO: Test limits
+        await proxy.removeLiquidityEarlyDaiPool(pool.address, poolTokens, '0', '0', { from: user2 }) // TODO: Test limits
 
         // Doesn't have pool tokens
         expect(await pool.balanceOf(user2)).to.be.bignumber.eq(ZERO)
@@ -268,7 +268,7 @@ contract('YieldProxy - LiquidityProxy', async (accounts) => {
         // the proxy must be a delegate in the pool because in order to remove
         // liquidity via the proxy we must authorize the proxy to burn from our balance
         await pool.addDelegate(proxy.address, { from: user2 })
-        await proxy.removeLiquidityEarleDaiPool(pool.address, poolTokens, '0', '0', { from: user2 }) // TODO: Test limits
+        await proxy.removeLiquidityEarlyDaiPool(pool.address, poolTokens, '0', '0', { from: user2 }) // TODO: Test limits
 
         // Doesn't have pool tokens
         expect(await pool.balanceOf(user2)).to.be.bignumber.eq(ZERO)
@@ -314,7 +314,7 @@ contract('YieldProxy - LiquidityProxy', async (accounts) => {
         // the proxy must be a delegate in the pool because in order to remove
         // liquidity via the proxy we must authorize the proxy to burn from our balance
         await pool.addDelegate(proxy.address, { from: user2 })
-        await proxy.removeLiquidityEarleDaiFixed(pool.address, poolTokens, '0', { from: user2 }) // TODO: Test limits
+        await proxy.removeLiquidityEarlyDaiFixed(pool.address, poolTokens, '0', { from: user2 }) // TODO: Test limits
 
         // Doesn't have pool tokens
         expect(await pool.balanceOf(user2)).to.be.bignumber.eq(ZERO)
@@ -353,7 +353,7 @@ contract('YieldProxy - LiquidityProxy', async (accounts) => {
         // the proxy must be a delegate in the pool because in order to remove
         // liquidity via the proxy we must authorize the proxy to burn from our balance
         await pool.addDelegate(proxy.address, { from: user2 })
-        await proxy.removeLiquidityEarleDaiFixed(pool.address, poolTokens, '0', { from: user2 }) // TODO: Test limits
+        await proxy.removeLiquidityEarlyDaiFixed(pool.address, poolTokens, '0', { from: user2 }) // TODO: Test limits
 
         // Doesn't have pool tokens
         expect(await pool.balanceOf(user2)).to.be.bignumber.eq(ZERO)
@@ -396,7 +396,7 @@ contract('YieldProxy - LiquidityProxy', async (accounts) => {
         // the proxy must be a delegate in the pool because in order to remove
         // liquidity via the proxy we must authorize the proxy to burn from our balance
         await pool.addDelegate(proxy.address, { from: user2 })
-        await proxy.removeLiquidityEarleDaiFixed(pool.address, poolTokens, '0', { from: user2 }) // TODO: Test limits
+        await proxy.removeLiquidityEarlyDaiFixed(pool.address, poolTokens, '0', { from: user2 }) // TODO: Test limits
 
         // Doesn't have pool tokens
         expect(await pool.balanceOf(user2)).to.be.bignumber.eq(ZERO)
@@ -432,11 +432,11 @@ contract('YieldProxy - LiquidityProxy', async (accounts) => {
         // liquidity via the proxy we must authorize the proxy to burn from our balance
         await pool.addDelegate(proxy.address, { from: user2 })
         await expectRevert(
-          proxy.removeLiquidityEarleDaiPool(pool.address, poolTokens, toRay(2), '0', { from: user2 }),
+          proxy.removeLiquidityEarlyDaiPool(pool.address, poolTokens, toRay(2), '0', { from: user2 }),
           'YieldProxy: minimumDaiPrice not reached'
         )
         await expectRevert(
-          proxy.removeLiquidityEarleDaiPool(pool.address, poolTokens, '0', toRay(2), { from: user2 }),
+          proxy.removeLiquidityEarlyDaiPool(pool.address, poolTokens, '0', toRay(2), { from: user2 }),
           'YieldProxy: minimumEDaiPrice not reached'
         )
       })

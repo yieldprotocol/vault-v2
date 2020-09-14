@@ -194,7 +194,7 @@ contract YieldProxy is DecimalMath, IFlashMinter {
     /// @param poolTokens amount of pool tokens to burn. 
     /// @param minimumDaiPrice minimum eDai/Dai price to be accepted when internally selling Dai.
     /// @param minimumEDaiPrice minimum Dai/eDai price to be accepted when internally selling eDai.
-    function removeLiquidityEarleDaiPool(IPool pool, uint256 poolTokens, uint256 minimumDaiPrice, uint256 minimumEDaiPrice) external {
+    function removeLiquidityEarlyDaiPool(IPool pool, uint256 poolTokens, uint256 minimumDaiPrice, uint256 minimumEDaiPrice) external {
         require(poolsMap[address(pool)], "YieldProxy: Unknown pool");
         IEDai eDai = pool.eDai();
         uint256 maturity = eDai.maturity();
@@ -228,7 +228,7 @@ contract YieldProxy is DecimalMath, IFlashMinter {
     /// Caller must have approved the liquidity burn with `pool.approve(poolTokens)`
     /// @param poolTokens amount of pool tokens to burn. 
     /// @param minimumEDaiPrice minimum Dai/eDai price to be accepted when internally selling eDai.
-    function removeLiquidityEarleDaiFixed(IPool pool, uint256 poolTokens, uint256 minimumEDaiPrice) external {
+    function removeLiquidityEarlyDaiFixed(IPool pool, uint256 poolTokens, uint256 minimumEDaiPrice) external {
         require(poolsMap[address(pool)], "YieldProxy: Unknown pool");
         IEDai eDai = pool.eDai();
         uint256 maturity = eDai.maturity();
@@ -301,12 +301,12 @@ contract YieldProxy is DecimalMath, IFlashMinter {
         returns (uint256)
     {
         require(poolsMap[address(pool)], "YieldProxy: Unknown pool");
-        uint256 eDaiToBorrow = pool.bueDaiPreview(daiToBorrow.toUint128());
+        uint256 eDaiToBorrow = pool.buyDaiPreview(daiToBorrow.toUint128());
         require (eDaiToBorrow <= maximumEDai, "YieldProxy: Too much eDai required");
 
         // The collateral for this borrow needs to have been posted beforehand
         controller.borrow(collateral, maturity, msg.sender, address(this), eDaiToBorrow);
-        pool.bueDai(address(this), to, daiToBorrow.toUint128());
+        pool.buyDai(address(this), to, daiToBorrow.toUint128());
 
         return eDaiToBorrow;
     }
@@ -411,11 +411,11 @@ contract YieldProxy is DecimalMath, IFlashMinter {
     /// @param to Wallet receiving the dai being bought
     /// @param daiOut Amount of dai being bought
     /// @param maxEDaiIn Maximum amount of eDai being sold
-    function bueDai(address pool, address to, uint128 daiOut, uint128 maxEDaiIn)
+    function buyDai(address pool, address to, uint128 daiOut, uint128 maxEDaiIn)
         public
         returns(uint256)
     {
-        uint256 eDaiIn = IPool(pool).bueDai(msg.sender, to, daiOut);
+        uint256 eDaiIn = IPool(pool).buyDai(msg.sender, to, daiOut);
         require(
             maxEDaiIn >= eDaiIn,
             "YieldProxy: Limit exceeded"
@@ -428,14 +428,14 @@ contract YieldProxy is DecimalMath, IFlashMinter {
     /// @param daiOut Amount of dai being bought
     /// @param maxEDaiIn Maximum amount of eDai being sold
     /// @param signature The `permit` call's signature
-    function bueDaiWithSignature(address pool, address to, uint128 daiOut, uint128 maxEDaiIn, bytes memory signature)
+    function buyDaiWithSignature(address pool, address to, uint128 daiOut, uint128 maxEDaiIn, bytes memory signature)
         external
         returns(uint256)
     {
         (bytes32 r, bytes32 s, uint8 v) = unpack(signature);
         IPool(pool).eDai().permit(msg.sender, address(pool), uint(-1), uint(-1), v, r, s);
 
-        return bueDai(pool, to, daiOut, maxEDaiIn);
+        return buyDai(pool, to, daiOut, maxEDaiIn);
     }
 
     /// @dev Sell eDai for Dai
@@ -570,7 +570,7 @@ contract YieldProxy is DecimalMath, IFlashMinter {
 
     /// @dev Amount of eDai debt that will result from migrating Dai debt from MakerDAO to Yield
     function eDaiForDai(address pool, uint256 daiAmount) public view returns (uint256) {
-        return IPool(pool).bueDaiPreview(daiAmount.toUint128());
+        return IPool(pool).buyDaiPreview(daiAmount.toUint128());
     }
 
     /// @dev Amount of dai debt that will result from migrating eDai debt from Yield to MakerDAO
@@ -591,7 +591,7 @@ contract YieldProxy is DecimalMath, IFlashMinter {
         IEDai eDai = IEDai(_pool.eDai());
 
         // Pool should take exactly all eDai flash minted. YieldProxy will hold the dai temporarily
-        uint256 eDaiSold = _pool.bueDai(address(this), address(this), daiAmount.toUint128());
+        uint256 eDaiSold = _pool.buyDai(address(this), address(this), daiAmount.toUint128());
 
         daiJoin.join(user, daiAmount);      // Put the Dai in Maker
         (, uint256 rate,,,) = vat.ilks("ETH-A");

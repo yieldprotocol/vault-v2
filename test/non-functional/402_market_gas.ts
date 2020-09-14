@@ -92,11 +92,11 @@ contract('Pool', async (accounts) => {
 
       await pool.addDelegate(operator, { from: from })
       await eDai1.approve(pool.address, bnify(eDaiTokens1).div(1000), { from: from })
-      await pool.bueDai(from, to, tradeSize, { from: operator })
+      await pool.buyDai(from, to, tradeSize, { from: operator })
 
       const eDaiIn = new BN(bnify(eDaiTokens1).div(1000).toString()).sub(new BN(await eDai1.balanceOf(from)))
 
-      results.add(['bueDai', daiReserves, eDaiReserves, eDaiIn, tradeSize])
+      results.add(['buyDai', daiReserves, eDaiReserves, eDaiIn, tradeSize])
     })
 
     it('sells eDai', async () => {

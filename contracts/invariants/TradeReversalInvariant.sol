@@ -130,7 +130,7 @@ contract TradeReversalInvariant {
     }
 
     /// @dev Buy eDai and sell it back
-    function _bueDaiAndReverse(uint128 daiReserves, uint128 eDaiReserves, uint128 daiOut, uint128 timeTillMaturity)
+    function _buyDaiAndReverse(uint128 daiReserves, uint128 eDaiReserves, uint128 daiOut, uint128 timeTillMaturity)
         internal pure returns (uint128)
     {
         uint128 eDaiAmount = YieldMath.eDaiInForDaiOut(daiReserves, eDaiReserves, daiOut, timeTillMaturity, k, g2);
