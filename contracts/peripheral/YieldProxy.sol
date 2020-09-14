@@ -194,7 +194,7 @@ contract YieldProxy is DecimalMath, IFlashMinter {
     /// @param poolTokens amount of pool tokens to burn. 
     /// @param minimumDaiPrice minimum eDai/Dai price to be accepted when internally selling Dai.
     /// @param minimumEDaiPrice minimum Dai/eDai price to be accepted when internally selling eDai.
-    function removeLiquidityEarleDaiPool(IPool pool, uint256 poolTokens, uint256 minimumDaiPrice, uint256 minimumEDaiPrice) external {
+    function removeLiquidityEarlyDaiPool(IPool pool, uint256 poolTokens, uint256 minimumDaiPrice, uint256 minimumEDaiPrice) external {
         require(poolsMap[address(pool)], "YieldProxy: Unknown pool");
         IEDai eDai = pool.eDai();
         uint256 maturity = eDai.maturity();
@@ -228,7 +228,7 @@ contract YieldProxy is DecimalMath, IFlashMinter {
     /// Caller must have approved the liquidity burn with `pool.approve(poolTokens)`
     /// @param poolTokens amount of pool tokens to burn. 
     /// @param minimumEDaiPrice minimum Dai/eDai price to be accepted when internally selling eDai.
-    function removeLiquidityEarleDaiFixed(IPool pool, uint256 poolTokens, uint256 minimumEDaiPrice) external {
+    function removeLiquidityEarlyDaiFixed(IPool pool, uint256 poolTokens, uint256 minimumEDaiPrice) external {
         require(poolsMap[address(pool)], "YieldProxy: Unknown pool");
         IEDai eDai = pool.eDai();
         uint256 maturity = eDai.maturity();
