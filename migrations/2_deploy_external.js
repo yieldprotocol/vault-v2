@@ -25,6 +25,17 @@ function subBN(x, y) {
   return BigNumber.from(x).sub(BigNumber.from(y))
 }
 
+const networkMap = new Map([
+  ['mainnet', 1],
+  ['rinkeby', 4],
+  ['rinkeby-fork', 4],
+  ['kovan', 42],
+  ['kovan-fork',42],
+  ['goerli', 5],
+  ['goerli-fork', 5],
+  ['development', 31337],
+])
+
 module.exports = async (deployer, network, accounts) => {
   const migrations = await Migrations.deployed();
 
@@ -62,7 +73,7 @@ module.exports = async (deployer, network, accounts) => {
     await deployer.deploy(GemJoin, vatAddress, WETH, wethAddress);
     wethJoinAddress = (await GemJoin.deployed()).address;
 
-    await deployer.deploy(Dai, 0);
+    await deployer.deploy(Dai, networkMap.get(network));
     const dai = await Dai.deployed();
     daiAddress = dai.address;
 
