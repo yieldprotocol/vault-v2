@@ -31,6 +31,8 @@ const networkMap = new Map([
   ['rinkeby-fork', 4],
   ['kovan', 42],
   ['kovan-fork',42],
+  ['goerli', 5],
+  ['goerli-fork', 5],
   ['development', 31337],
 ])
 
@@ -45,8 +47,6 @@ module.exports = async (deployer, network, accounts) => {
   let potAddress;
   let endAddress;
   let chaiAddress;
-
-
 
   if (network === "development" || network === "rinkeby" || network === "rinkeby-fork" || network === "kovan" || network === "kovan-fork") {
     // Setting up Vat
