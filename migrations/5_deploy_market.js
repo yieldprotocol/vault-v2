@@ -1,6 +1,6 @@
 const fixed_addrs = require('./fixed_addrs.json');
 const Migrations = artifacts.require("Migrations");
-const ERC20 = artifacts.require("TestDai");
+const Dai = artifacts.require("Dai");
 const EDai = artifacts.require("EDai");
 const Pool = artifacts.require("Pool");
 const YieldMath = artifacts.require("YieldMath.sol");
@@ -16,7 +16,7 @@ module.exports = async (deployer, network, accounts) => {
   if (network !== 'development' && network !== 'rinkeby' && network !== 'rinkeby-fork' && network !== 'kovan' && network !== 'kovan-fork') {
     daiAddress = fixed_addrs[network].daiAddress;
   } else {
-    daiAddress = (await ERC20.deployed()).address;
+    daiAddress = (await Dai.deployed()).address;
   }
 
   // Deploy and link YieldMath

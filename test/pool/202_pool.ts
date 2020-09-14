@@ -326,7 +326,7 @@ contract('Pool', async (accounts) => {
 
         await pool.addDelegate(operator, { from: from })
         await dai.approve(pool.address, oneToken, { from: from })
-        const event = (await pool.sellDai(from, to, oneToken, { from: operator })).logs[3]
+        const event = (await pool.sellDai(from, to, oneToken, { from: operator })).logs[2]
 
         const expectedEDaiOut = new BN(oneToken.toString()).mul(new BN('117440')).div(new BN('100000'))
         const eDaiOut = new BN(await eDai1.balanceOf(to))
@@ -375,7 +375,7 @@ contract('Pool', async (accounts) => {
 
         await pool.addDelegate(operator, { from: from })
         await dai.approve(pool.address, daiTokens1, { from: from })
-        const event = (await pool.buyEDai(from, to, oneToken, { from: operator })).logs[3]
+        const event = (await pool.buyEDai(from, to, oneToken, { from: operator })).logs[2]
 
         const expectedDaiIn = new BN(oneToken.toString()).mul(new BN('85110')).div(new BN('100000'))
         const daiIn = new BN(daiTokens1.toString()).sub(new BN(await dai.balanceOf(from)))
