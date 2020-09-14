@@ -7,7 +7,7 @@ const Vat = artifacts.require('Vat')
 const GemJoin = artifacts.require('GemJoin')
 const DaiJoin = artifacts.require('DaiJoin')
 const Weth = artifacts.require('WETH9')
-const Dai = artifacts.require('TestDai')
+const Dai = artifacts.require('Dai')
 const Pot = artifacts.require('Pot')
 const End = artifacts.require('End')
 const Chai = artifacts.require('Chai')
@@ -74,7 +74,7 @@ export class MakerEnvironment {
     const weth = await Weth.new()
     const wethJoin = await GemJoin.new(vat.address, WETH, weth.address)
 
-    const dai = await Dai.new(0)
+    const dai = await Dai.new(31337) // Dai.sol takes the chainId
     const daiJoin = await DaiJoin.new(vat.address, dai.address)
 
     // Setup vat
@@ -100,6 +100,7 @@ export class MakerEnvironment {
     await vat.rely(daiJoin.address)
     await vat.rely(pot.address)
     await vat.rely(end.address)
+    await dai.rely(daiJoin.address)
 
     return new MakerEnvironment(vat, weth, wethJoin, dai, daiJoin, chai, pot, end)
   }
