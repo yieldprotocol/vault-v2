@@ -86,10 +86,10 @@ module.exports = async (deployer, network) => {
   let symbols = dates.map(toSymbol)
 
   if (network === 'development') {
-    const block = await web3.eth.getBlockNumber();
-    maturities.push(
-      (await web3.eth.getBlock(block)).timestamp + 100,
-    );
+    const block = await web3.eth.getBlockNumber()
+    const maturity = (await web3.eth.getBlock(block)).timestamp + 1000
+    maturities.push(maturity);
+    symbols.push(toSymbol(new Date().toISOString().slice(0,10)));
   }
 
   let index = 0;

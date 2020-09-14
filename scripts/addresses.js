@@ -23,6 +23,7 @@ const CONTRACTS = [
     "eDai1",
     "eDai2",
     "eDai3",
+    "eDai4",
     "YieldProxy",
 ];
 

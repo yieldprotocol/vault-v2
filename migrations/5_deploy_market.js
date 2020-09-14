@@ -11,7 +11,7 @@ module.exports = async (deployer, network, accounts) => {
   let daiAddress;
   let eDaiAddress;
 
-  const eDaiNames = ['eDai0', 'eDai1', 'eDai2', 'eDai3'];
+  const eDaiNames = ['eDai0', 'eDai1', 'eDai2', 'eDai3', 'eDai4'];
 
   if (network !== 'development' && network !== 'rinkeby' && network !== 'rinkeby-fork' && network !== 'kovan' && network !== 'kovan-fork') {
     daiAddress = fixed_addrs[network].daiAddress;
