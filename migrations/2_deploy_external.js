@@ -63,7 +63,8 @@ module.exports = async (deployer, network, accounts) => {
     wethJoinAddress = (await GemJoin.deployed()).address;
 
     await deployer.deploy(Dai, 0);
-    daiAddress = (await Dai.deployed()).address;
+    const dai = await Dai.deployed();
+    daiAddress = dai.address;
 
     await deployer.deploy(DaiJoin, vatAddress, daiAddress);
     daiJoinAddress = (await DaiJoin.deployed()).address;
@@ -85,6 +86,7 @@ module.exports = async (deployer, network, accounts) => {
     await vat.rely(daiJoinAddress);
     await vat.rely(potAddress);
     await vat.rely(endAddress);
+    await dai.rely(daiJoinAddress)
 
     // Set development environment
     const rate  = toRay(1.25);
