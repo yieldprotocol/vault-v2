@@ -61,10 +61,15 @@ module.exports = async (deployer, network) => {
   treasuryAddress = treasury.address;
     
   const toTimestamp = (date) => (new Date(date)).getTime() / 1000
+  const toSymbol = (date) => 
+    new Intl.DateTimeFormat('en', { year: 'numeric' }).format(new Date(date)).slice(2) + '-' +
+    new Intl.DateTimeFormat('en', { month: 'short' }).format(new Date(date))
+
+
   let dates;
-  if (network === 'rinkeby') {
+  if (network !== 'mainnet') {
       dates = [
-          '2020-09-06',
+          '2020-09-15',
           '2021-10-01',
           '2021-01-01',
           '2021-12-31',
@@ -78,6 +83,7 @@ module.exports = async (deployer, network) => {
       ]
   }
   let maturities = dates.map(toTimestamp)
+  let symbols = dates.map(toSymbol)
 
   if (network === 'development') {
     const block = await web3.eth.getBlockNumber();
@@ -94,7 +100,7 @@ module.exports = async (deployer, network) => {
       treasuryAddress,
       maturities[i],
       `Yield Dai - ${dates[i]}`,
-      `eDai-${dates[i]}`,
+      `eDai-${symbols[i]}`,
     );
     const eDai = await EDai.deployed()
 
