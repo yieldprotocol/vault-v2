@@ -60,7 +60,7 @@ module.exports = async (deployer, network) => {
     chaiAddress = (await Chai.deployed()).address;
 
     const block = await web3.eth.getBlockNumber()
-    const maturity = (await web3.eth.getBlock(block)).timestamp + 1000
+    const maturity = (await web3.eth.getBlock(block)).timestamp + 3600
     maturities.push(maturity);
     symbols.push(toSymbol(new Date().toISOString().slice(0,10)));
  }
