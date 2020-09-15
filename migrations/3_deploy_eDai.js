@@ -27,7 +27,7 @@ module.exports = async (deployer, network) => {
 
   const toTimestamp = (date) => (new Date(date)).getTime() / 1000
   const toSymbol = (date) => 
-    new Intl.DateTimeFormat('en', { year: 'numeric' }).format(new Date(date)).slice(2) + '-' +
+    new Intl.DateTimeFormat('en', { year: 'numeric' }).format(new Date(date)).slice(2) +
     new Intl.DateTimeFormat('en', { month: 'short' }).format(new Date(date))
 
 
@@ -88,7 +88,7 @@ module.exports = async (deployer, network) => {
       treasuryAddress,
       maturities[i],
       `Yield Dai - ${dates[i]}`,
-      `eDai-${symbols[i]}`,
+      `eDai${symbols[i]}`,
     );
     const eDai = await EDai.deployed()
 
