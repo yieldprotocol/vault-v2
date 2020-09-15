@@ -59,6 +59,7 @@ contract Treasury is ITreasury, Orchestrated(), DecimalMath {
         vat.hope(daiJoin_);
 
         dai.approve(address(chai), uint256(-1));      // Chai will never cheat on us
+        dai.approve(address(daiJoin), uint256(-1));   // DaiJoin will never cheat on us
         weth.approve(address(wethJoin), uint256(-1)); // WethJoin will never cheat on us
     }
 

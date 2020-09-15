@@ -191,11 +191,11 @@ contract('Pool', async (accounts) => {
       )
 
       // Test preview since we are here
-      const eDaiInPreview = await pool.bueDaiPreview(oneToken, { from: operator })
+      const eDaiInPreview = await pool.buyDaiPreview(oneToken, { from: operator })
 
       await pool.addDelegate(operator, { from: from })
       await eDai1.approve(pool.address, eDaiTokens1, { from: from })
-      const event = (await pool.bueDai(from, to, oneToken, { from: operator })).logs[3]
+      const event = (await pool.buyDai(from, to, oneToken, { from: operator })).logs[3]
 
       const expectedEDaiIn = new BN(oneToken.toString()).mul(new BN('100270')).div(new BN('100000'))
       const eDaiIn = new BN(eDaiTokens1.toString()).sub(new BN(await eDai1.balanceOf(from)))
@@ -326,7 +326,7 @@ contract('Pool', async (accounts) => {
 
         await pool.addDelegate(operator, { from: from })
         await dai.approve(pool.address, oneToken, { from: from })
-        const event = (await pool.sellDai(from, to, oneToken, { from: operator })).logs[3]
+        const event = (await pool.sellDai(from, to, oneToken, { from: operator })).logs[2]
 
         const expectedEDaiOut = new BN(oneToken.toString()).mul(new BN('117440')).div(new BN('100000'))
         const eDaiOut = new BN(await eDai1.balanceOf(to))
@@ -375,7 +375,7 @@ contract('Pool', async (accounts) => {
 
         await pool.addDelegate(operator, { from: from })
         await dai.approve(pool.address, daiTokens1, { from: from })
-        const event = (await pool.buyEDai(from, to, oneToken, { from: operator })).logs[3]
+        const event = (await pool.buyEDai(from, to, oneToken, { from: operator })).logs[2]
 
         const expectedDaiIn = new BN(oneToken.toString()).mul(new BN('85110')).div(new BN('100000'))
         const daiIn = new BN(daiTokens1.toString()).sub(new BN(await dai.balanceOf(from)))
@@ -407,8 +407,8 @@ contract('Pool', async (accounts) => {
 
         await expectRevert(pool.sellDaiPreview(oneToken, { from: operator }), 'Pool: Too late')
         await expectRevert(pool.sellDai(from, to, oneToken, { from: from }), 'Pool: Too late')
-        await expectRevert(pool.bueDaiPreview(oneToken, { from: operator }), 'Pool: Too late')
-        await expectRevert(pool.bueDai(from, to, oneToken, { from: from }), 'Pool: Too late')
+        await expectRevert(pool.buyDaiPreview(oneToken, { from: operator }), 'Pool: Too late')
+        await expectRevert(pool.buyDai(from, to, oneToken, { from: from }), 'Pool: Too late')
         await expectRevert(pool.sellEDaiPreview(oneToken, { from: operator }), 'Pool: Too late')
         await expectRevert(pool.sellEDai(from, to, oneToken, { from: from }), 'Pool: Too late')
         await expectRevert(pool.buyEDaiPreview(oneToken, { from: operator }), 'Pool: Too late')

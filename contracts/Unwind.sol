@@ -70,7 +70,7 @@ contract Unwind is Ownable(), DecimalMath {
         pot = treasury.pot();
         chai = treasury.chai();
 
-
+        IERC20(treasury.dai()).approve(address(daiJoin), uint256(-1));
         vat.hope(address(treasury));
         vat.hope(address(end));
     }

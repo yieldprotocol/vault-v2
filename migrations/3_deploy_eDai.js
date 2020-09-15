@@ -4,7 +4,7 @@ const Migrations = artifacts.require("Migrations");
 
 const Vat = artifacts.require("Vat");
 const Weth = artifacts.require("WETH9");
-const ERC20 = artifacts.require("TestDai");
+const ERC20 = artifacts.require("Dai");
 const GemJoin = artifacts.require("GemJoin");
 const DaiJoin = artifacts.require("DaiJoin");
 const Pot = artifacts.require("Pot");

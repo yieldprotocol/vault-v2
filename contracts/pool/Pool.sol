@@ -207,12 +207,12 @@ contract Pool is IPool, Delegable(), ERC20Permit {
     /// @param to Wallet receiving the dai being bought
     /// @param daiOut Amount of dai being bought that will be deposited in `to` wallet
     /// @return Amount of eDai that will be taken from `from` wallet
-    function bueDai(address from, address to, uint128 daiOut)
+    function buyDai(address from, address to, uint128 daiOut)
         external override
         onlyHolderOrDelegate(from, "Pool: Only Holder Or Delegate")
         returns(uint128)
     {
-        uint128 eDaiIn = bueDaiPreview(daiOut);
+        uint128 eDaiIn = buyDaiPreview(daiOut);
 
         eDai.transferFrom(from, address(this), eDaiIn);
         dai.transfer(to, daiOut);
@@ -224,7 +224,7 @@ contract Pool is IPool, Delegable(), ERC20Permit {
     /// @dev Returns how much eDai would be required to buy `daiOut` dai.
     /// @param daiOut Amount of dai hypothetically desired.
     /// @return Amount of eDai hypothetically required.
-    function bueDaiPreview(uint128 daiOut)
+    function buyDaiPreview(uint128 daiOut)
         public view override
         beforeMaturity
         returns(uint128)

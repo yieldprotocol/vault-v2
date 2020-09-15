@@ -19,7 +19,7 @@ contract WhitepaperInvariant {
     uint128 maxDaiReserves = 10**27; // $1B
     uint128 maxEDaiReserves = maxDaiReserves + 1; // $1B
     uint128 maxTrade = maxDaiReserves / 10;
-    uint128 maxTimeTillMaturity = 126144000;
+    uint128 maxTimeTillMaturity = 31556952;
 
     constructor() public {}
     

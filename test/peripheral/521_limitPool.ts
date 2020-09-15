@@ -60,7 +60,7 @@ contract('YieldProxy - LimitPool', async (accounts) => {
 
     it('buys dai', async () => {
       await eDai1.mint(from, eDaiTokens1, { from: owner })
-      await limitPool.bueDai(pool.address, to, oneToken, oneToken.mul(2), { from: from })
+      await limitPool.buyDai(pool.address, to, oneToken, oneToken.mul(2), { from: from })
 
       const expectedEDaiIn = new BN(oneToken.toString()).mul(new BN('100270')).div(new BN('100000'))
       const eDaiIn = new BN(eDaiTokens1.toString()).sub(new BN(await eDai1.balanceOf(from)))
@@ -88,14 +88,14 @@ contract('YieldProxy - LimitPool', async (accounts) => {
       const sig = sign(digest, userPrivateKey)
 
       // can use the permit signature to avoid having an `approve` transaction
-      await limitPool.bueDaiWithSignature(pool.address, to, oneToken, oneToken.mul(2), sig, { from: user1 })
+      await limitPool.buyDaiWithSignature(pool.address, to, oneToken, oneToken.mul(2), sig, { from: user1 })
     })
 
     it("doesn't buy dai if limit exceeded", async () => {
       await eDai1.mint(from, eDaiTokens1, { from: owner })
 
       await expectRevert(
-        limitPool.bueDai(pool.address, to, oneToken, oneToken.div(2), { from: from }),
+        limitPool.buyDai(pool.address, to, oneToken, oneToken.div(2), { from: from }),
         'YieldProxy: Limit exceeded'
       )
     })

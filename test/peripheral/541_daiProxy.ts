@@ -184,8 +184,8 @@ contract('YieldProxy - DaiProxy', async (accounts) => {
       const fakePool = fakePoolContract.address
 
       await expectRevert(daiProxy.addLiquidity(fakePool, 1, 1), 'YieldProxy: Unknown pool')
-      await expectRevert(daiProxy.removeLiquidityEarleDaiPool(fakePool, 1, 1, 1), 'YieldProxy: Unknown pool')
-      await expectRevert(daiProxy.removeLiquidityEarleDaiFixed(fakePool, 1, 1), 'YieldProxy: Unknown pool')
+      await expectRevert(daiProxy.removeLiquidityEarlyDaiPool(fakePool, 1, 1, 1), 'YieldProxy: Unknown pool')
+      await expectRevert(daiProxy.removeLiquidityEarlyDaiFixed(fakePool, 1, 1), 'YieldProxy: Unknown pool')
       await expectRevert(daiProxy.removeLiquidityMature(fakePool, 1), 'YieldProxy: Unknown pool')
       await expectRevert(daiProxy.borrowDaiForMaximumEDai(fakePool, WETH, 1, owner, 1, 1), 'YieldProxy: Unknown pool')
       await expectRevert(daiProxy.borrowMinimumDaiForEDai(fakePool, WETH, 1, owner, 1, 1), 'YieldProxy: Unknown pool')

@@ -18,7 +18,7 @@ contract TradeReversalInvariant {
     uint128 maxDaiReserves = 10**27; // $1B
     uint128 maxEDaiReserves = maxDaiReserves + 1; // $1B
     uint128 maxTrade = maxDaiReserves / 10;
-    uint128 maxTimeTillMaturity = 126144000;
+    uint128 maxTimeTillMaturity = 31556952;
 
     constructor() public {}
     
@@ -77,7 +77,7 @@ contract TradeReversalInvariant {
     }
 
     /// @dev Ensures that if we buy DAI for eDai and back we get less eDai than we had
-    function testBueDaiAndReverse(uint128 daiReserves, uint128 eDaiReserves, uint128 daiOut, uint128 timeTillMaturity)
+    function testBuyDaiAndReverse(uint128 daiReserves, uint128 eDaiReserves, uint128 daiOut, uint128 timeTillMaturity)
         public view returns (uint128)
     {
         daiReserves = minDaiReserves + daiReserves % maxDaiReserves;
@@ -130,7 +130,7 @@ contract TradeReversalInvariant {
     }
 
     /// @dev Buy eDai and sell it back
-    function _bueDaiAndReverse(uint128 daiReserves, uint128 eDaiReserves, uint128 daiOut, uint128 timeTillMaturity)
+    function _buyDaiAndReverse(uint128 daiReserves, uint128 eDaiReserves, uint128 daiOut, uint128 timeTillMaturity)
         internal pure returns (uint128)
     {
         uint128 eDaiAmount = YieldMath.eDaiInForDaiOut(daiReserves, eDaiReserves, daiOut, timeTillMaturity, k, g2);

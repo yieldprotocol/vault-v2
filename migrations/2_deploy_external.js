@@ -5,7 +5,7 @@ const Vat = artifacts.require('Vat');
 const GemJoin = artifacts.require('GemJoin');
 const DaiJoin = artifacts.require('DaiJoin');
 const Weth = artifacts.require("WETH9");
-const Dai = artifacts.require("TestDai");
+const Dai = artifacts.require("Dai");
 const Pot = artifacts.require('Pot');
 const End = artifacts.require('End');
 const Chai = artifacts.require('Chai');
@@ -24,6 +24,17 @@ function toRad(value) {
 function subBN(x, y) {
   return BigNumber.from(x).sub(BigNumber.from(y))
 }
+
+const networkMap = new Map([
+  ['mainnet', 1],
+  ['rinkeby', 4],
+  ['rinkeby-fork', 4],
+  ['kovan', 42],
+  ['kovan-fork',42],
+  ['goerli', 5],
+  ['goerli-fork', 5],
+  ['development', 31337],
+])
 
 module.exports = async (deployer, network, accounts) => {
   const migrations = await Migrations.deployed();
@@ -62,8 +73,9 @@ module.exports = async (deployer, network, accounts) => {
     await deployer.deploy(GemJoin, vatAddress, WETH, wethAddress);
     wethJoinAddress = (await GemJoin.deployed()).address;
 
-    await deployer.deploy(Dai, 0);
-    daiAddress = (await Dai.deployed()).address;
+    await deployer.deploy(Dai, networkMap.get(network));
+    const dai = await Dai.deployed();
+    daiAddress = dai.address;
 
     await deployer.deploy(DaiJoin, vatAddress, daiAddress);
     daiJoinAddress = (await DaiJoin.deployed()).address;
@@ -85,6 +97,7 @@ module.exports = async (deployer, network, accounts) => {
     await vat.rely(daiJoinAddress);
     await vat.rely(potAddress);
     await vat.rely(endAddress);
+    await dai.rely(daiJoinAddress)
 
     // Set development environment
     const rate  = toRay(1.25);
