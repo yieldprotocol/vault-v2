@@ -17,7 +17,7 @@ module.exports = async (deployer, network, accounts) => {
   let unwindAddress;
   let liquidationsAddress;
 
-  if (network !== 'development' && network !== 'rinkeby' && network !== 'rinkeby-fork' && network !== 'kovan' && network !== 'kovan-fork') {
+  if (network === "mainnet") {
     endAddress = fixed_addrs[network].endAddress;
  } else {
     endAddress = (await End.deployed()).address;
@@ -26,7 +26,7 @@ module.exports = async (deployer, network, accounts) => {
   treasury = await Treasury.deployed();
   treasuryAddress = treasury.address;
 
-  let numEDais = network === 'development' ? 5 : 4
+  let numEDais = network !== 'mainnet' ? 5 : 4
   let eDais = await Promise.all([...Array(numEDais).keys()].map(async (index) => {
       return await migrations.contracts(web3.utils.fromAscii('eDai' + index))
   }))

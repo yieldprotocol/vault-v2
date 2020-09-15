@@ -1,6 +1,6 @@
 const fixed_addrs = require('./fixed_addrs.json');
 const Migrations = artifacts.require("Migrations");
-const ERC20 = artifacts.require("TestDai");
+const Dai = artifacts.require("Dai");
 const EDai = artifacts.require("EDai");
 const Pool = artifacts.require("Pool");
 const YieldMath = artifacts.require("YieldMath.sol");
@@ -11,12 +11,15 @@ module.exports = async (deployer, network, accounts) => {
   let daiAddress;
   let eDaiAddress;
 
-  const eDaiNames = ['eDai0', 'eDai1', 'eDai2', 'eDai3', 'eDai4'];
+  let numEDais = network !== 'mainnet' ? 5 : 4
+  let eDaiNames = await Promise.all([...Array(numEDais).keys()].map(async (index) => {
+      return 'eDai' + index
+  }))
 
-  if (network !== 'development' && network !== 'rinkeby' && network !== 'rinkeby-fork' && network !== 'kovan' && network !== 'kovan-fork') {
+  if (network === "mainnet") {
     daiAddress = fixed_addrs[network].daiAddress;
   } else {
-    daiAddress = (await ERC20.deployed()).address;
+    daiAddress = (await Dai.deployed()).address;
   }
 
   // Deploy and link YieldMath

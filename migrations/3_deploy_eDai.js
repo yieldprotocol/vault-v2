@@ -25,7 +25,22 @@ module.exports = async (deployer, network) => {
   let chaiAddress;
   let treasuryAddress;
 
-  if (network !== 'development' && network !== 'rinkeby' && network !== 'rinkeby-fork' && network !== 'kovan' && network !== 'kovan-fork') {
+  const toTimestamp = (date) => (new Date(date)).getTime() / 1000
+  const toSymbol = (date) => 
+    new Intl.DateTimeFormat('en', { year: 'numeric' }).format(new Date(date)).slice(2) + '-' +
+    new Intl.DateTimeFormat('en', { month: 'short' }).format(new Date(date))
+
+
+  let dates = [
+    '2020-10-01',
+    '2021-01-01',
+    '2021-04-01',
+    '2021-07-01',
+  ]
+  let maturities = dates.map(toTimestamp)
+  let symbols = dates.map(toSymbol)
+
+  if (network === "mainnet") {
     vatAddress = fixed_addrs[network].vatAddress ;
     wethAddress = fixed_addrs[network].wethAddress;
     wethJoinAddress = fixed_addrs[network].wethJoinAddress;
@@ -43,6 +58,11 @@ module.exports = async (deployer, network) => {
     daiJoinAddress = (await DaiJoin.deployed()).address;
     potAddress = (await Pot.deployed()).address;
     chaiAddress = (await Chai.deployed()).address;
+
+    const block = await web3.eth.getBlockNumber()
+    const maturity = (await web3.eth.getBlock(block)).timestamp + 1000
+    maturities.push(maturity);
+    symbols.push(toSymbol(new Date().toISOString().slice(0,10)));
  }
 
   // Setup treasury
@@ -59,38 +79,6 @@ module.exports = async (deployer, network) => {
 
   const treasury = await Treasury.deployed();
   treasuryAddress = treasury.address;
-    
-  const toTimestamp = (date) => (new Date(date)).getTime() / 1000
-  const toSymbol = (date) => 
-    new Intl.DateTimeFormat('en', { year: 'numeric' }).format(new Date(date)).slice(2) + '-' +
-    new Intl.DateTimeFormat('en', { month: 'short' }).format(new Date(date))
-
-
-  let dates;
-  if (network !== 'mainnet') {
-      dates = [
-          '2020-09-15',
-          '2021-10-01',
-          '2021-01-01',
-          '2021-12-31',
-      ]
-  } else {
-      dates = [
-          '2020-10-01',
-          '2021-01-01',
-          '2021-04-01',
-          '2021-07-01',
-      ]
-  }
-  let maturities = dates.map(toTimestamp)
-  let symbols = dates.map(toSymbol)
-
-  if (network === 'development') {
-    const block = await web3.eth.getBlockNumber()
-    const maturity = (await web3.eth.getBlock(block)).timestamp + 1000
-    maturities.push(maturity);
-    symbols.push(toSymbol(new Date().toISOString().slice(0,10)));
-  }
 
   let index = 0;
   for (const i in maturities) {
