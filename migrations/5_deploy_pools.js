@@ -12,9 +12,7 @@ module.exports = async (deployer, network, accounts) => {
   let eDaiAddress;
 
   let numEDais = network !== 'mainnet' ? 5 : 4
-  let eDaiNames = await Promise.all([...Array(numEDais).keys()].map(async (index) => {
-      return 'eDai' + index
-  }))
+  let eDaiNames = await Promise.all([...Array(numEDais).keys()].map(index => 'eDai' + index))
 
   if (network === "mainnet") {
     daiAddress = fixed_addrs[network].daiAddress;
