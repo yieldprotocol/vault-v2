@@ -23,6 +23,7 @@ const CONTRACTS = [
     "eDai1",
     "eDai2",
     "eDai3",
+    "eDai4",
     "YieldProxy",
 ];
 
@@ -43,7 +44,7 @@ module.exports = async (callback) => {
 
         if (name.startsWith("eDai")) {
             const eDai = await EDai.at(address)
-            const poolName = `${await eDai.name()}-Pool`
+            const poolName = `${name}-Pool`
             const poolNameBytes = ethers.utils.formatBytes32String(poolName)
             const poolAddress = await migrations.contracts(poolNameBytes);
             data[poolName] = poolAddress;

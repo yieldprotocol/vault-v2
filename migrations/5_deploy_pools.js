@@ -11,9 +11,10 @@ module.exports = async (deployer, network, accounts) => {
   let daiAddress;
   let eDaiAddress;
 
-  const eDaiNames = ['eDai0', 'eDai1', 'eDai2', 'eDai3'];
+  let numEDais = network !== 'mainnet' ? 5 : 4
+  let eDaiNames = await Promise.all([...Array(numEDais).keys()].map(index => 'eDai' + index))
 
-  if (network !== 'development' && network !== 'rinkeby' && network !== 'rinkeby-fork' && network !== 'kovan' && network !== 'kovan-fork') {
+  if (network === "mainnet") {
     daiAddress = fixed_addrs[network].daiAddress;
   } else {
     daiAddress = (await Dai.deployed()).address;
@@ -32,10 +33,10 @@ module.exports = async (deployer, network, accounts) => {
       daiAddress,
       eDaiAddress,
       (await eDai.name()) + '-Pool',
-      (await eDai.symbol()) + '-Pool',
+      (await eDai.symbol()).replace('eDai','eDaiLP'),
     );
     pool = await Pool.deployed();
-    await migrations.register(web3.utils.fromAscii((await eDai.name()) + '-Pool'), pool.address);
-    console.log((await eDai.name()) + '-Pool', pool.address);
+    await migrations.register(web3.utils.fromAscii(`${eDaiName}-Pool`), pool.address);
+    console.log(`${eDaiName}-Pool`, pool.address);
   }
 };

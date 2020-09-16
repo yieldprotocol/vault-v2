@@ -48,7 +48,7 @@ module.exports = async (deployer, network, accounts) => {
   let endAddress;
   let chaiAddress;
 
-  if (network === "development" || network === "rinkeby" || network === "rinkeby-fork" || network === "kovan" || network === "kovan-fork") {
+  if (network !== "mainnet") {
     // Setting up Vat
     const WETH = web3.utils.fromAscii("ETH-A");
     const Line = web3.utils.fromAscii("Line");
