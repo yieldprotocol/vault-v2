@@ -38,6 +38,7 @@ module.exports = async (deployer, network) => {
     '2021-04-01',
     '2021-07-01',
   ]
+  let maturities = dates.map(toTimestamp)
 
   if (network === "mainnet") {
     vatAddress = fixed_addrs[network].vatAddress ;
@@ -60,7 +61,7 @@ module.exports = async (deployer, network) => {
 
     const block = await web3.eth.getBlockNumber()
     const maturity = (await web3.eth.getBlock(block)).timestamp + 3600
-    dates.push(toDate(maturity));
+    maturities.unshift(maturity);
  }
 
   // Setup treasury
@@ -80,10 +81,10 @@ module.exports = async (deployer, network) => {
 
   const deployedEDais = {}
 
-  for (i in dates) {
-    eDaiMaturity = toTimestamp(dates[i])
-    eDaiName = `Yield Dai - ${dates[i]}`
-    eDaiSymbol = `eDai${toSymbol(dates[i])}`
+  for (i in maturities) {
+    eDaiMaturity = maturities[i]
+    eDaiName = `Yield Dai - ${toDate(maturities[i])}`
+    eDaiSymbol = `eDai${toSymbol(toDate(maturities[i]))}`
 
     // Setup EDai
     await deployer.deploy(
