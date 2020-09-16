@@ -1,9 +1,9 @@
 const fixed_addrs = require('./fixed_addrs.json');
+
 const Migrations = artifacts.require("Migrations");
 const Dai = artifacts.require("Dai");
 const EDai = artifacts.require("EDai");
 const Pool = artifacts.require("Pool");
-const YieldMath = artifacts.require("YieldMath.sol");
 
 module.exports = async (deployer, network, accounts) => {
   const migrations = await Migrations.deployed();
@@ -11,32 +11,40 @@ module.exports = async (deployer, network, accounts) => {
   let daiAddress;
   let eDaiAddress;
 
-  let numEDais = network !== 'mainnet' ? 5 : 4
-  let eDaiNames = await Promise.all([...Array(numEDais).keys()].map(index => 'eDai' + index))
-
   if (network === "mainnet") {
     daiAddress = fixed_addrs[network].daiAddress;
   } else {
     daiAddress = (await Dai.deployed()).address;
   }
 
-  // Deploy and link YieldMath
-  await deployer.deploy(YieldMath)
-  await deployer.link(YieldMath, Pool);  
+  const eDaiAddresses = []
+  const deployedPools = {}
 
-  for (eDaiName of eDaiNames) {
-    eDaiAddress = await migrations.contracts(web3.utils.fromAscii(eDaiName));
-    eDai = await EDai.at(eDaiAddress);
+  for (let i = 0; i < await migrations.length(); i++) {
+    const contractName = web3.utils.toAscii(await migrations.names(i))
+    if (contractName.includes('eDai')) eDaiAddresses.push(await migrations.contracts(web3.utils.fromAscii(contractName)))
+  }
+
+  for (let i = 0; i < await migrations.length(); i++) {
+    const contractName = web3.utils.toAscii(await migrations.names(i))
+    if (!contractName.includes('eDai')) continue
+    eDai = await EDai.at(await migrations.contracts(web3.utils.fromAscii(contractName)));
+    poolName = (await eDai.name()) + '-Pool'
+    poolSymbol = (await eDai.symbol()).replace('eDai','eDaiLP')
 
     await deployer.deploy(
       Pool,
       daiAddress,
-      eDaiAddress,
-      (await eDai.name()) + '-Pool',
-      (await eDai.symbol()).replace('eDai','eDaiLP'),
+      eDai.address,
+      poolName,
+      poolSymbol,
     );
     pool = await Pool.deployed();
-    await migrations.register(web3.utils.fromAscii(`${eDaiName}-Pool`), pool.address);
-    console.log(`${eDaiName}-Pool`, pool.address);
+    deployedPools[poolSymbol] = pool.address
   }
+
+  for (name in deployedPools) {
+    await migrations.register(web3.utils.fromAscii(name), deployedPools[name]);
+  }
+  console.log(deployedPools);
 };

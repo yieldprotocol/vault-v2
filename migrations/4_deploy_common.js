@@ -26,10 +26,19 @@ module.exports = async (deployer, network, accounts) => {
   treasury = await Treasury.deployed();
   treasuryAddress = treasury.address;
 
+
+  /*
   let numEDais = network !== 'mainnet' ? 5 : 4
   let eDais = await Promise.all([...Array(numEDais).keys()].map(async (index) => {
       return await migrations.contracts(web3.utils.fromAscii('eDai' + index))
   }))
+  */
+
+  const eDais = []
+  for (let i = 0; i < await migrations.length(); i++) {
+    const contractName = web3.utils.toAscii(await migrations.names(i))
+    if (contractName.includes('eDai')) eDais.push(await migrations.contracts(web3.utils.fromAscii(contractName)))
+  }
 
   // Setup controller
   await deployer.deploy(
@@ -61,22 +70,24 @@ module.exports = async (deployer, network, accounts) => {
   unwindAddress = unwind.address;
   await controller.orchestrate(unwind.address, id('erase(bytes32,address)'))
   await liquidations.orchestrate(unwind.address, id('erase(address)'))
-  await treasury.registerUnwind(unwindAddress);
 
   // EDai orchestration
   for (const addr of eDais) {
-      const eDai = await EDai.at(addr)
-      await treasury.orchestrate(addr, id('pullDai(address,uint256)'))
+    const eDai = await EDai.at(addr)
+    await treasury.orchestrate(addr, id('pullDai(address,uint256)'))
 
-      await eDai.batchOrchestrate(
-          controller.address,
-          [
-              id('mint(address,uint256)'),
-              id('burn(address,uint256)'),
-          ]
-      )
-      await eDai.orchestrate(unwind.address, id('burn(address,uint256)'))
+    await eDai.batchOrchestrate(
+        controller.address,
+        [
+            id('mint(address,uint256)'),
+            id('burn(address,uint256)'),
+        ]
+    )
+    await eDai.orchestrate(unwind.address, id('burn(address,uint256)'))
   }
+  
+  // Register Unwind at the very end. If the script fails after this point, Treasury needs to be redeployed.
+  await treasury.registerUnwind(unwindAddress);
 
   // Commit addresses to migrations registry
   const deployedCore = {
