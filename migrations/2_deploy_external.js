@@ -27,6 +27,7 @@ function subBN(x, y) {
 
 const networkMap = new Map([
   ['mainnet', 1],
+  ['mainnet-ganache', 1],
   ['rinkeby', 4],
   ['rinkeby-fork', 4],
   ['kovan', 42],

@@ -9,7 +9,7 @@
     "test": "buidler test test/*.ts test/pool/*.ts test/peripheral/*.ts",
     "test:non-functional": "buidler test test/non-functional/*.ts",
     "ganache": "./scripts/ganache.sh",
-    "deploy:ganache": "yarn ganache && truffle migrate",
+    "mainnet-ganache": "./scripts/mainnet-ganache.sh",
     "coverage": "buidler coverage --network coverage --temp build --testfiles 'test/*.ts test/pool/*.ts test/peripheral/*.ts'",
     "lint": "prettier ./test/**/*.ts --check",
     "lint:fix": "prettier ./test/**/*.ts --write"
