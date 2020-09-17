@@ -15,4 +15,4 @@ npx ganache-cli \
     --port 8545 \
     --networkId 1 \
     --host 0.0.0.0 \
-    --fork https://mainnet.infura.io/v3/`cat .infuraKey` &
+    --fork https://mainnet.infura.io/v3/`cat .infuraKey`
