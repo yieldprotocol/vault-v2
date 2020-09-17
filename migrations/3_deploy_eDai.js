@@ -56,7 +56,9 @@ module.exports = async (deployer, network) => {
     daiJoinAddress = (await DaiJoin.deployed()).address;
     potAddress = (await Pot.deployed()).address;
     chaiAddress = (await Chai.deployed()).address;
+ }
 
+ if (network !== "mainnet") {
     const block = await web3.eth.getBlockNumber()
     const maturity = (await web3.eth.getBlock(block)).timestamp + 3600
     maturities.unshift(maturity);
