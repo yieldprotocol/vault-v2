@@ -41,7 +41,7 @@ module.exports = async (callback) => {
         yieldProxy = await YieldProxy.at(await migrations.contracts(ethers.utils.formatBytes32String("YieldProxy")))
         console.log("Contracts loaded")
 
-        me = "0xF7b3f0F3A6fF862A109ac25464e0Dd3495461386"
+        me = "0x4aac5781f4594E0278257E2eEa17Dfd0A1C1c5f0"
         
         RAY = "000000000000000000000000000"
         WAD = "000000000000000000"
@@ -90,42 +90,42 @@ module.exports = async (callback) => {
         rate = (await vat.ilks(ETH_A)).rate
         spot = (await vat.ilks(ETH_A)).spot
                 
-        await weth.deposit({ value: "600" + WAD })
+        await weth.deposit({ value: "60" + THOUSAND + WAD })
         console.log("Weth obtained")
 
-        await wethJoin.join(me, "100" + WAD)
-        await vat.frob(ETH_A, me, me, me, "100" + WAD, "22000" + WAD)
-        await daiJoin.exit(me, "22000" + WAD)
+        await wethJoin.join(me, "10" + THOUSAND + WAD)
+        await vat.frob(ETH_A, me, me, me, "10" + THOUSAND + WAD, "2" + MILLION + WAD)
+        await daiJoin.exit(me, "2" + MILLION + WAD)
         console.log("Dai obtained")
 
-        await controller.post(ETH_A, me, me, "500" + WAD)
+        await controller.post(ETH_A, me, me, "50" + THOUSAND + WAD)
 
         // await controller.borrow(ETH_A, maturity0, me, me, "30" + MILLION + WAD)
-        await controller.borrow(ETH_A, maturity1, me, me, "1" + THOUSAND + WAD)
-        await controller.borrow(ETH_A, maturity2, me, me, "1" + THOUSAND + WAD)
-        await controller.borrow(ETH_A, maturity3, me, me, "1" + THOUSAND + WAD)
-        await controller.borrow(ETH_A, maturity4, me, me, "1" + THOUSAND + WAD)
+        await controller.borrow(ETH_A, maturity1, me, me, "100" + THOUSAND + WAD)
+        await controller.borrow(ETH_A, maturity2, me, me, "100" + THOUSAND + WAD)
+        await controller.borrow(ETH_A, maturity3, me, me, "100" + THOUSAND + WAD)
+        await controller.borrow(ETH_A, maturity4, me, me, "100" + THOUSAND + WAD)
         console.log("eDai obtained")
 
         // await pool0.init("1" + MILLION + WAD)
-        await pool1.init("1" + THOUSAND + WAD)
-        await pool2.init("1" + THOUSAND + WAD)
-        await pool3.init("1" + THOUSAND + WAD)
-        await pool4.init("1" + THOUSAND + WAD)
+        await pool1.init("100" + THOUSAND + WAD)
+        await pool2.init("100" + THOUSAND + WAD)
+        await pool3.init("100" + THOUSAND + WAD)
+        await pool4.init("100" + THOUSAND + WAD)
         console.log("Pools initialized")
                 
         // await yieldProxy.addLiquidity(pool0.address, "1" + MILLION + WAD, "2" + MILLION + WAD)
-        await yieldProxy.addLiquidity(pool1.address, "1" + THOUSAND + WAD, MAX)
-        await yieldProxy.addLiquidity(pool2.address, "1" + THOUSAND + WAD, MAX)
-        await yieldProxy.addLiquidity(pool3.address, "1" + THOUSAND + WAD, MAX)
-        await yieldProxy.addLiquidity(pool4.address, "1" + THOUSAND + WAD, MAX)
+        await yieldProxy.addLiquidity(pool1.address, "100" + THOUSAND + WAD, MAX)
+        await yieldProxy.addLiquidity(pool2.address, "100" + THOUSAND + WAD, MAX)
+        await yieldProxy.addLiquidity(pool3.address, "100" + THOUSAND + WAD, MAX)
+        await yieldProxy.addLiquidity(pool4.address, "100" + THOUSAND + WAD, MAX)
         console.log("Liquidity added")
 
         // await yieldProxy.sellEDai(pool0.address, me, "250" + THOUSAND + WAD, "125" + THOUSAND + WAD)
-        await yieldProxy.sellEDai(pool1.address, me, "250" + WAD, 0)
-        await yieldProxy.sellEDai(pool2.address, me, "250" + WAD, 0)
-        await yieldProxy.sellEDai(pool3.address, me, "250" + WAD, 0)
-        await yieldProxy.sellEDai(pool4.address, me, "250" + WAD, 0)
+        await yieldProxy.sellEDai(pool1.address, me, "25" + THOUSAND + WAD, 0)
+        await yieldProxy.sellEDai(pool2.address, me, "25" + THOUSAND + WAD, 0)
+        await yieldProxy.sellEDai(pool3.address, me, "25" + THOUSAND + WAD, 0)
+        await yieldProxy.sellEDai(pool4.address, me, "25" + THOUSAND + WAD, 0)
         console.log("eDai sold")
 
         callback()
