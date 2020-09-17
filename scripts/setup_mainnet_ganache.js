@@ -13,7 +13,6 @@ const Pot = artifacts.require('Pot')
 const YieldProxy = artifacts.require('YieldProxy')
 
 const ethers = require('ethers')
-const web = require('web3')
 
 // Logs all addresses of contracts
 module.exports = async (callback) => {
@@ -49,10 +48,10 @@ module.exports = async (callback) => {
     MILLION = '000000'
 
     MAX = '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'
-    Line = web.utils.fromAscii('Line')
-    line = web.utils.fromAscii('line')
-    spot = web.utils.fromAscii('spot')
-    ETH_A = web.utils.fromAscii('ETH-A')
+    Line = web3.utils.fromAscii('Line')
+    line = web3.utils.fromAscii('line')
+    spot = web3.utils.fromAscii('spot')
+    ETH_A = web3.utils.fromAscii('ETH-A')
 
     maturity0 = await eDai0.maturity()
     maturity1 = await eDai1.maturity()
@@ -85,9 +84,6 @@ module.exports = async (callback) => {
       await pool4.addDelegate(yieldProxy.address)
       console.log('Delegates granted')
     }
-
-    // rate = (await vat.ilks(ETH_A)).rate
-    // spot = (await vat.ilks(ETH_A)).spot
 
     await weth.deposit({ value: '70' + THOUSAND + WAD })
     console.log('Weth obtained')
