@@ -9,9 +9,8 @@ module.exports = async (deployer, network, accounts) => {
   const migrations = await Migrations.deployed();
 
   let daiAddress;
-  let eDaiAddress;
 
-  if (network === "mainnet") {
+  if (network === "mainnet" || network === "mainnet-ganache") {
     daiAddress = fixed_addrs[network].daiAddress;
   } else {
     daiAddress = (await Dai.deployed()).address;

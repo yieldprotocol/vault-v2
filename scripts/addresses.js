@@ -10,6 +10,7 @@ module.exports = async (callback) => {
     const network = await web3.eth.net.getId()
 
     data = {}
+    data["Version"] = await migrations.version()
 
     for (let i = 0; i < await migrations.length(); i++) {
         const name = await migrations.names(i)

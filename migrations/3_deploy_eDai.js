@@ -4,7 +4,7 @@ const Migrations = artifacts.require("Migrations");
 
 const Vat = artifacts.require("Vat");
 const Weth = artifacts.require("WETH9");
-const ERC20 = artifacts.require("Dai");
+const Dai = artifacts.require("Dai");
 const GemJoin = artifacts.require("GemJoin");
 const DaiJoin = artifacts.require("DaiJoin");
 const Pot = artifacts.require("Pot");
@@ -40,21 +40,19 @@ module.exports = async (deployer, network) => {
   ]
   let maturities = dates.map(toTimestamp)
 
-  if (network === "mainnet") {
+  if (network === "mainnet" || network === "mainnet-ganache") {
     vatAddress = fixed_addrs[network].vatAddress ;
     wethAddress = fixed_addrs[network].wethAddress;
     wethJoinAddress = fixed_addrs[network].wethJoinAddress;
     daiAddress = fixed_addrs[network].daiAddress;
     daiJoinAddress = fixed_addrs[network].daiJoinAddress;
     potAddress = fixed_addrs[network].potAddress;
-    fixed_addrs[network].chaiAddress ?
-      (chaiAddress = fixed_addrs[network].chaiAddress)
-      : (chaiAddress = (await Chai.deployed()).address);
+    chaiAddress = fixed_addrs[network].chaiAddress;
  } else {
     vatAddress = (await Vat.deployed()).address;
     wethAddress = (await Weth.deployed()).address;
     wethJoinAddress = (await GemJoin.deployed()).address;
-    daiAddress = (await ERC20.deployed()).address;
+    daiAddress = (await Dai.deployed()).address;
     daiJoinAddress = (await DaiJoin.deployed()).address;
     potAddress = (await Pot.deployed()).address;
     chaiAddress = (await Chai.deployed()).address;

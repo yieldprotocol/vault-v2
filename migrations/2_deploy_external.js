@@ -49,15 +49,16 @@ module.exports = async (deployer, network, accounts) => {
   let endAddress;
   let chaiAddress;
 
-  if (network !== "mainnet") {
+  if (network !== "mainnet" && network !== "mainnet-ganache") {
     // Setting up Vat
+    const MAX = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+
     const WETH = web3.utils.fromAscii("ETH-A");
     const Line = web3.utils.fromAscii("Line");
     const spotName = web3.utils.fromAscii("spot");
     const linel = web3.utils.fromAscii("line");
 
-    const limits = toRad(10000);
-    const spot  = toRay(150);
+    const spot  = toRay(300);
 
     // Setup vat
     await deployer.deploy(Vat);
@@ -65,8 +66,8 @@ module.exports = async (deployer, network, accounts) => {
     vatAddress = vat.address;
     await vat.init(WETH);
     await vat.file(WETH, spotName, spot);
-    await vat.file(WETH, linel, limits);
-    await vat.file(Line, limits);
+    await vat.file(WETH, linel, MAX);
+    await vat.file(Line, MAX);
 
     await deployer.deploy(Weth);
     wethAddress = (await Weth.deployed()).address;
@@ -99,12 +100,6 @@ module.exports = async (deployer, network, accounts) => {
     await vat.rely(potAddress);
     await vat.rely(endAddress);
     await dai.rely(daiJoinAddress)
-
-    // Set development environment
-    const rate  = toRay(1.25);
-    const chi = toRay(1.2);
-    await vat.fold(WETH, vatAddress, subBN(rate, toRay(1)));
-    await pot.setChi(chi);
   } else {
     vatAddress = fixed_addrs[network].vatAddress;
     wethAddress = fixed_addrs[network].wethAddress;
@@ -113,21 +108,8 @@ module.exports = async (deployer, network, accounts) => {
     daiJoinAddress = fixed_addrs[network].daiJoinAddress;
     potAddress = fixed_addrs[network].potAddress;
     endAddress = fixed_addrs[network].endAddress;
-    fixed_addrs[network].chaiAddress && (chaiAddress = fixed_addrs[network].chaiAddress);
-  };
-
-  if (network === "mainnet") {
     chaiAddress = fixed_addrs[network].chaiAddress;
-  } else {
-    await deployer.deploy(
-      Chai,
-      vatAddress,
-      potAddress,
-      daiJoinAddress,
-      daiAddress,
-    );
-    chaiAddress = (await Chai.deployed()).address;
-  }
+  };
 
   // Commit addresses to migrations registry
   const deployedExternal = {
