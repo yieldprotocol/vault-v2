@@ -93,6 +93,16 @@ module.exports = async (deployer, network, accounts) => {
     endAddress = end.address;
     await end.file(web3.utils.fromAscii("vat"), vatAddress);
 
+    // Setup chai
+    await deployer.deploy(
+      Chai,
+      vatAddress,
+      potAddress,
+      daiJoinAddress,
+      daiAddress,
+    );
+    chaiAddress = (await Chai.deployed()).address;
+
     // Permissions
     await vat.rely(vatAddress);
     await vat.rely(wethJoinAddress);
