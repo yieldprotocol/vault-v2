@@ -59,6 +59,16 @@ module.exports = {
       gas: 0x6691b7
     },
 
+    "mainnet-ganache": {
+      host: "127.0.0.1",     // Localhost (default: none)
+      port: 8545,            // Standard Ethereum port (default: none)
+      network_id: 1,       // Any network (default: none)
+      gas: 10000000,
+      confirmations: 0,       // # of confs to wait between deployments. (default: 0)
+      timeoutBlocks: 200,     // # of blocks before a deployment times out  (minimum/default: 50)
+      gasPrice: 10000000000,  // 10 gwei
+      skipDryRun: true       // Skip dry run before migrations? (default: false for public nets )
+    },
 
     // Another network with more advanced options...
     // advanced: {
