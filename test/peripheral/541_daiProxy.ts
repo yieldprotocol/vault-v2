@@ -247,22 +247,44 @@ contract('YieldProxy - DaiProxy', async (accounts) => {
         await eDai1.approve(pool.address, additionalEDaiReserves, { from: operator })
         await pool.sellEDai(operator, operator, additionalEDaiReserves, { from: operator })
 
+        // Create some eDai debt for `user1`
+        await daiProxy.post(user1, { from: user1, value: bnify(wethTokens1).mul(2).toString() })
+        await controller.borrow(WETH, maturity1, user1, user1, one, { from: user1 })
+
         // Create some eDai debt for `user2`
         await daiProxy.post(user2, { from: user2, value: bnify(wethTokens1).mul(2).toString() })
         await controller.borrow(WETH, maturity1, user2, user2, daiTokens1, { from: user2 })
 
         // Give some Dai to `user1`
-        await env.maker.getDai(user1, daiTokens1, rate1)
+        await env.maker.getDai(user1, bnify(daiTokens1).mul(2).toString(), rate1)
       })
 
       it('repays minimum eDai debt with dai', async () => {
+        const user2DebtBefore = (await controller.debtEDai(WETH, maturity1, user2)).toString()
+        const user1DaiBefore = (await dai.balanceOf(user1)).toString()
+
         await daiProxy.repayMinimumEDaiDebtForDai(pool.address, WETH, maturity1, user2, one, two, {
           from: user1,
         })
 
-        const debt = bnify((await controller.debtEDai(WETH, maturity1, user2)).toString())
-        expect(debt.lt(eDaiDebt)).to.be.true
-        assert.equal(await dai.balanceOf(user1), subBN(daiTokens1, two).toString())
+        const user2DebtAfter = (await controller.debtEDai(WETH, maturity1, user2)).toString()
+        const user1DaiAfter = (await dai.balanceOf(user1)).toString()
+
+        expect(bnify(user2DebtAfter).lt(bnify(user2DebtBefore))).to.be.true
+        assert.equal(user1DaiAfter, subBN(user1DaiBefore, two).toString())
+      })
+
+      it('does not take more dai than needed when repaying', async () => {
+        const user1DaiBefore = (await dai.balanceOf(user1)).toString()
+
+        await daiProxy.repayMinimumEDaiDebtForDai(pool.address, WETH, maturity1, user1, ZERO, two, {
+          from: user1,
+        })
+
+        const user1DaiAfter = (await dai.balanceOf(user1)).toString()
+
+        assert.equal((await controller.debtEDai(WETH, maturity1, user1)).toString(), ZERO)
+        expect(bnify(user1DaiAfter).lt(bnify(user1DaiBefore))).to.be.true
       })
 
       it("doesn't repay debt if limit not reached", async () => {
@@ -273,13 +295,31 @@ contract('YieldProxy - DaiProxy', async (accounts) => {
       })
 
       it('repays eDai debt with maximum dai', async () => {
+        const user2DebtBefore = (await controller.debtEDai(WETH, maturity1, user2)).toString()
+        const user1DaiBefore = (await dai.balanceOf(user1)).toString()
+
         await daiProxy.repayEDaiDebtForMaximumDai(pool.address, WETH, maturity1, user2, one, two, {
           from: user1,
         })
 
-        const balance = bnify(await dai.balanceOf(user1))
-        expect(balance.lt(daiTokens1)).to.be.true
-        assert.equal(await controller.debtEDai(WETH, maturity1, user2), subBN(eDaiDebt, one).toString())
+        const user2DebtAfter = (await controller.debtEDai(WETH, maturity1, user2)).toString()
+        const user1DaiAfter = (await dai.balanceOf(user1)).toString()
+
+        expect(bnify(user1DaiAfter).lt(bnify(user1DaiBefore))).to.be.true
+        assert.equal(user2DebtAfter, subBN(user2DebtBefore, one).toString())
+      })
+
+      it('does not take more dai than needed when repaying', async () => {
+        const user1DaiBefore = (await dai.balanceOf(user1)).toString()
+
+        await daiProxy.repayEDaiDebtForMaximumDai(pool.address, WETH, maturity1, user1, one, two, {
+          from: user1,
+        })
+
+        const user1DaiAfter = (await dai.balanceOf(user1)).toString()
+
+        assert.equal((await controller.debtEDai(WETH, maturity1, user1)).toString(), ZERO)
+        expect(bnify(user1DaiAfter).gt(subBN(user1DaiBefore, two))).to.be.true
       })
 
       it("doesn't repay debt if limit not reached", async () => {
