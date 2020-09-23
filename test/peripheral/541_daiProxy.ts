@@ -239,7 +239,7 @@ contract('YieldProxy - DaiProxy', async (accounts) => {
       )
     })
 
-    describe.only('with extra eDai reserves', () => {
+    describe('with extra eDai reserves', () => {
       beforeEach(async () => {
         // Set up the pool to allow buying eDai
         const additionalEDaiReserves = toWad(34.4)

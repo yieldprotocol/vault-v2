@@ -341,6 +341,7 @@ contract YieldProxy is DecimalMath, IFlashMinter {
 
     /// @dev Repay an amount of eDai debt in Controller using Dai exchanged for eDai at pool rates, up to a maximum amount of Dai spent.
     /// Must have approved the operator with `pool.addDelegate(yieldProxy.address)`.
+    /// If `eDaiRepayment` exceeds the existing debt, only the necessary eDai will be used.
     /// @param collateral Valid collateral type.
     /// @param maturity Maturity of an added series
     /// @param to Yield Vault to repay eDai debt for.
@@ -359,7 +360,7 @@ contract YieldProxy is DecimalMath, IFlashMinter {
     {
         require(poolsMap[address(pool)], "YieldProxy: Unknown pool");
         uint256 eDaiDebt = controller.debtEDai(collateral, maturity, to);
-        uint256 eDaiToUse = eDaiDebt < eDaiRepayment ? eDaiDebt : eDaiRepayment;
+        uint256 eDaiToUse = eDaiDebt < eDaiRepayment ? eDaiDebt : eDaiRepayment; // Use no more eDai than debt
         uint256 repaymentInDai = pool.buyEDai(msg.sender, address(this), eDaiToUse.toUint128());
         require (repaymentInDai <= maximumRepaymentInDai, "YieldProxy: Too much Dai required");
         controller.repayEDai(collateral, maturity, address(this), to, eDaiToUse);
@@ -369,6 +370,7 @@ contract YieldProxy is DecimalMath, IFlashMinter {
 
     /// @dev Repay an amount of eDai debt in Controller using a given amount of Dai exchanged for eDai at pool rates, with a minimum of eDai debt required to be paid.
     /// Must have approved the operator with `pool.addDelegate(yieldProxy.address)`.
+    /// If `repaymentInDai` exceeds the existing debt, only the necessary Dai will be used.
     /// @param collateral Valid collateral type.
     /// @param maturity Maturity of an added series
     /// @param to Yield Vault to repay eDai debt for.
@@ -388,9 +390,9 @@ contract YieldProxy is DecimalMath, IFlashMinter {
         require(poolsMap[address(pool)], "YieldProxy: Unknown pool");
         uint256 eDaiRepayment = pool.sellDaiPreview(repaymentInDai.toUint128());
         uint256 eDaiDebt = controller.debtEDai(collateral, maturity, to);
-        if(eDaiRepayment <= eDaiDebt) {
+        if(eDaiRepayment <= eDaiDebt) { // Sell no more Dai than needed to cancel all the debt
             pool.sellDai(msg.sender, address(this), repaymentInDai.toUint128());
-        } else {
+        } else { // If we have too much Dai, then don't sell it all and buy the exact amount of eDai needed instead.
             pool.buyEDai(msg.sender, address(this), eDaiDebt.toUint128());
             eDaiRepayment = eDaiDebt;
         }
