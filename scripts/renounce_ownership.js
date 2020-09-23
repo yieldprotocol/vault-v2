@@ -21,7 +21,6 @@ module.exports = async (deployer, network) => {
   const unwind = await Unwind.deployed()
   await unwind.renounceOwnership()
   
-  const eDais = []
   for (let i = 0; i < (await migrations.length()); i++) {
     const contractName = web3.utils.toAscii(await migrations.names(i))
     if (contractName.includes('eDai') && !contractName.includes('LP')) {
