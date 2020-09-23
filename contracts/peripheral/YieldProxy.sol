@@ -358,9 +358,11 @@ contract YieldProxy is DecimalMath, IFlashMinter {
         returns (uint256)
     {
         require(poolsMap[address(pool)], "YieldProxy: Unknown pool");
-        uint256 repaymentInDai = pool.buyEDai(msg.sender, address(this), eDaiRepayment.toUint128());
+        uint256 eDaiDebt = controller.debtEDai(collateral, maturity, to);
+        uint256 eDaiToUse = eDaiDebt < eDaiRepayment ? eDaiDebt : eDaiRepayment;
+        uint256 repaymentInDai = pool.buyEDai(msg.sender, address(this), eDaiToUse.toUint128());
         require (repaymentInDai <= maximumRepaymentInDai, "YieldProxy: Too much Dai required");
-        controller.repayEDai(collateral, maturity, address(this), to, eDaiRepayment);
+        controller.repayEDai(collateral, maturity, address(this), to, eDaiToUse);
 
         return repaymentInDai;
     }
@@ -384,7 +386,14 @@ contract YieldProxy is DecimalMath, IFlashMinter {
         returns (uint256)
     {
         require(poolsMap[address(pool)], "YieldProxy: Unknown pool");
-        uint256 eDaiRepayment = pool.sellDai(msg.sender, address(this), repaymentInDai.toUint128());
+        uint256 eDaiRepayment = pool.sellDaiPreview(repaymentInDai.toUint128());
+        uint256 eDaiDebt = controller.debtEDai(collateral, maturity, to);
+        if(eDaiRepayment <= eDaiDebt) {
+            pool.sellDai(msg.sender, address(this), repaymentInDai.toUint128());
+        } else {
+            pool.buyEDai(msg.sender, address(this), eDaiDebt.toUint128());
+            eDaiRepayment = eDaiDebt;
+        }
         require (eDaiRepayment >= minimumEDaiRepayment, "YieldProxy: Not enough eDai debt repaid");
         controller.repayEDai(collateral, maturity, address(this), to, eDaiRepayment);
 
