@@ -12,6 +12,7 @@
     "deploy:ganache": "yarn ganache && truffle migrate",
     "mainnet-ganache": "./scripts/mainnet-ganache.sh",
     "coverage": "buidler coverage --network coverage --temp build --testfiles 'test/*.ts test/pool/*.ts test/peripheral/*.ts'",
+    "lint": "prettier ./test/**/*.ts --check",
     "lint:ts": "prettier ./test/**/*.ts --write",
     "lint:sol": "solhint -f table contracts/**/*.sol"
   },
