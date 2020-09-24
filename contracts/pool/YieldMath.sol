@@ -177,7 +177,7 @@ library YieldMath {
    * @return x raised into power y/z and then multiplied by 2^(128 * (1 - y/z))
    */
   function pow (uint128 x, uint128 y, uint128 z)
-  internal pure returns (uint128) {
+  internal pure returns (uint256) {
     require (z != 0);
 
     if (x == 0) {
