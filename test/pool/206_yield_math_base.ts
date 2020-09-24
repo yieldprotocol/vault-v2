@@ -4,8 +4,7 @@ const YieldMath = artifacts.require('YieldMathWrapper')
 import helper from 'ganache-time-traveler'
 import { Contract } from '../shared/fixtures'
 // @ts-ignore
-import { BN } from '@openzeppelin/test-helpers'
-import { expect } from 'chai'
+import { BN, expectRevert } from '@openzeppelin/test-helpers'
 
 /**
  * Throws given message unless given condition is true.
@@ -872,6 +871,24 @@ contract('YieldMath - Base', async (accounts) => {
           )
         }
       }
+    })
+
+    it('Test rounding induced underflow', async () => {
+      var daiReserves = toBigNumber('9295050963679385441209')
+      var eDaiReserves = toBigNumber('10721945986215692199666')
+      var daiAmount = toBigNumber('10000')
+      var timeTillMaturity = toBigNumber('39971379')
+      var k = toBigNumber('146235604338')
+      var g = toBigNumber('19417625340746896437')
+
+      await expectRevert(
+        yieldMath.eDaiInForDaiOut(daiReserves, eDaiReserves, daiAmount, timeTillMaturity, k, g),
+        'YieldMath: Rounding induced error'
+      )
+      await expectRevert(
+        yieldMath.daiInForEDaiOut(daiReserves, eDaiReserves, daiAmount, timeTillMaturity, k, g),
+        'YieldMath: Rounding induced error'
+      )
     })
   })
 })

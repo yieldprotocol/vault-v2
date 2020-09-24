@@ -104,7 +104,7 @@ contract YieldMathWrapper {
    * @return x raised into power y/z and then multiplied by 2^(128 * (1 - y/z))
    */
   function pow (uint128 x, uint128 y, uint128 z)
-  public pure returns (bool, uint128) {
+  public pure returns (bool, uint256) {
     return (
       true,
       YieldMath.pow (x, y, z));
