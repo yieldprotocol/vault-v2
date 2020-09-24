@@ -34,9 +34,9 @@ library YieldMath {
     require (xdx < 0x100000000000000000000000000000000, "YieldMath: Too much Dai in");
 
     uint256 sum =
-      uint256 (pow (daiReserves, uint128 (a), 0x10000000000000000)) +
-      uint256 (pow (eDaiReserves, uint128 (a), 0x10000000000000000)) -
-      uint256 (pow (uint128(xdx), uint128 (a), 0x10000000000000000));
+      pow (daiReserves, uint128 (a), 0x10000000000000000) +
+      pow (eDaiReserves, uint128 (a), 0x10000000000000000) -
+      pow (uint128(xdx), uint128 (a), 0x10000000000000000);
     require (sum < 0x100000000000000000000000000000000, "YieldMath: Insufficient eDai reserves");
 
     uint256 result = eDaiReserves - pow (uint128 (sum), 0x10000000000000000, uint128 (a));
@@ -73,9 +73,9 @@ library YieldMath {
     require (ydy < 0x100000000000000000000000000000000, "YieldMath: Too much eDai in");
 
     uint256 sum =
-      uint256 (pow (uint128 (daiReserves), uint128 (a), 0x10000000000000000)) -
-      uint256 (pow (uint128 (ydy), uint128 (a), 0x10000000000000000)) +
-      uint256 (pow (eDaiReserves, uint128 (a), 0x10000000000000000));
+      pow (uint128 (daiReserves), uint128 (a), 0x10000000000000000) -
+      pow (uint128 (ydy), uint128 (a), 0x10000000000000000) +
+      pow (eDaiReserves, uint128 (a), 0x10000000000000000);
     require (sum < 0x100000000000000000000000000000000, "YieldMath: Insufficient Dai reserves");
 
     uint256 result =
@@ -114,9 +114,9 @@ library YieldMath {
     require (xdx < 0x100000000000000000000000000000000, "YieldMath: Too much Dai out");
 
     uint256 sum =
-      uint256 (pow (uint128 (daiReserves), uint128 (a), 0x10000000000000000)) +
-      uint256 (pow (eDaiReserves, uint128 (a), 0x10000000000000000)) -
-      uint256 (pow (uint128 (xdx), uint128 (a), 0x10000000000000000));
+      pow (uint128 (daiReserves), uint128 (a), 0x10000000000000000) +
+      pow (eDaiReserves, uint128 (a), 0x10000000000000000) -
+      pow (uint128 (xdx), uint128 (a), 0x10000000000000000);
     require (sum < 0x100000000000000000000000000000000, "YieldMath: Resulting eDai reserves too high");
 
     uint256 result = pow (uint128 (sum), 0x10000000000000000, uint128 (a)) - eDaiReserves;
@@ -152,9 +152,9 @@ library YieldMath {
     require (ydy < 0x100000000000000000000000000000000, "YieldMath: Too much eDai out");
 
     uint256 sum =
-      uint256 (pow (daiReserves, uint128 (a), 0x10000000000000000)) +
-      uint256 (pow (eDaiReserves, uint128 (a), 0x10000000000000000)) -
-      uint256 (pow (uint128 (ydy), uint128 (a), 0x10000000000000000));
+      pow (daiReserves, uint128 (a), 0x10000000000000000) +
+      pow (eDaiReserves, uint128 (a), 0x10000000000000000) -
+      pow (uint128 (ydy), uint128 (a), 0x10000000000000000);
     require (sum < 0x100000000000000000000000000000000, "YieldMath: Resulting Dai reserves too high");
 
     uint256 result =
@@ -187,7 +187,7 @@ library YieldMath {
       uint256 l =
         uint256 (0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF - log_2 (x)) * y / z;
       if (l > 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF) return 0;
-      else return pow_2 (uint128 (0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF - l));
+      else return uint256 (pow_2 (uint128 (0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF - l)));
     }
   }
 
