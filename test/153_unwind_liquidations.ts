@@ -3,7 +3,20 @@ import { id } from 'ethers/lib/utils'
 import helper from 'ganache-time-traveler'
 // @ts-ignore
 import { BN } from '@openzeppelin/test-helpers'
-import { WETH, spot, rate1, daiTokens1, wethTokens1, toRay, subBN, mulRay, divRay, bnify, ZERO } from './shared/utils'
+import {
+  WETH,
+  spot,
+  rate1,
+  chi1,
+  chaiTokens1,
+  wethTokens1,
+  toRay,
+  subBN,
+  mulRay,
+  divRay,
+  bnify,
+  ZERO,
+} from './shared/utils'
 import { YieldEnvironment, Contract } from './shared/fixtures'
 
 contract('Unwind - Liquidations', async (accounts) => {
@@ -70,6 +83,8 @@ contract('Unwind - Liquidations', async (accounts) => {
         .toString()
       await controller.borrow(WETH, maturity1, user3, user3, toBorrow, { from: user3 })
       await controller.borrow(WETH, maturity2, user3, user3, toBorrow, { from: user3 })
+
+      await env.postChai(user1, chaiTokens1, chi1, rate1)
 
       // Make sure that end.sol will have enough weth to cash chai savings
       await env.maker.getDai(owner, bnify(wethTokens1).mul(10), rate1)

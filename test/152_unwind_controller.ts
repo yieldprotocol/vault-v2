@@ -102,14 +102,6 @@ contract('Unwind - Controller', async (accounts) => {
       )
     })
 
-    it('does not allow to redeem EDai if treasury not settled and cashed', async () => {
-      await expectRevert(unwind.redeem(maturity1, user2, { from: user2 }), 'Unwind: Not ready')
-    })
-
-    it('does not allow to settle users if treasury not settled and cashed', async () => {
-      await expectRevert(unwind.settle(WETH, user2, { from: user2 }), 'Unwind: Not ready')
-    })
-
     describe('with Dss unwind initiated and treasury settled', () => {
       beforeEach(async () => {
         await env.shutdown(owner, user1, user2)
