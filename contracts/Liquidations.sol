@@ -60,14 +60,14 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
         internal pure returns (uint128)
     {
         uint128 c = a + b;
-        require(c >= a, "Market: Dai reserves too high");
+        require(c >= a, "Liquidations: Addition overflow");
 
         return c;
     }
 
     /// @dev Overflow-protected substraction, from OpenZeppelin
     function sub(uint128 a, uint128 b) internal pure returns (uint128) {
-        require(b <= a, "Market: eDai reserves too low");
+        require(b <= a, "Liquidations: Substraction overflow");
         uint128 c = a - b;
 
         return c;
@@ -77,7 +77,7 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
     function toUint128(uint256 x) internal pure returns(uint128) {
         require(
             x <= type(uint128).max,
-            "Market: Cast overflow"
+            "Liquidations: Cast overflow"
         );
         return uint128(x);
     }
