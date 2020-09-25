@@ -536,10 +536,10 @@ contract YieldProxy is DecimalMath, IFlashMinter {
     /// Needs controller.addDelegate(splitter.address, { from: user });
     /// @param pool The pool to trade in (and therefore eDai series to migrate)
     /// @param user Vault to migrate.
-    /// @param eDaiAmount eDai debt to move from Yield to MakerDAO.
     /// @param wethAmount weth to move from Yield to MakerDAO. Needs to be high enough to collateralize the dai debt in MakerDAO,
     /// and low enough to make sure that debt left in Yield is also collateralized.
-    function yieldToMaker(address pool, address user, uint256 eDaiAmount, uint256 wethAmount) public {
+    /// @param eDaiAmount eDai debt to move from Yield to MakerDAO.
+    function yieldToMaker(address pool, address user, uint256 wethAmount, uint256 eDaiAmount) public {
         IEDai eDai = IPool(pool).eDai();
 
         // The user specifies the eDai he wants to move, and the weth to be passed on as collateral
@@ -564,7 +564,7 @@ contract YieldProxy is DecimalMath, IFlashMinter {
         (bool direction, address pool, address user, uint256 wethAmount, uint256 daiAmount) = 
             abi.decode(data, (bool, address, address, uint256, uint256));
         if(direction == MTY) _makerToYield(pool, user, wethAmount, daiAmount);
-        if(direction == YTM) _yieldToMaker(pool, user, eDaiAmount, wethAmount);
+        if(direction == YTM) _yieldToMaker(pool, user, wethAmount, eDaiAmount);
     }
 
     /// @dev Minimum weth needed to collateralize an amount of dai in MakerDAO
@@ -627,10 +627,10 @@ contract YieldProxy is DecimalMath, IFlashMinter {
     /// Needs controller.addDelegate(splitter.address, { from: user });
     /// @param pool The pool to trade in (and therefore eDai series to migrate)
     /// @param user Vault to migrate.
-    /// @param eDaiAmount eDai debt to move from Yield to MakerDAO.
     /// @param wethAmount weth to move from Yield to MakerDAO. Needs to be high enough to collateralize the dai debt in MakerDAO,
     /// and low enough to make sure that debt left in Yield is also collateralized.
-    function _yieldToMaker(address pool, address user, uint256 eDaiAmount, uint256 wethAmount) internal {
+    /// @param eDaiAmount eDai debt to move from Yield to MakerDAO.
+    function _yieldToMaker(address pool, address user, uint256 wethAmount, uint256 eDaiAmount) internal {
         IPool _pool = IPool(pool);
         IEDai eDai = IEDai(_pool.eDai());
 
