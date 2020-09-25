@@ -7,8 +7,8 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IVat.sol";
 import "./interfaces/IWeth.sol";
-import "./interfaces/IDaiJoin.sol";
 import "./interfaces/IGemJoin.sol";
+import "./interfaces/IDaiJoin.sol";
 import "./interfaces/IPot.sol";
 import "./interfaces/IEnd.sol";
 import "./interfaces/IChai.sol";
@@ -33,6 +33,7 @@ contract Unwind is Ownable(), DecimalMath {
     bytes32 public constant WETH = "ETH-A";
 
     IVat public vat;
+    IERC20 public dai;
     IDaiJoin public daiJoin;
     IWeth public weth;
     IGemJoin public wethJoin;
@@ -64,6 +65,7 @@ contract Unwind is Ownable(), DecimalMath {
         controller = liquidations.controller();
         treasury = controller.treasury();
         vat = treasury.vat();
+        dai = treasury.dai();
         daiJoin = treasury.daiJoin();
         weth = treasury.weth();
         wethJoin = treasury.wethJoin();
@@ -123,6 +125,8 @@ contract Unwind is Ownable(), DecimalMath {
             "Unwind: Unwind first"
         );
         (uint256 ink, uint256 art) = vat.urns(WETH, address(treasury));
+        require(ink > 0, "Unwind: Nothing to settle");
+
         _treasuryWeth = ink;                            // We will need this to skim profits
         vat.fork(                                      // Take the treasury vault
             WETH,
@@ -148,8 +152,12 @@ contract Unwind is Ownable(), DecimalMath {
             end.fix(WETH) != 0,
             "Unwind: End.sol not ready"
         );
-        uint256 daiTokens = chai.dai(address(treasury));   // Find out how much is the chai worth
-        chai.draw(address(treasury), treasury.savings()); // Get the chai as dai
+        
+        uint256 chaiTokens = chai.balanceOf(address(treasury));
+        require(chaiTokens > 0, "Unwind: Nothing to cash");
+        chai.exit(address(treasury), chaiTokens);           // Get the chai as dai
+
+        uint256 daiTokens = dai.balanceOf(address(this));   // Find out how much is the chai worth
         daiJoin.join(address(this), daiTokens);             // Put the dai into MakerDAO
         end.pack(daiTokens);                                // Into End.sol, more exactly
         end.cash(WETH, daiTokens);                          // Exchange the dai for weth
@@ -165,9 +173,8 @@ contract Unwind is Ownable(), DecimalMath {
     /// @param collateral Valid collateral type.
     /// @param user User vault to settle, and wallet to receive the corresponding weth.
     function settle(bytes32 collateral, address user) public {
-        require(settled && cashedOut, "Unwind: Not ready");
-
         (uint256 tokens, uint256 debt) = controller.erase(collateral, user);
+        require(tokens > 0, "Unwind: Nothing to settle");
 
         uint256 remainder;
         if (collateral == WETH) {
@@ -181,9 +188,9 @@ contract Unwind is Ownable(), DecimalMath {
     /// @dev Settles a user vault in Liquidations, and then returns any remaining collateral as weth using the unwind Dai to Weth price.
     /// @param user User vault to settle, and wallet to receive the corresponding weth.
     function settleLiquidations(address user) public {
-        require(settled && cashedOut, "Unwind: Not ready");
-
         (uint256 wethAmount, uint256 debt) = liquidations.erase(user);
+        require(wethAmount > 0, "Unwind: Nothing to settle");
+
         uint256 remainder = subFloorZero(wethAmount, daiToFixWeth(debt, _fix));
 
         require(weth.transfer(user, remainder));
@@ -193,10 +200,11 @@ contract Unwind is Ownable(), DecimalMath {
     /// @param maturity Maturity of an added series
     /// @param user Wallet containing the eDai to burn.
     function redeem(uint256 maturity, address user) public {
-        require(settled && cashedOut, "Unwind: Not ready");
         IEDai eDai = controller.series(maturity);
         require(eDai.unlocked() == 1, "eDai is still locked");
         uint256 eDaiAmount = eDai.balanceOf(user);
+        require(eDaiAmount > 0, "Unwind: Nothing to redeem");
+
         eDai.burn(user, eDaiAmount);
         require(
             weth.transfer(
