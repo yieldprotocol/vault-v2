@@ -46,6 +46,10 @@ module.exports = async (deployer, network, accounts) => {
   const liquidations = await Liquidations.deployed()
   liquidationsAddress = liquidations.address
   await controller.orchestrate(liquidationsAddress, id('erase(bytes32,address)'))
+  await treasury.batchOrchestrate(liquidationsAddress, [
+      id('pushDai(address,uint256)'),
+      id('pullWeth(address,uint256)'),
+  ])
 
   // Setup Unwind
   await deployer.deploy(Unwind, endAddress, liquidationsAddress)
