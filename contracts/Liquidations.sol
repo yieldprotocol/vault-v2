@@ -160,6 +160,8 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
         });
         vaults[liquidated] = vault;
 
+        if (vaults[liquidated].debt == 0) delete liquidations[liquidated];
+
         treasury.pullWeth(to, tokenAmount);
 
         require(
@@ -171,6 +173,7 @@ contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath
     }
 
     /// @dev Retrieve weth from a liquidations account. This weth could be a remainder from liquidations.
+    /// If any weth is not withdrawn, it will be auctioned if the user gets liquidated again.
     /// `from` can delegate to other addresses to withdraw from him.
     /// @param from Address of the liquidations user vault to withdraw weth from.
     /// @param to Address of the wallet receiving the withdrawn weth.
