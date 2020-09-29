@@ -26,7 +26,7 @@ module.exports = async (deployer, network) => {
   let treasuryAddress
 
   const toDate = (timestamp) => new Date(timestamp * 1000).toISOString().slice(0, 10)
-  const toTimestamp = (date) => new Date(date).getTime() / 1000
+  const toTimestamp = (date) => new Date(date).getTime() / 1000 + 86399
   const toSymbol = (date) =>
     new Intl.DateTimeFormat('en', { year: 'numeric' }).format(new Date(date)).slice(2) +
     new Intl.DateTimeFormat('en', { month: 'short' }).format(new Date(date))
