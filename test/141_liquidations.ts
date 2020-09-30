@@ -236,6 +236,20 @@ contract('Liquidations', async (accounts) => {
           )
         })
 
+        it('when all debt is repaid, the user is not in liquidation anymore', async () => {
+          const liquidatorBuys = bnify(userDebt)
+
+          await dai.approve(treasury.address, liquidatorBuys, { from: buyer })
+          await liquidations.buy(buyer, receiver, user2, liquidatorBuys, { from: buyer })
+
+          assert.equal(
+            (await liquidations.vaults(user2, { from: buyer })).debt,
+            0,
+            'User debt should be 0, instead is ' + (await liquidations.vaults(user2, { from: buyer })).debt
+          )
+          assert.equal(await liquidations.liquidations(user2, { from: buyer }), 0)
+        })
+
         describe('once the liquidation time is complete', () => {
           beforeEach(async () => {
             await helper.advanceTime(5000) // Better to test well beyond the limit
