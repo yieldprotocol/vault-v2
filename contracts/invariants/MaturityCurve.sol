@@ -7,7 +7,7 @@ import "@nomiclabs/buidler/console.sol";
 
 contract MaturityCurve {
     uint128 constant internal precision = 1e12;
-    uint128 constant internal step = precision;
+    uint128 constant internal step = precision * 10;
     int128 constant internal k = int128(uint256((1 << 64)) / 126144000); // 1 / Seconds in 4 years, in 64.64
     int128 constant internal g1 = int128(uint256((950 << 64)) / 1000); // To be used when selling Dai to the pool. All constants are `ufixed`, to divide them they must be converted to uint256
     int128 constant internal g2 = int128(uint256((1000 << 64)) / 950); // To be used when selling eDai to the pool. All constants are `ufixed`, to divide them they must be converted to uint256
@@ -31,18 +31,19 @@ contract MaturityCurve {
         require(c >= a, "Pool: Dai reserves too high");
         return c;
     }
-    /// @dev Overflow-protected substraction, from OpenZeppelin
+    /// @dev Overflow-protected subtraction, from OpenZeppelin
     function sub(uint128 a, uint128 b) internal pure returns (uint128) {
         require(b <= a, "Pool: eDai reserves too low");
         uint128 c = a - b;
         return c;
     }
 
+    /// @dev Difference between two numbers: c = |a - b|
     function diff(uint128 a, uint128 b) internal pure returns (uint128) {
         return a > b ? a - b : b - a;
     }
 
-    /// @dev Ensures that if we sell eDai for DAI and back we get less eDai than we had
+    /// @dev Ensures that if we execute the same sell eDai trade in two consecutive seconds the Dai obtained doesn't differ more than `step`
     function testSellEDai(uint128 daiReserves, uint128 eDaiReserves, uint128 timeTillMaturity)
         public view returns (uint128, uint128)
     {
@@ -56,8 +57,8 @@ contract MaturityCurve {
         return (eDaiOut1, eDaiOut2);
     }
 
-    /// @dev Ensures that if we buy eDai for DAI and back we get less DAI than we had
-    function testBuyEDai(uint128 daiReserves, uint128 eDaiReserves, uint128 eDaiOut, uint128 timeTillMaturity)
+    /// @dev Ensures that if we execute the same buy eDai trade in two consecutive seconds the Dai paid doesn't differ more than `step`
+    function testBuyEDai(uint128 daiReserves, uint128 eDaiReserves, uint128 timeTillMaturity)
         public view returns (uint128, uint128)
     {
         daiReserves = minDaiReserves + daiReserves % maxDaiReserves;
@@ -70,8 +71,8 @@ contract MaturityCurve {
         return (eDaiIn1, eDaiIn2);
     }
 
-    /// @dev Ensures that if we sell DAI for eDai and back we get less DAI than we had
-    function testSellDai(uint128 daiReserves, uint128 eDaiReserves, uint128 daiIn, uint128 timeTillMaturity)
+    /// @dev Ensures that if we execute the same sell Dai trade in two consecutive seconds the eDai obtained doesn't differ more than `step`
+    function testSellDai(uint128 daiReserves, uint128 eDaiReserves, uint128 timeTillMaturity)
         public view returns (uint128, uint128)
     {
         daiReserves = minDaiReserves + daiReserves % maxDaiReserves;
@@ -84,8 +85,8 @@ contract MaturityCurve {
         return (daiOut1, daiOut2);
     }
 
-    /// @dev Ensures that if we buy DAI for eDai and back we get less eDai than we had
-    function testBuyDai(uint128 daiReserves, uint128 eDaiReserves, uint128 daiOut, uint128 timeTillMaturity)
+    /// @dev Ensures that if we execute the same buy Dai trade in two consecutive seconds the eDai paid doesn't differ more than `step`
+    function testBuyDai(uint128 daiReserves, uint128 eDaiReserves, uint128 timeTillMaturity)
         public view returns (uint128, uint128)
     {
         daiReserves = minDaiReserves + daiReserves % maxDaiReserves;
@@ -98,47 +99,41 @@ contract MaturityCurve {
         return (daiIn1, daiIn2);
     }
 
-    /// @dev Sell eDai and sell the obtained Dai back for eDai
+    /// @dev Sell eDai
     function _sellEDai(uint128 daiReserves, uint128 eDaiReserves, uint128 eDaiIn, uint128 timeTillMaturity)
         internal pure returns (uint128)
     {
-        uint128 daiAmount = YieldMath.daiOutForEDaiIn(daiReserves, eDaiReserves, eDaiIn, timeTillMaturity, k, g2);
-        require(add(eDaiReserves, eDaiIn) >= sub(daiReserves, daiAmount));
-        uint128 eDaiOut = YieldMath.eDaiOutForDaiIn(sub(daiReserves, daiAmount), add(eDaiReserves, eDaiIn), daiAmount, timeTillMaturity, k, g1);
-        require(sub(add(eDaiReserves, eDaiIn), eDaiOut) >= daiReserves);
-        return eDaiOut;
+        return YieldMath.daiOutForEDaiIn(daiReserves, eDaiReserves, eDaiIn, timeTillMaturity, k, g2);
     }
 
-    /// @dev Buy eDai and sell it back
+    /// @dev Buy eDai, reverting if the eDai reserves fall below the Dai reserves
     function _buyEDai(uint128 daiReserves, uint128 eDaiReserves, uint128 eDaiOut, uint128 timeTillMaturity)
         internal pure returns (uint128)
     {
-        uint128 daiAmount = YieldMath.daiInForEDaiOut(daiReserves, eDaiReserves, eDaiOut, timeTillMaturity, k, g1);
-        require(sub(eDaiReserves, eDaiOut) >= add(daiReserves, daiAmount));
-        uint128 eDaiIn = YieldMath.eDaiInForDaiOut(add(daiReserves, daiAmount), sub(eDaiReserves, eDaiOut), daiAmount, timeTillMaturity, k, g2);
-        require(add(sub(eDaiReserves, eDaiOut), eDaiIn) >= daiReserves);
-        return eDaiIn;
+        uint128 daiIn = YieldMath.daiInForEDaiOut(daiReserves, eDaiReserves, eDaiOut, timeTillMaturity, k, g1);
+        require(
+            sub(eDaiReserves, eDaiOut) >= add(daiReserves, daiIn),
+            "Pool: eDai reserves too low"
+        );
+        return daiIn;
     }
 
-    /// @dev Sell eDai and sell the obtained Dai back for eDai
+    /// @dev Sell Dai, reverting if the eDai reserves fall below the Dai reserves
     function _sellDai(uint128 daiReserves, uint128 eDaiReserves, uint128 daiIn, uint128 timeTillMaturity)
         internal pure returns (uint128)
     {
-        uint128 eDaiAmount = YieldMath.eDaiOutForDaiIn(daiReserves, eDaiReserves, daiIn, timeTillMaturity, k, g1);
-        require(sub(eDaiReserves, eDaiAmount) >= add(daiReserves, daiIn));
-        uint128 daiOut = YieldMath.daiOutForEDaiIn(add(daiReserves, daiIn), sub(eDaiReserves, eDaiAmount), eDaiAmount, timeTillMaturity, k, g2);
-        require(eDaiReserves >= sub(add(daiReserves, daiIn), daiOut));
-        return daiOut;
+        uint128 eDaiOut = YieldMath.eDaiOutForDaiIn(daiReserves, eDaiReserves, daiIn, timeTillMaturity, k, g1);
+        require(
+            sub(eDaiReserves, eDaiOut) >= add(daiReserves, daiIn),
+            "Pool: eDai reserves too low"
+        );
+        return eDaiOut;
     }
 
-    /// @dev Buy eDai and sell it back
+    /// @dev Buy Dai
     function _buyDai(uint128 daiReserves, uint128 eDaiReserves, uint128 daiOut, uint128 timeTillMaturity)
         internal pure returns (uint128)
     {
-        uint128 eDaiAmount = YieldMath.eDaiInForDaiOut(daiReserves, eDaiReserves, daiOut, timeTillMaturity, k, g2);
-        require(add(eDaiReserves, eDaiAmount) >= sub(daiReserves, daiOut));
-        uint128 daiIn = YieldMath.daiInForEDaiOut(sub(daiReserves, daiOut), add(eDaiReserves, eDaiAmount), eDaiAmount, timeTillMaturity, k, g1);
-        require(eDaiReserves >= add(sub(daiReserves, daiOut), daiIn));
-        return daiIn;
+        return YieldMath.eDaiInForDaiOut(daiReserves, eDaiReserves, daiOut, timeTillMaturity, k, g2);
     }
 }
