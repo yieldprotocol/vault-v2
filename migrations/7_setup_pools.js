@@ -3,12 +3,12 @@ const BigNumber = ethers.BigNumber
 
 const toWad = (value) => {
   let exponent = BigNumber.from(10).pow(BigNumber.from(8))
-  return BigNumber.from((value) * 10 ** 10).mul(exponent)
+  return BigNumber.from(Math.round((value) * 10 ** 10)).mul(exponent)
 }
 
-const toRay = (value) => {
-  let exponent = BigNumber.from(10).pow(BigNumber.from(17))
-  return BigNumber.from(Math.floor((value) * 10 ** 10)).mul(exponent)
+const fromWad = (value) => {
+  let exponent = BigNumber.from(10).pow(BigNumber.from(8))
+  return value.div(exponent).toNumber() / 10 ** 10
 }
 
 const divrupRay = (x, ray) => {
@@ -52,12 +52,23 @@ module.exports = async (deployer, network) => {
   const me = (await web3.eth.getAccounts())[0]
 
   const eDaiToSell = (maturity, rate, daiReserves) => {
-    const fromDate = Math.round((new Date()).getTime() / 1000)
-    const secsToMaturity = maturity - fromDate
-    const propOfYear = secsToMaturity/YEAR
-    const price = 1 / Math.pow(rate, propOfYear)
-    const priceRay = toRay(price)
-    return divrupRay(daiReserves, priceRay).sub(daiReserves)
+    const x = fromWad(daiReserves) // Easier to work in ether
+    const k = 1/(4 * 365 * 24 * 60 * 60) // 1 / seconds in four years
+    const timeTillMaturity = maturity - Math.round((new Date()).getTime() / 1000)
+    const t = k * timeTillMaturity
+    const top = 2 * Math.pow(x, 1 - t)
+    const bottom = 1 + Math.pow(rate, 1 - t)
+    const x_in = Math.pow(top / bottom, 1 - t) - x
+
+    console.log()
+    console.log(`x: ${x}`)
+    console.log(`k: ${k}`)
+    console.log(`timeTillMaturity: ${timeTillMaturity}`)
+    console.log(`t: ${t}`)
+    console.log(`top: ${top}`)
+    console.log(`bottom: ${bottom}`)
+    console.log(`x_in: ${x_in}`)
+    return toWad(x_in)
   };
 
   const pools = {}
@@ -123,10 +134,10 @@ module.exports = async (deployer, network) => {
     console.log(`   > Initialized ${name} with ${(await pool.getDaiReserves()).toString()} dai`)
 
     await controller.borrow(ETH_A, maturity, me, me, eDaiToSell)
-    console.log(`   > Borrowed ${(await controller.debtEDai(ETH_A, maturity, me)).toString()} ${await eDai.name()} EDai`)
+    console.log(`   > Borrowed ${(await controller.debtEDai(ETH_A, maturity, me)).toString()} ${await eDai.symbol()} EDai`)
     await eDai.approve(pool.address, MAX)
     await pool.sellEDai(me, me, eDaiToSell)
-    console.log(`   > Sold ${eDaiToSell.toString()} ${await eDai.name()} EDai`)
+    console.log(`   > Sold ${eDaiToSell.toString()} ${await eDai.symbol()} EDai`)
 
     // Consider joining the Dai to vat, and recovering the ETH
   }
