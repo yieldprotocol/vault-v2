@@ -6,9 +6,16 @@ const toWad = (value) => {
   return BigNumber.from((value) * 10 ** 10).mul(exponent)
 }
 
-const divRay = (x, ray) => {
+const toRay = (value) => {
+  let exponent = BigNumber.from(10).pow(BigNumber.from(17))
+  return BigNumber.from(Math.floor((value) * 10 ** 10)).mul(exponent)
+}
+
+const divrupRay = (x, ray) => {
   const RAY = BigNumber.from(10).pow(BigNumber.from(27))
-  return RAY.mul(x).div(ray)
+  const z = RAY.mul(x).div(ray)
+  if (z.mul(ray).div(RAY) < x) return z.add(BigNumber.from(1))
+  return z
 }
 
 const Migrations = artifacts.require('Migrations')
@@ -49,7 +56,8 @@ module.exports = async (deployer, network) => {
     const secsToMaturity = maturity - fromDate
     const propOfYear = secsToMaturity/YEAR
     const price = 1 / Math.pow(rate, propOfYear)
-    return daiReserves.div(BigNumber.from(Math.floor(price * 10**15))).div(10**15).sub(daiReserves)
+    const priceRay = toRay(price)
+    return divrupRay(daiReserves, priceRay).sub(daiReserves)
   };
 
   const pools = {}
@@ -72,18 +80,19 @@ module.exports = async (deployer, network) => {
       eDaiToSell: _eDaiToSell,
     }
   }
-  console.log(`TotalDai: ${ totalDai.toString() }`)
-  console.log(`TotalEDai: ${ totalEDai.toString() }`)
+  console.log()
+  console.log(`   > Total Dai required: ${ totalDai.toString() }`)
+  console.log(`   > Total EDai required: ${ totalEDai.toString() }`)
 
   const rate = BigNumber.from((await vat.ilks(ETH_A)).rate.toString()) // I could also use BN throughout
   const spot = BigNumber.from((await vat.ilks(ETH_A)).spot.toString())
-  const normalizedDai = divRay(totalDai, rate).add(BigNumber.from('1')) // Rounding up
-  const wethForDai = divRay(totalDai, spot).add(BigNumber.from('1')) // Rounding up
-  const wethForEDai = BigNumber.from(0) // divRay(totalEDai, spot)
+  const normalizedDai = divrupRay(totalDai, rate).add(BigNumber.from('1')) // Rounding up
+  const wethForDai = divrupRay(totalDai, spot).add(BigNumber.from('1')) // Rounding up
+  const wethForEDai = divrupRay(totalEDai, spot).add(BigNumber.from('1')) // Rounding up
 
   // Initialize pools
   await weth.deposit({ value: wethForDai.add(wethForEDai).toString() })
-  console.log(`Obtained ${(await weth.balanceOf(me)).toString()} weth`)
+  console.log(`   > Obtained ${(await weth.balanceOf(me)).toString()} weth`)
 
   // Get Dai
   await weth.approve(wethJoin.address, MAX)  
@@ -91,12 +100,12 @@ module.exports = async (deployer, network) => {
   await vat.frob(ETH_A, me, me, me, wethForDai, normalizedDai)
   await vat.hope(daiJoin.address)
   await daiJoin.exit(me, totalDai)
-  console.log(`Converted ${wethForDai.toString()} weth into ${(await dai.balanceOf(me)).toString()} dai`)
+  console.log(`   > Converted ${wethForDai.toString()} weth into ${(await dai.balanceOf(me)).toString()} dai`)
 
   // Post collateral for borrowing EDai
   await weth.approve(treasury.address, MAX)
   await controller.post(ETH_A, me, me, wethForEDai)
-  console.log(`Posted ${wethForEDai.toString()} weth into the Controller`)
+  console.log(`   > Posted ${wethForEDai.toString()} weth into the Controller`)
 
   // Init pools and sell EDai
   for (let name in pools) {
@@ -105,17 +114,19 @@ module.exports = async (deployer, network) => {
     const maturity = pools[name].maturity
     const eDaiToSell = pools[name].eDaiToSell
 
+    console.log()
+    console.log(`   ${name}`)
+    console.log('   -----------')
+
     await dai.approve(pool.address, MAX)
     await pool.init(daiReserves)
-    console.log(`Initialized ${name} with ${(await pool.getDaiReserves()).toString()} dai`)
+    console.log(`   > Initialized ${name} with ${(await pool.getDaiReserves()).toString()} dai`)
 
-    /*
     await controller.borrow(ETH_A, maturity, me, me, eDaiToSell)
-    console.log(`Borrowed ${(await controller.debtEDai(ETH_A, maturity, me)).toString()} ${await eDai.name()} EDai`)
+    console.log(`   > Borrowed ${(await controller.debtEDai(ETH_A, maturity, me)).toString()} ${await eDai.name()} EDai`)
     await eDai.approve(pool.address, MAX)
     await pool.sellEDai(me, me, eDaiToSell)
-    console.log(`Sold ${eDaiToSell.toString()} ${await eDai.name()} EDai`)
-    */
+    console.log(`   > Sold ${eDaiToSell.toString()} ${await eDai.name()} EDai`)
 
     // Consider joining the Dai to vat, and recovering the ETH
   }
