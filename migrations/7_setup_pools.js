@@ -31,7 +31,7 @@ const Treasury = artifacts.require('Treasury')
 const Controller = artifacts.require('Controller')
 const Pool = artifacts.require('Pool')
 
-const daiReserves = toWad(1000) // TODO: Tailor to each deployment.
+const daiReserves = toWad(1000) // Tailor to each deployment.
 const ETH_A = web3.utils.fromAscii("ETH-A")
 const MAX = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 

@@ -31,7 +31,7 @@ module.exports = async (deployer, network) => {
     new Intl.DateTimeFormat('en', { year: 'numeric' }).format(new Date(date)).slice(2) +
     new Intl.DateTimeFormat('en', { month: 'short' }).format(new Date(date))
 
-  let dates = ['2020-10-01', '2021-01-01', '2021-04-01', '2021-07-01']
+  let dates = ['2020-12-31', '2021-01-01', '2021-04-01', '2021-07-01']
   let maturities = dates.map(toTimestamp)
 
   if (network === 'mainnet' || network === 'mainnet-ganache') {
