@@ -1,3 +1,4 @@
+const { BN } = require('ethereumjs-util')
 const ethers = require('ethers')
 const BigNumber = ethers.BigNumber
 
@@ -30,9 +31,7 @@ const Treasury = artifacts.require('Treasury')
 const Controller = artifacts.require('Controller')
 const Pool = artifacts.require('Pool')
 
-const daiReserves = toWad(1000) // Increase to 10000 for Kovan
-const targetRate = 1.05
-const YEAR = 60*60*24*365
+const daiReserves = toWad(1000) // TODO: Tailor to each deployment.
 const ETH_A = web3.utils.fromAscii("ETH-A")
 const MAX = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
@@ -51,25 +50,6 @@ module.exports = async (deployer, network) => {
 
   const me = (await web3.eth.getAccounts())[0]
 
-  const eDaiToSell = (maturity, rate, daiReserves) => {
-    const x = fromWad(daiReserves) // Easier to work in ether
-    const k = 1/(4 * 365 * 24 * 60 * 60) // 1 / seconds in four years
-    const timeTillMaturity = maturity - Math.round((new Date()).getTime() / 1000)
-    const t = k * timeTillMaturity
-    const top = 2 * Math.pow(x, 1 - t)
-    const bottom = 1 + Math.pow(rate, 1 - t)
-    const x_in = Math.pow(top / bottom, 1 - t) - x
-
-    console.log()
-    console.log(`x: ${x}`)
-    console.log(`k: ${k}`)
-    console.log(`timeTillMaturity: ${timeTillMaturity}`)
-    console.log(`t: ${t}`)
-    console.log(`top: ${top}`)
-    console.log(`bottom: ${bottom}`)
-    console.log(`x_in: ${x_in}`)
-    return toWad(x_in)
-  };
 
   const pools = {}
   let totalEDai = BigNumber.from(0)
@@ -80,7 +60,8 @@ module.exports = async (deployer, network) => {
     const _pool = await Pool.at(await migrations.contracts(web3.utils.fromAscii(contractName)))
     const _eDai = await EDai.at(await _pool.eDai())
     const _maturity = await _eDai.maturity()
-    const _eDaiToSell = eDaiToSell(_maturity, targetRate, daiReserves)
+    // const _eDaiToSell = eDaiToSell(_maturity, targetRate, daiReserves)
+    const _eDaiToSell = daiReserves.div(BigNumber.from(8)) // eDaiToSell(_maturity, targetRate, daiReserves)
     totalEDai = totalEDai.add(_eDaiToSell)
     totalDai = totalDai.add(daiReserves)
 
