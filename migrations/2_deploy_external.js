@@ -52,13 +52,14 @@ module.exports = async (deployer, network, accounts) => {
   if (network !== 'mainnet' && network !== 'mainnet-ganache') {
     // Setting up Vat
     const MAX = '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'
-
+    const WAD = '000000000000000000'
     const WETH = web3.utils.fromAscii('ETH-A')
     const Line = web3.utils.fromAscii('Line')
     const spotName = web3.utils.fromAscii('spot')
     const linel = web3.utils.fromAscii('line')
 
     const spot = toRay(300)
+    const me = (await web3.eth.getAccounts())[0]
 
     // Setup vat
     await deployer.deploy(Vat)
@@ -68,7 +69,8 @@ module.exports = async (deployer, network, accounts) => {
     await vat.file(WETH, spotName, spot)
     await vat.file(WETH, linel, MAX)
     await vat.file(Line, MAX)
-
+    await vat.fold(WETH, me, "20000000" + WAD)
+    
     await deployer.deploy(Weth)
     wethAddress = (await Weth.deployed()).address
 
@@ -86,6 +88,7 @@ module.exports = async (deployer, network, accounts) => {
     await deployer.deploy(Pot, vatAddress)
     const pot = await Pot.deployed()
     potAddress = pot.address
+    await pot.setChi("1030000000" + WAD)
 
     // Setup end
     await deployer.deploy(End)
