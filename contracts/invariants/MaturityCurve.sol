@@ -45,7 +45,7 @@ contract MaturityCurve {
 
     /// @dev Ensures that if we execute the same sell eDai trade in two consecutive seconds the Dai obtained doesn't differ more than `step`
     function testSellEDai(uint128 daiReserves, uint128 eDaiReserves, uint128 timeTillMaturity)
-        public view returns (uint128, uint128)
+        public pure returns (uint128, uint128)
     {
         daiReserves = minDaiReserves + daiReserves % maxDaiReserves;
         eDaiReserves = minEDaiReserves + eDaiReserves % maxEDaiReserves;
@@ -59,7 +59,7 @@ contract MaturityCurve {
 
     /// @dev Ensures that if we execute the same buy eDai trade in two consecutive seconds the Dai paid doesn't differ more than `step`
     function testBuyEDai(uint128 daiReserves, uint128 eDaiReserves, uint128 timeTillMaturity)
-        public view returns (uint128, uint128)
+        public pure returns (uint128, uint128)
     {
         daiReserves = minDaiReserves + daiReserves % maxDaiReserves;
         eDaiReserves = minEDaiReserves + eDaiReserves % maxEDaiReserves;
@@ -73,7 +73,7 @@ contract MaturityCurve {
 
     /// @dev Ensures that if we execute the same sell Dai trade in two consecutive seconds the eDai obtained doesn't differ more than `step`
     function testSellDai(uint128 daiReserves, uint128 eDaiReserves, uint128 timeTillMaturity)
-        public view returns (uint128, uint128)
+        public pure returns (uint128, uint128)
     {
         daiReserves = minDaiReserves + daiReserves % maxDaiReserves;
         eDaiReserves = minEDaiReserves + eDaiReserves % maxEDaiReserves;
@@ -87,7 +87,7 @@ contract MaturityCurve {
 
     /// @dev Ensures that if we execute the same buy Dai trade in two consecutive seconds the eDai paid doesn't differ more than `step`
     function testBuyDai(uint128 daiReserves, uint128 eDaiReserves, uint128 timeTillMaturity)
-        public view returns (uint128, uint128)
+        public pure returns (uint128, uint128)
     {
         daiReserves = minDaiReserves + daiReserves % maxDaiReserves;
         eDaiReserves = minEDaiReserves + eDaiReserves % maxEDaiReserves;
