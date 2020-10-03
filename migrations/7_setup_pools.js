@@ -1,15 +1,9 @@
-const { BN } = require('ethereumjs-util')
 const ethers = require('ethers')
 const BigNumber = ethers.BigNumber
 
 const toWad = (value) => {
   let exponent = BigNumber.from(10).pow(BigNumber.from(8))
   return BigNumber.from(Math.round((value) * 10 ** 10)).mul(exponent)
-}
-
-const fromWad = (value) => {
-  let exponent = BigNumber.from(10).pow(BigNumber.from(8))
-  return value.div(exponent).toNumber() / 10 ** 10
 }
 
 const divrupRay = (x, ray) => {
