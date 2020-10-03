@@ -12,7 +12,7 @@ const Pot = artifacts.require('Pot')
 const End = artifacts.require('End')
 const Chai = artifacts.require('Chai')
 const Treasury = artifacts.require('Treasury')
-const EDai = artifacts.require('EDai')
+const FYDai = artifacts.require('FYDai')
 const Controller = artifacts.require('Controller')
 const Liquidations = artifacts.require('Liquidations')
 const Unwind = artifacts.require('Unwind')
@@ -132,13 +132,13 @@ export class YieldEnvironmentLite {
   maker: MakerEnvironment
   treasury: Contract
   controller: Contract
-  eDais: Array<Contract>
+  fyDais: Array<Contract>
 
-  constructor(maker: MakerEnvironment, treasury: Contract, controller: Contract, eDais: Array<Contract>) {
+  constructor(maker: MakerEnvironment, treasury: Contract, controller: Contract, fyDais: Array<Contract>) {
     this.maker = maker
     this.treasury = treasury
     this.controller = controller
-    this.eDais = eDais
+    this.fyDais = fyDais
   }
 
   public static async setupTreasury(maker: MakerEnvironment) {
@@ -153,27 +153,27 @@ export class YieldEnvironmentLite {
     )
   }
 
-  public static async setupController(treasury: Contract, eDais: Array<Contract>) {
-    const eDaiAddrs = eDais.map((c) => c.address)
-    const controller = await Controller.new(treasury.address, eDaiAddrs)
+  public static async setupController(treasury: Contract, fyDais: Array<Contract>) {
+    const fyDaiAddrs = fyDais.map((c) => c.address)
+    const controller = await Controller.new(treasury.address, fyDaiAddrs)
     const treasuryFunctions = ['pushDai', 'pullDai', 'pushChai', 'pullChai', 'pushWeth', 'pullWeth'].map((func) =>
       id(func + '(address,uint256)')
     )
     await treasury.batchOrchestrate(controller.address, treasuryFunctions)
 
-    for (const eDai of eDais) {
-      await eDai.batchOrchestrate(controller.address, [id('mint(address,uint256)'), id('burn(address,uint256)')])
+    for (const fyDai of fyDais) {
+      await fyDai.batchOrchestrate(controller.address, [id('mint(address,uint256)'), id('burn(address,uint256)')])
     }
 
     return controller
   }
 
-  public static async setupEDais(treasury: Contract, maturities: Array<number>): Promise<Array<Contract>> {
+  public static async setupFYDais(treasury: Contract, maturities: Array<number>): Promise<Array<Contract>> {
     return await Promise.all(
       maturities.map(async (maturity) => {
-        const eDai = await EDai.new(treasury.address, maturity, 'Name', 'Symbol')
-        await treasury.orchestrate(eDai.address, id('pullDai(address,uint256)'))
-        return eDai
+        const fyDai = await FYDai.new(treasury.address, maturity, 'Name', 'Symbol')
+        await treasury.orchestrate(fyDai.address, id('pullDai(address,uint256)'))
+        return fyDai
       })
     )
   }
@@ -181,32 +181,32 @@ export class YieldEnvironmentLite {
   public static async setup(maturities: Array<number>) {
     const maker = await MakerEnvironment.setup()
     const treasury = await this.setupTreasury(maker)
-    const eDais = await this.setupEDais(treasury, maturities)
-    const controller = await this.setupController(treasury, eDais)
-    return new YieldEnvironmentLite(maker, treasury, controller, eDais)
+    const fyDais = await this.setupFYDais(treasury, maturities)
+    const controller = await this.setupController(treasury, fyDais)
+    return new YieldEnvironmentLite(maker, treasury, controller, fyDais)
   }
 
-  public async newEDai(maturity: number, name: string, symbol: string) {
-    const eDai = await EDai.new(this.treasury.address, maturity, name, symbol)
-    await this.treasury.orchestrate(eDai.address, id('pullDai(address,uint256)'))
-    return eDai
+  public async newFYDai(maturity: number, name: string, symbol: string) {
+    const fyDai = await FYDai.new(this.treasury.address, maturity, name, symbol)
+    await this.treasury.orchestrate(fyDai.address, id('pullDai(address,uint256)'))
+    return fyDai
   }
 
-  // Convert eth to weth and post it to eDai
+  // Convert eth to weth and post it to fyDai
   public async postWeth(user: string, _wethTokens: BigNumberish) {
     await this.maker.weth.deposit({ from: user, value: _wethTokens.toString() })
     await this.maker.weth.approve(this.treasury.address, _wethTokens, { from: user })
     await this.controller.post(WETH, user, user, _wethTokens, { from: user })
   }
 
-  // Convert eth to chai and post it to eDai
+  // Convert eth to chai and post it to fyDai
   public async postChai(user: string, _chaiTokens: BigNumberish, _chi: BigNumberish, _rate: BigNumberish) {
     await this.maker.getChai(user, _chaiTokens, _chi, _rate)
     await this.maker.chai.approve(this.treasury.address, _chaiTokens, { from: user })
     await this.controller.post(CHAI, user, user, _chaiTokens, { from: user })
   }
 
-  // Retrieve the available eDai borrowing power - only works before rate increases
+  // Retrieve the available fyDai borrowing power - only works before rate increases
   public async unlockedOf(collateral: string, user: string): Promise<BigNumberish> {
     const debt = await this.controller.totalDebtDai(collateral, user)
     return (await this.controller.powerOf(collateral, user)).sub(debt)
@@ -221,17 +221,17 @@ export class YieldEnvironment extends YieldEnvironmentLite {
     maker: MakerEnvironment,
     treasury: Contract,
     controller: Contract,
-    eDais: Contract,
+    fyDais: Contract,
     liquidations: Contract,
     unwind: Contract
   ) {
-    super(maker, treasury, controller, eDais)
+    super(maker, treasury, controller, fyDais)
     this.liquidations = liquidations
     this.unwind = unwind
   }
 
   public static async setup(maturities: Array<number>) {
-    const { maker, treasury, controller, eDais } = await YieldEnvironmentLite.setup(maturities)
+    const { maker, treasury, controller, fyDais } = await YieldEnvironmentLite.setup(maturities)
 
     const liquidations = await Liquidations.new(controller.address)
     await controller.orchestrate(liquidations.address, id('erase(bytes32,address)'))
@@ -245,11 +245,11 @@ export class YieldEnvironment extends YieldEnvironmentLite {
     await controller.orchestrate(unwind.address, id('erase(bytes32,address)'))
     await liquidations.orchestrate(unwind.address, id('erase(address)'))
 
-    for (const eDai of eDais) {
-      await eDai.orchestrate(unwind.address, id('burn(address,uint256)'))
+    for (const fyDai of fyDais) {
+      await fyDai.orchestrate(unwind.address, id('burn(address,uint256)'))
     }
 
-    return new YieldEnvironment(maker, treasury, controller, eDais, liquidations, unwind)
+    return new YieldEnvironment(maker, treasury, controller, fyDais, liquidations, unwind)
   }
 
   public async shutdown(owner: string, user1: string, user2: string) {

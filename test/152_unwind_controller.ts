@@ -31,8 +31,8 @@ contract('Unwind - Controller', async (accounts) => {
 
   let controller: Contract
   let treasury: Contract
-  let eDai1: Contract
-  let eDai2: Contract
+  let fyDai1: Contract
+  let fyDai2: Contract
   let weth: Contract
   let unwind: Contract
   let end: Contract
@@ -42,7 +42,7 @@ contract('Unwind - Controller', async (accounts) => {
 
   const fix = divRay(toRay(1.0), mulRay(spot, toRay(1.1)))
   const fixedWeth = mulRay(daiTokens1, fix)
-  const eDaiTokens = daiTokens1
+  const fyDaiTokens = daiTokens1
 
   beforeEach(async () => {
     snapshot = await helper.takeSnapshot()
@@ -56,8 +56,8 @@ contract('Unwind - Controller', async (accounts) => {
     controller = env.controller
     treasury = env.treasury
     unwind = env.unwind
-    eDai1 = env.eDais[0]
-    eDai2 = env.eDais[1]
+    fyDai1 = env.fyDais[0]
+    fyDai2 = env.fyDais[1]
 
     weth = env.maker.weth
     end = env.maker.end
@@ -69,7 +69,7 @@ contract('Unwind - Controller', async (accounts) => {
     await helper.revertToSnapshot(snapshotId)
   })
 
-  describe('with posted collateral and borrowed eDai', () => {
+  describe('with posted collateral and borrowed fyDai', () => {
     beforeEach(async () => {
       // Weth setup
       await env.postWeth(user1, wethTokens1)
@@ -93,12 +93,12 @@ contract('Unwind - Controller', async (accounts) => {
       assert.equal(await weth.balanceOf(user1), 0, 'User1 should have no weth')
       assert.equal(await weth.balanceOf(user2), 0, 'User2 should have no weth')
       assert.equal(
-        await controller.debtEDai(WETH, maturity1, user2),
-        eDaiTokens.toString(),
+        await controller.debtFYDai(WETH, maturity1, user2),
+        fyDaiTokens.toString(),
         'User2 should have ' +
-          eDaiTokens.toString() +
+          fyDaiTokens.toString() +
           ' maturity1 weth debt, instead has ' +
-          (await controller.debtEDai(WETH, maturity1, user2)).toString()
+          (await controller.debtFYDai(WETH, maturity1, user2)).toString()
       )
     })
 
@@ -121,7 +121,7 @@ contract('Unwind - Controller', async (accounts) => {
           'Controller: Not available during unwind'
         )
         await expectRevert(
-          controller.borrow(WETH, maturity1, owner, owner, eDaiTokens, { from: owner }),
+          controller.borrow(WETH, maturity1, owner, owner, fyDaiTokens, { from: owner }),
           'Controller: Not available during unwind'
         )
         await expectRevert(
@@ -129,19 +129,19 @@ contract('Unwind - Controller', async (accounts) => {
           'Controller: Not available during unwind'
         )
         await expectRevert(
-          controller.repayEDai(WETH, maturity1, owner, owner, eDaiTokens, { from: owner }),
+          controller.repayFYDai(WETH, maturity1, owner, owner, fyDaiTokens, { from: owner }),
           'Controller: Not available during unwind'
         )
       })
 
-      it('user can redeem EDai', async () => {
+      it('user can redeem FYDai', async () => {
         assert.equal(
-          await eDai1.balanceOf(user2),
-          bnify(eDaiTokens).mul(2).toString(),
+          await fyDai1.balanceOf(user2),
+          bnify(fyDaiTokens).mul(2).toString(),
           'User2 should have ' +
-            bnify(eDaiTokens).mul(2) +
-            ' eDai, instead has ' +
-            (await eDai1.balanceOf(user2)).toString()
+            bnify(fyDaiTokens).mul(2) +
+            ' fyDai, instead has ' +
+            (await fyDai1.balanceOf(user2)).toString()
         )
         await unwind.redeem(maturity1, user2, { from: user2 })
 
@@ -185,14 +185,14 @@ contract('Unwind - Controller', async (accounts) => {
       it('allows user to settle weth debt', async () => {
         await unwind.settle(WETH, user2, { from: user2 })
 
-        assert.equal(await controller.debtEDai(WETH, maturity1, user2), 0, 'User2 should have no maturity1 weth debt')
+        assert.equal(await controller.debtFYDai(WETH, maturity1, user2), 0, 'User2 should have no maturity1 weth debt')
         // In the tests the settling nets zero surplus, which we tested above
       })
 
       it('allows user to settle chai debt', async () => {
         await unwind.settle(CHAI, user2, { from: user2 })
 
-        assert.equal(await controller.debtEDai(CHAI, maturity1, user2), 0, 'User2 should have no maturity1 chai debt')
+        assert.equal(await controller.debtFYDai(CHAI, maturity1, user2), 0, 'User2 should have no maturity1 chai debt')
         // In the tests the settling nets zero surplus, which we tested above
       })
 

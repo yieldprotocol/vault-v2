@@ -3,7 +3,7 @@ const Treasury = artifacts.require('Treasury')
 const Controller = artifacts.require('Controller')
 const Liquidations = artifacts.require('Liquidations')
 const Unwind = artifacts.require('Unwind')
-const EDai = artifacts.require('EDai')
+const FYDai = artifacts.require('FYDai')
 
 module.exports = async (deployer, network) => {
   const migrations = await Migrations.deployed()
@@ -23,9 +23,9 @@ module.exports = async (deployer, network) => {
   
   for (let i = 0; i < (await migrations.length()); i++) {
     const contractName = web3.utils.toAscii(await migrations.names(i))
-    if (contractName.includes('eDai') && !contractName.includes('LP')) {
-      const eDai = await EDai.at(await migrations.contracts(web3.utils.fromAscii(contractName)))
-      await eDai.renounceOwnership()
+    if (contractName.includes('fyDai') && !contractName.includes('LP')) {
+      const fyDai = await FYDai.at(await migrations.contracts(web3.utils.fromAscii(contractName)))
+      await fyDai.renounceOwnership()
     }
   }
 }

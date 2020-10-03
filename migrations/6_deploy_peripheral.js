@@ -11,7 +11,7 @@ module.exports = async (deployer, network) => {
   const poolAddresses = []
   for (let i = 0; i < (await migrations.length()); i++) {
     const contractName = web3.utils.toAscii(await migrations.names(i))
-    if (contractName.includes('eDaiLP'))
+    if (contractName.includes('fyDaiLP'))
       poolAddresses.push(await migrations.contracts(web3.utils.fromAscii(contractName)))
   }
 

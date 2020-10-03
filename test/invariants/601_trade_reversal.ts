@@ -23,136 +23,136 @@ contract('YieldMath - Trade Reversal Invariant', async (accounts) => {
     yieldMath = await YieldMath.new()
   })
 
-  it('Sells eDai and reverses the trade', async () => {
+  it('Sells fyDai and reverses the trade', async () => {
     // maxDaiReserves = 10**27; // $1B
-    // maxEDaiReserves = 10**27; // $1B
+    // maxFYDaiReserves = 10**27; // $1B
     // maxTrade = 10**26; // $100M
     // maxTimeTillMaturity = 31556952;
 
     // const minDaiReserves = '1000000000000000000000' // 10**21; // $1000
-    // const minEDaiReserves = '1000000000000000000000' // 10**21; // $1000
+    // const minFYDaiReserves = '1000000000000000000000' // 10**21; // $1000
     // const minTrade = '1000000000000000000' // 10**18; // $1
     // const minTimeTillMaturity = 1;
 
     // const daiReserves = minDaiReserves
-    // const eDaiReserves = minEDaiReserves
-    // const eDaiIn = minTrade
+    // const fyDaiReserves = minFYDaiReserves
+    // const fyDaiIn = minTrade
     // const timeTillMaturity = minTimeTillMaturity
 
     let daiReserves = '1000000000000000000000'
-    let eDaiReserves = '1000000000000000000001'
-    let eDaiIn = '1000000000000000000'
+    let fyDaiReserves = '1000000000000000000001'
+    let fyDaiIn = '1000000000000000000'
     let timeTillMaturity = '0'
 
-    console.log('eDai Reserves:       ' + eDaiReserves.toString())
+    console.log('fyDai Reserves:       ' + fyDaiReserves.toString())
     console.log('Dai Reserves:        ' + daiReserves.toString())
     console.log('Time until maturity: ' + timeTillMaturity.toString())
-    console.log('eDai in:             ' + eDaiIn.toString())
+    console.log('fyDai in:             ' + fyDaiIn.toString())
     console.log(
-      'eDai out:            ' +
-        (await test.sellEDaiAndReverse(daiReserves, eDaiReserves, eDaiIn, timeTillMaturity)).toString()
+      'fyDai out:            ' +
+        (await test.sellFYDaiAndReverse(daiReserves, fyDaiReserves, fyDaiIn, timeTillMaturity)).toString()
     )
   })
 
-  it('Buys eDai and reverses the trade', async () => {
+  it('Buys fyDai and reverses the trade', async () => {
     // maxDaiReserves = 10**27; // $1B
-    // maxEDaiReserves = 10**27; // $1B
+    // maxFYDaiReserves = 10**27; // $1B
     // maxTrade = 10**26; // $100M
     // maxTimeTillMaturity = 31556952;
 
     // const minDaiReserves = '1000000000000000000000' // 10**21; // $1000
-    // const minEDaiReserves = '1000000000000000000000' // 10**21; // $1000
+    // const minFYDaiReserves = '1000000000000000000000' // 10**21; // $1000
     // const minTrade = '1000000000000000000' // 10**18; // $1
     // const minTimeTillMaturity = 1;
 
     // const daiReserves = minDaiReserves
-    // const eDaiReserves = minEDaiReserves
-    // const eDaiIn = minTrade
+    // const fyDaiReserves = minFYDaiReserves
+    // const fyDaiIn = minTrade
     // const timeTillMaturity = minTimeTillMaturity
 
     const daiReserves = '349061773210894792196710'
-    const eDaiReserves = '1001649248511020033788'
-    const eDaiOut = '1000000000000000001'
+    const fyDaiReserves = '1001649248511020033788'
+    const fyDaiOut = '1000000000000000001'
     const timeTillMaturity = '49034'
 
-    console.log('eDai Reserves:       ' + eDaiReserves.toString())
+    console.log('fyDai Reserves:       ' + fyDaiReserves.toString())
     console.log('Dai Reserves:        ' + daiReserves.toString())
     console.log('Time until maturity: ' + timeTillMaturity.toString())
-    console.log('eDai out:             ' + eDaiOut.toString())
+    console.log('fyDai out:             ' + fyDaiOut.toString())
     console.log(
-      'eDai in:            ' +
-        (await test.buyEDaiAndReverse(daiReserves, eDaiReserves, eDaiOut, timeTillMaturity)).toString()
+      'fyDai in:            ' +
+        (await test.buyFYDaiAndReverse(daiReserves, fyDaiReserves, fyDaiOut, timeTillMaturity)).toString()
     )
   })
 
   it('Sells Dai and reverses the trade', async () => {
     // maxDaiReserves = 10**27; // $1B
-    // maxEDaiReserves = 10**27; // $1B
+    // maxFYDaiReserves = 10**27; // $1B
     // maxTrade = 10**26; // $100M
     // maxTimeTillMaturity = 31556952;
 
     // const minDaiReserves = '1000000000000000000000' // 10**21; // $1000
-    // const minEDaiReserves = '1000000000000000000000' // 10**21; // $1000
+    // const minFYDaiReserves = '1000000000000000000000' // 10**21; // $1000
     // const minTrade = '1000000000000000000' // 10**18; // $1
     // const minTimeTillMaturity = 1;
 
     // const daiReserves = minDaiReserves
-    // const eDaiReserves = minEDaiReserves
-    // const eDaiIn = minTrade
+    // const fyDaiReserves = minFYDaiReserves
+    // const fyDaiIn = minTrade
     // const timeTillMaturity = minTimeTillMaturity
 
     let daiReserves = '1000000000000000000000'
-    let eDaiReserves = '1000000000000000000001'
+    let fyDaiReserves = '1000000000000000000001'
     let daiIn = '1000000000000000000'
     let timeTillMaturity = '0'
 
-    console.log('eDai Reserves:       ' + eDaiReserves.toString())
+    console.log('fyDai Reserves:       ' + fyDaiReserves.toString())
     console.log('Dai Reserves:        ' + daiReserves.toString())
     console.log('Time until maturity: ' + timeTillMaturity.toString())
     console.log('Dai in:              ' + daiIn.toString())
     console.log(
       'Dai out:             ' +
-        (await test.sellDaiAndReverse(daiReserves, eDaiReserves, daiIn, timeTillMaturity)).toString()
+        (await test.sellDaiAndReverse(daiReserves, fyDaiReserves, daiIn, timeTillMaturity)).toString()
     )
 
     daiReserves = '1133485'
-    eDaiReserves = '83'
+    fyDaiReserves = '83'
     daiIn = '1001108599807'
     timeTillMaturity = '770'
     console.log(
       'Pass:                ' +
-        (await test.testSellDaiAndReverse(daiReserves, eDaiReserves, daiIn, timeTillMaturity)).toString()
+        (await test.testSellDaiAndReverse(daiReserves, fyDaiReserves, daiIn, timeTillMaturity)).toString()
     )
   })
 
   it('Buys Dai and reverses the trade', async () => {
     // maxDaiReserves = 10**27; // $1B
-    // maxEDaiReserves = 10**27; // $1B
+    // maxFYDaiReserves = 10**27; // $1B
     // maxTrade = 10**26; // $100M
     // maxTimeTillMaturity = 31556952;
 
     // const minDaiReserves = '1000000000000000000000' // 10**21; // $1000
-    // const minEDaiReserves = '1000000000000000000000' // 10**21; // $1000
+    // const minFYDaiReserves = '1000000000000000000000' // 10**21; // $1000
     // const minTrade = '1000000000000000000' // 10**18; // $1
     // const minTimeTillMaturity = 1;
 
     // const daiReserves = minDaiReserves
-    // const eDaiReserves = minEDaiReserves
-    // const eDaiIn = minTrade
+    // const fyDaiReserves = minFYDaiReserves
+    // const fyDaiIn = minTrade
     // const timeTillMaturity = minTimeTillMaturity
 
     const daiReserves = '786100583545859324586665'
-    const eDaiReserves = '21446358147545110233910802'
+    const fyDaiReserves = '21446358147545110233910802'
     const daiOut = '1000000001781921161'
     const timeTillMaturity = '94105225'
 
-    console.log('eDai Reserves:       ' + eDaiReserves.toString())
+    console.log('fyDai Reserves:       ' + fyDaiReserves.toString())
     console.log('Dai Reserves:        ' + daiReserves.toString())
     console.log('Time until maturity: ' + timeTillMaturity.toString())
     console.log('Dai out:             ' + daiOut.toString())
     console.log(
       'Dai in:            ' +
-        (await test.buyDaiAndReverse(daiReserves, eDaiReserves, daiOut, timeTillMaturity)).toString()
+        (await test.buyDaiAndReverse(daiReserves, fyDaiReserves, daiOut, timeTillMaturity)).toString()
     )
   })
 })

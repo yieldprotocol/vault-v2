@@ -9,8 +9,8 @@ const DaiJoin = artifacts.require('DaiJoin');
 const Weth = artifacts.require("WETH9");
 const Dai = artifacts.require("Dai");
 
-// EDai
-const EDai = artifacts.require('EDai');
+// FYDai
+const FYDai = artifacts.require('FYDai');
 
 // Peripheral
 const Pool = artifacts.require('Pool');
@@ -74,29 +74,29 @@ module.exports = async (callback) => {
         console.log('Passed Daijoin exit');
     }
 
-    let eDaiAddr = await migrations.contracts(web3.utils.fromAscii(`eDai0`))
-    let eDai0 = await EDai.at(eDaiAddr);
-    let eDai0Name = await eDai0.name();
-    let poolAddr = await migrations.contracts(web3.utils.fromAscii(`${eDai0Name}-Pool`));
+    let fyDaiAddr = await migrations.contracts(web3.utils.fromAscii(`fyDai0`))
+    let fyDai0 = await FYDai.at(fyDaiAddr);
+    let fyDai0Name = await fyDai0.name();
+    let poolAddr = await migrations.contracts(web3.utils.fromAscii(`${fyDai0Name}-Pool`));
     let pool = await Pool.at(poolAddr);
 
     try {        
-        // Allow owner to mint eDai the sneaky way, without recording a debt in dealer
-        await eDai0.orchestrate(owner, id('mint(address,uint256)'), { from: owner });
+        // Allow owner to mint fyDai the sneaky way, without recording a debt in dealer
+        await fyDai0.orchestrate(owner, id('mint(address,uint256)'), { from: owner });
 
         const daiReserves = daiTokens1;
         await getDai(user1, daiReserves);       console.log('0')
         await dai.approve(pool.address, daiReserves, { from: user1 });       console.log('1')
         await pool.init(daiReserves, { from: user1 });     console.log('2')
 
-        const additionalEDaiReserves = toWad(34.4);
-        await eDai0.mint(user1, additionalEDaiReserves, { from: owner });
-        await eDai0.approve(pool.address, additionalEDaiReserves, { from: user1 });
-        await pool.sellEDai(user1, user1, additionalEDaiReserves, { from: user1 });
+        const additionalFYDaiReserves = toWad(34.4);
+        await fyDai0.mint(user1, additionalFYDaiReserves, { from: owner });
+        await fyDai0.approve(pool.address, additionalFYDaiReserves, { from: user1 });
+        await pool.sellFYDai(user1, user1, additionalFYDaiReserves, { from: user1 });
 
         console.log("        initial liquidity...");
         console.log("        daiReserves: %d", (await pool.getDaiReserves()).toString());
-        console.log("        eDaiReserves: %d", (await pool.getEDaiReserves()).toString());
+        console.log("        fyDaiReserves: %d", (await pool.getFYDaiReserves()).toString());
         console.log();
         console.log('pool initiated')
         callback()

@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/math/Math.sol";
 import "./interfaces/IVat.sol";
 import "./interfaces/IPot.sol";
 import "./interfaces/ITreasury.sol";
-import "./interfaces/IEDai.sol";
+import "./interfaces/IFYDai.sol";
 import "./interfaces/IFlashMinter.sol";
 import "./helpers/Delegable.sol";
 import "./helpers/DecimalMath.sol";
@@ -15,17 +15,17 @@ import "./helpers/ERC20Permit.sol";
 
 
 /**
- * @dev eDai is an eToken targeting Chai.
- * Each eDai contract has a specific maturity time. One eDai is worth one Chai at or after maturity time.
- * At maturity, the eDai can be triggered to mature, which records the current rate and chi from MakerDAO and enables redemption.
- * Redeeming an eDai means burning it, and the contract will retrieve Dai from Treasury equal to one Dai times the growth in chi since maturity.
- * eDai also tracks the MakerDAO stability fee accumulator at the time of maturity, and the growth since. This is not used internally.
- * Minting and burning of eDai is restricted to orchestrated contracts. Redeeming and flash-minting is allowed to anyone.
+ * @dev fyDai is an eToken targeting Chai.
+ * Each fyDai contract has a specific maturity time. One fyDai is worth one Chai at or after maturity time.
+ * At maturity, the fyDai can be triggered to mature, which records the current rate and chi from MakerDAO and enables redemption.
+ * Redeeming an fyDai means burning it, and the contract will retrieve Dai from Treasury equal to one Dai times the growth in chi since maturity.
+ * fyDai also tracks the MakerDAO stability fee accumulator at the time of maturity, and the growth since. This is not used internally.
+ * Minting and burning of fyDai is restricted to orchestrated contracts. Redeeming and flash-minting is allowed to anyone.
  */
 
-contract EDai is IEDai, Orchestrated(), Delegable(), DecimalMath, ERC20Permit  {
+contract FYDai is IFYDai, Orchestrated(), Delegable(), DecimalMath, ERC20Permit  {
 
-    event Redeemed(address indexed from, address indexed to, uint256 eDaiIn, uint256 daiOut);
+    event Redeemed(address indexed from, address indexed to, uint256 fyDaiIn, uint256 daiOut);
     event Matured(uint256 rate, uint256 chi);
 
     bytes32 public constant WETH = "ETH-A";
@@ -43,16 +43,16 @@ contract EDai is IEDai, Orchestrated(), Delegable(), DecimalMath, ERC20Permit  {
 
     uint public override unlocked = 1;
     modifier lock() {
-        require(unlocked == 1, 'EDai: Locked');
+        require(unlocked == 1, 'FYDai: Locked');
         unlocked = 0;
         _;
         unlocked = 1;
     }
     
     /// @dev The constructor:
-    /// Sets the name and symbol for the eDai token.
+    /// Sets the name and symbol for the fyDai token.
     /// Connects to Vat, Jug, Pot and Treasury.
-    /// Sets the maturity date for the eDai, in unix time.
+    /// Sets the maturity date for the fyDai, in unix time.
     /// Initializes chi and rate at maturity time as 1.0 with 27 decimals.
     constructor(
         address treasury_,
@@ -61,7 +61,7 @@ contract EDai is IEDai, Orchestrated(), Delegable(), DecimalMath, ERC20Permit  {
         string memory symbol
     ) public ERC20Permit(name, symbol) {
         // solium-disable-next-line security/no-block-members
-        require(maturity_ > now && maturity_ < now + MAX_TIME_TO_MATURITY, "EDai: Invalid maturity");
+        require(maturity_ > now && maturity_ < now + MAX_TIME_TO_MATURITY, "FYDai: Invalid maturity");
         treasury = ITreasury(treasury_);
         vat = treasury.vat();
         pot = treasury.pot();
@@ -95,16 +95,16 @@ contract EDai is IEDai, Orchestrated(), Delegable(), DecimalMath, ERC20Permit  {
         return Math.max(UNIT, divdrup(rate, rate0)); // Rounding in favour of the protocol
     }
 
-    /// @dev Mature eDai and capture chi and rate
+    /// @dev Mature fyDai and capture chi and rate
     function mature() public override {
         require(
             // solium-disable-next-line security/no-block-members
             now > maturity,
-            "EDai: Too early to mature"
+            "FYDai: Too early to mature"
         );
         require(
             isMature != true,
-            "EDai: Already matured"
+            "FYDai: Already matured"
         );
         (, rate0,,,) = vat.ilks(WETH); // Retrieve the MakerDAO Vat
         rate0 = Math.max(rate0, UNIT); // Floor it at 1.0
@@ -115,60 +115,60 @@ contract EDai is IEDai, Orchestrated(), Delegable(), DecimalMath, ERC20Permit  {
 
     /// @dev Burn eTokens and return their dai equivalent value, pulled from the Treasury
     /// During unwind, `treasury.pullDai()` will revert which is right.
-    /// `from` needs to tell eDai to approve the burning of the eDai tokens.
-    /// `from` can delegate to other addresses to redeem his eDai and put the Dai proceeds in the `to` wallet.
+    /// `from` needs to tell fyDai to approve the burning of the fyDai tokens.
+    /// `from` can delegate to other addresses to redeem his fyDai and put the Dai proceeds in the `to` wallet.
     /// The collateral needed changes according to series maturity and MakerDAO rate and chi, depending on collateral type.
-    /// @param from Wallet to burn eDai from.
+    /// @param from Wallet to burn fyDai from.
     /// @param to Wallet to put the Dai in.
-    /// @param eDaiAmount Amount of eDai to burn.
-    // from --- eDai ---> us
+    /// @param fyDaiAmount Amount of fyDai to burn.
+    // from --- fyDai ---> us
     // us   --- Dai  ---> to
-    function redeem(address from, address to, uint256 eDaiAmount)
-        public onlyHolderOrDelegate(from, "EDai: Only Holder Or Delegate") lock override 
+    function redeem(address from, address to, uint256 fyDaiAmount)
+        public onlyHolderOrDelegate(from, "FYDai: Only Holder Or Delegate") lock override 
         returns (uint256)
     {
         require(
             isMature == true,
-            "EDai: eDai is not mature"
+            "FYDai: fyDai is not mature"
         );
-        _burn(from, eDaiAmount);                              // Burn eDai from `from`
-        uint256 daiAmount = muld(eDaiAmount, chiGrowth());    // User gets interest for holding after maturity
+        _burn(from, fyDaiAmount);                              // Burn fyDai from `from`
+        uint256 daiAmount = muld(fyDaiAmount, chiGrowth());    // User gets interest for holding after maturity
         treasury.pullDai(to, daiAmount);                     // Give dai to `to`, from Treasury
-        emit Redeemed(from, to, eDaiAmount, daiAmount);
+        emit Redeemed(from, to, fyDaiAmount, daiAmount);
         return daiAmount;
     }
 
-    /// @dev Flash-mint eDai. Calls back on `IFlashMinter.executeOnFlashMint()`
-    /// @param to Wallet to mint the eDai in.
-    /// @param eDaiAmount Amount of eDai to mint.
+    /// @dev Flash-mint fyDai. Calls back on `IFlashMinter.executeOnFlashMint()`
+    /// @param to Wallet to mint the fyDai in.
+    /// @param fyDaiAmount Amount of fyDai to mint.
     /// @param data User-defined data to pass on to `executeOnFlashMint()`
-    function flashMint(address to, uint256 eDaiAmount, bytes calldata data) external lock override {
-        _mint(to, eDaiAmount);
-        IFlashMinter(msg.sender).executeOnFlashMint(to, eDaiAmount, data);
-        _burn(to, eDaiAmount);
+    function flashMint(address to, uint256 fyDaiAmount, bytes calldata data) external lock override {
+        _mint(to, fyDaiAmount);
+        IFlashMinter(msg.sender).executeOnFlashMint(to, fyDaiAmount, data);
+        _burn(to, fyDaiAmount);
     }
 
-    /// @dev Mint eDai. Only callable by Controller contracts.
+    /// @dev Mint fyDai. Only callable by Controller contracts.
     /// This function can only be called by other Yield contracts, not users directly.
-    /// @param to Wallet to mint the eDai in.
-    /// @param eDaiAmount Amount of eDai to mint.
-    function mint(address to, uint256 eDaiAmount) public override onlyOrchestrated("EDai: Not Authorized") {
-        _mint(to, eDaiAmount);
+    /// @param to Wallet to mint the fyDai in.
+    /// @param fyDaiAmount Amount of fyDai to mint.
+    function mint(address to, uint256 fyDaiAmount) public override onlyOrchestrated("FYDai: Not Authorized") {
+        _mint(to, fyDaiAmount);
     }
 
-    /// @dev Burn eDai. Only callable by Controller contracts.
+    /// @dev Burn fyDai. Only callable by Controller contracts.
     /// This function can only be called by other Yield contracts, not users directly.
-    /// @param from Wallet to burn the eDai from.
-    /// @param eDaiAmount Amount of eDai to burn.
-    function burn(address from, uint256 eDaiAmount) public override onlyOrchestrated("EDai: Not Authorized") {
-        _burn(from, eDaiAmount);
+    /// @param from Wallet to burn the fyDai from.
+    /// @param fyDaiAmount Amount of fyDai to burn.
+    function burn(address from, uint256 fyDaiAmount) public override onlyOrchestrated("FYDai: Not Authorized") {
+        _burn(from, fyDaiAmount);
     }
 
-    /// @dev Creates `eDaiAmount` tokens and assigns them to `to`, increasing the total supply, up to a limit of 2**112.
-    /// @param to Wallet to mint the eDai in.
-    /// @param eDaiAmount Amount of eDai to mint.
-    function _mint(address to, uint256 eDaiAmount) internal override {
-        super._mint(to, eDaiAmount);
-        require(totalSupply() <= 5192296858534827628530496329220096, "EDai: Total supply limit exceeded"); // 2**112
+    /// @dev Creates `fyDaiAmount` tokens and assigns them to `to`, increasing the total supply, up to a limit of 2**112.
+    /// @param to Wallet to mint the fyDai in.
+    /// @param fyDaiAmount Amount of fyDai to mint.
+    function _mint(address to, uint256 fyDaiAmount) internal override {
+        super._mint(to, fyDaiAmount);
+        require(totalSupply() <= 5192296858534827628530496329220096, "FYDai: Total supply limit exceeded"); // 2**112
     }
 }
