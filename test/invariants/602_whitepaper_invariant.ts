@@ -53,7 +53,8 @@ contract('YieldMath - Reserves Value Invariant', async (accounts) => {
     console.log('Dai Reserves:        ' + daiReserves.toString())
     console.log('Time until maturity: ' + timeTillMaturity.toString())
     console.log(
-      'Reserves value:      ' + (await test.whitepaperInvariant(daiReserves, fyDaiReserves, timeTillMaturity)).toString()
+      'Reserves value:      ' +
+        (await test.whitepaperInvariant(daiReserves, fyDaiReserves, timeTillMaturity)).toString()
     )
     const daiOut = await yieldMath.daiOutForFYDaiIn64(daiReserves, fyDaiReserves, fyDaiIn, timeTillMaturity, k, g2)
     console.log('fyDai in:             ' + fyDaiIn.toString())
@@ -63,7 +64,9 @@ contract('YieldMath - Reserves Value Invariant', async (accounts) => {
     // console.log('Time until maturity: ' + timeTillMaturity.toString())
     console.log(
       'Reserves value:      ' +
-        (await test.whitepaperInvariant(daiReserves.sub(daiOut), fyDaiReserves.add(fyDaiIn), timeTillMaturity)).toString()
+        (
+          await test.whitepaperInvariant(daiReserves.sub(daiOut), fyDaiReserves.add(fyDaiIn), timeTillMaturity)
+        ).toString()
     )
     // console.log((await test.testLiquidityInvariant('66329041300990984000', '34400000000000000000', '10000000000000000000', '31556951')).toString());
   })
@@ -95,7 +98,8 @@ contract('YieldMath - Reserves Value Invariant', async (accounts) => {
     console.log('Dai out:             ' + daiOut.toString())
 
     console.log(
-      'Reserves value:      ' + (await test.whitepaperInvariant(daiReserves, fyDaiReserves, timeTillMaturity)).toString()
+      'Reserves value:      ' +
+        (await test.whitepaperInvariant(daiReserves, fyDaiReserves, timeTillMaturity)).toString()
     )
     const fyDaiAmount = await yieldMath.fyDaiInForDaiOut64(daiReserves, fyDaiReserves, daiOut, timeTillMaturity, k, g2)
     console.log('fyDai intermediate:   ' + fyDaiAmount.toString())

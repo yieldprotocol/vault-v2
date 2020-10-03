@@ -177,7 +177,10 @@ contract('YieldProxy - LiquidityProxy', async (accounts) => {
 
       await dai.mint(user2, oneToken, { from: owner })
       await dai.approve(proxy.address, oneToken, { from: user2 })
-      await expectRevert(proxy.addLiquidity(pool.address, oneToken, 1, { from: user2 }), 'YieldProxy: maxFYDai exceeded')
+      await expectRevert(
+        proxy.addLiquidity(pool.address, oneToken, 1, { from: user2 }),
+        'YieldProxy: maxFYDai exceeded'
+      )
     })
 
     describe('with proxied liquidity', () => {
