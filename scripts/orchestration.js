@@ -24,14 +24,14 @@ const CONTRACTS = [
   'Controller',
   'Unwind',
   'Liquidations',
-  'eDai0',
-  'eDai1',
-  'eDai2',
-  'eDai3',
-  'eDai-2020-09-30-Pool',
-  'eDai-2020-12-31-Pool',
-  'eDai-2021-03-31-Pool',
-  'eDai-2021-06-30-Pool',
+  'fyDai0',
+  'fyDai1',
+  'fyDai2',
+  'fyDai3',
+  'fyDai-2020-09-30-Pool',
+  'fyDai-2020-12-31-Pool',
+  'fyDai-2021-03-31-Pool',
+  'fyDai-2021-06-30-Pool',
 ]
 
 const SIGNATURES = [

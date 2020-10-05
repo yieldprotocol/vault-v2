@@ -12,12 +12,12 @@ contract('Pool', async (accounts) => {
   let [owner, user1, operator, from, to] = accounts
 
   const daiReserves = daiTokens1
-  const eDaiTokens1 = daiTokens1
-  const eDaiReserves = eDaiTokens1
+  const fyDaiTokens1 = daiTokens1
+  const fyDaiReserves = fyDaiTokens1
 
   let env: YieldEnvironmentLite
   let dai: Contract
-  let eDai1: Contract
+  let fyDai1: Contract
   let pool: Contract
 
   let maturity1: number
@@ -25,7 +25,7 @@ contract('Pool', async (accounts) => {
   let snapshotId: string
 
   const results = new Set()
-  results.add(['trade', 'daiReserves', 'eDaiReserves', 'tokensIn', 'tokensOut'])
+  results.add(['trade', 'daiReserves', 'fyDaiReserves', 'tokensIn', 'tokensOut'])
 
   beforeEach(async () => {
     snapshot = await helper.takeSnapshot()
@@ -37,11 +37,11 @@ contract('Pool', async (accounts) => {
     env = await YieldEnvironmentLite.setup([maturity1])
     dai = env.maker.dai
 
-    eDai1 = env.eDais[0]
-    await eDai1.orchestrate(owner, keccak256(toUtf8Bytes('mint(address,uint256)')))
+    fyDai1 = env.fyDais[0]
+    await fyDai1.orchestrate(owner, keccak256(toUtf8Bytes('mint(address,uint256)')))
 
     // Setup Pool
-    pool = await Pool.new(dai.address, eDai1.address, 'Name', 'Symbol', { from: owner })
+    pool = await Pool.new(dai.address, fyDai1.address, 'Name', 'Symbol', { from: owner })
   })
 
   afterEach(async () => {
@@ -79,44 +79,44 @@ contract('Pool', async (accounts) => {
   describe('with liquidity', () => {
     beforeEach(async () => {
       await env.maker.getDai(user1, daiReserves, rate1)
-      await eDai1.mint(user1, eDaiReserves, { from: owner })
+      await fyDai1.mint(user1, fyDaiReserves, { from: owner })
 
       await dai.approve(pool.address, daiReserves, { from: user1 })
-      await eDai1.approve(pool.address, eDaiReserves, { from: user1 })
+      await fyDai1.approve(pool.address, fyDaiReserves, { from: user1 })
       await pool.init(daiReserves, { from: user1 })
     })
 
     it('buys dai', async () => {
       const tradeSize = toWad(1).div(1000)
-      await eDai1.mint(from, bnify(eDaiTokens1).div(1000), { from: owner })
+      await fyDai1.mint(from, bnify(fyDaiTokens1).div(1000), { from: owner })
 
       await pool.addDelegate(operator, { from: from })
-      await eDai1.approve(pool.address, bnify(eDaiTokens1).div(1000), { from: from })
+      await fyDai1.approve(pool.address, bnify(fyDaiTokens1).div(1000), { from: from })
       await pool.buyDai(from, to, tradeSize, { from: operator })
 
-      const eDaiIn = new BN(bnify(eDaiTokens1).div(1000).toString()).sub(new BN(await eDai1.balanceOf(from)))
+      const fyDaiIn = new BN(bnify(fyDaiTokens1).div(1000).toString()).sub(new BN(await fyDai1.balanceOf(from)))
 
-      results.add(['buyDai', daiReserves, eDaiReserves, eDaiIn, tradeSize])
+      results.add(['buyDai', daiReserves, fyDaiReserves, fyDaiIn, tradeSize])
     })
 
-    it('sells eDai', async () => {
+    it('sells fyDai', async () => {
       const tradeSize = toWad(1).div(1000)
-      await eDai1.mint(from, tradeSize, { from: owner })
+      await fyDai1.mint(from, tradeSize, { from: owner })
 
       await pool.addDelegate(operator, { from: from })
-      await eDai1.approve(pool.address, tradeSize, { from: from })
-      await pool.sellEDai(from, to, tradeSize, { from: operator })
+      await fyDai1.approve(pool.address, tradeSize, { from: from })
+      await pool.sellFYDai(from, to, tradeSize, { from: operator })
 
       const daiOut = new BN(await dai.balanceOf(to))
-      results.add(['sellEDai', daiReserves, eDaiReserves, tradeSize, daiOut])
+      results.add(['sellFYDai', daiReserves, fyDaiReserves, tradeSize, daiOut])
     })
 
-    describe('with extra eDai reserves', () => {
+    describe('with extra fyDai reserves', () => {
       beforeEach(async () => {
-        const additionalEDaiReserves = toWad(34.4)
-        await eDai1.mint(operator, additionalEDaiReserves, { from: owner })
-        await eDai1.approve(pool.address, additionalEDaiReserves, { from: operator })
-        await pool.sellEDai(operator, operator, additionalEDaiReserves, { from: operator })
+        const additionalFYDaiReserves = toWad(34.4)
+        await fyDai1.mint(operator, additionalFYDaiReserves, { from: owner })
+        await fyDai1.approve(pool.address, additionalFYDaiReserves, { from: operator })
+        await pool.sellFYDai(operator, operator, additionalFYDaiReserves, { from: operator })
       })
 
       it('sells dai', async () => {
@@ -127,21 +127,21 @@ contract('Pool', async (accounts) => {
         await dai.approve(pool.address, tradeSize, { from: from })
         await pool.sellDai(from, to, tradeSize, { from: operator })
 
-        const eDaiOut = new BN(await eDai1.balanceOf(to))
+        const fyDaiOut = new BN(await fyDai1.balanceOf(to))
 
-        results.add(['sellDai', daiReserves, eDaiReserves, tradeSize, eDaiOut])
+        results.add(['sellDai', daiReserves, fyDaiReserves, tradeSize, fyDaiOut])
       })
 
-      it('buys eDai', async () => {
+      it('buys fyDai', async () => {
         const tradeSize = toWad(1).div(1000)
         await env.maker.getDai(from, bnify(daiTokens1).div(1000), rate1)
 
         await pool.addDelegate(operator, { from: from })
         await dai.approve(pool.address, bnify(daiTokens1).div(1000), { from: from })
-        await pool.buyEDai(from, to, tradeSize, { from: operator })
+        await pool.buyFYDai(from, to, tradeSize, { from: operator })
 
         const daiIn = new BN(bnify(daiTokens1).div(1000).toString()).sub(new BN(await dai.balanceOf(from)))
-        results.add(['buyEDai', daiReserves, eDaiReserves, daiIn, tradeSize])
+        results.add(['buyFYDai', daiReserves, fyDaiReserves, daiIn, tradeSize])
       })
 
       it('prints results', async () => {

@@ -32,7 +32,7 @@ contract('Liquidations', async (accounts) => {
   let dai: Contract
   let vat: Contract
   let controller: Contract
-  let eDai1: Contract
+  let fyDai1: Contract
   let treasury: Contract
   let weth: Contract
   let liquidations: Contract
@@ -43,7 +43,7 @@ contract('Liquidations', async (accounts) => {
   let env: YieldEnvironment
 
   const rate2 = toRay(1.5)
-  const eDaiTokens1 = daiTokens1
+  const fyDaiTokens1 = daiTokens1
 
   const dust = '25000000000000000' // 0.025 ETH
 
@@ -51,7 +51,7 @@ contract('Liquidations', async (accounts) => {
     snapshot = await helper.takeSnapshot()
     snapshotId = snapshot['result']
 
-    // Setup eDai
+    // Setup fyDai
     const block = await web3.eth.getBlockNumber()
     maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000
     maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000
@@ -65,14 +65,14 @@ contract('Liquidations', async (accounts) => {
     dai = env.maker.dai
     weth = env.maker.weth
 
-    eDai1 = env.eDais[0]
+    fyDai1 = env.fyDais[0]
   })
 
   afterEach(async () => {
     await helper.revertToSnapshot(snapshotId)
   })
 
-  describe('with posted collateral and borrowed eDai', () => {
+  describe('with posted collateral and borrowed fyDai', () => {
     beforeEach(async () => {
       await env.postWeth(user1, wethTokens1)
 
@@ -99,12 +99,12 @@ contract('Liquidations', async (accounts) => {
       assert.equal(await weth.balanceOf(user1), 0, 'User1 should have no weth')
       assert.equal(await weth.balanceOf(user2), 0, 'User2 should have no weth')
       assert.equal(
-        await controller.debtEDai(WETH, maturity1, user2),
+        await controller.debtFYDai(WETH, maturity1, user2),
         mulRay(wethTokens1, spot).toString(),
         'User2 should have ' +
           mulRay(wethTokens1, spot).toString() +
           ' maturity1 weth debt, instead has ' +
-          (await controller.debtEDai(WETH, maturity1, user2)).toString()
+          (await controller.debtFYDai(WETH, maturity1, user2)).toString()
       )
     })
 
@@ -151,10 +151,10 @@ contract('Liquidations', async (accounts) => {
 
     describe('with uncollateralized vaults', () => {
       beforeEach(async () => {
-        // eDai matures
+        // fyDai matures
         await helper.advanceTime(1000)
         await helper.advanceBlock()
-        await eDai1.mature()
+        await fyDai1.mature()
 
         await vat.fold(WETH, vat.address, subBN(rate2, rate1), { from: owner })
 

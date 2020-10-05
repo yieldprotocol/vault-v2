@@ -17,7 +17,7 @@ contract('Controller - Delegation', async (accounts) => {
   let dai: Contract
   let treasury: Contract
   let controller: Contract
-  let eDai1: Contract
+  let fyDai1: Contract
 
   let maturity1: number
   let maturity2: number
@@ -26,7 +26,7 @@ contract('Controller - Delegation', async (accounts) => {
     snapshot = await helper.takeSnapshot()
     snapshotId = snapshot['result']
 
-    // Setup eDai
+    // Setup fyDai
     const block = await web3.eth.getBlockNumber()
     maturity1 = (await web3.eth.getBlock(block)).timestamp + 1000
     maturity2 = (await web3.eth.getBlock(block)).timestamp + 2000
@@ -37,7 +37,7 @@ contract('Controller - Delegation', async (accounts) => {
     treasury = env.treasury
     weth = env.maker.weth
     dai = env.maker.dai
-    eDai1 = env.eDais[0]
+    fyDai1 = env.fyDais[0]
   })
 
   afterEach(async () => {
@@ -92,23 +92,23 @@ contract('Controller - Delegation', async (accounts) => {
       assert.equal(await controller.powerOf(WETH, user1), 0, 'User1 should not have borrowing power')
     })
 
-    it("doesn't allow to borrow eDai from others if not a delegate", async () => {
+    it("doesn't allow to borrow fyDai from others if not a delegate", async () => {
       await expectRevert(
         controller.borrow(WETH, maturity1, user1, user2, daiTokens1, { from: user2 }),
         'Controller: Only Holder Or Delegate'
       )
     })
 
-    it('allows to borrow eDai from others', async () => {
+    it('allows to borrow fyDai from others', async () => {
       await controller.addDelegate(user2, { from: user1 })
       const toBorrow = (await controller.powerOf(WETH, user1)).toString()
       await controller.borrow(WETH, maturity1, user1, user2, toBorrow, { from: user2 })
 
-      assert.equal(await eDai1.balanceOf(user2), toBorrow.toString(), 'User2 should have eDai')
+      assert.equal(await fyDai1.balanceOf(user2), toBorrow.toString(), 'User2 should have fyDai')
       assert.equal(await controller.debtDai(WETH, maturity1, user1), toBorrow.toString(), 'User1 should have debt')
     })
 
-    describe('with borrowed eDai', () => {
+    describe('with borrowed fyDai', () => {
       beforeEach(async () => {
         let toBorrow = (await controller.powerOf(WETH, user1)).toString()
         await controller.borrow(WETH, maturity1, user1, user1, toBorrow, { from: user1 })
@@ -116,7 +116,7 @@ contract('Controller - Delegation', async (accounts) => {
         await controller.borrow(WETH, maturity1, user2, user2, toBorrow, { from: user2 })
       })
 
-      describe('with borrowed eDai from two series', () => {
+      describe('with borrowed fyDai from two series', () => {
         beforeEach(async () => {
           await weth.deposit({ from: user1, value: wethTokens1 })
           await weth.approve(treasury.address, wethTokens1, { from: user1 })
@@ -131,19 +131,19 @@ contract('Controller - Delegation', async (accounts) => {
           await controller.borrow(WETH, maturity2, user2, user2, toBorrow, { from: user2 })
         })
 
-        it("others need to be added as delegates to repay eDai with others' funds", async () => {
+        it("others need to be added as delegates to repay fyDai with others' funds", async () => {
           await expectRevert(
-            controller.repayEDai(WETH, maturity1, user1, user1, daiTokens1, { from: user2 }),
+            controller.repayFYDai(WETH, maturity1, user1, user1, daiTokens1, { from: user2 }),
             'Controller: Only Holder Or Delegate'
           )
         })
 
-        it('allows delegates to use funds to repay eDai debts', async () => {
+        it('allows delegates to use funds to repay fyDai debts', async () => {
           await controller.addDelegate(user2, { from: user1 })
-          await eDai1.approve(treasury.address, daiTokens1, { from: user1 })
-          await controller.repayEDai(WETH, maturity1, user1, user1, daiTokens1, { from: user2 })
+          await fyDai1.approve(treasury.address, daiTokens1, { from: user1 })
+          await controller.repayFYDai(WETH, maturity1, user1, user1, daiTokens1, { from: user2 })
 
-          assert.equal(await eDai1.balanceOf(user1), 0, 'User1 should not have eDai')
+          assert.equal(await fyDai1.balanceOf(user1), 0, 'User1 should not have fyDai')
           assert.equal(await controller.debtDai(WETH, maturity1, user1), 0, 'User1 should not have debt')
         })
 
@@ -163,7 +163,7 @@ contract('Controller - Delegation', async (accounts) => {
           await dai.approve(treasury.address, daiTokens1, { from: user1 })
           await controller.repayDai(WETH, maturity1, user1, user1, daiTokens1, { from: user2 })
 
-          assert.equal(await dai.balanceOf(user1), balance.sub(debt).toString(), 'User1 should not have eDai')
+          assert.equal(await dai.balanceOf(user1), balance.sub(debt).toString(), 'User1 should not have fyDai')
           assert.equal(await controller.debtDai(WETH, maturity1, user1), 0, 'User1 should not have debt')
         })
       })

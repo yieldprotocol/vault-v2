@@ -14,7 +14,7 @@ import "./interfaces/IEnd.sol";
 import "./interfaces/IChai.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IController.sol";
-import "./interfaces/IEDai.sol";
+import "./interfaces/IFYDai.sol";
 import "./interfaces/ILiquidations.sol";
 import "./helpers/DecimalMath.sol";
 
@@ -24,7 +24,7 @@ import "./helpers/DecimalMath.sol";
  * During the unwind process, the system debt to MakerDAO is settled first with `settleTreasury`, extracting all free weth.
  * Once the Treasury is settled, any system savings are converted from Chai to Weth using `cashSavings`.
  * At this point, users can settle their positions using `settle`. The MakerDAO rates will be used to convert all debt and collateral to a Weth payout.
- * Users can also redeem here their eDai for a Weth payout, using `redeem`.
+ * Users can also redeem here their fyDai for a Weth payout, using `redeem`.
  */
 contract Unwind is Ownable(), DecimalMath {
     using SafeMath for uint256;
@@ -196,20 +196,20 @@ contract Unwind is Ownable(), DecimalMath {
         require(weth.transfer(user, remainder));
     }
 
-    /// @dev Redeems EDai for weth for any user. EDai.redeem won't work if MakerDAO is in shutdown.
+    /// @dev Redeems FYDai for weth for any user. FYDai.redeem won't work if MakerDAO is in shutdown.
     /// @param maturity Maturity of an added series
-    /// @param user Wallet containing the eDai to burn.
+    /// @param user Wallet containing the fyDai to burn.
     function redeem(uint256 maturity, address user) public {
-        IEDai eDai = controller.series(maturity);
-        require(eDai.unlocked() == 1, "eDai is still locked");
-        uint256 eDaiAmount = eDai.balanceOf(user);
-        require(eDaiAmount > 0, "Unwind: Nothing to redeem");
+        IFYDai fyDai = controller.series(maturity);
+        require(fyDai.unlocked() == 1, "fyDai is still locked");
+        uint256 fyDaiAmount = fyDai.balanceOf(user);
+        require(fyDaiAmount > 0, "Unwind: Nothing to redeem");
 
-        eDai.burn(user, eDaiAmount);
+        fyDai.burn(user, fyDaiAmount);
         require(
             weth.transfer(
                 user,
-                daiToFixWeth(muld(eDaiAmount, eDai.chiGrowth()), _fix)
+                daiToFixWeth(muld(fyDaiAmount, fyDai.chiGrowth()), _fix)
             )
         );
     }

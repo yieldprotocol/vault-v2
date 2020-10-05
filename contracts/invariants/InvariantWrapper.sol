@@ -6,40 +6,40 @@ import "./WhitepaperInvariant.sol";
 
 contract TradeReversalInvariantWrapper is TradeReversalInvariant {
 
-    /// @dev Sell eDai and sell the obtained Dai back for eDai
-    function sellEDaiAndReverse(uint128 daiReserves, uint128 eDaiReserves, uint128 eDaiIn, uint128 timeTillMaturity)
+    /// @dev Sell fyDai and sell the obtained Dai back for fyDai
+    function sellFYDaiAndReverse(uint128 daiReserves, uint128 fyDaiReserves, uint128 fyDaiIn, uint128 timeTillMaturity)
         public pure returns (uint128)
     {
-        return _sellEDaiAndReverse(daiReserves, eDaiReserves, eDaiIn, timeTillMaturity);
+        return _sellFYDaiAndReverse(daiReserves, fyDaiReserves, fyDaiIn, timeTillMaturity);
     }
 
-    /// @dev Buy eDai and sell it back
-    function buyEDaiAndReverse(uint128 daiReserves, uint128 eDaiReserves, uint128 eDaiOut, uint128 timeTillMaturity)
+    /// @dev Buy fyDai and sell it back
+    function buyFYDaiAndReverse(uint128 daiReserves, uint128 fyDaiReserves, uint128 fyDaiOut, uint128 timeTillMaturity)
         public pure returns (uint128)
     {
-        return _buyEDaiAndReverse(daiReserves, eDaiReserves, eDaiOut, timeTillMaturity);
+        return _buyFYDaiAndReverse(daiReserves, fyDaiReserves, fyDaiOut, timeTillMaturity);
     }
 
-    /// @dev Sell eDai and sell the obtained Dai back for eDai
-    function sellDaiAndReverse(uint128 daiReserves, uint128 eDaiReserves, uint128 daiIn, uint128 timeTillMaturity)
+    /// @dev Sell fyDai and sell the obtained Dai back for fyDai
+    function sellDaiAndReverse(uint128 daiReserves, uint128 fyDaiReserves, uint128 daiIn, uint128 timeTillMaturity)
         public pure returns (uint128)
     {
-        return _sellDaiAndReverse(daiReserves, eDaiReserves, daiIn, timeTillMaturity);
+        return _sellDaiAndReverse(daiReserves, fyDaiReserves, daiIn, timeTillMaturity);
     }
 
-    /// @dev Buy eDai and sell it back
-    function buyDaiAndReverse(uint128 daiReserves, uint128 eDaiReserves, uint128 daiOut, uint128 timeTillMaturity)
+    /// @dev Buy fyDai and sell it back
+    function buyDaiAndReverse(uint128 daiReserves, uint128 fyDaiReserves, uint128 daiOut, uint128 timeTillMaturity)
         public pure returns (uint128)
     {
-        return _buyDaiAndReverse(daiReserves, eDaiReserves, daiOut, timeTillMaturity);
+        return _buyDaiAndReverse(daiReserves, fyDaiReserves, daiOut, timeTillMaturity);
     }
 }
 
 contract WhitepaperInvariantWrapper is WhitepaperInvariant {
     /// @dev Calculates the value of the reserves
-    function whitepaperInvariant(uint128 daiReserves, uint128 eDaiReserves, uint128 timeTillMaturity)
+    function whitepaperInvariant(uint128 daiReserves, uint128 fyDaiReserves, uint128 timeTillMaturity)
         public pure returns (uint128)
     {
-        return _whitepaperInvariant(daiReserves, eDaiReserves, timeTillMaturity);
+        return _whitepaperInvariant(daiReserves, fyDaiReserves, timeTillMaturity);
     }
 }
