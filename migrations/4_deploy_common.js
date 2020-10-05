@@ -6,7 +6,7 @@ const Treasury = artifacts.require('Treasury')
 const Controller = artifacts.require('Controller')
 const Unwind = artifacts.require('Unwind')
 const Liquidations = artifacts.require('Liquidations')
-const EDai = artifacts.require('EDai')
+const FYDai = artifacts.require('FYDai')
 
 module.exports = async (deployer, network, accounts) => {
   const migrations = await Migrations.deployed()
@@ -26,14 +26,14 @@ module.exports = async (deployer, network, accounts) => {
   treasury = await Treasury.deployed()
   treasuryAddress = treasury.address
 
-  const eDais = []
+  const fyDais = []
   for (let i = 0; i < (await migrations.length()); i++) {
     const contractName = web3.utils.toAscii(await migrations.names(i))
-    if (contractName.includes('eDai')) eDais.push(await migrations.contracts(web3.utils.fromAscii(contractName)))
+    if (contractName.includes('fyDai')) fyDais.push(await migrations.contracts(web3.utils.fromAscii(contractName)))
   }
 
   // Setup controller
-  await deployer.deploy(Controller, treasuryAddress, eDais)
+  await deployer.deploy(Controller, treasuryAddress, fyDais)
   const controller = await Controller.deployed()
   controllerAddress = controller.address
   const treasuryFunctions = ['pushDai', 'pullDai', 'pushChai', 'pullChai', 'pushWeth', 'pullWeth'].map((func) =>
@@ -58,13 +58,13 @@ module.exports = async (deployer, network, accounts) => {
   await controller.orchestrate(unwind.address, id('erase(bytes32,address)'))
   await liquidations.orchestrate(unwind.address, id('erase(address)'))
 
-  // EDai orchestration
-  for (const addr of eDais) {
-    const eDai = await EDai.at(addr)
+  // FYDai orchestration
+  for (const addr of fyDais) {
+    const fyDai = await FYDai.at(addr)
     await treasury.orchestrate(addr, id('pullDai(address,uint256)'))
 
-    await eDai.batchOrchestrate(controller.address, [id('mint(address,uint256)'), id('burn(address,uint256)')])
-    await eDai.orchestrate(unwind.address, id('burn(address,uint256)'))
+    await fyDai.batchOrchestrate(controller.address, [id('mint(address,uint256)'), id('burn(address,uint256)')])
+    await fyDai.orchestrate(unwind.address, id('burn(address,uint256)'))
   }
 
   // Register Unwind at the very end. If the script fails after this point, Treasury needs to be redeployed.

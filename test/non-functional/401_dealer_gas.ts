@@ -24,7 +24,7 @@ contract('Gas Usage', async (accounts) => {
     snapshot = await helper.takeSnapshot()
     snapshotId = snapshot['result']
 
-    // Setup eDai
+    // Setup fyDai
     const block = await web3.eth.getBlockNumber()
     maturities = []
     for (let i = 1; i <= m; i++) {
@@ -37,7 +37,7 @@ contract('Gas Usage', async (accounts) => {
     treasury = env.treasury
     dai = env.maker.dai
     unwind = env.unwind
-    series = env.eDais
+    series = env.fyDais
   })
 
   afterEach(async () => {
@@ -61,17 +61,17 @@ contract('Gas Usage', async (accounts) => {
       }
     })
 
-    it('repayEDai', async () => {
+    it('repayFYDai', async () => {
       for (let i = 0; i < maturities.length; i++) {
         await series[i].approve(treasury.address, daiTokens1, { from: user3 })
-        await controller.repayEDai(WETH, maturities[i], user3, user3, daiTokens1, { from: user3 })
+        await controller.repayFYDai(WETH, maturities[i], user3, user3, daiTokens1, { from: user3 })
       }
     })
 
-    it('repay all debt with repayEDai', async () => {
+    it('repay all debt with repayFYDai', async () => {
       for (let i = 0; i < maturities.length; i++) {
         await series[i].approve(controller.address, daiTokens1.mul(2), { from: user3 })
-        await controller.repayEDai(WETH, maturities[i], user3, user3, daiTokens1.mul(2), { from: user3 })
+        await controller.repayFYDai(WETH, maturities[i], user3, user3, daiTokens1.mul(2), { from: user3 })
       }
     })
 

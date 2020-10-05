@@ -4,7 +4,7 @@ pragma solidity ^0.6.10;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./IERC2612.sol";
 
-interface IEDai is IERC20, IERC2612 {
+interface IFYDai is IERC20, IERC2612 {
     function isMature() external view returns(bool);
     function maturity() external view returns(uint);
     function chi0() external view returns(uint);

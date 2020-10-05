@@ -11,7 +11,7 @@ const Pot = artifacts.require('Pot')
 const Chai = artifacts.require('Chai')
 
 const Treasury = artifacts.require('Treasury')
-const EDai = artifacts.require('EDai')
+const FYDai = artifacts.require('FYDai')
 
 module.exports = async (deployer, network) => {
   const migrations = await Migrations.deployed()
@@ -73,20 +73,20 @@ module.exports = async (deployer, network) => {
   const treasury = await Treasury.deployed()
   treasuryAddress = treasury.address
 
-  const deployedEDais = {}
+  const deployedFYDais = {}
 
   for (i in maturities) {
-    eDaiMaturity = maturities[i]
-    eDaiName = `Yield Dai - ${toDate(maturities[i])}`
-    eDaiSymbol = `eDai${toSymbol(toDate(maturities[i]))}`
+    fyDaiMaturity = maturities[i]
+    fyDaiName = `Yield Dai - ${toDate(maturities[i])}`
+    fyDaiSymbol = `fyDai${toSymbol(toDate(maturities[i]))}`
 
-    // Setup EDai
-    await deployer.deploy(EDai, treasuryAddress, eDaiMaturity, eDaiName, eDaiSymbol)
-    const eDai = await EDai.deployed()
-    deployedEDais[eDaiSymbol] = eDai.address
+    // Setup FYDai
+    await deployer.deploy(FYDai, treasuryAddress, fyDaiMaturity, fyDaiName, fyDaiSymbol)
+    const fyDai = await FYDai.deployed()
+    deployedFYDais[fyDaiSymbol] = fyDai.address
   }
-  for (name in deployedEDais) {
-    await migrations.register(web3.utils.fromAscii(name), deployedEDais[name])
+  for (name in deployedFYDais) {
+    await migrations.register(web3.utils.fromAscii(name), deployedFYDais[name])
   }
-  console.log(deployedEDais)
+  console.log(deployedFYDais)
 }

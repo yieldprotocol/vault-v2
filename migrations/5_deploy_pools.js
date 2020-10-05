@@ -2,7 +2,7 @@ const fixed_addrs = require('./fixed_addrs.json')
 
 const Migrations = artifacts.require('Migrations')
 const Dai = artifacts.require('Dai')
-const EDai = artifacts.require('EDai')
+const FYDai = artifacts.require('FYDai')
 const Pool = artifacts.require('Pool')
 
 module.exports = async (deployer, network, accounts) => {
@@ -16,23 +16,23 @@ module.exports = async (deployer, network, accounts) => {
     daiAddress = (await Dai.deployed()).address
   }
 
-  const eDaiAddresses = []
+  const fyDaiAddresses = []
   const deployedPools = {}
 
   for (let i = 0; i < (await migrations.length()); i++) {
     const contractName = web3.utils.toAscii(await migrations.names(i))
-    if (contractName.includes('eDai'))
-      eDaiAddresses.push(await migrations.contracts(web3.utils.fromAscii(contractName)))
+    if (contractName.includes('fyDai'))
+      fyDaiAddresses.push(await migrations.contracts(web3.utils.fromAscii(contractName)))
   }
 
   for (let i = 0; i < (await migrations.length()); i++) {
     const contractName = web3.utils.toAscii(await migrations.names(i))
-    if (!contractName.includes('eDai')) continue
-    eDai = await EDai.at(await migrations.contracts(web3.utils.fromAscii(contractName)))
-    poolName = (await eDai.name()) + '-Pool'
-    poolSymbol = (await eDai.symbol()).replace('eDai', 'eDaiLP')
+    if (!contractName.includes('fyDai')) continue
+    fyDai = await FYDai.at(await migrations.contracts(web3.utils.fromAscii(contractName)))
+    poolName = (await fyDai.name()) + '-Pool'
+    poolSymbol = (await fyDai.symbol()).replace('fyDai', 'fyDaiLP')
 
-    await deployer.deploy(Pool, daiAddress, eDai.address, poolName, poolSymbol)
+    await deployer.deploy(Pool, daiAddress, fyDai.address, poolName, poolSymbol)
     pool = await Pool.deployed()
     deployedPools[poolSymbol] = pool.address
   }

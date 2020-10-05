@@ -109,7 +109,7 @@ contract('Unwind - Treasury', async (accounts) => {
         assert.equal(await liquidations.live(), false, 'Liquidations should not be live')
       })
 
-      describe('with eDai in unwind', () => {
+      describe('with fyDai in unwind', () => {
         beforeEach(async () => {
           await unwind.unwind({ from: owner })
         })
