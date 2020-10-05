@@ -20,7 +20,7 @@ const Weth = artifacts.require('WETH9')
 const Dai = artifacts.require('Dai')
 const GemJoin = artifacts.require('GemJoin')
 const DaiJoin = artifacts.require('DaiJoin')
-const EDai = artifacts.require('EDai')
+const FYDai = artifacts.require('FYDai')
 const Treasury = artifacts.require('Treasury')
 const Controller = artifacts.require('Controller')
 const Pool = artifacts.require('Pool')
@@ -46,38 +46,38 @@ module.exports = async (deployer, network) => {
 
 
   const pools = {}
-  let totalEDai = BigNumber.from(0)
+  let totalFYDai = BigNumber.from(0)
   let totalDai = BigNumber.from(0)
   for (let i = 0; i < (await migrations.length()); i++) {
     const contractName = web3.utils.toAscii(await migrations.names(i))
-    if (!contractName.includes('eDaiLP')) continue
+    if (!contractName.includes('fyDaiLP')) continue
     const _pool = await Pool.at(await migrations.contracts(web3.utils.fromAscii(contractName)))
-    const _eDai = await EDai.at(await _pool.eDai())
-    const _maturity = await _eDai.maturity()
-    // const _eDaiToSell = eDaiToSell(_maturity, targetRate, daiReserves)
-    const _eDaiToSell = daiReserves.div(BigNumber.from(9)) // eDaiToSell(_maturity, targetRate, daiReserves)
-    totalEDai = totalEDai.add(_eDaiToSell)
+    const _fyDai = await FYDai.at(await _pool.fyDai())
+    const _maturity = await _fyDai.maturity()
+    // const _fyDaiToSell = fyDaiToSell(_maturity, targetRate, daiReserves)
+    const _fyDaiToSell = daiReserves.div(BigNumber.from(9)) // fyDaiToSell(_maturity, targetRate, daiReserves)
+    totalFYDai = totalFYDai.add(_fyDaiToSell)
     totalDai = totalDai.add(daiReserves)
 
     pools[contractName] = { 
       pool: _pool,
-      eDai: _eDai,
+      fyDai: _fyDai,
       maturity: _maturity,
-      eDaiToSell: _eDaiToSell,
+      fyDaiToSell: _fyDaiToSell,
     }
   }
   console.log()
   console.log(`   > Total Dai required: ${ totalDai.toString() }`)
-  console.log(`   > Total EDai required: ${ totalEDai.toString() }`)
+  console.log(`   > Total FYDai required: ${ totalFYDai.toString() }`)
 
   const rate = BigNumber.from((await vat.ilks(ETH_A)).rate.toString()) // I could also use BN throughout
   const spot = BigNumber.from((await vat.ilks(ETH_A)).spot.toString())
   const normalizedDai = divrupRay(totalDai, rate).add(BigNumber.from('1')) // Rounding up
   const wethForDai = divrupRay(totalDai, spot).add(BigNumber.from('1')) // Rounding up
-  const wethForEDai = divrupRay(totalEDai, spot).add(BigNumber.from('1')) // Rounding up
+  const wethForFYDai = divrupRay(totalFYDai, spot).add(BigNumber.from('1')) // Rounding up
 
   // Initialize pools
-  await weth.deposit({ value: wethForDai.add(wethForEDai).toString() })
+  await weth.deposit({ value: wethForDai.add(wethForFYDai).toString() })
   console.log(`   > Obtained ${(await weth.balanceOf(me)).toString()} weth`)
 
   // Get Dai
@@ -88,17 +88,17 @@ module.exports = async (deployer, network) => {
   await daiJoin.exit(me, totalDai)
   console.log(`   > Converted ${wethForDai.toString()} weth into ${(await dai.balanceOf(me)).toString()} dai`)
 
-  // Post collateral for borrowing EDai
+  // Post collateral for borrowing FYDai
   await weth.approve(treasury.address, MAX)
-  await controller.post(ETH_A, me, me, wethForEDai)
-  console.log(`   > Posted ${wethForEDai.toString()} weth into the Controller`)
+  await controller.post(ETH_A, me, me, wethForFYDai)
+  console.log(`   > Posted ${wethForFYDai.toString()} weth into the Controller`)
 
-  // Init pools and sell EDai
+  // Init pools and sell FYDai
   for (let name in pools) {
     const pool = pools[name].pool
-    const eDai = pools[name].eDai
+    const fyDai = pools[name].fyDai
     const maturity = pools[name].maturity
-    const eDaiToSell = pools[name].eDaiToSell
+    const fyDaiToSell = pools[name].fyDaiToSell
 
     console.log()
     console.log(`   ${name}`)
@@ -108,11 +108,11 @@ module.exports = async (deployer, network) => {
     await pool.init(daiReserves)
     console.log(`   > Initialized ${name} with ${(await pool.getDaiReserves()).toString()} dai`)
 
-    await controller.borrow(ETH_A, maturity, me, me, eDaiToSell)
-    console.log(`   > Borrowed ${(await controller.debtEDai(ETH_A, maturity, me)).toString()} ${await eDai.symbol()} EDai`)
-    await eDai.approve(pool.address, MAX)
-    await pool.sellEDai(me, me, eDaiToSell)
-    console.log(`   > Sold ${eDaiToSell.toString()} ${await eDai.symbol()} EDai`)
+    await controller.borrow(ETH_A, maturity, me, me, fyDaiToSell)
+    console.log(`   > Borrowed ${(await controller.debtFYDai(ETH_A, maturity, me)).toString()} ${await fyDai.symbol()} FYDai`)
+    await fyDai.approve(pool.address, MAX)
+    await pool.sellFYDai(me, me, fyDaiToSell)
+    console.log(`   > Sold ${fyDaiToSell.toString()} ${await fyDai.symbol()} FYDai`)
 
     // Consider joining the Dai to vat, and recovering the ETH
   }
