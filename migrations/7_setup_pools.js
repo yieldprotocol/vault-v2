@@ -55,7 +55,7 @@ module.exports = async (deployer, network) => {
     const _eDai = await EDai.at(await _pool.eDai())
     const _maturity = await _eDai.maturity()
     // const _eDaiToSell = eDaiToSell(_maturity, targetRate, daiReserves)
-    const _eDaiToSell = daiReserves.div(BigNumber.from(8)) // eDaiToSell(_maturity, targetRate, daiReserves)
+    const _eDaiToSell = daiReserves.div(BigNumber.from(9)) // eDaiToSell(_maturity, targetRate, daiReserves)
     totalEDai = totalEDai.add(_eDaiToSell)
     totalDai = totalDai.add(daiReserves)
 
