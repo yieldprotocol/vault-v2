@@ -24,4 +24,5 @@ module.exports = async (deployer, network) => {
       console.log()
     }
   }
+  console.log("Press Ctrl+C to exit")
 }
