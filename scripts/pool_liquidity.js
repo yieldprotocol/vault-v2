@@ -1,4 +1,4 @@
-// npx truffle exec --network [network] scripts/pool_liquidity.js [migrations contract address]
+// npx truffle exec --network [network] scripts/pool_liquidity.js --migrations [migrations contract address]
 // If a network is not provided, it will check in the development one
 // If a migrations address is not provided, it will look for the latest deployed instance
 
