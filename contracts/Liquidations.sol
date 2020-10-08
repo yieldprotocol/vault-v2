@@ -13,11 +13,10 @@ import "./helpers/Orchestrated.sol";
 
 /**
  * @dev The Liquidations contract allows to liquidate undercollateralized weth vaults in a reverse Dutch auction.
- * Undercollateralized vaults can be liquidated by calling `liquidate`.
+ * Undercollateralized vaults can be liquidated by calling `liquidate`. This will result in debt and collateral records
+ * being read and removed from the Controller using `controller.erase`.
  * Collateral from vaults can be bought with Dai using `buy`.
- * Debt and collateral records will be adjusted in the Controller using `controller.grab`.
  * Dai taken in payment will be handed over to Treasury, and collateral assets bought will be taken from Treasury as well.
- * If a vault becomes colalteralized, the liquidation can be stopped with `cancel`.
  */
 contract Liquidations is ILiquidations, Orchestrated(), Delegable(), DecimalMath {
 
