@@ -34,7 +34,6 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     bytes32 public constant CHAI = "CHAI";
     bytes32 public constant WETH = "ETH-A";
     uint256 public constant DUST = 50e15; // 0.05 ETH
-    uint256 public constant THREE_MONTHS = 7776000;
 
     IVat public vat;
     IPot public pot;
