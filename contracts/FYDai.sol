@@ -15,7 +15,7 @@ import "./helpers/ERC20Permit.sol";
 
 
 /**
- * @dev fyDai is an eToken targeting Chai.
+ * @dev fyDai is an fyToken targeting Chai.
  * Each fyDai contract has a specific maturity time. One fyDai is worth one Chai at or after maturity time.
  * At maturity, the fyDai can be triggered to mature, which records the current rate and chi from MakerDAO and enables redemption.
  * Redeeming an fyDai means burning it, and the contract will retrieve Dai from Treasury equal to one Dai times the growth in chi since maturity.
@@ -113,7 +113,7 @@ contract FYDai is IFYDai, Orchestrated(), Delegable(), DecimalMath, ERC20Permit 
         emit Matured(rate0, chi0);
     }
 
-    /// @dev Burn eTokens and return their dai equivalent value, pulled from the Treasury
+    /// @dev Burn fyDai and return their dai equivalent value, pulled from the Treasury
     /// During unwind, `treasury.pullDai()` will revert which is right.
     /// `from` needs to tell fyDai to approve the burning of the fyDai tokens.
     /// `from` can delegate to other addresses to redeem his fyDai and put the Dai proceeds in the `to` wallet.
