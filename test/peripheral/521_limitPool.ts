@@ -116,7 +116,8 @@ contract('YieldProxy - LimitPool', async (accounts) => {
 
     it('sells fyDai with permit', async () => {
       const oneToken = toWad(1)
-      await fyDai1.mint(from, oneToken, { from: owner })
+      await pool.addDelegate(limitPool.address, { from: user1 })
+      await fyDai1.mint(user1, oneToken, { from: owner })
 
       const digest = getPermitDigest(
         await fyDai1.name(),
