@@ -35,7 +35,7 @@ module.exports = async (deployer, network) => {
     else return d
   }
 
-  let dates = ['2020-10-08', '2020-10-31', '2020-12-31', '2021-03-31', '2021-06-30', '2021-09-30', '2021-12-31']
+  let dates = ['2020-10-31', '2020-12-31', '2021-03-31', '2021-06-30', '2021-09-30', '2021-12-31']
   let maturities = dates.map(toTimestamp)
 
   if (network === 'mainnet' || network === 'mainnet-ganache') {
@@ -58,8 +58,8 @@ module.exports = async (deployer, network) => {
 
   if (network !== 'mainnet') {
     const block = await web3.eth.getBlockNumber()
-    const maturity = (await web3.eth.getBlock(block)).timestamp + 3600
-    maturities.unshift(maturity)
+    maturities.unshift((await web3.eth.getBlock(block)).timestamp + 86400)
+    maturities.unshift((await web3.eth.getBlock(block)).timestamp + 3600)
   }
 
   // Setup treasury
