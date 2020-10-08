@@ -35,7 +35,7 @@ module.exports = async (deployer, network) => {
     else return d
   }
 
-  let dates = ['2020-10-07', '2020-10-31', '2020-12-31', '2021-03-31', '2021-06-30', '2021-09-30', '2021-12-31']
+  let dates = ['2020-10-08', '2020-10-31', '2020-12-31', '2021-03-31', '2021-06-30', '2021-09-30', '2021-12-31']
   let maturities = dates.map(toTimestamp)
 
   if (network === 'mainnet' || network === 'mainnet-ganache') {
