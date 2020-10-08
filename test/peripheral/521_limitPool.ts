@@ -114,6 +114,27 @@ contract('YieldProxy - LimitPool', async (accounts) => {
       expect(daiOut).to.be.bignumber.lt(expectedDaiOut.mul(new BN('10001')).div(new BN('10000')))
     })
 
+    it('sells fyDai with permit', async () => {
+      const oneToken = toWad(1)
+      await fyDai1.mint(from, oneToken, { from: owner })
+
+      const digest = getPermitDigest(
+        await fyDai1.name(),
+        await pool.fyDai(),
+        chainId,
+        {
+          owner: user1,
+          spender: pool.address,
+          value: MAX,
+        },
+        bnify(await fyDai1.nonces(user1)),
+        MAX
+      )
+      const sig = sign(digest, userPrivateKey)
+
+      await limitPool.sellFYDaiWithSignature(pool.address, to, oneToken, oneToken.div(2), sig, { from: user1 })
+    })
+
     it("doesn't sell fyDai if limit not reached", async () => {
       const oneToken = toWad(1)
       await fyDai1.mint(from, oneToken, { from: owner })

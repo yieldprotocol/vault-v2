@@ -454,7 +454,7 @@ contract YieldProxy is DecimalMath, IFlashMinter {
     /// @param fyDaiIn Amount of fyDai being sold
     /// @param minDaiOut Minimum amount of dai being bought
     function sellFYDai(address pool, address to, uint128 fyDaiIn, uint128 minDaiOut)
-        external
+        public
         returns(uint256)
     {
         uint256 daiOut = IPool(pool).sellFYDai(msg.sender, to, fyDaiIn);
@@ -463,6 +463,21 @@ contract YieldProxy is DecimalMath, IFlashMinter {
             "YieldProxy: Limit not reached"
         );
         return daiOut;
+    }
+
+    /// @dev Sell fyDai for Dai and permits infinite Dai to the pool
+    /// @param to Wallet receiving the dai being bought
+    /// @param fyDaiIn Amount of fyDai being sold
+    /// @param minDaiOut Minimum amount of dai being bought
+    /// @param signature The `permit` call's signature
+    function sellFYDaiWithSignature(address pool, address to, uint128 fyDaiIn, uint128 minDaiOut, bytes memory signature)
+        external
+        returns(uint256)
+    {
+        (bytes32 r, bytes32 s, uint8 v) = unpack(signature);
+        IPool(pool).fyDai().permit(msg.sender, address(pool), uint(-1), uint(-1), v, r, s);
+
+        return sellFYDai(pool, to, fyDaiIn, minDaiOut);
     }
 
     /// @dev Buy fyDai for dai
