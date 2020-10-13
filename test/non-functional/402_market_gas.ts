@@ -83,7 +83,7 @@ contract('Pool', async (accounts) => {
 
       await dai.approve(pool.address, daiReserves, { from: user1 })
       await fyDai1.approve(pool.address, fyDaiReserves, { from: user1 })
-      await pool.init(daiReserves, { from: user1 })
+      await pool.mint(user1, user1, daiReserves, { from: user1 })
     })
 
     it('buys dai', async () => {

@@ -100,7 +100,7 @@ contract('YieldProxy - LiquidityProxy', async (accounts) => {
     beforeEach(async () => {
       await env.maker.getDai(user1, initialDai, rate1)
       await dai.approve(pool.address, initialDai, { from: user1 })
-      await pool.init(initialDai, { from: user1 })
+      await pool.mint(user1, user1, initialDai, { from: user1 })
       const additionalFYDaiReserves = toWad(34.4)
       await fyDai1.mint(operator, additionalFYDaiReserves, { from: owner })
       await fyDai1.approve(pool.address, additionalFYDaiReserves, { from: operator })

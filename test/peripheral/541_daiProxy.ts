@@ -169,7 +169,7 @@ contract('YieldProxy - DaiProxy', async (accounts) => {
       await env.maker.getDai(user1, daiReserves, rate1)
       await dai.approve(pool.address, MAX, { from: user1 })
       await fyDai1.approve(pool.address, MAX, { from: user1 })
-      await pool.init(daiReserves, { from: user1 })
+      await pool.mint(user1, user1, daiReserves, { from: user1 })
 
       // Post some weth to controller via the proxy to be able to borrow
       // without requiring an `approve`!

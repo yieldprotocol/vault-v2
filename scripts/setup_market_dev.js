@@ -87,7 +87,7 @@ module.exports = async (callback) => {
         const daiReserves = daiTokens1;
         await getDai(user1, daiReserves);       console.log('0')
         await dai.approve(pool.address, daiReserves, { from: user1 });       console.log('1')
-        await pool.init(daiReserves, { from: user1 });     console.log('2')
+        await pool.mint(user1, user1, daiReserves, { from: user1 });     console.log('2')
 
         const additionalFYDaiReserves = toWad(34.4);
         await fyDai0.mint(user1, additionalFYDaiReserves, { from: owner });

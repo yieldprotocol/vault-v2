@@ -99,7 +99,7 @@ contract('Pool', async (accounts) => {
 
     await dai.approve(pool.address, initialDai, { from: user1 })
     // await fyDai1.approve(pool.address, fyDaiTokens1, { from: user1 });
-    const tx = await pool.init(initialDai, { from: user1 })
+    const tx = await pool.mint(user1, user1, initialDai, { from: user1 })
     const event = tx.logs[tx.logs.length - 1]
 
     assert.equal(event.event, 'Liquidity')
@@ -121,7 +121,7 @@ contract('Pool', async (accounts) => {
       await env.maker.getDai(user1, initialDai, rate1)
 
       await dai.approve(pool.address, initialDai, { from: user1 })
-      await pool.init(initialDai, { from: user1 })
+      await pool.mint(user1, user1, initialDai, { from: user1 })
     })
 
     it('sells fyDai', async () => {
