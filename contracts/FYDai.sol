@@ -139,13 +139,12 @@ contract FYDai is IFYDai, Orchestrated(), Delegable(), DecimalMath, ERC20Permit 
     }
 
     /// @dev Flash-mint fyDai. Calls back on `IFlashMinter.executeOnFlashMint()`
-    /// @param to Wallet to mint the fyDai in.
     /// @param fyDaiAmount Amount of fyDai to mint.
     /// @param data User-defined data to pass on to `executeOnFlashMint()`
-    function flashMint(address to, uint256 fyDaiAmount, bytes calldata data) external lock override {
-        _mint(to, fyDaiAmount);
-        IFlashMinter(msg.sender).executeOnFlashMint(to, fyDaiAmount, data);
-        _burn(to, fyDaiAmount);
+    function flashMint(uint256 fyDaiAmount, bytes calldata data) external lock override {
+        _mint(msg.sender, fyDaiAmount);
+        IFlashMinter(msg.sender).executeOnFlashMint(fyDaiAmount, data);
+        _burn(msg.sender, fyDaiAmount);
     }
 
     /// @dev Mint fyDai. Only callable by Controller contracts.

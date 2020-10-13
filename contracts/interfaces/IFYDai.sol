@@ -15,7 +15,7 @@ interface IFYDai is IERC20, IERC2612 {
     function unlocked() external view returns (uint);
     function mint(address, uint) external;
     function burn(address, uint) external;
-    function flashMint(address, uint, bytes calldata) external;
+    function flashMint(uint, bytes calldata) external;
     function redeem(address, address, uint256) external returns (uint256);
     // function transfer(address, uint) external returns (bool);
     // function transferFrom(address, address, uint) external returns (bool);

@@ -540,7 +540,6 @@ contract YieldProxy is DecimalMath, IFlashMinter {
         // Flash mint the fyDai
         IFYDai fyDai = IPool(pool).fyDai();
         fyDai.flashMint(
-            address(this),
             fyDaiForDai(pool, daiAmount),
             abi.encode(MTY, pool, user, wethAmount, daiAmount)
         );
@@ -568,14 +567,13 @@ contract YieldProxy is DecimalMath, IFlashMinter {
         );
         // Flash mint the fyDai
         fyDai.flashMint(
-            address(this),
             fyDaiAmount,
             abi.encode(YTM, pool, user, wethAmount, 0)
         ); // The daiAmount encoded is ignored
     }
 
     /// @dev Callback from `FYDai.flashMint()`
-    function executeOnFlashMint(address, uint256 fyDaiAmount, bytes calldata data) external override {
+    function executeOnFlashMint(uint256 fyDaiAmount, bytes calldata data) external override {
         (bool direction, address pool, address user, uint256 wethAmount, uint256 daiAmount) = 
             abi.decode(data, (bool, address, address, uint256, uint256));
         if(direction == MTY) _makerToYield(pool, user, wethAmount, daiAmount);
