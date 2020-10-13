@@ -7,16 +7,16 @@ import "../interfaces/IFYDai.sol";
 
 contract FlashMinterMock is IFlashMinter {
 
-    event Parameters(address user, uint256 amount, bytes data);
+    event Parameters(uint256 amount, bytes data);
 
     uint256 public flashBalance;
 
-    function executeOnFlashMint(address to, uint256 fyDaiAmount, bytes calldata data) external override {
+    function executeOnFlashMint(uint256 fyDaiAmount, bytes calldata data) external override {
         flashBalance = IFYDai(msg.sender).balanceOf(address(this));
-        emit Parameters(to, fyDaiAmount, data);
+        emit Parameters(fyDaiAmount, data);
     }
 
     function flashMint(address fyDai, uint256 amount, bytes calldata data) public {
-        IFYDai(fyDai).flashMint(address(this), amount, data);
+        IFYDai(fyDai).flashMint(amount, data);
     }
 }

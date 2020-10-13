@@ -113,7 +113,6 @@ contract('fyDai', async (accounts) => {
       await flashMinter.flashMint(fyDai1.address, daiTokens1, web3.utils.fromAscii('DATA'), { from: user1 }),
       'Parameters',
       {
-        user: flashMinter.address,
         amount: daiTokens1,
         data: web3.utils.fromAscii('DATA'),
       }
@@ -155,7 +154,6 @@ contract('fyDai', async (accounts) => {
         await flashMinter.flashMint(fyDai1.address, daiTokens1, web3.utils.fromAscii('DATA'), { from: user1 }),
         'Parameters',
         {
-          user: flashMinter.address,
           amount: daiTokens1,
           data: web3.utils.fromAscii('DATA'),
         }
