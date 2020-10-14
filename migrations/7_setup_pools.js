@@ -105,7 +105,7 @@ module.exports = async (deployer, network) => {
     console.log('   -----------')
 
     await dai.approve(pool.address, MAX)
-    await pool.init(daiReserves)
+    await pool.mint(me, me, daiReserves)
     console.log(`   > Initialized ${name} with ${(await pool.getDaiReserves()).toString()} dai`)
 
     await controller.borrow(ETH_A, maturity, me, me, fyDaiToSell)

@@ -215,7 +215,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         uint256[] memory _seriesIterator = seriesIterator;
         for (uint256 i = 0; i < _seriesIterator.length; i += 1) {
             if (debtFYDai[collateral][_seriesIterator[i]][user] > 0) {
-                totalDebt = totalDebt + debtDai(collateral, _seriesIterator[i], user);
+                totalDebt = totalDebt.add(debtDai(collateral, _seriesIterator[i], user));
             }
         } // We don't expect hundreds of maturities per controller
         return totalDebt;

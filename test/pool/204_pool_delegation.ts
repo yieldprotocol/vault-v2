@@ -46,7 +46,7 @@ contract('Pool - Delegation', async (accounts) => {
       await env.maker.getDai(from, daiReserves, rate1)
 
       await dai.approve(pool.address, daiReserves, { from: from })
-      await pool.init(daiReserves, { from: from })
+      await pool.mint(from, from, daiReserves, { from: from })
     })
 
     it("doesn't mint liquidity without delegation", async () => {

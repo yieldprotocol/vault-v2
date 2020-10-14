@@ -102,11 +102,11 @@ module.exports = async (callback) => {
     await controller.borrow(ETH_A, maturity4, me, me, '100' + THOUSAND + WAD)
     console.log('fyDai obtained')
 
-    await pool0.init('100' + THOUSAND + WAD)
-    await pool1.init('100' + THOUSAND + WAD)
-    await pool2.init('100' + THOUSAND + WAD)
-    await pool3.init('100' + THOUSAND + WAD)
-    await pool4.init('100' + THOUSAND + WAD)
+    await pool0.mint(me, me, '100' + THOUSAND + WAD)
+    await pool1.mint(me, me, '100' + THOUSAND + WAD)
+    await pool2.mint(me, me, '100' + THOUSAND + WAD)
+    await pool3.mint(me, me, '100' + THOUSAND + WAD)
+    await pool4.mint(me, me, '100' + THOUSAND + WAD)
     console.log('Pools initialized')
 
     await yieldProxy.addLiquidity(pool0.address, '100' + THOUSAND + WAD, MAX)

@@ -60,7 +60,7 @@ contract('YieldProxy - Splitter', async (accounts) => {
     const daiReserves = bnify(daiTokens1).mul(5)
     await env.maker.getDai(owner, daiReserves, rate1)
     await dai.approve(pool1.address, daiReserves, { from: owner })
-    await pool1.init(daiReserves, { from: owner })
+    await pool1.mint(owner, owner, daiReserves, { from: owner })
 
     // Add fyDai
     const additionalFYDaiReserves = bnify(fyDaiTokens1).mul(2)

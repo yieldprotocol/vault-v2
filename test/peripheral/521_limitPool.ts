@@ -53,7 +53,7 @@ contract('YieldProxy - LimitPool', async (accounts) => {
       const daiReserves = daiTokens1
       await env.maker.getDai(user1, daiReserves, rate1)
 
-      await pool.init(daiReserves, { from: user1 })
+      await pool.mint(user1, user1, daiReserves, { from: user1 })
 
       await pool.addDelegate(limitPool.address, { from: from })
     })

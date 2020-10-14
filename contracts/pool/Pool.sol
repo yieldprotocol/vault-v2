@@ -83,9 +83,10 @@ contract Pool is IPool, Delegable(), ERC20Permit {
     /// @dev Mint initial liquidity tokens.
     /// The liquidity provider needs to have called `dai.approve`
     /// @param daiIn The initial Dai liquidity to provide.
-    function init(uint128 daiIn)
-        external
+    function init(uint256 daiIn)
+        internal
         beforeMaturity
+        returns (uint256)
     {
         require(
             totalSupply() == 0,
@@ -95,6 +96,8 @@ contract Pool is IPool, Delegable(), ERC20Permit {
         dai.transferFrom(msg.sender, address(this), daiIn);
         _mint(msg.sender, daiIn);
         emit Liquidity(maturity, msg.sender, msg.sender, -toInt256(daiIn), 0, toInt256(daiIn));
+
+        return daiIn;
     }
 
     /// @dev Mint liquidity tokens in exchange for adding dai and fyDai
@@ -109,11 +112,16 @@ contract Pool is IPool, Delegable(), ERC20Permit {
         returns (uint256)
     {
         uint256 supply = totalSupply();
+        if (supply == 0) return init(daiOffered);
+
         uint256 daiReserves = dai.balanceOf(address(this));
         // use the actual reserves rather than the virtual reserves
         uint256 fyDaiReserves = fyDai.balanceOf(address(this));
         uint256 tokensMinted = supply.mul(daiOffered).div(daiReserves);
         uint256 fyDaiRequired = fyDaiReserves.mul(tokensMinted).div(supply);
+
+        require(daiReserves.add(daiOffered) <= type(uint128).max); // fyDaiReserves can't go over type(uint128).max
+        require(supply.add(fyDaiReserves.add(fyDaiRequired)) <= type(uint128).max); // fyDaiReserves can't go over type(uint128).max
 
         require(dai.transferFrom(from, address(this), daiOffered));
         require(fyDai.transferFrom(from, address(this), fyDaiRequired));
@@ -331,7 +339,7 @@ contract Pool is IPool, Delegable(), ERC20Permit {
         public view override
         returns(uint128)
     {
-        return toUint128(fyDai.balanceOf(address(this)) + totalSupply());
+        return toUint128(fyDai.balanceOf(address(this)).add(totalSupply()));
     }
 
     /// @dev Returns the Dai reserves
