@@ -1,6 +1,9 @@
 // Script used to audit the permissions of Yield Protocol
+// Defaults to the mainnet deployment
+// This script may take a while to run.
 //
 // Run as `node orchestration.js`. Requires having `ethers v5` installed.
+//
 // Provide arguments as environment variables:
 // - ENDPOINT: The Ethereum node to connect to
 // - MIGRATIONS: The address of the smart contract registry
@@ -8,30 +11,20 @@
 //   Do not set this to 0 if using with services like Infura
 const ethers = require('ethers')
 
-const ENDPOINT = process.env.ENDPOINT || 'http://localhost:8545'
-const MIGRATIONS = process.env.MIGRATIONS || '0xb8d5847ec245647cc11fa178c5d2377b85df328b' // defaults to the ganache deployment
-const START_BLOCK = process.env.START_BLOCK || 0
+// defaults to the infura node
+const ENDPOINT = process.env.ENDPOINT || 'https://mainnet.infura.io/v3/878c2840dbf943898a8b60b5faef8fe9'
+// uses the mainnet deployment
+const MIGRATIONS = process.env.MIGRATIONS || '0xd110Cfe9f35c5fDfB069606842744577577f50e5'
+// migrations were deployed at https://etherscan.io/tx/0xbcd49ae3d5976bc7ad1e0e35de9ce5f21ffae01f4565c4fdc670d61abc233a70
+const START_BLOCK = process.env.START_BLOCK || 11065032 // deployed block
 
 // Human readable ABIs for Orchestrated contracts and for the registry
 const ABI = [
   'event GrantedAccess(address access, bytes4 signature)',
   'function owner() view returns (address)',
   'function contracts(bytes32 name) view returns (address)',
-]
-
-const CONTRACTS = [
-  'Treasury',
-  'Controller',
-  'Unwind',
-  'Liquidations',
-  'fyDai0',
-  'fyDai1',
-  'fyDai2',
-  'fyDai3',
-  'fyDai-2020-09-30-Pool',
-  'fyDai-2020-12-31-Pool',
-  'fyDai-2021-03-31-Pool',
-  'fyDai-2021-06-30-Pool',
+  'function length() view returns (uint256)',
+  'function names(uint i) view returns (bytes32)',
 ]
 
 const SIGNATURES = [
@@ -76,19 +69,31 @@ const NAMES = [
   data['block'] = block
   data['Migrations'] = { address: MIGRATIONS }
 
-  for (const name of CONTRACTS) {
-    // Get the contract from the registry
-    const nameBytes = ethers.utils.formatBytes32String(name)
+
+  let addressToName = {};
+  let contracts = [];
+  let names = [];
+
+  const numContracts = await migrations.length()
+  for (let i = 0; i < numContracts; i ++) {
+    const nameBytes = await migrations.names(i)
     const address = await migrations.contracts(nameBytes)
     const contract = new ethers.Contract(address, ABI, provider)
+    const name = ethers.utils.parseBytes32String(nameBytes)
+    addressToName[address] = name
+    contracts.push(contract)
+    names.push(name)
+  }
 
+ for (const i in contracts) {
     // Get the logs
-    const logs = await contract.queryFilter('GrantedAccess', START_BLOCK)
+    const logs = await contracts[i].queryFilter('GrantedAccess', START_BLOCK)
     const privileged = logs.map((log) => {
       const args = log.args
       const signature = args.signature
-      const name = NAMES[SIGNATURES.indexOf(signature)]
-      return { address: args.access, function: name || signature }
+      const fnName = NAMES[SIGNATURES.indexOf(signature)]
+      const contractName = addressToName[args.access]
+      return { caller: contractName || args.access, function: fnName || signature }
     })
 
     let owner
@@ -99,8 +104,8 @@ const NAMES = [
     }
 
     // save the data
-    data[name] = {
-      address: address,
+    data[names[i]] = {
+      address: contracts[i].address,
       owner: owner,
       privileged: privileged,
     }
