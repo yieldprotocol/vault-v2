@@ -83,6 +83,15 @@ module.exports = {
     // Useful for deploying to a public network.
     // NB: It's important to wrap the provider as a function.
 
+    mainnet: {
+      provider: () => getProvider("mainnet"),
+      network_id: 1,         // Mainnet's id
+      confirmations: 0,       // # of confs to wait between deployments. (default: 0)
+      timeoutBlocks: 1000,     // # of blocks before a deployment times out  (minimum/default: 50)
+      gasPrice: 90000000000,  // 90 gwei
+      skipDryRun: false       // Skip dry run before migrations? (default: false for public nets )
+    },
+
     kovan: {
       provider: () => getProvider("kovan"),
       network_id: 42,         // Kovan's id
