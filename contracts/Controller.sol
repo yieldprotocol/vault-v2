@@ -245,7 +245,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     /// @param collateral Valid collateral type.
     /// @param user Address of the user vault.
     function locked(bytes32 collateral, address user)
-        public view override
+        public view
         validCollateral(collateral)
         returns (uint256)
     {
