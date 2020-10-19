@@ -275,7 +275,10 @@ contract YieldProxy is DecimalMath {
     /// @dev Return to caller all posted chai if there is no debt, converted to dai, plus any dai remaining in the contract.
     function withdrawAssets(IFYDai fyDai) internal {
         if (controller.debtFYDai(CHAI, fyDai.maturity(), msg.sender) == 0) {
-            controller.withdraw(CHAI, msg.sender, address(this), controller.posted(CHAI, msg.sender));
+            uint256 posted = controller.posted(CHAI, msg.sender);
+            uint256 locked = controller.locked(CHAI, msg.sender);
+            require (posted >= locked, "YieldProxy: Undercollateralized");
+            controller.withdraw(CHAI, msg.sender, address(this), posted - locked);
             chai.exit(address(this), chai.balanceOf(address(this)));
         }
         require(dai.transfer(msg.sender, dai.balanceOf(address(this))), "YieldProxy: Dai Transfer Failed");
