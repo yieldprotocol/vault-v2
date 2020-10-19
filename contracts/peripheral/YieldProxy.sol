@@ -15,7 +15,7 @@ import "../interfaces/ITreasury.sol";
 import "../helpers/DecimalMath.sol";
 
 
-interface IController is IDelegable {
+interface ControllerLike is IDelegable {
     function treasury() external view returns (ITreasury);
     function series(uint256) external view returns (IFYDai);
     function seriesIterator(uint256) external view returns (uint256);
@@ -67,7 +67,7 @@ contract YieldProxy is DecimalMath {
     IGemJoin public wethJoin;
     IDaiJoin public daiJoin;
     IChai public chai;
-    IController public controller;
+    ControllerLike public controller;
     ITreasury public treasury;
 
     IPool[] public pools;
@@ -80,7 +80,7 @@ contract YieldProxy is DecimalMath {
 
 
     constructor(address controller_, IPool[] memory _pools) public {
-        controller = IController(controller_);
+        controller = ControllerLike(controller_);
         treasury = controller.treasury();
 
         weth = treasury.weth();
