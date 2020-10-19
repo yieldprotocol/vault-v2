@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.6.10;
 
-import "../interfaces/IController.sol";
 import "../interfaces/IWeth.sol";
 import "../interfaces/IDai.sol";
 import "../interfaces/IGemJoin.sol";
@@ -11,8 +10,33 @@ import "../interfaces/IPot.sol";
 import "../interfaces/IPool.sol";
 import "../interfaces/IFYDai.sol";
 import "../interfaces/IChai.sol";
+import "../interfaces/IDelegable.sol";
+import "../interfaces/ITreasury.sol";
 import "../helpers/DecimalMath.sol";
 
+
+interface ControllerLike is IDelegable {
+    function treasury() external view returns (ITreasury);
+    function series(uint256) external view returns (IFYDai);
+    function seriesIterator(uint256) external view returns (uint256);
+    function totalSeries() external view returns (uint256);
+    function containsSeries(uint256) external view returns (bool);
+    function posted(bytes32, address) external view returns (uint256);
+    function locked(bytes32, address) external view returns (uint256);
+    function debtFYDai(bytes32, uint256, address) external view returns (uint256);
+    function debtDai(bytes32, uint256, address) external view returns (uint256);
+    function totalDebtDai(bytes32, address) external view returns (uint256);
+    function isCollateralized(bytes32, address) external view returns (bool);
+    function inDai(bytes32, uint256, uint256) external view returns (uint256);
+    function inFYDai(bytes32, uint256, uint256) external view returns (uint256);
+    function erase(bytes32, address) external returns (uint256, uint256);
+    function shutdown() external;
+    function post(bytes32, address, address, uint256) external;
+    function withdraw(bytes32, address, address, uint256) external;
+    function borrow(bytes32, uint256, address, address, uint256) external;
+    function repayFYDai(bytes32, uint256, address, address, uint256) external returns (uint256);
+    function repayDai(bytes32, uint256, address, address, uint256) external returns (uint256);
+}
 
 library SafeCast {
     /// @dev Safe casting from uint256 to uint128
@@ -43,7 +67,7 @@ contract YieldProxy is DecimalMath {
     IGemJoin public wethJoin;
     IDaiJoin public daiJoin;
     IChai public chai;
-    IController public controller;
+    ControllerLike public controller;
     ITreasury public treasury;
 
     IPool[] public pools;
@@ -56,7 +80,7 @@ contract YieldProxy is DecimalMath {
 
 
     constructor(address controller_, IPool[] memory _pools) public {
-        controller = IController(controller_);
+        controller = ControllerLike(controller_);
         treasury = controller.treasury();
 
         weth = treasury.weth();
@@ -275,7 +299,10 @@ contract YieldProxy is DecimalMath {
     /// @dev Return to caller all posted chai if there is no debt, converted to dai, plus any dai remaining in the contract.
     function withdrawAssets(IFYDai fyDai) internal {
         if (controller.debtFYDai(CHAI, fyDai.maturity(), msg.sender) == 0) {
-            controller.withdraw(CHAI, msg.sender, address(this), controller.posted(CHAI, msg.sender));
+            uint256 posted = controller.posted(CHAI, msg.sender);
+            uint256 locked = controller.locked(CHAI, msg.sender);
+            require (posted >= locked, "YieldProxy: Undercollateralized");
+            controller.withdraw(CHAI, msg.sender, address(this), posted - locked);
             chai.exit(address(this), chai.balanceOf(address(this)));
         }
         require(dai.transfer(msg.sender, dai.balanceOf(address(this))), "YieldProxy: Dai Transfer Failed");
