@@ -97,10 +97,6 @@ contract('YieldProxy - LiquidityProxy', async (accounts) => {
     await dai.approve(proxy.address, MAX, { from: user1 })
     await dai.approve(pool0.address, MAX, { from: user1 })
     await controller.addDelegate(proxy.address, { from: user1 })
-
-    // Allow for the proxy to put up a wei when needed
-    // await fyDai0.mint(proxy.address, '100', { from: owner })
-    // await fyDai1.mint(proxy.address, '100', { from: owner })
   })
 
   afterEach(async () => {
