@@ -264,8 +264,8 @@ contract('YieldProxy - LiquidityProxy', async (accounts) => {
         expect(await pool0.balanceOf(user2)).to.be.bignumber.eq(ZERO)
         // Has less fyDai debt
         expect(await controller.debtFYDai(CHAI, maturity0, user2)).to.be.bignumber.lt(debt)
-        // Doesn't have dai
-        expect(await dai.balanceOf(user2)).to.be.bignumber.eq(ZERO)
+        // Got some dai
+        expect(await dai.balanceOf(user2)).to.be.bignumber.gt(ZERO)
         // Has the same fyDai
         expect(await fyDai0.balanceOf(user2)).to.be.bignumber.eq(toBorrow)
         // Proxy doesn't keep dai (beyond rounding)

@@ -243,7 +243,7 @@ contract YieldProxy is DecimalMath {
                 "YieldProxy: minimumFYDaiPrice not reached"
             );
         }
-        withdrawAssets(fyDai);
+        withdrawAssets();
     }
 
     /// @dev Burns tokens and repays debt with proceedings. Sells any excess fyDai for Dai, then returns all Dai, and if there is no debt in the Controller, all posted Chai.
@@ -273,7 +273,7 @@ contract YieldProxy is DecimalMath {
                 "YieldProxy: minimumFYDaiPrice not reached"
             );
         }
-        withdrawAssets(fyDai);
+        withdrawAssets();
     }
 
     /// @dev Burns tokens and repays fyDai debt after Maturity. 
@@ -293,18 +293,16 @@ contract YieldProxy is DecimalMath {
         if (daiObtained > 0 && controller.debtFYDai(CHAI, maturity, msg.sender) > 0) {
             controller.repayDai(CHAI, maturity, address(this), msg.sender, daiObtained);
         }
-        withdrawAssets(fyDai);
+        withdrawAssets();
     }
 
     /// @dev Return to caller all posted chai if there is no debt, converted to dai, plus any dai remaining in the contract.
-    function withdrawAssets(IFYDai fyDai) internal {
-        if (controller.debtFYDai(CHAI, fyDai.maturity(), msg.sender) == 0) {
-            uint256 posted = controller.posted(CHAI, msg.sender);
-            uint256 locked = controller.locked(CHAI, msg.sender);
-            require (posted >= locked, "YieldProxy: Undercollateralized");
-            controller.withdraw(CHAI, msg.sender, address(this), posted - locked);
-            chai.exit(address(this), chai.balanceOf(address(this)));
-        }
+    function withdrawAssets() internal {
+        uint256 posted = controller.posted(CHAI, msg.sender);
+        uint256 locked = controller.locked(CHAI, msg.sender);
+        require (posted >= locked, "YieldProxy: Undercollateralized");
+        controller.withdraw(CHAI, msg.sender, address(this), posted - locked);
+        chai.exit(address(this), chai.balanceOf(address(this)));
         require(dai.transfer(msg.sender, dai.balanceOf(address(this))), "YieldProxy: Dai Transfer Failed");
     }
 
