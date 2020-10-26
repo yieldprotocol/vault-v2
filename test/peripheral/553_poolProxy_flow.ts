@@ -179,11 +179,12 @@ contract('PoolProxy - user flow', async (accounts) => {
         // Give some pool1 tokens to user2
         await dai.mint(user2, oneToken, { from: owner })
         await proxy.addLiquidity(pool1.address, oneToken, maxBorrow, { from: user2 })
-
+        
         // TODO: Test removing liquidity before adding liquidity (for example when given liquidity tokens)
       })
 
       it('removes liquidity early by selling', async () => {
+
         const poolTokens = await pool0.balanceOf(user2)
 
         // Authorize the proxy for the pool
@@ -200,12 +201,17 @@ contract('PoolProxy - user flow', async (accounts) => {
         )
         const poolSig = sign(poolDigest, user2PrivateKey)
 
-        await proxy.removeLiquidityEarlyDaiPoolWithSignature(pool0.address, poolTokens, '0', '0', poolSig, {
-          from: user2,
-        })
+        await proxy.removeLiquidityEarlyDaiPoolWithSignature(
+          pool0.address,
+          poolTokens,
+          '0',
+          '0',
+          poolSig,
+          { from: user2 })
       })
 
       it('removes liquidity early by repaying', async () => {
+
         const poolTokens = await pool0.balanceOf(user2)
 
         // Authorize the proxy for the pool
@@ -221,8 +227,14 @@ contract('PoolProxy - user flow', async (accounts) => {
           MAX
         )
         const poolSig = sign(poolDigest, user2PrivateKey)
-
-        await proxy.removeLiquidityEarlyDaiFixedWithSignature(pool0.address, poolTokens, '0', poolSig, { from: user2 })
+        
+        await proxy.removeLiquidityEarlyDaiFixedWithSignature(
+          pool0.address,
+          poolTokens,
+          '0',
+          poolSig,
+          { from: user2 }
+        )
       })
 
       it('removes liquidity after maturity by redeeming', async () => {
@@ -246,7 +258,11 @@ contract('PoolProxy - user flow', async (accounts) => {
         )
         const poolSig = sign(poolDigest, user2PrivateKey)
 
-        await proxy.removeLiquidityMatureWithSignature(pool0.address, poolTokens, poolSig, { from: user2 })
+        await proxy.removeLiquidityMatureWithSignature(
+          pool0.address,
+          poolTokens,
+          poolSig,
+          { from: user2 })
       })
     })
   })
