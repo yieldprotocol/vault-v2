@@ -58,7 +58,7 @@ library SafeCast {
     }
 }
 
-contract RemoveLiquidityProxy is DecimalMath {
+contract PoolProxy is DecimalMath {
     using SafeCast for uint256;
 
     IVat public vat;
@@ -126,6 +126,68 @@ contract RemoveLiquidityProxy is DecimalMath {
         }
     }
 
+    function authorizeForAdding(bytes memory daiSig, bytes memory controllerSig) public {
+        bytes32 r;
+        bytes32 s;
+        uint8 v;
+
+        (r, s, v) = unpack(daiSig);
+        dai.permit(msg.sender, address(this), dai.nonces(msg.sender), uint(-1), true, v, r, s);
+
+        (r, s, v) = unpack(controllerSig);
+        
+        try controller.addDelegateBySignature(msg.sender, address(this), uint(-1), v, r, s) { }
+        catch Error(string memory) {
+            // We just want to silence the revert on adding a delegate again, but we are also silencing invalid or expired permits
+            // We check delegation, and if it doesn't exist revert.
+            require(controller.delegated(msg.sender, address(this)), "PoolProxy: Invalid controller signature");
+        }
+    }
+
+    function authorizeForRemoving(IPool pool, bytes memory controllerSig, bytes memory poolSig) public {
+        onlyKnownPool(pool);
+
+        bytes32 r;
+        bytes32 s;
+        uint8 v;
+
+        (r, s, v) = unpack(controllerSig);
+        try controller.addDelegateBySignature(msg.sender, address(this), uint(-1), v, r, s) { }
+        catch Error(string memory) {
+            // We just want to silence the revert on adding a delegate again, but we are also silencing invalid or expired permits
+            // We check delegation, and if it doesn't exist revert.
+            require(controller.delegated(msg.sender, address(this)), "PoolProxy: Invalid controller signature");
+        }
+
+        (r, s, v) = unpack(poolSig);
+        try pool.addDelegateBySignature(msg.sender, address(this), uint(-1), v, r, s) { }
+        catch Error(string memory) {
+            // We just want to silence the revert on adding a delegate again, but we are also silencing invalid or expired permits
+            // We check delegation, and if it doesn't exist revert.
+            require(pool.delegated(msg.sender, address(this)), "PoolProxy: Invalid controller signature");
+        }
+    }
+
+    /// @dev Mints liquidity with provided Dai by borrowing fyDai with some of the Dai.
+    /// Caller must have approved the proxy using`controller.addDelegate(yieldProxy)`
+    /// Caller must have approved the dai transfer with `dai.approve(daiUsed)`
+    /// @param daiUsed amount of Dai to use to mint liquidity. 
+    /// @param maxFYDai maximum amount of fyDai to be borrowed to mint liquidity.
+    /// @param daiSig packed signature for permit of dai transfers to this proxy.
+    /// @param controllerSig packed signature for delegation of this proxy in the controller.
+    /// @return The amount of liquidity tokens minted.  
+    function addLiquidityWithSignature(
+        IPool pool,
+        uint256 daiUsed,
+        uint256 maxFYDai,
+        bytes memory daiSig,
+        bytes memory controllerSig
+    ) external returns (uint256) {
+        onlyKnownPool(pool);
+        authorizeForAdding(daiSig, controllerSig);
+        return addLiquidity(pool, daiUsed, maxFYDai);
+    }
+
     /// @dev Burns tokens and sells Dai proceedings for fyDai. Pays as much debt as possible, then sells back any remaining fyDai for Dai. Then returns all Dai, and all unlocked Chai.
     /// Caller must have approved the proxy using`controller.addDelegate(yieldProxy)` and `pool.addDelegate(yieldProxy)`
     /// Caller must have approved the liquidity burn with `pool.approve(poolTokens)` <-- It actually doesn't.
@@ -143,17 +205,7 @@ contract RemoveLiquidityProxy is DecimalMath {
         bytes memory poolSig
     ) public {
         onlyKnownPool(pool);
-
-        bytes32 r;
-        bytes32 s;
-        uint8 v;
-
-        (r, s, v) = unpack(controllerSig);
-        controller.addDelegateBySignature(msg.sender, address(this), uint(-1), v, r, s);
-
-        (r, s, v) = unpack(poolSig);
-        pool.addDelegateBySignature(msg.sender, address(this), uint(-1), v, r, s);
-
+        authorizeForRemoving(pool, controllerSig, poolSig);
         removeLiquidityEarlyDaiPool(pool, poolTokens, minimumDaiPrice, minimumFYDaiPrice);
     }
 
@@ -170,17 +222,7 @@ contract RemoveLiquidityProxy is DecimalMath {
         bytes memory poolSig
     ) public {
         onlyKnownPool(pool);
-
-        bytes32 r;
-        bytes32 s;
-        uint8 v;
-
-        (r, s, v) = unpack(controllerSig);
-        controller.addDelegateBySignature(msg.sender, address(this), uint(-1), v, r, s);
-
-        (r, s, v) = unpack(poolSig);
-        pool.addDelegateBySignature(msg.sender, address(this), uint(-1), v, r, s);
-
+        authorizeForRemoving(pool, controllerSig, poolSig);
         removeLiquidityEarlyDaiFixed(pool, poolTokens, minimumFYDaiPrice);
     }
 
@@ -194,22 +236,43 @@ contract RemoveLiquidityProxy is DecimalMath {
         bytes memory controllerSig,
         bytes memory poolSig
     ) external {
-        bytes32 r;
-        bytes32 s;
-        uint8 v;
-
-        (r, s, v) = unpack(controllerSig);
-        controller.addDelegateBySignature(msg.sender, address(this), uint(-1), v, r, s);
-
-        (r, s, v) = unpack(poolSig);
-        pool.addDelegateBySignature(msg.sender, address(this), uint(-1), v, r, s);
-
+        onlyKnownPool(pool);
+        authorizeForRemoving(pool, controllerSig, poolSig);
         removeLiquidityMature(pool, poolTokens);
     }
 
-    /// @dev The WETH9 contract will send ether to YieldProxy on `weth.withdraw` using this function.
-    receive() external payable { }
+    /// @dev Mints liquidity with provided Dai by borrowing fyDai with some of the Dai.
+    /// Caller must have approved the proxy using`controller.addDelegate(yieldProxy)`
+    /// Caller must have approved the dai transfer with `dai.approve(daiUsed)`
+    /// @param daiUsed amount of Dai to use to mint liquidity. 
+    /// @param maxFYDai maximum amount of fyDai to be borrowed to mint liquidity. 
+    /// @return The amount of liquidity tokens minted.  
+    function addLiquidity(IPool pool, uint256 daiUsed, uint256 maxFYDai) public returns (uint256) {
+        onlyKnownPool(pool);
+        IFYDai fyDai = pool.fyDai();
+        require(fyDai.isMature() != true, "YieldProxy: Only before maturity");
+        require(dai.transferFrom(msg.sender, address(this), daiUsed), "YieldProxy: Transfer Failed");
 
+        // calculate needed fyDai
+        uint256 daiReserves = dai.balanceOf(address(pool));
+        uint256 fyDaiReserves = fyDai.balanceOf(address(pool));
+        uint256 daiToAdd = daiUsed.mul(daiReserves).div(fyDaiReserves.add(daiReserves));
+        uint256 daiToConvert = daiUsed.sub(daiToAdd);
+        require(
+            daiToConvert <= maxFYDai,
+            "YieldProxy: maxFYDai exceeded"
+        ); // 1 Dai == 1 fyDai
+
+        // convert dai to chai and borrow needed fyDai
+        chai.join(address(this), daiToConvert);
+        // look at the balance of chai in dai to avoid rounding issues
+        uint256 toBorrow = chai.dai(address(this));
+        controller.post(CHAI, address(this), msg.sender, chai.balanceOf(address(this)));
+        controller.borrow(CHAI, fyDai.maturity(), msg.sender, address(this), toBorrow);
+        
+        // mint liquidity tokens
+        return pool.mint(address(this), msg.sender, daiToAdd);
+    }
 
     /// @dev Burns tokens and sells Dai proceedings for fyDai. Pays as much debt as possible, then sells back any remaining fyDai for Dai. Then returns all Dai, and if there is no debt in the Controller, all posted Chai.
     /// Caller must have approved the proxy using`controller.addDelegate(yieldProxy)` and `pool.addDelegate(yieldProxy)`

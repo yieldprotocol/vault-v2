@@ -14,7 +14,7 @@ contract Delegable is IDelegable {
     bytes32 public immutable DELEGABLE_DOMAIN;
     mapping(address => uint) public signatureCount;
 
-    mapping(address => mapping(address => bool)) public delegated;
+    mapping(address => mapping(address => bool)) public override delegated;
 
     constructor () public {
         uint256 chainId;
