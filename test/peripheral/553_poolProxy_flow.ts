@@ -164,7 +164,7 @@ contract('PoolProxy - user flow', async (accounts) => {
       await proxy.addLiquidityWithSignature(pool0.address, daiUsed, maxFYDai, daiSig, controllerSig, { from: user2 })
     })
 
-    it('adds liquidity, without reverting if already delegated', async () => {
+    it('adds liquidity using only one signature', async () => {
       const oneToken = toWad(1)
       const maxFYDai = oneToken
       const daiUsed = bnify(oneToken)
@@ -184,6 +184,16 @@ contract('PoolProxy - user flow', async (accounts) => {
         deadline
       )
       const daiSig = sign(daiDigest, user2PrivateKey)
+
+      await dai.mint(user2, oneToken, { from: owner })
+      await controller.addDelegate(proxy.address, { from: user2 })
+      await proxy.addLiquidityWithSignature(pool0.address, daiUsed, maxFYDai, daiSig, '0x', { from: user2 })
+    })
+
+    it('adds liquidity using only one signature', async () => {
+      const oneToken = toWad(1)
+      const maxFYDai = oneToken
+      const daiUsed = bnify(oneToken)
 
       // Authorize the proxy for the controller
       const controllerDigest = getSignatureDigest(
@@ -200,50 +210,8 @@ contract('PoolProxy - user flow', async (accounts) => {
       const controllerSig = sign(controllerDigest, user2PrivateKey)
 
       await dai.mint(user2, oneToken, { from: owner })
-      await controller.addDelegate(proxy.address, { from: user2 })
-      await proxy.addLiquidityWithSignature(pool0.address, daiUsed, maxFYDai, daiSig, controllerSig, { from: user2 })
-    })
-
-    it('reverts with invalid delegate signature if adding liquidity', async () => {
-      const oneToken = toWad(1)
-      const maxFYDai = oneToken
-      const daiUsed = bnify(oneToken)
-
-      // Authorize DAI
-      const deadline = MAX
-      const daiDigest = getDaiDigest(
-        await dai.name(),
-        dai.address,
-        chainId,
-        {
-          owner: user2,
-          spender: proxy.address,
-          can: true,
-        },
-        bnify(await dai.nonces(user2)),
-        deadline
-      )
-      const daiSig = sign(daiDigest, user2PrivateKey)
-
-      // Authorize the proxy for the controller
-      const controllerDigest = getSignatureDigest(
-        name,
-        controller.address,
-        chainId,
-        {
-          user: user1, // <-- Invalid user
-          delegate: proxy.address,
-        },
-        await controller.signatureCount(user2),
-        MAX
-      )
-      const controllerSig = sign(controllerDigest, user2PrivateKey)
-
-      await dai.mint(user2, oneToken, { from: owner })
-      await expectRevert(
-        proxy.addLiquidityWithSignature(pool0.address, daiUsed, maxFYDai, daiSig, controllerSig, { from: user2 }),
-        "PoolProxy: Invalid controller signature"
-      )
+      await dai.approve(proxy.address, MAX, { from: user2 })
+      await proxy.addLiquidityWithSignature(pool0.address, daiUsed, maxFYDai, '0x', controllerSig, { from: user2 })
     })
 
     describe('with liquidity', () => {
@@ -265,7 +233,35 @@ contract('PoolProxy - user flow', async (accounts) => {
         // TODO: Test removing liquidity before adding liquidity (for example when given liquidity tokens)
       })
 
-      it('removes liquidity early by selling', async () => {
+      it('removes liquidity early by selling with only the pool signature', async () => {
+
+        const poolTokens = await pool0.balanceOf(user2)
+
+        // Authorize the proxy for the pool
+        const poolDigest = getSignatureDigest(
+          name,
+          pool0.address,
+          chainId,
+          {
+            user: user2,
+            delegate: proxy.address,
+          },
+          await pool0.signatureCount(user2),
+          MAX
+        )
+        const poolSig = sign(poolDigest, user2PrivateKey)
+
+        await proxy.removeLiquidityEarlyDaiPoolWithSignature(
+          pool0.address,
+          poolTokens,
+          '0',
+          '0',
+          '0x',
+          poolSig,
+          { from: user2 })
+      })
+
+      it('removes liquidity early by selling with the pool and controller signatures', async () => {
 
         const poolTokens = await pool0.balanceOf(user2)
 
@@ -297,6 +293,7 @@ contract('PoolProxy - user flow', async (accounts) => {
         )
         const poolSig = sign(poolDigest, user2PrivateKey)
 
+        await controller.revokeDelegate(proxy.address, { from: user2 })
         await proxy.removeLiquidityEarlyDaiPoolWithSignature(
           pool0.address,
           poolTokens,
@@ -304,6 +301,36 @@ contract('PoolProxy - user flow', async (accounts) => {
           '0',
           controllerSig,
           poolSig,
+          { from: user2 })
+      })
+
+      it('removes liquidity early by selling with the controller signature', async () => {
+
+        const poolTokens = await pool0.balanceOf(user2)
+
+        // Authorize the proxy for the controller - Note the user already authorized before, but the signature needs to be valid.
+        const controllerDigest = getSignatureDigest(
+          name,
+          controller.address,
+          chainId,
+          {
+            user: user2,
+            delegate: proxy.address,
+          },
+          await controller.signatureCount(user2),
+          MAX
+        )
+        const controllerSig = sign(controllerDigest, user2PrivateKey)
+
+        await controller.revokeDelegate(proxy.address, { from: user2 })
+        await pool0.addDelegate(proxy.address, { from: user2 })
+        await proxy.removeLiquidityEarlyDaiPoolWithSignature(
+          pool0.address,
+          poolTokens,
+          '0',
+          '0',
+          controllerSig,
+          '0x',
           { from: user2 })
       })
 
@@ -339,6 +366,7 @@ contract('PoolProxy - user flow', async (accounts) => {
         )
         const poolSig = sign(poolDigest, user2PrivateKey)
         
+        await controller.revokeDelegate(proxy.address, { from: user2 })
         await proxy.removeLiquidityEarlyDaiFixedWithSignature(
           pool0.address,
           poolTokens,
@@ -384,6 +412,7 @@ contract('PoolProxy - user flow', async (accounts) => {
         )
         const poolSig = sign(poolDigest, user2PrivateKey)
         
+        await controller.revokeDelegate(proxy.address, { from: user2 })
         await proxy.removeLiquidityMatureWithSignature(
           pool0.address,
           poolTokens,

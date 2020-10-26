@@ -109,16 +109,14 @@ contract PoolProxy is DecimalMath {
         bytes32 s;
         uint8 v;
 
-        (r, s, v) = unpack(daiSig);
-        dai.permit(msg.sender, address(this), dai.nonces(msg.sender), uint(-1), true, v, r, s);
+        if (daiSig.length > 0) {
+            (r, s, v) = unpack(daiSig);
+            dai.permit(msg.sender, address(this), dai.nonces(msg.sender), uint(-1), true, v, r, s);
+        }
 
-        (r, s, v) = unpack(controllerSig);
-        
-        try controller.addDelegateBySignature(msg.sender, address(this), uint(-1), v, r, s) { }
-        catch Error(string memory) {
-            // We just want to silence the revert on adding a delegate again, but we are also silencing invalid or expired permits
-            // We check delegation, and if it doesn't exist revert.
-            require(controller.delegated(msg.sender, address(this)), "PoolProxy: Invalid controller signature");
+        if (controllerSig.length > 0) {
+            (r, s, v) = unpack(controllerSig);
+            controller.addDelegateBySignature(msg.sender, address(this), uint(-1), v, r, s);
         }
     }
 
@@ -129,20 +127,14 @@ contract PoolProxy is DecimalMath {
         bytes32 s;
         uint8 v;
 
-        (r, s, v) = unpack(controllerSig);
-        try controller.addDelegateBySignature(msg.sender, address(this), uint(-1), v, r, s) { }
-        catch Error(string memory) {
-            // We just want to silence the revert on adding a delegate again, but we are also silencing invalid or expired permits
-            // We check delegation, and if it doesn't exist revert.
-            require(controller.delegated(msg.sender, address(this)), "PoolProxy: Invalid controller signature");
+        if (controllerSig.length > 0) {
+            (r, s, v) = unpack(controllerSig);
+            controller.addDelegateBySignature(msg.sender, address(this), uint(-1), v, r, s);
         }
 
-        (r, s, v) = unpack(poolSig);
-        try pool.addDelegateBySignature(msg.sender, address(this), uint(-1), v, r, s) { }
-        catch Error(string memory) {
-            // We just want to silence the revert on adding a delegate again, but we are also silencing invalid or expired permits
-            // We check delegation, and if it doesn't exist revert.
-            require(pool.delegated(msg.sender, address(this)), "PoolProxy: Invalid controller signature");
+        if (poolSig.length > 0) {
+            (r, s, v) = unpack(poolSig);
+            pool.addDelegateBySignature(msg.sender, address(this), uint(-1), v, r, s);
         }
     }
 
