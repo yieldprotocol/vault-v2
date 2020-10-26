@@ -126,7 +126,51 @@ contract PoolProxy is DecimalMath {
         }
     }
 
+    function authorizeForAdding(bytes memory daiSig, bytes memory controllerSig) public {
+        bytes32 r;
+        bytes32 s;
+        uint8 v;
+
+        (r, s, v) = unpack(daiSig);
+        dai.permit(msg.sender, address(this), dai.nonces(msg.sender), uint(-1), true, v, r, s);
+
+        (r, s, v) = unpack(controllerSig);
+        
+        try controller.addDelegateBySignature(msg.sender, address(this), uint(-1), v, r, s) { }
+        catch Error(string memory) {
+            // We just want to silence the revert on adding a delegate again, but we are also silencing invalid or expired permits
+            // We check delegation, and if it doesn't exist revert.
+            require(controller.delegated(msg.sender, address(this)), "PoolProxy: Invalid controller signature");
+        }
+    }
+
+    function authorizeForRemoving(IPool pool, bytes memory controllerSig, bytes memory poolSig) public {
+        onlyKnownPool(pool);
+
+        bytes32 r;
+        bytes32 s;
+        uint8 v;
+
+        (r, s, v) = unpack(controllerSig);
+        try controller.addDelegateBySignature(msg.sender, address(this), uint(-1), v, r, s) { }
+        catch Error(string memory) {
+            // We just want to silence the revert on adding a delegate again, but we are also silencing invalid or expired permits
+            // We check delegation, and if it doesn't exist revert.
+            require(controller.delegated(msg.sender, address(this)), "PoolProxy: Invalid controller signature");
+        }
+
+        (r, s, v) = unpack(poolSig);
+        try pool.addDelegateBySignature(msg.sender, address(this), uint(-1), v, r, s) { }
+        catch Error(string memory) {
+            // We just want to silence the revert on adding a delegate again, but we are also silencing invalid or expired permits
+            // We check delegation, and if it doesn't exist revert.
+            require(pool.delegated(msg.sender, address(this)), "PoolProxy: Invalid controller signature");
+        }
+    }
+
     /// @dev Mints liquidity with provided Dai by borrowing fyDai with some of the Dai.
+    /// Caller must have approved the proxy using`controller.addDelegate(yieldProxy)`
+    /// Caller must have approved the dai transfer with `dai.approve(daiUsed)`
     /// @param daiUsed amount of Dai to use to mint liquidity. 
     /// @param maxFYDai maximum amount of fyDai to be borrowed to mint liquidity.
     /// @param daiSig packed signature for permit of dai transfers to this proxy.
@@ -140,86 +184,60 @@ contract PoolProxy is DecimalMath {
         bytes memory controllerSig
     ) external returns (uint256) {
         onlyKnownPool(pool);
-        
-        bytes32 r;
-        bytes32 s;
-        uint8 v;
-
-        (r, s, v) = unpack(daiSig);
-        dai.permit(msg.sender, address(this), dai.nonces(msg.sender), uint(-1), true, v, r, s);
-
-        (r, s, v) = unpack(controllerSig);
-        controller.addDelegateBySignature(msg.sender, address(this), uint(-1), v, r, s);
-        
+        authorizeForAdding(daiSig, controllerSig);
         return addLiquidity(pool, daiUsed, maxFYDai);
     }
 
     /// @dev Burns tokens and sells Dai proceedings for fyDai. Pays as much debt as possible, then sells back any remaining fyDai for Dai. Then returns all Dai, and all unlocked Chai.
-    /// @notice Assumes the user already delegated the proxy to the controller, for example by running `addLiquidityWithSignature`
+    /// Caller must have approved the proxy using`controller.addDelegate(yieldProxy)` and `pool.addDelegate(yieldProxy)`
+    /// Caller must have approved the liquidity burn with `pool.approve(poolTokens)` <-- It actually doesn't.
     /// @param poolTokens amount of pool tokens to burn. 
     /// @param minimumDaiPrice minimum fyDai/Dai price to be accepted when internally selling Dai.
     /// @param minimumFYDaiPrice minimum Dai/fyDai price to be accepted when internally selling fyDai.
+    /// @param controllerSig packed signature for delegation of this proxy in the controller.
     /// @param poolSig packed signature for delegation of this proxy in a pool.
     function removeLiquidityEarlyDaiPoolWithSignature(
         IPool pool,
         uint256 poolTokens,
         uint256 minimumDaiPrice,
         uint256 minimumFYDaiPrice,
+        bytes memory controllerSig,
         bytes memory poolSig
     ) public {
         onlyKnownPool(pool);
-        
-        bytes32 r;
-        bytes32 s;
-        uint8 v;
-
-        (r, s, v) = unpack(poolSig);
-        pool.addDelegateBySignature(msg.sender, address(this), uint(-1), v, r, s);
-
+        authorizeForRemoving(pool, controllerSig, poolSig);
         removeLiquidityEarlyDaiPool(pool, poolTokens, minimumDaiPrice, minimumFYDaiPrice);
     }
 
     /// @dev Burns tokens and repays debt with proceedings. Sells any excess fyDai for Dai, then returns all Dai, and all unlocked Chai.
-    /// @notice Assumes the user already delegated the proxy to the controller, for example by running `addLiquidityWithSignature`
     /// @param poolTokens amount of pool tokens to burn. 
     /// @param minimumFYDaiPrice minimum Dai/fyDai price to be accepted when internally selling fyDai.
+    /// @param controllerSig packed signature for delegation of this proxy in the controller.
     /// @param poolSig packed signature for delegation of this proxy in a pool.
     function removeLiquidityEarlyDaiFixedWithSignature(
         IPool pool,
         uint256 poolTokens,
         uint256 minimumFYDaiPrice,
+        bytes memory controllerSig,
         bytes memory poolSig
     ) public {
         onlyKnownPool(pool);
-        
-        bytes32 r;
-        bytes32 s;
-        uint8 v;
-
-        (r, s, v) = unpack(poolSig);
-        pool.addDelegateBySignature(msg.sender, address(this), uint(-1), v, r, s);
-
+        authorizeForRemoving(pool, controllerSig, poolSig);
         removeLiquidityEarlyDaiFixed(pool, poolTokens, minimumFYDaiPrice);
     }
 
     /// @dev Burns tokens and repays fyDai debt after Maturity.
-    /// @notice Assumes the user already delegated the proxy to the controller, for example by running `addLiquidityWithSignature`
     /// @param poolTokens amount of pool tokens to burn.
+    /// @param controllerSig packed signature for delegation of this proxy in the controller.
     /// @param poolSig packed signature for delegation of this proxy in a pool.
     function removeLiquidityMatureWithSignature(
         IPool pool,
         uint256 poolTokens,
+        bytes memory controllerSig,
         bytes memory poolSig
     ) external {
         onlyKnownPool(pool);
-        
-        bytes32 r;
-        bytes32 s;
-        uint8 v;
-
-        (r, s, v) = unpack(poolSig);
-        pool.addDelegateBySignature(msg.sender, address(this), uint(-1), v, r, s);
-
+        authorizeForRemoving(pool, controllerSig, poolSig);
         removeLiquidityMature(pool, poolTokens);
     }
 
