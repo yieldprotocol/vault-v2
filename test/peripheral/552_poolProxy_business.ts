@@ -25,7 +25,7 @@ import { assert, expect } from 'chai'
 import { BigNumber } from 'ethers'
 
 contract('PoolProxy - business features', async (accounts) => {
-  let [owner, user1, user2, operator] = accounts
+  let [owner, user1, user2, user3, user4, user5, user6, user7, user8, user9] = accounts
 
   const initialDai = daiTokens1
 
@@ -47,6 +47,8 @@ contract('PoolProxy - business features', async (accounts) => {
 
   let maturity0: number
   let maturity1: number
+
+  const roundingProfit : any = new BN('100') // Some wei remain in proxy with each operation due to rounding
 
   const daiIn = (daiReserves: BigNumber, fyDaiReserves: BigNumber, daiUsed: BigNumber): BigNumber => {
     return daiUsed.mul(daiReserves).div(daiReserves.add(fyDaiReserves))
@@ -110,18 +112,16 @@ contract('PoolProxy - business features', async (accounts) => {
       await env.maker.getDai(user1, initialDai, rate1)
       await dai.approve(pool0.address, initialDai, { from: user1 })
       await pool0.mint(user1, user1, initialDai, { from: user1 })
-      await fyDai0.mint(operator, additionalFYDaiReserves, { from: owner })
-      await fyDai0.approve(pool0.address, additionalFYDaiReserves, { from: operator })
-      await pool0.sellFYDai(operator, operator, additionalFYDaiReserves, { from: operator })
+      await fyDai0.mint(owner, additionalFYDaiReserves, { from: owner })
+      await fyDai0.approve(pool0.address, additionalFYDaiReserves, { from: owner })
+      await pool0.sellFYDai(owner, owner, additionalFYDaiReserves, { from: owner })
 
       await env.maker.getDai(user1, initialDai, rate1)
       await dai.approve(pool1.address, initialDai, { from: user1 })
       await pool1.mint(user1, user1, initialDai, { from: user1 })
-      await fyDai1.mint(operator, additionalFYDaiReserves, { from: owner })
-      await fyDai1.approve(pool1.address, additionalFYDaiReserves, { from: operator })
-      await pool1.sellFYDai(operator, operator, additionalFYDaiReserves, { from: operator })
-
-      await controller.addDelegate(proxy.address, { from: user2 })
+      await fyDai1.mint(owner, additionalFYDaiReserves, { from: owner })
+      await fyDai1.approve(pool1.address, additionalFYDaiReserves, { from: owner })
+      await pool1.sellFYDai(owner, owner, additionalFYDaiReserves, { from: owner })
     })
 
     it('mints liquidity tokens with dai only', async () => {
@@ -157,6 +157,7 @@ contract('PoolProxy - business features', async (accounts) => {
 
       await dai.mint(user2, oneToken, { from: owner })
       await dai.approve(proxy.address, oneToken, { from: user2 })
+      await controller.addDelegate(proxy.address, { from: user2 })
       await proxy.addLiquidity(pool0.address, daiUsed, maxFYDai, { from: user2 })
 
       const debt = bnify((await controller.debtFYDai(CHAI, maturity0, user2)).toString())
@@ -180,11 +181,11 @@ contract('PoolProxy - business features', async (accounts) => {
         'User2 should have ' + expectedMinted + ' pool0 tokens, instead has ' + minted.toString()
       )
       // Proxy doesn't keep dai (beyond rounding)
-      expect(await dai.balanceOf(proxy.address)).to.be.bignumber.lt(new BN('10'))
+      expect(await dai.balanceOf(proxy.address)).to.be.bignumber.lt(roundingProfit)
       // Proxy doesn't keep fyDai (beyond rounding)
-      expect(await fyDai0.balanceOf(proxy.address)).to.be.bignumber.lt(new BN('10'))
+      expect(await fyDai0.balanceOf(proxy.address)).to.be.bignumber.lt(roundingProfit)
       // Proxy doesn't keep liquidity (beyond rounding)
-      expect(await pool0.balanceOf(proxy.address)).to.be.bignumber.lt(new BN('10'))
+      expect(await pool0.balanceOf(proxy.address)).to.be.bignumber.lt(roundingProfit)
     })
 
     it('does not allow borrowing more than max amount', async () => {
@@ -192,6 +193,7 @@ contract('PoolProxy - business features', async (accounts) => {
 
       await dai.mint(user2, oneToken, { from: owner })
       await dai.approve(proxy.address, oneToken, { from: user2 })
+      await controller.addDelegate(proxy.address, { from: user2 })
       await expectRevert(
         proxy.addLiquidity(pool0.address, oneToken, 1, { from: user2 }),
         'YieldProxy: maxFYDai exceeded'
@@ -203,26 +205,27 @@ contract('PoolProxy - business features', async (accounts) => {
         const additionalFYDai = toWad(34.4)
 
         // Add liquidity to the pool0
-        await fyDai0.mint(operator, additionalFYDai, { from: owner })
-        await fyDai0.approve(pool0.address, additionalFYDai, { from: operator })
-        await pool0.sellFYDai(operator, operator, additionalFYDai, { from: operator })
+        await fyDai0.mint(owner, additionalFYDai, { from: owner })
+        await fyDai0.approve(pool0.address, additionalFYDai, { from: owner })
+        await pool0.sellFYDai(owner, owner, additionalFYDai, { from: owner })
 
         // Add liquidity to the pool1
-        await fyDai1.mint(operator, additionalFYDai, { from: owner })
-        await fyDai1.approve(pool1.address, additionalFYDai, { from: operator })
-        await pool1.sellFYDai(operator, operator, additionalFYDai, { from: operator })
+        await fyDai1.mint(owner, additionalFYDai, { from: owner })
+        await fyDai1.approve(pool1.address, additionalFYDai, { from: owner })
+        await pool1.sellFYDai(owner, owner, additionalFYDai, { from: owner })
 
         const oneToken = bnify(toWad(1))
         const maxBorrow = oneToken
         // Give some pool0 tokens to user2
-        await dai.mint(user2, oneToken, { from: owner })
-        await dai.approve(proxy.address, oneToken, { from: user2 })
-        await proxy.addLiquidity(pool0.address, oneToken, maxBorrow, { from: user2 })
+        const users = [user2, user3, user4, user5, user6, user7, user8, user9]
+        for (let i in users) {
+          await controller.addDelegate(proxy.address, { from: users[i] })
 
-        // Give some pool1 tokens to user2
-        await dai.mint(user2, oneToken, { from: owner })
-        await dai.approve(proxy.address, oneToken, { from: user2 })
-        await proxy.addLiquidity(pool1.address, oneToken, maxBorrow, { from: user2 })
+          await dai.mint(users[i], oneToken.mul(2), { from: owner })
+          await dai.approve(proxy.address, MAX, { from: users[i] })
+          await proxy.addLiquidity(pool0.address, oneToken, maxBorrow, { from: users[i] })
+          await proxy.addLiquidity(pool1.address, oneToken, maxBorrow, { from: users[i] })  
+        }
 
         // Add some funds to the system to allow for rounding losses when withdrawing chai
         await maker.getChai(owner, 1000, chi1, rate1) // getChai can't get very small amounts
@@ -269,11 +272,45 @@ contract('PoolProxy - business features', async (accounts) => {
         // Has the same fyDai
         expect(await fyDai0.balanceOf(user2)).to.be.bignumber.eq(toBorrow)
         // Proxy doesn't keep dai (beyond rounding)
-        expect(await dai.balanceOf(proxy.address)).to.be.bignumber.lt(new BN('10'))
+        expect(await dai.balanceOf(proxy.address)).to.be.bignumber.lt(roundingProfit)
         // Proxy doesn't keep fyDai (beyond rounding)
-        expect(await fyDai0.balanceOf(proxy.address)).to.be.bignumber.lt(new BN('10'))
+        expect(await fyDai0.balanceOf(proxy.address)).to.be.bignumber.lt(roundingProfit)
         // Proxy doesn't keep liquidity (beyond rounding)
-        expect(await pool0.balanceOf(proxy.address)).to.be.bignumber.lt(new BN('10'))
+        expect(await pool0.balanceOf(proxy.address)).to.be.bignumber.lt(roundingProfit)
+      })
+
+      it('everyone can remove liquidity early by selling', async () => {
+        const users = [user2, user3, user4, user5, user6, user7, user8, user9]
+        for (let i in users) {
+          const poolTokens = await pool0.balanceOf(users[i])
+          const debt = await controller.debtFYDai(CHAI, maturity0, users[i])
+          const daiBalance = await dai.balanceOf(users[i])
+
+          // Has pool0 tokens
+          expect(poolTokens).to.be.bignumber.gt(ZERO)
+          // Has fyDai debt
+          expect(debt).to.be.bignumber.gt(ZERO)
+          // Doesn't have dai
+          expect(daiBalance).to.be.bignumber.eq(ZERO)
+
+          // the proxy must be a delegate in the pool0 because in order to remove
+          // liquidity via the proxy we must authorize the proxy to burn from our balance
+          await pool0.addDelegate(proxy.address, { from: users[i] })
+          await proxy.removeLiquidityEarlyDaiPool(pool0.address, poolTokens, '0', '0', { from: users[i] }) // TODO: Test limits
+
+          // Doesn't have pool0 tokens
+          expect(await pool0.balanceOf(users[i])).to.be.bignumber.eq(ZERO)
+          // Has less fyDai debt
+          expect(await controller.debtFYDai(CHAI, maturity0, users[i])).to.be.bignumber.lt(debt)
+          // Got some dai
+          expect(await dai.balanceOf(users[i])).to.be.bignumber.gt(ZERO)
+          // Proxy doesn't keep dai (beyond rounding)
+          expect(await dai.balanceOf(proxy.address)).to.be.bignumber.lt(roundingProfit)
+          // Proxy doesn't keep fyDai (beyond rounding)
+          expect(await fyDai0.balanceOf(proxy.address)).to.be.bignumber.lt(roundingProfit)
+          // Proxy doesn't keep liquidity (beyond rounding)
+          expect(await pool0.balanceOf(proxy.address)).to.be.bignumber.lt(roundingProfit)
+        }
       })
 
       it('removes liquidity early by selling, with some fyDai being sold in the pool0', async () => {
@@ -308,11 +345,11 @@ contract('PoolProxy - business features', async (accounts) => {
         // Doesn't have fyDai
         expect(await fyDai0.balanceOf(user2)).to.be.bignumber.eq(ZERO)
         // Proxy doesn't keep dai (beyond rounding)
-        expect(await dai.balanceOf(proxy.address)).to.be.bignumber.lt(new BN('10'))
+        expect(await dai.balanceOf(proxy.address)).to.be.bignumber.lt(roundingProfit)
         // Proxy doesn't keep fyDai (beyond rounding)
-        expect(await fyDai0.balanceOf(proxy.address)).to.be.bignumber.lt(new BN('10'))
+        expect(await fyDai0.balanceOf(proxy.address)).to.be.bignumber.lt(roundingProfit)
         // Proxy doesn't keep liquidity (beyond rounding)
-        expect(await pool0.balanceOf(proxy.address)).to.be.bignumber.lt(new BN('10'))
+        expect(await pool0.balanceOf(proxy.address)).to.be.bignumber.lt(roundingProfit)
       })
 
       it('removes liquidity early by repaying, and uses all in paying debt', async () => {
@@ -354,11 +391,11 @@ contract('PoolProxy - business features', async (accounts) => {
         // Has the same fyDai
         expect(await fyDai0.balanceOf(user2)).to.be.bignumber.eq(toBorrow)
         // Proxy doesn't keep dai (beyond rounding)
-        expect(await dai.balanceOf(proxy.address)).to.be.bignumber.lt(new BN('10'))
+        expect(await dai.balanceOf(proxy.address)).to.be.bignumber.lt(roundingProfit)
         // Proxy doesn't keep fyDai (beyond rounding)
-        expect(await fyDai0.balanceOf(proxy.address)).to.be.bignumber.lt(new BN('10'))
+        expect(await fyDai0.balanceOf(proxy.address)).to.be.bignumber.lt(roundingProfit)
         // Proxy doesn't keep liquidity (beyond rounding)
-        expect(await pool0.balanceOf(proxy.address)).to.be.bignumber.lt(new BN('10'))
+        expect(await pool0.balanceOf(proxy.address)).to.be.bignumber.lt(roundingProfit)
       })
 
       it('removes liquidity early by repaying, and has Dai left', async () => {
@@ -393,11 +430,50 @@ contract('PoolProxy - business features', async (accounts) => {
         // Doesn't have fyDai
         expect(await fyDai0.balanceOf(user2)).to.be.bignumber.eq(ZERO)
         // Proxy doesn't keep dai (beyond rounding)
-        expect(await dai.balanceOf(proxy.address)).to.be.bignumber.lt(new BN('10'))
+        expect(await dai.balanceOf(proxy.address)).to.be.bignumber.lt(roundingProfit)
         // Proxy doesn't keep fyDai (beyond rounding)
-        expect(await fyDai0.balanceOf(proxy.address)).to.be.bignumber.lt(new BN('10'))
+        expect(await fyDai0.balanceOf(proxy.address)).to.be.bignumber.lt(roundingProfit)
         // Proxy doesn't keep liquidity (beyond rounding)
-        expect(await pool0.balanceOf(proxy.address)).to.be.bignumber.lt(new BN('10'))
+        expect(await pool0.balanceOf(proxy.address)).to.be.bignumber.lt(roundingProfit)
+      })
+
+
+      it('everyone can remove liquidity early by repaying', async () => {
+        const users = [user2, user3, user4, user5, user6, user7, user8, user9]
+        for (let i in users) {
+          const poolTokens = await pool0.balanceOf(users[i])
+          const debt = await controller.debtFYDai(CHAI, maturity0, users[i])
+          const daiBalance = await dai.balanceOf(users[i])
+  
+          // Has pool0 tokens
+          expect(poolTokens).to.be.bignumber.gt(ZERO)
+          // Has fyDai debt
+          expect(debt).to.be.bignumber.gt(ZERO)
+          // Doesn't have dai
+          expect(daiBalance).to.be.bignumber.eq(ZERO)
+          // Doesn't have fyDai
+          expect(await fyDai0.balanceOf(users[i])).to.be.bignumber.eq(ZERO)
+  
+          // the proxy must be a delegate in the pool0 because in order to remove
+          // liquidity via the proxy we must authorize the proxy to burn from our balance
+          await pool0.addDelegate(proxy.address, { from: users[i] })
+          await proxy.removeLiquidityEarlyDaiFixed(pool0.address, poolTokens, '0', { from: users[i] }) // TODO: Test limits
+  
+          // Doesn't have pool0 tokens
+          expect(await pool0.balanceOf(users[i])).to.be.bignumber.eq(ZERO)
+          // Has less fyDai debt
+          expect(await controller.debtFYDai(CHAI, maturity0, users[i])).to.be.bignumber.lt(debt)
+          // Has more dai
+          expect(await dai.balanceOf(users[i])).to.be.bignumber.gt(daiBalance)
+          // Doesn't have fyDai
+          expect(await fyDai0.balanceOf(users[i])).to.be.bignumber.eq(ZERO)
+          // Proxy doesn't keep dai (beyond rounding)
+          expect(await dai.balanceOf(proxy.address)).to.be.bignumber.lt(roundingProfit)
+          // Proxy doesn't keep fyDai (beyond rounding)
+          expect(await fyDai0.balanceOf(proxy.address)).to.be.bignumber.lt(roundingProfit)
+          // Proxy doesn't keep liquidity (beyond rounding)
+          expect(await pool0.balanceOf(proxy.address)).to.be.bignumber.lt(roundingProfit)
+        }
       })
 
       it('removes liquidity early by repaying, and has Dai and fyDai left', async () => {
@@ -436,11 +512,11 @@ contract('PoolProxy - business features', async (accounts) => {
         // Doesn't have fyDai
         expect(await fyDai0.balanceOf(user2)).to.be.bignumber.eq(ZERO)
         // Proxy doesn't keep dai (beyond rounding)
-        expect(await dai.balanceOf(proxy.address)).to.be.bignumber.lt(new BN('10'))
+        expect(await dai.balanceOf(proxy.address)).to.be.bignumber.lt(roundingProfit)
         // Proxy doesn't keep fyDai (beyond rounding)
-        expect(await fyDai0.balanceOf(proxy.address)).to.be.bignumber.lt(new BN('10'))
+        expect(await fyDai0.balanceOf(proxy.address)).to.be.bignumber.lt(roundingProfit)
         // Proxy doesn't keep liquidity (beyond rounding)
-        expect(await pool0.balanceOf(proxy.address)).to.be.bignumber.lt(new BN('10'))
+        expect(await pool0.balanceOf(proxy.address)).to.be.bignumber.lt(roundingProfit)
       })
 
       it("doesn't remove liquidity if minimum prices not achieved", async () => {
@@ -501,11 +577,51 @@ contract('PoolProxy - business features', async (accounts) => {
         // Doesn't have fyDai
         expect(await fyDai0.balanceOf(user2)).to.be.bignumber.eq(ZERO)
         // Proxy doesn't keep dai (beyond rounding)
-        expect(await dai.balanceOf(proxy.address)).to.be.bignumber.lt(new BN('10'))
+        expect(await dai.balanceOf(proxy.address)).to.be.bignumber.lt(roundingProfit)
         // Proxy doesn't keep fyDai (beyond rounding)
-        expect(await fyDai0.balanceOf(proxy.address)).to.be.bignumber.lt(new BN('10'))
+        expect(await fyDai0.balanceOf(proxy.address)).to.be.bignumber.lt(roundingProfit)
         // Proxy doesn't keep liquidity (beyond rounding)
-        expect(await pool0.balanceOf(proxy.address)).to.be.bignumber.lt(new BN('10'))
+        expect(await pool0.balanceOf(proxy.address)).to.be.bignumber.lt(roundingProfit)
+      })
+
+      it('everyone can remove liquidity after maturity by redeeming', async () => {
+        await helper.advanceTime(31556952)
+        await helper.advanceBlock()
+        await fyDai0.mature()
+
+        const users = [user2, user3, user4, user5, user6, user7, user8, user9]
+        for (let i in users) {
+          const poolTokens = await pool0.balanceOf(users[i])
+          const debt = await controller.debtFYDai(CHAI, maturity0, users[i])
+          const daiBalance = await dai.balanceOf(users[i])
+  
+          // Has pool0 tokens
+          expect(poolTokens).to.be.bignumber.gt(ZERO)
+          // Has fyDai debt
+          expect(debt).to.be.bignumber.gt(ZERO)
+          // Doesn't have dai
+          expect(daiBalance).to.be.bignumber.eq(ZERO)
+          // Doesn't have fyDai
+          expect(await fyDai0.balanceOf(user2)).to.be.bignumber.eq(ZERO)
+  
+          // the proxy must be a delegate in the pool0 because in order to remove
+          // liquidity via the proxy we must authorize the proxy to burn from our balance
+          await pool0.addDelegate(proxy.address, { from: users[i] })
+          await proxy.removeLiquidityMature(pool0.address, poolTokens, { from: users[i] })
+  
+          // Doesn't have pool0 tokens
+          expect(await pool0.balanceOf(users[i])).to.be.bignumber.eq(ZERO)
+          // Has less fyDai debt
+          expect(await controller.debtFYDai(CHAI, maturity0, users[i])).to.be.bignumber.lt(debt)
+          // Has more dai
+          expect(await dai.balanceOf(user2)).to.be.bignumber.gt(daiBalance)
+          // Proxy doesn't keep dai (beyond rounding)
+          expect(await dai.balanceOf(proxy.address)).to.be.bignumber.lt(roundingProfit)
+          // Proxy doesn't keep fyDai (beyond rounding)
+          expect(await fyDai0.balanceOf(proxy.address)).to.be.bignumber.lt(roundingProfit)
+          // Proxy doesn't keep liquidity (beyond rounding)
+          expect(await pool0.balanceOf(proxy.address)).to.be.bignumber.lt(roundingProfit)
+        }
       })
     })
   })
