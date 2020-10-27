@@ -5,6 +5,7 @@ import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
 // @ts-ignore
 import helper from 'ganache-time-traveler'
 import {
+  WETH,
   CHAI,
   chi1,
   rate1,
@@ -37,6 +38,7 @@ contract('PoolProxy - business features', async (accounts) => {
   let treasury: Contract
   let controller: Contract
 
+  let weth: Contract
   let dai: Contract
   let chai: Contract
   let pool0: Contract
@@ -77,6 +79,7 @@ contract('PoolProxy - business features', async (accounts) => {
 
     env = await YieldEnvironmentLite.setup([maturity0, maturity1])
     maker = env.maker
+    weth = env.maker.weth
     dai = env.maker.dai
     chai = env.maker.chai
     treasury = env.treasury
@@ -231,6 +234,10 @@ contract('PoolProxy - business features', async (accounts) => {
         await maker.getChai(owner, 1000, chi1, rate1) // getChai can't get very small amounts
         await chai.approve(treasury.address, precision, { from: owner })
         await controller.post(CHAI, owner, owner, precision, { from: owner })
+
+        await weth.deposit({ value: toWad(1).toString() })
+        await weth.approve(treasury.address, MAX, { from: owner })
+        await controller.post(WETH, owner, owner, toWad(1).toString(), { from: owner })
       })
 
       it('removes liquidity early by selling', async () => {
@@ -621,6 +628,21 @@ contract('PoolProxy - business features', async (accounts) => {
           // Proxy doesn't keep liquidity (beyond rounding)
           expect(await pool0.balanceOf(proxy.address)).to.be.bignumber.lt(roundingProfit)
         }
+      })
+
+      it('and I mean everyone', async () => {
+        await helper.advanceTime(31556952)
+        await helper.advanceBlock()
+        await fyDai0.mature()
+
+        const users = [user1, user2, user3, user4, user5, user6, user7, user8, user9]
+        for (let i in users) {
+          const poolTokens = await pool0.balanceOf(users[i])
+          await pool0.addDelegate(proxy.address, { from: users[i] })
+          await proxy.removeLiquidityMature(pool0.address, poolTokens, { from: users[i] })
+        }
+        console.log(`           Remaining Dai:   ${(await pool0.getDaiReserves()).toString()}`)
+        console.log(`           Remaining fyDai: ${(await pool0.getFYDaiReserves()).toString()}`)
       })
     })
   })
