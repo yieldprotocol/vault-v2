@@ -1,31 +1,12 @@
 const Pool = artifacts.require('Pool')
 const PoolProxy = artifacts.require('PoolProxy')
 
-import { getSignatureDigest, getPermitDigest, getDaiDigest, user2PrivateKey, sign } from '../shared/signatures'
+import { getSignatureDigest, getDaiDigest, user2PrivateKey, sign } from '../shared/signatures'
 import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
 // @ts-ignore
 import helper from 'ganache-time-traveler'
-import {
-  CHAI,
-  chi1,
-  rate1,
-  daiTokens1,
-  chaiTokens1,
-  toWad,
-  toRay,
-  divrup,
-  precision,
-  bnify,
-  chainId,
-  name,
-  ZERO,
-  MAX,
-} from '../shared/utils'
+import { CHAI, chi1, rate1, daiTokens1, toWad, precision, bnify, chainId, name, MAX } from '../shared/utils'
 import { MakerEnvironment, YieldEnvironmentLite, Contract } from '../shared/fixtures'
-// @ts-ignore
-import { BN, expectRevert } from '@openzeppelin/test-helpers'
-import { assert, expect } from 'chai'
-import { BigNumber } from 'ethers'
 
 contract('PoolProxy - user flow', async (accounts) => {
   let [owner, user1, user2, operator, to] = accounts

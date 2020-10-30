@@ -1,16 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.6.10;
 
-import "../interfaces/IWeth.sol";
 import "../interfaces/IDai.sol";
-import "../interfaces/IGemJoin.sol";
-import "../interfaces/IDaiJoin.sol";
-import "../interfaces/IVat.sol";
-import "../interfaces/IPot.sol";
 import "../interfaces/IPool.sol";
 import "../interfaces/IFYDai.sol";
 import "../interfaces/IChai.sol";
-import "../interfaces/IDelegable.sol";
 import "../interfaces/ITreasury.sol";
 import "../interfaces/IController.sol";
 import "../helpers/DecimalMath.sol";
@@ -39,51 +33,31 @@ library SafeCast {
 contract PoolProxy is DecimalMath {
     using SafeCast for uint256;
 
-    IVat public vat;
-    IWeth public weth;
     IDai public dai;
-    IGemJoin public wethJoin;
-    IDaiJoin public daiJoin;
     IChai public chai;
     IController public controller;
-    ITreasury public treasury;
 
     IPool[] public pools;
     mapping (address => bool) public poolsMap;
 
     bytes32 public constant CHAI = "CHAI";
-    bytes32 public constant WETH = "ETH-A";
-    bool constant public MTY = true;
-    bool constant public YTM = false;
 
 
     constructor(address controller_, IPool[] memory _pools) public {
         controller = IController(controller_);
-        treasury = controller.treasury();
+        ITreasury treasury = controller.treasury();
 
-        weth = treasury.weth();
         dai = IDai(address(treasury.dai()));
         chai = treasury.chai();
-        daiJoin = treasury.daiJoin();
-        wethJoin = treasury.wethJoin();
-        vat = treasury.vat();
 
         // for repaying debt
         dai.approve(address(treasury), uint(-1));
 
         // for posting to the controller
         chai.approve(address(treasury), uint(-1));
-        weth.approve(address(treasury), uint(-1));
 
         // for converting DAI to CHAI
         dai.approve(address(chai), uint(-1));
-
-        vat.hope(address(daiJoin));
-        vat.hope(address(wethJoin));
-
-        dai.approve(address(daiJoin), uint(-1));
-        weth.approve(address(wethJoin), uint(-1));
-        weth.approve(address(treasury), uint(-1));
 
         // allow all the pools to pull FYDai/dai from us for LPing
         for (uint i = 0 ; i < _pools.length; i++) {
