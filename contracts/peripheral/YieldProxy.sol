@@ -211,9 +211,9 @@ contract YieldProxy is DecimalMath {
         return pool.mint(address(this), msg.sender, daiToAdd);
     }
 
-    /// @dev Burns tokens and sells Dai proceedings for fyDai. Pays as much debt as possible, then sells back any remaining fyDai for Dai. Then returns all Dai, and if there is no debt in the Controller, all posted Chai.
+    /// @dev Burns tokens and sells Dai proceedings for fyDai. Pays as much debt as possible, then sells back any remaining fyDai for Dai. Then returns all Dai, and all unlocked Chai.
     /// Caller must have approved the proxy using`controller.addDelegate(yieldProxy)` and `pool.addDelegate(yieldProxy)`
-    /// Caller must have approved the liquidity burn with `pool.approve(poolTokens)`
+    /// Caller must have approved the liquidity burn with `pool.approve(poolTokens)` <-- It actually doesn't.
     /// @param poolTokens amount of pool tokens to burn. 
     /// @param minimumDaiPrice minimum fyDai/Dai price to be accepted when internally selling Dai.
     /// @param minimumFYDaiPrice minimum Dai/fyDai price to be accepted when internally selling fyDai.
@@ -246,9 +246,9 @@ contract YieldProxy is DecimalMath {
         withdrawAssets();
     }
 
-    /// @dev Burns tokens and repays debt with proceedings. Sells any excess fyDai for Dai, then returns all Dai, and if there is no debt in the Controller, all posted Chai.
+    /// @dev Burns tokens and repays debt with proceedings. Sells any excess fyDai for Dai, then returns all Dai, and returns all unlocked Chai.
     /// Caller must have approved the proxy using`controller.addDelegate(yieldProxy)` and `pool.addDelegate(yieldProxy)`
-    /// Caller must have approved the liquidity burn with `pool.approve(poolTokens)`
+    /// Caller must have approved the liquidity burn with `pool.approve(poolTokens)` <-- It actually doesn't.
     /// @param poolTokens amount of pool tokens to burn. 
     /// @param minimumFYDaiPrice minimum Dai/fyDai price to be accepted when internally selling fyDai.
     function removeLiquidityEarlyDaiFixed(IPool pool, uint256 poolTokens, uint256 minimumFYDaiPrice) external {
@@ -277,8 +277,8 @@ contract YieldProxy is DecimalMath {
     }
 
     /// @dev Burns tokens and repays fyDai debt after Maturity. 
-    /// Caller must have approved the proxy using`controller.addDelegate(yieldProxy)`
-    /// Caller must have approved the liquidity burn with `pool.approve(poolTokens)`
+    /// Caller must have approved the proxy using`controller.addDelegate(yieldProxy)` and `pool.addDelegate(yieldProxy)`
+    /// Caller must have approved the liquidity burn with `pool.approve(poolTokens)` <-- It actually doesn't.
     /// @param poolTokens amount of pool tokens to burn.
     function removeLiquidityMature(IPool pool, uint256 poolTokens) external {
         onlyKnownPool(pool);
