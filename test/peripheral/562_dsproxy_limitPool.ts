@@ -60,10 +60,6 @@ contract('YieldProxy - LimitPool', async (accounts) => {
 
     // Setup DSProxyRegistry
     proxyRegistry = await DSProxyRegistry.new(proxyFactory.address, { from: owner })
-
-    // Sets DSProxy for user1
-    await proxyRegistry.build({ from: user1 })
-    dsProxy = await DSProxy.at(await proxyRegistry.proxies(user1))
   })
 
   describe('directly', () => {
@@ -119,6 +115,9 @@ contract('YieldProxy - LimitPool', async (accounts) => {
       await pool.mint(user1, user1, daiReserves, { from: user1 })
       await fyDai1.mint(user1, fyDaiTokens1, { from: owner })
 
+      // Sets DSProxy for user1
+      await proxyRegistry.build({ from: user1 })
+      dsProxy = await DSProxy.at(await proxyRegistry.proxies(user1))
       await pool.addDelegate(dsProxy.address, { from: user1 })
     })
 
