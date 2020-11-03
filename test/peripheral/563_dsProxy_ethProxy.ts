@@ -28,7 +28,6 @@ contract('YieldProxy - EthProxy', async (accounts) => {
   let dsProxy: Contract
 
   beforeEach(async () => {
-
     const env = await YieldEnvironmentLite.setup([])
     controller = env.controller
     treasury = env.treasury
@@ -69,7 +68,11 @@ contract('YieldProxy - EthProxy', async (accounts) => {
       beforeEach(async () => {
         await ethProxy.post(user1, { from: user1, value: wethTokens1 })
 
-        assert.equal((await vat.urns(WETH, treasury.address)).ink, wethTokens1, 'Treasury does not have weth in MakerDAO')
+        assert.equal(
+          (await vat.urns(WETH, treasury.address)).ink,
+          wethTokens1,
+          'Treasury does not have weth in MakerDAO'
+        )
         assert.equal(
           await controller.powerOf(WETH, user1),
           mulRay(wethTokens1, spot).toString(),

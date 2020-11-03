@@ -23,10 +23,7 @@ contract('DSProxy', async (accounts) => {
       await proxyRegistry.build({ from: user1 })
       const dsProxy = await DSProxy.at(await proxyRegistry.proxies(user1))
 
-      assert.equal(
-        await dsProxy.owner(),
-        user1
-      )
+      assert.equal(await dsProxy.owner(), user1)
     })
   })
 })

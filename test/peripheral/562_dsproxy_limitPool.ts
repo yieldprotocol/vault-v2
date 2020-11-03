@@ -131,7 +131,6 @@ contract('YieldProxy - LimitPool', async (accounts) => {
       expect(fyDaiIn).to.be.bignumber.lt(expectedFYDaiIn.mul(new BN('10001')).div(new BN('10000')))
     })
 
-
     it('buys dai with permit', async () => {
       const digest = getPermitDigest(
         await fyDai1.name(),
@@ -147,7 +146,9 @@ contract('YieldProxy - LimitPool', async (accounts) => {
       )
       const sig = sign(digest, userPrivateKey)
 
-      const calldata = limitPool.contract.methods.buyDaiWithSignature(pool.address, to, oneToken, oneToken.mul(2), sig).encodeABI()
+      const calldata = limitPool.contract.methods
+        .buyDaiWithSignature(pool.address, to, oneToken, oneToken.mul(2), sig)
+        .encodeABI()
       await dsProxy.methods['execute(address,bytes)'](limitPool.address, calldata, { from: user1 })
     })
 
