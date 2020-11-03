@@ -179,26 +179,6 @@ contract('YieldProxy - DaiProxy', async (accounts) => {
       await fyDai1.mint(user1, fyDaiTokens1, { from: owner })
     })
 
-    it('fails on unknown pools', async () => {
-      const fakePoolContract = await Pool.new(dai.address, fyDai1.address, 'Fake', 'Fake')
-      const fakePool = fakePoolContract.address
-
-      await expectRevert(daiProxy.addLiquidity(fakePool, 1, 1), 'YieldProxy: Unknown pool')
-      await expectRevert(daiProxy.removeLiquidityEarlyDaiPool(fakePool, 1, 1, 1), 'YieldProxy: Unknown pool')
-      await expectRevert(daiProxy.removeLiquidityEarlyDaiFixed(fakePool, 1, 1), 'YieldProxy: Unknown pool')
-      await expectRevert(daiProxy.removeLiquidityMature(fakePool, 1), 'YieldProxy: Unknown pool')
-      await expectRevert(daiProxy.borrowDaiForMaximumFYDai(fakePool, WETH, 1, owner, 1, 1), 'YieldProxy: Unknown pool')
-      await expectRevert(daiProxy.borrowMinimumDaiForFYDai(fakePool, WETH, 1, owner, 1, 1), 'YieldProxy: Unknown pool')
-      await expectRevert(
-        daiProxy.repayMinimumFYDaiDebtForDai(fakePool, WETH, 1, owner, 1, 1),
-        'YieldProxy: Unknown pool'
-      )
-      await expectRevert(
-        daiProxy.repayFYDaiDebtForMaximumDai(fakePool, WETH, 1, owner, 1, 1),
-        'YieldProxy: Unknown pool'
-      )
-    })
-
     it('borrows dai for maximum fyDai', async () => {
       await daiProxy.borrowDaiForMaximumFYDai(pool.address, WETH, maturity1, user2, fyDaiTokens1, one, {
         from: user1,
