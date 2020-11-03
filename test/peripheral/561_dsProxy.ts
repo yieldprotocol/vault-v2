@@ -3,6 +3,8 @@ const DSProxy = artifacts.require('DSProxy')
 const DSProxyFactory = artifacts.require('DSProxyFactory')
 const DSProxyRegistry = artifacts.require('ProxyRegistry')
 
+const { id } = require('ethers/lib/utils')
+
 // @ts-ignore
 import helper from 'ganache-time-traveler'
 import { wethTokens1 } from '../shared/utils'
@@ -78,16 +80,14 @@ contract('DSProxy', async (accounts) => {
     })
 
     it('post through dsproxy', async () => {
-      const dsProxy = await DSProxy.at(await proxyRegistry.proxies(user1))
+      console.log(ethProxy.contract)
 
-      const calldata = web3.eth.abi.encodeFunctionCall(
-        {
-          name: 'post',
-          type: 'function',
-          inputs: [{ type: 'address', name: 'to'}],
-        },
-        [ user1 ]
-      );
+      const dsProxy = await DSProxy.at(await proxyRegistry.proxies(user1))
+      const calldata = ethProxy.contract.post(user1).encodeABI()
+
+      console.log(calldata)
+      console.log(id('post(address)').slice(0, 10))
+      console.log(user1)
       await dsProxy.execute(ethProxy.address, calldata, { from: user1, value: wethTokens1 })
     })
   })
