@@ -70,6 +70,9 @@ contract YieldProxy is DecimalMath {
     ControllerLike public controller;
     ITreasury public treasury;
 
+    IPool[] public pools;
+    mapping (address => bool) public poolsMap;
+
     bytes32 public constant CHAI = "CHAI";
     bytes32 public constant WETH = "ETH-A";
     bool constant public MTY = true;
@@ -108,7 +111,10 @@ contract YieldProxy is DecimalMath {
         for (uint i = 0 ; i < _pools.length; i++) {
             dai.approve(address(_pools[i]), uint(-1));
             _pools[i].fyDai().approve(address(_pools[i]), uint(-1));
+            poolsMap[address(_pools[i])]= true;
         }
+
+        pools = _pools;
     }
 
     /// @dev Unpack r, s and v from a `bytes` signature
@@ -135,6 +141,7 @@ contract YieldProxy is DecimalMath {
 
     /// @dev Given a pool and 3 signatures, it `permit`'s dai and fyDai for that pool and adds it as a delegate
     function authorizePool(IPool pool, address from, bytes memory daiSig, bytes memory fyDaiSig, bytes memory poolSig) public {
+        onlyKnownPool(pool);
         bytes32 r;
         bytes32 s;
         uint8 v;
@@ -178,6 +185,7 @@ contract YieldProxy is DecimalMath {
     /// @param maxFYDai maximum amount of fyDai to be borrowed to mint liquidity. 
     /// @return The amount of liquidity tokens minted.  
     function addLiquidity(IPool pool, uint256 daiUsed, uint256 maxFYDai) external returns (uint256) {
+        onlyKnownPool(pool);
         IFYDai fyDai = pool.fyDai();
         require(fyDai.isMature() != true, "YieldProxy: Only before maturity");
         require(dai.transferFrom(msg.sender, address(this), daiUsed), "YieldProxy: Transfer Failed");
@@ -210,6 +218,7 @@ contract YieldProxy is DecimalMath {
     /// @param minimumDaiPrice minimum fyDai/Dai price to be accepted when internally selling Dai.
     /// @param minimumFYDaiPrice minimum Dai/fyDai price to be accepted when internally selling fyDai.
     function removeLiquidityEarlyDaiPool(IPool pool, uint256 poolTokens, uint256 minimumDaiPrice, uint256 minimumFYDaiPrice) external {
+        onlyKnownPool(pool);
         IFYDai fyDai = pool.fyDai();
         uint256 maturity = fyDai.maturity();
         (uint256 daiObtained, uint256 fyDaiObtained) = pool.burn(msg.sender, address(this), poolTokens);
@@ -243,6 +252,7 @@ contract YieldProxy is DecimalMath {
     /// @param poolTokens amount of pool tokens to burn. 
     /// @param minimumFYDaiPrice minimum Dai/fyDai price to be accepted when internally selling fyDai.
     function removeLiquidityEarlyDaiFixed(IPool pool, uint256 poolTokens, uint256 minimumFYDaiPrice) external {
+        onlyKnownPool(pool);
         IFYDai fyDai = pool.fyDai();
         uint256 maturity = fyDai.maturity();
         (uint256 daiObtained, uint256 fyDaiObtained) = pool.burn(msg.sender, address(this), poolTokens);
@@ -271,6 +281,7 @@ contract YieldProxy is DecimalMath {
     /// Caller must have approved the liquidity burn with `pool.approve(poolTokens)` <-- It actually doesn't.
     /// @param poolTokens amount of pool tokens to burn.
     function removeLiquidityMature(IPool pool, uint256 poolTokens) external {
+        onlyKnownPool(pool);
         IFYDai fyDai = pool.fyDai();
         uint256 maturity = fyDai.maturity();
         (uint256 daiObtained, uint256 fyDaiObtained) = pool.burn(msg.sender, address(this), poolTokens);
@@ -313,6 +324,7 @@ contract YieldProxy is DecimalMath {
         public
         returns (uint256)
     {
+        onlyKnownPool(pool);
         uint256 fyDaiToBorrow = pool.buyDaiPreview(daiToBorrow.toUint128());
         require (fyDaiToBorrow <= maximumFYDai, "YieldProxy: Too much fyDai required");
 
@@ -341,6 +353,7 @@ contract YieldProxy is DecimalMath {
         public
         returns (uint256)
     {
+        onlyKnownPool(pool);
         // The collateral for this borrow needs to have been posted beforehand
         controller.borrow(collateral, maturity, msg.sender, address(this), fyDaiToBorrow);
         uint256 boughtDai = pool.sellFYDai(address(this), to, fyDaiToBorrow.toUint128());
@@ -368,6 +381,7 @@ contract YieldProxy is DecimalMath {
         public
         returns (uint256)
     {
+        onlyKnownPool(pool);
         uint256 fyDaiDebt = controller.debtFYDai(collateral, maturity, to);
         uint256 fyDaiToUse = fyDaiDebt < fyDaiRepayment ? fyDaiDebt : fyDaiRepayment; // Use no more fyDai than debt
         uint256 repaymentInDai = pool.buyFYDai(msg.sender, address(this), fyDaiToUse.toUint128());
@@ -396,6 +410,7 @@ contract YieldProxy is DecimalMath {
         public
         returns (uint256)
     {
+        onlyKnownPool(pool);
         uint256 fyDaiRepayment = pool.sellDaiPreview(repaymentInDai.toUint128());
         uint256 fyDaiDebt = controller.debtFYDai(collateral, maturity, to);
         if(fyDaiRepayment <= fyDaiDebt) { // Sell no more Dai than needed to cancel all the debt
@@ -418,6 +433,7 @@ contract YieldProxy is DecimalMath {
         external
         returns(uint256)
     {
+        onlyKnownPool(pool);
         uint256 fyDaiOut = pool.sellDai(msg.sender, to, daiIn);
         require(
             fyDaiOut >= minFYDaiOut,
@@ -434,6 +450,7 @@ contract YieldProxy is DecimalMath {
         public
         returns(uint256)
     {
+        onlyKnownPool(pool);
         uint256 fyDaiIn = pool.buyDai(msg.sender, to, daiOut);
         require(
             maxFYDaiIn >= fyDaiIn,
@@ -451,6 +468,7 @@ contract YieldProxy is DecimalMath {
         external
         returns(uint256)
     {
+        onlyKnownPool(pool);
         (bytes32 r, bytes32 s, uint8 v) = unpack(signature);
         pool.fyDai().permit(msg.sender, address(pool), uint(-1), uint(-1), v, r, s);
 
@@ -465,6 +483,7 @@ contract YieldProxy is DecimalMath {
         public
         returns(uint256)
     {
+        onlyKnownPool(pool);
         uint256 daiOut = pool.sellFYDai(msg.sender, to, fyDaiIn);
         require(
             daiOut >= minDaiOut,
@@ -482,6 +501,7 @@ contract YieldProxy is DecimalMath {
         external
         returns(uint256)
     {
+        onlyKnownPool(pool);
         (bytes32 r, bytes32 s, uint8 v) = unpack(signature);
         pool.fyDai().permit(msg.sender, address(pool), uint(-1), uint(-1), v, r, s);
 
@@ -496,6 +516,7 @@ contract YieldProxy is DecimalMath {
         external
         returns(uint256)
     {
+        onlyKnownPool(pool);
         uint256 daiIn = pool.buyFYDai(msg.sender, to, fyDaiOut);
         require(
             maxDaiIn >= daiIn,
@@ -520,5 +541,9 @@ contract YieldProxy is DecimalMath {
         (bytes32 r, bytes32 s, uint8 v) = unpack(signature);
         dai.permit(msg.sender, address(treasury), dai.nonces(msg.sender), uint(-1), true, v, r, s);
         controller.repayDai(collateral, maturity, msg.sender, to, daiAmount);
+    }
+
+    function onlyKnownPool(IPool pool) private view {
+        require(poolsMap[address(pool)], "YieldProxy: Unknown pool");
     }
 }
