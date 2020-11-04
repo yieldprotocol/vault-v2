@@ -5,7 +5,7 @@ import "../interfaces/IWeth.sol";
 import "../interfaces/IDai.sol";
 import "../interfaces/ITreasury.sol";
 import "../interfaces/IPool.sol";
-import "@nomiclabs/buidler/console.sol";
+
 
 interface ControllerLike {
     function treasury() external view returns (ITreasury);
@@ -29,7 +29,6 @@ library SafeCast {
     }
 }
 
-
 contract BorrowProxy {
     using SafeCast for uint256;
 
@@ -46,8 +45,6 @@ contract BorrowProxy {
 
         weth = IWeth(weth_);
         dai = IDai(dai_);
-
-        IWeth(weth_).approve(treasury_, uint(-1));
     }
 
     /// @dev The WETH9 contract will send ether to YieldProxy on `weth.withdraw` using this function.
@@ -57,6 +54,11 @@ contract BorrowProxy {
     /// @param to Yield Vault to deposit collateral in.
     function post(address to)
         external payable {
+        // Approvals in the constructor don't work for contracts calling this via `delegatecall`
+        if (weth.allowance(address(this), treasury) < msg.value) {
+            weth.approve(treasury, type(uint256).max);
+        }
+
         weth.deposit{ value: msg.value }();
         controller.post(WETH, address(this), to, msg.value);
     }
