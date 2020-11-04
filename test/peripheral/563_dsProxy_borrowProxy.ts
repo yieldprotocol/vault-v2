@@ -6,7 +6,20 @@ const DSProxyRegistry = artifacts.require('ProxyRegistry')
 
 // @ts-ignore
 import { balance } from '@openzeppelin/test-helpers'
-import { WETH, spot, rate1, daiTokens1, wethTokens1, toWad, mulRay, bnify, chainId, name, ZERO, MAX } from '../shared/utils'
+import {
+  WETH,
+  spot,
+  rate1,
+  daiTokens1,
+  wethTokens1,
+  toWad,
+  mulRay,
+  bnify,
+  chainId,
+  name,
+  ZERO,
+  MAX,
+} from '../shared/utils'
 import { MakerEnvironment, YieldEnvironmentLite, Contract } from '../shared/fixtures'
 import { getSignatureDigest, getPermitDigest, getDaiDigest, userPrivateKey, sign } from '../shared/signatures'
 import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
@@ -21,7 +34,7 @@ const SIGNATURE_TYPEHASH = keccak256(
 
 contract('YieldProxy - BorrowProxy', async (accounts) => {
   let [owner, user1, user2] = accounts
-  
+
   let env: YieldEnvironmentLite
   let maker: MakerEnvironment
   let controller: Contract
@@ -45,7 +58,7 @@ contract('YieldProxy - BorrowProxy', async (accounts) => {
   const two = toWad(2)
   const fyDaiTokens1 = daiTokens1
   const fyDaiDebt = daiTokens1
-  
+
   beforeEach(async () => {
     const block = await web3.eth.getBlockNumber()
     maturity1 = (await web3.eth.getBlock(block)).timestamp + 31556952 // One year
@@ -161,11 +174,11 @@ contract('YieldProxy - BorrowProxy', async (accounts) => {
             from: user1,
           })
         })
-    
+
         it('repays debt with Dai and with signature', async () => {
           await maker.getDai(user1, daiTokens1, rate1)
           const debt = (await controller.debtDai(WETH, maturity1, user1)).toString()
-    
+
           const deadline = MAX
           // Authorize DAI
           digest = getDaiDigest(
@@ -181,7 +194,7 @@ contract('YieldProxy - BorrowProxy', async (accounts) => {
             deadline
           )
           const daiSig = sign(digest, userPrivateKey)
-    
+
           // Authorize the proxy for the controller
           digest = getSignatureDigest(
             name,
@@ -195,7 +208,7 @@ contract('YieldProxy - BorrowProxy', async (accounts) => {
             MAX
           )
           const controllerSig = sign(digest, userPrivateKey)
-    
+
           // Revoke delegation, so that we test the signature.
           await controller.revokeDelegate(borrowProxy.address, { from: user1 })
 
@@ -221,7 +234,10 @@ contract('YieldProxy - BorrowProxy', async (accounts) => {
       const previousBalance = await balance.current(user1)
 
       const calldata = borrowProxy.contract.methods.post(user2).encodeABI()
-      await dsProxy.methods['execute(address,bytes)'](borrowProxy.address, calldata, { from: user1, value: wethTokens1 })
+      await dsProxy.methods['execute(address,bytes)'](borrowProxy.address, calldata, {
+        from: user1,
+        value: wethTokens1,
+      })
 
       expect(await balance.current(user1)).to.be.bignumber.lt(previousBalance)
       assert.equal((await vat.urns(WETH, treasury.address)).ink, wethTokens1, 'Treasury should have weth in MakerDAO')
@@ -259,42 +275,42 @@ contract('YieldProxy - BorrowProxy', async (accounts) => {
           await dai.approve(pool.address, MAX, { from: user1 })
           await fyDai1.approve(pool.address, MAX, { from: user1 })
           await pool.mint(user1, user1, daiReserves, { from: user1 })
-  
+
           // Post some more weth to controller
           await borrowProxy.post(user1, { from: user1, value: bnify(wethTokens1).mul(2).toString() })
         })
-  
+
         it('borrows dai for maximum fyDai', async () => {
-          const calldata = borrowProxy.contract.methods.borrowDaiForMaximumFYDai(
-            pool.address, WETH, maturity1, user2, fyDaiTokens1, one
-          ).encodeABI()
+          const calldata = borrowProxy.contract.methods
+            .borrowDaiForMaximumFYDai(pool.address, WETH, maturity1, user2, fyDaiTokens1, one)
+            .encodeABI()
           await dsProxy.methods['execute(address,bytes)'](borrowProxy.address, calldata, { from: user1 })
-  
+
           assert.equal(await dai.balanceOf(user2), one.toString())
         })
-  
+
         it("doesn't borrow dai if limit exceeded", async () => {
-          const calldata = borrowProxy.contract.methods.borrowDaiForMaximumFYDai(
-            pool.address, WETH, maturity1, user2, fyDaiTokens1, daiTokens1
-          ).encodeABI()
+          const calldata = borrowProxy.contract.methods
+            .borrowDaiForMaximumFYDai(pool.address, WETH, maturity1, user2, fyDaiTokens1, daiTokens1)
+            .encodeABI()
           await expectRevert(
             dsProxy.methods['execute(address,bytes)'](borrowProxy.address, calldata, { from: user1 }),
             'YieldProxy: Too much fyDai required'
           )
         })
-  
+
         describe('repaying', () => {
           beforeEach(async () => {
-            const calldata = borrowProxy.contract.methods.borrowDaiForMaximumFYDai(
-              pool.address, WETH, maturity1, user2, fyDaiTokens1, one
-            ).encodeABI()
+            const calldata = borrowProxy.contract.methods
+              .borrowDaiForMaximumFYDai(pool.address, WETH, maturity1, user2, fyDaiTokens1, one)
+              .encodeABI()
             await dsProxy.methods['execute(address,bytes)'](borrowProxy.address, calldata, { from: user1 })
           })
-      
+
           it('repays debt with Dai and with signature', async () => {
             await maker.getDai(user1, daiTokens1, rate1)
             const debt = (await controller.debtDai(WETH, maturity1, user1)).toString()
-      
+
             const deadline = MAX
             // Authorize DAI
             digest = getDaiDigest(
@@ -310,7 +326,7 @@ contract('YieldProxy - BorrowProxy', async (accounts) => {
               deadline
             )
             const daiSig = sign(digest, userPrivateKey)
-      
+
             // Authorize the proxy for the controller
             digest = getSignatureDigest(
               name,
@@ -324,19 +340,19 @@ contract('YieldProxy - BorrowProxy', async (accounts) => {
               MAX
             )
             const controllerSig = sign(digest, userPrivateKey)
-      
+
             // Revoke delegation, so that we test the signature.
             await controller.revokeDelegate(dsProxy.address, { from: user1 })
-  
-            const calldata = borrowProxy.contract.methods.repayDaiWithSignature(
-              WETH, maturity1, user1, debt, daiSig, controllerSig
-            ).encodeABI()
+
+            const calldata = borrowProxy.contract.methods
+              .repayDaiWithSignature(WETH, maturity1, user1, debt, daiSig, controllerSig)
+              .encodeABI()
             await dsProxy.methods['execute(address,bytes)'](borrowProxy.address, calldata, { from: user1 })
 
             assert.equal((await controller.debtDai(WETH, maturity1, user1)).toString(), ZERO)
           })
-        })  
-      })  
+        })
+      })
     })
   })
 })
