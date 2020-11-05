@@ -5,7 +5,6 @@ const DSProxyFactory = artifacts.require('DSProxyFactory')
 const DSProxyRegistry = artifacts.require('ProxyRegistry')
 
 // @ts-ignore
-import { balance } from '@openzeppelin/test-helpers'
 import {
   WETH,
   spot,
@@ -25,7 +24,7 @@ import { getSignatureDigest, getPermitDigest, getDaiDigest, userPrivateKey, sign
 import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
 
 // @ts-ignore
-import { expectRevert } from '@openzeppelin/test-helpers'
+import { balance, expectRevert } from '@openzeppelin/test-helpers'
 import { assert, expect } from 'chai'
 
 const SIGNATURE_TYPEHASH = keccak256(

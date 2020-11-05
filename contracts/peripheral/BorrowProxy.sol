@@ -103,7 +103,7 @@ contract BorrowProxy {
         uint256 daiOut = pool.sellFYDai(msg.sender, to, fyDaiIn);
         require(
             daiOut >= minDaiOut,
-            "YieldProxy: Limit not reached"
+            "BorrowProxy: Limit not reached"
         );
         return daiOut;
     }
@@ -119,7 +119,7 @@ contract BorrowProxy {
         uint256 fyDaiIn = pool.buyDai(msg.sender, to, daiOut);
         require(
             maxFYDaiIn >= fyDaiIn,
-            "YieldProxy: Limit exceeded"
+            "BorrowProxy: Limit exceeded"
         );
         return fyDaiIn;
     }
