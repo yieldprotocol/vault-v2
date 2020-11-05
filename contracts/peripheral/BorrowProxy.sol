@@ -94,13 +94,12 @@ contract BorrowProxy {
     /// --------------------------------------------------
 
     /// @dev Users wishing to withdraw their Weth as ETH from the Controller should use this function.
-    /// Users must have called `controller.addDelegate(yieldProxy.address)` to authorize YieldProxy to act in their behalf.
     /// @param to Wallet to send Eth to.
     /// @param amount Amount of weth to move.
     /// @param controllerSig packed signature for delegation of this proxy in the controller. Ignored if '0x'.
     function withdrawWithSignature(address payable to, uint256 amount, bytes memory controllerSig)
         public {
-        if (controllerSig.length > 0) controller.addDelegate(controllerSig);
+        if (controllerSig.length > 0) controller.addDelegatePacked(controllerSig);
         withdraw(to, amount);
     }
 
@@ -123,7 +122,7 @@ contract BorrowProxy {
         public
         returns (uint256)
     {
-        if (controllerSig.length > 0) controller.addDelegate(controllerSig);
+        if (controllerSig.length > 0) controller.addDelegatePacked(controllerSig);
         return borrowDaiForMaximumFYDai(pool, collateral, maturity, to, maximumFYDai, daiToBorrow);
     }
 
@@ -141,7 +140,7 @@ contract BorrowProxy {
         external
         returns(uint256)
     {
-        if (controllerSig.length > 0) controller.addDelegate(controllerSig);
+        if (controllerSig.length > 0) controller.addDelegatePacked(controllerSig);
         if (daiSig.length > 0) dai.permitDai(treasury, daiSig);
         controller.repayDai(collateral, maturity, msg.sender, to, daiAmount);
     }

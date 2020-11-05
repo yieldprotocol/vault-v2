@@ -18,7 +18,7 @@ library YieldAuth {
     }
 
     /// @dev Use a packed `signature` to add this contract as a delegate of caller on the `target` contract.
-    function addDelegate(IDelegable target, bytes memory signature) internal {
+    function addDelegatePacked(IDelegable target, bytes memory signature) internal {
         bytes32 r;
         bytes32 s;
         uint8 v;
