@@ -97,10 +97,10 @@ contract BorrowProxy {
     /// Users must have called `controller.addDelegate(yieldProxy.address)` to authorize YieldProxy to act in their behalf.
     /// @param to Wallet to send Eth to.
     /// @param amount Amount of weth to move.
-    /// @param controllerSig packed signature for delegation of this proxy in the controller.
+    /// @param controllerSig packed signature for delegation of this proxy in the controller. Ignored if '0x'.
     function withdrawWithSignature(address payable to, uint256 amount, bytes memory controllerSig)
         public {
-        controller.addDelegate(controllerSig);
+        if (controllerSig.length > 0) controller.addDelegate(controllerSig);
         withdraw(to, amount);
     }
 
@@ -110,7 +110,7 @@ contract BorrowProxy {
     /// @param to Wallet to send the resulting Dai to.
     /// @param maximumFYDai Maximum amount of FYDai to borrow.
     /// @param daiToBorrow Exact amount of Dai that should be obtained.
-    /// @param controllerSig packed signature for delegation of this proxy in the controller.
+    /// @param controllerSig packed signature for delegation of this proxy in the controller. Ignored if '0x'.
     function borrowDaiForMaximumFYDaiWithSignature(
         IPool pool,
         bytes32 collateral,
@@ -123,7 +123,7 @@ contract BorrowProxy {
         public
         returns (uint256)
     {
-        controller.addDelegate(controllerSig);
+        if (controllerSig.length > 0) controller.addDelegate(controllerSig);
         return borrowDaiForMaximumFYDai(pool, collateral, maturity, to, maximumFYDai, daiToBorrow);
     }
 
@@ -135,14 +135,14 @@ contract BorrowProxy {
     /// @param maturity Maturity of an added series
     /// @param to Yield vault to repay debt for.
     /// @param daiAmount Amount of Dai to use for debt repayment.
-    /// @param daiSig packed signature for permit of dai transfers to this proxy.
-    /// @param controllerSig packed signature for delegation of this proxy in the controller.
+    /// @param daiSig packed signature for permit of dai transfers to this proxy. Ignored if '0x'.
+    /// @param controllerSig packed signature for delegation of this proxy in the controller. Ignored if '0x'.
     function repayDaiWithSignature(bytes32 collateral, uint256 maturity, address to, uint256 daiAmount, bytes memory daiSig, bytes memory controllerSig)
         external
         returns(uint256)
     {
-        controller.addDelegate(controllerSig);
-        dai.permitDai(treasury, daiSig);
+        if (controllerSig.length > 0) controller.addDelegate(controllerSig);
+        if (daiSig.length > 0) dai.permitDai(treasury, daiSig);
         controller.repayDai(collateral, maturity, msg.sender, to, daiAmount);
     }
 }
