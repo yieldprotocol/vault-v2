@@ -4,43 +4,23 @@ pragma solidity ^0.6.10;
 import "../interfaces/IWeth.sol";
 import "../interfaces/IDai.sol";
 import "../interfaces/ITreasury.sol";
+import "../interfaces/IController.sol";
 import "../interfaces/IPool.sol";
+import "../helpers/SafeCast.sol";
 
-
-interface ControllerLike {
-    function treasury() external view returns (ITreasury);
-    function weth() external view returns (IWeth);
-    function dai() external view returns (IDai);
-    function post(bytes32, address, address, uint256) external;
-    function withdraw(bytes32, address, address, uint256) external;
-    function borrow(bytes32, uint256, address, address, uint256) external;
-    function repayDai(bytes32, uint256, address, address, uint256) external returns (uint256);
-    function addDelegateBySignature(address, address, uint, uint8, bytes32, bytes32) external;
-}
-
-library SafeCast {
-    /// @dev Safe casting from uint256 to uint128
-    function toUint128(uint256 x) internal pure returns(uint128) {
-        require(
-            x <= type(uint128).max,
-            "YieldProxy: Cast overflow"
-        );
-        return uint128(x);
-    }
-}
 
 contract BorrowProxy {
     using SafeCast for uint256;
 
     IWeth public immutable weth;
     IDai public immutable dai;
-    ControllerLike public immutable controller;
+    IController public immutable controller;
     address public immutable treasury;
 
     bytes32 public constant WETH = "ETH-A";
 
     constructor(address weth_, address dai_, address treasury_, address controller_) public {
-        controller = ControllerLike(controller_);
+        controller = IController(controller_);
         treasury = treasury_;
 
         weth = IWeth(weth_);
