@@ -3,14 +3,16 @@ pragma solidity ^0.6.10;
 
 import "../interfaces/IWeth.sol";
 import "../interfaces/IDai.sol";
-import "../interfaces/ITreasury.sol";
 import "../interfaces/IController.sol";
 import "../interfaces/IPool.sol";
 import "../helpers/SafeCast.sol";
+import "../helpers/YieldAuth.sol";
 
 
 contract BorrowProxy {
     using SafeCast for uint256;
+    using YieldAuth for IController;
+    using YieldAuth for IDai;
 
     IWeth public immutable weth;
     IDai public immutable dai;
@@ -34,7 +36,7 @@ contract BorrowProxy {
     /// @param to Yield Vault to deposit collateral in.
     function post(address to)
         external payable {
-        // Approvals in the constructor don't work for contracts calling this via `delegatecall`
+        // Approvals in the constructor don't work for contracts calling this via `addDelegatecall`
         if (weth.allowance(address(this), treasury) < msg.value) {
             weth.approve(treasury, type(uint256).max);
         }
@@ -88,39 +90,8 @@ contract BorrowProxy {
     }
 
     /// --------------------------------------------------
-    /// Signature management and signature method wrappers
+    /// Signature method wrappers
     /// --------------------------------------------------
-
-    /// @dev Unpack r, s and v from a `bytes` signature
-    function unpack(bytes memory signature) private pure returns (bytes32 r, bytes32 s, uint8 v) {
-        assembly {
-            r := mload(add(signature, 0x20))
-            s := mload(add(signature, 0x40))
-            v := byte(0, mload(add(signature, 0x60)))
-        }
-    }
-
-    function authorizeController(bytes memory controllerSig) public {
-        bytes32 r;
-        bytes32 s;
-        uint8 v;
-
-        if (controllerSig.length > 0) {
-            (r, s, v) = unpack(controllerSig);
-            controller.addDelegateBySignature(msg.sender, address(this), uint(-1), v, r, s);
-        }
-    }
-
-    function authorizeDai(bytes memory daiSig) public {
-        bytes32 r;
-        bytes32 s;
-        uint8 v;
-
-        if (daiSig.length > 0) {
-            (r, s, v) = unpack(daiSig);
-            dai.permit(msg.sender, address(treasury), dai.nonces(msg.sender), uint(-1), true, v, r, s);
-        }
-    }
 
     /// @dev Users wishing to withdraw their Weth as ETH from the Controller should use this function.
     /// Users must have called `controller.addDelegate(yieldProxy.address)` to authorize YieldProxy to act in their behalf.
@@ -129,7 +100,7 @@ contract BorrowProxy {
     /// @param controllerSig packed signature for delegation of this proxy in the controller.
     function withdrawWithSignature(address payable to, uint256 amount, bytes memory controllerSig)
         public {
-        authorizeController(controllerSig);
+        controller.addDelegate(controllerSig);
         withdraw(to, amount);
     }
 
@@ -152,7 +123,7 @@ contract BorrowProxy {
         public
         returns (uint256)
     {
-        authorizeController(controllerSig);
+        controller.addDelegate(controllerSig);
         return borrowDaiForMaximumFYDai(pool, collateral, maturity, to, maximumFYDai, daiToBorrow);
     }
 
@@ -170,8 +141,8 @@ contract BorrowProxy {
         external
         returns(uint256)
     {
-        authorizeController(controllerSig);
-        authorizeDai(daiSig);
+        controller.addDelegate(controllerSig);
+        dai.permitDai(treasury, daiSig);
         controller.repayDai(collateral, maturity, msg.sender, to, daiAmount);
     }
 }

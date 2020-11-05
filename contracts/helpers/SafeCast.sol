@@ -1,4 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.6.10;
+
 
 library SafeCast {
     /// @dev Safe casting from uint256 to uint128
