@@ -86,139 +86,9 @@ contract('YieldProxy - BorrowProxy', async (accounts) => {
     await fyDai1.orchestrate(owner, keccak256(toUtf8Bytes('mint(address,uint256)')), { from: owner })
   })
 
-  describe('directly', () => {
-    it('allows user to post eth', async () => {
-      assert.equal((await vat.urns(WETH, treasury.address)).ink, 0, 'Treasury has weth in MakerDAO')
-      assert.equal(await controller.powerOf(WETH, user2), 0, 'User2 has borrowing power')
-
-      const previousBalance = await balance.current(user1)
-      await borrowProxy.post(user2, { from: user1, value: wethTokens1 })
-
-      expect(await balance.current(user1)).to.be.bignumber.lt(previousBalance)
-      assert.equal((await vat.urns(WETH, treasury.address)).ink, wethTokens1, 'Treasury should have weth in MakerDAO')
-      assert.equal(
-        await controller.powerOf(WETH, user2),
-        mulRay(wethTokens1, spot).toString(),
-        'User2 should have ' +
-          mulRay(wethTokens1, spot) +
-          ' borrowing power, instead has ' +
-          (await controller.powerOf(WETH, user2))
-      )
-    })
-
-    describe('with posted eth', () => {
-      beforeEach(async () => {
-        await borrowProxy.post(user1, { from: user1, value: wethTokens1 })
-
-        assert.equal(
-          (await vat.urns(WETH, treasury.address)).ink,
-          wethTokens1,
-          'Treasury does not have weth in MakerDAO'
-        )
-        assert.equal(
-          await controller.powerOf(WETH, user1),
-          mulRay(wethTokens1, spot).toString(),
-          'User1 does not have borrowing power'
-        )
-        assert.equal(await weth.balanceOf(user2), 0, 'User2 has collateral in hand')
-      })
-
-      it('allows user to withdraw weth', async () => {
-        await controller.addDelegate(borrowProxy.address, { from: user1 })
-        const previousBalance = await balance.current(user2)
-        await borrowProxy.withdraw(user2, wethTokens1, { from: user1 })
-
-        expect(await balance.current(user2)).to.be.bignumber.gt(previousBalance)
-        assert.equal((await vat.urns(WETH, treasury.address)).ink, 0, 'Treasury should not not have weth in MakerDAO')
-        assert.equal(await controller.powerOf(WETH, user1), 0, 'User1 should not have borrowing power')
-      })
-    })
-
-    describe('borrowing', () => {
-      beforeEach(async () => {
-        // Init pool
-        const daiReserves = daiTokens1
-        await env.maker.getDai(user1, daiReserves, rate1)
-        await dai.approve(pool.address, MAX, { from: user1 })
-        await fyDai1.approve(pool.address, MAX, { from: user1 })
-        await pool.mint(user1, user1, daiReserves, { from: user1 })
-
-        // Post some more weth to controller
-        await borrowProxy.post(user1, { from: user1, value: bnify(wethTokens1).mul(2).toString() })
-
-        // Authorize borrowProxy on the Controller
-        await controller.addDelegate(borrowProxy.address, { from: user1 })
-      })
-
-      it('borrows dai for maximum fyDai', async () => {
-        await borrowProxy.borrowDaiForMaximumFYDai(pool.address, WETH, maturity1, user2, fyDaiTokens1, one, {
-          from: user1,
-        })
-
-        assert.equal(await dai.balanceOf(user2), one.toString())
-      })
-
-      it("doesn't borrow dai if limit exceeded", async () => {
-        await expectRevert(
-          borrowProxy.borrowDaiForMaximumFYDai(pool.address, WETH, maturity1, user2, fyDaiTokens1, daiTokens1, {
-            from: user1,
-          }),
-          'YieldProxy: Too much fyDai required'
-        )
-      })
-
-      describe('repaying', () => {
-        beforeEach(async () => {
-          await borrowProxy.borrowDaiForMaximumFYDai(pool.address, WETH, maturity1, user2, fyDaiTokens1, one, {
-            from: user1,
-          })
-        })
-
-        it('repays debt with Dai and with signature', async () => {
-          await maker.getDai(user1, daiTokens1, rate1)
-          const debt = (await controller.debtDai(WETH, maturity1, user1)).toString()
-
-          const deadline = MAX
-          // Authorize DAI
-          digest = getDaiDigest(
-            await dai.name(),
-            dai.address,
-            chainId,
-            {
-              owner: user1,
-              spender: env.treasury.address,
-              can: true,
-            },
-            bnify(await dai.nonces(user1)),
-            deadline
-          )
-          const daiSig = sign(digest, userPrivateKey)
-
-          // Authorize the proxy for the controller
-          digest = getSignatureDigest(
-            name,
-            controller.address,
-            chainId,
-            {
-              user: user1,
-              delegate: borrowProxy.address,
-            },
-            await controller.signatureCount(user1),
-            MAX
-          )
-          const controllerSig = sign(digest, userPrivateKey)
-
-          // Revoke delegation, so that we test the signature.
-          await controller.revokeDelegate(borrowProxy.address, { from: user1 })
-
-          await borrowProxy.repayDaiWithSignature(WETH, maturity1, user1, debt, daiSig, controllerSig, { from: user1 })
-          assert.equal((await controller.debtDai(WETH, maturity1, user1)).toString(), ZERO)
-        })
-      })
-    })
-  })
-
   describe('through dsproxy', () => {
+    let daiSig: any, controllerSig: any, poolSig: any
+
     beforeEach(async () => {
       // Sets DSProxy for user1
       await proxyRegistry.build({ from: user1 })
@@ -304,13 +174,7 @@ contract('YieldProxy - BorrowProxy', async (accounts) => {
               .borrowDaiForMaximumFYDai(pool.address, WETH, maturity1, user2, fyDaiTokens1, one)
               .encodeABI()
             await dsProxy.methods['execute(address,bytes)'](borrowProxy.address, calldata, { from: user1 })
-          })
 
-          it('repays debt with Dai and with signature', async () => {
-            await maker.getDai(user1, daiTokens1, rate1)
-            const debt = (await controller.debtDai(WETH, maturity1, user1)).toString()
-
-            const deadline = MAX
             // Authorize DAI
             digest = getDaiDigest(
               await dai.name(),
@@ -322,9 +186,9 @@ contract('YieldProxy - BorrowProxy', async (accounts) => {
                 can: true,
               },
               bnify(await dai.nonces(user1)),
-              deadline
+              MAX
             )
-            const daiSig = sign(digest, userPrivateKey)
+            daiSig = sign(digest, userPrivateKey)
 
             // Authorize the proxy for the controller
             digest = getSignatureDigest(
@@ -338,7 +202,12 @@ contract('YieldProxy - BorrowProxy', async (accounts) => {
               await controller.signatureCount(user1),
               MAX
             )
-            const controllerSig = sign(digest, userPrivateKey)
+            controllerSig = sign(digest, userPrivateKey)
+          })
+
+          it('repays debt with Dai and with signature', async () => {
+            await maker.getDai(user1, daiTokens1, rate1)
+            const debt = (await controller.debtDai(WETH, maturity1, user1)).toString()
 
             // Revoke delegation, so that we test the signature.
             await controller.revokeDelegate(dsProxy.address, { from: user1 })
