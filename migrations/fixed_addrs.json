@@ -7,7 +7,9 @@
     "daiJoinAddress" : "0x9759A6Ac90977b93B58547b4A71c78317f391A28",
     "potAddress" : "0x197E90f9FAD81970bA7976f33CbD77088E5D7cf7",
     "endAddress" : "0xaB14d3CE3F733CACB76eC2AbE7d2fcb00c99F3d5",
-    "chaiAddress" : "0x06af07097c9eeb7fd685c692751d5c66db49c215"
+    "chaiAddress" : "0x06af07097c9eeb7fd685c692751d5c66db49c215",
+    "proxyFactoryAddress" : "0xA26e15C895EFc0616177B7c1e7270A4C7D51C997",
+    "proxyRegistry": "0x4678f0a6958e4D2Bc4F1BAF7Bc52E8F3564f3fE4"
   },
   "mainnet-ganache" : {
     "vatAddress": "0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B",
@@ -17,7 +19,9 @@
     "daiJoinAddress" : "0x9759A6Ac90977b93B58547b4A71c78317f391A28",
     "potAddress" : "0x197E90f9FAD81970bA7976f33CbD77088E5D7cf7",
     "endAddress" : "0xaB14d3CE3F733CACB76eC2AbE7d2fcb00c99F3d5",
-    "chaiAddress" : "0x06af07097c9eeb7fd685c692751d5c66db49c215"
+    "chaiAddress" : "0x06af07097c9eeb7fd685c692751d5c66db49c215",
+    "proxyFactoryAddress" : "0xA26e15C895EFc0616177B7c1e7270A4C7D51C997",
+    "proxyRegistry": "0x4678f0a6958e4D2Bc4F1BAF7Bc52E8F3564f3fE4"
   },
   "kovan" : {
     "vatAddress" : "0xbA987bDB501d131f766fEe8180Da5d81b34b69d9",
@@ -27,7 +31,9 @@
     "daiJoinAddress" : "0x5AA71a3ae1C0bd6ac27A1f28e1415fFFB6F15B8c",
     "potAddress" : "0xEA190DBDC7adF265260ec4dA6e9675Fd4f5A78bb",
     "endAddress" : "0x24728AcF2E2C403F5d2db4Df6834B8998e56aA5F",
-    "chaiAddress" : "0xb641957b6c29310926110848db2d464c8c3c3f38"
+    "chaiAddress" : "0xb641957b6c29310926110848db2d464c8c3c3f38",
+    "proxyFactoryAddress": "0xe11E3b391F7E8bC47247866aF32AF67Dd58Dc800",
+    "proxyRegistry": "0x64A436ae831C1672AE81F674CAb8B6775df3475C"
   },
   "kovan-fork" : {
     "vatAddress" : "0xbA987bDB501d131f766fEe8180Da5d81b34b69d9",
@@ -37,7 +43,9 @@
     "daiJoinAddress" : "0x5AA71a3ae1C0bd6ac27A1f28e1415fFFB6F15B8c",
     "potAddress" : "0xEA190DBDC7adF265260ec4dA6e9675Fd4f5A78bb",
     "endAddress" : "0x24728AcF2E2C403F5d2db4Df6834B8998e56aA5F",
-    "chaiAddress" : "0xb641957b6c29310926110848db2d464c8c3c3f38"
+    "chaiAddress" : "0xb641957b6c29310926110848db2d464c8c3c3f38",
+    "proxyFactoryAddress": "0xe11E3b391F7E8bC47247866aF32AF67Dd58Dc800",
+    "proxyRegistry": "0x64A436ae831C1672AE81F674CAb8B6775df3475C"
   },
   "goerli": {
     "vatAddress" : "0x0de72A41138079f8052e4625C24eD06ac55c97Be",
