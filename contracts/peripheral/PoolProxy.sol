@@ -206,7 +206,7 @@ contract PoolProxy is DecimalMath {
         bytes memory daiSig,
         bytes memory controllerSig
     ) external returns (uint256) {
-        if (daiSig.length > 0) dai.permitDai(address(this), daiSig);
+        if (daiSig.length > 0) dai.permitPackedDai(address(this), daiSig);
         if (controllerSig.length > 0) controller.addDelegatePacked(controllerSig);
         return addLiquidity(pool, daiUsed, maxFYDai);
     }

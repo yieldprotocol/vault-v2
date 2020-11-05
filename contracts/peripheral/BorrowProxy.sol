@@ -3,6 +3,7 @@ pragma solidity ^0.6.10;
 
 import "../interfaces/IWeth.sol";
 import "../interfaces/IDai.sol";
+import "../interfaces/IFYDai.sol";
 import "../interfaces/IController.sol";
 import "../interfaces/IPool.sol";
 import "../helpers/SafeCast.sol";
@@ -11,8 +12,10 @@ import "../helpers/YieldAuth.sol";
 
 contract BorrowProxy {
     using SafeCast for uint256;
-    using YieldAuth for IController;
     using YieldAuth for IDai;
+    using YieldAuth for IFYDai;
+    using YieldAuth for IController;
+    using YieldAuth for IPool;
 
     IWeth public immutable weth;
     IDai public immutable dai;
@@ -89,6 +92,38 @@ contract BorrowProxy {
         return fyDaiToBorrow;
     }
 
+    /// @dev Sell fyDai for Dai
+    /// @param to Wallet receiving the dai being bought
+    /// @param fyDaiIn Amount of fyDai being sold
+    /// @param minDaiOut Minimum amount of dai being bought
+    function sellFYDai(IPool pool, address to, uint128 fyDaiIn, uint128 minDaiOut)
+        public
+        returns(uint256)
+    {
+        uint256 daiOut = pool.sellFYDai(msg.sender, to, fyDaiIn);
+        require(
+            daiOut >= minDaiOut,
+            "YieldProxy: Limit not reached"
+        );
+        return daiOut;
+    }
+
+    /// @dev Buy Dai for fyDai
+    /// @param to Wallet receiving the dai being bought
+    /// @param daiOut Amount of dai being bought
+    /// @param maxFYDaiIn Maximum amount of fyDai being sold
+    function buyDai(IPool pool, address to, uint128 daiOut, uint128 maxFYDaiIn)
+        public
+        returns(uint256)
+    {
+        uint256 fyDaiIn = pool.buyDai(msg.sender, to, daiOut);
+        require(
+            maxFYDaiIn >= fyDaiIn,
+            "YieldProxy: Limit exceeded"
+        );
+        return fyDaiIn;
+    }
+
     /// --------------------------------------------------
     /// Signature method wrappers
     /// --------------------------------------------------
@@ -141,7 +176,37 @@ contract BorrowProxy {
         returns(uint256)
     {
         if (controllerSig.length > 0) controller.addDelegatePacked(controllerSig);
-        if (daiSig.length > 0) dai.permitDai(treasury, daiSig);
+        if (daiSig.length > 0) dai.permitPackedDai(treasury, daiSig);
         controller.repayDai(collateral, maturity, msg.sender, to, daiAmount);
+    }
+
+    /// @dev Sell fyDai for Dai
+    /// @param to Wallet receiving the dai being bought
+    /// @param fyDaiIn Amount of fyDai being sold
+    /// @param minDaiOut Minimum amount of dai being bought
+    /// @param fyDaiSig packed signature for approving fyDai transfers from a pool. Ignored if '0x'.
+    /// @param poolSig packed signature for delegation of this proxy in a pool. Ignored if '0x'.
+    function sellFYDaiWithSignature(IPool pool, address to, uint128 fyDaiIn, uint128 minDaiOut, bytes memory fyDaiSig, bytes memory poolSig)
+        public
+        returns(uint256)
+    {
+        if (fyDaiSig.length > 0) pool.fyDai().permitPacked(address(pool), fyDaiSig);
+        if (poolSig.length > 0) pool.addDelegatePacked(poolSig);
+        return sellFYDai(pool, to, fyDaiIn, minDaiOut);
+    }
+
+    /// @dev Buy Dai for fyDai
+    /// @param to Wallet receiving the dai being bought
+    /// @param daiOut Amount of dai being bought
+    /// @param maxFYDaiIn Maximum amount of fyDai being sold
+    /// @param fyDaiSig packed signature for approving fyDai transfers from a pool. Ignored if '0x'.
+    /// @param poolSig packed signature for delegation of this proxy in a pool. Ignored if '0x'.
+    function buyDaiWithSignature(IPool pool, address to, uint128 daiOut, uint128 maxFYDaiIn, bytes memory fyDaiSig, bytes memory poolSig)
+        external
+        returns(uint256)
+    {
+        if (fyDaiSig.length > 0) pool.fyDai().permitPacked(address(pool), fyDaiSig);
+        if (poolSig.length > 0) pool.addDelegatePacked(poolSig);
+        return buyDai(pool, to, daiOut, maxFYDaiIn);
     }
 }

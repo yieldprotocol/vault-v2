@@ -28,7 +28,7 @@ library YieldAuth {
     }
 
     /// @dev Use a packed `signature` to approve `spender` on the `dai` contract for the maximum amount.
-    function permitDai(IDai dai, address spender, bytes memory signature) internal {
+    function permitPackedDai(IDai dai, address spender, bytes memory signature) internal {
         bytes32 r;
         bytes32 s;
         uint8 v;
@@ -38,7 +38,7 @@ library YieldAuth {
     }
 
     /// @dev Use a packed `signature` to approve `spender` on the target IERC2612 `token` contract for the maximum amount.
-    function permit(IERC2612 token, address spender, bytes memory signature) internal {
+    function permitPacked(IERC2612 token, address spender, bytes memory signature) internal {
         bytes32 r;
         bytes32 s;
         uint8 v;
