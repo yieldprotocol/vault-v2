@@ -11,7 +11,7 @@ import helper from 'ganache-time-traveler'
 import { CHAI, chi1, rate1, daiTokens1, toWad, precision, bnify, chainId, name, MAX } from '../shared/utils'
 import { MakerEnvironment, YieldEnvironmentLite, Contract } from '../shared/fixtures'
 
-contract('PoolProxy - user flow', async (accounts) => {
+contract('PoolProxy - DSProxy', async (accounts) => {
   let [owner, user1, user2, operator, to] = accounts
 
   const initialDai = daiTokens1
@@ -161,11 +161,11 @@ contract('PoolProxy - user flow', async (accounts) => {
 
       await dai.mint(user2, oneToken, { from: owner })
 
-      const calldata = poolProxy.contract.methods.addLiquidityWithSignature(
-        pool0.address, daiUsed, maxFYDai, daiSig, controllerSig
-      ).encodeABI()
+      const calldata = poolProxy.contract.methods
+        .addLiquidityWithSignature(pool0.address, daiUsed, maxFYDai, daiSig, controllerSig)
+        .encodeABI()
       await dsProxy.methods['execute(address,bytes)'](poolProxy.address, calldata, {
-        from: user2
+        from: user2,
       })
     })
 
@@ -185,7 +185,6 @@ contract('PoolProxy - user flow', async (accounts) => {
         await dai.mint(user2, oneToken, { from: owner })
         await poolProxy.addLiquidity(pool1.address, oneToken, maxBorrow, { from: user2 })
 
-        
         // Authorize the proxy for the pool
         const poolDigest = getSignatureDigest(
           name,
@@ -206,22 +205,22 @@ contract('PoolProxy - user flow', async (accounts) => {
       it('removes liquidity early by selling with the pool and controller signatures', async () => {
         const poolTokens = (await pool0.balanceOf(user2)).toString()
 
-        const calldata = poolProxy.contract.methods.removeLiquidityEarlyDaiPoolWithSignature(
-          pool0.address, poolTokens, '0', '0', controllerSig, poolSig
-        ).encodeABI()
+        const calldata = poolProxy.contract.methods
+          .removeLiquidityEarlyDaiPoolWithSignature(pool0.address, poolTokens, '0', '0', controllerSig, poolSig)
+          .encodeABI()
         await dsProxy.methods['execute(address,bytes)'](poolProxy.address, calldata, {
-          from: user2
+          from: user2,
         })
       })
 
       it('removes liquidity early by repaying', async () => {
         const poolTokens = (await pool0.balanceOf(user2)).toString()
 
-        const calldata = poolProxy.contract.methods.removeLiquidityEarlyDaiFixedWithSignature(
-          pool0.address, poolTokens, '0', controllerSig, poolSig
-        ).encodeABI()
+        const calldata = poolProxy.contract.methods
+          .removeLiquidityEarlyDaiFixedWithSignature(pool0.address, poolTokens, '0', controllerSig, poolSig)
+          .encodeABI()
         await dsProxy.methods['execute(address,bytes)'](poolProxy.address, calldata, {
-          from: user2
+          from: user2,
         })
       })
 
@@ -232,11 +231,11 @@ contract('PoolProxy - user flow', async (accounts) => {
 
         const poolTokens = (await pool0.balanceOf(user2)).toString()
 
-        const calldata = poolProxy.contract.methods.removeLiquidityMatureWithSignature(
-          pool0.address, poolTokens, controllerSig, poolSig
-        ).encodeABI()
+        const calldata = poolProxy.contract.methods
+          .removeLiquidityMatureWithSignature(pool0.address, poolTokens, controllerSig, poolSig)
+          .encodeABI()
         await dsProxy.methods['execute(address,bytes)'](poolProxy.address, calldata, {
-          from: user2
+          from: user2,
         })
       })
     })

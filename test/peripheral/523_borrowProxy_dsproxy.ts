@@ -27,11 +27,7 @@ import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
 import { balance, expectRevert } from '@openzeppelin/test-helpers'
 import { assert, expect } from 'chai'
 
-const SIGNATURE_TYPEHASH = keccak256(
-  toUtf8Bytes('Signature(address user,address delegate,uint256 nonce,uint256 deadline)')
-)
-
-contract('YieldProxy - BorrowProxy', async (accounts) => {
+contract('YieldProxy - DSProxy', async (accounts) => {
   let [owner, user1, user2] = accounts
 
   let env: YieldEnvironmentLite
@@ -54,9 +50,7 @@ contract('YieldProxy - BorrowProxy', async (accounts) => {
   let digest: any
 
   const one = toWad(1)
-  const two = toWad(2)
   const fyDaiTokens1 = daiTokens1
-  const fyDaiDebt = daiTokens1
 
   beforeEach(async () => {
     const block = await web3.eth.getBlockNumber()

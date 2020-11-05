@@ -1,27 +1,16 @@
 const Pool = artifacts.require('Pool')
 const BorrowProxy = artifacts.require('BorrowProxy')
 
-import {
-  WETH,
-  spot,
-  wethTokens1,
-  toWad,
-  toRay,
-  mulRay,
-  bnify,
-  chainId,
-  name,
-  MAX,
-} from '../shared/utils'
+import { WETH, wethTokens1, toWad, toRay, mulRay, bnify, chainId, name, MAX } from '../shared/utils'
 import { getSignatureDigest, getDaiDigest, getPermitDigest, userPrivateKey, sign } from '../shared/signatures'
 import { MakerEnvironment, YieldEnvironmentLite, Contract } from '../shared/fixtures'
 import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
 
 // @ts-ignore
-import { balance, BN, expectRevert } from '@openzeppelin/test-helpers'
-import { assert, expect } from 'chai'
+import { expectRevert } from '@openzeppelin/test-helpers'
+import { assert } from 'chai'
 
-contract('BorrowProxy - LimitPool', async (accounts) => {
+contract('BorrowProxy - Signatures', async (accounts) => {
   let [owner, user1, user2] = accounts
 
   let env: YieldEnvironmentLite
@@ -100,27 +89,45 @@ contract('BorrowProxy - LimitPool', async (accounts) => {
           await dai.approve(pool.address, MAX, { from: user1 })
           await fyDai1.approve(pool.address, MAX, { from: user1 })
           await pool.mint(user1, user1, daiReserves, { from: user1 })
-    
+
           // Post some more weth to the controller
           await proxy.post(user1, { from: user1, value: bnify(wethTokens1).mul(2).toString() })
-    
+
           // Give some fyDai to user1
           await fyDai1.mint(user1, fyDaiTokens1, { from: owner })
         })
-    
+
         it('borrows dai for maximum fyDai', async () => {
-          await proxy.borrowDaiForMaximumFYDaiWithSignature(pool.address, WETH, maturity1, user2, fyDaiTokens1, oneToken, controllerSig, {
-            from: user1,
-          })
-    
+          await proxy.borrowDaiForMaximumFYDaiWithSignature(
+            pool.address,
+            WETH,
+            maturity1,
+            user2,
+            fyDaiTokens1,
+            oneToken,
+            controllerSig,
+            {
+              from: user1,
+            }
+          )
+
           assert.equal(await dai.balanceOf(user2), oneToken.toString())
         })
-    
+
         it("doesn't borrow dai if limit exceeded", async () => {
           await expectRevert(
-            proxy.borrowDaiForMaximumFYDaiWithSignature(pool.address, WETH, maturity1, user2, fyDaiTokens1, daiTokens1, controllerSig, {
-              from: user1,
-            }),
+            proxy.borrowDaiForMaximumFYDaiWithSignature(
+              pool.address,
+              WETH,
+              maturity1,
+              user2,
+              fyDaiTokens1,
+              daiTokens1,
+              controllerSig,
+              {
+                from: user1,
+              }
+            ),
             'YieldProxy: Too much fyDai required'
           )
         })
@@ -129,9 +136,18 @@ contract('BorrowProxy - LimitPool', async (accounts) => {
           let daiSig: any
 
           beforeEach(async () => {
-            await proxy.borrowDaiForMaximumFYDaiWithSignature(pool.address, WETH, maturity1, user2, fyDaiTokens1, oneToken, controllerSig, {
-              from: user1,
-            })
+            await proxy.borrowDaiForMaximumFYDaiWithSignature(
+              pool.address,
+              WETH,
+              maturity1,
+              user2,
+              fyDaiTokens1,
+              oneToken,
+              controllerSig,
+              {
+                from: user1,
+              }
+            )
 
             // Authorize DAI
             const daiDigest = getDaiDigest(
@@ -148,7 +164,7 @@ contract('BorrowProxy - LimitPool', async (accounts) => {
             )
             daiSig = sign(daiDigest, userPrivateKey)
           })
-      
+
           it('repays debt using Dai with Dai permit ', async () => {
             await proxy.repayDaiWithSignature(WETH, maturity1, user2, oneToken, daiSig, '0x', {
               from: user1,
@@ -193,7 +209,6 @@ contract('BorrowProxy - LimitPool', async (accounts) => {
       )
       poolSig = sign(poolDigest, userPrivateKey)
 
-
       const fyDaiDigest = getPermitDigest(
         await fyDai1.name(),
         await pool.fyDai(),
@@ -211,14 +226,18 @@ contract('BorrowProxy - LimitPool', async (accounts) => {
 
     it('buys dai with signatures', async () => {
       await fyDai1.mint(user1, fyDaiTokens1, { from: owner })
-      await proxy.buyDaiWithSignature(pool.address, user2, oneToken, oneToken.mul(2), fyDaiSig, poolSig, { from: user1 })
+      await proxy.buyDaiWithSignature(pool.address, user2, oneToken, oneToken.mul(2), fyDaiSig, poolSig, {
+        from: user1,
+      })
     })
 
     it('sells fyDai with signatures', async () => {
       const oneToken = toWad(1)
       await fyDai1.mint(user1, oneToken, { from: owner })
 
-      await proxy.sellFYDaiWithSignature(pool.address, user2, oneToken, oneToken.div(2), fyDaiSig, poolSig, { from: user1 })
+      await proxy.sellFYDaiWithSignature(pool.address, user2, oneToken, oneToken.div(2), fyDaiSig, poolSig, {
+        from: user1,
+      })
     })
   })
 })

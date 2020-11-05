@@ -1,16 +1,7 @@
 const Pool = artifacts.require('Pool')
 const BorrowProxy = artifacts.require('BorrowProxy')
 
-import {
-  WETH,
-  spot,
-  wethTokens1,
-  toWad,
-  toRay,
-  mulRay,
-  bnify,
-  MAX,
-} from '../shared/utils'
+import { WETH, spot, wethTokens1, toWad, toRay, mulRay, bnify, MAX } from '../shared/utils'
 import { MakerEnvironment, YieldEnvironmentLite, Contract } from '../shared/fixtures'
 import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
 
@@ -18,7 +9,7 @@ import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
 import { balance, BN, expectRevert } from '@openzeppelin/test-helpers'
 import { assert, expect } from 'chai'
 
-contract('BorrowProxy - LimitPool', async (accounts) => {
+contract('BorrowProxy', async (accounts) => {
   let [owner, user1, user2] = accounts
 
   let env: YieldEnvironmentLite
@@ -87,7 +78,11 @@ contract('BorrowProxy - LimitPool', async (accounts) => {
       beforeEach(async () => {
         await proxy.post(user1, { from: user1, value: wethTokens1 })
 
-        assert.equal((await vat.urns(WETH, treasury.address)).ink, wethTokens1, 'Treasury does not have weth in MakerDAO')
+        assert.equal(
+          (await vat.urns(WETH, treasury.address)).ink,
+          wethTokens1,
+          'Treasury does not have weth in MakerDAO'
+        )
         assert.equal(
           await controller.powerOf(WETH, user1),
           mulRay(wethTokens1, spot).toString(),
@@ -115,25 +110,25 @@ contract('BorrowProxy - LimitPool', async (accounts) => {
         await dai.approve(pool.address, MAX, { from: user1 })
         await fyDai1.approve(pool.address, MAX, { from: user1 })
         await pool.mint(user1, user1, daiReserves, { from: user1 })
-  
+
         // Post some weth to controller via the proxy to be able to borrow
         // without requiring an `approve`!
         await proxy.post(user1, { from: user1, value: bnify(wethTokens1).mul(2).toString() })
-  
+
         // Give some fyDai to user1
         await fyDai1.mint(user1, fyDaiTokens1, { from: owner })
 
         await controller.addDelegate(proxy.address, { from: user1 })
       })
-  
+
       it('borrows dai for maximum fyDai', async () => {
         await proxy.borrowDaiForMaximumFYDai(pool.address, WETH, maturity1, user2, fyDaiTokens1, oneToken, {
           from: user1,
         })
-  
+
         assert.equal(await dai.balanceOf(user2), oneToken.toString())
       })
-  
+
       it("doesn't borrow dai if limit exceeded", async () => {
         await expectRevert(
           proxy.borrowDaiForMaximumFYDai(pool.address, WETH, maturity1, user2, fyDaiTokens1, daiTokens1, {

@@ -8,7 +8,7 @@ import helper from 'ganache-time-traveler'
 import { CHAI, chi1, rate1, daiTokens1, toWad, precision, bnify, chainId, name, MAX } from '../shared/utils'
 import { MakerEnvironment, YieldEnvironmentLite, Contract } from '../shared/fixtures'
 
-contract('PoolProxy - user flow', async (accounts) => {
+contract('PoolProxy - Signatures', async (accounts) => {
   let [owner, user1, user2, operator, to] = accounts
 
   const initialDai = daiTokens1
@@ -183,7 +183,6 @@ contract('PoolProxy - user flow', async (accounts) => {
         await dai.mint(user2, oneToken, { from: owner })
         await proxy.addLiquidity(pool1.address, oneToken, maxBorrow, { from: user2 })
 
-        
         // Authorize the proxy for the pool
         const poolDigest = getSignatureDigest(
           name,

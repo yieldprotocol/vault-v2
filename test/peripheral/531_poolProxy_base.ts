@@ -25,7 +25,7 @@ import { BN, expectRevert } from '@openzeppelin/test-helpers'
 import { assert, expect } from 'chai'
 import { BigNumber } from 'ethers'
 
-contract('PoolProxy - business features', async (accounts) => {
+contract('PoolProxy', async (accounts) => {
   let [owner, user1, user2, user3, user4, user5, user6, user7, user8, user9] = accounts
 
   const initialDai = daiTokens1
