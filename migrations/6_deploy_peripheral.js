@@ -1,29 +1,44 @@
 const Migrations = artifacts.require('Migrations')
+const Weth = artifacts.require('WETH9')
+const Dai = artifacts.require('Dai')
+const Chai = artifacts.require('Chai')
+const Treasury = artifacts.require('Treasury')
 const Controller = artifacts.require('Controller')
-const YieldProxy = artifacts.require('YieldProxy')
+const BorrowProxy = artifacts.require('BorrowProxy')
+const PoolProxy = artifacts.require('PoolProxy')
 
 module.exports = async (deployer, network) => {
   const migrations = await Migrations.deployed()
 
-  const controller = await Controller.deployed()
-  const controllerAddress = controller.address
-
-  const poolAddresses = []
-  for (let i = 0; i < (await migrations.length()); i++) {
-    const contractName = web3.utils.toAscii(await migrations.names(i))
-    if (contractName.includes('fyDaiLP'))
-      poolAddresses.push(await migrations.contracts(web3.utils.fromAscii(contractName)))
+  let daiAddress, chaiAddress
+  if (network === 'mainnet' || network === 'mainnet-ganache') {
+    wethAddress = fixed_addrs[network].wethAddress
+    daiAddress = fixed_addrs[network].daiAddress
+    chaiAddress = fixed_addrs[network].chaiAddress
+  } else {
+    wethAddress = (await Weth.deployed()).address
+    daiAddress = (await Dai.deployed()).address
+    chaiAddress = (await Chai.deployed()).address
   }
+  const treasuryAddress = (await Treasury.deployed()).address
+  const controllerAddress = (await Controller.deployed()).address
 
-  await deployer.deploy(YieldProxy, controllerAddress, poolAddresses)
-  const yieldProxy = await YieldProxy.deployed()
+  await deployer.deploy(BorrowProxy, wethAddress, daiAddress, treasuryAddress, controllerAddress)
+  const borrowProxy = await BorrowProxy.deployed()
+
+  await deployer.deploy(PoolProxy, daiAddress, chaiAddress, treasuryAddress, controllerAddress)
+  const poolProxy = await PoolProxy.deployed()
 
   const deployment = {
-    YieldProxy: yieldProxy.address,
+    BorrowProxy: borrowProxy.address,
+    PoolProxy: poolProxy.address,
   }
 
-  for (name in deployment) {
-    await migrations.register(web3.utils.fromAscii(name), deployment[name])
+  if (network !== 'mainnet' && network !== 'mainnet-ganache') {
+    for (name in deployment) {
+      await migrations.register(web3.utils.fromAscii(name), deployment[name])
+    }
   }
+  
   console.log(deployment)
 }
