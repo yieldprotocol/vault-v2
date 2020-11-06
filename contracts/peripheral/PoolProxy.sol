@@ -54,7 +54,7 @@ contract PoolProxy is DecimalMath {
         if (dai.allowance(address(this), address(pool)) < type(uint256).max) dai.approve(address(pool), type(uint256).max);
 
         // Allow pool to take fyDai for minting
-        if (fyDai.allowance(address(this), address(pool)) < type(uint256).max) fyDai.approve(address(pool), type(uint256).max);
+        if (fyDai.allowance(address(this), address(pool)) < type(uint112).max) fyDai.approve(address(pool), type(uint256).max);
 
         // calculate needed fyDai
         uint256 daiReserves = dai.balanceOf(address(pool));
@@ -91,7 +91,7 @@ contract PoolProxy is DecimalMath {
         if (dai.allowance(address(this), address(pool)) < type(uint256).max) dai.approve(address(pool), type(uint256).max);
 
         // Allow pool to take fyDai for trading
-        if (fyDai.allowance(address(this), address(pool)) < type(uint256).max) fyDai.approve(address(pool), type(uint256).max);
+        if (fyDai.allowance(address(this), address(pool)) < type(uint112).max) fyDai.approve(address(pool), type(uint256).max);
 
         (uint256 daiObtained, uint256 fyDaiObtained) = pool.burn(msg.sender, address(this), poolTokens);
 
@@ -132,7 +132,7 @@ contract PoolProxy is DecimalMath {
         if (dai.allowance(address(this), treasury) < type(uint256).max) dai.approve(treasury, type(uint256).max);
 
         // Allow pool to take fyDai for trading
-        if (fyDai.allowance(address(this), address(pool)) < type(uint256).max) fyDai.approve(address(pool), type(uint256).max);
+        if (fyDai.allowance(address(this), address(pool)) < type(uint112).max) fyDai.approve(address(pool), type(uint256).max);
 
         (uint256 daiObtained, uint256 fyDaiObtained) = pool.burn(msg.sender, address(this), poolTokens);
         uint256 fyDaiUsed;

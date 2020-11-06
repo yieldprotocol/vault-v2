@@ -40,9 +40,7 @@ contract BorrowProxy {
     function post(address to)
         external payable {
         // Approvals in the constructor don't work for contracts calling this via `addDelegatecall`
-        if (weth.allowance(address(this), treasury) < msg.value) {
-            weth.approve(treasury, type(uint256).max);
-        }
+        if (weth.allowance(address(this), treasury) < type(uint256).max) weth.approve(treasury, type(uint256).max);
 
         weth.deposit{ value: msg.value }();
         controller.post(WETH, address(this), to, msg.value);
@@ -81,9 +79,7 @@ contract BorrowProxy {
         require (fyDaiToBorrow <= maximumFYDai, "YieldProxy: Too much fyDai required");
 
         // allow the pool to pull FYDai/dai from us for LPing
-        if (pool.fyDai().allowance(address(this), address(pool)) < type(uint256).max) {
-            pool.fyDai().approve(address(pool), type(uint256).max);
-        }
+        if (pool.fyDai().allowance(address(this), address(pool)) < type(uint112).max) pool.fyDai().approve(address(pool), type(uint256).max);
 
         // The collateral for this borrow needs to have been posted beforehand
         controller.borrow(collateral, maturity, msg.sender, address(this), fyDaiToBorrow);
