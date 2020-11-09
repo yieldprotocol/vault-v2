@@ -104,20 +104,20 @@ contract BorrowProxy {
         return daiOut;
     }
 
-    /// @dev Buy Dai for fyDai
-    /// @param to Wallet receiving the dai being bought
-    /// @param daiOut Amount of dai being bought
-    /// @param maxFYDaiIn Maximum amount of fyDai being sold
-    function buyDai(IPool pool, address to, uint128 daiOut, uint128 maxFYDaiIn)
+    /// @dev Sell Dai for fyDai
+    /// @param to Wallet receiving the fyDai being bought
+    /// @param daiIn Amount of dai being sold
+    /// @param minFYDaiOut Minimum amount of fyDai being bought
+    function sellDai(IPool pool, address to, uint128 daiIn, uint128 minFYDaiOut)
         public
         returns(uint256)
     {
-        uint256 fyDaiIn = pool.buyDai(msg.sender, to, daiOut);
+        uint256 fyDaiOut = pool.sellDai(msg.sender, to, daiIn);
         require(
-            maxFYDaiIn >= fyDaiIn,
-            "BorrowProxy: Limit exceeded"
+            fyDaiOut >= minFYDaiOut,
+            "BorrowProxy: Limit not reached"
         );
-        return fyDaiIn;
+        return fyDaiOut;
     }
 
     /// --------------------------------------------------
@@ -180,7 +180,7 @@ contract BorrowProxy {
     /// @param to Wallet receiving the dai being bought
     /// @param fyDaiIn Amount of fyDai being sold
     /// @param minDaiOut Minimum amount of dai being bought
-    /// @param fyDaiSig packed signature for approving fyDai transfers from a pool. Ignored if '0x'.
+    /// @param fyDaiSig packed signature for approving fyDai transfers to a pool. Ignored if '0x'.
     /// @param poolSig packed signature for delegation of this proxy in a pool. Ignored if '0x'.
     function sellFYDaiWithSignature(IPool pool, address to, uint128 fyDaiIn, uint128 minDaiOut, bytes memory fyDaiSig, bytes memory poolSig)
         public
@@ -191,18 +191,18 @@ contract BorrowProxy {
         return sellFYDai(pool, to, fyDaiIn, minDaiOut);
     }
 
-    /// @dev Buy Dai for fyDai
-    /// @param to Wallet receiving the dai being bought
-    /// @param daiOut Amount of dai being bought
-    /// @param maxFYDaiIn Maximum amount of fyDai being sold
-    /// @param fyDaiSig packed signature for approving fyDai transfers from a pool. Ignored if '0x'.
+    /// @dev Sell Dai for fyDai
+    /// @param to Wallet receiving the fyDai being bought
+    /// @param daiIn Amount of dai being sold
+    /// @param minFYDaiOut Minimum amount of fyDai being bought
+    /// @param daiSig packed signature for approving Dai transfers to a pool. Ignored if '0x'.
     /// @param poolSig packed signature for delegation of this proxy in a pool. Ignored if '0x'.
-    function buyDaiWithSignature(IPool pool, address to, uint128 daiOut, uint128 maxFYDaiIn, bytes memory fyDaiSig, bytes memory poolSig)
+    function sellDaiWithSignature(IPool pool, address to, uint128 daiIn, uint128 minFYDaiOut, bytes memory daiSig, bytes memory poolSig)
         external
         returns(uint256)
     {
-        if (fyDaiSig.length > 0) pool.fyDai().permitPacked(address(pool), fyDaiSig);
+        if (daiSig.length > 0) dai.permitPackedDai(address(pool), daiSig);
         if (poolSig.length > 0) pool.addDelegatePacked(poolSig);
-        return buyDai(pool, to, daiOut, maxFYDaiIn);
+        return sellDai(pool, to, daiIn, minFYDaiOut);
     }
 }

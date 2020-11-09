@@ -154,25 +154,6 @@ contract('BorrowProxy', async (accounts) => {
       await pool.addDelegate(proxy.address, { from: user1 })
     })
 
-    it('buys dai', async () => {
-      await fyDai1.mint(user1, fyDaiTokens1, { from: owner })
-      await proxy.buyDai(pool.address, user2, oneToken, oneToken.mul(2), { from: user1 })
-
-      const expectedFYDaiIn = new BN(oneToken.toString()).mul(new BN('100270')).div(new BN('100000'))
-      const fyDaiIn = new BN(fyDaiTokens1.toString()).sub(new BN(await fyDai1.balanceOf(user1)))
-      expect(fyDaiIn).to.be.bignumber.gt(expectedFYDaiIn.mul(new BN('9999')).div(new BN('10000')))
-      expect(fyDaiIn).to.be.bignumber.lt(expectedFYDaiIn.mul(new BN('10001')).div(new BN('10000')))
-    })
-
-    it("doesn't buy dai if limit exceeded", async () => {
-      await fyDai1.mint(user1, fyDaiTokens1, { from: owner })
-
-      await expectRevert(
-        proxy.buyDai(pool.address, user2, oneToken, oneToken.div(2), { from: user1 }),
-        'BorrowProxy: Limit exceeded'
-      )
-    })
-
     it('sells fyDai', async () => {
       const oneToken = toWad(1)
       await fyDai1.mint(user1, oneToken, { from: owner })
@@ -195,6 +176,45 @@ contract('BorrowProxy', async (accounts) => {
         proxy.sellFYDai(pool.address, user2, oneToken, oneToken.mul(2), { from: user1 }),
         'BorrowProxy: Limit not reached'
       )
+    })
+
+    describe('with extra fyDai reserves', () => {
+      beforeEach(async () => {
+        const additionalFYDaiReserves = toWad(34.4)
+        await fyDai1.mint(owner, additionalFYDaiReserves, { from: owner })
+        await fyDai1.approve(pool.address, additionalFYDaiReserves, { from: owner })
+        await pool.sellFYDai(owner, owner, additionalFYDaiReserves, { from: owner })
+
+        await env.maker.getDai(user1, daiTokens1, rate1)
+      })
+
+      it('sells dai', async () => {
+        const oneToken = toWad(1)
+        const daiBalance = await dai.balanceOf(user1)
+
+        // fyDaiOutForDaiIn formula: https://www.desmos.com/calculator/8eczy19er3
+
+        await proxy.sellDai(pool.address, user2, oneToken, oneToken.div(2), { from: user1 })
+
+        const expectedFYDaiOut = new BN(oneToken.toString()).mul(new BN('117440')).div(new BN('100000'))
+        const fyDaiOut = new BN(await fyDai1.balanceOf(user2))
+
+        assert.equal(
+          await dai.balanceOf(user1),
+          daiBalance.sub(new BN(oneToken.toString())).toString(),
+          'User1 should have ' + daiTokens1.sub(oneToken) + ' dai tokens'
+        )
+
+        expect(fyDaiOut).to.be.bignumber.gt(expectedFYDaiOut.mul(new BN('9999')).div(new BN('10000')))
+        expect(fyDaiOut).to.be.bignumber.lt(expectedFYDaiOut.mul(new BN('10001')).div(new BN('10000')))
+      })
+
+      it("doesn't sell dai if minimum not reached", async () => {
+        await expectRevert(
+          proxy.sellDai(pool.address, user2, oneToken, oneToken.mul(2), { from: user1 }),
+          'BorrowProxy: Limit not reached'
+        )
+      })
     })
   })
 })

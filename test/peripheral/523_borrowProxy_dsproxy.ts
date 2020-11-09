@@ -80,7 +80,7 @@ contract('YieldProxy - DSProxy', async (accounts) => {
     await fyDai1.orchestrate(owner, keccak256(toUtf8Bytes('mint(address,uint256)')), { from: owner })
   })
 
-  describe('through dsproxy', () => {
+  describe('collateral', () => {
     let daiSig: any, controllerSig: any, poolSig: any
 
     beforeEach(async () => {
@@ -214,6 +214,94 @@ contract('YieldProxy - DSProxy', async (accounts) => {
             assert.equal((await controller.debtDai(WETH, maturity1, user1)).toString(), ZERO)
           })
         })
+      })
+    })
+  })
+
+  describe('lend', () => {
+    let poolSig: any
+    let fyDaiSig: any
+    let daiSig: any
+
+    beforeEach(async () => {
+      const daiReserves = daiTokens1
+      await env.maker.getDai(owner, daiReserves, rate1)
+
+      await fyDai1.approve(pool.address, -1, { from: owner })
+      await dai.approve(pool.address, -1, { from: owner })
+      await pool.mint(owner, owner, daiReserves, { from: owner })
+
+      const fyDaiDigest = getPermitDigest(
+        await fyDai1.name(),
+        await pool.fyDai(),
+        chainId,
+        {
+          owner: user1,
+          spender: pool.address,
+          value: MAX,
+        },
+        bnify(await fyDai1.nonces(user1)),
+        MAX
+      )
+      fyDaiSig = sign(fyDaiDigest, userPrivateKey)
+
+      // Authorize DAI
+      const daiDigest = getDaiDigest(
+        await dai.name(),
+        dai.address,
+        chainId,
+        {
+          owner: user1,
+          spender: pool.address,
+          can: true,
+        },
+        bnify(await dai.nonces(user1)),
+        MAX
+      )
+      daiSig = sign(daiDigest, userPrivateKey)
+
+      // Authorize the proxy for the pool
+      const poolDigest = getSignatureDigest(
+        name,
+        pool.address,
+        chainId,
+        {
+          user: user1,
+          delegate: dsProxy.address,
+        },
+        await pool.signatureCount(user1),
+        MAX
+      )
+      poolSig = sign(poolDigest, userPrivateKey)
+    })
+
+    it('sells fyDai with signatures', async () => {
+      const oneToken = toWad(1)
+      await fyDai1.mint(user1, oneToken, { from: owner })
+
+      const calldata = borrowProxy.contract.methods
+        .sellFYDaiWithSignature(pool.address, user2, oneToken, oneToken.div(2), fyDaiSig, poolSig)
+        .encodeABI()
+      await dsProxy.methods['execute(address,bytes)'](borrowProxy.address, calldata, { from: user1 })
+    })
+
+    describe('with extra fyDai reserves', () => {
+      beforeEach(async () => {
+        const additionalFYDaiReserves = toWad(34.4)
+        await fyDai1.mint(owner, additionalFYDaiReserves, { from: owner })
+        await fyDai1.approve(pool.address, additionalFYDaiReserves, { from: owner })
+        await pool.sellFYDai(owner, owner, additionalFYDaiReserves, { from: owner })
+
+        await env.maker.getDai(user1, daiTokens1, rate1)
+      })
+
+      it('sells dai', async () => {
+        const oneToken = toWad(1)
+
+        const calldata = borrowProxy.contract.methods
+          .sellDaiWithSignature(pool.address, user2, oneToken, oneToken.div(2), daiSig, poolSig)
+          .encodeABI()
+        await dsProxy.methods['execute(address,bytes)'](borrowProxy.address, calldata, { from: user1 })
       })
     })
   })
