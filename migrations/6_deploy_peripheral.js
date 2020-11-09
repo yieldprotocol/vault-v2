@@ -1,35 +1,17 @@
+const fixed_addrs = require('./fixed_addrs.json')
+
 const Migrations = artifacts.require('Migrations')
-const Weth = artifacts.require('WETH9')
-const Dai = artifacts.require('Dai')
-const Chai = artifacts.require('Chai')
-const Treasury = artifacts.require('Treasury')
-const Controller = artifacts.require('Controller')
 const BorrowProxy = artifacts.require('BorrowProxy')
 const PoolProxy = artifacts.require('PoolProxy')
-const DSProxyFactory = artifacts.require('DSProxyFactory')
-const DSProxyRegistry = artifacts.require('ProxyRegistry')
 
 module.exports = async (deployer, network) => {
-  const migrations = await Migrations.deployed()
-
-  let daiAddress, chaiAddress, proxyFactoryAddress, proxyRegistryAddress
-  if (network === 'mainnet' || network === 'mainnet-ganache') {
-    wethAddress = fixed_addrs[network].wethAddress
-    daiAddress = fixed_addrs[network].daiAddress
-    chaiAddress = fixed_addrs[network].chaiAddress
-    proxyFactoryAddress = fixed_addrs[network].proxyFactoryAddress
-    proxyRegistryAddress = fixed_addrs[network].proxyRegistryAddress
-  } else {
-    wethAddress = (await Weth.deployed()).address
-    daiAddress = (await Dai.deployed()).address
-    chaiAddress = (await Chai.deployed()).address
-
-    // Setup DSProxyFactory and DSProxyRegistry
-    proxyFactoryAddress = (await deployer.deploy(DSProxyFactory)).address
-    proxyRegistryAddress = (await deployer.deploy(DSProxyRegistry, proxyFactoryAddress)).address
-  }
-  const treasuryAddress = (await Treasury.deployed()).address
-  const controllerAddress = (await Controller.deployed()).address
+  const wethAddress = fixed_addrs[network].wethAddress
+  const daiAddress = fixed_addrs[network].daiAddress
+  const chaiAddress = fixed_addrs[network].chaiAddress
+  const treasuryAddress = fixed_addrs[network].treasuryAddress
+  const controllerAddress = fixed_addrs[network].controllerAddress
+  const proxyFactoryAddress = fixed_addrs[network].proxyFactoryAddress
+  const proxyRegistryAddress = fixed_addrs[network].proxyRegistryAddress
 
   await deployer.deploy(BorrowProxy, wethAddress, daiAddress, treasuryAddress, controllerAddress)
   const borrowProxy = await BorrowProxy.deployed()
@@ -45,10 +27,11 @@ module.exports = async (deployer, network) => {
   }
 
   if (network !== 'mainnet' && network !== 'mainnet-ganache') {
+    const migrations = await Migrations.at(fixed_addrs[network].migrationsAddress)
     for (name in deployment) {
       await migrations.register(web3.utils.fromAscii(name), deployment[name])
     }
   }
-  
+
   console.log(deployment)
 }
