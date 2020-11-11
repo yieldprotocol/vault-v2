@@ -1,136 +1,48 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.6.10;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../interfaces/IController.sol";
 import "../interfaces/IWeth.sol";
-import "../interfaces/IDai.sol";
 import "../interfaces/IGemJoin.sol";
 import "../interfaces/IDaiJoin.sol";
 import "../interfaces/IVat.sol";
-import "../interfaces/IPot.sol";
 import "../interfaces/IPool.sol";
 import "../interfaces/IFYDai.sol";
-import "../interfaces/IChai.sol";
 import "../interfaces/IFlashMinter.sol";
 import "../helpers/DecimalMath.sol";
+import "../helpers/SafeCast.sol";
+import "../helpers/YieldAuth.sol";
 
-
-library SafeCast {
-    /// @dev Safe casting from uint256 to uint128
-    function toUint128(uint256 x) internal pure returns(uint128) {
-        require(
-            x <= type(uint128).max,
-            "YieldProxy: Cast overflow"
-        );
-        return uint128(x);
-    }
-
-    /// @dev Safe casting from uint256 to int256
-    function toInt256(uint256 x) internal pure returns(int256) {
-        require(
-            x <= uint256(type(int256).max),
-            "YieldProxy: Cast overflow"
-        );
-        return int256(x);
-    }
-}
 
 contract YieldProxy is DecimalMath, IFlashMinter {
     using SafeCast for uint256;
+    using YieldAuth for IController;
 
-    IVat public vat;
-    IWeth public weth;
-    IDai public dai;
-    IGemJoin public wethJoin;
-    IDaiJoin public daiJoin;
-    IChai public chai;
-    IController public controller;
-    ITreasury public treasury;
+    IVat public immutable vat;
+    IWeth public immutable weth;
+    IERC20 public immutable dai;
+    IGemJoin public immutable wethJoin;
+    IDaiJoin public immutable daiJoin;
+    IController public immutable controller;
+    address public immutable treasury;
 
-    IPool[] public pools;
-    mapping (address => bool) public poolsMap;
-
-    bytes32 public constant CHAI = "CHAI";
     bytes32 public constant WETH = "ETH-A";
-    bool constant public MTY = true;
-    bool constant public YTM = false;
+    bool public constant MTY = true;
+    bool public constant YTM = false;
 
+    constructor(address controller_) public {
+        IController _controller = IController(controller_);
+        ITreasury _treasury = _controller.treasury();
 
-    constructor(address controller_, IPool[] memory _pools) public {
-        controller = IController(controller_);
-        treasury = controller.treasury();
+        weth = _treasury.weth();
+        dai = _treasury.dai();
+        daiJoin = _treasury.daiJoin();
+        wethJoin = _treasury.wethJoin();
+        vat = _treasury.vat();
 
-        weth = treasury.weth();
-        dai = IDai(address(treasury.dai()));
-        chai = treasury.chai();
-        daiJoin = treasury.daiJoin();
-        wethJoin = treasury.wethJoin();
-        vat = treasury.vat();
-
-        // for repaying debt
-        dai.approve(address(treasury), uint(-1));
-
-        // for posting to the controller
-        chai.approve(address(treasury), uint(-1));
-        weth.approve(address(treasury), uint(-1));
-
-        // for converting DAI to CHAI
-        dai.approve(address(chai), uint(-1));
-
-        vat.hope(address(daiJoin));
-        vat.hope(address(wethJoin));
-
-        dai.approve(address(daiJoin), uint(-1));
-        weth.approve(address(wethJoin), uint(-1));
-        weth.approve(address(treasury), uint(-1));
-
-        // allow all the pools to pull FYDai/dai from us for LPing
-        for (uint i = 0 ; i < _pools.length; i++) {
-            dai.approve(address(_pools[i]), uint(-1));
-            _pools[i].fyDai().approve(address(_pools[i]), uint(-1));
-            poolsMap[address(_pools[i])]= true;
-        }
-
-        pools = _pools;
-    }
-
-    /// @dev Unpack r, s and v from a `bytes` signature
-    function unpack(bytes memory signature) private pure returns (bytes32 r, bytes32 s, uint8 v) {
-        assembly {
-            r := mload(add(signature, 0x20))
-            s := mload(add(signature, 0x40))
-            v := byte(0, mload(add(signature, 0x60)))
-        }
-    }
-
-    /// @dev Performs the initial onboarding of the user. It `permit`'s DAI to be used by the proxy, and adds the proxy as a delegate in the controller
-    function onboard(address from, bytes memory daiSignature, bytes memory controllerSig) external {
-        bytes32 r;
-        bytes32 s;
-        uint8 v;
-
-        (r, s, v) = unpack(daiSignature);
-        dai.permit(from, address(this), dai.nonces(from), uint(-1), true, v, r, s);
-
-        (r, s, v) = unpack(controllerSig);
-        controller.addDelegateBySignature(from, address(this), uint(-1), v, r, s);
-    }
-
-    /// @dev Given a pool and 3 signatures, it `permit`'s dai and fyDai for that pool and adds it as a delegate
-    function authorizePool(IPool pool, address from, bytes memory daiSig, bytes memory fyDaiSig, bytes memory poolSig) public {
-        onlyKnownPool(pool);
-        bytes32 r;
-        bytes32 s;
-        uint8 v;
-
-        (r, s, v) = unpack(daiSig);
-        dai.permit(from, address(pool), dai.nonces(from), uint(-1), true, v, r, s);
-
-        (r, s, v) = unpack(fyDaiSig);
-        pool.fyDai().permit(from, address(this), uint(-1), uint(-1), v, r, s);
-
-        (r, s, v) = unpack(poolSig);
-        pool.addDelegateBySignature(from, address(this), uint(-1), v, r, s);
+        controller = _controller;
+        treasury = address(_treasury);
     }
 
     // YieldProxy: Maker to Yield proxy
@@ -143,7 +55,6 @@ contract YieldProxy is DecimalMath, IFlashMinter {
     /// and low enough to make sure that debt left in MakerDAO is also collateralized.
     /// @param daiAmount dai debt to move from MakerDAO to Yield. Denominated in Dai (= art * rate)
     function makerToYield(IPool pool, uint256 wethAmount, uint256 daiAmount) public {
-        onlyKnownPool(pool);
         // The user specifies the fyDai he wants to mint to cover his maker debt, the weth to be passed on as collateral, and the dai debt to move
         (uint256 ink, uint256 art) = vat.urns(WETH, msg.sender);
         (, uint256 rate,,,) = vat.ilks("ETH-A");
@@ -171,7 +82,6 @@ contract YieldProxy is DecimalMath, IFlashMinter {
     /// and low enough to make sure that debt left in Yield is also collateralized.
     /// @param fyDaiAmount fyDai debt to move from Yield to MakerDAO.
     function yieldToMaker(IPool pool, uint256 wethAmount, uint256 fyDaiAmount) public {
-        onlyKnownPool(pool);
         IFYDai fyDai = pool.fyDai();
 
         // The user specifies the fyDai he wants to move, and the weth to be passed on as collateral
@@ -195,7 +105,6 @@ contract YieldProxy is DecimalMath, IFlashMinter {
         (bool direction, IPool pool, address user, uint256 wethAmount, uint256 daiAmount) = 
             abi.decode(data, (bool, IPool, address, uint256, uint256));
         require(msg.sender == address(IPool(pool).fyDai()), "YieldProxy: Restricted callback");
-        onlyKnownPool(pool);
 
         if(direction == MTY) _makerToYield(pool, user, wethAmount, daiAmount);
         if(direction == YTM) _yieldToMaker(pool, user, wethAmount, fyDaiAmount);
@@ -215,13 +124,11 @@ contract YieldProxy is DecimalMath, IFlashMinter {
 
     /// @dev Amount of fyDai debt that will result from migrating Dai debt from MakerDAO to Yield
     function fyDaiForDai(IPool pool, uint256 daiAmount) public view returns (uint256) {
-        onlyKnownPool(pool);
         return pool.buyDaiPreview(daiAmount.toUint128());
     }
 
     /// @dev Amount of dai debt that will result from migrating fyDai debt from Yield to MakerDAO
     function daiForFYDai(IPool pool, uint256 fyDaiAmount) public view returns (uint256) {
-        onlyKnownPool(pool);
         return pool.buyFYDaiPreview(fyDaiAmount.toUint128());
     }
 
@@ -234,8 +141,19 @@ contract YieldProxy is DecimalMath, IFlashMinter {
     /// Needs vat.hope(splitter.address, { from: user });
     /// Needs controller.addDelegate(splitter.address, { from: user });
     function _makerToYield(IPool pool, address user, uint256 wethAmount, uint256 daiAmount) internal {
-        onlyKnownPool(pool);
         IFYDai fyDai = IFYDai(pool.fyDai());
+
+        // Allow pool to take fyDai for trading
+        if (fyDai.allowance(address(this), address(pool)) < type(uint112).max) fyDai.approve(address(pool), type(uint256).max);
+
+        // Allow treasury to take weth for posting
+        if (weth.allowance(address(this), treasury) < type(uint256).max) weth.approve(treasury, type(uint256).max);
+
+        // Allow wethJoin to move weth out of vat for this proxy
+        if (vat.can(address(this), address(wethJoin)) != 1) vat.hope(address(wethJoin));
+
+        // Allow daiJoin to take Dai for paying debt
+        if (dai.allowance(address(this), address(daiJoin)) < type(uint112).max) dai.approve(address(daiJoin), type(uint256).max);
 
         // Pool should take exactly all fyDai flash minted. YieldProxy will hold the dai temporarily
         uint256 fyDaiSold = pool.buyDai(address(this), address(this), daiAmount.toUint128());
@@ -267,8 +185,19 @@ contract YieldProxy is DecimalMath, IFlashMinter {
     /// and low enough to make sure that debt left in Yield is also collateralized.
     /// @param fyDaiAmount fyDai debt to move from Yield to MakerDAO.
     function _yieldToMaker(IPool pool, address user, uint256 wethAmount, uint256 fyDaiAmount) internal {
-        onlyKnownPool(pool);
         IFYDai fyDai = IFYDai(pool.fyDai());
+
+        // Allow the Treasury to take dai for repaying
+        if (dai.allowance(address(this), treasury) < type(uint256).max) dai.approve(treasury, type(uint256).max);
+
+        // Allow the Pool to take dai for trading
+        if (dai.allowance(address(this), address(pool)) < type(uint256).max) dai.approve(address(pool), type(uint256).max);
+
+        // Allow daiJoin to move dai out of vat for this proxy
+        if (vat.can(address(this), address(daiJoin)) != 1) vat.hope(address(daiJoin));
+
+        // Allow wethJoin to take weth for collateralization
+        if (weth.allowance(address(this), address(wethJoin)) < type(uint112).max) weth.approve(address(wethJoin), type(uint256).max);
 
         // Pay the Yield debt - YieldProxy pays FYDai to remove the debt of `user`
         // Controller should take exactly all fyDai flash minted.
@@ -300,7 +229,31 @@ contract YieldProxy is DecimalMath, IFlashMinter {
         pool.buyFYDai(address(this), address(this), fyDaiAmount.toUint128());
     }
 
-    function onlyKnownPool(IPool pool) private view {
-        require(poolsMap[address(pool)], "YieldProxy: Unknown pool");
+    /// --------------------------------------------------
+    /// Signature method wrappers
+    /// --------------------------------------------------
+
+    /// @dev Transfer debt and collateral from MakerDAO to Yield
+    /// Needs vat.hope(splitter.address, { from: user });
+    /// @param pool The pool to trade in (and therefore fyDai series to borrow)
+    /// @param wethAmount weth to move from MakerDAO to Yield. Needs to be high enough to collateralize the dai debt in Yield,
+    /// and low enough to make sure that debt left in MakerDAO is also collateralized.
+    /// @param daiAmount dai debt to move from MakerDAO to Yield. Denominated in Dai (= art * rate)
+    /// @param controllerSig packed signature for delegation of this proxy in the controller. Ignored if '0x'.
+    function makerToYieldWithSignature(IPool pool, uint256 wethAmount, uint256 daiAmount, bytes memory controllerSig) public {
+        if (controllerSig.length > 0) controller.addDelegatePacked(controllerSig);
+        return makerToYield(pool, wethAmount, daiAmount);
+    }
+
+    /// @dev Transfer debt and collateral from Yield to MakerDAO
+    /// Needs vat.hope(splitter.address, { from: user });
+    /// @param pool The pool to trade in (and therefore fyDai series to migrate)
+    /// @param wethAmount weth to move from Yield to MakerDAO. Needs to be high enough to collateralize the dai debt in MakerDAO,
+    /// and low enough to make sure that debt left in Yield is also collateralized.
+    /// @param fyDaiAmount fyDai debt to move from Yield to MakerDAO.
+    /// @param controllerSig packed signature for delegation of this proxy in the controller. Ignored if '0x'.
+    function yieldToMaker(IPool pool, uint256 wethAmount, uint256 fyDaiAmount, bytes memory controllerSig) public {
+        if (controllerSig.length > 0) controller.addDelegatePacked(controllerSig);
+        return yieldToMaker(pool, wethAmount, fyDaiAmount);
     }
 }

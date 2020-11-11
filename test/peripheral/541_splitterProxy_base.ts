@@ -50,7 +50,7 @@ contract('SplitterProxy', async (accounts) => {
     pool1 = await Pool.new(dai.address, fyDai1.address, 'Name', 'Symbol', { from: owner })
 
     // Setup Splitter
-    splitter1 = await Splitter.new(controller.address, [pool1.address], { from: owner })
+    splitter1 = await Splitter.new(controller.address, { from: owner })
 
     // Allow owner to mint fyDai the sneaky way, without recording a debt in controller
     await fyDai1.orchestrate(owner, id('mint(address,uint256)'), { from: owner })
@@ -74,14 +74,6 @@ contract('SplitterProxy', async (accounts) => {
       [true, pool1.address, user, 1, 0]
     )
     await expectRevert(splitter1.executeOnFlashMint(1, data, { from: user }), 'YieldProxy: Restricted callback')
-  })
-
-  it('does not allow to move debt using unregistered pools', async () => {
-    const pool2 = await Pool.new(dai.address, fyDai1.address, 'Name', 'Symbol', { from: owner })
-    await expectRevert(
-      splitter1.makerToYield(pool2.address, wethTokens1, bnify(daiTokens1).mul(10), { from: user }),
-      'YieldProxy: Unknown pool'
-    )
   })
 
   it('does not allow to move more debt than existing in maker', async () => {
