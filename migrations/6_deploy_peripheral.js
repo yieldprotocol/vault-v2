@@ -1,29 +1,65 @@
+const fixed_addrs = require('./fixed_addrs.json')
+
 const Migrations = artifacts.require('Migrations')
+const WETH9 = artifacts.require('WETH9')
+const Dai = artifacts.require('Dai')
+const Chai = artifacts.require('Chai')
+const Treasury = artifacts.require('Treasury')
 const Controller = artifacts.require('Controller')
-const YieldProxy = artifacts.require('YieldProxy')
+const DSProxyFactory = artifacts.require('DSProxyFactory')
+const DSProxyRegistry = artifacts.require('ProxyRegistry')
+const BorrowProxy = artifacts.require('BorrowProxy')
+const PoolProxy = artifacts.require('PoolProxy')
 
 module.exports = async (deployer, network) => {
-  const migrations = await Migrations.deployed()
 
-  const controller = await Controller.deployed()
-  const controllerAddress = controller.address
-
-  const poolAddresses = []
-  for (let i = 0; i < (await migrations.length()); i++) {
-    const contractName = web3.utils.toAscii(await migrations.names(i))
-    if (contractName.includes('fyDaiLP'))
-      poolAddresses.push(await migrations.contracts(web3.utils.fromAscii(contractName)))
+  let wethAddress, daiAddress, chaiAddress, treasuryAddress, controllerAddress, proxyFactoryAddress, proxyRegistryAddress
+  if (network === 'development') {
+    wethAddress = (await WETH9.deployed()).address
+    daiAddress = (await Dai.deployed()).address
+    chaiAddress = (await Chai.deployed()).address
+    treasuryAddress = (await Treasury.deployed()).address
+    controllerAddress = (await Controller.deployed()).address
+    
+    await deployer.deploy(DSProxyFactory)
+    proxyFactoryAddress = (await DSProxyFactory.deployed()).address
+    await deployer.deploy(DSProxyRegistry, proxyFactoryAddress)
+    proxyRegistryAddress = (await DSProxyRegistry.deployed()).address
+  } else {
+    wethAddress = fixed_addrs[network].wethAddress
+    daiAddress = fixed_addrs[network].daiAddress
+    chaiAddress = fixed_addrs[network].chaiAddress
+    treasuryAddress = fixed_addrs[network].treasuryAddress
+    controllerAddress = fixed_addrs[network].controllerAddress
+    proxyFactoryAddress = fixed_addrs[network].proxyFactoryAddress
+    proxyRegistryAddress = fixed_addrs[network].proxyRegistryAddress  
   }
 
-  await deployer.deploy(YieldProxy, controllerAddress, poolAddresses)
-  const yieldProxy = await YieldProxy.deployed()
+  await deployer.deploy(BorrowProxy, wethAddress, daiAddress, treasuryAddress, controllerAddress)
+  const borrowProxy = await BorrowProxy.deployed()
+
+  await deployer.deploy(PoolProxy, daiAddress, chaiAddress, treasuryAddress, controllerAddress)
+  const poolProxy = await PoolProxy.deployed()
 
   const deployment = {
-    YieldProxy: yieldProxy.address,
+    ProxyFactory: proxyFactoryAddress,
+    ProxyRegistry: proxyRegistryAddress,
+    BorrowProxy: borrowProxy.address,
+    PoolProxy: poolProxy.address,
   }
 
-  for (name in deployment) {
-    await migrations.register(web3.utils.fromAscii(name), deployment[name])
+  let migrations
+  if (network === 'kovan' && network === 'kovan-fork') {
+    migrations = await Migrations.at(fixed_addrs[network].migrationsAddress)
+  } else if (network === 'development') {
+    migrations = await Migrations.deployed()
   }
+
+  if (migrations !== undefined) {
+    for (name in deployment) {
+      await migrations.register(web3.utils.fromAscii(name), deployment[name])
+    }
+  }
+
   console.log(deployment)
 }
