@@ -134,6 +134,7 @@ contract BorrowProxy {
     /// @dev Determine whether all approvals and signatures are in place for `borrowDaiForMaximumFYDai` to suceed for a given pool.
     /// If `return[0]` is `false`, calling `borrowDaiForMaximumFYDaiWithSignature` will set the approvals.
     /// If `return[1]` is `false`, `borrowDaiForMaximumFYDaiWithSignature` must be called with a controller signature
+    /// If `return` is `(true, true)`, `borrowDaiForMaximumFYDai` won't fail because of missing approvals or signatures.
     function borrowDaiForMaximumFYDaiCheck(IPool pool) public view returns (bool, bool) {
         bool approvals = pool.fyDai().allowance(address(this), address(pool)) >= type(uint112).max;
         bool controllerSig = controller.delegated(msg.sender, address(this));
@@ -166,6 +167,19 @@ contract BorrowProxy {
         return borrowDaiForMaximumFYDai(pool, collateral, maturity, to, maximumFYDai, daiToBorrow);
     }
 
+    /// @dev Determine whether all approvals and signatures are in place for `controller.repayDai` to suceed.
+    /// `return[0]` is always `true`, meaning that no proxy approvals are ever needed.
+    /// If `return[1]` is `false`, `repayDaiWithSignature` must be called with a dai permit signature.
+    /// If `return[2]` is `false`, `repayDaiWithSignature` must be called with a controller signature.
+    /// If `return` is `(true, true, true)`, `repayDaiWithSignature` won't fail because of missing approvals or signatures.
+    /// If `return` is `(true, true, any)`, `controller.repayDai` can be called directly and won't fail because of missing approvals or signatures.
+    function repayDaiCheck() public view returns (bool, bool, bool) {
+        bool approvals = true; // repayDai doesn't need proxy approvals
+        bool daiSig = dai.allowance(msg.sender, treasury) == type(uint256).max;
+        bool controllerSig = controller.delegated(msg.sender, address(this));
+        return (approvals, daiSig, controllerSig);
+    }
+
     /// @dev Burns Dai from caller to repay debt in a Yield Vault.
     /// User debt is decreased for the given collateral and fyDai series, in Yield vault `to`.
     /// The amount of debt repaid changes according to series maturity and MakerDAO rate and chi, depending on collateral type.
@@ -180,8 +194,8 @@ contract BorrowProxy {
         external
         returns(uint256)
     {
-        if (controllerSig.length > 0) controller.addDelegatePacked(controllerSig);
         if (daiSig.length > 0) dai.permitPackedDai(treasury, daiSig);
+        if (controllerSig.length > 0) controller.addDelegatePacked(controllerSig);
         controller.repayDai(collateral, maturity, msg.sender, to, daiAmount);
     }
 

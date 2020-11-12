@@ -119,7 +119,7 @@ contract('BorrowProxy', async (accounts) => {
         await fyDai1.mint(user1, fyDaiTokens1, { from: owner })
       })
 
-      it('checks missing approvals and signatures', async () => {
+      it('checks missing approvals and signatures for borrowing', async () => {
         let result = await proxy.borrowDaiForMaximumFYDaiCheck(pool.address, { from: user1 })
 
         assert.equal(result[0], false)
@@ -149,17 +149,6 @@ contract('BorrowProxy', async (accounts) => {
         assert.equal(await dai.balanceOf(user2), oneToken.toString())
       })
 
-      it.only('approvals only need to be set up once', async () => {
-        await controller.addDelegate(proxy.address, { from: user1 })
-        await proxy.borrowDaiForMaximumFYDaiWithSignature(pool.address, WETH, maturity1, user2, fyDaiTokens1, oneToken, '0x', {
-          from: user1,
-        })
-        await proxy.borrowDaiForMaximumFYDai(pool.address, WETH, maturity1, user2, fyDaiTokens1, oneToken, {
-          from: user1,
-        })
-      })
-
-
       it("doesn't borrow dai if limit exceeded", async () => {
         await controller.addDelegate(proxy.address, { from: user1 })
         await expectRevert(
@@ -168,6 +157,55 @@ contract('BorrowProxy', async (accounts) => {
           }),
           'YieldProxy: Too much fyDai required'
         )
+      })
+
+      describe('once borrowed', () => {
+        beforeEach(async () => {
+          await controller.addDelegate(proxy.address, { from: user1 })
+          await proxy.borrowDaiForMaximumFYDaiWithSignature(pool.address, WETH, maturity1, user2, fyDaiTokens1, oneToken, '0x', {
+            from: user1,
+          })
+        })
+        
+        it('approvals only need to be set up once', async () => {
+          await proxy.borrowDaiForMaximumFYDai(pool.address, WETH, maturity1, user2, fyDaiTokens1, oneToken, {
+            from: user1,
+          })
+        })
+
+        it('checks missing approvals and signatures for borrowing', async () => {
+          await controller.revokeDelegate(proxy.address, { from: user1 })
+          let result = await proxy.repayDaiCheck({ from: user1 })
+
+          assert.equal(result[0], true)
+          assert.equal(result[1], false)
+          assert.equal(result[2], false)
+          
+          await dai.approve(treasury.address, MAX, { from: user1 })
+          result = await proxy.repayDaiCheck({ from: user1 })
+
+          assert.equal(result[0], true)
+          assert.equal(result[1], true)
+          assert.equal(result[2], false)
+          
+          await controller.addDelegate(proxy.address, { from: user1 })
+          result = await proxy.repayDaiCheck({ from: user1 })
+
+          assert.equal(result[0], true)
+          assert.equal(result[1], true)
+          assert.equal(result[2], true)
+        })
+  
+        it.only('repays debt', async () => {
+          await env.maker.getDai(user1, oneToken, rate1)
+          await dai.approve(treasury.address, MAX, { from: user1 })
+          const debtBefore = await controller.debtDai(WETH, maturity1, user1)
+          await proxy.repayDaiWithSignature(WETH, maturity1, user1, oneToken, '0x', '0x', {
+            from: user1,
+          })
+          const debtAfter = await controller.debtDai(WETH, maturity1, user1)
+          expect(debtAfter.toString()).to.be.bignumber.eq(debtBefore.sub(new BN(oneToken.toString())).toString())
+        })
       })
     })
   })
