@@ -34,7 +34,6 @@ contract('YieldProxy - DSProxy', async (accounts) => {
   let maker: MakerEnvironment
   let controller: Contract
   let treasury: Contract
-  let weth: Contract
   let dai: Contract
   let vat: Contract
   let fyDai1: Contract
@@ -57,7 +56,6 @@ contract('YieldProxy - DSProxy', async (accounts) => {
     maturity1 = (await web3.eth.getBlock(block)).timestamp + 31556952 // One year
     env = await YieldEnvironmentLite.setup([maturity1])
     maker = env.maker
-    weth = maker.weth
     dai = maker.dai
     vat = maker.vat
     controller = env.controller
@@ -68,7 +66,7 @@ contract('YieldProxy - DSProxy', async (accounts) => {
     pool = await Pool.new(dai.address, fyDai1.address, 'Name', 'Symbol', { from: owner })
 
     // Setup BorrowProxy
-    borrowProxy = await BorrowProxy.new(weth.address, dai.address, treasury.address, controller.address)
+    borrowProxy = await BorrowProxy.new(controller.address)
 
     // Setup DSProxyFactory and DSProxyCache
     proxyFactory = await DSProxyFactory.new({ from: owner })

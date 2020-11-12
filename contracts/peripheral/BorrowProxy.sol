@@ -4,6 +4,7 @@ pragma solidity ^0.6.10;
 import "../interfaces/IWeth.sol";
 import "../interfaces/IDai.sol";
 import "../interfaces/IFYDai.sol";
+import "../interfaces/ITreasury.sol";
 import "../interfaces/IController.sol";
 import "../interfaces/IPool.sol";
 import "../helpers/SafeCast.sol";
@@ -24,12 +25,15 @@ contract BorrowProxy {
 
     bytes32 public constant WETH = "ETH-A";
 
-    constructor(address weth_, address dai_, address treasury_, address controller_) public {
-        controller = IController(controller_);
-        treasury = treasury_;
+    constructor(address controller_) public {
+        IController _controller = IController(controller_);
+        ITreasury _treasury = _controller.treasury();
 
-        weth = IWeth(weth_);
-        dai = IDai(dai_);
+        weth = _treasury.weth();
+        dai = _treasury.dai();
+
+        treasury = address(_treasury);
+        controller = _controller;
     }
 
     /// @dev The WETH9 contract will send ether to YieldProxy on `weth.withdraw` using this function.

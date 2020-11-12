@@ -48,7 +48,7 @@ contract('BorrowProxy', async (accounts) => {
     pool = await Pool.new(dai.address, fyDai1.address, 'Name', 'Symbol', { from: owner })
 
     // Setup LimitPool
-    proxy = await BorrowProxy.new(weth.address, dai.address, treasury.address, controller.address, { from: owner })
+    proxy = await BorrowProxy.new(controller.address, { from: owner })
 
     // Allow owner to mint fyDai the sneaky way, without recording a debt in controller
     await fyDai1.orchestrate(owner, keccak256(toUtf8Bytes('mint(address,uint256)')), { from: owner })
