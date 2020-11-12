@@ -143,18 +143,6 @@ contract YieldProxy is DecimalMath, IFlashMinter {
     function _makerToYield(IPool pool, address user, uint256 wethAmount, uint256 daiAmount) internal {
         IFYDai fyDai = IFYDai(pool.fyDai());
 
-        // Allow pool to take fyDai for trading
-        if (fyDai.allowance(address(this), address(pool)) < type(uint112).max) fyDai.approve(address(pool), type(uint256).max);
-
-        // Allow treasury to take weth for posting
-        if (weth.allowance(address(this), treasury) < type(uint256).max) weth.approve(treasury, type(uint256).max);
-
-        // Allow wethJoin to move weth out of vat for this proxy
-        if (vat.can(address(this), address(wethJoin)) != 1) vat.hope(address(wethJoin));
-
-        // Allow daiJoin to take Dai for paying debt
-        if (dai.allowance(address(this), address(daiJoin)) < type(uint112).max) dai.approve(address(daiJoin), type(uint256).max);
-
         // Pool should take exactly all fyDai flash minted. YieldProxy will hold the dai temporarily
         uint256 fyDaiSold = pool.buyDai(address(this), address(this), daiAmount.toUint128());
 
@@ -186,18 +174,6 @@ contract YieldProxy is DecimalMath, IFlashMinter {
     /// @param fyDaiAmount fyDai debt to move from Yield to MakerDAO.
     function _yieldToMaker(IPool pool, address user, uint256 wethAmount, uint256 fyDaiAmount) internal {
         IFYDai fyDai = IFYDai(pool.fyDai());
-
-        // Allow the Treasury to take dai for repaying
-        if (dai.allowance(address(this), treasury) < type(uint256).max) dai.approve(treasury, type(uint256).max);
-
-        // Allow the Pool to take dai for trading
-        if (dai.allowance(address(this), address(pool)) < type(uint256).max) dai.approve(address(pool), type(uint256).max);
-
-        // Allow daiJoin to move dai out of vat for this proxy
-        if (vat.can(address(this), address(daiJoin)) != 1) vat.hope(address(daiJoin));
-
-        // Allow wethJoin to take weth for collateralization
-        if (weth.allowance(address(this), address(wethJoin)) < type(uint112).max) weth.approve(address(wethJoin), type(uint256).max);
 
         // Pay the Yield debt - YieldProxy pays FYDai to remove the debt of `user`
         // Controller should take exactly all fyDai flash minted.
@@ -232,6 +208,23 @@ contract YieldProxy is DecimalMath, IFlashMinter {
     /// --------------------------------------------------
     /// Signature method wrappers
     /// --------------------------------------------------
+    
+    /// @dev Determine whether all approvals and signatures are in place for `makerToYield`.
+    /// If `return[0]` is `false`, calling `vat.hope(proxy.address)` will set the MakerDAO approval.
+    /// If `return[1]` is `false`, calling `makerToYieldWithSignature` will set the approvals.
+    /// If `return[2]` is `false`, `makerToYieldWithSignature` must be called with a controller signature.
+    /// If `return` is `(true, true)`, `makerToYield` won't fail because of missing approvals or signatures.
+    function makerToYieldCheck(IPool pool) public view returns (bool, bool, bool) {
+        bool hope = vat.can(msg.sender, address(this)) == 1;
+        bool approvals = true;
+        approvals = approvals && pool.fyDai().allowance(address(this), address(pool)) >= type(uint112).max;
+        approvals = approvals && weth.allowance(address(this), treasury) == type(uint256).max;
+        approvals = approvals && vat.can(address(this), address(wethJoin)) == 1;
+        approvals = approvals && dai.allowance(address(this), address(daiJoin)) == type(uint256).max;
+
+        bool controllerSig = controller.delegated(msg.sender, address(this));
+        return (hope, approvals, controllerSig);
+    }
 
     /// @dev Transfer debt and collateral from MakerDAO to Yield
     /// Needs vat.hope(splitter.address, { from: user });
@@ -241,8 +234,37 @@ contract YieldProxy is DecimalMath, IFlashMinter {
     /// @param daiAmount dai debt to move from MakerDAO to Yield. Denominated in Dai (= art * rate)
     /// @param controllerSig packed signature for delegation of this proxy in the controller. Ignored if '0x'.
     function makerToYieldWithSignature(IPool pool, uint256 wethAmount, uint256 daiAmount, bytes memory controllerSig) public {
+        // Allow pool to take fyDai for trading
+        if (pool.fyDai().allowance(address(this), address(pool)) < type(uint112).max) pool.fyDai().approve(address(pool), type(uint256).max);
+
+        // Allow treasury to take weth for posting
+        if (weth.allowance(address(this), treasury) < type(uint256).max) weth.approve(treasury, type(uint256).max);
+
+        // Allow wethJoin to move weth out of vat for this proxy
+        if (vat.can(address(this), address(wethJoin)) != 1) vat.hope(address(wethJoin));
+
+        // Allow daiJoin to take Dai for paying debt
+        if (dai.allowance(address(this), address(daiJoin)) < type(uint256).max) dai.approve(address(daiJoin), type(uint256).max);
+
         if (controllerSig.length > 0) controller.addDelegatePacked(controllerSig);
         return makerToYield(pool, wethAmount, daiAmount);
+    }
+
+    /// @dev Determine whether all approvals and signatures are in place for `yieldToMaker`.
+    /// If `return[0]` is `false`, calling `vat.hope(proxy.address)` will set the MakerDAO approval.
+    /// If `return[1]` is `false`, calling `yieldToMakerWithSignature` will set the approvals.
+    /// If `return[2]` is `false`, `yieldToMakerWithSignature` must be called with a controller signature.
+    /// If `return` is `(true, true)`, `yieldToMaker` won't fail because of missing approvals or signatures.
+    function yieldToMakerCheck(IPool pool) public view returns (bool, bool, bool) {
+        bool hope = vat.can(msg.sender, address(this)) == 1;
+        bool approvals = true;
+        approvals = approvals && dai.allowance(address(this), treasury) == type(uint256).max;
+        approvals = approvals && dai.allowance(address(this), address(pool)) == type(uint256).max;
+        approvals = approvals && vat.can(address(this), address(daiJoin)) == 1;
+        approvals = approvals && weth.allowance(address(this), address(wethJoin)) == type(uint256).max;
+
+        bool controllerSig = controller.delegated(msg.sender, address(this));
+        return (hope, approvals, controllerSig);
     }
 
     /// @dev Transfer debt and collateral from Yield to MakerDAO
@@ -252,7 +274,19 @@ contract YieldProxy is DecimalMath, IFlashMinter {
     /// and low enough to make sure that debt left in Yield is also collateralized.
     /// @param fyDaiAmount fyDai debt to move from Yield to MakerDAO.
     /// @param controllerSig packed signature for delegation of this proxy in the controller. Ignored if '0x'.
-    function yieldToMaker(IPool pool, uint256 wethAmount, uint256 fyDaiAmount, bytes memory controllerSig) public {
+    function yieldToMakerWithSignature(IPool pool, uint256 wethAmount, uint256 fyDaiAmount, bytes memory controllerSig) public {
+        // Allow the Treasury to take dai for repaying
+        if (dai.allowance(address(this), treasury) < type(uint256).max) dai.approve(treasury, type(uint256).max);
+
+        // Allow the Pool to take dai for trading
+        if (dai.allowance(address(this), address(pool)) < type(uint256).max) dai.approve(address(pool), type(uint256).max);
+
+        // Allow daiJoin to move dai out of vat for this proxy
+        if (vat.can(address(this), address(daiJoin)) != 1) vat.hope(address(daiJoin));
+
+        // Allow wethJoin to take weth for collateralization
+        if (weth.allowance(address(this), address(wethJoin)) < type(uint256).max) weth.approve(address(wethJoin), type(uint256).max);
+
         if (controllerSig.length > 0) controller.addDelegatePacked(controllerSig);
         return yieldToMaker(pool, wethAmount, fyDaiAmount);
     }

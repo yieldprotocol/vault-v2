@@ -92,6 +92,48 @@ contract('SplitterProxy', async (accounts) => {
     )
   })
 
+  it('checks approvals and signatures to move maker vault to yield', async () => {
+    await env.maker.getDai(user, daiTokens1, rate1)
+    const daiDebt = mulRay(bnify((await vat.urns(WETH, user)).art), rate1).toString()
+
+    let result = await splitter1.makerToYieldCheck(pool1.address, { from: user })
+    assert.equal(result[0], false)
+    assert.equal(result[1], false)
+    assert.equal(result[2], false)
+
+    await vat.hope(splitter1.address, { from: user }) // Allowing Splitter to manipulate debt for user in MakerDAO
+    result = await splitter1.makerToYieldCheck(pool1.address, { from: user })
+    assert.equal(result[0], true)
+    assert.equal(result[1], false)
+    assert.equal(result[2], false)
+
+    await controller.addDelegate(splitter1.address, { from: user }) // Allowing Splitter to create debt for use in Yield
+    result = await splitter1.makerToYieldCheck(pool1.address, { from: user })
+    assert.equal(result[0], true)
+    assert.equal(result[1], false)
+    assert.equal(result[2], true)
+
+    // This lot can be avoided if the user is certain that he has enough Weth in Controller
+    // The amount of fyDai to be borrowed can be obtained from Pool through Splitter
+    // As time passes, the amount of fyDai required decreases, so this value will always be slightly higher than needed
+    const fyDaiNeeded = await splitter1.fyDaiForDai(pool1.address, daiDebt)
+
+    // Once we know how much fyDai debt we will have, we can see how much weth we need to move
+    const wethInController = bnify(await splitter1.wethForFYDai(fyDaiNeeded, { from: user }))
+
+    // If we need any extra, we are posting it directly on Controller
+    const extraWethNeeded = wethInController.sub(bnify(wethTokens1)) // It will always be zero or more
+    await weth.deposit({ from: user, value: extraWethNeeded.toString() })
+    await weth.approve(treasury.address, MAX, { from: user })
+    await controller.post(WETH, user, user, extraWethNeeded, { from: user })
+
+    await splitter1.makerToYieldWithSignature(pool1.address, wethTokens1, daiDebt, '0x', { from: user })
+    result = await splitter1.makerToYieldCheck(pool1.address, { from: user })
+    assert.equal(result[0], true)
+    assert.equal(result[1], true)
+    assert.equal(result[2], true)
+  })
+
   it('moves maker vault to yield', async () => {
     await env.maker.getDai(user, daiTokens1, rate1)
     const daiDebt = mulRay(bnify((await vat.urns(WETH, user)).art), rate1).toString()
@@ -120,7 +162,7 @@ contract('SplitterProxy', async (accounts) => {
     assert.equal((await controller.posted(WETH, user)).toString(), extraWethNeeded.toString())
     assert.equal((await controller.debtFYDai(WETH, maturity1, user)).toString(), 0)
 
-    await splitter1.makerToYield(pool1.address, wethTokens1, daiDebt, { from: user })
+    await splitter1.makerToYieldWithSignature(pool1.address, wethTokens1, daiDebt, '0x', { from: user })
 
     assert.equal(await fyDai1.balanceOf(splitter1.address), 0)
     assert.equal(await dai.balanceOf(splitter1.address), 0)
@@ -151,6 +193,35 @@ contract('SplitterProxy', async (accounts) => {
     )
   })
 
+  it('checks approvals and signatures to move yield vault to maker', async () => {
+    await env.postWeth(user, wethTokens1)
+    const toBorrow = (await env.unlockedOf(WETH, user)).toString()
+    await controller.borrow(WETH, maturity1, user, user, toBorrow, { from: user })
+
+    let result = await splitter1.yieldToMakerCheck(pool1.address, { from: user })
+    assert.equal(result[0], false)
+    assert.equal(result[1], false)
+    assert.equal(result[2], false)
+
+    await vat.hope(splitter1.address, { from: user }) // Allowing Splitter to manipulate debt for user in MakerDAO
+    result = await splitter1.yieldToMakerCheck(pool1.address, { from: user })
+    assert.equal(result[0], true)
+    assert.equal(result[1], false)
+    assert.equal(result[2], false)
+
+    await controller.addDelegate(splitter1.address, { from: user }) // Allowing Splitter to create debt for use in Yield
+    result = await splitter1.yieldToMakerCheck(pool1.address, { from: user })
+    assert.equal(result[0], true)
+    assert.equal(result[1], false)
+    assert.equal(result[2], true)
+
+    await splitter1.yieldToMakerWithSignature(pool1.address, wethTokens1, toBorrow, '0x', { from: user })
+    result = await splitter1.yieldToMakerCheck(pool1.address, { from: user })
+    assert.equal(result[0], true)
+    assert.equal(result[1], true)
+    assert.equal(result[2], true)
+  })
+
   it('moves yield vault to maker', async () => {
     await env.postWeth(user, wethTokens1)
     const toBorrow = (await env.unlockedOf(WETH, user)).toString()
@@ -169,7 +240,7 @@ contract('SplitterProxy', async (accounts) => {
     // Will need this one for testing. As time passes, even for one block, the resulting dai debt will be higher than this value
     const makerDebtEstimate = new BN(await splitter1.daiForFYDai(pool1.address, toBorrow))
 
-    await splitter1.yieldToMaker(pool1.address, wethTokens1, toBorrow, { from: user })
+    await splitter1.yieldToMakerWithSignature(pool1.address, wethTokens1, toBorrow, '0x', { from: user })
 
     assert.equal(await fyDai1.balanceOf(splitter1.address), 0)
     assert.equal(await dai.balanceOf(splitter1.address), 0)
