@@ -196,7 +196,7 @@ contract('BorrowProxy', async (accounts) => {
           assert.equal(result[2], true)
         })
   
-        it.only('repays debt', async () => {
+        it('repays debt', async () => {
           await env.maker.getDai(user1, oneToken, rate1)
           await dai.approve(treasury.address, MAX, { from: user1 })
           const debtBefore = await controller.debtDai(WETH, maturity1, user1)
@@ -222,6 +222,28 @@ contract('BorrowProxy', async (accounts) => {
       await fyDai1.approve(pool.address, -1, { from: user1 })
       await dai.approve(pool.address, -1, { from: user1 })
       await pool.addDelegate(proxy.address, { from: user1 })
+    })
+
+    it('checks missing approvals and signatures for selling fyDai', async () => {
+      let result = await proxy.sellFYDaiCheck(pool.address, { from: user2 })
+
+      assert.equal(result[0], true)
+      assert.equal(result[1], false)
+      assert.equal(result[2], false)
+      
+      await fyDai1.approve(pool.address, MAX, { from: user2 })
+      result = await proxy.sellFYDaiCheck(pool.address, { from: user2 })
+
+      assert.equal(result[0], true)
+      assert.equal(result[1], true)
+      assert.equal(result[2], false)
+      
+      await pool.addDelegate(proxy.address, { from: user2 })
+      result = await proxy.sellFYDaiCheck(pool.address, { from: user2 })
+
+      assert.equal(result[0], true)
+      assert.equal(result[1], true)
+      assert.equal(result[2], true)
     })
 
     it('sells fyDai', async () => {
@@ -256,6 +278,28 @@ contract('BorrowProxy', async (accounts) => {
         await pool.sellFYDai(owner, owner, additionalFYDaiReserves, { from: owner })
 
         await env.maker.getDai(user1, daiTokens1, rate1)
+      })
+
+      it('checks missing approvals and signatures for selling dai', async () => {
+        let result = await proxy.sellDaiCheck(pool.address, { from: user2 })
+  
+        assert.equal(result[0], true)
+        assert.equal(result[1], false)
+        assert.equal(result[2], false)
+        
+        await dai.approve(pool.address, MAX, { from: user2 })
+        result = await proxy.sellDaiCheck(pool.address, { from: user2 })
+  
+        assert.equal(result[0], true)
+        assert.equal(result[1], true)
+        assert.equal(result[2], false)
+        
+        await pool.addDelegate(proxy.address, { from: user2 })
+        result = await proxy.sellDaiCheck(pool.address, { from: user2 })
+  
+        assert.equal(result[0], true)
+        assert.equal(result[1], true)
+        assert.equal(result[2], true)
       })
 
       it('sells dai', async () => {

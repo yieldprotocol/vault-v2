@@ -199,6 +199,18 @@ contract BorrowProxy {
         controller.repayDai(collateral, maturity, msg.sender, to, daiAmount);
     }
 
+    /// @dev Determine whether all approvals and signatures are in place for `sellFYDai` to suceed.
+    /// `return[0]` is always `true`, meaning that no proxy approvals are ever needed.
+    /// If `return[1]` is `false`, `sellFYDaiWithSignature` must be called with a fyDai permit signature.
+    /// If `return[2]` is `false`, `sellFYDaiWithSignature` must be called with a pool signature.
+    /// If `return` is `(true, true, true)`, `sellFYDai` won't fail because of missing approvals or signatures.
+    function sellFYDaiCheck(IPool pool) public view returns (bool, bool, bool) {
+        bool approvals = true; // sellFYDai doesn't need proxy approvals
+        bool fyDaiSig = pool.fyDai().allowance(msg.sender, address(pool)) >= type(uint112).max;
+        bool poolSig = pool.delegated(msg.sender, address(this));
+        return (approvals, fyDaiSig, poolSig);
+    }
+
     /// @dev Sell fyDai for Dai
     /// @param to Wallet receiving the dai being bought
     /// @param fyDaiIn Amount of fyDai being sold
@@ -212,6 +224,18 @@ contract BorrowProxy {
         if (fyDaiSig.length > 0) pool.fyDai().permitPacked(address(pool), fyDaiSig);
         if (poolSig.length > 0) pool.addDelegatePacked(poolSig);
         return sellFYDai(pool, to, fyDaiIn, minDaiOut);
+    }
+
+    /// @dev Determine whether all approvals and signatures are in place for `sellDai` to suceed.
+    /// `return[0]` is always `true`, meaning that no proxy approvals are ever needed.
+    /// If `return[1]` is `false`, `sellDaiWithSignature` must be called with a dai permit signature.
+    /// If `return[2]` is `false`, `sellDaiWithSignature` must be called with a pool signature.
+    /// If `return` is `(true, true, true)`, `sellDai` won't fail because of missing approvals or signatures.
+    function sellDaiCheck(IPool pool) public view returns (bool, bool, bool) {
+        bool approvals = true; // sellDai doesn't need proxy approvals
+        bool daiSig = dai.allowance(msg.sender, address(pool)) == type(uint256).max;
+        bool poolSig = pool.delegated(msg.sender, address(this));
+        return (approvals, daiSig, poolSig);
     }
 
     /// @dev Sell Dai for fyDai
