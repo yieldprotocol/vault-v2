@@ -4,16 +4,7 @@ const Splitter = artifacts.require('YieldProxy')
 import { id } from 'ethers/lib/utils'
 // @ts-ignore
 import { BN, expectRevert } from '@openzeppelin/test-helpers'
-import {
-  WETH,
-  rate1,
-  daiTokens1,
-  wethTokens1,
-  mulRay,
-  bnify,
-  MAX,
-  ZERO,
-} from '../shared/utils'
+import { WETH, rate1, daiTokens1, wethTokens1, mulRay, bnify, MAX, ZERO } from '../shared/utils'
 import { YieldEnvironmentLite, Contract } from '../shared/fixtures'
 
 import { assert, expect } from 'chai'
