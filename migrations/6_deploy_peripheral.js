@@ -10,6 +10,8 @@ const DSProxyFactory = artifacts.require('DSProxyFactory')
 const DSProxyRegistry = artifacts.require('ProxyRegistry')
 const BorrowProxy = artifacts.require('BorrowProxy')
 const PoolProxy = artifacts.require('PoolProxy')
+const SplitterProxy = artifacts.require('SplitterProxy')
+
 
 module.exports = async (deployer, network) => {
 
@@ -41,11 +43,15 @@ module.exports = async (deployer, network) => {
   await deployer.deploy(PoolProxy, daiAddress, chaiAddress, treasuryAddress, controllerAddress)
   const poolProxy = await PoolProxy.deployed()
 
+  await deployer.deploy(SplitterProxy, controllerAddress)
+  const splitterProxy = await SplitterProxy.deployed()
+
   const deployment = {
     ProxyFactory: proxyFactoryAddress,
     ProxyRegistry: proxyRegistryAddress,
     BorrowProxy: borrowProxy.address,
     PoolProxy: poolProxy.address,
+    SplitterProxy: splitterProxy.address,
   }
 
   let migrations
