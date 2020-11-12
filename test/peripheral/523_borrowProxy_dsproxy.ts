@@ -27,7 +27,7 @@ import { keccak256, toUtf8Bytes } from 'ethers/lib/utils'
 import { balance, expectRevert } from '@openzeppelin/test-helpers'
 import { assert, expect } from 'chai'
 
-contract('YieldProxy - DSProxy', async (accounts) => {
+contract('BorrowProxy - DSProxy', async (accounts) => {
   let [owner, user1, user2] = accounts
 
   let env: YieldEnvironmentLite

@@ -45,18 +45,6 @@ contract PoolProxy is DecimalMath {
         require(fyDai.isMature() != true, "YieldProxy: Only before maturity");
         require(dai.transferFrom(msg.sender, address(this), daiUsed), "YieldProxy: Transfer Failed");
 
-        // Allow the Treasury to take chai when posting
-        if (chai.allowance(address(this), treasury) < type(uint256).max) chai.approve(treasury, type(uint256).max);
-
-        // Allow Chai to take dai for wrapping
-        if (dai.allowance(address(this), address(chai)) < type(uint256).max) dai.approve(address(chai), type(uint256).max);
-
-        // Allow pool to take dai for minting
-        if (dai.allowance(address(this), address(pool)) < type(uint256).max) dai.approve(address(pool), type(uint256).max);
-
-        // Allow pool to take fyDai for minting
-        if (fyDai.allowance(address(this), address(pool)) < type(uint112).max) fyDai.approve(address(pool), type(uint256).max);
-
         // calculate needed fyDai
         uint256 daiReserves = dai.balanceOf(address(pool));
         uint256 fyDaiReserves = fyDai.balanceOf(address(pool));
@@ -87,12 +75,6 @@ contract PoolProxy is DecimalMath {
 
         IFYDai fyDai = pool.fyDai();
         uint256 maturity = fyDai.maturity();
-
-        // Allow pool to take dai for trading
-        if (dai.allowance(address(this), address(pool)) < type(uint256).max) dai.approve(address(pool), type(uint256).max);
-
-        // Allow pool to take fyDai for trading
-        if (fyDai.allowance(address(this), address(pool)) < type(uint112).max) fyDai.approve(address(pool), type(uint256).max);
 
         (uint256 daiObtained, uint256 fyDaiObtained) = pool.burn(msg.sender, address(this), poolTokens);
 
@@ -129,12 +111,6 @@ contract PoolProxy is DecimalMath {
         IFYDai fyDai = pool.fyDai();
         uint256 maturity = fyDai.maturity();
 
-        // Allow the Treasury to take dai for repaying
-        if (dai.allowance(address(this), treasury) < type(uint256).max) dai.approve(treasury, type(uint256).max);
-
-        // Allow pool to take fyDai for trading
-        if (fyDai.allowance(address(this), address(pool)) < type(uint112).max) fyDai.approve(address(pool), type(uint256).max);
-
         (uint256 daiObtained, uint256 fyDaiObtained) = pool.burn(msg.sender, address(this), poolTokens);
         uint256 fyDaiUsed;
         if (fyDaiObtained > 0 && controller.debtFYDai(CHAI, maturity, msg.sender) > 0) {
@@ -162,9 +138,6 @@ contract PoolProxy is DecimalMath {
 
         IFYDai fyDai = pool.fyDai();
         uint256 maturity = fyDai.maturity();
-
-        // Allow the Treasury to take dai for repaying
-        if (dai.allowance(address(this), treasury) < type(uint256).max) dai.approve(treasury, type(uint256).max);
 
         (uint256 daiObtained, uint256 fyDaiObtained) = pool.burn(msg.sender, address(this), poolTokens);
         if (fyDaiObtained > 0) {
@@ -207,6 +180,18 @@ contract PoolProxy is DecimalMath {
         bytes memory daiSig,
         bytes memory controllerSig
     ) external returns (uint256) {
+        // Allow the Treasury to take chai when posting
+        if (chai.allowance(address(this), treasury) < type(uint256).max) chai.approve(treasury, type(uint256).max);
+
+        // Allow Chai to take dai for wrapping
+        if (dai.allowance(address(this), address(chai)) < type(uint256).max) dai.approve(address(chai), type(uint256).max);
+
+        // Allow pool to take dai for minting
+        if (dai.allowance(address(this), address(pool)) < type(uint256).max) dai.approve(address(pool), type(uint256).max);
+
+        // Allow pool to take fyDai for minting
+        if (pool.fyDai().allowance(address(this), address(pool)) < type(uint112).max) pool.fyDai().approve(address(pool), type(uint256).max);
+
         if (daiSig.length > 0) dai.permitPackedDai(address(this), daiSig);
         if (controllerSig.length > 0) controller.addDelegatePacked(controllerSig);
         return addLiquidity(pool, daiUsed, maxFYDai);
@@ -226,6 +211,12 @@ contract PoolProxy is DecimalMath {
         bytes memory controllerSig,
         bytes memory poolSig
     ) public {
+        // Allow pool to take dai for trading
+        if (dai.allowance(address(this), address(pool)) < type(uint256).max) dai.approve(address(pool), type(uint256).max);
+
+        // Allow pool to take fyDai for trading
+        if (pool.fyDai().allowance(address(this), address(pool)) < type(uint112).max) pool.fyDai().approve(address(pool), type(uint256).max);
+
         if (controllerSig.length > 0) controller.addDelegatePacked(controllerSig);
         if (poolSig.length > 0) pool.addDelegatePacked(poolSig);
         removeLiquidityEarlyDaiPool(pool, poolTokens, minimumDaiPrice, minimumFYDaiPrice);
@@ -243,6 +234,12 @@ contract PoolProxy is DecimalMath {
         bytes memory controllerSig,
         bytes memory poolSig
     ) public {
+        // Allow the Treasury to take dai for repaying
+        if (dai.allowance(address(this), treasury) < type(uint256).max) dai.approve(treasury, type(uint256).max);
+
+        // Allow pool to take fyDai for trading
+        if (pool.fyDai().allowance(address(this), address(pool)) < type(uint112).max) pool.fyDai().approve(address(pool), type(uint256).max);
+
         if (controllerSig.length > 0) controller.addDelegatePacked(controllerSig);
         if (poolSig.length > 0) pool.addDelegatePacked(poolSig);
         removeLiquidityEarlyDaiFixed(pool, poolTokens, minimumFYDaiPrice);
@@ -258,6 +255,9 @@ contract PoolProxy is DecimalMath {
         bytes memory controllerSig,
         bytes memory poolSig
     ) external {
+        // Allow the Treasury to take dai for repaying
+        if (dai.allowance(address(this), treasury) < type(uint256).max) dai.approve(treasury, type(uint256).max);
+
         if (controllerSig.length > 0) controller.addDelegatePacked(controllerSig);
         if (poolSig.length > 0) pool.addDelegatePacked(poolSig);
         removeLiquidityMature(pool, poolTokens);

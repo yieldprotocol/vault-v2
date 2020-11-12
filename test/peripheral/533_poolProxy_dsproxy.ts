@@ -179,11 +179,11 @@ contract('PoolProxy - DSProxy', async (accounts) => {
         const maxBorrow = oneToken
         // Give some pool0 tokens to user2
         await dai.mint(user2, oneToken, { from: owner })
-        await poolProxy.addLiquidity(pool0.address, oneToken, maxBorrow, { from: user2 })
+        await poolProxy.addLiquidityWithSignature(pool0.address, oneToken, maxBorrow, '0x', '0x', { from: user2 })
 
         // Give some pool1 tokens to user2
         await dai.mint(user2, oneToken, { from: owner })
-        await poolProxy.addLiquidity(pool1.address, oneToken, maxBorrow, { from: user2 })
+        await poolProxy.addLiquidityWithSignature(pool1.address, oneToken, maxBorrow, '0x', '0x', { from: user2 })
 
         // Authorize the proxy for the pool
         const poolDigest = getSignatureDigest(

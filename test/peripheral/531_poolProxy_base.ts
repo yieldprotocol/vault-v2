@@ -161,7 +161,7 @@ contract('PoolProxy', async (accounts) => {
       await dai.mint(user2, oneToken, { from: owner })
       await dai.approve(proxy.address, oneToken, { from: user2 })
       await controller.addDelegate(proxy.address, { from: user2 })
-      await proxy.addLiquidity(pool0.address, daiUsed, maxFYDai, { from: user2 })
+      await proxy.addLiquidityWithSignature(pool0.address, daiUsed, maxFYDai, '0x', '0x', { from: user2 })
 
       const debt = bnify((await controller.debtFYDai(CHAI, maturity0, user2)).toString())
       const posted = bnify((await controller.posted(CHAI, user2)).toString())
@@ -226,8 +226,8 @@ contract('PoolProxy', async (accounts) => {
 
           await dai.mint(users[i], oneToken.mul(2), { from: owner })
           await dai.approve(proxy.address, MAX, { from: users[i] })
-          await proxy.addLiquidity(pool0.address, oneToken, maxBorrow, { from: users[i] })
-          await proxy.addLiquidity(pool1.address, oneToken, maxBorrow, { from: users[i] })
+          await proxy.addLiquidityWithSignature(pool0.address, oneToken, maxBorrow, '0x', '0x', { from: users[i] })
+          await proxy.addLiquidityWithSignature(pool1.address, oneToken, maxBorrow, '0x', '0x', { from: users[i] })
         }
 
         // Add some funds to the system to allow for rounding losses when withdrawing chai
@@ -387,7 +387,7 @@ contract('PoolProxy', async (accounts) => {
         // the proxy must be a delegate in the pool0 because in order to remove
         // liquidity via the proxy we must authorize the proxy to burn from our balance
         await pool0.addDelegate(proxy.address, { from: user2 })
-        await proxy.removeLiquidityEarlyDaiFixed(pool0.address, poolTokens, '0', { from: user2 }) // TODO: Test limits
+        await proxy.removeLiquidityEarlyDaiFixedWithSignature(pool0.address, poolTokens, '0', '0x', '0x', { from: user2 }) // TODO: Test limits
 
         // Doesn't have pool0 tokens
         expect(await pool0.balanceOf(user2)).to.be.bignumber.eq(ZERO)
@@ -426,7 +426,7 @@ contract('PoolProxy', async (accounts) => {
         // the proxy must be a delegate in the pool0 because in order to remove
         // liquidity via the proxy we must authorize the proxy to burn from our balance
         await pool0.addDelegate(proxy.address, { from: user2 })
-        await proxy.removeLiquidityEarlyDaiFixed(pool0.address, poolTokens, '0', { from: user2 }) // TODO: Test limits
+        await proxy.removeLiquidityEarlyDaiFixedWithSignature(pool0.address, poolTokens, '0', '0x', '0x', { from: user2 }) // TODO: Test limits
 
         // Doesn't have pool0 tokens
         expect(await pool0.balanceOf(user2)).to.be.bignumber.eq(ZERO)
@@ -463,7 +463,7 @@ contract('PoolProxy', async (accounts) => {
           // the proxy must be a delegate in the pool0 because in order to remove
           // liquidity via the proxy we must authorize the proxy to burn from our balance
           await pool0.addDelegate(proxy.address, { from: users[i] })
-          await proxy.removeLiquidityEarlyDaiFixed(pool0.address, poolTokens, '0', { from: users[i] }) // TODO: Test limits
+          await proxy.removeLiquidityEarlyDaiFixedWithSignature(pool0.address, poolTokens, '0', '0x', '0x', { from: users[i] }) // TODO: Test limits
 
           // Doesn't have pool0 tokens
           expect(await pool0.balanceOf(users[i])).to.be.bignumber.eq(ZERO)
@@ -507,7 +507,7 @@ contract('PoolProxy', async (accounts) => {
         // the proxy must be a delegate in the pool0 because in order to remove
         // liquidity via the proxy we must authorize the proxy to burn from our balance
         await pool0.addDelegate(proxy.address, { from: user2 })
-        await proxy.removeLiquidityEarlyDaiFixed(pool0.address, poolTokens, '0', { from: user2 }) // TODO: Test limits
+        await proxy.removeLiquidityEarlyDaiFixedWithSignature(pool0.address, poolTokens, '0', '0x', '0x', { from: user2 }) // TODO: Test limits
 
         // Doesn't have pool0 tokens
         expect(await pool0.balanceOf(user2)).to.be.bignumber.eq(ZERO)
@@ -572,7 +572,7 @@ contract('PoolProxy', async (accounts) => {
 
         await pool0.addDelegate(proxy.address, { from: user2 })
 
-        await proxy.removeLiquidityMature(pool0.address, poolTokens, { from: user2 })
+        await proxy.removeLiquidityMatureWithSignature(pool0.address, poolTokens, '0x', '0x', { from: user2 })
 
         // Doesn't have pool0 tokens
         expect(await pool0.balanceOf(user2)).to.be.bignumber.eq(ZERO)
@@ -613,7 +613,7 @@ contract('PoolProxy', async (accounts) => {
           // the proxy must be a delegate in the pool0 because in order to remove
           // liquidity via the proxy we must authorize the proxy to burn from our balance
           await pool0.addDelegate(proxy.address, { from: users[i] })
-          await proxy.removeLiquidityMature(pool0.address, poolTokens, { from: users[i] })
+          await proxy.removeLiquidityMatureWithSignature(pool0.address, poolTokens, '0x', '0x', { from: users[i] })
 
           // Doesn't have pool0 tokens
           expect(await pool0.balanceOf(users[i])).to.be.bignumber.eq(ZERO)
@@ -639,7 +639,7 @@ contract('PoolProxy', async (accounts) => {
         for (let i in users) {
           const poolTokens = await pool0.balanceOf(users[i])
           await pool0.addDelegate(proxy.address, { from: users[i] })
-          await proxy.removeLiquidityMature(pool0.address, poolTokens, { from: users[i] })
+          await proxy.removeLiquidityMatureWithSignature(pool0.address, poolTokens, '0x', '0x', { from: users[i] })
         }
         console.log(`           Remaining Dai:   ${(await pool0.getDaiReserves()).toString()}`)
         console.log(`           Remaining fyDai: ${(await pool0.getFYDaiReserves()).toString()}`)
