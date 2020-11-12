@@ -121,6 +121,17 @@ contract BorrowProxy {
     /// Signature method wrappers
     /// --------------------------------------------------
 
+
+    /// @dev Determine whether all approvals and signatures are in place for `withdrawWithSignature`.
+    /// `return[0]` is always `true`, meaning that no proxy approvals are ever needed.
+    /// If `return[1]` is `false`, `withdrawWithSignature` must be called with a controller signature.
+    /// If `return` is `(true, true)`, `withdrawWithSignature` won't fail because of missing approvals or signatures.
+    function withdrawCheck() public view returns (bool, bool) {
+        bool approvals = true; // sellFYDai doesn't need proxy approvals
+        bool controllerSig = controller.delegated(msg.sender, address(this));
+        return (approvals, controllerSig);
+    }
+
     /// @dev Users wishing to withdraw their Weth as ETH from the Controller should use this function.
     /// @param to Wallet to send Eth to.
     /// @param amount Amount of weth to move.
@@ -131,7 +142,7 @@ contract BorrowProxy {
         withdraw(to, amount);
     }
 
-    /// @dev Determine whether all approvals and signatures are in place for `borrowDaiForMaximumFYDai` to suceed for a given pool.
+    /// @dev Determine whether all approvals and signatures are in place for `borrowDaiForMaximumFYDai` with a given pool.
     /// If `return[0]` is `false`, calling `borrowDaiForMaximumFYDaiWithSignature` will set the approvals.
     /// If `return[1]` is `false`, `borrowDaiForMaximumFYDaiWithSignature` must be called with a controller signature
     /// If `return` is `(true, true)`, `borrowDaiForMaximumFYDai` won't fail because of missing approvals or signatures.
@@ -167,7 +178,7 @@ contract BorrowProxy {
         return borrowDaiForMaximumFYDai(pool, collateral, maturity, to, maximumFYDai, daiToBorrow);
     }
 
-    /// @dev Determine whether all approvals and signatures are in place for `controller.repayDai` to suceed.
+    /// @dev Determine whether all approvals and signatures are in place for `repayDaiWithSignature`.
     /// `return[0]` is always `true`, meaning that no proxy approvals are ever needed.
     /// If `return[1]` is `false`, `repayDaiWithSignature` must be called with a dai permit signature.
     /// If `return[2]` is `false`, `repayDaiWithSignature` must be called with a controller signature.
@@ -199,7 +210,7 @@ contract BorrowProxy {
         controller.repayDai(collateral, maturity, msg.sender, to, daiAmount);
     }
 
-    /// @dev Determine whether all approvals and signatures are in place for `sellFYDai` to suceed.
+    /// @dev Determine whether all approvals and signatures are in place for `sellFYDai`.
     /// `return[0]` is always `true`, meaning that no proxy approvals are ever needed.
     /// If `return[1]` is `false`, `sellFYDaiWithSignature` must be called with a fyDai permit signature.
     /// If `return[2]` is `false`, `sellFYDaiWithSignature` must be called with a pool signature.
@@ -226,7 +237,7 @@ contract BorrowProxy {
         return sellFYDai(pool, to, fyDaiIn, minDaiOut);
     }
 
-    /// @dev Determine whether all approvals and signatures are in place for `sellDai` to suceed.
+    /// @dev Determine whether all approvals and signatures are in place for `sellDai`.
     /// `return[0]` is always `true`, meaning that no proxy approvals are ever needed.
     /// If `return[1]` is `false`, `sellDaiWithSignature` must be called with a dai permit signature.
     /// If `return[2]` is `false`, `sellDaiWithSignature` must be called with a pool signature.

@@ -91,6 +91,19 @@ contract('BorrowProxy', async (accounts) => {
         assert.equal(await weth.balanceOf(user2), 0, 'User2 has collateral in hand')
       })
 
+      it('checks missing approvals and signatures for withdrawing', async () => {
+        let result = await proxy.withdrawCheck({ from: user2 })
+
+        assert.equal(result[0], true)
+        assert.equal(result[1], false)
+        
+        await controller.addDelegate(proxy.address, { from: user2 })
+        result = await proxy.withdrawCheck({ from: user2 })
+
+        assert.equal(result[0], true)
+        assert.equal(result[1], true)
+      })
+
       it('allows user to withdraw weth', async () => {
         await controller.addDelegate(proxy.address, { from: user1 })
         const previousBalance = await balance.current(user2)
