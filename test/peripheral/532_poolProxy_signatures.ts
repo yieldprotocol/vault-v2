@@ -59,7 +59,7 @@ contract('PoolProxy - Signatures', async (accounts) => {
     await fyDai1.orchestrate(owner, keccak256(toUtf8Bytes('mint(address,uint256)')), { from: owner })
 
     // Setup PoolProxy
-    proxy = await PoolProxy.new(dai.address, chai.address, treasury.address, controller.address)
+    proxy = await PoolProxy.new(controller.address)
   })
 
   afterEach(async () => {

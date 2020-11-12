@@ -25,13 +25,10 @@ contract BorrowProxy {
 
     bytes32 public constant WETH = "ETH-A";
 
-    constructor(address controller_) public {
-        IController _controller = IController(controller_);
+    constructor(IController _controller) public {
         ITreasury _treasury = _controller.treasury();
-
         weth = _treasury.weth();
         dai = _treasury.dai();
-
         treasury = address(_treasury);
         controller = _controller;
     }

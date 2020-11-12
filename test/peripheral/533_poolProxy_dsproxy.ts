@@ -66,7 +66,7 @@ contract('PoolProxy - DSProxy', async (accounts) => {
     await fyDai1.orchestrate(owner, keccak256(toUtf8Bytes('mint(address,uint256)')), { from: owner })
 
     // Setup PoolProxy
-    poolProxy = await PoolProxy.new(dai.address, chai.address, treasury.address, controller.address)
+    poolProxy = await PoolProxy.new(controller.address)
 
     // Setup DSProxyFactory and DSProxyCache
     proxyFactory = await DSProxyFactory.new({ from: owner })

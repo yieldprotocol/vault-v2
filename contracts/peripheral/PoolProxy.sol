@@ -26,11 +26,12 @@ contract PoolProxy is DecimalMath {
 
     bytes32 public constant CHAI = "CHAI";
 
-    constructor(address dai_, address chai_, address treasury_, address controller_) public {
-        controller = IController(controller_);
-        treasury = treasury_;
-        dai = IDai(dai_);
-        chai = IChai(chai_);
+    constructor(IController _controller) public {
+        ITreasury _treasury = _controller.treasury();
+        dai = _treasury.dai();
+        chai = _treasury.chai();
+        treasury = address(_treasury);
+        controller = _controller;
     }
 
     /// @dev Mints liquidity with provided Dai by borrowing fyDai with some of the Dai.
