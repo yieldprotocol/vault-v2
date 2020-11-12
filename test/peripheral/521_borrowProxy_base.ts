@@ -96,7 +96,7 @@ contract('BorrowProxy', async (accounts) => {
 
         assert.equal(result[0], true)
         assert.equal(result[1], false)
-        
+
         await controller.addDelegate(proxy.address, { from: user2 })
         result = await proxy.withdrawCheck({ from: user2 })
 
@@ -144,9 +144,18 @@ contract('BorrowProxy', async (accounts) => {
         assert.equal(result[0], false)
         assert.equal(result[1], true)
 
-        await proxy.borrowDaiForMaximumFYDaiWithSignature(pool.address, WETH, maturity1, user2, fyDaiTokens1, oneToken, '0x', {
-          from: user1,
-        })
+        await proxy.borrowDaiForMaximumFYDaiWithSignature(
+          pool.address,
+          WETH,
+          maturity1,
+          user2,
+          fyDaiTokens1,
+          oneToken,
+          '0x',
+          {
+            from: user1,
+          }
+        )
         result = await proxy.borrowDaiForMaximumFYDaiCheck(pool.address, { from: user1 })
 
         assert.equal(result[0], true)
@@ -155,9 +164,18 @@ contract('BorrowProxy', async (accounts) => {
 
       it('borrows dai for maximum fyDai', async () => {
         await controller.addDelegate(proxy.address, { from: user1 })
-        await proxy.borrowDaiForMaximumFYDaiWithSignature(pool.address, WETH, maturity1, user2, fyDaiTokens1, oneToken, '0x', {
-          from: user1,
-        })
+        await proxy.borrowDaiForMaximumFYDaiWithSignature(
+          pool.address,
+          WETH,
+          maturity1,
+          user2,
+          fyDaiTokens1,
+          oneToken,
+          '0x',
+          {
+            from: user1,
+          }
+        )
 
         assert.equal(await dai.balanceOf(user2), oneToken.toString())
       })
@@ -175,11 +193,20 @@ contract('BorrowProxy', async (accounts) => {
       describe('once borrowed', () => {
         beforeEach(async () => {
           await controller.addDelegate(proxy.address, { from: user1 })
-          await proxy.borrowDaiForMaximumFYDaiWithSignature(pool.address, WETH, maturity1, user2, fyDaiTokens1, oneToken, '0x', {
-            from: user1,
-          })
+          await proxy.borrowDaiForMaximumFYDaiWithSignature(
+            pool.address,
+            WETH,
+            maturity1,
+            user2,
+            fyDaiTokens1,
+            oneToken,
+            '0x',
+            {
+              from: user1,
+            }
+          )
         })
-        
+
         it('approvals only need to be set up once', async () => {
           await proxy.borrowDaiForMaximumFYDai(pool.address, WETH, maturity1, user2, fyDaiTokens1, oneToken, {
             from: user1,
@@ -193,14 +220,14 @@ contract('BorrowProxy', async (accounts) => {
           assert.equal(result[0], true)
           assert.equal(result[1], false)
           assert.equal(result[2], false)
-          
+
           await dai.approve(treasury.address, MAX, { from: user1 })
           result = await proxy.repayDaiCheck({ from: user1 })
 
           assert.equal(result[0], true)
           assert.equal(result[1], true)
           assert.equal(result[2], false)
-          
+
           await controller.addDelegate(proxy.address, { from: user1 })
           result = await proxy.repayDaiCheck({ from: user1 })
 
@@ -208,7 +235,7 @@ contract('BorrowProxy', async (accounts) => {
           assert.equal(result[1], true)
           assert.equal(result[2], true)
         })
-  
+
         it('repays debt', async () => {
           await env.maker.getDai(user1, oneToken, rate1)
           await dai.approve(treasury.address, MAX, { from: user1 })
@@ -243,14 +270,14 @@ contract('BorrowProxy', async (accounts) => {
       assert.equal(result[0], true)
       assert.equal(result[1], false)
       assert.equal(result[2], false)
-      
+
       await fyDai1.approve(pool.address, MAX, { from: user2 })
       result = await proxy.sellFYDaiCheck(pool.address, { from: user2 })
 
       assert.equal(result[0], true)
       assert.equal(result[1], true)
       assert.equal(result[2], false)
-      
+
       await pool.addDelegate(proxy.address, { from: user2 })
       result = await proxy.sellFYDaiCheck(pool.address, { from: user2 })
 
@@ -295,21 +322,21 @@ contract('BorrowProxy', async (accounts) => {
 
       it('checks missing approvals and signatures for selling dai', async () => {
         let result = await proxy.sellDaiCheck(pool.address, { from: user2 })
-  
+
         assert.equal(result[0], true)
         assert.equal(result[1], false)
         assert.equal(result[2], false)
-        
+
         await dai.approve(pool.address, MAX, { from: user2 })
         result = await proxy.sellDaiCheck(pool.address, { from: user2 })
-  
+
         assert.equal(result[0], true)
         assert.equal(result[1], true)
         assert.equal(result[2], false)
-        
+
         await pool.addDelegate(proxy.address, { from: user2 })
         result = await proxy.sellDaiCheck(pool.address, { from: user2 })
-  
+
         assert.equal(result[0], true)
         assert.equal(result[1], true)
         assert.equal(result[2], true)

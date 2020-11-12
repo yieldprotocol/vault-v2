@@ -135,9 +135,18 @@ contract('BorrowProxy - Signatures', async (accounts) => {
 
           beforeEach(async () => {
             await controller.addDelegate(proxy.address, { from: user1 })
-            await proxy.borrowDaiForMaximumFYDaiWithSignature(pool.address, WETH, maturity1, user2, fyDaiTokens1, oneToken, '0x', {
-              from: user1,
-            })
+            await proxy.borrowDaiForMaximumFYDaiWithSignature(
+              pool.address,
+              WETH,
+              maturity1,
+              user2,
+              fyDaiTokens1,
+              oneToken,
+              '0x',
+              {
+                from: user1,
+              }
+            )
 
             // Authorize DAI
             const daiDigest = getDaiDigest(

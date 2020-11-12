@@ -210,7 +210,7 @@ contract('PoolProxy', async (accounts) => {
     assert.equal(result[0], false)
     assert.equal(result[1], false)
     assert.equal(result[2], false)
-    
+
     await dai.approve(proxy.address, MAX, { from: user9 })
     result = await proxy.addLiquidityCheck(pool0.address, { from: user9 })
     assert.equal(result[0], false)
@@ -239,10 +239,7 @@ contract('PoolProxy', async (accounts) => {
     await dai.mint(user2, oneToken, { from: owner })
     await dai.approve(proxy.address, oneToken, { from: user2 })
     await controller.addDelegate(proxy.address, { from: user2 })
-    await expectRevert(
-      proxy.addLiquidity(pool0.address, oneToken, 1, { from: user2 }),
-      'YieldProxy: maxFYDai exceeded'
-    )
+    await expectRevert(proxy.addLiquidity(pool0.address, oneToken, 1, { from: user2 }), 'YieldProxy: maxFYDai exceeded')
   })
 
   describe('with proxied liquidity', () => {
@@ -334,7 +331,7 @@ contract('PoolProxy', async (accounts) => {
       assert.equal(result[0], false)
       assert.equal(result[1], false)
       assert.equal(result[2], false)
-      
+
       await controller.addDelegate(proxy.address, { from: user9 })
       result = await proxy.removeLiquidityEarlyDaiPoolCheck(pool2.address, { from: user9 })
       assert.equal(result[0], false)
@@ -434,7 +431,7 @@ contract('PoolProxy', async (accounts) => {
       assert.equal(result[0], false)
       assert.equal(result[1], false)
       assert.equal(result[2], false)
-      
+
       await controller.addDelegate(proxy.address, { from: user9 })
       result = await proxy.removeLiquidityEarlyDaiFixedCheck(pool2.address, { from: user9 })
       assert.equal(result[0], false)
@@ -559,7 +556,9 @@ contract('PoolProxy', async (accounts) => {
         // the proxy must be a delegate in the pool0 because in order to remove
         // liquidity via the proxy we must authorize the proxy to burn from our balance
         await pool0.addDelegate(proxy.address, { from: users[i] })
-        await proxy.removeLiquidityEarlyDaiFixedWithSignature(pool0.address, poolTokens, '0', '0x', '0x', { from: users[i] }) // TODO: Test limits
+        await proxy.removeLiquidityEarlyDaiFixedWithSignature(pool0.address, poolTokens, '0', '0x', '0x', {
+          from: users[i],
+        }) // TODO: Test limits
 
         // Doesn't have pool0 tokens
         expect(await pool0.balanceOf(users[i])).to.be.bignumber.eq(ZERO)
@@ -658,7 +657,7 @@ contract('PoolProxy', async (accounts) => {
       assert.equal(result[0], false)
       assert.equal(result[1], false)
       assert.equal(result[2], false)
-      
+
       await controller.addDelegate(proxy.address, { from: user9 })
       result = await proxy.removeLiquidityMatureCheck(pool2.address, { from: user9 })
       assert.equal(result[0], false)
