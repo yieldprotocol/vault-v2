@@ -48,7 +48,7 @@ contract BorrowProxy {
     }
 
     /// @dev Users wishing to withdraw their Weth as ETH from the Controller should use this function.
-    /// Users must have called `controller.addDelegate(yieldProxy.address)` to authorize YieldProxy to act in their behalf.
+    /// Users must have called `controller.addDelegate(borrowProxy.address)` or `withdrawWithSignature` to authorize YieldProxy to act in their behalf.
     /// @param to Wallet to send Eth to.
     /// @param amount Amount of weth to move.
     function withdraw(address payable to, uint256 amount)
@@ -59,7 +59,8 @@ contract BorrowProxy {
     }
 
     /// @dev Borrow fyDai from Controller and sell it immediately for Dai, for a maximum fyDai debt.
-    /// Must have approved the operator with `controller.addDelegate(yieldProxy.address)`.
+    /// Must have approved the operator with `controller.addDelegate(borrowProxy.address)` or with `borrowDaiForMaximumFYDaiWithSignature`.
+    /// Caller must have called `borrowDaiForMaximumFYDaiWithSignature` at least once before to set proxy approvals.
     /// @param collateral Valid collateral type.
     /// @param maturity Maturity of an added series
     /// @param to Wallet to send the resulting Dai to.
@@ -87,6 +88,8 @@ contract BorrowProxy {
     }
 
     /// @dev Sell fyDai for Dai
+    /// Caller must have approved the fyDai transfer with `fyDai.approve(fyDaiUsed)` or with `sellFYDaiWithSignature`.
+    /// Caller must have approved the proxy using`pool.addDelegate(borrowProxy)` or with `sellFYDaiWithSignature`.
     /// @param to Wallet receiving the dai being bought
     /// @param fyDaiIn Amount of fyDai being sold
     /// @param minDaiOut Minimum amount of dai being bought
@@ -103,6 +106,8 @@ contract BorrowProxy {
     }
 
     /// @dev Sell Dai for fyDai
+    /// Caller must have approved the dai transfer with `dai.approve(fyDaiUsed)` or with `sellDaiWithSignature`.
+    /// Caller must have approved the proxy using`pool.addDelegate(borrowProxy)` or with `sellDaiWithSignature`.
     /// @param to Wallet receiving the fyDai being bought
     /// @param daiIn Amount of dai being sold
     /// @param minFYDaiOut Minimum amount of fyDai being bought
@@ -121,7 +126,6 @@ contract BorrowProxy {
     /// --------------------------------------------------
     /// Signature method wrappers
     /// --------------------------------------------------
-
 
     /// @dev Determine whether all approvals and signatures are in place for `withdrawWithSignature`.
     /// `return[0]` is always `true`, meaning that no proxy approvals are ever needed.

@@ -35,8 +35,9 @@ contract PoolProxy is DecimalMath {
     }
 
     /// @dev Mints liquidity with provided Dai by borrowing fyDai with some of the Dai.
-    /// Caller must have approved the proxy using`controller.addDelegate(yieldProxy)`
-    /// Caller must have approved the dai transfer with `dai.approve(daiUsed)`
+    /// Caller must have approved the proxy using`controller.addDelegate(poolProxy)` or with `addLiquidityWithSignature`.
+    /// Caller must have approved the dai transfer with `dai.approve(daiUsed)` or with `addLiquidityWithSignature`.
+    /// Caller must have called `addLiquidityWithSignature` at least once before to set proxy approvals.
     /// @param daiUsed amount of Dai to use to mint liquidity. 
     /// @param maxFYDai maximum amount of fyDai to be borrowed to mint liquidity. 
     /// @return The amount of liquidity tokens minted.  
@@ -67,7 +68,8 @@ contract PoolProxy is DecimalMath {
     }
 
     /// @dev Burns tokens and sells Dai proceedings for fyDai. Pays as much debt as possible, then sells back any remaining fyDai for Dai. Then returns all Dai, and if there is no debt in the Controller, all posted Chai.
-    /// Caller must have approved the proxy using`controller.addDelegate(yieldProxy)` and `pool.addDelegate(yieldProxy)`
+    /// Caller must have approved the proxy using`controller.addDelegate(poolProxy)` and `pool.addDelegate(poolProxy)` or with `removeLiquidityEarlyDaiPoolWithSignature`
+    /// Caller must have called `removeLiquidityEarlyDaiPoolWithSignature` at least once before to set proxy approvals.
     /// @param poolTokens amount of pool tokens to burn. 
     /// @param minimumDaiPrice minimum fyDai/Dai price to be accepted when internally selling Dai.
     /// @param minimumFYDaiPrice minimum Dai/fyDai price to be accepted when internally selling fyDai.
@@ -102,8 +104,8 @@ contract PoolProxy is DecimalMath {
     }
 
     /// @dev Burns tokens and repays debt with proceedings. Sells any excess fyDai for Dai, then returns all Dai, and if there is no debt in the Controller, all posted Chai.
-    /// Caller must have approved the proxy using`controller.addDelegate(yieldProxy)` and `pool.addDelegate(yieldProxy)`
-    /// Caller must have approved the liquidity burn with `pool.approve(poolTokens)`
+    /// Caller must have approved the proxy using`controller.addDelegate(poolProxy)` and `pool.addDelegate(poolProxy)` or with `removeLiquidityEarlyDaiFixedWithSignature`
+    /// Caller must have called `removeLiquidityEarlyDaiFixedWithSignature` at least once before to set proxy approvals.
     /// @param poolTokens amount of pool tokens to burn. 
     /// @param minimumFYDaiPrice minimum Dai/fyDai price to be accepted when internally selling fyDai.
     function removeLiquidityEarlyDaiFixed(IPool pool, uint256 poolTokens, uint256 minimumFYDaiPrice) public {
@@ -132,7 +134,8 @@ contract PoolProxy is DecimalMath {
     }
 
     /// @dev Burns tokens and repays fyDai debt after Maturity. 
-    /// Caller must have approved the proxy using`controller.addDelegate(yieldProxy)`
+    /// Caller must have approved the proxy using`controller.addDelegate(poolProxy)` or `removeLiquidityEarlyDaiFixedWithSignature`
+    /// Caller must have called `removeLiquidityEarlyDaiFixedWithSignature` at least once before to set proxy approvals.
     /// @param poolTokens amount of pool tokens to burn.
     function removeLiquidityMature(IPool pool, uint256 poolTokens) public {
 
@@ -165,8 +168,24 @@ contract PoolProxy is DecimalMath {
     /// Signature method wrappers
     /// --------------------------------------------------
 
+    /// @dev Determine whether all approvals and signatures are in place for `addLiquidity`.
+    /// If `return[0]` is `false`, calling `addLiquidityWithSignature` will set the proxy approvals.
+    /// If `return[1]` is `false`, `addLiquidityWithSignature` must be called with a dai permit signature.
+    /// If `return[2]` is `false`, `addLiquidityWithSignature` must be called with a controller signature.
+    /// If `return` is `(true, true, true)`, `addLiquidity` won't fail because of missing approvals or signatures.
+    function addLiquidityCheck(IPool pool) public view returns (bool, bool, bool) {
+        bool approvals = true;
+        approvals = approvals && chai.allowance(address(this), treasury) == type(uint256).max;
+        approvals = approvals && dai.allowance(address(this), address(chai)) == type(uint256).max;
+        approvals = approvals && dai.allowance(address(this), address(pool)) == type(uint256).max;
+        approvals = approvals && pool.fyDai().allowance(address(this), address(pool)) >= type(uint112).max;
+        bool daiSig = dai.allowance(msg.sender, address(this)) == type(uint256).max;
+        bool controllerSig = controller.delegated(msg.sender, address(this));
+        return (approvals, daiSig, controllerSig);
+    }
+
     /// @dev Mints liquidity with provided Dai by borrowing fyDai with some of the Dai.
-    /// Caller must have approved the proxy using`controller.addDelegate(yieldProxy)`
+    /// Caller must have approved the proxy using`controller.addDelegate(poolProxy)`
     /// Caller must have approved the dai transfer with `dai.approve(daiUsed)`
     /// @param daiUsed amount of Dai to use to mint liquidity. 
     /// @param maxFYDai maximum amount of fyDai to be borrowed to mint liquidity.
@@ -197,6 +216,20 @@ contract PoolProxy is DecimalMath {
         return addLiquidity(pool, daiUsed, maxFYDai);
     }
 
+    /// @dev Determine whether all approvals and signatures are in place for `removeLiquidityEarlyDaiPool`.
+    /// If `return[0]` is `false`, calling `removeLiquidityEarlyDaiPoolWithSignature` will set the proxy approvals.
+    /// If `return[1]` is `false`, `removeLiquidityEarlyDaiPoolWithSignature` must be called with a controller signature.
+    /// If `return[2]` is `false`, `removeLiquidityEarlyDaiPoolWithSignature` must be called with a pool signature.
+    /// If `return` is `(true, true, true)`, `removeLiquidityEarlyDaiPool` won't fail because of missing approvals or signatures.
+    function removeLiquidityEarlyDaiPoolCheck(IPool pool) public view returns (bool, bool, bool) {
+        bool approvals = true;
+        approvals = approvals && dai.allowance(address(this), address(pool)) == type(uint256).max;
+        approvals = approvals && pool.fyDai().allowance(address(this), address(pool)) >= type(uint112).max;
+        bool controllerSig = controller.delegated(msg.sender, address(this));
+        bool poolSig = pool.delegated(msg.sender, address(this));
+        return (approvals, controllerSig, poolSig);
+    }
+
     /// @dev Burns tokens and sells Dai proceedings for fyDai. Pays as much debt as possible, then sells back any remaining fyDai for Dai. Then returns all Dai, and all unlocked Chai.
     /// @param poolTokens amount of pool tokens to burn. 
     /// @param minimumDaiPrice minimum fyDai/Dai price to be accepted when internally selling Dai.
@@ -222,6 +255,20 @@ contract PoolProxy is DecimalMath {
         removeLiquidityEarlyDaiPool(pool, poolTokens, minimumDaiPrice, minimumFYDaiPrice);
     }
 
+    /// @dev Determine whether all approvals and signatures are in place for `removeLiquidityEarlyDaiFixed`.
+    /// If `return[0]` is `false`, calling `removeLiquidityEarlyDaiFixedWithSignature` will set the proxy approvals.
+    /// If `return[1]` is `false`, `removeLiquidityEarlyDaiFixedWithSignature` must be called with a controller signature.
+    /// If `return[2]` is `false`, `removeLiquidityEarlyDaiFixedWithSignature` must be called with a pool signature.
+    /// If `return` is `(true, true, true)`, `removeLiquidityEarlyDaiFixed` won't fail because of missing approvals or signatures.
+    function removeLiquidityEarlyDaiFixedCheck(IPool pool) public view returns (bool, bool, bool) {
+        bool approvals = true;
+        approvals = approvals && dai.allowance(address(this), address(pool)) == type(uint256).max;
+        approvals = approvals && pool.fyDai().allowance(address(this), address(pool)) >= type(uint112).max;
+        bool controllerSig = controller.delegated(msg.sender, address(this));
+        bool poolSig = pool.delegated(msg.sender, address(this));
+        return (approvals, controllerSig, poolSig);
+    }
+
     /// @dev Burns tokens and repays debt with proceedings. Sells any excess fyDai for Dai, then returns all Dai, and all unlocked Chai.
     /// @param poolTokens amount of pool tokens to burn. 
     /// @param minimumFYDaiPrice minimum Dai/fyDai price to be accepted when internally selling fyDai.
@@ -243,6 +290,18 @@ contract PoolProxy is DecimalMath {
         if (controllerSig.length > 0) controller.addDelegatePacked(controllerSig);
         if (poolSig.length > 0) pool.addDelegatePacked(poolSig);
         removeLiquidityEarlyDaiFixed(pool, poolTokens, minimumFYDaiPrice);
+    }
+
+    /// @dev Determine whether all approvals and signatures are in place for `removeLiquidityMature`.
+    /// If `return[0]` is `false`, calling `removeLiquidityMatureCheck` will set the proxy approvals.
+    /// If `return[1]` is `false`, `removeLiquidityMatureCheck` must be called with a controller signature.
+    /// If `return[2]` is `false`, `removeLiquidityMatureCheck` must be called with a pool signature.
+    /// If `return` is `(true, true, true)`, `removeLiquidityMature` won't fail because of missing approvals or signatures.
+    function removeLiquidityMatureCheck(IPool pool) public view returns (bool, bool, bool) {
+        bool approvals = dai.allowance(address(this), treasury) == type(uint256).max;
+        bool controllerSig = controller.delegated(msg.sender, address(this));
+        bool poolSig = pool.delegated(msg.sender, address(this));
+        return (approvals, controllerSig, poolSig);
     }
 
     /// @dev Burns tokens and repays fyDai debt after Maturity.
