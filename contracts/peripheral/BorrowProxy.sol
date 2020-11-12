@@ -78,9 +78,6 @@ contract BorrowProxy {
         uint256 fyDaiToBorrow = pool.buyDaiPreview(daiToBorrow.toUint128());
         require (fyDaiToBorrow <= maximumFYDai, "YieldProxy: Too much fyDai required");
 
-        // allow the pool to pull FYDai/dai from us for LPing
-        if (pool.fyDai().allowance(address(this), address(pool)) < type(uint112).max) pool.fyDai().approve(address(pool), type(uint256).max);
-
         // The collateral for this borrow needs to have been posted beforehand
         controller.borrow(collateral, maturity, msg.sender, address(this), fyDaiToBorrow);
         pool.buyDai(address(this), to, daiToBorrow.toUint128());
@@ -134,6 +131,15 @@ contract BorrowProxy {
         withdraw(to, amount);
     }
 
+    /// @dev Determine whether all approvals and signatures are in place for `borrowDaiForMaximumFYDai` to suceed for a given pool.
+    /// If `return[0]` is `false`, calling `borrowDaiForMaximumFYDaiWithSignature` will set the approvals.
+    /// If `return[1]` is `false`, `borrowDaiForMaximumFYDaiWithSignature` must be called with a controller signature
+    function borrowDaiForMaximumFYDaiCheck(IPool pool) public view returns (bool, bool) {
+        bool approvals = pool.fyDai().allowance(address(this), address(pool)) >= type(uint112).max;
+        bool controllerSig = controller.delegated(msg.sender, address(this));
+        return (approvals, controllerSig);
+    }
+
     /// @dev Borrow fyDai from Controller and sell it immediately for Dai, for a maximum fyDai debt.
     /// @param collateral Valid collateral type.
     /// @param maturity Maturity of an added series
@@ -153,6 +159,9 @@ contract BorrowProxy {
         public
         returns (uint256)
     {
+        // allow the pool to pull FYDai/dai from us for LPing
+        if (pool.fyDai().allowance(address(this), address(pool)) < type(uint112).max) pool.fyDai().approve(address(pool), type(uint256).max);
+
         if (controllerSig.length > 0) controller.addDelegatePacked(controllerSig);
         return borrowDaiForMaximumFYDai(pool, collateral, maturity, to, maximumFYDai, daiToBorrow);
     }

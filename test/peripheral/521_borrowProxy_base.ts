@@ -117,19 +117,51 @@ contract('BorrowProxy', async (accounts) => {
 
         // Give some fyDai to user1
         await fyDai1.mint(user1, fyDaiTokens1, { from: owner })
+      })
+
+      it('checks missing approvals and signatures', async () => {
+        let result = await proxy.borrowDaiForMaximumFYDaiCheck(pool.address, { from: user1 })
+
+        assert.equal(result[0], false)
+        assert.equal(result[1], false)
 
         await controller.addDelegate(proxy.address, { from: user1 })
+        result = await proxy.borrowDaiForMaximumFYDaiCheck(pool.address, { from: user1 })
+
+        assert.equal(result[0], false)
+        assert.equal(result[1], true)
+
+        await proxy.borrowDaiForMaximumFYDaiWithSignature(pool.address, WETH, maturity1, user2, fyDaiTokens1, oneToken, '0x', {
+          from: user1,
+        })
+        result = await proxy.borrowDaiForMaximumFYDaiCheck(pool.address, { from: user1 })
+
+        assert.equal(result[0], true)
+        assert.equal(result[1], true)
       })
 
       it('borrows dai for maximum fyDai', async () => {
-        await proxy.borrowDaiForMaximumFYDai(pool.address, WETH, maturity1, user2, fyDaiTokens1, oneToken, {
+        await controller.addDelegate(proxy.address, { from: user1 })
+        await proxy.borrowDaiForMaximumFYDaiWithSignature(pool.address, WETH, maturity1, user2, fyDaiTokens1, oneToken, '0x', {
           from: user1,
         })
 
         assert.equal(await dai.balanceOf(user2), oneToken.toString())
       })
 
+      it.only('approvals only need to be set up once', async () => {
+        await controller.addDelegate(proxy.address, { from: user1 })
+        await proxy.borrowDaiForMaximumFYDaiWithSignature(pool.address, WETH, maturity1, user2, fyDaiTokens1, oneToken, '0x', {
+          from: user1,
+        })
+        await proxy.borrowDaiForMaximumFYDai(pool.address, WETH, maturity1, user2, fyDaiTokens1, oneToken, {
+          from: user1,
+        })
+      })
+
+
       it("doesn't borrow dai if limit exceeded", async () => {
+        await controller.addDelegate(proxy.address, { from: user1 })
         await expectRevert(
           proxy.borrowDaiForMaximumFYDai(pool.address, WETH, maturity1, user2, fyDaiTokens1, daiTokens1, {
             from: user1,
