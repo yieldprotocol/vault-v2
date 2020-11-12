@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.6.10;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./IVat.sol";
+import "./IDai.sol";
 import "./IWeth.sol";
 import "./IGemJoin.sol";
 import "./IDaiJoin.sol";
@@ -23,7 +23,7 @@ interface ITreasury {
 
     function vat() external view returns (IVat);
     function weth() external view returns (IWeth);
-    function dai() external view returns (IERC20);
+    function dai() external view returns (IDai);
     function daiJoin() external view returns (IDaiJoin);
     function wethJoin() external view returns (IGemJoin);
     function pot() external view returns (IPot);
