@@ -137,7 +137,7 @@ contract('BorrowProxy - Signatures', async (accounts) => {
 
           beforeEach(async () => {
             await controller.addDelegate(proxy.address, { from: user1 })
-            await proxy.borrowDaiForMaximumFYDai(pool.address, WETH, maturity1, user2, fyDaiTokens1, oneToken, {
+            await proxy.borrowDaiForMaximumFYDaiWithSignature(pool.address, WETH, maturity1, user2, fyDaiTokens1, oneToken, '0x', {
               from: user1,
             })
 
@@ -165,6 +165,20 @@ contract('BorrowProxy - Signatures', async (accounts) => {
 
           it('repays debt using Dai with signatures ', async () => {
             await controller.revokeDelegate(proxy.address, { from: user1 })
+
+            // Authorize the proxy for the controller
+            const controllerDigest = getSignatureDigest(
+              name,
+              controller.address,
+              chainId,
+              {
+                user: user1,
+                delegate: proxy.address,
+              },
+              await controller.signatureCount(user1),
+              MAX
+            )
+            controllerSig = sign(controllerDigest, userPrivateKey)
 
             await proxy.repayDaiWithSignature(WETH, maturity1, user2, oneToken, daiSig, controllerSig, {
               from: user1,

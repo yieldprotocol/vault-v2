@@ -145,7 +145,7 @@ contract('YieldProxy - DSProxy', async (accounts) => {
 
         it('borrows dai for maximum fyDai', async () => {
           const calldata = borrowProxy.contract.methods
-            .borrowDaiForMaximumFYDai(pool.address, WETH, maturity1, user2, fyDaiTokens1, one)
+            .borrowDaiForMaximumFYDaiWithSignature(pool.address, WETH, maturity1, user2, fyDaiTokens1, one, '0x')
             .encodeABI()
           await dsProxy.methods['execute(address,bytes)'](borrowProxy.address, calldata, { from: user1 })
 
@@ -154,7 +154,7 @@ contract('YieldProxy - DSProxy', async (accounts) => {
 
         it("doesn't borrow dai if limit exceeded", async () => {
           const calldata = borrowProxy.contract.methods
-            .borrowDaiForMaximumFYDai(pool.address, WETH, maturity1, user2, fyDaiTokens1, daiTokens1)
+            .borrowDaiForMaximumFYDaiWithSignature(pool.address, WETH, maturity1, user2, fyDaiTokens1, daiTokens1, '0x')
             .encodeABI()
           await expectRevert(
             dsProxy.methods['execute(address,bytes)'](borrowProxy.address, calldata, { from: user1 }),
@@ -165,7 +165,7 @@ contract('YieldProxy - DSProxy', async (accounts) => {
         describe('repaying', () => {
           beforeEach(async () => {
             const calldata = borrowProxy.contract.methods
-              .borrowDaiForMaximumFYDai(pool.address, WETH, maturity1, user2, fyDaiTokens1, one)
+              .borrowDaiForMaximumFYDaiWithSignature(pool.address, WETH, maturity1, user2, fyDaiTokens1, one, '0x')
               .encodeABI()
             await dsProxy.methods['execute(address,bytes)'](borrowProxy.address, calldata, { from: user1 })
 
