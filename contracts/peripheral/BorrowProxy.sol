@@ -157,6 +157,12 @@ contract BorrowProxy {
         return (approvals, controllerSig);
     }
 
+    /// @dev Set proxy approvals for `borrowDaiForMaximumFYDai` with a given pool.
+    function borrowDaiForMaximumFYDaiApprove(IPool pool) public {
+        // allow the pool to pull FYDai/dai from us for LPing
+        if (pool.fyDai().allowance(address(this), address(pool)) < type(uint112).max) pool.fyDai().approve(address(pool), type(uint256).max);
+    }
+
     /// @dev Borrow fyDai from Controller and sell it immediately for Dai, for a maximum fyDai debt.
     /// @param collateral Valid collateral type.
     /// @param maturity Maturity of an added series
@@ -176,9 +182,7 @@ contract BorrowProxy {
         public
         returns (uint256)
     {
-        // allow the pool to pull FYDai/dai from us for LPing
-        if (pool.fyDai().allowance(address(this), address(pool)) < type(uint112).max) pool.fyDai().approve(address(pool), type(uint256).max);
-
+        borrowDaiForMaximumFYDaiApprove(pool);
         if (controllerSig.length > 0) controller.addDelegatePacked(controllerSig);
         return borrowDaiForMaximumFYDai(pool, collateral, maturity, to, maximumFYDai, daiToBorrow);
     }

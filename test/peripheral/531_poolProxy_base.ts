@@ -426,27 +426,28 @@ contract('PoolProxy', async (accounts) => {
     })
 
     it('checks missing approvals and signatures for removing liquidity by repaying', async () => {
-      let result = await proxy.removeLiquidityEarlyDaiFixedCheck(pool2.address, { from: user9 })
+      await controller.revokeDelegate(proxy.address, { from: user2 })
+      let result = await proxy.removeLiquidityEarlyDaiFixedCheck(pool0.address, { from: user2 })
 
       assert.equal(result[0], false)
       assert.equal(result[1], false)
       assert.equal(result[2], false)
 
-      await controller.addDelegate(proxy.address, { from: user9 })
-      result = await proxy.removeLiquidityEarlyDaiFixedCheck(pool2.address, { from: user9 })
+      await controller.addDelegate(proxy.address, { from: user2 })
+      result = await proxy.removeLiquidityEarlyDaiFixedCheck(pool0.address, { from: user2 })
       assert.equal(result[0], false)
       assert.equal(result[1], true)
       assert.equal(result[2], false)
 
-      await pool2.addDelegate(proxy.address, { from: user9 })
-      result = await proxy.removeLiquidityEarlyDaiFixedCheck(pool2.address, { from: user9 })
+      await pool0.addDelegate(proxy.address, { from: user2 })
+      result = await proxy.removeLiquidityEarlyDaiFixedCheck(pool0.address, { from: user2 })
       assert.equal(result[0], false)
       assert.equal(result[1], true)
       assert.equal(result[2], true)
 
-      // Calling `addLiquidityWithSignature` also sets the right approvals
-      await pool0.addDelegate(proxy.address, { from: user1 })
-      result = await proxy.removeLiquidityEarlyDaiFixedCheck(pool0.address, { from: user1 })
+      const poolTokens = await pool0.balanceOf(user2)
+      await proxy.removeLiquidityEarlyDaiFixedWithSignature(pool0.address, poolTokens, '0', '0x', '0x', { from: user2 })
+      result = await proxy.removeLiquidityEarlyDaiFixedCheck(pool0.address, { from: user2 })
       assert.equal(result[0], true)
       assert.equal(result[1], true)
       assert.equal(result[2], true)
