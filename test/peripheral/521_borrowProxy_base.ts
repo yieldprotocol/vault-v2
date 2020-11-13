@@ -186,7 +186,7 @@ contract('BorrowProxy', async (accounts) => {
           proxy.borrowDaiForMaximumFYDai(pool.address, WETH, maturity1, user2, fyDaiTokens1, daiTokens1, {
             from: user1,
           }),
-          'YieldProxy: Too much fyDai required'
+          'BorrowProxy: Too much fyDai required'
         )
       })
 

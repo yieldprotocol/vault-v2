@@ -43,8 +43,8 @@ contract PoolProxy is DecimalMath {
     /// @return The amount of liquidity tokens minted.  
     function addLiquidity(IPool pool, uint256 daiUsed, uint256 maxFYDai) public returns (uint256) {
         IFYDai fyDai = pool.fyDai();
-        require(fyDai.isMature() != true, "YieldProxy: Only before maturity");
-        require(dai.transferFrom(msg.sender, address(this), daiUsed), "YieldProxy: Transfer Failed");
+        require(fyDai.isMature() != true, "PoolProxy: Only before maturity");
+        require(dai.transferFrom(msg.sender, address(this), daiUsed), "PoolProxy: Transfer Failed");
 
         // calculate needed fyDai
         uint256 daiReserves = dai.balanceOf(address(pool));
@@ -53,7 +53,7 @@ contract PoolProxy is DecimalMath {
         uint256 daiToConvert = daiUsed.sub(daiToAdd);
         require(
             daiToConvert <= maxFYDai,
-            "YieldProxy: maxFYDai exceeded"
+            "PoolProxy: maxFYDai exceeded"
         ); // 1 Dai == 1 fyDai
 
         // convert dai to chai and borrow needed fyDai
@@ -84,7 +84,7 @@ contract PoolProxy is DecimalMath {
         uint256 fyDaiBought = pool.sellDai(address(this), address(this), daiObtained.toUint128());
         require(
             fyDaiBought >= muld(daiObtained, minimumDaiPrice),
-            "YieldProxy: minimumDaiPrice not reached"
+            "PoolProxy: minimumDaiPrice not reached"
         );
         fyDaiObtained = fyDaiObtained.add(fyDaiBought);
         
@@ -97,7 +97,7 @@ contract PoolProxy is DecimalMath {
         if (fyDaiRemaining > 0) {// There is fyDai left, so exchange it for Dai to withdraw only Dai and Chai
             require(
                 pool.sellFYDai(address(this), address(this), uint128(fyDaiRemaining)) >= muld(fyDaiRemaining, minimumFYDaiPrice),
-                "YieldProxy: minimumFYDaiPrice not reached"
+                "PoolProxy: minimumFYDaiPrice not reached"
             );
         }
         withdrawAssets();
@@ -127,7 +127,7 @@ contract PoolProxy is DecimalMath {
         } else { // Exchange remaining fyDai for Dai to withdraw only Dai and Chai
             require(
                 pool.sellFYDai(address(this), address(this), uint128(fyDaiRemaining)) >= muld(fyDaiRemaining, minimumFYDaiPrice),
-                "YieldProxy: minimumFYDaiPrice not reached"
+                "PoolProxy: minimumFYDaiPrice not reached"
             );
         }
         withdrawAssets();
@@ -158,10 +158,10 @@ contract PoolProxy is DecimalMath {
     function withdrawAssets() internal {
         uint256 posted = controller.posted(CHAI, msg.sender);
         uint256 locked = controller.locked(CHAI, msg.sender);
-        require (posted >= locked, "YieldProxy: Undercollateralized");
+        require (posted >= locked, "PoolProxy: Undercollateralized");
         controller.withdraw(CHAI, msg.sender, address(this), posted - locked);
         chai.exit(address(this), chai.balanceOf(address(this)));
-        require(dai.transfer(msg.sender, dai.balanceOf(address(this))), "YieldProxy: Dai Transfer Failed");
+        require(dai.transfer(msg.sender, dai.balanceOf(address(this))), "PoolProxy: Dai Transfer Failed");
     }
 
     /// --------------------------------------------------

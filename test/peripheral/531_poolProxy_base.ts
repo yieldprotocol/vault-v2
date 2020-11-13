@@ -239,7 +239,7 @@ contract('PoolProxy', async (accounts) => {
     await dai.mint(user2, oneToken, { from: owner })
     await dai.approve(proxy.address, oneToken, { from: user2 })
     await controller.addDelegate(proxy.address, { from: user2 })
-    await expectRevert(proxy.addLiquidity(pool0.address, oneToken, 1, { from: user2 }), 'YieldProxy: maxFYDai exceeded')
+    await expectRevert(proxy.addLiquidity(pool0.address, oneToken, 1, { from: user2 }), 'PoolProxy: maxFYDai exceeded')
   })
 
   describe('with proxied liquidity', () => {
@@ -639,11 +639,11 @@ contract('PoolProxy', async (accounts) => {
       await pool0.addDelegate(proxy.address, { from: user2 })
       await expectRevert(
         proxy.removeLiquidityEarlyDaiPool(pool0.address, poolTokens, toRay(2), '0', { from: user2 }),
-        'YieldProxy: minimumDaiPrice not reached'
+        'PoolProxy: minimumDaiPrice not reached'
       )
       await expectRevert(
         proxy.removeLiquidityEarlyDaiPool(pool0.address, poolTokens, '0', toRay(2), { from: user2 }),
-        'YieldProxy: minimumFYDaiPrice not reached'
+        'PoolProxy: minimumFYDaiPrice not reached'
       )
     })
 

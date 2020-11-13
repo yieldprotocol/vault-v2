@@ -156,7 +156,7 @@ contract('BorrowProxy - DSProxy', async (accounts) => {
             .encodeABI()
           await expectRevert(
             dsProxy.methods['execute(address,bytes)'](borrowProxy.address, calldata, { from: user1 }),
-            'YieldProxy: Too much fyDai required'
+            'BorrowProxy: Too much fyDai required'
           )
         })
 

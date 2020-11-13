@@ -126,7 +126,7 @@ contract('BorrowProxy - Signatures', async (accounts) => {
                 from: user1,
               }
             ),
-            'YieldProxy: Too much fyDai required'
+            'BorrowProxy: Too much fyDai required'
           )
         })
 

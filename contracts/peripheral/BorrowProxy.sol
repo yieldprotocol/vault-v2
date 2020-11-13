@@ -33,10 +33,10 @@ contract BorrowProxy {
         controller = _controller;
     }
 
-    /// @dev The WETH9 contract will send ether to YieldProxy on `weth.withdraw` using this function.
+    /// @dev The WETH9 contract will send ether to BorrowProxy on `weth.withdraw` using this function.
     receive() external payable { }
 
-    /// @dev Users use `post` in YieldProxy to post ETH to the Controller (amount = msg.value), which will be converted to Weth here.
+    /// @dev Users use `post` in BorrowProxy to post ETH to the Controller (amount = msg.value), which will be converted to Weth here.
     /// @param to Yield Vault to deposit collateral in.
     function post(address to)
         external payable {
@@ -48,7 +48,7 @@ contract BorrowProxy {
     }
 
     /// @dev Users wishing to withdraw their Weth as ETH from the Controller should use this function.
-    /// Users must have called `controller.addDelegate(borrowProxy.address)` or `withdrawWithSignature` to authorize YieldProxy to act in their behalf.
+    /// Users must have called `controller.addDelegate(borrowProxy.address)` or `withdrawWithSignature` to authorize BorrowProxy to act in their behalf.
     /// @param to Wallet to send Eth to.
     /// @param amount Amount of weth to move.
     function withdraw(address payable to, uint256 amount)
@@ -78,7 +78,7 @@ contract BorrowProxy {
         returns (uint256)
     {
         uint256 fyDaiToBorrow = pool.buyDaiPreview(daiToBorrow.toUint128());
-        require (fyDaiToBorrow <= maximumFYDai, "YieldProxy: Too much fyDai required");
+        require (fyDaiToBorrow <= maximumFYDai, "BorrowProxy: Too much fyDai required");
 
         // The collateral for this borrow needs to have been posted beforehand
         controller.borrow(collateral, maturity, msg.sender, address(this), fyDaiToBorrow);
