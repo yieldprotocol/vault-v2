@@ -1,39 +1,25 @@
 const fixed_addrs = require('./fixed_addrs.json')
 
 const Migrations = artifacts.require('Migrations')
-const Controller = artifacts.require('Controller')
 const DSProxyFactory = artifacts.require('DSProxyFactory')
 const DSProxyRegistry = artifacts.require('ProxyRegistry')
-const BorrowProxy = artifacts.require('BorrowProxy')
-const PoolProxy = artifacts.require('PoolProxy')
 
 module.exports = async (deployer, network) => {
 
-  let controllerAddress, proxyFactoryAddress, proxyRegistryAddress
+  let proxyFactoryAddress, proxyRegistryAddress
   if (network === 'development') {
-    controllerAddress = (await Controller.deployed()).address
-    
     await deployer.deploy(DSProxyFactory)
     proxyFactoryAddress = (await DSProxyFactory.deployed()).address
     await deployer.deploy(DSProxyRegistry, proxyFactoryAddress)
     proxyRegistryAddress = (await DSProxyRegistry.deployed()).address
   } else {
-    controllerAddress = fixed_addrs[network].controllerAddress
     proxyFactoryAddress = fixed_addrs[network].proxyFactoryAddress
     proxyRegistryAddress = fixed_addrs[network].proxyRegistryAddress  
   }
 
-  await deployer.deploy(BorrowProxy, controllerAddress)
-  const borrowProxy = await BorrowProxy.deployed()
-
-  await deployer.deploy(PoolProxy, controllerAddress)
-  const poolProxy = await PoolProxy.deployed()
-
   const deployment = {
     ProxyFactory: proxyFactoryAddress,
     ProxyRegistry: proxyRegistryAddress,
-    BorrowProxy: borrowProxy.address,
-    PoolProxy: poolProxy.address,
   }
 
   let migrations
