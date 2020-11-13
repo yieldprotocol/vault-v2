@@ -1,5 +1,8 @@
 const Pool = artifacts.require('Pool')
 const Splitter = artifacts.require('SplitterProxy')
+const DSProxy = artifacts.require('DSProxy')
+const DSProxyFactory = artifacts.require('DSProxyFactory')
+const DSProxyRegistry = artifacts.require('ProxyRegistry')
 
 import { getSignatureDigest, userPrivateKey, sign } from '../shared/signatures'
 import { id } from 'ethers/lib/utils'
@@ -23,6 +26,10 @@ contract('SplitterProxy', async (accounts) => {
   let proxy: Contract
   let pool1: Contract
 
+  let proxyFactory: Contract
+  let proxyRegistry: Contract
+  let dsProxy: Contract
+
   let controllerSig: any
 
   beforeEach(async () => {
@@ -44,6 +51,12 @@ contract('SplitterProxy', async (accounts) => {
     // Setup Splitter
     proxy = await Splitter.new(controller.address, { from: owner })
 
+    // Setup DSProxyFactory and DSProxyCache
+    proxyFactory = await DSProxyFactory.new({ from: owner })
+
+    // Setup DSProxyRegistry
+    proxyRegistry = await DSProxyRegistry.new(proxyFactory.address, { from: owner })
+
     // Allow owner to mint fyDai the sneaky way, without recording a debt in controller
     await fyDai1.orchestrate(owner, id('mint(address,uint256)'), { from: owner })
 
@@ -59,6 +72,10 @@ contract('SplitterProxy', async (accounts) => {
     await fyDai1.approve(pool1.address, additionalFYDaiReserves, { from: owner })
     await pool1.sellFYDai(owner, owner, additionalFYDaiReserves, { from: owner })
 
+    // Sets DSProxy for user
+    await proxyRegistry.build({ from: user })
+    dsProxy = await DSProxy.at(await proxyRegistry.proxies(user))
+    
     // Authorize the proxy for the controller
     const controllerDigest = getSignatureDigest(
       name,
@@ -66,7 +83,7 @@ contract('SplitterProxy', async (accounts) => {
       chainId,
       {
         user: user,
-        delegate: proxy.address,
+        delegate: dsProxy.address,
       },
       await controller.signatureCount(user),
       MAX
@@ -93,8 +110,14 @@ contract('SplitterProxy', async (accounts) => {
     await controller.post(WETH, user, user, extraWethNeeded, { from: user })
 
     // Add permissions for vault migration
-    await vat.hope(proxy.address, { from: user }) // Allowing Splitter to manipulate debt for user in MakerDAO
-    await proxy.makerToYieldWithSignature(pool1.address, wethTokens1, daiDebt, controllerSig, { from: user })
+    await vat.hope(dsProxy.address, { from: user }) // Allowing Splitter to manipulate debt for user in MakerDAO
+    //await proxy.makerToYieldWithSignature(pool1.address, wethTokens1, daiDebt, controllerSig, { from: user })
+    const calldata = proxy.contract.methods
+      .makerToYieldWithSignature(pool1.address, wethTokens1, daiDebt, controllerSig)
+      .encodeABI()
+    await dsProxy.methods['execute(address,bytes)'](proxy.address, calldata, {
+      from: user,
+    })
   })
 
   it('moves yield vault to maker', async () => {
@@ -103,8 +126,13 @@ contract('SplitterProxy', async (accounts) => {
     await controller.borrow(WETH, maturity1, user, user, toBorrow, { from: user })
 
     // Add permissions for vault migration
-    await vat.hope(proxy.address, { from: user }) // Allowing Splitter to manipulate debt for user in MakerDAO
-
-    await proxy.yieldToMakerWithSignature(pool1.address, wethTokens1, toBorrow, controllerSig, { from: user })
+    await vat.hope(dsProxy.address, { from: user }) // Allowing Splitter to manipulate debt for user in MakerDAO
+    //await proxy.makerToYieldWithSignature(pool1.address, wethTokens1, daiDebt, controllerSig, { from: user })
+    const calldata = proxy.contract.methods
+      .yieldToMakerWithSignature(pool1.address, wethTokens1, toBorrow, controllerSig)
+      .encodeABI()
+    await dsProxy.methods['execute(address,bytes)'](proxy.address, calldata, {
+      from: user,
+    })
   })
 })
