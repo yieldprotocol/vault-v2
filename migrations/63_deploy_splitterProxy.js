@@ -9,7 +9,7 @@ const SplitterProxy = artifacts.require('SplitterProxy')
 
 module.exports = async (deployer, network) => {
 
-  let wethAddress, daiAddress, chaiAddress, treasuryAddress, controllerAddress, proxyFactoryAddress, proxyRegistryAddress
+  let controllerAddress, proxyFactoryAddress, proxyRegistryAddress
   if (network === 'development') {
     controllerAddress = (await Controller.deployed()).address
     proxyFactoryAddress = (await DSProxyFactory.deployed()).address
