@@ -1,5 +1,5 @@
 const Pool = artifacts.require('Pool')
-const Splitter = artifacts.require('YieldProxy')
+const Splitter = artifacts.require('SplitterProxy')
 
 import { id } from 'ethers/lib/utils'
 // @ts-ignore
@@ -64,13 +64,13 @@ contract('SplitterProxy', async (accounts) => {
       ['bool', 'address', 'address', 'uint256', 'uint256'],
       [true, pool1.address, user, 1, 0]
     )
-    await expectRevert(splitter1.executeOnFlashMint(1, data, { from: user }), 'YieldProxy: Restricted callback')
+    await expectRevert(splitter1.executeOnFlashMint(1, data, { from: user }), 'SplitterProxy: Restricted callback')
   })
 
   it('does not allow to move more debt than existing in maker', async () => {
     await expectRevert(
       splitter1.makerToYield(pool1.address, wethTokens1, bnify(daiTokens1).mul(10), { from: user }),
-      'YieldProxy: Not enough debt in Maker'
+      'SplitterProxy: Not enough debt in Maker'
     )
   })
 
@@ -79,7 +79,7 @@ contract('SplitterProxy', async (accounts) => {
 
     await expectRevert(
       splitter1.makerToYield(pool1.address, bnify(wethTokens1).mul(10), daiTokens1, { from: user }),
-      'YieldProxy: Not enough collateral in Maker'
+      'SplitterProxy: Not enough collateral in Maker'
     )
   })
 
@@ -169,7 +169,7 @@ contract('SplitterProxy', async (accounts) => {
   it('does not allow to move more debt than existing in env', async () => {
     await expectRevert(
       splitter1.yieldToMaker(pool1.address, wethTokens1, fyDaiTokens1, { from: user }),
-      'YieldProxy: Not enough debt in Yield'
+      'SplitterProxy: Not enough debt in Yield'
     )
   })
 
@@ -180,7 +180,7 @@ contract('SplitterProxy', async (accounts) => {
 
     await expectRevert(
       splitter1.yieldToMaker(pool1.address, bnify(wethTokens1).mul(2), toBorrow, { from: user }),
-      'YieldProxy: Not enough collateral in Yield'
+      'SplitterProxy: Not enough collateral in Yield'
     )
   })
 
