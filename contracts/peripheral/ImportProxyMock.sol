@@ -18,12 +18,12 @@ contract ImportProxyMock {
 
     // Splitter accepts to take the user vault. Callable only by the user or its dsproxy
     // Anyone can call this to donate a collateralized vault to Splitter.
-    function hope(address user) public {
+    function hope(address) public {
         splitter.hope(msg.sender);
     }
 
     // Splitter doesn't accept to take the user vault. Callable only by the user or its dsproxy
-    function nope(address user) public {
+    function nope(address) public {
         splitter.nope(msg.sender);
     }
 }

@@ -13,7 +13,6 @@ import "../interfaces/IFlashMinter.sol";
 import "../helpers/DecimalMath.sol";
 import "../helpers/SafeCast.sol";
 import "../helpers/YieldAuth.sol";
-import "@nomiclabs/buidler/console.sol";
 
 
 contract ExportProxy is DecimalMath, IFlashMinter {
@@ -48,7 +47,7 @@ contract ExportProxy is DecimalMath, IFlashMinter {
 
         // Allow the pools to take dai for trading
         for (uint i = 0 ; i < pools_.length; i++) {
-            pools_[i].fyDai().approve(address(pools_[i]), type(uint256).max);
+            dai.approve(address(pools_[i]), type(uint256).max);
         }
 
         // Allow daiJoin to move dai out of vat for this proxy
@@ -61,6 +60,7 @@ contract ExportProxy is DecimalMath, IFlashMinter {
     /// @dev Transfer debt and collateral from Yield to MakerDAO
     /// Needs vat.hope(splitter.address, { from: user });
     /// Needs controller.addDelegate(splitter.address, { from: user });
+    /// @notice This method won't work if executed via `delegatecall`, for example using dsproxy.
     /// @param pool The pool to trade in (and therefore fyDai series to migrate)
     /// @param wethAmount weth to move from Yield to MakerDAO. Needs to be high enough to collateralize the dai debt in MakerDAO,
     /// and low enough to make sure that debt left in Yield is also collateralized.
@@ -86,9 +86,8 @@ contract ExportProxy is DecimalMath, IFlashMinter {
 
     /// @dev Callback from `FYDai.flashMint()`
     function executeOnFlashMint(uint256 fyDaiAmount, bytes calldata data) external override {
-        console.log("executeOnFlashMint");
-        (bool direction, IPool pool, address user, uint256 wethAmount) = 
-            abi.decode(data, (bool, IPool, address, uint256));
+        (IPool pool, address user, uint256 wethAmount) = 
+            abi.decode(data, (IPool, address, uint256));
         require(msg.sender == address(IPool(pool).fyDai()), "ExportProxy: Restricted callback");
 
         _exportPosition(pool, user, wethAmount, fyDaiAmount);
@@ -165,7 +164,7 @@ contract ExportProxy is DecimalMath, IFlashMinter {
     /// If `return[0]` is `false`, calling `vat.hope(exportProxy.address)` will set the MakerDAO approval.
     /// If `return[1]` is `false`, `exportPositionWithSignature` must be called with a controller signature.
     /// If `return` is `(true, true)`, `exportPosition` won't fail because of missing approvals or signatures.
-    function exportPositionCheck(IPool pool) public view returns (bool, bool) {
+    function exportPositionCheck() public view returns (bool, bool) {
         bool approvals = vat.can(msg.sender, address(this)) == 1;
         bool controllerSig = controller.delegated(msg.sender, address(this));
         return (approvals, controllerSig);

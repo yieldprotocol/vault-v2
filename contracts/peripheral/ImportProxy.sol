@@ -233,7 +233,7 @@ contract ImportProxy is DecimalMath, IFlashMinter {
     /// If `return[0]` is `false`, calling `vat.hope(proxy.address)` will set the MakerDAO approval.
     /// If `return[1]` is `false`, `importFromProxyWithSignature` must be called with a controller signature.
     /// If `return` is `(true, true)`, `importFromProxy` won't fail because of missing approvals or signatures.
-    function importPositionCheck(IPool pool) public view returns (bool, bool) {
+    function importPositionCheck() public view returns (bool, bool) {
         bool approvals = vat.can(msg.sender, address(this)) == 1;
         bool controllerSig = controller.delegated(msg.sender, address(splitter));
         return (approvals, controllerSig);
