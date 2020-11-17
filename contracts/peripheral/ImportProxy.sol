@@ -246,14 +246,14 @@ contract ImportProxy is DecimalMath, IFlashMinter {
     /// @param wethAmount weth to move from MakerDAO to Yield. Needs to be high enough to collateralize the dai debt in Yield,
     /// and low enough to make sure that debt left in MakerDAO is also collateralized.
     /// @param debtAmount dai debt to move from MakerDAO to Yield. Denominated in Dai (= art * rate)
-    /// @param controllerSig packed signature for delegation of Splitter in the controller. Ignored if '0x'.
+    /// @param controllerSig packed signature for delegation of Splitter (not dsproxy) in the controller. Ignored if '0x'.
     function importPositionWithSignature(IPool pool, address user, uint256 wethAmount, uint256 debtAmount, bytes memory controllerSig) public {
-        if (controllerSig.length > 0) controller.addDelegatePacked(controllerSig); // THIS NEEDS TO BE FOR SPLITTER, NOT DSPROXY
+        if (controllerSig.length > 0) controller.addDelegatePacked(user, address(splitter), controllerSig);
         return importPosition(pool, user, wethAmount, debtAmount);
     }
 
     function importVaultWithSignature(IPool pool, address user, bytes memory controllerSig) public {
-        if (controllerSig.length > 0) controller.addDelegatePacked(controllerSig); // THIS NEEDS TO BE FOR SPLITTER, NOT DSPROXY
+        if (controllerSig.length > 0) controller.addDelegatePacked(user, address(splitter), controllerSig);
         return importVault(pool, user);
     }
 }

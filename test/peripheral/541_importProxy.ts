@@ -6,9 +6,10 @@ const DSProxyFactory = artifacts.require('DSProxyFactory')
 const DSProxyRegistry = artifacts.require('ProxyRegistry')
 
 import { id } from 'ethers/lib/utils'
+import { getSignatureDigest, userPrivateKey, sign } from '../shared/signatures'
 // @ts-ignore
 import { BN, expectRevert } from '@openzeppelin/test-helpers'
-import { WETH, rate1, daiTokens1, wethTokens1, mulRay, bnify, MAX, ZERO } from '../shared/utils'
+import { WETH, rate1, daiTokens1, mulRay, bnify, MAX, name, chainId, ZERO } from '../shared/utils'
 import { YieldEnvironmentLite, Contract } from '../shared/fixtures'
 
 import { assert, expect } from 'chai'
@@ -255,6 +256,40 @@ contract('ImportProxy', async (accounts) => {
     const obtainedFYDaiDebt = (await controller.debtFYDai(WETH, maturity1, user)).toString()
     expect(obtainedFYDaiDebt).to.be.bignumber.gt((new BN(fyDaiDebt)).mul(new BN('9999')).div(new BN('10000')))
     expect(obtainedFYDaiDebt).to.be.bignumber.lt((new BN(fyDaiDebt)).mul(new BN('10000')).div(new BN('9999')))
+  })
+
+  it('forks and moves maker vault to yield with signature', async () => {
+    await env.maker.getDai(user, daiTokens1, rate1)
+    const daiDebt = bnify((await vat.urns(WETH, user)).art).toString()
+    const wethCollateral = bnify((await vat.urns(WETH, user)).ink).toString()
+    expect(daiDebt).to.be.bignumber.gt(ZERO)
+    expect(wethCollateral).to.be.bignumber.gt(ZERO)
+
+    // Authorize the proxy for the controller
+    const controllerDigest = getSignatureDigest(
+      name,
+      controller.address,
+      chainId,
+      {
+        user: user,
+        delegate: importProxy.address,
+      },
+      await controller.signatureCount(user),
+      MAX
+    )
+    const controllerSig = sign(controllerDigest, userPrivateKey)
+    
+    // Add permissions for vault migration
+    await vat.hope(dsProxy.address, { from: user }) // Allowing Splitter to manipulate debt for user in MakerDAO
+
+    // Go!!!
+    const calldata = importProxy.contract.methods.importPositionWithSignature(
+      pool1.address, user, wethCollateral, daiDebt, controllerSig
+    ).encodeABI()
+    await dsProxy.methods['execute(address,bytes)'](importProxy.address, calldata, {
+      from: user,
+    })
+
   })
 
   it('fork and split is restricted to vault owners or their proxies', async () => {
