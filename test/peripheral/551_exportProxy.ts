@@ -141,17 +141,17 @@ contract('ExportProxy', async (accounts) => {
 
     // Authorize the proxy for the controller
     const controllerDigest = getSignatureDigest(
-        name,
-        controller.address,
-        chainId,
-        {
-          user: user,
-          delegate: exportProxy.address,
-        },
-        await controller.signatureCount(user),
-        MAX
-      )
-      const controllerSig = sign(controllerDigest, userPrivateKey)
+      name,
+      controller.address,
+      chainId,
+      {
+        user: user,
+        delegate: exportProxy.address,
+      },
+      await controller.signatureCount(user),
+      MAX
+    )
+    const controllerSig = sign(controllerDigest, userPrivateKey)
     await vat.hope(exportProxy.address, { from: user }) // Allowing ExportProxy to manipulate debt for user in MakerDAO
 
     await exportProxy.exportPositionWithSignature(pool1.address, wethTokens1, toBorrow, controllerSig, { from: user })

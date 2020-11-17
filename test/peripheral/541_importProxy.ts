@@ -78,7 +78,7 @@ contract('ImportProxy', async (accounts) => {
     dsProxy = await DSProxy.at(await proxyRegistry.proxies(user))
 
     // Prime ImportProxy with some Dai to cover rounding losses
-    await vat.move(owner, importProxy.address, "2040000000000000000000000000", { from: owner }) // 2.04 wei dai
+    await vat.move(owner, importProxy.address, '2040000000000000000000000000', { from: owner }) // 2.04 wei dai
   })
 
   it('allows setting hope/nope of ImportProxy to caller or its dsproxy only', async () => {
@@ -89,7 +89,7 @@ contract('ImportProxy', async (accounts) => {
     assert.equal(await vat.can(importProxy.address, user), 0)
     await expectRevert(importProxy.hope(owner, { from: user }), 'Restricted to user or its dsproxy')
     await expectRevert(importProxy.nope(owner, { from: user }), 'Restricted to user or its dsproxy')
-    
+
     const splitterMock = await ImportProxyMock.new(importProxy.address, { from: owner })
     let calldata = splitterMock.contract.methods.hope(user).encodeABI()
     await dsProxy.methods['execute(address,bytes)'](splitterMock.address, calldata, {
@@ -108,7 +108,10 @@ contract('ImportProxy', async (accounts) => {
       ['address', 'address', 'uint256', 'uint256'],
       [pool1.address, user, 1, 0]
     )
-    await expectRevert(importProxy.executeOnFlashMint(1, data, { from: user }), 'Callback restricted to the fyDai matching the pool')
+    await expectRevert(
+      importProxy.executeOnFlashMint(1, data, { from: user }),
+      'Callback restricted to the fyDai matching the pool'
+    )
   })
 
   it('does not allow to move more debt than existing in maker', async () => {
@@ -125,7 +128,7 @@ contract('ImportProxy', async (accounts) => {
     )
     const daiDebt = bnify((await vat.urns(WETH, importProxy.address)).art).toString()
     const wethCollateral = bnify((await vat.urns(WETH, importProxy.address)).ink).toString()
-    
+
     await expectRevert(
       importProxy.importFromProxy(pool1.address, user, wethCollateral, bnify(daiDebt).mul(10), { from: user }),
       'ImportProxy: Not enough debt in Maker'
@@ -213,8 +216,8 @@ contract('ImportProxy', async (accounts) => {
     assert.equal((await vat.urns(WETH, user)).art, 0)
     assert.equal((await controller.posted(WETH, user)).toString(), wethCollateral.toString())
     const obtainedFYDaiDebt = (await controller.debtFYDai(WETH, maturity1, user)).toString()
-    expect(obtainedFYDaiDebt).to.be.bignumber.gt((new BN(fyDaiDebt)).mul(new BN('9999')).div(new BN('10000')))
-    expect(obtainedFYDaiDebt).to.be.bignumber.lt((new BN(fyDaiDebt)).mul(new BN('10000')).div(new BN('9999')))
+    expect(obtainedFYDaiDebt).to.be.bignumber.gt(new BN(fyDaiDebt).mul(new BN('9999')).div(new BN('10000')))
+    expect(obtainedFYDaiDebt).to.be.bignumber.lt(new BN(fyDaiDebt).mul(new BN('10000')).div(new BN('9999')))
   })
 
   it('forks and moves maker vault to yield', async () => {
@@ -242,7 +245,9 @@ contract('ImportProxy', async (accounts) => {
     await vat.hope(dsProxy.address, { from: user }) // Allowing Splitter to manipulate debt for user in MakerDAO
 
     // Go!!!
-    const calldata = importProxy.contract.methods.importPosition(pool1.address, user, wethCollateral, daiDebt).encodeABI()
+    const calldata = importProxy.contract.methods
+      .importPosition(pool1.address, user, wethCollateral, daiDebt)
+      .encodeABI()
     await dsProxy.methods['execute(address,bytes)'](importProxy.address, calldata, {
       from: user,
     })
@@ -254,8 +259,8 @@ contract('ImportProxy', async (accounts) => {
     assert.equal((await vat.urns(WETH, user)).art, 0)
     assert.equal((await controller.posted(WETH, user)).toString(), wethCollateral.toString())
     const obtainedFYDaiDebt = (await controller.debtFYDai(WETH, maturity1, user)).toString()
-    expect(obtainedFYDaiDebt).to.be.bignumber.gt((new BN(fyDaiDebt)).mul(new BN('9999')).div(new BN('10000')))
-    expect(obtainedFYDaiDebt).to.be.bignumber.lt((new BN(fyDaiDebt)).mul(new BN('10000')).div(new BN('9999')))
+    expect(obtainedFYDaiDebt).to.be.bignumber.gt(new BN(fyDaiDebt).mul(new BN('9999')).div(new BN('10000')))
+    expect(obtainedFYDaiDebt).to.be.bignumber.lt(new BN(fyDaiDebt).mul(new BN('10000')).div(new BN('9999')))
   })
 
   it('forks and moves maker vault to yield with signature', async () => {
@@ -278,18 +283,17 @@ contract('ImportProxy', async (accounts) => {
       MAX
     )
     const controllerSig = sign(controllerDigest, userPrivateKey)
-    
+
     // Add permissions for vault migration
     await vat.hope(dsProxy.address, { from: user }) // Allowing Splitter to manipulate debt for user in MakerDAO
 
     // Go!!!
-    const calldata = importProxy.contract.methods.importPositionWithSignature(
-      pool1.address, user, wethCollateral, daiDebt, controllerSig
-    ).encodeABI()
+    const calldata = importProxy.contract.methods
+      .importPositionWithSignature(pool1.address, user, wethCollateral, daiDebt, controllerSig)
+      .encodeABI()
     await dsProxy.methods['execute(address,bytes)'](importProxy.address, calldata, {
       from: user,
     })
-
   })
 
   it('fork and split is restricted to vault owners or their proxies', async () => {
