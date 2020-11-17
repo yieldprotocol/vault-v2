@@ -66,7 +66,7 @@ contract('PoolProxy - DSProxy', async (accounts) => {
     await fyDai1.orchestrate(owner, keccak256(toUtf8Bytes('mint(address,uint256)')), { from: owner })
 
     // Setup PoolProxy
-    poolProxy = await PoolProxy.new(dai.address, chai.address, treasury.address, controller.address)
+    poolProxy = await PoolProxy.new(controller.address)
 
     // Setup DSProxyFactory and DSProxyCache
     proxyFactory = await DSProxyFactory.new({ from: owner })
@@ -179,11 +179,11 @@ contract('PoolProxy - DSProxy', async (accounts) => {
         const maxBorrow = oneToken
         // Give some pool0 tokens to user2
         await dai.mint(user2, oneToken, { from: owner })
-        await poolProxy.addLiquidity(pool0.address, oneToken, maxBorrow, { from: user2 })
+        await poolProxy.addLiquidityWithSignature(pool0.address, oneToken, maxBorrow, '0x', '0x', { from: user2 })
 
         // Give some pool1 tokens to user2
         await dai.mint(user2, oneToken, { from: owner })
-        await poolProxy.addLiquidity(pool1.address, oneToken, maxBorrow, { from: user2 })
+        await poolProxy.addLiquidityWithSignature(pool1.address, oneToken, maxBorrow, '0x', '0x', { from: user2 })
 
         // Authorize the proxy for the pool
         const poolDigest = getSignatureDigest(

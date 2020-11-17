@@ -7,7 +7,7 @@ library SafeCast {
     function toUint128(uint256 x) internal pure returns(uint128) {
         require(
             x <= type(uint128).max,
-            "YieldProxy: Cast overflow"
+            "SafeCast: Cast overflow"
         );
         return uint128(x);
     }
@@ -16,7 +16,7 @@ library SafeCast {
     function toInt256(uint256 x) internal pure returns(int256) {
         require(
             x <= uint256(type(int256).max),
-            "YieldProxy: Cast overflow"
+            "SafeCast: Cast overflow"
         );
         return int256(x);
     }

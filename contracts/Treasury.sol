@@ -2,8 +2,8 @@
 pragma solidity ^0.6.10;
 
 import "@openzeppelin/contracts/math/Math.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IVat.sol";
+import "./interfaces/IDai.sol";
 import "./interfaces/IDaiJoin.sol";
 import "./interfaces/IGemJoin.sol";
 import "./interfaces/IPot.sol";
@@ -26,7 +26,7 @@ contract Treasury is ITreasury, Orchestrated(), DecimalMath {
 
     IVat public override vat;
     IWeth public override weth;
-    IERC20 public override dai;
+    IDai public override dai;
     IDaiJoin public override daiJoin;
     IGemJoin public override wethJoin;
     IPot public override pot;
@@ -48,7 +48,7 @@ contract Treasury is ITreasury, Orchestrated(), DecimalMath {
         address chai_
     ) public {
         // These could be hardcoded for mainnet deployment.
-        dai = IERC20(dai_);
+        dai = IDai(dai_);
         chai = IChai(chai_);
         pot = IPot(pot_);
         weth = IWeth(weth_);

@@ -1,50 +1,28 @@
 const fixed_addrs = require('./fixed_addrs.json')
 
 const Migrations = artifacts.require('Migrations')
-const WETH9 = artifacts.require('WETH9')
-const Dai = artifacts.require('Dai')
-const Chai = artifacts.require('Chai')
-const Treasury = artifacts.require('Treasury')
 const Controller = artifacts.require('Controller')
 const DSProxyFactory = artifacts.require('DSProxyFactory')
 const DSProxyRegistry = artifacts.require('ProxyRegistry')
-const BorrowProxy = artifacts.require('BorrowProxy')
 const PoolProxy = artifacts.require('PoolProxy')
 
 module.exports = async (deployer, network) => {
 
-  let wethAddress, daiAddress, chaiAddress, treasuryAddress, controllerAddress, proxyFactoryAddress, proxyRegistryAddress
+  let controllerAddress, proxyFactoryAddress, proxyRegistryAddress
   if (network === 'development') {
-    wethAddress = (await WETH9.deployed()).address
-    daiAddress = (await Dai.deployed()).address
-    chaiAddress = (await Chai.deployed()).address
-    treasuryAddress = (await Treasury.deployed()).address
     controllerAddress = (await Controller.deployed()).address
-    
-    await deployer.deploy(DSProxyFactory)
     proxyFactoryAddress = (await DSProxyFactory.deployed()).address
-    await deployer.deploy(DSProxyRegistry, proxyFactoryAddress)
     proxyRegistryAddress = (await DSProxyRegistry.deployed()).address
   } else {
-    wethAddress = fixed_addrs[network].wethAddress
-    daiAddress = fixed_addrs[network].daiAddress
-    chaiAddress = fixed_addrs[network].chaiAddress
-    treasuryAddress = fixed_addrs[network].treasuryAddress
     controllerAddress = fixed_addrs[network].controllerAddress
     proxyFactoryAddress = fixed_addrs[network].proxyFactoryAddress
     proxyRegistryAddress = fixed_addrs[network].proxyRegistryAddress  
   }
 
-  await deployer.deploy(BorrowProxy, wethAddress, daiAddress, treasuryAddress, controllerAddress)
-  const borrowProxy = await BorrowProxy.deployed()
-
-  await deployer.deploy(PoolProxy, daiAddress, chaiAddress, treasuryAddress, controllerAddress)
+  await deployer.deploy(PoolProxy, controllerAddress)
   const poolProxy = await PoolProxy.deployed()
 
   const deployment = {
-    ProxyFactory: proxyFactoryAddress,
-    ProxyRegistry: proxyRegistryAddress,
-    BorrowProxy: borrowProxy.address,
     PoolProxy: poolProxy.address,
   }
 

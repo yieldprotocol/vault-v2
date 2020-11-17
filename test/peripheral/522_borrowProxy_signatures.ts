@@ -17,7 +17,6 @@ contract('BorrowProxy - Signatures', async (accounts) => {
   let maker: MakerEnvironment
   let controller: Contract
   let treasury: Contract
-  let weth: Contract
   let dai: Contract
   let vat: Contract
   let fyDai1: Contract
@@ -38,7 +37,6 @@ contract('BorrowProxy - Signatures', async (accounts) => {
     maturity1 = (await web3.eth.getBlock(block)).timestamp + 31556952 // One year
     env = await YieldEnvironmentLite.setup([maturity1])
     maker = env.maker
-    weth = maker.weth
     dai = maker.dai
     vat = maker.vat
     controller = env.controller
@@ -49,7 +47,7 @@ contract('BorrowProxy - Signatures', async (accounts) => {
     pool = await Pool.new(dai.address, fyDai1.address, 'Name', 'Symbol', { from: owner })
 
     // Setup LimitPool
-    proxy = await BorrowProxy.new(weth.address, dai.address, treasury.address, controller.address, { from: owner })
+    proxy = await BorrowProxy.new(controller.address, { from: owner })
 
     // Allow owner to mint fyDai the sneaky way, without recording a debt in controller
     await fyDai1.orchestrate(owner, keccak256(toUtf8Bytes('mint(address,uint256)')), { from: owner })
@@ -128,7 +126,7 @@ contract('BorrowProxy - Signatures', async (accounts) => {
                 from: user1,
               }
             ),
-            'YieldProxy: Too much fyDai required'
+            'BorrowProxy: Too much fyDai required'
           )
         })
 
@@ -137,9 +135,18 @@ contract('BorrowProxy - Signatures', async (accounts) => {
 
           beforeEach(async () => {
             await controller.addDelegate(proxy.address, { from: user1 })
-            await proxy.borrowDaiForMaximumFYDai(pool.address, WETH, maturity1, user2, fyDaiTokens1, oneToken, {
-              from: user1,
-            })
+            await proxy.borrowDaiForMaximumFYDaiWithSignature(
+              pool.address,
+              WETH,
+              maturity1,
+              user2,
+              fyDaiTokens1,
+              oneToken,
+              '0x',
+              {
+                from: user1,
+              }
+            )
 
             // Authorize DAI
             const daiDigest = getDaiDigest(
@@ -165,6 +172,20 @@ contract('BorrowProxy - Signatures', async (accounts) => {
 
           it('repays debt using Dai with signatures ', async () => {
             await controller.revokeDelegate(proxy.address, { from: user1 })
+
+            // Authorize the proxy for the controller
+            const controllerDigest = getSignatureDigest(
+              name,
+              controller.address,
+              chainId,
+              {
+                user: user1,
+                delegate: proxy.address,
+              },
+              await controller.signatureCount(user1),
+              MAX
+            )
+            controllerSig = sign(controllerDigest, userPrivateKey)
 
             await proxy.repayDaiWithSignature(WETH, maturity1, user2, oneToken, daiSig, controllerSig, {
               from: user1,
