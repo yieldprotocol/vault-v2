@@ -42,7 +42,7 @@ contract ImportProxy is DecimalMath, IFlashMinter {
     bytes32 public constant WETH = "ETH-A";
     bool public constant MTY = true;
 
-    constructor(IController controller_, IPool[] memory _pools, IProxyRegistry proxyRegistry_) public {
+    constructor(IController controller_, IPool[] memory pools_, IProxyRegistry proxyRegistry_) public {
         ITreasury _treasury = controller_.treasury();
 
         weth = _treasury.weth();
@@ -58,8 +58,8 @@ contract ImportProxy is DecimalMath, IFlashMinter {
         proxyRegistry = proxyRegistry_;
 
         // Allow pool to take fyDai for trading
-        for (uint i = 0 ; i < _pools.length; i++) {
-            _pools[i].fyDai().approve(address(_pools[i]), type(uint256).max);
+        for (uint i = 0 ; i < pools_.length; i++) {
+            pools_[i].fyDai().approve(address(pools_[i]), type(uint256).max);
         }
 
         // Allow treasury to take weth for posting
