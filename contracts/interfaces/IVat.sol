@@ -6,6 +6,7 @@ pragma solidity ^0.6.10;
 /// Taken from https://github.com/makerdao/developerguides/blob/master/devtools/working-with-dsproxy/working-with-dsproxy.md
 interface IVat {
     function can(address, address) external view returns (uint);
+    function wish(address, address) external view returns (uint);
     function hope(address) external;
     function nope(address) external;
     function live() external view returns (uint);
