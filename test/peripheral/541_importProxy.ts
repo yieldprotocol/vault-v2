@@ -157,17 +157,17 @@ contract('ImportProxy', async (accounts) => {
   })
 
   it('checks approvals and signatures to move maker vault to yield', async () => {
-    let result = await importProxy.importPositionCheck(pool1.address, { from: user })
+    let result = await importProxy.importPositionCheck({ from: user })
     assert.equal(result[0], false)
     assert.equal(result[1], false)
 
     await vat.hope(importProxy.address, { from: user }) // Allowing Splitter to manipulate debt for user in MakerDAO
-    result = await importProxy.importPositionCheck(pool1.address, { from: user })
+    result = await importProxy.importPositionCheck({ from: user })
     assert.equal(result[0], true)
     assert.equal(result[1], false)
 
     await controller.addDelegate(importProxy.address, { from: user }) // Allowing Splitter to create debt for use in Yield
-    result = await importProxy.importPositionCheck(pool1.address, { from: user })
+    result = await importProxy.importPositionCheck({ from: user })
     assert.equal(result[0], true)
     assert.equal(result[1], true)
   })
