@@ -4,7 +4,7 @@ const Migrations = artifacts.require('Migrations')
 const Controller = artifacts.require('Controller')
 const DSProxyFactory = artifacts.require('DSProxyFactory')
 const DSProxyRegistry = artifacts.require('ProxyRegistry')
-const SplitterProxy = artifacts.require('SplitterProxy')
+const ImportProxy = artifacts.require('ImportProxy')
 
 
 module.exports = async (deployer, network) => {
@@ -20,11 +20,11 @@ module.exports = async (deployer, network) => {
     proxyRegistryAddress = fixed_addrs[network].proxyRegistryAddress  
   }
 
-  await deployer.deploy(SplitterProxy, controllerAddress)
-  const splitterProxy = await SplitterProxy.deployed()
+  await deployer.deploy(ImportProxy, controllerAddress)
+  const importProxy = await ImportProxy.deployed()
 
   const deployment = {
-    SplitterProxy: splitterProxy.address,
+    ImportProxy: importProxy.address,
   }
 
   let migrations
