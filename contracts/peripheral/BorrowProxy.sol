@@ -87,6 +87,40 @@ contract BorrowProxy {
         return fyDaiToBorrow;
     }
 
+    /// @dev Repay an amount of fyDai debt in Controller using a given amount of Dai exchanged for fyDai at pool rates, with a minimum of fyDai debt required to be paid.
+    /// Must have approved the operator with `controller.addDelegate(borrowProxy.address)` or with `repayMinimumFYDaiDebtForDaiWithSignature`.
+    /// Must have approved the operator with `pool.addDelegate(borrowProxy.address)` or with `repayMinimumFYDaiDebtForDaiWithSignature`.
+    /// If `repaymentInDai` exceeds the existing debt, only the necessary Dai will be used.
+    /// @param collateral Valid collateral type.
+    /// @param maturity Maturity of an added series
+    /// @param to Yield Vault to repay fyDai debt for.
+    /// @param minimumFYDaiRepayment Minimum amount of fyDai debt to repay.
+    /// @param repaymentInDai Exact amount of Dai that should be spent on the repayment.
+    function repayMinimumFYDaiDebtForDai(
+        IPool pool,
+        bytes32 collateral,
+        uint256 maturity,
+        address to,
+        uint256 minimumFYDaiRepayment,
+        uint256 repaymentInDai
+    )
+        public
+        returns (uint256)
+    {
+        uint256 fyDaiRepayment = pool.sellDaiPreview(repaymentInDai.toUint128());
+        uint256 fyDaiDebt = controller.debtFYDai(collateral, maturity, to);
+        if(fyDaiRepayment <= fyDaiDebt) { // Sell no more Dai than needed to cancel all the debt
+            pool.sellDai(msg.sender, address(this), repaymentInDai.toUint128());
+        } else { // If we have too much Dai, then don't sell it all and buy the exact amount of fyDai needed instead.
+            pool.buyFYDai(msg.sender, address(this), fyDaiDebt.toUint128());
+            fyDaiRepayment = fyDaiDebt;
+        }
+        require (fyDaiRepayment >= minimumFYDaiRepayment, "BorrowProxy: Not enough fyDai debt repaid");
+        controller.repayFYDai(collateral, maturity, address(this), to, fyDaiRepayment);
+
+        return fyDaiRepayment;
+    }
+
     /// @dev Sell fyDai for Dai
     /// Caller must have approved the fyDai transfer with `fyDai.approve(fyDaiUsed)` or with `sellFYDaiWithSignature`.
     /// Caller must have approved the proxy using`pool.addDelegate(borrowProxy)` or with `sellFYDaiWithSignature`.
@@ -121,6 +155,24 @@ contract BorrowProxy {
             "BorrowProxy: Limit not reached"
         );
         return fyDaiOut;
+    }
+
+    /// @dev Buy Dai for fyDai
+    /// Caller must have approved the fyDai transfer with `fyDai.approve(maxFYDaiIn)` or with `buyDaiWithSignature`.
+    /// Caller must have approved the proxy using`pool.addDelegate(borrowProxy)` or with `buyDaiWithSignature`.
+    /// @param to Wallet receiving the dai being bought
+    /// @param daiOut Amount of dai being bought
+    /// @param maxFYDaiIn Maximum amount of fyDai being sold
+    function buyDai(IPool pool, address to, uint128 daiOut, uint128 maxFYDaiIn)
+        public
+        returns(uint256)
+    {
+        uint256 fyDaiIn = pool.buyDai(msg.sender, to, daiOut);
+        require(
+            maxFYDaiIn >= fyDaiIn,
+            "YieldProxy: Limit exceeded"
+        );
+        return fyDaiIn;
     }
 
     /// --------------------------------------------------
@@ -160,7 +212,8 @@ contract BorrowProxy {
     /// @dev Set proxy approvals for `borrowDaiForMaximumFYDai` with a given pool.
     function borrowDaiForMaximumFYDaiApprove(IPool pool) public {
         // allow the pool to pull FYDai/dai from us for LPing
-        if (pool.fyDai().allowance(address(this), address(pool)) < type(uint112).max) pool.fyDai().approve(address(pool), type(uint256).max);
+        if (pool.fyDai().allowance(address(this), address(pool)) < type(uint112).max)
+            pool.fyDai().approve(address(pool), type(uint256).max);
     }
 
     /// @dev Borrow fyDai from Controller and sell it immediately for Dai, for a maximum fyDai debt.
@@ -210,13 +263,69 @@ contract BorrowProxy {
     /// @param daiAmount Amount of Dai to use for debt repayment.
     /// @param daiSig packed signature for permit of dai transfers to this proxy. Ignored if '0x'.
     /// @param controllerSig packed signature for delegation of this proxy in the controller. Ignored if '0x'.
-    function repayDaiWithSignature(bytes32 collateral, uint256 maturity, address to, uint256 daiAmount, bytes memory daiSig, bytes memory controllerSig)
+    function repayDaiWithSignature(
+        bytes32 collateral,
+        uint256 maturity,
+        address to,
+        uint256 daiAmount,
+        bytes memory daiSig,
+        bytes memory controllerSig
+    )
         external
         returns(uint256)
     {
         if (daiSig.length > 0) dai.permitPackedDai(treasury, daiSig);
         if (controllerSig.length > 0) controller.addDelegatePacked(controllerSig);
         controller.repayDai(collateral, maturity, msg.sender, to, daiAmount);
+    }
+
+    /// @dev Set proxy approvals for `repayMinimumFYDaiDebtForDai` with a given pool.
+    function repayMinimumFYDaiDebtForDaiApprove(IPool pool) public {
+        // allow the treasury to pull FYDai from us for repaying
+        if (pool.fyDai().allowance(address(this), treasury) < type(uint112).max)
+            pool.fyDai().approve(treasury, type(uint256).max);
+    }
+
+    /// @dev Determine whether all approvals and signatures are in place for `repayMinimumFYDaiDebtForDai` with a given pool.
+    /// If `return[0]` is `false`, calling `repayMinimumFYDaiDebtForDaiWithSignature` will set the approvals.
+    /// If `return[1]` is `false`, `repayMinimumFYDaiDebtForDaiWithSignature` must be called with a controller signature
+    /// If `return[2]` is `false`, `repayMinimumFYDaiDebtForDaiWithSignature` must be called with a pool signature
+    /// If `return` is `(true, true, true)`, `repayMinimumFYDaiDebtForDai` won't fail because of missing approvals or signatures.
+    function repayMinimumFYDaiDebtForDaiCheck(IPool pool) public view returns (bool, bool, bool) {
+        bool approvals = pool.fyDai().allowance(address(this), treasury) >= type(uint112).max;
+        bool controllerSig = controller.delegated(msg.sender, address(this));
+        bool poolSig = pool.delegated(msg.sender, address(this));
+        return (approvals, controllerSig, poolSig);
+    }
+
+    /// @dev Repay an amount of fyDai debt in Controller using a given amount of Dai exchanged for fyDai at pool rates, with a minimum of fyDai debt required to be paid.
+    /// Must have approved the operator with `controller.addDelegate(borrowProxy.address)` or with `repayMinimumFYDaiDebtForDaiWithSignature`.
+    /// Must have approved the operator with `pool.addDelegate(borrowProxy.address)` or with `repayMinimumFYDaiDebtForDaiWithSignature`.
+    /// If `repaymentInDai` exceeds the existing debt, only the necessary Dai will be used.
+    /// @param collateral Valid collateral type.
+    /// @param maturity Maturity of an added series
+    /// @param to Yield Vault to repay fyDai debt for.
+    /// @param minimumFYDaiRepayment Minimum amount of fyDai debt to repay.
+    /// @param repaymentInDai Exact amount of Dai that should be spent on the repayment.
+    /// @param controllerSig packed signature for delegation of this proxy in the controller. Ignored if '0x'.
+    /// @param poolSig packed signature for delegation of this proxy in a pool. Ignored if '0x'.
+    function repayMinimumFYDaiDebtForDaiWithSignature(
+        IPool pool,
+        bytes32 collateral,
+        uint256 maturity,
+        address to,
+        uint256 minimumFYDaiRepayment,
+        uint256 repaymentInDai,
+        bytes memory controllerSig,
+        bytes memory poolSig
+    )
+        public
+        returns (uint256)
+    {
+        repayMinimumFYDaiDebtForDaiApprove(pool);
+        if (controllerSig.length > 0) controller.addDelegatePacked(controllerSig);
+        if (poolSig.length > 0) pool.addDelegatePacked(poolSig);
+        return repayMinimumFYDaiDebtForDai(pool, collateral, maturity, to, minimumFYDaiRepayment, repaymentInDai);
     }
 
     /// @dev Determine whether all approvals and signatures are in place for `sellFYDai`.
@@ -237,7 +346,14 @@ contract BorrowProxy {
     /// @param minDaiOut Minimum amount of dai being bought
     /// @param fyDaiSig packed signature for approving fyDai transfers to a pool. Ignored if '0x'.
     /// @param poolSig packed signature for delegation of this proxy in a pool. Ignored if '0x'.
-    function sellFYDaiWithSignature(IPool pool, address to, uint128 fyDaiIn, uint128 minDaiOut, bytes memory fyDaiSig, bytes memory poolSig)
+    function sellFYDaiWithSignature(
+        IPool pool,
+        address to,
+        uint128 fyDaiIn,
+        uint128 minDaiOut,
+        bytes memory fyDaiSig,
+        bytes memory poolSig
+    )
         public
         returns(uint256)
     {
@@ -264,7 +380,14 @@ contract BorrowProxy {
     /// @param minFYDaiOut Minimum amount of fyDai being bought
     /// @param daiSig packed signature for approving Dai transfers to a pool. Ignored if '0x'.
     /// @param poolSig packed signature for delegation of this proxy in a pool. Ignored if '0x'.
-    function sellDaiWithSignature(IPool pool, address to, uint128 daiIn, uint128 minFYDaiOut, bytes memory daiSig, bytes memory poolSig)
+    function sellDaiWithSignature(
+        IPool pool,
+        address to,
+        uint128 daiIn,
+        uint128 minFYDaiOut,
+        bytes memory daiSig,
+        bytes memory poolSig
+    )
         external
         returns(uint256)
     {
@@ -272,4 +395,36 @@ contract BorrowProxy {
         if (poolSig.length > 0) pool.addDelegatePacked(poolSig);
         return sellDai(pool, to, daiIn, minFYDaiOut);
     }
+
+    /// @dev Determine whether all approvals and signatures are in place for `buyDai`.
+    /// `return[0]` is always `true`, meaning that no proxy approvals are ever needed.
+    /// If `return[1]` is `false`, `buyDaiWithSignature` must be called with a fyDai permit signature.
+    /// If `return[2]` is `false`, `buyDaiWithSignature` must be called with a pool signature.
+    /// If `return` is `(true, true, true)`, `buyDai` won't fail because of missing approvals or signatures.
+    function buyDaiCheck(IPool pool) public view returns (bool, bool, bool) {
+        return sellFYDaiCheck(pool);
+    }
+
+    /// @dev Buy Dai for fyDai and permits infinite fyDai to the pool
+    /// @param to Wallet receiving the dai being bought
+    /// @param daiOut Amount of dai being bought
+    /// @param maxFYDaiIn Maximum amount of fyDai being sold
+    /// @param fyDaiSig packed signature for approving fyDai transfers to a pool. Ignored if '0x'.
+    /// @param poolSig packed signature for delegation of this proxy in a pool. Ignored if '0x'.
+    function buyDaiWithSignature(
+        IPool pool,
+        address to,
+        uint128 daiOut,
+        uint128 maxFYDaiIn,
+        bytes memory fyDaiSig,
+        bytes memory poolSig
+    )
+        external
+        returns(uint256)
+    {
+        if (fyDaiSig.length > 0) pool.fyDai().permitPacked(address(pool), fyDaiSig);
+        if (poolSig.length > 0) pool.addDelegatePacked(poolSig);
+        return buyDai(pool, to, daiOut, maxFYDaiIn);
+    }
+
 }
