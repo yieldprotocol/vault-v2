@@ -170,7 +170,7 @@ contract BorrowProxy {
         uint256 fyDaiIn = pool.buyDai(msg.sender, to, daiOut);
         require(
             maxFYDaiIn >= fyDaiIn,
-            "YieldProxy: Limit exceeded"
+            "BorrowProxy: Limit exceeded"
         );
         return fyDaiIn;
     }

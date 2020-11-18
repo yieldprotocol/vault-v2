@@ -364,6 +364,39 @@ contract('BorrowProxy', async (accounts) => {
       )
     })
 
+    it("doesn't sell fyDai if limit not reached", async () => {
+      const oneToken = toWad(1)
+      await fyDai1.mint(user1, oneToken, { from: owner })
+
+      await expectRevert(
+        proxy.sellFYDai(pool.address, user2, oneToken, oneToken.mul(2), { from: user1 }),
+        'BorrowProxy: Limit not reached'
+      )
+    })
+
+    it('buys dai', async () => {
+      const oneToken = toWad(1)
+      await fyDai1.mint(user1, oneToken.mul(2), { from: owner })
+
+      await proxy.buyDai(pool.address, user2, oneToken, oneToken.mul(2), { from: user1 })
+
+      assert.equal(
+        (await dai.balanceOf(user2)).toString(),
+        oneToken.toString(),
+        "User2 should have received one Dai"
+      )
+    })
+
+    it("doesn't buy dai if limit exceeded", async () => {
+      const oneToken = toWad(1)
+      await fyDai1.mint(user1, oneToken.mul(2), { from: owner })
+
+      await expectRevert(
+        proxy.buyDai(pool.address, user2, oneToken, oneToken.div(2), { from: user1 }),
+        'BorrowProxy: Limit exceeded'
+      )
+    })
+
     describe('with extra fyDai reserves', () => {
       beforeEach(async () => {
         const additionalFYDaiReserves = toWad(34.4)
