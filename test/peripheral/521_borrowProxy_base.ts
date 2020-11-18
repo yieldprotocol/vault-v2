@@ -151,8 +151,8 @@ contract('BorrowProxy', async (accounts) => {
           WETH,
           maturity1,
           user2,
-          fyDaiTokens1,
           oneToken,
+          fyDaiTokens1,
           '0x',
           {
             from: user1,
@@ -171,8 +171,8 @@ contract('BorrowProxy', async (accounts) => {
           WETH,
           maturity1,
           user2,
-          fyDaiTokens1,
           oneToken.mul(2),
+          fyDaiTokens1,
           '0x',
           {
             from: user1,
@@ -185,7 +185,7 @@ contract('BorrowProxy', async (accounts) => {
       it("doesn't borrow dai if limit exceeded", async () => {
         await controller.addDelegate(proxy.address, { from: user1 })
         await expectRevert(
-          proxy.borrowDaiForMaximumFYDai(pool.address, WETH, maturity1, user2, 0, oneToken, {
+          proxy.borrowDaiForMaximumFYDai(pool.address, WETH, maturity1, user2, oneToken, 0, {
             from: user1,
           }),
           'BorrowProxy: Too much fyDai required'
@@ -200,8 +200,8 @@ contract('BorrowProxy', async (accounts) => {
             WETH,
             maturity1,
             user2,
-            fyDaiTokens1,
             oneToken.mul(2),
+            fyDaiTokens1,
             '0x',
             {
               from: user1,
@@ -210,7 +210,7 @@ contract('BorrowProxy', async (accounts) => {
         })
 
         it('approvals only need to be set up once', async () => {
-          await proxy.borrowDaiForMaximumFYDai(pool.address, WETH, maturity1, user2, fyDaiTokens1, oneToken, {
+          await proxy.borrowDaiForMaximumFYDai(pool.address, WETH, maturity1, user2, oneToken, fyDaiTokens1, {
             from: user1,
           })
         })
@@ -249,7 +249,7 @@ contract('BorrowProxy', async (accounts) => {
           expect(debtAfter.toString()).to.be.bignumber.eq(debtBefore.sub(new BN(oneToken.toString())).toString())
         })
 
-        it.only('checks missing approvals and signatures for repaying at pool rates', async () => {
+        it('checks missing approvals and signatures for repaying at pool rates', async () => {
           await controller.revokeDelegate(proxy.address, { from: user1 })
           let result = await proxy.repayMinimumFYDaiDebtForDaiCheck(pool.address, { from: user1 })
 
@@ -287,7 +287,7 @@ contract('BorrowProxy', async (accounts) => {
 
           // await controller.addDelegate(proxy.address, { from: user1 })
           await pool.addDelegate(proxy.address, { from: user1 })
-          await proxy.repayMinimumFYDaiDebtForDaiWithSignature(pool.address, WETH, maturity1, user1, 0, oneToken, '0x', '0x', {
+          await proxy.repayMinimumFYDaiDebtForDaiWithSignature(pool.address, WETH, maturity1, user1, oneToken, 0, '0x', '0x', {
             from: user1,
           })
           const debtAfter = await controller.debtFYDai(WETH, maturity1, user1)
@@ -305,7 +305,7 @@ contract('BorrowProxy', async (accounts) => {
 
           // await controller.addDelegate(proxy.address, { from: user1 })
           await pool.addDelegate(proxy.address, { from: user1 })
-          await proxy.repayMinimumFYDaiDebtForDaiWithSignature(pool.address, WETH, maturity1, user1, 0, oneToken.mul(3), '0x', '0x', {
+          await proxy.repayMinimumFYDaiDebtForDaiWithSignature(pool.address, WETH, maturity1, user1, oneToken.mul(3), 0, '0x', '0x', {
             from: user1,
           })
           const debtAfter = await controller.debtFYDai(WETH, maturity1, user1)
@@ -323,7 +323,7 @@ contract('BorrowProxy', async (accounts) => {
           // await controller.addDelegate(proxy.address, { from: user1 })
           await pool.addDelegate(proxy.address, { from: user1 })
           await expectRevert(
-            proxy.repayMinimumFYDaiDebtForDaiWithSignature(pool.address, WETH, maturity1, user1, MAX, oneToken, '0x', '0x', {
+            proxy.repayMinimumFYDaiDebtForDaiWithSignature(pool.address, WETH, maturity1, user1, oneToken, MAX, '0x', '0x', {
               from: user1,
             }),
             'BorrowProxy: Not enough fyDai debt repaid'

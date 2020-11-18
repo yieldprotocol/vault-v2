@@ -48,7 +48,7 @@ contract('BorrowProxy - DSProxy', async (accounts) => {
   let maturity1: number
   let digest: any
 
-  const one = toWad(1)
+  const oneToken = toWad(1)
   const fyDaiTokens1 = daiTokens1
 
   beforeEach(async () => {
@@ -143,16 +143,16 @@ contract('BorrowProxy - DSProxy', async (accounts) => {
 
         it('borrows dai for maximum fyDai', async () => {
           const calldata = borrowProxy.contract.methods
-            .borrowDaiForMaximumFYDaiWithSignature(pool.address, WETH, maturity1, user2, fyDaiTokens1, one, '0x')
+            .borrowDaiForMaximumFYDaiWithSignature(pool.address, WETH, maturity1, user2, oneToken, fyDaiTokens1, '0x')
             .encodeABI()
           await dsProxy.methods['execute(address,bytes)'](borrowProxy.address, calldata, { from: user1 })
 
-          assert.equal(await dai.balanceOf(user2), one.toString())
+          assert.equal(await dai.balanceOf(user2), oneToken.toString())
         })
 
         it("doesn't borrow dai if limit exceeded", async () => {
           const calldata = borrowProxy.contract.methods
-            .borrowDaiForMaximumFYDaiWithSignature(pool.address, WETH, maturity1, user2, fyDaiTokens1, daiTokens1, '0x')
+            .borrowDaiForMaximumFYDaiWithSignature(pool.address, WETH, maturity1, user2, daiTokens1, fyDaiTokens1, '0x')
             .encodeABI()
           await expectRevert(
             dsProxy.methods['execute(address,bytes)'](borrowProxy.address, calldata, { from: user1 }),
@@ -163,7 +163,7 @@ contract('BorrowProxy - DSProxy', async (accounts) => {
         describe('repaying', () => {
           beforeEach(async () => {
             const calldata = borrowProxy.contract.methods
-              .borrowDaiForMaximumFYDaiWithSignature(pool.address, WETH, maturity1, user2, fyDaiTokens1, one, '0x')
+              .borrowDaiForMaximumFYDaiWithSignature(pool.address, WETH, maturity1, user2, oneToken, fyDaiTokens1, '0x')
               .encodeABI()
             await dsProxy.methods['execute(address,bytes)'](borrowProxy.address, calldata, { from: user1 })
 
@@ -252,8 +252,8 @@ contract('BorrowProxy - DSProxy', async (accounts) => {
                 WETH,
                 maturity1,
                 user1,
-                0,
                 toWad(1),
+                0,
                 controllerSig,
                 poolSig,
               ).encodeABI()
@@ -322,21 +322,21 @@ contract('BorrowProxy - DSProxy', async (accounts) => {
     })
 
     it('sells fyDai with signatures', async () => {
-      const oneToken = toWad(1)
-      await fyDai1.mint(user1, oneToken, { from: owner })
+      const oneTokenToken = toWad(1)
+      await fyDai1.mint(user1, oneTokenToken, { from: owner })
 
       const calldata = borrowProxy.contract.methods
-        .sellFYDaiWithSignature(pool.address, user2, oneToken, oneToken.div(2), fyDaiSig, poolSig)
+        .sellFYDaiWithSignature(pool.address, user2, oneTokenToken, oneTokenToken.div(2), fyDaiSig, poolSig)
         .encodeABI()
       await dsProxy.methods['execute(address,bytes)'](borrowProxy.address, calldata, { from: user1 })
     })
 
     it('buys dai with signatures', async () => {
-      const oneToken = toWad(1)
-      await fyDai1.mint(user1, oneToken.mul(2), { from: owner })
+      const oneTokenToken = toWad(1)
+      await fyDai1.mint(user1, oneTokenToken.mul(2), { from: owner })
 
       const calldata = borrowProxy.contract.methods
-        .buyDaiWithSignature(pool.address, user2, oneToken, oneToken.mul(2), fyDaiSig, poolSig)
+        .buyDaiWithSignature(pool.address, user2, oneTokenToken, oneTokenToken.mul(2), fyDaiSig, poolSig)
         .encodeABI()
       await dsProxy.methods['execute(address,bytes)'](borrowProxy.address, calldata, { from: user1 })
     })
@@ -352,10 +352,10 @@ contract('BorrowProxy - DSProxy', async (accounts) => {
       })
 
       it('sells dai', async () => {
-        const oneToken = toWad(1)
+        const oneTokenToken = toWad(1)
 
         const calldata = borrowProxy.contract.methods
-          .sellDaiWithSignature(pool.address, user2, oneToken, oneToken.div(2), daiSig, poolSig)
+          .sellDaiWithSignature(pool.address, user2, oneTokenToken, oneTokenToken.div(2), daiSig, poolSig)
           .encodeABI()
         await dsProxy.methods['execute(address,bytes)'](borrowProxy.address, calldata, { from: user1 })
       })
