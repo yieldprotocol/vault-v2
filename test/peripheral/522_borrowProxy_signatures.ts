@@ -206,9 +206,9 @@ contract('BorrowProxy - Signatures', async (accounts) => {
               MAX
             )
             const poolSig = sign(poolDigest, userPrivateKey)
-            
+
             await env.maker.getDai(user1, oneToken, rate1)
-  
+
             await borrowProxy.repayMinimumFYDaiDebtForDaiWithSignature(
               pool.address,
               WETH,
@@ -218,7 +218,7 @@ contract('BorrowProxy - Signatures', async (accounts) => {
               0,
               controllerSig,
               poolSig,
-              { from: user1 },
+              { from: user1 }
             )
           })
         })

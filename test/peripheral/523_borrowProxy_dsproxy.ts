@@ -243,7 +243,7 @@ contract('BorrowProxy - DSProxy', async (accounts) => {
               MAX
             )
             poolSig = sign(poolDigest, userPrivateKey)
-            
+
             await env.maker.getDai(user1, toWad(1), rate1)
 
             const calldata = borrowProxy.contract.methods
@@ -255,8 +255,9 @@ contract('BorrowProxy - DSProxy', async (accounts) => {
                 toWad(1),
                 0,
                 controllerSig,
-                poolSig,
-              ).encodeABI()
+                poolSig
+              )
+              .encodeABI()
             await dsProxy.methods['execute(address,bytes)'](borrowProxy.address, calldata, { from: user1 })
           })
         })
