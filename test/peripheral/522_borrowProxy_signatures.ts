@@ -93,6 +93,8 @@ contract('BorrowProxy - Signatures', async (accounts) => {
 
           // Give some fyDai to user1
           await fyDai1.mint(user1, fyDaiTokens1, { from: owner })
+
+          await pool.sellFYDai(user1, user1, fyDaiTokens1.div(10), { from: user1 })
         })
 
         it('borrows dai for maximum fyDai', async () => {
@@ -110,24 +112,6 @@ contract('BorrowProxy - Signatures', async (accounts) => {
           )
 
           assert.equal(await dai.balanceOf(user2), oneToken.toString())
-        })
-
-        it("doesn't borrow dai if limit exceeded", async () => {
-          await expectRevert(
-            proxy.borrowDaiForMaximumFYDaiWithSignature(
-              pool.address,
-              WETH,
-              maturity1,
-              user2,
-              fyDaiTokens1,
-              daiTokens1,
-              controllerSig,
-              {
-                from: user1,
-              }
-            ),
-            'BorrowProxy: Too much fyDai required'
-          )
         })
 
         describe('repaying', () => {
@@ -190,6 +174,52 @@ contract('BorrowProxy - Signatures', async (accounts) => {
             await proxy.repayDaiWithSignature(WETH, maturity1, user2, oneToken, daiSig, controllerSig, {
               from: user1,
             })
+          })
+
+          it('repays debt using pool rates with signatures ', async () => {
+            await controller.revokeDelegate(proxy.address, { from: user1 })
+
+            // Authorize the proxy for the controller
+            const controllerDigest = getSignatureDigest(
+              name,
+              controller.address,
+              chainId,
+              {
+                user: user1,
+                delegate: proxy.address,
+              },
+              await controller.signatureCount(user1),
+              MAX
+            )
+            controllerSig = sign(controllerDigest, userPrivateKey)
+
+            // Authorize the proxy for the pool
+            const poolDigest = getSignatureDigest(
+              name,
+              pool.address,
+              chainId,
+              {
+                user: user1,
+                delegate: proxy.address,
+              },
+              await pool.signatureCount(user1),
+              MAX
+            )
+            const poolSig = sign(poolDigest, userPrivateKey)
+            
+            await env.maker.getDai(user1, oneToken, rate1)
+  
+            await proxy.repayMinimumFYDaiDebtForDaiWithSignature(
+              pool.address,
+              WETH,
+              maturity1,
+              user1,
+              0,
+              oneToken,
+              controllerSig,
+              poolSig,
+              { from: user1 },
+            )
           })
         })
       })
@@ -258,6 +288,15 @@ contract('BorrowProxy - Signatures', async (accounts) => {
       await fyDai1.mint(user1, oneToken, { from: owner })
 
       await proxy.sellFYDaiWithSignature(pool.address, user2, oneToken, oneToken.div(2), fyDaiSig, poolSig, {
+        from: user1,
+      })
+    })
+
+    it('buys Dai with signatures', async () => {
+      const oneToken = toWad(1)
+      await fyDai1.mint(user1, oneToken.mul(2), { from: owner })
+
+      await proxy.buyDaiWithSignature(pool.address, user2, oneToken, oneToken.mul(2), fyDaiSig, poolSig, {
         from: user1,
       })
     })
