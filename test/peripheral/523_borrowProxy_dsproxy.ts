@@ -274,11 +274,11 @@ contract('BorrowProxy - DSProxy', async (accounts) => {
     })
 
     it('sells fyDai with signatures', async () => {
-      const oneTokenToken = toWad(1)
-      await fyDai1.mint(user1, oneTokenToken, { from: owner })
+      const oneToken = toWad(1)
+      await fyDai1.mint(user1, oneToken, { from: owner })
 
       const calldata = borrowProxy.contract.methods
-        .sellFYDaiWithSignature(pool.address, user2, oneTokenToken, oneTokenToken.div(2), fyDaiSig, poolSig)
+        .sellFYDaiWithSignature(pool.address, user2, oneToken, oneToken.div(2), fyDaiSig, poolSig)
         .encodeABI()
       await dsProxy.methods['execute(address,bytes)'](borrowProxy.address, calldata, { from: user1 })
     })
@@ -294,10 +294,10 @@ contract('BorrowProxy - DSProxy', async (accounts) => {
       })
 
       it('sells dai', async () => {
-        const oneTokenToken = toWad(1)
+        const oneToken = toWad(1)
 
         const calldata = borrowProxy.contract.methods
-          .sellDaiWithSignature(pool.address, user2, oneTokenToken, oneTokenToken.div(2), daiSig, poolSig)
+          .sellDaiWithSignature(pool.address, user2, oneToken, oneToken.div(2), daiSig, poolSig)
           .encodeABI()
         await dsProxy.methods['execute(address,bytes)'](borrowProxy.address, calldata, { from: user1 })
       })
