@@ -149,8 +149,8 @@ contract('BorrowProxy', async (accounts) => {
           WETH,
           maturity1,
           user2,
-          fyDaiTokens1,
           oneToken,
+          fyDaiTokens1,
           '0x',
           {
             from: user1,
@@ -169,8 +169,8 @@ contract('BorrowProxy', async (accounts) => {
           WETH,
           maturity1,
           user2,
-          fyDaiTokens1,
           oneToken,
+          fyDaiTokens1,
           '0x',
           {
             from: user1,
@@ -183,7 +183,7 @@ contract('BorrowProxy', async (accounts) => {
       it("doesn't borrow dai if limit exceeded", async () => {
         await controller.addDelegate(proxy.address, { from: user1 })
         await expectRevert(
-          proxy.borrowDaiForMaximumFYDai(pool.address, WETH, maturity1, user2, fyDaiTokens1, daiTokens1, {
+          proxy.borrowDaiForMaximumFYDai(pool.address, WETH, maturity1, user2, daiTokens1, fyDaiTokens1, {
             from: user1,
           }),
           'BorrowProxy: Too much fyDai required'
@@ -198,8 +198,8 @@ contract('BorrowProxy', async (accounts) => {
             WETH,
             maturity1,
             user2,
-            fyDaiTokens1,
             oneToken,
+            fyDaiTokens1,
             '0x',
             {
               from: user1,
@@ -208,7 +208,7 @@ contract('BorrowProxy', async (accounts) => {
         })
 
         it('approvals only need to be set up once', async () => {
-          await proxy.borrowDaiForMaximumFYDai(pool.address, WETH, maturity1, user2, fyDaiTokens1, oneToken, {
+          await proxy.borrowDaiForMaximumFYDai(pool.address, WETH, maturity1, user2, oneToken, fyDaiTokens1, {
             from: user1,
           })
         })
