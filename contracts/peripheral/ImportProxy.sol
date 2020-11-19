@@ -99,7 +99,7 @@ contract ImportProxy is DecimalMath, IFlashMinter {
             wethAmount.toInt256(),
             debtAmount.toInt256()
         );
-        splitter.nope(msg.sender);                     // Disallow the user or proxy to give splitter the MakerDAO vault. Needed?
+        splitter.nope(msg.sender);                     // Disallow the user or proxy to give splitter the MakerDAO vault.
         splitter.importFromProxy(pool, user, wethAmount, debtAmount);
     }
 
