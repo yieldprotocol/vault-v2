@@ -101,8 +101,8 @@ contract('BorrowProxy - Signatures', async (accounts) => {
             WETH,
             maturity1,
             user2,
-            oneToken,
             fyDaiTokens1,
+            oneToken,
             controllerSig,
             {
               from: user1,
@@ -122,8 +122,8 @@ contract('BorrowProxy - Signatures', async (accounts) => {
               WETH,
               maturity1,
               user2,
-              oneToken,
               fyDaiTokens1,
+              oneToken,
               '0x',
               {
                 from: user1,
@@ -212,8 +212,8 @@ contract('BorrowProxy - Signatures', async (accounts) => {
               WETH,
               maturity1,
               user1,
-              oneToken,
               0,
+              oneToken,
               controllerSig,
               poolSig,
               { from: user1 }

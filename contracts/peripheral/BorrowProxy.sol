@@ -64,15 +64,15 @@ contract BorrowProxy {
     /// @param collateral Valid collateral type.
     /// @param maturity Maturity of an added series
     /// @param to Wallet to send the resulting Dai to.
-    /// @param daiToBorrow Exact amount of Dai that should be obtained.
     /// @param maximumFYDai Maximum amount of FYDai to borrow.
+    /// @param daiToBorrow Exact amount of Dai that should be obtained.
     function borrowDaiForMaximumFYDai(
         IPool pool,
         bytes32 collateral,
         uint256 maturity,
         address to,
-        uint256 daiToBorrow,
-        uint256 maximumFYDai
+        uint256 maximumFYDai,
+        uint256 daiToBorrow
     )
         public
         returns (uint256)
@@ -94,15 +94,15 @@ contract BorrowProxy {
     /// @param collateral Valid collateral type.
     /// @param maturity Maturity of an added series
     /// @param to Yield Vault to repay fyDai debt for.
-    /// @param repaymentInDai Exact amount of Dai that should be spent on the repayment.
     /// @param minimumFYDaiRepayment Minimum amount of fyDai debt to repay.
+    /// @param repaymentInDai Exact amount of Dai that should be spent on the repayment.
     function repayMinimumFYDaiDebtForDai(
         IPool pool,
         bytes32 collateral,
         uint256 maturity,
         address to,
-        uint256 repaymentInDai,
-        uint256 minimumFYDaiRepayment
+        uint256 minimumFYDaiRepayment,
+        uint256 repaymentInDai
     )
         public
         returns (uint256)
@@ -228,8 +228,8 @@ contract BorrowProxy {
         bytes32 collateral,
         uint256 maturity,
         address to,
-        uint256 daiToBorrow,
         uint256 maximumFYDai,
+        uint256 daiToBorrow,
         bytes memory controllerSig
     )
         public
@@ -237,7 +237,7 @@ contract BorrowProxy {
     {
         borrowDaiForMaximumFYDaiApprove(pool);
         if (controllerSig.length > 0) controller.addDelegatePacked(controllerSig);
-        return borrowDaiForMaximumFYDai(pool, collateral, maturity, to, daiToBorrow, maximumFYDai);
+        return borrowDaiForMaximumFYDai(pool, collateral, maturity, to, maximumFYDai, daiToBorrow);
     }
 
     /// @dev Determine whether all approvals and signatures are in place for `repayDaiWithSignature`.
@@ -314,8 +314,8 @@ contract BorrowProxy {
         bytes32 collateral,
         uint256 maturity,
         address to,
-        uint256 repaymentInDai,
         uint256 minimumFYDaiRepayment,
+        uint256 repaymentInDai,
         bytes memory controllerSig,
         bytes memory poolSig
     )
@@ -325,7 +325,7 @@ contract BorrowProxy {
         repayMinimumFYDaiDebtForDaiApprove(pool);
         if (controllerSig.length > 0) controller.addDelegatePacked(controllerSig);
         if (poolSig.length > 0) pool.addDelegatePacked(poolSig);
-        return repayMinimumFYDaiDebtForDai(pool, collateral, maturity, to, repaymentInDai, minimumFYDaiRepayment);
+        return repayMinimumFYDaiDebtForDai(pool, collateral, maturity, to, minimumFYDaiRepayment, repaymentInDai);
     }
 
     /// @dev Determine whether all approvals and signatures are in place for `sellFYDai`.
