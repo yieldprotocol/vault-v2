@@ -45,11 +45,12 @@ contract ImportProxy is DecimalMath, IFlashMinter {
     constructor(IController controller_, IPool[] memory pools_, IProxyRegistry proxyRegistry_) public {
         ITreasury _treasury = controller_.treasury();
 
-        weth = _treasury.weth();
-        dai = _treasury.dai();
-        daiJoin = _treasury.daiJoin();
-        wethJoin = _treasury.wethJoin();
-        vat = _treasury.vat();
+        IVat _vat = _treasury.vat();
+        IWeth _weth = _treasury.weth();
+        IERC20 _dai = _treasury.dai();
+        address _daiJoin = address(_treasury.daiJoin());
+        address _wethJoin = address(_treasury.wethJoin());
+        
 
         controller = controller_;
         treasury = address(_treasury);
@@ -63,13 +64,19 @@ contract ImportProxy is DecimalMath, IFlashMinter {
         }
 
         // Allow treasury to take weth for posting
-        _treasury.weth().approve(address(_treasury), type(uint256).max);
+        _weth.approve(address(_treasury), type(uint256).max);
 
         // Allow wethJoin to move weth out of vat for this proxy
-        _treasury.vat().hope(address(_treasury.wethJoin()));
+        _vat.hope(_wethJoin);
 
         // Allow daiJoin to take Dai for paying debt
-        _treasury.dai().approve(address(_treasury.daiJoin()), type(uint256).max);
+        _dai.approve(_daiJoin, type(uint256).max);
+
+        vat = _vat;
+        weth = _weth;
+        dai = _dai;
+        daiJoin = IDaiJoin(_daiJoin);
+        wethJoin = IGemJoin(_wethJoin);
     }
 
     /// --------------------------------------------------
