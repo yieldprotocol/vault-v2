@@ -287,9 +287,19 @@ contract('BorrowProxy', async (accounts) => {
 
           // await controller.addDelegate(proxy.address, { from: user1 })
           await pool.addDelegate(proxy.address, { from: user1 })
-          await proxy.repayMinimumFYDaiDebtForDaiWithSignature(pool.address, WETH, maturity1, user1, 0, oneToken, '0x', '0x', {
-            from: user1,
-          })
+          await proxy.repayMinimumFYDaiDebtForDaiWithSignature(
+            pool.address,
+            WETH,
+            maturity1,
+            user1,
+            0,
+            oneToken,
+            '0x',
+            '0x',
+            {
+              from: user1,
+            }
+          )
           const debtAfter = await controller.debtFYDai(WETH, maturity1, user1)
           // Prices slip each block
           expect(debtAfter.toString()).to.be.bignumber.gt(debtBefore.sub(paidDebt).toString())
@@ -307,9 +317,19 @@ contract('BorrowProxy', async (accounts) => {
 
           // await controller.addDelegate(proxy.address, { from: user1 })
           await pool.addDelegate(proxy.address, { from: user1 })
-          await proxy.repayMinimumFYDaiDebtForDaiWithSignature(pool.address, WETH, maturity1, user1, 0, oneToken.mul(3), '0x', '0x', {
-            from: user1,
-          })
+          await proxy.repayMinimumFYDaiDebtForDaiWithSignature(
+            pool.address,
+            WETH,
+            maturity1,
+            user1,
+            0,
+            oneToken.mul(3),
+            '0x',
+            '0x',
+            {
+              from: user1,
+            }
+          )
           const debtAfter = await controller.debtFYDai(WETH, maturity1, user1)
           const daiBalanceAfter = await dai.balanceOf(user1)
           assert.equal(debtAfter, 0)
@@ -327,9 +347,19 @@ contract('BorrowProxy', async (accounts) => {
           // await controller.addDelegate(proxy.address, { from: user1 })
           await pool.addDelegate(proxy.address, { from: user1 })
           await expectRevert(
-            proxy.repayMinimumFYDaiDebtForDaiWithSignature(pool.address, WETH, maturity1, user1, MAX, oneToken, '0x', '0x', {
-              from: user1,
-            }),
+            proxy.repayMinimumFYDaiDebtForDaiWithSignature(
+              pool.address,
+              WETH,
+              maturity1,
+              user1,
+              MAX,
+              oneToken,
+              '0x',
+              '0x',
+              {
+                from: user1,
+              }
+            ),
             'BorrowProxy: Not enough fyDai debt repaid'
           )
         })
