@@ -93,8 +93,6 @@ contract('BorrowProxy - Signatures', async (accounts) => {
 
           // Give some fyDai to user1
           await fyDai1.mint(user1, fyDaiTokens1, { from: owner })
-
-          await pool.sellFYDai(user1, user1, fyDaiTokens1.div(10), { from: user1 })
         })
 
         it('borrows dai for maximum fyDai', async () => {

@@ -171,7 +171,7 @@ contract('BorrowProxy', async (accounts) => {
           WETH,
           maturity1,
           user2,
-          oneToken.mul(2),
+          oneToken,
           fyDaiTokens1,
           '0x',
           {
@@ -179,7 +179,7 @@ contract('BorrowProxy', async (accounts) => {
           }
         )
 
-        assert.equal(await dai.balanceOf(user2), oneToken.mul(2).toString())
+        assert.equal(await dai.balanceOf(user2), oneToken.toString())
       })
 
       it("doesn't borrow dai if limit exceeded", async () => {
