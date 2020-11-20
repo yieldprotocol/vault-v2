@@ -48,7 +48,7 @@ contract('BorrowProxy - DSProxy', async (accounts) => {
   let maturity1: number
   let digest: any
 
-  const one = toWad(1)
+  const oneToken = toWad(1)
   const fyDaiTokens1 = daiTokens1
 
   beforeEach(async () => {
@@ -143,16 +143,16 @@ contract('BorrowProxy - DSProxy', async (accounts) => {
 
         it('borrows dai for maximum fyDai', async () => {
           const calldata = borrowProxy.contract.methods
-            .borrowDaiForMaximumFYDaiWithSignature(pool.address, WETH, maturity1, user2, fyDaiTokens1, one, '0x')
+            .borrowDaiForMaximumFYDaiWithSignature(pool.address, WETH, maturity1, user2, oneToken, fyDaiTokens1, '0x')
             .encodeABI()
           await dsProxy.methods['execute(address,bytes)'](borrowProxy.address, calldata, { from: user1 })
 
-          assert.equal(await dai.balanceOf(user2), one.toString())
+          assert.equal(await dai.balanceOf(user2), oneToken.toString())
         })
 
         it("doesn't borrow dai if limit exceeded", async () => {
           const calldata = borrowProxy.contract.methods
-            .borrowDaiForMaximumFYDaiWithSignature(pool.address, WETH, maturity1, user2, fyDaiTokens1, daiTokens1, '0x')
+            .borrowDaiForMaximumFYDaiWithSignature(pool.address, WETH, maturity1, user2, daiTokens1, fyDaiTokens1, '0x')
             .encodeABI()
           await expectRevert(
             dsProxy.methods['execute(address,bytes)'](borrowProxy.address, calldata, { from: user1 }),
@@ -163,7 +163,7 @@ contract('BorrowProxy - DSProxy', async (accounts) => {
         describe('repaying', () => {
           beforeEach(async () => {
             const calldata = borrowProxy.contract.methods
-              .borrowDaiForMaximumFYDaiWithSignature(pool.address, WETH, maturity1, user2, fyDaiTokens1, one, '0x')
+              .borrowDaiForMaximumFYDaiWithSignature(pool.address, WETH, maturity1, user2, oneToken, fyDaiTokens1, '0x')
               .encodeABI()
             await dsProxy.methods['execute(address,bytes)'](borrowProxy.address, calldata, { from: user1 })
 
