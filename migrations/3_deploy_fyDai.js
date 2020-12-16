@@ -38,7 +38,7 @@ module.exports = async (deployer, network) => {
   let dates = ['2020-12-31', '2021-03-31', '2021-06-30', '2021-09-30', '2021-12-31']
   let maturities = dates.map(toTimestamp)
 
-  if (network === 'mainnet' || network === 'mainnet-ganache') {
+  if (network === 'mainnet' || network === 'mainnet-ganache' || network === 'kovan' || network === 'kovan-fork') {
     vatAddress = fixed_addrs[network].vatAddress
     wethAddress = fixed_addrs[network].wethAddress
     wethJoinAddress = fixed_addrs[network].wethJoinAddress
@@ -56,7 +56,7 @@ module.exports = async (deployer, network) => {
     chaiAddress = (await Chai.deployed()).address
   }
 
-  if (network !== 'mainnet') {
+  if (network !== 'mainnet' && network !== 'kovan' && network !== 'kovan-fork') {
     const block = await web3.eth.getBlockNumber()
     maturities.unshift((await web3.eth.getBlock(block)).timestamp + 86400)
     maturities.unshift((await web3.eth.getBlock(block)).timestamp + 3600)

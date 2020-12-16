@@ -1,3 +1,5 @@
+const fixed_addrs = require('./fixed_addrs.json')
+
 const ethers = require('ethers')
 const BigNumber = ethers.BigNumber
 
@@ -25,7 +27,7 @@ const Treasury = artifacts.require('Treasury')
 const Controller = artifacts.require('Controller')
 const Pool = artifacts.require('Pool')
 
-const daiReserves = toWad(1000) // Tailor to each deployment.
+const daiReserves = toWad(30000) // Tailor to each deployment.
 const ETH_A = web3.utils.fromAscii("ETH-A")
 const MAX = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
@@ -33,12 +35,22 @@ module.exports = async (deployer, network) => {
 
   if (network === 'mainnet') return
 
+  let vat, weth, wethJoin, dai, daiJoin
+  if (network === 'kovan' || network === 'kovan-fork') {
+    vat = await Vat.at(fixed_addrs[network].vatAddress)
+    weth = await Weth.at(fixed_addrs[network].wethAddress)
+    wethJoin = await GemJoin.at(fixed_addrs[network].wethJoinAddress)
+    dai = await Dai.at(fixed_addrs[network].daiAddress)
+    daiJoin = await DaiJoin.at(fixed_addrs[network].daiJoinAddress)
+  } else {
+    vat = await Vat.deployed()
+    weth = await Weth.deployed()
+    wethJoin = await GemJoin.deployed()
+    dai = await Dai.deployed()
+    daiJoin = await DaiJoin.deployed()
+  }
+
   const migrations = await Migrations.deployed()
-  const vat = await Vat.deployed()
-  const weth = await Weth.deployed()
-  const wethJoin = await GemJoin.deployed()
-  const dai = await Dai.deployed()
-  const daiJoin = await DaiJoin.deployed()
   const treasury = await Treasury.deployed()
   const controller = await Controller.deployed()
 
