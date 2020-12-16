@@ -10,7 +10,7 @@ module.exports = async (deployer, network, accounts) => {
 
   let daiAddress
 
-  if (network === 'mainnet' || network === 'mainnet-ganache') {
+  if (network === 'mainnet' || network === 'mainnet-ganache' || network === 'kovan' || network === 'kovan-fork') {
     daiAddress = fixed_addrs[network].daiAddress
   } else {
     daiAddress = (await Dai.deployed()).address

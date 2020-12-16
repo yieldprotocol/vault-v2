@@ -17,7 +17,7 @@ module.exports = async (deployer, network, accounts) => {
   let unwindAddress
   let liquidationsAddress
 
-  if (network === 'mainnet' || network === 'mainnet-ganache') {
+  if (network === 'mainnet' || network === 'mainnet-ganache' || network === 'kovan' || network === 'kovan-fork') {
     endAddress = fixed_addrs[network].endAddress
   } else {
     endAddress = (await End.deployed()).address

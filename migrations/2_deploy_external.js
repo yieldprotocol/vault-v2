@@ -49,7 +49,7 @@ module.exports = async (deployer, network, accounts) => {
   let endAddress
   let chaiAddress
 
-  if (network !== 'mainnet' && network !== 'mainnet-ganache') {
+  if (network !== 'mainnet' && network !== 'mainnet-ganache' && network !== 'kovan' && network !== 'kovan-fork') {
     // Setting up Vat
     const MAX = '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'
     const WAD = '000000000000000000'
