@@ -69,4 +69,3 @@ jobs:
             yarn-
       - run: yarn
       - run: yarn deploy:ganache
-      - run: npx truffle exec scripts/setup_market_dev.js

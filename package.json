@@ -6,12 +6,12 @@
   "author": "",
   "scripts": {
     "build": "buidler compile",
-    "test": "buidler test test/*.ts test/pool/*.ts test/peripheral/*.ts",
+    "test": "buidler test test/*.ts test/pool/*.ts",
     "test:non-functional": "buidler test test/non-functional/*.ts",
     "ganache": "./scripts/ganache.sh",
     "deploy:ganache": "yarn ganache && truffle migrate",
     "mainnet-ganache": "./scripts/mainnet-ganache.sh",
-    "coverage": "buidler coverage --network coverage --temp build --testfiles 'test/*.ts test/pool/*.ts test/peripheral/*.ts'",
+    "coverage": "buidler coverage --network coverage --temp build --testfiles 'test/*.ts test/pool/*.ts'",
     "lint": "prettier ./test/**/*.ts --check",
     "lint:ts": "prettier ./test/**/*.ts --write",
     "lint:sol": "solhint -f table contracts/**/*.sol"
