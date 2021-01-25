@@ -38,7 +38,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         Underlying underlying;
     }
 
-    struct Vault {
+    struct Vault { // TODO: Model after MakerDAO CDPs
         bool registered;
         Collateral collateral;
         Series series;
@@ -99,6 +99,14 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         _;
     }
 
+    modifier unlocked(Vault vault) {
+        require(
+            vault.lock == false,
+            "Controller: Vault locked"
+        );
+        _;
+    }
+
     /// @dev Disables post, withdraw, borrow and repay. To be called only when Treasury shuts down.
     function shutdown() 
         public override
@@ -111,7 +119,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     }
 
     function isCollateralized(Vault vault) public view override returns (bool) {
-        return powerOf(vault) >= underlyingDebt(vault);
+        return powerOf(vault) >= fyTokenToUnderlying(vault, vault.assets);
     }
 
     /// @dev Return if the collateral of a vault is between zero and the dust level
@@ -166,22 +174,37 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
     {
     }
 
-    /// @dev Underlying equivalent of the debt in a vault.
-    function underlyingDebt(Vault vault)
+    function fyTokenToUnderlying(Vault vault, uint256 amount)
         public view override
         validVault(vault)
         returns (uint256)
     {
         IFYToken fyToken = vault.series.fyToken;
-        if (fyToken.isMature()){
-            if (vault.collateral == WETH){
-                return muld(amount, fyToken.rateGrowth());
-            } else if (vault.collateral == WTOKEN) {
-                return muld(amount, fyToken.chiGrowth());
-            }
-        } else {
-            return amount;
+        if (fyToken.isMature()) {
+            return muld(
+                amount,
+                oracles[vault.series.underlying][vault.collateral].rateChange(fyToken.maturity())
+                // TODO: A function for oracles to store the rate at the given maturities
+                // TODO: The oracle for a wrapped token should return the inverse of savings rate
+            );
         }
+        else return amount;
+    }
+
+    function underlyingToFYToken(Vault vault, uint256 amount)
+        public view override
+        returns (uint256)
+    {
+        IFYToken fyToken = vault.series.fyToken;
+        if (fyToken.isMature()) {
+            return divdrup(
+                amount,
+                oracles[vault.series.underlying][vault.collateral].rateChange(fyToken.maturity())
+                // TODO: A function for oracles to store the rate at the given maturities
+                // TODO: The oracle for a wrapped token should return the inverse of savings rate
+            );
+        }
+        else return amount;
     }
 
     function powerOf(Vault vault)
@@ -189,7 +212,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         validVault(vault)
         returns (uint256)
     {
-        return muld(vault.assets, oracles[vault.underlying.erc20][vault.collateral.erc20].price());
+        return muld(vault.assets, oracles[vault.underlying.erc20][vault.collateral.erc20].rate());
     }
 
     function locked(Vault vault)
@@ -197,13 +220,17 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         validVault(vault)
         returns (uint256)
     {
-        return vault.assets - divdrup(underlyingDebt(vault), oracles[vault.underlying.erc20][vault.collateral.erc20].price());
+        return vault.assets - divdrup(
+            fyTokenToUnderlying(vault),
+            oracles[vault.underlying.erc20][vault.collateral.erc20].rate()
+        );
     }
 
     function post(IERC20 collateral, address from, address to, Vault vault, uint256 amount)
         public override 
         validCollateral(collateral)
         ownsVault(to, vault)
+        unlocked(vault)
         onlyLive
     {
         vault.assets += amount;
@@ -211,10 +238,27 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         treasury.push(collateral, from, amount);
     }
 
+    function move(address from, address to, Vault vaultFrom, Vault vaultTo, uint256 amount)
+        public override 
+        ownsVault(from, vaultFrom) // Refactor as `hasRights`
+        ownsVault(to, vaultTo)
+        unlocked(vaultFrom)
+        unlocked(vaultTo)
+        onlyLive
+    {
+        require(vaultFrom.collateral == vaultTo.collateral, "Controller: Collaterals do not match");
+        vaultFrom.assets -= amount;
+        vaultTo.assets += amount;
+        require(isCollateralized(vaultFrom), "Controller: Too much debt");
+        require(notDust(vaultFrom), "Controller: Dust");
+        require(notDust(vaultTo), "Controller: Dust");
+    }
+
     function withdraw(IERC20 collateral, address from, address to, Vault vault, uint256 amount)
         public override 
         validCollateral(collateral)
         ownsVault(from, vault)
+        unlocked(vault)
         onlyLive
     {
         vault.assets -= amount;
@@ -236,6 +280,7 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         public override 
         validCollateral(collateral)
         ownsVault(from, vault)
+        unlocked(vault)
         onlyLive
     {
         vault.debt += amount;
@@ -249,11 +294,12 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         emit Borrowed(collateral, maturity, from, toInt256(fyDaiAmount));
     }
 
-    /// @dev Repay fyTokens
+    /// @dev Repay with fyTokens
     function repay(address from, address to, Vault vault, uint256 amount)
         public override 
         validCollateral(collateral)
-        ownsVault(from, vault)
+        ownsVault(to, vault)
+        unlocked(vault)
         onlyLive
         returns (uint256)
     {
@@ -261,5 +307,21 @@ contract Controller is IController, Orchestrated(), Delegable(), DecimalMath {
         vault.series.fyToken.burn(from, toRepay);
         vault.debt -= toRepay;
         return toRepay;
+    }
+    
+    /// @dev Repay with underlying Tokens
+    function repayWithUnderlying(address from, address to, Vault vault, uint256 amount)
+        public override 
+        ownsVault(to, vault)
+        unlocked(vault)
+        onlyLive
+        returns (uint256)
+    {
+        uint256 amountFYToken = underlyingToFYToken(vault, amount);
+        uint256 toRepayFYToken = Math.min(amountFYToken, vault.debt);
+        uint256 toRepay = fyTokenToUnderlying(vault, amount);
+        treasury.push(vault.collateral, from, toRepay);
+        vault.debt -= toRepayFYToken;
+        return toRepayFYToken;
     }
 }
