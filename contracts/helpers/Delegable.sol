@@ -95,4 +95,9 @@ contract Delegable is IDelegable {
         delegated[user][delegate] = false;
         emit Delegate(user, delegate, false);
     }
+
+    // TODO: revokeDelegateWithSignature
+    // TODO: renounceDelegation
+    // TODO: onlyWithSignature
+    // TODO: addPartialDelegate (for only certain functions, maybe pack up to 8 of them in a bytes32)
 }
