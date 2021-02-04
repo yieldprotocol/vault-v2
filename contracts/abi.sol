@@ -13,9 +13,21 @@ contract fyTokenJoin {
 
 contract YieldVat {
 
+    function addCollateral(bytes32 collateral)
+    function updateCollateral(bytes32 collateral)
+    
+    function addUnderlying(address underlying)
+    function addSeries(bytes32 series, IERC20 underlying, IFYToken fyToken)
+
+    function addOracle(IERC20 underlying, IERC20 collateral, IOracle oracle)
+
+
 
     // collateral from/to Gem
     function slip(bytes32 collateral, address usr, int256 wad)
+
+    // from Gem to Gem
+    function flux(bytes32 collateral, address src, address dst, uint256 wad)
 
     // from gem to Vault
     function post(bytes32 collateral, bytes32 series, address from, address vault, uint256 amount)
