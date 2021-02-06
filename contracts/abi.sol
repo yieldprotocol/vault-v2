@@ -1,10 +1,10 @@
-contract Join {
+contract TokenJoin {
     function join(address usr, uint wad)
     function exit(address usr, uint wad)
 
 }
 
-contract fyTokenJoin {
+contract FYTokenJoin {
     function join(address usr, uint wad)
     function exit(address usr, uint wad)
 
@@ -12,56 +12,71 @@ contract fyTokenJoin {
 
 
 contract YieldVat {
-
-    function addCollateral(bytes32 collateral)
-    function updateCollateral(bytes32 collateral)
-    
-    function addUnderlying(address underlying)
+  
+    // ---- Administration ----
+    function addCollateral(bytes5 id, address collateral)
+    function addUnderlying(address underlying)                       
     function addSeries(bytes32 series, IERC20 underlying, IFYToken fyToken)
-
     function addOracle(IERC20 underlying, IERC20 collateral, IOracle oracle)
 
+    // ---- Vault composition----
+    // An user can own one or more Vaults, each one with a bytes12 identifier so that we can pack a singly linked list and a reverse search in a bytes32
+    mapping (address => bytes12)                    vaultFirst              // Each user points to the list head. We have 20 bytes here that we can still use.
+    mapping (bytes12 => bytes32)                    vaultNext               // With a vault identifier we can get both the owner and the next in the list. When giving a vault both are changed with 1 SSTORE.
+ 
+    mapping (bytes12 => bytes32)                    vaultSeries             // Each vault is related to only one series, which also determines the underlying. If there is any other data that is set up on initialization, we can pack it with the series.
+    mapping (bytes12 => bytes32)                    vaultCollaterals        // Collaterals are identified by just 5 bytes, then in 32 bytes (one SSTORE) we can have an array of 6 collateral types to allow multi-collateral vaults. 
+    mapping (bytes12 => mapping(bytes5 => uint256)) vaultHoldings           // The collateral held in a vault can be on a uint256 for each type.
+    mapping (bytes12 => uint256)                    vaultDebt
 
+    // ---- Vault management ----
+    // Create a new vault, linked to a series (and therefore underlying) and up to 6 collateral types
+    // 2 SSTORE for series and up to 6 collateral types, plus 2 SSTORE for vault ownership.
+    function build(bytes32 series, bytes32 collaterals)
 
-    // collateral from/to Gem
-    function slip(bytes32 collateral, address usr, int256 wad)
+    // Change a vault series and/or collateral types. 2 SSTORE.
+    // We can change the series if there is no debt, or collaterals types if there is no collateral
+    function tweak(bytes12 vault, bytes32 series, bytes32 collaterals)
 
-    // from Gem to Gem
-    function flux(bytes32 collateral, address src, address dst, uint256 wad)
+    // Add collateral to vault. 3 or 4 SSTORE per collateral type.
+    // Remove collateral from vault. 3 or 4 SSTORE per collateral type.
+    function slip(bytes12 vault, bytes32 collaterals, int256[] memory inks) // Remember that bytes32 collaterals is an array of up to 6 collateral types.
 
-    // from gem to Vault
-    function post(bytes32 collateral, bytes32 series, address from, address vault, uint256 amount)
+    // Move collateral from one vault to another (like when rolling a series). 2 SSTORE per collateral type.
+    function flux(bytes12 from, bytes12 to, bytes32 collaterals, uint256[] memory inks)
 
-    // from Vault to Gem
-    function withdraw(IERC20 collateral, address from, address to, Vault vault, uint256 amount)
+    // Move debt from one vault to another (like when rolling a series). 2 SSTORE.
+    function move(bytes12 from, bytes12 to, uint256 art)
+
+    // Move collateral and debt. Combine costs of `flux` and `move`.
+    function roll(bytes12 from, bytes12 to, bytes32 collaterals, uint256[] memory inks, uint256 art)
+
+    // Transfer vault to another user. 2 or 3 SSTORE.
+    function give(bytes12 vault, address user)
+
+    // Borrow from vault and push borrowed asset to user 
+    // Repay to vault and pull borrowed asset from user 
+    function draw(bytes12 vault, int256 art). // 3 or 4 SSTORE.
+
+    // Add collateral and borrow from vault, pull collaterals from and push borrowed asset to user 
+    // Repay to vault and remove collateral, pull borrowed asset from and push collaterals to user 
+    function frob(bytes12 vault, bytes32 collaterals,  int256[] memory inks, int256 art) // Combine costs of `slip` and `draw`.
     
+    // Repay vault debt using underlying token, pulled from user. Collaterals are pushed to user. 
+    function close(bytes12 vault, bytes32 collaterals, uint256[] memory inks, uint256 art) // Same cost as `frob`
 
+    // Return the collateralization of a vault, in terms of debt that can still be acquired
+    // 2 SLOAD, for collateral types array and debt, 1 SLOAD + 1 STATICCALL per existing collateral for balance and rate
+    function left(bytes12 vault) view returns (int256 dart)
 
-    // move collateral from one vault to another (like when rolling a series)
-    function move(bytes32 collateral, bytes32 fromSeries, address from, bytes32 toSeries, address to, uint256 amount)
+    // ---- Liquidations ----
+    // Stop a vault to be operated upon. 1 SSTORE.
+    function hold(bytes12 vault)
 
-    // fork vaults of the same series 
-    function fork(bytes32 collateral, bytes32 fromSeries, address from, address to, int256 collateral, int256 amount)
+    // Allow a vault to be operated upon again. 1 SSTORE.
+    function free(bytes12 vault)
 
-
-    //borrowing operations 
-
-    // borrow from vault, send borrowed asset to gem account 
-    function borrow(bytes32 collateral, bytes32 series, address vault, address to, uint256 amount)
-    
-    // repay vault debt from gem account using fyTokens
-    function repay(bytes32 collateral, bytes32 series, address vault, address from, uint256 amount)
-    
-    //repay vault debt from gem account using underlying token 
-    function repayWithUnderlying(bytes32 collateral, bytes32 series, address vault, address from, uint256 amount)
-
-
-
-
-
-    // Possible optimizations by bypassing Gem
-
-    /// bypass gem place directly in vault
-    function postDirect(bytes32 collateral, bytes32 series, address vault, int256 amount)
+    // Remove collateral and debt from a vault as a result of a liquidation, pull underlying from buyer. Same cost as `frob`.
+    function buy(bytes12 vault, bytes32 collaterals,  uint256[] memory inks, uint256 art)
 
 }
