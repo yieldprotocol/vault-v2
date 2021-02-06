@@ -1,3 +1,4 @@
+// Token balances will be kept in the join, for flexibility in their management
 contract TokenJoin {
     function join(address usr, uint wad)
     function exit(address usr, uint wad)
@@ -18,6 +19,8 @@ contract YieldVat {
     function addUnderlying(address underlying)                       
     function addSeries(bytes32 series, IERC20 underlying, IFYToken fyToken)
     function addOracle(IERC20 underlying, IERC20 collateral, IOracle oracle)
+
+    mapping (address => mapping(bytes6 => uint128)) safe                    // The `safe` of each user contains collateral balances (including fyDai) that are not assigned to any vault, and therefore unencumbered. A sentinel value let's collateral-managing functions know that they need to deal with the user's safe.
 
     // ---- Vault composition----
     // An user can own one or more Vaults, each one with a bytes12 identifier so that we can pack a singly linked list and a reverse search in a bytes32
