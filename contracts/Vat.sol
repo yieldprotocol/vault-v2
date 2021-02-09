@@ -12,7 +12,7 @@ contract FYTokenJoin {
 }
 
 
-contract YieldVat {
+contract Vat {
   
     // ---- Administration ----
     function addCollateral(bytes6 id, address collateral)
@@ -49,9 +49,11 @@ contract YieldVat {
     function flux(bytes12 from, bytes12 to, bytes32 collaterals, uint128[] memory inks)
 
     // Move debt from one vault to another (like when rolling a series). 2 SSTORE.
+    // Note, it won't be possible if the Vat doesn't know about pools
     function move(bytes12 from, bytes12 to, uint128 art)
 
     // Move collateral and debt. Combine costs of `flux` and `move`, minus 1 SSTORE.
+    // Note, it won't be possible if the Vat doesn't know about pools
     function roll(bytes12 from, bytes12 to, bytes32 collaterals, uint128[] memory inks, uint128 art)
 
     // Transfer vault to another user. 2 or 3 SSTORE.
