@@ -76,30 +76,49 @@ contract Vat {
 
     // Return the vault debt in underlying terms
     function dues(bytes12 vault) view returns (uint128 uart) {
-        IFYToken fyToken = series[vault];                                 // 1 LOOKUP + SLOAD
-        if (fyToken.isMature()) {                                         // 1 CALL + SLOAD
-            uint256 debt_ = debt[vault]                                   // 1 LOOKUP + SLOAD
+        IFYToken fyToken = series[vault];                                 // 1 SLOAD
+        if (fyToken.isMature()) {                                         // 1 CALL + 1 SLOAD
+            uint256 debt_ = debt[vault]                                   // 1 SLOAD
             for each collateral {                                         // * C
-                IOracle oracle = oracles[underlying][collateral];         // 2 LOOKUP + SLOAD
-                uart += debt_ * oracle.accrual(fyToken.maturity());       // 2 CALL + 3 SLOAD | The accrual would be positive for `rate` equivalents, negative for `chi` equivalents.
+                IOracle oracle = oracles[underlying][collateral];         // 1 SLOAD
+                uart += debt_ * proportion * oracle.accrual(fyToken.maturity());       // 2 CALL + 3 SLOAD | The accrual would be positive for `rate` equivalents, negative for `chi` equivalents.
             }
         } else {
-            uart = debt[vault];                                           // 1 LOOKUP + SLOAD
+            uart = debt[vault];                                           // 1 SLOAD
         }
     }
 
     // Return the capacity of the vault to borrow underlying based on the collaterals held
     function value(bytes12 vault) view returns (uint128 uart) {
         for each collateral {                                             // * C
-            IOracle oracle = oracles[underlying][collateral];             // 2 LOOKUP + SLOAD
-            uart += assets[vault][collateral] * oracle.spot();            // 2 LOOKUP + SLOAD + CALL + SLOAD | Divided by collateralization ratio
+            IOracle oracle = oracles[underlying][collateral];             // 1 SLOAD
+            uart += assets[vault][collateral] * oracle.spot();            // 1 SLOAD + 1 CALL + 1 SLOAD | Divided by collateralization ratio
         }
     }
 
     // Return the collateralization level of a vault. It will be negative if undercollateralized.
     // This can be optimized so that oracle.accrual and oracle.spot are retrieved in a single call.
     function level(bytes12 vault) view returns (int128 uart) {
-        return value(vault) - dues(vault);                                // 1 CALL + 2 LOOKUP + 3 SLOAD + C * (2 CALL + 2 LOOKUP + 4 SLOAD) (maybe optimize to almost half that)
+        uint256 maturity = fyToken.maturity();
+        uint256 vaultDues;
+        uint256 vaultValue;
+        bytes6[] memory collaterals = unpack(collaterals[vault]);
+        uint256[collaterals.length] assetValues;
+        bytes32[collaterals.length] rates;
+
+        IFYToken fyToken = series[vault];
+        for each collateral {
+            IOracle oracle = oracles[underlying][collateral];
+            rates[collateral] = oracle.read(maturity);                            // Get both `spot` and `accrual`
+            assetValues[collateral] = assets[vault][collateral] * rates[collateral].spot();
+            vaultValue += assetValues[collateral]
+        }
+        for each collateral {
+            uint256 proportion = assetValues[collateral] / vaultValue;
+            vaultDues += debt[vault] * proportion * rates[collateral].accrual();  // The accrual would be positive for `rate` equivalents, negative for `chi` equivalents.
+        }
+
+        return vaultValue - vaultDues;
     }
 
     // ---- Liquidations ----
