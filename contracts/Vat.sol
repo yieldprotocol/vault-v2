@@ -20,7 +20,8 @@ contract Vat {
     function addSeries(bytes32 series, IERC20 underlying, IFYToken fyToken)
     function addOracle(IERC20 underlying, IERC20 collateral, IOracle oracle)
 
-    mapping (address => mapping(bytes6 => uint128)) safe               // The `safe` of each user contains assets (including fyDai) that are not assigned to any vault, and therefore unencumbered.
+    mapping (bytes6 => mapping(bytes6 => address))  oracles            // oracles[underlying][collateral] Return the address of the oracle and whether the oracle has an accrual value on top of the spot.
+    mapping (address => mapping(bytes6 => uint128)) safe               // safe[user][collateral]          The `safe` of each user contains assets (including fyDai) that are not assigned to any vault, and therefore unencumbered.
 
     // ---- Vault composition----
     // An user can own one or more Vaults, each one with a bytes12 identifier so that we can pack a singly linked list and a reverse search in a bytes32
@@ -29,7 +30,7 @@ contract Vat {
  
     mapping (bytes12 => bytes32)                    series             // Each vault is related to only one series, which also determines the underlying. If there is any other data that is set up on initialization, we can pack it with the series.
     mapping (bytes12 => bytes32)                    collaterals        // Collaterals are identified by just 6 bytes, then in 32 bytes (one SSTORE) we can have an array of 5 collateral types to allow multi-collateral vaults. 
-    mapping (bytes12 => mapping(bytes6 => uint128)) assets             // The collateral held in a vault can be on a uint128 for each type. With packing we can use only one SSTORE to modify both the debt and the first collateral balance.
+    mapping (bytes12 => mapping(bytes6 => uint128)) assets             // assets[vault][collateral]       The collateral held in a vault can be on a uint128 for each type. With packing we can use only one SSTORE to modify both the debt and the first collateral balance.
     mapping (bytes12 => uint128)                    debt
 
     // ---- Vault management ----
@@ -74,14 +75,32 @@ contract Vat {
     // ---- Accounting ----
 
     // Return the vault debt in underlying terms
-    function level(bytes12 vault) view returns (int128 uart)
+    function dues(bytes12 vault) view returns (uint128 uart) {
+        IFYToken fyToken = series[vault];                                 // 1 LOOKUP + SLOAD
+        if (fyToken.isMature()) {                                         // 1 CALL + SLOAD
+            uint256 debt_ = debt[vault]                                   // 1 LOOKUP + SLOAD
+            for each collateral {                                         // * C
+                IOracle oracle = oracles[underlying][collateral];         // 2 LOOKUP + SLOAD
+                uart += debt_ * oracle.accrual(fyToken.maturity());       // 2 CALL + 3 SLOAD | The accrual would be positive for `rate` equivalents, negative for `chi` equivalents.
+            }
+        } else {
+            uart = debt[vault];                                           // 1 LOOKUP + SLOAD
+        }
+    }
 
-    // Return the vault collateral in underlying terms
-    function value(bytes12 vault) view returns (int128 uink)
+    // Return the capacity of the vault to borrow underlying based on the collaterals held
+    function value(bytes12 vault) view returns (uint128 uart) {
+        for each collateral {                                             // * C
+            IOracle oracle = oracles[underlying][collateral];             // 2 LOOKUP + SLOAD
+            uart += assets[vault][collateral] * oracle.spot();            // 2 LOOKUP + SLOAD + CALL + SLOAD | Divided by collateralization ratio
+        }
+    }
 
-    // Return the collateralization of a vault, in terms of debt that can still be acquired
-    // 2 SLOAD, for collateral types array and debt, 1 SLOAD + 1 STATICCALL per existing collateral for balance and rate
-    function left(bytes12 vault) view returns (int128 dart)
+    // Return the collateralization level of a vault. It will be negative if undercollateralized.
+    // This can be optimized so that oracle.accrual and oracle.spot are retrieved in a single call.
+    function level(bytes12 vault) view returns (int128 uart) {
+        return value(vault) - dues(vault);                                // 1 CALL + 2 LOOKUP + 3 SLOAD + C * (2 CALL + 2 LOOKUP + 4 SLOAD) (maybe optimize to almost half that)
+    }
 
     // ---- Liquidations ----
     // Each liquidation engine can:
