@@ -43,7 +43,7 @@ contract FYToken is Orchestrated()  {
             "FYToken: fyToken is not mature"
         );
         int256 _accrual = oracle.accrual(maturity);
-        uint256 redeemed = _accrual > 0 ? amount * _accrual : amount; // If accrual is positive the collateral used accrued value, which we honour.
+        uint256 redeemed = _accrual > 0 ? amount * _accrual : amount; // If accrual is positive the collateral used accrued value, which we honour. If the accrual is negative we ignore it.
         _burn(from, amount);
         treasury.pull(to, amount);
         emit Redeemed(from, to, amount);

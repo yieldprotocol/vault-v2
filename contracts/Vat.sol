@@ -102,7 +102,7 @@ contract Vat {
         IFYToken fyToken = _series.fyToken;
         if (block.timestamp >= maturity) {
             IOracle oracle = underlyingOracles[underlying];               // 1 SLOAD
-            uart = balances[vault].debt * oracle.accrual(maturity);       // 1 Oracle Call | The accrual would be positive for `rate` equivalents, negative for `chi` equivalents.
+            uart = balances[vault].debt * -oracle.accrual(maturity);      // 1 Oracle Call | The accrual would be negative for `rate` equivalents, positive for `chi` equivalents.
         } else {
             uart = balances[vault].debt;                                  // 1 SLOAD
         }

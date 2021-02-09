@@ -32,6 +32,7 @@ contract Oracle {
         return _value;
     }
 
+    // Return negative values for `rate`, positives for `chi`
     function accrual(uint256 timestamp)
         public view returns(uint256)
     {
