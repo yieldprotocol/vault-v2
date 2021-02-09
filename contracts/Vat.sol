@@ -20,8 +20,9 @@ contract Vat {
     function addSeries(bytes32 series, IERC20 underlying, IFYToken fyToken)
     function addOracle(IERC20 underlying, IERC20 collateral, IOracle oracle)
 
-    mapping (bytes6 => address)                     underlyingOracles  // Return the address of the accruals oracle for the underlying
-    mapping (bytes6 => mapping(bytes6 => address))  spotOracles        // [underlying][collateral] Return the address of the spot oracle
+    mapping (bytes6 => address)                     chiOracles         // Chi accruals oracle for the underlying
+    mapping (bytes6 => address)                     rateOracles        // Rate accruals oracle for the underlying
+    mapping (bytes6 => mapping(bytes6 => address))  spotOracles        // [underlying][collateral] Spot oracles
     mapping (address => mapping(bytes6 => uint128)) safe               // safe[user][collateral] The `safe` of each user contains assets (including fyDai) that are not assigned to any vault, and therefore unencumbered.
 
     // ---- Vault ordering ----
@@ -101,8 +102,8 @@ contract Vat {
         uint32 maturity = series[vault].maturity;                         // 1 SLOAD
         IFYToken fyToken = _series.fyToken;
         if (block.timestamp >= maturity) {
-            IOracle oracle = underlyingOracles[underlying];               // 1 SLOAD
-            uart = balances[vault].debt * -oracle.accrual(maturity);      // 1 Oracle Call | The accrual would be negative for `rate` equivalents, positive for `chi` equivalents.
+            IOracle oracle = rateOracles[underlying];                     // 1 SLOAD
+            uart = balances[vault].debt * oracle.accrual(maturity);       // 1 Oracle Call
         } else {
             uart = balances[vault].debt;                                  // 1 SLOAD
         }

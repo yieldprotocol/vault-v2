@@ -3,18 +3,14 @@ pragma solidity ^0.8.0;
 
 
 contract Oracle {
-
     address immutable public oracle; // Real oracle
-
     uint256 public historical; // Recorded historical values
     
-    constructor(
-        address oracle_
-    ) public {
+    constructor(address oracle_) public {
         oracle = oracle_;
     }
 
-    function value()
+    function spot()
         public view returns (uint256)
     {
         // return the spot price or accumulator in the format we use
@@ -26,13 +22,12 @@ contract Oracle {
     {
         require (block.timestamp >= timestamp, "Oracle: Too early");
         require (historical[timestamp] == 0, "Oracle: Already recorded");
-        uint256 _value = value();
-        historical[timestamp] = _value;
-        emit Recorded(timestamp, _value);
-        return _value;
+        uint256 _spot = spot();
+        historical[timestamp] = _spot;
+        emit Recorded(timestamp, _spot);
+        return _spot;
     }
 
-    // Return negative values for `rate`, positives for `chi`
     function accrual(uint256 timestamp)
         public view returns(uint256)
     {
