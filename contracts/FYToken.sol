@@ -36,7 +36,6 @@ contract FYToken is Orchestrated()  {
     // Redeem can only be called by `Vat` which needs to check all the collaterals in the respective vault and work out the redeemed amount from the accruals.
     function redeem(uint256 amount)
         public
-        onlyOrchestrated("FYToken: Not authorized")
         returns (uint256)
     {
         require(

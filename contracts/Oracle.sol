@@ -1,19 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "./helpers/Orchestrated.sol";
 
+contract Oracle {
 
-contract Oracle is Orchestrated  {
+    address immutable public oracle; // Real oracle
 
-    struct OracleRead {
-        uint256 spot;
-        uint256 accrual;
-    }
-
-    address immutable public oracle; // Real oracle, maybe separate ones for `spot` and `rate`
-
-    uint256 public historical; // Recorded historical prices
+    uint256 public historical; // Recorded historical values
     
     constructor(
         address oracle_
@@ -21,41 +14,28 @@ contract Oracle is Orchestrated  {
         oracle = oracle_;
     }
 
-    function spot()
+    function value()
         public view returns (uint256)
     {
-        // return the spot price in the format we use
-    }
-
-    function rate()
-        public view returns (uint256)
-    {
-        // return the rate acummulator in the format we use
+        // return the spot price or accumulator in the format we use
     }
 
     function record(uint256 timestamp)
         public
-        onlyOrchestrated("Oracle: Not authorized")
         returns (uint256)
     {
         require (block.timestamp >= timestamp, "Oracle: Too early");
         require (historical[timestamp] == 0, "Oracle: Already recorded");
-        uint256 _rate = rate();
-        historical[timestamp] = _rate;
-        emit Recorded(timestamp, _rate);
-        return _rate;
+        uint256 _value = value();
+        historical[timestamp] = _value;
+        emit Recorded(timestamp, _value);
+        return _value;
     }
 
-    function accrual(uint256 maturity)
+    function accrual(uint256 timestamp)
         public view returns(uint256)
     {
-        require(historical[maturity] > 0, "Oracle: Not available");
-        return rate() / historical[maturity];
-    }
-
-    function read(uint256 maturity)
-        public view returns(OracleRead)
-    {
-        return OracleRead(spot(), accrual(maturity));   
+        require(historical[timestamp] > 0, "Oracle: Not available");
+        return value() / historical[timestamp];
     }
 }
