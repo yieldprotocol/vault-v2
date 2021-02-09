@@ -23,24 +23,46 @@ contract Vat {
     mapping (bytes6 => mapping(bytes6 => address))  oracles            // oracles[underlying][collateral] Return the address of the oracle and whether the oracle has an accrual value on top of the spot.
     mapping (address => mapping(bytes6 => uint128)) safe               // safe[user][collateral]          The `safe` of each user contains assets (including fyDai) that are not assigned to any vault, and therefore unencumbered.
 
-    // ---- Vault composition----
+
+    // ---- Vault ordering ----
+    struct Vault {
+        address owner;
+        bytes12 next;
+    }
+
+    mapping (address => bytes12)                    first              // Pointer to the first vault in the user's list. We have 20 bytes here that we can still use.
+    mapping (bytes12 => Vault)                      vaults             // With a vault identifier we can get both the owner and the next in the list. When giving a vault both are changed with 1 SSTORE.
+
+    // ---- Vault composition ----
+    struct Collaterals {
+        bytes6[5] ids;
+        bytes2 length;
+    }
+
+    struct Balances {
+        uint128 debt;
+        uint128[5] assets;
+    }
+
+    struct Series {
+        address fyToken;
+        uint32  maturity;
+        // bytes8 free;
+    }
+
     // An user can own one or more Vaults, each one with a bytes12 identifier so that we can pack a singly linked list and a reverse search in a bytes32
-    mapping (address => bytes12)                    first              // Each user points to the list head. We have 20 bytes here that we can still use.
-    mapping (bytes12 => bytes32)                    next               // With a vault identifier we can get both the owner and the next in the list. When giving a vault both are changed with 1 SSTORE.
- 
-    mapping (bytes12 => bytes32)                    series             // Each vault is related to only one series, which also determines the underlying. If there is any other data that is set up on initialization, we can pack it with the series.
-    mapping (bytes12 => bytes32)                    collaterals        // Collaterals are identified by just 6 bytes, then in 32 bytes (one SSTORE) we can have an array of 5 collateral types to allow multi-collateral vaults. 
-    mapping (bytes12 => mapping(bytes6 => uint128)) assets             // assets[vault][collateral]       The collateral held in a vault can be on a uint128 for each type. With packing we can use only one SSTORE to modify both the debt and the first collateral balance.
-    mapping (bytes12 => uint128)                    debt
+    mapping (bytes12 => Series)                     series             // Each vault is related to only one series, which also determines the underlying. If there is any other data that is set up on initialization, we can pack it with the series.
+    mapping (bytes12 => Collaterals)                collaterals        // Collaterals are identified by just 6 bytes, then in 32 bytes (one SSTORE) we can have an array of 5 collateral types to allow multi-collateral vaults. 
+    mapping (bytes12 => Balances)                   balances           // Both debt and assets. The debt and the amount held for the first collateral share a word.
 
     // ---- Vault management ----
     // Create a new vault, linked to a series (and therefore underlying) and up to 6 collateral types
     // 2 SSTORE for series and up to 6 collateral types, plus 2 SSTORE for vault ownership.
-    function build(bytes32 series, bytes32 collaterals)
+    function build(bytes12 series, bytes32 collaterals)
 
     // Change a vault series and/or collateral types. 2 SSTORE.
     // We can change the series if there is no debt, or collaterals types if there is no collateral
-    function tweak(bytes12 vault, bytes32 series, bytes32 collaterals)
+    function tweak(bytes12 vault, bytes12 series, bytes32 collaterals)
 
     // Add collateral to vault. 2.5 or 3.5 SSTORE per collateral type, rounding up.
     // Remove collateral from vault. 2.5 or 3.5 SSTORE per collateral type, rounding up.
@@ -76,12 +98,13 @@ contract Vat {
 
     // Return the vault debt in underlying terms
     function dues(bytes12 vault) view returns (uint128 uart) {
-        IFYToken fyToken = series[vault];                                 // 1 SLOAD
-        if (fyToken.isMature()) {                                         // 1 CALL + 1 SLOAD
+        uint32 maturity = series[vault].maturity;                         // 1 SLOAD
+        IFYToken fyToken = _series.fyToken;
+        if (block.timestamp >= maturity) {
             uint256 debt_ = debt[vault]                                   // 1 SLOAD
             for each collateral {                                         // * C
                 IOracle oracle = oracles[underlying][collateral];         // 1 SLOAD
-                uart += debt_ * proportion * oracle.accrual(fyToken.maturity());       // 2 CALL + 3 SLOAD | The accrual would be positive for `rate` equivalents, negative for `chi` equivalents.
+                uart += debt_ * proportion * oracle.accrual(maturity);    // 1 Oracle Call | The accrual would be positive for `rate` equivalents, negative for `chi` equivalents.
             }
         } else {
             uart = debt[vault];                                           // 1 SLOAD
@@ -99,30 +122,28 @@ contract Vat {
     // Return the collateralization level of a vault. It will be negative if undercollateralized.
     // This has been optimized so that oracle.accrual and oracle.spot are retrieved in a single call. It's the same as `value(vault) - dues(vault).
     function level(bytes12 vault) view returns (int128) {
-        uint256 maturity = fyToken.maturity();
+        uint32 maturity = series[vault].maturity;                   // 1 SLOAD
+        Collaterals memory _collaterals = collaterals[vault];       // 1 SLOAD
+        Balances memory _balances = balances[vault];                // 1 SLOAD
+        OracleRead[_collaterals.length] memory rates;               // `spot` and `accrual(maturity)` from each underlying/collateral oracle
+        uint256[_collaterals.length] assetValues;                   // Value of each collateral asset in the vault, normalized to underlying
         uint256 vaultDues;                                          // Vault debt normalized to underlying
         uint256 vaultValue;                                         // Vault value normalized to underlying
-        bytes6[] memory collaterals = unpack(collaterals[vault]);
-        uint256[collaterals.length] assetValues;                    // Value of each collateral asset in the vault, normalized to underlying
-        bytes32[collaterals.length] rates;                          // `spot` and `accrual(maturity)` from each underlying/collateral oracle
 
-        IFYToken fyToken = series[vault];
         for each collateral {
-            IOracle oracle = oracles[underlying][collateral];
-            rates[collateral] = oracle.read(maturity);                            // Get both `spot` and `accrual`
-            assetValues[collateral] = assets[vault][collateral] * rates[collateral].spot();
+            IOracle oracle = oracles[underlying][collateral];       // 1 SLOAD
+            rates[collateral] = oracle.read(maturity);              // 1 Oracle Call | Get both `spot` and `accrual`
+            assetValues[collateral] = _balances.collaterals[collateral] * rates[collateral].spot();
             vaultValue += assetValues[collateral]
         }
-        if (fyToken.isMature()) {
+        if (block.timestamp >= maturity) {
             for each collateral {
                 uint256 proportion = assetValues[collateral] / vaultValue;
-                vaultDues += debt[vault] * proportion * rates[collateral].accrual();  // The accrual would be positive for `rate` equivalents, negative for `chi` equivalents.
+                vaultDues += _balances.debt * proportion * rates[collateral].accrual();  // The accrual would be positive for `rate` equivalents, negative for `chi` equivalents.
             }
-            
         } else {
-            vaultDues = debt[vault];
+            vaultDues = _balances.debt;
         }
-        
 
         return vaultValue - vaultDues;
     }
