@@ -33,11 +33,17 @@ contract Oracle is Orchestrated  {
         // return the rate acummulator in the format we use
     }
 
-    function record(uint256 maturity)
+    function record(uint256 timestamp)
         public
         onlyOrchestrated("Oracle: Not authorized")
+        returns (uint256)
     {
-        if (block.timestamp >= maturity && historical[maturity] == 0) historical[maturity] = rate();
+        require (block.timestamp >= timestamp, "Oracle: Too early");
+        require (historical[timestamp] == 0, "Oracle: Already recorded");
+        uint256 _rate = rate();
+        historical[timestamp] = _rate;
+        emit Recorded(timestamp, _rate);
+        return _rate;
     }
 
     function accrual(uint256 maturity)
