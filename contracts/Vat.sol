@@ -97,14 +97,14 @@ contract Vat {
     }
 
     // Return the collateralization level of a vault. It will be negative if undercollateralized.
-    // This can be optimized so that oracle.accrual and oracle.spot are retrieved in a single call.
-    function level(bytes12 vault) view returns (int128 uart) {
+    // This has been optimized so that oracle.accrual and oracle.spot are retrieved in a single call. It's the same as `value(vault) - dues(vault).
+    function level(bytes12 vault) view returns (int128) {
         uint256 maturity = fyToken.maturity();
-        uint256 vaultDues;
-        uint256 vaultValue;
+        uint256 vaultDues;                                          // Vault debt normalized to underlying
+        uint256 vaultValue;                                         // Vault value normalized to underlying
         bytes6[] memory collaterals = unpack(collaterals[vault]);
-        uint256[collaterals.length] assetValues;
-        bytes32[collaterals.length] rates;
+        uint256[collaterals.length] assetValues;                    // Value of each collateral asset in the vault, normalized to underlying
+        bytes32[collaterals.length] rates;                          // `spot` and `accrual(maturity)` from each underlying/collateral oracle
 
         IFYToken fyToken = series[vault];
         for each collateral {
@@ -113,10 +113,16 @@ contract Vat {
             assetValues[collateral] = assets[vault][collateral] * rates[collateral].spot();
             vaultValue += assetValues[collateral]
         }
-        for each collateral {
-            uint256 proportion = assetValues[collateral] / vaultValue;
-            vaultDues += debt[vault] * proportion * rates[collateral].accrual();  // The accrual would be positive for `rate` equivalents, negative for `chi` equivalents.
+        if (fyToken.isMature()) {
+            for each collateral {
+                uint256 proportion = assetValues[collateral] / vaultValue;
+                vaultDues += debt[vault] * proportion * rates[collateral].accrual();  // The accrual would be positive for `rate` equivalents, negative for `chi` equivalents.
+            }
+            
+        } else {
+            vaultDues = debt[vault];
         }
+        
 
         return vaultValue - vaultDues;
     }
