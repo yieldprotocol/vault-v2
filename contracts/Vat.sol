@@ -102,42 +102,24 @@ contract Vat {
         IFYToken fyToken = _series.fyToken;
         if (block.timestamp >= maturity) {
             IOracle oracle = underlyingOracles[underlying];               // 1 SLOAD
-            uart = debt[vault] * oracle.accrual(maturity);                // 1 Oracle Call | The accrual would be positive for `rate` equivalents, negative for `chi` equivalents.
+            uart = balances[vault].debt * oracle.accrual(maturity);       // 1 Oracle Call | The accrual would be positive for `rate` equivalents, negative for `chi` equivalents.
         } else {
-            uart = debt[vault];                                           // 1 SLOAD
+            uart = balances[vault].debt;                                  // 1 SLOAD
         }
     }
 
     // Return the capacity of the vault to borrow underlying based on the collaterals held
     function value(bytes12 vault) view returns (uint128 uart) {
+        Collaterals memory _collaterals = collaterals[vault];             // 1 SLOAD
+        Balances memory _balances = balances[vault];                      // 1 SLOAD
         for each collateral {                                             // * C
             IOracle oracle = spotOracles[underlying][collateral];         // 1 SLOAD
-            uart += assets[vault][collateral] * oracle.spot();            // 1 SLOAD + 1 CALL + 1 SLOAD | Divided by collateralization ratio
+            uart += _balances[collateral] * oracle.spot();                // 1 Oracle Call | Divided by collateralization ratio
         }
     }
 
     // Return the collateralization level of a vault. It will be negative if undercollateralized.
-    // This has been optimized so that oracle.accrual and oracle.spot are retrieved in a single call. It's the same as `value(vault) - dues(vault).
     function level(bytes12 vault) view returns (int128) {
-        uint32 maturity = series[vault].maturity;                         // 1 SLOAD
-        Collaterals memory _collaterals = collaterals[vault];             // 1 SLOAD
-        Balances memory _balances = balances[vault];                      // 1 SLOAD
-        uint256[_collaterals.length] assetValues;                         // Value of each collateral asset in the vault, normalized to underlying
-        uint256 vaultDues;                                                // Vault debt normalized to underlying
-        uint256 vaultValue;                                               // Vault value normalized to underlying
-
-        for each collateral {
-            IOracle oracle = spotOracles[underlying][collateral];         // 1 SLOAD
-            assetValues[collateral] = _balances.collaterals[collateral] * oracle.spot(); // 1 Oracle Call
-            vaultValue += assetValues[collateral]
-        }
-        if (block.timestamp >= maturity) {
-            IOracle oracle = underlyingOracles[underlying];               // 1 SLOAD
-            vaultDues = _balances.debt * oracle.accrual(maturity);        // 1 Oracle Call | The accrual would be positive for `rate` equivalents, negative for `chi` equivalents.
-        } else {
-            vaultDues = _balances.debt;
-        }
-
         return vaultValue - vaultDues;
     }
 
