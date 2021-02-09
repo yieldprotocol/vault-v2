@@ -120,7 +120,7 @@ contract Vat {
 
     // Return the collateralization level of a vault. It will be negative if undercollateralized.
     function level(bytes12 vault) view returns (int128) {
-        return vaultValue - vaultDues;
+        return value(vault) - dues(vault);
     }
 
     // ---- Liquidations ----
