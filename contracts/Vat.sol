@@ -105,13 +105,8 @@ contract Vat {
         Balances memory _balances = balances[vault];                                  // 1 SLOAD
         bool check;
         for each collateral {
-            if (inks[collateral] > 0) {
-                token.transferFrom(msg.sender, joins[collateral], inks[collateral]);  // C * 2/3 SSTORE. Should we let the Join update the balances instead?
-            } else {
-                if (!check) check = true;
-                token.transferFrom(joins[collateral], msg.sender, -inks[collateral]); // C * 2/3 SSTORE. Should we let the Join update the balances instead?
-            }
-            _balances.assets[collateral] += inks[collateral];
+            _balances.assets[collateral] += joins[collateral].join(inks[collateral]); // Cost of `join`. `join` with a negative value means `exit`
+            if (!check && inks[collateral] < 0) check = true;
         }
         if (check) require(level(vault) >= 0, "Undercollateralized");                 // Cost of `level`
         balances[id] = _balances;                                                     // 1 SSTORE
@@ -170,15 +165,9 @@ contract Vat {
         Balances memory _balances = balances[vault];                                  // 1 SLOAD
         bool check;
         for each collateral {
-            if (inks[collateral] > 0) {
-                token.transferFrom(msg.sender, joins[collateral], inks[collateral]);  // C * 2/3 SSTORE. Should we let the Join update the balances instead?
-            } else {
-                if (!check) check = true;
-                token.transferFrom(joins[collateral], msg.sender, -inks[collateral]); // C * 2/3 SSTORE. Should we let the Join update the balances instead?
-            }
-            _balances.assets[collateral] += inks[collateral];
+            _balances.assets[collateral] += joins[collateral].join(inks[collateral]); // Cost of `join`. `join` with a negative value means `exit`
+            if (!check && inks[collateral] < 0) check = true;
         }
-
         _balances.debt += art;
         balances[id] = _balances;                                                     // 1 SSTORE   
 
