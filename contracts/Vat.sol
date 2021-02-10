@@ -91,7 +91,10 @@ contract Vat {
 
     // Add collateral to vault. 2.5 or 3.5 SSTORE per collateral type, rounding up.
     // Remove collateral from vault. 2.5 or 3.5 SSTORE per collateral type, rounding up.
-    function slip(bytes12 vault, bytes32 collaterals, int128[] memory inks) {         // Remember that bytes32 collaterals is an array of up to 6 collateral types.
+    function slip(bytes12 vault, bytes32 collaterals, int128[] memory inks)
+        public returns (bytes32)
+    {         // Remember that bytes32 collaterals is an array of up to 6 collateral types.
+        require (validVault(vault), "Invalid vault");                                 // 1 SLOAD
         // The next 5 lines can be packed into an internal function
         require (validCollaterals(vault, collaterals), "Invalid collaterals");        // C+1 SLOAD.
         Collaterals memory _collaterals = ({
@@ -100,14 +103,20 @@ contract Vat {
         });
 
         Balances memory _balances = balances[vault];                                  // 1 SLOAD
+        bool check;
         for each collateral {
-            if (inks[collateral] > 0)
+            if (inks[collateral] > 0) {
                 token.transferFrom(msg.sender, joins[collateral], inks[collateral]);  // C * 2/3 SSTORE. Should we let the Join update the balances instead?
-            else
+            } else {
+                if (!check) check = true;
                 token.transferFrom(joins[collateral], msg.sender, -inks[collateral]); // C * 2/3 SSTORE. Should we let the Join update the balances instead?
+            }
             _balances.assets[collateral] += inks[collateral];
         }
+        if (check) require(level(vault) >= 0, "Undercollateralized");                 // Cost of `level`
         balances[id] = _balances;                                                     // 1 SSTORE
+
+        return bytes32(_balances);
     }
 
     // Move collateral from one vault to another (like when rolling a series). 1 SSTORE for each 2 collateral types.
@@ -144,7 +153,7 @@ contract Vat {
         IFYToken fyToken = _series.fyToken;
         if (block.timestamp >= maturity) {
             IOracle oracle = rateOracles[underlying];                     // 1 SLOAD
-            uart = balances[vault].debt * oracle.accrual(maturity);       // 1 Oracle Call
+            uart = balances[vault].debt * oracle.accrual(maturity);       // 1 SLOAD + 1 Oracle Call
         } else {
             uart = balances[vault].debt;                                  // 1 SLOAD
         }
@@ -161,7 +170,7 @@ contract Vat {
     }
 
     // Return the collateralization level of a vault. It will be negative if undercollateralized.
-    function level(bytes12 vault) view returns (int128) {
+    function level(bytes12 vault) view returns (int128) {                 // Cost of `value` + `dues`
         return value(vault) - dues(vault);
     }
 
