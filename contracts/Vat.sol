@@ -157,6 +157,43 @@ contract Vat {
     // Repay to vault and remove collateral, pull borrowed asset from and push collaterals to user
     // Same cost as `slip` but with an extra cheap collateral. As low as 5 SSTORE for posting WETH and borrowing fyDai
     function frob(bytes12 vault, bytes32 collaterals,  int128[] memory inks, int128 art)
+        public returns (bytes32[3])
+    {
+        require (validVault(vault), "Invalid vault");                                 // 1 SLOAD
+        // The next 5 lines can be packed into an internal function
+        require (validCollaterals(vault, collaterals), "Invalid collaterals");        // C+1 SLOAD.
+        Collaterals memory _collaterals = ({
+            ids: collaterals.slice(0, 30);
+            length: collaterals.slice(30, 32);
+        });
+
+        Balances memory _balances = balances[vault];                                  // 1 SLOAD
+        bool check;
+        for each collateral {
+            if (inks[collateral] > 0) {
+                token.transferFrom(msg.sender, joins[collateral], inks[collateral]);  // C * 2/3 SSTORE. Should we let the Join update the balances instead?
+            } else {
+                if (!check) check = true;
+                token.transferFrom(joins[collateral], msg.sender, -inks[collateral]); // C * 2/3 SSTORE. Should we let the Join update the balances instead?
+            }
+            _balances.assets[collateral] += inks[collateral];
+        }
+
+        _balances.debt += art;
+        balances[id] = _balances;                                                     // 1 SSTORE   
+
+        Series memory _series = series[vault];                                        // 1 SLOAD
+        if (art > 0) {
+            if (!check) check = true;
+            require(block.timestamp <= _series.maturity, "Mature");
+            IFYToken(_series.fyToken).mint(msg.sender, art);                          // 1 CALL(40) + fyToken.mint
+        } else {
+            IFYToken(_series.fyToken).burn(msg.sender, art);                          // 1 CALL(40) + fyToken.burn
+        }
+        if (check) require(level(vault) >= 0, "Undercollateralized");                 // Cost of `level`
+
+        return _debt + art;
+    }
     
     // Repay vault debt using underlying token, pulled from user. Collaterals are pushed to user. 
     function close(bytes12 vault, bytes32 collaterals, uint128[] memory inks, uint128 art) // Same cost as `frob`
