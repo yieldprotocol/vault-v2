@@ -135,7 +135,23 @@ contract Vat {
 
     // Borrow from vault and push borrowed asset to user 
     // Repay to vault and pull borrowed asset from user 
-    function draw(bytes12 vault, int128 art). // 3 SSTORE.
+    function draw(bytes12 vault, int128 art) 
+        public returns (uint128)
+    {
+        require (validVault(vault), "Invalid vault");                                 // 1 SLOAD
+        Series memory _series = series[vault];                                        // 1 SLOAD
+        uint128 _debt = balances[vault].debt                                          // 1 SLOAD
+        balances[vault].debt = _debt + art;                                           // 1 SSTORE
+
+        if (art > 0) {
+            require(level(vault) >= 0, "Undercollateralized");                        // Cost of `level`
+            require(block.timestamp <= _series.maturity, "Mature");
+            IFYToken(_series.fyToken).mint(msg.sender, art);                          // 1 CALL(40) + fyToken.mint
+        } else {
+            IFYToken(_series.fyToken).burn(msg.sender, art);                          // 1 CALL(40) + fyToken.burn
+        }
+        return _debt + art;
+    }
 
     // Add collateral and borrow from vault, pull collaterals from and push borrowed asset to user
     // Repay to vault and remove collateral, pull borrowed asset from and push collaterals to user
