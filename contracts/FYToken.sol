@@ -33,7 +33,6 @@ contract FYToken is Orchestrated()  {
         oracle.record(maturity); // The oracle checks the timestamp and that it hasn't been recorded yet.        
     }
 
-    // Redeem can only be called by `Vat` which needs to check all the collaterals in the respective vault and work out the redeemed amount from the accruals.
     function redeem(uint256 amount)
         public
         returns (uint256)
