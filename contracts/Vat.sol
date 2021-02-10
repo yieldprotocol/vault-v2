@@ -91,7 +91,24 @@ contract Vat {
 
     // Add collateral to vault. 2.5 or 3.5 SSTORE per collateral type, rounding up.
     // Remove collateral from vault. 2.5 or 3.5 SSTORE per collateral type, rounding up.
-    function slip(bytes12 vault, bytes32 collaterals, int128[] memory inks) // Remember that bytes32 collaterals is an array of up to 6 collateral types.
+    function slip(bytes12 vault, bytes32 collaterals, int128[] memory inks) {         // Remember that bytes32 collaterals is an array of up to 6 collateral types.
+        // The next 5 lines can be packed into an internal function
+        require (validCollaterals(vault, collaterals), "Invalid collaterals");        // C+1 SLOAD.
+        Collaterals memory _collaterals = ({
+            ids: collaterals.slice(0, 30);
+            length: collaterals.slice(30, 32);
+        });
+
+        Balances memory _balances = balances[vault];                                  // 1 SLOAD
+        for each collateral {
+            if (inks[collateral] > 0)
+                token.transferFrom(msg.sender, joins[collateral], inks[collateral]);  // C * 2/3 SSTORE. Should we let the Join update the balances instead?
+            else
+                token.transferFrom(joins[collateral], msg.sender, -inks[collateral]); // C * 2/3 SSTORE. Should we let the Join update the balances instead?
+            _balances.assets[collateral] += inks[collateral];
+        }
+        balances[id] = _balances;                                                     // 1 SSTORE
+    }
 
     // Move collateral from one vault to another (like when rolling a series). 1 SSTORE for each 2 collateral types.
     function flux(bytes12 from, bytes12 to, bytes32 collaterals, uint128[] memory inks)
