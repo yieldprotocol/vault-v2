@@ -32,6 +32,6 @@ contract Oracle {
         public view returns(uint256)
     {
         require(historical[timestamp] > 0, "Oracle: Not available");
-        return value() / historical[timestamp];
+        return spot() / historical[timestamp];
     }
 }
