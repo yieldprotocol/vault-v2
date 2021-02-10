@@ -12,12 +12,14 @@ contract FYToken is Orchestrated()  {
 
     uint256 constant internal MAX_TIME_TO_MATURITY = 126144000; // seconds in four years
 
-    IOracle public oracle;
     ITreasury public treasury;
+    IERC20 public underlying;
+    IOracle public oracle;
     uint256 public maturity;
 
     constructor(
         ITreasury treasury_,
+        IERC20 underlying_,
         IOracle oracle_, // Underlying vs its interest-bearing version
         uint256 maturity_,
         string memory name,
@@ -25,6 +27,7 @@ contract FYToken is Orchestrated()  {
     ) public {
         require(maturity_ > block.timestamp && maturity_ < block.timestamp + MAX_TIME_TO_MATURITY, "FYToken: Invalid maturity");
         treasury = treasury_;
+        underlying = underlying_;
         oracle = oracle_;
         maturity = maturity_;
     }
@@ -41,9 +44,12 @@ contract FYToken is Orchestrated()  {
             block.timestamp >= maturity,
             "FYToken: fyToken is not mature"
         );
-        uint256 redeemed = amount * oracle.accrual(maturity);
         _burn(from, amount);
+
+        // consider moving these two lines to Vat. Credit the user's account with the redemption value, then they can remove via the join.
+        uint256 redeemed = amount * oracle.accrual(maturity);
         treasury.pull(to, amount);
+        
         emit Redeemed(from, to, amount);
         return amount;
     }

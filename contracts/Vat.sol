@@ -25,10 +25,20 @@ contract Vat {
     mapping (bytes6 => mapping(bytes6 => address))  spotOracles        // [underlying][collateral] Spot oracles
     mapping (address => mapping(bytes6 => uint128)) safe               // safe[user][collateral] The `safe` of each user contains assets (including fyDai) that are not assigned to any vault, and therefore unencumbered.
 
+    struct Series {
+        address fyToken;
+        uint32  maturity;
+        // bytes8 free;
+    }
+
+    mapping (bytes12 => Series)                     series             // Series available in Vat. We can possibly use a bytes6 (3e14 possible series).
+    mapping (bytes6 => bool)                        collaterals        // Collaterals available in Vat. A whole word to pack in.
+
     // ---- Vault ordering ----
     struct Vault {
         address owner;
         bytes12 next;
+        bytes12 series;                                                // address to pack next to it. Each vault is related to only one series, which also determines the underlying.
     }
 
     mapping (address => bytes12)                    first              // Pointer to the first vault in the user's list. We have 20 bytes here that we can still use.
@@ -45,21 +55,35 @@ contract Vat {
         uint128[5] assets;
     }
 
-    struct Series {
-        address fyToken;
-        uint32  maturity;
-        // bytes8 free;
-    }
-
     // An user can own one or more Vaults, each one with a bytes12 identifier so that we can pack a singly linked list and a reverse search in a bytes32
-    mapping (bytes12 => Series)                     series             // Each vault is related to only one series, which also determines the underlying. If there is any other data that is set up on initialization, we can pack it with the series.
-    mapping (bytes12 => Collaterals)                collaterals        // Collaterals are identified by just 6 bytes, then in 32 bytes (one SSTORE) we can have an array of 5 collateral types to allow multi-collateral vaults. 
-    mapping (bytes12 => Balances)                   balances           // Both debt and assets. The debt and the amount held for the first collateral share a word.
+    mapping (bytes12 => Collaterals)                vaultCollaterals   // Collaterals are identified by just 6 bytes, then in 32 bytes (one SSTORE) we can have an array of 5 collateral types to allow multi-collateral vaults. 
+    mapping (bytes12 => Balances)                   vaultBalances      // Both debt and assets. The debt and the amount held for the first collateral share a word.
 
     // ---- Vault management ----
     // Create a new vault, linked to a series (and therefore underlying) and up to 6 collateral types
     // 2 SSTORE for series and up to 6 collateral types, plus 2 SSTORE for vault ownership.
     function build(bytes12 series, bytes32 collaterals)
+        public
+        returns (bytes12 id)
+    {
+        require (validSeries(series), "Invalid series");               // 1 SLOAD.
+        bytes12 _first = first[msg.sender];                            // 1 SLOAD. Use the id of the latest vault created by the user as salt.
+        bytes12 id = keccak256(msg.sender + _first)-slice(0, 12);      // Check (vaults[id].owner == address(0)), and increase the salt until a free vault id is found. 1 SLOAD per check.
+        Vault memory vault = ({
+            owner: msg.sender;
+            next: _first;
+            series: series;
+        });
+        first[msg.sender] = id;                                        // 1 SSTORE. We insert the new vaults in the list head.
+        vaults[id] = vault;                                            // 2 SSTORE. We can still store one more address for free.
+
+        require (validCollaterals(collaterals), "Invalid collaterals");// C SLOAD.
+        Collaterals memory _collaterals = ({
+            ids: collaterals.slice(0, 30);
+            length: collaterals.slice(30, 32);
+        });
+        collaterals[id] = _collaterals;                                // 1 SSTORE
+    }
 
     // Change a vault series and/or collateral types. 2 SSTORE.
     // We can change the series if there is no debt, or collaterals types if there is no collateral
