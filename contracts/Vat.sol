@@ -89,8 +89,43 @@ contract Vat {
     // We can change the series if there is no debt, or collaterals types if there is no collateral
     function tweak(bytes12 vault, bytes12 series, bytes32 collaterals)
 
-    // Move collateral from one vault to another (like when rolling a series). 1 SSTORE for each 2 collateral types.
-    function flux(bytes12 from, bytes12 to, bytes32 collaterals, uint128[] memory inks)
+    // Move collateral between vaults.
+    function __flux(bytes12 from, bytes12 to, bytes32 collaterals, uint128[] memory inks)
+        internal
+    {
+        Balances memory _balancesFrom = balances[from];                               // 1 SLOAD
+        Balances memory _balancesTo = balances[to];                                   // 1 SLOAD
+        for each ilk in ilks {
+            _balancesFrom.assets[ilk] -= inks[ilk];
+            _balancesTo.assets[ilk] += inks[ilk];
+        }
+        balances[from] = _balancesFrom;                                               // 1 SSTORE
+        balances[to] = _balancesTo;                                                   // 1 SSTORE
+    }
+
+    // Move collateral between a vault and its owner's safe
+    function __save(bytes12 vault, bytes6[] memory ilks, int128[] memory inks)
+        internal
+    {
+        address _owner = vaults[vault].owner;                                         // 1 SLOAD
+        Balances memory _balances = balances[vault];                                  // 1 SLOAD
+        for each ilk in ilks {
+            _balances.assets[ilk] -= inks[ilk];
+            safe[_owner][ilk] += inks[ilk];                                           // 1 SSTORE
+        }
+        balances[id] = _balances;                                                     // 1 SSTORE
+    }
+
+    // Move collateral between an external account and a safe
+    function __slip(address owner, bytes6[] memory ilks, int128[] memory inks)
+        internal
+    {
+        address _owner = vaults[vault].owner;                                         // 1 SLOAD
+        for each ilk in ilks {
+            joins[ilk].join(inks[ilk]);                                               // Cost of `join`. `join` with a negative value means `exit`
+            safe[_owner][ilk] += inks[ilk];                                           // 1 SSTORE
+        }
+    }
 
     // Move debt from one vault to another (like when rolling a series). 2 SSTORE.
     // Note, it won't be possible if the Vat doesn't know about pools
@@ -113,16 +148,19 @@ contract Vat {
         for each ilk in ilks {
             _balances.assets[ilk] += joins[ilk].join(inks[ilk]);                      // Cost of `join`. `join` with a negative value means `exit`
         }
-        _balances.debt += art;
-        balances[id] = _balances;                                                     // 1 SSTORE   
-
-        Series memory _series = series[vault];                                        // 1 SLOAD
-        if (art > 0) {
-            require(block.timestamp <= _series.maturity, "Mature");
-            IFYToken(_series.fyToken).mint(msg.sender, art);                          // 1 CALL(40) + fyToken.mint
-        } else {
-            IFYToken(_series.fyToken).burn(msg.sender, art);                          // 1 CALL(40) + fyToken.burn
+        
+        if (art != 0) {
+            _balances.debt += art;
+            Series memory _series = series[vault];                                    // 1 SLOAD
+            if (art > 0) {
+                require(block.timestamp <= _series.maturity, "Mature");
+                IFYToken(_series.fyToken).mint(msg.sender, art);                      // 1 CALL(40) + fyToken.mint
+            } else {
+                IFYToken(_series.fyToken).burn(msg.sender, art);                      // 1 CALL(40) + fyToken.burn
+            }
         }
+        balances[id] = _balances;                                                     // 1 SSTORE. Refactor for Checks-Effects-Interactions
+
         return _balances;
     }
     
