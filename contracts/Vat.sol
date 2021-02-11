@@ -15,24 +15,26 @@ contract FYTokenJoin {
 contract Vat {
   
     // ---- Administration ----
-    function addCollateral(bytes6 id, address collateral)
-    function addUnderlying(address underlying)                       
-    function addSeries(bytes32 series, IERC20 underlying, IFYToken fyToken)
-    function addOracle(IERC20 underlying, IERC20 collateral, IOracle oracle)
+    function addIlk(bytes6 id, address ilk)                            // Also known as collateral
+    function addBase(address base)                                     // Also known as underlying
+    function addSeries(bytes32 series, IERC20 base, IFYToken fyToken)
+    function addOracle(IERC20 base, IERC20 ilk, IOracle oracle)
 
     mapping (bytes6 => address)                     chiOracles         // Chi accruals oracle for the underlying
     mapping (bytes6 => address)                     rateOracles        // Rate accruals oracle for the underlying
-    mapping (bytes6 => mapping(bytes6 => address))  spotOracles        // [underlying][collateral] Spot oracles
-    mapping (address => mapping(bytes6 => uint128)) safe               // safe[user][collateral] The `safe` of each user contains assets (including fyDai) that are not assigned to any vault, and therefore unencumbered.
+    mapping (bytes6 => mapping(bytes6 => address))  spotOracles        // [base][ilk] Spot oracles
+    mapping (address => mapping(bytes6 => uint128)) safe               // safe[user][ilk] The `safe` of each user contains assets (including fyDai) that are not assigned to any vault, and therefore unencumbered.
 
     struct Series {
         address fyToken;
         uint32  maturity;
-        // bytes8 free;
+        bytes6  base;                                                  // We might want to make this an address, instead of an identifier
+        // bytes2 free
     }
 
     mapping (bytes12 => Series)                     series             // Series available in Vat. We can possibly use a bytes6 (3e14 possible series).
-    mapping (bytes6 => bool)                        collaterals        // Collaterals available in Vat. A whole word to pack in.
+    mapping (bytes6 => address)                     bases              // Underlyings available in Vat. 12 bytes still free.
+    mapping (bytes6 => address)                     ilks               // Collaterals available in Vat. 12 bytes still free.
 
     // ---- Vault ordering ----
     struct Vault {
@@ -45,7 +47,7 @@ contract Vat {
     mapping (bytes12 => Vault)                      vaults             // With a vault identifier we can get both the owner and the next in the list. When giving a vault both are changed with 1 SSTORE.
 
     // ---- Vault composition ----
-    struct Collaterals {
+    struct Ilks {
         bytes6[5] ids;
         bytes2 length;
     }
@@ -56,13 +58,13 @@ contract Vat {
     }
 
     // An user can own one or more Vaults, each one with a bytes12 identifier so that we can pack a singly linked list and a reverse search in a bytes32
-    mapping (bytes12 => Collaterals)                vaultCollaterals   // Collaterals are identified by just 6 bytes, then in 32 bytes (one SSTORE) we can have an array of 5 collateral types to allow multi-collateral vaults. 
+    mapping (bytes12 => Ilks)                       vaultIlks   // Collaterals are identified by just 6 bytes, then in 32 bytes (one SSTORE) we can have an array of 5 collateral types to allow multi-collateral vaults. 
     mapping (bytes12 => Balances)                   vaultBalances      // Both debt and assets. The debt and the amount held for the first collateral share a word.
 
     // ---- Vault management ----
     // Create a new vault, linked to a series (and therefore underlying) and up to 6 collateral types
     // 2 SSTORE for series and up to 6 collateral types, plus 2 SSTORE for vault ownership.
-    function build(bytes12 series, bytes32 collaterals)
+    function build(bytes12 series, bytes32 ilks)
         public
         returns (bytes12 id)
     {
@@ -77,20 +79,20 @@ contract Vat {
         first[msg.sender] = id;                                        // 1 SSTORE. We insert the new vaults in the list head.
         vaults[id] = vault;                                            // 2 SSTORE. We can still store one more address for free.
 
-        require (validCollaterals(collaterals), "Invalid collaterals");// C SLOAD.
-        Collaterals memory _collaterals = ({
-            ids: collaterals.slice(0, 30);
-            length: collaterals.slice(30, 32);
+        require (validIlks(ilks), "Invalid ilks");// C SLOAD.
+        Ilks memory _ilks = ({
+            ids: ilks.slice(0, 30);
+            length: ilks.slice(30, 32);
         });
-        collaterals[id] = _collaterals;                                // 1 SSTORE
+        ilks[id] = _ilks;                                // 1 SSTORE
     }
 
     // Change a vault series and/or collateral types. 2 SSTORE.
-    // We can change the series if there is no debt, or collaterals types if there is no collateral
-    function tweak(bytes12 vault, bytes12 series, bytes32 collaterals)
+    // We can change the series if there is no debt, or ilks types if there is no collateral
+    function tweak(bytes12 vault, bytes12 series, bytes32 ilks)
 
     // Move collateral between vaults.
-    function __flux(bytes12 from, bytes12 to, bytes32 collaterals, uint128[] memory inks)
+    function __flux(bytes12 from, bytes12 to, bytes32 ilks, uint128[] memory inks)
         internal
     {
         Balances memory _balancesFrom = balances[from];                               // 1 SLOAD
@@ -146,7 +148,8 @@ contract Vat {
     {
         require (validVault(from), "Invalid vault");                                             // 1 SLOAD
         require (validVault(to), "Invalid vault");                                               // 1 SLOAD
-        bytes6[] memory _ilks = unpackIlks(vault, ilks);                                         // 1 SLOAD
+        bytes6[] memory _ilks = unpackIlks(from, ilks);                                          // 1 SLOAD
+        require (validIlks(to, _ilks), "Invalid collaterals");                                   // 1 SLOAD
 
         Balances memory _balancesFrom;
         Balances memory _balancesTo;
@@ -160,8 +163,8 @@ contract Vat {
     // Transfer vault to another user. 2 or 3 SSTORE.
     function give(bytes12 vault, address user)
 
-    // Add collateral and borrow from vault, pull collaterals from and push borrowed asset to user
-    // Repay to vault and remove collateral, pull borrowed asset from and push collaterals to user
+    // Add collateral and borrow from vault, pull ilks from and push borrowed asset to user
+    // Repay to vault and remove collateral, pull borrowed asset from and push ilks to user
     // Doesn't check inputs, or collateralization level.
     function __frob(bytes12 vault, bytes6[] memory ilks, int128[] memory inks, int128 art)
         internal returns (bytes32[3])
@@ -186,8 +189,8 @@ contract Vat {
         return _balances;
     }
     
-    // Add collateral and borrow from vault, pull collaterals from and push borrowed asset to user
-    // Repay to vault and remove collateral, pull borrowed asset from and push collaterals to user
+    // Add collateral and borrow from vault, pull ilks from and push borrowed asset to user
+    // Repay to vault and remove collateral, pull borrowed asset from and push ilks to user
     // Checks the vault is valid, and collateralization levels at the end.
     function frob(bytes12 vault, bytes1 ilks,  int128[] memory inks, int128 art)
         public returns (bytes32[3])
@@ -203,8 +206,8 @@ contract Vat {
         return balances;
     }
 
-    // Repay vault debt using underlying token, pulled from user. Collaterals are pushed to user. 
-    function close(bytes12 vault, bytes32 collaterals, uint128[] memory inks, uint128 art) // Same cost as `frob`
+    // Repay vault debt using underlying token, pulled from user. Ilks are pushed to user. 
+    function close(bytes12 vault, bytes32 ilks, uint128[] memory inks, uint128 art) // Same cost as `frob`
 
     // ---- Accounting ----
 
@@ -213,20 +216,21 @@ contract Vat {
         uint32 maturity = series[vault].maturity;                         // 1 SLOAD
         IFYToken fyToken = _series.fyToken;
         if (block.timestamp >= maturity) {
-            IOracle oracle = rateOracles[underlying];                     // 1 SLOAD
+            IOracle oracle = rateOracles[_series.base];                   // 1 SLOAD
             uart = balances[vault].debt * oracle.accrual(maturity);       // 1 SLOAD + 1 Oracle Call
         } else {
             uart = balances[vault].debt;                                  // 1 SLOAD
         }
     }
 
-    // Return the capacity of the vault to borrow underlying based on the collaterals held
+    // Return the capacity of the vault to borrow underlying based on the ilks held
     function value(bytes12 vault) view returns (uint128 uart) {
-        Collaterals memory _collaterals = collaterals[vault];             // 1 SLOAD
+        Ilks memory _ilks = ilks[vault];                                  // 1 SLOAD
         Balances memory _balances = balances[vault];                      // 1 SLOAD
-        for each collateral {                                             // * C
-            IOracle oracle = spotOracles[underlying][collateral];         // 1 SLOAD
-            uart += _balances[collateral] * oracle.spot();                // 1 Oracle Call | Divided by collateralization ratio
+        bytes6 _base = series[vault].base;                            // 1 SLOAD
+        for each ilk {                                                    // * C
+            IOracle oracle = spotOracles[_base][ilk];                     // 1 SLOAD
+            uart += _balances[ilk] * oracle.spot();                       // 1 Oracle Call | Divided by collateralization ratio
         }
     }
 
