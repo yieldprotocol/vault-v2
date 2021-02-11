@@ -130,16 +130,6 @@ contract Vat {
     }
 
     // Move collateral and debt.
-    function __roll(bytes12 from, bytes12 to, bytes6[] memory ilks, uint128[] memory inks, uint128 artFrom, uint128 artTo)
-        internal
-        returns (Balances, Balances)
-    {
-        Balances memory _balancesFrom = __frob(from, ilks, -(int128[] inks), -int128(artFrom)); // Cost of `__frob`
-        Balances memory _balancesTo = __frob(to, ilks, int128[] inks, int128(artTo));           // Cost of `__frob`
-        return (_balancesFrom, _balancesTo);
-    }
-
-    // Move collateral and debt.
     // Usable only by an authorized module that won't cheat on Vat
     function _roll(bytes12 from, bytes12 to, bytes1 ilks, uint128[] memory inks, uint128 artFrom, uint128 artTo)
         public
@@ -151,9 +141,8 @@ contract Vat {
         bytes6[] memory _ilks = unpackIlks(from, ilks);                                          // 1 SLOAD
         require (validIlks(to, _ilks), "Invalid collaterals");                                   // 1 SLOAD
 
-        Balances memory _balancesFrom;
-        Balances memory _balancesTo;
-        (_balancesFrom, _balancesTo) = __roll(from, _ilks, inks, artFrom, artTo));               // Cost of `__roll`
+        Balances memory _balancesFrom = __frob(from, ilks, -(int128[] inks), -int128(artFrom));  // Cost of `__frob`
+        Balances memory _balancesTo = __frob(to, ilks, int128[] inks, int128(artTo));            // Cost of `__frob`
 
         if (inks.length > 0) require(level(from) >= 0, "Undercollateralized");                   // Cost of `level`
         if (artTo > 0) require(level(to) >= 0, "Undercollateralized");                           // Cost of `level`
