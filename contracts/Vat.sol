@@ -188,6 +188,9 @@ contract Vat {
 
         return _balances;
     }
+
+    // TODO: frob to/from safe
+    // TODO: close to/from safe
     
     // Add collateral and borrow from vault, pull ilks from and push borrowed asset to user
     // Repay to vault and remove collateral, pull borrowed asset from and push ilks to user
@@ -206,16 +209,23 @@ contract Vat {
         return balances;
     }
 
-    // Repay vault debt using underlying token, pulled from user. Ilks are pushed to user. 
-    function close(bytes12 vault, bytes32 ilks, uint128[] memory inks, uint128 art) // Same cost as `frob`
+    // Repay vault debt using underlying token, pulled from user. Collateral is returned to user
+    function __close(bytes12 vault, bytes6[] memory ilks, int128[] memory inks, uint128 repay) 
+        internal returns (bytes32[3])
+    {
+        bytes6 base = series[vault].base;                                             // 1 SLOAD
+        joins[base].join(repay);                                                      // Cost of `join`
+        uint128 debt = repay / rateOracles[base].spot()                               // 1 SLOAD + `spot`
+        return __frob(vault, ilks, inks, -int128(debt))                               // Cost of `__frob`
+    }
 
     // ---- Accounting ----
 
     // Return the vault debt in underlying terms
     function dues(bytes12 vault) view returns (uint128 uart) {
-        uint32 maturity = series[vault].maturity;                         // 1 SLOAD
+        Series _series = series[vault];                                   // 1 SLOAD
         IFYToken fyToken = _series.fyToken;
-        if (block.timestamp >= maturity) {
+        if (block.timestamp >= _series.maturity) {
             IOracle oracle = rateOracles[_series.base];                   // 1 SLOAD
             uart = balances[vault].debt * oracle.accrual(maturity);       // 1 SLOAD + 1 Oracle Call
         } else {
