@@ -104,24 +104,17 @@ contract Vat {
         balances[to] = _balancesTo;                                                   // (C+1)/2 SSTORE
     }
 
-    // Move collateral and debt.
-    // Usable only by an authorized module that won't cheat on Vat
-    function _roll(bytes12 from, bytes12 to, bytes1 ilks, uint128[] memory inks, uint128 artFrom, uint128 artTo)
+    // Change series and debt of a vault.
+    // Usable only by an authorized module that won't cheat on Vat. 
+    // The module also needs to buy underlying in Pool2, and sell it in Pool1.
+    function _roll(bytes12 vault, bytes6 series, uint128 art)
         public
         auth
-        returns (Balances, Balances)
     {
-        require (validVault(from), "Invalid vault");                                             // 1 SLOAD
-        require (validVault(to), "Invalid vault");                                               // 1 SLOAD
-        bytes6[] memory _ilks = unpackIlks(from, ilks);                                          // 1 SLOAD
-        require (validIlks(to, _ilks), "Invalid collaterals");                                   // 1 SLOAD
-
-        Balances memory _balancesFrom = __frob(from, ilks, -(int128[] inks), -int128(artFrom));  // Cost of `__frob`
-        Balances memory _balancesTo = __frob(to, ilks, int128[] inks, int128(artTo));            // Cost of `__frob`
-
-        if (inks.length > 0) require(level(from) >= 0, "Undercollateralized");                   // Cost of `level`
-        if (artTo > 0) require(level(to) >= 0, "Undercollateralized");                           // Cost of `level`
-        return (_balancesFrom, _balancesTo);
+        require (validVault(vault), "Invalid vault");                                 // 1 SLOAD
+        balances[from].debt = art;                                                    // 1 SSTORE
+        __tweak(vault, series, []);                                                   // 1 SSTORE
+        require(level(vault) >= 0, "Undercollateralized");                            // Cost of `level`.
     }
 
     // Transfer vault to another user. 2 or 3 SSTORE.
