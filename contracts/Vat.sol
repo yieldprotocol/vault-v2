@@ -34,6 +34,7 @@ contract Vat {
     mapping (bytes12 => Series)                     series             // Series available in Vat. We can possibly use a bytes6 (3e14 possible series).
     mapping (bytes6 => address)                     bases              // Underlyings available in Vat. 12 bytes still free.
     mapping (bytes6 => address)                     ilks               // Collaterals available in Vat. 12 bytes still free.
+    mapping (bytes6 => address)                     joins              // Join contracts available. 12 bytes still free.
 
     // ==== Vault ordering ====
     struct Vault {
@@ -95,20 +96,20 @@ contract Vat {
     function __tweak(bytes12 vault, bytes12 series, bytes32 ilks)
         internal
     {
-        require (validVault(vault), "Invalid vault");                             // 1 SLOAD
-        require (validSeries(series), "Invalid series");                          // 1 SLOAD
-        Balances memory _balances = balances[vault];                              // 1 SLOAD
+        require (validVault(vault), "Invalid vault");                  // 1 SLOAD
+        require (validSeries(series), "Invalid series");               // 1 SLOAD
+        Balances memory _balances = balances[vault];                   // 1 SLOAD
         if (series > 0) {
             require (balances.debt == 0, "Tweak only unused series");
-            vaults[vault].series = series                                         // 1 SSTORE 
+            vaults[vault].series = series                              // 1 SSTORE 
         }
-        if (ilks > 0) {                                                           // If a new set of ilks was provided
-            Ilks memory _ilks = ilks[vault];                                      // 1 SLOAD
-            for ilk in _ilks {                                                    // Loop on the provided ilks by index
+        if (ilks > 0) {                                                // If a new set of ilks was provided
+            Ilks memory _ilks = ilks[vault];                           // 1 SLOAD
+            for ilk in _ilks {                                         // Loop on the provided ilks by index
                 require (balances.assets[ilk] == 0, "Tweak only unused assets");  // Check on the vault ilks that the balance at that index is 0
-                _ilks[ilk] = ilks[ilk];                                           // Swap the ilk identifier
+                _ilks[ilk] = ilks[ilk];                                // Swap the ilk identifier
             }
-            balances[vault] = _balances;                                          // 1 SSTORE
+            balances[vault] = _balances;                               // 1 SSTORE
         }
     }
 
@@ -116,19 +117,19 @@ contract Vat {
     function __give(bytes12 vault, address user)
         internal
     {
-        Vault memory _vault = vaults[vault];                                          // 2 SLOAD. Split the list and series sections of Vault.
-        bytes12 _previous = previous(vault);                                          // V * 2 SLOAD. Split the list and series sections of Vault.
+        Vault memory _vault = vaults[vault];                           // 2 SLOAD. Split the list and series sections of Vault.
+        bytes12 _previous = previous(vault);                           // V * 2 SLOAD. Split the list and series sections of Vault.
         if (_previous == 0) { // Also consider next == 0
-            first[_vault.owner] = _vault.next;                                        // 1 SSTORE
+            first[_vault.owner] = _vault.next;                         // 1 SSTORE
         } else {
             if (vaults[_previous].next != 0 && _vault.next != 0) {
-                vaults[_previous].next = _vault.next;                                 // 1 SSTORE
+                vaults[_previous].next = _vault.next;                  // 1 SSTORE
             }
         }
         _vault.owner = user;
         _vault.next = first[user];
-        vaults[vault] = _vault;                                                       // 1 SSTORE
-        first[user] = vault;                                                          // 1 SSTORE
+        vaults[vault] = _vault;                                        // 1 SSTORE
+        first[user] = vault;                                           // 1 SSTORE
     }
 
     // ==== Asset and debt management ====
@@ -137,14 +138,14 @@ contract Vat {
     function __flux(bytes12 from, bytes12 to, bytes6[] memory ilks, uint128[] memory inks)
         internal
     {
-        Balances memory _balancesFrom = balances[from];                               // 1 SLOAD
-        Balances memory _balancesTo = balances[to];                                   // 1 SLOAD
+        Balances memory _balancesFrom = balances[from];                // 1 SLOAD
+        Balances memory _balancesTo = balances[to];                    // 1 SLOAD
         for each ilk in ilks {
             _balancesFrom.assets[ilk] -= inks[ilk];
             _balancesTo.assets[ilk] += inks[ilk];
         }
-        balances[from] = _balancesFrom;                                               // (C+1)/2 SSTORE
-        balances[to] = _balancesTo;                                                   // (C+1)/2 SSTORE
+        balances[from] = _balancesFrom;                                // (C+1)/2 SSTORE
+        balances[to] = _balancesTo;                                    // (C+1)/2 SSTORE
     }
 
     // Add collateral and borrow from vault, pull ilks from and push borrowed asset to user
@@ -153,22 +154,22 @@ contract Vat {
     function __frob(bytes12 vault, bytes6[] memory ilks, int128[] memory inks, int128 art)
         internal returns (bytes32[3])
     {
-        Balances memory _balances = balances[vault];                                  // 1 SLOAD
+        Balances memory _balances = balances[vault];                   // 1 SLOAD
         for each ilk in ilks {
-            _balances.assets[ilk] += joins[ilk].join(inks[ilk]);                      // Cost of `join`. `join` with a negative value means `exit`
+            _balances.assets[ilk] += joins[ilk].join(inks[ilk]);       // Cost of `join`. `join` with a negative value means `exit`
         }
         
         if (art != 0) {
             _balances.debt += art;
-            Series memory _series = series[vault];                                    // 1 SLOAD
+            Series memory _series = series[vault];                     // 1 SLOAD
             if (art > 0) {
                 require(block.timestamp <= _series.maturity, "Mature");
-                IFYToken(_series.fyToken).mint(msg.sender, art);                      // 1 CALL(40) + fyToken.mint
+                IFYToken(_series.fyToken).mint(msg.sender, art);       // 1 CALL(40) + fyToken.mint
             } else {
-                IFYToken(_series.fyToken).burn(msg.sender, art);                      // 1 CALL(40) + fyToken.burn
+                IFYToken(_series.fyToken).burn(msg.sender, art);       // 1 CALL(40) + fyToken.burn
             }
         }
-        balances[id] = _balances;                                                     // (C+1)/2 SSTORE. Refactor for Checks-Effects-Interactions
+        balances[id] = _balances;                                      // (C+1)/2 SSTORE. Refactor for Checks-Effects-Interactions
 
         return _balances;
     }
@@ -178,10 +179,10 @@ contract Vat {
     function __close(bytes12 vault, bytes6[] memory ilks, int128[] memory inks, uint128 repay) 
         internal returns (bytes32[3])
     {
-        bytes6 base = series[vault].base;                                             // 1 SLOAD
-        joins[base].join(repay);                                                      // Cost of `join`
-        uint128 debt = repay / rateOracles[base].spot()                               // 1 SLOAD + `spot`
-        return __frob(vault, ilks, inks, -int128(debt))                               // Cost of `__frob`
+        bytes6 base = series[vault].base;                              // 1 SLOAD
+        joins[base].join(repay);                                       // Cost of `join`
+        uint128 debt = repay / rateOracles[base].spot()                // 1 SLOAD + `spot`
+        return __frob(vault, ilks, inks, -int128(debt))                // Cost of `__frob`
     }
 
     // ---- Restricted processes ----
@@ -191,34 +192,34 @@ contract Vat {
     // The module also needs to buy underlying in Pool2, and sell it in Pool1.
     function _roll(bytes12 vault, bytes6 series, uint128 art)
         public
-        auth                                                                          // 1 SLOAD
+        auth                                                           // 1 SLOAD
     {
-        require (validVault(vault), "Invalid vault");                                 // 1 SLOAD
-        balances[from].debt = 0;                                                      // See two lines below
-        __tweak(vault, series, []);                                                   // Cost of `__tweak`
-        balances[from].debt = art;                                                    // 1 SSTORE
-        require(level(vault) >= 0, "Undercollateralized");                            // Cost of `level`
+        require (validVault(vault), "Invalid vault");                  // 1 SLOAD
+        balances[from].debt = 0;                                       // See two lines below
+        __tweak(vault, series, []);                                    // Cost of `__tweak`
+        balances[from].debt = art;                                     // 1 SSTORE
+        require(level(vault) >= 0, "Undercollateralized");             // Cost of `level`
     }
 
     // Give a non-timestamped vault to the caller, and timestamp it.
     // To be used for liquidation engines.
     function _grab(bytes12 vault)
         public
-        auth                                                                          // 1 SLOAD
+        auth                                                           // 1 SLOAD
     {
-        require (timestamps[vault] == 0, "Timestamped");                              // 1 SLOAD
-        timestamps[vault] = block.timestamp;                                          // 1 SSTORE
-        __give(vault, msg.sender);                                                    // Cost of `__give`
+        require (timestamps[vault] == 0, "Timestamped");               // 1 SLOAD
+        timestamps[vault] = block.timestamp;                           // 1 SSTORE
+        __give(vault, msg.sender);                                     // Cost of `__give`
     }
 
     // Give a timestamped vault to the caller, and delete the timestamp.
     // To be used for liquidation engines.
     function _free(bytes12 vault, address user)
         public
-        auth                                                                          // 1 SLOAD
+        auth                                                           // 1 SLOAD
     {
-        delete timestamps[vault];                                                     // 1 SSTORE refund
-        __give(vault, user);                                                          // Cost of `__give`
+        delete timestamps[vault];                                      // 1 SSTORE refund
+        __give(vault, user);                                           // Cost of `__give`
     }
 
     // Manipulate a vault without collateralization checks.
@@ -226,12 +227,12 @@ contract Vat {
     // TODO: __frob underlying from and collateral to users
     function _frob(bytes12 vault, bytes1 ilks,  int128[] memory inks, int128 art)
         public
-        auth                                                                          // 1 SLOAD
+        auth                                                           // 1 SLOAD
         returns (bytes32[3])
     {
-        require (validVault(vault), "Invalid vault");                                 // 1 SLOAD
-        bytes6[] memory _ilks = unpackIlks(vault, ilks);                              // 1 SLOAD
-        return __frob(vault, _ilks, inks, art);                                       // Cost of `__frob`
+        require (validVault(vault), "Invalid vault");                  // 1 SLOAD
+        bytes6[] memory _ilks = unpackIlks(vault, ilks);               // 1 SLOAD
+        return __frob(vault, _ilks, inks, art);                        // Cost of `__frob`
     }
 
     // ---- Public processes ----
@@ -240,9 +241,9 @@ contract Vat {
     function give(bytes12 vault, address user)
         public
     {
-        require (validVault(vault), "Invalid vault");                                 // 1 SLOAD
-        require (vaults[vault].owner == msg.sender, "Only owner");                    // 1 SLOAD
-        __give(vault, user);                                                          // Cost of `__give`
+        require (validVault(vault), "Invalid vault");                  // 1 SLOAD
+        require (vaults[vault].owner == msg.sender, "Only owner");     // 1 SLOAD
+        __give(vault, user);                                           // Cost of `__give`
     }
 
     // Move collateral between vaults.
@@ -250,18 +251,18 @@ contract Vat {
         internal
         returns (bytes32[3], bytes32[3])
     {
-        require (validVault(from), "Invalid origin");                                 // 1 SLOAD
-        require (vaults[from].owner == msg.sender, "Only owner");                     // 1 SLOAD
-        require (validVault(to), "Invalid recipient");                                // 1 SLOAD
-        bytes6[] memory _ilks = unpackIlks(vault, ilks);                              // 1 SLOAD
+        require (validVault(from), "Invalid origin");                  // 1 SLOAD
+        require (vaults[from].owner == msg.sender, "Only owner");      // 1 SLOAD
+        require (validVault(to), "Invalid recipient");                 // 1 SLOAD
+        bytes6[] memory _ilks = unpackIlks(vault, ilks);               // 1 SLOAD
         bool check;
         for each ilk {
             check = check || inks[ilk] < 0;
         }
         Balances memory _balancesFrom;
         Balances memory _balancesTo;
-        (_balancesFrom, _balancesTo) = __flux(vault, _ilks, inks, art);               // Cost of `__flux`
-        if (check) require(level(vault) >= 0, "Undercollateralized");                 // Cost of `level`
+        (_balancesFrom, _balancesTo) = __flux(vault, _ilks, inks, art);// Cost of `__flux`
+        if (check) require(level(vault) >= 0, "Undercollateralized");  // Cost of `level`
         return (_balancesFrom, _balancesTo);
     }
 
@@ -271,15 +272,15 @@ contract Vat {
     function frob(bytes12 vault, bytes1 ilks,  int128[] memory inks, int128 art)
         public returns (bytes32[3])
     {
-        require (validVault(vault), "Invalid vault");                                 // 1 SLOAD
-        require (vaults[vault].owner == msg.sender, "Only owner");                    // 1 SLOAD
-        bytes6[] memory _ilks = unpackIlks(vault, ilks);                              // 1 SLOAD
+        require (validVault(vault), "Invalid vault");                  // 1 SLOAD
+        require (vaults[vault].owner == msg.sender, "Only owner");     // 1 SLOAD
+        bytes6[] memory _ilks = unpackIlks(vault, ilks);               // 1 SLOAD
         bool check = art < 0;
         for each ilk {
             check = check || inks[ilk] < 0;
         }
-        Balances memory _balances = __frob(vault, _ilks, inks, art);                  // Cost of `__frob`
-        if (check) require(level(vault) >= 0, "Undercollateralized");                 // Cost of `level`
+        Balances memory _balances = __frob(vault, _ilks, inks, art);   // Cost of `__frob`
+        if (check) require(level(vault) >= 0, "Undercollateralized");  // Cost of `level`
         return balances;
     }
 
@@ -287,49 +288,38 @@ contract Vat {
     function close(bytes12 vault, bytes1 ilks, int128[] memory inks, uint128 repay) 
         internal returns (bytes32[3])
     {
-        require (validVault(vault), "Invalid vault");                                 // 1 SLOAD
-        require (vaults[vault].owner == msg.sender, "Only owner");                    // 1 SLOAD
-        bytes6[] memory _ilks = unpackIlks(vault, ilks);                              // 1 SLOAD
-        return __close(vault, _ilks, inks, repay)                                     // Cost of `__close`
+        require (validVault(vault), "Invalid vault");                  // 1 SLOAD
+        require (vaults[vault].owner == msg.sender, "Only owner");     // 1 SLOAD
+        bytes6[] memory _ilks = unpackIlks(vault, ilks);               // 1 SLOAD
+        return __close(vault, _ilks, inks, repay)                      // Cost of `__close`
     }
 
     // ==== Accounting ====
 
     // Return the vault debt in underlying terms
     function dues(bytes12 vault) view returns (uint128 uart) {
-        Series _series = series[vault];                                   // 1 SLOAD
+        Series _series = series[vault];                                // 1 SLOAD
         IFYToken fyToken = _series.fyToken;
         if (block.timestamp >= _series.maturity) {
-            IOracle oracle = rateOracles[_series.base];                   // 1 SLOAD
-            uart = balances[vault].debt * oracle.accrual(maturity);       // 1 SLOAD + 1 Oracle Call
+            IOracle oracle = rateOracles[_series.base];                // 1 SLOAD
+            uart = balances[vault].debt * oracle.accrual(maturity);    // 1 SLOAD + 1 Oracle Call
         } else {
-            uart = balances[vault].debt;                                  // 1 SLOAD
+            uart = balances[vault].debt;                               // 1 SLOAD
         }
     }
 
     // Return the capacity of the vault to borrow underlying based on the ilks held
     function value(bytes12 vault) view returns (uint128 uart) {
-        Ilks memory _ilks = ilks[vault];                                  // 1 SLOAD
-        Balances memory _balances = balances[vault];                      // 1 SLOAD
-        bytes6 _base = series[vault].base;                                // 1 SLOAD
-        for each ilk {                                                    // * C
-            IOracle oracle = spotOracles[_base][ilk];                     // 1 SLOAD
-            uart += _balances[ilk] * oracle.spot();                       // 1 Oracle Call | Divided by collateralization ratio
+        Ilks memory _ilks = ilks[vault];                               // 1 SLOAD
+        Balances memory _balances = balances[vault];                   // 1 SLOAD
+        bytes6 _base = series[vault].base;                             // 1 SLOAD
+        for each ilk {                                                 // * C
+            IOracle oracle = spotOracles[_base][ilk];                  // 1 SLOAD
+            uart += _balances[ilk] * oracle.spot();                    // 1 Oracle Call | Divided by collateralization ratio
         }
     }
 
     // Return the collateralization level of a vault. It will be negative if undercollateralized.
-    function level(bytes12 vault) view returns (int128) {                 // Cost of `value` + `dues`
+    function level(bytes12 vault) view returns (int128) {              // Cost of `value` + `dues`
         return value(vault) - dues(vault);
     }
-
-    // ==== Liquidations ====
-    // Each liquidation engine can:
-    // - Mark vaults as not a target for liquidation
-    // - Donate assets to the Vat
-    // - Cancel debt in liquidation vaults at no cost
-    // - Retrieve collateral from liquidation vaults
-    // - Give vaults to non-privileged users
-    // Giving a user vault to a liquidation engine means it will be auctioned and liquidated.
-    // The vault will be returned to the user once it's healthy.
-}
