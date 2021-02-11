@@ -108,6 +108,25 @@ contract Vat {
         }
     }
 
+    // Transfer vault to another user.
+    function __give(bytes12 vault, address user)
+        internal
+    {
+        Vault memory _vault = vaults[vault];                                          // 2 SLOAD. Split the list and series sections of Vault.
+        bytes12 _previous = previous(vault);                                          // V * 2 SLOAD. Split the list and series sections of Vault.
+        if (_previous == 0) { // Also consider next == 0
+            first[_vault.owner] = _vault.next;                                        // 1 SSTORE
+        } else {
+            if (vaults[_previous].next != 0 && _vault.next != 0) {
+                vaults[_previous].next = _vault.next;                                 // 1 SSTORE
+            }
+        }
+        _vault.owner = user;
+        _vault.next = first[user];
+        vaults[vault] = _vault;                                                       // 1 SSTORE
+        first[user] = vault;                                                          // 1 SSTORE
+    }
+
     // Move collateral between vaults.
     function __flux(bytes12 from, bytes12 to, bytes32 ilks, uint128[] memory inks)
         internal
@@ -135,9 +154,6 @@ contract Vat {
         balances[from].debt = art;                                                    // 1 SSTORE
         require(level(vault) >= 0, "Undercollateralized");                            // Cost of `level`
     }
-
-    // Transfer vault to another user. 2 or 3 SSTORE.
-    function give(bytes12 vault, address user)
 
     // Add collateral and borrow from vault, pull ilks from and push borrowed asset to user
     // Repay to vault and remove collateral, pull borrowed asset from and push ilks to user
