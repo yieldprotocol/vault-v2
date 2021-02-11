@@ -86,9 +86,27 @@ contract Vat {
         ilks[id] = _ilks;                                              // 1 SSTORE
     }
 
-    // Change a vault series and/or collateral types. 2 SSTORE.
-    // We can change the series if there is no debt, or ilks types if there is no collateral
-    function tweak(bytes12 vault, bytes12 series, bytes32 ilks)
+    // Change a vault series and/or collateral types.
+    // We can change the series if there is no debt, or ilks if there are no assets
+    function __tweak(bytes12 vault, bytes12 series, bytes32 ilks)
+        internal
+    {
+        require (validVault(vault), "Invalid vault");                             // 1 SLOAD
+        require (validSeries(series), "Invalid series");                          // 1 SLOAD
+        Balances memory _balances = balances[vault];                              // 1 SLOAD
+        if (series > 0) {
+            require (balances.debt == 0, "Tweak only unused series");
+            vaults[vault].series = series                                         // 1 SSTORE 
+        }
+        if (ilks > 0) {                                                           // If a new set of ilks was provided
+            Ilks memory _ilks = ilks[vault];                                      // 1 SLOAD
+            for ilk in _ilks {                                                    // Loop on the provided ilks by index
+                require (balances.assets[ilk] == 0, "Tweak only unused assets");  // Check on the vault ilks that the balance at that index is 0
+                _ilks[ilk] = ilks[ilk];                                           // Swap the ilk identifier
+            }
+            balances[vault] = _balances;                                          // 1 SSTORE
+        }
+    }
 
     // Move collateral between vaults.
     function __flux(bytes12 from, bytes12 to, bytes32 ilks, uint128[] memory inks)
@@ -112,9 +130,10 @@ contract Vat {
         auth
     {
         require (validVault(vault), "Invalid vault");                                 // 1 SLOAD
+        balances[from].debt = 0;                                                      // See two lines below
+        __tweak(vault, series, []);                                                   // Cost of `__tweak`
         balances[from].debt = art;                                                    // 1 SSTORE
-        __tweak(vault, series, []);                                                   // 1 SSTORE
-        require(level(vault) >= 0, "Undercollateralized");                            // Cost of `level`.
+        require(level(vault) >= 0, "Undercollateralized");                            // Cost of `level`
     }
 
     // Transfer vault to another user. 2 or 3 SSTORE.
