@@ -14,7 +14,7 @@ contract FYTokenJoin {
 
 contract Vat {
   
-    // ---- Administration ----
+    // ==== Administration ====
     function addIlk(bytes6 id, address ilk)                            // Also known as collateral
     function addBase(address base)                                     // Also known as underlying
     function addSeries(bytes32 series, IERC20 base, IFYToken fyToken)
@@ -35,7 +35,7 @@ contract Vat {
     mapping (bytes6 => address)                     bases              // Underlyings available in Vat. 12 bytes still free.
     mapping (bytes6 => address)                     ilks               // Collaterals available in Vat. 12 bytes still free.
 
-    // ---- Vault ordering ----
+    // ==== Vault ordering ====
     struct Vault {
         address owner;
         bytes12 next;
@@ -45,7 +45,7 @@ contract Vat {
     mapping (address => bytes12)                    first              // Pointer to the first vault in the user's list. We have 20 bytes here that we can still use.
     mapping (bytes12 => Vault)                      vaults             // With a vault identifier we can get both the owner and the next in the list. When giving a vault both are changed with 1 SSTORE.
 
-    // ---- Vault composition ----
+    // ==== Vault composition ====
     struct Ilks {
         bytes6[5] ids;
         bytes2 length;
@@ -57,10 +57,14 @@ contract Vat {
     }
 
     // An user can own one or more Vaults, each one with a bytes12 identifier so that we can pack a singly linked list and a reverse search in a bytes32
-    mapping (bytes12 => Ilks)                       vaultIlks   // Collaterals are identified by just 6 bytes, then in 32 bytes (one SSTORE) we can have an array of 5 collateral types to allow multi-collateral vaults. 
+    mapping (bytes12 => Ilks)                       vaultIlks          // Collaterals are identified by just 6 bytes, then in 32 bytes (one SSTORE) we can have an array of 5 collateral types to allow multi-collateral vaults. 
     mapping (bytes12 => Balances)                   vaultBalances      // Both debt and assets. The debt and the amount held for the first collateral share a word.
 
-    // ---- Vault management ----
+    // ==== Vault timestamping ====
+    mapping (bytes12 => uint32)                     timestamps         // If grater than zero, time that a vault was timestamped.
+
+    // ==== Vault management ====
+
     // Create a new vault, linked to a series (and therefore underlying) and up to 6 collateral types
     // 2 SSTORE for series and up to 6 collateral types, plus 2 SSTORE for vault ownership.
     function build(bytes12 series, bytes32 ilks)
@@ -127,6 +131,8 @@ contract Vat {
         first[user] = vault;                                                          // 1 SSTORE
     }
 
+    // ==== Asset and debt management ====
+
     // Move collateral between vaults.
     function __flux(bytes12 from, bytes12 to, bytes32 ilks, uint128[] memory inks)
         internal
@@ -139,20 +145,6 @@ contract Vat {
         }
         balances[from] = _balancesFrom;                                               // (C+1)/2 SSTORE
         balances[to] = _balancesTo;                                                   // (C+1)/2 SSTORE
-    }
-
-    // Change series and debt of a vault.
-    // Usable only by an authorized module that won't cheat on Vat. 
-    // The module also needs to buy underlying in Pool2, and sell it in Pool1.
-    function _roll(bytes12 vault, bytes6 series, uint128 art)
-        public
-        auth
-    {
-        require (validVault(vault), "Invalid vault");                                 // 1 SLOAD
-        balances[from].debt = 0;                                                      // See two lines below
-        __tweak(vault, series, []);                                                   // Cost of `__tweak`
-        balances[from].debt = art;                                                    // 1 SSTORE
-        require(level(vault) >= 0, "Undercollateralized");                            // Cost of `level`
     }
 
     // Add collateral and borrow from vault, pull ilks from and push borrowed asset to user
@@ -181,6 +173,68 @@ contract Vat {
         return _balances;
     }
     
+    // Repay vault debt using underlying token, pulled from user. Collateral is returned to user
+    function __close(bytes12 vault, bytes6[] memory ilks, int128[] memory inks, uint128 repay) 
+        internal returns (bytes32[3])
+    {
+        bytes6 base = series[vault].base;                                             // 1 SLOAD
+        joins[base].join(repay);                                                      // Cost of `join`
+        uint128 debt = repay / rateOracles[base].spot()                               // 1 SLOAD + `spot`
+        return __frob(vault, ilks, inks, -int128(debt))                               // Cost of `__frob`
+    }
+
+    // ---- Restricted processes ----
+    // Usable only by a authorized modules that won't cheat on Vat.
+
+    // Change series and debt of a vault.
+    // The module also needs to buy underlying in Pool2, and sell it in Pool1.
+    function _roll(bytes12 vault, bytes6 series, uint128 art)
+        public
+        auth                                                                          // 1 SLOAD
+    {
+        require (validVault(vault), "Invalid vault");                                 // 1 SLOAD
+        balances[from].debt = 0;                                                      // See two lines below
+        __tweak(vault, series, []);                                                   // Cost of `__tweak`
+        balances[from].debt = art;                                                    // 1 SSTORE
+        require(level(vault) >= 0, "Undercollateralized");                            // Cost of `level`
+    }
+
+    // Give a non-timestamped vault to the caller, and timestamp it.
+    // To be used for liquidation engines.
+    function _grab(bytes12 vault)
+        public
+        auth                                                                          // 1 SLOAD
+    {
+        require (timestamps[vault] == 0, "Timestamped");                              // 1 SLOAD
+        timestamps[vault] = block.timestamp;                                          // 1 SSTORE
+        __give(vault, msg.sender);                                                    // Cost of `__give`
+    }
+
+    // Give a timestamped vault to the caller, and delete the timestamp.
+    // To be used for liquidation engines.
+    function _free(bytes12 vault, address user)
+        public
+        auth                                                                          // 1 SLOAD
+    {
+        delete timestamps[vault];                                                     // 1 SSTORE refund
+        __give(vault, user);                                                          // Cost of `__give`
+    }
+
+    // Manipulate a vault without collateralization checks.
+    // To be used for liquidation engines.
+    // TODO: __frob underlying from and collateral to users
+    function _frob(bytes12 vault, bytes1 ilks,  int128[] memory inks, int128 art)
+        public
+        auth                                                                          // 1 SLOAD
+        returns (bytes32[3])
+    {
+        require (validVault(vault), "Invalid vault");                                 // 1 SLOAD
+        bytes6[] memory _ilks = unpackIlks(vault, ilks);                              // 1 SLOAD
+        return __frob(vault, _ilks, inks, art);                                       // Cost of `__frob`
+    }
+
+    // ---- Public processes ----
+
     // Add collateral and borrow from vault, pull ilks from and push borrowed asset to user
     // Repay to vault and remove collateral, pull borrowed asset from and push ilks to user
     // Checks the vault is valid, and collateralization levels at the end.
@@ -198,17 +252,7 @@ contract Vat {
         return balances;
     }
 
-    // Repay vault debt using underlying token, pulled from user. Collateral is returned to user
-    function __close(bytes12 vault, bytes6[] memory ilks, int128[] memory inks, uint128 repay) 
-        internal returns (bytes32[3])
-    {
-        bytes6 base = series[vault].base;                                             // 1 SLOAD
-        joins[base].join(repay);                                                      // Cost of `join`
-        uint128 debt = repay / rateOracles[base].spot()                               // 1 SLOAD + `spot`
-        return __frob(vault, ilks, inks, -int128(debt))                               // Cost of `__frob`
-    }
-
-    // ---- Accounting ----
+    // ==== Accounting ====
 
     // Return the vault debt in underlying terms
     function dues(bytes12 vault) view returns (uint128 uart) {
@@ -238,7 +282,7 @@ contract Vat {
         return value(vault) - dues(vault);
     }
 
-    // ---- Liquidations ----
+    // ==== Liquidations ====
     // Each liquidation engine can:
     // - Mark vaults as not a target for liquidation
     // - Donate assets to the Vat
