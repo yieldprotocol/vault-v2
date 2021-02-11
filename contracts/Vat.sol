@@ -84,7 +84,7 @@ contract Vat {
             ids: ilks.slice(0, 30);
             length: ilks.slice(30, 32);
         });
-        ilks[id] = _ilks;                                // 1 SSTORE
+        ilks[id] = _ilks;                                              // 1 SSTORE
     }
 
     // Change a vault series and/or collateral types. 2 SSTORE.
@@ -101,8 +101,8 @@ contract Vat {
             _balancesFrom.assets[ilk] -= inks[ilk];
             _balancesTo.assets[ilk] += inks[ilk];
         }
-        balances[from] = _balancesFrom;                                               // 1 SSTORE
-        balances[to] = _balancesTo;                                                   // 1 SSTORE
+        balances[from] = _balancesFrom;                                               // (C+1)/2 SSTORE
+        balances[to] = _balancesTo;                                                   // (C+1)/2 SSTORE
     }
 
     // Move collateral between a vault and its owner's safe
@@ -115,7 +115,7 @@ contract Vat {
             _balances.assets[ilk] -= inks[ilk];
             safe[_owner][ilk] += inks[ilk];                                           // 1 SSTORE
         }
-        balances[id] = _balances;                                                     // 1 SSTORE
+        balances[id] = _balances;                                                     // (C+1)/2 SSTORE
     }
 
     // Move collateral between an external account and a safe
@@ -173,7 +173,7 @@ contract Vat {
                 IFYToken(_series.fyToken).burn(msg.sender, art);                      // 1 CALL(40) + fyToken.burn
             }
         }
-        balances[id] = _balances;                                                     // 1 SSTORE. Refactor for Checks-Effects-Interactions
+        balances[id] = _balances;                                                     // (C+1)/2 SSTORE. Refactor for Checks-Effects-Interactions
 
         return _balances;
     }
