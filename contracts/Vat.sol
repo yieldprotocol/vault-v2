@@ -89,31 +89,6 @@ contract Vat {
     // We can change the series if there is no debt, or collaterals types if there is no collateral
     function tweak(bytes12 vault, bytes12 series, bytes32 collaterals)
 
-    // Add collateral to vault. 2.5 or 3.5 SSTORE per collateral type, rounding up.
-    // Remove collateral from vault. 2.5 or 3.5 SSTORE per collateral type, rounding up.
-    function slip(bytes12 vault, bytes32 collaterals, int128[] memory inks)
-        public returns (bytes32)
-    {         // Remember that bytes32 collaterals is an array of up to 6 collateral types.
-        require (validVault(vault), "Invalid vault");                                 // 1 SLOAD
-        // The next 5 lines can be packed into an internal function
-        require (validCollaterals(vault, collaterals), "Invalid collaterals");        // C+1 SLOAD.
-        Collaterals memory _collaterals = ({
-            ids: collaterals.slice(0, 30);
-            length: collaterals.slice(30, 32);
-        });
-
-        Balances memory _balances = balances[vault];                                  // 1 SLOAD
-        bool check;
-        for each collateral {
-            _balances.assets[collateral] += joins[collateral].join(inks[collateral]); // Cost of `join`. `join` with a negative value means `exit`
-            if (!check && inks[collateral] < 0) check = true;
-        }
-        if (check) require(level(vault) >= 0, "Undercollateralized");                 // Cost of `level`
-        balances[id] = _balances;                                                     // 1 SSTORE
-
-        return bytes32(_balances);
-    }
-
     // Move collateral from one vault to another (like when rolling a series). 1 SSTORE for each 2 collateral types.
     function flux(bytes12 from, bytes12 to, bytes32 collaterals, uint128[] memory inks)
 
@@ -128,62 +103,46 @@ contract Vat {
     // Transfer vault to another user. 2 or 3 SSTORE.
     function give(bytes12 vault, address user)
 
-    // Borrow from vault and push borrowed asset to user 
-    // Repay to vault and pull borrowed asset from user 
-    function draw(bytes12 vault, int128 art) 
-        public returns (uint128)
-    {
-        require (validVault(vault), "Invalid vault");                                 // 1 SLOAD
-        Series memory _series = series[vault];                                        // 1 SLOAD
-        uint128 _debt = balances[vault].debt                                          // 1 SLOAD
-        balances[vault].debt = _debt + art;                                           // 1 SSTORE
-
-        if (art > 0) {
-            require(level(vault) >= 0, "Undercollateralized");                        // Cost of `level`
-            require(block.timestamp <= _series.maturity, "Mature");
-            IFYToken(_series.fyToken).mint(msg.sender, art);                          // 1 CALL(40) + fyToken.mint
-        } else {
-            IFYToken(_series.fyToken).burn(msg.sender, art);                          // 1 CALL(40) + fyToken.burn
-        }
-        return _debt + art;
-    }
-
     // Add collateral and borrow from vault, pull collaterals from and push borrowed asset to user
     // Repay to vault and remove collateral, pull borrowed asset from and push collaterals to user
-    // Same cost as `slip` but with an extra cheap collateral. As low as 5 SSTORE for posting WETH and borrowing fyDai
-    function frob(bytes12 vault, bytes32 collaterals,  int128[] memory inks, int128 art)
-        public returns (bytes32[3])
+    // Doesn't check inputs, or collateralization level.
+    function __frob(bytes12 vault, bytes6[] memory ilks, int128[] memory inks, int128 art)
+        internal returns (bytes32[3])
     {
-        require (validVault(vault), "Invalid vault");                                 // 1 SLOAD
-        // The next 5 lines can be packed into an internal function
-        require (validCollaterals(vault, collaterals), "Invalid collaterals");        // C+1 SLOAD.
-        Collaterals memory _collaterals = ({
-            ids: collaterals.slice(0, 30);
-            length: collaterals.slice(30, 32);
-        });
-
         Balances memory _balances = balances[vault];                                  // 1 SLOAD
-        bool check;
-        for each collateral {
-            _balances.assets[collateral] += joins[collateral].join(inks[collateral]); // Cost of `join`. `join` with a negative value means `exit`
-            if (!check && inks[collateral] < 0) check = true;
+        for each ilk in ilks {
+            _balances.assets[ilk] += joins[ilk].join(inks[ilk]);                      // Cost of `join`. `join` with a negative value means `exit`
         }
         _balances.debt += art;
         balances[id] = _balances;                                                     // 1 SSTORE   
 
         Series memory _series = series[vault];                                        // 1 SLOAD
         if (art > 0) {
-            if (!check) check = true;
             require(block.timestamp <= _series.maturity, "Mature");
             IFYToken(_series.fyToken).mint(msg.sender, art);                          // 1 CALL(40) + fyToken.mint
         } else {
             IFYToken(_series.fyToken).burn(msg.sender, art);                          // 1 CALL(40) + fyToken.burn
         }
-        if (check) require(level(vault) >= 0, "Undercollateralized");                 // Cost of `level`
-
-        return _debt + art;
+        return _balances;
     }
     
+    // Add collateral and borrow from vault, pull collaterals from and push borrowed asset to user
+    // Repay to vault and remove collateral, pull borrowed asset from and push collaterals to user
+    // Checks the vault is valid, and collateralization levels at the end.
+    function frob(bytes12 vault, bytes1 ilks,  int128[] memory inks, int128 art)
+        public returns (bytes32[3])
+    {
+        require (validVault(vault), "Invalid vault");                                 // 1 SLOAD
+        bytes6[] memory _ilks = unpackIlks(vault, ilks);                              // 1 SLOAD
+        bool check = art < 0;
+        for each ilk {
+            check = check || inks[ilk] < 0;
+        }
+        Balances memory _balances = __frob(vault, _ilks, inks, art);                  // Cost of `__frob`
+        if (check) require(level(vault) >= 0, "Undercollateralized");                 // Cost of `level`
+        return balances;
+    }
+
     // Repay vault debt using underlying token, pulled from user. Collaterals are pushed to user. 
     function close(bytes12 vault, bytes32 collaterals, uint128[] memory inks, uint128 art) // Same cost as `frob`
 
