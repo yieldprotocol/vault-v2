@@ -23,7 +23,6 @@ contract Vat {
     mapping (bytes6 => address)                     chiOracles         // Chi accruals oracle for the underlying
     mapping (bytes6 => address)                     rateOracles        // Rate accruals oracle for the underlying
     mapping (bytes6 => mapping(bytes6 => address))  spotOracles        // [base][ilk] Spot oracles
-    mapping (address => mapping(bytes6 => uint128)) safe               // safe[user][ilk] The `safe` of each user contains assets (including fyDai) that are not assigned to any vault, and therefore unencumbered.
 
     struct Series {
         address fyToken;
@@ -105,30 +104,6 @@ contract Vat {
         balances[to] = _balancesTo;                                                   // (C+1)/2 SSTORE
     }
 
-    // Move collateral between a vault and its owner's safe
-    function __save(bytes12 vault, bytes6[] memory ilks, int128[] memory inks)
-        internal
-    {
-        address _owner = vaults[vault].owner;                                         // 1 SLOAD
-        Balances memory _balances = balances[vault];                                  // 1 SLOAD
-        for each ilk in ilks {
-            _balances.assets[ilk] -= inks[ilk];
-            safe[_owner][ilk] += inks[ilk];                                           // 1 SSTORE
-        }
-        balances[id] = _balances;                                                     // (C+1)/2 SSTORE
-    }
-
-    // Move collateral between an external account and a safe
-    function __slip(address owner, bytes6[] memory ilks, int128[] memory inks)
-        internal
-    {
-        address _owner = vaults[vault].owner;                                         // 1 SLOAD
-        for each ilk in ilks {
-            joins[ilk].join(inks[ilk]);                                               // Cost of `join`. `join` with a negative value means `exit`
-            safe[_owner][ilk] += inks[ilk];                                           // 1 SSTORE
-        }
-    }
-
     // Move collateral and debt.
     // Usable only by an authorized module that won't cheat on Vat
     function _roll(bytes12 from, bytes12 to, bytes1 ilks, uint128[] memory inks, uint128 artFrom, uint128 artTo)
@@ -177,9 +152,6 @@ contract Vat {
 
         return _balances;
     }
-
-    // TODO: frob to/from safe
-    // TODO: close to/from safe
     
     // Add collateral and borrow from vault, pull ilks from and push borrowed asset to user
     // Repay to vault and remove collateral, pull borrowed asset from and push ilks to user
