@@ -127,13 +127,35 @@ contract Vat {
         }
     }
 
-    // Move debt from one vault to another (like when rolling a series). 2 SSTORE.
-    // Note, it won't be possible if the Vat doesn't know about pools
-    function move(bytes12 from, bytes12 to, uint128 art)
+    // Move collateral and debt.
+    function __roll(bytes12 from, bytes12 to, bytes6[] memory ilks, uint128[] memory inks, uint128 artFrom, uint128 artTo)
+        internal
+        returns (Balances, Balances)
+    {
+        Balances memory _balancesFrom = __frob(from, ilks, -(int128[] inks), -int128(artFrom)); // Cost of `__frob`
+        Balances memory _balancesTo = __frob(to, ilks, int128[] inks, int128(artTo));           // Cost of `__frob`
+        return (_balancesFrom, _balancesTo);
+    }
 
-    // Move collateral and debt. Combine costs of `flux` and `move`, minus 1 SSTORE.
-    // Note, it won't be possible if the Vat doesn't know about pools
-    function roll(bytes12 from, bytes12 to, bytes32 collaterals, uint128[] memory inks, uint128 art)
+    // Move collateral and debt.
+    // Usable only by an authorized module that won't cheat on Vat
+    function _roll(bytes12 from, bytes12 to, bytes1 ilks, uint128[] memory inks, uint128 artFrom, uint128 artTo)
+        public
+        auth
+        returns (Balances, Balances)
+    {
+        require (validVault(from), "Invalid vault");                                             // 1 SLOAD
+        require (validVault(to), "Invalid vault");                                               // 1 SLOAD
+        bytes6[] memory _ilks = unpackIlks(vault, ilks);                                         // 1 SLOAD
+
+        Balances memory _balancesFrom;
+        Balances memory _balancesTo;
+        (_balancesFrom, _balancesTo) = __roll(from, _ilks, inks, artFrom, artTo));               // Cost of `__roll`
+
+        if (inks.length > 0) require(level(from) >= 0, "Undercollateralized");                   // Cost of `level`
+        if (artTo > 0) require(level(to) >= 0, "Undercollateralized");                           // Cost of `level`
+        return (_balancesFrom, _balancesTo);
+    }
 
     // Transfer vault to another user. 2 or 3 SSTORE.
     function give(bytes12 vault, address user)
