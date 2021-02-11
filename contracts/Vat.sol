@@ -134,7 +134,7 @@ contract Vat {
     // ==== Asset and debt management ====
 
     // Move collateral between vaults.
-    function __flux(bytes12 from, bytes12 to, bytes32 ilks, uint128[] memory inks)
+    function __flux(bytes12 from, bytes12 to, bytes6[] memory ilks, uint128[] memory inks)
         internal
     {
         Balances memory _balancesFrom = balances[from];                               // 1 SLOAD
@@ -174,6 +174,7 @@ contract Vat {
     }
     
     // Repay vault debt using underlying token, pulled from user. Collateral is returned to user
+    // TODO: `__frob` with recipient
     function __close(bytes12 vault, bytes6[] memory ilks, int128[] memory inks, uint128 repay) 
         internal returns (bytes32[3])
     {
@@ -235,6 +236,35 @@ contract Vat {
 
     // ---- Public processes ----
 
+    // Give a vault to another user.
+    function give(bytes12 vault, address user)
+        public
+    {
+        require (validVault(vault), "Invalid vault");                                 // 1 SLOAD
+        require (vaults[vault].owner == msg.sender, "Only owner");                    // 1 SLOAD
+        __give(vault, user);                                                          // Cost of `__give`
+    }
+
+    // Move collateral between vaults.
+    function flux(bytes12 from, bytes12 to, bytes1 ilks, uint128[] memory inks)
+        internal
+        returns (bytes32[3], bytes32[3])
+    {
+        require (validVault(from), "Invalid origin");                                 // 1 SLOAD
+        require (vaults[from].owner == msg.sender, "Only owner");                     // 1 SLOAD
+        require (validVault(to), "Invalid recipient");                                // 1 SLOAD
+        bytes6[] memory _ilks = unpackIlks(vault, ilks);                              // 1 SLOAD
+        bool check;
+        for each ilk {
+            check = check || inks[ilk] < 0;
+        }
+        Balances memory _balancesFrom;
+        Balances memory _balancesTo;
+        (_balancesFrom, _balancesTo) = __flux(vault, _ilks, inks, art);               // Cost of `__flux`
+        if (check) require(level(vault) >= 0, "Undercollateralized");                 // Cost of `level`
+        return (_balancesFrom, _balancesTo);
+    }
+
     // Add collateral and borrow from vault, pull ilks from and push borrowed asset to user
     // Repay to vault and remove collateral, pull borrowed asset from and push ilks to user
     // Checks the vault is valid, and collateralization levels at the end.
@@ -242,6 +272,7 @@ contract Vat {
         public returns (bytes32[3])
     {
         require (validVault(vault), "Invalid vault");                                 // 1 SLOAD
+        require (vaults[vault].owner == msg.sender, "Only owner");                    // 1 SLOAD
         bytes6[] memory _ilks = unpackIlks(vault, ilks);                              // 1 SLOAD
         bool check = art < 0;
         for each ilk {
@@ -250,6 +281,16 @@ contract Vat {
         Balances memory _balances = __frob(vault, _ilks, inks, art);                  // Cost of `__frob`
         if (check) require(level(vault) >= 0, "Undercollateralized");                 // Cost of `level`
         return balances;
+    }
+
+    // Repay vault debt using underlying token, pulled from user. Collateral is returned to caller
+    function close(bytes12 vault, bytes1 ilks, int128[] memory inks, uint128 repay) 
+        internal returns (bytes32[3])
+    {
+        require (validVault(vault), "Invalid vault");                                 // 1 SLOAD
+        require (vaults[vault].owner == msg.sender, "Only owner");                    // 1 SLOAD
+        bytes6[] memory _ilks = unpackIlks(vault, ilks);                              // 1 SLOAD
+        return __close(vault, _ilks, inks, repay)                                     // Cost of `__close`
     }
 
     // ==== Accounting ====
@@ -270,7 +311,7 @@ contract Vat {
     function value(bytes12 vault) view returns (uint128 uart) {
         Ilks memory _ilks = ilks[vault];                                  // 1 SLOAD
         Balances memory _balances = balances[vault];                      // 1 SLOAD
-        bytes6 _base = series[vault].base;                            // 1 SLOAD
+        bytes6 _base = series[vault].base;                                // 1 SLOAD
         for each ilk {                                                    // * C
             IOracle oracle = spotOracles[_base][ilk];                     // 1 SLOAD
             uart += _balances[ilk] * oracle.spot();                       // 1 Oracle Call | Divided by collateralization ratio
