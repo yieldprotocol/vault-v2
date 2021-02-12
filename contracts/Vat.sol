@@ -78,7 +78,7 @@ contract Vat {
         });
         vaults[id] = vault;                                            // 1 SSTORE
 
-        require (validIlks(ilks), "Invalid ilks");                     // C SLOAD.
+        require (validIlks(ilks), "Invalid collaterals");              // C SLOAD.
         Ilks memory _ilks = ({
             ids: ilks.slice(0, 30);
             length: ilks.slice(30, 32);
