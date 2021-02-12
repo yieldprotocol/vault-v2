@@ -1,42 +1,37 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "./interfaces/IOracle.sol";
-import "./helpers/Orchestrated.sol";
 
-
-contract Oracle is IOracle is Orchestrated  {
-
-    Contract public immutable oracle; // Real oracle
-
-    uint256 public override historical; // Recorded historical prices
+contract Oracle {
+    address immutable public oracle; // Real oracle
+    uint256 public historical; // Recorded historical values
     
-    /// @dev The constructor:
-    /// Sets the name and symbol for the fyDai token.
-    /// Sets the maturity date for the fyDai, in unix time.
-    constructor(
-        Contract oracle_
-    ) public {
+    constructor(address oracle_) public {
         oracle = oracle_;
     }
 
-    function rate()
-        public returns (uint256)
+    function spot()
+        public view returns (uint256)
     {
-        // return the rate in the format we use
+        // return the spot price or accumulator in the format we use
     }
 
-    function record(uint256 maturity)
+    function record(uint256 timestamp)
         public
-        onlyOrchestrated("Oracle: Not Authorized")
+        returns (uint256)
     {
-        if (block.timestamp >= maturity && historical[maturity] == 0) historical[maturity] = rate();
+        require (block.timestamp >= timestamp, "Oracle: Too early");
+        require (historical[timestamp] == 0, "Oracle: Already recorded");
+        uint256 _spot = spot();
+        historical[timestamp] = _spot;
+        emit Recorded(timestamp, _spot);
+        return _spot;
     }
 
-    function rateChange(uint256 maturity)
-        public returns(uint256)
+    function accrual(uint256 timestamp)
+        public view returns(uint256)
     {
-        require(historical[maturity] > 0, "Oracle: Not available");
-        return divd(rate(), historical[maturity]);
+        require(historical[timestamp] > 0, "Oracle: Not available");
+        return spot() / historical[timestamp];
     }
 }
