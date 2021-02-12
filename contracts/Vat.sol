@@ -39,12 +39,9 @@ contract Vat {
     // ==== Vault ordering ====
     struct Vault {
         address owner;
-        bytes12 next;
-        bytes12 series;                                                // address to pack next to it. Each vault is related to only one series, which also determines the underlying.
-        // 20 bytes available, we can cache the base address, for example, or the maturity.
+        bytes12 series;                                                // Each vault is related to only one series, which also determines the underlying.
     }
 
-    mapping (address => bytes12)                    first              // Pointer to the first vault in the user's list. We have 20 bytes here that we can still use. 1 byte could be for the number of vaults, and cap them at 64.
     mapping (bytes12 => Vault)                      vaults             // With a vault identifier we can get both the owner and the next in the list. When giving a vault both are changed with 1 SSTORE.
 
     // ==== Vault composition ====
@@ -73,18 +70,15 @@ contract Vat {
         public
         returns (bytes12 id)
     {
-        require (validSeries(series), "Invalid series");               // 1 SLOAD.
-        bytes12 _first = first[msg.sender];                            // 1 SLOAD. Use the id of the latest vault created by the user as salt.
-        bytes12 id = keccak256(msg.sender + _first)-slice(0, 12);      // Check (vaults[id].owner == address(0)), and increase the salt until a free vault id is found. 1 SLOAD per check.
+        require (validSeries(series), "Invalid series");               // 1 SLOAD
+        bytes12 id = keccak256(msg.sender + salt)-slice(0, 12);        // Check (vaults[id].owner == address(0)), and increase the salt until a free vault id is found. 1 SLOAD per check.
         Vault memory vault = ({
             owner: msg.sender;
-            next: _first;
             series: series;
         });
-        first[msg.sender] = id;                                        // 1 SSTORE. We insert the new vaults in the list head.
-        vaults[id] = vault;                                            // 2 SSTORE. We can still store one more address for free.
+        vaults[id] = vault;                                            // 1 SSTORE
 
-        require (validIlks(ilks), "Invalid ilks");// C SLOAD.
+        require (validIlks(ilks), "Invalid ilks");                     // C SLOAD.
         Ilks memory _ilks = ({
             ids: ilks.slice(0, 30);
             length: ilks.slice(30, 32);
@@ -118,19 +112,7 @@ contract Vat {
     function __give(bytes12 vault, address user)
         internal
     {
-        Vault memory _vault = vaults[vault];                           // 2 SLOAD. Split the list and series sections of Vault.
-        bytes12 _previous = previous(vault);                           // V * 2 SLOAD. Split the list and series sections of Vault.
-        if (_previous == 0) { // Also consider next == 0
-            first[_vault.owner] = _vault.next;                         // 1 SSTORE
-        } else {
-            if (vaults[_previous].next != 0 && _vault.next != 0) {
-                vaults[_previous].next = _vault.next;                  // 1 SSTORE
-            }
-        }
-        _vault.owner = user;
-        _vault.next = first[user];
-        vaults[vault] = _vault;                                        // 1 SSTORE
-        first[user] = vault;                                           // 1 SSTORE
+        vaults[vault].owner = user;                                    // 1 SSTORE
     }
 
     // ==== Asset and debt management ====
