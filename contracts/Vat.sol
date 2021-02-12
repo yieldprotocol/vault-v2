@@ -192,7 +192,7 @@ contract Vat {
         public
         auth                                                           // 1 SLOAD
     {
-        require (timestamps[vault] == 0, "Timestamped");               // 1 SLOAD
+        require (timestamps[vault] + 24*60*60 <= block.timestamp, "Timestamped"); // 1 SLOAD. Grabbing a vault protects it for a day from being grabbed by another liquidator.
         timestamps[vault] = block.timestamp;                           // 1 SSTORE
         __give(vault, msg.sender);                                     // Cost of `__give`
     }
