@@ -92,7 +92,7 @@ contract Vat {
     function __tweak(bytes12 vault, bytes12 series, bytes32 ilks)
         internal
     {
-        Balances memory _balances = balances[vault];                   // 1 SLOAD
+        Balances memory _balances = balances[vault];                   // 3 SLOAD. If the ilks are loaded before maybe we can do less SLOAD
         if (series > 0) {
             require (balances.debt == 0, "Tweak only unused series");
             vaults[vault].series = series                              // 1 SSTORE 
@@ -100,10 +100,10 @@ contract Vat {
         if (ilks > 0) {                                                // If a new set of ilks was provided
             Ilks memory _ilks = ilks[vault];                           // 1 SLOAD
             for ilk in _ilks {                                         // Loop on the provided ilks by index
-                require (balances.assets[ilk] == 0, "Tweak only unused assets");  // Check on the vault ilks that the balance at that index is 0
+                require (balances.assets[ilk] == 0, "Tweak only unused assets");  // Check on the parameter ilks that the balance at that index is 0
                 _ilks[ilk] = ilks[ilk];                                // Swap the ilk identifier
             }
-            balances[vault] = _balances;                               // 1 SSTORE
+            ilks[vault] = _ilks = ;                                    // 1 SSTORE
         }
     }
 
@@ -122,8 +122,8 @@ contract Vat {
     function __flux(bytes12 from, bytes12 to, bytes6[] memory ilks, uint128[] memory inks)
         internal
     {
-        Balances memory _balancesFrom = balances[from];                // 1 SLOAD
-        Balances memory _balancesTo = balances[to];                    // 1 SLOAD
+        Balances memory _balancesFrom = balances[from];                // 3 SLOAD
+        Balances memory _balancesTo = balances[to];                    // 3 SLOAD
         for each ilk in ilks {
             _balancesFrom.assets[ilk] -= inks[ilk];
             _balancesTo.assets[ilk] += inks[ilk];
@@ -138,7 +138,7 @@ contract Vat {
     function __frob(bytes12 vault, bytes6[] memory ilks, int128[] memory inks, int128 art)
         internal returns (bytes32[3])
     {
-        Balances memory _balances = balances[vault];                   // 1 SLOAD
+        Balances memory _balances = balances[vault];                   // 3 SLOAD
         for each ilk in ilks {
             _balances.assets[ilk] += joins[ilk].join(inks[ilk]);       // Cost of `join`. `join` with a negative value means `exit`.. Consider whether it's possible to achieve this without an external call, so that `Vat` doesn't depend on the `Join` interface.
         }
@@ -296,7 +296,7 @@ contract Vat {
     // Return the capacity of the vault to borrow underlying based on the ilks held
     function value(bytes12 vault) view returns (uint128 uart) {
         Ilks memory _ilks = ilks[vault];                               // 1 SLOAD
-        Balances memory _balances = balances[vault];                   // 1 SLOAD
+        Balances memory _balances = balances[vault];                   // 3 SLOAD. Maybe we can load less if there are less items in ilks
         bytes6 _base = series[vault].base;                             // 1 SLOAD
         for each ilk {                                                 // * C
             IOracle oracle = spotOracles[_base][ilk];                  // 1 SLOAD
