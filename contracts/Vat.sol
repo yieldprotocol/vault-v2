@@ -65,7 +65,7 @@ contract Vat {
     // ==== Vault management ====
 
     // Create a new vault, linked to a series (and therefore underlying) and up to 6 collateral types
-    // 2 SSTORE for series and up to 6 collateral types, plus 2 SSTORE for vault ownership.
+    // Doesn't check inputs, or collateralization level. Do that in public functions.
     function build(bytes12 series, bytes32 ilks)
         public
         returns (bytes12 id)
@@ -88,11 +88,10 @@ contract Vat {
 
     // Change a vault series and/or collateral types.
     // We can change the series if there is no debt, or ilks if there are no assets
+    // Doesn't check inputs, or collateralization level. Do that in public functions.
     function __tweak(bytes12 vault, bytes12 series, bytes32 ilks)
         internal
     {
-        require (validVault(vault), "Invalid vault");                  // 1 SLOAD
-        require (validSeries(series), "Invalid series");               // 1 SLOAD
         Balances memory _balances = balances[vault];                   // 1 SLOAD
         if (series > 0) {
             require (balances.debt == 0, "Tweak only unused series");
@@ -109,6 +108,7 @@ contract Vat {
     }
 
     // Transfer vault to another user.
+    // Doesn't check inputs, or collateralization level. Do that in public functions.
     function __give(bytes12 vault, address user)
         internal
     {
@@ -118,6 +118,7 @@ contract Vat {
     // ==== Asset and debt management ====
 
     // Move collateral between vaults.
+    // Doesn't check inputs, or collateralization level. Do that in public functions.
     function __flux(bytes12 from, bytes12 to, bytes6[] memory ilks, uint128[] memory inks)
         internal
     {
@@ -133,7 +134,7 @@ contract Vat {
 
     // Add collateral and borrow from vault, pull ilks from and push borrowed asset to user
     // Repay to vault and remove collateral, pull borrowed asset from and push ilks to user
-    // Doesn't check inputs, or collateralization level.
+    // Doesn't check inputs, or collateralization level. Do that in public functions.
     function __frob(bytes12 vault, bytes6[] memory ilks, int128[] memory inks, int128 art)
         internal returns (bytes32[3])
     {
@@ -158,6 +159,7 @@ contract Vat {
     }
     
     // Repay vault debt using underlying token, pulled from user. Collateral is returned to user
+    // Doesn't check inputs, or collateralization level. Do that in public functions.
     // TODO: `__frob` with recipient
     function __close(bytes12 vault, bytes6[] memory ilks, int128[] memory inks, uint128 repay) 
         internal returns (bytes32[3])
