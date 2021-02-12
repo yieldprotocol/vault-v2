@@ -139,7 +139,7 @@ contract Vat {
     {
         Balances memory _balances = balances[vault];                   // 1 SLOAD
         for each ilk in ilks {
-            _balances.assets[ilk] += joins[ilk].join(inks[ilk]);       // Cost of `join`. `join` with a negative value means `exit`
+            _balances.assets[ilk] += joins[ilk].join(inks[ilk]);       // Cost of `join`. `join` with a negative value means `exit`.. Consider whether it's possible to achieve this without an external call, so that `Vat` doesn't depend on the `Join` interface.
         }
         
         if (art != 0) {
@@ -147,9 +147,9 @@ contract Vat {
             Series memory _series = series[vault];                     // 1 SLOAD
             if (art > 0) {
                 require(block.timestamp <= _series.maturity, "Mature");
-                IFYToken(_series.fyToken).mint(msg.sender, art);       // 1 CALL(40) + fyToken.mint
+                IFYToken(_series.fyToken).mint(msg.sender, art);       // 1 CALL(40) + fyToken.mint. Consider whether it's possible to achieve this without an external call, so that `Vat` doesn't depend on the `FYDai` interface.
             } else {
-                IFYToken(_series.fyToken).burn(msg.sender, art);       // 1 CALL(40) + fyToken.burn
+                IFYToken(_series.fyToken).burn(msg.sender, art);       // 1 CALL(40) + fyToken.burn. Consider whether it's possible to achieve this without an external call, so that `Vat` doesn't depend on the `FYDai` interface.
             }
         }
         balances[id] = _balances;                                      // (C+1)/2 SSTORE. Refactor for Checks-Effects-Interactions
