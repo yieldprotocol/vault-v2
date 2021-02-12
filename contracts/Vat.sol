@@ -41,9 +41,10 @@ contract Vat {
         address owner;
         bytes12 next;
         bytes12 series;                                                // address to pack next to it. Each vault is related to only one series, which also determines the underlying.
+        // 20 bytes available, we can cache the base address, for example, or the maturity.
     }
 
-    mapping (address => bytes12)                    first              // Pointer to the first vault in the user's list. We have 20 bytes here that we can still use.
+    mapping (address => bytes12)                    first              // Pointer to the first vault in the user's list. We have 20 bytes here that we can still use. 1 byte could be for the number of vaults, and cap them at 64.
     mapping (bytes12 => Vault)                      vaults             // With a vault identifier we can get both the owner and the next in the list. When giving a vault both are changed with 1 SSTORE.
 
     // ==== Vault composition ====
