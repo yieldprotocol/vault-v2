@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
+import "./IJoin.sol";
+import "@yield-protocol/utils/contracts/token/IERC20.sol";
+
 
 interface IVat {
     /// @dev Add a collateral to Vat
@@ -125,5 +128,4 @@ interface IVat {
 
     /// @dev Return the collateralization level of a vault. It will be negative if undercollateralized.
     function level(bytes12 vault) external view returns (int128);
-    }
 }
