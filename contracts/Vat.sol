@@ -42,8 +42,6 @@ contract Vat {
         bytes12 series;                                                // Each vault is related to only one series, which also determines the underlying.
     }
 
-    mapping (bytes12 => Vault)                      vaults             // With a vault identifier we can get both the owner and the next in the list. When giving a vault both are changed with 1 SSTORE.
-
     // ==== Vault composition ====
     struct Ilks {
         bytes6[5] ids;
@@ -56,6 +54,7 @@ contract Vat {
     }
 
     // An user can own one or more Vaults, each one with a bytes12 identifier so that we can pack a singly linked list and a reverse search in a bytes32
+    mapping (bytes12 => Vault)                      vaults             // With a vault identifier we can get both the owner and the next in the list. When giving a vault both are changed with 1 SSTORE.
     mapping (bytes12 => Ilks)                       vaultIlks          // Collaterals are identified by just 6 bytes, then in 32 bytes (one SSTORE) we can have an array of 5 collateral types to allow multi-collateral vaults. 
     mapping (bytes12 => Balances)                   vaultBalances      // Both debt and assets. The debt and the amount held for the first collateral share a word.
 
