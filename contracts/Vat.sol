@@ -20,18 +20,18 @@ contract Vat {
     function addSeries(bytes32 series, IERC20 base, IFYToken fyToken)
     function addOracle(IERC20 base, IERC20 ilk, IOracle oracle)
 
-    mapping (bytes6 => address)                     chiOracles         // Chi accruals oracle for the underlying
-    mapping (bytes6 => address)                     rateOracles        // Rate accruals oracle for the underlying
-    mapping (bytes6 => mapping(bytes6 => address))  spotOracles        // [base][ilk] Spot oracles
+    mapping (bytes6 => address)                     chiOracles         // Chi (savings rate) accruals oracle for the underlying
+    mapping (bytes6 => address)                     rateOracles        // Rate (borrowing rate) accruals oracle for the underlying
+    mapping (bytes6 => mapping(bytes6 => address))  spotOracles        // [base][ilk] Spot price oracles
 
     struct Series {
-        address fyToken;
-        uint32  maturity;
-        bytes6  base;                                                  // We might want to make this an address, instead of an identifier
+        address fyToken;                                               // Redeemable token for the series.
+        uint32  maturity;                                              // Unix time at which redemption becomes possible.
+        bytes6  base;                                                  // Token received on redemption.
         // bytes2 free
     }
 
-    mapping (bytes12 => Series)                     series             // Series available in Vat. We can possibly use a bytes6 (3e14 possible series).
+    mapping (bytes6 => Series)                      series             // Series available in Vat. We can possibly use a bytes6 (3e14 possible series).
     mapping (bytes6 => address)                     bases              // Underlyings available in Vat. 12 bytes still free.
     mapping (bytes6 => address)                     ilks               // Collaterals available in Vat. 12 bytes still free.
     mapping (bytes6 => address)                     joins              // Join contracts available. 12 bytes still free.
@@ -39,7 +39,8 @@ contract Vat {
     // ==== Vault ordering ====
     struct Vault {
         address owner;
-        bytes12 series;                                                // Each vault is related to only one series, which also determines the underlying.
+        bytes6 series;                                                 // Each vault is related to only one series, which also determines the underlying.
+        // 6 bytes free
     }
 
     // ==== Vault composition ====
@@ -65,7 +66,7 @@ contract Vat {
 
     // Create a new vault, linked to a series (and therefore underlying) and up to 6 collateral types
     // Doesn't check inputs, or collateralization level. Do that in public functions.
-    function build(bytes12 series, bytes32 ilks)
+    function build(bytes6 series, bytes32 ilks)
         public
         returns (bytes12 id)
     {
@@ -88,7 +89,7 @@ contract Vat {
     // Change a vault series and/or collateral types.
     // We can change the series if there is no debt, or ilks if there are no assets
     // Doesn't check inputs, or collateralization level. Do that in public functions.
-    function __tweak(bytes12 vault, bytes12 series, bytes32 ilks)
+    function __tweak(bytes12 vault, bytes6 series, bytes32 ilks)
         internal
     {
         Balances memory _balances = balances[vault];                   // 3 SLOAD. If the ilks are loaded before maybe we can do less SLOAD
