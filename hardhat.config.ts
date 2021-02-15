@@ -76,7 +76,7 @@ module.exports = {
     apiKey: etherscanKey
   },
   solidity: {
-    version: '0.6.10',
+    version: '0.8.1',
     settings: {
       optimizer: {
         enabled: true,
