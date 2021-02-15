@@ -1,12 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
-
-import "./interfaces/ITreasury.sol";
 import "./interfaces/IOracle.sol";
-import "./helpers/Orchestrated.sol";
+import "@yield-protocol/utils/contracts/access/Orchestrated.sol";
+import "@yield-protocol/utils/contracts/token/ERC20Permit.sol";
+import "@yield-protocol/utils/contracts/token/IERC20.sol";
 
 
-contract FYToken is Orchestrated()  {
+interface ITreasury {
+    /// @dev Transfer `amount` of `token` to `to` from the Yield Treasury
+    function pull(address token, address to, uint256 amount) external;
+}
+
+contract FYToken is Orchestrated(), ERC20Permit  {
 
     event Redeemed(address indexed from, address indexed to, uint256 amount);
 
@@ -24,7 +29,7 @@ contract FYToken is Orchestrated()  {
         uint256 maturity_,
         string memory name,
         string memory symbol
-    ) public {
+    ) public ERC20Permit(name, symbol) {
         require(maturity_ > block.timestamp && maturity_ < block.timestamp + MAX_TIME_TO_MATURITY, "FYToken: Invalid maturity");
         treasury = treasury_;
         underlying = underlying_;
@@ -48,7 +53,7 @@ contract FYToken is Orchestrated()  {
 
         // consider moving these two lines to Vat. Credit the user's account with the redemption value, then they can remove via the join.
         uint256 redeemed = amount * oracle.accrual(maturity);
-        treasury.pull(to, amount);
+        treasury.pull(underlying, to, amount);
         
         emit Redeemed(from, to, amount);
         return amount;
