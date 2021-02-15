@@ -65,8 +65,7 @@ contract Vat {
     // ==== Vault management ====
 
     // Create a new vault, linked to a series (and therefore underlying) and up to 6 collateral types
-    // Doesn't check inputs, or collateralization level. Do that in public functions.
-    function build(bytes6 series, bytes32 ilks)
+    function build(bytes12 series, bytes32 ilks)
         public
         returns (bytes12 id)
     {
@@ -84,6 +83,23 @@ contract Vat {
             length: ilks.slice(30, 32);
         });
         ilks[id] = _ilks;                                              // 1 SSTORE
+    }
+
+    // Destroy an empty new vault.
+    function destroy(bytes12 vault)
+        public
+    {
+        require (validVault(vault), "Invalid vault");                  // 1 SLOAD
+        require (vaults[vault].owner == msg.sender, "Only owner");     // 1 SLOAD
+        Balances memory _balances = balances[vault];                   // 3 SLOAD
+        require (_balances.debt == 0, "Destroy only empty vaults");
+        Ilks memory _ilks = ilks[vault];                               // 1 SLOAD
+        for ilk in _ilks {
+            require (balances.assets[ilk] == 0, "Destroy only empty vaults");
+        }
+        delete ilks[vault];                                            // 1 SSTORE REFUND
+        delete vaults[vault];                                          // 1 SSTORE REFUND
+        delete timestamps[vault];                                      // 1 SSTORE REFUND
     }
 
     // Change a vault series and/or collateral types.
@@ -192,19 +208,9 @@ contract Vat {
         public
         auth                                                           // 1 SLOAD
     {
-        require (timestamps[vault] == 0, "Timestamped");               // 1 SLOAD
+        require (timestamps[vault] + 24*60*60 <= block.timestamp, "Timestamped"); // 1 SLOAD. Grabbing a vault protects it for a day from being grabbed by another liquidator.
         timestamps[vault] = block.timestamp;                           // 1 SSTORE
         __give(vault, msg.sender);                                     // Cost of `__give`
-    }
-
-    // Give a timestamped vault to the caller, and delete the timestamp.
-    // To be used for liquidation engines.
-    function _free(bytes12 vault, address user)
-        public
-        auth                                                           // 1 SLOAD
-    {
-        delete timestamps[vault];                                      // 1 SSTORE refund
-        __give(vault, user);                                           // Cost of `__give`
     }
 
     // Manipulate a vault without collateralization checks.
