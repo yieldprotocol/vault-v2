@@ -54,17 +54,16 @@ contract Vat {
         uint128[5] assets;
     }
 
-    // An user can own one or more Vaults, each one with a bytes12 identifier so that we can pack a singly linked list and a reverse search in a bytes32
-    mapping (bytes12 => Vault)                      vaults             // With a vault identifier we can get both the owner and the next in the list. When giving a vault both are changed with 1 SSTORE.
+    mapping (bytes12 => Vault)                      vaults             // An user can own one or more Vaults, each one with a bytes12 identifier
     mapping (bytes12 => Ilks)                       vaultIlks          // Collaterals are identified by just 6 bytes, then in 32 bytes (one SSTORE) we can have an array of 5 collateral types to allow multi-collateral vaults. 
     mapping (bytes12 => Balances)                   vaultBalances      // Both debt and assets. The debt and the amount held for the first collateral share a word.
 
     // ==== Vault timestamping ====
-    mapping (bytes12 => uint32)                     timestamps         // If grater than zero, time that a vault was timestamped.
+    mapping (bytes12 => uint32)                     timestamps         // If grater than zero, time that a vault was timestamped. Used for liquidation.
 
     // ==== Vault management ====
 
-    // Create a new vault, linked to a series (and therefore underlying) and up to 6 collateral types
+    // Create a new vault, linked to a series (and therefore underlying) and up to 5 collateral types
     function build(bytes12 series, bytes32 ilks)
         public
         returns (bytes12 id)
@@ -85,7 +84,7 @@ contract Vat {
         ilks[id] = _ilks;                                              // 1 SSTORE
     }
 
-    // Destroy an empty new vault.
+    // Destroy an empty vault. Used to recover gas costs.
     function destroy(bytes12 vault)
         public
     {
@@ -123,7 +122,7 @@ contract Vat {
         }
     }
 
-    // Transfer vault to another user.
+    // Transfer a vault to another user.
     // Doesn't check inputs, or collateralization level. Do that in public functions.
     function __give(bytes12 vault, address user)
         internal
@@ -149,7 +148,7 @@ contract Vat {
     }
 
     // Add collateral and borrow from vault, pull ilks from and push borrowed asset to user
-    // Repay to vault and remove collateral, pull borrowed asset from and push ilks to user
+    // Or, repay to vault and remove collateral, pull borrowed asset from and push ilks to user
     // Doesn't check inputs, or collateralization level. Do that in public functions.
     function __frob(bytes12 vault, bytes6[] memory ilks, int128[] memory inks, int128 art)
         internal returns (bytes32[3])
@@ -190,7 +189,7 @@ contract Vat {
     // Usable only by a authorized modules that won't cheat on Vat.
 
     // Change series and debt of a vault.
-    // The module also needs to buy underlying in Pool2, and sell it in Pool1.
+    // The module calling this function also needs to buy underlying in the pool for the new series, and sell it in pool for the old series.
     function _roll(bytes12 vault, bytes6 series, uint128 art)
         public
         auth                                                           // 1 SLOAD
@@ -258,7 +257,7 @@ contract Vat {
     }
 
     // Add collateral and borrow from vault, pull ilks from and push borrowed asset to user
-    // Repay to vault and remove collateral, pull borrowed asset from and push ilks to user
+    // Or, repay to vault and remove collateral, pull borrowed asset from and push ilks to user
     // Checks the vault is valid, and collateralization levels at the end.
     function frob(bytes12 vault, bytes1 ilks,  int128[] memory inks, int128 art)
         public returns (bytes32[3])
