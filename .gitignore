@@ -10,7 +10,8 @@ artifacts
 node_modules/
 output/
 
-# Truffle files
+# Secrets
+.etherscanKey
 .infuraKey
 .secret
 build/
