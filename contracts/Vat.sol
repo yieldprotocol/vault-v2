@@ -1,15 +1,5 @@
-// Token balances will be kept in the join, for flexibility in their management
-contract TokenJoin {
-    function join(address usr, uint wad)
-    function exit(address usr, uint wad)
-
-}
-
-contract FYTokenJoin {
-    function join(address usr, uint wad)
-    function exit(address usr, uint wad)
-
-}
+// SPDX-License-Identifier: GPL-3.0-or-later
+pragma solidity ^0.8.0;
 
 
 contract Vat {
