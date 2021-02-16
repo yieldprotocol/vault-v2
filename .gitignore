@@ -4,13 +4,19 @@
 *.swp
 *.swo
 
+# Packaging
+*.tar.gz
+*.tgz
+package/
+
 # Buidler files
 cache
 artifacts
 node_modules/
 output/
+typechain/
 
-# Secrets
+# Secret files
 .etherscanKey
 .infuraKey
 .secret
@@ -29,3 +35,7 @@ package-lock.json
 
 # Crytic
 crytic-export/
+
+# Typescript
+dist/
+

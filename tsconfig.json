@@ -6,11 +6,15 @@
     "esModuleInterop": true,
     "resolveJsonModule": true
   },
-  "files": [
-        "./buidler.config.ts",
-        "./node_modules/@nomiclabs/buidler-ethers/src/type-extensions.d.ts",
-        "./node_modules/@nomiclabs/buidler-waffle/src/type-extensions.d.ts",
-        "./node_modules/truffle-typings/index.d.ts",
-        "./@types/types.d.ts"
+  "include": [
+    "src/**/*.ts",
+    "artifacts/**/*",
+    "artifacts/**/*.json",
+    "scripts/**/*",
+    "tasks/**/*",
+    "test/**/*",
+    "typechain/**/*",
+    "types/**/*",
+    "hardhat.config.ts"
   ]
 }
