@@ -1,32 +1,28 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
-// import "@yield-protocol/utils/contracts/token/IERC20.sol";
 // import "./interfaces/IFYToken.sol";
 // import "./interfaces/IOracle.sol";
 // import "./libraries/IlksPacking.sol";
+import "@yield-protocol/utils/contracts/token/IERC20.sol";
 import "./libraries/DataTypes.sol";
 
 
 contract Vat {
     // using IlksPacking for bytes1;
 
-    event VaultBuilt(bytes12 id);
+    event VaultBuilt(bytes12 indexed id);
+    event BaseAdded(bytes6 indexed id, address indexed base);
 
-    // ==== Administration ====
+    mapping (bytes6 => IERC20)               public bases;              // Underlyings available in Vat. 12 bytes still free.
+
     /*
-    function addIlk(bytes6 id, address ilk) external;                            // Also known as collateral
-    function addBase(address base) external;                                     // Also known as underlying
-    function addSeries(bytes32 series, IERC20 base, IFYToken fyToken) external;
-    function addOracle(IERC20 base, IERC20 ilk, IOracle oracle) external;
+    mapping (bytes6 => Series)                      series;             // Series available in Vat. We can possibly use a bytes6 (3e14 possible series).
+    mapping (bytes6 => address)                     ilks;               // Collaterals available in Vat. 12 bytes still free.
+    mapping (bytes6 => address)                     joins;              // Join contracts available. 12 bytes still free.
 
     mapping (bytes6 => address)                     chiOracles;         // Chi (savings rate) accruals oracle for the underlying
     mapping (bytes6 => address)                     rateOracles;        // Rate (borrowing rate) accruals oracle for the underlying
     mapping (bytes6 => mapping(bytes6 => address))  spotOracles;        // [base][ilk] Spot price oracles
-
-    mapping (bytes6 => Series)                      series;             // Series available in Vat. We can possibly use a bytes6 (3e14 possible series).
-    mapping (bytes6 => address)                     bases;              // Underlyings available in Vat. 12 bytes still free.
-    mapping (bytes6 => address)                     ilks;               // Collaterals available in Vat. 12 bytes still free.
-    mapping (bytes6 => address)                     joins;              // Join contracts available. 12 bytes still free.
 
     // ==== Vault ordering ====
     */
@@ -38,6 +34,19 @@ contract Vat {
 
     // ==== Vault timestamping ====
     mapping (bytes12 => uint32)                     timestamps;         // If grater than zero, time that a vault was timestamped. Used for liquidation.
+    */
+
+    // ==== Administration ====
+    function addBase(bytes6 id, IERC20 base) external /*auth*/ {
+        require (bases[id] == IERC20(address(0)), "Vat: Base already present");
+        bases[id] = base;
+        emit BaseAdded(id, address(base));
+    }                                     // Also known as underlying
+
+    /*
+    function addIlk(bytes6 id, address ilk) external;                            // Also known as collateral
+    function addSeries(bytes32 series, IERC20 base, IFYToken fyToken) external;
+    function addOracle(IERC20 base, IERC20 ilk, IOracle oracle) external;
 
     // ==== Vault management ====
     */

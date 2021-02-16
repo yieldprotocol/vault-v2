@@ -25,6 +25,26 @@ describe('Vat', () => {
     vat = (await deployContract(ownerAcc, VatArtifact, [])) as Vat
   })
 
+  it('adds a base', async () => {
+    const id = ethers.utils.hexlify(ethers.utils.randomBytes(6));
+    const base = ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20)))
+    expect(await vat.addBase(id, base)).to.emit(vat, 'BaseAdded').withArgs(id, base);
+    expect(await vat.bases(id)).to.equal(base)
+  })
+
+  describe('with a base added', async () => {
+    const id = ethers.utils.hexlify(ethers.utils.randomBytes(6));
+    const base = ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20)))
+
+    beforeEach(async () => {
+      await vat.addBase(id, base)
+    })
+
+    it('does not allow using the same base identifier twice', async () => {
+      await expect(vat.addBase(id, base)).to.be.revertedWith('Vat: Base already present')
+    })
+  })
+
   it('builds a vault', async () => {
     const series = ethers.utils.randomBytes(6);
     const ilks = ethers.utils.randomBytes(32)
