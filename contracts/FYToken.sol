@@ -37,7 +37,9 @@ contract FYToken is Orchestrated(), ERC20Permit  {
         maturity = maturity_;
     }
 
-    function mature() {
+    function mature() 
+        public
+    {
         oracle.record(maturity); // The oracle checks the timestamp and that it hasn't been recorded yet.        
     }
 
