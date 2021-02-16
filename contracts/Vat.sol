@@ -58,6 +58,10 @@ contract Vat {
 
     // ==== Vault management ====
 
+    function testIlks() {
+        vaultIlks[bytes12(1)] = Ilks([bytes6("A"), bytes6("B"), bytes6(0), bytes6(0),bytes6(0)], bytes2(2));
+    }
+
     // Create a new vault, linked to a series (and therefore underlying) and up to 5 collateral types
     function build(bytes12 series, bytes32 ilks)
         public
@@ -77,6 +81,7 @@ contract Vat {
             length: ilks.slice(30, 32)
         });
         ilks[id] = _ilks;                                              // 1 SSTORE
+
     }
 
     // Destroy an empty vault. Used to recover gas costs.
