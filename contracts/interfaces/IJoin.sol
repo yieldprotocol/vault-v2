@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 import "@yield-protocol/utils/contracts/token/IERC20.sol";
 
 
-contract IJoin {
+interface IJoin {
     // --- Auth ---
     function wards (address usr) external view returns (uint);
     function rely(address usr) external;

@@ -4,7 +4,7 @@ import "@yield-protocol/utils/contracts/token/IERC20.sol";
 import "./IOracle.sol";
 
 
-contract IFYToken is IERC20 {
+interface IFYToken is IERC20 {
     /// @dev Token that is returned on redemption. Also called underlying.
     function base() external view returns (IERC20);
 
