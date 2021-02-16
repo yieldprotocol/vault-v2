@@ -26,6 +26,13 @@ describe('Vat', () => {
   })
 
   it('builds a vault', async () => {
-    const tx = await vat.build(ethers.utils.randomBytes(6), ethers.utils.randomBytes(32));
+    const series = ethers.utils.randomBytes(6);
+    const ilks = ethers.utils.randomBytes(32)
+    await vat.build(series, ilks);
+    const event = (await vat.queryFilter(vat.filters.VaultBuilt(null)))[0]
+    const id = event.args.id
+    const vault = await vat.vaults(id)
+    expect(vault.owner).to.equal(owner)
+    expect(vault.series).to.equal(ethers.utils.hexlify(series))
   })
 })
