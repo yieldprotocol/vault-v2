@@ -41,7 +41,7 @@ describe('Vat', () => {
     })
 
     it('does not allow using the same base identifier twice', async () => {
-      await expect(vat.addBase(id, base)).to.be.revertedWith('Vat: Base already present')
+      await expect(vat.addBase(id, base)).to.be.revertedWith('Vat: Id already used')
     })
   })
 

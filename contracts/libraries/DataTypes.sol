@@ -1,9 +1,9 @@
 pragma solidity ^0.8.0;
-
+import "../interfaces/IFYToken.sol";
 
 library DataTypes {
     struct Series {
-        address fyToken;                                               // Redeemable token for the series.
+        IFYToken fyToken;                                               // Redeemable token for the series.
         uint32  maturity;                                              // Unix time at which redemption becomes possible.
         bytes6  base;                                                  // Token received on redemption.
         // bytes2 free
