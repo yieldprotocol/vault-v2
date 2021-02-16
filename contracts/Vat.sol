@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
-import "@yield-protocol/utils/contracts/token/IERC20.sol";
-import "./interfaces/IFYToken.sol";
-import "./interfaces/IOracle.sol";
-import "./libraries/IlksPacking.sol";
+// import "@yield-protocol/utils/contracts/token/IERC20.sol";
+// import "./interfaces/IFYToken.sol";
+// import "./interfaces/IOracle.sol";
+// import "./libraries/IlksPacking.sol";
+import "./libraries/DataTypes.sol";
 
 
 contract Vat {
-    using IlksPacking for bytes1;
+    // using IlksPacking for bytes1;
 
     // ==== Administration ====
+    /*
     function addIlk(bytes6 id, address ilk) external;                            // Also known as collateral
     function addBase(address base) external;                                     // Also known as underlying
     function addSeries(bytes32 series, IERC20 base, IFYToken fyToken) external;
@@ -19,37 +21,16 @@ contract Vat {
     mapping (bytes6 => address)                     rateOracles;        // Rate (borrowing rate) accruals oracle for the underlying
     mapping (bytes6 => mapping(bytes6 => address))  spotOracles;        // [base][ilk] Spot price oracles
 
-    struct Series {
-        address fyToken;                                               // Redeemable token for the series.
-        uint32  maturity;                                              // Unix time at which redemption becomes possible.
-        bytes6  base;                                                  // Token received on redemption.
-        // bytes2 free
-    }
-
     mapping (bytes6 => Series)                      series;             // Series available in Vat. We can possibly use a bytes6 (3e14 possible series).
     mapping (bytes6 => address)                     bases;              // Underlyings available in Vat. 12 bytes still free.
     mapping (bytes6 => address)                     ilks;               // Collaterals available in Vat. 12 bytes still free.
     mapping (bytes6 => address)                     joins;              // Join contracts available. 12 bytes still free.
 
     // ==== Vault ordering ====
-    struct Vault {
-        address owner;
-        bytes6 series;                                                 // Each vault is related to only one series, which also determines the underlying.
-        // 6 bytes free
-    }
+    */
 
-    // ==== Vault composition ====
-    struct Ilks {
-        bytes6[5] ids;
-        bytes2 length;
-    }
-
-    struct Balances {
-        uint128 debt;
-        uint128[5] assets;
-    }
-
-    mapping (bytes12 => Vault)                      vaults;             // An user can own one or more Vaults, each one with a bytes12 identifier
+    mapping (bytes12 => DataTypes.Vault)     public vaults;             // An user can own one or more Vaults, each one with a bytes12 identifier
+    /*
     mapping (bytes12 => Ilks)                       vaultIlks;          // Collaterals are identified by just 6 bytes, then in 32 bytes (one SSTORE) we can have an array of 5 collateral types to allow multi-collateral vaults. 
     mapping (bytes12 => Balances)                   vaultBalances;      // Both debt and assets. The debt and the amount held for the first collateral share a word.
 
@@ -57,33 +38,32 @@ contract Vat {
     mapping (bytes12 => uint32)                     timestamps;         // If grater than zero, time that a vault was timestamped. Used for liquidation.
 
     // ==== Vault management ====
-
-    function testIlks() {
-        vaultIlks[bytes12(1)] = Ilks([bytes6("A"), bytes6("B"), bytes6(0), bytes6(0),bytes6(0)], bytes2(2));
-    }
+    */
 
     // Create a new vault, linked to a series (and therefore underlying) and up to 5 collateral types
-    function build(bytes12 series, bytes32 ilks)
+    function build(bytes6 series, bytes32 ilks)
         public
         returns (bytes12 id)
     {
-        require (validSeries(series), "Invalid series");               // 1 SLOAD
-        bytes12 id = keccak256(msg.sender + salt)-slice(0, 12);        // Check (vaults[id].owner == address(0)), and increase the salt until a free vault id is found. 1 SLOAD per check.
-        Vault memory vault = Vault({
+        // require (validSeries(series), "Invalid series");               // 1 SLOAD
+        bytes12 id = bytes12(keccak256(abi.encodePacked(msg.sender, block.timestamp)));               // Check (vaults[id].owner == address(0)), and increase the salt until a free vault id is found. 1 SLOAD per check.
+        vaults[id] = DataTypes.Vault({
             owner: msg.sender,
             series: series
-        });
-        vaults[id] = vault;                                            // 1 SSTORE
+        });                                                           // 1 SSTORE
 
+        /*
         require (validIlks(ilks), "Invalid collaterals");              // C SLOAD.
         Ilks memory _ilks = Ilks({
             ids: ilks.slice(0, 30),
             length: ilks.slice(30, 32)
         });
         ilks[id] = _ilks;                                              // 1 SSTORE
+        */
 
     }
 
+    /*
     // Destroy an empty vault. Used to recover gas costs.
     function destroy(bytes12 vault)
         public
@@ -313,4 +293,5 @@ contract Vat {
     function level(bytes12 vault) public view returns (int128) {              // Cost of `value` + `dues`
         return value(vault) - dues(vault);
     }
+    */
 }
