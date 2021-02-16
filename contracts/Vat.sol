@@ -10,6 +10,8 @@ import "./libraries/DataTypes.sol";
 contract Vat {
     // using IlksPacking for bytes1;
 
+    event VaultBuilt(bytes12 id);
+
     // ==== Administration ====
     /*
     function addIlk(bytes6 id, address ilk) external;                            // Also known as collateral
@@ -61,6 +63,7 @@ contract Vat {
         ilks[id] = _ilks;                                              // 1 SSTORE
         */
 
+        emit VaultBuilt(id);
     }
 
     /*
