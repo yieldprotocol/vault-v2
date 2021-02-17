@@ -20,6 +20,7 @@ describe('Vat', () => {
   let fyToken: FYToken
   let base: ERC20Mock
 
+  const mockId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const mockAddress =  ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20)))
   const emptyAddress =  ethers.utils.getAddress('0x0000000000000000000000000000000000000000')
 
@@ -72,6 +73,11 @@ describe('Vat', () => {
       expect(series.maturity).to.equal(maturity)
     })
 
+    it('does not build a vault not linked to a series', async () => {
+      const ilks = ethers.utils.hexlify(ethers.utils.randomBytes(32))
+      await expect(vat.build(mockId, ilks)).to.be.revertedWith('Vat: Series not found')
+    })
+
     describe('with a series added', async () => {
       beforeEach(async () => {
         await vat.addSeries(seriesId, baseId, fyToken.address)
@@ -80,21 +86,21 @@ describe('Vat', () => {
       it('does not allow using the same series identifier twice', async () => {
         await expect(vat.addSeries(seriesId, baseId, fyToken.address)).to.be.revertedWith('Vat: Id already used')
       })
+
+      it('builds a vault', async () => {
+        const ilks = ethers.utils.hexlify(ethers.utils.randomBytes(32))
+        // expect(await vat.build(seriesId, ilks)).to.emit(vat, 'VaultBuilt').withArgs(null, seriesId, ilks);
+        await vat.build(seriesId, ilks)
+        const event = (await vat.queryFilter(vat.filters.VaultBuilt(null, null, null)))[0]
+        const vaultId = event.args.vaultId
+        const vault = await vat.vaults(vaultId)
+        expect(vault.owner).to.equal(owner)
+        expect(vault.seriesId).to.equal(seriesId)
+
+        // Remove these two when `expect...to.emit` works
+        expect(event.args.seriesId).to.equal(seriesId)
+        expect(event.args.ilks).to.equal(ilks)
+      })
     })
-  })
-
-  it('builds a vault', async () => {
-    const ilks = ethers.utils.hexlify(ethers.utils.randomBytes(32))
-    // expect(await vat.build(seriesId, ilks)).to.emit(vat, 'VaultBuilt').withArgs(null, seriesId, ilks);
-    await vat.build(seriesId, ilks)
-    const event = (await vat.queryFilter(vat.filters.VaultBuilt(null, null, null)))[0]
-    const vaultId = event.args.vaultId
-    const vault = await vat.vaults(vaultId)
-    expect(vault.owner).to.equal(owner)
-    expect(vault.seriesId).to.equal(seriesId)
-
-    // Remove these two when `expect...to.emit` works
-    expect(event.args.seriesId).to.equal(seriesId)
-    expect(event.args.ilks).to.equal(ilks)
   })
 })

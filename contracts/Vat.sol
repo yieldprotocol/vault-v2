@@ -57,7 +57,7 @@ contract Vat {
     function addSeries(bytes6 seriesId, bytes6 baseId, IFYToken fyToken)
         external
         /*auth*/
-        baseExists(baseId)
+        baseExists(baseId)                                        // 1 SLOAD
     {
         require (fyToken != IFYToken(address(0)), "Vat: Series need a fyToken");
         require (series[seriesId].fyToken == IFYToken(address(0)), "Vat: Id already used");
@@ -85,9 +85,9 @@ contract Vat {
     /// @dev Create a new vault, linked to a series (and therefore underlying) and up to 5 collateral types
     function build(bytes6 seriesId, bytes32 ilks)
         public
+        seriesExists(seriesId)                                        // 1 SLOAD
         returns (bytes12 vaultId)
     {
-        // require (validSeries(series), "Invalid series");               // 1 SLOAD
         bytes12 vaultId = bytes12(keccak256(abi.encodePacked(msg.sender, block.timestamp)));               // Check (vaults[id].owner == address(0)), and increase the salt until a free vault id is found. 1 SLOAD per check.
         vaults[vaultId] = DataTypes.Vault({
             owner: msg.sender,
