@@ -3,7 +3,7 @@ import VatArtifact from '../artifacts/contracts/Vat.sol/Vat.json'
 import { Vat } from '../typechain/Vat'
 
 import { ethers, waffle } from 'hardhat'
-// import { id } from '../src'
+// import { baseId } from '../src'
 import { expect } from 'chai'
 const { deployContract } = waffle
 
@@ -26,23 +26,29 @@ describe('Vat', () => {
   })
 
   it('adds a base', async () => {
-    const id = ethers.utils.hexlify(ethers.utils.randomBytes(6));
+    const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
     const base = ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20)))
-    expect(await vat.addBase(id, base)).to.emit(vat, 'BaseAdded').withArgs(id, base);
-    expect(await vat.bases(id)).to.equal(base)
+    expect(await vat.addBase(baseId, base)).to.emit(vat, 'BaseAdded').withArgs(baseId, base);
+    expect(await vat.bases(baseId)).to.equal(base)
   })
 
   describe('with a base added', async () => {
-    const id = ethers.utils.hexlify(ethers.utils.randomBytes(6));
-    const base = ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20)))
+    const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
+    const mockBase = ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20)))
+    const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
+    const mockFYToken = ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20)))
 
     beforeEach(async () => {
-      await vat.addBase(id, base)
+      await vat.addBase(baseId, mockBase)
     })
 
-    it('does not allow using the same base identifier twice', async () => {
-      await expect(vat.addBase(id, base)).to.be.revertedWith('Vat: Id already used')
+    it('does not allow using the same base baseIdentifier twice', async () => {
+      await expect(vat.addBase(baseId, mockBase)).to.be.revertedWith('Vat: Id already used')
     })
+
+    /* it('adds a series', async () => {
+      expect(await vat.addSeries(seriesId, baseId, mockFYToken)).to.emit(vat, 'BaseAdded').withArgs(baseId, base);
+    }) */
   })
 
   it('builds a vault', async () => {
@@ -50,8 +56,8 @@ describe('Vat', () => {
     const ilks = ethers.utils.randomBytes(32)
     await vat.build(series, ilks);
     const event = (await vat.queryFilter(vat.filters.VaultBuilt(null)))[0]
-    const id = event.args.id
-    const vault = await vat.vaults(id)
+    const baseId = event.args.baseId
+    const vault = await vat.vaults(baseId)
     expect(vault.owner).to.equal(owner)
     expect(vault.series).to.equal(ethers.utils.hexlify(series))
   })
