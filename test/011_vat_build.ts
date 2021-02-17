@@ -45,12 +45,16 @@ describe('Vat', () => {
     expect(await vat.bases(baseId)).to.equal(base.address)
   })
 
+  it('does not allow adding a series before adding its base', async () => {
+    await expect(vat.addSeries(seriesId, baseId, fyToken.address)).to.be.revertedWith('Vat: Base not found')
+  })
+
   describe('with a base added', async () => {
     beforeEach(async () => {
       await vat.addBase(baseId, base.address)
     })
 
-    it('does not allow using the same base baseIdentifier twice', async () => {
+    it('does not allow using the same base identifier twice', async () => {
       await expect(vat.addBase(baseId, base.address)).to.be.revertedWith('Vat: Id already used')
     })
 
@@ -61,6 +65,16 @@ describe('Vat', () => {
       expect(series.fyToken).to.equal(fyToken.address)
       expect(series.baseId).to.equal(baseId)
       expect(series.maturity).to.equal(maturity)
+    })
+
+    describe('with a series added', async () => {
+      beforeEach(async () => {
+        await vat.addSeries(seriesId, baseId, fyToken.address)
+      })
+
+      it('does not allow using the same series identifier twice', async () => {
+        await expect(vat.addSeries(seriesId, baseId, fyToken.address)).to.be.revertedWith('Vat: Id already used')
+      })
     })
   })
 
