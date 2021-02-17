@@ -10,9 +10,10 @@ import "./libraries/DataTypes.sol";
 contract Vat {
     // using IlksPacking for bytes1;
 
-    event VaultBuilt(bytes12 indexed vaultId, bytes6 indexed seriesId, bytes32 indexed ilks);
     event BaseAdded(bytes6 indexed baseId, address indexed base);
     event SeriesAdded(bytes6 indexed seriesId, bytes6 indexed baseId, address indexed fyToken);
+    event VaultBuilt(bytes12 indexed vaultId, address indexed owner, bytes6 indexed seriesId, bytes32 ilks);
+    event VaultDestroyed(bytes12 indexed vaultId);
 
     mapping (bytes6 => IERC20)               public bases;              // Underlyings available in Vat. 12 bytes still free.
     mapping (bytes6 => DataTypes.Series)     public series;             // Series available in Vat. We can possibly use a bytes6 (3e14 possible series).
@@ -103,27 +104,41 @@ contract Vat {
         ilks[id] = _ilks;                                              // 1 SSTORE
         */
 
-        emit VaultBuilt(vaultId, seriesId, ilks);
+        emit VaultBuilt(vaultId, msg.sender, seriesId, ilks);
     }
 
-    /*
-    // Destroy an empty vault. Used to recover gas costs.
-    function destroy(bytes12 vault)
+    /// @dev Ensure a vault exists        
+    modifier vaultExists(bytes12 vaultId) {
+        require (vaults[vaultId].owner != address(0), "Vat: Vault not found");
+        _;
+    }
+
+    /// @dev Ensure a function is only called by the vault owner. Already ensures the vault exists.       
+    modifier vaultOwner(bytes12 vaultId) {
+        require (vaults[vaultId].owner == msg.sender, "Vat: Only vault owner");
+        _;
+    }
+
+    /// @dev Destroy an empty vault. Used to recover gas costs.
+    function destroy(bytes12 vaultId)
         public
+        vaultOwner(vaultId)                                            // 1 SLOAD
     {
-        require (validVault(vault), "Invalid vault");                  // 1 SLOAD
-        require (vaults[vault].owner == msg.sender, "Only owner");     // 1 SLOAD
+        /*
         Balances memory _balances = balances[vault];                   // 3 SLOAD
         require (_balances.debt == 0, "Destroy only empty vaults");
         Ilks memory _ilks = ilks[vault];                               // 1 SLOAD
         for (uint256 ilk = 0; ilk < _ilks.length; ilk++) {
             require (balances.assets[_ilks.ids[ilk]] == 0, "Destroy only empty vaults");
         }
-        delete ilks[vault];                                            // 1 SSTORE REFUND
-        delete vaults[vault];                                          // 1 SSTORE REFUND
         delete timestamps[vault];                                      // 1 SSTORE REFUND
+        delete ilks[vault];                                            // 1 SSTORE REFUND
+        */
+        delete vaults[vaultId];                                        // 1 SSTORE REFUND
+        emit VaultDestroyed(vaultId);
     }
 
+    /*
     // Change a vault series and/or collateral types.
     // We can change the series if there is no debt, or ilks if there are no assets
     // Doesn't check inputs, or collateralization level. Do that in public functions.

@@ -15,13 +15,18 @@ const { deployContract } = waffle
 describe('Vat', () => {
   let ownerAcc: SignerWithAddress
   let owner: string
-  let other: SignerWithAddress
+  let otherAcc: SignerWithAddress
+  let other: string
   let vat: Vat
+  let vatFromOther: Vat
   let fyToken: FYToken
   let base: ERC20Mock
 
-  const mockId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const mockAssetId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const emptyAssetId = '0x000000000000'
+  const mockVaultId =  ethers.utils.hexlify(ethers.utils.randomBytes(12))
   const mockAddress =  ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20)))
+  const mockIlks = ethers.utils.hexlify(ethers.utils.randomBytes(32))
   const emptyAddress =  ethers.utils.getAddress('0x0000000000000000000000000000000000000000')
 
   before(async () => {
@@ -29,7 +34,8 @@ describe('Vat', () => {
     ownerAcc = signers[0]
     owner = await ownerAcc.getAddress()
 
-    other = signers[1]
+    otherAcc = signers[1]
+    other = await otherAcc.getAddress()
   })
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
@@ -40,6 +46,8 @@ describe('Vat', () => {
     vat = (await deployContract(ownerAcc, VatArtifact, [])) as Vat
     base = (await deployContract(ownerAcc, ERC20MockArtifact, [baseId, "Mock Base"])) as ERC20Mock
     fyToken = (await deployContract(ownerAcc, FYTokenArtifact, [base.address, mockAddress, maturity, seriesId, "Mock FYToken"])) as FYToken
+
+    vatFromOther = vat.connect(otherAcc)
   })
 
   it('adds a base', async () => {
@@ -74,8 +82,7 @@ describe('Vat', () => {
     })
 
     it('does not build a vault not linked to a series', async () => {
-      const ilks = ethers.utils.hexlify(ethers.utils.randomBytes(32))
-      await expect(vat.build(mockId, ilks)).to.be.revertedWith('Vat: Series not found')
+      await expect(vat.build(mockAssetId, mockIlks)).to.be.revertedWith('Vat: Series not found')
     })
 
     describe('with a series added', async () => {
@@ -88,18 +95,39 @@ describe('Vat', () => {
       })
 
       it('builds a vault', async () => {
-        const ilks = ethers.utils.hexlify(ethers.utils.randomBytes(32))
-        // expect(await vat.build(seriesId, ilks)).to.emit(vat, 'VaultBuilt').withArgs(null, seriesId, ilks);
-        await vat.build(seriesId, ilks)
-        const event = (await vat.queryFilter(vat.filters.VaultBuilt(null, null, null)))[0]
+        // expect(await vat.build(seriesId, mockIlks)).to.emit(vat, 'VaultBuilt').withArgs(null, seriesId, mockIlks);
+        await vat.build(seriesId, mockIlks)
+        const event = (await vat.queryFilter(vat.filters.VaultBuilt(null, null, null, null)))[0]
         const vaultId = event.args.vaultId
         const vault = await vat.vaults(vaultId)
         expect(vault.owner).to.equal(owner)
         expect(vault.seriesId).to.equal(seriesId)
 
         // Remove these two when `expect...to.emit` works
+        expect(event.args.owner).to.equal(owner)
         expect(event.args.seriesId).to.equal(seriesId)
-        expect(event.args.ilks).to.equal(ilks)
+        expect(event.args.ilks).to.equal(mockIlks)
+      })
+
+      describe('with a vault built', async () => {
+        let vaultId: string
+
+        beforeEach(async () => {
+          await vat.build(seriesId, mockIlks)
+          const event = (await vat.queryFilter(vat.filters.VaultBuilt(null, null, null, null)))[0]
+          vaultId = event.args.vaultId
+        })
+  
+        it('does not allow destroying vaults if not the vault owner', async () => {
+          await expect(vatFromOther.destroy(vaultId)).to.be.revertedWith('Vat: Only vault owner')
+        })
+  
+        it('destroys a vault', async () => {
+          expect(await vat.destroy(vaultId)).to.emit(vat, 'VaultDestroyed').withArgs(vaultId)
+          const vault = await vat.vaults(vaultId)
+          expect(vault.owner).to.equal(emptyAddress)
+          expect(vault.seriesId).to.equal(emptyAssetId)
+        })
       })
     })
   })
