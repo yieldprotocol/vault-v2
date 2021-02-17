@@ -13,17 +13,11 @@ library DataTypes {
     struct Vault {
         address owner;
         bytes6 seriesId;                                                 // Each vault is related to only one series, which also determines the underlying.
-        // 6 bytes free
-    }
-
-    // ==== Vault composition ====
-    struct Ilks {
-        bytes6[5] ilkIds;
-        bytes2 length;
+        bytes6 ilkId;
     }
 
     struct Balances {
-        uint128 debt;
-        uint128[5] assets;
+        uint128 art;                                                     // Debt
+        uint128 ink;                                                     // Assets
     }
 }
