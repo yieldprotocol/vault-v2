@@ -128,6 +128,17 @@ describe('Vat', () => {
           expect(vault.owner).to.equal(emptyAddress)
           expect(vault.seriesId).to.equal(emptyAssetId)
         })
+
+        it('does not allow giving vaults if not the vault owner', async () => {
+          await expect(vatFromOther.give(vaultId, other)).to.be.revertedWith('Vat: Only vault owner')
+        })
+  
+        it('gives a vault', async () => {
+          expect(await vat.give(vaultId, other)).to.emit(vat, 'VaultTransfer').withArgs(vaultId, other)
+          const vault = await vat.vaults(vaultId)
+          expect(vault.owner).to.equal(other)
+          expect(vault.seriesId).to.equal(seriesId)
+        })
       })
     })
   })

@@ -14,6 +14,7 @@ contract Vat {
     event SeriesAdded(bytes6 indexed seriesId, bytes6 indexed baseId, address indexed fyToken);
     event VaultBuilt(bytes12 indexed vaultId, address indexed owner, bytes6 indexed seriesId, bytes32 ilks);
     event VaultDestroyed(bytes12 indexed vaultId);
+    event VaultTransfer(bytes12 indexed vaultId, address indexed receiver);
 
     mapping (bytes6 => IERC20)               public bases;              // Underlyings available in Vat. 12 bytes still free.
     mapping (bytes6 => DataTypes.Series)     public series;             // Series available in Vat. We can possibly use a bytes6 (3e14 possible series).
@@ -159,17 +160,20 @@ contract Vat {
             vaultIlks[vault] = _ilks ;                                    // 1 SSTORE
         }
     }
+    */
 
-    // Transfer a vault to another user.
-    // Doesn't check inputs, or collateralization level. Do that in public functions.
-    function __give(bytes12 vault, address user)
+    /// @dev Transfer a vault to another user.
+    /// Doesn't check inputs, or collateralization level. Do that in public functions.
+    function __give(bytes12 vaultId, address receiver)
         internal
     {
-        vaults[vault].owner = user;                                    // 1 SSTORE
+        vaults[vaultId].owner = receiver;                                    // 1 SSTORE
+        emit VaultTransfer(vaultId, receiver);
     }
 
     // ==== Asset and debt management ====
 
+    /*
     // Move collateral between vaults.
     // Doesn't check inputs, or collateralization level. Do that in public functions.
     function __flux(bytes12 from, bytes12 to, Ilks memory ilks, uint128[] memory inks)
@@ -262,18 +266,19 @@ contract Vat {
         Ilks memory selectedIlks = vaultIlks[vault].select(ilks);      // 1 SLOAD
         return __frob(vault, _ilks, inks, art);                        // Cost of `__frob`
     }
+    */
 
     // ---- Public processes ----
 
     // Give a vault to another user.
-    function give(bytes12 vault, address user)
+    function give(bytes12 vaultId, address user)
         public
+        vaultOwner(vaultId)
     {
-        require (validVault(vault), "Invalid vault");                  // 1 SLOAD
-        require (vaults[vault].owner == msg.sender, "Only owner");     // 1 SLOAD
-        __give(vault, user);                                           // Cost of `__give`
+        __give(vaultId, user);                                           // Cost of `__give`
     }
 
+    /*
     // Move collateral between vaults.
     function flux(bytes12 from, bytes12 to, bytes1 ilks, uint128[] memory inks)
         internal
