@@ -10,9 +10,9 @@ import "./libraries/DataTypes.sol";
 contract Vat {
     // using IlksPacking for bytes1;
 
-    event VaultBuilt(bytes12 indexed id);
-    event BaseAdded(bytes6 indexed id, address indexed base);
-    event SeriesAdded(bytes6 indexed id, bytes6 indexed base, address indexed fyToken);
+    event VaultBuilt(bytes12 indexed vaultId, bytes6 indexed seriesId, bytes32 indexed ilks);
+    event BaseAdded(bytes6 indexed baseId, address indexed base);
+    event SeriesAdded(bytes6 indexed seriesId, bytes6 indexed baseId, address indexed fyToken);
 
     mapping (bytes6 => IERC20)               public bases;              // Underlyings available in Vat. 12 bytes still free.
     mapping (bytes6 => DataTypes.Series)     public series;             // Series available in Vat. We can possibly use a bytes6 (3e14 possible series).
@@ -39,22 +39,22 @@ contract Vat {
 
     // ==== Administration ====
     /// @dev Add a new base
-    function addBase(bytes6 id, IERC20 base) external /*auth*/ {
-        require (bases[id] == IERC20(address(0)), "Vat: Id already used");
-        bases[id] = base;
-        emit BaseAdded(id, address(base));
+    function addBase(bytes6 baseId, IERC20 base) external /*auth*/ {
+        require (bases[baseId] == IERC20(address(0)), "Vat: Id already used");
+        bases[baseId] = base;
+        emit BaseAdded(baseId, address(base));
     }                                     // Also known as underlying
 
     /// @dev Add a new series
-    function addSeries(bytes6 id, bytes6 base, IFYToken fyToken, uint32 maturity) external /*auth*/ {
-        require (series[id].fyToken == IFYToken(address(0)), "Vat: Id already used");
-        require (bases[base] != IERC20(address(0)), "Vat: Base not present");
-        series[id] = DataTypes.Series({
+    function addSeries(bytes6 seriesId, bytes6 baseId, IFYToken fyToken) external /*auth*/ {
+        require (series[seriesId].fyToken == IFYToken(address(0)), "Vat: Id already used");
+        require (bases[baseId] != IERC20(address(0)), "Vat: Base not present");
+        series[seriesId] = DataTypes.Series({
             fyToken: fyToken,
-            maturity: maturity,
-            base: base
+            maturity: fyToken.maturity(),
+            baseId: baseId
         });                                                           // 1 SSTORE
-        emit SeriesAdded(id, base, address(fyToken));
+        emit SeriesAdded(seriesId, baseId, address(fyToken));
     }
 
     /*
@@ -65,15 +65,15 @@ contract Vat {
     */
 
     /// @dev Create a new vault, linked to a series (and therefore underlying) and up to 5 collateral types
-    function build(bytes6 series, bytes32 ilks)
+    function build(bytes6 seriesId, bytes32 ilks)
         public
-        returns (bytes12 id)
+        returns (bytes12 vaultId)
     {
         // require (validSeries(series), "Invalid series");               // 1 SLOAD
-        bytes12 id = bytes12(keccak256(abi.encodePacked(msg.sender, block.timestamp)));               // Check (vaults[id].owner == address(0)), and increase the salt until a free vault id is found. 1 SLOAD per check.
-        vaults[id] = DataTypes.Vault({
+        bytes12 vaultId = bytes12(keccak256(abi.encodePacked(msg.sender, block.timestamp)));               // Check (vaults[id].owner == address(0)), and increase the salt until a free vault id is found. 1 SLOAD per check.
+        vaults[vaultId] = DataTypes.Vault({
             owner: msg.sender,
-            series: series
+            seriesId: seriesId
         });                                                           // 1 SSTORE
 
         /*
@@ -85,7 +85,7 @@ contract Vat {
         ilks[id] = _ilks;                                              // 1 SSTORE
         */
 
-        emit VaultBuilt(id);
+        emit VaultBuilt(vaultId, seriesId, ilks);
     }
 
     /*

@@ -41,7 +41,7 @@ describe('Vat', () => {
   })
 
   it('adds a base', async () => {
-    expect(await vat.addBase(baseId, base.address)).to.emit(vat, 'BaseAdded').withArgs(baseId, base.address);
+    expect(await vat.addBase(baseId, base.address)).to.emit(vat, 'BaseAdded').withArgs(baseId, base.address)
     expect(await vat.bases(baseId)).to.equal(base.address)
   })
 
@@ -54,18 +54,28 @@ describe('Vat', () => {
       await expect(vat.addBase(baseId, base.address)).to.be.revertedWith('Vat: Id already used')
     })
 
-    /* it('adds a series', async () => {
-      expect(await vat.addSeries(seriesId, baseId, mockFYToken)).to.emit(vat, 'BaseAdded').withArgs(baseId, base);
-    }) */
+    it('adds a series', async () => {
+      expect(await vat.addSeries(seriesId, baseId, fyToken.address)).to.emit(vat, 'SeriesAdded').withArgs(seriesId, baseId, fyToken.address)
+
+      const series = await vat.series(seriesId)
+      expect(series.fyToken).to.equal(fyToken.address)
+      expect(series.baseId).to.equal(baseId)
+      expect(series.maturity).to.equal(maturity)
+    })
   })
 
   it('builds a vault', async () => {
-    const ilks = ethers.utils.randomBytes(32)
-    await vat.build(seriesId, ilks);
-    const event = (await vat.queryFilter(vat.filters.VaultBuilt(null)))[0]
-    const baseId = event.args.id
-    const vault = await vat.vaults(baseId)
+    const ilks = ethers.utils.hexlify(ethers.utils.randomBytes(32))
+    // expect(await vat.build(seriesId, ilks)).to.emit(vat, 'VaultBuilt').withArgs(null, seriesId, ilks);
+    await vat.build(seriesId, ilks)
+    const event = (await vat.queryFilter(vat.filters.VaultBuilt(null, null, null)))[0]
+    const vaultId = event.args.vaultId
+    const vault = await vat.vaults(vaultId)
     expect(vault.owner).to.equal(owner)
-    expect(vault.series).to.equal(seriesId)
+    expect(vault.seriesId).to.equal(seriesId)
+
+    // Remove these two when `expect...to.emit` works
+    expect(event.args.seriesId).to.equal(seriesId)
+    expect(event.args.ilks).to.equal(ilks)
   })
 })

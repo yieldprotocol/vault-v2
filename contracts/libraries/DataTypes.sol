@@ -4,21 +4,21 @@ import "../interfaces/IFYToken.sol";
 library DataTypes {
     struct Series {
         IFYToken fyToken;                                               // Redeemable token for the series.
+        bytes6  baseId;                                                  // Token received on redemption.
         uint32  maturity;                                              // Unix time at which redemption becomes possible.
-        bytes6  base;                                                  // Token received on redemption.
         // bytes2 free
     }
 
     // ==== Vault ordering ====
     struct Vault {
         address owner;
-        bytes6 series;                                                 // Each vault is related to only one series, which also determines the underlying.
+        bytes6 seriesId;                                                 // Each vault is related to only one series, which also determines the underlying.
         // 6 bytes free
     }
 
     // ==== Vault composition ====
     struct Ilks {
-        bytes6[5] ids;
+        bytes6[5] ilkIds;
         bytes2 length;
     }
 
