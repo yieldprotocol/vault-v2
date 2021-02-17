@@ -46,17 +46,33 @@ contract Vat {
         emit BaseAdded(baseId, address(base));
     }                                     // Also known as underlying
 
+    /// @dev Ensure a base exists        
+    modifier baseExists(bytes6 baseId) {
+        require (bases[baseId] != IERC20(address(0)), "Vat: Base not found");
+        _;
+    }
+
     /// @dev Add a new series
     // TODO: Should we add a fyToken Join now, before, or after?
-    function addSeries(bytes6 seriesId, bytes6 baseId, IFYToken fyToken) external /*auth*/ {
+    function addSeries(bytes6 seriesId, bytes6 baseId, IFYToken fyToken)
+        external
+        /*auth*/
+        baseExists(baseId)
+    {
+        require (fyToken != IFYToken(address(0)), "Vat: Series need a fyToken");
         require (series[seriesId].fyToken == IFYToken(address(0)), "Vat: Id already used");
-        require (bases[baseId] != IERC20(address(0)), "Vat: Base not found");
         series[seriesId] = DataTypes.Series({
             fyToken: fyToken,
             maturity: fyToken.maturity(),
             baseId: baseId
         });                                                           // 1 SSTORE
         emit SeriesAdded(seriesId, baseId, address(fyToken));
+    }
+
+    /// @dev Ensure a series exists        
+    modifier seriesExists(bytes6 seriesId) {
+        require (series[seriesId].fyToken != IFYToken(address(0)), "Vat: Series not found");
+        _;
     }
 
     /*

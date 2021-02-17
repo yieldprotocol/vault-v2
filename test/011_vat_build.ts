@@ -21,6 +21,7 @@ describe('Vat', () => {
   let base: ERC20Mock
 
   const mockAddress =  ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20)))
+  const emptyAddress =  ethers.utils.getAddress('0x0000000000000000000000000000000000000000')
 
   before(async () => {
     const signers = await ethers.getSigners()
@@ -56,6 +57,10 @@ describe('Vat', () => {
 
     it('does not allow using the same base identifier twice', async () => {
       await expect(vat.addBase(baseId, base.address)).to.be.revertedWith('Vat: Id already used')
+    })
+
+    it('does not allow not linking to a fyToken', async () => {
+      await expect(vat.addSeries(seriesId, baseId, emptyAddress)).to.be.revertedWith('Vat: Series need a fyToken')
     })
 
     it('adds a series', async () => {
