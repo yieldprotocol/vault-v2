@@ -39,6 +39,7 @@ contract Vat {
 
     // ==== Administration ====
     /// @dev Add a new base
+    // TODO: Should we add a base Join now, or before?
     function addBase(bytes6 baseId, IERC20 base) external /*auth*/ {
         require (bases[baseId] == IERC20(address(0)), "Vat: Id already used");
         bases[baseId] = base;
@@ -46,6 +47,7 @@ contract Vat {
     }                                     // Also known as underlying
 
     /// @dev Add a new series
+    // TODO: Should we add a fyToken Join now, or before?
     function addSeries(bytes6 seriesId, bytes6 baseId, IFYToken fyToken) external /*auth*/ {
         require (series[seriesId].fyToken == IFYToken(address(0)), "Vat: Id already used");
         require (bases[baseId] != IERC20(address(0)), "Vat: Base not present");
