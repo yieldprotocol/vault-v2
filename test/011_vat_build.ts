@@ -1,9 +1,14 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import VatArtifact from '../artifacts/contracts/Vat.sol/Vat.json'
+import FYTokenArtifact from '../artifacts/contracts/FYToken.sol/FYToken.json'
+import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
+
 import { Vat } from '../typechain/Vat'
+import { FYToken } from '../typechain/FYToken'
+import { ERC20Mock } from '../typechain/ERC20Mock'
 
 import { ethers, waffle } from 'hardhat'
-// import { baseId } from '../src'
+// import { id } from '../src'
 import { expect } from 'chai'
 const { deployContract } = waffle
 
@@ -12,6 +17,10 @@ describe('Vat', () => {
   let owner: string
   let other: SignerWithAddress
   let vat: Vat
+  let fyToken: FYToken
+  let base: ERC20Mock
+
+  const mockAddress =  ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20)))
 
   before(async () => {
     const signers = await ethers.getSigners()
@@ -21,29 +30,28 @@ describe('Vat', () => {
     other = signers[1]
   })
 
+  const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
+  const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
+  const maturity = 1640995199;
+
   beforeEach(async () => {
     vat = (await deployContract(ownerAcc, VatArtifact, [])) as Vat
+    base = (await deployContract(ownerAcc, ERC20MockArtifact, [baseId, "Mock Base"])) as ERC20Mock
+    fyToken = (await deployContract(ownerAcc, FYTokenArtifact, [base.address, mockAddress, maturity, seriesId, "Mock FYToken"])) as FYToken
   })
 
   it('adds a base', async () => {
-    const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
-    const base = ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20)))
-    expect(await vat.addBase(baseId, base)).to.emit(vat, 'BaseAdded').withArgs(baseId, base);
-    expect(await vat.bases(baseId)).to.equal(base)
+    expect(await vat.addBase(baseId, base.address)).to.emit(vat, 'BaseAdded').withArgs(baseId, base.address);
+    expect(await vat.bases(baseId)).to.equal(base.address)
   })
 
   describe('with a base added', async () => {
-    const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
-    const mockBase = ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20)))
-    const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
-    const mockFYToken = ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20)))
-
     beforeEach(async () => {
-      await vat.addBase(baseId, mockBase)
+      await vat.addBase(baseId, base.address)
     })
 
     it('does not allow using the same base baseIdentifier twice', async () => {
-      await expect(vat.addBase(baseId, mockBase)).to.be.revertedWith('Vat: Id already used')
+      await expect(vat.addBase(baseId, base.address)).to.be.revertedWith('Vat: Id already used')
     })
 
     /* it('adds a series', async () => {
@@ -52,13 +60,12 @@ describe('Vat', () => {
   })
 
   it('builds a vault', async () => {
-    const series = ethers.utils.randomBytes(6);
     const ilks = ethers.utils.randomBytes(32)
-    await vat.build(series, ilks);
+    await vat.build(seriesId, ilks);
     const event = (await vat.queryFilter(vat.filters.VaultBuilt(null)))[0]
     const baseId = event.args.id
     const vault = await vat.vaults(baseId)
     expect(vault.owner).to.equal(owner)
-    expect(vault.series).to.equal(ethers.utils.hexlify(series))
+    expect(vault.series).to.equal(seriesId)
   })
 })
