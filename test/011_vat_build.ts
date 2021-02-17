@@ -56,7 +56,7 @@ describe('Vat', () => {
     const ilks = ethers.utils.randomBytes(32)
     await vat.build(series, ilks);
     const event = (await vat.queryFilter(vat.filters.VaultBuilt(null)))[0]
-    const baseId = event.args.baseId
+    const baseId = event.args.id
     const vault = await vat.vaults(baseId)
     expect(vault.owner).to.equal(owner)
     expect(vault.series).to.equal(ethers.utils.hexlify(series))
