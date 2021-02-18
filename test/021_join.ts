@@ -21,6 +21,7 @@ describe('Vat', () => {
 
   const mockAddress =  ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20)))
   const emptyAddress =  ethers.utils.getAddress('0x0000000000000000000000000000000000000000')
+  const MAX = ethers.constants.MaxUint256
 
   before(async () => {
     const signers = await ethers.getSigners()
@@ -37,7 +38,7 @@ describe('Vat', () => {
     joinFromOther = join.connect(otherAcc)
 
     await token.mint(owner, 1);
-    await token.approve(join.address, 1)
+    await token.approve(join.address, MAX)
   })
 
   it('pulls tokens from user', async () => {
