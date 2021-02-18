@@ -12,6 +12,7 @@ contract CDPProxy {
 
     IVat public vat;
 
+    // TODO: Consider making ilks and bases a single variable
     mapping (bytes6 => IJoin)                public ilkJoins;           // Join contracts available to manage collateral. 12 bytes still free.
 
     event IlkJoinAdded(bytes6 indexed ilkId, address indexed join);
@@ -35,7 +36,8 @@ contract CDPProxy {
     // Doesn't check inputs, or collateralization level. Do that in public functions.
     // TODO: Extend to allow other accounts in `join`
     function frob(bytes12 vaultId, int128 ink, int128 art)
-        external returns (DataTypes.Balances memory _balances)
+        external
+        returns (DataTypes.Balances memory _balances)
     {
         DataTypes.Vault memory _vault = vat.vaults(vaultId);                // 1 CALL + 1 SLOAD
         require (_vault.owner == msg.sender, "Only vault owner");
@@ -58,4 +60,19 @@ contract CDPProxy {
 
         return _balances;
     }
+
+    /// @dev Repay vault debt using underlying token. It can add or remove collateral at the same time.
+    /* function close(bytes12 vaultId, int128 ink, uint128 repay)
+        external
+        returns (DataTypes.Balances memory _balances)
+    {
+        DataTypes.Vault memory _vault = vat.vaults(vaultId);                // 1 CALL + 1 SLOAD
+        require (_vault.owner == msg.sender, "Only vault owner");
+
+        DataTypes.Series memory _series = vat.series(_vault.seriesId);      // 1 CALL + 1 SLOAD
+        bytes6 baseId = _series[vaultId].baseId;                            // 1 SLOAD
+        joins[baseId].join(int128(repay));                                  // Cost of `join`
+        uint128 art = repay * RAY / rateOracles[base].spot();               // 1 SLOAD + `spot`
+        return __frob(vaultId, ink, -int128(art));                          // Cost of `__frob`
+    } */
 }
