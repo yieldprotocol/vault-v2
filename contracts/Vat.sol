@@ -20,7 +20,6 @@ contract Vat {
 
     event BaseAdded(bytes6 indexed baseId, address indexed base);
     event IlkAdded(bytes6 indexed ilkId, address indexed ilk);
-    event IlkJoinAdded(bytes6 indexed ilkId, address indexed join);
     event SeriesAdded(bytes6 indexed seriesId, bytes6 indexed baseId, address indexed fyToken);
 
     event VaultBuilt(bytes12 indexed vaultId, address indexed owner, bytes6 indexed seriesId, bytes6 ilkId);
@@ -32,8 +31,6 @@ contract Vat {
     mapping (bytes6 => IERC20)               public bases;              // Underlyings available in Vat. 12 bytes still free.
     mapping (bytes6 => IERC20)               public ilks;               // Collaterals available in Vat. 12 bytes still free.
     mapping (bytes6 => DataTypes.Series)     public series;             // Series available in Vat. We can possibly use a bytes6 (3e14 possible series).
-
-    mapping (bytes6 => IJoin)                public ilkJoins;           // Join contracts available to manage collateral. 12 bytes still free.
 
     mapping (bytes6 => address)                     chiOracles;         // Chi (savings rate) accruals oracle for the underlying
     mapping (bytes6 => address)                     rateOracles;        // Rate (borrowing rate) accruals oracle for the underlying
@@ -64,16 +61,6 @@ contract Vat {
         ilks[ilkId] = ilk;
         emit IlkAdded(ilkId, address(ilk));
     }                   // Also known as collateral
-
-    /// @dev Add a new Join for an Ilk. There can be only onw Join per Ilk. Until a Join is added, no tokens of that Ilk can be posted or withdrawn.
-    function addIlkJoin(bytes6 ilkId, IJoin join)
-        external
-        /*auth*/
-        ilkExists(ilkId)                                              // 1 SLOAD
-    {
-        ilkJoins[ilkId] = join;                                       // 1 SSTORE
-        emit IlkJoinAdded(ilkId, address(join));
-    }
 
     /// @dev Add a new series
     // TODO: Should we add a fyToken Join now, before, or after?
@@ -266,12 +253,12 @@ contract Vat {
     // TODO: __frob underlying from and collateral to users
     function _frob(bytes12 vaultId, int128 ink, int128 art)
         public
-        auth                                                            // 1 SLOAD
+        /* auth */                                                            // 1 SLOAD
         vaultExists(vaultId)                                            // 1 SLOAD
         returns (DataTypes.Balances memory)
     {
-        DataTypes.Balances memory _balances = __frob(vault, ink, art);                // Cost of `__frob`
-        if (art > 0 || ink < 0) require(level(vaultId) >= 0, "Undercollateralized");  // Cost of `level`
+        DataTypes.Balances memory _balances = __frob(vaultId, ink, art);                // Cost of `__frob`
+        // if (art > 0 || ink < 0) require(level(vaultId) >= 0, "Undercollateralized");  // Cost of `level`
         return _balances;
     }
 

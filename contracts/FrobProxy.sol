@@ -14,6 +14,8 @@ contract FrobProxy {
 
     mapping (bytes6 => IJoin)                public ilkJoins;           // Join contracts available to manage collateral. 12 bytes still free.
 
+    event IlkJoinAdded(bytes6 indexed ilkId, address indexed join);
+
     constructor (IVat vat_) {
         vat = vat_;
     }
@@ -48,9 +50,9 @@ contract FrobProxy {
             DataTypes.Series memory _series = vat.series(_vault.seriesId);      // 1 CALL + 1 SLOAD
             if (art > 0) {
                 require(block.timestamp <= _series.maturity, "Mature");
-                IFYToken(_series.fyToken).mint(msg.sender, art);        // 1 CALL(40) + fyToken.mint. Consider whether it's possible to achieve this without an external call, so that `Vat` doesn't depend on the `FYDai` interface.
+                IFYToken(_series.fyToken).mint(msg.sender, uint128(art));        // 1 CALL(40) + fyToken.mint. Consider whether it's possible to achieve this without an external call, so that `Vat` doesn't depend on the `FYDai` interface.
             } else {
-                IFYToken(_series.fyToken).burn(msg.sender, art);        // 1 CALL(40) + fyToken.burn. Consider whether it's possible to achieve this without an external call, so that `Vat` doesn't depend on the `FYDai` interface.
+                IFYToken(_series.fyToken).burn(msg.sender, uint128(-art));        // 1 CALL(40) + fyToken.burn. Consider whether it's possible to achieve this without an external call, so that `Vat` doesn't depend on the `FYDai` interface.
             }
         }
 
