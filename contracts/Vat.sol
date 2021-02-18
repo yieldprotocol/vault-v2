@@ -11,7 +11,7 @@ library Math {
     /// @dev Add a number (which might be negative) to a positive, and revert if the result is negative.
     function add(uint128 x, int128 y) internal pure returns (uint128 z) {
         require (y > 0 || x >= uint128(-y), "Math: Negative result");
-        z = x + uint128(y);
+        z = y > 0 ? x + uint128(y) : x - uint128(-y);
     }
 }
 
