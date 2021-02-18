@@ -32,20 +32,20 @@ contract Join {
     }
     */
 
-    function join(address user, int128 wad)
+    function join(address user, int128 amount)
         external
         // auth
         returns (int128)
     {
-        if (wad > 0) {
+        if (amount > 0) {
             // require(live == 1, "GemJoin/not-live");
             // TODO: Consider best practices about safe transfers
             // TODO: Safe casting
-            require(token.transferFrom(user, address(this), uint256(int256(wad))), "Join: Failed pull");
+            require(token.transferFrom(user, address(this), uint256(int256(amount))), "Join: Failed pull");
         } else {
             // TODO: Consider best practices about safe transfers
             // TODO: Safe casting
-            require(token.transfer(user, uint256(-int256(wad))), "Join: Failed push"); 
+            require(token.transfer(user, uint256(-int256(amount))), "Join: Failed push"); 
         }
         return wad;                    // Use this to record in vat a balance different from the amount joined
     }
