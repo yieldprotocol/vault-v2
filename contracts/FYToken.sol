@@ -22,7 +22,7 @@ contract FYToken is /* Orchestrated(),*/ ERC20Permit  {
         uint256 maturity_,
         string memory name,
         string memory symbol
-    ) public ERC20Permit(name, symbol) {
+    ) ERC20Permit(name, symbol) {
         // require(maturity_ > block.timestamp && maturity_ < block.timestamp + MAX_TIME_TO_MATURITY, "FYToken: Invalid maturity");
         underlying = underlying_;
         oracle = oracle_;
