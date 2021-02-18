@@ -286,19 +286,6 @@ contract Vat {
         return (_balancesFrom, _balancesTo);
     } */
 
-    // Add collateral and borrow from vault, pull ilks from and push borrowed asset to user
-    // Or, repay to vault and remove collateral, pull borrowed asset from and push ilks to user
-    // Checks the vault is valid, and collateralization levels at the end.
-    function frob(bytes12 vaultId, int128 ink, int128 art)
-        public
-        vaultOwner(vaultId)                                             // 1 SLOAD
-        returns (DataTypes.Balances memory)
-    {
-        DataTypes.Balances memory _balances = __frob(vaultId, ink, art);          // Cost of `__frob`
-        // if (_balances.art > 0) require(level(vaultId) >= 0, "Undercollateralized");  // Cost of `level`
-        return _balances;
-    }
-
     // Repay vault debt using underlying token, pulled from user. Collateral is returned to caller
     /* function close(bytes12 vaultId, uint128 ink, uint128 repay)
         public
