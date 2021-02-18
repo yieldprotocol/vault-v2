@@ -23,7 +23,7 @@ contract Join {
         wards[vat_] = 1;
         token = IERC20(token_);
         ilk = ilk_;
-        dec = token.decimals();
+        // dec = token.decimals();
         live = 1;
     }
 
@@ -31,12 +31,16 @@ contract Join {
         live = 0;
     }
 
-    function join(address usr, int wad) external auth returns (int128) {
+    function join(address usr, int128 wad)
+        external
+        auth
+        returns (int128)
+    {
         if (wad > 0) {
             require(live == 1, "GemJoin/not-live");
-            require(token.transferFrom(usr, address(this), wad), "GemJoin/failed-transfer");
+            require(token.transferFrom(usr, address(this), uint256(int256(wad))), "GemJoin/failed-transfer");
         } else {
-            require(token.transfer(usr, wad), "GemJoin/failed-transfer");
+            require(token.transfer(usr, uint256(-int256(wad))), "GemJoin/failed-transfer");
         }
         return wad;                    // Use this to record in vat a balance different from the amount joined
     }
