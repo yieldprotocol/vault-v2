@@ -9,15 +9,16 @@ import "./libraries/DataTypes.sol";
 contract Vat {
 
     event BaseAdded(bytes6 indexed baseId, address indexed base);
+    event IlkAdded(bytes6 indexed ilkId, address indexed ilk);
     event SeriesAdded(bytes6 indexed seriesId, bytes6 indexed baseId, address indexed fyToken);
     event VaultBuilt(bytes12 indexed vaultId, address indexed owner, bytes6 indexed seriesId, bytes6 ilkId);
     event VaultDestroyed(bytes12 indexed vaultId);
     event VaultTransfer(bytes12 indexed vaultId, address indexed receiver);
 
     mapping (bytes6 => IERC20)               public bases;              // Underlyings available in Vat. 12 bytes still free.
+    mapping (bytes6 => IERC20)               public ilks;               // Collaterals available in Vat. 12 bytes still free.
     mapping (bytes6 => DataTypes.Series)     public series;             // Series available in Vat. We can possibly use a bytes6 (3e14 possible series).
 
-    mapping (bytes6 => address)                     ilks;               // Collaterals available in Vat. 12 bytes still free.
     mapping (bytes6 => address)                     joins;              // Join contracts available. 12 bytes still free.
 
     mapping (bytes6 => address)                     chiOracles;         // Chi (savings rate) accruals oracle for the underlying
@@ -41,11 +42,13 @@ contract Vat {
         emit BaseAdded(baseId, address(base));
     }                                     // Also known as underlying
 
-    /// @dev Ensure a base exists        
-    modifier baseExists(bytes6 baseId) {
-        require (bases[baseId] != IERC20(address(0)), "Vat: Base not found");
-        _;
-    }
+    function addIlk(bytes6 ilkId, IERC20 ilk)
+        external
+    {
+        require (ilks[ilkId] == IERC20(address(0)), "Vat: Id already used");
+        ilks[ilkId] = ilk;
+        emit IlkAdded(ilkId, address(ilk));
+    }                   // Also known as collateral
 
     /// @dev Add a new series
     // TODO: Should we add a fyToken Join now, before, or after?
@@ -64,13 +67,23 @@ contract Vat {
         emit SeriesAdded(seriesId, baseId, address(fyToken));
     }
 
+    /// @dev Ensure a base exists        
+    modifier baseExists(bytes6 baseId) {
+        require (bases[baseId] != IERC20(address(0)), "Vat: Base not found");
+        _;
+    }
+
+    /// @dev Ensure an ilk exists        
+    modifier ilkExists(bytes6 ilkId) {
+        require (ilks[ilkId] != IERC20(address(0)), "Vat: Ilk not found");
+        _;
+    }
+
     /// @dev Ensure a series exists        
     modifier seriesExists(bytes6 seriesId) {
         require (series[seriesId].fyToken != IFYToken(address(0)), "Vat: Series not found");
         _;
     }
-
-    // function addIlk(bytes6 id, address ilk) external;                   // Also known as collateral
     // function addOracle(IERC20 base, IERC20 ilk, IOracle oracle) external;
 
     // ==== Vault management ====
@@ -79,7 +92,7 @@ contract Vat {
     function build(bytes6 seriesId, bytes6 ilkId)
         public
         seriesExists(seriesId)                                          // 1 SLOAD
-        // ilkExists(ilkId)                                                // 1 SLOAD
+        ilkExists(ilkId)                                                // 1 SLOAD
         returns (bytes12 vaultId)
     {
         vaultId = bytes12(keccak256(abi.encodePacked(msg.sender, block.timestamp)));               // Check (vaults[id].owner == address(0)), and increase the salt until a free vault id is found. 1 SLOAD per check.
