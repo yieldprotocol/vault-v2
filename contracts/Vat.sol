@@ -18,6 +18,7 @@ library Math {
 contract Vat {
     using Math for uint128;
 
+    // TODO: Consider merging Ilks and Bases
     event BaseAdded(bytes6 indexed baseId, address indexed base);
     event IlkAdded(bytes6 indexed ilkId, address indexed ilk);
     event SeriesAdded(bytes6 indexed seriesId, bytes6 indexed baseId, address indexed fyToken);
@@ -27,11 +28,10 @@ contract Vat {
     event VaultTransfer(bytes12 indexed vaultId, address indexed receiver);
 
     event VaultFrobbed(bytes12 indexed vaultId, bytes6 indexed ilkId, bytes6 indexed baseId, int128 ink, int128 art);
-    event IlkTransfer(bytes12 indexed from, bytes12 indexed to, bytes6 indexed ilkId, uint128 ink);
 
-    // TODO: Consider merging ilks and bases into assets
     mapping (bytes6 => IERC20)               public bases;              // Underlyings available in Vat. 12 bytes still free.
-    mapping (bytes6 => IERC20)               public ilks;               // Collaterals available in Vat. 12 bytes still free.
+    mapping (bytes6 => IERC20)               public ilks;               // Collaterals available in Vat. 12 bytes still free (maybe for ceiling)
+    mapping (bytes6 => mapping(bytes6 => uint128)) public ilkDebt;      // [ilk][base] Sum of debt per collateral and underlying across all vaults
     mapping (bytes6 => DataTypes.Series)     public series;             // Series available in Vat. We can possibly use a bytes6 (3e14 possible series).
 
     mapping (bytes6 => address)                     chiOracles;         // Chi (savings rate) accruals oracle for the underlying
@@ -181,18 +181,10 @@ contract Vat {
     // Doesn't check inputs, or collateralization level. Do that in public functions.
     /* function __flux(bytes12 from, bytes12 to, uint128 ink)
         internal
-        returns (Balances memory balancesFrom, Balances memory balancesTo)
     {
-        bytes6 ilkId = vaults[from].ilk;                                // 1 SLOAD
-        require (ilkId == vaults[to].ilk, "Vat: Different collateral"); // 1 SLOAD
-        balancesFrom = vaultBalances[from];                             // 1 SLOAD
-        balancesTo = vaultBalances[to];                                 // 1 SLOAD
-        balancesFrom.ink -= ink;
-        balancesTo.ink += ink;
-        vaultBalances[from] = balancesFrom;                             // 1 SSTORE
-        vaultBalances[to] = balancesTo;                                 // 1 SSTORE
-        emit IlkTransfer(from, to, ilkId, ink);
-        return (balancesFrom, balancesTo);
+        require (vaults[from].ilk == vaults[to].ilk, "Vat: Different collateral"); // 2 SLOAD
+        balances[from].assets -= ink;                                   // 1 SSTORE
+        balances[to].assets += ink;                                     // 1 SSTORE
     } */
 
     // Add collateral and borrow from vault, pull ilks from and push borrowed asset to user
@@ -211,9 +203,10 @@ contract Vat {
         }
 
         if (art != 0) {
-            _balances.art = _balances.art.add(art);
+            ilkDebt[_vault.ilkId][_series.baseId] = ilkDebt[_vault.ilkId][_series.baseId].add(art); // 1 SSTORE. TODO: Test.
+            _balances.art = _balances.art.add(art);                   // 1 SSTORE
         }
-        vaultBalances[vaultId] = _balances;                               // 1 SSTORE
+        vaultBalances[vaultId] = _balances;                             // 1 SSTORE
 
         emit VaultFrobbed(vaultId, _vault.ilkId, _series.baseId, ink, art);
         return _balances;
@@ -246,23 +239,23 @@ contract Vat {
         __give(vaultId, msg.sender);                                    // Cost of `__give`
     } */
 
-    /// @dev Manage vaults with collateralization checks
-    /// The caller is trusted to do the token transfers
+    // Manipulate a vault without collateralization checks.
+    // To be used for liquidation engines.
     // TODO: __frob underlying from and collateral to users
     function _frob(bytes12 vaultId, int128 ink, int128 art)
         public
-        /* auth */                                                            // 1 SLOAD
+        // auth                                                            // 1 SLOAD
         vaultExists(vaultId)                                            // 1 SLOAD
-        returns (DataTypes.Balances memory)
+        returns (DataTypes.Balances memory balances)
     {
-        DataTypes.Balances memory _balances = __frob(vaultId, ink, art);                // Cost of `__frob`
-        // if (art > 0 || ink < 0) require(level(vaultId) >= 0, "Undercollateralized");  // Cost of `level`
-        return _balances;
+        balances = __frob(vaultId, ink, art);                             // Cost of `__frob`
+        // if (balances.art > 0 && (ink < 0 || art > 0)) require(level(vaultId) >= 0, "Undercollateralized");  // Cost of `level`
+        return balances;
     }
 
     // ---- Public processes ----
 
-    /// @dev Give a vault to another user.
+    // Give a vault to another user.
     function give(bytes12 vaultId, address user)
         public
         vaultOwner(vaultId)                                             // 1 SLOAD
@@ -270,16 +263,18 @@ contract Vat {
         __give(vaultId, user);                                          // Cost of `__give`
     }
 
-    /// @dev Move collateral between vaults.
+    // Move collateral between vaults.
     /* function flux(bytes12 from, bytes12 to, uint128 ink)
         public
         vaultOwner(from)                                                // 1 SLOAD
         vaultExists(to)                                                 // 1 SLOAD
-        returns (Balances memory balancesFrom, Balances memory balancesTo)
+        returns (bytes32, bytes32)
     {
-        (balancesFrom, balancesTo) = __flux(from, to, ink);             // Cost of `__flux`
-        // if (_balancesFrom.art > 0) require(level(from) >= 0, "Undercollateralized");  // Cost of `level`
-        return (balancesFrom, balancesTo);
+        Balances memory _balancesFrom;
+        Balances memory _balancesTo;
+        (_balancesFrom, _balancesTo) = __flux(from, to, ink, art);      // Cost of `__flux`
+        if (_balancesFrom.art > 0) require(level(from) >= 0, "Undercollateralized");  // Cost of `level`
+        return (_balancesFrom, _balancesTo);
     } */
 
     // ==== Accounting ====
