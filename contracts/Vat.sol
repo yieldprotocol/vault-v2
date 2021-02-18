@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
-// import "./interfaces/IOracle.sol";
-// import "./libraries/IlksPacking.sol";
 import "@yield-protocol/utils/contracts/token/IERC20.sol";
 import "./interfaces/IFYToken.sol";
+// import "./interfaces/IOracle.sol";
 import "./libraries/DataTypes.sol";
 
 
 contract Vat {
-    // using IlksPacking for bytes1;
 
     event BaseAdded(bytes6 indexed baseId, address indexed base);
     event SeriesAdded(bytes6 indexed seriesId, bytes6 indexed baseId, address indexed fyToken);
@@ -29,7 +27,7 @@ contract Vat {
     // ==== Vault ordering ====
 
     mapping (bytes12 => DataTypes.Vault)     public vaults;             // An user can own one or more Vaults, each one with a bytes12 identifier
-    mapping (bytes12 => Balances)                   vaultBalances;      // Both debt and assets. The debt and the amount held for the first collateral share a word.
+    mapping (bytes12 => DataTypes.Balances)  public vaultBalances;      // Both debt and assets
 
     // ==== Vault timestamping ====
     mapping (bytes12 => uint32)                     timestamps;         // If grater than zero, time that a vault was timestamped. Used for liquidation.
@@ -72,8 +70,8 @@ contract Vat {
         _;
     }
 
-    function addIlk(bytes6 id, address ilk) external;                   // Also known as collateral
-    function addOracle(IERC20 base, IERC20 ilk, IOracle oracle) external;
+    // function addIlk(bytes6 id, address ilk) external;                   // Also known as collateral
+    // function addOracle(IERC20 base, IERC20 ilk, IOracle oracle) external;
 
     // ==== Vault management ====
 
@@ -81,10 +79,10 @@ contract Vat {
     function build(bytes6 seriesId, bytes6 ilkId)
         public
         seriesExists(seriesId)                                          // 1 SLOAD
-        ilkExists(ilkId)                                                // 1 SLOAD
+        // ilkExists(ilkId)                                                // 1 SLOAD
         returns (bytes12 vaultId)
     {
-        bytes12 vaultId = bytes12(keccak256(abi.encodePacked(msg.sender, block.timestamp)));               // Check (vaults[id].owner == address(0)), and increase the salt until a free vault id is found. 1 SLOAD per check.
+        vaultId = bytes12(keccak256(abi.encodePacked(msg.sender, block.timestamp)));               // Check (vaults[id].owner == address(0)), and increase the salt until a free vault id is found. 1 SLOAD per check.
         vaults[vaultId] = DataTypes.Vault({
             owner: msg.sender,
             seriesId: seriesId,
@@ -106,13 +104,18 @@ contract Vat {
         _;
     }
 
+    /* function emptyBalances(bytes12 vaultId) internal view returns (bool) {
+        DataTypes.Balances memory balances = vaultBalances[vaultId];
+        return balances.art == 0 && balances.ink == 0;
+    } */
+
     /// @dev Destroy an empty vault. Used to recover gas costs.
     function destroy(bytes12 vaultId)
         public
         vaultOwner(vaultId)                                             // 1 SLOAD
     {
-        require (bytes32(balances[vaultId]) == bytes32(0), "Destroy only empty vaults"); // 1 SLOAD
-        delete timestamps[vaultId];                                     // 1 SSTORE REFUND
+        // require (emptyBalances(vaultId), "Destroy only empty vaults");  // 1 SLOAD
+        // delete timestamps[vaultId];                                     // 1 SSTORE REFUND
         delete vaults[vaultId];                                         // 1 SSTORE REFUND
         emit VaultDestroyed(vaultId);
     }
@@ -120,7 +123,7 @@ contract Vat {
     // Change a vault series and/or collateral types.
     // We can change the series if there is no debt, or ilks if there are no assets
     // Doesn't check inputs, or collateralization level. Do that in public functions.
-    function __tweak(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
+    /* function __tweak(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
         internal
     {
         Balances memory _balances = balances[vaultId];                  // 1 SLOAD
@@ -134,7 +137,7 @@ contract Vat {
             _vault.inkId = inkId;
         }
         vaults[vaultId] = _vault;                                       // 1 SSTORE
-    }
+    } */
 
     /// @dev Transfer a vault to another user.
     /// Doesn't check inputs, or collateralization level. Do that in public functions.
@@ -149,18 +152,18 @@ contract Vat {
 
     // Move collateral between vaults.
     // Doesn't check inputs, or collateralization level. Do that in public functions.
-    function __flux(bytes12 from, bytes12 to, uint128 ink)
+    /* function __flux(bytes12 from, bytes12 to, uint128 ink)
         internal
     {
         require (vaults[from].ilk == vaults[to].ilk, "Vat: Different collateral"); // 2 SLOAD
         balances[from].assets -= ink;                                   // 1 SSTORE
         balances[to].assets += ink;                                     // 1 SSTORE
-    }
+    } */
 
     // Add collateral and borrow from vault, pull ilks from and push borrowed asset to user
     // Or, repay to vault and remove collateral, pull borrowed asset from and push ilks to user
     // Doesn't check inputs, or collateralization level. Do that in public functions.
-    function __frob(bytes12 vaultId, int128 ink, int128 art)
+    /* function __frob(bytes12 vaultId, int128 ink, int128 art)
         internal returns (Balances)
     {
         Vault memory _vault = vaults[vaultId];                          // 1 SLOAD
@@ -183,26 +186,26 @@ contract Vat {
         balances[vaultId] = _balances;                                  // 1 SSTORE. Refactor for Checks-Effects-Interactions
 
         return _balances;
-    }
+    } */
     
     // Repay vault debt using underlying token, pulled from user. Collateral is returned to user
     // Doesn't check inputs, or collateralization level. Do that in public functions.
     // TODO: `__frob` with recipient
-    function __close(bytes12 vault, int128 ink, uint128 repay) 
+    /* function __close(bytes12 vault, int128 ink, uint128 repay) 
         internal returns (bytes32[3])
     {
         bytes6 base = series[vaultId].baseId;                           // 1 SLOAD
         joins[base].join(repay);                                        // Cost of `join`
         uint128 debt = repay / rateOracles[base].spot();                // 1 SLOAD + `spot`
         return __frob(vaultId, ink, -int128(debt));                     // Cost of `__frob`
-    }
+    } */
 
     // ---- Restricted processes ----
     // Usable only by a authorized modules that won't cheat on Vat.
 
     // Change series and debt of a vault.
     // The module calling this function also needs to buy underlying in the pool for the new series, and sell it in pool for the old series.
-    function _roll(bytes12 vaultId, bytes6 seriesId, uint128 art)
+    /* function _roll(bytes12 vaultId, bytes6 seriesId, uint128 art)
         public
         auth
         vaultExists(vaultId)                                            // 1 SLOAD
@@ -211,30 +214,30 @@ contract Vat {
         __tweak(vaultId, series, 0);                                    // Cost of `__tweak`
         balances[from].debt = art;                                      // 1 SSTORE
         require(level(vaultId) >= 0, "Undercollateralized");            // Cost of `level`
-    }
+    } */
 
     // Give a non-timestamped vault to the caller, and timestamp it.
     // To be used for liquidation engines.
-    function _grab(bytes12 vaultId)
+    /* function _grab(bytes12 vaultId)
         public
         auth                                                            // 1 SLOAD
     {
         require (timestamps[vaultId] + 24*60*60 <= block.timestamp, "Timestamped"); // 1 SLOAD. Grabbing a vault protects it for a day from being grabbed by another liquidator.
         timestamps[vaultId] = block.timestamp;                          // 1 SSTORE
         __give(vaultId, msg.sender);                                    // Cost of `__give`
-    }
+    } */
 
     // Manipulate a vault without collateralization checks.
     // To be used for liquidation engines.
     // TODO: __frob underlying from and collateral to users
-    function _frob(bytes12 vaultId, int128 ink, int128 art)
+    /* function _frob(bytes12 vaultId, int128 ink, int128 art)
         public
         auth                                                            // 1 SLOAD
         vaultExists(vaultId)                                            // 1 SLOAD
         returns (bytes32)
     {
         return __frob(vault, ink, art);                                 // Cost of `__frob`
-    }
+    } */
 
     // ---- Public processes ----
 
@@ -247,7 +250,7 @@ contract Vat {
     }
 
     // Move collateral between vaults.
-    function flux(bytes12 from, bytes12 to, uint128 ink)
+    /* function flux(bytes12 from, bytes12 to, uint128 ink)
         public
         vaultOwner(from)                                                // 1 SLOAD
         vaultExists(to)                                                 // 1 SLOAD
@@ -258,12 +261,12 @@ contract Vat {
         (_balancesFrom, _balancesTo) = __flux(from, to, ink, art);      // Cost of `__flux`
         if (_balancesFrom.art > 0) require(level(from) >= 0, "Undercollateralized");  // Cost of `level`
         return (_balancesFrom, _balancesTo);
-    }
+    } */
 
     // Add collateral and borrow from vault, pull ilks from and push borrowed asset to user
     // Or, repay to vault and remove collateral, pull borrowed asset from and push ilks to user
     // Checks the vault is valid, and collateralization levels at the end.
-    function frob(bytes12 vaultId, int128 ink, int128 art)
+    /* function frob(bytes12 vaultId, int128 ink, int128 art)
         public
         vaultOwner(vaultId)                                             // 1 SLOAD
         returns (bytes32)
@@ -271,21 +274,21 @@ contract Vat {
         Balances memory _balances = __frob(vaultId, ink, art);          // Cost of `__frob`
         if (_balances.art > 0) require(level(vaultId) >= 0, "Undercollateralized");  // Cost of `level`
         return balances;
-    }
+    } */
 
     // Repay vault debt using underlying token, pulled from user. Collateral is returned to caller
-    function close(bytes12 vaultId, uint128 ink, uint128 repay)
+    /* function close(bytes12 vaultId, uint128 ink, uint128 repay)
         public
         vaultOwner(vaultId)                                             // 1 SLOAD
         returns (bytes32)
     {
         return __close(vaultId, int128(ink), repay);                    // Cost of `__close`
-    }
+    } */
 
     // ==== Accounting ====
 
     // Return the vault debt in underlying terms
-    function dues(bytes12 vaultId) public view returns (uint128 uart) {
+    /* function dues(bytes12 vaultId) public view returns (uint128 uart) {
         Series _series = series[vaultId];                               // 1 SLOAD
         IFYToken fyToken = _series.fyToken;
         if (block.timestamp >= _series.maturity) {
@@ -294,19 +297,19 @@ contract Vat {
         } else {
             uart = balances[vaultId].art;                               // 1 SLOAD
         }
-    }
+    } */
 
     // Return the capacity of the vault to borrow underlying based on the ilks held
-    function value(bytes12 vaultId) public view returns (uint128 uart) {
+    /* function value(bytes12 vaultId) public view returns (uint128 uart) {
         bytes6 ilk = vaults[vaultId].ilk;                               // 1 SLOAD
         Balances memory _balances = balances[vaultId];                  // 1 SLOAD
         bytes6 _base = series[vaultId].base;                            // 1 SLOAD
         IOracle oracle = spotOracles[_base][ilk];                       // 1 SLOAD
         uart += _balances.ink * oracle.spot();                          // 1 Oracle Call | Divided by collateralization ratio
-    }
+    } */
 
     // Return the collateralization level of a vault. It will be negative if undercollateralized.
-    function level(bytes12 vaultId) public view returns (int128) {      // Cost of `value` + `dues`
+    /* function level(bytes12 vaultId) public view returns (int128) {      // Cost of `value` + `dues`
         return value(vaultId) - dues(vaultId);
-    }
+    } */
 }
