@@ -8,7 +8,7 @@ contract ERC20Mock is ERC20Permit  {
     constructor(
         string memory name,
         string memory symbol
-    ) public ERC20Permit(name, symbol) { }
+    ) ERC20Permit(name, symbol) { }
 
     /// @dev Give tokens to whoever asks for them.
     function mint(address to, uint256 amount) public {
