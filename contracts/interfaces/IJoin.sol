@@ -4,17 +4,10 @@ import "@yield-protocol/utils/contracts/token/IERC20.sol";
 
 
 interface IJoin {
-    // --- Auth ---
-    function wards (address usr) external view returns (uint);
-    function rely(address usr) external;
-    function deny(address usr) external;
-
+    /// @dev ERC20 token managed by this contract
     function token() external view returns (IERC20);
-    function ilk() external view returns (bytes6);
-    function dec() external view returns (uint);
-    function live() external view returns (uint);
 
-    function cage() external;
-
-    function join(address usr, int wad) external returns (int128);
+    /// @dev Add tokens to this contract.
+    /// Or, if wad is negative, remove tokens from this contract.
+    function join(address user, int128 wad) external returns (int128);
 }

@@ -1,42 +1,35 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 import "./interfaces/IOracle.sol";
-import "@yield-protocol/utils/contracts/access/Orchestrated.sol";
+// import "@yield-protocol/utils/contracts/access/Orchestrated.sol";
 import "@yield-protocol/utils/contracts/token/ERC20Permit.sol";
 import "@yield-protocol/utils/contracts/token/IERC20.sol";
 
 
-interface ITreasury {
-    /// @dev Transfer `amount` of `token` to `to` from the Yield Treasury
-    function pull(address token, address to, uint256 amount) external;
-}
-
-contract FYToken is Orchestrated(), ERC20Permit  {
+contract FYToken is /* Orchestrated(),*/ ERC20Permit  {
 
     event Redeemed(address indexed from, address indexed to, uint256 amount);
 
     uint256 constant internal MAX_TIME_TO_MATURITY = 126144000; // seconds in four years
 
-    ITreasury public treasury;
     IERC20 public underlying;
     IOracle public oracle;
     uint256 public maturity;
 
     constructor(
-        ITreasury treasury_,
         IERC20 underlying_,
         IOracle oracle_, // Underlying vs its interest-bearing version
         uint256 maturity_,
         string memory name,
         string memory symbol
-    ) public ERC20Permit(name, symbol) {
-        require(maturity_ > block.timestamp && maturity_ < block.timestamp + MAX_TIME_TO_MATURITY, "FYToken: Invalid maturity");
-        treasury = treasury_;
+    ) ERC20Permit(name, symbol) {
+        // require(maturity_ > block.timestamp && maturity_ < block.timestamp + MAX_TIME_TO_MATURITY, "FYToken: Invalid maturity");
         underlying = underlying_;
         oracle = oracle_;
         maturity = maturity_;
     }
 
+    /*
     function mature() 
         public
     {
@@ -76,4 +69,5 @@ contract FYToken is Orchestrated(), ERC20Permit  {
     function burn(address from, uint256 fyTokenAmount) public override onlyOrchestrated("FYToken: Not Authorized") {
         _burn(from, fyTokenAmount);
     }
+    */
 }

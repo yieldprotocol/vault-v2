@@ -1,29 +1,24 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
-
+import "../interfaces/IFYToken.sol";
 
 library DataTypes {
     struct Series {
-        address fyToken;                                               // Redeemable token for the series.
+        IFYToken fyToken;                                               // Redeemable token for the series.
+        bytes6  baseId;                                                  // Token received on redemption.
         uint32  maturity;                                              // Unix time at which redemption becomes possible.
-        bytes6  base;                                                  // Token received on redemption.
         // bytes2 free
     }
 
     // ==== Vault ordering ====
     struct Vault {
         address owner;
-        bytes6 series;                                                 // Each vault is related to only one series, which also determines the underlying.
-        // 6 bytes free
-    }
-
-    // ==== Vault composition ====
-    struct Ilks {
-        bytes6[5] ids;
-        bytes2 length;
+        bytes6 seriesId;                                                 // Each vault is related to only one series, which also determines the underlying.
+        bytes6 ilkId;
     }
 
     struct Balances {
-        uint128 debt;
-        uint128[5] assets;
+        uint128 art;                                                     // Debt
+        uint128 ink;                                                     // Assets
     }
 }

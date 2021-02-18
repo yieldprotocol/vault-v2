@@ -5,38 +5,47 @@ import "@yield-protocol/utils/contracts/token/IERC20.sol";
 
 contract Join {
     // --- Auth ---
-    mapping (address => uint) public wards;
+    /* mapping (address => uint) public wards;
     function rely(address usr) external auth { wards[usr] = 1; }
     function deny(address usr) external auth { wards[usr] = 0; }
     modifier auth {
         require(wards[msg.sender] == 1, "GemJoin/not-authorized");
         _;
+    } */
+
+    IERC20 public token;
+    // bytes6  public ilk;   // Collateral Type
+    // uint    public dec;
+    // uint    public live;  // Active Flag
+
+    constructor(/* address vat_, */IERC20 token_) {
+        // wards[msg.sender] = 1;
+        token = token_;
+        // ilk = ilk_;
+        // dec = token.decimals();
+        // live = 1;
     }
 
-    IERC20  public token;
-    bytes6  public ilk;   // Collateral Type
-    uint    public dec;
-    uint    public live;  // Active Flag
-
-    constructor(address vat_, bytes6 ilk_, address token_) public {
-        wards[msg.sender] = 1;
-        wards[vat_] = 1;
-        token = IERC20(token_);
-        ilk = ilk_;
-        dec = token.decimals();
-        live = 1;
-    }
-
+    /*
     function cage() external auth {
         live = 0;
     }
+    */
 
-    function join(address usr, int wad) external auth returns (int128) {
-        if (wad > 0) {
-            require(live == 1, "GemJoin/not-live");
-            require(token.transferFrom(usr, address(this), wad), "GemJoin/failed-transfer");
+    function join(address user, int128 amount)
+        external
+        // auth
+        returns (int128)
+    {
+        if (amount > 0) {
+            // require(live == 1, "GemJoin/not-live");
+            // TODO: Consider best practices about safe transfers
+            // TODO: Safe casting
+            require(token.transferFrom(user, address(this), uint256(int256(amount))), "Join: Failed pull");
         } else {
-            require(token.transfer(usr, wad), "GemJoin/failed-transfer");
+            // TODO: Consider best practices about safe transfers
+            // TODO: Safe casting
+            require(token.transfer(user, uint256(-int256(amount))), "Join: Failed push"); 
         }
         return wad;                    // Use this to record in vat a balance different from the amount joined
     }
