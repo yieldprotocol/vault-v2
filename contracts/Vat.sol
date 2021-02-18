@@ -210,24 +210,15 @@ contract Vat {
         DataTypes.Series memory _series = series[_vault.seriesId];      // 1 SLOAD
 
         if (ink != 0) {
-            int128 inkJoined = ilkJoins[_vault.ilkId].join(_vault.owner, ink);          // Cost of `join`. `join` with a negative value means `exit`.. Consider whether it's possible to achieve this without an external call, so that `Vat` doesn't depend on the `Join` interface.
-            _balances.ink = _balances.ink.add(inkJoined);
+            _balances.ink = _balances.ink.add(ink);
         }
 
-        /*
         if (art != 0) {
-            _balances.debt += art;
-            if (art > 0) {
-                require(block.timestamp <= _series.maturity, "Mature");
-                IFYToken(_series.fyToken).mint(msg.sender, art);        // 1 CALL(40) + fyToken.mint. Consider whether it's possible to achieve this without an external call, so that `Vat` doesn't depend on the `FYDai` interface.
-            } else {
-                IFYToken(_series.fyToken).burn(msg.sender, art);        // 1 CALL(40) + fyToken.burn. Consider whether it's possible to achieve this without an external call, so that `Vat` doesn't depend on the `FYDai` interface.
-            }
+            _balances.art = _balances.art.add(art);
         }
-        */
-        vaultBalances[vaultId] = _balances;                                  // 1 SSTORE. Refactor for Checks-Effects-Interactions
+        vaultBalances[vaultId] = _balances;                               // 1 SSTORE
 
-        emit VaultFrobbed(vaultId, _vault.ilkId, _series.baseId, ink, art); // TODO: The third argument is the baseId
+        emit VaultFrobbed(vaultId, _vault.ilkId, _series.baseId, ink, art);
         return _balances;
     }
     
@@ -270,17 +261,19 @@ contract Vat {
         __give(vaultId, msg.sender);                                    // Cost of `__give`
     } */
 
-    // Manipulate a vault without collateralization checks.
-    // To be used for liquidation engines.
+    /// @dev Manage vaults with collateralization checks
+    /// The caller is trusted to do the token transfers
     // TODO: __frob underlying from and collateral to users
-    /* function _frob(bytes12 vaultId, int128 ink, int128 art)
+    function _frob(bytes12 vaultId, int128 ink, int128 art)
         public
         auth                                                            // 1 SLOAD
         vaultExists(vaultId)                                            // 1 SLOAD
-        returns (bytes32)
+        returns (DataTypes.Balances memory)
     {
-        return __frob(vault, ink, art);                                 // Cost of `__frob`
-    } */
+        DataTypes.Balances memory _balances = __frob(vault, ink, art);                // Cost of `__frob`
+        if (art > 0 || ink < 0) require(level(vaultId) >= 0, "Undercollateralized");  // Cost of `level`
+        return _balances;
+    }
 
     // ---- Public processes ----
 
