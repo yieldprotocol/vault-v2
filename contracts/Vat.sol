@@ -16,7 +16,8 @@ contract Vat {
     event VaultTransfer(bytes12 indexed vaultId, address indexed receiver);
 
     mapping (bytes6 => IERC20)               public bases;              // Underlyings available in Vat. 12 bytes still free.
-    mapping (bytes6 => IERC20)               public ilks;               // Collaterals available in Vat. 12 bytes still free.
+    mapping (bytes6 => IERC20)               public ilks;               // Collaterals available in Vat. 12 bytes still free (maybe for ceiling)
+    mapping (bytes6 => uint256)              public ilkDebt;            // Collateral locked in debt across all vaults
     mapping (bytes6 => DataTypes.Series)     public series;             // Series available in Vat. We can possibly use a bytes6 (3e14 possible series).
 
     mapping (bytes6 => address)                     joins;              // Join contracts available. 12 bytes still free.
@@ -195,6 +196,9 @@ contract Vat {
             } else {
                 IFYToken(_series.fyToken).burn(msg.sender, art);        // 1 CALL(40) + fyToken.burn. Consider whether it's possible to achieve this without an external call, so that `Vat` doesn't depend on the `FYDai` interface.
             }
+
+            int128 _ilkDebt = art / spotOracles[_series.baseId][ilk];   // 1 Oracle Call | Divided by collateralization ratio | Repeated with `value` when checking collateralization levels
+            ilkDebt[_vault.ilkId] += _ilkDebt;                          // 1 SSTORE
         }
         balances[vaultId] = _balances;                                  // 1 SSTORE. Refactor for Checks-Effects-Interactions
 
