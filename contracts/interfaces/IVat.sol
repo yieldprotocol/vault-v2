@@ -40,17 +40,11 @@ interface IVat {
     /// @dev Series available in Vat.
     function series(bytes6 seriesId) external returns (DataTypes.Series memory);
 
+    /// @dev Collaterals available in Vat.
+    function ilks(bytes6 ilksDd) external returns (IERC20);
+
     /// @dev Underlyings available in Vat.
     // function bases(bytes6 id) external returns (IERC20);
-
-    /// @dev Collaterals available in Vat.
-    // function ilks(bytes6 id) external returns (IERC20);
-
-    /// @dev Joins (token bridges) available in Vat.
-    // function joins(bytes6 id) external returns (IJoin);
-
-    /// @dev Each vault can have up to 5 collateral types associated.
-    // function vaultIlks(bytes12 vault) external view returns (Ilks);
 
     /// @dev Each vault records debt and collateral balances.
     // function vaultBalances(bytes12 vault) external view returns (Balances);
