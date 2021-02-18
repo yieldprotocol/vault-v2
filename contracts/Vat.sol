@@ -17,7 +17,7 @@ contract Vat {
 
     mapping (bytes6 => IERC20)               public bases;              // Underlyings available in Vat. 12 bytes still free.
     mapping (bytes6 => IERC20)               public ilks;               // Collaterals available in Vat. 12 bytes still free (maybe for ceiling)
-    mapping (bytes6 => mapping(bytes6 => uint256)) public ilkDebt;      // [ilk][series] Sum of debt per collateral and series across all vaults
+    mapping (bytes6 => mapping(bytes6 => uint256)) public ilkDebt;      // [ilk][base] Sum of debt per collateral and underlying across all vaults
     mapping (bytes6 => DataTypes.Series)     public series;             // Series available in Vat. We can possibly use a bytes6 (3e14 possible series).
 
     mapping (bytes6 => address)                     joins;              // Join contracts available. 12 bytes still free.
@@ -196,7 +196,7 @@ contract Vat {
                 IFYToken(_series.fyToken).burn(msg.sender, art);        // 1 CALL(40) + fyToken.burn. Consider whether it's possible to achieve this without an external call, so that `Vat` doesn't depend on the `FYDai` interface.
             }
 
-            ilkDebt[_vault.ilkId][_vault.seriesId] += art;              // 1 SSTORE
+            ilkDebt[_vault.ilkId][_series.baseId] += art;               // 1 SSTORE
             _balances.debt += art;
         }
         balances[vaultId] = _balances;                                  // 1 SSTORE. Refactor for Checks-Effects-Interactions
