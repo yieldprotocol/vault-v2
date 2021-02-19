@@ -43,40 +43,51 @@ export class YieldEnvironment {
   other: SignerWithAddress
   vat: Vat
   cdpProxy: CDPProxy
-  // joins: Map<string,Join>
+  joins: Map<string,Join>
+  assets: Map<string,ERC20Mock>
   // fyTokens: Map<string,FYToken>
-  // assets: Map<string,ERC20Mock>
-
+  
   constructor(
     owner: SignerWithAddress,
     other: SignerWithAddress,
     vat: Vat,
     cdpProxy: CDPProxy,
-    // assets: Map<string,ERC20Mock>,
+    assets: Map<string,ERC20Mock>,
+    joins: Map<string,Join>,
     // fyTokens: Map<string,FYToken>,
-    // joins: Map<string,Join>,
   ) {
     this.owner = owner
     this.other = other
     this.vat = vat
     this.cdpProxy = cdpProxy
-    // this.assets = assets
+    this.assets = assets
+    this.joins = joins
     // this.fyTokens = fyTokens
-    // this.joins = joins
   }
 
-  public static async setup(owner: SignerWithAddress, other: SignerWithAddress/* assets: Array<string>, maturities: number */) {
+  public static async setup(owner: SignerWithAddress, other: SignerWithAddress, assetIds: Array<string>/*, maturities: number */) {
     const ownerAdd = await owner.getAddress()
     const otherAdd = await other.getAddress()
 
     const vat = (await deployContract(owner, VatArtifact, [])) as Vat
     const cdpProxy = (await deployContract(owner, CDPProxyArtifact, [vat.address])) as CDPProxy
 
-    // ==== Add assets, series and joins    
-    // base = (await deployContract(ownerAcc, ERC20MockArtifact, [baseId, "Mock Base"])) as ERC20Mock
-    // ilk = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId, "Mock Ilk"])) as ERC20Mock
+    // ==== Add assets, series and joins
+    const assets: Map<string, ERC20Mock> = new Map()
+    const joins: Map<string, Join> = new Map()
+    for (let assetId of assetIds) {
+      const asset = await deployContract(owner, ERC20MockArtifact, [assetId, "Mock Base"]) as ERC20Mock
+      assets.set(assetId, asset)
+      await vat.addAsset(assetId, asset.address)
+      await asset.mint(ownerAdd, ethers.constants.WeiPerEther.mul(100))
+
+      const join = await deployContract(owner, JoinArtifact, [asset.address]) as Join
+      joins.set(assetId, join)
+      await cdpProxy.addJoin(assetId, join.address)
+      await asset.approve(join.address, ethers.constants.MaxUint256)
+    }
+
     // fyToken = (await deployContract(ownerAcc, FYTokenArtifact, [base.address, mockAddress, maturity, seriesId, "Mock FYToken"])) as FYToken
-    // join = (await deployContract(ownerAcc, JoinArtifact, [ilk.address])) as Join
 
     // ==== Build some vaults ====
     // await vat.build(seriesId, ilkId)
@@ -87,7 +98,7 @@ export class YieldEnvironment {
     // await ilk.mint(owner, 1);
     // await ilk.approve(join.address, MAX);
 
-    return new YieldEnvironment(owner, other, vat, cdpProxy)
+    return new YieldEnvironment(owner, other, vat, cdpProxy, assets, joins)
   }
 
   /*
