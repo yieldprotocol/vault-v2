@@ -3,28 +3,31 @@ import VatArtifact from '../artifacts/contracts/Vat.sol/Vat.json'
 import JoinArtifact from '../artifacts/contracts/Join.sol/Join.json'
 import FYTokenArtifact from '../artifacts/contracts/FYToken.sol/FYToken.json'
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
+import CDPProxyArtifact from '../artifacts/contracts/CDPProxy.sol/CDPProxy.json'
 
 import { Vat } from '../typechain/Vat'
 import { Join } from '../typechain/Join'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
+import { CDPProxy } from '../typechain/CDPProxy'
 
 import { ethers, waffle } from 'hardhat'
 // import { id } from '../src'
 import { expect } from 'chai'
 const { deployContract } = waffle
 
-describe('Vat', () => {
+describe('CDPProxy', () => {
   let ownerAcc: SignerWithAddress
   let owner: string
   let otherAcc: SignerWithAddress
   let other: string
   let vat: Vat
-  let vatFromOther: Vat
   let join: Join
   let fyToken: FYToken
   let base: ERC20Mock
   let ilk: ERC20Mock
+  let cdpProxy: CDPProxy
+  let cdpProxyFromOther: CDPProxy
 
   const mockAssetId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const emptyAssetId = '0x000000000000'
@@ -53,9 +56,10 @@ describe('Vat', () => {
     base = (await deployContract(ownerAcc, ERC20MockArtifact, [baseId, "Mock Base"])) as ERC20Mock
     ilk = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId, "Mock Ilk"])) as ERC20Mock
     fyToken = (await deployContract(ownerAcc, FYTokenArtifact, [base.address, mockAddress, maturity, seriesId, "Mock FYToken"])) as FYToken
+    cdpProxy = (await deployContract(ownerAcc, CDPProxyArtifact, [vat.address])) as CDPProxy
     join = (await deployContract(ownerAcc, JoinArtifact, [ilk.address])) as Join
 
-    vatFromOther = vat.connect(otherAcc)
+    cdpProxyFromOther = cdpProxy.connect(otherAcc)
 
     // ==== Set platform ====
     await vat.addBase(baseId, base.address)
@@ -72,37 +76,53 @@ describe('Vat', () => {
   })
 
   it('does not allow adding a join before adding its ilk', async () => {
-    await expect(vat.addIlkJoin(mockAssetId, join.address)).to.be.revertedWith('Vat: Ilk not found')
+    await expect(cdpProxy.addIlkJoin(mockAssetId, join.address)).to.be.revertedWith('Ilk not found')
   })
 
   it('adds a join', async () => {
-    expect(await vat.addIlkJoin(ilkId, join.address)).to.emit(vat, 'IlkJoinAdded').withArgs(ilkId, join.address)
-    expect(await vat.ilkJoins(ilkId)).to.equal(join.address)
+    expect(await cdpProxy.addIlkJoin(ilkId, join.address)).to.emit(cdpProxy, 'IlkJoinAdded').withArgs(ilkId, join.address)
+    expect(await cdpProxy.ilkJoins(ilkId)).to.equal(join.address)
   })
 
   describe('with a join added', async () => {
     beforeEach(async () => {
-      await vat.addIlkJoin(ilkId, join.address)
+      await cdpProxy.addIlkJoin(ilkId, join.address)
     })
 
     it('only the vault owner can manage its collateral', async () => {
-      await expect(vatFromOther.frob(vaultId, 1, 0)).to.be.revertedWith('Vat: Only vault owner')
+      await expect(cdpProxyFromOther.frob(vaultId, 1, 0)).to.be.revertedWith('Only vault owner')
     })
 
     it('users can frob to post collateral', async () => {
-      expect(await vat.frob(vaultId, 1, 0)).to.emit(vat, 'VaultFrobbed').withArgs(vaultId, ilkId, baseId, 1, 0)
+      expect(await cdpProxy.frob(vaultId, 1, 0)).to.emit(vat, 'VaultFrobbed').withArgs(vaultId, ilkId, baseId, 1, 0)
       expect(await ilk.balanceOf(join.address)).to.equal(1)
       expect((await vat.vaultBalances(vaultId)).ink).to.equal(1)
     })
 
     describe('with ink in the join', async () => {
       beforeEach(async () => {
-        await vat.frob(vaultId, 1, 0)
+        await cdpProxy.frob(vaultId, 1, 0)
       })
   
       it('users can frob to withdraw collateral', async () => {
-        await expect(vat.frob(vaultId, -1, 0)).to.emit(vat, 'VaultFrobbed').withArgs(vaultId, ilkId, baseId, -1, 0)
+        await expect(cdpProxy.frob(vaultId, -1, 0)).to.emit(vat, 'VaultFrobbed').withArgs(vaultId, ilkId, baseId, -1, 0)
+        expect(await ilk.balanceOf(join.address)).to.equal(0)
+        expect((await vat.vaultBalances(vaultId)).ink).to.equal(0)
       })
+
+      it('users can frob to borrow fyToken', async () => {
+        await expect(cdpProxy.frob(vaultId, 0, 1)).to.emit(vat, 'VaultFrobbed').withArgs(vaultId, ilkId, baseId, 0, 1)
+        expect(await fyToken.balanceOf(owner)).to.equal(1)
+        expect((await vat.vaultBalances(vaultId)).art).to.equal(1)
+      })
+    })
+
+    it('users can frob to post collateral and borrow fyToken', async () => {
+      await expect(cdpProxy.frob(vaultId, 1, 1)).to.emit(vat, 'VaultFrobbed').withArgs(vaultId, ilkId, baseId, 1, 1)
+      expect(await ilk.balanceOf(join.address)).to.equal(1)
+      expect(await fyToken.balanceOf(owner)).to.equal(1)
+      expect((await vat.vaultBalances(vaultId)).ink).to.equal(1)
+      expect((await vat.vaultBalances(vaultId)).art).to.equal(1)
     })
   })
 })

@@ -18,9 +18,9 @@ library Math {
 contract Vat {
     using Math for uint128;
 
+    // TODO: Consider merging Ilks and Bases
     event BaseAdded(bytes6 indexed baseId, address indexed base);
     event IlkAdded(bytes6 indexed ilkId, address indexed ilk);
-    event IlkJoinAdded(bytes6 indexed ilkId, address indexed join);
     event SeriesAdded(bytes6 indexed seriesId, bytes6 indexed baseId, address indexed fyToken);
 
     event VaultBuilt(bytes12 indexed vaultId, address indexed owner, bytes6 indexed seriesId, bytes6 ilkId);
@@ -31,10 +31,8 @@ contract Vat {
 
     mapping (bytes6 => IERC20)               public bases;              // Underlyings available in Vat. 12 bytes still free.
     mapping (bytes6 => IERC20)               public ilks;               // Collaterals available in Vat. 12 bytes still free (maybe for ceiling)
-    mapping (bytes6 => mapping(bytes6 => uint256)) public ilkDebt;      // [ilk][base] Sum of debt per collateral and underlying across all vaults
+    mapping (bytes6 => mapping(bytes6 => uint128)) public ilkDebt;      // [ilk][base] Sum of debt per collateral and underlying across all vaults
     mapping (bytes6 => DataTypes.Series)     public series;             // Series available in Vat. We can possibly use a bytes6 (3e14 possible series).
-
-    mapping (bytes6 => IJoin)                public ilkJoins;           // Join contracts available to manage collateral. 12 bytes still free.
 
     mapping (bytes6 => address)                     chiOracles;         // Chi (savings rate) accruals oracle for the underlying
     mapping (bytes6 => address)                     rateOracles;        // Rate (borrowing rate) accruals oracle for the underlying
@@ -65,16 +63,6 @@ contract Vat {
         ilks[ilkId] = ilk;
         emit IlkAdded(ilkId, address(ilk));
     }                   // Also known as collateral
-
-    /// @dev Add a new Join for an Ilk. There can be only onw Join per Ilk. Until a Join is added, no tokens of that Ilk can be posted or withdrawn.
-    function addIlkJoin(bytes6 ilkId, IJoin join)
-        external
-        /*auth*/
-        ilkExists(ilkId)                                              // 1 SLOAD
-    {
-        ilkJoins[ilkId] = join;                                       // 1 SSTORE
-        emit IlkJoinAdded(ilkId, address(join));
-    }
 
     /// @dev Add a new series
     // TODO: Should we add a fyToken Join now, before, or after?
@@ -211,40 +199,18 @@ contract Vat {
         DataTypes.Series memory _series = series[_vault.seriesId];      // 1 SLOAD
 
         if (ink != 0) {
-            int128 inkJoined = ilkJoins[_vault.ilkId].join(_vault.owner, ink);          // Cost of `join`. `join` with a negative value means `exit`.. Consider whether it's possible to achieve this without an external call, so that `Vat` doesn't depend on the `Join` interface.
-            _balances.ink = _balances.ink.add(inkJoined);
+            _balances.ink = _balances.ink.add(ink);
         }
 
-        /*
         if (art != 0) {
-            if (art > 0) {
-                require(block.timestamp <= _series.maturity, "Mature");
-                IFYToken(_series.fyToken).mint(msg.sender, art);        // 1 CALL(40) + fyToken.mint. Consider whether it's possible to achieve this without an external call, so that `Vat` doesn't depend on the `FYDai` interface.
-            } else {
-                IFYToken(_series.fyToken).burn(msg.sender, art);        // 1 CALL(40) + fyToken.burn. Consider whether it's possible to achieve this without an external call, so that `Vat` doesn't depend on the `FYDai` interface.
-            }
-
-            ilkDebt[_vault.ilkId][_series.baseId] += art;               // 1 SSTORE
-            _balances.debt += art;
+            ilkDebt[_vault.ilkId][_series.baseId] = ilkDebt[_vault.ilkId][_series.baseId].add(art); // 1 SSTORE. TODO: Test.
+            _balances.art = _balances.art.add(art);                   // 1 SSTORE
         }
-        */
-        vaultBalances[vaultId] = _balances;                                  // 1 SSTORE. Refactor for Checks-Effects-Interactions
+        vaultBalances[vaultId] = _balances;                             // 1 SSTORE
 
-        emit VaultFrobbed(vaultId, _vault.ilkId, _series.baseId, ink, art); // TODO: The third argument is the baseId
+        emit VaultFrobbed(vaultId, _vault.ilkId, _series.baseId, ink, art);
         return _balances;
     }
-    
-    // Repay vault debt using underlying token, pulled from user. Collateral is returned to user
-    // Doesn't check inputs, or collateralization level. Do that in public functions.
-    // TODO: `__frob` with recipient
-    /* function __close(bytes12 vault, int128 ink, uint128 repay) 
-        internal returns (bytes32[3])
-    {
-        bytes6 base = series[vaultId].baseId;                           // 1 SLOAD
-        joins[base].join(repay);                                        // Cost of `join`
-        uint128 debt = repay / rateOracles[base].spot();                // 1 SLOAD + `spot`
-        return __frob(vaultId, ink, -int128(debt));                     // Cost of `__frob`
-    } */
 
     // ---- Restricted processes ----
     // Usable only by a authorized modules that won't cheat on Vat.
@@ -276,14 +242,16 @@ contract Vat {
     // Manipulate a vault without collateralization checks.
     // To be used for liquidation engines.
     // TODO: __frob underlying from and collateral to users
-    /* function _frob(bytes12 vaultId, int128 ink, int128 art)
+    function _frob(bytes12 vaultId, int128 ink, int128 art)
         public
-        auth                                                            // 1 SLOAD
+        // auth                                                            // 1 SLOAD
         vaultExists(vaultId)                                            // 1 SLOAD
-        returns (bytes32)
+        returns (DataTypes.Balances memory balances)
     {
-        return __frob(vault, ink, art);                                 // Cost of `__frob`
-    } */
+        balances = __frob(vaultId, ink, art);                             // Cost of `__frob`
+        // if (balances.art > 0 && (ink < 0 || art > 0)) require(level(vaultId) >= 0, "Undercollateralized");  // Cost of `level`
+        return balances;
+    }
 
     // ---- Public processes ----
 
@@ -307,28 +275,6 @@ contract Vat {
         (_balancesFrom, _balancesTo) = __flux(from, to, ink, art);      // Cost of `__flux`
         if (_balancesFrom.art > 0) require(level(from) >= 0, "Undercollateralized");  // Cost of `level`
         return (_balancesFrom, _balancesTo);
-    } */
-
-    // Add collateral and borrow from vault, pull ilks from and push borrowed asset to user
-    // Or, repay to vault and remove collateral, pull borrowed asset from and push ilks to user
-    // Checks the vault is valid, and collateralization levels at the end.
-    function frob(bytes12 vaultId, int128 ink, int128 art)
-        public
-        vaultOwner(vaultId)                                             // 1 SLOAD
-        returns (DataTypes.Balances memory)
-    {
-        DataTypes.Balances memory _balances = __frob(vaultId, ink, art);          // Cost of `__frob`
-        // if (_balances.art > 0) require(level(vaultId) >= 0, "Undercollateralized");  // Cost of `level`
-        return _balances;
-    }
-
-    // Repay vault debt using underlying token, pulled from user. Collateral is returned to caller
-    /* function close(bytes12 vaultId, uint128 ink, uint128 repay)
-        public
-        vaultOwner(vaultId)                                             // 1 SLOAD
-        returns (bytes32)
-    {
-        return __close(vaultId, int128(ink), repay);                    // Cost of `__close`
     } */
 
     // ==== Accounting ====

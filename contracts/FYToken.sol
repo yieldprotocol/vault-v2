@@ -52,22 +52,27 @@ contract FYToken is /* Orchestrated(),*/ ERC20Permit  {
         
         emit Redeemed(from, to, amount);
         return amount;
-    }
+    } */
 
-    /// @dev Mint fyToken. Only callable by Controller contracts.
+    /// @dev Mint fyToken.
     /// This function can only be called by other Yield contracts, not users directly.
     /// @param to Wallet to mint the fyToken in.
-    /// @param fyTokenAmount Amount of fyToken to mint.
-    function mint(address to, uint256 fyTokenAmount) public override onlyOrchestrated("FYToken: Not Authorized") {
-        _mint(to, fyTokenAmount);
+    /// @param amount Amount of fyToken to mint.
+    function mint(address to, uint256 amount)
+        public
+        /* auth */
+    {
+        _mint(to, amount);
     }
 
-    /// @dev Burn fyToken. Only callable by Controller contracts.
+    /// @dev Burn fyToken.
     /// This function can only be called by other Yield contracts, not users directly.
     /// @param from Wallet to burn the fyToken from.
-    /// @param fyTokenAmount Amount of fyToken to burn.
-    function burn(address from, uint256 fyTokenAmount) public override onlyOrchestrated("FYToken: Not Authorized") {
-        _burn(from, fyTokenAmount);
+    /// @param amount Amount of fyToken to burn.
+    function burn(address from, uint256 amount)
+        public
+        /* auth */
+    {
+        _burn(from, amount);
     }
-    */
 }
