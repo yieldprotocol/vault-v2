@@ -44,18 +44,20 @@ export class YieldEnvironment {
   other: SignerWithAddress
   vat: Vat
   cdpProxy: CDPProxy
-  joins: Map<string,Join>
-  assets: Map<string,ERC20Mock>
-  series: Map<string,FYToken>
+  joins: Map<string, Join>
+  assets: Map<string, ERC20Mock>
+  series: Map<string, FYToken>
+  vaults: Map<string, Map<string, string>>
   
   constructor(
     owner: SignerWithAddress,
     other: SignerWithAddress,
     vat: Vat,
     cdpProxy: CDPProxy,
-    assets: Map<string,ERC20Mock>,
-    joins: Map<string,Join>,
-    series: Map<string,FYToken>,
+    assets: Map<string, ERC20Mock>,
+    joins: Map<string, Join>,
+    series: Map<string, FYToken>,
+    vaults: Map<string, Map<string, string>>
   ) {
     this.owner = owner
     this.other = other
@@ -64,6 +66,7 @@ export class YieldEnvironment {
     this.assets = assets
     this.joins = joins
     this.series = series
+    this.vaults = vaults
   }
 
   public static async setup(owner: SignerWithAddress, other: SignerWithAddress, assetIds: Array<string>, seriesIds: Array<string>) {
@@ -92,6 +95,7 @@ export class YieldEnvironment {
 
     // ==== Add series ====
     // For each series identifier we create a fyToken with the first asset as underlying.
+    // All assets after the first will be added as collateral for all series
     // The maturities for the fyTokens are in three month intervals, starting three months from now
     const series: Map<string, FYToken> = new Map()
     const mockOracleAddress =  ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20)))
@@ -105,16 +109,29 @@ export class YieldEnvironment {
       const fyToken = (await deployContract(owner, FYTokenArtifact, [base.address, mockOracleAddress, now + THREE_MONTHS * count++, seriesId, "Mock FYToken"])) as FYToken
       series.set(seriesId, fyToken)
       await vat.addSeries(seriesId, baseId, fyToken.address)
+      // TODO: Add all assets after the first one as collaterals
+      /*
+      for (let assetId of assetIds.slice(1)) {
+        await vat.addIlk(seriesId, assetId)
+      }
+      */
     }
 
     // ==== Build some vaults ====
     // For each series and ilk we create two vaults vaults[seriesId][ilkId] = vaultId
-    const vaults: Map<string, Map<string, string>
-    // await vat.build(seriesId, ilkId)
-    // const event = (await vat.queryFilter(vat.filters.VaultBuilt(null, null, null, null)))[0]
-    // vaultId = event.args.vaultId
+    const vaults: Map<string, Map<string, string>> = new Map()
+    for (let seriesId of seriesIds) {
+      const seriesVaults: Map<string, string> = new Map()
+      for (let assetId of assetIds.slice(1)) {
+        await vat.build(seriesId, assetId)
+        const event = (await vat.queryFilter(vat.filters.VaultBuilt(null, null, null, null)))[0]
+        const vaultId = event.args.vaultId
+        seriesVaults.set(assetId, vaultId)
+      }
+      vaults.set(seriesId, seriesVaults)
+    }
 
-    return new YieldEnvironment(owner, other, vat, cdpProxy, assets, joins, series)
+    return new YieldEnvironment(owner, other, vat, cdpProxy, assets, joins, series, vaults)
   }
 
   /*
