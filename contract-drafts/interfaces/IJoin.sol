@@ -10,7 +10,7 @@ interface IJoin {
     function deny(address usr) external;
 
     function token() external view returns (IERC20);
-    function ilk() external view returns (bytes6);
+    function asset() external view returns (bytes6);
     function dec() external view returns (uint);
     function live() external view returns (uint);
 

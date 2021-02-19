@@ -40,7 +40,7 @@ contract Cat {
     uint256 constant public AUCTION_TIME; // Time that auctions take to go to minimal price and stay there.
     IVat immutable public vat;
 
-    mapping (bytes6 => IOracle) oracles;                                                // [ilk] Spot oracles
+    mapping (bytes6 => IOracle) oracles;                                                // [asset] Spot oracles
 
     constructor (IVat vat_) {
         vat = vat_;
@@ -72,7 +72,7 @@ contract Cat {
         returns (int128)
     {
         // Let fail if the vault doesn't exist?
-        // Let fail if the vault doesn't have the right ilk?
+        // Let fail if the vault doesn't have the right asset?
         // Let fail if the vault doesn't have enough ink?
         uint32 timestamp = vat.timestamps(vaultId);                                     // 1 SLOAD + 700 + 12*16
         require (timestamp > 0, "Not for sale");

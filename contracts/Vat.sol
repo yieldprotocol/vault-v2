@@ -18,58 +18,48 @@ library Math {
 contract Vat {
     using Math for uint128;
 
-    // TODO: Consider merging Ilks and Bases
-    event BaseAdded(bytes6 indexed baseId, address indexed base);
-    event IlkAdded(bytes6 indexed ilkId, address indexed ilk);
+    event AssetAdded(bytes6 indexed assetId, address indexed asset);
     event SeriesAdded(bytes6 indexed seriesId, bytes6 indexed baseId, address indexed fyToken);
 
     event VaultBuilt(bytes12 indexed vaultId, address indexed owner, bytes6 indexed seriesId, bytes6 ilkId);
     event VaultDestroyed(bytes12 indexed vaultId);
     event VaultTransfer(bytes12 indexed vaultId, address indexed receiver);
 
-    event VaultFrobbed(bytes12 indexed vaultId, bytes6 indexed ilkId, bytes6 indexed baseId, int128 ink, int128 art);
+    event VaultFrobbed(bytes12 indexed vaultId, bytes6 indexed seriesId, bytes6 indexed ilkId, int128 ink, int128 art);
 
-    mapping (bytes6 => IERC20)               public bases;              // Underlyings available in Vat. 12 bytes still free.
-    mapping (bytes6 => IERC20)               public ilks;               // Collaterals available in Vat. 12 bytes still free (maybe for ceiling)
-    mapping (bytes6 => mapping(bytes6 => uint128)) public ilkDebt;      // [ilk][base] Sum of debt per collateral and underlying across all vaults
-    mapping (bytes6 => DataTypes.Series)     public series;             // Series available in Vat. We can possibly use a bytes6 (3e14 possible series).
+    mapping (bytes6 => IERC20)                      public assets;          // Underlyings and collaterals available in Vat. 12 bytes still free.
+    mapping (bytes6 => mapping(bytes6 => uint128))  public debt;            // [baseId][ilkId] Sum of debt per collateral and underlying across all vaults
+    mapping (bytes6 => DataTypes.Series)            public series;          // Series available in Vat. We can possibly use a bytes6 (3e14 possible series).
+    mapping (bytes6 => mapping(bytes6 => bool))     public collaterals;     // [seriesId][assetId] Assets that are approved as collateral for a series
 
-    mapping (bytes6 => address)                     chiOracles;         // Chi (savings rate) accruals oracle for the underlying
-    mapping (bytes6 => address)                     rateOracles;        // Rate (borrowing rate) accruals oracle for the underlying
-    mapping (bytes6 => mapping(bytes6 => address))  spotOracles;        // [base][ilk] Spot price oracles
+    mapping (bytes6 => address)                     chiOracles;             // Chi (savings rate) accruals oracle for the underlying
+    mapping (bytes6 => address)                     rateOracles;            // Rate (borrowing rate) accruals oracle for the underlying
+    mapping (bytes6 => mapping(bytes6 => address))  spotOracles;            // [assetId][assetId] Spot price oracles
 
     // ==== Vault ordering ====
 
-    mapping (bytes12 => DataTypes.Vault)     public vaults;             // An user can own one or more Vaults, each one with a bytes12 identifier
-    mapping (bytes12 => DataTypes.Balances)  public vaultBalances;      // Both debt and assets
+    mapping (bytes12 => DataTypes.Vault)            public vaults;          // An user can own one or more Vaults, each one with a bytes12 identifier
+    mapping (bytes12 => DataTypes.Balances)         public vaultBalances;   // Both debt and assets
 
     // ==== Vault timestamping ====
-    mapping (bytes12 => uint32)                     timestamps;         // If grater than zero, time that a vault was timestamped. Used for liquidation.
+    mapping (bytes12 => uint32)                     timestamps;             // If grater than zero, time that a vault was timestamped. Used for liquidation.
 
     // ==== Administration ====
-    /// @dev Add a new base
-    // TODO: Should we add a base Join now, before, or after?
-    function addBase(bytes6 baseId, IERC20 base) external /*auth*/ {
-        require (bases[baseId] == IERC20(address(0)), "Vat: Id already used");
-        bases[baseId] = base;
-        emit BaseAdded(baseId, address(base));
-    }                                     // Also known as underlying
 
-    /// @dev Add a new Ilk.
-    function addIlk(bytes6 ilkId, IERC20 ilk)
+    /// @dev Add a new Asset.
+    function addAsset(bytes6 assetId, IERC20 asset)
         external
     {
-        require (ilks[ilkId] == IERC20(address(0)), "Vat: Id already used");
-        ilks[ilkId] = ilk;
-        emit IlkAdded(ilkId, address(ilk));
+        require (assets[assetId] == IERC20(address(0)), "Vat: Id already used");
+        assets[assetId] = asset;
+        emit AssetAdded(assetId, address(asset));
     }                   // Also known as collateral
 
     /// @dev Add a new series
-    // TODO: Should we add a fyToken Join now, before, or after?
     function addSeries(bytes6 seriesId, bytes6 baseId, IFYToken fyToken)
         external
         /*auth*/
-        baseExists(baseId)                                              // 1 SLOAD
+        assetExists(baseId)                                              // 1 SLOAD
     {
         require (fyToken != IFYToken(address(0)), "Vat: Series need a fyToken");
         require (series[seriesId].fyToken == IFYToken(address(0)), "Vat: Id already used");
@@ -81,15 +71,9 @@ contract Vat {
         emit SeriesAdded(seriesId, baseId, address(fyToken));
     }
 
-    /// @dev Ensure a base exists        
-    modifier baseExists(bytes6 baseId) {
-        require (bases[baseId] != IERC20(address(0)), "Vat: Base not found");
-        _;
-    }
-
-    /// @dev Ensure an ilk exists        
-    modifier ilkExists(bytes6 ilkId) {
-        require (ilks[ilkId] != IERC20(address(0)), "Vat: Ilk not found");
+    /// @dev Ensure a asset exists        
+    modifier assetExists(bytes6 assetId) {
+        require (assets[assetId] != IERC20(address(0)), "Vat: Asset not found");
         _;
     }
 
@@ -98,15 +82,15 @@ contract Vat {
         require (series[seriesId].fyToken != IFYToken(address(0)), "Vat: Series not found");
         _;
     }
-    // function addOracle(IERC20 base, IERC20 ilk, IOracle oracle) external;
+    // function addOracle(IERC20 asset, IERC20 asset, IOracle oracle) external;
 
     // ==== Vault management ====
 
-    /// @dev Create a new vault, linked to a series (and therefore underlying) and up to 5 collateral types
+    /// @dev Create a new vault, linked to a series (and therefore underlying) and a collateral
     function build(bytes6 seriesId, bytes6 ilkId)
         public
         seriesExists(seriesId)                                          // 1 SLOAD
-        ilkExists(ilkId)                                                // 1 SLOAD
+        assetExists(ilkId)                                                // 1 SLOAD
         returns (bytes12 vaultId)
     {
         vaultId = bytes12(keccak256(abi.encodePacked(msg.sender, block.timestamp)));               // Check (vaults[id].owner == address(0)), and increase the salt until a free vault id is found. 1 SLOAD per check.
@@ -148,9 +132,9 @@ contract Vat {
     }
 
     // Change a vault series and/or collateral types.
-    // We can change the series if there is no debt, or ilks if there are no assets
+    // We can change the series if there is no debt, or assets if there are no assets
     // Doesn't check inputs, or collateralization level. Do that in public functions.
-    /* function __tweak(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
+    /* function __tweak(bytes12 vaultId, bytes6 seriesId, bytes6 assetId)
         internal
     {
         Balances memory _balances = balances[vaultId];                  // 1 SLOAD
@@ -159,7 +143,7 @@ contract Vat {
             require (balances.art == 0, "Tweak only unused series");
             _vault.seriesId = seriesId;
         }
-        if (ilkId != bytes6(0)) {                                       // If a new ilk was provided
+        if (assetId != bytes6(0)) {                                       // If a new asset was provided
             require (balances.ink == 0, "Tweak only unused assets");
             _vault.inkId = inkId;
         }
@@ -182,13 +166,13 @@ contract Vat {
     /* function __flux(bytes12 from, bytes12 to, uint128 ink)
         internal
     {
-        require (vaults[from].ilk == vaults[to].ilk, "Vat: Different collateral"); // 2 SLOAD
+        require (vaults[from].asset == vaults[to].asset, "Vat: Different collateral"); // 2 SLOAD
         balances[from].assets -= ink;                                   // 1 SSTORE
         balances[to].assets += ink;                                     // 1 SSTORE
     } */
 
-    // Add collateral and borrow from vault, pull ilks from and push borrowed asset to user
-    // Or, repay to vault and remove collateral, pull borrowed asset from and push ilks to user
+    // Add collateral and borrow from vault, pull assets from and push borrowed asset to user
+    // Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
     // Doesn't check inputs, or collateralization level. Do that in public functions.
     // TODO: Extend to allow other accounts in `join`
     function __frob(bytes12 vaultId, int128 ink, int128 art)
@@ -203,12 +187,12 @@ contract Vat {
         }
 
         if (art != 0) {
-            ilkDebt[_vault.ilkId][_series.baseId] = ilkDebt[_vault.ilkId][_series.baseId].add(art); // 1 SSTORE. TODO: Test.
-            _balances.art = _balances.art.add(art);                   // 1 SSTORE
+            debt[_series.baseId][_vault.ilkId] = debt[_series.baseId][_vault.ilkId].add(art); // 1 SSTORE. TODO: Test.
+            _balances.art = _balances.art.add(art);                     // 1 SSTORE
         }
         vaultBalances[vaultId] = _balances;                             // 1 SSTORE
 
-        emit VaultFrobbed(vaultId, _vault.ilkId, _series.baseId, ink, art);
+        emit VaultFrobbed(vaultId, _vault.seriesId, _vault.ilkId, ink, art);
         return _balances;
     }
 
@@ -284,19 +268,19 @@ contract Vat {
         Series _series = series[vaultId];                               // 1 SLOAD
         IFYToken fyToken = _series.fyToken;
         if (block.timestamp >= _series.maturity) {
-            IOracle oracle = rateOracles[_series.base];                 // 1 SLOAD
+            IOracle oracle = rateOracles[_series.asset];                 // 1 SLOAD
             uart = balances[vaultId].art * oracle.accrual(maturity);    // 1 SLOAD + 1 Oracle Call
         } else {
             uart = balances[vaultId].art;                               // 1 SLOAD
         }
     } */
 
-    // Return the capacity of the vault to borrow underlying based on the ilks held
+    // Return the capacity of the vault to borrow underlying assetd on the assets held
     /* function value(bytes12 vaultId) public view returns (uint128 uart) {
-        bytes6 ilk = vaults[vaultId].ilk;                               // 1 SLOAD
+        bytes6 asset = vaults[vaultId].asset;                               // 1 SLOAD
         Balances memory _balances = balances[vaultId];                  // 1 SLOAD
-        bytes6 _base = series[vaultId].base;                            // 1 SLOAD
-        IOracle oracle = spotOracles[_base][ilk];                       // 1 SLOAD
+        bytes6 _asset = series[vaultId].asset;                            // 1 SLOAD
+        IOracle oracle = spotOracles[_asset][asset];                       // 1 SLOAD
         uart += _balances.ink * oracle.spot();                          // 1 Oracle Call | Divided by collateralization ratio
     } */
 

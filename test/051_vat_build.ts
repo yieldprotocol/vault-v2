@@ -52,32 +52,23 @@ describe('Vat', () => {
     vatFromOther = vat.connect(otherAcc)
   })
 
-  it('adds a base', async () => {
-    expect(await vat.addBase(baseId, base.address)).to.emit(vat, 'BaseAdded').withArgs(baseId, base.address)
-    expect(await vat.bases(baseId)).to.equal(base.address)
-  })
-
-  it('adds an ilk', async () => {
-    expect(await vat.addIlk(ilkId, ilk.address)).to.emit(vat, 'IlkAdded').withArgs(ilkId, ilk.address)
-    expect(await vat.ilks(ilkId)).to.equal(ilk.address)
+  it('adds an asset', async () => {
+    expect(await vat.addAsset(ilkId, ilk.address)).to.emit(vat, 'AssetAdded').withArgs(ilkId, ilk.address)
+    expect(await vat.assets(ilkId)).to.equal(ilk.address)
   })
 
   it('does not allow adding a series before adding its base', async () => {
-    await expect(vat.addSeries(seriesId, baseId, fyToken.address)).to.be.revertedWith('Vat: Base not found')
+    await expect(vat.addSeries(seriesId, baseId, fyToken.address)).to.be.revertedWith('Vat: Asset not found')
   })
 
   describe('with a base and an ilk added', async () => {
     beforeEach(async () => {
-      await vat.addBase(baseId, base.address)
-      await vat.addIlk(ilkId, ilk.address)
+      await vat.addAsset(baseId, base.address)
+      await vat.addAsset(ilkId, ilk.address)
     })
 
-    it('does not allow using the same base identifier twice', async () => {
-      await expect(vat.addBase(baseId, base.address)).to.be.revertedWith('Vat: Id already used')
-    })
-
-    it('does not allow using the same ilk identifier twice', async () => {
-      await expect(vat.addIlk(ilkId, ilk.address)).to.be.revertedWith('Vat: Id already used')
+    it('does not allow using the same asset identifier twice', async () => {
+      await expect(vat.addAsset(baseId, base.address)).to.be.revertedWith('Vat: Id already used')
     })
 
     it('does not allow not linking a series to a fyToken', async () => {
@@ -107,7 +98,7 @@ describe('Vat', () => {
       })
   
       it('does not build a vault not linked to an ilk', async () => {
-        await expect(vat.build(seriesId, mockAssetId)).to.be.revertedWith('Vat: Ilk not found')
+        await expect(vat.build(seriesId, mockAssetId)).to.be.revertedWith('Vat: Asset not found')
       })
 
       it('builds a vault', async () => {
@@ -118,6 +109,7 @@ describe('Vat', () => {
         const vault = await vat.vaults(vaultId)
         expect(vault.owner).to.equal(owner)
         expect(vault.seriesId).to.equal(seriesId)
+        expect(vault.ilkId).to.equal(ilkId)
 
         // Remove these two when `expect...to.emit` works
         expect(event.args.owner).to.equal(owner)

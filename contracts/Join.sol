@@ -14,14 +14,14 @@ contract Join {
     } */
 
     IERC20 public token;
-    // bytes6  public ilk;   // Collateral Type
+    // bytes6  public asset;   // Collateral Type
     // uint    public dec;
     // uint    public live;  // Active Flag
 
     constructor(/* address vat_, */IERC20 token_) {
         // wards[msg.sender] = 1;
         token = token_;
-        // ilk = ilk_;
+        // asset = asset_;
         // dec = token.decimals();
         // live = 1;
     }
