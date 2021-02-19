@@ -1,6 +1,7 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { formatBytes32String as toBytes32, id } from 'ethers/lib/utils'
 import { BigNumber, BigNumberish } from 'ethers'
+import { BaseProvider } from '@ethersproject/providers'
 
 import VatArtifact from '../../artifacts/contracts/Vat.sol/Vat.json'
 import JoinArtifact from '../../artifacts/contracts/Join.sol/Join.json'
@@ -45,7 +46,7 @@ export class YieldEnvironment {
   cdpProxy: CDPProxy
   joins: Map<string,Join>
   assets: Map<string,ERC20Mock>
-  // fyTokens: Map<string,FYToken>
+  series: Map<string,FYToken>
   
   constructor(
     owner: SignerWithAddress,
@@ -54,7 +55,7 @@ export class YieldEnvironment {
     cdpProxy: CDPProxy,
     assets: Map<string,ERC20Mock>,
     joins: Map<string,Join>,
-    // fyTokens: Map<string,FYToken>,
+    series: Map<string,FYToken>,
   ) {
     this.owner = owner
     this.other = other
@@ -62,17 +63,19 @@ export class YieldEnvironment {
     this.cdpProxy = cdpProxy
     this.assets = assets
     this.joins = joins
-    // this.fyTokens = fyTokens
+    this.series = series
   }
 
-  public static async setup(owner: SignerWithAddress, other: SignerWithAddress, assetIds: Array<string>/*, maturities: number */) {
+  public static async setup(owner: SignerWithAddress, other: SignerWithAddress, assetIds: Array<string>, seriesIds: Array<string>) {
     const ownerAdd = await owner.getAddress()
     const otherAdd = await other.getAddress()
 
     const vat = (await deployContract(owner, VatArtifact, [])) as Vat
     const cdpProxy = (await deployContract(owner, CDPProxyArtifact, [vat.address])) as CDPProxy
 
-    // ==== Add assets, series and joins
+    // ==== Add assets and joins ====
+    // For each asset id passed as an argument, we create a Mock ERC20 which we register in vat, and its Join, that we register in CDPProxy.
+    // We also give 100 tokens of that asset to the owner account, and approve with the owner for the join to take the asset.
     const assets: Map<string, ERC20Mock> = new Map()
     const joins: Map<string, Join> = new Map()
     for (let assetId of assetIds) {
@@ -87,18 +90,31 @@ export class YieldEnvironment {
       await asset.approve(join.address, ethers.constants.MaxUint256)
     }
 
-    // fyToken = (await deployContract(ownerAcc, FYTokenArtifact, [base.address, mockAddress, maturity, seriesId, "Mock FYToken"])) as FYToken
+    // ==== Add series ====
+    // For each series identifier we create a fyToken with the first asset as underlying.
+    // The maturities for the fyTokens are in three month intervals, starting three months from now
+    const series: Map<string, FYToken> = new Map()
+    const mockOracleAddress =  ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20)))
+    const provider: BaseProvider = ethers.getDefaultProvider()
+    const now = (await provider.getBlock(provider.getBlockNumber())).timestamp
+    const THREE_MONTHS: number = 3 * 30 * 24 * 60 * 60
+    let count: number = 1
+    for (let seriesId of seriesIds) {
+      const baseId = assetIds[0]
+      const base = assets.get(baseId) as ERC20Mock
+      const fyToken = (await deployContract(owner, FYTokenArtifact, [base.address, mockOracleAddress, now + THREE_MONTHS * count++, seriesId, "Mock FYToken"])) as FYToken
+      series.set(seriesId, fyToken)
+      await vat.addSeries(seriesId, baseId, fyToken.address)
+    }
 
     // ==== Build some vaults ====
+    // For each series and ilk we create two vaults vaults[seriesId][ilkId] = vaultId
+    const vaults: Map<string, Map<string, string>
     // await vat.build(seriesId, ilkId)
     // const event = (await vat.queryFilter(vat.filters.VaultBuilt(null, null, null, null)))[0]
     // vaultId = event.args.vaultId
 
-    // ==== Give some assets
-    // await ilk.mint(owner, 1);
-    // await ilk.approve(join.address, MAX);
-
-    return new YieldEnvironment(owner, other, vat, cdpProxy, assets, joins)
+    return new YieldEnvironment(owner, other, vat, cdpProxy, assets, joins, series)
   }
 
   /*

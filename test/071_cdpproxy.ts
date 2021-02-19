@@ -55,23 +55,24 @@ describe('CDPProxy', () => {
   let vaultId: string
 
   beforeEach(async () => {
-    env = await YieldEnvironment.setup(ownerAcc, otherAcc, [])
+    env = await YieldEnvironment.setup(ownerAcc, otherAcc, [baseId], [seriesId])
     vat = env.vat
     cdpProxy = env.cdpProxy
-    // base = env.assets.get(baseId) as ERC20Mock
+    base = env.assets.get(baseId) as ERC20Mock
     // ilk = env.assets.get(ilkId) as ERC20Mock
     // ilkJoin = env.joins.get(ilkId) as Join
-    base = (await deployContract(ownerAcc, ERC20MockArtifact, [baseId, "Mock Base"])) as ERC20Mock
+    // base = (await deployContract(ownerAcc, ERC20MockArtifact, [baseId, "Mock Base"])) as ERC20Mock
     ilk = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId, "Mock Ilk"])) as ERC20Mock
     ilkJoin = (await deployContract(ownerAcc, JoinArtifact, [ilk.address])) as Join
-    fyToken = (await deployContract(ownerAcc, FYTokenArtifact, [base.address, mockAddress, maturity, seriesId, "Mock FYToken"])) as FYToken
+    // fyToken = (await deployContract(ownerAcc, FYTokenArtifact, [base.address, mockAddress, maturity, seriesId, "Mock FYToken"])) as FYToken
+    fyToken = env.series.get(seriesId) as FYToken
 
     cdpProxyFromOther = cdpProxy.connect(otherAcc)
 
     // ==== Set platform ====
-    await vat.addAsset(baseId, base.address)
+    // await vat.addAsset(baseId, base.address)
     await vat.addAsset(ilkId, ilk.address)
-    await vat.addSeries(seriesId, baseId, fyToken.address)
+    // await vat.addSeries(seriesId, baseId, fyToken.address)
 
     // ==== Set testing environment ====
     await vat.build(seriesId, ilkId)
