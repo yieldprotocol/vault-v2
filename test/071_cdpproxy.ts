@@ -16,10 +16,13 @@ import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { deployContract } = waffle
 
+import { YieldEnvironment } from './shared/fixtures'
+
 describe('CDPProxy', () => {
+  let env: YieldEnvironment
   let ownerAcc: SignerWithAddress
-  let owner: string
   let otherAcc: SignerWithAddress
+  let owner: string
   let other: string
   let vat: Vat
   let join: Join
@@ -52,11 +55,13 @@ describe('CDPProxy', () => {
   let vaultId: string
 
   beforeEach(async () => {
-    vat = (await deployContract(ownerAcc, VatArtifact, [])) as Vat
+    env = await YieldEnvironment.setup(ownerAcc, otherAcc)
+    vat = env.vat
+    cdpProxy = env.cdpProxy
+
     base = (await deployContract(ownerAcc, ERC20MockArtifact, [baseId, "Mock Base"])) as ERC20Mock
     ilk = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId, "Mock Ilk"])) as ERC20Mock
     fyToken = (await deployContract(ownerAcc, FYTokenArtifact, [base.address, mockAddress, maturity, seriesId, "Mock FYToken"])) as FYToken
-    cdpProxy = (await deployContract(ownerAcc, CDPProxyArtifact, [vat.address])) as CDPProxy
     join = (await deployContract(ownerAcc, JoinArtifact, [ilk.address])) as Join
 
     cdpProxyFromOther = cdpProxy.connect(otherAcc)
