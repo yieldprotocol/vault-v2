@@ -6,7 +6,7 @@ import "./IOracle.sol";
 
 interface IFYToken is IERC20 {
     /// @dev Token that is returned on redemption. Also called underlying.
-    function base() external view returns (IERC20);
+    function asset() external view returns (IERC20);
 
     /// @dev Oracle that returns the accrual of the borrowing rate, which is accrued after maturity.
     function oracle() external view returns (IOracle);

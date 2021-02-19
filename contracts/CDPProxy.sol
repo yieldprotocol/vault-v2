@@ -12,27 +12,27 @@ contract CDPProxy {
 
     IVat public vat;
 
-    // TODO: Consider making ilks and bases a single variable
-    mapping (bytes6 => IJoin)                public ilkJoins;           // Join contracts available to manage collateral. 12 bytes still free.
+    // TODO: Consider making assets and assets a single variable
+    mapping (bytes6 => IJoin)                public joins;           // Join contracts available to manage collateral. 12 bytes still free.
 
-    event IlkJoinAdded(bytes6 indexed ilkId, address indexed join);
+    event JoinAdded(bytes6 indexed assetId, address indexed join);
 
     constructor (IVat vat_) {
         vat = vat_;
     }
 
-    /// @dev Add a new Join for an Ilk. There can be only onw Join per Ilk. Until a Join is added, no tokens of that Ilk can be posted or withdrawn.
-    function addIlkJoin(bytes6 ilkId, IJoin join)
+    /// @dev Add a new Join for an Asset. There can be only onw Join per Asset. Until a Join is added, no tokens of that Asset can be posted or withdrawn.
+    function addJoin(bytes6 assetId, IJoin join)
         external
         /*auth*/
     {
-        require (vat.ilks(ilkId) != IERC20(address(0)), "Ilk not found"); // 1 CALL + 1 SLOAD
-        ilkJoins[ilkId] = join;                                             // 1 SSTORE
-        emit IlkJoinAdded(ilkId, address(join));
+        require (vat.assets(assetId) != IERC20(address(0)), "Asset not found"); // 1 CALL + 1 SLOAD
+        joins[assetId] = join;                                             // 1 SSTORE
+        emit JoinAdded(assetId, address(join));
     }
 
-    // Add collateral and borrow from vault, pull ilks from and push borrowed asset to user
-    // Or, repay to vault and remove collateral, pull borrowed asset from and push ilks to user
+    // Add collateral and borrow from vault, pull assets from and push borrowed asset to user
+    // Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
     // Doesn't check inputs, or collateralization level. Do that in public functions.
     // TODO: Extend to allow other accounts in `join`
     function frob(bytes12 vaultId, int128 ink, int128 art)
@@ -43,7 +43,7 @@ contract CDPProxy {
         require (_vault.owner == msg.sender, "Only vault owner");
 
         if (ink != 0) {
-            ilkJoins[_vault.ilkId].join(_vault.owner, ink);                 // Cost of `join` call. `join` with a negative value means `exit`.
+            joins[_vault.ilkId].join(_vault.owner, ink);                 // Cost of `join` call. `join` with a negative value means `exit`.
         }
 
         _balances = vat._frob(vaultId, ink, art);                           // Cost of `vat.frob` call.
@@ -70,9 +70,9 @@ contract CDPProxy {
         require (_vault.owner == msg.sender, "Only vault owner");
 
         DataTypes.Series memory _series = vat.series(_vault.seriesId);      // 1 CALL + 1 SLOAD
-        bytes6 baseId = _series[vaultId].baseId;                            // 1 SLOAD
-        joins[baseId].join(int128(repay));                                  // Cost of `join`
-        uint128 art = repay * RAY / rateOracles[base].spot();               // 1 SLOAD + `spot`
+        bytes6 assetId = _series[vaultId].assetId;                            // 1 SLOAD
+        joins[assetId].join(int128(repay));                                  // Cost of `join`
+        uint128 art = repay * RAY / rateOracles[asset].spot();               // 1 SLOAD + `spot`
         return __frob(vaultId, ink, -int128(art));                          // Cost of `__frob`
     } */
 }
