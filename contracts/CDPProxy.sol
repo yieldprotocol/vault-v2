@@ -27,7 +27,8 @@ contract CDPProxy {
         /*auth*/
     {
         require (vat.assets(assetId) != IERC20(address(0)), "Asset not found"); // 1 CALL + 1 SLOAD
-        joins[assetId] = join;                                             // 1 SSTORE
+        require (joins[assetId] == IJoin(address(0)), "One Join per Asset");    // 1 SLOAD
+        joins[assetId] = join;                                                  // 1 SSTORE
         emit JoinAdded(assetId, address(join));
     }
 
@@ -43,13 +44,15 @@ contract CDPProxy {
         require (_vault.owner == msg.sender, "Only vault owner");
 
         if (ink != 0) {
-            joins[_vault.ilkId].join(_vault.owner, ink);                 // Cost of `join` call. `join` with a negative value means `exit`.
+            // TODO: Consider checking the join exists
+            joins[_vault.ilkId].join(_vault.owner, ink);                    // Cost of `join` call. `join` with a negative value means `exit`.
         }
 
         _balances = vat._frob(vaultId, ink, art);                           // Cost of `vat.frob` call.
 
         if (art != 0) {
             DataTypes.Series memory _series = vat.series(_vault.seriesId);  // 1 CALL + 1 SLOAD
+            // TODO: Consider checking the series exists
             if (art > 0) {
                 require(block.timestamp <= _series.maturity, "Mature");
                 IFYToken(_series.fyToken).mint(msg.sender, uint128(art));   // 1 CALL(40) + fyToken.mint. Consider whether it's possible to achieve this without an external call, so that `Vat` doesn't depend on the `FYDai` interface.
