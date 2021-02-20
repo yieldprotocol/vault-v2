@@ -1,3 +1,4 @@
+import { Wallet } from '@ethersproject/wallet'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { formatBytes32String as toBytes32, id } from 'ethers/lib/utils'
 import { BigNumber, BigNumberish } from 'ethers'
@@ -40,8 +41,8 @@ import { expect } from 'chai'
 const { deployContract } = waffle
 
 export class YieldEnvironment {
-  owner: SignerWithAddress
-  other: SignerWithAddress
+  owner: Wallet
+  other: Wallet
   vat: Vat
   cdpProxy: CDPProxy
   joins: Map<string, Join>
@@ -50,8 +51,8 @@ export class YieldEnvironment {
   vaults: Map<string, Map<string, string>>
   
   constructor(
-    owner: SignerWithAddress,
-    other: SignerWithAddress,
+    owner: Wallet,
+    other: Wallet,
     vat: Vat,
     cdpProxy: CDPProxy,
     assets: Map<string, ERC20Mock>,
@@ -69,7 +70,7 @@ export class YieldEnvironment {
     this.vaults = vaults
   }
 
-  public static async setup(owner: SignerWithAddress, other: SignerWithAddress, assetIds: Array<string>, seriesIds: Array<string>) {
+  public static async setup(owner: Wallet, other: Wallet, assetIds: Array<string>, seriesIds: Array<string>) {
     const ownerAdd = await owner.getAddress()
     const otherAdd = await other.getAddress()
 

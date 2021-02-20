@@ -1,3 +1,5 @@
+import { BaseProvider } from '@ethersproject/providers'
+import { Wallet } from '@ethersproject/wallet'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import VatArtifact from '../artifacts/contracts/Vat.sol/Vat.json'
 import JoinArtifact from '../artifacts/contracts/Join.sol/Join.json'
@@ -14,7 +16,7 @@ import { CDPProxy } from '../typechain/CDPProxy'
 import { ethers, waffle } from 'hardhat'
 // import { id } from '../src'
 import { expect } from 'chai'
-const { deployContract } = waffle
+const { deployContract, loadFixture } = waffle
 
 import { YieldEnvironment } from './shared/fixtures'
 
@@ -39,6 +41,10 @@ describe('CDPProxy', () => {
   const emptyAddress =  ethers.utils.getAddress('0x0000000000000000000000000000000000000000')
   const MAX = ethers.constants.MaxUint256
 
+  async function fixture([ownerWallet, otherWallet]: Array<Wallet>, provider: BaseProvider) { // <-- TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    return await YieldEnvironment.setup(ownerWallet, otherWallet, [baseId], [seriesId])
+  }
+
   before(async () => {
     const signers = await ethers.getSigners()
     ownerAcc = signers[0]
@@ -55,7 +61,8 @@ describe('CDPProxy', () => {
   let vaultId: string
 
   beforeEach(async () => {
-    env = await YieldEnvironment.setup(ownerAcc, otherAcc, [baseId], [seriesId])
+    // env = await YieldEnvironment.setup(ownerAcc, otherAcc, [baseId], [seriesId])
+    env = await loadFixture(fixture);
     vat = env.vat
     cdpProxy = env.cdpProxy
     base = env.assets.get(baseId) as ERC20Mock
