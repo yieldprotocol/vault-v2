@@ -107,8 +107,8 @@ contract Vat {
     function build(bytes6 seriesId, bytes6 ilkId)
         public
         // TODO: The first two checks are not necessary with `ilkExists`, left for now for clarity on the require errors.
-        seriesExists(seriesId)                                          // 1 SLOAD
-        assetExists(ilkId)                                              // 1 SLOAD
+        // seriesExists(seriesId)                                          // 1 SLOAD
+        // assetExists(ilkId)                                              // 1 SLOAD
         ilkExists(seriesId, ilkId)                                      // 1 SLOAD
         returns (bytes12 vaultId)
     {

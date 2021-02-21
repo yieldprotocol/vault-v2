@@ -117,12 +117,12 @@ describe('Vat', () => {
           await vat.addIlk(seriesId, ilkId)
         })
 
-        it('does not build a vault with an unknown series', async () => { // TODO: Might be removed, redundant with approved ilk check
-          await expect(vat.build(mockAssetId, ilkId)).to.be.revertedWith('Vat: Series not found')
+        it('does not build a vault with an unknown series', async () => { // TODO: Error message misleading, replace in contract for something generic
+          await expect(vat.build(mockAssetId, ilkId)).to.be.revertedWith('Vat: Ilk not added')
         })
     
         it('does not build a vault with an unknown ilk', async () => { // TODO: Might be removed, redundant with approved ilk check
-          await expect(vat.build(seriesId, mockAssetId)).to.be.revertedWith('Vat: Asset not found')
+          await expect(vat.build(seriesId, mockAssetId)).to.be.revertedWith('Vat: Ilk not added')
         })
 
         it('builds a vault', async () => {
