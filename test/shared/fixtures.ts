@@ -70,6 +70,7 @@ export class YieldEnvironment {
     this.vaults = vaults
   }
 
+  // Set up a test environment. Provide at least one asset identifier.
   public static async setup(owner: SignerWithAddress, other: SignerWithAddress, assetIds: Array<string>, seriesIds: Array<string>) {
     const ownerAdd = await owner.getAddress()
     const otherAdd = await other.getAddress()
@@ -94,9 +95,19 @@ export class YieldEnvironment {
       await asset.approve(join.address, ethers.constants.MaxUint256)
     }
 
+    // The first asset will be the underlying for all series
+    // All assets after the first will be added as collateral for all series
+    const baseId = assetIds[0]
+    const ilkIds = assetIds.slice(1)
+    const base = assets.get(baseId) as ERC20Mock
+
+    // ==== Set debt limits ====
+    for (let ilkId of ilkIds) {
+      await vat.setMaxDebt(baseId, ilkId, ethers.constants.MaxUint256)
+    }
+
     // ==== Add series ====
     // For each series identifier we create a fyToken with the first asset as underlying.
-    // All assets after the first will be added as collateral for all series
     // The maturities for the fyTokens are in three month intervals, starting three months from now
     const series: Map<string, FYToken> = new Map()
     const mockOracleAddress =  ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20)))
@@ -105,8 +116,6 @@ export class YieldEnvironment {
     const THREE_MONTHS: number = 3 * 30 * 24 * 60 * 60
     let count: number = 1
     for (let seriesId of seriesIds) {
-      const baseId = assetIds[0]
-      const base = assets.get(baseId) as ERC20Mock
       const fyToken = (await deployContract(owner, FYTokenArtifact, [base.address, mockOracleAddress, now + THREE_MONTHS * count++, seriesId, "Mock FYToken"])) as FYToken
       series.set(seriesId, fyToken)
       await vat.addSeries(seriesId, baseId, fyToken.address)
@@ -122,7 +131,7 @@ export class YieldEnvironment {
     const vaults: Map<string, Map<string, string>> = new Map()
     for (let seriesId of seriesIds) {
       const seriesVaults: Map<string, string> = new Map()
-      for (let ilkId of assetIds.slice(1)) {
+      for (let ilkId of ilkIds) {
         await vat.build(seriesId, ilkId)
         const event = (await vat.queryFilter(vat.filters.VaultBuilt(null, null, null, null)))[0]
         const vaultId = event.args.vaultId
