@@ -41,8 +41,8 @@ import { expect } from 'chai'
 const { deployContract } = waffle
 
 export class YieldEnvironment {
-  owner: Wallet
-  other: Wallet
+  owner: SignerWithAddress
+  other: SignerWithAddress
   vat: Vat
   cdpProxy: CDPProxy
   joins: Map<string, Join>
@@ -51,8 +51,8 @@ export class YieldEnvironment {
   vaults: Map<string, Map<string, string>>
   
   constructor(
-    owner: Wallet,
-    other: Wallet,
+    owner: SignerWithAddress,
+    other: SignerWithAddress,
     vat: Vat,
     cdpProxy: CDPProxy,
     assets: Map<string, ERC20Mock>,
@@ -70,7 +70,7 @@ export class YieldEnvironment {
     this.vaults = vaults
   }
 
-  public static async setup(owner: Wallet, other: Wallet, assetIds: Array<string>, seriesIds: Array<string>) {
+  public static async setup(owner: SignerWithAddress, other: SignerWithAddress, assetIds: Array<string>, seriesIds: Array<string>) {
     const ownerAdd = await owner.getAddress()
     const otherAdd = await other.getAddress()
 

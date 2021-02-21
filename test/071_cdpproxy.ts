@@ -41,8 +41,8 @@ describe('CDPProxy', () => {
   const emptyAddress =  ethers.utils.getAddress('0x0000000000000000000000000000000000000000')
   const MAX = ethers.constants.MaxUint256
 
-  async function fixture([ownerWallet, otherWallet]: Array<Wallet>, provider: BaseProvider) { // <-- TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
-    return await YieldEnvironment.setup(ownerWallet, otherWallet, [baseId], [seriesId])
+  async function fixture() {
+    return await YieldEnvironment.setup(ownerAcc, otherAcc, [baseId], [seriesId])
   }
 
   before(async () => {
@@ -61,7 +61,6 @@ describe('CDPProxy', () => {
   let vaultId: string
 
   beforeEach(async () => {
-    // env = await YieldEnvironment.setup(ownerAcc, otherAcc, [baseId], [seriesId])
     env = await loadFixture(fixture);
     vat = env.vat
     cdpProxy = env.cdpProxy
