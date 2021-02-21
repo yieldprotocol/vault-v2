@@ -14,7 +14,7 @@ import { CDPProxy } from '../typechain/CDPProxy'
 import { ethers, waffle } from 'hardhat'
 // import { id } from '../src'
 import { expect } from 'chai'
-const { deployContract } = waffle
+const { deployContract, loadFixture } = waffle
 
 import { YieldEnvironment } from './shared/fixtures'
 
@@ -32,6 +32,10 @@ describe('Fixtures', () => {
   let cdpProxy: CDPProxy
   let cdpProxyFromOther: CDPProxy
 
+  async function fixture() {
+    return await YieldEnvironment.setup(ownerAcc, otherAcc, [baseId], [seriesId])
+  }
+
   before(async () => {
     const signers = await ethers.getSigners()
     ownerAcc = signers[0]
@@ -47,13 +51,11 @@ describe('Fixtures', () => {
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
 
   beforeEach(async () => {
-    env = await YieldEnvironment.setup(ownerAcc, otherAcc, [baseId, ilkId1, ilkId2], [seriesId])
-    vat = env.vat
-    cdpProxy = env.cdpProxy
+    env = await loadFixture(fixture);
   })
 
   // TODO: Do actual tests
-  it('print', async () => {
-    console.log(env)
+  it('dummy test', async () => {
+    // console.log(env)
   })
 })
