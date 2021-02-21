@@ -1,3 +1,5 @@
+import { BaseProvider } from '@ethersproject/providers'
+import { Wallet } from '@ethersproject/wallet'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import VatArtifact from '../artifacts/contracts/Vat.sol/Vat.json'
 import JoinArtifact from '../artifacts/contracts/Join.sol/Join.json'
@@ -14,18 +16,21 @@ import { CDPProxy } from '../typechain/CDPProxy'
 import { ethers, waffle } from 'hardhat'
 // import { id } from '../src'
 import { expect } from 'chai'
-const { deployContract } = waffle
+const { deployContract, loadFixture } = waffle
+
+import { YieldEnvironment } from './shared/fixtures'
 
 describe('CDPProxy', () => {
+  let env: YieldEnvironment
   let ownerAcc: SignerWithAddress
-  let owner: string
   let otherAcc: SignerWithAddress
+  let owner: string
   let other: string
   let vat: Vat
-  let join: Join
   let fyToken: FYToken
   let base: ERC20Mock
   let ilk: ERC20Mock
+  let ilkJoin: Join
   let cdpProxy: CDPProxy
   let cdpProxyFromOther: CDPProxy
 
@@ -35,6 +40,10 @@ describe('CDPProxy', () => {
   const mockAddress =  ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20)))
   const emptyAddress =  ethers.utils.getAddress('0x0000000000000000000000000000000000000000')
   const MAX = ethers.constants.MaxUint256
+
+  async function fixture() {
+    return await YieldEnvironment.setup(ownerAcc, otherAcc, [baseId], [seriesId])
+  }
 
   before(async () => {
     const signers = await ethers.getSigners()
@@ -52,19 +61,24 @@ describe('CDPProxy', () => {
   let vaultId: string
 
   beforeEach(async () => {
-    vat = (await deployContract(ownerAcc, VatArtifact, [])) as Vat
-    base = (await deployContract(ownerAcc, ERC20MockArtifact, [baseId, "Mock Base"])) as ERC20Mock
+    env = await loadFixture(fixture);
+    vat = env.vat
+    cdpProxy = env.cdpProxy
+    base = env.assets.get(baseId) as ERC20Mock
+    // ilk = env.assets.get(ilkId) as ERC20Mock
+    // ilkJoin = env.joins.get(ilkId) as Join
+    // base = (await deployContract(ownerAcc, ERC20MockArtifact, [baseId, "Mock Base"])) as ERC20Mock
     ilk = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId, "Mock Ilk"])) as ERC20Mock
-    fyToken = (await deployContract(ownerAcc, FYTokenArtifact, [base.address, mockAddress, maturity, seriesId, "Mock FYToken"])) as FYToken
-    cdpProxy = (await deployContract(ownerAcc, CDPProxyArtifact, [vat.address])) as CDPProxy
-    join = (await deployContract(ownerAcc, JoinArtifact, [ilk.address])) as Join
+    ilkJoin = (await deployContract(ownerAcc, JoinArtifact, [ilk.address])) as Join
+    // fyToken = (await deployContract(ownerAcc, FYTokenArtifact, [base.address, mockAddress, maturity, seriesId, "Mock FYToken"])) as FYToken
+    fyToken = env.series.get(seriesId) as FYToken
 
     cdpProxyFromOther = cdpProxy.connect(otherAcc)
 
     // ==== Set platform ====
-    await vat.addAsset(baseId, base.address)
+    // await vat.addAsset(baseId, base.address)
     await vat.addAsset(ilkId, ilk.address)
-    await vat.addSeries(seriesId, baseId, fyToken.address)
+    // await vat.addSeries(seriesId, baseId, fyToken.address)
 
     // ==== Set testing environment ====
     await vat.build(seriesId, ilkId)
@@ -72,21 +86,25 @@ describe('CDPProxy', () => {
     vaultId = event.args.vaultId
 
     await ilk.mint(owner, 1);
-    await ilk.approve(join.address, MAX);
+    await ilk.approve(ilkJoin.address, MAX);
   })
 
   it('does not allow adding a join before adding its ilk', async () => {
-    await expect(cdpProxy.addJoin(mockAssetId, join.address)).to.be.revertedWith('Asset not found')
+    await expect(cdpProxy.addJoin(mockAssetId, ilkJoin.address)).to.be.revertedWith('Asset not found')
   })
 
   it('adds a join', async () => {
-    expect(await cdpProxy.addJoin(ilkId, join.address)).to.emit(cdpProxy, 'JoinAdded').withArgs(ilkId, join.address)
-    expect(await cdpProxy.joins(ilkId)).to.equal(join.address)
+    expect(await cdpProxy.addJoin(ilkId, ilkJoin.address)).to.emit(cdpProxy, 'JoinAdded').withArgs(ilkId, ilkJoin.address)
+    expect(await cdpProxy.joins(ilkId)).to.equal(ilkJoin.address)
   })
 
   describe('with a join added', async () => {
     beforeEach(async () => {
-      await cdpProxy.addJoin(ilkId, join.address)
+      await cdpProxy.addJoin(ilkId, ilkJoin.address)
+    })
+
+    it('only one join per asset', async () => {
+      await expect(cdpProxy.addJoin(ilkId, ilkJoin.address)).to.be.revertedWith('One Join per Asset')
     })
 
     it('only the vault owner can manage its collateral', async () => {
@@ -95,7 +113,7 @@ describe('CDPProxy', () => {
 
     it('users can frob to post collateral', async () => {
       expect(await cdpProxy.frob(vaultId, 1, 0)).to.emit(vat, 'VaultFrobbed').withArgs(vaultId, seriesId, ilkId, 1, 0)
-      expect(await ilk.balanceOf(join.address)).to.equal(1)
+      expect(await ilk.balanceOf(ilkJoin.address)).to.equal(1)
       expect((await vat.vaultBalances(vaultId)).ink).to.equal(1)
     })
 
@@ -106,7 +124,7 @@ describe('CDPProxy', () => {
   
       it('users can frob to withdraw collateral', async () => {
         await expect(cdpProxy.frob(vaultId, -1, 0)).to.emit(vat, 'VaultFrobbed').withArgs(vaultId, seriesId, ilkId, -1, 0)
-        expect(await ilk.balanceOf(join.address)).to.equal(0)
+        expect(await ilk.balanceOf(ilkJoin.address)).to.equal(0)
         expect((await vat.vaultBalances(vaultId)).ink).to.equal(0)
       })
 
@@ -119,7 +137,7 @@ describe('CDPProxy', () => {
 
     it('users can frob to post collateral and borrow fyToken', async () => {
       await expect(cdpProxy.frob(vaultId, 1, 1)).to.emit(vat, 'VaultFrobbed').withArgs(vaultId, seriesId, ilkId, 1, 1)
-      expect(await ilk.balanceOf(join.address)).to.equal(1)
+      expect(await ilk.balanceOf(ilkJoin.address)).to.equal(1)
       expect(await fyToken.balanceOf(owner)).to.equal(1)
       expect((await vat.vaultBalances(vaultId)).ink).to.equal(1)
       expect((await vat.vaultBalances(vaultId)).art).to.equal(1)

@@ -71,6 +71,8 @@ contract Vat {
         emit SeriesAdded(seriesId, baseId, address(fyToken));
     }
 
+    // TODO: function to allow an asset as collateral for a series
+
     /// @dev Ensure a asset exists        
     modifier assetExists(bytes6 assetId) {
         require (assets[assetId] != IERC20(address(0)), "Vat: Asset not found");
@@ -91,6 +93,7 @@ contract Vat {
         public
         seriesExists(seriesId)                                          // 1 SLOAD
         assetExists(ilkId)                                                // 1 SLOAD
+        // TODO: validIlk(seriesId, ilkId) that checks that collaterals[seriesId][ilkId] == true
         returns (bytes12 vaultId)
     {
         vaultId = bytes12(keccak256(abi.encodePacked(msg.sender, block.timestamp)));               // Check (vaults[id].owner == address(0)), and increase the salt until a free vault id is found. 1 SLOAD per check.
