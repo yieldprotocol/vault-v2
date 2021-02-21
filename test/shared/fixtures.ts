@@ -110,12 +110,11 @@ export class YieldEnvironment {
       const fyToken = (await deployContract(owner, FYTokenArtifact, [base.address, mockOracleAddress, now + THREE_MONTHS * count++, seriesId, "Mock FYToken"])) as FYToken
       series.set(seriesId, fyToken)
       await vat.addSeries(seriesId, baseId, fyToken.address)
-      // TODO: Add all assets after the first one as collaterals
-      /*
-      for (let assetId of assetIds.slice(1)) {
-        await vat.addIlk(seriesId, assetId)
+
+      // Add all assets except the first one as approved collaterals
+      for (let ilkId of assetIds.slice(1)) {
+        await vat.addIlk(seriesId, ilkId)
       }
-      */
     }
 
     // ==== Build some vaults ====
@@ -123,11 +122,11 @@ export class YieldEnvironment {
     const vaults: Map<string, Map<string, string>> = new Map()
     for (let seriesId of seriesIds) {
       const seriesVaults: Map<string, string> = new Map()
-      for (let assetId of assetIds.slice(1)) {
-        await vat.build(seriesId, assetId)
+      for (let ilkId of assetIds.slice(1)) {
+        await vat.build(seriesId, ilkId)
         const event = (await vat.queryFilter(vat.filters.VaultBuilt(null, null, null, null)))[0]
         const vaultId = event.args.vaultId
-        seriesVaults.set(assetId, vaultId)
+        seriesVaults.set(ilkId, vaultId)
       }
       vaults.set(seriesId, seriesVaults)
     }

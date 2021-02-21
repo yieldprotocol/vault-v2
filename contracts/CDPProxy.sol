@@ -8,6 +8,7 @@ import "./interfaces/IVat.sol";
 import "./libraries/DataTypes.sol";
 
 /// @dev CDPProxy orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
+/// TODO: Rename to highlight that this is a core contract that manages debt. The handling of Joins might be a base class to this and other contracts.
 contract CDPProxy {
 
     IVat public vat;
