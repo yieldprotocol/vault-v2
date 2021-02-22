@@ -103,7 +103,7 @@ export class YieldEnvironment {
 
     // ==== Set debt limits ====
     for (let ilkId of ilkIds) {
-      await vat.setMaxDebt(baseId, ilkId, ethers.constants.MaxUint256)
+      await vat.setMaxDebt(baseId, ilkId, ethers.constants.WeiPerEther.mul(1000000))
     }
 
     // ==== Add series ====
