@@ -72,6 +72,21 @@ describe('Vat', () => {
       await expect(vat.addAsset(baseId, base.address)).to.be.revertedWith('Vat: Id already used')
     })
 
+    it('does not allow setting a debt limit for an unknown base', async () => {
+      await expect(vat.setMaxDebt(mockAssetId, ilkId, 2)).to.be.revertedWith('Asset not found')
+    })
+  
+    it('does not allow setting a debt limit for an unknown ilk', async () => {
+      await expect(vat.setMaxDebt(baseId, mockAssetId, 2)).to.be.revertedWith('Asset not found')
+    })
+  
+    it('sets a debt limit', async () => {
+      expect(await vat.setMaxDebt(baseId, ilkId, 2)).to.emit(vat, 'MaxDebtSet').withArgs(baseId, ilkId, 2)
+
+      const debt = await vat.debt(baseId, ilkId)
+      expect(debt.max).to.equal(2)
+    })
+
     it('does not allow not linking a series to a fyToken', async () => {
       await expect(vat.addSeries(seriesId, baseId, emptyAddress)).to.be.revertedWith('Vat: Series need a fyToken')
     })
