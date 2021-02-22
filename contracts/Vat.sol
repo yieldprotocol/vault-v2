@@ -62,8 +62,8 @@ contract Vat {
     function addSeries(bytes6 seriesId, bytes6 baseId, IFYToken fyToken)
         external
         /*auth*/
-        assetExists(baseId)                                              // 1 SLOAD
     {
+        require (assets[baseId] != IERC20(address(0)), "Vat: Asset not found"); // 1 SLOAD
         require (fyToken != IFYToken(address(0)), "Vat: Series need a fyToken");
         require (series[seriesId].fyToken == IFYToken(address(0)), "Vat: Id already used");
         series[seriesId] = DataTypes.Series({
@@ -77,9 +77,9 @@ contract Vat {
     /// @dev Add a spot oracle
     function addSpotOracle(bytes6 baseId, bytes6 ilkId, IOracle oracle)
         external
-        assetExists(baseId)
-        assetExists(ilkId)
     {
+        require (assets[baseId] != IERC20(address(0)), "Vat: Asset not found"); // 1 SLOAD
+        require (assets[ilkId] != IERC20(address(0)), "Vat: Asset not found"); // 1 SLOAD
         spotOracles[baseId][ilkId] = oracle;                                // 1 SSTORE. Allows to replace an existing oracle.
         emit SpotOracleAdded(baseId, ilkId, address(oracle));
     }
@@ -104,29 +104,11 @@ contract Vat {
     /// @dev Add a new Ilk (approve an asset as collateral for a series).
     function setMaxDebt(bytes6 baseId, bytes6 ilkId, uint128 max)
         external
-        assetExists(baseId)                                              // 1 SLOAD
-        assetExists(ilkId)                                              // 1 SLOAD
     {
+        require (assets[baseId] != IERC20(address(0)), "Vat: Asset not found"); // 1 SLOAD
+        require (assets[ilkId] != IERC20(address(0)), "Vat: Asset not found"); // 1 SLOAD
         debt[baseId][ilkId].max = max;                                   // 1 SSTORE
         emit MaxDebtSet(baseId, ilkId, max);
-    }
-
-    /// @dev Ensure a asset exists        
-    modifier assetExists(bytes6 assetId) {
-        require (assets[assetId] != IERC20(address(0)), "Vat: Asset not found");
-        _;
-    }
-
-    /// @dev Ensure a series exists        
-    modifier seriesExists(bytes6 seriesId) {
-        require (series[seriesId].fyToken != IFYToken(address(0)), "Vat: Series not found");
-        _;
-    }
-
-    /// @dev Ensure an asset is approved collateral for a series        
-    modifier ilkExists(bytes6 seriesId, bytes6 ilkId) {
-        require (ilks[seriesId][ilkId] == true, "Vat: Ilk not added");
-        _;
     }
 
     // ==== Vault management ====
@@ -134,12 +116,9 @@ contract Vat {
     /// @dev Create a new vault, linked to a series (and therefore underlying) and a collateral
     function build(bytes6 seriesId, bytes6 ilkId)
         public
-        // TODO: The first two checks are not necessary with `ilkExists`, left for now for clarity on the require errors.
-        // seriesExists(seriesId)                                          // 1 SLOAD
-        // assetExists(ilkId)                                              // 1 SLOAD
-        ilkExists(seriesId, ilkId)                                      // 1 SLOAD
         returns (bytes12 vaultId)
     {
+        require (ilks[seriesId][ilkId] == true, "Vat: Ilk not added"); // 1 SLOAD
         vaultId = bytes12(keccak256(abi.encodePacked(msg.sender, block.timestamp)));               // Check (vaults[id].owner == address(0)), and increase the salt until a free vault id is found. 1 SLOAD per check.
         vaults[vaultId] = DataTypes.Vault({
             owner: msg.sender,
@@ -150,18 +129,6 @@ contract Vat {
         emit VaultBuilt(vaultId, msg.sender, seriesId, ilkId);
     }
 
-    /// @dev Ensure a vault exists        
-    modifier vaultExists(bytes12 vaultId) {
-        require (vaults[vaultId].owner != address(0), "Vat: Vault not found");
-        _;
-    }
-
-    /// @dev Ensure a function is only called by the vault owner. Already ensures the vault exists.       
-    modifier vaultOwner(bytes12 vaultId) {
-        require (vaults[vaultId].owner == msg.sender, "Vat: Only vault owner");
-        _;
-    }
-
     /* function emptyBalances(bytes12 vaultId) internal view returns (bool) {
         DataTypes.Balances memory balances = vaultBalances[vaultId];
         return balances.art == 0 && balances.ink == 0;
@@ -170,8 +137,8 @@ contract Vat {
     /// @dev Destroy an empty vault. Used to recover gas costs.
     function destroy(bytes12 vaultId)
         public
-        vaultOwner(vaultId)                                             // 1 SLOAD
     {
+        require (vaults[vaultId].owner == msg.sender, "Vat: Only vault owner"); // 1 SLOAD
         // require (emptyBalances(vaultId), "Destroy only empty vaults");  // 1 SLOAD
         // delete timestamps[vaultId];                                     // 1 SSTORE REFUND
         delete vaults[vaultId];                                         // 1 SSTORE REFUND
@@ -183,8 +150,8 @@ contract Vat {
     // Doesn't check inputs, or collateralization level. Do that in public functions.
     /* function __tweak(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
         internal
-        ilkExists(seriesId, ilkId)                                      // 1 SLOAD
     {
+        require (ilks[seriesId][ilkId] == true, "Vat: Ilk not added"); // 1 SLOAD
         Balances memory _balances = balances[vaultId];                  // 1 SLOAD
         Vault memory _vault = vaults[vaultId];                          // 1 SLOAD
         if (seriesId != _vault.seriesId) {
@@ -259,8 +226,8 @@ contract Vat {
     /* function _roll(bytes12 vaultId, bytes6 seriesId, int128 art)
         public
         auth
-        vaultExists(vaultId)                                                // 1 SLOAD
     {
+        require (vaults[vaultId].owner != address(0), "Vat: Vault not found");  // 1 SLOAD
         DataTypes.Balances memory _balances = vaultBalances[vaultId];       // 1 SLOAD
         DataTypes.Series memory _series = series[vaultId];                  // 1 SLOAD
         
@@ -296,9 +263,9 @@ contract Vat {
     function _frob(bytes12 vaultId, int128 ink, int128 art)
         public
         // auth                                                           // 1 SLOAD
-        vaultExists(vaultId)                                              // 1 SLOAD
         returns (DataTypes.Balances memory balances)
     {
+        require (vaults[vaultId].owner != address(0), "Vat: Vault not found");  // 1 SLOAD
         balances = __frob(vaultId, ink, art);                             // Cost of `__frob`
         // if (balances.art > 0 && (ink < 0 || art > 0)) require(level(vaultId) >= 0, "Undercollateralized");  // Cost of `level`
         return balances;
@@ -309,18 +276,18 @@ contract Vat {
     // Give a vault to another user.
     function give(bytes12 vaultId, address user)
         public
-        vaultOwner(vaultId)                                             // 1 SLOAD
     {
+        require (vaults[vaultId].owner == msg.sender, "Vat: Only vault owner"); // 1 SLOAD
         __give(vaultId, user);                                          // Cost of `__give`
     }
 
     // Move collateral between vaults.
     /* function flux(bytes12 from, bytes12 to, uint128 ink)
         public
-        vaultOwner(from)                                                // 1 SLOAD
-        vaultExists(to)                                                 // 1 SLOAD
         returns (bytes32, bytes32)
     {
+        require (vaults[from].owner == msg.sender, "Vat: Only vault owner");  // 1 SLOAD
+        require (vaults[to].owner != address(0), "Vat: Vault not found");  // 1 SLOAD
         Balances memory _balancesFrom;
         Balances memory _balancesTo;
         (_balancesFrom, _balancesTo) = __flux(from, to, ink, art);      // Cost of `__flux`
