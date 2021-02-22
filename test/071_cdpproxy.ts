@@ -68,22 +68,24 @@ describe('CDPProxy', () => {
     // ilk = env.assets.get(ilkId) as ERC20Mock
     // ilkJoin = env.joins.get(ilkId) as Join
     // base = (await deployContract(ownerAcc, ERC20MockArtifact, [baseId, "Mock Base"])) as ERC20Mock
-    ilk = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId, "Mock Ilk"])) as ERC20Mock
-    ilkJoin = (await deployContract(ownerAcc, JoinArtifact, [ilk.address])) as Join
     // fyToken = (await deployContract(ownerAcc, FYTokenArtifact, [base.address, mockAddress, maturity, seriesId, "Mock FYToken"])) as FYToken
     fyToken = env.series.get(seriesId) as FYToken
 
     cdpProxyFromOther = cdpProxy.connect(otherAcc)
 
-    // ==== Set platform ====
-    // await vat.addAsset(baseId, base.address)
-    await vat.addAsset(ilkId, ilk.address)
-    // await vat.addSeries(seriesId, baseId, fyToken.address)
-
     // ==== Set testing environment ====
+    // We add this asset manually, because `fixtures` would also add the join, which we want to test.
+    ilk = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId, "Mock Ilk"])) as ERC20Mock
+
+    await vat.addAsset(ilkId, ilk.address)
+    await vat.addIlk(seriesId, ilkId)
+
     await vat.build(seriesId, ilkId)
     const event = (await vat.queryFilter(vat.filters.VaultBuilt(null, null, null, null)))[0]
     vaultId = event.args.vaultId
+
+    // Finally, we deploy the join. A check that a join exists would be impossible in `vat` functions.
+    ilkJoin = (await deployContract(ownerAcc, JoinArtifact, [ilk.address])) as Join
 
     await ilk.mint(owner, 1);
     await ilk.approve(ilkJoin.address, MAX);
