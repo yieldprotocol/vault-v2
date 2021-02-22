@@ -9,7 +9,7 @@ import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { deployContract } = waffle
 
-describe('Vat', () => {
+describe('Oracle', () => {
   let ownerAcc: SignerWithAddress
   let owner: string
   let oracle: Oracle
