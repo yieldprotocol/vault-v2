@@ -24,6 +24,7 @@ describe('Vat', () => {
   let ilk: ERC20Mock
 
   const mockAssetId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const mockSeriesId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const emptyAssetId = '0x000000000000'
   const mockVaultId =  ethers.utils.hexlify(ethers.utils.randomBytes(12))
   const mockAddress =  ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20)))
@@ -71,6 +72,21 @@ describe('Vat', () => {
       await expect(vat.addAsset(baseId, base.address)).to.be.revertedWith('Vat: Id already used')
     })
 
+    it('does not allow setting a debt limit for an unknown base', async () => {
+      await expect(vat.setMaxDebt(mockAssetId, ilkId, 2)).to.be.revertedWith('Asset not found')
+    })
+  
+    it('does not allow setting a debt limit for an unknown ilk', async () => {
+      await expect(vat.setMaxDebt(baseId, mockAssetId, 2)).to.be.revertedWith('Asset not found')
+    })
+  
+    it('sets a debt limit', async () => {
+      expect(await vat.setMaxDebt(baseId, ilkId, 2)).to.emit(vat, 'MaxDebtSet').withArgs(baseId, ilkId, 2)
+
+      const debt = await vat.debt(baseId, ilkId)
+      expect(debt.max).to.equal(2)
+    })
+
     it('does not allow not linking a series to a fyToken', async () => {
       await expect(vat.addSeries(seriesId, baseId, emptyAddress)).to.be.revertedWith('Vat: Series need a fyToken')
     })
@@ -93,61 +109,85 @@ describe('Vat', () => {
         await expect(vat.addSeries(seriesId, baseId, fyToken.address)).to.be.revertedWith('Vat: Id already used')
       })
 
-      it('does not build a vault not linked to a series', async () => {
-        await expect(vat.build(mockAssetId, ilkId)).to.be.revertedWith('Vat: Series not found')
+      it('does not allow adding an asset as an ilk to a series that doesn\'t exist', async () => {
+        await expect(vat.addIlk(mockSeriesId, ilkId)).to.be.revertedWith('Vat: Series not found')
+      })
+
+      it('does not allow adding an asset that doesn\'t exist as an ilk', async () => {
+        await expect(vat.addIlk(seriesId, mockAssetId)).to.be.revertedWith('Vat: Asset not found')
       })
   
-      it('does not build a vault not linked to an ilk', async () => {
-        await expect(vat.build(seriesId, mockAssetId)).to.be.revertedWith('Vat: Asset not found')
+      it('does not build a vault with an ilk that is not approved for a series', async () => {
+        await expect(vat.build(seriesId, ilkId)).to.be.revertedWith('Vat: Ilk not added')
       })
 
-      it('builds a vault', async () => {
-        // expect(await vat.build(seriesId, mockIlks)).to.emit(vat, 'VaultBuilt').withArgs(null, seriesId, mockIlks);
-        await vat.build(seriesId, ilkId)
-        const event = (await vat.queryFilter(vat.filters.VaultBuilt(null, null, null, null)))[0]
-        const vaultId = event.args.vaultId
-        const vault = await vat.vaults(vaultId)
-        expect(vault.owner).to.equal(owner)
-        expect(vault.seriesId).to.equal(seriesId)
-        expect(vault.ilkId).to.equal(ilkId)
-
-        // Remove these two when `expect...to.emit` works
-        expect(event.args.owner).to.equal(owner)
-        expect(event.args.seriesId).to.equal(seriesId)
-        expect(event.args.ilkId).to.equal(ilkId)
+      it('adds an asset as an ilk to a series', async () => {
+        expect(await vat.addIlk(seriesId, ilkId)).to.emit(vat, 'IlkAdded').withArgs(seriesId, ilkId)
+  
+        expect(await vat.ilks(seriesId, ilkId)).to.be.true
       })
 
-      describe('with a vault built', async () => {
-        let vaultId: string
-
+      describe('with an asset added as an ilk to a series', async () => {
         beforeEach(async () => {
+          await vat.addIlk(seriesId, ilkId)
+        })
+
+        it('does not build a vault with an unknown series', async () => { // TODO: Error message misleading, replace in contract for something generic
+          await expect(vat.build(mockAssetId, ilkId)).to.be.revertedWith('Vat: Ilk not added')
+        })
+    
+        it('does not build a vault with an unknown ilk', async () => { // TODO: Might be removed, redundant with approved ilk check
+          await expect(vat.build(seriesId, mockAssetId)).to.be.revertedWith('Vat: Ilk not added')
+        })
+
+        it('builds a vault', async () => {
+          // expect(await vat.build(seriesId, mockIlks)).to.emit(vat, 'VaultBuilt').withArgs(null, seriesId, mockIlks);
           await vat.build(seriesId, ilkId)
           const event = (await vat.queryFilter(vat.filters.VaultBuilt(null, null, null, null)))[0]
-          vaultId = event.args.vaultId
-        })
-  
-        it('does not allow destroying vaults if not the vault owner', async () => {
-          await expect(vatFromOther.destroy(vaultId)).to.be.revertedWith('Vat: Only vault owner')
-        })
-  
-        it('destroys a vault', async () => {
-          expect(await vat.destroy(vaultId)).to.emit(vat, 'VaultDestroyed').withArgs(vaultId)
+          const vaultId = event.args.vaultId
           const vault = await vat.vaults(vaultId)
-          expect(vault.owner).to.equal(emptyAddress)
-          expect(vault.seriesId).to.equal(emptyAssetId)
-          expect(vault.ilkId).to.equal(emptyAssetId)
-        })
-
-        it('does not allow giving vaults if not the vault owner', async () => {
-          await expect(vatFromOther.give(vaultId, other)).to.be.revertedWith('Vat: Only vault owner')
-        })
-  
-        it('gives a vault', async () => {
-          expect(await vat.give(vaultId, other)).to.emit(vat, 'VaultTransfer').withArgs(vaultId, other)
-          const vault = await vat.vaults(vaultId)
-          expect(vault.owner).to.equal(other)
+          expect(vault.owner).to.equal(owner)
           expect(vault.seriesId).to.equal(seriesId)
           expect(vault.ilkId).to.equal(ilkId)
+
+          // Remove these two when `expect...to.emit` works
+          expect(event.args.owner).to.equal(owner)
+          expect(event.args.seriesId).to.equal(seriesId)
+          expect(event.args.ilkId).to.equal(ilkId)
+        })
+
+        describe('with a vault built', async () => {
+          let vaultId: string
+
+          beforeEach(async () => {
+            await vat.build(seriesId, ilkId)
+            const event = (await vat.queryFilter(vat.filters.VaultBuilt(null, null, null, null)))[0]
+            vaultId = event.args.vaultId
+          })
+    
+          it('does not allow destroying vaults if not the vault owner', async () => {
+            await expect(vatFromOther.destroy(vaultId)).to.be.revertedWith('Vat: Only vault owner')
+          })
+    
+          it('destroys a vault', async () => {
+            expect(await vat.destroy(vaultId)).to.emit(vat, 'VaultDestroyed').withArgs(vaultId)
+            const vault = await vat.vaults(vaultId)
+            expect(vault.owner).to.equal(emptyAddress)
+            expect(vault.seriesId).to.equal(emptyAssetId)
+            expect(vault.ilkId).to.equal(emptyAssetId)
+          })
+
+          it('does not allow giving vaults if not the vault owner', async () => {
+            await expect(vatFromOther.give(vaultId, other)).to.be.revertedWith('Vat: Only vault owner')
+          })
+    
+          it('gives a vault', async () => {
+            expect(await vat.give(vaultId, other)).to.emit(vat, 'VaultTransfer').withArgs(vaultId, other)
+            const vault = await vat.vaults(vaultId)
+            expect(vault.owner).to.equal(other)
+            expect(vault.seriesId).to.equal(seriesId)
+            expect(vault.ilkId).to.equal(ilkId)
+          })
         })
       })
     })

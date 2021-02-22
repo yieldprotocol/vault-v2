@@ -20,6 +20,8 @@ contract Vat {
 
     event AssetAdded(bytes6 indexed assetId, address indexed asset);
     event SeriesAdded(bytes6 indexed seriesId, bytes6 indexed baseId, address indexed fyToken);
+    event IlkAdded(bytes6 indexed seriesId, bytes6 indexed ilkId);
+    event MaxDebtSet(bytes6 indexed baseId, bytes6 indexed ilkId, uint128 max);
 
     event VaultBuilt(bytes12 indexed vaultId, address indexed owner, bytes6 indexed seriesId, bytes6 ilkId);
     event VaultDestroyed(bytes12 indexed vaultId);
@@ -27,10 +29,10 @@ contract Vat {
 
     event VaultFrobbed(bytes12 indexed vaultId, bytes6 indexed seriesId, bytes6 indexed ilkId, int128 ink, int128 art);
 
-    mapping (bytes6 => IERC20)                      public assets;          // Underlyings and collaterals available in Vat. 12 bytes still free.
-    mapping (bytes6 => mapping(bytes6 => uint128))  public debt;            // [baseId][ilkId] Sum of debt per collateral and underlying across all vaults
-    mapping (bytes6 => DataTypes.Series)            public series;          // Series available in Vat. We can possibly use a bytes6 (3e14 possible series).
-    mapping (bytes6 => mapping(bytes6 => bool))     public collaterals;     // [seriesId][assetId] Assets that are approved as collateral for a series
+    mapping (bytes6 => IERC20)                              public assets;   // Underlyings and collaterals available in Vat. 12 bytes still free.
+    mapping (bytes6 => mapping(bytes6 => DataTypes.Debt))   public debt;     // [baseId][ilkId] Max and sum of debt per underlying and collateral.
+    mapping (bytes6 => DataTypes.Series)                    public series;   // Series available in Vat. We can possibly use a bytes6 (3e14 possible series).
+    mapping (bytes6 => mapping(bytes6 => bool))             public ilks;     // [seriesId][assetId] Assets that are approved as collateral for a series
 
     mapping (bytes6 => address)                     chiOracles;             // Chi (savings rate) accruals oracle for the underlying
     mapping (bytes6 => address)                     rateOracles;            // Rate (borrowing rate) accruals oracle for the underlying
@@ -71,7 +73,15 @@ contract Vat {
         emit SeriesAdded(seriesId, baseId, address(fyToken));
     }
 
-    // TODO: function to allow an asset as collateral for a series
+    /// @dev Add a new Ilk (approve an asset as collateral for a series).
+    function addIlk(bytes6 seriesId, bytes6 ilkId)
+        external
+        seriesExists(seriesId)                                          // 1 SLOAD
+        assetExists(ilkId)                                              // 1 SLOAD
+    {
+        ilks[seriesId][ilkId] = true;                                   // 1 SSTORE
+        emit IlkAdded(seriesId, ilkId);
+    }
 
     /// @dev Ensure a asset exists        
     modifier assetExists(bytes6 assetId) {
@@ -84,16 +94,33 @@ contract Vat {
         require (series[seriesId].fyToken != IFYToken(address(0)), "Vat: Series not found");
         _;
     }
+
+    /// @dev Ensure an asset is approved collateral for a series        
+    modifier ilkExists(bytes6 seriesId, bytes6 ilkId) {
+        require (ilks[seriesId][ilkId] == true, "Vat: Ilk not added");
+        _;
+    }
     // function addOracle(IERC20 asset, IERC20 asset, IOracle oracle) external;
+
+    /// @dev Add a new Ilk (approve an asset as collateral for a series).
+    function setMaxDebt(bytes6 baseId, bytes6 ilkId, uint128 max)
+        external
+        assetExists(baseId)                                              // 1 SLOAD
+        assetExists(ilkId)                                              // 1 SLOAD
+    {
+        debt[baseId][ilkId].max = max;                                   // 1 SSTORE
+        emit MaxDebtSet(baseId, ilkId, max);
+    }
 
     // ==== Vault management ====
 
     /// @dev Create a new vault, linked to a series (and therefore underlying) and a collateral
     function build(bytes6 seriesId, bytes6 ilkId)
         public
-        seriesExists(seriesId)                                          // 1 SLOAD
-        assetExists(ilkId)                                                // 1 SLOAD
-        // TODO: validIlk(seriesId, ilkId) that checks that collaterals[seriesId][ilkId] == true
+        // TODO: The first two checks are not necessary with `ilkExists`, left for now for clarity on the require errors.
+        // seriesExists(seriesId)                                          // 1 SLOAD
+        // assetExists(ilkId)                                              // 1 SLOAD
+        ilkExists(seriesId, ilkId)                                      // 1 SLOAD
         returns (bytes12 vaultId)
     {
         vaultId = bytes12(keccak256(abi.encodePacked(msg.sender, block.timestamp)));               // Check (vaults[id].owner == address(0)), and increase the salt until a free vault id is found. 1 SLOAD per check.
@@ -137,16 +164,17 @@ contract Vat {
     // Change a vault series and/or collateral types.
     // We can change the series if there is no debt, or assets if there are no assets
     // Doesn't check inputs, or collateralization level. Do that in public functions.
-    /* function __tweak(bytes12 vaultId, bytes6 seriesId, bytes6 assetId)
+    /* function __tweak(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
         internal
+        ilkExists(seriesId, ilkId)                                      // 1 SLOAD
     {
         Balances memory _balances = balances[vaultId];                  // 1 SLOAD
         Vault memory _vault = vaults[vaultId];                          // 1 SLOAD
-        if (seriesId != bytes6(0)) {
+        if (seriesId != _vault.seriesId) {
             require (balances.art == 0, "Tweak only unused series");
             _vault.seriesId = seriesId;
         }
-        if (assetId != bytes6(0)) {                                       // If a new asset was provided
+        if (ilkId != _vault.ilkId) {                                     // If a new asset was provided
             require (balances.ink == 0, "Tweak only unused assets");
             _vault.inkId = inkId;
         }
@@ -185,13 +213,19 @@ contract Vat {
         DataTypes.Balances memory _balances = vaultBalances[vaultId];   // 1 SLOAD
         DataTypes.Series memory _series = series[_vault.seriesId];      // 1 SLOAD
 
+        // For now, the collateralization checks are done outside to allow for underwater operation. That might change.
         if (ink != 0) {
             _balances.ink = _balances.ink.add(ink);
         }
 
+        // TODO: Consider whether _roll should call __frob, or the next block be a private function.
+        // Modify vault and global debt records. If debt increases, check global limit.
         if (art != 0) {
-            debt[_series.baseId][_vault.ilkId] = debt[_series.baseId][_vault.ilkId].add(art); // 1 SSTORE. TODO: Test.
-            _balances.art = _balances.art.add(art);                     // 1 SSTORE
+            DataTypes.Debt memory _debt = debt[_series.baseId][_vault.ilkId]; // 1 SLOAD
+            if (art > 0) require (_debt.sum.add(art) <= _debt.max, "Vat: Max debt exceeded");
+            _balances.art = _balances.art.add(art);
+            _debt.sum = _debt.sum.add(art);
+            debt[_series.baseId][_vault.ilkId] = _debt;                 // 1 SSTORE
         }
         vaultBalances[vaultId] = _balances;                             // 1 SSTORE
 
@@ -204,15 +238,28 @@ contract Vat {
 
     // Change series and debt of a vault.
     // The module calling this function also needs to buy underlying in the pool for the new series, and sell it in pool for the old series.
-    /* function _roll(bytes12 vaultId, bytes6 seriesId, uint128 art)
+    // TODO: Should we allow changing the collateral at the same time?
+    /* function _roll(bytes12 vaultId, bytes6 seriesId, int128 art)
         public
         auth
-        vaultExists(vaultId)                                            // 1 SLOAD
+        vaultExists(vaultId)                                                // 1 SLOAD
     {
-        balances[from].debt = 0;                                        // See two lines below
-        __tweak(vaultId, series, 0);                                    // Cost of `__tweak`
-        balances[from].debt = art;                                      // 1 SSTORE
-        require(level(vaultId) >= 0, "Undercollateralized");            // Cost of `level`
+        DataTypes.Balances memory _balances = vaultBalances[vaultId];       // 1 SLOAD
+        DataTypes.Series memory _series = series[vaultId];                  // 1 SLOAD
+        
+        delete vaultBalances[vaultId];                                      // -1 SSTORE
+        __tweak(vaultId, seriesId, vaults[vaultId].ilkId);                  // 1 SLOAD + Cost of `__tweak`
+
+        // Modify vault and global debt records. If debt increases, check global limit.
+        if (art != 0) {
+            DataTypes.Debt memory _debt = debt[_series.baseId][_vault.ilkId]; // 1 SLOAD
+            if (art > 0) require (_debt.sum.add(art) <= _debt.max, "Vat: Max debt exceeded");
+            _balances.art = _balances.art.add(art);
+            _debt.sum = _debt.sum.add(art);
+            debt[_series.baseId][_vault.ilkId] = _debt;                 // 1 SSTORE
+        }
+        vaultBalances[vaultId] = _balances;                                 // 1 SSTORE
+        require(level(vaultId) >= 0, "Undercollateralized");                // Cost of `level`
     } */
 
     // Give a non-timestamped vault to the caller, and timestamp it.
@@ -226,13 +273,13 @@ contract Vat {
         __give(vaultId, msg.sender);                                    // Cost of `__give`
     } */
 
-    // Manipulate a vault without collateralization checks.
-    // To be used for liquidation engines.
-    // TODO: __frob underlying from and collateral to users
+    /// @dev Manipulate a vault with collateralization checks.
+    /// Available only to authenticated platform accounts.
+    /// To be used by debt management contracts.
     function _frob(bytes12 vaultId, int128 ink, int128 art)
         public
-        // auth                                                            // 1 SLOAD
-        vaultExists(vaultId)                                            // 1 SLOAD
+        // auth                                                           // 1 SLOAD
+        vaultExists(vaultId)                                              // 1 SLOAD
         returns (DataTypes.Balances memory balances)
     {
         balances = __frob(vaultId, ink, art);                             // Cost of `__frob`

@@ -10,6 +10,11 @@ library DataTypes {
         // bytes2 free
     }
 
+    struct Debt {
+        uint128 max;                                                    // Maximum debt accepted for a given underlying, across all series
+        uint128 sum;                                                    // Current debt for a given underlying, across all series
+    }
+
     // ==== Vault ordering ====
     struct Vault {
         address owner;
