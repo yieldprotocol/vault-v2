@@ -5,39 +5,21 @@ import { BigNumber, BigNumberish } from 'ethers'
 import { BaseProvider } from '@ethersproject/providers'
 
 import VatArtifact from '../../artifacts/contracts/Vat.sol/Vat.json'
-import JoinArtifact from '../../artifacts/contracts/Join.sol/Join.json'
 import FYTokenArtifact from '../../artifacts/contracts/FYToken.sol/FYToken.json'
 import ERC20MockArtifact from '../../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
+import OracleMockArtifact from '../../artifacts/contracts/mocks/OracleMock.sol/OracleMock.json'
+import JoinArtifact from '../../artifacts/contracts/Join.sol/Join.json'
 import CDPProxyArtifact from '../../artifacts/contracts/CDPProxy.sol/CDPProxy.json'
 
 import { Vat } from '../../typechain/Vat'
-import { Join } from '../../typechain/Join'
 import { FYToken } from '../../typechain/FYToken'
 import { ERC20Mock } from '../../typechain/ERC20Mock'
+import { OracleMock } from '../../typechain/OracleMock'
+import { Join } from '../../typechain/Join'
 import { CDPProxy } from '../../typechain/CDPProxy'
-
-/* import {
-  WETH,
-  CHAI,
-  Line,
-  spotName,
-  linel,
-  limits,
-  spot,
-  rate1,
-  chi1,
-  tag,
-  fix,
-  toRay,
-  subBN,
-  divRay,
-  divrupRay,
-  mulRay,
-} from './utils' */
 
 import { ethers, waffle } from 'hardhat'
 // import { id } from '../src'
-import { expect } from 'chai'
 const { deployContract } = waffle
 
 export class YieldEnvironment {
@@ -45,9 +27,10 @@ export class YieldEnvironment {
   other: SignerWithAddress
   vat: Vat
   cdpProxy: CDPProxy
-  joins: Map<string, Join>
   assets: Map<string, ERC20Mock>
+  oracles: Map<string, OracleMock>
   series: Map<string, FYToken>
+  joins: Map<string, Join>
   vaults: Map<string, Map<string, string>>
   
   constructor(
@@ -56,8 +39,9 @@ export class YieldEnvironment {
     vat: Vat,
     cdpProxy: CDPProxy,
     assets: Map<string, ERC20Mock>,
-    joins: Map<string, Join>,
+    oracles: Map<string, OracleMock>,
     series: Map<string, FYToken>,
+    joins: Map<string, Join>,
     vaults: Map<string, Map<string, string>>
   ) {
     this.owner = owner
@@ -65,8 +49,9 @@ export class YieldEnvironment {
     this.vat = vat
     this.cdpProxy = cdpProxy
     this.assets = assets
-    this.joins = joins
+    this.oracles = oracles
     this.series = series
+    this.joins = joins
     this.vaults = vaults
   }
 
@@ -106,11 +91,19 @@ export class YieldEnvironment {
       await vat.setMaxDebt(baseId, ilkId, ethers.constants.WeiPerEther.mul(1000000))
     }
 
-    // ==== Add series ====
+    // ==== Add oracles and series ====
+    // There is only one base, so the oracles we need are one for each ilk, against the only base.
+    const oracles: Map<string, OracleMock> = new Map()
+    for (let ilkId of ilkIds) {
+      const oracle = (await deployContract(owner, OracleMockArtifact, [])) as OracleMock
+      await vat.addSpotOracle(baseId, ilkId, oracle.address) // This allows to set the ilks below
+      oracles.set(ilkId, oracle)
+    }
+
     // For each series identifier we create a fyToken with the first asset as underlying.
     // The maturities for the fyTokens are in three month intervals, starting three months from now
     const series: Map<string, FYToken> = new Map()
-    const mockOracleAddress =  ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20)))
+    const mockOracleAddress =  ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20))) // This is a chi oracle
     const provider: BaseProvider = ethers.getDefaultProvider()
     const now = (await provider.getBlock(provider.getBlockNumber())).timestamp
     const THREE_MONTHS: number = 3 * 30 * 24 * 60 * 60
@@ -140,7 +133,7 @@ export class YieldEnvironment {
       vaults.set(seriesId, seriesVaults)
     }
 
-    return new YieldEnvironment(owner, other, vat, cdpProxy, assets, joins, series, vaults)
+    return new YieldEnvironment(owner, other, vat, cdpProxy, assets, oracles, series, joins, vaults)
   }
 
   /*

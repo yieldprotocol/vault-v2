@@ -1,20 +1,16 @@
-import { BaseProvider } from '@ethersproject/providers'
-import { Wallet } from '@ethersproject/wallet'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import VatArtifact from '../artifacts/contracts/Vat.sol/Vat.json'
+import OracleMockArtifact from '../artifacts/contracts/mocks/OracleMock.sol/OracleMock.json'
 import JoinArtifact from '../artifacts/contracts/Join.sol/Join.json'
-import FYTokenArtifact from '../artifacts/contracts/FYToken.sol/FYToken.json'
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
-import CDPProxyArtifact from '../artifacts/contracts/CDPProxy.sol/CDPProxy.json'
 
 import { Vat } from '../typechain/Vat'
 import { Join } from '../typechain/Join'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
+import { OracleMock } from '../typechain/OracleMock'
 import { CDPProxy } from '../typechain/CDPProxy'
 
 import { ethers, waffle } from 'hardhat'
-// import { id } from '../src'
 import { expect } from 'chai'
 const { deployContract, loadFixture } = waffle
 
@@ -31,14 +27,11 @@ describe('CDPProxy', () => {
   let base: ERC20Mock
   let ilk: ERC20Mock
   let ilkJoin: Join
+  let oracle: OracleMock
   let cdpProxy: CDPProxy
   let cdpProxyFromOther: CDPProxy
 
   const mockAssetId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const emptyAssetId = '0x000000000000'
-  const mockVaultId =  ethers.utils.hexlify(ethers.utils.randomBytes(12))
-  const mockAddress =  ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20)))
-  const emptyAddress =  ethers.utils.getAddress('0x0000000000000000000000000000000000000000')
   const MAX = ethers.constants.MaxUint256
 
   async function fixture() {
@@ -57,7 +50,6 @@ describe('CDPProxy', () => {
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
   const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
-  const maturity = 1640995199;
   let vaultId: string
 
   beforeEach(async () => {
@@ -65,10 +57,6 @@ describe('CDPProxy', () => {
     vat = env.vat
     cdpProxy = env.cdpProxy
     base = env.assets.get(baseId) as ERC20Mock
-    // ilk = env.assets.get(ilkId) as ERC20Mock
-    // ilkJoin = env.joins.get(ilkId) as Join
-    // base = (await deployContract(ownerAcc, ERC20MockArtifact, [baseId, "Mock Base"])) as ERC20Mock
-    // fyToken = (await deployContract(ownerAcc, FYTokenArtifact, [base.address, mockAddress, maturity, seriesId, "Mock FYToken"])) as FYToken
     fyToken = env.series.get(seriesId) as FYToken
 
     cdpProxyFromOther = cdpProxy.connect(otherAcc)
@@ -76,9 +64,11 @@ describe('CDPProxy', () => {
     // ==== Set testing environment ====
     // We add this asset manually, because `fixtures` would also add the join, which we want to test.
     ilk = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId, "Mock Ilk"])) as ERC20Mock
+    oracle = (await deployContract(ownerAcc, OracleMockArtifact, [])) as OracleMock
 
     await vat.addAsset(ilkId, ilk.address)
     await vat.setMaxDebt(baseId, ilkId, 2)
+    await vat.addSpotOracle(baseId, ilkId, oracle.address)
     await vat.addIlk(seriesId, ilkId)
 
     await vat.build(seriesId, ilkId)

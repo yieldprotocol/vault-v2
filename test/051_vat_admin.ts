@@ -2,10 +2,12 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import VatArtifact from '../artifacts/contracts/Vat.sol/Vat.json'
 import FYTokenArtifact from '../artifacts/contracts/FYToken.sol/FYToken.json'
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
+import OracleMockArtifact from '../artifacts/contracts/mocks/OracleMock.sol/OracleMock.json'
 
 import { Vat } from '../typechain/Vat'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
+import { OracleMock } from '../typechain/OracleMock'
 
 import { ethers, waffle } from 'hardhat'
 // import { id } from '../src'
@@ -22,6 +24,7 @@ describe('Vat - Admin', () => {
   let fyToken: FYToken
   let base: ERC20Mock
   let ilk: ERC20Mock
+  let oracle: OracleMock
 
   const mockAssetId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const mockSeriesId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
@@ -49,6 +52,7 @@ describe('Vat - Admin', () => {
     base = (await deployContract(ownerAcc, ERC20MockArtifact, [baseId, "Mock Base"])) as ERC20Mock
     ilk = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId, "Mock Ilk"])) as ERC20Mock
     fyToken = (await deployContract(ownerAcc, FYTokenArtifact, [base.address, mockAddress, maturity, seriesId, "Mock FYToken"])) as FYToken
+    oracle = (await deployContract(ownerAcc, OracleMockArtifact, [])) as OracleMock
 
     vatFromOther = vat.connect(otherAcc)
   })
@@ -79,12 +83,26 @@ describe('Vat - Admin', () => {
     it('does not allow setting a debt limit for an unknown ilk', async () => {
       await expect(vat.setMaxDebt(baseId, mockAssetId, 2)).to.be.revertedWith('Asset not found')
     })
-  
+
     it('sets a debt limit', async () => {
       expect(await vat.setMaxDebt(baseId, ilkId, 2)).to.emit(vat, 'MaxDebtSet').withArgs(baseId, ilkId, 2)
 
       const debt = await vat.debt(baseId, ilkId)
       expect(debt.max).to.equal(2)
+    })
+
+    it('does not allow adding a spot oracle for an unknown base', async () => {
+      await expect(vat.addSpotOracle(mockAssetId, ilkId, oracle.address)).to.be.revertedWith('Asset not found')
+    })
+
+    it('does not allow adding a spot oracle for an unknown ilk', async () => {
+      await expect(vat.addSpotOracle(baseId, mockAssetId, oracle.address)).to.be.revertedWith('Asset not found')
+    })
+
+    it('adds a spot oracle', async () => {
+      expect(await vat.addSpotOracle(baseId, ilkId, oracle.address)).to.emit(vat, 'SpotOracleAdded').withArgs(baseId, ilkId, oracle.address)
+
+      expect(await vat.spotOracles(baseId, ilkId)).to.equal(oracle.address)
     })
 
     it('does not allow not linking a series to a fyToken', async () => {
@@ -109,35 +127,23 @@ describe('Vat - Admin', () => {
         await expect(vat.addSeries(seriesId, baseId, fyToken.address)).to.be.revertedWith('Vat: Id already used')
       })
 
-      it('does not allow adding an asset as an ilk to a series that doesn\'t exist', async () => {
-        await expect(vat.addIlk(mockSeriesId, ilkId)).to.be.revertedWith('Vat: Series not found')
-      })
-
-      it('does not allow adding an asset that doesn\'t exist as an ilk', async () => {
-        await expect(vat.addIlk(seriesId, mockAssetId)).to.be.revertedWith('Vat: Asset not found')
-      })
-  
-      it('does not build a vault with an ilk that is not approved for a series', async () => {
-        await expect(vat.build(seriesId, ilkId)).to.be.revertedWith('Vat: Ilk not added')
-      })
-
-      it('adds an asset as an ilk to a series', async () => {
-        expect(await vat.addIlk(seriesId, ilkId)).to.emit(vat, 'IlkAdded').withArgs(seriesId, ilkId)
-  
-        expect(await vat.ilks(seriesId, ilkId)).to.be.true
-      })
-
-      describe('with an asset added as an ilk to a series', async () => {
+      describe('with an oracle for the series base and an ilk', async () => {
         beforeEach(async () => {
-          await vat.addIlk(seriesId, ilkId)
+          await vat.addSpotOracle(baseId, ilkId, oracle.address)
         })
 
-        it('does not build a vault with an unknown series', async () => { // TODO: Error message misleading, replace in contract for something generic
-          await expect(vat.build(mockAssetId, ilkId)).to.be.revertedWith('Vat: Ilk not added')
+        it('does not allow adding an asset as an ilk to a series that doesn\'t exist', async () => {
+          await expect(vat.addIlk(mockSeriesId, ilkId)).to.be.revertedWith('Vat: Series not found')
         })
+
+        it('does not allow adding an asset as an ilk without an oracle for a series base', async () => {
+          await expect(vat.addIlk(seriesId, mockAssetId)).to.be.revertedWith('Vat: Oracle not found')
+        })
+
+        it('adds an asset as an ilk to a series', async () => {
+          expect(await vat.addIlk(seriesId, ilkId)).to.emit(vat, 'IlkAdded').withArgs(seriesId, ilkId)
     
-        it('does not build a vault with an unknown ilk', async () => { // TODO: Might be removed, redundant with approved ilk check
-          await expect(vat.build(seriesId, mockAssetId)).to.be.revertedWith('Vat: Ilk not added')
+          expect(await vat.ilks(seriesId, ilkId)).to.be.true
         })
       })
     })

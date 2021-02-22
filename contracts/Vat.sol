@@ -21,6 +21,7 @@ contract Vat {
     event AssetAdded(bytes6 indexed assetId, address indexed asset);
     event SeriesAdded(bytes6 indexed seriesId, bytes6 indexed baseId, address indexed fyToken);
     event IlkAdded(bytes6 indexed seriesId, bytes6 indexed ilkId);
+    event SpotOracleAdded(bytes6 indexed baseId, bytes6 indexed ilkId, address indexed oracle);
     event MaxDebtSet(bytes6 indexed baseId, bytes6 indexed ilkId, uint128 max);
 
     event VaultBuilt(bytes12 indexed vaultId, address indexed owner, bytes6 indexed seriesId, bytes6 ilkId);
@@ -29,22 +30,22 @@ contract Vat {
 
     event VaultFrobbed(bytes12 indexed vaultId, bytes6 indexed seriesId, bytes6 indexed ilkId, int128 ink, int128 art);
 
-    mapping (bytes6 => IERC20)                              public assets;   // Underlyings and collaterals available in Vat. 12 bytes still free.
-    mapping (bytes6 => mapping(bytes6 => DataTypes.Debt))   public debt;     // [baseId][ilkId] Max and sum of debt per underlying and collateral.
-    mapping (bytes6 => DataTypes.Series)                    public series;   // Series available in Vat. We can possibly use a bytes6 (3e14 possible series).
-    mapping (bytes6 => mapping(bytes6 => bool))             public ilks;     // [seriesId][assetId] Assets that are approved as collateral for a series
+    mapping (bytes6 => IERC20)                              public assets;      // Underlyings and collaterals available in Vat. 12 bytes still free.
+    mapping (bytes6 => mapping(bytes6 => DataTypes.Debt))   public debt;        // [baseId][ilkId] Max and sum of debt per underlying and collateral.
+    mapping (bytes6 => DataTypes.Series)                    public series;      // Series available in Vat. We can possibly use a bytes6 (3e14 possible series).
+    mapping (bytes6 => mapping(bytes6 => bool))             public ilks;        // [seriesId][assetId] Assets that are approved as collateral for a series
 
-    mapping (bytes6 => address)                     chiOracles;             // Chi (savings rate) accruals oracle for the underlying
-    mapping (bytes6 => address)                     rateOracles;            // Rate (borrowing rate) accruals oracle for the underlying
-    mapping (bytes6 => mapping(bytes6 => address))  spotOracles;            // [assetId][assetId] Spot price oracles
+    mapping (bytes6 => IOracle)                             public chiOracles;  // Chi (savings rate) accruals oracle for the underlying
+    mapping (bytes6 => IOracle)                             public rateOracles; // Rate (borrowing rate) accruals oracle for the underlying
+    mapping (bytes6 => mapping(bytes6 => IOracle))          public spotOracles; // [assetId][assetId] Spot price oracles
 
     // ==== Vault ordering ====
 
-    mapping (bytes12 => DataTypes.Vault)            public vaults;          // An user can own one or more Vaults, each one with a bytes12 identifier
-    mapping (bytes12 => DataTypes.Balances)         public vaultBalances;   // Both debt and assets
+    mapping (bytes12 => DataTypes.Vault)                    public vaults;      // An user can own one or more Vaults, each one with a bytes12 identifier
+    mapping (bytes12 => DataTypes.Balances)                 public vaultBalances; // Both debt and assets
 
     // ==== Vault timestamping ====
-    mapping (bytes12 => uint32)                     timestamps;             // If grater than zero, time that a vault was timestamped. Used for liquidation.
+    mapping (bytes12 => uint32)                             public timestamps;  // If grater than zero, time that a vault was timestamped. Used for liquidation.
 
     // ==== Administration ====
 
@@ -73,14 +74,41 @@ contract Vat {
         emit SeriesAdded(seriesId, baseId, address(fyToken));
     }
 
+    /// @dev Add a spot oracle
+    function addSpotOracle(bytes6 baseId, bytes6 ilkId, IOracle oracle)
+        external
+        assetExists(baseId)
+        assetExists(ilkId)
+    {
+        spotOracles[baseId][ilkId] = oracle;                                // 1 SSTORE. Allows to replace an existing oracle.
+        emit SpotOracleAdded(baseId, ilkId, address(oracle));
+    }
+
     /// @dev Add a new Ilk (approve an asset as collateral for a series).
     function addIlk(bytes6 seriesId, bytes6 ilkId)
         external
-        seriesExists(seriesId)                                          // 1 SLOAD
+    {
+        DataTypes.Series memory _series = series[seriesId];                                          // 1 SLOAD
+        require (
+            _series.fyToken != IFYToken(address(0)),
+            "Vat: Series not found"
+        );
+        require (
+            spotOracles[_series.baseId][ilkId] != IOracle(address(0)),                               // 1 SLOAD
+            "Vat: Oracle not found"
+        );
+        ilks[seriesId][ilkId] = true;                                                                // 1 SSTORE
+        emit IlkAdded(seriesId, ilkId);
+    }
+
+    /// @dev Add a new Ilk (approve an asset as collateral for a series).
+    function setMaxDebt(bytes6 baseId, bytes6 ilkId, uint128 max)
+        external
+        assetExists(baseId)                                              // 1 SLOAD
         assetExists(ilkId)                                              // 1 SLOAD
     {
-        ilks[seriesId][ilkId] = true;                                   // 1 SSTORE
-        emit IlkAdded(seriesId, ilkId);
+        debt[baseId][ilkId].max = max;                                   // 1 SSTORE
+        emit MaxDebtSet(baseId, ilkId, max);
     }
 
     /// @dev Ensure a asset exists        
@@ -99,17 +127,6 @@ contract Vat {
     modifier ilkExists(bytes6 seriesId, bytes6 ilkId) {
         require (ilks[seriesId][ilkId] == true, "Vat: Ilk not added");
         _;
-    }
-    // function addOracle(IERC20 asset, IERC20 asset, IOracle oracle) external;
-
-    /// @dev Add a new Ilk (approve an asset as collateral for a series).
-    function setMaxDebt(bytes6 baseId, bytes6 ilkId, uint128 max)
-        external
-        assetExists(baseId)                                              // 1 SLOAD
-        assetExists(ilkId)                                              // 1 SLOAD
-    {
-        debt[baseId][ilkId].max = max;                                   // 1 SSTORE
-        emit MaxDebtSet(baseId, ilkId, max);
     }
 
     // ==== Vault management ====
