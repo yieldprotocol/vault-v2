@@ -47,6 +47,6 @@ contract Join {
             // TODO: Safe casting
             require(token.transfer(user, uint256(-int256(amount))), "Join: Failed push"); 
         }
-        return wad;                    // Use this to record in vat a balance different from the amount joined
+        return amount;                    // Use this to record in vat a balance different from the amount joined
     }
 }
