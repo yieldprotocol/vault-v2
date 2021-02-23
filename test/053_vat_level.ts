@@ -76,10 +76,10 @@ describe('Vat - Level', () => {
   })
 
   it('users can\'t borrow and become undercollateralized', async () => {
-    await expect(cdpProxy.frob(vaultId, 0, WAD.mul(2))).to.be.revertedWith('Vat: Undercollateralized')
+    await expect(cdpProxy.frob(vaultId, 0, WAD.mul(2))).to.be.revertedWith('Undercollateralized')
   })
 
   it('users can\'t withdraw and become undercollateralized', async () => {
-    await expect(cdpProxy.frob(vaultId, WAD.mul(-1), 0)).to.be.revertedWith('Vat: Undercollateralized')
+    await expect(cdpProxy.frob(vaultId, WAD.mul(-1), 0)).to.be.revertedWith('Undercollateralized')
   })
 })

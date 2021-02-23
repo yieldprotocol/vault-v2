@@ -57,16 +57,16 @@ describe('Vat - Vaults', () => {
   })
 
   it('does not build a vault with an unknown series', async () => { // TODO: Error message misleading, replace in contract for something generic
-    await expect(vat.build(mockAssetId, ilkId)).to.be.revertedWith('Vat: Ilk not added')
+    await expect(vat.build(mockAssetId, ilkId)).to.be.revertedWith('Ilk not added')
   })
 
   it('does not build a vault with an unknown ilk', async () => { // TODO: Might be removed, redundant with approved ilk check
-    await expect(vat.build(seriesId, mockAssetId)).to.be.revertedWith('Vat: Ilk not added')
+    await expect(vat.build(seriesId, mockAssetId)).to.be.revertedWith('Ilk not added')
   })
 
   it('does not build a vault with an ilk that is not approved for a series', async () => {
     await vat.addAsset(mockAssetId, mockAddress)
-    await expect(vat.build(seriesId, mockAssetId)).to.be.revertedWith('Vat: Ilk not added')
+    await expect(vat.build(seriesId, mockAssetId)).to.be.revertedWith('Ilk not added')
   })
 
   it('builds a vault', async () => {
@@ -95,7 +95,7 @@ describe('Vat - Vaults', () => {
     })
 
     it('does not allow destroying vaults if not the vault owner', async () => {
-      await expect(vatFromOther.destroy(vaultId)).to.be.revertedWith('Vat: Only vault owner')
+      await expect(vatFromOther.destroy(vaultId)).to.be.revertedWith('Only vault owner')
     })
 
     it('destroys a vault', async () => {
@@ -107,7 +107,7 @@ describe('Vat - Vaults', () => {
     })
 
     it('does not allow giving vaults if not the vault owner', async () => {
-      await expect(vatFromOther.give(vaultId, other)).to.be.revertedWith('Vat: Only vault owner')
+      await expect(vatFromOther.give(vaultId, other)).to.be.revertedWith('Only vault owner')
     })
 
     it('gives a vault', async () => {

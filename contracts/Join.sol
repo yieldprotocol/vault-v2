@@ -41,11 +41,11 @@ contract Join {
             // require(live == 1, "GemJoin/not-live");
             // TODO: Consider best practices about safe transfers
             // TODO: Safe casting
-            require(token.transferFrom(user, address(this), uint256(int256(amount))), "Join: Failed pull");
+            require(token.transferFrom(user, address(this), uint256(int256(amount))), "Failed pull");
         } else {
             // TODO: Consider best practices about safe transfers
             // TODO: Safe casting
-            require(token.transfer(user, uint256(-int256(amount))), "Join: Failed push"); 
+            require(token.transfer(user, uint256(-int256(amount))), "Failed push"); 
         }
         return amount;                    // Use this to record in vat a balance different from the amount joined
     }

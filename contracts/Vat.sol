@@ -63,7 +63,7 @@ contract Vat {
     function addAsset(bytes6 assetId, IERC20 asset)
         external
     {
-        require (assets[assetId] == IERC20(address(0)), "Vat: Id already used");
+        require (assets[assetId] == IERC20(address(0)), "Id already used");
         assets[assetId] = asset;
         emit AssetAdded(assetId, address(asset));
     }
@@ -73,9 +73,9 @@ contract Vat {
         external
         /*auth*/
     {
-        require (assets[baseId] != IERC20(address(0)), "Vat: Asset not found");             // 1 SLOAD
-        require (fyToken != IFYToken(address(0)), "Vat: Series need a fyToken");
-        require (series[seriesId].fyToken == IFYToken(address(0)), "Vat: Id already used"); // 1 SLOAD
+        require (assets[baseId] != IERC20(address(0)), "Asset not found");                  // 1 SLOAD
+        require (fyToken != IFYToken(address(0)), "Series need a fyToken");
+        require (series[seriesId].fyToken == IFYToken(address(0)), "Id already used");      // 1 SLOAD
         series[seriesId] = DataTypes.Series({
             fyToken: fyToken,
             maturity: fyToken.maturity(),
@@ -88,8 +88,8 @@ contract Vat {
     function addSpotOracle(bytes6 baseId, bytes6 ilkId, IOracle oracle)
         external
     {
-        require (assets[baseId] != IERC20(address(0)), "Vat: Asset not found");             // 1 SLOAD
-        require (assets[ilkId] != IERC20(address(0)), "Vat: Asset not found");              // 1 SLOAD
+        require (assets[baseId] != IERC20(address(0)), "Asset not found");                  // 1 SLOAD
+        require (assets[ilkId] != IERC20(address(0)), "Asset not found");                   // 1 SLOAD
         spotOracles[baseId][ilkId] = oracle;                                                // 1 SSTORE. Allows to replace an existing oracle.
         emit SpotOracleAdded(baseId, ilkId, address(oracle));
     }
@@ -101,11 +101,11 @@ contract Vat {
         DataTypes.Series memory _series = series[seriesId];                                 // 1 SLOAD
         require (
             _series.fyToken != IFYToken(address(0)),
-            "Vat: Series not found"
+            "Series not found"
         );
         require (
             spotOracles[_series.baseId][ilkId] != IOracle(address(0)),                      // 1 SLOAD
-            "Vat: Oracle not found"
+            "Oracle not found"
         );
         ilks[seriesId][ilkId] = true;                                                       // 1 SSTORE
         emit IlkAdded(seriesId, ilkId);
@@ -115,8 +115,8 @@ contract Vat {
     function setMaxDebt(bytes6 baseId, bytes6 ilkId, uint128 max)
         external
     {
-        require (assets[baseId] != IERC20(address(0)), "Vat: Asset not found");             // 1 SLOAD
-        require (assets[ilkId] != IERC20(address(0)), "Vat: Asset not found");              // 1 SLOAD
+        require (assets[baseId] != IERC20(address(0)), "Asset not found");                  // 1 SLOAD
+        require (assets[ilkId] != IERC20(address(0)), "Asset not found");                   // 1 SLOAD
         debt[baseId][ilkId].max = max;                                                      // 1 SSTORE
         emit MaxDebtSet(baseId, ilkId, max);
     }
@@ -128,7 +128,7 @@ contract Vat {
         public
         returns (bytes12 vaultId)
     {
-        require (ilks[seriesId][ilkId] == true, "Vat: Ilk not added");                      // 1 SLOAD
+        require (ilks[seriesId][ilkId] == true, "Ilk not added");                           // 1 SLOAD
         vaultId = bytes12(keccak256(abi.encodePacked(msg.sender, block.timestamp)));        // Check (vaults[id].owner == address(0)), and increase the salt until a free vault id is found. 1 SLOAD per check.
         vaults[vaultId] = DataTypes.Vault({
             owner: msg.sender,
@@ -148,7 +148,7 @@ contract Vat {
     function destroy(bytes12 vaultId)
         public
     {
-        require (vaults[vaultId].owner == msg.sender, "Vat: Only vault owner");             // 1 SLOAD
+        require (vaults[vaultId].owner == msg.sender, "Only vault owner");                  // 1 SLOAD
         // require (emptyBalances(vaultId), "Destroy only empty vaults");                   // 1 SLOAD
         // delete timestamps[vaultId];                                                      // 1 SSTORE REFUND
         delete vaults[vaultId];                                                             // 1 SSTORE REFUND
@@ -161,7 +161,7 @@ contract Vat {
     /* function __tweak(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
         internal
     {
-        require (ilks[seriesId][ilkId] == true, "Vat: Ilk not added");                      // 1 SLOAD
+        require (ilks[seriesId][ilkId] == true, "Ilk not added");                           // 1 SLOAD
         Balances memory _balances = balances[vaultId];                                      // 1 SLOAD
         Vault memory _vault = vaults[vaultId];                                              // 1 SLOAD
         if (seriesId != _vault.seriesId) {
@@ -191,7 +191,7 @@ contract Vat {
     /* function __flux(bytes12 from, bytes12 to, uint128 ink)
         internal
     {
-        require (vaults[from].asset == vaults[to].asset, "Vat: Different collateral");      // 2 SLOAD
+        require (vaults[from].asset == vaults[to].asset, "Different collateral");           // 2 SLOAD
         balances[from].assets -= ink;                                                       // 1 SSTORE
         balances[to].assets += ink;                                                         // 1 SSTORE
     } */
@@ -216,7 +216,7 @@ contract Vat {
         // Modify vault and global debt records. If debt increases, check global limit.
         if (art != 0) {
             DataTypes.Debt memory _debt = debt[_series.baseId][_vault.ilkId];               // 1 SLOAD
-            if (art > 0) require (_debt.sum.add(art) <= _debt.max, "Vat: Max debt exceeded");
+            if (art > 0) require (_debt.sum.add(art) <= _debt.max, "Max debt exceeded");
             _balances.art = _balances.art.add(art);
             _debt.sum = _debt.sum.add(art);
             debt[_series.baseId][_vault.ilkId] = _debt;                                     // 1 SSTORE
@@ -237,7 +237,7 @@ contract Vat {
         public
         auth
     {
-        require (vaults[vaultId].owner != address(0), "Vat: Vault not found");              // 1 SLOAD
+        require (vaults[vaultId].owner != address(0), "Vault not found");                   // 1 SLOAD
         DataTypes.Balances memory _balances = vaultBalances[vaultId];                       // 1 SLOAD
         DataTypes.Series memory _series = series[vaultId];                                  // 1 SLOAD
         
@@ -247,7 +247,7 @@ contract Vat {
         // Modify vault and global debt records. If debt increases, check global limit.
         if (art != 0) {
             DataTypes.Debt memory _debt = debt[_series.baseId][_vault.ilkId];               // 1 SLOAD
-            if (art > 0) require (_debt.sum.add(art) <= _debt.max, "Vat: Max debt exceeded");
+            if (art > 0) require (_debt.sum.add(art) <= _debt.max, "Max debt exceeded");
             _balances.art = _balances.art.add(art);
             _debt.sum = _debt.sum.add(art);
             debt[_series.baseId][_vault.ilkId] = _debt;                                     // 1 SSTORE
@@ -275,10 +275,10 @@ contract Vat {
         // auth                                                                             // 1 SLOAD
         returns (DataTypes.Balances memory balances)
     {
-        require (vaults[vaultId].owner != address(0), "Vat: Vault not found");              // 1 SLOAD
+        require (vaults[vaultId].owner != address(0), "Vault not found");                   // 1 SLOAD
         balances = __frob(vaultId, ink, art);                                               // Cost of `__frob`
         if (balances.art > 0 && (ink < 0 || art > 0))                                       // If there is debt and we are less safe
-            require(level(vaultId) >= 0, "Vat: Undercollateralized");                       // Cost of `level`
+            require(level(vaultId) >= 0, "Undercollateralized");                            // Cost of `level`
         return balances;
     }
 
@@ -288,7 +288,7 @@ contract Vat {
     function give(bytes12 vaultId, address user)
         public
     {
-        require (vaults[vaultId].owner == msg.sender, "Vat: Only vault owner");             // 1 SLOAD
+        require (vaults[vaultId].owner == msg.sender, "Only vault owner");                  // 1 SLOAD
         __give(vaultId, user);                                                              // Cost of `__give`
     }
 
@@ -297,8 +297,8 @@ contract Vat {
         public
         returns (bytes32, bytes32)
     {
-        require (vaults[from].owner == msg.sender, "Vat: Only vault owner");                // 1 SLOAD
-        require (vaults[to].owner != address(0), "Vat: Vault not found");                   // 1 SLOAD
+        require (vaults[from].owner == msg.sender, "Only vault owner");                     // 1 SLOAD
+        require (vaults[to].owner != address(0), "Vault not found");                        // 1 SLOAD
         Balances memory _balancesFrom;
         Balances memory _balancesTo;
         (_balancesFrom, _balancesTo) = __flux(from, to, ink, art);                          // Cost of `__flux`
@@ -325,7 +325,7 @@ contract Vat {
     // TODO: Merged with `dues` to save 2 SLOADs. Move to an external contract if needed.
     /* function value(bytes12 vaultId) public view returns (uint128 art) {
         DataTypes.Vault memory _vault = vaults[vaultId];                                    // 1 SLOAD
-        require (_vault.owner != address(0), "Vat: Vault not found");                       // The vault existing is enough to be certain that the oracle exists.
+        require (_vault.owner != address(0), "Vault not found");                            // The vault existing is enough to be certain that the oracle exists.
         bytes6 ilkId = _vault.ilkId;
         bytes6 baseId = series[vaultId].baseId;                                             // 1 SLOAD
         IOracle oracle = spotOracles[baseId][ilkId];                                        // 1 SLOAD
@@ -337,7 +337,7 @@ contract Vat {
         DataTypes.Vault memory _vault = vaults[vaultId];                                    // 1 SLOAD
         DataTypes.Series memory _series = series[_vault.seriesId];                          // 1 SLOAD
         DataTypes.Balances memory _balances = vaultBalances[vaultId];                       // 1 SLOAD
-        require (_vault.owner != address(0), "Vat: Vault not found");                       // The vault existing is enough to be certain that the oracle exists.
+        require (_vault.owner != address(0), "Vault not found");                            // The vault existing is enough to be certain that the oracle exists.
 
         // Value of the collateral in the vault according to the spot price
         bytes6 ilkId = _vault.ilkId;

@@ -63,7 +63,7 @@ describe('Vat - Admin', () => {
   })
 
   it('does not allow adding a series before adding its base', async () => {
-    await expect(vat.addSeries(seriesId, baseId, fyToken.address)).to.be.revertedWith('Vat: Asset not found')
+    await expect(vat.addSeries(seriesId, baseId, fyToken.address)).to.be.revertedWith('Asset not found')
   })
 
   describe('with a base and an ilk added', async () => {
@@ -73,7 +73,7 @@ describe('Vat - Admin', () => {
     })
 
     it('does not allow using the same asset identifier twice', async () => {
-      await expect(vat.addAsset(baseId, base.address)).to.be.revertedWith('Vat: Id already used')
+      await expect(vat.addAsset(baseId, base.address)).to.be.revertedWith('Id already used')
     })
 
     it('does not allow setting a debt limit for an unknown base', async () => {
@@ -106,7 +106,7 @@ describe('Vat - Admin', () => {
     })
 
     it('does not allow not linking a series to a fyToken', async () => {
-      await expect(vat.addSeries(seriesId, baseId, emptyAddress)).to.be.revertedWith('Vat: Series need a fyToken')
+      await expect(vat.addSeries(seriesId, baseId, emptyAddress)).to.be.revertedWith('Series need a fyToken')
     })
 
     it('adds a series', async () => {
@@ -124,7 +124,7 @@ describe('Vat - Admin', () => {
       })
 
       it('does not allow using the same series identifier twice', async () => {
-        await expect(vat.addSeries(seriesId, baseId, fyToken.address)).to.be.revertedWith('Vat: Id already used')
+        await expect(vat.addSeries(seriesId, baseId, fyToken.address)).to.be.revertedWith('Id already used')
       })
 
       describe('with an oracle for the series base and an ilk', async () => {
@@ -133,11 +133,11 @@ describe('Vat - Admin', () => {
         })
 
         it('does not allow adding an asset as an ilk to a series that doesn\'t exist', async () => {
-          await expect(vat.addIlk(mockSeriesId, ilkId)).to.be.revertedWith('Vat: Series not found')
+          await expect(vat.addIlk(mockSeriesId, ilkId)).to.be.revertedWith('Series not found')
         })
 
         it('does not allow adding an asset as an ilk without an oracle for a series base', async () => {
-          await expect(vat.addIlk(seriesId, mockAssetId)).to.be.revertedWith('Vat: Oracle not found')
+          await expect(vat.addIlk(seriesId, mockAssetId)).to.be.revertedWith('Oracle not found')
         })
 
         it('adds an asset as an ilk to a series', async () => {

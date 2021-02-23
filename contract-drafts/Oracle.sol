@@ -20,8 +20,8 @@ contract Oracle {
         public
         returns (uint256)
     {
-        require (block.timestamp >= timestamp, "Oracle: Too early");
-        require (historical[timestamp] == 0, "Oracle: Already recorded");
+        require (block.timestamp >= timestamp, "Too early");
+        require (historical[timestamp] == 0, "Already recorded");
         uint256 _spot = spot();
         historical[timestamp] = _spot;
         emit Recorded(timestamp, _spot);
@@ -31,7 +31,7 @@ contract Oracle {
     function accrual(uint256 timestamp)
         public view returns(uint256)
     {
-        require(historical[timestamp] > 0, "Oracle: Not available");
+        require(historical[timestamp] > 0, "Not available");
         return spot() / historical[timestamp];
     }
 }

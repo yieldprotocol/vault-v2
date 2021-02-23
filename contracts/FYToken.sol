@@ -23,7 +23,7 @@ contract FYToken is /* Orchestrated(),*/ ERC20Permit  {
         string memory name,
         string memory symbol
     ) ERC20Permit(name, symbol) {
-        // require(maturity_ > block.timestamp && maturity_ < block.timestamp + MAX_TIME_TO_MATURITY, "FYToken: Invalid maturity");
+        // require(maturity_ > block.timestamp && maturity_ < block.timestamp + MAX_TIME_TO_MATURITY, "Invalid maturity");
         base = base_;
         oracle = oracle_;
         maturity = maturity_;
@@ -42,7 +42,7 @@ contract FYToken is /* Orchestrated(),*/ ERC20Permit  {
     {
         require(
             block.timestamp >= maturity,
-            "FYToken: fyToken is not mature"
+            "fyToken is not mature"
         );
         _burn(from, amount);
 

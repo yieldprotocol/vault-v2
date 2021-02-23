@@ -147,7 +147,7 @@ describe('CDPProxy', () => {
       })
 
       it('users can\'t borrow over the global debt limit', async () => {
-        await expect(cdpProxy.frob(vaultId, WAD.mul(2), WAD.mul(2))).to.be.revertedWith('Vat: Max debt exceeded')
+        await expect(cdpProxy.frob(vaultId, WAD.mul(2), WAD.mul(2))).to.be.revertedWith('Max debt exceeded')
       })
     })
   })
