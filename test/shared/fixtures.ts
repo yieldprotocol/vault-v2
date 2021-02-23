@@ -135,46 +135,4 @@ export class YieldEnvironment {
 
     return new YieldEnvironment(owner, other, vat, cdpProxy, assets, oracles, series, joins, vaults)
   }
-
-  /*
-  public async getDai(user: string, _daiTokens: BigNumberish, _rate: BigNumberish) {
-    await this.vat.hope(this.daiJoin.address, { from: user })
-    await this.vat.hope(this.wethJoin.address, { from: user })
-
-    const _daiDebt = divrupRay(_daiTokens, _rate).add(2).toString() // For very low values of rate, we can lose up to two wei dai debt, reverting the exit below
-    const _wethTokens = divRay(_daiTokens, spot).mul(2).toString() // We post twice the amount of weth needed to remain collateralized after future rate increases
-
-    await this.weth.deposit({ from: user, value: _wethTokens })
-    await this.weth.approve(this.wethJoin.address, _wethTokens, { from: user })
-    await this.wethJoin.join(user, _wethTokens, { from: user })
-    await this.vat.frob(WETH, user, user, user, _wethTokens, _daiDebt, { from: user })
-    await this.daiJoin.exit(user, _daiTokens, { from: user })
-  }
-
-  // With rounding somewhere, this might get one less chai wei than expected
-  public async getChai(user: string, _chaiTokens: BigNumberish, _chi: BigNumberish, _rate: BigNumberish) {
-    const _daiTokens = mulRay(_chaiTokens, _chi).add(1)
-    await this.getDai(user, _daiTokens, _rate)
-    await this.dai.approve(this.chai.address, _daiTokens, { from: user })
-    await this.chai.join(user, _daiTokens, { from: user })
-  }
-  */
-
-  /* public static async setupFYDais(treasury: Contract, maturities: Array<number>): Promise<Array<Contract>> {
-    return await Promise.all(
-      maturities.map(async (maturity) => {
-        const fyDai = await FYDai.new(treasury.address, maturity, 'Name', 'Symbol')
-        await treasury.orchestrate(fyDai.address, id('pullDai(address,uint256)'))
-        return fyDai
-      })
-    )
-  } */
-
-  /* public static async setup(maturities: Array<number>) {
-    const maker = await MakerEnvironment.setup()
-    const treasury = await this.setupTreasury(maker)
-    const fyDais = await this.setupFYDais(treasury, maturities)
-    const controller = await this.setupController(treasury, fyDais)
-    return new YieldEnvironmentLite(maker, treasury, controller, fyDais)
-  } */
 }
