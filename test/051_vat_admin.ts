@@ -46,6 +46,7 @@ describe('Vat - Admin', () => {
   const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
   const maturity = 1640995199;
+  const ratio = 10000  // == 100% collateralization ratio
 
   beforeEach(async () => {
     vat = (await deployContract(ownerAcc, VatArtifact, [])) as Vat
@@ -92,17 +93,19 @@ describe('Vat - Admin', () => {
     })
 
     it('does not allow adding a spot oracle for an unknown base', async () => {
-      await expect(vat.addSpotOracle(mockAssetId, ilkId, oracle.address)).to.be.revertedWith('Asset not found')
+      await expect(vat.addSpotOracle(mockAssetId, ilkId, oracle.address, ratio)).to.be.revertedWith('Asset not found')
     })
 
     it('does not allow adding a spot oracle for an unknown ilk', async () => {
-      await expect(vat.addSpotOracle(baseId, mockAssetId, oracle.address)).to.be.revertedWith('Asset not found')
+      await expect(vat.addSpotOracle(baseId, mockAssetId, oracle.address, ratio)).to.be.revertedWith('Asset not found')
     })
 
-    it('adds a spot oracle', async () => {
-      expect(await vat.addSpotOracle(baseId, ilkId, oracle.address)).to.emit(vat, 'SpotOracleAdded').withArgs(baseId, ilkId, oracle.address)
+    it('adds a spot oracle and its collateralization ratio', async () => {
+      expect(await vat.addSpotOracle(baseId, ilkId, oracle.address, ratio)).to.emit(vat, 'SpotOracleAdded').withArgs(baseId, ilkId, oracle.address)
 
-      expect(await vat.spotOracles(baseId, ilkId)).to.equal(oracle.address)
+      const spot = await vat.spotOracles(baseId, ilkId)
+      expect(spot.oracle).to.equal(oracle.address)
+      expect(spot.ratio).to.equal(ratio)
     })
 
     it('does not allow not linking a series to a fyToken', async () => {
@@ -129,7 +132,7 @@ describe('Vat - Admin', () => {
 
       describe('with an oracle for the series base and an ilk', async () => {
         beforeEach(async () => {
-          await vat.addSpotOracle(baseId, ilkId, oracle.address)
+          await vat.addSpotOracle(baseId, ilkId, oracle.address, ratio)
         })
 
         it('does not allow adding an asset as an ilk to a series that doesn\'t exist', async () => {

@@ -50,7 +50,7 @@ contract Vat {
 
     mapping (bytes6 => IOracle)                             public chiOracles;      // Chi (savings rate) accruals oracle for the underlying
     mapping (bytes6 => IOracle)                             public rateOracles;     // Rate (borrowing rate) accruals oracle for the underlying
-    mapping (bytes6 => mapping(bytes6 => IOracle))          public spotOracles;     // [assetId][assetId] Spot price oracles
+    mapping (bytes6 => mapping(bytes6 => DataTypes.Spot))   public spotOracles;     // [assetId][assetId] Spot price oracles
 
     // ==== Vault data ====
     mapping (bytes12 => DataTypes.Vault)                    public vaults;          // An user can own one or more Vaults, each one with a bytes12 identifier
@@ -84,13 +84,16 @@ contract Vat {
         emit SeriesAdded(seriesId, baseId, address(fyToken));
     }
 
-    /// @dev Add a spot oracle
-    function addSpotOracle(bytes6 baseId, bytes6 ilkId, IOracle oracle)
+    /// @dev Add a spot oracle and its collateralization ratio
+    function addSpotOracle(bytes6 baseId, bytes6 ilkId, IOracle oracle, uint32 ratio)
         external
     {
         require (assets[baseId] != IERC20(address(0)), "Asset not found");                  // 1 SLOAD
         require (assets[ilkId] != IERC20(address(0)), "Asset not found");                   // 1 SLOAD
-        spotOracles[baseId][ilkId] = oracle;                                                // 1 SSTORE. Allows to replace an existing oracle.
+        spotOracles[baseId][ilkId] = DataTypes.Spot({
+            oracle: oracle,
+            ratio: ratio                                                                    // With 2 decimals. 10000 == 100%
+        });                                                                                 // 1 SSTORE. Allows to replace an existing oracle.
         emit SpotOracleAdded(baseId, ilkId, address(oracle));
     }
 
@@ -104,7 +107,7 @@ contract Vat {
             "Series not found"
         );
         require (
-            spotOracles[_series.baseId][ilkId] != IOracle(address(0)),                      // 1 SLOAD
+            spotOracles[_series.baseId][ilkId].oracle != IOracle(address(0)),               // 1 SLOAD
             "Oracle not found"
         );
         ilks[seriesId][ilkId] = true;                                                       // 1 SSTORE
@@ -321,30 +324,6 @@ contract Vat {
 
     // ==== Accounting ====
 
-    // Return the vault debt in underlying terms
-    // TODO: Merged with `dues` to save 2 SLOADs. Move to an external contract if needed.
-    /* function dues(bytes12 vaultId) public view returns (uint128 uart) {
-        Series _series = series[vaultId];                                                   // 1 SLOAD
-        IFYToken fyToken = _series.fyToken;
-        if (block.timestamp >= _series.maturity) {
-            IOracle oracle = rateOracles[_series.asset];                                    // 1 SLOAD
-            uart = balances[vaultId].art * oracle.accrual(maturity);                        // 1 SLOAD + 1 Oracle Call
-        } else {
-            uart = balances[vaultId].art;                                                   // 1 SLOAD
-        }
-    } */
-
-    // Return the capacity of the vault to borrow in underlying terms
-    // TODO: Merged with `dues` to save 2 SLOADs. Move to an external contract if needed.
-    /* function value(bytes12 vaultId) public view returns (uint128 art) {
-        DataTypes.Vault memory _vault = vaults[vaultId];                                    // 1 SLOAD
-        require (_vault.owner != address(0), "Vault not found");                            // The vault existing is enough to be certain that the oracle exists.
-        bytes6 ilkId = _vault.ilkId;
-        bytes6 baseId = series[vaultId].baseId;                                             // 1 SLOAD
-        IOracle oracle = spotOracles[baseId][ilkId];                                        // 1 SLOAD
-        art = balances[vaultId].ink * oracle.spot();                                        // 1 SLOAD + 1 Oracle Call | Divided by collateralization ratio
-    } */
-
     /// @dev Return the collateralization level of a vault. It will be negative if undercollateralized.
     function level(bytes12 vaultId) public view returns (int128) {
         DataTypes.Vault memory _vault = vaults[vaultId];                                    // 1 SLOAD
@@ -355,8 +334,10 @@ contract Vat {
         // Value of the collateral in the vault according to the spot price
         bytes6 ilkId = _vault.ilkId;
         bytes6 baseId = _series.baseId;
-        IOracle oracle = spotOracles[baseId][ilkId];                                        // 1 SLOAD
-        int128 value = int128(_balances.ink.rmul(oracle.spot()));                           // 1 Oracle Call | Divided by collateralization ratio | TODO: SafeCast
+        DataTypes.Spot memory _spot = spotOracles[baseId][ilkId];                           // 1 SLOAD
+        IOracle oracle = _spot.oracle;
+        uint128 ratio = uint128(_spot.ratio) * 1e23;                                        // Normalization factor from 2 to 27 decimals
+        int128 value = int128(_balances.ink.rmul(oracle.spot()).rmul(ratio));               // 1 Oracle Call | Divided by collateralization ratio | TODO: SafeCast
 
         // Debt owed by the vault in underlying terms
         int128 dues;
