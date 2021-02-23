@@ -277,7 +277,8 @@ contract Vat {
     {
         require (vaults[vaultId].owner != address(0), "Vat: Vault not found");              // 1 SLOAD
         balances = __frob(vaultId, ink, art);                                               // Cost of `__frob`
-        // if (balances.art > 0 && (ink < 0 || art > 0)) require(level(vaultId) >= 0, "Undercollateralized");  // Cost of `level`
+        if (balances.art > 0 && (ink < 0 || art > 0))                                       // If there is debt and we are less safe
+            require(level(vaultId) >= 0, "Vat: Undercollateralized");                       // Cost of `level`
         return balances;
     }
 

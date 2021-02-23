@@ -14,7 +14,7 @@ import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { deployContract, loadFixture } = waffle
 
-import { YieldEnvironment } from './shared/fixtures'
+import { YieldEnvironment, WAD, RAY } from './shared/fixtures'
 
 describe('CDPProxy', () => {
   let env: YieldEnvironment
@@ -65,9 +65,10 @@ describe('CDPProxy', () => {
     // We add this asset manually, because `fixtures` would also add the join, which we want to test.
     ilk = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId, "Mock Ilk"])) as ERC20Mock
     oracle = (await deployContract(ownerAcc, OracleMockArtifact, [])) as OracleMock
+    await oracle.setSpot(RAY.mul(2))
 
     await vat.addAsset(ilkId, ilk.address)
-    await vat.setMaxDebt(baseId, ilkId, 2)
+    await vat.setMaxDebt(baseId, ilkId, WAD.mul(2))
     await vat.addSpotOracle(baseId, ilkId, oracle.address)
     await vat.addIlk(seriesId, ilkId)
 
@@ -78,7 +79,7 @@ describe('CDPProxy', () => {
     // Finally, we deploy the join. A check that a join exists would be impossible in `vat` functions.
     ilkJoin = (await deployContract(ownerAcc, JoinArtifact, [ilk.address])) as Join
 
-    await ilk.mint(owner, 10);
+    await ilk.mint(owner, WAD.mul(10));
     await ilk.approve(ilkJoin.address, MAX);
   })
 
@@ -101,52 +102,52 @@ describe('CDPProxy', () => {
     })
 
     it('only the vault owner can manage its collateral', async () => {
-      await expect(cdpProxyFromOther.frob(vaultId, 1, 0)).to.be.revertedWith('Only vault owner')
+      await expect(cdpProxyFromOther.frob(vaultId, WAD, 0)).to.be.revertedWith('Only vault owner')
     })
 
     it('users can frob to post collateral', async () => {
-      expect(await cdpProxy.frob(vaultId, 1, 0)).to.emit(vat, 'VaultFrobbed').withArgs(vaultId, seriesId, ilkId, 1, 0)
-      expect(await ilk.balanceOf(ilkJoin.address)).to.equal(1)
-      expect((await vat.vaultBalances(vaultId)).ink).to.equal(1)
+      expect(await cdpProxy.frob(vaultId, WAD, 0)).to.emit(vat, 'VaultFrobbed').withArgs(vaultId, seriesId, ilkId, WAD, 0)
+      expect(await ilk.balanceOf(ilkJoin.address)).to.equal(WAD)
+      expect((await vat.vaultBalances(vaultId)).ink).to.equal(WAD)
     })
 
     describe('with posted collateral', async () => {
       beforeEach(async () => {
-        await cdpProxy.frob(vaultId, 1, 0)
+        await cdpProxy.frob(vaultId, WAD.mul(2), 0)
       })
   
       it('users can frob to withdraw collateral', async () => {
-        await expect(cdpProxy.frob(vaultId, -1, 0)).to.emit(vat, 'VaultFrobbed').withArgs(vaultId, seriesId, ilkId, -1, 0)
+        await expect(cdpProxy.frob(vaultId, WAD.mul(-2), 0)).to.emit(vat, 'VaultFrobbed').withArgs(vaultId, seriesId, ilkId, WAD.mul(-2), 0)
         expect(await ilk.balanceOf(ilkJoin.address)).to.equal(0)
         expect((await vat.vaultBalances(vaultId)).ink).to.equal(0)
       })
 
       it('users can frob to borrow fyToken', async () => {
-        await expect(cdpProxy.frob(vaultId, 0, 1)).to.emit(vat, 'VaultFrobbed').withArgs(vaultId, seriesId, ilkId, 0, 1)
-        expect(await fyToken.balanceOf(owner)).to.equal(1)
-        expect((await vat.vaultBalances(vaultId)).art).to.equal(1)
+        await expect(cdpProxy.frob(vaultId, 0, WAD)).to.emit(vat, 'VaultFrobbed').withArgs(vaultId, seriesId, ilkId, 0, WAD)
+        expect(await fyToken.balanceOf(owner)).to.equal(WAD)
+        expect((await vat.vaultBalances(vaultId)).art).to.equal(WAD)
       })
     })
 
     it('users can frob to post collateral and borrow fyToken', async () => {
-      await expect(cdpProxy.frob(vaultId, 1, 1)).to.emit(vat, 'VaultFrobbed').withArgs(vaultId, seriesId, ilkId, 1, 1)
-      expect(await ilk.balanceOf(ilkJoin.address)).to.equal(1)
-      expect(await fyToken.balanceOf(owner)).to.equal(1)
-      expect((await vat.vaultBalances(vaultId)).ink).to.equal(1)
-      expect((await vat.vaultBalances(vaultId)).art).to.equal(1)
+      await expect(cdpProxy.frob(vaultId, WAD.mul(2), WAD)).to.emit(vat, 'VaultFrobbed').withArgs(vaultId, seriesId, ilkId, WAD.mul(2), WAD)
+      expect(await ilk.balanceOf(ilkJoin.address)).to.equal(WAD.mul(2))
+      expect(await fyToken.balanceOf(owner)).to.equal(WAD)
+      expect((await vat.vaultBalances(vaultId)).ink).to.equal(WAD.mul(2))
+      expect((await vat.vaultBalances(vaultId)).art).to.equal(WAD)
     })
 
     describe('with collateral and debt', async () => {
       beforeEach(async () => {
-        await cdpProxy.frob(vaultId, 1, 1)
+        await cdpProxy.frob(vaultId, WAD.mul(2), WAD)
       })
   
       it('users can borrow while under the global debt limit', async () => {
-        await expect(cdpProxy.frob(vaultId, 1, 1)).to.emit(vat, 'VaultFrobbed').withArgs(vaultId, seriesId, ilkId, 1, 1)
+        await expect(cdpProxy.frob(vaultId, WAD.mul(2), WAD)).to.emit(vat, 'VaultFrobbed').withArgs(vaultId, seriesId, ilkId, WAD.mul(2), WAD)
       })
 
       it('users can\'t borrow over the global debt limit', async () => {
-        await expect(cdpProxy.frob(vaultId, 2, 2)).to.be.revertedWith('Vat: Max debt exceeded')
+        await expect(cdpProxy.frob(vaultId, WAD.mul(4), WAD.mul(2))).to.be.revertedWith('Vat: Max debt exceeded')
       })
     })
   })
