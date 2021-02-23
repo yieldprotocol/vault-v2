@@ -353,8 +353,8 @@ contract Vat {
         // Debt owed by the vault in underlying terms
         uint128 dues;
         if (block.timestamp >= _series.maturity) {
-            // IOracle oracle = rateOracles[_series.baseId];                                 // 1 SLOAD
-            dues = _balances.art /*.rmul(oracle.accrual(maturity))*/;                        // 1 Oracle Call
+            IOracle rateOracle = rateOracles[_series.baseId];                               // 1 SLOAD
+            dues = _balances.art.rmul(rateOracle.accrual(_series.maturity));                // 1 Oracle Call
         } else {
             dues = _balances.art;
         }
