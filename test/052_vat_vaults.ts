@@ -26,7 +26,9 @@ describe('Vat - Vaults', () => {
 
   const baseId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ilkId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const otherIlkId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
+  const otherSeriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
 
   const mockAssetId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const emptyAssetId = '0x000000000000'
@@ -34,7 +36,7 @@ describe('Vat - Vaults', () => {
   const emptyAddress =  ethers.utils.getAddress('0x0000000000000000000000000000000000000000')
 
   async function fixture() {
-    return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId], [seriesId])
+    return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId, otherIlkId], [seriesId, otherSeriesId])
   }
 
   before(async () => {
@@ -110,6 +112,32 @@ describe('Vat - Vaults', () => {
       expect(vault.owner).to.equal(emptyAddress)
       expect(vault.seriesId).to.equal(emptyAssetId)
       expect(vault.ilkId).to.equal(emptyAssetId)
+    })
+
+    it('does not allow changing vaults if not the vault owner', async () => {
+      await expect(vatFromOther.tweak(vaultId, seriesId, ilkId)).to.be.revertedWith('Only vault owner')
+    })
+
+    it('does not allow changing vaults to non-approved collaterals', async () => {
+      await expect(vat.tweak(vaultId, seriesId, mockAssetId)).to.be.revertedWith('Ilk not added')
+    })
+
+    it('does not allow changing vaults with debt', async () => {
+      await cdpProxy.frob(vaultId, WAD, WAD)
+      await expect(vat.tweak(vaultId, otherSeriesId, otherIlkId)).to.be.revertedWith('Only with no debt')
+    })
+
+    it('does not allow changing vaults with collateral', async () => {
+      await cdpProxy.frob(vaultId, WAD, 0)
+      await expect(vat.tweak(vaultId, seriesId, otherIlkId)).to.be.revertedWith('Only with no collateral')
+    })
+
+    it('changes a vault', async () => {
+      expect(await vat.tweak(vaultId, otherSeriesId, otherIlkId)).to.emit(vat, 'VaultTweaked').withArgs(vaultId, otherSeriesId, otherIlkId)
+      const vault = await vat.vaults(vaultId)
+      expect(vault.owner).to.equal(owner)
+      expect(vault.seriesId).to.equal(otherSeriesId)
+      expect(vault.ilkId).to.equal(otherIlkId)
     })
 
     it('does not allow giving vaults if not the vault owner', async () => {
