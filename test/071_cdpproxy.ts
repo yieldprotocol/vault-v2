@@ -70,7 +70,7 @@ describe('CDPProxy', () => {
 
     await vat.addAsset(ilkId, ilk.address)
     await vat.setMaxDebt(baseId, ilkId, WAD.mul(2))
-    await vat.addSpotOracle(baseId, ilkId, oracle.address, ratio)
+    await vat.setSpotOracle(baseId, ilkId, oracle.address, ratio)
     await vat.addIlk(seriesId, ilkId)
 
     await vat.build(seriesId, ilkId)

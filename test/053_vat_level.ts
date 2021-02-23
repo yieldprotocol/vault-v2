@@ -75,13 +75,13 @@ describe('Vat - Level', () => {
     expect(await vat.level(vaultId)).to.equal(WAD.div(-2))
 
     await oracle.setSpot(RAY.mul(2))
-    await vat.addSpotOracle(baseId, ilkId, oracle.address, 20000)
+    await vat.setSpotOracle(baseId, ilkId, oracle.address, 20000)
     expect(await vat.level(vaultId)).to.equal(0)
 
-    await vat.addSpotOracle(baseId, ilkId, oracle.address, 10000)
+    await vat.setSpotOracle(baseId, ilkId, oracle.address, 10000)
     expect(await vat.level(vaultId)).to.equal(WAD)
 
-    await vat.addSpotOracle(baseId, ilkId, oracle.address, 30000)
+    await vat.setSpotOracle(baseId, ilkId, oracle.address, 30000)
     expect(await vat.level(vaultId)).to.equal(WAD.mul(-1))
   })
 

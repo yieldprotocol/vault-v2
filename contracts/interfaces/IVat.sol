@@ -17,7 +17,7 @@ interface IVat {
     // function addSeries(bytes32 series, IERC20 asset, IFYToken fyToken) external;
 
     /// @dev Add a spot oracle to Vat
-    // function addSpotOracle(IERC20 asset, IERC20 asset, IOracle oracle) external;
+    // function setSpotOracle(IERC20 asset, IERC20 asset, IOracle oracle) external;
 
     /// @dev Add a chi oracle to Vat
     // function addChiOracle(IERC20 asset, IOracle oracle) external;

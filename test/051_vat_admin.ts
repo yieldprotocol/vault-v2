@@ -92,61 +92,81 @@ describe('Vat - Admin', () => {
       expect(debt.max).to.equal(2)
     })
 
-    it('does not allow adding a spot oracle for an unknown base', async () => {
-      await expect(vat.addSpotOracle(mockAssetId, ilkId, oracle.address, ratio)).to.be.revertedWith('Asset not found')
+    it('does not allow adding a rate oracle for an unknown base', async () => {
+      await expect(vat.setRateOracle(mockAssetId, oracle.address)).to.be.revertedWith('Asset not found')
     })
 
-    it('does not allow adding a spot oracle for an unknown ilk', async () => {
-      await expect(vat.addSpotOracle(baseId, mockAssetId, oracle.address, ratio)).to.be.revertedWith('Asset not found')
+    it('adds a rate oracle', async () => {
+      expect(await vat.setRateOracle(baseId, oracle.address)).to.emit(vat, 'RateOracleAdded').withArgs(baseId, oracle.address)
+
+      expect(await vat.rateOracles(baseId)).to.equal(oracle.address)
     })
 
-    it('adds a spot oracle and its collateralization ratio', async () => {
-      expect(await vat.addSpotOracle(baseId, ilkId, oracle.address, ratio)).to.emit(vat, 'SpotOracleAdded').withArgs(baseId, ilkId, oracle.address)
-
-      const spot = await vat.spotOracles(baseId, ilkId)
-      expect(spot.oracle).to.equal(oracle.address)
-      expect(spot.ratio).to.equal(ratio)
+    it('does not allow adding a series without a rate oracle for its base', async () => {
+      await expect(vat.addSeries(seriesId, baseId, fyToken.address)).to.be.revertedWith('Rate oracle not found')
     })
 
-    it('does not allow not linking a series to a fyToken', async () => {
-      await expect(vat.addSeries(seriesId, baseId, emptyAddress)).to.be.revertedWith('Series need a fyToken')
-    })
-
-    it('adds a series', async () => {
-      expect(await vat.addSeries(seriesId, baseId, fyToken.address)).to.emit(vat, 'SeriesAdded').withArgs(seriesId, baseId, fyToken.address)
-
-      const series = await vat.series(seriesId)
-      expect(series.fyToken).to.equal(fyToken.address)
-      expect(series.baseId).to.equal(baseId)
-      expect(series.maturity).to.equal(maturity)
-    })
-
-    describe('with a series added', async () => {
+    describe('with a rate oracle added', async () => {
       beforeEach(async () => {
-        await vat.addSeries(seriesId, baseId, fyToken.address)
+        await vat.setRateOracle(baseId, oracle.address)
       })
 
-      it('does not allow using the same series identifier twice', async () => {
-        await expect(vat.addSeries(seriesId, baseId, fyToken.address)).to.be.revertedWith('Id already used')
+      it('does not allow not linking a series to a fyToken', async () => {
+        await expect(vat.addSeries(seriesId, baseId, emptyAddress)).to.be.revertedWith('Series need a fyToken')
       })
 
-      describe('with an oracle for the series base and an ilk', async () => {
+      it('adds a series', async () => {
+        expect(await vat.addSeries(seriesId, baseId, fyToken.address)).to.emit(vat, 'SeriesAdded').withArgs(seriesId, baseId, fyToken.address)
+
+        const series = await vat.series(seriesId)
+        expect(series.fyToken).to.equal(fyToken.address)
+        expect(series.baseId).to.equal(baseId)
+        expect(series.maturity).to.equal(maturity)
+      })
+
+      describe('with a series added', async () => {
         beforeEach(async () => {
-          await vat.addSpotOracle(baseId, ilkId, oracle.address, ratio)
+          await vat.addSeries(seriesId, baseId, fyToken.address)
         })
 
-        it('does not allow adding an asset as an ilk to a series that doesn\'t exist', async () => {
-          await expect(vat.addIlk(mockSeriesId, ilkId)).to.be.revertedWith('Series not found')
+        it('does not allow using the same series identifier twice', async () => {
+          await expect(vat.addSeries(seriesId, baseId, fyToken.address)).to.be.revertedWith('Id already used')
         })
 
-        it('does not allow adding an asset as an ilk without an oracle for a series base', async () => {
-          await expect(vat.addIlk(seriesId, mockAssetId)).to.be.revertedWith('Oracle not found')
+        it('does not allow adding a spot oracle for an unknown base', async () => {
+          await expect(vat.setSpotOracle(mockAssetId, ilkId, oracle.address, ratio)).to.be.revertedWith('Asset not found')
         })
 
-        it('adds an asset as an ilk to a series', async () => {
-          expect(await vat.addIlk(seriesId, ilkId)).to.emit(vat, 'IlkAdded').withArgs(seriesId, ilkId)
-    
-          expect(await vat.ilks(seriesId, ilkId)).to.be.true
+        it('does not allow adding a spot oracle for an unknown ilk', async () => {
+          await expect(vat.setSpotOracle(baseId, mockAssetId, oracle.address, ratio)).to.be.revertedWith('Asset not found')
+        })
+
+        it('adds a spot oracle and its collateralization ratio', async () => {
+          expect(await vat.setSpotOracle(baseId, ilkId, oracle.address, ratio)).to.emit(vat, 'SpotOracleAdded').withArgs(baseId, ilkId, oracle.address, ratio)
+
+          const spot = await vat.spotOracles(baseId, ilkId)
+          expect(spot.oracle).to.equal(oracle.address)
+          expect(spot.ratio).to.equal(ratio)
+        })
+
+        describe('with an oracle for the series base and an ilk', async () => {
+          beforeEach(async () => {
+            await vat.setSpotOracle(baseId, ilkId, oracle.address, ratio)
+          })
+
+          it('does not allow adding an asset as an ilk to a series that doesn\'t exist', async () => {
+            await expect(vat.addIlk(mockSeriesId, ilkId)).to.be.revertedWith('Series not found')
+          })
+
+          it('does not allow adding an asset as an ilk without an oracle for a series base', async () => {
+            await expect(vat.addIlk(seriesId, mockAssetId)).to.be.revertedWith('Spot oracle not found')
+          })
+
+          it('adds an asset as an ilk to a series', async () => {
+            expect(await vat.addIlk(seriesId, ilkId)).to.emit(vat, 'IlkAdded').withArgs(seriesId, ilkId)
+      
+            expect(await vat.ilks(seriesId, ilkId)).to.be.true
+          })
         })
       })
     })
