@@ -40,7 +40,9 @@ contract Vat {
     event VaultTransfer(bytes12 indexed vaultId, address indexed receiver);
 
     event VaultFrobbed(bytes12 indexed vaultId, bytes6 indexed seriesId, bytes6 indexed ilkId, int128 ink, int128 art);
+    event VaultFluxxed(bytes12 indexed from, bytes12 indexed to, uint128 ink);
 
+    // ==== Protocol data ====
     mapping (bytes6 => IERC20)                              public assets;          // Underlyings and collaterals available in Vat. 12 bytes still free.
     mapping (bytes6 => mapping(bytes6 => DataTypes.Debt))   public debt;            // [baseId][ilkId] Max and sum of debt per underlying and collateral.
     mapping (bytes6 => DataTypes.Series)                    public series;          // Series available in Vat. We can possibly use a bytes6 (3e14 possible series).
@@ -50,12 +52,9 @@ contract Vat {
     mapping (bytes6 => IOracle)                             public rateOracles;     // Rate (borrowing rate) accruals oracle for the underlying
     mapping (bytes6 => mapping(bytes6 => IOracle))          public spotOracles;     // [assetId][assetId] Spot price oracles
 
-    // ==== Vault ordering ====
-
+    // ==== Vault data ====
     mapping (bytes12 => DataTypes.Vault)                    public vaults;          // An user can own one or more Vaults, each one with a bytes12 identifier
     mapping (bytes12 => DataTypes.Balances)                 public vaultBalances;   // Both debt and assets
-
-    // ==== Vault timestamping ====
     mapping (bytes12 => uint32)                             public timestamps;      // If grater than zero, time that a vault was timestamped. Used for liquidation.
 
     // ==== Administration ====
@@ -184,15 +183,23 @@ contract Vat {
 
     // ==== Asset and debt management ====
 
-    // Move collateral between vaults.
-    // Doesn't check inputs, or collateralization level. Do that in public functions.
-    /* function __flux(bytes12 from, bytes12 to, uint128 ink)
+    /// @dev Move collateral between vaults.
+    /// Doesn't check inputs, or collateralization level. Do that in public functions.
+    function __flux(bytes12 from, bytes12 to, uint128 ink)
         internal
+        returns (DataTypes.Balances memory, DataTypes.Balances memory)
     {
-        require (vaults[from].asset == vaults[to].asset, "Different collateral");           // 2 SLOAD
-        balances[from].assets -= ink;                                                       // 1 SSTORE
-        balances[to].assets += ink;                                                         // 1 SSTORE
-    } */
+        require (vaults[from].ilkId == vaults[to].ilkId, "Different collateral");               // 2 SLOAD
+        DataTypes.Balances memory _balancesFrom = vaultBalances[from];                          // 1 SLOAD
+        DataTypes.Balances memory _balancesTo = vaultBalances[to];                              // 1 SLOAD
+        _balancesFrom.ink -= ink;
+        _balancesTo.ink += ink;
+        vaultBalances[from] = _balancesFrom;                                                    // 1 SSTORE
+        vaultBalances[to] = _balancesTo;                                                        // 1 SSTORE
+        emit VaultFluxxed(from, to, ink);
+
+        return (_balancesFrom, _balancesTo);
+    }
 
     /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
     /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
@@ -299,18 +306,18 @@ contract Vat {
     }
 
     // Move collateral between vaults.
-    /* function flux(bytes12 from, bytes12 to, uint128 ink)
+    function flux(bytes12 from, bytes12 to, uint128 ink)
         public
-        returns (bytes32, bytes32)
+        returns (DataTypes.Balances memory, DataTypes.Balances memory)
     {
         require (vaults[from].owner == msg.sender, "Only vault owner");                     // 1 SLOAD
         require (vaults[to].owner != address(0), "Vault not found");                        // 1 SLOAD
-        Balances memory _balancesFrom;
-        Balances memory _balancesTo;
-        (_balancesFrom, _balancesTo) = __flux(from, to, ink, art);                          // Cost of `__flux`
+        DataTypes.Balances memory _balancesFrom;
+        DataTypes.Balances memory _balancesTo;
+        (_balancesFrom, _balancesTo) = __flux(from, to, ink);                               // Cost of `__flux`
         if (_balancesFrom.art > 0) require(level(from) >= 0, "Undercollateralized");        // Cost of `level`
         return (_balancesFrom, _balancesTo);
-    } */
+    }
 
     // ==== Accounting ====
 
