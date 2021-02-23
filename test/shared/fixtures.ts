@@ -22,9 +22,11 @@ import { ethers, waffle } from 'hardhat'
 // import { id } from '../src'
 const { deployContract } = waffle
 
+export const WAD = BigNumber.from("1000000000000000000")
+export const RAY = BigNumber.from("1000000000000000000000000000")
+
 export class YieldEnvironment {
   owner: SignerWithAddress
-  other: SignerWithAddress
   vat: Vat
   cdpProxy: CDPProxy
   assets: Map<string, ERC20Mock>
@@ -35,7 +37,6 @@ export class YieldEnvironment {
   
   constructor(
     owner: SignerWithAddress,
-    other: SignerWithAddress,
     vat: Vat,
     cdpProxy: CDPProxy,
     assets: Map<string, ERC20Mock>,
@@ -45,7 +46,6 @@ export class YieldEnvironment {
     vaults: Map<string, Map<string, string>>
   ) {
     this.owner = owner
-    this.other = other
     this.vat = vat
     this.cdpProxy = cdpProxy
     this.assets = assets
@@ -56,9 +56,8 @@ export class YieldEnvironment {
   }
 
   // Set up a test environment. Provide at least one asset identifier.
-  public static async setup(owner: SignerWithAddress, other: SignerWithAddress, assetIds: Array<string>, seriesIds: Array<string>) {
+  public static async setup(owner: SignerWithAddress, assetIds: Array<string>, seriesIds: Array<string>) {
     const ownerAdd = await owner.getAddress()
-    const otherAdd = await other.getAddress()
 
     const vat = (await deployContract(owner, VatArtifact, [])) as Vat
     const cdpProxy = (await deployContract(owner, CDPProxyArtifact, [vat.address])) as CDPProxy
@@ -72,7 +71,7 @@ export class YieldEnvironment {
       const asset = await deployContract(owner, ERC20MockArtifact, [assetId, "Mock Base"]) as ERC20Mock
       assets.set(assetId, asset)
       await vat.addAsset(assetId, asset.address)
-      await asset.mint(ownerAdd, ethers.constants.WeiPerEther.mul(100))
+      await asset.mint(ownerAdd, WAD.mul(100))
 
       const join = await deployContract(owner, JoinArtifact, [asset.address]) as Join
       joins.set(assetId, join)
@@ -88,7 +87,7 @@ export class YieldEnvironment {
 
     // ==== Set debt limits ====
     for (let ilkId of ilkIds) {
-      await vat.setMaxDebt(baseId, ilkId, ethers.constants.WeiPerEther.mul(1000000))
+      await vat.setMaxDebt(baseId, ilkId, WAD.mul(1000000))
     }
 
     // ==== Add oracles and series ====
@@ -96,6 +95,7 @@ export class YieldEnvironment {
     const oracles: Map<string, OracleMock> = new Map()
     for (let ilkId of ilkIds) {
       const oracle = (await deployContract(owner, OracleMockArtifact, [])) as OracleMock
+      await oracle.setSpot(RAY.mul(2))
       await vat.addSpotOracle(baseId, ilkId, oracle.address) // This allows to set the ilks below
       oracles.set(ilkId, oracle)
     }
@@ -133,48 +133,6 @@ export class YieldEnvironment {
       vaults.set(seriesId, seriesVaults)
     }
 
-    return new YieldEnvironment(owner, other, vat, cdpProxy, assets, oracles, series, joins, vaults)
+    return new YieldEnvironment(owner, vat, cdpProxy, assets, oracles, series, joins, vaults)
   }
-
-  /*
-  public async getDai(user: string, _daiTokens: BigNumberish, _rate: BigNumberish) {
-    await this.vat.hope(this.daiJoin.address, { from: user })
-    await this.vat.hope(this.wethJoin.address, { from: user })
-
-    const _daiDebt = divrupRay(_daiTokens, _rate).add(2).toString() // For very low values of rate, we can lose up to two wei dai debt, reverting the exit below
-    const _wethTokens = divRay(_daiTokens, spot).mul(2).toString() // We post twice the amount of weth needed to remain collateralized after future rate increases
-
-    await this.weth.deposit({ from: user, value: _wethTokens })
-    await this.weth.approve(this.wethJoin.address, _wethTokens, { from: user })
-    await this.wethJoin.join(user, _wethTokens, { from: user })
-    await this.vat.frob(WETH, user, user, user, _wethTokens, _daiDebt, { from: user })
-    await this.daiJoin.exit(user, _daiTokens, { from: user })
-  }
-
-  // With rounding somewhere, this might get one less chai wei than expected
-  public async getChai(user: string, _chaiTokens: BigNumberish, _chi: BigNumberish, _rate: BigNumberish) {
-    const _daiTokens = mulRay(_chaiTokens, _chi).add(1)
-    await this.getDai(user, _daiTokens, _rate)
-    await this.dai.approve(this.chai.address, _daiTokens, { from: user })
-    await this.chai.join(user, _daiTokens, { from: user })
-  }
-  */
-
-  /* public static async setupFYDais(treasury: Contract, maturities: Array<number>): Promise<Array<Contract>> {
-    return await Promise.all(
-      maturities.map(async (maturity) => {
-        const fyDai = await FYDai.new(treasury.address, maturity, 'Name', 'Symbol')
-        await treasury.orchestrate(fyDai.address, id('pullDai(address,uint256)'))
-        return fyDai
-      })
-    )
-  } */
-
-  /* public static async setup(maturities: Array<number>) {
-    const maker = await MakerEnvironment.setup()
-    const treasury = await this.setupTreasury(maker)
-    const fyDais = await this.setupFYDais(treasury, maturities)
-    const controller = await this.setupController(treasury, fyDais)
-    return new YieldEnvironmentLite(maker, treasury, controller, fyDais)
-  } */
 }

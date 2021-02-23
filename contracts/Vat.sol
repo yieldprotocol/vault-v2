@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 import "@yield-protocol/utils/contracts/token/IERC20.sol";
 import "./interfaces/IFYToken.sol";
 import "./interfaces/IJoin.sol";
-// import "./interfaces/IOracle.sol";
+import "./interfaces/IOracle.sol";
 import "./libraries/DataTypes.sol";
 
 
@@ -15,8 +15,18 @@ library Math {
     }
 }
 
+library RMath { // Fixed point arithmetic in Ray units
+    /// @dev Multiply an unsigned integer by another, returning a fixed point factor in ray units
+    function rmul(uint128 x, uint128 y) internal pure returns (uint128 z) {
+        uint256 _z = uint256(x) * uint256(y) / 1e27;
+        require (_z <= type(uint128).max, "RMUL Overflow");
+        z = uint128(_z);
+    }
+}
+
 contract Vat {
     using Math for uint128;
+    using RMath for uint128;
 
     event AssetAdded(bytes6 indexed assetId, address indexed asset);
     event SeriesAdded(bytes6 indexed seriesId, bytes6 indexed baseId, address indexed fyToken);
@@ -118,7 +128,7 @@ contract Vat {
         public
         returns (bytes12 vaultId)
     {
-        require (ilks[seriesId][ilkId] == true, "Vat: Ilk not added"); // 1 SLOAD
+        require (ilks[seriesId][ilkId] == true, "Vat: Ilk not added");                      // 1 SLOAD
         vaultId = bytes12(keccak256(abi.encodePacked(msg.sender, block.timestamp)));        // Check (vaults[id].owner == address(0)), and increase the salt until a free vault id is found. 1 SLOAD per check.
         vaults[vaultId] = DataTypes.Vault({
             owner: msg.sender,
@@ -267,7 +277,8 @@ contract Vat {
     {
         require (vaults[vaultId].owner != address(0), "Vat: Vault not found");              // 1 SLOAD
         balances = __frob(vaultId, ink, art);                                               // Cost of `__frob`
-        // if (balances.art > 0 && (ink < 0 || art > 0)) require(level(vaultId) >= 0, "Undercollateralized");  // Cost of `level`
+        if (balances.art > 0 && (ink < 0 || art > 0))                                       // If there is debt and we are less safe
+            require(level(vaultId) >= 0, "Vat: Undercollateralized");                       // Cost of `level`
         return balances;
     }
 
@@ -298,6 +309,7 @@ contract Vat {
     // ==== Accounting ====
 
     // Return the vault debt in underlying terms
+    // TODO: Merged with `dues` to save 2 SLOADs. Move to an external contract if needed.
     /* function dues(bytes12 vaultId) public view returns (uint128 uart) {
         Series _series = series[vaultId];                                                   // 1 SLOAD
         IFYToken fyToken = _series.fyToken;
@@ -309,17 +321,39 @@ contract Vat {
         }
     } */
 
-    // Return the capacity of the vault to borrow underlying assetd on the assets held
-    /* function value(bytes12 vaultId) public view returns (uint128 uart) {
-        bytes6 asset = vaults[vaultId].asset;                                               // 1 SLOAD
-        Balances memory _balances = balances[vaultId];                                      // 1 SLOAD
-        bytes6 _asset = series[vaultId].asset;                                              // 1 SLOAD
-        IOracle oracle = spotOracles[_asset][asset];                                        // 1 SLOAD
-        uart += _balances.ink * oracle.spot();                                              // 1 Oracle Call | Divided by collateralization ratio
+    // Return the capacity of the vault to borrow in underlying terms
+    // TODO: Merged with `dues` to save 2 SLOADs. Move to an external contract if needed.
+    /* function value(bytes12 vaultId) public view returns (uint128 art) {
+        DataTypes.Vault memory _vault = vaults[vaultId];                                    // 1 SLOAD
+        require (_vault.owner != address(0), "Vat: Vault not found");                       // The vault existing is enough to be certain that the oracle exists.
+        bytes6 ilkId = _vault.ilkId;
+        bytes6 baseId = series[vaultId].baseId;                                             // 1 SLOAD
+        IOracle oracle = spotOracles[baseId][ilkId];                                        // 1 SLOAD
+        art = balances[vaultId].ink * oracle.spot();                                        // 1 SLOAD + 1 Oracle Call | Divided by collateralization ratio
     } */
 
-    // Return the collateralization level of a vault. It will be negative if undercollateralized.
-    /* function level(bytes12 vaultId) public view returns (int128) {                       // Cost of `value` + `dues`
-        return value(vaultId) - dues(vaultId);
-    } */
+    /// @dev Return the collateralization level of a vault. It will be negative if undercollateralized.
+    function level(bytes12 vaultId) public view returns (int128) {
+        DataTypes.Vault memory _vault = vaults[vaultId];                                    // 1 SLOAD
+        DataTypes.Series memory _series = series[_vault.seriesId];                          // 1 SLOAD
+        DataTypes.Balances memory _balances = vaultBalances[vaultId];                       // 1 SLOAD
+        require (_vault.owner != address(0), "Vat: Vault not found");                       // The vault existing is enough to be certain that the oracle exists.
+
+        // Value of the collateral in the vault according to the spot price
+        bytes6 ilkId = _vault.ilkId;
+        bytes6 baseId = _series.baseId;
+        IOracle oracle = spotOracles[baseId][ilkId];                                        // 1 SLOAD
+        int128 value = int128(_balances.ink.rmul(oracle.spot()));                           // 1 Oracle Call | Divided by collateralization ratio | TODO: SafeCast
+
+        // Debt owed by the vault in underlying terms
+        int128 dues;
+        if (block.timestamp >= _series.maturity) {
+            // IOracle oracle = rateOracles[_series.baseId];                                 // 1 SLOAD
+            dues = int128(_balances.art /*.rmul(oracle.accrual(maturity))*/);                // 1 Oracle Call | TODO: SafeCast
+        } else {
+            dues = int128(_balances.art);
+        }
+
+        return value - dues;
+    }
 }

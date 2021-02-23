@@ -33,7 +33,7 @@ describe('Fixtures', () => {
   let cdpProxyFromOther: CDPProxy
 
   async function fixture() {
-    return await YieldEnvironment.setup(ownerAcc, otherAcc, [baseId], [seriesId])
+    return await YieldEnvironment.setup(ownerAcc, [baseId], [seriesId])
   }
 
   before(async () => {

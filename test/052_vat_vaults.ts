@@ -1,7 +1,4 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import VatArtifact from '../artifacts/contracts/Vat.sol/Vat.json'
-import FYTokenArtifact from '../artifacts/contracts/FYToken.sol/FYToken.json'
-import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
 
 import { Vat } from '../typechain/Vat'
 import { FYToken } from '../typechain/FYToken'
@@ -10,9 +7,8 @@ import { ERC20Mock } from '../typechain/ERC20Mock'
 import { YieldEnvironment } from './shared/fixtures'
 
 import { ethers, waffle } from 'hardhat'
-// import { id } from '../src'
 import { expect } from 'chai'
-const { deployContract, loadFixture } = waffle
+const { loadFixture } = waffle
 
 describe('Vat - Vaults', () => {
   let ownerAcc: SignerWithAddress
@@ -31,14 +27,12 @@ describe('Vat - Vaults', () => {
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
 
   const mockAssetId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const mockSeriesId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const emptyAssetId = '0x000000000000'
-  const mockVaultId =  ethers.utils.hexlify(ethers.utils.randomBytes(12))
   const mockAddress =  ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20)))
   const emptyAddress =  ethers.utils.getAddress('0x0000000000000000000000000000000000000000')
 
   async function fixture() {
-    return await YieldEnvironment.setup(ownerAcc, otherAcc, [baseId, ilkId], [seriesId])
+    return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId], [seriesId])
   }
 
   before(async () => {
@@ -49,8 +43,6 @@ describe('Vat - Vaults', () => {
     otherAcc = signers[1]
     other = await otherAcc.getAddress()
   })
-
-  const maturity = 1640995199;
 
   beforeEach(async () => {
     env = await loadFixture(fixture);
