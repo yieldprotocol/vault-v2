@@ -24,7 +24,6 @@ const { deployContract } = waffle
 
 export class YieldEnvironment {
   owner: SignerWithAddress
-  other: SignerWithAddress
   vat: Vat
   cdpProxy: CDPProxy
   assets: Map<string, ERC20Mock>
@@ -35,7 +34,6 @@ export class YieldEnvironment {
   
   constructor(
     owner: SignerWithAddress,
-    other: SignerWithAddress,
     vat: Vat,
     cdpProxy: CDPProxy,
     assets: Map<string, ERC20Mock>,
@@ -45,7 +43,6 @@ export class YieldEnvironment {
     vaults: Map<string, Map<string, string>>
   ) {
     this.owner = owner
-    this.other = other
     this.vat = vat
     this.cdpProxy = cdpProxy
     this.assets = assets
@@ -56,9 +53,8 @@ export class YieldEnvironment {
   }
 
   // Set up a test environment. Provide at least one asset identifier.
-  public static async setup(owner: SignerWithAddress, other: SignerWithAddress, assetIds: Array<string>, seriesIds: Array<string>) {
+  public static async setup(owner: SignerWithAddress, assetIds: Array<string>, seriesIds: Array<string>) {
     const ownerAdd = await owner.getAddress()
-    const otherAdd = await other.getAddress()
 
     const vat = (await deployContract(owner, VatArtifact, [])) as Vat
     const cdpProxy = (await deployContract(owner, CDPProxyArtifact, [vat.address])) as CDPProxy
@@ -133,6 +129,6 @@ export class YieldEnvironment {
       vaults.set(seriesId, seriesVaults)
     }
 
-    return new YieldEnvironment(owner, other, vat, cdpProxy, assets, oracles, series, joins, vaults)
+    return new YieldEnvironment(owner, vat, cdpProxy, assets, oracles, series, joins, vaults)
   }
 }

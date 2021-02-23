@@ -32,7 +32,7 @@ describe('Vat - Vaults', () => {
   const emptyAddress =  ethers.utils.getAddress('0x0000000000000000000000000000000000000000')
 
   async function fixture() {
-    return await YieldEnvironment.setup(ownerAcc, otherAcc, [baseId, ilkId], [seriesId])
+    return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId], [seriesId])
   }
 
   before(async () => {

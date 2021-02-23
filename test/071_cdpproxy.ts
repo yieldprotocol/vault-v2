@@ -35,7 +35,7 @@ describe('CDPProxy', () => {
   const MAX = ethers.constants.MaxUint256
 
   async function fixture() {
-    return await YieldEnvironment.setup(ownerAcc, otherAcc, [baseId], [seriesId])
+    return await YieldEnvironment.setup(ownerAcc, [baseId], [seriesId])
   }
 
   before(async () => {
