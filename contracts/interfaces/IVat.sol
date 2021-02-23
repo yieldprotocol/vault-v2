@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 import "./IFYToken.sol";
 import "./IJoin.sol";
+import "./IOracle.sol";
 import "@yield-protocol/utils/contracts/token/IERC20.sol";
 import "../libraries/DataTypes.sol";
 
@@ -32,7 +33,7 @@ interface IVat {
     // function chiOracles(bytes6 asset) external returns (address);
 
     /// @dev Rate (borrowing rate) accruals oracle for an underlying
-    // function rateOracles(bytes6 asset) external returns (address);
+    function rateOracles(bytes6 baseId) external returns (IOracle);
 
     /// @dev An user can own one or more Vaults, with each vault being able to borrow from a single series.
     function vaults(bytes12 vault) external view returns (DataTypes.Vault memory);
