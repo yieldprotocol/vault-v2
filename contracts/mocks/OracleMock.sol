@@ -5,22 +5,22 @@ import "../interfaces/IOracle.sol";
 
 library RMath { // Fixed point arithmetic in Ray units
     /// @dev Divide an unsigned integer by another, returning a fixed point factor in ray units
-    function rdiv(uint256 x, uint256 y) internal pure returns (uint256 z) {
+    function rdiv(uint128 x, uint128 y) internal pure returns (uint128 z) {
         z = x * 1e27 / y; // We just rely on built-in exceptions
     }
 }
 
 /// @dev An oracle that allows to set the spot price to anyone. It also allows to record spot values and return the accrual between a recorded and current spots.
 contract OracleMock is IOracle {
-    using RMath for uint256;
+    using RMath for uint128;
 
-    event SpotRecorded(uint32 maturity, uint256 spot);
+    event SpotRecorded(uint32 maturity, uint128 spot);
 
-    uint256 internal _spot;
-    mapping(uint32 => uint256) public recorded;
+    uint128 internal _spot;
+    mapping(uint32 => uint128) public recorded;
 
     /// @dev Return the spot price
-    function spot() external view override returns (uint256) {
+    function spot() external view override returns (uint128) {
         return _spot;
     }
 
@@ -34,14 +34,14 @@ contract OracleMock is IOracle {
     }
 
     /// @dev Return the increase in spot price between now and the recorded price at `maturity`.
-    function accrual(uint32 maturity) external view override returns (uint256){
-        uint256 _recorded = recorded[maturity];
+    function accrual(uint32 maturity) external view override returns (uint128){
+        uint128 _recorded = recorded[maturity];
         require (_recorded > 0, "No recorded spot");
         return _spot.rdiv(_recorded);
     }
 
     /// @dev Set the spot price.
-    function setSpot(uint256 spot_) external {
+    function setSpot(uint128 spot_) external {
         _spot = spot_;
     }
 }
