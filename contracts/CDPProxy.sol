@@ -70,13 +70,13 @@ contract CDPProxy {
         external
         returns (DataTypes.Balances memory _balances)
     {
-        DataTypes.Vault memory _vault = vat.vaults(vaultId);                // 1 CALL + 1 SLOAD
+        DataTypes.Vault memory _vault = vat.vaults(vaultId);                        // 1 CALL + 1 SLOAD
         require (_vault.owner == msg.sender, "Only vault owner");
 
-        DataTypes.Series memory _series = vat.series(_vault.seriesId);      // 1 CALL + 1 SLOAD
-        bytes6 assetId = _series[vaultId].assetId;                            // 1 SLOAD
-        joins[assetId].join(int128(repay));                                  // Cost of `join`
-        uint128 art = repay * RAY / rateOracles[asset].spot();               // 1 SLOAD + `spot`
-        return __frob(vaultId, ink, -int128(art));                          // Cost of `__frob`
+        DataTypes.Series memory _series = vat.series(_vault.seriesId);              // 1 CALL + 1 SLOAD
+        bytes6 assetId = _series[vaultId].assetId;                                  // 1 SLOAD
+        joins[assetId].join(int128(repay));                                         // Cost of `join`
+        uint128 art = repay * RAY / rateOracles[asset].accrual(_series.maturity);   // 1 SLOAD + `spot`
+        return __frob(vaultId, ink, -int128(art));                                  // Cost of `__frob`
     } */
 }
