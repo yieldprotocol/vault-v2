@@ -337,17 +337,17 @@ contract Vat {
         DataTypes.Spot memory _spot = spotOracles[baseId][ilkId];                           // 1 SLOAD
         IOracle oracle = _spot.oracle;
         uint128 ratio = uint128(_spot.ratio) * 1e23;                                        // Normalization factor from 2 to 27 decimals
-        int128 value = int128(_balances.ink.rmul(oracle.spot()).rmul(ratio));               // 1 Oracle Call | Divided by collateralization ratio | TODO: SafeCast
+        uint128 ink = _balances.ink;                                                        // 1 Oracle Call
 
         // Debt owed by the vault in underlying terms
-        int128 dues;
+        uint128 dues;
         if (block.timestamp >= _series.maturity) {
             // IOracle oracle = rateOracles[_series.baseId];                                 // 1 SLOAD
-            dues = int128(_balances.art /*.rmul(oracle.accrual(maturity))*/);                // 1 Oracle Call | TODO: SafeCast
+            dues = _balances.art /*.rmul(oracle.accrual(maturity))*/;                        // 1 Oracle Call
         } else {
-            dues = int128(_balances.art);
+            dues = _balances.art;
         }
 
-        return value - dues;
+        return int128(ink.rmul(oracle.spot())) - int128(dues.rmul(ratio));                   // 1 Oracle Call | TODO: SafeCast
     }
 }
