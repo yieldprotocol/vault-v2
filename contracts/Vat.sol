@@ -35,6 +35,7 @@ contract Vat {
     event MaxDebtSet(bytes6 indexed baseId, bytes6 indexed ilkId, uint128 max);
 
     event VaultBuilt(bytes12 indexed vaultId, address indexed owner, bytes6 indexed seriesId, bytes6 ilkId);
+    event VaultTweaked(bytes12 indexed vaultId, bytes6 indexed seriesId, bytes6 indexed ilkId);
     event VaultDestroyed(bytes12 indexed vaultId);
     event VaultTransfer(bytes12 indexed vaultId, address indexed receiver);
 
@@ -151,25 +152,26 @@ contract Vat {
         emit VaultDestroyed(vaultId);
     }
 
-    // Change a vault series and/or collateral types.
-    // We can change the series if there is no debt, or assets if there are no assets
-    // Doesn't check inputs, or collateralization level. Do that in public functions.
-    /* function __tweak(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
+    /// @dev Change a vault series and/or collateral types.
+    /// We can change the series if there is no debt, or assets if there are no assets
+    /// Doesn't check inputs, or collateralization level. Do that in public functions.
+    function __tweak(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
         internal
     {
         require (ilks[seriesId][ilkId] == true, "Ilk not added");                           // 1 SLOAD
-        Balances memory _balances = balances[vaultId];                                      // 1 SLOAD
-        Vault memory _vault = vaults[vaultId];                                              // 1 SLOAD
+        DataTypes.Balances memory _balances = vaultBalances[vaultId];                       // 1 SLOAD
+        DataTypes.Vault memory _vault = vaults[vaultId];                                    // 1 SLOAD
         if (seriesId != _vault.seriesId) {
-            require (balances.art == 0, "Tweak only unused series");
+            require (_balances.art == 0, "Only with no debt");
             _vault.seriesId = seriesId;
         }
         if (ilkId != _vault.ilkId) {                                                        // If a new asset was provided
-            require (balances.ink == 0, "Tweak only unused assets");
-            _vault.inkId = inkId;
+            require (_balances.ink == 0, "Only with no collateral");
+            _vault.ilkId = ilkId;
         }
         vaults[vaultId] = _vault;                                                           // 1 SSTORE
-    } */
+        emit VaultTweaked(vaultId, seriesId, ilkId);
+    }
 
     /// @dev Transfer a vault to another user.
     /// Doesn't check inputs, or collateralization level. Do that in public functions.
@@ -280,7 +282,16 @@ contract Vat {
 
     // ---- Public processes ----
 
-    // Give a vault to another user.
+    /// @dev Change a vault series or collateral.
+    function tweak(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
+        public
+    {
+        require (vaults[vaultId].owner == msg.sender, "Only vault owner");                  // 1 SLOAD
+        // __tweak checks that the series and the collateral both exist and that the collateral is approved for the series
+        __tweak(vaultId, seriesId, ilkId);                                                  // Cost of `__give`
+    }
+
+    /// @dev Give a vault to another user.
     function give(bytes12 vaultId, address user)
         public
     {
