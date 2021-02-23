@@ -139,17 +139,13 @@ contract Vat {
         emit VaultBuilt(vaultId, msg.sender, seriesId, ilkId);
     }
 
-    /* function emptyBalances(bytes12 vaultId) internal view returns (bool) {
-        DataTypes.Balances memory balances = vaultBalances[vaultId];
-        return balances.art == 0 && balances.ink == 0;
-    } */
-
     /// @dev Destroy an empty vault. Used to recover gas costs.
     function destroy(bytes12 vaultId)
         public
     {
         require (vaults[vaultId].owner == msg.sender, "Only vault owner");                  // 1 SLOAD
-        // require (emptyBalances(vaultId), "Destroy only empty vaults");                   // 1 SLOAD
+        DataTypes.Balances memory _balances = vaultBalances[vaultId];                       // 1 SLOAD
+        require (_balances.art == 0 && _balances.ink == 0, "Only empty vaults");            // 1 SLOAD
         // delete timestamps[vaultId];                                                      // 1 SSTORE REFUND
         delete vaults[vaultId];                                                             // 1 SSTORE REFUND
         emit VaultDestroyed(vaultId);

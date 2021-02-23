@@ -1,10 +1,11 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 
 import { Vat } from '../typechain/Vat'
+import { CDPProxy } from '../typechain/CDPProxy'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 
-import { YieldEnvironment } from './shared/fixtures'
+import { YieldEnvironment, WAD } from './shared/fixtures'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
@@ -17,6 +18,7 @@ describe('Vat - Vaults', () => {
   let other: string
   let env: YieldEnvironment
   let vat: Vat
+  let cdpProxy: CDPProxy
   let vatFromOther: Vat
   let fyToken: FYToken
   let base: ERC20Mock
@@ -47,13 +49,12 @@ describe('Vat - Vaults', () => {
   beforeEach(async () => {
     env = await loadFixture(fixture);
     vat = env.vat
+    cdpProxy = env.cdpProxy
     base = env.assets.get(baseId) as ERC20Mock
     ilk = env.assets.get(ilkId) as ERC20Mock
     fyToken = env.series.get(seriesId) as FYToken
 
     vatFromOther = vat.connect(otherAcc)
-
-    await vat.setMaxDebt(baseId, ilkId, 2)
   })
 
   it('does not build a vault with an unknown series', async () => { // TODO: Error message misleading, replace in contract for something generic
@@ -96,6 +97,11 @@ describe('Vat - Vaults', () => {
 
     it('does not allow destroying vaults if not the vault owner', async () => {
       await expect(vatFromOther.destroy(vaultId)).to.be.revertedWith('Only vault owner')
+    })
+
+    it('does not allow destroying vaults if not empty', async () => {
+      await cdpProxy.frob(vaultId, WAD, 0)
+      await expect(vat.destroy(vaultId)).to.be.revertedWith('Only empty vaults')
     })
 
     it('destroys a vault', async () => {
