@@ -74,4 +74,12 @@ describe('Vat - Level', () => {
     await oracle.setSpot(RAY.div(2))
     expect(await vat.level(vaultId)).to.equal(WAD.div(-2))
   })
+
+  it('users can\'t borrow and become undercollateralized', async () => {
+    await expect(cdpProxy.frob(vaultId, 0, WAD.mul(2))).to.be.revertedWith('Vat: Undercollateralized')
+  })
+
+  it('users can\'t withdraw and become undercollateralized', async () => {
+    await expect(cdpProxy.frob(vaultId, WAD.mul(-1), 0)).to.be.revertedWith('Vat: Undercollateralized')
+  })
 })
