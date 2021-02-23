@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 import "@yield-protocol/utils/contracts/token/IERC20.sol";
 import "./interfaces/IFYToken.sol";
 import "./interfaces/IJoin.sol";
-// import "./interfaces/IOracle.sol";
+import "./interfaces/IOracle.sol";
 import "./libraries/DataTypes.sol";
 
 
@@ -15,8 +15,18 @@ library Math {
     }
 }
 
+library RMath { // Fixed point arithmetic in Ray units
+    /// @dev Multiply an unsigned integer by another, returning a fixed point factor in ray units
+    function rmul(uint128 x, uint128 y) internal pure returns (uint128 z) {
+        uint256 _z = uint256(x) * uint256(y) / 1e27;
+        require (_z <= type(uint128).max, "RMUL Overflow");
+        z = uint128(_z);
+    }
+}
+
 contract Vat {
     using Math for uint128;
+    using RMath for uint128;
 
     event AssetAdded(bytes6 indexed assetId, address indexed asset);
     event SeriesAdded(bytes6 indexed seriesId, bytes6 indexed baseId, address indexed fyToken);
@@ -332,13 +342,13 @@ contract Vat {
         bytes6 ilkId = _vault.ilkId;
         bytes6 baseId = _series.baseId;
         IOracle oracle = spotOracles[baseId][ilkId];                                        // 1 SLOAD
-        int128 value = int128(int256(_balances.ink * oracle.spot()));                       // 1 Oracle Call | Divided by collateralization ratio | TODO: SafeCast
+        int128 value = int128(_balances.ink.rmul(oracle.spot()));                           // 1 Oracle Call | Divided by collateralization ratio | TODO: SafeCast
 
         // Debt owed by the vault in underlying terms
         int128 dues;
         if (block.timestamp >= _series.maturity) {
             // IOracle oracle = rateOracles[_series.baseId];                                 // 1 SLOAD
-            dues = int128(_balances.art /* * oracle.accrual(maturity)*/);                    // 1 Oracle Call | TODO: SafeCast
+            dues = int128(_balances.art /*.rmul(oracle.accrual(maturity))*/);                // 1 Oracle Call | TODO: SafeCast
         } else {
             dues = int128(_balances.art);
         }

@@ -22,6 +22,9 @@ import { ethers, waffle } from 'hardhat'
 // import { id } from '../src'
 const { deployContract } = waffle
 
+export const WAD = BigNumber.from("1000000000000000000")
+export const RAY = BigNumber.from("1000000000000000000000000000")
+
 export class YieldEnvironment {
   owner: SignerWithAddress
   vat: Vat
@@ -68,7 +71,7 @@ export class YieldEnvironment {
       const asset = await deployContract(owner, ERC20MockArtifact, [assetId, "Mock Base"]) as ERC20Mock
       assets.set(assetId, asset)
       await vat.addAsset(assetId, asset.address)
-      await asset.mint(ownerAdd, ethers.constants.WeiPerEther.mul(100))
+      await asset.mint(ownerAdd, WAD.mul(100))
 
       const join = await deployContract(owner, JoinArtifact, [asset.address]) as Join
       joins.set(assetId, join)
@@ -84,7 +87,7 @@ export class YieldEnvironment {
 
     // ==== Set debt limits ====
     for (let ilkId of ilkIds) {
-      await vat.setMaxDebt(baseId, ilkId, ethers.constants.WeiPerEther.mul(1000000))
+      await vat.setMaxDebt(baseId, ilkId, WAD.mul(1000000))
     }
 
     // ==== Add oracles and series ====
@@ -92,6 +95,7 @@ export class YieldEnvironment {
     const oracles: Map<string, OracleMock> = new Map()
     for (let ilkId of ilkIds) {
       const oracle = (await deployContract(owner, OracleMockArtifact, [])) as OracleMock
+      await oracle.setSpot(RAY.mul(2))
       await vat.addSpotOracle(baseId, ilkId, oracle.address) // This allows to set the ilks below
       oracles.set(ilkId, oracle)
     }
