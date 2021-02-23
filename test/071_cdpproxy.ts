@@ -50,6 +50,7 @@ describe('CDPProxy', () => {
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
   const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
+  const ratio = 10000 // == 100% collateralization ratio
   let vaultId: string
 
   beforeEach(async () => {
@@ -69,7 +70,7 @@ describe('CDPProxy', () => {
 
     await vat.addAsset(ilkId, ilk.address)
     await vat.setMaxDebt(baseId, ilkId, WAD.mul(2))
-    await vat.addSpotOracle(baseId, ilkId, oracle.address)
+    await vat.addSpotOracle(baseId, ilkId, oracle.address, ratio)
     await vat.addIlk(seriesId, ilkId)
 
     await vat.build(seriesId, ilkId)

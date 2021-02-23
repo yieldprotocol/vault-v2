@@ -15,11 +15,16 @@ library DataTypes {
         uint128 sum;                                                    // Current debt for a given underlying, across all series
     }
 
-    // ==== Vault ordering ====
+    struct Spot {
+        IOracle oracle;                                                 // Address for the spot price oracle
+        uint32  ratio;                                                  // Collateralization ratio to multiply the price for
+        // bytes8 free
+    }
+
     struct Vault {
         address owner;
-        bytes6 seriesId;                                                 // Each vault is related to only one series, which also determines the underlying.
-        bytes6 ilkId;                                                    // Asset accepted as collateral
+        bytes6  seriesId;                                                // Each vault is related to only one series, which also determines the underlying.
+        bytes6  ilkId;                                                   // Asset accepted as collateral
     }
 
     struct Balances {
