@@ -194,10 +194,9 @@ contract Vat {
         balances[to].assets += ink;                                                         // 1 SSTORE
     } */
 
-    // Add collateral and borrow from vault, pull assets from and push borrowed asset to user
-    // Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
-    // Doesn't check inputs, or collateralization level. Do that in public functions.
-    // TODO: Extend to allow other accounts in `join`
+    /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
+    /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
+    /// Doesn't check inputs, or collateralization level. Do that in public functions.
     function __frob(bytes12 vaultId, int128 ink, int128 art)
         internal returns (DataTypes.Balances memory)
     {
