@@ -16,7 +16,7 @@ const { deployContract, loadFixture } = waffle
 
 import { YieldEnvironment, WAD, RAY } from './shared/fixtures'
 
-describe('CDPProxy', () => {
+describe('CDPProxy - frob', () => {
   let env: YieldEnvironment
   let ownerAcc: SignerWithAddress
   let otherAcc: SignerWithAddress
@@ -142,7 +142,17 @@ describe('CDPProxy', () => {
       beforeEach(async () => {
         await cdpProxy.frob(vaultId, WAD, WAD)
       })
-  
+
+      it('users can repay their debt', async () => {
+        await expect(cdpProxy.frob(vaultId, 0, WAD.mul(-1))).to.emit(vat, 'VaultFrobbed').withArgs(vaultId, seriesId, ilkId, 0, WAD.mul(-1))
+        expect(await fyToken.balanceOf(owner)).to.equal(0)
+        expect((await vat.vaultBalances(vaultId)).art).to.equal(0)
+      })
+
+      it('users can\'t repay more debt than they have', async () => {
+        await expect(cdpProxy.frob(vaultId, 0, WAD.mul(-2))).to.be.revertedWith('Result below zero')
+      })
+
       it('users can borrow while under the global debt limit', async () => {
         await expect(cdpProxy.frob(vaultId, WAD, WAD)).to.emit(vat, 'VaultFrobbed').withArgs(vaultId, seriesId, ilkId, WAD, WAD)
       })
