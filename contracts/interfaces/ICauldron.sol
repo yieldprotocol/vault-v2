@@ -7,23 +7,23 @@ import "@yield-protocol/utils/contracts/token/IERC20.sol";
 import "../libraries/DataTypes.sol";
 
 
-interface IVat {
-    /// @dev Add a collateral to Vat
+interface ICauldron {
+    /// @dev Add a collateral to Cauldron
     // function addAsset(bytes6 id, address asset) external;
 
-    /// @dev Add an underlying to Vat
+    /// @dev Add an underlying to Cauldron
     // function addAsset(address asset) external;
 
-    /// @dev Add a series to Vat
+    /// @dev Add a series to Cauldron
     // function addSeries(bytes32 series, IERC20 asset, IFYToken fyToken) external;
 
-    /// @dev Add a spot oracle to Vat
+    /// @dev Add a spot oracle to Cauldron
     // function setSpotOracle(IERC20 asset, IERC20 asset, IOracle oracle) external;
 
-    /// @dev Add a chi oracle to Vat
+    /// @dev Add a chi oracle to Cauldron
     // function addChiOracle(IERC20 asset, IOracle oracle) external;
 
-    /// @dev Add a rate oracle to Vat
+    /// @dev Add a rate oracle to Cauldron
     // function addRateOracle(IERC20 asset, IOracle oracle) external;
 
     /// @dev Spot price oracle for an underlying and collateral
@@ -38,13 +38,13 @@ interface IVat {
     /// @dev An user can own one or more Vaults, with each vault being able to borrow from a single series.
     function vaults(bytes12 vault) external view returns (DataTypes.Vault memory);
 
-    /// @dev Series available in Vat.
+    /// @dev Series available in Cauldron.
     function series(bytes6 seriesId) external returns (DataTypes.Series memory);
 
-    /// @dev Collaterals available in Vat.
+    /// @dev Collaterals available in Cauldron.
     function assets(bytes6 assetsDd) external returns (IERC20);
 
-    /// @dev Underlyings available in Vat.
+    /// @dev Underlyings available in Cauldron.
     // function assets(bytes6 id) external returns (IERC20);
 
     /// @dev Each vault records debt and collateral balances.
@@ -61,7 +61,7 @@ interface IVat {
 
 
     // ---- Restricted processes ----
-    // Usable only by a authorized modules that won't cheat on Vat.
+    // Usable only by a authorized modules that won't cheat on Cauldron.
 
     /// @dev Change series and debt of a vault.
     /// The module calling this function also needs to buy underlying in the pool for the new series, and sell it in pool for the old series.
@@ -72,7 +72,7 @@ interface IVat {
     // function _grab(bytes12 vault) external;
 
     /// @dev Manipulate a vault debt and collateral.
-    function _frob(bytes12 vault, int128 ink, int128 art) external returns (DataTypes.Balances memory);
+    function _stir(bytes12 vault, int128 ink, int128 art) external returns (DataTypes.Balances memory);
 
     // ---- Public processes ----
 
@@ -80,12 +80,12 @@ interface IVat {
     // function give(bytes12 vault, address user) external;
 
     /// @dev Move collateral between vaults.
-    // function flux(bytes12 from, bytes12 to, bytes1 assets, uint128[] memory inks) external returns (Balances, Balances);
+    // function shake(bytes12 from, bytes12 to, bytes1 assets, uint128[] memory inks) external returns (Balances, Balances);
 
     /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
     /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
     /// Checks the vault is valid, and collateralization levels at the end.
-    // function frob(bytes12 vault, bytes1 assets,  int128[] memory inks, int128 art) external returns (Balances);
+    // function stir(bytes12 vault, bytes1 assets,  int128[] memory inks, int128 art) external returns (Balances);
 
     /// @dev Repay vault debt using underlying token, pulled from user. Collateral is returned to caller
     // function close(bytes12 vault, bytes1 assets, int128[] memory inks, uint128 repay) external returns (Balances);

@@ -4,19 +4,19 @@ import { formatBytes32String as toBytes32, id } from 'ethers/lib/utils'
 import { BigNumber, BigNumberish } from 'ethers'
 import { BaseProvider } from '@ethersproject/providers'
 
-import VatArtifact from '../../artifacts/contracts/Vat.sol/Vat.json'
+import CauldronArtifact from '../../artifacts/contracts/Cauldron.sol/Cauldron.json'
 import FYTokenArtifact from '../../artifacts/contracts/FYToken.sol/FYToken.json'
 import ERC20MockArtifact from '../../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
 import OracleMockArtifact from '../../artifacts/contracts/mocks/OracleMock.sol/OracleMock.json'
 import JoinArtifact from '../../artifacts/contracts/Join.sol/Join.json'
-import CDPProxyArtifact from '../../artifacts/contracts/CDPProxy.sol/CDPProxy.json'
+import LadleArtifact from '../../artifacts/contracts/Ladle.sol/Ladle.json'
 
-import { Vat } from '../../typechain/Vat'
+import { Cauldron } from '../../typechain/Cauldron'
 import { FYToken } from '../../typechain/FYToken'
 import { ERC20Mock } from '../../typechain/ERC20Mock'
 import { OracleMock } from '../../typechain/OracleMock'
 import { Join } from '../../typechain/Join'
-import { CDPProxy } from '../../typechain/CDPProxy'
+import { Ladle } from '../../typechain/Ladle'
 
 import { ethers, waffle } from 'hardhat'
 // import { id } from '../src'
@@ -28,8 +28,8 @@ export const THREE_MONTHS: number = 3 * 30 * 24 * 60 * 60
 
 export class YieldEnvironment {
   owner: SignerWithAddress
-  vat: Vat
-  cdpProxy: CDPProxy
+  cauldron: Cauldron
+  ladle: Ladle
   assets: Map<string, ERC20Mock>
   oracles: Map<string, OracleMock>
   series: Map<string, FYToken>
@@ -38,8 +38,8 @@ export class YieldEnvironment {
   
   constructor(
     owner: SignerWithAddress,
-    vat: Vat,
-    cdpProxy: CDPProxy,
+    cauldron: Cauldron,
+    ladle: Ladle,
     assets: Map<string, ERC20Mock>,
     oracles: Map<string, OracleMock>,
     series: Map<string, FYToken>,
@@ -47,8 +47,8 @@ export class YieldEnvironment {
     vaults: Map<string, Map<string, string>>
   ) {
     this.owner = owner
-    this.vat = vat
-    this.cdpProxy = cdpProxy
+    this.cauldron = cauldron
+    this.ladle = ladle
     this.assets = assets
     this.oracles = oracles
     this.series = series
@@ -60,23 +60,23 @@ export class YieldEnvironment {
   public static async setup(owner: SignerWithAddress, assetIds: Array<string>, seriesIds: Array<string>) {
     const ownerAdd = await owner.getAddress()
 
-    const vat = (await deployContract(owner, VatArtifact, [])) as Vat
-    const cdpProxy = (await deployContract(owner, CDPProxyArtifact, [vat.address])) as CDPProxy
+    const cauldron = (await deployContract(owner, CauldronArtifact, [])) as Cauldron
+    const ladle = (await deployContract(owner, LadleArtifact, [cauldron.address])) as Ladle
 
     // ==== Add assets and joins ====
-    // For each asset id passed as an argument, we create a Mock ERC20 which we register in vat, and its Join, that we register in CDPProxy.
+    // For each asset id passed as an argument, we create a Mock ERC20 which we register in cauldron, and its Join, that we register in Ladle.
     // We also give 100 tokens of that asset to the owner account, and approve with the owner for the join to take the asset.
     const assets: Map<string, ERC20Mock> = new Map()
     const joins: Map<string, Join> = new Map()
     for (let assetId of assetIds) {
       const asset = await deployContract(owner, ERC20MockArtifact, [assetId, "Mock Base"]) as ERC20Mock
       assets.set(assetId, asset)
-      await vat.addAsset(assetId, asset.address)
+      await cauldron.addAsset(assetId, asset.address)
       await asset.mint(ownerAdd, WAD.mul(100))
 
       const join = await deployContract(owner, JoinArtifact, [asset.address]) as Join
       joins.set(assetId, join)
-      await cdpProxy.addJoin(assetId, join.address)
+      await ladle.addJoin(assetId, join.address)
       await asset.approve(join.address, ethers.constants.MaxUint256)
     }
 
@@ -88,7 +88,7 @@ export class YieldEnvironment {
 
     // ==== Set debt limits ====
     for (let ilkId of ilkIds) {
-      await vat.setMaxDebt(baseId, ilkId, WAD.mul(1000000))
+      await cauldron.setMaxDebt(baseId, ilkId, WAD.mul(1000000))
     }
 
     // ==== Add oracles and series ====
@@ -97,14 +97,14 @@ export class YieldEnvironment {
     const oracles: Map<string, OracleMock> = new Map()   
     const oracle = (await deployContract(owner, OracleMockArtifact, [])) as OracleMock
     await oracle.setSpot(RAY.mul(2))
-    await vat.setRateOracle(baseId, oracle.address)                 // This allows to set the series below.
+    await cauldron.setRateOracle(baseId, oracle.address)                 // This allows to set the series below.
     oracles.set(baseId, oracle)
 
     const ratio = 10000                                             //  10000 == 100% collateralization ratio
     for (let ilkId of ilkIds) {
       const oracle = (await deployContract(owner, OracleMockArtifact, [])) as OracleMock
       await oracle.setSpot(RAY.mul(2))
-      await vat.setSpotOracle(baseId, ilkId, oracle.address, ratio) // This allows to set the ilks below.
+      await cauldron.setSpotOracle(baseId, ilkId, oracle.address, ratio) // This allows to set the ilks below.
       oracles.set(ilkId, oracle)
     }
 
@@ -118,11 +118,11 @@ export class YieldEnvironment {
     for (let seriesId of seriesIds) {
       const fyToken = (await deployContract(owner, FYTokenArtifact, [base.address, mockOracleAddress, now + THREE_MONTHS * count++, seriesId, "Mock FYToken"])) as FYToken
       series.set(seriesId, fyToken)
-      await vat.addSeries(seriesId, baseId, fyToken.address)
+      await cauldron.addSeries(seriesId, baseId, fyToken.address)
 
       // Add all assets except the first one as approved collaterals
       for (let ilkId of assetIds.slice(1)) {
-        await vat.addIlk(seriesId, ilkId)
+        await cauldron.addIlk(seriesId, ilkId)
       }
     }
 
@@ -132,14 +132,14 @@ export class YieldEnvironment {
     for (let seriesId of seriesIds) {
       const seriesVaults: Map<string, string> = new Map()
       for (let ilkId of ilkIds) {
-        await vat.build(seriesId, ilkId)
-        const event = (await vat.queryFilter(vat.filters.VaultBuilt(null, null, null, null)))[0]
+        await cauldron.build(seriesId, ilkId)
+        const event = (await cauldron.queryFilter(cauldron.filters.VaultBuilt(null, null, null, null)))[0]
         const vaultId = event.args.vaultId
         seriesVaults.set(ilkId, vaultId)
       }
       vaults.set(seriesId, seriesVaults)
     }
 
-    return new YieldEnvironment(owner, vat, cdpProxy, assets, oracles, series, joins, vaults)
+    return new YieldEnvironment(owner, cauldron, ladle, assets, oracles, series, joins, vaults)
   }
 }

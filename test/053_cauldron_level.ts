@@ -1,8 +1,8 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { BigNumber } from 'ethers'
 
-import { Vat } from '../typechain/Vat'
-import { CDPProxy } from '../typechain/CDPProxy'
+import { Cauldron } from '../typechain/Cauldron'
+import { Ladle } from '../typechain/Ladle'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock as ERC20 } from '../typechain/ERC20Mock'
 import { OracleMock as Oracle } from '../typechain/OracleMock'
@@ -14,12 +14,12 @@ import { expect } from 'chai'
 const { loadFixture } = waffle
 const timeMachine = require('ether-time-traveler');
 
-describe('Vat - Level', () => {
+describe('Cauldron - Level', () => {
   let ownerAcc: SignerWithAddress
   let owner: string
   let env: YieldEnvironment
-  let vat: Vat
-  let cdpProxy: CDPProxy
+  let cauldron: Cauldron
+  let ladle: Ladle
   let fyToken: FYToken
   let base: ERC20
   let ilk: ERC20
@@ -44,8 +44,8 @@ describe('Vat - Level', () => {
   beforeEach(async function () {
     this.timeout(0)
     env = await loadFixture(fixture);
-    vat = env.vat
-    cdpProxy = env.cdpProxy
+    cauldron = env.cauldron
+    ladle = env.ladle
     base = env.assets.get(baseId) as ERC20
     ilk = env.assets.get(ilkId) as ERC20
     rateOracle = env.oracles.get(baseId) as Oracle
@@ -54,19 +54,19 @@ describe('Vat - Level', () => {
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
 
     await spotOracle.setSpot(RAY.mul(2))
-    await cdpProxy.frob(vaultId, WAD, WAD)
+    await ladle.stir(vaultId, WAD, WAD)
   })
 
   it('before maturity, level is ink * spot - art * ratio', async () => {
-    const ink = (await vat.vaultBalances(vaultId)).ink
-    const art = (await vat.vaultBalances(vaultId)).art
+    const ink = (await cauldron.vaultBalances(vaultId)).ink
+    const art = (await cauldron.vaultBalances(vaultId)).art
     for (let spot of [1, 2, 4]) {
       await spotOracle.setSpot(RAY.mul(spot))
       for (let ratio of [50, 100, 200]) {
-        await vat.setSpotOracle(baseId, ilkId, spotOracle.address, ratio * 100)
+        await cauldron.setSpotOracle(baseId, ilkId, spotOracle.address, ratio * 100)
         const expectedLevel = (ink.mul(spot)).sub(art.mul(ratio).div(100))
-        expect(await vat.level(vaultId)).to.equal(expectedLevel)
-        // console.log(`${ink} * ${RAY.mul(spot)} - ${art} * ${ratio} = ${await vat.level(vaultId)} | ${expectedLevel} `)
+        expect(await cauldron.level(vaultId)).to.equal(expectedLevel)
+        // console.log(`${ink} * ${RAY.mul(spot)} - ${art} * ${ratio} = ${await cauldron.level(vaultId)} | ${expectedLevel} `)
       }
     }
   })
@@ -77,28 +77,28 @@ describe('Vat - Level', () => {
     await timeMachine.advanceTimeAndBlock(ethers.provider, THREE_MONTHS)
     await rateOracle.record(await fyToken.maturity())
 
-    const ink = (await vat.vaultBalances(vaultId)).ink
-    const art = (await vat.vaultBalances(vaultId)).art
+    const ink = (await cauldron.vaultBalances(vaultId)).ink
+    const art = (await cauldron.vaultBalances(vaultId)).art
     for (let spot of [1, 2, 4]) {
       await spotOracle.setSpot(RAY.mul(spot))
       for (let rate of [110, 120, 140]) {
         await rateOracle.setSpot(RAY.mul(rate).div(100))
         // accrual = rate / 100
         for (let ratio of [50, 100, 200]) {
-          await vat.setSpotOracle(baseId, ilkId, spotOracle.address, ratio * 100)
+          await cauldron.setSpotOracle(baseId, ilkId, spotOracle.address, ratio * 100)
           const expectedLevel = (ink.mul(spot)).sub(art.mul(rate).mul(ratio).div(10000))
-          expect(await vat.level(vaultId)).to.equal(expectedLevel)
-          // console.log(`${ink} * ${RAY.mul(spot)} - ${art} * ${ratio} = ${await vat.level(vaultId)} | ${expectedLevel} `)
+          expect(await cauldron.level(vaultId)).to.equal(expectedLevel)
+          // console.log(`${ink} * ${RAY.mul(spot)} - ${art} * ${ratio} = ${await cauldron.level(vaultId)} | ${expectedLevel} `)
         }
       }
     }
   })
 
   it('users can\'t borrow and become undercollateralized', async () => {
-    await expect(cdpProxy.frob(vaultId, 0, WAD.mul(2))).to.be.revertedWith('Undercollateralized')
+    await expect(ladle.stir(vaultId, 0, WAD.mul(2))).to.be.revertedWith('Undercollateralized')
   })
 
   it('users can\'t withdraw and become undercollateralized', async () => {
-    await expect(cdpProxy.frob(vaultId, WAD.mul(-1), 0)).to.be.revertedWith('Undercollateralized')
+    await expect(ladle.stir(vaultId, WAD.mul(-1), 0)).to.be.revertedWith('Undercollateralized')
   })
 })

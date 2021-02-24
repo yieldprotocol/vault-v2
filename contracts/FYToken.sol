@@ -46,7 +46,7 @@ contract FYToken is /* Orchestrated(),*/ ERC20Permit  {
         );
         _burn(from, amount);
 
-        // consider moving these two lines to Vat. Credit the user's account with the redemption value, then they can remove via the join.
+        // consider moving these two lines to Cauldron. Credit the user's account with the redemption value, then they can remove via the join.
         uint256 redeemed = amount * oracle.accrual(maturity);
         treasury.pull(base, to, amount);
         

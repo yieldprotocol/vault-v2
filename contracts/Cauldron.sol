@@ -24,7 +24,7 @@ library RMath { // Fixed point arithmetic in Ray units
     }
 }
 
-contract Vat {
+contract Cauldron {
     using Math for uint128;
     using RMath for uint128;
 
@@ -40,13 +40,13 @@ contract Vat {
     event VaultDestroyed(bytes12 indexed vaultId);
     event VaultTransfer(bytes12 indexed vaultId, address indexed receiver);
 
-    event VaultFrobbed(bytes12 indexed vaultId, bytes6 indexed seriesId, bytes6 indexed ilkId, int128 ink, int128 art);
-    event VaultFluxxed(bytes12 indexed from, bytes12 indexed to, uint128 ink);
+    event VaultStirred(bytes12 indexed vaultId, bytes6 indexed seriesId, bytes6 indexed ilkId, int128 ink, int128 art);
+    event VaultShaken(bytes12 indexed from, bytes12 indexed to, uint128 ink);
 
     // ==== Protocol data ====
-    mapping (bytes6 => IERC20)                              public assets;          // Underlyings and collaterals available in Vat. 12 bytes still free.
+    mapping (bytes6 => IERC20)                              public assets;          // Underlyings and collaterals available in Cauldron. 12 bytes still free.
     mapping (bytes6 => mapping(bytes6 => DataTypes.Debt))   public debt;            // [baseId][ilkId] Max and sum of debt per underlying and collateral.
-    mapping (bytes6 => DataTypes.Series)                    public series;          // Series available in Vat. We can possibly use a bytes6 (3e14 possible series).
+    mapping (bytes6 => DataTypes.Series)                    public series;          // Series available in Cauldron. We can possibly use a bytes6 (3e14 possible series).
     mapping (bytes6 => mapping(bytes6 => bool))             public ilks;            // [seriesId][assetId] Assets that are approved as collateral for a series
 
     // mapping (bytes6 => IOracle)                             public chiOracles;      // Chi (savings rate) accruals oracle for the underlying
@@ -199,7 +199,7 @@ contract Vat {
 
     /// @dev Move collateral between vaults.
     /// Doesn't check inputs, or collateralization level. Do that in public functions.
-    function __flux(bytes12 from, bytes12 to, uint128 ink)
+    function __shake(bytes12 from, bytes12 to, uint128 ink)
         internal
         returns (DataTypes.Balances memory, DataTypes.Balances memory)
     {
@@ -210,7 +210,7 @@ contract Vat {
         _balancesTo.ink += ink;
         vaultBalances[from] = _balancesFrom;                                                    // 1 SSTORE
         vaultBalances[to] = _balancesTo;                                                        // 1 SSTORE
-        emit VaultFluxxed(from, to, ink);
+        emit VaultShaken(from, to, ink);
 
         return (_balancesFrom, _balancesTo);
     }
@@ -218,7 +218,7 @@ contract Vat {
     /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
     /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
     /// Doesn't check inputs, or collateralization level. Do that in public functions.
-    function __frob(bytes12 vaultId, int128 ink, int128 art)
+    function __stir(bytes12 vaultId, int128 ink, int128 art)
         internal returns (DataTypes.Balances memory)
     {
         DataTypes.Vault memory _vault = vaults[vaultId];                                    // 1 SLOAD
@@ -230,7 +230,7 @@ contract Vat {
             _balances.ink = _balances.ink.add(ink);
         }
 
-        // TODO: Consider whether _roll should call __frob, or the next block be a private function.
+        // TODO: Consider whether _roll should call __stir, or the next block be a private function.
         // Modify vault and global debt records. If debt increases, check global limit.
         if (art != 0) {
             DataTypes.Debt memory _debt = debt[_series.baseId][_vault.ilkId];               // 1 SLOAD
@@ -241,12 +241,12 @@ contract Vat {
         }
         vaultBalances[vaultId] = _balances;                                                 // 1 SSTORE
 
-        emit VaultFrobbed(vaultId, _vault.seriesId, _vault.ilkId, ink, art);
+        emit VaultStirred(vaultId, _vault.seriesId, _vault.ilkId, ink, art);
         return _balances;
     }
 
     // ---- Restricted processes ----
-    // Usable only by a authorized modules that won't cheat on Vat.
+    // Usable only by a authorized modules that won't cheat on Cauldron.
 
     // Change series and debt of a vault.
     // The module calling this function also needs to buy underlying in the pool for the new series, and sell it in pool for the old series.
@@ -288,13 +288,13 @@ contract Vat {
     /// @dev Manipulate a vault with collateralization checks.
     /// Available only to authenticated platform accounts.
     /// To be used by debt management contracts.
-    function _frob(bytes12 vaultId, int128 ink, int128 art)
+    function _stir(bytes12 vaultId, int128 ink, int128 art)
         public
         // auth                                                                             // 1 SLOAD
         returns (DataTypes.Balances memory balances)
     {
         require (vaults[vaultId].owner != address(0), "Vault not found");                   // 1 SLOAD
-        balances = __frob(vaultId, ink, art);                                               // Cost of `__frob`
+        balances = __stir(vaultId, ink, art);                                               // Cost of `__stir`
         if (balances.art > 0 && (ink < 0 || art > 0))                                       // If there is debt and we are less safe
             require(level(vaultId) >= 0, "Undercollateralized");                            // Cost of `level`
         return balances;
@@ -320,7 +320,7 @@ contract Vat {
     }
 
     // Move collateral between vaults.
-    function flux(bytes12 from, bytes12 to, uint128 ink)
+    function shake(bytes12 from, bytes12 to, uint128 ink)
         public
         returns (DataTypes.Balances memory, DataTypes.Balances memory)
     {
@@ -328,7 +328,7 @@ contract Vat {
         require (vaults[to].owner != address(0), "Vault not found");                        // 1 SLOAD
         DataTypes.Balances memory _balancesFrom;
         DataTypes.Balances memory _balancesTo;
-        (_balancesFrom, _balancesTo) = __flux(from, to, ink);                               // Cost of `__flux`
+        (_balancesFrom, _balancesTo) = __shake(from, to, ink);                               // Cost of `__shake`
         if (_balancesFrom.art > 0) require(level(from) >= 0, "Undercollateralized");        // Cost of `level`
         return (_balancesFrom, _balancesTo);
     }

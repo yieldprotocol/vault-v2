@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 import "./interfaces/IOracle.sol";
-import "./interfaces/IVat.sol";
+import "./interfaces/ICauldron.sol";
 import "./libraries/DataTypes.sol";
 
 
@@ -38,31 +38,31 @@ contract Cat {
     using DecimalMath for uint256;
   
     uint256 constant public AUCTION_TIME; // Time that auctions take to go to minimal price and stay there.
-    IVat immutable public vat;
+    ICauldron immutable public cauldron;
 
     mapping (bytes6 => IOracle) oracles;                                                // [asset] Spot oracles
 
-    constructor (IVat vat_) {
-        vat = vat_;
+    constructor (ICauldron cauldron_) {
+        cauldron = cauldron_;
     }
 
     // Put an undercollateralized vault up for liquidation.
     function grab(bytes12 vaultId)
         public
     {
-        vat._grab(vaultId);
+        cauldron._grab(vaultId);
     }
 
     // Buy an amount of collateral off a vault in liquidation, paying at most `max` underlying.
     function buy(bytes12 vaultId, uint128 ink, uint128 max)
         public
     {
-        // _frob already checks that the vault is valid.
+        // _stir already checks that the vault is valid.
         int128 art = price(vaultId, ink);                                               // Cost of `price`
         require (art <= max, "Too expensive to buy");
-        // TODO: Tweak `_frob` so that it takes the `art` from `msg.sender`, and sends the `ink` to him as well.
-        DataTypes.Balances memory balances = vat._frob(vault, ink, art);                // Cost of `vat._frob`
-        if (bytes32(balances) == bytes32(0)) vat.destroy(vault);                        // Cost of `vat.destroy`. Check balances.
+        // TODO: Tweak `_stir` so that it takes the `art` from `msg.sender`, and sends the `ink` to him as well.
+        DataTypes.Balances memory balances = cauldron._stir(vault, ink, art);                // Cost of `cauldron._stir`
+        if (bytes32(balances) == bytes32(0)) cauldron.destroy(vault);                        // Cost of `cauldron.destroy`. Check balances.
     }
 
     // Obtain the price in underlying terms to buy a selection of collateral from a vault in liquidation, at the preset time.
@@ -74,9 +74,9 @@ contract Cat {
         // Let fail if the vault doesn't exist?
         // Let fail if the vault doesn't have the right asset?
         // Let fail if the vault doesn't have enough ink?
-        uint32 timestamp = vat.timestamps(vaultId);                                     // 1 SLOAD + 700 + 12*16
+        uint32 timestamp = cauldron.timestamps(vaultId);                                     // 1 SLOAD + 700 + 12*16
         require (timestamp > 0, "Not for sale");
-        DataTypes.Balances memory balances = vat.vaultBalances(vaultId);                // 1 SLOAD + 700 + 12*16
+        DataTypes.Balances memory balances = cauldron.vaultBalances(vaultId);                // 1 SLOAD + 700 + 12*16
         uint128 _unit = unit(balances.art, block.timestamp - timestamp);
         uint128 _slice = balances.ink * _unit;                                          // Multiply collateral amount by the unit price. The result is the proportion of the debt that must be repaid in the vault.
         return _slice * balances.art;                                                   // Price in underlying terms.
