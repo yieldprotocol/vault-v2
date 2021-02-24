@@ -111,12 +111,14 @@ export class YieldEnvironment {
     // For each series identifier we create a fyToken with the first asset as underlying.
     // The maturities for the fyTokens are in three month intervals, starting three months from now
     const series: Map<string, FYToken> = new Map()
-    const mockOracleAddress =  ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20))) // This is a chi oracle
+    const chiOracle = (await deployContract(owner, OracleMockArtifact, [])) as OracleMock // Not storing this one in `oracles`, you can retrieve it from the fyToken
+    await chiOracle.setSpot(RAY)
     const provider: BaseProvider = ethers.getDefaultProvider()
     const now = (await provider.getBlock(provider.getBlockNumber())).timestamp
     let count: number = 1
+    const baseJoin = joins.get(baseId) as Join
     for (let seriesId of seriesIds) {
-      const fyToken = (await deployContract(owner, FYTokenArtifact, [base.address, mockOracleAddress, now + THREE_MONTHS * count++, seriesId, "Mock FYToken"])) as FYToken
+      const fyToken = (await deployContract(owner, FYTokenArtifact, [chiOracle.address, baseJoin.address, now + THREE_MONTHS * count++, seriesId, "Mock FYToken"])) as FYToken
       series.set(seriesId, fyToken)
       await cauldron.addSeries(seriesId, baseId, fyToken.address)
 
