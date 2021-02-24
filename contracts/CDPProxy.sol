@@ -81,7 +81,7 @@ contract CDPProxy {
         external
         returns (DataTypes.Balances memory _balances)
     {
-        require (art <= 0, "Only repay debt");
+        require (art <= 0, "Only repay debt");                                      // When repaying debt in `frob`, art is a negaive value. Here is the same for consistency.
         DataTypes.Vault memory _vault = vat.vaults(vaultId);                        // 1 CALL + 1 SLOAD
         require (_vault.owner == msg.sender, "Only vault owner");
 
