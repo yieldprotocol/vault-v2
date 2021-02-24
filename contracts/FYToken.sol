@@ -6,7 +6,17 @@ import "./interfaces/IJoin.sol";
 import "@yield-protocol/utils/contracts/token/ERC20Permit.sol";
 
 
+library RMath { // Fixed point arithmetic in Ray units
+    /// @dev Multiply an amount by a fixed point factor in ray units, returning an amount
+    function rmul(uint128 x, uint128 y) internal pure returns (uint128 z) {
+        uint256 _z = uint256(x) * uint256(y) / 1e27;
+        require (_z <= type(uint128).max, "RMUL Overflow");
+        z = uint128(_z);
+    }
+}
+
 contract FYToken is /* Orchestrated(),*/ ERC20Permit  {
+    using RMath for uint128;
 
     event Redeemed(address indexed from, address indexed to, uint256 amount, uint256 redeemed);
 
@@ -23,7 +33,7 @@ contract FYToken is /* Orchestrated(),*/ ERC20Permit  {
         string memory name,
         string memory symbol
     ) ERC20Permit(name, symbol) {
-        require(maturity_ > block.timestamp && maturity_ < block.timestamp + MAX_TIME_TO_MATURITY, "Invalid maturity");
+        require(/*maturity_ > block.timestamp && */maturity_ < block.timestamp + MAX_TIME_TO_MATURITY, "Invalid maturity");
         oracle = oracle_;
         join = join_;
         maturity = maturity_;
@@ -35,23 +45,23 @@ contract FYToken is /* Orchestrated(),*/ ERC20Permit  {
     function mature() 
         public
     {
-        oracle.record(maturity); // The oracle checks the timestamp and that it hasn't been recorded yet.        
+        oracle.record(maturity);                                    // Cost of `record` | The oracle checks the timestamp and that it hasn't been recorded yet.        
     }
 
     /// @dev Burn the fyToken after maturity for an amount that increases according to `chi`
-    function redeem(address to, uint256 amount)
+    function redeem(address to, uint128 amount)
         public
-        returns (uint256)
+        returns (uint128)
     {
         require(
             block.timestamp >= maturity,
-            "fyToken is not mature"
+            "Not mature"
         );
-        _burn(msg.sender, amount);
+        _burn(msg.sender, amount);                                  // 2 SSTORE
 
         // Consider moving these two lines to Ladle.
-        uint256 redeemed = amount * oracle.accrual(maturity);
-        join.join(to, -int128(uint128(redeemed))); // TODO: SafeCast
+        uint128 redeemed = amount.rmul(oracle.accrual(maturity));   // Cost of `accrual`
+        join.join(to, -int128(redeemed));                           // Cost of `join` | TODO: SafeCast
         
         emit Redeemed(msg.sender, to, amount, redeemed);
         return amount;
@@ -62,7 +72,7 @@ contract FYToken is /* Orchestrated(),*/ ERC20Permit  {
         public
         /* auth */
     {
-        _mint(to, amount);
+        _mint(to, amount);                                        // 2 SSTORE
     }
 
     /// @dev Burn fyTokens.
@@ -70,6 +80,6 @@ contract FYToken is /* Orchestrated(),*/ ERC20Permit  {
         public
         /* auth */
     {
-        _burn(from, amount);
+        _burn(from, amount);                                        // 2 SSTORE
     }
 }

@@ -63,7 +63,7 @@ describe('Ladle - close', () => {
     ilk = env.assets.get(ilkId) as ERC20Mock
     ilkJoin = env.joins.get(ilkId) as Join
     fyToken = env.series.get(seriesId) as FYToken
-    rateOracle = env.oracles.get(baseId) as OracleMock
+    rateOracle = env.oracles.get('rate') as OracleMock
     spotOracle = env.oracles.get(ilkId) as OracleMock
 
     ladleFromOther = ladle.connect(otherAcc)

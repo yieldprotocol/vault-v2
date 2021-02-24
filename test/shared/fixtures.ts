@@ -93,12 +93,11 @@ export class YieldEnvironment {
 
     // ==== Add oracles and series ====
     // There is only one base, so the oracles we need are one for each ilk, against the only base.
-    // We store the rate oracle as the first one, with the base identifier
     const oracles: Map<string, OracleMock> = new Map()   
     const oracle = (await deployContract(owner, OracleMockArtifact, [])) as OracleMock
     await oracle.setSpot(RAY.mul(2))
     await cauldron.setRateOracle(baseId, oracle.address)                 // This allows to set the series below.
-    oracles.set(baseId, oracle)
+    oracles.set('rate', oracle)
 
     const ratio = 10000                                             //  10000 == 100% collateralization ratio
     for (let ilkId of ilkIds) {
@@ -113,6 +112,7 @@ export class YieldEnvironment {
     const series: Map<string, FYToken> = new Map()
     const chiOracle = (await deployContract(owner, OracleMockArtifact, [])) as OracleMock // Not storing this one in `oracles`, you can retrieve it from the fyToken
     await chiOracle.setSpot(RAY)
+    oracles.set('chi', chiOracle)
     const provider: BaseProvider = ethers.getDefaultProvider()
     const now = (await provider.getBlock(provider.getBlockNumber())).timestamp
     let count: number = 1
