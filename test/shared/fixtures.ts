@@ -24,6 +24,7 @@ const { deployContract } = waffle
 
 export const WAD = BigNumber.from("1000000000000000000")
 export const RAY = BigNumber.from("1000000000000000000000000000")
+export const THREE_MONTHS: number = 3 * 30 * 24 * 60 * 60
 
 export class YieldEnvironment {
   owner: SignerWithAddress
@@ -92,12 +93,18 @@ export class YieldEnvironment {
 
     // ==== Add oracles and series ====
     // There is only one base, so the oracles we need are one for each ilk, against the only base.
-    const oracles: Map<string, OracleMock> = new Map()
+    // We store the rate oracle as the first one, with the base identifier
+    const oracles: Map<string, OracleMock> = new Map()   
+    const oracle = (await deployContract(owner, OracleMockArtifact, [])) as OracleMock
+    await oracle.setSpot(RAY.mul(2))
+    await vat.setRateOracle(baseId, oracle.address)                 // This allows to set the series below.
+    oracles.set(baseId, oracle)
+
     const ratio = 10000                                             //  10000 == 100% collateralization ratio
     for (let ilkId of ilkIds) {
       const oracle = (await deployContract(owner, OracleMockArtifact, [])) as OracleMock
       await oracle.setSpot(RAY.mul(2))
-      await vat.addSpotOracle(baseId, ilkId, oracle.address, ratio) // This allows to set the ilks below.
+      await vat.setSpotOracle(baseId, ilkId, oracle.address, ratio) // This allows to set the ilks below.
       oracles.set(ilkId, oracle)
     }
 
@@ -107,7 +114,6 @@ export class YieldEnvironment {
     const mockOracleAddress =  ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20))) // This is a chi oracle
     const provider: BaseProvider = ethers.getDefaultProvider()
     const now = (await provider.getBlock(provider.getBlockNumber())).timestamp
-    const THREE_MONTHS: number = 3 * 30 * 24 * 60 * 60
     let count: number = 1
     for (let seriesId of seriesIds) {
       const fyToken = (await deployContract(owner, FYTokenArtifact, [base.address, mockOracleAddress, now + THREE_MONTHS * count++, seriesId, "Mock FYToken"])) as FYToken

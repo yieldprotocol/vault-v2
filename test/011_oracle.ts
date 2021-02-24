@@ -5,7 +5,6 @@ import { OracleMock as Oracle } from '../typechain/OracleMock'
 import { BigNumber } from 'ethers'
 
 import { ethers, waffle } from 'hardhat'
-// import { id } from '../src'
 import { expect } from 'chai'
 const { deployContract } = waffle
 
@@ -28,11 +27,6 @@ describe('Oracle', () => {
   })
 
   it('sets and retrieves the spot price', async () => {
-    await oracle.setSpot(1)
-    expect(await oracle.spot()).to.equal(1)
-  })
-
-  it('records and retrieves the spot price', async () => {
     await oracle.setSpot(1)
     expect(await oracle.spot()).to.equal(1)
   })

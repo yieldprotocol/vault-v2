@@ -6,7 +6,9 @@ import "../interfaces/IOracle.sol";
 library RMath { // Fixed point arithmetic in Ray units
     /// @dev Divide an unsigned integer by another, returning a fixed point factor in ray units
     function rdiv(uint128 x, uint128 y) internal pure returns (uint128 z) {
-        z = x * 1e27 / y; // We just rely on built-in exceptions
+        uint256 _z = uint256(x) * 1e27 / uint256(y);
+        require (_z <= type(uint128).max, "RDIV Overflow");
+        z = uint128(_z);
     }
 }
 
@@ -43,5 +45,9 @@ contract OracleMock is IOracle {
     /// @dev Set the spot price.
     function setSpot(uint128 spot_) external {
         _spot = spot_;
+    }
+
+    function time() external view returns (uint256) {
+        return block.timestamp;
     }
 }

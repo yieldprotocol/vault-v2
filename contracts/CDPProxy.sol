@@ -4,12 +4,23 @@ import "@yield-protocol/utils/contracts/token/IERC20.sol";
 import "./interfaces/IFYToken.sol";
 import "./interfaces/IJoin.sol";
 import "./interfaces/IVat.sol";
-// import "./interfaces/IOracle.sol";
+import "./interfaces/IOracle.sol";
 import "./libraries/DataTypes.sol";
+
+
+library RMath { // Fixed point arithmetic in Ray units
+    /// @dev Divide an unsigned integer by another, returning a fixed point factor in ray units
+    function rdiv(uint128 x, uint128 y) internal pure returns (uint128 z) {
+        uint256 _z = uint256(x) * 1e27 / uint256(y);
+        require (_z <= type(uint128).max, "RDIV Overflow");
+        z = uint128(_z);
+    }
+}
 
 /// @dev CDPProxy orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
 /// TODO: Rename to highlight that this is a core contract that manages debt. The handling of Joins might be a base class to this and other contracts.
 contract CDPProxy {
+    using RMath for uint128;
 
     IVat public vat;
 
@@ -66,7 +77,7 @@ contract CDPProxy {
     }
 
     /// @dev Repay vault debt using underlying token. It can add or remove collateral at the same time.
-    /* function close(bytes12 vaultId, int128 ink, uint128 repay)
+    function close(bytes12 vaultId, int128 ink, uint128 repay)
         external
         returns (DataTypes.Balances memory _balances)
     {
@@ -74,9 +85,17 @@ contract CDPProxy {
         require (_vault.owner == msg.sender, "Only vault owner");
 
         DataTypes.Series memory _series = vat.series(_vault.seriesId);              // 1 CALL + 1 SLOAD
-        bytes6 assetId = _series[vaultId].assetId;                                  // 1 SLOAD
-        joins[assetId].join(int128(repay));                                         // Cost of `join`
-        uint128 art = repay * RAY / rateOracles[asset].accrual(_series.maturity);   // 1 SLOAD + `spot`
-        return __frob(vaultId, ink, -int128(art));                                  // Cost of `__frob`
-    } */
+        bytes6 baseId = _series.baseId;
+
+        uint128 art;
+        if (block.timestamp >= _series.maturity) {
+            IOracle rateOracle = vat.rateOracles(baseId);                           // 1 CALL + 1 SLOAD
+            art = repay.rdiv(rateOracle.accrual(_series.maturity));                 // Cost of `accrual`
+        } else {
+            art = repay;
+        }
+
+        joins[baseId].join(msg.sender, int128(repay));                              // Cost of `join`
+        return vat._frob(vaultId, ink, -int128(art));                               // Cost of `_frob`
+    }
 }

@@ -31,7 +31,8 @@ contract Vat {
     event AssetAdded(bytes6 indexed assetId, address indexed asset);
     event SeriesAdded(bytes6 indexed seriesId, bytes6 indexed baseId, address indexed fyToken);
     event IlkAdded(bytes6 indexed seriesId, bytes6 indexed ilkId);
-    event SpotOracleAdded(bytes6 indexed baseId, bytes6 indexed ilkId, address indexed oracle);
+    event SpotOracleAdded(bytes6 indexed baseId, bytes6 indexed ilkId, address indexed oracle, uint32 ratio);
+    event RateOracleAdded(bytes6 indexed baseId, address indexed oracle);
     event MaxDebtSet(bytes6 indexed baseId, bytes6 indexed ilkId, uint128 max);
 
     event VaultBuilt(bytes12 indexed vaultId, address indexed owner, bytes6 indexed seriesId, bytes6 ilkId);
@@ -48,7 +49,7 @@ contract Vat {
     mapping (bytes6 => DataTypes.Series)                    public series;          // Series available in Vat. We can possibly use a bytes6 (3e14 possible series).
     mapping (bytes6 => mapping(bytes6 => bool))             public ilks;            // [seriesId][assetId] Assets that are approved as collateral for a series
 
-    mapping (bytes6 => IOracle)                             public chiOracles;      // Chi (savings rate) accruals oracle for the underlying
+    // mapping (bytes6 => IOracle)                             public chiOracles;      // Chi (savings rate) accruals oracle for the underlying
     mapping (bytes6 => IOracle)                             public rateOracles;     // Rate (borrowing rate) accruals oracle for the underlying
     mapping (bytes6 => mapping(bytes6 => DataTypes.Spot))   public spotOracles;     // [assetId][assetId] Spot price oracles
 
@@ -68,24 +69,27 @@ contract Vat {
         emit AssetAdded(assetId, address(asset));
     }
 
-    /// @dev Add a new series
-    function addSeries(bytes6 seriesId, bytes6 baseId, IFYToken fyToken)
+    /// @dev Set the maximum debt for an underlying and ilk pair. Can be reset.
+    function setMaxDebt(bytes6 baseId, bytes6 ilkId, uint128 max)
         external
-        /*auth*/
     {
         require (assets[baseId] != IERC20(address(0)), "Asset not found");                  // 1 SLOAD
-        require (fyToken != IFYToken(address(0)), "Series need a fyToken");
-        require (series[seriesId].fyToken == IFYToken(address(0)), "Id already used");      // 1 SLOAD
-        series[seriesId] = DataTypes.Series({
-            fyToken: fyToken,
-            maturity: fyToken.maturity(),
-            baseId: baseId
-        });                                                                                 // 1 SSTORE
-        emit SeriesAdded(seriesId, baseId, address(fyToken));
+        require (assets[ilkId] != IERC20(address(0)), "Asset not found");                   // 1 SLOAD
+        debt[baseId][ilkId].max = max;                                                      // 1 SSTORE
+        emit MaxDebtSet(baseId, ilkId, max);
     }
 
-    /// @dev Add a spot oracle and its collateralization ratio
-    function addSpotOracle(bytes6 baseId, bytes6 ilkId, IOracle oracle, uint32 ratio)
+    /// @dev Set a rate oracle. Can be reset.
+    function setRateOracle(bytes6 baseId, IOracle oracle)
+        external
+    {
+        require (assets[baseId] != IERC20(address(0)), "Asset not found");                  // 1 SLOAD
+        rateOracles[baseId] = oracle;                                                       // 1 SSTORE                                                             // 1 SSTORE. Allows to replace an existing oracle.
+        emit RateOracleAdded(baseId, address(oracle));
+    }
+
+    /// @dev Set a spot oracle and its collateralization ratio. Can be reset.
+    function setSpotOracle(bytes6 baseId, bytes6 ilkId, IOracle oracle, uint32 ratio)
         external
     {
         require (assets[baseId] != IERC20(address(0)), "Asset not found");                  // 1 SLOAD
@@ -94,7 +98,24 @@ contract Vat {
             oracle: oracle,
             ratio: ratio                                                                    // With 2 decimals. 10000 == 100%
         });                                                                                 // 1 SSTORE. Allows to replace an existing oracle.
-        emit SpotOracleAdded(baseId, ilkId, address(oracle));
+        emit SpotOracleAdded(baseId, ilkId, address(oracle), ratio);
+    }
+
+    /// @dev Add a new series
+    function addSeries(bytes6 seriesId, bytes6 baseId, IFYToken fyToken)
+        external
+        /*auth*/
+    {
+        require (assets[baseId] != IERC20(address(0)), "Asset not found");                  // 1 SLOAD
+        require (fyToken != IFYToken(address(0)), "Series need a fyToken");
+        require (rateOracles[baseId] != IOracle(address(0)), "Rate oracle not found");      // 1 SLOAD
+        require (series[seriesId].fyToken == IFYToken(address(0)), "Id already used");      // 1 SLOAD
+        series[seriesId] = DataTypes.Series({
+            fyToken: fyToken,
+            maturity: fyToken.maturity(),
+            baseId: baseId
+        });                                                                                 // 1 SSTORE
+        emit SeriesAdded(seriesId, baseId, address(fyToken));
     }
 
     /// @dev Add a new Ilk (approve an asset as collateral for a series).
@@ -108,20 +129,10 @@ contract Vat {
         );
         require (
             spotOracles[_series.baseId][ilkId].oracle != IOracle(address(0)),               // 1 SLOAD
-            "Oracle not found"
+            "Spot oracle not found"
         );
         ilks[seriesId][ilkId] = true;                                                       // 1 SSTORE
         emit IlkAdded(seriesId, ilkId);
-    }
-
-    /// @dev Add a new Ilk (approve an asset as collateral for a series).
-    function setMaxDebt(bytes6 baseId, bytes6 ilkId, uint128 max)
-        external
-    {
-        require (assets[baseId] != IERC20(address(0)), "Asset not found");                  // 1 SLOAD
-        require (assets[ilkId] != IERC20(address(0)), "Asset not found");                   // 1 SLOAD
-        debt[baseId][ilkId].max = max;                                                      // 1 SSTORE
-        emit MaxDebtSet(baseId, ilkId, max);
     }
 
     // ==== Vault management ====
@@ -342,8 +353,9 @@ contract Vat {
         // Debt owed by the vault in underlying terms
         uint128 dues;
         if (block.timestamp >= _series.maturity) {
-            // IOracle oracle = rateOracles[_series.baseId];                                 // 1 SLOAD
-            dues = _balances.art /*.rmul(oracle.accrual(maturity))*/;                        // 1 Oracle Call
+            IOracle rateOracle = rateOracles[_series.baseId];                               // 1 SLOAD
+            uint128 accrual = rateOracle.accrual(_series.maturity);                         // 1 Oracle Call
+            dues = _balances.art.rmul(accrual);
         } else {
             dues = _balances.art;
         }
