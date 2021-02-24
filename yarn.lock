@@ -1368,7 +1368,7 @@
   dependencies:
     "@ethersproject/logger" "^5.0.0"
 
-"@ethersproject/providers@5.0.23", "@ethersproject/providers@^5.0.5":
+"@ethersproject/providers@5.0.23", "@ethersproject/providers@^5.0.15", "@ethersproject/providers@^5.0.5":
   version "5.0.23"
   resolved "https://registry.yarnpkg.com/@ethersproject/providers/-/providers-5.0.23.tgz#1e26512303d60bbd557242532fdb5fa3c5d5fb73"
   integrity sha512-eJ94z2tgPaUgUmxwd3BVkIzkgkbNIkY6wRPVas04LVaBTycObQbgj794aaUu2bfk7+Bn2B/gjUZtJW1ybxh9/A==
@@ -5779,6 +5779,11 @@ ethashjs@~0.0.7:
     buffer-xor "^2.0.1"
     ethereumjs-util "^7.0.2"
     miller-rabin "^4.0.0"
+
+ether-time-traveler@1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/ether-time-traveler/-/ether-time-traveler-1.1.0.tgz#8dbd21e741e44acadb5aa71f2cb725adf6bc7fcd"
+  integrity sha512-kSHw+HhhZiTyD1V6mIwB4FmzqzN7XI4+au6hrhiOIPwe0NKXCyXNXBm/1RORNWdN2opil6hXSWK93j0DQDb09A==
 
 ethereum-bloom-filters@^1.0.6:
   version "1.0.7"

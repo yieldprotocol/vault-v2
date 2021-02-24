@@ -354,7 +354,8 @@ contract Vat {
         uint128 dues;
         if (block.timestamp >= _series.maturity) {
             IOracle rateOracle = rateOracles[_series.baseId];                               // 1 SLOAD
-            dues = _balances.art.rmul(rateOracle.accrual(_series.maturity));                // 1 Oracle Call
+            uint128 accrual = rateOracle.accrual(_series.maturity);                         // 1 Oracle Call
+            dues = _balances.art.rmul(accrual);
         } else {
             dues = _balances.art;
         }
