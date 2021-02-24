@@ -9,10 +9,10 @@ import "./libraries/DataTypes.sol";
 
 
 library RMath { // Fixed point arithmetic in Ray units
-    /// @dev Divide an unsigned integer by another, returning a fixed point factor in ray units
-    function rdiv(uint128 x, uint128 y) internal pure returns (uint128 z) {
-        uint256 _z = uint256(x) * 1e27 / uint256(y);
-        require (_z <= type(uint128).max, "RDIV Overflow");
+    /// @dev Multiply an amount by a fixed point factor in ray units, returning an amount
+    function rmul(uint128 x, uint128 y) internal pure returns (uint128 z) {
+        uint256 _z = uint256(x) * uint256(y) / 1e27;
+        require (_z <= type(uint128).max, "RMUL Overflow");
         z = uint128(_z);
     }
 }
@@ -55,10 +55,7 @@ contract CDPProxy {
         DataTypes.Vault memory _vault = vat.vaults(vaultId);                // 1 CALL + 1 SLOAD
         require (_vault.owner == msg.sender, "Only vault owner");
 
-        if (ink != 0) {
-            // TODO: Consider checking the join exists
-            joins[_vault.ilkId].join(_vault.owner, ink);                    // Cost of `join` call. `join` with a negative value means `exit`.
-        }
+        if (ink != 0) joins[_vault.ilkId].join(_vault.owner, ink);          // Cost of `join`. `join` with a negative value means `exit`. | TODO: Consider checking the join exists
 
         _balances = vat._frob(vaultId, ink, art);                           // Cost of `vat.frob` call.
 
@@ -77,25 +74,33 @@ contract CDPProxy {
     }
 
     /// @dev Repay vault debt using underlying token. It can add or remove collateral at the same time.
-    function close(bytes12 vaultId, int128 ink, uint128 repay)
+    /// The debt to repay is denominated in fyToken, even if the tokens pulled from the user are underlying.
+    /// The debt to repay must be entered as a negative number, as with `frob`.
+    /// Debt cannot be acquired with this function.
+    function close(bytes12 vaultId, int128 ink, int128 art)
         external
         returns (DataTypes.Balances memory _balances)
     {
+        require (art <= 0, "Only repay debt");
         DataTypes.Vault memory _vault = vat.vaults(vaultId);                        // 1 CALL + 1 SLOAD
         require (_vault.owner == msg.sender, "Only vault owner");
 
         DataTypes.Series memory _series = vat.series(_vault.seriesId);              // 1 CALL + 1 SLOAD
         bytes6 baseId = _series.baseId;
 
-        uint128 art;
+        // Converting from fyToken debt to underlying amount allows us to repay an exact amount of debt,
+        // avoiding rounding errors and the need to pull only as much underlying as we can use.
+        uint128 amt;
         if (block.timestamp >= _series.maturity) {
             IOracle rateOracle = vat.rateOracles(baseId);                           // 1 CALL + 1 SLOAD
-            art = repay.rdiv(rateOracle.accrual(_series.maturity));                 // Cost of `accrual`
+            amt = uint128(-art).rmul(rateOracle.accrual(_series.maturity));         // Cost of `accrual`
         } else {
-            art = repay;
+            amt = uint128(-art);
         }
 
-        joins[baseId].join(msg.sender, int128(repay));                              // Cost of `join`
-        return vat._frob(vaultId, ink, -int128(art));                               // Cost of `_frob`
+        if (ink != 0) joins[_vault.ilkId].join(_vault.owner, ink);                  // Cost of `join`. `join` with a negative value means `exit`. | TODO: Consider checking the join exists
+        joins[baseId].join(msg.sender, int128(amt));                                // Cost of `join`
+        
+        return vat._frob(vaultId, ink, art);                                        // Cost of `_frob`
     }
 }

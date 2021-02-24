@@ -16,7 +16,7 @@ const { deployContract, loadFixture } = waffle
 
 import { YieldEnvironment, WAD, RAY } from './shared/fixtures'
 
-describe('CDPProxy', () => {
+describe('CDPProxy - frob', () => {
   let env: YieldEnvironment
   let ownerAcc: SignerWithAddress
   let otherAcc: SignerWithAddress
