@@ -5,14 +5,10 @@ import { OracleMock as Oracle } from '../typechain/OracleMock'
 import { BigNumber } from 'ethers'
 
 import { ethers, waffle } from 'hardhat'
-// import { id } from '../src'
 import { expect } from 'chai'
 const { deployContract } = waffle
-const timeMachine = require('ether-time-traveler');
-const provider = ethers.provider;
 
 describe('Oracle', () => {
-  let snapshotId: any
   let ownerAcc: SignerWithAddress
   let owner: string
   let oracle: Oracle
@@ -27,22 +23,7 @@ describe('Oracle', () => {
   })
 
   beforeEach(async () => {
-    snapshotId = await timeMachine.takeSnapshot(provider);
     oracle = (await deployContract(ownerAcc, OracleArtifact, [])) as Oracle
-  })
-
-  afterEach(async() => {
-    await timeMachine.revertToSnapshot(provider, snapshotId);
-  });
-
-  it.only('advances time', async () => {
-    const before = (await (provider.getBlock("latest"))).timestamp as number
-    console.log(`Before: ${await oracle.time()} | ${before}`)
-
-    const leap = 1000000
-    await timeMachine.advanceTimeAndBlock(provider, leap)
-    expect((await (provider.getBlock("latest"))).timestamp).to.equal(before + leap)
-    console.log(`After:  ${await oracle.time()} | ${before + leap}`)
   })
 
   it('sets and retrieves the spot price', async () => {
