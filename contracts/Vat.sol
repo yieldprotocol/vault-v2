@@ -10,13 +10,13 @@ import "./libraries/DataTypes.sol";
 library Math {
     /// @dev Add a number (which might be negative) to a positive, and revert if the result is negative.
     function add(uint128 x, int128 y) internal pure returns (uint128 z) {
-        require (y > 0 || x >= uint128(-y), "Math: Negative result");
+        require (y > 0 || x >= uint128(-y), "Result below zero");
         z = y > 0 ? x + uint128(y) : x - uint128(-y);
     }
 }
 
 library RMath { // Fixed point arithmetic in Ray units
-    /// @dev Multiply an unsigned integer by another, returning a fixed point factor in ray units
+    /// @dev Multiply an amount by a fixed point factor in ray units, returning an amount
     function rmul(uint128 x, uint128 y) internal pure returns (uint128 z) {
         uint256 _z = uint256(x) * uint256(y) / 1e27;
         require (_z <= type(uint128).max, "RMUL Overflow");
