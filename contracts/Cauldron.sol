@@ -30,6 +30,9 @@ library RMath { // Fixed point arithmetic in Ray units
     }
 }
 
+// TODO: Change ink for dink and art for dart when we are talking about differentials.
+// TODO: Come up with a consistent use of underscores for variables (trailing underscore?)
+
 contract Cauldron {
     using Math for uint128;
     using RMath for uint128;
