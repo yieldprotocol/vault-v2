@@ -37,6 +37,8 @@ library RMath {
 
 contract Witch {
     using RMath for uint128;
+
+    event Bought(address indexed buyer, bytes12 indexed vaultId, uint128 dink, uint128 dart);
   
     uint128 constant public AUCTION_TIME = 4 * 60 * 60; // Time that auctions take to go to minimal price and stay there.
     ICauldron immutable public cauldron;
@@ -55,8 +57,7 @@ contract Witch {
     /// @dev Buy an amount of collateral off a vault in liquidation, paying at most `max` underlying.
     function buy(bytes12 vaultId, uint128 dart, uint128 min) public {
         DataTypes.Balances memory balances = cauldron.vaultBalances(vaultId);                   // Cost of `cauldron.vaultBalances`
-        require (balances.art >= 0, "Nothing to buy");                                          // Cheapest way of failing gracefully if given a non existing vault
-
+        require (balances.art > 0, "Nothing to buy");                                          // Cheapest way of failing gracefully if given a non existing vault
         uint128 elapsed = uint128(block.timestamp) - cauldron.timestamps(vaultId);              // Cost of `cauldron.timestamps`
         uint128 price;
         {
@@ -74,11 +75,13 @@ contract Witch {
             price = uint128(RAY).rdiv(term1.rmul(term2 + term3));
         }
         uint128 dink = dart.rdivup(price);                                                      // Calculate collateral to sell. Using divdrup stops rounding from leaving 1 stray wei in vaults.
-        require (dink >= min, "Too expensive");
+        require (dink >= min, "Not enough bought");                                             // TODO: We could also check that min <= balances.ink
 
-        balances = cauldron._slurp(vaultId, int128(dink), int128(dart));                        // Cost of `cauldron._slurp`  | Manipulate the vault | TODO: SafeCast
-        ladle._join(vaultId, msg.sender, int128(dink), int128(dart));                           // Cost of `ladle._join`      | Move the assets | TODO: SafeCast
+        balances = cauldron._slurp(vaultId, -int128(dink), -int128(dart));                      // Cost of `cauldron._slurp`  | Manipulate the vault | TODO: SafeCast
+        ladle._join(vaultId, msg.sender, -int128(dink), int128(dart));                          // Cost of `ladle._join`      | Move the assets | TODO: SafeCast
         if (balances.art == 0 && balances.ink == 0) cauldron.destroy(vaultId);                  // Cost of `cauldron.destroy`
+
+        emit Bought(msg.sender, vaultId, dink, dart);
     }
 
     /// @dev Return price of a collateral unit, in underlying, at the present moment, for a given vault

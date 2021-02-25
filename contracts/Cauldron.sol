@@ -52,6 +52,7 @@ contract Cauldron {
 
     event VaultStirred(bytes12 indexed vaultId, bytes6 indexed seriesId, bytes6 indexed ilkId, int128 ink, int128 art);
     event VaultShaken(bytes12 indexed from, bytes12 indexed to, uint128 ink);
+    event VaultTimestamped(bytes12 indexed vaultId, uint256 indexed timestamp);
 
     // ==== Protocol data ====
     mapping (bytes6 => IERC20)                              public assets;          // Underlyings and collaterals available in Cauldron. 12 bytes still free.
@@ -309,6 +310,7 @@ contract Cauldron {
         require(__level(vaultId) < 0, "Not undercollateralized");                           // Cost of `__level`.
         timestamps[vaultId] = uint32(block.timestamp);                                      // 1 SSTORE. TODO: SafeCast
         __give(vaultId, msg.sender);                                                        // Cost of `__give`
+        emit VaultTimestamped(vaultId, block.timestamp);
     }
 
     /// @dev Manipulate a vault, ignoring collateralization levels.

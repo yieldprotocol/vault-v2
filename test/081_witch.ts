@@ -16,6 +16,7 @@ const timeMachine = require('ether-time-traveler');
 import { YieldEnvironment, WAD, RAY, THREE_MONTHS } from './shared/fixtures'
 
 describe('Witch', () => {
+  let snapshotId: any
   let env: YieldEnvironment
   let ownerAcc: SignerWithAddress
   let otherAcc: SignerWithAddress
@@ -41,12 +42,17 @@ describe('Witch', () => {
   }
 
   before(async () => {
+    snapshotId = await timeMachine.takeSnapshot(ethers.provider)      // `loadFixture` messes up with the chain state, so we revert to a clean state after each test file.
     const signers = await ethers.getSigners()
     ownerAcc = signers[0]
     owner = await ownerAcc.getAddress()
 
     otherAcc = signers[1]
     other = await otherAcc.getAddress()
+  })
+
+  after(async () => {
+    await timeMachine.revertToSnapshot(ethers.provider, snapshotId);  // Once all tests are done, revert the chain
   })
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
@@ -72,65 +78,68 @@ describe('Witch', () => {
     ladle.stir(vaultId, WAD, WAD)
   })
 
-  it('does not allow to borrow', async () => {
-    await expect(ladle.close(mockVaultId, 0, WAD)).to.be.revertedWith('Only repay debt')
+  it('does not allow to grab collateralized vaults', async () => {
+    await expect(witch.grab(vaultId)).to.be.revertedWith('Not undercollateralized')
   })
 
-  it('reverts on unknown vaults', async () => {
-    await expect(ladle.close(mockVaultId, 0, WAD.mul(-1))).to.be.revertedWith('Only vault owner')
+  it('does not allow to grab uninitialized vaults', async () => {
+    await expect(witch.grab(mockVaultId)).to.be.revertedWith('Vault not found')
   })
 
-  /*
-  it('does not allow adding a join before adding its ilk', async () => {
-    await expect(ladleFromOther.close(vaultId, 0, WAD.mul(-1))).to.be.revertedWith('Only vault owner')
+  it('does not allow to buy from uninitialized vaults', async () => {
+    await expect(witch.buy(mockVaultId, 0, 0)).to.be.revertedWith('Nothing to buy')
   })
 
-  it('users can repay their debt with underlying at a 1:1 rate', async () => {
-    const baseBefore = await base.balanceOf(owner)
-    await expect(ladle.close(vaultId, 0, WAD.mul(-1))).to.emit(cauldron, 'VaultStirred').withArgs(vaultId, seriesId, ilkId, 0, WAD.mul(-1))
-    expect(await base.balanceOf(owner)).to.equal(baseBefore.sub(WAD))
-    expect(await fyToken.balanceOf(owner)).to.equal(WAD)
-    expect((await cauldron.vaultBalances(vaultId)).art).to.equal(0)
+  it('grabs udercollateralized vaults', async () => {
+    await spotOracle.setSpot(RAY.div(2))
+    await witch.grab(vaultId)
+    const event = (await cauldron.queryFilter(cauldron.filters.VaultTimestamped(null, null)))[0]
+    expect(event.args.timestamp.toNumber()).to.be.greaterThan(0)
+    expect(await cauldron.timestamps(vaultId)).to.equal(event.args.timestamp)
   })
 
-  it('users can repay their debt with underlying and add collateral at the same time', async () => {
-    const baseBefore = await base.balanceOf(owner)
-    await expect(ladle.close(vaultId, WAD, WAD.mul(-1))).to.emit(cauldron, 'VaultStirred').withArgs(vaultId, seriesId, ilkId, WAD, WAD.mul(-1))
-    expect(await base.balanceOf(owner)).to.equal(baseBefore.sub(WAD))
-    expect(await fyToken.balanceOf(owner)).to.equal(WAD)
-    expect((await cauldron.vaultBalances(vaultId)).art).to.equal(0)
-    expect(await ilk.balanceOf(ilkJoin.address)).to.equal(WAD.mul(2))
-    expect((await cauldron.vaultBalances(vaultId)).ink).to.equal(WAD.mul(2))
-  })
-
-  it('users can repay their debt with underlying and remove collateral at the same time', async () => {
-    const baseBefore = await base.balanceOf(owner)
-    await expect(ladle.close(vaultId, WAD.mul(-1), WAD.mul(-1))).to.emit(cauldron, 'VaultStirred').withArgs(vaultId, seriesId, ilkId, WAD.mul(-1), WAD.mul(-1))
-    expect(await base.balanceOf(owner)).to.equal(baseBefore.sub(WAD))
-    expect(await fyToken.balanceOf(owner)).to.equal(WAD)
-    expect((await cauldron.vaultBalances(vaultId)).art).to.equal(0)
-    expect(await ilk.balanceOf(ilkJoin.address)).to.equal(0)
-    expect((await cauldron.vaultBalances(vaultId)).ink).to.equal(0)
-  })
-
-  describe('after maturity', async () => {
-    const accrual = RAY.mul(110).div(100) // accrual is 10% 
-
+  describe('once a vault has been grabbed', async () => {
     beforeEach(async () => {
-      await spotOracle.setSpot(RAY.mul(1))
-      await rateOracle.setSpot(RAY.mul(1))
-      await timeMachine.advanceTimeAndBlock(ethers.provider, THREE_MONTHS)
-      await rateOracle.record(await fyToken.maturity())
-      await rateOracle.setSpot(accrual) // Since spot was 1 when recorded at maturity, accrual is equal to the current spot
+      await spotOracle.setSpot(RAY.div(2))
+      await witch.grab(vaultId)
     })
 
-    it('users can repay their debt with underlying at accrual rate', async () => {
-      const baseBefore = await base.balanceOf(owner)
-      await expect(ladle.close(vaultId, 0, WAD.mul(-1))).to.emit(cauldron, 'VaultStirred').withArgs(vaultId, seriesId, ilkId, 0, WAD.mul(-1))
-      expect(await base.balanceOf(owner)).to.equal(baseBefore.sub(WAD.mul(accrual).div(RAY)))
-      expect(await fyToken.balanceOf(owner)).to.equal(WAD)
-      expect((await cauldron.vaultBalances(vaultId)).art).to.equal(0)
+    it('it can\'t be grabbed again', async () => {
+      await expect(witch.grab(vaultId)).to.be.revertedWith('Timestamped')
+    })
+
+    it('does not buy if minimum collateral not reached', async () => {
+      await expect(witch.buy(vaultId, WAD, WAD)).to.be.revertedWith('Not enough bought')
+    })
+
+    it('allows to buy 1/2 of the collateral for the whole debt at the beginning', async () => {
+      const baseBalanceBefore = await base.balanceOf(owner)
+      const ilkBalanceBefore = await ilk.balanceOf(owner)
+      // await expect(witch.buy(vaultId, WAD, 0)).to.emit(witch, 'Bought').withArgs(owner, vaultId, null, WAD)
+      await witch.buy(vaultId, WAD, 0)
+      // const event = (await witch.queryFilter(witch.filters.Bought(null, null, null, null)))[0]
+      const dink = WAD.sub((await cauldron.vaultBalances(vaultId)).ink)
+      expect(dink.div(10**15)).to.equal(WAD.div(10**15).div(2)) // Nice hack to compare up to some precision
+      expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(WAD))
+      expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(dink))
+    })
+
+    describe('once the auction time has passed', async () => {
+      beforeEach(async () => {
+        await timeMachine.advanceTimeAndBlock(ethers.provider, (await witch.AUCTION_TIME()).toNumber())
+      })
+
+      it('allows to buy all of the collateral for the whole debt at the end', async () => {
+        const baseBalanceBefore = await base.balanceOf(owner)
+        const ilkBalanceBefore = await ilk.balanceOf(owner)
+        // await expect(witch.buy(vaultId, WAD, 0)).to.emit(witch, 'Bought').withArgs(owner, vaultId, null, WAD)
+        await witch.buy(vaultId, WAD, 0)
+        // const event = (await witch.queryFilter(witch.filters.Bought(null, null, null, null)))[0]
+        const dink = WAD.sub((await cauldron.vaultBalances(vaultId)).ink)
+        expect(dink).to.equal(WAD)
+        expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(WAD))
+        expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(dink))
+      })
     })
   })
-  */
 })
