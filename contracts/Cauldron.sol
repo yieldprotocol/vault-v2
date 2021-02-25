@@ -297,25 +297,27 @@ contract Cauldron {
 
     /// @dev Give a non-timestamped vault to the caller, and timestamp it.
     /// To be used for liquidation engines.
+    /// TODO: Maybe this doesn't need to check the vault is in liquidation, and the liquidator does that.
     function _grab(bytes12 vaultId)
         public
         // auth                                                                             // 1 SLOAD
     {
         require (timestamps[vaultId] + 24*60*60 <= block.timestamp, "Timestamped");         // 1 SLOAD. Grabbing a vault protects it for a day from being grabbed by another liquidator.
+        require(__level(vaultId) < 0, "Not undercollateralized");                           // Cost of `__level`.
         timestamps[vaultId] = uint32(block.timestamp);                                      // 1 SSTORE. TODO: SafeCast
         __give(vaultId, msg.sender);                                                        // Cost of `__give`
     }
 
-    /// @dev Manipulate a vault, ensuring it is collateralization level improved.
-    /// To be used by debt management contracts.
+    /// @dev Manipulate a vault, ignoring collateralization levels.
+    /// To be used by debt management contracts, which must own the vault.
     function _slurp(bytes12 vaultId, int128 ink, int128 art)
         public
         // auth                                                                             // 1 SLOAD
         returns (DataTypes.Balances memory balances)
     {
-        require (vaults[vaultId].owner != address(0), "Vault not found");                   // 1 SLOAD
-        (int128 _level, int128 _diff) = __diff(vaultId, ink, art);                          // Cost of `__diff`
-        require (_level >= 0 || _diff >= 0, "Healthy or improve");
+        require (vaults[vaultId].owner == msg.sender, "Only vault owner");                  // 1 SLOAD
+        // (int128 _level, int128 _diff) = __diff(vaultId, ink, art);                       // Cost of `__diff`
+        // require (_level >= 0 || _diff >= 0, "Healthy or improve");                       // TODO: Do we really need this? We are only letting audited liquidators use this. Unaudited liquidators could just set art to zero.
         balances = __stir(vaultId, ink, art);                                               // Cost of `__stir`
         return balances;
     }

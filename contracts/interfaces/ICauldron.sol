@@ -48,16 +48,16 @@ interface ICauldron {
     // function assets(bytes6 id) external returns (IERC20);
 
     /// @dev Each vault records debt and collateral balances.
-    // function vaultBalances(bytes12 vault) external view returns (Balances);
+    function vaultBalances(bytes12 vault) external view returns (DataTypes.Balances memory);
 
     /// @dev Time at which a vault entered liquidation.
-    // function timestamps(bytes12 vault) external view returns (uint32);
+    function timestamps(bytes12 vault) external view returns (uint32);
 
     /// @dev Create a new vault, linked to a series (and therefore underlying) and up to 5 collateral types
     // function build(bytes12 series, bytes32 assets) external returns (bytes12 id);
 
     /// @dev Destroy an empty vault. Used to recover gas costs.
-    // function destroy(bytes12 vault) external;
+    function destroy(bytes12 vault) external;
 
 
     // ---- Restricted processes ----
@@ -69,10 +69,13 @@ interface ICauldron {
 
     /// @dev Give a non-timestamped vault to the caller, and timestamp it.
     /// To be used for liquidation engines.
-    // function _grab(bytes12 vault) external;
+    function _grab(bytes12 vault) external;
 
     /// @dev Manipulate a vault debt and collateral.
     function _stir(bytes12 vault, int128 ink, int128 art) external returns (DataTypes.Balances memory);
+
+    /// @dev Manipulate a vault debt and collateral without collateralization checks
+    function _slurp(bytes12 vault, int128 ink, int128 art) external returns (DataTypes.Balances memory);
 
     // ---- Public processes ----
 
