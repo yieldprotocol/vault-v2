@@ -1,7 +1,5 @@
-import { Wallet } from '@ethersproject/wallet'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { formatBytes32String as toBytes32, id } from 'ethers/lib/utils'
-import { BigNumber, BigNumberish } from 'ethers'
+import { BigNumber } from 'ethers'
 import { BaseProvider } from '@ethersproject/providers'
 
 import CauldronArtifact from '../../artifacts/contracts/Cauldron.sol/Cauldron.json'
@@ -10,6 +8,7 @@ import ERC20MockArtifact from '../../artifacts/contracts/mocks/ERC20Mock.sol/ERC
 import OracleMockArtifact from '../../artifacts/contracts/mocks/OracleMock.sol/OracleMock.json'
 import JoinArtifact from '../../artifacts/contracts/Join.sol/Join.json'
 import LadleArtifact from '../../artifacts/contracts/Ladle.sol/Ladle.json'
+import WitchArtifact from '../../artifacts/contracts/Witch.sol/Witch.json'
 
 import { Cauldron } from '../../typechain/Cauldron'
 import { FYToken } from '../../typechain/FYToken'
@@ -17,9 +16,9 @@ import { ERC20Mock } from '../../typechain/ERC20Mock'
 import { OracleMock } from '../../typechain/OracleMock'
 import { Join } from '../../typechain/Join'
 import { Ladle } from '../../typechain/Ladle'
+import { Witch } from '../../typechain/Witch'
 
 import { ethers, waffle } from 'hardhat'
-// import { id } from '../src'
 const { deployContract } = waffle
 
 export const WAD = BigNumber.from("1000000000000000000")
@@ -30,6 +29,7 @@ export class YieldEnvironment {
   owner: SignerWithAddress
   cauldron: Cauldron
   ladle: Ladle
+  witch: Witch
   assets: Map<string, ERC20Mock>
   oracles: Map<string, OracleMock>
   series: Map<string, FYToken>
@@ -40,6 +40,7 @@ export class YieldEnvironment {
     owner: SignerWithAddress,
     cauldron: Cauldron,
     ladle: Ladle,
+    witch: Witch,
     assets: Map<string, ERC20Mock>,
     oracles: Map<string, OracleMock>,
     series: Map<string, FYToken>,
@@ -49,6 +50,7 @@ export class YieldEnvironment {
     this.owner = owner
     this.cauldron = cauldron
     this.ladle = ladle
+    this.witch = witch
     this.assets = assets
     this.oracles = oracles
     this.series = series
@@ -60,8 +62,9 @@ export class YieldEnvironment {
   public static async setup(owner: SignerWithAddress, assetIds: Array<string>, seriesIds: Array<string>) {
     const ownerAdd = await owner.getAddress()
 
-    const cauldron = (await deployContract(owner, CauldronArtifact, [])) as Cauldron
-    const ladle = (await deployContract(owner, LadleArtifact, [cauldron.address])) as Ladle
+    const cauldron = await deployContract(owner, CauldronArtifact, []) as Cauldron
+    const ladle = await deployContract(owner, LadleArtifact, [cauldron.address]) as Ladle
+    const witch = await deployContract(owner, WitchArtifact, [cauldron.address, ladle.address]) as Witch
 
     // ==== Add assets and joins ====
     // For each asset id passed as an argument, we create a Mock ERC20 which we register in cauldron, and its Join, that we register in Ladle.
@@ -140,6 +143,6 @@ export class YieldEnvironment {
       vaults.set(seriesId, seriesVaults)
     }
 
-    return new YieldEnvironment(owner, cauldron, ladle, assets, oracles, series, joins, vaults)
+    return new YieldEnvironment(owner, cauldron, ladle, witch, assets, oracles, series, joins, vaults)
   }
 }
