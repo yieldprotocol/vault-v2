@@ -359,29 +359,20 @@ contract Cauldron {
     /*
     function level(bytes12 vaultId) public view returns (int128) {
         DataTypes.Vault memory _vault = vaults[vaultId];                                    // 1 SLOAD
+        require (_vault.owner != address(0), "Vault not found");                            // The vault existing is enough to be certain that the oracle exists.
         DataTypes.Series memory _series = series[_vault.seriesId];                          // 1 SLOAD
         DataTypes.Balances memory _balances = vaultBalances[vaultId];                       // 1 SLOAD
-        require (_vault.owner != address(0), "Vault not found");                            // The vault existing is enough to be certain that the oracle exists.
+        DataTypes.Spot memory _spotData = spotOracles[_series.baseId][_vault.ilkId];        // 1 SLOAD
+        uint128 spot = oracle.spot();                                                       // 1 `spot` call
+        uint128 ratio = uint128(_spotData.ratio) * 1e23;                                    // Normalization factor from 2 to 27 decimals
 
-        // Value of the collateral in the vault according to the spot price
-        bytes6 ilkId = _vault.ilkId;
-        bytes6 baseId = _series.baseId;
-        DataTypes.Spot memory _spot = spotOracles[baseId][ilkId];                           // 1 SLOAD
-        IOracle oracle = _spot.oracle;
-        uint128 ratio = uint128(_spot.ratio) * 1e23;                                        // Normalization factor from 2 to 27 decimals
-        uint128 ink = _balances.ink;
-
-        // Debt owed by the vault in underlying terms
-        uint128 dues;
         if (block.timestamp >= _series.maturity) {
             IOracle rateOracle = rateOracles[_series.baseId];                               // 1 SLOAD
-            uint128 accrual = rateOracle.accrual(_series.maturity);                         // 1 Oracle Call
-            dues = _balances.art.rmul(accrual);
-        } else {
-            dues = _balances.art;
+            uint128 accrual = rateOracle.accrual(_series.maturity);                         // 1 `accrual` call
+            return int128(_balances.ink.rmul(spot)) - int128(_balances.art.rmul(accrual).rmul(ratio)); // TODO: SafeCast
         }
 
-        return int128(ink.rmul(oracle.spot())) - int128(dues.rmul(ratio));                   // 1 Oracle Call | TODO: SafeCast
+        return int128(_balances.ink.rmul(spot)) - int128(_balances.art.rmul(ratio));         // TODO: SafeCast
     }
     */
 
@@ -409,16 +400,20 @@ contract Cauldron {
         DataTypes.Series memory _series = series[_vault.seriesId];                          // 1 SLOAD
         DataTypes.Balances memory _balances = vaultBalances[vaultId];                       // 1 SLOAD
         DataTypes.Spot memory _spotData = spotOracles[_series.baseId][_vault.ilkId];        // 1 SLOAD
-        uint128 ratio = uint128(_spotData.ratio) * 1e23;                                    // Normalization factor from 2 to 27 decimals
-        uint128 spot = _spotData.oracle.spot();                                             // 1 Oracle Call | TODO: SafeCast
-        uint128 accrual = 1e27;
+        uint128 ratio = uint128(_spotData.ratio) * 1e23;                                    // Normalization factor from 2 to 27 decimals | TODO: SafeCast
+        uint128 spot = _spotData.oracle.spot();                                             // 1 `spot` call
+
         if (block.timestamp >= _series.maturity) {
-            IOracle rateOracle = rateOracles[_series.baseId];                               // 1 SLOAD
-            accrual = rateOracle.accrual(_series.maturity);                                 // 1 Oracle Call
+            uint128 accrual = rateOracles[_series.baseId].accrual(_series.maturity);        // 1 SLOAD + 1 `accrual` call
+            return (
+                int128(_balances.ink.rmul(spot)) - int128(_balances.art.rmul(accrual).rmul(ratio)), // level
+                dink.rmul(spot) - dart.rmul(accrual).rmul(ratio)                                    // diff
+            );
         }
 
-        int128 _level = int128(_balances.ink.rmul(spot)) - int128(_balances.art.rmul(accrual).rmul(ratio));
-        int128 _diff = dink.rmul(spot) - dart.rmul(accrual).rmul(ratio);
-        return (_level, _diff);
+        return (
+            int128(_balances.ink.rmul(spot)) - int128(_balances.art.rmul(ratio)),           // level
+            dink.rmul(spot) - dart.rmul(ratio)                                              // diff
+        );
     }
 }
