@@ -307,8 +307,8 @@ contract Cauldron {
         returns (DataTypes.Balances memory balances)
     {
         require (vaults[vaultId].owner != address(0), "Vault not found");                   // 1 SLOAD
-        (, int128 _diff) = __diff(vaultId, ink, art);                                       // Cost of `__diff`
-        require (_diff >= 0, "Collateralization would drop");
+        (int128 _level, int128 _diff) = __diff(vaultId, ink, art);                          // Cost of `__diff`
+        require (_level >= 0 || _diff >= 0, "Healthy or improve");
         balances = __stir(vaultId, ink, art);                                               // Cost of `__stir`
         return balances;
     }
@@ -379,6 +379,11 @@ contract Cauldron {
     */
     function level(bytes12 vaultId) public view returns (int128) {
         return __level(vaultId);                                                            // Cost of `__level`
+    }
+
+    function diff(bytes12 vaultId, int128 dink, int128 dart) public view returns (int128) {
+        (,int128 _diff) = __diff(vaultId, dink, dart);                                      // Cost of `__diff`
+        return _diff;
     }
 
     function __level(bytes12 vaultId) internal view returns (int128) {
