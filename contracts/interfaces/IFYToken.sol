@@ -15,7 +15,7 @@ interface IFYToken is IERC20 {
     function maturity() external view returns (uint32);
     
     /// @dev Record price data at maturity
-    // function mature() external;
+    function mature() external;
 
     /// @dev Burn fyToken after maturity for an amount of underlying.
     // function redeem(uint256 amount) external returns (uint256);

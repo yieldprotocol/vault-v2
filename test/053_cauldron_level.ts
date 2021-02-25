@@ -1,5 +1,4 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { BigNumber } from 'ethers'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Ladle } from '../typechain/Ladle'
@@ -15,6 +14,7 @@ const { loadFixture } = waffle
 const timeMachine = require('ether-time-traveler');
 
 describe('Cauldron - Level', () => {
+  let snapshotId: any
   let ownerAcc: SignerWithAddress
   let owner: string
   let env: YieldEnvironment
@@ -36,9 +36,14 @@ describe('Cauldron - Level', () => {
   }
 
   before(async () => {
+    snapshotId = await timeMachine.takeSnapshot(ethers.provider)
     const signers = await ethers.getSigners()
     ownerAcc = signers[0]
     owner = await ownerAcc.getAddress()
+  })
+
+  after(async () => {
+    await timeMachine.revertToSnapshot(ethers.provider, snapshotId);
   })
 
   beforeEach(async function () {
@@ -48,7 +53,7 @@ describe('Cauldron - Level', () => {
     ladle = env.ladle
     base = env.assets.get(baseId) as ERC20
     ilk = env.assets.get(ilkId) as ERC20
-    rateOracle = env.oracles.get(baseId) as Oracle
+    rateOracle = env.oracles.get('rate') as Oracle
     spotOracle = env.oracles.get(ilkId) as Oracle
     fyToken = env.series.get(seriesId) as FYToken
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string

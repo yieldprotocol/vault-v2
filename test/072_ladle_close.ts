@@ -1,7 +1,4 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import OracleMockArtifact from '../artifacts/contracts/mocks/OracleMock.sol/OracleMock.json'
-import JoinArtifact from '../artifacts/contracts/Join.sol/Join.json'
-import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
@@ -12,12 +9,13 @@ import { Ladle } from '../typechain/Ladle'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
-const { deployContract, loadFixture } = waffle
+const { loadFixture } = waffle
 const timeMachine = require('ether-time-traveler');
 
 import { YieldEnvironment, WAD, RAY, THREE_MONTHS } from './shared/fixtures'
 
 describe('Ladle - close', () => {
+  let snapshotId: any
   let env: YieldEnvironment
   let ownerAcc: SignerWithAddress
   let otherAcc: SignerWithAddress
@@ -33,21 +31,24 @@ describe('Ladle - close', () => {
   let ladle: Ladle
   let ladleFromOther: Ladle
 
-  const mockAssetId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const mockVaultId =  ethers.utils.hexlify(ethers.utils.randomBytes(12))
-  const MAX = ethers.constants.MaxUint256
-
+  
   async function fixture() {
     return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId], [seriesId])
   }
 
   before(async () => {
+    snapshotId = await timeMachine.takeSnapshot(ethers.provider)
     const signers = await ethers.getSigners()
     ownerAcc = signers[0]
     owner = await ownerAcc.getAddress()
 
     otherAcc = signers[1]
     other = await otherAcc.getAddress()
+  })
+
+  after(async () => {
+    await timeMachine.revertToSnapshot(ethers.provider, snapshotId);
   })
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
@@ -63,7 +64,7 @@ describe('Ladle - close', () => {
     ilk = env.assets.get(ilkId) as ERC20Mock
     ilkJoin = env.joins.get(ilkId) as Join
     fyToken = env.series.get(seriesId) as FYToken
-    rateOracle = env.oracles.get(baseId) as OracleMock
+    rateOracle = env.oracles.get('rate') as OracleMock
     spotOracle = env.oracles.get(ilkId) as OracleMock
 
     ladleFromOther = ladle.connect(otherAcc)
