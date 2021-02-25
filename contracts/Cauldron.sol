@@ -22,11 +22,21 @@ library RMath { // Fixed point arithmetic in Ray units
         require (_z <= type(uint128).max, "RMUL Overflow");
         z = uint128(_z);
     }
+
+    /// @dev Multiply an integer amount by a fixed point factor in ray units, returning an integer amount
+    function rmul(int128 x, uint128 y) internal pure returns (int128 z) {
+        if (x < 0) return -int128(rmul(uint128(-x), y));                // TODO: SafeCast
+        else return int128(rmul(uint128(x), y));                        // TODO: SafeCast
+    }
 }
+
+// TODO: Change ink for dink and art for dart when we are talking about differentials.
+// TODO: Come up with a consistent use of underscores for variables (trailing underscore?)
 
 contract Cauldron {
     using Math for uint128;
     using RMath for uint128;
+    using RMath for int128;
 
     event AssetAdded(bytes6 indexed assetId, address indexed asset);
     event SeriesAdded(bytes6 indexed seriesId, bytes6 indexed baseId, address indexed fyToken);
@@ -42,6 +52,7 @@ contract Cauldron {
 
     event VaultStirred(bytes12 indexed vaultId, bytes6 indexed seriesId, bytes6 indexed ilkId, int128 ink, int128 art);
     event VaultShaken(bytes12 indexed from, bytes12 indexed to, uint128 ink);
+    event VaultTimestamped(bytes12 indexed vaultId, uint256 indexed timestamp);
 
     // ==== Protocol data ====
     mapping (bytes6 => IERC20)                              public assets;          // Underlyings and collaterals available in Cauldron. 12 bytes still free.
@@ -271,22 +282,10 @@ contract Cauldron {
             debt[_series.baseId][_vault.ilkId] = _debt;                                     // 1 SSTORE
         }
         vaultBalances[vaultId] = _balances;                                                 // 1 SSTORE
-        require(level(vaultId) >= 0, "Undercollateralized");                                // Cost of `level`
+        require(__level(vaultId) >= 0, "Undercollateralized");                              // Cost of `level`
     } */
 
-    // Give a non-timestamped vault to the caller, and timestamp it.
-    // To be used for liquidation engines.
-    /* function _grab(bytes12 vaultId)
-        public
-        auth                                                                                // 1 SLOAD
-    {
-        require (timestamps[vaultId] + 24*60*60 <= block.timestamp, "Timestamped");         // 1 SLOAD. Grabbing a vault protects it for a day from being grabbed by another liquidator.
-        timestamps[vaultId] = block.timestamp;                                              // 1 SSTORE
-        __give(vaultId, msg.sender);                                                        // Cost of `__give`
-    } */
-
-    /// @dev Manipulate a vault with collateralization checks.
-    /// Available only to authenticated platform accounts.
+    /// @dev Manipulate a vault, ensuring it is collateralized afterwards.
     /// To be used by debt management contracts.
     function _stir(bytes12 vaultId, int128 ink, int128 art)
         public
@@ -296,7 +295,35 @@ contract Cauldron {
         require (vaults[vaultId].owner != address(0), "Vault not found");                   // 1 SLOAD
         balances = __stir(vaultId, ink, art);                                               // Cost of `__stir`
         if (balances.art > 0 && (ink < 0 || art > 0))                                       // If there is debt and we are less safe
-            require(level(vaultId) >= 0, "Undercollateralized");                            // Cost of `level`
+            require(__level(vaultId) >= 0, "Undercollateralized");                          // Cost of `level`. TODO: Consider allowing if collateralization level either is healthy or improves.
+        return balances;
+    }
+
+    /// @dev Give a non-timestamped vault to the caller, and timestamp it.
+    /// To be used for liquidation engines.
+    /// TODO: Maybe this doesn't need to check the vault is in liquidation, and the liquidator does that.
+    function _grab(bytes12 vaultId)
+        public
+        // auth                                                                             // 1 SLOAD
+    {
+        require (timestamps[vaultId] + 24*60*60 <= block.timestamp, "Timestamped");         // 1 SLOAD. Grabbing a vault protects it for a day from being grabbed by another liquidator.
+        require(__level(vaultId) < 0, "Not undercollateralized");                           // Cost of `__level`.
+        timestamps[vaultId] = uint32(block.timestamp);                                      // 1 SSTORE. TODO: SafeCast
+        __give(vaultId, msg.sender);                                                        // Cost of `__give`
+        emit VaultTimestamped(vaultId, block.timestamp);
+    }
+
+    /// @dev Manipulate a vault, ignoring collateralization levels.
+    /// To be used by debt management contracts, which must own the vault.
+    function _slurp(bytes12 vaultId, int128 ink, int128 art)
+        public
+        // auth                                                                             // 1 SLOAD
+        returns (DataTypes.Balances memory balances)
+    {
+        require (vaults[vaultId].owner == msg.sender, "Only vault owner");                  // 1 SLOAD
+        // (int128 _level, int128 _diff) = __diff(vaultId, ink, art);                       // Cost of `__diff`
+        // require (_level >= 0 || _diff >= 0, "Healthy or improve");                       // TODO: Do we really need this? We are only letting audited liquidators use this. Unaudited liquidators could just set art to zero.
+        balances = __stir(vaultId, ink, art);                                               // Cost of `__stir`
         return balances;
     }
 
@@ -328,39 +355,73 @@ contract Cauldron {
         require (vaults[to].owner != address(0), "Vault not found");                        // 1 SLOAD
         DataTypes.Balances memory _balancesFrom;
         DataTypes.Balances memory _balancesTo;
-        (_balancesFrom, _balancesTo) = __shake(from, to, ink);                               // Cost of `__shake`
-        if (_balancesFrom.art > 0) require(level(from) >= 0, "Undercollateralized");        // Cost of `level`
+        (_balancesFrom, _balancesTo) = __shake(from, to, ink);                              // Cost of `__shake`
+        if (_balancesFrom.art > 0) require(__level(from) >= 0, "Undercollateralized");      // Cost of `level`. TODO: Consider allowing if collateralization level either is healthy or 
         return (_balancesFrom, _balancesTo);
     }
 
     // ==== Accounting ====
 
     /// @dev Return the collateralization level of a vault. It will be negative if undercollateralized.
+    /*
     function level(bytes12 vaultId) public view returns (int128) {
         DataTypes.Vault memory _vault = vaults[vaultId];                                    // 1 SLOAD
+        require (_vault.owner != address(0), "Vault not found");                            // The vault existing is enough to be certain that the oracle exists.
         DataTypes.Series memory _series = series[_vault.seriesId];                          // 1 SLOAD
         DataTypes.Balances memory _balances = vaultBalances[vaultId];                       // 1 SLOAD
-        require (_vault.owner != address(0), "Vault not found");                            // The vault existing is enough to be certain that the oracle exists.
+        DataTypes.Spot memory _spotData = spotOracles[_series.baseId][_vault.ilkId];        // 1 SLOAD
+        uint128 spot = oracle.spot();                                                       // 1 `spot` call
+        uint128 ratio = uint128(_spotData.ratio) * 1e23;                                    // Normalization factor from 2 to 27 decimals
 
-        // Value of the collateral in the vault according to the spot price
-        bytes6 ilkId = _vault.ilkId;
-        bytes6 baseId = _series.baseId;
-        DataTypes.Spot memory _spot = spotOracles[baseId][ilkId];                           // 1 SLOAD
-        IOracle oracle = _spot.oracle;
-        uint128 ratio = uint128(_spot.ratio) * 1e23;                                        // Normalization factor from 2 to 27 decimals
-        uint128 ink = _balances.ink;                                                        // 1 Oracle Call
-
-        // Debt owed by the vault in underlying terms
-        uint128 dues;
         if (block.timestamp >= _series.maturity) {
             IOracle rateOracle = rateOracles[_series.baseId];                               // 1 SLOAD
-            uint128 accrual = rateOracle.accrual(_series.maturity);                         // 1 Oracle Call
-            dues = _balances.art.rmul(accrual);
-        } else {
-            dues = _balances.art;
+            uint128 accrual = rateOracle.accrual(_series.maturity);                         // 1 `accrual` call
+            return int128(_balances.ink.rmul(spot)) - int128(_balances.art.rmul(accrual).rmul(ratio)); // TODO: SafeCast
         }
 
-        return int128(ink.rmul(oracle.spot())) - int128(dues.rmul(ratio));                   // 1 Oracle Call | TODO: SafeCast
+        return int128(_balances.ink.rmul(spot)) - int128(_balances.art.rmul(ratio));         // TODO: SafeCast
+    }
+    */
+
+    /// @dev Return the collateralization level of a vault. Negative means undercollateralized.
+    function level(bytes12 vaultId) public view returns (int128) {
+        return __level(vaultId);                                                            // Cost of `__level`
+    }
+
+    /// @dev Return the relative collateralization level of a vault for a given change in debt and collateral. Negative means the collateralization level would drop.
+    function diff(bytes12 vaultId, int128 dink, int128 dart) public view returns (int128) {
+        (,int128 _diff) = __diff(vaultId, dink, dart);                                      // Cost of `__diff`
+        return _diff;
+    }
+
+    /// @dev Return the collateralization level of a vault. Negative means undercollateralized.
+    function __level(bytes12 vaultId) internal view returns (int128) {
+        (int128 _level,) = __diff(vaultId, 0, 0);                                           // Cost of `__diff`
+        return _level;
+    }
+
+    /// @dev Return the relative collateralization level of a vault for a given change in debt and collateral, as well as the collateralization level at the end.
+    function __diff(bytes12 vaultId, int128 dink, int128 dart) internal view returns (int128, int128) {
+        DataTypes.Vault memory _vault = vaults[vaultId];                                    // 1 SLOAD
+        require (_vault.owner != address(0), "Vault not found");                            // The vault existing is enough to be certain that the oracle exists.
+        DataTypes.Series memory _series = series[_vault.seriesId];                          // 1 SLOAD
+        DataTypes.Balances memory _balances = vaultBalances[vaultId];                       // 1 SLOAD
+        DataTypes.Spot memory _spotData = spotOracles[_series.baseId][_vault.ilkId];        // 1 SLOAD
+        uint128 ratio = uint128(_spotData.ratio) * 1e23;                                    // Normalization factor from 2 to 27 decimals | TODO: SafeCast
+        uint128 spot = _spotData.oracle.spot();                                             // 1 `spot` call
+
+        if (block.timestamp >= _series.maturity) {
+            uint128 accrual = rateOracles[_series.baseId].accrual(_series.maturity);        // 1 SLOAD + 1 `accrual` call
+            return (
+                int128(_balances.ink.rmul(spot)) - int128(_balances.art.rmul(accrual).rmul(ratio)), // level
+                dink.rmul(spot) - dart.rmul(accrual).rmul(ratio)                                    // diff
+            );
+        }
+
+        return (
+            int128(_balances.ink.rmul(spot)) - int128(_balances.art.rmul(ratio)),           // level
+            dink.rmul(spot) - dart.rmul(ratio)                                              // diff
+        );
     }
 
     /// @dev Helper function to record the rate in the appropriate oracle when maturing an fyToken

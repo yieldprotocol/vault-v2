@@ -103,4 +103,16 @@ contract Ladle {
         
         return cauldron._stir(vaultId, ink, art);                                        // Cost of `_stir`
     }
+
+    /// @dev Allow authorized contracts to move assets through the ladle
+    function _join(bytes12 vaultId, address user, int128 ink, int128 art)
+        external
+        // auth
+    {
+        DataTypes.Vault memory _vault = cauldron.vaults(vaultId);                        // 1 CALL + 1 SLOAD
+        DataTypes.Series memory _series = cauldron.series(_vault.seriesId);              // 1 CALL + 1 SLOAD
+
+        if (ink != 0) joins[_vault.ilkId].join(user, ink);                              // 1 SLOAD + Cost of `join`
+        if (art != 0) joins[_series.baseId].join(user, art);                              // 1 SLOAD + Cost of `join`
+    }
 }

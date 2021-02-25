@@ -76,6 +76,21 @@ describe('Cauldron - Level', () => {
     }
   })
 
+  it('before maturity, diff is dink * spot - dart * ratio', async () => {
+    for (let spot of [1, 2, 4]) {
+      await spotOracle.setSpot(RAY.mul(spot))
+      for (let ratio of [50, 100, 200]) {
+        await cauldron.setSpotOracle(baseId, ilkId, spotOracle.address, ratio * 100)
+        for (let dink of [WAD, WAD.mul(-1)]) {
+          for (let dart of [WAD, WAD.mul(-1)]) {
+            const expectedDiff = (dink.mul(spot)).sub(dart.mul(ratio).div(100))
+            expect(await cauldron.diff(vaultId, dink, dart)).to.equal(expectedDiff)
+          }  
+        }
+      }
+    }
+  })
+
   it('after maturity, level is ink * spot - art * accrual * ratio', async () => {
     await spotOracle.setSpot(RAY.mul(1))
     await rateOracle.setSpot(RAY.mul(1))
@@ -94,6 +109,30 @@ describe('Cauldron - Level', () => {
           const expectedLevel = (ink.mul(spot)).sub(art.mul(rate).mul(ratio).div(10000))
           expect(await cauldron.level(vaultId)).to.equal(expectedLevel)
           // console.log(`${ink} * ${RAY.mul(spot)} - ${art} * ${ratio} = ${await cauldron.level(vaultId)} | ${expectedLevel} `)
+        }
+      }
+    }
+  })
+
+  it('after maturity, diff is dink * spot - dart * accrual * ratio', async () => {
+    await spotOracle.setSpot(RAY.mul(1))
+    await rateOracle.setSpot(RAY.mul(1))
+    await timeMachine.advanceTimeAndBlock(ethers.provider, THREE_MONTHS)
+    await rateOracle.record(await fyToken.maturity())
+
+    for (let spot of [1, 2, 4]) {
+      await spotOracle.setSpot(RAY.mul(spot))
+      for (let rate of [110, 120, 140]) {
+        await rateOracle.setSpot(RAY.mul(rate).div(100))
+        // accrual = rate / 100
+        for (let ratio of [50, 100, 200]) {
+          await cauldron.setSpotOracle(baseId, ilkId, spotOracle.address, ratio * 100)
+          for (let dink of [WAD, WAD.mul(-1)]) {
+            for (let dart of [WAD, WAD.mul(-1)]) {
+              const expectedDiff = (dink.mul(spot)).sub(dart.mul(rate).mul(ratio).div(10000))
+              expect(await cauldron.diff(vaultId, dink, dart)).to.equal(expectedDiff)
+            }  
+          }
         }
       }
     }
