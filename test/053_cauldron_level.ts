@@ -1,5 +1,4 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { BigNumber } from 'ethers'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Ladle } from '../typechain/Ladle'

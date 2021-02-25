@@ -1,7 +1,4 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import OracleMockArtifact from '../artifacts/contracts/mocks/OracleMock.sol/OracleMock.json'
-import JoinArtifact from '../artifacts/contracts/Join.sol/Join.json'
-import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
@@ -12,7 +9,7 @@ import { Ladle } from '../typechain/Ladle'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
-const { deployContract, loadFixture } = waffle
+const { loadFixture } = waffle
 const timeMachine = require('ether-time-traveler');
 
 import { YieldEnvironment, WAD, RAY, THREE_MONTHS } from './shared/fixtures'
@@ -34,10 +31,8 @@ describe('Ladle - close', () => {
   let ladle: Ladle
   let ladleFromOther: Ladle
 
-  const mockAssetId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const mockVaultId =  ethers.utils.hexlify(ethers.utils.randomBytes(12))
-  const MAX = ethers.constants.MaxUint256
-
+  
   async function fixture() {
     return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId], [seriesId])
   }

@@ -12,9 +12,9 @@ import { Ladle } from '../typechain/Ladle'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
-const { deployContract, loadFixture } = waffle
+const { loadFixture } = waffle
 
-import { YieldEnvironment, WAD, RAY } from './shared/fixtures'
+import { YieldEnvironment, WAD } from './shared/fixtures'
 
 describe('Cauldron - shake', () => {
   let env: YieldEnvironment
@@ -26,14 +26,8 @@ describe('Cauldron - shake', () => {
   let cauldronFromOther: Cauldron
   let fyToken: FYToken
   let base: ERC20Mock
-  let ilk: ERC20Mock
-  let ilkJoin: Join
-  let oracle: OracleMock
   let ladle: Ladle
   let ladleFromOther: Ladle
-
-  const mockAssetId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const MAX = ethers.constants.MaxUint256
 
   async function fixture() {
     return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId, otherIlkId], [seriesId])

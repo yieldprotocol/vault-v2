@@ -10,7 +10,6 @@ import { ERC20Mock } from '../typechain/ERC20Mock'
 import { OracleMock } from '../typechain/OracleMock'
 
 import { ethers, waffle } from 'hardhat'
-// import { id } from '../src'
 import { expect } from 'chai'
 const { deployContract } = waffle
 
@@ -28,8 +27,6 @@ describe('Cauldron - Admin', () => {
 
   const mockAssetId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const mockSeriesId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const emptyAssetId = '0x000000000000'
-  const mockVaultId =  ethers.utils.hexlify(ethers.utils.randomBytes(12))
   const mockAddress =  ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20)))
   const emptyAddress =  ethers.utils.getAddress('0x0000000000000000000000000000000000000000')
 
