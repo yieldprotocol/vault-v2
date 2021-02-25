@@ -3,12 +3,12 @@ import OracleMockArtifact from '../artifacts/contracts/mocks/OracleMock.sol/Orac
 import JoinArtifact from '../artifacts/contracts/Join.sol/Join.json'
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
 
-import { Vat } from '../typechain/Vat'
+import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { OracleMock } from '../typechain/OracleMock'
-import { CDPProxy } from '../typechain/CDPProxy'
+import { Ladle } from '../typechain/Ladle'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
@@ -16,20 +16,20 @@ const { deployContract, loadFixture } = waffle
 
 import { YieldEnvironment, WAD, RAY } from './shared/fixtures'
 
-describe('CDPProxy - frob', () => {
+describe('Ladle - stir', () => {
   let env: YieldEnvironment
   let ownerAcc: SignerWithAddress
   let otherAcc: SignerWithAddress
   let owner: string
   let other: string
-  let vat: Vat
+  let cauldron: Cauldron
   let fyToken: FYToken
   let base: ERC20Mock
   let ilk: ERC20Mock
   let ilkJoin: Join
   let oracle: OracleMock
-  let cdpProxy: CDPProxy
-  let cdpProxyFromOther: CDPProxy
+  let ladle: Ladle
+  let ladleFromOther: Ladle
 
   const mockAssetId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const MAX = ethers.constants.MaxUint256
@@ -55,12 +55,12 @@ describe('CDPProxy - frob', () => {
 
   beforeEach(async () => {
     env = await loadFixture(fixture);
-    vat = env.vat
-    cdpProxy = env.cdpProxy
+    cauldron = env.cauldron
+    ladle = env.ladle
     base = env.assets.get(baseId) as ERC20Mock
     fyToken = env.series.get(seriesId) as FYToken
 
-    cdpProxyFromOther = cdpProxy.connect(otherAcc)
+    ladleFromOther = ladle.connect(otherAcc)
 
     // ==== Set testing environment ====
     // We add this asset manually, because `fixtures` would also add the join, which we want to test.
@@ -68,16 +68,16 @@ describe('CDPProxy - frob', () => {
     oracle = (await deployContract(ownerAcc, OracleMockArtifact, [])) as OracleMock
     await oracle.setSpot(RAY)
 
-    await vat.addAsset(ilkId, ilk.address)
-    await vat.setMaxDebt(baseId, ilkId, WAD.mul(2))
-    await vat.setSpotOracle(baseId, ilkId, oracle.address, ratio)
-    await vat.addIlk(seriesId, ilkId)
+    await cauldron.addAsset(ilkId, ilk.address)
+    await cauldron.setMaxDebt(baseId, ilkId, WAD.mul(2))
+    await cauldron.setSpotOracle(baseId, ilkId, oracle.address, ratio)
+    await cauldron.addIlk(seriesId, ilkId)
 
-    await vat.build(seriesId, ilkId)
-    const event = (await vat.queryFilter(vat.filters.VaultBuilt(null, null, null, null)))[0]
+    await cauldron.build(seriesId, ilkId)
+    const event = (await cauldron.queryFilter(cauldron.filters.VaultBuilt(null, null, null, null)))[0]
     vaultId = event.args.vaultId
 
-    // Finally, we deploy the join. A check that a join exists would be impossible in `vat` functions.
+    // Finally, we deploy the join. A check that a join exists would be impossible in `cauldron` functions.
     ilkJoin = (await deployContract(ownerAcc, JoinArtifact, [ilk.address])) as Join
 
     await ilk.mint(owner, WAD.mul(10));
@@ -85,80 +85,80 @@ describe('CDPProxy - frob', () => {
   })
 
   it('does not allow adding a join before adding its ilk', async () => {
-    await expect(cdpProxy.addJoin(mockAssetId, ilkJoin.address)).to.be.revertedWith('Asset not found')
+    await expect(ladle.addJoin(mockAssetId, ilkJoin.address)).to.be.revertedWith('Asset not found')
   })
 
   it('adds a join', async () => {
-    expect(await cdpProxy.addJoin(ilkId, ilkJoin.address)).to.emit(cdpProxy, 'JoinAdded').withArgs(ilkId, ilkJoin.address)
-    expect(await cdpProxy.joins(ilkId)).to.equal(ilkJoin.address)
+    expect(await ladle.addJoin(ilkId, ilkJoin.address)).to.emit(ladle, 'JoinAdded').withArgs(ilkId, ilkJoin.address)
+    expect(await ladle.joins(ilkId)).to.equal(ilkJoin.address)
   })
 
   describe('with a join added', async () => {
     beforeEach(async () => {
-      await cdpProxy.addJoin(ilkId, ilkJoin.address)
+      await ladle.addJoin(ilkId, ilkJoin.address)
     })
 
     it('only one join per asset', async () => {
-      await expect(cdpProxy.addJoin(ilkId, ilkJoin.address)).to.be.revertedWith('One Join per Asset')
+      await expect(ladle.addJoin(ilkId, ilkJoin.address)).to.be.revertedWith('One Join per Asset')
     })
 
     it('only the vault owner can manage its collateral', async () => {
-      await expect(cdpProxyFromOther.frob(vaultId, WAD, 0)).to.be.revertedWith('Only vault owner')
+      await expect(ladleFromOther.stir(vaultId, WAD, 0)).to.be.revertedWith('Only vault owner')
     })
 
-    it('users can frob to post collateral', async () => {
-      expect(await cdpProxy.frob(vaultId, WAD, 0)).to.emit(vat, 'VaultFrobbed').withArgs(vaultId, seriesId, ilkId, WAD, 0)
+    it('users can stir to post collateral', async () => {
+      expect(await ladle.stir(vaultId, WAD, 0)).to.emit(cauldron, 'VaultStirred').withArgs(vaultId, seriesId, ilkId, WAD, 0)
       expect(await ilk.balanceOf(ilkJoin.address)).to.equal(WAD)
-      expect((await vat.vaultBalances(vaultId)).ink).to.equal(WAD)
+      expect((await cauldron.vaultBalances(vaultId)).ink).to.equal(WAD)
     })
 
     describe('with posted collateral', async () => {
       beforeEach(async () => {
-        await cdpProxy.frob(vaultId, WAD, 0)
+        await ladle.stir(vaultId, WAD, 0)
       })
   
-      it('users can frob to withdraw collateral', async () => {
-        await expect(cdpProxy.frob(vaultId, WAD.mul(-1), 0)).to.emit(vat, 'VaultFrobbed').withArgs(vaultId, seriesId, ilkId, WAD.mul(-1), 0)
+      it('users can stir to withdraw collateral', async () => {
+        await expect(ladle.stir(vaultId, WAD.mul(-1), 0)).to.emit(cauldron, 'VaultStirred').withArgs(vaultId, seriesId, ilkId, WAD.mul(-1), 0)
         expect(await ilk.balanceOf(ilkJoin.address)).to.equal(0)
-        expect((await vat.vaultBalances(vaultId)).ink).to.equal(0)
+        expect((await cauldron.vaultBalances(vaultId)).ink).to.equal(0)
       })
 
-      it('users can frob to borrow fyToken', async () => {
-        await expect(cdpProxy.frob(vaultId, 0, WAD)).to.emit(vat, 'VaultFrobbed').withArgs(vaultId, seriesId, ilkId, 0, WAD)
+      it('users can stir to borrow fyToken', async () => {
+        await expect(ladle.stir(vaultId, 0, WAD)).to.emit(cauldron, 'VaultStirred').withArgs(vaultId, seriesId, ilkId, 0, WAD)
         expect(await fyToken.balanceOf(owner)).to.equal(WAD)
-        expect((await vat.vaultBalances(vaultId)).art).to.equal(WAD)
+        expect((await cauldron.vaultBalances(vaultId)).art).to.equal(WAD)
       })
     })
 
-    it('users can frob to post collateral and borrow fyToken', async () => {
-      await expect(cdpProxy.frob(vaultId, WAD, WAD)).to.emit(vat, 'VaultFrobbed').withArgs(vaultId, seriesId, ilkId, WAD, WAD)
+    it('users can stir to post collateral and borrow fyToken', async () => {
+      await expect(ladle.stir(vaultId, WAD, WAD)).to.emit(cauldron, 'VaultStirred').withArgs(vaultId, seriesId, ilkId, WAD, WAD)
       expect(await ilk.balanceOf(ilkJoin.address)).to.equal(WAD)
       expect(await fyToken.balanceOf(owner)).to.equal(WAD)
-      expect((await vat.vaultBalances(vaultId)).ink).to.equal(WAD)
-      expect((await vat.vaultBalances(vaultId)).art).to.equal(WAD)
+      expect((await cauldron.vaultBalances(vaultId)).ink).to.equal(WAD)
+      expect((await cauldron.vaultBalances(vaultId)).art).to.equal(WAD)
     })
 
     describe('with collateral and debt', async () => {
       beforeEach(async () => {
-        await cdpProxy.frob(vaultId, WAD, WAD)
+        await ladle.stir(vaultId, WAD, WAD)
       })
 
       it('users can repay their debt', async () => {
-        await expect(cdpProxy.frob(vaultId, 0, WAD.mul(-1))).to.emit(vat, 'VaultFrobbed').withArgs(vaultId, seriesId, ilkId, 0, WAD.mul(-1))
+        await expect(ladle.stir(vaultId, 0, WAD.mul(-1))).to.emit(cauldron, 'VaultStirred').withArgs(vaultId, seriesId, ilkId, 0, WAD.mul(-1))
         expect(await fyToken.balanceOf(owner)).to.equal(0)
-        expect((await vat.vaultBalances(vaultId)).art).to.equal(0)
+        expect((await cauldron.vaultBalances(vaultId)).art).to.equal(0)
       })
 
       it('users can\'t repay more debt than they have', async () => {
-        await expect(cdpProxy.frob(vaultId, 0, WAD.mul(-2))).to.be.revertedWith('Result below zero')
+        await expect(ladle.stir(vaultId, 0, WAD.mul(-2))).to.be.revertedWith('Result below zero')
       })
 
       it('users can borrow while under the global debt limit', async () => {
-        await expect(cdpProxy.frob(vaultId, WAD, WAD)).to.emit(vat, 'VaultFrobbed').withArgs(vaultId, seriesId, ilkId, WAD, WAD)
+        await expect(ladle.stir(vaultId, WAD, WAD)).to.emit(cauldron, 'VaultStirred').withArgs(vaultId, seriesId, ilkId, WAD, WAD)
       })
 
       it('users can\'t borrow over the global debt limit', async () => {
-        await expect(cdpProxy.frob(vaultId, WAD.mul(2), WAD.mul(2))).to.be.revertedWith('Max debt exceeded')
+        await expect(ladle.stir(vaultId, WAD.mul(2), WAD.mul(2))).to.be.revertedWith('Max debt exceeded')
       })
     })
   })

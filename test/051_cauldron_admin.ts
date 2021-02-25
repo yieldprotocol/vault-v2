@@ -1,26 +1,25 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import VatArtifact from '../artifacts/contracts/Vat.sol/Vat.json'
+import CauldronArtifact from '../artifacts/contracts/Cauldron.sol/Cauldron.json'
 import FYTokenArtifact from '../artifacts/contracts/FYToken.sol/FYToken.json'
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
 import OracleMockArtifact from '../artifacts/contracts/mocks/OracleMock.sol/OracleMock.json'
 
-import { Vat } from '../typechain/Vat'
+import { Cauldron } from '../typechain/Cauldron'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { OracleMock } from '../typechain/OracleMock'
 
 import { ethers, waffle } from 'hardhat'
-// import { id } from '../src'
 import { expect } from 'chai'
 const { deployContract } = waffle
 
-describe('Vat - Admin', () => {
+describe('Cauldron - Admin', () => {
   let ownerAcc: SignerWithAddress
   let owner: string
   let otherAcc: SignerWithAddress
   let other: string
-  let vat: Vat
-  let vatFromOther: Vat
+  let cauldron: Cauldron
+  let cauldronFromOther: Cauldron
   let fyToken: FYToken
   let base: ERC20Mock
   let ilk: ERC20Mock
@@ -28,8 +27,6 @@ describe('Vat - Admin', () => {
 
   const mockAssetId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const mockSeriesId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const emptyAssetId = '0x000000000000'
-  const mockVaultId =  ethers.utils.hexlify(ethers.utils.randomBytes(12))
   const mockAddress =  ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20)))
   const emptyAddress =  ethers.utils.getAddress('0x0000000000000000000000000000000000000000')
 
@@ -49,76 +46,76 @@ describe('Vat - Admin', () => {
   const ratio = 10000  // == 100% collateralization ratio
 
   beforeEach(async () => {
-    vat = (await deployContract(ownerAcc, VatArtifact, [])) as Vat
+    cauldron = (await deployContract(ownerAcc, CauldronArtifact, [])) as Cauldron
     base = (await deployContract(ownerAcc, ERC20MockArtifact, [baseId, "Mock Base"])) as ERC20Mock
     ilk = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId, "Mock Ilk"])) as ERC20Mock
     fyToken = (await deployContract(ownerAcc, FYTokenArtifact, [base.address, mockAddress, maturity, seriesId, "Mock FYToken"])) as FYToken
     oracle = (await deployContract(ownerAcc, OracleMockArtifact, [])) as OracleMock
 
-    vatFromOther = vat.connect(otherAcc)
+    cauldronFromOther = cauldron.connect(otherAcc)
   })
 
   it('adds an asset', async () => {
-    expect(await vat.addAsset(ilkId, ilk.address)).to.emit(vat, 'AssetAdded').withArgs(ilkId, ilk.address)
-    expect(await vat.assets(ilkId)).to.equal(ilk.address)
+    expect(await cauldron.addAsset(ilkId, ilk.address)).to.emit(cauldron, 'AssetAdded').withArgs(ilkId, ilk.address)
+    expect(await cauldron.assets(ilkId)).to.equal(ilk.address)
   })
 
   it('does not allow adding a series before adding its base', async () => {
-    await expect(vat.addSeries(seriesId, baseId, fyToken.address)).to.be.revertedWith('Asset not found')
+    await expect(cauldron.addSeries(seriesId, baseId, fyToken.address)).to.be.revertedWith('Asset not found')
   })
 
   describe('with a base and an ilk added', async () => {
     beforeEach(async () => {
-      await vat.addAsset(baseId, base.address)
-      await vat.addAsset(ilkId, ilk.address)
+      await cauldron.addAsset(baseId, base.address)
+      await cauldron.addAsset(ilkId, ilk.address)
     })
 
     it('does not allow using the same asset identifier twice', async () => {
-      await expect(vat.addAsset(baseId, base.address)).to.be.revertedWith('Id already used')
+      await expect(cauldron.addAsset(baseId, base.address)).to.be.revertedWith('Id already used')
     })
 
     it('does not allow setting a debt limit for an unknown base', async () => {
-      await expect(vat.setMaxDebt(mockAssetId, ilkId, 2)).to.be.revertedWith('Asset not found')
+      await expect(cauldron.setMaxDebt(mockAssetId, ilkId, 2)).to.be.revertedWith('Asset not found')
     })
   
     it('does not allow setting a debt limit for an unknown ilk', async () => {
-      await expect(vat.setMaxDebt(baseId, mockAssetId, 2)).to.be.revertedWith('Asset not found')
+      await expect(cauldron.setMaxDebt(baseId, mockAssetId, 2)).to.be.revertedWith('Asset not found')
     })
 
     it('sets a debt limit', async () => {
-      expect(await vat.setMaxDebt(baseId, ilkId, 2)).to.emit(vat, 'MaxDebtSet').withArgs(baseId, ilkId, 2)
+      expect(await cauldron.setMaxDebt(baseId, ilkId, 2)).to.emit(cauldron, 'MaxDebtSet').withArgs(baseId, ilkId, 2)
 
-      const debt = await vat.debt(baseId, ilkId)
+      const debt = await cauldron.debt(baseId, ilkId)
       expect(debt.max).to.equal(2)
     })
 
     it('does not allow adding a rate oracle for an unknown base', async () => {
-      await expect(vat.setRateOracle(mockAssetId, oracle.address)).to.be.revertedWith('Asset not found')
+      await expect(cauldron.setRateOracle(mockAssetId, oracle.address)).to.be.revertedWith('Asset not found')
     })
 
     it('adds a rate oracle', async () => {
-      expect(await vat.setRateOracle(baseId, oracle.address)).to.emit(vat, 'RateOracleAdded').withArgs(baseId, oracle.address)
+      expect(await cauldron.setRateOracle(baseId, oracle.address)).to.emit(cauldron, 'RateOracleAdded').withArgs(baseId, oracle.address)
 
-      expect(await vat.rateOracles(baseId)).to.equal(oracle.address)
+      expect(await cauldron.rateOracles(baseId)).to.equal(oracle.address)
     })
 
     it('does not allow adding a series without a rate oracle for its base', async () => {
-      await expect(vat.addSeries(seriesId, baseId, fyToken.address)).to.be.revertedWith('Rate oracle not found')
+      await expect(cauldron.addSeries(seriesId, baseId, fyToken.address)).to.be.revertedWith('Rate oracle not found')
     })
 
     describe('with a rate oracle added', async () => {
       beforeEach(async () => {
-        await vat.setRateOracle(baseId, oracle.address)
+        await cauldron.setRateOracle(baseId, oracle.address)
       })
 
       it('does not allow not linking a series to a fyToken', async () => {
-        await expect(vat.addSeries(seriesId, baseId, emptyAddress)).to.be.revertedWith('Series need a fyToken')
+        await expect(cauldron.addSeries(seriesId, baseId, emptyAddress)).to.be.revertedWith('Series need a fyToken')
       })
 
       it('adds a series', async () => {
-        expect(await vat.addSeries(seriesId, baseId, fyToken.address)).to.emit(vat, 'SeriesAdded').withArgs(seriesId, baseId, fyToken.address)
+        expect(await cauldron.addSeries(seriesId, baseId, fyToken.address)).to.emit(cauldron, 'SeriesAdded').withArgs(seriesId, baseId, fyToken.address)
 
-        const series = await vat.series(seriesId)
+        const series = await cauldron.series(seriesId)
         expect(series.fyToken).to.equal(fyToken.address)
         expect(series.baseId).to.equal(baseId)
         expect(series.maturity).to.equal(maturity)
@@ -126,46 +123,46 @@ describe('Vat - Admin', () => {
 
       describe('with a series added', async () => {
         beforeEach(async () => {
-          await vat.addSeries(seriesId, baseId, fyToken.address)
+          await cauldron.addSeries(seriesId, baseId, fyToken.address)
         })
 
         it('does not allow using the same series identifier twice', async () => {
-          await expect(vat.addSeries(seriesId, baseId, fyToken.address)).to.be.revertedWith('Id already used')
+          await expect(cauldron.addSeries(seriesId, baseId, fyToken.address)).to.be.revertedWith('Id already used')
         })
 
         it('does not allow adding a spot oracle for an unknown base', async () => {
-          await expect(vat.setSpotOracle(mockAssetId, ilkId, oracle.address, ratio)).to.be.revertedWith('Asset not found')
+          await expect(cauldron.setSpotOracle(mockAssetId, ilkId, oracle.address, ratio)).to.be.revertedWith('Asset not found')
         })
 
         it('does not allow adding a spot oracle for an unknown ilk', async () => {
-          await expect(vat.setSpotOracle(baseId, mockAssetId, oracle.address, ratio)).to.be.revertedWith('Asset not found')
+          await expect(cauldron.setSpotOracle(baseId, mockAssetId, oracle.address, ratio)).to.be.revertedWith('Asset not found')
         })
 
         it('adds a spot oracle and its collateralization ratio', async () => {
-          expect(await vat.setSpotOracle(baseId, ilkId, oracle.address, ratio)).to.emit(vat, 'SpotOracleAdded').withArgs(baseId, ilkId, oracle.address, ratio)
+          expect(await cauldron.setSpotOracle(baseId, ilkId, oracle.address, ratio)).to.emit(cauldron, 'SpotOracleAdded').withArgs(baseId, ilkId, oracle.address, ratio)
 
-          const spot = await vat.spotOracles(baseId, ilkId)
+          const spot = await cauldron.spotOracles(baseId, ilkId)
           expect(spot.oracle).to.equal(oracle.address)
           expect(spot.ratio).to.equal(ratio)
         })
 
         describe('with an oracle for the series base and an ilk', async () => {
           beforeEach(async () => {
-            await vat.setSpotOracle(baseId, ilkId, oracle.address, ratio)
+            await cauldron.setSpotOracle(baseId, ilkId, oracle.address, ratio)
           })
 
           it('does not allow adding an asset as an ilk to a series that doesn\'t exist', async () => {
-            await expect(vat.addIlk(mockSeriesId, ilkId)).to.be.revertedWith('Series not found')
+            await expect(cauldron.addIlk(mockSeriesId, ilkId)).to.be.revertedWith('Series not found')
           })
 
           it('does not allow adding an asset as an ilk without an oracle for a series base', async () => {
-            await expect(vat.addIlk(seriesId, mockAssetId)).to.be.revertedWith('Spot oracle not found')
+            await expect(cauldron.addIlk(seriesId, mockAssetId)).to.be.revertedWith('Spot oracle not found')
           })
 
           it('adds an asset as an ilk to a series', async () => {
-            expect(await vat.addIlk(seriesId, ilkId)).to.emit(vat, 'IlkAdded').withArgs(seriesId, ilkId)
+            expect(await cauldron.addIlk(seriesId, ilkId)).to.emit(cauldron, 'IlkAdded').withArgs(seriesId, ilkId)
       
-            expect(await vat.ilks(seriesId, ilkId)).to.be.true
+            expect(await cauldron.ilks(seriesId, ilkId)).to.be.true
           })
         })
       })

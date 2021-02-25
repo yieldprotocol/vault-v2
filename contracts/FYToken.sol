@@ -1,78 +1,85 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 import "./interfaces/IOracle.sol";
+import "./interfaces/IJoin.sol";
 // import "@yield-protocol/utils/contracts/access/Orchestrated.sol";
 import "@yield-protocol/utils/contracts/token/ERC20Permit.sol";
-import "@yield-protocol/utils/contracts/token/IERC20.sol";
 
+
+library RMath { // Fixed point arithmetic in Ray units
+    /// @dev Multiply an amount by a fixed point factor in ray units, returning an amount
+    function rmul(uint128 x, uint128 y) internal pure returns (uint128 z) {
+        uint256 _z = uint256(x) * uint256(y) / 1e27;
+        require (_z <= type(uint128).max, "RMUL Overflow");
+        z = uint128(_z);
+    }
+}
 
 contract FYToken is /* Orchestrated(),*/ ERC20Permit  {
+    using RMath for uint128;
 
-    event Redeemed(address indexed from, address indexed to, uint256 amount);
+    event Redeemed(address indexed from, address indexed to, uint256 amount, uint256 redeemed);
 
     uint256 constant internal MAX_TIME_TO_MATURITY = 126144000; // seconds in four years
 
-    IERC20 public base;
-    IOracle public oracle;
-    uint256 public maturity;
+    IOracle public oracle;                                      // Oracle for the savings rate.
+    IJoin public join;                                          // Source of redemption funds.
+    uint32 public maturity;
 
     constructor(
-        IERC20 base_,
         IOracle oracle_, // Underlying vs its interest-bearing version
-        uint256 maturity_,
+        IJoin join_,
+        uint32 maturity_,
         string memory name,
         string memory symbol
     ) ERC20Permit(name, symbol) {
-        // require(maturity_ > block.timestamp && maturity_ < block.timestamp + MAX_TIME_TO_MATURITY, "Invalid maturity");
-        base = base_;
+        require(/*maturity_ > block.timestamp && */maturity_ < block.timestamp + MAX_TIME_TO_MATURITY, "Invalid maturity");
         oracle = oracle_;
+        join = join_;
         maturity = maturity_;
     }
 
-    /*
+    /// @dev Mature the fyToken by recording the chi in its oracle.
+    /// If called more than once, it will revert.
+    /// Check if it has been called as `fyToken.oracle.recorded(fyToken.maturity())`
     function mature() 
         public
     {
-        oracle.record(maturity); // The oracle checks the timestamp and that it hasn't been recorded yet.        
+        oracle.record(maturity);                                    // Cost of `record` | The oracle checks the timestamp and that it hasn't been recorded yet.        
     }
 
-    function redeem(uint256 amount)
+    /// @dev Burn the fyToken after maturity for an amount that increases according to `chi`
+    function redeem(address to, uint128 amount)
         public
-        returns (uint256)
+        returns (uint128)
     {
         require(
             block.timestamp >= maturity,
-            "fyToken is not mature"
+            "Not mature"
         );
-        _burn(from, amount);
+        _burn(msg.sender, amount);                                  // 2 SSTORE
 
-        // consider moving these two lines to Vat. Credit the user's account with the redemption value, then they can remove via the join.
-        uint256 redeemed = amount * oracle.accrual(maturity);
-        treasury.pull(base, to, amount);
+        // Consider moving these two lines to Ladle.
+        uint128 redeemed = amount.rmul(oracle.accrual(maturity));   // Cost of `accrual`
+        join.join(to, -int128(redeemed));                           // Cost of `join` | TODO: SafeCast
         
-        emit Redeemed(from, to, amount);
+        emit Redeemed(msg.sender, to, amount, redeemed);
         return amount;
-    } */
+    }
 
-    /// @dev Mint fyToken.
-    /// This function can only be called by other Yield contracts, not users directly.
-    /// @param to Wallet to mint the fyToken in.
-    /// @param amount Amount of fyToken to mint.
+    /// @dev Mint fyTokens.
     function mint(address to, uint256 amount)
         public
         /* auth */
     {
-        _mint(to, amount);
+        _mint(to, amount);                                        // 2 SSTORE
     }
 
-    /// @dev Burn fyToken.
-    /// This function can only be called by other Yield contracts, not users directly.
-    /// @param from Wallet to burn the fyToken from.
-    /// @param amount Amount of fyToken to burn.
+    /// @dev Burn fyTokens.
     function burn(address from, uint256 amount)
         public
         /* auth */
     {
-        _burn(from, amount);
+        _burn(from, amount);                                        // 2 SSTORE
     }
 }

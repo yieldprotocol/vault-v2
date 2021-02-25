@@ -6,7 +6,6 @@ import { Join } from '../typechain/Join'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 
 import { ethers, waffle } from 'hardhat'
-// import { id } from '../src'
 import { expect } from 'chai'
 const { deployContract } = waffle
 
@@ -19,8 +18,6 @@ describe('Join', () => {
   let joinFromOther: Join
   let token: ERC20Mock
 
-  const mockAddress =  ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20)))
-  const emptyAddress =  ethers.utils.getAddress('0x0000000000000000000000000000000000000000')
   const MAX = ethers.constants.MaxUint256
 
   before(async () => {

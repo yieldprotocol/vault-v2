@@ -1,15 +1,15 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import VatArtifact from '../artifacts/contracts/Vat.sol/Vat.json'
+import CauldronArtifact from '../artifacts/contracts/Cauldron.sol/Cauldron.json'
 import JoinArtifact from '../artifacts/contracts/Join.sol/Join.json'
 import FYTokenArtifact from '../artifacts/contracts/FYToken.sol/FYToken.json'
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
-import CDPProxyArtifact from '../artifacts/contracts/CDPProxy.sol/CDPProxy.json'
+import LadleArtifact from '../artifacts/contracts/Ladle.sol/Ladle.json'
 
-import { Vat } from '../typechain/Vat'
+import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
-import { CDPProxy } from '../typechain/CDPProxy'
+import { Ladle } from '../typechain/Ladle'
 
 import { ethers, waffle } from 'hardhat'
 // import { id } from '../src'
@@ -24,13 +24,13 @@ describe('Fixtures', () => {
   let otherAcc: SignerWithAddress
   let owner: string
   let other: string
-  let vat: Vat
+  let cauldron: Cauldron
   let fyToken: FYToken
   let base: ERC20Mock
   let ilk: ERC20Mock
   let ilkJoin: Join
-  let cdpProxy: CDPProxy
-  let cdpProxyFromOther: CDPProxy
+  let ladle: Ladle
+  let ladleFromOther: Ladle
 
   async function fixture() {
     return await YieldEnvironment.setup(ownerAcc, [baseId], [seriesId])
