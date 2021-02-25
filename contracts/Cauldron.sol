@@ -22,11 +22,18 @@ library RMath { // Fixed point arithmetic in Ray units
         require (_z <= type(uint128).max, "RMUL Overflow");
         z = uint128(_z);
     }
+
+    /// @dev Multiply an integer amount by a fixed point factor in ray units, returning an integer amount
+    function rmul(int128 x, uint128 y) internal pure returns (int128 z) {
+        if (x < 0) return -int128(rmul(uint128(-x), y));                // TODO: SafeCast
+        else return int128(rmul(uint128(x), y));                        // TODO: SafeCast
+    }
 }
 
 contract Cauldron {
     using Math for uint128;
     using RMath for uint128;
+    using RMath for int128;
 
     event AssetAdded(bytes6 indexed assetId, address indexed asset);
     event SeriesAdded(bytes6 indexed seriesId, bytes6 indexed baseId, address indexed fyToken);
@@ -396,38 +403,22 @@ contract Cauldron {
     }
 
     /// @dev Return the relative collateralization level of a vault for a given change in debt and collateral, as well as the collateralization level at the end.
-    /// TODO: Consider returning also `level`, as in (`level`, `diff`) and removing the `level` function.
-    /// TODO: Also, `diff` could return the collateralization level and the change, and `level` call `diff`.
     function __diff(bytes12 vaultId, int128 dink, int128 dart) internal view returns (int128, int128) {
-        DataTypes.Series memory _series;
-        DataTypes.Balances memory _balances;
-        uint128 ratio;
-        uint128 spot;
-        {
-            DataTypes.Vault memory _vault = vaults[vaultId];                                    // 1 SLOAD
-            _series = series[_vault.seriesId];                                                  // 1 SLOAD
-            DataTypes.Spot memory _spotData = spotOracles[_series.baseId][_vault.ilkId];        // 1 SLOAD
-            _balances = vaultBalances[vaultId];                                                 // 1 SLOAD
-            require (_vault.owner != address(0), "Vault not found");                            // The vault existing is enough to be certain that the oracle exists.
-            ratio = uint128(_spotData.ratio) * 1e23;                                            // Normalization factor from 2 to 27 decimals
-            spot = _spotData.oracle.spot();                                                     // 1 Oracle Call | TODO: SafeCast
-        }
-
-        // Debt owed by the vault in underlying terms
-        uint128 dues0;
-        uint128 dues1;
+        DataTypes.Vault memory _vault = vaults[vaultId];                                    // 1 SLOAD
+        require (_vault.owner != address(0), "Vault not found");                            // The vault existing is enough to be certain that the oracle exists.
+        DataTypes.Series memory _series = series[_vault.seriesId];                          // 1 SLOAD
+        DataTypes.Balances memory _balances = vaultBalances[vaultId];                       // 1 SLOAD
+        DataTypes.Spot memory _spotData = spotOracles[_series.baseId][_vault.ilkId];        // 1 SLOAD
+        uint128 ratio = uint128(_spotData.ratio) * 1e23;                                    // Normalization factor from 2 to 27 decimals
+        uint128 spot = _spotData.oracle.spot();                                             // 1 Oracle Call | TODO: SafeCast
+        uint128 accrual = 1e27;
         if (block.timestamp >= _series.maturity) {
-            IOracle rateOracle = rateOracles[_series.baseId];                                   // 1 SLOAD
-            uint128 accrual = rateOracle.accrual(_series.maturity);                             // 1 Oracle Call
-            dues0 = _balances.art.rmul(accrual);
-            dues1 = _balances.art.add(dart).rmul(accrual);
-        } else {
-            dues0 = _balances.art;
-            dues1 = _balances.art.add(dart);
+            IOracle rateOracle = rateOracles[_series.baseId];                               // 1 SLOAD
+            accrual = rateOracle.accrual(_series.maturity);                                 // 1 Oracle Call
         }
 
-        int128 _level0 = int128(_balances.ink.rmul(spot)) - int128(dues0.rmul(ratio));
-        int128 _level1 = int128(_balances.ink.add(dink).rmul(spot)) - int128(dues1.rmul(ratio));
-        return (_level0, _level1 - _level0);
+        int128 _level = int128(_balances.ink.rmul(spot)) - int128(_balances.art.rmul(accrual).rmul(ratio));
+        int128 _diff = dink.rmul(spot) - dart.rmul(accrual).rmul(ratio);
+        return (_level, _diff);
     }
 }
