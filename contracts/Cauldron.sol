@@ -377,21 +377,25 @@ contract Cauldron {
         return int128(ink.rmul(oracle.spot())) - int128(dues.rmul(ratio));                   // 1 Oracle Call | TODO: SafeCast
     }
     */
+
+    /// @dev Return the collateralization level of a vault. Negative means undercollateralized.
     function level(bytes12 vaultId) public view returns (int128) {
         return __level(vaultId);                                                            // Cost of `__level`
     }
 
+    /// @dev Return the relative collateralization level of a vault for a given change in debt and collateral. Negative means the collateralization level would drop.
     function diff(bytes12 vaultId, int128 dink, int128 dart) public view returns (int128) {
         (,int128 _diff) = __diff(vaultId, dink, dart);                                      // Cost of `__diff`
         return _diff;
     }
 
+    /// @dev Return the collateralization level of a vault. Negative means undercollateralized.
     function __level(bytes12 vaultId) internal view returns (int128) {
         (int128 _level,) = __diff(vaultId, 0, 0);                                           // Cost of `__diff`
         return _level;
     }
 
-    /// @dev Return the relative collateralization level of a vault for a given change in debt and collateral.
+    /// @dev Return the relative collateralization level of a vault for a given change in debt and collateral, as well as the collateralization level at the end.
     /// TODO: Consider returning also `level`, as in (`level`, `diff`) and removing the `level` function.
     /// TODO: Also, `diff` could return the collateralization level and the change, and `level` call `diff`.
     function __diff(bytes12 vaultId, int128 dink, int128 dart) internal view returns (int128, int128) {
