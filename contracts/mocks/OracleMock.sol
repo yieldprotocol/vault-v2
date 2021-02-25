@@ -16,7 +16,7 @@ library RMath { // Fixed point arithmetic in Ray units
 contract OracleMock is IOracle {
     using RMath for uint128;
 
-    event SpotRecorded(uint32 maturity, uint128 spot);
+    event Recorded(uint32 maturity, uint128 spot);
 
     uint128 internal _spot;
     mapping(uint32 => uint128) public recorded;
@@ -32,7 +32,7 @@ contract OracleMock is IOracle {
         require(_now >= maturity, "Record after maturity");
         require(recorded[maturity] == 0, "Already recorded a value");
         recorded[maturity] = _spot;
-        emit SpotRecorded(maturity, _spot);
+        emit Recorded(maturity, _spot);
     }
 
     /// @dev Return the increase in spot price between now and the recorded price at `maturity`.

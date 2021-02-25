@@ -362,4 +362,13 @@ contract Cauldron {
 
         return int128(ink.rmul(oracle.spot())) - int128(dues.rmul(ratio));                   // 1 Oracle Call | TODO: SafeCast
     }
+
+    /// @dev Helper function to record the rate in the appropriate oracle when maturing an fyToken
+    // TODO: Do we need this here? It can be in its own contract.
+    function mature(bytes6 seriesId) public {
+        DataTypes.Series memory _series = series[seriesId];                                 // 1 SLOAD
+        IOracle rateOracle = rateOracles[_series.baseId];                                   // 1 SLOAD
+        rateOracle.record(_series.maturity);                                                // Cost of `record`
+        _series.fyToken.mature();                                                           // Cost of `mature`
+    }
 }

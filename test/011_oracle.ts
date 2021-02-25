@@ -37,7 +37,7 @@ describe('Oracle', () => {
     })
 
     it('records and retrieves the spot price', async () => {
-      expect(await oracle.record(pastMaturity)).to.emit(oracle, 'SpotRecorded').withArgs(pastMaturity, 1)
+      expect(await oracle.record(pastMaturity)).to.emit(oracle, 'Recorded').withArgs(pastMaturity, 1)
 
       await oracle.setSpot(2) // Just to be sure we are retrieving the recorded value
       expect(await oracle.recorded(pastMaturity)).to.equal(1)

@@ -37,6 +37,8 @@ contract Join {
         // auth
         returns (int128)
     {
+        // console.logInt(amount);
+        // console.log(token.balanceOf(address(this)));
         if (amount > 0) {
             // require(live == 1, "GemJoin/not-live");
             // TODO: Consider best practices about safe transfers
