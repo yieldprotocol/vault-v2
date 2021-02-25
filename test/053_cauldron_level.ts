@@ -15,6 +15,7 @@ const { loadFixture } = waffle
 const timeMachine = require('ether-time-traveler');
 
 describe('Cauldron - Level', () => {
+  let snapshotId: any
   let ownerAcc: SignerWithAddress
   let owner: string
   let env: YieldEnvironment
@@ -36,9 +37,14 @@ describe('Cauldron - Level', () => {
   }
 
   before(async () => {
+    snapshotId = await timeMachine.takeSnapshot(ethers.provider)
     const signers = await ethers.getSigners()
     ownerAcc = signers[0]
     owner = await ownerAcc.getAddress()
+  })
+
+  after(async () => {
+    await timeMachine.revertToSnapshot(ethers.provider, snapshotId);
   })
 
   beforeEach(async function () {
