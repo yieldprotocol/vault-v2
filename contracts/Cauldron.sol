@@ -30,6 +30,18 @@ library RMath { // Fixed point arithmetic in Ray units
     }
 }
 
+library Safe128 {
+    function u128(int128 x) internal pure returns (uint128 y) {
+        require (x >= 0, "Cast overflow");
+        y = uint128(x);
+    }
+
+    function i128(uint128 x) internal pure returns (int128 y) {
+        require (x <= uint256(int256(type(int128).max)), "Cast overflow"); // TODO: Hardcode in hex
+        y = int128(x);
+    }
+}
+
 // TODO: Change ink for dink and art for dart when we are talking about differentials.
 // TODO: Come up with a consistent use of underscores for variables (trailing underscore?)
 
@@ -37,6 +49,8 @@ contract Cauldron {
     using Math for uint128;
     using RMath for uint128;
     using RMath for int128;
+    using Safe128 for uint128;
+    using Safe128 for int128;
 
     event AssetAdded(bytes6 indexed assetId, address indexed asset);
     event SeriesAdded(bytes6 indexed seriesId, bytes6 indexed baseId, address indexed fyToken);
@@ -376,10 +390,10 @@ contract Cauldron {
         if (block.timestamp >= series_.maturity) {
             IOracle rateOracle = rateOracles[series_.baseId];                               // 1 SLOAD
             uint128 accrual = rateOracle.accrual(series_.maturity);                         // 1 `accrual` call
-            return int128(balances_.ink.rmul(spot)) - int128(balances_.art.rmul(accrual).rmul(ratio)); // TODO: SafeCast
+            return balances_.ink.rmul(spot).i128() - balances_.art.rmul(accrual).rmul(ratio).i128();
         }
 
-        return int128(balances_.ink.rmul(spot)) - int128(balances_.art.rmul(ratio));         // TODO: SafeCast
+        return balances_.ink.rmul(spot).i128() - balances_.art.rmul(ratio).i128();
     }
     */
 
@@ -413,13 +427,13 @@ contract Cauldron {
         if (block.timestamp >= series_.maturity) {
             uint128 accrual = rateOracles[series_.baseId].accrual(series_.maturity);        // 1 SLOAD + 1 `accrual` call
             return (
-                int128(balances_.ink.rmul(spot)) - int128(balances_.art.rmul(accrual).rmul(ratio)), // level
+                balances_.ink.rmul(spot).i128() - balances_.art.rmul(accrual).rmul(ratio).i128(), // level
                 dink.rmul(spot) - dart.rmul(accrual).rmul(ratio)                                    // diff
             );
         }
 
         return (
-            int128(balances_.ink.rmul(spot)) - int128(balances_.art.rmul(ratio)),           // level
+            balances_.ink.rmul(spot).i128() - balances_.art.rmul(ratio).i128(),           // level
             dink.rmul(spot) - dart.rmul(ratio)                                              // diff
         );
     }
