@@ -109,7 +109,7 @@ describe('Ladle - stir', () => {
     it('users can stir to post collateral', async () => {
       expect(await ladle.stir(vaultId, WAD, 0)).to.emit(cauldron, 'VaultStirred').withArgs(vaultId, seriesId, ilkId, WAD, 0)
       expect(await ilk.balanceOf(ilkJoin.address)).to.equal(WAD)
-      expect((await cauldron.vaultBalances(vaultId)).ink).to.equal(WAD)
+      expect((await cauldron.balances(vaultId)).ink).to.equal(WAD)
     })
 
     describe('with posted collateral', async () => {
@@ -120,13 +120,13 @@ describe('Ladle - stir', () => {
       it('users can stir to withdraw collateral', async () => {
         await expect(ladle.stir(vaultId, WAD.mul(-1), 0)).to.emit(cauldron, 'VaultStirred').withArgs(vaultId, seriesId, ilkId, WAD.mul(-1), 0)
         expect(await ilk.balanceOf(ilkJoin.address)).to.equal(0)
-        expect((await cauldron.vaultBalances(vaultId)).ink).to.equal(0)
+        expect((await cauldron.balances(vaultId)).ink).to.equal(0)
       })
 
       it('users can stir to borrow fyToken', async () => {
         await expect(ladle.stir(vaultId, 0, WAD)).to.emit(cauldron, 'VaultStirred').withArgs(vaultId, seriesId, ilkId, 0, WAD)
         expect(await fyToken.balanceOf(owner)).to.equal(WAD)
-        expect((await cauldron.vaultBalances(vaultId)).art).to.equal(WAD)
+        expect((await cauldron.balances(vaultId)).art).to.equal(WAD)
       })
     })
 
@@ -134,8 +134,8 @@ describe('Ladle - stir', () => {
       await expect(ladle.stir(vaultId, WAD, WAD)).to.emit(cauldron, 'VaultStirred').withArgs(vaultId, seriesId, ilkId, WAD, WAD)
       expect(await ilk.balanceOf(ilkJoin.address)).to.equal(WAD)
       expect(await fyToken.balanceOf(owner)).to.equal(WAD)
-      expect((await cauldron.vaultBalances(vaultId)).ink).to.equal(WAD)
-      expect((await cauldron.vaultBalances(vaultId)).art).to.equal(WAD)
+      expect((await cauldron.balances(vaultId)).ink).to.equal(WAD)
+      expect((await cauldron.balances(vaultId)).art).to.equal(WAD)
     })
 
     describe('with collateral and debt', async () => {
@@ -146,7 +146,7 @@ describe('Ladle - stir', () => {
       it('users can repay their debt', async () => {
         await expect(ladle.stir(vaultId, 0, WAD.mul(-1))).to.emit(cauldron, 'VaultStirred').withArgs(vaultId, seriesId, ilkId, 0, WAD.mul(-1))
         expect(await fyToken.balanceOf(owner)).to.equal(0)
-        expect((await cauldron.vaultBalances(vaultId)).art).to.equal(0)
+        expect((await cauldron.balances(vaultId)).art).to.equal(0)
       })
 
       it('users can\'t repay more debt than they have', async () => {

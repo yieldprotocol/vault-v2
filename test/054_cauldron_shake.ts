@@ -91,7 +91,7 @@ describe('Cauldron - shake', () => {
 
   it('moves collateral', async () => {
     expect(await cauldron.shake(vaultFromId, vaultToId, WAD)).to.emit(cauldron, 'VaultShaken').withArgs(vaultFromId, vaultToId, WAD)
-    expect((await cauldron.vaultBalances(vaultFromId)).ink).to.equal(0)
-    expect((await cauldron.vaultBalances(vaultToId)).ink).to.equal(WAD)
+    expect((await cauldron.balances(vaultFromId)).ink).to.equal(0)
+    expect((await cauldron.balances(vaultToId)).ink).to.equal(WAD)
   })
 })

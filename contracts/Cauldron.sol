@@ -66,7 +66,7 @@ contract Cauldron {
 
     // ==== Vault data ====
     mapping (bytes12 => DataTypes.Vault)                    public vaults;          // An user can own one or more Vaults, each one with a bytes12 identifier
-    mapping (bytes12 => DataTypes.Balances)                 public vaultBalances;   // Both debt and assets
+    mapping (bytes12 => DataTypes.Balances)                 public balances;        // Both debt and assets
     mapping (bytes12 => uint32)                             public timestamps;      // If grater than zero, time that a vault was timestamped. Used for liquidation.
 
     // ==== Administration ====
@@ -169,7 +169,7 @@ contract Cauldron {
         public
     {
         require (vaults[vaultId].owner == msg.sender, "Only vault owner");                  // 1 SLOAD
-        DataTypes.Balances memory _balances = vaultBalances[vaultId];                       // 1 SLOAD
+        DataTypes.Balances memory _balances = balances[vaultId];                            // 1 SLOAD
         require (_balances.art == 0 && _balances.ink == 0, "Only empty vaults");            // 1 SLOAD
         // delete timestamps[vaultId];                                                      // 1 SSTORE REFUND
         delete vaults[vaultId];                                                             // 1 SSTORE REFUND
@@ -183,7 +183,7 @@ contract Cauldron {
         internal
     {
         require (ilks[seriesId][ilkId] == true, "Ilk not added");                           // 1 SLOAD
-        DataTypes.Balances memory _balances = vaultBalances[vaultId];                       // 1 SLOAD
+        DataTypes.Balances memory _balances = balances[vaultId];                            // 1 SLOAD
         DataTypes.Vault memory _vault = vaults[vaultId];                                    // 1 SLOAD
         if (seriesId != _vault.seriesId) {
             require (_balances.art == 0, "Only with no debt");
@@ -214,13 +214,13 @@ contract Cauldron {
         internal
         returns (DataTypes.Balances memory, DataTypes.Balances memory)
     {
-        require (vaults[from].ilkId == vaults[to].ilkId, "Different collateral");               // 2 SLOAD
-        DataTypes.Balances memory _balancesFrom = vaultBalances[from];                          // 1 SLOAD
-        DataTypes.Balances memory _balancesTo = vaultBalances[to];                              // 1 SLOAD
+        require (vaults[from].ilkId == vaults[to].ilkId, "Different collateral");          // 2 SLOAD
+        DataTypes.Balances memory _balancesFrom = balances[from];                          // 1 SLOAD
+        DataTypes.Balances memory _balancesTo = balances[to];                              // 1 SLOAD
         _balancesFrom.ink -= ink;
         _balancesTo.ink += ink;
-        vaultBalances[from] = _balancesFrom;                                                    // 1 SSTORE
-        vaultBalances[to] = _balancesTo;                                                        // 1 SSTORE
+        balances[from] = _balancesFrom;                                                    // 1 SSTORE
+        balances[to] = _balancesTo;                                                        // 1 SSTORE
         emit VaultShaken(from, to, ink);
 
         return (_balancesFrom, _balancesTo);
@@ -233,7 +233,7 @@ contract Cauldron {
         internal returns (DataTypes.Balances memory)
     {
         DataTypes.Vault memory _vault = vaults[vaultId];                                    // 1 SLOAD
-        DataTypes.Balances memory _balances = vaultBalances[vaultId];                       // 1 SLOAD
+        DataTypes.Balances memory _balances = balances[vaultId];                            // 1 SLOAD
         DataTypes.Series memory _series = series[_vault.seriesId];                          // 1 SLOAD
 
         // For now, the collateralization checks are done outside to allow for underwater operation. That might change.
@@ -250,7 +250,7 @@ contract Cauldron {
             _debt.sum = _debt.sum.add(art);
             debt[_series.baseId][_vault.ilkId] = _debt;                                     // 1 SSTORE
         }
-        vaultBalances[vaultId] = _balances;                                                 // 1 SSTORE
+        balances[vaultId] = _balances;                                                      // 1 SSTORE
 
         emit VaultStirred(vaultId, _vault.seriesId, _vault.ilkId, ink, art);
         return _balances;
@@ -267,10 +267,10 @@ contract Cauldron {
         auth
     {
         require (vaults[vaultId].owner != address(0), "Vault not found");                   // 1 SLOAD
-        DataTypes.Balances memory _balances = vaultBalances[vaultId];                       // 1 SLOAD
+        DataTypes.Balances memory _balances = balances[vaultId];                            // 1 SLOAD
         DataTypes.Series memory _series = series[vaultId];                                  // 1 SLOAD
         
-        delete vaultBalances[vaultId];                                                      // -1 SSTORE
+        delete balances[vaultId];                                                           // -1 SSTORE
         __tweak(vaultId, seriesId, vaults[vaultId].ilkId);                                  // 1 SLOAD + Cost of `__tweak`
 
         // Modify vault and global debt records. If debt increases, check global limit.
@@ -281,7 +281,7 @@ contract Cauldron {
             _debt.sum = _debt.sum.add(art);
             debt[_series.baseId][_vault.ilkId] = _debt;                                     // 1 SSTORE
         }
-        vaultBalances[vaultId] = _balances;                                                 // 1 SSTORE
+        balances[vaultId] = _balances;                                                      // 1 SSTORE
         require(__level(vaultId) >= 0, "Undercollateralized");                              // Cost of `level`
     } */
 
@@ -290,13 +290,13 @@ contract Cauldron {
     function _stir(bytes12 vaultId, int128 ink, int128 art)
         public
         // auth                                                                             // 1 SLOAD
-        returns (DataTypes.Balances memory balances)
+        returns (DataTypes.Balances memory _balances)
     {
         require (vaults[vaultId].owner != address(0), "Vault not found");                   // 1 SLOAD
-        balances = __stir(vaultId, ink, art);                                               // Cost of `__stir`
-        if (balances.art > 0 && (ink < 0 || art > 0))                                       // If there is debt and we are less safe
+        _balances = __stir(vaultId, ink, art);                                              // Cost of `__stir`
+        if (_balances.art > 0 && (ink < 0 || art > 0))                                      // If there is debt and we are less safe
             require(__level(vaultId) >= 0, "Undercollateralized");                          // Cost of `level`. TODO: Consider allowing if collateralization level either is healthy or improves.
-        return balances;
+        return _balances;
     }
 
     /// @dev Give a non-timestamped vault to the caller, and timestamp it.
@@ -318,13 +318,13 @@ contract Cauldron {
     function _slurp(bytes12 vaultId, int128 ink, int128 art)
         public
         // auth                                                                             // 1 SLOAD
-        returns (DataTypes.Balances memory balances)
+        returns (DataTypes.Balances memory _balances)
     {
         require (vaults[vaultId].owner == msg.sender, "Only vault owner");                  // 1 SLOAD
         // (int128 _level, int128 _diff) = __diff(vaultId, ink, art);                       // Cost of `__diff`
         // require (_level >= 0 || _diff >= 0, "Healthy or improve");                       // TODO: Do we really need this? We are only letting audited liquidators use this. Unaudited liquidators could just set art to zero.
-        balances = __stir(vaultId, ink, art);                                               // Cost of `__stir`
-        return balances;
+        _balances = __stir(vaultId, ink, art);                                              // Cost of `__stir`
+        return _balances;
     }
 
     // ---- Public processes ----
@@ -368,7 +368,7 @@ contract Cauldron {
         DataTypes.Vault memory _vault = vaults[vaultId];                                    // 1 SLOAD
         require (_vault.owner != address(0), "Vault not found");                            // The vault existing is enough to be certain that the oracle exists.
         DataTypes.Series memory _series = series[_vault.seriesId];                          // 1 SLOAD
-        DataTypes.Balances memory _balances = vaultBalances[vaultId];                       // 1 SLOAD
+        DataTypes.Balances memory _balances = balances[vaultId];                            // 1 SLOAD
         DataTypes.Spot memory _spotData = spotOracles[_series.baseId][_vault.ilkId];        // 1 SLOAD
         uint128 spot = oracle.spot();                                                       // 1 `spot` call
         uint128 ratio = uint128(_spotData.ratio) * 1e23;                                    // Normalization factor from 2 to 27 decimals
@@ -405,7 +405,7 @@ contract Cauldron {
         DataTypes.Vault memory _vault = vaults[vaultId];                                    // 1 SLOAD
         require (_vault.owner != address(0), "Vault not found");                            // The vault existing is enough to be certain that the oracle exists.
         DataTypes.Series memory _series = series[_vault.seriesId];                          // 1 SLOAD
-        DataTypes.Balances memory _balances = vaultBalances[vaultId];                       // 1 SLOAD
+        DataTypes.Balances memory _balances = balances[vaultId];                            // 1 SLOAD
         DataTypes.Spot memory _spotData = spotOracles[_series.baseId][_vault.ilkId];        // 1 SLOAD
         uint128 ratio = uint128(_spotData.ratio) * 1e23;                                    // Normalization factor from 2 to 27 decimals | TODO: SafeCast
         uint128 spot = _spotData.oracle.spot();                                             // 1 `spot` call

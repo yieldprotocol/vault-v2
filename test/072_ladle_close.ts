@@ -90,7 +90,7 @@ describe('Ladle - close', () => {
     await expect(ladle.close(vaultId, 0, WAD.mul(-1))).to.emit(cauldron, 'VaultStirred').withArgs(vaultId, seriesId, ilkId, 0, WAD.mul(-1))
     expect(await base.balanceOf(owner)).to.equal(baseBefore.sub(WAD))
     expect(await fyToken.balanceOf(owner)).to.equal(WAD)
-    expect((await cauldron.vaultBalances(vaultId)).art).to.equal(0)
+    expect((await cauldron.balances(vaultId)).art).to.equal(0)
   })
 
   it('users can repay their debt with underlying and add collateral at the same time', async () => {
@@ -98,9 +98,9 @@ describe('Ladle - close', () => {
     await expect(ladle.close(vaultId, WAD, WAD.mul(-1))).to.emit(cauldron, 'VaultStirred').withArgs(vaultId, seriesId, ilkId, WAD, WAD.mul(-1))
     expect(await base.balanceOf(owner)).to.equal(baseBefore.sub(WAD))
     expect(await fyToken.balanceOf(owner)).to.equal(WAD)
-    expect((await cauldron.vaultBalances(vaultId)).art).to.equal(0)
+    expect((await cauldron.balances(vaultId)).art).to.equal(0)
     expect(await ilk.balanceOf(ilkJoin.address)).to.equal(WAD.mul(2))
-    expect((await cauldron.vaultBalances(vaultId)).ink).to.equal(WAD.mul(2))
+    expect((await cauldron.balances(vaultId)).ink).to.equal(WAD.mul(2))
   })
 
   it('users can repay their debt with underlying and remove collateral at the same time', async () => {
@@ -108,9 +108,9 @@ describe('Ladle - close', () => {
     await expect(ladle.close(vaultId, WAD.mul(-1), WAD.mul(-1))).to.emit(cauldron, 'VaultStirred').withArgs(vaultId, seriesId, ilkId, WAD.mul(-1), WAD.mul(-1))
     expect(await base.balanceOf(owner)).to.equal(baseBefore.sub(WAD))
     expect(await fyToken.balanceOf(owner)).to.equal(WAD)
-    expect((await cauldron.vaultBalances(vaultId)).art).to.equal(0)
+    expect((await cauldron.balances(vaultId)).art).to.equal(0)
     expect(await ilk.balanceOf(ilkJoin.address)).to.equal(0)
-    expect((await cauldron.vaultBalances(vaultId)).ink).to.equal(0)
+    expect((await cauldron.balances(vaultId)).ink).to.equal(0)
   })
 
   describe('after maturity', async () => {
@@ -129,7 +129,7 @@ describe('Ladle - close', () => {
       await expect(ladle.close(vaultId, 0, WAD.mul(-1))).to.emit(cauldron, 'VaultStirred').withArgs(vaultId, seriesId, ilkId, 0, WAD.mul(-1))
       expect(await base.balanceOf(owner)).to.equal(baseBefore.sub(WAD.mul(accrual).div(RAY)))
       expect(await fyToken.balanceOf(owner)).to.equal(WAD)
-      expect((await cauldron.vaultBalances(vaultId)).art).to.equal(0)
+      expect((await cauldron.balances(vaultId)).art).to.equal(0)
     })
   })
 })

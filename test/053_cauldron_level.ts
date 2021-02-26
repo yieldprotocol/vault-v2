@@ -63,8 +63,8 @@ describe('Cauldron - Level', () => {
   })
 
   it('before maturity, level is ink * spot - art * ratio', async () => {
-    const ink = (await cauldron.vaultBalances(vaultId)).ink
-    const art = (await cauldron.vaultBalances(vaultId)).art
+    const ink = (await cauldron.balances(vaultId)).ink
+    const art = (await cauldron.balances(vaultId)).art
     for (let spot of [1, 2, 4]) {
       await spotOracle.setSpot(RAY.mul(spot))
       for (let ratio of [50, 100, 200]) {
@@ -97,8 +97,8 @@ describe('Cauldron - Level', () => {
     await timeMachine.advanceTimeAndBlock(ethers.provider, THREE_MONTHS)
     await rateOracle.record(await fyToken.maturity())
 
-    const ink = (await cauldron.vaultBalances(vaultId)).ink
-    const art = (await cauldron.vaultBalances(vaultId)).art
+    const ink = (await cauldron.balances(vaultId)).ink
+    const art = (await cauldron.balances(vaultId)).art
     for (let spot of [1, 2, 4]) {
       await spotOracle.setSpot(RAY.mul(spot))
       for (let rate of [110, 120, 140]) {

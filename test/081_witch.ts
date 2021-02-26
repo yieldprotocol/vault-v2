@@ -118,7 +118,7 @@ describe('Witch', () => {
       // await expect(witch.buy(vaultId, WAD, 0)).to.emit(witch, 'Bought').withArgs(owner, vaultId, null, WAD)
       await witch.buy(vaultId, WAD, 0)
       // const event = (await witch.queryFilter(witch.filters.Bought(null, null, null, null)))[0]
-      const dink = WAD.sub((await cauldron.vaultBalances(vaultId)).ink)
+      const dink = WAD.sub((await cauldron.balances(vaultId)).ink)
       expect(dink.div(10**15)).to.equal(WAD.div(10**15).div(2)) // Nice hack to compare up to some precision
       expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(WAD))
       expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(dink))
@@ -135,7 +135,7 @@ describe('Witch', () => {
         // await expect(witch.buy(vaultId, WAD, 0)).to.emit(witch, 'Bought').withArgs(owner, vaultId, null, WAD)
         await witch.buy(vaultId, WAD, 0)
         // const event = (await witch.queryFilter(witch.filters.Bought(null, null, null, null)))[0]
-        const dink = WAD.sub((await cauldron.vaultBalances(vaultId)).ink)
+        const dink = WAD.sub((await cauldron.balances(vaultId)).ink)
         expect(dink).to.equal(WAD)
         expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(WAD))
         expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(dink))
