@@ -43,10 +43,11 @@ library RMath {
     }
 }
 
+// TODO: Add a setter for AUCTION_TIME
 contract Witch {
     using RMath for uint128;
 
-    event Bought(address indexed buyer, bytes12 indexed vaultId, uint128 dink, uint128 dart);
+    event Bought(address indexed buyer, bytes12 indexed vaultId, uint128 ink, uint128 art);
   
     uint128 constant public AUCTION_TIME = 4 * 60 * 60; // Time that auctions take to go to minimal price and stay there.
     ICauldron immutable public cauldron;
@@ -63,10 +64,10 @@ contract Witch {
     }
 
     /// @dev Buy an amount of collateral off a vault in liquidation, paying at most `max` underlying.
-    function buy(bytes12 vaultId, uint128 dart, uint128 min) public {
+    function buy(bytes12 vaultId, uint128 art, uint128 min) public {
         DataTypes.Balances memory balances_ = cauldron.balances(vaultId);                   // Cost of `cauldron.balances`
         require (balances_.art > 0, "Nothing to buy");                                          // Cheapest way of failing gracefully if given a non existing vault
-        uint128 elapsed = uint128(block.timestamp) - cauldron.timestamps(vaultId);              // Cost of `cauldron.timestamps`
+        uint128 elapsed = uint32(block.timestamp) - cauldron.timestamps(vaultId);              // Cost of `cauldron.timestamps`
         uint128 price;
         {
             // Price of a collateral unit, in underlying, at the present moment, for a given vault
@@ -82,28 +83,13 @@ contract Witch {
             uint128 term3 = dividend3.rdiv(divisor3);
             price = uint128(RAY).rdiv(term1.rmul(term2 + term3));
         }
-        uint128 dink = dart.rdivup(price);                                                      // Calculate collateral to sell. Using divdrup stops rounding from leaving 1 stray wei in vaults.
-        require (dink >= min, "Not enough bought");                                             // TODO: We could also check that min <= balances_.ink
+        uint128 ink = art.rdivup(price);                                                      // Calculate collateral to sell. Using divdrup stops rounding from leaving 1 stray wei in vaults.
+        require (ink >= min, "Not enough bought");                                             // TODO: We could also check that min <= balances_.ink
 
-        balances_ = cauldron._slurp(vaultId, -int128(dink), -int128(dart));                      // Cost of `cauldron._slurp`  | Manipulate the vault | TODO: SafeCast
-        ladle._join(vaultId, msg.sender, -int128(dink), int128(dart));                          // Cost of `ladle._join`      | Move the assets | TODO: SafeCast
+        balances_ = cauldron._slurp(vaultId, -int128(ink), -int128(art));                      // Cost of `cauldron._slurp`  | Manipulate the vault | TODO: SafeCast
+        ladle._join(vaultId, msg.sender, -int128(ink), int128(art));                          // Cost of `ladle._join`      | Move the assets | TODO: SafeCast
         if (balances_.art == 0 && balances_.ink == 0) cauldron.destroy(vaultId);                  // Cost of `cauldron.destroy`
 
-        emit Bought(msg.sender, vaultId, dink, dart);
+        emit Bought(msg.sender, vaultId, ink, art);
     }
-
-    /// @dev Return price of a collateral unit, in underlying, at the present moment, for a given vault
-    //
-    //                ink       1      min(auction, elapsed)
-    // price = 1 / (------- * (--- + -----------------------))
-    //                art       2       2 * auction
-    /* function price(uint128 ink, uint128 art, uint128 elapsed) public pure returns (uint128) {
-        uint128 RAY = 1e27;
-        uint128 term1 = ink.rdiv(art);
-        uint128 term2 = RAY / 2;
-        uint128 dividend3 = Math.min(AUCTION_TIME, elapsed);
-        uint128 divisor3 = AUCTION_TIME * 2;
-        uint128 term3 = dividend3.rdiv(divisor3);
-        price = RAY.rdiv(term1.rmul(term2 + term3));
-    } */
 }

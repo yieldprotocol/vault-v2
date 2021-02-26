@@ -17,6 +17,8 @@ library RMath { // Fixed point arithmetic in Ray units
     }
 }
 
+// TODO: Setter for MAX_TIME_TO_MATURITY
+// TODO: Instantiating fyToken with maturity in the past
 contract FYToken is /* Orchestrated(),*/ ERC20Permit  {
     using RMath for uint128;
 
@@ -35,7 +37,8 @@ contract FYToken is /* Orchestrated(),*/ ERC20Permit  {
         string memory name,
         string memory symbol
     ) ERC20Permit(name, symbol) {
-        require(/*maturity_ > block.timestamp && */maturity_ < block.timestamp + MAX_TIME_TO_MATURITY, "Invalid maturity");
+        uint32 now_ = uint32(block.timestamp);
+        require(maturity_ > now_ && maturity_ < now_ + MAX_TIME_TO_MATURITY, "Invalid maturity");
         oracle = oracle_;
         join = join_;
         maturity = maturity_;
@@ -56,7 +59,7 @@ contract FYToken is /* Orchestrated(),*/ ERC20Permit  {
         returns (uint128)
     {
         require(
-            block.timestamp >= maturity,
+            uint32(block.timestamp) >= maturity,
             "Not mature"
         );
         _burn(msg.sender, amount);                                  // 2 SSTORE

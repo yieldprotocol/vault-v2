@@ -46,8 +46,4 @@ contract OracleMock is IOracle {
     function setSpot(uint128 spot_) external {
         _spot = spot_;
     }
-
-    function time() external view returns (uint256) {
-        return block.timestamp;
-    }
 }

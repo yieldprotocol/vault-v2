@@ -47,8 +47,8 @@ library Safe128 {
     }
 }
 
-// TODO: Change ink for dink and art for dart when we are talking about differentials.
-// TODO: Come up with a consistent use of underscores for variables (trailing underscore?)
+// TODO: Check safety of storing block.timestamp in an uint32, what happens when it wraps, and when will it wrap?
+// TODO: Add a setter for auction protection (same as Witch.AUCTION_TIME?)
 
 contract Cauldron {
     using Math for uint128;
@@ -325,11 +325,12 @@ contract Cauldron {
         public
         // auth                                                                             // 1 SLOAD
     {
-        require (timestamps[vaultId] + 24*60*60 <= block.timestamp, "Timestamped");         // 1 SLOAD. Grabbing a vault protects it for a day from being grabbed by another liquidator.
+        uint32 now_ = uint32(block.timestamp);
+        require (timestamps[vaultId] + 24*60*60 <= now_, "Timestamped");                    // 1 SLOAD. Grabbing a vault protects it for a day from being grabbed by another liquidator.
         require(__level(vaultId) < 0, "Not undercollateralized");                           // Cost of `__level`.
-        timestamps[vaultId] = uint32(block.timestamp);                                      // 1 SSTORE. TODO: SafeCast
+        timestamps[vaultId] = now_;                                                         // 1 SSTORE
         __give(vaultId, msg.sender);                                                        // Cost of `__give`
-        emit VaultTimestamped(vaultId, block.timestamp);
+        emit VaultTimestamped(vaultId, now_);
     }
 
     /// @dev Manipulate a vault, ignoring collateralization levels.
@@ -392,7 +393,7 @@ contract Cauldron {
         uint128 spot = oracle.spot();                                                       // 1 `spot` call
         uint128 ratio = uint128(spotOracle_.ratio) * 1e23;                                    // Normalization factor from 2 to 27 decimals
 
-        if (block.timestamp >= series_.maturity) {
+        if (uint32(block.timestamp) >= series_.maturity) {
             IOracle rateOracle = rateOracles[series_.baseId];                               // 1 SLOAD
             uint128 accrual = rateOracle.accrual(series_.maturity);                         // 1 `accrual` call
             return balances_.ink.rmul(spot).i128() - balances_.art.rmul(accrual).rmul(ratio).i128();
@@ -408,8 +409,8 @@ contract Cauldron {
     }
 
     /// @dev Return the relative collateralization level of a vault for a given change in debt and collateral. Negative means the collateralization level would drop.
-    function diff(bytes12 vaultId, int128 dink, int128 dart) public view returns (int128) {
-        (,int128 _diff) = __diff(vaultId, dink, dart);                                      // Cost of `__diff`
+    function diff(bytes12 vaultId, int128 ink, int128 art) public view returns (int128) {
+        (,int128 _diff) = __diff(vaultId, ink, art);                                      // Cost of `__diff`
         return _diff;
     }
 
@@ -420,7 +421,7 @@ contract Cauldron {
     }
 
     /// @dev Return the relative collateralization level of a vault for a given change in debt and collateral, as well as the collateralization level at the end.
-    function __diff(bytes12 vaultId, int128 dink, int128 dart) internal view returns (int128, int128) {
+    function __diff(bytes12 vaultId, int128 ink, int128 art) internal view returns (int128, int128) {
         DataTypes.Vault memory vault_ = vaults[vaultId];                                    // 1 SLOAD
         require (vault_.owner != address(0), "Vault not found");                            // The vault existing is enough to be certain that the oracle exists.
         DataTypes.Series memory series_ = series[vault_.seriesId];                          // 1 SLOAD
@@ -429,17 +430,17 @@ contract Cauldron {
         uint128 ratio = uint128(spotOracle_.ratio) * 1e23;                                  // Normalization factor from 2 to 27 decimals | TODO: SafeCast
         uint128 spot = spotOracle_.oracle.spot();                                           // 1 `spot` call
 
-        if (block.timestamp >= series_.maturity) {
+        if (uint32(block.timestamp) >= series_.maturity) {
             uint128 accrual = rateOracles[series_.baseId].accrual(series_.maturity);        // 1 SLOAD + 1 `accrual` call
             return (
                 balances_.ink.rmul(spot).i128() - balances_.art.rmul(accrual).rmul(ratio).i128(), // level
-                dink.rmul(spot) - dart.rmul(accrual).rmul(ratio)                                    // diff
+                ink.rmul(spot) - art.rmul(accrual).rmul(ratio)                                    // diff
             );
         }
 
         return (
             balances_.ink.rmul(spot).i128() - balances_.art.rmul(ratio).i128(),           // level
-            dink.rmul(spot) - dart.rmul(ratio)                                              // diff
+            ink.rmul(spot) - art.rmul(ratio)                                              // diff
         );
     }
 

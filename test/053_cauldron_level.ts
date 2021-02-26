@@ -76,15 +76,15 @@ describe('Cauldron - Level', () => {
     }
   })
 
-  it('before maturity, diff is dink * spot - dart * ratio', async () => {
+  it('before maturity, diff is ink * spot - art * ratio', async () => {
     for (let spot of [1, 2, 4]) {
       await spotOracle.setSpot(RAY.mul(spot))
       for (let ratio of [50, 100, 200]) {
         await cauldron.setSpotOracle(baseId, ilkId, spotOracle.address, ratio * 100)
-        for (let dink of [WAD, WAD.mul(-1)]) {
-          for (let dart of [WAD, WAD.mul(-1)]) {
-            const expectedDiff = (dink.mul(spot)).sub(dart.mul(ratio).div(100))
-            expect(await cauldron.diff(vaultId, dink, dart)).to.equal(expectedDiff)
+        for (let ink of [WAD, WAD.mul(-1)]) {
+          for (let art of [WAD, WAD.mul(-1)]) {
+            const expectedDiff = (ink.mul(spot)).sub(art.mul(ratio).div(100))
+            expect(await cauldron.diff(vaultId, ink, art)).to.equal(expectedDiff)
           }  
         }
       }
@@ -114,7 +114,7 @@ describe('Cauldron - Level', () => {
     }
   })
 
-  it('after maturity, diff is dink * spot - dart * accrual * ratio', async () => {
+  it('after maturity, diff is ink * spot - art * accrual * ratio', async () => {
     await spotOracle.setSpot(RAY.mul(1))
     await rateOracle.setSpot(RAY.mul(1))
     await timeMachine.advanceTimeAndBlock(ethers.provider, THREE_MONTHS)
@@ -127,10 +127,10 @@ describe('Cauldron - Level', () => {
         // accrual = rate / 100
         for (let ratio of [50, 100, 200]) {
           await cauldron.setSpotOracle(baseId, ilkId, spotOracle.address, ratio * 100)
-          for (let dink of [WAD, WAD.mul(-1)]) {
-            for (let dart of [WAD, WAD.mul(-1)]) {
-              const expectedDiff = (dink.mul(spot)).sub(dart.mul(rate).mul(ratio).div(10000))
-              expect(await cauldron.diff(vaultId, dink, dart)).to.equal(expectedDiff)
+          for (let ink of [WAD, WAD.mul(-1)]) {
+            for (let art of [WAD, WAD.mul(-1)]) {
+              const expectedDiff = (ink.mul(spot)).sub(art.mul(rate).mul(ratio).div(10000))
+              expect(await cauldron.diff(vaultId, ink, art)).to.equal(expectedDiff)
             }  
           }
         }

@@ -65,7 +65,7 @@ contract Ladle {
             DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);         // 1 CALL + 1 SLOAD
             // TODO: Consider checking the series exists
             if (art > 0) {
-                require(block.timestamp <= series_.maturity, "Mature");
+                require(uint32(block.timestamp) <= series_.maturity, "Mature");
                 IFYToken(series_.fyToken).mint(msg.sender, uint128(art));               // 1 CALL(40) + fyToken.mint. Consider whether it's possible to achieve this without an external call, so that `Cauldron` doesn't depend on the `FYDai` interface.
             } else {
                 IFYToken(series_.fyToken).burn(msg.sender, uint128(-art));              // 1 CALL(40) + fyToken.burn. Consider whether it's possible to achieve this without an external call, so that `Cauldron` doesn't depend on the `FYDai` interface.
@@ -93,7 +93,7 @@ contract Ladle {
         // Converting from fyToken debt to underlying amount allows us to repay an exact amount of debt,
         // avoiding rounding errors and the need to pull only as much underlying as we can use.
         uint128 amt;
-        if (block.timestamp >= series_.maturity) {
+        if (uint32(block.timestamp) >= series_.maturity) {
             IOracle rateOracle = cauldron.rateOracles(baseId);                          // 1 CALL + 1 SLOAD
             amt = uint128(-art).rmul(rateOracle.accrual(series_.maturity));             // Cost of `accrual`
         } else {

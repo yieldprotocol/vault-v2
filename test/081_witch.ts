@@ -118,10 +118,10 @@ describe('Witch', () => {
       // await expect(witch.buy(vaultId, WAD, 0)).to.emit(witch, 'Bought').withArgs(owner, vaultId, null, WAD)
       await witch.buy(vaultId, WAD, 0)
       // const event = (await witch.queryFilter(witch.filters.Bought(null, null, null, null)))[0]
-      const dink = WAD.sub((await cauldron.balances(vaultId)).ink)
-      expect(dink.div(10**15)).to.equal(WAD.div(10**15).div(2)) // Nice hack to compare up to some precision
+      const ink = WAD.sub((await cauldron.balances(vaultId)).ink)
+      expect(ink.div(10**15)).to.equal(WAD.div(10**15).div(2)) // Nice hack to compare up to some precision
       expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(WAD))
-      expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(dink))
+      expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(ink))
     })
 
     describe('once the auction time has passed', async () => {
@@ -135,10 +135,10 @@ describe('Witch', () => {
         // await expect(witch.buy(vaultId, WAD, 0)).to.emit(witch, 'Bought').withArgs(owner, vaultId, null, WAD)
         await witch.buy(vaultId, WAD, 0)
         // const event = (await witch.queryFilter(witch.filters.Bought(null, null, null, null)))[0]
-        const dink = WAD.sub((await cauldron.balances(vaultId)).ink)
-        expect(dink).to.equal(WAD)
+        const ink = WAD.sub((await cauldron.balances(vaultId)).ink)
+        expect(ink).to.equal(WAD)
         expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(WAD))
-        expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(dink))
+        expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(ink))
       })
     })
   })
