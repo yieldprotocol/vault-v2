@@ -42,7 +42,7 @@ library Safe128 {
     }
 
     function i128(uint128 x) internal pure returns (int128 y) {
-        require (x <= uint256(int256(type(int128).max)), "Cast overflow"); // TODO: Hardcode in hex
+        require (x <= uint128(type(int128).max), "Cast overflow");
         y = int128(x);
     }
 }
