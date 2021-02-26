@@ -49,7 +49,6 @@ library Safe128 {
     }
 }
 
-// TODO: Check safety of storing block.timestamp in an uint32, what happens when it wraps, and when will it wrap?
 // TODO: Add a setter for auction protection (same as Witch.AUCTION_TIME?)
 
 contract Cauldron {
@@ -328,7 +327,7 @@ contract Cauldron {
         // auth                                                                             // 1 SLOAD
     {
         uint32 now_ = uint32(block.timestamp);
-        require (timestamps[vaultId] + 24*60*60 <= now_, "Timestamped");                    // 1 SLOAD. Grabbing a vault protects it for a day from being grabbed by another liquidator.
+        require (timestamps[vaultId] + 24*60*60 <= now_, "Timestamped");            // 1 SLOAD. Grabbing a vault protects it for a day from being grabbed by another liquidator. All grabbed vaults will be suddenly released on the 7th of February 2106, at 06:28:16 GMT. I can live with that.
         require(__level(vaultId) < 0, "Not undercollateralized");                           // Cost of `__level`.
         timestamps[vaultId] = now_;                                                         // 1 SSTORE
         __give(vaultId, msg.sender);                                                        // Cost of `__give`
