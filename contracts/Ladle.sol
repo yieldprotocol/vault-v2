@@ -20,13 +20,11 @@ library RMath { // Fixed point arithmetic in Ray units
 }
 
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
-/// TODO: Rename to highlight that this is a core contract that manages debt. The handling of Joins might be a base class to this and other contracts.
 contract Ladle {
     using RMath for uint128;
 
     ICauldron public cauldron;
 
-    // TODO: Consider making assets and assets a single variable
     mapping (bytes6 => IJoin)                public joins;           // Join contracts available to manage collateral. 12 bytes still free.
 
     event JoinAdded(bytes6 indexed assetId, address indexed join);
@@ -66,9 +64,9 @@ contract Ladle {
             // TODO: Consider checking the series exists
             if (art > 0) {
                 require(uint32(block.timestamp) <= series_.maturity, "Mature");
-                IFYToken(series_.fyToken).mint(msg.sender, uint128(art));               // 1 CALL(40) + fyToken.mint. Consider whether it's possible to achieve this without an external call, so that `Cauldron` doesn't depend on the `FYDai` interface.
+                IFYToken(series_.fyToken).mint(msg.sender, uint128(art));               // 1 CALL(40) + fyToken.mint.
             } else {
-                IFYToken(series_.fyToken).burn(msg.sender, uint128(-art));              // 1 CALL(40) + fyToken.burn. Consider whether it's possible to achieve this without an external call, so that `Cauldron` doesn't depend on the `FYDai` interface.
+                IFYToken(series_.fyToken).burn(msg.sender, uint128(-art));              // 1 CALL(40) + fyToken.burn.
             }
         }
 

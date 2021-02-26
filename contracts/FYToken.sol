@@ -17,10 +17,19 @@ library RMath { // Fixed point arithmetic in Ray units
     }
 }
 
+library Safe128 {
+    /// @dev Safely cast an uint128 to an int128
+    function i128(uint128 x) internal pure returns (int128 y) {
+        require (x <= uint128(type(int128).max), "Cast overflow");
+        y = int128(x);
+    }
+}
+
 // TODO: Setter for MAX_TIME_TO_MATURITY
 // TODO: Instantiating fyToken with maturity in the past
 contract FYToken is /* Orchestrated(),*/ ERC20Permit  {
     using RMath for uint128;
+    using Safe128 for uint128;
 
     event Redeemed(address indexed from, address indexed to, uint256 amount, uint256 redeemed);
 
@@ -66,7 +75,7 @@ contract FYToken is /* Orchestrated(),*/ ERC20Permit  {
 
         // Consider moving these two lines to Ladle.
         uint128 redeemed = amount.rmul(oracle.accrual(maturity));   // Cost of `accrual`
-        join.join(to, -int128(redeemed));                           // Cost of `join` | TODO: SafeCast
+        join.join(to, -(redeemed.i128()));                           // Cost of `join`
         
         emit Redeemed(msg.sender, to, amount, redeemed);
         return amount;

@@ -36,11 +36,13 @@ library RMath { // Fixed point arithmetic in Ray units
 }
 
 library Safe128 {
+    /// @dev Safely cast an int128 to an uint128
     function u128(int128 x) internal pure returns (uint128 y) {
         require (x >= 0, "Cast overflow");
         y = uint128(x);
     }
 
+    /// @dev Safely cast an uint128 to an int128
     function i128(uint128 x) internal pure returns (int128 y) {
         require (x <= uint128(type(int128).max), "Cast overflow");
         y = int128(x);
@@ -427,7 +429,7 @@ contract Cauldron {
         DataTypes.Series memory series_ = series[vault_.seriesId];                          // 1 SLOAD
         DataTypes.Balances memory balances_ = balances[vaultId];                            // 1 SLOAD
         DataTypes.SpotOracle memory spotOracle_ = spotOracles[series_.baseId][vault_.ilkId];        // 1 SLOAD
-        uint128 ratio = uint128(spotOracle_.ratio) * 1e23;                                  // Normalization factor from 2 to 27 decimals | TODO: SafeCast
+        uint128 ratio = uint128(spotOracle_.ratio) * 1e23;                                  // Normalization factor from 2 to 27 decimals
         uint128 spot = spotOracle_.oracle.spot();                                           // 1 `spot` call
 
         if (uint32(block.timestamp) >= series_.maturity) {
