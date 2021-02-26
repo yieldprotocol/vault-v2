@@ -15,7 +15,7 @@ library DataTypes {
         uint128 sum;                                                    // Current debt for a given underlying, across all series
     }
 
-    struct Spot {
+    struct SpotOracle {
         IOracle oracle;                                                 // Address for the spot price oracle
         uint32  ratio;                                                  // Collateralization ratio to multiply the price for
         // bytes8 free

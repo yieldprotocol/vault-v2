@@ -47,7 +47,7 @@ interface ICauldron {
     /// @dev Underlyings available in Cauldron.
     // function assets(bytes6 id) external returns (IERC20);
 
-    /// @dev Each vault records debt and collateral _balances.
+    /// @dev Each vault records debt and collateral balances_.
     function balances(bytes12 vault) external view returns (DataTypes.Balances memory);
 
     /// @dev Time at which a vault entered liquidation.

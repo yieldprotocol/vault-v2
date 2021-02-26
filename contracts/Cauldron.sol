@@ -62,7 +62,7 @@ contract Cauldron {
 
     // mapping (bytes6 => IOracle)                             public chiOracles;      // Chi (savings rate) accruals oracle for the underlying
     mapping (bytes6 => IOracle)                             public rateOracles;     // Rate (borrowing rate) accruals oracle for the underlying
-    mapping (bytes6 => mapping(bytes6 => DataTypes.Spot))   public spotOracles;     // [assetId][assetId] Spot price oracles
+    mapping (bytes6 => mapping(bytes6 => DataTypes.SpotOracle))   public spotOracles;     // [assetId][assetId] Spot price oracles
 
     // ==== Vault data ====
     mapping (bytes12 => DataTypes.Vault)                    public vaults;          // An user can own one or more Vaults, each one with a bytes12 identifier
@@ -105,7 +105,7 @@ contract Cauldron {
     {
         require (assets[baseId] != IERC20(address(0)), "Asset not found");                  // 1 SLOAD
         require (assets[ilkId] != IERC20(address(0)), "Asset not found");                   // 1 SLOAD
-        spotOracles[baseId][ilkId] = DataTypes.Spot({
+        spotOracles[baseId][ilkId] = DataTypes.SpotOracle({
             oracle: oracle,
             ratio: ratio                                                                    // With 2 decimals. 10000 == 100%
         });                                                                                 // 1 SSTORE. Allows to replace an existing oracle.
@@ -133,13 +133,13 @@ contract Cauldron {
     function addIlk(bytes6 seriesId, bytes6 ilkId)
         external
     {
-        DataTypes.Series memory _series = series[seriesId];                                 // 1 SLOAD
+        DataTypes.Series memory series_ = series[seriesId];                                 // 1 SLOAD
         require (
-            _series.fyToken != IFYToken(address(0)),
+            series_.fyToken != IFYToken(address(0)),
             "Series not found"
         );
         require (
-            spotOracles[_series.baseId][ilkId].oracle != IOracle(address(0)),               // 1 SLOAD
+            spotOracles[series_.baseId][ilkId].oracle != IOracle(address(0)),               // 1 SLOAD
             "Spot oracle not found"
         );
         ilks[seriesId][ilkId] = true;                                                       // 1 SSTORE
@@ -169,9 +169,9 @@ contract Cauldron {
         public
     {
         require (vaults[vaultId].owner == msg.sender, "Only vault owner");                  // 1 SLOAD
-        DataTypes.Balances memory _balances = balances[vaultId];                            // 1 SLOAD
-        require (_balances.art == 0 && _balances.ink == 0, "Only empty vaults");            // 1 SLOAD
-        // delete timestamps[vaultId];                                                      // 1 SSTORE REFUND
+        DataTypes.Balances memory balances_ = balances[vaultId];                            // 1 SLOAD
+        require (balances_.art == 0 && balances_.ink == 0, "Only empty vaults");            // 1 SLOAD
+        delete timestamps[vaultId];                                                         // 1 SSTORE REFUND
         delete vaults[vaultId];                                                             // 1 SSTORE REFUND
         emit VaultDestroyed(vaultId);
     }
@@ -183,17 +183,17 @@ contract Cauldron {
         internal
     {
         require (ilks[seriesId][ilkId] == true, "Ilk not added");                           // 1 SLOAD
-        DataTypes.Balances memory _balances = balances[vaultId];                            // 1 SLOAD
-        DataTypes.Vault memory _vault = vaults[vaultId];                                    // 1 SLOAD
-        if (seriesId != _vault.seriesId) {
-            require (_balances.art == 0, "Only with no debt");
-            _vault.seriesId = seriesId;
+        DataTypes.Balances memory balances_ = balances[vaultId];                            // 1 SLOAD
+        DataTypes.Vault memory vault_ = vaults[vaultId];                                    // 1 SLOAD
+        if (seriesId != vault_.seriesId) {
+            require (balances_.art == 0, "Only with no debt");
+            vault_.seriesId = seriesId;
         }
-        if (ilkId != _vault.ilkId) {                                                        // If a new asset was provided
-            require (_balances.ink == 0, "Only with no collateral");
-            _vault.ilkId = ilkId;
+        if (ilkId != vault_.ilkId) {                                                        // If a new asset was provided
+            require (balances_.ink == 0, "Only with no collateral");
+            vault_.ilkId = ilkId;
         }
-        vaults[vaultId] = _vault;                                                           // 1 SSTORE
+        vaults[vaultId] = vault_;                                                           // 1 SSTORE
         emit VaultTweaked(vaultId, seriesId, ilkId);
     }
 
@@ -215,15 +215,15 @@ contract Cauldron {
         returns (DataTypes.Balances memory, DataTypes.Balances memory)
     {
         require (vaults[from].ilkId == vaults[to].ilkId, "Different collateral");          // 2 SLOAD
-        DataTypes.Balances memory _balancesFrom = balances[from];                          // 1 SLOAD
-        DataTypes.Balances memory _balancesTo = balances[to];                              // 1 SLOAD
-        _balancesFrom.ink -= ink;
-        _balancesTo.ink += ink;
-        balances[from] = _balancesFrom;                                                    // 1 SSTORE
-        balances[to] = _balancesTo;                                                        // 1 SSTORE
+        DataTypes.Balances memory balancesFrom_ = balances[from];                          // 1 SLOAD
+        DataTypes.Balances memory balancesTo_ = balances[to];                              // 1 SLOAD
+        balancesFrom_.ink -= ink;
+        balancesTo_.ink += ink;
+        balances[from] = balancesFrom_;                                                    // 1 SSTORE
+        balances[to] = balancesTo_;                                                        // 1 SSTORE
         emit VaultShaken(from, to, ink);
 
-        return (_balancesFrom, _balancesTo);
+        return (balancesFrom_, balancesTo_);
     }
 
     /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
@@ -232,28 +232,28 @@ contract Cauldron {
     function __stir(bytes12 vaultId, int128 ink, int128 art)
         internal returns (DataTypes.Balances memory)
     {
-        DataTypes.Vault memory _vault = vaults[vaultId];                                    // 1 SLOAD
-        DataTypes.Balances memory _balances = balances[vaultId];                            // 1 SLOAD
-        DataTypes.Series memory _series = series[_vault.seriesId];                          // 1 SLOAD
+        DataTypes.Vault memory vault_ = vaults[vaultId];                                    // 1 SLOAD
+        DataTypes.Balances memory balances_ = balances[vaultId];                            // 1 SLOAD
+        DataTypes.Series memory series_ = series[vault_.seriesId];                          // 1 SLOAD
 
         // For now, the collateralization checks are done outside to allow for underwater operation. That might change.
         if (ink != 0) {
-            _balances.ink = _balances.ink.add(ink);
+            balances_.ink = balances_.ink.add(ink);
         }
 
         // TODO: Consider whether _roll should call __stir, or the next block be a private function.
         // Modify vault and global debt records. If debt increases, check global limit.
         if (art != 0) {
-            DataTypes.Debt memory _debt = debt[_series.baseId][_vault.ilkId];               // 1 SLOAD
-            if (art > 0) require (_debt.sum.add(art) <= _debt.max, "Max debt exceeded");
-            _balances.art = _balances.art.add(art);
-            _debt.sum = _debt.sum.add(art);
-            debt[_series.baseId][_vault.ilkId] = _debt;                                     // 1 SSTORE
+            DataTypes.Debt memory debt_ = debt[series_.baseId][vault_.ilkId];               // 1 SLOAD
+            if (art > 0) require (debt_.sum.add(art) <= debt_.max, "Max debt exceeded");
+            balances_.art = balances_.art.add(art);
+            debt_.sum = debt_.sum.add(art);
+            debt[series_.baseId][vault_.ilkId] = debt_;                                     // 1 SSTORE
         }
-        balances[vaultId] = _balances;                                                      // 1 SSTORE
+        balances[vaultId] = balances_;                                                      // 1 SSTORE
 
-        emit VaultStirred(vaultId, _vault.seriesId, _vault.ilkId, ink, art);
-        return _balances;
+        emit VaultStirred(vaultId, vault_.seriesId, vault_.ilkId, ink, art);
+        return balances_;
     }
 
     // ---- Restricted processes ----
@@ -267,21 +267,21 @@ contract Cauldron {
         auth
     {
         require (vaults[vaultId].owner != address(0), "Vault not found");                   // 1 SLOAD
-        DataTypes.Balances memory _balances = balances[vaultId];                            // 1 SLOAD
-        DataTypes.Series memory _series = series[vaultId];                                  // 1 SLOAD
+        DataTypes.Balances memory balances_ = balances[vaultId];                            // 1 SLOAD
+        DataTypes.Series memory series_ = series[vaultId];                                  // 1 SLOAD
         
         delete balances[vaultId];                                                           // -1 SSTORE
         __tweak(vaultId, seriesId, vaults[vaultId].ilkId);                                  // 1 SLOAD + Cost of `__tweak`
 
         // Modify vault and global debt records. If debt increases, check global limit.
         if (art != 0) {
-            DataTypes.Debt memory _debt = debt[_series.baseId][_vault.ilkId];               // 1 SLOAD
-            if (art > 0) require (_debt.sum.add(art) <= _debt.max, "Max debt exceeded");
-            _balances.art = _balances.art.add(art);
-            _debt.sum = _debt.sum.add(art);
-            debt[_series.baseId][_vault.ilkId] = _debt;                                     // 1 SSTORE
+            DataTypes.Debt memory debt_ = debt[series_.baseId][vault_.ilkId];               // 1 SLOAD
+            if (art > 0) require (debt_.sum.add(art) <= debt_.max, "Max debt exceeded");
+            balances_.art = balances_.art.add(art);
+            debt_.sum = debt_.sum.add(art);
+            debt[series_.baseId][vault_.ilkId] = debt_;                                     // 1 SSTORE
         }
-        balances[vaultId] = _balances;                                                      // 1 SSTORE
+        balances[vaultId] = balances_;                                                      // 1 SSTORE
         require(__level(vaultId) >= 0, "Undercollateralized");                              // Cost of `level`
     } */
 
@@ -290,13 +290,13 @@ contract Cauldron {
     function _stir(bytes12 vaultId, int128 ink, int128 art)
         public
         // auth                                                                             // 1 SLOAD
-        returns (DataTypes.Balances memory _balances)
+        returns (DataTypes.Balances memory balances_)
     {
         require (vaults[vaultId].owner != address(0), "Vault not found");                   // 1 SLOAD
-        _balances = __stir(vaultId, ink, art);                                              // Cost of `__stir`
-        if (_balances.art > 0 && (ink < 0 || art > 0))                                      // If there is debt and we are less safe
+        balances_ = __stir(vaultId, ink, art);                                              // Cost of `__stir`
+        if (balances_.art > 0 && (ink < 0 || art > 0))                                      // If there is debt and we are less safe
             require(__level(vaultId) >= 0, "Undercollateralized");                          // Cost of `level`. TODO: Consider allowing if collateralization level either is healthy or improves.
-        return _balances;
+        return balances_;
     }
 
     /// @dev Give a non-timestamped vault to the caller, and timestamp it.
@@ -318,13 +318,13 @@ contract Cauldron {
     function _slurp(bytes12 vaultId, int128 ink, int128 art)
         public
         // auth                                                                             // 1 SLOAD
-        returns (DataTypes.Balances memory _balances)
+        returns (DataTypes.Balances memory balances_)
     {
         require (vaults[vaultId].owner == msg.sender, "Only vault owner");                  // 1 SLOAD
         // (int128 _level, int128 _diff) = __diff(vaultId, ink, art);                       // Cost of `__diff`
         // require (_level >= 0 || _diff >= 0, "Healthy or improve");                       // TODO: Do we really need this? We are only letting audited liquidators use this. Unaudited liquidators could just set art to zero.
-        _balances = __stir(vaultId, ink, art);                                              // Cost of `__stir`
-        return _balances;
+        balances_ = __stir(vaultId, ink, art);                                              // Cost of `__stir`
+        return balances_;
     }
 
     // ---- Public processes ----
@@ -353,11 +353,11 @@ contract Cauldron {
     {
         require (vaults[from].owner == msg.sender, "Only vault owner");                     // 1 SLOAD
         require (vaults[to].owner != address(0), "Vault not found");                        // 1 SLOAD
-        DataTypes.Balances memory _balancesFrom;
-        DataTypes.Balances memory _balancesTo;
-        (_balancesFrom, _balancesTo) = __shake(from, to, ink);                              // Cost of `__shake`
-        if (_balancesFrom.art > 0) require(__level(from) >= 0, "Undercollateralized");      // Cost of `level`. TODO: Consider allowing if collateralization level either is healthy or 
-        return (_balancesFrom, _balancesTo);
+        DataTypes.Balances memory balancesFrom_;
+        DataTypes.Balances memory balancesTo_;
+        (balancesFrom_, balancesTo_) = __shake(from, to, ink);                              // Cost of `__shake`
+        if (balancesFrom_.art > 0) require(__level(from) >= 0, "Undercollateralized");      // Cost of `level`. TODO: Consider allowing if collateralization level either is healthy or 
+        return (balancesFrom_, balancesTo_);
     }
 
     // ==== Accounting ====
@@ -365,21 +365,21 @@ contract Cauldron {
     /// @dev Return the collateralization level of a vault. It will be negative if undercollateralized.
     /*
     function level(bytes12 vaultId) public view returns (int128) {
-        DataTypes.Vault memory _vault = vaults[vaultId];                                    // 1 SLOAD
-        require (_vault.owner != address(0), "Vault not found");                            // The vault existing is enough to be certain that the oracle exists.
-        DataTypes.Series memory _series = series[_vault.seriesId];                          // 1 SLOAD
-        DataTypes.Balances memory _balances = balances[vaultId];                            // 1 SLOAD
-        DataTypes.Spot memory _spotData = spotOracles[_series.baseId][_vault.ilkId];        // 1 SLOAD
+        DataTypes.Vault memory vault_ = vaults[vaultId];                                    // 1 SLOAD
+        require (vault_.owner != address(0), "Vault not found");                            // The vault existing is enough to be certain that the oracle exists.
+        DataTypes.Series memory series_ = series[vault_.seriesId];                          // 1 SLOAD
+        DataTypes.Balances memory balances_ = balances[vaultId];                            // 1 SLOAD
+        DataTypes.SpotOracle memory spotOracle_ = spotOracles[series_.baseId][vault_.ilkId];        // 1 SLOAD
         uint128 spot = oracle.spot();                                                       // 1 `spot` call
-        uint128 ratio = uint128(_spotData.ratio) * 1e23;                                    // Normalization factor from 2 to 27 decimals
+        uint128 ratio = uint128(spotOracle_.ratio) * 1e23;                                    // Normalization factor from 2 to 27 decimals
 
-        if (block.timestamp >= _series.maturity) {
-            IOracle rateOracle = rateOracles[_series.baseId];                               // 1 SLOAD
-            uint128 accrual = rateOracle.accrual(_series.maturity);                         // 1 `accrual` call
-            return int128(_balances.ink.rmul(spot)) - int128(_balances.art.rmul(accrual).rmul(ratio)); // TODO: SafeCast
+        if (block.timestamp >= series_.maturity) {
+            IOracle rateOracle = rateOracles[series_.baseId];                               // 1 SLOAD
+            uint128 accrual = rateOracle.accrual(series_.maturity);                         // 1 `accrual` call
+            return int128(balances_.ink.rmul(spot)) - int128(balances_.art.rmul(accrual).rmul(ratio)); // TODO: SafeCast
         }
 
-        return int128(_balances.ink.rmul(spot)) - int128(_balances.art.rmul(ratio));         // TODO: SafeCast
+        return int128(balances_.ink.rmul(spot)) - int128(balances_.art.rmul(ratio));         // TODO: SafeCast
     }
     */
 
@@ -402,24 +402,24 @@ contract Cauldron {
 
     /// @dev Return the relative collateralization level of a vault for a given change in debt and collateral, as well as the collateralization level at the end.
     function __diff(bytes12 vaultId, int128 dink, int128 dart) internal view returns (int128, int128) {
-        DataTypes.Vault memory _vault = vaults[vaultId];                                    // 1 SLOAD
-        require (_vault.owner != address(0), "Vault not found");                            // The vault existing is enough to be certain that the oracle exists.
-        DataTypes.Series memory _series = series[_vault.seriesId];                          // 1 SLOAD
-        DataTypes.Balances memory _balances = balances[vaultId];                            // 1 SLOAD
-        DataTypes.Spot memory _spotData = spotOracles[_series.baseId][_vault.ilkId];        // 1 SLOAD
-        uint128 ratio = uint128(_spotData.ratio) * 1e23;                                    // Normalization factor from 2 to 27 decimals | TODO: SafeCast
-        uint128 spot = _spotData.oracle.spot();                                             // 1 `spot` call
+        DataTypes.Vault memory vault_ = vaults[vaultId];                                    // 1 SLOAD
+        require (vault_.owner != address(0), "Vault not found");                            // The vault existing is enough to be certain that the oracle exists.
+        DataTypes.Series memory series_ = series[vault_.seriesId];                          // 1 SLOAD
+        DataTypes.Balances memory balances_ = balances[vaultId];                            // 1 SLOAD
+        DataTypes.SpotOracle memory spotOracle_ = spotOracles[series_.baseId][vault_.ilkId];        // 1 SLOAD
+        uint128 ratio = uint128(spotOracle_.ratio) * 1e23;                                  // Normalization factor from 2 to 27 decimals | TODO: SafeCast
+        uint128 spot = spotOracle_.oracle.spot();                                           // 1 `spot` call
 
-        if (block.timestamp >= _series.maturity) {
-            uint128 accrual = rateOracles[_series.baseId].accrual(_series.maturity);        // 1 SLOAD + 1 `accrual` call
+        if (block.timestamp >= series_.maturity) {
+            uint128 accrual = rateOracles[series_.baseId].accrual(series_.maturity);        // 1 SLOAD + 1 `accrual` call
             return (
-                int128(_balances.ink.rmul(spot)) - int128(_balances.art.rmul(accrual).rmul(ratio)), // level
+                int128(balances_.ink.rmul(spot)) - int128(balances_.art.rmul(accrual).rmul(ratio)), // level
                 dink.rmul(spot) - dart.rmul(accrual).rmul(ratio)                                    // diff
             );
         }
 
         return (
-            int128(_balances.ink.rmul(spot)) - int128(_balances.art.rmul(ratio)),           // level
+            int128(balances_.ink.rmul(spot)) - int128(balances_.art.rmul(ratio)),           // level
             dink.rmul(spot) - dart.rmul(ratio)                                              // diff
         );
     }
@@ -427,9 +427,9 @@ contract Cauldron {
     /// @dev Helper function to record the rate in the appropriate oracle when maturing an fyToken
     // TODO: Do we need this here? It can be in its own contract.
     function mature(bytes6 seriesId) public {
-        DataTypes.Series memory _series = series[seriesId];                                 // 1 SLOAD
-        IOracle rateOracle = rateOracles[_series.baseId];                                   // 1 SLOAD
-        rateOracle.record(_series.maturity);                                                // Cost of `record`
-        _series.fyToken.mature();                                                           // Cost of `mature`
+        DataTypes.Series memory series_ = series[seriesId];                                 // 1 SLOAD
+        IOracle rateOracle = rateOracles[series_.baseId];                                   // 1 SLOAD
+        rateOracle.record(series_.maturity);                                                // Cost of `record`
+        series_.fyToken.mature();                                                           // Cost of `mature`
     }
 }

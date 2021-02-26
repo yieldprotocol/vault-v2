@@ -38,9 +38,9 @@ contract Ladle {
         external
         /*auth*/
     {
-        require (cauldron.assets(assetId) != IERC20(address(0)), "Asset not found"); // 1 CALL + 1 SLOAD
-        require (joins[assetId] == IJoin(address(0)), "One Join per Asset");    // 1 SLOAD
-        joins[assetId] = join;                                                  // 1 SSTORE
+        require (cauldron.assets(assetId) != IERC20(address(0)), "Asset not found");    // 1 CALL + 1 SLOAD
+        require (joins[assetId] == IJoin(address(0)), "One Join per Asset");            // 1 SLOAD
+        joins[assetId] = join;                                                          // 1 SSTORE
         emit JoinAdded(assetId, address(join));
     }
 
@@ -50,27 +50,27 @@ contract Ladle {
     // TODO: Extend to allow other accounts in `join`
     function stir(bytes12 vaultId, int128 ink, int128 art)
         external
-        returns (DataTypes.Balances memory _balances)
+        returns (DataTypes.Balances memory balances_)
     {
-        DataTypes.Vault memory _vault = cauldron.vaults(vaultId);                // 1 CALL + 1 SLOAD
-        require (_vault.owner == msg.sender, "Only vault owner");
+        DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);                       // 1 CALL + 1 SLOAD
+        require (vault_.owner == msg.sender, "Only vault owner");
 
-        if (ink != 0) joins[_vault.ilkId].join(_vault.owner, ink);          // Cost of `join`. `join` with a negative value means `exit`. | TODO: Consider checking the join exists
+        if (ink != 0) joins[vault_.ilkId].join(vault_.owner, ink);                      // Cost of `join`. `join` with a negative value means `exit`. | TODO: Consider checking the join exists
 
-        _balances = cauldron._stir(vaultId, ink, art);                           // Cost of `cauldron.stir` call.
+        balances_ = cauldron._stir(vaultId, ink, art);                                  // Cost of `cauldron.stir` call.
 
         if (art != 0) {
-            DataTypes.Series memory _series = cauldron.series(_vault.seriesId);  // 1 CALL + 1 SLOAD
+            DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);         // 1 CALL + 1 SLOAD
             // TODO: Consider checking the series exists
             if (art > 0) {
-                require(block.timestamp <= _series.maturity, "Mature");
-                IFYToken(_series.fyToken).mint(msg.sender, uint128(art));   // 1 CALL(40) + fyToken.mint. Consider whether it's possible to achieve this without an external call, so that `Cauldron` doesn't depend on the `FYDai` interface.
+                require(block.timestamp <= series_.maturity, "Mature");
+                IFYToken(series_.fyToken).mint(msg.sender, uint128(art));               // 1 CALL(40) + fyToken.mint. Consider whether it's possible to achieve this without an external call, so that `Cauldron` doesn't depend on the `FYDai` interface.
             } else {
-                IFYToken(_series.fyToken).burn(msg.sender, uint128(-art));  // 1 CALL(40) + fyToken.burn. Consider whether it's possible to achieve this without an external call, so that `Cauldron` doesn't depend on the `FYDai` interface.
+                IFYToken(series_.fyToken).burn(msg.sender, uint128(-art));              // 1 CALL(40) + fyToken.burn. Consider whether it's possible to achieve this without an external call, so that `Cauldron` doesn't depend on the `FYDai` interface.
             }
         }
 
-        return _balances;
+        return balances_;
     }
 
     /// @dev Repay vault debt using underlying token. It can add or remove collateral at the same time.
@@ -79,29 +79,29 @@ contract Ladle {
     /// Debt cannot be acquired with this function.
     function close(bytes12 vaultId, int128 ink, int128 art)
         external
-        returns (DataTypes.Balances memory _balances)
+        returns (DataTypes.Balances memory balances_)
     {
-        require (art <= 0, "Only repay debt");                                      // When repaying debt in `frob`, art is a negaive value. Here is the same for consistency.
-        DataTypes.Vault memory _vault = cauldron.vaults(vaultId);                        // 1 CALL + 1 SLOAD
-        require (_vault.owner == msg.sender, "Only vault owner");
+        require (art <= 0, "Only repay debt");                                          // When repaying debt in `frob`, art is a negaive value. Here is the same for consistency.
+        DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);                       // 1 CALL + 1 SLOAD
+        require (vault_.owner == msg.sender, "Only vault owner");
 
-        DataTypes.Series memory _series = cauldron.series(_vault.seriesId);              // 1 CALL + 1 SLOAD
-        bytes6 baseId = _series.baseId;
+        DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);             // 1 CALL + 1 SLOAD
+        bytes6 baseId = series_.baseId;
 
         // Converting from fyToken debt to underlying amount allows us to repay an exact amount of debt,
         // avoiding rounding errors and the need to pull only as much underlying as we can use.
         uint128 amt;
-        if (block.timestamp >= _series.maturity) {
-            IOracle rateOracle = cauldron.rateOracles(baseId);                           // 1 CALL + 1 SLOAD
-            amt = uint128(-art).rmul(rateOracle.accrual(_series.maturity));         // Cost of `accrual`
+        if (block.timestamp >= series_.maturity) {
+            IOracle rateOracle = cauldron.rateOracles(baseId);                          // 1 CALL + 1 SLOAD
+            amt = uint128(-art).rmul(rateOracle.accrual(series_.maturity));             // Cost of `accrual`
         } else {
             amt = uint128(-art);
         }
 
-        if (ink != 0) joins[_vault.ilkId].join(_vault.owner, ink);                  // Cost of `join`. `join` with a negative value means `exit`. | TODO: Consider checking the join exists
-        joins[baseId].join(msg.sender, int128(amt));                                // Cost of `join`
+        if (ink != 0) joins[vault_.ilkId].join(vault_.owner, ink);                      // Cost of `join`. `join` with a negative value means `exit`. | TODO: Consider checking the join exists
+        joins[baseId].join(msg.sender, int128(amt));                                    // Cost of `join`
         
-        return cauldron._stir(vaultId, ink, art);                                        // Cost of `_stir`
+        return cauldron._stir(vaultId, ink, art);                                       // Cost of `_stir`
     }
 
     /// @dev Allow authorized contracts to move assets through the ladle
@@ -109,10 +109,10 @@ contract Ladle {
         external
         // auth
     {
-        DataTypes.Vault memory _vault = cauldron.vaults(vaultId);                        // 1 CALL + 1 SLOAD
-        DataTypes.Series memory _series = cauldron.series(_vault.seriesId);              // 1 CALL + 1 SLOAD
+        DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);                       // 1 CALL + 1 SLOAD
+        DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);             // 1 CALL + 1 SLOAD
 
-        if (ink != 0) joins[_vault.ilkId].join(user, ink);                              // 1 SLOAD + Cost of `join`
-        if (art != 0) joins[_series.baseId].join(user, art);                              // 1 SLOAD + Cost of `join`
+        if (ink != 0) joins[vault_.ilkId].join(user, ink);                              // 1 SLOAD + Cost of `join`
+        if (art != 0) joins[series_.baseId].join(user, art);                            // 1 SLOAD + Cost of `join`
     }
 }
