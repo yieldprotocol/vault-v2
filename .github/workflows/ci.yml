@@ -47,6 +47,7 @@ jobs:
           restore-keys: |
             yarn-
       - run: yarn
+      - run: yarn build
       - run: yarn test
 
   migrations:
@@ -68,4 +69,4 @@ jobs:
           restore-keys: |
             yarn-
       - run: yarn
-      - run: yarn deploy:ganache
+      # - run: yarn deploy:ganache
