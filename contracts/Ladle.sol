@@ -11,9 +11,11 @@ import "./libraries/DataTypes.sol";
 library RMath { // Fixed point arithmetic in Ray units
     /// @dev Multiply an amount by a fixed point factor in ray units, returning an amount
     function rmul(uint128 x, uint128 y) internal pure returns (uint128 z) {
-        uint256 _z = uint256(x) * uint256(y) / 1e27;
-        require (_z <= type(uint128).max, "RMUL Overflow");
-        z = uint128(_z);
+        unchecked {
+            uint256 _z = uint256(x) * uint256(y) / 1e27;
+            require (_z <= type(uint128).max, "RMUL Overflow");
+            z = uint128(_z);
+        }
     }
 }
 

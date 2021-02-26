@@ -18,15 +18,32 @@ library Math {
 library RMath { // Fixed point arithmetic in Ray units
     /// @dev Multiply an amount by a fixed point factor in ray units, returning an amount
     function rmul(uint128 x, uint128 y) internal pure returns (uint128 z) {
-        uint256 _z = uint256(x) * uint256(y) / 1e27;
-        require (_z <= type(uint128).max, "RMUL Overflow");
-        z = uint128(_z);
+        unchecked {
+            uint256 _z = uint256(x) * uint256(y) / 1e27;
+            require (_z <= type(uint128).max, "RMUL Overflow");
+            z = uint128(_z);
+        }
     }
 
     /// @dev Multiply an integer amount by a fixed point factor in ray units, returning an integer amount
     function rmul(int128 x, uint128 y) internal pure returns (int128 z) {
-        if (x < 0) return -int128(rmul(uint128(-x), y));                // TODO: SafeCast
-        else return int128(rmul(uint128(x), y));                        // TODO: SafeCast
+        unchecked {
+            int256 _z = int256(x) * int256(uint256(y)) / 1e27;
+            require (_z >= type(int128).min && _z <= type(int128).max, "RMUL Overflow");
+            z = int128(_z);
+        }
+    }
+}
+
+library Safe128 {
+    function u128(int128 x) internal pure returns (uint128 y) {
+        require (x >= 0, "Cast overflow");
+        y = uint128(x);
+    }
+
+    function i128(uint128 x) internal pure returns (int128 y) {
+        require (x <= uint128(type(int128).max), "Cast overflow");
+        y = int128(x);
     }
 }
 
@@ -37,6 +54,8 @@ contract Cauldron {
     using Math for uint128;
     using RMath for uint128;
     using RMath for int128;
+    using Safe128 for uint128;
+    using Safe128 for int128;
 
     event AssetAdded(bytes6 indexed assetId, address indexed asset);
     event SeriesAdded(bytes6 indexed seriesId, bytes6 indexed baseId, address indexed fyToken);
@@ -376,10 +395,10 @@ contract Cauldron {
         if (block.timestamp >= series_.maturity) {
             IOracle rateOracle = rateOracles[series_.baseId];                               // 1 SLOAD
             uint128 accrual = rateOracle.accrual(series_.maturity);                         // 1 `accrual` call
-            return int128(balances_.ink.rmul(spot)) - int128(balances_.art.rmul(accrual).rmul(ratio)); // TODO: SafeCast
+            return balances_.ink.rmul(spot).i128() - balances_.art.rmul(accrual).rmul(ratio).i128();
         }
 
-        return int128(balances_.ink.rmul(spot)) - int128(balances_.art.rmul(ratio));         // TODO: SafeCast
+        return balances_.ink.rmul(spot).i128() - balances_.art.rmul(ratio).i128();
     }
     */
 
@@ -413,13 +432,13 @@ contract Cauldron {
         if (block.timestamp >= series_.maturity) {
             uint128 accrual = rateOracles[series_.baseId].accrual(series_.maturity);        // 1 SLOAD + 1 `accrual` call
             return (
-                int128(balances_.ink.rmul(spot)) - int128(balances_.art.rmul(accrual).rmul(ratio)), // level
+                balances_.ink.rmul(spot).i128() - balances_.art.rmul(accrual).rmul(ratio).i128(), // level
                 dink.rmul(spot) - dart.rmul(accrual).rmul(ratio)                                    // diff
             );
         }
 
         return (
-            int128(balances_.ink.rmul(spot)) - int128(balances_.art.rmul(ratio)),           // level
+            balances_.ink.rmul(spot).i128() - balances_.art.rmul(ratio).i128(),           // level
             dink.rmul(spot) - dart.rmul(ratio)                                              // diff
         );
     }
