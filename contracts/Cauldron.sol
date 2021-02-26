@@ -321,7 +321,6 @@ contract Cauldron {
 
     /// @dev Give a non-timestamped vault to the caller, and timestamp it.
     /// To be used for liquidation engines.
-    /// TODO: Maybe this doesn't need to check the vault is in liquidation, and the liquidator does that.
     function _grab(bytes12 vaultId)
         public
         // auth                                                                             // 1 SLOAD
