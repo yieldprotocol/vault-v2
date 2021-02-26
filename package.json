@@ -8,9 +8,9 @@
     "build": "hardhat compile",
     "test": "hardhat test",
     "coverage": "hardhat coverage",
-    "lint": "prettier ./test/**/*.ts --check && solhint -f table contracts/**/*.sol",
-    "lint:ts": "prettier ./test/**/*.ts --write",
     "lint:sol": "solhint -f table contracts/**/*.sol",
+    "lint:ts": "prettier ./test/**/*.ts --check",
+    "lint:ts:fix": "prettier ./test/**/*.ts --write",
     "prepublishOnly": "npx tsdx build --tsconfig ./tsconfig-publish.json"
   },
   "devDependencies": {

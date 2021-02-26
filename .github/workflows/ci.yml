@@ -26,7 +26,8 @@ jobs:
           restore-keys: |
             yarn-
       - run: yarn
-      - run: yarn lint
+      - run: yarn lint:ts
+      - run: yarn lint:sol
 
   test:
     runs-on: ubuntu-latest
