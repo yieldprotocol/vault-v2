@@ -15,23 +15,31 @@ library Math {
 library RMath {
     /// @dev Multiply an amount by a fixed point factor in ray units, returning an amount
     function rmul(uint128 x, uint128 y) internal pure returns (uint128 z) {
-        uint256 _z = uint256(x) * uint256(y) / 1e27;
-        require (_z <= type(uint128).max, "RMUL Overflow");
-        z = uint128(_z);
+        unchecked {
+            uint256 _z = uint256(x) * uint256(y) / 1e27;
+            require (_z <= type(uint128).max, "RMUL Overflow");
+            z = uint128(_z);
+        }
     }
 
     /// @dev Divide x and y, with y being fixed point. If both are integers, the result is a fixed point factor. Rounds down.
     function rdiv(uint128 x, uint128 y) internal pure returns (uint128 z) {
-        uint256 _z = uint256(x) * 1e27 / y;
-        require (_z <= type(uint128).max, "RDIV Overflow");
-        z = uint128(_z);
+        unchecked {
+            require (y > 0, "RDIV by zero");
+            uint256 _z = uint256(x) * 1e27 / y;
+            require (_z <= type(uint128).max, "RDIV Overflow");
+            z = uint128(_z);
+        }
     }
 
     /// @dev Divide x and y, with y being fixed point. If both are integers, the result is a fixed point factor. Rounds up.
     function rdivup(uint128 x, uint128 y) internal pure returns (uint128 z) {
-        uint256 _z = uint256(x) * 1e27 % y == 0 ? uint256(x) * 1e27 / y : uint256(x) * 1e27 / y + 1;
-        require (_z <= type(uint128).max, "RDIV Overflow");
-        z = uint128(_z);
+        unchecked {
+            require (y > 0, "RDIVUP by zero");
+            uint256 _z = uint256(x) * 1e27 % y == 0 ? uint256(x) * 1e27 / y : uint256(x) * 1e27 / y + 1;
+            require (_z <= type(uint128).max, "RDIV Overflow");
+            z = uint128(_z);
+        }
     }
 }
 
