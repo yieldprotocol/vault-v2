@@ -21,8 +21,8 @@ import { Witch } from '../../typechain/Witch'
 import { ethers, waffle } from 'hardhat'
 const { deployContract } = waffle
 
-export const WAD = BigNumber.from("1000000000000000000")
-export const RAY = BigNumber.from("1000000000000000000000000000")
+export const WAD = BigNumber.from('1000000000000000000')
+export const RAY = BigNumber.from('1000000000000000000000000000')
 export const THREE_MONTHS: number = 3 * 30 * 24 * 60 * 60
 
 export class YieldEnvironment {
@@ -35,7 +35,7 @@ export class YieldEnvironment {
   series: Map<string, FYToken>
   joins: Map<string, Join>
   vaults: Map<string, Map<string, string>>
-  
+
   constructor(
     owner: SignerWithAddress,
     cauldron: Cauldron,
@@ -62,9 +62,9 @@ export class YieldEnvironment {
   public static async setup(owner: SignerWithAddress, assetIds: Array<string>, seriesIds: Array<string>) {
     const ownerAdd = await owner.getAddress()
 
-    const cauldron = await deployContract(owner, CauldronArtifact, []) as Cauldron
-    const ladle = await deployContract(owner, LadleArtifact, [cauldron.address]) as Ladle
-    const witch = await deployContract(owner, WitchArtifact, [cauldron.address, ladle.address]) as Witch
+    const cauldron = (await deployContract(owner, CauldronArtifact, [])) as Cauldron
+    const ladle = (await deployContract(owner, LadleArtifact, [cauldron.address])) as Ladle
+    const witch = (await deployContract(owner, WitchArtifact, [cauldron.address, ladle.address])) as Witch
 
     // ==== Add assets and joins ====
     // For each asset id passed as an argument, we create a Mock ERC20 which we register in cauldron, and its Join, that we register in Ladle.
@@ -72,12 +72,12 @@ export class YieldEnvironment {
     const assets: Map<string, ERC20Mock> = new Map()
     const joins: Map<string, Join> = new Map()
     for (let assetId of assetIds) {
-      const asset = await deployContract(owner, ERC20MockArtifact, [assetId, "Mock Base"]) as ERC20Mock
+      const asset = (await deployContract(owner, ERC20MockArtifact, [assetId, 'Mock Base'])) as ERC20Mock
       assets.set(assetId, asset)
       await cauldron.addAsset(assetId, asset.address)
       await asset.mint(ownerAdd, WAD.mul(100))
 
-      const join = await deployContract(owner, JoinArtifact, [asset.address]) as Join
+      const join = (await deployContract(owner, JoinArtifact, [asset.address])) as Join
       joins.set(assetId, join)
       await ladle.addJoin(assetId, join.address)
       await asset.approve(join.address, ethers.constants.MaxUint256)
@@ -96,13 +96,13 @@ export class YieldEnvironment {
 
     // ==== Add oracles and series ====
     // There is only one base, so the oracles we need are one for each ilk, against the only base.
-    const oracles: Map<string, OracleMock> = new Map()   
+    const oracles: Map<string, OracleMock> = new Map()
     const oracle = (await deployContract(owner, OracleMockArtifact, [])) as OracleMock
     await oracle.setSpot(RAY.mul(2))
-    await cauldron.setRateOracle(baseId, oracle.address)                 // This allows to set the series below.
+    await cauldron.setRateOracle(baseId, oracle.address) // This allows to set the series below.
     oracles.set('rate', oracle)
 
-    const ratio = 10000                                             //  10000 == 100% collateralization ratio
+    const ratio = 10000 //  10000 == 100% collateralization ratio
     for (let ilkId of ilkIds) {
       const oracle = (await deployContract(owner, OracleMockArtifact, [])) as OracleMock
       await oracle.setSpot(RAY.mul(2))
@@ -121,7 +121,13 @@ export class YieldEnvironment {
     let count: number = 1
     const baseJoin = joins.get(baseId) as Join
     for (let seriesId of seriesIds) {
-      const fyToken = (await deployContract(owner, FYTokenArtifact, [chiOracle.address, baseJoin.address, now + THREE_MONTHS * count++, seriesId, "Mock FYToken"])) as FYToken
+      const fyToken = (await deployContract(owner, FYTokenArtifact, [
+        chiOracle.address,
+        baseJoin.address,
+        now + THREE_MONTHS * count++,
+        seriesId,
+        'Mock FYToken',
+      ])) as FYToken
       series.set(seriesId, fyToken)
       await cauldron.addSeries(seriesId, baseId, fyToken.address)
 

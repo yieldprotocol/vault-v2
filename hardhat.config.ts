@@ -1,12 +1,15 @@
-import "@nomiclabs/hardhat-waffle";
+import '@nomiclabs/hardhat-waffle'
+import '@nomiclabs/hardhat-etherscan'
 import 'hardhat-gas-reporter'
-import "hardhat-typechain";
-import "solidity-coverage";
+import 'hardhat-typechain'
+import 'solidity-coverage'
+import 'hardhat-deploy'
+
 
 export default {
-  defaultNetwork: "hardhat",
+  defaultNetwork: 'hardhat',
   solidity: {
-    version: "0.8.1",
+    version: '0.8.1',
     settings: {
       optimizer: {
         enabled: true,
@@ -18,7 +21,7 @@ export default {
     enabled: true
   },
   typechain: {
-    outDir: "typechain",
-    target: "ethers-v5",
+    outDir: 'typechain',
+    target: 'ethers-v5',
   },
 };

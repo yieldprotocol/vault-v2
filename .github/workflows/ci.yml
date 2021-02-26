@@ -26,7 +26,8 @@ jobs:
           restore-keys: |
             yarn-
       - run: yarn
-      - run: yarn lint
+      - run: yarn lint:ts
+      - run: yarn lint:sol
 
   test:
     runs-on: ubuntu-latest
@@ -47,6 +48,7 @@ jobs:
           restore-keys: |
             yarn-
       - run: yarn
+      - run: yarn build
       - run: yarn test
 
   migrations:
@@ -68,4 +70,4 @@ jobs:
           restore-keys: |
             yarn-
       - run: yarn
-      - run: yarn deploy:ganache
+      # - run: yarn deploy:ganache
