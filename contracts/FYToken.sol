@@ -26,7 +26,6 @@ library Safe128 {
 }
 
 // TODO: Setter for MAX_TIME_TO_MATURITY
-// TODO: Instantiating fyToken with maturity in the past
 contract FYToken is /* Orchestrated(),*/ ERC20Permit  {
     using RMath for uint128;
     using Safe128 for uint128;
