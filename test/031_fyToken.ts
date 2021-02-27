@@ -19,9 +19,7 @@ describe('FYToken', () => {
   let snapshotId: any
   let env: YieldEnvironment
   let ownerAcc: SignerWithAddress
-  let otherAcc: SignerWithAddress
   let owner: string
-  let other: string
   let cauldron: Cauldron
   let fyToken: FYToken
   let base: ERC20Mock
@@ -38,9 +36,6 @@ describe('FYToken', () => {
     const signers = await ethers.getSigners()
     ownerAcc = signers[0]
     owner = await ownerAcc.getAddress()
-
-    otherAcc = signers[1]
-    other = await otherAcc.getAddress()
   })
 
   after(async () => {

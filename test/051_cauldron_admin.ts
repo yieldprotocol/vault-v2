@@ -18,8 +18,6 @@ const { deployContract } = waffle
 describe('Cauldron - Admin', () => {
   let ownerAcc: SignerWithAddress
   let owner: string
-  let otherAcc: SignerWithAddress
-  let other: string
   let cauldron: Cauldron
   let fyToken: FYToken
   let base: ERC20Mock
@@ -35,9 +33,6 @@ describe('Cauldron - Admin', () => {
     const signers = await ethers.getSigners()
     ownerAcc = signers[0]
     owner = await ownerAcc.getAddress()
-
-    otherAcc = signers[1]
-    other = await otherAcc.getAddress()
   })
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
