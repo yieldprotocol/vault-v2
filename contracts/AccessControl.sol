@@ -80,9 +80,7 @@ contract AccessControl {
      */
     constructor () {
         _setupRole(ROOT, msg.sender);   // Grant ROOT to msg.sender
-        grantRole(LOCK, msg.sender);    // Create LOCK by granting it to msg.sender
-        setRoleAdmin(LOCK, LOCK);       // Make LOCK its own admin, creating an independent role tree
-        renounceRole(LOCK, msg.sender); // msg.sender renounces LOCK, meaning no one can be a member ever again
+        setRoleAdmin(LOCK, LOCK);       // Create the LOCK role by setting itself as its own admin, creating an independent role tree
     }
 
     /**
