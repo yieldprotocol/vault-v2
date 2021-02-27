@@ -91,7 +91,15 @@ contract AccessControl {
      * a specific action, or even create other roles to delegate admin control over a function.
      */
     modifier auth() {
-        require (_roles[msg.sig].members[msg.sender], "Access denied");
+        require (hasRole(msg.sig, msg.sender), "Access denied"); // TODO: Flatten functions when gas golfing
+        _;
+    }
+
+    /**
+     * @dev Allow only if the caller has been granted the admin role of `role`.
+     */
+    modifier admin(bytes4 role) {
+        require (hasRole(getRoleAdmin(role), msg.sender), "Only admin");
         _;
     }
 
@@ -122,9 +130,7 @@ contract AccessControl {
      *
      * - the caller must have ``role``'s admin role.
      */
-    function grantRole(bytes4 role, address account) public virtual {
-        require(hasRole(getRoleAdmin(role), msg.sender), "Only admin");
-
+    function grantRole(bytes4 role, address account) public virtual admin(role) {
         _grantRole(role, account);
     }
 
@@ -137,9 +143,7 @@ contract AccessControl {
      *
      * - the caller must have ``role``'s admin role.
      */
-    function setRoleAdmin(bytes4 role, bytes4 adminRole) public virtual {
-        require(hasRole(getRoleAdmin(role), msg.sender), "Only admin");
-
+    function setRoleAdmin(bytes4 role, bytes4 adminRole) public virtual admin(role) {
         _setRoleAdmin(role, adminRole);
     }
 
@@ -152,9 +156,7 @@ contract AccessControl {
      *
      * - the caller must have ``role``'s admin role.
      */
-    function lockRole(bytes4 role) public virtual {
-        require(hasRole(getRoleAdmin(role), msg.sender), "Only admin");
-
+    function lockRole(bytes4 role) public virtual admin(role) {
         _setRoleAdmin(role, LOCK);
     }
 
@@ -167,9 +169,7 @@ contract AccessControl {
      *
      * - the caller must have ``role``'s admin role.
      */
-    function revokeRole(bytes4 role, address account) public virtual {
-        require(hasRole(getRoleAdmin(role), msg.sender), "Only admin");
-
+    function revokeRole(bytes4 role, address account) public virtual admin(role) {
         _revokeRole(role, account);
     }
 
