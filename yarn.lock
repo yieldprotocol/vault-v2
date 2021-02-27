@@ -2561,10 +2561,10 @@
   resolved "https://registry.yarnpkg.com/@yarnpkg/lockfile/-/lockfile-1.1.0.tgz#e77a97fbd345b76d83245edcd17d393b1b41fb31"
   integrity sha512-GpSwvyXOcOOlV70vbnzjj4fW5xW/FdUF6nQEt1ENy7m4ZCczi1+/buVUPAqmGfqznsORNFzUMjctTIp8a9tuCQ==
 
-"@yield-protocol/utils@^1.2.1":
-  version "1.2.1"
-  resolved "https://registry.yarnpkg.com/@yield-protocol/utils/-/utils-1.2.1.tgz#9cc8d0461c15246c7e88e4c0cc991460f394a062"
-  integrity sha512-kREAf0efS/r+dqqjtqC24dCSikxw8GN6HpNfmetLrjUo0UG3LV1OTmyTiDupP/TX8lmBX4fC1qzrB/hAoNpPCw==
+"@yield-protocol/utils@^1.2.2":
+  version "1.2.2"
+  resolved "https://registry.yarnpkg.com/@yield-protocol/utils/-/utils-1.2.2.tgz#8555054309cbf8c67e06379f49225fd02f0ab16b"
+  integrity sha512-UZz19iTpXJZ0sZe2Q2fAo4YwAzbVC15zjMRT2OQt/NSVlLPQwC6gcTEGpX6Pbxcao2optoKmejIm1mEinkeClQ==
   dependencies:
     ethereumjs-util "^7.0.8"
     ethers "^5.0.7"
@@ -5127,6 +5127,11 @@ env-paths@^2.2.0:
   version "2.2.0"
   resolved "https://registry.yarnpkg.com/env-paths/-/env-paths-2.2.0.tgz#cdca557dc009152917d6166e2febe1f039685e43"
   integrity sha512-6u0VYSCo/OW6IoD5WCLLy9JUGARbamfSavcNXry/eu8aHVFei6CD3Sw+VGX5alea1i9pgPHW0mbu6Xj0uBh7gA==
+
+erc3156@^0.4.8:
+  version "0.4.8"
+  resolved "https://registry.yarnpkg.com/erc3156/-/erc3156-0.4.8.tgz#981ae601399cecc59a4f854b5304ebf112b02376"
+  integrity sha512-KzsDXNJY8ptG/IKzpwxY5edUAMVl/JQSC0pWhJzDE1JRDutarFoDWoLV0tZoU8asFmlldo7NDmT7Rzi3IacgDA==
 
 errno@~0.1.1:
   version "0.1.7"
