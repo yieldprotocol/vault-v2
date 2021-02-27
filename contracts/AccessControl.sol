@@ -79,10 +79,10 @@ contract AccessControl {
      * Calling setRoleAdmin(msg.sig, LOCK) means no one can grant that msg.sig role anymore.
      */
     constructor () {
-        _setupRole(ROOT, msg.sender); // ROOT
-        grantRole(LOCK, msg.sender); // LOCK
-        setRoleAdmin(LOCK, LOCK);
-        renounceRole(LOCK, msg.sender);
+        _setupRole(ROOT, msg.sender);   // Grant ROOT to msg.sender
+        grantRole(LOCK, msg.sender);    // Create LOCK by granting it to msg.sender
+        setRoleAdmin(LOCK, LOCK);       // Make LOCK its own admin, creating an independent role tree
+        renounceRole(LOCK, msg.sender); // msg.sender renounces LOCK, meaning no one can be a member ever again
     }
 
     /**
@@ -154,7 +154,7 @@ contract AccessControl {
      */
     function lockRole(bytes4 role) public virtual {
         require(hasRole(getRoleAdmin(role), msg.sender), "Only admin");
-        
+
         _setRoleAdmin(role, LOCK);
     }
 
