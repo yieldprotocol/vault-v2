@@ -4,6 +4,7 @@ import "./interfaces/IOracle.sol";
 import "./interfaces/IJoin.sol";
 // import "@yield-protocol/utils/contracts/access/Orchestrated.sol";
 import "@yield-protocol/utils/contracts/token/ERC20Permit.sol";
+import "./AccessControl.sol";
 
 
 library RMath { // Fixed point arithmetic in Ray units
@@ -26,7 +27,7 @@ library Safe128 {
 }
 
 // TODO: Setter for MAX_TIME_TO_MATURITY
-contract FYToken is /* Orchestrated(),*/ ERC20Permit  {
+contract FYToken is AccessControl(), ERC20Permit  {
     using RMath for uint128;
     using Safe128 for uint128;
 
@@ -83,7 +84,7 @@ contract FYToken is /* Orchestrated(),*/ ERC20Permit  {
     /// @dev Mint fyTokens.
     function mint(address to, uint256 amount)
         public
-        /* auth */
+        auth
     {
         _mint(to, amount);                                        // 2 SSTORE
     }
@@ -91,7 +92,7 @@ contract FYToken is /* Orchestrated(),*/ ERC20Permit  {
     /// @dev Burn fyTokens.
     function burn(address from, uint256 amount)
         public
-        /* auth */
+        auth
     {
         _burn(from, amount);                                        // 2 SSTORE
     }

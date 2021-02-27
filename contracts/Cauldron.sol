@@ -5,6 +5,7 @@ import "./interfaces/IFYToken.sol";
 import "./interfaces/IJoin.sol";
 import "./interfaces/IOracle.sol";
 import "./libraries/DataTypes.sol";
+import "./AccessControl.sol";
 
 
 library Math {
@@ -51,7 +52,7 @@ library Safe128 {
 
 // TODO: Add a setter for auction protection (same as Witch.AUCTION_TIME?)
 
-contract Cauldron {
+contract Cauldron is AccessControl() {
     using Math for uint128;
     using RMath for uint128;
     using RMath for int128;
@@ -94,6 +95,7 @@ contract Cauldron {
     /// @dev Add a new Asset.
     function addAsset(bytes6 assetId, IERC20 asset)
         external
+        auth
     {
         require (assets[assetId] == IERC20(address(0)), "Id already used");
         assets[assetId] = asset;
@@ -103,6 +105,7 @@ contract Cauldron {
     /// @dev Set the maximum debt for an underlying and ilk pair. Can be reset.
     function setMaxDebt(bytes6 baseId, bytes6 ilkId, uint128 max)
         external
+        auth
     {
         require (assets[baseId] != IERC20(address(0)), "Asset not found");                  // 1 SLOAD
         require (assets[ilkId] != IERC20(address(0)), "Asset not found");                   // 1 SLOAD
@@ -113,6 +116,7 @@ contract Cauldron {
     /// @dev Set a rate oracle. Can be reset.
     function setRateOracle(bytes6 baseId, IOracle oracle)
         external
+        auth
     {
         require (assets[baseId] != IERC20(address(0)), "Asset not found");                  // 1 SLOAD
         rateOracles[baseId] = oracle;                                                       // 1 SSTORE                                                             // 1 SSTORE. Allows to replace an existing oracle.
@@ -122,6 +126,7 @@ contract Cauldron {
     /// @dev Set a spot oracle and its collateralization ratio. Can be reset.
     function setSpotOracle(bytes6 baseId, bytes6 ilkId, IOracle oracle, uint32 ratio)
         external
+        auth
     {
         require (assets[baseId] != IERC20(address(0)), "Asset not found");                  // 1 SLOAD
         require (assets[ilkId] != IERC20(address(0)), "Asset not found");                   // 1 SLOAD
@@ -135,7 +140,7 @@ contract Cauldron {
     /// @dev Add a new series
     function addSeries(bytes6 seriesId, bytes6 baseId, IFYToken fyToken)
         external
-        /*auth*/
+        auth
     {
         require (assets[baseId] != IERC20(address(0)), "Asset not found");                  // 1 SLOAD
         require (fyToken != IFYToken(address(0)), "Series need a fyToken");
@@ -152,6 +157,7 @@ contract Cauldron {
     /// @dev Add a new Ilk (approve an asset as collateral for a series).
     function addIlk(bytes6 seriesId, bytes6 ilkId)
         external
+        auth
     {
         DataTypes.Series memory series_ = series[seriesId];                                 // 1 SLOAD
         require (
@@ -309,7 +315,7 @@ contract Cauldron {
     /// To be used by debt management contracts.
     function _stir(bytes12 vaultId, int128 ink, int128 art)
         public
-        // auth                                                                             // 1 SLOAD
+        auth                                                                             // 1 SLOAD
         returns (DataTypes.Balances memory balances_)
     {
         require (vaults[vaultId].owner != address(0), "Vault not found");                   // 1 SLOAD
@@ -323,7 +329,7 @@ contract Cauldron {
     /// To be used for liquidation engines.
     function _grab(bytes12 vaultId)
         public
-        // auth                                                                             // 1 SLOAD
+        auth                                                                             // 1 SLOAD
     {
         uint32 now_ = uint32(block.timestamp);
         require (timestamps[vaultId] + 24*60*60 <= now_, "Timestamped");            // 1 SLOAD. Grabbing a vault protects it for a day from being grabbed by another liquidator. All grabbed vaults will be suddenly released on the 7th of February 2106, at 06:28:16 GMT. I can live with that.
@@ -337,7 +343,7 @@ contract Cauldron {
     /// To be used by debt management contracts, which must own the vault.
     function _slurp(bytes12 vaultId, int128 ink, int128 art)
         public
-        // auth                                                                             // 1 SLOAD
+        auth                                                                             // 1 SLOAD
         returns (DataTypes.Balances memory balances_)
     {
         require (vaults[vaultId].owner == msg.sender, "Only vault owner");                  // 1 SLOAD

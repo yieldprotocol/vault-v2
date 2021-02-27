@@ -154,7 +154,7 @@ contract AccessControl {
      */
     function lockRole(bytes4 role) public virtual {
         require(hasRole(getRoleAdmin(role), msg.sender), "Only admin");
-
+        
         _setRoleAdmin(role, LOCK);
     }
 

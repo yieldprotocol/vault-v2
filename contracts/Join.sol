@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 import "@yield-protocol/utils/contracts/token/IERC20.sol";
+import "./AccessControl.sol";
 
 
 library Safe256 {
@@ -11,7 +12,7 @@ library Safe256 {
     }
 }
 
-contract Join {
+contract Join is AccessControl() {
     using Safe256 for int256;
 
     // --- Auth ---
@@ -44,7 +45,7 @@ contract Join {
 
     function join(address user, int128 amount)
         external
-        // auth
+        auth
         returns (int128)
     {
         // console.logInt(amount);
