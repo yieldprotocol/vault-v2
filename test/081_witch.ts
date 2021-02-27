@@ -90,7 +90,7 @@ describe('Witch', () => {
     await expect(witch.buy(mockVaultId, 0, 0)).to.be.revertedWith('Nothing to buy')
   })
 
-  it('grabs udercollateralized vaults', async () => {
+  it('grabs undercollateralized vaults', async () => {
     await spotOracle.setSpot(RAY.div(2))
     await witch.grab(vaultId)
     const event = (await cauldron.queryFilter(cauldron.filters.VaultTimestamped(null, null)))[0]

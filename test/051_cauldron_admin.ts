@@ -1,4 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
+import { id } from '@yield-protocol/utils'
+
 import CauldronArtifact from '../artifacts/contracts/Cauldron.sol/Cauldron.json'
 import FYTokenArtifact from '../artifacts/contracts/FYToken.sol/FYToken.json'
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
@@ -19,7 +21,6 @@ describe('Cauldron - Admin', () => {
   let otherAcc: SignerWithAddress
   let other: string
   let cauldron: Cauldron
-  let cauldronFromOther: Cauldron
   let fyToken: FYToken
   let base: ERC20Mock
   let ilk: ERC20Mock
@@ -52,7 +53,14 @@ describe('Cauldron - Admin', () => {
     fyToken = (await deployContract(ownerAcc, FYTokenArtifact, [base.address, mockAddress, maturity, seriesId, "Mock FYToken"])) as FYToken
     oracle = (await deployContract(ownerAcc, OracleMockArtifact, [])) as OracleMock
 
-    cauldronFromOther = cauldron.connect(otherAcc)
+    await cauldron.grantRoles([
+      id('addAsset(bytes6,address)'),
+      id('setMaxDebt(bytes6,bytes6,uint128)'),
+      id('setRateOracle(bytes6,address)'),
+      id('setSpotOracle(bytes6,bytes6,address,uint32)'),
+      id('addSeries(bytes6,bytes6,address)'),
+      id('addIlk(bytes6,bytes6)'),
+    ], owner)
   })
 
   it('adds an asset', async () => {

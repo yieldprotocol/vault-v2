@@ -134,6 +134,23 @@ contract AccessControl {
         _grantRole(role, account);
     }
 
+    
+    /**
+     * @dev Grants all of `role` in `roles` to `account`.
+     *
+     * If `account` had not been already granted `role`, emits a {RoleGranted}
+     * event.
+     *
+     * Requirements:
+     *
+     * - For each `role` in `roles`, the caller must have ``role``'s admin role.
+     */
+    function grantRoles(bytes4[] memory roles, address account) public virtual {
+        for (uint256 i = 0; i < roles.length; i++) {
+            grantRole(roles[i], account);
+        }
+    }
+
     /**
      * @dev Sets `adminRole` as ``role``'s admin role.
 

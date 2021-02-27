@@ -1,4 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
+import { id } from '@yield-protocol/utils'
+
 import OracleMockArtifact from '../artifacts/contracts/mocks/OracleMock.sol/OracleMock.json'
 import JoinArtifact from '../artifacts/contracts/Join.sol/Join.json'
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
@@ -79,6 +81,9 @@ describe('Ladle - stir', () => {
 
     // Finally, we deploy the join. A check that a join exists would be impossible in `cauldron` functions.
     ilkJoin = (await deployContract(ownerAcc, JoinArtifact, [ilk.address])) as Join
+    await ilkJoin.grantRoles([
+      id('join(address,int128)'),
+    ], ladle.address)
 
     await ilk.mint(owner, WAD.mul(10));
     await ilk.approve(ilkJoin.address, MAX);

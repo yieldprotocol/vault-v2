@@ -1,4 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
+import { id } from '@yield-protocol/utils'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
@@ -59,6 +60,15 @@ describe('FYToken', () => {
     baseJoin = env.joins.get(baseId) as Join
     fyToken = env.series.get(seriesId) as FYToken
     chiOracle = env.oracles.get('chi') as OracleMock
+
+    await baseJoin.grantRoles([
+      id('join(address,int128)'),
+    ], fyToken.address)
+
+    await fyToken.grantRoles([
+      id('mint(address,uint256)'),
+      id('burn(address,uint256)'),
+    ], owner)
 
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
     await ladle.stir(vaultId, WAD, WAD)               // This gives `owner` WAD fyToken
