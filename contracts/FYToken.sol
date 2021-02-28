@@ -134,9 +134,9 @@ contract FYToken is AccessControl(), ERC20Permit, IERC3156FlashLender {
         require(token == address(this), "Unsupported currency");
         _mint(address(receiver), amount);
 
-        require(receiver.onFlashLoan(msg.sender, token, amount, 0, data) == FLASH_LOAN_RETURN);     // Call to `onFlashLoan`
+        require(receiver.onFlashLoan(msg.sender, token, amount, 0, data) == FLASH_LOAN_RETURN, "Non-compliant borrower");     // Call to `onFlashLoan`
 
-        _decreaseApproval(address(receiver), amount);                                               // 1 SLOAD in most cases
+        _decreaseApproval(address(receiver), amount);                                               // Ignored if receiver == msg.sender or approve is set to MAX, 1 SLOAD otherwise
         _burn(address(receiver), amount);                                                           // 2 SSTORE
         return true;
     }
