@@ -149,6 +149,7 @@ describe('Ladle - stir', () => {
       })
 
       it('users can repay their debt', async () => {
+        await fyToken.approve(ladle.address, WAD)
         await expect(ladle.stir(vaultId, 0, WAD.mul(-1))).to.emit(cauldron, 'VaultStirred').withArgs(vaultId, seriesId, ilkId, 0, WAD.mul(-1))
         expect(await fyToken.balanceOf(owner)).to.equal(0)
         expect((await cauldron.balances(vaultId)).art).to.equal(0)
