@@ -1,4 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
+import { id } from '@yield-protocol/utils'
+
 import CauldronArtifact from '../artifacts/contracts/Cauldron.sol/Cauldron.json'
 import FYTokenArtifact from '../artifacts/contracts/FYToken.sol/FYToken.json'
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
@@ -16,47 +18,59 @@ const { deployContract } = waffle
 describe('Cauldron - Admin', () => {
   let ownerAcc: SignerWithAddress
   let owner: string
-  let otherAcc: SignerWithAddress
-  let other: string
   let cauldron: Cauldron
-  let cauldronFromOther: Cauldron
   let fyToken: FYToken
   let base: ERC20Mock
   let ilk: ERC20Mock
   let oracle: OracleMock
 
-  const mockAssetId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const mockSeriesId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const mockAddress =  ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20)))
-  const emptyAddress =  ethers.utils.getAddress('0x0000000000000000000000000000000000000000')
+  const mockAssetId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const mockSeriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const mockAddress = ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20)))
+  const emptyAddress = ethers.utils.getAddress('0x0000000000000000000000000000000000000000')
 
   before(async () => {
     const signers = await ethers.getSigners()
     ownerAcc = signers[0]
     owner = await ownerAcc.getAddress()
-
-    otherAcc = signers[1]
-    other = await otherAcc.getAddress()
   })
 
-  const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
-  const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
-  const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
-  const maturity = 1640995199;
-  const ratio = 10000  // == 100% collateralization ratio
+  const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const maturity = 1640995199
+  const ratio = 10000 // == 100% collateralization ratio
 
   beforeEach(async () => {
     cauldron = (await deployContract(ownerAcc, CauldronArtifact, [])) as Cauldron
-    base = (await deployContract(ownerAcc, ERC20MockArtifact, [baseId, "Mock Base"])) as ERC20Mock
-    ilk = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId, "Mock Ilk"])) as ERC20Mock
-    fyToken = (await deployContract(ownerAcc, FYTokenArtifact, [base.address, mockAddress, maturity, seriesId, "Mock FYToken"])) as FYToken
+    base = (await deployContract(ownerAcc, ERC20MockArtifact, [baseId, 'Mock Base'])) as ERC20Mock
+    ilk = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId, 'Mock Ilk'])) as ERC20Mock
+    fyToken = (await deployContract(ownerAcc, FYTokenArtifact, [
+      base.address,
+      mockAddress,
+      maturity,
+      seriesId,
+      'Mock FYToken',
+    ])) as FYToken
     oracle = (await deployContract(ownerAcc, OracleMockArtifact, [])) as OracleMock
 
-    cauldronFromOther = cauldron.connect(otherAcc)
+    await cauldron.grantRoles(
+      [
+        id('addAsset(bytes6,address)'),
+        id('setMaxDebt(bytes6,bytes6,uint128)'),
+        id('setRateOracle(bytes6,address)'),
+        id('setSpotOracle(bytes6,bytes6,address,uint32)'),
+        id('addSeries(bytes6,bytes6,address)'),
+        id('addIlk(bytes6,bytes6)'),
+      ],
+      owner
+    )
   })
 
   it('adds an asset', async () => {
-    expect(await cauldron.addAsset(ilkId, ilk.address)).to.emit(cauldron, 'AssetAdded').withArgs(ilkId, ilk.address)
+    expect(await cauldron.addAsset(ilkId, ilk.address))
+      .to.emit(cauldron, 'AssetAdded')
+      .withArgs(ilkId, ilk.address)
     expect(await cauldron.assets(ilkId)).to.equal(ilk.address)
   })
 
@@ -77,13 +91,15 @@ describe('Cauldron - Admin', () => {
     it('does not allow setting a debt limit for an unknown base', async () => {
       await expect(cauldron.setMaxDebt(mockAssetId, ilkId, 2)).to.be.revertedWith('Asset not found')
     })
-  
+
     it('does not allow setting a debt limit for an unknown ilk', async () => {
       await expect(cauldron.setMaxDebt(baseId, mockAssetId, 2)).to.be.revertedWith('Asset not found')
     })
 
     it('sets a debt limit', async () => {
-      expect(await cauldron.setMaxDebt(baseId, ilkId, 2)).to.emit(cauldron, 'MaxDebtSet').withArgs(baseId, ilkId, 2)
+      expect(await cauldron.setMaxDebt(baseId, ilkId, 2))
+        .to.emit(cauldron, 'MaxDebtSet')
+        .withArgs(baseId, ilkId, 2)
 
       const debt = await cauldron.debt(baseId, ilkId)
       expect(debt.max).to.equal(2)
@@ -94,7 +110,9 @@ describe('Cauldron - Admin', () => {
     })
 
     it('adds a rate oracle', async () => {
-      expect(await cauldron.setRateOracle(baseId, oracle.address)).to.emit(cauldron, 'RateOracleAdded').withArgs(baseId, oracle.address)
+      expect(await cauldron.setRateOracle(baseId, oracle.address))
+        .to.emit(cauldron, 'RateOracleAdded')
+        .withArgs(baseId, oracle.address)
 
       expect(await cauldron.rateOracles(baseId)).to.equal(oracle.address)
     })
@@ -113,7 +131,9 @@ describe('Cauldron - Admin', () => {
       })
 
       it('adds a series', async () => {
-        expect(await cauldron.addSeries(seriesId, baseId, fyToken.address)).to.emit(cauldron, 'SeriesAdded').withArgs(seriesId, baseId, fyToken.address)
+        expect(await cauldron.addSeries(seriesId, baseId, fyToken.address))
+          .to.emit(cauldron, 'SeriesAdded')
+          .withArgs(seriesId, baseId, fyToken.address)
 
         const series = await cauldron.series(seriesId)
         expect(series.fyToken).to.equal(fyToken.address)
@@ -131,15 +151,21 @@ describe('Cauldron - Admin', () => {
         })
 
         it('does not allow adding a spot oracle for an unknown base', async () => {
-          await expect(cauldron.setSpotOracle(mockAssetId, ilkId, oracle.address, ratio)).to.be.revertedWith('Asset not found')
+          await expect(cauldron.setSpotOracle(mockAssetId, ilkId, oracle.address, ratio)).to.be.revertedWith(
+            'Asset not found'
+          )
         })
 
         it('does not allow adding a spot oracle for an unknown ilk', async () => {
-          await expect(cauldron.setSpotOracle(baseId, mockAssetId, oracle.address, ratio)).to.be.revertedWith('Asset not found')
+          await expect(cauldron.setSpotOracle(baseId, mockAssetId, oracle.address, ratio)).to.be.revertedWith(
+            'Asset not found'
+          )
         })
 
         it('adds a spot oracle and its collateralization ratio', async () => {
-          expect(await cauldron.setSpotOracle(baseId, ilkId, oracle.address, ratio)).to.emit(cauldron, 'SpotOracleAdded').withArgs(baseId, ilkId, oracle.address, ratio)
+          expect(await cauldron.setSpotOracle(baseId, ilkId, oracle.address, ratio))
+            .to.emit(cauldron, 'SpotOracleAdded')
+            .withArgs(baseId, ilkId, oracle.address, ratio)
 
           const spot = await cauldron.spotOracles(baseId, ilkId)
           expect(spot.oracle).to.equal(oracle.address)
@@ -151,7 +177,7 @@ describe('Cauldron - Admin', () => {
             await cauldron.setSpotOracle(baseId, ilkId, oracle.address, ratio)
           })
 
-          it('does not allow adding an asset as an ilk to a series that doesn\'t exist', async () => {
+          it("does not allow adding an asset as an ilk to a series that doesn't exist", async () => {
             await expect(cauldron.addIlk(mockSeriesId, ilkId)).to.be.revertedWith('Series not found')
           })
 
@@ -160,8 +186,10 @@ describe('Cauldron - Admin', () => {
           })
 
           it('adds an asset as an ilk to a series', async () => {
-            expect(await cauldron.addIlk(seriesId, ilkId)).to.emit(cauldron, 'IlkAdded').withArgs(seriesId, ilkId)
-      
+            expect(await cauldron.addIlk(seriesId, ilkId))
+              .to.emit(cauldron, 'IlkAdded')
+              .withArgs(seriesId, ilkId)
+
             expect(await cauldron.ilks(seriesId, ilkId)).to.be.true
           })
         })

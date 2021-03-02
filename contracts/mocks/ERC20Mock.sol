@@ -11,7 +11,7 @@ contract ERC20Mock is ERC20Permit  {
     ) ERC20Permit(name, symbol) { }
 
     /// @dev Give tokens to whoever asks for them.
-    function mint(address to, uint256 amount) public {
+    function mint(address to, uint256 amount) public virtual {
         _mint(to, amount);
     }
 }

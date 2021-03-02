@@ -24,16 +24,16 @@ describe('Cauldron - Vaults', () => {
   let base: ERC20Mock
   let ilk: ERC20Mock
 
-  const baseId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const ilkId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const otherIlkId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
-  const otherSeriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
+  const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const otherIlkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const otherSeriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
 
-  const mockAssetId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const mockAssetId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const emptyAssetId = '0x000000000000'
-  const mockAddress =  ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20)))
-  const emptyAddress =  ethers.utils.getAddress('0x0000000000000000000000000000000000000000')
+  const mockAddress = ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20)))
+  const emptyAddress = ethers.utils.getAddress('0x0000000000000000000000000000000000000000')
 
   async function fixture() {
     return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId, otherIlkId], [seriesId, otherSeriesId])
@@ -49,7 +49,7 @@ describe('Cauldron - Vaults', () => {
   })
 
   beforeEach(async () => {
-    env = await loadFixture(fixture);
+    env = await loadFixture(fixture)
     cauldron = env.cauldron
     ladle = env.ladle
     base = env.assets.get(baseId) as ERC20Mock
@@ -59,11 +59,13 @@ describe('Cauldron - Vaults', () => {
     cauldronFromOther = cauldron.connect(otherAcc)
   })
 
-  it('does not build a vault with an unknown series', async () => { // TODO: Error message misleading, replace in contract for something generic
+  it('does not build a vault with an unknown series', async () => {
+    // TODO: Error message misleading, replace in contract for something generic
     await expect(cauldron.build(mockAssetId, ilkId)).to.be.revertedWith('Ilk not added')
   })
 
-  it('does not build a vault with an unknown ilk', async () => { // TODO: Might be removed, redundant with approved ilk check
+  it('does not build a vault with an unknown ilk', async () => {
+    // TODO: Might be removed, redundant with approved ilk check
     await expect(cauldron.build(seriesId, mockAssetId)).to.be.revertedWith('Ilk not added')
   })
 
@@ -107,7 +109,9 @@ describe('Cauldron - Vaults', () => {
     })
 
     it('destroys a vault', async () => {
-      expect(await cauldron.destroy(vaultId)).to.emit(cauldron, 'VaultDestroyed').withArgs(vaultId)
+      expect(await cauldron.destroy(vaultId))
+        .to.emit(cauldron, 'VaultDestroyed')
+        .withArgs(vaultId)
       const vault = await cauldron.vaults(vaultId)
       expect(vault.owner).to.equal(emptyAddress)
       expect(vault.seriesId).to.equal(emptyAssetId)
@@ -133,7 +137,9 @@ describe('Cauldron - Vaults', () => {
     })
 
     it('changes a vault', async () => {
-      expect(await cauldron.tweak(vaultId, otherSeriesId, otherIlkId)).to.emit(cauldron, 'VaultTweaked').withArgs(vaultId, otherSeriesId, otherIlkId)
+      expect(await cauldron.tweak(vaultId, otherSeriesId, otherIlkId))
+        .to.emit(cauldron, 'VaultTweaked')
+        .withArgs(vaultId, otherSeriesId, otherIlkId)
       const vault = await cauldron.vaults(vaultId)
       expect(vault.owner).to.equal(owner)
       expect(vault.seriesId).to.equal(otherSeriesId)
@@ -145,7 +151,9 @@ describe('Cauldron - Vaults', () => {
     })
 
     it('gives a vault', async () => {
-      expect(await cauldron.give(vaultId, other)).to.emit(cauldron, 'VaultTransfer').withArgs(vaultId, other)
+      expect(await cauldron.give(vaultId, other))
+        .to.emit(cauldron, 'VaultTransfer')
+        .withArgs(vaultId, other)
       const vault = await cauldron.vaults(vaultId)
       expect(vault.owner).to.equal(other)
       expect(vault.seriesId).to.equal(seriesId)

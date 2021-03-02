@@ -27,7 +27,7 @@ jobs:
             yarn-
       - run: yarn
       - run: yarn lint:ts
-      - run: yarn lint:sol
+      # - run: yarn lint:sol
 
   test:
     runs-on: ubuntu-latest

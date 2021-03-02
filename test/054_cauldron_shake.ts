@@ -42,17 +42,17 @@ describe('Cauldron - shake', () => {
     other = await otherAcc.getAddress()
   })
 
-  const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
-  const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
-  const otherIlkId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
-  const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
-  const mockVaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12));
+  const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const otherIlkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const mockVaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12))
 
   let vaultFromId: string
   let vaultToId: string
 
   beforeEach(async () => {
-    env = await loadFixture(fixture);
+    env = await loadFixture(fixture)
     cauldron = env.cauldron
     ladle = env.ladle
     base = env.assets.get(baseId) as ERC20Mock
@@ -90,7 +90,9 @@ describe('Cauldron - shake', () => {
   })
 
   it('moves collateral', async () => {
-    expect(await cauldron.shake(vaultFromId, vaultToId, WAD)).to.emit(cauldron, 'VaultShaken').withArgs(vaultFromId, vaultToId, WAD)
+    expect(await cauldron.shake(vaultFromId, vaultToId, WAD))
+      .to.emit(cauldron, 'VaultShaken')
+      .withArgs(vaultFromId, vaultToId, WAD)
     expect((await cauldron.balances(vaultFromId)).ink).to.equal(0)
     expect((await cauldron.balances(vaultToId)).ink).to.equal(WAD)
   })

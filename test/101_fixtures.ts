@@ -45,13 +45,13 @@ describe('Fixtures', () => {
     other = await otherAcc.getAddress()
   })
 
-  const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
-  const ilkId1 = ethers.utils.hexlify(ethers.utils.randomBytes(6));
-  const ilkId2 = ethers.utils.hexlify(ethers.utils.randomBytes(6));
-  const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
+  const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const ilkId1 = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const ilkId2 = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
 
   beforeEach(async () => {
-    env = await loadFixture(fixture);
+    env = await loadFixture(fixture)
   })
 
   // TODO: Do actual tests

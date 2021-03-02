@@ -2089,11 +2089,6 @@
   resolved "https://registry.yarnpkg.com/@solidity-parser/parser/-/parser-0.11.1.tgz#fa840af64840c930f24a9c82c08d4a092a068add"
   integrity sha512-H8BSBoKE8EubJa0ONqecA2TviT3TnHeC4NpgnAHSUiuhZoQBfPB4L2P9bs8R6AoTW10Endvh3vc+fomVMIDIYQ==
 
-"@solidity-parser/parser@^0.7.0":
-  version "0.7.1"
-  resolved "https://registry.yarnpkg.com/@solidity-parser/parser/-/parser-0.7.1.tgz#660210130e4237476cb55e2882064809f80f861e"
-  integrity sha512-5ma2uuwPAEX1TPl2rAPAAuGlBkKnn2oUKQvnhTFlDIB8U/KDWX77FpHtL6Rcz+OwqSCWx9IClxACgyIEJ/GhIw==
-
 "@solidity-parser/parser@^0.8.2":
   version "0.8.2"
   resolved "https://registry.yarnpkg.com/@solidity-parser/parser/-/parser-0.8.2.tgz#a6a5e93ac8dca6884a99a532f133beba59b87b69"
@@ -2561,10 +2556,10 @@
   resolved "https://registry.yarnpkg.com/@yarnpkg/lockfile/-/lockfile-1.1.0.tgz#e77a97fbd345b76d83245edcd17d393b1b41fb31"
   integrity sha512-GpSwvyXOcOOlV70vbnzjj4fW5xW/FdUF6nQEt1ENy7m4ZCczi1+/buVUPAqmGfqznsORNFzUMjctTIp8a9tuCQ==
 
-"@yield-protocol/utils@^1.2.1":
-  version "1.2.1"
-  resolved "https://registry.yarnpkg.com/@yield-protocol/utils/-/utils-1.2.1.tgz#9cc8d0461c15246c7e88e4c0cc991460f394a062"
-  integrity sha512-kREAf0efS/r+dqqjtqC24dCSikxw8GN6HpNfmetLrjUo0UG3LV1OTmyTiDupP/TX8lmBX4fC1qzrB/hAoNpPCw==
+"@yield-protocol/utils@^1.2.2":
+  version "1.2.2"
+  resolved "https://registry.yarnpkg.com/@yield-protocol/utils/-/utils-1.2.2.tgz#8555054309cbf8c67e06379f49225fd02f0ab16b"
+  integrity sha512-UZz19iTpXJZ0sZe2Q2fAo4YwAzbVC15zjMRT2OQt/NSVlLPQwC6gcTEGpX6Pbxcao2optoKmejIm1mEinkeClQ==
   dependencies:
     ethereumjs-util "^7.0.8"
     ethers "^5.0.7"
@@ -5127,6 +5122,11 @@ env-paths@^2.2.0:
   version "2.2.0"
   resolved "https://registry.yarnpkg.com/env-paths/-/env-paths-2.2.0.tgz#cdca557dc009152917d6166e2febe1f039685e43"
   integrity sha512-6u0VYSCo/OW6IoD5WCLLy9JUGARbamfSavcNXry/eu8aHVFei6CD3Sw+VGX5alea1i9pgPHW0mbu6Xj0uBh7gA==
+
+erc3156@^0.4.8:
+  version "0.4.8"
+  resolved "https://registry.yarnpkg.com/erc3156/-/erc3156-0.4.8.tgz#981ae601399cecc59a4f854b5304ebf112b02376"
+  integrity sha512-KzsDXNJY8ptG/IKzpwxY5edUAMVl/JQSC0pWhJzDE1JRDutarFoDWoLV0tZoU8asFmlldo7NDmT7Rzi3IacgDA==
 
 errno@~0.1.1:
   version "0.1.7"
@@ -11470,12 +11470,12 @@ solc@^0.6.3:
     semver "^5.5.0"
     tmp "0.0.33"
 
-solhint@^3.2.0:
-  version "3.2.0"
-  resolved "https://registry.yarnpkg.com/solhint/-/solhint-3.2.0.tgz#e3b3e568f64f71328f410a97f06e802033f0d7d2"
-  integrity sha512-BGp7JnnoLzknGC/arcH33oN/LjOz0hKgdauOcBOO5jNjhjnPQ3cAacSMH64fWYShAg5+HYQaSRubInpSKSvzLg==
+solhint@^3.3.2:
+  version "3.3.2"
+  resolved "https://registry.yarnpkg.com/solhint/-/solhint-3.3.2.tgz#ebd7270bb50fd378b427d7a6fc9f2a7fd00216c0"
+  integrity sha512-8tHCkIAk1axLLG6Qu2WIH3GgNABonj9eAWejJbov3o3ujkZQRNHeHU1cC4/Dmjsh3Om7UzFFeADUHu2i7ZJeiw==
   dependencies:
-    "@solidity-parser/parser" "^0.7.0"
+    "@solidity-parser/parser" "^0.8.2"
     ajv "^6.6.1"
     antlr4 "4.7.1"
     ast-parents "0.0.1"

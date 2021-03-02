@@ -14,7 +14,7 @@ describe('Oracle', () => {
   let oracle: Oracle
 
   const pastMaturity = 1600000000
-  const RAY = BigNumber.from("1000000000000000000000000000")
+  const RAY = BigNumber.from('1000000000000000000000000000')
 
   before(async () => {
     const signers = await ethers.getSigners()
@@ -37,7 +37,9 @@ describe('Oracle', () => {
     })
 
     it('records and retrieves the spot price', async () => {
-      expect(await oracle.record(pastMaturity)).to.emit(oracle, 'Recorded').withArgs(pastMaturity, 1)
+      expect(await oracle.record(pastMaturity))
+        .to.emit(oracle, 'Recorded')
+        .withArgs(pastMaturity, 1)
 
       await oracle.setSpot(2) // Just to be sure we are retrieving the recorded value
       expect(await oracle.recorded(pastMaturity)).to.equal(1)
@@ -47,7 +49,7 @@ describe('Oracle', () => {
       beforeEach(async () => {
         await oracle.record(pastMaturity)
       })
-  
+
       it('retrieves the spot price accrual', async () => {
         await oracle.setSpot(2) // Just to be sure we are retrieving the recorded value
         expect(await oracle.accrual(pastMaturity)).to.equal(RAY.mul(2))

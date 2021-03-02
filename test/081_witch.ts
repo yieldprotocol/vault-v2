@@ -11,7 +11,7 @@ import { OracleMock } from '../typechain/OracleMock'
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { deployContract, loadFixture } = waffle
-const timeMachine = require('ether-time-traveler');
+const timeMachine = require('ether-time-traveler')
 
 import { YieldEnvironment, WAD, RAY, THREE_MONTHS } from './shared/fixtures'
 
@@ -33,8 +33,8 @@ describe('Witch', () => {
   let spotOracle: OracleMock
   let rateOracle: OracleMock
 
-  const mockAssetId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const mockVaultId =  ethers.utils.hexlify(ethers.utils.randomBytes(12))
+  const mockAssetId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const mockVaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12))
   const MAX = ethers.constants.MaxUint256
 
   async function fixture() {
@@ -42,7 +42,7 @@ describe('Witch', () => {
   }
 
   before(async () => {
-    snapshotId = await timeMachine.takeSnapshot(ethers.provider)      // `loadFixture` messes up with the chain state, so we revert to a clean state after each test file.
+    snapshotId = await timeMachine.takeSnapshot(ethers.provider) // `loadFixture` messes up with the chain state, so we revert to a clean state after each test file.
     const signers = await ethers.getSigners()
     ownerAcc = signers[0]
     owner = await ownerAcc.getAddress()
@@ -52,16 +52,16 @@ describe('Witch', () => {
   })
 
   after(async () => {
-    await timeMachine.revertToSnapshot(ethers.provider, snapshotId);  // Once all tests are done, revert the chain
+    await timeMachine.revertToSnapshot(ethers.provider, snapshotId) // Once all tests are done, revert the chain
   })
 
-  const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
-  const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
-  const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
+  const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   let vaultId: string
 
   beforeEach(async () => {
-    env = await loadFixture(fixture);
+    env = await loadFixture(fixture)
     cauldron = env.cauldron
     ladle = env.ladle
     witch = env.witch
@@ -90,7 +90,7 @@ describe('Witch', () => {
     await expect(witch.buy(mockVaultId, 0, 0)).to.be.revertedWith('Nothing to buy')
   })
 
-  it('grabs udercollateralized vaults', async () => {
+  it('grabs undercollateralized vaults', async () => {
     await spotOracle.setSpot(RAY.div(2))
     await witch.grab(vaultId)
     const event = (await cauldron.queryFilter(cauldron.filters.VaultTimestamped(null, null)))[0]
@@ -104,7 +104,7 @@ describe('Witch', () => {
       await witch.grab(vaultId)
     })
 
-    it('it can\'t be grabbed again', async () => {
+    it("it can't be grabbed again", async () => {
       await expect(witch.grab(vaultId)).to.be.revertedWith('Timestamped')
     })
 
@@ -119,7 +119,7 @@ describe('Witch', () => {
       await witch.buy(vaultId, WAD, 0)
       // const event = (await witch.queryFilter(witch.filters.Bought(null, null, null, null)))[0]
       const ink = WAD.sub((await cauldron.balances(vaultId)).ink)
-      expect(ink.div(10**15)).to.equal(WAD.div(10**15).div(2)) // Nice hack to compare up to some precision
+      expect(ink.div(10 ** 15)).to.equal(WAD.div(10 ** 15).div(2)) // Nice hack to compare up to some precision
       expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(WAD))
       expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(ink))
     })

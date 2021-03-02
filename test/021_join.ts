@@ -1,4 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
+import { id } from '@yield-protocol/utils'
+
 import JoinArtifact from '../artifacts/contracts/Join.sol/Join.json'
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
 
@@ -30,16 +32,20 @@ describe('Join', () => {
   })
 
   beforeEach(async () => {
-    token = (await deployContract(ownerAcc, ERC20MockArtifact, ["MTK", "Mock Token"])) as ERC20Mock
+    token = (await deployContract(ownerAcc, ERC20MockArtifact, ['MTK', 'Mock Token'])) as ERC20Mock
     join = (await deployContract(ownerAcc, JoinArtifact, [token.address])) as Join
     joinFromOther = join.connect(otherAcc)
 
-    await token.mint(owner, 1);
+    await join.grantRoles([id('join(address,int128)')], owner)
+
+    await token.mint(owner, 1)
     await token.approve(join.address, MAX)
   })
 
   it('pulls tokens from user', async () => {
-    expect(await join.join(owner, 1)).to.emit(token, 'Transfer').withArgs(owner, join.address, 1)
+    expect(await join.join(owner, 1))
+      .to.emit(token, 'Transfer')
+      .withArgs(owner, join.address, 1)
   })
 
   describe('with tokens in the join', async () => {
@@ -48,7 +54,9 @@ describe('Join', () => {
     })
 
     it('pushes tokens to user', async () => {
-      expect(await join.join(owner, -1)).to.emit(token, 'Transfer').withArgs(join.address, owner, 1)
+      expect(await join.join(owner, -1))
+        .to.emit(token, 'Transfer')
+        .withArgs(join.address, owner, 1)
     })
   })
 })

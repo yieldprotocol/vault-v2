@@ -11,7 +11,7 @@ import { YieldEnvironment, WAD, RAY, THREE_MONTHS } from './shared/fixtures'
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { loadFixture } = waffle
-const timeMachine = require('ether-time-traveler');
+const timeMachine = require('ether-time-traveler')
 
 describe('Cauldron - Level', () => {
   let snapshotId: any
@@ -26,9 +26,9 @@ describe('Cauldron - Level', () => {
   let spotOracle: Oracle
   let rateOracle: Oracle
 
-  const baseId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const ilkId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
+  const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   let vaultId: string
 
   async function fixture() {
@@ -43,12 +43,12 @@ describe('Cauldron - Level', () => {
   })
 
   after(async () => {
-    await timeMachine.revertToSnapshot(ethers.provider, snapshotId);
+    await timeMachine.revertToSnapshot(ethers.provider, snapshotId)
   })
 
   beforeEach(async function () {
     this.timeout(0)
-    env = await loadFixture(fixture);
+    env = await loadFixture(fixture)
     cauldron = env.cauldron
     ladle = env.ladle
     base = env.assets.get(baseId) as ERC20
@@ -69,7 +69,7 @@ describe('Cauldron - Level', () => {
       await spotOracle.setSpot(RAY.mul(spot))
       for (let ratio of [50, 100, 200]) {
         await cauldron.setSpotOracle(baseId, ilkId, spotOracle.address, ratio * 100)
-        const expectedLevel = (ink.mul(spot)).sub(art.mul(ratio).div(100))
+        const expectedLevel = ink.mul(spot).sub(art.mul(ratio).div(100))
         expect(await cauldron.level(vaultId)).to.equal(expectedLevel)
         // console.log(`${ink} * ${RAY.mul(spot)} - ${art} * ${ratio} = ${await cauldron.level(vaultId)} | ${expectedLevel} `)
       }
@@ -83,9 +83,9 @@ describe('Cauldron - Level', () => {
         await cauldron.setSpotOracle(baseId, ilkId, spotOracle.address, ratio * 100)
         for (let ink of [WAD, WAD.mul(-1)]) {
           for (let art of [WAD, WAD.mul(-1)]) {
-            const expectedDiff = (ink.mul(spot)).sub(art.mul(ratio).div(100))
+            const expectedDiff = ink.mul(spot).sub(art.mul(ratio).div(100))
             expect(await cauldron.diff(vaultId, ink, art)).to.equal(expectedDiff)
-          }  
+          }
         }
       }
     }
@@ -106,7 +106,7 @@ describe('Cauldron - Level', () => {
         // accrual = rate / 100
         for (let ratio of [50, 100, 200]) {
           await cauldron.setSpotOracle(baseId, ilkId, spotOracle.address, ratio * 100)
-          const expectedLevel = (ink.mul(spot)).sub(art.mul(rate).mul(ratio).div(10000))
+          const expectedLevel = ink.mul(spot).sub(art.mul(rate).mul(ratio).div(10000))
           expect(await cauldron.level(vaultId)).to.equal(expectedLevel)
           // console.log(`${ink} * ${RAY.mul(spot)} - ${art} * ${ratio} = ${await cauldron.level(vaultId)} | ${expectedLevel} `)
         }
@@ -129,20 +129,20 @@ describe('Cauldron - Level', () => {
           await cauldron.setSpotOracle(baseId, ilkId, spotOracle.address, ratio * 100)
           for (let ink of [WAD, WAD.mul(-1)]) {
             for (let art of [WAD, WAD.mul(-1)]) {
-              const expectedDiff = (ink.mul(spot)).sub(art.mul(rate).mul(ratio).div(10000))
+              const expectedDiff = ink.mul(spot).sub(art.mul(rate).mul(ratio).div(10000))
               expect(await cauldron.diff(vaultId, ink, art)).to.equal(expectedDiff)
-            }  
+            }
           }
         }
       }
     }
   })
 
-  it('users can\'t borrow and become undercollateralized', async () => {
+  it("users can't borrow and become undercollateralized", async () => {
     await expect(ladle.stir(vaultId, 0, WAD.mul(2))).to.be.revertedWith('Undercollateralized')
   })
 
-  it('users can\'t withdraw and become undercollateralized', async () => {
+  it("users can't withdraw and become undercollateralized", async () => {
     await expect(ladle.stir(vaultId, WAD.mul(-1), 0)).to.be.revertedWith('Undercollateralized')
   })
 })

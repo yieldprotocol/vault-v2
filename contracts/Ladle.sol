@@ -6,6 +6,7 @@ import "./interfaces/IJoin.sol";
 import "./interfaces/ICauldron.sol";
 import "./interfaces/IOracle.sol";
 import "./libraries/DataTypes.sol";
+import "./AccessControl.sol";
 
 
 library RMath { // Fixed point arithmetic in Ray units
@@ -20,7 +21,7 @@ library RMath { // Fixed point arithmetic in Ray units
 }
 
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
-contract Ladle {
+contract Ladle is AccessControl() {
     using RMath for uint128;
 
     ICauldron public cauldron;
@@ -36,7 +37,7 @@ contract Ladle {
     /// @dev Add a new Join for an Asset. There can be only onw Join per Asset. Until a Join is added, no tokens of that Asset can be posted or withdrawn.
     function addJoin(bytes6 assetId, IJoin join)
         external
-        /*auth*/
+        auth
     {
         require (cauldron.assets(assetId) != IERC20(address(0)), "Asset not found");    // 1 CALL + 1 SLOAD
         require (joins[assetId] == IJoin(address(0)), "One Join per Asset");            // 1 SLOAD
@@ -107,7 +108,7 @@ contract Ladle {
     /// @dev Allow authorized contracts to move assets through the ladle
     function _join(bytes12 vaultId, address user, int128 ink, int128 art)
         external
-        // auth
+        auth
     {
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);                       // 1 CALL + 1 SLOAD
         DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);             // 1 CALL + 1 SLOAD
