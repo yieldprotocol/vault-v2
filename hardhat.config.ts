@@ -17,6 +17,11 @@ export default {
       },
     }
   },
+  namedAccounts: {
+    deployer: 0,
+    owner: 1,
+    other: 2,
+  },
   gasReporter: {
     enabled: true
   },
