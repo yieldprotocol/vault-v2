@@ -32,20 +32,20 @@ describe('Join', () => {
   })
 
   beforeEach(async () => {
-    token = (await deployContract(ownerAcc, ERC20MockArtifact, ["MTK", "Mock Token"])) as ERC20Mock
+    token = (await deployContract(ownerAcc, ERC20MockArtifact, ['MTK', 'Mock Token'])) as ERC20Mock
     join = (await deployContract(ownerAcc, JoinArtifact, [token.address])) as Join
     joinFromOther = join.connect(otherAcc)
 
-    await join.grantRoles([
-      id('join(address,int128)'),
-    ], owner)
+    await join.grantRoles([id('join(address,int128)')], owner)
 
-    await token.mint(owner, 1);
+    await token.mint(owner, 1)
     await token.approve(join.address, MAX)
   })
 
   it('pulls tokens from user', async () => {
-    expect(await join.join(owner, 1)).to.emit(token, 'Transfer').withArgs(owner, join.address, 1)
+    expect(await join.join(owner, 1))
+      .to.emit(token, 'Transfer')
+      .withArgs(owner, join.address, 1)
   })
 
   describe('with tokens in the join', async () => {
@@ -54,7 +54,9 @@ describe('Join', () => {
     })
 
     it('pushes tokens to user', async () => {
-      expect(await join.join(owner, -1)).to.emit(token, 'Transfer').withArgs(join.address, owner, 1)
+      expect(await join.join(owner, -1))
+        .to.emit(token, 'Transfer')
+        .withArgs(join.address, owner, 1)
     })
   })
 })

@@ -68,36 +68,29 @@ export class YieldEnvironment {
     const witch = (await deployContract(owner, WitchArtifact, [cauldron.address, ladle.address])) as Witch
 
     // ==== Orchestration ====
-    await cauldron.grantRoles([
-      id('_stir(bytes12,int128,int128)'),
-    ], ladle.address)
+    await cauldron.grantRoles([id('_stir(bytes12,int128,int128)')], ladle.address)
 
-    await cauldron.grantRoles([
-      id('_grab(bytes12)'),
-      id('_slurp(bytes12,int128,int128)'),
-    ], witch.address)
+    await cauldron.grantRoles([id('_grab(bytes12)'), id('_slurp(bytes12,int128,int128)')], witch.address)
 
-    await ladle.grantRoles([
-      id('_join(bytes12,address,int128,int128)'),
-    ], witch.address)
+    await ladle.grantRoles([id('_join(bytes12,address,int128,int128)')], witch.address)
 
     // ==== Owner access ====
-    await cauldron.grantRoles([
-      id('addAsset(bytes6,address)'),
-      id('setMaxDebt(bytes6,bytes6,uint128)'),
-      id('setRateOracle(bytes6,address)'),
-      id('setSpotOracle(bytes6,bytes6,address,uint32)'),
-      id('addSeries(bytes6,bytes6,address)'),
-      id('addIlk(bytes6,bytes6)'),
-      id('_stir(bytes12,int128,int128)'),
-      id('_grab(bytes12)'),
-      id('_slurp(bytes12,int128,int128)'),
-    ], ownerAdd)
+    await cauldron.grantRoles(
+      [
+        id('addAsset(bytes6,address)'),
+        id('setMaxDebt(bytes6,bytes6,uint128)'),
+        id('setRateOracle(bytes6,address)'),
+        id('setSpotOracle(bytes6,bytes6,address,uint32)'),
+        id('addSeries(bytes6,bytes6,address)'),
+        id('addIlk(bytes6,bytes6)'),
+        id('_stir(bytes12,int128,int128)'),
+        id('_grab(bytes12)'),
+        id('_slurp(bytes12,int128,int128)'),
+      ],
+      ownerAdd
+    )
 
-    await ladle.grantRoles([
-      id('addJoin(bytes6,address)'),
-      id('_join(bytes12,address,int128,int128)'),
-    ], ownerAdd)
+    await ladle.grantRoles([id('addJoin(bytes6,address)'), id('_join(bytes12,address,int128,int128)')], ownerAdd)
 
     // ==== Add assets and joins ====
     // For each asset id passed as an argument, we create a Mock ERC20 which we register in cauldron, and its Join, that we register in Ladle.
@@ -114,12 +107,8 @@ export class YieldEnvironment {
       joins.set(assetId, join)
       await ladle.addJoin(assetId, join.address)
       await asset.approve(join.address, ethers.constants.MaxUint256)
-      await join.grantRoles([
-        id('join(address,int128)'),
-      ], ladle.address)
-      await join.grantRoles([
-        id('join(address,int128)'),
-      ], ownerAdd)
+      await join.grantRoles([id('join(address,int128)')], ladle.address)
+      await join.grantRoles([id('join(address,int128)')], ownerAdd)
     }
 
     // The first asset will be the underlying for all series
@@ -175,17 +164,9 @@ export class YieldEnvironment {
         await cauldron.addIlk(seriesId, ilkId)
       }
 
-      await baseJoin.grantRoles([
-        id('join(address,int128)'),
-      ], fyToken.address)
-      await fyToken.grantRoles([
-        id('mint(address,uint256)'),
-        id('burn(address,uint256)'),
-      ], ladle.address)
-      await fyToken.grantRoles([
-        id('mint(address,uint256)'),
-        id('burn(address,uint256)'),
-      ], ownerAdd)
+      await baseJoin.grantRoles([id('join(address,int128)')], fyToken.address)
+      await fyToken.grantRoles([id('mint(address,uint256)'), id('burn(address,uint256)')], ladle.address)
+      await fyToken.grantRoles([id('mint(address,uint256)'), id('burn(address,uint256)')], ownerAdd)
     }
 
     // ==== Build some vaults ====

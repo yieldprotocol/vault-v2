@@ -33,7 +33,7 @@ describe('Ladle - stir', () => {
   let ladle: Ladle
   let ladleFromOther: Ladle
 
-  const mockAssetId =  ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const mockAssetId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const MAX = ethers.constants.MaxUint256
 
   async function fixture() {
@@ -49,14 +49,14 @@ describe('Ladle - stir', () => {
     other = await otherAcc.getAddress()
   })
 
-  const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
-  const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
-  const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
+  const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ratio = 10000 // == 100% collateralization ratio
   let vaultId: string
 
   beforeEach(async () => {
-    env = await loadFixture(fixture);
+    env = await loadFixture(fixture)
     cauldron = env.cauldron
     ladle = env.ladle
     base = env.assets.get(baseId) as ERC20Mock
@@ -66,7 +66,7 @@ describe('Ladle - stir', () => {
 
     // ==== Set testing environment ====
     // We add this asset manually, because `fixtures` would also add the join, which we want to test.
-    ilk = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId, "Mock Ilk"])) as ERC20Mock
+    ilk = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId, 'Mock Ilk'])) as ERC20Mock
     oracle = (await deployContract(ownerAcc, OracleMockArtifact, [])) as OracleMock
     await oracle.setSpot(RAY)
 
@@ -81,12 +81,10 @@ describe('Ladle - stir', () => {
 
     // Finally, we deploy the join. A check that a join exists would be impossible in `cauldron` functions.
     ilkJoin = (await deployContract(ownerAcc, JoinArtifact, [ilk.address])) as Join
-    await ilkJoin.grantRoles([
-      id('join(address,int128)'),
-    ], ladle.address)
+    await ilkJoin.grantRoles([id('join(address,int128)')], ladle.address)
 
-    await ilk.mint(owner, WAD.mul(10));
-    await ilk.approve(ilkJoin.address, MAX);
+    await ilk.mint(owner, WAD.mul(10))
+    await ilk.approve(ilkJoin.address, MAX)
   })
 
   it('does not allow adding a join before adding its ilk', async () => {
@@ -94,7 +92,9 @@ describe('Ladle - stir', () => {
   })
 
   it('adds a join', async () => {
-    expect(await ladle.addJoin(ilkId, ilkJoin.address)).to.emit(ladle, 'JoinAdded').withArgs(ilkId, ilkJoin.address)
+    expect(await ladle.addJoin(ilkId, ilkJoin.address))
+      .to.emit(ladle, 'JoinAdded')
+      .withArgs(ilkId, ilkJoin.address)
     expect(await ladle.joins(ilkId)).to.equal(ilkJoin.address)
   })
 
@@ -112,7 +112,9 @@ describe('Ladle - stir', () => {
     })
 
     it('users can stir to post collateral', async () => {
-      expect(await ladle.stir(vaultId, WAD, 0)).to.emit(cauldron, 'VaultStirred').withArgs(vaultId, seriesId, ilkId, WAD, 0)
+      expect(await ladle.stir(vaultId, WAD, 0))
+        .to.emit(cauldron, 'VaultStirred')
+        .withArgs(vaultId, seriesId, ilkId, WAD, 0)
       expect(await ilk.balanceOf(ilkJoin.address)).to.equal(WAD)
       expect((await cauldron.balances(vaultId)).ink).to.equal(WAD)
     })
@@ -121,22 +123,28 @@ describe('Ladle - stir', () => {
       beforeEach(async () => {
         await ladle.stir(vaultId, WAD, 0)
       })
-  
+
       it('users can stir to withdraw collateral', async () => {
-        await expect(ladle.stir(vaultId, WAD.mul(-1), 0)).to.emit(cauldron, 'VaultStirred').withArgs(vaultId, seriesId, ilkId, WAD.mul(-1), 0)
+        await expect(ladle.stir(vaultId, WAD.mul(-1), 0))
+          .to.emit(cauldron, 'VaultStirred')
+          .withArgs(vaultId, seriesId, ilkId, WAD.mul(-1), 0)
         expect(await ilk.balanceOf(ilkJoin.address)).to.equal(0)
         expect((await cauldron.balances(vaultId)).ink).to.equal(0)
       })
 
       it('users can stir to borrow fyToken', async () => {
-        await expect(ladle.stir(vaultId, 0, WAD)).to.emit(cauldron, 'VaultStirred').withArgs(vaultId, seriesId, ilkId, 0, WAD)
+        await expect(ladle.stir(vaultId, 0, WAD))
+          .to.emit(cauldron, 'VaultStirred')
+          .withArgs(vaultId, seriesId, ilkId, 0, WAD)
         expect(await fyToken.balanceOf(owner)).to.equal(WAD)
         expect((await cauldron.balances(vaultId)).art).to.equal(WAD)
       })
     })
 
     it('users can stir to post collateral and borrow fyToken', async () => {
-      await expect(ladle.stir(vaultId, WAD, WAD)).to.emit(cauldron, 'VaultStirred').withArgs(vaultId, seriesId, ilkId, WAD, WAD)
+      await expect(ladle.stir(vaultId, WAD, WAD))
+        .to.emit(cauldron, 'VaultStirred')
+        .withArgs(vaultId, seriesId, ilkId, WAD, WAD)
       expect(await ilk.balanceOf(ilkJoin.address)).to.equal(WAD)
       expect(await fyToken.balanceOf(owner)).to.equal(WAD)
       expect((await cauldron.balances(vaultId)).ink).to.equal(WAD)
@@ -150,20 +158,24 @@ describe('Ladle - stir', () => {
 
       it('users can repay their debt', async () => {
         await fyToken.approve(ladle.address, WAD)
-        await expect(ladle.stir(vaultId, 0, WAD.mul(-1))).to.emit(cauldron, 'VaultStirred').withArgs(vaultId, seriesId, ilkId, 0, WAD.mul(-1))
+        await expect(ladle.stir(vaultId, 0, WAD.mul(-1)))
+          .to.emit(cauldron, 'VaultStirred')
+          .withArgs(vaultId, seriesId, ilkId, 0, WAD.mul(-1))
         expect(await fyToken.balanceOf(owner)).to.equal(0)
         expect((await cauldron.balances(vaultId)).art).to.equal(0)
       })
 
-      it('users can\'t repay more debt than they have', async () => {
+      it("users can't repay more debt than they have", async () => {
         await expect(ladle.stir(vaultId, 0, WAD.mul(-2))).to.be.revertedWith('Result below zero')
       })
 
       it('users can borrow while under the global debt limit', async () => {
-        await expect(ladle.stir(vaultId, WAD, WAD)).to.emit(cauldron, 'VaultStirred').withArgs(vaultId, seriesId, ilkId, WAD, WAD)
+        await expect(ladle.stir(vaultId, WAD, WAD))
+          .to.emit(cauldron, 'VaultStirred')
+          .withArgs(vaultId, seriesId, ilkId, WAD, WAD)
       })
 
-      it('users can\'t borrow over the global debt limit', async () => {
+      it("users can't borrow over the global debt limit", async () => {
         await expect(ladle.stir(vaultId, WAD.mul(2), WAD.mul(2))).to.be.revertedWith('Max debt exceeded')
       })
     })

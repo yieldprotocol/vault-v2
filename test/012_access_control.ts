@@ -30,7 +30,10 @@ describe('Access Control', () => {
   })
 
   beforeEach(async () => {
-    restricted = (await deployContract(ownerAcc, RestrictedERC20MockArtifact, ['Restricted ERC20', 'AUTH'])) as Restricted
+    restricted = (await deployContract(ownerAcc, RestrictedERC20MockArtifact, [
+      'Restricted ERC20',
+      'AUTH',
+    ])) as Restricted
     restrictedFromOther = restricted.connect(otherAcc)
   })
 
@@ -72,7 +75,7 @@ describe('Access Control', () => {
 
     it('only admin can grant roles', async () => {
       await expect(restrictedFromOther.grantRole(role, owner)).to.be.revertedWith('Only admin')
-    })  
+    })
 
     it('roles can be revoked', async () => {
       await expect(restrictedFromOther.revokeRole(role, other)).to.be.revertedWith('Only admin')
@@ -82,7 +85,9 @@ describe('Access Control', () => {
 
     it('roles can be renounced', async () => {
       await expect(restricted.renounceRole(role, other)).to.be.revertedWith('Renounce only for self')
-      await expect(restrictedFromOther.renounceRole(role, other)).to.emit(restricted, 'RoleRevoked').withArgs(role, other, other)
+      await expect(restrictedFromOther.renounceRole(role, other))
+        .to.emit(restricted, 'RoleRevoked')
+        .withArgs(role, other, other)
       expect(await restricted.hasRole(role, other)).to.be.false
     })
   })

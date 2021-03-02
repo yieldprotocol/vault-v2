@@ -10,7 +10,7 @@ import { Ladle } from '../typechain/Ladle'
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { loadFixture } = waffle
-const timeMachine = require('ether-time-traveler');
+const timeMachine = require('ether-time-traveler')
 
 import { YieldEnvironment, WAD, RAY, THREE_MONTHS } from './shared/fixtures'
 
@@ -31,8 +31,8 @@ describe('Ladle - close', () => {
   let ladle: Ladle
   let ladleFromOther: Ladle
 
-  const mockVaultId =  ethers.utils.hexlify(ethers.utils.randomBytes(12))
-  
+  const mockVaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12))
+
   async function fixture() {
     return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId], [seriesId])
   }
@@ -48,16 +48,16 @@ describe('Ladle - close', () => {
   })
 
   after(async () => {
-    await timeMachine.revertToSnapshot(ethers.provider, snapshotId);
+    await timeMachine.revertToSnapshot(ethers.provider, snapshotId)
   })
 
-  const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
-  const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
-  const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6));
+  const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   let vaultId: string
 
   beforeEach(async () => {
-    env = await loadFixture(fixture);
+    env = await loadFixture(fixture)
     cauldron = env.cauldron
     ladle = env.ladle
     base = env.assets.get(baseId) as ERC20Mock
@@ -87,7 +87,9 @@ describe('Ladle - close', () => {
 
   it('users can repay their debt with underlying at a 1:1 rate', async () => {
     const baseBefore = await base.balanceOf(owner)
-    await expect(ladle.close(vaultId, 0, WAD.mul(-1))).to.emit(cauldron, 'VaultStirred').withArgs(vaultId, seriesId, ilkId, 0, WAD.mul(-1))
+    await expect(ladle.close(vaultId, 0, WAD.mul(-1)))
+      .to.emit(cauldron, 'VaultStirred')
+      .withArgs(vaultId, seriesId, ilkId, 0, WAD.mul(-1))
     expect(await base.balanceOf(owner)).to.equal(baseBefore.sub(WAD))
     expect(await fyToken.balanceOf(owner)).to.equal(WAD)
     expect((await cauldron.balances(vaultId)).art).to.equal(0)
@@ -95,7 +97,9 @@ describe('Ladle - close', () => {
 
   it('users can repay their debt with underlying and add collateral at the same time', async () => {
     const baseBefore = await base.balanceOf(owner)
-    await expect(ladle.close(vaultId, WAD, WAD.mul(-1))).to.emit(cauldron, 'VaultStirred').withArgs(vaultId, seriesId, ilkId, WAD, WAD.mul(-1))
+    await expect(ladle.close(vaultId, WAD, WAD.mul(-1)))
+      .to.emit(cauldron, 'VaultStirred')
+      .withArgs(vaultId, seriesId, ilkId, WAD, WAD.mul(-1))
     expect(await base.balanceOf(owner)).to.equal(baseBefore.sub(WAD))
     expect(await fyToken.balanceOf(owner)).to.equal(WAD)
     expect((await cauldron.balances(vaultId)).art).to.equal(0)
@@ -105,7 +109,9 @@ describe('Ladle - close', () => {
 
   it('users can repay their debt with underlying and remove collateral at the same time', async () => {
     const baseBefore = await base.balanceOf(owner)
-    await expect(ladle.close(vaultId, WAD.mul(-1), WAD.mul(-1))).to.emit(cauldron, 'VaultStirred').withArgs(vaultId, seriesId, ilkId, WAD.mul(-1), WAD.mul(-1))
+    await expect(ladle.close(vaultId, WAD.mul(-1), WAD.mul(-1)))
+      .to.emit(cauldron, 'VaultStirred')
+      .withArgs(vaultId, seriesId, ilkId, WAD.mul(-1), WAD.mul(-1))
     expect(await base.balanceOf(owner)).to.equal(baseBefore.sub(WAD))
     expect(await fyToken.balanceOf(owner)).to.equal(WAD)
     expect((await cauldron.balances(vaultId)).art).to.equal(0)
@@ -114,7 +120,7 @@ describe('Ladle - close', () => {
   })
 
   describe('after maturity', async () => {
-    const accrual = RAY.mul(110).div(100) // accrual is 10% 
+    const accrual = RAY.mul(110).div(100) // accrual is 10%
 
     beforeEach(async () => {
       await spotOracle.setSpot(RAY.mul(1))
@@ -126,7 +132,9 @@ describe('Ladle - close', () => {
 
     it('users can repay their debt with underlying at accrual rate', async () => {
       const baseBefore = await base.balanceOf(owner)
-      await expect(ladle.close(vaultId, 0, WAD.mul(-1))).to.emit(cauldron, 'VaultStirred').withArgs(vaultId, seriesId, ilkId, 0, WAD.mul(-1))
+      await expect(ladle.close(vaultId, 0, WAD.mul(-1)))
+        .to.emit(cauldron, 'VaultStirred')
+        .withArgs(vaultId, seriesId, ilkId, 0, WAD.mul(-1))
       expect(await base.balanceOf(owner)).to.equal(baseBefore.sub(WAD.mul(accrual).div(RAY)))
       expect(await fyToken.balanceOf(owner)).to.equal(WAD)
       expect((await cauldron.balances(vaultId)).art).to.equal(0)
