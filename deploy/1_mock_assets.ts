@@ -1,7 +1,7 @@
 import {HardhatRuntimeEnvironment} from 'hardhat/types';
 import {DeployFunction} from 'hardhat-deploy/types';
-import { ERC20Mock } from '../typechain/ERC20Mock'
-import { ethers } from 'hardhat'
+// import { ERC20Mock } from '../typechain/ERC20Mock'
+// import { ethers } from 'hardhat'
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const {deployer} = await hre.getNamedAccounts();
@@ -22,8 +22,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       args: [assetId, assetId],
       log: true,
     });
-    // const ERC20 = await ethers.getContract('ERC20Mock', deployer)
-    // await execute('ERC20Mock', { from: deployer }, 'approve', join.address, MAX)
+    // const ERC20 = await ethers.getContract(assetId, deployer) or https://docs.ethers.io/v5/api/contract/example/
+    await execute(assetId, { from: deployer }, 'approve', deployer, 1)
     console.log(`Deployed ${assetId} to ${deployment.address}`);
     assets.push(deployment.address)
     // (await get('ERC20Mock'))
@@ -33,4 +33,4 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 export default func;
 func.id = 'mock_assets'; // id required to prevent reexecution
-func.tags = ['ERC20Mock'];
+func.tags = ['MockAssets'];
