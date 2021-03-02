@@ -7,6 +7,7 @@
   "scripts": {
     "build": "hardhat compile",
     "test": "hardhat test",
+    "test:deploy": "hardhat deploy --tags DeployTest",
     "coverage": "hardhat coverage",
     "lint:sol": "solhint -f table contracts/*.sol",
     "lint:ts": "prettier ./test/*.ts --check",

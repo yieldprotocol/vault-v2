@@ -70,4 +70,4 @@ jobs:
           restore-keys: |
             yarn-
       - run: yarn
-      # - run: yarn deploy:ganache
+      - run: yarn test:deploy
