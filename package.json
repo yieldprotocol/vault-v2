@@ -23,7 +23,6 @@
     "@types/mocha": "^8.0.0",
     "@yield-protocol/utils": "^1.2.2",
     "chai": "4.2.0",
-    "dss-interfaces": "0.1.1",
     "ether-time-traveler": "1.1.0",
     "erc3156": "^0.4.8",
     "ethereum-waffle": "^3.2.2",
