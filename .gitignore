@@ -13,6 +13,7 @@ package/
 cache
 artifacts
 node_modules/
+abi/
 output/
 typechain/
 
