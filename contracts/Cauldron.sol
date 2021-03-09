@@ -155,7 +155,7 @@ contract Cauldron is AccessControl() {
     }
 
     /// @dev Add a new Ilk (approve an asset as collateral for a series).
-    function addIlk(bytes6 seriesId, bytes6 ilkId)
+    function addIlks(bytes6 seriesId, bytes6[] calldata ilkIds)
         external
         auth
     {
@@ -164,12 +164,14 @@ contract Cauldron is AccessControl() {
             series_.fyToken != IFYToken(address(0)),
             "Series not found"
         );
-        require (
-            spotOracles[series_.baseId][ilkId].oracle != IOracle(address(0)),               // 1 SLOAD
-            "Spot oracle not found"
-        );
-        ilks[seriesId][ilkId] = true;                                                       // 1 SSTORE
-        emit IlkAdded(seriesId, ilkId);
+        for (uint256 i = 0; i < ilkIds.length; i++) {
+            require (
+                spotOracles[series_.baseId][ilkIds[i]].oracle != IOracle(address(0)),       // 1 SLOAD
+                "Spot oracle not found"
+            );
+            ilks[seriesId][ilkIds[i]] = true;                                               // 1 SSTORE
+            emit IlkAdded(seriesId, ilkIds[i]);
+        }
     }
 
     // ==== Vault management ====

@@ -73,7 +73,7 @@ describe('Ladle - stir', () => {
     await cauldron.addAsset(ilkId, ilk.address)
     await cauldron.setMaxDebt(baseId, ilkId, WAD.mul(2))
     await cauldron.setSpotOracle(baseId, ilkId, oracle.address, ratio)
-    await cauldron.addIlk(seriesId, ilkId)
+    await cauldron.addIlks(seriesId, [ilkId])
 
     await cauldron.build(seriesId, ilkId)
     const event = (await cauldron.queryFilter(cauldron.filters.VaultBuilt(null, null, null, null)))[0]

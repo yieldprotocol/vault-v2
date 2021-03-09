@@ -82,7 +82,7 @@ export class YieldEnvironment {
         id('setRateOracle(bytes6,address)'),
         id('setSpotOracle(bytes6,bytes6,address,uint32)'),
         id('addSeries(bytes6,bytes6,address)'),
-        id('addIlk(bytes6,bytes6)'),
+        id('addIlks(bytes6,bytes6[])'),
         id('_stir(bytes12,int128,int128)'),
         id('_grab(bytes12)'),
         id('_slurp(bytes12,int128,int128)'),
@@ -160,9 +160,9 @@ export class YieldEnvironment {
       await cauldron.addSeries(seriesId, baseId, fyToken.address)
 
       // Add all assets except the first one as approved collaterals
-      for (let ilkId of assetIds.slice(1)) {
-        await cauldron.addIlk(seriesId, ilkId)
-      }
+      // for (let ilkId of assetIds.slice(1)) {
+        await cauldron.addIlks(seriesId, assetIds.slice(1))
+      // }
 
       await baseJoin.grantRoles([id('join(address,int128)')], fyToken.address)
       await fyToken.grantRoles([id('mint(address,uint256)'), id('burn(address,uint256)')], ladle.address)
