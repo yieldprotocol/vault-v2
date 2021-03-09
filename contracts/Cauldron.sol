@@ -207,8 +207,9 @@ contract Cauldron is AccessControl() {
     /// @dev Change a vault series and/or collateral types.
     /// We can change the series if there is no debt, or assets if there are no assets
     /// Doesn't check inputs, or collateralization level. Do that in public functions.
-    function __tweak(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
-        internal
+    function tweak(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
+        public
+        auth
     {
         require (ilks[seriesId][ilkId] == true, "Ilk not added");                           // 1 SLOAD
         DataTypes.Balances memory balances_ = balances[vaultId];                            // 1 SLOAD
@@ -299,7 +300,7 @@ contract Cauldron is AccessControl() {
         DataTypes.Series memory series_ = series[vaultId];                                  // 1 SLOAD
         
         delete balances[vaultId];                                                           // -1 SSTORE
-        __tweak(vaultId, seriesId, vaults[vaultId].ilkId);                                  // 1 SLOAD + Cost of `__tweak`
+        _tweak(vaultId, seriesId, vaults[vaultId].ilkId);                                  // 1 SLOAD + Cost of `_tweak`
 
         // Modify vault and global debt records. If debt increases, check global limit.
         if (art != 0) {
@@ -354,15 +355,6 @@ contract Cauldron is AccessControl() {
     }
 
     // ---- Public processes ----
-
-    /// @dev Change a vault series or collateral.
-    function tweak(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
-        public
-    {
-        require (vaults[vaultId].owner == msg.sender, "Only vault owner");                  // 1 SLOAD
-        // __tweak checks that the series and the collateral both exist and that the collateral is approved for the series
-        __tweak(vaultId, seriesId, ilkId);                                                  // Cost of `__give`
-    }
 
     /// @dev Give a vault to another user.
     function give(bytes12 vaultId, address user)

@@ -114,10 +114,6 @@ describe('Cauldron - Vaults', () => {
       expect(vault.ilkId).to.equal(emptyAssetId)
     })
 
-    it('does not allow changing vaults if not the vault owner', async () => {
-      await expect(cauldronFromOther.tweak(vaultId, seriesId, ilkId)).to.be.revertedWith('Only vault owner')
-    })
-
     it('does not allow changing vaults to non-approved collaterals', async () => {
       await expect(cauldron.tweak(vaultId, seriesId, mockAssetId)).to.be.revertedWith('Ilk not added')
     })

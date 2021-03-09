@@ -59,6 +59,8 @@ interface ICauldron {
     /// @dev Destroy an empty vault. Used to recover gas costs.
     function destroy(bytes12 vault) external;
 
+    /// @dev Change a vault series and/or collateral types.
+    function tweak(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId) external;
 
     // ---- Restricted processes ----
     // Usable only by a authorized modules that won't cheat on Cauldron.

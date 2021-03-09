@@ -54,6 +54,17 @@ contract Ladle is AccessControl() {
         cauldron.destroy(vaultId);
     }
 
+    /// @dev Change a vault series or collateral.
+    function tweak(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
+        public
+    {
+        DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);                       // 1 CALL + 1 SLOAD
+        require (vault_.owner == msg.sender, "Only vault owner");
+        // tweak checks that the series and the collateral both exist and that the collateral is approved for the series
+        cauldron.tweak(vaultId, seriesId, ilkId);                                                  // Cost of `tweak`
+    }
+
+
     // Add collateral and borrow from vault, pull assets from and push borrowed asset to user
     // Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
     // Doesn't check inputs, or collateralization level. Do that in public functions.

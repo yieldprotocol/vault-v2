@@ -22,7 +22,7 @@ describe('Ladle - vaults', () => {
   let ladleFromOther: Ladle
 
   async function fixture() {
-    return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId], [seriesId])
+    return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId, otherIlkId], [seriesId, otherSeriesId])
   }
 
   before(async () => {
@@ -42,6 +42,8 @@ describe('Ladle - vaults', () => {
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const otherIlkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const otherSeriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const emptyAssetId = '0x000000000000'
   const emptyAddress = ethers.utils.getAddress('0x0000000000000000000000000000000000000000')
 
@@ -71,4 +73,17 @@ describe('Ladle - vaults', () => {
     expect(vault.ilkId).to.equal(emptyAssetId)
   })
 
+  it('does not allow changing vaults if not the vault owner', async () => {
+    await expect(ladleFromOther.tweak(vaultId, seriesId, ilkId)).to.be.revertedWith('Only vault owner')
+  })
+
+  it('changes a vault', async () => {
+    expect(await ladle.tweak(vaultId, otherSeriesId, otherIlkId))
+      .to.emit(cauldron, 'VaultTweaked')
+      .withArgs(vaultId, otherSeriesId, otherIlkId)
+    const vault = await cauldron.vaults(vaultId)
+    expect(vault.owner).to.equal(owner)
+    expect(vault.seriesId).to.equal(otherSeriesId)
+    expect(vault.ilkId).to.equal(otherIlkId)
+    })
 })

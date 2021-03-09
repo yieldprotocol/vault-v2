@@ -71,6 +71,7 @@ export class YieldEnvironment {
     await cauldron.grantRoles([
       id('_stir(bytes12,int128,int128)'),
       id('destroy(bytes12)'),
+      id('tweak(bytes12,bytes6,bytes6)'),
     ], ladle.address)
 
     await cauldron.grantRoles([
@@ -93,6 +94,7 @@ export class YieldEnvironment {
         id('addSeries(bytes6,bytes6,address)'),
         id('addIlks(bytes6,bytes6[])'),
         id('destroy(bytes12)'),
+        id('tweak(bytes12,bytes6,bytes6)'),
         id('_stir(bytes12,int128,int128)'),
         id('_grab(bytes12)'),
         id('_slurp(bytes12,int128,int128)'),
