@@ -34,6 +34,7 @@ contract Ladle is AccessControl() {
         cauldron = cauldron_;
     }
 
+    /// @dev Execute several Ladle functions in a sequence
     function multicall(bytes[] calldata data) external returns(bytes[] memory results) {
         results = new bytes[](data.length);
         for(uint i = 0; i < data.length; i++) {
