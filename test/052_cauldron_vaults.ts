@@ -99,10 +99,6 @@ describe('Cauldron - Vaults', () => {
       vaultId = event.args.vaultId
     })
 
-    it('does not allow destroying vaults if not the vault owner', async () => {
-      await expect(cauldronFromOther.destroy(vaultId)).to.be.revertedWith('Only vault owner')
-    })
-
     it('does not allow destroying vaults if not empty', async () => {
       await ladle.stir(vaultId, WAD, 0)
       await expect(cauldron.destroy(vaultId)).to.be.revertedWith('Only empty vaults')

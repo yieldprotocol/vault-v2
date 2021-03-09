@@ -68,11 +68,20 @@ export class YieldEnvironment {
     const witch = (await deployContract(owner, WitchArtifact, [cauldron.address, ladle.address])) as Witch
 
     // ==== Orchestration ====
-    await cauldron.grantRoles([id('_stir(bytes12,int128,int128)')], ladle.address)
+    await cauldron.grantRoles([
+      id('_stir(bytes12,int128,int128)'),
+      id('destroy(bytes12)'),
+    ], ladle.address)
 
-    await cauldron.grantRoles([id('_grab(bytes12)'), id('_slurp(bytes12,int128,int128)')], witch.address)
+    await cauldron.grantRoles([
+      id('destroy(bytes12)'),
+      id('_grab(bytes12)'),
+      id('_slurp(bytes12,int128,int128)')
+    ], witch.address)
 
-    await ladle.grantRoles([id('_join(bytes12,address,int128,int128)')], witch.address)
+    await ladle.grantRoles([
+      id('_join(bytes12,address,int128,int128)')
+    ], witch.address)
 
     // ==== Owner access ====
     await cauldron.grantRoles(
@@ -83,6 +92,7 @@ export class YieldEnvironment {
         id('setSpotOracle(bytes6,bytes6,address,uint32)'),
         id('addSeries(bytes6,bytes6,address)'),
         id('addIlks(bytes6,bytes6[])'),
+        id('destroy(bytes12)'),
         id('_stir(bytes12,int128,int128)'),
         id('_grab(bytes12)'),
         id('_slurp(bytes12,int128,int128)'),
@@ -90,7 +100,10 @@ export class YieldEnvironment {
       ownerAdd
     )
 
-    await ladle.grantRoles([id('addJoin(bytes6,address)'), id('_join(bytes12,address,int128,int128)')], ownerAdd)
+    await ladle.grantRoles([
+      id('addJoin(bytes6,address)'),
+      id('_join(bytes12,address,int128,int128)')
+    ], ownerAdd)
 
     // ==== Add assets and joins ====
     // For each asset id passed as an argument, we create a Mock ERC20 which we register in cauldron, and its Join, that we register in Ladle.

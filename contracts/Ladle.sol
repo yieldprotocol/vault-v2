@@ -45,6 +45,15 @@ contract Ladle is AccessControl() {
         emit JoinAdded(assetId, address(join));
     }
 
+    /// @dev Destroy an empty vault. Used to recover gas costs.
+    function destroy(bytes12 vaultId)
+        public
+    {
+        DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);                       // 1 CALL + 1 SLOAD
+        require (vault_.owner == msg.sender, "Only vault owner");
+        cauldron.destroy(vaultId);
+    }
+
     // Add collateral and borrow from vault, pull assets from and push borrowed asset to user
     // Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
     // Doesn't check inputs, or collateralization level. Do that in public functions.

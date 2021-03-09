@@ -195,8 +195,8 @@ contract Cauldron is AccessControl() {
     /// @dev Destroy an empty vault. Used to recover gas costs.
     function destroy(bytes12 vaultId)
         public
+        auth
     {
-        require (vaults[vaultId].owner == msg.sender, "Only vault owner");                  // 1 SLOAD
         DataTypes.Balances memory balances_ = balances[vaultId];                            // 1 SLOAD
         require (balances_.art == 0 && balances_.ink == 0, "Only empty vaults");            // 1 SLOAD
         delete timestamps[vaultId];                                                         // 1 SSTORE REFUND
