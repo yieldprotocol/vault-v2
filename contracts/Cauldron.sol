@@ -310,7 +310,7 @@ contract Cauldron is AccessControl() {
             debt[series_.baseId][vault_.ilkId] = debt_;                                     // 1 SSTORE
         }
         balances[vaultId] = balances_;                                                      // 1 SSTORE
-        require(__level(vaultId) >= 0, "Undercollateralized");                              // Cost of `level`
+        require(level(vaultId) >= 0, "Undercollateralized");                              // Cost of `level`
     } */
 
     /// @dev Manipulate a vault, ensuring it is collateralized afterwards.
@@ -323,7 +323,7 @@ contract Cauldron is AccessControl() {
         require (vaults[vaultId].owner != address(0), "Vault not found");                   // 1 SLOAD
         balances_ = __stir(vaultId, ink, art);                                              // Cost of `__stir`
         if (balances_.art > 0 && (ink < 0 || art > 0))                                      // If there is debt and we are less safe
-            require(__level(vaultId) >= 0, "Undercollateralized");                          // Cost of `level`. TODO: Consider allowing if collateralization level either is healthy or improves.
+            require(level(vaultId) >= 0, "Undercollateralized");                          // Cost of `level`. TODO: Consider allowing if collateralization level either is healthy or improves.
         return balances_;
     }
 
@@ -335,7 +335,7 @@ contract Cauldron is AccessControl() {
     {
         uint32 now_ = uint32(block.timestamp);
         require (timestamps[vaultId] + 24*60*60 <= now_, "Timestamped");            // 1 SLOAD. Grabbing a vault protects it for a day from being grabbed by another liquidator. All grabbed vaults will be suddenly released on the 7th of February 2106, at 06:28:16 GMT. I can live with that.
-        require(__level(vaultId) < 0, "Not undercollateralized");                           // Cost of `__level`.
+        require(level(vaultId) < 0, "Not undercollateralized");                           // Cost of `level`.
         timestamps[vaultId] = now_;                                                         // 1 SSTORE
         __give(vaultId, msg.sender);                                                        // Cost of `__give`
         emit VaultTimestamped(vaultId, now_);
@@ -349,8 +349,6 @@ contract Cauldron is AccessControl() {
         returns (DataTypes.Balances memory balances_)
     {
         require (vaults[vaultId].owner == msg.sender, "Only vault owner");                  // 1 SLOAD
-        // (int128 _level, int128 _diff) = __diff(vaultId, ink, art);                       // Cost of `__diff`
-        // require (_level >= 0 || _diff >= 0, "Healthy or improve");                       // TODO: Do we really need this? We are only letting audited liquidators use this. Unaudited liquidators could just set art to zero.
         balances_ = __stir(vaultId, ink, art);                                              // Cost of `__stir`
         return balances_;
     }
@@ -384,21 +382,20 @@ contract Cauldron is AccessControl() {
         DataTypes.Balances memory balancesFrom_;
         DataTypes.Balances memory balancesTo_;
         (balancesFrom_, balancesTo_) = __shake(from, to, ink);                              // Cost of `__shake`
-        if (balancesFrom_.art > 0) require(__level(from) >= 0, "Undercollateralized");      // Cost of `level`. TODO: Consider allowing if collateralization level either is healthy or 
+        if (balancesFrom_.art > 0) require(level(from) >= 0, "Undercollateralized");      // Cost of `level`. TODO: Consider allowing if collateralization level either is healthy or 
         return (balancesFrom_, balancesTo_);
     }
 
     // ==== Accounting ====
 
     /// @dev Return the collateralization level of a vault. It will be negative if undercollateralized.
-    /*
     function level(bytes12 vaultId) public view returns (int128) {
         DataTypes.Vault memory vault_ = vaults[vaultId];                                    // 1 SLOAD
         require (vault_.owner != address(0), "Vault not found");                            // The vault existing is enough to be certain that the oracle exists.
         DataTypes.Series memory series_ = series[vault_.seriesId];                          // 1 SLOAD
         DataTypes.Balances memory balances_ = balances[vaultId];                            // 1 SLOAD
         DataTypes.SpotOracle memory spotOracle_ = spotOracles[series_.baseId][vault_.ilkId];        // 1 SLOAD
-        uint128 spot = oracle.spot();                                                       // 1 `spot` call
+        uint128 spot = spotOracle_.oracle.spot();                                                       // 1 `spot` call
         uint128 ratio = uint128(spotOracle_.ratio) * 1e23;                                    // Normalization factor from 2 to 27 decimals
 
         if (uint32(block.timestamp) >= series_.maturity) {
@@ -408,48 +405,6 @@ contract Cauldron is AccessControl() {
         }
 
         return balances_.ink.rmul(spot).i128() - balances_.art.rmul(ratio).i128();
-    }
-    */
-
-    /// @dev Return the collateralization level of a vault. Negative means undercollateralized.
-    function level(bytes12 vaultId) public view returns (int128) {
-        return __level(vaultId);                                                            // Cost of `__level`
-    }
-
-    /// @dev Return the relative collateralization level of a vault for a given change in debt and collateral. Negative means the collateralization level would drop.
-    function diff(bytes12 vaultId, int128 ink, int128 art) public view returns (int128) {
-        (,int128 _diff) = __diff(vaultId, ink, art);                                      // Cost of `__diff`
-        return _diff;
-    }
-
-    /// @dev Return the collateralization level of a vault. Negative means undercollateralized.
-    function __level(bytes12 vaultId) internal view returns (int128) {
-        (int128 _level,) = __diff(vaultId, 0, 0);                                           // Cost of `__diff`
-        return _level;
-    }
-
-    /// @dev Return the relative collateralization level of a vault for a given change in debt and collateral, as well as the collateralization level at the end.
-    function __diff(bytes12 vaultId, int128 ink, int128 art) internal view returns (int128, int128) {
-        DataTypes.Vault memory vault_ = vaults[vaultId];                                    // 1 SLOAD
-        require (vault_.owner != address(0), "Vault not found");                            // The vault existing is enough to be certain that the oracle exists.
-        DataTypes.Series memory series_ = series[vault_.seriesId];                          // 1 SLOAD
-        DataTypes.Balances memory balances_ = balances[vaultId];                            // 1 SLOAD
-        DataTypes.SpotOracle memory spotOracle_ = spotOracles[series_.baseId][vault_.ilkId];        // 1 SLOAD
-        uint128 ratio = uint128(spotOracle_.ratio) * 1e23;                                  // Normalization factor from 2 to 27 decimals
-        uint128 spot = spotOracle_.oracle.spot();                                           // 1 `spot` call
-
-        if (uint32(block.timestamp) >= series_.maturity) {
-            uint128 accrual = rateOracles[series_.baseId].accrual(series_.maturity);        // 1 SLOAD + 1 `accrual` call
-            return (
-                balances_.ink.rmul(spot).i128() - balances_.art.rmul(accrual).rmul(ratio).i128(), // level
-                ink.rmul(spot) - art.rmul(accrual).rmul(ratio)                                    // diff
-            );
-        }
-
-        return (
-            balances_.ink.rmul(spot).i128() - balances_.art.rmul(ratio).i128(),           // level
-            ink.rmul(spot) - art.rmul(ratio)                                              // diff
-        );
     }
 
     /// @dev Helper function to record the rate in the appropriate oracle when maturing an fyToken
