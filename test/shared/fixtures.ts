@@ -69,7 +69,7 @@ export class YieldEnvironment {
 
     // ==== Orchestration ====
     await cauldron.grantRoles([
-      id('_stir(bytes12,int128,int128)'),
+      id('stir(bytes12,int128,int128)'),
       id('destroy(bytes12)'),
       id('tweak(bytes12,bytes6,bytes6)'),
       id('give(bytes12,address)'),
@@ -77,8 +77,8 @@ export class YieldEnvironment {
 
     await cauldron.grantRoles([
       id('destroy(bytes12)'),
-      id('_grab(bytes12)'),
-      id('_slurp(bytes12,int128,int128)')
+      id('grab(bytes12)'),
+      id('slurp(bytes12,int128,int128)')
     ], witch.address)
 
     await ladle.grantRoles([
@@ -97,9 +97,9 @@ export class YieldEnvironment {
         id('destroy(bytes12)'),
         id('tweak(bytes12,bytes6,bytes6)'),
         id('give(bytes12,address)'),
-        id('_stir(bytes12,int128,int128)'),
-        id('_grab(bytes12)'),
-        id('_slurp(bytes12,int128,int128)'),
+        id('stir(bytes12,int128,int128)'),
+        id('grab(bytes12)'),
+        id('slurp(bytes12,int128,int128)'),
       ],
       ownerAdd
     )

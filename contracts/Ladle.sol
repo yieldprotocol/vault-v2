@@ -86,7 +86,7 @@ contract Ladle is AccessControl() {
 
         if (ink != 0) joins[vault_.ilkId].join(vault_.owner, ink);                      // Cost of `join`. `join` with a negative value means `exit`. | TODO: Consider checking the join exists
 
-        balances_ = cauldron._stir(vaultId, ink, art);                                  // Cost of `cauldron.stir` call.
+        balances_ = cauldron.stir(vaultId, ink, art);                                  // Cost of `cauldron.stir` call.
 
         if (art != 0) {
             DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);         // 1 CALL + 1 SLOAD
@@ -130,7 +130,7 @@ contract Ladle is AccessControl() {
         if (ink != 0) joins[vault_.ilkId].join(vault_.owner, ink);                      // Cost of `join`. `join` with a negative value means `exit`. | TODO: Consider checking the join exists
         joins[baseId].join(msg.sender, int128(amt));                                    // Cost of `join`
         
-        return cauldron._stir(vaultId, ink, art);                                       // Cost of `_stir`
+        return cauldron.stir(vaultId, ink, art);                                       // Cost of `stir`
     }
 
     /// @dev Allow authorized contracts to move assets through the ladle

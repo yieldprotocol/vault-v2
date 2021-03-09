@@ -265,7 +265,7 @@ contract Cauldron is AccessControl() {
     /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
     /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
     /// Doesn't check inputs, or collateralization level. Do that in public functions.
-    function __stir(bytes12 vaultId, int128 ink, int128 art)
+    function _stir(bytes12 vaultId, int128 ink, int128 art)
         internal returns (DataTypes.Balances memory)
     {
         DataTypes.Vault memory vault_ = vaults[vaultId];                                    // 1 SLOAD
@@ -277,7 +277,7 @@ contract Cauldron is AccessControl() {
             balances_.ink = balances_.ink.add(ink);
         }
 
-        // TODO: Consider whether _roll should call __stir, or the next block be a private function.
+        // TODO: Consider whether _roll should call _stir, or the next block be a private function.
         // Modify vault and global debt records. If debt increases, check global limit.
         if (art != 0) {
             DataTypes.Debt memory debt_ = debt[series_.baseId][vault_.ilkId];               // 1 SLOAD
@@ -323,13 +323,13 @@ contract Cauldron is AccessControl() {
 
     /// @dev Manipulate a vault, ensuring it is collateralized afterwards.
     /// To be used by debt management contracts.
-    function _stir(bytes12 vaultId, int128 ink, int128 art)
+    function stir(bytes12 vaultId, int128 ink, int128 art)
         public
         auth                                                                             // 1 SLOAD
         returns (DataTypes.Balances memory balances_)
     {
         require (vaults[vaultId].owner != address(0), "Vault not found");                   // 1 SLOAD
-        balances_ = __stir(vaultId, ink, art);                                              // Cost of `__stir`
+        balances_ = _stir(vaultId, ink, art);                                              // Cost of `_stir`
         if (balances_.art > 0 && (ink < 0 || art > 0))                                      // If there is debt and we are less safe
             require(level(vaultId) >= 0, "Undercollateralized");                          // Cost of `level`. TODO: Consider allowing if collateralization level either is healthy or improves.
         return balances_;
@@ -337,7 +337,7 @@ contract Cauldron is AccessControl() {
 
     /// @dev Give a non-timestamped vault to the caller, and timestamp it.
     /// To be used for liquidation engines.
-    function _grab(bytes12 vaultId)
+    function grab(bytes12 vaultId)
         public
         auth                                                                             // 1 SLOAD
     {
@@ -351,13 +351,13 @@ contract Cauldron is AccessControl() {
 
     /// @dev Manipulate a vault, ignoring collateralization levels.
     /// To be used by debt management contracts, which must own the vault.
-    function _slurp(bytes12 vaultId, int128 ink, int128 art)
+    function slurp(bytes12 vaultId, int128 ink, int128 art)
         public
         auth                                                                             // 1 SLOAD
         returns (DataTypes.Balances memory balances_)
     {
         require (vaults[vaultId].owner == msg.sender, "Only vault owner");                  // 1 SLOAD
-        balances_ = __stir(vaultId, ink, art);                                              // Cost of `__stir`
+        balances_ = _stir(vaultId, ink, art);                                              // Cost of `_stir`
         return balances_;
     }
 

@@ -69,7 +69,7 @@ contract Witch {
 
     /// @dev Put an undercollateralized vault up for liquidation.
     function grab(bytes12 vaultId) public {
-        cauldron._grab(vaultId);
+        cauldron.grab(vaultId);
     }
 
     /// @dev Buy an amount of collateral off a vault in liquidation, paying at most `max` underlying.
@@ -95,7 +95,7 @@ contract Witch {
         uint128 ink = art.rdivup(price);                                                      // Calculate collateral to sell. Using divdrup stops rounding from leaving 1 stray wei in vaults.
         require (ink >= min, "Not enough bought");                                             // TODO: We could also check that min <= balances_.ink
 
-        balances_ = cauldron._slurp(vaultId, -(ink.i128()), -(art.i128()));                      // Cost of `cauldron._slurp`  | Manipulate the vault
+        balances_ = cauldron.slurp(vaultId, -(ink.i128()), -(art.i128()));                      // Cost of `cauldron.slurp`  | Manipulate the vault
         ladle._join(vaultId, msg.sender, -(ink.i128()), art.i128());                          // Cost of `ladle._join`      | Move the assets
         if (balances_.art == 0 && balances_.ink == 0) cauldron.destroy(vaultId);                  // Cost of `cauldron.destroy`
 

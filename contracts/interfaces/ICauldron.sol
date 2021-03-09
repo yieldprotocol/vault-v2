@@ -71,13 +71,13 @@ interface ICauldron {
 
     /// @dev Give a non-timestamped vault to the caller, and timestamp it.
     /// To be used for liquidation engines.
-    function _grab(bytes12 vault) external;
+    function grab(bytes12 vault) external;
 
     /// @dev Manipulate a vault debt and collateral.
-    function _stir(bytes12 vault, int128 ink, int128 art) external returns (DataTypes.Balances memory);
+    function stir(bytes12 vault, int128 ink, int128 art) external returns (DataTypes.Balances memory);
 
     /// @dev Manipulate a vault debt and collateral without collateralization checks
-    function _slurp(bytes12 vault, int128 ink, int128 art) external returns (DataTypes.Balances memory);
+    function slurp(bytes12 vault, int128 ink, int128 art) external returns (DataTypes.Balances memory);
 
     // ---- Public processes ----
 
