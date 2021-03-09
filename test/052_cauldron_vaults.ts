@@ -138,10 +138,6 @@ describe('Cauldron - Vaults', () => {
       expect(vault.ilkId).to.equal(otherIlkId)
     })
 
-    it('does not allow giving vaults if not the vault owner', async () => {
-      await expect(cauldronFromOther.give(vaultId, other)).to.be.revertedWith('Only vault owner')
-    })
-
     it('gives a vault', async () => {
       expect(await cauldron.give(vaultId, other))
         .to.emit(cauldron, 'VaultTransfer')

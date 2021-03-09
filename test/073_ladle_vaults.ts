@@ -85,5 +85,19 @@ describe('Ladle - vaults', () => {
     expect(vault.owner).to.equal(owner)
     expect(vault.seriesId).to.equal(otherSeriesId)
     expect(vault.ilkId).to.equal(otherIlkId)
-    })
+  })
+
+  it('does not allow giving vaults if not the vault owner', async () => {
+    await expect(ladleFromOther.give(vaultId, other)).to.be.revertedWith('Only vault owner')
+  })
+
+  it('gives a vault', async () => {
+    expect(await ladle.give(vaultId, other))
+      .to.emit(cauldron, 'VaultTransfer')
+      .withArgs(vaultId, other)
+    const vault = await cauldron.vaults(vaultId)
+    expect(vault.owner).to.equal(other)
+    expect(vault.seriesId).to.equal(seriesId)
+    expect(vault.ilkId).to.equal(ilkId)
+  })
 })

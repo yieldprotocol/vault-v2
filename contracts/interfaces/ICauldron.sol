@@ -82,7 +82,7 @@ interface ICauldron {
     // ---- Public processes ----
 
     /// @dev Give a vault to another user.
-    // function give(bytes12 vault, address user) external;
+    function give(bytes12 vault, address user) external;
 
     /// @dev Move collateral between vaults.
     // function shake(bytes12 from, bytes12 to, bytes1 assets, uint128[] memory inks) external returns (Balances, Balances);

@@ -227,12 +227,19 @@ contract Cauldron is AccessControl() {
     }
 
     /// @dev Transfer a vault to another user.
-    /// Doesn't check inputs, or collateralization level. Do that in public functions.
-    function __give(bytes12 vaultId, address receiver)
+    function _give(bytes12 vaultId, address receiver)
         internal
     {
         vaults[vaultId].owner = receiver;                                                   // 1 SSTORE
         emit VaultTransfer(vaultId, receiver);
+    }
+
+    /// @dev Transfer a vault to another user.
+    function give(bytes12 vaultId, address receiver)
+        public
+        auth
+    {
+        _give(vaultId, receiver);
     }
 
     // ==== Asset and debt management ====
@@ -338,7 +345,7 @@ contract Cauldron is AccessControl() {
         require (timestamps[vaultId] + 24*60*60 <= now_, "Timestamped");            // 1 SLOAD. Grabbing a vault protects it for a day from being grabbed by another liquidator. All grabbed vaults will be suddenly released on the 7th of February 2106, at 06:28:16 GMT. I can live with that.
         require(level(vaultId) < 0, "Not undercollateralized");                           // Cost of `level`.
         timestamps[vaultId] = now_;                                                         // 1 SSTORE
-        __give(vaultId, msg.sender);                                                        // Cost of `__give`
+        _give(vaultId, msg.sender);                                                        // Cost of `_give`
         emit VaultTimestamped(vaultId, now_);
     }
 
@@ -355,14 +362,6 @@ contract Cauldron is AccessControl() {
     }
 
     // ---- Public processes ----
-
-    /// @dev Give a vault to another user.
-    function give(bytes12 vaultId, address user)
-        public
-    {
-        require (vaults[vaultId].owner == msg.sender, "Only vault owner");                  // 1 SLOAD
-        __give(vaultId, user);                                                              // Cost of `__give`
-    }
 
     // Move collateral between vaults.
     function shake(bytes12 from, bytes12 to, uint128 ink)

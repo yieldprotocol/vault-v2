@@ -64,6 +64,14 @@ contract Ladle is AccessControl() {
         cauldron.tweak(vaultId, seriesId, ilkId);                                                  // Cost of `tweak`
     }
 
+    /// @dev Give a vault to another user.
+    function give(bytes12 vaultId, address receiver)
+        public
+    {
+        DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);                       // 1 CALL + 1 SLOAD
+        require (vault_.owner == msg.sender, "Only vault owner");
+        cauldron.give(vaultId, receiver);                                                              // Cost of `give`
+    }
 
     // Add collateral and borrow from vault, pull assets from and push borrowed asset to user
     // Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
