@@ -246,19 +246,23 @@ contract Cauldron is AccessControl() {
 
     /// @dev Move collateral between vaults.
     /// Doesn't check inputs, or collateralization level. Do that in public functions.
-    function __shake(bytes12 from, bytes12 to, uint128 ink)
-        internal
+    function shake(bytes12 from, bytes12 to, uint128 ink)
+        public
+        auth
         returns (DataTypes.Balances memory, DataTypes.Balances memory)
     {
-        require (vaults[from].ilkId == vaults[to].ilkId, "Different collateral");          // 2 SLOAD
+        DataTypes.Vault memory vaultTo = vaults[to];                                       // 1 SLOAD
+        require (vaultTo.owner != address(0), "Vault not found");
+        require (vaults[from].ilkId == vaultTo.ilkId, "Different collateral");             // 1 SLOAD
         DataTypes.Balances memory balancesFrom_ = balances[from];                          // 1 SLOAD
         DataTypes.Balances memory balancesTo_ = balances[to];                              // 1 SLOAD
         balancesFrom_.ink -= ink;
         balancesTo_.ink += ink;
         balances[from] = balancesFrom_;                                                    // 1 SSTORE
         balances[to] = balancesTo_;                                                        // 1 SSTORE
-        emit VaultShaken(from, to, ink);
+        if (balancesFrom_.art > 0) require(level(from) >= 0, "Undercollateralized");      // Cost of `level`
 
+        emit VaultShaken(from, to, ink);
         return (balancesFrom_, balancesTo_);
     }
 
@@ -291,35 +295,6 @@ contract Cauldron is AccessControl() {
         emit VaultStirred(vaultId, vault_.seriesId, vault_.ilkId, ink, art);
         return balances_;
     }
-
-    // ---- Restricted processes ----
-    // Usable only by a authorized modules that won't cheat on Cauldron.
-
-    // Change series and debt of a vault.
-    // The module calling this function also needs to buy underlying in the pool for the new series, and sell it in pool for the old series.
-    // TODO: Should we allow changing the collateral at the same time?
-    /* function _roll(bytes12 vaultId, bytes6 seriesId, int128 art)
-        public
-        auth
-    {
-        require (vaults[vaultId].owner != address(0), "Vault not found");                   // 1 SLOAD
-        DataTypes.Balances memory balances_ = balances[vaultId];                            // 1 SLOAD
-        DataTypes.Series memory series_ = series[vaultId];                                  // 1 SLOAD
-        
-        delete balances[vaultId];                                                           // -1 SSTORE
-        _tweak(vaultId, seriesId, vaults[vaultId].ilkId);                                  // 1 SLOAD + Cost of `_tweak`
-
-        // Modify vault and global debt records. If debt increases, check global limit.
-        if (art != 0) {
-            DataTypes.Debt memory debt_ = debt[series_.baseId][vault_.ilkId];               // 1 SLOAD
-            if (art > 0) require (debt_.sum.add(art) <= debt_.max, "Max debt exceeded");
-            balances_.art = balances_.art.add(art);
-            debt_.sum = debt_.sum.add(art);
-            debt[series_.baseId][vault_.ilkId] = debt_;                                     // 1 SSTORE
-        }
-        balances[vaultId] = balances_;                                                      // 1 SSTORE
-        require(level(vaultId) >= 0, "Undercollateralized");                              // Cost of `level`
-    } */
 
     /// @dev Manipulate a vault, ensuring it is collateralized afterwards.
     /// To be used by debt management contracts.
@@ -361,21 +336,31 @@ contract Cauldron is AccessControl() {
         return balances_;
     }
 
-    // ---- Public processes ----
-
-    // Move collateral between vaults.
-    function shake(bytes12 from, bytes12 to, uint128 ink)
+    // Change series and debt of a vault.
+    // The module calling this function also needs to buy underlying in the pool for the new series, and sell it in pool for the old series.
+    // TODO: Should we allow changing the collateral at the same time?
+    /* function _roll(bytes12 vaultId, bytes6 seriesId, int128 art)
         public
-        returns (DataTypes.Balances memory, DataTypes.Balances memory)
+        auth
     {
-        require (vaults[from].owner == msg.sender, "Only vault owner");                     // 1 SLOAD
-        require (vaults[to].owner != address(0), "Vault not found");                        // 1 SLOAD
-        DataTypes.Balances memory balancesFrom_;
-        DataTypes.Balances memory balancesTo_;
-        (balancesFrom_, balancesTo_) = __shake(from, to, ink);                              // Cost of `__shake`
-        if (balancesFrom_.art > 0) require(level(from) >= 0, "Undercollateralized");      // Cost of `level`. TODO: Consider allowing if collateralization level either is healthy or 
-        return (balancesFrom_, balancesTo_);
-    }
+        require (vaults[vaultId].owner != address(0), "Vault not found");                   // 1 SLOAD
+        DataTypes.Balances memory balances_ = balances[vaultId];                            // 1 SLOAD
+        DataTypes.Series memory series_ = series[vaultId];                                  // 1 SLOAD
+        
+        delete balances[vaultId];                                                           // -1 SSTORE
+        _tweak(vaultId, seriesId, vaults[vaultId].ilkId);                                  // 1 SLOAD + Cost of `_tweak`
+
+        // Modify vault and global debt records. If debt increases, check global limit.
+        if (art != 0) {
+            DataTypes.Debt memory debt_ = debt[series_.baseId][vault_.ilkId];               // 1 SLOAD
+            if (art > 0) require (debt_.sum.add(art) <= debt_.max, "Max debt exceeded");
+            balances_.art = balances_.art.add(art);
+            debt_.sum = debt_.sum.add(art);
+            debt[series_.baseId][vault_.ilkId] = debt_;                                     // 1 SSTORE
+        }
+        balances[vaultId] = balances_;                                                      // 1 SSTORE
+        require(level(vaultId) >= 0, "Undercollateralized");                              // Cost of `level`
+    } */
 
     // ==== Accounting ====
 

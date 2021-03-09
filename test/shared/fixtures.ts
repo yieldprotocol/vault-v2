@@ -70,6 +70,7 @@ export class YieldEnvironment {
     // ==== Orchestration ====
     await cauldron.grantRoles([
       id('stir(bytes12,int128,int128)'),
+      id('shake(bytes12,bytes12,uint128)'),
       id('destroy(bytes12)'),
       id('tweak(bytes12,bytes6,bytes6)'),
       id('give(bytes12,address)'),
@@ -98,6 +99,7 @@ export class YieldEnvironment {
         id('tweak(bytes12,bytes6,bytes6)'),
         id('give(bytes12,address)'),
         id('stir(bytes12,int128,int128)'),
+        id('shake(bytes12,bytes12,uint128)'),
         id('grab(bytes12)'),
         id('slurp(bytes12,int128,int128)'),
       ],

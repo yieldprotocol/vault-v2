@@ -45,6 +45,14 @@ contract Ladle is AccessControl() {
         emit JoinAdded(assetId, address(join));
     }
 
+    /// @dev Create a new vault, linked to a series (and therefore underlying) and a collateral
+    function build(bytes6 seriesId, bytes6 ilkId)
+        public
+        returns (bytes12 vaultId)
+    {
+        return cauldron.build(seriesId, ilkId);
+    }
+
     /// @dev Destroy an empty vault. Used to recover gas costs.
     function destroy(bytes12 vaultId)
         public
@@ -100,6 +108,19 @@ contract Ladle is AccessControl() {
         }
 
         return balances_;
+    }
+
+    // Move collateral between vaults.
+    function shake(bytes12 from, bytes12 to, uint128 ink)
+        public
+        returns (DataTypes.Balances memory, DataTypes.Balances memory)
+    {
+        DataTypes.Vault memory vaultFrom = cauldron.vaults(from);                       // 1 CALL + 1 SLOAD
+        require (vaultFrom.owner == msg.sender, "Only vault owner");
+        DataTypes.Balances memory balancesFrom_;
+        DataTypes.Balances memory balancesTo_;
+        (balancesFrom_, balancesTo_) = cauldron.shake(from, to, ink);                              // Cost of `__shake`
+        return (balancesFrom_, balancesTo_);
     }
 
     /// @dev Repay vault debt using underlying token. It can add or remove collateral at the same time.
