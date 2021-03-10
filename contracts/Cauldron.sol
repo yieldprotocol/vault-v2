@@ -177,14 +177,14 @@ contract Cauldron is AccessControl() {
     // ==== Vault management ====
 
     /// @dev Create a new vault, linked to a series (and therefore underlying) and a collateral
-    function build(bytes6 seriesId, bytes6 ilkId)
+    function build(address owner, bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
         public
-        returns (bytes12 vaultId)
+        auth
     {
+        require (vaults[vaultId].owner == address(0), "Vault already exists");              // 1 SLOAD
         require (ilks[seriesId][ilkId] == true, "Ilk not added");                           // 1 SLOAD
-        vaultId = bytes12(keccak256(abi.encodePacked(msg.sender, block.timestamp)));        // Check (vaults[id].owner == address(0)), and increase the salt until a free vault id is found. 1 SLOAD per check.
         vaults[vaultId] = DataTypes.Vault({
-            owner: msg.sender,
+            owner: owner,
             seriesId: seriesId,
             ilkId: ilkId
         });                                                                                 // 1 SSTORE

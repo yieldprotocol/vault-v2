@@ -54,7 +54,7 @@ interface ICauldron {
     function timestamps(bytes12 vault) external view returns (uint32);
 
     /// @dev Create a new vault, linked to a series (and therefore underlying) and up to 5 collateral types
-    function build(bytes6 seriesId, bytes6 ilkId) external returns (bytes12 id);
+    function build(address owner, bytes12 vaultId, bytes6 seriesId, bytes6 ilkId) external;
 
     /// @dev Destroy an empty vault. Used to recover gas costs.
     function destroy(bytes12 vault) external;

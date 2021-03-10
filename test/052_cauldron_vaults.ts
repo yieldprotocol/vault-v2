@@ -26,8 +26,9 @@ describe('Cauldron - Vaults', () => {
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const otherIlkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const vaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12))
+  const otherIlkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const otherSeriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
 
   const mockAssetId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
@@ -61,43 +62,36 @@ describe('Cauldron - Vaults', () => {
 
   it('does not build a vault with an unknown series', async () => {
     // TODO: Error message misleading, replace in contract for something generic
-    await expect(cauldron.build(mockAssetId, ilkId)).to.be.revertedWith('Ilk not added')
+    await expect(cauldron.build(owner, vaultId, mockAssetId, ilkId)).to.be.revertedWith('Ilk not added')
   })
 
   it('does not build a vault with an unknown ilk', async () => {
     // TODO: Might be removed, redundant with approved ilk check
-    await expect(cauldron.build(seriesId, mockAssetId)).to.be.revertedWith('Ilk not added')
+    await expect(cauldron.build(owner, vaultId, seriesId, mockAssetId)).to.be.revertedWith('Ilk not added')
   })
 
   it('does not build a vault with an ilk that is not approved for a series', async () => {
     await cauldron.addAsset(mockAssetId, mockAddress)
-    await expect(cauldron.build(seriesId, mockAssetId)).to.be.revertedWith('Ilk not added')
+    await expect(cauldron.build(owner, vaultId, seriesId, mockAssetId)).to.be.revertedWith('Ilk not added')
   })
 
   it('builds a vault', async () => {
-    // expect(await cauldron.build(seriesId, mockIlks)).to.emit(cauldron, 'VaultBuilt').withArgs(null, seriesId, mockIlks);
-    await cauldron.build(seriesId, ilkId)
-    const event = (await cauldron.queryFilter(cauldron.filters.VaultBuilt(null, null, null, null)))[0]
-    const vaultId = event.args.vaultId
+    await expect(cauldron.build(owner, vaultId, seriesId, ilkId)).to.emit(cauldron, 'VaultBuilt').withArgs(vaultId, owner, seriesId, ilkId)
+
     const vault = await cauldron.vaults(vaultId)
     expect(vault.owner).to.equal(owner)
     expect(vault.seriesId).to.equal(seriesId)
     expect(vault.ilkId).to.equal(ilkId)
-
-    // Remove these two when `expect...to.emit` works
-    expect(event.args.owner).to.equal(owner)
-    expect(event.args.seriesId).to.equal(seriesId)
-    expect(event.args.ilkId).to.equal(ilkId)
   })
 
   describe('with a vault built', async () => {
-    let vaultId: string
-
     beforeEach(async () => {
-      await cauldron.build(seriesId, ilkId)
-      const event = (await cauldron.queryFilter(cauldron.filters.VaultBuilt(null, null, null, null)))[0]
-      vaultId = event.args.vaultId
+      await cauldron.build(owner, vaultId, seriesId, ilkId)
     })
+
+    it('does not build a vault with a vault id already in use', async () => {
+      await expect(cauldron.build(owner, vaultId, seriesId, ilkId)).to.be.revertedWith('Vault already exists')
+    })  
 
     it('does not allow destroying vaults if not empty', async () => {
       await ladle.stir(vaultId, WAD, 0)

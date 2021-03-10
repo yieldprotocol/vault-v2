@@ -39,12 +39,12 @@ describe('Cauldron - shake', () => {
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const otherIlkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const vaultToId = ethers.utils.hexlify(ethers.utils.randomBytes(12))
+  const otherIlkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const mockVaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12))
 
   let vaultFromId: string
-  let vaultToId: string
 
   beforeEach(async () => {
     env = await loadFixture(fixture)
@@ -59,10 +59,7 @@ describe('Cauldron - shake', () => {
     vaultFromId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
 
     // ==== Set testing environment ====
-    await cauldron.build(seriesId, ilkId)
-    const event = (await cauldron.queryFilter(cauldron.filters.VaultBuilt(null, null, null, null)))[2] // The third vault built, two from fixtures and this one.
-    vaultToId = event.args.vaultId
-
+    await cauldron.build(owner, vaultToId, seriesId, ilkId)
     await ladle.stir(vaultFromId, WAD, 0)
   })
 

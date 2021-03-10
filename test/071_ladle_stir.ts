@@ -52,8 +52,8 @@ describe('Ladle - stir', () => {
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const vaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12))
   const ratio = 10000 // == 100% collateralization ratio
-  let vaultId: string
 
   beforeEach(async () => {
     env = await loadFixture(fixture)
@@ -75,9 +75,7 @@ describe('Ladle - stir', () => {
     await cauldron.setSpotOracle(baseId, ilkId, oracle.address, ratio)
     await cauldron.addIlks(seriesId, [ilkId])
 
-    await cauldron.build(seriesId, ilkId)
-    const event = (await cauldron.queryFilter(cauldron.filters.VaultBuilt(null, null, null, null)))[0]
-    vaultId = event.args.vaultId
+    await cauldron.build(owner, vaultId, seriesId, ilkId)
 
     // Finally, we deploy the join. A check that a join exists would be impossible in `cauldron` functions.
     ilkJoin = (await deployContract(ownerAcc, JoinArtifact, [ilk.address])) as Join

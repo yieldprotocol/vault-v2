@@ -39,7 +39,7 @@ contract Ladle is AccessControl() {
         results = new bytes[](data.length);
         for(uint i = 0; i < data.length; i++) {
             (bool success, bytes memory result) = address(this).delegatecall(data[i]);
-            require(success);
+            require(success, "Delegate call failed"); // TODO: Show something more useful
             results[i] = result;
         }
         return results;
@@ -57,11 +57,10 @@ contract Ladle is AccessControl() {
     }
 
     /// @dev Create a new vault, linked to a series (and therefore underlying) and a collateral
-    function build(bytes6 seriesId, bytes6 ilkId)
+    function build(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
         public
-        returns (bytes12 vaultId)
     {
-        return cauldron.build(seriesId, ilkId);
+        cauldron.build(msg.sender, vaultId, seriesId, ilkId);
     }
 
     /// @dev Destroy an empty vault. Used to recover gas costs.
