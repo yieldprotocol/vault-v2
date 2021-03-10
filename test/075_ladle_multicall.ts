@@ -53,7 +53,8 @@ describe('Ladle - multicall', function() {
 
   it('builds a vault and posts to it', async () => {
     const buildCall = ladle.interface.encodeFunctionData('build', [vaultId, seriesId, ilkId])
-    const stirCall = ladle.interface.encodeFunctionData('stir', [vaultId, WAD, 0])
+    const stirCall = ladle.interface.encodeFunctionData('stir', [vaultId, WAD, WAD])
     await ladle.multicall([buildCall, stirCall])
+    expect(await fyToken.balanceOf(owner)).to.equal(WAD)
   })
 })
