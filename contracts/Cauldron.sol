@@ -342,6 +342,7 @@ contract Cauldron is AccessControl() {
     function roll(bytes12 vaultId, bytes6 seriesId, int128 art)
         public
         auth
+        returns (uint128)
     {
         DataTypes.Vault memory vault_ = vaults[vaultId];                                    // 1 SLOAD
         require (vault_.owner != address(0), "Vault not found");                            // 1 SLOAD
@@ -362,6 +363,7 @@ contract Cauldron is AccessControl() {
         balances[vaultId] = balances_;                                                      // 1 SSTORE
         require(level(vaultId) >= 0, "Undercollateralized");                              // Cost of `level`
         emit VaultRolled(vaultId, seriesId, balances_.art);
+        return balances_.art;
     }
 
     // ==== Accounting ====

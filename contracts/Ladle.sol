@@ -91,8 +91,8 @@ contract Ladle is AccessControl() {
         cauldron.give(vaultId, receiver);                                                              // Cost of `give`
     }
 
-    // Add collateral and borrow from vault, pull assets from and push borrowed asset to user
-    // Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
+    /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
+    /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
     // Doesn't check inputs, or collateralization level. Do that in public functions.
     // TODO: Extend to allow other accounts in `join`
     function stir(bytes12 vaultId, int128 ink, int128 art)
@@ -120,7 +120,7 @@ contract Ladle is AccessControl() {
         return balances_;
     }
 
-    // Move collateral between vaults.
+    /// @dev Move collateral between vaults.
     function shake(bytes12 from, bytes12 to, uint128 ink)
         public
         returns (DataTypes.Balances memory, DataTypes.Balances memory)
@@ -131,6 +131,17 @@ contract Ladle is AccessControl() {
         DataTypes.Balances memory balancesTo_;
         (balancesFrom_, balancesTo_) = cauldron.shake(from, to, ink);                              // Cost of `__shake`
         return (balancesFrom_, balancesTo_);
+    }
+
+    /// @dev Change series and debt of a vault.
+    function roll(bytes12 vaultId, bytes6 seriesId, int128 art)
+        public
+        returns (uint128)
+    {
+        DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);                       // 1 CALL + 1 SLOAD
+        require (vault_.owner == msg.sender, "Only vault owner");
+        /// TODO: Buy underlying in the pool for the new series, and sell it in pool for the old series.
+        return cauldron.roll(vaultId, seriesId, art);                              // Cost of `roll`
     }
 
     /// @dev Repay vault debt using underlying token. It can add or remove collateral at the same time.

@@ -64,20 +64,20 @@ interface ICauldron {
 
     /// @dev Change series and debt of a vault.
     /// The module calling this function also needs to buy underlying in the pool for the new series, and sell it in pool for the old series.
-    // function _roll(bytes12 vault, bytes6 series, uint128 art) external;
+    function roll(bytes12 vaultId, bytes6 seriesId, int128 art) external returns (uint128);
 
     /// @dev Give a non-timestamped vault to the caller, and timestamp it.
     /// To be used for liquidation engines.
     function grab(bytes12 vault) external;
 
     /// @dev Manipulate a vault debt and collateral.
-    function stir(bytes12 vault, int128 ink, int128 art) external returns (DataTypes.Balances memory);
+    function stir(bytes12 vaultId, int128 ink, int128 art) external returns (DataTypes.Balances memory);
 
     /// @dev Manipulate a vault debt and collateral without collateralization checks
-    function slurp(bytes12 vault, int128 ink, int128 art) external returns (DataTypes.Balances memory);
+    function slurp(bytes12 vaultId, int128 ink, int128 art) external returns (DataTypes.Balances memory);
 
     /// @dev Give a vault to another user.
-    function give(bytes12 vault, address user) external;
+    function give(bytes12 vaultId, address user) external;
 
     /// @dev Move collateral between vaults.
     function shake(bytes12 from, bytes12 to, uint128 ink) external returns (DataTypes.Balances memory, DataTypes.Balances memory);
