@@ -140,7 +140,10 @@ contract Ladle is AccessControl() {
     {
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);                       // 1 CALL + 1 SLOAD
         require (vault_.owner == msg.sender, "Only vault owner");
-        /// TODO: Buy underlying in the pool for the new series, and sell it in pool for the old series.
+        // TODO: Buy underlying in the pool for the new series, and sell it in pool for the old series.
+        // The new debt will be the amount of new series fyToken sold. This fyToken will be minted into the new series pool.
+        // The amount obtained when selling the underlying must produce the exact amount to repay the existing debt. The old series fyToken amount will be burnt.
+        
         return cauldron.roll(vaultId, seriesId, art);                              // Cost of `roll`
     }
 
