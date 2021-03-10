@@ -12,7 +12,7 @@ const { loadFixture } = waffle
 import { YieldEnvironment, WAD } from './shared/fixtures'
 import { EtherscanProvider } from '@ethersproject/providers'
 
-describe('Ladle - multicall', function() {
+describe('Ladle - multicall', function () {
   this.timeout(0)
 
   let env: YieldEnvironment

@@ -76,7 +76,9 @@ describe('Cauldron - Vaults', () => {
   })
 
   it('builds a vault', async () => {
-    await expect(cauldron.build(owner, vaultId, seriesId, ilkId)).to.emit(cauldron, 'VaultBuilt').withArgs(vaultId, owner, seriesId, ilkId)
+    await expect(cauldron.build(owner, vaultId, seriesId, ilkId))
+      .to.emit(cauldron, 'VaultBuilt')
+      .withArgs(vaultId, owner, seriesId, ilkId)
 
     const vault = await cauldron.vaults(vaultId)
     expect(vault.owner).to.equal(owner)
@@ -91,7 +93,7 @@ describe('Cauldron - Vaults', () => {
 
     it('does not build a vault with a vault id already in use', async () => {
       await expect(cauldron.build(owner, vaultId, seriesId, ilkId)).to.be.revertedWith('Vault already exists')
-    })  
+    })
 
     it('does not allow destroying vaults if not empty', async () => {
       await ladle.stir(vaultId, WAD, 0)

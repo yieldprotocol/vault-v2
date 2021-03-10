@@ -68,24 +68,24 @@ export class YieldEnvironment {
     const witch = (await deployContract(owner, WitchArtifact, [cauldron.address, ladle.address])) as Witch
 
     // ==== Orchestration ====
-    await cauldron.grantRoles([
-      id('stir(bytes12,int128,int128)'),
-      id('shake(bytes12,bytes12,uint128)'),
-      id('build(address,bytes12,bytes6,bytes6)'),
-      id('destroy(bytes12)'),
-      id('tweak(bytes12,bytes6,bytes6)'),
-      id('give(bytes12,address)'),
-    ], ladle.address)
+    await cauldron.grantRoles(
+      [
+        id('stir(bytes12,int128,int128)'),
+        id('shake(bytes12,bytes12,uint128)'),
+        id('build(address,bytes12,bytes6,bytes6)'),
+        id('destroy(bytes12)'),
+        id('tweak(bytes12,bytes6,bytes6)'),
+        id('give(bytes12,address)'),
+      ],
+      ladle.address
+    )
 
-    await cauldron.grantRoles([
-      id('destroy(bytes12)'),
-      id('grab(bytes12)'),
-      id('slurp(bytes12,int128,int128)')
-    ], witch.address)
+    await cauldron.grantRoles(
+      [id('destroy(bytes12)'), id('grab(bytes12)'), id('slurp(bytes12,int128,int128)')],
+      witch.address
+    )
 
-    await ladle.grantRoles([
-      id('_join(bytes12,address,int128,int128)')
-    ], witch.address)
+    await ladle.grantRoles([id('_join(bytes12,address,int128,int128)')], witch.address)
 
     // ==== Owner access ====
     await cauldron.grantRoles(
@@ -108,10 +108,7 @@ export class YieldEnvironment {
       ownerAdd
     )
 
-    await ladle.grantRoles([
-      id('addJoin(bytes6,address)'),
-      id('_join(bytes12,address,int128,int128)')
-    ], ownerAdd)
+    await ladle.grantRoles([id('addJoin(bytes6,address)'), id('_join(bytes12,address,int128,int128)')], ownerAdd)
 
     // ==== Add assets and joins ====
     // For each asset id passed as an argument, we create a Mock ERC20 which we register in cauldron, and its Join, that we register in Ladle.
@@ -182,7 +179,7 @@ export class YieldEnvironment {
 
       // Add all assets except the first one as approved collaterals
       // for (let ilkId of assetIds.slice(1)) {
-        await cauldron.addIlks(seriesId, assetIds.slice(1))
+      await cauldron.addIlks(seriesId, assetIds.slice(1))
       // }
 
       await baseJoin.grantRoles([id('join(address,int128)')], fyToken.address)
