@@ -51,7 +51,6 @@ describe('Ladle - roll', () => {
 
     ladleFromOther = ladle.connect(otherAcc)
 
-
     // ==== Set testing environment ====
     await cauldron.build(owner, vaultId, seriesId, ilkId)
     await ladle.stir(vaultId, WAD, WAD)
