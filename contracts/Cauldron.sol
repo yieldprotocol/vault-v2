@@ -338,17 +338,17 @@ contract Cauldron is AccessControl() {
 
     // Change series and debt of a vault.
     // The module calling this function also needs to buy underlying in the pool for the new series, and sell it in pool for the old series.
-    // TODO: Should we allow changing the collateral at the same time?
-    /* function _roll(bytes12 vaultId, bytes6 seriesId, int128 art)
+    function roll(bytes12 vaultId, bytes6 seriesId, int128 art)
         public
         auth
     {
-        require (vaults[vaultId].owner != address(0), "Vault not found");                   // 1 SLOAD
+        DataTypes.Vault memory vault_ = vaults[vaultId];                                    // 1 SLOAD
+        require (vault_.owner != address(0), "Vault not found");                            // 1 SLOAD
         DataTypes.Balances memory balances_ = balances[vaultId];                            // 1 SLOAD
-        DataTypes.Series memory series_ = series[vaultId];                                  // 1 SLOAD
+        DataTypes.Series memory series_ = series[vault_.seriesId];                          // 1 SLOAD
         
         delete balances[vaultId];                                                           // -1 SSTORE
-        _tweak(vaultId, seriesId, vaults[vaultId].ilkId);                                  // 1 SLOAD + Cost of `_tweak`
+        tweak(vaultId, seriesId, vault_.ilkId);                                             // 1 SLOAD + Cost of `_tweak`
 
         // Modify vault and global debt records. If debt increases, check global limit.
         if (art != 0) {
@@ -360,7 +360,7 @@ contract Cauldron is AccessControl() {
         }
         balances[vaultId] = balances_;                                                      // 1 SSTORE
         require(level(vaultId) >= 0, "Undercollateralized");                              // Cost of `level`
-    } */
+    }
 
     // ==== Accounting ====
 
