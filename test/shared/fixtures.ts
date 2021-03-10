@@ -72,6 +72,7 @@ export class YieldEnvironment {
       [
         id('stir(bytes12,int128,int128)'),
         id('shake(bytes12,bytes12,uint128)'),
+        id('roll(bytes12,bytes6,int128)'),
         id('build(address,bytes12,bytes6,bytes6)'),
         id('destroy(bytes12)'),
         id('tweak(bytes12,bytes6,bytes6)'),
@@ -102,6 +103,7 @@ export class YieldEnvironment {
         id('give(bytes12,address)'),
         id('stir(bytes12,int128,int128)'),
         id('shake(bytes12,bytes12,uint128)'),
+        id('roll(bytes12,bytes6,int128)'),
         id('grab(bytes12)'),
         id('slurp(bytes12,int128,int128)'),
       ],
