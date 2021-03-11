@@ -54,7 +54,12 @@ describe('Ladle - multicall', function () {
   it('builds a vault and posts to it', async () => {
     const buildCall = ladle.interface.encodeFunctionData('build', [vaultId, seriesId, ilkId])
     const stirCall = ladle.interface.encodeFunctionData('stir', [vaultId, WAD, WAD])
-    await ladle.multicall([buildCall, stirCall])
+    await ladle.batch([buildCall, stirCall], true)
     expect(await fyToken.balanceOf(owner)).to.equal(WAD)
+  })
+
+  it('reverts with the appropriate message when needed', async () => {
+    const stirCall = ladle.interface.encodeFunctionData('stir', [vaultId, WAD, WAD])
+    await expect(ladle.batch([stirCall], true)).to.be.revertedWith('Only vault owner')
   })
 })
