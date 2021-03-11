@@ -84,6 +84,7 @@ contract Witch {
             //                ink       1      min(auction, elapsed)
             // price = 1 / (------- * (--- + -----------------------))
             //                art       2       2 * auction
+            // solhint-disable-next-line var-name-mixedcase
             uint128 RAY = 1e27;
             uint128 term1 = balances_.ink.rdiv(balances_.art);
             uint128 term2 = RAY / 2;
