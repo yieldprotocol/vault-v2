@@ -7,6 +7,7 @@ import "./interfaces/ICauldron.sol";
 import "./interfaces/IOracle.sol";
 import "./libraries/DataTypes.sol";
 import "./AccessControl.sol";
+import "./Batchable.sol";
 
 
 library RMath { // Fixed point arithmetic in Ray units
@@ -21,7 +22,7 @@ library RMath { // Fixed point arithmetic in Ray units
 }
 
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
-contract Ladle is AccessControl() {
+contract Ladle is AccessControl(), Batchable {
     using RMath for uint128;
 
     ICauldron public cauldron;
@@ -32,17 +33,6 @@ contract Ladle is AccessControl() {
 
     constructor (ICauldron cauldron_) {
         cauldron = cauldron_;
-    }
-
-    /// @dev Execute several Ladle functions in a sequence
-    function multicall(bytes[] calldata data) external returns(bytes[] memory results) {
-        results = new bytes[](data.length);
-        for(uint i = 0; i < data.length; i++) {
-            (bool success, bytes memory result) = address(this).delegatecall(data[i]);
-            require(success, "Delegate call failed"); // TODO: Show something more useful
-            results[i] = result;
-        }
-        return results;
     }
 
     /// @dev Add a new Join for an Asset. There can be only onw Join per Asset. Until a Join is added, no tokens of that Asset can be posted or withdrawn.
