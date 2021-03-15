@@ -57,7 +57,7 @@ describe('Ladle - stir', () => {
 
     // ==== Set testing environment ====
     await cauldron.build(owner, vaultToId, seriesId, ilkId)
-    await ladle.pour(vaultFromId, WAD, 0)
+    await ladle.pour(vaultFromId, owner, WAD, 0)
   })
 
   it('does not allow moving collateral other than to the vault owner', async () => {

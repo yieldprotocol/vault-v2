@@ -15,7 +15,7 @@ import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { deployContract } = waffle
 
-describe('Cauldron - Admin', () => {
+describe('Cauldron - admin', () => {
   let ownerAcc: SignerWithAddress
   let owner: string
   let cauldron: Cauldron

@@ -13,7 +13,7 @@ const MAX = ethers.constants.MaxUint256
 
 import { YieldEnvironment, WAD } from './shared/fixtures'
 
-describe('FYToken', () => {
+describe('FYToken - flash', () => {
   let snapshotId: any
   let env: YieldEnvironment
   let ownerAcc: SignerWithAddress

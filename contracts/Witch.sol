@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
-import "./interfaces/ICauldron.sol";
-import "./interfaces/ILadle.sol";
-import "./libraries/DataTypes.sol";
+import "@yield-protocol/vault-interfaces/ILadle.sol";
+import "@yield-protocol/vault-interfaces/ICauldron.sol";
+import "@yield-protocol/vault-interfaces/DataTypes.sol";
 
 
 library Math {

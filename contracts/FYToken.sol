@@ -3,10 +3,10 @@ pragma solidity ^0.8.0;
 
 import "erc3156/contracts/interfaces/IERC3156FlashBorrower.sol";
 import "erc3156/contracts/interfaces/IERC3156FlashLender.sol";
-// import "@yield-protocol/utils/contracts/access/Orchestrated.sol";
 import "@yield-protocol/utils/contracts/token/ERC20Permit.sol";
-import "./interfaces/IOracle.sol";
-import "./interfaces/IJoin.sol";
+import "@yield-protocol/vault-interfaces/IFYToken.sol";
+import "@yield-protocol/vault-interfaces/IJoin.sol";
+import "@yield-protocol/vault-interfaces/IOracle.sol";
 import "./AccessControl.sol";
 
 

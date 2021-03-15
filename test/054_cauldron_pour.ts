@@ -11,7 +11,7 @@ const { loadFixture } = waffle
 
 import { YieldEnvironment, WAD } from './shared/fixtures'
 
-describe('Cauldron - stir', () => {
+describe('Cauldron - pour', () => {
   let env: YieldEnvironment
   let ownerAcc: SignerWithAddress
   let otherAcc: SignerWithAddress
@@ -60,7 +60,7 @@ describe('Cauldron - stir', () => {
 
     // ==== Set testing environment ====
     await cauldron.build(owner, vaultToId, seriesId, ilkId)
-    await ladle.pour(vaultFromId, WAD, 0)
+    await ladle.pour(vaultFromId, owner, WAD, 0)
   })
 
   it('does not allow moving collateral to an uninitialized vault', async () => {
@@ -68,7 +68,7 @@ describe('Cauldron - stir', () => {
   })
 
   it('does not allow moving collateral and becoming undercollateralized', async () => {
-    await ladle.pour(vaultFromId, 0, WAD)
+    await ladle.pour(vaultFromId, owner, 0, WAD)
     await expect(cauldron.stir(vaultFromId, vaultToId, WAD)).to.be.revertedWith('Undercollateralized')
   })
 

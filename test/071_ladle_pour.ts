@@ -106,11 +106,11 @@ describe('Ladle - pour', () => {
     })
 
     it('only the vault owner can manage its collateral', async () => {
-      await expect(ladleFromOther.pour(vaultId, WAD, 0)).to.be.revertedWith('Only vault owner')
+      await expect(ladleFromOther.pour(vaultId, other, WAD, 0)).to.be.revertedWith('Only vault owner')
     })
 
     it('users can pour to post collateral', async () => {
-      expect(await ladle.pour(vaultId, WAD, 0))
+      expect(await ladle.pour(vaultId, owner, WAD, 0))
         .to.emit(cauldron, 'VaultPoured')
         .withArgs(vaultId, seriesId, ilkId, WAD, 0)
       expect(await ilk.balanceOf(ilkJoin.address)).to.equal(WAD)
@@ -119,11 +119,11 @@ describe('Ladle - pour', () => {
 
     describe('with posted collateral', async () => {
       beforeEach(async () => {
-        await ladle.pour(vaultId, WAD, 0)
+        await ladle.pour(vaultId, owner, WAD, 0)
       })
 
       it('users can pour to withdraw collateral', async () => {
-        await expect(ladle.pour(vaultId, WAD.mul(-1), 0))
+        await expect(ladle.pour(vaultId, owner, WAD.mul(-1), 0))
           .to.emit(cauldron, 'VaultPoured')
           .withArgs(vaultId, seriesId, ilkId, WAD.mul(-1), 0)
         expect(await ilk.balanceOf(ilkJoin.address)).to.equal(0)
@@ -131,7 +131,7 @@ describe('Ladle - pour', () => {
       })
 
       it('users can pour to borrow fyToken', async () => {
-        await expect(ladle.pour(vaultId, 0, WAD))
+        await expect(ladle.pour(vaultId, owner, 0, WAD))
           .to.emit(cauldron, 'VaultPoured')
           .withArgs(vaultId, seriesId, ilkId, 0, WAD)
         expect(await fyToken.balanceOf(owner)).to.equal(WAD)
@@ -140,7 +140,7 @@ describe('Ladle - pour', () => {
     })
 
     it('users can pour to post collateral and borrow fyToken', async () => {
-      await expect(ladle.pour(vaultId, WAD, WAD))
+      await expect(ladle.pour(vaultId, owner, WAD, WAD))
         .to.emit(cauldron, 'VaultPoured')
         .withArgs(vaultId, seriesId, ilkId, WAD, WAD)
       expect(await ilk.balanceOf(ilkJoin.address)).to.equal(WAD)
@@ -151,12 +151,12 @@ describe('Ladle - pour', () => {
 
     describe('with collateral and debt', async () => {
       beforeEach(async () => {
-        await ladle.pour(vaultId, WAD, WAD)
+        await ladle.pour(vaultId, owner, WAD, WAD)
       })
 
       it('users can repay their debt', async () => {
         await fyToken.approve(ladle.address, WAD)
-        await expect(ladle.pour(vaultId, 0, WAD.mul(-1)))
+        await expect(ladle.pour(vaultId, owner, 0, WAD.mul(-1)))
           .to.emit(cauldron, 'VaultPoured')
           .withArgs(vaultId, seriesId, ilkId, 0, WAD.mul(-1))
         expect(await fyToken.balanceOf(owner)).to.equal(0)
@@ -164,17 +164,17 @@ describe('Ladle - pour', () => {
       })
 
       it("users can't repay more debt than they have", async () => {
-        await expect(ladle.pour(vaultId, 0, WAD.mul(-2))).to.be.revertedWith('Result below zero')
+        await expect(ladle.pour(vaultId, owner, 0, WAD.mul(-2))).to.be.revertedWith('Result below zero')
       })
 
       it('users can borrow while under the global debt limit', async () => {
-        await expect(ladle.pour(vaultId, WAD, WAD))
+        await expect(ladle.pour(vaultId, owner, WAD, WAD))
           .to.emit(cauldron, 'VaultPoured')
           .withArgs(vaultId, seriesId, ilkId, WAD, WAD)
       })
 
       it("users can't borrow over the global debt limit", async () => {
-        await expect(ladle.pour(vaultId, WAD.mul(2), WAD.mul(2))).to.be.revertedWith('Max debt exceeded')
+        await expect(ladle.pour(vaultId, owner, WAD.mul(2), WAD.mul(2))).to.be.revertedWith('Max debt exceeded')
       })
     })
   })
