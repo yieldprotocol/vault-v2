@@ -11,7 +11,7 @@ const { loadFixture } = waffle
 
 import { YieldEnvironment, WAD } from './shared/fixtures'
 
-describe('Cauldron - shake', () => {
+describe('Cauldron - roll', () => {
   let env: YieldEnvironment
   let ownerAcc: SignerWithAddress
   let otherAcc: SignerWithAddress
@@ -20,12 +20,13 @@ describe('Cauldron - shake', () => {
   let cauldron: Cauldron
   let cauldronFromOther: Cauldron
   let fyToken: FYToken
+  let otherFYToken: FYToken
   let base: ERC20Mock
   let ladle: Ladle
   let ladleFromOther: Ladle
 
   async function fixture() {
-    return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId, otherIlkId], [seriesId])
+    return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId], [seriesId, otherSeriesId])
   }
 
   before(async () => {
@@ -40,11 +41,10 @@ describe('Cauldron - shake', () => {
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const vaultToId = ethers.utils.hexlify(ethers.utils.randomBytes(12))
-  const otherIlkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const vaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12))
+  const otherSeriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const mockSeriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const mockVaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12))
-
-  let vaultFromId: string
 
   beforeEach(async () => {
     env = await loadFixture(fixture)
@@ -52,36 +52,33 @@ describe('Cauldron - shake', () => {
     ladle = env.ladle
     base = env.assets.get(baseId) as ERC20Mock
     fyToken = env.series.get(seriesId) as FYToken
+    otherFYToken = env.series.get(otherSeriesId) as FYToken
 
     cauldronFromOther = cauldron.connect(otherAcc)
-    ladleFromOther = ladle.connect(otherAcc)
-
-    vaultFromId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
 
     // ==== Set testing environment ====
-    await cauldron.build(owner, vaultToId, seriesId, ilkId)
-    await ladle.stir(vaultFromId, WAD, 0)
+    await cauldron.build(owner, vaultId, seriesId, ilkId)
+    await cauldron.stir(vaultId, WAD, WAD)
   })
 
-  it('does not allow moving collateral to an uninitialized vault', async () => {
-    await expect(cauldron.shake(vaultFromId, mockVaultId, WAD)).to.be.revertedWith('Vault not found')
+  it('does not allow rolling unknown vaults', async () => {
+    await expect(cauldron.roll(mockVaultId, otherSeriesId, 0)).to.be.revertedWith('Vault not found')
   })
 
-  it('does not allow moving collateral and becoming undercollateralized', async () => {
-    await ladle.stir(vaultFromId, 0, WAD)
-    await expect(cauldron.shake(vaultFromId, vaultToId, WAD)).to.be.revertedWith('Undercollateralized')
+  it('does not allow rolling and becoming undercollateralized', async () => {
+    await expect(cauldron.roll(vaultId, otherSeriesId, WAD.mul(2))).to.be.revertedWith('Undercollateralized')
   })
 
-  it('does not allow moving collateral to vault of a different ilk', async () => {
-    await cauldron.tweak(vaultToId, seriesId, otherIlkId)
-    await expect(cauldron.shake(vaultFromId, vaultToId, WAD)).to.be.revertedWith('Different collateral')
+  it('does not allow rolling to a series without a matching ilk for the vault', async () => {
+    await expect(cauldron.roll(vaultId, mockSeriesId, 0)).to.be.revertedWith('Ilk not added')
   })
 
-  it('moves collateral', async () => {
-    expect(await cauldron.shake(vaultFromId, vaultToId, WAD))
-      .to.emit(cauldron, 'VaultShaken')
-      .withArgs(vaultFromId, vaultToId, WAD)
-    expect((await cauldron.balances(vaultFromId)).ink).to.equal(0)
-    expect((await cauldron.balances(vaultToId)).ink).to.equal(WAD)
+  it('rolls a vault', async () => {
+    expect(await cauldron.roll(vaultId, otherSeriesId, WAD.div(-2)))
+      .to.emit(cauldron, 'VaultRolled')
+      .withArgs(vaultId, otherSeriesId, WAD.div(2))
+    expect((await cauldron.vaults(vaultId)).seriesId).to.equal(otherSeriesId)
+    expect((await cauldron.balances(vaultId)).ink).to.equal(WAD)
+    expect((await cauldron.balances(vaultId)).art).to.equal(WAD.div(2))
   })
 })

@@ -68,9 +68,23 @@ export class YieldEnvironment {
     const witch = (await deployContract(owner, WitchArtifact, [cauldron.address, ladle.address])) as Witch
 
     // ==== Orchestration ====
-    await cauldron.grantRoles([id('_stir(bytes12,int128,int128)')], ladle.address)
+    await cauldron.grantRoles(
+      [
+        id('stir(bytes12,int128,int128)'),
+        id('shake(bytes12,bytes12,uint128)'),
+        id('roll(bytes12,bytes6,int128)'),
+        id('build(address,bytes12,bytes6,bytes6)'),
+        id('destroy(bytes12)'),
+        id('tweak(bytes12,bytes6,bytes6)'),
+        id('give(bytes12,address)'),
+      ],
+      ladle.address
+    )
 
-    await cauldron.grantRoles([id('_grab(bytes12)'), id('_slurp(bytes12,int128,int128)')], witch.address)
+    await cauldron.grantRoles(
+      [id('destroy(bytes12)'), id('grab(bytes12)'), id('slurp(bytes12,int128,int128)')],
+      witch.address
+    )
 
     await ladle.grantRoles([id('_join(bytes12,address,int128,int128)')], witch.address)
 
@@ -83,9 +97,15 @@ export class YieldEnvironment {
         id('setSpotOracle(bytes6,bytes6,address,uint32)'),
         id('addSeries(bytes6,bytes6,address)'),
         id('addIlks(bytes6,bytes6[])'),
-        id('_stir(bytes12,int128,int128)'),
-        id('_grab(bytes12)'),
-        id('_slurp(bytes12,int128,int128)'),
+        id('build(address,bytes12,bytes6,bytes6)'),
+        id('destroy(bytes12)'),
+        id('tweak(bytes12,bytes6,bytes6)'),
+        id('give(bytes12,address)'),
+        id('stir(bytes12,int128,int128)'),
+        id('shake(bytes12,bytes12,uint128)'),
+        id('roll(bytes12,bytes6,int128)'),
+        id('grab(bytes12)'),
+        id('slurp(bytes12,int128,int128)'),
       ],
       ownerAdd
     )
@@ -161,7 +181,7 @@ export class YieldEnvironment {
 
       // Add all assets except the first one as approved collaterals
       // for (let ilkId of assetIds.slice(1)) {
-        await cauldron.addIlks(seriesId, assetIds.slice(1))
+      await cauldron.addIlks(seriesId, assetIds.slice(1))
       // }
 
       await baseJoin.grantRoles([id('join(address,int128)')], fyToken.address)
@@ -175,7 +195,7 @@ export class YieldEnvironment {
     for (let seriesId of seriesIds) {
       const seriesVaults: Map<string, string> = new Map()
       for (let ilkId of ilkIds) {
-        await cauldron.build(seriesId, ilkId)
+        await cauldron.build(ownerAdd, ethers.utils.hexlify(ethers.utils.randomBytes(12)), seriesId, ilkId)
         const event = (await cauldron.queryFilter(cauldron.filters.VaultBuilt(null, null, null, null)))[0]
         const vaultId = event.args.vaultId
         seriesVaults.set(ilkId, vaultId)

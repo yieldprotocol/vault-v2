@@ -7,6 +7,7 @@ import "./interfaces/ICauldron.sol";
 import "./interfaces/IOracle.sol";
 import "./libraries/DataTypes.sol";
 import "./AccessControl.sol";
+import "./Batchable.sol";
 
 
 library RMath { // Fixed point arithmetic in Ray units
@@ -21,7 +22,7 @@ library RMath { // Fixed point arithmetic in Ray units
 }
 
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
-contract Ladle is AccessControl() {
+contract Ladle is AccessControl(), Batchable {
     using RMath for uint128;
 
     ICauldron public cauldron;
@@ -45,8 +46,43 @@ contract Ladle is AccessControl() {
         emit JoinAdded(assetId, address(join));
     }
 
-    // Add collateral and borrow from vault, pull assets from and push borrowed asset to user
-    // Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
+    /// @dev Create a new vault, linked to a series (and therefore underlying) and a collateral
+    function build(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
+        public
+    {
+        cauldron.build(msg.sender, vaultId, seriesId, ilkId);
+    }
+
+    /// @dev Destroy an empty vault. Used to recover gas costs.
+    function destroy(bytes12 vaultId)
+        public
+    {
+        DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);                       // 1 CALL + 1 SLOAD
+        require (vault_.owner == msg.sender, "Only vault owner");
+        cauldron.destroy(vaultId);
+    }
+
+    /// @dev Change a vault series or collateral.
+    function tweak(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
+        public
+    {
+        DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);                       // 1 CALL + 1 SLOAD
+        require (vault_.owner == msg.sender, "Only vault owner");
+        // tweak checks that the series and the collateral both exist and that the collateral is approved for the series
+        cauldron.tweak(vaultId, seriesId, ilkId);                                                  // Cost of `tweak`
+    }
+
+    /// @dev Give a vault to another user.
+    function give(bytes12 vaultId, address receiver)
+        public
+    {
+        DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);                       // 1 CALL + 1 SLOAD
+        require (vault_.owner == msg.sender, "Only vault owner");
+        cauldron.give(vaultId, receiver);                                                              // Cost of `give`
+    }
+
+    /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
+    /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
     // Doesn't check inputs, or collateralization level. Do that in public functions.
     // TODO: Extend to allow other accounts in `join`
     function stir(bytes12 vaultId, int128 ink, int128 art)
@@ -58,7 +94,7 @@ contract Ladle is AccessControl() {
 
         if (ink != 0) joins[vault_.ilkId].join(vault_.owner, ink);                      // Cost of `join`. `join` with a negative value means `exit`. | TODO: Consider checking the join exists
 
-        balances_ = cauldron._stir(vaultId, ink, art);                                  // Cost of `cauldron.stir` call.
+        balances_ = cauldron.stir(vaultId, ink, art);                                  // Cost of `cauldron.stir` call.
 
         if (art != 0) {
             DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);         // 1 CALL + 1 SLOAD
@@ -72,6 +108,33 @@ contract Ladle is AccessControl() {
         }
 
         return balances_;
+    }
+
+    /// @dev Move collateral between vaults.
+    function shake(bytes12 from, bytes12 to, uint128 ink)
+        public
+        returns (DataTypes.Balances memory, DataTypes.Balances memory)
+    {
+        DataTypes.Vault memory vaultFrom = cauldron.vaults(from);                       // 1 CALL + 1 SLOAD
+        require (vaultFrom.owner == msg.sender, "Only vault owner");
+        DataTypes.Balances memory balancesFrom_;
+        DataTypes.Balances memory balancesTo_;
+        (balancesFrom_, balancesTo_) = cauldron.shake(from, to, ink);                              // Cost of `__shake`
+        return (balancesFrom_, balancesTo_);
+    }
+
+    /// @dev Change series and debt of a vault.
+    function roll(bytes12 vaultId, bytes6 seriesId, int128 art)
+        public
+        returns (uint128)
+    {
+        DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);                       // 1 CALL + 1 SLOAD
+        require (vault_.owner == msg.sender, "Only vault owner");
+        // TODO: Buy underlying in the pool for the new series, and sell it in pool for the old series.
+        // The new debt will be the amount of new series fyToken sold. This fyToken will be minted into the new series pool.
+        // The amount obtained when selling the underlying must produce the exact amount to repay the existing debt. The old series fyToken amount will be burnt.
+        
+        return cauldron.roll(vaultId, seriesId, art);                              // Cost of `roll`
     }
 
     /// @dev Repay vault debt using underlying token. It can add or remove collateral at the same time.
@@ -102,7 +165,7 @@ contract Ladle is AccessControl() {
         if (ink != 0) joins[vault_.ilkId].join(vault_.owner, ink);                      // Cost of `join`. `join` with a negative value means `exit`. | TODO: Consider checking the join exists
         joins[baseId].join(msg.sender, int128(amt));                                    // Cost of `join`
         
-        return cauldron._stir(vaultId, ink, art);                                       // Cost of `_stir`
+        return cauldron.stir(vaultId, ink, art);                                       // Cost of `stir`
     }
 
     /// @dev Allow authorized contracts to move assets through the ladle
