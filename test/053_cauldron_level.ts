@@ -59,7 +59,7 @@ describe('Cauldron - Level', () => {
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
 
     await spotOracle.setSpot(RAY.mul(2))
-    await ladle.stir(vaultId, WAD, WAD)
+    await ladle.pour(vaultId, WAD, WAD)
   })
 
   it('before maturity, level is ink * spot - art * ratio', async () => {
@@ -100,10 +100,10 @@ describe('Cauldron - Level', () => {
   })
 
   it("users can't borrow and become undercollateralized", async () => {
-    await expect(ladle.stir(vaultId, 0, WAD.mul(2))).to.be.revertedWith('Undercollateralized')
+    await expect(ladle.pour(vaultId, 0, WAD.mul(2))).to.be.revertedWith('Undercollateralized')
   })
 
   it("users can't withdraw and become undercollateralized", async () => {
-    await expect(ladle.stir(vaultId, WAD.mul(-1), 0)).to.be.revertedWith('Undercollateralized')
+    await expect(ladle.pour(vaultId, WAD.mul(-1), 0)).to.be.revertedWith('Undercollateralized')
   })
 })

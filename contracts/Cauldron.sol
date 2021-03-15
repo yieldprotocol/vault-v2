@@ -71,8 +71,8 @@ contract Cauldron is AccessControl() {
     event VaultDestroyed(bytes12 indexed vaultId);
     event VaultTransfer(bytes12 indexed vaultId, address indexed receiver);
 
-    event VaultStirred(bytes12 indexed vaultId, bytes6 indexed seriesId, bytes6 indexed ilkId, int128 ink, int128 art);
-    event VaultShaken(bytes12 indexed from, bytes12 indexed to, uint128 ink);
+    event VaultPoured(bytes12 indexed vaultId, bytes6 indexed seriesId, bytes6 indexed ilkId, int128 ink, int128 art);
+    event VaultStirred(bytes12 indexed from, bytes12 indexed to, uint128 ink);
     event VaultRolled(bytes12 indexed vaultId, bytes6 indexed seriesId, uint128 art);
     event VaultTimestamped(bytes12 indexed vaultId, uint256 indexed timestamp);
 
@@ -247,7 +247,7 @@ contract Cauldron is AccessControl() {
 
     /// @dev Move collateral between vaults.
     /// Doesn't check inputs, or collateralization level. Do that in public functions.
-    function shake(bytes12 from, bytes12 to, uint128 ink)
+    function stir(bytes12 from, bytes12 to, uint128 ink)
         public
         auth
         returns (DataTypes.Balances memory, DataTypes.Balances memory)
@@ -263,14 +263,14 @@ contract Cauldron is AccessControl() {
         balances[to] = balancesTo_;                                                        // 1 SSTORE
         if (balancesFrom_.art > 0) require(level(from) >= 0, "Undercollateralized");      // Cost of `level`
 
-        emit VaultShaken(from, to, ink);
+        emit VaultStirred(from, to, ink);
         return (balancesFrom_, balancesTo_);
     }
 
     /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
     /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
     /// Doesn't check inputs, or collateralization level. Do that in public functions.
-    function _stir(bytes12 vaultId, int128 ink, int128 art)
+    function _pour(bytes12 vaultId, int128 ink, int128 art)
         internal returns (DataTypes.Balances memory)
     {
         DataTypes.Vault memory vault_ = vaults[vaultId];                                    // 1 SLOAD
@@ -282,7 +282,7 @@ contract Cauldron is AccessControl() {
             balances_.ink = balances_.ink.add(ink);
         }
 
-        // TODO: Consider whether _roll should call _stir, or the next block be a private function.
+        // TODO: Consider whether _roll should call _pour, or the next block be a private function.
         // Modify vault and global debt records. If debt increases, check global limit.
         if (art != 0) {
             DataTypes.Debt memory debt_ = debt[series_.baseId][vault_.ilkId];               // 1 SLOAD
@@ -293,19 +293,19 @@ contract Cauldron is AccessControl() {
         }
         balances[vaultId] = balances_;                                                      // 1 SSTORE
 
-        emit VaultStirred(vaultId, vault_.seriesId, vault_.ilkId, ink, art);
+        emit VaultPoured(vaultId, vault_.seriesId, vault_.ilkId, ink, art);
         return balances_;
     }
 
     /// @dev Manipulate a vault, ensuring it is collateralized afterwards.
     /// To be used by debt management contracts.
-    function stir(bytes12 vaultId, int128 ink, int128 art)
+    function pour(bytes12 vaultId, int128 ink, int128 art)
         public
         auth                                                                             // 1 SLOAD
         returns (DataTypes.Balances memory balances_)
     {
         require (vaults[vaultId].owner != address(0), "Vault not found");                   // 1 SLOAD
-        balances_ = _stir(vaultId, ink, art);                                              // Cost of `_stir`
+        balances_ = _pour(vaultId, ink, art);                                              // Cost of `_pour`
         if (balances_.art > 0 && (ink < 0 || art > 0))                                      // If there is debt and we are less safe
             require(level(vaultId) >= 0, "Undercollateralized");                          // Cost of `level`. TODO: Consider allowing if collateralization level either is healthy or improves.
         return balances_;
@@ -333,7 +333,7 @@ contract Cauldron is AccessControl() {
         returns (DataTypes.Balances memory balances_)
     {
         require (vaults[vaultId].owner == msg.sender, "Only vault owner");                  // 1 SLOAD
-        balances_ = _stir(vaultId, ink, art);                                              // Cost of `_stir`
+        balances_ = _pour(vaultId, ink, art);                                              // Cost of `_pour`
         return balances_;
     }
 

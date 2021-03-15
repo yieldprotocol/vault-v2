@@ -75,7 +75,7 @@ describe('Witch', () => {
     witchFromOther = witch.connect(otherAcc)
 
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
-    ladle.stir(vaultId, WAD, WAD)
+    ladle.pour(vaultId, WAD, WAD)
   })
 
   it('does not allow to grab collateralized vaults', async () => {

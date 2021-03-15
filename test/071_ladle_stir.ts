@@ -18,7 +18,7 @@ const { deployContract, loadFixture } = waffle
 
 import { YieldEnvironment, WAD, RAY } from './shared/fixtures'
 
-describe('Ladle - stir', () => {
+describe('Ladle - pour', () => {
   let env: YieldEnvironment
   let ownerAcc: SignerWithAddress
   let otherAcc: SignerWithAddress
@@ -106,12 +106,12 @@ describe('Ladle - stir', () => {
     })
 
     it('only the vault owner can manage its collateral', async () => {
-      await expect(ladleFromOther.stir(vaultId, WAD, 0)).to.be.revertedWith('Only vault owner')
+      await expect(ladleFromOther.pour(vaultId, WAD, 0)).to.be.revertedWith('Only vault owner')
     })
 
-    it('users can stir to post collateral', async () => {
-      expect(await ladle.stir(vaultId, WAD, 0))
-        .to.emit(cauldron, 'VaultStirred')
+    it('users can pour to post collateral', async () => {
+      expect(await ladle.pour(vaultId, WAD, 0))
+        .to.emit(cauldron, 'VaultPoured')
         .withArgs(vaultId, seriesId, ilkId, WAD, 0)
       expect(await ilk.balanceOf(ilkJoin.address)).to.equal(WAD)
       expect((await cauldron.balances(vaultId)).ink).to.equal(WAD)
@@ -119,29 +119,29 @@ describe('Ladle - stir', () => {
 
     describe('with posted collateral', async () => {
       beforeEach(async () => {
-        await ladle.stir(vaultId, WAD, 0)
+        await ladle.pour(vaultId, WAD, 0)
       })
 
-      it('users can stir to withdraw collateral', async () => {
-        await expect(ladle.stir(vaultId, WAD.mul(-1), 0))
-          .to.emit(cauldron, 'VaultStirred')
+      it('users can pour to withdraw collateral', async () => {
+        await expect(ladle.pour(vaultId, WAD.mul(-1), 0))
+          .to.emit(cauldron, 'VaultPoured')
           .withArgs(vaultId, seriesId, ilkId, WAD.mul(-1), 0)
         expect(await ilk.balanceOf(ilkJoin.address)).to.equal(0)
         expect((await cauldron.balances(vaultId)).ink).to.equal(0)
       })
 
-      it('users can stir to borrow fyToken', async () => {
-        await expect(ladle.stir(vaultId, 0, WAD))
-          .to.emit(cauldron, 'VaultStirred')
+      it('users can pour to borrow fyToken', async () => {
+        await expect(ladle.pour(vaultId, 0, WAD))
+          .to.emit(cauldron, 'VaultPoured')
           .withArgs(vaultId, seriesId, ilkId, 0, WAD)
         expect(await fyToken.balanceOf(owner)).to.equal(WAD)
         expect((await cauldron.balances(vaultId)).art).to.equal(WAD)
       })
     })
 
-    it('users can stir to post collateral and borrow fyToken', async () => {
-      await expect(ladle.stir(vaultId, WAD, WAD))
-        .to.emit(cauldron, 'VaultStirred')
+    it('users can pour to post collateral and borrow fyToken', async () => {
+      await expect(ladle.pour(vaultId, WAD, WAD))
+        .to.emit(cauldron, 'VaultPoured')
         .withArgs(vaultId, seriesId, ilkId, WAD, WAD)
       expect(await ilk.balanceOf(ilkJoin.address)).to.equal(WAD)
       expect(await fyToken.balanceOf(owner)).to.equal(WAD)
@@ -151,30 +151,30 @@ describe('Ladle - stir', () => {
 
     describe('with collateral and debt', async () => {
       beforeEach(async () => {
-        await ladle.stir(vaultId, WAD, WAD)
+        await ladle.pour(vaultId, WAD, WAD)
       })
 
       it('users can repay their debt', async () => {
         await fyToken.approve(ladle.address, WAD)
-        await expect(ladle.stir(vaultId, 0, WAD.mul(-1)))
-          .to.emit(cauldron, 'VaultStirred')
+        await expect(ladle.pour(vaultId, 0, WAD.mul(-1)))
+          .to.emit(cauldron, 'VaultPoured')
           .withArgs(vaultId, seriesId, ilkId, 0, WAD.mul(-1))
         expect(await fyToken.balanceOf(owner)).to.equal(0)
         expect((await cauldron.balances(vaultId)).art).to.equal(0)
       })
 
       it("users can't repay more debt than they have", async () => {
-        await expect(ladle.stir(vaultId, 0, WAD.mul(-2))).to.be.revertedWith('Result below zero')
+        await expect(ladle.pour(vaultId, 0, WAD.mul(-2))).to.be.revertedWith('Result below zero')
       })
 
       it('users can borrow while under the global debt limit', async () => {
-        await expect(ladle.stir(vaultId, WAD, WAD))
-          .to.emit(cauldron, 'VaultStirred')
+        await expect(ladle.pour(vaultId, WAD, WAD))
+          .to.emit(cauldron, 'VaultPoured')
           .withArgs(vaultId, seriesId, ilkId, WAD, WAD)
       })
 
       it("users can't borrow over the global debt limit", async () => {
-        await expect(ladle.stir(vaultId, WAD.mul(2), WAD.mul(2))).to.be.revertedWith('Max debt exceeded')
+        await expect(ladle.pour(vaultId, WAD.mul(2), WAD.mul(2))).to.be.revertedWith('Max debt exceeded')
       })
     })
   })
