@@ -53,7 +53,7 @@ describe('Ladle - roll', () => {
 
     // ==== Set testing environment ====
     await cauldron.build(owner, vaultId, seriesId, ilkId)
-    await ladle.stir(vaultId, WAD, WAD)
+    await ladle.pour(vaultId, WAD, WAD)
   })
 
   it('does not allow rolling vaults other than to the vault owner', async () => {

@@ -70,7 +70,7 @@ describe('Ladle - close', () => {
     ladleFromOther = ladle.connect(otherAcc)
 
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
-    ladle.stir(vaultId, WAD, WAD)
+    ladle.pour(vaultId, WAD, WAD)
   })
 
   it('does not allow to borrow', async () => {
@@ -88,7 +88,7 @@ describe('Ladle - close', () => {
   it('users can repay their debt with underlying at a 1:1 rate', async () => {
     const baseBefore = await base.balanceOf(owner)
     await expect(ladle.close(vaultId, 0, WAD.mul(-1)))
-      .to.emit(cauldron, 'VaultStirred')
+      .to.emit(cauldron, 'VaultPoured')
       .withArgs(vaultId, seriesId, ilkId, 0, WAD.mul(-1))
     expect(await base.balanceOf(owner)).to.equal(baseBefore.sub(WAD))
     expect(await fyToken.balanceOf(owner)).to.equal(WAD)
@@ -98,7 +98,7 @@ describe('Ladle - close', () => {
   it('users can repay their debt with underlying and add collateral at the same time', async () => {
     const baseBefore = await base.balanceOf(owner)
     await expect(ladle.close(vaultId, WAD, WAD.mul(-1)))
-      .to.emit(cauldron, 'VaultStirred')
+      .to.emit(cauldron, 'VaultPoured')
       .withArgs(vaultId, seriesId, ilkId, WAD, WAD.mul(-1))
     expect(await base.balanceOf(owner)).to.equal(baseBefore.sub(WAD))
     expect(await fyToken.balanceOf(owner)).to.equal(WAD)
@@ -110,7 +110,7 @@ describe('Ladle - close', () => {
   it('users can repay their debt with underlying and remove collateral at the same time', async () => {
     const baseBefore = await base.balanceOf(owner)
     await expect(ladle.close(vaultId, WAD.mul(-1), WAD.mul(-1)))
-      .to.emit(cauldron, 'VaultStirred')
+      .to.emit(cauldron, 'VaultPoured')
       .withArgs(vaultId, seriesId, ilkId, WAD.mul(-1), WAD.mul(-1))
     expect(await base.balanceOf(owner)).to.equal(baseBefore.sub(WAD))
     expect(await fyToken.balanceOf(owner)).to.equal(WAD)
@@ -133,7 +133,7 @@ describe('Ladle - close', () => {
     it('users can repay their debt with underlying at accrual rate', async () => {
       const baseBefore = await base.balanceOf(owner)
       await expect(ladle.close(vaultId, 0, WAD.mul(-1)))
-        .to.emit(cauldron, 'VaultStirred')
+        .to.emit(cauldron, 'VaultPoured')
         .withArgs(vaultId, seriesId, ilkId, 0, WAD.mul(-1))
       expect(await base.balanceOf(owner)).to.equal(baseBefore.sub(WAD.mul(accrual).div(RAY)))
       expect(await fyToken.balanceOf(owner)).to.equal(WAD)

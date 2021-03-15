@@ -11,7 +11,7 @@ const { loadFixture } = waffle
 
 import { YieldEnvironment, WAD } from './shared/fixtures'
 
-describe('Ladle - shake', () => {
+describe('Ladle - stir', () => {
   let env: YieldEnvironment
   let ownerAcc: SignerWithAddress
   let otherAcc: SignerWithAddress
@@ -57,16 +57,16 @@ describe('Ladle - shake', () => {
 
     // ==== Set testing environment ====
     await cauldron.build(owner, vaultToId, seriesId, ilkId)
-    await ladle.stir(vaultFromId, WAD, 0)
+    await ladle.pour(vaultFromId, WAD, 0)
   })
 
   it('does not allow moving collateral other than to the vault owner', async () => {
-    await expect(ladleFromOther.shake(vaultFromId, vaultToId, WAD)).to.be.revertedWith('Only vault owner')
+    await expect(ladleFromOther.stir(vaultFromId, vaultToId, WAD)).to.be.revertedWith('Only vault owner')
   })
 
   it('moves collateral', async () => {
-    expect(await ladle.shake(vaultFromId, vaultToId, WAD))
-      .to.emit(cauldron, 'VaultShaken')
+    expect(await ladle.stir(vaultFromId, vaultToId, WAD))
+      .to.emit(cauldron, 'VaultStirred')
       .withArgs(vaultFromId, vaultToId, WAD)
     expect((await cauldron.balances(vaultFromId)).ink).to.equal(0)
     expect((await cauldron.balances(vaultToId)).ink).to.equal(WAD)

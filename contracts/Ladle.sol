@@ -85,7 +85,7 @@ contract Ladle is AccessControl(), Batchable {
     /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
     // Doesn't check inputs, or collateralization level. Do that in public functions.
     // TODO: Extend to allow other accounts in `join`
-    function stir(bytes12 vaultId, int128 ink, int128 art)
+    function pour(bytes12 vaultId, int128 ink, int128 art)
         external
         returns (DataTypes.Balances memory balances_)
     {
@@ -94,7 +94,7 @@ contract Ladle is AccessControl(), Batchable {
 
         if (ink != 0) joins[vault_.ilkId].join(vault_.owner, ink);                      // Cost of `join`. `join` with a negative value means `exit`. | TODO: Consider checking the join exists
 
-        balances_ = cauldron.stir(vaultId, ink, art);                                  // Cost of `cauldron.stir` call.
+        balances_ = cauldron.pour(vaultId, ink, art);                                  // Cost of `cauldron.pour` call.
 
         if (art != 0) {
             DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);         // 1 CALL + 1 SLOAD
@@ -111,7 +111,7 @@ contract Ladle is AccessControl(), Batchable {
     }
 
     /// @dev Move collateral between vaults.
-    function shake(bytes12 from, bytes12 to, uint128 ink)
+    function stir(bytes12 from, bytes12 to, uint128 ink)
         public
         returns (DataTypes.Balances memory, DataTypes.Balances memory)
     {
@@ -119,7 +119,7 @@ contract Ladle is AccessControl(), Batchable {
         require (vaultFrom.owner == msg.sender, "Only vault owner");
         DataTypes.Balances memory balancesFrom_;
         DataTypes.Balances memory balancesTo_;
-        (balancesFrom_, balancesTo_) = cauldron.shake(from, to, ink);                              // Cost of `__shake`
+        (balancesFrom_, balancesTo_) = cauldron.stir(from, to, ink);                              // Cost of `stir`
         return (balancesFrom_, balancesTo_);
     }
 
@@ -139,7 +139,7 @@ contract Ladle is AccessControl(), Batchable {
 
     /// @dev Repay vault debt using underlying token. It can add or remove collateral at the same time.
     /// The debt to repay is denominated in fyToken, even if the tokens pulled from the user are underlying.
-    /// The debt to repay must be entered as a negative number, as with `stir`.
+    /// The debt to repay must be entered as a negative number, as with `pour`.
     /// Debt cannot be acquired with this function.
     function close(bytes12 vaultId, int128 ink, int128 art)
         external
@@ -165,7 +165,7 @@ contract Ladle is AccessControl(), Batchable {
         if (ink != 0) joins[vault_.ilkId].join(vault_.owner, ink);                      // Cost of `join`. `join` with a negative value means `exit`. | TODO: Consider checking the join exists
         joins[baseId].join(msg.sender, int128(amt));                                    // Cost of `join`
         
-        return cauldron.stir(vaultId, ink, art);                                       // Cost of `stir`
+        return cauldron.pour(vaultId, ink, art);                                       // Cost of `pour`
     }
 
     /// @dev Allow authorized contracts to move assets through the ladle

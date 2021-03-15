@@ -11,7 +11,7 @@ const { loadFixture } = waffle
 
 import { YieldEnvironment, WAD } from './shared/fixtures'
 
-describe('Cauldron - shake', () => {
+describe('Cauldron - stir', () => {
   let env: YieldEnvironment
   let ownerAcc: SignerWithAddress
   let otherAcc: SignerWithAddress
@@ -60,26 +60,26 @@ describe('Cauldron - shake', () => {
 
     // ==== Set testing environment ====
     await cauldron.build(owner, vaultToId, seriesId, ilkId)
-    await ladle.stir(vaultFromId, WAD, 0)
+    await ladle.pour(vaultFromId, WAD, 0)
   })
 
   it('does not allow moving collateral to an uninitialized vault', async () => {
-    await expect(cauldron.shake(vaultFromId, mockVaultId, WAD)).to.be.revertedWith('Vault not found')
+    await expect(cauldron.stir(vaultFromId, mockVaultId, WAD)).to.be.revertedWith('Vault not found')
   })
 
   it('does not allow moving collateral and becoming undercollateralized', async () => {
-    await ladle.stir(vaultFromId, 0, WAD)
-    await expect(cauldron.shake(vaultFromId, vaultToId, WAD)).to.be.revertedWith('Undercollateralized')
+    await ladle.pour(vaultFromId, 0, WAD)
+    await expect(cauldron.stir(vaultFromId, vaultToId, WAD)).to.be.revertedWith('Undercollateralized')
   })
 
   it('does not allow moving collateral to vault of a different ilk', async () => {
     await cauldron.tweak(vaultToId, seriesId, otherIlkId)
-    await expect(cauldron.shake(vaultFromId, vaultToId, WAD)).to.be.revertedWith('Different collateral')
+    await expect(cauldron.stir(vaultFromId, vaultToId, WAD)).to.be.revertedWith('Different collateral')
   })
 
   it('moves collateral', async () => {
-    expect(await cauldron.shake(vaultFromId, vaultToId, WAD))
-      .to.emit(cauldron, 'VaultShaken')
+    expect(await cauldron.stir(vaultFromId, vaultToId, WAD))
+      .to.emit(cauldron, 'VaultStirred')
       .withArgs(vaultFromId, vaultToId, WAD)
     expect((await cauldron.balances(vaultFromId)).ink).to.equal(0)
     expect((await cauldron.balances(vaultToId)).ink).to.equal(WAD)

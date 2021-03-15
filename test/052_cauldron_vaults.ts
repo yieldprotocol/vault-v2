@@ -96,7 +96,7 @@ describe('Cauldron - Vaults', () => {
     })
 
     it('does not allow destroying vaults if not empty', async () => {
-      await ladle.stir(vaultId, WAD, 0)
+      await ladle.pour(vaultId, WAD, 0)
       await expect(cauldron.destroy(vaultId)).to.be.revertedWith('Only empty vaults')
     })
 
@@ -115,12 +115,12 @@ describe('Cauldron - Vaults', () => {
     })
 
     it('does not allow changing vaults with debt', async () => {
-      await ladle.stir(vaultId, WAD, WAD)
+      await ladle.pour(vaultId, WAD, WAD)
       await expect(cauldron.tweak(vaultId, otherSeriesId, otherIlkId)).to.be.revertedWith('Only with no debt')
     })
 
     it('does not allow changing vaults with collateral', async () => {
-      await ladle.stir(vaultId, WAD, 0)
+      await ladle.pour(vaultId, WAD, 0)
       await expect(cauldron.tweak(vaultId, seriesId, otherIlkId)).to.be.revertedWith('Only with no collateral')
     })
 

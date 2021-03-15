@@ -58,7 +58,7 @@ describe('Cauldron - roll', () => {
 
     // ==== Set testing environment ====
     await cauldron.build(owner, vaultId, seriesId, ilkId)
-    await cauldron.stir(vaultId, WAD, WAD)
+    await cauldron.pour(vaultId, WAD, WAD)
   })
 
   it('does not allow rolling unknown vaults', async () => {
