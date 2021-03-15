@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 import "@yield-protocol/utils/contracts/token/IERC20.sol";
-// import "@yield-protocol/yieldspace-interfaces/IPool.sol";
+import "@yield-protocol/yieldspace-interfaces/IPool.sol";
 import "@yield-protocol/vault-interfaces/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/IJoin.sol";
 import "@yield-protocol/vault-interfaces/ICauldron.sol";
@@ -22,17 +22,26 @@ library RMath { // Fixed point arithmetic in Ray units
     }
 }
 
+library Safe128 {
+    /// @dev Safely cast an int128 to an uint128
+    function u128(int128 x) internal pure returns (uint128 y) {
+        require (x >= 0, "Cast overflow");
+        y = uint128(x);
+    }
+}
+
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
 contract Ladle is AccessControl(), Batchable {
     using RMath for uint128;
+    using Safe128 for int128;
 
     ICauldron public cauldron;
 
     mapping (bytes6 => IJoin)                public joins;           // Join contracts available to manage collateral. 12 bytes still free.
-    // mapping (bytes6 => IPool)                public pools;           // Pool contracts available to manage series. 12 bytes still free.
+    mapping (bytes6 => IPool)                public pools;           // Pool contracts available to manage series. 12 bytes still free.
 
     event JoinAdded(bytes6 indexed assetId, address indexed join);
-    // event PoolAdded(bytes6 indexed seriesId, address indexed pool);
+    event PoolAdded(bytes6 indexed seriesId, address indexed pool);
 
     constructor (ICauldron cauldron_) {
         cauldron = cauldron_;
@@ -50,15 +59,15 @@ contract Ladle is AccessControl(), Batchable {
     }
 
     /// @dev Add a new Pool for a Series. There can be only one Pool per Series. Until a Pool is added, it is not possible to borrow Base.
-    /* function addPool(bytes6 seriesId, IPool pool)
+    function addPool(bytes6 seriesId, IPool pool)
         external
         auth
     {
-        require (cauldron.series(seriesId),fyToken != IFYToken(address(0)), "Series not found");    // 1 CALL + 1 SLOAD
+        require (cauldron.series(seriesId).fyToken != IFYToken(address(0)), "Series not found");    // 1 CALL + 1 SLOAD
         require (pools[seriesId] == IPool(address(0)), "One Pool per Series");            // 1 SLOAD
         pools[seriesId] = pool;                                                          // 1 SSTORE
         emit PoolAdded(seriesId, address(pool));
-    } */
+    }
 
     /// @dev Create a new vault, linked to a series (and therefore underlying) and a collateral
     function build(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
@@ -136,7 +145,7 @@ contract Ladle is AccessControl(), Batchable {
 
     /// @dev Add collateral and borrow from vault, pull assets from and push base of borrowed series to user
     // Doesn't check inputs, or collateralization level. Do that in public functions.
-    /* function serve(bytes12 vaultId, address to, int128 ink, int128 art, uint128 min)
+    function serve(bytes12 vaultId, address to, int128 ink, int128 art, uint128 min)
         external
         returns (DataTypes.Balances memory balances_, uint128 base_)
     {
@@ -145,8 +154,8 @@ contract Ladle is AccessControl(), Batchable {
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);                       // 1 CALL + 1 SLOAD
         IPool pool_ = pools[vault_.seriesId];
         balances_ = pour(vaultId, address(pool_), ink, art);
-        base_ = pool.sellFYToken(to, art, min);
-    } */
+        base_ = pool_.sellFYToken(to, art.u128());                                             // TODO: Implement slippage guards natively in Pools
+    }
 
     /// @dev Repay vault debt using underlying token. It can add or remove collateral at the same time.
     /// The debt to repay is denominated in fyToken, even if the tokens pulled from the user are underlying.
