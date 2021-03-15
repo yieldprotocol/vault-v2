@@ -42,8 +42,6 @@ contract PoolMock {
     ) {
         baseToken = baseToken_;
         fyToken = fyToken_;
-        ERC20Mock(address(baseToken_)).mint(address(this), 1e24);
-        ERC20Mock(address(fyToken_)).mint(address(this), 1e24);
         _update();
     }
 

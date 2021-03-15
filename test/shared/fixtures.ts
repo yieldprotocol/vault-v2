@@ -6,6 +6,7 @@ import { id } from '@yield-protocol/utils'
 import CauldronArtifact from '../../artifacts/contracts/Cauldron.sol/Cauldron.json'
 import FYTokenArtifact from '../../artifacts/contracts/FYToken.sol/FYToken.json'
 import ERC20MockArtifact from '../../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
+import PoolMockArtifact from '../../artifacts/contracts/mocks/PoolMock.sol/PoolMock.json'
 import OracleMockArtifact from '../../artifacts/contracts/mocks/OracleMock.sol/OracleMock.json'
 import JoinArtifact from '../../artifacts/contracts/Join.sol/Join.json'
 import LadleArtifact from '../../artifacts/contracts/Ladle.sol/Ladle.json'
@@ -14,6 +15,7 @@ import WitchArtifact from '../../artifacts/contracts/Witch.sol/Witch.json'
 import { Cauldron } from '../../typechain/Cauldron'
 import { FYToken } from '../../typechain/FYToken'
 import { ERC20Mock } from '../../typechain/ERC20Mock'
+import { PoolMock } from '../../typechain/PoolMock'
 import { OracleMock } from '../../typechain/OracleMock'
 import { Join } from '../../typechain/Join'
 import { Ladle } from '../../typechain/Ladle'
@@ -34,6 +36,7 @@ export class YieldEnvironment {
   assets: Map<string, ERC20Mock>
   oracles: Map<string, OracleMock>
   series: Map<string, FYToken>
+  pools: Map<string, PoolMock>
   joins: Map<string, Join>
   vaults: Map<string, Map<string, string>>
 
@@ -45,6 +48,7 @@ export class YieldEnvironment {
     assets: Map<string, ERC20Mock>,
     oracles: Map<string, OracleMock>,
     series: Map<string, FYToken>,
+    pools: Map<string, PoolMock>,
     joins: Map<string, Join>,
     vaults: Map<string, Map<string, string>>
   ) {
@@ -55,6 +59,7 @@ export class YieldEnvironment {
     this.assets = assets
     this.oracles = oracles
     this.series = series
+    this.pools = pools
     this.joins = joins
     this.vaults = vaults
   }
@@ -110,7 +115,11 @@ export class YieldEnvironment {
       ownerAdd
     )
 
-    await ladle.grantRoles([id('addJoin(bytes6,address)'), id('_join(bytes12,address,int128,int128)')], ownerAdd)
+    await ladle.grantRoles([
+      id('addJoin(bytes6,address)'),
+      id('addPool(bytes6,address)'),
+      id('_join(bytes12,address,int128,int128)')
+    ], ownerAdd)
 
     // ==== Add assets and joins ====
     // For each asset id passed as an argument, we create a Mock ERC20 which we register in cauldron, and its Join, that we register in Ladle.
@@ -161,6 +170,7 @@ export class YieldEnvironment {
     // For each series identifier we create a fyToken with the first asset as underlying.
     // The maturities for the fyTokens are in three month intervals, starting three months from now
     const series: Map<string, FYToken> = new Map()
+    const pools: Map<string, PoolMock> = new Map()
     const chiOracle = (await deployContract(owner, OracleMockArtifact, [])) as OracleMock // Not storing this one in `oracles`, you can retrieve it from the fyToken
     await chiOracle.setSpot(RAY)
     oracles.set('chi', chiOracle)
@@ -180,13 +190,23 @@ export class YieldEnvironment {
       await cauldron.addSeries(seriesId, baseId, fyToken.address)
 
       // Add all assets except the first one as approved collaterals
-      // for (let ilkId of assetIds.slice(1)) {
       await cauldron.addIlks(seriesId, assetIds.slice(1))
-      // }
 
       await baseJoin.grantRoles([id('join(address,int128)')], fyToken.address)
       await fyToken.grantRoles([id('mint(address,uint256)'), id('burn(address,uint256)')], ladle.address)
       await fyToken.grantRoles([id('mint(address,uint256)'), id('burn(address,uint256)')], ownerAdd)
+
+      // Add a pool between the base and each series
+      const pool = (await deployContract(owner, PoolMockArtifact, [
+        base.address,
+        fyToken.address,
+      ])) as PoolMock
+      pools.set(seriesId, pool)
+      await ladle.addPool(seriesId, pool.address)
+
+      // Initialize pool with a million tokens of each
+      await fyToken.mint(pool.address, WAD.mul(1000000))
+      await base.mint(pool.address, WAD.mul(1000000))
     }
 
     // ==== Build some vaults ====
@@ -203,6 +223,6 @@ export class YieldEnvironment {
       vaults.set(seriesId, seriesVaults)
     }
 
-    return new YieldEnvironment(owner, cauldron, ladle, witch, assets, oracles, series, joins, vaults)
+    return new YieldEnvironment(owner, cauldron, ladle, witch, assets, oracles, series, pools, joins, vaults)
   }
 }
