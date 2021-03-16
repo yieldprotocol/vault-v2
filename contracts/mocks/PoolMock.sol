@@ -57,11 +57,8 @@ contract PoolMock {
         return fyTokenReserves;
     }
 
-    function sellBaseToken(address to, uint128 tokenIn) external returns(uint128) {
-        require(
-            baseTokenReserves + uint112(tokenIn) >= uint112(baseToken.balanceOf(address(this))),
-            "Pool: Not enough base token in"
-        );
+    function sellBaseToken(address to) external returns(uint128) {
+        uint128 tokenIn = uint128(baseToken.balanceOf(address(this))) - baseTokenReserves;
         fyToken.transfer(to, tokenIn.rmul(rate));
         update();
         return tokenIn.rmul(rate);
@@ -72,11 +69,8 @@ contract PoolMock {
         update();
         return tokenOut.rmul(rate);
     }
-    function sellFYToken(address to, uint128 fyTokenIn) external returns(uint128) {
-        require(
-            fyTokenReserves + uint112(fyTokenIn) >= uint112(fyToken.balanceOf(address(this))),
-            "Pool: Not enough fyToken in"
-        );
+    function sellFYToken(address to) external returns(uint128) {
+        uint128 fyTokenIn = uint128(fyToken.balanceOf(address(this))) - fyTokenReserves;
         baseToken.transfer(to, fyTokenIn.rdiv(rate));
         update();
         return fyTokenIn.rdiv(rate);

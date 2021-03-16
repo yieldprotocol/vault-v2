@@ -22,18 +22,9 @@ library RMath { // Fixed point arithmetic in Ray units
     }
 }
 
-library Safe128 {
-    /// @dev Safely cast an int128 to an uint128
-    function u128(int128 x) internal pure returns (uint128 y) {
-        require (x >= 0, "Cast overflow");
-        y = uint128(x);
-    }
-}
-
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
 contract Ladle is AccessControl(), Batchable {
     using RMath for uint128;
-    using Safe128 for int128;
 
     ICauldron public cauldron;
 
@@ -154,7 +145,7 @@ contract Ladle is AccessControl(), Batchable {
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);                       // 1 CALL + 1 SLOAD
         IPool pool_ = pools[vault_.seriesId];
         balances_ = pour(vaultId, address(pool_), ink, art);                            // Checks msg.sender owns the vault.
-        base_ = pool_.sellFYToken(to, art.u128());                                      // TODO: Implement slippage guards natively in Pools
+        base_ = pool_.sellFYToken(to);                                      // TODO: Implement slippage guards natively in Pools
     }
 
     /// @dev Repay vault debt using underlying token at a 1:1 exchange rate, without trading in a pool.
