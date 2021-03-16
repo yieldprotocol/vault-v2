@@ -145,7 +145,7 @@ contract Ladle is AccessControl(), Batchable {
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);                       // 1 CALL + 1 SLOAD
         IPool pool_ = pools[vault_.seriesId];
         balances_ = pour(vaultId, address(pool_), ink, art);                            // Checks msg.sender owns the vault.
-        base_ = pool_.sellFYToken(to);                                      // TODO: Implement slippage guards natively in Pools
+        base_ = pool_.sellFYToken(to);                                                  // TODO: Implement slippage guards natively in Pools
     }
 
     /// @dev Repay vault debt using underlying token at a 1:1 exchange rate, without trading in a pool.
