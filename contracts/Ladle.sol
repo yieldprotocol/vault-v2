@@ -149,12 +149,12 @@ contract Ladle is AccessControl(), Batchable {
         external
         returns (DataTypes.Balances memory balances_, uint128 base_)
     {
-        require (art > 0, "Only borrow");                                              // When borrowing with `frob`, art is a positive value.
+        require (art > 0, "Only borrow");                                               // When borrowing with `frob`, art is a positive value.
 
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);                       // 1 CALL + 1 SLOAD
         IPool pool_ = pools[vault_.seriesId];
         balances_ = pour(vaultId, address(pool_), ink, art);
-        base_ = pool_.sellFYToken(to, art.u128());                                             // TODO: Implement slippage guards natively in Pools
+        base_ = pool_.sellFYToken(to, art.u128());                                      // TODO: Implement slippage guards natively in Pools
     }
 
     /// @dev Repay vault debt using underlying token. It can add or remove collateral at the same time.
