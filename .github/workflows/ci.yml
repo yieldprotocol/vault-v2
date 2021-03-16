@@ -26,6 +26,8 @@ jobs:
           restore-keys: |
             yarn-
       - run: yarn
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: yarn lint:ts
       - run: yarn lint:sol
 
@@ -48,6 +50,8 @@ jobs:
           restore-keys: |
             yarn-
       - run: yarn
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: yarn build
       - run: yarn test
 
@@ -70,4 +74,6 @@ jobs:
           restore-keys: |
             yarn-
       - run: yarn
+          env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: yarn test:deploy
