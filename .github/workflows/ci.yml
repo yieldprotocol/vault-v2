@@ -74,6 +74,6 @@ jobs:
           restore-keys: |
             yarn-
       - run: yarn
-          env:
+        env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: yarn test:deploy
