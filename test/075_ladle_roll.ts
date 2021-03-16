@@ -11,7 +11,9 @@ const { loadFixture } = waffle
 
 import { YieldEnvironment, WAD } from './shared/fixtures'
 
-describe('Ladle - roll', () => {
+describe('Ladle - roll', function () {
+  this.timeout(0)
+
   let env: YieldEnvironment
   let ownerAcc: SignerWithAddress
   let otherAcc: SignerWithAddress
