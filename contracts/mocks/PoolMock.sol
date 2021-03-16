@@ -31,7 +31,7 @@ contract PoolMock {
 
     IERC20 public baseToken;
     IFYToken public fyToken;
-    uint128 constant public rate = 5e25; // 5%
+    uint128 constant public rate = 105e25; // 5%
 
     uint112 public baseTokenReserves;
     uint112 public fyTokenReserves;
@@ -42,12 +42,19 @@ contract PoolMock {
     ) {
         baseToken = baseToken_;
         fyToken = fyToken_;
-        _update();
+        update();
     }
 
-    function _update() internal {
+    function update() public {
         baseTokenReserves = uint112(baseToken.balanceOf(address(this)));
         fyTokenReserves = uint112(fyToken.balanceOf(address(this)));
+    }
+
+    function getBaseTokenReserves() external view returns(uint128) {
+        return baseTokenReserves;
+    }
+    function getFYTokenReserves() external view returns(uint128) {
+        return fyTokenReserves;
     }
 
     function sellBaseToken(address to, uint128 tokenIn) external returns(uint128) {
@@ -56,13 +63,13 @@ contract PoolMock {
             "Pool: Not enough base token in"
         );
         fyToken.transfer(to, tokenIn.rmul(rate));
-        _update();
+        update();
         return tokenIn.rmul(rate);
     }
     function buyBaseToken(address to, uint128 tokenOut) external returns(uint128) {
         fyToken.transferFrom(msg.sender, address(this), tokenOut.rmul(rate));
         baseToken.transfer(to, tokenOut);
-        _update();
+        update();
         return tokenOut.rmul(rate);
     }
     function sellFYToken(address to, uint128 fyTokenIn) external returns(uint128) {
@@ -71,13 +78,13 @@ contract PoolMock {
             "Pool: Not enough fyToken in"
         );
         baseToken.transfer(to, fyTokenIn.rdiv(rate));
-        _update();
+        update();
         return fyTokenIn.rdiv(rate);
     }
     function buyFYToken(address to, uint128 fyTokenOut) external returns(uint128) {
         baseToken.transferFrom(msg.sender, address(this), fyTokenOut.rdiv(rate));
         fyToken.transfer(to, fyTokenOut);
-        _update();
+        update();
         return fyTokenOut.rdiv(rate);
     }
 }

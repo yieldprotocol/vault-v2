@@ -143,8 +143,8 @@ contract Ladle is AccessControl(), Batchable {
         }
     }
 
-    /// @dev Add collateral and borrow from vault, pull assets from and push base of borrowed series to user
-    // Doesn't check inputs, or collateralization level. Do that in public functions.
+    /// @dev Add collateral and borrow from vault, pull assets from and push base of borrowed series to user.
+    /// The base is obtained by borrowing fyToken and selling it in a pool.
     function serve(bytes12 vaultId, address to, int128 ink, int128 art, uint128 min)
         external
         returns (DataTypes.Balances memory balances_, uint128 base_)
@@ -153,11 +153,12 @@ contract Ladle is AccessControl(), Batchable {
 
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);                       // 1 CALL + 1 SLOAD
         IPool pool_ = pools[vault_.seriesId];
-        balances_ = pour(vaultId, address(pool_), ink, art);
+        balances_ = pour(vaultId, address(pool_), ink, art);                            // Checks msg.sender owns the vault.
         base_ = pool_.sellFYToken(to, art.u128());                                      // TODO: Implement slippage guards natively in Pools
     }
 
-    /// @dev Repay vault debt using underlying token. It can add or remove collateral at the same time.
+    /// @dev Repay vault debt using underlying token at a 1:1 exchange rate, without trading in a pool.
+    /// It can add or remove collateral at the same time.
     /// The debt to repay is denominated in fyToken, even if the tokens pulled from the user are underlying.
     /// The debt to repay must be entered as a negative number, as with `pour`.
     /// Debt cannot be acquired with this function.
