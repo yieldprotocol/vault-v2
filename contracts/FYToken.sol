@@ -12,64 +12,76 @@ import "./AccessControl.sol";
 
 library RMath { // Fixed point arithmetic in Ray units
     /// @dev Multiply an amount by a fixed point factor in ray units, returning an amount
-    function rmul(uint128 x, uint128 y) internal pure returns (uint128 z) {
+    function rmul(uint256 x, uint256 y) internal pure returns (uint256 z) {
         unchecked {
-            uint256 _z = uint256(x) * uint256(y) / 1e27;
-            require (_z <= type(uint128).max, "RMUL Overflow");
-            z = uint128(_z);
+            z = x * y / 1e27;
+            require (z <= type(uint256).max, "RMUL Overflow");
         }
     }
 }
 
-library Safe128 {
-    /// @dev Safely cast an uint128 to an int128
-    function i128(uint128 x) internal pure returns (int128 y) {
+library Safe256 {
+    /// @dev Safely cast an uint256 to an int128
+    function i128(uint256 x) internal pure returns (int128 y) {
         require (x <= uint128(type(int128).max), "Cast overflow");
-        y = int128(x);
+        y = int128(uint128(x));
+    }
+
+    /// @dev Safely cast an uint256 to an int128
+    function u32(uint256 x) internal pure returns (uint32 y) {
+        require (x <= type(uint32).max, "Cast overflow");
+        y = uint32(x);
     }
 }
 
 // TODO: Setter for MAX_TIME_TO_MATURITY
-contract FYToken is AccessControl(), ERC20Permit, IERC3156FlashLender {
-    using RMath for uint128;
-    using Safe128 for uint128;
+contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit {
+    using RMath for uint256;
+    using Safe256 for uint256;
 
     event Redeemed(address indexed from, address indexed to, uint256 amount, uint256 redeemed);
 
     uint256 constant internal MAX_TIME_TO_MATURITY = 126144000; // seconds in four years
     bytes32 constant internal FLASH_LOAN_RETURN = keccak256("ERC3156FlashBorrower.onFlashLoan");
 
-    IOracle public oracle;                                      // Oracle for the savings rate.
     IJoin public join;                                          // Source of redemption funds.
-    uint32 public maturity;
+    IOracle public oracle;                                      // Oracle for the savings rate.
+    address public override asset;
+    uint256 public override maturity;
 
     constructor(
         IOracle oracle_, // Underlying vs its interest-bearing version
         IJoin join_,
-        uint32 maturity_,
+        uint256 maturity_,
         string memory name,
         string memory symbol
     ) ERC20Permit(name, symbol) {
-        uint32 now_ = uint32(block.timestamp);
-        require(maturity_ > now_ && maturity_ < now_ + MAX_TIME_TO_MATURITY, "Invalid maturity");
+        uint256 now_ = block.timestamp;
+        require(
+            maturity_ > now_ &&
+            maturity_ < now_ + MAX_TIME_TO_MATURITY &&
+            maturity_ < type(uint32).max,
+            "Invalid maturity"
+        );
         oracle = oracle_;
         join = join_;
         maturity = maturity_;
+        asset = address(IJoin(join_).token());
     }
 
     /// @dev Mature the fyToken by recording the chi in its oracle.
     /// If called more than once, it will revert.
     /// Check if it has been called as `fyToken.oracle.recorded(fyToken.maturity())`
     function mature() 
-        public
+        public override
     {
-        oracle.record(maturity);                                    // Cost of `record` | The oracle checks the timestamp and that it hasn't been recorded yet.        
+        oracle.record(maturity.u32());                                    // Cost of `record` | The oracle checks the timestamp and that it hasn't been recorded yet.        
     }
 
     /// @dev Burn the fyToken after maturity for an amount that increases according to `chi`
-    function redeem(address to, uint128 amount)
-        public
-        returns (uint128)
+    function redeem(address to, uint256 amount)
+        public override
+        returns (uint256)
     {
         require(
             uint32(block.timestamp) >= maturity,
@@ -78,7 +90,7 @@ contract FYToken is AccessControl(), ERC20Permit, IERC3156FlashLender {
         _burn(msg.sender, amount);                                  // 2 SSTORE
 
         // Consider moving these two lines to Ladle.
-        uint128 redeemed = amount.rmul(oracle.accrual(maturity));   // Cost of `accrual`
+        uint256 redeemed = amount.rmul(oracle.accrual(maturity.u32()));   // Cost of `accrual`
         join.join(to, -(redeemed.i128()));                           // Cost of `join`
         
         emit Redeemed(msg.sender, to, amount, redeemed);
@@ -87,7 +99,7 @@ contract FYToken is AccessControl(), ERC20Permit, IERC3156FlashLender {
 
     /// @dev Mint fyTokens.
     function mint(address to, uint256 amount)
-        public
+        public override
         auth
     {
         _mint(to, amount);                                                  // 2 SSTORE
@@ -95,7 +107,7 @@ contract FYToken is AccessControl(), ERC20Permit, IERC3156FlashLender {
 
     /// @dev Burn fyTokens.
     function burn(address from, uint256 amount)
-        public
+        public override
         auth
     {
         _decreaseApproval(from, amount);                                    // 1 SLOAD, if called by Ladle
