@@ -11,7 +11,9 @@ import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { loadFixture } = waffle
 
-describe('Cauldron - vaults', () => {
+describe('Cauldron - vaults', function () {
+  this.timeout(0)
+  
   let ownerAcc: SignerWithAddress
   let owner: string
   let otherAcc: SignerWithAddress

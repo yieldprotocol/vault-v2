@@ -8,7 +8,9 @@ import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { deployContract } = waffle
 
-describe('Oracle', () => {
+describe('Oracle', function () {
+  this.timeout(0)
+  
   let ownerAcc: SignerWithAddress
   let owner: string
   let oracle: Oracle

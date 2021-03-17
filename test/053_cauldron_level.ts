@@ -13,7 +13,9 @@ import { expect } from 'chai'
 const { loadFixture } = waffle
 const timeMachine = require('ether-time-traveler')
 
-describe('Cauldron - level', () => {
+describe('Cauldron - level', function () {
+  this.timeout(0)
+  
   let snapshotId: any
   let ownerAcc: SignerWithAddress
   let owner: string
