@@ -121,6 +121,13 @@ describe('Ladle - close', function () {
     expect((await cauldron.balances(vaultId)).ink).to.equal(0)
   })
 
+  it('users can close and withdraw collateral to others', async () => {
+    await expect(ladle.close(vaultId, other, WAD.mul(-1), WAD.mul(-1)))
+      .to.emit(cauldron, 'VaultPoured')
+      .withArgs(vaultId, seriesId, ilkId, WAD.mul(-1), WAD.mul(-1))
+    expect(await ilk.balanceOf(other)).to.equal(WAD)
+  })
+
   describe('after maturity', async () => {
     const accrual = RAY.mul(110).div(100) // accrual is 10%
 
