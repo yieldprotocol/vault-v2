@@ -70,4 +70,8 @@ describe('Ladle - serve', function () {
     expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.add(WAD.mul(100).div(105)))
     expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.sub(WAD))
   })
+
+  it('does not `serve` if slippage exceeded', async () => {
+    await expect(ladle.serve(vaultId, owner, WAD, WAD, WAD.mul(2))).to.be.revertedWith('Slippage exceeded')
+  })
 })
