@@ -115,6 +115,17 @@ describe('Ladle - pour', function () {
     expect((await cauldron.balances(vaultId)).art).to.equal(WAD)
   })
 
+  it('users can pour to post collateral from themselves and borrow fyToken to another', async () => {
+    const ilkBalanceBefore = await ilk.balanceOf(owner)
+    await expect(ladle.pour(vaultId, other, WAD, WAD))
+      .to.emit(cauldron, 'VaultPoured')
+      .withArgs(vaultId, seriesId, ilkId, WAD, WAD)
+    expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.sub(WAD))
+    expect(await fyToken.balanceOf(other)).to.equal(WAD)
+    expect((await cauldron.balances(vaultId)).ink).to.equal(WAD)
+    expect((await cauldron.balances(vaultId)).art).to.equal(WAD)
+  })
+
   describe('with collateral and debt', async () => {
     beforeEach(async () => {
       await ladle.pour(vaultId, owner, WAD, WAD)
