@@ -33,10 +33,12 @@ describe('Ladle - admin', function () {
   let cauldron: Cauldron
   let fyToken: FYToken
   let base: ERC20Mock
+  let baseJoin: Join
   let ilk: ERC20Mock
   let ilkJoin: Join
   let pool: PoolMock
   let oracle: OracleMock
+  let rateOracle: OracleMock
   let ladle: Ladle
   let ladleFromOther: Ladle
 
@@ -59,7 +61,6 @@ describe('Ladle - admin', function () {
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const mockAddress = ethers.utils.hexlify(ethers.utils.randomBytes(20))
   const ratio = 10000 // == 100% collateralization ratio
 
   beforeEach(async () => {
@@ -67,6 +68,8 @@ describe('Ladle - admin', function () {
     cauldron = env.cauldron
     ladle = env.ladle
     base = env.assets.get(baseId) as ERC20Mock
+    baseJoin = env.joins.get(baseId) as Join
+    rateOracle = env.oracles.get('rate') as OracleMock
 
     ladleFromOther = ladle.connect(otherAcc)
 
@@ -87,8 +90,8 @@ describe('Ladle - admin', function () {
     const provider: BaseProvider = ethers.getDefaultProvider()
     const now = (await provider.getBlock(provider.getBlockNumber())).timestamp
     fyToken = (await deployContract(ownerAcc, FYTokenArtifact, [
-      mockAddress,
-      mockAddress,
+      rateOracle.address,
+      baseJoin.address,
       now + 3 * 30 * 24 * 60 * 60,
       seriesId,
       'Mock FYToken',

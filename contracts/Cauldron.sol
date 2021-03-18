@@ -51,12 +51,21 @@ library Safe128 {
     }
 }
 
+library Safe256 {
+    /// @dev Safely cast an uint256 to an int128
+    function u32(uint256 x) internal pure returns (uint32 y) {
+        require (x <= type(uint32).max, "Cast overflow");
+        y = uint32(x);
+    }
+}
+
 // TODO: Add a setter for auction protection (same as Witch.AUCTION_TIME?)
 
 contract Cauldron is AccessControl() {
     using Math for uint128;
     using RMath for uint128;
     using RMath for int128;
+    using Safe256 for uint256;
     using Safe128 for uint128;
     using Safe128 for int128;
 
@@ -150,7 +159,7 @@ contract Cauldron is AccessControl() {
         require (series[seriesId].fyToken == IFYToken(address(0)), "Id already used");      // 1 SLOAD
         series[seriesId] = DataTypes.Series({
             fyToken: fyToken,
-            maturity: fyToken.maturity(),
+            maturity: fyToken.maturity().u32(),
             baseId: baseId
         });                                                                                 // 1 SSTORE
         emit SeriesAdded(seriesId, baseId, address(fyToken));
