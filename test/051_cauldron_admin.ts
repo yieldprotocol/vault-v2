@@ -2,11 +2,13 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { id } from '@yield-protocol/utils'
 
 import CauldronArtifact from '../artifacts/contracts/Cauldron.sol/Cauldron.json'
+import JoinArtifact from '../artifacts/contracts/Join.sol/Join.json'
 import FYTokenArtifact from '../artifacts/contracts/FYToken.sol/FYToken.json'
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
 import OracleMockArtifact from '../artifacts/contracts/mocks/OracleMock.sol/OracleMock.json'
 
 import { Cauldron } from '../typechain/Cauldron'
+import { Join } from '../typechain/Join'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { OracleMock } from '../typechain/OracleMock'
@@ -15,7 +17,9 @@ import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { deployContract } = waffle
 
-describe('Cauldron - Admin', () => {
+describe('Cauldron - admin', function () {
+  this.timeout(0)
+
   let ownerAcc: SignerWithAddress
   let owner: string
   let cauldron: Cauldron
@@ -23,6 +27,7 @@ describe('Cauldron - Admin', () => {
   let base: ERC20Mock
   let ilk1: ERC20Mock
   let ilk2: ERC20Mock
+  let join: Join
   let oracle: OracleMock
 
   const mockAssetId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
@@ -48,9 +53,10 @@ describe('Cauldron - Admin', () => {
     base = (await deployContract(ownerAcc, ERC20MockArtifact, [baseId, 'Mock Base'])) as ERC20Mock
     ilk1 = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId1, 'Mock Ilk'])) as ERC20Mock
     ilk2 = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId2, 'Mock Ilk'])) as ERC20Mock
+    join = (await deployContract(ownerAcc, JoinArtifact, [base.address])) as Join
     fyToken = (await deployContract(ownerAcc, FYTokenArtifact, [
       base.address,
-      mockAddress,
+      join.address,
       maturity,
       seriesId,
       'Mock FYToken',

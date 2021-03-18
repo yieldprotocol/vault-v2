@@ -15,7 +15,9 @@ const timeMachine = require('ether-time-traveler')
 
 import { YieldEnvironment, WAD, RAY, THREE_MONTHS } from './shared/fixtures'
 
-describe('Witch', () => {
+describe('Witch', function () {
+  this.timeout(0)
+
   let snapshotId: any
   let env: YieldEnvironment
   let ownerAcc: SignerWithAddress
@@ -75,7 +77,7 @@ describe('Witch', () => {
     witchFromOther = witch.connect(otherAcc)
 
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
-    ladle.pour(vaultId, WAD, WAD)
+    ladle.pour(vaultId, owner, WAD, WAD)
   })
 
   it('does not allow to grab collateralized vaults', async () => {

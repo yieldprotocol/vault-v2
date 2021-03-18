@@ -11,7 +11,7 @@ const { loadFixture } = waffle
 
 import { YieldEnvironment, WAD } from './shared/fixtures'
 
-describe('Ladle - roll', function () {
+describe('Ladle - serve', function () {
   this.timeout(0)
 
   let env: YieldEnvironment
@@ -22,11 +22,11 @@ describe('Ladle - roll', function () {
   let cauldron: Cauldron
   let fyToken: FYToken
   let base: ERC20Mock
+  let ilk: ERC20Mock
   let ladle: Ladle
-  let ladleFromOther: Ladle
 
   async function fixture() {
-    return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId], [seriesId, otherSeriesId])
+    return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId], [seriesId])
   }
 
   before(async () => {
@@ -41,33 +41,37 @@ describe('Ladle - roll', function () {
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const vaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12))
-  const otherSeriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+
+  let vaultId: string
 
   beforeEach(async () => {
     env = await loadFixture(fixture)
     cauldron = env.cauldron
     ladle = env.ladle
     base = env.assets.get(baseId) as ERC20Mock
+    ilk = env.assets.get(ilkId) as ERC20Mock
     fyToken = env.series.get(seriesId) as FYToken
 
-    ladleFromOther = ladle.connect(otherAcc)
-
-    // ==== Set testing environment ====
-    await cauldron.build(owner, vaultId, seriesId, ilkId)
-    await ladle.pour(vaultId, owner, WAD, WAD)
+    vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
   })
 
-  it('does not allow rolling vaults other than to the vault owner', async () => {
-    await expect(ladleFromOther.roll(vaultId, seriesId, WAD)).to.be.revertedWith('Only vault owner')
+  it('does not allow repaying debt with `serve`', async () => {
+    await expect(ladle.serve(vaultId, owner, WAD, WAD.mul(-1), 0)).to.be.revertedWith('Only borrow')
   })
 
-  it('rolls a vault', async () => {
-    expect(await ladle.roll(vaultId, otherSeriesId, WAD.div(-2)))
-      .to.emit(cauldron, 'VaultRolled')
-      .withArgs(vaultId, otherSeriesId, WAD.div(2))
-    expect((await cauldron.vaults(vaultId)).seriesId).to.equal(otherSeriesId)
+  it('borrows and sells for base', async () => {
+    const baseBalanceBefore = await base.balanceOf(owner)
+    const ilkBalanceBefore = await ilk.balanceOf(owner)
+    expect(await ladle.serve(vaultId, owner, WAD, WAD, 0))
+      .to.emit(cauldron, 'VaultPoured')
+      .withArgs(vaultId, seriesId, ilkId, WAD, WAD)
     expect((await cauldron.balances(vaultId)).ink).to.equal(WAD)
-    expect((await cauldron.balances(vaultId)).art).to.equal(WAD.div(2))
+    expect((await cauldron.balances(vaultId)).art).to.equal(WAD)
+    expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.add(WAD.mul(100).div(105)))
+    expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.sub(WAD))
+  })
+
+  it('does not `serve` if slippage exceeded', async () => {
+    await expect(ladle.serve(vaultId, owner, WAD, WAD, WAD.mul(2))).to.be.revertedWith('Slippage exceeded')
   })
 })

@@ -22,6 +22,8 @@
     "@truffle/hdwallet-provider": "^1.0.40",
     "@types/mocha": "^8.0.0",
     "@yield-protocol/utils": "^1.2.2",
+    "@yield-protocol/vault-interfaces": "^2.0.5",
+    "@yield-protocol/yieldspace-interfaces": "^2.0.1",
     "chai": "4.2.0",
     "ether-time-traveler": "1.1.0",
     "erc3156": "^0.4.8",

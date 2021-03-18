@@ -14,7 +14,9 @@ const timeMachine = require('ether-time-traveler')
 
 import { YieldEnvironment, WAD, RAY, THREE_MONTHS } from './shared/fixtures'
 
-describe('Ladle - close', () => {
+describe('Ladle - close', function () {
+  this.timeout(0)
+
   let snapshotId: any
   let env: YieldEnvironment
   let ownerAcc: SignerWithAddress
@@ -70,24 +72,24 @@ describe('Ladle - close', () => {
     ladleFromOther = ladle.connect(otherAcc)
 
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
-    ladle.pour(vaultId, WAD, WAD)
+    ladle.pour(vaultId, owner, WAD, WAD)
   })
 
   it('does not allow to borrow', async () => {
-    await expect(ladle.close(mockVaultId, 0, WAD)).to.be.revertedWith('Only repay debt')
+    await expect(ladle.close(mockVaultId, owner, 0, WAD)).to.be.revertedWith('Only repay debt')
   })
 
   it('reverts on unknown vaults', async () => {
-    await expect(ladle.close(mockVaultId, 0, WAD.mul(-1))).to.be.revertedWith('Only vault owner')
+    await expect(ladle.close(mockVaultId, owner, 0, WAD.mul(-1))).to.be.revertedWith('Only vault owner')
   })
 
   it('does not allow adding a join before adding its ilk', async () => {
-    await expect(ladleFromOther.close(vaultId, 0, WAD.mul(-1))).to.be.revertedWith('Only vault owner')
+    await expect(ladleFromOther.close(vaultId, other, 0, WAD.mul(-1))).to.be.revertedWith('Only vault owner')
   })
 
   it('users can repay their debt with underlying at a 1:1 rate', async () => {
     const baseBefore = await base.balanceOf(owner)
-    await expect(ladle.close(vaultId, 0, WAD.mul(-1)))
+    await expect(ladle.close(vaultId, owner, 0, WAD.mul(-1)))
       .to.emit(cauldron, 'VaultPoured')
       .withArgs(vaultId, seriesId, ilkId, 0, WAD.mul(-1))
     expect(await base.balanceOf(owner)).to.equal(baseBefore.sub(WAD))
@@ -97,7 +99,7 @@ describe('Ladle - close', () => {
 
   it('users can repay their debt with underlying and add collateral at the same time', async () => {
     const baseBefore = await base.balanceOf(owner)
-    await expect(ladle.close(vaultId, WAD, WAD.mul(-1)))
+    await expect(ladle.close(vaultId, owner, WAD, WAD.mul(-1)))
       .to.emit(cauldron, 'VaultPoured')
       .withArgs(vaultId, seriesId, ilkId, WAD, WAD.mul(-1))
     expect(await base.balanceOf(owner)).to.equal(baseBefore.sub(WAD))
@@ -109,7 +111,7 @@ describe('Ladle - close', () => {
 
   it('users can repay their debt with underlying and remove collateral at the same time', async () => {
     const baseBefore = await base.balanceOf(owner)
-    await expect(ladle.close(vaultId, WAD.mul(-1), WAD.mul(-1)))
+    await expect(ladle.close(vaultId, owner, WAD.mul(-1), WAD.mul(-1)))
       .to.emit(cauldron, 'VaultPoured')
       .withArgs(vaultId, seriesId, ilkId, WAD.mul(-1), WAD.mul(-1))
     expect(await base.balanceOf(owner)).to.equal(baseBefore.sub(WAD))
@@ -117,6 +119,13 @@ describe('Ladle - close', () => {
     expect((await cauldron.balances(vaultId)).art).to.equal(0)
     expect(await ilk.balanceOf(ilkJoin.address)).to.equal(0)
     expect((await cauldron.balances(vaultId)).ink).to.equal(0)
+  })
+
+  it('users can close and withdraw collateral to others', async () => {
+    await expect(ladle.close(vaultId, other, WAD.mul(-1), WAD.mul(-1)))
+      .to.emit(cauldron, 'VaultPoured')
+      .withArgs(vaultId, seriesId, ilkId, WAD.mul(-1), WAD.mul(-1))
+    expect(await ilk.balanceOf(other)).to.equal(WAD)
   })
 
   describe('after maturity', async () => {
@@ -132,7 +141,7 @@ describe('Ladle - close', () => {
 
     it('users can repay their debt with underlying at accrual rate', async () => {
       const baseBefore = await base.balanceOf(owner)
-      await expect(ladle.close(vaultId, 0, WAD.mul(-1)))
+      await expect(ladle.close(vaultId, owner, 0, WAD.mul(-1)))
         .to.emit(cauldron, 'VaultPoured')
         .withArgs(vaultId, seriesId, ilkId, 0, WAD.mul(-1))
       expect(await base.balanceOf(owner)).to.equal(baseBefore.sub(WAD.mul(accrual).div(RAY)))

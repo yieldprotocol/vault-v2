@@ -11,13 +11,16 @@ const { loadFixture } = waffle
 
 import { YieldEnvironment, WAD } from './shared/fixtures'
 
-describe('Ladle - stir', () => {
+describe('Cauldron - pour', function () {
+  this.timeout(0)
+
   let env: YieldEnvironment
   let ownerAcc: SignerWithAddress
   let otherAcc: SignerWithAddress
   let owner: string
   let other: string
   let cauldron: Cauldron
+  let cauldronFromOther: Cauldron
   let fyToken: FYToken
   let base: ERC20Mock
   let ladle: Ladle
@@ -41,6 +44,7 @@ describe('Ladle - stir', () => {
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const vaultToId = ethers.utils.hexlify(ethers.utils.randomBytes(12))
   const otherIlkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const mockVaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12))
 
   let vaultFromId: string
 
@@ -51,21 +55,32 @@ describe('Ladle - stir', () => {
     base = env.assets.get(baseId) as ERC20Mock
     fyToken = env.series.get(seriesId) as FYToken
 
+    cauldronFromOther = cauldron.connect(otherAcc)
     ladleFromOther = ladle.connect(otherAcc)
 
     vaultFromId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
 
     // ==== Set testing environment ====
     await cauldron.build(owner, vaultToId, seriesId, ilkId)
-    await ladle.pour(vaultFromId, WAD, 0)
+    await ladle.pour(vaultFromId, owner, WAD, 0)
   })
 
-  it('does not allow moving collateral other than to the vault owner', async () => {
-    await expect(ladleFromOther.stir(vaultFromId, vaultToId, WAD)).to.be.revertedWith('Only vault owner')
+  it('does not allow moving collateral to an uninitialized vault', async () => {
+    await expect(cauldron.stir(vaultFromId, mockVaultId, WAD)).to.be.revertedWith('Vault not found')
+  })
+
+  it('does not allow moving collateral and becoming undercollateralized', async () => {
+    await ladle.pour(vaultFromId, owner, 0, WAD)
+    await expect(cauldron.stir(vaultFromId, vaultToId, WAD)).to.be.revertedWith('Undercollateralized')
+  })
+
+  it('does not allow moving collateral to vault of a different ilk', async () => {
+    await cauldron.tweak(vaultToId, seriesId, otherIlkId)
+    await expect(cauldron.stir(vaultFromId, vaultToId, WAD)).to.be.revertedWith('Different collateral')
   })
 
   it('moves collateral', async () => {
-    expect(await ladle.stir(vaultFromId, vaultToId, WAD))
+    expect(await cauldron.stir(vaultFromId, vaultToId, WAD))
       .to.emit(cauldron, 'VaultStirred')
       .withArgs(vaultFromId, vaultToId, WAD)
     expect((await cauldron.balances(vaultFromId)).ink).to.equal(0)

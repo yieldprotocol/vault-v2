@@ -10,7 +10,9 @@ import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { deployContract } = waffle
 
-describe('Access Control', () => {
+describe('Access Control', function () {
+  this.timeout(0)
+
   let ownerAcc: SignerWithAddress
   let owner: string
   let otherAcc: SignerWithAddress

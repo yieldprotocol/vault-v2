@@ -2569,6 +2569,16 @@
     ethereumjs-util "^7.0.8"
     ethers "^5.0.7"
 
+"@yield-protocol/vault-interfaces@^2.0.5":
+  version "2.0.5"
+  resolved "https://registry.yarnpkg.com/@yield-protocol/vault-interfaces/-/vault-interfaces-2.0.5.tgz#9b8582dc02a72a4dbb4bba3c876c04861ad4fca7"
+  integrity sha512-vWenDdNIKQO4N3k50/Zsvmk2BWH7rTqgHmzY0jwy+RJnyOhzxz9KJxOmEVVHMK+Q7qblJyZWG+Kqxx1zLRYSng==
+
+"@yield-protocol/yieldspace-interfaces@^2.0.1":
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/@yield-protocol/yieldspace-interfaces/-/yieldspace-interfaces-2.0.1.tgz#3faf5c678724a3cbcd9fcc7523545e57bc1e9e42"
+  integrity sha512-RBjSFt1iGjDMULiS20QxEYf5BE94znnyM9n9nmqeIQ9I291MOENVVpFHvccI7rL7ItxG/LRTaxDmxgkxrsxUlQ==
+
 abab@^2.0.0:
   version "2.0.5"
   resolved "https://registry.yarnpkg.com/abab/-/abab-2.0.5.tgz#c0b678fb32d60fc1219c784d6a826fe385aeb79a"

@@ -13,7 +13,9 @@ import { expect } from 'chai'
 const { loadFixture } = waffle
 const timeMachine = require('ether-time-traveler')
 
-describe('Cauldron - Level', () => {
+describe('Cauldron - level', function () {
+  this.timeout(0)
+
   let snapshotId: any
   let ownerAcc: SignerWithAddress
   let owner: string
@@ -59,7 +61,7 @@ describe('Cauldron - Level', () => {
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
 
     await spotOracle.setSpot(RAY.mul(2))
-    await ladle.pour(vaultId, WAD, WAD)
+    await ladle.pour(vaultId, owner, WAD, WAD)
   })
 
   it('before maturity, level is ink * spot - art * ratio', async () => {
@@ -100,10 +102,10 @@ describe('Cauldron - Level', () => {
   })
 
   it("users can't borrow and become undercollateralized", async () => {
-    await expect(ladle.pour(vaultId, 0, WAD.mul(2))).to.be.revertedWith('Undercollateralized')
+    await expect(ladle.pour(vaultId, owner, 0, WAD.mul(2))).to.be.revertedWith('Undercollateralized')
   })
 
   it("users can't withdraw and become undercollateralized", async () => {
-    await expect(ladle.pour(vaultId, WAD.mul(-1), 0)).to.be.revertedWith('Undercollateralized')
+    await expect(ladle.pour(vaultId, owner, WAD.mul(-1), 0)).to.be.revertedWith('Undercollateralized')
   })
 })

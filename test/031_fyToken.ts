@@ -15,7 +15,9 @@ const timeMachine = require('ether-time-traveler')
 
 import { YieldEnvironment, WAD, RAY, THREE_MONTHS } from './shared/fixtures'
 
-describe('FYToken', () => {
+describe('FYToken', function () {
+  this.timeout(0)
+
   let snapshotId: any
   let env: YieldEnvironment
   let ownerAcc: SignerWithAddress
@@ -61,7 +63,7 @@ describe('FYToken', () => {
     await fyToken.grantRoles([id('mint(address,uint256)'), id('burn(address,uint256)')], owner)
 
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
-    await ladle.pour(vaultId, WAD, WAD) // This gives `owner` WAD fyToken
+    await ladle.pour(vaultId, owner, WAD, WAD) // This gives `owner` WAD fyToken
     await base.transfer(baseJoin.address, WAD.mul(2)) // This loads the base join to serve redemptions
   })
 
