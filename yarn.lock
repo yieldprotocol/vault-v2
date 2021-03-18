@@ -5800,11 +5800,6 @@ ethashjs@~0.0.7:
     ethereumjs-util "^7.0.2"
     miller-rabin "^4.0.0"
 
-ether-time-traveler@1.1.0:
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/ether-time-traveler/-/ether-time-traveler-1.1.0.tgz#8dbd21e741e44acadb5aa71f2cb725adf6bc7fcd"
-  integrity sha512-kSHw+HhhZiTyD1V6mIwB4FmzqzN7XI4+au6hrhiOIPwe0NKXCyXNXBm/1RORNWdN2opil6hXSWK93j0DQDb09A==
-
 ethereum-bloom-filters@^1.0.6:
   version "1.0.7"
   resolved "https://registry.yarnpkg.com/ethereum-bloom-filters/-/ethereum-bloom-filters-1.0.7.tgz#b7b80735e385dbb7f944ce6b4533e24511306060"

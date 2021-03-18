@@ -87,8 +87,8 @@ describe('Ladle - admin', function () {
     await ilkJoin.grantRoles([id('join(address,int128)')], ladle.address)
 
     // Deploy a series
-    const provider: BaseProvider = ethers.getDefaultProvider()
-    const now = (await provider.getBlock(provider.getBlockNumber())).timestamp
+    const provider: BaseProvider = await ethers.provider
+    const now = (await provider.getBlock(await provider.getBlockNumber())).timestamp
     fyToken = (await deployContract(ownerAcc, FYTokenArtifact, [
       rateOracle.address,
       baseJoin.address,
