@@ -96,6 +96,15 @@ describe('Ladle - pour', function () {
       expect((await cauldron.balances(vaultId)).ink).to.equal(0)
     })
 
+    it('users can pour to withdraw collateral to others', async () => {
+      await expect(ladle.pour(vaultId, other, WAD.mul(-1), 0))
+        .to.emit(cauldron, 'VaultPoured')
+        .withArgs(vaultId, seriesId, ilkId, WAD.mul(-1), 0)
+      expect(await ilk.balanceOf(ilkJoin.address)).to.equal(0)
+      expect((await cauldron.balances(vaultId)).ink).to.equal(0)
+      expect(await ilk.balanceOf(other)).to.equal(WAD)
+    })
+
     it('users can pour to borrow fyToken', async () => {
       await expect(ladle.pour(vaultId, owner, 0, WAD))
         .to.emit(cauldron, 'VaultPoured')
@@ -111,6 +120,17 @@ describe('Ladle - pour', function () {
       .withArgs(vaultId, seriesId, ilkId, WAD, WAD)
     expect(await ilk.balanceOf(ilkJoin.address)).to.equal(WAD)
     expect(await fyToken.balanceOf(owner)).to.equal(WAD)
+    expect((await cauldron.balances(vaultId)).ink).to.equal(WAD)
+    expect((await cauldron.balances(vaultId)).art).to.equal(WAD)
+  })
+
+  it('users can pour to post collateral from themselves and borrow fyToken to another', async () => {
+    const ilkBalanceBefore = await ilk.balanceOf(owner)
+    await expect(ladle.pour(vaultId, other, WAD, WAD))
+      .to.emit(cauldron, 'VaultPoured')
+      .withArgs(vaultId, seriesId, ilkId, WAD, WAD)
+    expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.sub(WAD))
+    expect(await fyToken.balanceOf(other)).to.equal(WAD)
     expect((await cauldron.balances(vaultId)).ink).to.equal(WAD)
     expect((await cauldron.balances(vaultId)).art).to.equal(WAD)
   })
