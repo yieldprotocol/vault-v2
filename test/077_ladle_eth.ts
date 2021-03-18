@@ -54,20 +54,11 @@ describe('Ladle - eth', function () {
   })
 
   it('sending ETH to a non-ETH vault reverts', async () => {
-    await expect(ladle.pour(ilkVaultId, owner, WAD, 0, { value: WAD }))
-      .to.be.revertedWith('Not an ETH Join')
+    await expect(ladle.pour(ilkVaultId, owner, WAD, 0, { value: WAD })).to.be.revertedWith('Not an ETH Join')
   })
 
-  /*
   it('sending ETH different to stated posted amount reverts', async () => {
-    await expect(ladle.pour(ethVaultId, owner, WAD, 0))
-      .to.be.revertedWith('Mismatched ETH amount')
-  })
-  */
-
-  it('sending ETH when withdrawing reverts', async () => {
-    await expect(ladle.pour(ethVaultId, owner, WAD.mul(-1), 0, { value: WAD }))
-      .to.be.revertedWith('ETH received when withdrawing')
+    await expect(ladle.pour(ethVaultId, owner, WAD, 0)).to.be.revertedWith('Mismatched ETH amount')
   })
 
   it('users can pour to post ETH', async () => {
@@ -76,5 +67,47 @@ describe('Ladle - eth', function () {
       .withArgs(ethVaultId, seriesId, ethId, WAD, 0)
     expect(await ethers.provider.getBalance(ethJoin.address)).to.equal(WAD)
     expect((await cauldron.balances(ethVaultId)).ink).to.equal(WAD)
+  })
+
+  it('users can serve to post ETH', async () => {
+    expect(await ladle.serve(ethVaultId, owner, WAD, WAD, 0, { value: WAD }))
+      .to.emit(cauldron, 'VaultPoured')
+      .withArgs(ethVaultId, seriesId, ethId, WAD, WAD)
+    expect(await ethers.provider.getBalance(ethJoin.address)).to.equal(WAD)
+    expect((await cauldron.balances(ethVaultId)).ink).to.equal(WAD)
+  })
+
+  describe('with ETH posted', async () => {
+    beforeEach(async () => {
+      await ladle.pour(ethVaultId, owner, WAD, 0, { value: WAD })
+    })
+
+    it('sending ETH when withdrawing reverts', async () => {
+      await expect(ladle.pour(ethVaultId, owner, WAD.mul(-1), 0, { value: WAD })).to.be.revertedWith(
+        'ETH received when withdrawing'
+      )
+    })
+
+    it('users can pour to withdraw ETH', async () => {
+      expect(await ladle.pour(ethVaultId, owner, WAD.mul(-1), 0))
+        .to.emit(cauldron, 'VaultPoured')
+        .withArgs(ethVaultId, seriesId, ethId, WAD.mul(-1), 0)
+      expect(await ethers.provider.getBalance(ethJoin.address)).to.equal(0)
+      expect((await cauldron.balances(ethVaultId)).ink).to.equal(0)
+    })
+  })
+
+  describe('with ETH posted and positive debt', async () => {
+    beforeEach(async () => {
+      await ladle.pour(ethVaultId, owner, WAD, WAD, { value: WAD })
+    })
+
+    it('users can close to post ETH', async () => {
+      expect(await ladle.close(ethVaultId, owner, WAD, WAD.mul(-1), { value: WAD }))
+        .to.emit(cauldron, 'VaultPoured')
+        .withArgs(ethVaultId, seriesId, ethId, WAD, WAD.mul(-1))
+      expect(await ethers.provider.getBalance(ethJoin.address)).to.equal(WAD.mul(2))
+      expect((await cauldron.balances(ethVaultId)).ink).to.equal(WAD.mul(2))
+    })
   })
 })

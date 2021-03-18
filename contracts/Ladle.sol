@@ -158,7 +158,7 @@ contract Ladle is AccessControl(), Batchable {
         external payable
         returns (DataTypes.Balances memory balances_)
     {
-        require (art <= 0, "Only repay debt");                                          // When repaying debt in `frob`, art is a negative value. Here is the same for consistency.
+        require (art < 0, "Only repay debt");                                          // When repaying debt in `frob`, art is a negative value. Here is the same for consistency.
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);                       // 1 CALL + 1 SLOAD
         require (vault_.owner == msg.sender, "Only vault owner");
 
@@ -180,7 +180,8 @@ contract Ladle is AccessControl(), Batchable {
         if (ink > 0) joins[vault_.ilkId].join{ value: msg.value }(payable(vault_.owner), ink);                      // Cost of `join`. `join` with a negative value means `exit`. | TODO: Consider checking the join exists
         if (ink < 0) joins[vault_.ilkId].join{ value: msg.value }(payable(to), ink);                                // Cost of `join`.
 
-        joins[baseId].join{ value: msg.value }(payable(msg.sender), int128(amt));                                    // Cost of `join`
+        // TODO: What if baseId is ETH? Maybe Ladle needs to know just for this use case and its variations (repayPartEarly, repayAllEarly)
+        joins[baseId].join(payable(msg.sender), int128(amt));                                    // Cost of `join`
     }
 
     /// @dev Change series and debt of a vault.
