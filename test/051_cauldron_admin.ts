@@ -19,7 +19,7 @@ const { deployContract } = waffle
 
 describe('Cauldron - admin', function () {
   this.timeout(0)
-  
+
   let ownerAcc: SignerWithAddress
   let owner: string
   let cauldron: Cauldron

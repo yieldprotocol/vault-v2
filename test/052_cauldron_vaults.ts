@@ -13,7 +13,7 @@ const { loadFixture } = waffle
 
 describe('Cauldron - vaults', function () {
   this.timeout(0)
-  
+
   let ownerAcc: SignerWithAddress
   let owner: string
   let otherAcc: SignerWithAddress

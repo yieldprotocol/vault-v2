@@ -13,7 +13,7 @@ import { YieldEnvironment, WAD } from './shared/fixtures'
 
 describe('Ladle - stir', function () {
   this.timeout(0)
-  
+
   let env: YieldEnvironment
   let ownerAcc: SignerWithAddress
   let otherAcc: SignerWithAddress

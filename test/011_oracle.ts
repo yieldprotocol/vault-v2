@@ -10,7 +10,7 @@ const { deployContract } = waffle
 
 describe('Oracle', function () {
   this.timeout(0)
-  
+
   let ownerAcc: SignerWithAddress
   let owner: string
   let oracle: Oracle

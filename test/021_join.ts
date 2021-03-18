@@ -13,7 +13,7 @@ const { deployContract } = waffle
 
 describe('Join', function () {
   this.timeout(0)
-  
+
   let ownerAcc: SignerWithAddress
   let owner: string
   let otherAcc: SignerWithAddress

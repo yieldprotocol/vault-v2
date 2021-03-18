@@ -17,7 +17,7 @@ import { YieldEnvironment, WAD, RAY, THREE_MONTHS } from './shared/fixtures'
 
 describe('Witch', function () {
   this.timeout(0)
-  
+
   let snapshotId: any
   let env: YieldEnvironment
   let ownerAcc: SignerWithAddress

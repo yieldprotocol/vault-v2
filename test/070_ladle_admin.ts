@@ -24,7 +24,7 @@ import { YieldEnvironment, WAD, RAY } from './shared/fixtures'
 
 describe('Ladle - admin', function () {
   this.timeout(0)
-  
+
   let env: YieldEnvironment
   let ownerAcc: SignerWithAddress
   let otherAcc: SignerWithAddress
@@ -100,10 +100,7 @@ describe('Ladle - admin', function () {
     await cauldron.addIlks(seriesId, [ilkId])
 
     // Deploy a pool
-    pool = (await deployContract(ownerAcc, PoolMockArtifact, [
-      base.address,
-      fyToken.address,
-    ])) as PoolMock
+    pool = (await deployContract(ownerAcc, PoolMockArtifact, [base.address, fyToken.address])) as PoolMock
   })
 
   describe('join admin', async () => {
