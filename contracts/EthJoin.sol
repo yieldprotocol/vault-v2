@@ -16,13 +16,12 @@ library Safe256 {
 contract EthJoin is IJoin, AccessControl() {
     using Safe256 for int256;
 
-    IERC20 public override token;
+    IERC20 constant public override token = IERC20(address(1));
     // bytes6  public asset;   // Collateral Type
     // uint    public dec;
     // uint    public live;  // Active Flag
 
-    constructor(IERC20 token_) {
-        token = token_;
+    constructor() {
         // asset = asset_;
         // dec = token.decimals();
         // live = 1;
