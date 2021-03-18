@@ -137,7 +137,7 @@ contract Ladle is AccessControl(), Batchable {
     /// @dev Add collateral and borrow from vault, pull assets from and push base of borrowed series to user.
     /// The base is obtained by borrowing fyToken and selling it in a pool.
     function serve(bytes12 vaultId, address to, int128 ink, int128 art, uint128 min)
-        external
+        external payable
         returns (DataTypes.Balances memory balances_, uint128 base_)
     {
         require (art > 0, "Only borrow");                                               // When borrowing with `frob`, art is a positive value.
