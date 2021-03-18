@@ -13,7 +13,7 @@ library Safe256 {
     }
 }
 
-contract Join is IJoin, AccessControl() {
+contract EthJoin is IJoin, AccessControl() {
     using Safe256 for int256;
 
     IERC20 public override token;
@@ -39,14 +39,14 @@ contract Join is IJoin, AccessControl() {
         auth
         returns (int128)
     {
-        require(msg.value == 0, "Not an ETH Join");
         if (amount > 0) {
             // require(live == 1, "GemJoin/not-live");
             // TODO: Consider best practices about safe transfers
-            require(token.transferFrom(user, address(this), int256(amount).u256()), "Failed pull");
+            require(msg.value == uint128(amount), "Failed pull");
         } else {
             // TODO: Consider best practices about safe transfers
-            require(token.transfer(user, (-int256(amount)).u256()), "Failed push"); 
+            require(msg.value == 0, "Sent Ether on push");
+            user.transfer((-int256(amount)).u256()); 
         }
         return amount;
     }
