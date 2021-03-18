@@ -41,10 +41,10 @@ contract EthJoin is IJoin, AccessControl() {
         if (amount > 0) {
             // require(live == 1, "GemJoin/not-live");
             // TODO: Consider best practices about safe transfers
-            require(msg.value == uint128(amount), "Failed pull");
+            require(msg.value == uint128(amount), "Mismatched ETH amount");
         } else {
             // TODO: Consider best practices about safe transfers
-            require(msg.value == 0, "Sent Ether on push");
+            require(msg.value == 0, "ETH received when withdrawing");
             user.transfer((-int256(amount)).u256()); 
         }
         return amount;

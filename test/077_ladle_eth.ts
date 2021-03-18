@@ -41,6 +41,7 @@ describe('Ladle - eth', function () {
   const ethId = ethers.utils.formatBytes32String('ETH').slice(0, 14)
 
   let ethVaultId: string
+  let ilkVaultId: string
 
   beforeEach(async () => {
     env = await loadFixture(fixture)
@@ -49,6 +50,24 @@ describe('Ladle - eth', function () {
     ethJoin = env.joins.get(ethId) as EthJoin
 
     ethVaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ethId) as string
+    ilkVaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
+  })
+
+  it('sending ETH to a non-ETH vault reverts', async () => {
+    await expect(ladle.pour(ilkVaultId, owner, WAD, 0, { value: WAD }))
+      .to.be.revertedWith('Not an ETH Join')
+  })
+
+  /*
+  it('sending ETH different to stated posted amount reverts', async () => {
+    await expect(ladle.pour(ethVaultId, owner, WAD, 0))
+      .to.be.revertedWith('Mismatched ETH amount')
+  })
+  */
+
+  it('sending ETH when withdrawing reverts', async () => {
+    await expect(ladle.pour(ethVaultId, owner, WAD.mul(-1), 0, { value: WAD }))
+      .to.be.revertedWith('ETH received when withdrawing')
   })
 
   it('users can pour to post ETH', async () => {
