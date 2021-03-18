@@ -46,6 +46,7 @@ describe('Ladle - vaults', function () {
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const otherIlkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const otherSeriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const otherVaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12))
   const emptyAssetId = '0x000000000000'
   const emptyAddress = ethers.utils.getAddress('0x0000000000000000000000000000000000000000')
 
@@ -59,6 +60,17 @@ describe('Ladle - vaults', function () {
     ladleFromOther = ladle.connect(otherAcc)
 
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
+  })
+
+  it('builds a vault', async () => {
+    await expect(ladle.build(otherVaultId, seriesId, ilkId))
+      .to.emit(cauldron, 'VaultBuilt')
+      .withArgs(otherVaultId, owner, seriesId, ilkId)
+
+    const vault = await cauldron.vaults(otherVaultId)
+    expect(vault.owner).to.equal(owner)
+    expect(vault.seriesId).to.equal(seriesId)
+    expect(vault.ilkId).to.equal(ilkId)
   })
 
   it('does not allow destroying vaults if not the vault owner', async () => {
