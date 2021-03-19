@@ -242,15 +242,4 @@ contract Ladle is AccessControl(), Batchable {
         weth.withdraw(ethTransferred);   // TODO: Test gas savings using WETH10 `withdrawTo`
         to.transfer(ethTransferred); /// TODO: Consider reentrancy and safe transfers
     }
-
-    // ---- `permit` management ----
-    /// @dev This helper function allows Ladle to execute `permit` as part of a multicall
-    function forwardPermit(
-        bytes6 assetId,
-        address owner, address spender, uint256 amount,
-        uint256 deadline, uint8 v, bytes32 r, bytes32 s
-    ) public {
-        IERC2612 asset = IERC2612(address(joins[assetId].token()));
-        asset.permit(owner, spender, amount, deadline, v, r, s);
-    }
 }
