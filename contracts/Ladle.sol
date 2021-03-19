@@ -212,15 +212,15 @@ contract Ladle is AccessControl(), Batchable {
     // ---- Call forwarding ----
     // Call forwarding is expected to be most useful in conjunction with `batch`
 
-    event ForwardSet(address target, bytes4 sighash);
+    event ForwardSet(address target, bytes4 sighash, bool allowed);
 
     /// @dev To which contracts, and which functions, can callers ask `Ladle` to forward a call
     mapping (address => mapping (bytes4 => bool)) public forwards;
 
     /// @dev Allow users to forward through `Ladle` a `sighash` call to `target` 
-    function setForward(address target, bytes4 sighash) public auth {
-        forwards[target][sighash] = true;
-        emit ForwardSet(target, sighash);
+    function setForward(address target, bytes4 sighash, bool allowed) public auth {
+        forwards[target][sighash] = allowed;
+        emit ForwardSet(target, sighash, allowed);
     }
 
     /// @dev Have `Ladle` call on `target` the `sighash` function with `params` parameters.
