@@ -1,8 +1,9 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 
 import { Cauldron } from '../typechain/Cauldron'
-import { EthJoin } from '../typechain/EthJoin'
+import { Join } from '../typechain/Join'
 import { Ladle } from '../typechain/Ladle'
+import { WETH9Mock } from '../typechain/WETH9Mock'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
@@ -19,8 +20,9 @@ describe('Ladle - eth', function () {
   let owner: string
   let other: string
   let cauldron: Cauldron
-  let ethJoin: EthJoin
+  let wethJoin: Join
   let ladle: Ladle
+  let weth: WETH9Mock
 
   async function fixture() {
     return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId], [seriesId])
@@ -47,29 +49,35 @@ describe('Ladle - eth', function () {
     env = await loadFixture(fixture)
     cauldron = env.cauldron
     ladle = env.ladle
-    ethJoin = env.joins.get(ethId) as EthJoin
+    wethJoin = env.joins.get(ethId) as Join
+    weth = await ethers.getContractAt('WETH9Mock', await wethJoin.token()) as WETH9Mock
+
+    await ladle.setWeth(weth.address) // TODO: Test setWeth
 
     ethVaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ethId) as string
     ilkVaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
   })
 
-  it('sending ETH to a non-ETH vault reverts', async () => {
-    await expect(ladle.pour(ilkVaultId, owner, WAD, 0, { value: WAD })).to.be.revertedWith('Not an ETH Join')
+  it('pouring without sending ETH first reverts', async () => {
+    await expect(ladle.pour(ethVaultId, owner, WAD, 0)).to.be.revertedWith('ERC20: Insufficient approval')
   })
 
-  it('sending ETH different to stated posted amount reverts', async () => {
-    await expect(ladle.pour(ethVaultId, owner, WAD, 0)).to.be.revertedWith('Mismatched ETH amount')
-  })
-
-  it('users can pour to post ETH', async () => {
-    expect(await ladle.pour(ethVaultId, owner, WAD, 0, { value: WAD }))
+  it('users can transfer ETH then pour', async () => {
+    expect(await ladle.joinEther({ value: WAD }))
+    expect(await ladle.pour(ethVaultId, owner, WAD, 0))
       .to.emit(cauldron, 'VaultPoured')
       .withArgs(ethVaultId, seriesId, ethId, WAD, 0)
-    expect(await ethers.provider.getBalance(ethJoin.address)).to.equal(WAD)
+    expect(await weth.balanceOf(wethJoin.address)).to.equal(WAD)
     expect((await cauldron.balances(ethVaultId)).ink).to.equal(WAD)
   })
 
+  it('users can transfer ETH then pour in a single transaction with multicall', async () => {
+    
+  })
+
+  /*
   it('users can serve to post ETH', async () => {
+    ownerAcc.transfer(ethJoin.address, WAD)
     expect(await ladle.serve(ethVaultId, owner, WAD, WAD, 0, { value: WAD }))
       .to.emit(cauldron, 'VaultPoured')
       .withArgs(ethVaultId, seriesId, ethId, WAD, WAD)
@@ -79,13 +87,8 @@ describe('Ladle - eth', function () {
 
   describe('with ETH posted', async () => {
     beforeEach(async () => {
+      ownerAcc.transfer(ethJoin.address, WAD)
       await ladle.pour(ethVaultId, owner, WAD, 0, { value: WAD })
-    })
-
-    it('sending ETH when withdrawing reverts', async () => {
-      await expect(ladle.pour(ethVaultId, owner, WAD.mul(-1), 0, { value: WAD })).to.be.revertedWith(
-        'ETH received when withdrawing'
-      )
     })
 
     it('users can pour to withdraw ETH', async () => {
@@ -110,4 +113,5 @@ describe('Ladle - eth', function () {
       expect((await cauldron.balances(ethVaultId)).ink).to.equal(WAD.mul(2))
     })
   })
+  */
 })

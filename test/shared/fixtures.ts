@@ -6,20 +6,20 @@ import { id } from '@yield-protocol/utils'
 import CauldronArtifact from '../../artifacts/contracts/Cauldron.sol/Cauldron.json'
 import FYTokenArtifact from '../../artifacts/contracts/FYToken.sol/FYToken.json'
 import ERC20MockArtifact from '../../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
+import WETH9MockArtifact from '../../artifacts/contracts/mocks/WETH9Mock.sol/WETH9Mock.json'
 import PoolMockArtifact from '../../artifacts/contracts/mocks/PoolMock.sol/PoolMock.json'
 import OracleMockArtifact from '../../artifacts/contracts/mocks/OracleMock.sol/OracleMock.json'
 import JoinArtifact from '../../artifacts/contracts/Join.sol/Join.json'
-import EthJoinArtifact from '../../artifacts/contracts/EthJoin.sol/EthJoin.json'
 import LadleArtifact from '../../artifacts/contracts/Ladle.sol/Ladle.json'
 import WitchArtifact from '../../artifacts/contracts/Witch.sol/Witch.json'
 
 import { Cauldron } from '../../typechain/Cauldron'
 import { FYToken } from '../../typechain/FYToken'
 import { ERC20Mock } from '../../typechain/ERC20Mock'
+import { WETH9Mock } from '../../typechain/WETH9Mock'
 import { PoolMock } from '../../typechain/PoolMock'
 import { OracleMock } from '../../typechain/OracleMock'
 import { Join } from '../../typechain/Join'
-import { EthJoin } from '../../typechain/EthJoin'
 import { Ladle } from '../../typechain/Ladle'
 import { Witch } from '../../typechain/Witch'
 
@@ -120,7 +120,8 @@ export class YieldEnvironment {
     await ladle.grantRoles([
       id('addJoin(bytes6,address)'),
       id('addPool(bytes6,address)'),
-      id('_join(bytes12,address,int128,int128)')
+      id('_join(bytes12,address,int128,int128)'),
+      id('setWeth(address)')
     ], ownerAdd)
 
     // ==== Add assets and joins ====
@@ -148,11 +149,14 @@ export class YieldEnvironment {
     const ilkIds = assetIds.slice(1)
     const base = assets.get(baseId) as ERC20Mock
 
-    // Add the EthJoin
+    // Add Ether as an asset
     const ethId = ethers.utils.formatBytes32String('ETH').slice(0, 14)
     const ethAddress = ethers.utils.getAddress('0x0000000000000000000000000000000000000001')
     await cauldron.addAsset(ethId, ethAddress)
-    const join = (await deployContract(owner, EthJoinArtifact, [])) as EthJoin
+
+    // Deploy WETH9 and the WETH9 Join
+    const weth = (await deployContract(owner, WETH9MockArtifact, [])) as WETH9Mock
+    const join = (await deployContract(owner, JoinArtifact, [weth.address])) as Join
     joins.set(ethId, join)
     await ladle.addJoin(ethId, join.address)
     await join.grantRoles([id('join(address,int128)')], ladle.address)

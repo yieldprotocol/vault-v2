@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 import "@yield-protocol/utils/contracts/token/IERC20.sol";
+import "@yield-protocol/utils/contracts/token/IERC2612.sol";
 import "@yield-protocol/yieldspace-interfaces/IPool.sol";
 import "@yield-protocol/vault-interfaces/IFYToken.sol";
-import "./IJoin.sol";
-import "./ICauldron.sol";
+import "@yield-protocol/vault-interfaces/IJoin.sol";
+import "@yield-protocol/vault-interfaces/ICauldron.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
 import "./AccessControl.sol";
 import "./Batchable.sol";
+import "./IWETH9.sol";
 
 
 library RMath { // Fixed point arithmetic in Ray units
@@ -38,24 +40,24 @@ contract Ladle is AccessControl(), Batchable {
         cauldron = cauldron_;
     }
 
-    /// @dev Add a new Join for an Asset. There can be only one Join per Asset. Until a Join is added, no tokens of that Asset can be posted or withdrawn.
+    /// @dev Add a new Join for an Asset, or replace an existing one for a new one.
+    /// There can be only one Join per Asset. Until a Join is added, no tokens of that Asset can be posted or withdrawn.
     function addJoin(bytes6 assetId, IJoin join)
         external
         auth
     {
         require (cauldron.assets(assetId) != IERC20(address(0)), "Asset not found");    // 1 CALL + 1 SLOAD
-        require (joins[assetId] == IJoin(address(0)), "One Join per Asset");            // 1 SLOAD
         joins[assetId] = join;                                                          // 1 SSTORE
         emit JoinAdded(assetId, address(join));
     }
 
-    /// @dev Add a new Pool for a Series. There can be only one Pool per Series. Until a Pool is added, it is not possible to borrow Base.
+    /// @dev Add a new Pool for a Series, or replace an existing one for a new one.
+    /// There can be only one Pool per Series. Until a Pool is added, it is not possible to borrow Base.
     function addPool(bytes6 seriesId, IPool pool)
         external
         auth
     {
         require (cauldron.series(seriesId).fyToken != IFYToken(address(0)), "Series not found");    // 1 CALL + 1 SLOAD
-        require (pools[seriesId] == IPool(address(0)), "One Pool per Series");            // 1 SLOAD
         pools[seriesId] = pool;                                                          // 1 SSTORE
         emit PoolAdded(seriesId, address(pool));
     }
@@ -111,7 +113,7 @@ contract Ladle is AccessControl(), Batchable {
     /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
     /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
     function pour(bytes12 vaultId, address to, int128 ink, int128 art)
-        public payable
+        public
         returns (DataTypes.Balances memory balances_)
     {
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);                       // 1 CALL + 1 SLOAD
@@ -119,8 +121,8 @@ contract Ladle is AccessControl(), Batchable {
 
         balances_ = cauldron.pour(vaultId, ink, art);                                  // Cost of `cauldron.pour` call.
 
-        if (ink > 0) joins[vault_.ilkId].join{ value: msg.value }(payable(vault_.owner), ink);
-        if (ink < 0) joins[vault_.ilkId].join{ value: msg.value }(payable(to), ink);            // It is the Join itself that determines whether passing Ether is right, Ladle must pass it on with no judgement
+        if (ink > 0) joins[vault_.ilkId].join(vault_.owner, ink);
+        if (ink < 0) joins[vault_.ilkId].join(to, ink);            // It is the Join itself that determines whether passing Ether is right, Ladle must pass it on with no judgement
 
         if (art != 0) {
             DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);         // 1 CALL + 1 SLOAD
@@ -137,7 +139,7 @@ contract Ladle is AccessControl(), Batchable {
     /// @dev Add collateral and borrow from vault, pull assets from and push base of borrowed series to user.
     /// The base is obtained by borrowing fyToken and selling it in a pool.
     function serve(bytes12 vaultId, address to, int128 ink, int128 art, uint128 min)
-        external payable
+        external
         returns (DataTypes.Balances memory balances_, uint128 base_)
     {
         require (art > 0, "Only borrow");                                               // When borrowing with `frob`, art is a positive value.
@@ -155,7 +157,7 @@ contract Ladle is AccessControl(), Batchable {
     /// The debt to repay must be entered as a negative number, as with `pour`.
     /// Debt cannot be acquired with this function.
     function close(bytes12 vaultId, address to, int128 ink, int128 art)
-        external payable
+        external
         returns (DataTypes.Balances memory balances_)
     {
         require (art < 0, "Only repay debt");                                          // When repaying debt in `frob`, art is a negative value. Here is the same for consistency.
@@ -177,11 +179,10 @@ contract Ladle is AccessControl(), Batchable {
 
         balances_ = cauldron.pour(vaultId, ink, art);                                       // Cost of `pour`
 
-        if (ink > 0) joins[vault_.ilkId].join{ value: msg.value }(payable(vault_.owner), ink);                      // Cost of `join`. `join` with a negative value means `exit`. | TODO: Consider checking the join exists
-        if (ink < 0) joins[vault_.ilkId].join{ value: msg.value }(payable(to), ink);                                // Cost of `join`.
+        if (ink > 0) joins[vault_.ilkId].join(vault_.owner, ink);                      // Cost of `join`. `join` with a negative value means `exit`. | TODO: Consider checking the join exists
+        if (ink < 0) joins[vault_.ilkId].join(to, ink);                                // Cost of `join`.
 
-        // TODO: What if baseId is ETH? Maybe Ladle needs to know just for this use case and its variations (repayPartEarly, repayAllEarly)
-        joins[baseId].join(payable(msg.sender), int128(amt));                                    // Cost of `join`
+        joins[baseId].join(msg.sender, int128(amt));                                    // Cost of `join`
     }
 
     /// @dev Change series and debt of a vault.
@@ -199,14 +200,54 @@ contract Ladle is AccessControl(), Batchable {
     }
 
     /// @dev Allow authorized contracts to move assets through the ladle
+    // TODO: Come up with a different name, without underscore
     function _join(bytes12 vaultId, address user, int128 ink, int128 art)
-        external payable
+        external
         auth
     {
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);                       // 1 CALL + 1 SLOAD
         DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);             // 1 CALL + 1 SLOAD
 
-        if (ink != 0) joins[vault_.ilkId].join{ value: msg.value }(payable(user), ink);                              // 1 SLOAD + Cost of `join`
-        if (art != 0) joins[series_.baseId].join{ value: msg.value }(payable(user), art);                            // 1 SLOAD + Cost of `join`
+        if (ink != 0) joins[vault_.ilkId].join(user, ink);                              // 1 SLOAD + Cost of `join`
+        if (art != 0) joins[series_.baseId].join(user, art);                            // 1 SLOAD + Cost of `join`
+    }
+
+    // ---- Ether management ----
+
+    IWETH9 public weth;
+    IJoin public wethJoin;
+    bytes6 public constant ETHER_ID = "ETH";
+
+    function setWeth(IWETH9 weth_) public auth {
+        require(address(joins[ETHER_ID].token()) == address(weth_), "Mismatched Ether Join");
+        wethJoin = joins[ETHER_ID];
+        weth = weth_;
+    }
+
+    /// @dev Accept Ether, wrap it and forward it to the WethJoin
+    /// This function should be called first in a multicall, and the Join should keep track of stored reserves
+    function joinEther() public payable returns (uint256 ethTransferred){
+        ethTransferred = address(this).balance;
+        weth.deposit{ value: ethTransferred }();   // TODO: Test gas savings using WETH10 `depositTo`
+        weth.transfer(address(wethJoin), ethTransferred);
+    }
+
+    /// @dev Unwrap Wrapped Ether held by this Ladle, and send the Ether
+    /// This function should be called last in a multicall, and the Ladle should have no reason to keep an WETH balance
+    function exitEther(address payable to) public returns (uint256 ethTransferred) {
+        ethTransferred = weth.balanceOf(address(this));
+        weth.withdraw(ethTransferred);   // TODO: Test gas savings using WETH10 `withdrawTo`
+        to.transfer(ethTransferred); /// TODO: Consider reentrancy and safe transfers
+    }
+
+    // ---- `permit` management ----
+    /// @dev This helper function allows Ladle to execute `permit` as part of a multicall
+    function forwardPermit(
+        bytes6 assetId,
+        address owner, address spender, uint256 amount,
+        uint256 deadline, uint8 v, bytes32 r, bytes32 s
+    ) public {
+        IERC2612 asset = IERC2612(address(joins[assetId].token()));
+        asset.permit(owner, spender, amount, deadline, v, r, s);
     }
 }
