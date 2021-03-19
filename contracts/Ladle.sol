@@ -218,6 +218,9 @@ contract Ladle is AccessControl(), Batchable {
     IJoin public wethJoin;
     bytes6 public constant ETHER_ID = "ETH";
 
+    /// @dev The WETH9 contract will send ether to BorrowProxy on `weth.withdraw` using this function.
+    receive() external payable { }
+
     function setWeth(IWETH9 weth_) public auth {
         require(address(joins[ETHER_ID].token()) == address(weth_), "Mismatched Ether Join");
         wethJoin = joins[ETHER_ID];
