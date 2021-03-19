@@ -208,4 +208,30 @@ contract Ladle is AccessControl(), Batchable {
         if (ink != 0) joins[vault_.ilkId].join(user, ink);                              // 1 SLOAD + Cost of `join`
         if (art != 0) joins[series_.baseId].join(user, art);                            // 1 SLOAD + Cost of `join`
     }
+
+    // ---- Call forwarding ----
+    // Call forwarding is expected to be most useful in conjunction with `batch`
+
+    event ForwardSet(address target, bytes4 sighash);
+
+    /// @dev To which contracts, and which functions, can callers ask `Ladle` to forward a call
+    mapping (address => mapping (bytes4 => bool)) public forwards;
+
+    /// @dev Allow users to forward through `Ladle` a `sighash` call to `target` 
+    function setForward(address target, bytes4 sighash) public auth {
+        forwards[target][sighash] = true;
+        emit ForwardSet(target, sighash);
+    }
+
+    /// @dev Have `Ladle` call on `target` the `sighash` function with `params` parameters.
+    /// The `target` and `sighash` combination must have been approved by governance with `setForward`.
+    /// If `revertOnFail` is set to false, any reverts in the target execution won't make the transaction revert.
+    function forwardCall(address target, bytes4 sighash, bytes calldata params, bool revertOnFail)
+        payable
+        returns (bool success, bytes memory result)
+    {
+        require (forwards[target][sighash], "Forward not allowed");
+        (success, result) = target.call{ value: msg.value }(sighash, params);
+        require(success || !revertOnFail, _getRevertMsg(result)); // _getRevertMsg comes from Batchable.sol
+    }
 }
