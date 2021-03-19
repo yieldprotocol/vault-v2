@@ -71,14 +71,12 @@ describe('Ladle - eth', function () {
     expect((await cauldron.balances(ethVaultId)).ink).to.equal(WAD)
   })
 
-  /*
   it('users can transfer ETH then pour in a single transaction with multicall', async () => {
     const joinEtherCall = ladle.interface.encodeFunctionData('joinEther', [])
     const pourCall = ladle.interface.encodeFunctionData('pour', [ethVaultId, owner, WAD, 0])
     await ladle.batch([joinEtherCall, pourCall], true)
   })
-  */
-
+  
   it('users can transfer ETH then serve', async () => {
     expect(await ladle.joinEther({ value: WAD }))
     expect(await ladle.serve(ethVaultId, owner, WAD, WAD, 0))
