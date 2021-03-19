@@ -10,14 +10,12 @@ import { Ladle } from '../typechain/Ladle'
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { loadFixture } = waffle
-const timeMachine = require('ether-time-traveler')
 
 import { YieldEnvironment, WAD, RAY, THREE_MONTHS } from './shared/fixtures'
 
 describe('Ladle - close', function () {
   this.timeout(0)
 
-  let snapshotId: any
   let env: YieldEnvironment
   let ownerAcc: SignerWithAddress
   let otherAcc: SignerWithAddress
@@ -40,17 +38,12 @@ describe('Ladle - close', function () {
   }
 
   before(async () => {
-    snapshotId = await timeMachine.takeSnapshot(ethers.provider)
     const signers = await ethers.getSigners()
     ownerAcc = signers[0]
     owner = await ownerAcc.getAddress()
 
     otherAcc = signers[1]
     other = await otherAcc.getAddress()
-  })
-
-  after(async () => {
-    await timeMachine.revertToSnapshot(ethers.provider, snapshotId)
   })
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
@@ -134,7 +127,7 @@ describe('Ladle - close', function () {
     beforeEach(async () => {
       await spotOracle.setSpot(RAY.mul(1))
       await rateOracle.setSpot(RAY.mul(1))
-      await timeMachine.advanceTimeAndBlock(ethers.provider, THREE_MONTHS)
+      await ethers.provider.send('evm_mine', [(await fyToken.maturity()).toNumber()])
       await rateOracle.record(await fyToken.maturity())
       await rateOracle.setSpot(accrual) // Since spot was 1 when recorded at maturity, accrual is equal to the current spot
     })

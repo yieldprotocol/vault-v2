@@ -174,8 +174,8 @@ export class YieldEnvironment {
     const chiOracle = (await deployContract(owner, OracleMockArtifact, [])) as OracleMock // Not storing this one in `oracles`, you can retrieve it from the fyToken
     await chiOracle.setSpot(RAY)
     oracles.set('chi', chiOracle)
-    const provider: BaseProvider = ethers.getDefaultProvider()
-    const now = (await provider.getBlock(provider.getBlockNumber())).timestamp
+    const provider: BaseProvider = await ethers.provider
+    const now = (await provider.getBlock(await provider.getBlockNumber())).timestamp
     let count: number = 1
     const baseJoin = joins.get(baseId) as Join
     for (let seriesId of seriesIds) {

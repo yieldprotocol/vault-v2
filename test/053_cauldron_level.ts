@@ -11,12 +11,10 @@ import { YieldEnvironment, WAD, RAY, THREE_MONTHS } from './shared/fixtures'
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { loadFixture } = waffle
-const timeMachine = require('ether-time-traveler')
 
 describe('Cauldron - level', function () {
   this.timeout(0)
 
-  let snapshotId: any
   let ownerAcc: SignerWithAddress
   let owner: string
   let env: YieldEnvironment
@@ -38,14 +36,9 @@ describe('Cauldron - level', function () {
   }
 
   before(async () => {
-    snapshotId = await timeMachine.takeSnapshot(ethers.provider)
     const signers = await ethers.getSigners()
     ownerAcc = signers[0]
     owner = await ownerAcc.getAddress()
-  })
-
-  after(async () => {
-    await timeMachine.revertToSnapshot(ethers.provider, snapshotId)
   })
 
   beforeEach(async function () {
@@ -81,7 +74,7 @@ describe('Cauldron - level', function () {
   it('after maturity, level is ink * spot - art * accrual * ratio', async () => {
     await spotOracle.setSpot(RAY.mul(1))
     await rateOracle.setSpot(RAY.mul(1))
-    await timeMachine.advanceTimeAndBlock(ethers.provider, THREE_MONTHS)
+    await ethers.provider.send('evm_mine', [(await fyToken.maturity()).toNumber()])
     await rateOracle.record(await fyToken.maturity())
 
     const ink = (await cauldron.balances(vaultId)).ink

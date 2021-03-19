@@ -11,14 +11,12 @@ import { Ladle } from '../typechain/Ladle'
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { deployContract, loadFixture } = waffle
-const timeMachine = require('ether-time-traveler')
 
 import { YieldEnvironment, WAD, RAY, THREE_MONTHS } from './shared/fixtures'
 
 describe('FYToken', function () {
   this.timeout(0)
 
-  let snapshotId: any
   let env: YieldEnvironment
   let ownerAcc: SignerWithAddress
   let owner: string
@@ -34,14 +32,9 @@ describe('FYToken', function () {
   }
 
   before(async () => {
-    snapshotId = await timeMachine.takeSnapshot(ethers.provider) // `loadFixture` messes up with the chain state, so we revert to a clean state after each test file.
     const signers = await ethers.getSigners()
     ownerAcc = signers[0]
     owner = await ownerAcc.getAddress()
-  })
-
-  after(async () => {
-    await timeMachine.revertToSnapshot(ethers.provider, snapshotId) // Once all tests are done, revert the chain
   })
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
@@ -77,7 +70,7 @@ describe('FYToken', function () {
 
   describe('after maturity', async () => {
     beforeEach(async () => {
-      await timeMachine.advanceTimeAndBlock(ethers.provider, THREE_MONTHS)
+      await ethers.provider.send('evm_mine', [(await fyToken.maturity()).toNumber()])
     })
 
     it('matures by recording the chi value', async () => {

@@ -6,14 +6,12 @@ import { Ladle } from '../typechain/Ladle'
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { loadFixture } = waffle
-const timeMachine = require('ether-time-traveler')
 
 import { YieldEnvironment, WAD, RAY, THREE_MONTHS } from './shared/fixtures'
 
 describe('Ladle - vaults', function () {
   this.timeout(0)
 
-  let snapshotId: any
   let env: YieldEnvironment
   let ownerAcc: SignerWithAddress
   let otherAcc: SignerWithAddress
@@ -28,17 +26,12 @@ describe('Ladle - vaults', function () {
   }
 
   before(async () => {
-    snapshotId = await timeMachine.takeSnapshot(ethers.provider)
     const signers = await ethers.getSigners()
     ownerAcc = signers[0]
     owner = await ownerAcc.getAddress()
 
     otherAcc = signers[1]
     other = await otherAcc.getAddress()
-  })
-
-  after(async () => {
-    await timeMachine.revertToSnapshot(ethers.provider, snapshotId)
   })
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))

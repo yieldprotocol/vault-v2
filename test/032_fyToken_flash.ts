@@ -8,7 +8,6 @@ import { FlashBorrower } from '../typechain/FlashBorrower'
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { deployContract, loadFixture } = waffle
-const timeMachine = require('ether-time-traveler')
 const MAX = ethers.constants.MaxUint256
 
 import { YieldEnvironment, WAD } from './shared/fixtures'
@@ -16,7 +15,6 @@ import { YieldEnvironment, WAD } from './shared/fixtures'
 describe('FYToken - flash', function () {
   this.timeout(0)
 
-  let snapshotId: any
   let env: YieldEnvironment
   let ownerAcc: SignerWithAddress
   let owner: string
@@ -28,14 +26,9 @@ describe('FYToken - flash', function () {
   }
 
   before(async () => {
-    snapshotId = await timeMachine.takeSnapshot(ethers.provider) // `loadFixture` messes up with the chain state, so we revert to a clean state after each test file.
     const signers = await ethers.getSigners()
     ownerAcc = signers[0]
     owner = await ownerAcc.getAddress()
-  })
-
-  after(async () => {
-    await timeMachine.revertToSnapshot(ethers.provider, snapshotId) // Once all tests are done, revert the chain
   })
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
