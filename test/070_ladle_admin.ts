@@ -114,16 +114,6 @@ describe('Ladle - admin', function () {
         .withArgs(ilkId, ilkJoin.address)
       expect(await ladle.joins(ilkId)).to.equal(ilkJoin.address)
     })
-
-    describe('with a join added', async () => {
-      beforeEach(async () => {
-        await ladle.addJoin(ilkId, ilkJoin.address)
-      })
-
-      it('only one join per asset', async () => {
-        await expect(ladle.addJoin(ilkId, ilkJoin.address)).to.be.revertedWith('One Join per Asset')
-      })
-    })
   })
 
   describe('pool admin', async () => {
@@ -136,16 +126,6 @@ describe('Ladle - admin', function () {
         .to.emit(ladle, 'PoolAdded')
         .withArgs(seriesId, pool.address)
       expect(await ladle.pools(seriesId)).to.equal(pool.address)
-    })
-
-    describe('with a pool added', async () => {
-      beforeEach(async () => {
-        await ladle.addPool(seriesId, pool.address)
-      })
-
-      it('only one pool per asset', async () => {
-        await expect(ladle.addPool(seriesId, pool.address)).to.be.revertedWith('One Pool per Series')
-      })
     })
   })
 })

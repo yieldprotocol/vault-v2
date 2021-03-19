@@ -50,7 +50,7 @@ describe('Ladle - eth', function () {
     cauldron = env.cauldron
     ladle = env.ladle
     wethJoin = env.joins.get(ethId) as Join
-    weth = await ethers.getContractAt('WETH9Mock', await wethJoin.token()) as WETH9Mock
+    weth = (await ethers.getContractAt('WETH9Mock', await wethJoin.token())) as WETH9Mock
 
     await ladle.setWeth(weth.address) // TODO: Test setWeth
 
@@ -71,9 +71,7 @@ describe('Ladle - eth', function () {
     expect((await cauldron.balances(ethVaultId)).ink).to.equal(WAD)
   })
 
-  it('users can transfer ETH then pour in a single transaction with multicall', async () => {
-    
-  })
+  it('users can transfer ETH then pour in a single transaction with multicall', async () => {})
 
   /*
   it('users can serve to post ETH', async () => {

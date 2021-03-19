@@ -32,18 +32,19 @@ contract Join is IJoin, AccessControl() {
         auth
         returns (int128)
     {
-        if (amount > 0) {
+        if (amount >= 0) {
             // require(live == 1, "GemJoin/not-live");
             uint256 amount_ = uint128(amount);
             uint256 initialBalance = token.balanceOf(address(this));
             uint256 surplus = initialBalance - storedBalance;
-            storedBalance += amount_;
-            if (surplus < amount_)
-                require(token.transferFrom(user, address(this), amount_ - surplus), "Failed transfer"); // TODO: Consider best practices about safe transfers
+            uint256 required = surplus >= amount_ ? 0 : amount_ - surplus;
+            storedBalance = initialBalance + required;
+            if (required > 0) {
+                require(token.transferFrom(user, address(this), required), "Failed transfer"); // TODO: Consider best practices about safe transfers
+            }
         } else {
             uint256 amount_ = uint128(-amount);
-            storedBalance -= amount_;
-            // TODO: Consider best practices about safe transfers
+            storedBalance -= amount_;                                  // To withdraw surplus tokens we can do a `join` for zero tokens first.
             require(token.transfer(user, amount_), "Failed transfer"); // TODO: Consider best practices about safe transfers
         }
         return amount;
