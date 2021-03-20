@@ -76,7 +76,7 @@ describe('Ladle - eth', function () {
     const pourCall = ladle.interface.encodeFunctionData('pour', [ethVaultId, owner, WAD, 0])
     await ladle.batch([joinEtherCall, pourCall], true, { value: WAD })
   })
-  
+
   it('users can transfer ETH then serve', async () => {
     expect(await ladle.joinEther({ value: WAD }))
     expect(await ladle.serve(ethVaultId, owner, WAD, WAD, 0))
