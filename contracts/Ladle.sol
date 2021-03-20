@@ -64,14 +64,14 @@ contract Ladle is AccessControl(), Batchable {
 
     /// @dev Create a new vault, linked to a series (and therefore underlying) and a collateral
     function build(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
-        public
+        public payable
     {
         cauldron.build(msg.sender, vaultId, seriesId, ilkId);
     }
 
     /// @dev Destroy an empty vault. Used to recover gas costs.
     function destroy(bytes12 vaultId)
-        public
+        public payable
     {
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);                       // 1 CALL + 1 SLOAD
         require (vault_.owner == msg.sender, "Only vault owner");
@@ -80,7 +80,7 @@ contract Ladle is AccessControl(), Batchable {
 
     /// @dev Change a vault series or collateral.
     function tweak(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
-        public
+        public payable
     {
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);                       // 1 CALL + 1 SLOAD
         require (vault_.owner == msg.sender, "Only vault owner");
@@ -90,7 +90,7 @@ contract Ladle is AccessControl(), Batchable {
 
     /// @dev Give a vault to another user.
     function give(bytes12 vaultId, address receiver)
-        public
+        public payable
     {
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);                       // 1 CALL + 1 SLOAD
         require (vault_.owner == msg.sender, "Only vault owner");
@@ -99,7 +99,7 @@ contract Ladle is AccessControl(), Batchable {
 
     /// @dev Move collateral between vaults.
     function stir(bytes12 from, bytes12 to, uint128 ink)
-        public
+        public payable
         returns (DataTypes.Balances memory, DataTypes.Balances memory)
     {
         DataTypes.Vault memory vaultFrom = cauldron.vaults(from);                       // 1 CALL + 1 SLOAD
@@ -113,7 +113,7 @@ contract Ladle is AccessControl(), Batchable {
     /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
     /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
     function pour(bytes12 vaultId, address to, int128 ink, int128 art)
-        public
+        public payable
         returns (DataTypes.Balances memory balances_)
     {
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);                       // 1 CALL + 1 SLOAD
@@ -139,7 +139,7 @@ contract Ladle is AccessControl(), Batchable {
     /// @dev Add collateral and borrow from vault, pull assets from and push base of borrowed series to user.
     /// The base is obtained by borrowing fyToken and selling it in a pool.
     function serve(bytes12 vaultId, address to, int128 ink, int128 art, uint128 min)
-        external
+        external payable
         returns (DataTypes.Balances memory balances_, uint128 base_)
     {
         require (art > 0, "Only borrow");                                               // When borrowing with `frob`, art is a positive value.
@@ -157,7 +157,7 @@ contract Ladle is AccessControl(), Batchable {
     /// The debt to repay must be entered as a negative number, as with `pour`.
     /// Debt cannot be acquired with this function.
     function close(bytes12 vaultId, address to, int128 ink, int128 art)
-        external
+        external payable
         returns (DataTypes.Balances memory balances_)
     {
         require (art < 0, "Only repay debt");                                          // When repaying debt in `frob`, art is a negative value. Here is the same for consistency.
@@ -187,7 +187,7 @@ contract Ladle is AccessControl(), Batchable {
 
     /// @dev Change series and debt of a vault.
     function roll(bytes12 vaultId, bytes6 seriesId, int128 art)
-        public
+        public payable
         returns (uint128)
     {
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);                       // 1 CALL + 1 SLOAD
@@ -229,7 +229,10 @@ contract Ladle is AccessControl(), Batchable {
 
     /// @dev Accept Ether, wrap it and forward it to the WethJoin
     /// This function should be called first in a multicall, and the Join should keep track of stored reserves
-    function joinEther() public payable returns (uint256 ethTransferred){
+    function joinEther()
+        public payable
+        returns (uint256 ethTransferred)
+    {
         ethTransferred = address(this).balance;
         weth.deposit{ value: ethTransferred }();   // TODO: Test gas savings using WETH10 `depositTo`
         weth.transfer(address(wethJoin), ethTransferred);
@@ -237,7 +240,10 @@ contract Ladle is AccessControl(), Batchable {
 
     /// @dev Unwrap Wrapped Ether held by this Ladle, and send the Ether
     /// This function should be called last in a multicall, and the Ladle should have no reason to keep an WETH balance
-    function exitEther(address payable to) public returns (uint256 ethTransferred) {
+    function exitEther(address payable to)
+        public payable
+        returns (uint256 ethTransferred)
+    {
         ethTransferred = weth.balanceOf(address(this));
         weth.withdraw(ethTransferred);   // TODO: Test gas savings using WETH10 `withdrawTo`
         to.transfer(ethTransferred); /// TODO: Consider reentrancy and safe transfers

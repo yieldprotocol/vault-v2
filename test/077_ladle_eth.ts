@@ -72,9 +72,9 @@ describe('Ladle - eth', function () {
   })
 
   it('users can transfer ETH then pour in a single transaction with multicall', async () => {
-    const joinEtherCall = ladle.interface.encodeFunctionData('joinEther', [])
+    const joinEtherCall = ladle.interface.encodeFunctionData('joinEther')
     const pourCall = ladle.interface.encodeFunctionData('pour', [ethVaultId, owner, WAD, 0])
-    await ladle.batch([joinEtherCall, pourCall], true)
+    await ladle.batch([joinEtherCall, pourCall], true, { value: WAD })
   })
   
   it('users can transfer ETH then serve', async () => {
