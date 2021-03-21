@@ -208,4 +208,28 @@ contract Ladle is AccessControl(), Batchable {
         if (ink != 0) joins[vault_.ilkId].join(user, ink);                              // 1 SLOAD + Cost of `join`
         if (art != 0) joins[series_.baseId].join(user, art);                            // 1 SLOAD + Cost of `join`
     }
+    
+    /// @dev Allow users to trigger a token sale in a pool through the ladle, to be used with multicall
+    function sellToken(bytes6 seriesId, bool base, address to, uint128 min)
+        external
+        returns (uint128 tokenOut)
+    {
+        IPool pool = pools[seriesId];
+        require (pool != IPool(address(0)), "Pool does not exist");
+        tokenOut = base ? pool.sellBaseToken(to) : pool.sellFYToken(to);
+        require (tokenOut >= min, "Slippage exceeded");
+        return tokenOut;
+    }
+
+
+    /// @dev Allow users to trigger a token transfer to a pool through the ladle, to be used with multicall
+    function transferToPool(bytes6 seriesId, bool base, uint128 wad)
+        external
+        returns (bool)
+    {
+        IPool pool = pools[seriesId];
+        IERC20 token = base ? pool.baseToken() : pool.fyToken();
+        require(token.transferFrom(msg.sender, address(pool), wad), "Failed transfer");
+        return true;
+    }
 }
