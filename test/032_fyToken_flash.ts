@@ -21,6 +21,13 @@ describe('FYToken - flash', function () {
   let fyToken: FYToken
   let borrower: FlashBorrower
 
+  const actions = {
+    normal: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    transfer: '0x0000000000000000000000000000000000000000000000000000000000000001',
+    steal: '0x0000000000000000000000000000000000000000000000000000000000000002',
+    reenter: '0x0000000000000000000000000000000000000000000000000000000000000003',
+  }
+
   async function fixture() {
     return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId], [seriesId])
   }
@@ -42,7 +49,7 @@ describe('FYToken - flash', function () {
   })
 
   it('should do a simple flash loan', async () => {
-    await borrower.flashBorrow(fyToken.address, WAD)
+    await borrower.flashBorrow(fyToken.address, WAD, actions.normal)
 
     expect(await fyToken.balanceOf(owner)).to.equal(0)
     expect(await borrower.flashBalance()).to.equal(WAD)
@@ -51,25 +58,32 @@ describe('FYToken - flash', function () {
     expect(await borrower.flashInitiator()).to.equal(borrower.address)
   })
 
-  /*
-  it('can not flash loan to an EOA', async () => {
-    const mockData = ethers.utils.hexlify(ethers.utils.randomBytes(32));
-    await expect(fyToken.flashLoan(owner, fyToken.address, WAD, mockData)).to.be.revertedWith('Non-compliant borrower')
-  })*/
+  it('can repay the flash loan by transfer', async () => {
+    await expect(borrower.flashBorrow(fyToken.address, WAD, actions.transfer))
+      .to.emit(fyToken, 'Transfer')
+      .withArgs(fyToken.address, '0x0000000000000000000000000000000000000000', WAD)
+
+    expect(await fyToken.balanceOf(owner)).to.equal(0)
+    expect(await borrower.flashBalance()).to.equal(WAD)
+    expect(await borrower.flashToken()).to.equal(fyToken.address)
+    expect(await borrower.flashAmount()).to.equal(WAD)
+    expect(await borrower.flashInitiator()).to.equal(borrower.address)
+  })
 
   it('the receiver needs to approve the repayment if not the initiator', async () => {
-    const dataSteal = '0x0000000000000000000000000000000000000000000000000000000000000001'
-    await expect(fyToken.flashLoan(borrower.address, fyToken.address, WAD, dataSteal)).to.be.revertedWith(
+    await expect(fyToken.flashLoan(borrower.address, fyToken.address, WAD, actions.normal)).to.be.revertedWith(
       'ERC20: Insufficient approval'
     )
   })
 
   it('needs to have enough funds to repay a flash loan', async () => {
-    await expect(borrower.flashBorrowAndSteal(fyToken.address, WAD)).to.be.revertedWith('ERC20: Insufficient balance')
+    await expect(borrower.flashBorrow(fyToken.address, WAD, actions.steal)).to.be.revertedWith(
+      'ERC20: Insufficient balance'
+    )
   })
 
   it('should do two nested flash loans', async () => {
-    await borrower.flashBorrowAndReenter(fyToken.address, WAD) // It will borrow WAD, and then reenter and borrow WAD * 2
+    await borrower.flashBorrow(fyToken.address, WAD, actions.reenter) // It will borrow WAD, and then reenter and borrow WAD * 2
     expect(await borrower.flashBalance()).to.equal(WAD.mul(3))
   })
 })
