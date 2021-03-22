@@ -43,6 +43,7 @@ describe('Cauldron - admin', function () {
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ilkId1 = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const otherIlk1 = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ilkId2 = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const maturity = 1640995199
@@ -96,6 +97,13 @@ describe('Cauldron - admin', function () {
 
     it('does not allow using the same asset identifier twice', async () => {
       await expect(cauldron.addAsset(baseId, base.address)).to.be.revertedWith('Id already used')
+    })
+
+    it('allows adding the same asset again with a different identifier', async () => {
+      expect(await cauldron.addAsset(otherIlk1, ilk1.address))
+        .to.emit(cauldron, 'AssetAdded')
+        .withArgs(otherIlk1, ilk1.address)
+      expect(await cauldron.assets(otherIlk1)).to.equal(ilk1.address)
     })
 
     it('does not allow setting a debt limit for an unknown base', async () => {
