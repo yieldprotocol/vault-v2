@@ -159,26 +159,28 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         internal override
         returns (bool)
     {
-        unchecked {
-            // First use any tokens locked in this contract
-            uint256 reserve = _balanceOf[address(this)];
-            uint256 remainder = amount;
-            if (reserve > 0) {
-                uint256 localBurn = reserve >= remainder ? remainder : reserve;
+        // First use any tokens locked in this contract
+        uint256 reserve = _balanceOf[address(this)];
+        uint256 remainder = amount;
+        if (reserve > 0) {
+            uint256 localBurn = reserve >= remainder ? remainder : reserve;
+            unchecked {
                 _balanceOf[address(this)] = reserve - localBurn;
                 remainder -= localBurn;
-                emit Transfer(address(this), address(0), localBurn);
             }
-
-            // Then pull the remainder of the burn from `src`
-            if (remainder > 0) {
-                _decreaseApproval(from, remainder);     // Note that if msg.sender == from this is ignored.
-                require(_balanceOf[from] >= remainder, "ERC20: Insufficient balance");
-                _balanceOf[from] = _balanceOf[from] - remainder;
-                emit Transfer(from, address(0), remainder);
-            }
-            _totalSupply = _totalSupply - amount;
+            emit Transfer(address(this), address(0), localBurn);
         }
+
+        // Then pull the remainder of the burn from `src`
+        if (remainder > 0) {
+            _decreaseApproval(from, remainder);     // Note that if msg.sender == from this is ignored.
+            require(_balanceOf[from] >= remainder, "ERC20: Insufficient balance");
+            unchecked {
+                _balanceOf[from] = _balanceOf[from] - remainder;
+            }
+            emit Transfer(from, address(0), remainder);
+        }
+        _totalSupply = _totalSupply - amount;
         return true;
     }
 }
