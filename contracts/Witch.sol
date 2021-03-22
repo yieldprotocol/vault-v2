@@ -73,7 +73,7 @@ contract Witch {
     }
 
     /// @dev Buy an amount of collateral off a vault in liquidation, paying at most `max` underlying.
-    function buy(bytes12 vaultId, bytes6 ilkJoinId, bytes6 baseJoinId, uint128 art, uint128 min) public {
+    function buy(bytes12 vaultId, uint128 art, uint128 min) public {
         DataTypes.Balances memory balances_ = cauldron.balances(vaultId);                   // Cost of `cauldron.balances`
 
         require (balances_.art > 0, "Nothing to buy");                                          // Cheapest way of failing gracefully if given a non existing vault
@@ -98,7 +98,7 @@ contract Witch {
         require (ink >= min, "Not enough bought");                                             // TODO: We could also check that min <= balances_.ink
 
         balances_ = cauldron.slurp(vaultId, -(ink.i128()), -(art.i128()));                      // Cost of `cauldron.slurp`  | Manipulate the vault
-        ladle._join(vaultId, msg.sender, ilkJoinId, -(ink.i128()), baseJoinId, art.i128());                          // Cost of `ladle._join`      | Move the assets
+        ladle._join(vaultId, msg.sender, -(ink.i128()), art.i128());                          // Cost of `ladle._join`      | Move the assets
         if (balances_.art == 0 && balances_.ink == 0) cauldron.destroy(vaultId);                  // Cost of `cauldron.destroy`
 
         emit Bought(msg.sender, vaultId, ink, art);

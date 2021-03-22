@@ -29,15 +29,11 @@ contract Ladle is AccessControl(), Batchable {
     using RMath for uint128;
 
     ICauldron public cauldron;
-    struct JoinData {
-        IJoin join;
-        bytes6 assetId;
-    }
 
-    mapping (bytes6 => JoinData)                public joins;            // Join contracts available to manage assets. The same Join can serve multiple assets (ETH-A, ETH-B, etc...)
+    mapping (bytes6 => IJoin)                   public joins;            // Join contracts available to manage assets. The same Join can serve multiple assets (ETH-A, ETH-B, etc...)
     mapping (bytes6 => IPool)                   public pools;            // Pool contracts available to manage series. 12 bytes still free.
 
-    event JoinAdded(bytes6 indexed joinId, bytes6 indexed assetId, address indexed join);
+    event JoinAdded(bytes6 indexed assetId, address indexed join);
     event PoolAdded(bytes6 indexed seriesId, address indexed pool);
 
     constructor (ICauldron cauldron_) {
@@ -46,17 +42,13 @@ contract Ladle is AccessControl(), Batchable {
 
     /// @dev Add a new Join for an Asset, or replace an existing one for a new one.
     /// There can be only one Join per Asset. Until a Join is added, no tokens of that Asset can be posted or withdrawn.
-    function addJoin(bytes6 joinId, bytes6 assetId, IJoin join)
+    function addJoin(bytes6 assetId, IJoin join)
         external
         auth
     {
-        require (joins[joinId].join == IJoin(address(0)), "Join id already used");
         require (cauldron.assets(assetId) != IERC20(address(0)), "Asset not found");
-        joins[joinId] = JoinData({
-            join: join,
-            assetId: assetId
-        });
-        emit JoinAdded(joinId, assetId, address(join));
+        joins[assetId] = join;
+        emit JoinAdded(assetId, address(join));
     }
 
     /// @dev Add a new Pool for a Series, or replace an existing one for a new one.
@@ -120,7 +112,7 @@ contract Ladle is AccessControl(), Batchable {
 
     /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
     /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
-    function pour(bytes12 vaultId, address to, bytes6 ilkJoinId, int128 ink, int128 art)
+    function pour(bytes12 vaultId, address to, int128 ink, int128 art)
         public payable
         returns (DataTypes.Balances memory balances_)
     {
@@ -133,10 +125,10 @@ contract Ladle is AccessControl(), Batchable {
 
         // Manage collateral
         if (ink != 0) {
-            JoinData memory ilkJoinData_ = joins[ilkJoinId];
-            require (ilkJoinData_.assetId == vault_.ilkId, "Mismatched ilk and join");
-            if (ink > 0) ilkJoinData_.join.join(vault_.owner, ink);                      // Cost of `join`. `join` with a negative value means `exit`. | TODO: Consider checking the join exists
-            if (ink < 0) ilkJoinData_.join.join(to, ink);                                // Cost of `join`.
+            IJoin ilkJoin_ = joins[vault_.ilkId];
+            require (ilkJoin_ != IJoin(address(0)), "Ilk join not found");
+            if (ink > 0) ilkJoin_.join(vault_.owner, ink);
+            if (ink < 0) ilkJoin_.join(to, ink);
         }
 
         // Manage debt tokens
@@ -157,7 +149,7 @@ contract Ladle is AccessControl(), Batchable {
     /// The debt to repay is denominated in fyToken, even if the tokens pulled from the user are underlying.
     /// The debt to repay must be entered as a negative number, as with `pour`.
     /// Debt cannot be acquired with this function.
-    function close(bytes12 vaultId, address to, bytes6 ilkJoinId, int128 ink, bytes6 baseJoinId, int128 art)
+    function close(bytes12 vaultId, address to, int128 ink, int128 art)
         external payable
         returns (DataTypes.Balances memory balances_)
     {
@@ -183,21 +175,21 @@ contract Ladle is AccessControl(), Batchable {
 
         // Manage collateral
         if (ink != 0) {
-            JoinData memory ilkJoinData_ = joins[ilkJoinId];
-            require (ilkJoinData_.assetId == vault_.ilkId, "Mismatched ilk and join");
-            if (ink > 0) ilkJoinData_.join.join(vault_.owner, ink);                      // Cost of `join`. `join` with a negative value means `exit`. | TODO: Consider checking the join exists
-            if (ink < 0) ilkJoinData_.join.join(to, ink);                                // Cost of `join`.
+            IJoin ilkJoin_ = joins[vault_.ilkId];
+            require (ilkJoin_ != IJoin(address(0)), "Ilk join not found");
+            if (ink > 0) ilkJoin_.join(vault_.owner, ink);
+            if (ink < 0) ilkJoin_.join(to, ink);
         }
 
         // Manage underlying
-        JoinData memory baseJoinData_ = joins[baseJoinId];
-        require (baseJoinData_.assetId == series_.baseId, "Mismatched base and join");
-        baseJoinData_.join.join(msg.sender, int128(amt));
+        IJoin baseJoin_ = joins[series_.baseId];
+        require (baseJoin_ != IJoin(address(0)), "Base join not found");
+        baseJoin_.join(msg.sender, int128(amt));
     }
 
     /// @dev Add collateral and borrow from vault, pull assets from and push base of borrowed series to user.
     /// The base is obtained by borrowing fyToken and selling it in a pool.
-    function serve(bytes12 vaultId, address to, bytes6 joinId, int128 ink, int128 art, uint128 min)
+    function serve(bytes12 vaultId, address to, int128 ink, int128 art, uint128 min)
         external payable
         returns (DataTypes.Balances memory balances_, uint128 base_)
     {
@@ -205,7 +197,7 @@ contract Ladle is AccessControl(), Batchable {
 
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);                       // 1 CALL + 1 SLOAD
         IPool pool_ = pools[vault_.seriesId];
-        balances_ = pour(vaultId, address(pool_), joinId, ink, art);                            // Checks msg.sender owns the vault.
+        balances_ = pour(vaultId, address(pool_), ink, art);                            // Checks msg.sender owns the vault.
         base_ = pool_.sellFYToken(to);
         require (base_ >= min, "Slippage exceeded");
     }
@@ -226,7 +218,7 @@ contract Ladle is AccessControl(), Batchable {
 
     /// @dev Allow authorized contracts to move assets through the ladle
     // TODO: Come up with a different name, without underscore
-    function _join(bytes12 vaultId, address user, bytes6 ilkJoinId, int128 ink, bytes6 baseJoinId, int128 art)
+    function _join(bytes12 vaultId, address user, int128 ink, int128 art)
         external
         auth
     {
@@ -234,14 +226,14 @@ contract Ladle is AccessControl(), Batchable {
         DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);             // 1 CALL + 1 SLOAD
 
         if (ink != 0) {
-            JoinData memory ilkJoinData_ = joins[ilkJoinId];
-            require (ilkJoinData_.assetId == vault_.ilkId, "Mismatched ilk and join");
-            ilkJoinData_.join.join(user, ink);
+            IJoin ilkJoin_ = joins[vault_.ilkId];
+            require (ilkJoin_ != IJoin(address(0)), "Ilk join not found");
+            ilkJoin_.join(user, ink);
         }
         if (art != 0) {
-            JoinData memory baseJoinData_ = joins[baseJoinId];
-            require (baseJoinData_.assetId == series_.baseId, "Mismatched base and join");
-            baseJoinData_.join.join(user, art);
+            IJoin baseJoin_ = joins[series_.baseId];
+            require (baseJoin_ != IJoin(address(0)), "Base join not found");
+            baseJoin_.join(user, art);
         }
     }
 
@@ -259,17 +251,17 @@ contract Ladle is AccessControl(), Batchable {
 
     /// @dev Accept Ether, wrap it and forward it to the WethJoin
     /// This function should be called first in a multicall, and the Join should keep track of stored reserves
-    function joinEther(bytes6 wethJoinId)
+    function joinEther(bytes6 etherId)
         public payable
         returns (uint256 ethTransferred)
     {
         ethTransferred = address(this).balance;
 
-        address wethFromJoin = address(joins[wethJoinId].join.token());
-        require (wethFromJoin == address(weth), "Not a weth join");
+        IJoin wethJoin = joins[etherId];
+        require (address(wethJoin.token()) == address(weth), "Not a weth join");
 
         weth.deposit{ value: ethTransferred }();   // TODO: Test gas savings using WETH10 `depositTo`
-        weth.transfer(wethFromJoin, ethTransferred);
+        weth.transfer(address(wethJoin), ethTransferred);
     }
 
     /// @dev Unwrap Wrapped Ether held by this Ladle, and send the Ether
