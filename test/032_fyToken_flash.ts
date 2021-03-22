@@ -77,7 +77,9 @@ describe('FYToken - flash', function () {
   })
 
   it('needs to have enough funds to repay a flash loan', async () => {
-    await expect(borrower.flashBorrow(fyToken.address, WAD, actions.steal)).to.be.revertedWith('ERC20: Insufficient balance')
+    await expect(borrower.flashBorrow(fyToken.address, WAD, actions.steal)).to.be.revertedWith(
+      'ERC20: Insufficient balance'
+    )
   })
 
   it('should do two nested flash loans', async () => {
