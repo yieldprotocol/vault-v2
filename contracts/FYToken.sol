@@ -104,7 +104,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         _mint(to, amount);                                                  // 2 SSTORE
     }
 
-    /// @dev Burn fyTokens. The user needs to have either transferred the tokens to this contract, approved this contract to take them. 
+    /// @dev Burn fyTokens. The user needs to have either transferred the tokens to this contract, or have approved this contract to take them. 
     function burn(address from, uint256 amount)
         public override
         auth
