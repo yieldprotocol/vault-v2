@@ -228,6 +228,7 @@ contract Ladle is AccessControl(), Batchable {
         returns (bool)
     {
         IPool pool = pools[seriesId];
+        require (pool != IPool(address(0)), "Pool does not exist");
         IERC20 token = base ? pool.baseToken() : pool.fyToken();
         require(token.transferFrom(msg.sender, address(pool), wad), "Failed transfer");
         return true;
