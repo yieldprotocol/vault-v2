@@ -63,7 +63,7 @@ describe('Ladle - eth', function () {
   })
 
   it('users can transfer ETH then pour', async () => {
-    expect(await ladle.joinEther({ value: WAD }))
+    expect(await ladle.joinEther(ethId, { value: WAD }))
     expect(await ladle.pour(ethVaultId, owner, WAD, 0))
       .to.emit(cauldron, 'VaultPoured')
       .withArgs(ethVaultId, seriesId, ethId, WAD, 0)
@@ -72,13 +72,13 @@ describe('Ladle - eth', function () {
   })
 
   it('users can transfer ETH then pour in a single transaction with multicall', async () => {
-    const joinEtherCall = ladle.interface.encodeFunctionData('joinEther')
+    const joinEtherCall = ladle.interface.encodeFunctionData('joinEther', [ethId])
     const pourCall = ladle.interface.encodeFunctionData('pour', [ethVaultId, owner, WAD, 0])
     await ladle.batch([joinEtherCall, pourCall], true, { value: WAD })
   })
 
   it('users can transfer ETH then serve', async () => {
-    expect(await ladle.joinEther({ value: WAD }))
+    expect(await ladle.joinEther(ethId, { value: WAD }))
     expect(await ladle.serve(ethVaultId, owner, WAD, WAD, 0))
       .to.emit(cauldron, 'VaultPoured')
       .withArgs(ethVaultId, seriesId, ethId, WAD, WAD)
@@ -88,7 +88,7 @@ describe('Ladle - eth', function () {
 
   describe('with ETH posted', async () => {
     beforeEach(async () => {
-      expect(await ladle.joinEther({ value: WAD }))
+      expect(await ladle.joinEther(ethId, { value: WAD }))
       await ladle.pour(ethVaultId, owner, WAD, 0)
     })
 
@@ -115,12 +115,12 @@ describe('Ladle - eth', function () {
 
   describe('with ETH posted and positive debt', async () => {
     beforeEach(async () => {
-      expect(await ladle.joinEther({ value: WAD }))
+      expect(await ladle.joinEther(ethId, { value: WAD }))
       await ladle.pour(ethVaultId, owner, WAD, WAD)
     })
 
     it('users can close to post ETH', async () => {
-      expect(await ladle.joinEther({ value: WAD }))
+      expect(await ladle.joinEther(ethId, { value: WAD }))
       expect(await ladle.close(ethVaultId, owner, WAD, WAD.mul(-1)))
         .to.emit(cauldron, 'VaultPoured')
         .withArgs(ethVaultId, seriesId, ethId, WAD, WAD.mul(-1))
