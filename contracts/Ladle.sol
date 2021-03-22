@@ -48,6 +48,7 @@ contract Ladle is AccessControl(), Batchable {
     {
         require (cauldron.assets(assetId) != IERC20(address(0)), "Asset not found");
         joins[assetId] = join;
+        // TODO: Assert the base address and join.token() match
         emit JoinAdded(assetId, address(join));
     }
 
@@ -59,6 +60,7 @@ contract Ladle is AccessControl(), Batchable {
     {
         require (cauldron.series(seriesId).fyToken != IFYToken(address(0)), "Series not found");    // 1 CALL + 1 SLOAD
         pools[seriesId] = pool;                                                          // 1 SSTORE
+        // TODO: Assert the pool fyToken address and series fyToken address match
         emit PoolAdded(seriesId, address(pool));
     }
 

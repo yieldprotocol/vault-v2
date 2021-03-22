@@ -128,6 +128,7 @@ contract Cauldron is AccessControl() {
         auth
     {
         require (assets[baseId] != IERC20(address(0)), "Asset not found");                  // 1 SLOAD
+        // TODO: The oracle should record the asset it refers to, and we should match it against assets[baseId]
         rateOracles[baseId] = oracle;                                                       // 1 SSTORE                                                             // 1 SSTORE. Allows to replace an existing oracle.
         emit RateOracleAdded(baseId, address(oracle));
     }
@@ -139,6 +140,7 @@ contract Cauldron is AccessControl() {
     {
         require (assets[baseId] != IERC20(address(0)), "Asset not found");                  // 1 SLOAD
         require (assets[ilkId] != IERC20(address(0)), "Asset not found");                   // 1 SLOAD
+        // TODO: The oracle should record the assets it refers to, and we should match it against assets[baseId] and assets[ilkId]
         spotOracles[baseId][ilkId] = DataTypes.SpotOracle({
             oracle: oracle,
             ratio: ratio                                                                    // With 2 decimals. 10000 == 100%
@@ -153,6 +155,7 @@ contract Cauldron is AccessControl() {
     {
         require (assets[baseId] != IERC20(address(0)), "Asset not found");                  // 1 SLOAD
         require (fyToken != IFYToken(address(0)), "Series need a fyToken");
+        // TODO: Match fyToken.asset() against assets[baseId]
         require (rateOracles[baseId] != IOracle(address(0)), "Rate oracle not found");      // 1 SLOAD
         require (series[seriesId].fyToken == IFYToken(address(0)), "Id already used");      // 1 SLOAD
         series[seriesId] = DataTypes.Series({
