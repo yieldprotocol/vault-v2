@@ -202,6 +202,7 @@ contract Ladle is AccessControl(), Batchable {
         external payable
         returns (DataTypes.Balances memory balances_, uint128 base_)
     {
+        require (ink > 0, "Only post");                                                 // Any collateral withdrawn would get locked in a pool
         require (art > 0, "Only borrow");                                               // When borrowing with `frob`, art is a positive value.
 
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);

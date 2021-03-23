@@ -59,6 +59,10 @@ describe('Ladle - serve', function () {
     await expect(ladle.serve(vaultId, owner, WAD, WAD.mul(-1), 0)).to.be.revertedWith('Only borrow')
   })
 
+  it('does not allow withdrawing collateral with `serve`', async () => {
+    await expect(ladle.serve(vaultId, owner, WAD.mul(-1), WAD, 0)).to.be.revertedWith('Only post')
+  })
+
   it('borrows and sells for base', async () => {
     const baseBalanceBefore = await base.balanceOf(owner)
     const ilkBalanceBefore = await ilk.balanceOf(owner)
