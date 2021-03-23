@@ -336,7 +336,7 @@ contract Cauldron is AccessControl() {
     }
 
     /// @dev Reduce debt and collateral from a vault, ignoring collateralization checks.
-    /// To be used by debt management contracts, which must own the vault.
+    /// To be used by liquidation engines.
     function slurp(bytes12 vaultId, uint128 ink, uint128 art)
         public
         auth

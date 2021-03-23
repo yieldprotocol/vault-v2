@@ -237,6 +237,7 @@ contract Ladle is AccessControl(), Batchable {
         auth
     {
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
+        require (vault_.owner == msg.sender, "Only vault owner");
         DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);
 
         cauldron.slurp(vaultId, ink, art);                                                  // Remove debt and collateral from the vault
