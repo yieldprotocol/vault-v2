@@ -62,9 +62,11 @@ contract Ladle is AccessControl(), Batchable {
         external
         auth
     {
-        require (cauldron.series(seriesId).fyToken != IFYToken(address(0)), "Series not found");
+        IFYToken fyToken = cauldron.series(seriesId).fyToken;
+        require (fyToken != IFYToken(address(0)), "Series not found");
+        require (fyToken == pool.fyToken(), "Mismatched pool fyToken and series");
+        require (fyToken.asset() == address(pool.baseToken()), "Mismatched pool base and series");
         pools[seriesId] = pool;
-        // TODO: Assert the pool fyToken address and series fyToken address match
         emit PoolAdded(seriesId, address(pool));
     }
 
