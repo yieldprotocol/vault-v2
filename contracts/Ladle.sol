@@ -137,8 +137,8 @@ contract Ladle is AccessControl(), Batchable {
         if (ink != 0) {
             IJoin ilkJoin_ = joins[vault_.ilkId];
             require (ilkJoin_ != IJoin(address(0)), "Ilk join not found");
-            if (ink > 0) ilkJoin_.join(vault_.owner, ink);
-            if (ink < 0) ilkJoin_.join(to, ink);
+            if (ink > 0) ilkJoin_.join(vault_.owner, uint128(ink));
+            if (ink < 0) ilkJoin_.exit(to, uint128(-ink));
         }
 
         // Manage debt tokens
@@ -187,14 +187,14 @@ contract Ladle is AccessControl(), Batchable {
         if (ink != 0) {
             IJoin ilkJoin_ = joins[vault_.ilkId];
             require (ilkJoin_ != IJoin(address(0)), "Ilk join not found");
-            if (ink > 0) ilkJoin_.join(vault_.owner, ink);
-            if (ink < 0) ilkJoin_.join(to, ink);
+            if (ink > 0) ilkJoin_.join(vault_.owner, uint128(ink));
+            if (ink < 0) ilkJoin_.exit(to, uint128(-ink));
         }
 
         // Manage underlying
         IJoin baseJoin_ = joins[series_.baseId];
         require (baseJoin_ != IJoin(address(0)), "Base join not found");
-        baseJoin_.join(msg.sender, int128(amt));
+        baseJoin_.join(msg.sender, amt);
     }
 
     /// @dev Add collateral and borrow from vault, pull assets from and push base of borrowed series to user.
@@ -241,12 +241,14 @@ contract Ladle is AccessControl(), Batchable {
         if (ink != 0) {
             IJoin ilkJoin_ = joins[vault_.ilkId];
             require (ilkJoin_ != IJoin(address(0)), "Ilk join not found");
-            ilkJoin_.join(user, ink);
+            if (ink > 0) ilkJoin_.join(user, uint128(ink));
+            if (ink < 0) ilkJoin_.exit(user, uint128(-ink));
         }
         if (art != 0) {
             IJoin baseJoin_ = joins[series_.baseId];
             require (baseJoin_ != IJoin(address(0)), "Base join not found");
-            baseJoin_.join(user, art);
+            if (art > 0) baseJoin_.join(user, uint128(art));
+            if (art < 0) baseJoin_.exit(user, uint128(-art));
         }
     }
 

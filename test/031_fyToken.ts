@@ -51,7 +51,7 @@ describe('FYToken', function () {
     fyToken = env.series.get(seriesId) as FYToken
     chiOracle = env.oracles.get('chi') as OracleMock
 
-    await baseJoin.grantRoles([id('join(address,int128)')], fyToken.address)
+    await baseJoin.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], fyToken.address)
 
     await fyToken.grantRoles([id('mint(address,uint256)'), id('burn(address,uint256)')], owner)
 

@@ -21,10 +21,10 @@ library RMath { // Fixed point arithmetic in Ray units
 }
 
 library Safe256 {
-    /// @dev Safely cast an uint256 to an int128
-    function i128(uint256 x) internal pure returns (int128 y) {
-        require (x <= uint128(type(int128).max), "Cast overflow");
-        y = int128(uint128(x));
+    /// @dev Safely cast an uint256 to an uint128
+    function u128(uint256 x) internal pure returns (uint128 y) {
+        require (x <= type(uint128).max, "Cast overflow");
+        y = uint128(x);
     }
 
     /// @dev Safely cast an uint256 to an int128
@@ -92,7 +92,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
 
         // Consider moving these two lines to Ladle.
         uint256 redeemed = amount.rmul(oracle.accrual(maturity.u32()));   // Cost of `accrual`
-        join.join(to, -(redeemed.i128()));                           // Cost of `join`
+        join.exit(to, redeemed.u128());                           // Cost of `join`
         
         emit Redeemed(msg.sender, to, amount, redeemed);
         return amount;

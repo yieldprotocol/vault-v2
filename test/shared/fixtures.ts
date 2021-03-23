@@ -139,8 +139,8 @@ export class YieldEnvironment {
       joins.set(assetId, join)
       await ladle.addJoin(assetId, join.address)
       await asset.approve(join.address, ethers.constants.MaxUint256)
-      await join.grantRoles([id('join(address,int128)')], ladle.address)
-      await join.grantRoles([id('join(address,int128)')], ownerAdd)
+      await join.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], ladle.address)
+      await join.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], ownerAdd)
     }
 
     // The first asset will be the underlying for all series
@@ -157,8 +157,8 @@ export class YieldEnvironment {
     const join = (await deployContract(owner, JoinArtifact, [weth.address])) as Join
     await cauldron.addAsset(ethId, weth.address)
     await ladle.addJoin(ethId, join.address)
-    await join.grantRoles([id('join(address,int128)')], ladle.address)
-    await join.grantRoles([id('join(address,int128)')], ownerAdd)
+    await join.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], ladle.address)
+    await join.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], ownerAdd)
     joins.set(ethId, join)
     ilkIds.push(ethId)
 
@@ -208,7 +208,7 @@ export class YieldEnvironment {
       // Add all ilks to each series
       await cauldron.addIlks(seriesId, ilkIds)
 
-      await baseJoin.grantRoles([id('join(address,int128)')], fyToken.address)
+      await baseJoin.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], fyToken.address)
       await fyToken.grantRoles([id('mint(address,uint256)'), id('burn(address,uint256)')], ladle.address)
       await fyToken.grantRoles([id('mint(address,uint256)'), id('burn(address,uint256)')], ownerAdd)
 

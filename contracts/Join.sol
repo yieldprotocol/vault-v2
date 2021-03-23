@@ -26,28 +26,33 @@ contract Join is IJoin, AccessControl() {
 
     /// @dev With a positive `amount`, `join` will `transferFrom` the user the `amount`, minus any unaccounted `token` already present.
     /// Users can `transfer` to this contract and then execute `join`, as well as `approve` this contract and let `join` pull the tokens.
-    function join(address user, int128 amount)
+    function join(address user, uint128 amount)
         external override
         auth
-        returns (int128)
+        returns (uint128)
     {
         IERC20 token_ = IERC20(asset);
 
-        if (amount >= 0) {
-            // require(live == 1, "GemJoin/not-live");
-            uint256 amount_ = uint128(amount);
-            uint256 initialBalance = token_.balanceOf(address(this));
-            uint256 surplus = initialBalance - storedBalance;
-            uint256 required = surplus >= amount_ ? 0 : amount_ - surplus;
-            storedBalance = initialBalance + required;
-            if (required > 0) {
-                require(token_.transferFrom(user, address(this), required), "Failed transfer"); // TODO: Consider best practices about safe transfers
-            }
-        } else {
-            uint256 amount_ = uint128(-amount);
-            storedBalance -= amount_;                                  // To withdraw surplus tokens we can do a `join` for zero tokens first.
-            require(token_.transfer(user, amount_), "Failed transfer"); // TODO: Consider best practices about safe transfers
+        // require(live == 1, "GemJoin/not-live");
+        uint256 initialBalance = token_.balanceOf(address(this));
+        uint256 surplus = initialBalance - storedBalance;
+        uint256 required = surplus >= amount ? 0 : amount - surplus;
+        storedBalance = initialBalance + required;
+        if (required > 0) {
+            require(token_.transferFrom(user, address(this), required), "Failed transfer"); // TODO: Consider best practices about safe transfers
         }
+        return amount;
+    }
+
+    function exit(address user, uint128 amount)
+        external override
+        auth
+        returns (uint128)
+    {
+        IERC20 token_ = IERC20(asset);
+
+        storedBalance -= amount;                                  // To withdraw surplus tokens we can do a `join` for zero tokens first.
+        require(token_.transfer(user, amount), "Failed transfer"); // TODO: Consider best practices about safe transfers
         return amount;
     }
 }

@@ -85,7 +85,7 @@ describe('Ladle - admin', function () {
 
     // Deploy a join
     ilkJoin = (await deployContract(ownerAcc, JoinArtifact, [ilk.address])) as Join
-    await ilkJoin.grantRoles([id('join(address,int128)')], ladle.address)
+    await ilkJoin.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], ladle.address)
 
     // Deploy a series
     const provider: BaseProvider = await ethers.provider
