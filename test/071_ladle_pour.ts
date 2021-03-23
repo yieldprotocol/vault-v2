@@ -149,6 +149,15 @@ describe('Ladle - pour', function () {
       expect((await cauldron.balances(vaultId)).art).to.equal(0)
     })
 
+    it('users can repay their debt with a transfer', async () => {
+      await fyToken.transfer(fyToken.address, WAD)
+      await expect(ladle.pour(vaultId, owner, 0, WAD.mul(-1)))
+        .to.emit(cauldron, 'VaultPoured')
+        .withArgs(vaultId, seriesId, ilkId, 0, WAD.mul(-1))
+      expect(await fyToken.balanceOf(owner)).to.equal(0)
+      expect((await cauldron.balances(vaultId)).art).to.equal(0)
+    })
+
     it("users can't repay more debt than they have", async () => {
       await expect(ladle.pour(vaultId, owner, 0, WAD.mul(-2))).to.be.revertedWith('Result below zero')
     })

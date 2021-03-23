@@ -55,6 +55,12 @@ describe('Ladle - multicall', function () {
     const buildCall = ladle.interface.encodeFunctionData('build', [vaultId, seriesId, ilkId])
     const pourCall = ladle.interface.encodeFunctionData('pour', [vaultId, owner, WAD, WAD])
     await ladle.batch([buildCall, pourCall], true)
+
+    const vault = await cauldron.vaults(vaultId)
+    expect(vault.owner).to.equal(owner)
+    expect(vault.seriesId).to.equal(seriesId)
+    expect(vault.ilkId).to.equal(ilkId)
+
     expect(await fyToken.balanceOf(owner)).to.equal(WAD)
   })
 
