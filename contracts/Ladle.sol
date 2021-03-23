@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
-import "@yield-protocol/utils/contracts/token/IERC20.sol";
-import "@yield-protocol/utils/contracts/token/IERC2612.sol";
-import "@yield-protocol/yieldspace-interfaces/IPool.sol";
 import "@yield-protocol/vault-interfaces/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/IJoin.sol";
 import "@yield-protocol/vault-interfaces/ICauldron.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
+import "@yield-protocol/yieldspace-interfaces/IPool.sol";
+import "@yield-protocol/utils/contracts/token/IERC20.sol";
+import "@yield-protocol/utils/contracts/token/IERC2612.sol";
+import "dss-interfaces/src/dss/DaiAbstract.sol";
 import "./AccessControl.sol";
 import "./Batchable.sol";
 import "./IWETH9.sol";
@@ -256,10 +257,10 @@ contract Ladle is AccessControl(), Batchable {
     }
 
     /// @dev Execute a Dai-style permit for the selected asset or fyToken
-    /* function forwardDaiPermit(bytes6 id, bool asset, address spender, uint256 nonce, uint256 deadline, bool allowed, bytes32 v, bytes32 r, uint8 s) public {
-        IDaiPermit token = _findToken(id, asset);
+    function forwardDaiPermit(bytes6 id, bool asset, address spender, uint256 nonce, uint256 deadline, bool allowed, uint8 v, bytes32 r, bytes32 s) public {
+        DaiAbstract token = DaiAbstract(_findToken(id, asset));
         token.permit(msg.sender, spender, nonce, deadline, allowed, v, r, s);
-    } */
+    }
 
     /// @dev From an id, which can be an assetId or a seriesId, find the resulting asset or fyToken
     function _findToken(bytes6 id, bool asset) internal returns (address token) {

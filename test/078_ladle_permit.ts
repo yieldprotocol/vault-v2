@@ -1,17 +1,18 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { signatures } from '@yield-protocol/utils'
-// import { sign, getDaiDigest, getPermitDigest } from 'signatures'
+
+import DaiMockArtifact from '../artifacts/contracts/mocks/DaiMock.sol/DaiMock.json'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
 import { Ladle } from '../typechain/Ladle'
 import { ERC20Mock } from '../typechain/ERC20Mock'
-// import { DaiMock } from '../typechain/DaiMock'
+import { DaiMock } from '../typechain/DaiMock'
 import { FYToken } from '../typechain/FYToken'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
-const { loadFixture } = waffle
+const { loadFixture, deployContract } = waffle
 
 import { YieldEnvironment } from './shared/fixtures'
 import { MAX, WAD } from './shared/utils'
@@ -27,8 +28,7 @@ describe('Ladle - permit', function () {
   let cauldron: Cauldron
   let ilk: ERC20Mock
   let ilkJoin: Join
-  // let dai: DaiMock
-  // let daiJoin: Join
+  let dai: DaiMock
   let fyToken: FYToken
   let ladle: Ladle
 
@@ -49,23 +49,22 @@ describe('Ladle - permit', function () {
   const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const mockIlkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  // const daiId = ethers.utils.formatBytes32String('DAI').slice(0, 14)
+  const daiId = ethers.utils.formatBytes32String('DAI').slice(0, 14)
 
   let ilkVaultId: string
-  // let daiVaultId: string
 
   beforeEach(async () => {
     env = await loadFixture(fixture)
     cauldron = env.cauldron
     ladle = env.ladle
     ilkJoin = env.joins.get(ilkId) as Join
-    // daiJoin = env.joins.get(daiId) as Join
     ilk = env.assets.get(ilkId) as ERC20Mock
     fyToken = env.series.get(seriesId) as FYToken
-    // dai = env.assets.get(daiId) as ERC20Mock
+    dai = (await deployContract(ownerAcc, DaiMockArtifact, ["DAI", "DAI"])) as DaiMock
+
+    await cauldron.addAsset(daiId, dai.address)
 
     ilkVaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
-    // daiVaultId = (env.vaults.get(seriesId) as Map<string, string>).get(daiId) as string
   })
 
   it('users can use the ladle to execute permit on an asset', async () => {
@@ -108,6 +107,26 @@ describe('Ladle - permit', function () {
       .withArgs(owner, ladle.address, WAD)
 
     expect(await fyToken.allowance(owner, ladle.address)).to.equal(WAD)
+  })
+
+  it('users can use the ladle to execute a dai-style permit on an asset', async () => {
+    const daiSeparator = await dai.DOMAIN_SEPARATOR()
+    const deadline = MAX
+    const nonce = await fyToken.nonces(owner)
+    const approval = {
+      owner: owner,
+      spender: ladle.address,
+      can: true,
+    }
+    const daiPermitDigest = signatures.getDaiDigest(daiSeparator, approval, nonce, deadline)
+
+    const { v, r, s } = signatures.sign(daiPermitDigest, signatures.privateKey0)
+
+    expect(await ladle.forwardDaiPermit(daiId, true, ladle.address, nonce, deadline, true, v, r, s))
+      .to.emit(dai, 'Approval')
+      .withArgs(owner, ladle.address, MAX)
+
+    expect(await dai.allowance(owner, ladle.address)).to.equal(MAX)
   })
 
   it("users can' use the ladle to execute permit on unregistered tokens", async () => {

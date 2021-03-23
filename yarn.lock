@@ -4685,6 +4685,11 @@ drbg.js@^1.0.1:
     create-hash "^1.1.2"
     create-hmac "^1.1.4"
 
+dss-interfaces@0.1.1:
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/dss-interfaces/-/dss-interfaces-0.1.1.tgz#2ed72af0f206b5a4a6968262d42ceeefe1af9a30"
+  integrity sha512-SaTUptK+0jHsgaywKLDZBZi5L6d154b62ujFlECmY7bWPLp+7JmoK502xfjh8wtkOI5T3a7vhnEYTJ4m36uNhQ==
+
 duplexer3@^0.1.4:
   version "0.1.4"
   resolved "https://registry.yarnpkg.com/duplexer3/-/duplexer3-0.1.4.tgz#ee01dd1cac0ed3cbc7fdbea37dc0a8f1ce002ce2"
