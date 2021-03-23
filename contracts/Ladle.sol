@@ -241,18 +241,12 @@ contract Ladle is AccessControl(), Batchable {
 
     // ---- Ether management ----
 
-    IWETH9 public weth;
-
     /// @dev The WETH9 contract will send ether to BorrowProxy on `weth.withdraw` using this function.
     receive() external payable { }
 
-    /// @dev Set the weth9 contract
-    function setWeth(IWETH9 weth_) public auth {
-        weth = weth_;
-    }
-
     /// @dev Accept Ether, wrap it and forward it to the WethJoin
     /// This function should be called first in a multicall, and the Join should keep track of stored reserves
+    /// Passing the id for a join that doesn't link to a contract implemnting IWETH9 will fail
     function joinEther(bytes6 etherId)
         public payable
         returns (uint256 ethTransferred)
@@ -260,7 +254,7 @@ contract Ladle is AccessControl(), Batchable {
         ethTransferred = address(this).balance;
 
         IJoin wethJoin = joins[etherId];
-        require (address(wethJoin.token()) == address(weth), "Not a weth join");
+        IWETH9 weth = IWETH9(address(wethJoin.token()));
 
         weth.deposit{ value: ethTransferred }();   // TODO: Test gas savings using WETH10 `depositTo`
         weth.transfer(address(wethJoin), ethTransferred);
@@ -268,10 +262,12 @@ contract Ladle is AccessControl(), Batchable {
 
     /// @dev Unwrap Wrapped Ether held by this Ladle, and send the Ether
     /// This function should be called last in a multicall, and the Ladle should have no reason to keep an WETH balance
-    function exitEther(address payable to)
+    function exitEther(bytes6 etherId, address payable to)
         public payable
         returns (uint256 ethTransferred)
     {
+        IJoin wethJoin = joins[etherId];
+        IWETH9 weth = IWETH9(address(wethJoin.token()));
         ethTransferred = weth.balanceOf(address(this));
         weth.withdraw(ethTransferred);   // TODO: Test gas savings using WETH10 `withdrawTo`
         to.transfer(ethTransferred); /// TODO: Consider reentrancy and safe transfers

@@ -52,8 +52,6 @@ describe('Ladle - eth', function () {
     wethJoin = env.joins.get(ethId) as Join
     weth = (await ethers.getContractAt('WETH9Mock', await wethJoin.token())) as WETH9Mock
 
-    await ladle.setWeth(weth.address) // TODO: Test setWeth
-
     ethVaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ethId) as string
     ilkVaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
   })
@@ -100,7 +98,7 @@ describe('Ladle - eth', function () {
       expect((await cauldron.balances(ethVaultId)).ink).to.equal(0)
       expect(await weth.balanceOf(ladle.address)).to.equal(WAD)
 
-      expect(await ladle.exitEther(owner))
+      expect(await ladle.exitEther(ethId, owner))
         .to.emit(weth, 'Withdrawal')
         .withArgs(ladle.address, WAD)
       expect(await weth.balanceOf(ladle.address)).to.equal(0)
@@ -108,7 +106,7 @@ describe('Ladle - eth', function () {
 
     it('users can pour then unwrap to ETH in a single transaction with multicall', async () => {
       const pourCall = ladle.interface.encodeFunctionData('pour', [ethVaultId, ladle.address, WAD.mul(-1), 0])
-      const exitEtherCall = ladle.interface.encodeFunctionData('exitEther', [owner])
+      const exitEtherCall = ladle.interface.encodeFunctionData('exitEther', [ethId, owner])
       await ladle.batch([pourCall, exitEtherCall], true)
     })
   })
