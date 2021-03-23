@@ -154,7 +154,7 @@ contract Cauldron is AccessControl() {
         address asset = assets[baseId];
         require (asset != address(0), "Asset not found");
         require (fyToken != IFYToken(address(0)), "Series need a fyToken");
-        require (fyToken.asset() == asset, "Unmatched series and base");
+        require (fyToken.asset() == asset, "Mismatched series and base");
         require (rateOracles[baseId] != IOracle(address(0)), "Rate oracle not found");
         require (series[seriesId].fyToken == IFYToken(address(0)), "Id already used");
         series[seriesId] = DataTypes.Series({

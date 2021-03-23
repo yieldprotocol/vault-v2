@@ -150,17 +150,16 @@ export class YieldEnvironment {
     const base = assets.get(baseId) as ERC20Mock
 
     // Add Ether as an asset
-    const ethId = ethers.utils.formatBytes32String('ETH').slice(0, 14)
-    const ethAddress = ethers.utils.getAddress('0x0000000000000000000000000000000000000001')
-    await cauldron.addAsset(ethId, ethAddress)
 
     // Deploy WETH9 and the WETH9 Join
+    const ethId = ethers.utils.formatBytes32String('ETH').slice(0, 14)
     const weth = (await deployContract(owner, WETH9MockArtifact, [])) as WETH9Mock
     const join = (await deployContract(owner, JoinArtifact, [weth.address])) as Join
-    joins.set(ethId, join)
+    await cauldron.addAsset(ethId, weth.address)
     await ladle.addJoin(ethId, join.address)
     await join.grantRoles([id('join(address,int128)')], ladle.address)
     await join.grantRoles([id('join(address,int128)')], ownerAdd)
+    joins.set(ethId, join)
     ilkIds.push(ethId)
 
     // ==== Set debt limits ====

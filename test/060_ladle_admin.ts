@@ -109,6 +109,10 @@ describe('Ladle - admin', function () {
       await expect(ladle.addJoin(mockAssetId, ilkJoin.address)).to.be.revertedWith('Asset not found')
     })
 
+    it('does not allow adding a join with a mismatched ilk', async () => {
+      await expect(ladle.addJoin(baseId, ilkJoin.address)).to.be.revertedWith('Mismatched asset and join')
+    })
+
     it('adds a join', async () => {
       expect(await ladle.addJoin(ilkId, ilkJoin.address))
         .to.emit(ladle, 'JoinAdded')

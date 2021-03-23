@@ -49,9 +49,10 @@ contract Ladle is AccessControl(), Batchable {
         external
         auth
     {
-        require (cauldron.assets(assetId) != address(0), "Asset not found");
+        address asset = cauldron.assets(assetId);
+        require (asset != address(0), "Asset not found");
+        require (join.asset() == asset, "Mismatched asset and join");
         joins[assetId] = join;
-        // TODO: Assert the base address and join.token() match
         emit JoinAdded(assetId, address(join));
     }
 
@@ -290,7 +291,7 @@ contract Ladle is AccessControl(), Batchable {
         ethTransferred = address(this).balance;
 
         IJoin wethJoin = joins[etherId];
-        require (address(wethJoin.token()) == address(weth), "Not a weth join");
+        require (address(wethJoin.asset()) == address(weth), "Not a weth join");
 
         weth.deposit{ value: ethTransferred }();   // TODO: Test gas savings using WETH10 `depositTo`
         weth.transfer(address(wethJoin), ethTransferred);

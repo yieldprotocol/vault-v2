@@ -149,7 +149,7 @@ describe('Cauldron - admin', function () {
       })
 
       it('does not allow linking a series to the wrong base', async () => {
-        await expect(cauldron.addSeries(seriesId, ilkId1, fyToken.address)).to.be.revertedWith('Unmatched series and base')
+        await expect(cauldron.addSeries(seriesId, ilkId1, fyToken.address)).to.be.revertedWith('Mismatched series and base')
       })
 
       it('adds a series', async () => {

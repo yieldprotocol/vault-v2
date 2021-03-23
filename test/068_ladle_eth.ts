@@ -50,7 +50,7 @@ describe('Ladle - eth', function () {
     cauldron = env.cauldron
     ladle = env.ladle
     wethJoin = env.joins.get(ethId) as Join
-    weth = (await ethers.getContractAt('WETH9Mock', await wethJoin.token())) as WETH9Mock
+    weth = (await ethers.getContractAt('WETH9Mock', await wethJoin.asset())) as WETH9Mock
 
     await ladle.setWeth(weth.address) // TODO: Test setWeth
 
