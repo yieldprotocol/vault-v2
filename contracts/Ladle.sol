@@ -49,7 +49,7 @@ contract Ladle is AccessControl(), Batchable {
         external
         auth
     {
-        require (cauldron.assets(assetId) != IERC20(address(0)), "Asset not found");
+        require (cauldron.assets(assetId) != address(0), "Asset not found");
         joins[assetId] = join;
         // TODO: Assert the base address and join.token() match
         emit JoinAdded(assetId, address(join));
@@ -264,7 +264,7 @@ contract Ladle is AccessControl(), Batchable {
 
     /// @dev From an id, which can be an assetId or a seriesId, find the resulting asset or fyToken
     function _findToken(bytes6 id, bool asset) internal returns (address token) {
-        token = asset ? address(cauldron.assets(id)) : address(cauldron.series(id).fyToken); // TODO: Remove the castings
+        token = asset ? cauldron.assets(id) : address(cauldron.series(id).fyToken); // TODO: Remove the castings
         require (token != address(0), "Token not found");
     }
 

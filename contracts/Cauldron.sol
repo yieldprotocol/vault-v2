@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
-import "@yield-protocol/utils/contracts/token/IERC20.sol";
 import "@yield-protocol/vault-interfaces/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
@@ -85,7 +84,7 @@ contract Cauldron is AccessControl() {
     event VaultTimestamped(bytes12 indexed vaultId, uint256 indexed timestamp);
 
     // ==== Protocol data ====
-    mapping (bytes6 => IERC20)                              public assets;          // Underlyings and collaterals available in Cauldron. 12 bytes still free.
+    mapping (bytes6 => address)                             public assets;          // Underlyings and collaterals available in Cauldron. 12 bytes still free.
     mapping (bytes6 => mapping(bytes6 => DataTypes.Debt))   public debt;            // [baseId][ilkId] Max and sum of debt per underlying and collateral.
     mapping (bytes6 => DataTypes.Series)                    public series;          // Series available in Cauldron. We can possibly use a bytes6 (3e14 possible series).
     mapping (bytes6 => mapping(bytes6 => bool))             public ilks;            // [seriesId][assetId] Assets that are approved as collateral for a series
@@ -102,11 +101,11 @@ contract Cauldron is AccessControl() {
     // ==== Administration ====
 
     /// @dev Add a new Asset.
-    function addAsset(bytes6 assetId, IERC20 asset)
+    function addAsset(bytes6 assetId, address asset)
         external
         auth
     {
-        require (assets[assetId] == IERC20(address(0)), "Id already used");
+        require (assets[assetId] == address(0), "Id already used");
         assets[assetId] = asset;
         emit AssetAdded(assetId, address(asset));
     }
@@ -116,8 +115,8 @@ contract Cauldron is AccessControl() {
         external
         auth
     {
-        require (assets[baseId] != IERC20(address(0)), "Asset not found");                  // 1 SLOAD
-        require (assets[ilkId] != IERC20(address(0)), "Asset not found");                   // 1 SLOAD
+        require (assets[baseId] != address(0), "Asset not found");                  // 1 SLOAD
+        require (assets[ilkId] != address(0), "Asset not found");                   // 1 SLOAD
         debt[baseId][ilkId].max = max;                                                      // 1 SSTORE
         emit MaxDebtSet(baseId, ilkId, max);
     }
@@ -127,7 +126,7 @@ contract Cauldron is AccessControl() {
         external
         auth
     {
-        require (assets[baseId] != IERC20(address(0)), "Asset not found");                  // 1 SLOAD
+        require (assets[baseId] != address(0), "Asset not found");                  // 1 SLOAD
         // TODO: The oracle should record the asset it refers to, and we should match it against assets[baseId]
         rateOracles[baseId] = oracle;                                                       // 1 SSTORE                                                             // 1 SSTORE. Allows to replace an existing oracle.
         emit RateOracleAdded(baseId, address(oracle));
@@ -138,8 +137,8 @@ contract Cauldron is AccessControl() {
         external
         auth
     {
-        require (assets[baseId] != IERC20(address(0)), "Asset not found");                  // 1 SLOAD
-        require (assets[ilkId] != IERC20(address(0)), "Asset not found");                   // 1 SLOAD
+        require (assets[baseId] != address(0), "Asset not found");                  // 1 SLOAD
+        require (assets[ilkId] != address(0), "Asset not found");                   // 1 SLOAD
         // TODO: The oracle should record the assets it refers to, and we should match it against assets[baseId] and assets[ilkId]
         spotOracles[baseId][ilkId] = DataTypes.SpotOracle({
             oracle: oracle,
@@ -153,7 +152,7 @@ contract Cauldron is AccessControl() {
         external
         auth
     {
-        require (assets[baseId] != IERC20(address(0)), "Asset not found");                  // 1 SLOAD
+        require (assets[baseId] != address(0), "Asset not found");                  // 1 SLOAD
         require (fyToken != IFYToken(address(0)), "Series need a fyToken");
         // TODO: Match fyToken.asset() against assets[baseId]
         require (rateOracles[baseId] != IOracle(address(0)), "Rate oracle not found");      // 1 SLOAD
