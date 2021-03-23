@@ -77,23 +77,32 @@ export class YieldEnvironment {
     // ==== Orchestration ====
     await cauldron.grantRoles(
       [
-        id('pour(bytes12,int128,int128)'),
-        id('stir(bytes12,bytes12,uint128)'),
-        id('roll(bytes12,bytes6,int128)'),
         id('build(address,bytes12,bytes6,bytes6)'),
         id('destroy(bytes12)'),
         id('tweak(bytes12,bytes6,bytes6)'),
         id('give(bytes12,address)'),
+        id('pour(bytes12,int128,int128)'),
+        id('stir(bytes12,bytes12,uint128)'),
+        id('roll(bytes12,bytes6,int128)'),
+        id('slurp(bytes12,uint128,uint128)'),
       ],
       ladle.address
     )
 
     await cauldron.grantRoles(
-      [id('destroy(bytes12)'), id('grab(bytes12)'), id('slurp(bytes12,int128,int128)')],
+      [
+        id('destroy(bytes12)'),
+        id('grab(bytes12)'),
+      ],
       witch.address
     )
 
-    await ladle.grantRoles([id('_join(bytes12,address,int128,int128)')], witch.address)
+    await ladle.grantRoles([
+      id(
+        'settle(bytes12,address,uint128,uint128)'
+      )],
+      witch.address
+    )
 
     // ==== Owner access ====
     await cauldron.grantRoles(
@@ -112,7 +121,7 @@ export class YieldEnvironment {
         id('stir(bytes12,bytes12,uint128)'),
         id('roll(bytes12,bytes6,int128)'),
         id('grab(bytes12)'),
-        id('slurp(bytes12,int128,int128)'),
+        id('slurp(bytes12,uint128,uint128)'),
       ],
       ownerAdd
     )
@@ -120,7 +129,7 @@ export class YieldEnvironment {
     await ladle.grantRoles([
       id('addJoin(bytes6,address)'),
       id('addPool(bytes6,address)'),
-      id('_join(bytes12,address,int128,int128)'),
+      id('settle(bytes12,address,uint128,uint128)'),
       id('setWeth(address)')
     ], ownerAdd)
 

@@ -43,18 +43,9 @@ library RMath {
     }
 }
 
-library Safe128 {
-    /// @dev Safely cast an uint128 to an int128
-    function i128(uint128 x) internal pure returns (int128 y) {
-        require (x <= uint128(type(int128).max), "Cast overflow");
-        y = int128(x);
-    }
-}
-
 // TODO: Add a setter for AUCTION_TIME
 contract Witch {
     using RMath for uint128;
-    using Safe128 for uint128;
 
     event Bought(address indexed buyer, bytes12 indexed vaultId, uint128 ink, uint128 art);
   
@@ -97,9 +88,8 @@ contract Witch {
         uint128 ink = art.rdivup(price);                                                    // Calculate collateral to sell. Using divdrup stops rounding from leaving 1 stray wei in vaults.
         require (ink >= min, "Not enough bought");                                          // TODO: We could also check that min <= balances_.ink
 
-        balances_ = cauldron.slurp(vaultId, -(ink.i128()), -(art.i128()));                  // Manipulate the vault
-        ladle._join(vaultId, msg.sender, -(ink.i128()), art.i128());                        // Move the assets
-        if (balances_.art == 0 && balances_.ink == 0) cauldron.destroy(vaultId);
+        ladle.settle(vaultId, msg.sender, ink, art);                                        // Move the assets
+        if (balances_.art - art == 0 && balances_.ink - ink == 0) cauldron.destroy(vaultId);
 
         emit Bought(msg.sender, vaultId, ink, art);
     }
