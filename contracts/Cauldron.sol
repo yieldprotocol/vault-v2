@@ -152,9 +152,10 @@ contract Cauldron is AccessControl() {
         external
         auth
     {
-        require (assets[baseId] != address(0), "Asset not found");                  // 1 SLOAD
+        address asset = assets[baseId];
+        require (asset != address(0), "Asset not found");                  // 1 SLOAD
         require (fyToken != IFYToken(address(0)), "Series need a fyToken");
-        // TODO: Match fyToken.asset() against assets[baseId]
+        require (fyToken.asset() == asset, "Unmatched series and base");
         require (rateOracles[baseId] != IOracle(address(0)), "Rate oracle not found");      // 1 SLOAD
         require (series[seriesId].fyToken == IFYToken(address(0)), "Id already used");      // 1 SLOAD
         series[seriesId] = DataTypes.Series({
