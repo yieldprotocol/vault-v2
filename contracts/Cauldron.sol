@@ -84,19 +84,18 @@ contract Cauldron is AccessControl() {
     event VaultTimestamped(bytes12 indexed vaultId, uint256 indexed timestamp);
 
     // ==== Protocol data ====
-    mapping (bytes6 => address)                             public assets;          // Underlyings and collaterals available in Cauldron. 12 bytes still free.
-    mapping (bytes6 => mapping(bytes6 => DataTypes.Debt))   public debt;            // [baseId][ilkId] Max and sum of debt per underlying and collateral.
-    mapping (bytes6 => DataTypes.Series)                    public series;          // Series available in Cauldron. We can possibly use a bytes6 (3e14 possible series).
-    mapping (bytes6 => mapping(bytes6 => bool))             public ilks;            // [seriesId][assetId] Assets that are approved as collateral for a series
+    mapping (bytes6 => address)                                 public assets;          // Underlyings and collaterals available in Cauldron. 12 bytes still free.
+    mapping (bytes6 => mapping(bytes6 => DataTypes.Debt))       public debt;            // [baseId][ilkId] Max and sum of debt per underlying and collateral.
+    mapping (bytes6 => DataTypes.Series)                        public series;          // Series available in Cauldron. We can possibly use a bytes6 (3e14 possible series).
+    mapping (bytes6 => mapping(bytes6 => bool))                 public ilks;            // [seriesId][assetId] Assets that are approved as collateral for a series
 
-    // mapping (bytes6 => IOracle)                             public chiOracles;      // Chi (savings rate) accruals oracle for the underlying
-    mapping (bytes6 => IOracle)                             public rateOracles;     // Rate (borrowing rate) accruals oracle for the underlying
-    mapping (bytes6 => mapping(bytes6 => DataTypes.SpotOracle))   public spotOracles;     // [assetId][assetId] Spot price oracles
+    mapping (bytes6 => IOracle)                                 public rateOracles;     // Rate (borrowing rate) accruals oracle for the underlying
+    mapping (bytes6 => mapping(bytes6 => DataTypes.SpotOracle)) public spotOracles;     // [assetId][assetId] Spot price oracles
 
     // ==== Vault data ====
-    mapping (bytes12 => DataTypes.Vault)                    public vaults;          // An user can own one or more Vaults, each one with a bytes12 identifier
-    mapping (bytes12 => DataTypes.Balances)                 public balances;        // Both debt and assets
-    mapping (bytes12 => uint32)                             public timestamps;      // If grater than zero, time that a vault was timestamped. Used for liquidation.
+    mapping (bytes12 => DataTypes.Vault)                        public vaults;          // An user can own one or more Vaults, each one with a bytes12 identifier
+    mapping (bytes12 => DataTypes.Balances)                     public balances;        // Both debt and assets
+    mapping (bytes12 => uint32)                                 public timestamps;      // If grater than zero, time that a vault was timestamped. Used for liquidation.
 
     // ==== Administration ====
 
@@ -115,9 +114,9 @@ contract Cauldron is AccessControl() {
         external
         auth
     {
-        require (assets[baseId] != address(0), "Asset not found");                  // 1 SLOAD
-        require (assets[ilkId] != address(0), "Asset not found");                   // 1 SLOAD
-        debt[baseId][ilkId].max = max;                                                      // 1 SSTORE
+        require (assets[baseId] != address(0), "Asset not found");
+        require (assets[ilkId] != address(0), "Asset not found");
+        debt[baseId][ilkId].max = max;
         emit MaxDebtSet(baseId, ilkId, max);
     }
 
@@ -126,9 +125,9 @@ contract Cauldron is AccessControl() {
         external
         auth
     {
-        require (assets[baseId] != address(0), "Asset not found");                  // 1 SLOAD
+        require (assets[baseId] != address(0), "Asset not found");
         // TODO: The oracle should record the asset it refers to, and we should match it against assets[baseId]
-        rateOracles[baseId] = oracle;                                                       // 1 SSTORE                                                             // 1 SSTORE. Allows to replace an existing oracle.
+        rateOracles[baseId] = oracle;
         emit RateOracleAdded(baseId, address(oracle));
     }
 
@@ -137,13 +136,13 @@ contract Cauldron is AccessControl() {
         external
         auth
     {
-        require (assets[baseId] != address(0), "Asset not found");                  // 1 SLOAD
-        require (assets[ilkId] != address(0), "Asset not found");                   // 1 SLOAD
+        require (assets[baseId] != address(0), "Asset not found");
+        require (assets[ilkId] != address(0), "Asset not found");
         // TODO: The oracle should record the assets it refers to, and we should match it against assets[baseId] and assets[ilkId]
         spotOracles[baseId][ilkId] = DataTypes.SpotOracle({
             oracle: oracle,
             ratio: ratio                                                                    // With 2 decimals. 10000 == 100%
-        });                                                                                 // 1 SSTORE. Allows to replace an existing oracle.
+        });                                                                                 // Allows to replace an existing oracle.
         emit SpotOracleAdded(baseId, ilkId, address(oracle), ratio);
     }
 
@@ -153,16 +152,16 @@ contract Cauldron is AccessControl() {
         auth
     {
         address asset = assets[baseId];
-        require (asset != address(0), "Asset not found");                  // 1 SLOAD
+        require (asset != address(0), "Asset not found");
         require (fyToken != IFYToken(address(0)), "Series need a fyToken");
         require (fyToken.asset() == asset, "Unmatched series and base");
-        require (rateOracles[baseId] != IOracle(address(0)), "Rate oracle not found");      // 1 SLOAD
-        require (series[seriesId].fyToken == IFYToken(address(0)), "Id already used");      // 1 SLOAD
+        require (rateOracles[baseId] != IOracle(address(0)), "Rate oracle not found");
+        require (series[seriesId].fyToken == IFYToken(address(0)), "Id already used");
         series[seriesId] = DataTypes.Series({
             fyToken: fyToken,
             maturity: fyToken.maturity().u32(),
             baseId: baseId
-        });                                                                                 // 1 SSTORE
+        });
         emit SeriesAdded(seriesId, baseId, address(fyToken));
     }
 
@@ -171,17 +170,17 @@ contract Cauldron is AccessControl() {
         external
         auth
     {
-        DataTypes.Series memory series_ = series[seriesId];                                 // 1 SLOAD
+        DataTypes.Series memory series_ = series[seriesId];
         require (
             series_.fyToken != IFYToken(address(0)),
             "Series not found"
         );
         for (uint256 i = 0; i < ilkIds.length; i++) {
             require (
-                spotOracles[series_.baseId][ilkIds[i]].oracle != IOracle(address(0)),       // 1 SLOAD
+                spotOracles[series_.baseId][ilkIds[i]].oracle != IOracle(address(0)),
                 "Spot oracle not found"
             );
-            ilks[seriesId][ilkIds[i]] = true;                                               // 1 SSTORE
+            ilks[seriesId][ilkIds[i]] = true;
             emit IlkAdded(seriesId, ilkIds[i]);
         }
     }
@@ -193,13 +192,13 @@ contract Cauldron is AccessControl() {
         public
         auth
     {
-        require (vaults[vaultId].owner == address(0), "Vault already exists");              // 1 SLOAD
-        require (ilks[seriesId][ilkId] == true, "Ilk not added");                           // 1 SLOAD
+        require (vaults[vaultId].owner == address(0), "Vault already exists");
+        require (ilks[seriesId][ilkId] == true, "Ilk not added");
         vaults[vaultId] = DataTypes.Vault({
             owner: owner,
             seriesId: seriesId,
             ilkId: ilkId
-        });                                                                                 // 1 SSTORE
+        });
 
         emit VaultBuilt(vaultId, msg.sender, seriesId, ilkId);
     }
@@ -209,10 +208,10 @@ contract Cauldron is AccessControl() {
         public
         auth
     {
-        DataTypes.Balances memory balances_ = balances[vaultId];                            // 1 SLOAD
-        require (balances_.art == 0 && balances_.ink == 0, "Only empty vaults");            // 1 SLOAD
-        delete timestamps[vaultId];                                                         // 1 SSTORE REFUND
-        delete vaults[vaultId];                                                             // 1 SSTORE REFUND
+        DataTypes.Balances memory balances_ = balances[vaultId];
+        require (balances_.art == 0 && balances_.ink == 0, "Only empty vaults");
+        delete timestamps[vaultId];
+        delete vaults[vaultId];
         emit VaultDestroyed(vaultId);
     }
 
@@ -223,9 +222,9 @@ contract Cauldron is AccessControl() {
         public
         auth
     {
-        require (ilks[seriesId][ilkId] == true, "Ilk not added");                           // 1 SLOAD
-        DataTypes.Balances memory balances_ = balances[vaultId];                            // 1 SLOAD
-        DataTypes.Vault memory vault_ = vaults[vaultId];                                    // 1 SLOAD
+        require (ilks[seriesId][ilkId] == true, "Ilk not added");
+        DataTypes.Balances memory balances_ = balances[vaultId];
+        DataTypes.Vault memory vault_ = vaults[vaultId];
         if (seriesId != vault_.seriesId) {
             require (balances_.art == 0, "Only with no debt");
             vault_.seriesId = seriesId;
@@ -234,7 +233,7 @@ contract Cauldron is AccessControl() {
             require (balances_.ink == 0, "Only with no collateral");
             vault_.ilkId = ilkId;
         }
-        vaults[vaultId] = vault_;                                                           // 1 SSTORE
+        vaults[vaultId] = vault_;
         emit VaultTweaked(vaultId, seriesId, ilkId);
     }
 
@@ -242,7 +241,7 @@ contract Cauldron is AccessControl() {
     function _give(bytes12 vaultId, address receiver)
         internal
     {
-        vaults[vaultId].owner = receiver;                                                   // 1 SSTORE
+        vaults[vaultId].owner = receiver;
         emit VaultTransfer(vaultId, receiver);
     }
 
@@ -263,16 +262,16 @@ contract Cauldron is AccessControl() {
         auth
         returns (DataTypes.Balances memory, DataTypes.Balances memory)
     {
-        DataTypes.Vault memory vaultTo = vaults[to];                                       // 1 SLOAD
+        DataTypes.Vault memory vaultTo = vaults[to];
         require (vaultTo.owner != address(0), "Vault not found");
-        require (vaults[from].ilkId == vaultTo.ilkId, "Different collateral");             // 1 SLOAD
-        DataTypes.Balances memory balancesFrom_ = balances[from];                          // 1 SLOAD
-        DataTypes.Balances memory balancesTo_ = balances[to];                              // 1 SLOAD
+        require (vaults[from].ilkId == vaultTo.ilkId, "Different collateral");
+        DataTypes.Balances memory balancesFrom_ = balances[from];
+        DataTypes.Balances memory balancesTo_ = balances[to];
         balancesFrom_.ink -= ink;
         balancesTo_.ink += ink;
-        balances[from] = balancesFrom_;                                                    // 1 SSTORE
-        balances[to] = balancesTo_;                                                        // 1 SSTORE
-        if (balancesFrom_.art > 0) require(level(from) >= 0, "Undercollateralized");      // Cost of `level`
+        balances[from] = balancesFrom_;
+        balances[to] = balancesTo_;
+        if (balancesFrom_.art > 0) require(level(from) >= 0, "Undercollateralized");
 
         emit VaultStirred(from, to, ink);
         return (balancesFrom_, balancesTo_);
@@ -284,9 +283,9 @@ contract Cauldron is AccessControl() {
     function _pour(bytes12 vaultId, int128 ink, int128 art)
         internal returns (DataTypes.Balances memory)
     {
-        DataTypes.Vault memory vault_ = vaults[vaultId];                                    // 1 SLOAD
-        DataTypes.Balances memory balances_ = balances[vaultId];                            // 1 SLOAD
-        DataTypes.Series memory series_ = series[vault_.seriesId];                          // 1 SLOAD
+        DataTypes.Vault memory vault_ = vaults[vaultId];
+        DataTypes.Balances memory balances_ = balances[vaultId];
+        DataTypes.Series memory series_ = series[vault_.seriesId];
 
         // For now, the collateralization checks are done outside to allow for underwater operation. That might change.
         if (ink != 0) {
@@ -296,13 +295,13 @@ contract Cauldron is AccessControl() {
         // TODO: Consider whether _roll should call _pour, or the next block be a private function.
         // Modify vault and global debt records. If debt increases, check global limit.
         if (art != 0) {
-            DataTypes.Debt memory debt_ = debt[series_.baseId][vault_.ilkId];               // 1 SLOAD
+            DataTypes.Debt memory debt_ = debt[series_.baseId][vault_.ilkId];
             if (art > 0) require (debt_.sum.add(art) <= debt_.max, "Max debt exceeded");
             balances_.art = balances_.art.add(art);
             debt_.sum = debt_.sum.add(art);
-            debt[series_.baseId][vault_.ilkId] = debt_;                                     // 1 SSTORE
+            debt[series_.baseId][vault_.ilkId] = debt_;
         }
-        balances[vaultId] = balances_;                                                      // 1 SSTORE
+        balances[vaultId] = balances_;
 
         emit VaultPoured(vaultId, vault_.seriesId, vault_.ilkId, ink, art);
         return balances_;
@@ -312,13 +311,13 @@ contract Cauldron is AccessControl() {
     /// To be used by debt management contracts.
     function pour(bytes12 vaultId, int128 ink, int128 art)
         public
-        auth                                                                             // 1 SLOAD
+        auth
         returns (DataTypes.Balances memory balances_)
     {
-        require (vaults[vaultId].owner != address(0), "Vault not found");                   // 1 SLOAD
-        balances_ = _pour(vaultId, ink, art);                                              // Cost of `_pour`
-        if (balances_.art > 0 && (ink < 0 || art > 0))                                      // If there is debt and we are less safe
-            require(level(vaultId) >= 0, "Undercollateralized");                          // Cost of `level`. TODO: Consider allowing if collateralization level either is healthy or improves.
+        require (vaults[vaultId].owner != address(0), "Vault not found");
+        balances_ = _pour(vaultId, ink, art);
+        if (balances_.art > 0 && (ink < 0 || art > 0))                          // If there is debt and we are less safe
+            require(level(vaultId) >= 0, "Undercollateralized");
         return balances_;
     }
 
@@ -326,13 +325,13 @@ contract Cauldron is AccessControl() {
     /// To be used for liquidation engines.
     function grab(bytes12 vaultId)
         public
-        auth                                                                             // 1 SLOAD
+        auth
     {
         uint32 now_ = uint32(block.timestamp);
-        require (timestamps[vaultId] + 24*60*60 <= now_, "Timestamped");            // 1 SLOAD. Grabbing a vault protects it for a day from being grabbed by another liquidator. All grabbed vaults will be suddenly released on the 7th of February 2106, at 06:28:16 GMT. I can live with that.
-        require(level(vaultId) < 0, "Not undercollateralized");                           // Cost of `level`.
-        timestamps[vaultId] = now_;                                                         // 1 SSTORE
-        _give(vaultId, msg.sender);                                                        // Cost of `_give`
+        require (timestamps[vaultId] + 24*60*60 <= now_, "Timestamped");        // Grabbing a vault protects it for a day from being grabbed by another liquidator. All grabbed vaults will be suddenly released on the 7th of February 2106, at 06:28:16 GMT. I can live with that.
+        require(level(vaultId) < 0, "Not undercollateralized");
+        timestamps[vaultId] = now_;
+        _give(vaultId, msg.sender);
         emit VaultTimestamped(vaultId, now_);
     }
 
@@ -340,11 +339,11 @@ contract Cauldron is AccessControl() {
     /// To be used by debt management contracts, which must own the vault.
     function slurp(bytes12 vaultId, int128 ink, int128 art)
         public
-        auth                                                                             // 1 SLOAD
+        auth
         returns (DataTypes.Balances memory balances_)
     {
-        require (vaults[vaultId].owner == msg.sender, "Only vault owner");                  // 1 SLOAD
-        balances_ = _pour(vaultId, ink, art);                                              // Cost of `_pour`
+        require (vaults[vaultId].owner == msg.sender, "Only vault owner");
+        balances_ = _pour(vaultId, ink, art);
         return balances_;
     }
 
@@ -355,24 +354,24 @@ contract Cauldron is AccessControl() {
         auth
         returns (uint128)
     {
-        DataTypes.Vault memory vault_ = vaults[vaultId];                                    // 1 SLOAD
-        require (vault_.owner != address(0), "Vault not found");                            // 1 SLOAD
-        DataTypes.Balances memory balances_ = balances[vaultId];                            // 1 SLOAD
-        DataTypes.Series memory series_ = series[vault_.seriesId];                          // 1 SLOAD
+        DataTypes.Vault memory vault_ = vaults[vaultId];
+        require (vault_.owner != address(0), "Vault not found");
+        DataTypes.Balances memory balances_ = balances[vaultId];
+        DataTypes.Series memory series_ = series[vault_.seriesId];
         
-        delete balances[vaultId];                                                           // -1 SSTORE
-        tweak(vaultId, seriesId, vault_.ilkId);                                             // 1 SLOAD + Cost of `_tweak`
+        delete balances[vaultId];
+        tweak(vaultId, seriesId, vault_.ilkId);
 
         // Modify vault and global debt records. If debt increases, check global limit.
         if (art != 0) {
-            DataTypes.Debt memory debt_ = debt[series_.baseId][vault_.ilkId];               // 1 SLOAD
+            DataTypes.Debt memory debt_ = debt[series_.baseId][vault_.ilkId];
             if (art > 0) require (debt_.sum.add(art) <= debt_.max, "Max debt exceeded");
             balances_.art = balances_.art.add(art);
             debt_.sum = debt_.sum.add(art);
-            debt[series_.baseId][vault_.ilkId] = debt_;                                     // 1 SSTORE
+            debt[series_.baseId][vault_.ilkId] = debt_;
         }
-        balances[vaultId] = balances_;                                                      // 1 SSTORE
-        require(level(vaultId) >= 0, "Undercollateralized");                              // Cost of `level`
+        balances[vaultId] = balances_;
+        require(level(vaultId) >= 0, "Undercollateralized");
         emit VaultRolled(vaultId, seriesId, balances_.art);
         return balances_.art;
     }
@@ -381,17 +380,17 @@ contract Cauldron is AccessControl() {
 
     /// @dev Return the collateralization level of a vault. It will be negative if undercollateralized.
     function level(bytes12 vaultId) public view returns (int128) {
-        DataTypes.Vault memory vault_ = vaults[vaultId];                                    // 1 SLOAD
+        DataTypes.Vault memory vault_ = vaults[vaultId];
         require (vault_.owner != address(0), "Vault not found");                            // The vault existing is enough to be certain that the oracle exists.
-        DataTypes.Series memory series_ = series[vault_.seriesId];                          // 1 SLOAD
-        DataTypes.Balances memory balances_ = balances[vaultId];                            // 1 SLOAD
-        DataTypes.SpotOracle memory spotOracle_ = spotOracles[series_.baseId][vault_.ilkId];        // 1 SLOAD
-        uint128 spot = spotOracle_.oracle.spot();                                                       // 1 `spot` call
-        uint128 ratio = uint128(spotOracle_.ratio) * 1e23;                                    // Normalization factor from 2 to 27 decimals
+        DataTypes.Series memory series_ = series[vault_.seriesId];
+        DataTypes.Balances memory balances_ = balances[vaultId];
+        DataTypes.SpotOracle memory spotOracle_ = spotOracles[series_.baseId][vault_.ilkId];
+        uint128 spot = spotOracle_.oracle.spot();
+        uint128 ratio = uint128(spotOracle_.ratio) * 1e23;                                  // Normalization factor from 2 to 27 decimals
 
         if (uint32(block.timestamp) >= series_.maturity) {
-            IOracle rateOracle = rateOracles[series_.baseId];                               // 1 SLOAD
-            uint128 accrual = rateOracle.accrual(series_.maturity);                         // 1 `accrual` call
+            IOracle rateOracle = rateOracles[series_.baseId];
+            uint128 accrual = rateOracle.accrual(series_.maturity);
             return balances_.ink.rmul(spot).i128() - balances_.art.rmul(accrual).rmul(ratio).i128();
         }
 
@@ -401,9 +400,9 @@ contract Cauldron is AccessControl() {
     /// @dev Helper function to record the rate in the appropriate oracle when maturing an fyToken
     // TODO: Do we need this here? It can be in its own contract.
     function mature(bytes6 seriesId) public {
-        DataTypes.Series memory series_ = series[seriesId];                                 // 1 SLOAD
-        IOracle rateOracle = rateOracles[series_.baseId];                                   // 1 SLOAD
-        rateOracle.record(series_.maturity);                                                // Cost of `record`
-        series_.fyToken.mature();                                                           // Cost of `mature`
+        DataTypes.Series memory series_ = series[seriesId];
+        IOracle rateOracle = rateOracles[series_.baseId];
+        rateOracle.record(series_.maturity);
+        series_.fyToken.mature();
     }
 }
