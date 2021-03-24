@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
-import "@yield-protocol/utils/contracts/token/IERC20.sol";
-import "@yield-protocol/utils/contracts/token/IERC2612.sol";
-import "@yield-protocol/yieldspace-interfaces/IPool.sol";
 import "@yield-protocol/vault-interfaces/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/IJoin.sol";
 import "@yield-protocol/vault-interfaces/ICauldron.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
+import "@yield-protocol/yieldspace-interfaces/IPool.sol";
+import "@yield-protocol/utils/contracts/token/IERC20.sol";
+import "@yield-protocol/utils/contracts/token/IERC2612.sol";
+import "dss-interfaces/src/dss/DaiAbstract.sol";
 import "./AccessControl.sol";
 import "./Batchable.sol";
 import "./IWETH9.sol";
@@ -40,6 +41,8 @@ contract Ladle is AccessControl(), Batchable {
         cauldron = cauldron_;
     }
 
+    // ---- Administration ----
+
     /// @dev Add a new Join for an Asset, or replace an existing one for a new one.
     /// There can be only one Join per Asset. Until a Join is added, no tokens of that Asset can be posted or withdrawn.
     function addJoin(bytes6 assetId, IJoin join)
@@ -63,6 +66,8 @@ contract Ladle is AccessControl(), Batchable {
         // TODO: Assert the pool fyToken address and series fyToken address match
         emit PoolAdded(seriesId, address(pool));
     }
+
+    // ---- Vault management ----
 
     /// @dev Create a new vault, linked to a series (and therefore underlying) and a collateral
     function build(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
@@ -98,6 +103,8 @@ contract Ladle is AccessControl(), Batchable {
         require (vault_.owner == msg.sender, "Only vault owner");
         cauldron.give(vaultId, receiver);                                                              // Cost of `give`
     }
+
+    // ---- Asset and debt management ----
 
     /// @dev Move collateral between vaults.
     function stir(bytes12 from, bytes12 to, uint128 ink)
@@ -218,6 +225,8 @@ contract Ladle is AccessControl(), Batchable {
         return cauldron.roll(vaultId, seriesId, art);                              // Cost of `roll`
     }
 
+    // ---- Join integration ----
+
     /// @dev Allow authorized contracts to move assets through the ladle
     // TODO: Come up with a different name, without underscore
     function _join(bytes12 vaultId, address user, int128 ink, int128 art)
@@ -237,6 +246,26 @@ contract Ladle is AccessControl(), Batchable {
             require (baseJoin_ != IJoin(address(0)), "Base join not found");
             baseJoin_.join(user, art);
         }
+    }
+
+    // ---- Permit management ----
+
+    /// @dev Execute an ERC2612 permit for the selected asset or fyToken
+    function forwardPermit(bytes6 id, bool asset, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s) public {
+        IERC2612 token = IERC2612(_findToken(id, asset));
+        token.permit(msg.sender, spender, amount, deadline, v, r, s);
+    }
+
+    /// @dev Execute a Dai-style permit for the selected asset or fyToken
+    function forwardDaiPermit(bytes6 id, bool asset, address spender, uint256 nonce, uint256 deadline, bool allowed, uint8 v, bytes32 r, bytes32 s) public {
+        DaiAbstract token = DaiAbstract(_findToken(id, asset));
+        token.permit(msg.sender, spender, nonce, deadline, allowed, v, r, s);
+    }
+
+    /// @dev From an id, which can be an assetId or a seriesId, find the resulting asset or fyToken
+    function _findToken(bytes6 id, bool asset) internal returns (address token) {
+        token = asset ? address(cauldron.assets(id)) : address(cauldron.series(id).fyToken); // TODO: Remove the castings
+        require (token != address(0), "Token not found");
     }
 
     // ---- Ether management ----
