@@ -211,8 +211,7 @@ contract Ladle is AccessControl(), Batchable {
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
         IPool pool_ = pools[vault_.seriesId];
         balances_ = pour(vaultId, address(pool_), ink, art);                            // Checks msg.sender owns the vault.
-        base_ = pool_.sellFYToken(to);
-        require (base_ >= min, "Slippage exceeded");
+        base_ = pool_.sellFYToken(to, min);
     }
 
     /// @dev Change series and debt of a vault.
@@ -310,5 +309,51 @@ contract Ladle is AccessControl(), Batchable {
         ethTransferred = weth.balanceOf(address(this));
         weth.withdraw(ethTransferred);   // TODO: Test gas savings using WETH10 `withdrawTo`
         to.transfer(ethTransferred); /// TODO: Consider reentrancy and safe transfers
+    }
+
+    // ---- Pool router ----
+
+    /// @dev Allow users to trigger a token sale in a pool through the ladle, to be used with multicall
+    function sellToken(bytes6 seriesId, bool base, address to, uint128 min)
+        external
+        returns (uint128 tokenOut)
+    {
+        IPool pool = pools[seriesId];
+        require (pool != IPool(address(0)), "Pool does not exist");
+        tokenOut = base ? pool.sellBaseToken(to, min) : pool.sellFYToken(to, min);
+        return tokenOut;
+    }
+
+    /// @dev Allow users to trigger a token buy in a pool through the ladle, to be used with multicall
+    function buyToken(bytes6 seriesId, bool base, address to, uint128 tokenOut, uint128 max)
+        external
+        returns (uint128 tokenIn)
+    {
+        IPool pool = pools[seriesId];
+        require (pool != IPool(address(0)), "Pool does not exist");
+        tokenIn = base ? pool.buyBaseToken(to, tokenOut, max) : pool.buyFYToken(to, tokenOut, max);
+        return tokenIn;
+    }
+
+    /// @dev Allow users to trigger a token transfer to a pool through the ladle, to be used with multicall
+    function transferToPool(bytes6 seriesId, bool base, uint128 wad)
+        external
+        returns (bool)
+    {
+        IPool pool = pools[seriesId];
+        require (pool != IPool(address(0)), "Pool does not exist");
+        IERC20 token = base ? pool.baseToken() : pool.fyToken();
+        require(token.transferFrom(msg.sender, address(pool), wad), "Failed transfer");
+        return true;
+    }
+
+    /// @dev Allow users to trigger a token transfer to a pool through the ladle, to be used with multicall
+    function retrieveToken(bytes6 seriesId, address to, bool base)
+        external
+        returns (uint128 retrieved)
+    {
+        IPool pool = pools[seriesId];
+        require (pool != IPool(address(0)), "Pool does not exist");
+        retrieved = base ? pool.retrieveBaseToken(to) : pool.retrieveFYToken(to);
     }
 }

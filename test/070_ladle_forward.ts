@@ -3,6 +3,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { Cauldron } from '../typechain/Cauldron'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
+import { PoolMock } from '../typechain/PoolMock'
 import { Ladle } from '../typechain/Ladle'
 
 import { ethers, waffle } from 'hardhat'
@@ -11,7 +12,7 @@ const { loadFixture } = waffle
 
 import { YieldEnvironment, WAD } from './shared/fixtures'
 
-describe('Ladle - serve', function () {
+describe('Ladle - pool router', function () {
   this.timeout(0)
 
   let env: YieldEnvironment
@@ -21,6 +22,7 @@ describe('Ladle - serve', function () {
   let other: string
   let cauldron: Cauldron
   let fyToken: FYToken
+  let pool: PoolMock
   let base: ERC20Mock
   let ilk: ERC20Mock
   let ladle: Ladle
@@ -41,6 +43,7 @@ describe('Ladle - serve', function () {
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const mockSeriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
 
   let vaultId: string
 
@@ -51,33 +54,27 @@ describe('Ladle - serve', function () {
     base = env.assets.get(baseId) as ERC20Mock
     ilk = env.assets.get(ilkId) as ERC20Mock
     fyToken = env.series.get(seriesId) as FYToken
+    pool = env.pools.get(seriesId) as PoolMock
 
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
   })
 
-  it('does not allow repaying debt with `serve`', async () => {
-    await expect(ladle.serve(vaultId, owner, WAD, WAD.mul(-1), 0)).to.be.revertedWith('Only borrow')
+  it('does not allow using unknown pools', async () => {
+    await expect(ladle.transferToPool(mockSeriesId, true, WAD)).to.be.revertedWith('Pool does not exist')
   })
 
-  it('does not allow withdrawing collateral with `serve`', async () => {
-    await expect(ladle.serve(vaultId, owner, WAD.mul(-1), WAD, 0)).to.be.revertedWith('Only post')
+  it('transfers base to pool', async () => {
+    await base.approve(ladle.address, WAD)
+    expect(await ladle.transferToPool(seriesId, true, WAD))
+      .to.emit(base, 'Transfer')
+      .withArgs(owner, pool.address, WAD)
   })
 
-  it('borrows and sells for base', async () => {
-    const baseBalanceBefore = await base.balanceOf(owner)
-    const ilkBalanceBefore = await ilk.balanceOf(owner)
-    expect(await ladle.serve(vaultId, owner, WAD, WAD, 0))
-      .to.emit(cauldron, 'VaultPoured')
-      .withArgs(vaultId, seriesId, ilkId, WAD, WAD)
-    expect((await cauldron.balances(vaultId)).ink).to.equal(WAD)
-    expect((await cauldron.balances(vaultId)).art).to.equal(WAD)
-    expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.add(WAD.mul(100).div(105)))
-    expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.sub(WAD))
-  })
-
-  it('does not `serve` if slippage exceeded', async () => {
-    await expect(ladle.serve(vaultId, owner, WAD, WAD, WAD.mul(2))).to.be.revertedWith(
-      'Pool: Not enough baseToken obtained'
-    )
+  it('transfers fyToken to pool', async () => {
+    await ladle.pour(vaultId, owner, WAD, WAD)
+    await fyToken.approve(ladle.address, WAD)
+    expect(await ladle.transferToPool(seriesId, false, WAD))
+      .to.emit(fyToken, 'Transfer')
+      .withArgs(owner, pool.address, WAD)
   })
 })
