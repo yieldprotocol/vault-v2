@@ -229,28 +229,28 @@ contract Ladle is AccessControl(), Batchable {
         return cauldron.roll(vaultId, seriesId, art);
     }
 
-    // ---- Join integration ----
+    // ---- Liquidations ----
 
-    /// @dev Allow authorized contracts to move assets through the ladle
-    // TODO: Come up with a different name, without underscore
-    function _join(bytes12 vaultId, address user, int128 ink, int128 art)
+    /// @dev Allow liquidation contracts to move assets to wind down vaults
+    function settle(bytes12 vaultId, address user, uint128 ink, uint128 art)
         external
         auth
     {
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
+        require (vault_.owner == msg.sender, "Only vault owner");
         DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);
 
-        if (ink != 0) {
+        cauldron.slurp(vaultId, ink, art);                                                  // Remove debt and collateral from the vault
+
+        if (ink != 0) {                                                                     // Give collateral to the user
             IJoin ilkJoin_ = joins[vault_.ilkId];
             require (ilkJoin_ != IJoin(address(0)), "Ilk join not found");
-            if (ink > 0) ilkJoin_.join(user, uint128(ink));
-            if (ink < 0) ilkJoin_.exit(user, uint128(-ink));
+            ilkJoin_.exit(user, ink);
         }
-        if (art != 0) {
+        if (art != 0) {                                                                     // Take underlying from user
             IJoin baseJoin_ = joins[series_.baseId];
             require (baseJoin_ != IJoin(address(0)), "Base join not found");
-            if (art > 0) baseJoin_.join(user, uint128(art));
-            if (art < 0) baseJoin_.exit(user, uint128(-art));
+            baseJoin_.join(user, art);
         }
     }
 

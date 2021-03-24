@@ -335,15 +335,14 @@ contract Cauldron is AccessControl() {
         emit VaultTimestamped(vaultId, now_);
     }
 
-    /// @dev Manipulate a vault, ignoring collateralization levels.
-    /// To be used by debt management contracts, which must own the vault.
-    function slurp(bytes12 vaultId, int128 ink, int128 art)
+    /// @dev Reduce debt and collateral from a vault, ignoring collateralization checks.
+    /// To be used by liquidation engines.
+    function slurp(bytes12 vaultId, uint128 ink, uint128 art)
         public
         auth
         returns (DataTypes.Balances memory balances_)
     {
-        require (vaults[vaultId].owner == msg.sender, "Only vault owner");
-        balances_ = _pour(vaultId, ink, art);
+        balances_ = _pour(vaultId, -(ink.i128()), -(art.i128()));
         return balances_;
     }
 

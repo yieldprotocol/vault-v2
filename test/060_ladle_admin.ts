@@ -154,7 +154,7 @@ describe('Ladle - admin', function () {
 
     it('does not allow adding a pool with a mismatched base', async () => {
       const otherPool = (await deployContract(ownerAcc, PoolMockArtifact, [ilk.address, fyToken.address])) as PoolMock
-      
+
       await expect(ladle.addPool(seriesId, otherPool.address)).to.be.revertedWith('Mismatched pool base and series')
     })
 
