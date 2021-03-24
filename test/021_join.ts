@@ -40,7 +40,7 @@ describe('Join', function () {
     join = (await deployContract(ownerAcc, JoinArtifact, [token.address])) as Join
     joinFromOther = join.connect(otherAcc)
 
-    await join.grantRoles([id('join(address,int128)')], owner)
+    await join.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], owner)
 
     await token.mint(owner, WAD.mul(100))
     await token.approve(join.address, MAX)
@@ -81,7 +81,7 @@ describe('Join', function () {
       })
 
       it('pushes tokens to user', async () => {
-        expect(await join.join(owner, WAD.mul(-1)))
+        expect(await join.exit(owner, WAD))
           .to.emit(token, 'Transfer')
           .withArgs(join.address, owner, WAD)
         expect(await join.storedBalance()).to.equal(0)

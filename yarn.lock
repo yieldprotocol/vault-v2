@@ -963,20 +963,21 @@
     patch-package "^6.2.2"
     postinstall-postinstall "^2.1.0"
 
-"@ethereumjs/common@^2.0.0":
-  version "2.1.0"
-  resolved "https://registry.yarnpkg.com/@ethereumjs/common/-/common-2.1.0.tgz#00534e89419f43556843f73abdf40235f37693ee"
-  integrity sha512-sY2yBKwZjlIM5Z+sBd9ZEEH5YDB5OsvSVCi5hzTqeMfv4307JfLH0MjM09whi4InLmqWRdJp/fmt/rQyP4qxKg==
+"@ethereumjs/common@^2.2.0":
+  version "2.2.0"
+  resolved "https://registry.yarnpkg.com/@ethereumjs/common/-/common-2.2.0.tgz#850a3e3e594ee707ad8d44a11e8152fb62450535"
+  integrity sha512-PyQiTG00MJtBRkJmv46ChZL8u2XWxNBeAthznAUIUiefxPAXjbkuiCZOuncgJS34/XkMbNc9zMt/PlgKRBElig==
   dependencies:
     crc-32 "^1.2.0"
+    ethereumjs-util "^7.0.9"
 
 "@ethereumjs/tx@^3.0.2":
-  version "3.0.2"
-  resolved "https://registry.yarnpkg.com/@ethereumjs/tx/-/tx-3.0.2.tgz#9cd34226cad25fa6d1d66b620f647f846e649cbb"
-  integrity sha512-zmFCosjOdj1WoYEiQBdC4sCOAllBEwxdKuY85L9FgZ4zVDfZUVsQ4S9paczt4hVt65A7N8sJwgVEzDaQmrRaqw==
+  version "3.1.0"
+  resolved "https://registry.yarnpkg.com/@ethereumjs/tx/-/tx-3.1.0.tgz#b430ca04bcbf85914ffe90eff6cf6e6549e33e47"
+  integrity sha512-Ig6ept1XTxzNwP6ldNmi8+iOkNKsbhh3z/Z0uJxJ5tj1Loo6iX1jxJmaVjmjh5G+ww/b1JB0ljEC+TPiMaLKNw==
   dependencies:
-    "@ethereumjs/common" "^2.0.0"
-    ethereumjs-util "^7.0.8"
+    "@ethereumjs/common" "^2.2.0"
+    ethereumjs-util "^7.0.9"
 
 "@ethersproject/abi@5.0.0-beta.153":
   version "5.0.0-beta.153"
@@ -2239,10 +2240,10 @@
     ethereumjs-util "^7.0.8"
     ethers "^5.0.7"
 
-"@yield-protocol/vault-interfaces@^2.0.5":
-  version "2.0.5"
-  resolved "https://registry.yarnpkg.com/@yield-protocol/vault-interfaces/-/vault-interfaces-2.0.5.tgz#9b8582dc02a72a4dbb4bba3c876c04861ad4fca7"
-  integrity sha512-vWenDdNIKQO4N3k50/Zsvmk2BWH7rTqgHmzY0jwy+RJnyOhzxz9KJxOmEVVHMK+Q7qblJyZWG+Kqxx1zLRYSng==
+"@yield-protocol/vault-interfaces@^2.0.10":
+  version "2.0.10"
+  resolved "https://registry.yarnpkg.com/@yield-protocol/vault-interfaces/-/vault-interfaces-2.0.10.tgz#c4814a1bca38d9b421883a50ef833c12d6f545c4"
+  integrity sha512-FIMvI5g0PLpQu9IHlV5/VhKQsk5YCWm7TE9uB3In7k5YdfxKpOWmDlIKIB6LEjBH2RqwY5yjdbb3XbtcgucQdQ==
 
 "@yield-protocol/yieldspace-interfaces@^2.0.3":
   version "2.0.3"
@@ -5628,7 +5629,7 @@ ethereumjs-util@^5.0.0, ethereumjs-util@^5.0.1, ethereumjs-util@^5.1.1, ethereum
     rlp "^2.0.0"
     safe-buffer "^5.1.1"
 
-ethereumjs-util@^7.0.2, ethereumjs-util@^7.0.8:
+ethereumjs-util@^7.0.2, ethereumjs-util@^7.0.8, ethereumjs-util@^7.0.9:
   version "7.0.9"
   resolved "https://registry.yarnpkg.com/ethereumjs-util/-/ethereumjs-util-7.0.9.tgz#2038baeb30f370a3e576ec175bd70bbbb6807d42"
   integrity sha512-cRqvYYKJoitq6vMKMf8pXeVwvTrX+dRD0JwHaYqm8jvogK14tqIoCWH/KUHcRwnVxVXEYF/o6pup5jRG4V0xzg==

@@ -77,23 +77,32 @@ export class YieldEnvironment {
     // ==== Orchestration ====
     await cauldron.grantRoles(
       [
-        id('pour(bytes12,int128,int128)'),
-        id('stir(bytes12,bytes12,uint128)'),
-        id('roll(bytes12,bytes6,int128)'),
         id('build(address,bytes12,bytes6,bytes6)'),
         id('destroy(bytes12)'),
         id('tweak(bytes12,bytes6,bytes6)'),
         id('give(bytes12,address)'),
+        id('pour(bytes12,int128,int128)'),
+        id('stir(bytes12,bytes12,uint128)'),
+        id('roll(bytes12,bytes6,int128)'),
+        id('slurp(bytes12,uint128,uint128)'),
       ],
       ladle.address
     )
 
     await cauldron.grantRoles(
-      [id('destroy(bytes12)'), id('grab(bytes12)'), id('slurp(bytes12,int128,int128)')],
+      [
+        id('destroy(bytes12)'),
+        id('grab(bytes12)'),
+      ],
       witch.address
     )
 
-    await ladle.grantRoles([id('_join(bytes12,address,int128,int128)')], witch.address)
+    await ladle.grantRoles([
+      id(
+        'settle(bytes12,address,uint128,uint128)'
+      )],
+      witch.address
+    )
 
     // ==== Owner access ====
     await cauldron.grantRoles(
@@ -112,7 +121,7 @@ export class YieldEnvironment {
         id('stir(bytes12,bytes12,uint128)'),
         id('roll(bytes12,bytes6,int128)'),
         id('grab(bytes12)'),
-        id('slurp(bytes12,int128,int128)'),
+        id('slurp(bytes12,uint128,uint128)'),
       ],
       ownerAdd
     )
@@ -120,7 +129,7 @@ export class YieldEnvironment {
     await ladle.grantRoles([
       id('addJoin(bytes6,address)'),
       id('addPool(bytes6,address)'),
-      id('_join(bytes12,address,int128,int128)'),
+      id('settle(bytes12,address,uint128,uint128)'),
       id('setWeth(address)')
     ], ownerAdd)
 
@@ -139,8 +148,8 @@ export class YieldEnvironment {
       joins.set(assetId, join)
       await ladle.addJoin(assetId, join.address)
       await asset.approve(join.address, ethers.constants.MaxUint256)
-      await join.grantRoles([id('join(address,int128)')], ladle.address)
-      await join.grantRoles([id('join(address,int128)')], ownerAdd)
+      await join.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], ladle.address)
+      await join.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], ownerAdd)
     }
 
     // The first asset will be the underlying for all series
@@ -150,17 +159,16 @@ export class YieldEnvironment {
     const base = assets.get(baseId) as ERC20Mock
 
     // Add Ether as an asset
-    const ethId = ethers.utils.formatBytes32String('ETH').slice(0, 14)
-    const ethAddress = ethers.utils.getAddress('0x0000000000000000000000000000000000000001')
-    await cauldron.addAsset(ethId, ethAddress)
 
     // Deploy WETH9 and the WETH9 Join
+    const ethId = ethers.utils.formatBytes32String('ETH').slice(0, 14)
     const weth = (await deployContract(owner, WETH9MockArtifact, [])) as WETH9Mock
     const join = (await deployContract(owner, JoinArtifact, [weth.address])) as Join
-    joins.set(ethId, join)
+    await cauldron.addAsset(ethId, weth.address)
     await ladle.addJoin(ethId, join.address)
-    await join.grantRoles([id('join(address,int128)')], ladle.address)
-    await join.grantRoles([id('join(address,int128)')], ownerAdd)
+    await join.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], ladle.address)
+    await join.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], ownerAdd)
+    joins.set(ethId, join)
     ilkIds.push(ethId)
 
     // ==== Set debt limits ====
@@ -209,7 +217,7 @@ export class YieldEnvironment {
       // Add all ilks to each series
       await cauldron.addIlks(seriesId, ilkIds)
 
-      await baseJoin.grantRoles([id('join(address,int128)')], fyToken.address)
+      await baseJoin.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], fyToken.address)
       await fyToken.grantRoles([id('mint(address,uint256)'), id('burn(address,uint256)')], ladle.address)
       await fyToken.grantRoles([id('mint(address,uint256)'), id('burn(address,uint256)')], ownerAdd)
 

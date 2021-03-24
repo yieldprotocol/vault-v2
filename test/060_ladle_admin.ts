@@ -20,7 +20,7 @@ import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { deployContract, loadFixture } = waffle
 
-import { YieldEnvironment, WAD, RAY } from './shared/fixtures'
+import { YieldEnvironment, WAD, RAY, THREE_MONTHS } from './shared/fixtures'
 
 describe('Ladle - admin', function () {
   this.timeout(0)
@@ -62,7 +62,10 @@ describe('Ladle - admin', function () {
   const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const otherIlkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const otherSeriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ratio = 10000 // == 100% collateralization ratio
+
+  let maturity: number
 
   beforeEach(async () => {
     env = await loadFixture(fixture)
@@ -85,15 +88,15 @@ describe('Ladle - admin', function () {
 
     // Deploy a join
     ilkJoin = (await deployContract(ownerAcc, JoinArtifact, [ilk.address])) as Join
-    await ilkJoin.grantRoles([id('join(address,int128)')], ladle.address)
+    await ilkJoin.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], ladle.address)
 
     // Deploy a series
     const provider: BaseProvider = await ethers.provider
-    const now = (await provider.getBlock(await provider.getBlockNumber())).timestamp
+    maturity = (await provider.getBlock(await provider.getBlockNumber())).timestamp + THREE_MONTHS
     fyToken = (await deployContract(ownerAcc, FYTokenArtifact, [
       rateOracle.address,
       baseJoin.address,
-      now + 3 * 30 * 24 * 60 * 60,
+      maturity,
       seriesId,
       'Mock FYToken',
     ])) as FYToken
@@ -107,6 +110,10 @@ describe('Ladle - admin', function () {
   describe('join admin', async () => {
     it('does not allow adding a join before adding its ilk', async () => {
       await expect(ladle.addJoin(mockAssetId, ilkJoin.address)).to.be.revertedWith('Asset not found')
+    })
+
+    it('does not allow adding a join with a mismatched ilk', async () => {
+      await expect(ladle.addJoin(baseId, ilkJoin.address)).to.be.revertedWith('Mismatched asset and join')
     })
 
     it('adds a join', async () => {
@@ -128,6 +135,27 @@ describe('Ladle - admin', function () {
   describe('pool admin', async () => {
     it('does not allow adding a pool before adding its series', async () => {
       await expect(ladle.addPool(mockSeriesId, pool.address)).to.be.revertedWith('Series not found')
+    })
+
+    it('does not allow adding a pool with a mismatched fyToken', async () => {
+      // Deploy other series
+      const otherFYToken = (await deployContract(ownerAcc, FYTokenArtifact, [
+        rateOracle.address,
+        baseJoin.address,
+        maturity,
+        seriesId,
+        'Mock FYToken',
+      ])) as FYToken
+      await cauldron.addSeries(otherSeriesId, baseId, otherFYToken.address)
+      await cauldron.addIlks(otherSeriesId, [ilkId])
+
+      await expect(ladle.addPool(otherSeriesId, pool.address)).to.be.revertedWith('Mismatched pool fyToken and series')
+    })
+
+    it('does not allow adding a pool with a mismatched base', async () => {
+      const otherPool = (await deployContract(ownerAcc, PoolMockArtifact, [ilk.address, fyToken.address])) as PoolMock
+
+      await expect(ladle.addPool(seriesId, otherPool.address)).to.be.revertedWith('Mismatched pool base and series')
     })
 
     it('adds a pool', async () => {
