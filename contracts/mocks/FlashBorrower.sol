@@ -7,7 +7,7 @@ import "erc3156/contracts/interfaces/IERC3156FlashLender.sol";
 
 
 contract FlashBorrower is IERC3156FlashBorrower {
-    enum Action {NORMAL, NOT_APPROVE, STEAL, REENTER}
+    enum Action {NORMAL, TRANSFER, STEAL, REENTER}
 
     IERC3156FlashLender public lender;
 
@@ -31,46 +31,19 @@ contract FlashBorrower is IERC3156FlashBorrower {
         flashFee = fee;
         if (action == Action.NORMAL) {
             flashBalance = IERC20(token).balanceOf(address(this));
-        } else if (action == Action.NOT_APPROVE) {
-            // do nothing
+        } else if (action == Action.TRANSFER) {
+            flashBalance = IERC20(token).balanceOf(address(this));
+            IERC20(token).transfer(address(lender), amount + fee);
         } else if (action == Action.STEAL) {
             IERC20(token).transfer(address(0), amount);
         } else if (action == Action.REENTER) {
-            flashBorrow(token, amount * 2);
+            flashBorrow(token, amount * 2, Action.NORMAL);
         }
         return keccak256("ERC3156FlashBorrower.onFlashLoan");
     }
 
-    function flashBorrow(address token, uint256 amount) public {
-        // Use this to pack arbitrary data to `onFlashLoan`
-        bytes memory data = abi.encode(Action.NORMAL);
-        approveRepayment(token, amount);
+    function flashBorrow(address token, uint256 amount, Action action) public {
+        bytes memory data = abi.encode(action);
         lender.flashLoan(this, token, amount, data);
-    }
-
-    function flashBorrowAndNotApprove(address token, uint256 amount) public {
-        // Use this to pack arbitrary data to `onFlashLoan`
-        bytes memory data = abi.encode(Action.NOT_APPROVE);
-        lender.flashLoan(this, token, amount, data);
-    }
-
-    function flashBorrowAndSteal(address token, uint256 amount) public {
-        // Use this to pack arbitrary data to `onFlashLoan`
-        bytes memory data = abi.encode(Action.STEAL);
-        lender.flashLoan(this, token, amount, data);
-    }
-
-    function flashBorrowAndReenter(address token, uint256 amount) public {
-        // Use this to pack arbitrary data to `onFlashLoan`
-        bytes memory data = abi.encode(Action.REENTER);
-        approveRepayment(token, amount);
-        lender.flashLoan(this, token, amount, data);
-    }
-
-    function approveRepayment(address token, uint256 amount) public {
-        uint256 _allowance = IERC20(token).allowance(address(this), address(lender));
-        uint256 _fee = lender.flashFee(token, amount);
-        uint256 _repayment = amount + _fee;
-        IERC20(token).approve(address(lender), _allowance + _repayment);
     }
 }

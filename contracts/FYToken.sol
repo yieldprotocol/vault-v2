@@ -90,7 +90,6 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         );
         _burn(msg.sender, amount);                                  // 2 SSTORE
 
-        // Consider moving these two lines to Ladle.
         uint256 redeemed = amount.rmul(oracle.accrual(maturity.u32()));   // Cost of `accrual`
         join.exit(to, redeemed.u128());                           // Cost of `join`
         
@@ -106,13 +105,12 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         _mint(to, amount);                                                  // 2 SSTORE
     }
 
-    /// @dev Burn fyTokens.
+    /// @dev Burn fyTokens. The user needs to have either transferred the tokens to this contract, or have approved this contract to take them. 
     function burn(address from, uint256 amount)
         public override
         auth
     {
-        _decreaseApproval(from, amount);                                    // 1 SLOAD, if called by Ladle
-        _burn(from, amount);                                                // 2 SSTORE
+        _burn(from, amount);
     }
 
 
@@ -138,6 +136,8 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
 
     /**
      * @dev From ERC-3156. Loan `amount` fyDai to `receiver`, which needs to return them plus fee to this contract within the same transaction.
+     * Note that if the initiator and the borrower are the same address, no approval is needed for this contract to take the principal + fee from the borrower.
+     * If the borrower transfers the principal + fee to this contract, they will be burnt here instead of pulled from the borrower.
      * @param receiver The contract receiving the tokens, needs to implement the `onFlashLoan(address user, uint256 amount, uint256 fee, bytes calldata)` interface.
      * @param token The loan currency. Must be a fyDai contract.
      * @param amount The amount of tokens lent.
@@ -149,8 +149,39 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
 
         require(receiver.onFlashLoan(msg.sender, token, amount, 0, data) == FLASH_LOAN_RETURN, "Non-compliant borrower");     // Call to `onFlashLoan`
 
-        _decreaseApproval(address(receiver), amount);                                               // Ignored if receiver == msg.sender or approve is set to MAX, 1 SLOAD otherwise
         _burn(address(receiver), amount);                                                           // 2 SSTORE
+        return true;
+    }
+
+    /// @dev Burn fyTokens. 
+    /// Any tokens locked in this contract will be burned first and subtracted from the amount to burn from the user's wallet.
+    /// This feature allows someone to transfer fyToken to this contract to enable a `burn`, potentially saving the cost of `approve` or `permit`.
+    function _burn(address from, uint256 amount)
+        internal override
+        returns (bool)
+    {
+        // First use any tokens locked in this contract
+        uint256 reserve = _balanceOf[address(this)];
+        uint256 remainder = amount;
+        if (reserve > 0) {
+            uint256 localBurn = reserve >= remainder ? remainder : reserve;
+            unchecked {
+                _balanceOf[address(this)] = reserve - localBurn;
+                remainder -= localBurn;
+            }
+            emit Transfer(address(this), address(0), localBurn);
+        }
+
+        // Then pull the remainder of the burn from `src`
+        if (remainder > 0) {
+            _decreaseApproval(from, remainder);     // Note that if msg.sender == from this is ignored.
+            require(_balanceOf[from] >= remainder, "ERC20: Insufficient balance");
+            unchecked {
+                _balanceOf[from] = _balanceOf[from] - remainder;
+            }
+            emit Transfer(from, address(0), remainder);
+        }
+        _totalSupply = _totalSupply - amount;
         return true;
     }
 }

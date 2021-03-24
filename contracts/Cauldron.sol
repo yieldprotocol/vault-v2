@@ -200,7 +200,7 @@ contract Cauldron is AccessControl() {
             ilkId: ilkId
         });
 
-        emit VaultBuilt(vaultId, msg.sender, seriesId, ilkId);
+        emit VaultBuilt(vaultId, owner, seriesId, ilkId);
     }
 
     /// @dev Destroy an empty vault. Used to recover gas costs.
