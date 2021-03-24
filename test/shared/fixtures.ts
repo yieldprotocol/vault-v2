@@ -6,6 +6,7 @@ import { id } from '@yield-protocol/utils'
 import CauldronArtifact from '../../artifacts/contracts/Cauldron.sol/Cauldron.json'
 import FYTokenArtifact from '../../artifacts/contracts/FYToken.sol/FYToken.json'
 import ERC20MockArtifact from '../../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
+import WETH9MockArtifact from '../../artifacts/contracts/mocks/WETH9Mock.sol/WETH9Mock.json'
 import PoolMockArtifact from '../../artifacts/contracts/mocks/PoolMock.sol/PoolMock.json'
 import OracleMockArtifact from '../../artifacts/contracts/mocks/OracleMock.sol/OracleMock.json'
 import JoinArtifact from '../../artifacts/contracts/Join.sol/Join.json'
@@ -15,6 +16,7 @@ import WitchArtifact from '../../artifacts/contracts/Witch.sol/Witch.json'
 import { Cauldron } from '../../typechain/Cauldron'
 import { FYToken } from '../../typechain/FYToken'
 import { ERC20Mock } from '../../typechain/ERC20Mock'
+import { WETH9Mock } from '../../typechain/WETH9Mock'
 import { PoolMock } from '../../typechain/PoolMock'
 import { OracleMock } from '../../typechain/OracleMock'
 import { Join } from '../../typechain/Join'
@@ -118,7 +120,8 @@ export class YieldEnvironment {
     await ladle.grantRoles([
       id('addJoin(bytes6,address)'),
       id('addPool(bytes6,address)'),
-      id('_join(bytes12,address,int128,int128)')
+      id('_join(bytes12,address,int128,int128)'),
+      id('setWeth(address)')
     ], ownerAdd)
 
     // ==== Add assets and joins ====
@@ -145,6 +148,20 @@ export class YieldEnvironment {
     const baseId = assetIds[0]
     const ilkIds = assetIds.slice(1)
     const base = assets.get(baseId) as ERC20Mock
+
+    // Add Ether as an asset
+    const ethId = ethers.utils.formatBytes32String('ETH').slice(0, 14)
+    const ethAddress = ethers.utils.getAddress('0x0000000000000000000000000000000000000001')
+    await cauldron.addAsset(ethId, ethAddress)
+
+    // Deploy WETH9 and the WETH9 Join
+    const weth = (await deployContract(owner, WETH9MockArtifact, [])) as WETH9Mock
+    const join = (await deployContract(owner, JoinArtifact, [weth.address])) as Join
+    joins.set(ethId, join)
+    await ladle.addJoin(ethId, join.address)
+    await join.grantRoles([id('join(address,int128)')], ladle.address)
+    await join.grantRoles([id('join(address,int128)')], ownerAdd)
+    ilkIds.push(ethId)
 
     // ==== Set debt limits ====
     for (let ilkId of ilkIds) {
@@ -189,8 +206,8 @@ export class YieldEnvironment {
       series.set(seriesId, fyToken)
       await cauldron.addSeries(seriesId, baseId, fyToken.address)
 
-      // Add all assets except the first one as approved collaterals
-      await cauldron.addIlks(seriesId, assetIds.slice(1))
+      // Add all ilks to each series
+      await cauldron.addIlks(seriesId, ilkIds)
 
       await baseJoin.grantRoles([id('join(address,int128)')], fyToken.address)
       await fyToken.grantRoles([id('mint(address,uint256)'), id('burn(address,uint256)')], ladle.address)
@@ -211,14 +228,14 @@ export class YieldEnvironment {
     }
 
     // ==== Build some vaults ====
-    // For each series and ilk we create two vaults vaults[seriesId][ilkId] = vaultId
+    // For each series and ilk we create a vault - vaults[seriesId][ilkId] = vaultId
     const vaults: Map<string, Map<string, string>> = new Map()
     for (let seriesId of seriesIds) {
       const seriesVaults: Map<string, string> = new Map()
       for (let ilkId of ilkIds) {
         await cauldron.build(ownerAdd, ethers.utils.hexlify(ethers.utils.randomBytes(12)), seriesId, ilkId)
-        const event = (await cauldron.queryFilter(cauldron.filters.VaultBuilt(null, null, null, null)))[0]
-        const vaultId = event.args.vaultId
+        const vaultEvents = (await cauldron.queryFilter(cauldron.filters.VaultBuilt(null, null, null, null)))
+        const vaultId = vaultEvents[vaultEvents.length - 1].args.vaultId
         seriesVaults.set(ilkId, vaultId)
       }
       vaults.set(seriesId, seriesVaults)

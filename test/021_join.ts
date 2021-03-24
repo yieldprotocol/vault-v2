@@ -1,4 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
+import { BigNumber } from 'ethers'
 import { id } from '@yield-protocol/utils'
 
 import JoinArtifact from '../artifacts/contracts/Join.sol/Join.json'
@@ -23,6 +24,7 @@ describe('Join', function () {
   let token: ERC20Mock
 
   const MAX = ethers.constants.MaxUint256
+  const WAD = BigNumber.from(10).pow(18)
 
   before(async () => {
     const signers = await ethers.getSigners()
@@ -40,25 +42,50 @@ describe('Join', function () {
 
     await join.grantRoles([id('join(address,int128)')], owner)
 
-    await token.mint(owner, 1)
+    await token.mint(owner, WAD.mul(100))
     await token.approve(join.address, MAX)
   })
 
   it('pulls tokens from user', async () => {
-    expect(await join.join(owner, 1))
+    expect(await join.join(owner, WAD))
       .to.emit(token, 'Transfer')
-      .withArgs(owner, join.address, 1)
+      .withArgs(owner, join.address, WAD)
+    expect(await join.storedBalance()).to.equal(WAD)
   })
 
   describe('with tokens in the join', async () => {
     beforeEach(async () => {
-      await join.join(owner, 1)
+      await token.transfer(join.address, WAD)
     })
 
-    it('pushes tokens to user', async () => {
-      expect(await join.join(owner, -1))
+    it('accepts surplus as a transfer', async () => {
+      expect(await join.join(owner, WAD)).to.not.emit(token, 'Transfer')
+      expect(await join.storedBalance()).to.equal(WAD)
+    })
+
+    it('combines surplus and tokens pulled from the user', async () => {
+      expect(await join.join(owner, WAD.mul(2)))
         .to.emit(token, 'Transfer')
-        .withArgs(join.address, owner, 1)
+        .withArgs(owner, join.address, WAD)
+      expect(await join.storedBalance()).to.equal(WAD.mul(2))
+    })
+
+    it('the stored balance can be updated', async () => {
+      expect(await join.join(owner, 0)).to.not.emit(token, 'Transfer')
+      expect(await join.storedBalance()).to.equal(WAD)
+    })
+
+    describe('with a positive stored balance', async () => {
+      beforeEach(async () => {
+        await join.join(owner, 0)
+      })
+
+      it('pushes tokens to user', async () => {
+        expect(await join.join(owner, WAD.mul(-1)))
+          .to.emit(token, 'Transfer')
+          .withArgs(join.address, owner, WAD)
+        expect(await join.storedBalance()).to.equal(0)
+      })
     })
   })
 })

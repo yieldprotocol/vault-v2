@@ -60,6 +60,7 @@ describe('Ladle - admin', function () {
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const otherIlkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ratio = 10000 // == 100% collateralization ratio
 
@@ -115,14 +116,12 @@ describe('Ladle - admin', function () {
       expect(await ladle.joins(ilkId)).to.equal(ilkJoin.address)
     })
 
-    describe('with a join added', async () => {
-      beforeEach(async () => {
-        await ladle.addJoin(ilkId, ilkJoin.address)
-      })
-
-      it('only one join per asset', async () => {
-        await expect(ladle.addJoin(ilkId, ilkJoin.address)).to.be.revertedWith('One Join per Asset')
-      })
+    it('adds the same join for a second ilk of the same asset', async () => {
+      await cauldron.addAsset(otherIlkId, ilk.address)
+      expect(await ladle.addJoin(otherIlkId, ilkJoin.address))
+        .to.emit(ladle, 'JoinAdded')
+        .withArgs(otherIlkId, ilkJoin.address)
+      expect(await ladle.joins(otherIlkId)).to.equal(ilkJoin.address)
     })
   })
 
@@ -136,16 +135,6 @@ describe('Ladle - admin', function () {
         .to.emit(ladle, 'PoolAdded')
         .withArgs(seriesId, pool.address)
       expect(await ladle.pools(seriesId)).to.equal(pool.address)
-    })
-
-    describe('with a pool added', async () => {
-      beforeEach(async () => {
-        await ladle.addPool(seriesId, pool.address)
-      })
-
-      it('only one pool per asset', async () => {
-        await expect(ladle.addPool(seriesId, pool.address)).to.be.revertedWith('One Pool per Series')
-      })
     })
   })
 })
