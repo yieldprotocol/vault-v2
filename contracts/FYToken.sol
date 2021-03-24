@@ -65,6 +65,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         );
         oracle = oracle_;
         join = join_;
+        // TODO: Check the oracle asset matches the join asset, which is the base for this fyToken
         maturity = maturity_;
         asset = address(IJoin(join_).token());
     }
