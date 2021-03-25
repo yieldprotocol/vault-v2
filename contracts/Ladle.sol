@@ -313,6 +313,28 @@ contract Ladle is AccessControl(), Batchable {
 
     // ---- Pool router ----
 
+    /// @dev Allow users to trigger a token transfer to a pool through the ladle, to be used with multicall
+    function transferToPool(bytes6 seriesId, bool base, uint128 wad)
+        external
+        returns (bool)
+    {
+        IPool pool = pools[seriesId];
+        require (pool != IPool(address(0)), "Pool does not exist");
+        IERC20 token = base ? pool.baseToken() : pool.fyToken();
+        require(token.transferFrom(msg.sender, address(pool), wad), "Failed transfer");
+        return true;
+    }
+
+    /// @dev Allow users to trigger a token transfer to a pool through the ladle, to be used with multicall
+    function retrieveToken(bytes6 seriesId, bool base, address to)
+        external
+        returns (uint128 retrieved)
+    {
+        IPool pool = pools[seriesId];
+        require (pool != IPool(address(0)), "Pool does not exist");
+        retrieved = base ? pool.retrieveBaseToken(to) : pool.retrieveFYToken(to);
+    }
+
     /// @dev Allow users to trigger a token sale in a pool through the ladle, to be used with multicall
     function sellToken(bytes6 seriesId, bool base, address to, uint128 min)
         external
@@ -333,27 +355,5 @@ contract Ladle is AccessControl(), Batchable {
         require (pool != IPool(address(0)), "Pool does not exist");
         tokenIn = base ? pool.buyBaseToken(to, tokenOut, max) : pool.buyFYToken(to, tokenOut, max);
         return tokenIn;
-    }
-
-    /// @dev Allow users to trigger a token transfer to a pool through the ladle, to be used with multicall
-    function transferToPool(bytes6 seriesId, bool base, uint128 wad)
-        external
-        returns (bool)
-    {
-        IPool pool = pools[seriesId];
-        require (pool != IPool(address(0)), "Pool does not exist");
-        IERC20 token = base ? pool.baseToken() : pool.fyToken();
-        require(token.transferFrom(msg.sender, address(pool), wad), "Failed transfer");
-        return true;
-    }
-
-    /// @dev Allow users to trigger a token transfer to a pool through the ladle, to be used with multicall
-    function retrieveToken(bytes6 seriesId, address to, bool base)
-        external
-        returns (uint128 retrieved)
-    {
-        IPool pool = pools[seriesId];
-        require (pool != IPool(address(0)), "Pool does not exist");
-        retrieved = base ? pool.retrieveBaseToken(to) : pool.retrieveFYToken(to);
     }
 }

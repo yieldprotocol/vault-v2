@@ -1,4 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
+import { BigNumber } from 'ethers'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { FYToken } from '../typechain/FYToken'
@@ -11,6 +12,8 @@ import { expect } from 'chai'
 const { loadFixture } = waffle
 
 import { YieldEnvironment, WAD } from './shared/fixtures'
+
+const MAX128 = BigNumber.from(2).pow(128).sub(1)
 
 describe('Ladle - pool router', function () {
   this.timeout(0)
@@ -61,6 +64,9 @@ describe('Ladle - pool router', function () {
 
   it('does not allow using unknown pools', async () => {
     await expect(ladle.transferToPool(mockSeriesId, true, WAD)).to.be.revertedWith('Pool does not exist')
+    await expect(ladle.retrieveToken(mockSeriesId, true, other)).to.be.revertedWith('Pool does not exist')
+    await expect(ladle.sellToken(mockSeriesId, true, other, 0)).to.be.revertedWith('Pool does not exist')
+    await expect(ladle.buyToken(mockSeriesId, true, other, WAD.div(2), MAX128)).to.be.revertedWith('Pool does not exist')
   })
 
   it('transfers base to pool', async () => {
@@ -76,5 +82,41 @@ describe('Ladle - pool router', function () {
     expect(await ladle.transferToPool(seriesId, false, WAD))
       .to.emit(fyToken, 'Transfer')
       .withArgs(owner, pool.address, WAD)
+  })
+
+  describe('with unaccounted tokens in the pool', async () => {
+    beforeEach(async () => {
+      await base.mint(pool.address, WAD)
+      await fyToken.mint(pool.address, WAD)
+    })
+
+    it('retrieves unaccounted tokens in the pool', async () => {
+      expect(await ladle.retrieveToken(seriesId, true, other))
+        .to.emit(base, 'Transfer')
+        .withArgs(pool.address, other, WAD)
+      expect(await ladle.retrieveToken(seriesId, false, other))
+        .to.emit(fyToken, 'Transfer')
+        .withArgs(pool.address, other, WAD)
+    })
+
+    /*
+    it('sells using unaccounted tokens in the pool', async () => {
+      expect(await ladle.sellToken(seriesId, true, other, 0))
+        .to.emit(fyToken, 'Transfer')
+        .withArgs(pool.address, other, null)
+      expect(await ladle.sellToken(seriesId, false, other, 0))
+        .to.emit(base, 'Transfer')
+        .withArgs(pool.address, other, null)
+    })
+
+    it('buys using unaccounted tokens in the pool', async () => {
+      expect(await ladle.buyToken(seriesId, true, other, WAD.div(2), MAX128))
+        .to.emit(base, 'Transfer')
+        .withArgs(pool.address, other, null)
+      expect(await ladle.buyToken(seriesId, false, other, WAD.div(2), MAX128))
+        .to.emit(fyToken, 'Transfer')
+        .withArgs(pool.address, other, null)
+    })
+    */
   })
 })
