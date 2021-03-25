@@ -59,18 +59,32 @@ describe('Ladle - stir', function () {
 
     // ==== Set testing environment ====
     await cauldron.build(owner, vaultToId, seriesId, ilkId)
-    await ladle.pour(vaultFromId, owner, WAD, 0)
   })
 
-  it('does not allow moving collateral other than to the vault owner', async () => {
-    await expect(ladleFromOther.stir(vaultFromId, vaultToId, WAD)).to.be.revertedWith('Only vault owner')
+  it('does not allow moving collateral other than to the origin vault owner', async () => {
+    await expect(ladleFromOther.stir(vaultFromId, vaultToId, WAD, 0)).to.be.revertedWith('Only origin vault owner')
+  })
+
+  it('does not allow moving debt other than to the destination vault owner', async () => {
+    await expect(ladleFromOther.stir(vaultFromId, vaultToId, 0, WAD)).to.be.revertedWith('Only destination vault owner')
   })
 
   it('moves collateral', async () => {
-    expect(await ladle.stir(vaultFromId, vaultToId, WAD))
+    await ladle.pour(vaultFromId, owner, WAD, 0)
+    expect(await ladle.stir(vaultFromId, vaultToId, WAD, 0))
       .to.emit(cauldron, 'VaultStirred')
-      .withArgs(vaultFromId, vaultToId, WAD)
+      .withArgs(vaultFromId, vaultToId, WAD, 0)
     expect((await cauldron.balances(vaultFromId)).ink).to.equal(0)
     expect((await cauldron.balances(vaultToId)).ink).to.equal(WAD)
+  })
+
+  it('moves debt', async () => {
+    await ladle.pour(vaultFromId, owner, WAD, WAD)
+    await ladle.pour(vaultToId, owner, WAD, 0)
+    expect(await ladle.stir(vaultFromId, vaultToId, 0, WAD))
+      .to.emit(cauldron, 'VaultStirred')
+      .withArgs(vaultFromId, vaultToId, 0, WAD)
+    expect((await cauldron.balances(vaultFromId)).art).to.equal(0)
+    expect((await cauldron.balances(vaultToId)).art).to.equal(WAD)
   })
 })
