@@ -66,7 +66,9 @@ describe('Ladle - pool router', function () {
     await expect(ladle.transferToPool(mockSeriesId, true, WAD)).to.be.revertedWith('Pool does not exist')
     await expect(ladle.retrieveToken(mockSeriesId, true, other)).to.be.revertedWith('Pool does not exist')
     await expect(ladle.sellToken(mockSeriesId, true, other, 0)).to.be.revertedWith('Pool does not exist')
-    await expect(ladle.buyToken(mockSeriesId, true, other, WAD.div(2), MAX128)).to.be.revertedWith('Pool does not exist')
+    await expect(ladle.buyToken(mockSeriesId, true, other, WAD.div(2), MAX128)).to.be.revertedWith(
+      'Pool does not exist'
+    )
   })
 
   it('transfers base to pool', async () => {
@@ -99,24 +101,28 @@ describe('Ladle - pool router', function () {
         .withArgs(pool.address, other, WAD)
     })
 
-    /*
-    it('sells using unaccounted tokens in the pool', async () => {
+    it('sells using unaccounted base tokens in the pool', async () => {
       expect(await ladle.sellToken(seriesId, true, other, 0))
         .to.emit(fyToken, 'Transfer')
-        .withArgs(pool.address, other, null)
-      expect(await ladle.sellToken(seriesId, false, other, 0))
-        .to.emit(base, 'Transfer')
-        .withArgs(pool.address, other, null)
+        .withArgs(pool.address, other, WAD.mul(105).div(100))
     })
 
-    it('buys using unaccounted tokens in the pool', async () => {
+    it('sells using unaccounted fyTokens in the pool', async () => {
+      expect(await ladle.sellToken(seriesId, false, other, 0))
+        .to.emit(base, 'Transfer')
+        .withArgs(pool.address, other, WAD.mul(100).div(105))
+    })
+
+    it('buys using unaccounted base tokens in the pool', async () => {
       expect(await ladle.buyToken(seriesId, true, other, WAD.div(2), MAX128))
         .to.emit(base, 'Transfer')
-        .withArgs(pool.address, other, null)
+        .withArgs(pool.address, other, WAD.div(2).mul(105).div(100))
+    })
+
+    it('buys using unaccounted fyTokens in the pool', async () => {
       expect(await ladle.buyToken(seriesId, false, other, WAD.div(2), MAX128))
         .to.emit(fyToken, 'Transfer')
-        .withArgs(pool.address, other, null)
+        .withArgs(pool.address, other, WAD.div(2).mul(100).div(105))
     })
-    */
   })
 })
