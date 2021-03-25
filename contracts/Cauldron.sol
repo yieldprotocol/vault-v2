@@ -79,7 +79,7 @@ contract Cauldron is AccessControl() {
     event VaultTransfer(bytes12 indexed vaultId, address indexed receiver);
 
     event VaultPoured(bytes12 indexed vaultId, bytes6 indexed seriesId, bytes6 indexed ilkId, int128 ink, int128 art);
-    event VaultStirred(bytes12 indexed from, bytes12 indexed to, uint128 ink);
+    event VaultStirred(bytes12 indexed from, bytes12 indexed to, uint128 ink, uint128 art);
     event VaultRolled(bytes12 indexed vaultId, bytes6 indexed seriesId, uint128 art);
     event VaultTimestamped(bytes12 indexed vaultId, uint256 indexed timestamp);
 
@@ -217,7 +217,6 @@ contract Cauldron is AccessControl() {
 
     /// @dev Change a vault series and/or collateral types.
     /// We can change the series if there is no debt, or assets if there are no assets
-    /// Doesn't check inputs, or collateralization level. Do that in public functions.
     function tweak(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
         public
         auth
@@ -255,31 +254,43 @@ contract Cauldron is AccessControl() {
 
     // ==== Asset and debt management ====
 
-    /// @dev Move collateral between vaults.
-    /// Doesn't check inputs, or collateralization level. Do that in public functions.
-    function stir(bytes12 from, bytes12 to, uint128 ink)
+    /// @dev Move collateral and debt between vaults.
+    function stir(bytes12 from, bytes12 to, uint128 ink, uint128 art)
         public
         auth
         returns (DataTypes.Balances memory, DataTypes.Balances memory)
     {
+        DataTypes.Vault memory vaultFrom = vaults[from];
         DataTypes.Vault memory vaultTo = vaults[to];
-        require (vaultTo.owner != address(0), "Vault not found");
-        require (vaults[from].ilkId == vaultTo.ilkId, "Different collateral");
+        require (vaultFrom.owner != address(0), "Origin vault not found");
+        require (vaultTo.owner != address(0), "Destination vault not found");
+
         DataTypes.Balances memory balancesFrom_ = balances[from];
         DataTypes.Balances memory balancesTo_ = balances[to];
-        balancesFrom_.ink -= ink;
-        balancesTo_.ink += ink;
+
+        if (ink > 0) {
+            require (vaultFrom.ilkId == vaultTo.ilkId, "Different collateral");
+            balancesFrom_.ink -= ink;
+            balancesTo_.ink += ink;
+        }
+        if (art > 0) {
+            require (vaultFrom.seriesId == vaultTo.seriesId, "Different series");
+            balancesFrom_.art -= art;
+            balancesTo_.art += art;
+        }
+
         balances[from] = balancesFrom_;
         balances[to] = balancesTo_;
-        if (balancesFrom_.art > 0) require(level(from) >= 0, "Undercollateralized");
 
-        emit VaultStirred(from, to, ink);
+        if (ink > 0) require(level(from) >= 0, "Undercollateralized at origin");
+        if (art > 0) require(level(to) >= 0, "Undercollateralized at destination");
+
+        emit VaultStirred(from, to, ink, art);
         return (balancesFrom_, balancesTo_);
     }
 
     /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
     /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
-    /// Doesn't check inputs, or collateralization level. Do that in public functions.
     function _pour(bytes12 vaultId, int128 ink, int128 art)
         internal returns (DataTypes.Balances memory)
     {

@@ -148,16 +148,13 @@ contract Ladle is AccessControl(), Batchable {
     // ---- Asset and debt management ----
 
     /// @dev Move collateral between vaults.
-    function stir(bytes12 from, bytes12 to, uint128 ink)
+    function stir(bytes12 from, bytes12 to, uint128 ink, uint128 art)
         public payable
         returns (DataTypes.Balances memory, DataTypes.Balances memory)
     {
-        DataTypes.Vault memory vaultFrom = cauldron.vaults(from);
-        require (vaultFrom.owner == msg.sender, "Only vault owner");
-        DataTypes.Balances memory balancesFrom_;
-        DataTypes.Balances memory balancesTo_;
-        (balancesFrom_, balancesTo_) = cauldron.stir(from, to, ink);
-        return (balancesFrom_, balancesTo_);
+        if (ink > 0) require (cauldron.vaults(from).owner == msg.sender, "Only origin vault owner");
+        if (art > 0) require (cauldron.vaults(to).owner == msg.sender, "Only destination vault owner");
+        return cauldron.stir(from, to, ink, art);
     }
 
     /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
