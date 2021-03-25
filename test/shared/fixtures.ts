@@ -232,7 +232,7 @@ export class YieldEnvironment {
       // Initialize pool with a million tokens of each
       await fyToken.mint(pool.address, WAD.mul(1000000))
       await base.mint(pool.address, WAD.mul(1000000))
-      await pool.update() // You can only do this because it's a mock
+      await pool.sync()
     }
 
     // ==== Build some vaults ====

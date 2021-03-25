@@ -42,47 +42,80 @@ contract PoolMock {
     ) {
         baseToken = baseToken_;
         fyToken = fyToken_;
-        update();
     }
 
-    function update() public {
-        baseTokenReserves = uint112(baseToken.balanceOf(address(this)));
-        fyTokenReserves = uint112(fyToken.balanceOf(address(this)));
+    function sync() public {
+        (baseTokenReserves, fyTokenReserves) = (uint112(baseToken.balanceOf(address(this))), uint112(fyToken.balanceOf(address(this))));
     }
 
-    function getBaseTokenReserves() external view returns(uint128) {
-        return baseTokenReserves;
+    function update(uint112 baseTokenReserves_, uint112 fyTokenReserves_) public {
+        baseTokenReserves = baseTokenReserves_;
+        fyTokenReserves = fyTokenReserves_;
     }
-    function getFYTokenReserves() external view returns(uint128) {
-        return fyTokenReserves;
+
+    function getBaseTokenReserves() public view returns(uint128) {
+        return uint128(baseToken.balanceOf(address(this)));
+    }
+
+    function getFYTokenReserves() public view returns(uint128) {
+        return uint128(fyToken.balanceOf(address(this)));
+    }
+
+    function retrieveBaseToken(address to)
+        external
+        returns(uint128 surplus)
+    {
+        surplus = getBaseTokenReserves() - baseTokenReserves; // TODO: Consider adding a require for UX
+        require(
+            baseToken.transfer(to, surplus),
+            "Pool: Base transfer failed"
+        );
+    }
+
+    function retrieveFYToken(address to)
+        external
+        returns(uint128 surplus)
+    {
+        surplus = getFYTokenReserves() - fyTokenReserves; // TODO: Consider adding a require for UX
+        require(
+            fyToken.transfer(to, surplus),
+            "Pool: FYToken transfer failed"
+        );
     }
 
     function sellBaseToken(address to, uint128 min) external returns(uint128) {
-        uint128 tokenIn = uint128(baseToken.balanceOf(address(this))) - baseTokenReserves;
-        require(tokenIn >= min, "Pool: Not enough fyToken obtained");
-        fyToken.transfer(to, tokenIn.rmul(rate));
-        update();
-        return tokenIn.rmul(rate);
+        uint128 baseTokenIn = uint128(baseToken.balanceOf(address(this))) - baseTokenReserves;
+        uint128 fyTokenOut = baseTokenIn.rmul(rate);
+        require(fyTokenOut >= min, "Pool: Not enough fyToken obtained");
+        fyToken.transfer(to, fyTokenOut.rmul(rate));
+        (baseTokenReserves, fyTokenReserves) = (uint112(baseToken.balanceOf(address(this))), uint112(fyTokenReserves - fyTokenOut));
+        return fyTokenOut;
     }
-    function buyBaseToken(address to, uint128 tokenOut, uint128 max) external returns(uint128) {
-        require(tokenOut <= max, "Pool: Too much fyToken in");
-        fyToken.transferFrom(msg.sender, address(this), tokenOut.rmul(rate));
-        baseToken.transfer(to, tokenOut);
-        update();
-        return tokenOut.rmul(rate);
+
+    function buyBaseToken(address to, uint128 baseTokenOut, uint128 max) external returns(uint128) {
+        uint128 fyTokenIn = baseTokenOut.rmul(rate);
+        require(fyTokenIn <= max, "Pool: Too much fyToken in");
+        require(fyTokenReserves + fyTokenIn < getFYTokenReserves(), "Pool: Not enough fyToken in");
+        baseToken.transfer(to, baseTokenOut);
+        (baseTokenReserves, fyTokenReserves) = (uint112(baseTokenReserves - baseTokenOut), uint112(fyTokenReserves + fyTokenIn));
+        return fyTokenIn;
     }
+
     function sellFYToken(address to, uint128 min) external returns(uint128) {
         uint128 fyTokenIn = uint128(fyToken.balanceOf(address(this))) - fyTokenReserves;
-        require(fyTokenIn >= min, "Pool: Not enough baseToken obtained");
-        baseToken.transfer(to, fyTokenIn.rdiv(rate));
-        update();
-        return fyTokenIn.rdiv(rate);
+        uint128 baseTokenOut = fyTokenIn.rdiv(rate);
+        require(baseTokenOut >= min, "Pool: Not enough baseToken obtained");
+        baseToken.transfer(to, baseTokenOut);
+        (baseTokenReserves, fyTokenReserves) = (uint112(baseTokenReserves - baseTokenOut), uint112(fyToken.balanceOf(address(this))));
+        return baseTokenOut;
     }
+
     function buyFYToken(address to, uint128 fyTokenOut, uint128 max) external returns(uint128) {
-        require(fyTokenOut <= max, "Pool: Too much base token in");
-        baseToken.transferFrom(msg.sender, address(this), fyTokenOut.rdiv(rate));
+        uint128 baseTokenIn = fyTokenOut.rdiv(rate);
+        require(baseTokenIn <= max, "Pool: Too much base token in");
+        require(baseTokenReserves + baseTokenIn < getBaseTokenReserves(), "Pool: Not enough base token in");
         fyToken.transfer(to, fyTokenOut);
-        update();
-        return fyTokenOut.rdiv(rate);
+        (baseTokenReserves, fyTokenReserves) = (uint112(baseTokenReserves + baseTokenIn), uint112(fyTokenReserves - fyTokenOut));
+        return baseTokenIn;
     }
 }
