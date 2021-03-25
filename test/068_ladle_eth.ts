@@ -75,15 +75,6 @@ describe('Ladle - eth', function () {
     await ladle.batch([joinEtherCall, pourCall], true, { value: WAD })
   })
 
-  it('users can transfer ETH then serve', async () => {
-    expect(await ladle.joinEther(ethId, { value: WAD }))
-    expect(await ladle.serve(ethVaultId, owner, WAD, WAD, 0))
-      .to.emit(cauldron, 'VaultPoured')
-      .withArgs(ethVaultId, seriesId, ethId, WAD, WAD)
-    expect(await weth.balanceOf(wethJoin.address)).to.equal(WAD)
-    expect((await cauldron.balances(ethVaultId)).ink).to.equal(WAD)
-  })
-
   describe('with ETH posted', async () => {
     beforeEach(async () => {
       expect(await ladle.joinEther(ethId, { value: WAD }))

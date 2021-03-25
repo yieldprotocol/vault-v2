@@ -25,9 +25,18 @@ library RMath { // Fixed point arithmetic in Ray units
     }
 }
 
+library Safe128 {
+    /// @dev Safely cast an uint128 to an int128
+    function i128(uint128 x) internal pure returns (int128 y) {
+        require (x <= uint128(type(int128).max), "Cast overflow");
+        y = int128(x);
+    }
+}
+
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
 contract Ladle is AccessControl(), Batchable {
     using RMath for uint128;
+    using Safe128 for uint128;
 
     ICauldron public cauldron;
 
@@ -201,17 +210,43 @@ contract Ladle is AccessControl(), Batchable {
 
     /// @dev Add collateral and borrow from vault, pull assets from and push base of borrowed series to user.
     /// The base is obtained by borrowing fyToken and selling it in a pool.
-    function serve(bytes12 vaultId, address to, int128 ink, int128 art, uint128 min)
+    function serve(bytes12 vaultId, address to, uint128 ink, uint128 base, uint128 max)
         external payable
-        returns (DataTypes.Balances memory balances_, uint128 base_)
+        returns (DataTypes.Balances memory balances_, uint128 art)
     {
-        require (ink > 0, "Only post");                                                 // Any collateral withdrawn would get locked in a pool
-        require (art > 0, "Only borrow");                                               // When borrowing with `frob`, art is a positive value.
-
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
         IPool pool_ = pools[vault_.seriesId];
-        balances_ = pour(vaultId, address(pool_), ink, art);                            // Checks msg.sender owns the vault.
-        base_ = pool_.sellFYToken(to, min);
+        art = pool_.buyBaseTokenPreview(base);
+        balances_ = pour(vaultId, address(pool_), ink.i128(), art.i128());                            // Checks msg.sender owns the vault.
+        pool_.buyFYToken(to, art, max);
+    }
+
+    /// @dev Repay debt by selling base in a pool and using the resulting fyToken
+    /// The base tokens need to be already in the pool, unaccounted for.
+    function repay(bytes12 vaultId, address to, int128 ink, uint128 min)
+        external payable
+        returns (DataTypes.Balances memory balances_, uint128 art)
+    {
+        DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
+        DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);
+        IPool pool_ = pools[vault_.seriesId];
+        art = pool_.sellBaseToken(address(series_.fyToken), min);
+        balances_ = pour(vaultId, to, ink, art.i128());                            // Checks msg.sender owns the vault.
+    }
+
+    /// @dev Repay all debt in a vault by buying fyToken from a pool with base.
+    /// The base tokens need to be already in the pool, unaccounted for. The surplus base needs to be retrieved from the pool.
+    function repayVault(bytes12 vaultId, address to, int128 ink, uint128 max)
+        external payable
+        returns (DataTypes.Balances memory balances_, uint128 base)
+    {
+        DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
+        DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);
+        balances_ = cauldron.balances(vaultId);
+        IPool pool_ = pools[vault_.seriesId];
+
+        base = pool_.buyFYToken(address(series_.fyToken), balances_.art, max);
+        balances_ = pour(vaultId, to, ink, balances_.art.i128());                            // Checks msg.sender owns the vault.
     }
 
     /// @dev Change series and debt of a vault.
