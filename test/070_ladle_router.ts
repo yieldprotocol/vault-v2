@@ -102,27 +102,27 @@ describe('Ladle - pool router', function () {
     })
 
     it('sells using unaccounted base tokens in the pool', async () => {
-      expect(await ladle.sellToken(seriesId, true, other, 0))
+      await expect(await ladle.sellToken(seriesId, true, other, 0))
         .to.emit(fyToken, 'Transfer')
         .withArgs(pool.address, other, WAD.mul(105).div(100))
     })
 
     it('sells using unaccounted fyTokens in the pool', async () => {
-      expect(await ladle.sellToken(seriesId, false, other, 0))
+      await expect(await ladle.sellToken(seriesId, false, other, 0))
         .to.emit(base, 'Transfer')
         .withArgs(pool.address, other, WAD.mul(100).div(105))
     })
 
     it('buys using unaccounted base tokens in the pool', async () => {
-      expect(await ladle.buyToken(seriesId, true, other, WAD.div(2), MAX128))
+      await expect(await ladle.buyToken(seriesId, true, other, WAD.div(2), MAX128))
         .to.emit(base, 'Transfer')
-        .withArgs(pool.address, other, WAD.div(2).mul(105).div(100))
+        .withArgs(pool.address, other, WAD.div(2))
     })
 
     it('buys using unaccounted fyTokens in the pool', async () => {
-      expect(await ladle.buyToken(seriesId, false, other, WAD.div(2), MAX128))
+      await expect(await ladle.buyToken(seriesId, false, other, WAD.div(2), MAX128))
         .to.emit(fyToken, 'Transfer')
-        .withArgs(pool.address, other, WAD.div(2).mul(100).div(105))
+        .withArgs(pool.address, other, WAD.div(2))
     })
   })
 })

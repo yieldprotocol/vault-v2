@@ -87,7 +87,7 @@ contract PoolMock {
         uint128 baseTokenIn = uint128(baseToken.balanceOf(address(this))) - baseTokenReserves;
         uint128 fyTokenOut = baseTokenIn.rmul(rate);
         require(fyTokenOut >= min, "Pool: Not enough fyToken obtained");
-        fyToken.transfer(to, fyTokenOut.rmul(rate));
+        fyToken.transfer(to, fyTokenOut);
         (baseTokenReserves, fyTokenReserves) = (uint112(baseToken.balanceOf(address(this))), uint112(fyTokenReserves - fyTokenOut));
         return fyTokenOut;
     }
