@@ -395,13 +395,4 @@ contract Cauldron is AccessControl() {
 
         return balances_.ink.rmul(spot).i128() - balances_.art.rmul(ratio).i128();
     }
-
-    /// @dev Helper function to record the rate in the appropriate oracle when maturing an fyToken
-    // TODO: Do we need this here? It can be in its own contract.
-    function mature(bytes6 seriesId) public {
-        DataTypes.Series memory series_ = series[seriesId];
-        IOracle rateOracle = rateOracles[series_.baseId];
-        rateOracle.record(series_.maturity);
-        series_.fyToken.mature();
-    }
 }
