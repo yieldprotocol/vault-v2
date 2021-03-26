@@ -164,28 +164,28 @@ contract Ladle is AccessControl(), Batchable {
     /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
     function pour(bytes12 vaultId, address to, int128 ink, int128 art)
         public payable
-        returns (DataTypes.Balances memory balances_)
+        returns (DataTypes.Balances memory balances)
     {
-        DataTypes.Vault memory vault_ = getOwnedVault(vaultId);
+        DataTypes.Vault memory vault = getOwnedVault(vaultId);
 
         // Update accounting
-        balances_ = cauldron.pour(vaultId, ink, art);
+        balances = cauldron.pour(vaultId, ink, art);
 
         // Manage collateral
         if (ink != 0) {
-            IJoin ilkJoin_ = getJoin(vault_.ilkId);
-            if (ink > 0) ilkJoin_.join(vault_.owner, uint128(ink));
-            if (ink < 0) ilkJoin_.exit(to, uint128(-ink));
+            IJoin ilkJoin = getJoin(vault.ilkId);
+            if (ink > 0) ilkJoin.join(vault.owner, uint128(ink));
+            if (ink < 0) ilkJoin.exit(to, uint128(-ink));
         }
 
         // Manage debt tokens
         if (art != 0) {
-            DataTypes.Series memory series_ = getSeries(vault_.seriesId);
+            DataTypes.Series memory series = getSeries(vault.seriesId);
             if (art > 0) {
-                require(uint32(block.timestamp) <= series_.maturity, "Mature");
-                IFYToken(series_.fyToken).mint(to, uint128(art));
+                require(uint32(block.timestamp) <= series.maturity, "Mature");
+                IFYToken(series.fyToken).mint(to, uint128(art));
             } else {
-                IFYToken(series_.fyToken).burn(msg.sender, uint128(-art));
+                IFYToken(series.fyToken).burn(msg.sender, uint128(-art));
             }
         }
     }
@@ -197,80 +197,80 @@ contract Ladle is AccessControl(), Batchable {
     /// Debt cannot be acquired with this function.
     function close(bytes12 vaultId, address to, int128 ink, int128 art)
         external payable
-        returns (DataTypes.Balances memory balances_)
+        returns (DataTypes.Balances memory balances)
     {
         require (art < 0, "Only repay debt");                                          // When repaying debt in `frob`, art is a negative value. Here is the same for consistency.
         
         // Verify vault ownership
-        DataTypes.Vault memory vault_ = getOwnedVault(vaultId);
+        DataTypes.Vault memory vault = getOwnedVault(vaultId);
 
         // Calculate debt in fyToken terms
-        DataTypes.Series memory series_ = getSeries(vault_.seriesId);
-        bytes6 baseId = series_.baseId;
+        DataTypes.Series memory series = getSeries(vault.seriesId);
+        bytes6 baseId = series.baseId;
         uint128 amt;
-        if (uint32(block.timestamp) >= series_.maturity) {
+        if (uint32(block.timestamp) >= series.maturity) {
             IOracle rateOracle = cauldron.rateOracles(baseId);
-            amt = uint128(-art).rmul(rateOracle.accrual(series_.maturity));
+            amt = uint128(-art).rmul(rateOracle.accrual(series.maturity));
         } else {
             amt = uint128(-art);
         }
 
         // Update accounting
-        balances_ = cauldron.pour(vaultId, ink, art);
+        balances = cauldron.pour(vaultId, ink, art);
 
         // Manage collateral
         if (ink != 0) {
-            IJoin ilkJoin_ = getJoin(vault_.ilkId);
-            if (ink > 0) ilkJoin_.join(vault_.owner, uint128(ink));
-            if (ink < 0) ilkJoin_.exit(to, uint128(-ink));
+            IJoin ilkJoin = getJoin(vault.ilkId);
+            if (ink > 0) ilkJoin.join(vault.owner, uint128(ink));
+            if (ink < 0) ilkJoin.exit(to, uint128(-ink));
         }
 
         // Manage underlying
-        IJoin baseJoin_ = getJoin(series_.baseId);
-        baseJoin_.join(msg.sender, amt);
+        IJoin baseJoin = getJoin(series.baseId);
+        baseJoin.join(msg.sender, amt);
     }
 
     /// @dev Add collateral and borrow from vault, so that a precise amount of base is obtained by the user.
     /// The base is obtained by borrowing fyToken and buying base with it in a pool.
     function serve(bytes12 vaultId, address to, uint128 ink, uint128 base, uint128 max)
         external payable
-        returns (DataTypes.Balances memory balances_, uint128 art)
+        returns (DataTypes.Balances memory balances, uint128 art)
     {
-        DataTypes.Vault memory vault_ = getOwnedVault(vaultId);
-        IPool pool_ = getPool(vault_.seriesId);
+        DataTypes.Vault memory vault = getOwnedVault(vaultId);
+        IPool pool = getPool(vault.seriesId);
         
-        art = pool_.buyBaseTokenPreview(base);
-        balances_ = pour(vaultId, address(pool_), ink.i128(), art.i128());                            // Checks msg.sender owns the vault.
-        pool_.buyBaseToken(to, base, max);
+        art = pool.buyBaseTokenPreview(base);
+        balances = pour(vaultId, address(pool), ink.i128(), art.i128());                            // Checks msg.sender owns the vault.
+        pool.buyBaseToken(to, base, max);
     }
 
     /// @dev Repay debt by selling base in a pool and using the resulting fyToken
     /// The base tokens need to be already in the pool, unaccounted for.
     function repay(bytes12 vaultId, address to, int128 ink, uint128 min)
         external payable
-        returns (DataTypes.Balances memory balances_, uint128 art)
+        returns (DataTypes.Balances memory balances, uint128 art)
     {
-        DataTypes.Vault memory vault_ = getOwnedVault(vaultId);
-        DataTypes.Series memory series_ = getSeries(vault_.seriesId);
-        IPool pool_ = getPool(vault_.seriesId);
+        DataTypes.Vault memory vault = getOwnedVault(vaultId);
+        DataTypes.Series memory series = getSeries(vault.seriesId);
+        IPool pool = getPool(vault.seriesId);
 
-        art = pool_.sellBaseToken(address(series_.fyToken), min);
-        balances_ = pour(vaultId, to, ink, art.i128());                            // Checks msg.sender owns the vault.
+        art = pool.sellBaseToken(address(series.fyToken), min);
+        balances = pour(vaultId, to, ink, art.i128());                            // Checks msg.sender owns the vault.
     }
 
     /// @dev Repay all debt in a vault by buying fyToken from a pool with base.
     /// The base tokens need to be already in the pool, unaccounted for. The surplus base needs to be retrieved from the pool.
     function repayVault(bytes12 vaultId, address to, int128 ink, uint128 max)
         external payable
-        returns (DataTypes.Balances memory balances_, uint128 base)
+        returns (DataTypes.Balances memory balances, uint128 base)
     {
-        DataTypes.Vault memory vault_ = getOwnedVault(vaultId);
-        DataTypes.Series memory series_ = getSeries(vault_.seriesId);
-        IPool pool_ = getPool(vault_.seriesId);
+        DataTypes.Vault memory vault = getOwnedVault(vaultId);
+        DataTypes.Series memory series = getSeries(vault.seriesId);
+        IPool pool = getPool(vault.seriesId);
 
-        balances_ = cauldron.balances(vaultId);
-        base = pool_.buyFYToken(address(series_.fyToken), balances_.art, max);
-        balances_ = pour(vaultId, to, ink, balances_.art.i128());                            // Checks msg.sender owns the vault.
+        balances = cauldron.balances(vaultId);
+        base = pool.buyFYToken(address(series.fyToken), balances.art, max);
+        balances = pour(vaultId, to, ink, balances.art.i128());                            // Checks msg.sender owns the vault.
     }
 
     /// @dev Change series and debt of a vault.
@@ -293,18 +293,18 @@ contract Ladle is AccessControl(), Batchable {
         external
         auth
     {
-        DataTypes.Vault memory vault_ = getOwnedVault(vaultId);
-        DataTypes.Series memory series_ = getSeries(vault_.seriesId);
+        DataTypes.Vault memory vault = getOwnedVault(vaultId);
+        DataTypes.Series memory series = getSeries(vault.seriesId);
 
         cauldron.slurp(vaultId, ink, art);                                                  // Remove debt and collateral from the vault
 
         if (ink != 0) {                                                                     // Give collateral to the user
-            IJoin ilkJoin_ = getJoin(vault_.ilkId);
-            ilkJoin_.exit(user, ink);
+            IJoin ilkJoin = getJoin(vault.ilkId);
+            ilkJoin.exit(user, ink);
         }
         if (art != 0) {                                                                     // Take underlying from user
-            IJoin baseJoin_ = getJoin(series_.baseId);
-            baseJoin_.join(user, art);
+            IJoin baseJoin = getJoin(series.baseId);
+            baseJoin.join(user, art);
         }
     }
 

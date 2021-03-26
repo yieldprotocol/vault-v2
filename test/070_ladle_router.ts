@@ -61,12 +61,10 @@ describe('Ladle - pool router', function () {
   })
 
   it('does not allow using unknown pools', async () => {
-    await expect(ladle.transferToPool(mockSeriesId, true, WAD)).to.be.revertedWith('Pool does not exist')
-    await expect(ladle.retrieveToken(mockSeriesId, true, other)).to.be.revertedWith('Pool does not exist')
-    await expect(ladle.sellToken(mockSeriesId, true, other, 0)).to.be.revertedWith('Pool does not exist')
-    await expect(ladle.buyToken(mockSeriesId, true, other, WAD.div(2), MAX)).to.be.revertedWith(
-      'Pool does not exist'
-    )
+    await expect(ladle.transferToPool(mockSeriesId, true, WAD)).to.be.revertedWith('Pool not found')
+    await expect(ladle.retrieveToken(mockSeriesId, true, other)).to.be.revertedWith('Pool not found')
+    await expect(ladle.sellToken(mockSeriesId, true, other, 0)).to.be.revertedWith('Pool not found')
+    await expect(ladle.buyToken(mockSeriesId, true, other, WAD.div(2), MAX)).to.be.revertedWith('Pool not found')
   })
 
   it('transfers base to pool', async () => {
