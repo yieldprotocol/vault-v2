@@ -62,16 +62,19 @@ describe('Ladle - serve', function () {
   it('borrows an amount of base', async () => {
     const baseBalanceBefore = await base.balanceOf(other)
     const ilkBalanceBefore = await ilk.balanceOf(owner)
-    const expectedDebt = WAD.mul(105).div(100)
-    await expect(await ladle.serve(vaultId, other, WAD.mul(2), WAD, MAX))
+    const baseBorrowed = WAD
+    const expectedDebtInFY = baseBorrowed.mul(105).div(100)
+    const inkPosted = WAD.mul(2)
+
+    await expect(await ladle.serve(vaultId, other, inkPosted, baseBorrowed, MAX))
       .to.emit(cauldron, 'VaultPoured')
-      .withArgs(vaultId, seriesId, ilkId, WAD.mul(2), expectedDebt)
+      .withArgs(vaultId, seriesId, ilkId, inkPosted, expectedDebtInFY)
       .to.emit(pool, 'Trade')
-      .withArgs(await fyToken.maturity(), ladle.address, other, WAD.mul(-1), expectedDebt)
-    expect((await cauldron.balances(vaultId)).ink).to.equal(WAD.mul(2))
-    expect((await cauldron.balances(vaultId)).art).to.equal(expectedDebt)
-    expect(await base.balanceOf(other)).to.equal(baseBalanceBefore.add(WAD))
-    expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.sub(WAD.mul(2)))
+      .withArgs(await fyToken.maturity(), ladle.address, other, baseBorrowed.mul(-1), expectedDebtInFY)
+    expect((await cauldron.balances(vaultId)).ink).to.equal(inkPosted)
+    expect((await cauldron.balances(vaultId)).art).to.equal(expectedDebtInFY)
+    expect(await base.balanceOf(other)).to.equal(baseBalanceBefore.add(baseBorrowed))
+    expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.sub(inkPosted))
   })
 
   it('repays debt with base', async () => {
@@ -80,11 +83,12 @@ describe('Ladle - serve', function () {
     const baseBalanceBefore = await base.balanceOf(owner)
     const debtRepaidInBase = WAD.div(2)
     const debtRepaidInFY = debtRepaidInBase.mul(105).div(100)
+    const inkRetrieved = WAD.div(4)
 
     await base.transfer(pool.address, debtRepaidInBase) // This would normally be part of a multicall, using ladle.transferToPool
-    await expect(await ladle.repay(vaultId, owner, debtRepaidInBase, 0))
+    await expect(await ladle.repay(vaultId, owner, inkRetrieved, 0))
       .to.emit(cauldron, 'VaultPoured')
-      .withArgs(vaultId, seriesId, ilkId, 0, debtRepaidInFY.mul(-1))
+      .withArgs(vaultId, seriesId, ilkId, inkRetrieved, debtRepaidInFY.mul(-1))
       .to.emit(pool, 'Trade')
       .withArgs(await fyToken.maturity(), ladle.address, fyToken.address, debtRepaidInBase, debtRepaidInFY.mul(-1))
     expect((await cauldron.balances(vaultId)).art).to.equal(WAD.sub(debtRepaidInFY))
@@ -98,11 +102,12 @@ describe('Ladle - serve', function () {
     const baseOffered = WAD.mul(2)
     const debtinFY = WAD
     const debtinBase = debtinFY.mul(100).div(105)
+    const inkRetrieved = WAD.div(4)
 
     await base.transfer(pool.address, baseOffered) // This would normally be part of a multicall, using ladle.transferToPool
-    await expect(await ladle.repayVault(vaultId, owner, 0, MAX))
+    await expect(await ladle.repayVault(vaultId, owner, inkRetrieved, MAX))
       .to.emit(cauldron, 'VaultPoured')
-      .withArgs(vaultId, seriesId, ilkId, 0, WAD.mul(-1))
+      .withArgs(vaultId, seriesId, ilkId, inkRetrieved, WAD.mul(-1))
       .to.emit(pool, 'Trade')
       .withArgs(await fyToken.maturity(), ladle.address, fyToken.address, debtinBase, debtinFY.mul(-1))
     await pool.retrieveBaseToken(owner)
