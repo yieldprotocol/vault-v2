@@ -208,8 +208,8 @@ contract Ladle is AccessControl(), Batchable {
         baseJoin_.join(msg.sender, amt);
     }
 
-    /// @dev Add collateral and borrow from vault, pull assets from and push base of borrowed series to user.
-    /// The base is obtained by borrowing fyToken and selling it in a pool.
+    /// @dev Add collateral and borrow from vault, so that a precise amount of base is obtained by the user.
+    /// The base is obtained by borrowing fyToken and buying base with it in a pool.
     function serve(bytes12 vaultId, address to, uint128 ink, uint128 base, uint128 max)
         external payable
         returns (DataTypes.Balances memory balances_, uint128 art)
