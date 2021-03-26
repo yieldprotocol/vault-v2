@@ -147,7 +147,7 @@ contract Ladle is AccessControl(), Batchable {
 
     // ---- Asset and debt management ----
 
-    /// @dev Move collateral between vaults.
+    /// @dev Move collateral and debt between vaults.
     function stir(bytes12 from, bytes12 to, uint128 ink, uint128 art)
         public payable
         returns (DataTypes.Balances memory, DataTypes.Balances memory)
