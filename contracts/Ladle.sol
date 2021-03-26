@@ -79,6 +79,15 @@ contract Ladle is AccessControl(), Batchable {
         emit PoolAdded(seriesId, address(pool));
     }
 
+    // ---- Data sourcing ----
+    /// @dev Obtains a vault by vaultId from the CAuldron, and verifies that msg.sender is the owner
+    function getOwnedVault(bytes12 vaultId)
+        internal view returns(DataTypes.Vault memory vault)
+    {
+        vault = cauldron.vaults(vaultId);
+        require (vault.owner == msg.sender, "Only vault owner");
+    }
+
     // ---- Vault management ----
 
     /// @dev Create a new vault, linked to a series (and therefore underlying) and a collateral
@@ -92,8 +101,7 @@ contract Ladle is AccessControl(), Batchable {
     function destroy(bytes12 vaultId)
         public payable
     {
-        DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
-        require (vault_.owner == msg.sender, "Only vault owner");
+        getOwnedVault(vaultId);
         cauldron.destroy(vaultId);
     }
 
@@ -101,8 +109,7 @@ contract Ladle is AccessControl(), Batchable {
     function tweak(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
         public payable
     {
-        DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
-        require (vault_.owner == msg.sender, "Only vault owner");
+        getOwnedVault(vaultId);
         // tweak checks that the series and the collateral both exist and that the collateral is approved for the series
         cauldron.tweak(vaultId, seriesId, ilkId);
     }
@@ -111,8 +118,7 @@ contract Ladle is AccessControl(), Batchable {
     function give(bytes12 vaultId, address receiver)
         public payable
     {
-        DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
-        require (vault_.owner == msg.sender, "Only vault owner");
+        getOwnedVault(vaultId);
         cauldron.give(vaultId, receiver);
     }
 
@@ -137,9 +143,7 @@ contract Ladle is AccessControl(), Batchable {
         public payable
         returns (DataTypes.Balances memory balances_)
     {
-        // Verify vault ownership
-        DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
-        require (vault_.owner == msg.sender, "Only vault owner");
+        DataTypes.Vault memory vault_ = getOwnedVault(vaultId);
 
         // Update accounting
         balances_ = cauldron.pour(vaultId, ink, art);
@@ -177,8 +181,7 @@ contract Ladle is AccessControl(), Batchable {
         require (art < 0, "Only repay debt");                                          // When repaying debt in `frob`, art is a negative value. Here is the same for consistency.
         
         // Verify vault ownership
-        DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
-        require (vault_.owner == msg.sender, "Only vault owner");
+        DataTypes.Vault memory vault_ = getOwnedVault(vaultId);
 
         // Calculate debt in fyToken terms
         DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);
@@ -214,8 +217,7 @@ contract Ladle is AccessControl(), Batchable {
         external payable
         returns (DataTypes.Balances memory balances_, uint128 art)
     {
-        DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
-        require (vault_.owner == msg.sender, "Only vault owner");
+        DataTypes.Vault memory vault_ = getOwnedVault(vaultId);
         IPool pool_ = pools[vault_.seriesId];
         require (pool_ != IPool(address(0)), "Pool not found");
         
@@ -230,8 +232,7 @@ contract Ladle is AccessControl(), Batchable {
         external payable
         returns (DataTypes.Balances memory balances_, uint128 art)
     {
-        DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
-        require (vault_.owner == msg.sender, "Only vault owner");
+        DataTypes.Vault memory vault_ = getOwnedVault(vaultId);
         DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);
         require (series_.fyToken != IFYToken(address(0)), "Series not found");
         IPool pool_ = pools[vault_.seriesId];
@@ -247,8 +248,7 @@ contract Ladle is AccessControl(), Batchable {
         external payable
         returns (DataTypes.Balances memory balances_, uint128 base)
     {
-        DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
-        require (vault_.owner == msg.sender, "Only vault owner");
+        DataTypes.Vault memory vault_ = getOwnedVault(vaultId);
         DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);
         require (series_.fyToken != IFYToken(address(0)), "Series not found");
         IPool pool_ = pools[vault_.seriesId];
@@ -264,8 +264,7 @@ contract Ladle is AccessControl(), Batchable {
         public payable
         returns (uint128)
     {
-        DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
-        require (vault_.owner == msg.sender, "Only vault owner");
+        getOwnedVault(vaultId);
         // TODO: Buy underlying in the pool for the new series, and sell it in pool for the old series.
         // The new debt will be the amount of new series fyToken sold. This fyToken will be minted into the new series pool.
         // The amount obtained when selling the underlying must produce the exact amount to repay the existing debt. The old series fyToken amount will be burnt.
@@ -280,8 +279,7 @@ contract Ladle is AccessControl(), Batchable {
         external
         auth
     {
-        DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
-        require (vault_.owner == msg.sender, "Only vault owner");
+        DataTypes.Vault memory vault_ = getOwnedVault(vaultId);
         DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);
 
         cauldron.slurp(vaultId, ink, art);                                                  // Remove debt and collateral from the vault
