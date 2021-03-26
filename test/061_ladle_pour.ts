@@ -29,7 +29,6 @@ describe('Ladle - pour', function () {
   let ladle: Ladle
   let ladleFromOther: Ladle
 
-
   async function fixture() {
     return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId], [seriesId])
   }
