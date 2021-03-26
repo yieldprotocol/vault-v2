@@ -240,7 +240,7 @@ contract Ladle is AccessControl(), Batchable {
         IPool pool = getPool(vault.seriesId);
         
         art = pool.buyBaseTokenPreview(base);
-        balances = pour(vaultId, address(pool), ink.i128(), art.i128());                            // Checks msg.sender owns the vault.
+        balances = pour(vaultId, address(pool), ink.i128(), art.i128());    // TODO: Do a private _pour function that doesn't check the owner.
         pool.buyBaseToken(to, base, max);
     }
 
@@ -255,7 +255,7 @@ contract Ladle is AccessControl(), Batchable {
         IPool pool = getPool(vault.seriesId);
 
         art = pool.sellBaseToken(address(series.fyToken), min);
-        balances = pour(vaultId, to, ink, -(art.i128()));                            // Checks msg.sender owns the vault.
+        balances = pour(vaultId, to, ink, -(art.i128()));
     }
 
     /// @dev Repay all debt in a vault by buying fyToken from a pool with base.
@@ -270,7 +270,7 @@ contract Ladle is AccessControl(), Batchable {
 
         balances = cauldron.balances(vaultId);
         base = pool.buyFYToken(address(series.fyToken), balances.art, max);
-        balances = pour(vaultId, to, ink, balances.art.i128());                            // Checks msg.sender owns the vault.
+        balances = pour(vaultId, to, ink, -(balances.art.i128()));
     }
 
     /// @dev Change series and debt of a vault.
