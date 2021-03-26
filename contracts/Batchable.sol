@@ -3,22 +3,10 @@
 
 pragma solidity ^0.8.0;
 
-// Audit on 5-Jan-2021 by Keno and BoringCrypto. Since renamed and upgraded solidity version.
+import "./RevertMsgExtractor.sol";
+
 
 contract Batchable {
-    /// @dev Helper function to extract a useful revert message from a failed call.
-    /// If the returned data is malformed or not correctly abi encoded then this call can fail itself.
-    function _getRevertMsg(bytes memory _returnData) internal pure returns (string memory) {
-        // If the _res length is less than 68, then the transaction failed silently (without a revert message)
-        if (_returnData.length < 68) return "Transaction reverted silently";
-
-        assembly {
-            // Slice the sighash.
-            _returnData := add(_returnData, 0x04)
-        }
-        return abi.decode(_returnData, (string)); // All that remains is the revert string
-    }
-
     /// @notice Allows batched call to self (this contract).
     /// @param calls An array of inputs for each call.
     /// @param revertOnFail If True then reverts after a failed call and stops doing further calls.
@@ -33,7 +21,7 @@ contract Batchable {
         results = new bytes[](calls.length);
         for (uint256 i = 0; i < calls.length; i++) {
             (bool success, bytes memory result) = address(this).delegatecall(calls[i]);
-            require(success || !revertOnFail, _getRevertMsg(result));
+            require(success || !revertOnFail, RevertMsgExtractor.getRevertMsg(result));
             successes[i] = success;
             results[i] = result;
         }

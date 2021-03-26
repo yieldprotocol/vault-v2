@@ -3,9 +3,12 @@ pragma solidity ^0.8.0;
 import "@yield-protocol/utils/contracts/token/IERC20.sol";
 import "@yield-protocol/vault-interfaces/IJoin.sol";
 import "./AccessControl.sol";
+import "./TransferHelper.sol";
 
 
 contract Join is IJoin, AccessControl() {
+    using TransferHelper for IERC20;
+
     address public override asset;
     uint256 public storedBalance;
     // bytes6  public asset;   // Collateral Type
@@ -31,16 +34,14 @@ contract Join is IJoin, AccessControl() {
         auth
         returns (uint128)
     {
-        IERC20 token_ = IERC20(asset);
+        IERC20 token = IERC20(asset);
 
         // require(live == 1, "GemJoin/not-live");
-        uint256 initialBalance = token_.balanceOf(address(this));
+        uint256 initialBalance = token.balanceOf(address(this));
         uint256 surplus = initialBalance - storedBalance;
         uint256 required = surplus >= amount ? 0 : amount - surplus;
         storedBalance = initialBalance + required;
-        if (required > 0) {
-            require(token_.transferFrom(user, address(this), required), "Failed transfer"); // TODO: Consider best practices about safe transfers
-        }
+        if (required > 0) token.safeTransferFrom(user, address(this), required);
         return amount;
     }
 
@@ -49,10 +50,10 @@ contract Join is IJoin, AccessControl() {
         auth
         returns (uint128)
     {
-        IERC20 token_ = IERC20(asset);
+        IERC20 token = IERC20(asset);
 
         storedBalance -= amount;                                  // To withdraw surplus tokens we can do a `join` for zero tokens first.
-        require(token_.transfer(user, amount), "Failed transfer"); // TODO: Consider best practices about safe transfers
+        token.safeTransfer(user, amount);
         return amount;
     }
 }
