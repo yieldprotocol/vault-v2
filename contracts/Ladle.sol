@@ -215,10 +215,13 @@ contract Ladle is AccessControl(), Batchable {
         returns (DataTypes.Balances memory balances_, uint128 art)
     {
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
+        require (vault_.owner == msg.sender, "Only vault owner");
         IPool pool_ = pools[vault_.seriesId];
+        require (pool_ != IPool(address(0)), "Pool not found");
+        
         art = pool_.buyBaseTokenPreview(base);
         balances_ = pour(vaultId, address(pool_), ink.i128(), art.i128());                            // Checks msg.sender owns the vault.
-        pool_.buyFYToken(to, art, max);
+        pool_.buyBaseToken(to, base, max);
     }
 
     /// @dev Repay debt by selling base in a pool and using the resulting fyToken
@@ -228,8 +231,12 @@ contract Ladle is AccessControl(), Batchable {
         returns (DataTypes.Balances memory balances_, uint128 art)
     {
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
+        require (vault_.owner == msg.sender, "Only vault owner");
         DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);
+        require (series_.fyToken != IFYToken(address(0)), "Series not found");
         IPool pool_ = pools[vault_.seriesId];
+        require (pool_ != IPool(address(0)), "Pool not found");
+
         art = pool_.sellBaseToken(address(series_.fyToken), min);
         balances_ = pour(vaultId, to, ink, art.i128());                            // Checks msg.sender owns the vault.
     }
@@ -241,10 +248,13 @@ contract Ladle is AccessControl(), Batchable {
         returns (DataTypes.Balances memory balances_, uint128 base)
     {
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
+        require (vault_.owner == msg.sender, "Only vault owner");
         DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);
-        balances_ = cauldron.balances(vaultId);
+        require (series_.fyToken != IFYToken(address(0)), "Series not found");
         IPool pool_ = pools[vault_.seriesId];
+        require (pool_ != IPool(address(0)), "Pool not found");
 
+        balances_ = cauldron.balances(vaultId);
         base = pool_.buyFYToken(address(series_.fyToken), balances_.art, max);
         balances_ = pour(vaultId, to, ink, balances_.art.i128());                            // Checks msg.sender owns the vault.
     }
@@ -346,7 +356,7 @@ contract Ladle is AccessControl(), Batchable {
 
     /// @dev Allow users to trigger a token transfer to a pool through the ladle, to be used with multicall
     function transferToPool(bytes6 seriesId, bool base, uint128 wad)
-        external
+        external payable
         returns (bool)
     {
         IPool pool = pools[seriesId];
@@ -368,7 +378,7 @@ contract Ladle is AccessControl(), Batchable {
 
     /// @dev Allow users to trigger a token sale in a pool through the ladle, to be used with multicall
     function sellToken(bytes6 seriesId, bool base, address to, uint128 min)
-        external
+        external payable
         returns (uint128 tokenOut)
     {
         IPool pool = pools[seriesId];
@@ -379,7 +389,7 @@ contract Ladle is AccessControl(), Batchable {
 
     /// @dev Allow users to trigger a token buy in a pool through the ladle, to be used with multicall
     function buyToken(bytes6 seriesId, bool base, address to, uint128 tokenOut, uint128 max)
-        external
+        external payable
         returns (uint128 tokenIn)
     {
         IPool pool = pools[seriesId];

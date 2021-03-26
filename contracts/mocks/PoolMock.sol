@@ -29,6 +29,8 @@ library RMath { // Fixed point arithmetic in Ray units
 contract PoolMock {
     using RMath for uint128;
 
+    event Trade(uint32 maturity, address indexed from, address indexed to, int256 baseTokens, int256 fyTokenTokens);
+
     IERC20 public baseToken;
     IFYToken public fyToken;
     uint128 constant public rate = 105e25; // 5%
@@ -73,7 +75,7 @@ contract PoolMock {
     }
 
     function retrieveFYToken(address to)
-        external
+        external payable
         returns(uint128 surplus)
     {
         surplus = getFYTokenReserves() - fyTokenReserves; // TODO: Consider adding a require for UX
@@ -83,39 +85,59 @@ contract PoolMock {
         );
     }
 
+    function sellBaseTokenPreview(uint128 baseTokenIn) public pure returns(uint128) {
+        return baseTokenIn.rmul(rate);
+    }
+
+    function buyBaseTokenPreview(uint128 baseTokenOut) public pure returns(uint128) {
+        return baseTokenOut.rmul(rate);
+    }
+
+    function sellFYTokenPreview(uint128 fyTokenIn) public pure returns(uint128) {
+        return fyTokenIn.rdiv(rate);
+    }
+
+    function buyFYTokenPreview(uint128 fyTokenOut) public pure returns(uint128) {
+        return fyTokenOut.rdiv(rate);
+    }
+
     function sellBaseToken(address to, uint128 min) external returns(uint128) {
         uint128 baseTokenIn = uint128(baseToken.balanceOf(address(this))) - baseTokenReserves;
-        uint128 fyTokenOut = baseTokenIn.rmul(rate);
+        uint128 fyTokenOut = sellBaseTokenPreview(baseTokenIn);
         require(fyTokenOut >= min, "Pool: Not enough fyToken obtained");
         fyToken.transfer(to, fyTokenOut);
         (baseTokenReserves, fyTokenReserves) = (uint112(baseToken.balanceOf(address(this))), uint112(fyTokenReserves - fyTokenOut));
+        emit Trade(uint32(fyToken.maturity()), msg.sender, to, int128(baseTokenIn), -int128(fyTokenOut));
         return fyTokenOut;
     }
 
     function buyBaseToken(address to, uint128 baseTokenOut, uint128 max) external returns(uint128) {
-        uint128 fyTokenIn = baseTokenOut.rmul(rate);
+        uint128 fyTokenIn = buyBaseTokenPreview(baseTokenOut);
         require(fyTokenIn <= max, "Pool: Too much fyToken in");
-        require(fyTokenReserves + fyTokenIn < getFYTokenReserves(), "Pool: Not enough fyToken in");
+        require(fyTokenReserves + fyTokenIn <= getFYTokenReserves(), "Pool: Not enough fyToken in");
         baseToken.transfer(to, baseTokenOut);
         (baseTokenReserves, fyTokenReserves) = (uint112(baseTokenReserves - baseTokenOut), uint112(fyTokenReserves + fyTokenIn));
+        emit Trade(uint32(fyToken.maturity()), msg.sender, to, -int128(baseTokenOut), int128(fyTokenIn));
         return fyTokenIn;
     }
 
     function sellFYToken(address to, uint128 min) external returns(uint128) {
         uint128 fyTokenIn = uint128(fyToken.balanceOf(address(this))) - fyTokenReserves;
-        uint128 baseTokenOut = fyTokenIn.rdiv(rate);
+        uint128 baseTokenOut = sellFYTokenPreview(fyTokenIn);
         require(baseTokenOut >= min, "Pool: Not enough baseToken obtained");
         baseToken.transfer(to, baseTokenOut);
         (baseTokenReserves, fyTokenReserves) = (uint112(baseTokenReserves - baseTokenOut), uint112(fyToken.balanceOf(address(this))));
+        emit Trade(uint32(fyToken.maturity()), msg.sender, to, -int128(baseTokenOut), int128(fyTokenIn));
         return baseTokenOut;
     }
 
     function buyFYToken(address to, uint128 fyTokenOut, uint128 max) external returns(uint128) {
-        uint128 baseTokenIn = fyTokenOut.rdiv(rate);
+        uint128 baseTokenIn = buyFYTokenPreview(fyTokenOut);
         require(baseTokenIn <= max, "Pool: Too much base token in");
-        require(baseTokenReserves + baseTokenIn < getBaseTokenReserves(), "Pool: Not enough base token in");
+        require(baseTokenReserves + baseTokenIn <= getBaseTokenReserves(), "Pool: Not enough base token in");
         fyToken.transfer(to, fyTokenOut);
         (baseTokenReserves, fyTokenReserves) = (uint112(baseTokenReserves + baseTokenIn), uint112(fyTokenReserves - fyTokenOut));
+        emit Trade(uint32(fyToken.maturity()), msg.sender, to, int128(baseTokenIn), -int128(fyTokenOut));
         return baseTokenIn;
     }
 }
