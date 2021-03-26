@@ -1,5 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { BigNumber } from 'ethers'
+import { WAD, MAX128 as MAX } from './shared/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { FYToken } from '../typechain/FYToken'
@@ -11,9 +11,7 @@ import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { loadFixture } = waffle
 
-import { YieldEnvironment, WAD } from './shared/fixtures'
-
-const MAX128 = BigNumber.from(2).pow(128).sub(1)
+import { YieldEnvironment } from './shared/fixtures'
 
 describe('Ladle - pool router', function () {
   this.timeout(0)
@@ -66,7 +64,7 @@ describe('Ladle - pool router', function () {
     await expect(ladle.transferToPool(mockSeriesId, true, WAD)).to.be.revertedWith('Pool does not exist')
     await expect(ladle.retrieveToken(mockSeriesId, true, other)).to.be.revertedWith('Pool does not exist')
     await expect(ladle.sellToken(mockSeriesId, true, other, 0)).to.be.revertedWith('Pool does not exist')
-    await expect(ladle.buyToken(mockSeriesId, true, other, WAD.div(2), MAX128)).to.be.revertedWith(
+    await expect(ladle.buyToken(mockSeriesId, true, other, WAD.div(2), MAX)).to.be.revertedWith(
       'Pool does not exist'
     )
   })
@@ -114,13 +112,13 @@ describe('Ladle - pool router', function () {
     })
 
     it('buys using unaccounted base tokens in the pool', async () => {
-      await expect(await ladle.buyToken(seriesId, true, other, WAD.div(2), MAX128))
+      await expect(await ladle.buyToken(seriesId, true, other, WAD.div(2), MAX))
         .to.emit(base, 'Transfer')
         .withArgs(pool.address, other, WAD.div(2))
     })
 
     it('buys using unaccounted fyTokens in the pool', async () => {
-      await expect(await ladle.buyToken(seriesId, false, other, WAD.div(2), MAX128))
+      await expect(await ladle.buyToken(seriesId, false, other, WAD.div(2), MAX))
         .to.emit(fyToken, 'Transfer')
         .withArgs(pool.address, other, WAD.div(2))
     })

@@ -1,4 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
+import { WAD, MAX128 as MAX } from './shared/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { FYToken } from '../typechain/FYToken'
@@ -9,7 +10,7 @@ import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { loadFixture } = waffle
 
-import { YieldEnvironment, WAD } from './shared/fixtures'
+import { YieldEnvironment } from './shared/fixtures'
 
 describe('Ladle - serve', function () {
   this.timeout(0)
@@ -56,10 +57,10 @@ describe('Ladle - serve', function () {
   })
 
   /*
-  it('borrows and sells for base', async () => {
+  it('borrows an amount of base', async () => {
     const baseBalanceBefore = await base.balanceOf(owner)
     const ilkBalanceBefore = await ilk.balanceOf(owner)
-    expect(await ladle.serve(vaultId, owner, WAD, WAD, 0))
+    expect(await ladle.serve(vaultId, owner, WAD, WAD, MAX))
       .to.emit(cauldron, 'VaultPoured')
       .withArgs(vaultId, seriesId, ilkId, WAD, WAD)
     expect((await cauldron.balances(vaultId)).ink).to.equal(WAD)
@@ -67,7 +68,9 @@ describe('Ladle - serve', function () {
     expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.add(WAD.mul(100).div(105)))
     expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.sub(WAD))
   })
+  */
 
+  /*
   it('does not `serve` if slippage exceeded', async () => {
     await expect(ladle.serve(vaultId, owner, WAD, WAD, WAD.mul(2))).to.be.revertedWith(
       'Pool: Not enough baseToken obtained'
