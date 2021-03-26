@@ -74,11 +74,20 @@ describe('Ladle - serve', function () {
     expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.sub(WAD.mul(2)))
   })
 
-  /*
-  it('does not `serve` if slippage exceeded', async () => {
-    await expect(ladle.serve(vaultId, owner, WAD, WAD, WAD.mul(2))).to.be.revertedWith(
-      'Pool: Not enough baseToken obtained'
-    )
+  it('repays debt with base', async () => {
+    await ladle.pour(vaultId, owner, WAD, WAD)
+
+    const baseBalanceBefore = await base.balanceOf(owner)
+    const debtRepaidInBase = WAD.div(2)
+    const debtRepaidInFY = debtRepaidInBase.mul(105).div(100)
+
+    await base.transfer(pool.address, debtRepaidInBase) // This would normally be part of a multicall, using ladle.transferToPool
+    await expect(await ladle.repay(vaultId, owner, debtRepaidInBase, 0))
+      .to.emit(cauldron, 'VaultPoured')
+      .withArgs(vaultId, seriesId, ilkId, 0, debtRepaidInFY.mul(-1))
+      .to.emit(pool, 'Trade')
+      .withArgs(await fyToken.maturity(), ladle.address, fyToken.address, debtRepaidInBase, debtRepaidInFY.mul(-1))
+    expect((await cauldron.balances(vaultId)).art).to.equal(WAD.sub(debtRepaidInFY))
+    expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(debtRepaidInBase))
   })
-  */
 })

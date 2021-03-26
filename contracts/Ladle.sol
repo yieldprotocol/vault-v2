@@ -255,7 +255,7 @@ contract Ladle is AccessControl(), Batchable {
         IPool pool = getPool(vault.seriesId);
 
         art = pool.sellBaseToken(address(series.fyToken), min);
-        balances = pour(vaultId, to, ink, art.i128());                            // Checks msg.sender owns the vault.
+        balances = pour(vaultId, to, ink, -(art.i128()));                            // Checks msg.sender owns the vault.
     }
 
     /// @dev Repay all debt in a vault by buying fyToken from a pool with base.
