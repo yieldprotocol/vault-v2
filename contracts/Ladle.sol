@@ -50,6 +50,39 @@ contract Ladle is AccessControl(), Batchable {
         cauldron = cauldron_;
     }
 
+    // ---- Data sourcing ----
+    /// @dev Obtains a vault by vaultId from the Cauldron, and verifies that msg.sender is the owner
+    function getOwnedVault(bytes12 vaultId)
+        internal view returns(DataTypes.Vault memory vault)
+    {
+        vault = cauldron.vaults(vaultId);
+        require (vault.owner == msg.sender, "Only vault owner");
+    }
+
+    /// @dev Obtains a series by seriesId from the Cauldron, and verifies that it exists
+    function getSeries(bytes6 seriesId)
+        internal view returns(DataTypes.Series memory series)
+    {
+        series = cauldron.series(seriesId);
+        require (series.fyToken != IFYToken(address(0)), "Series not found");
+    }
+
+    /// @dev Obtains a join by assetId, and verifies that it exists
+    function getJoin(bytes6 assetId)
+        internal view returns(IJoin join)
+    {
+        join = joins[assetId];
+        require (join != IJoin(address(0)), "Join not found");
+    }
+
+    /// @dev Obtains a pool by seriesId, and verifies that it exists
+    function getPool(bytes6 seriesId)
+        internal view returns(IPool pool)
+    {
+        pool = pools[seriesId];
+        require (pool != IPool(address(0)), "Pool not found");
+    }
+
     // ---- Administration ----
 
     /// @dev Add a new Join for an Asset, or replace an existing one for a new one.
@@ -71,21 +104,11 @@ contract Ladle is AccessControl(), Batchable {
         external
         auth
     {
-        IFYToken fyToken = cauldron.series(seriesId).fyToken;
-        require (fyToken != IFYToken(address(0)), "Series not found");
+        IFYToken fyToken = getSeries(seriesId).fyToken;
         require (fyToken == pool.fyToken(), "Mismatched pool fyToken and series");
         require (fyToken.asset() == address(pool.baseToken()), "Mismatched pool base and series");
         pools[seriesId] = pool;
         emit PoolAdded(seriesId, address(pool));
-    }
-
-    // ---- Data sourcing ----
-    /// @dev Obtains a vault by vaultId from the CAuldron, and verifies that msg.sender is the owner
-    function getOwnedVault(bytes12 vaultId)
-        internal view returns(DataTypes.Vault memory vault)
-    {
-        vault = cauldron.vaults(vaultId);
-        require (vault.owner == msg.sender, "Only vault owner");
     }
 
     // ---- Vault management ----
@@ -150,16 +173,14 @@ contract Ladle is AccessControl(), Batchable {
 
         // Manage collateral
         if (ink != 0) {
-            IJoin ilkJoin_ = joins[vault_.ilkId];
-            require (ilkJoin_ != IJoin(address(0)), "Ilk join not found");
+            IJoin ilkJoin_ = getJoin(vault_.ilkId);
             if (ink > 0) ilkJoin_.join(vault_.owner, uint128(ink));
             if (ink < 0) ilkJoin_.exit(to, uint128(-ink));
         }
 
         // Manage debt tokens
         if (art != 0) {
-            DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);
-            // TODO: Consider checking the series exists
+            DataTypes.Series memory series_ = getSeries(vault_.seriesId);
             if (art > 0) {
                 require(uint32(block.timestamp) <= series_.maturity, "Mature");
                 IFYToken(series_.fyToken).mint(to, uint128(art));
@@ -184,7 +205,7 @@ contract Ladle is AccessControl(), Batchable {
         DataTypes.Vault memory vault_ = getOwnedVault(vaultId);
 
         // Calculate debt in fyToken terms
-        DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);
+        DataTypes.Series memory series_ = getSeries(vault_.seriesId);
         bytes6 baseId = series_.baseId;
         uint128 amt;
         if (uint32(block.timestamp) >= series_.maturity) {
@@ -199,15 +220,13 @@ contract Ladle is AccessControl(), Batchable {
 
         // Manage collateral
         if (ink != 0) {
-            IJoin ilkJoin_ = joins[vault_.ilkId];
-            require (ilkJoin_ != IJoin(address(0)), "Ilk join not found");
+            IJoin ilkJoin_ = getJoin(vault_.ilkId);
             if (ink > 0) ilkJoin_.join(vault_.owner, uint128(ink));
             if (ink < 0) ilkJoin_.exit(to, uint128(-ink));
         }
 
         // Manage underlying
-        IJoin baseJoin_ = joins[series_.baseId];
-        require (baseJoin_ != IJoin(address(0)), "Base join not found");
+        IJoin baseJoin_ = getJoin(series_.baseId);
         baseJoin_.join(msg.sender, amt);
     }
 
@@ -218,8 +237,7 @@ contract Ladle is AccessControl(), Batchable {
         returns (DataTypes.Balances memory balances_, uint128 art)
     {
         DataTypes.Vault memory vault_ = getOwnedVault(vaultId);
-        IPool pool_ = pools[vault_.seriesId];
-        require (pool_ != IPool(address(0)), "Pool not found");
+        IPool pool_ = getPool(vault_.seriesId);
         
         art = pool_.buyBaseTokenPreview(base);
         balances_ = pour(vaultId, address(pool_), ink.i128(), art.i128());                            // Checks msg.sender owns the vault.
@@ -233,10 +251,8 @@ contract Ladle is AccessControl(), Batchable {
         returns (DataTypes.Balances memory balances_, uint128 art)
     {
         DataTypes.Vault memory vault_ = getOwnedVault(vaultId);
-        DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);
-        require (series_.fyToken != IFYToken(address(0)), "Series not found");
-        IPool pool_ = pools[vault_.seriesId];
-        require (pool_ != IPool(address(0)), "Pool not found");
+        DataTypes.Series memory series_ = getSeries(vault_.seriesId);
+        IPool pool_ = getPool(vault_.seriesId);
 
         art = pool_.sellBaseToken(address(series_.fyToken), min);
         balances_ = pour(vaultId, to, ink, art.i128());                            // Checks msg.sender owns the vault.
@@ -249,10 +265,8 @@ contract Ladle is AccessControl(), Batchable {
         returns (DataTypes.Balances memory balances_, uint128 base)
     {
         DataTypes.Vault memory vault_ = getOwnedVault(vaultId);
-        DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);
-        require (series_.fyToken != IFYToken(address(0)), "Series not found");
-        IPool pool_ = pools[vault_.seriesId];
-        require (pool_ != IPool(address(0)), "Pool not found");
+        DataTypes.Series memory series_ = getSeries(vault_.seriesId);
+        IPool pool_ = getPool(vault_.seriesId);
 
         balances_ = cauldron.balances(vaultId);
         base = pool_.buyFYToken(address(series_.fyToken), balances_.art, max);
@@ -280,18 +294,16 @@ contract Ladle is AccessControl(), Batchable {
         auth
     {
         DataTypes.Vault memory vault_ = getOwnedVault(vaultId);
-        DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);
+        DataTypes.Series memory series_ = getSeries(vault_.seriesId);
 
         cauldron.slurp(vaultId, ink, art);                                                  // Remove debt and collateral from the vault
 
         if (ink != 0) {                                                                     // Give collateral to the user
-            IJoin ilkJoin_ = joins[vault_.ilkId];
-            require (ilkJoin_ != IJoin(address(0)), "Ilk join not found");
+            IJoin ilkJoin_ = getJoin(vault_.ilkId);
             ilkJoin_.exit(user, ink);
         }
         if (art != 0) {                                                                     // Take underlying from user
-            IJoin baseJoin_ = joins[series_.baseId];
-            require (baseJoin_ != IJoin(address(0)), "Base join not found");
+            IJoin baseJoin_ = getJoin(series_.baseId);
             baseJoin_.join(user, art);
         }
     }
@@ -299,20 +311,26 @@ contract Ladle is AccessControl(), Batchable {
     // ---- Permit management ----
 
     /// @dev Execute an ERC2612 permit for the selected asset or fyToken
-    function forwardPermit(bytes6 id, bool asset, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s) public {
-        IERC2612 token = IERC2612(_findToken(id, asset));
+    function forwardPermit(bytes6 id, bool asset, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
+        public
+    {
+        IERC2612 token = IERC2612(findToken(id, asset));
         token.permit(msg.sender, spender, amount, deadline, v, r, s);
     }
 
     /// @dev Execute a Dai-style permit for the selected asset or fyToken
-    function forwardDaiPermit(bytes6 id, bool asset, address spender, uint256 nonce, uint256 deadline, bool allowed, uint8 v, bytes32 r, bytes32 s) public {
-        DaiAbstract token = DaiAbstract(_findToken(id, asset));
+    function forwardDaiPermit(bytes6 id, bool asset, address spender, uint256 nonce, uint256 deadline, bool allowed, uint8 v, bytes32 r, bytes32 s)
+        public
+    {
+        DaiAbstract token = DaiAbstract(findToken(id, asset));
         token.permit(msg.sender, spender, nonce, deadline, allowed, v, r, s);
     }
 
     /// @dev From an id, which can be an assetId or a seriesId, find the resulting asset or fyToken
-    function _findToken(bytes6 id, bool asset) internal returns (address token) {
-        token = asset ? cauldron.assets(id) : address(cauldron.series(id).fyToken); // TODO: Remove the castings
+    function findToken(bytes6 id, bool asset)
+        internal view returns (address token)
+    {
+        token = asset ? cauldron.assets(id) : address(getSeries(id).fyToken);
         require (token != address(0), "Token not found");
     }
 
@@ -330,7 +348,7 @@ contract Ladle is AccessControl(), Batchable {
     {
         ethTransferred = address(this).balance;
 
-        IJoin wethJoin = joins[etherId];
+        IJoin wethJoin = getJoin(etherId);
         IWETH9 weth = IWETH9(address(wethJoin.asset()));
 
         weth.deposit{ value: ethTransferred }();   // TODO: Test gas savings using WETH10 `depositTo`
@@ -343,7 +361,7 @@ contract Ladle is AccessControl(), Batchable {
         public payable
         returns (uint256 ethTransferred)
     {
-        IJoin wethJoin = joins[etherId];
+        IJoin wethJoin = getJoin(etherId);
         IWETH9 weth = IWETH9(address(wethJoin.asset()));
         ethTransferred = weth.balanceOf(address(this));
         weth.withdraw(ethTransferred);   // TODO: Test gas savings using WETH10 `withdrawTo`
@@ -357,8 +375,7 @@ contract Ladle is AccessControl(), Batchable {
         external payable
         returns (bool)
     {
-        IPool pool = pools[seriesId];
-        require (pool != IPool(address(0)), "Pool does not exist");
+        IPool pool = getPool(seriesId);
         IERC20 token = base ? pool.baseToken() : pool.fyToken();
         require(token.transferFrom(msg.sender, address(pool), wad), "Failed transfer");
         return true;
@@ -369,8 +386,7 @@ contract Ladle is AccessControl(), Batchable {
         external
         returns (uint128 retrieved)
     {
-        IPool pool = pools[seriesId];
-        require (pool != IPool(address(0)), "Pool does not exist");
+        IPool pool = getPool(seriesId);
         retrieved = base ? pool.retrieveBaseToken(to) : pool.retrieveFYToken(to);
     }
 
@@ -379,8 +395,7 @@ contract Ladle is AccessControl(), Batchable {
         external payable
         returns (uint128 tokenOut)
     {
-        IPool pool = pools[seriesId];
-        require (pool != IPool(address(0)), "Pool does not exist");
+        IPool pool = getPool(seriesId);
         tokenOut = base ? pool.sellBaseToken(to, min) : pool.sellFYToken(to, min);
         return tokenOut;
     }
@@ -390,8 +405,7 @@ contract Ladle is AccessControl(), Batchable {
         external payable
         returns (uint128 tokenIn)
     {
-        IPool pool = pools[seriesId];
-        require (pool != IPool(address(0)), "Pool does not exist");
+        IPool pool = getPool(seriesId);
         tokenIn = base ? pool.buyBaseToken(to, tokenOut, max) : pool.buyFYToken(to, tokenOut, max);
         return tokenIn;
     }
