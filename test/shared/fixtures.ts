@@ -136,6 +136,28 @@ export class YieldEnvironment {
     return join
   }
 
+  public static async addSpotOracle(owner: SignerWithAddress, cauldron: Cauldron, baseId: string, ilkId: string) {
+    const ratio = 10000 //  10000 == 100% collateralization ratio
+    const oracle = (await deployContract(owner, OracleMockArtifact, [])) as OracleMock
+    await oracle.setSpot(RAY.mul(2))
+    await cauldron.setSpotOracle(baseId, ilkId, oracle.address, ratio)
+    return oracle
+  }
+
+  public static async addRateOracle(owner: SignerWithAddress, cauldron: Cauldron, baseId: string) {
+    const oracle = (await deployContract(owner, OracleMockArtifact, [])) as OracleMock
+    await oracle.setSpot(RAY.mul(2))
+    await cauldron.setRateOracle(baseId, oracle.address)
+    return oracle
+  }
+
+  public static async addChiOracle(owner: SignerWithAddress) { // This will be referenced by the fyToken, and needs no id
+    const oracle = (await deployContract(owner, OracleMockArtifact, [])) as OracleMock
+    await oracle.setSpot(RAY)
+    return oracle
+  }
+  
+
   // Set up a test environment. Provide at least one asset identifier.
   public static async setup(owner: SignerWithAddress, assetIds: Array<string>, seriesIds: Array<string>) {
     const ownerAdd = await owner.getAddress()
@@ -191,29 +213,25 @@ export class YieldEnvironment {
       await cauldron.setMaxDebt(baseId, ilkId, WAD.mul(1000000))
     }
 
-    // ==== Add oracles and series ====
+    // ==== Add oracles ====
     // There is only one base, so the oracles we need are one for each ilk, against the only base.
     const oracles: Map<string, OracleMock> = new Map()
-    const oracle = (await deployContract(owner, OracleMockArtifact, [])) as OracleMock
-    await oracle.setSpot(RAY.mul(2))
-    await cauldron.setRateOracle(baseId, oracle.address) // This allows to set the series below.
-    oracles.set('rate', oracle)
 
-    const ratio = 10000 //  10000 == 100% collateralization ratio
+    const rateOracle = await this.addRateOracle(owner, cauldron, baseId) as OracleMock
+    oracles.set('rate', rateOracle)
+    const chiOracle = await this.addChiOracle(owner) as OracleMock
+    oracles.set('chi', chiOracle)
     for (let ilkId of ilkIds) {
-      const oracle = (await deployContract(owner, OracleMockArtifact, [])) as OracleMock
-      await oracle.setSpot(RAY.mul(2))
-      await cauldron.setSpotOracle(baseId, ilkId, oracle.address, ratio) // This allows to set the ilks below.
-      oracles.set(ilkId, oracle)
+      oracles.set(ilkId, await this.addSpotOracle(owner, cauldron, baseId, ilkId) as OracleMock)
     }
+
+    // ==== Add series ====
 
     // For each series identifier we create a fyToken with the first asset as underlying.
     // The maturities for the fyTokens are in three month intervals, starting three months from now
     const series: Map<string, FYToken> = new Map()
     const pools: Map<string, PoolMock> = new Map()
-    const chiOracle = (await deployContract(owner, OracleMockArtifact, [])) as OracleMock // Not storing this one in `oracles`, you can retrieve it from the fyToken
-    await chiOracle.setSpot(RAY)
-    oracles.set('chi', chiOracle)
+
     const provider: BaseProvider = await ethers.provider
     const now = (await provider.getBlock(await provider.getBlockNumber())).timestamp
     let count: number = 1
