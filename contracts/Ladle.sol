@@ -11,6 +11,7 @@ import "@yield-protocol/utils/contracts/token/IERC2612.sol";
 import "dss-interfaces/src/dss/DaiAbstract.sol";
 import "./AccessControl.sol";
 import "./Batchable.sol";
+import "./TransferHelper.sol";
 import "./IWETH9.sol";
 
 
@@ -37,6 +38,8 @@ library Safe128 {
 contract Ladle is AccessControl(), Batchable {
     using RMath for uint128;
     using Safe128 for uint128;
+    using TransferHelper for IERC20;
+    using TransferHelper for address payable;
 
     ICauldron public cauldron;
 
@@ -147,17 +150,14 @@ contract Ladle is AccessControl(), Batchable {
 
     // ---- Asset and debt management ----
 
-    /// @dev Move collateral between vaults.
-    function stir(bytes12 from, bytes12 to, uint128 ink)
+    /// @dev Move collateral and debt between vaults.
+    function stir(bytes12 from, bytes12 to, uint128 ink, uint128 art)
         public payable
         returns (DataTypes.Balances memory, DataTypes.Balances memory)
     {
-        DataTypes.Vault memory vaultFrom = cauldron.vaults(from);
-        require (vaultFrom.owner == msg.sender, "Only vault owner");
-        DataTypes.Balances memory balancesFrom_;
-        DataTypes.Balances memory balancesTo_;
-        (balancesFrom_, balancesTo_) = cauldron.stir(from, to, ink);
-        return (balancesFrom_, balancesTo_);
+        if (ink > 0) require (cauldron.vaults(from).owner == msg.sender, "Only origin vault owner");
+        if (art > 0) require (cauldron.vaults(to).owner == msg.sender, "Only destination vault owner");
+        return cauldron.stir(from, to, ink, art);
     }
 
     /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
@@ -349,10 +349,10 @@ contract Ladle is AccessControl(), Batchable {
         ethTransferred = address(this).balance;
 
         IJoin wethJoin = getJoin(etherId);
-        IWETH9 weth = IWETH9(address(wethJoin.asset()));
+        address weth = wethJoin.asset();
 
-        weth.deposit{ value: ethTransferred }();   // TODO: Test gas savings using WETH10 `depositTo`
-        weth.transfer(address(wethJoin), ethTransferred);
+        IWETH9(weth).deposit{ value: ethTransferred }();   // TODO: Test gas savings using WETH10 `depositTo`
+        IERC20(weth).safeTransfer(address(wethJoin), ethTransferred);
     }
 
     /// @dev Unwrap Wrapped Ether held by this Ladle, and send the Ether
@@ -362,10 +362,10 @@ contract Ladle is AccessControl(), Batchable {
         returns (uint256 ethTransferred)
     {
         IJoin wethJoin = getJoin(etherId);
-        IWETH9 weth = IWETH9(address(wethJoin.asset()));
-        ethTransferred = weth.balanceOf(address(this));
-        weth.withdraw(ethTransferred);   // TODO: Test gas savings using WETH10 `withdrawTo`
-        to.transfer(ethTransferred); /// TODO: Consider reentrancy and safe transfers
+        address weth = wethJoin.asset();
+        ethTransferred = IERC20(weth).balanceOf(address(this));
+        IWETH9(weth).withdraw(ethTransferred);   // TODO: Test gas savings using WETH10 `withdrawTo`
+        to.safeTransferETH(ethTransferred); /// TODO: Consider reentrancy
     }
 
     // ---- Pool router ----
@@ -377,7 +377,7 @@ contract Ladle is AccessControl(), Batchable {
     {
         IPool pool = getPool(seriesId);
         IERC20 token = base ? pool.baseToken() : pool.fyToken();
-        require(token.transferFrom(msg.sender, address(pool), wad), "Failed transfer");
+        token.safeTransferFrom(msg.sender, address(pool), wad);
         return true;
     }
 
