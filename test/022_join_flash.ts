@@ -48,11 +48,10 @@ describe('Join - flash', function () {
     join = (await deployContract(ownerAcc, JoinArtifact, [token.address])) as Join
     joinFromOther = join.connect(otherAcc)
 
-    await join.grantRoles([
-      id('join(address,uint128)'),
-      id('exit(address,uint128)'),
-      id('setFlashFeeFactor(uint256)')
-    ], owner)
+    await join.grantRoles(
+      [id('join(address,uint128)'), id('exit(address,uint128)'), id('setFlashFeeFactor(uint256)')],
+      owner
+    )
 
     await token.mint(join.address, WAD.mul(100))
     await join.join(owner, 0)
@@ -101,9 +100,7 @@ describe('Join - flash', function () {
 
   it('sets the flash fee factor', async () => {
     const feeFactor = BigNumber.from(10).pow(25).mul(5) // 5%
-    await expect(join.setFlashFeeFactor(feeFactor))
-      .to.emit(join, 'FlashFeeFactorSet')
-      .withArgs(feeFactor)
+    await expect(join.setFlashFeeFactor(feeFactor)).to.emit(join, 'FlashFeeFactorSet').withArgs(feeFactor)
     expect(await join.flashFeeFactor()).to.equal(feeFactor)
   })
 
@@ -120,7 +117,7 @@ describe('Join - flash', function () {
       await expect(borrower.flashBorrow(token.address, principal, actions.none))
         .to.emit(token, 'Transfer')
         .withArgs(borrower.address, join.address, principal.add(fee))
-  
+
       expect(await token.balanceOf(owner)).to.equal(0)
       expect(await borrower.flashBalance()).to.equal(principal.add(fee))
       expect(await borrower.flashToken()).to.equal(token.address)
