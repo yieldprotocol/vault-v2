@@ -32,13 +32,13 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
     using RMath for uint256;
     using Safe256 for uint256;
 
-    event FlashFeeSet(uint256 indexed fee);
+    event FlashFeeFactorSet(uint256 indexed fee);
 
     bytes32 constant internal FLASH_LOAN_RETURN = keccak256("ERC3156FlashBorrower.onFlashLoan");
 
     address public override asset;
     uint256 public storedBalance;
-    uint256 public fee; // Fee on flash loans, in fixed point with 27 decimals (RAY)
+    uint256 public flashFeeFactor; // Fee on flash loans, as a percentage in fixed point with 27 decimals (RAY)
     // bytes6  public asset;   // Collateral Type
     // uint    public dec;
     // uint    public live;  // Active Flag
@@ -55,13 +55,13 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
     }
     */
 
-    /// @dev Set the flash loan fee
-    function setFlashFee(uint256 fee_)
+    /// @dev Set the flash loan fee factor
+    function setFlashFeeFactor(uint256 flashFeeFactor_)
         public
         auth
     {
-        fee = fee_;
-        emit FlashFeeSet(fee_);
+        flashFeeFactor = flashFeeFactor_;
+        emit FlashFeeFactorSet(flashFeeFactor_);
     }
 
     /// @dev Take `amount` `asset` from `user` using `transferFrom`, minus any unaccounted `asset` in this contract.
@@ -134,7 +134,7 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
      * @return The amount of `token` to be charged for the loan, on top of the returned principal.
      */
     function _flashFee(uint256 amount) internal view returns (uint256) {
-        return amount.rmul(fee);
+        return amount.rmul(flashFeeFactor);
     }
 
     /**
@@ -148,7 +148,7 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
     function flashLoan(IERC3156FlashBorrower receiver, address token, uint256 amount, bytes memory data) public override returns(bool) {
         require(token == asset, "Unsupported currency");
         uint128 _amount = amount.u128();
-        uint128 _fee = amount.rmul(fee).u128();
+        uint128 _fee = _flashFee(amount).u128();
         _exit(address(receiver), _amount);
 
         require(receiver.onFlashLoan(msg.sender, token, _amount, _fee, data) == FLASH_LOAN_RETURN, "Non-compliant borrower");

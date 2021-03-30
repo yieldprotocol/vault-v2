@@ -1,5 +1,4 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { BigNumber } from 'ethers'
 import { id } from '@yield-protocol/utils'
 import { WAD, MAX256 as MAX } from './shared/constants'
 
