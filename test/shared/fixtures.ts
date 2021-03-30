@@ -1,7 +1,7 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { BigNumber } from 'ethers'
 import { BaseProvider } from '@ethersproject/providers'
 import { id } from '@yield-protocol/utils'
+import { WAD, RAY, THREE_MONTHS } from './constants'
 
 import CauldronArtifact from '../../artifacts/contracts/Cauldron.sol/Cauldron.json'
 import FYTokenArtifact from '../../artifacts/contracts/FYToken.sol/FYToken.json'
@@ -25,10 +25,6 @@ import { Witch } from '../../typechain/Witch'
 
 import { ethers, waffle } from 'hardhat'
 const { deployContract } = waffle
-
-export const WAD = BigNumber.from('1000000000000000000')
-export const RAY = BigNumber.from('1000000000000000000000000000')
-export const THREE_MONTHS: number = 3 * 30 * 24 * 60 * 60
 
 export class YieldEnvironment {
   owner: SignerWithAddress
@@ -82,7 +78,7 @@ export class YieldEnvironment {
         id('tweak(bytes12,bytes6,bytes6)'),
         id('give(bytes12,address)'),
         id('pour(bytes12,int128,int128)'),
-        id('stir(bytes12,bytes12,uint128)'),
+        id('stir(bytes12,bytes12,uint128,uint128)'),
         id('roll(bytes12,bytes6,int128)'),
         id('slurp(bytes12,uint128,uint128)'),
       ],
@@ -118,7 +114,7 @@ export class YieldEnvironment {
         id('tweak(bytes12,bytes6,bytes6)'),
         id('give(bytes12,address)'),
         id('pour(bytes12,int128,int128)'),
-        id('stir(bytes12,bytes12,uint128)'),
+        id('stir(bytes12,bytes12,uint128,uint128)'),
         id('roll(bytes12,bytes6,int128)'),
         id('grab(bytes12)'),
         id('slurp(bytes12,uint128,uint128)'),
@@ -232,7 +228,7 @@ export class YieldEnvironment {
       // Initialize pool with a million tokens of each
       await fyToken.mint(pool.address, WAD.mul(1000000))
       await base.mint(pool.address, WAD.mul(1000000))
-      await pool.update() // You can only do this because it's a mock
+      await pool.sync()
     }
 
     // ==== Build some vaults ====

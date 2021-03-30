@@ -1,6 +1,7 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { BigNumber } from 'ethers'
 import { id } from '@yield-protocol/utils'
+import { WAD, MAX256 as MAX } from './shared/constants'
 
 import JoinArtifact from '../artifacts/contracts/Join.sol/Join.json'
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
@@ -22,9 +23,6 @@ describe('Join', function () {
   let join: Join
   let joinFromOther: Join
   let token: ERC20Mock
-
-  const MAX = ethers.constants.MaxUint256
-  const WAD = BigNumber.from(10).pow(18)
 
   before(async () => {
     const signers = await ethers.getSigners()

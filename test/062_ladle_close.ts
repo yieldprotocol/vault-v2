@@ -1,4 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
+import { WAD, RAY } from './shared/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
@@ -11,7 +12,7 @@ import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { loadFixture } = waffle
 
-import { YieldEnvironment, WAD, RAY, THREE_MONTHS } from './shared/fixtures'
+import { YieldEnvironment } from './shared/fixtures'
 
 describe('Ladle - close', function () {
   this.timeout(0)

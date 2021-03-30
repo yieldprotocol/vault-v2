@@ -4,7 +4,6 @@ import { id } from '@yield-protocol/utils'
 import RestrictedERC20MockArtifact from '../artifacts/contracts/mocks/RestrictedERC20Mock.sol/RestrictedERC20Mock.json'
 
 import { RestrictedERC20Mock as Restricted } from '../typechain/RestrictedERC20Mock'
-import { BigNumber } from 'ethers'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'

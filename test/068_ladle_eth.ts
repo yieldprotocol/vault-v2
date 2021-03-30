@@ -1,4 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
+import { WAD } from './shared/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
@@ -9,7 +10,7 @@ import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { loadFixture } = waffle
 
-import { YieldEnvironment, WAD } from './shared/fixtures'
+import { YieldEnvironment } from './shared/fixtures'
 
 describe('Ladle - eth', function () {
   this.timeout(0)
@@ -73,15 +74,6 @@ describe('Ladle - eth', function () {
     const joinEtherCall = ladle.interface.encodeFunctionData('joinEther', [ethId])
     const pourCall = ladle.interface.encodeFunctionData('pour', [ethVaultId, owner, WAD, 0])
     await ladle.batch([joinEtherCall, pourCall], true, { value: WAD })
-  })
-
-  it('users can transfer ETH then serve', async () => {
-    expect(await ladle.joinEther(ethId, { value: WAD }))
-    expect(await ladle.serve(ethVaultId, owner, WAD, WAD, 0))
-      .to.emit(cauldron, 'VaultPoured')
-      .withArgs(ethVaultId, seriesId, ethId, WAD, WAD)
-    expect(await weth.balanceOf(wethJoin.address)).to.equal(WAD)
-    expect((await cauldron.balances(ethVaultId)).ink).to.equal(WAD)
   })
 
   describe('with ETH posted', async () => {

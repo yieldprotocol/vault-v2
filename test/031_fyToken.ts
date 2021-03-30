@@ -1,5 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { id } from '@yield-protocol/utils'
+import { WAD, RAY } from './shared/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
@@ -10,9 +11,9 @@ import { Ladle } from '../typechain/Ladle'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
-const { deployContract, loadFixture } = waffle
+const { loadFixture } = waffle
 
-import { YieldEnvironment, WAD, RAY, THREE_MONTHS } from './shared/fixtures'
+import { YieldEnvironment } from './shared/fixtures'
 
 describe('FYToken', function () {
   this.timeout(0)

@@ -1,4 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
+import { WAD, RAY } from './shared/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Ladle } from '../typechain/Ladle'
@@ -10,9 +11,9 @@ import { OracleMock } from '../typechain/OracleMock'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
-const { deployContract, loadFixture } = waffle
+const { loadFixture } = waffle
 
-import { YieldEnvironment, WAD, RAY, THREE_MONTHS } from './shared/fixtures'
+import { YieldEnvironment } from './shared/fixtures'
 
 describe('Witch', function () {
   this.timeout(0)
