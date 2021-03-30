@@ -121,6 +121,21 @@ export class YieldEnvironment {
     )
   }
 
+  public static async addAsset(owner: SignerWithAddress, cauldron: Cauldron, assetId: string) {
+    const asset = (await deployContract(owner, ERC20MockArtifact, [assetId, 'Mock Base'])) as ERC20Mock
+    await cauldron.addAsset(assetId, asset.address)
+    await asset.mint(await owner.getAddress(), WAD.mul(100))
+    return asset
+  }
+
+  public static async addJoin(owner: SignerWithAddress, ladle: Ladle, asset: ERC20Mock, assetId: string) {
+    const join = (await deployContract(owner, JoinArtifact, [asset.address])) as Join
+    await ladle.addJoin(assetId, join.address)
+    await asset.approve(join.address, ethers.constants.MaxUint256)
+    await join.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], ladle.address)
+    return join
+  }
+
   // Set up a test environment. Provide at least one asset identifier.
   public static async setup(owner: SignerWithAddress, assetIds: Array<string>, seriesIds: Array<string>) {
     const ownerAdd = await owner.getAddress()
@@ -134,7 +149,7 @@ export class YieldEnvironment {
     await this.cauldronWitchAuth(owner, cauldron, witch.address)
     await this.ladleWitchAuth(owner, ladle, witch.address)
 
-    // ==== Owner access ====
+    // ==== Owner access (only test environment) ====
     await this.cauldronGovAuth(owner, cauldron, ownerAdd)
     await this.cauldronLadleAuth(owner, cauldron, ownerAdd)
     await this.ladleGovAuth(owner, ladle, ownerAdd)
@@ -146,17 +161,12 @@ export class YieldEnvironment {
     const assets: Map<string, ERC20Mock> = new Map()
     const joins: Map<string, Join> = new Map()
     for (let assetId of assetIds) {
-      const asset = (await deployContract(owner, ERC20MockArtifact, [assetId, 'Mock Base'])) as ERC20Mock
+      const asset = await this.addAsset(owner, cauldron, assetId) as ERC20Mock
       assets.set(assetId, asset)
-      await cauldron.addAsset(assetId, asset.address)
-      await asset.mint(ownerAdd, WAD.mul(100))
 
-      const join = (await deployContract(owner, JoinArtifact, [asset.address])) as Join
+      const join = await this.addJoin(owner, ladle, asset, assetId) as Join
       joins.set(assetId, join)
-      await ladle.addJoin(assetId, join.address)
-      await asset.approve(join.address, ethers.constants.MaxUint256)
-      await join.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], ladle.address)
-      await join.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], ownerAdd)
+      await join.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], ownerAdd) // Only test environment
     }
 
     // The first asset will be the underlying for all series
