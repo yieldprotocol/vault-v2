@@ -11,9 +11,7 @@ import { ethers, waffle } from 'hardhat'
 
 const { loadFixture } = waffle
 
-const base:Uint8Array = ethers.utils.randomBytes(6);
-const ilks:Uint8Array[] = Array.from({length: 3}, () => ethers.utils.randomBytes(6));
-
+const ilksRandom:Uint8Array[] = Array.from({length: 3}, () => ethers.utils.randomBytes(6));
 const series:Uint8Array[] = Array.from({length: 5}, () => ethers.utils.randomBytes(6));
 const ilkNames: string[] = ['DAI', 'USDC', 'USDT']
 
@@ -26,7 +24,7 @@ async function fixture() {
     return await YieldEnvironment.setup(
         ownerAcc,
         ilkNames.map((name:string)=> ethers.utils.formatBytes32String(name).slice(0, 14) ),
-        // ...ilks.map((x:Uint8Array) => ethers.utils.hexlify(x)),
+        // ...ilksRandom.map((x:Uint8Array) => ethers.utils.hexlify(x)),
         series.map((x:Uint8Array) => ethers.utils.hexlify(x))
         )
 }
