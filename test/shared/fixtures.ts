@@ -186,6 +186,28 @@ export class YieldEnvironment {
     return fyToken
   }
 
+  public static async addPool(
+    owner: SignerWithAddress,
+    ladle: Ladle,
+    base: ERC20Mock,
+    fyToken: FYToken,
+    seriesId: string,
+  ) {
+    const pool = (await deployContract(owner, PoolMockArtifact, [
+      base.address,
+      fyToken.address,
+    ])) as PoolMock
+
+    // Initialize pool with a million tokens of each
+    await fyToken.mint(pool.address, WAD.mul(1000000))
+    await base.mint(pool.address, WAD.mul(1000000))
+    await pool.sync()
+
+    await ladle.addPool(seriesId, pool.address)
+
+    return pool
+  }
+
   // Set up a test environment. Provide at least one asset identifier.
   public static async setup(owner: SignerWithAddress, assetIds: Array<string>, seriesIds: Array<string>) {
     const ownerAdd = await owner.getAddress()
@@ -253,7 +275,7 @@ export class YieldEnvironment {
       oracles.set(ilkId, await this.addSpotOracle(owner, cauldron, baseId, ilkId) as OracleMock)
     }
 
-    // ==== Add series ====
+    // ==== Add series and pools ====
     // For each series identifier we create a fyToken with the first asset as underlying.
     // The maturities for the fyTokens are in three month intervals, starting three months from now
     const series: Map<string, FYToken> = new Map()
@@ -269,17 +291,7 @@ export class YieldEnvironment {
       await fyToken.grantRoles([id('mint(address,uint256)'), id('burn(address,uint256)')], ownerAdd) // Only test environment
 
       // Add a pool between the base and each series
-      const pool = (await deployContract(owner, PoolMockArtifact, [
-        base.address,
-        fyToken.address,
-      ])) as PoolMock
-      pools.set(seriesId, pool)
-      await ladle.addPool(seriesId, pool.address)
-
-      // Initialize pool with a million tokens of each
-      await fyToken.mint(pool.address, WAD.mul(1000000))
-      await base.mint(pool.address, WAD.mul(1000000))
-      await pool.sync()
+      pools.set(seriesId, await this.addPool(owner, ladle, base, fyToken, seriesId))
     }
 
     // ==== Build some vaults ====
