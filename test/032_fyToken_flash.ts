@@ -1,4 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
+import { WAD } from './shared/constants'
 
 import FlashBorrowerArtifact from '../artifacts/contracts/mocks/FlashBorrower.sol/FlashBorrower.json'
 
@@ -8,9 +9,8 @@ import { FlashBorrower } from '../typechain/FlashBorrower'
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { deployContract, loadFixture } = waffle
-const MAX = ethers.constants.MaxUint256
 
-import { YieldEnvironment, WAD } from './shared/fixtures'
+import { YieldEnvironment } from './shared/fixtures'
 
 describe('FYToken - flash', function () {
   this.timeout(0)

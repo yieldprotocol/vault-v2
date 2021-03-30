@@ -1,6 +1,7 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { BaseProvider } from '@ethersproject/providers'
 import { id } from '@yield-protocol/utils'
+import { WAD, RAY, THREE_MONTHS } from './shared/constants'
 
 import FYTokenArtifact from '../artifacts/contracts/FYToken.sol/FYToken.json'
 import JoinArtifact from '../artifacts/contracts/Join.sol/Join.json'
@@ -20,7 +21,7 @@ import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { deployContract, loadFixture } = waffle
 
-import { YieldEnvironment, WAD, RAY, THREE_MONTHS } from './shared/fixtures'
+import { YieldEnvironment } from './shared/fixtures'
 
 describe('Ladle - admin', function () {
   this.timeout(0)

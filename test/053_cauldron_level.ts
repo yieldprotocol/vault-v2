@@ -1,4 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
+import { WAD, RAY } from './shared/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Ladle } from '../typechain/Ladle'
@@ -6,7 +7,7 @@ import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock as ERC20 } from '../typechain/ERC20Mock'
 import { OracleMock as Oracle } from '../typechain/OracleMock'
 
-import { YieldEnvironment, WAD, RAY, THREE_MONTHS } from './shared/fixtures'
+import { YieldEnvironment } from './shared/fixtures'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'

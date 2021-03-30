@@ -1,22 +1,17 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { id } from '@yield-protocol/utils'
-
-import OracleMockArtifact from '../artifacts/contracts/mocks/OracleMock.sol/OracleMock.json'
-import JoinArtifact from '../artifacts/contracts/Join.sol/Join.json'
-import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
+import { WAD } from './shared/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
-import { OracleMock } from '../typechain/OracleMock'
 import { Ladle } from '../typechain/Ladle'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
-const { deployContract, loadFixture } = waffle
+const { loadFixture } = waffle
 
-import { YieldEnvironment, WAD, RAY } from './shared/fixtures'
+import { YieldEnvironment } from './shared/fixtures'
 
 describe('Ladle - pour', function () {
   this.timeout(0)
@@ -31,12 +26,8 @@ describe('Ladle - pour', function () {
   let base: ERC20Mock
   let ilk: ERC20Mock
   let ilkJoin: Join
-  let oracle: OracleMock
   let ladle: Ladle
   let ladleFromOther: Ladle
-
-  const mockAssetId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const MAX = ethers.constants.MaxUint256
 
   async function fixture() {
     return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId], [seriesId])

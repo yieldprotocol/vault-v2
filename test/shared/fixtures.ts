@@ -1,7 +1,7 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { BigNumber } from 'ethers'
 import { BaseProvider } from '@ethersproject/providers'
 import { id } from '@yield-protocol/utils'
+import { WAD, RAY, THREE_MONTHS } from './constants'
 
 import CauldronArtifact from '../../artifacts/contracts/Cauldron.sol/Cauldron.json'
 import FYTokenArtifact from '../../artifacts/contracts/FYToken.sol/FYToken.json'
@@ -25,10 +25,6 @@ import { Witch } from '../../typechain/Witch'
 
 import { ethers, waffle } from 'hardhat'
 const { deployContract } = waffle
-
-export const WAD = BigNumber.from('1000000000000000000')
-export const RAY = BigNumber.from('1000000000000000000000000000')
-export const THREE_MONTHS: number = 3 * 30 * 24 * 60 * 60
 
 export class YieldEnvironment {
   owner: SignerWithAddress

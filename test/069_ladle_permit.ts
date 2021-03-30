@@ -1,5 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { signatures } from '@yield-protocol/utils'
+import { WAD, MAX256 as MAX } from './shared/constants'
 
 import DaiMockArtifact from '../artifacts/contracts/mocks/DaiMock.sol/DaiMock.json'
 
@@ -15,7 +16,6 @@ import { expect } from 'chai'
 const { loadFixture, deployContract } = waffle
 
 import { YieldEnvironment } from './shared/fixtures'
-import { MAX, WAD } from './shared/utils'
 
 describe('Ladle - permit', function () {
   this.timeout(0)
