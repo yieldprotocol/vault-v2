@@ -58,7 +58,7 @@ describe('Ladle - eth', function () {
   })
 
   it('pouring without sending ETH first reverts', async () => {
-    await expect(ladle.pour(ethVaultId, owner, WAD, 0)).to.be.revertedWith('ERC20: Insufficient approval')
+    await expect(ladle.pour(ethVaultId, owner, WAD, 0)).to.be.revertedWith('ERC20: Insufficient balance')
   })
 
   it('users can transfer ETH then pour', async () => {

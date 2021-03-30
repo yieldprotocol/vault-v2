@@ -131,7 +131,7 @@ export class YieldEnvironment {
   public static async addJoin(owner: SignerWithAddress, ladle: Ladle, asset: ERC20Mock, assetId: string) {
     const join = (await deployContract(owner, JoinArtifact, [asset.address])) as Join
     await ladle.addJoin(assetId, join.address)
-    await asset.approve(join.address, ethers.constants.MaxUint256)
+    await asset.approve(join.address, ethers.constants.MaxUint256) // Owner approves all joins to take from him. Only testing
     await join.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], ladle.address)
     return join
   }
@@ -180,11 +180,9 @@ export class YieldEnvironment {
     // Deploy WETH9 and the WETH9 Join
     const ethId = ethers.utils.formatBytes32String('ETH').slice(0, 14)
     const weth = (await deployContract(owner, WETH9MockArtifact, [])) as WETH9Mock
-    const join = (await deployContract(owner, JoinArtifact, [weth.address])) as Join
     await cauldron.addAsset(ethId, weth.address)
-    await ladle.addJoin(ethId, join.address)
-    await join.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], ladle.address)
-    await join.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], ownerAdd)
+
+    const join = await this.addJoin(owner, ladle, weth as unknown as ERC20Mock, ethId) as Join
     joins.set(ethId, join)
     ilkIds.push(ethId)
 
