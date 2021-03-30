@@ -62,6 +62,13 @@ module.exports = {
     outDir: 'typechain',
     target: 'ethers-v5',
   },
+  abiExporter: {
+    path: './abi',
+    clear: true,
+    flat: true,
+    // only: [':ERC20$'],
+    spacing: 2
+  },
   contractSizer: {
     alphaSort: true,
     runOnCompile: false,

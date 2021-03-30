@@ -16,6 +16,7 @@ node_modules/
 abi/
 output/
 typechain/
+deployments/
 
 # Secret files
 .etherscanKey
