@@ -27,6 +27,10 @@ library Safe256 {
     }
 }
 
+interface IERC20Extended is IERC20 {
+    function decimals() external returns (uint256);
+}
+
 contract Join is IJoin, IERC3156FlashLender, AccessControl() {
     using TransferHelper for IERC20;
     using RMath for uint256;
@@ -36,16 +40,15 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
 
     bytes32 constant internal FLASH_LOAN_RETURN = keccak256("ERC3156FlashBorrower.onFlashLoan");
 
-    address public override asset;
+    address public immutable override asset;    // Underlying token contract
+    uint8   public immutable decimals;          // Decimals on the token contract
     uint256 public storedBalance;
-    uint256 public flashFeeFactor; // Fee on flash loans, as a percentage in fixed point with 27 decimals (RAY)
-    // bytes6  public asset;   // Collateral Type
-    // uint    public dec;
+    uint256 public flashFeeFactor;              // Fee on flash loans, as a percentage in fixed point with 27 decimals (RAY)
     // uint    public live;  // Active Flag
 
     constructor(address asset_) {
         asset = asset_;
-        // dec = token.decimals();
+        decimals = uint8(IERC20Extended(asset_).decimals()); // TODO: Safely cast
         // live = 1;
     }
 
@@ -74,6 +77,7 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
     }
 
     /// @dev Take `amount` `asset` from `user` using `transferFrom`, minus any unaccounted `asset` in this contract.
+    /// @return `amount`, converted to 18 decimals
     function _join(address user, uint128 amount)
         internal
         returns (uint128)
@@ -81,14 +85,19 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
         // require(live == 1, "GemJoin/not-live");
         IERC20 token = IERC20(asset);
         uint256 initialBalance = token.balanceOf(address(this));
-        uint256 surplus = initialBalance - storedBalance;
+        uint256 surplus = initialBalance - storedBalance;       // If you join assets with more than 18 decimals, you will lose the assets beyond the 18th decimal
         uint256 required = surplus >= amount ? 0 : amount - surplus;
         storedBalance = initialBalance + required;
         if (required > 0) token.safeTransferFrom(user, address(this), required);
-        return amount;        
+
+        if (decimals == 18) return amount;
+        else return decimals > 18
+            ? amount / (uint128(10) ** (decimals - 18))
+            : amount * (uint128(10) ** (18 - decimals));
     }
 
     /// @dev Transfer `amount` `asset` to `user`
+    /// @return `amount`, converted to 18 decimals
     function exit(address user, uint128 amount)
         external override
         auth
@@ -103,9 +112,14 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
         returns (uint128)
     {
         IERC20 token = IERC20(asset);
+        
         storedBalance -= amount;                                  // To withdraw surplus tokens we can do a `join` for zero tokens first.
         token.safeTransfer(user, amount);
-        return amount;
+        
+        if (decimals == 18) return amount;
+        else return decimals > 18
+            ? amount / (uint128(10) ** (decimals - 18))
+            : amount * (uint128(10) ** (18 - decimals));
     }
 
     /**
