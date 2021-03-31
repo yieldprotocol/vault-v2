@@ -67,7 +67,8 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
         emit FlashFeeFactorSet(flashFeeFactor_);
     }
 
-    /// @dev Take `amount` `asset` from `user` using `transferFrom`, minus any unaccounted `asset` in this contract.
+    /// @dev Take assets from `user` using `transferFrom`, minus any unaccounted `asset` in this contract.
+    /// `amount` is normalized to 18 decimals, so to join 1 USDC (6 decimals) you need to call `join(user, 1e18)`, not `join(user, 1e6)`. 
     function join(address user, uint128 amount)
         external override
         auth
@@ -76,28 +77,30 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
         return _join(user, amount);
     }
 
-    /// @dev Take `amount` `asset` from `user` using `transferFrom`, minus any unaccounted `asset` in this contract.
-    /// @return `amount`, converted to 18 decimals
+    /// @dev Take assets from `user` using `transferFrom`, minus any unaccounted `asset` in this contract.
+    /// `amount` is normalized to 18 decimals, so to join 1 USDC (6 decimals) you need to call `join(user, 1e18)`, not `join(user, 1e6)`. 
     function _join(address user, uint128 amount)
         internal
         returns (uint128)
     {
-        // require(live == 1, "GemJoin/not-live");
+        uint128 assetAmount;                                     // Amount according to `asset` decimals
+        if (decimals == 18) assetAmount = amount;
+        else assetAmount = decimals > 18
+            ? amount * (uint128(10) ** (decimals - 18))
+            : amount / (uint128(10) ** (18 - decimals));
+        
         IERC20 token = IERC20(asset);
         uint256 initialBalance = token.balanceOf(address(this));
         uint256 surplus = initialBalance - storedBalance;       // If you join assets with more than 18 decimals, you will lose the assets beyond the 18th decimal
-        uint256 required = surplus >= amount ? 0 : amount - surplus;
+        uint256 required = surplus >= assetAmount ? 0 : assetAmount - surplus;
         storedBalance = initialBalance + required;
         if (required > 0) token.safeTransferFrom(user, address(this), required);
 
-        if (decimals == 18) return amount;
-        else return decimals > 18
-            ? amount / (uint128(10) ** (decimals - 18))
-            : amount * (uint128(10) ** (18 - decimals));
+        return assetAmount;
     }
 
-    /// @dev Transfer `amount` `asset` to `user`
-    /// @return `amount`, converted to 18 decimals
+    /// @dev Transfer assets to `user`
+    /// `amount` is normalized to 18 decimals, so to exit 1 USDC (6 decimals) you need to call `exit(user, 1e18)`, not `exit(user, 1e6)`.
     function exit(address user, uint128 amount)
         external override
         auth
@@ -106,20 +109,24 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
         return _exit(user, amount);
     }
 
-    /// @dev Transfer `amount` `asset` to `user`
+    /// @dev Transfer assets to `user`
+    /// `amount` is normalized to 18 decimals, so to exit 1 USDC (6 decimals) you need to call `exit(user, 1e18)`, not `exit(user, 1e6)`.
     function _exit(address user, uint128 amount)
         internal
         returns (uint128)
     {
+        uint128 assetAmount;                                     // Amount according to `asset` decimals
+        if (decimals == 18) assetAmount = amount;
+        else assetAmount = decimals > 18
+            ? amount * (uint128(10) ** (decimals - 18))
+            : amount / (uint128(10) ** (18 - decimals));
+
         IERC20 token = IERC20(asset);
         
-        storedBalance -= amount;                                  // To withdraw surplus tokens we can do a `join` for zero tokens first.
-        token.safeTransfer(user, amount);
+        storedBalance -= assetAmount;                                  // To withdraw surplus tokens we can do a `join` for zero tokens first.
+        token.safeTransfer(user, assetAmount);
         
-        if (decimals == 18) return amount;
-        else return decimals > 18
-            ? amount / (uint128(10) ** (decimals - 18))
-            : amount * (uint128(10) ** (18 - decimals));
+        return assetAmount;
     }
 
     /**

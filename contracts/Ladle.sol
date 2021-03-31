@@ -149,6 +149,8 @@ contract Ladle is AccessControl(), Batchable {
     }
 
     // ---- Asset and debt management ----
+    // Note that `Ladle` deals only in 18-decimal normalized assets. I.e. to post 1 USDC (6 decimals) as collateral
+    // you would call `pour(vaultId, to, 1e18, 0)`, and not `pour(vaultId, to, 1e6, 0)`
 
     /// @dev Move collateral and debt between vaults.
     function stir(bytes12 from, bytes12 to, uint128 ink, uint128 art)

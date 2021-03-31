@@ -49,53 +49,53 @@ describe('Join', function () {
 
   it('pulls low decimal tokens from user', async () => {
     await usdc.approve(usdcJoin.address, MAX)
-    expect(await usdcJoin.callStatic.join(owner, oneUSDC)).to.equal(WAD)
+    expect(await usdcJoin.callStatic.join(owner, WAD)).to.equal(oneUSDC)
 
-    await usdcJoin.join(owner, oneUSDC)
+    await usdcJoin.join(owner, WAD)
     expect(await usdcJoin.storedBalance()).to.equal(oneUSDC)
   })
 
   it('joins transferred low decimal tokens', async () => {
     await usdc.transfer(usdcJoin.address, oneUSDC)
-    expect(await usdcJoin.callStatic.join(owner, oneUSDC)).to.equal(WAD)
+    expect(await usdcJoin.callStatic.join(owner, WAD)).to.equal(oneUSDC)
 
-    await usdcJoin.join(owner, oneUSDC)
+    await usdcJoin.join(owner, WAD)
     expect(await usdcJoin.storedBalance()).to.equal(oneUSDC)
   })
 
   it('pulls high decimal tokens from user', async () => {
     await big.approve(bigJoin.address, MAX)
-    expect(await bigJoin.callStatic.join(owner, oneBIG)).to.equal(WAD)
+    expect(await bigJoin.callStatic.join(owner, WAD)).to.equal(oneBIG)
 
-    await bigJoin.join(owner, oneBIG)
+    await bigJoin.join(owner, WAD)
     expect(await bigJoin.storedBalance()).to.equal(oneBIG)
   })
 
   it('joins transferred high decimal tokens', async () => {
     await big.transfer(bigJoin.address, oneBIG)
-    expect(await bigJoin.callStatic.join(owner, oneBIG)).to.equal(WAD)
+    expect(await bigJoin.callStatic.join(owner, WAD)).to.equal(oneBIG)
 
-    await bigJoin.join(owner, oneBIG)
+    await bigJoin.join(owner, WAD)
     expect(await bigJoin.storedBalance()).to.equal(oneBIG)
   })
 
   describe('with tokens in the join', async () => {
     beforeEach(async () => {
       await usdc.transfer(usdcJoin.address, oneUSDC)
-      await usdcJoin.join(owner, oneUSDC)
+      await usdcJoin.join(owner, WAD)
       await big.transfer(bigJoin.address, oneBIG)
-      await bigJoin.join(owner, oneBIG)
+      await bigJoin.join(owner, WAD)
     })
 
     it('pushes low decimal tokens to user', async () => {
-      expect(await usdcJoin.callStatic.exit(owner, oneUSDC)).to.equal(WAD)
-      await usdcJoin.exit(owner, oneUSDC)
+      expect(await usdcJoin.callStatic.exit(owner, WAD)).to.equal(oneUSDC)
+      await usdcJoin.exit(owner, WAD)
       expect(await usdcJoin.storedBalance()).to.equal(0)
     })
 
     it('pushes high decimal tokens to user', async () => {
-      expect(await bigJoin.callStatic.exit(owner, oneBIG)).to.equal(WAD)
-      await bigJoin.exit(owner, oneBIG)
+      expect(await bigJoin.callStatic.exit(owner, WAD)).to.equal(oneBIG)
+      await bigJoin.exit(owner, WAD)
       expect(await bigJoin.storedBalance()).to.equal(0)
     })
   })
