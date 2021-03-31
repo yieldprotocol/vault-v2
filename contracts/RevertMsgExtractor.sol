@@ -7,7 +7,10 @@ pragma solidity >=0.6.0;
 library RevertMsgExtractor {
     /// @dev Helper function to extract a useful revert message from a failed call.
     /// If the returned data is malformed or not correctly abi encoded then this call can fail itself.
-    function getRevertMsg(bytes memory returnData) internal pure returns (string memory) {
+    function getRevertMsg(bytes memory returnData)
+        internal pure
+        returns (string memory)
+    {
         // If the _res length is less than 68, then the transaction failed silently (without a revert message)
         if (returnData.length < 68) return "Transaction reverted silently";
 

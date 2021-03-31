@@ -4,6 +4,7 @@
 pragma solidity ^0.8.0;
 
 import "./RevertMsgExtractor.sol";
+import "hardhat/console.sol";
 
 
 contract Batchable {
@@ -21,7 +22,7 @@ contract Batchable {
         results = new bytes[](calls.length);
         for (uint256 i = 0; i < calls.length; i++) {
             (bool success, bytes memory result) = address(this).delegatecall(calls[i]);
-            require(success || !revertOnFail, RevertMsgExtractor.getRevertMsg(result));
+            if (!success && revertOnFail) revert(RevertMsgExtractor.getRevertMsg(result));
             successes[i] = success;
             results[i] = result;
         }
