@@ -47,7 +47,7 @@ describe('Cauldron - admin', function () {
   const ilkId2 = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const maturity = 1640995199
-  const ratio = 10000 // == 100% collateralization ratio
+  const ratio = 1000000 // == 100% collateralization ratio
 
   beforeEach(async () => {
     cauldron = (await deployContract(ownerAcc, CauldronArtifact, [])) as Cauldron

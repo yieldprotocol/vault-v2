@@ -64,7 +64,7 @@ describe('Ladle - admin', function () {
   const otherIlkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const otherSeriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const ratio = 10000 // == 100% collateralization ratio
+  const ratio = 1000000 // == 100% collateralization ratio
 
   let maturity: number
 

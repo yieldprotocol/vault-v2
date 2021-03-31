@@ -138,7 +138,7 @@ export class YieldEnvironment {
   }
 
   public static async addSpotOracle(owner: SignerWithAddress, cauldron: Cauldron, baseId: string, ilkId: string) {
-    const ratio = 10000 //  10000 == 100% collateralization ratio
+    const ratio = 1000000 //  1000000 == 100% collateralization ratio
     const oracle = (await deployContract(owner, OracleMockArtifact, [])) as OracleMock
     await oracle.setSpot(DEC6.mul(2))
     await cauldron.setSpotOracle(baseId, ilkId, oracle.address, ratio)

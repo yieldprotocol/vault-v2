@@ -143,7 +143,7 @@ contract Cauldron is AccessControl() {
         // TODO: The oracle should record the assets it refers to, and we should match it against assets[baseId] and assets[ilkId]
         spotOracles[baseId][ilkId] = DataTypes.SpotOracle({
             oracle: oracle,
-            ratio: ratio                                                                    // With 2 decimals. 10000 == 100%
+            ratio: ratio                                                                    // With 6 decimals. 1000000 == 100%
         });                                                                                 // Allows to replace an existing oracle.
         emit SpotOracleAdded(baseId, ilkId, address(oracle), ratio);
     }
@@ -398,7 +398,7 @@ contract Cauldron is AccessControl() {
         DataTypes.Balances memory balances_ = balances[vaultId];
         DataTypes.SpotOracle memory spotOracle_ = spotOracles[series_.baseId][vault_.ilkId];
         uint128 spot = spotOracle_.oracle.spot();
-        uint128 ratio = uint128(spotOracle_.ratio) * 1e2;                                  // Normalization factor from 4 to 6 decimals. TODO: Make ratio 6 decimals.
+        uint128 ratio = spotOracle_.ratio;
 
         if (uint32(block.timestamp) >= series_.maturity) {
             IOracle rateOracle = rateOracles[series_.baseId];

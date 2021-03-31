@@ -64,7 +64,7 @@ describe('Cauldron - level', function () {
     for (let spot of [1, 2, 4]) {
       await spotOracle.setSpot(DEC6.mul(spot))
       for (let ratio of [50, 100, 200]) {
-        await cauldron.setSpotOracle(baseId, ilkId, spotOracle.address, ratio * 100)
+        await cauldron.setSpotOracle(baseId, ilkId, spotOracle.address, ratio * 10000)
         const expectedLevel = ink.mul(spot).sub(art.mul(ratio).div(100))
         expect(await cauldron.level(vaultId)).to.equal(expectedLevel)
         // console.log(`${ink} * ${DEC6.mul(spot)} - ${art} * ${ratio} = ${await cauldron.level(vaultId)} | ${expectedLevel} `)
@@ -86,7 +86,7 @@ describe('Cauldron - level', function () {
         await rateOracle.setSpot(DEC6.mul(rate).div(100))
         // accrual = rate / 100
         for (let ratio of [50, 100, 200]) {
-          await cauldron.setSpotOracle(baseId, ilkId, spotOracle.address, ratio * 100)
+          await cauldron.setSpotOracle(baseId, ilkId, spotOracle.address, ratio * 10000)
           const expectedLevel = ink.mul(spot).sub(art.mul(rate).mul(ratio).div(10000))
           expect(await cauldron.level(vaultId)).to.equal(expectedLevel)
           // console.log(`${ink} * ${RAY.mul(spot)} - ${art} * ${ratio} = ${await cauldron.level(vaultId)} | ${expectedLevel} `)
