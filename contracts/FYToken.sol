@@ -10,13 +10,10 @@ import "@yield-protocol/vault-interfaces/IOracle.sol";
 import "./AccessControl.sol";
 
 
-library RMath { // Fixed point arithmetic in Ray units
-    /// @dev Multiply an amount by a fixed point factor in ray units, returning an amount
-    function rmul(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        unchecked {
-            z = x * y / 1e27;
-            require (z <= type(uint256).max, "RMUL Overflow");
-        }
+library DMath { // Fixed point arithmetic in 6 decimal units
+    /// @dev Multiply an amount by a fixed point factor with 6 decimals, returning an amount
+    function dmul(uint256 x, uint256 y) internal pure returns (uint256 z) {
+        z = x * y / 1e6;
     }
 }
 
@@ -36,7 +33,7 @@ library Safe256 {
 
 // TODO: Setter for MAX_TIME_TO_MATURITY
 contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit {
-    using RMath for uint256;
+    using DMath for uint256;
     using Safe256 for uint256;
 
     event Redeemed(address indexed from, address indexed to, uint256 amount, uint256 redeemed);
@@ -90,7 +87,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         );
         _burn(msg.sender, amount);                                  // 2 SSTORE
 
-        uint256 redeemed = amount.rmul(oracle.accrual(maturity.u32()));   // Cost of `accrual`
+        uint256 redeemed = amount.dmul(oracle.accrual(maturity.u32()));   // Cost of `accrual`
         join.exit(to, redeemed.u128());                           // Cost of `join`
         
         emit Redeemed(msg.sender, to, amount, redeemed);

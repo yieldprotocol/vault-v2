@@ -1,5 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { WAD, RAY } from './shared/constants'
+import { WAD, DEC6 } from './shared/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Ladle } from '../typechain/Ladle'
@@ -54,7 +54,7 @@ describe('Cauldron - level', function () {
     fyToken = env.series.get(seriesId) as FYToken
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
 
-    await spotOracle.setSpot(RAY.mul(2))
+    await spotOracle.setSpot(DEC6.mul(2))
     await ladle.pour(vaultId, owner, WAD, WAD)
   })
 
@@ -62,28 +62,28 @@ describe('Cauldron - level', function () {
     const ink = (await cauldron.balances(vaultId)).ink
     const art = (await cauldron.balances(vaultId)).art
     for (let spot of [1, 2, 4]) {
-      await spotOracle.setSpot(RAY.mul(spot))
+      await spotOracle.setSpot(DEC6.mul(spot))
       for (let ratio of [50, 100, 200]) {
         await cauldron.setSpotOracle(baseId, ilkId, spotOracle.address, ratio * 100)
         const expectedLevel = ink.mul(spot).sub(art.mul(ratio).div(100))
         expect(await cauldron.level(vaultId)).to.equal(expectedLevel)
-        // console.log(`${ink} * ${RAY.mul(spot)} - ${art} * ${ratio} = ${await cauldron.level(vaultId)} | ${expectedLevel} `)
+        // console.log(`${ink} * ${DEC6.mul(spot)} - ${art} * ${ratio} = ${await cauldron.level(vaultId)} | ${expectedLevel} `)
       }
     }
   })
 
   it('after maturity, level is ink * spot - art * accrual * ratio', async () => {
-    await spotOracle.setSpot(RAY.mul(1))
-    await rateOracle.setSpot(RAY.mul(1))
+    await spotOracle.setSpot(DEC6.mul(1))
+    await rateOracle.setSpot(DEC6.mul(1))
     await ethers.provider.send('evm_mine', [(await fyToken.maturity()).toNumber()])
     await rateOracle.record(await fyToken.maturity())
 
     const ink = (await cauldron.balances(vaultId)).ink
     const art = (await cauldron.balances(vaultId)).art
     for (let spot of [1, 2, 4]) {
-      await spotOracle.setSpot(RAY.mul(spot))
+      await spotOracle.setSpot(DEC6.mul(spot))
       for (let rate of [110, 120, 140]) {
-        await rateOracle.setSpot(RAY.mul(rate).div(100))
+        await rateOracle.setSpot(DEC6.mul(rate).div(100))
         // accrual = rate / 100
         for (let ratio of [50, 100, 200]) {
           await cauldron.setSpotOracle(baseId, ilkId, spotOracle.address, ratio * 100)

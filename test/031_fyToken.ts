@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { id } from '@yield-protocol/utils'
-import { WAD, RAY } from './shared/constants'
+import { WAD, DEC6 } from './shared/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
@@ -80,7 +80,7 @@ describe('FYToken', function () {
       const maturity = await fyToken.maturity()
       expect(await fyToken.mature())
         .to.emit(chiOracle, 'Recorded')
-        .withArgs(maturity, RAY)
+        .withArgs(maturity, DEC6)
     })
 
     it('does not allow to mature more than once', async () => {
@@ -93,7 +93,7 @@ describe('FYToken', function () {
     })
 
     describe('once matured', async () => {
-      const accrual = RAY.mul(110).div(100) // accrual is 10%
+      const accrual = DEC6.mul(110).div(100) // accrual is 10%
 
       beforeEach(async () => {
         await fyToken.mature()
@@ -105,9 +105,9 @@ describe('FYToken', function () {
         const baseJoinBefore = await base.balanceOf(baseJoin.address)
         await expect(fyToken.redeem(owner, WAD))
           .to.emit(fyToken, 'Redeemed')
-          .withArgs(owner, owner, WAD, WAD.mul(accrual).div(RAY))
-        expect(await base.balanceOf(baseJoin.address)).to.equal(baseJoinBefore.sub(WAD.mul(accrual).div(RAY)))
-        expect(await base.balanceOf(owner)).to.equal(baseOwnerBefore.add(WAD.mul(accrual).div(RAY)))
+          .withArgs(owner, owner, WAD, WAD.mul(accrual).div(DEC6))
+        expect(await base.balanceOf(baseJoin.address)).to.equal(baseJoinBefore.sub(WAD.mul(accrual).div(DEC6)))
+        expect(await base.balanceOf(owner)).to.equal(baseOwnerBefore.add(WAD.mul(accrual).div(DEC6)))
         expect(await fyToken.balanceOf(owner)).to.equal(0)
       })
 
@@ -120,9 +120,9 @@ describe('FYToken', function () {
           .to.emit(fyToken, 'Transfer')
           .withArgs(fyToken.address, '0x0000000000000000000000000000000000000000', WAD)
           .to.emit(fyToken, 'Redeemed')
-          .withArgs(owner, owner, WAD, WAD.mul(accrual).div(RAY))
-        expect(await base.balanceOf(baseJoin.address)).to.equal(baseJoinBefore.sub(WAD.mul(accrual).div(RAY)))
-        expect(await base.balanceOf(owner)).to.equal(baseOwnerBefore.add(WAD.mul(accrual).div(RAY)))
+          .withArgs(owner, owner, WAD, WAD.mul(accrual).div(DEC6))
+        expect(await base.balanceOf(baseJoin.address)).to.equal(baseJoinBefore.sub(WAD.mul(accrual).div(DEC6)))
+        expect(await base.balanceOf(owner)).to.equal(baseOwnerBefore.add(WAD.mul(accrual).div(DEC6)))
       })
 
       it('redeems fyToken by a transfer and approve combination', async () => {
@@ -136,9 +136,9 @@ describe('FYToken', function () {
           .to.emit(fyToken, 'Transfer')
           .withArgs(owner, '0x0000000000000000000000000000000000000000', WAD.div(2))
           .to.emit(fyToken, 'Redeemed')
-          .withArgs(owner, owner, WAD, WAD.mul(accrual).div(RAY))
-        expect(await base.balanceOf(baseJoin.address)).to.equal(baseJoinBefore.sub(WAD.mul(accrual).div(RAY)))
-        expect(await base.balanceOf(owner)).to.equal(baseOwnerBefore.add(WAD.mul(accrual).div(RAY)))
+          .withArgs(owner, owner, WAD, WAD.mul(accrual).div(DEC6))
+        expect(await base.balanceOf(baseJoin.address)).to.equal(baseJoinBefore.sub(WAD.mul(accrual).div(DEC6)))
+        expect(await base.balanceOf(owner)).to.equal(baseOwnerBefore.add(WAD.mul(accrual).div(DEC6)))
       })
     })
   })

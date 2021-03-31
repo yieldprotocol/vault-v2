@@ -1,5 +1,6 @@
 import { BigNumber } from 'ethers'
 
+export const DEC6 = BigNumber.from(10).pow(6)
 export const WAD = BigNumber.from(10).pow(18)
 export const RAY = BigNumber.from(10).pow(27)
 export const MAX128 = BigNumber.from(2).pow(128).sub(1)

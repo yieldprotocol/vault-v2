@@ -15,12 +15,12 @@ import "./TransferHelper.sol";
 import "./IWETH9.sol";
 
 
-library RMath { // Fixed point arithmetic in Ray units
-    /// @dev Multiply an amount by a fixed point factor in ray units, returning an amount
-    function rmul(uint128 x, uint128 y) internal pure returns (uint128 z) {
+library DMath { // Fixed point arithmetic in 6 decimal units
+    /// @dev Multiply an amount by a fixed point factor with 6 decimals, returning an amount
+    function dmul(uint128 x, uint128 y) internal pure returns (uint128 z) {
         unchecked {
-            uint256 _z = uint256(x) * uint256(y) / 1e27;
-            require (_z <= type(uint128).max, "RMUL Overflow");
+            uint256 _z = uint256(x) * uint256(y) / 1e6;
+            require (_z <= type(uint128).max, "DMUL Overflow");
             z = uint128(_z);
         }
     }
@@ -36,7 +36,7 @@ library Safe128 {
 
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
 contract Ladle is AccessControl(), Batchable {
-    using RMath for uint128;
+    using DMath for uint128;
     using Safe128 for uint128;
     using TransferHelper for IERC20;
     using TransferHelper for address payable;
@@ -210,7 +210,7 @@ contract Ladle is AccessControl(), Batchable {
         uint128 amt;
         if (uint32(block.timestamp) >= series.maturity) {
             IOracle rateOracle = cauldron.rateOracles(baseId);
-            amt = uint128(-art).rmul(rateOracle.accrual(series.maturity));
+            amt = uint128(-art).dmul(rateOracle.accrual(series.maturity));
         } else {
             amt = uint128(-art);
         }

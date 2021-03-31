@@ -1,7 +1,7 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { BaseProvider } from '@ethersproject/providers'
 import { id } from '@yield-protocol/utils'
-import { WAD, RAY, THREE_MONTHS } from './shared/constants'
+import { DEC6, WAD, THREE_MONTHS } from './shared/constants'
 
 import FYTokenArtifact from '../artifacts/contracts/FYToken.sol/FYToken.json'
 import JoinArtifact from '../artifacts/contracts/Join.sol/Join.json'
@@ -81,7 +81,7 @@ describe('Ladle - admin', function () {
     // ==== Set testing environment ====
     ilk = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId, 'Mock Ilk'])) as ERC20Mock
     oracle = (await deployContract(ownerAcc, OracleMockArtifact, [])) as OracleMock
-    await oracle.setSpot(RAY)
+    await oracle.setSpot(DEC6)
 
     await cauldron.addAsset(ilkId, ilk.address)
     await cauldron.setMaxDebt(baseId, ilkId, WAD.mul(2))
