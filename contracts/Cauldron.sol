@@ -193,14 +193,16 @@ contract Cauldron is AccessControl() {
     function build(address owner, bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
         public
         auth
+        returns(DataTypes.Vault memory vault)
     {
         require (vaults[vaultId].owner == address(0), "Vault already exists");
         require (ilks[seriesId][ilkId] == true, "Ilk not added");
-        vaults[vaultId] = DataTypes.Vault({
+        vault = DataTypes.Vault({
             owner: owner,
             seriesId: seriesId,
             ilkId: ilkId
         });
+        vaults[vaultId] = vault;
 
         emit VaultBuilt(vaultId, owner, seriesId, ilkId);
     }
@@ -222,27 +224,31 @@ contract Cauldron is AccessControl() {
     function tweak(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
         public
         auth
+        returns(DataTypes.Vault memory vault)
     {
         require (ilks[seriesId][ilkId] == true, "Ilk not added");
         DataTypes.Balances memory balances_ = balances[vaultId];
-        DataTypes.Vault memory vault_ = vaults[vaultId];
-        if (seriesId != vault_.seriesId) {
+        vault = vaults[vaultId];
+        if (seriesId != vault.seriesId) {
             require (balances_.art == 0, "Only with no debt");
-            vault_.seriesId = seriesId;
+            vault.seriesId = seriesId;
         }
-        if (ilkId != vault_.ilkId) {                                                        // If a new asset was provided
+        if (ilkId != vault.ilkId) {                                                        // If a new asset was provided
             require (balances_.ink == 0, "Only with no collateral");
-            vault_.ilkId = ilkId;
+            vault.ilkId = ilkId;
         }
-        vaults[vaultId] = vault_;
+        vaults[vaultId] = vault;
         emit VaultTweaked(vaultId, seriesId, ilkId);
     }
 
     /// @dev Transfer a vault to another user.
     function _give(bytes12 vaultId, address receiver)
         internal
+        returns(DataTypes.Vault memory vault)
     {
-        vaults[vaultId].owner = receiver;
+        vault = vaults[vaultId];
+        vault.owner = receiver;
+        vaults[vaultId] = vault;
         emit VaultTransfer(vaultId, receiver);
     }
 
@@ -250,8 +256,9 @@ contract Cauldron is AccessControl() {
     function give(bytes12 vaultId, address receiver)
         public
         auth
+        returns(DataTypes.Vault memory vault)
     {
-        _give(vaultId, receiver);
+        vault = _give(vaultId, receiver);
     }
 
     // ==== Asset and debt management ====
