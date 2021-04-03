@@ -10,6 +10,7 @@ import "@yield-protocol/utils/contracts/token/IERC20.sol";
 import "@yield-protocol/utils/contracts/token/IERC2612.sol";
 import "dss-interfaces/src/dss/DaiAbstract.sol";
 import "./AccessControl.sol";
+import "./Multicall.sol";
 import "./TransferHelper.sol";
 import "./IWETH9.sol";
 
@@ -34,7 +35,7 @@ library Safe128 {
 }
 
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
-contract Ladle is AccessControl() {
+contract Ladle is AccessControl(), Multicall {
     using DMath for uint128;
     using Safe128 for uint128;
     using TransferHelper for IERC20;
