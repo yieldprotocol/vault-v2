@@ -10,7 +10,6 @@ import "@yield-protocol/utils/contracts/token/IERC20.sol";
 import "@yield-protocol/utils/contracts/token/IERC2612.sol";
 import "dss-interfaces/src/dss/DaiAbstract.sol";
 import "./AccessControl.sol";
-import "./Batchable.sol";
 import "./TransferHelper.sol";
 import "./IWETH9.sol";
 
@@ -35,11 +34,33 @@ library Safe128 {
 }
 
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
-contract Ladle is AccessControl(), Batchable {
+contract Ladle is AccessControl() {
     using DMath for uint128;
     using Safe128 for uint128;
     using TransferHelper for IERC20;
     using TransferHelper for address payable;
+
+    enum Operation {
+        BUILD,                  // 0
+        FORWARD_PERMIT,         // 1
+        FORWARD_DAI_PERMIT,     // 2
+        JOIN_ETHER,             // 3
+        EXIT_ETHER,             // 4
+        TRANSFER_TO_FYTOKEN,    // 5
+        DESTROY,                // 6
+        TWEAK,                  // 7
+        GIVE,                   // 8
+        STIR_TO,                // 9
+        STIR_FROM,              // 10
+        POUR,                   // 11
+        CLOSE,                  // 12
+        SERVE,                  // 13
+        REPAY,                  // 14
+        REPAY_VAULT,            // 15
+        TRANSFER_TO_POOL,       // 16
+        RETRIEVE_FROM_POOL,     // 17
+        CALL_IN_POOL            // 18
+    }
 
     ICauldron public cauldron;
 
@@ -56,7 +77,7 @@ contract Ladle is AccessControl(), Batchable {
     // ---- Data sourcing ----
     /// @dev Obtains a vault by vaultId from the Cauldron, and verifies that msg.sender is the owner
     function getOwnedVault(bytes12 vaultId)
-        internal view returns(DataTypes.Vault memory vault)
+        private view returns(DataTypes.Vault memory vault)
     {
         vault = cauldron.vaults(vaultId);
         require (vault.owner == msg.sender, "Only vault owner");
@@ -64,7 +85,7 @@ contract Ladle is AccessControl(), Batchable {
 
     /// @dev Obtains a series by seriesId from the Cauldron, and verifies that it exists
     function getSeries(bytes6 seriesId)
-        internal view returns(DataTypes.Series memory series)
+        private view returns(DataTypes.Series memory series)
     {
         series = cauldron.series(seriesId);
         require (series.fyToken != IFYToken(address(0)), "Series not found");
@@ -72,7 +93,7 @@ contract Ladle is AccessControl(), Batchable {
 
     /// @dev Obtains a join by assetId, and verifies that it exists
     function getJoin(bytes6 assetId)
-        internal view returns(IJoin join)
+        private view returns(IJoin join)
     {
         join = joins[assetId];
         require (join != IJoin(address(0)), "Join not found");
@@ -80,7 +101,7 @@ contract Ladle is AccessControl(), Batchable {
 
     /// @dev Obtains a pool by seriesId, and verifies that it exists
     function getPool(bytes6 seriesId)
-        internal view returns(IPool pool)
+        private view returns(IPool pool)
     {
         pool = pools[seriesId];
         require (pool != IPool(address(0)), "Pool not found");
@@ -114,60 +135,215 @@ contract Ladle is AccessControl(), Batchable {
         emit PoolAdded(seriesId, address(pool));
     }
 
+    // ---- Liquidations ----
+
+    /// @dev Allow liquidation contracts to move assets to wind down vaults.
+    function settle(bytes12 vaultId, address user, uint128 ink, uint128 art)
+        external
+        auth
+    {
+        DataTypes.Vault memory vault = getOwnedVault(vaultId);
+        DataTypes.Series memory series = getSeries(vault.seriesId);
+
+        cauldron.slurp(vaultId, ink, art);                                                  // Remove debt and collateral from the vault
+
+        if (ink != 0) {                                                                     // Give collateral to the user
+            IJoin ilkJoin = getJoin(vault.ilkId);
+            ilkJoin.exit(user, ink);
+        }
+        if (art != 0) {                                                                     // Take underlying from user
+            IJoin baseJoin = getJoin(series.baseId);
+            baseJoin.join(user, art);
+        }
+    }
+
+    // ---- Batchable operations below ----
+
+        /// @dev Submit a series of calls for execution
+    /// The `bases` and `fyTokens` parameters define the pools that will be target for operations
+    /// Each trio of `target`, `operation` and `data` define one call:
+    ///  - `target` is an index in the `bases` and `fyTokens` arrays, from which contract addresses the target will be determined.
+    ///  - `operation` is a numerical identifier for the call to be executed, from the enum `Operation`
+    ///  - `data` is an abi-encoded group of parameters, to be consumed by the function encoded in `operation`.
+    function batch(
+        bytes12 vaultId,
+        bytes6 seriesId,
+        Operation[] calldata operations,
+        bytes[] calldata data
+    ) external payable {    // TODO: I think we need `payable` to receive ether which we will deposit through `joinEther`
+        require(operations.length == data.length, "Unmatched operation data");
+        DataTypes.Vault memory vault;
+        DataTypes.Series memory series;
+        IPool pool;
+
+        // Determine what needs to be cached, and cache it
+        for (uint256 i = 0; i < operations.length; i += 1) {
+            Operation operation = operations[i];
+            if (uint8(operation) < uint8(Operation.DESTROY)) continue;
+            
+            if (vault.owner == address(0) && 
+                uint8(Operation.DESTROY) <= uint8(operation) && 
+                uint8(operation) <= uint8(Operation.REPAY_VAULT)
+                    /* operation == Operation.DESTROY ||
+                    operation == Operation.TWEAK ||
+                    operation == Operation.GIVE ||
+                    operation == Operation.STIR_TO ||
+                    operation == Operation.STIR_FROM ||
+                    operation == Operation.POUR ||
+                    operation == Operation.CLOSE || 
+                    operation == Operation.SERVE ||
+                    operation == Operation.REPAY ||
+                    operation == Operation.REPAY_VAULT */
+            ) {
+                vault = getOwnedVault(vaultId);
+            }
+
+            if (series.fyToken == IFYToken(address(0)) && 
+                uint8(Operation.SERVE) <= uint8(operation) && 
+                uint8(operation) <= uint8(Operation.TRANSFER_TO_FYTOKEN)
+                    /* operation == Operation.SERVE ||
+                    operation == Operation.REPAY ||
+                    operation == Operation.REPAY_VAULT ||
+                    operation == Operation.TRANSFER_TO_FYTOKEN */
+            ) {
+                series = getSeries(seriesId);
+            }
+
+            if (pool == IPool(address(0)) && 
+                uint8(Operation.REPAY) <= uint8(operation) && 
+                uint8(operation) <= uint8(Operation.CALL_IN_POOL)
+                    /* operation == Operation.REPAY ||
+                    operation == Operation.REPAY_VAULT ||
+                    operation == Operation.TRANSFER_TO_POOL ||
+                    operation == Operation.RETRIEVE_FROM_POOL ||
+                    operation == Operation.CALL_IN_POOL */
+            ) {
+                pool = getPool(seriesId);
+            }
+        }
+
+        // If we cached a vault and anything else, check that the vault matches the series
+        require(vault.owner == address(0) || 
+            (series.fyToken == IFYToken(address(0)) && pool == IPool(address(0))) ||
+            vault.seriesId == seriesId,
+            "Mismatched vault and seriesId"
+        );
+
+        // Execute all operations in the batch
+        // TODO: Order by frequency, and consider how to remove these 20 sequential comparisons.
+        for (uint256 i = 0; i < operations.length; i += 1) {
+            Operation operation = operations[i];
+            if (operation == Operation.BUILD) {
+                require (vault.owner == address(0), "Cannot overwrite vault cache");
+                vault = _build(vaultId, data[i]);
+            } else if (operation == Operation.DESTROY) {
+                _destroy(vaultId, data[i]);
+            } else if (operation == Operation.TWEAK) {
+                vault = _tweak(vaultId, data[i]);   // Overwrite cache
+            } else if (operation == Operation.GIVE) {
+                vault = _give(vaultId, data[i]);    // Overwrite cache
+            } else if (operation == Operation.STIR_TO) {
+                _stirTo(vaultId, data[i]);
+            } else if (operation == Operation.STIR_FROM) {
+                _stirFrom(vaultId, data[i]);
+            } else if (operation == Operation.POUR) {
+                _pour(vaultId, vault, data[i]);
+            } else if (operation == Operation.CLOSE) {
+                _close(vaultId, vault, series, data[i]);
+            } else if (operation == Operation.SERVE) {
+                _serve(vaultId, vault, pool, data[i]);
+            } else if (operation == Operation.REPAY) {
+                _repay(vaultId, vault, series, pool, data[i]);
+            } else if (operation == Operation.REPAY_VAULT) {
+                _repayVault(vaultId, vault, series, pool, data[i]);
+            } else if (operation == Operation.FORWARD_PERMIT) {
+                _forwardPermit(data[i]);
+            } else if (operation == Operation.FORWARD_DAI_PERMIT) {
+                _forwardDaiPermit(data[i]);
+            } else if (operation == Operation.JOIN_ETHER) {
+                _joinEther(data[i]);
+            } else if (operation == Operation.EXIT_ETHER) {
+                _exitEther(data[i]);
+            } else if (operation == Operation.TRANSFER_TO_FYTOKEN) {
+                _transferToFYToken(series, data[i]);
+            } else if (operation == Operation.TRANSFER_TO_POOL) {
+                _transferToPool(pool, data[i]);
+            } else if (operation == Operation.RETRIEVE_FROM_POOL) {
+                _retrieveFromPool(pool, data[i]);
+            } else if (operation == Operation.CALL_IN_POOL) {
+                _route(pool, data[i]);
+            } else {
+                revert("Invalid operation");
+            }
+        }
+    }
+
     // ---- Vault management ----
 
     /// @dev Create a new vault, linked to a series (and therefore underlying) and a collateral
-    function build(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
-        public payable
+    function _build(bytes12 vaultId, bytes memory data)
+        private
+        returns(DataTypes.Vault memory vault)
     {
-        cauldron.build(msg.sender, vaultId, seriesId, ilkId);
+        (bytes6 seriesId, bytes6 ilkId) = abi.decode(data, (bytes6, bytes6));
+        return cauldron.build(msg.sender, vaultId, seriesId, ilkId);
     }
 
     /// @dev Destroy an empty vault. Used to recover gas costs.
-    function destroy(bytes12 vaultId)
+    function _destroy(bytes12 vaultId, bytes memory)
         public payable
     {
-        getOwnedVault(vaultId);
         cauldron.destroy(vaultId);
     }
 
     /// @dev Change a vault series or collateral.
-    function tweak(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
-        public payable
+    function _tweak(bytes12 vaultId, bytes memory data)
+        private
+        returns(DataTypes.Vault memory vault)
     {
-        getOwnedVault(vaultId);
+        (bytes6 seriesId, bytes6 ilkId) = abi.decode(data, (bytes6, bytes6));
         // tweak checks that the series and the collateral both exist and that the collateral is approved for the series
-        cauldron.tweak(vaultId, seriesId, ilkId);
+        return cauldron.tweak(vaultId, seriesId, ilkId);
     }
 
     /// @dev Give a vault to another user.
-    function give(bytes12 vaultId, address receiver)
-        public payable
+    function _give(bytes12 vaultId, bytes memory data)
+        private
+        returns(DataTypes.Vault memory vault)
     {
-        getOwnedVault(vaultId);
-        cauldron.give(vaultId, receiver);
+        (address receiver) = abi.decode(data, (address));
+        return cauldron.give(vaultId, receiver);
     }
 
     // ---- Asset and debt management ----
 
-    /// @dev Move collateral and debt between vaults.
-    function stir(bytes12 from, bytes12 to, uint128 ink, uint128 art)
-        public payable
+    /// @dev Move collateral and debt to the owner's vault.
+    function _stirTo(bytes12 to, bytes memory data)
+        private
         returns (DataTypes.Balances memory, DataTypes.Balances memory)
     {
+        (bytes12 from, uint128 ink, uint128 art) = abi.decode(data, (bytes12, uint128, uint128));
         if (ink > 0) require (cauldron.vaults(from).owner == msg.sender, "Only origin vault owner");
+        return cauldron.stir(from, to, ink, art);
+    }
+
+    /// @dev Move collateral and debt from the owner's vault.
+    function _stirFrom(bytes12 from, bytes memory data)
+        private
+        returns (DataTypes.Balances memory, DataTypes.Balances memory)
+    {
+        (bytes12 to, uint128 ink, uint128 art) = abi.decode(data, (bytes12, uint128, uint128));
         if (art > 0) require (cauldron.vaults(to).owner == msg.sender, "Only destination vault owner");
         return cauldron.stir(from, to, ink, art);
     }
 
     /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
     /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
-    function pour(bytes12 vaultId, address to, int128 ink, int128 art)
-        public payable
+    function _pour(bytes12 vaultId, DataTypes.Vault memory vault, bytes memory data)
+        private
         returns (DataTypes.Balances memory balances)
     {
-        DataTypes.Vault memory vault = getOwnedVault(vaultId);
-
+        (address to, int128 ink, int128 art) = abi.decode(data, (address, int128, int128));
         // Update accounting
         balances = cauldron.pour(vaultId, ink, art);
 
@@ -195,17 +371,15 @@ contract Ladle is AccessControl(), Batchable {
     /// The debt to repay is denominated in fyToken, even if the tokens pulled from the user are underlying.
     /// The debt to repay must be entered as a negative number, as with `pour`.
     /// Debt cannot be acquired with this function.
-    function close(bytes12 vaultId, address to, int128 ink, int128 art)
-        external payable
+    function _close(bytes12 vaultId, DataTypes.Vault memory vault, DataTypes.Series memory series, bytes memory data)
+        private
         returns (DataTypes.Balances memory balances)
     {
+        (address to, int128 ink, int128 art) = abi.decode(data, (address, int128, int128));
+
         require (art < 0, "Only repay debt");                                          // When repaying debt in `frob`, art is a negative value. Here is the same for consistency.
-        
-        // Verify vault ownership
-        DataTypes.Vault memory vault = getOwnedVault(vaultId);
 
         // Calculate debt in fyToken terms
-        DataTypes.Series memory series = getSeries(vault.seriesId);
         bytes6 baseId = series.baseId;
         uint128 amt;
         if (uint32(block.timestamp) >= series.maturity) {
@@ -232,49 +406,44 @@ contract Ladle is AccessControl(), Batchable {
 
     /// @dev Add collateral and borrow from vault, so that a precise amount of base is obtained by the user.
     /// The base is obtained by borrowing fyToken and buying base with it in a pool.
-    function serve(bytes12 vaultId, address to, uint128 ink, uint128 base, uint128 max)
-        external payable
+    function _serve(bytes12 vaultId, DataTypes.Vault memory vault, IPool pool, bytes memory data)
+        private
         returns (DataTypes.Balances memory balances, uint128 art)
     {
-        DataTypes.Vault memory vault = getOwnedVault(vaultId);
-        IPool pool = getPool(vault.seriesId);
-        
+        (address to, uint128 ink, uint128 base, uint128 max) = abi.decode(data, (address, uint128, uint128, uint128));
+
         art = pool.buyBaseTokenPreview(base);
-        balances = pour(vaultId, address(pool), ink.i128(), art.i128());    // TODO: Do a private _pour function that doesn't check the owner.
+        balances = _pour(vaultId, vault, abi.encode(address(pool), ink.i128(), art.i128()));
         pool.buyBaseToken(to, base, max);
     }
 
     /// @dev Repay debt by selling base in a pool and using the resulting fyToken
     /// The base tokens need to be already in the pool, unaccounted for.
-    function repay(bytes12 vaultId, address to, int128 ink, uint128 min)
-        external payable
+    function _repay(bytes12 vaultId, DataTypes.Vault memory vault, DataTypes.Series memory series, IPool pool, bytes memory data)
+        private
         returns (DataTypes.Balances memory balances, uint128 art)
     {
-        DataTypes.Vault memory vault = getOwnedVault(vaultId);
-        DataTypes.Series memory series = getSeries(vault.seriesId);
-        IPool pool = getPool(vault.seriesId);
+        (address to, int128 ink, uint128 min) = abi.decode(data, (address, int128, uint128));
 
         art = pool.sellBaseToken(address(series.fyToken), min);
-        balances = pour(vaultId, to, ink, -(art.i128()));
+        balances = _pour(vaultId, vault, abi.encode(to, ink, -(art.i128())));
     }
 
     /// @dev Repay all debt in a vault by buying fyToken from a pool with base.
     /// The base tokens need to be already in the pool, unaccounted for. The surplus base needs to be retrieved from the pool.
-    function repayVault(bytes12 vaultId, address to, int128 ink, uint128 max)
-        external payable
+    function _repayVault(bytes12 vaultId, DataTypes.Vault memory vault, DataTypes.Series memory series, IPool pool, bytes memory data)
+        private
         returns (DataTypes.Balances memory balances, uint128 base)
     {
-        DataTypes.Vault memory vault = getOwnedVault(vaultId);
-        DataTypes.Series memory series = getSeries(vault.seriesId);
-        IPool pool = getPool(vault.seriesId);
+        (address to, int128 ink, uint128 max) = abi.decode(data, (address, int128, uint128));
 
         balances = cauldron.balances(vaultId);
         base = pool.buyFYToken(address(series.fyToken), balances.art, max);
-        balances = pour(vaultId, to, ink, -(balances.art.i128()));
+        balances = _pour(vaultId, vault, abi.encode(to, ink, -(balances.art.i128())));
     }
 
     /// @dev Change series and debt of a vault.
-    function roll(bytes12 vaultId, bytes6 seriesId, int128 art)
+    /* function _roll(bytes12 vaultId, bytes6 seriesId, int128 art)
         public payable
         returns (uint128)
     {
@@ -284,44 +453,26 @@ contract Ladle is AccessControl(), Batchable {
         // The amount obtained when selling the underlying must produce the exact amount to repay the existing debt. The old series fyToken amount will be burnt.
         
         return cauldron.roll(vaultId, seriesId, art);
-    }
-
-    // ---- Liquidations ----
-
-    /// @dev Allow liquidation contracts to move assets to wind down vaults
-    function settle(bytes12 vaultId, address user, uint128 ink, uint128 art)
-        external
-        auth
-    {
-        DataTypes.Vault memory vault = getOwnedVault(vaultId);
-        DataTypes.Series memory series = getSeries(vault.seriesId);
-
-        cauldron.slurp(vaultId, ink, art);                                                  // Remove debt and collateral from the vault
-
-        if (ink != 0) {                                                                     // Give collateral to the user
-            IJoin ilkJoin = getJoin(vault.ilkId);
-            ilkJoin.exit(user, ink);
-        }
-        if (art != 0) {                                                                     // Take underlying from user
-            IJoin baseJoin = getJoin(series.baseId);
-            baseJoin.join(user, art);
-        }
-    }
+    } */
 
     // ---- Permit management ----
 
     /// @dev Execute an ERC2612 permit for the selected asset or fyToken
-    function forwardPermit(bytes6 id, bool asset, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
-        public
+    function _forwardPermit(bytes memory data)
+        private
     {
+        (bytes6 id, bool asset, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
+            = abi.decode(data, (bytes6, bool, address, uint256, uint256, uint8, bytes32, bytes32));
         IERC2612 token = IERC2612(findToken(id, asset));
         token.permit(msg.sender, spender, amount, deadline, v, r, s);
     }
 
     /// @dev Execute a Dai-style permit for the selected asset or fyToken
-    function forwardDaiPermit(bytes6 id, bool asset, address spender, uint256 nonce, uint256 deadline, bool allowed, uint8 v, bytes32 r, bytes32 s)
-        public
+    function _forwardDaiPermit(bytes memory data)
+        private
     {
+        (bytes6 id, bool asset, address spender, uint256 nonce, uint256 deadline, bool allowed, uint8 v, bytes32 r, bytes32 s)
+            = abi.decode(data, (bytes6, bool, address, uint256, uint256, bool, uint8, bytes32, bytes32));
         DaiAbstract token = DaiAbstract(findToken(id, asset));
         token.permit(msg.sender, spender, nonce, deadline, allowed, v, r, s);
     }
@@ -342,10 +493,11 @@ contract Ladle is AccessControl(), Batchable {
     /// @dev Accept Ether, wrap it and forward it to the WethJoin
     /// This function should be called first in a multicall, and the Join should keep track of stored reserves
     /// Passing the id for a join that doesn't link to a contract implemnting IWETH9 will fail
-    function joinEther(bytes6 etherId)
-        public payable
+    function _joinEther(bytes memory data)
+        private
         returns (uint256 ethTransferred)
     {
+        (bytes6 etherId) = abi.decode(data, (bytes6));
         ethTransferred = address(this).balance;
 
         IJoin wethJoin = getJoin(etherId);
@@ -357,56 +509,58 @@ contract Ladle is AccessControl(), Batchable {
 
     /// @dev Unwrap Wrapped Ether held by this Ladle, and send the Ether
     /// This function should be called last in a multicall, and the Ladle should have no reason to keep an WETH balance
-    function exitEther(bytes6 etherId, address payable to)
-        public payable
+    function _exitEther(bytes memory data)
+        private
         returns (uint256 ethTransferred)
     {
+        (bytes6 etherId, address to) = abi.decode(data, (bytes6, address));
         IJoin wethJoin = getJoin(etherId);
         address weth = wethJoin.asset();
         ethTransferred = IERC20(weth).balanceOf(address(this));
         IWETH9(weth).withdraw(ethTransferred);   // TODO: Test gas savings using WETH10 `withdrawTo`
-        to.safeTransferETH(ethTransferred); /// TODO: Consider reentrancy
+        payable(to).safeTransferETH(ethTransferred); /// TODO: Consider reentrancy
+    }
+
+    // ---- FYToken router ----
+
+    /// @dev Allow users to trigger a token transfer to a fyToken through the ladle, to be used with multicall
+    function _transferToFYToken(DataTypes.Series memory series, bytes memory data)
+        private
+        returns (bool)
+    {
+        (uint128 wad) = abi.decode(data, (uint128));
+        IERC20(address(series.fyToken)).safeTransferFrom(msg.sender, address(series.fyToken), wad);
+        return true;
     }
 
     // ---- Pool router ----
 
     /// @dev Allow users to trigger a token transfer to a pool through the ladle, to be used with multicall
-    function transferToPool(bytes6 seriesId, bool base, uint128 wad)
-        external payable
+    function _transferToPool(IPool pool, bytes memory data)
+        private
         returns (bool)
     {
-        IPool pool = getPool(seriesId);
+        (bool base, uint128 wad) = abi.decode(data, (bool, uint128));
         IERC20 token = base ? pool.baseToken() : pool.fyToken();
         token.safeTransferFrom(msg.sender, address(pool), wad);
         return true;
     }
 
     /// @dev Allow users to trigger a token transfer to a pool through the ladle, to be used with multicall
-    function retrieveToken(bytes6 seriesId, bool base, address to)
-        external
+    function _retrieveFromPool(IPool pool, bytes memory data)
+        private
         returns (uint128 retrieved)
     {
-        IPool pool = getPool(seriesId);
+        (bool base, address to) = abi.decode(data, (bool, address));
         retrieved = base ? pool.retrieveBaseToken(to) : pool.retrieveFYToken(to);
     }
 
-    /// @dev Allow users to trigger a token sale in a pool through the ladle, to be used with multicall
-    function sellToken(bytes6 seriesId, bool base, address to, uint128 min)
-        external payable
-        returns (uint128 tokenOut)
+    /// @dev Allow users to route calls to a pool, to be used with multicall
+    function _route(IPool pool, bytes memory data)
+        private
+        returns (bool success, bytes memory result)
     {
-        IPool pool = getPool(seriesId);
-        tokenOut = base ? pool.sellBaseToken(to, min) : pool.sellFYToken(to, min);
-        return tokenOut;
-    }
-
-    /// @dev Allow users to trigger a token buy in a pool through the ladle, to be used with multicall
-    function buyToken(bytes6 seriesId, bool base, address to, uint128 tokenOut, uint128 max)
-        external payable
-        returns (uint128 tokenIn)
-    {
-        IPool pool = getPool(seriesId);
-        tokenIn = base ? pool.buyBaseToken(to, tokenOut, max) : pool.buyFYToken(to, tokenOut, max);
-        return tokenIn;
+        (success, result) = address(pool).call{ value: msg.value }(data);
+        if (!success) revert(RevertMsgExtractor.getRevertMsg(result));
     }
 }
