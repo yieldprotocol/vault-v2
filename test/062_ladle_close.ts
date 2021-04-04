@@ -70,7 +70,7 @@ describe('Ladle - close', function () {
   })
 
   it('does not allow to borrow', async () => {
-    await expect(ladle.close(mockVaultId, owner, 0, WAD)).to.be.revertedWith('Only repay debt')
+    await expect(ladle.close(vaultId, owner, 0, WAD)).to.be.revertedWith('Only repay debt')
   })
 
   it('reverts on unknown vaults', async () => {
