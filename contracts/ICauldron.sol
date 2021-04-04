@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
-import "./IFYToken.sol";
-import "./IOracle.sol";
-import "./DataTypes.sol";
+import "@yield-protocol/vault-interfaces/IFYToken.sol";
+import "@yield-protocol/vault-interfaces/IOracle.sol";
+import "@yield-protocol/vault-interfaces/DataTypes.sol";
 
 
 interface ICauldron {
