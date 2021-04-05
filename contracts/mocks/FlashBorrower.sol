@@ -7,7 +7,7 @@ import "erc3156/contracts/interfaces/IERC3156FlashLender.sol";
 
 
 contract FlashBorrower is IERC3156FlashBorrower {
-    enum Action {NORMAL, TRANSFER, STEAL, REENTER}
+    enum Action {NORMAL, TRANSFER, STEAL, REENTER, APPROVE}
 
     IERC3156FlashLender public lender;
 
@@ -36,7 +36,7 @@ contract FlashBorrower is IERC3156FlashBorrower {
             IERC20(token).transfer(address(lender), amount + fee);
         } else if (action == Action.STEAL) {
             IERC20(token).transfer(address(0), amount);
-        } else if (action == Action.REENTER) {
+        } else if (action == Action.REENTER) {    
             flashBorrow(token, amount * 2, Action.NORMAL);
         }
         return keccak256("ERC3156FlashBorrower.onFlashLoan");
@@ -44,6 +44,8 @@ contract FlashBorrower is IERC3156FlashBorrower {
 
     function flashBorrow(address token, uint256 amount, Action action) public {
         bytes memory data = abi.encode(action);
+        uint256 allowance = IERC20(token).allowance(address(this), address(lender));
+        IERC20(token).approve(address(lender), allowance + amount + lender.flashFee(token, amount));
         lender.flashLoan(this, token, amount, data);
     }
 }
