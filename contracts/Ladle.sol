@@ -58,12 +58,14 @@ contract Ladle is AccessControl(), Multicall {
     }
 
     ICauldron public cauldron;
+    address public poolRouter;
 
     mapping (bytes6 => IJoin)                   public joins;            // Join contracts available to manage assets. The same Join can serve multiple assets (ETH-A, ETH-B, etc...)
     mapping (bytes6 => IPool)                   public pools;            // Pool contracts available to manage series. 12 bytes still free.
 
     event JoinAdded(bytes6 indexed assetId, address indexed join);
     event PoolAdded(bytes6 indexed seriesId, address indexed pool);
+    event PoolRouterSet(address indexed poolRouter);
 
     constructor (ICauldron cauldron_) {
         cauldron = cauldron_;
@@ -128,6 +130,15 @@ contract Ladle is AccessControl(), Multicall {
         require (fyToken.asset() == address(pool.baseToken()), "Mismatched pool base and series");
         pools[seriesId] = pool;
         emit PoolAdded(seriesId, address(pool));
+    }
+
+    /// @dev Set the Pool Router for this Ladle
+    function setPoolRouter(address poolRouter_)
+        external
+        auth
+    {
+        poolRouter = poolRouter_;
+        emit PoolRouterSet(poolRouter_);
     }
 
     // ---- Batching ----
@@ -538,7 +549,7 @@ contract Ladle is AccessControl(), Multicall {
         ethTransferred = address(this).balance;
 
         IJoin wethJoin = getJoin(etherId);
-        address weth = wethJoin.asset();
+        address weth = wethJoin.asset();                    // TODO: Consider setting weth contract via governance
 
         IWETH9(weth).deposit{ value: ethTransferred }();   // TODO: Test gas savings using WETH10 `depositTo`
         IERC20(weth).safeTransfer(address(wethJoin), ethTransferred);
@@ -551,7 +562,7 @@ contract Ladle is AccessControl(), Multicall {
         returns (uint256 ethTransferred)
     {
         IJoin wethJoin = getJoin(etherId);
-        address weth = wethJoin.asset();
+        address weth = wethJoin.asset();            // TODO: Consider setting weth contract via governance
         ethTransferred = IERC20(weth).balanceOf(address(this));
         IWETH9(weth).withdraw(ethTransferred);   // TODO: Test gas savings using WETH10 `withdrawTo`
         to.safeTransferETH(ethTransferred); /// TODO: Consider reentrancy
@@ -573,8 +584,7 @@ contract Ladle is AccessControl(), Multicall {
         private
         returns (bool success, bytes memory result)
     {
-        address poolRouter; // TODO: Set by governance
-        (success, result) = address(poolRouter).call{ value: msg.value }(data);
+        (success, result) = poolRouter.call{ value: msg.value }(data);
         if (!success) revert(RevertMsgExtractor.getRevertMsg(result));
     }
 }
