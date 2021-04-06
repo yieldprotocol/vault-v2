@@ -1,5 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { DEC6, WAD } from './shared/constants'
+import { DEC6, WAD, OPS } from './shared/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
@@ -86,6 +86,7 @@ describe('Ladle - close', function () {
     await expect(ladle.close(vaultId, owner, 0, WAD.mul(-1)))
       .to.emit(cauldron, 'VaultPoured')
       .withArgs(vaultId, seriesId, ilkId, 0, WAD.mul(-1))
+
     expect(await base.balanceOf(owner)).to.equal(baseBefore.sub(WAD))
     expect(await fyToken.balanceOf(owner)).to.equal(WAD)
     expect((await cauldron.balances(vaultId)).art).to.equal(0)
@@ -96,6 +97,7 @@ describe('Ladle - close', function () {
     await expect(ladle.close(vaultId, owner, WAD, WAD.mul(-1)))
       .to.emit(cauldron, 'VaultPoured')
       .withArgs(vaultId, seriesId, ilkId, WAD, WAD.mul(-1))
+
     expect(await base.balanceOf(owner)).to.equal(baseBefore.sub(WAD))
     expect(await fyToken.balanceOf(owner)).to.equal(WAD)
     expect((await cauldron.balances(vaultId)).art).to.equal(0)
@@ -108,6 +110,26 @@ describe('Ladle - close', function () {
     await expect(ladle.close(vaultId, owner, WAD.mul(-1), WAD.mul(-1)))
       .to.emit(cauldron, 'VaultPoured')
       .withArgs(vaultId, seriesId, ilkId, WAD.mul(-1), WAD.mul(-1))
+
+    expect(await base.balanceOf(owner)).to.equal(baseBefore.sub(WAD))
+    expect(await fyToken.balanceOf(owner)).to.equal(WAD)
+    expect((await cauldron.balances(vaultId)).art).to.equal(0)
+    expect(await ilk.balanceOf(ilkJoin.address)).to.equal(0)
+    expect((await cauldron.balances(vaultId)).ink).to.equal(0)
+  })
+
+  it('users can repay their debt with underlying and remove collateral at the same time in a batch', async () => {
+    const baseBefore = await base.balanceOf(owner)
+
+    const closeData = ethers.utils.defaultAbiCoder.encode(
+      ['address', 'int128', 'int128'],
+      [owner, WAD.mul(-1), WAD.mul(-1)]
+    )
+
+    await expect(ladle.batch(vaultId, [OPS.CLOSE], [closeData]))
+      .to.emit(cauldron, 'VaultPoured')
+      .withArgs(vaultId, seriesId, ilkId, WAD.mul(-1), WAD.mul(-1))
+
     expect(await base.balanceOf(owner)).to.equal(baseBefore.sub(WAD))
     expect(await fyToken.balanceOf(owner)).to.equal(WAD)
     expect((await cauldron.balances(vaultId)).art).to.equal(0)
