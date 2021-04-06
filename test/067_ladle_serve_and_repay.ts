@@ -1,5 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { WAD, MAX128 as MAX } from './shared/constants'
+import { WAD, MAX128 as MAX, OPS } from './shared/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { FYToken } from '../typechain/FYToken'
@@ -13,7 +13,7 @@ const { loadFixture } = waffle
 
 import { YieldEnvironment } from './shared/fixtures'
 
-describe('Ladle - serve', function () {
+describe('Ladle - serve and repay', function () {
   this.timeout(0)
 
   let env: YieldEnvironment
@@ -95,6 +95,29 @@ describe('Ladle - serve', function () {
     expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(debtRepaidInBase))
   })
 
+  it('repays debt with base in a batch', async () => {
+    await ladle.pour(vaultId, owner, WAD, WAD)
+
+    const baseBalanceBefore = await base.balanceOf(owner)
+    const debtRepaidInBase = WAD.div(2)
+    const debtRepaidInFY = debtRepaidInBase.mul(105).div(100)
+    const inkRetrieved = WAD.div(4)
+
+    const repayData = ethers.utils.defaultAbiCoder.encode(
+      ['address', 'int128', 'uint128'],
+      [owner, inkRetrieved, 0]
+    )
+
+    await base.transfer(pool.address, debtRepaidInBase) // This would normally be part of a multicall, using ladle.transferToPool
+    await expect(ladle.batch(vaultId, [OPS.REPAY], [repayData]))
+      .to.emit(cauldron, 'VaultPoured')
+      .withArgs(vaultId, seriesId, ilkId, inkRetrieved, debtRepaidInFY.mul(-1))
+      .to.emit(pool, 'Trade')
+      .withArgs(await fyToken.maturity(), ladle.address, fyToken.address, debtRepaidInBase, debtRepaidInFY.mul(-1))
+    expect((await cauldron.balances(vaultId)).art).to.equal(WAD.sub(debtRepaidInFY))
+    expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(debtRepaidInBase))
+  })
+
   it('repays all debt of a vault with base', async () => {
     await ladle.pour(vaultId, owner, WAD, WAD)
 
@@ -106,6 +129,32 @@ describe('Ladle - serve', function () {
 
     await base.transfer(pool.address, baseOffered) // This would normally be part of a multicall, using ladle.transferToPool
     await expect(await ladle.repayVault(vaultId, owner, inkRetrieved, MAX))
+      .to.emit(cauldron, 'VaultPoured')
+      .withArgs(vaultId, seriesId, ilkId, inkRetrieved, WAD.mul(-1))
+      .to.emit(pool, 'Trade')
+      .withArgs(await fyToken.maturity(), ladle.address, fyToken.address, debtinBase, debtinFY.mul(-1))
+    await pool.retrieveBaseToken(owner)
+
+    expect((await cauldron.balances(vaultId)).art).to.equal(0)
+    expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(debtinBase))
+  })
+
+  it('repays all debt of a vault with base in a batch', async () => {
+    await ladle.pour(vaultId, owner, WAD, WAD)
+
+    const baseBalanceBefore = await base.balanceOf(owner)
+    const baseOffered = WAD.mul(2)
+    const debtinFY = WAD
+    const debtinBase = debtinFY.mul(100).div(105)
+    const inkRetrieved = WAD.div(4)
+
+    const repayVaultData = ethers.utils.defaultAbiCoder.encode(
+      ['address', 'int128', 'uint128'],
+      [owner, inkRetrieved, MAX]
+    )
+
+    await base.transfer(pool.address, baseOffered) // This would normally be part of a multicall, using ladle.transferToPool
+    await expect(ladle.batch(vaultId, [OPS.REPAY_VAULT], [repayVaultData]))
       .to.emit(cauldron, 'VaultPoured')
       .withArgs(vaultId, seriesId, ilkId, inkRetrieved, WAD.mul(-1))
       .to.emit(pool, 'Trade')

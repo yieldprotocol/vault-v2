@@ -570,7 +570,6 @@ contract Ladle is AccessControl(), Multicall {
 
     // ---- Pool router ----
 
-
     /// @dev Allow users to route calls to a pool, to be used with multicall
     function route(bytes memory data)
         public payable
