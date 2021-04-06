@@ -103,13 +103,17 @@ describe('Ladle - serve and repay', function () {
     const debtRepaidInFY = debtRepaidInBase.mul(105).div(100)
     const inkRetrieved = WAD.div(4)
 
+    const transferToPoolData = ethers.utils.defaultAbiCoder.encode(
+      ['bool', 'uint128'],
+      [true, debtRepaidInBase]
+    )
     const repayData = ethers.utils.defaultAbiCoder.encode(
       ['address', 'int128', 'uint128'],
       [owner, inkRetrieved, 0]
     )
 
-    await base.transfer(pool.address, debtRepaidInBase) // This would normally be part of a multicall, using ladle.transferToPool
-    await expect(ladle.batch(vaultId, [OPS.REPAY], [repayData]))
+    await base.approve(ladle.address, debtRepaidInBase) // This would normally be part of a multicall, using ladle.forwardPermit
+    await expect(ladle.batch(vaultId, [OPS.TRANSFER_TO_POOL, OPS.REPAY], [transferToPoolData, repayData]))
       .to.emit(cauldron, 'VaultPoured')
       .withArgs(vaultId, seriesId, ilkId, inkRetrieved, debtRepaidInFY.mul(-1))
       .to.emit(pool, 'Trade')
@@ -145,23 +149,34 @@ describe('Ladle - serve and repay', function () {
     const baseBalanceBefore = await base.balanceOf(owner)
     const baseOffered = WAD.mul(2)
     const debtinFY = WAD
-    const debtinBase = debtinFY.mul(100).div(105)
+    const debtInBase = debtinFY.mul(100).div(105)
     const inkRetrieved = WAD.div(4)
 
+    const transferToPoolData = ethers.utils.defaultAbiCoder.encode(
+      ['bool', 'uint128'],
+      [true, baseOffered]
+    )
     const repayVaultData = ethers.utils.defaultAbiCoder.encode(
       ['address', 'int128', 'uint128'],
       [owner, inkRetrieved, MAX]
     )
+    const retrieveFromPoolData = ethers.utils.defaultAbiCoder.encode(
+      ['bool', 'address'],
+      [true, owner]
+    )
 
-    await base.transfer(pool.address, baseOffered) // This would normally be part of a multicall, using ladle.transferToPool
-    await expect(ladle.batch(vaultId, [OPS.REPAY_VAULT], [repayVaultData]))
+    await base.approve(ladle.address, baseOffered) // This would normally be part of a multicall, using ladle.forwardPermit
+    await expect(ladle.batch(
+        vaultId,
+        [OPS.TRANSFER_TO_POOL, OPS.REPAY_VAULT, OPS.RETRIEVE_FROM_POOL],
+        [transferToPoolData, repayVaultData, retrieveFromPoolData])
+      )
       .to.emit(cauldron, 'VaultPoured')
       .withArgs(vaultId, seriesId, ilkId, inkRetrieved, WAD.mul(-1))
       .to.emit(pool, 'Trade')
-      .withArgs(await fyToken.maturity(), ladle.address, fyToken.address, debtinBase, debtinFY.mul(-1))
-    await pool.retrieveBaseToken(owner)
+      .withArgs(await fyToken.maturity(), ladle.address, fyToken.address, debtInBase, debtinFY.mul(-1))
 
     expect((await cauldron.balances(vaultId)).art).to.equal(0)
-    expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(debtinBase))
+    expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(debtInBase))
   })
 })

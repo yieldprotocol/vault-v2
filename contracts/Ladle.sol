@@ -54,7 +54,9 @@ contract Ladle is AccessControl(), Multicall {
         FORWARD_DAI_PERMIT, // 9
         JOIN_ETHER,         // 10
         EXIT_ETHER,         // 11
-        ROUTE               // 12
+        TRANSFER_TO_POOL,   // 12
+        RETRIEVE_FROM_POOL, // 13
+        ROUTE               // 14
     }
 
     ICauldron public cauldron;
@@ -181,6 +183,16 @@ contract Ladle is AccessControl(), Multicall {
                 (bytes6 id, bool asset, address spender, uint256 nonce, uint256 deadline, bool allowed, uint8 v, bytes32 r, bytes32 s) =
                     abi.decode(data[i], (bytes6, bool, address, uint256, uint256, bool, uint8, bytes32, bytes32));
                 _forwardDaiPermit(id, asset, spender, nonce, deadline, allowed, v, r, s);
+            } else if (operation == Operation.TRANSFER_TO_POOL) {
+                (bool base, uint128 wad) =
+                    abi.decode(data[i], (bool, uint128));
+                IPool pool = getPool(vault.seriesId);
+                _transferToPool(pool, base, wad);
+            } else if (operation == Operation.RETRIEVE_FROM_POOL) {
+                (bool base, address to) =
+                    abi.decode(data[i], (bool, address));
+                IPool pool = getPool(vault.seriesId);
+                _retrieveFromPool(pool, base, to);
             } else if (operation == Operation.ROUTE) {
                 _route(data[i]);
             } else if (operation == Operation.EXIT_ETHER) {
@@ -570,15 +582,50 @@ contract Ladle is AccessControl(), Multicall {
 
     // ---- Pool router ----
 
+    /// @dev Allow users to trigger a token transfer to a pool through the ladle, to be used with multicall
+    function transferToPool(bytes6 seriesId, bool base, uint128 wad)
+        external payable
+        returns (bool)
+    {
+        return _transferToPool(getPool(seriesId), base, wad);
+    }
+
+    /// @dev Allow users to trigger a token transfer to a pool through the ladle, to be used with batch
+    function _transferToPool(IPool pool, bool base, uint128 wad)
+        private
+        returns (bool)
+    {
+        IERC20 token = base ? pool.baseToken() : pool.fyToken();
+        token.safeTransferFrom(msg.sender, address(pool), wad);
+        return true;
+    }
+
+    /// @dev Allow users to trigger a token transfer to a pool through the ladle, to be used with multicall
+    function retrieveFromPool(bytes6 seriesId, bool base, address to)
+        external payable
+        returns (uint128 retrieved)
+    {
+        IPool pool = getPool(seriesId);
+        retrieved = _retrieveFromPool(pool, base, to);
+    }
+
+    /// @dev Allow users to trigger a token transfer to a pool through the ladle, to be used with batch
+    function _retrieveFromPool(IPool pool, bool base, address to)
+        private
+        returns (uint128 retrieved)
+    {
+        retrieved = base ? pool.retrieveBaseToken(to) : pool.retrieveFYToken(to);
+    }
+
     /// @dev Allow users to route calls to a pool, to be used with multicall
     function route(bytes memory data)
-        public payable
+        external payable
         returns (bool success, bytes memory result)
     {
         (success, result) = _route(data);
     }
 
-    /// @dev Allow users to route calls to a pool, to be used with multicall
+    /// @dev Allow users to route calls to a pool, to be used with batch
     function _route(bytes memory data)
         private
         returns (bool success, bytes memory result)

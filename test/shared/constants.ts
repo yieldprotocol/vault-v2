@@ -19,5 +19,7 @@ export const OPS = {
     FORWARD_DAI_PERMIT: 9,
     JOIN_ETHER: 10,
     EXIT_ETHER: 11,
-    ROUTE: 12,
+    TRANSFER_TO_POOL: 12,
+    RETRIEVE_FROM_POOL: 13,
+    ROUTE: 14,
   }
