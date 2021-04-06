@@ -110,7 +110,6 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         _burn(from, amount);
     }
 
-
     /**
      * @dev From ERC-3156. The amount of currency available to be lended.
      * @param token The loan currency. It must be a FYDai contract.

@@ -15,10 +15,7 @@ library TransferHelper {
         uint256 value
     ) internal {
         (bool success, bytes memory data) = address(token).call(abi.encodeWithSelector(IERC20.transfer.selector, to, value));
-        require(
-            success && (data.length == 0 || abi.decode(data, (bool))),
-            RevertMsgExtractor.getRevertMsg(data)
-        );
+        if (!(success && (data.length == 0 || abi.decode(data, (bool))))) revert(RevertMsgExtractor.getRevertMsg(data));
     }
 
     function safeTransferFrom(
@@ -28,17 +25,11 @@ library TransferHelper {
         uint256 value
     ) internal {
         (bool success, bytes memory data) = address(token).call(abi.encodeWithSelector(IERC20.transferFrom.selector, from, to, value));
-        require(
-            success && (data.length == 0 || abi.decode(data, (bool))),
-            RevertMsgExtractor.getRevertMsg(data)
-        );
+        if (!(success && (data.length == 0 || abi.decode(data, (bool))))) revert(RevertMsgExtractor.getRevertMsg(data));
     }
 
     function safeTransferETH(address payable to, uint256 value) internal {
         (bool success, bytes memory data) = to.call{value: value}(new bytes(0));
-        require(
-            success,
-            RevertMsgExtractor.getRevertMsg(data)
-        );
+        if (!success) revert(RevertMsgExtractor.getRevertMsg(data));
     }
 }
