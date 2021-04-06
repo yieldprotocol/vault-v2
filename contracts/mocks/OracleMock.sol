@@ -3,10 +3,10 @@ pragma solidity ^0.8.0;
 import "@yield-protocol/vault-interfaces/IOracle.sol";
 
 
-library RMath { // Fixed point arithmetic in Ray units
+library R6Math { // Fixed point arithmetic in Ray units
     /// @dev Divide an unsigned integer by another, returning a fixed point factor in ray units
     function rdiv(uint128 x, uint128 y) internal pure returns (uint128 z) {
-        uint256 _z = uint256(x) * 1e27 / uint256(y);
+        uint256 _z = uint256(x) * 1e6 / uint256(y);
         require (_z <= type(uint128).max, "RDIV Overflow");
         z = uint128(_z);
     }
@@ -14,7 +14,7 @@ library RMath { // Fixed point arithmetic in Ray units
 
 /// @dev An oracle that allows to set the spot price to anyone. It also allows to record spot values and return the accrual between a recorded and current spots.
 contract OracleMock is IOracle {
-    using RMath for uint128;
+    using R6Math for uint128;
 
     event Recorded(uint32 maturity, uint128 spot);
 

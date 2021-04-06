@@ -1,5 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { WAD, RAY } from './shared/constants'
+import { DEC6, WAD } from './shared/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Ladle } from '../typechain/Ladle'
@@ -87,7 +87,7 @@ describe('Witch', function () {
   })
 
   it('grabs undercollateralized vaults', async () => {
-    await spotOracle.setSpot(RAY.div(2))
+    await spotOracle.setSpot(DEC6.div(2))
     await witch.grab(vaultId)
     const event = (await cauldron.queryFilter(cauldron.filters.VaultTimestamped(null, null)))[0]
     expect(event.args.timestamp.toNumber()).to.be.greaterThan(0)
@@ -96,7 +96,7 @@ describe('Witch', function () {
 
   describe('once a vault has been grabbed', async () => {
     beforeEach(async () => {
-      await spotOracle.setSpot(RAY.div(2))
+      await spotOracle.setSpot(DEC6.div(2))
       await witch.grab(vaultId)
     })
 

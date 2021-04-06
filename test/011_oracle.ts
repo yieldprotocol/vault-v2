@@ -1,5 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import OracleArtifact from '../artifacts/contracts/mocks/OracleMock.sol/OracleMock.json'
+import { DEC6 } from './shared/constants'
 
 import { OracleMock as Oracle } from '../typechain/OracleMock'
 import { BigNumber } from 'ethers'
@@ -16,7 +17,6 @@ describe('Oracle', function () {
   let oracle: Oracle
 
   const pastMaturity = 1600000000
-  const RAY = BigNumber.from('1000000000000000000000000000')
 
   before(async () => {
     const signers = await ethers.getSigners()
@@ -54,7 +54,7 @@ describe('Oracle', function () {
 
       it('retrieves the spot price accrual', async () => {
         await oracle.setSpot(2) // Just to be sure we are retrieving the recorded value
-        expect(await oracle.accrual(pastMaturity)).to.equal(RAY.mul(2))
+        expect(await oracle.accrual(pastMaturity)).to.equal(DEC6.mul(2))
       })
     })
   })

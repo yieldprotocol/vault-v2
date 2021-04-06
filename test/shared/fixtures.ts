@@ -1,7 +1,7 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { BaseProvider } from '@ethersproject/providers'
 import { id } from '@yield-protocol/utils'
-import { WAD, RAY, THREE_MONTHS } from './constants'
+import { DEC6, WAD, RAY, THREE_MONTHS } from './constants'
 
 import CauldronArtifact from '../../artifacts/contracts/Cauldron.sol/Cauldron.json'
 import FYTokenArtifact from '../../artifacts/contracts/FYToken.sol/FYToken.json'
@@ -138,23 +138,23 @@ export class YieldEnvironment {
   }
 
   public static async addSpotOracle(owner: SignerWithAddress, cauldron: Cauldron, baseId: string, ilkId: string) {
-    const ratio = 10000 //  10000 == 100% collateralization ratio
+    const ratio = 1000000 //  1000000 == 100% collateralization ratio
     const oracle = (await deployContract(owner, OracleMockArtifact, [])) as OracleMock
-    await oracle.setSpot(RAY.mul(2))
+    await oracle.setSpot(DEC6.mul(2))
     await cauldron.setSpotOracle(baseId, ilkId, oracle.address, ratio)
     return oracle
   }
 
   public static async addRateOracle(owner: SignerWithAddress, cauldron: Cauldron, baseId: string) {
     const oracle = (await deployContract(owner, OracleMockArtifact, [])) as OracleMock
-    await oracle.setSpot(RAY.mul(2))
+    await oracle.setSpot(DEC6.mul(2))
     await cauldron.setRateOracle(baseId, oracle.address)
     return oracle
   }
 
   public static async addChiOracle(owner: SignerWithAddress) { // This will be referenced by the fyToken, and needs no id
     const oracle = (await deployContract(owner, OracleMockArtifact, [])) as OracleMock
-    await oracle.setSpot(RAY)
+    await oracle.setSpot(DEC6)
     return oracle
   }
 

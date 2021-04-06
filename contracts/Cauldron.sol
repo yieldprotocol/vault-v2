@@ -14,16 +14,18 @@ library Math {
     }
 }
 
-library RMath { // Fixed point arithmetic in Ray units
-    /// @dev Multiply an amount by a fixed point factor in ray units, returning an amount
-    function rmul(uint128 x, uint128 y) internal pure returns (uint128 z) {
+library DMath { // Fixed point arithmetic in 6 decimal units
+    /// @dev Multiply an amount by a fixed point factor with 6 decimals, returning an amount
+    function dmul(uint128 x, uint128 y) internal pure returns (uint128 z) {
         unchecked {
-            uint256 _z = uint256(x) * uint256(y) / 1e27;
-            require (_z <= type(uint128).max, "RMUL Overflow");
+            uint256 _z = uint256(x) * uint256(y) / 1e6;
+            require (_z <= type(uint128).max, "DMUL Overflow");
             z = uint128(_z);
         }
     }
+}
 
+library RMath { // Fixed point arithmetic in Ray units
     /// @dev Multiply an integer amount by a fixed point factor in ray units, returning an integer amount
     function rmul(int128 x, uint128 y) internal pure returns (int128 z) {
         unchecked {
@@ -60,7 +62,7 @@ library Safe256 {
 
 contract Cauldron is AccessControl() {
     using Math for uint128;
-    using RMath for uint128;
+    using DMath for uint128;
     using RMath for int128;
     using Safe256 for uint256;
     using Safe128 for uint128;
@@ -141,7 +143,7 @@ contract Cauldron is AccessControl() {
         // TODO: The oracle should record the assets it refers to, and we should match it against assets[baseId] and assets[ilkId]
         spotOracles[baseId][ilkId] = DataTypes.SpotOracle({
             oracle: oracle,
-            ratio: ratio                                                                    // With 2 decimals. 10000 == 100%
+            ratio: ratio                                                                    // With 6 decimals. 1000000 == 100%
         });                                                                                 // Allows to replace an existing oracle.
         emit SpotOracleAdded(baseId, ilkId, address(oracle), ratio);
     }
@@ -396,14 +398,14 @@ contract Cauldron is AccessControl() {
         DataTypes.Balances memory balances_ = balances[vaultId];
         DataTypes.SpotOracle memory spotOracle_ = spotOracles[series_.baseId][vault_.ilkId];
         uint128 spot = spotOracle_.oracle.spot();
-        uint128 ratio = uint128(spotOracle_.ratio) * 1e23;                                  // Normalization factor from 2 to 27 decimals
+        uint128 ratio = spotOracle_.ratio;
 
         if (uint32(block.timestamp) >= series_.maturity) {
             IOracle rateOracle = rateOracles[series_.baseId];
             uint128 accrual = rateOracle.accrual(series_.maturity);
-            return balances_.ink.rmul(spot).i128() - balances_.art.rmul(accrual).rmul(ratio).i128();
+            return balances_.ink.dmul(spot).i128() - balances_.art.dmul(accrual).dmul(ratio).i128();
         }
 
-        return balances_.ink.rmul(spot).i128() - balances_.art.rmul(ratio).i128();
+        return balances_.ink.dmul(spot).i128() - balances_.art.dmul(ratio).i128();
     }
 }
