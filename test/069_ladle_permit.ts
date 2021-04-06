@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { signatures } from '@yield-protocol/utils'
-import { WAD, MAX256 as MAX } from './shared/constants'
+import { WAD, MAX256 as MAX, OPS } from './shared/constants'
 
 import DaiMockArtifact from '../artifacts/contracts/mocks/DaiMock.sol/DaiMock.json'
 
@@ -109,6 +109,34 @@ describe('Ladle - permit', function () {
     expect(await fyToken.allowance(owner, ladle.address)).to.equal(WAD)
   })
 
+  it('users can use the ladle to execute permit on a fyToken as a batch', async () => {
+    const fyTokenSeparator = await fyToken.DOMAIN_SEPARATOR()
+    const deadline = MAX
+    const amount = WAD
+    const nonce = await fyToken.nonces(owner)
+    const approval = {
+      owner: owner,
+      spender: ladle.address,
+      value: amount,
+    }
+    const permitDigest = signatures.getPermitDigest(fyTokenSeparator, approval, nonce, deadline)
+
+    const { v, r, s } = signatures.sign(permitDigest, signatures.privateKey0)
+
+    const vaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12)) // You can't use `batch` without owning or building a vault.
+    const buildData = ethers.utils.defaultAbiCoder.encode(['bytes6', 'bytes6'], [seriesId, ilkId])
+    const permitData = ethers.utils.defaultAbiCoder.encode(
+      ['bytes6', 'bool', 'address', 'uint256', 'uint256', 'uint8', 'bytes32', 'bytes32'],
+      [seriesId, false, ladle.address, amount, deadline, v, r, s]
+    )
+
+    expect(await ladle.batch(vaultId, [OPS.BUILD, OPS.FORWARD_PERMIT], [buildData, permitData]))
+      .to.emit(fyToken, 'Approval')
+      .withArgs(owner, ladle.address, WAD)
+
+    expect(await fyToken.allowance(owner, ladle.address)).to.equal(WAD)
+  })
+
   it('users can use the ladle to execute a dai-style permit on an asset', async () => {
     const daiSeparator = await dai.DOMAIN_SEPARATOR()
     const deadline = MAX
@@ -129,7 +157,35 @@ describe('Ladle - permit', function () {
     expect(await dai.allowance(owner, ladle.address)).to.equal(MAX)
   })
 
-  it("users can' use the ladle to execute permit on unregistered tokens", async () => {
+
+  it('users can use the ladle to execute a dai-style permit on an asset as a batch', async () => {
+    const daiSeparator = await dai.DOMAIN_SEPARATOR()
+    const deadline = MAX
+    const nonce = await fyToken.nonces(owner)
+    const approval = {
+      owner: owner,
+      spender: ladle.address,
+      can: true,
+    }
+    const daiPermitDigest = signatures.getDaiDigest(daiSeparator, approval, nonce, deadline)
+
+    const { v, r, s } = signatures.sign(daiPermitDigest, signatures.privateKey0)
+
+    const vaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12)) // You can't use `batch` without owning or building a vault.
+    const buildData = ethers.utils.defaultAbiCoder.encode(['bytes6', 'bytes6'], [seriesId, ilkId])
+    const permitData = ethers.utils.defaultAbiCoder.encode(
+      ['bytes6', 'bool', 'address', 'uint256', 'uint256', 'bool', 'uint8', 'bytes32', 'bytes32'],
+      [daiId, true, ladle.address, nonce, deadline, true, v, r, s]
+    )
+
+    expect(await ladle.batch(vaultId, [OPS.BUILD, OPS.FORWARD_DAI_PERMIT], [buildData, permitData]))
+      .to.emit(dai, 'Approval')
+      .withArgs(owner, ladle.address, MAX)
+
+    expect(await dai.allowance(owner, ladle.address)).to.equal(MAX)
+  })
+
+  it("users can't use the ladle to execute permit on unregistered tokens", async () => {
     const ilkSeparator = await ilk.DOMAIN_SEPARATOR()
     const deadline = MAX
     const amount = WAD
