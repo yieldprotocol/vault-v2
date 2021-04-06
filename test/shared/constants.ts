@@ -22,4 +22,6 @@ export const OPS = {
     TRANSFER_TO_POOL: 12,
     RETRIEVE_FROM_POOL: 13,
     ROUTE: 14,
+    TRANSFER_TO_FYTOKEN: 15,
+    REDEEM: 16,
   }
