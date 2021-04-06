@@ -158,6 +158,8 @@ contract Ladle is AccessControl(), Multicall {
     ) external payable {    // TODO: I think we need `payable` to receive ether which we will deposit through `joinEther`
         require(operations.length == data.length, "Unmatched operation data");
         DataTypes.Vault memory vault;
+        IFYToken fyToken;
+        IPool pool;
 
         // Unless we are building the vault, we cache it
         if (operations[0] != Operation.BUILD) vault = getOwnedVault(vaultId);
@@ -195,13 +197,13 @@ contract Ladle is AccessControl(), Multicall {
             } else if (operation == Operation.TRANSFER_TO_POOL) {
                 (bool base, uint128 wad) =
                     abi.decode(data[i], (bool, uint128));
-                IPool pool = getPool(vault.seriesId);
+                if (address(pool) == address(0)) pool = getPool(vault.seriesId);
                 _transferToPool(pool, base, wad);
             
             } else if (operation == Operation.RETRIEVE_FROM_POOL) {
                 (bool base, address to) =
                     abi.decode(data[i], (bool, address));
-                IPool pool = getPool(vault.seriesId);
+                if (address(pool) == address(0)) pool = getPool(vault.seriesId);
                 _retrieveFromPool(pool, base, to);
             
             } else if (operation == Operation.ROUTE) {
@@ -224,13 +226,13 @@ contract Ladle is AccessControl(), Multicall {
                 _repayVault(vaultId, vault, to, ink, max);
             
             } else if (operation == Operation.TRANSFER_TO_FYTOKEN) {
-                (bytes6 seriesId, uint256 amount) = abi.decode(data[i], (bytes6, uint256));
-                IFYToken fyToken = getSeries(seriesId).fyToken;
+                (uint256 amount) = abi.decode(data[i], (uint256));
+                if (address(fyToken) == address(0)) fyToken = getSeries(vault.seriesId).fyToken;
                 _transferToFYToken(fyToken, amount);
             
             } else if (operation == Operation.REDEEM) {
-                (bytes6 seriesId, address to, uint256 amount) = abi.decode(data[i], (bytes6, address, uint256));
-                IFYToken fyToken = getSeries(seriesId).fyToken;
+                (address to, uint256 amount) = abi.decode(data[i], (address, uint256));
+                if (address(fyToken) == address(0)) fyToken = getSeries(vault.seriesId).fyToken;
                 _redeem(fyToken, to, amount);
             
             } else if (operation == Operation.STIR_FROM) {

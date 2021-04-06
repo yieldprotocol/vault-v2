@@ -146,8 +146,8 @@ describe('FYToken', function () {
         const baseJoinBefore = await base.balanceOf(baseJoin.address)
 
         await fyToken.approve(ladle.address, WAD)
-        const transferToFYTokenData = ethers.utils.defaultAbiCoder.encode(['bytes6', 'uint256'], [seriesId, WAD])
-        const redeemData = ethers.utils.defaultAbiCoder.encode(['bytes6', 'address', 'uint128'], [seriesId, owner, WAD])
+        const transferToFYTokenData = ethers.utils.defaultAbiCoder.encode(['uint256'], [WAD])
+        const redeemData = ethers.utils.defaultAbiCoder.encode(['address', 'uint128'], [owner, WAD])
 
         await expect(
           await ladle.batch(vaultId, [OPS.TRANSFER_TO_FYTOKEN, OPS.REDEEM], [transferToFYTokenData, redeemData])
