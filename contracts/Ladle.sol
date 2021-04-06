@@ -42,21 +42,23 @@ contract Ladle is AccessControl(), Multicall {
     using TransferHelper for address payable;
 
     enum Operation {
-        BUILD,              // 0
-        STIR_TO,            // 1
-        STIR_FROM,          // 2
-        POUR,               // 3
-        SERVE,              // 4
-        CLOSE,              // 5
-        REPAY,              // 6
-        REPAY_VAULT,        // 7
-        FORWARD_PERMIT,     // 8
-        FORWARD_DAI_PERMIT, // 9
-        JOIN_ETHER,         // 10
-        EXIT_ETHER,         // 11
-        TRANSFER_TO_POOL,   // 12
-        RETRIEVE_FROM_POOL, // 13
-        ROUTE               // 14
+        BUILD,               // 0
+        STIR_TO,             // 1
+        STIR_FROM,           // 2
+        POUR,                // 3
+        SERVE,               // 4
+        CLOSE,               // 5
+        REPAY,               // 6
+        REPAY_VAULT,         // 7
+        FORWARD_PERMIT,      // 8
+        FORWARD_DAI_PERMIT,  // 9
+        JOIN_ETHER,          // 10
+        EXIT_ETHER,          // 11
+        TRANSFER_TO_POOL,    // 12
+        RETRIEVE_FROM_POOL,  // 13
+        ROUTE,               // 14
+        TRANSFER_TO_FYTOKEN, // 15
+        REDEEM               // 16
     }
 
     ICauldron public cauldron;
@@ -163,56 +165,82 @@ contract Ladle is AccessControl(), Multicall {
         // Execute all operations in the batch. Conditionals ordered by expected frequency.
         for (uint256 i = 0; i < operations.length; i += 1) {
             Operation operation = operations[i];
+
             if (operation == Operation.BUILD) {
                 (bytes6 seriesId, bytes6 ilkId) = abi.decode(data[i], (bytes6, bytes6));
                 vault = _build(vaultId, seriesId, ilkId);   // Cache the vault that was just built
+            
             } else if (operation == Operation.FORWARD_PERMIT) {
                 (bytes6 id, bool asset, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s) =
                     abi.decode(data[i], (bytes6, bool, address, uint256, uint256, uint8, bytes32, bytes32));
                 _forwardPermit(id, asset, spender, amount, deadline, v, r, s);
+            
             } else if (operation == Operation.JOIN_ETHER) {
                 (bytes6 etherId) = abi.decode(data[i], (bytes6));
                 _joinEther(etherId);
+            
             } else if (operation == Operation.POUR) {
                 (address to, int128 ink, int128 art) = abi.decode(data[i], (address, int128, int128));
                 _pour(vaultId, vault, to, ink, art);
+            
             } else if (operation == Operation.SERVE) {
                 (address to, uint128 ink, uint128 base, uint128 max) = abi.decode(data[i], (address, uint128, uint128, uint128));
                 _serve(vaultId, vault, to, ink, base, max);
+            
             } else if (operation == Operation.FORWARD_DAI_PERMIT) {
                 (bytes6 id, bool asset, address spender, uint256 nonce, uint256 deadline, bool allowed, uint8 v, bytes32 r, bytes32 s) =
                     abi.decode(data[i], (bytes6, bool, address, uint256, uint256, bool, uint8, bytes32, bytes32));
                 _forwardDaiPermit(id, asset, spender, nonce, deadline, allowed, v, r, s);
+            
             } else if (operation == Operation.TRANSFER_TO_POOL) {
                 (bool base, uint128 wad) =
                     abi.decode(data[i], (bool, uint128));
                 IPool pool = getPool(vault.seriesId);
                 _transferToPool(pool, base, wad);
+            
             } else if (operation == Operation.RETRIEVE_FROM_POOL) {
                 (bool base, address to) =
                     abi.decode(data[i], (bool, address));
                 IPool pool = getPool(vault.seriesId);
                 _retrieveFromPool(pool, base, to);
+            
             } else if (operation == Operation.ROUTE) {
                 _route(data[i]);
+            
             } else if (operation == Operation.EXIT_ETHER) {
                 (bytes6 etherId, address to) = abi.decode(data[i], (bytes6, address));
                 _exitEther(etherId, payable(to));
+            
             } else if (operation == Operation.CLOSE) {
                 (address to, int128 ink, int128 art) = abi.decode(data[i], (address, int128, int128));
                 _close(vaultId, vault, to, ink, art);
+            
             } else if (operation == Operation.REPAY) {
                 (address to, int128 ink, uint128 min) = abi.decode(data[i], (address, int128, uint128));
                 _repay(vaultId, vault, to, ink, min);
+            
             } else if (operation == Operation.REPAY_VAULT) {
                 (address to, int128 ink, uint128 max) = abi.decode(data[i], (address, int128, uint128));
                 _repayVault(vaultId, vault, to, ink, max);
+            
+            } else if (operation == Operation.TRANSFER_TO_FYTOKEN) {
+                (bytes6 seriesId, uint256 amount) = abi.decode(data[i], (bytes6, uint256));
+                IFYToken fyToken = getSeries(seriesId).fyToken;
+                _transferToFYToken(fyToken, amount);
+            
+            } else if (operation == Operation.REDEEM) {
+                (bytes6 seriesId, address to, uint256 amount) = abi.decode(data[i], (bytes6, address, uint256));
+                IFYToken fyToken = getSeries(seriesId).fyToken;
+                _redeem(fyToken, to, amount);
+            
             } else if (operation == Operation.STIR_FROM) {
                 (bytes12 to, uint128 ink, uint128 art) = abi.decode(data[i], (bytes12, uint128, uint128));
                 _stirFrom(vaultId, to, ink, art);
+            
             } else if (operation == Operation.STIR_TO) {
                 (bytes12 from, uint128 ink, uint128 art) = abi.decode(data[i], (bytes12, uint128, uint128));
                 _stirTo(from, vaultId, ink, art);
+            
             } else {
                 revert("Invalid operation");
             }
@@ -585,19 +613,8 @@ contract Ladle is AccessControl(), Multicall {
     /// @dev Allow users to trigger a token transfer to a pool through the ladle, to be used with multicall
     function transferToPool(bytes6 seriesId, bool base, uint128 wad)
         external payable
-        returns (bool)
     {
-        return _transferToPool(getPool(seriesId), base, wad);
-    }
-
-    /// @dev Allow users to trigger a token transfer to a pool through the ladle, to be used with batch
-    function _transferToPool(IPool pool, bool base, uint128 wad)
-        private
-        returns (bool)
-    {
-        IERC20 token = base ? pool.baseToken() : pool.fyToken();
-        token.safeTransferFrom(msg.sender, address(pool), wad);
-        return true;
+        _transferToPool(getPool(seriesId), base, wad);
     }
 
     /// @dev Allow users to trigger a token transfer to a pool through the ladle, to be used with multicall
@@ -609,20 +626,28 @@ contract Ladle is AccessControl(), Multicall {
         retrieved = _retrieveFromPool(pool, base, to);
     }
 
-    /// @dev Allow users to trigger a token transfer to a pool through the ladle, to be used with batch
-    function _retrieveFromPool(IPool pool, bool base, address to)
-        private
-        returns (uint128 retrieved)
-    {
-        retrieved = base ? pool.retrieveBaseToken(to) : pool.retrieveFYToken(to);
-    }
-
     /// @dev Allow users to route calls to a pool, to be used with multicall
     function route(bytes memory data)
         external payable
         returns (bool success, bytes memory result)
     {
         (success, result) = _route(data);
+    }
+
+    /// @dev Allow users to trigger a token transfer to a pool through the ladle, to be used with batch
+    function _transferToPool(IPool pool, bool base, uint128 wad)
+        private
+    {
+        IERC20 token = base ? pool.baseToken() : pool.fyToken();
+        token.safeTransferFrom(msg.sender, address(pool), wad);
+    }
+    
+    /// @dev Allow users to trigger a token transfer to a pool through the ladle, to be used with batch
+    function _retrieveFromPool(IPool pool, bool base, address to)
+        private
+        returns (uint128 retrieved)
+    {
+        retrieved = base ? pool.retrieveBaseToken(to) : pool.retrieveFYToken(to);
     }
 
     /// @dev Allow users to route calls to a pool, to be used with batch
@@ -632,5 +657,39 @@ contract Ladle is AccessControl(), Multicall {
     {
         (success, result) = poolRouter.call{ value: msg.value }(data);
         if (!success) revert(RevertMsgExtractor.getRevertMsg(result));
+    }
+
+    // ---- FYToken router ----
+
+    /// @dev Allow users to trigger a token transfer to a fyToken through the ladle, to be used with multicall
+    function transferToFYToken(bytes6 seriesId, uint256 wad)
+        external payable
+    {
+        _transferToFYToken(getSeries(seriesId).fyToken, wad);
+    }
+
+    /// @dev Allow users to redeem fyToken, to be used with multicall
+    /// The fyToken needs to have been transferred to the FYToken contract
+    function redeem(bytes6 seriesId, address to, uint256 wad)
+        external payable
+        returns (uint256)
+    {
+
+        return _redeem(getSeries(seriesId).fyToken, to, wad);
+    }
+
+    /// @dev Allow users to trigger a token transfer to a pool through the ladle, to be used with batch
+    function _transferToFYToken(IFYToken fyToken, uint256 wad)
+        private
+    {
+        IERC20(fyToken).safeTransferFrom(msg.sender, address(fyToken), wad);
+    }
+
+    /// @dev Allow users to redeem fyToken, to be used with batch
+    function _redeem(IFYToken fyToken, address to, uint256 wad)
+        private
+        returns (uint256)
+    {
+        return fyToken.redeem(to, wad);
     }
 }
