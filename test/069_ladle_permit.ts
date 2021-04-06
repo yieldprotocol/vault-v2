@@ -157,7 +157,6 @@ describe('Ladle - permit', function () {
     expect(await dai.allowance(owner, ladle.address)).to.equal(MAX)
   })
 
-
   it('users can use the ladle to execute a dai-style permit on an asset as a batch', async () => {
     const daiSeparator = await dai.DOMAIN_SEPARATOR()
     const deadline = MAX

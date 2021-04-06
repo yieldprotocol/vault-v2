@@ -103,14 +103,8 @@ describe('Ladle - serve and repay', function () {
     const debtRepaidInFY = debtRepaidInBase.mul(105).div(100)
     const inkRetrieved = WAD.div(4)
 
-    const transferToPoolData = ethers.utils.defaultAbiCoder.encode(
-      ['bool', 'uint128'],
-      [true, debtRepaidInBase]
-    )
-    const repayData = ethers.utils.defaultAbiCoder.encode(
-      ['address', 'int128', 'uint128'],
-      [owner, inkRetrieved, 0]
-    )
+    const transferToPoolData = ethers.utils.defaultAbiCoder.encode(['bool', 'uint128'], [true, debtRepaidInBase])
+    const repayData = ethers.utils.defaultAbiCoder.encode(['address', 'int128', 'uint128'], [owner, inkRetrieved, 0])
 
     await base.approve(ladle.address, debtRepaidInBase) // This would normally be part of a multicall, using ladle.forwardPermit
     await expect(ladle.batch(vaultId, [OPS.TRANSFER_TO_POOL, OPS.REPAY], [transferToPoolData, repayData]))
@@ -152,25 +146,21 @@ describe('Ladle - serve and repay', function () {
     const debtInBase = debtinFY.mul(100).div(105)
     const inkRetrieved = WAD.div(4)
 
-    const transferToPoolData = ethers.utils.defaultAbiCoder.encode(
-      ['bool', 'uint128'],
-      [true, baseOffered]
-    )
+    const transferToPoolData = ethers.utils.defaultAbiCoder.encode(['bool', 'uint128'], [true, baseOffered])
     const repayVaultData = ethers.utils.defaultAbiCoder.encode(
       ['address', 'int128', 'uint128'],
       [owner, inkRetrieved, MAX]
     )
-    const retrieveFromPoolData = ethers.utils.defaultAbiCoder.encode(
-      ['bool', 'address'],
-      [true, owner]
-    )
+    const retrieveFromPoolData = ethers.utils.defaultAbiCoder.encode(['bool', 'address'], [true, owner])
 
     await base.approve(ladle.address, baseOffered) // This would normally be part of a multicall, using ladle.forwardPermit
-    await expect(ladle.batch(
+    await expect(
+      ladle.batch(
         vaultId,
         [OPS.TRANSFER_TO_POOL, OPS.REPAY_VAULT, OPS.RETRIEVE_FROM_POOL],
-        [transferToPoolData, repayVaultData, retrieveFromPoolData])
+        [transferToPoolData, repayVaultData, retrieveFromPoolData]
       )
+    )
       .to.emit(cauldron, 'VaultPoured')
       .withArgs(vaultId, seriesId, ilkId, inkRetrieved, WAD.mul(-1))
       .to.emit(pool, 'Trade')

@@ -149,7 +149,9 @@ describe('FYToken', function () {
         const transferToFYTokenData = ethers.utils.defaultAbiCoder.encode(['bytes6', 'uint256'], [seriesId, WAD])
         const redeemData = ethers.utils.defaultAbiCoder.encode(['bytes6', 'address', 'uint128'], [seriesId, owner, WAD])
 
-        await expect(await ladle.batch(vaultId, [OPS.TRANSFER_TO_FYTOKEN, OPS.REDEEM], [transferToFYTokenData, redeemData]))
+        await expect(
+          await ladle.batch(vaultId, [OPS.TRANSFER_TO_FYTOKEN, OPS.REDEEM], [transferToFYTokenData, redeemData])
+        )
           .to.emit(fyToken, 'Transfer')
           .withArgs(owner, fyToken.address, WAD)
           .to.emit(fyToken, 'Transfer')
