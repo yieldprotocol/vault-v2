@@ -1,5 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { WAD, MAX128 as MAX } from './shared/constants'
+import { WAD, MAX128 as MAX, OPS } from './shared/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
@@ -50,22 +50,6 @@ describe('Ladle - batch', function () {
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const vaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12))
   let ethVaultId: string
-
-  const OPS = {
-    BUILD: 0,
-    STIR_TO: 1,
-    STIR_FROM: 2,
-    POUR: 3,
-    SERVE: 4,
-    CLOSE: 5,
-    REPAY: 6,
-    REPAY_VAULT: 7,
-    FORWARD_PERMIT: 8,
-    FORWARD_DAI_PERMIT: 9,
-    JOIN_ETHER: 10,
-    EXIT_ETHER: 11,
-    ROUTE: 12,
-  }
 
   beforeEach(async () => {
     env = await loadFixture(fixture)

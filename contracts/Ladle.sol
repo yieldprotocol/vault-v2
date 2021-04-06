@@ -197,7 +197,7 @@ contract Ladle is AccessControl(), Multicall {
                 _repayVault(vaultId, vault, to, ink, max);
             } else if (operation == Operation.STIR_FROM) {
                 (bytes12 to, uint128 ink, uint128 art) = abi.decode(data[i], (bytes12, uint128, uint128));
-                _stirTo(vaultId, to, ink, art);
+                _stirFrom(vaultId, to, ink, art);
             } else if (operation == Operation.STIR_TO) {
                 (bytes12 from, uint128 ink, uint128 art) = abi.decode(data[i], (bytes12, uint128, uint128));
                 _stirTo(from, vaultId, ink, art);

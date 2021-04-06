@@ -1,5 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { WAD } from './shared/constants'
+import { WAD, OPS } from './shared/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { FYToken } from '../typechain/FYToken'
@@ -87,5 +87,71 @@ describe('Ladle - stir', function () {
       .withArgs(vaultFromId, vaultToId, 0, WAD)
     expect((await cauldron.balances(vaultFromId)).art).to.equal(0)
     expect((await cauldron.balances(vaultToId)).art).to.equal(WAD)
+  })
+
+  it('moves collateral and debt', async () => {
+    await ladle.pour(vaultFromId, owner, WAD, WAD)
+    expect(await ladle.stir(vaultFromId, vaultToId, WAD, WAD))
+      .to.emit(cauldron, 'VaultStirred')
+      .withArgs(vaultFromId, vaultToId, WAD, WAD)
+    expect((await cauldron.balances(vaultFromId)).ink).to.equal(0)
+    expect((await cauldron.balances(vaultToId)).ink).to.equal(WAD)
+    expect((await cauldron.balances(vaultFromId)).art).to.equal(0)
+    expect((await cauldron.balances(vaultToId)).art).to.equal(WAD)
+  })
+
+  it('moves collateral in a batch', async () => {
+    await ladle.pour(vaultFromId, owner, WAD, 0)
+    await ladle.give(vaultToId, other)
+
+    const stirFromData = ethers.utils.defaultAbiCoder.encode(
+      ['bytes12', 'uint128', 'uint128'],
+      [vaultToId, WAD, 0]
+    )
+    expect(await ladle.batch(vaultFromId, [OPS.STIR_FROM], [stirFromData]))
+      .to.emit(cauldron, 'VaultStirred')
+      .withArgs(vaultFromId, vaultToId, WAD, 0)
+    expect((await cauldron.balances(vaultFromId)).ink).to.equal(0)
+    expect((await cauldron.balances(vaultToId)).ink).to.equal(WAD)
+  })
+
+  it('only origin vault owner can move collateral in a batch', async () => {
+    await ladle.pour(vaultFromId, owner, WAD, 0)
+    await ladle.give(vaultFromId, other)
+
+    const stirFromData = ethers.utils.defaultAbiCoder.encode(
+      ['bytes12', 'uint128', 'uint128'],
+      [vaultToId, WAD, 0]
+    )
+    await expect(ladle.batch(vaultFromId, [OPS.STIR_FROM], [stirFromData]))
+      .to.be.revertedWith('Only vault owner')
+  })
+
+  it('moves debt in a batch', async () => {
+    await ladle.pour(vaultFromId, owner, WAD, WAD)
+    await ladle.pour(vaultToId, owner, WAD, 0)
+    await ladle.give(vaultFromId, other)
+
+    const stirToData = ethers.utils.defaultAbiCoder.encode(
+      ['bytes12', 'uint128', 'uint128'],
+      [vaultFromId, 0, WAD]
+    )
+    expect(await ladle.batch(vaultToId, [OPS.STIR_TO], [stirToData]))
+      .to.emit(cauldron, 'VaultStirred')
+      .withArgs(vaultFromId, vaultToId, 0, WAD)
+    expect((await cauldron.balances(vaultFromId)).art).to.equal(0)
+    expect((await cauldron.balances(vaultToId)).art).to.equal(WAD)
+  })
+
+  it('only destination vault owner can move debt in a batch', async () => {
+    await ladle.pour(vaultFromId, owner, WAD, WAD)
+    await ladle.give(vaultToId, other)
+
+    const stirToData = ethers.utils.defaultAbiCoder.encode(
+      ['bytes12', 'uint128', 'uint128'],
+      [vaultFromId, 0, WAD]
+    )
+    await expect(ladle.batch(vaultToId, [OPS.STIR_TO], [stirToData]))
+      .to.be.revertedWith('Only vault owner')
   })
 })
