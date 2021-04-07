@@ -1,5 +1,6 @@
 import { YieldEnvironment } from '../test/shared/fixtures'
 import { ethers, waffle } from 'hardhat'
+import { ERC20Mock } from '../typechain';
 
 
 /**
@@ -15,10 +16,6 @@ const ilksRandom:Uint8Array[] = Array.from({length: 3}, () => ethers.utils.rando
 const series:Uint8Array[] = Array.from({length: 5}, () => ethers.utils.randomBytes(6));
 const ilkNames: string[] = ['DAI', 'USDC', 'USDT']
 
-const externalTestAccounts = [
-    "0x885Bc35dC9B10EA39f2d7B3C94a7452a9ea442A7",
-]
-
 async function fixture() {
     const [ ownerAcc ] = await ethers.getSigners();
     return await YieldEnvironment.setup(
@@ -29,14 +26,23 @@ async function fixture() {
         )
 }
 
-const fundExternalAccounts = async  () => {
+const externalTestAccounts = [
+    "0x885Bc35dC9B10EA39f2d7B3C94a7452a9ea442A7",
+]
+
+const fundExternalAccounts = async (assetList:Map<string, ERC20Mock>) => {
     const [ ownerAcc ] = await ethers.getSigners();
     await Promise.all(
         externalTestAccounts.map((to:string)=> {
+            /* add test Eth */
             ownerAcc.sendTransaction({to,value: ethers.utils.parseEther("100")})
+            /* add test asset[] values */
+            assetList.forEach(async (value:any, key:any)=> {
+                await value.transfer(to, ethers.utils.parseEther("1000")); 
+            })
         })
     )
-    console.log('External Accounts funded with 100ETH.')
+    console.log('External accounts funded with 100ETH, and 1000 of each asset')
 };
 
 loadFixture(fixture).then( ( env:YieldEnvironment)  => { 
@@ -60,7 +66,7 @@ loadFixture(fixture).then( ( env:YieldEnvironment)  => {
     console.log('Vaults:')
     env.vaults.forEach((value:any, key:any) => console.log(value))
 
-    fundExternalAccounts();
+    fundExternalAccounts(env.assets);
 
 }
 
