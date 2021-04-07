@@ -125,7 +125,7 @@ export class YieldEnvironment {
     const symbol = Buffer.from(assetId.slice(2), 'hex').toString('utf8')
     const asset = (await deployContract(owner, ERC20MockArtifact, [assetId, symbol])) as ERC20Mock
     await cauldron.addAsset(assetId, asset.address)
-    await asset.mint(await owner.getAddress(), WAD.mul(100))
+    await asset.mint(await owner.getAddress(), WAD.mul(100000))
     return asset
   }
 
