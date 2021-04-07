@@ -411,9 +411,9 @@ contract Ladle is AccessControl(), Multicall {
             DataTypes.Series memory series = getSeries(vault.seriesId);
             if (art > 0) {
                 require(uint32(block.timestamp) <= series.maturity, "Mature");
-                IFYToken(series.fyToken).mint(to, uint128(art));
+                series.fyToken.mint(to, uint128(art));
             } else {
-                IFYToken(series.fyToken).burn(msg.sender, uint128(-art));
+                series.fyToken.burn(msg.sender, uint128(-art));
             }
         }
     }
