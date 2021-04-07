@@ -86,4 +86,16 @@ describe('FYToken - flash', function () {
     await borrower.flashBorrow(fyToken.address, WAD, actions.reenter) // It will borrow WAD, and then reenter and borrow WAD * 2
     expect(await borrower.flashBalance()).to.equal(WAD.mul(3))
   })
+
+  describe('after maturity', async () => {
+    beforeEach(async () => {
+      await ethers.provider.send('evm_mine', [(await fyToken.maturity()).toNumber()])
+    })
+
+    it('does not allow to flash mint after maturity', async () => {
+      await expect(borrower.flashBorrow(fyToken.address, WAD, actions.normal)).to.be.revertedWith(
+        'Only before maturity'
+      )
+    })
+  })
 })

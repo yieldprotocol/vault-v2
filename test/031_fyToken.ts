@@ -64,11 +64,11 @@ describe('FYToken', function () {
   })
 
   it('does not allow to mature before maturity', async () => {
-    await expect(fyToken.mature()).to.be.revertedWith('Record after maturity')
+    await expect(fyToken.mature()).to.be.revertedWith('Only after maturity')
   })
 
   it('does not allow to redeem before maturity', async () => {
-    await expect(fyToken.redeem(owner, WAD)).to.be.revertedWith('Not mature')
+    await expect(fyToken.redeem(owner, WAD)).to.be.revertedWith('Only after maturity')
   })
 
   describe('after maturity', async () => {
@@ -76,11 +76,8 @@ describe('FYToken', function () {
       await ethers.provider.send('evm_mine', [(await fyToken.maturity()).toNumber()])
     })
 
-    it('matures by recording the chi value', async () => {
-      const maturity = await fyToken.maturity()
-      expect(await fyToken.mature())
-        .to.emit(chiOracle, 'Recorded')
-        .withArgs(maturity, DEC6)
+    it('does not allow to mint after maturity', async () => {
+      await expect(fyToken.mint(owner, WAD)).to.be.revertedWith('Only before maturity')
     })
 
     it('does not allow to mature more than once', async () => {
@@ -90,6 +87,13 @@ describe('FYToken', function () {
 
     it('does not allow to redeem before chi is recorded', async () => {
       await expect(fyToken.redeem(owner, WAD)).to.be.revertedWith('No recorded spot')
+    })
+
+    it('matures by recording the chi value', async () => {
+      const maturity = await fyToken.maturity()
+      expect(await fyToken.mature())
+        .to.emit(chiOracle, 'Recorded')
+        .withArgs(maturity, DEC6)
     })
 
     describe('once matured', async () => {
