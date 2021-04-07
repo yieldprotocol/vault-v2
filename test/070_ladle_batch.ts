@@ -1,5 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { WAD, MAX128 as MAX } from './shared/constants'
+import { WAD, MAX128 as MAX, OPS } from './shared/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
@@ -15,7 +15,7 @@ const { loadFixture } = waffle
 
 import { YieldEnvironment } from './shared/fixtures'
 
-describe('Ladle - multicall', function () {
+describe('Ladle - batch', function () {
   this.timeout(0)
 
   let env: YieldEnvironment
@@ -66,9 +66,9 @@ describe('Ladle - multicall', function () {
   })
 
   it('builds a vault and posts to it', async () => {
-    const buildCall = ladle.interface.encodeFunctionData('build', [vaultId, seriesId, ilkId])
-    const pourCall = ladle.interface.encodeFunctionData('pour', [vaultId, owner, WAD, WAD])
-    await ladle.batch([buildCall, pourCall], true)
+    const buildData = ethers.utils.defaultAbiCoder.encode(['bytes6', 'bytes6'], [seriesId, ilkId])
+    const pourData = ethers.utils.defaultAbiCoder.encode(['address', 'int128', 'int128'], [owner, WAD, WAD])
+    await ladle.batch(vaultId, [OPS.BUILD, OPS.POUR], [buildData, pourData])
 
     const vault = await cauldron.vaults(vaultId)
     expect(vault.owner).to.equal(owner)
@@ -78,17 +78,30 @@ describe('Ladle - multicall', function () {
     expect(await fyToken.balanceOf(owner)).to.equal(WAD)
   })
 
-  it('reverts with the appropriate message when needed', async () => {
-    const pourCall = ladle.interface.encodeFunctionData('pour', [vaultId, owner, WAD, WAD])
-    await expect(ladle.batch([pourCall], true)).to.be.revertedWith('Only vault owner')
-  })
-
   it('users can transfer ETH then pour, then serve in a single transaction with multicall', async () => {
     const posted = WAD.mul(2)
     const borrowed = WAD
-    const joinEtherCall = ladle.interface.encodeFunctionData('joinEther', [ethId])
-    const pourCall = ladle.interface.encodeFunctionData('pour', [ethVaultId, owner, posted, 0])
-    const serveCall = ladle.interface.encodeFunctionData('serve', [ethVaultId, other, 0, borrowed, MAX])
-    await ladle.batch([joinEtherCall, pourCall, serveCall], true, { value: posted })
+
+    const joinEtherData = ethers.utils.defaultAbiCoder.encode(['bytes6'], [ethId])
+    const pourData = ethers.utils.defaultAbiCoder.encode(['address', 'int128', 'int128'], [owner, posted, 0])
+    const serveData = ethers.utils.defaultAbiCoder.encode(
+      ['address', 'uint128', 'uint128', 'uint128'],
+      [other, 0, borrowed, MAX]
+    )
+    await ladle.batch(ethVaultId, [OPS.JOIN_ETHER, OPS.POUR, OPS.SERVE], [joinEtherData, pourData, serveData], {
+      value: posted,
+    })
+  })
+
+  it('batches can be grouped with multicall', async () => {
+    const buildData = ethers.utils.defaultAbiCoder.encode(['bytes6', 'bytes6'], [seriesId, ilkId])
+    const pourData = ethers.utils.defaultAbiCoder.encode(['address', 'int128', 'int128'], [owner, WAD, WAD])
+
+    const buildBatchCall = ladle.interface.encodeFunctionData('batch', [vaultId, [OPS.BUILD], [buildData]])
+    const pourBatchCall = ladle.interface.encodeFunctionData('batch', [vaultId, [OPS.POUR], [pourData]])
+
+    await ladle.multicall([buildBatchCall, pourBatchCall], true)
+
+    expect(await fyToken.balanceOf(owner)).to.equal(WAD)
   })
 })

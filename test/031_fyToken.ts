@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { id } from '@yield-protocol/utils'
-import { WAD, DEC6 } from './shared/constants'
+import { WAD, DEC6, OPS } from './shared/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
@@ -137,6 +137,27 @@ describe('FYToken', function () {
           .withArgs(owner, '0x0000000000000000000000000000000000000000', WAD.div(2))
           .to.emit(fyToken, 'Redeemed')
           .withArgs(owner, owner, WAD, WAD.mul(accrual).div(DEC6))
+        expect(await base.balanceOf(baseJoin.address)).to.equal(baseJoinBefore.sub(WAD.mul(accrual).div(DEC6)))
+        expect(await base.balanceOf(owner)).to.equal(baseOwnerBefore.add(WAD.mul(accrual).div(DEC6)))
+      })
+
+      it('redeems fyToken by transferring to the fyToken contract in a batch', async () => {
+        const baseOwnerBefore = await base.balanceOf(owner)
+        const baseJoinBefore = await base.balanceOf(baseJoin.address)
+
+        await fyToken.approve(ladle.address, WAD)
+        const transferToFYTokenData = ethers.utils.defaultAbiCoder.encode(['uint256'], [WAD])
+        const redeemData = ethers.utils.defaultAbiCoder.encode(['address', 'uint128'], [owner, WAD])
+
+        await expect(
+          await ladle.batch(vaultId, [OPS.TRANSFER_TO_FYTOKEN, OPS.REDEEM], [transferToFYTokenData, redeemData])
+        )
+          .to.emit(fyToken, 'Transfer')
+          .withArgs(owner, fyToken.address, WAD)
+          .to.emit(fyToken, 'Transfer')
+          .withArgs(fyToken.address, '0x0000000000000000000000000000000000000000', WAD)
+          .to.emit(fyToken, 'Redeemed')
+          .withArgs(ladle.address, owner, WAD, WAD.mul(accrual).div(DEC6))
         expect(await base.balanceOf(baseJoin.address)).to.equal(baseJoinBefore.sub(WAD.mul(accrual).div(DEC6)))
         expect(await base.balanceOf(owner)).to.equal(baseOwnerBefore.add(WAD.mul(accrual).div(DEC6)))
       })

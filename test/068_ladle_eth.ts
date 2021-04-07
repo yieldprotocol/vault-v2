@@ -1,5 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { WAD } from './shared/constants'
+import { WAD, OPS } from './shared/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
@@ -73,7 +73,14 @@ describe('Ladle - eth', function () {
   it('users can transfer ETH then pour in a single transaction with multicall', async () => {
     const joinEtherCall = ladle.interface.encodeFunctionData('joinEther', [ethId])
     const pourCall = ladle.interface.encodeFunctionData('pour', [ethVaultId, owner, WAD, 0])
-    await ladle.batch([joinEtherCall, pourCall], true, { value: WAD })
+    await ladle.multicall([joinEtherCall, pourCall], true, { value: WAD })
+  })
+
+  it('users can transfer ETH then pour in a single transaction with batch', async () => {
+    const joinEtherData = ethers.utils.defaultAbiCoder.encode(['bytes6'], [ethId])
+    const pourData = ethers.utils.defaultAbiCoder.encode(['address', 'int128', 'int128'], [owner, WAD, 0])
+
+    await ladle.batch(ethVaultId, [OPS.JOIN_ETHER, OPS.POUR], [joinEtherData, pourData], { value: WAD })
   })
 
   describe('with ETH posted', async () => {
@@ -99,7 +106,17 @@ describe('Ladle - eth', function () {
     it('users can pour then unwrap to ETH in a single transaction with multicall', async () => {
       const pourCall = ladle.interface.encodeFunctionData('pour', [ethVaultId, ladle.address, WAD.mul(-1), 0])
       const exitEtherCall = ladle.interface.encodeFunctionData('exitEther', [ethId, owner])
-      await ladle.batch([pourCall, exitEtherCall], true)
+      await ladle.multicall([pourCall, exitEtherCall], true)
+    })
+
+    it('users can pour then unwrap to ETH in a single transaction with batch', async () => {
+      const pourData = ethers.utils.defaultAbiCoder.encode(
+        ['address', 'int128', 'int128'],
+        [ladle.address, WAD.mul(-1), 0]
+      )
+      const exitEtherData = ethers.utils.defaultAbiCoder.encode(['bytes6', 'address'], [ethId, owner])
+
+      await ladle.batch(ethVaultId, [OPS.POUR, OPS.EXIT_ETHER], [pourData, exitEtherData])
     })
   })
 

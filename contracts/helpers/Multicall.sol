@@ -7,7 +7,7 @@ import "./RevertMsgExtractor.sol";
 import "hardhat/console.sol";
 
 
-contract Batchable {
+contract Multicall {
     /// @notice Allows batched call to self (this contract).
     /// @param calls An array of inputs for each call.
     /// @param revertOnFail If True then reverts after a failed call and stops doing further calls.
@@ -17,7 +17,7 @@ contract Batchable {
     // F2: Calls in the batch may be payable, delegatecall operates in the same context, so each call in the batch has access to msg.value
     // C3: The length of the loop is fully under user control, so can't be exploited
     // C7: Delegatecall is only used on the same contract, so it's safe
-    function batch(bytes[] calldata calls, bool revertOnFail) external payable returns (bool[] memory successes, bytes[] memory results) {
+    function multicall(bytes[] calldata calls, bool revertOnFail) external payable returns (bool[] memory successes, bytes[] memory results) {
         successes = new bool[](calls.length);
         results = new bytes[](calls.length);
         for (uint256 i = 0; i < calls.length; i++) {
