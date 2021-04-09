@@ -253,7 +253,7 @@ contract Ladle is AccessControl(), Multicall {
 
     /// @dev Create a new vault, linked to a series (and therefore underlying) and a collateral
     function build(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
-        public payable
+        external payable
         returns(DataTypes.Vault memory vault)
     {
         return _build(vaultId, seriesId, ilkId);
@@ -261,7 +261,7 @@ contract Ladle is AccessControl(), Multicall {
 
     /// @dev Change a vault series or collateral.
     function tweak(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
-        public payable
+        external payable
         returns(DataTypes.Vault memory vault)
     {
         getOwnedVault(vaultId);
@@ -271,7 +271,7 @@ contract Ladle is AccessControl(), Multicall {
 
     /// @dev Give a vault to another user.
     function give(bytes12 vaultId, address receiver)
-        public payable
+        external payable
         returns(DataTypes.Vault memory vault)
     {
         getOwnedVault(vaultId);
@@ -280,7 +280,7 @@ contract Ladle is AccessControl(), Multicall {
 
     /// @dev Destroy an empty vault. Used to recover gas costs.
     function destroy(bytes12 vaultId)
-        public payable
+        external payable
     {
         getOwnedVault(vaultId);
         cauldron.destroy(vaultId);
@@ -298,7 +298,7 @@ contract Ladle is AccessControl(), Multicall {
 
     /// @dev Move collateral and debt between vaults.
     function stir(bytes12 from, bytes12 to, uint128 ink, uint128 art)
-        public payable
+        external payable
         returns (DataTypes.Balances memory, DataTypes.Balances memory)
     {
         if (ink > 0) require (cauldron.vaults(from).owner == msg.sender, "Only origin vault owner");
@@ -309,7 +309,7 @@ contract Ladle is AccessControl(), Multicall {
     /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
     /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
     function pour(bytes12 vaultId, address to, int128 ink, int128 art)
-        public payable
+        external payable
         returns (DataTypes.Balances memory balances)
     {
         DataTypes.Vault memory vault = getOwnedVault(vaultId);
@@ -361,7 +361,7 @@ contract Ladle is AccessControl(), Multicall {
 
     /// @dev Change series and debt of a vault.
     function roll(bytes12 vaultId, bytes6 seriesId, int128 art)
-        public payable
+        external payable
         returns (uint128)
     {
         getOwnedVault(vaultId);
@@ -393,7 +393,7 @@ contract Ladle is AccessControl(), Multicall {
     /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
     /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
     function _pour(bytes12 vaultId, DataTypes.Vault memory vault, address to, int128 ink, int128 art)
-        public payable
+        private
         returns (DataTypes.Balances memory balances)
     {
         // Update accounting
@@ -409,12 +409,8 @@ contract Ladle is AccessControl(), Multicall {
         // Manage debt tokens
         if (art != 0) {
             DataTypes.Series memory series = getSeries(vault.seriesId);
-            if (art > 0) {
-                require(uint32(block.timestamp) <= series.maturity, "Mature");
-                IFYToken(series.fyToken).mint(to, uint128(art));
-            } else {
-                IFYToken(series.fyToken).burn(msg.sender, uint128(-art));
-            }
+            if (art > 0) series.fyToken.mint(to, uint128(art));
+            else series.fyToken.burn(msg.sender, uint128(-art));
         }
     }
 
@@ -427,7 +423,7 @@ contract Ladle is AccessControl(), Multicall {
         IPool pool = getPool(vault.seriesId);
         
         art = pool.buyBaseTokenPreview(base);
-        balances = pour(vaultId, address(pool), ink.i128(), art.i128());    // TODO: Do a private _pour function that doesn't check the owner.
+        balances = _pour(vaultId, vault, address(pool), ink.i128(), art.i128());
         pool.buyBaseToken(to, base, max);
     }
 
@@ -478,7 +474,7 @@ contract Ladle is AccessControl(), Multicall {
         IPool pool = getPool(vault.seriesId);
 
         art = pool.sellBaseToken(address(series.fyToken), min);
-        balances = pour(vaultId, to, ink, -(art.i128()));
+        balances = _pour(vaultId, vault, to, ink, -(art.i128()));
     }
 
     /// @dev Repay all debt in a vault by buying fyToken from a pool with base.
@@ -492,7 +488,7 @@ contract Ladle is AccessControl(), Multicall {
 
         balances = cauldron.balances(vaultId);
         base = pool.buyFYToken(address(series.fyToken), balances.art, max);
-        balances = pour(vaultId, to, ink, -(balances.art.i128()));
+        balances = _pour(vaultId, vault, to, ink, -(balances.art.i128()));
     }
 
     // ---- Liquidations ----
@@ -521,14 +517,14 @@ contract Ladle is AccessControl(), Multicall {
 
     /// @dev Execute an ERC2612 permit for the selected asset or fyToken
     function forwardPermit(bytes6 id, bool asset, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
-        public payable
+        external payable
     {
         _forwardPermit(id, asset, spender, amount, deadline, v, r, s);
     }
 
     /// @dev Execute a Dai-style permit for the selected asset or fyToken
     function forwardDaiPermit(bytes6 id, bool asset, address spender, uint256 nonce, uint256 deadline, bool allowed, uint8 v, bytes32 r, bytes32 s)
-        public payable
+        external payable
     {
         _forwardDaiPermit(id, asset, spender, nonce, deadline, allowed, v, r, s);
     }
@@ -566,7 +562,7 @@ contract Ladle is AccessControl(), Multicall {
     /// This function should be called first in a multicall, and the Join should keep track of stored reserves
     /// Passing the id for a join that doesn't link to a contract implemnting IWETH9 will fail
     function joinEther(bytes6 etherId)
-        public payable
+        external payable
         returns (uint256 ethTransferred)
     {
         ethTransferred = _joinEther(etherId);
@@ -575,7 +571,7 @@ contract Ladle is AccessControl(), Multicall {
     /// @dev Unwrap Wrapped Ether held by this Ladle, and send the Ether
     /// This function should be called last in a multicall, and the Ladle should have no reason to keep an WETH balance
     function exitEther(bytes6 etherId, address payable to)
-        public payable
+        external payable
         returns (uint256 ethTransferred)
     {
         ethTransferred = _exitEther(etherId, to);
