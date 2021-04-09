@@ -67,28 +67,42 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         asset = address(IJoin(join_).asset());
     }
 
+    modifier afterMaturity() {
+        require(
+            uint32(block.timestamp) >= maturity,
+            "Only after maturity"
+        );
+        _;
+    }
+
+    modifier beforeMaturity() {
+        require(
+            uint32(block.timestamp) < maturity,
+            "Only before maturity"
+        );
+        _;
+    }
+
     /// @dev Mature the fyToken by recording the chi in its oracle.
     /// If called more than once, it will revert.
     /// Check if it has been called as `fyToken.oracle.recorded(fyToken.maturity())`
     function mature() 
         public override
+        afterMaturity
     {
-        oracle.record(maturity.u32());                                    // Cost of `record` | The oracle checks the timestamp and that it hasn't been recorded yet.        
+        oracle.record(maturity.u32());                                    // The oracle checks the timestamp and that it hasn't been recorded yet.        
     }
 
     /// @dev Burn the fyToken after maturity for an amount that increases according to `chi`
     function redeem(address to, uint256 amount)
         public override
+        afterMaturity
         returns (uint256)
     {
-        require(
-            uint32(block.timestamp) >= maturity,
-            "Not mature"
-        );
-        _burn(msg.sender, amount);                                  // 2 SSTORE
+        _burn(msg.sender, amount);
 
-        uint256 redeemed = amount.dmul(oracle.accrual(maturity.u32()));   // Cost of `accrual`
-        join.exit(to, redeemed.u128());                           // Cost of `join`
+        uint256 redeemed = amount.dmul(oracle.accrual(maturity.u32()));
+        join.exit(to, redeemed.u128());
         
         emit Redeemed(msg.sender, to, amount, redeemed);
         return amount;
@@ -97,9 +111,10 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
     /// @dev Mint fyTokens.
     function mint(address to, uint256 amount)
         public override
+        beforeMaturity
         auth
     {
-        _mint(to, amount);                                                  // 2 SSTORE
+        _mint(to, amount);
     }
 
     /// @dev Burn fyTokens. The user needs to have either transferred the tokens to this contract, or have approved this contract to take them. 
@@ -115,7 +130,11 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
      * @param token The loan currency. It must be a FYDai contract.
      * @return The amount of `token` that can be borrowed.
      */
-    function maxFlashLoan(address token) public view override returns (uint256) {
+    function maxFlashLoan(address token)
+        public view override
+        beforeMaturity
+        returns (uint256)
+    {
         return token == address(this) ? type(uint256).max - totalSupply() : 0;
     }
 
@@ -125,7 +144,11 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
      * param amount The amount of tokens lent.
      * @return The amount of `token` to be charged for the loan, on top of the returned principal.
      */
-    function flashFee(address token, uint256) public view override returns (uint256) {
+    function flashFee(address token, uint256)
+        public view override
+        beforeMaturity
+        returns (uint256)
+    {
         require(token == address(this), "Unsupported currency");
         return 0;
     }
@@ -139,13 +162,15 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
      * @param amount The amount of tokens lent.
      * @param data A data parameter to be passed on to the `receiver` for any custom use.
      */
-    function flashLoan(IERC3156FlashBorrower receiver, address token, uint256 amount, bytes memory data) public override returns(bool) {
+    function flashLoan(IERC3156FlashBorrower receiver, address token, uint256 amount, bytes memory data)
+        public override
+        beforeMaturity
+        returns(bool)
+    {
         require(token == address(this), "Unsupported currency");
         _mint(address(receiver), amount);
-
-        require(receiver.onFlashLoan(msg.sender, token, amount, 0, data) == FLASH_LOAN_RETURN, "Non-compliant borrower");     // Call to `onFlashLoan`
-
-        _burn(address(receiver), amount);                                                           // 2 SSTORE
+        require(receiver.onFlashLoan(msg.sender, token, amount, 0, data) == FLASH_LOAN_RETURN, "Non-compliant borrower");
+        _burn(address(receiver), amount);
         return true;
     }
 

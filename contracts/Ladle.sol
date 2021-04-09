@@ -409,12 +409,8 @@ contract Ladle is AccessControl(), Multicall {
         // Manage debt tokens
         if (art != 0) {
             DataTypes.Series memory series = getSeries(vault.seriesId);
-            if (art > 0) {
-                require(uint32(block.timestamp) <= series.maturity, "Mature");
-                series.fyToken.mint(to, uint128(art));
-            } else {
-                series.fyToken.burn(msg.sender, uint128(-art));
-            }
+            if (art > 0) series.fyToken.mint(to, uint128(art));
+            else series.fyToken.burn(msg.sender, uint128(-art));
         }
     }
 
