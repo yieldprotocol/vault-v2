@@ -7,7 +7,7 @@ import "@yield-protocol/utils/contracts/token/ERC20Permit.sol";
 import "@yield-protocol/vault-interfaces/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/IJoin.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
-import "./helpers/AccessControl.sol";
+import "@yield-protocol/utils-v2/contracts/AccessControl.sol";
 
 
 library DMath { // Fixed point arithmetic in 6 decimal units

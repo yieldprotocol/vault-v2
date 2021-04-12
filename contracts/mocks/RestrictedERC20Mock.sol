@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 import "@yield-protocol/utils/contracts/token/ERC20Permit.sol";
-import "../helpers/AccessControl.sol";
+import "@yield-protocol/utils-v2/contracts/AccessControl.sol";
 
 contract RestrictedERC20Mock is AccessControl(), ERC20Permit  {
 
