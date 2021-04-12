@@ -291,8 +291,8 @@ contract Cauldron is AccessControl() {
         balances[from] = balancesFrom;
         balances[to] = balancesTo;
 
-        if (ink > 0) require(_level(vaultFrom, balancesFrom) >= 0, "Undercollateralized at origin");
-        if (art > 0) require(_level(vaultTo, balancesTo) >= 0, "Undercollateralized at destination");
+        if (ink > 0) require(_level(vaultFrom, balancesFrom, series[vaultFrom.seriesId]) >= 0, "Undercollateralized at origin");
+        if (art > 0) require(_level(vaultTo, balancesTo, series[vaultTo.seriesId]) >= 0, "Undercollateralized at destination");
 
         emit VaultStirred(from, to, ink, art);
         return (balancesFrom, balancesTo);
@@ -300,11 +300,16 @@ contract Cauldron is AccessControl() {
 
     /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
     /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
-    function _pour(bytes12 vaultId, DataTypes.Vault memory vault_, DataTypes.Balances memory balances_, int128 ink, int128 art)
+    function _pour(
+        bytes12 vaultId,
+        DataTypes.Vault memory vault_,
+        DataTypes.Balances memory balances_,
+        DataTypes.Series memory series_,
+        int128 ink,
+        int128 art
+    )
         internal returns (DataTypes.Balances memory)
     {
-        DataTypes.Series memory series_ = series[vault_.seriesId];
-
         // For now, the collateralization checks are done outside to allow for underwater operation. That might change.
         if (ink != 0) {
             balances_.ink = balances_.ink.add(ink);
@@ -334,10 +339,11 @@ contract Cauldron is AccessControl() {
     {
         DataTypes.Vault memory vault_ = vaults[vaultId];
         require (vault_.owner != address(0), "Vault not found");
+        DataTypes.Series memory series_ = series[vault_.seriesId];
         balances_ = balances[vaultId];
-        balances_ = _pour(vaultId, vault_, balances_, ink, art);
+        balances_ = _pour(vaultId, vault_, balances_, series_, ink, art);
         if (balances_.art > 0 && (ink < 0 || art > 0))                          // If there is debt and we are less safe
-            require(_level(vault_, balances_) >= 0, "Undercollateralized");
+            require(_level(vault_, balances_, series_) >= 0, "Undercollateralized");
         return balances_;
     }
 
@@ -353,7 +359,8 @@ contract Cauldron is AccessControl() {
         DataTypes.Vault memory vault_ = vaults[vaultId];
         require (vault_.owner != address(0), "Vault not found");
         DataTypes.Balances memory balances_ = balances[vaultId];
-        require(_level(vault_, balances_) < 0, "Not undercollateralized");
+        DataTypes.Series memory series_ = series[vault_.seriesId];
+        require(_level(vault_, balances_, series_) < 0, "Not undercollateralized");
 
         timestamps[vaultId] = now_;
         _give(vaultId, msg.sender);
@@ -369,8 +376,9 @@ contract Cauldron is AccessControl() {
     {
         DataTypes.Vault memory vault_ = vaults[vaultId];
         require (vault_.owner != address(0), "Vault not found");
+        DataTypes.Series memory series_ = series[vault_.seriesId];
         balances_ = balances[vaultId];
-        balances_ = _pour(vaultId, vault_, balances_, -(ink.i128()), -(art.i128()));
+        balances_ = _pour(vaultId, vault_, balances_, series_, -(ink.i128()), -(art.i128()));
         return balances_;
     }
 
@@ -398,7 +406,7 @@ contract Cauldron is AccessControl() {
             debt[series_.baseId][vault_.ilkId] = debt_;
         }
         balances[vaultId] = balances_;
-        require(_level(vault_, balances_) >= 0, "Undercollateralized");
+        require(_level(vault_, balances_, series_) >= 0, "Undercollateralized");
         emit VaultRolled(vaultId, seriesId, balances_.art);
         return balances_.art;
     }
@@ -410,16 +418,20 @@ contract Cauldron is AccessControl() {
         DataTypes.Vault memory vault_ = vaults[vaultId];
         require (vault_.owner != address(0), "Vault not found");                            // The vault existing is enough to be certain that the oracle exists.
         DataTypes.Balances memory balances_ = balances[vaultId];
+        DataTypes.Series memory series_ = series[vault_.seriesId];
 
-        return _level(vault_, balances_);
+        return _level(vault_, balances_, series_);
     }
 
     /// @dev Return the collateralization level of a vault. It will be negative if undercollateralized.
-    function _level(DataTypes.Vault memory vault_, DataTypes.Balances memory balances_)
+    function _level(
+        DataTypes.Vault memory vault_,
+        DataTypes.Balances memory balances_,
+        DataTypes.Series memory series_
+    )
         internal view
         returns (int128)
     {
-        DataTypes.Series memory series_ = series[vault_.seriesId];
         DataTypes.SpotOracle memory spotOracle_ = spotOracles[series_.baseId][vault_.ilkId];
         uint128 spot = spotOracle_.oracle.spot();
         uint128 ratio = spotOracle_.ratio;
