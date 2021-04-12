@@ -9,10 +9,10 @@ import "@yield-protocol/yieldspace-interfaces/IPool.sol";
 import "@yield-protocol/utils/contracts/token/IERC20.sol";
 import "@yield-protocol/utils/contracts/token/IERC2612.sol";
 import "dss-interfaces/src/dss/DaiAbstract.sol";
-import "./helpers/AccessControl.sol";
-import "./helpers/Multicall.sol";
-import "./helpers/TransferHelper.sol";
-import "./helpers/IWETH9.sol";
+import "@yield-protocol/utils-v2/contracts/AccessControl.sol";
+import "@yield-protocol/utils-v2/contracts/Multicall.sol";
+import "@yield-protocol/utils-v2/contracts/TransferHelper.sol";
+import "@yield-protocol/utils-v2/contracts/IWETH9.sol";
 
 
 library DMath { // Fixed point arithmetic in 6 decimal units

@@ -2230,6 +2230,11 @@
   resolved "https://registry.yarnpkg.com/@yarnpkg/lockfile/-/lockfile-1.1.0.tgz#e77a97fbd345b76d83245edcd17d393b1b41fb31"
   integrity sha512-GpSwvyXOcOOlV70vbnzjj4fW5xW/FdUF6nQEt1ENy7m4ZCczi1+/buVUPAqmGfqznsORNFzUMjctTIp8a9tuCQ==
 
+"@yield-protocol/utils-v2@^2.0.1":
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/@yield-protocol/utils-v2/-/utils-v2-2.0.1.tgz#4a32dc7dd8f746d87d93e268b68066d63ec7b5cb"
+  integrity sha512-/Er22GVj3IL1UQj0vyYczbQhyDPy9Yzd8sPDYFDLCq61g5J4/eBINP3zV4RLYa+UjVB5RfusEK/MpEFuYJbIwQ==
+
 "@yield-protocol/utils@^1.2.3":
   version "1.2.3"
   resolved "https://registry.yarnpkg.com/@yield-protocol/utils/-/utils-1.2.3.tgz#b5dc1d36bef1febc9ebac3ad876254fea1a5f166"

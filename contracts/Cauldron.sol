@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 import "@yield-protocol/vault-interfaces/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
-import "./helpers/AccessControl.sol";
+import "@yield-protocol/utils-v2/contracts/AccessControl.sol";
 
 
 library Math {

@@ -5,8 +5,8 @@ import "erc3156/contracts/interfaces/IERC3156FlashBorrower.sol";
 import "erc3156/contracts/interfaces/IERC3156FlashLender.sol";
 import "@yield-protocol/utils/contracts/token/IERC20.sol";
 import "@yield-protocol/vault-interfaces/IJoin.sol";
-import "./helpers/AccessControl.sol";
-import "./helpers/TransferHelper.sol";
+import "@yield-protocol/utils-v2/contracts/AccessControl.sol";
+import "@yield-protocol/utils-v2/contracts/TransferHelper.sol";
 
 
 library RMath { // Fixed point arithmetic in Ray units
