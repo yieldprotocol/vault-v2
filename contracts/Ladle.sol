@@ -360,16 +360,35 @@ contract Ladle is AccessControl(), Multicall {
     }
 
     /// @dev Change series and debt of a vault.
-    function roll(bytes12 vaultId, bytes6 seriesId, int128 art)
+    function roll(bytes12 vaultId, bytes6 newSeriesId, uint128 max)
         external payable
         returns (uint128)
     {
-        getOwnedVault(vaultId);
-        // TODO: Buy underlying in the pool for the new series, and sell it in pool for the old series.
-        // The new debt will be the amount of new series fyToken sold. This fyToken will be minted into the new series pool.
-        // The amount obtained when selling the underlying must produce the exact amount to repay the existing debt. The old series fyToken amount will be burnt.
+        DataTypes.Vault memory vault = getOwnedVault(vaultId);
+        DataTypes.Balances memory balances = cauldron.balances(vaultId);
         
-        return cauldron.roll(vaultId, seriesId, art);
+        // Calculate debt in fyToken terms
+        DataTypes.Series memory series = getSeries(vault.seriesId);
+        uint128 amt = _debtInBase(series, balances.art);
+
+        DataTypes.Series memory newSeries = getSeries(newSeriesId);
+        IPool pool = getPool(newSeriesId);
+        IFYToken fyToken = IFYToken(newSeries.fyToken);
+        IJoin baseJoin = getJoin(series.baseId);
+
+        // Mint fyToken to the pool, as a kind of flash loan
+        fyToken.mint(address(pool), amt * 2);
+
+        // Buy the base required to pay off the debt in series 1, and find out the debt in series 2
+        uint128 newDebt = pool.buyBaseToken(address(baseJoin), amt, max);
+        baseJoin.join(address(baseJoin), amt);                  // Repay the old series debt
+
+        pool.retrieveFYToken(address(fyToken));                 // Get the surplus fyToken
+        fyToken.burn(address(fyToken), (amt * 2) - newDebt);    // Burn the surplus
+
+        cauldron.roll(vaultId, newSeriesId, int128(newDebt));   // Fix cauldron.roll
+        
+        return newDebt;
     }
 
     /// @dev Move collateral and debt to the owner's vault.
@@ -440,14 +459,7 @@ contract Ladle is AccessControl(), Multicall {
 
         // Calculate debt in fyToken terms
         DataTypes.Series memory series = getSeries(vault.seriesId);
-        bytes6 baseId = series.baseId;
-        uint128 amt;
-        if (uint32(block.timestamp) >= series.maturity) {
-            IOracle rateOracle = cauldron.rateOracles(baseId);
-            amt = uint128(-art).dmul(rateOracle.accrual(series.maturity));
-        } else {
-            amt = uint128(-art);
-        }
+        uint128 amt = _debtInBase(series, uint128(-art));
 
         // Update accounting
         balances = cauldron.pour(vaultId, ink, art);
@@ -462,6 +474,19 @@ contract Ladle is AccessControl(), Multicall {
         // Manage underlying
         IJoin baseJoin = getJoin(series.baseId);
         baseJoin.join(msg.sender, amt);
+    }
+
+    /// @dev Calculate a debt amount for a series in base terms
+    function _debtInBase(DataTypes.Series memory series, uint128 art)
+        private view
+        returns (uint128 amt)
+    {
+        if (uint32(block.timestamp) >= series.maturity) {
+            IOracle rateOracle = cauldron.rateOracles(series.baseId);
+            amt = art.dmul(rateOracle.accrual(series.maturity));
+        } else {
+            amt = art;
+        }
     }
 
     /// @dev Repay debt by selling base in a pool and using the resulting fyToken
