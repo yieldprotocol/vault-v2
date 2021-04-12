@@ -220,13 +220,23 @@ contract Cauldron is AccessControl() {
     }
 
     /// @dev Change a vault series and/or collateral types.
+    function _tweak(bytes12 vaultId, DataTypes.Vault memory vault)
+        internal
+    {
+        require (ilks[vault.seriesId][vault.ilkId] == true, "Ilk not added");
+
+        vaults[vaultId] = vault;
+        emit VaultTweaked(vaultId, vault.seriesId, vault.ilkId);
+    }
+
+    /// @dev Change a vault series and/or collateral types.
     /// We can change the series if there is no debt, or assets if there are no assets
     function tweak(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
-        public      // TODO: Split in external and private
+        external
         auth
         returns(DataTypes.Vault memory vault)
     {
-        require (ilks[seriesId][ilkId] == true, "Ilk not added");
+        // require (ilks[seriesId][ilkId] == true, "Ilk not added");
         DataTypes.Balances memory balances_ = balances[vaultId];
         vault = vaults[vaultId];
         if (seriesId != vault.seriesId) {
@@ -237,8 +247,7 @@ contract Cauldron is AccessControl() {
             require (balances_.ink == 0, "Only with no collateral");
             vault.ilkId = ilkId;
         }
-        vaults[vaultId] = vault;
-        emit VaultTweaked(vaultId, seriesId, ilkId);
+        _tweak(vaultId, vault);
     }
 
     /// @dev Transfer a vault to another user.
@@ -341,7 +350,9 @@ contract Cauldron is AccessControl() {
         require (vault_.owner != address(0), "Vault not found");
         DataTypes.Series memory series_ = series[vault_.seriesId];
         balances_ = balances[vaultId];
+
         balances_ = _pour(vaultId, vault_, balances_, series_, ink, art);
+
         if (balances_.art > 0 && (ink < 0 || art > 0))                          // If there is debt and we are less safe
             require(_level(vault_, balances_, series_) >= 0, "Undercollateralized");
         return balances_;
@@ -364,6 +375,7 @@ contract Cauldron is AccessControl() {
 
         timestamps[vaultId] = now_;
         _give(vaultId, msg.sender);
+
         emit VaultTimestamped(vaultId, now_);
     }
 
@@ -378,13 +390,15 @@ contract Cauldron is AccessControl() {
         require (vault_.owner != address(0), "Vault not found");
         DataTypes.Series memory series_ = series[vault_.seriesId];
         balances_ = balances[vaultId];
+
         balances_ = _pour(vaultId, vault_, balances_, series_, -(ink.i128()), -(art.i128()));
+
         return balances_;
     }
 
     /// @dev Change series and debt of a vault.
     /// The module calling this function also needs to buy underlying in the pool for the new series, and sell it in pool for the old series.
-    function roll(bytes12 vaultId, bytes6 seriesId, int128 art)
+    function roll(bytes12 vaultId, bytes6 newSeriesId, int128 art)
         external
         auth
         returns (uint128)
@@ -392,22 +406,26 @@ contract Cauldron is AccessControl() {
         DataTypes.Vault memory vault_ = vaults[vaultId];
         require (vault_.owner != address(0), "Vault not found");
         DataTypes.Balances memory balances_ = balances[vaultId];
-        DataTypes.Series memory series_ = series[vault_.seriesId];
+        DataTypes.Series memory oldSeries_ = series[vault_.seriesId];
+        DataTypes.Series memory newSeries_ = series[newSeriesId];
+        require (oldSeries_.baseId == newSeries_.baseId, "Mismatched bases in series");
         
-        delete balances[vaultId];
-        tweak(vaultId, seriesId, vault_.ilkId);
+        // Change the vault series, ignoring balance and debt checks
+        vault_.seriesId = newSeriesId;
+        _tweak(vaultId, vault_);
 
         // Modify vault and global debt records. If debt increases, check global limit.
         if (art != 0) {
-            DataTypes.Debt memory debt_ = debt[series_.baseId][vault_.ilkId];
+            DataTypes.Debt memory debt_ = debt[oldSeries_.baseId][vault_.ilkId];
             if (art > 0) require (debt_.sum.add(art) <= debt_.max, "Max debt exceeded");
             balances_.art = balances_.art.add(art);
             debt_.sum = debt_.sum.add(art);
-            debt[series_.baseId][vault_.ilkId] = debt_;
+            debt[oldSeries_.baseId][vault_.ilkId] = debt_;
         }
         balances[vaultId] = balances_;
-        require(_level(vault_, balances_, series_) >= 0, "Undercollateralized");
-        emit VaultRolled(vaultId, seriesId, balances_.art);
+
+        require(_level(vault_, balances_, newSeries_) >= 0, "Undercollateralized");
+        emit VaultRolled(vaultId, newSeriesId, balances_.art);
         return balances_.art;
     }
 
