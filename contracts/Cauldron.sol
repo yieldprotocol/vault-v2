@@ -398,7 +398,7 @@ contract Cauldron is AccessControl() {
 
     /// @dev Change series and debt of a vault.
     /// The module calling this function also needs to buy underlying in the pool for the new series, and sell it in pool for the old series.
-    function roll(bytes12 vaultId, bytes6 newSeriesId, int128 art)
+    function roll(bytes12 vaultId, bytes6 newSeriesId, uint128 art)
         external
         auth
         returns (uint128)
@@ -414,14 +414,14 @@ contract Cauldron is AccessControl() {
         vault_.seriesId = newSeriesId;
         _tweak(vaultId, vault_);
 
-        // Modify vault and global debt records. If debt increases, check global limit.
-        if (art != 0) {
-            DataTypes.Debt memory debt_ = debt[oldSeries_.baseId][vault_.ilkId];
-            if (art > 0) require (debt_.sum.add(art) <= debt_.max, "Max debt exceeded");
-            balances_.art = balances_.art.add(art);
-            debt_.sum = debt_.sum.add(art);
-            debt[oldSeries_.baseId][vault_.ilkId] = debt_;
-        }
+        // Modify global debt records
+        DataTypes.Debt memory debt_ = debt[oldSeries_.baseId][vault_.ilkId];
+        debt_.sum = debt_.sum + art - balances_.art;
+        require (debt_.sum <= debt_.max, "Max debt exceeded");
+        debt[oldSeries_.baseId][vault_.ilkId] = debt_;
+
+        // Modify vault debt records
+        balances_.art =  art;
         balances[vaultId] = balances_;
 
         require(_level(vault_, balances_, newSeries_) >= 0, "Undercollateralized");
