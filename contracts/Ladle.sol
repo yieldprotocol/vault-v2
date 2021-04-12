@@ -386,7 +386,7 @@ contract Ladle is AccessControl(), Multicall {
         pool.retrieveFYToken(address(fyToken));                 // Get the surplus fyToken
         fyToken.burn(address(fyToken), (amt * 2) - newDebt);    // Burn the surplus
 
-        cauldron.roll(vaultId, newSeriesId, newDebt);   // Fix cauldron.roll
+        cauldron.roll(vaultId, newSeriesId, newDebt);           // Change the series and debt for the vault
         
         return newDebt;
     }
