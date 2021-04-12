@@ -300,11 +300,9 @@ contract Cauldron is AccessControl() {
 
     /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
     /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
-    function _pour(bytes12 vaultId, int128 ink, int128 art)
+    function _pour(bytes12 vaultId, DataTypes.Vault memory vault_, DataTypes.Balances memory balances_, int128 ink, int128 art)
         internal returns (DataTypes.Balances memory)
     {
-        DataTypes.Vault memory vault_ = vaults[vaultId];
-        DataTypes.Balances memory balances_ = balances[vaultId];
         DataTypes.Series memory series_ = series[vault_.seriesId];
 
         // For now, the collateralization checks are done outside to allow for underwater operation. That might change.
@@ -336,7 +334,8 @@ contract Cauldron is AccessControl() {
     {
         DataTypes.Vault memory vault_ = vaults[vaultId];
         require (vault_.owner != address(0), "Vault not found");
-        balances_ = _pour(vaultId, ink, art);
+        balances_ = balances[vaultId];
+        balances_ = _pour(vaultId, vault_, balances_, ink, art);
         if (balances_.art > 0 && (ink < 0 || art > 0))                          // If there is debt and we are less safe
             require(_level(vault_, balances_) >= 0, "Undercollateralized");
         return balances_;
@@ -368,7 +367,10 @@ contract Cauldron is AccessControl() {
         auth
         returns (DataTypes.Balances memory balances_)
     {
-        balances_ = _pour(vaultId, -(ink.i128()), -(art.i128()));
+        DataTypes.Vault memory vault_ = vaults[vaultId];
+        require (vault_.owner != address(0), "Vault not found");
+        balances_ = balances[vaultId];
+        balances_ = _pour(vaultId, vault_, balances_, -(ink.i128()), -(art.i128()));
         return balances_;
     }
 
