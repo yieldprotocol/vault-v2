@@ -191,7 +191,7 @@ contract Cauldron is AccessControl() {
 
     /// @dev Create a new vault, linked to a series (and therefore underlying) and a collateral
     function build(address owner, bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
-        public
+        external
         auth
         returns(DataTypes.Vault memory vault)
     {
@@ -209,7 +209,7 @@ contract Cauldron is AccessControl() {
 
     /// @dev Destroy an empty vault. Used to recover gas costs.
     function destroy(bytes12 vaultId)
-        public
+        external
         auth
     {
         DataTypes.Balances memory balances_ = balances[vaultId];
@@ -222,7 +222,7 @@ contract Cauldron is AccessControl() {
     /// @dev Change a vault series and/or collateral types.
     /// We can change the series if there is no debt, or assets if there are no assets
     function tweak(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
-        public
+        public      // TODO: Split in external and private
         auth
         returns(DataTypes.Vault memory vault)
     {
@@ -254,7 +254,7 @@ contract Cauldron is AccessControl() {
 
     /// @dev Transfer a vault to another user.
     function give(bytes12 vaultId, address receiver)
-        public
+        external
         auth
         returns(DataTypes.Vault memory vault)
     {
@@ -265,7 +265,7 @@ contract Cauldron is AccessControl() {
 
     /// @dev Move collateral and debt between vaults.
     function stir(bytes12 from, bytes12 to, uint128 ink, uint128 art)
-        public
+        external
         auth
         returns (DataTypes.Balances memory, DataTypes.Balances memory)
     {
@@ -274,28 +274,28 @@ contract Cauldron is AccessControl() {
         require (vaultFrom.owner != address(0), "Origin vault not found");
         require (vaultTo.owner != address(0), "Destination vault not found");
 
-        DataTypes.Balances memory balancesFrom_ = balances[from];
-        DataTypes.Balances memory balancesTo_ = balances[to];
+        DataTypes.Balances memory balancesFrom = balances[from];
+        DataTypes.Balances memory balancesTo = balances[to];
 
         if (ink > 0) {
             require (vaultFrom.ilkId == vaultTo.ilkId, "Different collateral");
-            balancesFrom_.ink -= ink;
-            balancesTo_.ink += ink;
+            balancesFrom.ink -= ink;
+            balancesTo.ink += ink;
         }
         if (art > 0) {
             require (vaultFrom.seriesId == vaultTo.seriesId, "Different series");
-            balancesFrom_.art -= art;
-            balancesTo_.art += art;
+            balancesFrom.art -= art;
+            balancesTo.art += art;
         }
 
-        balances[from] = balancesFrom_;
-        balances[to] = balancesTo_;
+        balances[from] = balancesFrom;
+        balances[to] = balancesTo;
 
-        if (ink > 0) require(level(from) >= 0, "Undercollateralized at origin");
-        if (art > 0) require(level(to) >= 0, "Undercollateralized at destination");
+        if (ink > 0) require(_level(vaultFrom, balancesFrom) >= 0, "Undercollateralized at origin");
+        if (art > 0) require(_level(vaultTo, balancesTo) >= 0, "Undercollateralized at destination");
 
         emit VaultStirred(from, to, ink, art);
-        return (balancesFrom_, balancesTo_);
+        return (balancesFrom, balancesTo);
     }
 
     /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
@@ -330,26 +330,32 @@ contract Cauldron is AccessControl() {
     /// @dev Manipulate a vault, ensuring it is collateralized afterwards.
     /// To be used by debt management contracts.
     function pour(bytes12 vaultId, int128 ink, int128 art)
-        public
+        external
         auth
         returns (DataTypes.Balances memory balances_)
     {
-        require (vaults[vaultId].owner != address(0), "Vault not found");
+        DataTypes.Vault memory vault_ = vaults[vaultId];
+        require (vault_.owner != address(0), "Vault not found");
         balances_ = _pour(vaultId, ink, art);
         if (balances_.art > 0 && (ink < 0 || art > 0))                          // If there is debt and we are less safe
-            require(level(vaultId) >= 0, "Undercollateralized");
+            require(_level(vault_, balances_) >= 0, "Undercollateralized");
         return balances_;
     }
 
     /// @dev Give a non-timestamped vault to the caller, and timestamp it.
     /// To be used for liquidation engines.
     function grab(bytes12 vaultId)
-        public
+        external
         auth
     {
         uint32 now_ = uint32(block.timestamp);
         require (timestamps[vaultId] + 24*60*60 <= now_, "Timestamped");        // Grabbing a vault protects it for a day from being grabbed by another liquidator. All grabbed vaults will be suddenly released on the 7th of February 2106, at 06:28:16 GMT. I can live with that.
-        require(level(vaultId) < 0, "Not undercollateralized");
+
+        DataTypes.Vault memory vault_ = vaults[vaultId];
+        require (vault_.owner != address(0), "Vault not found");
+        DataTypes.Balances memory balances_ = balances[vaultId];
+        require(_level(vault_, balances_) < 0, "Not undercollateralized");
+
         timestamps[vaultId] = now_;
         _give(vaultId, msg.sender);
         emit VaultTimestamped(vaultId, now_);
@@ -358,7 +364,7 @@ contract Cauldron is AccessControl() {
     /// @dev Reduce debt and collateral from a vault, ignoring collateralization checks.
     /// To be used by liquidation engines.
     function slurp(bytes12 vaultId, uint128 ink, uint128 art)
-        public
+        external
         auth
         returns (DataTypes.Balances memory balances_)
     {
@@ -369,7 +375,7 @@ contract Cauldron is AccessControl() {
     /// @dev Change series and debt of a vault.
     /// The module calling this function also needs to buy underlying in the pool for the new series, and sell it in pool for the old series.
     function roll(bytes12 vaultId, bytes6 seriesId, int128 art)
-        public
+        external
         auth
         returns (uint128)
     {
@@ -390,7 +396,7 @@ contract Cauldron is AccessControl() {
             debt[series_.baseId][vault_.ilkId] = debt_;
         }
         balances[vaultId] = balances_;
-        require(level(vaultId) >= 0, "Undercollateralized");
+        require(_level(vault_, balances_) >= 0, "Undercollateralized");
         emit VaultRolled(vaultId, seriesId, balances_.art);
         return balances_.art;
     }
@@ -401,8 +407,17 @@ contract Cauldron is AccessControl() {
     function level(bytes12 vaultId) public view returns (int128) {
         DataTypes.Vault memory vault_ = vaults[vaultId];
         require (vault_.owner != address(0), "Vault not found");                            // The vault existing is enough to be certain that the oracle exists.
-        DataTypes.Series memory series_ = series[vault_.seriesId];
         DataTypes.Balances memory balances_ = balances[vaultId];
+
+        return _level(vault_, balances_);
+    }
+
+    /// @dev Return the collateralization level of a vault. It will be negative if undercollateralized.
+    function _level(DataTypes.Vault memory vault_, DataTypes.Balances memory balances_)
+        internal view
+        returns (int128)
+    {
+        DataTypes.Series memory series_ = series[vault_.seriesId];
         DataTypes.SpotOracle memory spotOracle_ = spotOracles[series_.baseId][vault_.ilkId];
         uint128 spot = spotOracle_.oracle.spot();
         uint128 ratio = spotOracle_.ratio;
