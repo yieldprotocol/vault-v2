@@ -68,7 +68,7 @@ describe('FYToken', function () {
     await baseJoin.join(owner, WAD.mul(2)) // This loads the base join to serve redemptions
   })
 
-  it.only('mints a fee to the beneficiary', async () => {
+  it('mints a fee to the beneficiary', async () => {
     const feeId = ethers.utils.formatBytes32String('fee')
     const beneficiaryId = ethers.utils.formatBytes32String('beneficiary')
     const wrongId = ethers.utils.formatBytes32String('wrong')
