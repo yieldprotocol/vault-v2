@@ -31,20 +31,23 @@ library Safe256 {
     }
 }
 
-// TODO: Setter for MAX_TIME_TO_MATURITY
+
 contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit {
     using DMath for uint256;
     using Safe256 for uint256;
 
     event Redeemed(address indexed from, address indexed to, uint256 amount, uint256 redeemed);
+    event ParameterSet(bytes32 parameter, bytes32 value);
 
     uint256 constant internal MAX_TIME_TO_MATURITY = 126144000; // seconds in four years
     bytes32 constant internal FLASH_LOAN_RETURN = keccak256("ERC3156FlashBorrower.onFlashLoan");
 
-    IJoin public join;                                          // Source of redemption funds.
-    IOracle public oracle;                                      // Oracle for the savings rate.
-    address public override asset;
-    uint256 public override maturity;
+    IJoin public immutable join;                                          // Source of redemption funds.
+    IOracle public immutable oracle;                                      // Oracle for the savings rate.
+    address public immutable override asset;
+    uint256 public immutable override maturity;
+    uint256 public fee;
+    address public beneficiary;
 
     constructor(
         IOracle oracle_, // Underlying vs its interest-bearing version
@@ -83,6 +86,17 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         _;
     }
 
+    /// @dev Set the fee or beneficiary parameters
+    function setParameter(bytes32 parameter, bytes32 value)
+        public
+        auth    
+    {
+        if (parameter == "fee") fee = uint256(value);
+        else if (parameter == "beneficiary") beneficiary = address(bytes20(value));
+        else revert("Unrecognized parameter");
+        emit ParameterSet(parameter, value);
+    }
+
     /// @dev Mature the fyToken by recording the chi in its oracle.
     /// If called more than once, it will revert.
     /// Check if it has been called as `fyToken.oracle.recorded(fyToken.maturity())`
@@ -114,6 +128,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         beforeMaturity
         auth
     {
+        _mint(beneficiary, (maturity - block.timestamp) * fee * amount / 1e18); // TODO: Check if overriding _mint is cheaper in gas
         _mint(to, amount);
     }
 
@@ -168,7 +183,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         returns(bool)
     {
         require(token == address(this), "Unsupported currency");
-        _mint(address(receiver), amount);
+        _mint(address(receiver), amount);   // TODO: Minting a fee to the beneficiary could be exploited. Should we do anything here?
         require(receiver.onFlashLoan(msg.sender, token, amount, 0, data) == FLASH_LOAN_RETURN, "Non-compliant borrower");
         _burn(address(receiver), amount);
         return true;
