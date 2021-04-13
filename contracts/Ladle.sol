@@ -15,7 +15,7 @@ import "@yield-protocol/utils-v2/contracts/TransferHelper.sol";
 import "@yield-protocol/utils-v2/contracts/IWETH9.sol";
 
 
-library DMath { // Fixed point arithmetic in 6 decimal units
+library LadleDMath { // Fixed point arithmetic in 6 decimal units
     /// @dev Multiply an amount by a fixed point factor with 6 decimals, returning an amount
     function dmul(uint128 x, uint128 y) internal pure returns (uint128 z) {
         unchecked {
@@ -26,7 +26,7 @@ library DMath { // Fixed point arithmetic in 6 decimal units
     }
 }
 
-library Safe128 {
+library LadleSafe128 {
     /// @dev Safely cast an uint128 to an int128
     function i128(uint128 x) internal pure returns (int128 y) {
         require (x <= uint128(type(int128).max), "Cast overflow");
@@ -36,8 +36,8 @@ library Safe128 {
 
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
 contract Ladle is AccessControl(), Multicall {
-    using DMath for uint128;
-    using Safe128 for uint128;
+    using LadleDMath for uint128;
+    using LadleSafe128 for uint128;
     using TransferHelper for IERC20;
     using TransferHelper for address payable;
 

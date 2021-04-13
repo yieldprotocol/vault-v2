@@ -5,14 +5,14 @@ import "@yield-protocol/vault-interfaces/ICauldron.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
 
 
-library Math {
+library WitchMath {
     /// @dev Minimum of two unsigned integers
     function min(uint128 x, uint128 y) internal pure returns (uint128) {
         return x < y ? x : y;
     }
 }
 
-library RMath {
+library WitchRMath {
     /// @dev Multiply an amount by a fixed point factor in ray units, returning an amount
     function rmul(uint128 x, uint128 y) internal pure returns (uint128 z) {
         unchecked {
@@ -45,7 +45,7 @@ library RMath {
 
 // TODO: Add a setter for AUCTION_TIME
 contract Witch {
-    using RMath for uint128;
+    using WitchRMath for uint128;
 
     event Bought(address indexed buyer, bytes12 indexed vaultId, uint128 ink, uint128 art);
   
@@ -80,7 +80,7 @@ contract Witch {
             uint128 RAY = 1e27;
             uint128 term1 = balances_.ink.rdiv(balances_.art);
             uint128 term2 = RAY / 2;
-            uint128 dividend3 = Math.min(AUCTION_TIME, elapsed);
+            uint128 dividend3 = WitchMath.min(AUCTION_TIME, elapsed);
             uint128 divisor3 = AUCTION_TIME * 2;
             uint128 term3 = dividend3.rdiv(divisor3);
             price = RAY.rdiv(term1.rmul(term2 + term3));
