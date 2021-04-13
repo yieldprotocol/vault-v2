@@ -10,14 +10,14 @@ import "@yield-protocol/vault-interfaces/IOracle.sol";
 import "@yield-protocol/utils-v2/contracts/AccessControl.sol";
 
 
-library DMath { // Fixed point arithmetic in 6 decimal units
+library FYTokenDMath { // Fixed point arithmetic in 6 decimal units
     /// @dev Multiply an amount by a fixed point factor with 6 decimals, returning an amount
     function dmul(uint256 x, uint256 y) internal pure returns (uint256 z) {
         z = x * y / 1e6;
     }
 }
 
-library Safe256 {
+library FYTokenSafe256 {
     /// @dev Safely cast an uint256 to an uint128
     function u128(uint256 x) internal pure returns (uint128 y) {
         require (x <= type(uint128).max, "Cast overflow");
@@ -33,8 +33,8 @@ library Safe256 {
 
 // TODO: Setter for MAX_TIME_TO_MATURITY
 contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit {
-    using DMath for uint256;
-    using Safe256 for uint256;
+    using FYTokenDMath for uint256;
+    using FYTokenSafe256 for uint256;
 
     event Redeemed(address indexed from, address indexed to, uint256 amount, uint256 redeemed);
 
