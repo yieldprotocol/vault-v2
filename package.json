@@ -1,6 +1,6 @@
 {
   "name": "@yield-protocol/vault-v2",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "description": "Yield Collateralized Debt Engine v2",
   "main": "index.js",
   "author": "Yield Inc.",
