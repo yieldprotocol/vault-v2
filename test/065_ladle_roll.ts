@@ -26,7 +26,6 @@ describe('Ladle - roll', function () {
   let ladle: Ladle
   let ladleFromOther: Ladle
 
-  
   async function fixture() {
     return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId], [seriesId, otherSeriesId])
   }
@@ -67,7 +66,7 @@ describe('Ladle - roll', function () {
   it('rolls a vault', async () => {
     expect(await ladle.roll(vaultId, otherSeriesId, MAX))
       .to.emit(cauldron, 'VaultRolled')
-      .withArgs(vaultId, otherSeriesId, WAD.mul(105).div(100))  // Mock pools have a constant rate of 5%
+      .withArgs(vaultId, otherSeriesId, WAD.mul(105).div(100)) // Mock pools have a constant rate of 5%
     expect((await cauldron.vaults(vaultId)).seriesId).to.equal(otherSeriesId)
     expect((await cauldron.balances(vaultId)).ink).to.equal(WAD)
     expect((await cauldron.balances(vaultId)).art).to.equal(WAD.mul(105).div(100))
