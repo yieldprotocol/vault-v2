@@ -4,6 +4,10 @@
   "description": "Yield Collateralized Debt Engine v2",
   "main": "index.js",
   "author": "Yield Inc.",
+  "files": [
+    "contracts/*.sol",
+    "contracts/helpers/*.sol"
+  ],
   "scripts": {
     "build": "hardhat compile",
     "test": "hardhat test",
@@ -44,5 +48,14 @@
     "typechain": "^4.0.1",
     "typechain-target-ethers-v5": "^5.0.1",
     "typescript": "^3.9.7"
-  }
+  },
+  "repository": {
+    "url": "git+https://github.com/yieldprotocol/vault-v2.git",
+    "type": "git"
+  },
+  "bugs": {
+    "url": "https://github.com/yieldprotocol/vault-v2/issues"
+  },
+  "license": "GPL-3.0-or-later",
+  "homepage": "https://github.com/yieldprotocol/vault-v2#readme"
 }
