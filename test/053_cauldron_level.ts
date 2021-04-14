@@ -66,31 +66,8 @@ describe('Cauldron - level', function () {
       for (let ratio of [50, 100, 200]) {
         await cauldron.setSpotOracle(baseId, ilkId, spotOracle.address, ratio * 10000)
         const expectedLevel = ink.mul(spot).sub(art.mul(ratio).div(100))
-        expect(await cauldron.level(vaultId)).to.equal(expectedLevel)
+        expect(await cauldron.callStatic.level(vaultId)).to.equal(expectedLevel)
         // console.log(`${ink} * ${DEC6.mul(spot)} - ${art} * ${ratio} = ${await cauldron.level(vaultId)} | ${expectedLevel} `)
-      }
-    }
-  })
-
-  it('after maturity, level is ink * spot - art * accrual * ratio', async () => {
-    await spotOracle.setSpot(DEC6.mul(1))
-    await rateOracle.setSpot(DEC6.mul(1))
-    await ethers.provider.send('evm_mine', [(await fyToken.maturity()).toNumber()])
-    await rateOracle.record(await fyToken.maturity())
-
-    const ink = (await cauldron.balances(vaultId)).ink
-    const art = (await cauldron.balances(vaultId)).art
-    for (let spot of [1, 2, 4]) {
-      await spotOracle.setSpot(DEC6.mul(spot))
-      for (let rate of [110, 120, 140]) {
-        await rateOracle.setSpot(DEC6.mul(rate).div(100))
-        // accrual = rate / 100
-        for (let ratio of [50, 100, 200]) {
-          await cauldron.setSpotOracle(baseId, ilkId, spotOracle.address, ratio * 10000)
-          const expectedLevel = ink.mul(spot).sub(art.mul(rate).mul(ratio).div(10000))
-          expect(await cauldron.level(vaultId)).to.equal(expectedLevel)
-          // console.log(`${ink} * ${RAY.mul(spot)} - ${art} * ${ratio} = ${await cauldron.level(vaultId)} | ${expectedLevel} `)
-        }
       }
     }
   })
@@ -101,5 +78,43 @@ describe('Cauldron - level', function () {
 
   it("users can't withdraw and become undercollateralized", async () => {
     await expect(ladle.pour(vaultId, owner, WAD.mul(-1), 0)).to.be.revertedWith('Undercollateralized')
+  })
+
+  it('does not allow to mature before maturity', async () => {
+    await expect(cauldron.mature(seriesId)).to.be.revertedWith('Only after maturity')
+  })
+
+  describe('after maturity', async () => {
+    beforeEach(async () => {
+      await spotOracle.setSpot(DEC6.mul(1))
+      await rateOracle.setSpot(DEC6.mul(1))
+      await ethers.provider.send('evm_mine', [(await fyToken.maturity()).toNumber()])
+    })
+
+    it('matures by recording the chi value', async () => {
+      expect(await cauldron.mature(seriesId))
+        .to.emit(cauldron, 'SeriesMatured')
+        .withArgs(seriesId, DEC6)
+    })
+
+    it('after maturity, level is ink * spot - art * accrual * ratio', async () => {
+      await cauldron.level(vaultId)
+  
+      const ink = (await cauldron.balances(vaultId)).ink
+      const art = (await cauldron.balances(vaultId)).art
+      for (let spot of [1, 2, 4]) {
+        await spotOracle.setSpot(DEC6.mul(spot))
+        for (let rate of [110, 120, 140]) {
+          await rateOracle.setSpot(DEC6.mul(rate).div(100))
+          // accrual = rate / 100
+          for (let ratio of [50, 100, 200]) {
+            await cauldron.setSpotOracle(baseId, ilkId, spotOracle.address, ratio * 10000)
+            const expectedLevel = ink.mul(spot).sub(art.mul(rate).mul(ratio).div(10000))
+            expect(await cauldron.callStatic.level(vaultId)).to.equal(expectedLevel)
+            // console.log(`${ink} * ${RAY.mul(spot)} - ${art} * ${ratio} = ${await cauldron.level(vaultId)} | ${expectedLevel} `)
+          }
+        }
+      }
+    })  
   })
 })
