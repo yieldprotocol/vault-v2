@@ -43,7 +43,6 @@ library WitchRMath {
     }
 }
 
-// TODO: Add a setter for AUCTION_TIME
 contract Witch {
     using WitchRMath for uint128;
 
