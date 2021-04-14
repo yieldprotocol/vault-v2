@@ -9,7 +9,7 @@ import "@yield-protocol/utils-v2/contracts/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/TransferHelper.sol";
 
 
-library RMath { // Fixed point arithmetic in Ray units
+library JoinRMath { // Fixed point arithmetic in Ray units
     /// @dev Multiply an amount by a fixed point factor in ray units, returning an amount
     function rmul(uint256 x, uint256 y) internal pure returns (uint256 z) {
         unchecked {
@@ -19,7 +19,7 @@ library RMath { // Fixed point arithmetic in Ray units
     }
 }
 
-library Safe256 {
+library JoinSafe256 {
     /// @dev Safely cast an uint256 to an uint128
     function u128(uint256 x) internal pure returns (uint128 y) {
         require (x <= type(uint128).max, "Cast overflow");
@@ -29,8 +29,8 @@ library Safe256 {
 
 contract Join is IJoin, IERC3156FlashLender, AccessControl() {
     using TransferHelper for IERC20;
-    using RMath for uint256;
-    using Safe256 for uint256;
+    using JoinRMath for uint256;
+    using JoinSafe256 for uint256;
 
     event FlashFeeFactorSet(uint256 indexed fee);
 

@@ -6,7 +6,7 @@ import "@yield-protocol/vault-interfaces/DataTypes.sol";
 import "@yield-protocol/utils-v2/contracts/AccessControl.sol";
 
 
-library Math {
+library CauldronMath {
     /// @dev Add a number (which might be negative) to a positive, and revert if the result is negative.
     function add(uint128 x, int128 y) internal pure returns (uint128 z) {
         require (y > 0 || x >= uint128(-y), "Result below zero");
@@ -14,7 +14,7 @@ library Math {
     }
 }
 
-library DMath { // Fixed point arithmetic in 6 decimal units
+library CauldronDMath { // Fixed point arithmetic in 6 decimal units
     /// @dev Multiply an amount by a fixed point factor with 6 decimals, returning an amount
     function dmul(uint128 x, uint128 y) internal pure returns (uint128 z) {
         unchecked {
@@ -25,7 +25,7 @@ library DMath { // Fixed point arithmetic in 6 decimal units
     }
 }
 
-library RMath { // Fixed point arithmetic in Ray units
+library CauldronRMath { // Fixed point arithmetic in Ray units
     /// @dev Multiply an integer amount by a fixed point factor in ray units, returning an integer amount
     function rmul(int128 x, uint128 y) internal pure returns (int128 z) {
         unchecked {
@@ -36,7 +36,7 @@ library RMath { // Fixed point arithmetic in Ray units
     }
 }
 
-library Safe128 {
+library CauldronSafe128 {
     /// @dev Safely cast an int128 to an uint128
     function u128(int128 x) internal pure returns (uint128 y) {
         require (x >= 0, "Cast overflow");
@@ -50,7 +50,7 @@ library Safe128 {
     }
 }
 
-library Safe256 {
+library CauldronSafe256 {
     /// @dev Safely cast an uint256 to an int128
     function u32(uint256 x) internal pure returns (uint32 y) {
         require (x <= type(uint32).max, "Cast overflow");
@@ -61,12 +61,12 @@ library Safe256 {
 // TODO: Add a setter for auction protection (same as Witch.AUCTION_TIME?)
 
 contract Cauldron is AccessControl() {
-    using Math for uint128;
-    using DMath for uint128;
-    using RMath for int128;
-    using Safe256 for uint256;
-    using Safe128 for uint128;
-    using Safe128 for int128;
+    using CauldronMath for uint128;
+    using CauldronDMath for uint128;
+    using CauldronRMath for int128;
+    using CauldronSafe256 for uint256;
+    using CauldronSafe128 for uint128;
+    using CauldronSafe128 for int128;
 
     event AssetAdded(bytes6 indexed assetId, address indexed asset);
     event SeriesAdded(bytes6 indexed seriesId, bytes6 indexed baseId, address indexed fyToken);
