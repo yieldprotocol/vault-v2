@@ -85,7 +85,7 @@ export class YieldEnvironment {
         id('give(bytes12,address)'),
         id('pour(bytes12,int128,int128)'),
         id('stir(bytes12,bytes12,uint128,uint128)'),
-        id('roll(bytes12,bytes6,int128)'),
+        id('roll(bytes12,bytes6,uint128)'),
         id('slurp(bytes12,uint128,uint128)'),
       ],
       receiver
