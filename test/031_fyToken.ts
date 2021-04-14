@@ -94,9 +94,7 @@ describe('FYToken', function () {
     it('matures if needed on first redemption after maturity', async () => {
       const baseOwnerBefore = await base.balanceOf(owner)
       const baseJoinBefore = await base.balanceOf(baseJoin.address)
-      await expect(fyToken.redeem(owner, WAD))
-        .to.emit(fyToken, 'Redeemed')
-        .withArgs(owner, owner, WAD, WAD)
+      await expect(fyToken.redeem(owner, WAD)).to.emit(fyToken, 'Redeemed').withArgs(owner, owner, WAD, WAD)
       expect(await base.balanceOf(baseJoin.address)).to.equal(baseJoinBefore.sub(WAD))
       expect(await base.balanceOf(owner)).to.equal(baseOwnerBefore.add(WAD))
       expect(await fyToken.balanceOf(owner)).to.equal(0)

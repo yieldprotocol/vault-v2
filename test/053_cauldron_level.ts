@@ -99,7 +99,7 @@ describe('Cauldron - level', function () {
 
     it('after maturity, level is ink * spot - art * accrual * ratio', async () => {
       await cauldron.level(vaultId)
-  
+
       const ink = (await cauldron.balances(vaultId)).ink
       const art = (await cauldron.balances(vaultId)).art
       for (let spot of [1, 2, 4]) {
@@ -115,6 +115,6 @@ describe('Cauldron - level', function () {
           }
         }
       }
-    })  
+    })
   })
 })
