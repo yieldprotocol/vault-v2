@@ -39,11 +39,10 @@ describe('Join', function () {
     join = (await deployContract(ownerAcc, JoinArtifact, [token.address])) as Join
     joinFromOther = join.connect(otherAcc)
 
-    await join.grantRoles([
-      id('join(address,uint128)'),
-      id('exit(address,uint128)'),
-      id('retrieve(address,address)')
-    ], owner)
+    await join.grantRoles(
+      [id('join(address,uint128)'), id('exit(address,uint128)'), id('retrieve(address,address)')],
+      owner
+    )
 
     await token.mint(owner, WAD.mul(100))
     await token.approve(join.address, MAX)
