@@ -82,18 +82,24 @@ describe('FYToken', function () {
 
     it('does not allow to mature more than once', async () => {
       await fyToken.mature()
-      await expect(fyToken.mature()).to.be.revertedWith('Already recorded a value')
-    })
-
-    it('does not allow to redeem before chi is recorded', async () => {
-      await expect(fyToken.redeem(owner, WAD)).to.be.revertedWith('No recorded spot')
+      await expect(fyToken.mature()).to.be.revertedWith('Already matured')
     })
 
     it('matures by recording the chi value', async () => {
-      const maturity = await fyToken.maturity()
       expect(await fyToken.mature())
-        .to.emit(chiOracle, 'Recorded')
-        .withArgs(maturity, DEC6)
+        .to.emit(fyToken, 'Matured')
+        .withArgs(DEC6)
+    })
+
+    it('matures if needed on first redemption after maturity', async () => {
+      const baseOwnerBefore = await base.balanceOf(owner)
+      const baseJoinBefore = await base.balanceOf(baseJoin.address)
+      await expect(fyToken.redeem(owner, WAD))
+        .to.emit(fyToken, 'Redeemed')
+        .withArgs(owner, owner, WAD, WAD)
+      expect(await base.balanceOf(baseJoin.address)).to.equal(baseJoinBefore.sub(WAD))
+      expect(await base.balanceOf(owner)).to.equal(baseOwnerBefore.add(WAD))
+      expect(await fyToken.balanceOf(owner)).to.equal(0)
     })
 
     describe('once matured', async () => {

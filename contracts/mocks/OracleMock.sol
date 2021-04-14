@@ -3,8 +3,8 @@ pragma solidity ^0.8.0;
 import "@yield-protocol/vault-interfaces/IOracle.sol";
 
 
-library R6Math { // Fixed point arithmetic in Ray units
-    /// @dev Divide an unsigned integer by another, returning a fixed point factor in ray units
+library R6Math { // Fixed point arithmetic with 6 decimals
+    /// @dev Divide an unsigned integer by another, returning a fixed point factor with 6 decimals
     function rdiv(uint128 x, uint128 y) internal pure returns (uint128 z) {
         uint256 _z = uint256(x) * 1e6 / uint256(y);
         require (_z <= type(uint128).max, "RDIV Overflow");
