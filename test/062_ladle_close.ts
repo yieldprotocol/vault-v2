@@ -148,11 +148,11 @@ describe('Ladle - close', function () {
     const accrual = DEC6.mul(110).div(100) // accrual is 10%
 
     beforeEach(async () => {
-      await spotOracle.setSpot(DEC6.mul(1))
-      await rateOracle.setSpot(DEC6.mul(1))
+      await spotOracle.set(DEC6.mul(1))
+      await rateOracle.set(DEC6.mul(1))
       await ethers.provider.send('evm_mine', [(await fyToken.maturity()).toNumber()])
       await cauldron.mature(seriesId)
-      await rateOracle.setSpot(accrual) // Since spot was 1 when recorded at maturity, accrual is equal to the current spot
+      await rateOracle.set(accrual) // Since spot was 1 when recorded at maturity, accrual is equal to the current spot
     })
 
     it('users can repay their debt with underlying at accrual rate', async () => {

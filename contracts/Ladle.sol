@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 import "@yield-protocol/vault-interfaces/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/IJoin.sol";
 import "@yield-protocol/vault-interfaces/ICauldron.sol";
-import "@yield-protocol/vault-interfaces/IOracle.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
 import "@yield-protocol/yieldspace-interfaces/IPool.sol";
 import "@yield-protocol/utils/contracts/token/IERC20.sol";

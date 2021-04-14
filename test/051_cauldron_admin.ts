@@ -68,8 +68,8 @@ describe('Cauldron - admin', function () {
       [
         id('addAsset(bytes6,address)'),
         id('setMaxDebt(bytes6,bytes6,uint128)'),
-        id('setRateOracle(bytes6,address)'),
-        id('setSpotOracle(bytes6,bytes6,address,uint32)'),
+        id('setRateOracle(bytes6,address,bytes)'),
+        id('setSpotOracle(bytes6,bytes6,address,uint32,bytes)'),
         id('addSeries(bytes6,bytes6,address)'),
         id('addIlks(bytes6,bytes6[])'),
       ],
@@ -124,13 +124,13 @@ describe('Cauldron - admin', function () {
     })
 
     it('does not allow adding a rate oracle for an unknown base', async () => {
-      await expect(cauldron.setRateOracle(mockAssetId, oracle.address)).to.be.revertedWith('Asset not found')
+      await expect(cauldron.setRateOracle(mockAssetId, oracle.address, '0x00')).to.be.revertedWith('Asset not found')
     })
 
     it('adds a rate oracle', async () => {
-      expect(await cauldron.setRateOracle(baseId, oracle.address))
+      expect(await cauldron.setRateOracle(baseId, oracle.address, '0x00'))
         .to.emit(cauldron, 'RateOracleAdded')
-        .withArgs(baseId, oracle.address)
+        .withArgs(baseId, oracle.address, '0x00')
 
       expect(await cauldron.rateOracles(baseId)).to.equal(oracle.address)
     })
@@ -141,7 +141,7 @@ describe('Cauldron - admin', function () {
 
     describe('with a rate oracle added', async () => {
       beforeEach(async () => {
-        await cauldron.setRateOracle(baseId, oracle.address)
+        await cauldron.setRateOracle(baseId, oracle.address, '0x00')
       })
 
       it('does not allow not linking a series to a fyToken', async () => {
@@ -175,21 +175,21 @@ describe('Cauldron - admin', function () {
         })
 
         it('does not allow adding a spot oracle for an unknown base', async () => {
-          await expect(cauldron.setSpotOracle(mockAssetId, ilkId1, oracle.address, ratio)).to.be.revertedWith(
+          await expect(cauldron.setSpotOracle(mockAssetId, ilkId1, oracle.address, ratio, '0x00')).to.be.revertedWith(
             'Asset not found'
           )
         })
 
         it('does not allow adding a spot oracle for an unknown ilk', async () => {
-          await expect(cauldron.setSpotOracle(baseId, mockAssetId, oracle.address, ratio)).to.be.revertedWith(
+          await expect(cauldron.setSpotOracle(baseId, mockAssetId, oracle.address, ratio, '0x00')).to.be.revertedWith(
             'Asset not found'
           )
         })
 
         it('adds a spot oracle and its collateralization ratio', async () => {
-          expect(await cauldron.setSpotOracle(baseId, ilkId1, oracle.address, ratio))
+          expect(await cauldron.setSpotOracle(baseId, ilkId1, oracle.address, ratio, '0x00'))
             .to.emit(cauldron, 'SpotOracleAdded')
-            .withArgs(baseId, ilkId1, oracle.address, ratio)
+            .withArgs(baseId, ilkId1, oracle.address, ratio, '0x00')
 
           const spot = await cauldron.spotOracles(baseId, ilkId1)
           expect(spot.oracle).to.equal(oracle.address)
@@ -198,8 +198,8 @@ describe('Cauldron - admin', function () {
 
         describe('with an oracle for the series base and an ilk', async () => {
           beforeEach(async () => {
-            await cauldron.setSpotOracle(baseId, ilkId1, oracle.address, ratio)
-            await cauldron.setSpotOracle(baseId, ilkId2, oracle.address, ratio)
+            await cauldron.setSpotOracle(baseId, ilkId1, oracle.address, ratio, '0x00')
+            await cauldron.setSpotOracle(baseId, ilkId2, oracle.address, ratio, '0x00')
           })
 
           it("does not allow adding an asset as an ilk to a series that doesn't exist", async () => {

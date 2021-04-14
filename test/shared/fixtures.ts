@@ -69,8 +69,8 @@ export class YieldEnvironment {
         id('addSeries(bytes6,bytes6,address)'),
         id('addIlks(bytes6,bytes6[])'),
         id('setMaxDebt(bytes6,bytes6,uint128)'),
-        id('setRateOracle(bytes6,address)'),
-        id('setSpotOracle(bytes6,bytes6,address,uint32)'),
+        id('setRateOracle(bytes6,address,bytes)'),
+        id('setSpotOracle(bytes6,bytes6,address,uint32,bytes)'),
       ],
       receiver
     )
@@ -140,21 +140,21 @@ export class YieldEnvironment {
   public static async addSpotOracle(owner: SignerWithAddress, cauldron: Cauldron, baseId: string, ilkId: string) {
     const ratio = 1000000 //  1000000 == 100% collateralization ratio
     const oracle = (await deployContract(owner, OracleMockArtifact, [])) as OracleMock
-    await oracle.setSpot(DEC6.mul(2))
-    await cauldron.setSpotOracle(baseId, ilkId, oracle.address, ratio)
+    await oracle.set(DEC6.mul(2))
+    await cauldron.setSpotOracle(baseId, ilkId, oracle.address, ratio, '0x00')
     return oracle
   }
 
   public static async addRateOracle(owner: SignerWithAddress, cauldron: Cauldron, baseId: string) {
     const oracle = (await deployContract(owner, OracleMockArtifact, [])) as OracleMock
-    await oracle.setSpot(DEC6.mul(2))
-    await cauldron.setRateOracle(baseId, oracle.address)
+    await oracle.set(DEC6.mul(2))
+    await cauldron.setRateOracle(baseId, oracle.address, '0x00')
     return oracle
   }
 
   public static async addChiOracle(owner: SignerWithAddress) { // This will be referenced by the fyToken, and needs no id
     const oracle = (await deployContract(owner, OracleMockArtifact, [])) as OracleMock
-    await oracle.setSpot(DEC6)
+    await oracle.set(DEC6)
     return oracle
   }
 

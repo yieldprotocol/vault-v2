@@ -105,7 +105,7 @@ describe('FYToken', function () {
 
       beforeEach(async () => {
         await fyToken.mature()
-        await chiOracle.setSpot(accrual) // Since spot was 1 when recorded at maturity, accrual is equal to the current spot
+        await chiOracle.set(accrual) // Since spot was 1 when recorded at maturity, accrual is equal to the current spot
       })
 
       it('redeems fyToken for underlying according to the chi accrual', async () => {

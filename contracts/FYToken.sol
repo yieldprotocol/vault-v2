@@ -49,6 +49,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
 
     IJoin public join;                                          // Source of redemption funds.
     IOracle public oracle;                                      // Oracle for the savings rate.
+    bytes public constant ORACLE_DATA = abi.encode("0x0");      // Parameters to convert the raw oracle data to our format
     address public override asset;
     uint256 public override maturity;
     uint256 public chiAtMaturity = type(uint256).max;          // Spot price (exchange rate) between the base and an interest accruing token at maturity 
@@ -103,11 +104,13 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
     /// @dev Mature the fyToken by recording the chi.
     function _mature() 
         private
-        returns (uint256 _chiAtMaturity)
+        returns (uint256)
     {
-        _chiAtMaturity = oracle.spot();
+        (bool success, uint256 _chiAtMaturity) = oracle.get(ORACLE_DATA);
+        require (success, "No chi from oracle");
         chiAtMaturity = _chiAtMaturity;
         emit SeriesMatured(_chiAtMaturity);
+        return _chiAtMaturity;
     }
 
     /// @dev Retrieve the chi accrual since maturity, maturing if necessary.
@@ -129,7 +132,9 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
             _mature();
             return 1e6;
         } else {
-            return uint256(oracle.spot()).ddiv(chiAtMaturity);
+            (bool success, uint256 chi) = oracle.get(ORACLE_DATA);
+            require (success, "No chi from oracle");
+            return chi.ddiv(chiAtMaturity);
         }
     }
 

@@ -54,7 +54,7 @@ describe('Cauldron - level', function () {
     fyToken = env.series.get(seriesId) as FYToken
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
 
-    await spotOracle.setSpot(DEC6.mul(2))
+    await spotOracle.set(DEC6.mul(2))
     await ladle.pour(vaultId, owner, WAD, WAD)
   })
 
@@ -62,9 +62,9 @@ describe('Cauldron - level', function () {
     const ink = (await cauldron.balances(vaultId)).ink
     const art = (await cauldron.balances(vaultId)).art
     for (let spot of [1, 2, 4]) {
-      await spotOracle.setSpot(DEC6.mul(spot))
+      await spotOracle.set(DEC6.mul(spot))
       for (let ratio of [50, 100, 200]) {
-        await cauldron.setSpotOracle(baseId, ilkId, spotOracle.address, ratio * 10000)
+        await cauldron.setSpotOracle(baseId, ilkId, spotOracle.address, ratio * 10000, '0x00')
         const expectedLevel = ink.mul(spot).sub(art.mul(ratio).div(100))
         expect(await cauldron.callStatic.level(vaultId)).to.equal(expectedLevel)
         // console.log(`${ink} * ${DEC6.mul(spot)} - ${art} * ${ratio} = ${await cauldron.level(vaultId)} | ${expectedLevel} `)
@@ -86,8 +86,8 @@ describe('Cauldron - level', function () {
 
   describe('after maturity', async () => {
     beforeEach(async () => {
-      await spotOracle.setSpot(DEC6.mul(1))
-      await rateOracle.setSpot(DEC6.mul(1))
+      await spotOracle.set(DEC6.mul(1))
+      await rateOracle.set(DEC6.mul(1))
       await ethers.provider.send('evm_mine', [(await fyToken.maturity()).toNumber()])
     })
 
@@ -103,12 +103,12 @@ describe('Cauldron - level', function () {
       const ink = (await cauldron.balances(vaultId)).ink
       const art = (await cauldron.balances(vaultId)).art
       for (let spot of [1, 2, 4]) {
-        await spotOracle.setSpot(DEC6.mul(spot))
+        await spotOracle.set(DEC6.mul(spot))
         for (let rate of [110, 120, 140]) {
-          await rateOracle.setSpot(DEC6.mul(rate).div(100))
+          await rateOracle.set(DEC6.mul(rate).div(100))
           // accrual = rate / 100
           for (let ratio of [50, 100, 200]) {
-            await cauldron.setSpotOracle(baseId, ilkId, spotOracle.address, ratio * 10000)
+            await cauldron.setSpotOracle(baseId, ilkId, spotOracle.address, ratio * 10000, '0x00')
             const expectedLevel = ink.mul(spot).sub(art.mul(rate).mul(ratio).div(10000))
             expect(await cauldron.callStatic.level(vaultId)).to.equal(expectedLevel)
             // console.log(`${ink} * ${RAY.mul(spot)} - ${art} * ${ratio} = ${await cauldron.level(vaultId)} | ${expectedLevel} `)

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 import "@yield-protocol/vault-interfaces/IFYToken.sol";
-import "@yield-protocol/vault-interfaces/IOracle.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
 import "@yield-protocol/utils-v2/contracts/AccessControl.sol";
 
@@ -54,7 +53,7 @@ library CauldronSafe256 {
     }
 }
 
-// TODO: Add a setter for auction protection (same as Witch.AUCTION_TIME?)
+// TODO: Add a setter for auction protection
 
 contract Cauldron is AccessControl() {
     using CauldronMath for uint128;
@@ -66,8 +65,8 @@ contract Cauldron is AccessControl() {
     event AssetAdded(bytes6 indexed assetId, address indexed asset);
     event SeriesAdded(bytes6 indexed seriesId, bytes6 indexed baseId, address indexed fyToken);
     event IlkAdded(bytes6 indexed seriesId, bytes6 indexed ilkId);
-    event SpotOracleAdded(bytes6 indexed baseId, bytes6 indexed ilkId, address indexed oracle, uint32 ratio);
-    event RateOracleAdded(bytes6 indexed baseId, address indexed oracle);
+    event SpotOracleAdded(bytes6 indexed baseId, bytes6 indexed ilkId, address indexed oracle, uint32 ratio, bytes data);
+    event RateOracleAdded(bytes6 indexed baseId, address indexed oracle, bytes data);
     event MaxDebtSet(bytes6 indexed baseId, bytes6 indexed ilkId, uint128 max);
 
     event VaultBuilt(bytes12 indexed vaultId, address indexed owner, bytes6 indexed seriesId, bytes6 ilkId);
@@ -89,8 +88,10 @@ contract Cauldron is AccessControl() {
     mapping (bytes6 => mapping(bytes6 => bool))                 public ilks;            // [seriesId][assetId] Assets that are approved as collateral for a series
 
     mapping (bytes6 => IOracle)                                 public rateOracles;     // Rate (borrowing rate) accruals oracle for the underlying
+    mapping (bytes6 => bytes)                                   public rateOracleData;  // Parameters to convert the raw rate oracle data to our format
     mapping (bytes6 => uint256)                                 public ratesAtMaturity; // Borrowing rate at maturity for a mature series
     mapping (bytes6 => mapping(bytes6 => DataTypes.SpotOracle)) public spotOracles;     // [assetId][assetId] Spot price oracles
+    mapping (bytes6 => mapping(bytes6 => bytes))                public spotOracleData;  // Parameters to convert the raw spot oracle data to our format
 
     // ==== Vault data ====
     mapping (bytes12 => DataTypes.Vault)                        public vaults;          // An user can own one or more Vaults, each one with a bytes12 identifier
@@ -121,18 +122,19 @@ contract Cauldron is AccessControl() {
     }
 
     /// @dev Set a rate oracle. Can be reset.
-    function setRateOracle(bytes6 baseId, IOracle oracle)
+    function setRateOracle(bytes6 baseId, IOracle oracle, bytes calldata data)
         external
         auth
     {
         require (assets[baseId] != address(0), "Asset not found");
         // TODO: The oracle should record the asset it refers to, and we should match it against assets[baseId]
         rateOracles[baseId] = oracle;
-        emit RateOracleAdded(baseId, address(oracle));
+        rateOracleData[baseId] = data;
+        emit RateOracleAdded(baseId, address(oracle), data);
     }
 
     /// @dev Set a spot oracle and its collateralization ratio. Can be reset.
-    function setSpotOracle(bytes6 baseId, bytes6 ilkId, IOracle oracle, uint32 ratio)
+    function setSpotOracle(bytes6 baseId, bytes6 ilkId, IOracle oracle, uint32 ratio, bytes calldata data)
         external
         auth
     {
@@ -142,8 +144,9 @@ contract Cauldron is AccessControl() {
         spotOracles[baseId][ilkId] = DataTypes.SpotOracle({
             oracle: oracle,
             ratio: ratio                                                                    // With 6 decimals. 1000000 == 100%
-        });                                                                                 // Allows to replace an existing oracle.
-        emit SpotOracleAdded(baseId, ilkId, address(oracle), ratio);
+        });      
+        spotOracleData[baseId][ilkId] = data;
+        emit SpotOracleAdded(baseId, ilkId, address(oracle), ratio, data);
     }
 
     /// @dev Add a new series
@@ -453,9 +456,10 @@ contract Cauldron is AccessControl() {
     function _mature(bytes6 seriesId, DataTypes.Series memory series_)
         internal
     {
-        uint256 rateAtMaturity;
         IOracle rateOracle = rateOracles[series_.baseId];
-        ratesAtMaturity[seriesId] = rateAtMaturity = rateOracle.spot();
+        (bool success, uint256 rateAtMaturity) = rateOracle.get(rateOracleData[series_.baseId]);
+        require (success, "No rate from oracle");
+        ratesAtMaturity[seriesId] = rateAtMaturity;
         emit SeriesMatured(seriesId, rateAtMaturity);
     }
     
@@ -482,7 +486,9 @@ contract Cauldron is AccessControl() {
             return 1e6;
         } else {
             IOracle rateOracle = rateOracles[series_.baseId];
-            return uint256(rateOracle.spot()).ddiv(rateAtMaturity);
+            (bool success, uint256 rate) = rateOracle.get(rateOracleData[series_.baseId]);
+            require (success, "No rate from oracle");
+            return rate.ddiv(rateAtMaturity);
         }
     }
 
@@ -496,8 +502,9 @@ contract Cauldron is AccessControl() {
         returns (int256)
     {
         DataTypes.SpotOracle memory spotOracle_ = spotOracles[series_.baseId][vault_.ilkId];
-        uint128 spot = spotOracle_.oracle.spot();
-        uint128 ratio = spotOracle_.ratio;
+        (bool success, uint256 spot) = spotOracle_.oracle.get(spotOracleData[series_.baseId][vault_.ilkId]);
+        require (success, "No spot from oracle");
+        uint256 ratio = spotOracle_.ratio;
 
         if (uint32(block.timestamp) >= series_.maturity) {
             uint256 accrual_ = _accrual(vault_.seriesId, series_);

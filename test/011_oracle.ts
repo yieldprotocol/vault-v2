@@ -27,7 +27,9 @@ describe('Oracle', function () {
   })
 
   it('sets and retrieves the spot price', async () => {
-    await oracle.setSpot(1)
-    expect(await oracle.spot()).to.equal(1)
+    await oracle.set(1)
+    const result = await oracle.callStatic.get('0x00')
+    expect(result[0]).to.be.true
+    expect(result[1]).to.equal(1)
   })
 })

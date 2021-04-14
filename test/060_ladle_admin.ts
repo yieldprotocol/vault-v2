@@ -81,11 +81,11 @@ describe('Ladle - admin', function () {
     // ==== Set testing environment ====
     ilk = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId, 'Mock Ilk'])) as ERC20Mock
     oracle = (await deployContract(ownerAcc, OracleMockArtifact, [])) as OracleMock
-    await oracle.setSpot(DEC6)
+    await oracle.set(DEC6)
 
     await cauldron.addAsset(ilkId, ilk.address)
     await cauldron.setMaxDebt(baseId, ilkId, WAD.mul(2))
-    await cauldron.setSpotOracle(baseId, ilkId, oracle.address, ratio)
+    await cauldron.setSpotOracle(baseId, ilkId, oracle.address, ratio, '0x00')
 
     // Deploy a join
     ilkJoin = (await deployContract(ownerAcc, JoinArtifact, [ilk.address])) as Join
