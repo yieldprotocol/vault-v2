@@ -111,16 +111,25 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
     }
 
     /// @dev Retrieve the chi accrual since maturity, maturing if necessary.
+    function accrual()
+        external
+        afterMaturity
+        returns (uint256)
+    {
+        return _accrual();
+    }
+
+    /// @dev Retrieve the chi accrual since maturity, maturing if necessary.
     /// Note: Call only after checking we are past maturity
     function _accrual()
         private
-        returns (uint256 accrual)
+        returns (uint256)
     {
         if (chiAtMaturity == type(uint256).max) {  // After maturity, but chi not yet recorded. Let's record it, and accrual is then 1.
             _mature();
-            accrual = 1e6;
+            return 1e6;
         } else {
-            accrual = uint256(oracle.spot()).ddiv(chiAtMaturity);
+            return uint256(oracle.spot()).ddiv(chiAtMaturity);
         }
     }
 

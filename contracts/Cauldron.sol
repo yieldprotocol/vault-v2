@@ -512,8 +512,8 @@ contract Cauldron is AccessControl() {
         uint128 ratio = spotOracle_.ratio;
 
         if (uint32(block.timestamp) >= series_.maturity) {
-            uint256 accrual = _accrual(vault_.seriesId, series_);
-            return uint256(balances_.ink).dmul(spot).i256() - uint256(balances_.art).dmul(accrual).dmul(ratio).i256();
+            uint256 accrual_ = _accrual(vault_.seriesId, series_);
+            return uint256(balances_.ink).dmul(spot).i256() - uint256(balances_.art).dmul(accrual_).dmul(ratio).i256();
         }
 
         return uint256(balances_.ink).dmul(spot).i256() - uint256(balances_.art).dmul(ratio).i256();
