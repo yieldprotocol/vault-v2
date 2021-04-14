@@ -41,7 +41,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
     using FYTokenDMath for uint256;
     using FYTokenSafe256 for uint256;
 
-    event Matured(uint256 spotAtMaturity);
+    event SeriesMatured(uint256 chiAtMaturity);
     event Redeemed(address indexed from, address indexed to, uint256 amount, uint256 redeemed);
 
     uint256 constant internal MAX_TIME_TO_MATURITY = 126144000; // seconds in four years
@@ -51,7 +51,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
     IOracle public oracle;                                      // Oracle for the savings rate.
     address public override asset;
     uint256 public override maturity;
-    uint256 public spotAtMaturity = type(uint256).max;          // Spot price (exchange rate) between the base and an interest accruing token at maturity 
+    uint256 public chiAtMaturity = type(uint256).max;          // Spot price (exchange rate) between the base and an interest accruing token at maturity 
 
     constructor(
         IOracle oracle_, // Underlying vs its interest-bearing version
@@ -96,18 +96,18 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         external override
         afterMaturity
     {
-        require (spotAtMaturity == type(uint256).max, "Already matured");
+        require (chiAtMaturity == type(uint256).max, "Already matured");
         _mature();
     }
 
     /// @dev Mature the fyToken by recording the chi.
     function _mature() 
         private
-        returns (uint256 _spotAtMaturity)
+        returns (uint256 _chiAtMaturity)
     {
-        _spotAtMaturity = oracle.spot();
-        spotAtMaturity = _spotAtMaturity;
-        emit Matured(_spotAtMaturity);
+        _chiAtMaturity = oracle.spot();
+        chiAtMaturity = _chiAtMaturity;
+        emit SeriesMatured(_chiAtMaturity);
     }
 
     /// @dev Burn the fyToken after maturity for an amount that increases according to `chi`
@@ -118,11 +118,11 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
     {
         _burn(msg.sender, amount);
 
-        if (spotAtMaturity == type(uint256).max) {  // After maturity, but chi not yet recorded. Let's record it, and accrual is then 1.
+        if (chiAtMaturity == type(uint256).max) {  // After maturity, but chi not yet recorded. Let's record it, and accrual is then 1.
             _mature();
             redeemed = amount;
         } else {
-            uint256 accrual = uint256(oracle.spot()).ddiv(spotAtMaturity);
+            uint256 accrual = uint256(oracle.spot()).ddiv(chiAtMaturity);
             redeemed = amount.dmul(accrual);
         }
         join.exit(to, redeemed.u128());

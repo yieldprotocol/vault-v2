@@ -87,7 +87,7 @@ describe('FYToken', function () {
 
     it('matures by recording the chi value', async () => {
       expect(await fyToken.mature())
-        .to.emit(fyToken, 'Matured')
+        .to.emit(fyToken, 'SeriesMatured')
         .withArgs(DEC6)
     })
 
