@@ -369,7 +369,7 @@ contract Ladle is AccessControl(), Multicall {
         
         // Calculate debt in fyToken terms
         DataTypes.Series memory series = getSeries(vault.seriesId);
-        uint128 amt = _debtInBase(series, balances.art);
+        uint128 amt = _debtInBase(vault.seriesId, series, balances.art);
 
         DataTypes.Series memory newSeries = getSeries(newSeriesId);
         IPool pool = getPool(newSeriesId);
@@ -459,7 +459,7 @@ contract Ladle is AccessControl(), Multicall {
 
         // Calculate debt in fyToken terms
         DataTypes.Series memory series = getSeries(vault.seriesId);
-        uint128 amt = _debtInBase(series, uint128(-art));
+        uint128 amt = _debtInBase(vault.seriesId, series, uint128(-art));
 
         // Update accounting
         balances = cauldron.pour(vaultId, ink, art);
@@ -477,13 +477,12 @@ contract Ladle is AccessControl(), Multicall {
     }
 
     /// @dev Calculate a debt amount for a series in base terms
-    function _debtInBase(DataTypes.Series memory series, uint128 art)
-        private view
+    function _debtInBase(bytes6 seriesId, DataTypes.Series memory series, uint128 art)
+        private
         returns (uint128 amt)
     {
         if (uint32(block.timestamp) >= series.maturity) {
-            IOracle rateOracle = cauldron.rateOracles(series.baseId);
-            amt = art.dmul(rateOracle.accrual(series.maturity));
+            amt = art.dmul(uint128(cauldron.accrual(seriesId))); // TODO: Fix casting
         } else {
             amt = art;
         }

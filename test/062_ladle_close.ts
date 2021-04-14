@@ -151,7 +151,7 @@ describe('Ladle - close', function () {
       await spotOracle.setSpot(DEC6.mul(1))
       await rateOracle.setSpot(DEC6.mul(1))
       await ethers.provider.send('evm_mine', [(await fyToken.maturity()).toNumber()])
-      await rateOracle.record(await fyToken.maturity())
+      await cauldron.mature(seriesId)
       await rateOracle.setSpot(accrual) // Since spot was 1 when recorded at maturity, accrual is equal to the current spot
     })
 

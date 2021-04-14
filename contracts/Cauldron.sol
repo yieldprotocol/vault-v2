@@ -471,19 +471,30 @@ contract Cauldron is AccessControl() {
         emit SeriesMatured(seriesId, rateAtMaturity);
     }
     
+
+    /// @dev Retrieve the rate accrual since maturity, maturing if necessary.
+    function accrual(bytes6 seriesId)
+        public
+        returns (uint256)
+    {
+        DataTypes.Series memory series_ = series[seriesId];
+        require (uint32(block.timestamp) >= series_.maturity, "Only after maturity");
+        return _accrual(seriesId, series_);
+    }
+
     /// @dev Retrieve the rate accrual since maturity, maturing if necessary.
     /// Note: Call only after checking we are past maturity
     function _accrual(bytes6 seriesId, DataTypes.Series memory series_)
         private
-        returns (uint256 accrual)
+        returns (uint256)
     {
         uint256 rateAtMaturity = ratesAtMaturity[seriesId];
         if (rateAtMaturity == 0) {  // After maturity, but rate not yet recorded. Let's record it, and accrual is then 1.
             _mature(seriesId, series_);
-            accrual = 1e6;
+            return 1e6;
         } else {
             IOracle rateOracle = rateOracles[series_.baseId];
-            accrual = uint256(rateOracle.spot()).ddiv(rateAtMaturity);
+            return uint256(rateOracle.spot()).ddiv(rateAtMaturity);
         }
     }
 
