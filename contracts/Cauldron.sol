@@ -26,17 +26,6 @@ library CauldronDMath { // Fixed point arithmetic in 6 decimal units
     }
 }
 
-library CauldronRMath { // Fixed point arithmetic in Ray units
-    /// @dev Multiply an integer amount by a fixed point factor in ray units, returning an integer amount
-    function rmul(int128 x, uint128 y) internal pure returns (int128 z) {
-        unchecked {
-            int256 z_ = int256(x) * int256(uint256(y)) / 1e27;
-            require (z_ >= type(int128).min && z_ <= type(int128).max, "RMUL Overflow");
-            z = int128(z_);
-        }
-    }
-}
-
 library CauldronSafe128 {
     /// @dev Safely cast an int128 to an uint128
     function u128(int128 x) internal pure returns (uint128 y) {
@@ -70,7 +59,6 @@ library CauldronSafe256 {
 contract Cauldron is AccessControl() {
     using CauldronMath for uint128;
     using CauldronDMath for uint256;
-    using CauldronRMath for int128;
     using CauldronSafe256 for uint256;
     using CauldronSafe128 for uint128;
     using CauldronSafe128 for int128;
@@ -426,7 +414,7 @@ contract Cauldron is AccessControl() {
 
         // Modify global debt records
         DataTypes.Debt memory debt_ = debt[oldSeries_.baseId][vault_.ilkId];
-        debt_.sum = debt_.sum + art - balances_.art;
+        debt_.sum = debt_.sum - balances_.art + art;
         require (debt_.sum <= debt_.max, "Max debt exceeded");
         debt[oldSeries_.baseId][vault_.ilkId] = debt_;
 
