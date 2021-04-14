@@ -470,6 +470,22 @@ contract Cauldron is AccessControl() {
         ratesAtMaturity[seriesId] = rateAtMaturity = rateOracle.spot();
         emit SeriesMatured(seriesId, rateAtMaturity);
     }
+    
+    /// @dev Retrieve the rate accrual since maturity, maturing if necessary.
+    /// Note: Call only after checking we are past maturity
+    function _accrual(bytes6 seriesId, DataTypes.Series memory series_)
+        private
+        returns (uint256 accrual)
+    {
+        uint256 rateAtMaturity = ratesAtMaturity[seriesId];
+        if (rateAtMaturity == 0) {  // After maturity, but rate not yet recorded. Let's record it, and accrual is then 1.
+            _mature(seriesId, series_);
+            accrual = 1e6;
+        } else {
+            IOracle rateOracle = rateOracles[series_.baseId];
+            accrual = uint256(rateOracle.spot()).ddiv(rateAtMaturity);
+        }
+    }
 
     /// @dev Return the collateralization level of a vault. It will be negative if undercollateralized.
     function _level(
@@ -485,14 +501,8 @@ contract Cauldron is AccessControl() {
         uint128 ratio = spotOracle_.ratio;
 
         if (uint32(block.timestamp) >= series_.maturity) {
-            uint256 rateAtMaturity = ratesAtMaturity[vault_.seriesId];
-            if (rateAtMaturity == 0) {  // We haven't recorded the rate at maturity yet, so we do it and calculate the level without accrual.
-                _mature(vault_.seriesId, series_);
-            } else {
-                IOracle rateOracle = rateOracles[series_.baseId];
-                uint256 accrual = uint256(rateOracle.spot()).ddiv(rateAtMaturity);
-                return uint256(balances_.ink).dmul(spot).i256() - uint256(balances_.art).dmul(accrual).dmul(ratio).i256();
-            }
+            uint256 accrual = _accrual(vault_.seriesId, series_);
+            return uint256(balances_.ink).dmul(spot).i256() - uint256(balances_.art).dmul(accrual).dmul(ratio).i256();
         }
 
         return uint256(balances_.ink).dmul(spot).i256() - uint256(balances_.art).dmul(ratio).i256();

@@ -110,6 +110,20 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         emit SeriesMatured(_chiAtMaturity);
     }
 
+    /// @dev Retrieve the chi accrual since maturity, maturing if necessary.
+    /// Note: Call only after checking we are past maturity
+    function _accrual()
+        private
+        returns (uint256 accrual)
+    {
+        if (chiAtMaturity == type(uint256).max) {  // After maturity, but chi not yet recorded. Let's record it, and accrual is then 1.
+            _mature();
+            accrual = 1e6;
+        } else {
+            accrual = uint256(oracle.spot()).ddiv(chiAtMaturity);
+        }
+    }
+
     /// @dev Burn the fyToken after maturity for an amount that increases according to `chi`
     function redeem(address to, uint256 amount)
         external override
@@ -117,14 +131,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         returns (uint256 redeemed)
     {
         _burn(msg.sender, amount);
-
-        if (chiAtMaturity == type(uint256).max) {  // After maturity, but chi not yet recorded. Let's record it, and accrual is then 1.
-            _mature();
-            redeemed = amount;
-        } else {
-            uint256 accrual = uint256(oracle.spot()).ddiv(chiAtMaturity);
-            redeemed = amount.dmul(accrual);
-        }
+        redeemed = amount.dmul(_accrual());
         join.exit(to, redeemed.u128());
         
         emit Redeemed(msg.sender, to, amount, redeemed);
