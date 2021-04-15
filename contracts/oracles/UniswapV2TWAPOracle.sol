@@ -5,7 +5,7 @@ import "@yield-protocol/vault-interfaces/IOracle.sol";
 import "./IUniswapV2Pair.sol";
 
 
-contract OurUniswapV2TWAPOracle is IOracle {
+contract UniswapV2TWAPOracle is IOracle {
     /**
      * UNISWAP_MIN_TWAP_PERIOD plays two roles:
      *

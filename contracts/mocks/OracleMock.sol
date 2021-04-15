@@ -5,20 +5,23 @@ import "@yield-protocol/vault-interfaces/IOracle.sol";
 
 /// @dev An oracle that allows to set the spot price to anyone. It also allows to record spot values and return the accrual between a recorded and current spots.
 contract OracleMock is IOracle {
-    uint256 internal _spot;
+    uint256 public spot;
+    uint256 public updated;
 
     /// @dev Return the spot price
-    function peek() external view override returns (uint256, uint256) {
-        return (_spot, block.timestamp);
+    function peek() external view virtual override returns (uint256, uint256) {
+        return (spot, updated);
     }
 
     /// @dev Return the spot price
-    function get() external override returns (uint256, uint256) {
-        return (_spot, block.timestamp);
+    function get() external virtual override returns (uint256, uint256) {
+        updated = block.timestamp;
+        return (spot, updated = block.timestamp);
     }
 
     /// @dev Set the spot price.
     function set(uint256 spot_) external {
-        _spot = spot_;
+        updated = block.timestamp;
+        spot = spot_;
     }
 }
