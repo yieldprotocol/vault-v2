@@ -108,6 +108,15 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
         return amount;
     }
 
+    /// @dev Retrieve any tokens other than the `asset`. Useful for airdropped tokens.
+    function retrieve(IERC20 token, address to)
+        external
+        auth
+    {
+        require(address(token) != address(asset), "Use exit for asset");
+        token.safeTransfer(to, token.balanceOf(address(this)));
+    }
+
     /**
      * @dev From ERC-3156. The amount of currency available to be lended.
      * @param token The loan currency. It must be a FYDai contract.

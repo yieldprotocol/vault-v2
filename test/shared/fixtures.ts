@@ -239,7 +239,11 @@ export class YieldEnvironment {
 
       const join = await this.addJoin(owner, ladle, asset, assetId) as Join
       joins.set(assetId, join)
-      await join.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], ownerAdd) // Only test environment
+      await join.grantRoles([
+        id('join(address,uint128)'),
+        id('exit(address,uint128)'),
+        id('retrieve(address,address)')
+      ], ownerAdd) // Only test environment
     }
 
     // The first asset will be the underlying for all series
@@ -255,6 +259,11 @@ export class YieldEnvironment {
     await cauldron.addAsset(ethId, weth.address)
 
     const wethJoin = await this.addJoin(owner, ladle, weth as unknown as ERC20Mock, ethId) as Join
+    await wethJoin.grantRoles([
+      id('join(address,uint128)'),
+      id('exit(address,uint128)'),
+      id('retrieve(address,address)')
+    ], ownerAdd) // Only test environment
     joins.set(ethId, wethJoin)
     ilkIds.push(ethId)
 
