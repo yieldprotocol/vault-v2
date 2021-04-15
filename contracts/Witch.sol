@@ -3,40 +3,17 @@ pragma solidity ^0.8.0;
 import "@yield-protocol/vault-interfaces/ILadle.sol";
 import "@yield-protocol/vault-interfaces/ICauldron.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
+import "./math/WMul.sol";
+import "./math/WDiv.sol";
+import "./math/WDivUp.sol";
+import "./math/CastU256U128.sol";
 
-
-library WitchWMath {
-    // Taken from https://github.com/usmfum/USM/blob/master/contracts/WadMath.sol
-    /// @dev Multiply an amount by a fixed point factor with 18 decimals, rounds down.
-    function wmul(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        z = x * y;
-        unchecked { z /= 1e18; }
-    }
-
-    /// @dev Divide an amount by a fixed point factor with 18 decimals
-    function wdiv(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        z = (x * 1e18) / y;
-    }
-
-    /// @dev Divide x and y, with y being fixed point. If both are integers, the result is a fixed point factor. Rounds up.
-    function wdivup(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        z = x * 1e18 + y;
-        unchecked { z -= 1; }
-        z /= y;
-    }
-}
-
-library WitchSafe256 {
-    /// @dev Safely cast an uint256 to an uint128
-    function u128(uint256 x) internal pure returns (uint128 y) {
-        require (x <= type(uint128).max, "Cast overflow");
-        y = uint128(x);
-    }
-}
 
 contract Witch {
-    using WitchWMath for uint256;
-    using WitchSafe256 for uint256;
+    using WMul for uint256;
+    using WDiv for uint256;
+    using WDivUp for uint256;
+    using CastU256U128 for uint256;
 
     event Bought(address indexed buyer, bytes12 indexed vaultId, uint256 ink, uint256 art);
   

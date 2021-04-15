@@ -7,29 +7,14 @@ import "@yield-protocol/utils/contracts/token/IERC20.sol";
 import "@yield-protocol/vault-interfaces/IJoin.sol";
 import "@yield-protocol/utils-v2/contracts/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/TransferHelper.sol";
+import "./math/WMul.sol";
+import "./math/CastU256U128.sol";
 
-
-library JoinWMath { // Fixed point arithmetic with 18 decimals
-    // Taken from https://github.com/usmfum/USM/blob/master/contracts/WadMath.sol
-    /// @dev Multiply an amount by a fixed point factor with 18 decimals, rounds down.
-    function wmul(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        z = x * y;
-        unchecked { z /= 1e18; }
-    }
-}
-
-library JoinSafe256 {
-    /// @dev Safely cast an uint256 to an uint128
-    function u128(uint256 x) internal pure returns (uint128 y) {
-        require (x <= type(uint128).max, "Cast overflow");
-        y = uint128(x);
-    }
-}
 
 contract Join is IJoin, IERC3156FlashLender, AccessControl() {
     using TransferHelper for IERC20;
-    using JoinWMath for uint256;
-    using JoinSafe256 for uint256;
+    using WMul for uint256;
+    using CastU256U128 for uint256;
 
     event FlashFeeFactorSet(uint256 indexed fee);
 

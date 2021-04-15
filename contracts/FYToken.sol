@@ -8,40 +8,17 @@ import "@yield-protocol/vault-interfaces/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/IJoin.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
 import "@yield-protocol/utils-v2/contracts/AccessControl.sol";
+import "./math/WMul.sol";
+import "./math/WDiv.sol";
+import "./math/CastU256U128.sol";
+import "./math/CastU256U32.sol";
 
 
-library FYTokenWMath { // Fixed point arithmetic in 6 decimal units
-    // Taken from https://github.com/usmfum/USM/blob/master/contracts/WadMath.sol
-    /// @dev Multiply an amount by a fixed point factor with 18 decimals, rounds down.
-    function wmul(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        z = x * y;
-        unchecked { z /= 1e18; }
-    }
-
-    /// @dev Divide an amount by a fixed point factor with 18 decimals
-    function wdiv(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        z = (x * 1e18) / y;
-    }
-}
-
-library FYTokenSafe256 {
-    /// @dev Safely cast an uint256 to an uint128
-    function u128(uint256 x) internal pure returns (uint128 y) {
-        require (x <= type(uint128).max, "Cast overflow");
-        y = uint128(x);
-    }
-
-    /// @dev Safely cast an uint256 to an int128
-    function u32(uint256 x) internal pure returns (uint32 y) {
-        require (x <= type(uint32).max, "Cast overflow");
-        y = uint32(x);
-    }
-}
-
-// TODO: Setter for MAX_TIME_TO_MATURITY
 contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit {
-    using FYTokenWMath for uint256;
-    using FYTokenSafe256 for uint256;
+    using WMul for uint256;
+    using WDiv for uint256;
+    using CastU256U128 for uint256;
+    using CastU256U32 for uint256;
 
     event SeriesMatured(uint256 chiAtMaturity);
     event Redeemed(address indexed from, address indexed to, uint256 amount, uint256 redeemed);

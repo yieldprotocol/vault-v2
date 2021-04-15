@@ -4,7 +4,12 @@ import "@yield-protocol/vault-interfaces/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
 import "@yield-protocol/utils-v2/contracts/AccessControl.sol";
-
+import "./math/WMul.sol";
+import "./math/WDiv.sol";
+import "./math/CastU128I128.sol";
+import "./math/CastI128U128.sol";
+import "./math/CastU256U32.sol";
+import "./math/CastU256I256.sol";
 
 library CauldronMath {
     /// @dev Add a number (which might be negative) to a positive, and revert if the result is negative.
@@ -14,56 +19,16 @@ library CauldronMath {
     }
 }
 
-library CauldronWMath { // Fixed point arithmetic in 18 decimal units
-    // Taken from https://github.com/usmfum/USM/blob/master/contracts/WadMath.sol
-    /// @dev Multiply an amount by a fixed point factor with 18 decimals, rounds down.
-    function wmul(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        z = x * y;
-        unchecked { z /= 1e18; }
-    }
-
-    /// @dev Divide an amount by a fixed point factor with 18 decimals
-    function wdiv(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        z = (x * 1e18) / y;
-    }
-}
-
-library CauldronSafe128 {
-    /// @dev Safely cast an int128 to an uint128
-    function u128(int128 x) internal pure returns (uint128 y) {
-        require (x >= 0, "Cast overflow");
-        y = uint128(x);
-    }
-
-    /// @dev Safely cast an uint128 to an int128
-    function i128(uint128 x) internal pure returns (int128 y) {
-        require (x <= uint128(type(int128).max), "Cast overflow");
-        y = int128(x);
-    }
-}
-
-library CauldronSafe256 {
-    /// @dev Safely cast an uint256 to an int128
-    function u32(uint256 x) internal pure returns (uint32 y) {
-        require (x <= type(uint32).max, "Cast overflow");
-        y = uint32(x);
-    }
-
-    /// @dev Safely cast an uint256 to an int256
-    function i256(uint256 x) internal pure returns (int256 y) {
-        require (x <= uint256(type(int256).max), "Cast overflow");
-        y = int256(x);
-    }
-}
-
 // TODO: Add a setter for auction protection (same as Witch.AUCTION_TIME?)
 
 contract Cauldron is AccessControl() {
     using CauldronMath for uint128;
-    using CauldronWMath for uint256;
-    using CauldronSafe256 for uint256;
-    using CauldronSafe128 for uint128;
-    using CauldronSafe128 for int128;
+    using WMul for uint256;
+    using WDiv for uint256;
+    using CastU128I128 for uint128;
+    using CastU256U32 for uint256;
+    using CastU256I256 for uint256;
+    using CastI128U128 for int128;
 
     event AssetAdded(bytes6 indexed assetId, address indexed asset);
     event SeriesAdded(bytes6 indexed seriesId, bytes6 indexed baseId, address indexed fyToken);

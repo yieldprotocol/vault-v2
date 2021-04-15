@@ -13,38 +13,16 @@ import "@yield-protocol/utils-v2/contracts/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/Multicall.sol";
 import "@yield-protocol/utils-v2/contracts/TransferHelper.sol";
 import "@yield-protocol/utils-v2/contracts/IWETH9.sol";
+import "./math/WMul.sol";
+import "./math/CastU256U128.sol";
+import "./math/CastU128I128.sol";
 
-
-library LadleWMath { // Fixed point arithmetic in 18 decimal units
-    // Taken from https://github.com/usmfum/USM/blob/master/contracts/WadMath.sol
-    /// @dev Multiply an amount by a fixed point factor with 18 decimals, rounds down.
-    function wmul(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        z = x * y;
-        unchecked { z /= 1e18; }
-    }
-}
-
-library LadleSafe256 {
-    /// @dev Safely cast an uint256 to an uint128
-    function u128(uint256 x) internal pure returns (uint128 y) {
-        require (x <= type(uint128).max, "Cast overflow");
-        y = uint128(x);
-    }
-}
-
-library LadleSafe128 {
-    /// @dev Safely cast an uint128 to an int128
-    function i128(uint128 x) internal pure returns (int128 y) {
-        require (x <= uint128(type(int128).max), "Cast overflow");
-        y = int128(x);
-    }
-}
 
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
 contract Ladle is AccessControl(), Multicall {
-    using LadleWMath for uint256;
-    using LadleSafe256 for uint256;
-    using LadleSafe128 for uint128;
+    using WMul for uint256;
+    using CastU256U128 for uint256;
+    using CastU128I128 for uint128;
     using TransferHelper for IERC20;
     using TransferHelper for address payable;
 
