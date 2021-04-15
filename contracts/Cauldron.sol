@@ -14,15 +14,21 @@ library CauldronMath {
     }
 }
 
-library CauldronDMath { // Fixed point arithmetic in 6 decimal units
-    /// @dev Multiply an amount by a fixed point factor with 6 decimals, returning an amount
-    function dmul(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        z = x * y / 1e6;
+library CauldronWMath { // Fixed point arithmetic in 18 decimal units
+    /// @dev Multiply an amount by a fixed point factor with 18 decimals
+    function wmul(uint256 x, uint256 y) internal pure returns (uint256 z) {
+        unchecked {
+            z = x * y / 1e18;
+            require (z <= type(uint256).max, "WMUL Overflow");
+        }
     }
 
-    /// @dev Divide an unsigned integer by another, returning a fixed point factor with 6 decimals
-    function ddiv(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        z = x * 1e6 / y;
+    /// @dev Divide an amount by a fixed point factor with 18 decimals
+    function wdiv(uint256 x, uint256 y) internal pure returns (uint256 z) {
+        unchecked {
+            z = x * 1e18 / y;
+            require (z <= type(uint256).max, "WDIV Overflow");
+        }
     }
 }
 
@@ -58,7 +64,7 @@ library CauldronSafe256 {
 
 contract Cauldron is AccessControl() {
     using CauldronMath for uint128;
-    using CauldronDMath for uint256;
+    using CauldronWMath for uint256;
     using CauldronSafe256 for uint256;
     using CauldronSafe128 for uint128;
     using CauldronSafe128 for int128;
@@ -481,9 +487,9 @@ contract Cauldron is AccessControl() {
             _mature(seriesId, series_);
         } else {
             IOracle rateOracle = rateOracles[series_.baseId];
-            accrual_ = uint256(rateOracle.spot()).ddiv(rateAtMaturity);
+            accrual_ = uint256(rateOracle.spot()).wdiv(rateAtMaturity);
         }
-        accrual_ = accrual_ >= 1e6 ? accrual_ : 1e6;     // The accrual can't be below 1 (with 6 decimals)
+        accrual_ = accrual_ >= 1e18 ? accrual_ : 1e18;     // The accrual can't be below 1 (with 18 decimals)
     }
 
     /// @dev Return the collateralization level of a vault. It will be negative if undercollateralized.
@@ -496,14 +502,14 @@ contract Cauldron is AccessControl() {
         returns (int256)
     {
         DataTypes.SpotOracle memory spotOracle_ = spotOracles[series_.baseId][vault_.ilkId];
-        uint128 spot = spotOracle_.oracle.spot();
-        uint128 ratio = spotOracle_.ratio;
+        uint256 spot = spotOracle_.oracle.spot();
+        uint256 ratio = uint256(spotOracle_.ratio) * 1e12;   // Normalized to 18 decimals
 
         if (uint32(block.timestamp) >= series_.maturity) {
             uint256 accrual_ = _accrual(vault_.seriesId, series_);
-            return uint256(balances_.ink).dmul(spot).i256() - uint256(balances_.art).dmul(accrual_).dmul(ratio).i256();
+            return uint256(balances_.ink).wmul(spot).i256() - uint256(balances_.art).wmul(accrual_).wmul(ratio).i256();
         }
 
-        return uint256(balances_.ink).dmul(spot).i256() - uint256(balances_.art).dmul(ratio).i256();
+        return uint256(balances_.ink).wmul(spot).i256() - uint256(balances_.art).wmul(ratio).i256();
     }
 }

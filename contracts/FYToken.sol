@@ -19,7 +19,7 @@ library FYTokenWMath { // Fixed point arithmetic in 6 decimal units
         }
     }
 
-        /// @dev Divide an amount by a fixed point factor with 18 decimals
+    /// @dev Divide an amount by a fixed point factor with 18 decimals
     function wdiv(uint256 x, uint256 y) internal pure returns (uint256 z) {
         unchecked {
             z = x * 1e18 / y;
