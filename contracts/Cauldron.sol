@@ -474,16 +474,16 @@ contract Cauldron is AccessControl() {
     /// Note: Call only after checking we are past maturity
     function _accrual(bytes6 seriesId, DataTypes.Series memory series_)
         private
-        returns (uint256)
+        returns (uint256 accrual_)
     {
         uint256 rateAtMaturity = ratesAtMaturity[seriesId];
         if (rateAtMaturity == 0) {  // After maturity, but rate not yet recorded. Let's record it, and accrual is then 1.
             _mature(seriesId, series_);
-            return 1e6;
         } else {
             IOracle rateOracle = rateOracles[series_.baseId];
-            return uint256(rateOracle.spot()).ddiv(rateAtMaturity);
+            accrual_ = uint256(rateOracle.spot()).ddiv(rateAtMaturity);
         }
+        accrual_ = accrual_ >= 1e6 ? accrual_ : 1e6;     // The accrual can't be below 1 (with 6 decimals)
     }
 
     /// @dev Return the collateralization level of a vault. It will be negative if undercollateralized.

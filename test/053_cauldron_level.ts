@@ -91,10 +91,15 @@ describe('Cauldron - level', function () {
       await ethers.provider.send('evm_mine', [(await fyToken.maturity()).toNumber()])
     })
 
-    it('matures by recording the chi value', async () => {
+    it('matures by recording the rate value', async () => {
       expect(await cauldron.mature(seriesId))
         .to.emit(cauldron, 'SeriesMatured')
         .withArgs(seriesId, DEC6)
+    })
+
+    it("rate accrual can't be below 1", async () => {
+      await rateOracle.setSpot(DEC6.mul(100).div(110))
+      expect(await cauldron.callStatic.accrual(seriesId)).to.equal(DEC6)
     })
 
     it('after maturity, level is ink * spot - art * accrual * ratio', async () => {
