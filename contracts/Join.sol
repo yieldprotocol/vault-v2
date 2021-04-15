@@ -9,12 +9,12 @@ import "@yield-protocol/utils-v2/contracts/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/TransferHelper.sol";
 
 
-library JoinRMath { // Fixed point arithmetic in Ray units
-    /// @dev Multiply an amount by a fixed point factor in ray units, returning an amount
-    function rmul(uint256 x, uint256 y) internal pure returns (uint256 z) {
+library JoinWMath { // Fixed point arithmetic with 18 decimals
+    /// @dev Multiply an amount by a fixed point factor with 18 decimals
+    function wmul(uint256 x, uint256 y) internal pure returns (uint256 z) {
         unchecked {
-            z = x * y / 1e27;
-            require (z <= type(uint256).max, "RMUL Overflow");
+            z = x * y / 1e18;
+            require (z <= type(uint256).max, "WMUL Overflow");
         }
     }
 }
@@ -29,7 +29,7 @@ library JoinSafe256 {
 
 contract Join is IJoin, IERC3156FlashLender, AccessControl() {
     using TransferHelper for IERC20;
-    using JoinRMath for uint256;
+    using JoinWMath for uint256;
     using JoinSafe256 for uint256;
 
     event FlashFeeFactorSet(uint256 indexed fee);
@@ -38,22 +38,11 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
 
     address public override asset;
     uint256 public storedBalance;
-    uint256 public flashFeeFactor; // Fee on flash loans, as a percentage in fixed point with 27 decimals (RAY)
-    // bytes6  public asset;   // Collateral Type
-    // uint    public dec;
-    // uint    public live;  // Active Flag
+    uint256 public flashFeeFactor; // Fee on flash loans, as a percentage in fixed point with 18 decimals
 
     constructor(address asset_) {
         asset = asset_;
-        // dec = token.decimals();
-        // live = 1;
     }
-
-    /*
-    function cage() external auth {
-        live = 0;
-    }
-    */
 
     /// @dev Set the flash loan fee factor
     function setFlashFeeFactor(uint256 flashFeeFactor_)
@@ -143,7 +132,7 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
      * @return The amount of `token` to be charged for the loan, on top of the returned principal.
      */
     function _flashFee(uint256 amount) internal view returns (uint256) {
-        return amount.rmul(flashFeeFactor);
+        return amount.wmul(flashFeeFactor);
     }
 
     /**
