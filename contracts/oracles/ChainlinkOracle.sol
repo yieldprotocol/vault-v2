@@ -1,0 +1,39 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+pragma solidity ^0.8.0;
+
+import "@yield-protocol/vault-interfaces/IOracle.sol";
+import "./AggregatorV3Interface.sol";
+
+/**
+ * @title ChainlinkOracle
+ */
+contract ChainlinkOracle is IOracle {
+
+    uint public constant CHAINLINK_SCALE_FACTOR = 1e10; // Since Chainlink has 8 dec places, and peek() needs 18
+
+    AggregatorV3Interface public immutable chainlinkAggregator;
+
+    constructor(AggregatorV3Interface aggregator_)
+    {
+        chainlinkAggregator = aggregator_;
+    }
+
+    /**
+     * @notice Retrieve the latest price of the price oracle.
+     * @return price
+     */
+    function peek() public virtual override view returns (uint price, uint updateTime) {
+        int rawPrice;
+        (, rawPrice,, updateTime,) = chainlinkAggregator.latestRoundData();
+        require(rawPrice > 0, "Chainlink price <= 0");
+        price = uint(rawPrice) * CHAINLINK_SCALE_FACTOR;
+    }
+
+    /**
+     * @notice Retrieve the latest price of the price oracle. Same as `peek` for this oracle.
+     * @return price
+     */
+    function get() public virtual override returns (uint price, uint updateTime){
+        (price, updateTime) = peek();
+    }
+}

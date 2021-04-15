@@ -1,9 +1,7 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import OracleArtifact from '../artifacts/contracts/mocks/OracleMock.sol/OracleMock.json'
-import { DEC6 } from './shared/constants'
 
 import { OracleMock as Oracle } from '../typechain/OracleMock'
-import { BigNumber } from 'ethers'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
@@ -27,7 +25,7 @@ describe('Oracle', function () {
   })
 
   it('sets and retrieves the spot price', async () => {
-    await oracle.setSpot(1)
-    expect(await oracle.spot()).to.equal(1)
+    await oracle.set(1)
+    expect((await oracle.callStatic.get())[0]).to.equal(1)
   })
 })

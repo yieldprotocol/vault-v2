@@ -105,11 +105,11 @@ describe('FYToken', function () {
 
       beforeEach(async () => {
         await fyToken.mature()
-        await chiOracle.setSpot(accrual) // Since spot was 1 when recorded at maturity, accrual is equal to the current spot
+        await chiOracle.set(accrual) // Since spot was 1 when recorded at maturity, accrual is equal to the current spot
       })
 
       it("chi accrual can't be below 1", async () => {
-        await chiOracle.setSpot(WAD.mul(100).div(110))
+        await chiOracle.set(WAD.mul(100).div(110))
         expect(await fyToken.callStatic.accrual()).to.equal(WAD)
       })
 

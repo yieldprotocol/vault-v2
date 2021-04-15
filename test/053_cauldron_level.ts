@@ -54,7 +54,7 @@ describe('Cauldron - level', function () {
     fyToken = env.series.get(seriesId) as FYToken
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
 
-    await spotOracle.setSpot(WAD.mul(2))
+    await spotOracle.set(WAD.mul(2))
     await cauldron.pour(vaultId, WAD, WAD)
   })
 
@@ -62,7 +62,7 @@ describe('Cauldron - level', function () {
     const ink = (await cauldron.balances(vaultId)).ink
     const art = (await cauldron.balances(vaultId)).art
     for (let spot of [1, 2, 4]) {
-      await spotOracle.setSpot(WAD.mul(spot))
+      await spotOracle.set(WAD.mul(spot))
       for (let ratio of [50, 100, 200]) {
         await cauldron.setSpotOracle(baseId, ilkId, spotOracle.address, ratio * 10000)
         const expectedLevel = ink.mul(spot).sub(art.mul(ratio).div(100))
@@ -86,8 +86,8 @@ describe('Cauldron - level', function () {
 
   describe('after maturity', async () => {
     beforeEach(async () => {
-      await spotOracle.setSpot(WAD.mul(1))
-      await rateOracle.setSpot(WAD.mul(1))
+      await spotOracle.set(WAD.mul(1))
+      await rateOracle.set(WAD.mul(1))
       await ethers.provider.send('evm_mine', [(await fyToken.maturity()).toNumber()])
     })
 
@@ -98,7 +98,7 @@ describe('Cauldron - level', function () {
     })
 
     it("rate accrual can't be below 1", async () => {
-      await rateOracle.setSpot(WAD.mul(100).div(110))
+      await rateOracle.set(WAD.mul(100).div(110))
       expect(await cauldron.callStatic.accrual(seriesId)).to.equal(WAD)
     })
 
@@ -108,9 +108,9 @@ describe('Cauldron - level', function () {
       const ink = (await cauldron.balances(vaultId)).ink
       const art = (await cauldron.balances(vaultId)).art
       for (let spot of [1, 2, 4]) {
-        await spotOracle.setSpot(WAD.mul(spot))
+        await spotOracle.set(WAD.mul(spot))
         for (let rate of [110, 120, 140]) {
-          await rateOracle.setSpot(WAD.mul(rate).div(100))
+          await rateOracle.set(WAD.mul(rate).div(100))
           // accrual = rate / 100
           for (let ratio of [50, 100, 200]) {
             await cauldron.setSpotOracle(baseId, ilkId, spotOracle.address, ratio * 10000)
