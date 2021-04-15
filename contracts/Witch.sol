@@ -5,36 +5,24 @@ import "@yield-protocol/vault-interfaces/ICauldron.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
 
 
-library WitchMath {
-    /// @dev Minimum of two unsigned integers
-    function min(uint256 x, uint256 y) internal pure returns (uint256) {
-        return x < y ? x : y;
-    }
-}
-
 library WitchWMath {
-    /// @dev Multiply an amount by a fixed point factor with 18 decimals
+    // Taken from https://github.com/usmfum/USM/blob/master/contracts/WadMath.sol
+    /// @dev Multiply an amount by a fixed point factor with 18 decimals, rounds down.
     function wmul(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        unchecked {
-            z = x * y / 1e18;
-            require (z <= type(uint256).max, "WMUL Overflow");
-        }
+        z = x * y;
+        unchecked { z /= 1e18; }
     }
 
     /// @dev Divide an amount by a fixed point factor with 18 decimals
     function wdiv(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        unchecked {
-            z = x * 1e18 / y;
-            require (z <= type(uint256).max, "WDIV Overflow");
-        }
+        z = (x * 1e18) / y;
     }
 
     /// @dev Divide x and y, with y being fixed point. If both are integers, the result is a fixed point factor. Rounds up.
     function wdivup(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        unchecked {
-            z = x * 1e18 % y == 0 ? x * 1e18 / y : x * 1e18 / y + 1;
-            require (z <= type(uint256).max, "WDIV Overflow");
-        }
+        z = x * 1e18 + y;
+        unchecked { z -= 1; }
+        z /= y;
     }
 }
 
@@ -82,7 +70,7 @@ contract Witch {
             // solhint-disable-next-line var-name-mixedcase
             uint256 term1 = uint256(balances_.ink).wdiv(balances_.art);
             uint256 term2 = 1e18 / 2;
-            uint256 dividend3 = WitchMath.min(AUCTION_TIME, elapsed);
+            uint256 dividend3 = AUCTION_TIME < elapsed ? AUCTION_TIME : elapsed;
             uint256 divisor3 = AUCTION_TIME * 2;
             uint256 term3 = dividend3.wdiv(divisor3);
             price = uint256(1e18).wdiv(term1.wmul(term2 + term3));

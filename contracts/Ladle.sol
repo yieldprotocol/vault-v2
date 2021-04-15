@@ -16,12 +16,11 @@ import "@yield-protocol/utils-v2/contracts/IWETH9.sol";
 
 
 library LadleWMath { // Fixed point arithmetic in 18 decimal units
-    /// @dev Multiply an amount by a fixed point factor with 18 decimals
+    // Taken from https://github.com/usmfum/USM/blob/master/contracts/WadMath.sol
+    /// @dev Multiply an amount by a fixed point factor with 18 decimals, rounds down.
     function wmul(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        unchecked {
-            z = x * y / 1e18;
-            require (z <= type(uint256).max, "WMUL Overflow");
-        }
+        z = x * y;
+        unchecked { z /= 1e18; }
     }
 }
 
