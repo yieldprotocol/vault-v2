@@ -17,12 +17,16 @@ import "@yield-protocol/utils-v2/contracts/IWETH9.sol";
 
 library LadleDMath { // Fixed point arithmetic in 6 decimal units
     /// @dev Multiply an amount by a fixed point factor with 6 decimals, returning an amount
-    function dmul(uint128 x, uint128 y) internal pure returns (uint128 z) {
-        unchecked {
-            uint256 _z = uint256(x) * uint256(y) / 1e6;
-            require (_z <= type(uint128).max, "DMUL Overflow");
-            z = uint128(_z);
-        }
+    function dmul(uint256 x, uint256 y) internal pure returns (uint256 z) {
+        z = x * y / 1e6;
+    }
+}
+
+library LadleSafe256 {
+    /// @dev Safely cast an uint256 to an uint128
+    function u128(uint256 x) internal pure returns (uint128 y) {
+        require (x <= type(uint128).max, "Cast overflow");
+        y = uint128(x);
     }
 }
 
@@ -36,7 +40,8 @@ library LadleSafe128 {
 
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
 contract Ladle is AccessControl(), Multicall {
-    using LadleDMath for uint128;
+    using LadleDMath for uint256;
+    using LadleSafe256 for uint256;
     using LadleSafe128 for uint128;
     using TransferHelper for IERC20;
     using TransferHelper for address payable;
@@ -369,7 +374,7 @@ contract Ladle is AccessControl(), Multicall {
         
         // Calculate debt in fyToken terms
         DataTypes.Series memory series = getSeries(vault.seriesId);
-        uint128 amt = _debtInBase(series, balances.art);
+        uint128 amt = _debtInBase(vault.seriesId, series, balances.art);
 
         DataTypes.Series memory newSeries = getSeries(newSeriesId);
         IPool pool = getPool(newSeriesId);
@@ -459,7 +464,7 @@ contract Ladle is AccessControl(), Multicall {
 
         // Calculate debt in fyToken terms
         DataTypes.Series memory series = getSeries(vault.seriesId);
-        uint128 amt = _debtInBase(series, uint128(-art));
+        uint128 amt = _debtInBase(vault.seriesId, series, uint128(-art));
 
         // Update accounting
         balances = cauldron.pour(vaultId, ink, art);
@@ -477,13 +482,12 @@ contract Ladle is AccessControl(), Multicall {
     }
 
     /// @dev Calculate a debt amount for a series in base terms
-    function _debtInBase(DataTypes.Series memory series, uint128 art)
-        private view
+    function _debtInBase(bytes6 seriesId, DataTypes.Series memory series, uint128 art)
+        private
         returns (uint128 amt)
     {
         if (uint32(block.timestamp) >= series.maturity) {
-            IOracle rateOracle = cauldron.rateOracles(series.baseId);
-            amt = art.dmul(rateOracle.accrual(series.maturity));
+            amt = uint256(art).dmul(cauldron.accrual(seriesId)).u128();
         } else {
             amt = art;
         }
