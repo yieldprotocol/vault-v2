@@ -9,6 +9,8 @@ import ERC20MockArtifact from '../../artifacts/contracts/mocks/ERC20Mock.sol/ERC
 import WETH9MockArtifact from '../../artifacts/contracts/mocks/WETH9Mock.sol/WETH9Mock.json'
 import PoolMockArtifact from '../../artifacts/contracts/mocks/PoolMock.sol/PoolMock.json'
 import OracleMockArtifact from '../../artifacts/contracts/mocks/OracleMock.sol/OracleMock.json'
+import MockChainlinkAggregatorV3Artifact from '../../artifacts/contracts/mocks/MockChainlinkAggregatorV3.sol/MockChainlinkAggregatorV3.json'
+import ChainlinkOracleArtifact from '../../artifacts/contracts/oracles/ChainlinkOracle.sol/ChainlinkOracle.json'
 import JoinArtifact from '../../artifacts/contracts/Join.sol/Join.json'
 import LadleArtifact from '../../artifacts/contracts/Ladle.sol/Ladle.json'
 import WitchArtifact from '../../artifacts/contracts/Witch.sol/Witch.json'
@@ -19,6 +21,8 @@ import { ERC20Mock } from '../../typechain/ERC20Mock'
 import { WETH9Mock } from '../../typechain/WETH9Mock'
 import { PoolMock } from '../../typechain/PoolMock'
 import { OracleMock } from '../../typechain/OracleMock'
+import { MockChainlinkAggregatorV3 } from '../../typechain/MockChainlinkAggregatorV3'
+import { ChainlinkOracle } from '../../typechain/ChainlinkOracle'
 import { Join } from '../../typechain/Join'
 import { Ladle } from '../../typechain/Ladle'
 import { Witch } from '../../typechain/Witch'
@@ -139,8 +143,9 @@ export class YieldEnvironment {
 
   public static async addSpotOracle(owner: SignerWithAddress, cauldron: Cauldron, baseId: string, ilkId: string) {
     const ratio = 1000000 //  1000000 == 100% collateralization ratio
-    const oracle = (await deployContract(owner, OracleMockArtifact, [])) as OracleMock
-    await oracle.set(WAD.mul(2))
+    const aggregator = (await deployContract(owner, MockChainlinkAggregatorV3Artifact, [])) as MockChainlinkAggregatorV3
+    const oracle = (await deployContract(owner, ChainlinkOracleArtifact, [aggregator.address])) as OracleMock // Externally, all oracles are the same
+    await aggregator.set(WAD.mul(2))
     await cauldron.setSpotOracle(baseId, ilkId, oracle.address, ratio)
     return oracle
   }

@@ -5,9 +5,9 @@ contract MockChainlinkAggregatorV3 {
     int public price;
     uint public timestamp;
 
-    function set(int price_, uint timestamp_) external {
-        price = price_;
-        timestamp = timestamp_;
+    function set(int price_) external {
+        price = price_ / 1e10;          // Provide prices with 18 decimals, which will be scaled down to Chainlink's 8
+        timestamp = block.timestamp;
     }
 
     function latestRoundData() public view returns (uint80, int256, uint256, uint256, uint80) {

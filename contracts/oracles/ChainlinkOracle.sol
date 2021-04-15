@@ -11,11 +11,10 @@ contract ChainlinkOracle is IOracle {
 
     uint public constant CHAINLINK_SCALE_FACTOR = 1e10; // Since Chainlink has 8 dec places, and peek() needs 18
 
-    AggregatorV3Interface public immutable chainlinkAggregator;
+    address public immutable override source;
 
-    constructor(AggregatorV3Interface aggregator_)
-    {
-        chainlinkAggregator = aggregator_;
+    constructor(address source_) {
+        source = source_;
     }
 
     /**
@@ -24,7 +23,7 @@ contract ChainlinkOracle is IOracle {
      */
     function peek() public virtual override view returns (uint price, uint updateTime) {
         int rawPrice;
-        (, rawPrice,, updateTime,) = chainlinkAggregator.latestRoundData();
+        (, rawPrice,, updateTime,) = AggregatorV3Interface(source).latestRoundData();
         require(rawPrice > 0, "Chainlink price <= 0");
         price = uint(rawPrice) * CHAINLINK_SCALE_FACTOR;
     }
