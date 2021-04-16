@@ -27,7 +27,7 @@
     "@types/mocha": "^8.0.0",
     "@yield-protocol/utils": "^1.2.3",
     "@yield-protocol/utils-v2": "^2.0.1",
-    "@yield-protocol/vault-interfaces": "^2.0.16",
+    "@yield-protocol/vault-interfaces": "^2.0.18",
     "@yield-protocol/yieldspace-interfaces": "^2.0.10",
     "chai": "4.2.0",
     "dss-interfaces": "0.1.1",
