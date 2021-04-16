@@ -40,10 +40,9 @@ contract Ladle is AccessControl(), Multicall {
         JOIN_ETHER,          // 10
         EXIT_ETHER,          // 11
         TRANSFER_TO_POOL,    // 12
-        RETRIEVE_FROM_POOL,  // 13
-        ROUTE,               // 14
-        TRANSFER_TO_FYTOKEN, // 15
-        REDEEM               // 16
+        ROUTE,               // 13
+        TRANSFER_TO_FYTOKEN, // 14
+        REDEEM               // 15
     }
 
     ICauldron public cauldron;
@@ -184,12 +183,6 @@ contract Ladle is AccessControl(), Multicall {
                     abi.decode(data[i], (bool, uint128));
                 if (address(pool) == address(0)) pool = getPool(vault.seriesId);
                 _transferToPool(pool, base, wad);
-            
-            } else if (operation == Operation.RETRIEVE_FROM_POOL) {
-                (bool base, address to) =
-                    abi.decode(data[i], (bool, address));
-                if (address(pool) == address(0)) pool = getPool(vault.seriesId);
-                _retrieveFromPool(pool, base, to);
             
             } else if (operation == Operation.ROUTE) {
                 _route(data[i]);
@@ -624,15 +617,6 @@ contract Ladle is AccessControl(), Multicall {
         _transferToPool(getPool(seriesId), base, wad);
     }
 
-    /// @dev Allow users to trigger a token transfer to a pool through the ladle, to be used with multicall
-    function retrieveFromPool(bytes6 seriesId, bool base, address to)
-        external payable
-        returns (uint128 retrieved)
-    {
-        IPool pool = getPool(seriesId);
-        retrieved = _retrieveFromPool(pool, base, to);
-    }
-
     /// @dev Allow users to route calls to a pool, to be used with multicall
     function route(bytes memory data)
         external payable
@@ -647,14 +631,6 @@ contract Ladle is AccessControl(), Multicall {
     {
         IERC20 token = base ? pool.baseToken() : pool.fyToken();
         token.safeTransferFrom(msg.sender, address(pool), wad);
-    }
-    
-    /// @dev Allow users to trigger a token transfer to a pool through the ladle, to be used with batch
-    function _retrieveFromPool(IPool pool, bool base, address to)
-        private
-        returns (uint128 retrieved)
-    {
-        retrieved = base ? pool.retrieveBaseToken(to) : pool.retrieveFYToken(to);
     }
 
     /// @dev Allow users to route calls to a pool, to be used with batch
