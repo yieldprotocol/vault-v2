@@ -46,7 +46,7 @@ contract Ladle is AccessControl(), Multicall {
         REDEEM               // 16
     }
 
-    ICauldron public immutable cauldron;
+    ICauldron public cauldron;
     address public poolRouter;
     uint256 public borrowingFee;
 
@@ -122,7 +122,7 @@ contract Ladle is AccessControl(), Multicall {
         emit PoolAdded(seriesId, address(pool));
     }
     
-    /// @dev Set the fee or beneficiary parameters
+    /// @dev Set the fee or router parameters
     function set(bytes32 parameter, bytes32 value)
         public
         auth    
