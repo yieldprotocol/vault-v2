@@ -31,7 +31,6 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
     IOracle public immutable oracle;                                      // Oracle for the savings rate.
     address public immutable override asset;
     uint256 public immutable override maturity;
-    uint256 public fee;
     address public beneficiary;
     uint256 public chiAtMaturity = type(uint256).max;          // Spot price (exchange rate) between the base and an interest accruing token at maturity 
 
@@ -72,13 +71,12 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         _;
     }
 
-    /// @dev Set the fee or beneficiary parameters
-    function setParameter(bytes32 parameter, bytes32 value)
+    /// @dev Set the beneficiary parameter
+    function set(bytes32 parameter, bytes32 value)
         public
         auth    
     {
-        if (parameter == "fee") fee = uint256(value);
-        else if (parameter == "beneficiary") beneficiary = address(bytes20(value));
+        if (parameter == "beneficiary") beneficiary = address(bytes20(value));
         else revert("Unrecognized parameter");
         emit ParameterSet(parameter, value);
     }
@@ -147,7 +145,16 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         beforeMaturity
         auth
     {
-        _mint(beneficiary, (maturity - block.timestamp) * fee * amount / 1e18); // TODO: Check if overriding _mint is cheaper in gas
+        _mint(to, amount);
+    }
+
+    /// @dev Mint fyTokens, with a fee minted to the beneficiary
+    function mintWithFee(address to, uint256 amount, uint256 fee)
+        external override
+        beforeMaturity
+        auth
+    {
+        _mint(beneficiary, fee); // TODO: Check if overriding _mint is cheaper in gas
         _mint(to, amount);
     }
 

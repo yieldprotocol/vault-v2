@@ -46,15 +46,16 @@ contract Ladle is AccessControl(), Multicall {
         REDEEM               // 16
     }
 
-    ICauldron public cauldron;
+    ICauldron public immutable cauldron;
     address public poolRouter;
+    uint256 public borrowingFee;
 
     mapping (bytes6 => IJoin)                   public joins;            // Join contracts available to manage assets. The same Join can serve multiple assets (ETH-A, ETH-B, etc...)
     mapping (bytes6 => IPool)                   public pools;            // Pool contracts available to manage series. 12 bytes still free.
 
     event JoinAdded(bytes6 indexed assetId, address indexed join);
     event PoolAdded(bytes6 indexed seriesId, address indexed pool);
-    event PoolRouterSet(address indexed poolRouter);
+    event ParameterSet(bytes32 indexed parameter, bytes32 value);
 
     constructor (ICauldron cauldron_) {
         cauldron = cauldron_;
@@ -120,14 +121,16 @@ contract Ladle is AccessControl(), Multicall {
         pools[seriesId] = pool;
         emit PoolAdded(seriesId, address(pool));
     }
-
-    /// @dev Set the Pool Router for this Ladle
-    function setPoolRouter(address poolRouter_)
-        external
-        auth
+    
+    /// @dev Set the fee or beneficiary parameters
+    function set(bytes32 parameter, bytes32 value)
+        public
+        auth    
     {
-        poolRouter = poolRouter_;
-        emit PoolRouterSet(poolRouter_);
+        if (parameter == "fee") borrowingFee = uint256(value);
+        else if (parameter == "router") poolRouter = address(bytes20(value));
+        else revert("Unrecognized parameter");
+        emit ParameterSet(parameter, value);
     }
 
     // ---- Batching ----
@@ -352,7 +355,7 @@ contract Ladle is AccessControl(), Multicall {
         DataTypes.Vault memory vault = getOwnedVault(vaultId);
         DataTypes.Balances memory balances = cauldron.balances(vaultId);
         
-        // Calculate debt in fyToken terms
+        // Calculate debt in base terms
         DataTypes.Series memory series = getSeries(vault.seriesId);
         uint128 amt = _debtInBase(vault.seriesId, series, balances.art);
 
@@ -362,7 +365,7 @@ contract Ladle is AccessControl(), Multicall {
         IJoin baseJoin = getJoin(series.baseId);
 
         // Mint fyToken to the pool, as a kind of flash loan
-        fyToken.mint(address(pool), amt * 2);
+        fyToken.mint(address(pool), amt * 2);                   // TODO: Maybe we don't apply a borrowing fee when rolling. It makes things complex.
 
         // Buy the base required to pay off the debt in series 1, and find out the debt in series 2
         uint128 newDebt = pool.buyBaseToken(address(baseJoin), amt, max);
@@ -400,8 +403,14 @@ contract Ladle is AccessControl(), Multicall {
         private
         returns (DataTypes.Balances memory balances)
     {
+        DataTypes.Series memory series;
+        if (art != 0) series = getSeries(vault.seriesId);
+
+        uint256 fee;
+        if (art > 0) fee = ((series.maturity - block.timestamp) * uint256(int256(art)).wmul(borrowingFee));
+
         // Update accounting
-        balances = cauldron.pour(vaultId, ink, art);
+        balances = cauldron.pour(vaultId, ink, art + fee.u128().i128());
 
         // Manage collateral
         if (ink != 0) {
@@ -412,8 +421,7 @@ contract Ladle is AccessControl(), Multicall {
 
         // Manage debt tokens
         if (art != 0) {
-            DataTypes.Series memory series = getSeries(vault.seriesId);
-            if (art > 0) series.fyToken.mint(to, uint128(art));
+            if (art > 0) series.fyToken.mintWithFee(to, uint128(art), fee);
             else series.fyToken.burn(msg.sender, uint128(-art));
         }
     }

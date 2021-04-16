@@ -120,6 +120,7 @@ export class YieldEnvironment {
       [
         id('addJoin(bytes6,address)'),
         id('addPool(bytes6,address)'),
+        id('set(bytes32,bytes32)'),
       ],
       receiver
     )
@@ -146,7 +147,10 @@ export class YieldEnvironment {
     const join = (await deployContract(owner, JoinArtifact, [asset.address])) as Join
     await ladle.addJoin(assetId, join.address)
     await asset.approve(join.address, ethers.constants.MaxUint256) // Owner approves all joins to take from him. Only testing
-    await join.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], ladle.address)
+    await join.grantRoles([
+      id('join(address,uint128)'),
+      id('exit(address,uint128)')
+    ], ladle.address)
     return join
   }
 
@@ -198,8 +202,17 @@ export class YieldEnvironment {
     // Add all ilks to each series
     await cauldron.addIlks(seriesId, ilkIds)
 
-    await baseJoin.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], fyToken.address)
-    await fyToken.grantRoles([id('mint(address,uint256)'), id('burn(address,uint256)')], ladle.address)
+    await baseJoin.grantRoles([
+      id('join(address,uint128)'),
+      id('exit(address,uint128)')
+    ], fyToken.address)
+
+    await fyToken.grantRoles([
+      id('mint(address,uint256)'),
+      id('mintWithFee(address,uint256,uint256)'),
+      id('burn(address,uint256)')
+    ], ladle.address)
+
     return fyToken
   }
 
@@ -314,7 +327,11 @@ export class YieldEnvironment {
       const maturity = now + THREE_MONTHS * count++
       const fyToken = await this.addSeries(owner, cauldron, ladle, baseJoin, chiOracle, seriesId, baseId, ilkIds, maturity) as FYToken
       series.set(seriesId, fyToken)
-      await fyToken.grantRoles([id('mint(address,uint256)'), id('burn(address,uint256)')], ownerAdd) // Only test environment
+      await fyToken.grantRoles([
+        id('mint(address,uint256)'),
+        id('mintWithFee(address,uint256,uint256)'),
+        id('burn(address,uint256)')
+      ], ownerAdd) // Only test environment
 
       // Add a pool between the base and each series
       pools.set(seriesId, await this.addPool(owner, ladle, base, fyToken, seriesId))

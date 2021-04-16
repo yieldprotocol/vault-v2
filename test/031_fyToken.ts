@@ -60,7 +60,7 @@ describe('FYToken', function () {
     await baseJoin.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], fyToken.address)
 
     await fyToken.grantRoles(
-      [id('mint(address,uint256)'), id('burn(address,uint256)'), id('setParameter(bytes32,bytes32)')],
+      [id('mint(address,uint256)'), id('burn(address,uint256)'), id('set(bytes32,bytes32)')],
       owner
     )
 
@@ -72,20 +72,22 @@ describe('FYToken', function () {
   })
 
   it('mints a fee to the beneficiary', async () => {
-    const feeId = ethers.utils.formatBytes32String('fee')
     const beneficiaryId = ethers.utils.formatBytes32String('beneficiary')
     const wrongId = ethers.utils.formatBytes32String('wrong')
     const oneBytes32 = '0x0000000000000000000000000000000000000000000000000000000000000001'
     const otherBytes32 = (other + '000000000000000000000000').toLowerCase()
 
-    await expect(fyToken.setParameter(feeId, oneBytes32)).to.emit(fyToken, 'ParameterSet').withArgs(feeId, oneBytes32)
-    await expect(fyToken.setParameter(beneficiaryId, otherBytes32))
+    // const feeId = ethers.utils.formatBytes32String('fee')
+    // await expect(ladle.set(feeId, oneBytes32)).to.emit(ladle, 'ParameterSet').withArgs(feeId, oneBytes32) // TODO: Test this in 060_ladle_admin
+    // TODO: Test borrowing fees in 061_ladle_pour
+    
+    await expect(fyToken.set(beneficiaryId, otherBytes32))
       .to.emit(fyToken, 'ParameterSet')
       .withArgs(beneficiaryId, otherBytes32)
-    await expect(fyToken.setParameter(wrongId, oneBytes32)).to.be.revertedWith('Unrecognized parameter')
+    await expect(fyToken.set(wrongId, oneBytes32)).to.be.revertedWith('Unrecognized parameter')
 
-    await fyToken.mint(owner, WAD)
-    expect(await fyToken.balanceOf(other)).to.not.equal(0)
+    await fyToken.mintWithFee(owner, WAD, WAD.div(10))
+    expect(await fyToken.balanceOf(other)).to.equal(WAD.div(10))
   })
 
   it('does not allow to mature before maturity', async () => {
