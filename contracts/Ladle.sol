@@ -9,35 +9,20 @@ import "@yield-protocol/yieldspace-interfaces/IPool.sol";
 import "@yield-protocol/utils/contracts/token/IERC20.sol";
 import "@yield-protocol/utils/contracts/token/IERC2612.sol";
 import "dss-interfaces/src/dss/DaiAbstract.sol";
-import "./helpers/AccessControl.sol";
-import "./helpers/Multicall.sol";
-import "./helpers/TransferHelper.sol";
-import "./helpers/IWETH9.sol";
+import "@yield-protocol/utils-v2/contracts/AccessControl.sol";
+import "@yield-protocol/utils-v2/contracts/Multicall.sol";
+import "@yield-protocol/utils-v2/contracts/TransferHelper.sol";
+import "@yield-protocol/utils-v2/contracts/IWETH9.sol";
+import "./math/WMul.sol";
+import "./math/CastU256U128.sol";
+import "./math/CastU128I128.sol";
 
-
-library DMath { // Fixed point arithmetic in 6 decimal units
-    /// @dev Multiply an amount by a fixed point factor with 6 decimals, returning an amount
-    function dmul(uint128 x, uint128 y) internal pure returns (uint128 z) {
-        unchecked {
-            uint256 _z = uint256(x) * uint256(y) / 1e6;
-            require (_z <= type(uint128).max, "DMUL Overflow");
-            z = uint128(_z);
-        }
-    }
-}
-
-library Safe128 {
-    /// @dev Safely cast an uint128 to an int128
-    function i128(uint128 x) internal pure returns (int128 y) {
-        require (x <= uint128(type(int128).max), "Cast overflow");
-        y = int128(x);
-    }
-}
 
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
 contract Ladle is AccessControl(), Multicall {
-    using DMath for uint128;
-    using Safe128 for uint128;
+    using WMul for uint256;
+    using CastU256U128 for uint256;
+    using CastU128I128 for uint128;
     using TransferHelper for IERC20;
     using TransferHelper for address payable;
 
@@ -360,16 +345,35 @@ contract Ladle is AccessControl(), Multicall {
     }
 
     /// @dev Change series and debt of a vault.
-    function roll(bytes12 vaultId, bytes6 seriesId, int128 art)
+    function roll(bytes12 vaultId, bytes6 newSeriesId, uint128 max)
         external payable
         returns (uint128)
     {
-        getOwnedVault(vaultId);
-        // TODO: Buy underlying in the pool for the new series, and sell it in pool for the old series.
-        // The new debt will be the amount of new series fyToken sold. This fyToken will be minted into the new series pool.
-        // The amount obtained when selling the underlying must produce the exact amount to repay the existing debt. The old series fyToken amount will be burnt.
+        DataTypes.Vault memory vault = getOwnedVault(vaultId);
+        DataTypes.Balances memory balances = cauldron.balances(vaultId);
         
-        return cauldron.roll(vaultId, seriesId, art);
+        // Calculate debt in fyToken terms
+        DataTypes.Series memory series = getSeries(vault.seriesId);
+        uint128 amt = _debtInBase(vault.seriesId, series, balances.art);
+
+        DataTypes.Series memory newSeries = getSeries(newSeriesId);
+        IPool pool = getPool(newSeriesId);
+        IFYToken fyToken = IFYToken(newSeries.fyToken);
+        IJoin baseJoin = getJoin(series.baseId);
+
+        // Mint fyToken to the pool, as a kind of flash loan
+        fyToken.mint(address(pool), amt * 2);
+
+        // Buy the base required to pay off the debt in series 1, and find out the debt in series 2
+        uint128 newDebt = pool.buyBaseToken(address(baseJoin), amt, max);
+        baseJoin.join(address(baseJoin), amt);                  // Repay the old series debt
+
+        pool.retrieveFYToken(address(fyToken));                 // Get the surplus fyToken
+        fyToken.burn(address(fyToken), (amt * 2) - newDebt);    // Burn the surplus
+
+        cauldron.roll(vaultId, newSeriesId, newDebt);           // Change the series and debt for the vault
+        
+        return newDebt;
     }
 
     /// @dev Move collateral and debt to the owner's vault.
@@ -440,14 +444,7 @@ contract Ladle is AccessControl(), Multicall {
 
         // Calculate debt in fyToken terms
         DataTypes.Series memory series = getSeries(vault.seriesId);
-        bytes6 baseId = series.baseId;
-        uint128 amt;
-        if (uint32(block.timestamp) >= series.maturity) {
-            IOracle rateOracle = cauldron.rateOracles(baseId);
-            amt = uint128(-art).dmul(rateOracle.accrual(series.maturity));
-        } else {
-            amt = uint128(-art);
-        }
+        uint128 amt = _debtInBase(vault.seriesId, series, uint128(-art));
 
         // Update accounting
         balances = cauldron.pour(vaultId, ink, art);
@@ -462,6 +459,18 @@ contract Ladle is AccessControl(), Multicall {
         // Manage underlying
         IJoin baseJoin = getJoin(series.baseId);
         baseJoin.join(msg.sender, amt);
+    }
+
+    /// @dev Calculate a debt amount for a series in base terms
+    function _debtInBase(bytes6 seriesId, DataTypes.Series memory series, uint128 art)
+        private
+        returns (uint128 amt)
+    {
+        if (uint32(block.timestamp) >= series.maturity) {
+            amt = uint256(art).wmul(cauldron.accrual(seriesId)).u128();
+        } else {
+            amt = art;
+        }
     }
 
     /// @dev Repay debt by selling base in a pool and using the resulting fyToken

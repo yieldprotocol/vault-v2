@@ -7,35 +7,20 @@ import "@yield-protocol/utils/contracts/token/ERC20Permit.sol";
 import "@yield-protocol/vault-interfaces/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/IJoin.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
-import "./helpers/AccessControl.sol";
+import "@yield-protocol/utils-v2/contracts/AccessControl.sol";
+import "./math/WMul.sol";
+import "./math/WDiv.sol";
+import "./math/CastU256U128.sol";
+import "./math/CastU256U32.sol";
 
 
-library DMath { // Fixed point arithmetic in 6 decimal units
-    /// @dev Multiply an amount by a fixed point factor with 6 decimals, returning an amount
-    function dmul(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        z = x * y / 1e6;
-    }
-}
-
-library Safe256 {
-    /// @dev Safely cast an uint256 to an uint128
-    function u128(uint256 x) internal pure returns (uint128 y) {
-        require (x <= type(uint128).max, "Cast overflow");
-        y = uint128(x);
-    }
-
-    /// @dev Safely cast an uint256 to an int128
-    function u32(uint256 x) internal pure returns (uint32 y) {
-        require (x <= type(uint32).max, "Cast overflow");
-        y = uint32(x);
-    }
-}
-
-// TODO: Setter for MAX_TIME_TO_MATURITY
 contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit {
-    using DMath for uint256;
-    using Safe256 for uint256;
+    using WMul for uint256;
+    using WDiv for uint256;
+    using CastU256U128 for uint256;
+    using CastU256U32 for uint256;
 
+    event SeriesMatured(uint256 chiAtMaturity);
     event Redeemed(address indexed from, address indexed to, uint256 amount, uint256 redeemed);
 
     uint256 constant internal MAX_TIME_TO_MATURITY = 126144000; // seconds in four years
@@ -45,6 +30,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
     IOracle public oracle;                                      // Oracle for the savings rate.
     address public override asset;
     uint256 public override maturity;
+    uint256 public chiAtMaturity = type(uint256).max;          // Spot price (exchange rate) between the base and an interest accruing token at maturity 
 
     constructor(
         IOracle oracle_, // Underlying vs its interest-bearing version
@@ -83,25 +69,58 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         _;
     }
 
-    /// @dev Mature the fyToken by recording the chi in its oracle.
+    /// @dev Mature the fyToken by recording the chi.
     /// If called more than once, it will revert.
-    /// Check if it has been called as `fyToken.oracle.recorded(fyToken.maturity())`
-    function mature() 
-        public override
+    function mature()
+        external override
         afterMaturity
     {
-        oracle.record(maturity.u32());                                    // The oracle checks the timestamp and that it hasn't been recorded yet.        
+        require (chiAtMaturity == type(uint256).max, "Already matured");
+        _mature();
+    }
+
+    /// @dev Mature the fyToken by recording the chi.
+    function _mature() 
+        private
+        returns (uint256 _chiAtMaturity)
+    {
+        (_chiAtMaturity,) = oracle.get();
+        chiAtMaturity = _chiAtMaturity;
+        emit SeriesMatured(_chiAtMaturity);
+    }
+
+    /// @dev Retrieve the chi accrual since maturity, maturing if necessary.
+    function accrual()
+        external
+        afterMaturity
+        returns (uint256)
+    {
+        return _accrual();
+    }
+
+    /// @dev Retrieve the chi accrual since maturity, maturing if necessary.
+    /// Note: Call only after checking we are past maturity
+    function _accrual()
+        private
+        returns (uint256 accrual_)
+    {
+        if (chiAtMaturity == type(uint256).max) {  // After maturity, but chi not yet recorded. Let's record it, and accrual is then 1.
+            _mature();
+        } else {
+            (uint256 chi,) = oracle.get();
+            accrual_ = chi.wdiv(chiAtMaturity);
+        }
+        accrual_ = accrual_ >= 1e18 ? accrual_ : 1e18;     // The accrual can't be below 1 (with 18 decimals)
     }
 
     /// @dev Burn the fyToken after maturity for an amount that increases according to `chi`
     function redeem(address to, uint256 amount)
-        public override
+        external override
         afterMaturity
-        returns (uint256)
+        returns (uint256 redeemed)
     {
         _burn(msg.sender, amount);
-
-        uint256 redeemed = amount.dmul(oracle.accrual(maturity.u32()));
+        redeemed = amount.wmul(_accrual());
         join.exit(to, redeemed.u128());
         
         emit Redeemed(msg.sender, to, amount, redeemed);
@@ -110,7 +129,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
 
     /// @dev Mint fyTokens.
     function mint(address to, uint256 amount)
-        public override
+        external override
         beforeMaturity
         auth
     {
@@ -119,7 +138,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
 
     /// @dev Burn fyTokens. The user needs to have either transferred the tokens to this contract, or have approved this contract to take them. 
     function burn(address from, uint256 amount)
-        public override
+        external override
         auth
     {
         _burn(from, amount);
@@ -131,7 +150,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
      * @return The amount of `token` that can be borrowed.
      */
     function maxFlashLoan(address token)
-        public view override
+        external view override
         beforeMaturity
         returns (uint256)
     {
@@ -145,7 +164,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
      * @return The amount of `token` to be charged for the loan, on top of the returned principal.
      */
     function flashFee(address token, uint256)
-        public view override
+        external view override
         beforeMaturity
         returns (uint256)
     {
@@ -163,7 +182,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
      * @param data A data parameter to be passed on to the `receiver` for any custom use.
      */
     function flashLoan(IERC3156FlashBorrower receiver, address token, uint256 amount, bytes memory data)
-        public override
+        external override
         beforeMaturity
         returns(bool)
     {

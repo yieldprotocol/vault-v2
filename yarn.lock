@@ -2230,6 +2230,11 @@
   resolved "https://registry.yarnpkg.com/@yarnpkg/lockfile/-/lockfile-1.1.0.tgz#e77a97fbd345b76d83245edcd17d393b1b41fb31"
   integrity sha512-GpSwvyXOcOOlV70vbnzjj4fW5xW/FdUF6nQEt1ENy7m4ZCczi1+/buVUPAqmGfqznsORNFzUMjctTIp8a9tuCQ==
 
+"@yield-protocol/utils-v2@^2.0.1":
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/@yield-protocol/utils-v2/-/utils-v2-2.0.1.tgz#4a32dc7dd8f746d87d93e268b68066d63ec7b5cb"
+  integrity sha512-/Er22GVj3IL1UQj0vyYczbQhyDPy9Yzd8sPDYFDLCq61g5J4/eBINP3zV4RLYa+UjVB5RfusEK/MpEFuYJbIwQ==
+
 "@yield-protocol/utils@^1.2.3":
   version "1.2.3"
   resolved "https://registry.yarnpkg.com/@yield-protocol/utils/-/utils-1.2.3.tgz#b5dc1d36bef1febc9ebac3ad876254fea1a5f166"
@@ -2238,15 +2243,15 @@
     ethereumjs-util "^7.0.8"
     ethers "^5.0.7"
 
-"@yield-protocol/vault-interfaces@^2.0.13":
-  version "2.0.13"
-  resolved "https://registry.yarnpkg.com/@yield-protocol/vault-interfaces/-/vault-interfaces-2.0.13.tgz#214f6b9cae3ff40227455a6c1801a7ce1df2c439"
-  integrity sha512-n93VMirY8GhN1eutOr9oGIarYQSie/BHsUJkpdvf/oBwGijq7WkMOumlgGcOmdffjVYHp5Mb3ISeJR7ptDGskA==
+"@yield-protocol/vault-interfaces@^2.0.18":
+  version "2.0.18"
+  resolved "https://registry.yarnpkg.com/@yield-protocol/vault-interfaces/-/vault-interfaces-2.0.18.tgz#40815094f3f930f49ab33de235d1a9ce1de9e697"
+  integrity sha512-IegxA/mEhxep6ogC/hd4pS0e8kPalaElXTobD5VTHiBzErGlS1n4MYLGM/w9UsUVEn3tqQiO7xppTmwyZAD//Q==
 
-"@yield-protocol/yieldspace-interfaces@^2.0.8":
-  version "2.0.8"
-  resolved "https://registry.yarnpkg.com/@yield-protocol/yieldspace-interfaces/-/yieldspace-interfaces-2.0.8.tgz#8bdee577ee0b7abc941b618bca274fd28aa313cd"
-  integrity sha512-H9H0IU4E62xhKFvBgGOOprKJlYsdSe9QxkYeHVD0tzc3HydNc1tDVRM7o6c3krXGxmqOgd4v0bgoc29daxvZ1w==
+"@yield-protocol/yieldspace-interfaces@^2.0.10":
+  version "2.0.10"
+  resolved "https://registry.yarnpkg.com/@yield-protocol/yieldspace-interfaces/-/yieldspace-interfaces-2.0.10.tgz#afcc4e95042e84e74a78922525a6d2fba22bccd9"
+  integrity sha512-EFmK3uPEIfQPDQcxgX6kvScN9Gdfx5N/augfTOlb+RiiXP7VlShCa6zWLlKS8QXEErsiCDfTNNijXVZb7ZzlrQ==
 
 abab@^2.0.0:
   version "2.0.5"

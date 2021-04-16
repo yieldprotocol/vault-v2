@@ -3,10 +3,15 @@ pragma solidity ^0.8.0;
 import "@yield-protocol/vault-interfaces/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
-import "./helpers/AccessControl.sol";
+import "@yield-protocol/utils-v2/contracts/AccessControl.sol";
+import "./math/WMul.sol";
+import "./math/WDiv.sol";
+import "./math/CastU128I128.sol";
+import "./math/CastI128U128.sol";
+import "./math/CastU256U32.sol";
+import "./math/CastU256I256.sol";
 
-
-library Math {
+library CauldronMath {
     /// @dev Add a number (which might be negative) to a positive, and revert if the result is negative.
     function add(uint128 x, int128 y) internal pure returns (uint128 z) {
         require (y > 0 || x >= uint128(-y), "Result below zero");
@@ -14,59 +19,16 @@ library Math {
     }
 }
 
-library DMath { // Fixed point arithmetic in 6 decimal units
-    /// @dev Multiply an amount by a fixed point factor with 6 decimals, returning an amount
-    function dmul(uint128 x, uint128 y) internal pure returns (uint128 z) {
-        unchecked {
-            uint256 _z = uint256(x) * uint256(y) / 1e6;
-            require (_z <= type(uint128).max, "DMUL Overflow");
-            z = uint128(_z);
-        }
-    }
-}
-
-library RMath { // Fixed point arithmetic in Ray units
-    /// @dev Multiply an integer amount by a fixed point factor in ray units, returning an integer amount
-    function rmul(int128 x, uint128 y) internal pure returns (int128 z) {
-        unchecked {
-            int256 _z = int256(x) * int256(uint256(y)) / 1e27;
-            require (_z >= type(int128).min && _z <= type(int128).max, "RMUL Overflow");
-            z = int128(_z);
-        }
-    }
-}
-
-library Safe128 {
-    /// @dev Safely cast an int128 to an uint128
-    function u128(int128 x) internal pure returns (uint128 y) {
-        require (x >= 0, "Cast overflow");
-        y = uint128(x);
-    }
-
-    /// @dev Safely cast an uint128 to an int128
-    function i128(uint128 x) internal pure returns (int128 y) {
-        require (x <= uint128(type(int128).max), "Cast overflow");
-        y = int128(x);
-    }
-}
-
-library Safe256 {
-    /// @dev Safely cast an uint256 to an int128
-    function u32(uint256 x) internal pure returns (uint32 y) {
-        require (x <= type(uint32).max, "Cast overflow");
-        y = uint32(x);
-    }
-}
-
 // TODO: Add a setter for auction protection (same as Witch.AUCTION_TIME?)
 
 contract Cauldron is AccessControl() {
-    using Math for uint128;
-    using DMath for uint128;
-    using RMath for int128;
-    using Safe256 for uint256;
-    using Safe128 for uint128;
-    using Safe128 for int128;
+    using CauldronMath for uint128;
+    using WMul for uint256;
+    using WDiv for uint256;
+    using CastU128I128 for uint128;
+    using CastU256U32 for uint256;
+    using CastU256I256 for uint256;
+    using CastI128U128 for int128;
 
     event AssetAdded(bytes6 indexed assetId, address indexed asset);
     event SeriesAdded(bytes6 indexed seriesId, bytes6 indexed baseId, address indexed fyToken);
@@ -85,6 +47,8 @@ contract Cauldron is AccessControl() {
     event VaultRolled(bytes12 indexed vaultId, bytes6 indexed seriesId, uint128 art);
     event VaultTimestamped(bytes12 indexed vaultId, uint256 indexed timestamp);
 
+    event SeriesMatured(bytes6 indexed seriesId, uint256 rateAtMaturity);
+
     // ==== Protocol data ====
     mapping (bytes6 => address)                                 public assets;          // Underlyings and collaterals available in Cauldron. 12 bytes still free.
     mapping (bytes6 => mapping(bytes6 => DataTypes.Debt))       public debt;            // [baseId][ilkId] Max and sum of debt per underlying and collateral.
@@ -92,6 +56,7 @@ contract Cauldron is AccessControl() {
     mapping (bytes6 => mapping(bytes6 => bool))                 public ilks;            // [seriesId][assetId] Assets that are approved as collateral for a series
 
     mapping (bytes6 => IOracle)                                 public rateOracles;     // Rate (borrowing rate) accruals oracle for the underlying
+    mapping (bytes6 => uint256)                                 public ratesAtMaturity; // Borrowing rate at maturity for a mature series
     mapping (bytes6 => mapping(bytes6 => DataTypes.SpotOracle)) public spotOracles;     // [assetId][assetId] Spot price oracles
 
     // ==== Vault data ====
@@ -191,7 +156,7 @@ contract Cauldron is AccessControl() {
 
     /// @dev Create a new vault, linked to a series (and therefore underlying) and a collateral
     function build(address owner, bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
-        public
+        external
         auth
         returns(DataTypes.Vault memory vault)
     {
@@ -209,7 +174,7 @@ contract Cauldron is AccessControl() {
 
     /// @dev Destroy an empty vault. Used to recover gas costs.
     function destroy(bytes12 vaultId)
-        public
+        external
         auth
     {
         DataTypes.Balances memory balances_ = balances[vaultId];
@@ -220,13 +185,23 @@ contract Cauldron is AccessControl() {
     }
 
     /// @dev Change a vault series and/or collateral types.
+    function _tweak(bytes12 vaultId, DataTypes.Vault memory vault)
+        internal
+    {
+        require (ilks[vault.seriesId][vault.ilkId] == true, "Ilk not added");
+
+        vaults[vaultId] = vault;
+        emit VaultTweaked(vaultId, vault.seriesId, vault.ilkId);
+    }
+
+    /// @dev Change a vault series and/or collateral types.
     /// We can change the series if there is no debt, or assets if there are no assets
     function tweak(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
-        public
+        external
         auth
         returns(DataTypes.Vault memory vault)
     {
-        require (ilks[seriesId][ilkId] == true, "Ilk not added");
+        // require (ilks[seriesId][ilkId] == true, "Ilk not added");
         DataTypes.Balances memory balances_ = balances[vaultId];
         vault = vaults[vaultId];
         if (seriesId != vault.seriesId) {
@@ -237,8 +212,7 @@ contract Cauldron is AccessControl() {
             require (balances_.ink == 0, "Only with no collateral");
             vault.ilkId = ilkId;
         }
-        vaults[vaultId] = vault;
-        emit VaultTweaked(vaultId, seriesId, ilkId);
+        _tweak(vaultId, vault);
     }
 
     /// @dev Transfer a vault to another user.
@@ -254,7 +228,7 @@ contract Cauldron is AccessControl() {
 
     /// @dev Transfer a vault to another user.
     function give(bytes12 vaultId, address receiver)
-        public
+        external
         auth
         returns(DataTypes.Vault memory vault)
     {
@@ -265,7 +239,7 @@ contract Cauldron is AccessControl() {
 
     /// @dev Move collateral and debt between vaults.
     function stir(bytes12 from, bytes12 to, uint128 ink, uint128 art)
-        public
+        external
         auth
         returns (DataTypes.Balances memory, DataTypes.Balances memory)
     {
@@ -274,39 +248,42 @@ contract Cauldron is AccessControl() {
         require (vaultFrom.owner != address(0), "Origin vault not found");
         require (vaultTo.owner != address(0), "Destination vault not found");
 
-        DataTypes.Balances memory balancesFrom_ = balances[from];
-        DataTypes.Balances memory balancesTo_ = balances[to];
+        DataTypes.Balances memory balancesFrom = balances[from];
+        DataTypes.Balances memory balancesTo = balances[to];
 
         if (ink > 0) {
             require (vaultFrom.ilkId == vaultTo.ilkId, "Different collateral");
-            balancesFrom_.ink -= ink;
-            balancesTo_.ink += ink;
+            balancesFrom.ink -= ink;
+            balancesTo.ink += ink;
         }
         if (art > 0) {
             require (vaultFrom.seriesId == vaultTo.seriesId, "Different series");
-            balancesFrom_.art -= art;
-            balancesTo_.art += art;
+            balancesFrom.art -= art;
+            balancesTo.art += art;
         }
 
-        balances[from] = balancesFrom_;
-        balances[to] = balancesTo_;
+        balances[from] = balancesFrom;
+        balances[to] = balancesTo;
 
-        if (ink > 0) require(level(from) >= 0, "Undercollateralized at origin");
-        if (art > 0) require(level(to) >= 0, "Undercollateralized at destination");
+        if (ink > 0) require(_level(vaultFrom, balancesFrom, series[vaultFrom.seriesId]) >= 0, "Undercollateralized at origin");
+        if (art > 0) require(_level(vaultTo, balancesTo, series[vaultTo.seriesId]) >= 0, "Undercollateralized at destination");
 
         emit VaultStirred(from, to, ink, art);
-        return (balancesFrom_, balancesTo_);
+        return (balancesFrom, balancesTo);
     }
 
     /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
     /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
-    function _pour(bytes12 vaultId, int128 ink, int128 art)
+    function _pour(
+        bytes12 vaultId,
+        DataTypes.Vault memory vault_,
+        DataTypes.Balances memory balances_,
+        DataTypes.Series memory series_,
+        int128 ink,
+        int128 art
+    )
         internal returns (DataTypes.Balances memory)
     {
-        DataTypes.Vault memory vault_ = vaults[vaultId];
-        DataTypes.Balances memory balances_ = balances[vaultId];
-        DataTypes.Series memory series_ = series[vault_.seriesId];
-
         // For now, the collateralization checks are done outside to allow for underwater operation. That might change.
         if (ink != 0) {
             balances_.ink = balances_.ink.add(ink);
@@ -330,89 +307,171 @@ contract Cauldron is AccessControl() {
     /// @dev Manipulate a vault, ensuring it is collateralized afterwards.
     /// To be used by debt management contracts.
     function pour(bytes12 vaultId, int128 ink, int128 art)
-        public
+        external
         auth
         returns (DataTypes.Balances memory balances_)
     {
-        require (vaults[vaultId].owner != address(0), "Vault not found");
-        balances_ = _pour(vaultId, ink, art);
+        DataTypes.Vault memory vault_ = vaults[vaultId];
+        require (vault_.owner != address(0), "Vault not found");
+        DataTypes.Series memory series_ = series[vault_.seriesId];
+        balances_ = balances[vaultId];
+
+        balances_ = _pour(vaultId, vault_, balances_, series_, ink, art);
+
         if (balances_.art > 0 && (ink < 0 || art > 0))                          // If there is debt and we are less safe
-            require(level(vaultId) >= 0, "Undercollateralized");
+            require(_level(vault_, balances_, series_) >= 0, "Undercollateralized");
         return balances_;
     }
 
     /// @dev Give a non-timestamped vault to the caller, and timestamp it.
     /// To be used for liquidation engines.
     function grab(bytes12 vaultId)
-        public
+        external
         auth
     {
         uint32 now_ = uint32(block.timestamp);
         require (timestamps[vaultId] + 24*60*60 <= now_, "Timestamped");        // Grabbing a vault protects it for a day from being grabbed by another liquidator. All grabbed vaults will be suddenly released on the 7th of February 2106, at 06:28:16 GMT. I can live with that.
-        require(level(vaultId) < 0, "Not undercollateralized");
+
+        DataTypes.Vault memory vault_ = vaults[vaultId];
+        require (vault_.owner != address(0), "Vault not found");
+        DataTypes.Balances memory balances_ = balances[vaultId];
+        DataTypes.Series memory series_ = series[vault_.seriesId];
+        require(_level(vault_, balances_, series_) < 0, "Not undercollateralized");
+
         timestamps[vaultId] = now_;
         _give(vaultId, msg.sender);
+
         emit VaultTimestamped(vaultId, now_);
     }
 
     /// @dev Reduce debt and collateral from a vault, ignoring collateralization checks.
     /// To be used by liquidation engines.
     function slurp(bytes12 vaultId, uint128 ink, uint128 art)
-        public
+        external
         auth
         returns (DataTypes.Balances memory balances_)
     {
-        balances_ = _pour(vaultId, -(ink.i128()), -(art.i128()));
+        DataTypes.Vault memory vault_ = vaults[vaultId];
+        require (vault_.owner != address(0), "Vault not found");
+        DataTypes.Series memory series_ = series[vault_.seriesId];
+        balances_ = balances[vaultId];
+
+        balances_ = _pour(vaultId, vault_, balances_, series_, -(ink.i128()), -(art.i128()));
+
         return balances_;
     }
 
     /// @dev Change series and debt of a vault.
     /// The module calling this function also needs to buy underlying in the pool for the new series, and sell it in pool for the old series.
-    function roll(bytes12 vaultId, bytes6 seriesId, int128 art)
-        public
+    function roll(bytes12 vaultId, bytes6 newSeriesId, uint128 art)
+        external
         auth
         returns (uint128)
     {
         DataTypes.Vault memory vault_ = vaults[vaultId];
         require (vault_.owner != address(0), "Vault not found");
         DataTypes.Balances memory balances_ = balances[vaultId];
-        DataTypes.Series memory series_ = series[vault_.seriesId];
+        DataTypes.Series memory oldSeries_ = series[vault_.seriesId];
+        DataTypes.Series memory newSeries_ = series[newSeriesId];
+        require (oldSeries_.baseId == newSeries_.baseId, "Mismatched bases in series");
         
-        delete balances[vaultId];
-        tweak(vaultId, seriesId, vault_.ilkId);
+        // Change the vault series, ignoring balance and debt checks
+        vault_.seriesId = newSeriesId;
+        _tweak(vaultId, vault_);
 
-        // Modify vault and global debt records. If debt increases, check global limit.
-        if (art != 0) {
-            DataTypes.Debt memory debt_ = debt[series_.baseId][vault_.ilkId];
-            if (art > 0) require (debt_.sum.add(art) <= debt_.max, "Max debt exceeded");
-            balances_.art = balances_.art.add(art);
-            debt_.sum = debt_.sum.add(art);
-            debt[series_.baseId][vault_.ilkId] = debt_;
-        }
+        // Modify global debt records
+        DataTypes.Debt memory debt_ = debt[oldSeries_.baseId][vault_.ilkId];
+        debt_.sum = debt_.sum - balances_.art + art;
+        require (debt_.sum <= debt_.max, "Max debt exceeded");
+        debt[oldSeries_.baseId][vault_.ilkId] = debt_;
+
+        // Modify vault debt records
+        balances_.art =  art;
         balances[vaultId] = balances_;
-        require(level(vaultId) >= 0, "Undercollateralized");
-        emit VaultRolled(vaultId, seriesId, balances_.art);
+
+        require(_level(vault_, balances_, newSeries_) >= 0, "Undercollateralized");
+        emit VaultRolled(vaultId, newSeriesId, balances_.art);
         return balances_.art;
     }
 
     // ==== Accounting ====
 
     /// @dev Return the collateralization level of a vault. It will be negative if undercollateralized.
-    function level(bytes12 vaultId) public view returns (int128) {
+    function level(bytes12 vaultId) public returns (int256) {
         DataTypes.Vault memory vault_ = vaults[vaultId];
         require (vault_.owner != address(0), "Vault not found");                            // The vault existing is enough to be certain that the oracle exists.
-        DataTypes.Series memory series_ = series[vault_.seriesId];
         DataTypes.Balances memory balances_ = balances[vaultId];
+        DataTypes.Series memory series_ = series[vault_.seriesId];
+
+        return _level(vault_, balances_, series_);
+    }
+
+    /// @dev Record the borrowing rate at maturity for a series
+    function mature(bytes6 seriesId)
+        public
+    {
+        DataTypes.Series memory series_ = series[seriesId];
+        require (uint32(block.timestamp) >= series_.maturity, "Only after maturity");
+        require (ratesAtMaturity[seriesId] == 0, "Already matured");
+        _mature(seriesId, series_);
+    }
+
+    /// @dev Record the borrowing rate at maturity for a series
+    function _mature(bytes6 seriesId, DataTypes.Series memory series_)
+        internal
+    {
+        IOracle rateOracle = rateOracles[series_.baseId];
+        (uint256 rateAtMaturity,) = rateOracle.get();
+        ratesAtMaturity[seriesId] = rateAtMaturity;
+        emit SeriesMatured(seriesId, rateAtMaturity);
+    }
+    
+
+    /// @dev Retrieve the rate accrual since maturity, maturing if necessary.
+    function accrual(bytes6 seriesId)
+        public
+        returns (uint256)
+    {
+        DataTypes.Series memory series_ = series[seriesId];
+        require (uint32(block.timestamp) >= series_.maturity, "Only after maturity");
+        return _accrual(seriesId, series_);
+    }
+
+    /// @dev Retrieve the rate accrual since maturity, maturing if necessary.
+    /// Note: Call only after checking we are past maturity
+    function _accrual(bytes6 seriesId, DataTypes.Series memory series_)
+        private
+        returns (uint256 accrual_)
+    {
+        uint256 rateAtMaturity = ratesAtMaturity[seriesId];
+        if (rateAtMaturity == 0) {  // After maturity, but rate not yet recorded. Let's record it, and accrual is then 1.
+            _mature(seriesId, series_);
+        } else {
+            IOracle rateOracle = rateOracles[series_.baseId];
+            (uint256 rate,) = rateOracle.get();
+            accrual_ = rate.wdiv(rateAtMaturity);
+        }
+        accrual_ = accrual_ >= 1e18 ? accrual_ : 1e18;     // The accrual can't be below 1 (with 18 decimals)
+    }
+
+    /// @dev Return the collateralization level of a vault. It will be negative if undercollateralized.
+    function _level(
+        DataTypes.Vault memory vault_,
+        DataTypes.Balances memory balances_,
+        DataTypes.Series memory series_
+    )
+        internal
+        returns (int256)
+    {
         DataTypes.SpotOracle memory spotOracle_ = spotOracles[series_.baseId][vault_.ilkId];
-        uint128 spot = spotOracle_.oracle.spot();
-        uint128 ratio = spotOracle_.ratio;
+        (uint256 spot,) = spotOracle_.oracle.get();
+        uint256 ratio = uint256(spotOracle_.ratio) * 1e12;   // Normalized to 18 decimals
 
         if (uint32(block.timestamp) >= series_.maturity) {
-            IOracle rateOracle = rateOracles[series_.baseId];
-            uint128 accrual = rateOracle.accrual(series_.maturity);
-            return balances_.ink.dmul(spot).i128() - balances_.art.dmul(accrual).dmul(ratio).i128();
+            uint256 accrual_ = _accrual(vault_.seriesId, series_);
+            return uint256(balances_.ink).wmul(spot).i256() - uint256(balances_.art).wmul(accrual_).wmul(ratio).i256();
         }
 
-        return balances_.ink.dmul(spot).i128() - balances_.art.dmul(ratio).i128();
+        return uint256(balances_.ink).wmul(spot).i256() - uint256(balances_.art).wmul(ratio).i256();
     }
 }

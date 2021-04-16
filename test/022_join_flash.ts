@@ -99,14 +99,14 @@ describe('Join - flash', function () {
   })
 
   it('sets the flash fee factor', async () => {
-    const feeFactor = BigNumber.from(10).pow(25).mul(5) // 5%
+    const feeFactor = WAD.mul(5).div(100) // 5%
     await expect(join.setFlashFeeFactor(feeFactor)).to.emit(join, 'FlashFeeFactorSet').withArgs(feeFactor)
     expect(await join.flashFeeFactor()).to.equal(feeFactor)
   })
 
   describe('with a non-zero fee', async () => {
     beforeEach(async () => {
-      const feeFactor = BigNumber.from(10).pow(25).mul(5) // 5%
+      const feeFactor = WAD.mul(5).div(100) // 5%
       await join.setFlashFeeFactor(feeFactor)
     })
 

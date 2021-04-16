@@ -1,11 +1,12 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { DEC6, WAD, OPS } from './shared/constants'
+import { WAD, OPS } from './shared/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { OracleMock } from '../typechain/OracleMock'
+import { SourceMock } from '../typechain/SourceMock'
 import { Ladle } from '../typechain/Ladle'
 
 import { ethers, waffle } from 'hardhat'
@@ -28,7 +29,9 @@ describe('Ladle - close', function () {
   let ilk: ERC20Mock
   let ilkJoin: Join
   let spotOracle: OracleMock
+  let spotSource: SourceMock
   let rateOracle: OracleMock
+  let rateSource: SourceMock
   let ladle: Ladle
   let ladleFromOther: Ladle
 
@@ -61,7 +64,9 @@ describe('Ladle - close', function () {
     ilkJoin = env.joins.get(ilkId) as Join
     fyToken = env.series.get(seriesId) as FYToken
     rateOracle = env.oracles.get('rate') as OracleMock
+    rateSource = (await ethers.getContractAt('SourceMock', await rateOracle.source())) as SourceMock
     spotOracle = env.oracles.get(ilkId) as OracleMock
+    spotSource = (await ethers.getContractAt('SourceMock', await spotOracle.source())) as SourceMock
 
     ladleFromOther = ladle.connect(otherAcc)
 
@@ -145,14 +150,14 @@ describe('Ladle - close', function () {
   })
 
   describe('after maturity', async () => {
-    const accrual = DEC6.mul(110).div(100) // accrual is 10%
+    const accrual = WAD.mul(110).div(100) // accrual is 10%
 
     beforeEach(async () => {
-      await spotOracle.setSpot(DEC6.mul(1))
-      await rateOracle.setSpot(DEC6.mul(1))
+      await spotSource.set(WAD.mul(1))
+      await rateSource.set(WAD.mul(1))
       await ethers.provider.send('evm_mine', [(await fyToken.maturity()).toNumber()])
-      await rateOracle.record(await fyToken.maturity())
-      await rateOracle.setSpot(accrual) // Since spot was 1 when recorded at maturity, accrual is equal to the current spot
+      await cauldron.mature(seriesId)
+      await rateSource.set(accrual) // Since spot was 1 when recorded at maturity, accrual is equal to the current spot
     })
 
     it('users can repay their debt with underlying at accrual rate', async () => {
@@ -160,7 +165,7 @@ describe('Ladle - close', function () {
       await expect(ladle.close(vaultId, owner, 0, WAD.mul(-1)))
         .to.emit(cauldron, 'VaultPoured')
         .withArgs(vaultId, seriesId, ilkId, 0, WAD.mul(-1))
-      expect(await base.balanceOf(owner)).to.equal(baseBefore.sub(WAD.mul(accrual).div(DEC6)))
+      expect(await base.balanceOf(owner)).to.equal(baseBefore.sub(WAD.mul(accrual).div(WAD)))
       expect(await fyToken.balanceOf(owner)).to.equal(WAD)
       expect((await cauldron.balances(vaultId)).art).to.equal(0)
     })

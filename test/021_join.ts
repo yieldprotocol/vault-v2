@@ -22,6 +22,7 @@ describe('Join', function () {
   let join: Join
   let joinFromOther: Join
   let token: ERC20Mock
+  let otherToken: ERC20Mock
 
   before(async () => {
     const signers = await ethers.getSigners()
@@ -34,13 +35,24 @@ describe('Join', function () {
 
   beforeEach(async () => {
     token = (await deployContract(ownerAcc, ERC20MockArtifact, ['MTK', 'Mock Token'])) as ERC20Mock
+    otherToken = (await deployContract(ownerAcc, ERC20MockArtifact, ['OTH', 'Other Token'])) as ERC20Mock
     join = (await deployContract(ownerAcc, JoinArtifact, [token.address])) as Join
     joinFromOther = join.connect(otherAcc)
 
-    await join.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], owner)
+    await join.grantRoles(
+      [id('join(address,uint128)'), id('exit(address,uint128)'), id('retrieve(address,address)')],
+      owner
+    )
 
     await token.mint(owner, WAD.mul(100))
     await token.approve(join.address, MAX)
+  })
+
+  it('retrieves airdropped tokens', async () => {
+    await otherToken.mint(join.address, WAD)
+    expect(await join.retrieve(otherToken.address, other))
+      .to.emit(otherToken, 'Transfer')
+      .withArgs(join.address, other, WAD)
   })
 
   it('pulls tokens from user', async () => {

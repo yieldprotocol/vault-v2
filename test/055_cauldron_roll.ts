@@ -69,15 +69,11 @@ describe('Cauldron - roll', function () {
   })
 
   it('does not allow rolling and becoming undercollateralized', async () => {
-    await expect(cauldron.roll(vaultId, otherSeriesId, WAD.mul(2))).to.be.revertedWith('Undercollateralized')
-  })
-
-  it('does not allow rolling to a series without a matching ilk for the vault', async () => {
-    await expect(cauldron.roll(vaultId, mockSeriesId, 0)).to.be.revertedWith('Ilk not added')
+    await expect(cauldron.roll(vaultId, otherSeriesId, WAD.mul(3))).to.be.revertedWith('Undercollateralized')
   })
 
   it('rolls a vault', async () => {
-    expect(await cauldron.roll(vaultId, otherSeriesId, WAD.div(-2)))
+    expect(await cauldron.roll(vaultId, otherSeriesId, WAD.div(2)))
       .to.emit(cauldron, 'VaultRolled')
       .withArgs(vaultId, otherSeriesId, WAD.div(2))
     expect((await cauldron.vaults(vaultId)).seriesId).to.equal(otherSeriesId)

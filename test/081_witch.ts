@@ -1,5 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { DEC6, WAD } from './shared/constants'
+import { WAD } from './shared/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Ladle } from '../typechain/Ladle'
@@ -8,6 +8,7 @@ import { Witch } from '../typechain/Witch'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { OracleMock } from '../typechain/OracleMock'
+import { SourceMock } from '../typechain/SourceMock'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
@@ -32,11 +33,9 @@ describe('Witch', function () {
   let ilk: ERC20Mock
   let ilkJoin: Join
   let spotOracle: OracleMock
-  let rateOracle: OracleMock
+  let spotSource: SourceMock
 
-  const mockAssetId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const mockVaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12))
-  const MAX = ethers.constants.MaxUint256
 
   async function fixture() {
     return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId], [seriesId])
@@ -65,13 +64,13 @@ describe('Witch', function () {
     ilk = env.assets.get(ilkId) as ERC20Mock
     ilkJoin = env.joins.get(ilkId) as Join
     fyToken = env.series.get(seriesId) as FYToken
-    rateOracle = env.oracles.get(baseId) as OracleMock
     spotOracle = env.oracles.get(ilkId) as OracleMock
+    spotSource = (await ethers.getContractAt('SourceMock', await spotOracle.source())) as SourceMock
 
     witchFromOther = witch.connect(otherAcc)
 
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
-    ladle.pour(vaultId, owner, WAD, WAD)
+    await ladle.pour(vaultId, owner, WAD, WAD)
   })
 
   it('does not allow to grab collateralized vaults', async () => {
@@ -87,7 +86,7 @@ describe('Witch', function () {
   })
 
   it('grabs undercollateralized vaults', async () => {
-    await spotOracle.setSpot(DEC6.div(2))
+    await spotSource.set(WAD.div(2))
     await witch.grab(vaultId)
     const event = (await cauldron.queryFilter(cauldron.filters.VaultTimestamped(null, null)))[0]
     expect(event.args.timestamp.toNumber()).to.be.greaterThan(0)
@@ -96,7 +95,7 @@ describe('Witch', function () {
 
   describe('once a vault has been grabbed', async () => {
     beforeEach(async () => {
-      await spotOracle.setSpot(DEC6.div(2))
+      await spotSource.set(WAD.div(2))
       await witch.grab(vaultId)
     })
 
