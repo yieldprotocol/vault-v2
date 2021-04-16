@@ -7,6 +7,7 @@ import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { OracleMock } from '../typechain/OracleMock'
 import { MockChainlinkAggregatorV3 } from '../typechain/MockChainlinkAggregatorV3'
+import { CTokenRateMock } from '../typechain/CTokenRateMock'
 import { Ladle } from '../typechain/Ladle'
 
 import { ethers, waffle } from 'hardhat'
@@ -31,6 +32,7 @@ describe('Ladle - close', function () {
   let spotOracle: OracleMock
   let spotSource: MockChainlinkAggregatorV3
   let rateOracle: OracleMock
+  let rateSource: CTokenRateMock
   let ladle: Ladle
   let ladleFromOther: Ladle
 
@@ -63,6 +65,10 @@ describe('Ladle - close', function () {
     ilkJoin = env.joins.get(ilkId) as Join
     fyToken = env.series.get(seriesId) as FYToken
     rateOracle = env.oracles.get('rate') as OracleMock
+    rateSource = (await ethers.getContractAt(
+      'CTokenRateMock',
+      await rateOracle.source()
+    )) as CTokenRateMock // TODO: Generalize to MockSource
     spotOracle = env.oracles.get(ilkId) as OracleMock
     spotSource = (await ethers.getContractAt(
       'MockChainlinkAggregatorV3',
@@ -155,10 +161,10 @@ describe('Ladle - close', function () {
 
     beforeEach(async () => {
       await spotSource.set(WAD.mul(1))
-      await rateOracle.set(WAD.mul(1))
+      await rateSource.set(WAD.mul(1))
       await ethers.provider.send('evm_mine', [(await fyToken.maturity()).toNumber()])
       await cauldron.mature(seriesId)
-      await rateOracle.set(accrual) // Since spot was 1 when recorded at maturity, accrual is equal to the current spot
+      await rateSource.set(accrual) // Since spot was 1 when recorded at maturity, accrual is equal to the current spot
     })
 
     it('users can repay their debt with underlying at accrual rate', async () => {

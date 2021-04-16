@@ -7,6 +7,7 @@ import { Join } from '../typechain/Join'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { OracleMock } from '../typechain/OracleMock'
+import { CTokenChiMock } from '../typechain/CTokenChiMock'
 import { Ladle } from '../typechain/Ladle'
 
 import { ethers, waffle } from 'hardhat'
@@ -26,6 +27,7 @@ describe('FYToken', function () {
   let base: ERC20Mock
   let baseJoin: Join
   let chiOracle: OracleMock
+  let chiSource: CTokenChiMock
   let ladle: Ladle
 
   async function fixture() {
@@ -51,6 +53,10 @@ describe('FYToken', function () {
     baseJoin = env.joins.get(baseId) as Join
     fyToken = env.series.get(seriesId) as FYToken
     chiOracle = env.oracles.get('chi') as OracleMock
+    chiSource = (await ethers.getContractAt(
+      'CTokenChiMock',
+      await chiOracle.source()
+    )) as CTokenChiMock // TODO: Generalize to MockSource
 
     await baseJoin.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], fyToken.address)
 
@@ -105,11 +111,11 @@ describe('FYToken', function () {
 
       beforeEach(async () => {
         await fyToken.mature()
-        await chiOracle.set(accrual) // Since spot was 1 when recorded at maturity, accrual is equal to the current spot
+        await chiSource.set(accrual) // Since spot was 1 when recorded at maturity, accrual is equal to the current spot
       })
 
       it("chi accrual can't be below 1", async () => {
-        await chiOracle.set(WAD.mul(100).div(110))
+        await chiSource.set(WAD.mul(100).div(110))
         expect(await fyToken.callStatic.accrual()).to.equal(WAD)
       })
 

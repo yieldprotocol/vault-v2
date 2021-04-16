@@ -2,14 +2,12 @@
 pragma solidity ^0.8.0;
 
 import "@yield-protocol/vault-interfaces/IOracle.sol";
-import "./AggregatorV3Interface.sol";
+import "./CTokenInterface.sol";
 
-/**
- * @title ChainlinkOracle
- */
-contract ChainlinkOracle is IOracle {
 
-    uint public constant SCALE_FACTOR = 1e10; // Since Chainlink has 8 dec places, and peek() needs 18
+contract CompoundChiOracle is IOracle {
+
+    uint public constant SCALE_FACTOR = 1; // I think we don't need scaling for rate and chi oracles
 
     address public immutable override source;
 
@@ -22,10 +20,10 @@ contract ChainlinkOracle is IOracle {
      * @return price
      */
     function peek() public virtual override view returns (uint price, uint updateTime) {
-        int rawPrice;
-        (, rawPrice,, updateTime,) = AggregatorV3Interface(source).latestRoundData();
-        require(rawPrice > 0, "Chainlink price <= 0");
-        price = uint(rawPrice) * SCALE_FACTOR;
+        uint rawPrice = CTokenInterface(source).exchangeRateStored();
+        require(rawPrice > 0, "Compound chi is zero");
+        price = rawPrice * SCALE_FACTOR;
+        updateTime = block.timestamp;
     }
 
     /**

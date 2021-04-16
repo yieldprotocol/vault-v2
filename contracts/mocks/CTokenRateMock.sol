@@ -1,0 +1,10 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+pragma solidity ^0.8.0;
+
+contract CTokenRateMock {
+    uint public borrowIndex;
+
+    function set(uint rate) external {
+        borrowIndex = rate;          // I'm assuming Compound uses 18 decimals for the borrowing rate
+    }
+}
