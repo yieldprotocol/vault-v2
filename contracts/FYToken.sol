@@ -123,14 +123,14 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
     /// Note: Call only after checking we are past maturity
     function _accrual()
         private
-        returns (uint256)
+        returns (uint256 accrual_)
     {
         if (chiAtMaturity == type(uint256).max) {  // After maturity, but chi not yet recorded. Let's record it, and accrual is then 1.
             _mature();
-            return 1e6;
         } else {
-            return uint256(oracle.spot()).ddiv(chiAtMaturity);
+            accrual_ = uint256(oracle.spot()).ddiv(chiAtMaturity);
         }
+        accrual_ = accrual_ >= 1e6 ? accrual_ : 1e6;     // The accrual can't be below 1 (with 6 decimals)
     }
 
     /// @dev Burn the fyToken after maturity for an amount that increases according to `chi`
