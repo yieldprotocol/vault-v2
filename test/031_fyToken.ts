@@ -7,7 +7,7 @@ import { Join } from '../typechain/Join'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { OracleMock } from '../typechain/OracleMock'
-import { CTokenChiMock } from '../typechain/CTokenChiMock'
+import { SourceMock } from '../typechain/SourceMock'
 import { Ladle } from '../typechain/Ladle'
 
 import { ethers, waffle } from 'hardhat'
@@ -27,7 +27,7 @@ describe('FYToken', function () {
   let base: ERC20Mock
   let baseJoin: Join
   let chiOracle: OracleMock
-  let chiSource: CTokenChiMock
+  let chiSource: SourceMock
   let ladle: Ladle
 
   async function fixture() {
@@ -54,9 +54,9 @@ describe('FYToken', function () {
     fyToken = env.series.get(seriesId) as FYToken
     chiOracle = env.oracles.get('chi') as OracleMock
     chiSource = (await ethers.getContractAt(
-      'CTokenChiMock',
+      'SourceMock',
       await chiOracle.source()
-    )) as CTokenChiMock // TODO: Generalize to MockSource
+    )) as SourceMock
 
     await baseJoin.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], fyToken.address)
 

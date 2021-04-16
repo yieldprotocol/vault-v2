@@ -6,8 +6,7 @@ import { Ladle } from '../typechain/Ladle'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock as ERC20 } from '../typechain/ERC20Mock'
 import { OracleMock as Oracle } from '../typechain/OracleMock'
-import { ChainlinkAggregatorV3Mock } from '../typechain/ChainlinkAggregatorV3Mock'
-import { CTokenRateMock } from '../typechain/CTokenRateMock'
+import { SourceMock } from '../typechain/SourceMock'
 
 import { YieldEnvironment } from './shared/fixtures'
 
@@ -27,9 +26,9 @@ describe('Cauldron - level', function () {
   let base: ERC20
   let ilk: ERC20
   let spotOracle: Oracle
-  let spotSource: ChainlinkAggregatorV3Mock
+  let spotSource: SourceMock
   let rateOracle: Oracle
-  let rateSource: CTokenRateMock
+  let rateSource: SourceMock
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
@@ -55,15 +54,15 @@ describe('Cauldron - level', function () {
     ilk = env.assets.get(ilkId) as ERC20
     rateOracle = env.oracles.get('rate') as Oracle
     rateSource = (await ethers.getContractAt(
-      'CTokenRateMock',
+      'SourceMock',
       await rateOracle.source()
-    )) as CTokenRateMock // TODO: Generalize to MockSource
+    )) as SourceMock
 
     spotOracle = env.oracles.get(ilkId) as Oracle
     spotSource = (await ethers.getContractAt(
-      'ChainlinkAggregatorV3Mock',
+      'SourceMock',
       await spotOracle.source()
-    )) as ChainlinkAggregatorV3Mock // TODO: Generalize to MockSource
+    )) as SourceMock
     fyToken = env.series.get(seriesId) as FYToken
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
 
