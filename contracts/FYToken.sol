@@ -84,7 +84,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         private
         returns (uint256 _chiAtMaturity)
     {
-        _chiAtMaturity = oracle.spot();
+        (_chiAtMaturity,) = oracle.get();
         chiAtMaturity = _chiAtMaturity;
         emit SeriesMatured(_chiAtMaturity);
     }
@@ -107,7 +107,8 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         if (chiAtMaturity == type(uint256).max) {  // After maturity, but chi not yet recorded. Let's record it, and accrual is then 1.
             _mature();
         } else {
-            accrual_ = uint256(oracle.spot()).wdiv(chiAtMaturity);
+            (uint256 chi,) = oracle.get();
+            accrual_ = chi.wdiv(chiAtMaturity);
         }
         accrual_ = accrual_ >= 1e18 ? accrual_ : 1e18;     // The accrual can't be below 1 (with 18 decimals)
     }
