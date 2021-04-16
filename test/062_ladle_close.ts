@@ -6,7 +6,7 @@ import { Join } from '../typechain/Join'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { OracleMock } from '../typechain/OracleMock'
-import { MockChainlinkAggregatorV3 } from '../typechain/MockChainlinkAggregatorV3'
+import { ChainlinkAggregatorV3Mock } from '../typechain/ChainlinkAggregatorV3Mock'
 import { CTokenRateMock } from '../typechain/CTokenRateMock'
 import { Ladle } from '../typechain/Ladle'
 
@@ -30,7 +30,7 @@ describe('Ladle - close', function () {
   let ilk: ERC20Mock
   let ilkJoin: Join
   let spotOracle: OracleMock
-  let spotSource: MockChainlinkAggregatorV3
+  let spotSource: ChainlinkAggregatorV3Mock
   let rateOracle: OracleMock
   let rateSource: CTokenRateMock
   let ladle: Ladle
@@ -71,9 +71,9 @@ describe('Ladle - close', function () {
     )) as CTokenRateMock // TODO: Generalize to MockSource
     spotOracle = env.oracles.get(ilkId) as OracleMock
     spotSource = (await ethers.getContractAt(
-      'MockChainlinkAggregatorV3',
+      'ChainlinkAggregatorV3Mock',
       await spotOracle.source()
-    )) as MockChainlinkAggregatorV3 // TODO: Generalize to MockSource
+    )) as ChainlinkAggregatorV3Mock // TODO: Generalize to MockSource
 
     ladleFromOther = ladle.connect(otherAcc)
 

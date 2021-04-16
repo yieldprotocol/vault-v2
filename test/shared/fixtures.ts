@@ -14,7 +14,7 @@ import OracleMockArtifact from '../../artifacts/contracts/mocks/OracleMock.sol/O
 import ChainlinkOracleArtifact from '../../artifacts/contracts/oracles/ChainlinkOracle.sol/ChainlinkOracle.json'
 import CompoundRateOracleArtifact from '../../artifacts/contracts/oracles/CompoundRateOracle.sol/CompoundRateOracle.json'
 import CompoundChiOracleArtifact from '../../artifacts/contracts/oracles/CompoundChiOracle.sol/CompoundChiOracle.json'
-import MockChainlinkAggregatorV3Artifact from '../../artifacts/contracts/mocks/MockChainlinkAggregatorV3.sol/MockChainlinkAggregatorV3.json'
+import ChainlinkAggregatorV3MockArtifact from '../../artifacts/contracts/mocks/ChainlinkAggregatorV3Mock.sol/ChainlinkAggregatorV3Mock.json'
 import CTokenRateMockArtifact from '../../artifacts/contracts/mocks/CTokenRateMock.sol/CTokenRateMock.json'
 import CTokenChiMockArtifact from '../../artifacts/contracts/mocks/CTokenChiMock.sol/CTokenChiMock.json'
 
@@ -29,7 +29,7 @@ import { FYToken } from '../../typechain/FYToken'
 import { PoolMock } from '../../typechain/PoolMock'
 
 import { OracleMock } from '../../typechain/OracleMock'
-import { MockChainlinkAggregatorV3 } from '../../typechain/MockChainlinkAggregatorV3'
+import { ChainlinkAggregatorV3Mock } from '../../typechain/ChainlinkAggregatorV3Mock'
 import { CTokenRateMock } from '../../typechain/CTokenRateMock'
 import { CTokenChiMock } from '../../typechain/CTokenChiMock'
 
@@ -152,7 +152,7 @@ export class YieldEnvironment {
 
   public static async addSpotOracle(owner: SignerWithAddress, cauldron: Cauldron, baseId: string, ilkId: string) {
     const ratio = 1000000 //  1000000 == 100% collateralization ratio
-    const aggregator = (await deployContract(owner, MockChainlinkAggregatorV3Artifact, [])) as MockChainlinkAggregatorV3
+    const aggregator = (await deployContract(owner, ChainlinkAggregatorV3MockArtifact, [])) as ChainlinkAggregatorV3Mock
     const oracle = (await deployContract(owner, ChainlinkOracleArtifact, [aggregator.address])) as OracleMock // Externally, all oracles are the same
     await aggregator.set(WAD.mul(2))
     await cauldron.setSpotOracle(baseId, ilkId, oracle.address, ratio)

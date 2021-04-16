@@ -6,7 +6,7 @@ import { Ladle } from '../typechain/Ladle'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock as ERC20 } from '../typechain/ERC20Mock'
 import { OracleMock as Oracle } from '../typechain/OracleMock'
-import { MockChainlinkAggregatorV3 } from '../typechain/MockChainlinkAggregatorV3'
+import { ChainlinkAggregatorV3Mock } from '../typechain/ChainlinkAggregatorV3Mock'
 import { CTokenRateMock } from '../typechain/CTokenRateMock'
 
 import { YieldEnvironment } from './shared/fixtures'
@@ -27,7 +27,7 @@ describe('Cauldron - level', function () {
   let base: ERC20
   let ilk: ERC20
   let spotOracle: Oracle
-  let spotSource: MockChainlinkAggregatorV3
+  let spotSource: ChainlinkAggregatorV3Mock
   let rateOracle: Oracle
   let rateSource: CTokenRateMock
 
@@ -61,9 +61,9 @@ describe('Cauldron - level', function () {
 
     spotOracle = env.oracles.get(ilkId) as Oracle
     spotSource = (await ethers.getContractAt(
-      'MockChainlinkAggregatorV3',
+      'ChainlinkAggregatorV3Mock',
       await spotOracle.source()
-    )) as MockChainlinkAggregatorV3 // TODO: Generalize to MockSource
+    )) as ChainlinkAggregatorV3Mock // TODO: Generalize to MockSource
     fyToken = env.series.get(seriesId) as FYToken
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
 

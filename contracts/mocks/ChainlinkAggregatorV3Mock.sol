@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-contract MockChainlinkAggregatorV3 {
+contract ChainlinkAggregatorV3Mock {
     int public price;
     uint public timestamp;
 
