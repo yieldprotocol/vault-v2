@@ -164,7 +164,11 @@ describe('Ladle - serve and repay', function () {
 
     // Call wrapping: ladle.route(poolRouter.route(findPool(base.address, fyToken.address).retrieveBaseTokenCall(owner)))
     const retrieveBaseTokenCall = pool.interface.encodeFunctionData('retrieveBaseToken', [owner]) // This is a call passed through `poolRouter.route`
-    const poolRouteCall = poolRouter.interface.encodeFunctionData('route', [base.address, fyToken.address, retrieveBaseTokenCall]) // This is a call passed through `ladle.batch(OPS.ROUTE)`
+    const poolRouteCall = poolRouter.interface.encodeFunctionData('route', [
+      base.address,
+      fyToken.address,
+      retrieveBaseTokenCall,
+    ]) // This is a call passed through `ladle.batch(OPS.ROUTE)`
 
     await base.approve(ladle.address, baseOffered) // This would normally be part of a multicall, using ladle.forwardPermit
     await expect(
