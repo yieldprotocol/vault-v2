@@ -64,15 +64,9 @@ describe('Ladle - close', function () {
     ilkJoin = env.joins.get(ilkId) as Join
     fyToken = env.series.get(seriesId) as FYToken
     rateOracle = env.oracles.get('rate') as OracleMock
-    rateSource = (await ethers.getContractAt(
-      'SourceMock',
-      await rateOracle.source()
-    )) as SourceMock
+    rateSource = (await ethers.getContractAt('SourceMock', await rateOracle.source())) as SourceMock
     spotOracle = env.oracles.get(ilkId) as OracleMock
-    spotSource = (await ethers.getContractAt(
-      'SourceMock',
-      await spotOracle.source()
-    )) as SourceMock
+    spotSource = (await ethers.getContractAt('SourceMock', await spotOracle.source())) as SourceMock
 
     ladleFromOther = ladle.connect(otherAcc)
 

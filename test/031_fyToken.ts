@@ -53,10 +53,7 @@ describe('FYToken', function () {
     baseJoin = env.joins.get(baseId) as Join
     fyToken = env.series.get(seriesId) as FYToken
     chiOracle = env.oracles.get('chi') as OracleMock
-    chiSource = (await ethers.getContractAt(
-      'SourceMock',
-      await chiOracle.source()
-    )) as SourceMock
+    chiSource = (await ethers.getContractAt('SourceMock', await chiOracle.source())) as SourceMock
 
     await baseJoin.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], fyToken.address)
 
