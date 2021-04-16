@@ -209,7 +209,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         returns(bool)
     {
         require(token == address(this), "Unsupported currency");
-        _mint(address(receiver), amount);   // TODO: Minting a fee to the beneficiary could be exploited. Should we do anything here?
+        _mint(address(receiver), amount);   // TODO: Minting a fee to the beneficiary during a flash loan doesn't make sense, unless we add it to the burn as well.
         require(receiver.onFlashLoan(msg.sender, token, amount, 0, data) == FLASH_LOAN_RETURN, "Non-compliant borrower");
         _burn(address(receiver), amount);
         return true;
