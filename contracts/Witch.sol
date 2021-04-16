@@ -3,43 +3,17 @@ pragma solidity ^0.8.0;
 import "@yield-protocol/vault-interfaces/ILadle.sol";
 import "@yield-protocol/vault-interfaces/ICauldron.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
+import "./math/WMul.sol";
+import "./math/WDiv.sol";
+import "./math/WDivUp.sol";
+import "./math/CastU256U128.sol";
 
-
-library WitchMath {
-    /// @dev Minimum of two unsigned integers
-    function min(uint256 x, uint256 y) internal pure returns (uint256) {
-        return x < y ? x : y;
-    }
-}
-
-library WitchRMath {
-    /// @dev Multiply an amount by a fixed point factor in ray units, returning an amount
-    function rmul(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        z = x * y / 1e27;
-    }
-
-    /// @dev Divide x and y, with y being fixed point. If both are integers, the result is a fixed point factor. Rounds down.
-    function rdiv(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        z = x * 1e27 / y;
-    }
-
-    /// @dev Divide x and y, with y being fixed point. If both are integers, the result is a fixed point factor. Rounds up.
-    function rdivup(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        z = x * 1e27 % y == 0 ? x * 1e27 / y : x * 1e27 / y + 1;
-    }
-}
-
-library WitchSafe256 {
-    /// @dev Safely cast an uint256 to an uint128
-    function u128(uint256 x) internal pure returns (uint128 y) {
-        require (x <= type(uint128).max, "Cast overflow");
-        y = uint128(x);
-    }
-}
 
 contract Witch {
-    using WitchRMath for uint256;
-    using WitchSafe256 for uint256;
+    using WMul for uint256;
+    using WDiv for uint256;
+    using WDivUp for uint256;
+    using CastU256U128 for uint256;
 
     event Bought(address indexed buyer, bytes12 indexed vaultId, uint256 ink, uint256 art);
   
@@ -71,15 +45,14 @@ contract Witch {
             // price = 1 / (------- * (--- + -----------------------))
             //                art       2       2 * auction
             // solhint-disable-next-line var-name-mixedcase
-            uint256 RAY = 1e27;
-            uint256 term1 = uint256(balances_.ink).rdiv(balances_.art);
-            uint256 term2 = RAY / 2;
-            uint256 dividend3 = WitchMath.min(AUCTION_TIME, elapsed);
+            uint256 term1 = uint256(balances_.ink).wdiv(balances_.art);
+            uint256 term2 = 1e18 / 2;
+            uint256 dividend3 = AUCTION_TIME < elapsed ? AUCTION_TIME : elapsed;
             uint256 divisor3 = AUCTION_TIME * 2;
-            uint256 term3 = dividend3.rdiv(divisor3);
-            price = RAY.rdiv(term1.rmul(term2 + term3));
+            uint256 term3 = dividend3.wdiv(divisor3);
+            price = uint256(1e18).wdiv(term1.wmul(term2 + term3));
         }
-        uint256 ink = uint256(art).rdivup(price);                                                    // Calculate collateral to sell. Using divdrup stops rounding from leaving 1 stray wei in vaults.
+        uint256 ink = uint256(art).wdivup(price);                                                    // Calculate collateral to sell. Using divdrup stops rounding from leaving 1 stray wei in vaults.
         require (ink >= min, "Not enough bought");
 
         ladle.settle(vaultId, msg.sender, ink.u128(), art);                                        // Move the assets

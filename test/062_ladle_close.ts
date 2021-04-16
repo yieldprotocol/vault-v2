@@ -1,5 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { DEC6, WAD, OPS } from './shared/constants'
+import { WAD, OPS } from './shared/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
@@ -145,11 +145,11 @@ describe('Ladle - close', function () {
   })
 
   describe('after maturity', async () => {
-    const accrual = DEC6.mul(110).div(100) // accrual is 10%
+    const accrual = WAD.mul(110).div(100) // accrual is 10%
 
     beforeEach(async () => {
-      await spotOracle.setSpot(DEC6.mul(1))
-      await rateOracle.setSpot(DEC6.mul(1))
+      await spotOracle.setSpot(WAD.mul(1))
+      await rateOracle.setSpot(WAD.mul(1))
       await ethers.provider.send('evm_mine', [(await fyToken.maturity()).toNumber()])
       await cauldron.mature(seriesId)
       await rateOracle.setSpot(accrual) // Since spot was 1 when recorded at maturity, accrual is equal to the current spot
@@ -160,7 +160,7 @@ describe('Ladle - close', function () {
       await expect(ladle.close(vaultId, owner, 0, WAD.mul(-1)))
         .to.emit(cauldron, 'VaultPoured')
         .withArgs(vaultId, seriesId, ilkId, 0, WAD.mul(-1))
-      expect(await base.balanceOf(owner)).to.equal(baseBefore.sub(WAD.mul(accrual).div(DEC6)))
+      expect(await base.balanceOf(owner)).to.equal(baseBefore.sub(WAD.mul(accrual).div(WAD)))
       expect(await fyToken.balanceOf(owner)).to.equal(WAD)
       expect((await cauldron.balances(vaultId)).art).to.equal(0)
     })

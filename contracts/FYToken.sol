@@ -8,38 +8,17 @@ import "@yield-protocol/vault-interfaces/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/IJoin.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
 import "@yield-protocol/utils-v2/contracts/AccessControl.sol";
+import "./math/WMul.sol";
+import "./math/WDiv.sol";
+import "./math/CastU256U128.sol";
+import "./math/CastU256U32.sol";
 
 
-library FYTokenDMath { // Fixed point arithmetic in 6 decimal units
-    /// @dev Multiply an amount by a fixed point factor with 6 decimals, returning an amount
-    function dmul(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        z = x * y / 1e6;
-    }
-
-    /// @dev Divide an unsigned integer by another, returning a fixed point factor with 6 decimals
-    function ddiv(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        z = x * 1e6 / y;
-    }
-}
-
-library FYTokenSafe256 {
-    /// @dev Safely cast an uint256 to an uint128
-    function u128(uint256 x) internal pure returns (uint128 y) {
-        require (x <= type(uint128).max, "Cast overflow");
-        y = uint128(x);
-    }
-
-    /// @dev Safely cast an uint256 to an int128
-    function u32(uint256 x) internal pure returns (uint32 y) {
-        require (x <= type(uint32).max, "Cast overflow");
-        y = uint32(x);
-    }
-}
-
-// TODO: Setter for MAX_TIME_TO_MATURITY
 contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit {
-    using FYTokenDMath for uint256;
-    using FYTokenSafe256 for uint256;
+    using WMul for uint256;
+    using WDiv for uint256;
+    using CastU256U128 for uint256;
+    using CastU256U32 for uint256;
 
     event SeriesMatured(uint256 chiAtMaturity);
     event Redeemed(address indexed from, address indexed to, uint256 amount, uint256 redeemed);
@@ -128,9 +107,9 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         if (chiAtMaturity == type(uint256).max) {  // After maturity, but chi not yet recorded. Let's record it, and accrual is then 1.
             _mature();
         } else {
-            accrual_ = uint256(oracle.spot()).ddiv(chiAtMaturity);
+            accrual_ = uint256(oracle.spot()).wdiv(chiAtMaturity);
         }
-        accrual_ = accrual_ >= 1e6 ? accrual_ : 1e6;     // The accrual can't be below 1 (with 6 decimals)
+        accrual_ = accrual_ >= 1e18 ? accrual_ : 1e18;     // The accrual can't be below 1 (with 18 decimals)
     }
 
     /// @dev Burn the fyToken after maturity for an amount that increases according to `chi`
@@ -140,7 +119,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         returns (uint256 redeemed)
     {
         _burn(msg.sender, amount);
-        redeemed = amount.dmul(_accrual());
+        redeemed = amount.wmul(_accrual());
         join.exit(to, redeemed.u128());
         
         emit Redeemed(msg.sender, to, amount, redeemed);

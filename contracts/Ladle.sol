@@ -13,36 +13,16 @@ import "@yield-protocol/utils-v2/contracts/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/Multicall.sol";
 import "@yield-protocol/utils-v2/contracts/TransferHelper.sol";
 import "@yield-protocol/utils-v2/contracts/IWETH9.sol";
+import "./math/WMul.sol";
+import "./math/CastU256U128.sol";
+import "./math/CastU128I128.sol";
 
-
-library LadleDMath { // Fixed point arithmetic in 6 decimal units
-    /// @dev Multiply an amount by a fixed point factor with 6 decimals, returning an amount
-    function dmul(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        z = x * y / 1e6;
-    }
-}
-
-library LadleSafe256 {
-    /// @dev Safely cast an uint256 to an uint128
-    function u128(uint256 x) internal pure returns (uint128 y) {
-        require (x <= type(uint128).max, "Cast overflow");
-        y = uint128(x);
-    }
-}
-
-library LadleSafe128 {
-    /// @dev Safely cast an uint128 to an int128
-    function i128(uint128 x) internal pure returns (int128 y) {
-        require (x <= uint128(type(int128).max), "Cast overflow");
-        y = int128(x);
-    }
-}
 
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
 contract Ladle is AccessControl(), Multicall {
-    using LadleDMath for uint256;
-    using LadleSafe256 for uint256;
-    using LadleSafe128 for uint128;
+    using WMul for uint256;
+    using CastU256U128 for uint256;
+    using CastU128I128 for uint128;
     using TransferHelper for IERC20;
     using TransferHelper for address payable;
 
@@ -487,7 +467,7 @@ contract Ladle is AccessControl(), Multicall {
         returns (uint128 amt)
     {
         if (uint32(block.timestamp) >= series.maturity) {
-            amt = uint256(art).dmul(cauldron.accrual(seriesId)).u128();
+            amt = uint256(art).wmul(cauldron.accrual(seriesId)).u128();
         } else {
             amt = art;
         }

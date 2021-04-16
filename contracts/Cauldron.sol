@@ -4,7 +4,12 @@ import "@yield-protocol/vault-interfaces/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
 import "@yield-protocol/utils-v2/contracts/AccessControl.sol";
-
+import "./math/WMul.sol";
+import "./math/WDiv.sol";
+import "./math/CastU128I128.sol";
+import "./math/CastI128U128.sol";
+import "./math/CastU256U32.sol";
+import "./math/CastU256I256.sol";
 
 library CauldronMath {
     /// @dev Add a number (which might be negative) to a positive, and revert if the result is negative.
@@ -14,54 +19,16 @@ library CauldronMath {
     }
 }
 
-library CauldronDMath { // Fixed point arithmetic in 6 decimal units
-    /// @dev Multiply an amount by a fixed point factor with 6 decimals, returning an amount
-    function dmul(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        z = x * y / 1e6;
-    }
-
-    /// @dev Divide an unsigned integer by another, returning a fixed point factor with 6 decimals
-    function ddiv(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        z = x * 1e6 / y;
-    }
-}
-
-library CauldronSafe128 {
-    /// @dev Safely cast an int128 to an uint128
-    function u128(int128 x) internal pure returns (uint128 y) {
-        require (x >= 0, "Cast overflow");
-        y = uint128(x);
-    }
-
-    /// @dev Safely cast an uint128 to an int128
-    function i128(uint128 x) internal pure returns (int128 y) {
-        require (x <= uint128(type(int128).max), "Cast overflow");
-        y = int128(x);
-    }
-}
-
-library CauldronSafe256 {
-    /// @dev Safely cast an uint256 to an int128
-    function u32(uint256 x) internal pure returns (uint32 y) {
-        require (x <= type(uint32).max, "Cast overflow");
-        y = uint32(x);
-    }
-
-    /// @dev Safely cast an uint256 to an int256
-    function i256(uint256 x) internal pure returns (int256 y) {
-        require (x <= uint256(type(int256).max), "Cast overflow");
-        y = int256(x);
-    }
-}
-
 // TODO: Add a setter for auction protection (same as Witch.AUCTION_TIME?)
 
 contract Cauldron is AccessControl() {
     using CauldronMath for uint128;
-    using CauldronDMath for uint256;
-    using CauldronSafe256 for uint256;
-    using CauldronSafe128 for uint128;
-    using CauldronSafe128 for int128;
+    using WMul for uint256;
+    using WDiv for uint256;
+    using CastU128I128 for uint128;
+    using CastU256U32 for uint256;
+    using CastU256I256 for uint256;
+    using CastI128U128 for int128;
 
     event AssetAdded(bytes6 indexed assetId, address indexed asset);
     event SeriesAdded(bytes6 indexed seriesId, bytes6 indexed baseId, address indexed fyToken);
@@ -481,9 +448,9 @@ contract Cauldron is AccessControl() {
             _mature(seriesId, series_);
         } else {
             IOracle rateOracle = rateOracles[series_.baseId];
-            accrual_ = uint256(rateOracle.spot()).ddiv(rateAtMaturity);
+            accrual_ = uint256(rateOracle.spot()).wdiv(rateAtMaturity);
         }
-        accrual_ = accrual_ >= 1e6 ? accrual_ : 1e6;     // The accrual can't be below 1 (with 6 decimals)
+        accrual_ = accrual_ >= 1e18 ? accrual_ : 1e18;     // The accrual can't be below 1 (with 18 decimals)
     }
 
     /// @dev Return the collateralization level of a vault. It will be negative if undercollateralized.
@@ -496,14 +463,14 @@ contract Cauldron is AccessControl() {
         returns (int256)
     {
         DataTypes.SpotOracle memory spotOracle_ = spotOracles[series_.baseId][vault_.ilkId];
-        uint128 spot = spotOracle_.oracle.spot();
-        uint128 ratio = spotOracle_.ratio;
+        uint256 spot = spotOracle_.oracle.spot();
+        uint256 ratio = uint256(spotOracle_.ratio) * 1e12;   // Normalized to 18 decimals
 
         if (uint32(block.timestamp) >= series_.maturity) {
             uint256 accrual_ = _accrual(vault_.seriesId, series_);
-            return uint256(balances_.ink).dmul(spot).i256() - uint256(balances_.art).dmul(accrual_).dmul(ratio).i256();
+            return uint256(balances_.ink).wmul(spot).i256() - uint256(balances_.art).wmul(accrual_).wmul(ratio).i256();
         }
 
-        return uint256(balances_.ink).dmul(spot).i256() - uint256(balances_.art).dmul(ratio).i256();
+        return uint256(balances_.ink).wmul(spot).i256() - uint256(balances_.art).wmul(ratio).i256();
     }
 }
