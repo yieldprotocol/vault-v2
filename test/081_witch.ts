@@ -8,7 +8,7 @@ import { Witch } from '../typechain/Witch'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { OracleMock } from '../typechain/OracleMock'
-import { MockChainlinkAggregatorV3 } from '../typechain/MockChainlinkAggregatorV3'
+import { SourceMock } from '../typechain/SourceMock'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
@@ -33,8 +33,7 @@ describe('Witch', function () {
   let ilk: ERC20Mock
   let ilkJoin: Join
   let spotOracle: OracleMock
-  let spotSource: MockChainlinkAggregatorV3
-  let rateOracle: OracleMock
+  let spotSource: SourceMock
 
   const mockVaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12))
 
@@ -65,12 +64,8 @@ describe('Witch', function () {
     ilk = env.assets.get(ilkId) as ERC20Mock
     ilkJoin = env.joins.get(ilkId) as Join
     fyToken = env.series.get(seriesId) as FYToken
-    rateOracle = env.oracles.get(baseId) as OracleMock
     spotOracle = env.oracles.get(ilkId) as OracleMock
-    spotSource = (await ethers.getContractAt(
-      'MockChainlinkAggregatorV3',
-      await spotOracle.source()
-    )) as MockChainlinkAggregatorV3 // TODO: Generalize to MockSource
+    spotSource = (await ethers.getContractAt('SourceMock', await spotOracle.source())) as SourceMock
 
     witchFromOther = witch.connect(otherAcc)
 

@@ -4,28 +4,37 @@ import { id } from '@yield-protocol/utils'
 import { WAD, THREE_MONTHS } from './constants'
 
 import CauldronArtifact from '../../artifacts/contracts/Cauldron.sol/Cauldron.json'
-import FYTokenArtifact from '../../artifacts/contracts/FYToken.sol/FYToken.json'
-import ERC20MockArtifact from '../../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
-import WETH9MockArtifact from '../../artifacts/contracts/mocks/WETH9Mock.sol/WETH9Mock.json'
-import PoolMockArtifact from '../../artifacts/contracts/mocks/PoolMock.sol/PoolMock.json'
-import OracleMockArtifact from '../../artifacts/contracts/mocks/OracleMock.sol/OracleMock.json'
-import MockChainlinkAggregatorV3Artifact from '../../artifacts/contracts/mocks/MockChainlinkAggregatorV3.sol/MockChainlinkAggregatorV3.json'
-import ChainlinkOracleArtifact from '../../artifacts/contracts/oracles/ChainlinkOracle.sol/ChainlinkOracle.json'
 import JoinArtifact from '../../artifacts/contracts/Join.sol/Join.json'
 import LadleArtifact from '../../artifacts/contracts/Ladle.sol/Ladle.json'
 import WitchArtifact from '../../artifacts/contracts/Witch.sol/Witch.json'
+import FYTokenArtifact from '../../artifacts/contracts/FYToken.sol/FYToken.json'
+import PoolMockArtifact from '../../artifacts/contracts/mocks/PoolMock.sol/PoolMock.json'
+
+import OracleMockArtifact from '../../artifacts/contracts/mocks/OracleMock.sol/OracleMock.json'
+import ChainlinkOracleArtifact from '../../artifacts/contracts/oracles/ChainlinkOracle.sol/ChainlinkOracle.json'
+import CompoundRateOracleArtifact from '../../artifacts/contracts/oracles/CompoundRateOracle.sol/CompoundRateOracle.json'
+import CompoundChiOracleArtifact from '../../artifacts/contracts/oracles/CompoundChiOracle.sol/CompoundChiOracle.json'
+import ChainlinkAggregatorV3MockArtifact from '../../artifacts/contracts/mocks/ChainlinkAggregatorV3Mock.sol/ChainlinkAggregatorV3Mock.json'
+import CTokenRateMockArtifact from '../../artifacts/contracts/mocks/CTokenRateMock.sol/CTokenRateMock.json'
+import CTokenChiMockArtifact from '../../artifacts/contracts/mocks/CTokenChiMock.sol/CTokenChiMock.json'
+
+import ERC20MockArtifact from '../../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
+import WETH9MockArtifact from '../../artifacts/contracts/mocks/WETH9Mock.sol/WETH9Mock.json'
 
 import { Cauldron } from '../../typechain/Cauldron'
-import { FYToken } from '../../typechain/FYToken'
-import { ERC20Mock } from '../../typechain/ERC20Mock'
-import { WETH9Mock } from '../../typechain/WETH9Mock'
-import { PoolMock } from '../../typechain/PoolMock'
-import { OracleMock } from '../../typechain/OracleMock'
-import { MockChainlinkAggregatorV3 } from '../../typechain/MockChainlinkAggregatorV3'
-import { ChainlinkOracle } from '../../typechain/ChainlinkOracle'
 import { Join } from '../../typechain/Join'
 import { Ladle } from '../../typechain/Ladle'
 import { Witch } from '../../typechain/Witch'
+import { FYToken } from '../../typechain/FYToken'
+import { PoolMock } from '../../typechain/PoolMock'
+
+import { OracleMock } from '../../typechain/OracleMock'
+import { ChainlinkAggregatorV3Mock } from '../../typechain/ChainlinkAggregatorV3Mock'
+import { CTokenRateMock } from '../../typechain/CTokenRateMock'
+import { CTokenChiMock } from '../../typechain/CTokenChiMock'
+
+import { ERC20Mock } from '../../typechain/ERC20Mock'
+import { WETH9Mock } from '../../typechain/WETH9Mock'
 
 import { ethers, waffle } from 'hardhat'
 const { deployContract } = waffle
@@ -143,7 +152,7 @@ export class YieldEnvironment {
 
   public static async addSpotOracle(owner: SignerWithAddress, cauldron: Cauldron, baseId: string, ilkId: string) {
     const ratio = 1000000 //  1000000 == 100% collateralization ratio
-    const aggregator = (await deployContract(owner, MockChainlinkAggregatorV3Artifact, [])) as MockChainlinkAggregatorV3
+    const aggregator = (await deployContract(owner, ChainlinkAggregatorV3MockArtifact, [])) as ChainlinkAggregatorV3Mock
     const oracle = (await deployContract(owner, ChainlinkOracleArtifact, [aggregator.address])) as OracleMock // Externally, all oracles are the same
     await aggregator.set(WAD.mul(2))
     await cauldron.setSpotOracle(baseId, ilkId, oracle.address, ratio)
@@ -151,15 +160,17 @@ export class YieldEnvironment {
   }
 
   public static async addRateOracle(owner: SignerWithAddress, cauldron: Cauldron, baseId: string) {
-    const oracle = (await deployContract(owner, OracleMockArtifact, [])) as OracleMock
-    await oracle.set(WAD.mul(2))
+    const ctoken = (await deployContract(owner, CTokenRateMockArtifact, [])) as CTokenRateMock
+    const oracle = (await deployContract(owner, CompoundRateOracleArtifact, [ctoken.address])) as OracleMock // Externally, all oracles are the same
+    await ctoken.set(WAD.mul(2))
     await cauldron.setRateOracle(baseId, oracle.address)
     return oracle
   }
 
   public static async addChiOracle(owner: SignerWithAddress) { // This will be referenced by the fyToken, and needs no id
-    const oracle = (await deployContract(owner, OracleMockArtifact, [])) as OracleMock
-    await oracle.set(WAD)
+    const ctoken = (await deployContract(owner, CTokenChiMockArtifact, [])) as CTokenChiMock
+    const oracle = (await deployContract(owner, CompoundChiOracleArtifact, [ctoken.address])) as OracleMock // Externally, all oracles are the same
+    await ctoken.set(WAD)
     return oracle
   }
 

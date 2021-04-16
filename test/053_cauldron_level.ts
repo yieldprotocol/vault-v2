@@ -6,7 +6,7 @@ import { Ladle } from '../typechain/Ladle'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock as ERC20 } from '../typechain/ERC20Mock'
 import { OracleMock as Oracle } from '../typechain/OracleMock'
-import { MockChainlinkAggregatorV3 } from '../typechain/MockChainlinkAggregatorV3'
+import { SourceMock } from '../typechain/SourceMock'
 
 import { YieldEnvironment } from './shared/fixtures'
 
@@ -26,8 +26,9 @@ describe('Cauldron - level', function () {
   let base: ERC20
   let ilk: ERC20
   let spotOracle: Oracle
-  let spotSource: MockChainlinkAggregatorV3
+  let spotSource: SourceMock
   let rateOracle: Oracle
+  let rateSource: SourceMock
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
@@ -52,11 +53,10 @@ describe('Cauldron - level', function () {
     base = env.assets.get(baseId) as ERC20
     ilk = env.assets.get(ilkId) as ERC20
     rateOracle = env.oracles.get('rate') as Oracle
+    rateSource = (await ethers.getContractAt('SourceMock', await rateOracle.source())) as SourceMock
+
     spotOracle = env.oracles.get(ilkId) as Oracle
-    spotSource = (await ethers.getContractAt(
-      'MockChainlinkAggregatorV3',
-      await spotOracle.source()
-    )) as MockChainlinkAggregatorV3 // TODO: Generalize to MockSource
+    spotSource = (await ethers.getContractAt('SourceMock', await spotOracle.source())) as SourceMock
     fyToken = env.series.get(seriesId) as FYToken
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
 
@@ -93,7 +93,7 @@ describe('Cauldron - level', function () {
   describe('after maturity', async () => {
     beforeEach(async () => {
       await spotSource.set(WAD.mul(1))
-      await rateOracle.set(WAD.mul(1))
+      await rateSource.set(WAD.mul(1))
       await ethers.provider.send('evm_mine', [(await fyToken.maturity()).toNumber()])
     })
 
@@ -104,7 +104,7 @@ describe('Cauldron - level', function () {
     })
 
     it("rate accrual can't be below 1", async () => {
-      await rateOracle.set(WAD.mul(100).div(110))
+      await rateSource.set(WAD.mul(100).div(110))
       expect(await cauldron.callStatic.accrual(seriesId)).to.equal(WAD)
     })
 
@@ -116,7 +116,7 @@ describe('Cauldron - level', function () {
       for (let spot of [1, 2, 4]) {
         await spotSource.set(WAD.mul(spot))
         for (let rate of [110, 120, 140]) {
-          await rateOracle.set(WAD.mul(rate).div(100))
+          await rateSource.set(WAD.mul(rate).div(100))
           // accrual = rate / 100
           for (let ratio of [50, 100, 200]) {
             await cauldron.setSpotOracle(baseId, ilkId, spotOracle.address, ratio * 10000)

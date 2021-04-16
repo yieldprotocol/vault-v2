@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-contract MockUniswapV2Pair {
+contract UniswapV2PairMock {
     uint112 public reserves0;
     uint112 public reserves1;
     uint32 public blockTimestamp;

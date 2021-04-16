@@ -6,7 +6,7 @@ import { Join } from '../typechain/Join'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { OracleMock } from '../typechain/OracleMock'
-import { MockChainlinkAggregatorV3 } from '../typechain/MockChainlinkAggregatorV3'
+import { SourceMock } from '../typechain/SourceMock'
 import { Ladle } from '../typechain/Ladle'
 
 import { ethers, waffle } from 'hardhat'
@@ -29,8 +29,9 @@ describe('Ladle - close', function () {
   let ilk: ERC20Mock
   let ilkJoin: Join
   let spotOracle: OracleMock
-  let spotSource: MockChainlinkAggregatorV3
+  let spotSource: SourceMock
   let rateOracle: OracleMock
+  let rateSource: SourceMock
   let ladle: Ladle
   let ladleFromOther: Ladle
 
@@ -63,11 +64,9 @@ describe('Ladle - close', function () {
     ilkJoin = env.joins.get(ilkId) as Join
     fyToken = env.series.get(seriesId) as FYToken
     rateOracle = env.oracles.get('rate') as OracleMock
+    rateSource = (await ethers.getContractAt('SourceMock', await rateOracle.source())) as SourceMock
     spotOracle = env.oracles.get(ilkId) as OracleMock
-    spotSource = (await ethers.getContractAt(
-      'MockChainlinkAggregatorV3',
-      await spotOracle.source()
-    )) as MockChainlinkAggregatorV3 // TODO: Generalize to MockSource
+    spotSource = (await ethers.getContractAt('SourceMock', await spotOracle.source())) as SourceMock
 
     ladleFromOther = ladle.connect(otherAcc)
 
@@ -155,10 +154,10 @@ describe('Ladle - close', function () {
 
     beforeEach(async () => {
       await spotSource.set(WAD.mul(1))
-      await rateOracle.set(WAD.mul(1))
+      await rateSource.set(WAD.mul(1))
       await ethers.provider.send('evm_mine', [(await fyToken.maturity()).toNumber()])
       await cauldron.mature(seriesId)
-      await rateOracle.set(accrual) // Since spot was 1 when recorded at maturity, accrual is equal to the current spot
+      await rateSource.set(accrual) // Since spot was 1 when recorded at maturity, accrual is equal to the current spot
     })
 
     it('users can repay their debt with underlying at accrual rate', async () => {
