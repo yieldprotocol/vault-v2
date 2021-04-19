@@ -19,7 +19,7 @@ contract CompoundChiOracle is IOracle {
      * @notice Retrieve the latest price of the price oracle.
      * @return price
      */
-    function peek() public virtual override view returns (uint price, uint updateTime) {
+    function _peek() private view returns (uint price, uint updateTime) {
         uint rawPrice = CTokenInterface(source).exchangeRateStored();
         require(rawPrice > 0, "Compound chi is zero");
         price = rawPrice * SCALE_FACTOR;
@@ -27,10 +27,18 @@ contract CompoundChiOracle is IOracle {
     }
 
     /**
+     * @notice Retrieve the latest price of the price oracle.
+     * @return price
+     */
+    function peek() public virtual override view returns (uint price, uint updateTime) {
+        (price, updateTime) = _peek();
+    }
+
+    /**
      * @notice Retrieve the latest price of the price oracle. Same as `peek` for this oracle.
      * @return price
      */
     function get() public virtual override returns (uint price, uint updateTime){
-        (price, updateTime) = peek();
+        (price, updateTime) = _peek();
     }
 }
