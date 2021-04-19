@@ -1,3 +1,4 @@
+import { ethers } from 'hardhat'
 import { BigNumber } from 'ethers'
 
 export const WAD = BigNumber.from(10).pow(18)
@@ -24,3 +25,7 @@ export const OPS = {
     TRANSFER_TO_FYTOKEN: 15,
     REDEEM: 16,
   }
+
+export const ETH = ethers.utils.formatBytes32String('ETH').slice(0, 14)
+export const DAI = ethers.utils.formatBytes32String('DAI').slice(0, 14)
+export const USDC = ethers.utils.formatBytes32String('USDC').slice(0, 14)

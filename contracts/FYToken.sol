@@ -38,7 +38,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         uint256 maturity_,
         string memory name,
         string memory symbol
-    ) ERC20Permit(name, symbol) {
+    ) ERC20Permit(name, symbol, IERC20Metadata(address(IJoin(join_).asset())).decimals()) { // The join asset is this fyToken's base, from which we inherit the decimals
         uint256 now_ = block.timestamp;
         require(
             maturity_ > now_ &&
@@ -48,7 +48,6 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         );
         oracle = oracle_;
         join = join_;
-        // TODO: Check the oracle asset matches the join asset, which is the base for this fyToken
         maturity = maturity_;
         asset = address(IJoin(join_).asset());
     }

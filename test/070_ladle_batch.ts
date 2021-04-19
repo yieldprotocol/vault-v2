@@ -100,7 +100,7 @@ describe('Ladle - batch', function () {
     const buildBatchCall = ladle.interface.encodeFunctionData('batch', [vaultId, [OPS.BUILD], [buildData]])
     const pourBatchCall = ladle.interface.encodeFunctionData('batch', [vaultId, [OPS.POUR], [pourData]])
 
-    await ladle.multicall([buildBatchCall, pourBatchCall], true)
+    await ladle.multicall([buildBatchCall, pourBatchCall])
 
     expect(await fyToken.balanceOf(owner)).to.equal(WAD)
   })
