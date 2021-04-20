@@ -5,7 +5,7 @@ import { constants } from '@yield-protocol/utils-v2'
 const { WAD, MAX256, DAI } = constants
 const MAX = MAX256
 
-import { OPS } from './shared/constants'
+import { OPS } from '../src/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'

@@ -2,13 +2,15 @@
   "name": "@yield-protocol/vault-v2",
   "version": "0.2.1",
   "description": "Yield Collateralized Debt Engine v2",
-  "main": "index.js",
   "author": "Yield Inc.",
   "files": [
     "contracts/*.sol",
     "contracts/math/*.sol",
-    "contracts/oracles/*.sol"
+    "contracts/oracles/*.sol",
+    "dist"
   ],
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
   "scripts": {
     "build": "hardhat compile",
     "test": "hardhat test",

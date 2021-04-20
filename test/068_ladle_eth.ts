@@ -3,7 +3,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { constants } from '@yield-protocol/utils-v2'
 const { WAD } = constants
 
-import { OPS } from './shared/constants'
+import { OPS } from '../src/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
