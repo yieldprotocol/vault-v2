@@ -11,7 +11,6 @@ import WitchArtifact from '../../artifacts/contracts/Witch.sol/Witch.json'
 import FYTokenArtifact from '../../artifacts/contracts/FYToken.sol/FYToken.json'
 import PoolMockArtifact from '../../artifacts/contracts/mocks/PoolMock.sol/PoolMock.json'
 
-import OracleMockArtifact from '../../artifacts/contracts/mocks/OracleMock.sol/OracleMock.json'
 import ChainlinkOracleArtifact from '../../artifacts/contracts/oracles/ChainlinkOracle.sol/ChainlinkOracle.json'
 import CompoundRateOracleArtifact from '../../artifacts/contracts/oracles/CompoundRateOracle.sol/CompoundRateOracle.json'
 import CompoundChiOracleArtifact from '../../artifacts/contracts/oracles/CompoundChiOracle.sol/CompoundChiOracle.json'
