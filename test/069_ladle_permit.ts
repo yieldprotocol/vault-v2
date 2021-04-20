@@ -1,8 +1,11 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { signatures } from '@yield-protocol/utils'
-import { WAD, MAX256 as MAX, OPS, DAI } from './shared/constants'
 
-import DAIMockArtifact from '../artifacts/contracts/mocks/DAIMock.sol/DAIMock.json'
+import { constants } from '@yield-protocol/utils-v2'
+const { WAD, MAX256, DAI } = constants
+const MAX = MAX256
+
+import { OPS } from './shared/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
