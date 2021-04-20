@@ -406,11 +406,11 @@ contract Ladle is AccessControl(), Multicall {
         DataTypes.Series memory series;
         if (art != 0) series = getSeries(vault.seriesId);
 
-        uint256 fee;
-        if (art > 0) fee = ((series.maturity - block.timestamp) * uint256(int256(art)).wmul(borrowingFee));
+        int128 fee;
+        if (art > 0) fee = ((series.maturity - block.timestamp) * uint256(int256(art)).wmul(borrowingFee)).u128().i128();
 
         // Update accounting
-        balances = cauldron.pour(vaultId, ink, art + fee.u128().i128());
+        balances = cauldron.pour(vaultId, ink, art + fee);
 
         // Manage collateral
         if (ink != 0) {
@@ -421,7 +421,7 @@ contract Ladle is AccessControl(), Multicall {
 
         // Manage debt tokens
         if (art != 0) {
-            if (art > 0) series.fyToken.mintWithFee(to, uint128(art), fee);
+            if (art > 0) series.fyToken.mintWithFee(to, uint128(art), uint128(fee));
             else series.fyToken.burn(msg.sender, uint128(-art));
         }
     }
