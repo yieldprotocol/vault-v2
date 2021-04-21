@@ -114,12 +114,9 @@ describe('Ladle - batch', function () {
       ['address', 'uint128', 'uint128', 'uint128'],
       [owner, posted, borrowed, MAX]
     )
-    await ladle.batch(
-      newVaultId,
-      [OPS.BUILD, OPS.JOIN_ETHER, OPS.SERVE],
-      [buildData, joinEtherData, serveData],
-      { value: posted },
-    )
+    await ladle.batch(newVaultId, [OPS.BUILD, OPS.JOIN_ETHER, OPS.SERVE], [buildData, joinEtherData, serveData], {
+      value: posted,
+    })
 
     const vault = await cauldron.vaults(newVaultId)
     expect(vault.owner).to.equal(owner)
