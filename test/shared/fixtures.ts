@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { BaseProvider } from '@ethersproject/providers'
-import { id } from '@yield-protocol/utils'
+import { id } from '@yield-protocol/utils-v2'
 import { constants } from '@yield-protocol/utils-v2'
 const { WAD, THREE_MONTHS, ETH, DAI, USDC } = constants
 

@@ -96,16 +96,4 @@ describe('Ladle - batch', function () {
       value: posted,
     })
   })
-
-  it('batches can be grouped with multicall', async () => {
-    const buildData = ethers.utils.defaultAbiCoder.encode(['bytes6', 'bytes6'], [seriesId, ilkId])
-    const pourData = ethers.utils.defaultAbiCoder.encode(['address', 'int128', 'int128'], [owner, WAD, WAD])
-
-    const buildBatchCall = ladle.interface.encodeFunctionData('batch', [vaultId, [OPS.BUILD], [buildData]])
-    const pourBatchCall = ladle.interface.encodeFunctionData('batch', [vaultId, [OPS.POUR], [pourData]])
-
-    await ladle.multicall([buildBatchCall, pourBatchCall])
-
-    expect(await fyToken.balanceOf(owner)).to.equal(WAD)
-  })
 })

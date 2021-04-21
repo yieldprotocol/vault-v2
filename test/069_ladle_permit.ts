@@ -1,7 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { signatures } from '@yield-protocol/utils'
-
-import { constants } from '@yield-protocol/utils-v2'
+import { constants, signatures } from '@yield-protocol/utils-v2'
 const { WAD, MAX256, DAI } = constants
 const MAX = MAX256
 
