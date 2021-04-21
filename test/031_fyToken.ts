@@ -26,6 +26,7 @@ describe('FYToken', function () {
   let env: YieldEnvironment
   let ownerAcc: SignerWithAddress
   let owner: string
+  let other: string
   let cauldron: Cauldron
   let fyToken: FYToken
   let base: ERC20Mock
@@ -42,6 +43,7 @@ describe('FYToken', function () {
     const signers = await ethers.getSigners()
     ownerAcc = signers[0]
     owner = await ownerAcc.getAddress()
+    other = await signers[1].getAddress()
   })
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
@@ -61,13 +63,35 @@ describe('FYToken', function () {
 
     await baseJoin.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], fyToken.address)
 
-    await fyToken.grantRoles([id('mint(address,uint256)'), id('burn(address,uint256)')], owner)
+    await fyToken.grantRoles(
+      [id('mint(address,uint256)'), id('burn(address,uint256)'), id('set(bytes32,bytes32)')],
+      owner
+    )
 
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
     await ladle.pour(vaultId, owner, WAD, WAD) // This gives `owner` WAD fyToken
 
     await base.approve(baseJoin.address, WAD.mul(2))
     await baseJoin.join(owner, WAD.mul(2)) // This loads the base join to serve redemptions
+  })
+
+  it('mints a fee to the beneficiary', async () => {
+    const beneficiaryId = ethers.utils.formatBytes32String('beneficiary')
+    const wrongId = ethers.utils.formatBytes32String('wrong')
+    const oneBytes32 = '0x0000000000000000000000000000000000000000000000000000000000000001'
+    const otherBytes32 = (other + '000000000000000000000000').toLowerCase()
+
+    // const feeId = ethers.utils.formatBytes32String('fee')
+    // await expect(ladle.set(feeId, oneBytes32)).to.emit(ladle, 'ParameterSet').withArgs(feeId, oneBytes32) // TODO: Test this in 060_ladle_admin
+    // TODO: Test borrowing fees in 061_ladle_pour
+
+    await expect(fyToken.set(beneficiaryId, otherBytes32))
+      .to.emit(fyToken, 'ParameterSet')
+      .withArgs(beneficiaryId, otherBytes32)
+    await expect(fyToken.set(wrongId, oneBytes32)).to.be.revertedWith('Unrecognized parameter')
+
+    await fyToken.mintWithFee(owner, WAD, WAD.div(10))
+    expect(await fyToken.balanceOf(other)).to.equal(WAD.div(10))
   })
 
   it('does not allow to mature before maturity', async () => {

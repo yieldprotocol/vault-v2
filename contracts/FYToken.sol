@@ -22,6 +22,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
 
     event SeriesMatured(uint256 chiAtMaturity);
     event Redeemed(address indexed from, address indexed to, uint256 amount, uint256 redeemed);
+    event ParameterSet(bytes32 parameter, bytes32 value);
 
     uint256 constant internal MAX_TIME_TO_MATURITY = 126144000; // seconds in four years
     bytes32 constant internal FLASH_LOAN_RETURN = keccak256("ERC3156FlashBorrower.onFlashLoan");
@@ -30,6 +31,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
     IOracle public oracle;                                      // Oracle for the savings rate.
     address public override asset;
     uint256 public override maturity;
+    address public beneficiary;
     uint256 public chiAtMaturity = type(uint256).max;          // Spot price (exchange rate) between the base and an interest accruing token at maturity 
 
     constructor(
@@ -66,6 +68,16 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
             "Only before maturity"
         );
         _;
+    }
+
+    /// @dev Set the beneficiary parameter
+    function set(bytes32 parameter, bytes32 value)
+        public
+        auth    
+    {
+        if (parameter == "beneficiary") beneficiary = address(bytes20(value));
+        else revert("Unrecognized parameter");
+        emit ParameterSet(parameter, value);
     }
 
     /// @dev Mature the fyToken by recording the chi.
@@ -135,6 +147,16 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         _mint(to, amount);
     }
 
+    /// @dev Mint fyTokens, with a fee minted to the beneficiary
+    function mintWithFee(address to, uint256 amount, uint256 fee)
+        external override
+        beforeMaturity
+        auth
+    {
+        _mint(beneficiary, fee); // TODO: Check if overriding _mint is cheaper in gas
+        _mint(to, amount);
+    }
+
     /// @dev Burn fyTokens. The user needs to have either transferred the tokens to this contract, or have approved this contract to take them. 
     function burn(address from, uint256 amount)
         external override
@@ -186,7 +208,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         returns(bool)
     {
         require(token == address(this), "Unsupported currency");
-        _mint(address(receiver), amount);
+        _mint(address(receiver), amount);   // TODO: Minting a fee to the beneficiary during a flash loan doesn't make sense, unless we add it to the burn as well.
         require(receiver.onFlashLoan(msg.sender, token, amount, 0, data) == FLASH_LOAN_RETURN, "Non-compliant borrower");
         _burn(address(receiver), amount);
         return true;

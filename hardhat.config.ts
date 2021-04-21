@@ -54,7 +54,7 @@ module.exports = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 20000,
+        runs: 2000, // TODO: Increase to 20000. Remove `retrieveFromPool` and `Multicall` from `Ladle`
       }
     }
   },
