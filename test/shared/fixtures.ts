@@ -62,8 +62,8 @@ export class LadleWrapper {
     return new LadleWrapper(this.ladle.connect(account))
   }
 
-  public async batch(vaultId: string, ops: Array<BigNumberish>, data: Array<string>, overrides?: PayableOverrides): Promise<ContractTransaction> {
-    return this.ladle.batch(vaultId, ops, data, overrides)
+  public async batch(vaultId: string, ops: Array<BigNumberish>, data: Array<string>): Promise<ContractTransaction> {
+    return this.ladle.batch(vaultId, ops, data)
   }
 
   public buildData(seriesId: string, ilkId: string): [BigNumberish, string] {

@@ -77,7 +77,7 @@ describe('Ladle - eth', function () {
     const joinEtherData = ethers.utils.defaultAbiCoder.encode(['bytes6'], [ethId])
     const pourData = ethers.utils.defaultAbiCoder.encode(['address', 'int128', 'int128'], [owner, WAD, 0])
 
-    await ladle.batch(ethVaultId, [OPS.JOIN_ETHER, OPS.POUR], [joinEtherData, pourData], { value: WAD })
+    await ladle.ladle.batch(ethVaultId, [OPS.JOIN_ETHER, OPS.POUR], [joinEtherData, pourData], { value: WAD }) // TODO: Fix batch in ladle wrapper
   })
 
   describe('with ETH posted', async () => {
@@ -107,7 +107,7 @@ describe('Ladle - eth', function () {
       )
       const exitEtherData = ethers.utils.defaultAbiCoder.encode(['bytes6', 'address'], [ethId, owner])
 
-      await ladle.ladle.batch(ethVaultId, [OPS.POUR, OPS.EXIT_ETHER], [pourData, exitEtherData]) // TODO: Fix batch in ladle wrapper
+      await ladle.batch(ethVaultId, [OPS.POUR, OPS.EXIT_ETHER], [pourData, exitEtherData])
     })
   })
 
