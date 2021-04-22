@@ -14,7 +14,7 @@ import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { loadFixture } = waffle
 
-import { YieldEnvironment } from './shared/fixtures'
+import { YieldEnvironment, LadleWrapper } from './shared/fixtures'
 
 describe('Ladle - stir', function () {
   this.timeout(0)
@@ -27,8 +27,8 @@ describe('Ladle - stir', function () {
   let cauldron: Cauldron
   let fyToken: FYToken
   let base: ERC20Mock
-  let ladle: Ladle
-  let ladleFromOther: Ladle
+  let ladle: LadleWrapper
+  let ladleFromOther: LadleWrapper
 
   async function fixture() {
     return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId, otherIlkId], [seriesId])
@@ -54,11 +54,10 @@ describe('Ladle - stir', function () {
   beforeEach(async () => {
     env = await loadFixture(fixture)
     cauldron = env.cauldron
-    ladle = env.ladle
+    ladle = new LadleWrapper(env.ladle)
+    ladleFromOther = ladle.connect(otherAcc)
     base = env.assets.get(baseId) as ERC20Mock
     fyToken = env.series.get(seriesId) as FYToken
-
-    ladleFromOther = ladle.connect(otherAcc)
 
     vaultFromId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
 
@@ -67,11 +66,11 @@ describe('Ladle - stir', function () {
   })
 
   it('does not allow moving collateral other than to the origin vault owner', async () => {
-    await expect(ladleFromOther.stir(vaultFromId, vaultToId, WAD, 0)).to.be.revertedWith('Only origin vault owner')
+    await expect(ladleFromOther.stir(vaultFromId, vaultToId, WAD, 0)).to.be.revertedWith('Only vault owner')
   })
 
   it('does not allow moving debt other than to the destination vault owner', async () => {
-    await expect(ladleFromOther.stir(vaultFromId, vaultToId, 0, WAD)).to.be.revertedWith('Only destination vault owner')
+    await expect(ladleFromOther.stir(vaultFromId, vaultToId, 0, WAD)).to.be.revertedWith('Only vault owner')
   })
 
   it('moves collateral', async () => {

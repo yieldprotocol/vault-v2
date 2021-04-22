@@ -1,5 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { BaseProvider } from '@ethersproject/providers'
+import { OPS } from '../../src/constants'
 import { id } from '@yield-protocol/utils-v2'
 import { constants } from '@yield-protocol/utils-v2'
 const { WAD, THREE_MONTHS, ETH, DAI, USDC } = constants
@@ -42,6 +43,93 @@ import { USDCMock } from '../../typechain/USDCMock'
 
 import { ethers, waffle } from 'hardhat'
 const { deployContract } = waffle
+import { BigNumberish, ContractTransaction } from 'ethers'
+
+export class LadleWrapper {
+  ladle: Ladle
+  address: string
+
+  constructor(ladle: Ladle) {
+    this.ladle = ladle
+    this.address = ladle.address
+  }
+
+  public static async setup(ladle: Ladle) {
+    return new LadleWrapper(ladle)
+  }
+
+  public connect(account: SignerWithAddress): LadleWrapper {
+    return new LadleWrapper(this.ladle.connect(account))
+  }
+
+  public async batch(vaultId: string, ops: Array<BigNumberish>, data: Array<string>): Promise<ContractTransaction> {
+    return this.ladle.batch(vaultId, ops, data)
+  }
+
+  public buildData(seriesId: string, ilkId: string): [BigNumberish, string] {
+    return [OPS.BUILD, ethers.utils.defaultAbiCoder.encode(['bytes6', 'bytes6'], [seriesId, ilkId])]
+  }
+
+  public async build(vaultId: string, seriesId: string, ilkId: string): Promise<ContractTransaction> {
+    const [op, data] = this.buildData(seriesId, ilkId)
+    return this.ladle.batch(vaultId, [op], [data])
+  }
+
+  public async tweak(vaultId: string, seriesId: string, ilkId: string): Promise<ContractTransaction> {
+    return this.ladle.tweak(vaultId, seriesId, ilkId)
+  }
+
+  public async give(vaultId: string, receiver: string): Promise<ContractTransaction> {
+    return this.ladle.give(vaultId, receiver)
+  }
+
+  public async destroy(vaultId: string): Promise<ContractTransaction> {
+    return this.ladle.destroy(vaultId)
+  }
+
+  public stirToData(from: string, ink: BigNumberish, art: BigNumberish): [BigNumberish, string] {
+    return [OPS.STIR_TO, ethers.utils.defaultAbiCoder.encode(['bytes12', 'uint128', 'uint128'], [from, ink, art])]
+  }
+
+  public stirFromData(to: string, ink: BigNumberish, art: BigNumberish): [BigNumberish, string] {
+    return [OPS.STIR_FROM, ethers.utils.defaultAbiCoder.encode(['bytes12', 'uint128', 'uint128'], [to, ink, art])]
+  }
+
+  public async stir(from: string, to: string, ink: BigNumberish, art: BigNumberish): Promise<ContractTransaction> {
+    const [op, data] = this.stirFromData(to, ink, art)
+    return this.ladle.batch(from, [op], [data])
+  }
+
+  public async stirTo(from: string, to: string, ink: BigNumberish, art: BigNumberish): Promise<ContractTransaction> {
+    const [op, data] = this.stirToData(from, ink, art)
+    return this.ladle.batch(to, [op], [data])
+  }
+
+  public pourData(to: string, ink: BigNumberish, art: BigNumberish): [BigNumberish, string] {
+    return [OPS.POUR, ethers.utils.defaultAbiCoder.encode(['address', 'int128', 'int128'], [to, ink, art])]
+  }
+
+  public async pour(vaultId: string, to: string, ink: BigNumberish, art: BigNumberish): Promise<ContractTransaction> {
+    const [op, data] = this.pourData(to, ink, art)
+    return this.ladle.batch(vaultId, [op], [data])
+  }
+
+  /*
+  POUR,                // 3
+  SERVE,               // 4
+  CLOSE,               // 5
+  REPAY,               // 6
+  REPAY_VAULT,         // 7
+  FORWARD_PERMIT,      // 8
+  FORWARD_DAI_PERMIT,  // 9
+  JOIN_ETHER,          // 10
+  EXIT_ETHER,          // 11
+  TRANSFER_TO_POOL,    // 12
+  ROUTE,               // 13
+  TRANSFER_TO_FYTOKEN, // 14
+  REDEEM               // 15
+  */
+}
 
 export class YieldEnvironment {
   owner: SignerWithAddress
