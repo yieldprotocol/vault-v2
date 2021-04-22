@@ -1,7 +1,8 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { BaseProvider } from '@ethersproject/providers'
 import { id } from '@yield-protocol/utils'
-import { WAD, THREE_MONTHS, ETH, DAI, USDC } from './constants'
+import { constants } from '@yield-protocol/utils-v2'
+const { WAD, THREE_MONTHS, ETH, DAI, USDC } = constants
 
 import CauldronArtifact from '../../artifacts/contracts/Cauldron.sol/Cauldron.json'
 import JoinArtifact from '../../artifacts/contracts/Join.sol/Join.json'
@@ -10,7 +11,6 @@ import WitchArtifact from '../../artifacts/contracts/Witch.sol/Witch.json'
 import FYTokenArtifact from '../../artifacts/contracts/FYToken.sol/FYToken.json'
 import PoolMockArtifact from '../../artifacts/contracts/mocks/PoolMock.sol/PoolMock.json'
 
-import OracleMockArtifact from '../../artifacts/contracts/mocks/OracleMock.sol/OracleMock.json'
 import ChainlinkOracleArtifact from '../../artifacts/contracts/oracles/ChainlinkOracle.sol/ChainlinkOracle.json'
 import CompoundRateOracleArtifact from '../../artifacts/contracts/oracles/CompoundRateOracle.sol/CompoundRateOracle.json'
 import CompoundChiOracleArtifact from '../../artifacts/contracts/oracles/CompoundChiOracle.sol/CompoundChiOracle.json'

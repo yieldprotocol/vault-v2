@@ -1,7 +1,9 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { BaseProvider } from '@ethersproject/providers'
 import { id } from '@yield-protocol/utils'
-import { WAD, THREE_MONTHS } from './shared/constants'
+
+import { constants } from '@yield-protocol/utils-v2'
+const { WAD, THREE_MONTHS } = constants
 
 import FYTokenArtifact from '../artifacts/contracts/FYToken.sol/FYToken.json'
 import JoinArtifact from '../artifacts/contracts/Join.sol/Join.json'
