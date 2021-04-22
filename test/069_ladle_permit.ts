@@ -7,7 +7,6 @@ import { OPS } from '../src/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
-import { Ladle } from '../typechain/Ladle'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { DAIMock } from '../typechain/DAIMock'
 import { FYToken } from '../typechain/FYToken'
@@ -16,7 +15,7 @@ import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { loadFixture } = waffle
 
-import { YieldEnvironment } from './shared/fixtures'
+import { YieldEnvironment, LadleWrapper } from './shared/fixtures'
 
 describe('Ladle - permit', function () {
   this.timeout(0)
@@ -31,7 +30,7 @@ describe('Ladle - permit', function () {
   let ilkJoin: Join
   let dai: DAIMock
   let fyToken: FYToken
-  let ladle: Ladle
+  let ladle: LadleWrapper
 
   async function fixture() {
     return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId], [seriesId])
@@ -56,7 +55,7 @@ describe('Ladle - permit', function () {
   beforeEach(async () => {
     env = await loadFixture(fixture)
     cauldron = env.cauldron
-    ladle = env.ladle
+    ladle = new LadleWrapper(env.ladle)
     ilkJoin = env.joins.get(ilkId) as Join
     ilk = env.assets.get(ilkId) as ERC20Mock
     fyToken = env.series.get(seriesId) as FYToken
@@ -79,7 +78,7 @@ describe('Ladle - permit', function () {
 
     const { v, r, s } = signatures.sign(permitDigest, signatures.privateKey0)
 
-    expect(await ladle.forwardPermit(ilkId, true, ilkJoin.address, amount, deadline, v, r, s))
+    expect(await ladle.forwardPermit(ilkVaultId, ilkId, true, ilkJoin.address, amount, deadline, v, r, s))
       .to.emit(ilk, 'Approval')
       .withArgs(owner, ilkJoin.address, WAD)
 
@@ -100,7 +99,7 @@ describe('Ladle - permit', function () {
 
     const { v, r, s } = signatures.sign(permitDigest, signatures.privateKey0)
 
-    expect(await ladle.forwardPermit(seriesId, false, ladle.address, amount, deadline, v, r, s))
+    expect(await ladle.forwardPermit(ilkVaultId, seriesId, false, ladle.address, amount, deadline, v, r, s))
       .to.emit(fyToken, 'Approval')
       .withArgs(owner, ladle.address, WAD)
 
@@ -148,7 +147,7 @@ describe('Ladle - permit', function () {
 
     const { v, r, s } = signatures.sign(daiPermitDigest, signatures.privateKey0)
 
-    expect(await ladle.forwardDaiPermit(DAI, true, ladle.address, nonce, deadline, true, v, r, s))
+    expect(await ladle.forwardDaiPermit(ilkVaultId, DAI, true, ladle.address, nonce, deadline, true, v, r, s))
       .to.emit(dai, 'Approval')
       .withArgs(owner, ladle.address, MAX)
 
@@ -196,7 +195,7 @@ describe('Ladle - permit', function () {
 
     const { v, r, s } = signatures.sign(permitDigest, signatures.privateKey0)
 
-    await expect(ladle.forwardPermit(mockIlkId, true, ilkJoin.address, amount, deadline, v, r, s)).to.be.revertedWith(
+    await expect(ladle.forwardPermit(ilkVaultId, mockIlkId, true, ilkJoin.address, amount, deadline, v, r, s)).to.be.revertedWith(
       'Token not found'
     )
   })

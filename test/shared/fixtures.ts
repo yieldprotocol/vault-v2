@@ -154,9 +154,31 @@ export class LadleWrapper {
     return this.ladle.roll(vaultId, newSeriesId, max)
   }
 
+  public forwardPermitData(seriesId: string, asset: boolean, spender: string, amount: BigNumberish, deadline: BigNumberish, v: BigNumberish, r: Buffer, s: Buffer): [BigNumberish, string] {
+    return [OPS.FORWARD_PERMIT, ethers.utils.defaultAbiCoder.encode(
+      ['bytes6', 'bool', 'address', 'uint256', 'uint256', 'uint8', 'bytes32', 'bytes32'],
+      [seriesId, asset, spender, amount, deadline, v, r, s]
+    )]
+  }
+
+  public async forwardPermit(vaultId: string, seriesId: string, asset: boolean, spender: string, amount: BigNumberish, deadline: BigNumberish, v: BigNumberish, r: Buffer, s: Buffer): Promise<ContractTransaction> {
+    const [op, data] = this.forwardPermitData(seriesId, asset, spender, amount, deadline, v, r, s)
+    return this.ladle.batch(vaultId, [op], [data])
+  }
+
+  public forwardDaiPermitData(seriesId: string, asset: boolean, spender: string, nonce: BigNumberish, deadline: BigNumberish, approved: boolean, v: BigNumberish, r: Buffer, s: Buffer): [BigNumberish, string] {
+    return [OPS.FORWARD_DAI_PERMIT, ethers.utils.defaultAbiCoder.encode(
+      ['bytes6', 'bool', 'address', 'uint256', 'uint256', 'bool', 'uint8', 'bytes32', 'bytes32'],
+      [seriesId, asset, spender, nonce, deadline, approved, v, r, s]
+    )]
+  }
+
+  public async forwardDaiPermit(vaultId: string, seriesId: string, asset: boolean, spender: string, nonce: BigNumberish, deadline: BigNumberish, approved: boolean, v: BigNumberish, r: Buffer, s: Buffer): Promise<ContractTransaction> {
+    const [op, data] = this.forwardDaiPermitData(seriesId, asset, spender, nonce, deadline, approved, v, r, s)
+    return this.ladle.batch(vaultId, [op], [data])
+  }
+
   /*
-  FORWARD_PERMIT,      // 8
-  FORWARD_DAI_PERMIT,  // 9
   JOIN_ETHER,          // 10
   EXIT_ETHER,          // 11
   TRANSFER_TO_POOL,    // 12
