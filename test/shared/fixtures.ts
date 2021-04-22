@@ -43,7 +43,7 @@ import { USDCMock } from '../../typechain/USDCMock'
 
 import { ethers, waffle } from 'hardhat'
 const { deployContract } = waffle
-import { BigNumberish, ContractTransaction } from 'ethers'
+import { BigNumberish, ContractTransaction, PayableOverrides } from 'ethers'
 
 export class LadleWrapper {
   ladle: Ladle
@@ -62,8 +62,8 @@ export class LadleWrapper {
     return new LadleWrapper(this.ladle.connect(account))
   }
 
-  public async batch(vaultId: string, ops: Array<BigNumberish>, data: Array<string>): Promise<ContractTransaction> {
-    return this.ladle.batch(vaultId, ops, data)
+  public async batch(vaultId: string, ops: Array<BigNumberish>, data: Array<string>, overrides?: PayableOverrides): Promise<ContractTransaction> {
+    return this.ladle.batch(vaultId, ops, data, overrides)
   }
 
   public buildData(seriesId: string, ilkId: string): [BigNumberish, string] {
@@ -162,6 +162,7 @@ export class LadleWrapper {
   }
 
   public async forwardPermit(vaultId: string, seriesId: string, asset: boolean, spender: string, amount: BigNumberish, deadline: BigNumberish, v: BigNumberish, r: Buffer, s: Buffer): Promise<ContractTransaction> {
+    // The vaultId parameter is irrelevant to forwardPermit, but necessary when included in a batch
     const [op, data] = this.forwardPermitData(seriesId, asset, spender, amount, deadline, v, r, s)
     return this.ladle.batch(vaultId, [op], [data])
   }
@@ -174,13 +175,32 @@ export class LadleWrapper {
   }
 
   public async forwardDaiPermit(vaultId: string, seriesId: string, asset: boolean, spender: string, nonce: BigNumberish, deadline: BigNumberish, approved: boolean, v: BigNumberish, r: Buffer, s: Buffer): Promise<ContractTransaction> {
+    // The vaultId parameter is irrelevant to forwardDaiPermit, but necessary when included in a batch
     const [op, data] = this.forwardDaiPermitData(seriesId, asset, spender, nonce, deadline, approved, v, r, s)
     return this.ladle.batch(vaultId, [op], [data])
   }
 
+  public joinEtherData(etherId: string): [BigNumberish, string] {
+    return [OPS.JOIN_ETHER, ethers.utils.defaultAbiCoder.encode(['bytes6'], [etherId])]
+  }
+
+  public async joinEther(vaultId: string, etherId: string, overrides?: any): Promise<ContractTransaction> {
+    // The vaultId parameter is irrelevant to joinEther, but necessary when included in a batch
+    const [op, data] = this.joinEtherData(etherId)
+    return this.ladle.batch(vaultId, [op], [data], overrides)
+  }
+
+  public exitEtherData(etherId: string, to: string): [BigNumberish, string] {
+    return [OPS.EXIT_ETHER, ethers.utils.defaultAbiCoder.encode(['bytes6', 'address'], [etherId, to])]
+  }
+
+  public async exitEther(vaultId: string, etherId: string, to: string): Promise<ContractTransaction> {
+    // The vaultId parameter is irrelevant to exitEther, but necessary when included in a batch
+    const [op, data] = this.exitEtherData(etherId, to)
+    return this.ladle.batch(vaultId, [op], [data])
+  }
+
   /*
-  JOIN_ETHER,          // 10
-  EXIT_ETHER,          // 11
   TRANSFER_TO_POOL,    // 12
   ROUTE,               // 13
   TRANSFER_TO_FYTOKEN, // 14

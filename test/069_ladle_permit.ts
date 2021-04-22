@@ -5,7 +5,6 @@ const MAX = MAX256
 
 import { OPS } from '../src/constants'
 
-import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { DAIMock } from '../typechain/DAIMock'
@@ -24,8 +23,6 @@ describe('Ladle - permit', function () {
   let ownerAcc: SignerWithAddress
   let otherAcc: SignerWithAddress
   let owner: string
-  let other: string
-  let cauldron: Cauldron
   let ilk: ERC20Mock
   let ilkJoin: Join
   let dai: DAIMock
@@ -42,7 +39,6 @@ describe('Ladle - permit', function () {
     owner = await ownerAcc.getAddress()
 
     otherAcc = signers[1]
-    other = await otherAcc.getAddress()
   })
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
@@ -54,7 +50,6 @@ describe('Ladle - permit', function () {
 
   beforeEach(async () => {
     env = await loadFixture(fixture)
-    cauldron = env.cauldron
     ladle = new LadleWrapper(env.ladle)
     ilkJoin = env.joins.get(ilkId) as Join
     ilk = env.assets.get(ilkId) as ERC20Mock
