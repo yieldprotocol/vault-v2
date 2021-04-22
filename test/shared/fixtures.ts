@@ -150,6 +150,10 @@ export class LadleWrapper {
     return this.ladle.batch(vaultId, [op], [data])
   }
 
+  public async roll(vaultId: string, newSeriesId: string, max: BigNumberish): Promise<ContractTransaction> {
+    return this.ladle.roll(vaultId, newSeriesId, max)
+  }
+
   /*
   FORWARD_PERMIT,      // 8
   FORWARD_DAI_PERMIT,  // 9
