@@ -6,13 +6,12 @@ const { WAD } = constants
 import { Cauldron } from '../typechain/Cauldron'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
-import { Ladle } from '../typechain/Ladle'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { loadFixture } = waffle
 
-import { YieldEnvironment } from './shared/fixtures'
+import { LadleWrapper, YieldEnvironment } from './shared/fixtures'
 
 describe('Cauldron - stir', function () {
   this.timeout(0)
@@ -26,8 +25,8 @@ describe('Cauldron - stir', function () {
   let cauldronFromOther: Cauldron
   let fyToken: FYToken
   let base: ERC20Mock
-  let ladle: Ladle
-  let ladleFromOther: Ladle
+  let ladle: LadleWrapper
+  let ladleFromOther: LadleWrapper
 
   async function fixture() {
     return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId, otherIlkId], [seriesId, otherSeriesId])
@@ -55,12 +54,11 @@ describe('Cauldron - stir', function () {
   beforeEach(async () => {
     env = await loadFixture(fixture)
     cauldron = env.cauldron
-    ladle = env.ladle
+    cauldronFromOther = cauldron.connect(otherAcc)
+    ladle = env.ladle // TODO: Use Cauldron to pour instead
+    ladleFromOther = ladle.connect(otherAcc)
     base = env.assets.get(baseId) as ERC20Mock
     fyToken = env.series.get(seriesId) as FYToken
-
-    cauldronFromOther = cauldron.connect(otherAcc)
-    ladleFromOther = ladle.connect(otherAcc)
 
     vaultFromId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
 

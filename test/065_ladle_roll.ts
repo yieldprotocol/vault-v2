@@ -50,7 +50,7 @@ describe('Ladle - roll', function () {
   beforeEach(async () => {
     env = await loadFixture(fixture)
     cauldron = env.cauldron
-    ladle = new LadleWrapper(env.ladle)
+    ladle = env.ladle
     ladleFromOther = ladle.connect(otherAcc)
     base = env.assets.get(baseId) as ERC20Mock
     fyToken = env.series.get(seriesId) as FYToken

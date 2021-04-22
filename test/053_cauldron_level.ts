@@ -4,13 +4,12 @@ import { constants } from '@yield-protocol/utils-v2'
 const { WAD } = constants
 
 import { Cauldron } from '../typechain/Cauldron'
-import { Ladle } from '../typechain/Ladle'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock as ERC20 } from '../typechain/ERC20Mock'
 import { OracleMock as Oracle } from '../typechain/OracleMock'
 import { SourceMock } from '../typechain/SourceMock'
 
-import { YieldEnvironment } from './shared/fixtures'
+import { YieldEnvironment, LadleWrapper } from './shared/fixtures'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
@@ -23,7 +22,7 @@ describe('Cauldron - level', function () {
   let owner: string
   let env: YieldEnvironment
   let cauldron: Cauldron
-  let ladle: Ladle
+  let ladle: LadleWrapper
   let fyToken: FYToken
   let base: ERC20
   let ilk: ERC20
@@ -51,7 +50,7 @@ describe('Cauldron - level', function () {
     this.timeout(0)
     env = await loadFixture(fixture)
     cauldron = env.cauldron
-    ladle = env.ladle
+    ladle = env.ladle // TODO: Use Cauldron to pour instead
     base = env.assets.get(baseId) as ERC20
     ilk = env.assets.get(ilkId) as ERC20
     rateOracle = env.oracles.get('rate') as Oracle

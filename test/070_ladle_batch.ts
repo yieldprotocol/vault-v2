@@ -7,7 +7,6 @@ import { OPS } from '../src/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
-import { Ladle } from '../typechain/Ladle'
 import { FYToken } from '../typechain/FYToken'
 import { PoolMock } from '../typechain/PoolMock'
 import { ERC20Mock } from '../typechain/ERC20Mock'
@@ -17,7 +16,7 @@ import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { loadFixture } = waffle
 
-import { YieldEnvironment } from './shared/fixtures'
+import { YieldEnvironment, LadleWrapper } from './shared/fixtures'
 
 describe('Ladle - batch', function () {
   this.timeout(0)
@@ -28,7 +27,7 @@ describe('Ladle - batch', function () {
   let owner: string
   let other: string
   let cauldron: Cauldron
-  let ladle: Ladle
+  let ladle: LadleWrapper
   let fyToken: FYToken
   let base: ERC20Mock
   let ilk: ERC20Mock
@@ -117,8 +116,8 @@ describe('Ladle - batch', function () {
       ['address', 'uint128', 'uint128', 'uint128'],
       [owner, posted, borrowed, MAX]
     )
-    await ladle.batch(newVaultId, [OPS.BUILD, OPS.JOIN_ETHER, OPS.SERVE], [buildData, joinEtherData, serveData], {
-      value: posted,
+    await ladle.ladle.batch(newVaultId, [OPS.BUILD, OPS.JOIN_ETHER, OPS.SERVE], [buildData, joinEtherData, serveData], {
+      value: posted, // TODO: Fix when ladlewrapper.batch accepts overrides
     })
 
     const vault = await cauldron.vaults(newVaultId)
@@ -137,8 +136,8 @@ describe('Ladle - batch', function () {
       ['address', 'uint128', 'uint128', 'uint128'],
       [other, 0, borrowed, MAX]
     )
-    await ladle.batch(ethVaultId, [OPS.JOIN_ETHER, OPS.POUR, OPS.SERVE], [joinEtherData, pourData, serveData], {
-      value: posted,
+    await ladle.ladle.batch(ethVaultId, [OPS.JOIN_ETHER, OPS.POUR, OPS.SERVE], [joinEtherData, pourData, serveData], {
+      value: posted, // TODO: Fix when ladlewrapper.batch accepts overrides
     })
   })
 })

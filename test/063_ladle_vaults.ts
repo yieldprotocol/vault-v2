@@ -47,7 +47,7 @@ describe('Ladle - vaults', function () {
   beforeEach(async () => {
     env = await loadFixture(fixture)
     cauldron = env.cauldron
-    ladle = new LadleWrapper(env.ladle)
+    ladle = env.ladle
     ladleFromOther = ladle.connect(otherAcc)
 
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string

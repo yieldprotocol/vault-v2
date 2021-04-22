@@ -57,7 +57,7 @@ describe('Ladle - serve and repay', function () {
   beforeEach(async () => {
     env = await loadFixture(fixture)
     cauldron = env.cauldron
-    ladle = new LadleWrapper(env.ladle)
+    ladle = env.ladle
     base = env.assets.get(baseId) as ERC20Mock
     ilk = env.assets.get(ilkId) as ERC20Mock
     fyToken = env.series.get(seriesId) as FYToken

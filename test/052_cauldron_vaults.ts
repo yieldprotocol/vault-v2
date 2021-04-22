@@ -4,11 +4,10 @@ import { constants } from '@yield-protocol/utils-v2'
 const { WAD } = constants
 
 import { Cauldron } from '../typechain/Cauldron'
-import { Ladle } from '../typechain/Ladle'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 
-import { YieldEnvironment } from './shared/fixtures'
+import { YieldEnvironment, LadleWrapper } from './shared/fixtures'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
@@ -23,7 +22,7 @@ describe('Cauldron - vaults', function () {
   let other: string
   let env: YieldEnvironment
   let cauldron: Cauldron
-  let ladle: Ladle
+  let ladle: LadleWrapper
   let cauldronFromOther: Cauldron
   let fyToken: FYToken
   let base: ERC20Mock
@@ -57,7 +56,7 @@ describe('Cauldron - vaults', function () {
   beforeEach(async () => {
     env = await loadFixture(fixture)
     cauldron = env.cauldron
-    ladle = env.ladle
+    ladle = env.ladle // TODO: This should be done through Cauldron instead
     base = env.assets.get(baseId) as ERC20Mock
     ilk = env.assets.get(ilkId) as ERC20Mock
     fyToken = env.series.get(seriesId) as FYToken

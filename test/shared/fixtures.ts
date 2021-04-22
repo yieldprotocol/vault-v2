@@ -211,7 +211,7 @@ export class LadleWrapper {
 export class YieldEnvironment {
   owner: SignerWithAddress
   cauldron: Cauldron
-  ladle: Ladle
+  ladle: LadleWrapper
   witch: Witch
   assets: Map<string, ERC20Mock>
   oracles: Map<string, OracleMock>
@@ -234,7 +234,7 @@ export class YieldEnvironment {
   ) {
     this.owner = owner
     this.cauldron = cauldron
-    this.ladle = ladle
+    this.ladle = new LadleWrapper(ladle)
     this.witch = witch
     this.assets = assets
     this.oracles = oracles

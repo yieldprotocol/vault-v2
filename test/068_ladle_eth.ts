@@ -52,7 +52,7 @@ describe('Ladle - eth', function () {
   beforeEach(async () => {
     env = await loadFixture(fixture)
     cauldron = env.cauldron
-    ladle = new LadleWrapper(env.ladle)
+    ladle = env.ladle
     wethJoin = env.joins.get(ethId) as Join
     weth = (await ethers.getContractAt('WETH9Mock', await wethJoin.asset())) as WETH9Mock
 
