@@ -26,10 +26,10 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
     uint256 constant internal MAX_TIME_TO_MATURITY = 126144000; // seconds in four years
     bytes32 constant internal FLASH_LOAN_RETURN = keccak256("ERC3156FlashBorrower.onFlashLoan");
 
-    IJoin public join;                                          // Source of redemption funds.
-    IOracle public oracle;                                      // Oracle for the savings rate.
-    address public override asset;
-    uint256 public override maturity;
+    IJoin public immutable join;                                          // Source of redemption funds.
+    IOracle public immutable oracle;                                      // Oracle for the savings rate.
+    address public immutable override asset;
+    uint256 public immutable override maturity;
     uint256 public chiAtMaturity = type(uint256).max;          // Spot price (exchange rate) between the base and an interest accruing token at maturity 
 
     constructor(
@@ -38,7 +38,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         uint256 maturity_,
         string memory name,
         string memory symbol
-    ) ERC20Permit(name, symbol) {
+    ) ERC20Permit(name, symbol, IERC20Metadata(address(IJoin(join_).asset())).decimals()) { // The join asset is this fyToken's base, from which we inherit the decimals
         uint256 now_ = block.timestamp;
         require(
             maturity_ > now_ &&
@@ -48,7 +48,6 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         );
         oracle = oracle_;
         join = join_;
-        // TODO: Check the oracle asset matches the join asset, which is the base for this fyToken
         maturity = maturity_;
         asset = address(IJoin(join_).asset());
     }

@@ -1,5 +1,9 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { WAD, OPS } from './shared/constants'
+
+import { constants } from '@yield-protocol/utils-v2'
+const { WAD } = constants
+
+import { OPS } from '../src/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
@@ -73,7 +77,7 @@ describe('Ladle - eth', function () {
   it('users can transfer ETH then pour in a single transaction with multicall', async () => {
     const joinEtherCall = ladle.interface.encodeFunctionData('joinEther', [ethId])
     const pourCall = ladle.interface.encodeFunctionData('pour', [ethVaultId, owner, WAD, 0])
-    await ladle.multicall([joinEtherCall, pourCall], true, { value: WAD })
+    await ladle.multicall([joinEtherCall, pourCall], { value: WAD })
   })
 
   it('users can transfer ETH then pour in a single transaction with batch', async () => {
@@ -106,7 +110,7 @@ describe('Ladle - eth', function () {
     it('users can pour then unwrap to ETH in a single transaction with multicall', async () => {
       const pourCall = ladle.interface.encodeFunctionData('pour', [ethVaultId, ladle.address, WAD.mul(-1), 0])
       const exitEtherCall = ladle.interface.encodeFunctionData('exitEther', [ethId, owner])
-      await ladle.multicall([pourCall, exitEtherCall], true)
+      await ladle.multicall([pourCall, exitEtherCall])
     })
 
     it('users can pour then unwrap to ETH in a single transaction with batch', async () => {

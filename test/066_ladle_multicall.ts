@@ -1,5 +1,8 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { WAD, MAX128 as MAX } from './shared/constants'
+
+import { constants } from '@yield-protocol/utils-v2'
+const { WAD, MAX128 } = constants
+const MAX = MAX128
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
@@ -68,7 +71,7 @@ describe('Ladle - multicall', function () {
   it('builds a vault and posts to it', async () => {
     const buildCall = ladle.interface.encodeFunctionData('build', [vaultId, seriesId, ilkId])
     const pourCall = ladle.interface.encodeFunctionData('pour', [vaultId, owner, WAD, WAD])
-    await ladle.multicall([buildCall, pourCall], true)
+    await ladle.multicall([buildCall, pourCall])
 
     const vault = await cauldron.vaults(vaultId)
     expect(vault.owner).to.equal(owner)
@@ -80,7 +83,7 @@ describe('Ladle - multicall', function () {
 
   it('reverts with the appropriate message when needed', async () => {
     const pourCall = ladle.interface.encodeFunctionData('pour', [vaultId, owner, WAD, WAD])
-    await expect(ladle.multicall([pourCall], true)).to.be.revertedWith('Only vault owner')
+    await expect(ladle.multicall([pourCall])).to.be.revertedWith('Only vault owner')
   })
 
   it('users can transfer ETH then pour, then serve in a single transaction with multicall', async () => {
@@ -89,6 +92,6 @@ describe('Ladle - multicall', function () {
     const joinEtherCall = ladle.interface.encodeFunctionData('joinEther', [ethId])
     const pourCall = ladle.interface.encodeFunctionData('pour', [ethVaultId, owner, posted, 0])
     const serveCall = ladle.interface.encodeFunctionData('serve', [ethVaultId, other, 0, borrowed, MAX])
-    await ladle.multicall([joinEtherCall, pourCall, serveCall], true, { value: posted })
+    await ladle.multicall([joinEtherCall, pourCall, serveCall], { value: posted })
   })
 })
