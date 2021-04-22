@@ -43,7 +43,7 @@ import { USDCMock } from '../../typechain/USDCMock'
 
 import { ethers, waffle } from 'hardhat'
 const { deployContract } = waffle
-import { BigNumberish, ContractTransaction, PayableOverrides } from 'ethers'
+import { BigNumberish, ContractTransaction, PayableOverrides, BytesLike } from 'ethers'
 
 export class LadleWrapper {
   ladle: Ladle
@@ -224,9 +224,25 @@ export class LadleWrapper {
     return this.ladle.batch(vaultId, [op], [data])
   }
 
+  public transferToPoolData(seriesId: string, base: boolean, wad: BigNumberish): [BigNumberish, string] {
+    return [OPS.TRANSFER_TO_POOL, ethers.utils.defaultAbiCoder.encode(['bytes6', 'bool', 'uint128'], [seriesId, base, wad])]
+  }
+
+  public async transferToPool(vaultId: string, seriesId: string, base: boolean, wad: BigNumberish): Promise<ContractTransaction> {
+    const [op, data] = this.transferToPoolData(seriesId, base, wad)
+    return this.ladle.batch(vaultId, [op], [data])
+  }
+
+  public routeData(call: BytesLike): [BigNumberish, string] {
+    return [OPS.TRANSFER_TO_POOL, ethers.utils.defaultAbiCoder.encode(['bytes'], [call])]
+  }
+
+  public async route(vaultId: string, call: BytesLike): Promise<ContractTransaction> {
+    const [op, data] = this.routeData(call)
+    return this.ladle.batch(vaultId, [op], [data])
+  }
+
   /*
-  TRANSFER_TO_POOL,    // 12
-  ROUTE,               // 13
   TRANSFER_TO_FYTOKEN, // 14
   REDEEM               // 15
   */
