@@ -119,7 +119,9 @@ describe('Ladle - stir', function () {
     await ladle.give(vaultFromId, other)
 
     const stirFromData = ladle.stirFromData(vaultToId, WAD, 0)
-    await expect(ladle.batch(vaultFromId, [stirFromData.op], [stirFromData.data])).to.be.revertedWith('Only vault owner')
+    await expect(ladle.batch(vaultFromId, [stirFromData.op], [stirFromData.data])).to.be.revertedWith(
+      'Only vault owner'
+    )
   })
 
   it('moves debt in a batch', async () => {

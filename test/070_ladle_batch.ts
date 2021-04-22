@@ -91,7 +91,11 @@ describe('Ladle - batch', function () {
 
     const borrowed = WAD
     const serveData = ladle.serveData(owner, posted, borrowed, MAX)
-    await ladle.batch(vaultId, [buildData.op, permitData.op, serveData.op], [buildData.data, permitData.data, serveData.data])
+    await ladle.batch(
+      vaultId,
+      [buildData.op, permitData.op, serveData.op],
+      [buildData.data, permitData.data, serveData.data]
+    )
 
     const vault = await cauldron.vaults(vaultId)
     expect(vault.owner).to.equal(owner)
@@ -107,9 +111,14 @@ describe('Ladle - batch', function () {
     const buildData = ladle.buildData(seriesId, ethId)
     const joinEtherData = ladle.joinEtherData(ethId)
     const serveData = ladle.serveData(owner, posted, borrowed, MAX)
-    await ladle.ladle.batch(newVaultId, [buildData.op, joinEtherData.op, serveData.op], [buildData.data, joinEtherData.data, serveData.data], {
-      value: posted, // TODO: Fix when ladlewrapper.batch accepts overrides
-    })
+    await ladle.ladle.batch(
+      newVaultId,
+      [buildData.op, joinEtherData.op, serveData.op],
+      [buildData.data, joinEtherData.data, serveData.data],
+      {
+        value: posted, // TODO: Fix when ladlewrapper.batch accepts overrides
+      }
+    )
 
     const vault = await cauldron.vaults(newVaultId)
     expect(vault.owner).to.equal(owner)
@@ -124,8 +133,13 @@ describe('Ladle - batch', function () {
     const joinEtherData = ladle.joinEtherData(ethId)
     const pourData = ladle.pourData(owner, posted, 0)
     const serveData = ladle.serveData(other, 0, borrowed, MAX)
-    await ladle.ladle.batch(ethVaultId, [joinEtherData.op, pourData.op, serveData.op], [joinEtherData.data, pourData.data, serveData.data], {
-      value: posted, // TODO: Fix when ladlewrapper.batch accepts overrides
-    })
+    await ladle.ladle.batch(
+      ethVaultId,
+      [joinEtherData.op, pourData.op, serveData.op],
+      [joinEtherData.data, pourData.data, serveData.data],
+      {
+        value: posted, // TODO: Fix when ladlewrapper.batch accepts overrides
+      }
+    )
   })
 })

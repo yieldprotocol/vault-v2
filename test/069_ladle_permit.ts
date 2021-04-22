@@ -184,8 +184,8 @@ describe('Ladle - permit', function () {
 
     const { v, r, s } = signatures.sign(permitDigest, signatures.privateKey0)
 
-    await expect(ladle.forwardPermit(ilkVaultId, mockIlkId, true, ilkJoin.address, amount, deadline, v, r, s)).to.be.revertedWith(
-      'Token not found'
-    )
+    await expect(
+      ladle.forwardPermit(ilkVaultId, mockIlkId, true, ilkJoin.address, amount, deadline, v, r, s)
+    ).to.be.revertedWith('Token not found')
   })
 })

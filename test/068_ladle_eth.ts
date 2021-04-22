@@ -77,7 +77,9 @@ describe('Ladle - eth', function () {
     const joinEtherData = ladle.joinEtherData(ethId)
     const pourData = ladle.pourData(owner, WAD, 0)
 
-    await ladle.ladle.batch(ethVaultId, [joinEtherData.op, pourData.op], [joinEtherData.data, pourData.data], { value: WAD }) // TODO: Fix batch in ladle wrapper
+    await ladle.ladle.batch(ethVaultId, [joinEtherData.op, pourData.op], [joinEtherData.data, pourData.data], {
+      value: WAD,
+    }) // TODO: Fix batch in ladle wrapper
   })
 
   describe('with ETH posted', async () => {
