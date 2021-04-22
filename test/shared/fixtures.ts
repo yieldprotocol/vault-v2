@@ -62,6 +62,26 @@ export class LadleWrapper {
     return new LadleWrapper(this.ladle.connect(account))
   }
 
+  public async addJoin(assetId: string, join: string): Promise<ContractTransaction> {
+    return this.ladle.addJoin(assetId, join)
+  }
+
+  public async addPool(assetId: string, pool: string): Promise<ContractTransaction> {
+    return this.ladle.addPool(assetId, pool)
+  }
+
+  public async setPoolRouter(poolRouter: string): Promise<ContractTransaction> {
+    return this.ladle.setPoolRouter(poolRouter)
+  }
+
+  public async joins(ilkId: string): Promise<string> {
+    return this.ladle.joins(ilkId)
+  }
+
+  public async pools(seriesId: string): Promise<string> {
+    return this.ladle.pools(seriesId)
+  }
+
   public async batch(vaultId: string, ops: Array<BigNumberish>, data: Array<string>): Promise<ContractTransaction> {
     return this.ladle.batch(vaultId, ops, data)
   }

@@ -108,32 +108,32 @@ describe('Ladle - admin', function () {
 
   describe('join admin', async () => {
     it('does not allow adding a join before adding its ilk', async () => {
-      await expect(ladle.ladle.addJoin(mockAssetId, ilkJoin.address)).to.be.revertedWith('Asset not found')
+      await expect(ladle.addJoin(mockAssetId, ilkJoin.address)).to.be.revertedWith('Asset not found')
     })
 
     it('does not allow adding a join with a mismatched ilk', async () => {
-      await expect(ladle.ladle.addJoin(baseId, ilkJoin.address)).to.be.revertedWith('Mismatched asset and join')
+      await expect(ladle.addJoin(baseId, ilkJoin.address)).to.be.revertedWith('Mismatched asset and join')
     })
 
     it('adds a join', async () => {
-      expect(await ladle.ladle.addJoin(ilkId, ilkJoin.address))
+      expect(await ladle.addJoin(ilkId, ilkJoin.address))
         .to.emit(ladle, 'JoinAdded')
         .withArgs(ilkId, ilkJoin.address)
-      expect(await ladle.ladle.joins(ilkId)).to.equal(ilkJoin.address)
+      expect(await ladle.joins(ilkId)).to.equal(ilkJoin.address)
     })
 
     it('adds the same join for a second ilk of the same asset', async () => {
       await cauldron.addAsset(otherIlkId, ilk.address)
-      expect(await ladle.ladle.addJoin(otherIlkId, ilkJoin.address))
+      expect(await ladle.addJoin(otherIlkId, ilkJoin.address))
         .to.emit(ladle, 'JoinAdded')
         .withArgs(otherIlkId, ilkJoin.address)
-      expect(await ladle.ladle.joins(otherIlkId)).to.equal(ilkJoin.address)
+      expect(await ladle.joins(otherIlkId)).to.equal(ilkJoin.address)
     })
   })
 
   describe('pool admin', async () => {
     it('does not allow adding a pool before adding its series', async () => {
-      await expect(ladle.ladle.addPool(mockSeriesId, pool.address)).to.be.revertedWith('Series not found')
+      await expect(ladle.addPool(mockSeriesId, pool.address)).to.be.revertedWith('Series not found')
     })
 
     it('does not allow adding a pool with a mismatched fyToken', async () => {
@@ -148,20 +148,20 @@ describe('Ladle - admin', function () {
       await cauldron.addSeries(otherSeriesId, baseId, otherFYToken.address)
       await cauldron.addIlks(otherSeriesId, [ilkId])
 
-      await expect(ladle.ladle.addPool(otherSeriesId, pool.address)).to.be.revertedWith('Mismatched pool fyToken and series')
+      await expect(ladle.addPool(otherSeriesId, pool.address)).to.be.revertedWith('Mismatched pool fyToken and series')
     })
 
     it('does not allow adding a pool with a mismatched base', async () => {
       const otherPool = (await deployContract(ownerAcc, PoolMockArtifact, [ilk.address, fyToken.address])) as PoolMock
 
-      await expect(ladle.ladle.addPool(seriesId, otherPool.address)).to.be.revertedWith('Mismatched pool base and series')
+      await expect(ladle.addPool(seriesId, otherPool.address)).to.be.revertedWith('Mismatched pool base and series')
     })
 
     it('adds a pool', async () => {
-      expect(await ladle.ladle.addPool(seriesId, pool.address))
+      expect(await ladle.addPool(seriesId, pool.address))
         .to.emit(ladle, 'PoolAdded')
         .withArgs(seriesId, pool.address)
-      expect(await ladle.ladle.pools(seriesId)).to.equal(pool.address)
+      expect(await ladle.pools(seriesId)).to.equal(pool.address)
     })
   })
 })

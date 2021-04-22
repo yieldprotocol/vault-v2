@@ -148,7 +148,7 @@ describe('Ladle - serve and repay', function () {
     // We need to set up a pool router
     const poolRouter = (await deployContract(ownerAcc, PoolRouterMockArtifact, [])) as PoolRouterMock
     await poolRouter.addPool(base.address, fyToken.address, pool.address)
-    await ladle.ladle.setPoolRouter(poolRouter.address) // TODO: Use `set` or use constructor
+    await ladle.setPoolRouter(poolRouter.address) // TODO: Use `set` or use constructor
 
     // Borrow, so that we can repay
     await ladle.pour(vaultId, owner, WAD, WAD)
