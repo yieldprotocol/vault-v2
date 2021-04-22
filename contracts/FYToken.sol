@@ -3,11 +3,11 @@ pragma solidity ^0.8.0;
 
 import "erc3156/contracts/interfaces/IERC3156FlashBorrower.sol";
 import "erc3156/contracts/interfaces/IERC3156FlashLender.sol";
-import "@yield-protocol/utils/contracts/token/ERC20Permit.sol";
+import "@yield-protocol/utils-v2/contracts/token/ERC20Permit.sol";
 import "@yield-protocol/vault-interfaces/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/IJoin.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
-import "@yield-protocol/utils-v2/contracts/AccessControl.sol";
+import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "./math/WMul.sol";
 import "./math/WDiv.sol";
 import "./math/CastU256U128.sol";
@@ -153,7 +153,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         beforeMaturity
         returns (uint256)
     {
-        return token == address(this) ? type(uint256).max - totalSupply() : 0;
+        return token == address(this) ? type(uint256).max - _totalSupply : 0;
     }
 
     /**
@@ -213,7 +213,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
 
         // Then pull the remainder of the burn from `src`
         if (remainder > 0) {
-            _decreaseApproval(from, remainder);     // Note that if msg.sender == from this is ignored.
+            _decreaseAllowance(from, remainder);     // Note that if msg.sender == from this is ignored.
             require(_balanceOf[from] >= remainder, "ERC20: Insufficient balance");
             unchecked {
                 _balanceOf[from] = _balanceOf[from] - remainder;

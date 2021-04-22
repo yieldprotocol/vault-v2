@@ -1,5 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { id } from '@yield-protocol/utils'
+import { id } from '@yield-protocol/utils-v2'
 
 import RestrictedERC20MockArtifact from '../artifacts/contracts/mocks/RestrictedERC20Mock.sol/RestrictedERC20Mock.json'
 

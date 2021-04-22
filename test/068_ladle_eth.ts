@@ -74,12 +74,6 @@ describe('Ladle - eth', function () {
     expect((await cauldron.balances(ethVaultId)).ink).to.equal(WAD)
   })
 
-  it('users can transfer ETH then pour in a single transaction with multicall', async () => {
-    const joinEtherCall = ladle.interface.encodeFunctionData('joinEther', [ethId])
-    const pourCall = ladle.interface.encodeFunctionData('pour', [ethVaultId, owner, WAD, 0])
-    await ladle.multicall([joinEtherCall, pourCall], { value: WAD })
-  })
-
   it('users can transfer ETH then pour in a single transaction with batch', async () => {
     const joinEtherData = ethers.utils.defaultAbiCoder.encode(['bytes6'], [ethId])
     const pourData = ethers.utils.defaultAbiCoder.encode(['address', 'int128', 'int128'], [owner, WAD, 0])
@@ -105,12 +99,6 @@ describe('Ladle - eth', function () {
         .to.emit(weth, 'Withdrawal')
         .withArgs(ladle.address, WAD)
       expect(await weth.balanceOf(ladle.address)).to.equal(0)
-    })
-
-    it('users can pour then unwrap to ETH in a single transaction with multicall', async () => {
-      const pourCall = ladle.interface.encodeFunctionData('pour', [ethVaultId, ladle.address, WAD.mul(-1), 0])
-      const exitEtherCall = ladle.interface.encodeFunctionData('exitEther', [ethId, owner])
-      await ladle.multicall([pourCall, exitEtherCall])
     })
 
     it('users can pour then unwrap to ETH in a single transaction with batch', async () => {

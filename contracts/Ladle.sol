@@ -6,20 +6,19 @@ import "@yield-protocol/vault-interfaces/ICauldron.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
 import "@yield-protocol/yieldspace-interfaces/IPool.sol";
-import "@yield-protocol/utils/contracts/token/IERC20.sol";
-import "@yield-protocol/utils/contracts/token/IERC2612.sol";
+import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
+import "@yield-protocol/utils-v2/contracts/token/IERC2612.sol";
 import "dss-interfaces/src/dss/DaiAbstract.sol";
-import "@yield-protocol/utils-v2/contracts/AccessControl.sol";
-import "@yield-protocol/utils-v2/contracts/Multicall.sol";
-import "@yield-protocol/utils-v2/contracts/TransferHelper.sol";
-import "@yield-protocol/utils-v2/contracts/IWETH9.sol";
+import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
+import "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
 import "./math/WMul.sol";
 import "./math/CastU256U128.sol";
 import "./math/CastU128I128.sol";
 
 
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
-contract Ladle is AccessControl(), Multicall {
+contract Ladle is AccessControl() {
     using WMul for uint256;
     using CastU256U128 for uint256;
     using CastU128I128 for uint128;
