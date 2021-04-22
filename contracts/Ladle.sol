@@ -273,69 +273,6 @@ contract Ladle is AccessControl() {
 
     // ---- Asset and debt management ----
 
-    /// @dev Move collateral and debt between vaults.
-    function stir(bytes12 from, bytes12 to, uint128 ink, uint128 art)
-        external payable
-        returns (DataTypes.Balances memory, DataTypes.Balances memory)
-    {
-        if (ink > 0) require (cauldron.vaults(from).owner == msg.sender, "Only origin vault owner");
-        if (art > 0) require (cauldron.vaults(to).owner == msg.sender, "Only destination vault owner");
-        return cauldron.stir(from, to, ink, art);
-    }
-
-    /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
-    /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
-    function pour(bytes12 vaultId, address to, int128 ink, int128 art)
-        external payable
-        returns (DataTypes.Balances memory balances)
-    {
-        DataTypes.Vault memory vault = getOwnedVault(vaultId);
-        balances = _pour(vaultId, vault, to, ink, art);
-    }
-
-    /// @dev Add collateral and borrow from vault, so that a precise amount of base is obtained by the user.
-    /// The base is obtained by borrowing fyToken and buying base with it in a pool.
-    function serve(bytes12 vaultId, address to, uint128 ink, uint128 base, uint128 max)
-        external payable
-        returns (DataTypes.Balances memory balances, uint128 art)
-    {
-        DataTypes.Vault memory vault = getOwnedVault(vaultId);
-        (balances, art) = _serve(vaultId, vault, to, ink, base, max);
-    }
-
-    /// @dev Repay vault debt using underlying token at a 1:1 exchange rate, without trading in a pool.
-    /// It can add or remove collateral at the same time.
-    /// The debt to repay is denominated in fyToken, even if the tokens pulled from the user are underlying.
-    /// The debt to repay must be entered as a negative number, as with `pour`.
-    /// Debt cannot be acquired with this function.
-    function close(bytes12 vaultId, address to, int128 ink, int128 art)
-        external payable
-        returns (DataTypes.Balances memory balances)
-    {
-        DataTypes.Vault memory vault = getOwnedVault(vaultId);
-        balances = _close(vaultId, vault, to, ink, art);
-    }
-
-    /// @dev Repay debt by selling base in a pool and using the resulting fyToken
-    /// The base tokens need to be already in the pool, unaccounted for.
-    function repay(bytes12 vaultId, address to, int128 ink, uint128 min)
-        external payable
-        returns (DataTypes.Balances memory balances, uint128 art)
-    {
-        DataTypes.Vault memory vault = getOwnedVault(vaultId);
-        (balances, art) = _repay(vaultId, vault, to, ink, min);
-    }
-
-    /// @dev Repay all debt in a vault by buying fyToken from a pool with base.
-    /// The base tokens need to be already in the pool, unaccounted for. The surplus base needs to be retrieved from the pool.
-    function repayVault(bytes12 vaultId, address to, int128 ink, uint128 max)
-        external payable
-        returns (DataTypes.Balances memory balances, uint128 base)
-    {
-        DataTypes.Vault memory vault = getOwnedVault(vaultId);
-        (balances, base) = _repayVault(vaultId, vault, to, ink, max);
-    }
-
     /// @dev Change series and debt of a vault.
     function roll(bytes12 vaultId, bytes6 newSeriesId, uint128 max)
         external payable
@@ -516,20 +453,6 @@ contract Ladle is AccessControl() {
 
     // ---- Permit management ----
 
-    /// @dev Execute an ERC2612 permit for the selected asset or fyToken
-    function forwardPermit(bytes6 id, bool asset, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
-        external payable
-    {
-        _forwardPermit(id, asset, spender, amount, deadline, v, r, s);
-    }
-
-    /// @dev Execute a Dai-style permit for the selected asset or fyToken
-    function forwardDaiPermit(bytes6 id, bool asset, address spender, uint256 nonce, uint256 deadline, bool allowed, uint8 v, bytes32 r, bytes32 s)
-        external payable
-    {
-        _forwardDaiPermit(id, asset, spender, nonce, deadline, allowed, v, r, s);
-    }
-
     /// @dev From an id, which can be an assetId or a seriesId, find the resulting asset or fyToken
     function findToken(bytes6 id, bool asset)
         private view returns (address token)
@@ -558,25 +481,6 @@ contract Ladle is AccessControl() {
 
     /// @dev The WETH9 contract will send ether to BorrowProxy on `weth.withdraw` using this function.
     receive() external payable { }
-
-    /// @dev Accept Ether, wrap it and forward it to the WethJoin
-    /// This function should be called first in a multicall, and the Join should keep track of stored reserves
-    /// Passing the id for a join that doesn't link to a contract implemnting IWETH9 will fail
-    function joinEther(bytes6 etherId)
-        external payable
-        returns (uint256 ethTransferred)
-    {
-        ethTransferred = _joinEther(etherId);
-    }
-
-    /// @dev Unwrap Wrapped Ether held by this Ladle, and send the Ether
-    /// This function should be called last in a multicall, and the Ladle should have no reason to keep an WETH balance
-    function exitEther(bytes6 etherId, address payable to)
-        external payable
-        returns (uint256 ethTransferred)
-    {
-        ethTransferred = _exitEther(etherId, to);
-    }
 
     /// @dev Accept Ether, wrap it and forward it to the WethJoin
     /// This function should be called first in a multicall, and the Join should keep track of stored reserves
