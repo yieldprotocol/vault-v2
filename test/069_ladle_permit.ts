@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { signatures } from '@yield-protocol/utils'
-import { WAD, MAX256 as MAX, OPS } from './shared/constants'
+import { WAD, MAX256 as MAX, POOL_OPS as OPS } from './shared/constants'
 
 import DaiMockArtifact from '../artifacts/contracts/mocks/DaiMock.sol/DaiMock.json'
 
