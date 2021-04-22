@@ -242,10 +242,23 @@ export class LadleWrapper {
     return this.ladle.batch(vaultId, [op], [data])
   }
 
-  /*
-  TRANSFER_TO_FYTOKEN, // 14
-  REDEEM               // 15
-  */
+  public transferToFYTokenData(seriesId: string, wad: BigNumberish): [BigNumberish, string] {
+    return [OPS.TRANSFER_TO_FYTOKEN, ethers.utils.defaultAbiCoder.encode(['bytes6', 'uint256'], [seriesId, wad])]
+  }
+
+  public async transferToFYToken(vaultId: string, seriesId: string, wad: BigNumberish): Promise<ContractTransaction> {
+    const [op, data] = this.transferToFYTokenData(seriesId, wad)
+    return this.ladle.batch(vaultId, [op], [data])
+  }
+
+  public redeemData(seriesId: string, to: string, wad: BigNumberish): [BigNumberish, string] {
+    return [OPS.REDEEM, ethers.utils.defaultAbiCoder.encode(['bytes6', 'address', 'uint256'], [seriesId, to, wad])]
+  }
+
+  public async redeem(vaultId: string, seriesId: string, to: string, wad: BigNumberish): Promise<ContractTransaction> {
+    const [op, data] = this.redeemData(seriesId, to, wad)
+    return this.ladle.batch(vaultId, [op], [data])
+  }
 }
 
 export class YieldEnvironment {

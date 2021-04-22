@@ -513,21 +513,6 @@ contract Ladle is AccessControl() {
 
     // ---- Pool router ----
 
-    /// @dev Allow users to trigger a token transfer to a pool through the ladle, to be used with multicall
-    function transferToPool(bytes6 seriesId, bool base, uint128 wad)
-        external payable
-    {
-        _transferToPool(getPool(seriesId), base, wad);
-    }
-
-    /// @dev Allow users to route calls to a pool, to be used with multicall
-    function route(bytes memory data)
-        external payable
-        returns (bool success, bytes memory result)
-    {
-        (success, result) = _route(data);
-    }
-
     /// @dev Allow users to trigger a token transfer to a pool through the ladle, to be used with batch
     function _transferToPool(IPool pool, bool base, uint128 wad)
         private
@@ -546,23 +531,6 @@ contract Ladle is AccessControl() {
     }
 
     // ---- FYToken router ----
-
-    /// @dev Allow users to trigger a token transfer to a fyToken through the ladle, to be used with multicall
-    function transferToFYToken(bytes6 seriesId, uint256 wad)
-        external payable
-    {
-        _transferToFYToken(getSeries(seriesId).fyToken, wad);
-    }
-
-    /// @dev Allow users to redeem fyToken, to be used with multicall
-    /// The fyToken needs to have been transferred to the FYToken contract
-    function redeem(bytes6 seriesId, address to, uint256 wad)
-        external payable
-        returns (uint256)
-    {
-
-        return _redeem(getSeries(seriesId).fyToken, to, wad);
-    }
 
     /// @dev Allow users to trigger a token transfer to a pool through the ladle, to be used with batch
     function _transferToFYToken(IFYToken fyToken, uint256 wad)
