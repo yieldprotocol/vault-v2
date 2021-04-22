@@ -74,7 +74,7 @@ describe('Ladle - batch', function () {
   })
 
   it('builds a vault, permit and serve', async () => {
-    const buildData = ethers.utils.defaultAbiCoder.encode(['bytes6', 'bytes6'], [seriesId, ilkId])
+    const buildData = ladle.buildData(seriesId, ilkId)
 
     const ilkSeparator = await ilk.DOMAIN_SEPARATOR()
     const deadline = MAX
@@ -87,17 +87,11 @@ describe('Ladle - batch', function () {
     }
     const permitDigest = signatures.getPermitDigest(ilkSeparator, approval, nonce, deadline)
     const { v, r, s } = signatures.sign(permitDigest, signatures.privateKey0)
-    const permitData = ethers.utils.defaultAbiCoder.encode(
-      ['bytes6', 'bool', 'address', 'uint256', 'uint256', 'uint8', 'bytes32', 'bytes32'],
-      [ilkId, true, ilkJoin.address, posted, deadline, v, r, s]
-    )
+    const permitData = ladle.forwardPermitData(ilkId, true, ilkJoin.address, posted, deadline, v, r, s)
 
     const borrowed = WAD
-    const serveData = ethers.utils.defaultAbiCoder.encode(
-      ['address', 'uint128', 'uint128', 'uint128'],
-      [owner, posted, borrowed, MAX]
-    )
-    await ladle.batch(vaultId, [OPS.BUILD, OPS.FORWARD_PERMIT, OPS.SERVE], [buildData, permitData, serveData])
+    const serveData = ladle.serveData(owner, posted, borrowed, MAX)
+    await ladle.batch(vaultId, [buildData.op, permitData.op, serveData.op], [buildData.data, permitData.data, serveData.data])
 
     const vault = await cauldron.vaults(vaultId)
     expect(vault.owner).to.equal(owner)
@@ -110,13 +104,10 @@ describe('Ladle - batch', function () {
     const posted = WAD.mul(2)
     const borrowed = WAD
 
-    const buildData = ethers.utils.defaultAbiCoder.encode(['bytes6', 'bytes6'], [seriesId, ethId])
-    const joinEtherData = ethers.utils.defaultAbiCoder.encode(['bytes6'], [ethId])
-    const serveData = ethers.utils.defaultAbiCoder.encode(
-      ['address', 'uint128', 'uint128', 'uint128'],
-      [owner, posted, borrowed, MAX]
-    )
-    await ladle.ladle.batch(newVaultId, [OPS.BUILD, OPS.JOIN_ETHER, OPS.SERVE], [buildData, joinEtherData, serveData], {
+    const buildData = ladle.buildData(seriesId, ethId)
+    const joinEtherData = ladle.joinEtherData(ethId)
+    const serveData = ladle.serveData(owner, posted, borrowed, MAX)
+    await ladle.ladle.batch(newVaultId, [buildData.op, joinEtherData.op, serveData.op], [buildData.data, joinEtherData.data, serveData.data], {
       value: posted, // TODO: Fix when ladlewrapper.batch accepts overrides
     })
 
@@ -130,13 +121,10 @@ describe('Ladle - batch', function () {
     const posted = WAD.mul(2)
     const borrowed = WAD
 
-    const joinEtherData = ethers.utils.defaultAbiCoder.encode(['bytes6'], [ethId])
-    const pourData = ethers.utils.defaultAbiCoder.encode(['address', 'int128', 'int128'], [owner, posted, 0])
-    const serveData = ethers.utils.defaultAbiCoder.encode(
-      ['address', 'uint128', 'uint128', 'uint128'],
-      [other, 0, borrowed, MAX]
-    )
-    await ladle.ladle.batch(ethVaultId, [OPS.JOIN_ETHER, OPS.POUR, OPS.SERVE], [joinEtherData, pourData, serveData], {
+    const joinEtherData = ladle.joinEtherData(ethId)
+    const pourData = ladle.pourData(owner, posted, 0)
+    const serveData = ladle.serveData(other, 0, borrowed, MAX)
+    await ladle.ladle.batch(ethVaultId, [joinEtherData.op, pourData.op, serveData.op], [joinEtherData.data, pourData.data, serveData.data], {
       value: posted, // TODO: Fix when ladlewrapper.batch accepts overrides
     })
   })

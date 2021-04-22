@@ -128,12 +128,9 @@ describe('Ladle - close', function () {
   it('users can repay their debt with underlying and remove collateral at the same time in a batch', async () => {
     const baseBefore = await base.balanceOf(owner)
 
-    const closeData = ethers.utils.defaultAbiCoder.encode(
-      ['address', 'int128', 'int128'],
-      [owner, WAD.mul(-1), WAD.mul(-1)]
-    )
+    const closeData = ladle.closeData(owner, WAD.mul(-1), WAD.mul(-1))
 
-    await expect(ladle.batch(vaultId, [OPS.CLOSE], [closeData]))
+    await expect(ladle.batch(vaultId, [closeData.op], [closeData.data]))
       .to.emit(cauldron, 'VaultPoured')
       .withArgs(vaultId, seriesId, ilkId, WAD.mul(-1), WAD.mul(-1))
 

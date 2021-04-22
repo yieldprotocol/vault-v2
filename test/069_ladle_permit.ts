@@ -116,13 +116,10 @@ describe('Ladle - permit', function () {
     const { v, r, s } = signatures.sign(permitDigest, signatures.privateKey0)
 
     const vaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12)) // You can't use `batch` without owning or building a vault.
-    const buildData = ethers.utils.defaultAbiCoder.encode(['bytes6', 'bytes6'], [seriesId, ilkId])
-    const permitData = ethers.utils.defaultAbiCoder.encode(
-      ['bytes6', 'bool', 'address', 'uint256', 'uint256', 'uint8', 'bytes32', 'bytes32'],
-      [seriesId, false, ladle.address, amount, deadline, v, r, s]
-    )
+    const buildData = ladle.buildData(seriesId, ilkId)
+    const permitData = ladle.forwardPermitData(seriesId, false, ladle.address, amount, deadline, v, r, s)
 
-    expect(await ladle.batch(vaultId, [OPS.BUILD, OPS.FORWARD_PERMIT], [buildData, permitData]))
+    expect(await ladle.batch(vaultId, [buildData.op, permitData.op], [buildData.data, permitData.data]))
       .to.emit(fyToken, 'Approval')
       .withArgs(owner, ladle.address, WAD)
 
@@ -163,13 +160,10 @@ describe('Ladle - permit', function () {
     const { v, r, s } = signatures.sign(daiPermitDigest, signatures.privateKey0)
 
     const vaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12)) // You can't use `batch` without owning or building a vault.
-    const buildData = ethers.utils.defaultAbiCoder.encode(['bytes6', 'bytes6'], [seriesId, ilkId])
-    const permitData = ethers.utils.defaultAbiCoder.encode(
-      ['bytes6', 'bool', 'address', 'uint256', 'uint256', 'bool', 'uint8', 'bytes32', 'bytes32'],
-      [DAI, true, ladle.address, nonce, deadline, true, v, r, s]
-    )
+    const buildData = ladle.buildData(seriesId, ilkId)
+    const permitData = ladle.forwardDaiPermitData(DAI, true, ladle.address, nonce, deadline, true, v, r, s)
 
-    expect(await ladle.batch(vaultId, [OPS.BUILD, OPS.FORWARD_DAI_PERMIT], [buildData, permitData]))
+    expect(await ladle.batch(vaultId, [buildData.op, permitData.op], [buildData.data, permitData.data]))
       .to.emit(dai, 'Approval')
       .withArgs(owner, ladle.address, MAX)
 

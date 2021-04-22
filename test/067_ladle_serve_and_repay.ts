@@ -110,11 +110,11 @@ describe('Ladle - serve and repay', function () {
     const debtRepaidInFY = debtRepaidInBase.mul(105).div(100)
     const inkRetrieved = WAD.div(4)
 
-    const transferToPoolData = ethers.utils.defaultAbiCoder.encode(['bool', 'uint128'], [true, debtRepaidInBase])
-    const repayData = ethers.utils.defaultAbiCoder.encode(['address', 'int128', 'uint128'], [owner, inkRetrieved, 0])
+    const transferToPoolData = ladle.transferToPoolData(true, debtRepaidInBase)
+    const repayData = ladle.repayData(owner, inkRetrieved, 0)
 
     await base.approve(ladle.address, debtRepaidInBase) // This would normally be part of a multicall, using ladle.forwardPermit
-    await expect(ladle.batch(vaultId, [OPS.TRANSFER_TO_POOL, OPS.REPAY], [transferToPoolData, repayData]))
+    await expect(ladle.batch(vaultId, [transferToPoolData.op, repayData.op], [transferToPoolData.data, repayData.data]))
       .to.emit(cauldron, 'VaultPoured')
       .withArgs(vaultId, seriesId, ilkId, inkRetrieved, debtRepaidInFY.mul(-1))
       .to.emit(pool, 'Trade')
@@ -159,11 +159,8 @@ describe('Ladle - serve and repay', function () {
     const debtInBase = debtinFY.mul(100).div(105)
     const inkRetrieved = WAD.div(4)
 
-    const transferToPoolData = ethers.utils.defaultAbiCoder.encode(['bool', 'uint128'], [true, baseOffered])
-    const repayVaultData = ethers.utils.defaultAbiCoder.encode(
-      ['address', 'int128', 'uint128'],
-      [owner, inkRetrieved, MAX]
-    )
+    const transferToPoolData = ladle.transferToPoolData(true, baseOffered)
+    const repayVaultData = ladle.repayVaultData(owner, inkRetrieved, MAX)
 
     // Call wrapping: ladle.route(poolRouter.route(findPool(base.address, fyToken.address).retrieveBaseTokenCall(owner)))
     const retrieveBaseTokenCall = pool.interface.encodeFunctionData('retrieveBaseToken', [owner]) // This is a call passed through `poolRouter.route`
@@ -172,13 +169,14 @@ describe('Ladle - serve and repay', function () {
       fyToken.address,
       retrieveBaseTokenCall,
     ]) // This is a call passed through `ladle.batch(OPS.ROUTE)`
+    const routeData = ladle.routeData(poolRouteCall)
 
     await base.approve(ladle.address, baseOffered) // This would normally be part of a multicall, using ladle.forwardPermit
     await expect(
       ladle.batch(
         vaultId,
-        [OPS.TRANSFER_TO_POOL, OPS.REPAY_VAULT, OPS.ROUTE],
-        [transferToPoolData, repayVaultData, poolRouteCall]
+        [transferToPoolData.op, repayVaultData.op, routeData.op],
+        [transferToPoolData.data, repayVaultData.data, routeData.data]
       )
     )
       .to.emit(cauldron, 'VaultPoured')

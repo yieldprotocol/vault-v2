@@ -74,10 +74,10 @@ describe('Ladle - eth', function () {
   })
 
   it('users can transfer ETH then pour in a single transaction with batch', async () => {
-    const joinEtherData = ethers.utils.defaultAbiCoder.encode(['bytes6'], [ethId])
-    const pourData = ethers.utils.defaultAbiCoder.encode(['address', 'int128', 'int128'], [owner, WAD, 0])
+    const joinEtherData = ladle.joinEtherData(ethId)
+    const pourData = ladle.pourData(owner, WAD, 0)
 
-    await ladle.ladle.batch(ethVaultId, [OPS.JOIN_ETHER, OPS.POUR], [joinEtherData, pourData], { value: WAD }) // TODO: Fix batch in ladle wrapper
+    await ladle.ladle.batch(ethVaultId, [joinEtherData.op, pourData.op], [joinEtherData.data, pourData.data], { value: WAD }) // TODO: Fix batch in ladle wrapper
   })
 
   describe('with ETH posted', async () => {
@@ -101,13 +101,10 @@ describe('Ladle - eth', function () {
     })
 
     it('users can pour then unwrap to ETH in a single transaction with batch', async () => {
-      const pourData = ethers.utils.defaultAbiCoder.encode(
-        ['address', 'int128', 'int128'],
-        [ladle.address, WAD.mul(-1), 0]
-      )
-      const exitEtherData = ethers.utils.defaultAbiCoder.encode(['bytes6', 'address'], [ethId, owner])
+      const pourData = ladle.pourData(ladle.address, WAD.mul(-1), 0)
+      const exitEtherData = ladle.exitEtherData(ethId, owner)
 
-      await ladle.batch(ethVaultId, [OPS.POUR, OPS.EXIT_ETHER], [pourData, exitEtherData])
+      await ladle.batch(ethVaultId, [pourData.op, exitEtherData.op], [pourData.data, exitEtherData.data])
     })
   })
 
