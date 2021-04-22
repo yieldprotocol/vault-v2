@@ -26,10 +26,10 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
     uint256 constant internal MAX_TIME_TO_MATURITY = 126144000; // seconds in four years
     bytes32 constant internal FLASH_LOAN_RETURN = keccak256("ERC3156FlashBorrower.onFlashLoan");
 
-    IJoin public join;                                          // Source of redemption funds.
-    IOracle public oracle;                                      // Oracle for the savings rate.
-    address public override asset;
-    uint256 public override maturity;
+    IJoin public immutable join;                                          // Source of redemption funds.
+    IOracle public immutable oracle;                                      // Oracle for the savings rate.
+    address public immutable override asset;
+    uint256 public immutable override maturity;
     uint256 public chiAtMaturity = type(uint256).max;          // Spot price (exchange rate) between the base and an interest accruing token at maturity 
 
     constructor(

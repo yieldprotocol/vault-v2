@@ -12,8 +12,7 @@ export const OPS = {
     JOIN_ETHER: 10,
     EXIT_ETHER: 11,
     TRANSFER_TO_POOL: 12,
-    RETRIEVE_FROM_POOL: 13,
-    ROUTE: 14,
-    TRANSFER_TO_FYTOKEN: 15,
-    REDEEM: 16,
+    ROUTE: 13,
+    TRANSFER_TO_FYTOKEN: 14,
+    REDEEM: 15,
   }
