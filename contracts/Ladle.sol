@@ -45,7 +45,7 @@ contract Ladle is AccessControl(), Multicall {
         REDEEM               // 15
     }
 
-    ICauldron public cauldron;
+    ICauldron public immutable cauldron;
     address public poolRouter;
 
     mapping (bytes6 => IJoin)                   public joins;            // Join contracts available to manage assets. The same Join can serve multiple assets (ETH-A, ETH-B, etc...)
