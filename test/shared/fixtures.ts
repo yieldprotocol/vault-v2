@@ -74,6 +74,10 @@ export class LadleWrapper {
     return this.ladle.setPoolRouter(poolRouter)
   }
 
+  public async grantRoles(roles: Array<string>, user: string): Promise<ContractTransaction> {
+    return this.ladle.grantRoles(roles, user)
+  }
+
   public async joins(ilkId: string): Promise<string> {
     return this.ladle.joins(ilkId)
   }
@@ -243,7 +247,7 @@ export class YieldEnvironment {
   constructor(
     owner: SignerWithAddress,
     cauldron: Cauldron,
-    ladle: Ladle,
+    ladle: LadleWrapper,
     witch: Witch,
     assets: Map<string, ERC20Mock>,
     oracles: Map<string, OracleMock>,
@@ -254,7 +258,7 @@ export class YieldEnvironment {
   ) {
     this.owner = owner
     this.cauldron = cauldron
-    this.ladle = new LadleWrapper(ladle)
+    this.ladle = ladle
     this.witch = witch
     this.assets = assets
     this.oracles = oracles
@@ -304,7 +308,7 @@ export class YieldEnvironment {
     )
   }
 
-  public static async ladleGovAuth(owner: SignerWithAddress, ladle: Ladle, receiver: string) {
+  public static async ladleGovAuth(owner: SignerWithAddress, ladle: LadleWrapper, receiver: string) {
     await ladle.grantRoles(
       [
         id('addJoin(bytes6,address)'),
@@ -315,7 +319,7 @@ export class YieldEnvironment {
     )
   }
 
-  public static async ladleWitchAuth(owner: SignerWithAddress, ladle: Ladle, receiver: string) {
+  public static async ladleWitchAuth(owner: SignerWithAddress, ladle: LadleWrapper, receiver: string) {
     await ladle.grantRoles([
       id(
         'settle(bytes12,address,uint128,uint128)'
@@ -332,7 +336,7 @@ export class YieldEnvironment {
     return asset
   }
 
-  public static async addJoin(owner: SignerWithAddress, ladle: Ladle, asset: ERC20Mock, assetId: string) {
+  public static async addJoin(owner: SignerWithAddress, ladle: LadleWrapper, asset: ERC20Mock, assetId: string) {
     const join = (await deployContract(owner, JoinArtifact, [asset.address])) as Join
     await ladle.addJoin(assetId, join.address)
     await asset.approve(join.address, ethers.constants.MaxUint256) // Owner approves all joins to take from him. Only testing
@@ -367,7 +371,7 @@ export class YieldEnvironment {
   public static async addSeries(
     owner: SignerWithAddress,
     cauldron: Cauldron,
-    ladle: Ladle,
+    ladle: LadleWrapper,
     baseJoin: Join,
     chiOracle: OracleMock,
     seriesId: string,
@@ -395,7 +399,7 @@ export class YieldEnvironment {
 
   public static async addPool(
     owner: SignerWithAddress,
-    ladle: Ladle,
+    ladle: LadleWrapper,
     base: ERC20Mock,
     fyToken: FYToken,
     seriesId: string,
@@ -420,7 +424,8 @@ export class YieldEnvironment {
     const ownerAdd = await owner.getAddress()
 
     const cauldron = (await deployContract(owner, CauldronArtifact, [])) as Cauldron
-    const ladle = (await deployContract(owner, LadleArtifact, [cauldron.address])) as Ladle
+    const innerLadle = (await deployContract(owner, LadleArtifact, [cauldron.address])) as Ladle
+    const ladle = new LadleWrapper(innerLadle)
     const witch = (await deployContract(owner, WitchArtifact, [cauldron.address, ladle.address])) as Witch
 
     // ==== Orchestration ====
