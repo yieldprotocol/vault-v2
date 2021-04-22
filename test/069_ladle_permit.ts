@@ -1,19 +1,19 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { signatures } from '@yield-protocol/utils'
-import { WAD, MAX256 as MAX, POOL_OPS as OPS } from './shared/constants'
+import { WAD, MAX256 as MAX, VAULT_OPS as OPS, DAI } from './shared/constants'
 
-import DaiMockArtifact from '../artifacts/contracts/mocks/DaiMock.sol/DaiMock.json'
+import DAIMockArtifact from '../artifacts/contracts/mocks/DAIMock.sol/DAIMock.json'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
 import { Ladle } from '../typechain/Ladle'
 import { ERC20Mock } from '../typechain/ERC20Mock'
-import { DaiMock } from '../typechain/DaiMock'
+import { DAIMock } from '../typechain/DAIMock'
 import { FYToken } from '../typechain/FYToken'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
-const { loadFixture, deployContract } = waffle
+const { loadFixture } = waffle
 
 import { YieldEnvironment } from './shared/fixtures'
 
@@ -28,7 +28,7 @@ describe('Ladle - permit', function () {
   let cauldron: Cauldron
   let ilk: ERC20Mock
   let ilkJoin: Join
-  let dai: DaiMock
+  let dai: DAIMock
   let fyToken: FYToken
   let ladle: Ladle
 
@@ -49,7 +49,6 @@ describe('Ladle - permit', function () {
   const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const mockIlkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const daiId = ethers.utils.formatBytes32String('DAI').slice(0, 14)
 
   let ilkVaultId: string
 
@@ -60,9 +59,7 @@ describe('Ladle - permit', function () {
     ilkJoin = env.joins.get(ilkId) as Join
     ilk = env.assets.get(ilkId) as ERC20Mock
     fyToken = env.series.get(seriesId) as FYToken
-    dai = (await deployContract(ownerAcc, DaiMockArtifact, ['DAI', 'DAI'])) as DaiMock
-
-    await cauldron.addAsset(daiId, dai.address)
+    dai = (env.assets.get(DAI) as unknown) as DAIMock
 
     ilkVaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
   })
@@ -150,7 +147,7 @@ describe('Ladle - permit', function () {
 
     const { v, r, s } = signatures.sign(daiPermitDigest, signatures.privateKey0)
 
-    expect(await ladle.forwardDaiPermit(daiId, true, ladle.address, nonce, deadline, true, v, r, s))
+    expect(await ladle.forwardDaiPermit(DAI, true, ladle.address, nonce, deadline, true, v, r, s))
       .to.emit(dai, 'Approval')
       .withArgs(owner, ladle.address, MAX)
 
@@ -174,7 +171,7 @@ describe('Ladle - permit', function () {
     const buildData = ethers.utils.defaultAbiCoder.encode(['bytes6', 'bytes6'], [seriesId, ilkId])
     const permitData = ethers.utils.defaultAbiCoder.encode(
       ['bytes6', 'bool', 'address', 'uint256', 'uint256', 'bool', 'uint8', 'bytes32', 'bytes32'],
-      [daiId, true, ladle.address, nonce, deadline, true, v, r, s]
+      [DAI, true, ladle.address, nonce, deadline, true, v, r, s]
     )
 
     expect(await ladle.batch(vaultId, [OPS.BUILD, OPS.FORWARD_DAI_PERMIT], [buildData, permitData]))

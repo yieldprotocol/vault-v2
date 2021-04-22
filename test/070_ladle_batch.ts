@@ -1,5 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { WAD, MAX128 as MAX, POOL_OPS as OPS } from './shared/constants'
+import { WAD, MAX128 as MAX, VAULT_OPS as OPS } from './shared/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
@@ -100,7 +100,7 @@ describe('Ladle - batch', function () {
     const buildBatchCall = ladle.interface.encodeFunctionData('batch', [vaultId, [OPS.BUILD], [buildData]])
     const pourBatchCall = ladle.interface.encodeFunctionData('batch', [vaultId, [OPS.POUR], [pourData]])
 
-    await ladle.multicall([buildBatchCall, pourBatchCall], true)
+    await ladle.multicall([buildBatchCall, pourBatchCall])
 
     expect(await fyToken.balanceOf(owner)).to.equal(WAD)
   })

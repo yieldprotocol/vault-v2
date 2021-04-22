@@ -1,3 +1,4 @@
+import { ethers } from 'hardhat'
 import { BigNumber } from 'ethers'
 
 export const WAD = BigNumber.from(10).pow(18)
@@ -5,7 +6,7 @@ export const RAY = BigNumber.from(10).pow(27)
 export const MAX128 = BigNumber.from(2).pow(128).sub(1)
 export const MAX256 = BigNumber.from(2).pow(256).sub(1)
 export const THREE_MONTHS: number = 3 * 30 * 24 * 60 * 60
-export const POOL_OPS = {
+export const VAULT_OPS = {
     BUILD: 0,
     STIR_TO: 1,
     STIR_FROM: 2,
@@ -23,3 +24,7 @@ export const POOL_OPS = {
     TRANSFER_TO_FYTOKEN: 14,
     REDEEM: 15,
   }
+
+export const ETH = ethers.utils.formatBytes32String('ETH').slice(0, 14)
+export const DAI = ethers.utils.formatBytes32String('DAI').slice(0, 14)
+export const USDC = ethers.utils.formatBytes32String('USDC').slice(0, 14)
