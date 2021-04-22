@@ -114,6 +114,16 @@ export class LadleWrapper {
     return this.ladle.batch(vaultId, [op], [data])
   }
 
+  public closeData(to: string, ink: BigNumberish, art: BigNumberish): [BigNumberish, string] {
+    return [OPS.CLOSE, ethers.utils.defaultAbiCoder.encode(['address', 'int128', 'int128'], [to, ink, art])]
+  }
+
+  public async close(vaultId: string, to: string, ink: BigNumberish, art: BigNumberish): Promise<ContractTransaction> {
+    const [op, data] = this.closeData(to, ink, art)
+    return this.ladle.batch(vaultId, [op], [data])
+  }
+
+
   /*
   POUR,                // 3
   SERVE,               // 4

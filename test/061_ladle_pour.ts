@@ -52,12 +52,11 @@ describe('Ladle - pour', function () {
     env = await loadFixture(fixture)
     cauldron = env.cauldron
     ladle = new LadleWrapper(env.ladle)
+    ladleFromOther = ladle.connect(otherAcc)
     base = env.assets.get(baseId) as ERC20Mock
     ilk = env.assets.get(ilkId) as ERC20Mock
     fyToken = env.series.get(seriesId) as FYToken
     ilkJoin = env.joins.get(ilkId) as Join
-
-    ladleFromOther = ladle.connect(otherAcc)
 
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
     await cauldron.setMaxDebt(baseId, ilkId, WAD.mul(2))
