@@ -123,13 +123,34 @@ export class LadleWrapper {
     return this.ladle.batch(vaultId, [op], [data])
   }
 
+  public serveData(to: string, ink: BigNumberish, base: BigNumberish, max: BigNumberish): [BigNumberish, string] {
+    return [OPS.SERVE, ethers.utils.defaultAbiCoder.encode(['address', 'uint128', 'uint128', 'uint128'], [to, ink, base, max])]
+  }
+
+  public async serve(vaultId: string, to: string, ink: BigNumberish, base: BigNumberish, max: BigNumberish): Promise<ContractTransaction> {
+    const [op, data] = this.serveData(to, ink, base, max)
+    return this.ladle.batch(vaultId, [op], [data])
+  }
+
+  public repayData(to: string, ink: BigNumberish, min: BigNumberish): [BigNumberish, string] {
+    return [OPS.REPAY, ethers.utils.defaultAbiCoder.encode(['address', 'int128', 'uint128'], [to, ink, min])]
+  }
+
+  public async repay(vaultId: string, to: string, ink: BigNumberish, min: BigNumberish): Promise<ContractTransaction> {
+    const [op, data] = this.repayData(to, ink, min)
+    return this.ladle.batch(vaultId, [op], [data])
+  }
+
+  public repayVaultData(to: string, ink: BigNumberish, max: BigNumberish): [BigNumberish, string] {
+    return [OPS.REPAY_VAULT, ethers.utils.defaultAbiCoder.encode(['address', 'int128', 'uint128'], [to, ink, max])]
+  }
+
+  public async repayVault(vaultId: string, to: string, ink: BigNumberish, max: BigNumberish): Promise<ContractTransaction> {
+    const [op, data] = this.repayVaultData(to, ink, max)
+    return this.ladle.batch(vaultId, [op], [data])
+  }
 
   /*
-  POUR,                // 3
-  SERVE,               // 4
-  CLOSE,               // 5
-  REPAY,               // 6
-  REPAY_VAULT,         // 7
   FORWARD_PERMIT,      // 8
   FORWARD_DAI_PERMIT,  // 9
   JOIN_ETHER,          // 10

@@ -8,8 +8,6 @@ import { OPS } from '../src/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { FYToken } from '../typechain/FYToken'
-import { Ladle } from '../typechain/Ladle'
-
 import { PoolMock } from '../typechain/PoolMock'
 import { PoolRouterMock } from '../typechain/PoolRouterMock'
 import { ERC20Mock } from '../typechain/ERC20Mock'
@@ -20,7 +18,7 @@ import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { deployContract, loadFixture } = waffle
 
-import { YieldEnvironment } from './shared/fixtures'
+import { YieldEnvironment, LadleWrapper } from './shared/fixtures'
 
 describe('Ladle - serve and repay', function () {
   this.timeout(0)
@@ -35,7 +33,7 @@ describe('Ladle - serve and repay', function () {
   let pool: PoolMock
   let base: ERC20Mock
   let ilk: ERC20Mock
-  let ladle: Ladle
+  let ladle: LadleWrapper
 
   async function fixture() {
     return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId], [seriesId])
@@ -59,7 +57,7 @@ describe('Ladle - serve and repay', function () {
   beforeEach(async () => {
     env = await loadFixture(fixture)
     cauldron = env.cauldron
-    ladle = env.ladle
+    ladle = new LadleWrapper(env.ladle)
     base = env.assets.get(baseId) as ERC20Mock
     ilk = env.assets.get(ilkId) as ERC20Mock
     fyToken = env.series.get(seriesId) as FYToken
@@ -150,7 +148,7 @@ describe('Ladle - serve and repay', function () {
     // We need to set up a pool router
     const poolRouter = (await deployContract(ownerAcc, PoolRouterMockArtifact, [])) as PoolRouterMock
     await poolRouter.addPool(base.address, fyToken.address, pool.address)
-    await ladle.setPoolRouter(poolRouter.address)
+    await ladle.ladle.setPoolRouter(poolRouter.address) // TODO: Use `set` or use constructor
 
     // Borrow, so that we can repay
     await ladle.pour(vaultId, owner, WAD, WAD)
