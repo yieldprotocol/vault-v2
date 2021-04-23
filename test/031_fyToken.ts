@@ -159,17 +159,20 @@ describe('FYToken', function () {
         expect(await base.balanceOf(owner)).to.equal(baseOwnerBefore.add(WAD.mul(accrual).div(WAD)))
       })
 
-      /* TODO: Fix
       it('redeems fyToken by transferring to the fyToken contract in a batch', async () => {
         const baseOwnerBefore = await base.balanceOf(owner)
         const baseJoinBefore = await base.balanceOf(baseJoin.address)
 
         await fyToken.approve(ladle.address, WAD)
-        const transferToFYTokenData = ladle.transferToFYTokenData(seriesId, WAD)
-        const redeemData = ladle.redeemData(seriesId, owner, WAD)
+        const transferToFYTokenData = ladle.transferToFYTokenData(WAD)
+        const redeemData = ladle.redeemData(owner, WAD)
 
         await expect(
-          await ladle.batch(vaultId, [transferToFYTokenData.op, redeemData.op], [transferToFYTokenData.data, redeemData.data])
+          await ladle.batch(
+            vaultId,
+            [transferToFYTokenData.op, redeemData.op],
+            [transferToFYTokenData.data, redeemData.data]
+          )
         )
           .to.emit(fyToken, 'Transfer')
           .withArgs(owner, fyToken.address, WAD)
@@ -180,7 +183,6 @@ describe('FYToken', function () {
         expect(await base.balanceOf(baseJoin.address)).to.equal(baseJoinBefore.sub(WAD.mul(accrual).div(WAD)))
         expect(await base.balanceOf(owner)).to.equal(baseOwnerBefore.add(WAD.mul(accrual).div(WAD)))
       })
-      */
     })
   })
 })

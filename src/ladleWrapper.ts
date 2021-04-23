@@ -253,21 +253,21 @@ export class LadleWrapper {
     return this.ladle.batch(vaultId, [action.op], [action.data])
   }
 
-  public transferToFYTokenData(seriesId: string, wad: BigNumberish): BatchAction {
-    return new BatchAction(OPS.TRANSFER_TO_FYTOKEN, ethers.utils.defaultAbiCoder.encode(['bytes6', 'uint256'], [seriesId, wad]))
+  public transferToFYTokenData(wad: BigNumberish): BatchAction {
+    return new BatchAction(OPS.TRANSFER_TO_FYTOKEN, ethers.utils.defaultAbiCoder.encode(['uint256'], [wad]))
   }
 
   public async transferToFYToken(vaultId: string, seriesId: string, wad: BigNumberish): Promise<ContractTransaction> {
-    const action = this.transferToFYTokenData(seriesId, wad)
+    const action = this.transferToFYTokenData(wad)
     return this.ladle.batch(vaultId, [action.op], [action.data])
   }
 
-  public redeemData(seriesId: string, to: string, wad: BigNumberish): BatchAction {
-    return new BatchAction(OPS.REDEEM, ethers.utils.defaultAbiCoder.encode(['bytes6', 'address', 'uint256'], [seriesId, to, wad]))
+  public redeemData(to: string, wad: BigNumberish): BatchAction {
+    return new BatchAction(OPS.REDEEM, ethers.utils.defaultAbiCoder.encode(['address', 'uint256'], [to, wad]))
   }
 
   public async redeem(vaultId: string, seriesId: string, to: string, wad: BigNumberish): Promise<ContractTransaction> {
-    const action = this.redeemData(seriesId, to, wad)
+    const action = this.redeemData(to, wad)
     return this.ladle.batch(vaultId, [action.op], [action.data])
   }
 }
