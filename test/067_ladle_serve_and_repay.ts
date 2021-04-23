@@ -155,11 +155,7 @@ describe('Ladle - serve and repay', function () {
 
     await base.approve(ladle.address, baseOffered) // This would normally be part of a multicall, using ladle.forwardPermit
     await expect(
-      ladle.batch(
-        vaultId,
-        [transferToPoolData.op, repayVaultData.op],
-        [transferToPoolData.data, repayVaultData.data],
-      )
+      ladle.batch(vaultId, [transferToPoolData.op, repayVaultData.op], [transferToPoolData.data, repayVaultData.data])
     )
       .to.emit(cauldron, 'VaultPoured')
       .withArgs(vaultId, seriesId, ilkId, inkRetrieved, WAD.mul(-1))
