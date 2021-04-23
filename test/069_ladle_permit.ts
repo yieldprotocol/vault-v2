@@ -3,8 +3,6 @@ import { constants, signatures } from '@yield-protocol/utils-v2'
 const { WAD, MAX256, DAI } = constants
 const MAX = MAX256
 
-import { OPS } from '../src/constants'
-
 import { Join } from '../typechain/Join'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { DAIMock } from '../typechain/DAIMock'
