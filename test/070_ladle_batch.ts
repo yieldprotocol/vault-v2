@@ -73,8 +73,6 @@ describe('Ladle - batch', function () {
   })
 
   it('builds a vault, permit and serve', async () => {
-    const buildData = ladle.buildData(seriesId, ilkId)
-
     const ilkSeparator = await ilk.DOMAIN_SEPARATOR()
     const deadline = MAX
     const posted = WAD.mul(2)
@@ -86,15 +84,14 @@ describe('Ladle - batch', function () {
     }
     const permitDigest = signatures.getPermitDigest(ilkSeparator, approval, nonce, deadline)
     const { v, r, s } = signatures.sign(permitDigest, signatures.privateKey0)
-    const permitData = ladle.forwardPermitData(ilkId, true, ilkJoin.address, posted, deadline, v, r, s)
 
     const borrowed = WAD
-    const serveData = ladle.serveData(owner, posted, borrowed, MAX)
-    await ladle.batch(
-      vaultId,
-      [buildData.op, permitData.op, serveData.op],
-      [buildData.data, permitData.data, serveData.data]
-    )
+
+    await ladle.batch(vaultId, [
+      ladle.buildData(seriesId, ilkId),
+      ladle.forwardPermitData(ilkId, true, ilkJoin.address, posted, deadline, v, r, s),
+      ladle.serveData(owner, posted, borrowed, MAX)
+    ])
 
     const vault = await cauldron.vaults(vaultId)
     expect(vault.owner).to.equal(owner)
@@ -107,16 +104,14 @@ describe('Ladle - batch', function () {
     const posted = WAD.mul(2)
     const borrowed = WAD
 
-    const buildData = ladle.buildData(seriesId, ethId)
-    const joinEtherData = ladle.joinEtherData(ethId)
-    const serveData = ladle.serveData(owner, posted, borrowed, MAX)
-    await ladle.ladle.batch(
+    await ladle.batch(
       newVaultId,
-      [buildData.op, joinEtherData.op, serveData.op],
-      [buildData.data, joinEtherData.data, serveData.data],
-      {
-        value: posted, // TODO: Fix when ladlewrapper.batch accepts overrides
-      }
+      [
+        ladle.buildData(seriesId, ethId),
+        ladle.joinEtherData(ethId),
+        ladle.serveData(owner, posted, borrowed, MAX)
+      ],
+      { value: posted }
     )
 
     const vault = await cauldron.vaults(newVaultId)
@@ -129,16 +124,14 @@ describe('Ladle - batch', function () {
     const posted = WAD.mul(2)
     const borrowed = WAD
 
-    const joinEtherData = ladle.joinEtherData(ethId)
-    const pourData = ladle.pourData(owner, posted, 0)
-    const serveData = ladle.serveData(other, 0, borrowed, MAX)
-    await ladle.ladle.batch(
+    await ladle.batch(
       ethVaultId,
-      [joinEtherData.op, pourData.op, serveData.op],
-      [joinEtherData.data, pourData.data, serveData.data],
-      {
-        value: posted, // TODO: Fix when ladlewrapper.batch accepts overrides
-      }
+      [
+        ladle.joinEtherData(ethId),
+        ladle.pourData(owner, posted, 0),
+        ladle.serveData(other, 0, borrowed, MAX)        
+      ],
+      { value: posted }
     )
   })
 

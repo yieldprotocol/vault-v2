@@ -115,10 +115,11 @@ describe('Ladle - permit', function () {
     const { v, r, s } = signatures.sign(permitDigest, signatures.privateKey0)
 
     const vaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12)) // You can't use `batch` without owning or building a vault.
-    const buildData = ladle.buildData(seriesId, ilkId)
-    const permitData = ladle.forwardPermitData(seriesId, false, ladle.address, amount, deadline, v, r, s)
 
-    expect(await ladle.batch(vaultId, [buildData.op, permitData.op], [buildData.data, permitData.data]))
+    expect(await ladle.batch(vaultId, [
+      ladle.buildData(seriesId, ilkId),
+      ladle.forwardPermitData(seriesId, false, ladle.address, amount, deadline, v, r, s)
+    ]))
       .to.emit(fyToken, 'Approval')
       .withArgs(owner, ladle.address, WAD)
 
@@ -159,10 +160,11 @@ describe('Ladle - permit', function () {
     const { v, r, s } = signatures.sign(daiPermitDigest, signatures.privateKey0)
 
     const vaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12)) // You can't use `batch` without owning or building a vault.
-    const buildData = ladle.buildData(seriesId, ilkId)
-    const permitData = ladle.forwardDaiPermitData(DAI, true, ladle.address, nonce, deadline, true, v, r, s)
 
-    expect(await ladle.batch(vaultId, [buildData.op, permitData.op], [buildData.data, permitData.data]))
+    expect(await ladle.batch(vaultId, [
+      ladle.buildData(seriesId, ilkId),
+      ladle.forwardDaiPermitData(DAI, true, ladle.address, nonce, deadline, true, v, r, s)
+    ]))
       .to.emit(dai, 'Approval')
       .withArgs(owner, ladle.address, MAX)
 

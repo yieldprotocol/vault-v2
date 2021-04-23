@@ -73,12 +73,10 @@ describe('Ladle - eth', function () {
   })
 
   it('users can transfer ETH then pour in a single transaction with batch', async () => {
-    const joinEtherData = ladle.joinEtherData(ethId)
-    const pourData = ladle.pourData(owner, WAD, 0)
-
-    await ladle.ladle.batch(ethVaultId, [joinEtherData.op, pourData.op], [joinEtherData.data, pourData.data], {
-      value: WAD,
-    }) // TODO: Fix batch in ladle wrapper
+    await ladle.batch(ethVaultId, [
+      ladle.joinEtherData(ethId),
+      ladle.pourData(owner, WAD, 0)
+    ], { value: WAD })
   })
 
   describe('with ETH posted', async () => {
@@ -102,10 +100,10 @@ describe('Ladle - eth', function () {
     })
 
     it('users can pour then unwrap to ETH in a single transaction with batch', async () => {
-      const pourData = ladle.pourData(ladle.address, WAD.mul(-1), 0)
-      const exitEtherData = ladle.exitEtherData(ethId, owner)
-
-      await ladle.batch(ethVaultId, [pourData.op, exitEtherData.op], [pourData.data, exitEtherData.data])
+      await ladle.batch(ethVaultId, [
+        ladle.pourData(ladle.address, WAD.mul(-1), 0),
+        ladle.exitEtherData(ethId, owner)
+      ])
     })
   })
 

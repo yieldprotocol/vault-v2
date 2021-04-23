@@ -162,14 +162,14 @@ describe('FYToken', function () {
         const baseJoinBefore = await base.balanceOf(baseJoin.address)
 
         await fyToken.approve(ladle.address, WAD)
-        const transferToFYTokenData = ladle.transferToFYTokenData(WAD)
-        const redeemData = ladle.redeemData(owner, WAD)
 
         await expect(
           await ladle.batch(
             vaultId,
-            [transferToFYTokenData.op, redeemData.op],
-            [transferToFYTokenData.data, redeemData.data]
+            [
+              ladle.transferToFYTokenData(WAD),
+              ladle.redeemData(owner, WAD)
+            ]
           )
         )
           .to.emit(fyToken, 'Transfer')

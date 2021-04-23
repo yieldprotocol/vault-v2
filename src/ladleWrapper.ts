@@ -1,5 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { ethers, BigNumberish, ContractTransaction } from 'ethers'
+import { ethers, BigNumberish, ContractTransaction, BytesLike, PayableOverrides } from 'ethers'
 import { Ladle } from '../typechain/Ladle'
 import { OPS } from './constants'
 
@@ -54,8 +54,15 @@ export class LadleWrapper {
     return this.ladle.pools(seriesId)
   }
 
-  public async batch(vaultId: string, ops: Array<BigNumberish>, data: Array<string>): Promise<ContractTransaction> {
-    return this.ladle.batch(vaultId, ops, data)
+  public async batch(vaultId: string, actions: Array<BatchAction>, overrides?: PayableOverrides): Promise<ContractTransaction> {
+    const ops = new Array<BigNumberish>()
+    const data = new Array<BytesLike>()
+    actions.forEach(action => {
+      ops.push(action.op)
+      data.push(action.data)
+    });
+    if (overrides === undefined) return this.ladle.batch(vaultId, ops, data)
+    else return this.ladle.batch(vaultId, ops, data, overrides)
   }
 
   public buildData(seriesId: string, ilkId: string): BatchAction {
@@ -63,8 +70,7 @@ export class LadleWrapper {
   }
 
   public async build(vaultId: string, seriesId: string, ilkId: string): Promise<ContractTransaction> {
-    const action = this.buildData(seriesId, ilkId)
-    return this.ladle.batch(vaultId, [action.op], [action.data])
+    return this.batch(vaultId, [this.buildData(seriesId, ilkId)])
   }
 
   public tweakData(seriesId: string, ilkId: string): BatchAction {
@@ -72,8 +78,7 @@ export class LadleWrapper {
   }
 
   public async tweak(vaultId: string, seriesId: string, ilkId: string): Promise<ContractTransaction> {
-    const action = this.tweakData(seriesId, ilkId)
-    return this.ladle.batch(vaultId, [action.op], [action.data])
+    return this.batch(vaultId, [this.tweakData(seriesId, ilkId)])
   }
 
   public giveData(to: string): BatchAction {
@@ -81,8 +86,7 @@ export class LadleWrapper {
   }
 
   public async give(vaultId: string, to: string): Promise<ContractTransaction> {
-    const action = this.giveData(to)
-    return this.ladle.batch(vaultId, [action.op], [action.data])
+    return this.batch(vaultId, [this.giveData(to)])
   }
 
   public destroyData(): BatchAction {
@@ -90,8 +94,7 @@ export class LadleWrapper {
   }
 
   public async destroy(vaultId: string): Promise<ContractTransaction> {
-    const action = this.destroyData()
-    return this.ladle.batch(vaultId, [action.op], [action.data])
+    return this.batch(vaultId, [this.destroyData()])
   }
 
   public stirToData(from: string, ink: BigNumberish, art: BigNumberish): BatchAction {
@@ -103,13 +106,11 @@ export class LadleWrapper {
   }
 
   public async stir(from: string, to: string, ink: BigNumberish, art: BigNumberish): Promise<ContractTransaction> {
-    const action = this.stirFromData(to, ink, art)
-    return this.ladle.batch(from, [action.op], [action.data])
+    return this.batch(from, [this.stirFromData(to, ink, art)])
   }
 
   public async stirTo(from: string, to: string, ink: BigNumberish, art: BigNumberish): Promise<ContractTransaction> {
-    const action = this.stirToData(from, ink, art)
-    return this.ladle.batch(to, [action.op], [action.data])
+    return this.batch(to, [this.stirToData(from, ink, art)])
   }
 
   public pourData(to: string, ink: BigNumberish, art: BigNumberish): BatchAction {
@@ -117,8 +118,7 @@ export class LadleWrapper {
   }
 
   public async pour(vaultId: string, to: string, ink: BigNumberish, art: BigNumberish): Promise<ContractTransaction> {
-    const action = this.pourData(to, ink, art)
-    return this.ladle.batch(vaultId, [action.op], [action.data])
+    return this.batch(vaultId, [this.pourData(to, ink, art)])
   }
 
   public closeData(to: string, ink: BigNumberish, art: BigNumberish): BatchAction {
@@ -126,8 +126,7 @@ export class LadleWrapper {
   }
 
   public async close(vaultId: string, to: string, ink: BigNumberish, art: BigNumberish): Promise<ContractTransaction> {
-    const action = this.closeData(to, ink, art)
-    return this.ladle.batch(vaultId, [action.op], [action.data])
+    return this.batch(vaultId, [this.closeData(to, ink, art)])
   }
 
   public serveData(to: string, ink: BigNumberish, base: BigNumberish, max: BigNumberish): BatchAction {
@@ -135,8 +134,7 @@ export class LadleWrapper {
   }
 
   public async serve(vaultId: string, to: string, ink: BigNumberish, base: BigNumberish, max: BigNumberish): Promise<ContractTransaction> {
-    const action = this.serveData(to, ink, base, max)
-    return this.ladle.batch(vaultId, [action.op], [action.data])
+    return this.batch(vaultId, [this.serveData(to, ink, base, max)])
   }
 
   public repayData(to: string, ink: BigNumberish, min: BigNumberish): BatchAction {
@@ -144,8 +142,7 @@ export class LadleWrapper {
   }
 
   public async repay(vaultId: string, to: string, ink: BigNumberish, min: BigNumberish): Promise<ContractTransaction> {
-    const action = this.repayData(to, ink, min)
-    return this.ladle.batch(vaultId, [action.op], [action.data])
+    return this.batch(vaultId, [this.repayData(to, ink, min)])
   }
 
   public repayVaultData(to: string, ink: BigNumberish, max: BigNumberish): BatchAction {
@@ -153,8 +150,7 @@ export class LadleWrapper {
   }
 
   public async repayVault(vaultId: string, to: string, ink: BigNumberish, max: BigNumberish): Promise<ContractTransaction> {
-    const action = this.repayVaultData(to, ink, max)
-    return this.ladle.batch(vaultId, [action.op], [action.data])
+    return this.batch(vaultId, [this.repayVaultData(to, ink, max)])
   }
 
   public rollData(newSeriesId: string, max: BigNumberish): BatchAction {
@@ -162,8 +158,7 @@ export class LadleWrapper {
   }
 
   public async roll(vaultId: string, newSeriesId: string, max: BigNumberish): Promise<ContractTransaction> {
-    const action = this.rollData(newSeriesId, max)
-    return this.ladle.batch(vaultId, [action.op], [action.data])
+    return this.batch(vaultId, [this.rollData(newSeriesId, max)])
   }
 
   public forwardPermitData(seriesId: string, asset: boolean, spender: string, amount: BigNumberish, deadline: BigNumberish, v: BigNumberish, r: Buffer, s: Buffer): BatchAction {
@@ -175,8 +170,7 @@ export class LadleWrapper {
 
   public async forwardPermit(vaultId: string, seriesId: string, asset: boolean, spender: string, amount: BigNumberish, deadline: BigNumberish, v: BigNumberish, r: Buffer, s: Buffer): Promise<ContractTransaction> {
     // The vaultId parameter is irrelevant to forwardPermit, but necessary when included in a batch
-    const action = this.forwardPermitData(seriesId, asset, spender, amount, deadline, v, r, s)
-    return this.ladle.batch(vaultId, [action.op], [action.data])
+    return this.batch(vaultId, [this.forwardPermitData(seriesId, asset, spender, amount, deadline, v, r, s)])
   }
 
   public forwardDaiPermitData(seriesId: string, asset: boolean, spender: string, nonce: BigNumberish, deadline: BigNumberish, approved: boolean, v: BigNumberish, r: Buffer, s: Buffer): BatchAction {
@@ -188,8 +182,7 @@ export class LadleWrapper {
 
   public async forwardDaiPermit(vaultId: string, seriesId: string, asset: boolean, spender: string, nonce: BigNumberish, deadline: BigNumberish, approved: boolean, v: BigNumberish, r: Buffer, s: Buffer): Promise<ContractTransaction> {
     // The vaultId parameter is irrelevant to forwardDaiPermit, but necessary when included in a batch
-    const action = this.forwardDaiPermitData(seriesId, asset, spender, nonce, deadline, approved, v, r, s)
-    return this.ladle.batch(vaultId, [action.op], [action.data])
+    return this.batch(vaultId, [this.forwardDaiPermitData(seriesId, asset, spender, nonce, deadline, approved, v, r, s)])
   }
 
   public joinEtherData(etherId: string): BatchAction {
@@ -208,8 +201,7 @@ export class LadleWrapper {
 
   public async exitEther(vaultId: string, etherId: string, to: string): Promise<ContractTransaction> {
     // The vaultId parameter is irrelevant to exitEther, but necessary when included in a batch
-    const action = this.exitEtherData(etherId, to)
-    return this.ladle.batch(vaultId, [action.op], [action.data])
+    return this.batch(vaultId, [this.exitEtherData(etherId, to)])
   }
 
   public transferToPoolData(base: boolean, wad: BigNumberish): BatchAction {
@@ -217,8 +209,7 @@ export class LadleWrapper {
   }
 
   public async transferToPool(vaultId: string, base: boolean, wad: BigNumberish): Promise<ContractTransaction> {
-    const action = this.transferToPoolData(base, wad)
-    return this.ladle.batch(vaultId, [action.op], [action.data])
+    return this.batch(vaultId, [this.transferToPoolData(base, wad)])
   }
 
   public routeData(call: string): BatchAction {
@@ -226,8 +217,7 @@ export class LadleWrapper {
   }
 
   public async route(vaultId: string, innerCall: string): Promise<ContractTransaction> {
-    const action = this.routeData(innerCall)
-    return this.ladle.batch(vaultId, [action.op], [action.data])
+    return this.batch(vaultId, [this.routeData(innerCall)])
   }
 
   public transferToFYTokenData(wad: BigNumberish): BatchAction {
@@ -235,8 +225,7 @@ export class LadleWrapper {
   }
 
   public async transferToFYToken(vaultId: string, seriesId: string, wad: BigNumberish): Promise<ContractTransaction> {
-    const action = this.transferToFYTokenData(wad)
-    return this.ladle.batch(vaultId, [action.op], [action.data])
+    return this.batch(vaultId, [this.transferToFYTokenData(wad)])
   }
 
   public redeemData(to: string, wad: BigNumberish): BatchAction {
@@ -244,8 +233,7 @@ export class LadleWrapper {
   }
 
   public async redeem(vaultId: string, seriesId: string, to: string, wad: BigNumberish): Promise<ContractTransaction> {
-    const action = this.redeemData(to, wad)
-    return this.ladle.batch(vaultId, [action.op], [action.data])
+    return this.batch(vaultId, [this.redeemData(to, wad)])
   }
 }
   
