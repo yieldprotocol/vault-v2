@@ -27,22 +27,25 @@ contract Ladle is AccessControl() {
 
     enum Operation {
         BUILD,               // 0
-        STIR_TO,             // 1
-        STIR_FROM,           // 2
-        POUR,                // 3
-        SERVE,               // 4
-        ROLL,                // 5
-        CLOSE,               // 6
-        REPAY,               // 7
-        REPAY_VAULT,         // 8
-        FORWARD_PERMIT,      // 9
-        FORWARD_DAI_PERMIT,  // 10
-        JOIN_ETHER,          // 11
-        EXIT_ETHER,          // 12
-        TRANSFER_TO_POOL,    // 13
-        ROUTE,               // 14
-        TRANSFER_TO_FYTOKEN, // 15
-        REDEEM               // 16
+        TWEAK,               // 1
+        GIVE,                // 2
+        DESTROY,             // 3
+        STIR_TO,             // 4
+        STIR_FROM,           // 5
+        POUR,                // 6
+        SERVE,               // 7
+        ROLL,                // 8
+        CLOSE,               // 9
+        REPAY,               // 10
+        REPAY_VAULT,         // 11
+        FORWARD_PERMIT,      // 12
+        FORWARD_DAI_PERMIT,  // 13
+        JOIN_ETHER,          // 14
+        EXIT_ETHER,          // 15
+        TRANSFER_TO_POOL,    // 16
+        ROUTE,               // 17
+        TRANSFER_TO_FYTOKEN, // 18
+        REDEEM               // 19
     }
 
     ICauldron public immutable cauldron;
@@ -145,12 +148,13 @@ contract Ladle is AccessControl() {
         IFYToken fyToken;
         IPool pool;
 
-        // Unless we are building the vault, we cache it
-        if (operations[0] != Operation.BUILD) vault = getOwnedVault(vaultId);
-
         // Execute all operations in the batch. Conditionals ordered by expected frequency.
         for (uint256 i = 0; i < operations.length; i += 1) {
+
             Operation operation = operations[i];
+
+            // If we don't have a vault cached, and we are not building it, we cache it
+            if (vault.owner == address(0) && operation != Operation.BUILD) vault = getOwnedVault(vaultId);
 
             if (operation == Operation.BUILD) {
                 (bytes6 seriesId, bytes6 ilkId) = abi.decode(data[i], (bytes6, bytes6));
@@ -225,6 +229,19 @@ contract Ladle is AccessControl() {
                 (bytes12 from, uint128 ink, uint128 art) = abi.decode(data[i], (bytes12, uint128, uint128));
                 _stirTo(from, vaultId, ink, art);
             
+            } else if (operation == Operation.TWEAK) {
+                (bytes6 seriesId, bytes6 ilkId) = abi.decode(data[i], (bytes6, bytes6));
+                vault = _tweak(vaultId, seriesId, ilkId);   // Cache the vault again after changing the series
+
+            } else if (operation == Operation.GIVE) {
+                require (i == operations.length - 1, "Give must be the last action");
+                (address to) = abi.decode(data[i], (address));
+                _give(vaultId, to);
+
+            } else if (operation == Operation.DESTROY) {
+                delete vault;   // Clear the cache
+                _destroy(vaultId);
+            
             } else {
                 revert("Invalid operation");
             }
@@ -234,46 +251,35 @@ contract Ladle is AccessControl() {
     // ---- Vault management ----
 
     /// @dev Create a new vault, linked to a series (and therefore underlying) and a collateral
-    function build(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
-        external payable
-        returns(DataTypes.Vault memory vault)
-    {
-        return _build(vaultId, seriesId, ilkId);
-    }
-
-    /// @dev Change a vault series or collateral.
-    function tweak(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
-        external payable
-        returns(DataTypes.Vault memory vault)
-    {
-        getOwnedVault(vaultId);
-        // tweak checks that the series and the collateral both exist and that the collateral is approved for the series
-        return cauldron.tweak(vaultId, seriesId, ilkId);
-    }
-
-    /// @dev Give a vault to another user.
-    function give(bytes12 vaultId, address receiver)
-        external payable
-        returns(DataTypes.Vault memory vault)
-    {
-        getOwnedVault(vaultId);
-        return cauldron.give(vaultId, receiver);
-    }
-
-    /// @dev Destroy an empty vault. Used to recover gas costs.
-    function destroy(bytes12 vaultId)
-        external payable
-    {
-        getOwnedVault(vaultId);
-        cauldron.destroy(vaultId);
-    }
-
-    /// @dev Create a new vault, linked to a series (and therefore underlying) and a collateral
     function _build(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
         private
         returns(DataTypes.Vault memory vault)
     {
         return cauldron.build(msg.sender, vaultId, seriesId, ilkId);
+    }
+
+    /// @dev Change a vault series or collateral.
+    function _tweak(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
+        private
+        returns(DataTypes.Vault memory vault)
+    {
+        // tweak checks that the series and the collateral both exist and that the collateral is approved for the series
+        return cauldron.tweak(vaultId, seriesId, ilkId);
+    }
+
+    /// @dev Give a vault to another user.
+    function _give(bytes12 vaultId, address receiver)
+        private
+        returns(DataTypes.Vault memory vault)
+    {
+        return cauldron.give(vaultId, receiver);
+    }
+
+    /// @dev Destroy an empty vault. Used to recover gas costs.
+    function _destroy(bytes12 vaultId)
+        private
+    {
+        cauldron.destroy(vaultId);
     }
 
     // ---- Asset and debt management ----

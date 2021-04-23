@@ -109,16 +109,31 @@ export class LadleWrapper {
     return this.ladle.batch(vaultId, [call.op], [call.data])
   }
 
-  public async tweak(vaultId: string, seriesId: string, ilkId: string): Promise<ContractTransaction> {
-    return this.ladle.tweak(vaultId, seriesId, ilkId)
+  public tweakData(seriesId: string, ilkId: string): BatchCall {
+    return new BatchCall(OPS.TWEAK, ethers.utils.defaultAbiCoder.encode(['bytes6', 'bytes6'], [seriesId, ilkId]))
   }
 
-  public async give(vaultId: string, receiver: string): Promise<ContractTransaction> {
-    return this.ladle.give(vaultId, receiver)
+  public async tweak(vaultId: string, seriesId: string, ilkId: string): Promise<ContractTransaction> {
+    const call = this.tweakData(seriesId, ilkId)
+    return this.ladle.batch(vaultId, [call.op], [call.data])
+  }
+
+  public giveData(to: string): BatchCall {
+    return new BatchCall(OPS.GIVE, ethers.utils.defaultAbiCoder.encode(['address'], [to]))
+  }
+
+  public async give(vaultId: string, to: string): Promise<ContractTransaction> {
+    const call = this.giveData(to)
+    return this.ladle.batch(vaultId, [call.op], [call.data])
+  }
+
+  public destroyData(): BatchCall {
+    return new BatchCall(OPS.DESTROY, ethers.utils.defaultAbiCoder.encode(['uint256'], [0]))  // The data will be ignored
   }
 
   public async destroy(vaultId: string): Promise<ContractTransaction> {
-    return this.ladle.destroy(vaultId)
+    const call = this.destroyData()
+    return this.ladle.batch(vaultId, [call.op], [call.data])
   }
 
   public stirToData(from: string, ink: BigNumberish, art: BigNumberish): BatchCall {
