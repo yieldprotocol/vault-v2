@@ -426,7 +426,7 @@ contract Ladle is AccessControl() {
     }
 
     /// @dev Repay all debt in a vault by buying fyToken from a pool with base.
-    /// The base tokens need to be already in the pool, unaccounted for. The surplus base needs to be retrieved from the pool.
+    /// The base tokens need to be already in the pool, unaccounted for. The surplus base will be returned to msg.sender.
     function _repayVault(bytes12 vaultId, DataTypes.Vault memory vault, address to, int128 ink, uint128 max)
         private
         returns (DataTypes.Balances memory balances, uint128 base)
@@ -437,6 +437,7 @@ contract Ladle is AccessControl() {
         balances = cauldron.balances(vaultId);
         base = pool.buyFYToken(address(series.fyToken), balances.art, max);
         balances = _pour(vaultId, vault, to, ink, -(balances.art.i128()));
+        pool.retrieveBaseToken(msg.sender);
     }
 
     // ---- Liquidations ----

@@ -4,19 +4,14 @@ import { constants } from '@yield-protocol/utils-v2'
 const { WAD, MAX128 } = constants
 const MAX = MAX128
 
-import { OPS } from '../src/constants'
-
 import { Cauldron } from '../typechain/Cauldron'
 import { FYToken } from '../typechain/FYToken'
 import { PoolMock } from '../typechain/PoolMock'
-import { PoolRouterMock } from '../typechain/PoolRouterMock'
 import { ERC20Mock } from '../typechain/ERC20Mock'
-
-import PoolRouterMockArtifact from '../artifacts/contracts/mocks/PoolRouterMock.sol/PoolRouterMock.json'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
-const { deployContract, loadFixture } = waffle
+const { loadFixture } = waffle
 
 import { YieldEnvironment } from './shared/fixtures'
 import { LadleWrapper } from '../src/ladleWrapper'
@@ -139,18 +134,13 @@ describe('Ladle - serve and repay', function () {
       .withArgs(vaultId, seriesId, ilkId, inkRetrieved, WAD.mul(-1))
       .to.emit(pool, 'Trade')
       .withArgs(await fyToken.maturity(), ladle.address, fyToken.address, debtinBase, debtinFY.mul(-1))
-    await pool.retrieveBaseToken(owner)
+    // await pool.retrieveBaseToken(owner)
 
     expect((await cauldron.balances(vaultId)).art).to.equal(0)
     expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(debtinBase))
   })
 
   it('repays all debt of a vault with base in a batch', async () => {
-    // We need to set up a pool router
-    const poolRouter = (await deployContract(ownerAcc, PoolRouterMockArtifact, [])) as PoolRouterMock
-    await poolRouter.addPool(base.address, fyToken.address, pool.address)
-    await ladle.setPoolRouter(poolRouter.address) // TODO: Use `set` or use constructor
-
     // Borrow, so that we can repay
     await ladle.pour(vaultId, owner, WAD, WAD)
 
@@ -163,21 +153,12 @@ describe('Ladle - serve and repay', function () {
     const transferToPoolData = ladle.transferToPoolData(true, baseOffered)
     const repayVaultData = ladle.repayVaultData(owner, inkRetrieved, MAX)
 
-    // Call wrapping: ladle.route(poolRouter.route(findPool(base.address, fyToken.address).retrieveBaseTokenCall(owner)))
-    const retrieveBaseTokenCall = pool.interface.encodeFunctionData('retrieveBaseToken', [owner]) // This is a call passed through `poolRouter.route`
-    const poolRouteCall = poolRouter.interface.encodeFunctionData('route', [
-      base.address,
-      fyToken.address,
-      retrieveBaseTokenCall,
-    ]) // This is a call passed through `ladle.batch(OPS.ROUTE)`
-    const routeData = ladle.routeData(poolRouteCall)
-
     await base.approve(ladle.address, baseOffered) // This would normally be part of a multicall, using ladle.forwardPermit
     await expect(
       ladle.batch(
         vaultId,
-        [transferToPoolData.op, repayVaultData.op, routeData.op],
-        [transferToPoolData.data, repayVaultData.data, routeData.data]
+        [transferToPoolData.op, repayVaultData.op],
+        [transferToPoolData.data, repayVaultData.data],
       )
     )
       .to.emit(cauldron, 'VaultPoured')
