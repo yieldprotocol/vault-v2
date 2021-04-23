@@ -139,7 +139,7 @@ describe('Ladle - batch', function () {
     await ladle.build(vaultId, seriesId, ilkId) // ladle.batch can only be executed by vault owners
     await base.mint(pool.address, WAD)
 
-    const retrieveBaseTokenCall = pool.interface.encodeFunctionAction('retrieveBaseToken', [owner])
+    const retrieveBaseTokenCall = pool.interface.encodeFunctionData('retrieveBaseToken', [owner])
     await expect(await ladle.route(vaultId, retrieveBaseTokenCall)) // The pool is found through the vault seriesId
       .to.emit(base, 'Transfer')
       .withArgs(pool.address, owner, WAD)
