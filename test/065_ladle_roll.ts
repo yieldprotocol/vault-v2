@@ -12,7 +12,8 @@ import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { loadFixture } = waffle
 
-import { YieldEnvironment, LadleWrapper } from './shared/fixtures'
+import { YieldEnvironment } from './shared/fixtures'
+import { LadleWrapper } from '../src/ladleWrapper'
 
 describe('Ladle - roll', function () {
   this.timeout(0)

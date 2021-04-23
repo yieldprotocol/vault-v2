@@ -20,7 +20,8 @@ import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { deployContract, loadFixture } = waffle
 
-import { LadleWrapper, YieldEnvironment } from './shared/fixtures'
+import { YieldEnvironment } from './shared/fixtures'
+import { LadleWrapper } from '../src/ladleWrapper'
 
 describe('Ladle - admin', function () {
   this.timeout(0)
