@@ -1,29 +1,7 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { ethers, BigNumberish, ContractTransaction } from 'ethers'
 import { Ladle } from '../typechain/Ladle'
-
-export const OPS = {
-  BUILD:                0,
-  TWEAK:                1,
-  GIVE:                 2,
-  DESTROY:              3,
-  STIR_TO:              4,
-  STIR_FROM:            5,
-  POUR:                 6,
-  SERVE:                7,
-  ROLL:                 8,
-  CLOSE:                9,
-  REPAY:                10,
-  REPAY_VAULT:          11,
-  FORWARD_PERMIT:       12,
-  FORWARD_DAI_PERMIT:   13,
-  JOIN_ETHER:           14,
-  EXIT_ETHER:           15,
-  TRANSFER_TO_POOL:     16,
-  ROUTE:                17,
-  TRANSFER_TO_FYTOKEN:  18,
-  REDEEM:               19,
-}
+import { OPS } from './constants'
 
 export class BatchAction {
   op: BigNumberish

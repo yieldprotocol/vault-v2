@@ -21,6 +21,7 @@ deployments/
 # Secret files
 .etherscanKey
 .infuraKey
+.mythxKey
 .secret
 build/
 
