@@ -193,7 +193,8 @@ contract Ladle is AccessControl() {
                 _transferToPool(pool, base, wad);
             
             } else if (operation == Operation.ROUTE) {
-                _route(data[i]);
+                if (address(pool) == address(0)) pool = getPool(vault.seriesId);
+                _route(pool, data[i]);
             
             } else if (operation == Operation.EXIT_ETHER) {
                 (bytes6 etherId, address to) = abi.decode(data[i], (bytes6, address));
@@ -533,11 +534,11 @@ contract Ladle is AccessControl() {
     }
 
     /// @dev Allow users to route calls to a pool, to be used with batch
-    function _route(bytes memory data)
+    function _route(IPool pool, bytes memory data)
         private
         returns (bool success, bytes memory result)
     {
-        (success, result) = poolRouter.call{ value: msg.value }(data);
+        (success, result) = address(pool).call(data);
         if (!success) revert(RevertMsgExtractor.getRevertMsg(result));
     }
 
