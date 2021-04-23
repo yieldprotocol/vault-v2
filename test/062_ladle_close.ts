@@ -11,13 +11,13 @@ import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { OracleMock } from '../typechain/OracleMock'
 import { SourceMock } from '../typechain/SourceMock'
-import { Ladle } from '../typechain/Ladle'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { loadFixture } = waffle
 
 import { YieldEnvironment } from './shared/fixtures'
+import { LadleWrapper } from '../src/ladleWrapper'
 
 describe('Ladle - close', function () {
   this.timeout(0)
@@ -36,8 +36,8 @@ describe('Ladle - close', function () {
   let spotSource: SourceMock
   let rateOracle: OracleMock
   let rateSource: SourceMock
-  let ladle: Ladle
-  let ladleFromOther: Ladle
+  let ladle: LadleWrapper
+  let ladleFromOther: LadleWrapper
 
   const mockVaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12))
 
@@ -63,6 +63,7 @@ describe('Ladle - close', function () {
     env = await loadFixture(fixture)
     cauldron = env.cauldron
     ladle = env.ladle
+    ladleFromOther = ladle.connect(otherAcc)
     base = env.assets.get(baseId) as ERC20Mock
     ilk = env.assets.get(ilkId) as ERC20Mock
     ilkJoin = env.joins.get(ilkId) as Join
@@ -71,8 +72,6 @@ describe('Ladle - close', function () {
     rateSource = (await ethers.getContractAt('SourceMock', await rateOracle.source())) as SourceMock
     spotOracle = env.oracles.get(ilkId) as OracleMock
     spotSource = (await ethers.getContractAt('SourceMock', await spotOracle.source())) as SourceMock
-
-    ladleFromOther = ladle.connect(otherAcc)
 
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
     ladle.pour(vaultId, owner, WAD, WAD)
@@ -130,12 +129,9 @@ describe('Ladle - close', function () {
   it('users can repay their debt with underlying and remove collateral at the same time in a batch', async () => {
     const baseBefore = await base.balanceOf(owner)
 
-    const closeData = ethers.utils.defaultAbiCoder.encode(
-      ['address', 'int128', 'int128'],
-      [owner, WAD.mul(-1), WAD.mul(-1)]
-    )
+    const closeData = ladle.closeData(owner, WAD.mul(-1), WAD.mul(-1))
 
-    await expect(ladle.batch(vaultId, [OPS.CLOSE], [closeData]))
+    await expect(ladle.batch(vaultId, [closeData.op], [closeData.data]))
       .to.emit(cauldron, 'VaultPoured')
       .withArgs(vaultId, seriesId, ilkId, WAD.mul(-1), WAD.mul(-1))
 

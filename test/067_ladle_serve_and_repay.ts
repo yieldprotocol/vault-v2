@@ -8,8 +8,6 @@ import { OPS } from '../src/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { FYToken } from '../typechain/FYToken'
-import { Ladle } from '../typechain/Ladle'
-
 import { PoolMock } from '../typechain/PoolMock'
 import { PoolRouterMock } from '../typechain/PoolRouterMock'
 import { ERC20Mock } from '../typechain/ERC20Mock'
@@ -21,6 +19,7 @@ import { expect } from 'chai'
 const { deployContract, loadFixture } = waffle
 
 import { YieldEnvironment } from './shared/fixtures'
+import { LadleWrapper } from '../src/ladleWrapper'
 
 describe('Ladle - serve and repay', function () {
   this.timeout(0)
@@ -35,7 +34,7 @@ describe('Ladle - serve and repay', function () {
   let pool: PoolMock
   let base: ERC20Mock
   let ilk: ERC20Mock
-  let ladle: Ladle
+  let ladle: LadleWrapper
 
   async function fixture() {
     return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId], [seriesId])
@@ -112,11 +111,11 @@ describe('Ladle - serve and repay', function () {
     const debtRepaidInFY = debtRepaidInBase.mul(105).div(100)
     const inkRetrieved = WAD.div(4)
 
-    const transferToPoolData = ethers.utils.defaultAbiCoder.encode(['bool', 'uint128'], [true, debtRepaidInBase])
-    const repayData = ethers.utils.defaultAbiCoder.encode(['address', 'int128', 'uint128'], [owner, inkRetrieved, 0])
+    const transferToPoolData = ladle.transferToPoolData(true, debtRepaidInBase)
+    const repayData = ladle.repayData(owner, inkRetrieved, 0)
 
     await base.approve(ladle.address, debtRepaidInBase) // This would normally be part of a multicall, using ladle.forwardPermit
-    await expect(ladle.batch(vaultId, [OPS.TRANSFER_TO_POOL, OPS.REPAY], [transferToPoolData, repayData]))
+    await expect(ladle.batch(vaultId, [transferToPoolData.op, repayData.op], [transferToPoolData.data, repayData.data]))
       .to.emit(cauldron, 'VaultPoured')
       .withArgs(vaultId, seriesId, ilkId, inkRetrieved, debtRepaidInFY.mul(-1))
       .to.emit(pool, 'Trade')
@@ -150,7 +149,7 @@ describe('Ladle - serve and repay', function () {
     // We need to set up a pool router
     const poolRouter = (await deployContract(ownerAcc, PoolRouterMockArtifact, [])) as PoolRouterMock
     await poolRouter.addPool(base.address, fyToken.address, pool.address)
-    await ladle.setPoolRouter(poolRouter.address)
+    await ladle.setPoolRouter(poolRouter.address) // TODO: Use `set` or use constructor
 
     // Borrow, so that we can repay
     await ladle.pour(vaultId, owner, WAD, WAD)
@@ -161,11 +160,8 @@ describe('Ladle - serve and repay', function () {
     const debtInBase = debtinFY.mul(100).div(105)
     const inkRetrieved = WAD.div(4)
 
-    const transferToPoolData = ethers.utils.defaultAbiCoder.encode(['bool', 'uint128'], [true, baseOffered])
-    const repayVaultData = ethers.utils.defaultAbiCoder.encode(
-      ['address', 'int128', 'uint128'],
-      [owner, inkRetrieved, MAX]
-    )
+    const transferToPoolData = ladle.transferToPoolData(true, baseOffered)
+    const repayVaultData = ladle.repayVaultData(owner, inkRetrieved, MAX)
 
     // Call wrapping: ladle.route(poolRouter.route(findPool(base.address, fyToken.address).retrieveBaseTokenCall(owner)))
     const retrieveBaseTokenCall = pool.interface.encodeFunctionData('retrieveBaseToken', [owner]) // This is a call passed through `poolRouter.route`
@@ -174,13 +170,14 @@ describe('Ladle - serve and repay', function () {
       fyToken.address,
       retrieveBaseTokenCall,
     ]) // This is a call passed through `ladle.batch(OPS.ROUTE)`
+    const routeData = ladle.routeData(poolRouteCall)
 
     await base.approve(ladle.address, baseOffered) // This would normally be part of a multicall, using ladle.forwardPermit
     await expect(
       ladle.batch(
         vaultId,
-        [OPS.TRANSFER_TO_POOL, OPS.REPAY_VAULT, OPS.ROUTE],
-        [transferToPoolData, repayVaultData, poolRouteCall]
+        [transferToPoolData.op, repayVaultData.op, routeData.op],
+        [transferToPoolData.data, repayVaultData.data, routeData.data]
       )
     )
       .to.emit(cauldron, 'VaultPoured')

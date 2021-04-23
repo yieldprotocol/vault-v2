@@ -4,7 +4,6 @@ import { constants } from '@yield-protocol/utils-v2'
 const { WAD } = constants
 
 import { Cauldron } from '../typechain/Cauldron'
-import { Ladle } from '../typechain/Ladle'
 import { Join } from '../typechain/Join'
 import { Witch } from '../typechain/Witch'
 import { FYToken } from '../typechain/FYToken'
@@ -17,6 +16,7 @@ import { expect } from 'chai'
 const { loadFixture } = waffle
 
 import { YieldEnvironment } from './shared/fixtures'
+import { LadleWrapper } from '../src/ladleWrapper'
 
 describe('Witch', function () {
   this.timeout(0)
@@ -27,7 +27,7 @@ describe('Witch', function () {
   let owner: string
   let other: string
   let cauldron: Cauldron
-  let ladle: Ladle
+  let ladle: LadleWrapper
   let witch: Witch
   let witchFromOther: Witch
   let fyToken: FYToken

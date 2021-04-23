@@ -27,21 +27,25 @@ contract Ladle is AccessControl() {
 
     enum Operation {
         BUILD,               // 0
-        STIR_TO,             // 1
-        STIR_FROM,           // 2
-        POUR,                // 3
-        SERVE,               // 4
-        CLOSE,               // 5
-        REPAY,               // 6
-        REPAY_VAULT,         // 7
-        FORWARD_PERMIT,      // 8
-        FORWARD_DAI_PERMIT,  // 9
-        JOIN_ETHER,          // 10
-        EXIT_ETHER,          // 11
-        TRANSFER_TO_POOL,    // 12
-        ROUTE,               // 13
-        TRANSFER_TO_FYTOKEN, // 14
-        REDEEM               // 15
+        TWEAK,               // 1
+        GIVE,                // 2
+        DESTROY,             // 3
+        STIR_TO,             // 4
+        STIR_FROM,           // 5
+        POUR,                // 6
+        SERVE,               // 7
+        ROLL,                // 8
+        CLOSE,               // 9
+        REPAY,               // 10
+        REPAY_VAULT,         // 11
+        FORWARD_PERMIT,      // 12
+        FORWARD_DAI_PERMIT,  // 13
+        JOIN_ETHER,          // 14
+        EXIT_ETHER,          // 15
+        TRANSFER_TO_POOL,    // 16
+        ROUTE,               // 17
+        TRANSFER_TO_FYTOKEN, // 18
+        REDEEM               // 19
     }
 
     ICauldron public immutable cauldron;
@@ -144,12 +148,13 @@ contract Ladle is AccessControl() {
         IFYToken fyToken;
         IPool pool;
 
-        // Unless we are building the vault, we cache it
-        if (operations[0] != Operation.BUILD) vault = getOwnedVault(vaultId);
-
         // Execute all operations in the batch. Conditionals ordered by expected frequency.
         for (uint256 i = 0; i < operations.length; i += 1) {
+
             Operation operation = operations[i];
+
+            // If we don't have a vault cached, and we are not building it, we cache it
+            if (vault.owner == address(0) && operation != Operation.BUILD) vault = getOwnedVault(vaultId);
 
             if (operation == Operation.BUILD) {
                 (bytes6 seriesId, bytes6 ilkId) = abi.decode(data[i], (bytes6, bytes6));
@@ -171,6 +176,10 @@ contract Ladle is AccessControl() {
             } else if (operation == Operation.SERVE) {
                 (address to, uint128 ink, uint128 base, uint128 max) = abi.decode(data[i], (address, uint128, uint128, uint128));
                 _serve(vaultId, vault, to, ink, base, max);
+
+            } else if (operation == Operation.ROLL) {
+                (bytes6 newSeriesId, uint128 max) = abi.decode(data[i], (bytes6, uint128));
+                _roll(vaultId, vault, newSeriesId, max);
             
             } else if (operation == Operation.FORWARD_DAI_PERMIT) {
                 (bytes6 id, bool asset, address spender, uint256 nonce, uint256 deadline, bool allowed, uint8 v, bytes32 r, bytes32 s) =
@@ -220,6 +229,19 @@ contract Ladle is AccessControl() {
                 (bytes12 from, uint128 ink, uint128 art) = abi.decode(data[i], (bytes12, uint128, uint128));
                 _stirTo(from, vaultId, ink, art);
             
+            } else if (operation == Operation.TWEAK) {
+                (bytes6 seriesId, bytes6 ilkId) = abi.decode(data[i], (bytes6, bytes6));
+                vault = _tweak(vaultId, seriesId, ilkId);   // Cache the vault again after changing the series
+
+            } else if (operation == Operation.GIVE) {
+                require (i == operations.length - 1, "Give must be the last action");
+                (address to) = abi.decode(data[i], (address));
+                _give(vaultId, to);
+
+            } else if (operation == Operation.DESTROY) {
+                delete vault;   // Clear the cache
+                _destroy(vaultId);
+            
             } else {
                 revert("Invalid operation");
             }
@@ -229,41 +251,6 @@ contract Ladle is AccessControl() {
     // ---- Vault management ----
 
     /// @dev Create a new vault, linked to a series (and therefore underlying) and a collateral
-    function build(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
-        external payable
-        returns(DataTypes.Vault memory vault)
-    {
-        return _build(vaultId, seriesId, ilkId);
-    }
-
-    /// @dev Change a vault series or collateral.
-    function tweak(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
-        external payable
-        returns(DataTypes.Vault memory vault)
-    {
-        getOwnedVault(vaultId);
-        // tweak checks that the series and the collateral both exist and that the collateral is approved for the series
-        return cauldron.tweak(vaultId, seriesId, ilkId);
-    }
-
-    /// @dev Give a vault to another user.
-    function give(bytes12 vaultId, address receiver)
-        external payable
-        returns(DataTypes.Vault memory vault)
-    {
-        getOwnedVault(vaultId);
-        return cauldron.give(vaultId, receiver);
-    }
-
-    /// @dev Destroy an empty vault. Used to recover gas costs.
-    function destroy(bytes12 vaultId)
-        external payable
-    {
-        getOwnedVault(vaultId);
-        cauldron.destroy(vaultId);
-    }
-
-    /// @dev Create a new vault, linked to a series (and therefore underlying) and a collateral
     function _build(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
         private
         returns(DataTypes.Vault memory vault)
@@ -271,77 +258,37 @@ contract Ladle is AccessControl() {
         return cauldron.build(msg.sender, vaultId, seriesId, ilkId);
     }
 
+    /// @dev Change a vault series or collateral.
+    function _tweak(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
+        private
+        returns(DataTypes.Vault memory vault)
+    {
+        // tweak checks that the series and the collateral both exist and that the collateral is approved for the series
+        return cauldron.tweak(vaultId, seriesId, ilkId);
+    }
+
+    /// @dev Give a vault to another user.
+    function _give(bytes12 vaultId, address receiver)
+        private
+        returns(DataTypes.Vault memory vault)
+    {
+        return cauldron.give(vaultId, receiver);
+    }
+
+    /// @dev Destroy an empty vault. Used to recover gas costs.
+    function _destroy(bytes12 vaultId)
+        private
+    {
+        cauldron.destroy(vaultId);
+    }
+
     // ---- Asset and debt management ----
 
-    /// @dev Move collateral and debt between vaults.
-    function stir(bytes12 from, bytes12 to, uint128 ink, uint128 art)
-        external payable
-        returns (DataTypes.Balances memory, DataTypes.Balances memory)
-    {
-        if (ink > 0) require (cauldron.vaults(from).owner == msg.sender, "Only origin vault owner");
-        if (art > 0) require (cauldron.vaults(to).owner == msg.sender, "Only destination vault owner");
-        return cauldron.stir(from, to, ink, art);
-    }
-
-    /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
-    /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
-    function pour(bytes12 vaultId, address to, int128 ink, int128 art)
-        external payable
-        returns (DataTypes.Balances memory balances)
-    {
-        DataTypes.Vault memory vault = getOwnedVault(vaultId);
-        balances = _pour(vaultId, vault, to, ink, art);
-    }
-
-    /// @dev Add collateral and borrow from vault, so that a precise amount of base is obtained by the user.
-    /// The base is obtained by borrowing fyToken and buying base with it in a pool.
-    function serve(bytes12 vaultId, address to, uint128 ink, uint128 base, uint128 max)
-        external payable
-        returns (DataTypes.Balances memory balances, uint128 art)
-    {
-        DataTypes.Vault memory vault = getOwnedVault(vaultId);
-        (balances, art) = _serve(vaultId, vault, to, ink, base, max);
-    }
-
-    /// @dev Repay vault debt using underlying token at a 1:1 exchange rate, without trading in a pool.
-    /// It can add or remove collateral at the same time.
-    /// The debt to repay is denominated in fyToken, even if the tokens pulled from the user are underlying.
-    /// The debt to repay must be entered as a negative number, as with `pour`.
-    /// Debt cannot be acquired with this function.
-    function close(bytes12 vaultId, address to, int128 ink, int128 art)
-        external payable
-        returns (DataTypes.Balances memory balances)
-    {
-        DataTypes.Vault memory vault = getOwnedVault(vaultId);
-        balances = _close(vaultId, vault, to, ink, art);
-    }
-
-    /// @dev Repay debt by selling base in a pool and using the resulting fyToken
-    /// The base tokens need to be already in the pool, unaccounted for.
-    function repay(bytes12 vaultId, address to, int128 ink, uint128 min)
-        external payable
-        returns (DataTypes.Balances memory balances, uint128 art)
-    {
-        DataTypes.Vault memory vault = getOwnedVault(vaultId);
-        (balances, art) = _repay(vaultId, vault, to, ink, min);
-    }
-
-    /// @dev Repay all debt in a vault by buying fyToken from a pool with base.
-    /// The base tokens need to be already in the pool, unaccounted for. The surplus base needs to be retrieved from the pool.
-    function repayVault(bytes12 vaultId, address to, int128 ink, uint128 max)
-        external payable
-        returns (DataTypes.Balances memory balances, uint128 base)
-    {
-        DataTypes.Vault memory vault = getOwnedVault(vaultId);
-        (balances, base) = _repayVault(vaultId, vault, to, ink, max);
-    }
-
     /// @dev Change series and debt of a vault.
-    function roll(bytes12 vaultId, bytes6 newSeriesId, uint128 max)
-        external payable
+    function _roll(bytes12 vaultId, DataTypes.Vault memory vault, bytes6 newSeriesId, uint128 max)
+        private
         returns (uint128)
     {
-        DataTypes.Vault memory vault = getOwnedVault(vaultId);
         DataTypes.Balances memory balances = cauldron.balances(vaultId);
         
         // Calculate debt in fyToken terms
@@ -516,20 +463,6 @@ contract Ladle is AccessControl() {
 
     // ---- Permit management ----
 
-    /// @dev Execute an ERC2612 permit for the selected asset or fyToken
-    function forwardPermit(bytes6 id, bool asset, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
-        external payable
-    {
-        _forwardPermit(id, asset, spender, amount, deadline, v, r, s);
-    }
-
-    /// @dev Execute a Dai-style permit for the selected asset or fyToken
-    function forwardDaiPermit(bytes6 id, bool asset, address spender, uint256 nonce, uint256 deadline, bool allowed, uint8 v, bytes32 r, bytes32 s)
-        external payable
-    {
-        _forwardDaiPermit(id, asset, spender, nonce, deadline, allowed, v, r, s);
-    }
-
     /// @dev From an id, which can be an assetId or a seriesId, find the resulting asset or fyToken
     function findToken(bytes6 id, bool asset)
         private view returns (address token)
@@ -562,25 +495,6 @@ contract Ladle is AccessControl() {
     /// @dev Accept Ether, wrap it and forward it to the WethJoin
     /// This function should be called first in a multicall, and the Join should keep track of stored reserves
     /// Passing the id for a join that doesn't link to a contract implemnting IWETH9 will fail
-    function joinEther(bytes6 etherId)
-        external payable
-        returns (uint256 ethTransferred)
-    {
-        ethTransferred = _joinEther(etherId);
-    }
-
-    /// @dev Unwrap Wrapped Ether held by this Ladle, and send the Ether
-    /// This function should be called last in a multicall, and the Ladle should have no reason to keep an WETH balance
-    function exitEther(bytes6 etherId, address payable to)
-        external payable
-        returns (uint256 ethTransferred)
-    {
-        ethTransferred = _exitEther(etherId, to);
-    }
-
-    /// @dev Accept Ether, wrap it and forward it to the WethJoin
-    /// This function should be called first in a multicall, and the Join should keep track of stored reserves
-    /// Passing the id for a join that doesn't link to a contract implemnting IWETH9 will fail
     function _joinEther(bytes6 etherId)
         private
         returns (uint256 ethTransferred)
@@ -609,21 +523,6 @@ contract Ladle is AccessControl() {
 
     // ---- Pool router ----
 
-    /// @dev Allow users to trigger a token transfer to a pool through the ladle, to be used with multicall
-    function transferToPool(bytes6 seriesId, bool base, uint128 wad)
-        external payable
-    {
-        _transferToPool(getPool(seriesId), base, wad);
-    }
-
-    /// @dev Allow users to route calls to a pool, to be used with multicall
-    function route(bytes memory data)
-        external payable
-        returns (bool success, bytes memory result)
-    {
-        (success, result) = _route(data);
-    }
-
     /// @dev Allow users to trigger a token transfer to a pool through the ladle, to be used with batch
     function _transferToPool(IPool pool, bool base, uint128 wad)
         private
@@ -642,23 +541,6 @@ contract Ladle is AccessControl() {
     }
 
     // ---- FYToken router ----
-
-    /// @dev Allow users to trigger a token transfer to a fyToken through the ladle, to be used with multicall
-    function transferToFYToken(bytes6 seriesId, uint256 wad)
-        external payable
-    {
-        _transferToFYToken(getSeries(seriesId).fyToken, wad);
-    }
-
-    /// @dev Allow users to redeem fyToken, to be used with multicall
-    /// The fyToken needs to have been transferred to the FYToken contract
-    function redeem(bytes6 seriesId, address to, uint256 wad)
-        external payable
-        returns (uint256)
-    {
-
-        return _redeem(getSeries(seriesId).fyToken, to, wad);
-    }
 
     /// @dev Allow users to trigger a token transfer to a pool through the ladle, to be used with batch
     function _transferToFYToken(IFYToken fyToken, uint256 wad)

@@ -15,13 +15,13 @@ import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { OracleMock } from '../typechain/OracleMock'
 import { PoolMock } from '../typechain/PoolMock'
-import { Ladle } from '../typechain/Ladle'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { deployContract, loadFixture } = waffle
 
 import { YieldEnvironment } from './shared/fixtures'
+import { LadleWrapper } from '../src/ladleWrapper'
 
 describe('Ladle - admin', function () {
   this.timeout(0)
@@ -40,8 +40,8 @@ describe('Ladle - admin', function () {
   let pool: PoolMock
   let oracle: OracleMock
   let rateOracle: OracleMock
-  let ladle: Ladle
-  let ladleFromOther: Ladle
+  let ladle: LadleWrapper
+  let ladleFromOther: LadleWrapper
 
   const mockAssetId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const mockSeriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
@@ -72,11 +72,10 @@ describe('Ladle - admin', function () {
     env = await loadFixture(fixture)
     cauldron = env.cauldron
     ladle = env.ladle
+    ladleFromOther = ladle.connect(otherAcc)
     base = env.assets.get(baseId) as ERC20Mock
     baseJoin = env.joins.get(baseId) as Join
     rateOracle = env.oracles.get('rate') as OracleMock
-
-    ladleFromOther = ladle.connect(otherAcc)
 
     // ==== Set testing environment ====
     ilk = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId, 'Mock Ilk'])) as ERC20Mock
