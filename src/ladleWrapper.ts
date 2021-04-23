@@ -65,103 +65,103 @@ export class LadleWrapper {
     else return this.ladle.batch(vaultId, ops, data, overrides)
   }
 
-  public buildData(seriesId: string, ilkId: string): BatchAction {
+  public buildAction(seriesId: string, ilkId: string): BatchAction {
     return new BatchAction(OPS.BUILD, ethers.utils.defaultAbiCoder.encode(['bytes6', 'bytes6'], [seriesId, ilkId]))
   }
 
   public async build(vaultId: string, seriesId: string, ilkId: string): Promise<ContractTransaction> {
-    return this.batch(vaultId, [this.buildData(seriesId, ilkId)])
+    return this.batch(vaultId, [this.buildAction(seriesId, ilkId)])
   }
 
-  public tweakData(seriesId: string, ilkId: string): BatchAction {
+  public tweakAction(seriesId: string, ilkId: string): BatchAction {
     return new BatchAction(OPS.TWEAK, ethers.utils.defaultAbiCoder.encode(['bytes6', 'bytes6'], [seriesId, ilkId]))
   }
 
   public async tweak(vaultId: string, seriesId: string, ilkId: string): Promise<ContractTransaction> {
-    return this.batch(vaultId, [this.tweakData(seriesId, ilkId)])
+    return this.batch(vaultId, [this.tweakAction(seriesId, ilkId)])
   }
 
-  public giveData(to: string): BatchAction {
+  public giveAction(to: string): BatchAction {
     return new BatchAction(OPS.GIVE, ethers.utils.defaultAbiCoder.encode(['address'], [to]))
   }
 
   public async give(vaultId: string, to: string): Promise<ContractTransaction> {
-    return this.batch(vaultId, [this.giveData(to)])
+    return this.batch(vaultId, [this.giveAction(to)])
   }
 
-  public destroyData(): BatchAction {
+  public destroyAction(): BatchAction {
     return new BatchAction(OPS.DESTROY, ethers.utils.defaultAbiCoder.encode(['uint256'], [0]))  // The data will be ignored
   }
 
   public async destroy(vaultId: string): Promise<ContractTransaction> {
-    return this.batch(vaultId, [this.destroyData()])
+    return this.batch(vaultId, [this.destroyAction()])
   }
 
-  public stirToData(from: string, ink: BigNumberish, art: BigNumberish): BatchAction {
+  public stirToAction(from: string, ink: BigNumberish, art: BigNumberish): BatchAction {
     return new BatchAction(OPS.STIR_TO, ethers.utils.defaultAbiCoder.encode(['bytes12', 'uint128', 'uint128'], [from, ink, art]))
   }
 
-  public stirFromData(to: string, ink: BigNumberish, art: BigNumberish): BatchAction {
+  public stirFromAction(to: string, ink: BigNumberish, art: BigNumberish): BatchAction {
     return new BatchAction(OPS.STIR_FROM, ethers.utils.defaultAbiCoder.encode(['bytes12', 'uint128', 'uint128'], [to, ink, art]))
   }
 
   public async stir(from: string, to: string, ink: BigNumberish, art: BigNumberish): Promise<ContractTransaction> {
-    return this.batch(from, [this.stirFromData(to, ink, art)])
+    return this.batch(from, [this.stirFromAction(to, ink, art)])
   }
 
   public async stirTo(from: string, to: string, ink: BigNumberish, art: BigNumberish): Promise<ContractTransaction> {
-    return this.batch(to, [this.stirToData(from, ink, art)])
+    return this.batch(to, [this.stirToAction(from, ink, art)])
   }
 
-  public pourData(to: string, ink: BigNumberish, art: BigNumberish): BatchAction {
+  public pourAction(to: string, ink: BigNumberish, art: BigNumberish): BatchAction {
     return new BatchAction(OPS.POUR, ethers.utils.defaultAbiCoder.encode(['address', 'int128', 'int128'], [to, ink, art]))
   }
 
   public async pour(vaultId: string, to: string, ink: BigNumberish, art: BigNumberish): Promise<ContractTransaction> {
-    return this.batch(vaultId, [this.pourData(to, ink, art)])
+    return this.batch(vaultId, [this.pourAction(to, ink, art)])
   }
 
-  public closeData(to: string, ink: BigNumberish, art: BigNumberish): BatchAction {
+  public closeAction(to: string, ink: BigNumberish, art: BigNumberish): BatchAction {
     return new BatchAction(OPS.CLOSE, ethers.utils.defaultAbiCoder.encode(['address', 'int128', 'int128'], [to, ink, art]))
   }
 
   public async close(vaultId: string, to: string, ink: BigNumberish, art: BigNumberish): Promise<ContractTransaction> {
-    return this.batch(vaultId, [this.closeData(to, ink, art)])
+    return this.batch(vaultId, [this.closeAction(to, ink, art)])
   }
 
-  public serveData(to: string, ink: BigNumberish, base: BigNumberish, max: BigNumberish): BatchAction {
+  public serveAction(to: string, ink: BigNumberish, base: BigNumberish, max: BigNumberish): BatchAction {
     return new BatchAction(OPS.SERVE, ethers.utils.defaultAbiCoder.encode(['address', 'uint128', 'uint128', 'uint128'], [to, ink, base, max]))
   }
 
   public async serve(vaultId: string, to: string, ink: BigNumberish, base: BigNumberish, max: BigNumberish): Promise<ContractTransaction> {
-    return this.batch(vaultId, [this.serveData(to, ink, base, max)])
+    return this.batch(vaultId, [this.serveAction(to, ink, base, max)])
   }
 
-  public repayData(to: string, ink: BigNumberish, min: BigNumberish): BatchAction {
+  public repayAction(to: string, ink: BigNumberish, min: BigNumberish): BatchAction {
     return new BatchAction(OPS.REPAY, ethers.utils.defaultAbiCoder.encode(['address', 'int128', 'uint128'], [to, ink, min]))
   }
 
   public async repay(vaultId: string, to: string, ink: BigNumberish, min: BigNumberish): Promise<ContractTransaction> {
-    return this.batch(vaultId, [this.repayData(to, ink, min)])
+    return this.batch(vaultId, [this.repayAction(to, ink, min)])
   }
 
-  public repayVaultData(to: string, ink: BigNumberish, max: BigNumberish): BatchAction {
+  public repayVaultAction(to: string, ink: BigNumberish, max: BigNumberish): BatchAction {
     return new BatchAction(OPS.REPAY_VAULT, ethers.utils.defaultAbiCoder.encode(['address', 'int128', 'uint128'], [to, ink, max]))
   }
 
   public async repayVault(vaultId: string, to: string, ink: BigNumberish, max: BigNumberish): Promise<ContractTransaction> {
-    return this.batch(vaultId, [this.repayVaultData(to, ink, max)])
+    return this.batch(vaultId, [this.repayVaultAction(to, ink, max)])
   }
 
-  public rollData(newSeriesId: string, max: BigNumberish): BatchAction {
+  public rollAction(newSeriesId: string, max: BigNumberish): BatchAction {
     return new BatchAction(OPS.ROLL, ethers.utils.defaultAbiCoder.encode(['bytes6', 'uint128'], [newSeriesId, max]))
   }
 
   public async roll(vaultId: string, newSeriesId: string, max: BigNumberish): Promise<ContractTransaction> {
-    return this.batch(vaultId, [this.rollData(newSeriesId, max)])
+    return this.batch(vaultId, [this.rollAction(newSeriesId, max)])
   }
 
-  public forwardPermitData(seriesId: string, asset: boolean, spender: string, amount: BigNumberish, deadline: BigNumberish, v: BigNumberish, r: Buffer, s: Buffer): BatchAction {
+  public forwardPermitAction(seriesId: string, asset: boolean, spender: string, amount: BigNumberish, deadline: BigNumberish, v: BigNumberish, r: Buffer, s: Buffer): BatchAction {
     return new BatchAction(OPS.FORWARD_PERMIT, ethers.utils.defaultAbiCoder.encode(
       ['bytes6', 'bool', 'address', 'uint256', 'uint256', 'uint8', 'bytes32', 'bytes32'],
       [seriesId, asset, spender, amount, deadline, v, r, s]
@@ -170,10 +170,10 @@ export class LadleWrapper {
 
   public async forwardPermit(vaultId: string, seriesId: string, asset: boolean, spender: string, amount: BigNumberish, deadline: BigNumberish, v: BigNumberish, r: Buffer, s: Buffer): Promise<ContractTransaction> {
     // The vaultId parameter is irrelevant to forwardPermit, but necessary when included in a batch
-    return this.batch(vaultId, [this.forwardPermitData(seriesId, asset, spender, amount, deadline, v, r, s)])
+    return this.batch(vaultId, [this.forwardPermitAction(seriesId, asset, spender, amount, deadline, v, r, s)])
   }
 
-  public forwardDaiPermitData(seriesId: string, asset: boolean, spender: string, nonce: BigNumberish, deadline: BigNumberish, approved: boolean, v: BigNumberish, r: Buffer, s: Buffer): BatchAction {
+  public forwardDaiPermitAction(seriesId: string, asset: boolean, spender: string, nonce: BigNumberish, deadline: BigNumberish, approved: boolean, v: BigNumberish, r: Buffer, s: Buffer): BatchAction {
     return new BatchAction(OPS.FORWARD_DAI_PERMIT, ethers.utils.defaultAbiCoder.encode(
       ['bytes6', 'bool', 'address', 'uint256', 'uint256', 'bool', 'uint8', 'bytes32', 'bytes32'],
       [seriesId, asset, spender, nonce, deadline, approved, v, r, s]
@@ -182,58 +182,58 @@ export class LadleWrapper {
 
   public async forwardDaiPermit(vaultId: string, seriesId: string, asset: boolean, spender: string, nonce: BigNumberish, deadline: BigNumberish, approved: boolean, v: BigNumberish, r: Buffer, s: Buffer): Promise<ContractTransaction> {
     // The vaultId parameter is irrelevant to forwardDaiPermit, but necessary when included in a batch
-    return this.batch(vaultId, [this.forwardDaiPermitData(seriesId, asset, spender, nonce, deadline, approved, v, r, s)])
+    return this.batch(vaultId, [this.forwardDaiPermitAction(seriesId, asset, spender, nonce, deadline, approved, v, r, s)])
   }
 
-  public joinEtherData(etherId: string): BatchAction {
+  public joinEtherAction(etherId: string): BatchAction {
     return new BatchAction(OPS.JOIN_ETHER, ethers.utils.defaultAbiCoder.encode(['bytes6'], [etherId]))
   }
 
   public async joinEther(vaultId: string, etherId: string, overrides?: any): Promise<ContractTransaction> {
     // The vaultId parameter is irrelevant to joinEther, but necessary when included in a batch
-    const action = this.joinEtherData(etherId)
+    const action = this.joinEtherAction(etherId)
     return this.ladle.batch(vaultId, [action.op], [action.data], overrides)
   }
 
-  public exitEtherData(etherId: string, to: string): BatchAction {
+  public exitEtherAction(etherId: string, to: string): BatchAction {
     return new BatchAction(OPS.EXIT_ETHER, ethers.utils.defaultAbiCoder.encode(['bytes6', 'address'], [etherId, to]))
   }
 
   public async exitEther(vaultId: string, etherId: string, to: string): Promise<ContractTransaction> {
     // The vaultId parameter is irrelevant to exitEther, but necessary when included in a batch
-    return this.batch(vaultId, [this.exitEtherData(etherId, to)])
+    return this.batch(vaultId, [this.exitEtherAction(etherId, to)])
   }
 
-  public transferToPoolData(base: boolean, wad: BigNumberish): BatchAction {
+  public transferToPoolAction(base: boolean, wad: BigNumberish): BatchAction {
     return new BatchAction(OPS.TRANSFER_TO_POOL, ethers.utils.defaultAbiCoder.encode(['bool', 'uint128'], [base, wad]))
   }
 
   public async transferToPool(vaultId: string, base: boolean, wad: BigNumberish): Promise<ContractTransaction> {
-    return this.batch(vaultId, [this.transferToPoolData(base, wad)])
+    return this.batch(vaultId, [this.transferToPoolAction(base, wad)])
   }
 
-  public routeData(call: string): BatchAction {
+  public routeAction(call: string): BatchAction {
     return new BatchAction(OPS.ROUTE, call)  // `call` is already an encoded function call, no need to abi-encode it again
   }
 
   public async route(vaultId: string, innerCall: string): Promise<ContractTransaction> {
-    return this.batch(vaultId, [this.routeData(innerCall)])
+    return this.batch(vaultId, [this.routeAction(innerCall)])
   }
 
-  public transferToFYTokenData(wad: BigNumberish): BatchAction {
+  public transferToFYTokenAction(wad: BigNumberish): BatchAction {
     return new BatchAction(OPS.TRANSFER_TO_FYTOKEN, ethers.utils.defaultAbiCoder.encode(['uint256'], [wad]))
   }
 
   public async transferToFYToken(vaultId: string, seriesId: string, wad: BigNumberish): Promise<ContractTransaction> {
-    return this.batch(vaultId, [this.transferToFYTokenData(wad)])
+    return this.batch(vaultId, [this.transferToFYTokenAction(wad)])
   }
 
-  public redeemData(to: string, wad: BigNumberish): BatchAction {
+  public redeemAction(to: string, wad: BigNumberish): BatchAction {
     return new BatchAction(OPS.REDEEM, ethers.utils.defaultAbiCoder.encode(['address', 'uint256'], [to, wad]))
   }
 
   public async redeem(vaultId: string, seriesId: string, to: string, wad: BigNumberish): Promise<ContractTransaction> {
-    return this.batch(vaultId, [this.redeemData(to, wad)])
+    return this.batch(vaultId, [this.redeemAction(to, wad)])
   }
 }
   

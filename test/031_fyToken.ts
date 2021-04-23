@@ -167,8 +167,8 @@ describe('FYToken', function () {
           await ladle.batch(
             vaultId,
             [
-              ladle.transferToFYTokenData(WAD),
-              ladle.redeemData(owner, WAD)
+              ladle.transferToFYTokenAction(WAD),
+              ladle.redeemAction(owner, WAD)
             ]
           )
         )

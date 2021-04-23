@@ -88,9 +88,9 @@ describe('Ladle - batch', function () {
     const borrowed = WAD
 
     await ladle.batch(vaultId, [
-      ladle.buildData(seriesId, ilkId),
-      ladle.forwardPermitData(ilkId, true, ilkJoin.address, posted, deadline, v, r, s),
-      ladle.serveData(owner, posted, borrowed, MAX)
+      ladle.buildAction(seriesId, ilkId),
+      ladle.forwardPermitAction(ilkId, true, ilkJoin.address, posted, deadline, v, r, s),
+      ladle.serveAction(owner, posted, borrowed, MAX)
     ])
 
     const vault = await cauldron.vaults(vaultId)
@@ -107,9 +107,9 @@ describe('Ladle - batch', function () {
     await ladle.batch(
       newVaultId,
       [
-        ladle.buildData(seriesId, ethId),
-        ladle.joinEtherData(ethId),
-        ladle.serveData(owner, posted, borrowed, MAX)
+        ladle.buildAction(seriesId, ethId),
+        ladle.joinEtherAction(ethId),
+        ladle.serveAction(owner, posted, borrowed, MAX)
       ],
       { value: posted }
     )
@@ -127,9 +127,9 @@ describe('Ladle - batch', function () {
     await ladle.batch(
       ethVaultId,
       [
-        ladle.joinEtherData(ethId),
-        ladle.pourData(owner, posted, 0),
-        ladle.serveData(other, 0, borrowed, MAX)        
+        ladle.joinEtherAction(ethId),
+        ladle.pourAction(owner, posted, 0),
+        ladle.serveAction(other, 0, borrowed, MAX)        
       ],
       { value: posted }
     )
@@ -139,7 +139,7 @@ describe('Ladle - batch', function () {
     await ladle.build(vaultId, seriesId, ilkId) // ladle.batch can only be executed by vault owners
     await base.mint(pool.address, WAD)
 
-    const retrieveBaseTokenCall = pool.interface.encodeFunctionData('retrieveBaseToken', [owner])
+    const retrieveBaseTokenCall = pool.interface.encodeFunctionAction('retrieveBaseToken', [owner])
     await expect(await ladle.route(vaultId, retrieveBaseTokenCall)) // The pool is found through the vault seriesId
       .to.emit(base, 'Transfer')
       .withArgs(pool.address, owner, WAD)

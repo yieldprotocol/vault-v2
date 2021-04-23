@@ -127,7 +127,7 @@ describe('Ladle - close', function () {
   it('users can repay their debt with underlying and remove collateral at the same time in a batch', async () => {
     const baseBefore = await base.balanceOf(owner)
 
-    await expect(ladle.batch(vaultId, [ladle.closeData(owner, WAD.mul(-1), WAD.mul(-1))]))
+    await expect(ladle.batch(vaultId, [ladle.closeAction(owner, WAD.mul(-1), WAD.mul(-1))]))
       .to.emit(cauldron, 'VaultPoured')
       .withArgs(vaultId, seriesId, ilkId, WAD.mul(-1), WAD.mul(-1))
 

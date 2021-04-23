@@ -117,8 +117,8 @@ describe('Ladle - permit', function () {
     const vaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12)) // You can't use `batch` without owning or building a vault.
 
     expect(await ladle.batch(vaultId, [
-      ladle.buildData(seriesId, ilkId),
-      ladle.forwardPermitData(seriesId, false, ladle.address, amount, deadline, v, r, s)
+      ladle.buildAction(seriesId, ilkId),
+      ladle.forwardPermitAction(seriesId, false, ladle.address, amount, deadline, v, r, s)
     ]))
       .to.emit(fyToken, 'Approval')
       .withArgs(owner, ladle.address, WAD)
@@ -162,8 +162,8 @@ describe('Ladle - permit', function () {
     const vaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12)) // You can't use `batch` without owning or building a vault.
 
     expect(await ladle.batch(vaultId, [
-      ladle.buildData(seriesId, ilkId),
-      ladle.forwardDaiPermitData(DAI, true, ladle.address, nonce, deadline, true, v, r, s)
+      ladle.buildAction(seriesId, ilkId),
+      ladle.forwardDaiPermitAction(DAI, true, ladle.address, nonce, deadline, true, v, r, s)
     ]))
       .to.emit(dai, 'Approval')
       .withArgs(owner, ladle.address, MAX)

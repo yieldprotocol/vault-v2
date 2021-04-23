@@ -74,8 +74,8 @@ describe('Ladle - eth', function () {
 
   it('users can transfer ETH then pour in a single transaction with batch', async () => {
     await ladle.batch(ethVaultId, [
-      ladle.joinEtherData(ethId),
-      ladle.pourData(owner, WAD, 0)
+      ladle.joinEtherAction(ethId),
+      ladle.pourAction(owner, WAD, 0)
     ], { value: WAD })
   })
 
@@ -101,8 +101,8 @@ describe('Ladle - eth', function () {
 
     it('users can pour then unwrap to ETH in a single transaction with batch', async () => {
       await ladle.batch(ethVaultId, [
-        ladle.pourData(ladle.address, WAD.mul(-1), 0),
-        ladle.exitEtherData(ethId, owner)
+        ladle.pourAction(ladle.address, WAD.mul(-1), 0),
+        ladle.exitEtherAction(ethId, owner)
       ])
     })
   })
