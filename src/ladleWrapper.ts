@@ -1,6 +1,5 @@
-import { ethers } from 'hardhat'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { BigNumberish, ContractTransaction } from 'ethers'
+import { ethers, BigNumberish, ContractTransaction } from 'ethers'
 import { Ladle } from '../typechain/Ladle'
 
 export const OPS = {
