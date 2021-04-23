@@ -31,17 +31,18 @@ contract Ladle is AccessControl() {
         STIR_FROM,           // 2
         POUR,                // 3
         SERVE,               // 4
-        CLOSE,               // 5
-        REPAY,               // 6
-        REPAY_VAULT,         // 7
-        FORWARD_PERMIT,      // 8
-        FORWARD_DAI_PERMIT,  // 9
-        JOIN_ETHER,          // 10
-        EXIT_ETHER,          // 11
-        TRANSFER_TO_POOL,    // 12
-        ROUTE,               // 13
-        TRANSFER_TO_FYTOKEN, // 14
-        REDEEM               // 15
+        ROLL,                // 5
+        CLOSE,               // 6
+        REPAY,               // 7
+        REPAY_VAULT,         // 8
+        FORWARD_PERMIT,      // 9
+        FORWARD_DAI_PERMIT,  // 10
+        JOIN_ETHER,          // 11
+        EXIT_ETHER,          // 12
+        TRANSFER_TO_POOL,    // 13
+        ROUTE,               // 14
+        TRANSFER_TO_FYTOKEN, // 15
+        REDEEM               // 16
     }
 
     ICauldron public immutable cauldron;
@@ -171,6 +172,10 @@ contract Ladle is AccessControl() {
             } else if (operation == Operation.SERVE) {
                 (address to, uint128 ink, uint128 base, uint128 max) = abi.decode(data[i], (address, uint128, uint128, uint128));
                 _serve(vaultId, vault, to, ink, base, max);
+
+            } else if (operation == Operation.ROLL) {
+                (bytes6 newSeriesId, uint128 max) = abi.decode(data[i], (bytes6, uint128));
+                _roll(vaultId, vault, newSeriesId, max);
             
             } else if (operation == Operation.FORWARD_DAI_PERMIT) {
                 (bytes6 id, bool asset, address spender, uint256 nonce, uint256 deadline, bool allowed, uint8 v, bytes32 r, bytes32 s) =
@@ -274,11 +279,10 @@ contract Ladle is AccessControl() {
     // ---- Asset and debt management ----
 
     /// @dev Change series and debt of a vault.
-    function roll(bytes12 vaultId, bytes6 newSeriesId, uint128 max)
-        external payable
+    function _roll(bytes12 vaultId, DataTypes.Vault memory vault, bytes6 newSeriesId, uint128 max)
+        private
         returns (uint128)
     {
-        DataTypes.Vault memory vault = getOwnedVault(vaultId);
         DataTypes.Balances memory balances = cauldron.balances(vaultId);
         
         // Calculate debt in fyToken terms

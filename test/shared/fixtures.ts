@@ -184,8 +184,13 @@ export class LadleWrapper {
     return this.ladle.batch(vaultId, [call.op], [call.data])
   }
 
+  public rollData(newSeriesId: string, max: BigNumberish): BatchCall {
+    return new BatchCall(OPS.ROLL, ethers.utils.defaultAbiCoder.encode(['bytes6', 'uint128'], [newSeriesId, max]))
+  }
+
   public async roll(vaultId: string, newSeriesId: string, max: BigNumberish): Promise<ContractTransaction> {
-    return this.ladle.roll(vaultId, newSeriesId, max)
+    const call = this.rollData(newSeriesId, max)
+    return this.ladle.batch(vaultId, [call.op], [call.data])
   }
 
   public forwardPermitData(seriesId: string, asset: boolean, spender: string, amount: BigNumberish, deadline: BigNumberish, v: BigNumberish, r: Buffer, s: Buffer): BatchCall {
