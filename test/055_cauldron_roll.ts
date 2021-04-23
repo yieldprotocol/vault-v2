@@ -11,7 +11,7 @@ import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { loadFixture } = waffle
 
-import { YieldEnvironment, LadleWrapper } from './shared/fixtures'
+import { YieldEnvironment } from './shared/fixtures'
 
 describe('Cauldron - roll', function () {
   this.timeout(0)
@@ -26,7 +26,6 @@ describe('Cauldron - roll', function () {
   let fyToken: FYToken
   let otherFYToken: FYToken
   let base: ERC20Mock
-  let ladle: LadleWrapper
 
   async function fixture() {
     return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId], [seriesId, otherSeriesId])
@@ -52,7 +51,6 @@ describe('Cauldron - roll', function () {
     env = await loadFixture(fixture)
     cauldron = env.cauldron
     cauldronFromOther = cauldron.connect(otherAcc)
-    ladle = env.ladle // TODO: Use Cauldron to pour instead
     base = env.assets.get(baseId) as ERC20Mock
     fyToken = env.series.get(seriesId) as FYToken
     otherFYToken = env.series.get(otherSeriesId) as FYToken

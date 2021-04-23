@@ -9,7 +9,7 @@ import { ERC20Mock as ERC20 } from '../typechain/ERC20Mock'
 import { OracleMock as Oracle } from '../typechain/OracleMock'
 import { SourceMock } from '../typechain/SourceMock'
 
-import { YieldEnvironment, LadleWrapper } from './shared/fixtures'
+import { YieldEnvironment } from './shared/fixtures'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
@@ -22,7 +22,6 @@ describe('Cauldron - level', function () {
   let owner: string
   let env: YieldEnvironment
   let cauldron: Cauldron
-  let ladle: LadleWrapper
   let fyToken: FYToken
   let base: ERC20
   let ilk: ERC20
@@ -50,7 +49,6 @@ describe('Cauldron - level', function () {
     this.timeout(0)
     env = await loadFixture(fixture)
     cauldron = env.cauldron
-    ladle = env.ladle // TODO: Use Cauldron to pour instead
     base = env.assets.get(baseId) as ERC20
     ilk = env.assets.get(ilkId) as ERC20
     rateOracle = env.oracles.get('rate') as Oracle
@@ -80,11 +78,11 @@ describe('Cauldron - level', function () {
   })
 
   it("users can't borrow and become undercollateralized", async () => {
-    await expect(ladle.pour(vaultId, owner, 0, WAD.mul(2))).to.be.revertedWith('Undercollateralized')
+    await expect(cauldron.pour(vaultId, 0, WAD.mul(2))).to.be.revertedWith('Undercollateralized')
   })
 
   it("users can't withdraw and become undercollateralized", async () => {
-    await expect(ladle.pour(vaultId, owner, WAD.mul(-1), 0)).to.be.revertedWith('Undercollateralized')
+    await expect(cauldron.pour(vaultId, WAD.mul(-1), 0)).to.be.revertedWith('Undercollateralized')
   })
 
   it('does not allow to mature before maturity', async () => {
