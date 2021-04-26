@@ -75,8 +75,7 @@ describe('Ladle - batch', function () {
   })
 
   it('operations and their data must match in length', async () => {
-    await expect(ladle.ladle.batch([0], []))
-      .to.be.revertedWith('Mismatched operation data')
+    await expect(ladle.ladle.batch([0], [])).to.be.revertedWith('Mismatched operation data')
   })
 
   it('builds a vault, tweaks it and gives it', async () => {
@@ -97,19 +96,17 @@ describe('Ladle - batch', function () {
   })
 
   it('builds a vault and destroys it', async () => {
-    await ladle.batch([
-      ladle.buildAction(vaultId, seriesId, ilkId),
-      ladle.destroyAction(vaultId),
-    ])
+    await ladle.batch([ladle.buildAction(vaultId, seriesId, ilkId), ladle.destroyAction(vaultId)])
   })
 
-  it('after giving a vault, it can\'t tweak it', async () => {
-    await expect(ladle.batch([
-      ladle.buildAction(vaultId, seriesId, ilkId),
-      ladle.giveAction(vaultId, other),
-      ladle.tweakAction(vaultId, seriesId, otherIlkId),
-    ]))
-    .to.be.revertedWith('Only vault owner')
+  it("after giving a vault, it can't tweak it", async () => {
+    await expect(
+      ladle.batch([
+        ladle.buildAction(vaultId, seriesId, ilkId),
+        ladle.giveAction(vaultId, other),
+        ladle.tweakAction(vaultId, seriesId, otherIlkId),
+      ])
+    ).to.be.revertedWith('Only vault owner')
   })
 
   it('builds a vault, permit and pour', async () => {
@@ -204,15 +201,13 @@ describe('Ladle - batch', function () {
     const posted = WAD.mul(2)
     const borrowed = WAD
 
-    await ladle.batch(
-      [
-        ladle.buildAction(vaultId, seriesId, ilkId),
-        ladle.pourAction(vaultId, owner, posted, borrowed),
-        ladle.forwardPermitAction(baseId, true, ladle.address, amount, deadline, v, r, s),
-        ladle.transferToPoolAction(seriesId, true, WAD.div(2)),
-        ladle.repayAction(vaultId, other, 0, 0),
-      ],
-    )
+    await ladle.batch([
+      ladle.buildAction(vaultId, seriesId, ilkId),
+      ladle.pourAction(vaultId, owner, posted, borrowed),
+      ladle.forwardPermitAction(baseId, true, ladle.address, amount, deadline, v, r, s),
+      ladle.transferToPoolAction(seriesId, true, WAD.div(2)),
+      ladle.repayAction(vaultId, other, 0, 0),
+    ])
   })
 
   it('users can transfer to a pool and repay a whole vault in a batch', async () => {
@@ -232,15 +227,13 @@ describe('Ladle - batch', function () {
     const posted = WAD.mul(2)
     const borrowed = WAD
 
-    await ladle.batch(
-      [
-        ladle.buildAction(vaultId, seriesId, ilkId),
-        ladle.pourAction(vaultId, owner, posted, borrowed),
-        ladle.forwardPermitAction(baseId, true, ladle.address, amount, deadline, v, r, s),
-        ladle.transferToPoolAction(seriesId, true, WAD),
-        ladle.repayVaultAction(vaultId, other, 0, MAX),
-      ],
-    )
+    await ladle.batch([
+      ladle.buildAction(vaultId, seriesId, ilkId),
+      ladle.pourAction(vaultId, owner, posted, borrowed),
+      ladle.forwardPermitAction(baseId, true, ladle.address, amount, deadline, v, r, s),
+      ladle.transferToPoolAction(seriesId, true, WAD),
+      ladle.repayVaultAction(vaultId, other, 0, MAX),
+    ])
   })
 
   it('calls can be routed to pools', async () => {
@@ -256,7 +249,6 @@ describe('Ladle - batch', function () {
     await base.mint(pool.address, WAD)
 
     const sellBaseTokenCall = pool.interface.encodeFunctionData('sellBaseToken', [owner, MAX128])
-    await expect(ladle.route(seriesId, sellBaseTokenCall))
-      .to.be.revertedWith('Pool: Not enough fyToken obtained')
+    await expect(ladle.route(seriesId, sellBaseTokenCall)).to.be.revertedWith('Pool: Not enough fyToken obtained')
   })
 })
