@@ -62,6 +62,12 @@ describe('Cauldron - vaults', function () {
     cauldronFromOther = cauldron.connect(otherAcc)
   })
 
+  it('does not build a vault with zero as the id', async () => {
+    await expect(cauldron.build(owner, '0x000000000000000000000000', seriesId, ilkId)).to.be.revertedWith(
+      'Vault id is zero'
+    )
+  })
+
   it('does not build a vault with an unknown series', async () => {
     // TODO: Error message misleading, replace in contract for something generic
     await expect(cauldron.build(owner, vaultId, mockAssetId, ilkId)).to.be.revertedWith('Ilk not added')
