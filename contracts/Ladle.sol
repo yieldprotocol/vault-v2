@@ -177,7 +177,7 @@ contract Ladle is AccessControl() {
             } else if (operation == Operation.ROLL) {
                 (bytes12 vaultId, bytes6 newSeriesId, uint128 max) = abi.decode(data[i], (bytes12, bytes6, uint128));
                 if (vaultId_ != vaultId) vault = getOwnedVault(vaultId);
-                /* vault = */ _roll(vaultId, vault, newSeriesId, max); // TODO: _roll must return vault and balances
+                (vault,) = _roll(vaultId, vault, newSeriesId, max); // TODO: _roll must return vault and balances
             
             } else if (operation == Operation.FORWARD_DAI_PERMIT) {
                 (bytes6 id, bool asset, address spender, uint256 nonce, uint256 deadline, bool allowed, uint8 v, bytes32 r, bytes32 s) =
@@ -297,7 +297,7 @@ contract Ladle is AccessControl() {
     /// @dev Change series and debt of a vault.
     function _roll(bytes12 vaultId, DataTypes.Vault memory vault, bytes6 newSeriesId, uint128 max)
         private
-        returns (uint128)
+        returns (DataTypes.Vault memory, DataTypes.Balances memory)
     {
         DataTypes.Balances memory balances = cauldron.balances(vaultId);
         
@@ -320,9 +320,7 @@ contract Ladle is AccessControl() {
         pool.retrieveFYToken(address(fyToken));                 // Get the surplus fyToken
         fyToken.burn(address(fyToken), (amt * 2) - newDebt);    // Burn the surplus
 
-        cauldron.roll(vaultId, newSeriesId, newDebt);           // Change the series and debt for the vault
-        
-        return newDebt;
+        return cauldron.roll(vaultId, newSeriesId, newDebt);    // Change the series and debt for the vault
     }
 
     /// @dev Move collateral and debt to the owner's vault.
