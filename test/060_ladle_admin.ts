@@ -118,7 +118,7 @@ describe('Ladle - admin', function () {
 
     it('adds a join', async () => {
       expect(await ladle.addJoin(ilkId, ilkJoin.address))
-        .to.emit(ladle, 'JoinAdded')
+        .to.emit(ladle.ladle, 'JoinAdded') // The event is emitted by the ladle, not the wrapper
         .withArgs(ilkId, ilkJoin.address)
       expect(await ladle.joins(ilkId)).to.equal(ilkJoin.address)
     })
@@ -126,7 +126,7 @@ describe('Ladle - admin', function () {
     it('adds the same join for a second ilk of the same asset', async () => {
       await cauldron.addAsset(otherIlkId, ilk.address)
       expect(await ladle.addJoin(otherIlkId, ilkJoin.address))
-        .to.emit(ladle, 'JoinAdded')
+        .to.emit(ladle.ladle, 'JoinAdded')
         .withArgs(otherIlkId, ilkJoin.address)
       expect(await ladle.joins(otherIlkId)).to.equal(ilkJoin.address)
     })
@@ -160,7 +160,7 @@ describe('Ladle - admin', function () {
 
     it('adds a pool', async () => {
       expect(await ladle.addPool(seriesId, pool.address))
-        .to.emit(ladle, 'PoolAdded')
+        .to.emit(ladle.ladle, 'PoolAdded')
         .withArgs(seriesId, pool.address)
       expect(await ladle.pools(seriesId)).to.equal(pool.address)
     })
