@@ -107,10 +107,12 @@ describe('Ladle - serve and repay', function () {
     const inkRetrieved = WAD.div(4)
 
     await base.approve(ladle.address, debtRepaidInBase) // This would normally be part of a multicall, using ladle.forwardPermit
-    await expect(ladle.batch(vaultId, [
-      ladle.transferToPoolAction(true, debtRepaidInBase),
-      ladle.repayAction(owner, inkRetrieved, 0)
-    ]))
+    await expect(
+      ladle.batch([
+        ladle.transferToPoolAction(seriesId, true, debtRepaidInBase),
+        ladle.repayAction(vaultId, owner, inkRetrieved, 0),
+      ])
+    )
       .to.emit(cauldron, 'VaultPoured')
       .withArgs(vaultId, seriesId, ilkId, inkRetrieved, debtRepaidInFY.mul(-1))
       .to.emit(pool, 'Trade')
@@ -152,9 +154,9 @@ describe('Ladle - serve and repay', function () {
 
     await base.approve(ladle.address, baseOffered) // This would normally be part of a multicall, using ladle.forwardPermit
     await expect(
-      ladle.batch(vaultId, [
-        ladle.transferToPoolAction(true, baseOffered),
-        ladle.repayVaultAction(owner, inkRetrieved, MAX)
+      ladle.batch([
+        ladle.transferToPoolAction(seriesId, true, baseOffered),
+        ladle.repayVaultAction(vaultId, owner, inkRetrieved, MAX),
       ])
     )
       .to.emit(cauldron, 'VaultPoured')

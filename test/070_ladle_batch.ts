@@ -87,10 +87,10 @@ describe('Ladle - batch', function () {
 
     const borrowed = WAD
 
-    await ladle.batch(vaultId, [
-      ladle.buildAction(seriesId, ilkId),
+    await ladle.batch([
+      ladle.buildAction(vaultId, seriesId, ilkId),
       ladle.forwardPermitAction(ilkId, true, ilkJoin.address, posted, deadline, v, r, s),
-      ladle.serveAction(owner, posted, borrowed, MAX)
+      ladle.serveAction(vaultId, owner, posted, borrowed, MAX),
     ])
 
     const vault = await cauldron.vaults(vaultId)
@@ -105,11 +105,10 @@ describe('Ladle - batch', function () {
     const borrowed = WAD
 
     await ladle.batch(
-      newVaultId,
       [
-        ladle.buildAction(seriesId, ethId),
+        ladle.buildAction(newVaultId, seriesId, ethId),
         ladle.joinEtherAction(ethId),
-        ladle.serveAction(owner, posted, borrowed, MAX)
+        ladle.serveAction(newVaultId, owner, posted, borrowed, MAX),
       ],
       { value: posted }
     )
@@ -125,22 +124,21 @@ describe('Ladle - batch', function () {
     const borrowed = WAD
 
     await ladle.batch(
-      ethVaultId,
       [
         ladle.joinEtherAction(ethId),
-        ladle.pourAction(owner, posted, 0),
-        ladle.serveAction(other, 0, borrowed, MAX)        
+        ladle.pourAction(ethVaultId, owner, posted, 0),
+        ladle.serveAction(ethVaultId, other, 0, borrowed, MAX),
       ],
       { value: posted }
     )
   })
 
   it('calls can be routed to pools', async () => {
-    await ladle.build(vaultId, seriesId, ilkId) // ladle.batch can only be executed by vault owners
+    await ladle.build(vaultId, seriesId, ilkId)
     await base.mint(pool.address, WAD)
 
     const retrieveBaseTokenCall = pool.interface.encodeFunctionData('retrieveBaseToken', [owner])
-    await expect(await ladle.route(vaultId, retrieveBaseTokenCall)) // The pool is found through the vault seriesId
+    await expect(await ladle.route(seriesId, retrieveBaseTokenCall))
       .to.emit(base, 'Transfer')
       .withArgs(pool.address, owner, WAD)
   })

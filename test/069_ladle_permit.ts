@@ -72,7 +72,7 @@ describe('Ladle - permit', function () {
 
     const { v, r, s } = signatures.sign(permitDigest, signatures.privateKey0)
 
-    expect(await ladle.forwardPermit(ilkVaultId, ilkId, true, ilkJoin.address, amount, deadline, v, r, s))
+    expect(await ladle.forwardPermit(ilkId, true, ilkJoin.address, amount, deadline, v, r, s))
       .to.emit(ilk, 'Approval')
       .withArgs(owner, ilkJoin.address, WAD)
 
@@ -93,7 +93,7 @@ describe('Ladle - permit', function () {
 
     const { v, r, s } = signatures.sign(permitDigest, signatures.privateKey0)
 
-    expect(await ladle.forwardPermit(ilkVaultId, seriesId, false, ladle.address, amount, deadline, v, r, s))
+    expect(await ladle.forwardPermit(seriesId, false, ladle.address, amount, deadline, v, r, s))
       .to.emit(fyToken, 'Approval')
       .withArgs(owner, ladle.address, WAD)
 
@@ -116,10 +116,12 @@ describe('Ladle - permit', function () {
 
     const vaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12)) // You can't use `batch` without owning or building a vault.
 
-    expect(await ladle.batch(vaultId, [
-      ladle.buildAction(seriesId, ilkId),
-      ladle.forwardPermitAction(seriesId, false, ladle.address, amount, deadline, v, r, s)
-    ]))
+    expect(
+      await ladle.batch([
+        ladle.buildAction(vaultId, seriesId, ilkId),
+        ladle.forwardPermitAction(seriesId, false, ladle.address, amount, deadline, v, r, s),
+      ])
+    )
       .to.emit(fyToken, 'Approval')
       .withArgs(owner, ladle.address, WAD)
 
@@ -139,7 +141,7 @@ describe('Ladle - permit', function () {
 
     const { v, r, s } = signatures.sign(daiPermitDigest, signatures.privateKey0)
 
-    expect(await ladle.forwardDaiPermit(ilkVaultId, DAI, true, ladle.address, nonce, deadline, true, v, r, s))
+    expect(await ladle.forwardDaiPermit(DAI, true, ladle.address, nonce, deadline, true, v, r, s))
       .to.emit(dai, 'Approval')
       .withArgs(owner, ladle.address, MAX)
 
@@ -161,10 +163,12 @@ describe('Ladle - permit', function () {
 
     const vaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12)) // You can't use `batch` without owning or building a vault.
 
-    expect(await ladle.batch(vaultId, [
-      ladle.buildAction(seriesId, ilkId),
-      ladle.forwardDaiPermitAction(DAI, true, ladle.address, nonce, deadline, true, v, r, s)
-    ]))
+    expect(
+      await ladle.batch([
+        ladle.buildAction(vaultId, seriesId, ilkId),
+        ladle.forwardDaiPermitAction(DAI, true, ladle.address, nonce, deadline, true, v, r, s),
+      ])
+    )
       .to.emit(dai, 'Approval')
       .withArgs(owner, ladle.address, MAX)
 
@@ -185,8 +189,8 @@ describe('Ladle - permit', function () {
 
     const { v, r, s } = signatures.sign(permitDigest, signatures.privateKey0)
 
-    await expect(
-      ladle.forwardPermit(ilkVaultId, mockIlkId, true, ilkJoin.address, amount, deadline, v, r, s)
-    ).to.be.revertedWith('Token not found')
+    await expect(ladle.forwardPermit(mockIlkId, true, ilkJoin.address, amount, deadline, v, r, s)).to.be.revertedWith(
+      'Token not found'
+    )
   })
 })

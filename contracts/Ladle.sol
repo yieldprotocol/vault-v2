@@ -139,25 +139,20 @@ contract Ladle is AccessControl() {
     /// Unlike `multicall`, this function calls private functions, saving a CALL per function.
     /// It also caches the vault, which is useful in `build` + `pour` and `build` + `serve` combinations.
     function batch(
-        bytes12 vaultId,
         Operation[] calldata operations,
         bytes[] calldata data
-    ) external payable {    // TODO: I think we need `payable` to receive ether which we will deposit through `joinEther`
+    ) external payable {
         require(operations.length == data.length, "Unmatched operation data");
+        bytes12 vaultId_;
         DataTypes.Vault memory vault;
-        IFYToken fyToken;
-        IPool pool;
 
         // Execute all operations in the batch. Conditionals ordered by expected frequency.
         for (uint256 i = 0; i < operations.length; i += 1) {
 
             Operation operation = operations[i];
 
-            // If we don't have a vault cached, and we are not building it, we cache it
-            if (vault.owner == address(0) && operation != Operation.BUILD) vault = getOwnedVault(vaultId);
-
             if (operation == Operation.BUILD) {
-                (bytes6 seriesId, bytes6 ilkId) = abi.decode(data[i], (bytes6, bytes6));
+                (bytes12 vaultId, bytes6 seriesId, bytes6 ilkId) = abi.decode(data[i], (bytes12, bytes6, bytes6));
                 vault = _build(vaultId, seriesId, ilkId);   // Cache the vault that was just built
             
             } else if (operation == Operation.FORWARD_PERMIT) {
@@ -170,16 +165,19 @@ contract Ladle is AccessControl() {
                 _joinEther(etherId);
             
             } else if (operation == Operation.POUR) {
-                (address to, int128 ink, int128 art) = abi.decode(data[i], (address, int128, int128));
+                (bytes12 vaultId, address to, int128 ink, int128 art) = abi.decode(data[i], (bytes12, address, int128, int128));
+                if (vaultId_ != vaultId) vault = getOwnedVault(vaultId);
                 _pour(vaultId, vault, to, ink, art);
             
             } else if (operation == Operation.SERVE) {
-                (address to, uint128 ink, uint128 base, uint128 max) = abi.decode(data[i], (address, uint128, uint128, uint128));
+                (bytes12 vaultId, address to, uint128 ink, uint128 base, uint128 max) = abi.decode(data[i], (bytes12, address, uint128, uint128, uint128));
+                if (vaultId_ != vaultId) vault = getOwnedVault(vaultId);
                 _serve(vaultId, vault, to, ink, base, max);
 
             } else if (operation == Operation.ROLL) {
-                (bytes6 newSeriesId, uint128 max) = abi.decode(data[i], (bytes6, uint128));
-                _roll(vaultId, vault, newSeriesId, max);
+                (bytes12 vaultId, bytes6 newSeriesId, uint128 max) = abi.decode(data[i], (bytes12, bytes6, uint128));
+                if (vaultId_ != vaultId) vault = getOwnedVault(vaultId);
+                /* vault = */ _roll(vaultId, vault, newSeriesId, max); // TODO: _roll must return vault and balances
             
             } else if (operation == Operation.FORWARD_DAI_PERMIT) {
                 (bytes6 id, bool asset, address spender, uint256 nonce, uint256 deadline, bool allowed, uint8 v, bytes32 r, bytes32 s) =
@@ -187,61 +185,72 @@ contract Ladle is AccessControl() {
                 _forwardDaiPermit(id, asset, spender, nonce, deadline, allowed, v, r, s);
             
             } else if (operation == Operation.TRANSFER_TO_POOL) {
-                (bool base, uint128 wad) =
-                    abi.decode(data[i], (bool, uint128));
-                if (address(pool) == address(0)) pool = getPool(vault.seriesId);
+                (bytes6 seriesId, bool base, uint128 wad) =
+                    abi.decode(data[i], (bytes6, bool, uint128));
+                IPool pool = getPool(seriesId);
                 _transferToPool(pool, base, wad);
             
             } else if (operation == Operation.ROUTE) {
-                if (address(pool) == address(0)) pool = getPool(vault.seriesId);
-                _route(pool, data[i]);
+                (bytes6 seriesId, bytes memory poolCall) =
+                    abi.decode(data[i], (bytes6, bytes));
+                IPool pool = getPool(seriesId);
+                _route(pool, poolCall);
             
             } else if (operation == Operation.EXIT_ETHER) {
                 (bytes6 etherId, address to) = abi.decode(data[i], (bytes6, address));
                 _exitEther(etherId, payable(to));
             
             } else if (operation == Operation.CLOSE) {
-                (address to, int128 ink, int128 art) = abi.decode(data[i], (address, int128, int128));
+                (bytes12 vaultId, address to, int128 ink, int128 art) = abi.decode(data[i], (bytes12, address, int128, int128));
+                if (vaultId_ != vaultId) vault = getOwnedVault(vaultId);
                 _close(vaultId, vault, to, ink, art);
             
             } else if (operation == Operation.REPAY) {
-                (address to, int128 ink, uint128 min) = abi.decode(data[i], (address, int128, uint128));
+                (bytes12 vaultId, address to, int128 ink, uint128 min) = abi.decode(data[i], (bytes12, address, int128, uint128));
+                if (vaultId_ != vaultId) vault = getOwnedVault(vaultId);
                 _repay(vaultId, vault, to, ink, min);
             
             } else if (operation == Operation.REPAY_VAULT) {
-                (address to, int128 ink, uint128 max) = abi.decode(data[i], (address, int128, uint128));
+                (bytes12 vaultId, address to, int128 ink, uint128 max) = abi.decode(data[i], (bytes12, address, int128, uint128));
+                if (vaultId_ != vaultId) vault = getOwnedVault(vaultId);
                 _repayVault(vaultId, vault, to, ink, max);
             
             } else if (operation == Operation.TRANSFER_TO_FYTOKEN) {
-                (uint256 amount) = abi.decode(data[i], (uint256));
-                if (address(fyToken) == address(0)) fyToken = getSeries(vault.seriesId).fyToken;
+                (bytes6 seriesId, uint256 amount) = abi.decode(data[i], (bytes6, uint256));
+                IFYToken fyToken = getSeries(seriesId).fyToken;
                 _transferToFYToken(fyToken, amount);
             
             } else if (operation == Operation.REDEEM) {
-                (address to, uint256 amount) = abi.decode(data[i], (address, uint256));
-                if (address(fyToken) == address(0)) fyToken = getSeries(vault.seriesId).fyToken;
+                (bytes6 seriesId, address to, uint256 amount) = abi.decode(data[i], (bytes6, address, uint256));
+                IFYToken fyToken = getSeries(seriesId).fyToken;
                 _redeem(fyToken, to, amount);
             
             } else if (operation == Operation.STIR_FROM) {
-                (bytes12 to, uint128 ink, uint128 art) = abi.decode(data[i], (bytes12, uint128, uint128));
+                (bytes12 vaultId, bytes12 to, uint128 ink, uint128 art) = abi.decode(data[i], (bytes12, bytes12, uint128, uint128));
+                if (vaultId_ != vaultId) vault = getOwnedVault(vaultId);
                 _stirFrom(vaultId, to, ink, art);
             
             } else if (operation == Operation.STIR_TO) {
-                (bytes12 from, uint128 ink, uint128 art) = abi.decode(data[i], (bytes12, uint128, uint128));
+                (bytes12 from, bytes12 vaultId, uint128 ink, uint128 art) = abi.decode(data[i], (bytes12, bytes12, uint128, uint128));
+                if (vaultId_ != vaultId) vault = getOwnedVault(vaultId);
                 _stirTo(from, vaultId, ink, art);
             
             } else if (operation == Operation.TWEAK) {
-                (bytes6 seriesId, bytes6 ilkId) = abi.decode(data[i], (bytes6, bytes6));
-                vault = _tweak(vaultId, seriesId, ilkId);   // Cache the vault again after changing the series
+                (bytes12 vaultId, bytes6 seriesId, bytes6 ilkId) = abi.decode(data[i], (bytes12, bytes6, bytes6));
+                if (vaultId_ != vaultId) vault = getOwnedVault(vaultId);
+                vault = _tweak(vaultId, seriesId, ilkId);
 
             } else if (operation == Operation.GIVE) {
-                require (i == operations.length - 1, "Give must be the last action");
-                (address to) = abi.decode(data[i], (address));
-                _give(vaultId, to);
+                (bytes12 vaultId, address to) = abi.decode(data[i], (bytes12, address));
+                if (vaultId_ != vaultId) vault = getOwnedVault(vaultId);
+                vault = _give(vaultId, to);
+                delete vault;   // Clear the cache, since the vault doesn't necessarily belong to msg.sender anymore
 
             } else if (operation == Operation.DESTROY) {
-                delete vault;   // Clear the cache
+                (bytes12 vaultId) = abi.decode(data[i], (bytes12));
+                if (vaultId_ != vaultId) vault = getOwnedVault(vaultId);
                 _destroy(vaultId);
+                delete vault;   // Clear the cache
             
             } else {
                 revert("Invalid operation");

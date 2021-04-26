@@ -105,7 +105,7 @@ describe('Ladle - stir', function () {
     await ladle.pour(vaultFromId, owner, WAD, 0)
     await ladle.give(vaultToId, other)
 
-    expect(await ladle.batch(vaultFromId, [ladle.stirFromAction(vaultToId, WAD, 0)]))
+    expect(await ladle.batch([ladle.stirFromAction(vaultFromId, vaultToId, WAD, 0)]))
       .to.emit(cauldron, 'VaultStirred')
       .withArgs(vaultFromId, vaultToId, WAD, 0)
     expect((await cauldron.balances(vaultFromId)).ink).to.equal(0)
@@ -116,7 +116,7 @@ describe('Ladle - stir', function () {
     await ladle.pour(vaultFromId, owner, WAD, 0)
     await ladle.give(vaultFromId, other)
 
-    await expect(ladle.batch(vaultFromId, [ladle.stirFromAction(vaultToId, WAD, 0)])).to.be.revertedWith(
+    await expect(ladle.batch([ladle.stirFromAction(vaultFromId, vaultToId, WAD, 0)])).to.be.revertedWith(
       'Only vault owner'
     )
   })
@@ -126,7 +126,7 @@ describe('Ladle - stir', function () {
     await ladle.pour(vaultToId, owner, WAD, 0)
     await ladle.give(vaultFromId, other)
 
-    expect(await ladle.batch(vaultToId, [ladle.stirToAction(vaultFromId, 0, WAD)]))
+    expect(await ladle.batch([ladle.stirToAction(vaultFromId, vaultToId, 0, WAD)]))
       .to.emit(cauldron, 'VaultStirred')
       .withArgs(vaultFromId, vaultToId, 0, WAD)
     expect((await cauldron.balances(vaultFromId)).art).to.equal(0)
@@ -137,6 +137,8 @@ describe('Ladle - stir', function () {
     await ladle.pour(vaultFromId, owner, WAD, WAD)
     await ladle.give(vaultToId, other)
 
-    await expect(ladle.batch(vaultToId, [ladle.stirToAction(vaultFromId, 0, WAD)])).to.be.revertedWith('Only vault owner')
+    await expect(ladle.batch([ladle.stirToAction(vaultFromId, vaultToId, 0, WAD)])).to.be.revertedWith(
+      'Only vault owner'
+    )
   })
 })

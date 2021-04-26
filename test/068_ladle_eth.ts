@@ -64,7 +64,7 @@ describe('Ladle - eth', function () {
   })
 
   it('users can transfer ETH then pour', async () => {
-    expect(await ladle.joinEther(ethVaultId, ethId, { value: WAD }))
+    expect(await ladle.joinEther(ethId, { value: WAD }))
     expect(await ladle.pour(ethVaultId, owner, WAD, 0))
       .to.emit(cauldron, 'VaultPoured')
       .withArgs(ethVaultId, seriesId, ethId, WAD, 0)
@@ -73,15 +73,12 @@ describe('Ladle - eth', function () {
   })
 
   it('users can transfer ETH then pour in a single transaction with batch', async () => {
-    await ladle.batch(ethVaultId, [
-      ladle.joinEtherAction(ethId),
-      ladle.pourAction(owner, WAD, 0)
-    ], { value: WAD })
+    await ladle.batch([ladle.joinEtherAction(ethId), ladle.pourAction(ethVaultId, owner, WAD, 0)], { value: WAD })
   })
 
   describe('with ETH posted', async () => {
     beforeEach(async () => {
-      expect(await ladle.joinEther(ethVaultId, ethId, { value: WAD }))
+      expect(await ladle.joinEther(ethId, { value: WAD }))
       await ladle.pour(ethVaultId, owner, WAD, 0)
     })
 
@@ -93,28 +90,28 @@ describe('Ladle - eth', function () {
       expect((await cauldron.balances(ethVaultId)).ink).to.equal(0)
       expect(await weth.balanceOf(ladle.address)).to.equal(WAD)
 
-      expect(await ladle.exitEther(ethVaultId, ethId, owner))
+      expect(await ladle.exitEther(ethId, owner))
         .to.emit(weth, 'Withdrawal')
         .withArgs(ladle.address, WAD)
       expect(await weth.balanceOf(ladle.address)).to.equal(0)
     })
 
     it('users can pour then unwrap to ETH in a single transaction with batch', async () => {
-      await ladle.batch(ethVaultId, [
-        ladle.pourAction(ladle.address, WAD.mul(-1), 0),
-        ladle.exitEtherAction(ethId, owner)
+      await ladle.batch([
+        ladle.pourAction(ethVaultId, ladle.address, WAD.mul(-1), 0),
+        ladle.exitEtherAction(ethId, owner),
       ])
     })
   })
 
   describe('with ETH posted and positive debt', async () => {
     beforeEach(async () => {
-      expect(await ladle.joinEther(ethVaultId, ethId, { value: WAD }))
+      expect(await ladle.joinEther(ethId, { value: WAD }))
       await ladle.pour(ethVaultId, owner, WAD, WAD)
     })
 
     it('users can close to post ETH', async () => {
-      expect(await ladle.joinEther(ethVaultId, ethId, { value: WAD }))
+      expect(await ladle.joinEther(ethId, { value: WAD }))
       expect(await ladle.close(ethVaultId, owner, WAD, WAD.mul(-1)))
         .to.emit(cauldron, 'VaultPoured')
         .withArgs(ethVaultId, seriesId, ethId, WAD, WAD.mul(-1))
