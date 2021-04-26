@@ -77,6 +77,10 @@ describe('Cauldron - admin', function () {
     )
   })
 
+  it('does not allow using zero as an asset identifier', async () => {
+    await expect(cauldron.addAsset('0x000000000000', base.address)).to.be.revertedWith('Asset id is zero')
+  })
+
   it('adds an asset', async () => {
     expect(await cauldron.addAsset(ilkId1, ilk1.address))
       .to.emit(cauldron, 'AssetAdded')
@@ -151,6 +155,12 @@ describe('Cauldron - admin', function () {
       it('does not allow linking a series to the wrong base', async () => {
         await expect(cauldron.addSeries(seriesId, ilkId1, fyToken.address)).to.be.revertedWith(
           'Mismatched series and base'
+        )
+      })
+
+      it('does not allow using zero as the series id', async () => {
+        await expect(cauldron.addSeries('0x000000000000', baseId, fyToken.address)).to.be.revertedWith(
+          'Series id is zero'
         )
       })
 
