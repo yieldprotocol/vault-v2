@@ -49,14 +49,12 @@ contract Ladle is AccessControl() {
     }
 
     ICauldron public immutable cauldron;
-    address public poolRouter;
 
     mapping (bytes6 => IJoin)                   public joins;            // Join contracts available to manage assets. The same Join can serve multiple assets (ETH-A, ETH-B, etc...)
     mapping (bytes6 => IPool)                   public pools;            // Pool contracts available to manage series. 12 bytes still free.
 
     event JoinAdded(bytes6 indexed assetId, address indexed join);
     event PoolAdded(bytes6 indexed seriesId, address indexed pool);
-    event PoolRouterSet(address indexed poolRouter);
 
     constructor (ICauldron cauldron_) {
         cauldron = cauldron_;
@@ -121,15 +119,6 @@ contract Ladle is AccessControl() {
         require (fyToken.asset() == address(pool.baseToken()), "Mismatched pool base and series");
         pools[seriesId] = pool;
         emit PoolAdded(seriesId, address(pool));
-    }
-
-    /// @dev Set the Pool Router for this Ladle
-    function setPoolRouter(address poolRouter_)
-        external
-        auth
-    {
-        poolRouter = poolRouter_;
-        emit PoolRouterSet(poolRouter_);
     }
 
     // ---- Batching ----
