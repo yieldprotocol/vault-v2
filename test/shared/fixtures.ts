@@ -81,7 +81,7 @@ export class YieldEnvironment {
     this.vaults = vaults
   }
 
-  public static async cauldronGovAuth(owner: SignerWithAddress, cauldron: Cauldron, receiver: string) {
+  public static async cauldronGovAuth(cauldron: Cauldron, receiver: string) {
     await cauldron.grantRoles(
       [
         id('addAsset(bytes6,address)'),
@@ -95,7 +95,7 @@ export class YieldEnvironment {
     )
   }
 
-  public static async cauldronLadleAuth(owner: SignerWithAddress, cauldron: Cauldron, receiver: string) {
+  public static async cauldronLadleAuth(cauldron: Cauldron, receiver: string) {
     await cauldron.grantRoles(
       [
         id('build(address,bytes12,bytes6,bytes6)'),
@@ -111,7 +111,7 @@ export class YieldEnvironment {
     )
   }
 
-  public static async cauldronWitchAuth(owner: SignerWithAddress, cauldron: Cauldron, receiver: string) {
+  public static async cauldronWitchAuth(cauldron: Cauldron, receiver: string) {
     await cauldron.grantRoles(
       [
         id('destroy(bytes12)'),
@@ -121,18 +121,19 @@ export class YieldEnvironment {
     )
   }
 
-  public static async ladleGovAuth(owner: SignerWithAddress, ladle: LadleWrapper, receiver: string) {
+  public static async ladleGovAuth(ladle: LadleWrapper, receiver: string) {
     await ladle.grantRoles(
       [
         id('addJoin(bytes6,address)'),
         id('addPool(bytes6,address)'),
         id('setPoolRouter(address)'),
+        id('setFee(uint256)'),
       ],
       receiver
     )
   }
 
-  public static async ladleWitchAuth(owner: SignerWithAddress, ladle: LadleWrapper, receiver: string) {
+  public static async ladleWitchAuth(ladle: LadleWrapper, receiver: string) {
     await ladle.grantRoles([
       id(
         'settle(bytes12,address,uint128,uint128)'
@@ -242,15 +243,15 @@ export class YieldEnvironment {
     const witch = (await deployContract(owner, WitchArtifact, [cauldron.address, ladle.address])) as Witch
 
     // ==== Orchestration ====
-    await this.cauldronLadleAuth(owner, cauldron, ladle.address)
-    await this.cauldronWitchAuth(owner, cauldron, witch.address)
-    await this.ladleWitchAuth(owner, ladle, witch.address)
+    await this.cauldronLadleAuth(cauldron, ladle.address)
+    await this.cauldronWitchAuth(cauldron, witch.address)
+    await this.ladleWitchAuth(ladle, witch.address)
 
     // ==== Owner access (only test environment) ====
-    await this.cauldronGovAuth(owner, cauldron, ownerAdd)
-    await this.cauldronLadleAuth(owner, cauldron, ownerAdd)
-    await this.ladleGovAuth(owner, ladle, ownerAdd)
-    await this.ladleWitchAuth(owner, ladle, ownerAdd)
+    await this.cauldronGovAuth(cauldron, ownerAdd)
+    await this.cauldronLadleAuth(cauldron, ownerAdd)
+    await this.ladleGovAuth(ladle, ownerAdd)
+    await this.ladleWitchAuth(ladle, ownerAdd)
 
     // ==== Add assets and joins ====
     // For each asset id passed as an argument, we create a Mock ERC20 which we register in cauldron, and its Join, that we register in Ladle.

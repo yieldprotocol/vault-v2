@@ -104,6 +104,16 @@ describe('Ladle - pour', function () {
       expect(await fyToken.balanceOf(owner)).to.equal(WAD)
       expect((await cauldron.balances(vaultId)).art).to.equal(WAD)
     })
+
+    it('users can be charged a fee when borrowing', async () => {
+      const fee = WAD.div(1000000000) // 0.000000 001% wei/second
+      await ladle.setFee(fee)
+      await ladle.pour(vaultId, owner, 0, WAD)
+      const now = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
+      const appliedFee = (await fyToken.maturity()).sub(now).mul(fee)
+      expect(await fyToken.balanceOf(owner)).to.equal(WAD)
+      expect((await cauldron.balances(vaultId)).art).to.equal(WAD.add(appliedFee))
+    })
   })
 
   it('users can pour to post collateral and borrow fyToken', async () => {

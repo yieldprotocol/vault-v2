@@ -107,6 +107,14 @@ describe('Ladle - admin', function () {
     pool = (await deployContract(ownerAcc, PoolMockArtifact, [base.address, fyToken.address])) as PoolMock
   })
 
+  it('sets the borrowing fee', async () => {
+    const fee = WAD.div(100)
+    expect(await ladle.setFee(fee))
+      .to.emit(ladle.ladle, 'FeeSet') // The event is emitted by the ladle, not the wrapper
+      .withArgs(fee)
+    expect(await ladle.borrowingFee()).to.equal(fee)
+  })
+
   describe('join admin', async () => {
     it('does not allow adding a join before adding its ilk', async () => {
       await expect(ladle.addJoin(mockAssetId, ilkJoin.address)).to.be.revertedWith('Asset not found')
