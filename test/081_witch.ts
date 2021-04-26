@@ -109,6 +109,12 @@ describe('Witch', function () {
       await expect(witch.buy(vaultId, WAD, WAD)).to.be.revertedWith('Not enough bought')
     })
 
+    it('it can buy no collateral (coverage)', async () => {
+      expect(await witch.buy(vaultId, 0, 0))
+        .to.emit(witch, 'Bought')
+        .withArgs(owner, vaultId, 0, 0)
+    })
+
     it('allows to buy 1/2 of the collateral for the whole debt at the beginning', async () => {
       const baseBalanceBefore = await base.balanceOf(owner)
       const ilkBalanceBefore = await ilk.balanceOf(owner)

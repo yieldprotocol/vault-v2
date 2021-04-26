@@ -134,12 +134,19 @@ describe('Ladle - batch', function () {
   })
 
   it('calls can be routed to pools', async () => {
-    await ladle.build(vaultId, seriesId, ilkId)
     await base.mint(pool.address, WAD)
 
     const retrieveBaseTokenCall = pool.interface.encodeFunctionData('retrieveBaseToken', [owner])
     await expect(await ladle.route(seriesId, retrieveBaseTokenCall))
       .to.emit(base, 'Transfer')
       .withArgs(pool.address, owner, WAD)
+  })
+
+  it('errors bubble up from calls routed to pools', async () => {
+    await base.mint(pool.address, WAD)
+
+    const sellBaseTokenCall = pool.interface.encodeFunctionData('sellBaseToken', [owner, MAX128])
+    await expect(ladle.route(seriesId, sellBaseTokenCall))
+      .to.be.revertedWith('Pool: Not enough fyToken obtained')
   })
 })
