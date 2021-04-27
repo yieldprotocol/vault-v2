@@ -36,8 +36,9 @@ yarn-error.log
 # NPM
 package-lock.json
 
-# Crytic
+# Crytic / MythX
 crytic-export/
+mythx.json
 
 # Typescript
 dist/

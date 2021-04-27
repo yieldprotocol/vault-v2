@@ -1,0 +1,14 @@
+output: mythx.json
+format: json
+analyze:
+    mode: quick
+    async: true
+    create-group: true
+    group-name: Utils
+    solc: 0.8.1
+    targets:
+      - contracts/fuzz/Cauldron.sol:Cauldron
+      - contracts/fuzz/FYToken.sol:FYToken
+      - contracts/fuzz/Join.sol:Join
+      - contracts/fuzz/Ladle.sol:Ladle
+      - contracts/fuzz/Witch.sol:Witch
