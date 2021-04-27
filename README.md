@@ -48,10 +48,16 @@ $ yarn test
 ```
 
 ### Fuzz
-You will need to install [echidna](https://github.com/crytic/echidna) separately, and then run:
-
+Flatten the contracts and remove SPDX tags
 ```
-$ echidna-test . --contract WhitepaperInvariant --config contracts/invariants/config.yaml
+for file in Cauldron FYToken Join Ladle Witch; do
+npx hardhat flatten contracts/$file.sol | sed s/^.*SPDX.*$//g > fuzz/$file.sol;
+done
+```
+
+Submit for analysis
+```
+mythx --api-key `cat .mythxKey` --config mythx.yml analyze
 ```
 
 ### Start a local blockchain

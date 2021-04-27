@@ -38,6 +38,7 @@ package-lock.json
 
 # Crytic / MythX
 crytic-export/
+fuzz/
 mythx.json
 
 # Typescript
