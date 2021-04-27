@@ -166,7 +166,7 @@ contract Cauldron is AccessControl() {
     {
         require (vaultId != bytes12(0), "Vault id is zero");
         require (vaults[vaultId].seriesId == bytes6(0), "Vault already exists");   // Series can't take bytes6(0) as their id
-        require (ilks[seriesId][ilkId] == true, "Ilk not added");
+        require (ilks[seriesId][ilkId] == true, "Mismatched ilk and series");
         vault = DataTypes.Vault({
             owner: owner,
             seriesId: seriesId,
@@ -193,7 +193,7 @@ contract Cauldron is AccessControl() {
     function _tweak(bytes12 vaultId, DataTypes.Vault memory vault)
         internal
     {
-        require (ilks[vault.seriesId][vault.ilkId] == true, "Ilk not added");
+        require (ilks[vault.seriesId][vault.ilkId] == true, "Mismatched ilk and series");
 
         vaults[vaultId] = vault;
         emit VaultTweaked(vaultId, vault.seriesId, vault.ilkId);
@@ -206,7 +206,6 @@ contract Cauldron is AccessControl() {
         auth
         returns(DataTypes.Vault memory vault)
     {
-        // require (ilks[seriesId][ilkId] == true, "Ilk not added");
         DataTypes.Balances memory balances_ = balances[vaultId];
         vault = vaults[vaultId];
         if (seriesId != vault.seriesId) {
