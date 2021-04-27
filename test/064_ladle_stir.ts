@@ -60,7 +60,7 @@ describe('Ladle - stir', function () {
     vaultFromId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
 
     // ==== Set testing environment ====
-    await cauldron.build(owner, vaultToId, seriesId, ilkId)
+    await ladle.build(vaultToId, seriesId, ilkId)
   })
 
   it('does not allow moving collateral other than to the origin vault owner', async () => {
