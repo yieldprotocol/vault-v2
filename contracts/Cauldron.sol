@@ -358,6 +358,10 @@ contract Cauldron is AccessControl() {
 
     /// @dev Give a non-timestamped vault to the caller, and timestamp it.
     /// To be used for liquidation engines.
+    /// if_succeeded
+    ///     {msg: "Cauldron: grab only works on underwater vaults"}
+    ///     let vault := old(vaults[vaultId]);
+    ///     _level(vault, old(balances[vaultId]), old(series[vault.seriesId])) < 0;
     function grab(bytes12 vaultId)
         external
         auth
@@ -390,6 +394,21 @@ contract Cauldron is AccessControl() {
 
     /// @dev Change series and debt of a vault.
     /// The module calling this function also needs to buy underlying in the pool for the new series, and sell it in pool for the old series.
+    /// if_succeeded
+    ///     {msg: "Cauldron: roll doesn't allow to go underwater"}
+    ///     let vault := vaults[vaultId];
+    ///     _level(vault, balances[vaultId], series[vault.seriesId]) >= 0;
+    ///
+    /// if_succeeded
+    ///     {msg: "Cauldron: roll modifies art, not ink"}
+    ///     (
+    ///         old(balances[vaultId].art) + art) == balances[vaultId].art ||
+    ///         old(balances[vaultId].ink) == balances[vaultId].ink
+    ///     );
+    ///
+    /// if_succeeded
+    ///     {msg: "Cauldron: roll changes the series"}
+    ///     vaults[vaultId].seriesId == newSeriesId;
     function roll(bytes12 vaultId, bytes6 newSeriesId, int128 art)
         external
         auth
