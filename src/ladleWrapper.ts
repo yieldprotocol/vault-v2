@@ -30,6 +30,14 @@ export class LadleWrapper {
     return new LadleWrapper(this.ladle.connect(account))
   }
 
+  public async setFee(fee: BigNumberish): Promise<ContractTransaction> {
+    return this.ladle.setFee(fee)
+  }
+
+  public async borrowingFee(): Promise<BigNumberish> {
+    return this.ladle.borrowingFee()
+  }
+
   public async addJoin(assetId: string, join: string): Promise<ContractTransaction> {
     return this.ladle.addJoin(assetId, join)
   }
