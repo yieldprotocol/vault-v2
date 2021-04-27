@@ -299,16 +299,16 @@ contract Ladle is AccessControl() {
         private
         returns (DataTypes.Vault memory, DataTypes.Balances memory)
     {
-        DataTypes.Balances memory balances = cauldron.balances(vaultId);
-        
-        // Calculate debt in fyToken terms
         DataTypes.Series memory series = getSeries(vault.seriesId);
-        uint128 amt = _debtInBase(vault.seriesId, series, balances.art);
-
         DataTypes.Series memory newSeries = getSeries(newSeriesId);
+        
         IPool pool = getPool(newSeriesId);
         IFYToken fyToken = IFYToken(newSeries.fyToken);
         IJoin baseJoin = getJoin(series.baseId);
+
+        // Calculate debt in fyToken terms
+        DataTypes.Balances memory balances = cauldron.balances(vaultId);
+        uint128 amt = _debtInBase(vault.seriesId, series, balances.art);
 
         // Mint fyToken to the pool, as a kind of flash loan
         fyToken.mint(address(pool), amt * 2);
@@ -320,9 +320,9 @@ contract Ladle is AccessControl() {
         pool.retrieveFYToken(address(fyToken));                 // Get the surplus fyToken
         fyToken.burn(address(fyToken), (amt * 2) - newDebt);    // Burn the surplus
 
-        uint128 fee = ((series.maturity - block.timestamp) * uint256(newDebt).wmul(borrowingFee)).u128();
+        newDebt += ((series.maturity - block.timestamp) * uint256(newDebt).wmul(borrowingFee)).u128();  // Add borrowing fee
 
-        return cauldron.roll(vaultId, newSeriesId, newDebt + fee);           // Change the series and debt for the vault
+        return cauldron.roll(vaultId, newSeriesId, newDebt);           // Change the series and debt for the vault
     }
 
     /// @dev Move collateral and debt to the owner's vault.
