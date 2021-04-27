@@ -322,7 +322,7 @@ contract Ladle is AccessControl() {
 
         newDebt += ((series.maturity - block.timestamp) * uint256(newDebt).wmul(borrowingFee)).u128();  // Add borrowing fee
 
-        return cauldron.roll(vaultId, newSeriesId, newDebt);           // Change the series and debt for the vault
+        return cauldron.roll(vaultId, newSeriesId, newDebt.i128() - balances.art.i128()); // Change the series and debt for the vault
     }
 
     /// @dev Move collateral and debt to the owner's vault.

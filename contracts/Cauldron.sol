@@ -299,7 +299,6 @@ contract Cauldron is AccessControl() {
             balances_.ink = balances_.ink.add(ink);
         }
 
-        // TODO: Consider whether _roll should call _pour, or the next block be a private function.
         // Modify vault and global debt records. If debt increases, check global limit.
         if (art != 0) {
             DataTypes.Debt memory debt_ = debt[series_.baseId][vault_.ilkId];
@@ -364,7 +363,7 @@ contract Cauldron is AccessControl() {
 
     /// @dev Change series and debt of a vault.
     /// The module calling this function also needs to buy underlying in the pool for the new series, and sell it in pool for the old series.
-    function roll(bytes12 vaultId, bytes6 newSeriesId, uint128 art)
+    function roll(bytes12 vaultId, bytes6 newSeriesId, int128 art)
         external
         auth
         returns (DataTypes.Vault memory, DataTypes.Balances memory)
@@ -373,19 +372,12 @@ contract Cauldron is AccessControl() {
         DataTypes.Series memory newSeries_ = series[newSeriesId];
         require (oldSeries_.baseId == newSeries_.baseId, "Mismatched bases in series");
         
-        // Change the vault series, ignoring balance and debt checks
+        // Change the vault series
         vault_.seriesId = newSeriesId;
         _tweak(vaultId, vault_);
 
-        // Modify global debt records
-        DataTypes.Debt memory debt_ = debt[oldSeries_.baseId][vault_.ilkId];
-        debt_.sum = debt_.sum - balances_.art + art;
-        require (debt_.sum <= debt_.max, "Max debt exceeded");
-        debt[oldSeries_.baseId][vault_.ilkId] = debt_;
-
-        // Modify vault debt records
-        balances_.art =  art;
-        balances[vaultId] = balances_;
+        // Change the vault balances
+        balances_ = _pour(vaultId, vault_, balances_, newSeries_, 0, art);
 
         require(_level(vault_, balances_, newSeries_) >= 0, "Undercollateralized");
         emit VaultRolled(vaultId, newSeriesId, balances_.art);
