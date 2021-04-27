@@ -1,3 +1,6 @@
+import { constants } from '@yield-protocol/utils-v2'
+const { WAD } = constants
+
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import OracleArtifact from '../artifacts/contracts/mocks/OracleMock.sol/OracleMock.json'
 
@@ -25,7 +28,7 @@ describe('Oracle', function () {
   })
 
   it('sets and retrieves the spot price', async () => {
-    await oracle.set(1)
-    expect((await oracle.callStatic.get())[0]).to.equal(1)
+    await oracle.set(WAD.mul(2))
+    expect((await oracle.callStatic.get(WAD))[0]).to.equal(WAD.mul(2))
   })
 })

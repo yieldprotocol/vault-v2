@@ -27,18 +27,22 @@ contract CompoundRateOracle is IOracle {
     }
 
     /**
-     * @notice Retrieve the latest price of the price oracle.
-     * @return price
+     * @notice Retrieve the value of the amount at the latest oracle price.
+     * @return value
      */
-    function peek() public virtual override view returns (uint price, uint updateTime) {
+    function peek(uint256 amount) public virtual override view returns (uint256 value, uint256 updateTime) {
+        uint256 price;
         (price, updateTime) = _peek();
+        value = price * amount / 1e18;
     }
 
     /**
-     * @notice Retrieve the latest price of the price oracle. Same as `peek` for this oracle.
-     * @return price
+     * @notice Retrieve the value of the amount at the latest oracle price. Same as `peek` for this oracle.
+     * @return value
      */
-    function get() public virtual override returns (uint price, uint updateTime){
+    function get(uint256 amount) public virtual override view returns (uint256 value, uint256 updateTime) {
+        uint256 price;
         (price, updateTime) = _peek();
+        value = price * amount / 1e18;
     }
 }

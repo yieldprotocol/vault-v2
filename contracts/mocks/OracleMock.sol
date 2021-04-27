@@ -15,15 +15,15 @@ contract OracleMock is IOracle {
         source = address(this);
     }
 
-    /// @dev Return the spot price with 18 decimals.
-    function peek() external view virtual override returns (uint256, uint256) {
-        return (spot, updated);
+    /// @dev Return the value of the amount at the spot price.
+    function peek(uint256 amount) external view virtual override returns (uint256, uint256) {
+        return (spot * amount / 1e18, updated);
     }
 
-    /// @dev Return the spot price with 18 decimals.
-    function get() external virtual override returns (uint256, uint256) {
+    /// @dev Return the value of the amount at the spot price.
+    function get(uint256 amount) external virtual override returns (uint256, uint256) {
         updated = block.timestamp;
-        return (spot, updated = block.timestamp);
+        return (spot * amount / 1e18, updated = block.timestamp);
     }
 
     /// @dev Set the spot price with 18 decimals. Overriding contracts with different formats must convert from 18 decimals.
