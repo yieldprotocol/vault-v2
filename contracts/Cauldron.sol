@@ -241,19 +241,25 @@ contract Cauldron is AccessControl() {
 
     // ==== Asset and debt management ====
 
+    function vaultData(bytes12 vaultId, bool getSeries)
+        internal
+        view
+        returns (DataTypes.Vault memory vault_, DataTypes.Series memory series_, DataTypes.Balances memory balances_)
+    {
+        vault_ = vaults[vaultId];
+        require (vault_.seriesId != bytes6(0), "Vault not found");
+        if (getSeries) series_ = series[vault_.seriesId];
+        balances_ = balances[vaultId];
+    }
+
     /// @dev Move collateral and debt between vaults.
     function stir(bytes12 from, bytes12 to, uint128 ink, uint128 art)
         external
         auth
         returns (DataTypes.Balances memory, DataTypes.Balances memory)
     {
-        DataTypes.Vault memory vaultFrom = vaults[from];
-        DataTypes.Vault memory vaultTo = vaults[to];
-        require (vaultFrom.owner != address(0), "Origin vault not found");
-        require (vaultTo.owner != address(0), "Destination vault not found");
-
-        DataTypes.Balances memory balancesFrom = balances[from];
-        DataTypes.Balances memory balancesTo = balances[to];
+        (DataTypes.Vault memory vaultFrom, , DataTypes.Balances memory balancesFrom) = vaultData(from, false);
+        (DataTypes.Vault memory vaultTo, , DataTypes.Balances memory balancesTo) = vaultData(to, false);
 
         if (ink > 0) {
             require (vaultFrom.ilkId == vaultTo.ilkId, "Different collateral");
@@ -313,12 +319,9 @@ contract Cauldron is AccessControl() {
     function pour(bytes12 vaultId, int128 ink, int128 art)
         external
         auth
-        returns (DataTypes.Balances memory balances_)
+        returns (DataTypes.Balances memory)
     {
-        DataTypes.Vault memory vault_ = vaults[vaultId];
-        require (vault_.owner != address(0), "Vault not found");
-        DataTypes.Series memory series_ = series[vault_.seriesId];
-        balances_ = balances[vaultId];
+        (DataTypes.Vault memory vault_, DataTypes.Series memory series_, DataTypes.Balances memory balances_) = vaultData(vaultId, true);
 
         balances_ = _pour(vaultId, vault_, balances_, series_, ink, art);
 
@@ -336,10 +339,7 @@ contract Cauldron is AccessControl() {
         uint32 now_ = uint32(block.timestamp);
         require (timestamps[vaultId] + 24*60*60 <= now_, "Timestamped");        // Grabbing a vault protects it for a day from being grabbed by another liquidator. All grabbed vaults will be suddenly released on the 7th of February 2106, at 06:28:16 GMT. I can live with that.
 
-        DataTypes.Vault memory vault_ = vaults[vaultId];
-        require (vault_.owner != address(0), "Vault not found");
-        DataTypes.Balances memory balances_ = balances[vaultId];
-        DataTypes.Series memory series_ = series[vault_.seriesId];
+        (DataTypes.Vault memory vault_, DataTypes.Series memory series_, DataTypes.Balances memory balances_) = vaultData(vaultId, true);
         require(_level(vault_, balances_, series_) < 0, "Not undercollateralized");
 
         timestamps[vaultId] = now_;
@@ -353,12 +353,9 @@ contract Cauldron is AccessControl() {
     function slurp(bytes12 vaultId, uint128 ink, uint128 art)
         external
         auth
-        returns (DataTypes.Balances memory balances_)
+        returns (DataTypes.Balances memory)
     {
-        DataTypes.Vault memory vault_ = vaults[vaultId];
-        require (vault_.owner != address(0), "Vault not found");
-        DataTypes.Series memory series_ = series[vault_.seriesId];
-        balances_ = balances[vaultId];
+        (DataTypes.Vault memory vault_, DataTypes.Series memory series_, DataTypes.Balances memory balances_) = vaultData(vaultId, true);
 
         balances_ = _pour(vaultId, vault_, balances_, series_, -(ink.i128()), -(art.i128()));
 
@@ -370,12 +367,9 @@ contract Cauldron is AccessControl() {
     function roll(bytes12 vaultId, bytes6 newSeriesId, uint128 art)
         external
         auth
-        returns (DataTypes.Vault memory vault_, DataTypes.Balances memory balances_)
+        returns (DataTypes.Vault memory, DataTypes.Balances memory)
     {
-        vault_ = vaults[vaultId];
-        require (vault_.owner != address(0), "Vault not found");
-        balances_ = balances[vaultId];
-        DataTypes.Series memory oldSeries_ = series[vault_.seriesId];
+        (DataTypes.Vault memory vault_, DataTypes.Series memory oldSeries_, DataTypes.Balances memory balances_) = vaultData(vaultId, true);
         DataTypes.Series memory newSeries_ = series[newSeriesId];
         require (oldSeries_.baseId == newSeries_.baseId, "Mismatched bases in series");
         
@@ -395,6 +389,8 @@ contract Cauldron is AccessControl() {
 
         require(_level(vault_, balances_, newSeries_) >= 0, "Undercollateralized");
         emit VaultRolled(vaultId, newSeriesId, balances_.art);
+
+        return (vault_, balances_);
     }
 
     // ==== Accounting ====
