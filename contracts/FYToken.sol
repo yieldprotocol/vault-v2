@@ -30,6 +30,10 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
     IOracle public immutable oracle;                                      // Oracle for the savings rate.
     address public immutable override asset;
     uint256 public immutable override maturity;
+
+    /// if_updated
+    ///     {:msg "chiAtMaturity can only be set once"} 
+    ///     old(chiAtMaturity) == 0;
     uint256 public chiAtMaturity = type(uint256).max;          // Spot price (exchange rate) between the base and an interest accruing token at maturity 
 
     constructor(
@@ -89,6 +93,9 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
     }
 
     /// @dev Retrieve the chi accrual since maturity, maturing if necessary.
+    /// if_succeeds
+    ///     {:msg "accrual is 1e18 or greater"} 
+    ///     result >= 1e18;
     function accrual()
         external
         afterMaturity
@@ -136,6 +143,9 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
     }
 
     /// @dev Burn fyTokens. The user needs to have either transferred the tokens to this contract, or have approved this contract to take them. 
+    /// if_succeeds
+    ///     {msg: "Burn from user or contract"}
+    ///     old(_balanceOf[address(this)]) + old(_balanceOf[from]) - amount == _balanceOf[address(this)] + _balanceOf[from];
     function burn(address from, uint256 amount)
         external override
         auth
