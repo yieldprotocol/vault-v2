@@ -397,10 +397,7 @@ contract Cauldron is AccessControl() {
 
     /// @dev Return the collateralization level of a vault. It will be negative if undercollateralized.
     function level(bytes12 vaultId) public returns (int256) {
-        DataTypes.Vault memory vault_ = vaults[vaultId];
-        require (vault_.owner != address(0), "Vault not found");                            // The vault existing is enough to be certain that the oracle exists.
-        DataTypes.Balances memory balances_ = balances[vaultId];
-        DataTypes.Series memory series_ = series[vault_.seriesId];
+        (DataTypes.Vault memory vault_, DataTypes.Series memory series_, DataTypes.Balances memory balances_) = vaultData(vaultId, true);
 
         return _level(vault_, balances_, series_);
     }
