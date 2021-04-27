@@ -69,7 +69,7 @@ describe('FYToken', function () {
     await baseJoin.join(owner, WAD.mul(2)) // This loads the base join to serve redemptions
   })
 
-  it.only('allows to change the chi oracle', async () => {
+  it('allows to change the chi oracle', async () => {
     const mockAddress = owner
     expect(await fyToken.setOracle(mockAddress))
       .to.emit(fyToken, 'OracleSet')
