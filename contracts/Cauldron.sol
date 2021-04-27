@@ -40,7 +40,7 @@ contract Cauldron is AccessControl() {
     event VaultBuilt(bytes12 indexed vaultId, address indexed owner, bytes6 indexed seriesId, bytes6 ilkId);
     event VaultTweaked(bytes12 indexed vaultId, bytes6 indexed seriesId, bytes6 indexed ilkId);
     event VaultDestroyed(bytes12 indexed vaultId);
-    event VaultTransfer(bytes12 indexed vaultId, address indexed receiver);
+    event VaultGiven(bytes12 indexed vaultId, address indexed receiver);
 
     event VaultPoured(bytes12 indexed vaultId, bytes6 indexed seriesId, bytes6 indexed ilkId, int128 ink, int128 art);
     event VaultStirred(bytes12 indexed from, bytes12 indexed to, uint128 ink, uint128 art);
@@ -49,17 +49,19 @@ contract Cauldron is AccessControl() {
 
     event SeriesMatured(bytes6 indexed seriesId, uint256 rateAtMaturity);
 
-    // ==== Protocol data ====
+    // ==== Configuration data ====
     mapping (bytes6 => address)                                 public assets;          // Underlyings and collaterals available in Cauldron. 12 bytes still free.
-    mapping (bytes6 => mapping(bytes6 => DataTypes.Debt))       public debt;            // [baseId][ilkId] Max and sum of debt per underlying and collateral.
     mapping (bytes6 => DataTypes.Series)                        public series;          // Series available in Cauldron. We can possibly use a bytes6 (3e14 possible series).
     mapping (bytes6 => mapping(bytes6 => bool))                 public ilks;            // [seriesId][assetId] Assets that are approved as collateral for a series
 
     mapping (bytes6 => IOracle)                                 public rateOracles;     // Rate (borrowing rate) accruals oracle for the underlying
-    mapping (bytes6 => uint256)                                 public ratesAtMaturity; // Borrowing rate at maturity for a mature series
     mapping (bytes6 => mapping(bytes6 => DataTypes.SpotOracle)) public spotOracles;     // [assetId][assetId] Spot price oracles
 
-    // ==== Vault data ====
+    // ==== Protocol data ====
+    mapping (bytes6 => mapping(bytes6 => DataTypes.Debt))       public debt;            // [baseId][ilkId] Max and sum of debt per underlying and collateral.
+    mapping (bytes6 => uint256)                                 public ratesAtMaturity; // Borrowing rate at maturity for a mature series
+
+    // ==== User data ====
     mapping (bytes12 => DataTypes.Vault)                        public vaults;          // An user can own one or more Vaults, each one with a bytes12 identifier
     mapping (bytes12 => DataTypes.Balances)                     public balances;        // Both debt and assets
     mapping (bytes12 => uint32)                                 public timestamps;      // If grater than zero, time that a vault was timestamped. Used for liquidation.
@@ -211,7 +213,7 @@ contract Cauldron is AccessControl() {
             require (balances_.art == 0, "Only with no debt");
             vault.seriesId = seriesId;
         }
-        if (ilkId != vault.ilkId) {                                                        // If a new asset was provided
+        if (ilkId != vault.ilkId) {
             require (balances_.ink == 0, "Only with no collateral");
             vault.ilkId = ilkId;
         }
@@ -226,7 +228,7 @@ contract Cauldron is AccessControl() {
         vault = vaults[vaultId];
         vault.owner = receiver;
         vaults[vaultId] = vault;
-        emit VaultTransfer(vaultId, receiver);
+        emit VaultGiven(vaultId, receiver);
     }
 
     /// @dev Transfer a vault to another user.
