@@ -351,7 +351,11 @@ export class YieldEnvironment {
       const maturity = now + THREE_MONTHS * count++
       const fyToken = await this.addSeries(owner, cauldron, ladle, baseJoin, chiOracle, seriesId, baseId, ilkIds, maturity) as FYToken
       series.set(seriesId, fyToken)
-      await fyToken.grantRoles([id('mint(address,uint256)'), id('burn(address,uint256)')], ownerAdd) // Only test environment
+      await fyToken.grantRoles([
+          id('mint(address,uint256)'),
+          id('burn(address,uint256)'),
+          id('setOracle(address)')],
+        ownerAdd) // Only test environment
 
       // Add a pool between the base and each series
       pools.set(seriesId, await this.addPool(owner, ladle, base, fyToken, seriesId))
