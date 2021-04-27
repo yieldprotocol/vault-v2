@@ -242,6 +242,19 @@ contract Cauldron is AccessControl() {
     // ==== Asset and debt management ====
 
     /// @dev Move collateral and debt between vaults.
+    /// if_succeeded
+    ///     {msg: "Cauldron: stir doesn't change balances"}
+    ///     (
+    ///         old(balances[from].art) + old(balances[to].art) == balances[from].art + balances[to].art ||
+    ///         old(balances[from].ink) + old(balances[to].ink) == balances[from].ink + balances[to].ink
+    ///     );
+    ///
+    /// if_succeeded
+    ///     {msg: "Cauldron: stir doesn't allow undercollateralization"}
+    ///     (
+    ///         _level(vaults[from], balances[from], series[vaults[from].seriesId]) >= 0 ||
+    ///         _level(vaults[to], balances[to], series[vaults[to].seriesId]) >= 0
+    ///     );
     function stir(bytes12 from, bytes12 to, uint128 ink, uint128 art)
         external
         auth
@@ -278,6 +291,16 @@ contract Cauldron is AccessControl() {
 
     /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
     /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
+    /// if_succeeded
+    ///     {msg: "Cauldron: _pour adds ink and art"}
+    ///     (
+    ///         old(balances[vaultId].art) + art) == balances[vaultId].art ||
+    ///         old(balances[vaultId].ink) + ink) == balances[vaultId].ink
+    ///     );
+    ///
+    /// if_succeeded
+    ///     {msg: "Cauldron: _pour updates global debt"}
+    ///     old(debt[series_.baseId][vault_.ilkId] + art) == debt[series_.baseId][vault_.ilkId];
     function _pour(
         bytes12 vaultId,
         DataTypes.Vault memory vault_,
@@ -309,6 +332,10 @@ contract Cauldron is AccessControl() {
 
     /// @dev Manipulate a vault, ensuring it is collateralized afterwards.
     /// To be used by debt management contracts.
+    /// if_succeeded
+    ///     {msg: "Cauldron: pour doesn't allow to go underwater"}
+    ///     let vault := vaults[vaultId];
+    ///     _level(vault, balances[vaultId], series[vault.seriesId]) >= 0;
     function pour(bytes12 vaultId, int128 ink, int128 art)
         external
         auth
