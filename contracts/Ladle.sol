@@ -30,22 +30,21 @@ contract Ladle is AccessControl() {
         TWEAK,               // 1
         GIVE,                // 2
         DESTROY,             // 3
-        STIR_TO,             // 4
-        STIR_FROM,           // 5
-        POUR,                // 6
-        SERVE,               // 7
-        ROLL,                // 8
-        CLOSE,               // 9
-        REPAY,               // 10
-        REPAY_VAULT,         // 11
-        FORWARD_PERMIT,      // 12
-        FORWARD_DAI_PERMIT,  // 13
-        JOIN_ETHER,          // 14
-        EXIT_ETHER,          // 15
-        TRANSFER_TO_POOL,    // 16
-        ROUTE,               // 17
-        TRANSFER_TO_FYTOKEN, // 18
-        REDEEM               // 19
+        STIR,                // 4
+        POUR,                // 5
+        SERVE,               // 6
+        ROLL,                // 7
+        CLOSE,               // 8
+        REPAY,               // 9
+        REPAY_VAULT,         // 10
+        FORWARD_PERMIT,      // 11
+        FORWARD_DAI_PERMIT,  // 12
+        JOIN_ETHER,          // 13
+        EXIT_ETHER,          // 14
+        TRANSFER_TO_POOL,    // 15
+        ROUTE,               // 16
+        TRANSFER_TO_FYTOKEN, // 17
+        REDEEM               // 18
     }
 
     ICauldron public immutable cauldron;
@@ -225,15 +224,9 @@ contract Ladle is AccessControl() {
                 IFYToken fyToken = getSeries(seriesId).fyToken;
                 _redeem(fyToken, to, amount);
             
-            } else if (operation == Operation.STIR_FROM) {
-                (bytes12 vaultId, bytes12 to, uint128 ink, uint128 art) = abi.decode(data[i], (bytes12, bytes12, uint128, uint128));
-                if (cachedId != vaultId) (cachedId, vault) = (vaultId, getOwnedVault(vaultId));
-                _stirFrom(vaultId, to, ink, art);
-            
-            } else if (operation == Operation.STIR_TO) {
-                (bytes12 from, bytes12 vaultId, uint128 ink, uint128 art) = abi.decode(data[i], (bytes12, bytes12, uint128, uint128));
-                if (cachedId != vaultId) (cachedId, vault) = (vaultId, getOwnedVault(vaultId));
-                _stirTo(from, vaultId, ink, art);
+            } else if (operation == Operation.STIR) {
+                (bytes12 from, bytes12 to, uint128 ink, uint128 art) = abi.decode(data[i], (bytes12, bytes12, uint128, uint128));
+                _stir(from, to, ink, art);  // Too complicated to use caching here
             
             } else if (operation == Operation.TWEAK) {
                 (bytes12 vaultId, bytes6 seriesId, bytes6 ilkId) = abi.decode(data[i], (bytes12, bytes6, bytes6));
@@ -325,20 +318,12 @@ contract Ladle is AccessControl() {
         return cauldron.roll(vaultId, newSeriesId, newDebt);           // Change the series and debt for the vault
     }
 
-    /// @dev Move collateral and debt to the owner's vault.
-    function _stirTo(bytes12 from, bytes12 to, uint128 ink, uint128 art)
+    /// @dev Move collateral and debt between vaults.
+    function _stir(bytes12 from, bytes12 to, uint128 ink, uint128 art)
         private
         returns (DataTypes.Balances memory, DataTypes.Balances memory)
     {
         if (ink > 0) require (cauldron.vaults(from).owner == msg.sender, "Only origin vault owner");
-        return cauldron.stir(from, to, ink, art);
-    }
-
-    /// @dev Move collateral and debt from the owner's vault.
-    function _stirFrom(bytes12 from, bytes12 to, uint128 ink, uint128 art)
-        private
-        returns (DataTypes.Balances memory, DataTypes.Balances memory)
-    {
         if (art > 0) require (cauldron.vaults(to).owner == msg.sender, "Only destination vault owner");
         return cauldron.stir(from, to, ink, art);
     }

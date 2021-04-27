@@ -105,20 +105,12 @@ export class LadleWrapper {
     return this.batch([this.destroyAction(vaultId)])
   }
 
-  public stirToAction(from: string, to: string, ink: BigNumberish, art: BigNumberish): BatchAction {
-    return new BatchAction(OPS.STIR_TO, ethers.utils.defaultAbiCoder.encode(['bytes12', 'bytes12', 'uint128', 'uint128'], [from, to, ink, art]))
+  public stirAction(from: string, to: string, ink: BigNumberish, art: BigNumberish): BatchAction {
+    return new BatchAction(OPS.STIR, ethers.utils.defaultAbiCoder.encode(['bytes12', 'bytes12', 'uint128', 'uint128'], [from, to, ink, art]))
   }
 
-  public stirFromAction(from: string, to: string, ink: BigNumberish, art: BigNumberish): BatchAction {
-    return new BatchAction(OPS.STIR_FROM, ethers.utils.defaultAbiCoder.encode(['bytes12', 'bytes12', 'uint128', 'uint128'], [from, to, ink, art]))
-  }
-
-  public async stir(from: string, to: string, ink: BigNumberish, art: BigNumberish): Promise<ContractTransaction> { // Default stir. Use when `from` has been used before in the same batch.
-    return this.batch([this.stirFromAction(from, to, ink, art)])
-  }
-
-  public async stirTo(from: string, to: string, ink: BigNumberish, art: BigNumberish): Promise<ContractTransaction> { // Alternate stir. Use when `to` has been used before in the same batch.
-    return this.batch([this.stirToAction(from, to, ink, art)])
+  public async stir(from: string, to: string, ink: BigNumberish, art: BigNumberish): Promise<ContractTransaction> {
+    return this.batch([this.stirAction(from, to, ink, art)])
   }
 
   public pourAction(vaultId: string, to: string, ink: BigNumberish, art: BigNumberish): BatchAction {
