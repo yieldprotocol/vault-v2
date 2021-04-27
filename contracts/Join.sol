@@ -21,6 +21,12 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
     bytes32 constant internal FLASH_LOAN_RETURN = keccak256("ERC3156FlashBorrower.onFlashLoan");
 
     address public immutable override asset;
+    /// if_updated
+    ///     {:msg "storedBalance only changed by join and exit"} 
+    ///     (
+    ///         msg.sig == bytes4(keccak256(join(address,uint128))) ||
+    ///         msg.sig == bytes4(keccak256(exit(address,uint128))) ||
+    ///     );
     uint256 public storedBalance;
     uint256 public flashFeeFactor; // Fee on flash loans, as a percentage in fixed point with 18 decimals
 
@@ -38,6 +44,9 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
     }
 
     /// @dev Take `amount` `asset` from `user` using `transferFrom`, minus any unaccounted `asset` in this contract.
+    /// if_succeeds
+    ///     {:msg "Join - storedBalance increase"}
+    ///     old(storedBalance) + amount == storedBalance;
     function join(address user, uint128 amount)
         external override
         auth
@@ -51,7 +60,6 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
         internal
         returns (uint128)
     {
-        // require(live == 1, "GemJoin/not-live");
         IERC20 token = IERC20(asset);
         uint256 initialBalance = token.balanceOf(address(this));
         uint256 surplus = initialBalance - storedBalance;
@@ -62,6 +70,9 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
     }
 
     /// @dev Transfer `amount` `asset` to `user`
+    /// if_succeeds
+    ///     {:msg "Join - storedBalance decrease"}
+    ///     old(storedBalance) - amount == storedBalance;
     function exit(address user, uint128 amount)
         external override
         auth
