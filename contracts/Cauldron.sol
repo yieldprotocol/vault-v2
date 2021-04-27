@@ -71,6 +71,7 @@ contract Cauldron is AccessControl() {
         external
         auth
     {
+        require (assetId != bytes6(0), "Asset id is zero");
         require (assets[assetId] == address(0), "Id already used");
         assets[assetId] = asset;
         emit AssetAdded(assetId, address(asset));
@@ -118,6 +119,7 @@ contract Cauldron is AccessControl() {
         external
         auth
     {
+        require (seriesId != bytes6(0), "Series id is zero");
         address asset = assets[baseId];
         require (asset != address(0), "Asset not found");
         require (fyToken != IFYToken(address(0)), "Series need a fyToken");
@@ -160,7 +162,8 @@ contract Cauldron is AccessControl() {
         auth
         returns(DataTypes.Vault memory vault)
     {
-        require (vaults[vaultId].owner == address(0), "Vault already exists");
+        require (vaultId != bytes12(0), "Vault id is zero");
+        require (vaults[vaultId].seriesId == bytes6(0), "Vault already exists");   // Series can't take bytes6(0) as their id
         require (ilks[seriesId][ilkId] == true, "Ilk not added");
         vault = DataTypes.Vault({
             owner: owner,
