@@ -69,11 +69,12 @@ describe('Cauldron - roll', function () {
   })
 
   it('rolls a vault', async () => {
+    const artBefore = (await cauldron.balances(vaultId)).art
     expect(await cauldron.roll(vaultId, otherSeriesId, WAD.div(2)))
       .to.emit(cauldron, 'VaultRolled')
-      .withArgs(vaultId, otherSeriesId, WAD.div(2))
+      .withArgs(vaultId, otherSeriesId, artBefore.add(WAD.div(2)))
     expect((await cauldron.vaults(vaultId)).seriesId).to.equal(otherSeriesId)
     expect((await cauldron.balances(vaultId)).ink).to.equal(WAD)
-    expect((await cauldron.balances(vaultId)).art).to.equal(WAD.div(2))
+    expect((await cauldron.balances(vaultId)).art).to.equal(artBefore.add(WAD.div(2)))
   })
 })
