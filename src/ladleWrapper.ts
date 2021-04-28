@@ -17,6 +17,13 @@ export class LadleWrapper {
   ladle: Ladle
   address: string
 
+  pool = new ethers.utils.Interface([
+    "function sellBaseToken(address to, uint128 min)",
+    "function sellFYToken(address to, uint128 min)",
+    "function mintWithBaseToken(address to, uint256 fyTokenToBuy, uint256 minTokensMinted)",
+    "function burnForBaseToken(address to, uint256 minBaseTokenOut)",
+  ]);
+
   constructor(ladle: Ladle) {
     this.ladle = ladle
     this.address = ladle.address
@@ -237,6 +244,63 @@ export class LadleWrapper {
 
   public async redeem(seriesId: string, to: string, wad: BigNumberish): Promise<ContractTransaction> {
     return this.batch([this.redeemAction(seriesId, to, wad)])
+  }
+
+
+  public sellBaseTokenAction(seriesId: string, receiver: string, min: BigNumberish): BatchAction {
+    return new BatchAction(OPS.ROUTE, ethers.utils.defaultAbiCoder.encode(
+      ['bytes6', 'bytes'],
+      [
+        seriesId,
+        this.pool.encodeFunctionData('sellBaseToken', [receiver, min])
+      ]
+    ))
+  }
+
+  public async sellBaseToken(seriesId: string, receiver: string, min: BigNumberish): Promise<ContractTransaction> {
+    return this.batch([this.sellBaseTokenAction(seriesId, receiver, min)])
+  }
+
+  public sellFYTokenAction(seriesId: string, receiver: string, min: BigNumberish): BatchAction {
+    return new BatchAction(OPS.ROUTE, ethers.utils.defaultAbiCoder.encode(
+      ['bytes6', 'bytes'],
+      [
+        seriesId,
+        this.pool.encodeFunctionData('sellFYToken', [receiver, min])
+      ]
+    ))
+  }
+
+  public async sellFYToken(seriesId: string, receiver: string, min: BigNumberish): Promise<ContractTransaction> {
+    return this.batch([this.sellFYTokenAction(seriesId, receiver, min)])
+  }
+
+  public mintWithBaseTokenAction(seriesId: string, receiver: string, fyTokenToBuy: BigNumberish, minTokensMinted: BigNumberish): BatchAction {
+    return new BatchAction(OPS.ROUTE, ethers.utils.defaultAbiCoder.encode(
+      ['bytes6', 'bytes'],
+      [
+        seriesId,
+        this.pool.encodeFunctionData('mintWithBaseToken', [receiver, fyTokenToBuy, minTokensMinted])
+      ]
+    ))
+  }
+
+  public async mintWithBaseToken(seriesId: string, receiver: string, fyTokenToBuy: BigNumberish, minTokensMinted: BigNumberish): Promise<ContractTransaction> {
+    return this.batch([this.mintWithBaseTokenAction(seriesId, receiver, fyTokenToBuy, minTokensMinted)])
+  }
+
+  public burnForBaseTokenAction(seriesId: string, receiver: string, minBaseTokenOut: BigNumberish): BatchAction {
+    return new BatchAction(OPS.ROUTE, ethers.utils.defaultAbiCoder.encode(
+      ['bytes6', 'bytes'],
+      [
+        seriesId,
+        this.pool.encodeFunctionData('burnForBaseToken', [receiver, minBaseTokenOut])
+      ]
+    ))
+  }
+
+  public async burnForBaseToken(seriesId: string, receiver: string, minBaseTokenOut: BigNumberish): Promise<ContractTransaction> {
+    return this.batch([this.burnForBaseTokenAction(seriesId, receiver, minBaseTokenOut)])
   }
 }
   
