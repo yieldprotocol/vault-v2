@@ -145,6 +145,16 @@ export class YieldEnvironment {
     )
   }
 
+  public static async witchGovAuth(witch: Witch, receiver: string) {
+    await witch.grantRoles(
+      [
+        id('setAuctionTime(uint256)'),
+        id('setInitialProportion(uint256)'),
+      ],
+      receiver
+    )
+  }
+
   public static async addAsset(owner: SignerWithAddress, cauldron: Cauldron, assetId: string) {
     const symbol = Buffer.from(assetId.slice(2), 'hex').toString('utf8')
     const asset = (await deployContract(owner, ERC20MockArtifact, [assetId, symbol])) as ERC20Mock
@@ -254,6 +264,7 @@ export class YieldEnvironment {
     await this.cauldronLadleAuth(cauldron, ownerAdd)
     await this.ladleGovAuth(ladle, ownerAdd)
     await this.ladleWitchAuth(ladle, ownerAdd)
+    await this.witchGovAuth(witch, ownerAdd)
 
     // ==== Set protection period for vaults in liquidation ====
     await cauldron.setAuctionInterval(24 * 60 * 60)

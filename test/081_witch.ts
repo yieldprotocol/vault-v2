@@ -76,6 +76,24 @@ describe('Witch', function () {
     await ladle.pour(vaultId, owner, WAD, WAD)
   })
 
+  it('does not allow to set the initial proportion over 100%', async () => {
+    await expect(witch.setInitialProportion(WAD.mul(2))).to.be.revertedWith('Only at or under 100%')
+  })
+
+  it('allows to set the initial proportion', async () => {
+    expect(await witch.setInitialProportion(1))
+      .to.emit(witch, 'InitialProportionSet')
+      .withArgs(1)
+    expect(await witch.initialProportion()).to.equal(1)
+  })
+
+  it('allows to set the auction time', async () => {
+    expect(await witch.setAuctionTime(1))
+      .to.emit(witch, 'AuctionTimeSet')
+      .withArgs(1)
+    expect(await witch.auctionTime()).to.equal(1)
+  })
+
   it('does not allow to grab collateralized vaults', async () => {
     await expect(witch.grab(vaultId)).to.be.revertedWith('Not undercollateralized')
   })
@@ -131,7 +149,7 @@ describe('Witch', function () {
     describe('once the auction time has passed', async () => {
       beforeEach(async () => {
         const now = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
-        await ethers.provider.send('evm_mine', [now + (await witch.AUCTION_TIME()).toNumber()])
+        await ethers.provider.send('evm_mine', [now + (await witch.auctionTime()).toNumber()])
       })
 
       it('allows to buy all of the collateral for the whole debt at the end', async () => {
