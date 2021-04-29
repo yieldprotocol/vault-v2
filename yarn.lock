@@ -2289,10 +2289,10 @@
   resolved "https://registry.yarnpkg.com/@yarnpkg/lockfile/-/lockfile-1.1.0.tgz#e77a97fbd345b76d83245edcd17d393b1b41fb31"
   integrity sha512-GpSwvyXOcOOlV70vbnzjj4fW5xW/FdUF6nQEt1ENy7m4ZCczi1+/buVUPAqmGfqznsORNFzUMjctTIp8a9tuCQ==
 
-"@yield-protocol/utils-v2@^2.2.1":
-  version "2.2.1"
-  resolved "https://registry.yarnpkg.com/@yield-protocol/utils-v2/-/utils-v2-2.2.1.tgz#a6ee16f0132d967225cfcc5b112d1062a732b1c1"
-  integrity sha512-IFWOdVJUC3phhRsmTozIl27NDqRI5VYalXfALNzXLRgDjOJa20gZ4CbUzaQK5wP3yceR2xSoo5Oi6fiKkzdmnQ==
+"@yield-protocol/utils-v2@^2.2.2":
+  version "2.2.2"
+  resolved "https://registry.yarnpkg.com/@yield-protocol/utils-v2/-/utils-v2-2.2.2.tgz#4491efd241d2aa8c40a9c655e9782490412c3ad7"
+  integrity sha512-IEUpqJyWglEJw2BoYOixMEWC8B9xbD3og9vGVtLMo9mjB2+TMsXAe3yUYZe+yv3E+BWW+i5rjLrUG3lingG72A==
   dependencies:
     ethereumjs-util "^7.0.8"
     ethers "^5.0.7"
