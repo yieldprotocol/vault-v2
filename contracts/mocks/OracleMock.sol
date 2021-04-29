@@ -6,7 +6,7 @@ import "@yield-protocol/vault-interfaces/IOracle.sol";
 /// @dev An oracle that allows to set the spot price to anyone. It also allows to record spot values and return the accrual between a recorded and current spots.
 contract OracleMock is IOracle {
 
-    address public immutable override source;
+    address public immutable source;
 
     uint256 public spot;
     uint256 public updated;

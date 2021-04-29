@@ -9,7 +9,7 @@ contract CompoundChiOracle is IOracle {
 
     uint public constant SCALE_FACTOR = 1; // I think we don't need scaling for rate and chi oracles
 
-    address public immutable override source;
+    address public immutable source;
 
     constructor(address source_) {
         source = source_;

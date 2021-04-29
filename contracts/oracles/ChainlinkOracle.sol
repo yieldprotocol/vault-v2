@@ -11,7 +11,7 @@ contract ChainlinkOracle is IOracle {
 
     uint public constant SCALE_FACTOR = 1e10; // Since Chainlink has 8 dec places, and peek() needs 18
 
-    address public immutable override source;
+    address public immutable source;
 
     constructor(address source_) {
         source = source_;
