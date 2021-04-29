@@ -3,14 +3,9 @@ pragma solidity ^0.8.0;
 
 import "@yield-protocol/utils-v2/contracts/access/Ownable.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
+import "../math/CastBytes32Bytes6.sol";
 import "./AggregatorV3Interface.sol";
 
-
-library CastBytes32Bytes6 {
-    function b6(bytes32 x) internal pure returns (bytes6 y){
-        require (bytes32(y = bytes6(x)) == x, "Cast overflow");
-    }
-}
 
 /**
  * @title ChainlinkMultiOracle

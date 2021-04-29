@@ -3,14 +3,9 @@ pragma solidity ^0.8.0;
 
 import "@yield-protocol/utils-v2/contracts/access/Ownable.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
+import "../math/CastBytes32Bytes6.sol";
 import "./CTokenInterface.sol";
 
-
-library CastBytes32Bytes6 {
-    function b6(bytes32 x) internal pure returns (bytes6 y){
-        require (bytes32(y = bytes6(x)) == x, "Cast overflow");
-    }
-}
 
 contract CompoundMultiOracle is IOracle, Ownable {
     using CastBytes32Bytes6 for bytes32;
