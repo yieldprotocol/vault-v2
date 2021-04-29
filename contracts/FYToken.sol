@@ -22,15 +22,16 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
 
     event SeriesMatured(uint256 chiAtMaturity);
     event Redeemed(address indexed from, address indexed to, uint256 amount, uint256 redeemed);
+    event OracleSet(address indexed oracle);
 
     uint256 constant internal MAX_TIME_TO_MATURITY = 126144000; // seconds in four years
     bytes32 constant internal FLASH_LOAN_RETURN = keccak256("ERC3156FlashBorrower.onFlashLoan");
 
-    IJoin public immutable join;                                          // Source of redemption funds.
-    IOracle public immutable oracle;                                      // Oracle for the savings rate.
+    IOracle public oracle;                                      // Oracle for the savings rate.
+    IJoin public immutable join;                                // Source of redemption funds.
     address public immutable override asset;
     uint256 public immutable override maturity;
-    uint256 public chiAtMaturity = type(uint256).max;          // Spot price (exchange rate) between the base and an interest accruing token at maturity 
+    uint256 public chiAtMaturity = type(uint256).max;           // Spot price (exchange rate) between the base and an interest accruing token at maturity 
 
     constructor(
         IOracle oracle_, // Underlying vs its interest-bearing version
@@ -46,10 +47,11 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
             maturity_ < type(uint32).max,
             "Invalid maturity"
         );
-        oracle = oracle_;
+
         join = join_;
         maturity = maturity_;
         asset = address(IJoin(join_).asset());
+        setOracle(oracle_);
     }
 
     modifier afterMaturity() {
@@ -66,6 +68,15 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
             "Only before maturity"
         );
         _;
+    }
+
+    /// @dev Set the oracle parameter
+    function setOracle(IOracle oracle_)
+        public
+        auth    
+    {
+        oracle = oracle_;
+        emit OracleSet(address(oracle_));
     }
 
     /// @dev Mature the fyToken by recording the chi.

@@ -99,7 +99,7 @@ describe('Ladle - vaults', function () {
 
   it('gives a vault', async () => {
     expect(await ladle.give(vaultId, other))
-      .to.emit(cauldron, 'VaultTransfer')
+      .to.emit(cauldron, 'VaultGiven')
       .withArgs(vaultId, other)
     const vault = await cauldron.vaults(vaultId)
     expect(vault.owner).to.equal(other)

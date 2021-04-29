@@ -57,13 +57,24 @@ describe('FYToken', function () {
 
     await baseJoin.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], fyToken.address)
 
-    await fyToken.grantRoles([id('mint(address,uint256)'), id('burn(address,uint256)')], owner)
+    await fyToken.grantRoles(
+      [id('mint(address,uint256)'), id('burn(address,uint256)'), id('setOracle(address)')],
+      owner
+    )
 
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
     await ladle.pour(vaultId, owner, WAD, WAD) // This gives `owner` WAD fyToken
 
     await base.approve(baseJoin.address, WAD.mul(2))
     await baseJoin.join(owner, WAD.mul(2)) // This loads the base join to serve redemptions
+  })
+
+  it('allows to change the chi oracle', async () => {
+    const mockAddress = owner
+    expect(await fyToken.setOracle(mockAddress))
+      .to.emit(fyToken, 'OracleSet')
+      .withArgs(mockAddress)
+    expect(await fyToken.oracle()).to.equal(mockAddress)
   })
 
   it('does not allow to mature before maturity', async () => {
