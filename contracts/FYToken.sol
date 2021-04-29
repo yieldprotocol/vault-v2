@@ -27,6 +27,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
     uint256 constant internal MAX_TIME_TO_MATURITY = 126144000; // seconds in four years
     bytes32 constant internal FLASH_LOAN_RETURN = keccak256("ERC3156FlashBorrower.onFlashLoan");
 
+    bytes6 public immutable baseId;                             // Needed to access the oracle
     IOracle public oracle;                                      // Oracle for the savings rate.
     IJoin public immutable join;                                // Source of redemption funds.
     address public immutable override asset;
@@ -34,6 +35,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
     uint256 public chiAtMaturity = type(uint256).max;           // Spot price (exchange rate) between the base and an interest accruing token at maturity 
 
     constructor(
+        bytes6 baseId_,
         IOracle oracle_, // Underlying vs its interest-bearing version
         IJoin join_,
         uint256 maturity_,
@@ -48,6 +50,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
             "Invalid maturity"
         );
 
+        baseId = baseId_;
         join = join_;
         maturity = maturity_;
         asset = address(IJoin(join_).asset());
@@ -94,7 +97,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         private
         returns (uint256 _chiAtMaturity)
     {
-        (_chiAtMaturity,) = oracle.get(bytes32(bytes20(asset)), bytes32("chi"), 1e18);
+        (_chiAtMaturity,) = oracle.get(baseId, bytes32("chi"), 1e18);
         chiAtMaturity = _chiAtMaturity;
         emit SeriesMatured(_chiAtMaturity);
     }
@@ -117,7 +120,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         if (chiAtMaturity == type(uint256).max) {  // After maturity, but chi not yet recorded. Let's record it, and accrual is then 1.
             _mature();
         } else {
-            (uint256 chi,) = oracle.get(bytes32(bytes20(asset)), bytes32("chi"), 1e18);
+            (uint256 chi,) = oracle.get(baseId, bytes32("chi"), 1e18);
             accrual_ = chi.wdiv(chiAtMaturity);
         }
         accrual_ = accrual_ >= 1e18 ? accrual_ : 1e18;     // The accrual can't be below 1 (with 18 decimals)
