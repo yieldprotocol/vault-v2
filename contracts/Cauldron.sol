@@ -409,7 +409,7 @@ contract Cauldron is AccessControl() {
         internal
     {
         IOracle rateOracle = rateOracles[series_.baseId];
-        (uint256 rateAtMaturity,) = rateOracle.get(1e18);
+        (uint256 rateAtMaturity,) = rateOracle.get(series_.baseId, bytes32("rate"), 1e18);
         ratesAtMaturity[seriesId] = rateAtMaturity;
         emit SeriesMatured(seriesId, rateAtMaturity);
     }
@@ -436,7 +436,7 @@ contract Cauldron is AccessControl() {
             _mature(seriesId, series_);
         } else {
             IOracle rateOracle = rateOracles[series_.baseId];
-            (uint256 rate,) = rateOracle.get(1e18);
+            (uint256 rate,) = rateOracle.get(series_.baseId, bytes32("rate"), 1e18);
             accrual_ = rate.wdiv(rateAtMaturity);
         }
         accrual_ = accrual_ >= 1e18 ? accrual_ : 1e18;     // The accrual can't be below 1 (with 18 decimals)
@@ -453,7 +453,7 @@ contract Cauldron is AccessControl() {
     {
         DataTypes.SpotOracle memory spotOracle_ = spotOracles[series_.baseId][vault_.ilkId];
         uint256 ratio = uint256(spotOracle_.ratio) * 1e12;   // Normalized to 18 decimals
-        (uint256 inkValue,) = spotOracle_.oracle.get(balances_.ink);    // ink * spot
+        (uint256 inkValue,) = spotOracle_.oracle.get(series_.baseId, vault_.ilkId, balances_.ink);    // ink * spot
 
         if (uint32(block.timestamp) >= series_.maturity) {
             uint256 accrual_ = _accrual(vault_.seriesId, series_);

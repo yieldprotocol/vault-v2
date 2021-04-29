@@ -16,12 +16,12 @@ contract OracleMock is IOracle {
     }
 
     /// @dev Return the value of the amount at the spot price.
-    function peek(uint256 amount) external view virtual override returns (uint256, uint256) {
+    function peek(bytes32, bytes32, uint256 amount) external view virtual override returns (uint256, uint256) {
         return (spot * amount / 1e18, updated);
     }
 
     /// @dev Return the value of the amount at the spot price.
-    function get(uint256 amount) external virtual override returns (uint256, uint256) {
+    function get(bytes32, bytes32, uint256 amount) external virtual override returns (uint256, uint256) {
         updated = block.timestamp;
         return (spot * amount / 1e18, updated = block.timestamp);
     }

@@ -17,6 +17,8 @@ describe('Oracle', function () {
   let owner: string
   let oracle: Oracle
 
+  const mockData = ethers.utils.hexlify(ethers.utils.randomBytes(32))
+
   before(async () => {
     const signers = await ethers.getSigners()
     ownerAcc = signers[0]
@@ -29,6 +31,6 @@ describe('Oracle', function () {
 
   it('sets and retrieves the spot price', async () => {
     await oracle.set(WAD.mul(2))
-    expect((await oracle.callStatic.get(WAD))[0]).to.equal(WAD.mul(2))
+    expect((await oracle.callStatic.get(mockData, mockData, WAD))[0]).to.equal(WAD.mul(2))
   })
 })
