@@ -1,5 +1,6 @@
 import { constants } from '@yield-protocol/utils-v2'
 const { WAD } = constants
+import { CHI, RATE } from '../src/constants'
 
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import OracleArtifact from '../artifacts/contracts/mocks/OracleMock.sol/OracleMock.json'
@@ -20,20 +21,8 @@ import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { deployContract } = waffle
 
-function bytes32ToBytes6(x: string): string {
-  return x.slice(0, 14)
-}
-
 function bytes6ToBytes32(x: string): string {
   return x + '00'.repeat(26)
-}
-
-function bytes32ToAddress(x: string): string {
-  return x.slice(0, 42)
-}
-
-function addressToBytes32(x: string): string {
-  return x + '00'.repeat(12)
 }
 
 describe('Oracle', function () {
@@ -51,10 +40,6 @@ describe('Oracle', function () {
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const quoteId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const mockBytes32 = ethers.utils.hexlify(ethers.utils.randomBytes(32))
-  const baseAddress = ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20)))
-
-  const CHI = ethers.utils.formatBytes32String('chi')
-  const RATE = ethers.utils.formatBytes32String('rate')
 
   before(async () => {
     const signers = await ethers.getSigners()
@@ -74,7 +59,7 @@ describe('Oracle', function () {
     cTokenRate = (await deployContract(ownerAcc, CTokenRateMockArtifact, [])) as CTokenRateMock
     
     compoundMultiOracle = (await deployContract(ownerAcc, CompoundMultiOracleArtifact, [])) as CompoundMultiOracle
-    await compoundMultiOracle.setSources([baseAddress, baseAddress], [CHI, RATE], [cTokenChi.address, cTokenRate.address])
+    await compoundMultiOracle.setSources([baseId, baseId], [CHI, RATE], [cTokenChi.address, cTokenRate.address])
   })
 
   it('sets and retrieves the value at spot price', async () => {
@@ -88,10 +73,10 @@ describe('Oracle', function () {
   })
 
 
-  it.only('sets and retrieves the chi and rate values at spot price from a compound multioracle', async () => {
+  it('sets and retrieves the chi and rate values at spot price from a compound multioracle', async () => {
     await cTokenChi.set(WAD.mul(2))
     await cTokenRate.set(WAD.mul(3))
-    expect((await compoundMultiOracle.callStatic.get(addressToBytes32(baseAddress), CHI, WAD))[0]).to.equal(WAD.mul(2))
-    expect((await compoundMultiOracle.callStatic.get(addressToBytes32(baseAddress), RATE, WAD))[0]).to.equal(WAD.mul(3))
+    expect((await compoundMultiOracle.callStatic.get(bytes6ToBytes32(baseId), CHI, WAD))[0]).to.equal(WAD.mul(2))
+    expect((await compoundMultiOracle.callStatic.get(bytes6ToBytes32(baseId), RATE, WAD))[0]).to.equal(WAD.mul(3))
   })
 })
