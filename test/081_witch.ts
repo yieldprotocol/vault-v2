@@ -91,9 +91,9 @@ describe('Witch', function () {
   it('grabs undercollateralized vaults', async () => {
     await spotSource.set(WAD.div(2))
     await witch.grab(vaultId)
-    const event = (await cauldron.queryFilter(cauldron.filters.VaultTimestamped(null, null)))[0]
+    const event = (await cauldron.queryFilter(cauldron.filters.VaultLocked(null, null)))[0]
     expect(event.args.timestamp.toNumber()).to.be.greaterThan(0)
-    expect(await cauldron.timestamps(vaultId)).to.equal(event.args.timestamp)
+    expect(await cauldron.auctions(vaultId)).to.equal(event.args.timestamp)
   })
 
   describe('once a vault has been grabbed', async () => {
@@ -103,7 +103,7 @@ describe('Witch', function () {
     })
 
     it("it can't be grabbed again", async () => {
-      await expect(witch.grab(vaultId)).to.be.revertedWith('Timestamped')
+      await expect(witch.grab(vaultId)).to.be.revertedWith('Vault under auction')
     })
 
     it('does not buy if minimum collateral not reached', async () => {

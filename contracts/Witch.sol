@@ -36,7 +36,7 @@ contract Witch {
         DataTypes.Balances memory balances_ = cauldron.balances(vaultId);
 
         require (balances_.art > 0, "Nothing to buy");                                      // Cheapest way of failing gracefully if given a non existing vault
-        uint256 elapsed = uint32(block.timestamp) - cauldron.timestamps(vaultId);           // Auctions will malfunction on the 7th of February 2106, at 06:28:16 GMT, we should replace this contract before then.
+        uint256 elapsed = uint32(block.timestamp) - cauldron.auctions(vaultId);           // Auctions will malfunction on the 7th of February 2106, at 06:28:16 GMT, we should replace this contract before then.
         uint256 price;
         {
             // Price of a collateral unit, in underlying, at the present moment, for a given vault
