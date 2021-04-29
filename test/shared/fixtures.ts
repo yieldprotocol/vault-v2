@@ -148,8 +148,8 @@ export class YieldEnvironment {
   public static async witchGovAuth(witch: Witch, receiver: string) {
     await witch.grantRoles(
       [
-        id('setAuctionTime(uint256)'),
-        id('setInitialProportion(uint256)'),
+        id('setAuctionTime(uint128)'),
+        id('setInitialProportion(uint128)'),
       ],
       receiver
     )
