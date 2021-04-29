@@ -329,9 +329,9 @@ contract Cauldron is AccessControl() {
         return balances_;
     }
 
-    /// @dev Give a non-timestamped vault to the caller, and timestamp it.
+    /// @dev Give a non-timestamped vault to another user, and timestamp it.
     /// To be used for liquidation engines.
-    function grab(bytes12 vaultId)
+    function grab(bytes12 vaultId, address receiver)
         external
         auth
     {
@@ -342,7 +342,7 @@ contract Cauldron is AccessControl() {
         require(_level(vault_, balances_, series_) < 0, "Not undercollateralized");
 
         timestamps[vaultId] = now_;
-        _give(vaultId, msg.sender);
+        _give(vaultId, receiver);
 
         emit VaultTimestamped(vaultId, now_);
     }

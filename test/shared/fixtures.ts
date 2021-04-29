@@ -117,7 +117,7 @@ export class YieldEnvironment {
     await cauldron.grantRoles(
       [
         id('destroy(bytes12)'),
-        id('grab(bytes12)'),
+        id('grab(bytes12,address)'),
       ],
       receiver
     )

@@ -28,7 +28,7 @@ contract Witch {
 
     /// @dev Put an undercollateralized vault up for liquidation.
     function grab(bytes12 vaultId) public {
-        cauldron.grab(vaultId);
+        cauldron.grab(vaultId, address(this));
     }
 
     /// @dev Buy an amount of collateral off a vault in liquidation, paying at most `max` underlying.
