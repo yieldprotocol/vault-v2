@@ -75,7 +75,7 @@ describe('Ladle - admin', function () {
     ladleFromOther = ladle.connect(otherAcc)
     base = env.assets.get(baseId) as ERC20Mock
     baseJoin = env.joins.get(baseId) as Join
-    rateOracle = env.oracles.get('rate') as OracleMock
+    rateOracle = env.oracles.get(RATE) as OracleMock
 
     // ==== Set testing environment ====
     ilk = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId, 'Mock Ilk'])) as ERC20Mock
@@ -94,6 +94,7 @@ describe('Ladle - admin', function () {
     const provider: BaseProvider = await ethers.provider
     maturity = (await provider.getBlock(await provider.getBlockNumber())).timestamp + THREE_MONTHS
     fyToken = (await deployContract(ownerAcc, FYTokenArtifact, [
+      baseId,
       rateOracle.address,
       baseJoin.address,
       maturity,
@@ -148,6 +149,7 @@ describe('Ladle - admin', function () {
     it('does not allow adding a pool with a mismatched fyToken', async () => {
       // Deploy other series
       const otherFYToken = (await deployContract(ownerAcc, FYTokenArtifact, [
+        baseId,
         rateOracle.address,
         baseJoin.address,
         maturity,

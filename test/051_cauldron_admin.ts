@@ -56,6 +56,7 @@ describe('Cauldron - admin', function () {
     ilk2 = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId2, 'Mock Ilk'])) as ERC20Mock
     join = (await deployContract(ownerAcc, JoinArtifact, [base.address])) as Join
     fyToken = (await deployContract(ownerAcc, FYTokenArtifact, [
+      baseId,
       base.address,
       join.address,
       maturity,

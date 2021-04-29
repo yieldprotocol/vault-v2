@@ -2,12 +2,15 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 
 import { constants } from '@yield-protocol/utils-v2'
 const { WAD } = constants
+import { RATE } from '../src/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { OracleMock } from '../typechain/OracleMock'
+import { ChainlinkMultiOracle } from '../typechain/ChainlinkMultiOracle'
+import { CompoundMultiOracle } from '../typechain/CompoundMultiOracle'
 import { SourceMock } from '../typechain/SourceMock'
 
 import { ethers, waffle } from 'hardhat'
@@ -30,9 +33,9 @@ describe('Ladle - close', function () {
   let base: ERC20Mock
   let ilk: ERC20Mock
   let ilkJoin: Join
-  let spotOracle: OracleMock
+  let spotOracle: ChainlinkMultiOracle
   let spotSource: SourceMock
-  let rateOracle: OracleMock
+  let rateOracle: CompoundMultiOracle
   let rateSource: SourceMock
   let ladle: LadleWrapper
   let ladleFromOther: LadleWrapper
@@ -66,10 +69,10 @@ describe('Ladle - close', function () {
     ilk = env.assets.get(ilkId) as ERC20Mock
     ilkJoin = env.joins.get(ilkId) as Join
     fyToken = env.series.get(seriesId) as FYToken
-    rateOracle = env.oracles.get('rate') as OracleMock
-    rateSource = (await ethers.getContractAt('SourceMock', await rateOracle.source())) as SourceMock
-    spotOracle = env.oracles.get(ilkId) as OracleMock
-    spotSource = (await ethers.getContractAt('SourceMock', await spotOracle.source())) as SourceMock
+    rateOracle = env.oracles.get(RATE) as unknown as CompoundMultiOracle
+    rateSource = (await ethers.getContractAt('SourceMock', await rateOracle.sources(baseId, RATE))) as SourceMock
+    spotOracle = env.oracles.get(ilkId) as unknown as ChainlinkMultiOracle
+    spotSource = (await ethers.getContractAt('SourceMock', await spotOracle.sources(baseId, ilkId))) as SourceMock
 
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
     ladle.pour(vaultId, owner, WAD, WAD)
