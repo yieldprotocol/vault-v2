@@ -57,7 +57,7 @@ describe('Oracle', function () {
 
     cTokenChi = (await deployContract(ownerAcc, CTokenChiMockArtifact, [])) as CTokenChiMock
     cTokenRate = (await deployContract(ownerAcc, CTokenRateMockArtifact, [])) as CTokenRateMock
-    
+
     compoundMultiOracle = (await deployContract(ownerAcc, CompoundMultiOracleArtifact, [])) as CompoundMultiOracle
     await compoundMultiOracle.setSources([baseId, baseId], [CHI, RATE], [cTokenChi.address, cTokenRate.address])
   })
@@ -69,9 +69,10 @@ describe('Oracle', function () {
 
   it('sets and retrieves the value at spot price from a chainlink multioracle', async () => {
     await aggregator.set(WAD.mul(2))
-    expect((await chainlinkMultiOracle.callStatic.get(bytes6ToBytes32(baseId), bytes6ToBytes32(quoteId), WAD))[0]).to.equal(WAD.mul(2))
+    expect(
+      (await chainlinkMultiOracle.callStatic.get(bytes6ToBytes32(baseId), bytes6ToBytes32(quoteId), WAD))[0]
+    ).to.equal(WAD.mul(2))
   })
-
 
   it('sets and retrieves the chi and rate values at spot price from a compound multioracle', async () => {
     await cTokenChi.set(WAD.mul(2))
