@@ -98,7 +98,7 @@ describe('Cauldron - admin', function () {
   })
 
   it('does not allow adding a series before adding its base', async () => {
-    await expect(cauldron.addSeries(seriesId, baseId, fyToken.address)).to.be.revertedWith('Asset not found')
+    await expect(cauldron.addSeries(seriesId, baseId, fyToken.address)).to.be.revertedWith('Base not found')
   })
 
   describe('with a base and an ilk added', async () => {
@@ -120,11 +120,11 @@ describe('Cauldron - admin', function () {
     })
 
     it('does not allow setting a debt limit for an unknown base', async () => {
-      await expect(cauldron.setMaxDebt(mockAssetId, ilkId1, 2)).to.be.revertedWith('Asset not found')
+      await expect(cauldron.setMaxDebt(mockAssetId, ilkId1, 2)).to.be.revertedWith('Base not found')
     })
 
     it('does not allow setting a debt limit for an unknown ilk', async () => {
-      await expect(cauldron.setMaxDebt(baseId, mockAssetId, 2)).to.be.revertedWith('Asset not found')
+      await expect(cauldron.setMaxDebt(baseId, mockAssetId, 2)).to.be.revertedWith('Ilk not found')
     })
 
     it('sets a debt limit', async () => {
@@ -137,7 +137,7 @@ describe('Cauldron - admin', function () {
     })
 
     it('does not allow adding a rate oracle for an unknown base', async () => {
-      await expect(cauldron.setRateOracle(mockAssetId, oracle.address)).to.be.revertedWith('Asset not found')
+      await expect(cauldron.setRateOracle(mockAssetId, oracle.address)).to.be.revertedWith('Base not found')
     })
 
     it('adds a rate oracle', async () => {
@@ -195,13 +195,13 @@ describe('Cauldron - admin', function () {
 
         it('does not allow adding a spot oracle for an unknown base', async () => {
           await expect(cauldron.setSpotOracle(mockAssetId, ilkId1, oracle.address, ratio)).to.be.revertedWith(
-            'Asset not found'
+            'Base not found'
           )
         })
 
         it('does not allow adding a spot oracle for an unknown ilk', async () => {
           await expect(cauldron.setSpotOracle(baseId, mockAssetId, oracle.address, ratio)).to.be.revertedWith(
-            'Asset not found'
+            'Ilk not found'
           )
         })
 

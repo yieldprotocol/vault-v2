@@ -86,8 +86,8 @@ contract Cauldron is AccessControl() {
         external
         auth
     {
-        require (assets[baseId] != address(0), "Asset not found");
-        require (assets[ilkId] != address(0), "Asset not found");
+        require (assets[baseId] != address(0), "Base not found");
+        require (assets[ilkId] != address(0), "Ilk not found");
         debt[baseId][ilkId].max = max;
         emit MaxDebtSet(baseId, ilkId, max);
     }
@@ -97,7 +97,7 @@ contract Cauldron is AccessControl() {
         external
         auth
     {
-        require (assets[baseId] != address(0), "Asset not found");
+        require (assets[baseId] != address(0), "Base not found");
         // TODO: The oracle should record the asset it refers to, and we should match it against assets[baseId]
         rateOracles[baseId] = oracle;
         emit RateOracleAdded(baseId, address(oracle));
@@ -117,8 +117,8 @@ contract Cauldron is AccessControl() {
         external
         auth
     {
-        require (assets[baseId] != address(0), "Asset not found");
-        require (assets[ilkId] != address(0), "Asset not found");
+        require (assets[baseId] != address(0), "Base not found");
+        require (assets[ilkId] != address(0), "Ilk not found");
         // TODO: The oracle should record the assets it refers to, and we should match it against assets[baseId] and assets[ilkId]
         spotOracles[baseId][ilkId] = DataTypes.SpotOracle({
             oracle: oracle,
@@ -133,10 +133,10 @@ contract Cauldron is AccessControl() {
         auth
     {
         require (seriesId != bytes6(0), "Series id is zero");
-        address asset = assets[baseId];
-        require (asset != address(0), "Asset not found");
+        address base = assets[baseId];
+        require (base != address(0), "Base not found");
         require (fyToken != IFYToken(address(0)), "Series need a fyToken");
-        require (fyToken.asset() == asset, "Mismatched series and base");
+        require (fyToken.underlying() == base, "Mismatched series and base");
         require (rateOracles[baseId] != IOracle(address(0)), "Rate oracle not found");
         require (series[seriesId].fyToken == IFYToken(address(0)), "Id already used");
         series[seriesId] = DataTypes.Series({
