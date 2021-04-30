@@ -86,6 +86,7 @@ export class YieldEnvironment {
   public static async cauldronGovAuth(cauldron: Cauldron, receiver: string) {
     await cauldron.grantRoles(
       [
+        id('setAuctionInterval(uint32)'),
         id('addAsset(bytes6,address)'),
         id('addSeries(bytes6,bytes6,address)'),
         id('addIlks(bytes6,bytes6[])'),
@@ -140,6 +141,16 @@ export class YieldEnvironment {
       id(
         'settle(bytes12,address,uint128,uint128)'
       )],
+      receiver
+    )
+  }
+
+  public static async witchGovAuth(witch: Witch, receiver: string) {
+    await witch.grantRoles(
+      [
+        id('setAuctionTime(uint128)'),
+        id('setInitialProportion(uint128)'),
+      ],
       receiver
     )
   }
@@ -253,6 +264,10 @@ export class YieldEnvironment {
     await this.cauldronLadleAuth(cauldron, ownerAdd)
     await this.ladleGovAuth(ladle, ownerAdd)
     await this.ladleWitchAuth(ladle, ownerAdd)
+    await this.witchGovAuth(witch, ownerAdd)
+
+    // ==== Set protection period for vaults in liquidation ====
+    await cauldron.setAuctionInterval(24 * 60 * 60)
 
     // ==== Add assets and joins ====
     // For each asset id passed as an argument, we create a Mock ERC20 which we register in cauldron, and its Join, that we register in Ladle.
