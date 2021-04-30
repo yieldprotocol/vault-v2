@@ -24,22 +24,26 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
     event Redeemed(address indexed from, address indexed to, uint256 amount, uint256 redeemed);
     event OracleSet(address indexed oracle);
 
+    bytes32 constant CHI = "chi";
+
     uint256 constant internal MAX_TIME_TO_MATURITY = 126144000; // seconds in four years
     bytes32 constant internal FLASH_LOAN_RETURN = keccak256("ERC3156FlashBorrower.onFlashLoan");
 
     IOracle public oracle;                                      // Oracle for the savings rate.
     IJoin public immutable join;                                // Source of redemption funds.
-    address public immutable override asset;
+    address public immutable override underlying;
+    bytes6 public immutable underlyingId;                             // Needed to access the oracle
     uint256 public immutable override maturity;
     uint256 public chiAtMaturity = type(uint256).max;           // Spot price (exchange rate) between the base and an interest accruing token at maturity 
 
     constructor(
+        bytes6 underlyingId_,
         IOracle oracle_, // Underlying vs its interest-bearing version
         IJoin join_,
         uint256 maturity_,
         string memory name,
         string memory symbol
-    ) ERC20Permit(name, symbol, IERC20Metadata(address(IJoin(join_).asset())).decimals()) { // The join asset is this fyToken's base, from which we inherit the decimals
+    ) ERC20Permit(name, symbol, IERC20Metadata(address(IJoin(join_).asset())).decimals()) { // The join asset is this fyToken's underlying, from which we inherit the decimals
         uint256 now_ = block.timestamp;
         require(
             maturity_ > now_ &&
@@ -48,9 +52,10 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
             "Invalid maturity"
         );
 
+        underlyingId = underlyingId_;
         join = join_;
         maturity = maturity_;
-        asset = address(IJoin(join_).asset());
+        underlying = address(IJoin(join_).asset());
         setOracle(oracle_);
     }
 
@@ -94,7 +99,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         private
         returns (uint256 _chiAtMaturity)
     {
-        (_chiAtMaturity,) = oracle.get();
+        (_chiAtMaturity,) = oracle.get(underlyingId, CHI, 1e18);
         chiAtMaturity = _chiAtMaturity;
         emit SeriesMatured(_chiAtMaturity);
     }
@@ -117,7 +122,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         if (chiAtMaturity == type(uint256).max) {  // After maturity, but chi not yet recorded. Let's record it, and accrual is then 1.
             _mature();
         } else {
-            (uint256 chi,) = oracle.get();
+            (uint256 chi,) = oracle.get(underlyingId, CHI, 1e18);
             accrual_ = chi.wdiv(chiAtMaturity);
         }
         accrual_ = accrual_ >= 1e18 ? accrual_ : 1e18;     // The accrual can't be below 1 (with 18 decimals)

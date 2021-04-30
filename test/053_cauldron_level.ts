@@ -2,11 +2,13 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 
 import { constants } from '@yield-protocol/utils-v2'
 const { WAD } = constants
+import { RATE } from '../src/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock as ERC20 } from '../typechain/ERC20Mock'
-import { OracleMock as Oracle } from '../typechain/OracleMock'
+import { ChainlinkMultiOracle } from '../typechain/ChainlinkMultiOracle'
+import { CompoundMultiOracle } from '../typechain/CompoundMultiOracle'
 import { SourceMock } from '../typechain/SourceMock'
 
 import { YieldEnvironment } from './shared/fixtures'
@@ -25,9 +27,9 @@ describe('Cauldron - level', function () {
   let fyToken: FYToken
   let base: ERC20
   let ilk: ERC20
-  let spotOracle: Oracle
+  let spotOracle: ChainlinkMultiOracle
   let spotSource: SourceMock
-  let rateOracle: Oracle
+  let rateOracle: CompoundMultiOracle
   let rateSource: SourceMock
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
@@ -51,11 +53,11 @@ describe('Cauldron - level', function () {
     cauldron = env.cauldron
     base = env.assets.get(baseId) as ERC20
     ilk = env.assets.get(ilkId) as ERC20
-    rateOracle = env.oracles.get('rate') as Oracle
-    rateSource = (await ethers.getContractAt('SourceMock', await rateOracle.source())) as SourceMock
 
-    spotOracle = env.oracles.get(ilkId) as Oracle
-    spotSource = (await ethers.getContractAt('SourceMock', await spotOracle.source())) as SourceMock
+    rateOracle = (env.oracles.get(RATE) as unknown) as CompoundMultiOracle
+    rateSource = (await ethers.getContractAt('SourceMock', await rateOracle.sources(baseId, RATE))) as SourceMock
+    spotOracle = (env.oracles.get(ilkId) as unknown) as ChainlinkMultiOracle
+    spotSource = (await ethers.getContractAt('SourceMock', await spotOracle.sources(baseId, ilkId))) as SourceMock
     fyToken = env.series.get(seriesId) as FYToken
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
 

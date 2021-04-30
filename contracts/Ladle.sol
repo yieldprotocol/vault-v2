@@ -117,7 +117,7 @@ contract Ladle is AccessControl() {
     {
         IFYToken fyToken = getSeries(seriesId).fyToken;
         require (fyToken == pool.fyToken(), "Mismatched pool fyToken and series");
-        require (fyToken.asset() == address(pool.baseToken()), "Mismatched pool base and series");
+        require (fyToken.underlying() == address(pool.baseToken()), "Mismatched pool base and series");
         pools[seriesId] = pool;
         emit PoolAdded(seriesId, address(pool));
     }

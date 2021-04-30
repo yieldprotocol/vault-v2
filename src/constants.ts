@@ -1,3 +1,5 @@
+import { ethers } from 'ethers'
+
 export const OPS = {
     BUILD:                0,
     TWEAK:                1,
@@ -19,3 +21,6 @@ export const OPS = {
     TRANSFER_TO_FYTOKEN:  17,
     REDEEM:               18,
   }
+
+export const CHI = ethers.utils.formatBytes32String('chi')
+export const RATE = ethers.utils.formatBytes32String('rate')
