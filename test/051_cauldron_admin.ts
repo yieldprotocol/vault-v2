@@ -56,6 +56,7 @@ describe('Cauldron - admin', function () {
     ilk2 = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId2, 'Mock Ilk'])) as ERC20Mock
     join = (await deployContract(ownerAcc, JoinArtifact, [base.address])) as Join
     fyToken = (await deployContract(ownerAcc, FYTokenArtifact, [
+      baseId,
       base.address,
       join.address,
       maturity,
@@ -66,6 +67,7 @@ describe('Cauldron - admin', function () {
 
     await cauldron.grantRoles(
       [
+        id('setAuctionInterval(uint32)'),
         id('addAsset(bytes6,address)'),
         id('setMaxDebt(bytes6,bytes6,uint128)'),
         id('setRateOracle(bytes6,address)'),
@@ -75,6 +77,13 @@ describe('Cauldron - admin', function () {
       ],
       owner
     )
+  })
+
+  it('sets the protection period', async () => {
+    expect(await cauldron.setAuctionInterval(1))
+      .to.emit(cauldron, 'AuctionIntervalSet')
+      .withArgs(1)
+    expect(await cauldron.auctionInterval()).to.equal(1)
   })
 
   it('does not allow using zero as an asset identifier', async () => {
@@ -89,7 +98,7 @@ describe('Cauldron - admin', function () {
   })
 
   it('does not allow adding a series before adding its base', async () => {
-    await expect(cauldron.addSeries(seriesId, baseId, fyToken.address)).to.be.revertedWith('Asset not found')
+    await expect(cauldron.addSeries(seriesId, baseId, fyToken.address)).to.be.revertedWith('Base not found')
   })
 
   describe('with a base and an ilk added', async () => {
@@ -111,11 +120,11 @@ describe('Cauldron - admin', function () {
     })
 
     it('does not allow setting a debt limit for an unknown base', async () => {
-      await expect(cauldron.setMaxDebt(mockAssetId, ilkId1, 2)).to.be.revertedWith('Asset not found')
+      await expect(cauldron.setMaxDebt(mockAssetId, ilkId1, 2)).to.be.revertedWith('Base not found')
     })
 
     it('does not allow setting a debt limit for an unknown ilk', async () => {
-      await expect(cauldron.setMaxDebt(baseId, mockAssetId, 2)).to.be.revertedWith('Asset not found')
+      await expect(cauldron.setMaxDebt(baseId, mockAssetId, 2)).to.be.revertedWith('Ilk not found')
     })
 
     it('sets a debt limit', async () => {
@@ -128,7 +137,7 @@ describe('Cauldron - admin', function () {
     })
 
     it('does not allow adding a rate oracle for an unknown base', async () => {
-      await expect(cauldron.setRateOracle(mockAssetId, oracle.address)).to.be.revertedWith('Asset not found')
+      await expect(cauldron.setRateOracle(mockAssetId, oracle.address)).to.be.revertedWith('Base not found')
     })
 
     it('adds a rate oracle', async () => {
@@ -186,13 +195,13 @@ describe('Cauldron - admin', function () {
 
         it('does not allow adding a spot oracle for an unknown base', async () => {
           await expect(cauldron.setSpotOracle(mockAssetId, ilkId1, oracle.address, ratio)).to.be.revertedWith(
-            'Asset not found'
+            'Base not found'
           )
         })
 
         it('does not allow adding a spot oracle for an unknown ilk', async () => {
           await expect(cauldron.setSpotOracle(baseId, mockAssetId, oracle.address, ratio)).to.be.revertedWith(
-            'Asset not found'
+            'Ilk not found'
           )
         })
 

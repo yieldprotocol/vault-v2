@@ -30,6 +30,7 @@ contract Cauldron is AccessControl() {
     using CastU256I256 for uint256;
     using CastI128U128 for int128;
 
+    event AuctionIntervalSet(uint32 indexed auctionInterval);
     event AssetAdded(bytes6 indexed assetId, address indexed asset);
     event SeriesAdded(bytes6 indexed seriesId, bytes6 indexed baseId, address indexed fyToken);
     event IlkAdded(bytes6 indexed seriesId, bytes6 indexed ilkId);
@@ -45,7 +46,7 @@ contract Cauldron is AccessControl() {
     event VaultPoured(bytes12 indexed vaultId, bytes6 indexed seriesId, bytes6 indexed ilkId, int128 ink, int128 art);
     event VaultStirred(bytes12 indexed from, bytes12 indexed to, uint128 ink, uint128 art);
     event VaultRolled(bytes12 indexed vaultId, bytes6 indexed seriesId, uint128 art);
-    event VaultTimestamped(bytes12 indexed vaultId, uint256 indexed timestamp);
+    event VaultLocked(bytes12 indexed vaultId, uint256 indexed timestamp);
 
     event SeriesMatured(bytes6 indexed seriesId, uint256 rateAtMaturity);
 
@@ -60,11 +61,12 @@ contract Cauldron is AccessControl() {
     // ==== Protocol data ====
     mapping (bytes6 => mapping(bytes6 => DataTypes.Debt))       public debt;            // [baseId][ilkId] Max and sum of debt per underlying and collateral.
     mapping (bytes6 => uint256)                                 public ratesAtMaturity; // Borrowing rate at maturity for a mature series
+    uint32                                                      public auctionInterval;// Time that vaults in liquidation are protected from being grabbed by a different engine.
 
     // ==== User data ====
     mapping (bytes12 => DataTypes.Vault)                        public vaults;          // An user can own one or more Vaults, each one with a bytes12 identifier
     mapping (bytes12 => DataTypes.Balances)                     public balances;        // Both debt and assets
-    mapping (bytes12 => uint32)                                 public timestamps;      // If grater than zero, time that a vault was timestamped. Used for liquidation.
+    mapping (bytes12 => uint32)                                 public auctions;        // If grater than zero, time that a vault was timestamped. Used for liquidation.
 
     // ==== Administration ====
 
@@ -84,8 +86,8 @@ contract Cauldron is AccessControl() {
         external
         auth
     {
-        require (assets[baseId] != address(0), "Asset not found");
-        require (assets[ilkId] != address(0), "Asset not found");
+        require (assets[baseId] != address(0), "Base not found");
+        require (assets[ilkId] != address(0), "Ilk not found");
         debt[baseId][ilkId].max = max;
         emit MaxDebtSet(baseId, ilkId, max);
     }
@@ -95,10 +97,19 @@ contract Cauldron is AccessControl() {
         external
         auth
     {
-        require (assets[baseId] != address(0), "Asset not found");
+        require (assets[baseId] != address(0), "Base not found");
         // TODO: The oracle should record the asset it refers to, and we should match it against assets[baseId]
         rateOracles[baseId] = oracle;
         emit RateOracleAdded(baseId, address(oracle));
+    }
+
+    /// @dev Set the interval for which vaults being auctioned can't be grabbed by another liquidation engine
+    function setAuctionInterval(uint32 auctionInterval_)
+        external
+        auth
+    {
+        auctionInterval = auctionInterval_;
+        emit AuctionIntervalSet(auctionInterval_);
     }
 
     /// @dev Set a spot oracle and its collateralization ratio. Can be reset.
@@ -106,8 +117,8 @@ contract Cauldron is AccessControl() {
         external
         auth
     {
-        require (assets[baseId] != address(0), "Asset not found");
-        require (assets[ilkId] != address(0), "Asset not found");
+        require (assets[baseId] != address(0), "Base not found");
+        require (assets[ilkId] != address(0), "Ilk not found");
         // TODO: The oracle should record the assets it refers to, and we should match it against assets[baseId] and assets[ilkId]
         spotOracles[baseId][ilkId] = DataTypes.SpotOracle({
             oracle: oracle,
@@ -122,10 +133,10 @@ contract Cauldron is AccessControl() {
         auth
     {
         require (seriesId != bytes6(0), "Series id is zero");
-        address asset = assets[baseId];
-        require (asset != address(0), "Asset not found");
+        address base = assets[baseId];
+        require (base != address(0), "Base not found");
         require (fyToken != IFYToken(address(0)), "Series need a fyToken");
-        require (fyToken.asset() == asset, "Mismatched series and base");
+        require (fyToken.underlying() == base, "Mismatched series and base");
         require (rateOracles[baseId] != IOracle(address(0)), "Rate oracle not found");
         require (series[seriesId].fyToken == IFYToken(address(0)), "Id already used");
         series[seriesId] = DataTypes.Series({
@@ -184,7 +195,7 @@ contract Cauldron is AccessControl() {
     {
         DataTypes.Balances memory balances_ = balances[vaultId];
         require (balances_.art == 0 && balances_.ink == 0, "Only empty vaults");
-        delete timestamps[vaultId];
+        delete auctions[vaultId];
         delete vaults[vaultId];
         emit VaultDestroyed(vaultId);
     }
@@ -329,22 +340,22 @@ contract Cauldron is AccessControl() {
         return balances_;
     }
 
-    /// @dev Give a non-timestamped vault to the caller, and timestamp it.
+    /// @dev Give a non-timestamped vault to another user, and timestamp it.
     /// To be used for liquidation engines.
-    function grab(bytes12 vaultId)
+    function grab(bytes12 vaultId, address receiver)
         external
         auth
     {
         uint32 now_ = uint32(block.timestamp);
-        require (timestamps[vaultId] + 24*60*60 <= now_, "Timestamped");        // Grabbing a vault protects it for a day from being grabbed by another liquidator. All grabbed vaults will be suddenly released on the 7th of February 2106, at 06:28:16 GMT. I can live with that.
+        require (auctions[vaultId] + auctionInterval <= now_, "Vault under auction");        // Grabbing a vault protects it for a day from being grabbed by another liquidator. All grabbed vaults will be suddenly released on the 7th of February 2106, at 06:28:16 GMT. I can live with that.
 
         (DataTypes.Vault memory vault_, DataTypes.Series memory series_, DataTypes.Balances memory balances_) = vaultData(vaultId, true);
         require(_level(vault_, balances_, series_) < 0, "Not undercollateralized");
 
-        timestamps[vaultId] = now_;
-        _give(vaultId, msg.sender);
+        auctions[vaultId] = now_;
+        _give(vaultId, receiver);
 
-        emit VaultTimestamped(vaultId, now_);
+        emit VaultLocked(vaultId, now_);
     }
 
     /// @dev Reduce debt and collateral from a vault, ignoring collateralization checks.
@@ -409,7 +420,7 @@ contract Cauldron is AccessControl() {
         internal
     {
         IOracle rateOracle = rateOracles[series_.baseId];
-        (uint256 rateAtMaturity,) = rateOracle.get(1e18);
+        (uint256 rateAtMaturity,) = rateOracle.get(series_.baseId, bytes32("rate"), 1e18);
         ratesAtMaturity[seriesId] = rateAtMaturity;
         emit SeriesMatured(seriesId, rateAtMaturity);
     }
@@ -436,7 +447,7 @@ contract Cauldron is AccessControl() {
             _mature(seriesId, series_);
         } else {
             IOracle rateOracle = rateOracles[series_.baseId];
-            (uint256 rate,) = rateOracle.get(1e18);
+            (uint256 rate,) = rateOracle.get(series_.baseId, bytes32("rate"), 1e18);
             accrual_ = rate.wdiv(rateAtMaturity);
         }
         accrual_ = accrual_ >= 1e18 ? accrual_ : 1e18;     // The accrual can't be below 1 (with 18 decimals)
@@ -453,7 +464,7 @@ contract Cauldron is AccessControl() {
     {
         DataTypes.SpotOracle memory spotOracle_ = spotOracles[series_.baseId][vault_.ilkId];
         uint256 ratio = uint256(spotOracle_.ratio) * 1e12;   // Normalized to 18 decimals
-        (uint256 inkValue,) = spotOracle_.oracle.get(balances_.ink);    // ink * spot
+        (uint256 inkValue,) = spotOracle_.oracle.get(series_.baseId, vault_.ilkId, balances_.ink);    // ink * spot
 
         if (uint32(block.timestamp) >= series_.maturity) {
             uint256 accrual_ = _accrual(vault_.seriesId, series_);

@@ -9,6 +9,7 @@ import { Witch } from '../typechain/Witch'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { OracleMock } from '../typechain/OracleMock'
+import { ChainlinkMultiOracle } from '../typechain/ChainlinkMultiOracle'
 import { SourceMock } from '../typechain/SourceMock'
 
 import { ethers, waffle } from 'hardhat'
@@ -34,7 +35,7 @@ describe('Witch', function () {
   let base: ERC20Mock
   let ilk: ERC20Mock
   let ilkJoin: Join
-  let spotOracle: OracleMock
+  let spotOracle: ChainlinkMultiOracle
   let spotSource: SourceMock
 
   const mockVaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12))
@@ -66,13 +67,31 @@ describe('Witch', function () {
     ilk = env.assets.get(ilkId) as ERC20Mock
     ilkJoin = env.joins.get(ilkId) as Join
     fyToken = env.series.get(seriesId) as FYToken
-    spotOracle = env.oracles.get(ilkId) as OracleMock
-    spotSource = (await ethers.getContractAt('SourceMock', await spotOracle.source())) as SourceMock
+    spotOracle = (env.oracles.get(ilkId) as unknown) as ChainlinkMultiOracle
+    spotSource = (await ethers.getContractAt('SourceMock', await spotOracle.sources(baseId, ilkId))) as SourceMock
 
     witchFromOther = witch.connect(otherAcc)
 
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
     await ladle.pour(vaultId, owner, WAD, WAD)
+  })
+
+  it('does not allow to set the initial proportion over 100%', async () => {
+    await expect(witch.setInitialProportion(WAD.mul(2))).to.be.revertedWith('Only at or under 100%')
+  })
+
+  it('allows to set the initial proportion', async () => {
+    expect(await witch.setInitialProportion(1))
+      .to.emit(witch, 'InitialProportionSet')
+      .withArgs(1)
+    expect(await witch.initialProportion()).to.equal(1)
+  })
+
+  it('allows to set the auction time', async () => {
+    expect(await witch.setAuctionTime(1))
+      .to.emit(witch, 'AuctionTimeSet')
+      .withArgs(1)
+    expect(await witch.auctionTime()).to.equal(1)
   })
 
   it('does not allow to grab collateralized vaults', async () => {
@@ -90,9 +109,9 @@ describe('Witch', function () {
   it('grabs undercollateralized vaults', async () => {
     await spotSource.set(WAD.div(2))
     await witch.grab(vaultId)
-    const event = (await cauldron.queryFilter(cauldron.filters.VaultTimestamped(null, null)))[0]
+    const event = (await cauldron.queryFilter(cauldron.filters.VaultLocked(null, null)))[0]
     expect(event.args.timestamp.toNumber()).to.be.greaterThan(0)
-    expect(await cauldron.timestamps(vaultId)).to.equal(event.args.timestamp)
+    expect(await cauldron.auctions(vaultId)).to.equal(event.args.timestamp)
   })
 
   describe('once a vault has been grabbed', async () => {
@@ -102,7 +121,7 @@ describe('Witch', function () {
     })
 
     it("it can't be grabbed again", async () => {
-      await expect(witch.grab(vaultId)).to.be.revertedWith('Timestamped')
+      await expect(witch.grab(vaultId)).to.be.revertedWith('Vault under auction')
     })
 
     it('does not buy if minimum collateral not reached', async () => {
@@ -130,7 +149,7 @@ describe('Witch', function () {
     describe('once the auction time has passed', async () => {
       beforeEach(async () => {
         const now = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
-        await ethers.provider.send('evm_mine', [now + (await witch.AUCTION_TIME()).toNumber()])
+        await ethers.provider.send('evm_mine', [now + (await witch.auctionTime()).toNumber()])
       })
 
       it('allows to buy all of the collateral for the whole debt at the end', async () => {

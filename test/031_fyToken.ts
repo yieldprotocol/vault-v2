@@ -1,12 +1,13 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { constants, id } from '@yield-protocol/utils-v2'
 const { WAD } = constants
+import { CHI } from '../src/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
-import { OracleMock } from '../typechain/OracleMock'
+import { CompoundMultiOracle } from '../typechain/CompoundMultiOracle'
 import { SourceMock } from '../typechain/SourceMock'
 
 import { ethers, waffle } from 'hardhat'
@@ -26,7 +27,7 @@ describe('FYToken', function () {
   let fyToken: FYToken
   let base: ERC20Mock
   let baseJoin: Join
-  let chiOracle: OracleMock
+  let chiOracle: CompoundMultiOracle
   let chiSource: SourceMock
   let ladle: LadleWrapper
 
@@ -52,8 +53,8 @@ describe('FYToken', function () {
     base = env.assets.get(baseId) as ERC20Mock
     baseJoin = env.joins.get(baseId) as Join
     fyToken = env.series.get(seriesId) as FYToken
-    chiOracle = env.oracles.get('chi') as OracleMock
-    chiSource = (await ethers.getContractAt('SourceMock', await chiOracle.source())) as SourceMock
+    chiOracle = (env.oracles.get(CHI) as unknown) as CompoundMultiOracle
+    chiSource = (await ethers.getContractAt('SourceMock', await chiOracle.sources(baseId, CHI))) as SourceMock
 
     await baseJoin.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], fyToken.address)
 
