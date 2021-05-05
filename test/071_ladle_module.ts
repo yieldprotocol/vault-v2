@@ -76,8 +76,8 @@ describe('Ladle - module', function () {
     await ilk.approve(transferModule.address, WAD)
     const transferFromSelector = id('transferFrom(address,bytes)')
     const transferFromData = ethers.utils.defaultAbiCoder.encode(
-      ['address', 'address', 'address', 'uint256'],
-      [ilk.address, owner, ilkJoin.address, WAD]
+      ['address', 'address', 'uint256'],
+      [ilk.address, ilkJoin.address, WAD]
     )
     const moduleData = ethers.utils.defaultAbiCoder.encode(
       ['address', 'bytes4', 'bytes'],

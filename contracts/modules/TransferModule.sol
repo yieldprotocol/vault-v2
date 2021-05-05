@@ -13,7 +13,7 @@ contract TransferModule is AccessControl() {
         external
         auth
     {
-        (address token, address src, address dst, uint256 wad) = abi.decode(data, (address, address, address, uint256));
-        IERC20(token).safeTransferFrom(src, dst, wad);
+        (address token, address dst, uint256 wad) = abi.decode(data, (address, address, uint256));
+        IERC20(token).safeTransferFrom(initiator, dst, wad);
     }
 }
