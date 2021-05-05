@@ -54,21 +54,11 @@ describe('Ladle - module', function () {
 
     // ==== Set transfer module ====
     transferModule = (await deployContract(ownerAcc, TransferModuleArtifact, [])) as TransferModule
-    await ladle.grantRoles(
-      [
-        id('setModule(address,bool)'),
-      ],
-      owner
-    )
+    await ladle.grantRoles([id('setModule(address,bool)')], owner)
 
     await ladle.ladle.setModule(transferModule.address, true)
 
-    await transferModule.grantRoles(
-      [
-        id('transferFrom(address,bytes)'),
-      ],
-      ladle.address
-    )
+    await transferModule.grantRoles([id('transferFrom(address,bytes)')], ladle.address)
   })
 
   it('transfers token from src to dst', async () => {

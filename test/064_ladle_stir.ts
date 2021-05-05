@@ -5,7 +5,6 @@ const { WAD } = constants
 
 import StirModuleArtifact from '../artifacts/contracts/modules/StirModule.sol/StirModule.json'
 
-
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { Cauldron } from '../typechain/Cauldron'
 import { FYToken } from '../typechain/FYToken'
@@ -69,27 +68,12 @@ describe('Ladle - stir', function () {
 
     // ==== Set stir module ====
     stirModule = (await deployContract(ownerAcc, StirModuleArtifact, [cauldron.address])) as StirModule
-    await ladle.grantRoles(
-      [
-        id('setModule(address,bool)'),
-      ],
-      owner
-    )
+    await ladle.grantRoles([id('setModule(address,bool)')], owner)
 
     await ladle.ladle.setModule(stirModule.address, true)
-    await cauldron.grantRoles(
-      [
-        id('stir(bytes12,bytes12,uint128,uint128)'),
-      ],
-      stirModule.address
-    )
+    await cauldron.grantRoles([id('stir(bytes12,bytes12,uint128,uint128)')], stirModule.address)
 
-    await stirModule.grantRoles(
-      [
-        id('stir(address,bytes)'),
-      ],
-      ladle.address
-    )
+    await stirModule.grantRoles([id('stir(address,bytes)')], ladle.address)
   })
 
   it('does not allow moving collateral other than to the origin vault owner', async () => {
