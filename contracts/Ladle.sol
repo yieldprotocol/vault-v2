@@ -10,7 +10,7 @@ import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC2612.sol";
 import "dss-interfaces/src/dss/DaiAbstract.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
+import "@yield-protocol/utils-v2/contracts/token/AllTransferHelper.sol";
 import "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
 import "./math/WMul.sol";
 import "./math/CastU256U128.sol";
@@ -22,8 +22,8 @@ contract Ladle is AccessControl() {
     using WMul for uint256;
     using CastU256U128 for uint256;
     using CastU128I128 for uint128;
-    using TransferHelper for IERC20;
-    using TransferHelper for address payable;
+    using AllTransferHelper for IERC20;
+    using AllTransferHelper for address payable;
 
     enum Operation {
         BUILD,               // 0
