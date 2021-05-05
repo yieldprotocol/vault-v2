@@ -1,15 +1,19 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 
-import { constants } from '@yield-protocol/utils-v2'
+import { id, constants } from '@yield-protocol/utils-v2'
 const { WAD } = constants
 
+import StirModuleArtifact from '../artifacts/contracts/modules/StirModule.sol/StirModule.json'
+
+
+import { ERC20Mock } from '../typechain/ERC20Mock'
 import { Cauldron } from '../typechain/Cauldron'
 import { FYToken } from '../typechain/FYToken'
-import { ERC20Mock } from '../typechain/ERC20Mock'
+import { StirModule } from '../typechain/StirModule'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
-const { loadFixture } = waffle
+const { deployContract, loadFixture } = waffle
 
 import { YieldEnvironment } from './shared/fixtures'
 import { LadleWrapper } from '../src/ladleWrapper'
@@ -27,6 +31,7 @@ describe('Ladle - stir', function () {
   let base: ERC20Mock
   let ladle: LadleWrapper
   let ladleFromOther: LadleWrapper
+  let stirModule: StirModule
 
   async function fixture() {
     return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId, otherIlkId], [seriesId])
@@ -61,6 +66,30 @@ describe('Ladle - stir', function () {
 
     // ==== Set testing environment ====
     await ladle.build(vaultToId, seriesId, ilkId)
+
+    // ==== Set stir module ====
+    stirModule = (await deployContract(ownerAcc, StirModuleArtifact, [cauldron.address])) as StirModule
+    await ladle.grantRoles(
+      [
+        id('setModule(address,bool)'),
+      ],
+      owner
+    )
+
+    await ladle.ladle.setModule(stirModule.address, true)
+    await cauldron.grantRoles(
+      [
+        id('stir(bytes12,bytes12,uint128,uint128)'),
+      ],
+      stirModule.address
+    )
+
+    await stirModule.grantRoles(
+      [
+        id('stir(address,bytes)'),
+      ],
+      ladle.address
+    )
   })
 
   it('does not allow moving collateral other than to the origin vault owner', async () => {
@@ -78,6 +107,23 @@ describe('Ladle - stir', function () {
       .withArgs(vaultFromId, vaultToId, WAD, 0)
     expect((await cauldron.balances(vaultFromId)).ink).to.equal(0)
     expect((await cauldron.balances(vaultToId)).ink).to.equal(WAD)
+  })
+
+  it('moves collateral through module', async () => {
+    await ladle.pour(vaultFromId, owner, WAD, 0)
+
+    const stirSelector = id('stir(address,bytes)')
+    const stirData = ethers.utils.defaultAbiCoder.encode(
+      ['bytes12', 'bytes12', 'uint128', 'uint128'],
+      [vaultFromId, vaultToId, WAD, 0]
+    )
+    const moduleData = ethers.utils.defaultAbiCoder.encode(
+      ['address', 'bytes4', 'bytes'],
+      [stirModule.address, stirSelector, stirData]
+    )
+    expect(await ladle.ladle.batch([19], [moduleData]))
+      .to.emit(cauldron, 'VaultStirred')
+      .withArgs(vaultFromId, vaultToId, WAD, 0)
   })
 
   it('moves debt', async () => {

@@ -44,7 +44,8 @@ contract Ladle is AccessControl() {
         TRANSFER_TO_POOL,    // 15
         ROUTE,               // 16
         TRANSFER_TO_FYTOKEN, // 17
-        REDEEM               // 18
+        REDEEM,              // 18
+        MODULE               // 19
     }
 
     ICauldron public immutable cauldron;
@@ -52,9 +53,11 @@ contract Ladle is AccessControl() {
 
     mapping (bytes6 => IJoin)                   public joins;            // Join contracts available to manage assets. The same Join can serve multiple assets (ETH-A, ETH-B, etc...)
     mapping (bytes6 => IPool)                   public pools;            // Pool contracts available to manage series. 12 bytes still free.
+    mapping (address => bool)                   public modules;          // Trusted contracts to execute anything on.
 
     event JoinAdded(bytes6 indexed assetId, address indexed join);
     event PoolAdded(bytes6 indexed seriesId, address indexed pool);
+    event ModuleSet(address indexed module, bool indexed set);
     event FeeSet(uint256 fee);
 
     constructor (ICauldron cauldron_) {
@@ -120,6 +123,15 @@ contract Ladle is AccessControl() {
         require (fyToken.underlying() == address(pool.baseToken()), "Mismatched pool base and series");
         pools[seriesId] = pool;
         emit PoolAdded(seriesId, address(pool));
+    }
+
+    /// @dev Add or remove a module.
+    function setModule(address module, bool set)
+        external
+        auth
+    {
+        modules[module] = set;
+        emit ModuleSet(module, set);
     }
 
     /// @dev Set the fee parameter
@@ -246,6 +258,10 @@ contract Ladle is AccessControl() {
                 _destroy(vaultId);
                 delete vault;   // Clear the cache
                 cachedId = bytes12(0);
+            
+            } else if (operation == Operation.MODULE) {
+                (address module, bytes4 selector, bytes memory data_) = abi.decode(data[i], (address, bytes4, bytes));
+                _moduleCall(module, selector, data_);
             
             }
         }
@@ -556,5 +572,17 @@ contract Ladle is AccessControl() {
         returns (uint256)
     {
         return fyToken.redeem(to, wad);
+    }
+
+    // ---- Module router ----
+
+    /// @dev Allow users to route calls to a pool, to be used with batch
+    function _moduleCall(address module, bytes4 selector, bytes memory data)
+        private
+        returns (bool success, bytes memory result)
+    {
+        require (modules[module], "Unregistered module");
+        (success, result) = module.call(abi.encodeWithSelector(selector, msg.sender, data));
+        if (!success) revert(RevertMsgExtractor.getRevertMsg(result));
     }
 }
