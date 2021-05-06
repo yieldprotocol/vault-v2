@@ -1,6 +1,7 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { id } from '@yield-protocol/utils'
-import { WAD, MAX256 as MAX } from './shared/constants'
+import { constants, id } from '@yield-protocol/utils-v2'
+const { WAD, MAX256 } = constants
+const MAX = MAX256
 
 import JoinArtifact from '../artifacts/contracts/Join.sol/Join.json'
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'

@@ -1,8 +1,9 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { WAD } from './shared/constants'
+
+import { constants } from '@yield-protocol/utils-v2'
+const { WAD } = constants
 
 import { Cauldron } from '../typechain/Cauldron'
-import { Ladle } from '../typechain/Ladle'
 import { Join } from '../typechain/Join'
 import { Witch } from '../typechain/Witch'
 import { FYToken } from '../typechain/FYToken'
@@ -15,6 +16,7 @@ import { expect } from 'chai'
 const { loadFixture } = waffle
 
 import { YieldEnvironment } from './shared/fixtures'
+import { LadleWrapper } from '../src/ladleWrapper'
 
 describe('Witch', function () {
   this.timeout(0)
@@ -25,7 +27,7 @@ describe('Witch', function () {
   let owner: string
   let other: string
   let cauldron: Cauldron
-  let ladle: Ladle
+  let ladle: LadleWrapper
   let witch: Witch
   let witchFromOther: Witch
   let fyToken: FYToken
@@ -105,6 +107,12 @@ describe('Witch', function () {
 
     it('does not buy if minimum collateral not reached', async () => {
       await expect(witch.buy(vaultId, WAD, WAD)).to.be.revertedWith('Not enough bought')
+    })
+
+    it('it can buy no collateral (coverage)', async () => {
+      expect(await witch.buy(vaultId, 0, 0))
+        .to.emit(witch, 'Bought')
+        .withArgs(owner, vaultId, 0, 0)
     })
 
     it('allows to buy 1/2 of the collateral for the whole debt at the beginning', async () => {

@@ -1,17 +1,20 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { WAD, MAX128 as MAX, OPS } from './shared/constants'
+
+import { constants } from '@yield-protocol/utils-v2'
+const { WAD, MAX128 } = constants
+const MAX = MAX128
 
 import { Cauldron } from '../typechain/Cauldron'
 import { FYToken } from '../typechain/FYToken'
 import { PoolMock } from '../typechain/PoolMock'
 import { ERC20Mock } from '../typechain/ERC20Mock'
-import { Ladle } from '../typechain/Ladle'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { loadFixture } = waffle
 
 import { YieldEnvironment } from './shared/fixtures'
+import { LadleWrapper } from '../src/ladleWrapper'
 
 describe('Ladle - serve and repay', function () {
   this.timeout(0)
@@ -26,7 +29,7 @@ describe('Ladle - serve and repay', function () {
   let pool: PoolMock
   let base: ERC20Mock
   let ilk: ERC20Mock
-  let ladle: Ladle
+  let ladle: LadleWrapper
 
   async function fixture() {
     return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId], [seriesId])
@@ -103,11 +106,13 @@ describe('Ladle - serve and repay', function () {
     const debtRepaidInFY = debtRepaidInBase.mul(105).div(100)
     const inkRetrieved = WAD.div(4)
 
-    const transferToPoolData = ethers.utils.defaultAbiCoder.encode(['bool', 'uint128'], [true, debtRepaidInBase])
-    const repayData = ethers.utils.defaultAbiCoder.encode(['address', 'int128', 'uint128'], [owner, inkRetrieved, 0])
-
     await base.approve(ladle.address, debtRepaidInBase) // This would normally be part of a multicall, using ladle.forwardPermit
-    await expect(ladle.batch(vaultId, [OPS.TRANSFER_TO_POOL, OPS.REPAY], [transferToPoolData, repayData]))
+    await expect(
+      ladle.batch([
+        ladle.transferToPoolAction(seriesId, true, debtRepaidInBase),
+        ladle.repayAction(vaultId, owner, inkRetrieved, 0),
+      ])
+    )
       .to.emit(cauldron, 'VaultPoured')
       .withArgs(vaultId, seriesId, ilkId, inkRetrieved, debtRepaidInFY.mul(-1))
       .to.emit(pool, 'Trade')
@@ -131,13 +136,14 @@ describe('Ladle - serve and repay', function () {
       .withArgs(vaultId, seriesId, ilkId, inkRetrieved, WAD.mul(-1))
       .to.emit(pool, 'Trade')
       .withArgs(await fyToken.maturity(), ladle.address, fyToken.address, debtinBase, debtinFY.mul(-1))
-    await pool.retrieveBaseToken(owner)
+    // await pool.retrieveBaseToken(owner)
 
     expect((await cauldron.balances(vaultId)).art).to.equal(0)
     expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(debtinBase))
   })
 
   it('repays all debt of a vault with base in a batch', async () => {
+    // Borrow, so that we can repay
     await ladle.pour(vaultId, owner, WAD, WAD)
 
     const baseBalanceBefore = await base.balanceOf(owner)
@@ -146,20 +152,12 @@ describe('Ladle - serve and repay', function () {
     const debtInBase = debtinFY.mul(100).div(105)
     const inkRetrieved = WAD.div(4)
 
-    const transferToPoolData = ethers.utils.defaultAbiCoder.encode(['bool', 'uint128'], [true, baseOffered])
-    const repayVaultData = ethers.utils.defaultAbiCoder.encode(
-      ['address', 'int128', 'uint128'],
-      [owner, inkRetrieved, MAX]
-    )
-    const retrieveFromPoolData = ethers.utils.defaultAbiCoder.encode(['bool', 'address'], [true, owner])
-
     await base.approve(ladle.address, baseOffered) // This would normally be part of a multicall, using ladle.forwardPermit
     await expect(
-      ladle.batch(
-        vaultId,
-        [OPS.TRANSFER_TO_POOL, OPS.REPAY_VAULT, OPS.RETRIEVE_FROM_POOL],
-        [transferToPoolData, repayVaultData, retrieveFromPoolData]
-      )
+      ladle.batch([
+        ladle.transferToPoolAction(seriesId, true, baseOffered),
+        ladle.repayVaultAction(vaultId, owner, inkRetrieved, MAX),
+      ])
     )
       .to.emit(cauldron, 'VaultPoured')
       .withArgs(vaultId, seriesId, ilkId, inkRetrieved, WAD.mul(-1))

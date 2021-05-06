@@ -1,10 +1,11 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { WAD } from './shared/constants'
+
+import { constants } from '@yield-protocol/utils-v2'
+const { WAD } = constants
 
 import { Cauldron } from '../typechain/Cauldron'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
-import { Ladle } from '../typechain/Ladle'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
@@ -24,8 +25,6 @@ describe('Cauldron - stir', function () {
   let cauldronFromOther: Cauldron
   let fyToken: FYToken
   let base: ERC20Mock
-  let ladle: Ladle
-  let ladleFromOther: Ladle
 
   async function fixture() {
     return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId, otherIlkId], [seriesId, otherSeriesId])
@@ -53,12 +52,9 @@ describe('Cauldron - stir', function () {
   beforeEach(async () => {
     env = await loadFixture(fixture)
     cauldron = env.cauldron
-    ladle = env.ladle
+    cauldronFromOther = cauldron.connect(otherAcc)
     base = env.assets.get(baseId) as ERC20Mock
     fyToken = env.series.get(seriesId) as FYToken
-
-    cauldronFromOther = cauldron.connect(otherAcc)
-    ladleFromOther = ladle.connect(otherAcc)
 
     vaultFromId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
 
@@ -82,17 +78,17 @@ describe('Cauldron - stir', function () {
   })
 
   it('does not allow moving collateral and becoming undercollateralized at origin', async () => {
-    await ladle.pour(vaultFromId, owner, WAD, WAD)
+    await cauldron.pour(vaultFromId, WAD, WAD)
     await expect(cauldron.stir(vaultFromId, vaultToId, WAD, 0)).to.be.revertedWith('Undercollateralized at origin')
   })
 
   it('does not allow moving debt and becoming undercollateralized at destination', async () => {
-    await ladle.pour(vaultFromId, owner, WAD, WAD)
+    await cauldron.pour(vaultFromId, WAD, WAD)
     await expect(cauldron.stir(vaultFromId, vaultToId, 0, WAD)).to.be.revertedWith('Undercollateralized at destination')
   })
 
   it('moves collateral', async () => {
-    await ladle.pour(vaultFromId, owner, WAD, 0)
+    await cauldron.pour(vaultFromId, WAD, 0)
     expect(await cauldron.stir(vaultFromId, vaultToId, WAD, 0))
       .to.emit(cauldron, 'VaultStirred')
       .withArgs(vaultFromId, vaultToId, WAD, 0)
@@ -101,8 +97,8 @@ describe('Cauldron - stir', function () {
   })
 
   it('moves debt', async () => {
-    await ladle.pour(vaultFromId, owner, WAD, WAD)
-    await ladle.pour(vaultToId, owner, WAD, 0)
+    await cauldron.pour(vaultFromId, WAD, WAD)
+    await cauldron.pour(vaultToId, WAD, 0)
     expect(await cauldron.stir(vaultFromId, vaultToId, 0, WAD))
       .to.emit(cauldron, 'VaultStirred')
       .withArgs(vaultFromId, vaultToId, 0, WAD)

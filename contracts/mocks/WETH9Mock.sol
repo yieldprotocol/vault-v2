@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import "@yield-protocol/utils/contracts/token/ERC20.sol";
+import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
 
 pragma solidity ^0.8.0;
 
@@ -8,7 +8,7 @@ contract WETH9Mock is ERC20 {
     event  Deposit(address indexed dst, uint wad);
     event  Withdrawal(address indexed src, uint wad);
 
-    constructor () ERC20("Wrapped Ether", "WETH") { }
+    constructor () ERC20("Wrapped Ether", "WETH", 18) { }
 
     receive() external payable {
         deposit();

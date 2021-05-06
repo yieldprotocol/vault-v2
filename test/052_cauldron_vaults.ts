@@ -1,8 +1,9 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { WAD } from './shared/constants'
+
+import { constants } from '@yield-protocol/utils-v2'
+const { WAD } = constants
 
 import { Cauldron } from '../typechain/Cauldron'
-import { Ladle } from '../typechain/Ladle'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 
@@ -21,7 +22,6 @@ describe('Cauldron - vaults', function () {
   let other: string
   let env: YieldEnvironment
   let cauldron: Cauldron
-  let ladle: Ladle
   let cauldronFromOther: Cauldron
   let fyToken: FYToken
   let base: ERC20Mock
@@ -55,7 +55,6 @@ describe('Cauldron - vaults', function () {
   beforeEach(async () => {
     env = await loadFixture(fixture)
     cauldron = env.cauldron
-    ladle = env.ladle
     base = env.assets.get(baseId) as ERC20Mock
     ilk = env.assets.get(ilkId) as ERC20Mock
     fyToken = env.series.get(seriesId) as FYToken
@@ -99,7 +98,7 @@ describe('Cauldron - vaults', function () {
     })
 
     it('does not allow destroying vaults if not empty', async () => {
-      await ladle.pour(vaultId, owner, WAD, 0)
+      await cauldron.pour(vaultId, WAD, 0)
       await expect(cauldron.destroy(vaultId)).to.be.revertedWith('Only empty vaults')
     })
 
@@ -118,12 +117,12 @@ describe('Cauldron - vaults', function () {
     })
 
     it('does not allow changing vaults with debt', async () => {
-      await ladle.pour(vaultId, owner, WAD, WAD)
+      await cauldron.pour(vaultId, WAD, WAD)
       await expect(cauldron.tweak(vaultId, otherSeriesId, otherIlkId)).to.be.revertedWith('Only with no debt')
     })
 
     it('does not allow changing vaults with collateral', async () => {
-      await ladle.pour(vaultId, owner, WAD, 0)
+      await cauldron.pour(vaultId, WAD, 0)
       await expect(cauldron.tweak(vaultId, seriesId, otherIlkId)).to.be.revertedWith('Only with no collateral')
     })
 

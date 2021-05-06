@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { id } from '@yield-protocol/utils'
-import { WAD, OPS } from './shared/constants'
+import { constants, id } from '@yield-protocol/utils-v2'
+const { WAD } = constants
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
@@ -8,13 +8,13 @@ import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { OracleMock } from '../typechain/OracleMock'
 import { SourceMock } from '../typechain/SourceMock'
-import { Ladle } from '../typechain/Ladle'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { loadFixture } = waffle
 
 import { YieldEnvironment } from './shared/fixtures'
+import { LadleWrapper } from '../src/ladleWrapper'
 
 describe('FYToken', function () {
   this.timeout(0)
@@ -28,7 +28,7 @@ describe('FYToken', function () {
   let baseJoin: Join
   let chiOracle: OracleMock
   let chiSource: SourceMock
-  let ladle: Ladle
+  let ladle: LadleWrapper
 
   async function fixture() {
     return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId], [seriesId])
@@ -162,11 +162,9 @@ describe('FYToken', function () {
         const baseJoinBefore = await base.balanceOf(baseJoin.address)
 
         await fyToken.approve(ladle.address, WAD)
-        const transferToFYTokenData = ethers.utils.defaultAbiCoder.encode(['uint256'], [WAD])
-        const redeemData = ethers.utils.defaultAbiCoder.encode(['address', 'uint128'], [owner, WAD])
 
         await expect(
-          await ladle.batch(vaultId, [OPS.TRANSFER_TO_FYTOKEN, OPS.REDEEM], [transferToFYTokenData, redeemData])
+          await ladle.batch([ladle.transferToFYTokenAction(seriesId, WAD), ladle.redeemAction(seriesId, owner, WAD)])
         )
           .to.emit(fyToken, 'Transfer')
           .withArgs(owner, fyToken.address, WAD)

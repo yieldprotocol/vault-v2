@@ -1,21 +1,19 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { signatures } from '@yield-protocol/utils'
-import { WAD, MAX256 as MAX, OPS } from './shared/constants'
+import { constants, signatures } from '@yield-protocol/utils-v2'
+const { WAD, MAX256, DAI } = constants
+const MAX = MAX256
 
-import DaiMockArtifact from '../artifacts/contracts/mocks/DaiMock.sol/DaiMock.json'
-
-import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
-import { Ladle } from '../typechain/Ladle'
 import { ERC20Mock } from '../typechain/ERC20Mock'
-import { DaiMock } from '../typechain/DaiMock'
+import { DAIMock } from '../typechain/DAIMock'
 import { FYToken } from '../typechain/FYToken'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
-const { loadFixture, deployContract } = waffle
+const { loadFixture } = waffle
 
 import { YieldEnvironment } from './shared/fixtures'
+import { LadleWrapper } from '../src/ladleWrapper'
 
 describe('Ladle - permit', function () {
   this.timeout(0)
@@ -24,13 +22,11 @@ describe('Ladle - permit', function () {
   let ownerAcc: SignerWithAddress
   let otherAcc: SignerWithAddress
   let owner: string
-  let other: string
-  let cauldron: Cauldron
   let ilk: ERC20Mock
   let ilkJoin: Join
-  let dai: DaiMock
+  let dai: DAIMock
   let fyToken: FYToken
-  let ladle: Ladle
+  let ladle: LadleWrapper
 
   async function fixture() {
     return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId], [seriesId])
@@ -42,27 +38,22 @@ describe('Ladle - permit', function () {
     owner = await ownerAcc.getAddress()
 
     otherAcc = signers[1]
-    other = await otherAcc.getAddress()
   })
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const mockIlkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const daiId = ethers.utils.formatBytes32String('DAI').slice(0, 14)
 
   let ilkVaultId: string
 
   beforeEach(async () => {
     env = await loadFixture(fixture)
-    cauldron = env.cauldron
     ladle = env.ladle
     ilkJoin = env.joins.get(ilkId) as Join
     ilk = env.assets.get(ilkId) as ERC20Mock
     fyToken = env.series.get(seriesId) as FYToken
-    dai = (await deployContract(ownerAcc, DaiMockArtifact, ['DAI', 'DAI'])) as DaiMock
-
-    await cauldron.addAsset(daiId, dai.address)
+    dai = (env.assets.get(DAI) as unknown) as DAIMock
 
     ilkVaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
   })
@@ -124,13 +115,13 @@ describe('Ladle - permit', function () {
     const { v, r, s } = signatures.sign(permitDigest, signatures.privateKey0)
 
     const vaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12)) // You can't use `batch` without owning or building a vault.
-    const buildData = ethers.utils.defaultAbiCoder.encode(['bytes6', 'bytes6'], [seriesId, ilkId])
-    const permitData = ethers.utils.defaultAbiCoder.encode(
-      ['bytes6', 'bool', 'address', 'uint256', 'uint256', 'uint8', 'bytes32', 'bytes32'],
-      [seriesId, false, ladle.address, amount, deadline, v, r, s]
-    )
 
-    expect(await ladle.batch(vaultId, [OPS.BUILD, OPS.FORWARD_PERMIT], [buildData, permitData]))
+    expect(
+      await ladle.batch([
+        ladle.buildAction(vaultId, seriesId, ilkId),
+        ladle.forwardPermitAction(seriesId, false, ladle.address, amount, deadline, v, r, s),
+      ])
+    )
       .to.emit(fyToken, 'Approval')
       .withArgs(owner, ladle.address, WAD)
 
@@ -150,7 +141,7 @@ describe('Ladle - permit', function () {
 
     const { v, r, s } = signatures.sign(daiPermitDigest, signatures.privateKey0)
 
-    expect(await ladle.forwardDaiPermit(daiId, true, ladle.address, nonce, deadline, true, v, r, s))
+    expect(await ladle.forwardDaiPermit(DAI, true, ladle.address, nonce, deadline, true, v, r, s))
       .to.emit(dai, 'Approval')
       .withArgs(owner, ladle.address, MAX)
 
@@ -171,13 +162,13 @@ describe('Ladle - permit', function () {
     const { v, r, s } = signatures.sign(daiPermitDigest, signatures.privateKey0)
 
     const vaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12)) // You can't use `batch` without owning or building a vault.
-    const buildData = ethers.utils.defaultAbiCoder.encode(['bytes6', 'bytes6'], [seriesId, ilkId])
-    const permitData = ethers.utils.defaultAbiCoder.encode(
-      ['bytes6', 'bool', 'address', 'uint256', 'uint256', 'bool', 'uint8', 'bytes32', 'bytes32'],
-      [daiId, true, ladle.address, nonce, deadline, true, v, r, s]
-    )
 
-    expect(await ladle.batch(vaultId, [OPS.BUILD, OPS.FORWARD_DAI_PERMIT], [buildData, permitData]))
+    expect(
+      await ladle.batch([
+        ladle.buildAction(vaultId, seriesId, ilkId),
+        ladle.forwardDaiPermitAction(DAI, true, ladle.address, nonce, deadline, true, v, r, s),
+      ])
+    )
       .to.emit(dai, 'Approval')
       .withArgs(owner, ladle.address, MAX)
 

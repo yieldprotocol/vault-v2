@@ -3,10 +3,10 @@ pragma solidity ^0.8.0;
 
 import "erc3156/contracts/interfaces/IERC3156FlashBorrower.sol";
 import "erc3156/contracts/interfaces/IERC3156FlashLender.sol";
-import "@yield-protocol/utils/contracts/token/IERC20.sol";
+import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 import "@yield-protocol/vault-interfaces/IJoin.sol";
-import "@yield-protocol/utils-v2/contracts/AccessControl.sol";
-import "@yield-protocol/utils-v2/contracts/TransferHelper.sol";
+import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
 import "./math/WMul.sol";
 import "./math/CastU256U128.sol";
 
@@ -20,7 +20,7 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
 
     bytes32 constant internal FLASH_LOAN_RETURN = keccak256("ERC3156FlashBorrower.onFlashLoan");
 
-    address public override asset;
+    address public immutable override asset;
     uint256 public storedBalance;
     uint256 public flashFeeFactor; // Fee on flash loans, as a percentage in fixed point with 18 decimals
 

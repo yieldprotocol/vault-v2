@@ -1,7 +1,7 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { BaseProvider } from '@ethersproject/providers'
-import { id } from '@yield-protocol/utils'
-import { WAD, THREE_MONTHS } from './shared/constants'
+import { constants, id } from '@yield-protocol/utils-v2'
+const { WAD, THREE_MONTHS } = constants
 
 import FYTokenArtifact from '../artifacts/contracts/FYToken.sol/FYToken.json'
 import JoinArtifact from '../artifacts/contracts/Join.sol/Join.json'
@@ -15,13 +15,13 @@ import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { OracleMock } from '../typechain/OracleMock'
 import { PoolMock } from '../typechain/PoolMock'
-import { Ladle } from '../typechain/Ladle'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { deployContract, loadFixture } = waffle
 
 import { YieldEnvironment } from './shared/fixtures'
+import { LadleWrapper } from '../src/ladleWrapper'
 
 describe('Ladle - admin', function () {
   this.timeout(0)
@@ -40,8 +40,8 @@ describe('Ladle - admin', function () {
   let pool: PoolMock
   let oracle: OracleMock
   let rateOracle: OracleMock
-  let ladle: Ladle
-  let ladleFromOther: Ladle
+  let ladle: LadleWrapper
+  let ladleFromOther: LadleWrapper
 
   const mockAssetId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const mockSeriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
@@ -72,11 +72,10 @@ describe('Ladle - admin', function () {
     env = await loadFixture(fixture)
     cauldron = env.cauldron
     ladle = env.ladle
+    ladleFromOther = ladle.connect(otherAcc)
     base = env.assets.get(baseId) as ERC20Mock
     baseJoin = env.joins.get(baseId) as Join
     rateOracle = env.oracles.get('rate') as OracleMock
-
-    ladleFromOther = ladle.connect(otherAcc)
 
     // ==== Set testing environment ====
     ilk = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId, 'Mock Ilk'])) as ERC20Mock
@@ -119,7 +118,7 @@ describe('Ladle - admin', function () {
 
     it('adds a join', async () => {
       expect(await ladle.addJoin(ilkId, ilkJoin.address))
-        .to.emit(ladle, 'JoinAdded')
+        .to.emit(ladle.ladle, 'JoinAdded') // The event is emitted by the ladle, not the wrapper
         .withArgs(ilkId, ilkJoin.address)
       expect(await ladle.joins(ilkId)).to.equal(ilkJoin.address)
     })
@@ -127,7 +126,7 @@ describe('Ladle - admin', function () {
     it('adds the same join for a second ilk of the same asset', async () => {
       await cauldron.addAsset(otherIlkId, ilk.address)
       expect(await ladle.addJoin(otherIlkId, ilkJoin.address))
-        .to.emit(ladle, 'JoinAdded')
+        .to.emit(ladle.ladle, 'JoinAdded')
         .withArgs(otherIlkId, ilkJoin.address)
       expect(await ladle.joins(otherIlkId)).to.equal(ilkJoin.address)
     })
@@ -161,7 +160,7 @@ describe('Ladle - admin', function () {
 
     it('adds a pool', async () => {
       expect(await ladle.addPool(seriesId, pool.address))
-        .to.emit(ladle, 'PoolAdded')
+        .to.emit(ladle.ladle, 'PoolAdded')
         .withArgs(seriesId, pool.address)
       expect(await ladle.pools(seriesId)).to.equal(pool.address)
     })

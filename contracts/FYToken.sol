@@ -3,11 +3,11 @@ pragma solidity ^0.8.0;
 
 import "erc3156/contracts/interfaces/IERC3156FlashBorrower.sol";
 import "erc3156/contracts/interfaces/IERC3156FlashLender.sol";
-import "@yield-protocol/utils/contracts/token/ERC20Permit.sol";
+import "@yield-protocol/utils-v2/contracts/token/ERC20Permit.sol";
 import "@yield-protocol/vault-interfaces/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/IJoin.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
-import "@yield-protocol/utils-v2/contracts/AccessControl.sol";
+import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "./math/WMul.sol";
 import "./math/WDiv.sol";
 import "./math/CastU256U128.sol";
@@ -26,10 +26,10 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
     uint256 constant internal MAX_TIME_TO_MATURITY = 126144000; // seconds in four years
     bytes32 constant internal FLASH_LOAN_RETURN = keccak256("ERC3156FlashBorrower.onFlashLoan");
 
-    IJoin public join;                                          // Source of redemption funds.
-    IOracle public oracle;                                      // Oracle for the savings rate.
-    address public override asset;
-    uint256 public override maturity;
+    IJoin public immutable join;                                          // Source of redemption funds.
+    IOracle public immutable oracle;                                      // Oracle for the savings rate.
+    address public immutable override asset;
+    uint256 public immutable override maturity;
     uint256 public chiAtMaturity = type(uint256).max;          // Spot price (exchange rate) between the base and an interest accruing token at maturity 
 
     constructor(
@@ -38,7 +38,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         uint256 maturity_,
         string memory name,
         string memory symbol
-    ) ERC20Permit(name, symbol) {
+    ) ERC20Permit(name, symbol, IERC20Metadata(address(IJoin(join_).asset())).decimals()) { // The join asset is this fyToken's base, from which we inherit the decimals
         uint256 now_ = block.timestamp;
         require(
             maturity_ > now_ &&
@@ -48,7 +48,6 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         );
         oracle = oracle_;
         join = join_;
-        // TODO: Check the oracle asset matches the join asset, which is the base for this fyToken
         maturity = maturity_;
         asset = address(IJoin(join_).asset());
     }
@@ -154,7 +153,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         beforeMaturity
         returns (uint256)
     {
-        return token == address(this) ? type(uint256).max - totalSupply() : 0;
+        return token == address(this) ? type(uint256).max - _totalSupply : 0;
     }
 
     /**
@@ -214,7 +213,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
 
         // Then pull the remainder of the burn from `src`
         if (remainder > 0) {
-            _decreaseApproval(from, remainder);     // Note that if msg.sender == from this is ignored.
+            _decreaseAllowance(from, remainder);     // Note that if msg.sender == from this is ignored.
             require(_balanceOf[from] >= remainder, "ERC20: Insufficient balance");
             unchecked {
                 _balanceOf[from] = _balanceOf[from] - remainder;

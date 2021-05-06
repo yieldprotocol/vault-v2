@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
-import "@yield-protocol/utils/contracts/token/ERC20.sol";
+import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
 
 
-contract DaiMock is ERC20  {
+contract DAIMock is ERC20  {
 
     mapping (address => uint)                      public nonces;
 
@@ -12,10 +12,7 @@ contract DaiMock is ERC20  {
     bytes32 public constant PERMIT_TYPEHASH = keccak256("Permit(address holder,address spender,uint256 nonce,uint256 expiry,bool allowed)");
     string  public constant version  = "1";
 
-    constructor(
-        string memory name,
-        string memory symbol
-    ) ERC20(name, symbol) {
+    constructor() ERC20("Dai Stablecoin", "DAI", 18) {
         uint256 chainId;
         assembly {
             chainId := chainid()

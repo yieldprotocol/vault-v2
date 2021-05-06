@@ -1,9 +1,10 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { WAD, MAX128 as MAX, OPS } from './shared/constants'
+import { constants, signatures } from '@yield-protocol/utils-v2'
+const { WAD, MAX128 } = constants
+const MAX = MAX128
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
-import { Ladle } from '../typechain/Ladle'
 import { FYToken } from '../typechain/FYToken'
 import { PoolMock } from '../typechain/PoolMock'
 import { ERC20Mock } from '../typechain/ERC20Mock'
@@ -14,6 +15,7 @@ import { expect } from 'chai'
 const { loadFixture } = waffle
 
 import { YieldEnvironment } from './shared/fixtures'
+import { LadleWrapper } from '../src/ladleWrapper'
 
 describe('Ladle - batch', function () {
   this.timeout(0)
@@ -24,15 +26,17 @@ describe('Ladle - batch', function () {
   let owner: string
   let other: string
   let cauldron: Cauldron
-  let ladle: Ladle
+  let ladle: LadleWrapper
   let fyToken: FYToken
   let base: ERC20Mock
+  let ilk: ERC20Mock
   let pool: PoolMock
+  let ilkJoin: Join
   let wethJoin: Join
   let weth: WETH9Mock
 
   async function fixture() {
-    return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId], [seriesId])
+    return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId, otherIlkId], [seriesId])
   }
 
   before(async () => {
@@ -46,9 +50,11 @@ describe('Ladle - batch', function () {
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const otherIlkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ethId = ethers.utils.formatBytes32String('ETH').slice(0, 14)
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const vaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12))
+  const otherVaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12))
   let ethVaultId: string
 
   beforeEach(async () => {
@@ -56,8 +62,11 @@ describe('Ladle - batch', function () {
     cauldron = env.cauldron
     ladle = env.ladle
     base = env.assets.get(baseId) as ERC20Mock
+    ilk = env.assets.get(ilkId) as ERC20Mock
     fyToken = env.series.get(seriesId) as FYToken
     pool = env.pools.get(seriesId) as PoolMock
+
+    ilkJoin = env.joins.get(ilkId) as Join
 
     wethJoin = env.joins.get(ethId) as Join
     weth = (await ethers.getContractAt('WETH9Mock', await wethJoin.asset())) as WETH9Mock
@@ -65,43 +74,181 @@ describe('Ladle - batch', function () {
     ethVaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ethId) as string
   })
 
-  it('builds a vault and posts to it', async () => {
-    const buildData = ethers.utils.defaultAbiCoder.encode(['bytes6', 'bytes6'], [seriesId, ilkId])
-    const pourData = ethers.utils.defaultAbiCoder.encode(['address', 'int128', 'int128'], [owner, WAD, WAD])
-    await ladle.batch(vaultId, [OPS.BUILD, OPS.POUR], [buildData, pourData])
+  it('operations and their data must match in length', async () => {
+    await expect(ladle.ladle.batch([0], [])).to.be.revertedWith('Mismatched operation data')
+  })
+
+  it('builds a vault, tweaks it and gives it', async () => {
+    await ladle.batch([
+      ladle.buildAction(vaultId, seriesId, ilkId),
+      ladle.tweakAction(vaultId, seriesId, otherIlkId),
+      ladle.giveAction(vaultId, other),
+    ])
+  })
+
+  it('builds two vaults and gives them', async () => {
+    await ladle.batch([
+      ladle.buildAction(vaultId, seriesId, ilkId),
+      ladle.giveAction(vaultId, other),
+      ladle.buildAction(otherVaultId, seriesId, ilkId),
+      ladle.giveAction(otherVaultId, other),
+    ])
+  })
+
+  it('builds a vault and destroys it', async () => {
+    await ladle.batch([ladle.buildAction(vaultId, seriesId, ilkId), ladle.destroyAction(vaultId)])
+  })
+
+  it("after giving a vault, it can't tweak it", async () => {
+    await expect(
+      ladle.batch([
+        ladle.buildAction(vaultId, seriesId, ilkId),
+        ladle.giveAction(vaultId, other),
+        ladle.tweakAction(vaultId, seriesId, otherIlkId),
+      ])
+    ).to.be.revertedWith('Only vault owner')
+  })
+
+  it('builds a vault, permit and pour', async () => {
+    const ilkSeparator = await ilk.DOMAIN_SEPARATOR()
+    const deadline = MAX
+    const posted = WAD.mul(2)
+    const nonce = await ilk.nonces(owner)
+    const approval = {
+      owner: owner,
+      spender: ilkJoin.address,
+      value: posted,
+    }
+    const permitDigest = signatures.getPermitDigest(ilkSeparator, approval, nonce, deadline)
+    const { v, r, s } = signatures.sign(permitDigest, signatures.privateKey0)
+
+    const borrowed = WAD
+
+    await ladle.batch([
+      ladle.buildAction(vaultId, seriesId, ilkId),
+      ladle.forwardPermitAction(ilkId, true, ilkJoin.address, posted, deadline, v, r, s),
+      ladle.pourAction(vaultId, owner, posted, borrowed),
+    ])
 
     const vault = await cauldron.vaults(vaultId)
     expect(vault.owner).to.equal(owner)
     expect(vault.seriesId).to.equal(seriesId)
     expect(vault.ilkId).to.equal(ilkId)
-
-    expect(await fyToken.balanceOf(owner)).to.equal(WAD)
   })
 
-  it('users can transfer ETH then pour, then serve in a single transaction with multicall', async () => {
+  it('builds a vault, wraps ether and serve', async () => {
+    const newVaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12))
     const posted = WAD.mul(2)
     const borrowed = WAD
 
-    const joinEtherData = ethers.utils.defaultAbiCoder.encode(['bytes6'], [ethId])
-    const pourData = ethers.utils.defaultAbiCoder.encode(['address', 'int128', 'int128'], [owner, posted, 0])
-    const serveData = ethers.utils.defaultAbiCoder.encode(
-      ['address', 'uint128', 'uint128', 'uint128'],
-      [other, 0, borrowed, MAX]
+    await ladle.batch(
+      [
+        ladle.buildAction(newVaultId, seriesId, ethId),
+        ladle.joinEtherAction(ethId),
+        ladle.serveAction(newVaultId, owner, posted, borrowed, MAX),
+      ],
+      { value: posted }
     )
-    await ladle.batch(ethVaultId, [OPS.JOIN_ETHER, OPS.POUR, OPS.SERVE], [joinEtherData, pourData, serveData], {
-      value: posted,
-    })
+
+    const vault = await cauldron.vaults(newVaultId)
+    expect(vault.owner).to.equal(owner)
+    expect(vault.seriesId).to.equal(seriesId)
+    expect(vault.ilkId).to.equal(ethId)
   })
 
-  it('batches can be grouped with multicall', async () => {
-    const buildData = ethers.utils.defaultAbiCoder.encode(['bytes6', 'bytes6'], [seriesId, ilkId])
-    const pourData = ethers.utils.defaultAbiCoder.encode(['address', 'int128', 'int128'], [owner, WAD, WAD])
+  it('users can transfer ETH then pour, then serve', async () => {
+    const posted = WAD.mul(2)
+    const borrowed = WAD
 
-    const buildBatchCall = ladle.interface.encodeFunctionData('batch', [vaultId, [OPS.BUILD], [buildData]])
-    const pourBatchCall = ladle.interface.encodeFunctionData('batch', [vaultId, [OPS.POUR], [pourData]])
+    await ladle.batch(
+      [
+        ladle.joinEtherAction(ethId),
+        ladle.pourAction(ethVaultId, owner, posted, 0),
+        ladle.serveAction(ethVaultId, other, 0, borrowed, MAX),
+      ],
+      { value: posted }
+    )
+  })
 
-    await ladle.multicall([buildBatchCall, pourBatchCall], true)
+  it('users can transfer ETH then pour, then close', async () => {
+    const posted = WAD.mul(2)
+    const borrowed = WAD
 
-    expect(await fyToken.balanceOf(owner)).to.equal(WAD)
+    await ladle.batch(
+      [
+        ladle.joinEtherAction(ethId),
+        ladle.pourAction(ethVaultId, owner, posted, borrowed),
+        ladle.closeAction(ethVaultId, other, 0, borrowed.div(2).mul(-1)),
+      ],
+      { value: posted }
+    )
+  })
+
+  it('users can transfer to a pool and repay in a batch', async () => {
+    const separator = await base.DOMAIN_SEPARATOR()
+    const deadline = MAX
+    const amount = WAD
+    const nonce = await base.nonces(owner)
+    const approval = {
+      owner: owner,
+      spender: ladle.address,
+      value: amount,
+    }
+    const permitDigest = signatures.getPermitDigest(separator, approval, nonce, deadline)
+
+    const { v, r, s } = signatures.sign(permitDigest, signatures.privateKey0)
+
+    const posted = WAD.mul(2)
+    const borrowed = WAD
+
+    await ladle.batch([
+      ladle.buildAction(vaultId, seriesId, ilkId),
+      ladle.pourAction(vaultId, owner, posted, borrowed),
+      ladle.forwardPermitAction(baseId, true, ladle.address, amount, deadline, v, r, s),
+      ladle.transferToPoolAction(seriesId, true, WAD.div(2)),
+      ladle.repayAction(vaultId, other, 0, 0),
+    ])
+  })
+
+  it('users can transfer to a pool and repay a whole vault in a batch', async () => {
+    const separator = await base.DOMAIN_SEPARATOR()
+    const deadline = MAX
+    const amount = WAD
+    const nonce = await base.nonces(owner)
+    const approval = {
+      owner: owner,
+      spender: ladle.address,
+      value: amount,
+    }
+    const permitDigest = signatures.getPermitDigest(separator, approval, nonce, deadline)
+
+    const { v, r, s } = signatures.sign(permitDigest, signatures.privateKey0)
+
+    const posted = WAD.mul(2)
+    const borrowed = WAD
+
+    await ladle.batch([
+      ladle.buildAction(vaultId, seriesId, ilkId),
+      ladle.pourAction(vaultId, owner, posted, borrowed),
+      ladle.forwardPermitAction(baseId, true, ladle.address, amount, deadline, v, r, s),
+      ladle.transferToPoolAction(seriesId, true, WAD),
+      ladle.repayVaultAction(vaultId, other, 0, MAX),
+    ])
+  })
+
+  it('calls can be routed to pools', async () => {
+    await base.mint(pool.address, WAD)
+
+    const retrieveBaseTokenCall = pool.interface.encodeFunctionData('retrieveBaseToken', [owner])
+    await expect(await ladle.route(seriesId, retrieveBaseTokenCall))
+      .to.emit(base, 'Transfer')
+      .withArgs(pool.address, owner, WAD)
+  })
+
+  it('errors bubble up from calls routed to pools', async () => {
+    await base.mint(pool.address, WAD)
+
+    const sellBaseTokenCall = pool.interface.encodeFunctionData('sellBaseToken', [owner, MAX128])
+    await expect(ladle.route(seriesId, sellBaseTokenCall)).to.be.revertedWith('Pool: Not enough fyToken obtained')
   })
 })

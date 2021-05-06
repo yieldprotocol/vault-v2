@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
-import "@yield-protocol/utils/contracts/token/ERC20Permit.sol";
-import "@yield-protocol/utils-v2/contracts/AccessControl.sol";
+import "@yield-protocol/utils-v2/contracts/token/ERC20Permit.sol";
+import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 
 contract RestrictedERC20Mock is AccessControl(), ERC20Permit  {
 
     constructor(
         string memory name,
         string memory symbol
-    ) ERC20Permit(name, symbol) { }
+    ) ERC20Permit(name, symbol, 18) { }
 
     /// @dev Give tokens to whoever.
     function mint(address to, uint256 amount) public virtual auth {

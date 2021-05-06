@@ -1,7 +1,8 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { BaseProvider } from '@ethersproject/providers'
-import { id } from '@yield-protocol/utils'
-import { WAD, THREE_MONTHS } from './constants'
+import { id } from '@yield-protocol/utils-v2'
+import { constants } from '@yield-protocol/utils-v2'
+const { WAD, THREE_MONTHS, ETH, DAI, USDC } = constants
 
 import CauldronArtifact from '../../artifacts/contracts/Cauldron.sol/Cauldron.json'
 import JoinArtifact from '../../artifacts/contracts/Join.sol/Join.json'
@@ -10,7 +11,6 @@ import WitchArtifact from '../../artifacts/contracts/Witch.sol/Witch.json'
 import FYTokenArtifact from '../../artifacts/contracts/FYToken.sol/FYToken.json'
 import PoolMockArtifact from '../../artifacts/contracts/mocks/PoolMock.sol/PoolMock.json'
 
-import OracleMockArtifact from '../../artifacts/contracts/mocks/OracleMock.sol/OracleMock.json'
 import ChainlinkOracleArtifact from '../../artifacts/contracts/oracles/ChainlinkOracle.sol/ChainlinkOracle.json'
 import CompoundRateOracleArtifact from '../../artifacts/contracts/oracles/CompoundRateOracle.sol/CompoundRateOracle.json'
 import CompoundChiOracleArtifact from '../../artifacts/contracts/oracles/CompoundChiOracle.sol/CompoundChiOracle.json'
@@ -20,6 +20,8 @@ import CTokenChiMockArtifact from '../../artifacts/contracts/mocks/CTokenChiMock
 
 import ERC20MockArtifact from '../../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
 import WETH9MockArtifact from '../../artifacts/contracts/mocks/WETH9Mock.sol/WETH9Mock.json'
+import DAIMockArtifact from '../../artifacts/contracts/mocks/DAIMock.sol/DAIMock.json'
+import USDCMockArtifact from '../../artifacts/contracts/mocks/USDCMock.sol/USDCMock.json'
 
 import { Cauldron } from '../../typechain/Cauldron'
 import { Join } from '../../typechain/Join'
@@ -35,6 +37,10 @@ import { CTokenChiMock } from '../../typechain/CTokenChiMock'
 
 import { ERC20Mock } from '../../typechain/ERC20Mock'
 import { WETH9Mock } from '../../typechain/WETH9Mock'
+import { DAIMock } from '../../typechain/DAIMock'
+import { USDCMock } from '../../typechain/USDCMock'
+
+import { LadleWrapper } from '../../src/ladleWrapper'
 
 import { ethers, waffle } from 'hardhat'
 const { deployContract } = waffle
@@ -42,7 +48,7 @@ const { deployContract } = waffle
 export class YieldEnvironment {
   owner: SignerWithAddress
   cauldron: Cauldron
-  ladle: Ladle
+  ladle: LadleWrapper
   witch: Witch
   assets: Map<string, ERC20Mock>
   oracles: Map<string, OracleMock>
@@ -54,7 +60,7 @@ export class YieldEnvironment {
   constructor(
     owner: SignerWithAddress,
     cauldron: Cauldron,
-    ladle: Ladle,
+    ladle: LadleWrapper,
     witch: Witch,
     assets: Map<string, ERC20Mock>,
     oracles: Map<string, OracleMock>,
@@ -115,17 +121,18 @@ export class YieldEnvironment {
     )
   }
 
-  public static async ladleGovAuth(owner: SignerWithAddress, ladle: Ladle, receiver: string) {
+  public static async ladleGovAuth(owner: SignerWithAddress, ladle: LadleWrapper, receiver: string) {
     await ladle.grantRoles(
       [
         id('addJoin(bytes6,address)'),
         id('addPool(bytes6,address)'),
+        id('setPoolRouter(address)'),
       ],
       receiver
     )
   }
 
-  public static async ladleWitchAuth(owner: SignerWithAddress, ladle: Ladle, receiver: string) {
+  public static async ladleWitchAuth(owner: SignerWithAddress, ladle: LadleWrapper, receiver: string) {
     await ladle.grantRoles([
       id(
         'settle(bytes12,address,uint128,uint128)'
@@ -142,7 +149,7 @@ export class YieldEnvironment {
     return asset
   }
 
-  public static async addJoin(owner: SignerWithAddress, ladle: Ladle, asset: ERC20Mock, assetId: string) {
+  public static async addJoin(owner: SignerWithAddress, ladle: LadleWrapper, asset: ERC20Mock, assetId: string) {
     const join = (await deployContract(owner, JoinArtifact, [asset.address])) as Join
     await ladle.addJoin(assetId, join.address)
     await asset.approve(join.address, ethers.constants.MaxUint256) // Owner approves all joins to take from him. Only testing
@@ -177,7 +184,7 @@ export class YieldEnvironment {
   public static async addSeries(
     owner: SignerWithAddress,
     cauldron: Cauldron,
-    ladle: Ladle,
+    ladle: LadleWrapper,
     baseJoin: Join,
     chiOracle: OracleMock,
     seriesId: string,
@@ -205,7 +212,7 @@ export class YieldEnvironment {
 
   public static async addPool(
     owner: SignerWithAddress,
-    ladle: Ladle,
+    ladle: LadleWrapper,
     base: ERC20Mock,
     fyToken: FYToken,
     seriesId: string,
@@ -230,7 +237,8 @@ export class YieldEnvironment {
     const ownerAdd = await owner.getAddress()
 
     const cauldron = (await deployContract(owner, CauldronArtifact, [])) as Cauldron
-    const ladle = (await deployContract(owner, LadleArtifact, [cauldron.address])) as Ladle
+    const innerLadle = (await deployContract(owner, LadleArtifact, [cauldron.address])) as Ladle
+    const ladle = new LadleWrapper(innerLadle)
     const witch = (await deployContract(owner, WitchArtifact, [cauldron.address, ladle.address])) as Witch
 
     // ==== Orchestration ====
@@ -270,18 +278,46 @@ export class YieldEnvironment {
     const baseJoin = joins.get(baseId) as Join
 
     // Add Ether as an asset, as well as WETH9 and the WETH9 Join
-    const ethId = ethers.utils.formatBytes32String('ETH').slice(0, 14)
     const weth = (await deployContract(owner, WETH9MockArtifact, [])) as WETH9Mock
-    await cauldron.addAsset(ethId, weth.address)
+    await cauldron.addAsset(ETH, weth.address)
 
-    const wethJoin = await this.addJoin(owner, ladle, weth as unknown as ERC20Mock, ethId) as Join
+    const wethJoin = await this.addJoin(owner, ladle, weth as unknown as ERC20Mock, ETH) as Join
     await wethJoin.grantRoles([
       id('join(address,uint128)'),
       id('exit(address,uint128)'),
       id('retrieve(address,address)')
     ], ownerAdd) // Only test environment
-    joins.set(ethId, wethJoin)
-    ilkIds.push(ethId)
+    assets.set(ETH, weth as unknown as ERC20Mock)
+    joins.set(ETH, wethJoin)
+    ilkIds.push(ETH)
+
+    // Add Dai as an asset
+    const dai = (await deployContract(owner, DAIMockArtifact, [])) as DAIMock
+    await cauldron.addAsset(DAI, dai.address)
+
+    const daiJoin = await this.addJoin(owner, ladle, dai as unknown as ERC20Mock, DAI) as Join
+    await daiJoin.grantRoles([
+      id('join(address,uint128)'),
+      id('exit(address,uint128)'),
+      id('retrieve(address,address)')
+    ], ownerAdd) // Only test environment
+    assets.set(DAI, dai as unknown as ERC20Mock)
+    joins.set(DAI, daiJoin)
+    ilkIds.push(DAI)
+
+    // Add USDC as an asset
+    const usdc = (await deployContract(owner, USDCMockArtifact, [])) as USDCMock
+    await cauldron.addAsset(USDC, usdc.address)
+
+    const usdcJoin = await this.addJoin(owner, ladle, usdc as unknown as ERC20Mock, USDC) as Join
+    await usdcJoin.grantRoles([
+      id('join(address,uint128)'),
+      id('exit(address,uint128)'),
+      id('retrieve(address,address)')
+    ], ownerAdd) // Only test environment
+    assets.set(USDC, usdc as unknown as ERC20Mock)
+    joins.set(USDC, usdcJoin)
+    ilkIds.push(USDC)
 
     // ==== Set debt limits ====
     for (let ilkId of ilkIds) {

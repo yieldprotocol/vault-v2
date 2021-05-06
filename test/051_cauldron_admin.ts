@@ -1,5 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { id } from '@yield-protocol/utils'
+import { id } from '@yield-protocol/utils-v2'
 
 import CauldronArtifact from '../artifacts/contracts/Cauldron.sol/Cauldron.json'
 import JoinArtifact from '../artifacts/contracts/Join.sol/Join.json'

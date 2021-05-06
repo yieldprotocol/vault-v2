@@ -1,10 +1,11 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { WAD } from './shared/constants'
+
+import { constants } from '@yield-protocol/utils-v2'
+const { WAD } = constants
 
 import { Cauldron } from '../typechain/Cauldron'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
-import { Ladle } from '../typechain/Ladle'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
@@ -25,8 +26,6 @@ describe('Cauldron - roll', function () {
   let fyToken: FYToken
   let otherFYToken: FYToken
   let base: ERC20Mock
-  let ladle: Ladle
-  let ladleFromOther: Ladle
 
   async function fixture() {
     return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId], [seriesId, otherSeriesId])
@@ -46,18 +45,15 @@ describe('Cauldron - roll', function () {
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const vaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12))
   const otherSeriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const mockSeriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const mockVaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12))
 
   beforeEach(async () => {
     env = await loadFixture(fixture)
     cauldron = env.cauldron
-    ladle = env.ladle
+    cauldronFromOther = cauldron.connect(otherAcc)
     base = env.assets.get(baseId) as ERC20Mock
     fyToken = env.series.get(seriesId) as FYToken
     otherFYToken = env.series.get(otherSeriesId) as FYToken
-
-    cauldronFromOther = cauldron.connect(otherAcc)
 
     // ==== Set testing environment ====
     await cauldron.build(owner, vaultId, seriesId, ilkId)

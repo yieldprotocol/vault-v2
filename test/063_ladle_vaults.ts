@@ -1,13 +1,13 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 
 import { Cauldron } from '../typechain/Cauldron'
-import { Ladle } from '../typechain/Ladle'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { loadFixture } = waffle
 
 import { YieldEnvironment } from './shared/fixtures'
+import { LadleWrapper } from '../src/ladleWrapper'
 
 describe('Ladle - vaults', function () {
   this.timeout(0)
@@ -18,8 +18,8 @@ describe('Ladle - vaults', function () {
   let owner: string
   let other: string
   let cauldron: Cauldron
-  let ladle: Ladle
-  let ladleFromOther: Ladle
+  let ladle: LadleWrapper
+  let ladleFromOther: LadleWrapper
 
   async function fixture() {
     return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId, otherIlkId], [seriesId, otherSeriesId])
@@ -49,7 +49,6 @@ describe('Ladle - vaults', function () {
     env = await loadFixture(fixture)
     cauldron = env.cauldron
     ladle = env.ladle
-
     ladleFromOther = ladle.connect(otherAcc)
 
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string

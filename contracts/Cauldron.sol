@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 import "@yield-protocol/vault-interfaces/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
-import "@yield-protocol/utils-v2/contracts/AccessControl.sol";
+import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "./math/WMul.sol";
 import "./math/WDiv.sol";
 import "./math/CastU128I128.sol";
@@ -366,11 +366,11 @@ contract Cauldron is AccessControl() {
     function roll(bytes12 vaultId, bytes6 newSeriesId, uint128 art)
         external
         auth
-        returns (uint128)
+        returns (DataTypes.Vault memory vault_, DataTypes.Balances memory balances_)
     {
-        DataTypes.Vault memory vault_ = vaults[vaultId];
+        vault_ = vaults[vaultId];
         require (vault_.owner != address(0), "Vault not found");
-        DataTypes.Balances memory balances_ = balances[vaultId];
+        balances_ = balances[vaultId];
         DataTypes.Series memory oldSeries_ = series[vault_.seriesId];
         DataTypes.Series memory newSeries_ = series[newSeriesId];
         require (oldSeries_.baseId == newSeries_.baseId, "Mismatched bases in series");
@@ -391,7 +391,6 @@ contract Cauldron is AccessControl() {
 
         require(_level(vault_, balances_, newSeries_) >= 0, "Undercollateralized");
         emit VaultRolled(vaultId, newSeriesId, balances_.art);
-        return balances_.art;
     }
 
     // ==== Accounting ====

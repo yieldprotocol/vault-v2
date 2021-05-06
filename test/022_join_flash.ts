@@ -1,7 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { id } from '@yield-protocol/utils'
-import { BigNumber } from 'ethers'
-import { WAD } from './shared/constants'
+import { constants, id } from '@yield-protocol/utils-v2'
+const { WAD } = constants
 
 import JoinArtifact from '../artifacts/contracts/Join.sol/Join.json'
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
