@@ -80,14 +80,9 @@ describe('Join', function () {
       expect(await join.storedBalance()).to.equal(WAD.mul(2))
     })
 
-    it('the stored balance can be updated', async () => {
-      expect(await join.join(owner, 0)).to.not.emit(token, 'Transfer')
-      expect(await join.storedBalance()).to.equal(WAD)
-    })
-
     describe('with a positive stored balance', async () => {
       beforeEach(async () => {
-        await join.join(owner, 0)
+        await join.join(owner, WAD)
       })
 
       it('pushes tokens to user', async () => {

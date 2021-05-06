@@ -53,7 +53,7 @@ describe('Join - flash', function () {
     )
 
     await token.mint(join.address, WAD.mul(100))
-    await join.join(owner, 0)
+    await join.join(owner, WAD.mul(100))
 
     borrower = (await deployContract(ownerAcc, FlashBorrowerArtifact, [join.address])) as FlashBorrower
   })
