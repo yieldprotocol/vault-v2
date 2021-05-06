@@ -440,6 +440,37 @@ contract Ladle is AccessControl() {
         pool.retrieveBaseToken(msg.sender);
     }
 
+    /// @dev Remove liquidity in a pool and use proceedings to repay debt
+    /// The liquidity tokens need to be already in the pool, unaccounted for.
+    function _removeAndRepay(bytes12 vaultId, DataTypes.Vault memory vault, address to, uint128 minBaseOut, uint128 minFYTokenOut)
+        private
+        returns (DataTypes.Balances memory balances)
+    {
+        DataTypes.Series memory series = getSeries(vault.seriesId);
+        balances = cauldron.balances(vaultId);
+        IPool pool = getPool(vault.seriesId);
+        (, uint256 base, uint256 art) = pool.burn(address(this), minBaseOut, minFYTokenOut);
+
+        uint256 repayment;
+
+        // Update accounting
+        if (balances.art > 0) {
+            repayment = (art >= balances.art) ? balances.art : art;
+            balances = cauldron.pour(vaultId, 0, -(repayment.u128().i128()));
+            series.fyToken.burn(address(this), repayment);
+        }
+        
+        // Return base
+        IERC20 baseToken = IERC20((getJoin(series.baseId)).asset());
+        baseToken.safeTransfer(to, base);
+
+        // Return fyToken
+        if (art - repayment > 0) {
+            IERC20 fyToken = IERC20(address(series.fyToken));
+            fyToken.safeTransfer(to, art - repayment);
+        }
+    }
+
     // ---- Liquidations ----
 
     /// @dev Allow liquidation contracts to move assets to wind down vaults
