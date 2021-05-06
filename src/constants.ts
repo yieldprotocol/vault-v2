@@ -20,6 +20,7 @@ export const OPS = {
     ROUTE:                16,
     TRANSFER_TO_FYTOKEN:  17,
     REDEEM:               18,
+    MODULE:               19,
   }
 
 export const CHI = ethers.utils.formatBytes32String('chi')

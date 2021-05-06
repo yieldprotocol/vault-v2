@@ -56,7 +56,7 @@ describe('Ladle - module', function () {
     transferModule = (await deployContract(ownerAcc, TransferModuleArtifact, [])) as TransferModule
     await ladle.grantRoles([id('setModule(address,bool)')], owner)
 
-    await ladle.ladle.setModule(transferModule.address, true)
+    await ladle.setModule(transferModule.address, true)
 
     await transferModule.grantRoles([id('transferFrom(address,bytes)')], ladle.address)
   })

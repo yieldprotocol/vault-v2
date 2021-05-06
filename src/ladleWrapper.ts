@@ -1,4 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
+import { id } from '@yield-protocol/utils-v2'
 import { ethers, BigNumberish, ContractTransaction, BytesLike, PayableOverrides } from 'ethers'
 import { Ladle } from '../typechain/Ladle'
 import { OPS } from './constants'
@@ -53,8 +54,8 @@ export class LadleWrapper {
     return this.ladle.addPool(assetId, pool)
   }
 
-  public async setPoolRouter(poolRouter: string): Promise<ContractTransaction> {
-    return this.ladle.setPoolRouter(poolRouter)
+  public async setModule(module: string, set: boolean): Promise<ContractTransaction> {
+    return this.ladle.setModule(module, set)
   }
 
   public async grantRoles(roles: Array<string>, user: string): Promise<ContractTransaction> {
@@ -293,6 +294,23 @@ export class LadleWrapper {
 
   public async burnForBaseToken(seriesId: string, receiver: string, minBaseTokenOut: BigNumberish): Promise<ContractTransaction> {
     return this.batch([this.burnForBaseTokenAction(seriesId, receiver, minBaseTokenOut)])
+  }
+
+  public tlmSellAction(tlmModuleAddress: string, seriesId: string, receiver: string, amount: BigNumberish): BatchAction {
+    const tlmSellSelector = id('tlmSell(address,bytes)')
+    const tlmSellData = ethers.utils.defaultAbiCoder.encode(
+      ['bytes6', 'address', 'uint256'],
+      [seriesId, receiver, amount]
+    )
+
+    return new BatchAction(OPS.MODULE, ethers.utils.defaultAbiCoder.encode(
+      ['address', 'bytes4', 'bytes'],
+      [tlmModuleAddress, tlmSellSelector, tlmSellData]
+    ))
+  }
+
+  public async tlmSell(tlmModuleAddress: string, seriesId: string, receiver: string, amount: BigNumberish): Promise<ContractTransaction> {
+    return this.batch([this.tlmSellAction(tlmModuleAddress, seriesId, receiver, amount)])
   }
 }
   

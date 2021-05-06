@@ -70,7 +70,7 @@ describe('Ladle - module', function () {
     tlmModule = (await deployContract(ownerAcc, TLMModuleArtifact, [cauldron.address, tlm.address])) as TLMModule
     await ladle.grantRoles([id('setModule(address,bool)')], owner)
 
-    await ladle.ladle.setModule(tlmModule.address, true)
+    await ladle.setModule(tlmModule.address, true)
   })
 
   it('registers a series for sale in the TLM Module', async () => {
@@ -86,22 +86,12 @@ describe('Ladle - module', function () {
     })
 
     it('sells fyToken in the TLM Module', async () => {
-      // Load the TLM Module
-      await ladle.pour(vaultId, tlmModule.address, WAD, WAD)
-
-      const tlmSellSelector = id('tlmSell(address,bytes)')
-      const tlmSellData = ethers.utils.defaultAbiCoder.encode(
-        ['bytes6', 'address', 'uint256'],
-        [seriesId, owner, WAD]
-      )
-      const moduleData = ethers.utils.defaultAbiCoder.encode(
-        ['address', 'bytes4', 'bytes'],
-        [tlmModule.address, tlmSellSelector, tlmSellData]
-      )
-
-      expect(await ladle.ladle.batch([19], [moduleData]))
-        .to.emit(base, 'Transfer')
-        .withArgs(zeroAddress, owner, WAD)
+      expect(await ladle.batch([
+        ladle.pourAction(vaultId, tlmModule.address, WAD, WAD),
+        ladle.tlmSellAction(tlmModule.address, seriesId, owner, WAD),
+      ]))
+      .to.emit(base, 'Transfer')
+      .withArgs(zeroAddress, owner, WAD)
     })
   })
 })
