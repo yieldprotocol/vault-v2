@@ -461,7 +461,7 @@ contract Ladle is AccessControl() {
         }
         
         // Return base
-        IERC20 baseToken = IERC20((getJoin(series.baseId)).asset());
+        IERC20 baseToken = IERC20(cauldron.assets(series.baseId));
         baseToken.safeTransfer(to, base);
 
         // Return fyToken
