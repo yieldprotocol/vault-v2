@@ -60,7 +60,7 @@ contract TLMModule {
         external
         returns (uint256)
     {
-        (address to, bytes6 seriesId, uint256 fyDaiToSell) = abi.decode(data, (address, bytes6, uint256));
+        (bytes6 seriesId, address to, uint256 fyDaiToSell) = abi.decode(data, (bytes6, address, uint256));
         return tlm.sellGem(seriesToIlk[seriesId], to, fyDaiToSell);
     }
 }
