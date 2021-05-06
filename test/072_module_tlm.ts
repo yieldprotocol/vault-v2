@@ -86,12 +86,14 @@ describe('Ladle - module', function () {
     })
 
     it('sells fyToken in the TLM Module', async () => {
-      expect(await ladle.batch([
-        ladle.pourAction(vaultId, tlmModule.address, WAD, WAD),
-        ladle.tlmSellAction(tlmModule.address, seriesId, owner, WAD),
-      ]))
-      .to.emit(base, 'Transfer')
-      .withArgs(zeroAddress, owner, WAD)
+      expect(
+        await ladle.batch([
+          ladle.pourAction(vaultId, tlmModule.address, WAD, WAD),
+          ladle.tlmSellAction(tlmModule.address, seriesId, owner, WAD),
+        ])
+      )
+        .to.emit(base, 'Transfer')
+        .withArgs(zeroAddress, owner, WAD)
     })
   })
 })
