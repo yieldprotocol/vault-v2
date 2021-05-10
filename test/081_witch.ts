@@ -142,7 +142,7 @@ describe('Witch', function () {
         .withArgs(vaultId, owner, (await ilk.balanceOf(owner)).sub(ilkBalanceBefore), WAD)
         .to.emit(cauldron, 'VaultGiven')
         .withArgs(vaultId, owner)
-      
+
       const ink = WAD.sub((await cauldron.balances(vaultId)).ink)
       expect(ink.div(10 ** 15)).to.equal(WAD.div(10 ** 15).div(2)) // Nice hack to compare up to some precision
       expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(WAD))
@@ -159,9 +159,7 @@ describe('Witch', function () {
       it('allows to buy all of the collateral for the whole debt at the end', async () => {
         const baseBalanceBefore = await base.balanceOf(owner)
         const ilkBalanceBefore = await ilk.balanceOf(owner)
-        await expect(witch.buy(vaultId, WAD, 0))
-          .to.emit(witch, 'Bought')
-          .withArgs(vaultId, owner, WAD, WAD)
+        await expect(witch.buy(vaultId, WAD, 0)).to.emit(witch, 'Bought').withArgs(vaultId, owner, WAD, WAD)
 
         const ink = WAD.sub((await cauldron.balances(vaultId)).ink)
         expect(ink).to.equal(WAD)
