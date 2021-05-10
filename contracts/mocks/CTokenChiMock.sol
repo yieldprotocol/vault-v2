@@ -10,7 +10,7 @@ contract CTokenChiMock is SourceMock {
         exchangeRateStored = chi;
     }
 
-    function exchangeRateCurrent() public returns (uint) {
+    function exchangeRateCurrent() public view returns (uint) {
         return exchangeRateStored;
     }
 }
