@@ -5,7 +5,9 @@ import "@yield-protocol/utils-v2/contracts/access/Ownable.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
 import "../math/CastBytes32Bytes6.sol";
 import "@uniswap/v3-core/contracts/interfaces/pool/IUniswapV3PoolImmutables.sol";
-import "@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol";
+// This for the real deal
+// import "@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol";
+import "../mocks/UniswapV3OracleLibraryMock.sol";
 
 /**
  * @title UniswapV3Oracle
@@ -13,6 +15,7 @@ import "@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol";
 contract UniswapV3Oracle is IOracle, Ownable {
     using CastBytes32Bytes6 for bytes32;
 
+    event SecondsAgoSet(uint32 indexed secondsAgo);
     event SourcesSet(bytes6[] indexed bases, bytes6[] indexed quotes, address[] indexed sources_);
 
     uint32 public secondsAgo;
@@ -42,11 +45,12 @@ contract UniswapV3Oracle is IOracle, Ownable {
      * @return value
      */
     function peek(bytes32 base, bytes32 quote, uint256 amount) public virtual override view returns (uint256 value, uint256 updateTime) {
-        address factory = IUniswapV3PoolImmutables(sources[base][quote]).factory();
-        address baseToken = IUniswapV3PoolImmutables(sources[base][quote]).token0();
-        address quoteToken = IUniswapV3PoolImmutables(sources[base][quote]).token1();
-        uint24 fee = IUniswapV3PoolImmutables(sources[base][quote]).fee();
-        value = OracleLibrary.consult(factory, baseToken, quoteToken, fee, amount, secondsAgo);
+        address source = sources[bytes6(base)][bytes6(quote)];
+        address factory = IUniswapV3PoolImmutables(source).factory();
+        address baseToken = IUniswapV3PoolImmutables(source).token0();
+        address quoteToken = IUniswapV3PoolImmutables(source).token1();
+        uint24 fee = IUniswapV3PoolImmutables(source).fee();
+        value = UniswapV3OracleLibraryMock.consult(factory, baseToken, quoteToken, fee, amount, secondsAgo);
         updateTime = uint256(secondsAgo);
     }
 
