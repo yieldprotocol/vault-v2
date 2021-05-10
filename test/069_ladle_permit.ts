@@ -5,7 +5,7 @@ const MAX = MAX256
 
 import { Join } from '../typechain/Join'
 import { ERC20Mock } from '../typechain/ERC20Mock'
-import { DAIMock } from '../typechain/DAIMock'
+import { DaiMock } from '../typechain/DAIMock'
 import { FYToken } from '../typechain/FYToken'
 
 import { ethers, waffle } from 'hardhat'
@@ -24,7 +24,7 @@ describe('Ladle - permit', function () {
   let owner: string
   let ilk: ERC20Mock
   let ilkJoin: Join
-  let dai: DAIMock
+  let dai: DaiMock
   let fyToken: FYToken
   let ladle: LadleWrapper
 
@@ -53,7 +53,7 @@ describe('Ladle - permit', function () {
     ilkJoin = env.joins.get(ilkId) as Join
     ilk = env.assets.get(ilkId) as ERC20Mock
     fyToken = env.series.get(seriesId) as FYToken
-    dai = (env.assets.get(DAI) as unknown) as DAIMock
+    dai = (env.assets.get(DAI) as unknown) as DaiMock
 
     ilkVaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
   })

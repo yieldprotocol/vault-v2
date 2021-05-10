@@ -39,7 +39,7 @@ import { CTokenChiMock } from '../../typechain/CTokenChiMock'
 
 import { ERC20Mock } from '../../typechain/ERC20Mock'
 import { WETH9Mock } from '../../typechain/WETH9Mock'
-import { DAIMock } from '../../typechain/DAIMock'
+import { DaiMock } from '../../typechain/DAIMock'
 import { USDCMock } from '../../typechain/USDCMock'
 
 import { LadleWrapper } from '../../src/ladleWrapper'
@@ -309,7 +309,7 @@ export class YieldEnvironment {
     ilkIds.push(ETH)
 
     // Add Dai as an asset
-    const dai = (await deployContract(owner, DAIMockArtifact, [])) as DAIMock
+    const dai = (await deployContract(owner, DAIMockArtifact, [])) as DaiMock
     await cauldron.addAsset(DAI, dai.address)
 
     const daiJoin = await this.addJoin(owner, ladle, dai as unknown as ERC20Mock, DAI) as Join
