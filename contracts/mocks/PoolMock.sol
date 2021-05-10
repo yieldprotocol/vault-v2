@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
+import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
 import "@yield-protocol/vault-interfaces/IFYToken.sol";
 import "./ERC20Mock.sol";
 
@@ -26,10 +27,11 @@ library RMath { // Fixed point arithmetic in Ray units
     }
 }
 
-contract PoolMock {
+contract PoolMock is ERC20 {
     using RMath for uint128;
 
     event Trade(uint32 maturity, address indexed from, address indexed to, int256 baseTokens, int256 fyTokenTokens);
+    event Liquidity(uint32 maturity, address indexed from, address indexed to, int256 baseTokens, int256 fyTokenTokens, int256 poolTokens);
 
     IERC20 public baseToken;
     IFYToken public fyToken;
@@ -41,7 +43,7 @@ contract PoolMock {
     constructor(
         IERC20 baseToken_,
         IFYToken fyToken_
-    ) {
+    ) ERC20("Pool", "Pool", 18) {
         baseToken = baseToken_;
         fyToken = fyToken_;
     }
@@ -84,6 +86,47 @@ contract PoolMock {
             "Pool: FYToken transfer failed"
         );
     }
+
+    function mint(address to, bool, uint256 minTokensMinted)
+        external
+        returns (uint256 baseTokenIn, uint256 fyTokenIn, uint256 tokensMinted) {
+        baseTokenIn = uint128(baseToken.balanceOf(address(this))) - baseTokenReserves;
+        if (_totalSupply > 0) {
+            tokensMinted = (_totalSupply * baseTokenIn) / baseTokenReserves;
+            fyTokenIn = (fyTokenReserves * tokensMinted) / _totalSupply;
+        } else {
+            tokensMinted = baseTokenIn;
+        }
+        require(fyTokenReserves + fyTokenIn <= fyToken.balanceOf(address(this)), "Pool: Not enough fyToken in");
+        require (tokensMinted >= minTokensMinted, "Pool: Not enough tokens minted");
+
+        (baseTokenReserves, fyTokenReserves) = (baseTokenReserves + uint112(baseTokenIn), fyTokenReserves + uint112(fyTokenIn));
+        
+        _mint(to, tokensMinted);
+
+        emit Liquidity(0, msg.sender, to, -int256(baseTokenIn), -int256(fyTokenIn), int256(tokensMinted));
+    }
+
+    function burn(address to, uint256 minBaseTokenOut, uint256 minFYTokenOut)
+        external
+        returns (uint256 tokensBurned, uint256 baseTokenOut, uint256 fyTokenOut) {
+        tokensBurned = _balanceOf[address(this)];
+
+        baseTokenOut = (tokensBurned * baseTokenReserves) / _totalSupply;
+        fyTokenOut = (tokensBurned * fyTokenReserves) / _totalSupply;
+
+        require (baseTokenOut >= minBaseTokenOut, "Pool: Not enough base tokens obtained");
+        require (fyTokenOut >= minFYTokenOut, "Pool: Not enough fyToken obtained");
+
+        (baseTokenReserves, fyTokenReserves) = (baseTokenReserves - uint112(baseTokenOut), fyTokenReserves - uint112(fyTokenOut));
+
+        _burn(address(this), tokensBurned);
+        baseToken.transfer(to, baseTokenOut);
+        fyToken.transfer(to, fyTokenOut);
+
+        emit Liquidity(0, msg.sender, to, int256(baseTokenOut), int256(fyTokenOut), -int(tokensBurned));
+    }
+
 
     function sellBaseTokenPreview(uint128 baseTokenIn) public pure returns(uint128) {
         return baseTokenIn.rmul(rate);

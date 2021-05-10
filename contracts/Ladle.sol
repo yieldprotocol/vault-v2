@@ -37,14 +37,15 @@ contract Ladle is AccessControl() {
         CLOSE,               // 8
         REPAY,               // 9
         REPAY_VAULT,         // 10
-        FORWARD_PERMIT,      // 11
-        FORWARD_DAI_PERMIT,  // 12
-        JOIN_ETHER,          // 13
-        EXIT_ETHER,          // 14
-        TRANSFER_TO_POOL,    // 15
-        ROUTE,               // 16
-        TRANSFER_TO_FYTOKEN, // 17
-        REDEEM               // 18
+        REMOVE_REPAY,        // 11
+        FORWARD_PERMIT,      // 12
+        FORWARD_DAI_PERMIT,  // 13
+        JOIN_ETHER,          // 14
+        EXIT_ETHER,          // 15
+        TRANSFER_TO_POOL,    // 16
+        ROUTE,               // 17
+        TRANSFER_TO_FYTOKEN, // 18
+        REDEEM               // 19
     }
 
     ICauldron public immutable cauldron;
@@ -213,7 +214,12 @@ contract Ladle is AccessControl() {
                 (bytes12 vaultId, address to, int128 ink, uint128 max) = abi.decode(data[i], (bytes12, address, int128, uint128));
                 if (cachedId != vaultId) (cachedId, vault) = (vaultId, getOwnedVault(vaultId));
                 _repayVault(vaultId, vault, to, ink, max);
-            
+
+            } else if (operation == Operation.REMOVE_REPAY) {
+                (bytes12 vaultId, address to, uint128 minBaseOut, uint128 minFYTokenOut) = abi.decode(data[i], (bytes12, address, uint128, uint128));
+                if (cachedId != vaultId) (cachedId, vault) = (vaultId, getOwnedVault(vaultId));
+                _removeAndRepay(vaultId, vault, to, minBaseOut, minFYTokenOut);
+
             } else if (operation == Operation.TRANSFER_TO_FYTOKEN) {
                 (bytes6 seriesId, uint256 amount) = abi.decode(data[i], (bytes6, uint256));
                 IFYToken fyToken = getSeries(seriesId).fyToken;

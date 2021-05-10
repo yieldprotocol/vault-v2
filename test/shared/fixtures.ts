@@ -235,9 +235,10 @@ export class YieldEnvironment {
       fyToken.address,
     ])) as PoolMock
 
-    // Initialize pool with a million tokens of each
-    await fyToken.mint(pool.address, WAD.mul(1000000))
+    // Initialize pool
     await base.mint(pool.address, WAD.mul(1000000))
+    await pool.mint(await owner.getAddress(), true, 0)
+    await fyToken.mint(pool.address, WAD.mul(1100000))
     await pool.sync()
 
     await ladle.addPool(seriesId, pool.address)
