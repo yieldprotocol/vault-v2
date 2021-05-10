@@ -24,7 +24,7 @@ contract UniswapV3Oracle is IOracle, Ownable {
     function setSecondsAgo(uint32 secondsAgo_) public onlyOwner {
         require(secondsAgo_ != 0, "Uniswap must look into the past.");
         secondsAgo = secondsAgo_;
-        emit SecondsAgoSet(secodnsAgo_);
+        emit SecondsAgoSet(secondsAgo_);
     }
 
     /**
