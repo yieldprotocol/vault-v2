@@ -150,6 +150,7 @@ contract MakerImportModule is LadleStorage {
     /// @dev Migrate part of a CDPMgr-controlled MakerDAO vault to Yield.
     function importCdpPosition(bytes12 vaultId, uint256 cdp, uint128 ilkAmount, uint128 debtAmount, uint128 maxDaiPrice) public {
         // Authenticate user
+        DataTypes.Vault memory vault = getOwnedVault(vaultId);
         address cdpOwner = cdpMgr.owns(cdp);
         
         require(
@@ -162,7 +163,7 @@ contract MakerImportModule is LadleStorage {
         cdpMgr.give(cdp, address(this));
 
         // Transfer position
-        _importCdpPosition(vaultId, cdp, ilkAmount, debtAmount, maxDaiPrice);
+        _importCdpPosition(vaultId, vault, cdp, ilkAmount, debtAmount, maxDaiPrice);
         
         // Return rest of CDP
         cdpMgr.give(cdp, cdpOwner);
@@ -171,6 +172,7 @@ contract MakerImportModule is LadleStorage {
     /// @dev Migrate a CDPMgr-controlled MakerDAO vault to Yield.
     function importCdp(bytes12 vaultId, uint256 cdp, uint128 maxDaiPrice) public {
         // Authenticate user
+        DataTypes.Vault memory vault = getOwnedVault(vaultId);
         address cdpOwner = cdpMgr.owns(cdp);
         
         require(
@@ -185,14 +187,14 @@ contract MakerImportModule is LadleStorage {
         // Transfer position
         bytes32 ilk = cdpMgr.ilks(cdp);
         (uint256 ink, uint256 art) = vat.urns(ilk, cdpMgr.urns(cdp));
-        _importCdpPosition(vaultId, cdp, ink.u128(), art.u128(), maxDaiPrice);
+        _importCdpPosition(vaultId, vault, cdp, ink.u128(), art.u128(), maxDaiPrice);
         
         // Return empty CDP
         cdpMgr.give(cdp, cdpOwner);
     }
 
     /// @dev Transfer debt and collateral from MakerDAO (this contract's CDP) to Yield (user's vault)
-    function _importCdpPosition(bytes12 vaultId, uint256 cdp, uint128 ilkAmount, uint128 debtAmount, uint128 maxDaiPrice) public {
+    function _importCdpPosition(bytes12 vaultId, DataTypes.Vault memory vault, uint256 cdp, uint128 ilkAmount, uint128 debtAmount, uint128 maxDaiPrice) public {
         // The user specifies the fyDai he wants to mint to cover his maker debt, the weth to be passed on as collateral, and the dai debt to move
         bytes32 ilk = cdpMgr.ilks(cdp);
         (uint256 ink, uint256 art) = vat.urns(ilk, cdpMgr.urns(cdp));
@@ -206,7 +208,6 @@ contract MakerImportModule is LadleStorage {
             "Not enough collateral in Maker"
         );
 
-        DataTypes.Vault memory vault = getOwnedVault(vaultId);
         IPool pool = getPool(vault.seriesId);
 
         // Find cost in fyDai
