@@ -260,8 +260,8 @@ contract Ladle is AccessControl() {
                 cachedId = bytes12(0);
             
             } else if (operation == Operation.MODULE) {
-                (address module, bytes4 selector, bytes memory data_) = abi.decode(data[i], (address, bytes4, bytes));
-                _moduleCall(module, selector, data_);
+                (address module, bytes memory moduleCall) = abi.decode(data[i], (address, bytes));
+                _moduleCall(module, moduleCall);
             
             }
         }
@@ -577,12 +577,12 @@ contract Ladle is AccessControl() {
     // ---- Module router ----
 
     /// @dev Allow users to route calls to a pool, to be used with batch
-    function _moduleCall(address module, bytes4 selector, bytes memory data)
+    function _moduleCall(address module, bytes memory moduleCall)
         private
         returns (bool success, bytes memory result)
     {
         require (modules[module], "Unregistered module");
-        (success, result) = module.call(abi.encodeWithSelector(selector, msg.sender, data));
+        (success, result) = module.delegatecall(moduleCall);
         if (!success) revert(RevertMsgExtractor.getRevertMsg(result));
     }
 }

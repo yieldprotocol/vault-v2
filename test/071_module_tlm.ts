@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { id, constants } from '@yield-protocol/utils-v2'
-const { WAD } = constants
+const { WAD, MAX256 } = constants
 
 import TLMMockArtifact from '../artifacts/contracts/mocks/TLMMock.sol/TLMMock.json'
 import TLMModuleArtifact from '../artifacts/contracts/modules/TLMModule.sol/TLMModule.json'
@@ -20,6 +20,7 @@ const { deployContract, loadFixture } = waffle
 import { YieldEnvironment } from './shared/fixtures'
 import { LadleWrapper } from '../src/ladleWrapper'
 
+
 describe('Ladle - module', function () {
   this.timeout(0)
 
@@ -31,6 +32,7 @@ describe('Ladle - module', function () {
   let base: ERC20Mock
   let ilk: ERC20Mock
   let ilkJoin: Join
+  let gemJoin: string
   let fyToken: FYToken
   let tlm: TLMMock
   let tlmModule: TLMModule
@@ -66,6 +68,7 @@ describe('Ladle - module', function () {
     // ==== Set TLM and TLM Module ====
     tlm = (await deployContract(ownerAcc, TLMMockArtifact, [base.address, fyToken.address])) as TLMMock
     makerIlk = await tlm.FYDAI()
+    gemJoin = (await tlm.ilks(makerIlk)).gemJoin
 
     tlmModule = (await deployContract(ownerAcc, TLMModuleArtifact, [cauldron.address, tlm.address])) as TLMModule
     await ladle.grantRoles([id('setModule(address,bool)')], owner)
@@ -85,15 +88,28 @@ describe('Ladle - module', function () {
       await tlmModule.register(seriesId, makerIlk)
     })
 
-    it('sells fyToken in the TLM Module', async () => {
-      expect(
-        await ladle.batch([
-          ladle.pourAction(vaultId, tlmModule.address, WAD, WAD),
-          ladle.tlmSellAction(tlmModule.address, seriesId, owner, WAD),
-        ])
-      )
-        .to.emit(base, 'Transfer')
-        .withArgs(zeroAddress, owner, WAD)
+    it('approves the TLM Module to take fyToken from the Ladle', async () => {
+      await expect(ladle.tlmApprove(tlmModule.address, seriesId))
+        .to.emit(fyToken, 'Approval')
+        .withArgs(ladle.address, gemJoin, MAX256)
+      expect(await fyToken.allowance(ladle.address, gemJoin)).to.equal(MAX256)
+    })
+
+    describe('with Ladle approval', async () => {
+      beforeEach(async () => {
+        await ladle.tlmApprove(tlmModule.address, seriesId)
+      })
+  
+      it('sells fyToken in the TLM Module', async () => {
+        expect(
+          await ladle.batch([
+            ladle.pourAction(vaultId, ladle.address, WAD, WAD),
+            ladle.tlmSellAction(tlmModule.address, seriesId, owner, WAD),
+          ])
+        )
+          .to.emit(base, 'Transfer')
+          .withArgs(zeroAddress, owner, WAD)
+      })
     })
   })
 })

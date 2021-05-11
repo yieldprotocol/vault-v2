@@ -1,5 +1,4 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { id } from '@yield-protocol/utils-v2'
 import { ethers, BigNumberish, ContractTransaction, BytesLike, PayableOverrides } from 'ethers'
 import { Ladle } from '../typechain/Ladle'
 import { OPS } from './constants'
@@ -23,6 +22,11 @@ export class LadleWrapper {
     "function sellFYToken(address to, uint128 min)",
     "function mintWithBaseToken(address to, uint256 fyTokenToBuy, uint256 minTokensMinted)",
     "function burnForBaseToken(address to, uint256 minBaseTokenOut)",
+  ]);
+
+  tlmModule = new ethers.utils.Interface([
+    "function approve(bytes6 seriesId)",
+    "function sell(bytes6 seriesId, address to, uint256 fyDaiToSell)",
   ]);
 
   constructor(ladle: Ladle) {
@@ -296,16 +300,25 @@ export class LadleWrapper {
     return this.batch([this.burnForBaseTokenAction(seriesId, receiver, minBaseTokenOut)])
   }
 
-  public tlmSellAction(tlmModuleAddress: string, seriesId: string, receiver: string, amount: BigNumberish): BatchAction {
-    const tlmSellSelector = id('tlmSell(address,bytes)')
-    const tlmSellData = ethers.utils.defaultAbiCoder.encode(
-      ['bytes6', 'address', 'uint256'],
-      [seriesId, receiver, amount]
-    )
+  public tlmApproveAction(tlmModuleAddress: string, seriesId: string): BatchAction {
+    const tlmApproveCall = this.tlmModule.encodeFunctionData('approve', [seriesId])
 
     return new BatchAction(OPS.MODULE, ethers.utils.defaultAbiCoder.encode(
-      ['address', 'bytes4', 'bytes'],
-      [tlmModuleAddress, tlmSellSelector, tlmSellData]
+      ['address', 'bytes'],
+      [tlmModuleAddress, tlmApproveCall]
+    ))
+  }
+
+  public async tlmApprove(tlmModuleAddress: string, seriesId: string): Promise<ContractTransaction> {
+    return this.batch([this.tlmApproveAction(tlmModuleAddress, seriesId)])
+  }
+
+  public tlmSellAction(tlmModuleAddress: string, seriesId: string, receiver: string, amount: BigNumberish): BatchAction {
+    const tlmSellCall = this.tlmModule.encodeFunctionData('sell', [seriesId, receiver, amount])
+
+    return new BatchAction(OPS.MODULE, ethers.utils.defaultAbiCoder.encode(
+      ['address', 'bytes'],
+      [tlmModuleAddress, tlmSellCall]
     ))
   }
 
