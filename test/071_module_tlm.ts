@@ -20,7 +20,6 @@ const { deployContract, loadFixture } = waffle
 import { YieldEnvironment } from './shared/fixtures'
 import { LadleWrapper } from '../src/ladleWrapper'
 
-
 describe('Ladle - module', function () {
   this.timeout(0)
 
@@ -99,7 +98,7 @@ describe('Ladle - module', function () {
       beforeEach(async () => {
         await ladle.tlmApprove(tlmModule.address, seriesId)
       })
-  
+
       it('sells fyToken in the TLM Module', async () => {
         expect(
           await ladle.batch([
