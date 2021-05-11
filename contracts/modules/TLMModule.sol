@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 import "@yield-protocol/vault-interfaces/ICauldron.sol";
 import "@yield-protocol/vault-interfaces/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
+import "../LadleStorage.sol";
 
 
 interface DssTlmAbstract {
@@ -17,17 +18,22 @@ interface AuthGemJoinAbstract {
 interface MaturingGemAbstract {
 }
 
-contract TLMModule {
+/// @dev 
+contract TLMModule is LadleStorage {
     event SeriesRegistered(bytes6 indexed seriesId, bytes32 indexed ilk);
 
-    ICauldron public immutable cauldron;
+    // The TLMModule inherits the same storage layout as the Ladle.
+    // When the Ladle delegatecalls into the TLMModule, the functions called have access to the Ladle storage.
+    // The following two variables are avaiable to delegatecalls, being immutable
     DssTlmAbstract public immutable tlm;
     TLMModule public immutable tlmModule;
 
+    // The TLMModule is also deployed, and called normally to register the series to ilk correspondence
+    // The following is not directly available through delegatecall, but can be found at `tlm.seriesToIlk`
     mapping (bytes6 => bytes32) public seriesToIlk;
 
-    constructor (ICauldron cauldron_, DssTlmAbstract tlm_) {
-        cauldron = cauldron_;
+    constructor (ICauldron cauldron_, DssTlmAbstract tlm_) 
+        LadleStorage(cauldron_) {
         tlm = tlm_;
         tlmModule = this;
     }
