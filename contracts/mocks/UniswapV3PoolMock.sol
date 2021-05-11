@@ -8,25 +8,17 @@ import "@uniswap/v3-core/contracts/interfaces/pool/IUniswapV3PoolImmutables.sol"
 contract UniswapV3PoolMock is ISourceMock, IUniswapV3PoolImmutables {
 
     uint public price;
+    address public immutable override factory;
+    address public immutable override token0;
+    address public immutable override token1;
+    uint24 public immutable override fee;
+
+    constructor(address factory_, address token0_, address token1_, uint24 fee_) {
+        (factory, token0, token1, fee) = (factory_, token0_, token1_, fee_);
+    }
 
     function set(uint price_) external override {
         price = price_;
-    }
-
-    function factory() public pure override returns (address) {
-        return address(0);
-    }
-    
-    function token0() public pure override returns (address) {
-        return address(0);
-    }
-
-    function token1() public pure override returns (address) {
-        return address(0);
-    }
-
-    function fee() public pure override returns (uint24) {
-        return 0;
     }
 
     function tickSpacing() public pure override returns (int24) {
