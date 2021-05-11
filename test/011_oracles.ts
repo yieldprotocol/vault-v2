@@ -71,8 +71,8 @@ describe('Oracle', function () {
     await compoundMultiOracle.setSources([baseId, baseId], [CHI, RATE], [cTokenChi.address, cTokenRate.address])
 
     uniswapV3Factory = (await deployContract(ownerAcc, UniswapV3FactoryMockArtifact, [])) as UniswapV3FactoryMock
-    const token0: string = ethers.utils.HDNode.fromSeed("0x0123456789abcdef0123456789abcdef").address
-    const token1: string = ethers.utils.HDNode.fromSeed("0xfedcba9876543210fedcba9876543210").address
+    const token0: string = ethers.utils.HDNode.fromSeed('0x0123456789abcdef0123456789abcdef').address
+    const token1: string = ethers.utils.HDNode.fromSeed('0xfedcba9876543210fedcba9876543210').address
     uniswapV3PoolAddress = await uniswapV3Factory.callStatic.createPool(token0, token1, 0)
     await uniswapV3Factory.createPool(token0, token1, 0)
     uniswapV3Pool = (await ethers.getContractAt('UniswapV3PoolMock', uniswapV3PoolAddress)) as UniswapV3PoolMock
