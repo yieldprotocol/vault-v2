@@ -54,6 +54,7 @@ interface IVat {
     function urns(bytes32, address) external view returns (uint256, uint256);
 }
 
+/// ATTENTION: THIS MODULE IS A DRAFT AND IT IS NOT TO BE DEPLOYED UNTIL TESTED
 contract MakerImportModule is LadleStorage {
     using CastU256U128 for uint256;
     using CastU128I128 for uint128;
