@@ -67,8 +67,8 @@ describe('Oracle', function () {
     compoundMultiOracle = (await deployContract(ownerAcc, CompoundMultiOracleArtifact, [])) as CompoundMultiOracle
     await compoundMultiOracle.setSources([baseId, baseId], [CHI, RATE], [cTokenChi.address, cTokenRate.address])
 
-    uniswapV3Pool = (await deployContract(ownerAcc, UniswapV3PoolMockArtifact, [])) as UniswapV3PoolMock;
-    uniswapV3Oracle = (await deployContract(ownerAcc, UniswapV3OracleArtifact, [])) as UniswapV3Oracle;
+    uniswapV3Pool = (await deployContract(ownerAcc, UniswapV3PoolMockArtifact, [])) as UniswapV3PoolMock
+    uniswapV3Oracle = (await deployContract(ownerAcc, UniswapV3OracleArtifact, [])) as UniswapV3Oracle
     await uniswapV3Oracle.setSources([baseId], [quoteId], [uniswapV3Pool.address])
   })
 
@@ -93,8 +93,8 @@ describe('Oracle', function () {
 
   it('retrieves the value at spot price from a uniswap v3 oracle', async () => {
     // The Uniswap V3 Oracle Library Mock always returns double the base amount
-    expect(
-      (await uniswapV3Oracle.callStatic.get(bytes6ToBytes32(baseId), bytes6ToBytes32(quoteId), WAD))[0]
-    ).to.equal(WAD.mul(2))
+    expect((await uniswapV3Oracle.callStatic.get(bytes6ToBytes32(baseId), bytes6ToBytes32(quoteId), WAD))[0]).to.equal(
+      WAD.mul(2)
+    )
   })
 })
