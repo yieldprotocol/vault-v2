@@ -3,6 +3,7 @@ import { BaseProvider } from '@ethersproject/providers'
 import { id } from '@yield-protocol/utils-v2'
 import { constants } from '@yield-protocol/utils-v2'
 const { WAD, THREE_MONTHS, ETH, DAI, USDC } = constants
+import { CHI, RATE } from '../../src/constants'
 
 import CauldronArtifact from '../../artifacts/contracts/Cauldron.sol/Cauldron.json'
 import JoinArtifact from '../../artifacts/contracts/Join.sol/Join.json'
@@ -11,9 +12,8 @@ import WitchArtifact from '../../artifacts/contracts/Witch.sol/Witch.json'
 import FYTokenArtifact from '../../artifacts/contracts/FYToken.sol/FYToken.json'
 import PoolMockArtifact from '../../artifacts/contracts/mocks/PoolMock.sol/PoolMock.json'
 
-import ChainlinkOracleArtifact from '../../artifacts/contracts/oracles/ChainlinkOracle.sol/ChainlinkOracle.json'
-import CompoundRateOracleArtifact from '../../artifacts/contracts/oracles/CompoundRateOracle.sol/CompoundRateOracle.json'
-import CompoundChiOracleArtifact from '../../artifacts/contracts/oracles/CompoundChiOracle.sol/CompoundChiOracle.json'
+import ChainlinkMultiOracleArtifact from '../../artifacts/contracts/oracles/ChainlinkMultiOracle.sol/ChainlinkMultiOracle.json'
+import CompoundMultiOracleArtifact from '../../artifacts/contracts/oracles/CompoundMultiOracle.sol/CompoundMultiOracle.json'
 import ChainlinkAggregatorV3MockArtifact from '../../artifacts/contracts/mocks/ChainlinkAggregatorV3Mock.sol/ChainlinkAggregatorV3Mock.json'
 import CTokenRateMockArtifact from '../../artifacts/contracts/mocks/CTokenRateMock.sol/CTokenRateMock.json'
 import CTokenChiMockArtifact from '../../artifacts/contracts/mocks/CTokenChiMock.sol/CTokenChiMock.json'
@@ -31,6 +31,8 @@ import { FYToken } from '../../typechain/FYToken'
 import { PoolMock } from '../../typechain/PoolMock'
 
 import { OracleMock } from '../../typechain/OracleMock'
+import { ChainlinkMultiOracle } from '../../typechain/ChainlinkMultiOracle'
+import { CompoundMultiOracle } from '../../typechain/CompoundMultiOracle'
 import { ChainlinkAggregatorV3Mock } from '../../typechain/ChainlinkAggregatorV3Mock'
 import { CTokenRateMock } from '../../typechain/CTokenRateMock'
 import { CTokenChiMock } from '../../typechain/CTokenChiMock'
@@ -81,9 +83,10 @@ export class YieldEnvironment {
     this.vaults = vaults
   }
 
-  public static async cauldronGovAuth(owner: SignerWithAddress, cauldron: Cauldron, receiver: string) {
+  public static async cauldronGovAuth(cauldron: Cauldron, receiver: string) {
     await cauldron.grantRoles(
       [
+        id('setAuctionInterval(uint32)'),
         id('addAsset(bytes6,address)'),
         id('addSeries(bytes6,bytes6,address)'),
         id('addIlks(bytes6,bytes6[])'),
@@ -95,7 +98,7 @@ export class YieldEnvironment {
     )
   }
 
-  public static async cauldronLadleAuth(owner: SignerWithAddress, cauldron: Cauldron, receiver: string) {
+  public static async cauldronLadleAuth(cauldron: Cauldron, receiver: string) {
     await cauldron.grantRoles(
       [
         id('build(address,bytes12,bytes6,bytes6)'),
@@ -104,39 +107,50 @@ export class YieldEnvironment {
         id('give(bytes12,address)'),
         id('pour(bytes12,int128,int128)'),
         id('stir(bytes12,bytes12,uint128,uint128)'),
-        id('roll(bytes12,bytes6,uint128)'),
+        id('roll(bytes12,bytes6,int128)'),
         id('slurp(bytes12,uint128,uint128)'),
       ],
       receiver
     )
   }
 
-  public static async cauldronWitchAuth(owner: SignerWithAddress, cauldron: Cauldron, receiver: string) {
+  public static async cauldronWitchAuth(cauldron: Cauldron, receiver: string) {
     await cauldron.grantRoles(
       [
         id('destroy(bytes12)'),
-        id('grab(bytes12)'),
+        id('grab(bytes12,address)'),
       ],
       receiver
     )
   }
 
-  public static async ladleGovAuth(owner: SignerWithAddress, ladle: LadleWrapper, receiver: string) {
+  public static async ladleGovAuth(ladle: LadleWrapper, receiver: string) {
     await ladle.grantRoles(
       [
         id('addJoin(bytes6,address)'),
         id('addPool(bytes6,address)'),
         id('setPoolRouter(address)'),
+        id('setFee(uint256)'),
       ],
       receiver
     )
   }
 
-  public static async ladleWitchAuth(owner: SignerWithAddress, ladle: LadleWrapper, receiver: string) {
+  public static async ladleWitchAuth(ladle: LadleWrapper, receiver: string) {
     await ladle.grantRoles([
       id(
         'settle(bytes12,address,uint128,uint128)'
       )],
+      receiver
+    )
+  }
+
+  public static async witchGovAuth(witch: Witch, receiver: string) {
+    await witch.grantRoles(
+      [
+        id('setAuctionTime(uint128)'),
+        id('setInitialProportion(uint128)'),
+      ],
       receiver
     )
   }
@@ -157,28 +171,26 @@ export class YieldEnvironment {
     return join
   }
 
-  public static async addSpotOracle(owner: SignerWithAddress, cauldron: Cauldron, baseId: string, ilkId: string) {
+  public static async addSpotOracle(owner: SignerWithAddress, cauldron: Cauldron, oracle: ChainlinkMultiOracle, baseId: string, ilkId: string) {
     const ratio = 1000000 //  1000000 == 100% collateralization ratio
     const aggregator = (await deployContract(owner, ChainlinkAggregatorV3MockArtifact, [])) as ChainlinkAggregatorV3Mock
-    const oracle = (await deployContract(owner, ChainlinkOracleArtifact, [aggregator.address])) as OracleMock // Externally, all oracles are the same
     await aggregator.set(WAD.mul(2))
+    await oracle.setSources([baseId], [ilkId], [aggregator.address])
     await cauldron.setSpotOracle(baseId, ilkId, oracle.address, ratio)
     return oracle
   }
 
-  public static async addRateOracle(owner: SignerWithAddress, cauldron: Cauldron, baseId: string) {
-    const ctoken = (await deployContract(owner, CTokenRateMockArtifact, [])) as CTokenRateMock
-    const oracle = (await deployContract(owner, CompoundRateOracleArtifact, [ctoken.address])) as OracleMock // Externally, all oracles are the same
-    await ctoken.set(WAD.mul(2))
+  public static async addRateOracle(owner: SignerWithAddress, cauldron: Cauldron, oracle: CompoundMultiOracle, baseId: string) {
+    const cTokenRate = (await deployContract(owner, CTokenRateMockArtifact, [])) as CTokenRateMock
+    await cTokenRate.set(WAD.mul(2))
+    await oracle.setSources([baseId], [RATE], [cTokenRate.address])
     await cauldron.setRateOracle(baseId, oracle.address)
-    return oracle
   }
 
-  public static async addChiOracle(owner: SignerWithAddress) { // This will be referenced by the fyToken, and needs no id
-    const ctoken = (await deployContract(owner, CTokenChiMockArtifact, [])) as CTokenChiMock
-    const oracle = (await deployContract(owner, CompoundChiOracleArtifact, [ctoken.address])) as OracleMock // Externally, all oracles are the same
-    await ctoken.set(WAD)
-    return oracle
+  public static async addChiOracle(owner: SignerWithAddress, oracle: CompoundMultiOracle, baseId: string) { // This will be referenced by the fyToken, and needs no id
+    const cTokenChi = (await deployContract(owner, CTokenChiMockArtifact, [])) as CTokenChiMock
+    await cTokenChi.set(WAD)
+    await oracle.setSources([baseId], [CHI], [cTokenChi.address])
   }
 
   public static async addSeries(
@@ -186,7 +198,7 @@ export class YieldEnvironment {
     cauldron: Cauldron,
     ladle: LadleWrapper,
     baseJoin: Join,
-    chiOracle: OracleMock,
+    chiOracle: CompoundMultiOracle,
     seriesId: string,
     baseId: string,
     ilkIds: Array<string>,
@@ -194,6 +206,7 @@ export class YieldEnvironment {
 
   ) {
     const fyToken = (await deployContract(owner, FYTokenArtifact, [
+      baseId,
       chiOracle.address,
       baseJoin.address,
       maturity,
@@ -242,15 +255,19 @@ export class YieldEnvironment {
     const witch = (await deployContract(owner, WitchArtifact, [cauldron.address, ladle.address])) as Witch
 
     // ==== Orchestration ====
-    await this.cauldronLadleAuth(owner, cauldron, ladle.address)
-    await this.cauldronWitchAuth(owner, cauldron, witch.address)
-    await this.ladleWitchAuth(owner, ladle, witch.address)
+    await this.cauldronLadleAuth(cauldron, ladle.address)
+    await this.cauldronWitchAuth(cauldron, witch.address)
+    await this.ladleWitchAuth(ladle, witch.address)
 
     // ==== Owner access (only test environment) ====
-    await this.cauldronGovAuth(owner, cauldron, ownerAdd)
-    await this.cauldronLadleAuth(owner, cauldron, ownerAdd)
-    await this.ladleGovAuth(owner, ladle, ownerAdd)
-    await this.ladleWitchAuth(owner, ladle, ownerAdd)
+    await this.cauldronGovAuth(cauldron, ownerAdd)
+    await this.cauldronLadleAuth(cauldron, ownerAdd)
+    await this.ladleGovAuth(ladle, ownerAdd)
+    await this.ladleWitchAuth(ladle, ownerAdd)
+    await this.witchGovAuth(witch, ownerAdd)
+
+    // ==== Set protection period for vaults in liquidation ====
+    await cauldron.setAuctionInterval(24 * 60 * 60)
 
     // ==== Add assets and joins ====
     // For each asset id passed as an argument, we create a Mock ERC20 which we register in cauldron, and its Join, that we register in Ladle.
@@ -327,14 +344,16 @@ export class YieldEnvironment {
     // ==== Add oracles ====
     const oracles: Map<string, OracleMock> = new Map()
 
-    const rateOracle = await this.addRateOracle(owner, cauldron, baseId) as OracleMock
-    oracles.set('rate', rateOracle)
-    const chiOracle = await this.addChiOracle(owner) as OracleMock
-    oracles.set('chi', chiOracle)
-    
+    const chiRateOracle = (await deployContract(owner, CompoundMultiOracleArtifact, [])) as CompoundMultiOracle
+    await this.addRateOracle(owner, cauldron, chiRateOracle, baseId)
+    oracles.set(RATE, chiRateOracle as unknown as OracleMock)
+    await this.addChiOracle(owner, chiRateOracle, baseId)
+    oracles.set(CHI, chiRateOracle as unknown as OracleMock)
+
+    const spotOracle = (await deployContract(owner, ChainlinkMultiOracleArtifact, [])) as ChainlinkMultiOracle
     // There is only one base, so the spot oracles we need are one for each ilk, against the only base.
     for (let ilkId of ilkIds) {
-      oracles.set(ilkId, await this.addSpotOracle(owner, cauldron, baseId, ilkId) as OracleMock)
+      oracles.set(ilkId, await this.addSpotOracle(owner, cauldron, spotOracle, baseId, ilkId) as unknown as OracleMock)
     }
 
     // ==== Add series and pools ====
@@ -348,9 +367,13 @@ export class YieldEnvironment {
     let count: number = 1
     for (let seriesId of seriesIds) {
       const maturity = now + THREE_MONTHS * count++
-      const fyToken = await this.addSeries(owner, cauldron, ladle, baseJoin, chiOracle, seriesId, baseId, ilkIds, maturity) as FYToken
+      const fyToken = await this.addSeries(owner, cauldron, ladle, baseJoin, chiRateOracle, seriesId, baseId, ilkIds, maturity) as FYToken
       series.set(seriesId, fyToken)
-      await fyToken.grantRoles([id('mint(address,uint256)'), id('burn(address,uint256)')], ownerAdd) // Only test environment
+      await fyToken.grantRoles([
+          id('mint(address,uint256)'),
+          id('burn(address,uint256)'),
+          id('setOracle(address)')],
+        ownerAdd) // Only test environment
 
       // Add a pool between the base and each series
       pools.set(seriesId, await this.addPool(owner, ladle, base, fyToken, seriesId))

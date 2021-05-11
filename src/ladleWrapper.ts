@@ -17,6 +17,13 @@ export class LadleWrapper {
   ladle: Ladle
   address: string
 
+  pool = new ethers.utils.Interface([
+    "function sellBaseToken(address to, uint128 min)",
+    "function sellFYToken(address to, uint128 min)",
+    "function mintWithBaseToken(address to, uint256 fyTokenToBuy, uint256 minTokensMinted)",
+    "function burnForBaseToken(address to, uint256 minBaseTokenOut)",
+  ]);
+
   constructor(ladle: Ladle) {
     this.ladle = ladle
     this.address = ladle.address
@@ -28,6 +35,14 @@ export class LadleWrapper {
 
   public connect(account: SignerWithAddress): LadleWrapper {
     return new LadleWrapper(this.ladle.connect(account))
+  }
+
+  public async setFee(fee: BigNumberish): Promise<ContractTransaction> {
+    return this.ladle.setFee(fee)
+  }
+
+  public async borrowingFee(): Promise<BigNumberish> {
+    return this.ladle.borrowingFee()
   }
 
   public async addJoin(assetId: string, join: string): Promise<ContractTransaction> {
@@ -97,20 +112,12 @@ export class LadleWrapper {
     return this.batch([this.destroyAction(vaultId)])
   }
 
-  public stirToAction(from: string, to: string, ink: BigNumberish, art: BigNumberish): BatchAction {
-    return new BatchAction(OPS.STIR_TO, ethers.utils.defaultAbiCoder.encode(['bytes12', 'bytes12', 'uint128', 'uint128'], [from, to, ink, art]))
+  public stirAction(from: string, to: string, ink: BigNumberish, art: BigNumberish): BatchAction {
+    return new BatchAction(OPS.STIR, ethers.utils.defaultAbiCoder.encode(['bytes12', 'bytes12', 'uint128', 'uint128'], [from, to, ink, art]))
   }
 
-  public stirFromAction(from: string, to: string, ink: BigNumberish, art: BigNumberish): BatchAction {
-    return new BatchAction(OPS.STIR_FROM, ethers.utils.defaultAbiCoder.encode(['bytes12', 'bytes12', 'uint128', 'uint128'], [from, to, ink, art]))
-  }
-
-  public async stir(from: string, to: string, ink: BigNumberish, art: BigNumberish): Promise<ContractTransaction> { // Default stir. Use when `from` has been used before in the same batch.
-    return this.batch([this.stirFromAction(from, to, ink, art)])
-  }
-
-  public async stirTo(from: string, to: string, ink: BigNumberish, art: BigNumberish): Promise<ContractTransaction> { // Alternate stir. Use when `to` has been used before in the same batch.
-    return this.batch([this.stirToAction(from, to, ink, art)])
+  public async stir(from: string, to: string, ink: BigNumberish, art: BigNumberish): Promise<ContractTransaction> {
+    return this.batch([this.stirAction(from, to, ink, art)])
   }
 
   public pourAction(vaultId: string, to: string, ink: BigNumberish, art: BigNumberish): BatchAction {
@@ -229,6 +236,63 @@ export class LadleWrapper {
 
   public async redeem(seriesId: string, to: string, wad: BigNumberish): Promise<ContractTransaction> {
     return this.batch([this.redeemAction(seriesId, to, wad)])
+  }
+
+
+  public sellBaseTokenAction(seriesId: string, receiver: string, min: BigNumberish): BatchAction {
+    return new BatchAction(OPS.ROUTE, ethers.utils.defaultAbiCoder.encode(
+      ['bytes6', 'bytes'],
+      [
+        seriesId,
+        this.pool.encodeFunctionData('sellBaseToken', [receiver, min])
+      ]
+    ))
+  }
+
+  public async sellBaseToken(seriesId: string, receiver: string, min: BigNumberish): Promise<ContractTransaction> {
+    return this.batch([this.sellBaseTokenAction(seriesId, receiver, min)])
+  }
+
+  public sellFYTokenAction(seriesId: string, receiver: string, min: BigNumberish): BatchAction {
+    return new BatchAction(OPS.ROUTE, ethers.utils.defaultAbiCoder.encode(
+      ['bytes6', 'bytes'],
+      [
+        seriesId,
+        this.pool.encodeFunctionData('sellFYToken', [receiver, min])
+      ]
+    ))
+  }
+
+  public async sellFYToken(seriesId: string, receiver: string, min: BigNumberish): Promise<ContractTransaction> {
+    return this.batch([this.sellFYTokenAction(seriesId, receiver, min)])
+  }
+
+  public mintWithBaseTokenAction(seriesId: string, receiver: string, fyTokenToBuy: BigNumberish, minTokensMinted: BigNumberish): BatchAction {
+    return new BatchAction(OPS.ROUTE, ethers.utils.defaultAbiCoder.encode(
+      ['bytes6', 'bytes'],
+      [
+        seriesId,
+        this.pool.encodeFunctionData('mintWithBaseToken', [receiver, fyTokenToBuy, minTokensMinted])
+      ]
+    ))
+  }
+
+  public async mintWithBaseToken(seriesId: string, receiver: string, fyTokenToBuy: BigNumberish, minTokensMinted: BigNumberish): Promise<ContractTransaction> {
+    return this.batch([this.mintWithBaseTokenAction(seriesId, receiver, fyTokenToBuy, minTokensMinted)])
+  }
+
+  public burnForBaseTokenAction(seriesId: string, receiver: string, minBaseTokenOut: BigNumberish): BatchAction {
+    return new BatchAction(OPS.ROUTE, ethers.utils.defaultAbiCoder.encode(
+      ['bytes6', 'bytes'],
+      [
+        seriesId,
+        this.pool.encodeFunctionData('burnForBaseToken', [receiver, minBaseTokenOut])
+      ]
+    ))
+  }
+
+  public async burnForBaseToken(seriesId: string, receiver: string, minBaseTokenOut: BigNumberish): Promise<ContractTransaction> {
+    return this.batch([this.burnForBaseTokenAction(seriesId, receiver, minBaseTokenOut)])
   }
 }
   

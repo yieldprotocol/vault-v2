@@ -62,19 +62,25 @@ describe('Cauldron - vaults', function () {
     cauldronFromOther = cauldron.connect(otherAcc)
   })
 
+  it('does not build a vault with zero as the id', async () => {
+    await expect(cauldron.build(owner, '0x000000000000000000000000', seriesId, ilkId)).to.be.revertedWith(
+      'Vault id is zero'
+    )
+  })
+
   it('does not build a vault with an unknown series', async () => {
     // TODO: Error message misleading, replace in contract for something generic
-    await expect(cauldron.build(owner, vaultId, mockAssetId, ilkId)).to.be.revertedWith('Ilk not added')
+    await expect(cauldron.build(owner, vaultId, mockAssetId, ilkId)).to.be.revertedWith('Mismatched ilk and series')
   })
 
   it('does not build a vault with an unknown ilk', async () => {
     // TODO: Might be removed, redundant with approved ilk check
-    await expect(cauldron.build(owner, vaultId, seriesId, mockAssetId)).to.be.revertedWith('Ilk not added')
+    await expect(cauldron.build(owner, vaultId, seriesId, mockAssetId)).to.be.revertedWith('Mismatched ilk and series')
   })
 
   it('does not build a vault with an ilk that is not approved for a series', async () => {
     await cauldron.addAsset(mockAssetId, mockAddress)
-    await expect(cauldron.build(owner, vaultId, seriesId, mockAssetId)).to.be.revertedWith('Ilk not added')
+    await expect(cauldron.build(owner, vaultId, seriesId, mockAssetId)).to.be.revertedWith('Mismatched ilk and series')
   })
 
   it('builds a vault', async () => {
@@ -113,7 +119,7 @@ describe('Cauldron - vaults', function () {
     })
 
     it('does not allow changing vaults to non-approved collaterals', async () => {
-      await expect(cauldron.tweak(vaultId, seriesId, mockAssetId)).to.be.revertedWith('Ilk not added')
+      await expect(cauldron.tweak(vaultId, seriesId, mockAssetId)).to.be.revertedWith('Mismatched ilk and series')
     })
 
     it('does not allow changing vaults with debt', async () => {
@@ -138,7 +144,7 @@ describe('Cauldron - vaults', function () {
 
     it('gives a vault', async () => {
       expect(await cauldron.give(vaultId, other))
-        .to.emit(cauldron, 'VaultTransfer')
+        .to.emit(cauldron, 'VaultGiven')
         .withArgs(vaultId, other)
       const vault = await cauldron.vaults(vaultId)
       expect(vault.owner).to.equal(other)

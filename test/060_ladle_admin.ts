@@ -2,6 +2,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { BaseProvider } from '@ethersproject/providers'
 import { constants, id } from '@yield-protocol/utils-v2'
 const { WAD, THREE_MONTHS } = constants
+import { RATE } from '../src/constants'
 
 import FYTokenArtifact from '../artifacts/contracts/FYToken.sol/FYToken.json'
 import JoinArtifact from '../artifacts/contracts/Join.sol/Join.json'
@@ -75,7 +76,7 @@ describe('Ladle - admin', function () {
     ladleFromOther = ladle.connect(otherAcc)
     base = env.assets.get(baseId) as ERC20Mock
     baseJoin = env.joins.get(baseId) as Join
-    rateOracle = env.oracles.get('rate') as OracleMock
+    rateOracle = env.oracles.get(RATE) as OracleMock
 
     // ==== Set testing environment ====
     ilk = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId, 'Mock Ilk'])) as ERC20Mock
@@ -94,6 +95,7 @@ describe('Ladle - admin', function () {
     const provider: BaseProvider = await ethers.provider
     maturity = (await provider.getBlock(await provider.getBlockNumber())).timestamp + THREE_MONTHS
     fyToken = (await deployContract(ownerAcc, FYTokenArtifact, [
+      baseId,
       rateOracle.address,
       baseJoin.address,
       maturity,
@@ -105,6 +107,14 @@ describe('Ladle - admin', function () {
 
     // Deploy a pool
     pool = (await deployContract(ownerAcc, PoolMockArtifact, [base.address, fyToken.address])) as PoolMock
+  })
+
+  it('sets the borrowing fee', async () => {
+    const fee = WAD.div(100)
+    expect(await ladle.setFee(fee))
+      .to.emit(ladle.ladle, 'FeeSet') // The event is emitted by the ladle, not the wrapper
+      .withArgs(fee)
+    expect(await ladle.borrowingFee()).to.equal(fee)
   })
 
   describe('join admin', async () => {
@@ -140,6 +150,7 @@ describe('Ladle - admin', function () {
     it('does not allow adding a pool with a mismatched fyToken', async () => {
       // Deploy other series
       const otherFYToken = (await deployContract(ownerAcc, FYTokenArtifact, [
+        baseId,
         rateOracle.address,
         baseJoin.address,
         maturity,

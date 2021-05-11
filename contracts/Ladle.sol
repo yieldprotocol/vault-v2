@@ -10,7 +10,7 @@ import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC2612.sol";
 import "dss-interfaces/src/dss/DaiAbstract.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
+import "@yield-protocol/utils-v2/contracts/token/AllTransferHelper.sol";
 import "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
 import "./math/WMul.sol";
 import "./math/CastU256U128.sol";
@@ -22,39 +22,40 @@ contract Ladle is AccessControl() {
     using WMul for uint256;
     using CastU256U128 for uint256;
     using CastU128I128 for uint128;
-    using TransferHelper for IERC20;
-    using TransferHelper for address payable;
+    using AllTransferHelper for IERC20;
+    using AllTransferHelper for address payable;
 
     enum Operation {
         BUILD,               // 0
         TWEAK,               // 1
         GIVE,                // 2
         DESTROY,             // 3
-        STIR_TO,             // 4
-        STIR_FROM,           // 5
-        POUR,                // 6
-        SERVE,               // 7
-        ROLL,                // 8
-        CLOSE,               // 9
-        REPAY,               // 10
-        REPAY_VAULT,         // 11
-        FORWARD_PERMIT,      // 12
-        FORWARD_DAI_PERMIT,  // 13
-        JOIN_ETHER,          // 14
-        EXIT_ETHER,          // 15
-        TRANSFER_TO_POOL,    // 16
-        ROUTE,               // 17
-        TRANSFER_TO_FYTOKEN, // 18
-        REDEEM               // 19
+        STIR,                // 4
+        POUR,                // 5
+        SERVE,               // 6
+        ROLL,                // 7
+        CLOSE,               // 8
+        REPAY,               // 9
+        REPAY_VAULT,         // 10
+        FORWARD_PERMIT,      // 11
+        FORWARD_DAI_PERMIT,  // 12
+        JOIN_ETHER,          // 13
+        EXIT_ETHER,          // 14
+        TRANSFER_TO_POOL,    // 15
+        ROUTE,               // 16
+        TRANSFER_TO_FYTOKEN, // 17
+        REDEEM               // 18
     }
 
     ICauldron public immutable cauldron;
+    uint256 public borrowingFee;
 
     mapping (bytes6 => IJoin)                   public joins;            // Join contracts available to manage assets. The same Join can serve multiple assets (ETH-A, ETH-B, etc...)
     mapping (bytes6 => IPool)                   public pools;            // Pool contracts available to manage series. 12 bytes still free.
 
     event JoinAdded(bytes6 indexed assetId, address indexed join);
     event PoolAdded(bytes6 indexed seriesId, address indexed pool);
+    event FeeSet(uint256 fee);
 
     constructor (ICauldron cauldron_) {
         cauldron = cauldron_;
@@ -116,9 +117,18 @@ contract Ladle is AccessControl() {
     {
         IFYToken fyToken = getSeries(seriesId).fyToken;
         require (fyToken == pool.fyToken(), "Mismatched pool fyToken and series");
-        require (fyToken.asset() == address(pool.baseToken()), "Mismatched pool base and series");
+        require (fyToken.underlying() == address(pool.baseToken()), "Mismatched pool base and series");
         pools[seriesId] = pool;
         emit PoolAdded(seriesId, address(pool));
+    }
+
+    /// @dev Set the fee parameter
+    function setFee(uint256 fee)
+        public
+        auth    
+    {
+        borrowingFee = fee;
+        emit FeeSet(fee);
     }
 
     // ---- Batching ----
@@ -214,15 +224,9 @@ contract Ladle is AccessControl() {
                 IFYToken fyToken = getSeries(seriesId).fyToken;
                 _redeem(fyToken, to, amount);
             
-            } else if (operation == Operation.STIR_FROM) {
-                (bytes12 vaultId, bytes12 to, uint128 ink, uint128 art) = abi.decode(data[i], (bytes12, bytes12, uint128, uint128));
-                if (cachedId != vaultId) (cachedId, vault) = (vaultId, getOwnedVault(vaultId));
-                _stirFrom(vaultId, to, ink, art);
-            
-            } else if (operation == Operation.STIR_TO) {
-                (bytes12 from, bytes12 vaultId, uint128 ink, uint128 art) = abi.decode(data[i], (bytes12, bytes12, uint128, uint128));
-                if (cachedId != vaultId) (cachedId, vault) = (vaultId, getOwnedVault(vaultId));
-                _stirTo(from, vaultId, ink, art);
+            } else if (operation == Operation.STIR) {
+                (bytes12 from, bytes12 to, uint128 ink, uint128 art) = abi.decode(data[i], (bytes12, bytes12, uint128, uint128));
+                _stir(from, to, ink, art);  // Too complicated to use caching here
             
             } else if (operation == Operation.TWEAK) {
                 (bytes12 vaultId, bytes6 seriesId, bytes6 ilkId) = abi.decode(data[i], (bytes12, bytes6, bytes6));
@@ -288,16 +292,16 @@ contract Ladle is AccessControl() {
         private
         returns (DataTypes.Vault memory, DataTypes.Balances memory)
     {
-        DataTypes.Balances memory balances = cauldron.balances(vaultId);
-        
-        // Calculate debt in fyToken terms
         DataTypes.Series memory series = getSeries(vault.seriesId);
-        uint128 amt = _debtInBase(vault.seriesId, series, balances.art);
-
         DataTypes.Series memory newSeries = getSeries(newSeriesId);
+        
         IPool pool = getPool(newSeriesId);
         IFYToken fyToken = IFYToken(newSeries.fyToken);
         IJoin baseJoin = getJoin(series.baseId);
+
+        // Calculate debt in fyToken terms
+        DataTypes.Balances memory balances = cauldron.balances(vaultId);
+        uint128 amt = _debtInBase(vault.seriesId, series, balances.art);
 
         // Mint fyToken to the pool, as a kind of flash loan
         fyToken.mint(address(pool), amt * 2);
@@ -309,23 +313,17 @@ contract Ladle is AccessControl() {
         pool.retrieveFYToken(address(fyToken));                 // Get the surplus fyToken
         fyToken.burn(address(fyToken), (amt * 2) - newDebt);    // Burn the surplus
 
-        return cauldron.roll(vaultId, newSeriesId, newDebt);    // Change the series and debt for the vault
+        newDebt += ((series.maturity - block.timestamp) * uint256(newDebt).wmul(borrowingFee)).u128();  // Add borrowing fee
+
+        return cauldron.roll(vaultId, newSeriesId, newDebt.i128() - balances.art.i128()); // Change the series and debt for the vault
     }
 
-    /// @dev Move collateral and debt to the owner's vault.
-    function _stirTo(bytes12 from, bytes12 to, uint128 ink, uint128 art)
+    /// @dev Move collateral and debt between vaults.
+    function _stir(bytes12 from, bytes12 to, uint128 ink, uint128 art)
         private
         returns (DataTypes.Balances memory, DataTypes.Balances memory)
     {
         if (ink > 0) require (cauldron.vaults(from).owner == msg.sender, "Only origin vault owner");
-        return cauldron.stir(from, to, ink, art);
-    }
-
-    /// @dev Move collateral and debt from the owner's vault.
-    function _stirFrom(bytes12 from, bytes12 to, uint128 ink, uint128 art)
-        private
-        returns (DataTypes.Balances memory, DataTypes.Balances memory)
-    {
         if (art > 0) require (cauldron.vaults(to).owner == msg.sender, "Only destination vault owner");
         return cauldron.stir(from, to, ink, art);
     }
@@ -336,8 +334,14 @@ contract Ladle is AccessControl() {
         private
         returns (DataTypes.Balances memory balances)
     {
+        DataTypes.Series memory series;
+        if (art != 0) series = getSeries(vault.seriesId);
+
+        int128 fee;
+        if (art > 0) fee = ((series.maturity - block.timestamp) * uint256(int256(art)).wmul(borrowingFee)).u128().i128();
+
         // Update accounting
-        balances = cauldron.pour(vaultId, ink, art);
+        balances = cauldron.pour(vaultId, ink, art + fee);
 
         // Manage collateral
         if (ink != 0) {
@@ -348,7 +352,6 @@ contract Ladle is AccessControl() {
 
         // Manage debt tokens
         if (art != 0) {
-            DataTypes.Series memory series = getSeries(vault.seriesId);
             if (art > 0) series.fyToken.mint(to, uint128(art));
             else series.fyToken.burn(msg.sender, uint128(-art));
         }
