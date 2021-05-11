@@ -117,7 +117,7 @@ export class YieldEnvironment {
   public static async cauldronWitchAuth(cauldron: Cauldron, receiver: string) {
     await cauldron.grantRoles(
       [
-        id('destroy(bytes12)'),
+        id('give(bytes12,address)'),
         id('grab(bytes12,address)'),
       ],
       receiver
