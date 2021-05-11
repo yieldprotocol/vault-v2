@@ -6,11 +6,10 @@ const { WAD } = constants
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { Cauldron } from '../typechain/Cauldron'
 import { FYToken } from '../typechain/FYToken'
-import { StirModule } from '../typechain/StirModule'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
-const { deployContract, loadFixture } = waffle
+const { loadFixture } = waffle
 
 import { YieldEnvironment } from './shared/fixtures'
 import { LadleWrapper } from '../src/ladleWrapper'
