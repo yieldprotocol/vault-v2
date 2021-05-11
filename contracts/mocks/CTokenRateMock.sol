@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
-import "./SourceMock.sol";
+import "./ISourceMock.sol";
 
 
-contract CTokenRateMock is SourceMock {
+contract CTokenRateMock is ISourceMock {
     uint public borrowIndex;
 
     function set(uint rate) external override {

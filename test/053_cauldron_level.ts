@@ -9,7 +9,7 @@ import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock as ERC20 } from '../typechain/ERC20Mock'
 import { ChainlinkMultiOracle } from '../typechain/ChainlinkMultiOracle'
 import { CompoundMultiOracle } from '../typechain/CompoundMultiOracle'
-import { SourceMock } from '../typechain/SourceMock'
+import { ISourceMock } from '../typechain/ISourceMock'
 
 import { YieldEnvironment } from './shared/fixtures'
 
@@ -28,9 +28,9 @@ describe('Cauldron - level', function () {
   let base: ERC20
   let ilk: ERC20
   let spotOracle: ChainlinkMultiOracle
-  let spotSource: SourceMock
+  let spotSource: ISourceMock
   let rateOracle: CompoundMultiOracle
-  let rateSource: SourceMock
+  let rateSource: ISourceMock
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
@@ -55,9 +55,9 @@ describe('Cauldron - level', function () {
     ilk = env.assets.get(ilkId) as ERC20
 
     rateOracle = (env.oracles.get(RATE) as unknown) as CompoundMultiOracle
-    rateSource = (await ethers.getContractAt('SourceMock', await rateOracle.sources(baseId, RATE))) as SourceMock
+    rateSource = (await ethers.getContractAt('ISourceMock', await rateOracle.sources(baseId, RATE))) as ISourceMock
     spotOracle = (env.oracles.get(ilkId) as unknown) as ChainlinkMultiOracle
-    spotSource = (await ethers.getContractAt('SourceMock', await spotOracle.sources(baseId, ilkId))) as SourceMock
+    spotSource = (await ethers.getContractAt('ISourceMock', await spotOracle.sources(baseId, ilkId))) as ISourceMock
     fyToken = env.series.get(seriesId) as FYToken
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
 

@@ -11,7 +11,7 @@ import { ERC20Mock } from '../typechain/ERC20Mock'
 import { OracleMock } from '../typechain/OracleMock'
 import { ChainlinkMultiOracle } from '../typechain/ChainlinkMultiOracle'
 import { CompoundMultiOracle } from '../typechain/CompoundMultiOracle'
-import { SourceMock } from '../typechain/SourceMock'
+import { ISourceMock } from '../typechain/ISourceMock'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
@@ -34,9 +34,9 @@ describe('Ladle - close', function () {
   let ilk: ERC20Mock
   let ilkJoin: Join
   let spotOracle: ChainlinkMultiOracle
-  let spotSource: SourceMock
+  let spotSource: ISourceMock
   let rateOracle: CompoundMultiOracle
-  let rateSource: SourceMock
+  let rateSource: ISourceMock
   let ladle: LadleWrapper
   let ladleFromOther: LadleWrapper
 
@@ -70,9 +70,9 @@ describe('Ladle - close', function () {
     ilkJoin = env.joins.get(ilkId) as Join
     fyToken = env.series.get(seriesId) as FYToken
     rateOracle = (env.oracles.get(RATE) as unknown) as CompoundMultiOracle
-    rateSource = (await ethers.getContractAt('SourceMock', await rateOracle.sources(baseId, RATE))) as SourceMock
+    rateSource = (await ethers.getContractAt('ISourceMock', await rateOracle.sources(baseId, RATE))) as ISourceMock
     spotOracle = (env.oracles.get(ilkId) as unknown) as ChainlinkMultiOracle
-    spotSource = (await ethers.getContractAt('SourceMock', await spotOracle.sources(baseId, ilkId))) as SourceMock
+    spotSource = (await ethers.getContractAt('ISourceMock', await spotOracle.sources(baseId, ilkId))) as ISourceMock
 
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
     ladle.pour(vaultId, owner, WAD, WAD)

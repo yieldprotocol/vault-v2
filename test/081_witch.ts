@@ -10,7 +10,7 @@ import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { OracleMock } from '../typechain/OracleMock'
 import { ChainlinkMultiOracle } from '../typechain/ChainlinkMultiOracle'
-import { SourceMock } from '../typechain/SourceMock'
+import { ISourceMock } from '../typechain/ISourceMock'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
@@ -36,7 +36,7 @@ describe('Witch', function () {
   let ilk: ERC20Mock
   let ilkJoin: Join
   let spotOracle: ChainlinkMultiOracle
-  let spotSource: SourceMock
+  let spotSource: ISourceMock
 
   const mockVaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12))
 
@@ -68,7 +68,7 @@ describe('Witch', function () {
     ilkJoin = env.joins.get(ilkId) as Join
     fyToken = env.series.get(seriesId) as FYToken
     spotOracle = (env.oracles.get(ilkId) as unknown) as ChainlinkMultiOracle
-    spotSource = (await ethers.getContractAt('SourceMock', await spotOracle.sources(baseId, ilkId))) as SourceMock
+    spotSource = (await ethers.getContractAt('ISourceMock', await spotOracle.sources(baseId, ilkId))) as ISourceMock
 
     witchFromOther = witch.connect(otherAcc)
 
