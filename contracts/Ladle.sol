@@ -284,7 +284,7 @@ contract Ladle is LadleStorage, AccessControl() {
         uint128 amt = _debtInBase(vault.seriesId, series, balances.art);
 
         // Mint fyToken to the pool, as a kind of flash loan
-        fyToken.mint(address(pool), amt * 2);
+        fyToken.mint(address(pool), amt * 2); // TODO: Set multiplier via parameter
 
         // Buy the base required to pay off the debt in series 1, and find out the debt in series 2
         uint128 newDebt = pool.buyBaseToken(address(baseJoin), amt, max);
