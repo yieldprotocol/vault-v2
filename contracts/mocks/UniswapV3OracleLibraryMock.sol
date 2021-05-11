@@ -20,6 +20,7 @@ library UniswapV3OracleLibraryMock {
         uint256 baseAmount,
         uint32 /* secondsAgo */
     ) internal view returns (uint256 quoteAmount) {
-        return baseAmount.wmul(UniswapV3PoolMock(UniswapV3FactoryMock(factory).getPool(baseToken, quoteToken, fee)).price());
+        address pool = UniswapV3FactoryMock(factory).getPool(baseToken, quoteToken, fee);
+        return baseAmount.wmul(UniswapV3PoolMock(pool).price());
     }
 }
