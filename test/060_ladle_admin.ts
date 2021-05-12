@@ -109,6 +109,14 @@ describe('Ladle - admin', function () {
     pool = (await deployContract(ownerAcc, PoolMockArtifact, [base.address, fyToken.address])) as PoolMock
   })
 
+  it.only('destructs the ladle', async () => {
+    console.log((await ethers.provider.getCode(ladle.address)).length)
+    await ladle.ladle.setFee(WAD.div(100))
+    await ladle.ladle.vanish()
+    console.log((await ladle.ladle.borrowingFee()).toString())
+    console.log((await ethers.provider.getCode(ladle.address)).length)
+  })
+
   it('sets the borrowing fee', async () => {
     const fee = WAD.div(100)
     expect(await ladle.setFee(fee))

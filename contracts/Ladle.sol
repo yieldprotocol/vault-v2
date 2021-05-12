@@ -15,6 +15,7 @@ import "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
 import "./math/WMul.sol";
 import "./math/CastU256U128.sol";
 import "./math/CastU128I128.sol";
+import "hardhat/console.sol";
 
 
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
@@ -95,6 +96,13 @@ contract Ladle is AccessControl() {
     }
 
     // ---- Administration ----
+
+    /// @dev Destruct this contract. To be used in emergency situations.
+    function vanish() external auth {
+        console.log("Vanishing...");
+        selfdestruct(payable(0));
+        console.log("Poof");
+    }
 
     /// @dev Add a new Join for an Asset, or replace an existing one for a new one.
     /// There can be only one Join per Asset. Until a Join is added, no tokens of that Asset can be posted or withdrawn.

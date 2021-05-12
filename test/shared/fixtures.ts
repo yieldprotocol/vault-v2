@@ -127,6 +127,7 @@ export class YieldEnvironment {
   public static async ladleGovAuth(ladle: LadleWrapper, receiver: string) {
     await ladle.grantRoles(
       [
+        id('vanish()'),
         id('addJoin(bytes6,address)'),
         id('addPool(bytes6,address)'),
         id('setPoolRouter(address)'),
