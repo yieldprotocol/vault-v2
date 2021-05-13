@@ -52,8 +52,12 @@ describe('Oracle', function () {
   beforeEach(async () => {
     oracle = (await deployContract(ownerAcc, OracleArtifact, [])) as IOracle
 
-    usdAggregator = (await deployContract(ownerAcc, ChainlinkAggregatorV3MockArtifact, [8])) as ChainlinkAggregatorV3Mock
-    ethAggregator = (await deployContract(ownerAcc, ChainlinkAggregatorV3MockArtifact, [18])) as ChainlinkAggregatorV3Mock
+    usdAggregator = (await deployContract(ownerAcc, ChainlinkAggregatorV3MockArtifact, [
+      8,
+    ])) as ChainlinkAggregatorV3Mock
+    ethAggregator = (await deployContract(ownerAcc, ChainlinkAggregatorV3MockArtifact, [
+      18,
+    ])) as ChainlinkAggregatorV3Mock
 
     chainlinkMultiOracle = (await deployContract(ownerAcc, ChainlinkMultiOracleArtifact, [])) as ChainlinkMultiOracle
     await chainlinkMultiOracle.setSources([baseId], [usdQuoteId], [usdAggregator.address])
