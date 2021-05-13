@@ -85,7 +85,7 @@ describe('Oracle', function () {
     await uniswapV3Factory.createPool(token0, token1, 0)
     uniswapV3Pool = (await ethers.getContractAt('UniswapV3PoolMock', uniswapV3PoolAddress)) as UniswapV3PoolMock
     uniswapV3Oracle = (await deployContract(ownerAcc, UniswapV3OracleArtifact, [])) as UniswapV3Oracle
-    await uniswapV3Oracle.setSources([baseId], [quoteId], [uniswapV3PoolAddress])
+    await uniswapV3Oracle.setSources([baseId], [ethQuoteId], [uniswapV3PoolAddress])
   })
 
   it('sets and retrieves the value at spot price', async () => {
@@ -113,7 +113,7 @@ describe('Oracle', function () {
 
   it('retrieves the value at spot price from a uniswap v3 oracle', async () => {
     await uniswapV3Pool.set(ethers.constants.Two.mul(ethers.constants.WeiPerEther))
-    expect((await uniswapV3Oracle.callStatic.get(bytes6ToBytes32(baseId), bytes6ToBytes32(quoteId), WAD))[0]).to.equal(
+    expect((await uniswapV3Oracle.callStatic.get(bytes6ToBytes32(baseId), bytes6ToBytes32(ethQuoteId), WAD))[0]).to.equal(
       WAD.mul(2)
     )
   })
