@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@yield-protocol/utils-v2/contracts/access/Ownable.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
-import "../math/CastBytes32Bytes6.sol";
+import "../../math/CastBytes32Bytes6.sol";
 import "./CTokenInterface.sol";
 
 
