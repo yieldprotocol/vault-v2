@@ -5,7 +5,7 @@ import CauldronArtifact from '../artifacts/contracts/Cauldron.sol/Cauldron.json'
 import JoinArtifact from '../artifacts/contracts/Join.sol/Join.json'
 import FYTokenArtifact from '../artifacts/contracts/FYToken.sol/FYToken.json'
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
-import OracleMockArtifact from '../artifacts/contracts/mocks/OracleMock.sol/OracleMock.json'
+import OracleMockArtifact from '../artifacts/contracts/mocks/oracles/OracleMock.sol/OracleMock.json'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "./ISourceMock.sol";
-import "../oracles/uniswap/IUniswapV3PoolImmutables.sol";
+import "../ISourceMock.sol";
+import "../../../oracles/uniswap/IUniswapV3PoolImmutables.sol";
 
 
 contract UniswapV3PoolMock is ISourceMock, IUniswapV3PoolImmutables {

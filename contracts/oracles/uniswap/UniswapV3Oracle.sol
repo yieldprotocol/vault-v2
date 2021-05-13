@@ -7,7 +7,7 @@ import "../../math/CastBytes32Bytes6.sol";
 import "./IUniswapV3PoolImmutables.sol";
 // This for the real deal
 // import "@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol";
-import "../../mocks/UniswapV3OracleLibraryMock.sol";
+import "../../mocks/oracles/uniswap/UniswapV3OracleLibraryMock.sol";
 
 /**
  * @title UniswapV3Oracle
