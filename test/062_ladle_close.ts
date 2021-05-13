@@ -72,7 +72,7 @@ describe('Ladle - close', function () {
     rateOracle = (env.oracles.get(RATE) as unknown) as CompoundMultiOracle
     rateSource = (await ethers.getContractAt('SourceMock', await rateOracle.sources(baseId, RATE))) as SourceMock
     spotOracle = (env.oracles.get(ilkId) as unknown) as ChainlinkMultiOracle
-    spotSource = (await ethers.getContractAt('SourceMock', await spotOracle.sources(baseId, ilkId))) as SourceMock
+    spotSource = (await ethers.getContractAt('SourceMock', (await spotOracle.sources(baseId, ilkId))[0])) as SourceMock
 
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
     ladle.pour(vaultId, owner, WAD, WAD)

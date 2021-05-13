@@ -33,12 +33,14 @@ describe('Oracle', function () {
   let oracle: IOracle
   let chainlinkMultiOracle: ChainlinkMultiOracle
   let compoundMultiOracle: CompoundMultiOracle
-  let aggregator: ChainlinkAggregatorV3Mock
+  let usdAggregator: ChainlinkAggregatorV3Mock
+  let ethAggregator: ChainlinkAggregatorV3Mock
   let cTokenChi: CTokenChiMock
   let cTokenRate: CTokenRateMock
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const quoteId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const usdQuoteId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const ethQuoteId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const mockBytes32 = ethers.utils.hexlify(ethers.utils.randomBytes(32))
 
   before(async () => {
@@ -50,10 +52,16 @@ describe('Oracle', function () {
   beforeEach(async () => {
     oracle = (await deployContract(ownerAcc, OracleArtifact, [])) as IOracle
 
-    aggregator = (await deployContract(ownerAcc, ChainlinkAggregatorV3MockArtifact, [])) as ChainlinkAggregatorV3Mock
+    usdAggregator = (await deployContract(ownerAcc, ChainlinkAggregatorV3MockArtifact, [
+      8,
+    ])) as ChainlinkAggregatorV3Mock
+    ethAggregator = (await deployContract(ownerAcc, ChainlinkAggregatorV3MockArtifact, [
+      18,
+    ])) as ChainlinkAggregatorV3Mock
 
     chainlinkMultiOracle = (await deployContract(ownerAcc, ChainlinkMultiOracleArtifact, [])) as ChainlinkMultiOracle
-    await chainlinkMultiOracle.setSources([baseId], [quoteId], [aggregator.address])
+    await chainlinkMultiOracle.setSources([baseId], [usdQuoteId], [usdAggregator.address])
+    await chainlinkMultiOracle.setSources([baseId], [ethQuoteId], [ethAggregator.address])
 
     cTokenChi = (await deployContract(ownerAcc, CTokenChiMockArtifact, [])) as CTokenChiMock
     cTokenRate = (await deployContract(ownerAcc, CTokenRateMockArtifact, [])) as CTokenRateMock
@@ -68,10 +76,14 @@ describe('Oracle', function () {
   })
 
   it('sets and retrieves the value at spot price from a chainlink multioracle', async () => {
-    await aggregator.set(WAD.mul(2))
+    await usdAggregator.set(WAD.mul(2))
+    await ethAggregator.set(WAD.mul(3))
     expect(
-      (await chainlinkMultiOracle.callStatic.get(bytes6ToBytes32(baseId), bytes6ToBytes32(quoteId), WAD))[0]
+      (await chainlinkMultiOracle.callStatic.get(bytes6ToBytes32(baseId), bytes6ToBytes32(usdQuoteId), WAD))[0]
     ).to.equal(WAD.mul(2))
+    expect(
+      (await chainlinkMultiOracle.callStatic.get(bytes6ToBytes32(baseId), bytes6ToBytes32(ethQuoteId), WAD))[0]
+    ).to.equal(WAD.mul(3))
   })
 
   it('sets and retrieves the chi and rate values at spot price from a compound multioracle', async () => {

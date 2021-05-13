@@ -13,19 +13,29 @@ import "./AggregatorV3Interface.sol";
 contract ChainlinkMultiOracle is IOracle, Ownable {
     using CastBytes32Bytes6 for bytes32;
 
-    event SourcesSet(bytes6[] indexed bases, bytes6[] indexed quotes, address[] indexed sources_);
+    event SourcesSet(bytes6[] indexed bases, bytes6[] indexed quotes, address[] indexed sources);
 
-    uint public constant SCALE_FACTOR = 1e10; // Since Chainlink has 8 dec places, and peek() needs 18
+    struct Source {
+        address source;
+        uint8 decimals;
+    }
 
-    mapping(bytes6 => mapping(bytes6 => address)) public sources;
+    mapping(bytes6 => mapping(bytes6 => Source)) public sources;
 
     /**
      * @notice Set or reset a number of oracle sources
      */
     function setSources(bytes6[] memory bases, bytes6[] memory quotes, address[] memory sources_) public onlyOwner {
-        require(bases.length == quotes.length && quotes.length == sources_.length, "Mismatched inputs");
-        for (uint256 i = 0; i < bases.length; i++)
-            sources[bases[i]][quotes[i]] = sources_[i];
+        require(
+            bases.length == quotes.length && 
+            bases.length == sources_.length,
+            "Mismatched inputs"
+        );
+        for (uint256 i = 0; i < bases.length; i++) {
+            uint8 decimals = AggregatorV3Interface(sources_[i]).decimals();
+            require (decimals <= 18, "Unsupported decimals");
+            sources[bases[i]][quotes[i]] = Source(sources_[i], decimals);
+        }
         emit SourcesSet(bases, quotes, sources_);
     }
 
@@ -35,9 +45,14 @@ contract ChainlinkMultiOracle is IOracle, Ownable {
      */
     function _peek(bytes6 base, bytes6 quote) private view returns (uint price, uint updateTime) {
         int rawPrice;
-        (, rawPrice,, updateTime,) = AggregatorV3Interface(sources[base][quote]).latestRoundData();
+        uint80 roundId;
+        uint80 answeredInRound;
+        Source memory source = sources[base][quote];
+        (roundId, rawPrice,, updateTime, answeredInRound) = AggregatorV3Interface(source.source).latestRoundData();
         require(rawPrice > 0, "Chainlink price <= 0");
-        price = uint(rawPrice) * SCALE_FACTOR;
+        require(updateTime != 0, "Incomplete round");
+        require(answeredInRound >= roundId, "Stale price");
+        price = uint(rawPrice) * 10 ** (18 - source.decimals);
     }
 
     /**
