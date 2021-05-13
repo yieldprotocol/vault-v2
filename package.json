@@ -30,7 +30,7 @@
     "@truffle/hdwallet-provider": "^1.0.40",
     "@types/mocha": "^8.0.0",
     "@uniswap/v3-periphery": "https://github.com/Uniswap/uniswap-v3-periphery#scott/oracle",
-    "@yield-protocol/utils-v2": "^2.2.4",
+    "@yield-protocol/utils-v2": "^2.2.5",
     "@yield-protocol/vault-interfaces": "^2.0.28",
     "@yield-protocol/yieldspace-interfaces": "^2.0.13",
     "chai": "4.2.0",
