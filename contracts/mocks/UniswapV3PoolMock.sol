@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "./ISourceMock.sol";
-import "@uniswap/v3-core/contracts/interfaces/pool/IUniswapV3PoolImmutables.sol";
+import "../oracles/IUniswapV3PoolImmutables.sol";
 
 
 contract UniswapV3PoolMock is ISourceMock, IUniswapV3PoolImmutables {

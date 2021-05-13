@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "@yield-protocol/utils-v2/contracts/access/Ownable.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
 import "../math/CastBytes32Bytes6.sol";
-import "@uniswap/v3-core/contracts/interfaces/pool/IUniswapV3PoolImmutables.sol";
+import "./IUniswapV3PoolImmutables.sol";
 // This for the real deal
 // import "@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol";
 import "../mocks/UniswapV3OracleLibraryMock.sol";
