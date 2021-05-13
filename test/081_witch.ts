@@ -110,6 +110,8 @@ describe('Witch', function () {
     await spotSource.set(WAD.div(2))
     await witch.grab(vaultId)
     const event = (await cauldron.queryFilter(cauldron.filters.VaultLocked(null, null)))[0]
+    expect((await cauldron.vaults(vaultId)).owner).to.equal(witch.address)
+    expect(await witch.vaultOwners(vaultId)).to.equal(owner)
     expect(event.args.timestamp.toNumber()).to.be.greaterThan(0)
     expect(await cauldron.auctions(vaultId)).to.equal(event.args.timestamp)
   })
