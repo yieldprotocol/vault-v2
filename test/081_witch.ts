@@ -68,7 +68,7 @@ describe('Witch', function () {
     ilkJoin = env.joins.get(ilkId) as Join
     fyToken = env.series.get(seriesId) as FYToken
     spotOracle = (env.oracles.get(ilkId) as unknown) as ChainlinkMultiOracle
-    spotSource = (await ethers.getContractAt('ISourceMock', await spotOracle.sources(baseId, ilkId))) as ISourceMock
+    spotSource = (await ethers.getContractAt('SourceMock', (await spotOracle.sources(baseId, ilkId))[0])) as ISourceMock
 
     witchFromOther = witch.connect(otherAcc)
 

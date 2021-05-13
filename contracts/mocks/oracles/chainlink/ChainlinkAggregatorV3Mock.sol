@@ -6,9 +6,16 @@ import "../ISourceMock.sol";
 contract ChainlinkAggregatorV3Mock is ISourceMock {
     int public price;   // Prices in Chainlink can be negative (!)
     uint public timestamp;
+    uint8 public decimals;  // Decimals provided in the oracle prices
 
-    function set(uint price_) external override {
-        price = int(price_) / 1e10;          // Provide prices with 18 decimals, which will be scaled down to Chainlink's 8
+    constructor (uint8 decimals_) {
+        decimals = decimals_;
+    }
+
+    function set(uint price_) external override {// We provide prices with 18 decimals, which will be scaled Chainlink's decimals
+        if (decimals <= 18) price = int(price_ / 10**(18 - decimals));
+        else price = int(price_ * 10**(decimals - 18));          
+        
         timestamp = block.timestamp;
     }
 
