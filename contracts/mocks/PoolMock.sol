@@ -67,7 +67,7 @@ contract PoolMock {
         external
         returns(uint128 surplus)
     {
-        surplus = getBaseTokenReserves() - baseTokenReserves; // TODO: Consider adding a require for UX
+        surplus = getBaseTokenReserves() - baseTokenReserves;
         require(
             baseToken.transfer(to, surplus),
             "Pool: Base transfer failed"
@@ -78,7 +78,7 @@ contract PoolMock {
         external payable
         returns(uint128 surplus)
     {
-        surplus = getFYTokenReserves() - fyTokenReserves; // TODO: Consider adding a require for UX
+        surplus = getFYTokenReserves() - fyTokenReserves;
         require(
             fyToken.transfer(to, surplus),
             "Pool: FYToken transfer failed"
