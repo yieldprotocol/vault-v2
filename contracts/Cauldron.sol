@@ -19,7 +19,6 @@ library CauldronMath {
     }
 }
 
-// TODO: Add a setter for auction protection (same as Witch.AUCTION_TIME?)
 
 contract Cauldron is AccessControl() {
     using CauldronMath for uint128;
@@ -177,7 +176,7 @@ contract Cauldron is AccessControl() {
     {
         require (vaultId != bytes12(0), "Vault id is zero");
         require (vaults[vaultId].seriesId == bytes6(0), "Vault already exists");   // Series can't take bytes6(0) as their id
-        require (ilks[seriesId][ilkId] == true, "Mismatched ilk and series");
+        require (ilks[seriesId][ilkId] == true, "Ilk not added to series");
         vault = DataTypes.Vault({
             owner: owner,
             seriesId: seriesId,
@@ -204,7 +203,7 @@ contract Cauldron is AccessControl() {
     function _tweak(bytes12 vaultId, DataTypes.Vault memory vault)
         internal
     {
-        require (ilks[vault.seriesId][vault.ilkId] == true, "Mismatched ilk and series");
+        require (ilks[vault.seriesId][vault.ilkId] == true, "Ilk not added to series");
 
         vaults[vaultId] = vault;
         emit VaultTweaked(vaultId, vault.seriesId, vault.ilkId);
