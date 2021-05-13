@@ -173,7 +173,7 @@ export class YieldEnvironment {
 
   public static async addSpotOracle(owner: SignerWithAddress, cauldron: Cauldron, oracle: ChainlinkMultiOracle, baseId: string, ilkId: string) {
     const ratio = 1000000 //  1000000 == 100% collateralization ratio
-    const aggregator = (await deployContract(owner, ChainlinkAggregatorV3MockArtifact, [])) as ChainlinkAggregatorV3Mock
+    const aggregator = (await deployContract(owner, ChainlinkAggregatorV3MockArtifact, [8])) as ChainlinkAggregatorV3Mock
     await aggregator.set(WAD.mul(2))
     await oracle.setSources([baseId], [ilkId], [aggregator.address])
     await cauldron.setSpotOracle(baseId, ilkId, oracle.address, ratio)
