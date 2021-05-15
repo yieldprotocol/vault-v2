@@ -19,13 +19,14 @@ contract Witch is AccessControl() {
 
     event AuctionTimeSet(uint128 indexed auctionTime);
     event InitialProportionSet(uint128 indexed initialProportion);
-    event Bought(address indexed buyer, bytes12 indexed vaultId, uint256 ink, uint256 art);
+    event Bought(bytes12 indexed vaultId, address indexed buyer, uint256 ink, uint256 art);
   
     uint128 public auctionTime = 4 * 60 * 60; // Time that auctions take to go to minimal price and stay there.
     uint128 public initialProportion = 5e17;  // Proportion of collateral that is sold at auction start.
 
     ICauldron immutable public cauldron;
     ILadle immutable public ladle;
+    mapping(bytes12 => address) public vaultOwners;
 
     constructor (ICauldron cauldron_, ILadle ladle_) {
         cauldron = cauldron_;
@@ -47,6 +48,8 @@ contract Witch is AccessControl() {
 
     /// @dev Put an undercollateralized vault up for liquidation.
     function grab(bytes12 vaultId) public {
+        DataTypes.Vault memory vault = cauldron.vaults(vaultId);
+        vaultOwners[vaultId] = vault.owner;
         cauldron.grab(vaultId, address(this));
     }
 
@@ -74,8 +77,11 @@ contract Witch is AccessControl() {
         require (ink >= min, "Not enough bought");
 
         ladle.settle(vaultId, msg.sender, ink.u128(), art);                                        // Move the assets
-        if (balances_.art - art == 0 && balances_.ink - ink == 0) cauldron.destroy(vaultId);
+        if (balances_.art - art == 0) {                                                             // If there is no debt left, return the vault with the collateral to the owner
+            cauldron.give(vaultId, vaultOwners[vaultId]);
+            delete vaultOwners[vaultId];
+        }
 
-        emit Bought(msg.sender, vaultId, ink, art);
+        emit Bought(vaultId, msg.sender, ink, art);
     }
 }

@@ -20,8 +20,10 @@ export class LadleWrapper {
   pool = new ethers.utils.Interface([
     "function sellBaseToken(address to, uint128 min)",
     "function sellFYToken(address to, uint128 min)",
+    "function mint(address to, bool, uint256 minTokensMinted)",
     "function mintWithBaseToken(address to, uint256 fyTokenToBuy, uint256 minTokensMinted)",
     "function burnForBaseToken(address to, uint256 minBaseTokenOut)",
+    "function burn(address to, uint256 minBaseTokenOut, uint256 minFYTokenOut)",
   ]);
 
   tlmModule = new ethers.utils.Interface([
@@ -163,6 +165,14 @@ export class LadleWrapper {
 
   public async repayVault(vaultId: string, to: string, ink: BigNumberish, max: BigNumberish): Promise<ContractTransaction> {
     return this.batch([this.repayVaultAction(vaultId, to, ink, max)])
+  }
+
+  public removeRepayAction(vaultId: string, to: string, minBaseTokenOut: BigNumberish, minFYTokenOut: BigNumberish): BatchAction {
+    return new BatchAction(OPS.REMOVE_REPAY, ethers.utils.defaultAbiCoder.encode(['bytes12', 'address', 'uint128', 'uint128'], [vaultId, to, minBaseTokenOut, minFYTokenOut]))
+  }
+
+  public async removeRepay(vaultId: string, to: string, minBaseTokenOut: BigNumberish, minFYTokenOut: BigNumberish): Promise<ContractTransaction> {
+    return this.batch([this.removeRepayAction(vaultId, to, minBaseTokenOut, minFYTokenOut)])
   }
 
   public rollAction(vaultId: string, newSeriesId: string, max: BigNumberish): BatchAction {

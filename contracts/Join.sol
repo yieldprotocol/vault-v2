@@ -51,13 +51,11 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
         internal
         returns (uint128)
     {
-        // require(live == 1, "GemJoin/not-live");
         IERC20 token = IERC20(asset);
-        uint256 initialBalance = token.balanceOf(address(this));
-        uint256 surplus = initialBalance - storedBalance;
-        uint256 required = surplus >= amount ? 0 : amount - surplus;
-        storedBalance = initialBalance + required;
-        if (required > 0) token.safeTransferFrom(user, address(this), required);
+        uint256 _storedBalance = storedBalance;
+        uint256 available = token.balanceOf(address(this)) - _storedBalance; // Fine to panic if this underflows
+        storedBalance = _storedBalance + amount;
+        unchecked { if (available < amount) token.safeTransferFrom(user, address(this), amount - available); }
         return amount;        
     }
 
@@ -76,7 +74,7 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
         returns (uint128)
     {
         IERC20 token = IERC20(asset);
-        storedBalance -= amount;                                  // To withdraw surplus tokens we can do a `join` for zero tokens first.
+        storedBalance -= amount;
         token.safeTransfer(user, amount);
         return amount;
     }

@@ -9,12 +9,15 @@ import "./AggregatorV3Interface.sol";
  */
 contract ChainlinkOracle is IOracle {
 
-    uint public constant SCALE_FACTOR = 1e10; // Since Chainlink has 8 dec places, and peek() needs 18
 
     address public immutable source;
+    uint256 public immutable scaleFactor;
 
     constructor(address source_) {
         source = source_;
+        uint256 decimals = AggregatorV3Interface(source_).decimals();
+        require (decimals <= 18, "Unsupported decimals"); 
+        scaleFactor = 10 ** (18 - decimals);
     }
 
     /**
@@ -23,9 +26,13 @@ contract ChainlinkOracle is IOracle {
      */
     function _peek() private view returns (uint price, uint updateTime) {
         int rawPrice;
-        (, rawPrice,, updateTime,) = AggregatorV3Interface(source).latestRoundData();
+        uint80 roundId;
+        uint80 answeredInRound;
+        (roundId, rawPrice,, updateTime, answeredInRound) = AggregatorV3Interface(source).latestRoundData();
         require(rawPrice > 0, "Chainlink price <= 0");
-        price = uint(rawPrice) * SCALE_FACTOR;
+        require(updateTime != 0, "Incomplete round");
+        require(answeredInRound >= roundId, "Stale price");
+        price = uint(rawPrice) * scaleFactor;
     }
 
     /**

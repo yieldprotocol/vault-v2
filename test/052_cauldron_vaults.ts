@@ -69,18 +69,16 @@ describe('Cauldron - vaults', function () {
   })
 
   it('does not build a vault with an unknown series', async () => {
-    // TODO: Error message misleading, replace in contract for something generic
-    await expect(cauldron.build(owner, vaultId, mockAssetId, ilkId)).to.be.revertedWith('Mismatched ilk and series')
+    await expect(cauldron.build(owner, vaultId, mockAssetId, ilkId)).to.be.revertedWith('Ilk not added to series')
   })
 
   it('does not build a vault with an unknown ilk', async () => {
-    // TODO: Might be removed, redundant with approved ilk check
-    await expect(cauldron.build(owner, vaultId, seriesId, mockAssetId)).to.be.revertedWith('Mismatched ilk and series')
+    await expect(cauldron.build(owner, vaultId, seriesId, mockAssetId)).to.be.revertedWith('Ilk not added to series')
   })
 
   it('does not build a vault with an ilk that is not approved for a series', async () => {
     await cauldron.addAsset(mockAssetId, mockAddress)
-    await expect(cauldron.build(owner, vaultId, seriesId, mockAssetId)).to.be.revertedWith('Mismatched ilk and series')
+    await expect(cauldron.build(owner, vaultId, seriesId, mockAssetId)).to.be.revertedWith('Ilk not added to series')
   })
 
   it('builds a vault', async () => {
@@ -119,7 +117,7 @@ describe('Cauldron - vaults', function () {
     })
 
     it('does not allow changing vaults to non-approved collaterals', async () => {
-      await expect(cauldron.tweak(vaultId, seriesId, mockAssetId)).to.be.revertedWith('Mismatched ilk and series')
+      await expect(cauldron.tweak(vaultId, seriesId, mockAssetId)).to.be.revertedWith('Ilk not added to series')
     })
 
     it('does not allow changing vaults with debt', async () => {

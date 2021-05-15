@@ -12,11 +12,11 @@ import WitchArtifact from '../../artifacts/contracts/Witch.sol/Witch.json'
 import FYTokenArtifact from '../../artifacts/contracts/FYToken.sol/FYToken.json'
 import PoolMockArtifact from '../../artifacts/contracts/mocks/PoolMock.sol/PoolMock.json'
 
-import ChainlinkMultiOracleArtifact from '../../artifacts/contracts/oracles/ChainlinkMultiOracle.sol/ChainlinkMultiOracle.json'
-import CompoundMultiOracleArtifact from '../../artifacts/contracts/oracles/CompoundMultiOracle.sol/CompoundMultiOracle.json'
-import ChainlinkAggregatorV3MockArtifact from '../../artifacts/contracts/mocks/ChainlinkAggregatorV3Mock.sol/ChainlinkAggregatorV3Mock.json'
-import CTokenRateMockArtifact from '../../artifacts/contracts/mocks/CTokenRateMock.sol/CTokenRateMock.json'
-import CTokenChiMockArtifact from '../../artifacts/contracts/mocks/CTokenChiMock.sol/CTokenChiMock.json'
+import ChainlinkMultiOracleArtifact from '../../artifacts/contracts/oracles/chainlink/ChainlinkMultiOracle.sol/ChainlinkMultiOracle.json'
+import CompoundMultiOracleArtifact from '../../artifacts/contracts/oracles/compound/CompoundMultiOracle.sol/CompoundMultiOracle.json'
+import ChainlinkAggregatorV3MockArtifact from '../../artifacts/contracts/mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol/ChainlinkAggregatorV3Mock.json'
+import CTokenRateMockArtifact from '../../artifacts/contracts/mocks/oracles/compound/CTokenRateMock.sol/CTokenRateMock.json'
+import CTokenChiMockArtifact from '../../artifacts/contracts/mocks/oracles/compound/CTokenChiMock.sol/CTokenChiMock.json'
 
 import ERC20MockArtifact from '../../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
 import WETH9MockArtifact from '../../artifacts/contracts/mocks/WETH9Mock.sol/WETH9Mock.json'
@@ -117,7 +117,7 @@ export class YieldEnvironment {
   public static async cauldronWitchAuth(cauldron: Cauldron, receiver: string) {
     await cauldron.grantRoles(
       [
-        id('destroy(bytes12)'),
+        id('give(bytes12,address)'),
         id('grab(bytes12,address)'),
       ],
       receiver
@@ -173,7 +173,7 @@ export class YieldEnvironment {
 
   public static async addSpotOracle(owner: SignerWithAddress, cauldron: Cauldron, oracle: ChainlinkMultiOracle, baseId: string, ilkId: string) {
     const ratio = 1000000 //  1000000 == 100% collateralization ratio
-    const aggregator = (await deployContract(owner, ChainlinkAggregatorV3MockArtifact, [])) as ChainlinkAggregatorV3Mock
+    const aggregator = (await deployContract(owner, ChainlinkAggregatorV3MockArtifact, [8])) as ChainlinkAggregatorV3Mock
     await aggregator.set(WAD.mul(2))
     await oracle.setSources([baseId], [ilkId], [aggregator.address])
     await cauldron.setSpotOracle(baseId, ilkId, oracle.address, ratio)
@@ -235,9 +235,10 @@ export class YieldEnvironment {
       fyToken.address,
     ])) as PoolMock
 
-    // Initialize pool with a million tokens of each
-    await fyToken.mint(pool.address, WAD.mul(1000000))
+    // Initialize pool
     await base.mint(pool.address, WAD.mul(1000000))
+    await pool.mint(await owner.getAddress(), true, 0)
+    await fyToken.mint(pool.address, WAD.mul(1100000))
     await pool.sync()
 
     await ladle.addPool(seriesId, pool.address)

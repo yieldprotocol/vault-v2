@@ -189,7 +189,12 @@ contract Ladle is LadleStorage, AccessControl() {
                 (bytes12 vaultId, address to, int128 ink, uint128 max) = abi.decode(data[i], (bytes12, address, int128, uint128));
                 if (cachedId != vaultId) (cachedId, vault) = (vaultId, getOwnedVault(vaultId));
                 _repayVault(vaultId, vault, to, ink, max);
-            
+
+            } else if (operation == Operation.REMOVE_REPAY) {
+                (bytes12 vaultId, address to, uint128 minBaseOut, uint128 minFYTokenOut) = abi.decode(data[i], (bytes12, address, uint128, uint128));
+                if (cachedId != vaultId) (cachedId, vault) = (vaultId, getOwnedVault(vaultId));
+                _removeAndRepay(vaultId, vault, to, minBaseOut, minFYTokenOut);
+
             } else if (operation == Operation.TRANSFER_TO_FYTOKEN) {
                 (bytes6 seriesId, uint256 amount) = abi.decode(data[i], (bytes6, uint256));
                 IFYToken fyToken = getSeries(seriesId).fyToken;
@@ -420,6 +425,37 @@ contract Ladle is LadleStorage, AccessControl() {
         pool.retrieveBaseToken(msg.sender);
     }
 
+    /// @dev Remove liquidity in a pool and use proceedings to repay debt
+    /// The liquidity tokens need to be already in the pool, unaccounted for.
+    function _removeAndRepay(bytes12 vaultId, DataTypes.Vault memory vault, address to, uint128 minBaseOut, uint128 minFYTokenOut)
+        private
+        returns (DataTypes.Balances memory balances)
+    {
+        DataTypes.Series memory series = getSeries(vault.seriesId);
+        balances = cauldron.balances(vaultId);
+        IPool pool = getPool(vault.seriesId);
+        (, uint256 base, uint256 art) = pool.burn(address(this), minBaseOut, minFYTokenOut);
+
+        uint256 repayment;
+
+        // Update accounting
+        if (balances.art > 0) {
+            repayment = (art >= balances.art) ? balances.art : art;
+            balances = cauldron.pour(vaultId, 0, -(repayment.u128().i128()));
+            series.fyToken.burn(address(this), repayment);
+        }
+        
+        // Return base
+        IERC20 baseToken = IERC20(cauldron.assets(series.baseId));
+        baseToken.safeTransfer(to, base);
+
+        // Return fyToken
+        if (art - repayment > 0) {
+            IERC20 fyToken = IERC20(address(series.fyToken));
+            fyToken.safeTransfer(to, art - repayment);
+        }
+    }
+
     // ---- Liquidations ----
 
     /// @dev Allow liquidation contracts to move assets to wind down vaults
@@ -540,7 +576,7 @@ contract Ladle is LadleStorage, AccessControl() {
 
     // ---- Module router ----
 
-    /// @dev Allow users to route calls to a pool, to be used with batch
+    /// @dev Allow users to use functionality coded in a module, to be used with batch
     function _moduleCall(address module, bytes memory moduleCall)
         private
         returns (bool success, bytes memory result)
