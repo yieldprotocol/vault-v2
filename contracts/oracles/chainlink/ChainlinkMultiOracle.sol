@@ -13,7 +13,7 @@ import "./AggregatorV3Interface.sol";
 contract ChainlinkMultiOracle is IOracle, Ownable {
     using CastBytes32Bytes6 for bytes32;
 
-    event SourcesSet(bytes6[] indexed bases, bytes6[] indexed quotes, address[] indexed sources);
+    event SourcesSet(bytes6 baseId, bytes6 quoteId, address source);
 
     struct Source {
         address source;
@@ -21,6 +21,16 @@ contract ChainlinkMultiOracle is IOracle, Ownable {
     }
 
     mapping(bytes6 => mapping(bytes6 => Source)) public sources;
+
+    /**
+     * @notice Set or reset an oracle source
+     */
+    function setSource(bytes6 base, bytes6 quote, address source) public onlyOwner {
+        uint8 decimals = AggregatorV3Interface(source).decimals();
+        require (decimals <= 18, "Unsupported decimals");
+        sources[base][quote] = Source(source, decimals);
+        emit SourcesSet(base, quote, source);
+    }
 
     /**
      * @notice Set or reset a number of oracle sources
@@ -31,12 +41,8 @@ contract ChainlinkMultiOracle is IOracle, Ownable {
             bases.length == sources_.length,
             "Mismatched inputs"
         );
-        for (uint256 i = 0; i < bases.length; i++) {
-            uint8 decimals = AggregatorV3Interface(sources_[i]).decimals();
-            require (decimals <= 18, "Unsupported decimals");
-            sources[bases[i]][quotes[i]] = Source(sources_[i], decimals);
-        }
-        emit SourcesSet(bases, quotes, sources_);
+        for (uint256 i = 0; i < bases.length; i++)
+            setSource(bases[i], quotes[i], sources_[i]);
     }
 
     /**
