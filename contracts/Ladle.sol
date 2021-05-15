@@ -15,52 +15,18 @@ import "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
 import "./math/WMul.sol";
 import "./math/CastU256U128.sol";
 import "./math/CastU128I128.sol";
+import "./LadleStorage.sol";
 
 
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
-contract Ladle is AccessControl() {
+contract Ladle is LadleStorage, AccessControl() {
     using WMul for uint256;
     using CastU256U128 for uint256;
     using CastU128I128 for uint128;
     using AllTransferHelper for IERC20;
     using AllTransferHelper for address payable;
 
-    enum Operation {
-        BUILD,               // 0
-        TWEAK,               // 1
-        GIVE,                // 2
-        DESTROY,             // 3
-        STIR,                // 4
-        POUR,                // 5
-        SERVE,               // 6
-        ROLL,                // 7
-        CLOSE,               // 8
-        REPAY,               // 9
-        REPAY_VAULT,         // 10
-        REMOVE_REPAY,        // 11
-        FORWARD_PERMIT,      // 12
-        FORWARD_DAI_PERMIT,  // 13
-        JOIN_ETHER,          // 14
-        EXIT_ETHER,          // 15
-        TRANSFER_TO_POOL,    // 16
-        ROUTE,               // 17
-        TRANSFER_TO_FYTOKEN, // 18
-        REDEEM               // 19
-    }
-
-    ICauldron public immutable cauldron;
-    uint256 public borrowingFee;
-
-    mapping (bytes6 => IJoin)                   public joins;            // Join contracts available to manage assets. The same Join can serve multiple assets (ETH-A, ETH-B, etc...)
-    mapping (bytes6 => IPool)                   public pools;            // Pool contracts available to manage series. 12 bytes still free.
-
-    event JoinAdded(bytes6 indexed assetId, address indexed join);
-    event PoolAdded(bytes6 indexed seriesId, address indexed pool);
-    event FeeSet(uint256 fee);
-
-    constructor (ICauldron cauldron_) {
-        cauldron = cauldron_;
-    }
+    constructor (ICauldron cauldron) LadleStorage(cauldron) { }
 
     // ---- Data sourcing ----
     /// @dev Obtains a vault by vaultId from the Cauldron, and verifies that msg.sender is the owner
@@ -121,6 +87,15 @@ contract Ladle is AccessControl() {
         require (fyToken.underlying() == address(pool.baseToken()), "Mismatched pool base and series");
         pools[seriesId] = pool;
         emit PoolAdded(seriesId, address(pool));
+    }
+
+    /// @dev Add or remove a module.
+    function setModule(address module, bool set)
+        external
+        auth
+    {
+        modules[module] = set;
+        emit ModuleSet(module, set);
     }
 
     /// @dev Set the fee parameter
@@ -253,6 +228,10 @@ contract Ladle is AccessControl() {
                 delete vault;   // Clear the cache
                 cachedId = bytes12(0);
             
+            } else if (operation == Operation.MODULE) {
+                (address module, bytes memory moduleCall) = abi.decode(data[i], (address, bytes));
+                _moduleCall(module, moduleCall);
+            
             }
         }
     }
@@ -310,7 +289,7 @@ contract Ladle is AccessControl() {
         uint128 amt = _debtInBase(vault.seriesId, series, balances.art);
 
         // Mint fyToken to the pool, as a kind of flash loan
-        fyToken.mint(address(pool), amt * 2);
+        fyToken.mint(address(pool), amt * 2); // TODO: Set multiplier via parameter
 
         // Buy the base required to pay off the debt in series 1, and find out the debt in series 2
         uint128 newDebt = pool.buyBaseToken(address(baseJoin), amt, max);
@@ -593,5 +572,17 @@ contract Ladle is AccessControl() {
         returns (uint256)
     {
         return fyToken.redeem(to, wad);
+    }
+
+    // ---- Module router ----
+
+    /// @dev Allow users to use functionality coded in a module, to be used with batch
+    function _moduleCall(address module, bytes memory moduleCall)
+        private
+        returns (bool success, bytes memory result)
+    {
+        require (modules[module], "Unregistered module");
+        (success, result) = module.delegatecall(moduleCall);
+        if (!success) revert(RevertMsgExtractor.getRevertMsg(result));
     }
 }

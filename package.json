@@ -13,8 +13,7 @@
   "typings": "dist/index.d.ts",
   "scripts": {
     "build": "hardhat compile",
-    "test": "mocha --require hardhat/register --recursive --parallel --exit --extension ts",
-    "test:only": "hardhat test",
+    "test": "hardhat test",
     "test:deploy": "hardhat deploy --tags DeployTest",
     "coverage": "hardhat coverage",
     "lint:sol": "solhint -f table contracts/*.sol",

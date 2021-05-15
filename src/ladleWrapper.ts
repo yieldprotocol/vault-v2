@@ -26,6 +26,11 @@ export class LadleWrapper {
     "function burn(address to, uint256 minBaseTokenOut, uint256 minFYTokenOut)",
   ]);
 
+  tlmModule = new ethers.utils.Interface([
+    "function approve(bytes6 seriesId)",
+    "function sell(bytes6 seriesId, address to, uint256 fyDaiToSell)",
+  ]);
+
   constructor(ladle: Ladle) {
     this.ladle = ladle
     this.address = ladle.address
@@ -55,8 +60,8 @@ export class LadleWrapper {
     return this.ladle.addPool(assetId, pool)
   }
 
-  public async setPoolRouter(poolRouter: string): Promise<ContractTransaction> {
-    return this.ladle.setPoolRouter(poolRouter)
+  public async setModule(module: string, set: boolean): Promise<ContractTransaction> {
+    return this.ladle.setModule(module, set)
   }
 
   public async grantRoles(roles: Array<string>, user: string): Promise<ContractTransaction> {
@@ -303,6 +308,32 @@ export class LadleWrapper {
 
   public async burnForBaseToken(seriesId: string, receiver: string, minBaseTokenOut: BigNumberish): Promise<ContractTransaction> {
     return this.batch([this.burnForBaseTokenAction(seriesId, receiver, minBaseTokenOut)])
+  }
+
+  public tlmApproveAction(tlmModuleAddress: string, seriesId: string): BatchAction {
+    const tlmApproveCall = this.tlmModule.encodeFunctionData('approve', [seriesId])
+
+    return new BatchAction(OPS.MODULE, ethers.utils.defaultAbiCoder.encode(
+      ['address', 'bytes'],
+      [tlmModuleAddress, tlmApproveCall]
+    ))
+  }
+
+  public async tlmApprove(tlmModuleAddress: string, seriesId: string): Promise<ContractTransaction> {
+    return this.batch([this.tlmApproveAction(tlmModuleAddress, seriesId)])
+  }
+
+  public tlmSellAction(tlmModuleAddress: string, seriesId: string, receiver: string, amount: BigNumberish): BatchAction {
+    const tlmSellCall = this.tlmModule.encodeFunctionData('sell', [seriesId, receiver, amount])
+
+    return new BatchAction(OPS.MODULE, ethers.utils.defaultAbiCoder.encode(
+      ['address', 'bytes'],
+      [tlmModuleAddress, tlmSellCall]
+    ))
+  }
+
+  public async tlmSell(tlmModuleAddress: string, seriesId: string, receiver: string, amount: BigNumberish): Promise<ContractTransaction> {
+    return this.batch([this.tlmSellAction(tlmModuleAddress, seriesId, receiver, amount)])
   }
 }
   
