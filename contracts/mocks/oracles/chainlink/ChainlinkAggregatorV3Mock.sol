@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
-import "./SourceMock.sol";
+import "../ISourceMock.sol";
 
 
-contract ChainlinkAggregatorV3Mock is SourceMock {
+contract ChainlinkAggregatorV3Mock is ISourceMock {
     int public price;   // Prices in Chainlink can be negative (!)
     uint public timestamp;
     uint8 public decimals;  // Decimals provided in the oracle prices
