@@ -84,7 +84,7 @@ contract Ladle is LadleStorage, AccessControl() {
     {
         IFYToken fyToken = getSeries(seriesId).fyToken;
         require (fyToken == pool.fyToken(), "Mismatched pool fyToken and series");
-        require (fyToken.underlying() == address(pool.baseToken()), "Mismatched pool base and series");
+        require (fyToken.underlying() == address(pool.base()), "Mismatched pool base and series");
         pools[seriesId] = pool;
         emit PoolAdded(seriesId, address(pool));
     }
@@ -292,7 +292,7 @@ contract Ladle is LadleStorage, AccessControl() {
         fyToken.mint(address(pool), amt * 2); // TODO: Set multiplier via parameter
 
         // Buy the base required to pay off the debt in series 1, and find out the debt in series 2
-        uint128 newDebt = pool.buyBaseToken(address(baseJoin), amt, max);
+        uint128 newDebt = pool.buyBase(address(baseJoin), amt, max);
         baseJoin.join(address(baseJoin), amt);                  // Repay the old series debt
 
         pool.retrieveFYToken(address(fyToken));                 // Get the surplus fyToken
@@ -350,9 +350,9 @@ contract Ladle is LadleStorage, AccessControl() {
     {
         IPool pool = getPool(vault.seriesId);
         
-        art = pool.buyBaseTokenPreview(base);
+        art = pool.buyBasePreview(base);
         balances = _pour(vaultId, vault, address(pool), ink.i128(), art.i128());
-        pool.buyBaseToken(to, base, max);
+        pool.buyBase(to, base, max);
     }
 
     /// @dev Repay vault debt using underlying token at a 1:1 exchange rate, without trading in a pool.
@@ -406,7 +406,7 @@ contract Ladle is LadleStorage, AccessControl() {
         DataTypes.Series memory series = getSeries(vault.seriesId);
         IPool pool = getPool(vault.seriesId);
 
-        art = pool.sellBaseToken(address(series.fyToken), min);
+        art = pool.sellBase(address(series.fyToken), min);
         balances = _pour(vaultId, vault, to, ink, -(art.i128()));
     }
 
@@ -422,7 +422,7 @@ contract Ladle is LadleStorage, AccessControl() {
         balances = cauldron.balances(vaultId);
         base = pool.buyFYToken(address(series.fyToken), balances.art, max);
         balances = _pour(vaultId, vault, to, ink, -(balances.art.i128()));
-        pool.retrieveBaseToken(msg.sender);
+        pool.retrieveBase(msg.sender);
     }
 
     /// @dev Remove liquidity in a pool and use proceedings to repay debt
@@ -544,7 +544,7 @@ contract Ladle is LadleStorage, AccessControl() {
     function _transferToPool(IPool pool, bool base, uint128 wad)
         private
     {
-        IERC20 token = base ? pool.baseToken() : pool.fyToken();
+        IERC20 token = base ? pool.base() : pool.fyToken();
         token.safeTransferFrom(msg.sender, address(pool), wad);
     }
 

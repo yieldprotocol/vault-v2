@@ -213,14 +213,14 @@ contract MakerImportModule is LadleStorage {
         // Find cost in fyDai
         (, uint256 rate,,,) = vat.ilks(ilk);
         uint128 daiNeeded = uint256(debtAmount).wmulup(rate).u128();
-        uint128 fyDaiAmount = pool.buyBaseTokenPreview(daiNeeded);
+        uint128 fyDaiAmount = pool.buyBasePreview(daiNeeded);
 
         {
             // Mint fyToken to the pool, as a kind of flash loan
             IFYToken(pool.fyToken()).mint(address(pool), fyDaiAmount);
 
             // Pool should take exactly all fyDai minted. ImportCdpProxy will hold the dai temporarily
-            pool.buyBaseToken(address(this), daiNeeded, maxDaiPrice);
+            pool.buyBase(address(this), daiNeeded, maxDaiPrice);
 
             makerDaiJoin.join(cdpMgr.urns(cdp), daiNeeded);         // Put the Dai in Maker
             cdpMgr.frob(                                            // Pay the debt and unlock collateral in Maker
