@@ -48,6 +48,7 @@ contract ChainlinkMultiOracle is IOracle, Ownable {
         uint80 roundId;
         uint80 answeredInRound;
         Source memory source = sources[base][quote];
+        require (source.source != address(0), "Source not found");
         (roundId, rawPrice,, updateTime, answeredInRound) = AggregatorV3Interface(source.source).latestRoundData();
         require(rawPrice > 0, "Chainlink price <= 0");
         require(updateTime != 0, "Incomplete round");
@@ -61,7 +62,7 @@ contract ChainlinkMultiOracle is IOracle, Ownable {
      */
     function peek(bytes32 base, bytes32 quote, uint256 amount) public virtual override view returns (uint256 value, uint256 updateTime) {
         uint256 price;
-        (price, updateTime) = _peek(bytes6(base), bytes6(quote));
+        (price, updateTime) = _peek(base.b6(), quote.b6());
         value = price * amount / 1e18;
     }
 
@@ -71,7 +72,7 @@ contract ChainlinkMultiOracle is IOracle, Ownable {
      */
     function get(bytes32 base, bytes32 quote, uint256 amount) public virtual override view returns (uint256 value, uint256 updateTime) {
         uint256 price;
-        (price, updateTime) = _peek(bytes6(base), bytes6(quote));
+        (price, updateTime) = _peek(base.b6(), quote.b6());
         value = price * amount / 1e18;
     }
 }

@@ -32,9 +32,11 @@ contract CompoundMultiOracle is IOracle, Ownable {
      */
     function _peek(bytes6 base, bytes32 kind) private view returns (uint price, uint updateTime) {
         uint256 rawPrice;
-        
-        if (kind == "rate") rawPrice = CTokenInterface(sources[base][kind]).borrowIndex();
-        else if (kind == "chi") rawPrice = CTokenInterface(sources[base][kind]).exchangeRateStored();
+        address source = sources[base][kind];
+        require (source != address(0), "Source not found");
+
+        if (kind == "rate") rawPrice = CTokenInterface(source).borrowIndex();
+        else if (kind == "chi") rawPrice = CTokenInterface(source).exchangeRateStored();
         else revert("Unknown oracle type");
 
         require(rawPrice > 0, "Compound price is zero");
