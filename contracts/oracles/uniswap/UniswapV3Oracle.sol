@@ -59,17 +59,27 @@ contract UniswapV3Oracle is IOracle, Ownable {
      * @notice Retrieve the value of the amount at the latest oracle price.
      * @return value
      */
-    function peek(bytes32 base, bytes32 quote, uint256 amount) public virtual override view returns (uint256 value, uint256 updateTime) {
-        SourceData memory sourceData = sourcesData[sources[base.b6()][quote.b6()]];
+    function _peek(bytes6 base, bytes6 quote, uint256 amount) public virtual view returns (uint256 value, uint256 updateTime) {
+        address source = sources[base][quote];
+        require (source != address(0), "Source not found");
+        SourceData memory sourceData = sourcesData[sources[base][quote]];
         value = UniswapV3OracleLibraryMock.consult(sourceData.factory, sourceData.baseToken, sourceData.quoteToken, sourceData.fee, amount, secondsAgo);
         updateTime = block.timestamp - secondsAgo;
     }
 
     /**
-     * @notice Retrieve the value of the amount at the latest oracle price.. Same as `peek` for this oracle.
+     * @notice Retrieve the value of the amount at the latest oracle price.
+     * @return value
+     */
+    function peek(bytes32 base, bytes32 quote, uint256 amount) public virtual override view returns (uint256 value, uint256 updateTime) {
+        return _peek(base.b6(), quote.b6(), amount);
+    }
+
+    /**
+     * @notice Retrieve the value of the amount at the latest oracle price. Same as `peek` for this oracle.
      * @return value
      */
     function get(bytes32 base, bytes32 quote, uint256 amount) public virtual override view returns (uint256 value, uint256 updateTime) {
-        return peek(base, quote, amount);
+        return _peek(base.b6(), quote.b6(), amount);
     }
 }
