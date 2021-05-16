@@ -73,7 +73,7 @@ contract Wand is AccessControl {
         sigs[0] = JOIN;
         sigs[1] = EXIT;
         join.grantRoles(sigs, address(ladle));
-        join.grantRole(join.ROOT(), msg.sender); // Pass ownership of Join to msg.sender
+        join.grantRole(join.ROOT(), msg.sender); // Pass ownership of the join to msg.sender
         join.renounceRole(join.ROOT(), address(this));
         ladle.addJoin(assetId, address(join));
     }
@@ -100,7 +100,7 @@ contract Wand is AccessControl {
     /// @dev Add an existing series to the protocol:
     ///  - Deploy FYToken, and register it in the cauldron with the approved ilks
     ///  - Deploy related pool, and register it in the ladle
-    /* function addSeries(
+    function addSeries(
         bytes6 seriesId,
         bytes6 baseId,
         uint32 maturity,
@@ -111,7 +111,7 @@ contract Wand is AccessControl {
         address base = cauldron.assets(baseId);
         require(base != address(0), "Base not found");
 
-        Join baseJoin = ladle.joins(baseId);
+        IJoin baseJoin = ladle.joins(baseId);
         require(address(baseJoin) != address(0), "Join not found");
 
         IOracle oracle = cauldron.rateOracles(baseId);
@@ -124,12 +124,12 @@ contract Wand is AccessControl {
             maturity,
             name,     // Derive from base and maturity, perhaps
             symbol    // Derive from base and maturity, perhaps
-        ); // TODO: Use a FYTokenFactory to make Wand deployable.
+        ); // TODO: Use a FYTokenFactory to make Wand deployable at 20000 runs
 
         // Allow the fyToken to pull from the base join for redemption
         bytes4[] memory sigs = new bytes4[](1);
         sigs[1] = EXIT;
-        baseJoin.grantRoles(sigs, address(ladle));
+        AccessControl(address(baseJoin)).grantRoles(sigs, address(ladle));
 
         // Allow the ladle to issue and cancel fyToken
         sigs = new bytes4[](2);
@@ -137,16 +137,22 @@ contract Wand is AccessControl {
         sigs[2] = BURN;
         fyToken.grantRoles(sigs, address(ladle));
 
-        // Pass ownership of Join to msg.sender
-        fyToken.grantRole(join.ROOT(), msg.sender);
-        fyToken.renounceRole(join.ROOT(), address(this));
+        // Pass ownership of the fyToken to msg.sender
+        fyToken.grantRole(fyToken.ROOT(), msg.sender);
+        fyToken.renounceRole(fyToken.ROOT(), address(this));
 
         // Add fyToken/series to the Cauldron and approve ilks for the series
         cauldron.addSeries(seriesId, baseId, fyToken);
         cauldron.addIlks(seriesId, ilkIds);
 
         // Create the pool for the base and fyToken
-        address pool = poolFactory.createPool(address(base), address(fyToken)); // TODO: Remember to hand ownership to governor
-        ladle.addPool(seriesId, pool);
-    } */
+        AccessControl pool = AccessControl(poolFactory.createPool(address(base), address(fyToken)));
+
+        // Pass ownership of pool to msg.sender
+        pool.grantRole(pool.ROOT(), msg.sender);
+        pool.renounceRole(pool.ROOT(), address(this));
+
+        // Register pool in Ladle
+        ladle.addPool(seriesId, address(pool));
+    }
 }
