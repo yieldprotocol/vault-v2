@@ -10,6 +10,7 @@ import JoinArtifact from '../../artifacts/contracts/Join.sol/Join.json'
 import LadleArtifact from '../../artifacts/contracts/Ladle.sol/Ladle.json'
 import WandArtifact from '../../artifacts/contracts/Wand.sol/Wand.json'
 import WitchArtifact from '../../artifacts/contracts/Witch.sol/Witch.json'
+import JoinFactoryArtifact from '../../artifacts/contracts/JoinFactory.sol/JoinFactory.json'
 import FYTokenArtifact from '../../artifacts/contracts/FYToken.sol/FYToken.json'
 import PoolMockArtifact from '../../artifacts/contracts/mocks/PoolMock.sol/PoolMock.json'
 
@@ -29,6 +30,7 @@ import { Join } from '../../typechain/Join'
 import { Ladle } from '../../typechain/Ladle'
 import { Wand } from '../../typechain/Wand'
 import { Witch } from '../../typechain/Witch'
+import { JoinFactory } from '../../typechain/JoinFactory'
 import { FYToken } from '../../typechain/FYToken'
 import { PoolMock } from '../../typechain/PoolMock'
 
@@ -51,8 +53,9 @@ export class YieldEnvironment {
   owner: SignerWithAddress
   cauldron: Cauldron
   ladle: LadleWrapper
-  wand: Wand
   witch: Witch
+  joinFactory: JoinFactory
+  wand: Wand
   assets: Map<string, ERC20Mock>
   oracles: Map<string, OracleMock>
   series: Map<string, FYToken>
@@ -64,8 +67,9 @@ export class YieldEnvironment {
     owner: SignerWithAddress,
     cauldron: Cauldron,
     ladle: LadleWrapper,
-    wand: Wand,
     witch: Witch,
+    joinFactory: JoinFactory,
+    wand: Wand,
     assets: Map<string, ERC20Mock>,
     oracles: Map<string, OracleMock>,
     series: Map<string, FYToken>,
@@ -76,8 +80,9 @@ export class YieldEnvironment {
     this.owner = owner
     this.cauldron = cauldron
     this.ladle = ladle
-    this.wand = wand
     this.witch = witch
+    this.joinFactory = joinFactory
+    this.wand = wand
     this.assets = assets
     this.oracles = oracles
     this.series = series
@@ -295,8 +300,9 @@ export class YieldEnvironment {
     const cauldron = (await deployContract(owner, CauldronArtifact, [])) as Cauldron
     const innerLadle = (await deployContract(owner, LadleArtifact, [cauldron.address])) as Ladle
     const ladle = new LadleWrapper(innerLadle)
-    const wand = (await deployContract(owner, WandArtifact, [cauldron.address, ladle.address, cauldron.address])) as Wand // TODO: Get a PoolFactoryMock going
     const witch = (await deployContract(owner, WitchArtifact, [cauldron.address, ladle.address])) as Witch
+    const joinFactory = (await deployContract(owner, JoinFactoryArtifact, [])) as JoinFactory
+    const wand = (await deployContract(owner, WandArtifact, [cauldron.address, ladle.address, cauldron.address, joinFactory.address])) as Wand // TODO: Get a PoolFactoryMock going
     const chiRateOracle = (await deployContract(owner, CompoundMultiOracleArtifact, [])) as CompoundMultiOracle
     const spotOracle = (await deployContract(owner, ChainlinkMultiOracleArtifact, [])) as ChainlinkMultiOracle
     oracles.set(RATE, chiRateOracle as unknown as OracleMock)
@@ -404,6 +410,6 @@ export class YieldEnvironment {
       vaults.set(seriesId, seriesVaults)
     }
 
-    return new YieldEnvironment(owner, cauldron, ladle, wand, witch, assets, oracles, series, pools, joins, vaults)
+    return new YieldEnvironment(owner, cauldron, ladle, witch, joinFactory, wand, assets, oracles, series, pools, joins, vaults)
   }
 }

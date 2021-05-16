@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
+import "@yield-protocol/vault-interfaces/IJoinFactory.sol";
+import "@yield-protocol/vault-interfaces/IJoin.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "./Join.sol";
 import "./FYToken.sol";
 
 interface ICauldron {
@@ -16,7 +17,7 @@ interface ICauldron {
 }
 
 interface ILadle {
-    function joins(bytes6) external view returns (Join);
+    function joins(bytes6) external view returns (IJoin);
     function addJoin(bytes6, address) external;
     function addPool(bytes6, address) external;
 }
@@ -46,11 +47,13 @@ contract Wand is AccessControl {
     ICauldron public immutable cauldron;
     ILadle public immutable ladle;
     IPoolFactory public immutable poolFactory;
+    IJoinFactory public immutable joinFactory;
 
-    constructor (ICauldron cauldron_, ILadle ladle_, IPoolFactory poolFactory_) {
+    constructor (ICauldron cauldron_, ILadle ladle_, IPoolFactory poolFactory_, IJoinFactory joinFactory_) {
         cauldron = cauldron_;
         ladle = ladle_;
         poolFactory = poolFactory_;
+        joinFactory = joinFactory_;
     }
 
     /// @dev Add an existing asset to the protocol, meaning:
@@ -65,7 +68,7 @@ contract Wand is AccessControl {
         // Add asset to cauldron, deploy new Join, and add it to the ladle
         require (address(asset) != address(0), "Asset required");
         cauldron.addAsset(assetId, asset);
-        Join join = new Join(asset);    // TODO: Use a JoinFactory to make Wand deployable
+        AccessControl join = AccessControl(joinFactory.createJoin(asset));  // We need the access control methods of Join
         bytes4[] memory sigs = new bytes4[](2);
         sigs[0] = JOIN;
         sigs[1] = EXIT;

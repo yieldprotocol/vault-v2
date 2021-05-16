@@ -5,13 +5,14 @@ const { WAD, THREE_MONTHS } = constants
 import { RATE } from '../src/constants'
 
 import FYTokenArtifact from '../artifacts/contracts/FYToken.sol/FYToken.json'
-import JoinArtifact from '../artifacts/contracts/Join.sol/Join.json'
+import JoinFactoryArtifact from '../artifacts/contracts/JoinFactory.sol/JoinFactory.json'
 import OracleMockArtifact from '../artifacts/contracts/mocks/oracles/OracleMock.sol/OracleMock.json'
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
 import PoolMockArtifact from '../artifacts/contracts/mocks/PoolMock.sol/PoolMock.json'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
+import { JoinFactory } from '../typechain/JoinFactory'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { OracleMock } from '../typechain/OracleMock'
@@ -36,6 +37,7 @@ describe('Ladle - admin', function () {
   let fyToken: FYToken
   let base: ERC20Mock
   let baseJoin: Join
+  let joinFactory: JoinFactory
   let ilk: ERC20Mock
   let ilkJoin: Join
   let pool: PoolMock
@@ -88,7 +90,10 @@ describe('Ladle - admin', function () {
     await cauldron.setSpotOracle(baseId, ilkId, oracle.address, ratio)
 
     // Deploy a join
-    ilkJoin = (await deployContract(ownerAcc, JoinArtifact, [ilk.address])) as Join
+    joinFactory = (await deployContract(ownerAcc, JoinFactoryArtifact, [])) as JoinFactory
+    const joinAddress = await joinFactory.calculateJoinAddress(ilk.address) // Get the address
+    await joinFactory.createJoin(ilk.address) // Create the Join (doesn't return anything outside a contract call)
+    ilkJoin = (await ethers.getContractAt('Join', joinAddress, ownerAcc)) as Join
     await ilkJoin.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], ladle.address)
 
     // Deploy a series

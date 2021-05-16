@@ -3,10 +3,11 @@ import { constants, id } from '@yield-protocol/utils-v2'
 const { WAD, MAX256 } = constants
 const MAX = MAX256
 
-import JoinArtifact from '../artifacts/contracts/Join.sol/Join.json'
+import JoinFactoryArtifact from '../artifacts/contracts/JoinFactory.sol/JoinFactory.json'
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
 
 import { Join } from '../typechain/Join'
+import { JoinFactory } from '../typechain/JoinFactory'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 
 import { ethers, waffle } from 'hardhat'
@@ -21,7 +22,7 @@ describe('Join', function () {
   let otherAcc: SignerWithAddress
   let other: string
   let join: Join
-  let joinFromOther: Join
+  let joinFactory: JoinFactory
   let token: ERC20Mock
   let otherToken: ERC20Mock
 
@@ -37,8 +38,10 @@ describe('Join', function () {
   beforeEach(async () => {
     token = (await deployContract(ownerAcc, ERC20MockArtifact, ['MTK', 'Mock Token'])) as ERC20Mock
     otherToken = (await deployContract(ownerAcc, ERC20MockArtifact, ['OTH', 'Other Token'])) as ERC20Mock
-    join = (await deployContract(ownerAcc, JoinArtifact, [token.address])) as Join
-    joinFromOther = join.connect(otherAcc)
+    joinFactory = (await deployContract(ownerAcc, JoinFactoryArtifact, [])) as JoinFactory
+    const joinAddress = await joinFactory.calculateJoinAddress(token.address) // Get the address
+    await joinFactory.createJoin(token.address) // Create the Join (doesn't return anything outside a contract call)
+    join = (await ethers.getContractAt('Join', joinAddress, ownerAcc)) as Join
 
     await join.grantRoles(
       [id('join(address,uint128)'), id('exit(address,uint128)'), id('retrieve(address,address)')],
