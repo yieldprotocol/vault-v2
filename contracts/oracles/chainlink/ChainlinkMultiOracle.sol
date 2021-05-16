@@ -28,7 +28,10 @@ contract ChainlinkMultiOracle is IOracle, Ownable {
     function setSource(bytes6 base, bytes6 quote, address source) public onlyOwner {
         uint8 decimals = AggregatorV3Interface(source).decimals();
         require (decimals <= 18, "Unsupported decimals");
-        sources[base][quote] = Source(source, decimals);
+        sources[base][quote] = Source({
+            source: source,
+            decimals: decimals
+        });
         emit SourcesSet(base, quote, source);
     }
 

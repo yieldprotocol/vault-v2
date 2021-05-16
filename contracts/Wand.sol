@@ -82,8 +82,8 @@ contract Wand is AccessControl {
         require (rateSource != address(0), "Rate source required");
         require (chiSource != address(0), "Chi source required");
 
-        oracle.setSource(assetId, "RATE", rateSource);
-        oracle.setSource(assetId, "CHI", chiSource);
+        oracle.setSource(assetId, "rate", rateSource);
+        oracle.setSource(assetId, "chi", chiSource);
         cauldron.setRateOracle(assetId, IOracle(address(oracle))); // TODO: Consider adding a registry of chi oracles in cauldron as well
     }
 
