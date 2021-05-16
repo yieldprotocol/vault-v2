@@ -380,11 +380,10 @@ export class YieldEnvironment {
     // For each series identifier we create a fyToken with the first asset as underlying.
     // The maturities for the fyTokens are in three month intervals, starting three months from now
 
-    const provider: BaseProvider = await ethers.provider
-    const now = (await provider.getBlock(await provider.getBlockNumber())).timestamp
+    const { timestamp } = await ethers.provider.getBlock('latest')
     let count: number = 1
     for (let seriesId of seriesIds) {
-      const maturity = now + THREE_MONTHS * count++
+      const maturity = timestamp + THREE_MONTHS * count++
       const fyToken = await this.addSeries(owner, cauldron, ladle, baseJoin, chiRateOracle, seriesId, baseId, ilkIds, maturity) as FYToken
       series.set(seriesId, fyToken)
       await fyToken.grantRoles([
