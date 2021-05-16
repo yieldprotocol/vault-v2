@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
+import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "./Join.sol";
 import "./FYToken.sol";
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 
 interface ICauldron {
     function assets(bytes6) external view returns (address);
+    function rateOracles(bytes6) external view returns (IOracle);
     function addAsset(bytes6, address) external;
-    function addSeries(bytes6, bytes6, address) external;
+    function addSeries(bytes6, bytes6, IFYToken) external;
     function addIlks(bytes6, bytes6[] memory) external;
-    function setRateOracle(bytes6, address) external;
-    function setSpotOracle(bytes6, bytes6, address, uint32) external;
+    function setRateOracle(bytes6, IOracle) external;
+    function setSpotOracle(bytes6, bytes6, IOracle, uint32) external;
     function setMaxDebt(bytes6, bytes6, uint128) external;
 }
 
@@ -33,12 +34,14 @@ interface IRateMultiOracle {
     function setSource(bytes6, bytes32, address) external;
 }
 
-interface IChiMultiOracle {
-    function setSource(bytes6, bytes32, address) external;
-}
-
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient governance features.
 contract Wand is AccessControl {
+
+    bytes4 public constant JOIN = bytes4(keccak256("join(address,uint128)"));
+    bytes4 public constant EXIT = bytes4(keccak256("exit(address,uint128)"));
+    bytes4 public constant MINT = bytes4(keccak256("mint(address,uint256)"));
+    bytes4 public constant BURN = bytes4(keccak256("burn(address,uint256)"));
+    
 
     ICauldron public immutable cauldron;
     ILadle public immutable ladle;
@@ -50,11 +53,6 @@ contract Wand is AccessControl {
         poolFactory = poolFactory_;
     }
 
-    /// @dev Return a function signature
-    function id(bytes memory signature) public pure returns (bytes4) {
-        return bytes4(keccak256(signature));
-    }
-
     /// @dev Add an existing asset to the protocol, meaning:
     ///  - Add the asset to the cauldron
     ///  - Deploy a new Join, and integrate it with the Ladle
@@ -62,90 +60,90 @@ contract Wand is AccessControl {
     ///  - If the asset is a base, integrate a spot source and set a debt ceiling for any provided ilks
     function addAsset(
         bytes6 assetId,
-        address asset,
-        address rateOracle,
-        address rateSource,
-        bytes6[] memory ilkIds,
-        address[] memory spotOracles,
-        address[] memory spotSources,
-        uint32[] memory ratios,
-        uint128[] memory maxDebts
+        address asset
     ) public auth {
-        // TODO: Check inputs
         // Add asset to cauldron, deploy new Join, and add it to the ladle
+        require (address(asset) != address(0), "Asset required");
         cauldron.addAsset(assetId, asset);
-        Join join = new Join(asset);
+        Join join = new Join(asset);    // TODO: Use a JoinFactory to make Wand deployable
         bytes4[] memory sigs = new bytes4[](2);
-        sigs[0] = id("join(address,uint128)");
-        sigs[1] = id("exit(address,uint128)");
+        sigs[0] = JOIN;
+        sigs[1] = EXIT;
         join.grantRoles(sigs, address(ladle));
+        join.grantRole(join.ROOT(), msg.sender); // Pass ownership of Join to msg.sender
+        join.renounceRole(join.ROOT(), address(this));
         ladle.addJoin(assetId, address(join));
-        
-        // If the asset will be a base, add the rate source to the rate oracle, and the rate oracle to the cauldron
-        if (rateOracle != address(0)) {
-            IRateMultiOracle(rateOracle).setSource(assetId, "RATE", rateSource);
-            cauldron.setRateOracle(assetId, rateOracle);
-        }
-
-        // If the asset will be a base, add spot oracles and debt ceilings for any provided ilks
-        for (uint256 i = 0; i <= ilkIds.length; i += 1) {
-            ISpotMultiOracle(spotOracles[i]).setSource(assetId, ilkIds[i], spotSources[i]);
-            cauldron.setSpotOracle(assetId, ilkIds[i], spotOracles[i], ratios[i]);
-            cauldron.setMaxDebt(assetId, ilkIds[i], maxDebts[i]);
-        }
     }
 
-    /// @dev Add an existing series to the protocol, meaning:
-    ///  - Add the asset to the cauldron
-    ///  - Deploy a new Join, and integrate it with the Ladle
-    ///  - If the asset is a base, integrate its rate source
-    ///  - If the asset is a base, integrate a spot source and set a debt ceiling for any provided ilks
-    function addSeries(
+    /// @dev Make a base asset out of a generic asset, by adding rate and chi oracles.
+    /// This assumes CompoundMultiOracles, which deliver both rate and chi.
+    function makeBase(bytes6 assetId, IRateMultiOracle oracle, address rateSource, address chiSource) public auth {
+        require (address(oracle) != address(0), "Oracle required");
+        require (rateSource != address(0), "Rate source required");
+        require (chiSource != address(0), "Chi source required");
+
+        oracle.setSource(assetId, "RATE", rateSource);
+        oracle.setSource(assetId, "CHI", chiSource);
+        cauldron.setRateOracle(assetId, IOracle(address(oracle))); // TODO: Consider adding a registry of chi oracles in cauldron as well
+    }
+
+    /// @dev Make an ilk asset out of a generic asset, by adding a spot oracle against a base asset, collateralization ratio, and debt ceiling.
+    function makeIlk(bytes6 baseId, bytes6 ilkId, ISpotMultiOracle oracle, address spotSource, uint32 ratio, uint128 maxDebt) public auth {
+        oracle.setSource(baseId, ilkId, spotSource);
+        cauldron.setSpotOracle(baseId, ilkId, IOracle(address(oracle)), ratio);
+        cauldron.setMaxDebt(baseId, ilkId, maxDebt);
+    }
+
+    /// @dev Add an existing series to the protocol:
+    ///  - Deploy FYToken, and register it in the cauldron with the approved ilks
+    ///  - Deploy related pool, and register it in the ladle
+    /* function addSeries(
         bytes6 seriesId,
         bytes6 baseId,
         uint32 maturity,
-        address chiOracle,
-        address chiSource,
         bytes6[] memory ilkIds,
         string memory name,
         string memory symbol
     ) public auth {
-        // TODO: Check inputs
         address base = cauldron.assets(baseId);
+        require(base != address(0), "Base not found");
+
         Join baseJoin = ladle.joins(baseId);
-        
-        // If provided, add the chi source to the chi oracle, and the chi oracle to the cauldron
-        if (chiSource != address(0)) {
-            IChiMultiOracle(chiOracle).setSource(baseId, "CHI", chiSource);
-            cauldron.setRateOracle(baseId, chiOracle);
-        }
+        require(address(baseJoin) != address(0), "Join not found");
+
+        IOracle oracle = cauldron.rateOracles(baseId);
+        require(address(oracle) != address(0), "Chi oracle not found");
 
         FYToken fyToken = new FYToken(
             baseId,
-            IOracle(chiOracle),
+            oracle,
             baseJoin,
             maturity,
             name,     // Derive from base and maturity, perhaps
             symbol    // Derive from base and maturity, perhaps
-        );
+        ); // TODO: Use a FYTokenFactory to make Wand deployable.
 
         // Allow the fyToken to pull from the base join for redemption
         bytes4[] memory sigs = new bytes4[](1);
-        sigs[1] = id("exit(address,uint128)");
+        sigs[1] = EXIT;
         baseJoin.grantRoles(sigs, address(ladle));
 
         // Allow the ladle to issue and cancel fyToken
         sigs = new bytes4[](2);
-        sigs[1] = id("mint(address,uint256)");
-        sigs[2] = id("burn(address,uint256)");
+        sigs[1] = MINT;
+        sigs[2] = BURN;
         fyToken.grantRoles(sigs, address(ladle));
 
-        // Add fyToken/series to the Cauldron and all ilks to each series
-        cauldron.addSeries(seriesId, baseId, address(fyToken));
+        // Pass ownership of Join to msg.sender
+        fyToken.grantRole(join.ROOT(), msg.sender);
+        fyToken.renounceRole(join.ROOT(), address(this));
+
+        // Add fyToken/series to the Cauldron and approve ilks for the series
+        cauldron.addSeries(seriesId, baseId, fyToken);
         cauldron.addIlks(seriesId, ilkIds);
 
         // Create the pool for the base and fyToken
         address pool = poolFactory.createPool(address(base), address(fyToken)); // TODO: Remember to hand ownership to governor
         ladle.addPool(seriesId, pool);
-    }
+    } */
 }
