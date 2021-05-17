@@ -45,6 +45,7 @@ contract UniswapV3Oracle is IOracle, Ownable {
         require(bases.length == quotes.length && quotes.length == sources_.length, "Mismatched inputs");
         for (uint256 i = 0; i < bases.length; i++) {
             sources[bases[i]][quotes[i]] = sources_[i];
+            sources[quotes[i]][bases[i]] = sources_[i];
             sourcesData[sources_[i]] = SourceData(
                 IUniswapV3PoolImmutables(sources_[i]).factory(),
                 IUniswapV3PoolImmutables(sources_[i]).token0(),
