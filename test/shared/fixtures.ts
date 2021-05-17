@@ -25,17 +25,17 @@ import USDCMockArtifact from '../../artifacts/contracts/mocks/USDCMock.sol/USDCM
 
 import { Cauldron } from '../../typechain/Cauldron'
 import { Join } from '../../typechain/Join'
+import { FYToken } from '../../typechain/FYToken'
 import { Ladle } from '../../typechain/Ladle'
-import { Wand } from '../../typechain/Wand'
 import { Witch } from '../../typechain/Witch'
 import { JoinFactory } from '../../typechain/JoinFactory'
-import { FYToken } from '../../typechain/FYToken'
+import { Wand } from '../../typechain/Wand'
 import { PoolMock } from '../../typechain/PoolMock'
 import { PoolFactoryMock } from '../../typechain/PoolFactoryMock'
 import { OracleMock } from '../../typechain/OracleMock'
+import { ISourceMock } from '../../typechain/ISourceMock'
 import { ChainlinkMultiOracle } from '../../typechain/ChainlinkMultiOracle'
 import { CompoundMultiOracle } from '../../typechain/CompoundMultiOracle'
-import { SourceMock } from '../../typechain/SourceMock'
 
 import { ERC20Mock } from '../../typechain/ERC20Mock'
 import { WETH9Mock } from '../../typechain/WETH9Mock'
@@ -213,7 +213,7 @@ export class YieldEnvironment {
     const assets: Map<string, ERC20Mock> = new Map()
     const joins: Map<string, Join> = new Map()
     const oracles: Map<string, OracleMock> = new Map()
-    const sources: Map<string, SourceMock> = new Map()
+    const sources: Map<string, ISourceMock> = new Map()
     const series: Map<string, FYToken> = new Map()
     const pools: Map<string, PoolMock> = new Map()
     const vaults: Map<string, Map<string, string>> = new Map()
@@ -238,28 +238,28 @@ export class YieldEnvironment {
     const dai = (await deployContract(owner, DAIMockArtifact, [])) as DAIMock
     const usdc = (await deployContract(owner, USDCMockArtifact, [])) as USDCMock
 
-    const cTokenRate = (await deployContract(owner, CTokenRateMockArtifact, [])) as SourceMock
+    const cTokenRate = (await deployContract(owner, CTokenRateMockArtifact, [])) as ISourceMock
     await cTokenRate.set(WAD.mul(2))
     sources.set(RATE, cTokenRate)
-    const cTokenChi = (await deployContract(owner, CTokenChiMockArtifact, [])) as SourceMock
+    const cTokenChi = (await deployContract(owner, CTokenChiMockArtifact, [])) as ISourceMock
     await cTokenChi.set(WAD)
     sources.set(CHI, cTokenChi)
 
     for (let ilkId of ilkIds) {
-      const aggregator = (await deployContract(owner, ChainlinkAggregatorV3MockArtifact, [8])) as SourceMock
+      const aggregator = (await deployContract(owner, ChainlinkAggregatorV3MockArtifact, [8])) as ISourceMock
       await aggregator.set(WAD.mul(2))
       sources.set(ilkId, aggregator)
     }
 
-    const ethAggregator = (await deployContract(owner, ChainlinkAggregatorV3MockArtifact, [8])) as SourceMock
+    const ethAggregator = (await deployContract(owner, ChainlinkAggregatorV3MockArtifact, [8])) as ISourceMock
     await ethAggregator.set(WAD.mul(2))
     sources.set(ETH, ethAggregator)
 
-    const daiAggregator = (await deployContract(owner, ChainlinkAggregatorV3MockArtifact, [8])) as SourceMock
+    const daiAggregator = (await deployContract(owner, ChainlinkAggregatorV3MockArtifact, [8])) as ISourceMock
     await daiAggregator.set(WAD.mul(2))
     sources.set(DAI, daiAggregator)
 
-    const usdcAggregator = (await deployContract(owner, ChainlinkAggregatorV3MockArtifact, [8])) as SourceMock
+    const usdcAggregator = (await deployContract(owner, ChainlinkAggregatorV3MockArtifact, [8])) as ISourceMock
     await usdcAggregator.set(WAD.mul(2))
     sources.set(USDC, usdcAggregator)
 
@@ -345,7 +345,7 @@ export class YieldEnvironment {
     const ratio = 1000000 //  1000000 == 100% collateralization ratio
     const maxDebt = WAD.mul(1000000)
     for (let ilkId of ilkIds) {
-      const source = sources.get(ilkId) as SourceMock
+      const source = sources.get(ilkId) as ISourceMock
       await wand.makeIlk(baseId, ilkId, spotOracle.address, source.address, ratio, maxDebt)
       oracles.set(ilkId, spotOracle as unknown as OracleMock)
     }
