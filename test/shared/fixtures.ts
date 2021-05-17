@@ -1,18 +1,16 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { BaseProvider } from '@ethersproject/providers'
+
 import { id } from '@yield-protocol/utils-v2'
 import { constants } from '@yield-protocol/utils-v2'
 const { WAD, THREE_MONTHS, ETH, DAI, USDC } = constants
 import { CHI, RATE } from '../../src/constants'
 
 import CauldronArtifact from '../../artifacts/contracts/Cauldron.sol/Cauldron.json'
-import JoinArtifact from '../../artifacts/contracts/Join.sol/Join.json'
 import LadleArtifact from '../../artifacts/contracts/Ladle.sol/Ladle.json'
 import WandArtifact from '../../artifacts/contracts/Wand.sol/Wand.json'
 import WitchArtifact from '../../artifacts/contracts/Witch.sol/Witch.json'
 import JoinFactoryArtifact from '../../artifacts/contracts/JoinFactory.sol/JoinFactory.json'
-import FYTokenArtifact from '../../artifacts/contracts/FYToken.sol/FYToken.json'
-import PoolMockArtifact from '../../artifacts/contracts/mocks/PoolMock.sol/PoolMock.json'
+import PoolFactoryMockArtifact from '../../artifacts/contracts/mocks/PoolFactoryMock.sol/PoolFactoryMock.json'
 
 import ChainlinkMultiOracleArtifact from '../../artifacts/contracts/oracles/chainlink/ChainlinkMultiOracle.sol/ChainlinkMultiOracle.json'
 import CompoundMultiOracleArtifact from '../../artifacts/contracts/oracles/compound/CompoundMultiOracle.sol/CompoundMultiOracle.json'
@@ -33,7 +31,7 @@ import { Witch } from '../../typechain/Witch'
 import { JoinFactory } from '../../typechain/JoinFactory'
 import { FYToken } from '../../typechain/FYToken'
 import { PoolMock } from '../../typechain/PoolMock'
-
+import { PoolFactoryMock } from '../../typechain/PoolFactoryMock'
 import { OracleMock } from '../../typechain/OracleMock'
 import { ChainlinkMultiOracle } from '../../typechain/ChainlinkMultiOracle'
 import { CompoundMultiOracle } from '../../typechain/CompoundMultiOracle'
@@ -55,6 +53,7 @@ export class YieldEnvironment {
   ladle: LadleWrapper
   witch: Witch
   joinFactory: JoinFactory
+  poolFactory: PoolFactoryMock
   wand: Wand
   assets: Map<string, ERC20Mock>
   oracles: Map<string, OracleMock>
@@ -69,6 +68,7 @@ export class YieldEnvironment {
     ladle: LadleWrapper,
     witch: Witch,
     joinFactory: JoinFactory,
+    poolFactory: PoolFactoryMock,
     wand: Wand,
     assets: Map<string, ERC20Mock>,
     oracles: Map<string, OracleMock>,
@@ -82,6 +82,7 @@ export class YieldEnvironment {
     this.ladle = ladle
     this.witch = witch
     this.joinFactory = joinFactory
+    this.poolFactory = poolFactory
     this.wand = wand
     this.assets = assets
     this.oracles = oracles
@@ -151,6 +152,7 @@ export class YieldEnvironment {
         id('makeBase(bytes6,address,address,address)'),
         id('makeIlk(bytes6,bytes6,address,address,uint32,uint128)'),
         id('addSeries(bytes6,bytes6,uint32,bytes6[],string,string)'),
+        id('addPool(bytes6,bytes6)'),
       ],
       receiver
     )
@@ -175,9 +177,8 @@ export class YieldEnvironment {
     )
   }
 
-  public static async addAsset(owner: SignerWithAddress, ladle: LadleWrapper, wand: Wand, assetId: string, asset: ERC20Mock | DAIMock | USDCMock | WETH9Mock): Promise<Join> {
-    await wand.addAsset(assetId, asset.address)
-
+  // Initialize an asset for testing purposes. Gives the owner powers over it, and approves the join to take the asset from the owner.
+  public static async initAsset(owner: SignerWithAddress, ladle: LadleWrapper, assetId: string, asset: ERC20Mock | DAIMock | USDCMock | WETH9Mock): Promise<Join> {
     const join = await ethers.getContractAt('Join', await ladle.joins(assetId), owner) as Join
     await asset.approve(await ladle.joins(assetId), ethers.constants.MaxUint256) // Owner approves all joins to take from him. Only testing
 
@@ -190,55 +191,18 @@ export class YieldEnvironment {
     return join
   }
 
-  public static async addSeries(
+  // Initialize a mock pool, with assets printed out of thin air. Also give the owner the right to mint fyToken at will.
+  public static async initPool(
     owner: SignerWithAddress,
-    cauldron: Cauldron,
-    ladle: LadleWrapper,
-    baseJoin: Join,
-    chiOracle: CompoundMultiOracle,
-    seriesId: string,
-    baseId: string,
-    ilkIds: Array<string>,
-    maturity: number,
-
-  ) {
-    const fyToken = (await deployContract(owner, FYTokenArtifact, [
-      baseId,
-      chiOracle.address,
-      baseJoin.address,
-      maturity,
-      seriesId,
-      seriesId,
-    ])) as FYToken
-    await cauldron.addSeries(seriesId, baseId, fyToken.address)
-
-    // Add all ilks to each series
-    await cauldron.addIlks(seriesId, ilkIds)
-
-    await baseJoin.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], fyToken.address)
-    await fyToken.grantRoles([id('mint(address,uint256)'), id('burn(address,uint256)')], ladle.address)
-    return fyToken
-  }
-
-  public static async addPool(
-    owner: SignerWithAddress,
-    ladle: LadleWrapper,
+    pool: PoolMock,
     base: ERC20Mock,
     fyToken: FYToken,
-    seriesId: string,
   ) {
-    const pool = (await deployContract(owner, PoolMockArtifact, [
-      base.address,
-      fyToken.address,
-    ])) as PoolMock
-
-    // Initialize pool
     await base.mint(pool.address, WAD.mul(1000000))
     await pool.mint(await owner.getAddress(), true, 0)
+    await fyToken.grantRole(id('mint(address,uint256)'), await owner.getAddress()) // Only test environment
     await fyToken.mint(pool.address, WAD.mul(1100000))
     await pool.sync()
-
-    await ladle.addPool(seriesId, pool.address)
 
     return pool
   }
@@ -253,8 +217,11 @@ export class YieldEnvironment {
     const series: Map<string, FYToken> = new Map()
     const pools: Map<string, PoolMock> = new Map()
     const vaults: Map<string, Map<string, string>> = new Map()
-    const ilkIds = assetIds.slice(1)
+
+    // The first asset will be the underlying for all series
+    // All assets after the first will be added as collateral for all series
     const baseId = assetIds[0]
+    const ilkIds = assetIds.slice(1)
 
     // ==== Mocks ====
 
@@ -266,6 +233,7 @@ export class YieldEnvironment {
       await asset.mint(await owner.getAddress(), WAD.mul(100000))
       assets.set(assetId, asset)
     }
+    const base = assets.get(baseId) as ERC20Mock
     const weth = (await deployContract(owner, WETH9MockArtifact, [])) as WETH9Mock
     const dai = (await deployContract(owner, DAIMockArtifact, [])) as DAIMock
     const usdc = (await deployContract(owner, USDCMockArtifact, [])) as USDCMock
@@ -302,7 +270,8 @@ export class YieldEnvironment {
     const ladle = new LadleWrapper(innerLadle)
     const witch = (await deployContract(owner, WitchArtifact, [cauldron.address, ladle.address])) as Witch
     const joinFactory = (await deployContract(owner, JoinFactoryArtifact, [])) as JoinFactory
-    const wand = (await deployContract(owner, WandArtifact, [cauldron.address, ladle.address, cauldron.address, joinFactory.address])) as Wand // TODO: Get a PoolFactoryMock going
+    const poolFactory = (await deployContract(owner, PoolFactoryMockArtifact, [])) as PoolFactoryMock
+    const wand = (await deployContract(owner, WandArtifact, [cauldron.address, ladle.address, poolFactory.address, joinFactory.address])) as Wand
     const chiRateOracle = (await deployContract(owner, CompoundMultiOracleArtifact, [])) as CompoundMultiOracle
     const spotOracle = (await deployContract(owner, ChainlinkMultiOracleArtifact, [])) as ChainlinkMultiOracle
     oracles.set(RATE, chiRateOracle as unknown as OracleMock)
@@ -334,32 +303,37 @@ export class YieldEnvironment {
 
     // ==== Add assets and joins ====
     for (let assetId of assetIds) {
-      const join = await this.addAsset(owner, ladle, wand, assetId, assets.get(assetId) as ERC20Mock)
+      const asset = assets.get(assetId) as ERC20Mock
+      await wand.addAsset(assetId, asset.address)
+      const join = await ethers.getContractAt('Join', await joinFactory.calculateJoinAddress(asset.address), owner) as Join
+
+      await this.initAsset(owner, ladle, assetId, asset)
       joins.set(assetId, join)
     }
 
-    // The first asset will be the underlying for all series
-    // All assets after the first will be added as collateral for all series
-    const base = assets.get(baseId) as ERC20Mock
-    const baseJoin = joins.get(baseId) as Join
-
     // Add WETH9
-    const wethJoin = await this.addAsset(owner, ladle, wand, ETH, weth)
+    await wand.addAsset(ETH, weth.address)
+    const wethJoin = await ethers.getContractAt('Join', await joinFactory.calculateJoinAddress(weth.address), owner) as Join
 
+    await this.initAsset(owner, ladle, ETH, weth)
     assets.set(ETH, weth as unknown as ERC20Mock)
     joins.set(ETH, wethJoin)
     ilkIds.push(ETH)
 
     // Add Dai
-    const daiJoin = await this.addAsset(owner, ladle, wand, DAI, dai)
-
+    await wand.addAsset(DAI, dai.address)
+    const daiJoin = await ethers.getContractAt('Join', await joinFactory.calculateJoinAddress(dai.address), owner) as Join
+    
+    await this.initAsset(owner, ladle, DAI, dai)
     assets.set(DAI, dai as unknown as ERC20Mock)
     joins.set(DAI, daiJoin)
     ilkIds.push(DAI)
 
     // Add USDC
-    const usdcJoin = await this.addAsset(owner, ladle, wand, USDC, usdc)
+    await wand.addAsset(USDC, usdc.address)
+    const usdcJoin = await ethers.getContractAt('Join', await joinFactory.calculateJoinAddress(usdc.address), owner) as Join
 
+    await this.initAsset(owner, ladle, USDC, usdc)
     assets.set(USDC, usdc as unknown as ERC20Mock)
     joins.set(USDC, usdcJoin)
     ilkIds.push(USDC)
@@ -384,16 +358,18 @@ export class YieldEnvironment {
     let count: number = 1
     for (let seriesId of seriesIds) {
       const maturity = timestamp + THREE_MONTHS * count++
-      const fyToken = await this.addSeries(owner, cauldron, ladle, baseJoin, chiRateOracle, seriesId, baseId, ilkIds, maturity) as FYToken
+      await wand.addSeries(seriesId, baseId, maturity, ilkIds, seriesId, seriesId)
+      const fyToken = await ethers.getContractAt('FYToken', (await cauldron.series(seriesId)).fyToken, owner) as FYToken
+      const pool = await ethers.getContractAt('PoolMock', await ladle.pools(seriesId), owner) as PoolMock
+      await this.initPool(owner, pool, base, fyToken)
       series.set(seriesId, fyToken)
+      pools.set(seriesId, pool)
+
       await fyToken.grantRoles([
           id('mint(address,uint256)'),
           id('burn(address,uint256)'),
           id('setOracle(address)')],
-        ownerAdd) // Only test environment
-
-      // Add a pool between the base and each series
-      pools.set(seriesId, await this.addPool(owner, ladle, base, fyToken, seriesId))
+      ownerAdd) // Only test environment
     }
 
     // ==== Build some vaults ====
@@ -409,6 +385,6 @@ export class YieldEnvironment {
       vaults.set(seriesId, seriesVaults)
     }
 
-    return new YieldEnvironment(owner, cauldron, ladle, witch, joinFactory, wand, assets, oracles, series, pools, joins, vaults)
+    return new YieldEnvironment(owner, cauldron, ladle, witch, joinFactory, poolFactory, wand, assets, oracles, series, pools, joins, vaults)
   }
 }

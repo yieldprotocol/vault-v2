@@ -2,11 +2,15 @@
 pragma solidity ^0.8.0;
 import "@yield-protocol/vault-interfaces/IJoinFactory.sol";
 import "@yield-protocol/vault-interfaces/IJoin.sol";
+import "@yield-protocol/vault-interfaces/DataTypes.sol";
+import "@yield-protocol/yieldspace-interfaces/IPoolFactory.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "./FYToken.sol";
 
+
 interface ICauldron {
     function assets(bytes6) external view returns (address);
+    function series(bytes6) external view returns (DataTypes.Series memory);
     function rateOracles(bytes6) external view returns (IOracle);
     function addAsset(bytes6, address) external;
     function addSeries(bytes6, bytes6, IFYToken) external;
@@ -22,17 +26,16 @@ interface ILadle {
     function addPool(bytes6, address) external;
 }
 
-interface IPoolFactory {
-  function calculatePoolAddress(address, address) external view returns (address);
-  function createPool(address, address) external view returns (address);
-}
-
 interface ISpotMultiOracle {
     function setSource(bytes6, bytes6, address) external;
 }
 
 interface IRateMultiOracle {
     function setSource(bytes6, bytes32, address) external;
+}
+
+interface IOwnable {
+    function transferOwnership(address) external;
 }
 
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient governance features.
@@ -73,8 +76,8 @@ contract Wand is AccessControl {
         sigs[0] = JOIN;
         sigs[1] = EXIT;
         join.grantRoles(sigs, address(ladle));
-        join.grantRole(join.ROOT(), msg.sender); // Pass ownership of the join to msg.sender
-        join.renounceRole(join.ROOT(), address(this));
+        join.grantRole(join.ROOT(), msg.sender);
+        // join.renounceRole(join.ROOT(), address(this));  // If Wand gives up ownership it can't create fyToken
         ladle.addJoin(assetId, address(join));
     }
 
@@ -97,9 +100,8 @@ contract Wand is AccessControl {
         cauldron.setMaxDebt(baseId, ilkId, maxDebt);
     }
 
-    /// @dev Add an existing series to the protocol:
-    ///  - Deploy FYToken, and register it in the cauldron with the approved ilks
-    ///  - Deploy related pool, and register it in the ladle
+    /// @dev Add an existing series to the protocol, by deploying a FYToken, and registering it in the cauldron with the approved ilks
+    /// This must be followed by a call to addPool
     function addSeries(
         bytes6 seriesId,
         bytes6 baseId,
@@ -128,13 +130,13 @@ contract Wand is AccessControl {
 
         // Allow the fyToken to pull from the base join for redemption
         bytes4[] memory sigs = new bytes4[](1);
-        sigs[1] = EXIT;
+        sigs[0] = EXIT;
         AccessControl(address(baseJoin)).grantRoles(sigs, address(ladle));
 
         // Allow the ladle to issue and cancel fyToken
         sigs = new bytes4[](2);
-        sigs[1] = MINT;
-        sigs[2] = BURN;
+        sigs[0] = MINT;
+        sigs[1] = BURN;
         fyToken.grantRoles(sigs, address(ladle));
 
         // Pass ownership of the fyToken to msg.sender
@@ -146,11 +148,12 @@ contract Wand is AccessControl {
         cauldron.addIlks(seriesId, ilkIds);
 
         // Create the pool for the base and fyToken
-        AccessControl pool = AccessControl(poolFactory.createPool(address(base), address(fyToken)));
+        poolFactory.createPool(base, address(fyToken));
+        IOwnable pool = IOwnable(poolFactory.calculatePoolAddress(base, address(fyToken)));
+        
 
         // Pass ownership of pool to msg.sender
-        pool.grantRole(pool.ROOT(), msg.sender);
-        pool.renounceRole(pool.ROOT(), address(this));
+        pool.transferOwnership(msg.sender);
 
         // Register pool in Ladle
         ladle.addPool(seriesId, address(pool));

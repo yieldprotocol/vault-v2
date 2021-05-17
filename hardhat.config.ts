@@ -75,7 +75,7 @@ module.exports = {
     disambiguatePaths: false,
   },
   gasReporter: {
-    enabled: false,
+    enabled: true,
   },
   defaultNetwork: 'hardhat',
   namedAccounts: {
