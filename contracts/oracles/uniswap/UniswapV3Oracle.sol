@@ -64,7 +64,7 @@ contract UniswapV3Oracle is IOracle, Ownable {
         SourceData memory sourceData;
         if (source == address(0)) {
             source = sources[quote][base];
-            require(source != address(0), "Source not set for base and quote");
+            require(source != address(0), "Source not found");
             sourceData = sourcesData[source];
             sourceData.baseToken = sourcesData[source].quoteToken;
             sourceData.quoteToken = sourcesData[source].baseToken;
