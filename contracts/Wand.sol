@@ -8,7 +8,7 @@ import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "./FYToken.sol";
 
 
-interface ICauldron {
+interface ICauldronGov {
     function assets(bytes6) external view returns (address);
     function series(bytes6) external view returns (DataTypes.Series memory);
     function rateOracles(bytes6) external view returns (IOracle);
@@ -20,18 +20,14 @@ interface ICauldron {
     function setMaxDebt(bytes6, bytes6, uint128) external;
 }
 
-interface ILadle {
+interface ILadleGov {
     function joins(bytes6) external view returns (IJoin);
     function addJoin(bytes6, address) external;
     function addPool(bytes6, address) external;
 }
 
-interface ISpotMultiOracle {
+interface IMultiOracleGov {
     function setSource(bytes6, bytes6, address) external;
-}
-
-interface IRateMultiOracle {
-    function setSource(bytes6, bytes32, address) external;
 }
 
 interface IOwnable {
@@ -47,12 +43,12 @@ contract Wand is AccessControl {
     bytes4 public constant BURN = bytes4(keccak256("burn(address,uint256)"));
     
 
-    ICauldron public immutable cauldron;
-    ILadle public immutable ladle;
+    ICauldronGov public immutable cauldron;
+    ILadleGov public immutable ladle;
     IPoolFactory public immutable poolFactory;
     IJoinFactory public immutable joinFactory;
 
-    constructor (ICauldron cauldron_, ILadle ladle_, IPoolFactory poolFactory_, IJoinFactory joinFactory_) {
+    constructor (ICauldronGov cauldron_, ILadleGov ladle_, IPoolFactory poolFactory_, IJoinFactory joinFactory_) {
         cauldron = cauldron_;
         ladle = ladle_;
         poolFactory = poolFactory_;
@@ -83,7 +79,7 @@ contract Wand is AccessControl {
 
     /// @dev Make a base asset out of a generic asset, by adding rate and chi oracles.
     /// This assumes CompoundMultiOracles, which deliver both rate and chi.
-    function makeBase(bytes6 assetId, IRateMultiOracle oracle, address rateSource, address chiSource) public auth {
+    function makeBase(bytes6 assetId, IMultiOracleGov oracle, address rateSource, address chiSource) public auth {
         require (address(oracle) != address(0), "Oracle required");
         require (rateSource != address(0), "Rate source required");
         require (chiSource != address(0), "Chi source required");
@@ -94,7 +90,7 @@ contract Wand is AccessControl {
     }
 
     /// @dev Make an ilk asset out of a generic asset, by adding a spot oracle against a base asset, collateralization ratio, and debt ceiling.
-    function makeIlk(bytes6 baseId, bytes6 ilkId, ISpotMultiOracle oracle, address spotSource, uint32 ratio, uint128 maxDebt) public auth {
+    function makeIlk(bytes6 baseId, bytes6 ilkId, IMultiOracleGov oracle, address spotSource, uint32 ratio, uint128 maxDebt) public auth {
         oracle.setSource(baseId, ilkId, spotSource);
         cauldron.setSpotOracle(baseId, ilkId, IOracle(address(oracle)), ratio);
         cauldron.setMaxDebt(baseId, ilkId, maxDebt);
