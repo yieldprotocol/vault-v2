@@ -48,12 +48,21 @@ contract ChainlinkMultiOracle is IOracle, Ownable {
         uint80 roundId;
         uint80 answeredInRound;
         Source memory source = sources[base][quote];
-        require (source.source != address(0), "Source not found");
-        (roundId, rawPrice,, updateTime, answeredInRound) = AggregatorV3Interface(source.source).latestRoundData();
-        require(rawPrice > 0, "Chainlink price <= 0");
-        require(updateTime != 0, "Incomplete round");
-        require(answeredInRound >= roundId, "Stale price");
-        price = uint(rawPrice) * 10 ** (18 - source.decimals);
+        if (source.source == address(0)) {
+            source = sources[quote][base];
+            require (source.source != address(0), "Source not found");
+            (roundId, rawPrice,, updateTime, answeredInRound) = AggregatorV3Interface(source.source).latestRoundData();
+            require(rawPrice > 0, "Chainlink price <= 0");
+            require(updateTime != 0, "Incomplete round");
+            require(answeredInRound >= roundId, "Stale price");
+            price = 10 ** (source.decimals + 18) / uint(rawPrice);
+        } else {
+            (roundId, rawPrice,, updateTime, answeredInRound) = AggregatorV3Interface(source.source).latestRoundData();
+            require(rawPrice > 0, "Chainlink price <= 0");
+            require(updateTime != 0, "Incomplete round");
+            require(answeredInRound >= roundId, "Stale price");
+            price = uint(rawPrice) * 10 ** (18 - source.decimals);
+        }  
     }
 
     /**

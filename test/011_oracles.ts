@@ -113,8 +113,14 @@ describe('Oracle', function () {
       (await chainlinkMultiOracle.callStatic.get(bytes6ToBytes32(baseId), bytes6ToBytes32(usdQuoteId), WAD))[0]
     ).to.equal(WAD.mul(2))
     expect(
+      (await chainlinkMultiOracle.callStatic.get(bytes6ToBytes32(usdQuoteId), bytes6ToBytes32(baseId), WAD))[0]
+    ).to.equal(WAD.div(2))
+    expect(
       (await chainlinkMultiOracle.callStatic.get(bytes6ToBytes32(baseId), bytes6ToBytes32(ethQuoteId), WAD))[0]
     ).to.equal(WAD.mul(3))
+    expect(
+      (await chainlinkMultiOracle.callStatic.get(bytes6ToBytes32(ethQuoteId), bytes6ToBytes32(baseId), WAD))[0]
+    ).to.equal(WAD.div(3))
   })
 
   it('sets and retrieves the chi and rate values at spot price from a compound multioracle', async () => {
