@@ -15,51 +15,18 @@ import "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
 import "./math/WMul.sol";
 import "./math/CastU256U128.sol";
 import "./math/CastU128I128.sol";
+import "./LadleStorage.sol";
 
 
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
-contract Ladle is AccessControl() {
+contract Ladle is LadleStorage, AccessControl() {
     using WMul for uint256;
     using CastU256U128 for uint256;
     using CastU128I128 for uint128;
     using AllTransferHelper for IERC20;
     using AllTransferHelper for address payable;
 
-    enum Operation {
-        BUILD,               // 0
-        TWEAK,               // 1
-        GIVE,                // 2
-        DESTROY,             // 3
-        STIR,                // 4
-        POUR,                // 5
-        SERVE,               // 6
-        ROLL,                // 7
-        CLOSE,               // 8
-        REPAY,               // 9
-        REPAY_VAULT,         // 10
-        FORWARD_PERMIT,      // 11
-        FORWARD_DAI_PERMIT,  // 12
-        JOIN_ETHER,          // 13
-        EXIT_ETHER,          // 14
-        TRANSFER_TO_POOL,    // 15
-        ROUTE,               // 16
-        TRANSFER_TO_FYTOKEN, // 17
-        REDEEM               // 18
-    }
-
-    ICauldron public immutable cauldron;
-    uint256 public borrowingFee;
-
-    mapping (bytes6 => IJoin)                   public joins;            // Join contracts available to manage assets. The same Join can serve multiple assets (ETH-A, ETH-B, etc...)
-    mapping (bytes6 => IPool)                   public pools;            // Pool contracts available to manage series. 12 bytes still free.
-
-    event JoinAdded(bytes6 indexed assetId, address indexed join);
-    event PoolAdded(bytes6 indexed seriesId, address indexed pool);
-    event FeeSet(uint256 fee);
-
-    constructor (ICauldron cauldron_) {
-        cauldron = cauldron_;
-    }
+    constructor (ICauldron cauldron) LadleStorage(cauldron) { }
 
     // ---- Data sourcing ----
     /// @dev Obtains a vault by vaultId from the Cauldron, and verifies that msg.sender is the owner
@@ -117,9 +84,18 @@ contract Ladle is AccessControl() {
     {
         IFYToken fyToken = getSeries(seriesId).fyToken;
         require (fyToken == pool.fyToken(), "Mismatched pool fyToken and series");
-        require (fyToken.underlying() == address(pool.baseToken()), "Mismatched pool base and series");
+        require (fyToken.underlying() == address(pool.base()), "Mismatched pool base and series");
         pools[seriesId] = pool;
         emit PoolAdded(seriesId, address(pool));
+    }
+
+    /// @dev Add or remove a module.
+    function setModule(address module, bool set)
+        external
+        auth
+    {
+        modules[module] = set;
+        emit ModuleSet(module, set);
     }
 
     /// @dev Set the fee parameter
@@ -213,7 +189,12 @@ contract Ladle is AccessControl() {
                 (bytes12 vaultId, address to, int128 ink, uint128 max) = abi.decode(data[i], (bytes12, address, int128, uint128));
                 if (cachedId != vaultId) (cachedId, vault) = (vaultId, getOwnedVault(vaultId));
                 _repayVault(vaultId, vault, to, ink, max);
-            
+
+            } else if (operation == Operation.REMOVE_REPAY) {
+                (bytes12 vaultId, address to, uint128 minBaseOut, uint128 minFYTokenOut) = abi.decode(data[i], (bytes12, address, uint128, uint128));
+                if (cachedId != vaultId) (cachedId, vault) = (vaultId, getOwnedVault(vaultId));
+                _removeAndRepay(vaultId, vault, to, minBaseOut, minFYTokenOut);
+
             } else if (operation == Operation.TRANSFER_TO_FYTOKEN) {
                 (bytes6 seriesId, uint256 amount) = abi.decode(data[i], (bytes6, uint256));
                 IFYToken fyToken = getSeries(seriesId).fyToken;
@@ -246,6 +227,10 @@ contract Ladle is AccessControl() {
                 _destroy(vaultId);
                 delete vault;   // Clear the cache
                 cachedId = bytes12(0);
+            
+            } else if (operation == Operation.MODULE) {
+                (address module, bytes memory moduleCall) = abi.decode(data[i], (address, bytes));
+                _moduleCall(module, moduleCall);
             
             }
         }
@@ -304,10 +289,10 @@ contract Ladle is AccessControl() {
         uint128 amt = _debtInBase(vault.seriesId, series, balances.art);
 
         // Mint fyToken to the pool, as a kind of flash loan
-        fyToken.mint(address(pool), amt * 2);
+        fyToken.mint(address(pool), amt * 2); // TODO: Set multiplier via parameter
 
         // Buy the base required to pay off the debt in series 1, and find out the debt in series 2
-        uint128 newDebt = pool.buyBaseToken(address(baseJoin), amt, max);
+        uint128 newDebt = pool.buyBase(address(baseJoin), amt, max);
         baseJoin.join(address(baseJoin), amt);                  // Repay the old series debt
 
         pool.retrieveFYToken(address(fyToken));                 // Get the surplus fyToken
@@ -365,9 +350,9 @@ contract Ladle is AccessControl() {
     {
         IPool pool = getPool(vault.seriesId);
         
-        art = pool.buyBaseTokenPreview(base);
+        art = pool.buyBasePreview(base);
         balances = _pour(vaultId, vault, address(pool), ink.i128(), art.i128());
-        pool.buyBaseToken(to, base, max);
+        pool.buyBase(to, base, max);
     }
 
     /// @dev Repay vault debt using underlying token at a 1:1 exchange rate, without trading in a pool.
@@ -421,7 +406,7 @@ contract Ladle is AccessControl() {
         DataTypes.Series memory series = getSeries(vault.seriesId);
         IPool pool = getPool(vault.seriesId);
 
-        art = pool.sellBaseToken(address(series.fyToken), min);
+        art = pool.sellBase(address(series.fyToken), min);
         balances = _pour(vaultId, vault, to, ink, -(art.i128()));
     }
 
@@ -437,7 +422,38 @@ contract Ladle is AccessControl() {
         balances = cauldron.balances(vaultId);
         base = pool.buyFYToken(address(series.fyToken), balances.art, max);
         balances = _pour(vaultId, vault, to, ink, -(balances.art.i128()));
-        pool.retrieveBaseToken(msg.sender);
+        pool.retrieveBase(msg.sender);
+    }
+
+    /// @dev Remove liquidity in a pool and use proceedings to repay debt
+    /// The liquidity tokens need to be already in the pool, unaccounted for.
+    function _removeAndRepay(bytes12 vaultId, DataTypes.Vault memory vault, address to, uint128 minBaseOut, uint128 minFYTokenOut)
+        private
+        returns (DataTypes.Balances memory balances)
+    {
+        DataTypes.Series memory series = getSeries(vault.seriesId);
+        balances = cauldron.balances(vaultId);
+        IPool pool = getPool(vault.seriesId);
+        (, uint256 base, uint256 art) = pool.burn(address(this), minBaseOut, minFYTokenOut);
+
+        uint256 repayment;
+
+        // Update accounting
+        if (balances.art > 0) {
+            repayment = (art >= balances.art) ? balances.art : art;
+            balances = cauldron.pour(vaultId, 0, -(repayment.u128().i128()));
+            series.fyToken.burn(address(this), repayment);
+        }
+        
+        // Return base
+        IERC20 baseToken = IERC20(cauldron.assets(series.baseId));
+        baseToken.safeTransfer(to, base);
+
+        // Return fyToken
+        if (art - repayment > 0) {
+            IERC20 fyToken = IERC20(address(series.fyToken));
+            fyToken.safeTransfer(to, art - repayment);
+        }
     }
 
     // ---- Liquidations ----
@@ -528,7 +544,7 @@ contract Ladle is AccessControl() {
     function _transferToPool(IPool pool, bool base, uint128 wad)
         private
     {
-        IERC20 token = base ? pool.baseToken() : pool.fyToken();
+        IERC20 token = base ? pool.base() : pool.fyToken();
         token.safeTransferFrom(msg.sender, address(pool), wad);
     }
 
@@ -556,5 +572,17 @@ contract Ladle is AccessControl() {
         returns (uint256)
     {
         return fyToken.redeem(to, wad);
+    }
+
+    // ---- Module router ----
+
+    /// @dev Allow users to use functionality coded in a module, to be used with batch
+    function _moduleCall(address module, bytes memory moduleCall)
+        private
+        returns (bool success, bytes memory result)
+    {
+        require (modules[module], "Unregistered module");
+        (success, result) = module.delegatecall(moduleCall);
+        if (!success) revert(RevertMsgExtractor.getRevertMsg(result));
     }
 }

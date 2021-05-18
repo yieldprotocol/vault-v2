@@ -1,6 +1,6 @@
 {
   "name": "@yield-protocol/vault-v2",
-  "version": "0.4.1",
+  "version": "0.5.0-rc1",
   "description": "Yield Collateralized Debt Engine v2",
   "author": "Yield Inc.",
   "files": [
@@ -13,7 +13,7 @@
   "typings": "dist/index.d.ts",
   "scripts": {
     "build": "rm -rf artifacts typechain && hardhat compile",
-    "test": "mocha --require hardhat/register --recursive --parallel --exit --extension ts",
+    "test": "hardhat test",
     "test:only": "hardhat test",
     "test:deploy": "hardhat deploy --tags DeployTest",
     "coverage": "hardhat coverage",
@@ -31,7 +31,7 @@
     "@types/mocha": "^8.0.0",
     "@yield-protocol/utils-v2": "^2.2.5",
     "@yield-protocol/vault-interfaces": "^2.0.28",
-    "@yield-protocol/yieldspace-interfaces": "^2.0.13",
+    "@yield-protocol/yieldspace-interfaces": "^2.0.14",
     "chai": "4.2.0",
     "dss-interfaces": "0.1.1",
     "erc3156": "^0.4.8",

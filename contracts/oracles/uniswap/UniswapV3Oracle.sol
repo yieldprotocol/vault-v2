@@ -59,11 +59,11 @@ contract UniswapV3Oracle is IOracle, Ownable {
      * @notice Retrieve the value of the amount at the latest oracle price.
      * @return value
      */
-    function peek(bytes32 base, bytes32 quote, uint256 amount) public virtual override view returns (uint256 value, uint256 updateTime) {
-        address source = sources[base.b6()][quote.b6()];
+    function _peek(bytes6 base, bytes6 quote, uint256 amount) public virtual view returns (uint256 value, uint256 updateTime) {
+        address source = sources[base][quote];
         SourceData memory sourceData;
         if (source == address(0)) {
-            source = sources[quote.b6()][base.b6()];
+            source = sources[quote][base];
             require(source != address(0), "Source not set for base and quote");
             sourceData = sourcesData[source];
             sourceData.baseToken = sourcesData[source].quoteToken;
@@ -78,10 +78,18 @@ contract UniswapV3Oracle is IOracle, Ownable {
     }
 
     /**
-     * @notice Retrieve the value of the amount at the latest oracle price.. Same as `peek` for this oracle.
+     * @notice Retrieve the value of the amount at the latest oracle price.
+     * @return value
+     */
+    function peek(bytes32 base, bytes32 quote, uint256 amount) public virtual override view returns (uint256 value, uint256 updateTime) {
+        return _peek(base.b6(), quote.b6(), amount);
+    }
+
+    /**
+     * @notice Retrieve the value of the amount at the latest oracle price. Same as `peek` for this oracle.
      * @return value
      */
     function get(bytes32 base, bytes32 quote, uint256 amount) public virtual override view returns (uint256 value, uint256 updateTime) {
-        return peek(base, quote, amount);
+        return _peek(base.b6(), quote.b6(), amount);
     }
 }

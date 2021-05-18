@@ -50,6 +50,7 @@ describe('Oracle', function () {
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const usdQuoteId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ethQuoteId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const mockBytes6 = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const mockBytes32 = ethers.utils.hexlify(ethers.utils.randomBytes(32))
 
   before(async () => {
@@ -91,6 +92,18 @@ describe('Oracle', function () {
   it('sets and retrieves the value at spot price', async () => {
     await oracle.set(WAD.mul(2))
     expect((await oracle.callStatic.get(mockBytes32, mockBytes32, WAD))[0]).to.equal(WAD.mul(2))
+  })
+
+  it('revert on unknown sources', async () => {
+    await expect(
+      chainlinkMultiOracle.callStatic.get(bytes6ToBytes32(mockBytes6), bytes6ToBytes32(mockBytes6), WAD)
+    ).to.be.revertedWith('Source not found')
+    await expect(compoundMultiOracle.callStatic.get(bytes6ToBytes32(mockBytes6), CHI, WAD)).to.be.revertedWith(
+      'Source not found'
+    )
+    await expect(
+      uniswapV3Oracle.callStatic.get(bytes6ToBytes32(mockBytes6), bytes6ToBytes32(mockBytes6), WAD)
+    ).to.be.revertedWith('Source not found')
   })
 
   it('sets and retrieves the value at spot price from a chainlink multioracle', async () => {
