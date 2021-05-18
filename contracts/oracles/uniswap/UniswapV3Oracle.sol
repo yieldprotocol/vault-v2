@@ -45,7 +45,6 @@ contract UniswapV3Oracle is IOracle, Ownable {
         require(bases.length == quotes.length && quotes.length == sources_.length, "Mismatched inputs");
         for (uint256 i = 0; i < bases.length; i++) {
             sources[bases[i]][quotes[i]] = sources_[i];
-            sources[quotes[i]][bases[i]] = sources_[i];
             sourcesData[sources_[i]] = SourceData(
                 IUniswapV3PoolImmutables(sources_[i]).factory(),
                 IUniswapV3PoolImmutables(sources_[i]).token0(),
@@ -61,7 +60,19 @@ contract UniswapV3Oracle is IOracle, Ownable {
      * @return value
      */
     function peek(bytes32 base, bytes32 quote, uint256 amount) public virtual override view returns (uint256 value, uint256 updateTime) {
-        SourceData memory sourceData = sourcesData[sources[base.b6()][quote.b6()]];
+        address source = sources[base.b6()][quote.b6()];
+        SourceData memory sourceData;
+        if (source == address(0)) {
+            source = sources[quote.b6()][base.b6()];
+            require(source != address(0), "Source not set for base and quote");
+            sourceData = sourcesData[source];
+            sourceData.baseToken = sourcesData[source].quoteToken;
+            sourceData.quoteToken = sourcesData[source].baseToken;
+        } else {
+            sourceData = sourcesData[source];
+            sourceData.baseToken = sourcesData[source].baseToken;
+            sourceData.quoteToken = sourcesData[source].quoteToken;
+        }
         value = UniswapV3OracleLibraryMock.consult(sourceData.factory, sourceData.baseToken, sourceData.quoteToken, sourceData.fee, amount, secondsAgo);
         updateTime = block.timestamp - secondsAgo;
     }
