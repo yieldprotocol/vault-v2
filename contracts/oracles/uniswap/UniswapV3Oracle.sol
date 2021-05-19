@@ -18,6 +18,11 @@ contract UniswapV3Oracle is IOracle, Ownable {
     event SecondsAgoSet(uint32 indexed secondsAgo);
     event SourcesSet(bytes6[] indexed bases, bytes6[] indexed quotes, address[] indexed sources_);
 
+    struct Source {
+        address source;
+        bool inverse;
+    }
+
     struct SourceData {
         address factory;
         address baseToken;
@@ -26,7 +31,7 @@ contract UniswapV3Oracle is IOracle, Ownable {
     }
 
     uint32 public secondsAgo;
-    mapping(bytes6 => mapping(bytes6 => address)) public sources;
+    mapping(bytes6 => mapping(bytes6 => Source)) public sources;
     mapping(address => SourceData) public sourcesData;
 
     /**
@@ -44,7 +49,8 @@ contract UniswapV3Oracle is IOracle, Ownable {
     function setSources(bytes6[] memory bases, bytes6[] memory quotes, address[] memory sources_) public onlyOwner {
         require(bases.length == quotes.length && quotes.length == sources_.length, "Mismatched inputs");
         for (uint256 i = 0; i < bases.length; i++) {
-            sources[bases[i]][quotes[i]] = sources_[i];
+            sources[bases[i]][quotes[i]] = Source(sources_[i], false);
+            sources[quotes[i]][bases[i]] = Source(sources_[i], true);
             sourcesData[sources_[i]] = SourceData(
                 IUniswapV3PoolImmutables(sources_[i]).factory(),
                 IUniswapV3PoolImmutables(sources_[i]).token0(),
@@ -60,10 +66,15 @@ contract UniswapV3Oracle is IOracle, Ownable {
      * @return value
      */
     function _peek(bytes6 base, bytes6 quote, uint256 amount) public virtual view returns (uint256 value, uint256 updateTime) {
-        address source = sources[base][quote];
-        require (source != address(0), "Source not found");
-        SourceData memory sourceData = sourcesData[sources[base][quote]];
-        value = UniswapV3OracleLibraryMock.consult(sourceData.factory, sourceData.baseToken, sourceData.quoteToken, sourceData.fee, amount, secondsAgo);
+        Source memory source = sources[base][quote];
+        SourceData memory sourceData;
+        require(source.source != address(0), "Source not found");
+        sourceData = sourcesData[source.source];
+        if (source.inverse) {
+            value = UniswapV3OracleLibraryMock.consult(sourceData.factory, sourceData.quoteToken, sourceData.baseToken, sourceData.fee, amount, secondsAgo);
+        } else {
+            value = UniswapV3OracleLibraryMock.consult(sourceData.factory, sourceData.baseToken, sourceData.quoteToken, sourceData.fee, amount, secondsAgo);
+        }
         updateTime = block.timestamp - secondsAgo;
     }
 
