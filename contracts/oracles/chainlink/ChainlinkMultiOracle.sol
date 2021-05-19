@@ -18,6 +18,7 @@ contract ChainlinkMultiOracle is IOracle, Ownable {
     struct Source {
         address source;
         uint8 decimals;
+        bool inverse;
     }
 
     mapping(bytes6 => mapping(bytes6 => Source)) public sources;
@@ -34,7 +35,8 @@ contract ChainlinkMultiOracle is IOracle, Ownable {
         for (uint256 i = 0; i < bases.length; i++) {
             uint8 decimals = AggregatorV3Interface(sources_[i]).decimals();
             require (decimals <= 18, "Unsupported decimals");
-            sources[bases[i]][quotes[i]] = Source(sources_[i], decimals);
+            sources[bases[i]][quotes[i]] = Source(sources_[i], decimals, false);
+            sources[quotes[i]][bases[i]] = Source(sources_[i], decimals, true);
         }
         emit SourcesSet(bases, quotes, sources_);
     }
@@ -48,19 +50,14 @@ contract ChainlinkMultiOracle is IOracle, Ownable {
         uint80 roundId;
         uint80 answeredInRound;
         Source memory source = sources[base][quote];
-        if (source.source == address(0)) {
-            source = sources[quote][base];
-            require (source.source != address(0), "Source not found");
-            (roundId, rawPrice,, updateTime, answeredInRound) = AggregatorV3Interface(source.source).latestRoundData();
-            require(rawPrice > 0, "Chainlink price <= 0");
-            require(updateTime != 0, "Incomplete round");
-            require(answeredInRound >= roundId, "Stale price");
+        require (source.source != address(0), "Source not found");
+        (roundId, rawPrice,, updateTime, answeredInRound) = AggregatorV3Interface(source.source).latestRoundData();
+        require(rawPrice > 0, "Chainlink price <= 0");
+        require(updateTime != 0, "Incomplete round");
+        require(answeredInRound >= roundId, "Stale price");
+        if (source.inverse == true) {
             price = 10 ** (source.decimals + 18) / uint(rawPrice);
         } else {
-            (roundId, rawPrice,, updateTime, answeredInRound) = AggregatorV3Interface(source.source).latestRoundData();
-            require(rawPrice > 0, "Chainlink price <= 0");
-            require(updateTime != 0, "Incomplete round");
-            require(answeredInRound >= roundId, "Stale price");
             price = uint(rawPrice) * 10 ** (18 - source.decimals);
         }  
     }
