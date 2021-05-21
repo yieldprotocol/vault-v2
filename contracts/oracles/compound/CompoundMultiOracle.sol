@@ -10,7 +10,7 @@ import "./CTokenInterface.sol";
 contract CompoundMultiOracle is IOracle, Ownable {
     using CastBytes32Bytes6 for bytes32;
 
-    event SourcesSet(bytes6 baseId, bytes32 kind, address source);
+    event SourceSet(bytes6 indexed baseId, bytes32 indexed kind, address indexed source);
 
     uint public constant SCALE_FACTOR = 1; // I think we don't need scaling for rate and chi oracles
 
@@ -21,7 +21,7 @@ contract CompoundMultiOracle is IOracle, Ownable {
      */
     function setSource(bytes6 base, bytes32 kind, address source) public onlyOwner {
         sources[base][kind] = source;
-        emit SourcesSet(base, kind, source);
+        emit SourceSet(base, kind, source);
     }
 
     /**
