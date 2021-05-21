@@ -23,11 +23,6 @@ contract UniswapV3Oracle is IOracle, Ownable {
         bool inverse;
     }
 
-    struct Source {
-        address source;
-        bool inverse;
-    }
-
     struct SourceData {
         address factory;
         address baseToken;
