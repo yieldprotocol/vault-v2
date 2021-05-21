@@ -17,7 +17,7 @@ interface ICauldronGov {
     function addIlks(bytes6, bytes6[] memory) external;
     function setRateOracle(bytes6, IOracle) external;
     function setSpotOracle(bytes6, bytes6, IOracle, uint32) external;
-    function setMaxDebt(bytes6, bytes6, uint128) external;
+    function setDebtLimits(bytes6, bytes6, uint96, uint24, uint8) external;
 }
 
 interface ILadleGov {
@@ -94,10 +94,10 @@ contract Wand is AccessControl {
     }
 
     /// @dev Make an ilk asset out of a generic asset, by adding a spot oracle against a base asset, collateralization ratio, and debt ceiling.
-    function makeIlk(bytes6 baseId, bytes6 ilkId, ISpotMultiOracleGov oracle, address spotSource, uint32 ratio, uint128 maxDebt) public auth {
+    function makeIlk(bytes6 baseId, bytes6 ilkId, ISpotMultiOracleGov oracle, address spotSource, uint32 ratio, uint96 max, uint24 min, uint8 dec) public auth {
         oracle.setSource(baseId, ilkId, spotSource);
         cauldron.setSpotOracle(baseId, ilkId, IOracle(address(oracle)), ratio);
-        cauldron.setMaxDebt(baseId, ilkId, maxDebt);
+        cauldron.setDebtLimits(baseId, ilkId, max, min, dec);
     }
 
     /// @dev Add an existing series to the protocol, by deploying a FYToken, and registering it in the cauldron with the approved ilks

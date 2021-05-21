@@ -73,7 +73,7 @@ describe('Cauldron - admin', function () {
       [
         id('setAuctionInterval(uint32)'),
         id('addAsset(bytes6,address)'),
-        id('setMaxDebt(bytes6,bytes6,uint128)'),
+        id('setDebtLimits(bytes6,bytes6,uint96,uint24,uint8)'),
         id('setRateOracle(bytes6,address)'),
         id('setSpotOracle(bytes6,bytes6,address,uint32)'),
         id('addSeries(bytes6,bytes6,address)'),
@@ -123,21 +123,23 @@ describe('Cauldron - admin', function () {
       expect(await cauldron.assets(otherIlk1)).to.equal(ilk1.address)
     })
 
-    it('does not allow setting a debt limit for an unknown base', async () => {
-      await expect(cauldron.setMaxDebt(mockAssetId, ilkId1, 2)).to.be.revertedWith('Base not found')
+    it('does not allow setting debt limits for an unknown base', async () => {
+      await expect(cauldron.setDebtLimits(mockAssetId, ilkId1, 0, 0, 0)).to.be.revertedWith('Base not found')
     })
 
-    it('does not allow setting a debt limit for an unknown ilk', async () => {
-      await expect(cauldron.setMaxDebt(baseId, mockAssetId, 2)).to.be.revertedWith('Ilk not found')
+    it('does not allow setting a debt limits for an unknown ilk', async () => {
+      await expect(cauldron.setDebtLimits(baseId, mockAssetId, 0, 0, 0)).to.be.revertedWith('Ilk not found')
     })
 
-    it('sets a debt limit', async () => {
-      expect(await cauldron.setMaxDebt(baseId, ilkId1, 2))
-        .to.emit(cauldron, 'MaxDebtSet')
-        .withArgs(baseId, ilkId1, 2)
+    it('sets debt limits', async () => {
+      expect(await cauldron.setDebtLimits(baseId, ilkId1, 2, 1, 3))
+        .to.emit(cauldron, 'DebtLimitsSet')
+        .withArgs(baseId, ilkId1, 2, 1, 3)
 
       const debt = await cauldron.debt(baseId, ilkId1)
       expect(debt.max).to.equal(2)
+      expect(debt.min).to.equal(1)
+      expect(debt.dec).to.equal(3)
     })
 
     it('does not allow adding a rate oracle for an unknown base', async () => {
