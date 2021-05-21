@@ -1,21 +1,23 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { BaseProvider } from '@ethersproject/providers'
+
 import { constants, id } from '@yield-protocol/utils-v2'
 const { WAD, THREE_MONTHS } = constants
 import { RATE } from '../src/constants'
 
 import FYTokenArtifact from '../artifacts/contracts/FYToken.sol/FYToken.json'
-import JoinArtifact from '../artifacts/contracts/Join.sol/Join.json'
+import JoinFactoryArtifact from '../artifacts/contracts/JoinFactory.sol/JoinFactory.json'
 import OracleMockArtifact from '../artifacts/contracts/mocks/oracles/OracleMock.sol/OracleMock.json'
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
-import PoolMockArtifact from '../artifacts/contracts/mocks/PoolMock.sol/PoolMock.json'
+import PoolFactoryMockArtifact from '../artifacts/contracts/mocks/PoolFactoryMock.sol/PoolFactoryMock.json'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
+import { JoinFactory } from '../typechain/JoinFactory'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { OracleMock } from '../typechain/OracleMock'
 import { PoolMock } from '../typechain/PoolMock'
+import { PoolFactoryMock } from '../typechain/PoolFactoryMock'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
@@ -36,8 +38,10 @@ describe('Ladle - admin', function () {
   let fyToken: FYToken
   let base: ERC20Mock
   let baseJoin: Join
+  let joinFactory: JoinFactory
   let ilk: ERC20Mock
   let ilkJoin: Join
+  let poolFactory: PoolFactoryMock
   let pool: PoolMock
   let oracle: OracleMock
   let rateOracle: OracleMock
@@ -88,12 +92,15 @@ describe('Ladle - admin', function () {
     await cauldron.setSpotOracle(baseId, ilkId, oracle.address, ratio)
 
     // Deploy a join
-    ilkJoin = (await deployContract(ownerAcc, JoinArtifact, [ilk.address])) as Join
+    joinFactory = (await deployContract(ownerAcc, JoinFactoryArtifact, [])) as JoinFactory
+    const joinAddress = await joinFactory.calculateJoinAddress(ilk.address) // Get the address
+    await joinFactory.createJoin(ilk.address) // Create the Join (doesn't return anything outside a contract call)
+    ilkJoin = (await ethers.getContractAt('Join', joinAddress, ownerAcc)) as Join
     await ilkJoin.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], ladle.address)
 
     // Deploy a series
-    const provider: BaseProvider = await ethers.provider
-    maturity = (await provider.getBlock(await provider.getBlockNumber())).timestamp + THREE_MONTHS
+    const { timestamp } = await ethers.provider.getBlock('latest')
+    maturity = timestamp + THREE_MONTHS
     fyToken = (await deployContract(ownerAcc, FYTokenArtifact, [
       baseId,
       rateOracle.address,
@@ -106,7 +113,10 @@ describe('Ladle - admin', function () {
     await cauldron.addIlks(seriesId, [ilkId])
 
     // Deploy a pool
-    pool = (await deployContract(ownerAcc, PoolMockArtifact, [base.address, fyToken.address])) as PoolMock
+    poolFactory = (await deployContract(ownerAcc, PoolFactoryMockArtifact, [])) as PoolFactoryMock
+    const poolAddress = await poolFactory.calculatePoolAddress(base.address, fyToken.address) // Get the address
+    await poolFactory.createPool(base.address, fyToken.address) // Create the Pool (doesn't return anything outside a contract call)
+    pool = (await ethers.getContractAt('PoolMock', poolAddress, ownerAcc)) as PoolMock
   })
 
   it('sets the borrowing fee', async () => {
@@ -164,7 +174,9 @@ describe('Ladle - admin', function () {
     })
 
     it('does not allow adding a pool with a mismatched base', async () => {
-      const otherPool = (await deployContract(ownerAcc, PoolMockArtifact, [ilk.address, fyToken.address])) as PoolMock
+      const poolAddress = await poolFactory.calculatePoolAddress(ilk.address, fyToken.address) // Get the address
+      await poolFactory.createPool(ilk.address, fyToken.address) // Create the Pool (doesn't return anything outside a contract call)
+      const otherPool = (await ethers.getContractAt('PoolMock', poolAddress, ownerAcc)) as PoolMock
 
       await expect(ladle.addPool(seriesId, otherPool.address)).to.be.revertedWith('Mismatched pool base and series')
     })

@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
+import "@yield-protocol/utils-v2/contracts/access/Ownable.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
 import "@yield-protocol/vault-interfaces/IFYToken.sol";
+import "@yield-protocol/yieldspace-interfaces/IPoolFactory.sol";
 import "./ERC20Mock.sol";
 
 
@@ -27,7 +29,7 @@ library RMath { // Fixed point arithmetic in Ray units
     }
 }
 
-contract PoolMock is ERC20 {
+contract PoolMock is ERC20, Ownable() {
     using RMath for uint128;
 
     event Trade(uint32 maturity, address indexed from, address indexed to, int256 baseAmount, int256 fyTokenAmount);
@@ -40,12 +42,9 @@ contract PoolMock is ERC20 {
     uint112 public baseReserves;
     uint112 public fyTokenReserves;
 
-    constructor(
-        IERC20 base_,
-        IFYToken fyToken_
-    ) ERC20("Pool", "Pool", 18) {
-        base = base_;
-        fyToken = fyToken_;
+    constructor() ERC20("Pool", "Pool", 18) {
+        fyToken = IFYToken(IPoolFactory(msg.sender).nextFYToken());
+        base = IERC20(IPoolFactory(msg.sender).nextBase());
     }
 
     function sync() public {

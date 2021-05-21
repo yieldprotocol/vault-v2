@@ -2,13 +2,14 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { id } from '@yield-protocol/utils-v2'
 
 import CauldronArtifact from '../artifacts/contracts/Cauldron.sol/Cauldron.json'
-import JoinArtifact from '../artifacts/contracts/Join.sol/Join.json'
+import JoinFactoryArtifact from '../artifacts/contracts/JoinFactory.sol/JoinFactory.json'
 import FYTokenArtifact from '../artifacts/contracts/FYToken.sol/FYToken.json'
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
 import OracleMockArtifact from '../artifacts/contracts/mocks/oracles/OracleMock.sol/OracleMock.json'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
+import { JoinFactory } from '../typechain/JoinFactory'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { OracleMock } from '../typechain/OracleMock'
@@ -28,11 +29,11 @@ describe('Cauldron - admin', function () {
   let ilk1: ERC20Mock
   let ilk2: ERC20Mock
   let join: Join
+  let joinFactory: JoinFactory
   let oracle: OracleMock
 
   const mockAssetId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const mockSeriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const mockAddress = ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20)))
   const emptyAddress = ethers.utils.getAddress('0x0000000000000000000000000000000000000000')
 
   before(async () => {
@@ -54,7 +55,10 @@ describe('Cauldron - admin', function () {
     base = (await deployContract(ownerAcc, ERC20MockArtifact, [baseId, 'Mock Base'])) as ERC20Mock
     ilk1 = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId1, 'Mock Ilk'])) as ERC20Mock
     ilk2 = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId2, 'Mock Ilk'])) as ERC20Mock
-    join = (await deployContract(ownerAcc, JoinArtifact, [base.address])) as Join
+    joinFactory = (await deployContract(ownerAcc, JoinFactoryArtifact, [])) as JoinFactory
+    const joinAddress = await joinFactory.calculateJoinAddress(base.address) // Get the address
+    await joinFactory.createJoin(base.address) // Create the Join (doesn't return anything outside a contract call)
+    join = (await ethers.getContractAt('Join', joinAddress, ownerAcc)) as Join
     fyToken = (await deployContract(ownerAcc, FYTokenArtifact, [
       baseId,
       base.address,

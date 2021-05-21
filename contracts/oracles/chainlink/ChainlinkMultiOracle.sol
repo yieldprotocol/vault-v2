@@ -13,7 +13,7 @@ import "./AggregatorV3Interface.sol";
 contract ChainlinkMultiOracle is IOracle, Ownable {
     using CastBytes32Bytes6 for bytes32;
 
-    event SourcesSet(bytes6[] indexed bases, bytes6[] indexed quotes, address[] indexed sources);
+    event SourceSet(bytes6 indexed baseId, bytes6 indexed quoteId, address indexed source);
 
     struct Source {
         address source;
@@ -24,7 +24,27 @@ contract ChainlinkMultiOracle is IOracle, Ownable {
     mapping(bytes6 => mapping(bytes6 => Source)) public sources;
 
     /**
-     * @notice Set or reset a number of oracle sources
+     * @notice Set or reset an oracle source and its inverse
+     */
+    function setSource(bytes6 base, bytes6 quote, address source) public onlyOwner {
+        uint8 decimals = AggregatorV3Interface(source).decimals();
+        require (decimals <= 18, "Unsupported decimals");
+        sources[base][quote] = Source({
+            source: source,
+            decimals: decimals,
+            inverse: false
+        });
+        sources[quote][base] = Source({
+            source: source,
+            decimals: decimals,
+            inverse: true
+        });
+        emit SourceSet(base, quote, source);
+        emit SourceSet(quote, base, source);
+    }
+
+    /**
+     * @notice Set or reset a number of oracle sources and their inverses
      */
     function setSources(bytes6[] memory bases, bytes6[] memory quotes, address[] memory sources_) public onlyOwner {
         require(
@@ -33,12 +53,8 @@ contract ChainlinkMultiOracle is IOracle, Ownable {
             "Mismatched inputs"
         );
         for (uint256 i = 0; i < bases.length; i++) {
-            uint8 decimals = AggregatorV3Interface(sources_[i]).decimals();
-            require (decimals <= 18, "Unsupported decimals");
-            sources[bases[i]][quotes[i]] = Source(sources_[i], decimals, false);
-            sources[quotes[i]][bases[i]] = Source(sources_[i], decimals, true);
+            setSource(bases[i], quotes[i], sources_[i]);
         }
-        emit SourcesSet(bases, quotes, sources_);
     }
 
     /**

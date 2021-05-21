@@ -16,7 +16,7 @@ contract UniswapV3Oracle is IOracle, Ownable {
     using CastBytes32Bytes6 for bytes32;
 
     event SecondsAgoSet(uint32 indexed secondsAgo);
-    event SourcesSet(bytes6[] indexed bases, bytes6[] indexed quotes, address[] indexed sources_);
+    event SourceSet(bytes6 indexed base, bytes6 indexed quote, address indexed source);
 
     struct Source {
         address source;
@@ -44,21 +44,29 @@ contract UniswapV3Oracle is IOracle, Ownable {
     }
 
     /**
+     * @notice Set or reset an oracle source and its inverse
+     */
+    function setSource(bytes6 base, bytes6 quote, address source) public onlyOwner {
+        sources[base][quote] = Source(source, false);
+        sources[quote][base] = Source(source, true);
+        sourcesData[source] = SourceData(
+            IUniswapV3PoolImmutables(source).factory(),
+            IUniswapV3PoolImmutables(source).token0(),
+            IUniswapV3PoolImmutables(source).token1(),
+            IUniswapV3PoolImmutables(source).fee()
+        );
+        emit SourceSet(base, quote, source);
+        emit SourceSet(quote, base, source);
+    }
+
+    /**
      * @notice Set or reset a number of oracle sources
      */
     function setSources(bytes6[] memory bases, bytes6[] memory quotes, address[] memory sources_) public onlyOwner {
         require(bases.length == quotes.length && quotes.length == sources_.length, "Mismatched inputs");
         for (uint256 i = 0; i < bases.length; i++) {
-            sources[bases[i]][quotes[i]] = Source(sources_[i], false);
-            sources[quotes[i]][bases[i]] = Source(sources_[i], true);
-            sourcesData[sources_[i]] = SourceData(
-                IUniswapV3PoolImmutables(sources_[i]).factory(),
-                IUniswapV3PoolImmutables(sources_[i]).token0(),
-                IUniswapV3PoolImmutables(sources_[i]).token1(),
-                IUniswapV3PoolImmutables(sources_[i]).fee()
-            );
+            setSource(bases[i], quotes[i], sources_[i]);
         }
-        emit SourcesSet(bases, quotes, sources_);
     }
 
     /**
