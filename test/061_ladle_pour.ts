@@ -109,8 +109,8 @@ describe('Ladle - pour', function () {
       const fee = WAD.div(1000000000) // 0.000000 001% wei/second
       await ladle.setFee(fee)
       await ladle.pour(vaultId, owner, 0, WAD)
-      const now = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
-      const appliedFee = (await fyToken.maturity()).sub(now).mul(fee)
+      const { timestamp } = await ethers.provider.getBlock('latest')
+      const appliedFee = (await fyToken.maturity()).sub(timestamp).mul(fee)
       expect(await fyToken.balanceOf(owner)).to.equal(WAD)
       expect((await cauldron.balances(vaultId)).art).to.equal(WAD.add(appliedFee))
     })

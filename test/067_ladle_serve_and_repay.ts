@@ -136,7 +136,7 @@ describe('Ladle - serve and repay', function () {
       .withArgs(vaultId, seriesId, ilkId, inkRetrieved, WAD.mul(-1))
       .to.emit(pool, 'Trade')
       .withArgs(await fyToken.maturity(), ladle.address, fyToken.address, debtinBase, debtinFY.mul(-1))
-    // await pool.retrieveBaseToken(owner)
+    // await pool.retrieveBase(owner)
 
     expect((await cauldron.balances(vaultId)).art).to.equal(0)
     expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(debtinBase))

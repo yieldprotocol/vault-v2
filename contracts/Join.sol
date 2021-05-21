@@ -3,8 +3,9 @@ pragma solidity ^0.8.0;
 
 import "erc3156/contracts/interfaces/IERC3156FlashBorrower.sol";
 import "erc3156/contracts/interfaces/IERC3156FlashLender.sol";
-import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 import "@yield-protocol/vault-interfaces/IJoin.sol";
+import "@yield-protocol/vault-interfaces/IJoinFactory.sol";
+import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/token/AllTransferHelper.sol";
 import "./math/WMul.sol";
@@ -24,8 +25,8 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
     uint256 public storedBalance;
     uint256 public flashFeeFactor; // Fee on flash loans, as a percentage in fixed point with 18 decimals
 
-    constructor(address asset_) {
-        asset = asset_;
+    constructor() {
+        asset = IJoinFactory(msg.sender).nextAsset();
     }
 
     /// @dev Set the flash loan fee factor
@@ -51,13 +52,11 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
         internal
         returns (uint128)
     {
-        // require(live == 1, "GemJoin/not-live");
         IERC20 token = IERC20(asset);
-        uint256 initialBalance = token.balanceOf(address(this));
-        uint256 surplus = initialBalance - storedBalance;
-        uint256 required = surplus >= amount ? 0 : amount - surplus;
-        storedBalance = initialBalance + required;
-        if (required > 0) token.safeTransferFrom(user, address(this), required);
+        uint256 _storedBalance = storedBalance;
+        uint256 available = token.balanceOf(address(this)) - _storedBalance; // Fine to panic if this underflows
+        storedBalance = _storedBalance + amount;
+        unchecked { if (available < amount) token.safeTransferFrom(user, address(this), amount - available); }
         return amount;        
     }
 
@@ -76,7 +75,7 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
         returns (uint128)
     {
         IERC20 token = IERC20(asset);
-        storedBalance -= amount;                                  // To withdraw surplus tokens we can do a `join` for zero tokens first.
+        storedBalance -= amount;
         token.safeTransfer(user, amount);
         return amount;
     }

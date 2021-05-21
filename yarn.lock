@@ -2289,23 +2289,23 @@
   resolved "https://registry.yarnpkg.com/@yarnpkg/lockfile/-/lockfile-1.1.0.tgz#e77a97fbd345b76d83245edcd17d393b1b41fb31"
   integrity sha512-GpSwvyXOcOOlV70vbnzjj4fW5xW/FdUF6nQEt1ENy7m4ZCczi1+/buVUPAqmGfqznsORNFzUMjctTIp8a9tuCQ==
 
-"@yield-protocol/utils-v2@^2.2.4":
-  version "2.2.4"
-  resolved "https://registry.yarnpkg.com/@yield-protocol/utils-v2/-/utils-v2-2.2.4.tgz#fa83353691812be8c0a08cb99d172f30d0e2cadd"
-  integrity sha512-knYXm0oz5Be8+b9R2Cs3SNvw/8Z0tpGtyr8JKGBaoOWeYGUXJR86/G73wq+H4coZcPvSVhi12ez0wmX7wkGHYA==
+"@yield-protocol/utils-v2@^2.2.5":
+  version "2.2.5"
+  resolved "https://registry.yarnpkg.com/@yield-protocol/utils-v2/-/utils-v2-2.2.5.tgz#b6f8b8d5eee11eb664217af62587a7628fbd42c1"
+  integrity sha512-Lu8bDQgnmA9m0hhCn6ko235mm95UszIn0+qyR6tLoJ5CPaJ1qQFuQtB2iEel24Wq8WP1B8tAYdfjI7N5XXwKcA==
   dependencies:
     ethereumjs-util "^7.0.8"
     ethers "^5.0.7"
 
-"@yield-protocol/vault-interfaces@^2.0.28":
-  version "2.0.28"
-  resolved "https://registry.yarnpkg.com/@yield-protocol/vault-interfaces/-/vault-interfaces-2.0.28.tgz#0f0be4bd2791870ec8c89df1021eca3543dc7e65"
-  integrity sha512-YDhr/SpHvA8nUXDanDzviXoNnA2r/UGxuTIqpd+glgq4E6vHHqgviOOeNtqEztdDzFgXR/OWBK6S/bk+nw8udg==
+"@yield-protocol/vault-interfaces@^2.0.29":
+  version "2.0.29"
+  resolved "https://registry.yarnpkg.com/@yield-protocol/vault-interfaces/-/vault-interfaces-2.0.29.tgz#b5514164ba24190996e4141526dd09400bad7a70"
+  integrity sha512-NiPrNNID0RjvkEEIcfdjt2Ay0Uh2/avD2auWpCFx0XMAiHKFLIlo1r2XXv6r0AHcjEtUjqtd/gOgdumZNgX2zA==
 
-"@yield-protocol/yieldspace-interfaces@^2.0.13":
-  version "2.0.13"
-  resolved "https://registry.yarnpkg.com/@yield-protocol/yieldspace-interfaces/-/yieldspace-interfaces-2.0.13.tgz#683febd156d9c834bdeff7ef8e29f679ab20f4f8"
-  integrity sha512-eQctxMzjXGop2N3z9V5x1B5b5Uh5OOqv4xwTF1dLAKh/MVVxyVrtTFh2F/4ccbvb64GXyAYAi2MO96EMZPLVqQ==
+"@yield-protocol/yieldspace-interfaces@^2.0.14":
+  version "2.0.14"
+  resolved "https://registry.yarnpkg.com/@yield-protocol/yieldspace-interfaces/-/yieldspace-interfaces-2.0.14.tgz#b54adfcde6f8149b910fa77062f24ce5f62f988f"
+  integrity sha512-M/6Q++878++40en39Bl4UPkTXeYR0N+HitUJmx0qpXLrrwCML7u2pMCgGfrf6zTowcQYBPDwsG7A5n1bwzhzpA==
 
 abab@^2.0.0:
   version "2.0.5"

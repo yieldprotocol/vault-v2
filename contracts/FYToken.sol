@@ -159,6 +159,24 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         _burn(from, amount);
     }
 
+    /// @dev Burn fyTokens. 
+    /// Any tokens locked in this contract will be burned first and subtracted from the amount to burn from the user's wallet.
+    /// This feature allows someone to transfer fyToken to this contract to enable a `burn`, potentially saving the cost of `approve` or `permit`.
+    function _burn(address from, uint256 amount)
+        internal override
+        returns (bool)
+    {
+        // First use any tokens locked in this contract
+        uint256 available = _balanceOf[address(this)];
+        if (available >= amount) {
+            unchecked { return super._burn(address(this), amount); }
+        } else {
+            if (available >= 0 ) _burn(address(this), available);
+            unchecked { _decreaseAllowance(from, amount - available); }
+            unchecked { return super._burn(from, amount - available); }
+        }
+    }
+
     /**
      * @dev From ERC-3156. The amount of currency available to be lended.
      * @param token The loan currency. It must be a FYDai contract.
@@ -205,38 +223,6 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         _mint(address(receiver), amount);
         require(receiver.onFlashLoan(msg.sender, token, amount, 0, data) == FLASH_LOAN_RETURN, "Non-compliant borrower");
         _burn(address(receiver), amount);
-        return true;
-    }
-
-    /// @dev Burn fyTokens. 
-    /// Any tokens locked in this contract will be burned first and subtracted from the amount to burn from the user's wallet.
-    /// This feature allows someone to transfer fyToken to this contract to enable a `burn`, potentially saving the cost of `approve` or `permit`.
-    function _burn(address from, uint256 amount)
-        internal override
-        returns (bool)
-    {
-        // First use any tokens locked in this contract
-        uint256 reserve = _balanceOf[address(this)];
-        uint256 remainder = amount;
-        if (reserve > 0) {
-            uint256 localBurn = reserve >= remainder ? remainder : reserve;
-            unchecked {
-                _balanceOf[address(this)] = reserve - localBurn;
-                remainder -= localBurn;
-            }
-            emit Transfer(address(this), address(0), localBurn);
-        }
-
-        // Then pull the remainder of the burn from `src`
-        if (remainder > 0) {
-            _decreaseAllowance(from, remainder);     // Note that if msg.sender == from this is ignored.
-            require(_balanceOf[from] >= remainder, "ERC20: Insufficient balance");
-            unchecked {
-                _balanceOf[from] = _balanceOf[from] - remainder;
-            }
-            emit Transfer(from, address(0), remainder);
-        }
-        _totalSupply = _totalSupply - amount;
         return true;
     }
 }

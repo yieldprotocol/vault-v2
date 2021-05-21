@@ -78,9 +78,9 @@ describe('Ladle - roll', function () {
     const fee = WAD.div(1000000000) // 0.000000 001% wei/second
     await ladle.setFee(fee)
     await ladle.roll(vaultId, otherSeriesId, MAX)
-    const now = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
+    const { timestamp } = await ethers.provider.getBlock('latest')
     const preFeeDebt = WAD.mul(105).div(100)
-    const appliedFee = (await fyToken.maturity()).sub(now).mul(preFeeDebt).mul(fee).div(WAD)
+    const appliedFee = (await fyToken.maturity()).sub(timestamp).mul(preFeeDebt).mul(fee).div(WAD)
 
     expect(await fyToken.balanceOf(owner)).to.equal(WAD)
     expect((await cauldron.balances(vaultId)).art).to.equal(preFeeDebt.add(appliedFee))

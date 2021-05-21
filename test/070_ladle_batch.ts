@@ -239,8 +239,8 @@ describe('Ladle - batch', function () {
   it('calls can be routed to pools', async () => {
     await base.mint(pool.address, WAD)
 
-    const retrieveBaseTokenCall = pool.interface.encodeFunctionData('retrieveBaseToken', [owner])
-    await expect(await ladle.route(seriesId, retrieveBaseTokenCall))
+    const retrieveBaseCall = pool.interface.encodeFunctionData('retrieveBase', [owner])
+    await expect(await ladle.route(seriesId, retrieveBaseCall))
       .to.emit(base, 'Transfer')
       .withArgs(pool.address, owner, WAD)
   })
@@ -248,14 +248,14 @@ describe('Ladle - batch', function () {
   it('errors bubble up from calls routed to pools', async () => {
     await base.mint(pool.address, WAD)
 
-    const sellBaseTokenCall = pool.interface.encodeFunctionData('sellBaseToken', [owner, MAX128])
-    await expect(ladle.route(seriesId, sellBaseTokenCall)).to.be.revertedWith('Pool: Not enough fyToken obtained')
+    const sellBaseCall = pool.interface.encodeFunctionData('sellBase', [owner, MAX128])
+    await expect(ladle.route(seriesId, sellBaseCall)).to.be.revertedWith('Pool: Not enough fyToken obtained')
   })
 
   it('sells base', async () => {
     await base.mint(pool.address, WAD)
 
-    await expect(await ladle.sellBaseToken(seriesId, owner, 0)).to.emit(pool, 'Trade')
+    await expect(await ladle.sellBase(seriesId, owner, 0)).to.emit(pool, 'Trade')
   })
 
   it('sells fyToken', async () => {

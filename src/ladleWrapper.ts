@@ -18,10 +18,17 @@ export class LadleWrapper {
   address: string
 
   pool = new ethers.utils.Interface([
-    "function sellBaseToken(address to, uint128 min)",
+    "function sellBase(address to, uint128 min)",
     "function sellFYToken(address to, uint128 min)",
-    "function mintWithBaseToken(address to, uint256 fyTokenToBuy, uint256 minTokensMinted)",
-    "function burnForBaseToken(address to, uint256 minBaseTokenOut)",
+    "function mint(address to, bool, uint256 minTokensMinted)",
+    "function mintWithBase(address to, uint256 fyTokenToBuy, uint256 minTokensMinted)",
+    "function burnForBase(address to, uint256 minBaseOut)",
+    "function burn(address to, uint256 minBaseOut, uint256 minFYTokenOut)",
+  ]);
+
+  tlmModule = new ethers.utils.Interface([
+    "function approve(bytes6 seriesId)",
+    "function sell(bytes6 seriesId, address to, uint256 fyDaiToSell)",
   ]);
 
   constructor(ladle: Ladle) {
@@ -53,8 +60,8 @@ export class LadleWrapper {
     return this.ladle.addPool(assetId, pool)
   }
 
-  public async setPoolRouter(poolRouter: string): Promise<ContractTransaction> {
-    return this.ladle.setPoolRouter(poolRouter)
+  public async setModule(module: string, set: boolean): Promise<ContractTransaction> {
+    return this.ladle.setModule(module, set)
   }
 
   public async grantRoles(roles: Array<string>, user: string): Promise<ContractTransaction> {
@@ -160,6 +167,14 @@ export class LadleWrapper {
     return this.batch([this.repayVaultAction(vaultId, to, ink, max)])
   }
 
+  public removeRepayAction(vaultId: string, to: string, minBaseOut: BigNumberish, minFYTokenOut: BigNumberish): BatchAction {
+    return new BatchAction(OPS.REMOVE_REPAY, ethers.utils.defaultAbiCoder.encode(['bytes12', 'address', 'uint128', 'uint128'], [vaultId, to, minBaseOut, minFYTokenOut]))
+  }
+
+  public async removeRepay(vaultId: string, to: string, minBaseOut: BigNumberish, minFYTokenOut: BigNumberish): Promise<ContractTransaction> {
+    return this.batch([this.removeRepayAction(vaultId, to, minBaseOut, minFYTokenOut)])
+  }
+
   public rollAction(vaultId: string, newSeriesId: string, max: BigNumberish): BatchAction {
     return new BatchAction(OPS.ROLL, ethers.utils.defaultAbiCoder.encode(['bytes12', 'bytes6', 'uint128'], [vaultId, newSeriesId, max]))
   }
@@ -239,18 +254,18 @@ export class LadleWrapper {
   }
 
 
-  public sellBaseTokenAction(seriesId: string, receiver: string, min: BigNumberish): BatchAction {
+  public sellBaseAction(seriesId: string, receiver: string, min: BigNumberish): BatchAction {
     return new BatchAction(OPS.ROUTE, ethers.utils.defaultAbiCoder.encode(
       ['bytes6', 'bytes'],
       [
         seriesId,
-        this.pool.encodeFunctionData('sellBaseToken', [receiver, min])
+        this.pool.encodeFunctionData('sellBase', [receiver, min])
       ]
     ))
   }
 
-  public async sellBaseToken(seriesId: string, receiver: string, min: BigNumberish): Promise<ContractTransaction> {
-    return this.batch([this.sellBaseTokenAction(seriesId, receiver, min)])
+  public async sellBase(seriesId: string, receiver: string, min: BigNumberish): Promise<ContractTransaction> {
+    return this.batch([this.sellBaseAction(seriesId, receiver, min)])
   }
 
   public sellFYTokenAction(seriesId: string, receiver: string, min: BigNumberish): BatchAction {
@@ -267,32 +282,58 @@ export class LadleWrapper {
     return this.batch([this.sellFYTokenAction(seriesId, receiver, min)])
   }
 
-  public mintWithBaseTokenAction(seriesId: string, receiver: string, fyTokenToBuy: BigNumberish, minTokensMinted: BigNumberish): BatchAction {
+  public mintWithBaseAction(seriesId: string, receiver: string, fyTokenToBuy: BigNumberish, minTokensMinted: BigNumberish): BatchAction {
     return new BatchAction(OPS.ROUTE, ethers.utils.defaultAbiCoder.encode(
       ['bytes6', 'bytes'],
       [
         seriesId,
-        this.pool.encodeFunctionData('mintWithBaseToken', [receiver, fyTokenToBuy, minTokensMinted])
+        this.pool.encodeFunctionData('mintWithBase', [receiver, fyTokenToBuy, minTokensMinted])
       ]
     ))
   }
 
-  public async mintWithBaseToken(seriesId: string, receiver: string, fyTokenToBuy: BigNumberish, minTokensMinted: BigNumberish): Promise<ContractTransaction> {
-    return this.batch([this.mintWithBaseTokenAction(seriesId, receiver, fyTokenToBuy, minTokensMinted)])
+  public async mintWithBase(seriesId: string, receiver: string, fyTokenToBuy: BigNumberish, minTokensMinted: BigNumberish): Promise<ContractTransaction> {
+    return this.batch([this.mintWithBaseAction(seriesId, receiver, fyTokenToBuy, minTokensMinted)])
   }
 
-  public burnForBaseTokenAction(seriesId: string, receiver: string, minBaseTokenOut: BigNumberish): BatchAction {
+  public burnForBaseAction(seriesId: string, receiver: string, minBaseOut: BigNumberish): BatchAction {
     return new BatchAction(OPS.ROUTE, ethers.utils.defaultAbiCoder.encode(
       ['bytes6', 'bytes'],
       [
         seriesId,
-        this.pool.encodeFunctionData('burnForBaseToken', [receiver, minBaseTokenOut])
+        this.pool.encodeFunctionData('burnForBase', [receiver, minBaseOut])
       ]
     ))
   }
 
-  public async burnForBaseToken(seriesId: string, receiver: string, minBaseTokenOut: BigNumberish): Promise<ContractTransaction> {
-    return this.batch([this.burnForBaseTokenAction(seriesId, receiver, minBaseTokenOut)])
+  public async burnForBase(seriesId: string, receiver: string, minBaseOut: BigNumberish): Promise<ContractTransaction> {
+    return this.batch([this.burnForBaseAction(seriesId, receiver, minBaseOut)])
+  }
+
+  public tlmApproveAction(tlmModuleAddress: string, seriesId: string): BatchAction {
+    const tlmApproveCall = this.tlmModule.encodeFunctionData('approve', [seriesId])
+
+    return new BatchAction(OPS.MODULE, ethers.utils.defaultAbiCoder.encode(
+      ['address', 'bytes'],
+      [tlmModuleAddress, tlmApproveCall]
+    ))
+  }
+
+  public async tlmApprove(tlmModuleAddress: string, seriesId: string): Promise<ContractTransaction> {
+    return this.batch([this.tlmApproveAction(tlmModuleAddress, seriesId)])
+  }
+
+  public tlmSellAction(tlmModuleAddress: string, seriesId: string, receiver: string, amount: BigNumberish): BatchAction {
+    const tlmSellCall = this.tlmModule.encodeFunctionData('sell', [seriesId, receiver, amount])
+
+    return new BatchAction(OPS.MODULE, ethers.utils.defaultAbiCoder.encode(
+      ['address', 'bytes'],
+      [tlmModuleAddress, tlmSellCall]
+    ))
+  }
+
+  public async tlmSell(tlmModuleAddress: string, seriesId: string, receiver: string, amount: BigNumberish): Promise<ContractTransaction> {
+    return this.batch([this.tlmSellAction(tlmModuleAddress, seriesId, receiver, amount)])
   }
 }
   

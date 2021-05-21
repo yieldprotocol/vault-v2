@@ -10,7 +10,7 @@ import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { OracleMock } from '../typechain/OracleMock'
 import { ChainlinkMultiOracle } from '../typechain/ChainlinkMultiOracle'
-import { SourceMock } from '../typechain/SourceMock'
+import { ISourceMock } from '../typechain/ISourceMock'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
@@ -36,7 +36,7 @@ describe('Witch', function () {
   let ilk: ERC20Mock
   let ilkJoin: Join
   let spotOracle: ChainlinkMultiOracle
-  let spotSource: SourceMock
+  let spotSource: ISourceMock
 
   const mockVaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12))
 
@@ -68,7 +68,10 @@ describe('Witch', function () {
     ilkJoin = env.joins.get(ilkId) as Join
     fyToken = env.series.get(seriesId) as FYToken
     spotOracle = (env.oracles.get(ilkId) as unknown) as ChainlinkMultiOracle
-    spotSource = (await ethers.getContractAt('SourceMock', await spotOracle.sources(baseId, ilkId))) as SourceMock
+    spotSource = (await ethers.getContractAt(
+      'ISourceMock',
+      (await spotOracle.sources(baseId, ilkId))[0]
+    )) as ISourceMock
 
     witchFromOther = witch.connect(otherAcc)
 
@@ -110,6 +113,8 @@ describe('Witch', function () {
     await spotSource.set(WAD.div(2))
     await witch.grab(vaultId)
     const event = (await cauldron.queryFilter(cauldron.filters.VaultLocked(null, null)))[0]
+    expect((await cauldron.vaults(vaultId)).owner).to.equal(witch.address)
+    expect(await witch.vaultOwners(vaultId)).to.equal(owner)
     expect(event.args.timestamp.toNumber()).to.be.greaterThan(0)
     expect(await cauldron.auctions(vaultId)).to.equal(event.args.timestamp)
   })
@@ -137,27 +142,30 @@ describe('Witch', function () {
     it('allows to buy 1/2 of the collateral for the whole debt at the beginning', async () => {
       const baseBalanceBefore = await base.balanceOf(owner)
       const ilkBalanceBefore = await ilk.balanceOf(owner)
-      // await expect(witch.buy(vaultId, WAD, 0)).to.emit(witch, 'Bought').withArgs(owner, vaultId, null, WAD)
-      await witch.buy(vaultId, WAD, 0)
-      // const event = (await witch.queryFilter(witch.filters.Bought(null, null, null, null)))[0]
+      await expect(witch.buy(vaultId, WAD, 0))
+        .to.emit(witch, 'Bought')
+        .withArgs(vaultId, owner, (await ilk.balanceOf(owner)).sub(ilkBalanceBefore), WAD)
+        .to.emit(cauldron, 'VaultGiven')
+        .withArgs(vaultId, owner)
+
       const ink = WAD.sub((await cauldron.balances(vaultId)).ink)
       expect(ink.div(10 ** 15)).to.equal(WAD.div(10 ** 15).div(2)) // Nice hack to compare up to some precision
       expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(WAD))
       expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(ink))
+      expect((await cauldron.vaults(vaultId)).owner).to.equal(owner) // The vault was returned once all the debt was paid off
     })
 
     describe('once the auction time has passed', async () => {
       beforeEach(async () => {
-        const now = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
-        await ethers.provider.send('evm_mine', [now + (await witch.auctionTime()).toNumber()])
+        const { timestamp } = await ethers.provider.getBlock('latest')
+        await ethers.provider.send('evm_mine', [timestamp + (await witch.auctionTime()).toNumber()])
       })
 
       it('allows to buy all of the collateral for the whole debt at the end', async () => {
         const baseBalanceBefore = await base.balanceOf(owner)
         const ilkBalanceBefore = await ilk.balanceOf(owner)
-        // await expect(witch.buy(vaultId, WAD, 0)).to.emit(witch, 'Bought').withArgs(owner, vaultId, null, WAD)
-        await witch.buy(vaultId, WAD, 0)
-        // const event = (await witch.queryFilter(witch.filters.Bought(null, null, null, null)))[0]
+        await expect(witch.buy(vaultId, WAD, 0)).to.emit(witch, 'Bought').withArgs(vaultId, owner, WAD, WAD)
+
         const ink = WAD.sub((await cauldron.balances(vaultId)).ink)
         expect(ink).to.equal(WAD)
         expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(WAD))

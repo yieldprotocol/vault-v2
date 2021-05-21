@@ -1,16 +1,31 @@
-# YieldToken
-YieldToken is an implementation of zero-coupon Dai bonds. It is inspired by the paper ["The Yield Protocol: On-Chain Lending With
-Interest Rate Discovery"](https://yield.is/Yield.pdf) by Dan Robinson and Allan Niemerg.
+# Yield Protocol Vault v2
 
-These smart contracts have been deployed to [Kovan and the Mainnet](http://docs.yield.is), and a web frontend is deployed at [http://app.yield.is](http://app.yield.is)
+The Yield Protocol Vault v2 is a Collateralized Debt Engine for zero-coupon bonds, loosely integrated with [YieldSpace Automated Market Makers](https://yield.is/Yield.pdf), as described by Dan Robinson and Allan Niemerg.
 
-Detailed documentation can be found in the [Yield docs](http://docs.yield.is).
+## Smart Contracts
+
+### Oracles
+Oracles return spot prices, borrowing rates and lending rates for the assets in the protocol.
+
+### Join
+Joins store assets, such as ERC20 or ERC721 tokens.
+
+### FYToken
+FYTokens are ERC20 tokens that are redeemable at maturity for their underlying asset, at an amount that starts at 1 and increases with the lending rate (`chi`).
+
+### Cauldron
+The Cauldron is responsible for the accounting in the Yield Protocol. Vaults are created to contain borrowing positions of one collateral asset type against one fyToken series. The debt in a given vault increases with the borrowing rate (`rate`) after maturity of the associated fyToken series.
+
+When the value of the collateral in a vault falls below the value of the borrowed fyToken, the vault can be liquidated.
+
+### Ladle
+The Ladle is the gateway for all Cauldron integrations, and all asset movements in and out of the Joins (except fyToken redemptions). To implement certain features the Ladle integrates with YieldSpace Pools.
+
+### Witch
+The Witch is the liquidation engine for the Yield Protocol Vault v2.
 
 ## Warning
 This code is provided as-is, with no guarantees of any kind.
-
-## Install
-
 
 ### Pre Requisites
 Before running any command, make sure to install dependencies:
@@ -47,56 +62,8 @@ Compile and test the smart contracts with [Buidler](https://buidler.dev/) and Mo
 $ yarn test
 ```
 
-### Fuzz
-You will need to install [echidna](https://github.com/crytic/echidna) separately, and then run:
-
-```
-$ echidna-test . --contract WhitepaperInvariant --config contracts/invariants/config.yaml
-```
-
-### Start a local blockchain
-We use [ganache](https://www.trufflesuite.com/ganache) as a local blockchain:
-
-```
-$ yarn ganache
-```
-
-### Start a local copy of the mainnet blockchain
-We use [ganache](https://www.trufflesuite.com/ganache) to fork the mainnet blockchain:
-
-```
-$ yarn mainnet-ganache
-```
-
-### Migrate
-We use [truffle](https://www.trufflesuite.com/) for migrations, make sure that `truffle-config.js` suits your use case, start a local ganache instance as explained above, and then run truffle:
-
-```
-$ npx truffle migrate
-```
-
-or
-
-```
-$ npx truffle migrate --network mainnet-ganache
-```
-
-## Math
-In developing fyDai we have used two different libraries for fixed point arithmetic.
- - For general use we have used a [decimal-based fixed point math library](https://github.com/yieldprotocol/fyDai/blob/master/contracts/helpers/DecimalMath.sol), trading off performance for clarity.
- - For heavy-duty use in the YieldSpace formula, we have used a [binary-based fixed point math library](https://github.com/yieldprotocol/fyDai/blob/master/contracts/pool/YieldMath.sol), trading off clarity for performance.
-
-## Security
-In developing the code in this repository we have set the highest bar possible for security. We have been fully audited by [Trail of Bits](https://www.trailofbits.com/), with the [results](https://github.com/trailofbits/publications/blob/master/reviews/YieldProtocol.pdf) publicly available. We have also used fuzzing tests for the Pool and YieldMath contracts, allowing us to find edge cases and vulnerabilities that we would have missed otherwise.
-
 ## Bug Bounty
 Yield is offering bounties for bugs disclosed to us at [security@yield.is](mailto:security@yield.is). The bounty reward is up to $25,000, depending on severity. Please include full details of the vulnerability and steps/code to reproduce. We ask that you permit us time to review and remediate any findings before public disclosure.
-
-## Contributing
-This project doesn't include any governance or upgradability features. If you have a contribution to make, please reach us out on Discord and we will consider it for a future release or product.
-
-## Acknowledgements
-We would like to thank Dan Robinson (Paradigm), Georgios Konstantopoulos (Paradigm), Sam Sun (Paradigm), Mikhail Vladimirov (ABDK), Gustavo Grieco (Trail of Bits), Martin Lundfall (dAppHub) and Noah Zinsmeister (Uniswap) for their feedback and advice. We wouldn't be here without them.
 
 ## License
 All files in this repository are released under the [GPLv3](https://github.com/yieldprotocol/fyDai/blob/master/LICENSE.md) license.

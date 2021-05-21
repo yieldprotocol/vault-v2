@@ -3,27 +3,34 @@ pragma solidity ^0.8.0;
 
 import "@yield-protocol/utils-v2/contracts/access/Ownable.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
-import "../math/CastBytes32Bytes6.sol";
+import "../../math/CastBytes32Bytes6.sol";
 import "./CTokenInterface.sol";
 
 
 contract CompoundMultiOracle is IOracle, Ownable {
     using CastBytes32Bytes6 for bytes32;
 
-    event SourcesSet(bytes6[] indexed bases, bytes32[] indexed kinds, address[] indexed sources_);
+    event SourceSet(bytes6 indexed baseId, bytes32 indexed kind, address indexed source);
 
     uint public constant SCALE_FACTOR = 1; // I think we don't need scaling for rate and chi oracles
 
     mapping(bytes6 => mapping(bytes32 => address)) public sources;
 
     /**
-     * @notice Set or reset a number of oracle sources
+     * @notice Set or reset one source
+     */
+    function setSource(bytes6 base, bytes32 kind, address source) public onlyOwner {
+        sources[base][kind] = source;
+        emit SourceSet(base, kind, source);
+    }
+
+    /**
+     * @notice Set or reset an oracle source
      */
     function setSources(bytes6[] memory bases, bytes32[] memory kinds, address[] memory sources_) public onlyOwner {
         require(bases.length == kinds.length && kinds.length == sources_.length, "Mismatched inputs");
         for (uint256 i = 0; i < bases.length; i++)
-            sources[bases[i]][kinds[i]] = sources_[i];
-        emit SourcesSet(bases, kinds, sources_);
+            setSource(bases[i], kinds[i], sources_[i]);
     }
 
     /**
@@ -32,9 +39,11 @@ contract CompoundMultiOracle is IOracle, Ownable {
      */
     function _peek(bytes6 base, bytes32 kind) private view returns (uint price, uint updateTime) {
         uint256 rawPrice;
-        
-        if (kind == "rate") rawPrice = CTokenInterface(sources[base][kind]).borrowIndex();
-        else if (kind == "chi") rawPrice = CTokenInterface(sources[base][kind]).exchangeRateStored();
+        address source = sources[base][kind];
+        require (source != address(0), "Source not found");
+
+        if (kind == "rate") rawPrice = CTokenInterface(source).borrowIndex();
+        else if (kind == "chi") rawPrice = CTokenInterface(source).exchangeRateStored();
         else revert("Unknown oracle type");
 
         require(rawPrice > 0, "Compound price is zero");

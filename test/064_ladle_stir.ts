@@ -1,11 +1,11 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 
-import { constants } from '@yield-protocol/utils-v2'
+import { id, constants } from '@yield-protocol/utils-v2'
 const { WAD } = constants
 
+import { ERC20Mock } from '../typechain/ERC20Mock'
 import { Cauldron } from '../typechain/Cauldron'
 import { FYToken } from '../typechain/FYToken'
-import { ERC20Mock } from '../typechain/ERC20Mock'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'

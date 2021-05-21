@@ -2,11 +2,12 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { constants, id } from '@yield-protocol/utils-v2'
 const { WAD } = constants
 
-import JoinArtifact from '../artifacts/contracts/Join.sol/Join.json'
+import JoinFactoryArtifact from '../artifacts/contracts/JoinFactory.sol/JoinFactory.json'
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
 import FlashBorrowerArtifact from '../artifacts/contracts/mocks/FlashBorrower.sol/FlashBorrower.json'
 
 import { Join } from '../typechain/Join'
+import { JoinFactory } from '../typechain/JoinFactory'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { FlashBorrower } from '../typechain/FlashBorrower'
 
@@ -22,7 +23,7 @@ describe('Join - flash', function () {
   let otherAcc: SignerWithAddress
   let other: string
   let join: Join
-  let joinFromOther: Join
+  let joinFactory: JoinFactory
   let token: ERC20Mock
   let borrower: FlashBorrower
 
@@ -44,8 +45,10 @@ describe('Join - flash', function () {
 
   beforeEach(async () => {
     token = (await deployContract(ownerAcc, ERC20MockArtifact, ['MTK', 'Mock Token'])) as ERC20Mock
-    join = (await deployContract(ownerAcc, JoinArtifact, [token.address])) as Join
-    joinFromOther = join.connect(otherAcc)
+    joinFactory = (await deployContract(ownerAcc, JoinFactoryArtifact, [])) as JoinFactory
+    const joinAddress = await joinFactory.calculateJoinAddress(token.address) // Get the address
+    await joinFactory.createJoin(token.address) // Create the Join (doesn't return anything outside a contract call)
+    join = (await ethers.getContractAt('Join', joinAddress, ownerAcc)) as Join
 
     await join.grantRoles(
       [id('join(address,uint128)'), id('exit(address,uint128)'), id('setFlashFeeFactor(uint256)')],
@@ -53,7 +56,7 @@ describe('Join - flash', function () {
     )
 
     await token.mint(join.address, WAD.mul(100))
-    await join.join(owner, 0)
+    await join.join(owner, WAD.mul(100))
 
     borrower = (await deployContract(ownerAcc, FlashBorrowerArtifact, [join.address])) as FlashBorrower
   })
