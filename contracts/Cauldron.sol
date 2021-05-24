@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 import "@yield-protocol/vault-interfaces/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
@@ -101,7 +101,6 @@ contract Cauldron is AccessControl() {
         auth
     {
         require (assets[baseId] != address(0), "Base not found");
-        // TODO: The oracle should record the asset it refers to, and we should match it against assets[baseId]
         rateOracles[baseId] = oracle;
         emit RateOracleAdded(baseId, address(oracle));
     }
@@ -122,7 +121,6 @@ contract Cauldron is AccessControl() {
     {
         require (assets[baseId] != address(0), "Base not found");
         require (assets[ilkId] != address(0), "Ilk not found");
-        // TODO: The oracle should record the assets it refers to, and we should match it against assets[baseId] and assets[ilkId]
         spotOracles[baseId][ilkId] = DataTypes.SpotOracle({
             oracle: oracle,
             ratio: ratio                                                                    // With 6 decimals. 1000000 == 100%

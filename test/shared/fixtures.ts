@@ -266,7 +266,7 @@ export class YieldEnvironment {
     // ==== Protocol ====
 
     const cauldron = (await deployContract(owner, CauldronArtifact, [])) as Cauldron
-    const innerLadle = (await deployContract(owner, LadleArtifact, [cauldron.address])) as Ladle
+    const innerLadle = (await deployContract(owner, LadleArtifact, [cauldron.address, weth.address])) as Ladle
     const ladle = new LadleWrapper(innerLadle)
     const witch = (await deployContract(owner, WitchArtifact, [cauldron.address, ladle.address])) as Witch
     const joinFactory = (await deployContract(owner, JoinFactoryArtifact, [])) as JoinFactory

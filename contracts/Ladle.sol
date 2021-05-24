@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 import "@yield-protocol/vault-interfaces/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/IJoin.sol";
@@ -26,7 +26,11 @@ contract Ladle is LadleStorage, AccessControl() {
     using AllTransferHelper for IERC20;
     using AllTransferHelper for address payable;
 
-    constructor (ICauldron cauldron) LadleStorage(cauldron) { }
+    IWETH9 public immutable weth;
+
+    constructor (ICauldron cauldron, IWETH9 weth_) LadleStorage(cauldron) {
+        weth = weth_;
+    }
 
     // ---- Data sourcing ----
     /// @dev Obtains a vault by vaultId from the Cauldron, and verifies that msg.sender is the owner
@@ -111,7 +115,7 @@ contract Ladle is LadleStorage, AccessControl() {
 
 
     /// @dev Submit a series of calls for execution.
-    /// Unlike `multicall`, this function calls private functions, saving a CALL per function.
+    /// Unlike `batch`, this function calls private functions, saving a CALL per function.
     /// It also caches the vault, which is useful in `build` + `pour` and `build` + `serve` combinations.
     function batch(
         Operation[] calldata operations,
@@ -172,8 +176,8 @@ contract Ladle is LadleStorage, AccessControl() {
                 _route(pool, poolCall);
             
             } else if (operation == Operation.EXIT_ETHER) {
-                (bytes6 etherId, address to) = abi.decode(data[i], (bytes6, address));
-                _exitEther(etherId, payable(to));
+                (address to) = abi.decode(data[i], (address));
+                _exitEther(payable(to));
             
             } else if (operation == Operation.CLOSE) {
                 (bytes12 vaultId, address to, int128 ink, int128 art) = abi.decode(data[i], (bytes12, address, int128, int128));
@@ -510,32 +514,27 @@ contract Ladle is LadleStorage, AccessControl() {
     receive() external payable { }
 
     /// @dev Accept Ether, wrap it and forward it to the WethJoin
-    /// This function should be called first in a multicall, and the Join should keep track of stored reserves
+    /// This function should be called first in a batch, and the Join should keep track of stored reserves
     /// Passing the id for a join that doesn't link to a contract implemnting IWETH9 will fail
     function _joinEther(bytes6 etherId)
         private
         returns (uint256 ethTransferred)
     {
         ethTransferred = address(this).balance;
-
         IJoin wethJoin = getJoin(etherId);
-        address weth = wethJoin.asset();                    // TODO: Consider setting weth contract via governance
-
-        IWETH9(weth).deposit{ value: ethTransferred }();   // TODO: Test gas savings using WETH10 `depositTo`
-        IERC20(weth).safeTransfer(address(wethJoin), ethTransferred);
+        weth.deposit{ value: ethTransferred }();   // TODO: Test gas savings using WETH10 `depositTo`
+        IERC20(address(weth)).safeTransfer(address(wethJoin), ethTransferred);
     }
 
     /// @dev Unwrap Wrapped Ether held by this Ladle, and send the Ether
-    /// This function should be called last in a multicall, and the Ladle should have no reason to keep an WETH balance
-    function _exitEther(bytes6 etherId, address payable to)
+    /// This function should be called last in a batch, and the Ladle should have no reason to keep an WETH balance
+    function _exitEther(address payable to)
         private
         returns (uint256 ethTransferred)
     {
-        IJoin wethJoin = getJoin(etherId);
-        address weth = wethJoin.asset();            // TODO: Consider setting weth contract via governance
-        ethTransferred = IERC20(weth).balanceOf(address(this));
-        IWETH9(weth).withdraw(ethTransferred);   // TODO: Test gas savings using WETH10 `withdrawTo`
-        to.safeTransferETH(ethTransferred); /// TODO: Consider reentrancy
+        ethTransferred = weth.balanceOf(address(this));
+        weth.withdraw(ethTransferred);   // TODO: Test gas savings using WETH10 `withdrawTo`
+        to.safeTransferETH(ethTransferred);
     }
 
     // ---- Pool router ----

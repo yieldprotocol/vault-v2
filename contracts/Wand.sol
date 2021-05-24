@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 import "@yield-protocol/vault-interfaces/IJoinFactory.sol";
 import "@yield-protocol/vault-interfaces/IJoin.sol";
@@ -131,7 +131,7 @@ contract Wand is AccessControl {
         // Allow the fyToken to pull from the base join for redemption
         bytes4[] memory sigs = new bytes4[](1);
         sigs[0] = EXIT;
-        AccessControl(address(baseJoin)).grantRoles(sigs, address(ladle));
+        AccessControl(address(baseJoin)).grantRoles(sigs, address(fyToken));
 
         // Allow the ladle to issue and cancel fyToken
         sigs = new bytes4[](2);
