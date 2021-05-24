@@ -171,7 +171,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         if (available >= amount) {
             unchecked { return super._burn(address(this), amount); }
         } else {
-            if (available >= 0 ) _burn(address(this), available);
+            if (available > 0 ) super._burn(address(this), available);
             unchecked { _decreaseAllowance(from, amount - available); }
             unchecked { return super._burn(from, amount - available); }
         }
