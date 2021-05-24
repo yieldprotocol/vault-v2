@@ -1,7 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 
-import { id } from '@yield-protocol/utils-v2'
-import { constants } from '@yield-protocol/utils-v2'
+import { id, constants } from '@yield-protocol/utils-v2'
 const { WAD, THREE_MONTHS, ETH, DAI, USDC } = constants
 import { CHI, RATE } from '../../src/constants'
 
@@ -285,8 +284,8 @@ export class YieldEnvironment {
     await this.cauldronGovAuth(cauldron, wand.address)
     await this.ladleGovAuth(ladle, wand.address)
     await this.witchGovAuth(witch, wand.address)
-    await chiRateOracle.transferOwnership(wand.address)
-    await spotOracle.transferOwnership(wand.address)
+    await chiRateOracle.grantRole(id('setSource(bytes6,bytes6,address)'), wand.address)
+    await spotOracle.grantRole(id('setSource(bytes6,bytes6,address)'), wand.address)
 
     // ==== Owner access (only test environment) ====
     await this.wandAuth(wand, ownerAdd)
