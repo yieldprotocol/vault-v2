@@ -90,17 +90,14 @@ describe('Ladle - eth', function () {
       expect((await cauldron.balances(ethVaultId)).ink).to.equal(0)
       expect(await weth.balanceOf(ladle.address)).to.equal(WAD)
 
-      expect(await ladle.exitEther(ethId, owner))
+      expect(await ladle.exitEther(owner))
         .to.emit(weth, 'Withdrawal')
         .withArgs(ladle.address, WAD)
       expect(await weth.balanceOf(ladle.address)).to.equal(0)
     })
 
     it('users can pour then unwrap to ETH in a single transaction with batch', async () => {
-      await ladle.batch([
-        ladle.pourAction(ethVaultId, ladle.address, WAD.mul(-1), 0),
-        ladle.exitEtherAction(ethId, owner),
-      ])
+      await ladle.batch([ladle.pourAction(ethVaultId, ladle.address, WAD.mul(-1), 0), ladle.exitEtherAction(owner)])
     })
   })
 
