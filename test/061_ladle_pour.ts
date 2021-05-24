@@ -97,7 +97,7 @@ describe('Ladle - pour', function () {
       expect(await ilk.balanceOf(other)).to.equal(WAD)
     })
 
-    it("users can't borrow under the global debt limit", async () => {
+    it("users can't borrow under the vault debt limit (dust)", async () => {
       await expect(ladle.pour(vaultId, owner, 0, WAD.div(1000000).sub(1))).to.be.revertedWith('Min debt not reached')
     })
 
@@ -168,13 +168,13 @@ describe('Ladle - pour', function () {
       await expect(ladle.pour(vaultId, owner, 0, WAD.mul(-2))).to.be.revertedWith('Result below zero')
     })
 
-    it('users can borrow while under the global debt limit', async () => {
+    it('users can borrow while under the global debt limit (line)', async () => {
       await expect(ladle.pour(vaultId, owner, WAD, WAD))
         .to.emit(cauldron, 'VaultPoured')
         .withArgs(vaultId, seriesId, ilkId, WAD, WAD)
     })
 
-    it("users can't borrow over the global debt limit", async () => {
+    it("users can't borrow over the global debt limit (line)", async () => {
       await expect(ladle.pour(vaultId, owner, WAD.mul(2), WAD.mul(2))).to.be.revertedWith('Max debt exceeded')
     })
   })
