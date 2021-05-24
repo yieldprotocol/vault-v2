@@ -213,12 +213,12 @@ export class LadleWrapper {
     return this.batch([this.joinEtherAction(etherId)], overrides)
   }
 
-  public exitEtherAction(etherId: string, to: string): BatchAction {
-    return new BatchAction(OPS.EXIT_ETHER, ethers.utils.defaultAbiCoder.encode(['bytes6', 'address'], [etherId, to]))
+  public exitEtherAction(to: string): BatchAction {
+    return new BatchAction(OPS.EXIT_ETHER, ethers.utils.defaultAbiCoder.encode(['address'], [to]))
   }
 
-  public async exitEther(etherId: string, to: string): Promise<ContractTransaction> {
-    return this.batch([this.exitEtherAction(etherId, to)])
+  public async exitEther(to: string): Promise<ContractTransaction> {
+    return this.batch([this.exitEtherAction(to)])
   }
 
   public transferToPoolAction(seriesId: string, base: boolean, wad: BigNumberish): BatchAction {
