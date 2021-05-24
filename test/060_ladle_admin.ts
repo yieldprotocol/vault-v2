@@ -88,7 +88,7 @@ describe('Ladle - admin', function () {
     await oracle.set(WAD)
 
     await cauldron.addAsset(ilkId, ilk.address)
-    await cauldron.setMaxDebt(baseId, ilkId, WAD.mul(2))
+    await cauldron.setDebtLimits(baseId, ilkId, WAD.mul(2), 0, 0)
     await cauldron.setSpotOracle(baseId, ilkId, oracle.address, ratio)
 
     // Deploy a join

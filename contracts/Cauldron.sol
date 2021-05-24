@@ -35,7 +35,7 @@ contract Cauldron is AccessControl() {
     event IlkAdded(bytes6 indexed seriesId, bytes6 indexed ilkId);
     event SpotOracleAdded(bytes6 indexed baseId, bytes6 indexed ilkId, address indexed oracle, uint32 ratio);
     event RateOracleAdded(bytes6 indexed baseId, address indexed oracle);
-    event MaxDebtSet(bytes6 indexed baseId, bytes6 indexed ilkId, uint128 max);
+    event DebtLimitsSet(bytes6 indexed baseId, bytes6 indexed ilkId, uint96 max, uint24 min, uint8 dec);
 
     event VaultBuilt(bytes12 indexed vaultId, address indexed owner, bytes6 indexed seriesId, bytes6 ilkId);
     event VaultTweaked(bytes12 indexed vaultId, bytes6 indexed seriesId, bytes6 indexed ilkId);
@@ -80,15 +80,19 @@ contract Cauldron is AccessControl() {
         emit AssetAdded(assetId, address(asset));
     }
 
-    /// @dev Set the maximum debt for an underlying and ilk pair. Can be reset.
-    function setMaxDebt(bytes6 baseId, bytes6 ilkId, uint128 max)
+    /// @dev Set the maximum and minimum debt for an underlying and ilk pair. Can be reset.
+    function setDebtLimits(bytes6 baseId, bytes6 ilkId, uint96 max, uint24 min, uint8 dec)
         external
         auth
     {
         require (assets[baseId] != address(0), "Base not found");
         require (assets[ilkId] != address(0), "Ilk not found");
-        debt[baseId][ilkId].max = max;
-        emit MaxDebtSet(baseId, ilkId, max);
+        DataTypes.Debt memory debt_ = debt[baseId][ilkId];
+        debt_.max = max;
+        debt_.min = min;
+        debt_.dec = dec;
+        debt[baseId][ilkId] = debt_;
+        emit DebtLimitsSet(baseId, ilkId, max, min, dec);
     }
 
     /// @dev Set a rate oracle. Can be reset.
@@ -310,9 +314,12 @@ contract Cauldron is AccessControl() {
         // Modify vault and global debt records. If debt increases, check global limit.
         if (art != 0) {
             DataTypes.Debt memory debt_ = debt[series_.baseId][vault_.ilkId];
-            if (art > 0) require (debt_.sum.add(art) <= debt_.max, "Max debt exceeded");
             balances_.art = balances_.art.add(art);
             debt_.sum = debt_.sum.add(art);
+            uint128 dust = debt_.min * uint128(10) ** debt_.dec;
+            uint128 line = debt_.max * uint128(10) ** debt_.dec;
+            require (balances_.art == 0 || balances_.art >= dust, "Min debt not reached");
+            if (art > 0) require (debt_.sum <= line, "Max debt exceeded");
             debt[series_.baseId][vault_.ilkId] = debt_;
         }
         balances[vaultId] = balances_;

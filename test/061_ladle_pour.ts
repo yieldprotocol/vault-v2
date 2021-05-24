@@ -60,7 +60,7 @@ describe('Ladle - pour', function () {
     ilkJoin = env.joins.get(ilkId) as Join
 
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
-    await cauldron.setMaxDebt(baseId, ilkId, WAD.mul(2))
+    await cauldron.setDebtLimits(baseId, ilkId, WAD.mul(2).div(1000000), 1000000, 6)
   })
 
   it('only the vault owner can manage its collateral', async () => {
@@ -95,6 +95,10 @@ describe('Ladle - pour', function () {
       expect(await ilk.balanceOf(ilkJoin.address)).to.equal(0)
       expect((await cauldron.balances(vaultId)).ink).to.equal(0)
       expect(await ilk.balanceOf(other)).to.equal(WAD)
+    })
+
+    it("users can't borrow under the vault debt limit (dust)", async () => {
+      await expect(ladle.pour(vaultId, owner, 0, WAD.div(1000000).sub(1))).to.be.revertedWith('Min debt not reached')
     })
 
     it('users can pour to borrow fyToken', async () => {
@@ -164,13 +168,13 @@ describe('Ladle - pour', function () {
       await expect(ladle.pour(vaultId, owner, 0, WAD.mul(-2))).to.be.revertedWith('Result below zero')
     })
 
-    it('users can borrow while under the global debt limit', async () => {
+    it('users can borrow while under the global debt limit (line)', async () => {
       await expect(ladle.pour(vaultId, owner, WAD, WAD))
         .to.emit(cauldron, 'VaultPoured')
         .withArgs(vaultId, seriesId, ilkId, WAD, WAD)
     })
 
-    it("users can't borrow over the global debt limit", async () => {
+    it("users can't borrow over the global debt limit (line)", async () => {
       await expect(ladle.pour(vaultId, owner, WAD.mul(2), WAD.mul(2))).to.be.revertedWith('Max debt exceeded')
     })
   })

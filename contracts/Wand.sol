@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
+import "@yield-protocol/vault-interfaces/ICauldronGov.sol";
+import "@yield-protocol/vault-interfaces/ILadleGov.sol";
+import "@yield-protocol/vault-interfaces/IMultiOracleGov.sol";
 import "@yield-protocol/vault-interfaces/IJoinFactory.sol";
 import "@yield-protocol/vault-interfaces/IJoin.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
@@ -7,28 +10,6 @@ import "@yield-protocol/yieldspace-interfaces/IPoolFactory.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "./FYToken.sol";
 
-
-interface ICauldronGov {
-    function assets(bytes6) external view returns (address);
-    function series(bytes6) external view returns (DataTypes.Series memory);
-    function rateOracles(bytes6) external view returns (IOracle);
-    function addAsset(bytes6, address) external;
-    function addSeries(bytes6, bytes6, IFYToken) external;
-    function addIlks(bytes6, bytes6[] memory) external;
-    function setRateOracle(bytes6, IOracle) external;
-    function setSpotOracle(bytes6, bytes6, IOracle, uint32) external;
-    function setMaxDebt(bytes6, bytes6, uint128) external;
-}
-
-interface ILadleGov {
-    function joins(bytes6) external view returns (IJoin);
-    function addJoin(bytes6, address) external;
-    function addPool(bytes6, address) external;
-}
-
-interface IMultiOracleGov {
-    function setSource(bytes6, bytes6, address) external;
-}
 
 interface IOwnable {
     function transferOwnership(address) external;
@@ -92,10 +73,10 @@ contract Wand is AccessControl {
     }
 
     /// @dev Make an ilk asset out of a generic asset, by adding a spot oracle against a base asset, collateralization ratio, and debt ceiling.
-    function makeIlk(bytes6 baseId, bytes6 ilkId, IMultiOracleGov oracle, address spotSource, uint32 ratio, uint128 maxDebt) public auth {
+    function makeIlk(bytes6 baseId, bytes6 ilkId, IMultiOracleGov oracle, address spotSource, uint32 ratio, uint96 max, uint24 min, uint8 dec) public auth {
         oracle.setSource(baseId, ilkId, spotSource);
         cauldron.setSpotOracle(baseId, ilkId, IOracle(address(oracle)), ratio);
-        cauldron.setMaxDebt(baseId, ilkId, maxDebt);
+        cauldron.setDebtLimits(baseId, ilkId, max, min, dec);
     }
 
     /// @dev Add an existing series to the protocol, by deploying a FYToken, and registering it in the cauldron with the approved ilks
