@@ -97,10 +97,7 @@ describe('Ladle - eth', function () {
     })
 
     it('users can pour then unwrap to ETH in a single transaction with batch', async () => {
-      await ladle.batch([
-        ladle.pourAction(ethVaultId, ladle.address, WAD.mul(-1), 0),
-        ladle.exitEtherAction(owner),
-      ])
+      await ladle.batch([ladle.pourAction(ethVaultId, ladle.address, WAD.mul(-1), 0), ladle.exitEtherAction(owner)])
     })
   })
 
