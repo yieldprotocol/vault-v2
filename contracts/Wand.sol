@@ -26,11 +26,7 @@ interface ILadleGov {
     function addPool(bytes6, address) external;
 }
 
-interface IRateMultiOracleGov {
-    function setSource(bytes6, bytes32, address) external;
-}
-
-interface ISpotMultiOracleGov {
+interface IMultiOracleGov {
     function setSource(bytes6, bytes6, address) external;
 }
 
@@ -46,6 +42,8 @@ contract Wand is AccessControl {
     bytes4 public constant MINT = bytes4(keccak256("mint(address,uint256)"));
     bytes4 public constant BURN = bytes4(keccak256("burn(address,uint256)"));
     
+    bytes6 public constant CHI = "chi";
+    bytes6 public constant RATE = "rate";
 
     ICauldronGov public immutable cauldron;
     ILadleGov public immutable ladle;
@@ -83,18 +81,18 @@ contract Wand is AccessControl {
 
     /// @dev Make a base asset out of a generic asset, by adding rate and chi oracles.
     /// This assumes CompoundMultiOracles, which deliver both rate and chi.
-    function makeBase(bytes6 assetId, IRateMultiOracleGov oracle, address rateSource, address chiSource) public auth {
+    function makeBase(bytes6 assetId, IMultiOracleGov oracle, address rateSource, address chiSource) public auth {
         require (address(oracle) != address(0), "Oracle required");
         require (rateSource != address(0), "Rate source required");
         require (chiSource != address(0), "Chi source required");
 
-        oracle.setSource(assetId, "rate", rateSource);
-        oracle.setSource(assetId, "chi", chiSource);
+        oracle.setSource(assetId, RATE, rateSource);
+        oracle.setSource(assetId, CHI, chiSource);
         cauldron.setRateOracle(assetId, IOracle(address(oracle))); // TODO: Consider adding a registry of chi oracles in cauldron as well
     }
 
     /// @dev Make an ilk asset out of a generic asset, by adding a spot oracle against a base asset, collateralization ratio, and debt ceiling.
-    function makeIlk(bytes6 baseId, bytes6 ilkId, ISpotMultiOracleGov oracle, address spotSource, uint32 ratio, uint128 maxDebt) public auth {
+    function makeIlk(bytes6 baseId, bytes6 ilkId, IMultiOracleGov oracle, address spotSource, uint32 ratio, uint128 maxDebt) public auth {
         oracle.setSource(baseId, ilkId, spotSource);
         cauldron.setSpotOracle(baseId, ilkId, IOracle(address(oracle)), ratio);
         cauldron.setMaxDebt(baseId, ilkId, maxDebt);

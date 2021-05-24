@@ -1,4 +1,4 @@
-import { constants } from '@yield-protocol/utils-v2'
+import { constants, id } from '@yield-protocol/utils-v2'
 const { WAD } = constants
 import { CHI, RATE } from '../src/constants'
 
@@ -70,6 +70,7 @@ describe('Oracle', function () {
     ])) as ChainlinkAggregatorV3Mock
 
     chainlinkMultiOracle = (await deployContract(ownerAcc, ChainlinkMultiOracleArtifact, [])) as ChainlinkMultiOracle
+    chainlinkMultiOracle.grantRole(id('setSources(bytes6[],bytes6[],address[])'), owner)
     await chainlinkMultiOracle.setSources([baseId], [usdQuoteId], [usdAggregator.address])
     await chainlinkMultiOracle.setSources([baseId], [ethQuoteId], [ethAggregator.address])
 
@@ -77,6 +78,7 @@ describe('Oracle', function () {
     cTokenRate = (await deployContract(ownerAcc, CTokenRateMockArtifact, [])) as CTokenRateMock
 
     compoundMultiOracle = (await deployContract(ownerAcc, CompoundMultiOracleArtifact, [])) as CompoundMultiOracle
+    compoundMultiOracle.grantRole(id('setSources(bytes6[],bytes6[],address[])'), owner)
     await compoundMultiOracle.setSources([baseId, baseId], [CHI, RATE], [cTokenChi.address, cTokenRate.address])
 
     uniswapV3Factory = (await deployContract(ownerAcc, UniswapV3FactoryMockArtifact, [])) as UniswapV3FactoryMock
@@ -86,6 +88,7 @@ describe('Oracle', function () {
     await uniswapV3Factory.createPool(token0, token1, 0)
     uniswapV3Pool = (await ethers.getContractAt('UniswapV3PoolMock', uniswapV3PoolAddress)) as UniswapV3PoolMock
     uniswapV3Oracle = (await deployContract(ownerAcc, UniswapV3OracleArtifact, [])) as UniswapV3Oracle
+    uniswapV3Oracle.grantRole(id('setSources(bytes6[],bytes6[],address[])'), owner)
     await uniswapV3Oracle.setSources([baseId], [ethQuoteId], [uniswapV3PoolAddress])
   })
 
@@ -98,9 +101,9 @@ describe('Oracle', function () {
     await expect(
       chainlinkMultiOracle.callStatic.get(bytes6ToBytes32(mockBytes6), bytes6ToBytes32(mockBytes6), WAD)
     ).to.be.revertedWith('Source not found')
-    await expect(compoundMultiOracle.callStatic.get(bytes6ToBytes32(mockBytes6), CHI, WAD)).to.be.revertedWith(
-      'Source not found'
-    )
+    await expect(
+      compoundMultiOracle.callStatic.get(bytes6ToBytes32(mockBytes6), bytes6ToBytes32(CHI), WAD)
+    ).to.be.revertedWith('Source not found')
     await expect(
       uniswapV3Oracle.callStatic.get(bytes6ToBytes32(mockBytes6), bytes6ToBytes32(mockBytes6), WAD)
     ).to.be.revertedWith('Source not found')
@@ -126,8 +129,12 @@ describe('Oracle', function () {
   it('sets and retrieves the chi and rate values at spot price from a compound multioracle', async () => {
     await cTokenChi.set(WAD.mul(2))
     await cTokenRate.set(WAD.mul(3))
-    expect((await compoundMultiOracle.callStatic.get(bytes6ToBytes32(baseId), CHI, WAD))[0]).to.equal(WAD.mul(2))
-    expect((await compoundMultiOracle.callStatic.get(bytes6ToBytes32(baseId), RATE, WAD))[0]).to.equal(WAD.mul(3))
+    expect((await compoundMultiOracle.callStatic.get(bytes6ToBytes32(baseId), bytes6ToBytes32(CHI), WAD))[0]).to.equal(
+      WAD.mul(2)
+    )
+    expect((await compoundMultiOracle.callStatic.get(bytes6ToBytes32(baseId), bytes6ToBytes32(RATE), WAD))[0]).to.equal(
+      WAD.mul(3)
+    )
   })
 
   it('retrieves the value at spot price from a uniswap v3 oracle', async () => {

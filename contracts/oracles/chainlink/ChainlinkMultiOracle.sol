@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "@yield-protocol/utils-v2/contracts/access/Ownable.sol";
+import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
 import "../../math/CastBytes32Bytes6.sol";
 import "./AggregatorV3Interface.sol";
@@ -10,7 +10,7 @@ import "./AggregatorV3Interface.sol";
 /**
  * @title ChainlinkMultiOracle
  */
-contract ChainlinkMultiOracle is IOracle, Ownable {
+contract ChainlinkMultiOracle is IOracle, AccessControl {
     using CastBytes32Bytes6 for bytes32;
 
     event SourceSet(bytes6 indexed baseId, bytes6 indexed quoteId, address indexed source);
@@ -26,7 +26,7 @@ contract ChainlinkMultiOracle is IOracle, Ownable {
     /**
      * @notice Set or reset an oracle source and its inverse
      */
-    function setSource(bytes6 base, bytes6 quote, address source) public onlyOwner {
+    function setSource(bytes6 base, bytes6 quote, address source) public auth {
         uint8 decimals = AggregatorV3Interface(source).decimals();
         require (decimals <= 18, "Unsupported decimals");
         sources[base][quote] = Source({
@@ -46,7 +46,7 @@ contract ChainlinkMultiOracle is IOracle, Ownable {
     /**
      * @notice Set or reset a number of oracle sources and their inverses
      */
-    function setSources(bytes6[] memory bases, bytes6[] memory quotes, address[] memory sources_) public onlyOwner {
+    function setSources(bytes6[] memory bases, bytes6[] memory quotes, address[] memory sources_) public auth {
         require(
             bases.length == quotes.length && 
             bases.length == sources_.length,
