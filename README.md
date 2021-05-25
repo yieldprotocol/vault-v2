@@ -4,6 +4,8 @@ The Yield Protocol Vault v2 is a Collateralized Debt Engine for zero-coupon bond
 
 ## Smart Contracts
 
+A longer description of the smart contracts can be found in the [Yield v2 reference](https://docs.google.com/document/d/1WBrJx_5wxK1a4N_9b6IQV70d2TyyyFxpiTfjA6PuZaQ/edit).
+
 ### Oracles
 Oracles return spot prices, borrowing rates and lending rates for the assets in the protocol.
 
@@ -20,6 +22,11 @@ When the value of the collateral in a vault falls below the value of the borrowe
 
 ### Ladle
 The Ladle is the gateway for all Cauldron integrations, and all asset movements in and out of the Joins (except fyToken redemptions). To implement certain features the Ladle integrates with YieldSpace Pools.
+
+[Ladle recipe cookbook](https://docs.google.com/document/d/1-r9g99aZfGLd1Aa3FRxBXLybgfGzAZIuHWwufF-I8Js).
+
+### Wand
+The Wand bundles function calls into governance actions.
 
 ### Witch
 The Witch is the liquidation engine for the Yield Protocol Vault v2.
