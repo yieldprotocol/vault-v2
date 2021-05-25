@@ -194,10 +194,14 @@ contract Ladle is LadleStorage, AccessControl() {
                 if (cachedId != vaultId) (cachedId, vault) = (vaultId, getOwnedVault(vaultId));
                 _repayVault(vaultId, vault, to, ink, max);
 
-            } else if (operation == Operation.REMOVE_REPAY) {
-                (bytes12 vaultId, address to, uint128 minBaseOut, uint128 minFYTokenOut) = abi.decode(data[i], (bytes12, address, uint128, uint128));
+            } else if (operation == Operation.REPAY_LADLE) {
+                (bytes12 vaultId) = abi.decode(data[i], (bytes12));
                 if (cachedId != vaultId) (cachedId, vault) = (vaultId, getOwnedVault(vaultId));
-                _removeAndRepay(vaultId, vault, to, minBaseOut, minFYTokenOut);
+                _repayLadle(vaultId, vault);
+
+            } else if (operation == Operation.RETRIEVE) {
+                (bytes6 assetId, bool asset, address to) = abi.decode(data[i], (bytes6, bool, address));
+                _retrieve(assetId, asset, to);
 
             } else if (operation == Operation.TRANSFER_TO_FYTOKEN) {
                 (bytes6 seriesId, uint256 amount) = abi.decode(data[i], (bytes6, uint256));
@@ -319,6 +323,7 @@ contract Ladle is LadleStorage, AccessControl() {
 
     /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
     /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
+    /// Borrow only before maturity.
     function _pour(bytes12 vaultId, DataTypes.Vault memory vault, address to, int128 ink, int128 art)
         private
         returns (DataTypes.Balances memory balances)
@@ -348,6 +353,7 @@ contract Ladle is LadleStorage, AccessControl() {
 
     /// @dev Add collateral and borrow from vault, so that a precise amount of base is obtained by the user.
     /// The base is obtained by borrowing fyToken and buying base with it in a pool.
+    /// Only before maturity.
     function _serve(bytes12 vaultId, DataTypes.Vault memory vault, address to, uint128 ink, uint128 base, uint128 max)
         private
         returns (DataTypes.Balances memory balances, uint128 art)
@@ -403,6 +409,7 @@ contract Ladle is LadleStorage, AccessControl() {
 
     /// @dev Repay debt by selling base in a pool and using the resulting fyToken
     /// The base tokens need to be already in the pool, unaccounted for.
+    /// Only before maturity. After maturity use close.
     function _repay(bytes12 vaultId, DataTypes.Vault memory vault, address to, int128 ink, uint128 min)
         private
         returns (DataTypes.Balances memory balances, uint128 art)
@@ -416,6 +423,7 @@ contract Ladle is LadleStorage, AccessControl() {
 
     /// @dev Repay all debt in a vault by buying fyToken from a pool with base.
     /// The base tokens need to be already in the pool, unaccounted for. The surplus base will be returned to msg.sender.
+    /// Only before maturity. After maturity use close.
     function _repayVault(bytes12 vaultId, DataTypes.Vault memory vault, address to, int128 ink, uint128 max)
         private
         returns (DataTypes.Balances memory balances, uint128 base)
@@ -431,7 +439,8 @@ contract Ladle is LadleStorage, AccessControl() {
 
     /// @dev Remove liquidity in a pool and use proceedings to repay debt
     /// The liquidity tokens need to be already in the pool, unaccounted for.
-    function _removeAndRepay(bytes12 vaultId, DataTypes.Vault memory vault, address to, uint128 minBaseOut, uint128 minFYTokenOut)
+    /// Only before maturity. TODO: After maturity
+    /* function _removeAndRepay(bytes12 vaultId, DataTypes.Vault memory vault, address to, uint128 minBaseOut, uint128 minFYTokenOut)
         private
         returns (DataTypes.Balances memory balances)
     {
@@ -458,6 +467,34 @@ contract Ladle is LadleStorage, AccessControl() {
             IERC20 fyToken = IERC20(address(series.fyToken));
             fyToken.safeTransfer(to, art - repayment);
         }
+    } */
+
+    // ---- Ladle as a token holder ----
+
+    /// @dev Use fyToken in the Ladle to repay debt.
+    function _repayLadle(bytes12 vaultId, DataTypes.Vault memory vault)
+        private
+        returns (DataTypes.Balances memory balances)
+    {
+        DataTypes.Series memory series = getSeries(vault.seriesId);
+        balances = cauldron.balances(vaultId);
+        
+        uint256 amount = series.fyToken.balanceOf(address(this));
+        amount = amount <= balances.art ? amount : balances.art;
+
+        // Update accounting
+        balances = cauldron.pour(vaultId, 0, -(amount.u128().i128()));
+        series.fyToken.burn(address(this), amount);
+    }
+
+    /// @dev Retrieve any asset or fyToken in the Ladle
+    function _retrieve(bytes6 id, bool asset, address to) 
+        private
+        returns (uint256 amount)
+    {
+        IERC20 token = IERC20(findToken(id, asset));
+        amount = token.balanceOf(address(this));
+        token.safeTransfer(to, amount);
     }
 
     // ---- Liquidations ----
@@ -565,12 +602,13 @@ contract Ladle is LadleStorage, AccessControl() {
         IERC20(fyToken).safeTransferFrom(msg.sender, address(fyToken), wad);
     }
 
-    /// @dev Allow users to redeem fyToken, to be used with batch
+    /// @dev Allow users to redeem fyToken, to be used with batch.
+    /// If 0 is passed as the amount to redeem, it redeems the fyToken balance of the Ladle instead.
     function _redeem(IFYToken fyToken, address to, uint256 wad)
         private
         returns (uint256)
     {
-        return fyToken.redeem(to, wad);
+        return fyToken.redeem(to, wad != 0 ? wad : fyToken.balanceOf(address(this)));
     }
 
     // ---- Module router ----
