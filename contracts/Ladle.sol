@@ -135,9 +135,9 @@ contract Ladle is LadleStorage, AccessControl() {
                 (cachedId, vault) = (vaultId, _build(vaultId, seriesId, ilkId));   // Cache the vault that was just built
             
             } else if (operation == Operation.FORWARD_PERMIT) {
-                (bytes6 id, bool asset, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s) =
+                (bytes6 id, bool isAsset, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s) =
                     abi.decode(data[i], (bytes6, bool, address, uint256, uint256, uint8, bytes32, bytes32));
-                _forwardPermit(id, asset, spender, amount, deadline, v, r, s);
+                _forwardPermit(id, isAsset, spender, amount, deadline, v, r, s);
             
             } else if (operation == Operation.JOIN_ETHER) {
                 (bytes6 etherId) = abi.decode(data[i], (bytes6));
@@ -159,9 +159,9 @@ contract Ladle is LadleStorage, AccessControl() {
                 (vault,) = _roll(vaultId, vault, newSeriesId, max);
             
             } else if (operation == Operation.FORWARD_DAI_PERMIT) {
-                (bytes6 id, bool asset, address spender, uint256 nonce, uint256 deadline, bool allowed, uint8 v, bytes32 r, bytes32 s) =
+                (bytes6 id, bool isAsset, address spender, uint256 nonce, uint256 deadline, bool allowed, uint8 v, bytes32 r, bytes32 s) =
                     abi.decode(data[i], (bytes6, bool, address, uint256, uint256, bool, uint8, bytes32, bytes32));
-                _forwardDaiPermit(id, asset, spender, nonce, deadline, allowed, v, r, s);
+                _forwardDaiPermit(id, isAsset, spender, nonce, deadline, allowed, v, r, s);
             
             } else if (operation == Operation.TRANSFER_TO_POOL) {
                 (bytes6 seriesId, bool base, uint128 wad) =
@@ -200,8 +200,8 @@ contract Ladle is LadleStorage, AccessControl() {
                 _repayLadle(vaultId, vault);
 
             } else if (operation == Operation.RETRIEVE) {
-                (bytes6 assetId, bool asset, address to) = abi.decode(data[i], (bytes6, bool, address));
-                _retrieve(assetId, asset, to);
+                (bytes6 assetId, bool isAsset, address to) = abi.decode(data[i], (bytes6, bool, address));
+                _retrieve(assetId, isAsset, to);
 
             } else if (operation == Operation.TRANSFER_TO_FYTOKEN) {
                 (bytes6 seriesId, uint256 amount) = abi.decode(data[i], (bytes6, uint256));
@@ -488,11 +488,11 @@ contract Ladle is LadleStorage, AccessControl() {
     }
 
     /// @dev Retrieve any asset or fyToken in the Ladle
-    function _retrieve(bytes6 id, bool asset, address to) 
+    function _retrieve(bytes6 id, bool isAsset, address to) 
         private
         returns (uint256 amount)
     {
-        IERC20 token = IERC20(findToken(id, asset));
+        IERC20 token = IERC20(findToken(id, isAsset));
         amount = token.balanceOf(address(this));
         token.safeTransfer(to, amount);
     }
@@ -522,26 +522,26 @@ contract Ladle is LadleStorage, AccessControl() {
     // ---- Permit management ----
 
     /// @dev From an id, which can be an assetId or a seriesId, find the resulting asset or fyToken
-    function findToken(bytes6 id, bool asset)
+    function findToken(bytes6 id, bool isAsset)
         private view returns (address token)
     {
-        token = asset ? cauldron.assets(id) : address(getSeries(id).fyToken);
+        token = isAsset ? cauldron.assets(id) : address(getSeries(id).fyToken);
         require (token != address(0), "Token not found");
     }
 
     /// @dev Execute an ERC2612 permit for the selected asset or fyToken
-    function _forwardPermit(bytes6 id, bool asset, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
+    function _forwardPermit(bytes6 id, bool isAsset, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
         private
     {
-        IERC2612 token = IERC2612(findToken(id, asset));
+        IERC2612 token = IERC2612(findToken(id, isAsset));
         token.permit(msg.sender, spender, amount, deadline, v, r, s);
     }
 
     /// @dev Execute a Dai-style permit for the selected asset or fyToken
-    function _forwardDaiPermit(bytes6 id, bool asset, address spender, uint256 nonce, uint256 deadline, bool allowed, uint8 v, bytes32 r, bytes32 s)
+    function _forwardDaiPermit(bytes6 id, bool isAsset, address spender, uint256 nonce, uint256 deadline, bool allowed, uint8 v, bytes32 r, bytes32 s)
         private
     {
-        DaiAbstract token = DaiAbstract(findToken(id, asset));
+        DaiAbstract token = DaiAbstract(findToken(id, isAsset));
         token.permit(msg.sender, spender, nonce, deadline, allowed, v, r, s);
     }
 

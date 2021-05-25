@@ -191,26 +191,26 @@ export class LadleWrapper {
     return this.batch([this.rollAction(vaultId, newSeriesId, max)])
   }
 
-  public forwardPermitAction(id: string, asset: boolean, spender: string, amount: BigNumberish, deadline: BigNumberish, v: BigNumberish, r: Buffer, s: Buffer): BatchAction {
+  public forwardPermitAction(id: string, isAsset: boolean, spender: string, amount: BigNumberish, deadline: BigNumberish, v: BigNumberish, r: Buffer, s: Buffer): BatchAction {
     return new BatchAction(OPS.FORWARD_PERMIT, ethers.utils.defaultAbiCoder.encode(
       ['bytes6', 'bool', 'address', 'uint256', 'uint256', 'uint8', 'bytes32', 'bytes32'],
-      [id, asset, spender, amount, deadline, v, r, s]
+      [id, isAsset, spender, amount, deadline, v, r, s]
     ))
   }
 
-  public async forwardPermit(id: string, asset: boolean, spender: string, amount: BigNumberish, deadline: BigNumberish, v: BigNumberish, r: Buffer, s: Buffer): Promise<ContractTransaction> {
-    return this.batch([this.forwardPermitAction(id, asset, spender, amount, deadline, v, r, s)])
+  public async forwardPermit(id: string, isAsset: boolean, spender: string, amount: BigNumberish, deadline: BigNumberish, v: BigNumberish, r: Buffer, s: Buffer): Promise<ContractTransaction> {
+    return this.batch([this.forwardPermitAction(id, isAsset, spender, amount, deadline, v, r, s)])
   }
 
-  public forwardDaiPermitAction(id: string, asset: boolean, spender: string, nonce: BigNumberish, deadline: BigNumberish, approved: boolean, v: BigNumberish, r: Buffer, s: Buffer): BatchAction {
+  public forwardDaiPermitAction(id: string, isAsset: boolean, spender: string, nonce: BigNumberish, deadline: BigNumberish, approved: boolean, v: BigNumberish, r: Buffer, s: Buffer): BatchAction {
     return new BatchAction(OPS.FORWARD_DAI_PERMIT, ethers.utils.defaultAbiCoder.encode(
       ['bytes6', 'bool', 'address', 'uint256', 'uint256', 'bool', 'uint8', 'bytes32', 'bytes32'],
-      [id, asset, spender, nonce, deadline, approved, v, r, s]
+      [id, isAsset, spender, nonce, deadline, approved, v, r, s]
     ))
   }
 
-  public async forwardDaiPermit(id: string, asset: boolean, spender: string, nonce: BigNumberish, deadline: BigNumberish, approved: boolean, v: BigNumberish, r: Buffer, s: Buffer): Promise<ContractTransaction> {
-    return this.batch([this.forwardDaiPermitAction(id, asset, spender, nonce, deadline, approved, v, r, s)])
+  public async forwardDaiPermit(id: string, isAsset: boolean, spender: string, nonce: BigNumberish, deadline: BigNumberish, approved: boolean, v: BigNumberish, r: Buffer, s: Buffer): Promise<ContractTransaction> {
+    return this.batch([this.forwardDaiPermitAction(id, isAsset, spender, nonce, deadline, approved, v, r, s)])
   }
 
   public joinEtherAction(etherId: string): BatchAction {
