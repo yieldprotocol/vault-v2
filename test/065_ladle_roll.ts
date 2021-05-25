@@ -25,6 +25,7 @@ describe('Ladle - roll', function () {
   let other: string
   let cauldron: Cauldron
   let fyToken: FYToken
+  let otherFYToken: FYToken
   let base: ERC20Mock
   let ladle: LadleWrapper
   let ladleFromOther: LadleWrapper
@@ -56,6 +57,7 @@ describe('Ladle - roll', function () {
     ladleFromOther = ladle.connect(otherAcc)
     base = env.assets.get(baseId) as ERC20Mock
     fyToken = env.series.get(seriesId) as FYToken
+    otherFYToken = env.series.get(otherSeriesId) as FYToken
 
     // ==== Set testing environment ====
     await cauldron.build(owner, vaultId, seriesId, ilkId)
@@ -81,9 +83,24 @@ describe('Ladle - roll', function () {
     await ladle.roll(vaultId, otherSeriesId, loan, MAX)
     const { timestamp } = await ethers.provider.getBlock('latest')
     const preFeeDebt = WAD.mul(105).div(100)
-    const appliedFee = (await fyToken.maturity()).sub(timestamp).mul(preFeeDebt).mul(fee).div(WAD)
+    const appliedFee = (await otherFYToken.maturity()).sub(timestamp).mul(preFeeDebt).mul(fee).div(WAD)
 
     expect(await fyToken.balanceOf(owner)).to.equal(WAD)
     expect((await cauldron.balances(vaultId)).art).to.equal(preFeeDebt.add(appliedFee))
+  })
+
+  describe('after maturity', async () => {
+    beforeEach(async () => {
+      await ethers.provider.send('evm_mine', [(await fyToken.maturity()).toNumber()])
+    })
+
+    it('rolls a vault', async () => {
+      expect(await ladle.roll(vaultId, otherSeriesId, loan, MAX))
+        .to.emit(cauldron, 'VaultRolled')
+        .withArgs(vaultId, otherSeriesId, WAD.mul(105).div(100)) // Mock pools have a constant rate of 5%
+      expect((await cauldron.vaults(vaultId)).seriesId).to.equal(otherSeriesId)
+      expect((await cauldron.balances(vaultId)).ink).to.equal(WAD)
+      expect((await cauldron.balances(vaultId)).art).to.equal(WAD.mul(105).div(100))
+    })
   })
 })

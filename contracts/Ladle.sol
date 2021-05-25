@@ -16,6 +16,7 @@ import "./math/WMul.sol";
 import "./math/CastU256U128.sol";
 import "./math/CastU128I128.sol";
 import "./LadleStorage.sol";
+import "hardhat/console.sol";
 
 
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
@@ -276,40 +277,6 @@ contract Ladle is LadleStorage, AccessControl() {
 
     // ---- Asset and debt management ----
 
-    /// @dev Change series and debt of a vault.
-    function _roll(bytes12 vaultId, DataTypes.Vault memory vault, bytes6 newSeriesId, uint8 loan, uint128 max)
-        private
-        returns (DataTypes.Vault memory, DataTypes.Balances memory)
-    {
-        DataTypes.Series memory series = getSeries(vault.seriesId);
-        DataTypes.Series memory newSeries = getSeries(newSeriesId);
-        DataTypes.Balances memory balances = cauldron.balances(vaultId);
-        
-        uint128 newDebt;
-        {
-            IPool pool = getPool(newSeriesId);
-            IFYToken fyToken = IFYToken(newSeries.fyToken);
-            IJoin baseJoin = getJoin(series.baseId);
-
-            // Calculate debt in fyToken terms
-            uint128 amt = _debtInBase(vault.seriesId, series, balances.art);
-
-            // Mint fyToken to the pool, as a kind of flash loan
-            fyToken.mint(address(pool), amt * loan);                // Loan is the size of the flash loan relative to the debt amount, 2 should be safe most of the time
-
-            // Buy the base required to pay off the debt in series 1, and find out the debt in series 2
-            newDebt = pool.buyBase(address(baseJoin), amt, max);
-            baseJoin.join(address(baseJoin), amt);                  // Repay the old series debt
-
-            pool.retrieveFYToken(address(fyToken));                 // Get the surplus fyToken
-            fyToken.burn(address(fyToken), (amt * loan) - newDebt);    // Burn the surplus
-        }
-
-        newDebt += ((series.maturity - block.timestamp) * uint256(newDebt).wmul(borrowingFee)).u128();  // Add borrowing fee
-
-        return cauldron.roll(vaultId, newSeriesId, newDebt.i128() - balances.art.i128()); // Change the series and debt for the vault
-    }
-
     /// @dev Move collateral and debt between vaults.
     function _stir(bytes12 from, bytes12 to, uint128 ink, uint128 art)
         private
@@ -430,6 +397,40 @@ contract Ladle is LadleStorage, AccessControl() {
         base = pool.buyFYToken(address(series.fyToken), balances.art, max);
         balances = _pour(vaultId, vault, to, ink, -(balances.art.i128()));
         pool.retrieveBase(msg.sender);
+    }
+
+    /// @dev Change series and debt of a vault.
+    function _roll(bytes12 vaultId, DataTypes.Vault memory vault, bytes6 newSeriesId, uint8 loan, uint128 max)
+        private
+        returns (DataTypes.Vault memory, DataTypes.Balances memory)
+    {
+        DataTypes.Series memory series = getSeries(vault.seriesId);
+        DataTypes.Series memory newSeries = getSeries(newSeriesId);
+        DataTypes.Balances memory balances = cauldron.balances(vaultId);
+        
+        uint128 newDebt;
+        {
+            IPool pool = getPool(newSeriesId);
+            IFYToken fyToken = IFYToken(newSeries.fyToken);
+            IJoin baseJoin = getJoin(series.baseId);
+
+            // Calculate debt in fyToken terms
+            uint128 amt = _debtInBase(vault.seriesId, series, balances.art);
+
+            // Mint fyToken to the pool, as a kind of flash loan
+            fyToken.mint(address(pool), amt * loan);                // Loan is the size of the flash loan relative to the debt amount, 2 should be safe most of the time
+
+            // Buy the base required to pay off the debt in series 1, and find out the debt in series 2
+            newDebt = pool.buyBase(address(baseJoin), amt, max);
+            baseJoin.join(address(baseJoin), amt);                  // Repay the old series debt
+
+            pool.retrieveFYToken(address(fyToken));                 // Get the surplus fyToken
+            fyToken.burn(address(fyToken), (amt * loan) - newDebt);    // Burn the surplus
+        }
+
+        newDebt += ((newSeries.maturity - block.timestamp) * uint256(newDebt).wmul(borrowingFee)).u128();  // Add borrowing fee, also stops users form rolling to a mature series
+
+        return cauldron.roll(vaultId, newSeriesId, newDebt.i128() - balances.art.i128()); // Change the series and debt for the vault
     }
 
     /// @dev Remove liquidity in a pool and use proceedings to repay debt
