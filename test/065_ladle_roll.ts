@@ -28,6 +28,7 @@ describe('Ladle - roll', function () {
   let base: ERC20Mock
   let ladle: LadleWrapper
   let ladleFromOther: LadleWrapper
+  const loan = '2' // Flash loan size relative to debt
 
   async function fixture() {
     return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId], [seriesId, otherSeriesId])
@@ -62,11 +63,11 @@ describe('Ladle - roll', function () {
   })
 
   it('does not allow rolling vaults other than to the vault owner', async () => {
-    await expect(ladleFromOther.roll(vaultId, seriesId, WAD)).to.be.revertedWith('Only vault owner')
+    await expect(ladleFromOther.roll(vaultId, seriesId, loan, WAD)).to.be.revertedWith('Only vault owner')
   })
 
   it('rolls a vault', async () => {
-    expect(await ladle.roll(vaultId, otherSeriesId, MAX))
+    expect(await ladle.roll(vaultId, otherSeriesId, loan, MAX))
       .to.emit(cauldron, 'VaultRolled')
       .withArgs(vaultId, otherSeriesId, WAD.mul(105).div(100)) // Mock pools have a constant rate of 5%
     expect((await cauldron.vaults(vaultId)).seriesId).to.equal(otherSeriesId)
@@ -77,7 +78,7 @@ describe('Ladle - roll', function () {
   it('borrowing fees are applied when rolling', async () => {
     const fee = WAD.div(1000000000) // 0.000000 001% wei/second
     await ladle.setFee(fee)
-    await ladle.roll(vaultId, otherSeriesId, MAX)
+    await ladle.roll(vaultId, otherSeriesId, loan, MAX)
     const { timestamp } = await ethers.provider.getBlock('latest')
     const preFeeDebt = WAD.mul(105).div(100)
     const appliedFee = (await fyToken.maturity()).sub(timestamp).mul(preFeeDebt).mul(fee).div(WAD)

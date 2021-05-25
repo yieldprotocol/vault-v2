@@ -175,12 +175,12 @@ export class LadleWrapper {
     return this.batch([this.removeRepayAction(vaultId, to, minBaseOut, minFYTokenOut)])
   }
 
-  public rollAction(vaultId: string, newSeriesId: string, max: BigNumberish): BatchAction {
-    return new BatchAction(OPS.ROLL, ethers.utils.defaultAbiCoder.encode(['bytes12', 'bytes6', 'uint128'], [vaultId, newSeriesId, max]))
+  public rollAction(vaultId: string, newSeriesId: string, loan: BigNumberish, max: BigNumberish): BatchAction {
+    return new BatchAction(OPS.ROLL, ethers.utils.defaultAbiCoder.encode(['bytes12', 'bytes6', 'uint8', 'uint128'], [vaultId, newSeriesId, loan, max]))
   }
 
-  public async roll(vaultId: string, newSeriesId: string, max: BigNumberish): Promise<ContractTransaction> {
-    return this.batch([this.rollAction(vaultId, newSeriesId, max)])
+  public async roll(vaultId: string, newSeriesId: string, loan: BigNumberish, max: BigNumberish): Promise<ContractTransaction> {
+    return this.batch([this.rollAction(vaultId, newSeriesId, loan, max)])
   }
 
   public forwardPermitAction(id: string, asset: boolean, spender: string, amount: BigNumberish, deadline: BigNumberish, v: BigNumberish, r: Buffer, s: Buffer): BatchAction {

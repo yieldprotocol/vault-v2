@@ -154,9 +154,9 @@ contract Ladle is LadleStorage, AccessControl() {
                 _serve(vaultId, vault, to, ink, base, max);
 
             } else if (operation == Operation.ROLL) {
-                (bytes12 vaultId, bytes6 newSeriesId, uint128 max) = abi.decode(data[i], (bytes12, bytes6, uint128));
+                (bytes12 vaultId, bytes6 newSeriesId, uint8 loan, uint128 max) = abi.decode(data[i], (bytes12, bytes6, uint8, uint128));
                 if (cachedId != vaultId) (cachedId, vault) = (vaultId, getOwnedVault(vaultId));
-                (vault,) = _roll(vaultId, vault, newSeriesId, max);
+                (vault,) = _roll(vaultId, vault, newSeriesId, loan, max);
             
             } else if (operation == Operation.FORWARD_DAI_PERMIT) {
                 (bytes6 id, bool asset, address spender, uint256 nonce, uint256 deadline, bool allowed, uint8 v, bytes32 r, bytes32 s) =
@@ -277,30 +277,33 @@ contract Ladle is LadleStorage, AccessControl() {
     // ---- Asset and debt management ----
 
     /// @dev Change series and debt of a vault.
-    function _roll(bytes12 vaultId, DataTypes.Vault memory vault, bytes6 newSeriesId, uint128 max)
+    function _roll(bytes12 vaultId, DataTypes.Vault memory vault, bytes6 newSeriesId, uint8 loan, uint128 max)
         private
         returns (DataTypes.Vault memory, DataTypes.Balances memory)
     {
         DataTypes.Series memory series = getSeries(vault.seriesId);
         DataTypes.Series memory newSeries = getSeries(newSeriesId);
-        
-        IPool pool = getPool(newSeriesId);
-        IFYToken fyToken = IFYToken(newSeries.fyToken);
-        IJoin baseJoin = getJoin(series.baseId);
-
-        // Calculate debt in fyToken terms
         DataTypes.Balances memory balances = cauldron.balances(vaultId);
-        uint128 amt = _debtInBase(vault.seriesId, series, balances.art);
+        
+        uint128 newDebt;
+        {
+            IPool pool = getPool(newSeriesId);
+            IFYToken fyToken = IFYToken(newSeries.fyToken);
+            IJoin baseJoin = getJoin(series.baseId);
 
-        // Mint fyToken to the pool, as a kind of flash loan
-        fyToken.mint(address(pool), amt * 2); // TODO: Set multiplier via parameter
+            // Calculate debt in fyToken terms
+            uint128 amt = _debtInBase(vault.seriesId, series, balances.art);
 
-        // Buy the base required to pay off the debt in series 1, and find out the debt in series 2
-        uint128 newDebt = pool.buyBase(address(baseJoin), amt, max);
-        baseJoin.join(address(baseJoin), amt);                  // Repay the old series debt
+            // Mint fyToken to the pool, as a kind of flash loan
+            fyToken.mint(address(pool), amt * loan);                // Loan is the size of the flash loan relative to the debt amount, 2 should be safe most of the time
 
-        pool.retrieveFYToken(address(fyToken));                 // Get the surplus fyToken
-        fyToken.burn(address(fyToken), (amt * 2) - newDebt);    // Burn the surplus
+            // Buy the base required to pay off the debt in series 1, and find out the debt in series 2
+            newDebt = pool.buyBase(address(baseJoin), amt, max);
+            baseJoin.join(address(baseJoin), amt);                  // Repay the old series debt
+
+            pool.retrieveFYToken(address(fyToken));                 // Get the surplus fyToken
+            fyToken.burn(address(fyToken), (amt * loan) - newDebt);    // Burn the surplus
+        }
 
         newDebt += ((series.maturity - block.timestamp) * uint256(newDebt).wmul(borrowingFee)).u128();  // Add borrowing fee
 
