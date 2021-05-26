@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: BUSL-1.1
 import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
 
 pragma solidity ^0.8.0;

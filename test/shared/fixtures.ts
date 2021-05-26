@@ -1,7 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 
-import { id } from '@yield-protocol/utils-v2'
-import { constants } from '@yield-protocol/utils-v2'
+import { id, constants } from '@yield-protocol/utils-v2'
 const { WAD, THREE_MONTHS, ETH, DAI, USDC } = constants
 import { CHI, RATE } from '../../src/constants'
 
@@ -99,7 +98,7 @@ export class YieldEnvironment {
         id('addAsset(bytes6,address)'),
         id('addSeries(bytes6,bytes6,address)'),
         id('addIlks(bytes6,bytes6[])'),
-        id('setMaxDebt(bytes6,bytes6,uint128)'),
+        id('setDebtLimits(bytes6,bytes6,uint96,uint24,uint8)'),
         id('setRateOracle(bytes6,address)'),
         id('setSpotOracle(bytes6,bytes6,address,uint32)'),
       ],
@@ -150,7 +149,7 @@ export class YieldEnvironment {
       [
         id('addAsset(bytes6,address)'),
         id('makeBase(bytes6,address,address,address)'),
-        id('makeIlk(bytes6,bytes6,address,address,uint32,uint128)'),
+        id('makeIlk(bytes6,bytes6,address,address,uint32,uint96,uint24,uint8)'),
         id('addSeries(bytes6,bytes6,uint32,bytes6[],string,string)'),
         id('addPool(bytes6,bytes6)'),
       ],
@@ -266,7 +265,7 @@ export class YieldEnvironment {
     // ==== Protocol ====
 
     const cauldron = (await deployContract(owner, CauldronArtifact, [])) as Cauldron
-    const innerLadle = (await deployContract(owner, LadleArtifact, [cauldron.address])) as Ladle
+    const innerLadle = (await deployContract(owner, LadleArtifact, [cauldron.address, weth.address])) as Ladle
     const ladle = new LadleWrapper(innerLadle)
     const witch = (await deployContract(owner, WitchArtifact, [cauldron.address, ladle.address])) as Witch
     const joinFactory = (await deployContract(owner, JoinFactoryArtifact, [])) as JoinFactory
@@ -285,8 +284,8 @@ export class YieldEnvironment {
     await this.cauldronGovAuth(cauldron, wand.address)
     await this.ladleGovAuth(ladle, wand.address)
     await this.witchGovAuth(witch, wand.address)
-    await chiRateOracle.transferOwnership(wand.address)
-    await spotOracle.transferOwnership(wand.address)
+    await chiRateOracle.grantRole(id('setSource(bytes6,bytes6,address)'), wand.address)
+    await spotOracle.grantRole(id('setSource(bytes6,bytes6,address)'), wand.address)
 
     // ==== Owner access (only test environment) ====
     await this.wandAuth(wand, ownerAdd)
@@ -343,10 +342,12 @@ export class YieldEnvironment {
 
     // ==== Make ilkIds the ilks, creating spot oracles and settting debt limits ====
     const ratio = 1000000 //  1000000 == 100% collateralization ratio
-    const maxDebt = WAD.mul(1000000)
+    const max = WAD
+    const min = 1000000
+    const dec = 6
     for (let ilkId of ilkIds) {
       const source = sources.get(ilkId) as ISourceMock
-      await wand.makeIlk(baseId, ilkId, spotOracle.address, source.address, ratio, maxDebt)
+      await wand.makeIlk(baseId, ilkId, spotOracle.address, source.address, ratio, max, min, dec)
       oracles.set(ilkId, spotOracle as unknown as OracleMock)
     }
 

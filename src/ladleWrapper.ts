@@ -167,42 +167,50 @@ export class LadleWrapper {
     return this.batch([this.repayVaultAction(vaultId, to, ink, max)])
   }
 
-  public removeRepayAction(vaultId: string, to: string, minBaseOut: BigNumberish, minFYTokenOut: BigNumberish): BatchAction {
-    return new BatchAction(OPS.REMOVE_REPAY, ethers.utils.defaultAbiCoder.encode(['bytes12', 'address', 'uint128', 'uint128'], [vaultId, to, minBaseOut, minFYTokenOut]))
+  public repayLadleAction(vaultId: string): BatchAction {
+    return new BatchAction(OPS.REPAY_LADLE, ethers.utils.defaultAbiCoder.encode(['bytes12'], [vaultId]))
   }
 
-  public async removeRepay(vaultId: string, to: string, minBaseOut: BigNumberish, minFYTokenOut: BigNumberish): Promise<ContractTransaction> {
-    return this.batch([this.removeRepayAction(vaultId, to, minBaseOut, minFYTokenOut)])
+  public async repayLadle(vaultId: string): Promise<ContractTransaction> {
+    return this.batch([this.repayLadleAction(vaultId)])
   }
 
-  public rollAction(vaultId: string, newSeriesId: string, max: BigNumberish): BatchAction {
-    return new BatchAction(OPS.ROLL, ethers.utils.defaultAbiCoder.encode(['bytes12', 'bytes6', 'uint128'], [vaultId, newSeriesId, max]))
+  public retrieveAction(assetId: string, isAsset: boolean, to: string): BatchAction {
+    return new BatchAction(OPS.RETRIEVE, ethers.utils.defaultAbiCoder.encode(['bytes6', 'bool', 'address'], [assetId, isAsset, to]))
   }
 
-  public async roll(vaultId: string, newSeriesId: string, max: BigNumberish): Promise<ContractTransaction> {
-    return this.batch([this.rollAction(vaultId, newSeriesId, max)])
+  public async retrieve(assetId: string, isAsset: boolean, to: string): Promise<ContractTransaction> {
+    return this.batch([this.retrieveAction(assetId, isAsset, to)])
   }
 
-  public forwardPermitAction(id: string, asset: boolean, spender: string, amount: BigNumberish, deadline: BigNumberish, v: BigNumberish, r: Buffer, s: Buffer): BatchAction {
+  public rollAction(vaultId: string, newSeriesId: string, loan: BigNumberish, max: BigNumberish): BatchAction {
+    return new BatchAction(OPS.ROLL, ethers.utils.defaultAbiCoder.encode(['bytes12', 'bytes6', 'uint8', 'uint128'], [vaultId, newSeriesId, loan, max]))
+  }
+
+  public async roll(vaultId: string, newSeriesId: string, loan: BigNumberish, max: BigNumberish): Promise<ContractTransaction> {
+    return this.batch([this.rollAction(vaultId, newSeriesId, loan, max)])
+  }
+
+  public forwardPermitAction(id: string, isAsset: boolean, spender: string, amount: BigNumberish, deadline: BigNumberish, v: BigNumberish, r: Buffer, s: Buffer): BatchAction {
     return new BatchAction(OPS.FORWARD_PERMIT, ethers.utils.defaultAbiCoder.encode(
       ['bytes6', 'bool', 'address', 'uint256', 'uint256', 'uint8', 'bytes32', 'bytes32'],
-      [id, asset, spender, amount, deadline, v, r, s]
+      [id, isAsset, spender, amount, deadline, v, r, s]
     ))
   }
 
-  public async forwardPermit(id: string, asset: boolean, spender: string, amount: BigNumberish, deadline: BigNumberish, v: BigNumberish, r: Buffer, s: Buffer): Promise<ContractTransaction> {
-    return this.batch([this.forwardPermitAction(id, asset, spender, amount, deadline, v, r, s)])
+  public async forwardPermit(id: string, isAsset: boolean, spender: string, amount: BigNumberish, deadline: BigNumberish, v: BigNumberish, r: Buffer, s: Buffer): Promise<ContractTransaction> {
+    return this.batch([this.forwardPermitAction(id, isAsset, spender, amount, deadline, v, r, s)])
   }
 
-  public forwardDaiPermitAction(id: string, asset: boolean, spender: string, nonce: BigNumberish, deadline: BigNumberish, approved: boolean, v: BigNumberish, r: Buffer, s: Buffer): BatchAction {
+  public forwardDaiPermitAction(id: string, isAsset: boolean, spender: string, nonce: BigNumberish, deadline: BigNumberish, approved: boolean, v: BigNumberish, r: Buffer, s: Buffer): BatchAction {
     return new BatchAction(OPS.FORWARD_DAI_PERMIT, ethers.utils.defaultAbiCoder.encode(
       ['bytes6', 'bool', 'address', 'uint256', 'uint256', 'bool', 'uint8', 'bytes32', 'bytes32'],
-      [id, asset, spender, nonce, deadline, approved, v, r, s]
+      [id, isAsset, spender, nonce, deadline, approved, v, r, s]
     ))
   }
 
-  public async forwardDaiPermit(id: string, asset: boolean, spender: string, nonce: BigNumberish, deadline: BigNumberish, approved: boolean, v: BigNumberish, r: Buffer, s: Buffer): Promise<ContractTransaction> {
-    return this.batch([this.forwardDaiPermitAction(id, asset, spender, nonce, deadline, approved, v, r, s)])
+  public async forwardDaiPermit(id: string, isAsset: boolean, spender: string, nonce: BigNumberish, deadline: BigNumberish, approved: boolean, v: BigNumberish, r: Buffer, s: Buffer): Promise<ContractTransaction> {
+    return this.batch([this.forwardDaiPermitAction(id, isAsset, spender, nonce, deadline, approved, v, r, s)])
   }
 
   public joinEtherAction(etherId: string): BatchAction {
@@ -213,12 +221,12 @@ export class LadleWrapper {
     return this.batch([this.joinEtherAction(etherId)], overrides)
   }
 
-  public exitEtherAction(etherId: string, to: string): BatchAction {
-    return new BatchAction(OPS.EXIT_ETHER, ethers.utils.defaultAbiCoder.encode(['bytes6', 'address'], [etherId, to]))
+  public exitEtherAction(to: string): BatchAction {
+    return new BatchAction(OPS.EXIT_ETHER, ethers.utils.defaultAbiCoder.encode(['address'], [to]))
   }
 
-  public async exitEther(etherId: string, to: string): Promise<ContractTransaction> {
-    return this.batch([this.exitEtherAction(etherId, to)])
+  public async exitEther(to: string): Promise<ContractTransaction> {
+    return this.batch([this.exitEtherAction(to)])
   }
 
   public transferToPoolAction(seriesId: string, base: boolean, wad: BigNumberish): BatchAction {
