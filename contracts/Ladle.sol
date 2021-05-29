@@ -605,6 +605,8 @@ contract Ladle is LadleStorage, AccessControl() {
     // ---- Module router ----
 
     /// @dev Allow users to use functionality coded in a module, to be used with batch
+    /// @notice Modules must not do any changes to the vault (owner, seriesId, ilkId),
+    /// it would be disastrous in combination with batch vault caching 
     function _moduleCall(address module, bytes memory moduleCall)
         private
         returns (bool success, bytes memory result)
