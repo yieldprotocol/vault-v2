@@ -55,9 +55,15 @@ describe('Ladle - vaults', function () {
   })
 
   it('builds a vault', async () => {
-    await expect(ladle.build(otherVaultId, seriesId, ilkId))
+    await expect(ladle.build(seriesId, ilkId))
       .to.emit(cauldron, 'VaultBuilt')
-      .withArgs(otherVaultId, owner, seriesId, ilkId)
+
+    const logs = await cauldron.queryFilter(cauldron.filters.VaultBuilt(null, null, null, null))
+    const event = logs[logs.length - 1]
+    const otherVaultId = event.args.vaultId
+    expect(event.args.owner).to.equal(owner)
+    expect(event.args.seriesId).to.equal(seriesId)
+    expect(event.args.ilkId).to.equal(ilkId)
 
     const vault = await cauldron.vaults(otherVaultId)
     expect(vault.owner).to.equal(owner)
