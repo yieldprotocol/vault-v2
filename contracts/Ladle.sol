@@ -120,8 +120,9 @@ contract Ladle is LadleStorage, AccessControl() {
         private view
         returns (bytes12, bytes12, DataTypes.Vault memory)
     {
-            if (vaultId == bytes12(0) || vaultId == cachedId) return (vaultId, vaultId, vault); // Use the cache
-            else return (vaultId, vaultId, getOwnedVault(vaultId)); // Refresh the cache
+        require(vaultId != bytes12(0) || cachedId != bytes12(0), "Vault not cached");           // Can't use the cache
+        if (vaultId == bytes12(0) || vaultId == cachedId) return (cachedId, cachedId, vault);   // Use the cache
+        else return (vaultId, vaultId, getOwnedVault(vaultId));                                 // Refresh the cache
     } 
 
     /// @dev Submit a series of calls for execution.
@@ -269,7 +270,7 @@ contract Ladle is LadleStorage, AccessControl() {
         bytes12 vaultId = _generateVaultId(salt);
         try cauldron.build(msg.sender, vaultId, seriesId, ilkId) returns (DataTypes.Vault memory vault) {
             return (vaultId, vault);
-        } catch Error (string memory /*Vault already exists*/) {
+        } catch Error (string memory) {
             return _build(seriesId, ilkId, salt + 1);
         }
     }

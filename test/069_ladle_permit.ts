@@ -118,7 +118,7 @@ describe('Ladle - permit', function () {
 
     expect(
       await ladle.batch([
-        ladle.buildAction(vaultId, seriesId, ilkId),
+        ladle.buildAction(seriesId, ilkId),
         ladle.forwardPermitAction(seriesId, false, ladle.address, amount, deadline, v, r, s),
       ])
     )
@@ -165,7 +165,7 @@ describe('Ladle - permit', function () {
 
     expect(
       await ladle.batch([
-        ladle.buildAction(vaultId, seriesId, ilkId),
+        ladle.buildAction(seriesId, ilkId),
         ladle.forwardDaiPermitAction(DAI, true, ladle.address, nonce, deadline, true, v, r, s),
       ])
     )

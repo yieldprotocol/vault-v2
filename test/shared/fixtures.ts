@@ -42,15 +42,10 @@ import { DAIMock } from '../../typechain/DAIMock'
 import { USDCMock } from '../../typechain/USDCMock'
 
 import { LadleWrapper } from '../../src/ladleWrapper'
+import { getLastVaultId } from '../../src/helpers'
 
 import { ethers, waffle } from 'hardhat'
 const { deployContract } = waffle
-
-export async function getLastVaultId(cauldron: Cauldron): Promise<string> {
-  const logs = await cauldron.queryFilter(cauldron.filters.VaultBuilt(null, null, null, null))
-  const event = logs[logs.length - 1]
-  return event.args.vaultId
-}
 
 export class YieldEnvironment {
   owner: SignerWithAddress
