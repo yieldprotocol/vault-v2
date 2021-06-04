@@ -177,6 +177,8 @@ contract Cauldron is AccessControl() {
         returns(DataTypes.Vault memory vault)
     {
         require (vaultId != bytes12(0), "Vault id is zero");
+        require (seriesId != bytes12(0), "Series id is zero");
+        require (ilkId != bytes12(0), "Ilk id is zero");
         require (vaults[vaultId].seriesId == bytes6(0), "Vault already exists");   // Series can't take bytes6(0) as their id
         require (ilks[seriesId][ilkId] == true, "Ilk not added to series");
         vault = DataTypes.Vault({
@@ -205,6 +207,8 @@ contract Cauldron is AccessControl() {
     function _tweak(bytes12 vaultId, DataTypes.Vault memory vault)
         internal
     {
+        require (vault.seriesId != bytes6(0), "Series id is zero");
+        require (vault.ilkId != bytes6(0), "Ilk id is zero");
         require (ilks[vault.seriesId][vault.ilkId] == true, "Ilk not added to series");
 
         vaults[vaultId] = vault;
@@ -236,6 +240,7 @@ contract Cauldron is AccessControl() {
         internal
         returns(DataTypes.Vault memory vault)
     {
+        require (vaultId != bytes12(0), "Vault id is zero");
         vault = vaults[vaultId];
         vault.owner = receiver;
         vaults[vaultId] = vault;
