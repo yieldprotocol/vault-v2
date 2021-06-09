@@ -96,10 +96,7 @@ describe('Ladle - batch', function () {
   })
 
   it('builds a vault and destroys it', async () => {
-    await ladle.batch([
-      ladle.buildAction(seriesId, ilkId),
-      ladle.destroyAction(cachedVaultId)
-    ])
+    await ladle.batch([ladle.buildAction(seriesId, ilkId), ladle.destroyAction(cachedVaultId)])
   })
 
   it("after giving a vault, it can't tweak it", async () => {

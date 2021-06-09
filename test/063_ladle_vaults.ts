@@ -55,8 +55,7 @@ describe('Ladle - vaults', function () {
   })
 
   it('builds a vault', async () => {
-    await expect(ladle.build(seriesId, ilkId))
-      .to.emit(cauldron, 'VaultBuilt')
+    await expect(ladle.build(seriesId, ilkId)).to.emit(cauldron, 'VaultBuilt')
 
     const logs = await cauldron.queryFilter(cauldron.filters.VaultBuilt(null, null, null, null))
     const event = logs[logs.length - 1]
