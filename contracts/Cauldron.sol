@@ -9,6 +9,7 @@ import "./math/WDiv.sol";
 import "./math/CastU128I128.sol";
 import "./math/CastI128U128.sol";
 import "./math/CastU256U32.sol";
+import "./math/CastU256U128.sol";
 import "./math/CastU256I256.sol";
 
 library CauldronMath {
@@ -26,6 +27,7 @@ contract Cauldron is AccessControl() {
     using WDiv for uint256;
     using CastU128I128 for uint128;
     using CastU256U32 for uint256;
+    using CastU256U128 for uint256;
     using CastU256I256 for uint256;
     using CastI128U128 for int128;
 
@@ -476,5 +478,19 @@ contract Cauldron is AccessControl() {
         }
 
         return inkValue.i256() - uint256(balances_.art).wmul(ratio).i256();
+    }
+
+    /// @dev Calculate a debt amount for a series in base and FYToken terms
+    function debtInBaseAndFYToken(bytes6 seriesId, DataTypes.Series memory series_, uint128 art)
+        public
+        returns (uint128 bamt, uint128 fyamt)
+    {
+        if (uint32(block.timestamp) >= series_.maturity) {
+            bamt = uint256(art).wmul(accrual(seriesId)).u128();
+            fyamt = uint256(art).wdiv(series_.fyToken.accrual()).u128();
+        } else {
+            bamt = art;
+            fyamt = art;
+        }
     }
 }

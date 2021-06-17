@@ -348,7 +348,7 @@ contract Ladle is LadleStorage, AccessControl() {
 
         // Calculate debt in fyToken terms
         DataTypes.Series memory series = getSeries(vault.seriesId);
-        uint128 amt = _debtInBase(vault.seriesId, series, uint128(-art));
+        uint128 amt = cauldron.debtInBaseAndFYToken(vault.seriesId, series, uint128(-art));
 
         // Update accounting
         balances = cauldron.pour(vaultId, ink, art);
@@ -363,18 +363,6 @@ contract Ladle is LadleStorage, AccessControl() {
         // Manage underlying
         IJoin baseJoin = getJoin(series.baseId);
         baseJoin.join(msg.sender, amt);
-    }
-
-    /// @dev Calculate a debt amount for a series in base terms
-    function _debtInBase(bytes6 seriesId, DataTypes.Series memory series, uint128 art)
-        private
-        returns (uint128 amt)
-    {
-        if (uint32(block.timestamp) >= series.maturity) {
-            amt = uint256(art).wmul(cauldron.accrual(seriesId)).u128();
-        } else {
-            amt = art;
-        }
     }
 
     /// @dev Repay debt by selling base in a pool and using the resulting fyToken
@@ -423,7 +411,7 @@ contract Ladle is LadleStorage, AccessControl() {
             IJoin baseJoin = getJoin(series.baseId);
 
             // Calculate debt in fyToken terms
-            uint128 amt = _debtInBase(vault.seriesId, series, balances.art);
+            uint128 amt = cauldron.debtInBaseAndFYToken(vault.seriesId, series, balances.art);
 
             // Mint fyToken to the pool, as a kind of flash loan
             fyToken.mint(address(pool), amt * loan);                // Loan is the size of the flash loan relative to the debt amount, 2 should be safe most of the time
