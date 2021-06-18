@@ -11,12 +11,12 @@ contract RestrictedERC20Mock is AccessControl(), ERC20Permit  {
     ) ERC20Permit(name, symbol, 18) { }
 
     /// @dev Give tokens to whoever.
-    function mint(address to, uint256 amount) public virtual auth {
+    function mint(address to, uint256 amount) external virtual auth {
         _mint(to, amount);
     }
 
     /// @dev Burn tokens from whoever.
-    function burn(address from, uint256 amount) public virtual auth {
+    function burn(address from, uint256 amount) external virtual auth {
         _burn(from, amount);
     }
 }

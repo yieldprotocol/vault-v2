@@ -31,7 +31,7 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
 
     /// @dev Set the flash loan fee factor
     function setFlashFeeFactor(uint256 flashFeeFactor_)
-        public
+        external
         auth
     {
         flashFeeFactor = flashFeeFactor_;

@@ -46,7 +46,7 @@ contract Wand is AccessControl {
     function addAsset(
         bytes6 assetId,
         address asset
-    ) public auth {
+    ) external auth {
         // Add asset to cauldron, deploy new Join, and add it to the ladle
         require (address(asset) != address(0), "Asset required");
         cauldron.addAsset(assetId, asset);
@@ -62,7 +62,7 @@ contract Wand is AccessControl {
 
     /// @dev Make a base asset out of a generic asset, by adding rate and chi oracles.
     /// This assumes CompoundMultiOracles, which deliver both rate and chi.
-    function makeBase(bytes6 assetId, IMultiOracleGov oracle, address rateSource, address chiSource) public auth {
+    function makeBase(bytes6 assetId, IMultiOracleGov oracle, address rateSource, address chiSource) external auth {
         require (address(oracle) != address(0), "Oracle required");
         require (rateSource != address(0), "Rate source required");
         require (chiSource != address(0), "Chi source required");
@@ -73,7 +73,7 @@ contract Wand is AccessControl {
     }
 
     /// @dev Make an ilk asset out of a generic asset, by adding a spot oracle against a base asset, collateralization ratio, and debt ceiling.
-    function makeIlk(bytes6 baseId, bytes6 ilkId, IMultiOracleGov oracle, address spotSource, uint32 ratio, uint96 max, uint24 min, uint8 dec) public auth {
+    function makeIlk(bytes6 baseId, bytes6 ilkId, IMultiOracleGov oracle, address spotSource, uint32 ratio, uint96 max, uint24 min, uint8 dec) external auth {
         oracle.setSource(baseId, ilkId, spotSource);
         cauldron.setSpotOracle(baseId, ilkId, IOracle(address(oracle)), ratio);
         cauldron.setDebtLimits(baseId, ilkId, max, min, dec);
@@ -88,7 +88,7 @@ contract Wand is AccessControl {
         bytes6[] memory ilkIds,
         string memory name,
         string memory symbol
-    ) public auth {
+    ) external auth {
         address base = cauldron.assets(baseId);
         require(base != address(0), "Base not found");
 

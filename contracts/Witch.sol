@@ -34,13 +34,13 @@ contract Witch is AccessControl() {
     }
 
     /// @dev Set the auction time to calculate liquidation prices
-    function setAuctionTime(uint128 auctionTime_) public auth {
+    function setAuctionTime(uint128 auctionTime_) external auth {
         auctionTime = auctionTime_;
         emit AuctionTimeSet(auctionTime_);
     }
 
     /// @dev Set the proportion of the collateral that will be sold at auction start
-    function setInitialProportion(uint128 initialProportion_) public auth {
+    function setInitialProportion(uint128 initialProportion_) external auth {
         require (initialProportion_ <= 1e18, "Only at or under 100%");
         initialProportion = initialProportion_;
         emit InitialProportionSet(initialProportion_);
