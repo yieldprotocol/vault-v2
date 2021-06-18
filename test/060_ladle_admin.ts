@@ -1,4 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
+import { Event } from '@ethersproject/contracts/lib/index'
+import { Result } from '@ethersproject/abi'
 
 import { constants, id } from '@yield-protocol/utils-v2'
 const { WAD, THREE_MONTHS } = constants
@@ -93,9 +95,13 @@ describe('Ladle - admin', function () {
 
     // Deploy a join
     joinFactory = (await deployContract(ownerAcc, JoinFactoryArtifact, [])) as JoinFactory
-    const joinAddress = await joinFactory.calculateJoinAddress(ilk.address) // Get the address
-    await joinFactory.createJoin(ilk.address) // Create the Join (doesn't return anything outside a contract call)
-    ilkJoin = (await ethers.getContractAt('Join', joinAddress, ownerAcc)) as Join
+    ilkJoin = (await ethers.getContractAt(
+      'Join',
+      (((await (await joinFactory.createJoin(ilk.address)).wait()).events as Event[]).filter(
+        (e) => e.event == 'JoinCreated'
+      )[0].args as Result)[1],
+      ownerAcc
+    )) as Join
     await ilkJoin.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], ladle.address)
 
     // Deploy a series

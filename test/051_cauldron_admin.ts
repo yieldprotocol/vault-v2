@@ -1,4 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
+import { Event } from '@ethersproject/contracts/lib/index'
+import { Result } from '@ethersproject/abi'
 import { id } from '@yield-protocol/utils-v2'
 
 import CauldronArtifact from '../artifacts/contracts/Cauldron.sol/Cauldron.json'
@@ -56,9 +58,13 @@ describe('Cauldron - admin', function () {
     ilk1 = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId1, 'Mock Ilk'])) as ERC20Mock
     ilk2 = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId2, 'Mock Ilk'])) as ERC20Mock
     joinFactory = (await deployContract(ownerAcc, JoinFactoryArtifact, [])) as JoinFactory
-    const joinAddress = await joinFactory.calculateJoinAddress(base.address) // Get the address
-    await joinFactory.createJoin(base.address) // Create the Join (doesn't return anything outside a contract call)
-    join = (await ethers.getContractAt('Join', joinAddress, ownerAcc)) as Join
+    join = (await ethers.getContractAt(
+      'Join',
+      (((await (await joinFactory.createJoin(base.address)).wait()).events as Event[]).filter(
+        (e) => e.event == 'JoinCreated'
+      )[0].args as Result)[1],
+      ownerAcc
+    )) as Join
     fyToken = (await deployContract(ownerAcc, FYTokenArtifact, [
       baseId,
       base.address,

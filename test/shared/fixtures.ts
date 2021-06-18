@@ -1,4 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
+import { Event } from '@ethersproject/contracts/lib/index'
+import { Result } from '@ethersproject/abi'
 
 import { id, constants } from '@yield-protocol/utils-v2'
 const { WAD, THREE_MONTHS, ETH, DAI, USDC } = constants
@@ -304,7 +306,7 @@ export class YieldEnvironment {
     for (let assetId of assetIds) {
       const asset = assets.get(assetId) as ERC20Mock
       await wand.addAsset(assetId, asset.address)
-      const join = await ethers.getContractAt('Join', await joinFactory.calculateJoinAddress(asset.address), owner) as Join
+      const join = await ethers.getContractAt('Join', ((((await (await joinFactory.createJoin(asset.address)).wait()).events) as Event[]).filter(e => e.event == "JoinCreated")[0].args as Result)[1], owner) as Join
 
       await this.initAsset(owner, ladle, assetId, asset)
       joins.set(assetId, join)
@@ -312,7 +314,7 @@ export class YieldEnvironment {
 
     // Add WETH9
     await wand.addAsset(ETH, weth.address)
-    const wethJoin = await ethers.getContractAt('Join', await joinFactory.calculateJoinAddress(weth.address), owner) as Join
+    const wethJoin = await ethers.getContractAt('Join', ((((await (await joinFactory.createJoin(weth.address)).wait()).events) as Event[]).filter(e => e.event == "JoinCreated")[0].args as Result)[1], owner) as Join
 
     await this.initAsset(owner, ladle, ETH, weth)
     assets.set(ETH, weth as unknown as ERC20Mock)
@@ -321,7 +323,7 @@ export class YieldEnvironment {
 
     // Add Dai
     await wand.addAsset(DAI, dai.address)
-    const daiJoin = await ethers.getContractAt('Join', await joinFactory.calculateJoinAddress(dai.address), owner) as Join
+    const daiJoin = await ethers.getContractAt('Join', ((((await (await joinFactory.createJoin(dai.address)).wait()).events) as Event[]).filter(e => e.event == "JoinCreated")[0].args as Result)[1], owner) as Join
     
     await this.initAsset(owner, ladle, DAI, dai)
     assets.set(DAI, dai as unknown as ERC20Mock)
@@ -330,7 +332,7 @@ export class YieldEnvironment {
 
     // Add USDC
     await wand.addAsset(USDC, usdc.address)
-    const usdcJoin = await ethers.getContractAt('Join', await joinFactory.calculateJoinAddress(usdc.address), owner) as Join
+    const usdcJoin = await ethers.getContractAt('Join', ((((await (await joinFactory.createJoin(usdc.address)).wait()).events) as Event[]).filter(e => e.event == "JoinCreated")[0].args as Result)[1], owner) as Join
 
     await this.initAsset(owner, ladle, USDC, usdc)
     assets.set(USDC, usdc as unknown as ERC20Mock)

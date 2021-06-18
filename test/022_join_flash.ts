@@ -1,4 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
+import { Event } from '@ethersproject/contracts/lib/index'
+import { Result } from '@ethersproject/abi'
 import { constants, id } from '@yield-protocol/utils-v2'
 const { WAD } = constants
 
@@ -46,9 +48,13 @@ describe('Join - flash', function () {
   beforeEach(async () => {
     token = (await deployContract(ownerAcc, ERC20MockArtifact, ['MTK', 'Mock Token'])) as ERC20Mock
     joinFactory = (await deployContract(ownerAcc, JoinFactoryArtifact, [])) as JoinFactory
-    const joinAddress = await joinFactory.calculateJoinAddress(token.address) // Get the address
-    await joinFactory.createJoin(token.address) // Create the Join (doesn't return anything outside a contract call)
-    join = (await ethers.getContractAt('Join', joinAddress, ownerAcc)) as Join
+    join = (await ethers.getContractAt(
+      'Join',
+      (((await (await joinFactory.createJoin(token.address)).wait()).events as Event[]).filter(
+        (e) => e.event == 'JoinCreated'
+      )[0].args as Result)[1],
+      ownerAcc
+    )) as Join
 
     await join.grantRoles(
       [id('join(address,uint128)'), id('exit(address,uint128)'), id('setFlashFeeFactor(uint256)')],

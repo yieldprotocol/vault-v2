@@ -15,7 +15,7 @@
   "typings": "dist/index.d.ts",
   "scripts": {
     "build": "rm -rf artifacts typechain && hardhat compile",
-    "test": "hardhat test",
+    "test": "hardhat test --show-stack-traces",
     "test:deploy": "hardhat deploy --tags DeployTest",
     "coverage": "hardhat coverage",
     "lint:sol": "solhint -f table contracts/*.sol",
@@ -31,7 +31,7 @@
     "@truffle/hdwallet-provider": "^1.0.40",
     "@types/mocha": "^8.0.0",
     "@yield-protocol/utils-v2": "^2.2.5",
-    "@yield-protocol/vault-interfaces": "^2.0.33",
+    "@yield-protocol/vault-interfaces": "^2.0.34",
     "@yield-protocol/yieldspace-interfaces": "^2.0.14",
     "chai": "4.2.0",
     "dss-interfaces": "0.1.1",
