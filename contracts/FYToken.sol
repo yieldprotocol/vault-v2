@@ -56,7 +56,8 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         join = join_;
         maturity = maturity_;
         underlying = address(IJoin(join_).asset());
-        setOracle(oracle_);
+        oracle = oracle_;
+        emit OracleSet(address(oracle_));
     }
 
     modifier afterMaturity() {
@@ -77,7 +78,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
 
     /// @dev Set the oracle parameter
     function setOracle(IOracle oracle_)
-        public
+        external
         auth    
     {
         oracle = oracle_;
