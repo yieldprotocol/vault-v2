@@ -25,8 +25,8 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
     uint256 public storedBalance;
     uint256 public flashFeeFactor; // Fee on flash loans, as a percentage in fixed point with 18 decimals
 
-    constructor() {
-        asset = IJoinFactory(msg.sender).nextAsset();
+    constructor(address asset_) {
+        asset = asset_;
     }
 
     /// @dev Set the flash loan fee factor
