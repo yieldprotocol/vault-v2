@@ -1,7 +1,11 @@
+import { id } from '@yield-protocol/utils-v2'
+
+import { sendStatic } from './shared/helpers'
+
+import { Contract } from '@ethersproject/contracts'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { Event } from '@ethersproject/contracts/lib/index'
 import { Result } from '@ethersproject/abi'
-import { id } from '@yield-protocol/utils-v2'
 
 import CauldronArtifact from '../artifacts/contracts/Cauldron.sol/Cauldron.json'
 import JoinFactoryArtifact from '../artifacts/contracts/JoinFactory.sol/JoinFactory.json'
@@ -60,9 +64,7 @@ describe('Cauldron - admin', function () {
     joinFactory = (await deployContract(ownerAcc, JoinFactoryArtifact, [])) as JoinFactory
     join = (await ethers.getContractAt(
       'Join',
-      (((await (await joinFactory.createJoin(base.address)).wait()).events as Event[]).filter(
-        (e) => e.event == 'JoinCreated'
-      )[0].args as Result)[1],
+      await sendStatic(joinFactory as Contract, 'createJoin', ownerAcc, [base.address]),
       ownerAcc
     )) as Join
     fyToken = (await deployContract(ownerAcc, FYTokenArtifact, [

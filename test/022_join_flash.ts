@@ -1,7 +1,12 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
+import { constants, id } from '@yield-protocol/utils-v2'
+
+import { sendStatic } from './shared/helpers'
+
+import { Contract } from '@ethersproject/contracts'
 import { Event } from '@ethersproject/contracts/lib/index'
 import { Result } from '@ethersproject/abi'
-import { constants, id } from '@yield-protocol/utils-v2'
+
 const { WAD } = constants
 
 import JoinFactoryArtifact from '../artifacts/contracts/JoinFactory.sol/JoinFactory.json'
@@ -50,9 +55,7 @@ describe('Join - flash', function () {
     joinFactory = (await deployContract(ownerAcc, JoinFactoryArtifact, [])) as JoinFactory
     join = (await ethers.getContractAt(
       'Join',
-      (((await (await joinFactory.createJoin(token.address)).wait()).events as Event[]).filter(
-        (e) => e.event == 'JoinCreated'
-      )[0].args as Result)[1],
+      await sendStatic(joinFactory as Contract, 'createJoin', ownerAcc, [token.address]),
       ownerAcc
     )) as Join
 

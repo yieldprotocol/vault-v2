@@ -9,9 +9,6 @@ import "./Join.sol";
 contract JoinFactory is IJoinFactory {
 
   /// @dev Deploys a new join.
-  /// The asset address is written to a temporary storage slot to allow for simpler
-  /// address calculation, while still allowing the Join contract to store the values as
-  /// immutable.
   /// @param asset Address of the asset token.
   /// @return join The join address.
   function createJoin(address asset) external override returns (address) {

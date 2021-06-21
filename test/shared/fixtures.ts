@@ -1,8 +1,12 @@
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
+import { id, constants } from '@yield-protocol/utils-v2'
+
+import { sendStatic } from './helpers'
+
+import { Contract } from '@ethersproject/contracts'
 import { Event } from '@ethersproject/contracts/lib/index'
 import { Result } from '@ethersproject/abi'
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 
-import { id, constants } from '@yield-protocol/utils-v2'
 const { WAD, THREE_MONTHS, ETH, DAI, USDC } = constants
 import { CHI, RATE } from '../../src/constants'
 
