@@ -62,6 +62,10 @@ describe('Cauldron - stir', function () {
     await cauldron.build(owner, vaultToId, seriesId, ilkId)
   })
 
+  it('does not allow moving collateral or debt from and to the same vault', async () => {
+    await expect(cauldron.stir(vaultFromId, vaultFromId, WAD, WAD)).to.be.revertedWith('Identical vaults')
+  })
+
   it('does not allow moving collateral or debt to an uninitialized vault', async () => {
     await expect(cauldron.stir(mockVaultId, vaultToId, WAD, 0)).to.be.revertedWith('Vault not found')
     await expect(cauldron.stir(vaultFromId, mockVaultId, WAD, 0)).to.be.revertedWith('Vault not found')
