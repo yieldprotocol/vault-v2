@@ -270,6 +270,7 @@ contract Cauldron is AccessControl() {
         auth
         returns (DataTypes.Balances memory, DataTypes.Balances memory)
     {
+        require (from != to, "Identical vaults");
         (DataTypes.Vault memory vaultFrom, , DataTypes.Balances memory balancesFrom) = vaultData(from, false);
         (DataTypes.Vault memory vaultTo, , DataTypes.Balances memory balancesTo) = vaultData(to, false);
 
