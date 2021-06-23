@@ -521,7 +521,7 @@ contract Ladle is LadleStorage, AccessControl() {
 
     /// @dev The WETH9 contract will send ether to BorrowProxy on `weth.withdraw` using this function.
     receive() external payable { 
-        require (msg.sender == address(weth), "Only receive WETH");
+        require (msg.sender == address(weth), "Only receive from WETH");
     }
 
     /// @dev Accept Ether, wrap it and forward it to the WethJoin
