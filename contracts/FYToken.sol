@@ -140,7 +140,6 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         join.exit(to, redeemed.u128());
         
         emit Redeemed(msg.sender, to, amount, redeemed);
-        return amount;
     }
 
     /// @dev Mint fyTokens.
