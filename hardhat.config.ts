@@ -10,6 +10,10 @@ import 'hardhat-typechain'
 import 'solidity-coverage'
 import 'hardhat-deploy'
 
+import { task } from 'hardhat/config'
+import { TASK_TEST } from 'hardhat/builtin-tasks/task-names'
+import { TaskArguments, HardhatRuntimeEnvironment, RunSuperFunction } from 'hardhat/types'
+
 // REQUIRED TO ENSURE METADATA IS SAVED IN DEPLOYMENTS (because solidity-coverage disable it otherwise)
 /* import {
   TASK_COMPILE_GET_COMPILER_INPUT
@@ -20,6 +24,14 @@ task(TASK_COMPILE_GET_COMPILER_INPUT).setAction(async (_, bre, runSuper) => {
   return input
 }) */
 
+// Periodically, one needs to remove the 'artifacts' and 'typechain' folder (and hence, do a yarn build). Yet, if running yarn build, the tests shouldn't run the compilation again, so the hook below accomplishes just that.
+task(
+  TASK_TEST,
+  "Runs the tests",
+  async (args: TaskArguments, hre: HardhatRuntimeEnvironment, runSuper: RunSuperFunction<TaskArguments>) => {
+    return runSuper({...args, noCompile: true});
+  }
+);
 
 function nodeUrl(network: any) {
   let infuraKey
