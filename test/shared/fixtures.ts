@@ -48,6 +48,7 @@ import { DAIMock } from '../../typechain/DAIMock'
 import { USDCMock } from '../../typechain/USDCMock'
 
 import { LadleWrapper } from '../../src/ladleWrapper'
+import { getLastVaultId } from '../../src/helpers'
 
 import { ethers, waffle } from 'hardhat'
 const { deployContract } = waffle
@@ -388,10 +389,8 @@ export class YieldEnvironment {
     for (let seriesId of seriesIds) {
       const seriesVaults: Map<string, string> = new Map()
       for (let ilkId of ilkIds) {
-        await cauldron.build(ownerAdd, ethers.utils.hexlify(ethers.utils.randomBytes(12)), seriesId, ilkId)
-        const vaultEvents = (await cauldron.queryFilter(cauldron.filters.VaultBuilt(null, null, null, null)))
-        const vaultId = vaultEvents[vaultEvents.length - 1].args.vaultId
-        seriesVaults.set(ilkId, vaultId)
+        await ladle.build(seriesId, ilkId)
+        seriesVaults.set(ilkId, await getLastVaultId(cauldron))
       }
       vaults.set(seriesId, seriesVaults)
     }

@@ -54,7 +54,7 @@ module.exports = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 5000,
+        runs: 2500,
       }
     }
   },
@@ -75,7 +75,7 @@ module.exports = {
     disambiguatePaths: false,
   },
   gasReporter: {
-    enabled: true,
+    enabled: false,
   },
   defaultNetwork: 'hardhat',
   namedAccounts: {

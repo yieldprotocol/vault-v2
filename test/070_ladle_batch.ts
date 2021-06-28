@@ -16,6 +16,7 @@ const { loadFixture } = waffle
 
 import { YieldEnvironment } from './shared/fixtures'
 import { LadleWrapper } from '../src/ladleWrapper'
+import { getLastVaultId } from '../src/helpers'
 
 describe('Ladle - batch', function () {
   this.timeout(0)
@@ -53,8 +54,7 @@ describe('Ladle - batch', function () {
   const otherIlkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ethId = ethers.utils.formatBytes32String('ETH').slice(0, 14)
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const vaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12))
-  const otherVaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12))
+  const cachedVaultId = '0x' + '00'.repeat(12)
   let ethVaultId: string
 
   beforeEach(async () => {
@@ -80,33 +80,33 @@ describe('Ladle - batch', function () {
 
   it('builds a vault, tweaks it and gives it', async () => {
     await ladle.batch([
-      ladle.buildAction(vaultId, seriesId, ilkId),
-      ladle.tweakAction(vaultId, seriesId, otherIlkId),
-      ladle.giveAction(vaultId, other),
+      ladle.buildAction(seriesId, ilkId),
+      ladle.tweakAction(cachedVaultId, seriesId, otherIlkId),
+      ladle.giveAction(cachedVaultId, other),
     ])
   })
 
   it('builds two vaults and gives them', async () => {
     await ladle.batch([
-      ladle.buildAction(vaultId, seriesId, ilkId),
-      ladle.giveAction(vaultId, other),
-      ladle.buildAction(otherVaultId, seriesId, ilkId),
-      ladle.giveAction(otherVaultId, other),
+      ladle.buildAction(seriesId, ilkId),
+      ladle.giveAction(cachedVaultId, other),
+      ladle.buildAction(seriesId, ilkId),
+      ladle.giveAction(cachedVaultId, other),
     ])
   })
 
   it('builds a vault and destroys it', async () => {
-    await ladle.batch([ladle.buildAction(vaultId, seriesId, ilkId), ladle.destroyAction(vaultId)])
+    await ladle.batch([ladle.buildAction(seriesId, ilkId), ladle.destroyAction(cachedVaultId)])
   })
 
   it("after giving a vault, it can't tweak it", async () => {
     await expect(
       ladle.batch([
-        ladle.buildAction(vaultId, seriesId, ilkId),
-        ladle.giveAction(vaultId, other),
-        ladle.tweakAction(vaultId, seriesId, otherIlkId),
+        ladle.buildAction(seriesId, ilkId),
+        ladle.giveAction(cachedVaultId, other),
+        ladle.tweakAction(cachedVaultId, seriesId, otherIlkId),
       ])
-    ).to.be.revertedWith('Only vault owner')
+    ).to.be.revertedWith('Vault not cached')
   })
 
   it('builds a vault, permit and pour', async () => {
@@ -125,32 +125,31 @@ describe('Ladle - batch', function () {
     const borrowed = WAD
 
     await ladle.batch([
-      ladle.buildAction(vaultId, seriesId, ilkId),
+      ladle.buildAction(seriesId, ilkId),
       ladle.forwardPermitAction(ilkId, true, ilkJoin.address, posted, deadline, v, r, s),
-      ladle.pourAction(vaultId, owner, posted, borrowed),
+      ladle.pourAction(cachedVaultId, owner, posted, borrowed),
     ])
 
-    const vault = await cauldron.vaults(vaultId)
+    const vault = await cauldron.vaults(await getLastVaultId(cauldron))
     expect(vault.owner).to.equal(owner)
     expect(vault.seriesId).to.equal(seriesId)
     expect(vault.ilkId).to.equal(ilkId)
   })
 
   it('builds a vault, wraps ether and serve', async () => {
-    const newVaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12))
     const posted = WAD.mul(2)
     const borrowed = WAD
 
     await ladle.batch(
       [
-        ladle.buildAction(newVaultId, seriesId, ethId),
+        ladle.buildAction(seriesId, ethId),
         ladle.joinEtherAction(ethId),
-        ladle.serveAction(newVaultId, owner, posted, borrowed, MAX),
+        ladle.serveAction(cachedVaultId, owner, posted, borrowed, MAX),
       ],
       { value: posted }
     )
 
-    const vault = await cauldron.vaults(newVaultId)
+    const vault = await cauldron.vaults(await getLastVaultId(cauldron))
     expect(vault.owner).to.equal(owner)
     expect(vault.seriesId).to.equal(seriesId)
     expect(vault.ilkId).to.equal(ethId)
@@ -202,11 +201,11 @@ describe('Ladle - batch', function () {
     const borrowed = WAD
 
     await ladle.batch([
-      ladle.buildAction(vaultId, seriesId, ilkId),
-      ladle.pourAction(vaultId, owner, posted, borrowed),
+      ladle.buildAction(seriesId, ilkId),
+      ladle.pourAction(cachedVaultId, owner, posted, borrowed),
       ladle.forwardPermitAction(baseId, true, ladle.address, amount, deadline, v, r, s),
       ladle.transferToPoolAction(seriesId, true, WAD.div(2)),
-      ladle.repayAction(vaultId, other, 0, 0),
+      ladle.repayAction(cachedVaultId, other, 0, 0),
     ])
   })
 
@@ -228,11 +227,11 @@ describe('Ladle - batch', function () {
     const borrowed = WAD
 
     await ladle.batch([
-      ladle.buildAction(vaultId, seriesId, ilkId),
-      ladle.pourAction(vaultId, owner, posted, borrowed),
+      ladle.buildAction(seriesId, ilkId),
+      ladle.pourAction(cachedVaultId, owner, posted, borrowed),
       ladle.forwardPermitAction(baseId, true, ladle.address, amount, deadline, v, r, s),
       ladle.transferToPoolAction(seriesId, true, WAD),
-      ladle.repayVaultAction(vaultId, other, 0, MAX),
+      ladle.repayVaultAction(cachedVaultId, other, 0, MAX),
     ])
   })
 
