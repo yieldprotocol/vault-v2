@@ -10,6 +10,8 @@ import 'hardhat-typechain'
 import 'solidity-coverage'
 import 'hardhat-deploy'
 
+import { task } from 'hardhat/config'
+
 // REQUIRED TO ENSURE METADATA IS SAVED IN DEPLOYMENTS (because solidity-coverage disable it otherwise)
 /* import {
   TASK_COMPILE_GET_COMPILER_INPUT
@@ -20,6 +22,26 @@ task(TASK_COMPILE_GET_COMPILER_INPUT).setAction(async (_, bre, runSuper) => {
   return input
 }) */
 
+task("lint:collisions", "Checks all contracts for function signatures collisions with ROOT (0x00000000) and LOCK (0xffffffff)",
+  async (taskArguments, hre, runSuper) => {
+    let ROOT = "0x00000000"
+    let LOCK = "0xffffffff"
+    const abiPath = path.join(__dirname, 'abi')
+    for (let contract of fs.readdirSync(abiPath)) {
+      const iface = new hre.ethers.utils.Interface(require(abiPath + "/" + contract))
+      for (let func in iface.functions) {
+        const sig = iface.getSighash(func)
+        if (sig == ROOT) {
+          console.error("Function " + func + " of contract " + contract.slice(0, contract.length - 5) + " has a role-colliding signature with ROOT.")
+        }
+        if (sig == LOCK) {
+          console.error("Function " + func + " of contract " + contract.slice(0, contract.length - 5) + " has a role-colliding signature with LOCK.")
+        }
+      }
+    }
+    console.log("No collisions, check passed.")
+  }
+)
 
 function nodeUrl(network: any) {
   let infuraKey
