@@ -18,7 +18,8 @@
     "test": "yarn build && hardhat test --show-stack-traces",
     "test:deploy": "hardhat deploy --tags DeployTest",
     "coverage": "hardhat coverage",
-    "lint:sol": "solhint -f table contracts/*.sol",
+    "lint:collisions": "yarn build && hardhat lint:collisions",
+    "lint:sol": "yarn lint:collisions && solhint -f table contracts/*.sol",
     "lint:ts": "prettier ./test/*.ts --check",
     "lint:ts:fix": "prettier ./test/*.ts --write",
     "prepublishOnly": "npx tsdx build --tsconfig ./tsconfig-publish.json"
