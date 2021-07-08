@@ -179,7 +179,6 @@ describe('Witch', function () {
       await expect(witch.buy(vaultId, WAD, 0)).to.be.revertedWith('Leaves dust')
     })
 
-
     describe('once the auction time has passed', async () => {
       beforeEach(async () => {
         const { timestamp } = await ethers.provider.getBlock('latest')
@@ -197,22 +196,44 @@ describe('Witch', function () {
         expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(ink))
       })
 
-      it('debt to repay grows with rate after maturity', async () => {
-        await ethers.provider.send('evm_mine', [(await fyToken.maturity()).toNumber()])
-        await cauldron.mature(seriesId)
-        const rate = await cauldron.ratesAtMaturity(seriesId)
-        await rateSource.set(rate.mul(110).div(100))
+      describe('after maturity, with a rate increase', async () => {
+        beforeEach(async () => {
+          await ethers.provider.send('evm_mine', [(await fyToken.maturity()).toNumber()])
+          await cauldron.mature(seriesId)
+          const rate = await cauldron.ratesAtMaturity(seriesId)
+          await rateSource.set(rate.mul(110).div(100))
+        })
 
-        const baseBalanceBefore = await base.balanceOf(owner)
-        const ilkBalanceBefore = await ilk.balanceOf(owner)
-        await expect(witch.buy(vaultId, WAD, 0)).to.emit(witch, 'Bought')//.withArgs(vaultId, owner, WAD, WAD)
+        it('debt to repay grows with rate after maturity', async () => {
 
-        const art = WAD.sub((await cauldron.balances(vaultId)).art)
-        const ink = WAD.sub((await cauldron.balances(vaultId)).ink)
-        expect(art).to.equal(WAD.mul(100).div(110)) // The rate increased by a 10%, so by paying WAD base we only repay 100/110 of the debt in fyToken terms
-        expect(ink).to.equal(WAD.mul(100).div(110)) // We only pay 100/110 of the debt, so we get 100/110 of the collateral
-        expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(WAD))
-        expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(ink))
+          const baseBalanceBefore = await base.balanceOf(owner)
+          const ilkBalanceBefore = await ilk.balanceOf(owner)
+          await expect(witch.buy(vaultId, WAD, 0)).to.emit(witch, 'Bought')
+            .withArgs(
+              vaultId,
+              owner,
+              WAD.sub((await cauldron.balances(vaultId)).art),
+              WAD.sub((await cauldron.balances(vaultId)).ink)
+            )
+  
+          const art = WAD.sub((await cauldron.balances(vaultId)).art)
+          const ink = WAD.sub((await cauldron.balances(vaultId)).ink)
+          expect(art).to.equal(WAD.mul(100).div(110)) // The rate increased by a 10%, so by paying WAD base we only repay 100/110 of the debt in fyToken terms
+          expect(ink).to.equal(WAD.mul(100).div(110)) // We only pay 100/110 of the debt, so we get 100/110 of the collateral
+          expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(WAD))
+          expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(ink))
+        })
+
+        it('allows to pay all of the debt', async () => {
+          const baseBalanceBefore = await base.balanceOf(owner)
+          const ilkBalanceBefore = await ilk.balanceOf(owner)
+          await expect(witch.payAll(vaultId, WAD)).to.emit(witch, 'Bought').withArgs(vaultId, owner, WAD, WAD)
+  
+          expect((await cauldron.balances(vaultId)).art).to.equal(0)
+          expect((await cauldron.balances(vaultId)).ink).to.equal(0)
+          expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(WAD.mul(110).div(100)))
+          expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(WAD))
+        })
       })
     })
   })
