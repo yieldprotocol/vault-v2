@@ -71,7 +71,8 @@ contract Witch is AccessControl() {
         DataTypes.Balances memory balances_ = cauldron.balances(vaultId);
 
         require (balances_.art > 0, "Nothing to buy");                                      // Cheapest way of failing gracefully if given a non existing vault
-        uint256 elapsed = uint32(block.timestamp) - auctions[vaultId].start;                      // Auctions will malfunction on the 7th of February 2106, at 06:28:16 GMT, we should replace this contract before then.
+        Auction memory auction_ = auctions[vaultId];
+        uint256 elapsed = uint32(block.timestamp) - auction_.start;                      // Auctions will malfunction on the 7th of February 2106, at 06:28:16 GMT, we should replace this contract before then.
         uint256 price;
         {
             // Price of a collateral unit, in underlying, at the present moment, for a given vault
@@ -91,7 +92,7 @@ contract Witch is AccessControl() {
 
         ladle.settle(vaultId, msg.sender, ink.u128(), art);                                        // Move the assets
         if (balances_.art - art == 0) {                                                             // If there is no debt left, return the vault with the collateral to the owner
-            cauldron.give(vaultId, auctions[vaultId].owner);
+            cauldron.give(vaultId, auction_.owner);
             delete auctions[vaultId];
         }
 
