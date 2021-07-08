@@ -15,7 +15,7 @@
   "typings": "dist/index.d.ts",
   "scripts": {
     "build": "rm -rf artifacts typechain && hardhat compile",
-    "test": "yarn build && hardhat test --show-stack-traces",
+    "test": "hardhat test --show-stack-traces",
     "test:deploy": "hardhat deploy --tags DeployTest",
     "coverage": "hardhat coverage",
     "lint:collisions": "yarn build && hardhat lint:collisions",
