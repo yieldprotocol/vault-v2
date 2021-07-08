@@ -8,6 +8,7 @@ import "./math/WMul.sol";
 import "./math/WDiv.sol";
 import "./math/CastU128I128.sol";
 import "./math/CastI128U128.sol";
+import "./math/CastU256U128.sol";
 import "./math/CastU256U32.sol";
 import "./math/CastU256I256.sol";
 
@@ -24,9 +25,10 @@ contract Cauldron is AccessControl() {
     using WMul for uint256;
     using WDiv for uint256;
     using CastU128I128 for uint128;
+    using CastI128U128 for int128;
+    using CastU256U128 for uint256;
     using CastU256U32 for uint256;
     using CastU256I256 for uint256;
-    using CastI128U128 for int128;
 
     event AssetAdded(bytes6 indexed assetId, address indexed asset);
     event SeriesAdded(bytes6 indexed seriesId, bytes6 indexed baseId, address indexed fyToken);
@@ -254,6 +256,31 @@ contract Cauldron is AccessControl() {
         balances_ = balances[vaultId];
     }
 
+    /// @dev Convert a debt amount for a series from base to fyToken terms.
+    /// @notice Think about rounding if using, since we are dividing.
+    function debtFromBase(bytes6 seriesId, uint128 base)
+        external
+        returns (uint128 art)
+    {
+        if (uint32(block.timestamp) >= series[seriesId].maturity) {
+            art = uint256(base).wdiv(accrual(seriesId)).u128();
+        } else {
+            art = base;
+        }
+    }
+
+    /// @dev Convert a debt amount for a series from fyToken to base terms
+    function debtToBase(bytes6 seriesId, uint128 art)
+        external
+        returns (uint128 base)
+    {
+        if (uint32(block.timestamp) >= series[seriesId].maturity) {
+            base = uint256(art).wmul(accrual(seriesId)).u128();
+        } else {
+            base = art;
+        }
+    }
+
     /// @dev Move collateral and debt between vaults.
     function stir(bytes12 from, bytes12 to, uint128 ink, uint128 art)
         external
@@ -412,7 +439,6 @@ contract Cauldron is AccessControl() {
         ratesAtMaturity[seriesId] = rateAtMaturity;
         emit SeriesMatured(seriesId, rateAtMaturity);
     }
-    
 
     /// @dev Retrieve the rate accrual since maturity, maturing if necessary.
     function accrual(bytes6 seriesId)

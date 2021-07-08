@@ -368,7 +368,7 @@ contract Ladle is LadleStorage, AccessControl() {
 
         // Calculate debt in fyToken terms
         DataTypes.Series memory series = getSeries(vault.seriesId);
-        uint128 amt = _debtInBase(vault.seriesId, series, uint128(-art));
+        uint128 base = cauldron.debtToBase(vault.seriesId, uint128(-art));
 
         // Update accounting
         balances = cauldron.pour(vaultId, ink, art);
@@ -382,19 +382,7 @@ contract Ladle is LadleStorage, AccessControl() {
 
         // Manage underlying
         IJoin baseJoin = getJoin(series.baseId);
-        baseJoin.join(msg.sender, amt);
-    }
-
-    /// @dev Calculate a debt amount for a series in base terms
-    function _debtInBase(bytes6 seriesId, DataTypes.Series memory series, uint128 art)
-        private
-        returns (uint128 amt)
-    {
-        if (uint32(block.timestamp) >= series.maturity) {
-            amt = uint256(art).wmul(cauldron.accrual(seriesId)).u128();
-        } else {
-            amt = art;
-        }
+        baseJoin.join(msg.sender, base);
     }
 
     /// @dev Repay debt by selling base in a pool and using the resulting fyToken
@@ -443,17 +431,17 @@ contract Ladle is LadleStorage, AccessControl() {
             IJoin baseJoin = getJoin(series.baseId);
 
             // Calculate debt in fyToken terms
-            uint128 amt = _debtInBase(vault.seriesId, series, balances.art);
+            uint128 base = cauldron.debtToBase(vault.seriesId, balances.art);
 
             // Mint fyToken to the pool, as a kind of flash loan
-            fyToken.mint(address(pool), amt * loan);                // Loan is the size of the flash loan relative to the debt amount, 2 should be safe most of the time
+            fyToken.mint(address(pool), base * loan);                // Loan is the size of the flash loan relative to the debt amount, 2 should be safe most of the time
 
             // Buy the base required to pay off the debt in series 1, and find out the debt in series 2
-            newDebt = pool.buyBase(address(baseJoin), amt, max);
-            baseJoin.join(address(baseJoin), amt);                  // Repay the old series debt
+            newDebt = pool.buyBase(address(baseJoin), base, max);
+            baseJoin.join(address(baseJoin), base);                  // Repay the old series debt
 
             pool.retrieveFYToken(address(fyToken));                 // Get the surplus fyToken
-            fyToken.burn(address(fyToken), (amt * loan) - newDebt);    // Burn the surplus
+            fyToken.burn(address(fyToken), (base * loan) - newDebt);    // Burn the surplus
         }
 
         newDebt += ((newSeries.maturity - block.timestamp) * uint256(newDebt).wmul(borrowingFee)).u128();  // Add borrowing fee, also stops users form rolling to a mature series
@@ -571,10 +559,10 @@ contract Ladle is LadleStorage, AccessControl() {
     // ---- Pool router ----
 
     /// @dev Allow users to trigger a token transfer to a pool through the ladle, to be used with batch
-    function _transferToPool(IPool pool, bool base, uint128 wad)
+    function _transferToPool(IPool pool, bool isBase, uint128 wad)
         private
     {
-        IERC20 token = base ? pool.base() : pool.fyToken();
+        IERC20 token = isBase ? pool.base() : pool.fyToken();
         token.safeTransferFrom(msg.sender, address(pool), wad);
     }
 
