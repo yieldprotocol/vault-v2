@@ -97,36 +97,36 @@ describe('Witch', function () {
     expect(await witch.auctionTime()).to.equal(1)
   })
 
-  it('does not allow to grab collateralized vaults', async () => {
-    await expect(witch.grab(vaultId)).to.be.revertedWith('Not undercollateralized')
+  it('does not allow to auction collateralized vaults', async () => {
+    await expect(witch.auction(vaultId)).to.be.revertedWith('Not undercollateralized')
   })
 
-  it('does not allow to grab uninitialized vaults', async () => {
-    await expect(witch.grab(mockVaultId)).to.be.revertedWith('Vault not found')
+  it('does not allow to auction uninitialized vaults', async () => {
+    await expect(witch.auction(mockVaultId)).to.be.revertedWith('Vault not found')
   })
 
   it('does not allow to buy from uninitialized vaults', async () => {
     await expect(witch.buy(mockVaultId, 0, 0)).to.be.revertedWith('Nothing to buy')
   })
 
-  it('grabs undercollateralized vaults', async () => {
+  it('auctions undercollateralized vaults', async () => {
     await spotSource.set(WAD.div(2))
-    await witch.grab(vaultId)
-    const event = (await cauldron.queryFilter(cauldron.filters.VaultLocked(null, null)))[0]
+    await witch.auction(vaultId)
+    const event = (await witch.queryFilter(witch.filters.VaultAuctioned(null, null)))[0]
     expect((await cauldron.vaults(vaultId)).owner).to.equal(witch.address)
-    expect(await witch.vaultOwners(vaultId)).to.equal(owner)
-    expect(event.args.timestamp.toNumber()).to.be.greaterThan(0)
-    expect(await cauldron.auctions(vaultId)).to.equal(event.args.timestamp)
+    expect((await witch.auctions(vaultId)).owner).to.equal(owner)
+    expect(event.args.start.toNumber()).to.be.greaterThan(0)
+    expect((await witch.auctions(vaultId)).start).to.equal(event.args.start)
   })
 
-  describe('once a vault has been grabbed', async () => {
+  describe('once a vault has been auctioned', async () => {
     beforeEach(async () => {
       await spotSource.set(WAD.div(2))
-      await witch.grab(vaultId)
+      await witch.auction(vaultId)
     })
 
-    it("it can't be grabbed again", async () => {
-      await expect(witch.grab(vaultId)).to.be.revertedWith('Vault under auction')
+    it("it can't be auctioned again", async () => {
+      await expect(witch.auction(vaultId)).to.be.revertedWith('Vault already under auction')
     })
 
     it('does not buy if minimum collateral not reached', async () => {

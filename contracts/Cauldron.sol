@@ -19,7 +19,6 @@ library CauldronMath {
     }
 }
 
-
 contract Cauldron is AccessControl() {
     using CauldronMath for uint128;
     using WMul for uint256;
@@ -29,7 +28,6 @@ contract Cauldron is AccessControl() {
     using CastU256I256 for uint256;
     using CastI128U128 for int128;
 
-    event AuctionIntervalSet(uint32 indexed auctionInterval);
     event AssetAdded(bytes6 indexed assetId, address indexed asset);
     event SeriesAdded(bytes6 indexed seriesId, bytes6 indexed baseId, address indexed fyToken);
     event IlkAdded(bytes6 indexed seriesId, bytes6 indexed ilkId);
@@ -45,7 +43,6 @@ contract Cauldron is AccessControl() {
     event VaultPoured(bytes12 indexed vaultId, bytes6 indexed seriesId, bytes6 indexed ilkId, int128 ink, int128 art);
     event VaultStirred(bytes12 indexed from, bytes12 indexed to, uint128 ink, uint128 art);
     event VaultRolled(bytes12 indexed vaultId, bytes6 indexed seriesId, uint128 art);
-    event VaultLocked(bytes12 indexed vaultId, uint256 indexed timestamp);
 
     event SeriesMatured(bytes6 indexed seriesId, uint256 rateAtMaturity);
 
@@ -60,12 +57,10 @@ contract Cauldron is AccessControl() {
     // ==== Protocol data ====
     mapping (bytes6 => mapping(bytes6 => DataTypes.Debt))       public debt;            // [baseId][ilkId] Max and sum of debt per underlying and collateral.
     mapping (bytes6 => uint256)                                 public ratesAtMaturity; // Borrowing rate at maturity for a mature series
-    uint32                                                      public auctionInterval;// Time that vaults in liquidation are protected from being grabbed by a different engine.
 
     // ==== User data ====
     mapping (bytes12 => DataTypes.Vault)                        public vaults;          // An user can own one or more Vaults, each one with a bytes12 identifier
     mapping (bytes12 => DataTypes.Balances)                     public balances;        // Both debt and assets
-    mapping (bytes12 => uint32)                                 public auctions;        // If grater than zero, time that a vault was timestamped. Used for liquidation.
 
     // ==== Administration ====
 
@@ -103,15 +98,6 @@ contract Cauldron is AccessControl() {
         require (assets[baseId] != address(0), "Base not found");
         rateOracles[baseId] = oracle;
         emit RateOracleAdded(baseId, address(oracle));
-    }
-
-    /// @dev Set the interval for which vaults being auctioned can't be grabbed by another liquidation engine
-    function setAuctionInterval(uint32 auctionInterval_)
-        external
-        auth
-    {
-        auctionInterval = auctionInterval_;
-        emit AuctionIntervalSet(auctionInterval_);
     }
 
     /// @dev Set a spot oracle and its collateralization ratio. Can be reset.
@@ -198,7 +184,6 @@ contract Cauldron is AccessControl() {
     {
         DataTypes.Balances memory balances_ = balances[vaultId];
         require (balances_.art == 0 && balances_.ink == 0, "Only empty vaults");
-        delete auctions[vaultId];
         delete vaults[vaultId];
         emit VaultDestroyed(vaultId);
     }
@@ -350,22 +335,15 @@ contract Cauldron is AccessControl() {
         return balances_;
     }
 
-    /// @dev Give a non-timestamped vault to another user, and timestamp it.
+    /// @dev Give an uncollateralized vault to another user.
     /// To be used for liquidation engines.
     function grab(bytes12 vaultId, address receiver)
         external
         auth
     {
-        uint32 now_ = uint32(block.timestamp);
-        require (auctions[vaultId] + auctionInterval <= now_, "Vault under auction");        // Grabbing a vault protects it for a day from being grabbed by another liquidator. All grabbed vaults will be suddenly released on the 7th of February 2106, at 06:28:16 GMT. I can live with that.
-
         (DataTypes.Vault memory vault_, DataTypes.Series memory series_, DataTypes.Balances memory balances_) = vaultData(vaultId, true);
         require(_level(vault_, balances_, series_) < 0, "Not undercollateralized");
-
-        auctions[vaultId] = now_;
         _give(vaultId, receiver);
-
-        emit VaultLocked(vaultId, now_);
     }
 
     /// @dev Reduce debt and collateral from a vault, ignoring collateralization checks.
