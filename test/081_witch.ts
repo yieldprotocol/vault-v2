@@ -80,21 +80,28 @@ describe('Witch', function () {
   })
 
   it('does not allow to set the initial proportion over 100%', async () => {
-    await expect(witch.setInitialProportion(WAD.mul(2))).to.be.revertedWith('Only at or under 100%')
+    await expect(witch.setInitialOffer(WAD.mul(2))).to.be.revertedWith('Only at or under 100%')
   })
 
   it('allows to set the initial proportion', async () => {
-    expect(await witch.setInitialProportion(1))
-      .to.emit(witch, 'InitialProportionSet')
+    expect(await witch.setInitialOffer(1))
+      .to.emit(witch, 'InitialOfferSet')
       .withArgs(1)
-    expect(await witch.initialProportion()).to.equal(1)
+    expect(await witch.initialOffer()).to.equal(1)
   })
 
-  it('allows to set the auction time', async () => {
-    expect(await witch.setAuctionTime(1))
-      .to.emit(witch, 'AuctionTimeSet')
+  it('allows to set the auction duration', async () => {
+    expect(await witch.setDuration(1))
+      .to.emit(witch, 'DurationSet')
       .withArgs(1)
-    expect(await witch.auctionTime()).to.equal(1)
+    expect(await witch.duration()).to.equal(1)
+  })
+
+  it('allows to set the dust level', async () => {
+    expect(await witch.setDust(1))
+      .to.emit(witch, 'DustSet')
+      .withArgs(1)
+    expect(await witch.dust()).to.equal(1)
   })
 
   it('does not allow to auction collateralized vaults', async () => {
@@ -112,7 +119,7 @@ describe('Witch', function () {
   it('auctions undercollateralized vaults', async () => {
     await spotSource.set(WAD.div(2))
     await witch.auction(vaultId)
-    const event = (await witch.queryFilter(witch.filters.VaultAuctioned(null, null)))[0]
+    const event = (await witch.queryFilter(witch.filters.Auctioned(null, null)))[0]
     expect((await cauldron.vaults(vaultId)).owner).to.equal(witch.address)
     expect((await witch.auctions(vaultId)).owner).to.equal(owner)
     expect(event.args.start.toNumber()).to.be.greaterThan(0)
@@ -155,10 +162,16 @@ describe('Witch', function () {
       expect((await cauldron.vaults(vaultId)).owner).to.equal(owner) // The vault was returned once all the debt was paid off
     })
 
+    it('does not buy if leaving dust', async () => {
+      await witch.setDust(WAD)
+      await expect(witch.buy(vaultId, WAD, 0)).to.be.revertedWith('Leaves dust')
+    })
+
+
     describe('once the auction time has passed', async () => {
       beforeEach(async () => {
         const { timestamp } = await ethers.provider.getBlock('latest')
-        await ethers.provider.send('evm_mine', [timestamp + (await witch.auctionTime()).toNumber()])
+        await ethers.provider.send('evm_mine', [timestamp + await witch.duration()])
       })
 
       it('allows to buy all of the collateral for the whole debt at the end', async () => {

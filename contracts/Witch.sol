@@ -19,18 +19,20 @@ contract Witch is AccessControl() {
     using CastU256U128 for uint256;
     using CastU256U32 for uint256;
 
-    event AuctionTimeSet(uint128 indexed auctionTime);
-    event InitialProportionSet(uint128 indexed initialProportion);
+    event DurationSet(uint32 indexed duration);
+    event InitialOfferSet(uint64 indexed initialOffer);
+    event DustSet(uint128 indexed dust);
     event Bought(bytes12 indexed vaultId, address indexed buyer, uint256 ink, uint256 art);
-    event VaultAuctioned(bytes12 indexed vaultId, uint256 indexed start);
+    event Auctioned(bytes12 indexed vaultId, uint256 indexed start);
   
     struct Auction {
         address owner;
         uint32 start;
     }
 
-    uint128 public auctionTime = 4 * 60 * 60; // Time that auctions take to go to minimal price and stay there.
-    uint128 public initialProportion = 5e17;  // Proportion of collateral that is sold at auction start.
+    uint32 public duration = 4 * 60 * 60; // Time that auctions take to go to minimal price and stay there.
+    uint64 public initialOffer = 5e17;  // Proportion of collateral that is sold at auction start (1e18 = 100%)
+    uint128 public dust;                     // Minimum collateral that must be left when buying, unless buying all
 
     ICauldron immutable public cauldron;
     ILadle immutable public ladle;
@@ -41,17 +43,23 @@ contract Witch is AccessControl() {
         ladle = ladle_;
     }
 
-    /// @dev Set the auction time to calculate liquidation prices
-    function setAuctionTime(uint128 auctionTime_) external auth {
-        auctionTime = auctionTime_;
-        emit AuctionTimeSet(auctionTime_);
+    /// @dev Set the auction duration to calculate liquidation prices
+    function setDuration(uint32 duration_) external auth {
+        duration = duration_;
+        emit DurationSet(duration_);
     }
 
     /// @dev Set the proportion of the collateral that will be sold at auction start
-    function setInitialProportion(uint128 initialProportion_) external auth {
-        require (initialProportion_ <= 1e18, "Only at or under 100%");
-        initialProportion = initialProportion_;
-        emit InitialProportionSet(initialProportion_);
+    function setInitialOffer(uint64 initialOffer_) external auth {
+        require (initialOffer_ <= 1e18, "Only at or under 100%");
+        initialOffer = initialOffer_;
+        emit InitialOfferSet(initialOffer_);
+    }
+
+    /// @dev Set the minimum collateral that must be left when buying, unless buying all
+    function setDust(uint128 dust_) external auth {
+        dust = dust_;
+        emit DustSet(dust_);
     }
 
     /// @dev Put an undercollateralized vault up for liquidation.
@@ -63,7 +71,7 @@ contract Witch is AccessControl() {
             start: block.timestamp.u32()
         });
         cauldron.grab(vaultId, address(this));
-        emit VaultAuctioned(vaultId, block.timestamp.u32());
+        emit Auctioned(vaultId, block.timestamp.u32());
     }
 
     /// @dev Buy an amount of collateral off a vault in liquidation, paying at most `max` underlying.
@@ -74,21 +82,25 @@ contract Witch is AccessControl() {
         Auction memory auction_ = auctions[vaultId];
         uint256 elapsed = uint32(block.timestamp) - auction_.start;                      // Auctions will malfunction on the 7th of February 2106, at 06:28:16 GMT, we should replace this contract before then.
         uint256 price;
+        uint256 dust_;
         {
+            uint256 duration_;
+            uint256 initialOffer_;
+            (duration_, initialOffer_, dust_) = (duration, initialOffer, dust);
             // Price of a collateral unit, in underlying, at the present moment, for a given vault
             //
             //                ink                     min(auction, elapsed)
             // price = 1 / (------- * (p + (1 - p) * -----------------------))
             //                art                          auction
-            (uint256 auctionTime_, uint256 initialProportion_) = (auctionTime, initialProportion);
             uint256 term1 = uint256(balances_.ink).wdiv(balances_.art);
-            uint256 dividend2 = auctionTime_ < elapsed ? auctionTime_ : elapsed;
-            uint256 divisor2 = auctionTime_;
-            uint256 term2 = initialProportion_ + (1e18 - initialProportion_).wmul(dividend2.wdiv(divisor2));
+            uint256 dividend2 = duration_ < elapsed ? duration_ : elapsed;
+            uint256 divisor2 = duration_;
+            uint256 term2 = initialOffer_ + (1e18 - initialOffer_).wmul(dividend2.wdiv(divisor2));
             price = uint256(1e18).wdiv(term1.wmul(term2));
         }
         uint256 ink = uint256(art).wdivup(price);                                                    // Calculate collateral to sell. Using divdrup stops rounding from leaving 1 stray wei in vaults.
         require (ink >= min, "Not enough bought");
+        require (ink == balances_.ink || balances_.ink - ink >= dust_, "Leaves dust");
 
         ladle.settle(vaultId, msg.sender, ink.u128(), art);                                        // Move the assets
         if (balances_.art - art == 0) {                                                             // If there is no debt left, return the vault with the collateral to the owner
