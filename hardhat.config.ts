@@ -11,6 +11,8 @@ import 'solidity-coverage'
 import 'hardhat-deploy'
 
 import { task } from 'hardhat/config'
+import { TASK_TEST } from 'hardhat/builtin-tasks/task-names'
+import { TaskArguments, HardhatRuntimeEnvironment, RunSuperFunction } from 'hardhat/types'
 
 // REQUIRED TO ENSURE METADATA IS SAVED IN DEPLOYMENTS (because solidity-coverage disable it otherwise)
 /* import {
@@ -21,6 +23,15 @@ task(TASK_COMPILE_GET_COMPILER_INPUT).setAction(async (_, bre, runSuper) => {
   input.settings.metadata.useLiteralContent = bre.network.name !== "coverage"
   return input
 }) */
+
+// Periodically, one needs to remove the 'artifacts' and 'typechain' folder (and hence, do a yarn build). Yet, if running yarn build, the tests shouldn't run the compilation again, so the hook below accomplishes just that.
+task(
+  TASK_TEST,
+  "Runs the tests",
+  async (args: TaskArguments, hre: HardhatRuntimeEnvironment, runSuper: RunSuperFunction<TaskArguments>) => {
+    return runSuper({...args, noCompile: true});
+  }
+);
 
 task("lint:collisions", "Checks all contracts for function signatures collisions with ROOT (0x00000000) and LOCK (0xffffffff)",
   async (taskArguments, hre, runSuper) => {
