@@ -80,10 +80,7 @@ describe('Witch', function () {
       (await spotOracle.sources(baseId, ilkId))[0]
     )) as ISourceMock
     rateOracle = (env.oracles.get(RATE) as unknown) as CompoundMultiOracle
-    rateSource = (await ethers.getContractAt(
-      'ISourceMock',
-      await rateOracle.sources(baseId, RATE)
-    )) as ISourceMock
+    rateSource = (await ethers.getContractAt('ISourceMock', await rateOracle.sources(baseId, RATE))) as ISourceMock
 
     witchFromOther = witch.connect(otherAcc)
 
@@ -182,7 +179,7 @@ describe('Witch', function () {
     describe('once the auction time has passed', async () => {
       beforeEach(async () => {
         const { timestamp } = await ethers.provider.getBlock('latest')
-        await ethers.provider.send('evm_mine', [timestamp + await witch.duration()])
+        await ethers.provider.send('evm_mine', [timestamp + (await witch.duration())])
       })
 
       it('allows to buy all of the collateral for the whole debt at the end', async () => {
@@ -205,17 +202,17 @@ describe('Witch', function () {
         })
 
         it('debt to repay grows with rate after maturity', async () => {
-
           const baseBalanceBefore = await base.balanceOf(owner)
           const ilkBalanceBefore = await ilk.balanceOf(owner)
-          await expect(witch.buy(vaultId, WAD, 0)).to.emit(witch, 'Bought')
+          await expect(witch.buy(vaultId, WAD, 0))
+            .to.emit(witch, 'Bought')
             .withArgs(
               vaultId,
               owner,
               WAD.sub((await cauldron.balances(vaultId)).art),
               WAD.sub((await cauldron.balances(vaultId)).ink)
             )
-  
+
           const art = WAD.sub((await cauldron.balances(vaultId)).art)
           const ink = WAD.sub((await cauldron.balances(vaultId)).ink)
           expect(art).to.equal(WAD.mul(100).div(110)) // The rate increased by a 10%, so by paying WAD base we only repay 100/110 of the debt in fyToken terms
@@ -228,7 +225,7 @@ describe('Witch', function () {
           const baseBalanceBefore = await base.balanceOf(owner)
           const ilkBalanceBefore = await ilk.balanceOf(owner)
           await expect(witch.payAll(vaultId, WAD)).to.emit(witch, 'Bought').withArgs(vaultId, owner, WAD, WAD)
-  
+
           expect((await cauldron.balances(vaultId)).art).to.equal(0)
           expect((await cauldron.balances(vaultId)).ink).to.equal(0)
           expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(WAD.mul(110).div(100)))
