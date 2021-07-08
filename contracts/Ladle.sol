@@ -487,8 +487,6 @@ contract Ladle is LadleStorage, AccessControl() {
         DataTypes.Vault memory vault = getOwnedVault(vaultId);
         DataTypes.Series memory series = getSeries(vault.seriesId);
 
-        cauldron.slurp(vaultId, ink, art);                                                  // Remove debt and collateral from the vault
-
         if (ink != 0) {                                                                     // Give collateral to the user
             IJoin ilkJoin = getJoin(vault.ilkId);
             ilkJoin.exit(user, ink);

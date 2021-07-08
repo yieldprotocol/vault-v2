@@ -2,15 +2,16 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 
 import { constants } from '@yield-protocol/utils-v2'
 const { WAD } = constants
+import { RATE } from '../src/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
 import { Witch } from '../typechain/Witch'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
-import { OracleMock } from '../typechain/OracleMock'
 import { ChainlinkMultiOracle } from '../typechain/ChainlinkMultiOracle'
 import { ISourceMock } from '../typechain/ISourceMock'
+import { CompoundMultiOracle } from '../typechain/CompoundMultiOracle'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
@@ -18,6 +19,10 @@ const { loadFixture } = waffle
 
 import { YieldEnvironment } from './shared/fixtures'
 import { LadleWrapper } from '../src/ladleWrapper'
+
+function bytes6ToBytes32(x: string): string {
+  return x + '00'.repeat(26)
+}
 
 describe('Witch', function () {
   this.timeout(0)
@@ -37,6 +42,8 @@ describe('Witch', function () {
   let ilkJoin: Join
   let spotOracle: ChainlinkMultiOracle
   let spotSource: ISourceMock
+  let rateOracle: CompoundMultiOracle
+  let rateSource: ISourceMock
 
   const mockVaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12))
 
@@ -71,6 +78,11 @@ describe('Witch', function () {
     spotSource = (await ethers.getContractAt(
       'ISourceMock',
       (await spotOracle.sources(baseId, ilkId))[0]
+    )) as ISourceMock
+    rateOracle = (env.oracles.get(RATE) as unknown) as CompoundMultiOracle
+    rateSource = (await ethers.getContractAt(
+      'ISourceMock',
+      await rateOracle.sources(baseId, RATE)
     )) as ISourceMock
 
     witchFromOther = witch.connect(otherAcc)
@@ -181,6 +193,24 @@ describe('Witch', function () {
 
         const ink = WAD.sub((await cauldron.balances(vaultId)).ink)
         expect(ink).to.equal(WAD)
+        expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(WAD))
+        expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(ink))
+      })
+
+      it('debt to repay grows with rate after maturity', async () => {
+        await ethers.provider.send('evm_mine', [(await fyToken.maturity()).toNumber()])
+        await cauldron.mature(seriesId)
+        const rate = await cauldron.ratesAtMaturity(seriesId)
+        await rateSource.set(rate.mul(110).div(100))
+
+        const baseBalanceBefore = await base.balanceOf(owner)
+        const ilkBalanceBefore = await ilk.balanceOf(owner)
+        await expect(witch.buy(vaultId, WAD, 0)).to.emit(witch, 'Bought')//.withArgs(vaultId, owner, WAD, WAD)
+
+        const art = WAD.sub((await cauldron.balances(vaultId)).art)
+        const ink = WAD.sub((await cauldron.balances(vaultId)).ink)
+        expect(art).to.equal(WAD.mul(100).div(110)) // The rate increased by a 10%, so by paying WAD base we only repay 100/110 of the debt in fyToken terms
+        expect(ink).to.equal(WAD.mul(100).div(110)) // We only pay 100/110 of the debt, so we get 100/110 of the collateral
         expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(WAD))
         expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(ink))
       })

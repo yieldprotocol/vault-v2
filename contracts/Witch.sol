@@ -75,10 +75,12 @@ contract Witch is AccessControl() {
     }
 
     /// @dev Buy an amount of collateral off a vault in liquidation, paying at most `max` underlying.
-    function buy(bytes12 vaultId, uint128 art, uint128 min) public {
+    function buy(bytes12 vaultId, uint128 base, uint128 min) public {
         DataTypes.Balances memory balances_ = cauldron.balances(vaultId);
+        DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
 
         require (balances_.art > 0, "Nothing to buy");                                      // Cheapest way of failing gracefully if given a non existing vault
+        uint256 art = cauldron.debtFromBase(vault_.seriesId, base);
         Auction memory auction_ = auctions[vaultId];
         uint256 elapsed = uint32(block.timestamp) - auction_.start;                      // Auctions will malfunction on the 7th of February 2106, at 06:28:16 GMT, we should replace this contract before then.
         uint256 price;
@@ -102,7 +104,8 @@ contract Witch is AccessControl() {
         require (ink >= min, "Not enough bought");
         require (ink == balances_.ink || balances_.ink - ink >= dust_, "Leaves dust");
 
-        ladle.settle(vaultId, msg.sender, ink.u128(), art);                                        // Move the assets
+        cauldron.slurp(vaultId, ink.u128(), art.u128());                                            // Remove debt and collateral from the vault
+        ladle.settle(vaultId, msg.sender, ink.u128(), base);                                        // Move the assets
         if (balances_.art - art == 0) {                                                             // If there is no debt left, return the vault with the collateral to the owner
             cauldron.give(vaultId, auction_.owner);
             delete auctions[vaultId];
