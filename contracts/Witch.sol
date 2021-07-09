@@ -89,7 +89,7 @@ contract Witch is AccessControl() {
         {
             uint256 elapsed = uint32(block.timestamp) - auction_.start;                      // Auctions will malfunction on the 7th of February 2106, at 06:28:16 GMT, we should replace this contract before then.
             uint256 price = inkPrice(balances_, initialOffer_, duration_, elapsed);
-            ink = uint256(art).wdivup(price);                                                    // Calculate collateral to sell. Using divdrup stops rounding from leaving 1 stray wei in vaults.
+            ink = uint256(art).wmul(price);                                                    // Calculate collateral to sell. Using divdrup stops rounding from leaving 1 stray wei in vaults.
             require (ink >= min, "Not enough bought");
             require (ink == balances_.ink || balances_.ink - ink >= dust_, "Leaves dust");
         }
@@ -119,7 +119,7 @@ contract Witch is AccessControl() {
         {
             uint256 elapsed = uint32(block.timestamp) - auction_.start;                      // Auctions will malfunction on the 7th of February 2106, at 06:28:16 GMT, we should replace this contract before then.
             uint256 price = inkPrice(balances_, initialOffer_, duration_, elapsed);
-            ink = uint256(balances_.art).wdivup(price);                                                    // Calculate collateral to sell. Using divdrup stops rounding from leaving 1 stray wei in vaults.
+            ink = uint256(balances_.art).wmul(price);                                                    // Calculate collateral to sell. Using divdrup stops rounding from leaving 1 stray wei in vaults.
             require (ink >= min, "Not enough bought");
             require (ink == balances_.ink || balances_.ink - ink >= dust_, "Leaves dust");
         }
@@ -131,19 +131,18 @@ contract Witch is AccessControl() {
         emit Bought(vaultId, msg.sender, ink, balances_.art); // Still the initailly read `art` value, not the updated one
     }
 
+    /// @dev Price of a collateral unit, in underlying, at the present moment, for a given vault
+    ///            ink                     min(auction, elapsed)
+    /// price = (------- * (p + (1 - p) * -----------------------))
+    ///            art                          auction
     function inkPrice(DataTypes.Balances memory balances, uint256 initialOffer_, uint256 duration_, uint256 elapsed)
         private pure
         returns (uint256 price)
     {
-            // Price of a collateral unit, in underlying, at the present moment, for a given vault
-            //
-            //                ink                     min(auction, elapsed)
-            // price = 1 / (------- * (p + (1 - p) * -----------------------))
-            //                art                          auction
             uint256 term1 = uint256(balances.ink).wdiv(balances.art);
             uint256 dividend2 = duration_ < elapsed ? duration_ : elapsed;
             uint256 divisor2 = duration_;
             uint256 term2 = initialOffer_ + (1e18 - initialOffer_).wmul(dividend2.wdiv(divisor2));
-            price = uint256(1e18).wdiv(term1.wmul(term2));
+            price = term1.wmul(term2);
     }
 }
