@@ -53,6 +53,10 @@ describe('Witch', function () {
     other = await otherAcc.getAddress()
   })
 
+  after(async () => {
+    await loadFixture(fixture) // We advance the time to test maturity features, this rolls it back after the tests
+  })
+
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))

@@ -47,6 +47,10 @@ describe('Cauldron - level', function () {
     owner = await ownerAcc.getAddress()
   })
 
+  after(async () => {
+    await loadFixture(fixture) // We advance the time to test maturity features, this rolls it back after the tests
+  })
+
   beforeEach(async function () {
     this.timeout(0)
     env = await loadFixture(fixture)
