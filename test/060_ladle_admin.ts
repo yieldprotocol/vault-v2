@@ -3,8 +3,7 @@ import { constants, id } from '@yield-protocol/utils-v2'
 import { sendStatic } from './shared/helpers'
 
 import { Contract } from '@ethersproject/contracts'
-import { Event } from '@ethersproject/contracts/lib/index'
-import { Result } from '@ethersproject/abi'
+import { ContractFactory } from 'ethers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 
 const { WAD, THREE_MONTHS } = constants
@@ -24,6 +23,7 @@ import { ERC20Mock } from '../typechain/ERC20Mock'
 import { OracleMock } from '../typechain/OracleMock'
 import { PoolMock } from '../typechain/PoolMock'
 import { PoolFactoryMock } from '../typechain/PoolFactoryMock'
+import { SafeERC20Namer } from '../typechain/SafeERC20Namer'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
@@ -42,6 +42,7 @@ describe('Ladle - admin', function () {
   let other: string
   let cauldron: Cauldron
   let fyToken: FYToken
+  let fyTokenFactory: ContractFactory
   let base: ERC20Mock
   let baseJoin: Join
   let joinFactory: JoinFactory
@@ -109,14 +110,26 @@ describe('Ladle - admin', function () {
     // Deploy a series
     const { timestamp } = await ethers.provider.getBlock('latest')
     maturity = timestamp + THREE_MONTHS
-    fyToken = (await deployContract(ownerAcc, FYTokenArtifact, [
+
+    const SafeERC20NamerFactory = await ethers.getContractFactory('SafeERC20Namer')
+    const safeERC20NamerLibrary = ((await SafeERC20NamerFactory.deploy()) as unknown) as SafeERC20Namer
+    await safeERC20NamerLibrary.deployed()
+
+    fyTokenFactory = await ethers.getContractFactory('FYToken', {
+      libraries: {
+        SafeERC20Namer: safeERC20NamerLibrary.address,
+      },
+    })
+    fyToken = ((await fyTokenFactory.deploy(
       baseId,
       rateOracle.address,
       baseJoin.address,
       maturity,
       seriesId,
       'Mock FYToken',
-    ])) as FYToken
+    )) as unknown) as FYToken
+    await fyToken.deployed()
+
     await cauldron.addSeries(seriesId, baseId, fyToken.address)
     await cauldron.addIlks(seriesId, [ilkId])
 
@@ -167,14 +180,16 @@ describe('Ladle - admin', function () {
 
     it('does not allow adding a pool with a mismatched fyToken', async () => {
       // Deploy other series
-      const otherFYToken = (await deployContract(ownerAcc, FYTokenArtifact, [
+      const otherFYToken = ((await fyTokenFactory.deploy(
         baseId,
         rateOracle.address,
         baseJoin.address,
         maturity,
         seriesId,
         'Mock FYToken',
-      ])) as FYToken
+      )) as unknown) as FYToken
+      await otherFYToken.deployed()  
+
       await cauldron.addSeries(otherSeriesId, baseId, otherFYToken.address)
       await cauldron.addIlks(otherSeriesId, [ilkId])
 
