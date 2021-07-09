@@ -272,7 +272,12 @@ export class YieldEnvironment {
         SafeERC20Namer: safeERC20NamerLibrary.address,
       },
     })
-    const wand = ((await wandFactory.deploy(cauldron.address, ladle.address, poolFactory.address, joinFactory.address)) as unknown) as Wand
+    const wand = ((await wandFactory.deploy(
+      cauldron.address,
+      ladle.address,
+      poolFactory.address,
+      joinFactory.address
+    )) as unknown) as Wand
     await wand.deployed()
 
     const chiRateOracle = (await deployContract(owner, CompoundMultiOracleArtifact, [])) as CompoundMultiOracle

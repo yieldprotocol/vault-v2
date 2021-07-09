@@ -126,7 +126,7 @@ describe('Ladle - admin', function () {
       baseJoin.address,
       maturity,
       seriesId,
-      'Mock FYToken',
+      'Mock FYToken'
     )) as unknown) as FYToken
     await fyToken.deployed()
 
@@ -186,9 +186,9 @@ describe('Ladle - admin', function () {
         baseJoin.address,
         maturity,
         seriesId,
-        'Mock FYToken',
+        'Mock FYToken'
       )) as unknown) as FYToken
-      await otherFYToken.deployed()  
+      await otherFYToken.deployed()
 
       await cauldron.addSeries(otherSeriesId, baseId, otherFYToken.address)
       await cauldron.addIlks(otherSeriesId, [ilkId])

@@ -81,7 +81,7 @@ describe('Cauldron - admin', function () {
       join.address,
       maturity,
       seriesId,
-      'Mock FYToken',
+      'Mock FYToken'
     )) as unknown) as FYToken
     await fyToken.deployed()
 
