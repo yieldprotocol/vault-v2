@@ -50,7 +50,7 @@ contract CompoundMultiOracle is IOracle, AccessControl {
      * @return value
      */
     function get(bytes32 base, bytes32 kind, uint256 amount)
-        external view virtual override
+        external virtual override
         returns (uint256 value, uint256 updateTime)
     {
         uint256 price;

@@ -76,7 +76,7 @@ contract UniswapV3Oracle is IOracle, AccessControl {
      * @return value
      */
     function get(bytes32 base, bytes32 quote, uint256 amount)
-        external view virtual override
+        external virtual override
         returns (uint256 value, uint256 updateTime)
     {
         return _peek(base.b6(), quote.b6(), amount);

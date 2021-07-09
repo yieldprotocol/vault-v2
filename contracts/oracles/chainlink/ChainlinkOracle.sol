@@ -53,7 +53,7 @@ contract ChainlinkOracle is IOracle {
      * @return value
      */
     function get(bytes32, bytes32, uint256 amount)
-        external view virtual override
+        external virtual override
         returns (uint256 value, uint256 updateTime)
     {
         uint256 price;
