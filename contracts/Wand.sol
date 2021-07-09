@@ -69,7 +69,7 @@ contract Wand is AccessControl, Constants {
 
         oracle.setSource(assetId, RATE.b6(), rateSource);
         oracle.setSource(assetId, CHI.b6(), chiSource);
-        cauldron.setRateOracle(assetId, IOracle(address(oracle))); // TODO: Consider adding a registry of chi oracles in cauldron as well
+        cauldron.setRateOracle(assetId, IOracle(address(oracle)));
     }
 
     /// @dev Make an ilk asset out of a generic asset, by adding a spot oracle against a base asset, collateralization ratio, and debt ceiling.
@@ -105,7 +105,7 @@ contract Wand is AccessControl, Constants {
             maturity,
             name,     // Derive from base and maturity, perhaps
             symbol    // Derive from base and maturity, perhaps
-        ); // TODO: Use a FYTokenFactory to make Wand deployable at 20000 runs
+        );
 
         // Allow the fyToken to pull from the base join for redemption
         bytes4[] memory sigs = new bytes4[](1);
