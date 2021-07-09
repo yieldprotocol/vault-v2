@@ -109,7 +109,7 @@ contract Witch is AccessControl() {
 
     /// @dev Pay all debt from a vault in liquidation, getting at least `min` collateral.
     function payAll(bytes12 vaultId, uint128 min)
-        public
+        external
         returns (uint256 ink)
     {
         DataTypes.Balances memory balances_ = cauldron.balances(vaultId);

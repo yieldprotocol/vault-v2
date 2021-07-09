@@ -263,7 +263,8 @@ contract Cauldron is AccessControl() {
         returns (uint128 art)
     {
         if (uint32(block.timestamp) >= series[seriesId].maturity) {
-            art = uint256(base).wdiv(accrual(seriesId)).u128();
+            DataTypes.Series memory series_ = series[seriesId];
+            art = uint256(base).wdiv(_accrual(seriesId, series_)).u128();
         } else {
             art = base;
         }
@@ -275,7 +276,8 @@ contract Cauldron is AccessControl() {
         returns (uint128 base)
     {
         if (uint32(block.timestamp) >= series[seriesId].maturity) {
-            base = uint256(art).wmul(accrual(seriesId)).u128();
+            DataTypes.Series memory series_ = series[seriesId];
+            base = uint256(art).wmul(_accrual(seriesId, series_)).u128();
         } else {
             base = art;
         }
@@ -427,9 +429,8 @@ contract Cauldron is AccessControl() {
     function mature(bytes6 seriesId)
         external
     {
-        DataTypes.Series memory series_ = series[seriesId];
-        require (uint32(block.timestamp) >= series_.maturity, "Only after maturity");
         require (ratesAtMaturity[seriesId] == 0, "Already matured");
+        DataTypes.Series memory series_ = series[seriesId];
         _mature(seriesId, series_);
     }
 
@@ -437,6 +438,7 @@ contract Cauldron is AccessControl() {
     function _mature(bytes6 seriesId, DataTypes.Series memory series_)
         internal
     {
+        require (uint32(block.timestamp) >= series_.maturity, "Only after maturity");
         IOracle rateOracle = rateOracles[series_.baseId];
         (uint256 rateAtMaturity,) = rateOracle.get(series_.baseId, bytes32("rate"), 1e18);
         ratesAtMaturity[seriesId] = rateAtMaturity;
@@ -449,7 +451,6 @@ contract Cauldron is AccessControl() {
         returns (uint256)
     {
         DataTypes.Series memory series_ = series[seriesId];
-        require (uint32(block.timestamp) >= series_.maturity, "Only after maturity");
         return _accrual(seriesId, series_);
     }
 
