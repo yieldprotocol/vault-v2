@@ -94,7 +94,10 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
      * @param token The loan currency. It must be a FYDai contract.
      * @return The amount of `token` that can be borrowed.
      */
-    function maxFlashLoan(address token) public view override returns (uint256) {
+    function maxFlashLoan(address token)
+        external view override
+        returns (uint256)
+    {
         return token == asset ? storedBalance : 0;
     }
 
@@ -104,7 +107,10 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
      * @param amount The amount of tokens lent.
      * @return The amount of `token` to be charged for the loan, on top of the returned principal.
      */
-    function flashFee(address token, uint256 amount) public view override returns (uint256) {
+    function flashFee(address token, uint256 amount)
+        external view override
+        returns (uint256)
+    {
         require(token == asset, "Unsupported currency");
         return _flashFee(amount);
     }
@@ -126,7 +132,10 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
      * @param amount The amount of tokens lent.
      * @param data A data parameter to be passed on to the `receiver` for any custom use.
      */
-    function flashLoan(IERC3156FlashBorrower receiver, address token, uint256 amount, bytes memory data) public override returns(bool) {
+    function flashLoan(IERC3156FlashBorrower receiver, address token, uint256 amount, bytes memory data)
+        external override
+        returns(bool)
+    {
         require(token == asset, "Unsupported currency");
         uint128 _amount = amount.u128();
         uint128 _fee = _flashFee(amount).u128();
