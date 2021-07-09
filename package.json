@@ -33,7 +33,7 @@
     "@types/mocha": "^8.0.0",
     "@yield-protocol/utils-v2": "^2.2.5",
     "@yield-protocol/vault-interfaces": "^2.0.35",
-    "@yield-protocol/yieldspace-interfaces": "^2.0.14",
+    "@yield-protocol/yieldspace-interfaces": "^2.0.17",
     "chai": "4.2.0",
     "dss-interfaces": "0.1.1",
     "erc3156": "^0.4.8",
