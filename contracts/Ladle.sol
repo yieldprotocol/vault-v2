@@ -553,7 +553,7 @@ contract Ladle is LadleStorage, AccessControl() {
     {
         ethTransferred = address(this).balance;
         IJoin wethJoin = getJoin(etherId);
-        weth.deposit{ value: ethTransferred }();   // TODO: Test gas savings using WETH10 `depositTo`
+        weth.deposit{ value: ethTransferred }();
         IERC20(address(weth)).safeTransfer(address(wethJoin), ethTransferred);
     }
 
@@ -564,7 +564,7 @@ contract Ladle is LadleStorage, AccessControl() {
         returns (uint256 ethTransferred)
     {
         ethTransferred = weth.balanceOf(address(this));
-        weth.withdraw(ethTransferred);   // TODO: Test gas savings using WETH10 `withdrawTo`
+        weth.withdraw(ethTransferred);
         to.safeTransferETH(ethTransferred);
     }
 
