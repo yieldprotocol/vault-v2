@@ -12,9 +12,10 @@ import "./math/WMul.sol";
 import "./math/WDiv.sol";
 import "./math/CastU256U128.sol";
 import "./math/CastU256U32.sol";
+import "./constants/Constants.sol";
 
 
-contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit {
+contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit, Constants {
     using WMul for uint256;
     using WDiv for uint256;
     using CastU256U128 for uint256;
@@ -24,7 +25,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
     event Redeemed(address indexed from, address indexed to, uint256 amount, uint256 redeemed);
     event OracleSet(address indexed oracle);
 
-    bytes32 constant CHI = "chi";
+    uint256 constant CHI_NOT_SET = type(uint256).max;
 
     uint256 constant internal MAX_TIME_TO_MATURITY = 126144000; // seconds in four years
     bytes32 constant internal FLASH_LOAN_RETURN = keccak256("ERC3156FlashBorrower.onFlashLoan");
@@ -34,7 +35,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
     address public immutable override underlying;
     bytes6 public immutable underlyingId;                             // Needed to access the oracle
     uint256 public immutable override maturity;
-    uint256 public chiAtMaturity = type(uint256).max;           // Spot price (exchange rate) between the base and an interest accruing token at maturity 
+    uint256 public chiAtMaturity = CHI_NOT_SET;           // Spot price (exchange rate) between the base and an interest accruing token at maturity 
 
     constructor(
         bytes6 underlyingId_,
@@ -91,7 +92,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         external override
         afterMaturity
     {
-        require (chiAtMaturity == type(uint256).max, "Already matured");
+        require (chiAtMaturity == CHI_NOT_SET, "Already matured");
         _mature();
     }
 
@@ -120,7 +121,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         private
         returns (uint256 accrual_)
     {
-        if (chiAtMaturity == type(uint256).max) {  // After maturity, but chi not yet recorded. Let's record it, and accrual is then 1.
+        if (chiAtMaturity == CHI_NOT_SET) {  // After maturity, but chi not yet recorded. Let's record it, and accrual is then 1.
             _mature();
         } else {
             (uint256 chi,) = oracle.get(underlyingId, CHI, 1e18);
