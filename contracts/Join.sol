@@ -23,7 +23,7 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
 
     address public immutable override asset;
     uint256 public storedBalance;
-    uint256 public flashFeeFactor; // Fee on flash loans, as a percentage in fixed point with 18 decimals
+    uint256 public flashFeeFactor = type(uint256).max; // Fee on flash loans, as a percentage in fixed point with 18 decimals. Flash loans disabled by default.
 
     constructor(address asset_) {
         asset = asset_;
