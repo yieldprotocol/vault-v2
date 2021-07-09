@@ -41,6 +41,7 @@ import { OracleMock } from '../../typechain/OracleMock'
 import { ISourceMock } from '../../typechain/ISourceMock'
 import { ChainlinkMultiOracle } from '../../typechain/ChainlinkMultiOracle'
 import { CompoundMultiOracle } from '../../typechain/CompoundMultiOracle'
+import { SafeERC20Namer } from '../../typechain/SafeERC20Namer'
 
 import { ERC20Mock } from '../../typechain/ERC20Mock'
 import { WETH9Mock } from '../../typechain/WETH9Mock'
@@ -259,12 +260,26 @@ export class YieldEnvironment {
     const witch = (await deployContract(owner, WitchArtifact, [cauldron.address, ladle.address])) as Witch
     const joinFactory = (await deployContract(owner, JoinFactoryArtifact, [])) as JoinFactory
     const poolFactory = (await deployContract(owner, PoolFactoryMockArtifact, [])) as PoolFactoryMock
-    const wand = (await deployContract(owner, WandArtifact, [
+
+    // const wand = (await deployContract(owner, WandArtifact, [cauldron.address, ladle.address, poolFactory.address, joinFactory.address])) as Wand
+
+    const SafeERC20NamerFactory = await ethers.getContractFactory('SafeERC20Namer')
+    const safeERC20NamerLibrary = ((await SafeERC20NamerFactory.deploy()) as unknown) as SafeERC20Namer
+    await safeERC20NamerLibrary.deployed()
+
+    const wandFactory = await ethers.getContractFactory('Wand', {
+      libraries: {
+        SafeERC20Namer: safeERC20NamerLibrary.address,
+      },
+    })
+    const wand = ((await wandFactory.deploy(
       cauldron.address,
       ladle.address,
       poolFactory.address,
-      joinFactory.address,
-    ])) as Wand
+      joinFactory.address
+    )) as unknown) as Wand
+    await wand.deployed()
+
     const chiRateOracle = (await deployContract(owner, CompoundMultiOracleArtifact, [])) as CompoundMultiOracle
     const spotOracle = (await deployContract(owner, ChainlinkMultiOracleArtifact, [])) as ChainlinkMultiOracle
     oracles.set(RATE, (chiRateOracle as unknown) as OracleMock)

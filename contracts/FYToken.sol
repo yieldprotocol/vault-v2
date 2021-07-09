@@ -4,6 +4,7 @@ pragma solidity 0.8.1;
 import "erc3156/contracts/interfaces/IERC3156FlashBorrower.sol";
 import "erc3156/contracts/interfaces/IERC3156FlashLender.sol";
 import "@yield-protocol/utils-v2/contracts/token/ERC20Permit.sol";
+import "@yield-protocol/utils-v2/contracts/token/SafeERC20Namer.sol";
 import "@yield-protocol/vault-interfaces/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/IJoin.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
@@ -44,7 +45,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit,
         uint256 maturity_,
         string memory name,
         string memory symbol
-    ) ERC20Permit(name, symbol, IERC20Metadata(address(IJoin(join_).asset())).decimals()) { // The join asset is this fyToken's underlying, from which we inherit the decimals
+    ) ERC20Permit(name, symbol, SafeERC20Namer.tokenDecimals(address(IJoin(join_).asset()))) { // The join asset is this fyToken's underlying, from which we inherit the decimals
         uint256 now_ = block.timestamp;
         require(
             maturity_ > now_ &&
