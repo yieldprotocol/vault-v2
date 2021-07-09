@@ -114,6 +114,16 @@ contract Ladle is LadleStorage, AccessControl() {
 
     // ---- Batching ----
 
+    /// @dev Return the cached vault if necessary, preceded by the current vaultId (needed if vaultId == bytes(0)) and cachedId (which is the same as the vaultId)
+    /// If refreshing the cache, verifies that msg.sender is the owner of the vault
+    function getCachedVault(bytes12 vaultId, bytes12 cachedId, DataTypes.Vault memory vault)
+        private view
+        returns (bytes12, bytes12, DataTypes.Vault memory)
+    {
+        require(vaultId != bytes12(0) || cachedId != bytes12(0), "Vault not cached");           // Can't use the cache
+        if (vaultId == bytes12(0) || vaultId == cachedId) return (cachedId, cachedId, vault);   // Use the cache
+        else return (vaultId, vaultId, getOwnedVault(vaultId));                                 // Refresh the cache
+    } 
 
     /// @dev Submit a series of calls for execution.
     /// Unlike `batch`, this function calls private functions, saving a CALL per function.
@@ -132,8 +142,8 @@ contract Ladle is LadleStorage, AccessControl() {
             Operation operation = operations[i];
 
             if (operation == Operation.BUILD) {
-                (bytes12 vaultId, bytes6 seriesId, bytes6 ilkId) = abi.decode(data[i], (bytes12, bytes6, bytes6));
-                (cachedId, vault) = (vaultId, _build(vaultId, seriesId, ilkId));   // Cache the vault that was just built
+                (bytes6 seriesId, bytes6 ilkId) = abi.decode(data[i], (bytes6, bytes6));
+                (cachedId, vault) = _build(seriesId, ilkId, 0);   // Cache the vault that was just built
             
             } else if (operation == Operation.FORWARD_PERMIT) {
                 (bytes6 id, bool isAsset, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s) =
@@ -146,17 +156,17 @@ contract Ladle is LadleStorage, AccessControl() {
             
             } else if (operation == Operation.POUR) {
                 (bytes12 vaultId, address to, int128 ink, int128 art) = abi.decode(data[i], (bytes12, address, int128, int128));
-                if (cachedId != vaultId) (cachedId, vault) = (vaultId, getOwnedVault(vaultId));
+                (vaultId, cachedId, vault) = getCachedVault(vaultId, cachedId, vault);
                 _pour(vaultId, vault, to, ink, art);
             
             } else if (operation == Operation.SERVE) {
                 (bytes12 vaultId, address to, uint128 ink, uint128 base, uint128 max) = abi.decode(data[i], (bytes12, address, uint128, uint128, uint128));
-                if (cachedId != vaultId) (cachedId, vault) = (vaultId, getOwnedVault(vaultId));
+                (vaultId, cachedId, vault) = getCachedVault(vaultId, cachedId, vault);
                 _serve(vaultId, vault, to, ink, base, max);
 
             } else if (operation == Operation.ROLL) {
                 (bytes12 vaultId, bytes6 newSeriesId, uint8 loan, uint128 max) = abi.decode(data[i], (bytes12, bytes6, uint8, uint128));
-                if (cachedId != vaultId) (cachedId, vault) = (vaultId, getOwnedVault(vaultId));
+                (vaultId, cachedId, vault) = getCachedVault(vaultId, cachedId, vault);
                 (vault,) = _roll(vaultId, vault, newSeriesId, loan, max);
             
             } else if (operation == Operation.FORWARD_DAI_PERMIT) {
@@ -182,22 +192,22 @@ contract Ladle is LadleStorage, AccessControl() {
             
             } else if (operation == Operation.CLOSE) {
                 (bytes12 vaultId, address to, int128 ink, int128 art) = abi.decode(data[i], (bytes12, address, int128, int128));
-                if (cachedId != vaultId) (cachedId, vault) = (vaultId, getOwnedVault(vaultId));
+                (vaultId, cachedId, vault) = getCachedVault(vaultId, cachedId, vault);
                 _close(vaultId, vault, to, ink, art);
             
             } else if (operation == Operation.REPAY) {
                 (bytes12 vaultId, address to, int128 ink, uint128 min) = abi.decode(data[i], (bytes12, address, int128, uint128));
-                if (cachedId != vaultId) (cachedId, vault) = (vaultId, getOwnedVault(vaultId));
+                (vaultId, cachedId, vault) = getCachedVault(vaultId, cachedId, vault);
                 _repay(vaultId, vault, to, ink, min);
             
             } else if (operation == Operation.REPAY_VAULT) {
                 (bytes12 vaultId, address to, int128 ink, uint128 max) = abi.decode(data[i], (bytes12, address, int128, uint128));
-                if (cachedId != vaultId) (cachedId, vault) = (vaultId, getOwnedVault(vaultId));
+                (vaultId, cachedId, vault) = getCachedVault(vaultId, cachedId, vault);
                 _repayVault(vaultId, vault, to, ink, max);
 
             } else if (operation == Operation.REPAY_LADLE) {
                 (bytes12 vaultId) = abi.decode(data[i], (bytes12));
-                if (cachedId != vaultId) (cachedId, vault) = (vaultId, getOwnedVault(vaultId));
+                (vaultId, cachedId, vault) = getCachedVault(vaultId, cachedId, vault);
                 _repayLadle(vaultId, vault);
 
             } else if (operation == Operation.RETRIEVE) {
@@ -220,19 +230,19 @@ contract Ladle is LadleStorage, AccessControl() {
             
             } else if (operation == Operation.TWEAK) {
                 (bytes12 vaultId, bytes6 seriesId, bytes6 ilkId) = abi.decode(data[i], (bytes12, bytes6, bytes6));
-                if (cachedId != vaultId) (cachedId, vault) = (vaultId, getOwnedVault(vaultId));
+                (vaultId, cachedId, vault) = getCachedVault(vaultId, cachedId, vault);  // Needed to verify ownership
                 vault = _tweak(vaultId, seriesId, ilkId);
 
             } else if (operation == Operation.GIVE) {
                 (bytes12 vaultId, address to) = abi.decode(data[i], (bytes12, address));
-                if (cachedId != vaultId) (cachedId, vault) = (vaultId, getOwnedVault(vaultId));
-                vault = _give(vaultId, to);
+                (vaultId, cachedId, vault) = getCachedVault(vaultId, cachedId, vault);  // Needed to verify ownership
+                _give(vaultId, to);
                 delete vault;   // Clear the cache, since the vault doesn't necessarily belong to msg.sender anymore
                 cachedId = bytes12(0);
 
             } else if (operation == Operation.DESTROY) {
                 (bytes12 vaultId) = abi.decode(data[i], (bytes12));
-                if (cachedId != vaultId) (cachedId, vault) = (vaultId, getOwnedVault(vaultId));
+                (vaultId, cachedId, vault) = getCachedVault(vaultId, cachedId, vault);  // Needed to verify ownership
                 _destroy(vaultId);
                 delete vault;   // Clear the cache
                 cachedId = bytes12(0);
@@ -247,12 +257,22 @@ contract Ladle is LadleStorage, AccessControl() {
 
     // ---- Vault management ----
 
+    /// @dev Generate a vaultId. A keccak256 is cheaper than using a counter with a SSTORE, even accounting for eventual collision retries.
+    function _generateVaultId(uint8 salt) private view returns (bytes12) {
+        return bytes12(keccak256(abi.encodePacked(msg.sender, block.timestamp, salt)));
+    }
+
     /// @dev Create a new vault, linked to a series (and therefore underlying) and a collateral
-    function _build(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
+    function _build(bytes6 seriesId, bytes6 ilkId, uint8 salt)
         private
-        returns(DataTypes.Vault memory vault)
+        returns(bytes12, DataTypes.Vault memory)
     {
-        return cauldron.build(msg.sender, vaultId, seriesId, ilkId);
+        bytes12 vaultId = _generateVaultId(salt);
+        try cauldron.build(msg.sender, vaultId, seriesId, ilkId) returns (DataTypes.Vault memory vault) {
+            return (vaultId, vault);
+        } catch Error (string memory) {
+            return _build(seriesId, ilkId, salt + 1);
+        }
     }
 
     /// @dev Change a vault series or collateral.
@@ -520,7 +540,9 @@ contract Ladle is LadleStorage, AccessControl() {
     // ---- Ether management ----
 
     /// @dev The WETH9 contract will send ether to BorrowProxy on `weth.withdraw` using this function.
-    receive() external payable { }
+    receive() external payable { 
+        require (msg.sender == address(weth), "Only receive from WETH");
+    }
 
     /// @dev Accept Ether, wrap it and forward it to the WethJoin
     /// This function should be called first in a batch, and the Join should keep track of stored reserves
@@ -586,6 +608,8 @@ contract Ladle is LadleStorage, AccessControl() {
     // ---- Module router ----
 
     /// @dev Allow users to use functionality coded in a module, to be used with batch
+    /// @notice Modules must not do any changes to the vault (owner, seriesId, ilkId),
+    /// it would be disastrous in combination with batch vault caching 
     function _moduleCall(address module, bytes memory moduleCall)
         private
         returns (bool success, bytes memory result)
@@ -594,4 +618,5 @@ contract Ladle is LadleStorage, AccessControl() {
         (success, result) = module.delegatecall(moduleCall);
         if (!success) revert(RevertMsgExtractor.getRevertMsg(result));
     }
+
 }

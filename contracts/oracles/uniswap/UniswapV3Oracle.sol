@@ -64,7 +64,10 @@ contract UniswapV3Oracle is IOracle, AccessControl {
      * @notice Retrieve the value of the amount at the latest oracle price.
      * @return value
      */
-    function peek(bytes32 base, bytes32 quote, uint256 amount) public virtual override view returns (uint256 value, uint256 updateTime) {
+    function peek(bytes32 base, bytes32 quote, uint256 amount)
+        external view virtual override
+        returns (uint256 value, uint256 updateTime)
+    {
         return _peek(base.b6(), quote.b6(), amount);
     }
 
@@ -72,11 +75,17 @@ contract UniswapV3Oracle is IOracle, AccessControl {
      * @notice Retrieve the value of the amount at the latest oracle price. Same as `peek` for this oracle.
      * @return value
      */
-    function get(bytes32 base, bytes32 quote, uint256 amount) public virtual override view returns (uint256 value, uint256 updateTime) {
+    function get(bytes32 base, bytes32 quote, uint256 amount)
+        external virtual override
+        returns (uint256 value, uint256 updateTime)
+    {
         return _peek(base.b6(), quote.b6(), amount);
     }
 
-    function _peek(bytes6 base, bytes6 quote, uint256 amount) public virtual view returns (uint256 value, uint256 updateTime) {
+    function _peek(bytes6 base, bytes6 quote, uint256 amount)
+        private view
+        returns (uint256 value, uint256 updateTime)
+    {
         Source memory source = sources[base][quote];
         SourceData memory sourceData;
         require(source.source != address(0), "Source not found");

@@ -177,6 +177,8 @@ contract Cauldron is AccessControl() {
         returns(DataTypes.Vault memory vault)
     {
         require (vaultId != bytes12(0), "Vault id is zero");
+        require (seriesId != bytes12(0), "Series id is zero");
+        require (ilkId != bytes12(0), "Ilk id is zero");
         require (vaults[vaultId].seriesId == bytes6(0), "Vault already exists");   // Series can't take bytes6(0) as their id
         require (ilks[seriesId][ilkId] == true, "Ilk not added to series");
         vault = DataTypes.Vault({
@@ -205,6 +207,8 @@ contract Cauldron is AccessControl() {
     function _tweak(bytes12 vaultId, DataTypes.Vault memory vault)
         internal
     {
+        require (vault.seriesId != bytes6(0), "Series id is zero");
+        require (vault.ilkId != bytes6(0), "Ilk id is zero");
         require (ilks[vault.seriesId][vault.ilkId] == true, "Ilk not added to series");
 
         vaults[vaultId] = vault;
@@ -236,6 +240,7 @@ contract Cauldron is AccessControl() {
         internal
         returns(DataTypes.Vault memory vault)
     {
+        require (vaultId != bytes12(0), "Vault id is zero");
         vault = vaults[vaultId];
         vault.owner = receiver;
         vaults[vaultId] = vault;
@@ -404,7 +409,10 @@ contract Cauldron is AccessControl() {
     // ==== Accounting ====
 
     /// @dev Return the collateralization level of a vault. It will be negative if undercollateralized.
-    function level(bytes12 vaultId) public returns (int256) {
+    function level(bytes12 vaultId)
+        external
+        returns (int256)
+    {
         (DataTypes.Vault memory vault_, DataTypes.Series memory series_, DataTypes.Balances memory balances_) = vaultData(vaultId, true);
 
         return _level(vault_, balances_, series_);
@@ -412,7 +420,7 @@ contract Cauldron is AccessControl() {
 
     /// @dev Record the borrowing rate at maturity for a series
     function mature(bytes6 seriesId)
-        public
+        external
     {
         DataTypes.Series memory series_ = series[seriesId];
         require (uint32(block.timestamp) >= series_.maturity, "Only after maturity");
@@ -433,7 +441,7 @@ contract Cauldron is AccessControl() {
 
     /// @dev Retrieve the rate accrual since maturity, maturing if necessary.
     function accrual(bytes6 seriesId)
-        public
+        external
         returns (uint256)
     {
         DataTypes.Series memory series_ = series[seriesId];

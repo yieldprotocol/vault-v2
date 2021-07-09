@@ -47,14 +47,18 @@ contract Witch is AccessControl() {
     }
 
     /// @dev Put an undercollateralized vault up for liquidation.
-    function grab(bytes12 vaultId) public {
+    function grab(bytes12 vaultId)
+        external
+    {
         DataTypes.Vault memory vault = cauldron.vaults(vaultId);
         vaultOwners[vaultId] = vault.owner;
         cauldron.grab(vaultId, address(this));
     }
 
     /// @dev Buy an amount of collateral off a vault in liquidation, paying at most `max` underlying.
-    function buy(bytes12 vaultId, uint128 art, uint128 min) public {
+    function buy(bytes12 vaultId, uint128 art, uint128 min)
+        external
+    {
         DataTypes.Balances memory balances_ = cauldron.balances(vaultId);
 
         require (balances_.art > 0, "Nothing to buy");                                      // Cheapest way of failing gracefully if given a non existing vault

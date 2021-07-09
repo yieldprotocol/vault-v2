@@ -10,6 +10,10 @@ import 'hardhat-typechain'
 import 'solidity-coverage'
 import 'hardhat-deploy'
 
+import { task } from 'hardhat/config'
+import { TASK_TEST } from 'hardhat/builtin-tasks/task-names'
+import { TaskArguments, HardhatRuntimeEnvironment, RunSuperFunction } from 'hardhat/types'
+
 // REQUIRED TO ENSURE METADATA IS SAVED IN DEPLOYMENTS (because solidity-coverage disable it otherwise)
 /* import {
   TASK_COMPILE_GET_COMPILER_INPUT
@@ -20,6 +24,35 @@ task(TASK_COMPILE_GET_COMPILER_INPUT).setAction(async (_, bre, runSuper) => {
   return input
 }) */
 
+// Periodically, one needs to remove the 'artifacts' and 'typechain' folder (and hence, do a yarn build). Yet, if running yarn build, the tests shouldn't run the compilation again, so the hook below accomplishes just that.
+task(
+  TASK_TEST,
+  "Runs the tests",
+  async (args: TaskArguments, hre: HardhatRuntimeEnvironment, runSuper: RunSuperFunction<TaskArguments>) => {
+    return runSuper({...args, noCompile: true});
+  }
+);
+
+task("lint:collisions", "Checks all contracts for function signatures collisions with ROOT (0x00000000) and LOCK (0xffffffff)",
+  async (taskArguments, hre, runSuper) => {
+    let ROOT = "0x00000000"
+    let LOCK = "0xffffffff"
+    const abiPath = path.join(__dirname, 'abi')
+    for (let contract of fs.readdirSync(abiPath)) {
+      const iface = new hre.ethers.utils.Interface(require(abiPath + "/" + contract))
+      for (let func in iface.functions) {
+        const sig = iface.getSighash(func)
+        if (sig == ROOT) {
+          console.error("Function " + func + " of contract " + contract.slice(0, contract.length - 5) + " has a role-colliding signature with ROOT.")
+        }
+        if (sig == LOCK) {
+          console.error("Function " + func + " of contract " + contract.slice(0, contract.length - 5) + " has a role-colliding signature with LOCK.")
+        }
+      }
+    }
+    console.log("No collisions, check passed.")
+  }
+)
 
 function nodeUrl(network: any) {
   let infuraKey
@@ -54,7 +87,7 @@ module.exports = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 5000,
+        runs: 2500,
       }
     }
   },
@@ -75,7 +108,7 @@ module.exports = {
     disambiguatePaths: false,
   },
   gasReporter: {
-    enabled: true,
+    enabled: false,
   },
   defaultNetwork: 'hardhat',
   namedAccounts: {

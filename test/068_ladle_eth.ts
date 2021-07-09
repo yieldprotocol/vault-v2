@@ -76,6 +76,12 @@ describe('Ladle - eth', function () {
     await ladle.batch([ladle.joinEtherAction(ethId), ladle.pourAction(ethVaultId, owner, WAD, 0)], { value: WAD })
   })
 
+  it('ladle will only receive from WETH', async () => {
+    await expect(ownerAcc.sendTransaction({ to: ladle.address, value: WAD })).to.be.revertedWith(
+      'Only receive from WETH'
+    )
+  })
+
   describe('with ETH posted', async () => {
     beforeEach(async () => {
       expect(await ladle.joinEther(ethId, { value: WAD }))
