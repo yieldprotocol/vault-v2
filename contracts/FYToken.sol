@@ -169,7 +169,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit 
         // First use any tokens locked in this contract
         uint256 available = _balanceOf[address(this)];
         if (available >= amount) {
-            unchecked { return super._burn(address(this), amount); }
+            return super._burn(address(this), amount);
         } else {
             if (available > 0 ) super._burn(address(this), available);
             unchecked { _decreaseAllowance(from, amount - available); }
