@@ -85,52 +85,52 @@ describe('Join - flash', function () {
         'ERC20: Insufficient approval'
       )
     })
-  
+
     it('should do a simple flash loan', async () => {
       await borrower.flashBorrow(token.address, WAD, actions.none)
-  
+
       expect(await token.balanceOf(owner)).to.equal(0)
       expect(await borrower.flashBalance()).to.equal(WAD)
       expect(await borrower.flashToken()).to.equal(token.address)
       expect(await borrower.flashAmount()).to.equal(WAD)
       expect(await borrower.flashInitiator()).to.equal(borrower.address)
     })
-  
+
     it('can repay the flash loan by transfer', async () => {
       await expect(borrower.flashBorrow(token.address, WAD, actions.transfer))
         .to.emit(token, 'Transfer')
         .withArgs(borrower.address, join.address, WAD)
-  
+
       expect(await token.balanceOf(owner)).to.equal(0)
       expect(await borrower.flashBalance()).to.equal(WAD)
       expect(await borrower.flashToken()).to.equal(token.address)
       expect(await borrower.flashAmount()).to.equal(WAD)
       expect(await borrower.flashInitiator()).to.equal(borrower.address)
     })
-  
+
     it('needs to have enough funds to repay a flash loan', async () => {
       await expect(borrower.flashBorrow(token.address, WAD, actions.steal)).to.be.revertedWith(
         'ERC20: Insufficient balance'
       )
     })
-  
+
     it('should do two nested flash loans', async () => {
       await borrower.flashBorrow(token.address, WAD, actions.reenter) // It will borrow WAD, and then reenter and borrow WAD * 2
       expect(await borrower.flashBalance()).to.equal(WAD.mul(3))
     })
-  
+
     it('sets the flash fee factor', async () => {
       const feeFactor = WAD.mul(5).div(100) // 5%
       await expect(join.setFlashFeeFactor(feeFactor)).to.emit(join, 'FlashFeeFactorSet').withArgs(feeFactor)
       expect(await join.flashFeeFactor()).to.equal(feeFactor)
     })
-  
+
     describe('with a non-zero fee', async () => {
       beforeEach(async () => {
         const feeFactor = WAD.mul(5).div(100) // 5%
         await join.setFlashFeeFactor(feeFactor)
       })
-  
+
       it('should do a simple flash loan', async () => {
         const principal = WAD
         const fee = principal.mul(5).div(100)
@@ -138,13 +138,13 @@ describe('Join - flash', function () {
         await expect(borrower.flashBorrow(token.address, principal, actions.none))
           .to.emit(token, 'Transfer')
           .withArgs(borrower.address, join.address, principal.add(fee))
-  
+
         expect(await token.balanceOf(owner)).to.equal(0)
         expect(await borrower.flashBalance()).to.equal(principal.add(fee))
         expect(await borrower.flashToken()).to.equal(token.address)
         expect(await borrower.flashAmount()).to.equal(principal)
         expect(await borrower.flashInitiator()).to.equal(borrower.address)
       })
-    })  
+    })
   })
 })
