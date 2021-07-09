@@ -63,7 +63,9 @@ contract Witch is AccessControl() {
     }
 
     /// @dev Put an undercollateralized vault up for liquidation.
-    function auction(bytes12 vaultId) public {
+    function auction(bytes12 vaultId)
+        external
+    {
         require (auctions[vaultId].start == 0, "Vault already under auction");
         DataTypes.Vault memory vault = cauldron.vaults(vaultId);
         auctions[vaultId] = Auction({
@@ -76,7 +78,7 @@ contract Witch is AccessControl() {
 
     /// @dev Pay `base` of the debt in a vault in liquidation, getting at least `min` collateral.
     function buy(bytes12 vaultId, uint128 base, uint128 min)
-        public
+        external
         returns (uint256 ink)
     {
         DataTypes.Balances memory balances_ = cauldron.balances(vaultId);

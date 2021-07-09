@@ -414,7 +414,10 @@ contract Cauldron is AccessControl() {
     // ==== Accounting ====
 
     /// @dev Return the collateralization level of a vault. It will be negative if undercollateralized.
-    function level(bytes12 vaultId) public returns (int256) {
+    function level(bytes12 vaultId)
+        external
+        returns (int256)
+    {
         (DataTypes.Vault memory vault_, DataTypes.Series memory series_, DataTypes.Balances memory balances_) = vaultData(vaultId, true);
 
         return _level(vault_, balances_, series_);
@@ -422,7 +425,7 @@ contract Cauldron is AccessControl() {
 
     /// @dev Record the borrowing rate at maturity for a series
     function mature(bytes6 seriesId)
-        public
+        external
     {
         DataTypes.Series memory series_ = series[seriesId];
         require (uint32(block.timestamp) >= series_.maturity, "Only after maturity");
@@ -442,7 +445,7 @@ contract Cauldron is AccessControl() {
 
     /// @dev Retrieve the rate accrual since maturity, maturing if necessary.
     function accrual(bytes6 seriesId)
-        public
+        external
         returns (uint256)
     {
         DataTypes.Series memory series_ = series[seriesId];

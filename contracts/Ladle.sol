@@ -236,7 +236,7 @@ contract Ladle is LadleStorage, AccessControl() {
             } else if (operation == Operation.GIVE) {
                 (bytes12 vaultId, address to) = abi.decode(data[i], (bytes12, address));
                 (vaultId, cachedId, vault) = getCachedVault(vaultId, cachedId, vault);  // Needed to verify ownership
-                vault = _give(vaultId, to);
+                _give(vaultId, to);
                 delete vault;   // Clear the cache, since the vault doesn't necessarily belong to msg.sender anymore
                 cachedId = bytes12(0);
 

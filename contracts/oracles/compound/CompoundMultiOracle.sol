@@ -36,7 +36,10 @@ contract CompoundMultiOracle is IOracle, AccessControl {
      * @notice Retrieve the value of the amount at the latest oracle price.
      * @return value
      */
-    function peek(bytes32 base, bytes32 kind, uint256 amount) public virtual override view returns (uint256 value, uint256 updateTime) {
+    function peek(bytes32 base, bytes32 kind, uint256 amount)
+        external view virtual override
+        returns (uint256 value, uint256 updateTime)
+    {
         uint256 price;
         (price, updateTime) = _peek(base.b6(), kind.b6());
         value = price * amount / 1e18;
@@ -46,7 +49,10 @@ contract CompoundMultiOracle is IOracle, AccessControl {
      * @notice Retrieve the value of the amount at the latest oracle price. Same as `peek` for this oracle.
      * @return value
      */
-    function get(bytes32 base, bytes32 kind, uint256 amount) public virtual override view returns (uint256 value, uint256 updateTime) {
+    function get(bytes32 base, bytes32 kind, uint256 amount)
+        external view virtual override
+        returns (uint256 value, uint256 updateTime)
+    {
         uint256 price;
         (price, updateTime) = _peek(base.b6(), kind.b6());
         value = price * amount / 1e18;
