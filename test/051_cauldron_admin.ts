@@ -89,7 +89,6 @@ describe('Cauldron - admin', function () {
 
     await cauldron.grantRoles(
       [
-        id('setAuctionInterval(uint32)'),
         id('addAsset(bytes6,address)'),
         id('setDebtLimits(bytes6,bytes6,uint96,uint24,uint8)'),
         id('setRateOracle(bytes6,address)'),
@@ -99,13 +98,6 @@ describe('Cauldron - admin', function () {
       ],
       owner
     )
-  })
-
-  it('sets the protection period', async () => {
-    expect(await cauldron.setAuctionInterval(1))
-      .to.emit(cauldron, 'AuctionIntervalSet')
-      .withArgs(1)
-    expect(await cauldron.auctionInterval()).to.equal(1)
   })
 
   it('does not allow using zero as an asset identifier', async () => {

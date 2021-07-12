@@ -102,7 +102,6 @@ export class YieldEnvironment {
   public static async cauldronGovAuth(cauldron: Cauldron, receiver: string) {
     await cauldron.grantRoles(
       [
-        id('setAuctionInterval(uint32)'),
         id('addAsset(bytes6,address)'),
         id('addSeries(bytes6,bytes6,address)'),
         id('addIlks(bytes6,bytes6[])'),
@@ -124,14 +123,20 @@ export class YieldEnvironment {
         id('pour(bytes12,int128,int128)'),
         id('stir(bytes12,bytes12,uint128,uint128)'),
         id('roll(bytes12,bytes6,int128)'),
-        id('slurp(bytes12,uint128,uint128)'),
       ],
       receiver
     )
   }
 
   public static async cauldronWitchAuth(cauldron: Cauldron, receiver: string) {
-    await cauldron.grantRoles([id('give(bytes12,address)'), id('grab(bytes12,address)')], receiver)
+    await cauldron.grantRoles(
+      [
+        id('give(bytes12,address)'),
+        id('grab(bytes12,address)'),
+        id('slurp(bytes12,uint128,uint128)')
+      ],
+      receiver
+    )
   }
 
   public static async ladleGovAuth(ladle: LadleWrapper, receiver: string) {
@@ -164,7 +169,14 @@ export class YieldEnvironment {
   }
 
   public static async witchGovAuth(witch: Witch, receiver: string) {
-    await witch.grantRoles([id('setAuctionTime(uint128)'), id('setInitialProportion(uint128)')], receiver)
+    await witch.grantRoles(
+      [
+        id('setDuration(uint32)'),
+        id('setInitialOffer(uint64)'),
+        id('setDust(uint128)')
+      ],
+      receiver
+    )
   }
 
   // Initialize an asset for testing purposes. Gives the owner powers over it, and approves the join to take the asset from the owner.
@@ -305,9 +317,6 @@ export class YieldEnvironment {
     await this.cauldronGovAuth(cauldron, ownerAdd)
     await this.ladleGovAuth(ladle, ownerAdd)
     await this.witchGovAuth(witch, ownerAdd)
-
-    // ==== Set protection period for vaults in liquidation ====
-    await cauldron.setAuctionInterval(24 * 60 * 60)
 
     // ==== Add assets and joins ====
     for (let assetId of assetIds) {

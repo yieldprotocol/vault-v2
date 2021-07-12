@@ -2297,10 +2297,10 @@
     ethereumjs-util "^7.0.8"
     ethers "^5.0.7"
 
-"@yield-protocol/vault-interfaces@^2.0.35":
-  version "2.0.35"
-  resolved "https://registry.yarnpkg.com/@yield-protocol/vault-interfaces/-/vault-interfaces-2.0.35.tgz#1a6d5d8ca60039cfa5375186563f38c5456eb84b"
-  integrity sha512-xIY23pFerspk6wckyukhlDkyUzEiu+AyC8W2PpqvC4mqT1iYic51MMNn4CInIyCh34YgaVJbDhzHQ32ZccjpIQ==
+"@yield-protocol/vault-interfaces@^2.0.36":
+  version "2.0.36"
+  resolved "https://registry.yarnpkg.com/@yield-protocol/vault-interfaces/-/vault-interfaces-2.0.36.tgz#6f896257cee9eb5cd93071533059f58e05e32980"
+  integrity sha512-vsKemfPBFE+IaMkcBzgWf1k73s0EccZNI7C7lrZLyKmlg8QxbKbr1TyeY7+Rx0Sbgoh9hgmtlbuSUDid1kGmIg==
 
 "@yield-protocol/yieldspace-interfaces@^2.0.17":
   version "2.0.17"

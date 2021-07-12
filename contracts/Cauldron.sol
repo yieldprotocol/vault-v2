@@ -8,6 +8,7 @@ import "./math/WMul.sol";
 import "./math/WDiv.sol";
 import "./math/CastU128I128.sol";
 import "./math/CastI128U128.sol";
+import "./math/CastU256U128.sol";
 import "./math/CastU256U32.sol";
 import "./math/CastU256I256.sol";
 
@@ -19,17 +20,16 @@ library CauldronMath {
     }
 }
 
-
 contract Cauldron is AccessControl() {
     using CauldronMath for uint128;
     using WMul for uint256;
     using WDiv for uint256;
     using CastU128I128 for uint128;
+    using CastI128U128 for int128;
+    using CastU256U128 for uint256;
     using CastU256U32 for uint256;
     using CastU256I256 for uint256;
-    using CastI128U128 for int128;
 
-    event AuctionIntervalSet(uint32 indexed auctionInterval);
     event AssetAdded(bytes6 indexed assetId, address indexed asset);
     event SeriesAdded(bytes6 indexed seriesId, bytes6 indexed baseId, address indexed fyToken);
     event IlkAdded(bytes6 indexed seriesId, bytes6 indexed ilkId);
@@ -45,7 +45,6 @@ contract Cauldron is AccessControl() {
     event VaultPoured(bytes12 indexed vaultId, bytes6 indexed seriesId, bytes6 indexed ilkId, int128 ink, int128 art);
     event VaultStirred(bytes12 indexed from, bytes12 indexed to, uint128 ink, uint128 art);
     event VaultRolled(bytes12 indexed vaultId, bytes6 indexed seriesId, uint128 art);
-    event VaultLocked(bytes12 indexed vaultId, uint256 indexed timestamp);
 
     event SeriesMatured(bytes6 indexed seriesId, uint256 rateAtMaturity);
 
@@ -60,12 +59,10 @@ contract Cauldron is AccessControl() {
     // ==== Protocol data ====
     mapping (bytes6 => mapping(bytes6 => DataTypes.Debt))       public debt;            // [baseId][ilkId] Max and sum of debt per underlying and collateral.
     mapping (bytes6 => uint256)                                 public ratesAtMaturity; // Borrowing rate at maturity for a mature series
-    uint32                                                      public auctionInterval;// Time that vaults in liquidation are protected from being grabbed by a different engine.
 
     // ==== User data ====
     mapping (bytes12 => DataTypes.Vault)                        public vaults;          // An user can own one or more Vaults, each one with a bytes12 identifier
     mapping (bytes12 => DataTypes.Balances)                     public balances;        // Both debt and assets
-    mapping (bytes12 => uint32)                                 public auctions;        // If grater than zero, time that a vault was timestamped. Used for liquidation.
 
     // ==== Administration ====
 
@@ -103,15 +100,6 @@ contract Cauldron is AccessControl() {
         require (assets[baseId] != address(0), "Base not found");
         rateOracles[baseId] = oracle;
         emit RateOracleAdded(baseId, address(oracle));
-    }
-
-    /// @dev Set the interval for which vaults being auctioned can't be grabbed by another liquidation engine
-    function setAuctionInterval(uint32 auctionInterval_)
-        external
-        auth
-    {
-        auctionInterval = auctionInterval_;
-        emit AuctionIntervalSet(auctionInterval_);
     }
 
     /// @dev Set a spot oracle and its collateralization ratio. Can be reset.
@@ -198,7 +186,6 @@ contract Cauldron is AccessControl() {
     {
         DataTypes.Balances memory balances_ = balances[vaultId];
         require (balances_.art == 0 && balances_.ink == 0, "Only empty vaults");
-        delete auctions[vaultId];
         delete vaults[vaultId];
         emit VaultDestroyed(vaultId);
     }
@@ -267,6 +254,33 @@ contract Cauldron is AccessControl() {
         require (vault_.seriesId != bytes6(0), "Vault not found");
         if (getSeries) series_ = series[vault_.seriesId];
         balances_ = balances[vaultId];
+    }
+
+    /// @dev Convert a debt amount for a series from base to fyToken terms.
+    /// @notice Think about rounding if using, since we are dividing.
+    function debtFromBase(bytes6 seriesId, uint128 base)
+        external
+        returns (uint128 art)
+    {
+        if (uint32(block.timestamp) >= series[seriesId].maturity) {
+            DataTypes.Series memory series_ = series[seriesId];
+            art = uint256(base).wdiv(_accrual(seriesId, series_)).u128();
+        } else {
+            art = base;
+        }
+    }
+
+    /// @dev Convert a debt amount for a series from fyToken to base terms
+    function debtToBase(bytes6 seriesId, uint128 art)
+        external
+        returns (uint128 base)
+    {
+        if (uint32(block.timestamp) >= series[seriesId].maturity) {
+            DataTypes.Series memory series_ = series[seriesId];
+            base = uint256(art).wmul(_accrual(seriesId, series_)).u128();
+        } else {
+            base = art;
+        }
     }
 
     /// @dev Move collateral and debt between vaults.
@@ -350,22 +364,15 @@ contract Cauldron is AccessControl() {
         return balances_;
     }
 
-    /// @dev Give a non-timestamped vault to another user, and timestamp it.
+    /// @dev Give an uncollateralized vault to another user.
     /// To be used for liquidation engines.
     function grab(bytes12 vaultId, address receiver)
         external
         auth
     {
-        uint32 now_ = uint32(block.timestamp);
-        require (auctions[vaultId] + auctionInterval <= now_, "Vault under auction");        // Grabbing a vault protects it for a day from being grabbed by another liquidator. All grabbed vaults will be suddenly released on the 7th of February 2106, at 06:28:16 GMT. I can live with that.
-
         (DataTypes.Vault memory vault_, DataTypes.Series memory series_, DataTypes.Balances memory balances_) = vaultData(vaultId, true);
         require(_level(vault_, balances_, series_) < 0, "Not undercollateralized");
-
-        auctions[vaultId] = now_;
         _give(vaultId, receiver);
-
-        emit VaultLocked(vaultId, now_);
     }
 
     /// @dev Reduce debt and collateral from a vault, ignoring collateralization checks.
@@ -422,9 +429,8 @@ contract Cauldron is AccessControl() {
     function mature(bytes6 seriesId)
         external
     {
-        DataTypes.Series memory series_ = series[seriesId];
-        require (uint32(block.timestamp) >= series_.maturity, "Only after maturity");
         require (ratesAtMaturity[seriesId] == 0, "Already matured");
+        DataTypes.Series memory series_ = series[seriesId];
         _mature(seriesId, series_);
     }
 
@@ -432,12 +438,12 @@ contract Cauldron is AccessControl() {
     function _mature(bytes6 seriesId, DataTypes.Series memory series_)
         internal
     {
+        require (uint32(block.timestamp) >= series_.maturity, "Only after maturity");
         IOracle rateOracle = rateOracles[series_.baseId];
         (uint256 rateAtMaturity,) = rateOracle.get(series_.baseId, bytes32("rate"), 1e18);
         ratesAtMaturity[seriesId] = rateAtMaturity;
         emit SeriesMatured(seriesId, rateAtMaturity);
     }
-    
 
     /// @dev Retrieve the rate accrual since maturity, maturing if necessary.
     function accrual(bytes6 seriesId)
@@ -445,7 +451,6 @@ contract Cauldron is AccessControl() {
         returns (uint256)
     {
         DataTypes.Series memory series_ = series[seriesId];
-        require (uint32(block.timestamp) >= series_.maturity, "Only after maturity");
         return _accrual(seriesId, series_);
     }
 
