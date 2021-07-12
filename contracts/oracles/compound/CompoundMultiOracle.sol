@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.0;
+pragma solidity 0.8.1;
 
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
+import "../../constants/Constants.sol";
 import "../../math/CastBytes32Bytes6.sol";
 import "./CTokenInterface.sol";
 
 
-contract CompoundMultiOracle is IOracle, AccessControl {
+contract CompoundMultiOracle is IOracle, AccessControl, Constants {
     using CastBytes32Bytes6 for bytes32;
 
     event SourceSet(bytes6 indexed baseId, bytes6 indexed kind, address indexed source);
@@ -50,7 +51,7 @@ contract CompoundMultiOracle is IOracle, AccessControl {
      * @return value
      */
     function get(bytes32 base, bytes32 kind, uint256 amount)
-        external view virtual override
+        external virtual override
         returns (uint256 value, uint256 updateTime)
     {
         uint256 price;
@@ -63,8 +64,8 @@ contract CompoundMultiOracle is IOracle, AccessControl {
         address source = sources[base][kind];
         require (source != address(0), "Source not found");
 
-        if (kind == "rate") rawPrice = CTokenInterface(source).borrowIndex();
-        else if (kind == "chi") rawPrice = CTokenInterface(source).exchangeRateStored();
+        if (kind == RATE.b6()) rawPrice = CTokenInterface(source).borrowIndex();
+        else if (kind == CHI.b6()) rawPrice = CTokenInterface(source).exchangeRateStored();
         else revert("Unknown oracle type");
 
         require(rawPrice > 0, "Compound price is zero");

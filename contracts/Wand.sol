@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.0;
+pragma solidity 0.8.1;
 import "@yield-protocol/vault-interfaces/ICauldronGov.sol";
 import "@yield-protocol/vault-interfaces/ILadleGov.sol";
 import "@yield-protocol/vault-interfaces/IMultiOracleGov.sol";
@@ -8,6 +8,8 @@ import "@yield-protocol/vault-interfaces/IJoin.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
 import "@yield-protocol/yieldspace-interfaces/IPoolFactory.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import "./constants/Constants.sol";
+import "./math/CastBytes32Bytes6.sol";
 import "./FYToken.sol";
 
 
@@ -16,15 +18,13 @@ interface IOwnable {
 }
 
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient governance features.
-contract Wand is AccessControl {
+contract Wand is AccessControl, Constants {
+    using CastBytes32Bytes6 for bytes32;
 
     bytes4 public constant JOIN = bytes4(keccak256("join(address,uint128)"));
     bytes4 public constant EXIT = bytes4(keccak256("exit(address,uint128)"));
     bytes4 public constant MINT = bytes4(keccak256("mint(address,uint256)"));
     bytes4 public constant BURN = bytes4(keccak256("burn(address,uint256)"));
-    
-    bytes6 public constant CHI = "chi";
-    bytes6 public constant RATE = "rate";
 
     ICauldronGov public immutable cauldron;
     ILadleGov public immutable ladle;
@@ -67,9 +67,9 @@ contract Wand is AccessControl {
         require (rateSource != address(0), "Rate source required");
         require (chiSource != address(0), "Chi source required");
 
-        oracle.setSource(assetId, RATE, rateSource);
-        oracle.setSource(assetId, CHI, chiSource);
-        cauldron.setRateOracle(assetId, IOracle(address(oracle))); // TODO: Consider adding a registry of chi oracles in cauldron as well
+        oracle.setSource(assetId, RATE.b6(), rateSource);
+        oracle.setSource(assetId, CHI.b6(), chiSource);
+        cauldron.setRateOracle(assetId, IOracle(address(oracle)));
     }
 
     /// @dev Make an ilk asset out of a generic asset, by adding a spot oracle against a base asset, collateralization ratio, and debt ceiling.
@@ -105,7 +105,7 @@ contract Wand is AccessControl {
             maturity,
             name,     // Derive from base and maturity, perhaps
             symbol    // Derive from base and maturity, perhaps
-        ); // TODO: Use a FYTokenFactory to make Wand deployable at 20000 runs
+        );
 
         // Allow the fyToken to pull from the base join for redemption
         bytes4[] memory sigs = new bytes4[](1);

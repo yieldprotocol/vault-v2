@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.0;
+pragma solidity 0.8.1;
 
 import "erc3156/contracts/interfaces/IERC3156FlashBorrower.sol";
 import "erc3156/contracts/interfaces/IERC3156FlashLender.sol";
@@ -20,10 +20,11 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
     event FlashFeeFactorSet(uint256 indexed fee);
 
     bytes32 constant internal FLASH_LOAN_RETURN = keccak256("ERC3156FlashBorrower.onFlashLoan");
+    uint256 constant FLASH_LOANS_DISABLED = type(uint256).max;
 
     address public immutable override asset;
     uint256 public storedBalance;
-    uint256 public flashFeeFactor = type(uint256).max; // Fee on flash loans, as a percentage in fixed point with 18 decimals. Flash loans disabled by default.
+    uint256 public flashFeeFactor = FLASH_LOANS_DISABLED; // Fee on flash loans, as a percentage in fixed point with 18 decimals. Flash loans disabled by default.
 
     constructor(address asset_) {
         asset = asset_;
