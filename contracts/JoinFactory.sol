@@ -5,7 +5,7 @@ import "@yield-protocol/vault-interfaces/IJoinFactory.sol";
 import "./Join.sol";
 
 
-/// @dev The JoinFactory can deterministically create new join instances.
+/// @dev The JoinFactory creates new join instances.
 contract JoinFactory is IJoinFactory {
 
   /// @dev Deploys a new join.

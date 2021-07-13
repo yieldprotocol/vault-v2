@@ -2,9 +2,6 @@ import { id, constants } from '@yield-protocol/utils-v2'
 
 import { sendStatic } from './helpers'
 
-import { Contract } from '@ethersproject/contracts'
-import { Event } from '@ethersproject/contracts/lib/index'
-import { Result } from '@ethersproject/abi'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 
 const { WAD, THREE_MONTHS, ETH, DAI, USDC } = constants
@@ -34,6 +31,7 @@ import { FYToken } from '../../typechain/FYToken'
 import { Ladle } from '../../typechain/Ladle'
 import { Witch } from '../../typechain/Witch'
 import { JoinFactory } from '../../typechain/JoinFactory'
+import { FYTokenFactory } from '../../typechain/FYTokenFactory'
 import { Wand } from '../../typechain/Wand'
 import { PoolMock } from '../../typechain/PoolMock'
 import { PoolFactoryMock } from '../../typechain/PoolFactoryMock'
@@ -264,6 +262,12 @@ export class YieldEnvironment {
     await usdcAggregator.set(WAD.mul(2))
     sources.set(USDC, usdcAggregator)
 
+
+    // ==== Libraries ====
+    const SafeERC20NamerFactory = await ethers.getContractFactory('SafeERC20Namer')
+    const safeERC20NamerLibrary = ((await SafeERC20NamerFactory.deploy()) as unknown) as SafeERC20Namer
+    await safeERC20NamerLibrary.deployed()
+
     // ==== Protocol ====
 
     const cauldron = (await deployContract(owner, CauldronArtifact, [])) as Cauldron
@@ -273,24 +277,25 @@ export class YieldEnvironment {
     const joinFactory = (await deployContract(owner, JoinFactoryArtifact, [])) as JoinFactory
     const poolFactory = (await deployContract(owner, PoolFactoryMockArtifact, [])) as PoolFactoryMock
 
-    // const wand = (await deployContract(owner, WandArtifact, [cauldron.address, ladle.address, poolFactory.address, joinFactory.address])) as Wand
-
-    const SafeERC20NamerFactory = await ethers.getContractFactory('SafeERC20Namer')
-    const safeERC20NamerLibrary = ((await SafeERC20NamerFactory.deploy()) as unknown) as SafeERC20Namer
-    await safeERC20NamerLibrary.deployed()
-
-    const wandFactory = await ethers.getContractFactory('Wand', {
+    const fyTokenFactoryFactory = await ethers.getContractFactory('FYTokenFactory', {
       libraries: {
         SafeERC20Namer: safeERC20NamerLibrary.address,
       },
     })
-    const wand = ((await wandFactory.deploy(
-      cauldron.address,
-      ladle.address,
-      poolFactory.address,
-      joinFactory.address
-    )) as unknown) as Wand
-    await wand.deployed()
+    const fyTokenFactory = ((await fyTokenFactoryFactory.deploy()) as unknown) as FYTokenFactory
+    await fyTokenFactory.deployed()
+
+    const wand = (await deployContract(
+      owner,
+      WandArtifact,
+      [
+        cauldron.address,
+        ladle.address,
+        poolFactory.address,
+        joinFactory.address,
+        fyTokenFactory.address
+      ]
+    )) as Wand
 
     const chiRateOracle = (await deployContract(owner, CompoundMultiOracleArtifact, [])) as CompoundMultiOracle
     const spotOracle = (await deployContract(owner, ChainlinkMultiOracleArtifact, [])) as ChainlinkMultiOracle

@@ -5,12 +5,13 @@ import "@yield-protocol/vault-interfaces/ILadleGov.sol";
 import "@yield-protocol/vault-interfaces/IMultiOracleGov.sol";
 import "@yield-protocol/vault-interfaces/IJoinFactory.sol";
 import "@yield-protocol/vault-interfaces/IJoin.sol";
+import "@yield-protocol/vault-interfaces/IFYTokenFactory.sol";
+import "@yield-protocol/vault-interfaces/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
 import "@yield-protocol/yieldspace-interfaces/IPoolFactory.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "./constants/Constants.sol";
 import "./math/CastBytes32Bytes6.sol";
-import "./FYToken.sol";
 
 
 interface IOwnable {
@@ -30,12 +31,20 @@ contract Wand is AccessControl, Constants {
     ILadleGov public immutable ladle;
     IPoolFactory public immutable poolFactory;
     IJoinFactory public immutable joinFactory;
+    IFYTokenFactory public immutable fyTokenFactory;
 
-    constructor (ICauldronGov cauldron_, ILadleGov ladle_, IPoolFactory poolFactory_, IJoinFactory joinFactory_) {
+    constructor (
+        ICauldronGov cauldron_,
+        ILadleGov ladle_,
+        IPoolFactory poolFactory_,
+        IJoinFactory joinFactory_,
+        IFYTokenFactory fyTokenFactory_
+    ) {
         cauldron = cauldron_;
         ladle = ladle_;
         poolFactory = poolFactory_;
         joinFactory = joinFactory_;
+        fyTokenFactory = fyTokenFactory_;
     }
 
     /// @dev Add an existing asset to the protocol, meaning:
@@ -70,6 +79,7 @@ contract Wand is AccessControl, Constants {
         oracle.setSource(assetId, RATE.b6(), rateSource);
         oracle.setSource(assetId, CHI.b6(), chiSource);
         cauldron.setRateOracle(assetId, IOracle(address(oracle)));
+        // Give the Witch permission to join base
     }
 
     /// @dev Make an ilk asset out of a generic asset, by adding a spot oracle against a base asset, collateralization ratio, and debt ceiling.
@@ -77,6 +87,7 @@ contract Wand is AccessControl, Constants {
         oracle.setSource(baseId, ilkId, spotSource);
         cauldron.setSpotOracle(baseId, ilkId, IOracle(address(oracle)), ratio);
         cauldron.setDebtLimits(baseId, ilkId, max, min, dec);
+        // Give the Witch permission to exit ilk
     }
 
     /// @dev Add an existing series to the protocol, by deploying a FYToken, and registering it in the cauldron with the approved ilks
@@ -98,14 +109,14 @@ contract Wand is AccessControl, Constants {
         IOracle oracle = cauldron.rateOracles(baseId);
         require(address(oracle) != address(0), "Chi oracle not found");
 
-        FYToken fyToken = new FYToken(
+        AccessControl fyToken = AccessControl(fyTokenFactory.createFYToken(
             baseId,
             oracle,
             baseJoin,
             maturity,
             name,     // Derive from base and maturity, perhaps
             symbol    // Derive from base and maturity, perhaps
-        );
+        ));
 
         // Allow the fyToken to pull from the base join for redemption
         bytes4[] memory sigs = new bytes4[](1);
@@ -123,7 +134,7 @@ contract Wand is AccessControl, Constants {
         fyToken.renounceRole(fyToken.ROOT(), address(this));
 
         // Add fyToken/series to the Cauldron and approve ilks for the series
-        cauldron.addSeries(seriesId, baseId, fyToken);
+        cauldron.addSeries(seriesId, baseId, IFYToken(address(fyToken)));
         cauldron.addIlks(seriesId, ilkIds);
 
         // Create the pool for the base and fyToken
