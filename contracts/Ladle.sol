@@ -16,7 +16,6 @@ import "./math/WMul.sol";
 import "./math/CastU256U128.sol";
 import "./math/CastU128I128.sol";
 import "./LadleStorage.sol";
-import "hardhat/console.sol";
 
 
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
