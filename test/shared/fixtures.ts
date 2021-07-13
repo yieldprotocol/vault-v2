@@ -162,10 +162,6 @@ export class YieldEnvironment {
     )
   }
 
-  public static async ladleWitchAuth(ladle: LadleWrapper, receiver: string) {
-    await ladle.grantRoles([id('settle(bytes12,address,uint128,uint128)')], receiver)
-  }
-
   public static async witchGovAuth(witch: Witch, receiver: string) {
     await witch.grantRoles(
       [
@@ -291,6 +287,7 @@ export class YieldEnvironment {
       [
         cauldron.address,
         ladle.address,
+        witch.address,
         poolFactory.address,
         joinFactory.address,
         fyTokenFactory.address
@@ -305,7 +302,6 @@ export class YieldEnvironment {
     // ==== Orchestration ====
     await this.cauldronLadleAuth(cauldron, ladle.address)
     await this.cauldronWitchAuth(cauldron, witch.address)
-    await this.ladleWitchAuth(ladle, witch.address)
 
     await this.cauldronGovAuth(cauldron, wand.address)
     await this.ladleGovAuth(ladle, wand.address)
@@ -314,10 +310,8 @@ export class YieldEnvironment {
     await spotOracle.grantRole(id('setSource(bytes6,bytes6,address)'), wand.address)
 
     // ==== Owner access (only test environment) ====
-    await this.wandAuth(wand, ownerAdd)
-
     await this.cauldronLadleAuth(cauldron, ownerAdd)
-    await this.ladleWitchAuth(ladle, ownerAdd)
+    await this.wandAuth(wand, ownerAdd)
 
     await this.cauldronGovAuth(cauldron, ownerAdd)
     await this.ladleGovAuth(ladle, ownerAdd)

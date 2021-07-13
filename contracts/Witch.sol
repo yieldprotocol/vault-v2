@@ -4,6 +4,7 @@ pragma solidity 0.8.1;
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/vault-interfaces/ILadle.sol";
 import "@yield-protocol/vault-interfaces/ICauldron.sol";
+import "@yield-protocol/vault-interfaces/IJoin.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
 import "./math/WMul.sol";
 import "./math/WDiv.sol";
@@ -83,6 +84,7 @@ contract Witch is AccessControl() {
     {
         DataTypes.Balances memory balances_ = cauldron.balances(vaultId);
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
+        DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);
         Auction memory auction_ = auctions[vaultId];
         (uint256 duration_, uint256 initialOffer_, uint256 dust_) = (duration, initialOffer, dust);
 
@@ -97,7 +99,7 @@ contract Witch is AccessControl() {
         }
 
         cauldron.slurp(vaultId, ink.u128(), art.u128());                                            // Remove debt and collateral from the vault
-        ladle.settle(vaultId, msg.sender, ink.u128(), base);                                        // Move the assets
+        settle(msg.sender, vault_.ilkId, series_.baseId, ink.u128(), base);                   // Move the assets
         if (balances_.art - art == 0) {                                                             // If there is no debt left, return the vault with the collateral to the owner
             cauldron.give(vaultId, auction_.owner);
             delete auctions[vaultId];
@@ -114,6 +116,7 @@ contract Witch is AccessControl() {
     {
         DataTypes.Balances memory balances_ = cauldron.balances(vaultId);
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
+        DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);
         Auction memory auction_ = auctions[vaultId];
         (uint256 duration_, uint256 initialOffer_, uint256 dust_) = (duration, initialOffer, dust);
 
@@ -127,10 +130,26 @@ contract Witch is AccessControl() {
         }
 
         cauldron.slurp(vaultId, ink.u128(), balances_.art);                                                     // Remove debt and collateral from the vault
-        ladle.settle(vaultId, msg.sender, ink.u128(), cauldron.debtToBase(vault_.seriesId, balances_.art));                                        // Move the assets
+        settle(msg.sender, vault_.ilkId, series_.baseId, ink.u128(), cauldron.debtToBase(vault_.seriesId, balances_.art));                                        // Move the assets
         cauldron.give(vaultId, auction_.owner);
 
-        emit Bought(vaultId, msg.sender, ink, balances_.art); // Still the initailly read `art` value, not the updated one
+        emit Bought(vaultId, msg.sender, ink, balances_.art); // Still the initially read `art` value, not the updated one
+    }
+
+    /// @dev Move base from the buyer to the protocol, and collateral from the protocol to the buyer
+    function settle(address user, bytes6 ilkId, bytes6 baseId, uint128 ink, uint128 art)
+        private
+    {
+        if (ink != 0) {                                                                     // Give collateral to the user
+            IJoin ilkJoin = ladle.joins(ilkId);
+            require (ilkJoin != IJoin(address(0)), "Join not found");
+            ilkJoin.exit(user, ink);
+        }
+        if (art != 0) {                                                                     // Take underlying from user
+            IJoin baseJoin = ladle.joins(baseId);
+            require (baseJoin != IJoin(address(0)), "Join not found");
+            baseJoin.join(user, art);
+        }    
     }
 
     /// @dev Price of a collateral unit, in underlying, at the present moment, for a given vault
