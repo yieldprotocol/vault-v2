@@ -90,43 +90,21 @@ describe('Witch', function () {
 
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
     await ladle.pour(vaultId, owner, WAD, WAD)
+
+    await witch.setIlk(ilkId, 3 * 60 * 60, WAD.div(2), 0)
   })
 
   it('does not allow to set the initial proportion over 100%', async () => {
-    await expect(witch.setInitialOffer(WAD.mul(2))).to.be.revertedWith('Only at or under 100%')
+    await expect(witch.setIlk(ilkId, 1, WAD.mul(2), 3)).to.be.revertedWith('Only at or under 100%')
   })
 
-  it('allows to set the initial proportion', async () => {
-    expect(await witch.setInitialOffer(1))
-      .to.emit(witch, 'InitialOfferSet')
-      .withArgs(1)
-    expect(await witch.initialOffer()).to.equal(1)
-  })
-
-  it('allows to set the auction duration', async () => {
-    expect(await witch.setDuration(1))
-      .to.emit(witch, 'DurationSet')
-      .withArgs(1)
-    expect(await witch.duration()).to.equal(1)
-  })
-
-  it('allows to set the dust level', async () => {
-    expect(await witch.setDust(1))
-      .to.emit(witch, 'DustSet')
-      .withArgs(1)
-    expect(await witch.dust()).to.equal(1)
-  })
-
-  it('does not allow to auction collateralized vaults', async () => {
-    await expect(witch.auction(vaultId)).to.be.revertedWith('Not undercollateralized')
-  })
-
-  it('does not allow to auction uninitialized vaults', async () => {
-    await expect(witch.auction(mockVaultId)).to.be.revertedWith('Vault not found')
-  })
-
-  it('does not allow to buy from uninitialized vaults', async () => {
-    await expect(witch.buy(mockVaultId, 0, 0)).to.be.revertedWith('Nothing to buy')
+  it('allows to set an ilk', async () => {
+    expect(await witch.setIlk(ilkId, 1, 2, 3))
+      .to.emit(witch, 'IlkSet')
+      .withArgs(ilkId, 1, 2, 3)
+    expect((await witch.ilks(ilkId)).duration).to.equal(1)
+    expect((await witch.ilks(ilkId)).initialOffer).to.equal(2)
+    expect((await witch.ilks(ilkId)).dust).to.equal(3)
   })
 
   it('auctions undercollateralized vaults', async () => {
@@ -176,14 +154,14 @@ describe('Witch', function () {
     })
 
     it('does not buy if leaving dust', async () => {
-      await witch.setDust(WAD)
+      await witch.setIlk(ilkId, 3 * 60 * 60, WAD.div(2), WAD)
       await expect(witch.buy(vaultId, WAD, 0)).to.be.revertedWith('Leaves dust')
     })
 
     describe('once the auction time has passed', async () => {
       beforeEach(async () => {
         const { timestamp } = await ethers.provider.getBlock('latest')
-        await ethers.provider.send('evm_mine', [timestamp + (await witch.duration())])
+        await ethers.provider.send('evm_mine', [timestamp + ((await witch.ilks(ilkId)).duration)])
       })
 
       it('allows to buy all of the collateral for the whole debt at the end', async () => {
