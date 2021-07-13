@@ -128,11 +128,7 @@ export class YieldEnvironment {
 
   public static async cauldronWitchAuth(cauldron: Cauldron, receiver: string) {
     await cauldron.grantRoles(
-      [
-        id('give(bytes12,address)'),
-        id('grab(bytes12,address)'),
-        id('slurp(bytes12,uint128,uint128)')
-      ],
+      [id('give(bytes12,address)'), id('grab(bytes12,address)'), id('slurp(bytes12,uint128,uint128)')],
       receiver
     )
   }
@@ -167,14 +163,7 @@ export class YieldEnvironment {
   }
 
   public static async witchGovAuth(witch: Witch, receiver: string) {
-    await witch.grantRoles(
-      [
-        id('setDuration(uint32)'),
-        id('setInitialOffer(uint64)'),
-        id('setDust(uint128)')
-      ],
-      receiver
-    )
+    await witch.grantRoles([id('setDuration(uint32)'), id('setInitialOffer(uint64)'), id('setDust(uint128)')], receiver)
   }
 
   // Initialize an asset for testing purposes. Gives the owner powers over it, and approves the join to take the asset from the owner.
@@ -262,7 +251,6 @@ export class YieldEnvironment {
     await usdcAggregator.set(WAD.mul(2))
     sources.set(USDC, usdcAggregator)
 
-
     // ==== Libraries ====
     const SafeERC20NamerFactory = await ethers.getContractFactory('SafeERC20Namer')
     const safeERC20NamerLibrary = ((await SafeERC20NamerFactory.deploy()) as unknown) as SafeERC20Namer
@@ -285,17 +273,13 @@ export class YieldEnvironment {
     const fyTokenFactory = ((await fyTokenFactoryFactory.deploy()) as unknown) as FYTokenFactory
     await fyTokenFactory.deployed()
 
-    const wand = (await deployContract(
-      owner,
-      WandArtifact,
-      [
-        cauldron.address,
-        ladle.address,
-        poolFactory.address,
-        joinFactory.address,
-        fyTokenFactory.address
-      ]
-    )) as Wand
+    const wand = (await deployContract(owner, WandArtifact, [
+      cauldron.address,
+      ladle.address,
+      poolFactory.address,
+      joinFactory.address,
+      fyTokenFactory.address,
+    ])) as Wand
 
     const chiRateOracle = (await deployContract(owner, CompoundMultiOracleArtifact, [])) as CompoundMultiOracle
     const spotOracle = (await deployContract(owner, ChainlinkMultiOracleArtifact, [])) as ChainlinkMultiOracle
