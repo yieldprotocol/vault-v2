@@ -161,7 +161,7 @@ describe('Witch', function () {
     describe('once the auction time has passed', async () => {
       beforeEach(async () => {
         const { timestamp } = await ethers.provider.getBlock('latest')
-        await ethers.provider.send('evm_mine', [timestamp + ((await witch.ilks(ilkId)).duration)])
+        await ethers.provider.send('evm_mine', [timestamp + (await witch.ilks(ilkId)).duration])
       })
 
       it('allows to buy all of the collateral for the whole debt at the end', async () => {
