@@ -8,6 +8,7 @@
     "contracts/math/*.sol",
     "contracts/oracles/chainlink/*.sol",
     "contracts/oracles/compound/*.sol",
+    "contracts/oracles/composite/*.sol",
     "contracts/oracles/uniswap/*.sol",
     "dist"
   ],

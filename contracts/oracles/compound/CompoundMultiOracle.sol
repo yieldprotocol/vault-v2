@@ -14,6 +14,7 @@ contract CompoundMultiOracle is IOracle, AccessControl, Constants {
     event SourceSet(bytes6 indexed baseId, bytes6 indexed kind, address indexed source);
 
     uint public constant SCALE_FACTOR = 1; // I think we don't need scaling for rate and chi oracles
+    uint8 public constant override decimals = 18;
 
     mapping(bytes6 => mapping(bytes6 => address)) public sources;
 
