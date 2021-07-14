@@ -4,6 +4,7 @@ pragma solidity 0.8.1;
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
 import "../../math/CastBytes32Bytes6.sol";
+import "hardhat/console.sol";
 
 
 /**
@@ -75,8 +76,15 @@ contract CompositeMultiOracle is IOracle, AccessControl {
         external view virtual override
         returns (uint256 value, uint256 updateTime)
     {
-        uint256 price;
-        (price, updateTime) = _peek(base.b6(), quote.b6());
+        uint256 price = 1e18;
+        bytes6 base_ = base.b6();
+        bytes6 quote_ = quote.b6();
+        bytes6[] memory path = paths[base_][quote_];
+        for (uint256 p = 0; p < path.length; p++) {
+            (price, updateTime) = _peek(base_, path[p], price, updateTime);
+            base_ = path[p];
+        }
+        (price, updateTime) = _peek(base_, quote_, price, updateTime);
         value = price * amount / 1e18;
     }
 
@@ -88,43 +96,36 @@ contract CompositeMultiOracle is IOracle, AccessControl {
         external virtual override
         returns (uint256 value, uint256 updateTime)
     {
-        uint256 price;
-        (price, updateTime) = _peek(base.b6(), quote.b6());
+        uint256 price = 1e18;
+        bytes6 base_ = base.b6();
+        bytes6 quote_ = quote.b6();
+        bytes6[] memory path = paths[base_][quote_];
+        for (uint256 p = 0; p < path.length; p++) {
+            (price, updateTime) = _get(base_, path[p], price, updateTime);
+            base_ = path[p];
+        }
+        (price, updateTime) = _get(base_, quote_, price, updateTime);
         value = price * amount / 1e18;
     }
 
-    function _peek(bytes6 base, bytes6 quote) private view returns (uint price, uint updateTime) {
-        bytes6[] memory path = paths[base][quote];
-        if (path.length > 0) {
-            bytes32 base_ = base;
-            for (uint256 p = 0; p < path.length; p++) {
-                Source memory source = sources[base][quote];
-                require (source.source != address(0), "Source not found");
-                uint256 price_;
-                uint256 updateTime_;
-                (price_, updateTime_) = IOracle(source.source).peek(base_, quote, 10 ** source.decimals);   // Get price for one unit
-                price = price * price_ / (10 ** source.decimals);                                           // Fixed point according to decimals
-                updateTime = (updateTime > updateTime_) ? updateTime : updateTime_;                         // Take the oldest update time
-                base_ = path[p];
-            }
-        }
+    function _peek(bytes6 base, bytes6 quote, uint256 priceIn, uint256 updateTimeIn)
+        private view returns (uint priceOut, uint updateTimeOut)
+    {
+        Source memory source = sources[base][quote];
+        require (source.source != address(0), "Source not found");
+        (priceOut, updateTimeOut) = IOracle(source.source).peek(base, quote, 10 ** source.decimals);   // Get price for one unit
+        priceOut = priceIn * priceOut / (10 ** source.decimals);                                       // Fixed point according to decimals
+        updateTimeOut = (updateTimeOut < updateTimeIn) ? updateTimeOut : updateTimeIn;                 // Take the oldest update time
     }
 
-    function _get(bytes6 base, bytes6 quote) private returns (uint price, uint updateTime) {
-        bytes6[] memory path = paths[base][quote];
-        if (path.length > 0) {
-            bytes32 base_ = base;
-            for (uint256 p = 0; p < path.length; p++) {
-                Source memory source = sources[base][quote];
-                require (source.source != address(0), "Source not found");
-                uint256 price_;
-                uint256 updateTime_;
-                (price_, updateTime_) = IOracle(source.source).get(base_, quote, 10 ** source.decimals);    // Get price for one unit
-                price = price * price_ / 10 ** (source.decimals);                                           // Fixed point according to decimals
-                updateTime = (updateTime > updateTime_) ? updateTime : updateTime_;                         // Take the oldest update time
-                base_ = path[p];
-            }
-        }
+    function _get(bytes6 base, bytes6 quote, uint256 priceIn, uint256 updateTimeIn)
+        private returns (uint priceOut, uint updateTimeOut)
+    {
+        Source memory source = sources[base][quote];
+        require (source.source != address(0), "Source not found");
+        (priceOut, updateTimeOut) = IOracle(source.source).get(base, quote, 10 ** source.decimals);    // Get price for one unit
+        priceOut = priceIn * priceOut / (10 ** source.decimals);                                       // Fixed point according to decimals
+        updateTimeOut = (updateTimeOut < updateTimeIn) ? updateTimeOut : updateTimeIn;                 // Take the oldest update time
     }
 
     function _setSource(bytes6 base, bytes6 quote, address source) internal {
@@ -138,8 +139,10 @@ contract CompositeMultiOracle is IOracle, AccessControl {
     }
 
     function _setPath(bytes6 base, bytes6 quote, bytes6[] memory path) internal {
+        bytes6 base_ = base;
         for (uint256 p = 0; p < path.length; p++) {
-            require (sources[base][quote].source != address(0), "Source not found");
+            require (sources[base_][path[p]].source != address(0), "Source not found");
+            base_ = path[p];
         }
         paths[base][quote] = path;
         emit PathSet(base, quote, path);
