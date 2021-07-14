@@ -4,11 +4,12 @@ pragma solidity 0.8.1;
 import "@yield-protocol/vault-interfaces/IOracle.sol";
 import "@yield-protocol/vault-interfaces/IJoin.sol";
 import "@yield-protocol/vault-interfaces/IFYTokenFactory.sol";
+import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "./FYToken.sol";
 
 
 /// @dev The FYTokenFactory creates new FYToken instances.
-contract FYTokenFactory is IFYTokenFactory {
+contract FYTokenFactory is IFYTokenFactory, AccessControl {
 
   /// @dev Deploys a new fyToken.
   /// @return fyToken The fyToken address.
@@ -20,7 +21,9 @@ contract FYTokenFactory is IFYTokenFactory {
     string memory name,
     string memory symbol
   )
-    external override returns (address)
+    external override
+    auth
+    returns (address)
   {
     FYToken fyToken = new FYToken(
       baseId,

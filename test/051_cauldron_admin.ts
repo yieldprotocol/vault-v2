@@ -60,6 +60,11 @@ describe('Cauldron - admin', function () {
     ilk1 = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId1, 'Mock Ilk'])) as ERC20Mock
     ilk2 = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId2, 'Mock Ilk'])) as ERC20Mock
     joinFactory = (await deployContract(ownerAcc, JoinFactoryArtifact, [])) as JoinFactory
+    await joinFactory.grantRoles(
+      [id('createJoin(address)')],
+      owner
+    )
+
     join = (await ethers.getContractAt(
       'Join',
       await sendStatic(joinFactory as Contract, 'createJoin', ownerAcc, [base.address]),
