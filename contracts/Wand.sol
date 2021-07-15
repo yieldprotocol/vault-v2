@@ -29,6 +29,7 @@ contract Wand is AccessControl, Constants {
 
     ICauldronGov public immutable cauldron;
     ILadleGov public immutable ladle;
+    address public immutable witch;
     IPoolFactory public immutable poolFactory;
     IJoinFactory public immutable joinFactory;
     IFYTokenFactory public immutable fyTokenFactory;
@@ -36,12 +37,14 @@ contract Wand is AccessControl, Constants {
     constructor (
         ICauldronGov cauldron_,
         ILadleGov ladle_,
+        address witch_,
         IPoolFactory poolFactory_,
         IJoinFactory joinFactory_,
         IFYTokenFactory fyTokenFactory_
     ) {
         cauldron = cauldron_;
         ladle = ladle_;
+        witch = witch_;
         poolFactory = poolFactory_;
         joinFactory = joinFactory_;
         fyTokenFactory = fyTokenFactory_;
@@ -65,7 +68,7 @@ contract Wand is AccessControl, Constants {
         sigs[1] = EXIT;
         join.grantRoles(sigs, address(ladle));
         join.grantRole(join.ROOT(), msg.sender);
-        // join.renounceRole(join.ROOT(), address(this));  // If Wand gives up ownership it can't create fyToken
+        // join.renounceRole(join.ROOT(), address(this));  // Wand requires ongoing rights to set up permissions to joins
         ladle.addJoin(assetId, address(join));
     }
 
@@ -79,7 +82,9 @@ contract Wand is AccessControl, Constants {
         oracle.setSource(assetId, RATE.b6(), rateSource);
         oracle.setSource(assetId, CHI.b6(), chiSource);
         cauldron.setRateOracle(assetId, IOracle(address(oracle)));
-        // Give the Witch permission to join base
+        
+        AccessControl baseJoin = AccessControl(address(ladle.joins(assetId)));
+        baseJoin.grantRole(JOIN, witch); // Give the Witch permission to join base
     }
 
     /// @dev Make an ilk asset out of a generic asset, by adding a spot oracle against a base asset, collateralization ratio, and debt ceiling.
@@ -87,7 +92,9 @@ contract Wand is AccessControl, Constants {
         oracle.setSource(baseId, ilkId, spotSource);
         cauldron.setSpotOracle(baseId, ilkId, IOracle(address(oracle)), ratio);
         cauldron.setDebtLimits(baseId, ilkId, max, min, dec);
-        // Give the Witch permission to exit ilk
+
+        AccessControl ilkJoin = AccessControl(address(ladle.joins(ilkId)));
+        ilkJoin.grantRole(EXIT, witch); // Give the Witch permission to exit ilk
     }
 
     /// @dev Add an existing series to the protocol, by deploying a FYToken, and registering it in the cauldron with the approved ilks

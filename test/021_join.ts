@@ -45,13 +45,15 @@ describe('Join', function () {
   beforeEach(async () => {
     token = (await deployContract(ownerAcc, ERC20MockArtifact, ['MTK', 'Mock Token'])) as ERC20Mock
     otherToken = (await deployContract(ownerAcc, ERC20MockArtifact, ['OTH', 'Other Token'])) as ERC20Mock
+
     joinFactory = (await deployContract(ownerAcc, JoinFactoryArtifact, [])) as JoinFactory
+    await joinFactory.grantRoles([id('createJoin(address)')], owner)
+
     join = (await ethers.getContractAt(
       'Join',
       await sendStatic(joinFactory as Contract, 'createJoin', ownerAcc, [token.address]),
       ownerAcc
     )) as Join
-
     await join.grantRoles(
       [id('join(address,uint128)'), id('exit(address,uint128)'), id('retrieve(address,address)')],
       owner

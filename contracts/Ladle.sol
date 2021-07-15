@@ -16,7 +16,6 @@ import "./math/WMul.sol";
 import "./math/CastU256U128.sol";
 import "./math/CastU128I128.sol";
 import "./LadleStorage.sol";
-import "hardhat/console.sol";
 
 
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
@@ -488,26 +487,6 @@ contract Ladle is LadleStorage, AccessControl() {
         IERC20 token = IERC20(findToken(id, isAsset));
         amount = token.balanceOf(address(this));
         token.safeTransfer(to, amount);
-    }
-
-    // ---- Liquidations ----
-
-    /// @dev Allow liquidation contracts to move assets to wind down vaults
-    function settle(bytes12 vaultId, address user, uint128 ink, uint128 art)
-        external
-        auth
-    {
-        DataTypes.Vault memory vault = getOwnedVault(vaultId);
-        DataTypes.Series memory series = getSeries(vault.seriesId);
-
-        if (ink != 0) {                                                                     // Give collateral to the user
-            IJoin ilkJoin = getJoin(vault.ilkId);
-            ilkJoin.exit(user, ink);
-        }
-        if (art != 0) {                                                                     // Take underlying from user
-            IJoin baseJoin = getJoin(series.baseId);
-            baseJoin.join(user, art);
-        }
     }
 
     // ---- Permit management ----

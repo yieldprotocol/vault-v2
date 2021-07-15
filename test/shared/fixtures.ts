@@ -158,12 +158,16 @@ export class YieldEnvironment {
     )
   }
 
-  public static async ladleWitchAuth(ladle: LadleWrapper, receiver: string) {
-    await ladle.grantRoles([id('settle(bytes12,address,uint128,uint128)')], receiver)
+  public static async witchGovAuth(witch: Witch, receiver: string) {
+    await witch.grantRoles([id('setIlk(bytes6,uint32,uint64,uint128)')], receiver)
   }
 
-  public static async witchGovAuth(witch: Witch, receiver: string) {
-    await witch.grantRoles([id('setDuration(uint32)'), id('setInitialOffer(uint64)'), id('setDust(uint128)')], receiver)
+  public static async joinFactoryAuth(joinFactory: JoinFactory, receiver: string) {
+    await joinFactory.grantRoles([id('createJoin(address)')], receiver)
+  }
+
+  public static async fyTokenFactoryAuth(fyTokenFactory: FYTokenFactory, receiver: string) {
+    await fyTokenFactory.grantRoles([id('createFYToken(bytes6,address,address,uint32,string,string)')], receiver)
   }
 
   // Initialize an asset for testing purposes. Gives the owner powers over it, and approves the join to take the asset from the owner.
@@ -276,6 +280,7 @@ export class YieldEnvironment {
     const wand = (await deployContract(owner, WandArtifact, [
       cauldron.address,
       ladle.address,
+      witch.address,
       poolFactory.address,
       joinFactory.address,
       fyTokenFactory.address,
@@ -289,20 +294,20 @@ export class YieldEnvironment {
     // ==== Orchestration ====
     await this.cauldronLadleAuth(cauldron, ladle.address)
     await this.cauldronWitchAuth(cauldron, witch.address)
-    await this.ladleWitchAuth(ladle, witch.address)
 
     await this.cauldronGovAuth(cauldron, wand.address)
     await this.ladleGovAuth(ladle, wand.address)
     await this.witchGovAuth(witch, wand.address)
+    await this.joinFactoryAuth(joinFactory, wand.address)
+    await this.fyTokenFactoryAuth(fyTokenFactory, wand.address)
     await chiRateOracle.grantRole(id('setSource(bytes6,bytes6,address)'), wand.address)
     await spotOracle.grantRole(id('setSource(bytes6,bytes6,address)'), wand.address)
 
     // ==== Owner access (only test environment) ====
-    await this.wandAuth(wand, ownerAdd)
-
     await this.cauldronLadleAuth(cauldron, ownerAdd)
-    await this.ladleWitchAuth(ladle, ownerAdd)
-
+    await this.wandAuth(wand, ownerAdd)
+    await this.joinFactoryAuth(joinFactory, ownerAdd)
+    await this.fyTokenFactoryAuth(fyTokenFactory, ownerAdd)
     await this.cauldronGovAuth(cauldron, ownerAdd)
     await this.ladleGovAuth(ladle, ownerAdd)
     await this.witchGovAuth(witch, ownerAdd)
