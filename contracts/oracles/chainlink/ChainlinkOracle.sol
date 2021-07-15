@@ -12,12 +12,13 @@ contract ChainlinkOracle is IOracle {
 
     address public immutable source;
     uint256 public immutable scaleFactor;
+    uint8 public constant override decimals = 18;   // All prices are converted to 18 decimals
 
     constructor(address source_) {
         source = source_;
-        uint256 decimals = AggregatorV3Interface(source_).decimals();
-        require (decimals <= 18, "Unsupported decimals"); 
-        scaleFactor = 10 ** (18 - decimals);
+        uint256 decimals_ = AggregatorV3Interface(source_).decimals();
+        require (decimals_ <= 18, "Unsupported decimals"); 
+        scaleFactor = 10 ** (18 - decimals_);
     }
 
     /**

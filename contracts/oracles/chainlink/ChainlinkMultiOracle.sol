@@ -13,6 +13,8 @@ import "./AggregatorV3Interface.sol";
 contract ChainlinkMultiOracle is IOracle, AccessControl {
     using CastBytes32Bytes6 for bytes32;
 
+    uint8 public constant override decimals = 18;   // All prices are converted to 18 decimals
+
     event SourceSet(bytes6 indexed baseId, bytes6 indexed quoteId, address indexed source);
 
     struct Source {
@@ -88,16 +90,16 @@ contract ChainlinkMultiOracle is IOracle, AccessControl {
     }
 
     function _setSource(bytes6 base, bytes6 quote, address source) internal {
-        uint8 decimals = AggregatorV3Interface(source).decimals();
-        require (decimals <= 18, "Unsupported decimals");
+        uint8 decimals_ = AggregatorV3Interface(source).decimals();
+        require (decimals_ <= 18, "Unsupported decimals");
         sources[base][quote] = Source({
             source: source,
-            decimals: decimals,
+            decimals: decimals_,
             inverse: false
         });
         sources[quote][base] = Source({
             source: source,
-            decimals: decimals,
+            decimals: decimals_,
             inverse: true
         });
         emit SourceSet(base, quote, source);
