@@ -2,9 +2,6 @@ import { id, constants } from '@yield-protocol/utils-v2'
 
 import { sendStatic } from './helpers'
 
-import { Contract } from '@ethersproject/contracts'
-import { Event } from '@ethersproject/contracts/lib/index'
-import { Result } from '@ethersproject/abi'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 
 const { WAD, THREE_MONTHS, ETH, DAI, USDC } = constants
@@ -34,6 +31,7 @@ import { FYToken } from '../../typechain/FYToken'
 import { Ladle } from '../../typechain/Ladle'
 import { Witch } from '../../typechain/Witch'
 import { JoinFactory } from '../../typechain/JoinFactory'
+import { FYTokenFactory } from '../../typechain/FYTokenFactory'
 import { Wand } from '../../typechain/Wand'
 import { PoolMock } from '../../typechain/PoolMock'
 import { PoolFactoryMock } from '../../typechain/PoolFactoryMock'
@@ -130,11 +128,7 @@ export class YieldEnvironment {
 
   public static async cauldronWitchAuth(cauldron: Cauldron, receiver: string) {
     await cauldron.grantRoles(
-      [
-        id('give(bytes12,address)'),
-        id('grab(bytes12,address)'),
-        id('slurp(bytes12,uint128,uint128)')
-      ],
+      [id('give(bytes12,address)'), id('grab(bytes12,address)'), id('slurp(bytes12,uint128,uint128)')],
       receiver
     )
   }
@@ -164,19 +158,16 @@ export class YieldEnvironment {
     )
   }
 
-  public static async ladleWitchAuth(ladle: LadleWrapper, receiver: string) {
-    await ladle.grantRoles([id('settle(bytes12,address,uint128,uint128)')], receiver)
+  public static async witchGovAuth(witch: Witch, receiver: string) {
+    await witch.grantRoles([id('setIlk(bytes6,uint32,uint64,uint128)')], receiver)
   }
 
-  public static async witchGovAuth(witch: Witch, receiver: string) {
-    await witch.grantRoles(
-      [
-        id('setDuration(uint32)'),
-        id('setInitialOffer(uint64)'),
-        id('setDust(uint128)')
-      ],
-      receiver
-    )
+  public static async joinFactoryAuth(joinFactory: JoinFactory, receiver: string) {
+    await joinFactory.grantRoles([id('createJoin(address)')], receiver)
+  }
+
+  public static async fyTokenFactoryAuth(fyTokenFactory: FYTokenFactory, receiver: string) {
+    await fyTokenFactory.grantRoles([id('createFYToken(bytes6,address,address,uint32,string,string)')], receiver)
   }
 
   // Initialize an asset for testing purposes. Gives the owner powers over it, and approves the join to take the asset from the owner.
@@ -264,6 +255,11 @@ export class YieldEnvironment {
     await usdcAggregator.set(WAD.mul(2))
     sources.set(USDC, usdcAggregator)
 
+    // ==== Libraries ====
+    const SafeERC20NamerFactory = await ethers.getContractFactory('SafeERC20Namer')
+    const safeERC20NamerLibrary = ((await SafeERC20NamerFactory.deploy()) as unknown) as SafeERC20Namer
+    await safeERC20NamerLibrary.deployed()
+
     // ==== Protocol ====
 
     const cauldron = (await deployContract(owner, CauldronArtifact, [])) as Cauldron
@@ -273,24 +269,22 @@ export class YieldEnvironment {
     const joinFactory = (await deployContract(owner, JoinFactoryArtifact, [])) as JoinFactory
     const poolFactory = (await deployContract(owner, PoolFactoryMockArtifact, [])) as PoolFactoryMock
 
-    // const wand = (await deployContract(owner, WandArtifact, [cauldron.address, ladle.address, poolFactory.address, joinFactory.address])) as Wand
-
-    const SafeERC20NamerFactory = await ethers.getContractFactory('SafeERC20Namer')
-    const safeERC20NamerLibrary = ((await SafeERC20NamerFactory.deploy()) as unknown) as SafeERC20Namer
-    await safeERC20NamerLibrary.deployed()
-
-    const wandFactory = await ethers.getContractFactory('Wand', {
+    const fyTokenFactoryFactory = await ethers.getContractFactory('FYTokenFactory', {
       libraries: {
         SafeERC20Namer: safeERC20NamerLibrary.address,
       },
     })
-    const wand = ((await wandFactory.deploy(
+    const fyTokenFactory = ((await fyTokenFactoryFactory.deploy()) as unknown) as FYTokenFactory
+    await fyTokenFactory.deployed()
+
+    const wand = (await deployContract(owner, WandArtifact, [
       cauldron.address,
       ladle.address,
+      witch.address,
       poolFactory.address,
-      joinFactory.address
-    )) as unknown) as Wand
-    await wand.deployed()
+      joinFactory.address,
+      fyTokenFactory.address,
+    ])) as Wand
 
     const chiRateOracle = (await deployContract(owner, CompoundMultiOracleArtifact, [])) as CompoundMultiOracle
     const spotOracle = (await deployContract(owner, ChainlinkMultiOracleArtifact, [])) as ChainlinkMultiOracle
@@ -300,20 +294,20 @@ export class YieldEnvironment {
     // ==== Orchestration ====
     await this.cauldronLadleAuth(cauldron, ladle.address)
     await this.cauldronWitchAuth(cauldron, witch.address)
-    await this.ladleWitchAuth(ladle, witch.address)
 
     await this.cauldronGovAuth(cauldron, wand.address)
     await this.ladleGovAuth(ladle, wand.address)
     await this.witchGovAuth(witch, wand.address)
+    await this.joinFactoryAuth(joinFactory, wand.address)
+    await this.fyTokenFactoryAuth(fyTokenFactory, wand.address)
     await chiRateOracle.grantRole(id('setSource(bytes6,bytes6,address)'), wand.address)
     await spotOracle.grantRole(id('setSource(bytes6,bytes6,address)'), wand.address)
 
     // ==== Owner access (only test environment) ====
-    await this.wandAuth(wand, ownerAdd)
-
     await this.cauldronLadleAuth(cauldron, ownerAdd)
-    await this.ladleWitchAuth(ladle, ownerAdd)
-
+    await this.wandAuth(wand, ownerAdd)
+    await this.joinFactoryAuth(joinFactory, ownerAdd)
+    await this.fyTokenFactoryAuth(fyTokenFactory, ownerAdd)
     await this.cauldronGovAuth(cauldron, ownerAdd)
     await this.ladleGovAuth(ladle, ownerAdd)
     await this.witchGovAuth(witch, ownerAdd)
