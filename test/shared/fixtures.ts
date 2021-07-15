@@ -159,7 +159,15 @@ export class YieldEnvironment {
   }
 
   public static async witchGovAuth(witch: Witch, receiver: string) {
-    await witch.grantRoles([id('setDuration(uint32)'), id('setInitialOffer(uint64)'), id('setDust(uint128)')], receiver)
+    await witch.grantRoles([id('setIlk(bytes6,uint32,uint64,uint128)')], receiver)
+  }
+
+  public static async joinFactoryAuth(joinFactory: JoinFactory, receiver: string) {
+    await joinFactory.grantRoles([id('createJoin(address)')], receiver)
+  }
+
+  public static async fyTokenFactoryAuth(fyTokenFactory: FYTokenFactory, receiver: string) {
+    await fyTokenFactory.grantRoles([id('createFYToken(bytes6,address,address,uint32,string,string)')], receiver)
   }
 
   // Initialize an asset for testing purposes. Gives the owner powers over it, and approves the join to take the asset from the owner.
@@ -269,18 +277,14 @@ export class YieldEnvironment {
     const fyTokenFactory = ((await fyTokenFactoryFactory.deploy()) as unknown) as FYTokenFactory
     await fyTokenFactory.deployed()
 
-    const wand = (await deployContract(
-      owner,
-      WandArtifact,
-      [
-        cauldron.address,
-        ladle.address,
-        witch.address,
-        poolFactory.address,
-        joinFactory.address,
-        fyTokenFactory.address
-      ]
-    )) as Wand
+    const wand = (await deployContract(owner, WandArtifact, [
+      cauldron.address,
+      ladle.address,
+      witch.address,
+      poolFactory.address,
+      joinFactory.address,
+      fyTokenFactory.address,
+    ])) as Wand
 
     const chiRateOracle = (await deployContract(owner, CompoundMultiOracleArtifact, [])) as CompoundMultiOracle
     const spotOracle = (await deployContract(owner, ChainlinkMultiOracleArtifact, [])) as ChainlinkMultiOracle
@@ -294,13 +298,16 @@ export class YieldEnvironment {
     await this.cauldronGovAuth(cauldron, wand.address)
     await this.ladleGovAuth(ladle, wand.address)
     await this.witchGovAuth(witch, wand.address)
+    await this.joinFactoryAuth(joinFactory, wand.address)
+    await this.fyTokenFactoryAuth(fyTokenFactory, wand.address)
     await chiRateOracle.grantRole(id('setSource(bytes6,bytes6,address)'), wand.address)
     await spotOracle.grantRole(id('setSource(bytes6,bytes6,address)'), wand.address)
 
     // ==== Owner access (only test environment) ====
     await this.cauldronLadleAuth(cauldron, ownerAdd)
     await this.wandAuth(wand, ownerAdd)
-
+    await this.joinFactoryAuth(joinFactory, ownerAdd)
+    await this.fyTokenFactoryAuth(fyTokenFactory, ownerAdd)
     await this.cauldronGovAuth(cauldron, ownerAdd)
     await this.ladleGovAuth(ladle, ownerAdd)
     await this.witchGovAuth(witch, ownerAdd)
