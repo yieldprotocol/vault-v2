@@ -58,7 +58,7 @@ contract CTokenMultiOracle is IOracle, AccessControl, Constants {
     }
 
     /**
-     * @notice Retrieve the value of the amount at the latest oracle price.. Same as `peek` for this oracle.
+     * @notice Retrieve the value of the amount at the latest oracle price.
      * @return value
      */
     function get(bytes32 base, bytes32 quote, uint256 amount)
