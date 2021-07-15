@@ -45,10 +45,10 @@ describe('Oracle', function () {
     chainlinkMultiOracle = (await deployContract(ownerAcc, ChainlinkMultiOracleArtifact, [])) as ChainlinkMultiOracle
     chainlinkMultiOracle.grantRole(id('setSources(bytes6[],bytes6[],address[])'), owner)
     compositeMultiOracle = (await deployContract(ownerAcc, CompositeMultiOracleArtifact, [])) as CompositeMultiOracle
-    compositeMultiOracle.grantRoles([
-      id('setSources(bytes6[],bytes6[],address[])'),
-      id('setPaths(bytes6[],bytes6[],bytes6[][])'),
-    ], owner)
+    compositeMultiOracle.grantRoles(
+      [id('setSources(bytes6[],bytes6[],address[])'), id('setPaths(bytes6[],bytes6[],bytes6[][])')],
+      owner
+    )
 
     // Deploy original sources
     basePath1Aggregator = (await deployContract(ownerAcc, ChainlinkAggregatorV3MockArtifact, [
@@ -76,11 +76,7 @@ describe('Oracle', function () {
     )
 
     // Configure the base -> path1 -> path2 -> ilk path for base / ilk
-    await compositeMultiOracle.setPaths(
-      [baseId],
-      [ilkId],
-      [[path1Id, path2Id]]
-    )
+    await compositeMultiOracle.setPaths([baseId], [ilkId], [[path1Id, path2Id]])
 
     // Set price at source
     await basePath1Aggregator.set(WAD.mul(2))
@@ -89,10 +85,14 @@ describe('Oracle', function () {
   })
 
   it('retrieves the value at spot price for base -> path1', async () => {
-    expect((await compositeMultiOracle.peek(bytes6ToBytes32(baseId), bytes6ToBytes32(path1Id), WAD))[0]).to.equal(WAD.mul(2))
+    expect((await compositeMultiOracle.peek(bytes6ToBytes32(baseId), bytes6ToBytes32(path1Id), WAD))[0]).to.equal(
+      WAD.mul(2)
+    )
   })
 
   it('retrieves the value at spot price through the path', async () => {
-    expect((await compositeMultiOracle.callStatic.get(bytes6ToBytes32(baseId), bytes6ToBytes32(ilkId), WAD))[0]).to.equal(WAD.mul(30))
+    expect(
+      (await compositeMultiOracle.callStatic.get(bytes6ToBytes32(baseId), bytes6ToBytes32(ilkId), WAD))[0]
+    ).to.equal(WAD.mul(30))
   })
 })
