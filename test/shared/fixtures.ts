@@ -130,11 +130,7 @@ export class YieldEnvironment {
 
   public static async cauldronWitchAuth(cauldron: Cauldron, receiver: string) {
     await cauldron.grantRoles(
-      [
-        id('give(bytes12,address)'),
-        id('grab(bytes12,address)'),
-        id('slurp(bytes12,uint128,uint128)')
-      ],
+      [id('give(bytes12,address)'), id('grab(bytes12,address)'), id('slurp(bytes12,uint128,uint128)')],
       receiver
     )
   }
@@ -169,14 +165,7 @@ export class YieldEnvironment {
   }
 
   public static async witchGovAuth(witch: Witch, receiver: string) {
-    await witch.grantRoles(
-      [
-        id('setDuration(uint32)'),
-        id('setInitialOffer(uint64)'),
-        id('setDust(uint128)')
-      ],
-      receiver
-    )
+    await witch.grantRoles([id('setDuration(uint32)'), id('setInitialOffer(uint64)'), id('setDust(uint128)')], receiver)
   }
 
   // Initialize an asset for testing purposes. Gives the owner powers over it, and approves the join to take the asset from the owner.
