@@ -26,13 +26,8 @@ contract Ladle is LadleStorage, AccessControl() {
     using AllTransferHelper for IERC20;
     using AllTransferHelper for address payable;
 
-    struct CachedVault {
-        bytes12 vaultId;
-        address vaultOwner;
-        DataTypes.Vault vault;
-    }
+    bytes12 cachedVaultId;
 
-    CachedVault public cachedVault;
     IWETH9 public immutable weth;
 
     constructor (ICauldron cauldron, IWETH9 weth_) LadleStorage(cauldron) {
@@ -43,20 +38,17 @@ contract Ladle is LadleStorage, AccessControl() {
     /// @dev Obtains a vault by vaultId from the Cauldron, and verifies that msg.sender is the owner
     /// If bytes(0) is passed as the vaultId it tries to load a vault from the cache
     function getVault(bytes12 vaultId_)
-        private
+        internal view
         returns (bytes12 vaultId, DataTypes.Vault memory vault)
     {
         if (vaultId_ == bytes12(0)) { // We use the cache
-            CachedVault memory cache = cachedVault;
-            require (cache.vaultId != bytes12(0), "Vault not cached");
-            require (cache.vaultOwner == msg.sender, "Only vault owner");
-            vaultId = cache.vaultId;
-            vault = cache.vault;
+            require (cachedVaultId != bytes12(0), "Vault not cached");
+            vaultId = cachedVaultId;
         } else {
-            vault = cauldron.vaults(vaultId_);
             vaultId = vaultId_;
-            require (vault.owner == msg.sender, "Only vault owner");
         }
+        vault = cauldron.vaults(vaultId);
+        require (vault.owner == msg.sender, "Only vault owner");
     } 
     /// @dev Obtains a series by seriesId from the Cauldron, and verifies that it exists
     function getSeries(bytes6 seriesId)
@@ -141,7 +133,7 @@ contract Ladle is LadleStorage, AccessControl() {
         }
 
         // build would have populated the cache, this deletes it
-        delete cachedVault;   // TODO: Verify this deletes the cache
+        cachedVaultId = bytes12(0);
     }
 
     // ---- Vault management ----
@@ -168,11 +160,7 @@ contract Ladle is LadleStorage, AccessControl() {
         bytes12 vaultId = _generateVaultId(salt);
         try cauldron.build(msg.sender, vaultId, seriesId, ilkId) returns (DataTypes.Vault memory vault) {
             // Store the vault data in the cache
-            cachedVault = CachedVault({
-                vaultId: vaultId,
-                vaultOwner: msg.sender,
-                vault: vault
-            });
+            cachedVaultId = vaultId;
             return (vaultId, vault);
         } catch Error (string memory) {
             return _build(seriesId, ilkId, salt + 1);
@@ -187,7 +175,6 @@ contract Ladle is LadleStorage, AccessControl() {
         (bytes12 vaultId, ) = getVault(vaultId_); // getVault verifies the ownership as well
         // tweak checks that the series and the collateral both exist and that the collateral is approved for the series
         vault = cauldron.tweak(vaultId, seriesId, ilkId);
-        cachedVault.vault = vault;
     }
 
     /// @dev Give a vault to another user.
@@ -197,7 +184,6 @@ contract Ladle is LadleStorage, AccessControl() {
     {
         (bytes12 vaultId, ) = getVault(vaultId_);
         vault = cauldron.give(vaultId, receiver);
-        delete cachedVault;   // TODO: Verify this deletes the cache
     }
 
     /// @dev Destroy an empty vault. Used to recover gas costs.
@@ -206,7 +192,6 @@ contract Ladle is LadleStorage, AccessControl() {
     {
         (bytes12 vaultId, ) = getVault(vaultId_);
         cauldron.destroy(vaultId);
-        delete cachedVault;   // TODO: Verify this deletes the cache
     }
 
     // ---- Asset and debt management ----
@@ -371,8 +356,6 @@ contract Ladle is LadleStorage, AccessControl() {
         newDebt += ((newSeries.maturity - block.timestamp) * uint256(newDebt).wmul(borrowingFee)).u128();  // Add borrowing fee, also stops users form rolling to a mature series
 
         (vault,) = cauldron.roll(vaultId, newSeriesId, newDebt.i128() - balances.art.i128()); // Change the series and debt for the vault
-
-        cachedVault.vault = vault;
 
         return (vault, newDebt);
     }

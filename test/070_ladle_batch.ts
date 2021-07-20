@@ -102,7 +102,7 @@ describe('Ladle - batch', function () {
         ladle.giveAction(cachedVaultId, other),
         ladle.tweakAction(cachedVaultId, seriesId, otherIlkId),
       ])
-    ).to.be.revertedWith('Vault not cached')
+    ).to.be.revertedWith('Only vault owner')
   })
 
   it('builds a vault, permit and pour', async () => {
