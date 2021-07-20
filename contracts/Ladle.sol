@@ -113,8 +113,8 @@ contract Ladle is LadleStorage, AccessControl() {
 
     /// @dev Set the fee parameter
     function setFee(uint256 fee)
-        external payable
-        auth    
+        external
+        auth
     {
         borrowingFee = fee;
         emit FeeSet(fee);
