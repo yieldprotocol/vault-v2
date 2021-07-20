@@ -79,7 +79,7 @@ contract Ladle is LadleStorage, AccessControl() {
     /// @dev Add a new Join for an Asset, or replace an existing one for a new one.
     /// There can be only one Join per Asset. Until a Join is added, no tokens of that Asset can be posted or withdrawn.
     function addJoin(bytes6 assetId, IJoin join)
-        external payable
+        external
         auth
     {
         address asset = cauldron.assets(assetId);
@@ -92,7 +92,7 @@ contract Ladle is LadleStorage, AccessControl() {
     /// @dev Add a new Pool for a Series, or replace an existing one for a new one.
     /// There can be only one Pool per Series. Until a Pool is added, it is not possible to borrow Base.
     function addPool(bytes6 seriesId, IPool pool)
-        external payable
+        external
         auth
     {
         IFYToken fyToken = getSeries(seriesId).fyToken;
@@ -104,7 +104,7 @@ contract Ladle is LadleStorage, AccessControl() {
 
     /// @dev Add or remove a module.
     function setModule(address module, bool set)
-        external payable
+        external
         auth
     {
         modules[module] = set;
