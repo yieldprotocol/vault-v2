@@ -74,10 +74,6 @@ describe('Ladle - batch', function () {
     ethVaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ethId) as string
   })
 
-  it('operations and their data must match in length', async () => {
-    await expect(ladle.ladle.batch([0], [])).to.be.revertedWith('Mismatched operation data')
-  })
-
   it('builds a vault, tweaks it and gives it', async () => {
     await ladle.batch([
       ladle.buildAction(seriesId, ilkId),
