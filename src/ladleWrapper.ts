@@ -87,12 +87,12 @@ export class LadleWrapper {
     else return this.ladle.batch(ops, data, overrides)
   }
 
-  public buildAction(vaultId: string, seriesId: string, ilkId: string): BatchAction {
-    return new BatchAction(OPS.BUILD, ethers.utils.defaultAbiCoder.encode(['bytes12', 'bytes6', 'bytes6'], [vaultId, seriesId, ilkId]))
+  public buildAction(seriesId: string, ilkId: string): BatchAction {
+    return new BatchAction(OPS.BUILD, ethers.utils.defaultAbiCoder.encode(['bytes6', 'bytes6'], [seriesId, ilkId]))
   }
 
-  public async build(vaultId: string, seriesId: string, ilkId: string): Promise<ContractTransaction> {
-    return this.batch([this.buildAction(vaultId, seriesId, ilkId)])
+  public async build(seriesId: string, ilkId: string): Promise<ContractTransaction> {
+    return this.batch([this.buildAction(seriesId, ilkId)])
   }
 
   public tweakAction(vaultId: string, seriesId: string, ilkId: string): BatchAction {

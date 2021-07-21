@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.0;
+pragma solidity 0.8.1;
 
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
@@ -37,7 +37,7 @@ contract UniswapV3Oracle is IOracle, AccessControl {
     /**
      * @notice Set or reset the number of seconds Uniswap will use for its Time Weighted Average Price computation
      */
-    function setSecondsAgo(uint32 secondsAgo_) public auth {
+    function setSecondsAgo(uint32 secondsAgo_) external auth {
         require(secondsAgo_ != 0, "Uniswap must look into the past.");
         secondsAgo = secondsAgo_;
         emit SecondsAgoSet(secondsAgo_);
@@ -46,26 +46,17 @@ contract UniswapV3Oracle is IOracle, AccessControl {
     /**
      * @notice Set or reset an oracle source and its inverse
      */
-    function setSource(bytes6 base, bytes6 quote, address source) public auth {
-        sources[base][quote] = Source(source, false);
-        sources[quote][base] = Source(source, true);
-        sourcesData[source] = SourceData(
-            IUniswapV3PoolImmutables(source).factory(),
-            IUniswapV3PoolImmutables(source).token0(),
-            IUniswapV3PoolImmutables(source).token1(),
-            IUniswapV3PoolImmutables(source).fee()
-        );
-        emit SourceSet(base, quote, source);
-        emit SourceSet(quote, base, source);
+    function setSource(bytes6 base, bytes6 quote, address source) external auth {
+        _setSource(base, quote, source);
     }
 
     /**
      * @notice Set or reset a number of oracle sources
      */
-    function setSources(bytes6[] memory bases, bytes6[] memory quotes, address[] memory sources_) public auth {
+    function setSources(bytes6[] memory bases, bytes6[] memory quotes, address[] memory sources_) external auth {
         require(bases.length == quotes.length && quotes.length == sources_.length, "Mismatched inputs");
         for (uint256 i = 0; i < bases.length; i++) {
-            setSource(bases[i], quotes[i], sources_[i]);
+            _setSource(bases[i], quotes[i], sources_[i]);
         }
     }
 
@@ -73,7 +64,28 @@ contract UniswapV3Oracle is IOracle, AccessControl {
      * @notice Retrieve the value of the amount at the latest oracle price.
      * @return value
      */
-    function _peek(bytes6 base, bytes6 quote, uint256 amount) public virtual view returns (uint256 value, uint256 updateTime) {
+    function peek(bytes32 base, bytes32 quote, uint256 amount)
+        external view virtual override
+        returns (uint256 value, uint256 updateTime)
+    {
+        return _peek(base.b6(), quote.b6(), amount);
+    }
+
+    /**
+     * @notice Retrieve the value of the amount at the latest oracle price. Same as `peek` for this oracle.
+     * @return value
+     */
+    function get(bytes32 base, bytes32 quote, uint256 amount)
+        external virtual override
+        returns (uint256 value, uint256 updateTime)
+    {
+        return _peek(base.b6(), quote.b6(), amount);
+    }
+
+    function _peek(bytes6 base, bytes6 quote, uint256 amount)
+        private view
+        returns (uint256 value, uint256 updateTime)
+    {
         Source memory source = sources[base][quote];
         SourceData memory sourceData;
         require(source.source != address(0), "Source not found");
@@ -86,19 +98,16 @@ contract UniswapV3Oracle is IOracle, AccessControl {
         updateTime = block.timestamp - secondsAgo;
     }
 
-    /**
-     * @notice Retrieve the value of the amount at the latest oracle price.
-     * @return value
-     */
-    function peek(bytes32 base, bytes32 quote, uint256 amount) public virtual override view returns (uint256 value, uint256 updateTime) {
-        return _peek(base.b6(), quote.b6(), amount);
-    }
-
-    /**
-     * @notice Retrieve the value of the amount at the latest oracle price. Same as `peek` for this oracle.
-     * @return value
-     */
-    function get(bytes32 base, bytes32 quote, uint256 amount) public virtual override view returns (uint256 value, uint256 updateTime) {
-        return _peek(base.b6(), quote.b6(), amount);
+    function _setSource(bytes6 base, bytes6 quote, address source) internal {
+        sources[base][quote] = Source(source, false);
+        sources[quote][base] = Source(source, true);
+        sourcesData[source] = SourceData(
+            IUniswapV3PoolImmutables(source).factory(),
+            IUniswapV3PoolImmutables(source).token0(),
+            IUniswapV3PoolImmutables(source).token1(),
+            IUniswapV3PoolImmutables(source).fee()
+        );
+        emit SourceSet(base, quote, source);
+        emit SourceSet(quote, base, source);
     }
 }

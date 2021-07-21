@@ -41,6 +41,10 @@ describe('FYToken', function () {
     owner = await ownerAcc.getAddress()
   })
 
+  after(async () => {
+    await loadFixture(fixture) // We advance the time to test maturity features, this rolls it back after the tests
+  })
+
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
@@ -57,6 +61,7 @@ describe('FYToken', function () {
     chiSource = (await ethers.getContractAt('ISourceMock', await chiOracle.sources(baseId, CHI))) as ISourceMock
 
     await baseJoin.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], fyToken.address)
+    await baseJoin.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], owner)
 
     await fyToken.grantRoles(
       [id('mint(address,uint256)'), id('burn(address,uint256)'), id('setOracle(address)')],
@@ -109,7 +114,9 @@ describe('FYToken', function () {
     it('matures if needed on first redemption after maturity', async () => {
       const baseOwnerBefore = await base.balanceOf(owner)
       const baseJoinBefore = await base.balanceOf(baseJoin.address)
-      await expect(fyToken.redeem(owner, WAD)).to.emit(fyToken, 'Redeemed').withArgs(owner, owner, WAD, WAD)
+      expect(await fyToken.redeem(owner, WAD))
+        .to.emit(fyToken, 'Redeemed')
+        .withArgs(owner, owner, WAD, WAD)
       expect(await base.balanceOf(baseJoin.address)).to.equal(baseJoinBefore.sub(WAD))
       expect(await base.balanceOf(owner)).to.equal(baseOwnerBefore.add(WAD))
       expect(await fyToken.balanceOf(owner)).to.equal(0)

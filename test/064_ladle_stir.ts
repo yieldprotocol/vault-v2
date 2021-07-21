@@ -13,6 +13,7 @@ const { loadFixture } = waffle
 
 import { YieldEnvironment } from './shared/fixtures'
 import { LadleWrapper } from '../src/ladleWrapper'
+import { getLastVaultId } from '../src/helpers'
 
 describe('Ladle - stir', function () {
   this.timeout(0)
@@ -44,8 +45,8 @@ describe('Ladle - stir', function () {
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const vaultToId = ethers.utils.hexlify(ethers.utils.randomBytes(12))
   const otherIlkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  let vaultToId: string
 
   let vaultFromId: string
 
@@ -60,7 +61,8 @@ describe('Ladle - stir', function () {
     vaultFromId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
 
     // ==== Set testing environment ====
-    await ladle.build(vaultToId, seriesId, ilkId)
+    await ladle.build(seriesId, ilkId)
+    vaultToId = await getLastVaultId(cauldron)
   })
 
   it('does not allow moving collateral other than to the origin vault owner', async () => {

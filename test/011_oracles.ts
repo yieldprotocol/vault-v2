@@ -2,7 +2,11 @@ import { constants, id } from '@yield-protocol/utils-v2'
 const { WAD } = constants
 import { CHI, RATE } from '../src/constants'
 
+import { sendStatic } from './shared/helpers'
+
+import { Contract } from '@ethersproject/contracts'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
+
 import OracleArtifact from '../artifacts/contracts/mocks/oracles/OracleMock.sol/OracleMock.json'
 import ChainlinkMultiOracleArtifact from '../artifacts/contracts/oracles/chainlink/ChainlinkMultiOracle.sol/ChainlinkMultiOracle.json'
 import CompoundMultiOracleArtifact from '../artifacts/contracts/oracles/compound/CompoundMultiOracle.sol/CompoundMultiOracle.json'
@@ -84,8 +88,7 @@ describe('Oracle', function () {
     uniswapV3Factory = (await deployContract(ownerAcc, UniswapV3FactoryMockArtifact, [])) as UniswapV3FactoryMock
     const token0: string = ethers.utils.HDNode.fromSeed('0x0123456789abcdef0123456789abcdef').address
     const token1: string = ethers.utils.HDNode.fromSeed('0xfedcba9876543210fedcba9876543210').address
-    uniswapV3PoolAddress = await uniswapV3Factory.callStatic.createPool(token0, token1, 0)
-    await uniswapV3Factory.createPool(token0, token1, 0)
+    uniswapV3PoolAddress = await sendStatic(uniswapV3Factory as Contract, 'createPool', ownerAcc, [token0, token1, 0])
     uniswapV3Pool = (await ethers.getContractAt('UniswapV3PoolMock', uniswapV3PoolAddress)) as UniswapV3PoolMock
     uniswapV3Oracle = (await deployContract(ownerAcc, UniswapV3OracleArtifact, [])) as UniswapV3Oracle
     uniswapV3Oracle.grantRole(id('setSources(bytes6[],bytes6[],address[])'), owner)

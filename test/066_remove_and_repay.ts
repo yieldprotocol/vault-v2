@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 
-import { constants } from '@yield-protocol/utils-v2'
+import { constants, id } from '@yield-protocol/utils-v2'
 const { WAD, MAX128 } = constants
 const MAX = MAX128
 
@@ -46,6 +46,10 @@ describe('Ladle - remove and repay', function () {
     other = await otherAcc.getAddress()
   })
 
+  after(async () => {
+    await loadFixture(fixture) // We advance the time to test maturity features, this rolls it back after the tests
+  })
+
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
@@ -63,6 +67,8 @@ describe('Ladle - remove and repay', function () {
     pool = env.pools.get(seriesId) as PoolMock
 
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
+
+    await baseJoin.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], owner)
 
     // Borrow and add liquidity
     await ladle.serve(vaultId, pool.address, WAD, WAD, MAX)

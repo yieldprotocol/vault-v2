@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.0;
+pragma solidity 0.8.1;
 
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
@@ -26,41 +26,50 @@ contract ChainlinkMultiOracle is IOracle, AccessControl {
     /**
      * @notice Set or reset an oracle source and its inverse
      */
-    function setSource(bytes6 base, bytes6 quote, address source) public auth {
-        uint8 decimals = AggregatorV3Interface(source).decimals();
-        require (decimals <= 18, "Unsupported decimals");
-        sources[base][quote] = Source({
-            source: source,
-            decimals: decimals,
-            inverse: false
-        });
-        sources[quote][base] = Source({
-            source: source,
-            decimals: decimals,
-            inverse: true
-        });
-        emit SourceSet(base, quote, source);
-        emit SourceSet(quote, base, source);
+    function setSource(bytes6 base, bytes6 quote, address source) external auth {
+        _setSource(base, quote, source);
     }
 
     /**
      * @notice Set or reset a number of oracle sources and their inverses
      */
-    function setSources(bytes6[] memory bases, bytes6[] memory quotes, address[] memory sources_) public auth {
+    function setSources(bytes6[] memory bases, bytes6[] memory quotes, address[] memory sources_) external auth {
         require(
             bases.length == quotes.length && 
             bases.length == sources_.length,
             "Mismatched inputs"
         );
         for (uint256 i = 0; i < bases.length; i++) {
-            setSource(bases[i], quotes[i], sources_[i]);
+            _setSource(bases[i], quotes[i], sources_[i]);
         }
     }
 
     /**
-     * @notice Retrieve the latest price of the price oracle.
-     * @return price
+     * @notice Retrieve the value of the amount at the latest oracle price.
+     * @return value
      */
+    function peek(bytes32 base, bytes32 quote, uint256 amount)
+        external view virtual override
+        returns (uint256 value, uint256 updateTime)
+    {
+        uint256 price;
+        (price, updateTime) = _peek(base.b6(), quote.b6());
+        value = price * amount / 1e18;
+    }
+
+    /**
+     * @notice Retrieve the value of the amount at the latest oracle price.. Same as `peek` for this oracle.
+     * @return value
+     */
+    function get(bytes32 base, bytes32 quote, uint256 amount)
+        external virtual override
+        returns (uint256 value, uint256 updateTime)
+    {
+        uint256 price;
+        (price, updateTime) = _peek(base.b6(), quote.b6());
+        value = price * amount / 1e18;
+    }
+
     function _peek(bytes6 base, bytes6 quote) private view returns (uint price, uint updateTime) {
         int rawPrice;
         uint80 roundId;
@@ -78,23 +87,20 @@ contract ChainlinkMultiOracle is IOracle, AccessControl {
         }  
     }
 
-    /**
-     * @notice Retrieve the value of the amount at the latest oracle price.
-     * @return value
-     */
-    function peek(bytes32 base, bytes32 quote, uint256 amount) public virtual override view returns (uint256 value, uint256 updateTime) {
-        uint256 price;
-        (price, updateTime) = _peek(base.b6(), quote.b6());
-        value = price * amount / 1e18;
-    }
-
-    /**
-     * @notice Retrieve the value of the amount at the latest oracle price.. Same as `peek` for this oracle.
-     * @return value
-     */
-    function get(bytes32 base, bytes32 quote, uint256 amount) public virtual override view returns (uint256 value, uint256 updateTime) {
-        uint256 price;
-        (price, updateTime) = _peek(base.b6(), quote.b6());
-        value = price * amount / 1e18;
+    function _setSource(bytes6 base, bytes6 quote, address source) internal {
+        uint8 decimals = AggregatorV3Interface(source).decimals();
+        require (decimals <= 18, "Unsupported decimals");
+        sources[base][quote] = Source({
+            source: source,
+            decimals: decimals,
+            inverse: false
+        });
+        sources[quote][base] = Source({
+            source: source,
+            decimals: decimals,
+            inverse: true
+        });
+        emit SourceSet(base, quote, source);
+        emit SourceSet(quote, base, source);
     }
 }

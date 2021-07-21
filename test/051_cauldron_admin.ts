@@ -1,9 +1,12 @@
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { id } from '@yield-protocol/utils-v2'
+
+import { sendStatic } from './shared/helpers'
+
+import { Contract } from '@ethersproject/contracts'
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 
 import CauldronArtifact from '../artifacts/contracts/Cauldron.sol/Cauldron.json'
 import JoinFactoryArtifact from '../artifacts/contracts/JoinFactory.sol/JoinFactory.json'
-import FYTokenArtifact from '../artifacts/contracts/FYToken.sol/FYToken.json'
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
 import OracleMockArtifact from '../artifacts/contracts/mocks/oracles/OracleMock.sol/OracleMock.json'
 
@@ -13,6 +16,7 @@ import { JoinFactory } from '../typechain/JoinFactory'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { OracleMock } from '../typechain/OracleMock'
+import { SafeERC20Namer } from '../typechain/SafeERC20Namer'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
@@ -56,22 +60,35 @@ describe('Cauldron - admin', function () {
     ilk1 = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId1, 'Mock Ilk'])) as ERC20Mock
     ilk2 = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId2, 'Mock Ilk'])) as ERC20Mock
     joinFactory = (await deployContract(ownerAcc, JoinFactoryArtifact, [])) as JoinFactory
-    const joinAddress = await joinFactory.calculateJoinAddress(base.address) // Get the address
-    await joinFactory.createJoin(base.address) // Create the Join (doesn't return anything outside a contract call)
-    join = (await ethers.getContractAt('Join', joinAddress, ownerAcc)) as Join
-    fyToken = (await deployContract(ownerAcc, FYTokenArtifact, [
+    join = (await ethers.getContractAt(
+      'Join',
+      await sendStatic(joinFactory as Contract, 'createJoin', ownerAcc, [base.address]),
+      ownerAcc
+    )) as Join
+
+    const SafeERC20NamerFactory = await ethers.getContractFactory('SafeERC20Namer')
+    const safeERC20NamerLibrary = ((await SafeERC20NamerFactory.deploy()) as unknown) as SafeERC20Namer
+    await safeERC20NamerLibrary.deployed()
+
+    const fyTokenFactory = await ethers.getContractFactory('FYToken', {
+      libraries: {
+        SafeERC20Namer: safeERC20NamerLibrary.address,
+      },
+    })
+    fyToken = ((await fyTokenFactory.deploy(
       baseId,
       base.address,
       join.address,
       maturity,
       seriesId,
-      'Mock FYToken',
-    ])) as FYToken
+      'Mock FYToken'
+    )) as unknown) as FYToken
+    await fyToken.deployed()
+
     oracle = (await deployContract(ownerAcc, OracleMockArtifact, [])) as OracleMock
 
     await cauldron.grantRoles(
       [
-        id('setAuctionInterval(uint32)'),
         id('addAsset(bytes6,address)'),
         id('setDebtLimits(bytes6,bytes6,uint96,uint24,uint8)'),
         id('setRateOracle(bytes6,address)'),
@@ -81,13 +98,6 @@ describe('Cauldron - admin', function () {
       ],
       owner
     )
-  })
-
-  it('sets the protection period', async () => {
-    expect(await cauldron.setAuctionInterval(1))
-      .to.emit(cauldron, 'AuctionIntervalSet')
-      .withArgs(1)
-    expect(await cauldron.auctionInterval()).to.equal(1)
   })
 
   it('does not allow using zero as an asset identifier', async () => {

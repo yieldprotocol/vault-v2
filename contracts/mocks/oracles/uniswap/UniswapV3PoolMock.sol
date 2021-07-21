@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.0;
+pragma solidity 0.8.1;
 
 import "../ISourceMock.sol";
 import "../../../oracles/uniswap/IUniswapV3PoolImmutables.sol";
