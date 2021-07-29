@@ -22,17 +22,19 @@ interface IOwnable {
 contract Wand is AccessControl, Constants {
     using CastBytes32Bytes6 for bytes32;
 
+    event ContractLinked(bytes32 indexed param, address value);
+
     bytes4 public constant JOIN = bytes4(keccak256("join(address,uint128)"));
     bytes4 public constant EXIT = bytes4(keccak256("exit(address,uint128)"));
     bytes4 public constant MINT = bytes4(keccak256("mint(address,uint256)"));
     bytes4 public constant BURN = bytes4(keccak256("burn(address,uint256)"));
 
-    ICauldronGov public immutable cauldron;
-    ILadleGov public immutable ladle;
-    address public immutable witch;
-    IPoolFactory public immutable poolFactory;
-    IJoinFactory public immutable joinFactory;
-    IFYTokenFactory public immutable fyTokenFactory;
+    ICauldronGov public cauldron;
+    ILadleGov public ladle;
+    address public witch;
+    IPoolFactory public poolFactory;
+    IJoinFactory public joinFactory;
+    IFYTokenFactory public fyTokenFactory;
 
     constructor (
         ICauldronGov cauldron_,
@@ -48,6 +50,18 @@ contract Wand is AccessControl, Constants {
         poolFactory = poolFactory_;
         joinFactory = joinFactory_;
         fyTokenFactory = fyTokenFactory_;
+    }
+
+    /// @dev Point to a different cauldron, ladle, witch, poolFactory, joinFactory or fyTokenFactory
+    function point(bytes32 param, address value) external auth {
+        if (param == "cauldron") cauldron = ICauldronGov(value);
+        else if (param == "ladle") ladle = ILadleGov(value);
+        else if (param == "witch") witch = value;
+        else if (param == "poolFactory") poolFactory = IPoolFactory(value);
+        else if (param == "joinFactory") joinFactory = IJoinFactory(value);
+        else if (param == "fyTokenFactory") fyTokenFactory = IFYTokenFactory(value);
+        else revert("Unrecognized parameter");
+        emit ContractLinked(param, value);
     }
 
     /// @dev Add an existing asset to the protocol, meaning:
