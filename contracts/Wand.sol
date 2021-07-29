@@ -22,7 +22,7 @@ interface IOwnable {
 contract Wand is AccessControl, Constants {
     using CastBytes32Bytes6 for bytes32;
 
-    event ContractLinked(bytes32 indexed param, address value);
+    event Point(bytes32 indexed param, address value);
 
     bytes4 public constant JOIN = bytes4(keccak256("join(address,uint128)"));
     bytes4 public constant EXIT = bytes4(keccak256("exit(address,uint128)"));
@@ -61,7 +61,7 @@ contract Wand is AccessControl, Constants {
         else if (param == "joinFactory") joinFactory = IJoinFactory(value);
         else if (param == "fyTokenFactory") fyTokenFactory = IFYTokenFactory(value);
         else revert("Unrecognized parameter");
-        emit ContractLinked(param, value);
+        emit Point(param, value);
     }
 
     /// @dev Add an existing asset to the protocol, meaning:
