@@ -82,9 +82,7 @@ describe('Ladle - module transfer', function () {
 
   it('transfers to a module', async () => {
     await base.approve(ladle.address, WAD)
-    await expect(ladle.transferToModule(baseId, user1, WAD))
-      .to.emit(base, 'Transfer')
-      .withArgs(owner, user1, WAD)
+    await expect(ladle.transferToModule(baseId, user1, WAD)).to.emit(base, 'Transfer').withArgs(owner, user1, WAD)
     expect(await base.balanceOf(user1)).to.equal(WAD)
   })
 })
