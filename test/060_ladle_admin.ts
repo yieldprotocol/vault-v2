@@ -100,6 +100,8 @@ describe('Ladle - admin', function () {
 
     // Deploy a join
     joinFactory = (await deployContract(ownerAcc, JoinFactoryArtifact, [])) as JoinFactory
+    await joinFactory.grantRoles([id('createJoin(address)')], owner)
+
     ilkJoin = (await ethers.getContractAt(
       'Join',
       await sendStatic(joinFactory as Contract, 'createJoin', ownerAcc, [ilk.address]),

@@ -5,12 +5,13 @@ import "@yield-protocol/vault-interfaces/ILadleGov.sol";
 import "@yield-protocol/vault-interfaces/IMultiOracleGov.sol";
 import "@yield-protocol/vault-interfaces/IJoinFactory.sol";
 import "@yield-protocol/vault-interfaces/IJoin.sol";
+import "@yield-protocol/vault-interfaces/IFYTokenFactory.sol";
+import "@yield-protocol/vault-interfaces/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
 import "@yield-protocol/yieldspace-interfaces/IPoolFactory.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "./constants/Constants.sol";
 import "./math/CastBytes32Bytes6.sol";
-import "./FYToken.sol";
 
 
 interface IOwnable {
@@ -21,21 +22,46 @@ interface IOwnable {
 contract Wand is AccessControl, Constants {
     using CastBytes32Bytes6 for bytes32;
 
+    event Point(bytes32 indexed param, address value);
+
     bytes4 public constant JOIN = bytes4(keccak256("join(address,uint128)"));
     bytes4 public constant EXIT = bytes4(keccak256("exit(address,uint128)"));
     bytes4 public constant MINT = bytes4(keccak256("mint(address,uint256)"));
     bytes4 public constant BURN = bytes4(keccak256("burn(address,uint256)"));
 
-    ICauldronGov public immutable cauldron;
-    ILadleGov public immutable ladle;
-    IPoolFactory public immutable poolFactory;
-    IJoinFactory public immutable joinFactory;
+    ICauldronGov public cauldron;
+    ILadleGov public ladle;
+    address public witch;
+    IPoolFactory public poolFactory;
+    IJoinFactory public joinFactory;
+    IFYTokenFactory public fyTokenFactory;
 
-    constructor (ICauldronGov cauldron_, ILadleGov ladle_, IPoolFactory poolFactory_, IJoinFactory joinFactory_) {
+    constructor (
+        ICauldronGov cauldron_,
+        ILadleGov ladle_,
+        address witch_,
+        IPoolFactory poolFactory_,
+        IJoinFactory joinFactory_,
+        IFYTokenFactory fyTokenFactory_
+    ) {
         cauldron = cauldron_;
         ladle = ladle_;
+        witch = witch_;
         poolFactory = poolFactory_;
         joinFactory = joinFactory_;
+        fyTokenFactory = fyTokenFactory_;
+    }
+
+    /// @dev Point to a different cauldron, ladle, witch, poolFactory, joinFactory or fyTokenFactory
+    function point(bytes32 param, address value) external auth {
+        if (param == "cauldron") cauldron = ICauldronGov(value);
+        else if (param == "ladle") ladle = ILadleGov(value);
+        else if (param == "witch") witch = value;
+        else if (param == "poolFactory") poolFactory = IPoolFactory(value);
+        else if (param == "joinFactory") joinFactory = IJoinFactory(value);
+        else if (param == "fyTokenFactory") fyTokenFactory = IFYTokenFactory(value);
+        else revert("Unrecognized parameter");
+        emit Point(param, value);
     }
 
     /// @dev Add an existing asset to the protocol, meaning:
@@ -56,7 +82,7 @@ contract Wand is AccessControl, Constants {
         sigs[1] = EXIT;
         join.grantRoles(sigs, address(ladle));
         join.grantRole(join.ROOT(), msg.sender);
-        // join.renounceRole(join.ROOT(), address(this));  // If Wand gives up ownership it can't create fyToken
+        // join.renounceRole(join.ROOT(), address(this));  // Wand requires ongoing rights to set up permissions to joins
         ladle.addJoin(assetId, address(join));
     }
 
@@ -70,6 +96,9 @@ contract Wand is AccessControl, Constants {
         oracle.setSource(assetId, RATE.b6(), rateSource);
         oracle.setSource(assetId, CHI.b6(), chiSource);
         cauldron.setRateOracle(assetId, IOracle(address(oracle)));
+        
+        AccessControl baseJoin = AccessControl(address(ladle.joins(assetId)));
+        baseJoin.grantRole(JOIN, witch); // Give the Witch permission to join base
     }
 
     /// @dev Make an ilk asset out of a generic asset, by adding a spot oracle against a base asset, collateralization ratio, and debt ceiling.
@@ -77,6 +106,9 @@ contract Wand is AccessControl, Constants {
         oracle.setSource(baseId, ilkId, spotSource);
         cauldron.setSpotOracle(baseId, ilkId, IOracle(address(oracle)), ratio);
         cauldron.setDebtLimits(baseId, ilkId, max, min, dec);
+
+        AccessControl ilkJoin = AccessControl(address(ladle.joins(ilkId)));
+        ilkJoin.grantRole(EXIT, witch); // Give the Witch permission to exit ilk
     }
 
     /// @dev Add an existing series to the protocol, by deploying a FYToken, and registering it in the cauldron with the approved ilks
@@ -98,14 +130,14 @@ contract Wand is AccessControl, Constants {
         IOracle oracle = cauldron.rateOracles(baseId);
         require(address(oracle) != address(0), "Chi oracle not found");
 
-        FYToken fyToken = new FYToken(
+        AccessControl fyToken = AccessControl(fyTokenFactory.createFYToken(
             baseId,
             oracle,
             baseJoin,
             maturity,
             name,     // Derive from base and maturity, perhaps
             symbol    // Derive from base and maturity, perhaps
-        );
+        ));
 
         // Allow the fyToken to pull from the base join for redemption
         bytes4[] memory sigs = new bytes4[](1);
@@ -123,7 +155,7 @@ contract Wand is AccessControl, Constants {
         fyToken.renounceRole(fyToken.ROOT(), address(this));
 
         // Add fyToken/series to the Cauldron and approve ilks for the series
-        cauldron.addSeries(seriesId, baseId, fyToken);
+        cauldron.addSeries(seriesId, baseId, IFYToken(address(fyToken)));
         cauldron.addIlks(seriesId, ilkIds);
 
         // Create the pool for the base and fyToken

@@ -8,6 +8,7 @@ import "./CTokenInterface.sol";
 contract CompoundRateOracle is IOracle {
 
     uint public constant SCALE_FACTOR = 1; // I think we don't need scaling for rate and chi oracles
+    uint8 public constant override decimals = 18;
 
     address public immutable source;
 
