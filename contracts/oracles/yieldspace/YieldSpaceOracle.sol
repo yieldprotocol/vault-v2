@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.1;
 
-import "@yield-protocol/vault-interfaces/IOracle.sol";
-// import "@yield-protocol/yieldspace-interfaces/IPool.sol";
+// import "@yield-protocol/vault-interfaces/IOracle.sol";
+import "./IOracleTmp.sol";
+import "hardhat/console.sol";
 
 interface IPool {
     function getCache() external view returns (uint112, uint112, uint32);
@@ -19,61 +20,59 @@ library CastU256U112 {
 /**
  * @title YieldSpaceOracle
  */
-contract YieldSpaceOracle is IOracle {
+contract YieldSpaceOracle is IOracleTmp {
     using CastU256U112 for uint256;
-    uint8 public constant override decimals = 18;   // All prices are converted to 18 decimals
+
+    event Updated(uint112 twar, uint32 indexed twarTimestamp, uint112 ratioCumulative);
+
+    uint8 public constant override decimals = 18;   // Ratio is presented with 18 decimals
+    address public immutable override source;
     uint public constant PERIOD = 1 hours;
 
-    address public immutable source;
-
-    uint112 public ratioBaseAverage;
-    uint32  public blockTimestampLast;
-    uint112 public ratioBaseCumulativeLast;
+    uint112 public twar;
+    uint32  public twarTimestamp;
+    uint112 public ratioCumulative;
 
     constructor(IPool pool_) {
         source = address(pool_);
     }
 
     function update() external {
+        (,, uint32 poolTimestamp) = IPool(source).getCache();
+        require(twarTimestamp != poolTimestamp, "Up to date");
         _update();
     }
 
     /// @dev Update the cumulative ratioSeconds if PERIOD has passed.
     function _update() internal {
-        (uint256 baseReserves, uint256 fyTokenReserves, uint32 blockTimestamp) = IPool(source).getCache();
-        (uint32 blockTimestampLast_, uint112 ratioBaseCumulativeLast_) = (blockTimestampLast, ratioBaseCumulativeLast);
+        IPool(source).sync(); // Do we need this?
+        uint256 newRatioCumulative_ = IPool(source).cumulativeBalancesRatio();
+        uint32 timeElapsed = block.timestamp - twarTimestamp;
 
-        require(baseReserves > 0 && fyTokenReserves > 0, "No liquidity in the pool");
-        uint112 ratioBaseCumulative = ((1e18 * baseReserves * blockTimestamp) / fyTokenReserves).u112();
-        uint32 timeElapsed = blockTimestamp - blockTimestampLast_;
-
-        // ensure that at least one full period has passed since the last update
+        // ensure that at least one full period has passed since the last update on the pool
         if(timeElapsed >= PERIOD) {
-            // cumulative price is in (ratio * seconds) units so we simply wrap it after division by time elapsed
-            (ratioBaseAverage, blockTimestampLast, ratioBaseCumulativeLast) = (
-                uint112((ratioBaseCumulative - ratioBaseCumulativeLast_) / timeElapsed),  // average, casting won't overflow
-                blockTimestamp,
-                ratioBaseCumulative                                                     // last
-            );
+            // cumulative ratio is in (ratio * seconds) units so for the average we simply wrap it after division by time elapsed
+            uint112 twar_ = uint112((newRatioCumulative_ - ratioCumulative) / timeElapsed); // casting won't overflow
+            (twar, twarTimestamp, ratioCumulative) = (twar_, block.timestamp, newRatioCumulative_);
+            emit Updated(twar_, block.timestamp, newRatioCumulative_);
         }
     }
 
     /// @dev Return the cumulative ratioSeconds
     function peek(bytes32, bytes32, uint256)
         external view virtual override
-        returns (uint256 ratio, uint256 updateTime)
+        returns (uint256 twar_, uint256 twarTimestamp_)
     {
-        (ratio, updateTime) = (ratioBaseAverage, blockTimestampLast);
-        require(updateTime != 0, "Not initialized");
+        (twar_, twarTimestamp_) = (twar, twarTimestamp);
+        require(twarTimestamp_ != 0, "Not initialized");
     }
 
-    /// @dev Update and return the cumulative ratioSeconds
+    /// @dev Update and return the time-weighted average ratio and the time of the last update
     function get(bytes32, bytes32, uint256)
         external virtual override
-        returns (uint256 ratio, uint256 updateTime)
+        returns (uint256 twar_, uint256 twarTimestamp_)
     {
         _update();
-        ratio = ratioBaseAverage;
-        updateTime = blockTimestampLast;
+        (twar_, twarTimestamp_) = (twar, twarTimestamp);
     }
 }
