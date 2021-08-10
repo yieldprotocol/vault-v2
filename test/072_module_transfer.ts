@@ -20,12 +20,13 @@ const { deployContract, loadFixture } = waffle
 import { YieldEnvironment } from './shared/fixtures'
 import { LadleWrapper } from '../src/ladleWrapper'
 
-describe('Ladle - TLM module', function () {
+describe('Ladle - module transfer', function () {
   this.timeout(0)
 
   let env: YieldEnvironment
   let ownerAcc: SignerWithAddress
   let owner: string
+  let user1: string
   let cauldron: Cauldron
   let ladle: LadleWrapper
   let base: ERC20Mock
@@ -46,10 +47,12 @@ describe('Ladle - TLM module', function () {
     const signers = await ethers.getSigners()
     ownerAcc = signers[0]
     owner = await ownerAcc.getAddress()
+    user1 = await signers[1].getAddress()
   })
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const wrongAssetId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const zeroAddress = '0x' + '0'.repeat(40)
 
@@ -64,51 +67,24 @@ describe('Ladle - TLM module', function () {
 
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
 
-    // ==== Set TLM and TLM Module ====
-    tlm = (await deployContract(ownerAcc, TLMMockArtifact, [base.address, fyToken.address])) as TLMMock
-    makerIlk = await tlm.FYDAI()
-    gemJoin = (await tlm.ilks(makerIlk)).gemJoin
-
-    tlmModule = (await deployContract(ownerAcc, TLMModuleArtifact, [cauldron.address, tlm.address])) as TLMModule
+    // ==== Set Mock Module ====
     await ladle.grantRoles([id('setModule(address,bool)')], owner)
-
-    await ladle.setModule(tlmModule.address, true)
+    await ladle.setModule(user1, true)
   })
 
-  it('registers a series for sale in the TLM Module', async () => {
-    await expect(tlmModule.register(seriesId, makerIlk))
-      .to.emit(tlmModule, 'SeriesRegistered')
-      .withArgs(seriesId, makerIlk)
-    expect(await tlmModule.seriesToIlk(seriesId)).to.equal(makerIlk)
+  it('transferring to unregistered modules reverts', async () => {
+    await expect(ladle.transferToModule(baseId, owner, WAD)).to.be.revertedWith('Unregistered module')
   })
 
-  describe('with a registered series', async () => {
-    beforeEach(async () => {
-      await tlmModule.register(seriesId, makerIlk)
-    })
+  it('transferring unknown assets reverts', async () => {
+    await expect(ladle.transferToModule(wrongAssetId, user1, WAD)).to.be.revertedWith('Unknown asset')
+  })
 
-    it('approves the TLM Module to take fyToken from the Ladle', async () => {
-      await expect(ladle.tlmApprove(tlmModule.address, seriesId))
-        .to.emit(fyToken, 'Approval')
-        .withArgs(ladle.address, gemJoin, MAX256)
-      expect(await fyToken.allowance(ladle.address, gemJoin)).to.equal(MAX256)
-    })
-
-    describe('with Ladle approval', async () => {
-      beforeEach(async () => {
-        await ladle.tlmApprove(tlmModule.address, seriesId)
-      })
-
-      it('sells fyToken in the TLM Module', async () => {
-        expect(
-          await ladle.batch([
-            ladle.pourAction(vaultId, ladle.address, WAD, WAD),
-            ladle.tlmSellAction(tlmModule.address, seriesId, owner, WAD),
-          ])
-        )
-          .to.emit(base, 'Transfer')
-          .withArgs(zeroAddress, owner, WAD)
-      })
-    })
+  it('transfers to a module', async () => {
+    await base.approve(ladle.address, WAD)
+    await expect(ladle.transferToModule(baseId, user1, WAD))
+      .to.emit(base, 'Transfer')
+      .withArgs(owner, user1, WAD)
+    expect(await base.balanceOf(user1)).to.equal(WAD)
   })
 })

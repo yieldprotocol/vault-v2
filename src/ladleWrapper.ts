@@ -242,7 +242,6 @@ export class LadleWrapper {
     return this.ladle.redeem(seriesId, to, wad)
   }
 
-
   public sellBaseAction(seriesId: string, receiver: string, min: BigNumberish): string {
     return this.ladle.interface.encodeFunctionData('route',
       [
@@ -318,6 +317,14 @@ export class LadleWrapper {
   public async tlmSell(tlmModuleAddress: string, seriesId: string, receiver: string, amount: BigNumberish): Promise<ContractTransaction> {
     const tlmSellCall = this.tlmModule.encodeFunctionData('sell', [seriesId, receiver, amount])
     return this.ladle.tlmSell(tlmModuleAddress, tlmSellCall)
+  }
+
+  public transferToModuleAction(assetId: string, module_: string, wad: BigNumberish): string {
+    return this.ladle.interface.encodeFunctionData('transferToModule', [assetId, module_, wad])
+  }
+
+  public async transferToModule(assetId: string, module_: string, wad: BigNumberish): Promise<ContractTransaction> {
+    return this.ladle.transferToModule(assetId, module_, wad)
   }
 }
   
