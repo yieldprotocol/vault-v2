@@ -20,7 +20,7 @@ const { deployContract, loadFixture } = waffle
 import { YieldEnvironment } from './shared/fixtures'
 import { LadleWrapper } from '../src/ladleWrapper'
 
-describe('Ladle - TLM module', function () {
+describe('Ladle - module', function () {
   this.timeout(0)
 
   let env: YieldEnvironment

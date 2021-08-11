@@ -502,15 +502,4 @@ contract Ladle is LadleStorage, AccessControl() {
         (success, result) = module.delegatecall(data);
         if (!success) revert(RevertMsgExtractor.getRevertMsg(result));
     }
-
-    /// @dev Allow users to trigger an asset transfer to a module through the ladle, to be used with batch
-    function transferToModule(bytes6 assetId, address module, uint256 wad)
-        external payable
-    {
-        require (modules[module], "Unregistered module");
-        IERC20 token = IERC20(cauldron.assets(assetId));
-        require (token != IERC20(address(0)), "Unknown asset");
-
-        token.safeTransferFrom(msg.sender, module, wad);
-    }
 }
