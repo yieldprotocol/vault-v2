@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.1;
+import "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
 import "@yield-protocol/vault-interfaces/ICauldron.sol";
 import "@yield-protocol/vault-interfaces/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
@@ -75,8 +76,8 @@ contract MakerImportModule is LadleStorage {
 
     // The MakerImportModule doesn't have any data storage of its own
 
-    constructor (ICauldron cauldron_, IMakerJoin makerDaiJoin_, ICDPMgr cdpMgr_, IProxyRegistry proxyRegistry_, IIlkRegistry ilkRegistry_) 
-        LadleStorage(cauldron_) {
+    constructor (ICauldron cauldron_, IWETH9 weth_, IMakerJoin makerDaiJoin_, ICDPMgr cdpMgr_, IProxyRegistry proxyRegistry_, IIlkRegistry ilkRegistry_) 
+        LadleStorage(cauldron_, weth_) {
         proxyRegistry = proxyRegistry_;
         ilkRegistry = ilkRegistry_;
         cdpMgr = cdpMgr_;

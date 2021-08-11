@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.1;
+import "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
 import "@yield-protocol/vault-interfaces/ICauldron.sol";
 import "@yield-protocol/vault-interfaces/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
@@ -32,8 +33,8 @@ contract TLMModule is LadleStorage {
     // The following is not directly available through delegatecall, but can be found at `tlm.seriesToIlk`
     mapping (bytes6 => bytes32) public seriesToIlk;
 
-    constructor (ICauldron cauldron_, DssTlmAbstract tlm_) 
-        LadleStorage(cauldron_) {
+    constructor (ICauldron cauldron_, IWETH9 weth_, DssTlmAbstract tlm_) 
+        LadleStorage(cauldron_, weth_) {
         tlm = tlm_;
         tlmModule = this;
     }

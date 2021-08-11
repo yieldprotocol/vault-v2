@@ -11,7 +11,6 @@ import "@yield-protocol/utils-v2/contracts/token/IERC2612.sol";
 import "dss-interfaces/src/dss/DaiAbstract.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/token/AllTransferHelper.sol";
-import "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
 import "./math/WMul.sol";
 import "./math/CastU256U128.sol";
 import "./math/CastU128I128.sol";
@@ -26,13 +25,7 @@ contract Ladle is LadleStorage, AccessControl() {
     using AllTransferHelper for IERC20;
     using AllTransferHelper for address payable;
 
-    bytes12 cachedVaultId;
-
-    IWETH9 public immutable weth;
-
-    constructor (ICauldron cauldron, IWETH9 weth_) LadleStorage(cauldron) {
-        weth = weth_;
-    }
+    constructor (ICauldron cauldron, IWETH9 weth) LadleStorage(cauldron, weth) { }
 
     // ---- Data sourcing ----
     /// @dev Obtains a vault by vaultId from the Cauldron, and verifies that msg.sender is the owner
