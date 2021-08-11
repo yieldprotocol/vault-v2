@@ -10,7 +10,9 @@ import "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
 contract LadleStorage {
     event JoinAdded(bytes6 indexed assetId, address indexed join);
     event PoolAdded(bytes6 indexed seriesId, address indexed pool);
-    event ModuleSet(address indexed module, bool indexed set);
+    event ModuleAdded(address indexed module, bool indexed set);
+    event IntegrationAdded(address indexed integration, bool indexed set);
+    event TokenAdded(address indexed token, bool indexed set);
     event FeeSet(uint256 fee);
 
     IWETH9 public immutable weth;
@@ -20,7 +22,10 @@ contract LadleStorage {
 
     mapping (bytes6 => IJoin)                   public joins;            // Join contracts available to manage assets. The same Join can serve multiple assets (ETH-A, ETH-B, etc...)
     mapping (bytes6 => IPool)                   public pools;            // Pool contracts available to manage series. 12 bytes still free.
-    mapping (address => bool)                   public modules;          // Trusted contracts to execute anything on.
+
+    mapping (address => bool)                   public modules;          // Trusted contracts to use delegatecall with.
+    mapping (address => bool)                   public integrations;     // Trusted contracts to use call with.
+    mapping (address => bool)                   public tokens;           // Trusted contracts to use transfer and permit with.
 
     constructor (ICauldron cauldron_, IWETH9 weth_) {
         cauldron = cauldron_;
