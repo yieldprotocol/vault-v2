@@ -92,7 +92,10 @@ contract Ladle is LadleStorage, AccessControl() {
         require (fyToken == pool.fyToken(), "Mismatched pool fyToken and series");
         require (fyToken.underlying() == address(pool.base()), "Mismatched pool base and series");
         pools[seriesId] = pool;
+        bool set = (pool != IPool(address(0))) ? true : false;
+        integrations[address(pool)] = set;
         emit PoolAdded(seriesId, address(pool));
+        emit IntegrationAdded(address(pool), set);
     }
 
     /// @dev Add or remove a module.
