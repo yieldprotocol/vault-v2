@@ -184,14 +184,14 @@ export class LadleWrapper {
     return this.ladle.forwardPermit(id, isAsset, spender, amount, deadline, v, r, s)
   }
 
-  public forwardDaiPermitAction(id: string, isAsset: boolean, spender: string, nonce: BigNumberish, deadline: BigNumberish, approved: boolean, v: BigNumberish, r: Buffer, s: Buffer): string {
+  public forwardDaiPermitAction(token: string, spender: string, nonce: BigNumberish, deadline: BigNumberish, approved: boolean, v: BigNumberish, r: Buffer, s: Buffer): string {
     return this.ladle.interface.encodeFunctionData('forwardDaiPermit',
-      [id, isAsset, spender, nonce, deadline, approved, v, r, s]
+      [token, spender, nonce, deadline, approved, v, r, s]
     )
   }
 
-  public async forwardDaiPermit(id: string, isAsset: boolean, spender: string, nonce: BigNumberish, deadline: BigNumberish, approved: boolean, v: BigNumberish, r: Buffer, s: Buffer): Promise<ContractTransaction> {
-    return this.ladle.forwardDaiPermit(id, isAsset, spender, nonce, deadline, approved, v, r, s)
+  public async forwardDaiPermit(token: string, spender: string, nonce: BigNumberish, deadline: BigNumberish, approved: boolean, v: BigNumberish, r: Buffer, s: Buffer): Promise<ContractTransaction> {
+    return this.ladle.forwardDaiPermit(token, spender, nonce, deadline, approved, v, r, s)
   }
 
   public joinEtherAction(etherId: string): string {

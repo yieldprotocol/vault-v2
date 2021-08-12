@@ -432,11 +432,11 @@ contract Ladle is LadleStorage, AccessControl() {
         token.permit(msg.sender, spender, amount, deadline, v, r, s);
     }
 
-    /// @dev Execute a Dai-style permit for the selected asset or fyToken
-    function forwardDaiPermit(bytes6 id, bool isAsset, address spender, uint256 nonce, uint256 deadline, bool allowed, uint8 v, bytes32 r, bytes32 s)
+    /// @dev Execute a Dai-style permit for the selected token
+    function forwardDaiPermit(DaiAbstract token, address spender, uint256 nonce, uint256 deadline, bool allowed, uint8 v, bytes32 r, bytes32 s)
         external payable
     {
-        DaiAbstract token = DaiAbstract(findToken(id, isAsset));
+        require(tokens[address(token)], "Unknown token");
         token.permit(msg.sender, spender, nonce, deadline, allowed, v, r, s);
     }
 

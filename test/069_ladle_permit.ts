@@ -141,7 +141,7 @@ describe('Ladle - permit', function () {
 
     const { v, r, s } = signatures.sign(daiPermitDigest, signatures.privateKey0)
 
-    expect(await ladle.forwardDaiPermit(DAI, true, ladle.address, nonce, deadline, true, v, r, s))
+    expect(await ladle.forwardDaiPermit(dai.address, ladle.address, nonce, deadline, true, v, r, s))
       .to.emit(dai, 'Approval')
       .withArgs(owner, ladle.address, MAX)
 
@@ -166,7 +166,7 @@ describe('Ladle - permit', function () {
     expect(
       await ladle.batch([
         ladle.buildAction(seriesId, ilkId),
-        ladle.forwardDaiPermitAction(DAI, true, ladle.address, nonce, deadline, true, v, r, s),
+        ladle.forwardDaiPermitAction(dai.address, ladle.address, nonce, deadline, true, v, r, s),
       ])
     )
       .to.emit(dai, 'Approval')
