@@ -473,13 +473,12 @@ contract Ladle is LadleStorage, AccessControl() {
 
     // ---- Pool router ----
 
-    /// @dev Allow users to trigger a token transfer to a pool through the ladle, to be used with batch
-    function transferToPool(bytes6 seriesId, bool isBase, uint128 wad)
+    /// @dev Allow users to trigger a token transfer from themselves to a receiver through the ladle, to be used with batch
+    function transfer(IERC20 token, address receiver, uint128 wad)
         external payable
     {
-        IPool pool = getPool(seriesId);
-        IERC20 token = isBase ? pool.base() : pool.fyToken();
-        token.safeTransferFrom(msg.sender, address(pool), wad);
+        require(tokens[address(token)], "Unknown token");
+        token.safeTransferFrom(msg.sender, receiver, wad);
     }
 
     /// @dev Allow users to route calls to a contract, to be used with batch

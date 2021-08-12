@@ -200,7 +200,7 @@ describe('Ladle - batch', function () {
       ladle.buildAction(seriesId, ilkId),
       ladle.pourAction(cachedVaultId, owner, posted, borrowed),
       ladle.forwardPermitAction(baseId, true, ladle.address, amount, deadline, v, r, s),
-      ladle.transferToPoolAction(seriesId, true, WAD.div(2)),
+      ladle.transferAction(base.address, pool.address, WAD.div(2)),
       ladle.repayAction(cachedVaultId, other, 0, 0),
     ])
   })
@@ -226,7 +226,7 @@ describe('Ladle - batch', function () {
       ladle.buildAction(seriesId, ilkId),
       ladle.pourAction(cachedVaultId, owner, posted, borrowed),
       ladle.forwardPermitAction(baseId, true, ladle.address, amount, deadline, v, r, s),
-      ladle.transferToPoolAction(seriesId, true, WAD),
+      ladle.transferAction(base.address, pool.address, WAD),
       ladle.repayVaultAction(cachedVaultId, other, 0, MAX),
     ])
   })

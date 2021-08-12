@@ -88,7 +88,7 @@ describe('Ladle - serve and repay', function () {
     const debtRepaidInFY = debtRepaidInBase.mul(105).div(100)
     const inkRetrieved = WAD.div(4)
 
-    await base.transfer(pool.address, debtRepaidInBase) // This would normally be part of a multicall, using ladle.transferToPool
+    await base.transfer(pool.address, debtRepaidInBase) // This would normally be part of a multicall, using ladle.transfer
     await expect(await ladle.repay(vaultId, owner, inkRetrieved, 0))
       .to.emit(cauldron, 'VaultPoured')
       .withArgs(vaultId, seriesId, ilkId, inkRetrieved, debtRepaidInFY.mul(-1))
@@ -109,7 +109,7 @@ describe('Ladle - serve and repay', function () {
     await base.approve(ladle.address, debtRepaidInBase) // This would normally be part of a multicall, using ladle.forwardPermit
     await expect(
       ladle.batch([
-        ladle.transferToPoolAction(seriesId, true, debtRepaidInBase),
+        ladle.transferAction(base.address, pool.address, debtRepaidInBase),
         ladle.repayAction(vaultId, owner, inkRetrieved, 0),
       ])
     )
@@ -130,7 +130,7 @@ describe('Ladle - serve and repay', function () {
     const debtinBase = debtinFY.mul(100).div(105)
     const inkRetrieved = WAD.div(4)
 
-    await base.transfer(pool.address, baseOffered) // This would normally be part of a multicall, using ladle.transferToPool
+    await base.transfer(pool.address, baseOffered) // This would normally be part of a multicall, using ladle.transfer
     await expect(await ladle.repayVault(vaultId, owner, inkRetrieved, MAX))
       .to.emit(cauldron, 'VaultPoured')
       .withArgs(vaultId, seriesId, ilkId, inkRetrieved, WAD.mul(-1))
@@ -155,7 +155,7 @@ describe('Ladle - serve and repay', function () {
     await base.approve(ladle.address, baseOffered) // This would normally be part of a multicall, using ladle.forwardPermit
     await expect(
       ladle.batch([
-        ladle.transferToPoolAction(seriesId, true, baseOffered),
+        ladle.transferAction(base.address, pool.address, baseOffered),
         ladle.repayVaultAction(vaultId, owner, inkRetrieved, MAX),
       ])
     )

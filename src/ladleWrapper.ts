@@ -210,12 +210,12 @@ export class LadleWrapper {
     return this.ladle.exitEther(to)
   }
 
-  public transferToPoolAction(seriesId: string, base: boolean, wad: BigNumberish): string {
-    return this.ladle.interface.encodeFunctionData('transferToPool', [seriesId, base, wad])
+  public transferAction(token: string, receiver: string, wad: BigNumberish): string {
+    return this.ladle.interface.encodeFunctionData('transfer', [token, receiver, wad])
   }
 
-  public async transferToPool(seriesId: string, base: boolean, wad: BigNumberish): Promise<ContractTransaction> {
-    return this.ladle.transferToPool(seriesId, base, wad)
+  public async transfer(token: string, receiver: string, wad: BigNumberish): Promise<ContractTransaction> {
+    return this.ladle.transfer(token, receiver, wad)
   }
 
   public routeAction(target: string, poolCall: string): string {
