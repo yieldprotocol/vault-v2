@@ -174,14 +174,14 @@ export class LadleWrapper {
     return this.ladle.roll(vaultId, newSeriesId, loan, max)
   }
 
-  public forwardPermitAction(id: string, isAsset: boolean, spender: string, amount: BigNumberish, deadline: BigNumberish, v: BigNumberish, r: Buffer, s: Buffer): string {
+  public forwardPermitAction(token: string, spender: string, amount: BigNumberish, deadline: BigNumberish, v: BigNumberish, r: Buffer, s: Buffer): string {
     return this.ladle.interface.encodeFunctionData('forwardPermit',
-      [id, isAsset, spender, amount, deadline, v, r, s]
+      [token, spender, amount, deadline, v, r, s]
     )
   }
 
-  public async forwardPermit(id: string, isAsset: boolean, spender: string, amount: BigNumberish, deadline: BigNumberish, v: BigNumberish, r: Buffer, s: Buffer): Promise<ContractTransaction> {
-    return this.ladle.forwardPermit(id, isAsset, spender, amount, deadline, v, r, s)
+  public async forwardPermit(token: string, spender: string, amount: BigNumberish, deadline: BigNumberish, v: BigNumberish, r: Buffer, s: Buffer): Promise<ContractTransaction> {
+    return this.ladle.forwardPermit(token, spender, amount, deadline, v, r, s)
   }
 
   public forwardDaiPermitAction(token: string, spender: string, nonce: BigNumberish, deadline: BigNumberish, approved: boolean, v: BigNumberish, r: Buffer, s: Buffer): string {

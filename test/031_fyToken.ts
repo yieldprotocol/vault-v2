@@ -183,7 +183,10 @@ describe('FYToken', function () {
         await fyToken.approve(ladle.address, WAD)
 
         await expect(
-          await ladle.batch([ladle.transferAction(fyToken.address, fyToken.address, WAD), ladle.redeemAction(seriesId, owner, WAD)])
+          await ladle.batch([
+            ladle.transferAction(fyToken.address, fyToken.address, WAD),
+            ladle.redeemAction(seriesId, owner, WAD),
+          ])
         )
           .to.emit(fyToken, 'Transfer')
           .withArgs(owner, fyToken.address, WAD)

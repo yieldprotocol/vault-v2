@@ -122,7 +122,7 @@ describe('Ladle - batch', function () {
 
     await ladle.batch([
       ladle.buildAction(seriesId, ilkId),
-      ladle.forwardPermitAction(ilkId, true, ilkJoin.address, posted, deadline, v, r, s),
+      ladle.forwardPermitAction(ilk.address, ilkJoin.address, posted, deadline, v, r, s),
       ladle.pourAction(cachedVaultId, owner, posted, borrowed),
     ])
 
@@ -199,7 +199,7 @@ describe('Ladle - batch', function () {
     await ladle.batch([
       ladle.buildAction(seriesId, ilkId),
       ladle.pourAction(cachedVaultId, owner, posted, borrowed),
-      ladle.forwardPermitAction(baseId, true, ladle.address, amount, deadline, v, r, s),
+      ladle.forwardPermitAction(base.address, ladle.address, amount, deadline, v, r, s),
       ladle.transferAction(base.address, pool.address, WAD.div(2)),
       ladle.repayAction(cachedVaultId, other, 0, 0),
     ])
@@ -225,7 +225,7 @@ describe('Ladle - batch', function () {
     await ladle.batch([
       ladle.buildAction(seriesId, ilkId),
       ladle.pourAction(cachedVaultId, owner, posted, borrowed),
-      ladle.forwardPermitAction(baseId, true, ladle.address, amount, deadline, v, r, s),
+      ladle.forwardPermitAction(base.address, ladle.address, amount, deadline, v, r, s),
       ladle.transferAction(base.address, pool.address, WAD),
       ladle.repayVaultAction(cachedVaultId, other, 0, MAX),
     ])

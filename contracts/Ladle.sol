@@ -416,19 +416,11 @@ contract Ladle is LadleStorage, AccessControl() {
 
     // ---- Permit management ----
 
-    /// @dev From an id, which can be an assetId or a seriesId, find the resulting asset or fyToken
-    function findToken(bytes6 id, bool isAsset)
-        private view returns (address token)
-    {
-        token = isAsset ? cauldron.assets(id) : address(getSeries(id).fyToken);
-        require (token != address(0), "Token not found");
-    }
-
-    /// @dev Execute an ERC2612 permit for the selected asset or fyToken
-    function forwardPermit(bytes6 id, bool isAsset, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
+    /// @dev Execute an ERC2612 permit for the selected token
+    function forwardPermit(IERC2612 token, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
         external payable
     {
-        IERC2612 token = IERC2612(findToken(id, isAsset));
+        require(tokens[address(token)], "Unknown token");
         token.permit(msg.sender, spender, amount, deadline, v, r, s);
     }
 
