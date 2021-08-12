@@ -145,7 +145,7 @@ contract Ladle is LadleStorage, AccessControl() {
         emit FeeSet(fee);
     }
 
-    // ---- Batching ----
+    // ---- Call management ----
 
     /// @dev Allows batched call to self (this contract).
     /// @param calls An array of inputs for each call.
@@ -159,6 +159,93 @@ contract Ladle is LadleStorage, AccessControl() {
 
         // build would have populated the cache, this deletes it
         cachedVaultId = bytes12(0);
+    }
+
+    /// @dev Allow users to route calls to a contract, to be used with batch
+    function route(address integration, bytes memory data)
+        external payable
+        returns (bytes memory result)
+    {
+        require(integrations[integration], "Unknown integration");
+        return router.route(integration, data);
+    }
+
+    /// @dev Allow users to use functionality coded in a module, to be used with batch
+    /// @notice Modules must not do any changes to the vault (owner, seriesId, ilkId),
+    /// it would be disastrous in combination with batch vault caching 
+    function moduleCall(address module, bytes memory data)
+        external payable
+        returns (bytes memory result)
+    {
+        require (modules[module], "Unregistered module");
+        bool success;
+        (success, result) = module.delegatecall(data);
+        if (!success) revert(RevertMsgExtractor.getRevertMsg(result));
+    }
+
+    // ---- Token management ----
+
+    /// @dev Execute an ERC2612 permit for the selected token
+    function forwardPermit(IERC2612 token, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
+        external payable
+    {
+        require(tokens[address(token)], "Unknown token");
+        token.permit(msg.sender, spender, amount, deadline, v, r, s);
+    }
+
+    /// @dev Execute a Dai-style permit for the selected token
+    function forwardDaiPermit(DaiAbstract token, address spender, uint256 nonce, uint256 deadline, bool allowed, uint8 v, bytes32 r, bytes32 s)
+        external payable
+    {
+        require(tokens[address(token)], "Unknown token");
+        token.permit(msg.sender, spender, nonce, deadline, allowed, v, r, s);
+    }
+
+    /// @dev Allow users to trigger a token transfer from themselves to a receiver through the ladle, to be used with batch
+    function transfer(IERC20 token, address receiver, uint128 wad)
+        external payable
+    {
+        require(tokens[address(token)], "Unknown token");
+        token.safeTransferFrom(msg.sender, receiver, wad);
+    }
+
+    /// @dev Retrieve any token in the Ladle
+    function retrieve(IERC20 token, address to) 
+        external payable
+        returns (uint256 amount)
+    {
+        require(tokens[address(token)], "Unknown token");
+        amount = token.balanceOf(address(this));
+        token.safeTransfer(to, amount);
+    }
+
+    /// @dev The WETH9 contract will send ether to BorrowProxy on `weth.withdraw` using this function.
+    receive() external payable { 
+        require (msg.sender == address(weth), "Only receive from WETH");
+    }
+
+    /// @dev Accept Ether, wrap it and forward it to the WethJoin
+    /// This function should be called first in a batch, and the Join should keep track of stored reserves
+    /// Passing the id for a join that doesn't link to a contract implemnting IWETH9 will fail
+    function joinEther(bytes6 etherId)
+        external payable
+        returns (uint256 ethTransferred)
+    {
+        ethTransferred = address(this).balance;
+        IJoin wethJoin = getJoin(etherId);
+        weth.deposit{ value: ethTransferred }();
+        IERC20(address(weth)).safeTransfer(address(wethJoin), ethTransferred);
+    }
+
+    /// @dev Unwrap Wrapped Ether held by this Ladle, and send the Ether
+    /// This function should be called last in a batch, and the Ladle should have no reason to keep an WETH balance
+    function exitEther(address payable to)
+        external payable
+        returns (uint256 ethTransferred)
+    {
+        ethTransferred = weth.balanceOf(address(this));
+        weth.withdraw(ethTransferred);
+        to.safeTransferETH(ethTransferred);
     }
 
     // ---- Vault management ----
@@ -404,86 +491,6 @@ contract Ladle is LadleStorage, AccessControl() {
         series.fyToken.burn(address(this), repaid);
     }
 
-    /// @dev Retrieve any token in the Ladle
-    function retrieve(IERC20 token, address to) 
-        external payable
-        returns (uint256 amount)
-    {
-        require(tokens[address(token)], "Unknown token");
-        amount = token.balanceOf(address(this));
-        token.safeTransfer(to, amount);
-    }
-
-    // ---- Permit management ----
-
-    /// @dev Execute an ERC2612 permit for the selected token
-    function forwardPermit(IERC2612 token, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
-        external payable
-    {
-        require(tokens[address(token)], "Unknown token");
-        token.permit(msg.sender, spender, amount, deadline, v, r, s);
-    }
-
-    /// @dev Execute a Dai-style permit for the selected token
-    function forwardDaiPermit(DaiAbstract token, address spender, uint256 nonce, uint256 deadline, bool allowed, uint8 v, bytes32 r, bytes32 s)
-        external payable
-    {
-        require(tokens[address(token)], "Unknown token");
-        token.permit(msg.sender, spender, nonce, deadline, allowed, v, r, s);
-    }
-
-    // ---- Ether management ----
-
-    /// @dev The WETH9 contract will send ether to BorrowProxy on `weth.withdraw` using this function.
-    receive() external payable { 
-        require (msg.sender == address(weth), "Only receive from WETH");
-    }
-
-    /// @dev Accept Ether, wrap it and forward it to the WethJoin
-    /// This function should be called first in a batch, and the Join should keep track of stored reserves
-    /// Passing the id for a join that doesn't link to a contract implemnting IWETH9 will fail
-    function joinEther(bytes6 etherId)
-        external payable
-        returns (uint256 ethTransferred)
-    {
-        ethTransferred = address(this).balance;
-        IJoin wethJoin = getJoin(etherId);
-        weth.deposit{ value: ethTransferred }();
-        IERC20(address(weth)).safeTransfer(address(wethJoin), ethTransferred);
-    }
-
-    /// @dev Unwrap Wrapped Ether held by this Ladle, and send the Ether
-    /// This function should be called last in a batch, and the Ladle should have no reason to keep an WETH balance
-    function exitEther(address payable to)
-        external payable
-        returns (uint256 ethTransferred)
-    {
-        ethTransferred = weth.balanceOf(address(this));
-        weth.withdraw(ethTransferred);
-        to.safeTransferETH(ethTransferred);
-    }
-
-    // ---- Pool router ----
-
-    /// @dev Allow users to trigger a token transfer from themselves to a receiver through the ladle, to be used with batch
-    function transfer(IERC20 token, address receiver, uint128 wad)
-        external payable
-    {
-        require(tokens[address(token)], "Unknown token");
-        token.safeTransferFrom(msg.sender, receiver, wad);
-    }
-
-    /// @dev Allow users to route calls to a contract, to be used with batch
-    function route(address integration, bytes memory data)
-        external payable
-        returns (bytes memory result)
-    {
-        require(integrations[integration], "Unknown integration");
-        return router.route(integration, data);
-    }
-
-    // ---- FYToken router ----
-
     /// @dev Allow users to redeem fyToken, to be used with batch.
     /// If 0 is passed as the amount to redeem, it redeems the fyToken balance of the Ladle instead.
     function redeem(bytes6 seriesId, address to, uint256 wad)
@@ -494,18 +501,4 @@ contract Ladle is LadleStorage, AccessControl() {
         return fyToken.redeem(to, wad != 0 ? wad : fyToken.balanceOf(address(this)));
     }
 
-    // ---- Module router ----
-
-    /// @dev Allow users to use functionality coded in a module, to be used with batch
-    /// @notice Modules must not do any changes to the vault (owner, seriesId, ilkId),
-    /// it would be disastrous in combination with batch vault caching 
-    function moduleCall(address module, bytes memory data)
-        external payable
-        returns (bytes memory result)
-    {
-        require (modules[module], "Unregistered module");
-        bool success;
-        (success, result) = module.delegatecall(data);
-        if (!success) revert(RevertMsgExtractor.getRevertMsg(result));
-    }
 }
