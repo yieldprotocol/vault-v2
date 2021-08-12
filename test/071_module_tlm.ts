@@ -69,10 +69,14 @@ describe('Ladle - module', function () {
     makerIlk = await tlm.FYDAI()
     gemJoin = (await tlm.ilks(makerIlk)).gemJoin
 
-    tlmModule = (await deployContract(ownerAcc, TLMModuleArtifact, [cauldron.address, zeroAddress, tlm.address])) as TLMModule
-    await ladle.grantRoles([id('setModule(address,bool)')], owner)
+    tlmModule = (await deployContract(ownerAcc, TLMModuleArtifact, [
+      cauldron.address,
+      zeroAddress,
+      tlm.address,
+    ])) as TLMModule
+    await ladle.grantRoles([id('addModule(address,bool)')], owner)
 
-    await ladle.setModule(tlmModule.address, true)
+    await ladle.addModule(tlmModule.address, true)
   })
 
   it('registers a series for sale in the TLM Module', async () => {

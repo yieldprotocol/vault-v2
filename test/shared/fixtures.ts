@@ -138,7 +138,7 @@ export class YieldEnvironment {
       [
         id('addJoin(bytes6,address)'),
         id('addPool(bytes6,address)'),
-        id('setModule(address,bool)'),
+        id('addModule(address,bool)'),
         id('setFee(uint256)'),
       ],
       receiver

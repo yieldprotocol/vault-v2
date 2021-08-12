@@ -92,16 +92,29 @@ contract Ladle is LadleStorage, AccessControl() {
         require (fyToken == pool.fyToken(), "Mismatched pool fyToken and series");
         require (fyToken.underlying() == address(pool.base()), "Mismatched pool base and series");
         pools[seriesId] = pool;
+
+        bool set = (pool != IPool(address(0))) ? true : false;
+        integrations[address(pool)] = set; // address(0) disables the integration
+        emit IntegrationAdded(address(pool), set);
         emit PoolAdded(seriesId, address(pool));
     }
 
     /// @dev Add or remove a module.
-    function setModule(address module, bool set)
+    function addModule(address module, bool set)
         external
         auth
     {
         modules[module] = set;
-        emit ModuleSet(module, set);
+        emit ModuleAdded(module, set);
+    }
+
+    /// @dev Add or remove an integration.
+    function addIntegration(address integration, bool set)
+        external
+        auth
+    {
+        integrations[integration] = set;
+        emit IntegrationAdded(integration, set);
     }
 
     /// @dev Set the fee parameter
@@ -450,15 +463,13 @@ contract Ladle is LadleStorage, AccessControl() {
         token.safeTransferFrom(msg.sender, address(pool), wad);
     }
 
-    /// @dev Allow users to route calls to a pool, to be used with batch
-    function route(bytes6 seriesId, bytes memory data)
+    /// @dev Allow users to route calls to a contract, to be used with batch
+    function route(address integration, bytes memory data)
         external payable
         returns (bytes memory result)
     {
-        address pool = address(getPool(seriesId));
-        bool success;
-        (success, result) = pool.call(data);
-        if (!success) revert(RevertMsgExtractor.getRevertMsg(result));
+        require(integrations[integration], "Unknown integration");
+        return router.route(integration, data);
     }
 
     // ---- FYToken router ----

@@ -49,8 +49,8 @@ export class LadleWrapper {
     return this.ladle.addPool(assetId, pool)
   }
 
-  public async setModule(module: string, set: boolean): Promise<ContractTransaction> {
-    return this.ladle.setModule(module, set)
+  public async addModule(module: string, set: boolean): Promise<ContractTransaction> {
+    return this.ladle.addModule(module, set)
   }
 
   public async grantRoles(roles: Array<string>, user: string): Promise<ContractTransaction> {
@@ -218,12 +218,12 @@ export class LadleWrapper {
     return this.ladle.transferToPool(seriesId, base, wad)
   }
 
-  public routeAction(seriesId: string, poolCall: string): string {
-    return this.ladle.interface.encodeFunctionData('route', [seriesId, poolCall])
+  public routeAction(target: string, poolCall: string): string {
+    return this.ladle.interface.encodeFunctionData('route', [target, poolCall])
   }
 
-  public async route(seriesId: string, poolCall: string): Promise<ContractTransaction> {
-    return this.ladle.route(seriesId, poolCall)
+  public async route(target: string, poolCall: string): Promise<ContractTransaction> {
+    return this.ladle.route(target, poolCall)
   }
 
   public transferToFYTokenAction(seriesId: string, wad: BigNumberish): string {
@@ -242,56 +242,56 @@ export class LadleWrapper {
     return this.ladle.redeem(seriesId, to, wad)
   }
 
-  public sellBaseAction(seriesId: string, receiver: string, min: BigNumberish): string {
+  public sellBaseAction(pool: string, receiver: string, min: BigNumberish): string {
     return this.ladle.interface.encodeFunctionData('route',
       [
-        seriesId,
+        pool,
         this.pool.encodeFunctionData('sellBase', [receiver, min])
       ]
     )
   }
 
-  public async sellBase(seriesId: string, receiver: string, min: BigNumberish): Promise<ContractTransaction> {
-    return this.ladle.route(seriesId, this.pool.encodeFunctionData('sellBase', [receiver, min]))
+  public async sellBase(pool: string, receiver: string, min: BigNumberish): Promise<ContractTransaction> {
+    return this.ladle.route(pool, this.pool.encodeFunctionData('sellBase', [receiver, min]))
   }
 
-  public sellFYTokenAction(seriesId: string, receiver: string, min: BigNumberish): string {
+  public sellFYTokenAction(pool: string, receiver: string, min: BigNumberish): string {
     return this.ladle.interface.encodeFunctionData('route',
       [
-        seriesId,
+        pool,
         this.pool.encodeFunctionData('sellFYToken', [receiver, min])
       ]
     )
   }
 
-  public async sellFYToken(seriesId: string, receiver: string, min: BigNumberish): Promise<ContractTransaction> {
-    return this.ladle.route(seriesId, this.pool.encodeFunctionData('sellFYToken', [receiver, min]))
+  public async sellFYToken(pool: string, receiver: string, min: BigNumberish): Promise<ContractTransaction> {
+    return this.ladle.route(pool, this.pool.encodeFunctionData('sellFYToken', [receiver, min]))
   }
 
-  public mintWithBaseAction(seriesId: string, receiver: string, fyTokenToBuy: BigNumberish, minTokensMinted: BigNumberish): string {
+  public mintWithBaseAction(pool: string, receiver: string, fyTokenToBuy: BigNumberish, minTokensMinted: BigNumberish): string {
     return this.ladle.interface.encodeFunctionData('route',
       [
-        seriesId,
+        pool,
         this.pool.encodeFunctionData('mintWithBase', [receiver, fyTokenToBuy, minTokensMinted])
       ]
     )
   }
 
-  public async mintWithBase(seriesId: string, receiver: string, fyTokenToBuy: BigNumberish, minTokensMinted: BigNumberish): Promise<ContractTransaction> {
-    return this.ladle.route(seriesId, this.pool.encodeFunctionData('mintWithBase', [receiver, fyTokenToBuy, minTokensMinted]))
+  public async mintWithBase(pool: string, receiver: string, fyTokenToBuy: BigNumberish, minTokensMinted: BigNumberish): Promise<ContractTransaction> {
+    return this.ladle.route(pool, this.pool.encodeFunctionData('mintWithBase', [receiver, fyTokenToBuy, minTokensMinted]))
   }
 
-  public burnForBaseAction(seriesId: string, receiver: string, minBaseOut: BigNumberish): string {
+  public burnForBaseAction(pool: string, receiver: string, minBaseOut: BigNumberish): string {
     return this.ladle.interface.encodeFunctionData('route',
       [
-        seriesId,
+        pool,
         this.pool.encodeFunctionData('burnForBase', [receiver, minBaseOut])
       ]
     )
   }
 
-  public async burnForBase(seriesId: string, receiver: string, minBaseOut: BigNumberish): Promise<ContractTransaction> {
-    return this.ladle.route(seriesId, this.pool.encodeFunctionData('burnForBase', [receiver, minBaseOut]))
+  public async burnForBase(pool: string, receiver: string, minBaseOut: BigNumberish): Promise<ContractTransaction> {
+    return this.ladle.route(pool, this.pool.encodeFunctionData('burnForBase', [receiver, minBaseOut]))
   }
 
   public tlmApproveAction(tlmModuleAddress: string, seriesId: string): string {
