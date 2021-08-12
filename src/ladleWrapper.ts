@@ -226,14 +226,6 @@ export class LadleWrapper {
     return this.ladle.route(target, poolCall)
   }
 
-  public transferToFYTokenAction(seriesId: string, wad: BigNumberish): string {
-    return this.ladle.interface.encodeFunctionData('transferToFYToken', [seriesId, wad])
-  }
-
-  public async transferToFYToken(seriesId: string, wad: BigNumberish): Promise<ContractTransaction> {
-    return this.ladle.transferToFYToken(seriesId, wad)
-  }
-
   public redeemAction(seriesId: string, to: string, wad: BigNumberish): string {
     return this.ladle.interface.encodeFunctionData('redeem', [seriesId, to, wad])
   }

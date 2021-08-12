@@ -492,14 +492,6 @@ contract Ladle is LadleStorage, AccessControl() {
 
     // ---- FYToken router ----
 
-    /// @dev Allow users to trigger a token transfer to a fyToken through the ladle, to be used with batch
-    function transferToFYToken(bytes6 seriesId, uint256 wad)
-        external payable
-    {
-        address fyToken = address(getSeries(seriesId).fyToken);
-        IERC20(fyToken).safeTransferFrom(msg.sender, address(fyToken), wad);
-    }
-
     /// @dev Allow users to redeem fyToken, to be used with batch.
     /// If 0 is passed as the amount to redeem, it redeems the fyToken balance of the Ladle instead.
     function redeem(bytes6 seriesId, address to, uint256 wad)
