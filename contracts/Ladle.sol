@@ -70,6 +70,14 @@ contract Ladle is LadleStorage, AccessControl() {
     // ---- Administration ----
 
     /// @dev Add or remove an integration.
+    function addIntegration(address integration, bool set)
+        external
+        auth
+    {
+        _addIntegration(integration, set);
+    }
+
+    /// @dev Add or remove an integration.
     function _addIntegration(address integration, bool set)
         private
     {
@@ -78,12 +86,22 @@ contract Ladle is LadleStorage, AccessControl() {
     }
 
     /// @dev Add or remove a token that the Ladle can call `transfer` or `permit` on.
+    function addToken(address token, bool set)
+        external
+        auth
+    {
+        _addToken(token, set);
+    }
+    
+
+    /// @dev Add or remove a token that the Ladle can call `transfer` or `permit` on.
     function _addToken(address token, bool set)
         private
     {
         tokens[token] = set;
         emit TokenAdded(token, set);
     }
+
 
     /// @dev Add a new Join for an Asset, or replace an existing one for a new one.
     /// There can be only one Join per Asset. Until a Join is added, no tokens of that Asset can be posted or withdrawn.
