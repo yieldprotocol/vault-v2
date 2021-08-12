@@ -69,6 +69,22 @@ contract Ladle is LadleStorage, AccessControl() {
 
     // ---- Administration ----
 
+    /// @dev Add or remove an integration.
+    function _addIntegration(address integration, bool set)
+        private
+    {
+        integrations[integration] = set;
+        emit IntegrationAdded(integration, set);
+    }
+
+    /// @dev Add or remove a token that the Ladle can call `transfer` or `permit` on.
+    function _addToken(address token, bool set)
+        private
+    {
+        tokens[token] = set;
+        emit TokenAdded(token, set);
+    }
+
     /// @dev Add a new Join for an Asset, or replace an existing one for a new one.
     /// There can be only one Join per Asset. Until a Join is added, no tokens of that Asset can be posted or withdrawn.
     function addJoin(bytes6 assetId, IJoin join)
@@ -81,9 +97,7 @@ contract Ladle is LadleStorage, AccessControl() {
         joins[assetId] = join;
 
         bool set = (join != IJoin(address(0))) ? true : false;
-        tokens[address(asset)] = set; // address(0) disables the token
-
-        emit TokenAdded(address(asset), set);
+        _addToken(asset, set);                  // address(0) disables the token
         emit JoinAdded(assetId, address(join));
     }
 
@@ -99,13 +113,10 @@ contract Ladle is LadleStorage, AccessControl() {
         pools[seriesId] = pool;
 
         bool set = (pool != IPool(address(0))) ? true : false;
-        tokens[address(fyToken)] = set; // address(0) disables the token
-        tokens[address(pool)] = set; // address(0) disables the token
-        integrations[address(pool)] = set; // address(0) disables the integration
+        _addToken(address(fyToken), set);       // address(0) disables the token
+        _addToken(address(pool), set);          // address(0) disables the token
+        _addIntegration(address(pool), set);    // address(0) disables the integration
 
-        emit TokenAdded(address(fyToken), set);
-        emit TokenAdded(address(pool), set);
-        emit IntegrationAdded(address(pool), set);
         emit PoolAdded(seriesId, address(pool));
     }
 
@@ -116,24 +127,6 @@ contract Ladle is LadleStorage, AccessControl() {
     {
         modules[module] = set;
         emit ModuleAdded(module, set);
-    }
-
-    /// @dev Add or remove an integration.
-    function addIntegration(address integration, bool set)
-        external
-        auth
-    {
-        integrations[integration] = set;
-        emit IntegrationAdded(integration, set);
-    }
-
-    /// @dev Add or remove a token that the Ladle can call `transfer` or `permit` on.
-    function addToken(address token, bool set)
-        external
-        auth
-    {
-        tokens[token] = set;
-        emit TokenAdded(token, set);
     }
 
     /// @dev Set the fee parameter
