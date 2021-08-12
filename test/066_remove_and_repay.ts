@@ -94,8 +94,8 @@ describe('Ladle - remove and repay', function () {
     await ladle.batch([
       ladle.routeAction(pool.address, burnCall), // burn to ladle
       ladle.repayLadleAction(vaultId), // ladle repay
-      ladle.retrieveAction(seriesId, false, owner), // retrieve fyToken
-      ladle.retrieveAction(baseId, true, owner), // retrieve base
+      ladle.retrieveAction(fyToken.address, owner), // retrieve fyToken
+      ladle.retrieveAction(base.address, owner), // retrieve base
     ])
 
     const baseOut = baseReservesBefore.sub(await base.balanceOf(pool.address))
@@ -125,7 +125,7 @@ describe('Ladle - remove and repay', function () {
       await ladle.batch([
         ladle.routeAction(pool.address, burnCall), // burn to ladle
         ladle.redeemAction(seriesId, owner, 0), // ladle redeem
-        ladle.retrieveAction(baseId, true, owner), // retrieve base
+        ladle.retrieveAction(base.address, owner), // retrieve base
       ])
 
       const baseOut = baseReservesBefore.sub(await base.balanceOf(pool.address))

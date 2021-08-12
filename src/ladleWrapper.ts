@@ -158,12 +158,12 @@ export class LadleWrapper {
     return this.ladle.repayLadle(vaultId)
   }
 
-  public retrieveAction(assetId: string, isAsset: boolean, to: string): string {
-    return this.ladle.interface.encodeFunctionData('retrieve', [assetId, isAsset, to])
+  public retrieveAction(token: string, to: string): string {
+    return this.ladle.interface.encodeFunctionData('retrieve', [token, to])
   }
 
-  public async retrieve(assetId: string, isAsset: boolean, to: string): Promise<ContractTransaction> {
-    return this.ladle.retrieve(assetId, isAsset, to)
+  public async retrieve(token: string, to: string): Promise<ContractTransaction> {
+    return this.ladle.retrieve(token, to)
   }
 
   public rollAction(vaultId: string, newSeriesId: string, loan: BigNumberish, max: BigNumberish): string {

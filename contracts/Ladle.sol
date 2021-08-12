@@ -79,6 +79,11 @@ contract Ladle is LadleStorage, AccessControl() {
         require (asset != address(0), "Asset not found");
         require (join.asset() == asset, "Mismatched asset and join");
         joins[assetId] = join;
+
+        bool set = (join != IJoin(address(0))) ? true : false;
+        tokens[address(asset)] = set; // address(0) disables the token
+
+        emit TokenAdded(address(asset), set);
         emit JoinAdded(assetId, address(join));
     }
 
@@ -94,7 +99,12 @@ contract Ladle is LadleStorage, AccessControl() {
         pools[seriesId] = pool;
 
         bool set = (pool != IPool(address(0))) ? true : false;
+        tokens[address(fyToken)] = set; // address(0) disables the token
+        tokens[address(pool)] = set; // address(0) disables the token
         integrations[address(pool)] = set; // address(0) disables the integration
+
+        emit TokenAdded(address(fyToken), set);
+        emit TokenAdded(address(pool), set);
         emit IntegrationAdded(address(pool), set);
         emit PoolAdded(seriesId, address(pool));
     }
@@ -115,6 +125,15 @@ contract Ladle is LadleStorage, AccessControl() {
     {
         integrations[integration] = set;
         emit IntegrationAdded(integration, set);
+    }
+
+    /// @dev Add or remove a token that the Ladle can call `transfer` or `permit` on.
+    function addToken(address token, bool set)
+        external
+        auth
+    {
+        tokens[token] = set;
+        emit TokenAdded(token, set);
     }
 
     /// @dev Set the fee parameter
@@ -385,12 +404,12 @@ contract Ladle is LadleStorage, AccessControl() {
         series.fyToken.burn(address(this), repaid);
     }
 
-    /// @dev Retrieve any asset or fyToken in the Ladle
-    function retrieve(bytes6 id, bool isAsset, address to) 
+    /// @dev Retrieve any token in the Ladle
+    function retrieve(IERC20 token, address to) 
         external payable
         returns (uint256 amount)
     {
-        IERC20 token = IERC20(findToken(id, isAsset));
+        require(tokens[address(token)], "Unknown token");
         amount = token.balanceOf(address(this));
         token.safeTransfer(to, amount);
     }

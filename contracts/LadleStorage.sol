@@ -13,6 +13,7 @@ contract LadleStorage {
     event PoolAdded(bytes6 indexed seriesId, address indexed pool);
     event ModuleAdded(address indexed module, bool indexed set);
     event IntegrationAdded(address indexed integration, bool indexed set);
+    event TokenAdded(address indexed token, bool indexed set);
     event FeeSet(uint256 fee);
 
     ICauldron public immutable cauldron;
@@ -24,7 +25,8 @@ contract LadleStorage {
     mapping (bytes6 => IJoin)                   public joins;            // Join contracts available to manage assets. The same Join can serve multiple assets (ETH-A, ETH-B, etc...)
     mapping (bytes6 => IPool)                   public pools;            // Pool contracts available to manage series. 12 bytes still free.
     mapping (address => bool)                   public modules;          // Trusted contracts to delegatecall anything on.
-    mapping (address => bool)                   public integrations;          // Trusted contracts to call anything on.
+    mapping (address => bool)                   public integrations;     // Trusted contracts to call anything on.
+    mapping (address => bool)                   public tokens;           // Trusted contracts to call `transfer` or `permit` on.
 
     constructor (ICauldron cauldron_, IWETH9 weth_) {
         cauldron = cauldron_;
