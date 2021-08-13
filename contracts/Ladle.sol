@@ -10,9 +10,10 @@ import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC2612.sol";
 import "dss-interfaces/src/dss/DaiAbstract.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "@yield-protocol/utils-v2/contracts/token/AllTransferHelper.sol";
+import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
 import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastU256I128.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU128I128.sol";
 import "./LadleStorage.sol";
 
@@ -21,9 +22,10 @@ import "./LadleStorage.sol";
 contract Ladle is LadleStorage, AccessControl() {
     using WMul for uint256;
     using CastU256U128 for uint256;
+    using CastU256I128 for uint256;
     using CastU128I128 for uint128;
-    using AllTransferHelper for IERC20;
-    using AllTransferHelper for address payable;
+    using TransferHelper for IERC20;
+    using TransferHelper for address payable;
 
     constructor (ICauldron cauldron, IWETH9 weth) LadleStorage(cauldron, weth) { }
 
@@ -334,7 +336,7 @@ contract Ladle is LadleStorage, AccessControl() {
         if (art != 0) series = getSeries(vault.seriesId);
 
         int128 fee;
-        if (art > 0) fee = ((series.maturity - block.timestamp) * uint256(int256(art)).wmul(borrowingFee)).u128().i128();
+        if (art > 0) fee = ((series.maturity - block.timestamp) * uint256(int256(art)).wmul(borrowingFee)).i128();
 
         // Update accounting
         cauldron.pour(vaultId, ink, art + fee);
@@ -494,7 +496,7 @@ contract Ladle is LadleStorage, AccessControl() {
         repaid = amount <= balances.art ? amount : balances.art;
 
         // Update accounting
-        cauldron.pour(vaultId, 0, -(repaid.u128().i128()));
+        cauldron.pour(vaultId, 0, -(repaid.i128()));
         series.fyToken.burn(address(this), repaid);
     }
 

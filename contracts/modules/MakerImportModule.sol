@@ -4,6 +4,7 @@ import "@yield-protocol/vault-interfaces/ICauldron.sol";
 import "@yield-protocol/vault-interfaces/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastU256I128.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU128I128.sol";
 import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
 import "@yield-protocol/utils-v2/contracts/math/WMulUp.sol";
@@ -57,6 +58,7 @@ interface IVat {
 /// ATTENTION: THIS MODULE IS A DRAFT AND IT IS NOT TO BE DEPLOYED UNTIL TESTED
 contract MakerImportModule is LadleStorage {
     using CastU256U128 for uint256;
+    using CastU256I128 for uint256;
     using CastU128I128 for uint128;
     using WMul for uint256;
     using WMulUp for uint256;
@@ -128,7 +130,7 @@ contract MakerImportModule is LadleStorage {
         if (art != 0) series = getSeries(vault.seriesId);
 
         int128 fee;
-        if (art > 0) fee = ((series.maturity - block.timestamp) * uint256(int256(art)).wmul(borrowingFee)).u128().i128();
+        if (art > 0) fee = ((series.maturity - block.timestamp) * uint256(int256(art)).wmul(borrowingFee)).i128();
 
         // Update accounting
         balances = cauldron.pour(vaultId, ink, art + fee);

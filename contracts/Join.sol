@@ -7,13 +7,13 @@ import "@yield-protocol/vault-interfaces/IJoin.sol";
 import "@yield-protocol/vault-interfaces/IJoinFactory.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "@yield-protocol/utils-v2/contracts/token/AllTransferHelper.sol";
+import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
 import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
 
 
 contract Join is IJoin, IERC3156FlashLender, AccessControl() {
-    using AllTransferHelper for IERC20;
+    using TransferHelper for IERC20;
     using WMul for uint256;
     using CastU256U128 for uint256;
 
