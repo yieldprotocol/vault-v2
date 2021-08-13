@@ -11,9 +11,9 @@ import "@yield-protocol/utils-v2/contracts/token/IERC2612.sol";
 import "dss-interfaces/src/dss/DaiAbstract.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/token/AllTransferHelper.sol";
-import "./math/WMul.sol";
-import "./math/CastU256U128.sol";
-import "./math/CastU128I128.sol";
+import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastU128I128.sol";
 import "./LadleStorage.sol";
 
 

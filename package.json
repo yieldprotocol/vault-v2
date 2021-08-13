@@ -1,6 +1,6 @@
 {
   "name": "@yield-protocol/vault-v2",
-  "version": "0.9.0-rc1",
+  "version": "0.9.0-rc2",
   "description": "Yield Collateralized Debt Engine v2",
   "author": "Yield Inc.",
   "files": [
@@ -33,8 +33,8 @@
     "@nomiclabs/hardhat-waffle": "^2.0.1",
     "@truffle/hdwallet-provider": "^1.0.40",
     "@types/mocha": "^8.0.0",
-    "@yield-protocol/utils-v2": "^2.2.21",
-    "@yield-protocol/vault-interfaces": "^2.0.39",
+    "@yield-protocol/utils-v2": "^2.2.23",
+    "@yield-protocol/vault-interfaces": "^2.0.41",
     "@yield-protocol/yieldspace-interfaces": "^2.0.17",
     "chai": "4.2.0",
     "dss-interfaces": "0.1.1",

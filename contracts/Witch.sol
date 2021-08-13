@@ -6,11 +6,11 @@ import "@yield-protocol/vault-interfaces/ILadle.sol";
 import "@yield-protocol/vault-interfaces/ICauldron.sol";
 import "@yield-protocol/vault-interfaces/IJoin.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
-import "./math/WMul.sol";
-import "./math/WDiv.sol";
-import "./math/WDivUp.sol";
-import "./math/CastU256U128.sol";
-import "./math/CastU256U32.sol";
+import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
+import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
+import "@yield-protocol/utils-v2/contracts/math/WDivUp.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastU256U32.sol";
 
 
 contract Witch is AccessControl() {

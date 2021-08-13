@@ -4,13 +4,13 @@ import "@yield-protocol/vault-interfaces/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "./math/WMul.sol";
-import "./math/WDiv.sol";
-import "./math/CastU128I128.sol";
-import "./math/CastI128U128.sol";
-import "./math/CastU256U128.sol";
-import "./math/CastU256U32.sol";
-import "./math/CastU256I256.sol";
+import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
+import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastU128I128.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastI128U128.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastU256U32.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastU256I256.sol";
 
 library CauldronMath {
     /// @dev Add a number (which might be negative) to a positive, and revert if the result is negative.
