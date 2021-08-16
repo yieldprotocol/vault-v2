@@ -18,8 +18,8 @@ contract FYTokenFactory is IFYTokenFactory, AccessControl {
     IOracle oracle,
     IJoin baseJoin,
     uint32 maturity,
-    string memory name,
-    string memory symbol
+    string calldata name,
+    string calldata symbol
   )
     external override
     auth
