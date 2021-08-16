@@ -66,7 +66,7 @@ describe('Ladle - route', function () {
     env = await loadFixture(fixture)
     cauldron = env.cauldron
     ladle = env.ladle.ladle
-    router = await ethers.getContractAt('Router', await ladle.router(), ownerAcc) as Router
+    router = (await ethers.getContractAt('Router', await ladle.router(), ownerAcc)) as Router
     base = env.assets.get(baseId) as ERC20Mock
     ilk = env.assets.get(ilkId) as ERC20Mock
     fyToken = env.series.get(seriesId) as FYToken
@@ -112,9 +112,9 @@ describe('Ladle - route', function () {
       await ladle.addIntegration(owner, true)
     })
 
-    it('transactions can\'t be routed to EOAs', async () => {
+    it("transactions can't be routed to EOAs", async () => {
       await expect(ladle.route(owner, '0x00000000')).to.be.revertedWith('Target is not a contract')
-    })  
+    })
 
     it('unknown tokens cannot be transferred through the Ladle', async () => {
       await expect(ladle.transfer(token2.address, other, WAD)).to.be.revertedWith('Unknown token')
