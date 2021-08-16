@@ -14,7 +14,7 @@ contract Router {
     }
 
     /// @dev Allow users to route calls to a pool, to be used with batch
-    function route(address target, bytes memory data)
+    function route(address target, bytes calldata data)
         external payable
         returns (bytes memory result)
     {

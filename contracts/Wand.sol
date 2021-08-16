@@ -117,7 +117,7 @@ contract Wand is AccessControl, Constants {
         bytes6 seriesId,
         bytes6 baseId,
         uint32 maturity,
-        bytes6[] memory ilkIds,
+        bytes6[] calldata ilkIds,
         string memory name,
         string memory symbol
     ) external auth {
