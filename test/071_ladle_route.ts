@@ -12,6 +12,7 @@ import { PoolMock } from '../typechain/PoolMock'
 import { RestrictedERC20Mock as ERC20Mock } from '../typechain/RestrictedERC20Mock'
 import { WETH9Mock } from '../typechain/WETH9Mock'
 import { Ladle } from '../typechain/Ladle'
+import { Router } from '../typechain/Router'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
@@ -29,6 +30,7 @@ describe('Ladle - route', function () {
   let other: string
   let cauldron: Cauldron
   let ladle: Ladle
+  let router: Router
   let token: ERC20Mock
   let token2: ERC20Mock
   let fyToken: FYToken
@@ -64,6 +66,7 @@ describe('Ladle - route', function () {
     env = await loadFixture(fixture)
     cauldron = env.cauldron
     ladle = env.ladle.ladle
+    router = await ethers.getContractAt('Router', await ladle.router(), ownerAcc) as Router
     base = env.assets.get(baseId) as ERC20Mock
     ilk = env.assets.get(ilkId) as ERC20Mock
     fyToken = env.series.get(seriesId) as FYToken
@@ -98,11 +101,20 @@ describe('Ladle - route', function () {
     expect(await ladle.integrations(cauldron.address)).to.be.false
   })
 
+  it('only the Ladle can use the Router', async () => {
+    await expect(router.route(cauldron.address, '0x00000000')).to.be.revertedWith('Only owner')
+  })
+
   describe('with tokens and integrations', async () => {
     beforeEach(async () => {
       await ladle.addToken(token.address, true)
       await ladle.addIntegration(token2.address, true)
+      await ladle.addIntegration(owner, true)
     })
+
+    it('transactions can\'t be routed to EOAs', async () => {
+      await expect(ladle.route(owner, '0x00000000')).to.be.revertedWith('Target is not a contract')
+    })  
 
     it('unknown tokens cannot be transferred through the Ladle', async () => {
       await expect(ladle.transfer(token2.address, other, WAD)).to.be.revertedWith('Unknown token')
