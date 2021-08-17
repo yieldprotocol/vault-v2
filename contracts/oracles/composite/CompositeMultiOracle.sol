@@ -88,7 +88,7 @@ contract CompositeMultiOracle is IOracle, AccessControl {
     }
 
     /**
-     * @notice Retrieve the value of the amount at the latest oracle price.. Same as `peek` for this oracle.
+     * @notice Retrieve the value of the amount at the latest oracle price, updating it if possible.
      * @return value
      */
     function get(bytes32 base, bytes32 quote, uint256 amount)
@@ -107,6 +107,10 @@ contract CompositeMultiOracle is IOracle, AccessControl {
         value = price * amount / 1e18;
     }
 
+    /**
+     * @notice Retrieve the value of the amount at the latest oracle price.
+     * @return value
+     */
     function _peek(bytes6 base, bytes6 quote, uint256 priceIn, uint256 updateTimeIn)
         private view returns (uint priceOut, uint updateTimeOut)
     {
@@ -117,6 +121,10 @@ contract CompositeMultiOracle is IOracle, AccessControl {
         updateTimeOut = (updateTimeOut < updateTimeIn) ? updateTimeOut : updateTimeIn;                 // Take the oldest update time
     }
 
+    /**
+     * @notice Retrieve the value of the amount at the latest oracle price, updating it if possible.
+     * @return value
+     */
     function _get(bytes6 base, bytes6 quote, uint256 priceIn, uint256 updateTimeIn)
         private returns (uint priceOut, uint updateTimeOut)
     {
@@ -127,6 +135,9 @@ contract CompositeMultiOracle is IOracle, AccessControl {
         updateTimeOut = (updateTimeOut < updateTimeIn) ? updateTimeOut : updateTimeIn;                 // Take the oldest update time
     }
 
+    /**
+     * @dev Set a new price source
+     */
     function _setSource(bytes6 base, bytes6 quote, address source) internal {
         uint8 decimals_ = IOracle(source).decimals();
         require (decimals_ <= 18, "Unsupported decimals");
@@ -137,6 +148,9 @@ contract CompositeMultiOracle is IOracle, AccessControl {
         emit SourceSet(base, quote, source);
     }
 
+    /**
+     * @dev Set a new price source as the combination of multiple already registered sources.
+     */
     function _setPath(bytes6 base, bytes6 quote, bytes6[] memory path) internal {
         bytes6 base_ = base;
         for (uint256 p = 0; p < path.length; p++) {

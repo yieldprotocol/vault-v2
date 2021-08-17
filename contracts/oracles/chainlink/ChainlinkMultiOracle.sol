@@ -60,7 +60,7 @@ contract ChainlinkMultiOracle is IOracle, AccessControl {
     }
 
     /**
-     * @notice Retrieve the value of the amount at the latest oracle price.. Same as `peek` for this oracle.
+     * @notice Retrieve the value of the amount at the latest oracle price. Same as `peek` for this oracle.
      * @return value
      */
     function get(bytes32 base, bytes32 quote, uint256 amount)
@@ -72,6 +72,10 @@ contract ChainlinkMultiOracle is IOracle, AccessControl {
         value = price * amount / 1e18;
     }
 
+    /**
+     * @notice Retrieve the value of the amount at the latest oracle price.
+     * @return value
+     */
     function _peek(bytes6 base, bytes6 quote) private view returns (uint price, uint updateTime) {
         int rawPrice;
         uint80 roundId;
@@ -89,6 +93,9 @@ contract ChainlinkMultiOracle is IOracle, AccessControl {
         }  
     }
 
+    /**
+     * @dev Set a new price source
+     */
     function _setSource(bytes6 base, bytes6 quote, address source) internal {
         uint8 decimals_ = AggregatorV3Interface(source).decimals();
         require (decimals_ <= 18, "Unsupported decimals");

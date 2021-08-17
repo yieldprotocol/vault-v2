@@ -60,6 +60,10 @@ contract CompoundMultiOracle is IOracle, AccessControl, Constants {
         value = price * amount / 1e18;
     }
 
+    /**
+     * @notice Retrieve the value of the amount at the latest oracle price.
+     * @return value
+     */
     function _peek(bytes6 base, bytes6 kind) private view returns (uint price, uint updateTime) {
         uint256 rawPrice;
         address source = sources[base][kind];
@@ -75,6 +79,9 @@ contract CompoundMultiOracle is IOracle, AccessControl, Constants {
         updateTime = block.timestamp;
     }
 
+    /**
+     * @dev Set a new price source
+     */
     function _setSource(bytes6 base, bytes6 kind, address source) internal {
         sources[base][kind] = source;
         emit SourceSet(base, kind, source);
