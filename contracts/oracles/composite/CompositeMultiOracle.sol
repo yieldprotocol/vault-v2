@@ -76,7 +76,8 @@ contract CompositeMultiOracle is IOracle, AccessControl {
         external view virtual override
         returns (uint256 value, uint256 updateTime)
     {
-        uint256 price = 1e18;
+        updateTime = block.timestamp;
+        uint256 price = 1e18; // 10 ** decimals
         bytes6 base_ = base.b6();
         bytes6 quote_ = quote.b6();
         bytes6[] memory path = paths[base_][quote_];
@@ -85,7 +86,7 @@ contract CompositeMultiOracle is IOracle, AccessControl {
             base_ = path[p];
         }
         (price, updateTime) = _peek(base_, quote_, price, updateTime);
-        value = price * amount / 1e18;
+        value = price * amount / 1e18; // Convert from our 10 ** decimals to `amount`
     }
 
     /**
@@ -95,7 +96,8 @@ contract CompositeMultiOracle is IOracle, AccessControl {
         external virtual override
         returns (uint256 value, uint256 updateTime)
     {
-        uint256 price = 1e18;
+        updateTime = block.timestamp;
+        uint256 price = 1e18; // 10 ** decimals
         bytes6 base_ = base.b6();
         bytes6 quote_ = quote.b6();
         bytes6[] memory path = paths[base_][quote_];
@@ -104,7 +106,7 @@ contract CompositeMultiOracle is IOracle, AccessControl {
             base_ = path[p];
         }
         (price, updateTime) = _get(base_, quote_, price, updateTime);
-        value = price * amount / 1e18;
+        value = price * amount / 1e18; // Convert from our 10 ** decimals to `amount`
     }
 
     /**
