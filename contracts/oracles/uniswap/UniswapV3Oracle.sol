@@ -57,14 +57,13 @@ contract UniswapV3Oracle is IOracle, AccessControl {
      */
     function setSources(bytes6[] memory bases, bytes6[] memory quotes, address[] memory sources_) external auth {
         require(bases.length == quotes.length && quotes.length == sources_.length, "Mismatched inputs");
-        for (uint256 i = 0; i < bases.length; i++) {
+        for (uint256 i; i < bases.length; i++) {
             _setSource(bases[i], quotes[i], sources_[i]);
         }
     }
 
     /**
      * @notice Retrieve the value of the amount at the latest oracle price.
-     * @return value
      */
     function peek(bytes32 base, bytes32 quote, uint256 amount)
         external view virtual override
@@ -75,7 +74,6 @@ contract UniswapV3Oracle is IOracle, AccessControl {
 
     /**
      * @notice Retrieve the value of the amount at the latest oracle price. Same as `peek` for this oracle.
-     * @return value
      */
     function get(bytes32 base, bytes32 quote, uint256 amount)
         external virtual override

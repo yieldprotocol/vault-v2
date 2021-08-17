@@ -36,12 +36,13 @@ contract CompositeMultiOracle is IOracle, AccessControl {
      * @notice Set or reset a number of oracle sources
      */
     function setSources(bytes6[] memory bases, bytes6[] memory quotes, address[] memory sources_) external auth {
+        uint256 length = bases.length;
         require(
-            bases.length == quotes.length && 
-            bases.length == sources_.length,
+            length == quotes.length && 
+            length == sources_.length,
             "Mismatched inputs"
         );
-        for (uint256 i = 0; i < bases.length; i++) {
+        for (uint256 i; i < length; i++) {
             _setSource(bases[i], quotes[i], sources_[i]);
         }
     }
@@ -62,14 +63,13 @@ contract CompositeMultiOracle is IOracle, AccessControl {
             bases.length == paths_.length,
             "Mismatched inputs"
         );
-        for (uint256 i = 0; i < bases.length; i++) {
+        for (uint256 i; i < bases.length; i++) {
             _setPath(bases[i], quotes[i], paths_[i]);
         }
     }
 
     /**
      * @notice Retrieve the value of the amount at the latest oracle price.
-     * @return value
      */
     function peek(bytes32 base, bytes32 quote, uint256 amount)
         external view virtual override
@@ -89,7 +89,6 @@ contract CompositeMultiOracle is IOracle, AccessControl {
 
     /**
      * @notice Retrieve the value of the amount at the latest oracle price, updating it if possible.
-     * @return value
      */
     function get(bytes32 base, bytes32 quote, uint256 amount)
         external virtual override
@@ -109,7 +108,6 @@ contract CompositeMultiOracle is IOracle, AccessControl {
 
     /**
      * @notice Retrieve the value of the amount at the latest oracle price.
-     * @return value
      */
     function _peek(bytes6 base, bytes6 quote, uint256 priceIn, uint256 updateTimeIn)
         private view returns (uint priceOut, uint updateTimeOut)
@@ -123,7 +121,6 @@ contract CompositeMultiOracle is IOracle, AccessControl {
 
     /**
      * @notice Retrieve the value of the amount at the latest oracle price, updating it if possible.
-     * @return value
      */
     function _get(bytes6 base, bytes6 quote, uint256 priceIn, uint256 updateTimeIn)
         private returns (uint priceOut, uint updateTimeOut)

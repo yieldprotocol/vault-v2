@@ -29,14 +29,14 @@ contract CompoundMultiOracle is IOracle, AccessControl, Constants {
      * @notice Set or reset an oracle source
      */
     function setSources(bytes6[] memory bases, bytes6[] memory kinds, address[] memory sources_) external auth {
-        require(bases.length == kinds.length && kinds.length == sources_.length, "Mismatched inputs");
-        for (uint256 i = 0; i < bases.length; i++)
+        uint256 length = bases.length;
+        require(length == kinds.length && length == sources_.length, "Mismatched inputs");
+        for (uint256 i; i < length; i++)
             _setSource(bases[i], kinds[i], sources_[i]);
     }
 
     /**
      * @notice Retrieve the value of the amount at the latest oracle price.
-     * @return value
      */
     function peek(bytes32 base, bytes32 kind, uint256 amount)
         external view virtual override
@@ -49,7 +49,6 @@ contract CompoundMultiOracle is IOracle, AccessControl, Constants {
 
     /**
      * @notice Retrieve the value of the amount at the latest oracle price. Same as `peek` for this oracle.
-     * @return value
      */
     function get(bytes32 base, bytes32 kind, uint256 amount)
         external virtual override
@@ -62,7 +61,6 @@ contract CompoundMultiOracle is IOracle, AccessControl, Constants {
 
     /**
      * @notice Retrieve the value of the amount at the latest oracle price.
-     * @return value
      */
     function _peek(bytes6 base, bytes6 kind) private view returns (uint price, uint updateTime) {
         uint256 rawPrice;

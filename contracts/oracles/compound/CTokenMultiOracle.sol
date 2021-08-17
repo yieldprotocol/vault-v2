@@ -34,19 +34,19 @@ contract CTokenMultiOracle is IOracle, AccessControl, Constants {
      * @notice Set or reset a number of oracle sources and their inverses
      */
     function setSources(bytes6[] memory cTokenIds, bytes6[] memory underlyings, address[] memory cTokens) external auth {
+        uint256 length = cTokenIds.length;
         require(
-            cTokenIds.length == underlyings.length && 
-            cTokenIds.length == cTokens.length,
+            length == underlyings.length && 
+            length == cTokens.length,
             "Mismatched inputs"
         );
-        for (uint256 i = 0; i < cTokenIds.length; i++) {
+        for (uint256 i; i < length; i++) {
             _setSource(cTokenIds[i], underlyings[i], cTokens[i]);
         }
     }
 
     /**
      * @notice Retrieve the value of the amount at the latest oracle price.
-     * @return value
      */
     function peek(bytes32 base, bytes32 quote, uint256 amount)
         external view virtual override
@@ -59,7 +59,6 @@ contract CTokenMultiOracle is IOracle, AccessControl, Constants {
 
     /**
      * @notice Retrieve the value of the amount at the latest oracle price.
-     * @return value
      */
     function get(bytes32 base, bytes32 quote, uint256 amount)
         external virtual override

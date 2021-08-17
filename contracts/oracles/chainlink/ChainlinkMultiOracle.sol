@@ -36,19 +36,19 @@ contract ChainlinkMultiOracle is IOracle, AccessControl {
      * @notice Set or reset a number of oracle sources and their inverses
      */
     function setSources(bytes6[] memory bases, bytes6[] memory quotes, address[] memory sources_) external auth {
+        uint256 length = bases.length;
         require(
-            bases.length == quotes.length && 
-            bases.length == sources_.length,
+            length == quotes.length && 
+            length == sources_.length,
             "Mismatched inputs"
         );
-        for (uint256 i = 0; i < bases.length; i++) {
+        for (uint256 i; i < length; i++) {
             _setSource(bases[i], quotes[i], sources_[i]);
         }
     }
 
     /**
      * @notice Retrieve the value of the amount at the latest oracle price.
-     * @return value
      */
     function peek(bytes32 base, bytes32 quote, uint256 amount)
         external view virtual override
@@ -61,7 +61,6 @@ contract ChainlinkMultiOracle is IOracle, AccessControl {
 
     /**
      * @notice Retrieve the value of the amount at the latest oracle price. Same as `peek` for this oracle.
-     * @return value
      */
     function get(bytes32 base, bytes32 quote, uint256 amount)
         external virtual override
@@ -74,7 +73,6 @@ contract ChainlinkMultiOracle is IOracle, AccessControl {
 
     /**
      * @notice Retrieve the value of the amount at the latest oracle price.
-     * @return value
      */
     function _peek(bytes6 base, bytes6 quote) private view returns (uint price, uint updateTime) {
         int rawPrice;

@@ -146,7 +146,7 @@ contract Cauldron is AccessControl() {
             series_.fyToken != IFYToken(address(0)),
             "Series not found"
         );
-        for (uint256 i = 0; i < ilkIds.length; i++) {
+        for (uint256 i; i < ilkIds.length; i++) {
             require (
                 spotOracles[series_.baseId][ilkIds[i]].oracle != IOracle(address(0)),
                 "Spot oracle not found"
