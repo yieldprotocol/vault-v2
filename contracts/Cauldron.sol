@@ -440,7 +440,7 @@ contract Cauldron is AccessControl() {
     {
         require (uint32(block.timestamp) >= series_.maturity, "Only after maturity");
         IOracle rateOracle = rateOracles[series_.baseId];
-        (uint256 rateAtMaturity,) = rateOracle.get(series_.baseId, bytes32("rate"), 1e18);
+        (uint256 rateAtMaturity,) = rateOracle.get(series_.baseId, bytes32("rate"), 0);   // The value returned is an accumulator, it doesn't need an input amount
         ratesAtMaturity[seriesId] = rateAtMaturity;
         emit SeriesMatured(seriesId, rateAtMaturity);
     }
@@ -465,7 +465,7 @@ contract Cauldron is AccessControl() {
             _mature(seriesId, series_);
         } else {
             IOracle rateOracle = rateOracles[series_.baseId];
-            (uint256 rate,) = rateOracle.get(series_.baseId, bytes32("rate"), 1e18);
+            (uint256 rate,) = rateOracle.get(series_.baseId, bytes32("rate"), 0);   // The value returned is an accumulator, it doesn't need an input amount
             accrual_ = rate.wdiv(rateAtMaturity);
         }
         accrual_ = accrual_ >= 1e18 ? accrual_ : 1e18;     // The accrual can't be below 1 (with 18 decimals)

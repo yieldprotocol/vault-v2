@@ -43,14 +43,14 @@ contract CompositeMultiOracle is IOracle, AccessControl {
     }
 
     /**
-     * @notice Set or reset an price path
+     * @notice Set or reset an price path and its reverse
      */
     function setPath(bytes6 base, bytes6 quote, bytes6[] memory path) external auth {
         _setPath(base, quote, path);
     }
 
     /**
-     * @notice Set or reset a number of price paths
+     * @notice Set or reset a number of price paths and their reverses
      */
     function setPaths(bytes6[] memory bases, bytes6[] memory quotes, bytes6[][] memory paths_) external auth {
         uint256 length = bases.length;
@@ -128,23 +128,30 @@ contract CompositeMultiOracle is IOracle, AccessControl {
 
     /**
      * @dev Set a new price source. It must conform to the IOracle interface and have the same decimals.
+     * @notice The price source must provide also the price of the reverse.
      */
     function _setSource(bytes6 base, bytes6 quote, IOracle source) internal {
         require (source.decimals() == decimals, "Unsupported decimals");
         sources[base][quote] = source;
+        sources[quote][base] = source;
         emit SourceSet(base, quote, source);
+        emit SourceSet(quote, base, source);
     }
 
     /**
-     * @dev Set a new price source as the combination of multiple already registered sources.
+     * @dev Set a new price source and their reverse as the combination of multiple already registered sources.
      */
     function _setPath(bytes6 base, bytes6 quote, bytes6[] memory path) internal {
+        bytes6[] memory reverse = new bytes6[](path.length);
         bytes6 base_ = base;
         for (uint256 p = 0; p < path.length; p++) {
             require (sources[base_][path[p]] != IOracle(address(0)), "Source not found");
             base_ = path[p];
+            reverse[path.length - (p + 1)] = base_;
         }
         paths[base][quote] = path;
+        paths[quote][base] = reverse;
         emit PathSet(base, quote, path);
+        emit PathSet(quote, base, path);
     }
 }

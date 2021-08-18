@@ -14,6 +14,8 @@ import CTokenMultiOracleArtifact from '../artifacts/contracts/oracles/compound/C
 import ChainlinkAggregatorV3MockArtifact from '../artifacts/contracts/mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol/ChainlinkAggregatorV3Mock.json'
 import CTokenChiMockArtifact from '../artifacts/contracts/mocks/oracles/compound/CTokenChiMock.sol/CTokenChiMock.json'
 import CTokenRateMockArtifact from '../artifacts/contracts/mocks/oracles/compound/CTokenRateMock.sol/CTokenRateMock.json'
+import CDaiMockArtifact from '../artifacts/contracts/mocks/oracles/compound/CDaiMock.sol/CDaiMock.json'
+import CUSDCMockArtifact from '../artifacts/contracts/mocks/oracles/compound/CUSDCMock.sol/CUSDCMock.json'
 import UniswapV3FactoryMockArtifact from '../artifacts/contracts/mocks/oracles/uniswap/UniswapV3FactoryMock.sol/UniswapV3FactoryMock.json'
 import UniswapV3OracleArtifact from '../artifacts/contracts/oracles/uniswap/UniswapV3Oracle.sol/UniswapV3Oracle.json'
 
@@ -24,6 +26,8 @@ import { CTokenMultiOracle } from '../typechain/CTokenMultiOracle'
 import { ChainlinkAggregatorV3Mock } from '../typechain/ChainlinkAggregatorV3Mock'
 import { CTokenChiMock } from '../typechain/CTokenChiMock'
 import { CTokenRateMock } from '../typechain/CTokenRateMock'
+import { CDaiMock } from '../typechain/CDaiMock'
+import { CUSDCMock } from '../typechain/CUSDCMock'
 import { UniswapV3FactoryMock } from '../typechain/UniswapV3FactoryMock'
 import { UniswapV3PoolMock } from '../typechain/UniswapV3PoolMock'
 import { UniswapV3Oracle } from '../typechain/UniswapV3Oracle'
@@ -49,13 +53,17 @@ describe('Oracle', function () {
   let ethAggregator: ChainlinkAggregatorV3Mock
   let cTokenChi: CTokenChiMock
   let cTokenRate: CTokenRateMock
+  let cDai: CDaiMock
+  let cUSDC: CUSDCMock
   let uniswapV3Factory: UniswapV3FactoryMock
   let uniswapV3Pool: UniswapV3PoolMock
   let uniswapV3PoolAddress: string
   let uniswapV3Oracle: UniswapV3Oracle
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const cBaseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const usdcId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const cDaiId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const cUSDCId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const usdQuoteId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ethQuoteId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const mockBytes6 = ethers.utils.hexlify(ethers.utils.randomBytes(6))
@@ -84,6 +92,8 @@ describe('Oracle', function () {
 
     cTokenChi = (await deployContract(ownerAcc, CTokenChiMockArtifact, [])) as CTokenChiMock
     cTokenRate = (await deployContract(ownerAcc, CTokenRateMockArtifact, [])) as CTokenRateMock
+    cDai = (await deployContract(ownerAcc, CDaiMockArtifact, [])) as CDaiMock
+    cUSDC = (await deployContract(ownerAcc, CUSDCMockArtifact, [])) as CUSDCMock
 
     compoundMultiOracle = (await deployContract(ownerAcc, CompoundMultiOracleArtifact, [])) as CompoundMultiOracle
     await compoundMultiOracle.grantRole(id('setSources(bytes6[],bytes6[],address[])'), owner)
@@ -91,7 +101,7 @@ describe('Oracle', function () {
 
     cTokenMultiOracle = (await deployContract(ownerAcc, CTokenMultiOracleArtifact, [])) as CTokenMultiOracle
     await cTokenMultiOracle.grantRole(id('setSources(bytes6[],bytes6[],address[])'), owner)
-    await cTokenMultiOracle.setSources([cBaseId], [baseId], [cTokenChi.address])
+    await cTokenMultiOracle.setSources([cDaiId, cUSDCId], [baseId, usdcId], [cDai.address, cUSDC.address])
 
     uniswapV3Factory = (await deployContract(ownerAcc, UniswapV3FactoryMockArtifact, [])) as UniswapV3FactoryMock
     const token0: string = ethers.utils.HDNode.fromSeed('0x0123456789abcdef0123456789abcdef').address
@@ -161,18 +171,26 @@ describe('Oracle', function () {
   })
 
   it('sets and retrieves the cToken spot price from a cToken multioracle', async () => {
-    await cTokenChi.set(WAD.mul(2))
-    expect(
-      (await cTokenMultiOracle.callStatic.get(bytes6ToBytes32(cBaseId), bytes6ToBytes32(baseId), WAD))[0]
-    ).to.equal(WAD.mul(2))
-    expect(
-      (await cTokenMultiOracle.callStatic.get(bytes6ToBytes32(baseId), bytes6ToBytes32(cBaseId), WAD))[0]
-    ).to.equal(WAD.div(2))
+    await cDai.set(WAD.mul(2).mul(10 ** 10)) // cDai has 18 + 10 decimals
+    await cUSDC.set(WAD.mul(2).div(100)) // USDC has 6 + 10 decimals
 
-    expect((await cTokenMultiOracle.peek(bytes6ToBytes32(cBaseId), bytes6ToBytes32(baseId), WAD))[0]).to.equal(
+    expect((await cTokenMultiOracle.callStatic.get(bytes6ToBytes32(cDaiId), bytes6ToBytes32(baseId), WAD))[0]).to.equal(
       WAD.mul(2)
     )
-    expect((await cTokenMultiOracle.peek(bytes6ToBytes32(baseId), bytes6ToBytes32(cBaseId), WAD))[0]).to.equal(
+    expect(
+      (await cTokenMultiOracle.callStatic.get(bytes6ToBytes32(cUSDCId), bytes6ToBytes32(usdcId), WAD))[0]
+    ).to.equal(WAD.mul(2))
+    expect((await cTokenMultiOracle.callStatic.get(bytes6ToBytes32(baseId), bytes6ToBytes32(cDaiId), WAD))[0]).to.equal(
+      WAD.div(2)
+    )
+
+    expect((await cTokenMultiOracle.peek(bytes6ToBytes32(cDaiId), bytes6ToBytes32(baseId), WAD))[0]).to.equal(
+      WAD.mul(2)
+    )
+    expect((await cTokenMultiOracle.peek(bytes6ToBytes32(cUSDCId), bytes6ToBytes32(usdcId), WAD))[0]).to.equal(
+      WAD.mul(2)
+    )
+    expect((await cTokenMultiOracle.peek(bytes6ToBytes32(baseId), bytes6ToBytes32(cDaiId), WAD))[0]).to.equal(
       WAD.div(2)
     )
   })

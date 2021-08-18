@@ -7,8 +7,7 @@ import "./CTokenInterface.sol";
 
 contract CompoundChiOracle is IOracle {
 
-    uint public constant SCALE_FACTOR = 1; // I think we don't need scaling for rate and chi oracles
-    uint8 public constant override decimals = 18;
+    uint8 public constant override decimals = 1; // The Chi Oracle tracks an accumulator, and it makes no sense to talk of decimals
 
     address public immutable source;
 
@@ -17,37 +16,31 @@ contract CompoundChiOracle is IOracle {
     }
 
     /**
-     * @notice Retrieve the latest price of the price oracle.
-     * @return price
+     * @notice Retrieve the latest value of the chi accumulator (exchangeRateStored).
      */
-    function _peek() private view returns (uint price, uint updateTime) {
-        uint rawPrice = CTokenInterface(source).exchangeRateStored();
-        require(rawPrice > 0, "Compound chi is zero");
-        price = rawPrice * SCALE_FACTOR;
+    function _peek() private view returns (uint accumulator, uint updateTime) {
+        accumulator = CTokenInterface(source).exchangeRateStored();
+        require(accumulator > 0, "Compound chi is zero");
         updateTime = block.timestamp;
     }
 
     /**
-     * @notice Retrieve the value of the amount at the latest oracle price.
+     * @notice Retrieve the latest stored accumulator.
      */
-    function peek(bytes32, bytes32, uint256 amount)
+    function peek(bytes32, bytes32, uint256)
         external view virtual override
-        returns (uint256 value, uint256 updateTime)
+        returns (uint256 accumulator, uint256 updateTime)
     {
-        uint256 price;
-        (price, updateTime) = _peek();
-        value = price * amount / 1e18;
+        (accumulator, updateTime) = _peek();
     }
 
     /**
-     * @notice Retrieve the value of the amount at the latest oracle price. Same as `peek` for this oracle.
+     * @notice Retrieve the value of the accumulator, updating it if necessary. Same as `peek` for this oracle.
      */
-    function get(bytes32, bytes32, uint256 amount)
+    function get(bytes32, bytes32, uint256)
         external virtual override
-        returns (uint256 value, uint256 updateTime)
+        returns (uint256 accumulator, uint256 updateTime)
     {
-        uint256 price;
-        (price, updateTime) = _peek();
-        value = price * amount / 1e18;
+        (accumulator, updateTime) = _peek();
     }
 }

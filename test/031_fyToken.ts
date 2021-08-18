@@ -9,6 +9,7 @@ import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { CompoundMultiOracle } from '../typechain/CompoundMultiOracle'
 import { ISourceMock } from '../typechain/ISourceMock'
+import { CTokenChiMock } from '../typechain/CTokenChiMock'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
@@ -16,6 +17,7 @@ const { loadFixture } = waffle
 
 import { YieldEnvironment } from './shared/fixtures'
 import { LadleWrapper } from '../src/ladleWrapper'
+import { BigNumber } from 'ethers'
 
 describe('FYToken', function () {
   this.timeout(0)
@@ -28,7 +30,7 @@ describe('FYToken', function () {
   let base: ERC20Mock
   let baseJoin: Join
   let chiOracle: CompoundMultiOracle
-  let chiSource: ISourceMock
+  let chiSource: CTokenChiMock
   let ladle: LadleWrapper
 
   async function fixture() {
@@ -58,7 +60,7 @@ describe('FYToken', function () {
     baseJoin = env.joins.get(baseId) as Join
     fyToken = env.series.get(seriesId) as FYToken
     chiOracle = (env.oracles.get(CHI) as unknown) as CompoundMultiOracle
-    chiSource = (await ethers.getContractAt('ISourceMock', await chiOracle.sources(baseId, CHI))) as ISourceMock
+    chiSource = (await ethers.getContractAt('CTokenChiMock', await chiOracle.sources(baseId, CHI))) as CTokenChiMock
 
     await baseJoin.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], fyToken.address)
     await baseJoin.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], owner)
@@ -123,15 +125,15 @@ describe('FYToken', function () {
     })
 
     describe('once matured', async () => {
-      const accrual = WAD.mul(110).div(100) // accrual is 10%
+      let accrual = WAD.mul(110).div(100) // accrual is 10%, with 18 decimals
 
       beforeEach(async () => {
         await fyToken.mature()
-        await chiSource.set(accrual) // Since spot was 1 when recorded at maturity, accrual is equal to the current spot
+        await chiSource.set((await chiSource.exchangeRateStored()).mul(110).div(100)) // Increase the accumulator at source by 10%, to match the accrual
       })
 
       it("chi accrual can't be below 1", async () => {
-        await chiSource.set(WAD.mul(100).div(110))
+        await chiSource.set((await chiSource.exchangeRateStored()).mul(100).div(110))
         expect(await fyToken.callStatic.accrual()).to.equal(WAD)
       })
 
