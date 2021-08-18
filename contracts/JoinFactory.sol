@@ -19,8 +19,8 @@ contract JoinFactory is IJoinFactory, AccessControl {
   {
     Join join = new Join(asset);
 
-    join.grantRole(join.ROOT(), msg.sender);
-    join.renounceRole(join.ROOT(), address(this));
+    join.grantRole(ROOT, msg.sender);
+    join.renounceRole(ROOT, address(this));
     
     emit JoinCreated(asset, address(join));
 

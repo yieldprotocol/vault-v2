@@ -81,8 +81,8 @@ contract Wand is AccessControl, Constants {
         sigs[0] = JOIN;
         sigs[1] = EXIT;
         join.grantRoles(sigs, address(ladle));
-        join.grantRole(join.ROOT(), msg.sender);
-        // join.renounceRole(join.ROOT(), address(this));  // Wand requires ongoing rights to set up permissions to joins
+        join.grantRole(ROOT, msg.sender);
+        // join.renounceRole(ROOT, address(this));  // Wand requires ongoing rights to set up permissions to joins
         ladle.addJoin(assetId, address(join));
     }
 
@@ -151,8 +151,8 @@ contract Wand is AccessControl, Constants {
         fyToken.grantRoles(sigs, address(ladle));
 
         // Pass ownership of the fyToken to msg.sender
-        fyToken.grantRole(fyToken.ROOT(), msg.sender);
-        fyToken.renounceRole(fyToken.ROOT(), address(this));
+        fyToken.grantRole(ROOT, msg.sender);
+        fyToken.renounceRole(ROOT, address(this));
 
         // Add fyToken/series to the Cauldron and approve ilks for the series
         cauldron.addSeries(seriesId, baseId, IFYToken(address(fyToken)));

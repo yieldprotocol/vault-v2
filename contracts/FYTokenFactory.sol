@@ -34,8 +34,8 @@ contract FYTokenFactory is IFYTokenFactory, AccessControl {
       symbol    // Derive from base and maturity, perhaps
     );
 
-    fyToken.grantRole(fyToken.ROOT(), msg.sender);
-    fyToken.renounceRole(fyToken.ROOT(), address(this));
+    fyToken.grantRole(ROOT, msg.sender);
+    fyToken.renounceRole(ROOT, address(this));
     
     emit FYTokenCreated(address(fyToken), baseJoin.asset(), maturity);
 
