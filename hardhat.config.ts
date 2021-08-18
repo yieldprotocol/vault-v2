@@ -83,7 +83,7 @@ if (!etherscanKey) {
 
 module.exports = {
   solidity: {
-    version: '0.8.1',
+    version: '0.8.6',
     settings: {
       optimizer: {
         enabled: true,
