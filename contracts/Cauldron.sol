@@ -6,6 +6,7 @@ import "@yield-protocol/vault-interfaces/DataTypes.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
 import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
+import "@yield-protocol/utils-v2/contracts/math/WDivUp.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU128I128.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastI128U128.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
@@ -24,6 +25,7 @@ contract Cauldron is AccessControl() {
     using CauldronMath for uint128;
     using WMul for uint256;
     using WDiv for uint256;
+    using WDivUp for uint256;
     using CastU128I128 for uint128;
     using CastI128U128 for int128;
     using CastU256U128 for uint256;
@@ -257,14 +259,14 @@ contract Cauldron is AccessControl() {
     }
 
     /// @dev Convert a debt amount for a series from base to fyToken terms.
-    /// @notice Think about rounding if using, since we are dividing.
+    /// @notice Think about rounding up if using, since we are dividing.
     function debtFromBase(bytes6 seriesId, uint128 base)
         external
         returns (uint128 art)
     {
         if (uint32(block.timestamp) >= series[seriesId].maturity) {
             DataTypes.Series memory series_ = series[seriesId];
-            art = uint256(base).wdiv(_accrual(seriesId, series_)).u128();
+            art = uint256(base).wdivup(_accrual(seriesId, series_)).u128();
         } else {
             art = base;
         }
