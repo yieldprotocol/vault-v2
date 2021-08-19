@@ -38,7 +38,6 @@ contract ChainlinkOracle is IOracle {
 
     /**
      * @notice Retrieve the value of the amount at the latest oracle price.
-     * @return value
      */
     function peek(bytes32, bytes32, uint256 amount)
         external view virtual override
@@ -51,7 +50,6 @@ contract ChainlinkOracle is IOracle {
 
     /**
      * @notice Retrieve the value of the amount at the latest oracle price.. Same as `peek` for this oracle.
-     * @return value
      */
     function get(bytes32, bytes32, uint256 amount)
         external virtual override

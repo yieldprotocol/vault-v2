@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity >=0.5.16;
 
+import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
+
 interface CTokenInterface {
     /**
      * @notice Accumulator of the total earned interest rate since the opening of the market
@@ -20,4 +22,9 @@ interface CTokenInterface {
      * @return Calculated exchange rate scaled by 1e18
      */
     function exchangeRateStored() external view returns (uint);
+
+    /**
+     * @notice Underlying asset for this CToken
+     */
+    function underlying() external view returns (address);
 }

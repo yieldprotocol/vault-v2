@@ -2,9 +2,10 @@
 pragma solidity 0.8.6;
 
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
+import "@yield-protocol/utils-v2/contracts/token/IERC20Metadata.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
 import "../../constants/Constants.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
 import "./CTokenInterface.sol";
 
 
@@ -34,19 +35,19 @@ contract CTokenMultiOracle is IOracle, AccessControl, Constants {
      * @notice Set or reset a number of oracle sources and their inverses
      */
     function setSources(bytes6[] memory cTokenIds, bytes6[] memory underlyings, address[] memory cTokens) external auth {
+        uint256 length = cTokenIds.length;
         require(
-            cTokenIds.length == underlyings.length && 
-            cTokenIds.length == cTokens.length,
+            length == underlyings.length && 
+            length == cTokens.length,
             "Mismatched inputs"
         );
-        for (uint256 i = 0; i < cTokenIds.length; i++) {
+        for (uint256 i; i < length; i++) {
             _setSource(cTokenIds[i], underlyings[i], cTokens[i]);
         }
     }
 
     /**
      * @notice Retrieve the value of the amount at the latest oracle price.
-     * @return value
      */
     function peek(bytes32 base, bytes32 quote, uint256 amount)
         external view virtual override
@@ -58,8 +59,7 @@ contract CTokenMultiOracle is IOracle, AccessControl, Constants {
     }
 
     /**
-     * @notice Retrieve the value of the amount at the latest oracle price.
-     * @return value
+     * @notice Retrieve the value of the amount at the latest oracle price. Updates the price before fetching it if possible.
      */
     function get(bytes32 base, bytes32 quote, uint256 amount)
         external virtual override
@@ -70,45 +70,63 @@ contract CTokenMultiOracle is IOracle, AccessControl, Constants {
         value = price * amount / 1e18;
     }
 
+    /**
+     * @notice Retrieve the value of the amount at the latest oracle price.
+     */
     function _peek(bytes6 base, bytes6 quote) private view returns (uint price, uint updateTime) {
         uint256 rawPrice;
+        uint8 decimals_ = decimals;
         Source memory source = sources[base][quote];
         require (source.source != address(0), "Source not found");
 
         rawPrice = CTokenInterface(source.source).exchangeRateStored();
-
         require(rawPrice > 0, "Compound price is zero");
+        price = _scale(rawPrice, source.decimals, decimals_);
 
-        if (source.inverse == true) {
-            price = 10 ** (source.decimals + 18) / uint(rawPrice);
-        } else {
-            price = uint(rawPrice) * 10 ** (18 - source.decimals);
-        }
+        // If calculating the inverse, we divide 1 (with the decimals of this oracle) by the price
+        if (source.inverse == true) price = (10 ** (uint256(decimals_) * 2)) / uint(price);
 
         updateTime = block.timestamp; // We should get the timestamp
     }
 
+    /**
+     * @notice Retrieve the value of the amount at the latest oracle price. Updates the price before fetching it if possible.
+     */
     function _get(bytes6 base, bytes6 quote) private returns (uint price, uint updateTime) {
         uint256 rawPrice;
+        uint8 decimals_ = decimals;
         Source memory source = sources[base][quote];
         require (source.source != address(0), "Source not found");
 
         rawPrice = CTokenInterface(source.source).exchangeRateCurrent();
-
         require(rawPrice > 0, "Compound price is zero");
+        price = _scale(rawPrice, source.decimals, decimals_);
 
-        if (source.inverse == true) {
-            price = 10 ** (source.decimals + 18) / uint(rawPrice);
-        } else {
-            price = uint(rawPrice) * 10 ** (18 - source.decimals);
-        }
+        // If calculating the inverse, we divide 1 (with the decimals of this oracle) by the price
+        if (source.inverse == true) price = (10 ** (uint256(decimals_) * 2)) / uint(price);
 
         updateTime = block.timestamp; // We should get the timestamp
     }
 
+    /**
+     * @notice Convert a price between two decimal bases
+     * @dev The castings in this code won't overflow
+     */
+    function _scale(uint256 rawPrice, uint8 sourceDecimals, uint8 oracleDecimals)
+        private pure
+        returns (uint256 price)
+    {
+        // We scale the source data to the decimals of this oracle
+        int256 diff = int256(uint256(sourceDecimals)) - int256(uint256(oracleDecimals));
+        if (diff >= 0) price = uint(rawPrice) / 10 ** uint256(diff);
+        else price = uint(rawPrice) * 10 ** uint256(-diff);
+    }
+
+    /**
+     * @dev Set a cToken as a data source between said cToken and its underlying, and its inverse
+     */
     function _setSource(bytes6 cTokenId, bytes6 underlying, address source) internal {
-        uint8 decimals_ = 18; // Does the borrowing rate have 18 decimals?
-        require (decimals_ <= 18, "Unsupported decimals");
+        uint8 decimals_ = IERC20Metadata(CTokenInterface(source).underlying()).decimals() + 10; // https://compound.finance/docs/ctokens#exchange-rate
         sources[cTokenId][underlying] = Source({
             source: source,
             decimals: decimals_,

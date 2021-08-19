@@ -13,8 +13,7 @@ contract CompoundMultiOracle is IOracle, AccessControl, Constants {
 
     event SourceSet(bytes6 indexed baseId, bytes6 indexed kind, address indexed source);
 
-    uint public constant SCALE_FACTOR = 1; // I think we don't need scaling for rate and chi oracles
-    uint8 public constant override decimals = 18;
+    uint8 public constant override decimals = 1; // The Rate and Chi Oracle tracks accumulators, and it makes no sense to talk of decimals
 
     mapping(bytes6 => mapping(bytes6 => address)) public sources;
 
@@ -29,52 +28,51 @@ contract CompoundMultiOracle is IOracle, AccessControl, Constants {
      * @notice Set or reset an oracle source
      */
     function setSources(bytes6[] memory bases, bytes6[] memory kinds, address[] memory sources_) external auth {
-        require(bases.length == kinds.length && kinds.length == sources_.length, "Mismatched inputs");
-        for (uint256 i = 0; i < bases.length; i++)
+        uint256 length = bases.length;
+        require(length == kinds.length && length == sources_.length, "Mismatched inputs");
+        for (uint256 i; i < length; i++)
             _setSource(bases[i], kinds[i], sources_[i]);
     }
 
     /**
-     * @notice Retrieve the value of the amount at the latest oracle price.
-     * @return value
+     * @notice Retrieve the latest stored accumulator.
      */
-    function peek(bytes32 base, bytes32 kind, uint256 amount)
+    function peek(bytes32 base, bytes32 kind, uint256)
         external view virtual override
-        returns (uint256 value, uint256 updateTime)
+        returns (uint256 accumulator, uint256 updateTime)
     {
-        uint256 price;
-        (price, updateTime) = _peek(base.b6(), kind.b6());
-        value = price * amount / 1e18;
+        (accumulator, updateTime) = _peek(base.b6(), kind.b6());
     }
 
     /**
-     * @notice Retrieve the value of the amount at the latest oracle price. Same as `peek` for this oracle.
-     * @return value
+     * @notice Retrieve the latest accumulator from source, updating it if necessary.
      */
-    function get(bytes32 base, bytes32 kind, uint256 amount)
+    function get(bytes32 base, bytes32 kind, uint256)
         external virtual override
-        returns (uint256 value, uint256 updateTime)
+        returns (uint256 accumulator, uint256 updateTime)
     {
-        uint256 price;
-        (price, updateTime) = _peek(base.b6(), kind.b6());
-        value = price * amount / 1e18;
+        (accumulator, updateTime) = _peek(base.b6(), kind.b6());
     }
 
-    function _peek(bytes6 base, bytes6 kind) private view returns (uint price, uint updateTime) {
-        uint256 rawPrice;
+    /**
+     * @notice Retrieve the value of the amount at the latest oracle price.
+     */
+    function _peek(bytes6 base, bytes6 kind) private view returns (uint accumulator, uint updateTime) {
         address source = sources[base][kind];
         require (source != address(0), "Source not found");
 
-        if (kind == RATE.b6()) rawPrice = CTokenInterface(source).borrowIndex();
-        else if (kind == CHI.b6()) rawPrice = CTokenInterface(source).exchangeRateStored();
+        if (kind == RATE.b6()) accumulator = CTokenInterface(source).borrowIndex();
+        else if (kind == CHI.b6()) accumulator = CTokenInterface(source).exchangeRateStored();
         else revert("Unknown oracle type");
 
-        require(rawPrice > 0, "Compound price is zero");
+        require(accumulator > 0, "Compound accumulator is zero");
 
-        price = rawPrice * SCALE_FACTOR;
         updateTime = block.timestamp;
     }
 
+    /**
+     * @dev Set a new price source
+     */
     function _setSource(bytes6 base, bytes6 kind, address source) internal {
         sources[base][kind] = source;
         emit SourceSet(base, kind, source);
