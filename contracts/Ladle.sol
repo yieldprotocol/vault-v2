@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.1;
+pragma solidity 0.8.6;
 import "@yield-protocol/vault-interfaces/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/IJoin.sol";
 import "@yield-protocol/vault-interfaces/ICauldron.sol";
@@ -175,7 +175,7 @@ contract Ladle is LadleStorage, AccessControl() {
     }
 
     /// @dev Allow users to route calls to a contract, to be used with batch
-    function route(address integration, bytes memory data)
+    function route(address integration, bytes calldata data)
         external payable
         returns (bytes memory result)
     {
@@ -186,7 +186,7 @@ contract Ladle is LadleStorage, AccessControl() {
     /// @dev Allow users to use functionality coded in a module, to be used with batch
     /// @notice Modules must not do any changes to the vault (owner, seriesId, ilkId),
     /// it would be disastrous in combination with batch vault caching 
-    function moduleCall(address module, bytes memory data)
+    function moduleCall(address module, bytes calldata data)
         external payable
         returns (bytes memory result)
     {

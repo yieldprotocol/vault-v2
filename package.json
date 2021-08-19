@@ -33,7 +33,7 @@
     "@nomiclabs/hardhat-waffle": "^2.0.1",
     "@truffle/hdwallet-provider": "^1.0.40",
     "@types/mocha": "^8.0.0",
-    "@yield-protocol/utils-v2": "^2.2.24",
+    "@yield-protocol/utils-v2": "^2.3.0-rc1",
     "@yield-protocol/vault-interfaces": "^2.0.41",
     "@yield-protocol/yieldspace-interfaces": "^2.0.17",
     "chai": "4.2.0",
