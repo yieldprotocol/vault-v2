@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.1;
+pragma solidity 0.8.6;
 
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/vault-interfaces/ILadle.sol";
 import "@yield-protocol/vault-interfaces/ICauldron.sol";
 import "@yield-protocol/vault-interfaces/IJoin.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
-import "./math/WMul.sol";
-import "./math/WDiv.sol";
-import "./math/WDivUp.sol";
-import "./math/CastU256U128.sol";
-import "./math/CastU256U32.sol";
+import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
+import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
+import "@yield-protocol/utils-v2/contracts/math/WDivUp.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastU256U32.sol";
 
 
 contract Witch is AccessControl() {
@@ -48,25 +48,6 @@ contract Witch is AccessControl() {
         cauldron = cauldron_;
         ladle = ladle_;
     }
-
-    /// @dev Set the auction duration to calculate liquidation prices
-    /* function setDuration(uint32 duration_) external auth {
-        duration = duration_;
-        emit DurationSet(duration_);
-    }
-
-    /// @dev Set the proportion of the collateral that will be sold at auction start
-    function setInitialOffer(uint64 initialOffer_) external auth {
-        require (initialOffer_ <= 1e18, "Only at or under 100%");
-        initialOffer = initialOffer_;
-        emit InitialOfferSet(initialOffer_);
-    }
-
-    /// @dev Set the minimum collateral that must be left when buying, unless buying all
-    function setDust(uint128 dust_) external auth {
-        dust = dust_;
-        emit DustSet(dust_);
-    } */
 
     /// @dev Set:
     ///  - the auction duration to calculate liquidation prices

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.1;
+pragma solidity 0.8.6;
 
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
-import "../../math/CastBytes32Bytes6.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
 import "./IUniswapV3PoolImmutables.sol";
 // This for the real deal
 // import "@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol";

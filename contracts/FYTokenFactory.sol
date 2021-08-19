@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.1;
+pragma solidity 0.8.6;
 
 import "@yield-protocol/vault-interfaces/IOracle.sol";
 import "@yield-protocol/vault-interfaces/IJoin.sol";
@@ -18,8 +18,8 @@ contract FYTokenFactory is IFYTokenFactory, AccessControl {
     IOracle oracle,
     IJoin baseJoin,
     uint32 maturity,
-    string memory name,
-    string memory symbol
+    string calldata name,
+    string calldata symbol
   )
     external override
     auth
@@ -34,8 +34,8 @@ contract FYTokenFactory is IFYTokenFactory, AccessControl {
       symbol    // Derive from base and maturity, perhaps
     );
 
-    fyToken.grantRole(fyToken.ROOT(), msg.sender);
-    fyToken.renounceRole(fyToken.ROOT(), address(this));
+    fyToken.grantRole(ROOT, msg.sender);
+    fyToken.renounceRole(ROOT, address(this));
     
     emit FYTokenCreated(address(fyToken), baseJoin.asset(), maturity);
 

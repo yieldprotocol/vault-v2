@@ -1006,14 +1006,6 @@
     ethereumjs-util "^7.0.7"
     miller-rabin "^4.0.0"
 
-"@ethereumjs/tx@^3.0.2":
-  version "3.1.1"
-  resolved "https://registry.yarnpkg.com/@ethereumjs/tx/-/tx-3.1.1.tgz#e8d6943baa955b2d197d2f6f7864939991b8feb3"
-  integrity sha512-IuN9EUT6sCZrldVbgQA+XuuxouUvMdoW34qZvlzFtCgjlvKJ848iK/lDTJVVPNb3WndlEu3d2a7Mu474ggdT/g==
-  dependencies:
-    "@ethereumjs/common" "^2.2.0"
-    ethereumjs-util "^7.0.9"
-
 "@ethereumjs/tx@^3.1.3":
   version "3.1.3"
   resolved "https://registry.yarnpkg.com/@ethereumjs/tx/-/tx-3.1.3.tgz#0e4b0ccec2f12b1f0bbbb0e7542dd79d9ec25d87"
@@ -1820,16 +1812,15 @@
   integrity sha512-kZqqnPR9YDJG7KCDOcN1qH16Qs0oz1PzF0Y93AWdhXuL9S9HYo/RUUeqGKbPpRBEZldQUS8aa4EzfK08u5pu6g==
 
 "@truffle/hdwallet-provider@^1.0.40":
-  version "1.2.5"
-  resolved "https://registry.yarnpkg.com/@truffle/hdwallet-provider/-/hdwallet-provider-1.2.5.tgz#da25d0632e792e66b8203ae65e464ac8f429354d"
-  integrity sha512-wEtUunnQ+eby/6Rlgo6mDqFOJtE+gs8GZL8oR/XaoOMEMv5WDLqSFpjZRLIOVVyzz9wtoBIZLqxUprxCv2DrTw==
+  version "1.4.3"
+  resolved "https://registry.yarnpkg.com/@truffle/hdwallet-provider/-/hdwallet-provider-1.4.3.tgz#a7f9de514ce803c4da58c36845ba0790528b92dd"
+  integrity sha512-Oo8ORAQLfcbLYp6HwG1mpOx6IpVkHv8IkKy25LZUN5Q5bCCqxdlMF0F7CnSXPBdQ+UqZY9+RthC0VrXv9gXiPQ==
   dependencies:
-    "@ethereumjs/tx" "^3.0.2"
     "@trufflesuite/web3-provider-engine" "15.0.13-1"
-    any-promise "^1.3.0"
-    bindings "^1.5.0"
     ethereum-cryptography "^0.1.3"
     ethereum-protocol "^1.0.1"
+    ethereumjs-common "^1.5.0"
+    ethereumjs-tx "^2.1.2"
     ethereumjs-util "^6.1.0"
     ethereumjs-wallet "^1.0.1"
 
@@ -2289,18 +2280,18 @@
   resolved "https://registry.yarnpkg.com/@yarnpkg/lockfile/-/lockfile-1.1.0.tgz#e77a97fbd345b76d83245edcd17d393b1b41fb31"
   integrity sha512-GpSwvyXOcOOlV70vbnzjj4fW5xW/FdUF6nQEt1ENy7m4ZCczi1+/buVUPAqmGfqznsORNFzUMjctTIp8a9tuCQ==
 
-"@yield-protocol/utils-v2@^2.2.21":
-  version "2.2.21"
-  resolved "https://registry.yarnpkg.com/@yield-protocol/utils-v2/-/utils-v2-2.2.21.tgz#69a3bca3925b45d3a7b03053c98872d83563e82c"
-  integrity sha512-ek1WxC9Zqh4eQvoUpLN7LvztviP9pUy8X+FjWYQ6YCXul3tW6syyQRzH3UUsmvCeQ9SxNdpw8lX40AKhKzcBmg==
+"@yield-protocol/utils-v2@^2.3.0-rc1":
+  version "2.3.0-rc1"
+  resolved "https://registry.yarnpkg.com/@yield-protocol/utils-v2/-/utils-v2-2.3.0-rc1.tgz#bec28af48f72f8b6cbc66f774bb204f54e0f6895"
+  integrity sha512-CiTJ5zA2dgHkX71Qb8He06wxst4PpLEuaaXWHPZ/ejPF2C55adeD72gm+2igbWzK94x7GKxygOVIcDxgIuhGmQ==
   dependencies:
     ethereumjs-util "^7.0.8"
     ethers "^5.0.7"
 
-"@yield-protocol/vault-interfaces@^2.0.39":
-  version "2.0.39"
-  resolved "https://registry.yarnpkg.com/@yield-protocol/vault-interfaces/-/vault-interfaces-2.0.39.tgz#5ae9671d69754a7605873caf1935e7252d775123"
-  integrity sha512-WQ/FVmQdMnBGWEwVRWyzhyg+7hbLYgeNH6TP9GObvmvJPYK1p3ZK6XDGQp+j1I+o3xQI/KcGsPPIIoxtqhL1+w==
+"@yield-protocol/vault-interfaces@^2.0.41":
+  version "2.0.41"
+  resolved "https://registry.yarnpkg.com/@yield-protocol/vault-interfaces/-/vault-interfaces-2.0.41.tgz#4831495e1317ea2cd09c21b49501bfb73d2ca68e"
+  integrity sha512-KeARm+VJ5aqYiA/GfDvc/LIm7NQtx1hbsV2EZvzjVoMbNyj+tWDQ4uZmM4cCkNz4cXNvz6Bi+l4GgkcVrdA4Aw==
 
 "@yield-protocol/yieldspace-interfaces@^2.0.17":
   version "2.0.17"
@@ -2522,11 +2513,6 @@ antlr4@4.7.1:
   version "4.7.1"
   resolved "https://registry.yarnpkg.com/antlr4/-/antlr4-4.7.1.tgz#69984014f096e9e775f53dd9744bf994d8959773"
   integrity sha512-haHyTW7Y9joE5MVs37P2lNYfU2RWBLfcRDD8OWldcdZm5TiCE91B5Xl1oWSwiDUSd4rlExpt2pu1fksYQjRBYQ==
-
-any-promise@^1.3.0:
-  version "1.3.0"
-  resolved "https://registry.yarnpkg.com/any-promise/-/any-promise-1.3.0.tgz#abc6afeedcea52e809cdc0376aed3ce39635d17f"
-  integrity sha1-q8av7tzqUugJzcA3au0845Y10X8=
 
 anymatch@^2.0.0:
   version "2.0.0"

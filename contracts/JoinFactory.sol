@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.1;
+pragma solidity 0.8.6;
 
 import "@yield-protocol/vault-interfaces/IJoinFactory.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
@@ -19,8 +19,8 @@ contract JoinFactory is IJoinFactory, AccessControl {
   {
     Join join = new Join(asset);
 
-    join.grantRole(join.ROOT(), msg.sender);
-    join.renounceRole(join.ROOT(), address(this));
+    join.grantRole(ROOT, msg.sender);
+    join.renounceRole(ROOT, address(this));
     
     emit JoinCreated(asset, address(join));
 
