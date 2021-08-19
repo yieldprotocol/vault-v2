@@ -70,6 +70,10 @@ describe('Ladle - vaults', function () {
     expect(vault.ilkId).to.equal(ilkId)
   })
 
+  it("doesn't fall into an infinite vaultId generating loop", async () => {
+    await expect(ladle.build(seriesId, emptyAssetId)).to.be.revertedWith('Ilk id is zero')
+  })
+
   it('does not allow destroying vaults if not the vault owner', async () => {
     await expect(ladleFromOther.destroy(vaultId)).to.be.revertedWith('Only vault owner')
   })

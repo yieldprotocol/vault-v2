@@ -275,19 +275,15 @@ contract Ladle is LadleStorage, AccessControl() {
     }
 
     /// @dev Create a new vault, linked to a series (and therefore underlying) and a collateral
-    // TODO: Include a function that doesn't cache the vault
     function _build(bytes6 seriesId, bytes6 ilkId, uint8 salt)
         private
-        returns(bytes12, DataTypes.Vault memory)
+        returns(bytes12 vaultId, DataTypes.Vault memory vault)
     {
-        bytes12 vaultId = _generateVaultId(salt);
-        try cauldron.build(msg.sender, vaultId, seriesId, ilkId) returns (DataTypes.Vault memory vault) {
-            // Store the vault data in the cache
-            cachedVaultId = vaultId;
-            return (vaultId, vault);
-        } catch Error (string memory) {
-            return _build(seriesId, ilkId, salt + 1);
-        }
+        vaultId = _generateVaultId(salt);
+        while (cauldron.vaults(vaultId).seriesId != bytes6(0)) vaultId = _generateVaultId(++salt); // If the vault exists, generate other random vaultId
+        vault = cauldron.build(msg.sender, vaultId, seriesId, ilkId);
+        // Store the vault data in the cache
+        cachedVaultId = vaultId;
     }
 
     /// @dev Change a vault series or collateral.
