@@ -33,7 +33,7 @@ contract PoolMock is ERC20, Ownable() {
     using RMath for uint128;
 
     event Trade(uint32 maturity, address indexed from, address indexed to, int256 baseAmount, int256 fyTokenAmount);
-    event Liquidity(uint32 maturity, address indexed from, address indexed to, int256 baseAmount, int256 fyTokenAmount, int256 poolTokenAmount);
+    event Liquidity(uint32 maturity, address indexed from, address indexed to, address fyTokenTo, int256 baseAmount, int256 fyTokenAmount, int256 poolTokenAmount);
 
     IERC20 public base;
     IFYToken public fyToken;
@@ -103,10 +103,10 @@ contract PoolMock is ERC20, Ownable() {
         
         _mint(to, tokensMinted);
 
-        emit Liquidity(0, msg.sender, to, -int256(baseIn), -int256(fyTokenIn), int256(tokensMinted));
+        emit Liquidity(0, msg.sender, to, address(0), -int256(baseIn), -int256(fyTokenIn), int256(tokensMinted));
     }
 
-    function burn(address to, uint256 minBaseOut, uint256 minFYTokenOut)
+    function burn(address baseTo, address fyTokenTo, uint256 minBaseOut, uint256 minFYTokenOut)
         external
         returns (uint256 tokensBurned, uint256 baseOut, uint256 fyTokenOut) {
         tokensBurned = _balanceOf[address(this)];
@@ -120,10 +120,10 @@ contract PoolMock is ERC20, Ownable() {
         (baseReserves, fyTokenReserves) = (baseReserves - uint112(baseOut), fyTokenReserves - uint112(fyTokenOut));
 
         _burn(address(this), tokensBurned);
-        base.transfer(to, baseOut);
-        fyToken.transfer(to, fyTokenOut);
+        base.transfer(baseTo, baseOut);
+        fyToken.transfer(fyTokenTo, fyTokenOut);
 
-        emit Liquidity(0, msg.sender, to, int256(baseOut), int256(fyTokenOut), -int(tokensBurned));
+        emit Liquidity(0, msg.sender, baseTo, fyTokenTo, int256(baseOut), int256(fyTokenOut), -int(tokensBurned));
     }
 
 

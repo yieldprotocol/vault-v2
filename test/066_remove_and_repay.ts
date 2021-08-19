@@ -89,7 +89,7 @@ describe('Ladle - remove and repay', function () {
 
     await pool.transfer(pool.address, WAD.mul(2))
 
-    const burnCall = pool.interface.encodeFunctionData('burn', [ladle.address, 0, 0])
+    const burnCall = pool.interface.encodeFunctionData('burn', [ladle.address, ladle.address, 0, 0])
 
     await ladle.batch([
       ladle.routeAction(pool.address, burnCall), // burn to ladle
@@ -120,7 +120,7 @@ describe('Ladle - remove and repay', function () {
       const baseBalanceBefore = await base.balanceOf(owner)
 
       await pool.transfer(pool.address, WAD.mul(2))
-      const burnCall = pool.interface.encodeFunctionData('burn', [ladle.address, 0, 0])
+      const burnCall = pool.interface.encodeFunctionData('burn', [ladle.address, ladle.address, 0, 0])
 
       await ladle.batch([
         ladle.routeAction(pool.address, burnCall), // burn to ladle
