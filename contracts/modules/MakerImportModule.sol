@@ -75,8 +75,8 @@ contract MakerImportModule is LadleStorage {
 
     // The MakerImportModule doesn't have any data storage of its own
 
-    constructor (ICauldron cauldron_, IMakerJoin makerDaiJoin_, ICDPMgr cdpMgr_, IProxyRegistry proxyRegistry_, IIlkRegistry ilkRegistry_) 
-        LadleStorage(cauldron_) {
+    constructor (ICauldron cauldron_, IWETH9 weth_, IMakerJoin makerDaiJoin_, ICDPMgr cdpMgr_, IProxyRegistry proxyRegistry_, IIlkRegistry ilkRegistry_) 
+        LadleStorage(cauldron_, weth_) {
         proxyRegistry = proxyRegistry_;
         ilkRegistry = ilkRegistry_;
         cdpMgr = cdpMgr_;

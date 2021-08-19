@@ -72,7 +72,7 @@ describe('Ladle - permit', function () {
 
     const { v, r, s } = signatures.sign(permitDigest, signatures.privateKey0)
 
-    expect(await ladle.forwardPermit(ilkId, true, ilkJoin.address, amount, deadline, v, r, s))
+    expect(await ladle.forwardPermit(ilk.address, ilkJoin.address, amount, deadline, v, r, s))
       .to.emit(ilk, 'Approval')
       .withArgs(owner, ilkJoin.address, WAD)
 
@@ -93,7 +93,7 @@ describe('Ladle - permit', function () {
 
     const { v, r, s } = signatures.sign(permitDigest, signatures.privateKey0)
 
-    expect(await ladle.forwardPermit(seriesId, false, ladle.address, amount, deadline, v, r, s))
+    expect(await ladle.forwardPermit(fyToken.address, ladle.address, amount, deadline, v, r, s))
       .to.emit(fyToken, 'Approval')
       .withArgs(owner, ladle.address, WAD)
 
@@ -119,7 +119,7 @@ describe('Ladle - permit', function () {
     expect(
       await ladle.batch([
         ladle.buildAction(seriesId, ilkId),
-        ladle.forwardPermitAction(seriesId, false, ladle.address, amount, deadline, v, r, s),
+        ladle.forwardPermitAction(fyToken.address, ladle.address, amount, deadline, v, r, s),
       ])
     )
       .to.emit(fyToken, 'Approval')
@@ -141,7 +141,7 @@ describe('Ladle - permit', function () {
 
     const { v, r, s } = signatures.sign(daiPermitDigest, signatures.privateKey0)
 
-    expect(await ladle.forwardDaiPermit(DAI, true, ladle.address, nonce, deadline, true, v, r, s))
+    expect(await ladle.forwardDaiPermit(dai.address, ladle.address, nonce, deadline, true, v, r, s))
       .to.emit(dai, 'Approval')
       .withArgs(owner, ladle.address, MAX)
 
@@ -166,7 +166,7 @@ describe('Ladle - permit', function () {
     expect(
       await ladle.batch([
         ladle.buildAction(seriesId, ilkId),
-        ladle.forwardDaiPermitAction(DAI, true, ladle.address, nonce, deadline, true, v, r, s),
+        ladle.forwardDaiPermitAction(dai.address, ladle.address, nonce, deadline, true, v, r, s),
       ])
     )
       .to.emit(dai, 'Approval')
@@ -189,8 +189,8 @@ describe('Ladle - permit', function () {
 
     const { v, r, s } = signatures.sign(permitDigest, signatures.privateKey0)
 
-    await expect(ladle.forwardPermit(mockIlkId, true, ilkJoin.address, amount, deadline, v, r, s)).to.be.revertedWith(
-      'Token not found'
+    await expect(ladle.forwardPermit(owner, ilkJoin.address, amount, deadline, v, r, s)).to.be.revertedWith(
+      'Unknown token'
     )
   })
 })

@@ -11,7 +11,6 @@ import "@yield-protocol/utils-v2/contracts/token/IERC2612.sol";
 import "dss-interfaces/src/dss/DaiAbstract.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/token/AllTransferHelper.sol";
-import "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
 import "./math/WMul.sol";
 import "./math/CastU256U128.sol";
 import "./math/CastU128I128.sol";
@@ -26,13 +25,7 @@ contract Ladle is LadleStorage, AccessControl() {
     using AllTransferHelper for IERC20;
     using AllTransferHelper for address payable;
 
-    bytes12 cachedVaultId;
-
-    IWETH9 public immutable weth;
-
-    constructor (ICauldron cauldron, IWETH9 weth_) LadleStorage(cauldron) {
-        weth = weth_;
-    }
+    constructor (ICauldron cauldron, IWETH9 weth) LadleStorage(cauldron, weth) { }
 
     // ---- Data sourcing ----
     /// @dev Obtains a vault by vaultId from the Cauldron, and verifies that msg.sender is the owner
@@ -76,6 +69,40 @@ contract Ladle is LadleStorage, AccessControl() {
 
     // ---- Administration ----
 
+    /// @dev Add or remove an integration.
+    function addIntegration(address integration, bool set)
+        external
+        auth
+    {
+        _addIntegration(integration, set);
+    }
+
+    /// @dev Add or remove an integration.
+    function _addIntegration(address integration, bool set)
+        private
+    {
+        integrations[integration] = set;
+        emit IntegrationAdded(integration, set);
+    }
+
+    /// @dev Add or remove a token that the Ladle can call `transfer` or `permit` on.
+    function addToken(address token, bool set)
+        external
+        auth
+    {
+        _addToken(token, set);
+    }
+    
+
+    /// @dev Add or remove a token that the Ladle can call `transfer` or `permit` on.
+    function _addToken(address token, bool set)
+        private
+    {
+        tokens[token] = set;
+        emit TokenAdded(token, set);
+    }
+
+
     /// @dev Add a new Join for an Asset, or replace an existing one for a new one.
     /// There can be only one Join per Asset. Until a Join is added, no tokens of that Asset can be posted or withdrawn.
     function addJoin(bytes6 assetId, IJoin join)
@@ -86,6 +113,9 @@ contract Ladle is LadleStorage, AccessControl() {
         require (asset != address(0), "Asset not found");
         require (join.asset() == asset, "Mismatched asset and join");
         joins[assetId] = join;
+
+        bool set = (join != IJoin(address(0))) ? true : false;
+        _addToken(asset, set);                  // address(0) disables the token
         emit JoinAdded(assetId, address(join));
     }
 
@@ -99,16 +129,22 @@ contract Ladle is LadleStorage, AccessControl() {
         require (fyToken == pool.fyToken(), "Mismatched pool fyToken and series");
         require (fyToken.underlying() == address(pool.base()), "Mismatched pool base and series");
         pools[seriesId] = pool;
+
+        bool set = (pool != IPool(address(0))) ? true : false;
+        _addToken(address(fyToken), set);       // address(0) disables the token
+        _addToken(address(pool), set);          // address(0) disables the token
+        _addIntegration(address(pool), set);    // address(0) disables the integration
+
         emit PoolAdded(seriesId, address(pool));
     }
 
     /// @dev Add or remove a module.
-    function setModule(address module, bool set)
+    function addModule(address module, bool set)
         external
         auth
     {
         modules[module] = set;
-        emit ModuleSet(module, set);
+        emit ModuleAdded(module, set);
     }
 
     /// @dev Set the fee parameter
@@ -120,7 +156,7 @@ contract Ladle is LadleStorage, AccessControl() {
         emit FeeSet(fee);
     }
 
-    // ---- Batching ----
+    // ---- Call management ----
 
     /// @dev Allows batched call to self (this contract).
     /// @param calls An array of inputs for each call.
@@ -134,6 +170,93 @@ contract Ladle is LadleStorage, AccessControl() {
 
         // build would have populated the cache, this deletes it
         cachedVaultId = bytes12(0);
+    }
+
+    /// @dev Allow users to route calls to a contract, to be used with batch
+    function route(address integration, bytes memory data)
+        external payable
+        returns (bytes memory result)
+    {
+        require(integrations[integration], "Unknown integration");
+        return router.route(integration, data);
+    }
+
+    /// @dev Allow users to use functionality coded in a module, to be used with batch
+    /// @notice Modules must not do any changes to the vault (owner, seriesId, ilkId),
+    /// it would be disastrous in combination with batch vault caching 
+    function moduleCall(address module, bytes memory data)
+        external payable
+        returns (bytes memory result)
+    {
+        require (modules[module], "Unregistered module");
+        bool success;
+        (success, result) = module.delegatecall(data);
+        if (!success) revert(RevertMsgExtractor.getRevertMsg(result));
+    }
+
+    // ---- Token management ----
+
+    /// @dev Execute an ERC2612 permit for the selected token
+    function forwardPermit(IERC2612 token, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
+        external payable
+    {
+        require(tokens[address(token)], "Unknown token");
+        token.permit(msg.sender, spender, amount, deadline, v, r, s);
+    }
+
+    /// @dev Execute a Dai-style permit for the selected token
+    function forwardDaiPermit(DaiAbstract token, address spender, uint256 nonce, uint256 deadline, bool allowed, uint8 v, bytes32 r, bytes32 s)
+        external payable
+    {
+        require(tokens[address(token)], "Unknown token");
+        token.permit(msg.sender, spender, nonce, deadline, allowed, v, r, s);
+    }
+
+    /// @dev Allow users to trigger a token transfer from themselves to a receiver through the ladle, to be used with batch
+    function transfer(IERC20 token, address receiver, uint128 wad)
+        external payable
+    {
+        require(tokens[address(token)], "Unknown token");
+        token.safeTransferFrom(msg.sender, receiver, wad);
+    }
+
+    /// @dev Retrieve any token in the Ladle
+    function retrieve(IERC20 token, address to) 
+        external payable
+        returns (uint256 amount)
+    {
+        require(tokens[address(token)], "Unknown token");
+        amount = token.balanceOf(address(this));
+        token.safeTransfer(to, amount);
+    }
+
+    /// @dev The WETH9 contract will send ether to BorrowProxy on `weth.withdraw` using this function.
+    receive() external payable { 
+        require (msg.sender == address(weth), "Only receive from WETH");
+    }
+
+    /// @dev Accept Ether, wrap it and forward it to the WethJoin
+    /// This function should be called first in a batch, and the Join should keep track of stored reserves
+    /// Passing the id for a join that doesn't link to a contract implemnting IWETH9 will fail
+    function joinEther(bytes6 etherId)
+        external payable
+        returns (uint256 ethTransferred)
+    {
+        ethTransferred = address(this).balance;
+        IJoin wethJoin = getJoin(etherId);
+        weth.deposit{ value: ethTransferred }();
+        IERC20(address(weth)).safeTransfer(address(wethJoin), ethTransferred);
+    }
+
+    /// @dev Unwrap Wrapped Ether held by this Ladle, and send the Ether
+    /// This function should be called last in a batch, and the Ladle should have no reason to keep an WETH balance
+    function exitEther(address payable to)
+        external payable
+        returns (uint256 ethTransferred)
+    {
+        ethTransferred = weth.balanceOf(address(this));
+        weth.withdraw(ethTransferred);
+        to.safeTransferETH(ethTransferred);
     }
 
     // ---- Vault management ----
@@ -152,19 +275,15 @@ contract Ladle is LadleStorage, AccessControl() {
     }
 
     /// @dev Create a new vault, linked to a series (and therefore underlying) and a collateral
-    // TODO: Include a function that doesn't cache the vault
     function _build(bytes6 seriesId, bytes6 ilkId, uint8 salt)
         private
-        returns(bytes12, DataTypes.Vault memory)
+        returns(bytes12 vaultId, DataTypes.Vault memory vault)
     {
-        bytes12 vaultId = _generateVaultId(salt);
-        try cauldron.build(msg.sender, vaultId, seriesId, ilkId) returns (DataTypes.Vault memory vault) {
-            // Store the vault data in the cache
-            cachedVaultId = vaultId;
-            return (vaultId, vault);
-        } catch Error (string memory) {
-            return _build(seriesId, ilkId, salt + 1);
-        }
+        vaultId = _generateVaultId(salt);
+        while (cauldron.vaults(vaultId).seriesId != bytes6(0)) vaultId = _generateVaultId(++salt); // If the vault exists, generate other random vaultId
+        vault = cauldron.build(msg.sender, vaultId, seriesId, ilkId);
+        // Store the vault data in the cache
+        cachedVaultId = vaultId;
     }
 
     /// @dev Change a vault series or collateral.
@@ -379,105 +498,6 @@ contract Ladle is LadleStorage, AccessControl() {
         series.fyToken.burn(address(this), repaid);
     }
 
-    /// @dev Retrieve any asset or fyToken in the Ladle
-    function retrieve(bytes6 id, bool isAsset, address to) 
-        external payable
-        returns (uint256 amount)
-    {
-        IERC20 token = IERC20(findToken(id, isAsset));
-        amount = token.balanceOf(address(this));
-        token.safeTransfer(to, amount);
-    }
-
-    // ---- Permit management ----
-
-    /// @dev From an id, which can be an assetId or a seriesId, find the resulting asset or fyToken
-    function findToken(bytes6 id, bool isAsset)
-        private view returns (address token)
-    {
-        token = isAsset ? cauldron.assets(id) : address(getSeries(id).fyToken);
-        require (token != address(0), "Token not found");
-    }
-
-    /// @dev Execute an ERC2612 permit for the selected asset or fyToken
-    function forwardPermit(bytes6 id, bool isAsset, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
-        external payable
-    {
-        IERC2612 token = IERC2612(findToken(id, isAsset));
-        token.permit(msg.sender, spender, amount, deadline, v, r, s);
-    }
-
-    /// @dev Execute a Dai-style permit for the selected asset or fyToken
-    function forwardDaiPermit(bytes6 id, bool isAsset, address spender, uint256 nonce, uint256 deadline, bool allowed, uint8 v, bytes32 r, bytes32 s)
-        external payable
-    {
-        DaiAbstract token = DaiAbstract(findToken(id, isAsset));
-        token.permit(msg.sender, spender, nonce, deadline, allowed, v, r, s);
-    }
-
-    // ---- Ether management ----
-
-    /// @dev The WETH9 contract will send ether to BorrowProxy on `weth.withdraw` using this function.
-    receive() external payable { 
-        require (msg.sender == address(weth), "Only receive from WETH");
-    }
-
-    /// @dev Accept Ether, wrap it and forward it to the WethJoin
-    /// This function should be called first in a batch, and the Join should keep track of stored reserves
-    /// Passing the id for a join that doesn't link to a contract implemnting IWETH9 will fail
-    function joinEther(bytes6 etherId)
-        external payable
-        returns (uint256 ethTransferred)
-    {
-        ethTransferred = address(this).balance;
-        IJoin wethJoin = getJoin(etherId);
-        weth.deposit{ value: ethTransferred }();
-        IERC20(address(weth)).safeTransfer(address(wethJoin), ethTransferred);
-    }
-
-    /// @dev Unwrap Wrapped Ether held by this Ladle, and send the Ether
-    /// This function should be called last in a batch, and the Ladle should have no reason to keep an WETH balance
-    function exitEther(address payable to)
-        external payable
-        returns (uint256 ethTransferred)
-    {
-        ethTransferred = weth.balanceOf(address(this));
-        weth.withdraw(ethTransferred);
-        to.safeTransferETH(ethTransferred);
-    }
-
-    // ---- Pool router ----
-
-    /// @dev Allow users to trigger a token transfer to a pool through the ladle, to be used with batch
-    function transferToPool(bytes6 seriesId, bool isBase, uint128 wad)
-        external payable
-    {
-        IPool pool = getPool(seriesId);
-        IERC20 token = isBase ? pool.base() : pool.fyToken();
-        token.safeTransferFrom(msg.sender, address(pool), wad);
-    }
-
-    /// @dev Allow users to route calls to a pool, to be used with batch
-    function route(bytes6 seriesId, bytes memory data)
-        external payable
-        returns (bytes memory result)
-    {
-        address pool = address(getPool(seriesId));
-        bool success;
-        (success, result) = pool.call(data);
-        if (!success) revert(RevertMsgExtractor.getRevertMsg(result));
-    }
-
-    // ---- FYToken router ----
-
-    /// @dev Allow users to trigger a token transfer to a fyToken through the ladle, to be used with batch
-    function transferToFYToken(bytes6 seriesId, uint256 wad)
-        external payable
-    {
-        address fyToken = address(getSeries(seriesId).fyToken);
-        IERC20(fyToken).safeTransferFrom(msg.sender, address(fyToken), wad);
-    }
-
     /// @dev Allow users to redeem fyToken, to be used with batch.
     /// If 0 is passed as the amount to redeem, it redeems the fyToken balance of the Ladle instead.
     function redeem(bytes6 seriesId, address to, uint256 wad)
@@ -488,18 +508,4 @@ contract Ladle is LadleStorage, AccessControl() {
         return fyToken.redeem(to, wad != 0 ? wad : fyToken.balanceOf(address(this)));
     }
 
-    // ---- Module router ----
-
-    /// @dev Allow users to use functionality coded in a module, to be used with batch
-    /// @notice Modules must not do any changes to the vault (owner, seriesId, ilkId),
-    /// it would be disastrous in combination with batch vault caching 
-    function moduleCall(address module, bytes memory data)
-        external payable
-        returns (bytes memory result)
-    {
-        require (modules[module], "Unregistered module");
-        bool success;
-        (success, result) = module.delegatecall(data);
-        if (!success) revert(RevertMsgExtractor.getRevertMsg(result));
-    }
 }

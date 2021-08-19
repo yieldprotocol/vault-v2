@@ -32,8 +32,8 @@ contract TLMModule is LadleStorage {
     // The following is not directly available through delegatecall, but can be found at `tlm.seriesToIlk`
     mapping (bytes6 => bytes32) public seriesToIlk;
 
-    constructor (ICauldron cauldron_, DssTlmAbstract tlm_) 
-        LadleStorage(cauldron_) {
+    constructor (ICauldron cauldron_, IWETH9 weth_, DssTlmAbstract tlm_) 
+        LadleStorage(cauldron_, weth_) {
         tlm = tlm_;
         tlmModule = this;
     }
