@@ -10,13 +10,9 @@ import "@yield-protocol/vault-interfaces/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
 import "@yield-protocol/yieldspace-interfaces/IPoolFactory.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "./constants/Constants.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
+import "./constants/Constants.sol";
 
-
-interface IOwnable {
-    function transferOwnership(address) external;
-}
 
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient governance features.
 contract Wand is AccessControl, Constants {
@@ -160,11 +156,7 @@ contract Wand is AccessControl, Constants {
 
         // Create the pool for the base and fyToken
         poolFactory.createPool(base, address(fyToken));
-        IOwnable pool = IOwnable(poolFactory.calculatePoolAddress(base, address(fyToken)));
-        
-
-        // Pass ownership of pool to msg.sender
-        pool.transferOwnership(msg.sender);
+        address pool = poolFactory.calculatePoolAddress(base, address(fyToken));
 
         // Register pool in Ladle
         ladle.addPool(seriesId, address(pool));
