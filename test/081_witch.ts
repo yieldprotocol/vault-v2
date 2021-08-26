@@ -197,8 +197,8 @@ describe('Witch', function () {
 
           const art = WAD.sub((await cauldron.balances(vaultId)).art)
           const ink = WAD.sub((await cauldron.balances(vaultId)).ink)
-          expect(art).to.equal(WAD.mul(100).div(110)) // The rate increased by a 10%, so by paying WAD base we only repay 100/110 of the debt in fyToken terms
-          expect(ink).to.equal(WAD.mul(100).div(110)) // We only pay 100/110 of the debt, so we get 100/110 of the collateral
+          expect(art).to.equal(WAD.mul(100).div(110).add(1)) // The rate increased by a 10%, so by paying WAD base we only repay 100/110 of the debt in fyToken terms
+          expect(ink).to.equal(WAD.mul(100).div(110).add(1)) // We only pay 100/110 of the debt, so we get 100/110 of the collateral
           expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(WAD))
           expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(ink))
         })
