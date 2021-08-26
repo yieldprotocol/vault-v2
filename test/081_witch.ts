@@ -108,7 +108,7 @@ describe('Witch', function () {
   })
 
   it('auctions undercollateralized vaults', async () => {
-    await spotSource.set(WAD.div(2))
+    await spotSource.set(WAD.mul(2))
     await witch.auction(vaultId)
     const event = (await witch.queryFilter(witch.filters.Auctioned(null, null)))[0]
     expect((await cauldron.vaults(vaultId)).owner).to.equal(witch.address)
@@ -119,7 +119,7 @@ describe('Witch', function () {
 
   describe('once a vault has been auctioned', async () => {
     beforeEach(async () => {
-      await spotSource.set(WAD.div(2))
+      await spotSource.set(WAD.mul(2))
       await witch.auction(vaultId)
     })
 
