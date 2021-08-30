@@ -149,8 +149,8 @@ export class YieldEnvironment {
     await wand.grantRoles(
       [
         id('addAsset(bytes6,address)'),
-        id('makeBase(bytes6,address,address,address)'),
-        id('makeIlk(bytes6,bytes6,address,address,uint32,uint96,uint24,uint8)'),
+        id('makeBase(bytes6,address)'),
+        id('makeIlk(bytes6,bytes6,address,uint32,uint96,uint24,uint8)'),
         id('addSeries(bytes6,bytes6,uint32,bytes6[],string,string)'),
         id('addPool(bytes6,bytes6)'),
       ],
@@ -311,6 +311,8 @@ export class YieldEnvironment {
     await this.cauldronGovAuth(cauldron, ownerAdd)
     await this.ladleGovAuth(ladle, ownerAdd)
     await this.witchGovAuth(witch, ownerAdd)
+    await chiRateOracle.grantRole(id('setSource(bytes6,bytes6,address)'), ownerAdd)
+    await spotOracle.grantRole(id('setSource(bytes6,bytes6,address)'), ownerAdd)
 
     // ==== Add assets and joins ====
     for (let assetId of assetIds) {
@@ -358,7 +360,9 @@ export class YieldEnvironment {
     ilkIds.push(USDC)
 
     // ==== Make baseId the base, creating chi and rate oracles ====
-    await wand.makeBase(baseId, chiRateOracle.address, cTokenRate.address, cTokenChi.address)
+    await chiRateOracle.setSource(baseId, RATE, cTokenRate.address)
+    await chiRateOracle.setSource(baseId, CHI, cTokenChi.address)
+    await wand.makeBase(baseId, chiRateOracle.address)
 
     // ==== Make ilkIds the ilks, creating spot oracles and settting debt limits ====
     const ratio = 1000000 //  1000000 == 100% collateralization ratio
@@ -366,8 +370,9 @@ export class YieldEnvironment {
     const min = 1000000
     const dec = 6
     for (let ilkId of ilkIds) {
-      const source = sources.get(ilkId) as ISourceMock
-      await wand.makeIlk(baseId, ilkId, spotOracle.address, source.address, ratio, max, min, dec)
+      const spotSource = sources.get(ilkId) as ISourceMock
+      await spotOracle.setSource(baseId, ilkId, spotSource.address)
+      await wand.makeIlk(baseId, ilkId, spotOracle.address, ratio, max, min, dec)
       oracles.set(ilkId, (spotOracle as unknown) as OracleMock)
     }
 
