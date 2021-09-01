@@ -1,10 +1,7 @@
 import { constants, id } from '@yield-protocol/utils-v2'
 const { WAD } = constants
-import { CHI, RATE } from '../src/constants'
+import { ETH, DAI, USDC } from '../src/constants'
 
-import { sendStatic } from './shared/helpers'
-
-import { Contract } from '@ethersproject/contracts'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 
 import OracleArtifact from '../artifacts/contracts/mocks/oracles/OracleMock.sol/OracleMock.json'
@@ -12,12 +9,14 @@ import ChainlinkMultiOracleArtifact from '../artifacts/contracts/oracles/chainli
 import ChainlinkAggregatorV3MockArtifact from '../artifacts/contracts/mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol/ChainlinkAggregatorV3Mock.json'
 import DAIMockArtifact from '../artifacts/contracts/mocks/DAIMock.sol/DAIMock.json'
 import USDCMockArtifact from '../artifacts/contracts/mocks/USDCMock.sol/USDCMock.json'
+import WETH9MockArtifact from '../artifacts/contracts/mocks/WETH9Mock.sol/WETH9Mock.json'
 
 import { IOracle } from '../typechain/IOracle'
 import { ChainlinkMultiOracle } from '../typechain/ChainlinkMultiOracle'
 import { ChainlinkAggregatorV3Mock } from '../typechain/ChainlinkAggregatorV3Mock'
 import { DAIMock } from '../typechain/DAIMock'
 import { USDCMock } from '../typechain/USDCMock'
+import { WETH9Mock } from '../typechain/WETH9Mock'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
@@ -34,19 +33,16 @@ describe('Oracles - Chainlink', function () {
   let owner: string
   let oracle: IOracle
   let chainlinkMultiOracle: ChainlinkMultiOracle
-  let usdAggregator: ChainlinkAggregatorV3Mock
-  let ethAggregator: ChainlinkAggregatorV3Mock
+  let daiEthAggregator: ChainlinkAggregatorV3Mock
+  let usdcEthAggregator: ChainlinkAggregatorV3Mock
   let dai: DAIMock
   let usdc: USDCMock
+  let weth: WETH9Mock
 
-  const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const usdcId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const cDaiId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const cUSDCId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const usdQuoteId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const ethQuoteId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const mockBytes6 = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const mockBytes32 = ethers.utils.hexlify(ethers.utils.randomBytes(32))
+
+  const oneUSDC = WAD.div(1000000000000)
 
   before(async () => {
     const signers = await ethers.getSigners()
@@ -59,18 +55,18 @@ describe('Oracles - Chainlink', function () {
 
     dai = (await deployContract(ownerAcc, DAIMockArtifact)) as DAIMock
     usdc = (await deployContract(ownerAcc, USDCMockArtifact)) as USDCMock
+    weth = (await deployContract(ownerAcc, WETH9MockArtifact)) as WETH9Mock
 
-    usdAggregator = (await deployContract(ownerAcc, ChainlinkAggregatorV3MockArtifact, [
-      8,
-    ])) as ChainlinkAggregatorV3Mock
-    ethAggregator = (await deployContract(ownerAcc, ChainlinkAggregatorV3MockArtifact, [
-      18,
-    ])) as ChainlinkAggregatorV3Mock
+    daiEthAggregator = (await deployContract(ownerAcc, ChainlinkAggregatorV3MockArtifact)) as ChainlinkAggregatorV3Mock
+    usdcEthAggregator = (await deployContract(ownerAcc, ChainlinkAggregatorV3MockArtifact)) as ChainlinkAggregatorV3Mock
 
     chainlinkMultiOracle = (await deployContract(ownerAcc, ChainlinkMultiOracleArtifact, [])) as ChainlinkMultiOracle
-    await chainlinkMultiOracle.grantRole(id('setSource(bytes6,bytes6,address)'), owner)
-    await chainlinkMultiOracle.setSource(baseId, usdQuoteId, usdAggregator.address)
-    await chainlinkMultiOracle.setSource(baseId, ethQuoteId, ethAggregator.address)
+    await chainlinkMultiOracle.grantRole(id('setSource(bytes6,address,bytes6,address,address)'), owner)
+    await chainlinkMultiOracle.setSource(DAI, dai.address, ETH, weth.address, daiEthAggregator.address)
+    await chainlinkMultiOracle.setSource(USDC, usdc.address, ETH, weth.address, usdcEthAggregator.address)
+
+    await daiEthAggregator.set(WAD.div(2500)) // 1 DAI (1^18) in ETH
+    await usdcEthAggregator.set(WAD.div(2500)) // 1 USDC (1^6) in ETH
   })
 
   it('sets and retrieves the value at spot price', async () => {
@@ -85,26 +81,17 @@ describe('Oracles - Chainlink', function () {
   })
 
   it('sets and retrieves the value at spot price from a chainlink multioracle', async () => {
-    await usdAggregator.set(WAD.mul(2))
-    await ethAggregator.set(WAD.mul(3))
     expect(
-      (await chainlinkMultiOracle.callStatic.get(bytes6ToBytes32(baseId), bytes6ToBytes32(usdQuoteId), WAD))[0]
-    ).to.equal(WAD.mul(2))
+      (await chainlinkMultiOracle.callStatic.get(bytes6ToBytes32(DAI), bytes6ToBytes32(ETH), WAD.mul(2500)))[0]
+    ).to.equal(WAD)
     expect(
-      (await chainlinkMultiOracle.callStatic.get(bytes6ToBytes32(usdQuoteId), bytes6ToBytes32(baseId), WAD))[0]
-    ).to.equal(WAD.div(2))
+      (await chainlinkMultiOracle.callStatic.get(bytes6ToBytes32(USDC), bytes6ToBytes32(ETH), oneUSDC.mul(2500)))[0]
+    ).to.equal(WAD)
     expect(
-      (await chainlinkMultiOracle.callStatic.get(bytes6ToBytes32(baseId), bytes6ToBytes32(ethQuoteId), WAD))[0]
-    ).to.equal(WAD.mul(3))
+      (await chainlinkMultiOracle.callStatic.get(bytes6ToBytes32(ETH), bytes6ToBytes32(DAI), WAD))[0]
+    ).to.equal(WAD.mul(2500))
     expect(
-      (await chainlinkMultiOracle.callStatic.get(bytes6ToBytes32(ethQuoteId), bytes6ToBytes32(baseId), WAD))[0]
-    ).to.equal(WAD.div(3))
-
-    expect((await chainlinkMultiOracle.peek(bytes6ToBytes32(baseId), bytes6ToBytes32(ethQuoteId), WAD))[0]).to.equal(
-      WAD.mul(3)
-    )
-    expect((await chainlinkMultiOracle.peek(bytes6ToBytes32(ethQuoteId), bytes6ToBytes32(baseId), WAD))[0]).to.equal(
-      WAD.div(3)
-    )
+      (await chainlinkMultiOracle.callStatic.get(bytes6ToBytes32(ETH), bytes6ToBytes32(USDC), WAD))[0]
+    ).to.equal(oneUSDC.mul(2500))
   })
 })

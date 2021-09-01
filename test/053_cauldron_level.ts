@@ -2,7 +2,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 
 import { constants } from '@yield-protocol/utils-v2'
 const { WAD } = constants
-import { RATE } from '../src/constants'
+import { RATE, USDC } from '../src/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { FYToken } from '../typechain/FYToken'
@@ -32,7 +32,8 @@ describe('Cauldron - level', function () {
   let rateOracle: CompoundMultiOracle
   let rateSource: ISourceMock
 
-  const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const oneUSDC = WAD.div(1000000000000)
+  const baseId = USDC // We can have only one base in fixtures, so let's do the hard one
   const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   let vaultId: string
@@ -68,36 +69,37 @@ describe('Cauldron - level', function () {
     fyToken = env.series.get(seriesId) as FYToken
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
 
-    await spotSource.set(WAD.div(2))
-    await cauldron.pour(vaultId, WAD, WAD)
+    await spotSource.set(WAD.div(2500)) // ETH wei per USDC
+    await cauldron.pour(vaultId, WAD, oneUSDC.mul(2500))
   })
 
   it('before maturity, level is ink * spot - art * ratio', async () => {
     const ink = (await cauldron.balances(vaultId)).ink
     const art = (await cauldron.balances(vaultId)).art
-    for (let spot of [1, 2, 4]) {
-      await spotSource.set(WAD.mul(spot))
+    const spots = [WAD.div(2500), WAD.div(5000), WAD.div(10000)]
+    for (let spot of spots) {
+      await spotSource.set(spot)
       for (let ratio of [50, 100, 200]) {
         await cauldron.setSpotOracle(baseId, ilkId, spotOracle.address, ratio * 10000)
-        const reverseSpot = WAD.div(spot)
+        const reverseSpot = oneUSDC.mul(WAD).div(spot)
         // When setting the oracles, we set them as underlying/collateral matching Chainlink, for which ETH is always the quote.
-        // Then for `level` we want the collateral/underlying spot price (this one ETH collateral, how much DAI is worth?)
-        // So we set the DAI/ETH spot to 2.0 (WAD*2), for example, but the `spot` that `level` uses is the reverse of that,
-        // 1 / 2.0 = 0.5 (WAD/2). ink * spot is fixed point with WAD decimals, so we finally divide by WAD to find the value
-        // of the collateral in base terms.
+        // We set for example the USDC/ETH spot to WAD.div(2500), meaning that 1 ETH gets you 2500 USDC, or that 1 USDC gets you 1/2500 of 1 ETH.
+        // Then for `level` we want the collateral/underlying spot price (this one ETH collateral, how much USDC is worth?)
+        // The reverse is (10**6)*(10**18)/spot (1/spot, in fixed point math with the decimals of the reverse quote (USDC, 6).
+        // Finally, to get the value of the collateral we multiply the amount of ETH (ink) by the reverse spot (ETH/USDC) as a fixed point multiplication with the ETH decimals (18) so that the reulst is in USDC.
         const expectedLevel = ink.mul(reverseSpot).div(WAD).sub(art.mul(ratio).div(100))
-        // console.log(`${ink} * ${WAD.mul(spot)} - ${art} * ${ratio} = ${await cauldron.callStatic.level(vaultId)} | ${expectedLevel} `)
+        // console.log(`${ink} * ${reverseSpot} / ${WAD} - ${art} * ${ratio} = ${await cauldron.callStatic.level(vaultId)} | ${expectedLevel} `)
         expect(await cauldron.callStatic.level(vaultId)).to.equal(expectedLevel)
       }
     }
   })
 
   it("users can't borrow and become undercollateralized", async () => {
-    await expect(cauldron.pour(vaultId, 0, WAD.mul(2))).to.be.revertedWith('Undercollateralized')
+    await expect(cauldron.pour(vaultId, 0, oneUSDC.mul(2))).to.be.revertedWith('Undercollateralized')
   })
 
   it("users can't withdraw and become undercollateralized", async () => {
-    await expect(cauldron.pour(vaultId, WAD.mul(-1), 0)).to.be.revertedWith('Undercollateralized')
+    await expect(cauldron.pour(vaultId, oneUSDC.mul(-1), 0)).to.be.revertedWith('Undercollateralized')
   })
 
   it('does not allow to mature before maturity', async () => {
@@ -127,14 +129,16 @@ describe('Cauldron - level', function () {
 
       const ink = (await cauldron.balances(vaultId)).ink
       const art = (await cauldron.balances(vaultId)).art
-      for (let spot of [1, 2, 4]) {
-        await spotSource.set(WAD.mul(spot))
+      const spots = [WAD.div(2500), WAD.div(5000), WAD.div(10000)]
+      for (let spot of spots) {
+        await spotSource.set(spot)
         for (let rate of [110, 120, 140]) {
           await rateSource.set(WAD.mul(rate).div(100))
           // accrual = rate / 100
           for (let ratio of [50, 100, 200]) {
             await cauldron.setSpotOracle(baseId, ilkId, spotOracle.address, ratio * 10000)
-            const expectedLevel = ink.div(spot).sub(art.mul(rate).mul(ratio).div(10000))
+            const reverseSpot = oneUSDC.mul(WAD).div(spot)
+            const expectedLevel = ink.mul(reverseSpot).div(WAD).sub(art.mul(rate).mul(ratio).div(10000))
             expect(await cauldron.callStatic.level(vaultId)).to.equal(expectedLevel)
             // console.log(`${ink} * ${RAY.mul(spot)} - ${art} * ${ratio} = ${await cauldron.level(vaultId)} | ${expectedLevel} `)
           }
