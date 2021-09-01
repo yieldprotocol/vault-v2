@@ -89,13 +89,11 @@ describe('Ladle - remove and repay', function () {
 
     await pool.transfer(pool.address, WAD.mul(2))
 
-    const burnCall = pool.interface.encodeFunctionData('burn', [ladle.address, 0, 0])
+    const burnCall = pool.interface.encodeFunctionData('burn', [owner, ladle.address, 0, 0])
 
     await ladle.batch([
       ladle.routeAction(pool.address, burnCall), // burn to ladle
-      ladle.repayLadleAction(vaultId), // ladle repay
-      ladle.retrieveAction(fyToken.address, owner), // retrieve fyToken
-      ladle.retrieveAction(base.address, owner), // retrieve base
+      ladle.repayFromLadleAction(vaultId, owner), // repay with fyToken
     ])
 
     const baseOut = baseReservesBefore.sub(await base.balanceOf(pool.address))
@@ -105,6 +103,34 @@ describe('Ladle - remove and repay', function () {
     const fyTokenObtained = (await fyToken.balanceOf(owner)).sub(fyTokenBalanceBefore)
     expect(fyTokenOut).to.equal(debtRepaid.add(fyTokenObtained))
     expect(baseObtained).to.equal(baseOut)
+  })
+
+  it('repays debt with base, returns base and surplus fyToken', async () => {
+    const baseReservesBefore = await base.balanceOf(pool.address)
+    const fyTokenReservesBefore = await fyToken.balanceOf(pool.address)
+    const baseBalanceBefore = await base.balanceOf(owner)
+    const fyTokenBalanceBefore = await fyToken.balanceOf(owner)
+    const debtBefore = (await cauldron.balances(vaultId)).art
+
+    await pool.transfer(pool.address, WAD.mul(2))
+
+    const burnCall = pool.interface.encodeFunctionData('burn', [ladle.address, owner, 0, 0])
+
+    await ladle.batch([
+      ladle.routeAction(pool.address, burnCall), // burn to ladle
+      ladle.closeFromLadleAction(vaultId, owner), // close with base
+    ])
+
+    const baseOut = baseReservesBefore.sub(await base.balanceOf(pool.address))
+    const fyTokenOut = fyTokenReservesBefore.sub(await fyToken.balanceOf(pool.address))
+    const debtRepaid = await cauldron.callStatic.debtToBase(
+      seriesId,
+      debtBefore.sub((await cauldron.balances(vaultId)).art)
+    )
+    const baseObtained = (await base.balanceOf(owner)).sub(baseBalanceBefore)
+    const fyTokenObtained = (await fyToken.balanceOf(owner)).sub(fyTokenBalanceBefore)
+    expect(baseOut).to.equal(debtRepaid.add(baseObtained))
+    expect(fyTokenObtained).to.equal(fyTokenOut)
   })
 
   describe('after maturity', async () => {
@@ -120,12 +146,11 @@ describe('Ladle - remove and repay', function () {
       const baseBalanceBefore = await base.balanceOf(owner)
 
       await pool.transfer(pool.address, WAD.mul(2))
-      const burnCall = pool.interface.encodeFunctionData('burn', [ladle.address, 0, 0])
+      const burnCall = pool.interface.encodeFunctionData('burn', [owner, ladle.address, 0, 0])
 
       await ladle.batch([
         ladle.routeAction(pool.address, burnCall), // burn to ladle
         ladle.redeemAction(seriesId, owner, 0), // ladle redeem
-        ladle.retrieveAction(base.address, owner), // retrieve base
       ])
 
       const baseOut = baseReservesBefore.sub(await base.balanceOf(pool.address))

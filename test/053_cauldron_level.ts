@@ -68,7 +68,7 @@ describe('Cauldron - level', function () {
     fyToken = env.series.get(seriesId) as FYToken
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
 
-    await spotSource.set(WAD.mul(2))
+    await spotSource.set(WAD.div(2))
     await cauldron.pour(vaultId, WAD, WAD)
   })
 
@@ -79,9 +79,15 @@ describe('Cauldron - level', function () {
       await spotSource.set(WAD.mul(spot))
       for (let ratio of [50, 100, 200]) {
         await cauldron.setSpotOracle(baseId, ilkId, spotOracle.address, ratio * 10000)
-        const expectedLevel = ink.mul(spot).sub(art.mul(ratio).div(100))
+        const reverseSpot = WAD.div(spot)
+        // When setting the oracles, we set them as underlying/collateral matching Chainlink, for which ETH is always the quote.
+        // Then for `level` we want the collateral/underlying spot price (this one ETH collateral, how much DAI is worth?)
+        // So we set the DAI/ETH spot to 2.0 (WAD*2), for example, but the `spot` that `level` uses is the reverse of that,
+        // 1 / 2.0 = 0.5 (WAD/2). ink * spot is fixed point with WAD decimals, so we finally divide by WAD to find the value
+        // of the collateral in base terms.
+        const expectedLevel = ink.mul(reverseSpot).div(WAD).sub(art.mul(ratio).div(100))
+        // console.log(`${ink} * ${WAD.mul(spot)} - ${art} * ${ratio} = ${await cauldron.callStatic.level(vaultId)} | ${expectedLevel} `)
         expect(await cauldron.callStatic.level(vaultId)).to.equal(expectedLevel)
-        // console.log(`${ink} * ${WAD.mul(spot)} - ${art} * ${ratio} = ${await cauldron.level(vaultId)} | ${expectedLevel} `)
       }
     }
   })
@@ -128,7 +134,7 @@ describe('Cauldron - level', function () {
           // accrual = rate / 100
           for (let ratio of [50, 100, 200]) {
             await cauldron.setSpotOracle(baseId, ilkId, spotOracle.address, ratio * 10000)
-            const expectedLevel = ink.mul(spot).sub(art.mul(rate).mul(ratio).div(10000))
+            const expectedLevel = ink.div(spot).sub(art.mul(rate).mul(ratio).div(10000))
             expect(await cauldron.callStatic.level(vaultId)).to.equal(expectedLevel)
             // console.log(`${ink} * ${RAY.mul(spot)} - ${art} * ${ratio} = ${await cauldron.level(vaultId)} | ${expectedLevel} `)
           }
