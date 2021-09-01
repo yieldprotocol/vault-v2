@@ -131,17 +131,19 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit,
         accrual_ = accrual_ >= 1e18 ? accrual_ : 1e18;     // The accrual can't be below 1 (with 18 decimals)
     }
 
-    /// @dev Burn the fyToken after maturity for an amount that increases according to `chi`
+    /// @dev Burn fyToken after maturity for an amount that increases according to `chi`
+    /// If `amount` is 0, the contract will redeem instead the fyToken balance of this contract. Useful for batches.
     function redeem(address to, uint256 amount)
         external override
         afterMaturity
         returns (uint256 redeemed)
     {
-        _burn(msg.sender, amount);
-        redeemed = amount.wmul(_accrual());
+        uint256 amount_ = (amount == 0) ? _balanceOf[address(this)] : amount;
+        _burn(msg.sender, amount_);
+        redeemed = amount_.wmul(_accrual());
         join.exit(to, redeemed.u128());
         
-        emit Redeemed(msg.sender, to, amount, redeemed);
+        emit Redeemed(msg.sender, to, amount_, redeemed);
     }
 
     /// @dev Mint fyTokens.

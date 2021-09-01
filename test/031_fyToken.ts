@@ -110,7 +110,7 @@ describe('FYToken', function () {
     it('matures by recording the chi value', async () => {
       expect(await fyToken.mature())
         .to.emit(fyToken, 'SeriesMatured')
-        .withArgs(WAD)
+        .withArgs(await chiSource.exchangeRateStored())
     })
 
     it('matures if needed on first redemption after maturity', async () => {
@@ -153,7 +153,7 @@ describe('FYToken', function () {
         const baseJoinBefore = await base.balanceOf(baseJoin.address)
         await fyToken.transfer(fyToken.address, WAD)
         expect(await fyToken.balanceOf(owner)).to.equal(0)
-        await expect(fyToken.redeem(owner, WAD))
+        await expect(fyToken.redeem(owner, 0))
           .to.emit(fyToken, 'Transfer')
           .withArgs(fyToken.address, '0x0000000000000000000000000000000000000000', WAD)
           .to.emit(fyToken, 'Redeemed')
