@@ -484,7 +484,7 @@ contract Cauldron is AccessControl() {
     {
         DataTypes.SpotOracle memory spotOracle_ = spotOracles[series_.baseId][vault_.ilkId];
         uint256 ratio = uint256(spotOracle_.ratio) * 1e12;   // Normalized to 18 decimals
-        (uint256 inkValue,) = spotOracle_.oracle.get(series_.baseId, vault_.ilkId, balances_.ink);    // ink * spot
+        (uint256 inkValue,) = spotOracle_.oracle.get(vault_.ilkId, series_.baseId, balances_.ink);    // ink * spot
 
         if (uint32(block.timestamp) >= series_.maturity) {
             uint256 accrual_ = _accrual(vault_.seriesId, series_);

@@ -239,20 +239,20 @@ export class YieldEnvironment {
 
     for (let ilkId of ilkIds) {
       const aggregator = (await deployContract(owner, ChainlinkAggregatorV3MockArtifact, [8])) as ISourceMock
-      await aggregator.set(WAD.mul(2))
+      await aggregator.set(WAD.div(2))
       sources.set(ilkId, aggregator)
     }
 
     const ethAggregator = (await deployContract(owner, ChainlinkAggregatorV3MockArtifact, [8])) as ISourceMock
-    await ethAggregator.set(WAD.mul(2))
+    await ethAggregator.set(WAD.div(2))
     sources.set(ETH, ethAggregator)
 
     const daiAggregator = (await deployContract(owner, ChainlinkAggregatorV3MockArtifact, [8])) as ISourceMock
-    await daiAggregator.set(WAD.mul(2))
+    await daiAggregator.set(WAD.div(2))
     sources.set(DAI, daiAggregator)
 
     const usdcAggregator = (await deployContract(owner, ChainlinkAggregatorV3MockArtifact, [8])) as ISourceMock
-    await usdcAggregator.set(WAD.mul(2))
+    await usdcAggregator.set(WAD.div(2))
     sources.set(USDC, usdcAggregator)
 
     // ==== Libraries ====
