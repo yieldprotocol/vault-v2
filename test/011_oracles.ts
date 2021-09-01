@@ -86,9 +86,9 @@ describe('Oracle', function () {
     ])) as ChainlinkAggregatorV3Mock
 
     chainlinkMultiOracle = (await deployContract(ownerAcc, ChainlinkMultiOracleArtifact, [])) as ChainlinkMultiOracle
-    await chainlinkMultiOracle.grantRole(id('setSources(bytes6[],bytes6[],address[])'), owner)
-    await chainlinkMultiOracle.setSources([baseId], [usdQuoteId], [usdAggregator.address])
-    await chainlinkMultiOracle.setSources([baseId], [ethQuoteId], [ethAggregator.address])
+    await chainlinkMultiOracle.grantRole(id('setSource(bytes6,bytes6,address)'), owner)
+    await chainlinkMultiOracle.setSource(baseId, usdQuoteId, usdAggregator.address)
+    await chainlinkMultiOracle.setSource(baseId, ethQuoteId, ethAggregator.address)
 
     cTokenChi = (await deployContract(ownerAcc, CTokenChiMockArtifact, [])) as CTokenChiMock
     cTokenRate = (await deployContract(ownerAcc, CTokenRateMockArtifact, [])) as CTokenRateMock
@@ -96,12 +96,14 @@ describe('Oracle', function () {
     cUSDC = (await deployContract(ownerAcc, CUSDCMockArtifact, [])) as CUSDCMock
 
     compoundMultiOracle = (await deployContract(ownerAcc, CompoundMultiOracleArtifact, [])) as CompoundMultiOracle
-    await compoundMultiOracle.grantRole(id('setSources(bytes6[],bytes6[],address[])'), owner)
-    await compoundMultiOracle.setSources([baseId, baseId], [CHI, RATE], [cTokenChi.address, cTokenRate.address])
+    await compoundMultiOracle.grantRole(id('setSource(bytes6,bytes6,address)'), owner)
+    await compoundMultiOracle.setSource(baseId, CHI, cTokenChi.address)
+    await compoundMultiOracle.setSource(baseId, RATE, cTokenRate.address)
 
     cTokenMultiOracle = (await deployContract(ownerAcc, CTokenMultiOracleArtifact, [])) as CTokenMultiOracle
-    await cTokenMultiOracle.grantRole(id('setSources(bytes6[],bytes6[],address[])'), owner)
-    await cTokenMultiOracle.setSources([cDaiId, cUSDCId], [baseId, usdcId], [cDai.address, cUSDC.address])
+    await cTokenMultiOracle.grantRole(id('setSource(bytes6,bytes6,address)'), owner)
+    await cTokenMultiOracle.setSource(cDaiId, baseId, cDai.address)
+    await cTokenMultiOracle.setSource(cUSDCId, usdcId, cUSDC.address)
 
     uniswapV3Factory = (await deployContract(ownerAcc, UniswapV3FactoryMockArtifact, [])) as UniswapV3FactoryMock
     const token0: string = ethers.utils.HDNode.fromSeed('0x0123456789abcdef0123456789abcdef').address
@@ -109,8 +111,8 @@ describe('Oracle', function () {
     uniswapV3PoolAddress = await sendStatic(uniswapV3Factory as Contract, 'createPool', ownerAcc, [token0, token1, 0])
     uniswapV3Pool = (await ethers.getContractAt('UniswapV3PoolMock', uniswapV3PoolAddress)) as UniswapV3PoolMock
     uniswapV3Oracle = (await deployContract(ownerAcc, UniswapV3OracleArtifact, [])) as UniswapV3Oracle
-    await uniswapV3Oracle.grantRole(id('setSources(bytes6[],bytes6[],address[])'), owner)
-    await uniswapV3Oracle.setSources([baseId], [ethQuoteId], [uniswapV3PoolAddress])
+    await uniswapV3Oracle.grantRole(id('setSource(bytes6,bytes6,address)'), owner)
+    await uniswapV3Oracle.setSource(baseId, ethQuoteId, uniswapV3PoolAddress)
   })
 
   it('sets and retrieves the value at spot price', async () => {

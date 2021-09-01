@@ -28,40 +28,10 @@ contract CompositeMultiOracle is IOracle, AccessControl {
     }
 
     /**
-     * @notice Set or reset a number of oracle sources
-     */
-    function setSources(bytes6[] memory bases, bytes6[] memory quotes, IOracle[] memory sources_) external auth {
-        uint256 length = bases.length;
-        require(
-            length == quotes.length && 
-            length == sources_.length,
-            "Mismatched inputs"
-        );
-        for (uint256 i; i < length; i++) {
-            _setSource(bases[i], quotes[i], sources_[i]);
-        }
-    }
-
-    /**
      * @notice Set or reset an price path and its reverse
      */
     function setPath(bytes6 base, bytes6 quote, bytes6[] memory path) external auth {
         _setPath(base, quote, path);
-    }
-
-    /**
-     * @notice Set or reset a number of price paths and their reverses
-     */
-    function setPaths(bytes6[] memory bases, bytes6[] memory quotes, bytes6[][] memory paths_) external auth {
-        uint256 length = bases.length;
-        require(
-            length == quotes.length && 
-            length == paths_.length,
-            "Mismatched inputs"
-        );
-        for (uint256 i; i < length; i++) {
-            _setPath(bases[i], quotes[i], paths_[i]);
-        }
     }
 
     /**

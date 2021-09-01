@@ -53,16 +53,6 @@ contract UniswapV3Oracle is IOracle, AccessControl {
     }
 
     /**
-     * @notice Set or reset a number of oracle sources
-     */
-    function setSources(bytes6[] memory bases, bytes6[] memory quotes, address[] memory sources_) external auth {
-        require(bases.length == quotes.length && quotes.length == sources_.length, "Mismatched inputs");
-        for (uint256 i; i < bases.length; i++) {
-            _setSource(bases[i], quotes[i], sources_[i]);
-        }
-    }
-
-    /**
      * @notice Retrieve the value of the amount at the latest oracle price.
      */
     function peek(bytes32 base, bytes32 quote, uint256 amount)

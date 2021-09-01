@@ -43,10 +43,10 @@ describe('Oracle', function () {
   beforeEach(async () => {
     // Deploy oracles
     chainlinkMultiOracle = (await deployContract(ownerAcc, ChainlinkMultiOracleArtifact, [])) as ChainlinkMultiOracle
-    chainlinkMultiOracle.grantRole(id('setSources(bytes6[],bytes6[],address[])'), owner)
+    chainlinkMultiOracle.grantRole(id('setSource(bytes6,bytes6,address)'), owner)
     compositeMultiOracle = (await deployContract(ownerAcc, CompositeMultiOracleArtifact, [])) as CompositeMultiOracle
     compositeMultiOracle.grantRoles(
-      [id('setSources(bytes6[],bytes6[],address[])'), id('setPaths(bytes6[],bytes6[],bytes6[][])')],
+      [id('setSource(bytes6,bytes6,address)'), id('setPath(bytes6,bytes6,bytes6[])')],
       owner
     )
 
@@ -62,21 +62,41 @@ describe('Oracle', function () {
     ])) as ChainlinkAggregatorV3Mock
 
     // Set up the ChainlinkMultiOracle to draw from original sources
-    await chainlinkMultiOracle.setSources(
-      [baseId, path1Id, path2Id],
-      [path1Id, path2Id, ilkId],
-      [basePath1Aggregator.address, path1Path2Aggregator.address, path2IlkAggregator.address]
+    await chainlinkMultiOracle.setSource(
+      baseId,
+      path1Id,
+      basePath1Aggregator.address,
+    )
+    await chainlinkMultiOracle.setSource(
+      path1Id,
+      path2Id,
+      path1Path2Aggregator.address,
+    )
+    await chainlinkMultiOracle.setSource(
+      path2Id,
+      ilkId,
+      path2IlkAggregator.address
     )
 
     // Set up the CompositeMultiOracle to draw from the ChainlinkMultiOracle
-    await compositeMultiOracle.setSources(
-      [baseId, path1Id, path2Id],
-      [path1Id, path2Id, ilkId],
-      [chainlinkMultiOracle.address, chainlinkMultiOracle.address, chainlinkMultiOracle.address]
+    await compositeMultiOracle.setSource(
+      baseId,
+      path1Id,
+      chainlinkMultiOracle.address,
+    )
+    await compositeMultiOracle.setSource(
+      path1Id,
+      path2Id,
+      chainlinkMultiOracle.address,
+    )
+    await compositeMultiOracle.setSource(
+      path2Id,
+      ilkId,
+      chainlinkMultiOracle.address
     )
 
     // Configure the base -> path1 -> path2 -> ilk path for base / ilk
-    await compositeMultiOracle.setPaths([baseId], [ilkId], [[path1Id, path2Id]])
+    await compositeMultiOracle.setPath(baseId, ilkId, [path1Id, path2Id])
 
     // Set price at source
     await basePath1Aggregator.set(WAD.mul(2))

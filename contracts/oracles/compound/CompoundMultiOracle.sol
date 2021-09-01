@@ -2,9 +2,9 @@
 pragma solidity 0.8.6;
 
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
 import "../../constants/Constants.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
 import "./CTokenInterface.sol";
 
 
@@ -22,16 +22,6 @@ contract CompoundMultiOracle is IOracle, AccessControl, Constants {
      */
     function setSource(bytes6 base, bytes6 kind, address source) external auth {
         _setSource(base, kind, source);
-    }
-
-    /**
-     * @notice Set or reset an oracle source
-     */
-    function setSources(bytes6[] memory bases, bytes6[] memory kinds, address[] memory sources_) external auth {
-        uint256 length = bases.length;
-        require(length == kinds.length && length == sources_.length, "Mismatched inputs");
-        for (uint256 i; i < length; i++)
-            _setSource(bases[i], kinds[i], sources_[i]);
     }
 
     /**

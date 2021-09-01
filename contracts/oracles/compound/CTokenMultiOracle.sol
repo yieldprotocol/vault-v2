@@ -32,21 +32,6 @@ contract CTokenMultiOracle is IOracle, AccessControl, Constants {
     }
 
     /**
-     * @notice Set or reset a number of oracle sources and their inverses
-     */
-    function setSources(bytes6[] memory cTokenIds, bytes6[] memory underlyings, address[] memory cTokens) external auth {
-        uint256 length = cTokenIds.length;
-        require(
-            length == underlyings.length && 
-            length == cTokens.length,
-            "Mismatched inputs"
-        );
-        for (uint256 i; i < length; i++) {
-            _setSource(cTokenIds[i], underlyings[i], cTokens[i]);
-        }
-    }
-
-    /**
      * @notice Retrieve the value of the amount at the latest oracle price.
      */
     function peek(bytes32 base, bytes32 quote, uint256 amount)
