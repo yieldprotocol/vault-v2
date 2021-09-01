@@ -18,7 +18,7 @@ function bytes6ToBytes32(x: string): string {
   return x + '00'.repeat(26)
 }
 
-describe('Oracle', function () {
+describe('Oracles - Composite', function () {
   this.timeout(0)
 
   let ownerAcc: SignerWithAddress
