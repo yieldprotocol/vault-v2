@@ -43,7 +43,10 @@ contract ChainlinkMultiOracle is IOracle, AccessControl, Constants {
         external view virtual override
         returns (uint256 value, uint256 updateTime)
     {
-        (value, updateTime) = _peek(baseId.b6(), quoteId.b6(), amount);
+        if ((baseId == ETH || quoteId == ETH) || baseId == quoteId)
+            (value, updateTime) = _peek(baseId.b6(), quoteId.b6(), amount);
+        else
+            (value, updateTime) = _peekThroughETH(baseId.b6(), quoteId.b6(), amount);
     }
 
     /**
@@ -53,7 +56,10 @@ contract ChainlinkMultiOracle is IOracle, AccessControl, Constants {
         external virtual override
         returns (uint256 value, uint256 updateTime)
     {
-        (value, updateTime) = _peek(baseId.b6(), quoteId.b6(), amount);
+        if ((baseId == ETH || quoteId == ETH) || baseId == quoteId)
+            (value, updateTime) = _peek(baseId.b6(), quoteId.b6(), amount);
+        else
+            (value, updateTime) = _peekThroughETH(baseId.b6(), quoteId.b6(), amount);
     }
 
     /**
@@ -79,6 +85,15 @@ contract ChainlinkMultiOracle is IOracle, AccessControl, Constants {
     }
 
     /**
+     * @notice Retrieve the value of the amount at the latest oracle price, using ETH as an intermediate step
+     */
+    function _peekThroughETH(bytes6 baseId, bytes6 quoteId, uint256 amount) private view returns (uint value, uint updateTime) {
+        (uint256 ethValue, uint256 updateTime1) = _peek(baseId, ETH, amount);
+        (value, updateTime) = _peek(ETH, quoteId, ethValue);
+        if (updateTime1 < updateTime) updateTime = updateTime1;
+    }
+
+    /**
      * @dev Set a new price source
      */
     function _setSource(bytes6 baseId, IERC20Metadata base, bytes6 quoteId, IERC20Metadata quote, address source) internal {
@@ -88,13 +103,16 @@ contract ChainlinkMultiOracle is IOracle, AccessControl, Constants {
             quoteDecimals: quote.decimals(),
             inverse: false
         });
-        sources[quoteId][baseId] = Source({
-            source: source,
-            baseDecimals: quote.decimals(), // We are reversing the base and the quote
-            quoteDecimals: base.decimals(),
-            inverse: true
-        });
         emit SourceSet(baseId, quoteId, source);
-        emit SourceSet(quoteId, baseId, source);
+
+        if (baseId != quoteId) {
+            sources[quoteId][baseId] = Source({
+                source: source,
+                baseDecimals: quote.decimals(), // We are reversing the base and the quote
+                quoteDecimals: base.decimals(),
+                inverse: true
+            });
+            emit SourceSet(quoteId, baseId, source);
+        }
     }
 }

@@ -1,4 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
+import { ETH } from '../src/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 
@@ -35,7 +36,7 @@ describe('Ladle - vaults', function () {
   })
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const ilkId = ETH
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const otherIlkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const otherSeriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))

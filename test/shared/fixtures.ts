@@ -185,6 +185,8 @@ export class YieldEnvironment {
       await owner.getAddress()
     ) // Only test environment
 
+    await asset.mint(await owner.getAddress(), WAD.mul(100000))
+
     return join
   }
 
@@ -212,6 +214,8 @@ export class YieldEnvironment {
 
     // The first asset will be the underlying for all series
     // All assets after the first will be added as collateral for all series
+    // If the user didn't specify ETH as an ilk, we add it anyway
+    if (assetIds.indexOf(ETH) == -1) assetIds.push(ETH)
     const baseId = assetIds[0]
     const ilkIds = assetIds.slice(1)
 
@@ -226,11 +230,11 @@ export class YieldEnvironment {
     for (let assetId of assetIds) {
       const symbol = Buffer.from(assetId.slice(2), 'hex').toString('utf8')
       let asset: ERC20Mock
-      if (assetId === DAI) asset = dai as unknown as ERC20Mock
-      else if (assetId === USDC) asset = usdc as unknown as ERC20Mock
+      if (assetId === DAI) asset = (dai as unknown) as ERC20Mock
+      else if (assetId === USDC) asset = (usdc as unknown) as ERC20Mock
+      else if (assetId === ETH) asset = (weth as unknown) as ERC20Mock
       else asset = (await deployContract(owner, ERC20MockArtifact, [assetId, symbol])) as ERC20Mock
-      
-      await asset.mint(await owner.getAddress(), WAD.mul(100000))
+
       assets.set(assetId, asset)
     }
     const base = assets.get(baseId) as ERC20Mock
@@ -330,17 +334,6 @@ export class YieldEnvironment {
       await this.initAsset(owner, ladle, assetId, asset)
       joins.set(assetId, join)
     }
-
-    // Add WETH9
-    await wand.addAsset(ETH, weth.address)
-    const wethJoinAddress = (await joinFactory.queryFilter(joinFactory.filters.JoinCreated(weth.address, null)))[0]
-      .args[1]
-    const wethJoin = (await ethers.getContractAt('Join', wethJoinAddress, owner)) as Join
-
-    await this.initAsset(owner, ladle, ETH, weth)
-    assets.set(ETH, (weth as unknown) as ERC20Mock)
-    joins.set(ETH, wethJoin)
-    ilkIds.push(ETH)
 
     // ==== Make baseId the base, creating chi and rate oracles ====
     await chiRateOracle.setSource(baseId, RATE, cTokenRate.address)

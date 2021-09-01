@@ -2,7 +2,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 
 import { constants } from '@yield-protocol/utils-v2'
 const { WAD } = constants
-import { RATE, USDC } from '../src/constants'
+import { RATE, USDC, ETH } from '../src/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { FYToken } from '../typechain/FYToken'
@@ -34,7 +34,7 @@ describe('Cauldron - level', function () {
 
   const oneUSDC = WAD.div(1000000000000)
   const baseId = USDC // We can have only one base in fixtures, so let's do the hard one
-  const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const ilkId = ETH
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   let vaultId: string
 

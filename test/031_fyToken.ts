@@ -1,14 +1,13 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { constants, id } from '@yield-protocol/utils-v2'
 const { WAD } = constants
-import { CHI } from '../src/constants'
+import { CHI, ETH } from '../src/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { CompoundMultiOracle } from '../typechain/CompoundMultiOracle'
-import { ISourceMock } from '../typechain/ISourceMock'
 import { CTokenChiMock } from '../typechain/CTokenChiMock'
 
 import { ethers, waffle } from 'hardhat'
@@ -17,7 +16,6 @@ const { loadFixture } = waffle
 
 import { YieldEnvironment } from './shared/fixtures'
 import { LadleWrapper } from '../src/ladleWrapper'
-import { BigNumber } from 'ethers'
 
 describe('FYToken', function () {
   this.timeout(0)
@@ -34,7 +32,7 @@ describe('FYToken', function () {
   let ladle: LadleWrapper
 
   async function fixture() {
-    return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId], [seriesId])
+    return await YieldEnvironment.setup(ownerAcc, [baseId], [seriesId])
   }
 
   before(async () => {
@@ -48,7 +46,7 @@ describe('FYToken', function () {
   })
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const ilkId = ETH
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   let vaultId: string
 

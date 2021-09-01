@@ -80,18 +80,27 @@ describe('Oracles - Chainlink', function () {
     ).to.be.revertedWith('Source not found')
   })
 
-  it('sets and retrieves the value at spot price from a chainlink multioracle', async () => {
+  it('retrieves the value at spot price from a chainlink multioracle', async () => {
     expect(
       (await chainlinkMultiOracle.callStatic.get(bytes6ToBytes32(DAI), bytes6ToBytes32(ETH), WAD.mul(2500)))[0]
     ).to.equal(WAD)
     expect(
       (await chainlinkMultiOracle.callStatic.get(bytes6ToBytes32(USDC), bytes6ToBytes32(ETH), oneUSDC.mul(2500)))[0]
     ).to.equal(WAD)
+    expect((await chainlinkMultiOracle.callStatic.get(bytes6ToBytes32(ETH), bytes6ToBytes32(DAI), WAD))[0]).to.equal(
+      WAD.mul(2500)
+    )
+    expect((await chainlinkMultiOracle.callStatic.get(bytes6ToBytes32(ETH), bytes6ToBytes32(USDC), WAD))[0]).to.equal(
+      oneUSDC.mul(2500)
+    )
+  })
+
+  it('retrieves the value at spot price from a chainlink multioracle through ETH', async () => {
     expect(
-      (await chainlinkMultiOracle.callStatic.get(bytes6ToBytes32(ETH), bytes6ToBytes32(DAI), WAD))[0]
-    ).to.equal(WAD.mul(2500))
-    expect(
-      (await chainlinkMultiOracle.callStatic.get(bytes6ToBytes32(ETH), bytes6ToBytes32(USDC), WAD))[0]
+      (await chainlinkMultiOracle.callStatic.get(bytes6ToBytes32(DAI), bytes6ToBytes32(USDC), WAD.mul(2500)))[0]
     ).to.equal(oneUSDC.mul(2500))
+    expect(
+      (await chainlinkMultiOracle.callStatic.get(bytes6ToBytes32(USDC), bytes6ToBytes32(DAI), oneUSDC.mul(2500)))[0]
+    ).to.equal(WAD.mul(2500))
   })
 })

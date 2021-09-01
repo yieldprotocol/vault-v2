@@ -103,13 +103,13 @@ describe('Oracles - Compound/cToken/Uniswap', function () {
 
   it('revert on unknown sources', async () => {
     await expect(
-        compoundMultiOracle.callStatic.get(bytes6ToBytes32(mockBytes6), bytes6ToBytes32(mockBytes6), WAD)
+      compoundMultiOracle.callStatic.get(bytes6ToBytes32(mockBytes6), bytes6ToBytes32(mockBytes6), WAD)
     ).to.be.revertedWith('Source not found')
     await expect(
-        cTokenMultiOracle.callStatic.get(bytes6ToBytes32(mockBytes6), bytes6ToBytes32(mockBytes6), WAD)
+      cTokenMultiOracle.callStatic.get(bytes6ToBytes32(mockBytes6), bytes6ToBytes32(mockBytes6), WAD)
     ).to.be.revertedWith('Source not found')
     await expect(
-        uniswapV3Oracle.callStatic.get(bytes6ToBytes32(mockBytes6), bytes6ToBytes32(mockBytes6), WAD)
+      uniswapV3Oracle.callStatic.get(bytes6ToBytes32(mockBytes6), bytes6ToBytes32(mockBytes6), WAD)
     ).to.be.revertedWith('Source not found')
   })
 

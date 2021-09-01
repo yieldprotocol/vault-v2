@@ -3,6 +3,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { constants, id } from '@yield-protocol/utils-v2'
 const { WAD, MAX128 } = constants
 const MAX = MAX128
+import { ETH } from '../src/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
@@ -51,7 +52,7 @@ describe('Ladle - remove and repay', function () {
   })
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const ilkId = ETH
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
 
   let vaultId: string
@@ -72,7 +73,7 @@ describe('Ladle - remove and repay', function () {
 
     // Borrow and add liquidity
     await ladle.serve(vaultId, pool.address, WAD, WAD, MAX)
-    await ladle.pour(vaultId, pool.address, WAD.mul(2), WAD.mul(2))
+    await ladle.pour(vaultId, pool.address, WAD.mul(4), WAD.mul(4))
     await pool.mint(owner, true, 0)
 
     // Add some base to the baseJoin to serve redemptions

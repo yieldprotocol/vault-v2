@@ -2,6 +2,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { constants, signatures } from '@yield-protocol/utils-v2'
 const { WAD, MAX128 } = constants
 const MAX = MAX128
+import { ETH } from '../src/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
@@ -50,7 +51,7 @@ describe('Ladle - batch', function () {
   })
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const ilkId = ETH
   const otherIlkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ethId = ethers.utils.formatBytes32String('ETH').slice(0, 14)
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
@@ -105,10 +106,10 @@ describe('Ladle - batch', function () {
     ).to.be.revertedWith('Only vault owner')
   })
 
-  it('builds a vault, permit and pour', async () => {
+  /* it('builds a vault, permit and pour', async () => {
     const ilkSeparator = await ilk.DOMAIN_SEPARATOR()
     const deadline = MAX
-    const posted = WAD.mul(2)
+    const posted = WAD.mul(4)
     const nonce = await ilk.nonces(owner)
     const approval = {
       owner: owner,
@@ -130,7 +131,7 @@ describe('Ladle - batch', function () {
     expect(vault.owner).to.equal(owner)
     expect(vault.seriesId).to.equal(seriesId)
     expect(vault.ilkId).to.equal(ilkId)
-  })
+  }) */
 
   it('builds a vault, wraps ether and serve', async () => {
     const posted = WAD.mul(2)
@@ -166,8 +167,8 @@ describe('Ladle - batch', function () {
   })
 
   it('users can transfer ETH then pour, then close', async () => {
-    const posted = WAD.mul(2)
-    const borrowed = WAD
+    const posted = WAD.mul(4)
+    const borrowed = WAD.mul(2)
 
     await ladle.batch(
       [
@@ -193,14 +194,14 @@ describe('Ladle - batch', function () {
 
     const { v, r, s } = signatures.sign(permitDigest, signatures.privateKey0)
 
-    const posted = WAD.mul(2)
-    const borrowed = WAD
+    const posted = WAD.mul(8)
+    const borrowed = WAD.mul(4)
 
     await ladle.batch([
       ladle.buildAction(seriesId, ilkId),
       ladle.pourAction(cachedVaultId, owner, posted, borrowed),
       ladle.forwardPermitAction(base.address, ladle.address, amount, deadline, v, r, s),
-      ladle.transferAction(base.address, pool.address, WAD.div(2)),
+      ladle.transferAction(base.address, pool.address, WAD),
       ladle.repayAction(cachedVaultId, other, 0, 0),
     ])
   })
