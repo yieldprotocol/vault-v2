@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.1;
+pragma solidity 0.8.6;
 
 import "erc3156/contracts/interfaces/IERC3156FlashBorrower.sol";
 import "erc3156/contracts/interfaces/IERC3156FlashLender.sol";
@@ -9,10 +9,10 @@ import "@yield-protocol/vault-interfaces/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/IJoin.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "./math/WMul.sol";
-import "./math/WDiv.sol";
-import "./math/CastU256U128.sol";
-import "./math/CastU256U32.sol";
+import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
+import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastU256U32.sol";
 import "./constants/Constants.sol";
 
 
@@ -102,7 +102,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit,
         private
         returns (uint256 _chiAtMaturity)
     {
-        (_chiAtMaturity,) = oracle.get(underlyingId, CHI, 1e18);
+        (_chiAtMaturity,) = oracle.get(underlyingId, CHI, 0);   // The value returned is an accumulator, it doesn't need an input amount
         chiAtMaturity = _chiAtMaturity;
         emit SeriesMatured(_chiAtMaturity);
     }
@@ -125,7 +125,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit,
         if (chiAtMaturity == CHI_NOT_SET) {  // After maturity, but chi not yet recorded. Let's record it, and accrual is then 1.
             _mature();
         } else {
-            (uint256 chi,) = oracle.get(underlyingId, CHI, 1e18);
+            (uint256 chi,) = oracle.get(underlyingId, CHI, 0);   // The value returned is an accumulator, it doesn't need an input amount
             accrual_ = chi.wdiv(chiAtMaturity);
         }
         accrual_ = accrual_ >= 1e18 ? accrual_ : 1e18;     // The accrual can't be below 1 (with 18 decimals)

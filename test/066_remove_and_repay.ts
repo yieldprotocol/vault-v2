@@ -92,10 +92,10 @@ describe('Ladle - remove and repay', function () {
     const burnCall = pool.interface.encodeFunctionData('burn', [ladle.address, 0, 0])
 
     await ladle.batch([
-      ladle.routeAction(seriesId, burnCall), // burn to ladle
+      ladle.routeAction(pool.address, burnCall), // burn to ladle
       ladle.repayLadleAction(vaultId), // ladle repay
-      ladle.retrieveAction(seriesId, false, owner), // retrieve fyToken
-      ladle.retrieveAction(baseId, true, owner), // retrieve base
+      ladle.retrieveAction(fyToken.address, owner), // retrieve fyToken
+      ladle.retrieveAction(base.address, owner), // retrieve base
     ])
 
     const baseOut = baseReservesBefore.sub(await base.balanceOf(pool.address))
@@ -123,9 +123,9 @@ describe('Ladle - remove and repay', function () {
       const burnCall = pool.interface.encodeFunctionData('burn', [ladle.address, 0, 0])
 
       await ladle.batch([
-        ladle.routeAction(seriesId, burnCall), // burn to ladle
+        ladle.routeAction(pool.address, burnCall), // burn to ladle
         ladle.redeemAction(seriesId, owner, 0), // ladle redeem
-        ladle.retrieveAction(baseId, true, owner), // retrieve base
+        ladle.retrieveAction(base.address, owner), // retrieve base
       ])
 
       const baseOut = baseReservesBefore.sub(await base.balanceOf(pool.address))

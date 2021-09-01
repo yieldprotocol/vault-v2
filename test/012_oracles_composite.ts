@@ -90,9 +90,21 @@ describe('Oracle', function () {
     )
   })
 
+  it('retrieves the value at spot price for path1 -> base', async () => {
+    expect((await compositeMultiOracle.peek(bytes6ToBytes32(path1Id), bytes6ToBytes32(baseId), WAD))[0]).to.equal(
+      WAD.div(2)
+    )
+  })
+
   it('retrieves the value at spot price through the path', async () => {
     expect(
       (await compositeMultiOracle.callStatic.get(bytes6ToBytes32(baseId), bytes6ToBytes32(ilkId), WAD))[0]
     ).to.equal(WAD.mul(30))
+  })
+
+  it('retrieves the value at spot price through the reverse path', async () => {
+    expect(
+      (await compositeMultiOracle.callStatic.get(bytes6ToBytes32(ilkId), bytes6ToBytes32(baseId), WAD.mul(3)))[0]
+    ).to.equal(WAD.div(10).sub(1)) // Rounding
   })
 })

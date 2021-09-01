@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.1;
+pragma solidity 0.8.6;
 import "@yield-protocol/vault-interfaces/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "./math/WMul.sol";
-import "./math/WDiv.sol";
-import "./math/CastU128I128.sol";
-import "./math/CastI128U128.sol";
-import "./math/CastU256U128.sol";
-import "./math/CastU256U32.sol";
-import "./math/CastU256I256.sol";
+import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
+import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastU128I128.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastI128U128.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastU256U32.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastU256I256.sol";
 
 library CauldronMath {
     /// @dev Add a number (which might be negative) to a positive, and revert if the result is negative.
@@ -146,7 +146,7 @@ contract Cauldron is AccessControl() {
             series_.fyToken != IFYToken(address(0)),
             "Series not found"
         );
-        for (uint256 i = 0; i < ilkIds.length; i++) {
+        for (uint256 i; i < ilkIds.length; i++) {
             require (
                 spotOracles[series_.baseId][ilkIds[i]].oracle != IOracle(address(0)),
                 "Spot oracle not found"
@@ -440,7 +440,7 @@ contract Cauldron is AccessControl() {
     {
         require (uint32(block.timestamp) >= series_.maturity, "Only after maturity");
         IOracle rateOracle = rateOracles[series_.baseId];
-        (uint256 rateAtMaturity,) = rateOracle.get(series_.baseId, bytes32("rate"), 1e18);
+        (uint256 rateAtMaturity,) = rateOracle.get(series_.baseId, bytes32("rate"), 0);   // The value returned is an accumulator, it doesn't need an input amount
         ratesAtMaturity[seriesId] = rateAtMaturity;
         emit SeriesMatured(seriesId, rateAtMaturity);
     }
@@ -465,7 +465,7 @@ contract Cauldron is AccessControl() {
             _mature(seriesId, series_);
         } else {
             IOracle rateOracle = rateOracles[series_.baseId];
-            (uint256 rate,) = rateOracle.get(series_.baseId, bytes32("rate"), 1e18);
+            (uint256 rate,) = rateOracle.get(series_.baseId, bytes32("rate"), 0);   // The value returned is an accumulator, it doesn't need an input amount
             accrual_ = rate.wdiv(rateAtMaturity);
         }
         accrual_ = accrual_ >= 1e18 ? accrual_ : 1e18;     // The accrual can't be below 1 (with 18 decimals)

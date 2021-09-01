@@ -138,7 +138,7 @@ export class YieldEnvironment {
       [
         id('addJoin(bytes6,address)'),
         id('addPool(bytes6,address)'),
-        id('setModule(address,bool)'),
+        id('addModule(address,bool)'),
         id('setFee(uint256)'),
       ],
       receiver
@@ -231,10 +231,10 @@ export class YieldEnvironment {
     const usdc = (await deployContract(owner, USDCMockArtifact, [])) as USDCMock
 
     const cTokenRate = (await deployContract(owner, CTokenRateMockArtifact, [])) as ISourceMock
-    await cTokenRate.set(WAD.mul(2))
+    await cTokenRate.set(WAD.mul(2).mul(10000000000))
     sources.set(RATE, cTokenRate)
     const cTokenChi = (await deployContract(owner, CTokenChiMockArtifact, [])) as ISourceMock
-    await cTokenChi.set(WAD)
+    await cTokenChi.set(WAD.mul(10000000000))
     sources.set(CHI, cTokenChi)
 
     for (let ilkId of ilkIds) {

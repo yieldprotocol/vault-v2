@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.1;
+pragma solidity 0.8.6;
 
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
-import "../../math/CastBytes32Bytes6.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
 import "./IUniswapV3PoolImmutables.sol";
 // This for the real deal
 // import "@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol";
@@ -57,14 +57,13 @@ contract UniswapV3Oracle is IOracle, AccessControl {
      */
     function setSources(bytes6[] memory bases, bytes6[] memory quotes, address[] memory sources_) external auth {
         require(bases.length == quotes.length && quotes.length == sources_.length, "Mismatched inputs");
-        for (uint256 i = 0; i < bases.length; i++) {
+        for (uint256 i; i < bases.length; i++) {
             _setSource(bases[i], quotes[i], sources_[i]);
         }
     }
 
     /**
      * @notice Retrieve the value of the amount at the latest oracle price.
-     * @return value
      */
     function peek(bytes32 base, bytes32 quote, uint256 amount)
         external view virtual override
@@ -75,7 +74,6 @@ contract UniswapV3Oracle is IOracle, AccessControl {
 
     /**
      * @notice Retrieve the value of the amount at the latest oracle price. Same as `peek` for this oracle.
-     * @return value
      */
     function get(bytes32 base, bytes32 quote, uint256 amount)
         external virtual override

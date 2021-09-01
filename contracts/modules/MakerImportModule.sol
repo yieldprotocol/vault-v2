@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.1;
+pragma solidity 0.8.6;
 import "@yield-protocol/vault-interfaces/ICauldron.sol";
 import "@yield-protocol/vault-interfaces/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
-import "../math/CastU256U128.sol";
-import "../math/CastU128I128.sol";
-import "../math/WMul.sol";
-import "../math/WMulUp.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastU256I128.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastU128I128.sol";
+import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
+import "@yield-protocol/utils-v2/contracts/math/WMulUp.sol";
 import "../LadleStorage.sol";
 
 /// @dev interface for the DssCdpManager contract from MakerDAO
@@ -57,6 +58,7 @@ interface IVat {
 /// ATTENTION: THIS MODULE IS A DRAFT AND IT IS NOT TO BE DEPLOYED UNTIL TESTED
 contract MakerImportModule is LadleStorage {
     using CastU256U128 for uint256;
+    using CastU256I128 for uint256;
     using CastU128I128 for uint128;
     using WMul for uint256;
     using WMulUp for uint256;
@@ -75,8 +77,8 @@ contract MakerImportModule is LadleStorage {
 
     // The MakerImportModule doesn't have any data storage of its own
 
-    constructor (ICauldron cauldron_, IMakerJoin makerDaiJoin_, ICDPMgr cdpMgr_, IProxyRegistry proxyRegistry_, IIlkRegistry ilkRegistry_) 
-        LadleStorage(cauldron_) {
+    constructor (ICauldron cauldron_, IWETH9 weth_, IMakerJoin makerDaiJoin_, ICDPMgr cdpMgr_, IProxyRegistry proxyRegistry_, IIlkRegistry ilkRegistry_) 
+        LadleStorage(cauldron_, weth_) {
         proxyRegistry = proxyRegistry_;
         ilkRegistry = ilkRegistry_;
         cdpMgr = cdpMgr_;
@@ -128,7 +130,7 @@ contract MakerImportModule is LadleStorage {
         if (art != 0) series = getSeries(vault.seriesId);
 
         int128 fee;
-        if (art > 0) fee = ((series.maturity - block.timestamp) * uint256(int256(art)).wmul(borrowingFee)).u128().i128();
+        if (art > 0) fee = ((series.maturity - block.timestamp) * uint256(int256(art)).wmul(borrowingFee)).i128();
 
         // Update accounting
         balances = cauldron.pour(vaultId, ink, art + fee);

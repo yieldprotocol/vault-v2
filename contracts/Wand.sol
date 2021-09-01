@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.1;
+pragma solidity 0.8.6;
 import "@yield-protocol/vault-interfaces/ICauldronGov.sol";
 import "@yield-protocol/vault-interfaces/ILadleGov.sol";
 import "@yield-protocol/vault-interfaces/IMultiOracleGov.sol";
@@ -11,7 +11,7 @@ import "@yield-protocol/vault-interfaces/DataTypes.sol";
 import "@yield-protocol/yieldspace-interfaces/IPoolFactory.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "./constants/Constants.sol";
-import "./math/CastBytes32Bytes6.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
 
 
 interface IOwnable {
@@ -24,10 +24,10 @@ contract Wand is AccessControl, Constants {
 
     event Point(bytes32 indexed param, address value);
 
-    bytes4 public constant JOIN = bytes4(keccak256("join(address,uint128)"));
-    bytes4 public constant EXIT = bytes4(keccak256("exit(address,uint128)"));
-    bytes4 public constant MINT = bytes4(keccak256("mint(address,uint256)"));
-    bytes4 public constant BURN = bytes4(keccak256("burn(address,uint256)"));
+    bytes4 public constant JOIN = IJoin.join.selector;      // bytes4(keccak256("join(address,uint128)"));
+    bytes4 public constant EXIT = IJoin.exit.selector;      // bytes4(keccak256("exit(address,uint128)"));
+    bytes4 public constant MINT = IFYToken.mint.selector;   // bytes4(keccak256("mint(address,uint256)"));
+    bytes4 public constant BURN = IFYToken.burn.selector;   // bytes4(keccak256("burn(address,uint256)"));
 
     ICauldronGov public cauldron;
     ILadleGov public ladle;
@@ -81,8 +81,8 @@ contract Wand is AccessControl, Constants {
         sigs[0] = JOIN;
         sigs[1] = EXIT;
         join.grantRoles(sigs, address(ladle));
-        join.grantRole(join.ROOT(), msg.sender);
-        // join.renounceRole(join.ROOT(), address(this));  // Wand requires ongoing rights to set up permissions to joins
+        join.grantRole(ROOT, msg.sender);
+        // join.renounceRole(ROOT, address(this));  // Wand requires ongoing rights to set up permissions to joins
         ladle.addJoin(assetId, address(join));
     }
 
@@ -117,7 +117,7 @@ contract Wand is AccessControl, Constants {
         bytes6 seriesId,
         bytes6 baseId,
         uint32 maturity,
-        bytes6[] memory ilkIds,
+        bytes6[] calldata ilkIds,
         string memory name,
         string memory symbol
     ) external auth {
@@ -151,8 +151,8 @@ contract Wand is AccessControl, Constants {
         fyToken.grantRoles(sigs, address(ladle));
 
         // Pass ownership of the fyToken to msg.sender
-        fyToken.grantRole(fyToken.ROOT(), msg.sender);
-        fyToken.renounceRole(fyToken.ROOT(), address(this));
+        fyToken.grantRole(ROOT, msg.sender);
+        fyToken.renounceRole(ROOT, address(this));
 
         // Add fyToken/series to the Cauldron and approve ilks for the series
         cauldron.addSeries(seriesId, baseId, IFYToken(address(fyToken)));
