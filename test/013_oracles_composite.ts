@@ -35,7 +35,7 @@ describe('Oracles - Composite', function () {
   let weth: WETH9Mock
   let chainlinkMultiOracle: ChainlinkMultiOracle
   let compositeMultiOracle: CompositeMultiOracle
-  
+
   let daiEthAggregator: ChainlinkAggregatorV3Mock
   let usdcEthAggregator: ChainlinkAggregatorV3Mock
 
@@ -63,13 +63,9 @@ describe('Oracles - Composite', function () {
     await daiEthAggregator.set(WAD.div(2500)) // 1 DAI (1^18) in ETH
     await usdcEthAggregator.set(WAD.div(2500)) // 1 USDC (1^6) in ETH
 
-
     compositeMultiOracle = (await deployContract(ownerAcc, CompositeMultiOracleArtifact)) as CompositeMultiOracle
     compositeMultiOracle.grantRoles(
-      [
-        id('setSource(bytes6,bytes6,address)'),
-        id('setPath(bytes6,bytes6,bytes6[])')
-      ],
+      [id('setSource(bytes6,bytes6,address)'), id('setPath(bytes6,bytes6,bytes6[])')],
       owner
     )
 
@@ -96,11 +92,7 @@ describe('Oracles - Composite', function () {
   })
 
   it('retrieves the value at spot price for DAI -> USDC and reverse', async () => {
-    expect((await compositeMultiOracle.peek(bytes6ToBytes32(DAI), bytes6ToBytes32(USDC), WAD))[0]).to.equal(
-      oneUSDC
-    )
-    expect((await compositeMultiOracle.peek(bytes6ToBytes32(USDC), bytes6ToBytes32(DAI), oneUSDC))[0]).to.equal(
-      WAD
-    )
+    expect((await compositeMultiOracle.peek(bytes6ToBytes32(DAI), bytes6ToBytes32(USDC), WAD))[0]).to.equal(oneUSDC)
+    expect((await compositeMultiOracle.peek(bytes6ToBytes32(USDC), bytes6ToBytes32(DAI), oneUSDC))[0]).to.equal(WAD)
   })
 })

@@ -68,21 +68,15 @@ describe('Oracles - cToken', function () {
     expect((await cTokenMultiOracle.callStatic.get(bytes6ToBytes32(cDaiId), bytes6ToBytes32(DAI), WAD))[0]).to.equal(
       WAD.mul(2)
     )
-    expect(
-      (await cTokenMultiOracle.callStatic.get(bytes6ToBytes32(cUSDCId), bytes6ToBytes32(USDC), WAD))[0]
-    ).to.equal(WAD.mul(2))
+    expect((await cTokenMultiOracle.callStatic.get(bytes6ToBytes32(cUSDCId), bytes6ToBytes32(USDC), WAD))[0]).to.equal(
+      WAD.mul(2)
+    )
     expect((await cTokenMultiOracle.callStatic.get(bytes6ToBytes32(DAI), bytes6ToBytes32(cDaiId), WAD))[0]).to.equal(
       WAD.div(2)
     )
 
-    expect((await cTokenMultiOracle.peek(bytes6ToBytes32(cDaiId), bytes6ToBytes32(DAI), WAD))[0]).to.equal(
-      WAD.mul(2)
-    )
-    expect((await cTokenMultiOracle.peek(bytes6ToBytes32(cUSDCId), bytes6ToBytes32(USDC), WAD))[0]).to.equal(
-      WAD.mul(2)
-    )
-    expect((await cTokenMultiOracle.peek(bytes6ToBytes32(DAI), bytes6ToBytes32(cDaiId), WAD))[0]).to.equal(
-      WAD.div(2)
-    )
+    expect((await cTokenMultiOracle.peek(bytes6ToBytes32(cDaiId), bytes6ToBytes32(DAI), WAD))[0]).to.equal(WAD.mul(2))
+    expect((await cTokenMultiOracle.peek(bytes6ToBytes32(cUSDCId), bytes6ToBytes32(USDC), WAD))[0]).to.equal(WAD.mul(2))
+    expect((await cTokenMultiOracle.peek(bytes6ToBytes32(DAI), bytes6ToBytes32(cDaiId), WAD))[0]).to.equal(WAD.div(2))
   })
 })
