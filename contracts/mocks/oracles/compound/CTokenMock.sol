@@ -1,21 +1,22 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.6;
 import "../ISourceMock.sol";
-import "./CTokenUnderlyingMock.sol";
 
-contract CUSDCMock is ISourceMock {
+contract CTokenMock is ISourceMock {
     uint public exchangeRateStored;
     address public underlying;
+    uint counter; // Just to avoid warnings
 
-    constructor () {
-        underlying = address(new CTokenUnderlyingMock(6));
+    constructor (address underlying_) {
+        underlying = underlying_;
     }
 
     function set(uint chi) external override {
         exchangeRateStored = chi;
     }
 
-    function exchangeRateCurrent() public view returns (uint) {
+    function exchangeRateCurrent() public returns (uint) {
+        counter++;
         return exchangeRateStored;
     }
 }
