@@ -16,10 +16,11 @@ contract CompoundMultiOracle is IOracle, AccessControl, Constants {
     mapping(bytes6 => mapping(bytes6 => address)) public sources;
 
     /**
-     * @notice Set or reset one source
+     * @notice Set or reset a source
      */
     function setSource(bytes6 base, bytes6 kind, address source) external auth {
-        _setSource(base, kind, source);
+        sources[base][kind] = source;
+        emit SourceSet(base, kind, source);
     }
 
     /**
@@ -56,13 +57,5 @@ contract CompoundMultiOracle is IOracle, AccessControl, Constants {
         require(accumulator > 0, "Compound accumulator is zero");
 
         updateTime = block.timestamp;
-    }
-
-    /**
-     * @dev Set a new price source
-     */
-    function _setSource(bytes6 base, bytes6 kind, address source) internal {
-        sources[base][kind] = source;
-        emit SourceSet(base, kind, source);
     }
 }
