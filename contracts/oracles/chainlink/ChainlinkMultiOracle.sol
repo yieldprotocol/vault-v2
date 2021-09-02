@@ -16,7 +16,7 @@ import "./AggregatorV3Interface.sol";
 contract ChainlinkMultiOracle is IOracle, AccessControl, Constants {
     using CastBytes32Bytes6 for bytes32;
 
-    event SourceSet(bytes6 indexed baseId, bytes6 indexed quoteId, address indexed source);
+    event SourceSet(bytes6 indexed baseId, IERC20Metadata base, bytes6 indexed quoteId, IERC20Metadata quote, address indexed source);
 
     struct Source {
         address source;
@@ -37,7 +37,7 @@ contract ChainlinkMultiOracle is IOracle, AccessControl, Constants {
             quoteDecimals: quote.decimals(),
             inverse: false
         });
-        emit SourceSet(baseId, quoteId, source);
+        emit SourceSet(baseId, base, quoteId, quote, source);
 
         if (baseId != quoteId) {
             sources[quoteId][baseId] = Source({
@@ -46,7 +46,7 @@ contract ChainlinkMultiOracle is IOracle, AccessControl, Constants {
                 quoteDecimals: base.decimals(),
                 inverse: true
             });
-            emit SourceSet(quoteId, baseId, source);
+            emit SourceSet(quoteId, quote, baseId, base, source);
         }
     }
 
@@ -93,7 +93,7 @@ contract ChainlinkMultiOracle is IOracle, AccessControl, Constants {
             amountOut = amountIn * (10 ** source.quoteDecimals) / uint(price);
         } else {
             // USDC/ETH: 3000 USDC (*10^6) * 286253688799857 ETH per USDC / 10^6 = 858761066399571000 ETH wei
-            amountOut = uint(price) * amountIn / (10 ** source.baseDecimals);
+            amountOut = amountIn * uint(price) / (10 ** source.baseDecimals);
         }  
     }
 
