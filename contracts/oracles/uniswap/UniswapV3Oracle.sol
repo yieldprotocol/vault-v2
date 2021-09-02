@@ -15,8 +15,6 @@ import "../../mocks/oracles/uniswap/UniswapV3OracleLibraryMock.sol";
 contract UniswapV3Oracle is IOracle, AccessControl {
     using CastBytes32Bytes6 for bytes32;
 
-    uint8 public constant override decimals = 18;
-
     event SecondsAgoSet(uint32 indexed secondsAgo);
     event SourceSet(bytes6 indexed base, bytes6 indexed quote, address indexed source);
 

@@ -16,8 +16,6 @@ import "./AggregatorV3Interface.sol";
 contract ChainlinkMultiOracle is IOracle, AccessControl, Constants {
     using CastBytes32Bytes6 for bytes32;
 
-    uint8 public constant override decimals = 18;   // TODO: Remove from IOracle, it makes no sense
-
     event SourceSet(bytes6 indexed baseId, bytes6 indexed quoteId, address indexed source);
 
     struct Source {

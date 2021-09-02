@@ -13,8 +13,6 @@ contract CompoundMultiOracle is IOracle, AccessControl, Constants {
 
     event SourceSet(bytes6 indexed baseId, bytes6 indexed kind, address indexed source);
 
-    uint8 public constant override decimals = 1; // The Rate and Chi Oracle tracks accumulators, and it makes no sense to talk of decimals
-
     mapping(bytes6 => mapping(bytes6 => address)) public sources;
 
     /**

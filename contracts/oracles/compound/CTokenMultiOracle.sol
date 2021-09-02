@@ -12,8 +12,6 @@ import "./CTokenInterface.sol";
 contract CTokenMultiOracle is IOracle, AccessControl, Constants {
     using CastBytes32Bytes6 for bytes32;
 
-    uint8 public constant override decimals = 18;   // All prices are converted to 18 decimals
-
     event SourceSet(bytes6 indexed baseId, bytes6 indexed quoteId, address indexed source);
 
     struct Source {
@@ -34,63 +32,47 @@ contract CTokenMultiOracle is IOracle, AccessControl, Constants {
     /**
      * @notice Retrieve the value of the amount at the latest oracle price.
      */
-    function peek(bytes32 base, bytes32 quote, uint256 amount)
+    function peek(bytes32 base, bytes32 quote, uint256 amountIn)
         external view virtual override
-        returns (uint256 value, uint256 updateTime)
+        returns (uint256 amountOut, uint256 updateTime)
     {
-        uint256 price;
-        (price, updateTime) = _peek(base.b6(), quote.b6());
-        value = price * amount / 1e18;
-    }
-
-    /**
-     * @notice Retrieve the value of the amount at the latest oracle price. Updates the price before fetching it if possible.
-     */
-    function get(bytes32 base, bytes32 quote, uint256 amount)
-        external virtual override
-        returns (uint256 value, uint256 updateTime)
-    {
-        uint256 price;
-        (price, updateTime) = _get(base.b6(), quote.b6());
-        value = price * amount / 1e18;
-    }
-
-    /**
-     * @notice Retrieve the value of the amount at the latest oracle price.
-     */
-    function _peek(bytes6 base, bytes6 quote) private view returns (uint price, uint updateTime) {
         uint256 rawPrice;
-        uint8 decimals_ = decimals;
-        Source memory source = sources[base][quote];
+        uint8 decimals_ = 18; // TODO: This should be the decimals of the token (i.e, 6 for USDC)
+        Source memory source = sources[base.b6()][quote.b6()];
         require (source.source != address(0), "Source not found");
 
         rawPrice = CTokenInterface(source.source).exchangeRateStored();
         require(rawPrice > 0, "Compound price is zero");
-        price = _scale(rawPrice, source.decimals, decimals_);
+        uint256 price = _scale(rawPrice, source.decimals, decimals_);
 
         // If calculating the inverse, we divide 1 (with the decimals of this oracle) by the price
         if (source.inverse == true) price = (10 ** (uint256(decimals_) * 2)) / uint(price);
 
-        updateTime = block.timestamp; // We should get the timestamp
+        amountOut = price * amountIn / 1e18;
+        updateTime = block.timestamp; // TODO: We should get the timestamp
     }
 
     /**
      * @notice Retrieve the value of the amount at the latest oracle price. Updates the price before fetching it if possible.
      */
-    function _get(bytes6 base, bytes6 quote) private returns (uint price, uint updateTime) {
+    function get(bytes32 base, bytes32 quote, uint256 amountIn)
+        external virtual override
+        returns (uint256 amountOut, uint256 updateTime)
+    {
         uint256 rawPrice;
-        uint8 decimals_ = decimals;
-        Source memory source = sources[base][quote];
+        uint8 decimals_ = 18; // TODO: This should be the decimals of the token (i.e, 6 for USDC)
+        Source memory source = sources[base.b6()][quote.b6()];
         require (source.source != address(0), "Source not found");
 
         rawPrice = CTokenInterface(source.source).exchangeRateCurrent();
         require(rawPrice > 0, "Compound price is zero");
-        price = _scale(rawPrice, source.decimals, decimals_);
+        uint256 price = _scale(rawPrice, source.decimals, decimals_);
 
         // If calculating the inverse, we divide 1 (with the decimals of this oracle) by the price
         if (source.inverse == true) price = (10 ** (uint256(decimals_) * 2)) / uint(price);
 
-        updateTime = block.timestamp; // We should get the timestamp
+        amountOut = price * amountIn / 1e18;
+        updateTime = block.timestamp; // TODO: We should get the timestamp
     }
 
     /**
