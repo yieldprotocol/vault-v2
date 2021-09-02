@@ -159,7 +159,10 @@ export class YieldEnvironment {
   }
 
   public static async witchGovAuth(witch: Witch, receiver: string) {
-    await witch.grantRoles([id('setIlk(bytes6,uint32,uint64,uint128)')], receiver)
+    await witch.grantRoles([
+      id('point(bytes32,address)'),
+      id('setIlk(bytes6,uint32,uint64,uint128)'),
+    ], receiver)
   }
 
   public static async joinFactoryAuth(joinFactory: JoinFactory, receiver: string) {
