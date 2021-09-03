@@ -50,9 +50,9 @@ contract CTokenMultiOracle is IOracle, AccessControl, Constants {
     /**
      * @notice Retrieve the value of the amount at the latest oracle price.
      */
-    function peek(bytes32 base, bytes32 quote, uint256 amountIn)
+    function peek(bytes32 base, bytes32 quote, uint256 amountBase)
         external view virtual override
-        returns (uint256 amountOut, uint256 updateTime)
+        returns (uint256 amountQuote, uint256 updateTime)
     {
         Source memory source = sources[base.b6()][quote.b6()];
         require (source.source != CTokenInterface(address(0)), "Source not found");
@@ -62,10 +62,10 @@ contract CTokenMultiOracle is IOracle, AccessControl, Constants {
 
         if (source.inverse == true) {
             // ETH/USDC: 1 ETH (*10^18) * (1^6)/(286253688799857 ETH per USDC) = 3493404763 USDC wei
-            amountOut = amountIn * (10 ** source.quoteDecimals) / uint(price);
+            amountQuote = amountBase * (10 ** source.quoteDecimals) / uint(price);
         } else {
             // USDC/ETH: 3000 USDC (*10^6) * 286253688799857 ETH per USDC / 10^6 = 858761066399571000 ETH wei
-            amountOut = uint(price) * amountIn / (10 ** source.baseDecimals);
+            amountQuote = uint(price) * amountBase / (10 ** source.baseDecimals);
         }
         updateTime = block.timestamp; // TODO: We should get the timestamp
     }
@@ -73,9 +73,9 @@ contract CTokenMultiOracle is IOracle, AccessControl, Constants {
     /**
      * @notice Retrieve the value of the amount at the latest oracle price. Updates the price before fetching it if possible.
      */
-    function get(bytes32 base, bytes32 quote, uint256 amountIn)
+    function get(bytes32 base, bytes32 quote, uint256 amountBase)
         external virtual override
-        returns (uint256 amountOut, uint256 updateTime)
+        returns (uint256 amountQuote, uint256 updateTime)
     {
         Source memory source = sources[base.b6()][quote.b6()];
         require (source.source != CTokenInterface(address(0)), "Source not found");
@@ -85,10 +85,10 @@ contract CTokenMultiOracle is IOracle, AccessControl, Constants {
         
         if (source.inverse == true) {
             // USDC/cUSDC: 1 USDC (*10^6) * (1^16)/(x USDC per cUSDC) = y cUSDC wei
-            amountOut = amountIn * (10 ** source.quoteDecimals) / uint(price);
+            amountQuote = amountBase * (10 ** source.quoteDecimals) / uint(price);
         } else {
             // cUSDC/USDC: 3000 cUSDC (*10^18) * x USDC per cUSDC / 10^16 = y USDC wei
-            amountOut = amountIn * uint(price) / (10 ** source.baseDecimals);
+            amountQuote = amountBase * uint(price) / (10 ** source.baseDecimals);
         }  
         updateTime = block.timestamp; // TODO: We should get the timestamp
     }

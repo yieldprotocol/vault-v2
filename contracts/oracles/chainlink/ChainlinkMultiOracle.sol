@@ -50,34 +50,34 @@ contract ChainlinkMultiOracle is IOracle, AccessControl, Constants {
         }
     }
 
-    /// @dev Convert amountIn base into quote at the latest oracle price.
-    function peek(bytes32 baseId, bytes32 quoteId, uint256 amountIn)
+    /// @dev Convert amountBase base into quote at the latest oracle price.
+    function peek(bytes32 baseId, bytes32 quoteId, uint256 amountBase)
         external view virtual override
-        returns (uint256 amountOut, uint256 updateTime)
+        returns (uint256 amountQuote, uint256 updateTime)
     {
-        if (baseId == quoteId) return (amountIn, block.timestamp);
+        if (baseId == quoteId) return (amountBase, block.timestamp);
         if (baseId == ETH || quoteId == ETH)
-            (amountOut, updateTime) = _peek(baseId.b6(), quoteId.b6(), amountIn);
+            (amountQuote, updateTime) = _peek(baseId.b6(), quoteId.b6(), amountBase);
         else
-            (amountOut, updateTime) = _peekThroughETH(baseId.b6(), quoteId.b6(), amountIn);
+            (amountQuote, updateTime) = _peekThroughETH(baseId.b6(), quoteId.b6(), amountBase);
     }
 
-    /// @dev Convert amountIn base into quote at the latest oracle price, updating state if necessary. Same as `peek` for this oracle.
-    function get(bytes32 baseId, bytes32 quoteId, uint256 amountIn)
+    /// @dev Convert amountBase base into quote at the latest oracle price, updating state if necessary. Same as `peek` for this oracle.
+    function get(bytes32 baseId, bytes32 quoteId, uint256 amountBase)
         external virtual override
-        returns (uint256 amountOut, uint256 updateTime)
+        returns (uint256 amountQuote, uint256 updateTime)
     {
-        if (baseId == quoteId) (amountOut, updateTime) = (amountIn, block.timestamp);
+        if (baseId == quoteId) (amountQuote, updateTime) = (amountBase, block.timestamp);
         if (baseId == ETH || quoteId == ETH)
-            (amountOut, updateTime) = _peek(baseId.b6(), quoteId.b6(), amountIn);
+            (amountQuote, updateTime) = _peek(baseId.b6(), quoteId.b6(), amountBase);
         else
-            (amountOut, updateTime) = _peekThroughETH(baseId.b6(), quoteId.b6(), amountIn);
+            (amountQuote, updateTime) = _peekThroughETH(baseId.b6(), quoteId.b6(), amountBase);
     }
 
-    /// @dev Convert amountIn base into quote at the latest oracle price.
-    function _peek(bytes6 baseId, bytes6 quoteId, uint256 amountIn)
+    /// @dev Convert amountBase base into quote at the latest oracle price.
+    function _peek(bytes6 baseId, bytes6 quoteId, uint256 amountBase)
         private view
-        returns (uint amountOut, uint updateTime)
+        returns (uint amountQuote, uint updateTime)
     {
         int price;
         uint80 roundId;
@@ -90,20 +90,20 @@ contract ChainlinkMultiOracle is IOracle, AccessControl, Constants {
         require(answeredInRound >= roundId, "Stale price");
         if (source.inverse == true) {
             // ETH/USDC: 1 ETH (*10^18) * (1^6)/(286253688799857 ETH per USDC) = 3493404763 USDC wei
-            amountOut = amountIn * (10 ** source.quoteDecimals) / uint(price);
+            amountQuote = amountBase * (10 ** source.quoteDecimals) / uint(price);
         } else {
             // USDC/ETH: 3000 USDC (*10^6) * 286253688799857 ETH per USDC / 10^6 = 858761066399571000 ETH wei
-            amountOut = amountIn * uint(price) / (10 ** source.baseDecimals);
+            amountQuote = amountBase * uint(price) / (10 ** source.baseDecimals);
         }  
     }
 
-    /// @dev Convert amountIn base into quote at the latest oracle price, using ETH as an intermediate step.
-    function _peekThroughETH(bytes6 baseId, bytes6 quoteId, uint256 amountIn)
+    /// @dev Convert amountBase base into quote at the latest oracle price, using ETH as an intermediate step.
+    function _peekThroughETH(bytes6 baseId, bytes6 quoteId, uint256 amountBase)
         private view
-        returns (uint amountOut, uint updateTime)
+        returns (uint amountQuote, uint updateTime)
     {
-        (uint256 ethAmount, uint256 updateTime1) = _peek(baseId, ETH, amountIn);
-        (amountOut, updateTime) = _peek(ETH, quoteId, ethAmount);
+        (uint256 ethAmount, uint256 updateTime1) = _peek(baseId, ETH, amountBase);
+        (amountQuote, updateTime) = _peek(ETH, quoteId, ethAmount);
         if (updateTime1 < updateTime) updateTime = updateTime1;
     }
 }

@@ -48,57 +48,57 @@ contract CompositeMultiOracle is IOracle, AccessControl {
         emit PathSet(quote, base, path);
     }
 
-    /// @dev Convert amountIn base into quote at the latest oracle price, through a path is exists.
-    function peek(bytes32 base, bytes32 quote, uint256 amountIn)
+    /// @dev Convert amountBase base into quote at the latest oracle price, through a path is exists.
+    function peek(bytes32 base, bytes32 quote, uint256 amountBase)
         external view virtual override
-        returns (uint256 amountOut, uint256 updateTime)
+        returns (uint256 amountQuote, uint256 updateTime)
     {
-        amountOut = amountIn;
+        amountQuote = amountBase;
         bytes6 base_ = base.b6();
         bytes6 quote_ = quote.b6();
         bytes6[] memory path = paths[base_][quote_];
         for (uint256 p = 0; p < path.length; p++) {
-            (amountOut, updateTime) = _peek(base_, path[p], amountOut, updateTime);
+            (amountQuote, updateTime) = _peek(base_, path[p], amountQuote, updateTime);
             base_ = path[p];
         }
-        (amountOut, updateTime) = _peek(base_, quote_, amountOut, updateTime);
+        (amountQuote, updateTime) = _peek(base_, quote_, amountQuote, updateTime);
     }
 
-    /// @dev Convert amountIn base into quote at the latest oracle price, through a path is exists, updating state if necessary.
-    function get(bytes32 base, bytes32 quote, uint256 amountIn)
+    /// @dev Convert amountBase base into quote at the latest oracle price, through a path is exists, updating state if necessary.
+    function get(bytes32 base, bytes32 quote, uint256 amountBase)
         external virtual override
-        returns (uint256 amountOut, uint256 updateTime)
+        returns (uint256 amountQuote, uint256 updateTime)
     {
-        amountOut = amountIn;
+        amountQuote = amountBase;
         bytes6 base_ = base.b6();
         bytes6 quote_ = quote.b6();
         bytes6[] memory path = paths[base_][quote_];
         for (uint256 p = 0; p < path.length; p++) {
-            (amountOut, updateTime) = _get(base_, path[p], amountOut, updateTime);
+            (amountQuote, updateTime) = _get(base_, path[p], amountQuote, updateTime);
             base_ = path[p];
         }
-        (amountOut, updateTime) = _get(base_, quote_, amountOut, updateTime);
+        (amountQuote, updateTime) = _get(base_, quote_, amountQuote, updateTime);
     }
 
-    /// @dev Convert amountIn base into quote at the latest oracle price, using only direct sources.
-    function _peek(bytes6 base, bytes6 quote, uint256 amountIn, uint256 updateTimeIn)
+    /// @dev Convert amountBase base into quote at the latest oracle price, using only direct sources.
+    function _peek(bytes6 base, bytes6 quote, uint256 amountBase, uint256 updateTimeIn)
         private view
-        returns (uint amountOut, uint updateTimeOut)
+        returns (uint amountQuote, uint updateTimeOut)
     {
         IOracle source = sources[base][quote];
         require (address(source) != address(0), "Source not found");
-        (amountOut, updateTimeOut) = source.peek(base, quote, amountIn);
+        (amountQuote, updateTimeOut) = source.peek(base, quote, amountBase);
         updateTimeOut = (updateTimeOut < updateTimeIn) ? updateTimeOut : updateTimeIn;                 // Take the oldest update time
     }
 
-    /// @dev Convert amountIn base into quote at the latest oracle price, using only direct sources, updating state if necessary.
-    function _get(bytes6 base, bytes6 quote, uint256 amountIn, uint256 updateTimeIn)
+    /// @dev Convert amountBase base into quote at the latest oracle price, using only direct sources, updating state if necessary.
+    function _get(bytes6 base, bytes6 quote, uint256 amountBase, uint256 updateTimeIn)
         private
-        returns (uint amountOut, uint updateTimeOut)
+        returns (uint amountQuote, uint updateTimeOut)
     {
         IOracle source = sources[base][quote];
         require (address(source) != address(0), "Source not found");
-        (amountOut, updateTimeOut) = source.get(base, quote, amountIn);
+        (amountQuote, updateTimeOut) = source.get(base, quote, amountBase);
         updateTimeOut = (updateTimeOut < updateTimeIn) ? updateTimeOut : updateTimeIn;                 // Take the oldest update time
     }
 }
