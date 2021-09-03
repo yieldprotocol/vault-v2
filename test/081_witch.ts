@@ -102,7 +102,6 @@ describe('Witch', function () {
     expect(await witch.ladle()).to.equal(mockAddress)
   })
 
-
   it('does not allow to set the initial proportion over 100%', async () => {
     await expect(witch.setIlk(ilkId, 1, WAD.mul(2), 3)).to.be.revertedWith('Only at or under 100%')
   })
