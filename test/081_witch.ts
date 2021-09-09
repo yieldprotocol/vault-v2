@@ -20,8 +20,8 @@ const { loadFixture } = waffle
 import { YieldEnvironment } from './shared/fixtures'
 import { LadleWrapper } from '../src/ladleWrapper'
 
-function bytes6ToBytes32(x: string): string {
-  return x + '00'.repeat(26)
+function stringToBytes32(x: string): string {
+  return ethers.utils.formatBytes32String(x)
 }
 
 describe('Witch', function () {
@@ -92,6 +92,14 @@ describe('Witch', function () {
     await ladle.pour(vaultId, owner, WAD, WAD)
 
     await witch.setIlk(ilkId, 3 * 60 * 60, WAD.div(2), 0)
+  })
+
+  it('allows to change the ladle', async () => {
+    const mockAddress = owner
+    expect(await witch.point(stringToBytes32('ladle'), mockAddress))
+      .to.emit(witch, 'Point')
+      .withArgs(stringToBytes32('ladle'), mockAddress)
+    expect(await witch.ladle()).to.equal(mockAddress)
   })
 
   it('does not allow to set the initial proportion over 100%', async () => {

@@ -20,6 +20,7 @@ contract Witch is AccessControl() {
     using CastU256U128 for uint256;
     using CastU256U32 for uint256;
 
+    event Point(bytes32 indexed param, address value);
     event IlkSet(bytes6 indexed ilkId, uint32 duration, uint64 initialOffer, uint128 dust);
     event Bought(bytes12 indexed vaultId, address indexed buyer, uint256 ink, uint256 art);
     event Auctioned(bytes12 indexed vaultId, uint256 indexed start);
@@ -40,13 +41,21 @@ contract Witch is AccessControl() {
     // uint128 public dust;                     // Minimum collateral that must be left when buying, unless buying all
 
     ICauldron immutable public cauldron;
-    ILadle immutable public ladle;
+    ILadle public ladle;
     mapping(bytes12 => Auction) public auctions;
     mapping(bytes6 => Ilk) public ilks;
 
     constructor (ICauldron cauldron_, ILadle ladle_) {
         cauldron = cauldron_;
         ladle = ladle_;
+    }
+
+
+    /// @dev Point to a different ladle
+    function point(bytes32 param, address value) external auth {
+        if (param == "ladle") ladle = ILadle(value);
+        else revert("Unrecognized parameter");
+        emit Point(param, value);
     }
 
     /// @dev Set:

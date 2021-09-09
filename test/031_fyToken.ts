@@ -17,6 +17,10 @@ const { loadFixture } = waffle
 import { YieldEnvironment } from './shared/fixtures'
 import { LadleWrapper } from '../src/ladleWrapper'
 
+function stringToBytes32(x: string): string {
+  return ethers.utils.formatBytes32String(x)
+}
+
 describe('FYToken', function () {
   this.timeout(0)
 
@@ -64,7 +68,7 @@ describe('FYToken', function () {
     await baseJoin.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], owner)
 
     await fyToken.grantRoles(
-      [id('mint(address,uint256)'), id('burn(address,uint256)'), id('setOracle(address)')],
+      [id('mint(address,uint256)'), id('burn(address,uint256)'), id('point(bytes32,address)')],
       owner
     )
 
@@ -75,11 +79,16 @@ describe('FYToken', function () {
     await baseJoin.join(owner, WAD.mul(2)) // This loads the base join to serve redemptions
   })
 
-  it('allows to change the chi oracle', async () => {
+  it('allows to change the chi oracle or join', async () => {
     const mockAddress = owner
-    expect(await fyToken.setOracle(mockAddress))
-      .to.emit(fyToken, 'OracleSet')
-      .withArgs(mockAddress)
+    expect(await fyToken.point(stringToBytes32('oracle'), mockAddress))
+      .to.emit(fyToken, 'Point')
+      .withArgs(stringToBytes32('oracle'), mockAddress)
+    expect(await fyToken.oracle()).to.equal(mockAddress)
+
+    expect(await fyToken.point(stringToBytes32('join'), mockAddress))
+      .to.emit(fyToken, 'Point')
+      .withArgs(stringToBytes32('join'), mockAddress)
     expect(await fyToken.oracle()).to.equal(mockAddress)
   })
 
