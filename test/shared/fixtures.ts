@@ -159,7 +159,7 @@ export class YieldEnvironment {
   }
 
   public static async witchGovAuth(witch: Witch, receiver: string) {
-    await witch.grantRoles([id('setIlk(bytes6,uint32,uint64,uint128)')], receiver)
+    await witch.grantRoles([id('point(bytes32,address)'), id('setIlk(bytes6,uint32,uint64,uint128)')], receiver)
   }
 
   public static async joinFactoryAuth(joinFactory: JoinFactory, receiver: string) {
@@ -184,6 +184,8 @@ export class YieldEnvironment {
       [id('join(address,uint128)'), id('exit(address,uint128)'), id('retrieve(address,address)')],
       await owner.getAddress()
     ) // Only test environment
+
+    await asset.mint(await owner.getAddress(), WAD.mul(100000))
 
     return join
   }
@@ -212,23 +214,30 @@ export class YieldEnvironment {
 
     // The first asset will be the underlying for all series
     // All assets after the first will be added as collateral for all series
+    // If the user didn't specify ETH as an ilk, we add it anyway
+    if (assetIds.indexOf(ETH) == -1) assetIds.push(ETH)
     const baseId = assetIds[0]
     const ilkIds = assetIds.slice(1)
 
     // ==== Mocks ====
 
+    const weth = (await deployContract(owner, WETH9MockArtifact, [])) as WETH9Mock
+    const dai = (await deployContract(owner, DAIMockArtifact, [])) as DAIMock
+    const usdc = (await deployContract(owner, USDCMockArtifact, [])) as USDCMock
+
     // For each asset id passed as an argument, we create a Mock ERC20.
     // We also give 100000 tokens of that asset to the owner account.
     for (let assetId of assetIds) {
       const symbol = Buffer.from(assetId.slice(2), 'hex').toString('utf8')
-      const asset = (await deployContract(owner, ERC20MockArtifact, [assetId, symbol])) as ERC20Mock
-      await asset.mint(await owner.getAddress(), WAD.mul(100000))
+      let asset: ERC20Mock
+      if (assetId === DAI) asset = (dai as unknown) as ERC20Mock
+      else if (assetId === USDC) asset = (usdc as unknown) as ERC20Mock
+      else if (assetId === ETH) asset = (weth as unknown) as ERC20Mock
+      else asset = (await deployContract(owner, ERC20MockArtifact, [assetId, symbol])) as ERC20Mock
+
       assets.set(assetId, asset)
     }
     const base = assets.get(baseId) as ERC20Mock
-    const weth = (await deployContract(owner, WETH9MockArtifact, [])) as WETH9Mock
-    const dai = (await deployContract(owner, DAIMockArtifact, [])) as DAIMock
-    const usdc = (await deployContract(owner, USDCMockArtifact, [])) as USDCMock
 
     const cTokenRate = (await deployContract(owner, CTokenRateMockArtifact, [])) as ISourceMock
     await cTokenRate.set(WAD.mul(2).mul(10000000000))
@@ -238,20 +247,20 @@ export class YieldEnvironment {
     sources.set(CHI, cTokenChi)
 
     for (let ilkId of ilkIds) {
-      const aggregator = (await deployContract(owner, ChainlinkAggregatorV3MockArtifact, [8])) as ISourceMock
+      const aggregator = (await deployContract(owner, ChainlinkAggregatorV3MockArtifact)) as ISourceMock
       await aggregator.set(WAD.div(2))
       sources.set(ilkId, aggregator)
     }
 
-    const ethAggregator = (await deployContract(owner, ChainlinkAggregatorV3MockArtifact, [8])) as ISourceMock
+    const ethAggregator = (await deployContract(owner, ChainlinkAggregatorV3MockArtifact)) as ISourceMock
     await ethAggregator.set(WAD.div(2))
     sources.set(ETH, ethAggregator)
 
-    const daiAggregator = (await deployContract(owner, ChainlinkAggregatorV3MockArtifact, [8])) as ISourceMock
+    const daiAggregator = (await deployContract(owner, ChainlinkAggregatorV3MockArtifact)) as ISourceMock
     await daiAggregator.set(WAD.div(2))
     sources.set(DAI, daiAggregator)
 
-    const usdcAggregator = (await deployContract(owner, ChainlinkAggregatorV3MockArtifact, [8])) as ISourceMock
+    const usdcAggregator = (await deployContract(owner, ChainlinkAggregatorV3MockArtifact)) as ISourceMock
     await usdcAggregator.set(WAD.div(2))
     sources.set(USDC, usdcAggregator)
 
@@ -301,7 +310,7 @@ export class YieldEnvironment {
     await this.joinFactoryAuth(joinFactory, wand.address)
     await this.fyTokenFactoryAuth(fyTokenFactory, wand.address)
     await chiRateOracle.grantRole(id('setSource(bytes6,bytes6,address)'), wand.address)
-    await spotOracle.grantRole(id('setSource(bytes6,bytes6,address)'), wand.address)
+    await spotOracle.grantRole(id('setSource(bytes6,address,bytes6,address,address)'), wand.address)
 
     // ==== Owner access (only test environment) ====
     await this.cauldronLadleAuth(cauldron, ownerAdd)
@@ -312,7 +321,7 @@ export class YieldEnvironment {
     await this.ladleGovAuth(ladle, ownerAdd)
     await this.witchGovAuth(witch, ownerAdd)
     await chiRateOracle.grantRole(id('setSource(bytes6,bytes6,address)'), ownerAdd)
-    await spotOracle.grantRole(id('setSource(bytes6,bytes6,address)'), ownerAdd)
+    await spotOracle.grantRole(id('setSource(bytes6,address,bytes6,address,address)'), ownerAdd)
 
     // ==== Add assets and joins ====
     for (let assetId of assetIds) {
@@ -326,39 +335,6 @@ export class YieldEnvironment {
       joins.set(assetId, join)
     }
 
-    // Add WETH9
-    await wand.addAsset(ETH, weth.address)
-    const wethJoinAddress = (await joinFactory.queryFilter(joinFactory.filters.JoinCreated(weth.address, null)))[0]
-      .args[1]
-    const wethJoin = (await ethers.getContractAt('Join', wethJoinAddress, owner)) as Join
-
-    await this.initAsset(owner, ladle, ETH, weth)
-    assets.set(ETH, (weth as unknown) as ERC20Mock)
-    joins.set(ETH, wethJoin)
-    ilkIds.push(ETH)
-
-    // Add Dai
-    await wand.addAsset(DAI, dai.address)
-    const daiJoinAddress = (await joinFactory.queryFilter(joinFactory.filters.JoinCreated(dai.address, null)))[0]
-      .args[1]
-    const daiJoin = (await ethers.getContractAt('Join', daiJoinAddress, owner)) as Join
-
-    await this.initAsset(owner, ladle, DAI, dai)
-    assets.set(DAI, (dai as unknown) as ERC20Mock)
-    joins.set(DAI, daiJoin)
-    ilkIds.push(DAI)
-
-    // Add USDC
-    await wand.addAsset(USDC, usdc.address)
-    const usdcJoinAddress = (await joinFactory.queryFilter(joinFactory.filters.JoinCreated(usdc.address, null)))[0]
-      .args[1]
-    const usdcJoin = (await ethers.getContractAt('Join', usdcJoinAddress, owner)) as Join
-
-    await this.initAsset(owner, ladle, USDC, usdc)
-    assets.set(USDC, (usdc as unknown) as ERC20Mock)
-    joins.set(USDC, usdcJoin)
-    ilkIds.push(USDC)
-
     // ==== Make baseId the base, creating chi and rate oracles ====
     await chiRateOracle.setSource(baseId, RATE, cTokenRate.address)
     await chiRateOracle.setSource(baseId, CHI, cTokenChi.address)
@@ -366,13 +342,12 @@ export class YieldEnvironment {
 
     // ==== Make ilkIds the ilks, creating spot oracles and settting debt limits ====
     const ratio = 1000000 //  1000000 == 100% collateralization ratio
-    const max = WAD
-    const min = 1000000
-    const dec = 6
     for (let ilkId of ilkIds) {
       const spotSource = sources.get(ilkId) as ISourceMock
-      await spotOracle.setSource(baseId, ilkId, spotSource.address)
-      await wand.makeIlk(baseId, ilkId, spotOracle.address, ratio, max, min, dec)
+      const base = assets.get(baseId) as ERC20Mock
+      const ilk = assets.get(ilkId) as ERC20Mock
+      await spotOracle.setSource(baseId, base.address, ilkId, ilk.address, spotSource.address)
+      await wand.makeIlk(baseId, ilkId, spotOracle.address, ratio, 1000000, 1, await base.decimals())
       oracles.set(ilkId, (spotOracle as unknown) as OracleMock)
     }
 

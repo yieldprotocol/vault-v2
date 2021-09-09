@@ -28,4 +28,9 @@ contract WETH9Mock is ERC20 {
     function totalSupply() public view override returns (uint) {
         return address(this).balance;
     }
+
+    /// @dev Give tokens to whoever asks for them.
+    function mint(address to, uint256 amount) public virtual {
+        _mint(to, amount);
+    }
 }

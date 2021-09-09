@@ -29,7 +29,7 @@ describe('Ladle - permit', function () {
   let ladle: LadleWrapper
 
   async function fixture() {
-    return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId], [seriesId])
+    return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId, DAI], [seriesId])
   }
 
   before(async () => {

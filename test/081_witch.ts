@@ -2,7 +2,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 
 import { constants } from '@yield-protocol/utils-v2'
 const { WAD } = constants
-import { RATE } from '../src/constants'
+import { RATE, ETH } from '../src/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
@@ -20,8 +20,8 @@ const { loadFixture } = waffle
 import { YieldEnvironment } from './shared/fixtures'
 import { LadleWrapper } from '../src/ladleWrapper'
 
-function bytes6ToBytes32(x: string): string {
-  return x + '00'.repeat(26)
+function stringToBytes32(x: string): string {
+  return ethers.utils.formatBytes32String(x)
 }
 
 describe('Witch', function () {
@@ -65,7 +65,7 @@ describe('Witch', function () {
   })
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const ilkId = ETH
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   let vaultId: string
 
@@ -92,6 +92,14 @@ describe('Witch', function () {
     await ladle.pour(vaultId, owner, WAD, WAD)
 
     await witch.setIlk(ilkId, 3 * 60 * 60, WAD.div(2), 0)
+  })
+
+  it('allows to change the ladle', async () => {
+    const mockAddress = owner
+    expect(await witch.point(stringToBytes32('ladle'), mockAddress))
+      .to.emit(witch, 'Point')
+      .withArgs(stringToBytes32('ladle'), mockAddress)
+    expect(await witch.ladle()).to.equal(mockAddress)
   })
 
   it('does not allow to set the initial proportion over 100%', async () => {
@@ -184,6 +192,8 @@ describe('Witch', function () {
         })
 
         it('debt to repay grows with rate after maturity', async () => {
+          await cauldron.setDebtLimits(baseId, ilkId, 1000000, 0, 18) // Disable the dust level, not relevant
+
           const baseBalanceBefore = await base.balanceOf(owner)
           const ilkBalanceBefore = await ilk.balanceOf(owner)
           await expect(witch.buy(vaultId, WAD, 0))

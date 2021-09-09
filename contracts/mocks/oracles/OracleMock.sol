@@ -7,7 +7,6 @@ import "@yield-protocol/vault-interfaces/IOracle.sol";
 contract OracleMock is IOracle {
 
     address public immutable source;
-    uint8 public override constant decimals = 18;
 
     uint256 public spot;
     uint256 public updated;
