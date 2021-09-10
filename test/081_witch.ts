@@ -24,6 +24,8 @@ function stringToBytes32(x: string): string {
   return ethers.utils.formatBytes32String(x)
 }
 
+const ZERO_ADDRESS = '0x'+'00'.repeat(20)
+
 describe('Witch', function () {
   this.timeout(0)
 
@@ -181,6 +183,7 @@ describe('Witch', function () {
         expect(ink).to.equal(WAD)
         expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(WAD))
         expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(ink))
+        expect((await witch.auctions(vaultId)).owner).to.equal(ZERO_ADDRESS)
       })
 
       describe('after maturity, with a rate increase', async () => {
@@ -222,6 +225,7 @@ describe('Witch', function () {
           expect((await cauldron.balances(vaultId)).ink).to.equal(0)
           expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(WAD.mul(110).div(100)))
           expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(WAD))
+          expect((await witch.auctions(vaultId)).owner).to.equal(ZERO_ADDRESS)
         })
       })
     })
