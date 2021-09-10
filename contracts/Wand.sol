@@ -85,7 +85,7 @@ contract Wand is AccessControl, Constants {
     function makeBase(bytes6 assetId, IMultiOracleGov oracle) external auth {
         require (address(oracle) != address(0), "Oracle required");
 
-        cauldron.setRateOracle(assetId, IOracle(address(oracle)));
+        cauldron.setLendingOracle(assetId, IOracle(address(oracle)));
         
         AccessControl baseJoin = AccessControl(address(ladle.joins(assetId)));
         baseJoin.grantRole(JOIN, witch); // Give the Witch permission to join base
@@ -118,7 +118,7 @@ contract Wand is AccessControl, Constants {
         IJoin baseJoin = ladle.joins(baseId);
         require(address(baseJoin) != address(0), "Join not found");
 
-        IOracle oracle = cauldron.rateOracles(baseId);
+        IOracle oracle = cauldron.lendingOracles(baseId); // The lending oracles in the Cauldron are also configured to return chi
         require(address(oracle) != address(0), "Chi oracle not found");
 
         AccessControl fyToken = AccessControl(fyTokenFactory.createFYToken(
