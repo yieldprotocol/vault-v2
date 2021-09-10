@@ -104,7 +104,7 @@ export class YieldEnvironment {
         id('addSeries(bytes6,bytes6,address)'),
         id('addIlks(bytes6,bytes6[])'),
         id('setDebtLimits(bytes6,bytes6,uint96,uint24,uint8)'),
-        id('setRateOracle(bytes6,address)'),
+        id('setLendingOracle(bytes6,address)'),
         id('setSpotOracle(bytes6,bytes6,address,uint32)'),
       ],
       receiver
