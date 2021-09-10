@@ -24,7 +24,7 @@ function stringToBytes32(x: string): string {
   return ethers.utils.formatBytes32String(x)
 }
 
-const ZERO_ADDRESS = '0x'+'00'.repeat(20)
+const ZERO_ADDRESS = '0x' + '00'.repeat(20)
 
 describe('Witch', function () {
   this.timeout(0)
