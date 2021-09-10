@@ -56,7 +56,10 @@ describe('Oracles - Composite', function () {
     usdcEthAggregator = (await deployContract(ownerAcc, ChainlinkAggregatorV3MockArtifact)) as ChainlinkAggregatorV3Mock
 
     chainlinkMultiOracle = (await deployContract(ownerAcc, ChainlinkMultiOracleArtifact, [])) as ChainlinkMultiOracle
-    await chainlinkMultiOracle.grantRole(id('setSource(bytes6,address,bytes6,address,address)'), owner)
+    await chainlinkMultiOracle.grantRole(
+      id(chainlinkMultiOracle.interface, 'setSource(bytes6,address,bytes6,address,address)'),
+      owner
+    )
     await chainlinkMultiOracle.setSource(DAI, dai.address, ETH, weth.address, daiEthAggregator.address)
     await chainlinkMultiOracle.setSource(USDC, usdc.address, ETH, weth.address, usdcEthAggregator.address)
 
@@ -65,7 +68,10 @@ describe('Oracles - Composite', function () {
 
     compositeMultiOracle = (await deployContract(ownerAcc, CompositeMultiOracleArtifact)) as CompositeMultiOracle
     compositeMultiOracle.grantRoles(
-      [id('setSource(bytes6,bytes6,address)'), id('setPath(bytes6,bytes6,bytes6[])')],
+      [
+        id(compositeMultiOracle.interface, 'setSource(bytes6,bytes6,address)'),
+        id(compositeMultiOracle.interface, 'setPath(bytes6,bytes6,bytes6[])'),
+      ],
       owner
     )
 

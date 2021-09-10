@@ -75,7 +75,7 @@ describe('Ladle - module', function () {
       zeroAddress,
       tlm.address,
     ])) as TLMModule
-    await ladle.grantRoles([id('addModule(address,bool)')], owner)
+    await ladle.grantRoles([id(ladle.ladle.interface, 'addModule(address,bool)')], owner)
 
     await ladle.addModule(tlmModule.address, true)
   })

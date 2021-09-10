@@ -61,7 +61,10 @@ describe('Oracles - Chainlink', function () {
     usdcEthAggregator = (await deployContract(ownerAcc, ChainlinkAggregatorV3MockArtifact)) as ChainlinkAggregatorV3Mock
 
     chainlinkMultiOracle = (await deployContract(ownerAcc, ChainlinkMultiOracleArtifact, [])) as ChainlinkMultiOracle
-    await chainlinkMultiOracle.grantRole(id('setSource(bytes6,address,bytes6,address,address)'), owner)
+    await chainlinkMultiOracle.grantRole(
+      id(chainlinkMultiOracle.interface, 'setSource(bytes6,address,bytes6,address,address)'),
+      owner
+    )
     await chainlinkMultiOracle.setSource(DAI, dai.address, ETH, weth.address, daiEthAggregator.address)
     await chainlinkMultiOracle.setSource(USDC, usdc.address, ETH, weth.address, usdcEthAggregator.address)
 

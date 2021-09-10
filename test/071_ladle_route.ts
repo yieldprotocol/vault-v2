@@ -82,9 +82,12 @@ describe('Ladle - route', function () {
     token = (await deployContract(ownerAcc, RestrictedERC20MockArtifact, ['MTK', 'Mock Token'])) as ERC20Mock
     token2 = (await deployContract(ownerAcc, RestrictedERC20MockArtifact, ['MTK', 'Mock Token'])) as ERC20Mock
 
-    await ladle.grantRoles([id('addToken(address,bool)'), id('addIntegration(address,bool)')], owner)
-    await token.grantRoles([id('mint(address,uint256)')], owner)
-    await token2.grantRoles([id('mint(address,uint256)')], ladle.address)
+    await ladle.grantRoles(
+      [id(ladle.interface, 'addToken(address,bool)'), id(ladle.interface, 'addIntegration(address,bool)')],
+      owner
+    )
+    await token.grantRoles([id(token.interface, 'mint(address,uint256)')], owner)
+    await token2.grantRoles([id(token2.interface, 'mint(address,uint256)')], ladle.address)
   })
 
   it('tokens can be added and removed', async () => {
