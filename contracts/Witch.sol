@@ -141,6 +141,7 @@ contract Witch is AccessControl() {
         cauldron.slurp(vaultId, ink.u128(), balances_.art);                                                     // Remove debt and collateral from the vault
         settle(msg.sender, vault_.ilkId, series_.baseId, ink.u128(), cauldron.debtToBase(vault_.seriesId, balances_.art));                                        // Move the assets
         cauldron.give(vaultId, auction_.owner);
+        delete auctions[vaultId];
 
         emit Bought(vaultId, msg.sender, ink, balances_.art); // Still the initially read `art` value, not the updated one
     }
