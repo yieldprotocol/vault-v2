@@ -100,12 +100,12 @@ export class YieldEnvironment {
   public static async cauldronGovAuth(cauldron: Cauldron, receiver: string) {
     await cauldron.grantRoles(
       [
-        id('addAsset(bytes6,address)'),
-        id('addSeries(bytes6,bytes6,address)'),
-        id('addIlks(bytes6,bytes6[])'),
-        id('setDebtLimits(bytes6,bytes6,uint96,uint24,uint8)'),
-        id('setRateOracle(bytes6,address)'),
-        id('setSpotOracle(bytes6,bytes6,address,uint32)'),
+        id(cauldron.interface, 'addAsset(bytes6,address)'),
+        id(cauldron.interface, 'addSeries(bytes6,bytes6,address)'),
+        id(cauldron.interface, 'addIlks(bytes6,bytes6[])'),
+        id(cauldron.interface, 'setDebtLimits(bytes6,bytes6,uint96,uint24,uint8)'),
+        id(cauldron.interface, 'setRateOracle(bytes6,address)'),
+        id(cauldron.interface, 'setSpotOracle(bytes6,bytes6,address,uint32)'),
       ],
       receiver
     )
@@ -114,13 +114,13 @@ export class YieldEnvironment {
   public static async cauldronLadleAuth(cauldron: Cauldron, receiver: string) {
     await cauldron.grantRoles(
       [
-        id('build(address,bytes12,bytes6,bytes6)'),
-        id('destroy(bytes12)'),
-        id('tweak(bytes12,bytes6,bytes6)'),
-        id('give(bytes12,address)'),
-        id('pour(bytes12,int128,int128)'),
-        id('stir(bytes12,bytes12,uint128,uint128)'),
-        id('roll(bytes12,bytes6,int128)'),
+        id(cauldron.interface, 'build(address,bytes12,bytes6,bytes6)'),
+        id(cauldron.interface, 'destroy(bytes12)'),
+        id(cauldron.interface, 'tweak(bytes12,bytes6,bytes6)'),
+        id(cauldron.interface, 'give(bytes12,address)'),
+        id(cauldron.interface, 'pour(bytes12,int128,int128)'),
+        id(cauldron.interface, 'stir(bytes12,bytes12,uint128,uint128)'),
+        id(cauldron.interface, 'roll(bytes12,bytes6,int128)'),
       ],
       receiver
     )
@@ -128,7 +128,11 @@ export class YieldEnvironment {
 
   public static async cauldronWitchAuth(cauldron: Cauldron, receiver: string) {
     await cauldron.grantRoles(
-      [id('give(bytes12,address)'), id('grab(bytes12,address)'), id('slurp(bytes12,uint128,uint128)')],
+      [
+        id(cauldron.interface, 'give(bytes12,address)'),
+        id(cauldron.interface, 'grab(bytes12,address)'),
+        id(cauldron.interface, 'slurp(bytes12,uint128,uint128)'),
+      ],
       receiver
     )
   }
@@ -136,10 +140,10 @@ export class YieldEnvironment {
   public static async ladleGovAuth(ladle: LadleWrapper, receiver: string) {
     await ladle.grantRoles(
       [
-        id('addJoin(bytes6,address)'),
-        id('addPool(bytes6,address)'),
-        id('addModule(address,bool)'),
-        id('setFee(uint256)'),
+        id(ladle.ladle.interface, 'addJoin(bytes6,address)'),
+        id(ladle.ladle.interface, 'addPool(bytes6,address)'),
+        id(ladle.ladle.interface, 'addModule(address,bool)'),
+        id(ladle.ladle.interface, 'setFee(uint256)'),
       ],
       receiver
     )
@@ -148,26 +152,31 @@ export class YieldEnvironment {
   public static async wandAuth(wand: Wand, receiver: string) {
     await wand.grantRoles(
       [
-        id('addAsset(bytes6,address)'),
-        id('makeBase(bytes6,address)'),
-        id('makeIlk(bytes6,bytes6,address,uint32,uint96,uint24,uint8)'),
-        id('addSeries(bytes6,bytes6,uint32,bytes6[],string,string)'),
-        id('addPool(bytes6,bytes6)'),
+        id(wand.interface, 'addAsset(bytes6,address)'),
+        id(wand.interface, 'makeBase(bytes6,address)'),
+        id(wand.interface, 'makeIlk(bytes6,bytes6,address,uint32,uint96,uint24,uint8)'),
+        id(wand.interface, 'addSeries(bytes6,bytes6,uint32,bytes6[],string,string)'),
       ],
       receiver
     )
   }
 
   public static async witchGovAuth(witch: Witch, receiver: string) {
-    await witch.grantRoles([id('point(bytes32,address)'), id('setIlk(bytes6,uint32,uint64,uint128)')], receiver)
+    await witch.grantRoles(
+      [id(witch.interface, 'point(bytes32,address)'), id(witch.interface, 'setIlk(bytes6,uint32,uint64,uint128)')],
+      receiver
+    )
   }
 
   public static async joinFactoryAuth(joinFactory: JoinFactory, receiver: string) {
-    await joinFactory.grantRoles([id('createJoin(address)')], receiver)
+    await joinFactory.grantRoles([id(joinFactory.interface, 'createJoin(address)')], receiver)
   }
 
   public static async fyTokenFactoryAuth(fyTokenFactory: FYTokenFactory, receiver: string) {
-    await fyTokenFactory.grantRoles([id('createFYToken(bytes6,address,address,uint32,string,string)')], receiver)
+    await fyTokenFactory.grantRoles(
+      [id(fyTokenFactory.interface, 'createFYToken(bytes6,address,address,uint32,string,string)')],
+      receiver
+    )
   }
 
   // Initialize an asset for testing purposes. Gives the owner powers over it, and approves the join to take the asset from the owner.
@@ -181,7 +190,12 @@ export class YieldEnvironment {
     await asset.approve(await ladle.joins(assetId), ethers.constants.MaxUint256) // Owner approves all joins to take from him. Only testing
 
     await join.grantRoles(
-      [id('join(address,uint128)'), id('exit(address,uint128)'), id('retrieve(address,address)')],
+      [
+        id(join.interface, 'join(address,uint128)'),
+        id(join.interface, 'exit(address,uint128)'),
+        id(join.interface, 'retrieve(address,address)'),
+        id(join.interface, 'setFlashFeeFactor(uint256)'),
+      ],
       await owner.getAddress()
     ) // Only test environment
 
@@ -194,7 +208,7 @@ export class YieldEnvironment {
   public static async initPool(owner: SignerWithAddress, pool: PoolMock, base: ERC20Mock, fyToken: FYToken) {
     await base.mint(pool.address, WAD.mul(1000000))
     await pool.mint(await owner.getAddress(), true, 0)
-    await fyToken.grantRole(id('mint(address,uint256)'), await owner.getAddress()) // Only test environment
+    await fyToken.grantRole(id(fyToken.interface, 'mint(address,uint256)'), await owner.getAddress()) // Only test environment
     await fyToken.mint(pool.address, WAD.mul(1100000))
     await pool.sync()
 
@@ -309,8 +323,11 @@ export class YieldEnvironment {
     await this.witchGovAuth(witch, wand.address)
     await this.joinFactoryAuth(joinFactory, wand.address)
     await this.fyTokenFactoryAuth(fyTokenFactory, wand.address)
-    await chiRateOracle.grantRole(id('setSource(bytes6,bytes6,address)'), wand.address)
-    await spotOracle.grantRole(id('setSource(bytes6,address,bytes6,address,address)'), wand.address)
+    await chiRateOracle.grantRole(id(chiRateOracle.interface, 'setSource(bytes6,bytes6,address)'), wand.address)
+    await spotOracle.grantRole(
+      id(spotOracle.interface, 'setSource(bytes6,address,bytes6,address,address)'),
+      wand.address
+    )
 
     // ==== Owner access (only test environment) ====
     await this.cauldronLadleAuth(cauldron, ownerAdd)
@@ -320,8 +337,8 @@ export class YieldEnvironment {
     await this.cauldronGovAuth(cauldron, ownerAdd)
     await this.ladleGovAuth(ladle, ownerAdd)
     await this.witchGovAuth(witch, ownerAdd)
-    await chiRateOracle.grantRole(id('setSource(bytes6,bytes6,address)'), ownerAdd)
-    await spotOracle.grantRole(id('setSource(bytes6,address,bytes6,address,address)'), ownerAdd)
+    await chiRateOracle.grantRole(id(chiRateOracle.interface, 'setSource(bytes6,bytes6,address)'), ownerAdd)
+    await spotOracle.grantRole(id(spotOracle.interface, 'setSource(bytes6,address,bytes6,address,address)'), ownerAdd)
 
     // ==== Add assets and joins ====
     for (let assetId of assetIds) {
@@ -371,7 +388,11 @@ export class YieldEnvironment {
       pools.set(seriesId, pool)
 
       await fyToken.grantRoles(
-        [id('mint(address,uint256)'), id('burn(address,uint256)'), id('setOracle(address)')],
+        [
+          id(fyToken.interface, 'mint(address,uint256)'),
+          id(fyToken.interface, 'burn(address,uint256)'),
+          id(fyToken.interface, 'point(bytes32,address)'),
+        ],
         ownerAdd
       ) // Only test environment
     }

@@ -50,7 +50,7 @@ describe('Oracles - cToken', function () {
     cUSDC = (await deployContract(ownerAcc, CTokenMockArtifact, [usdc.address])) as CTokenMock
 
     cTokenMultiOracle = (await deployContract(ownerAcc, CTokenMultiOracleArtifact)) as CTokenMultiOracle
-    await cTokenMultiOracle.grantRole(id('setSource(bytes6,bytes6,address)'), owner)
+    await cTokenMultiOracle.grantRole(id(cTokenMultiOracle.interface, 'setSource(bytes6,bytes6,address)'), owner)
     await cTokenMultiOracle.setSource(cDaiId, DAI, cDai.address)
     await cTokenMultiOracle.setSource(cUSDCId, USDC, cUSDC.address)
   })

@@ -45,7 +45,7 @@ describe('Oracles - Rate and Chi (Compound)', function () {
     cTokenRate = (await deployContract(ownerAcc, CTokenRateMockArtifact, [])) as CTokenRateMock
 
     compoundMultiOracle = (await deployContract(ownerAcc, CompoundMultiOracleArtifact)) as CompoundMultiOracle
-    await compoundMultiOracle.grantRole(id('setSource(bytes6,bytes6,address)'), owner)
+    await compoundMultiOracle.grantRole(id(compoundMultiOracle.interface, 'setSource(bytes6,bytes6,address)'), owner)
     await compoundMultiOracle.setSource(baseId, CHI, cTokenChi.address)
     await compoundMultiOracle.setSource(baseId, RATE, cTokenRate.address)
   })

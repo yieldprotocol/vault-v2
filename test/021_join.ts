@@ -47,7 +47,7 @@ describe('Join', function () {
     otherToken = (await deployContract(ownerAcc, ERC20MockArtifact, ['OTH', 'Other Token'])) as ERC20Mock
 
     joinFactory = (await deployContract(ownerAcc, JoinFactoryArtifact, [])) as JoinFactory
-    await joinFactory.grantRoles([id('createJoin(address)')], owner)
+    await joinFactory.grantRoles([id(joinFactory.interface, 'createJoin(address)')], owner)
 
     join = (await ethers.getContractAt(
       'Join',
@@ -55,7 +55,11 @@ describe('Join', function () {
       ownerAcc
     )) as Join
     await join.grantRoles(
-      [id('join(address,uint128)'), id('exit(address,uint128)'), id('retrieve(address,address)')],
+      [
+        id(join.interface, 'join(address,uint128)'),
+        id(join.interface, 'exit(address,uint128)'),
+        id(join.interface, 'retrieve(address,address)'),
+      ],
       owner
     )
 
