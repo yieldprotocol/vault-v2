@@ -69,7 +69,10 @@ describe('Ladle - remove and repay', function () {
 
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
 
-    await baseJoin.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], owner)
+    await baseJoin.grantRoles(
+      [id(baseJoin.interface, 'join(address,uint128)'), id(baseJoin.interface, 'exit(address,uint128)')],
+      owner
+    )
 
     // Borrow and add liquidity
     await ladle.serve(vaultId, pool.address, WAD, WAD, MAX)

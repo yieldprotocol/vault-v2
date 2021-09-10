@@ -64,11 +64,21 @@ describe('FYToken', function () {
     chiOracle = (env.oracles.get(CHI) as unknown) as CompoundMultiOracle
     chiSource = (await ethers.getContractAt('CTokenChiMock', await chiOracle.sources(baseId, CHI))) as CTokenChiMock
 
-    await baseJoin.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], fyToken.address)
-    await baseJoin.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], owner)
+    await baseJoin.grantRoles(
+      [id(baseJoin.interface, 'join(address,uint128)'), id(baseJoin.interface, 'exit(address,uint128)')],
+      fyToken.address
+    )
+    await baseJoin.grantRoles(
+      [id(baseJoin.interface, 'join(address,uint128)'), id(baseJoin.interface, 'exit(address,uint128)')],
+      owner
+    )
 
     await fyToken.grantRoles(
-      [id('mint(address,uint256)'), id('burn(address,uint256)'), id('point(bytes32,address)')],
+      [
+        id(fyToken.interface, 'mint(address,uint256)'),
+        id(fyToken.interface, 'burn(address,uint256)'),
+        id(fyToken.interface, 'point(bytes32,address)'),
+      ],
       owner
     )
 

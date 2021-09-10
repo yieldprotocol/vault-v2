@@ -14,6 +14,10 @@ contract PoolFactoryMock is IPoolFactory {
   address private _nextBase;
   address private _nextFYToken;
 
+  int128 public override g1;
+  int128 public override g2;
+  int128 public override ts;
+
   /// @dev Returns true if `account` is a contract.
   function isContract(address account) internal view returns (bool) {
       // This method relies on extcodesize, which returns 0 for contracts in
