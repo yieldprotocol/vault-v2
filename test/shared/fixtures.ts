@@ -278,6 +278,10 @@ export class YieldEnvironment {
     await usdcAggregator.set(WAD.div(2))
     sources.set(USDC, usdcAggregator)
 
+    const baseAggregator = (await deployContract(owner, ChainlinkAggregatorV3MockArtifact)) as ISourceMock
+    await baseAggregator.set(WAD)
+    sources.set(baseId, baseAggregator)
+
     // ==== Libraries ====
     const SafeERC20NamerFactory = await ethers.getContractFactory('SafeERC20Namer')
     const safeERC20NamerLibrary = ((await SafeERC20NamerFactory.deploy()) as unknown) as SafeERC20Namer
@@ -359,7 +363,8 @@ export class YieldEnvironment {
 
     // ==== Make ilkIds the ilks, creating spot oracles and settting debt limits ====
     const ratio = 1000000 //  1000000 == 100% collateralization ratio
-    for (let ilkId of ilkIds) {
+    for (let ilkId of assetIds) {
+      // Including ilkId == baseId
       const spotSource = sources.get(ilkId) as ISourceMock
       const base = assets.get(baseId) as ERC20Mock
       const ilk = assets.get(ilkId) as ERC20Mock
@@ -376,7 +381,7 @@ export class YieldEnvironment {
     let count: number = 1
     for (let seriesId of seriesIds) {
       const maturity = timestamp + THREE_MONTHS * count++
-      await wand.addSeries(seriesId, baseId, maturity, ilkIds, seriesId, seriesId)
+      await wand.addSeries(seriesId, baseId, maturity, assetIds, seriesId, seriesId)
       const fyToken = (await ethers.getContractAt(
         'FYToken',
         (await cauldron.series(seriesId)).fyToken,
@@ -401,7 +406,8 @@ export class YieldEnvironment {
     // For each series and ilk we create a vault - vaults[seriesId][ilkId] = vaultId
     for (let seriesId of seriesIds) {
       const seriesVaults: Map<string, string> = new Map()
-      for (let ilkId of ilkIds) {
+      for (let ilkId of assetIds) {
+        // Including a vault whose ilk equals its base
         await ladle.build(seriesId, ilkId)
         seriesVaults.set(ilkId, await getLastVaultId(cauldron))
       }

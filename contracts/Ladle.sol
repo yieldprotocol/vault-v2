@@ -336,7 +336,8 @@ contract Ladle is LadleStorage, AccessControl() {
         if (art != 0) series = getSeries(vault.seriesId);
 
         int128 fee;
-        if (art > 0) fee = ((series.maturity - block.timestamp) * uint256(int256(art)).wmul(borrowingFee)).i128();
+        if (art > 0 && vault.ilkId != series.baseId && borrowingFee != 0)
+            fee = ((series.maturity - block.timestamp) * uint256(int256(art)).wmul(borrowingFee)).i128();
 
         // Update accounting
         cauldron.pour(vaultId, ink, art + fee);
@@ -474,7 +475,8 @@ contract Ladle is LadleStorage, AccessControl() {
             fyToken.burn(address(fyToken), (base * loan) - newDebt);    // Burn the surplus
         }
 
-        newDebt += ((newSeries.maturity - block.timestamp) * uint256(newDebt).wmul(borrowingFee)).u128();  // Add borrowing fee, also stops users form rolling to a mature series
+        if (vault.ilkId != newSeries.baseId && borrowingFee != 0)
+            newDebt += ((newSeries.maturity - block.timestamp) * uint256(newDebt).wmul(borrowingFee)).u128();  // Add borrowing fee, also stops users form rolling to a mature series
 
         (vault,) = cauldron.roll(vaultId, newSeriesId, newDebt.i128() - balances.art.i128()); // Change the series and debt for the vault
 
