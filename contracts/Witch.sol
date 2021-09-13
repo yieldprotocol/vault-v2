@@ -31,6 +31,7 @@ contract Witch is AccessControl() {
     }
 
     struct Ilk {
+        bool initialized;     // Set to true if set, as we might want all parameters set to zero
         uint32 duration;      // Time that auctions take to go to minimal price and stay there.
         uint64 initialOffer;  // Proportion of collateral that is sold at auction start (1e18 = 100%)
         uint128 dust;         // Minimum collateral that must be left when buying, unless buying all
@@ -65,6 +66,7 @@ contract Witch is AccessControl() {
     function setIlk(bytes6 ilkId, uint32 duration, uint64 initialOffer, uint128 dust) external auth {
         require (initialOffer <= 1e18, "Only at or under 100%");
         ilks[ilkId] = Ilk({
+            initialized: true,
             duration: duration,
             initialOffer: initialOffer,
             dust: dust
