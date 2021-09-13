@@ -94,21 +94,18 @@ describe('Ladle - roll', function () {
     const preFeeDebt = WAD.mul(105).div(100)
     const appliedFee = (await otherFYToken.maturity()).sub(timestamp).mul(preFeeDebt).mul(fee).div(WAD)
 
-    console.log((await cauldron.balances(vaultId)).ink.toString())
     expect(await fyToken.balanceOf(owner)).to.equal(WAD.mul(2))
     expect((await cauldron.balances(vaultId)).art).to.equal(preFeeDebt.add(appliedFee))
   })
 
   it('except if base == ilk', async () => {
     await ladle.pour(baseVaultId, owner, WAD.mul(5).div(100), 0) // The exchange rate is 1:1, but YieldSpace charges a 5%
-    console.log(`${baseId}:${ilkId}`)
 
     const fee = WAD.div(1000000000) // 0.000000 001% wei/second
     await ladle.setFee(fee)
     await ladle.roll(baseVaultId, otherSeriesId, loan, MAX)
     const preFeeDebt = WAD.mul(105).div(100)
 
-    console.log((await cauldron.balances(baseVaultId)).ink.toString())
     expect(await fyToken.balanceOf(owner)).to.equal(WAD.mul(2))
     expect((await cauldron.balances(baseVaultId)).art).to.equal(preFeeDebt)
   })
