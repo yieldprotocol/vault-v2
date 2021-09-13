@@ -112,6 +112,7 @@ describe('Witch', function () {
     expect(await witch.setIlk(ilkId, 1, 2, 3))
       .to.emit(witch, 'IlkSet')
       .withArgs(ilkId, 1, 2, 3)
+    expect((await witch.ilks(ilkId)).initialized).to.be.true
     expect((await witch.ilks(ilkId)).duration).to.equal(1)
     expect((await witch.ilks(ilkId)).initialOffer).to.equal(2)
     expect((await witch.ilks(ilkId)).dust).to.equal(3)

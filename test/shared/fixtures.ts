@@ -369,6 +369,7 @@ export class YieldEnvironment {
       const base = assets.get(baseId) as ERC20Mock
       const ilk = assets.get(ilkId) as ERC20Mock
       await spotOracle.setSource(baseId, base.address, ilkId, ilk.address, spotSource.address)
+      await witch.setIlk(ilkId, 4 * 60 * 60, WAD.div(2), 0)
       await wand.makeIlk(baseId, ilkId, spotOracle.address, ratio, 1000000, 1, await base.decimals())
       oracles.set(ilkId, (spotOracle as unknown) as OracleMock)
     }
