@@ -2,6 +2,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { constants, signatures, id } from '@yield-protocol/utils-v2'
 const { WAD, MAX128 } = constants
 const MAX = MAX128
+import { ETH } from '../src/constants'
 
 import RestrictedERC20MockArtifact from '../artifacts/contracts/mocks/RestrictedERC20Mock.sol/RestrictedERC20Mock.json'
 
@@ -57,7 +58,7 @@ describe('Ladle - route', function () {
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const otherIlkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const ethId = ethers.utils.formatBytes32String('ETH').slice(0, 14)
+  const ethId = ETH
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const cachedVaultId = '0x' + '00'.repeat(12)
   let ethVaultId: string

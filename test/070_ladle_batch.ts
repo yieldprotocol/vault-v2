@@ -53,7 +53,7 @@ describe('Ladle - batch', function () {
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ilkId = ETH
   const otherIlkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const ethId = ethers.utils.formatBytes32String('ETH').slice(0, 14)
+  const ethId = ETH
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const cachedVaultId = '0x' + '00'.repeat(12)
   let ethVaultId: string

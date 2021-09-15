@@ -56,6 +56,7 @@ describe('FYToken', function () {
 
   beforeEach(async () => {
     env = await loadFixture(fixture)
+
     cauldron = env.cauldron
     ladle = env.ladle
     base = env.assets.get(baseId) as ERC20Mock
@@ -63,7 +64,7 @@ describe('FYToken', function () {
     fyToken = env.series.get(seriesId) as FYToken
     chiOracle = (env.oracles.get(CHI) as unknown) as CompoundMultiOracle
     chiSource = (await ethers.getContractAt('CTokenChiMock', await chiOracle.sources(baseId, CHI))) as CTokenChiMock
-
+    
     await baseJoin.grantRoles(
       [id(baseJoin.interface, 'join(address,uint128)'), id(baseJoin.interface, 'exit(address,uint128)')],
       fyToken.address

@@ -4,8 +4,8 @@ import { sendStatic } from './helpers'
 
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 
-const { WAD, THREE_MONTHS, ETH, DAI, USDC } = constants
-import { CHI, RATE } from '../../src/constants'
+const { WAD, THREE_MONTHS } = constants
+import { CHI, RATE, ETH, DAI, USDC } from '../../src/constants'
 
 import CauldronArtifact from '../../artifacts/contracts/Cauldron.sol/Cauldron.json'
 import LadleArtifact from '../../artifacts/contracts/Ladle.sol/Ladle.json'
