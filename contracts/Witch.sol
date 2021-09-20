@@ -106,7 +106,7 @@ contract Witch is AccessControl() {
             uint256 price = inkPrice(balances_, ilk_.initialOffer, ilk_.duration, elapsed);
             ink = uint256(art).wmul(price);                                                    // Calculate collateral to sell. Using divdrup stops rounding from leaving 1 stray wei in vaults.
             require (ink >= min, "Not enough bought");
-            require (ink == balances_.ink || balances_.ink - ink >= ilk_.dust, "Leaves dust");
+            require (art == balances_.art || balances_.ink - ink >= ilk_.dust, "Leaves dust");
         }
 
         cauldron.slurp(vaultId, ink.u128(), art.u128());                                            // Remove debt and collateral from the vault
@@ -137,7 +137,6 @@ contract Witch is AccessControl() {
             uint256 price = inkPrice(balances_, ilk_.initialOffer, ilk_.duration, elapsed);
             ink = uint256(balances_.art).wmul(price);                                                    // Calculate collateral to sell. Using divdrup stops rounding from leaving 1 stray wei in vaults.
             require (ink >= min, "Not enough bought");
-            require (ink == balances_.ink || balances_.ink - ink >= ilk_.dust, "Leaves dust");
         }
 
         cauldron.slurp(vaultId, ink.u128(), balances_.art);                                                     // Remove debt and collateral from the vault
@@ -164,10 +163,11 @@ contract Witch is AccessControl() {
         }    
     }
 
-    /// @dev Price of a collateral unit, in underlying, at the present moment, for a given vault
+    /// @dev Price of a collateral unit, in underlying, at the present moment, for a given vault.
     ///            ink                     min(auction, elapsed)
     /// price = (------- * (p + (1 - p) * -----------------------))
     ///            art                          auction
+    /// Rounds down, it's safer that rounding up and then making sure that `ink = uint256(balances_.art).wmul(price) <= balances_.ink`
     function inkPrice(DataTypes.Balances memory balances, uint256 initialOffer_, uint256 duration_, uint256 elapsed)
         private pure
         returns (uint256 price)
