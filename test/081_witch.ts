@@ -187,12 +187,12 @@ describe('Witch', function () {
       it('allows to buy all of the collateral for the whole debt at the end', async () => {
         const baseBalanceBefore = await base.balanceOf(owner)
         const ilkBalanceBefore = await ilk.balanceOf(owner)
-        await expect(witch.buy(vaultId, borrowed, 0))
+        await expect(witch.payAll(vaultId, 0))
           .to.emit(witch, 'Bought')
-          .withArgs(vaultId, owner, posted.sub(1), borrowed)
+          .withArgs(vaultId, owner, posted, borrowed)
 
         const ink = posted.sub((await cauldron.balances(vaultId)).ink)
-        expect(ink).to.equal(posted.sub(1))
+        expect(ink).to.equal(posted)
         expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(borrowed))
         expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(ink))
         expect((await witch.auctions(vaultId)).owner).to.equal(ZERO_ADDRESS)
@@ -223,7 +223,7 @@ describe('Witch', function () {
           const art = borrowed.sub((await cauldron.balances(vaultId)).art)
           const ink = posted.sub((await cauldron.balances(vaultId)).ink)
           expect(art).to.equal(borrowed.mul(100).div(110).add(1)) // The rate increased by a 10%, so by paying WAD base we only repay 100/110 of the debt in fyToken terms
-          expect(ink).to.equal(posted.mul(100).div(110)) // We only pay 100/110 of the debt, so we get 100/110 of the collateral
+          expect(ink).to.equal(posted.mul(100).div(110).add(2)) // We only pay 100/110 of the debt, so we get 100/110 of the collateral
           expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(borrowed))
           expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(ink))
         })
@@ -233,12 +233,12 @@ describe('Witch', function () {
           const ilkBalanceBefore = await ilk.balanceOf(owner)
           await expect(witch.payAll(vaultId, 0))
             .to.emit(witch, 'Bought')
-            .withArgs(vaultId, owner, posted.sub(1), borrowed)
+            .withArgs(vaultId, owner, posted, borrowed)
 
           expect((await cauldron.balances(vaultId)).art).to.equal(0)
-          expect((await cauldron.balances(vaultId)).ink).to.equal(1)
+          expect((await cauldron.balances(vaultId)).ink).to.equal(0)
           expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(borrowed.mul(110).div(100)))
-          expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(posted).sub(1))
+          expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(posted))
           expect((await witch.auctions(vaultId)).owner).to.equal(ZERO_ADDRESS)
         })
       })

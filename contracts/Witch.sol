@@ -7,6 +7,7 @@ import "@yield-protocol/vault-interfaces/ICauldron.sol";
 import "@yield-protocol/vault-interfaces/IJoin.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
 import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
+import "@yield-protocol/utils-v2/contracts/math/WMulUp.sol";
 import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
 import "@yield-protocol/utils-v2/contracts/math/WDivUp.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
@@ -15,6 +16,7 @@ import "@yield-protocol/utils-v2/contracts/cast/CastU256U32.sol";
 
 contract Witch is AccessControl() {
     using WMul for uint256;
+    using WMulUp for uint256;
     using WDiv for uint256;
     using WDivUp for uint256;
     using CastU256U128 for uint256;
@@ -89,6 +91,7 @@ contract Witch is AccessControl() {
     }
 
     /// @dev Pay `base` of the debt in a vault in liquidation, getting at least `min` collateral.
+    /// Use `payAll` to pay all the debt, using `buy` for amounts close to the whole vault might revert.
     function buy(bytes12 vaultId, uint128 base, uint128 min)
         external
         returns (uint256 ink)
@@ -137,6 +140,7 @@ contract Witch is AccessControl() {
             uint256 price = inkPrice(balances_, ilk_.initialOffer, ilk_.duration, elapsed);
             ink = uint256(balances_.art).wmul(price);                                                    // Calculate collateral to sell. Using divdrup stops rounding from leaving 1 stray wei in vaults.
             require (ink >= min, "Not enough bought");
+            ink = (ink > balances_.ink) ? balances_.ink : ink;                                  // The price is rounded up, so we cap this at all the collateral and no more
         }
 
         cauldron.slurp(vaultId, ink.u128(), balances_.art);                                                     // Remove debt and collateral from the vault
@@ -163,19 +167,18 @@ contract Witch is AccessControl() {
         }    
     }
 
-    /// @dev Price of a collateral unit, in underlying, at the present moment, for a given vault.
+    /// @dev Price of a collateral unit, in underlying, at the present moment, for a given vault. Rounds up, sometimes twice.
     ///            ink                     min(auction, elapsed)
     /// price = (------- * (p + (1 - p) * -----------------------))
     ///            art                          auction
-    /// Rounds down, it's safer that rounding up and then making sure that `ink = uint256(balances_.art).wmul(price) <= balances_.ink`
     function inkPrice(DataTypes.Balances memory balances, uint256 initialOffer_, uint256 duration_, uint256 elapsed)
         private pure
         returns (uint256 price)
     {
-            uint256 term1 = uint256(balances.ink).wdiv(balances.art);
+            uint256 term1 = uint256(balances.ink).wdivup(balances.art);
             uint256 dividend2 = duration_ < elapsed ? duration_ : elapsed;
             uint256 divisor2 = duration_;
-            uint256 term2 = initialOffer_ + (1e18 - initialOffer_).wmul(dividend2.wdiv(divisor2));
-            price = term1.wmul(term2);
+            uint256 term2 = initialOffer_ + (1e18 - initialOffer_).wmulup(dividend2.wdivup(divisor2));
+            price = term1.wmulup(term2);
     }
 }
