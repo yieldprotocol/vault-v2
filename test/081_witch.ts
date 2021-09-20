@@ -187,9 +187,7 @@ describe('Witch', function () {
       it('allows to buy all of the collateral for the whole debt at the end', async () => {
         const baseBalanceBefore = await base.balanceOf(owner)
         const ilkBalanceBefore = await ilk.balanceOf(owner)
-        await expect(witch.payAll(vaultId, 0))
-          .to.emit(witch, 'Bought')
-          .withArgs(vaultId, owner, posted, borrowed)
+        await expect(witch.payAll(vaultId, 0)).to.emit(witch, 'Bought').withArgs(vaultId, owner, posted, borrowed)
 
         const ink = posted.sub((await cauldron.balances(vaultId)).ink)
         expect(ink).to.equal(posted)
@@ -231,9 +229,7 @@ describe('Witch', function () {
         it('allows to pay all of the debt', async () => {
           const baseBalanceBefore = await base.balanceOf(owner)
           const ilkBalanceBefore = await ilk.balanceOf(owner)
-          await expect(witch.payAll(vaultId, 0))
-            .to.emit(witch, 'Bought')
-            .withArgs(vaultId, owner, posted, borrowed)
+          await expect(witch.payAll(vaultId, 0)).to.emit(witch, 'Bought').withArgs(vaultId, owner, posted, borrowed)
 
           expect((await cauldron.balances(vaultId)).art).to.equal(0)
           expect((await cauldron.balances(vaultId)).ink).to.equal(0)
