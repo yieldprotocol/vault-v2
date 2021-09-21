@@ -67,7 +67,7 @@ contract ChainlinkMultiOracle is IOracle, AccessControl, Constants {
         external virtual override
         returns (uint256 amountQuote, uint256 updateTime)
     {
-        if (baseId == quoteId) (amountQuote, updateTime) = (amountBase, block.timestamp);
+        if (baseId == quoteId) return (amountBase, block.timestamp);
         if (baseId == ETH || quoteId == ETH)
             (amountQuote, updateTime) = _peek(baseId.b6(), quoteId.b6(), amountBase);
         else
