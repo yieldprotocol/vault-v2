@@ -86,7 +86,7 @@ contract Witch is AccessControl() {
             owner: vault.owner,
             start: block.timestamp.u32()
         });
-        cauldron.grab(vaultId, address(this));
+        cauldron.give(vaultId, address(this));
         emit Auctioned(vaultId, block.timestamp.u32());
     }
 
@@ -96,6 +96,7 @@ contract Witch is AccessControl() {
         external
         returns (uint256 ink)
     {
+        require (auctions[vaultId].start > 0, "Vault not under auction");
         DataTypes.Balances memory balances_ = cauldron.balances(vaultId);
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
         DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);
@@ -128,6 +129,7 @@ contract Witch is AccessControl() {
         external
         returns (uint256 ink)
     {
+        require (auctions[vaultId].start > 0, "Vault not under auction");
         DataTypes.Balances memory balances_ = cauldron.balances(vaultId);
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
         DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);
