@@ -161,7 +161,7 @@ describe('Witch', function () {
     it('it can buy no collateral (coverage)', async () => {
       expect(await witch.buy(vaultId, 0, 0))
         .to.emit(witch, 'Bought')
-        .withArgs(owner, vaultId, 0, 0)
+        .withArgs(vaultId, owner, 0, 0)
     })
 
     it('allows to buy 1/2 of the collateral for the whole debt at the beginning', async () => {
