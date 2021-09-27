@@ -26,11 +26,7 @@ contract Witch is AccessControl() {
     event IlkSet(bytes6 indexed ilkId, uint32 duration, uint64 initialOffer, uint128 dust);
     event Bought(bytes12 indexed vaultId, address indexed buyer, uint256 ink, uint256 art);
     event Auctioned(bytes12 indexed vaultId, uint256 indexed start);
-  
-    struct Auction {
-        address owner;
-        uint32 start;
-    }
+    event Stopped(bytes12 indexed vaultId);
 
     struct Ilk {
         bool initialized;     // Set to true if set, as we might want all parameters set to zero
@@ -45,7 +41,7 @@ contract Witch is AccessControl() {
 
     ICauldron immutable public cauldron;
     ILadle public ladle;
-    mapping(bytes12 => Auction) public auctions;
+    mapping(bytes12 => uint32) public auctions;
     mapping(bytes6 => Ilk) public ilks;
 
     constructor (ICauldron cauldron_, ILadle ladle_) {
@@ -80,14 +76,20 @@ contract Witch is AccessControl() {
     function auction(bytes12 vaultId)
         external
     {
-        require (auctions[vaultId].start == 0, "Vault already under auction");
-        DataTypes.Vault memory vault = cauldron.vaults(vaultId);
-        auctions[vaultId] = Auction({
-            owner: vault.owner,
-            start: block.timestamp.u32()
-        });
-        cauldron.grab(vaultId, address(this));
+        require (auctions[vaultId] == 0, "Vault already under auction");
+        require (cauldron.level(vaultId) < 0, "Not undercollateralized");
+        auctions[vaultId] = block.timestamp.u32();
         emit Auctioned(vaultId, block.timestamp.u32());
+    }
+
+    /// @dev Put an undercollateralized vault up for liquidation.
+    function stop(bytes12 vaultId)
+        external
+    {
+        require (auctions[vaultId] > 0, "Vault not under auction");
+        require (cauldron.level(vaultId) >= 0, "Undercollateralized");
+        delete auctions[vaultId];
+        emit Stopped(vaultId);
     }
 
     /// @dev Pay `base` of the debt in a vault in liquidation, getting at least `min` collateral.
@@ -96,16 +98,16 @@ contract Witch is AccessControl() {
         external
         returns (uint256 ink)
     {
+        require (auctions[vaultId] > 0, "Vault not under auction");
         DataTypes.Balances memory balances_ = cauldron.balances(vaultId);
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
         DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);
-        Auction memory auction_ = auctions[vaultId];
         Ilk memory ilk_ = ilks[vault_.ilkId];
 
         require (balances_.art > 0, "Nothing to buy");                                      // Cheapest way of failing gracefully if given a non existing vault
         uint256 art = cauldron.debtFromBase(vault_.seriesId, base);
         {
-            uint256 elapsed = uint32(block.timestamp) - auction_.start;                      // Auctions will malfunction on the 7th of February 2106, at 06:28:16 GMT, we should replace this contract before then.
+            uint256 elapsed = uint32(block.timestamp) - auctions[vaultId];                      // Auctions will malfunction on the 7th of February 2106, at 06:28:16 GMT, we should replace this contract before then.
             uint256 price = inkPrice(balances_, ilk_.initialOffer, ilk_.duration, elapsed);
             ink = uint256(art).wmul(price);                                                    // Calculate collateral to sell. Using divdrup stops rounding from leaving 1 stray wei in vaults.
             require (ink >= min, "Not enough bought");
@@ -114,10 +116,7 @@ contract Witch is AccessControl() {
 
         cauldron.slurp(vaultId, ink.u128(), art.u128());                                            // Remove debt and collateral from the vault
         settle(msg.sender, vault_.ilkId, series_.baseId, ink.u128(), base);                   // Move the assets
-        if (balances_.art - art == 0) {                                                             // If there is no debt left, return the vault with the collateral to the owner
-            cauldron.give(vaultId, auction_.owner);
-            delete auctions[vaultId];
-        }
+        if (balances_.art - art == 0) delete auctions[vaultId];
 
         emit Bought(vaultId, msg.sender, ink, art);
     }
@@ -128,15 +127,15 @@ contract Witch is AccessControl() {
         external
         returns (uint256 ink)
     {
+        require (auctions[vaultId] > 0, "Vault not under auction");
         DataTypes.Balances memory balances_ = cauldron.balances(vaultId);
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
         DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);
-        Auction memory auction_ = auctions[vaultId];
         Ilk memory ilk_ = ilks[vault_.ilkId];
 
         require (balances_.art > 0, "Nothing to buy");                                      // Cheapest way of failing gracefully if given a non existing vault
         {
-            uint256 elapsed = uint32(block.timestamp) - auction_.start;                      // Auctions will malfunction on the 7th of February 2106, at 06:28:16 GMT, we should replace this contract before then.
+            uint256 elapsed = uint32(block.timestamp) - auctions[vaultId];                      // Auctions will malfunction on the 7th of February 2106, at 06:28:16 GMT, we should replace this contract before then.
             uint256 price = inkPrice(balances_, ilk_.initialOffer, ilk_.duration, elapsed);
             ink = uint256(balances_.art).wmul(price);                                                    // Calculate collateral to sell. Using divdrup stops rounding from leaving 1 stray wei in vaults.
             require (ink >= min, "Not enough bought");
@@ -145,7 +144,6 @@ contract Witch is AccessControl() {
 
         cauldron.slurp(vaultId, ink.u128(), balances_.art);                                                     // Remove debt and collateral from the vault
         settle(msg.sender, vault_.ilkId, series_.baseId, ink.u128(), cauldron.debtToBase(vault_.seriesId, balances_.art));                                        // Move the assets
-        cauldron.give(vaultId, auction_.owner);
         delete auctions[vaultId];
 
         emit Bought(vaultId, msg.sender, ink, balances_.art); // Still the initially read `art` value, not the updated one

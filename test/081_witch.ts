@@ -127,14 +127,21 @@ describe('Witch', function () {
     expect((await witch.ilks(ilkId)).dust).to.equal(3)
   })
 
+  it('does not allow to buy from vaults not being auctioned', async () => {
+    await expect(witch.buy(vaultId, 0, 0)).to.be.revertedWith('Vault not under auction')
+    await expect(witch.payAll(vaultId, 0)).to.be.revertedWith('Vault not under auction')
+  })
+
+  it('does not auction collateralized vaults', async () => {
+    await expect(witch.auction(vaultId)).to.be.revertedWith('Not undercollateralized')
+  })
+
   it('auctions undercollateralized vaults', async () => {
     await spotSource.set(WAD.mul(2))
     await witch.auction(vaultId)
     const event = (await witch.queryFilter(witch.filters.Auctioned(null, null)))[0]
-    expect((await cauldron.vaults(vaultId)).owner).to.equal(witch.address)
-    expect((await witch.auctions(vaultId)).owner).to.equal(owner)
     expect(event.args.start.toNumber()).to.be.greaterThan(0)
-    expect((await witch.auctions(vaultId)).start).to.equal(event.args.start)
+    expect(await witch.auctions(vaultId)).to.equal(event.args.start)
   })
 
   describe('once a vault has been auctioned', async () => {
@@ -163,14 +170,11 @@ describe('Witch', function () {
       await expect(witch.buy(vaultId, borrowed, 0))
         .to.emit(witch, 'Bought')
         .withArgs(vaultId, owner, (await ilk.balanceOf(owner)).sub(ilkBalanceBefore), borrowed)
-        .to.emit(cauldron, 'VaultGiven')
-        .withArgs(vaultId, owner)
 
       const ink = posted.sub((await cauldron.balances(vaultId)).ink)
       expect(ink.div(10 ** 15)).to.equal(posted.div(10 ** 15).div(2)) // Nice hack to compare up to some precision
       expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(borrowed))
       expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(ink))
-      expect((await cauldron.vaults(vaultId)).owner).to.equal(owner) // The vault was returned once all the debt was paid off
     })
 
     it('does not buy if leaving dust', async () => {
@@ -193,7 +197,7 @@ describe('Witch', function () {
         expect(ink).to.equal(posted)
         expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(borrowed))
         expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(ink))
-        expect((await witch.auctions(vaultId)).owner).to.equal(ZERO_ADDRESS)
+        expect(await witch.auctions(vaultId)).to.equal(0)
       })
 
       describe('after maturity, with a rate increase', async () => {
@@ -235,7 +239,7 @@ describe('Witch', function () {
           expect((await cauldron.balances(vaultId)).ink).to.equal(0)
           expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(borrowed.mul(110).div(100)))
           expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(posted))
-          expect((await witch.auctions(vaultId)).owner).to.equal(ZERO_ADDRESS)
+          expect(await witch.auctions(vaultId)).to.equal(0)
         })
       })
     })
