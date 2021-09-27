@@ -33,7 +33,7 @@ contract Witch is AccessControl() {
     }
 
     struct Ilk {
-        bool active;          // Set to true if set, as we might want all parameters set to zero, or to disable autcions
+        bool active;          // Set to true if set, as we might want all parameters set to zero, or to disable auctions
         uint32 duration;      // Time that auctions take to go to minimal price and stay there.
         uint64 initialOffer;  // Proportion of collateral that is sold at auction start (1e18 = 100%)
         uint128 dust;         // Minimum collateral that must be left when buying, unless buying all
