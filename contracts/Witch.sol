@@ -23,7 +23,7 @@ contract Witch is AccessControl() {
     using CastU256U32 for uint256;
 
     event Point(bytes32 indexed param, address value);
-    event IlkSet(bytes6 indexed ilkId, uint32 duration, uint64 initialOffer, uint128 dust);
+    event IlkSet(bytes6 indexed ilkId, uint32 duration, uint64 initialOffer, uint128 dust, bool active);
     event Bought(bytes12 indexed vaultId, address indexed buyer, uint256 ink, uint256 art);
     event Auctioned(bytes12 indexed vaultId, uint256 indexed start);
   
@@ -33,7 +33,7 @@ contract Witch is AccessControl() {
     }
 
     struct Ilk {
-        bool initialized;     // Set to true if set, as we might want all parameters set to zero
+        bool active;          // Set to true if set, as we might want all parameters set to zero, or to disable autcions
         uint32 duration;      // Time that auctions take to go to minimal price and stay there.
         uint64 initialOffer;  // Proportion of collateral that is sold at auction start (1e18 = 100%)
         uint128 dust;         // Minimum collateral that must be left when buying, unless buying all
@@ -65,15 +65,15 @@ contract Witch is AccessControl() {
     ///  - the auction duration to calculate liquidation prices
     ///  - the proportion of the collateral that will be sold at auction start
     ///  - the minimum collateral that must be left when buying, unless buying all
-    function setIlk(bytes6 ilkId, uint32 duration, uint64 initialOffer, uint128 dust) external auth {
+    function setIlk(bytes6 ilkId, uint32 duration, uint64 initialOffer, uint128 dust, bool active) external auth {
         require (initialOffer <= 1e18, "Only at or under 100%");
         ilks[ilkId] = Ilk({
-            initialized: true,
+            active: active,
             duration: duration,
             initialOffer: initialOffer,
             dust: dust
         });
-        emit IlkSet(ilkId, duration, initialOffer, dust);
+        emit IlkSet(ilkId, duration, initialOffer, dust, active);
     }
 
     /// @dev Put an undercollateralized vault up for liquidation.
@@ -81,7 +81,9 @@ contract Witch is AccessControl() {
         external
     {
         require (auctions[vaultId].start == 0, "Vault already under auction");
+        require (cauldron.level(vaultId) < 0, "Not undercollateralized");
         DataTypes.Vault memory vault = cauldron.vaults(vaultId);
+        require (ilks[vault.ilkId].active, "Ilk not active");
         auctions[vaultId] = Auction({
             owner: vault.owner,
             start: block.timestamp.u32()

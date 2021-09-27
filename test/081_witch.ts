@@ -102,7 +102,7 @@ describe('Witch', function () {
     roundVaultId = await getLastVaultId(cauldron)
     await ladle.pour(roundVaultId, owner, WAD, WAD)
 
-    await witch.setIlk(ilkId, 3 * 60 * 60, WAD.div(2), 0)
+    await witch.setIlk(ilkId, 3 * 60 * 60, WAD.div(2), 0, true)
   })
 
   it('allows to change the ladle', async () => {
@@ -114,17 +114,32 @@ describe('Witch', function () {
   })
 
   it('does not allow to set the initial proportion over 100%', async () => {
-    await expect(witch.setIlk(ilkId, 1, WAD.mul(2), 3)).to.be.revertedWith('Only at or under 100%')
+    await expect(witch.setIlk(ilkId, 1, WAD.mul(2), 3, true)).to.be.revertedWith('Only at or under 100%')
   })
 
   it('allows to set an ilk', async () => {
-    expect(await witch.setIlk(ilkId, 1, 2, 3))
+    expect(await witch.setIlk(ilkId, 1, 2, 3, true))
       .to.emit(witch, 'IlkSet')
-      .withArgs(ilkId, 1, 2, 3)
-    expect((await witch.ilks(ilkId)).initialized).to.be.true
+      .withArgs(ilkId, 1, 2, 3, true)
+    expect((await witch.ilks(ilkId)).active).to.be.true
     expect((await witch.ilks(ilkId)).duration).to.equal(1)
     expect((await witch.ilks(ilkId)).initialOffer).to.equal(2)
     expect((await witch.ilks(ilkId)).dust).to.equal(3)
+  })
+
+  it('does not allow to buy from vaults not being auctioned', async () => {
+    await expect(witch.buy(vaultId, 0, 0)).to.be.revertedWith('Vault not under auction')
+    await expect(witch.payAll(vaultId, 0)).to.be.revertedWith('Vault not under auction')
+  })
+
+  it('does not auction collateralized vaults', async () => {
+    await expect(witch.auction(vaultId)).to.be.revertedWith('Not undercollateralized')
+  })
+
+  it('does not auction vaults if ilk not active', async () => {
+    await spotSource.set(WAD.mul(2))
+    await witch.setIlk(ilkId, 1, 2, 3, false)
+    await expect(witch.auction(vaultId)).to.be.revertedWith('Ilk not active')
   })
 
   it('auctions undercollateralized vaults', async () => {
@@ -154,7 +169,7 @@ describe('Witch', function () {
     it('it can buy no collateral (coverage)', async () => {
       expect(await witch.buy(vaultId, 0, 0))
         .to.emit(witch, 'Bought')
-        .withArgs(owner, vaultId, 0, 0)
+        .withArgs(vaultId, owner, 0, 0)
     })
 
     it('allows to buy 1/2 of the collateral for the whole debt at the beginning', async () => {
@@ -174,7 +189,7 @@ describe('Witch', function () {
     })
 
     it('does not buy if leaving dust', async () => {
-      await witch.setIlk(ilkId, 3 * 60 * 60, WAD.div(2), posted)
+      await witch.setIlk(ilkId, 3 * 60 * 60, WAD.div(2), posted, true)
       await expect(witch.buy(vaultId, WAD, 0)).to.be.revertedWith('Leaves dust')
     })
 
