@@ -12,6 +12,12 @@ contract BurnV1LiquidityModule {
     /// @param poolTokens amount of pool tokens to burn. 
     /// @param minimumFYDaiPrice minimum Dai/fyDai price to be accepted when internally selling fyDai.
     function migrateLiquidity(IV1Pool pool, address to, uint256 poolTokens, uint256 minimumFYDaiPrice) public {
+        require(
+            address(pool) == 0x8EcC94a91b5CF03927f5eb8c60ABbDf48F82b0b3 || 
+            address(pool) == 0x5591f644B377eD784e558D4BE1bbA78f5a26bdCd,
+            "Unknown pool"
+        );
+
         IV1FYDai fyDai = pool.fyDai();
 
         (uint256 daiObtained, uint256 fyDaiObtained) = pool.burn(address(this), address(this), poolTokens);
