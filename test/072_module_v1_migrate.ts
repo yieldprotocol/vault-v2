@@ -60,25 +60,13 @@ describe('Ladle - module', function () {
     base = env.assets.get(baseId) as ERC20Mock
 
     // ==== Set v1 Mocks ====
-    fyDaiSep = (await deployContract(ownerAcc, V1FYDaiMockArtifact, [
-      base.address,
-      EOSEP,
-    ])) as V1FYDaiMock
+    fyDaiSep = (await deployContract(ownerAcc, V1FYDaiMockArtifact, [base.address, EOSEP])) as V1FYDaiMock
 
-    v1PoolSep = (await deployContract(ownerAcc, V1PoolMockArtifact, [
-      base.address,
-      fyDaiSep.address,
-    ])) as V1PoolMock
+    v1PoolSep = (await deployContract(ownerAcc, V1PoolMockArtifact, [base.address, fyDaiSep.address])) as V1PoolMock
 
-    fyDaiDec = (await deployContract(ownerAcc, V1FYDaiMockArtifact, [
-      base.address,
-      EODEC,
-    ])) as V1FYDaiMock
-    
-    v1PoolDec = (await deployContract(ownerAcc, V1PoolMockArtifact, [
-      base.address,
-      fyDaiDec.address,
-    ])) as V1PoolMock
+    fyDaiDec = (await deployContract(ownerAcc, V1FYDaiMockArtifact, [base.address, EODEC])) as V1FYDaiMock
+
+    v1PoolDec = (await deployContract(ownerAcc, V1PoolMockArtifact, [base.address, fyDaiDec.address])) as V1PoolMock
 
     // ==== Module ====
 
@@ -86,7 +74,7 @@ describe('Ladle - module', function () {
       v1PoolSep.address,
       v1PoolDec.address,
     ])) as BurnV1LiquidityModule
-    
+
     await ladle.grantRoles([id(ladle.ladle.interface, 'addToken(address,bool)')], owner)
     await ladle.grantRoles([id(ladle.ladle.interface, 'addModule(address,bool)')], owner)
 
@@ -115,7 +103,10 @@ describe('Ladle - module', function () {
   it('redeems mature v1 fyDai', async () => {
     const poolTokensToBurn = (await v1PoolSep.balanceOf(owner)).div(2)
     const calldata = module.interface.encodeFunctionData('migrateLiquidity', [
-      v1PoolSep.address, owner, poolTokensToBurn, 0
+      v1PoolSep.address,
+      owner,
+      poolTokensToBurn,
+      0,
     ])
     await v1PoolSep.transfer(ladle.address, poolTokensToBurn)
     await ladle.moduleCall(module.address, calldata)
@@ -125,7 +116,10 @@ describe('Ladle - module', function () {
   it('sells v1 fyDai', async () => {
     const poolTokensToBurn = (await v1PoolDec.balanceOf(owner)).div(2)
     const calldata = module.interface.encodeFunctionData('migrateLiquidity', [
-      v1PoolDec.address, owner, poolTokensToBurn, 0
+      v1PoolDec.address,
+      owner,
+      poolTokensToBurn,
+      0,
     ])
     await v1PoolDec.transfer(ladle.address, poolTokensToBurn)
     await ladle.moduleCall(module.address, calldata)
