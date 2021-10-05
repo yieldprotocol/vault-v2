@@ -3,6 +3,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { constants } from '@yield-protocol/utils-v2'
 const { WAD, MAX128 } = constants
 const MAX = MAX128
+import { ETH } from '../src/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { FYToken } from '../typechain/FYToken'
@@ -49,10 +50,11 @@ describe('Ladle - roll', function () {
   })
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const ilkId = ETH
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const vaultId = ethers.utils.hexlify(ethers.utils.randomBytes(12))
   const otherSeriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  let vaultId: string
+  let baseVaultId: string
 
   beforeEach(async () => {
     env = await loadFixture(fixture)
@@ -64,8 +66,11 @@ describe('Ladle - roll', function () {
     otherFYToken = env.series.get(otherSeriesId) as FYToken
 
     // ==== Set testing environment ====
-    await cauldron.build(owner, vaultId, seriesId, ilkId)
+    vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
     await ladle.pour(vaultId, owner, WAD, WAD)
+
+    baseVaultId = (env.vaults.get(seriesId) as Map<string, string>).get(baseId) as string
+    await ladle.pour(baseVaultId, owner, WAD, WAD)
   })
 
   it('does not allow rolling vaults other than to the vault owner', async () => {
@@ -89,8 +94,20 @@ describe('Ladle - roll', function () {
     const preFeeDebt = WAD.mul(105).div(100)
     const appliedFee = (await otherFYToken.maturity()).sub(timestamp).mul(preFeeDebt).mul(fee).div(WAD)
 
-    expect(await fyToken.balanceOf(owner)).to.equal(WAD)
+    expect(await fyToken.balanceOf(owner)).to.equal(WAD.mul(2))
     expect((await cauldron.balances(vaultId)).art).to.equal(preFeeDebt.add(appliedFee))
+  })
+
+  it('except if base == ilk', async () => {
+    await ladle.pour(baseVaultId, owner, WAD.mul(5).div(100), 0) // The exchange rate is 1:1, but YieldSpace charges a 5%
+
+    const fee = WAD.div(1000000000) // 0.000000 001% wei/second
+    await ladle.setFee(fee)
+    await ladle.roll(baseVaultId, otherSeriesId, loan, MAX)
+    const preFeeDebt = WAD.mul(105).div(100)
+
+    expect(await fyToken.balanceOf(owner)).to.equal(WAD.mul(2))
+    expect((await cauldron.balances(baseVaultId)).art).to.equal(preFeeDebt)
   })
 
   describe('after maturity', async () => {

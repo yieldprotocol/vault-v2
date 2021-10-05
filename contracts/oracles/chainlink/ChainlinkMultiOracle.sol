@@ -2,112 +2,108 @@
 pragma solidity 0.8.6;
 
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "@yield-protocol/vault-interfaces/IOracle.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
+import "@yield-protocol/utils-v2/contracts/token/IERC20Metadata.sol";
+import "@yield-protocol/vault-interfaces/IOracle.sol";
+import "../../constants/Constants.sol";
 import "./AggregatorV3Interface.sol";
 
 
 /**
  * @title ChainlinkMultiOracle
+ * @notice Chainlink only uses USD or ETH as a quote in the aggregators, and we will use only ETH
  */
-contract ChainlinkMultiOracle is IOracle, AccessControl {
+contract ChainlinkMultiOracle is IOracle, AccessControl, Constants {
     using CastBytes32Bytes6 for bytes32;
 
-    uint8 public constant override decimals = 18;   // All prices are converted to 18 decimals
-
-    event SourceSet(bytes6 indexed baseId, bytes6 indexed quoteId, address indexed source);
+    event SourceSet(bytes6 indexed baseId, IERC20Metadata base, bytes6 indexed quoteId, IERC20Metadata quote, address indexed source);
 
     struct Source {
         address source;
-        uint8 decimals;
+        uint8 baseDecimals;
+        uint8 quoteDecimals;
         bool inverse;
     }
 
     mapping(bytes6 => mapping(bytes6 => Source)) public sources;
 
-    /**
-     * @notice Set or reset an oracle source and its inverse
-     */
-    function setSource(bytes6 base, bytes6 quote, address source) external auth {
-        _setSource(base, quote, source);
-    }
+    /// @dev Set or reset an oracle source and its inverse
+    function setSource(bytes6 baseId, IERC20Metadata base, bytes6 quoteId, IERC20Metadata quote, address source)
+        external auth
+    {
+        sources[baseId][quoteId] = Source({
+            source: source,
+            baseDecimals: base.decimals(),
+            quoteDecimals: quote.decimals(),
+            inverse: false
+        });
+        emit SourceSet(baseId, base, quoteId, quote, source);
 
-    /**
-     * @notice Set or reset a number of oracle sources and their inverses
-     */
-    function setSources(bytes6[] memory bases, bytes6[] memory quotes, address[] memory sources_) external auth {
-        uint256 length = bases.length;
-        require(
-            length == quotes.length && 
-            length == sources_.length,
-            "Mismatched inputs"
-        );
-        for (uint256 i; i < length; i++) {
-            _setSource(bases[i], quotes[i], sources_[i]);
+        if (baseId != quoteId) {
+            sources[quoteId][baseId] = Source({
+                source: source,
+                baseDecimals: quote.decimals(), // We are reversing the base and the quote
+                quoteDecimals: base.decimals(),
+                inverse: true
+            });
+            emit SourceSet(quoteId, quote, baseId, base, source);
         }
     }
 
-    /**
-     * @notice Retrieve the value of the amount at the latest oracle price.
-     */
-    function peek(bytes32 base, bytes32 quote, uint256 amount)
+    /// @dev Convert amountBase base into quote at the latest oracle price.
+    function peek(bytes32 baseId, bytes32 quoteId, uint256 amountBase)
         external view virtual override
-        returns (uint256 value, uint256 updateTime)
+        returns (uint256 amountQuote, uint256 updateTime)
     {
-        uint256 price;
-        (price, updateTime) = _peek(base.b6(), quote.b6());
-        value = price * amount / 1e18;
+        if (baseId == quoteId) return (amountBase, block.timestamp);
+        if (baseId == ETH || quoteId == ETH)
+            (amountQuote, updateTime) = _peek(baseId.b6(), quoteId.b6(), amountBase);
+        else
+            (amountQuote, updateTime) = _peekThroughETH(baseId.b6(), quoteId.b6(), amountBase);
     }
 
-    /**
-     * @notice Retrieve the value of the amount at the latest oracle price. Same as `peek` for this oracle.
-     */
-    function get(bytes32 base, bytes32 quote, uint256 amount)
+    /// @dev Convert amountBase base into quote at the latest oracle price, updating state if necessary. Same as `peek` for this oracle.
+    function get(bytes32 baseId, bytes32 quoteId, uint256 amountBase)
         external virtual override
-        returns (uint256 value, uint256 updateTime)
+        returns (uint256 amountQuote, uint256 updateTime)
     {
-        uint256 price;
-        (price, updateTime) = _peek(base.b6(), quote.b6());
-        value = price * amount / 1e18;
+        if (baseId == quoteId) (amountQuote, updateTime) = (amountBase, block.timestamp);
+        if (baseId == ETH || quoteId == ETH)
+            (amountQuote, updateTime) = _peek(baseId.b6(), quoteId.b6(), amountBase);
+        else
+            (amountQuote, updateTime) = _peekThroughETH(baseId.b6(), quoteId.b6(), amountBase);
     }
 
-    /**
-     * @notice Retrieve the value of the amount at the latest oracle price.
-     */
-    function _peek(bytes6 base, bytes6 quote) private view returns (uint price, uint updateTime) {
-        int rawPrice;
+    /// @dev Convert amountBase base into quote at the latest oracle price.
+    function _peek(bytes6 baseId, bytes6 quoteId, uint256 amountBase)
+        private view
+        returns (uint amountQuote, uint updateTime)
+    {
+        int price;
         uint80 roundId;
         uint80 answeredInRound;
-        Source memory source = sources[base][quote];
+        Source memory source = sources[baseId][quoteId];
         require (source.source != address(0), "Source not found");
-        (roundId, rawPrice,, updateTime, answeredInRound) = AggregatorV3Interface(source.source).latestRoundData();
-        require(rawPrice > 0, "Chainlink price <= 0");
+        (roundId, price,, updateTime, answeredInRound) = AggregatorV3Interface(source.source).latestRoundData();
+        require(price > 0, "Chainlink price <= 0");
         require(updateTime != 0, "Incomplete round");
         require(answeredInRound >= roundId, "Stale price");
         if (source.inverse == true) {
-            price = 10 ** (source.decimals + 18) / uint(rawPrice);
+            // ETH/USDC: 1 ETH (*10^18) * (1^6)/(286253688799857 ETH per USDC) = 3493404763 USDC wei
+            amountQuote = amountBase * (10 ** source.quoteDecimals) / uint(price);
         } else {
-            price = uint(rawPrice) * 10 ** (18 - source.decimals);
+            // USDC/ETH: 3000 USDC (*10^6) * 286253688799857 ETH per USDC / 10^6 = 858761066399571000 ETH wei
+            amountQuote = amountBase * uint(price) / (10 ** source.baseDecimals);
         }  
     }
 
-    /**
-     * @dev Set a new price source
-     */
-    function _setSource(bytes6 base, bytes6 quote, address source) internal {
-        uint8 decimals_ = AggregatorV3Interface(source).decimals();
-        require (decimals_ <= 18, "Unsupported decimals");
-        sources[base][quote] = Source({
-            source: source,
-            decimals: decimals_,
-            inverse: false
-        });
-        sources[quote][base] = Source({
-            source: source,
-            decimals: decimals_,
-            inverse: true
-        });
-        emit SourceSet(base, quote, source);
-        emit SourceSet(quote, base, source);
+    /// @dev Convert amountBase base into quote at the latest oracle price, using ETH as an intermediate step.
+    function _peekThroughETH(bytes6 baseId, bytes6 quoteId, uint256 amountBase)
+        private view
+        returns (uint amountQuote, uint updateTime)
+    {
+        (uint256 ethAmount, uint256 updateTime1) = _peek(baseId, ETH, amountBase);
+        (amountQuote, updateTime) = _peek(ETH, quoteId, ethAmount);
+        if (updateTime1 < updateTime) updateTime = updateTime1;
     }
 }

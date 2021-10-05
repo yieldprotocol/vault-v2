@@ -2,6 +2,8 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 
 import { constants } from '@yield-protocol/utils-v2'
 const { WAD } = constants
+import { ETH } from '../src/constants'
+import { getLastVaultId } from '../src/helpers'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
@@ -45,9 +47,10 @@ describe('Ladle - pour', function () {
   })
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const ilkId = ETH
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   let vaultId: string
+  let baseVaultId: string
 
   beforeEach(async () => {
     env = await loadFixture(fixture)
@@ -61,6 +64,8 @@ describe('Ladle - pour', function () {
 
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
     await cauldron.setDebtLimits(baseId, ilkId, WAD.mul(2).div(1000000), 1000000, 6)
+
+    baseVaultId = (env.vaults.get(seriesId) as Map<string, string>).get(baseId) as string
   })
 
   it('only the vault owner can manage its collateral', async () => {
@@ -78,6 +83,7 @@ describe('Ladle - pour', function () {
   describe('with posted collateral', async () => {
     beforeEach(async () => {
       await ladle.pour(vaultId, owner, WAD, 0)
+      await ladle.pour(baseVaultId, owner, WAD, 0)
     })
 
     it('users can pour to withdraw collateral', async () => {
@@ -117,6 +123,14 @@ describe('Ladle - pour', function () {
       const appliedFee = (await fyToken.maturity()).sub(timestamp).mul(fee)
       expect(await fyToken.balanceOf(owner)).to.equal(WAD)
       expect((await cauldron.balances(vaultId)).art).to.equal(WAD.add(appliedFee))
+    })
+
+    it('except if baseId == ilkId', async () => {
+      const fee = WAD.div(1000000000) // 0.000000 001% wei/second
+      await ladle.setFee(fee)
+      await ladle.pour(baseVaultId, owner, 0, WAD)
+      expect(await fyToken.balanceOf(owner)).to.equal(WAD)
+      expect((await cauldron.balances(baseVaultId)).art).to.equal(WAD)
     })
   })
 

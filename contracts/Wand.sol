@@ -2,6 +2,7 @@
 pragma solidity 0.8.6;
 import "@yield-protocol/vault-interfaces/ICauldronGov.sol";
 import "@yield-protocol/vault-interfaces/ILadleGov.sol";
+// import "@yield-protocol/vault-interfaces/IWitchGov.sol";
 import "@yield-protocol/vault-interfaces/IMultiOracleGov.sol";
 import "@yield-protocol/vault-interfaces/IJoinFactory.sol";
 import "@yield-protocol/vault-interfaces/IJoin.sol";
@@ -11,16 +12,13 @@ import "@yield-protocol/vault-interfaces/DataTypes.sol";
 import "@yield-protocol/yieldspace-interfaces/IPoolFactory.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "./constants/Constants.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
 
-
-interface IOwnable {
-    function transferOwnership(address) external;
+interface IWitchGov {
+    function ilks(bytes6) external view returns(bool, uint32, uint64, uint128);
 }
 
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient governance features.
 contract Wand is AccessControl, Constants {
-    using CastBytes32Bytes6 for bytes32;
 
     event Point(bytes32 indexed param, address value);
 
@@ -31,7 +29,7 @@ contract Wand is AccessControl, Constants {
 
     ICauldronGov public cauldron;
     ILadleGov public ladle;
-    address public witch;
+    IWitchGov public witch;
     IPoolFactory public poolFactory;
     IJoinFactory public joinFactory;
     IFYTokenFactory public fyTokenFactory;
@@ -39,7 +37,7 @@ contract Wand is AccessControl, Constants {
     constructor (
         ICauldronGov cauldron_,
         ILadleGov ladle_,
-        address witch_,
+        IWitchGov witch_,
         IPoolFactory poolFactory_,
         IJoinFactory joinFactory_,
         IFYTokenFactory fyTokenFactory_
@@ -56,7 +54,7 @@ contract Wand is AccessControl, Constants {
     function point(bytes32 param, address value) external auth {
         if (param == "cauldron") cauldron = ICauldronGov(value);
         else if (param == "ladle") ladle = ILadleGov(value);
-        else if (param == "witch") witch = value;
+        else if (param == "witch") witch = IWitchGov(value);
         else if (param == "poolFactory") poolFactory = IPoolFactory(value);
         else if (param == "joinFactory") joinFactory = IJoinFactory(value);
         else if (param == "fyTokenFactory") fyTokenFactory = IFYTokenFactory(value);
@@ -86,29 +84,28 @@ contract Wand is AccessControl, Constants {
         ladle.addJoin(assetId, address(join));
     }
 
-    /// @dev Make a base asset out of a generic asset, by adding rate and chi oracles.
-    /// This assumes CompoundMultiOracles, which deliver both rate and chi.
-    function makeBase(bytes6 assetId, IMultiOracleGov oracle, address rateSource, address chiSource) external auth {
+    /// @dev Make a base asset out of a generic asset.
+    /// @notice `oracle` must be able to deliver a value for assetId and 'rate'
+    function makeBase(bytes6 assetId, IMultiOracleGov oracle) external auth {
         require (address(oracle) != address(0), "Oracle required");
-        require (rateSource != address(0), "Rate source required");
-        require (chiSource != address(0), "Chi source required");
 
-        oracle.setSource(assetId, RATE.b6(), rateSource);
-        oracle.setSource(assetId, CHI.b6(), chiSource);
-        cauldron.setRateOracle(assetId, IOracle(address(oracle)));
+        cauldron.setLendingOracle(assetId, IOracle(address(oracle)));
         
         AccessControl baseJoin = AccessControl(address(ladle.joins(assetId)));
-        baseJoin.grantRole(JOIN, witch); // Give the Witch permission to join base
+        baseJoin.grantRole(JOIN, address(witch)); // Give the Witch permission to join base
     }
 
-    /// @dev Make an ilk asset out of a generic asset, by adding a spot oracle against a base asset, collateralization ratio, and debt ceiling.
-    function makeIlk(bytes6 baseId, bytes6 ilkId, IMultiOracleGov oracle, address spotSource, uint32 ratio, uint96 max, uint24 min, uint8 dec) external auth {
-        oracle.setSource(baseId, ilkId, spotSource);
+    /// @dev Make an ilk asset out of a generic asset.
+    /// @notice `oracle` must be able to deliver a value for baseId and ilkId
+    function makeIlk(bytes6 baseId, bytes6 ilkId, IMultiOracleGov oracle, uint32 ratio, uint96 max, uint24 min, uint8 dec) external auth {
+        require (address(oracle) != address(0), "Oracle required");
+        (bool ilkInitialized,,,) = witch.ilks(ilkId);
+        require (ilkInitialized == true, "Initialize ilk in Witch");
         cauldron.setSpotOracle(baseId, ilkId, IOracle(address(oracle)), ratio);
         cauldron.setDebtLimits(baseId, ilkId, max, min, dec);
 
         AccessControl ilkJoin = AccessControl(address(ladle.joins(ilkId)));
-        ilkJoin.grantRole(EXIT, witch); // Give the Witch permission to exit ilk
+        ilkJoin.grantRole(EXIT, address(witch)); // Give the Witch permission to exit ilk
     }
 
     /// @dev Add an existing series to the protocol, by deploying a FYToken, and registering it in the cauldron with the approved ilks
@@ -127,7 +124,7 @@ contract Wand is AccessControl, Constants {
         IJoin baseJoin = ladle.joins(baseId);
         require(address(baseJoin) != address(0), "Join not found");
 
-        IOracle oracle = cauldron.rateOracles(baseId);
+        IOracle oracle = cauldron.lendingOracles(baseId); // The lending oracles in the Cauldron are also configured to return chi
         require(address(oracle) != address(0), "Chi oracle not found");
 
         AccessControl fyToken = AccessControl(fyTokenFactory.createFYToken(
@@ -160,11 +157,7 @@ contract Wand is AccessControl, Constants {
 
         // Create the pool for the base and fyToken
         poolFactory.createPool(base, address(fyToken));
-        IOwnable pool = IOwnable(poolFactory.calculatePoolAddress(base, address(fyToken)));
-        
-
-        // Pass ownership of pool to msg.sender
-        pool.transferOwnership(msg.sender);
+        address pool = poolFactory.calculatePoolAddress(base, address(fyToken));
 
         // Register pool in Ladle
         ladle.addPool(seriesId, address(pool));

@@ -336,7 +336,8 @@ contract Ladle is LadleStorage, AccessControl() {
         if (art != 0) series = getSeries(vault.seriesId);
 
         int128 fee;
-        if (art > 0) fee = ((series.maturity - block.timestamp) * uint256(int256(art)).wmul(borrowingFee)).i128();
+        if (art > 0 && vault.ilkId != series.baseId && borrowingFee != 0)
+            fee = ((series.maturity - block.timestamp) * uint256(int256(art)).wmul(borrowingFee)).i128();
 
         // Update accounting
         cauldron.pour(vaultId, ink, art + fee);
@@ -474,7 +475,8 @@ contract Ladle is LadleStorage, AccessControl() {
             fyToken.burn(address(fyToken), (base * loan) - newDebt);    // Burn the surplus
         }
 
-        newDebt += ((newSeries.maturity - block.timestamp) * uint256(newDebt).wmul(borrowingFee)).u128();  // Add borrowing fee, also stops users form rolling to a mature series
+        if (vault.ilkId != newSeries.baseId && borrowingFee != 0)
+            newDebt += ((newSeries.maturity - block.timestamp) * uint256(newDebt).wmul(borrowingFee)).u128();  // Add borrowing fee, also stops users form rolling to a mature series
 
         (vault,) = cauldron.roll(vaultId, newSeriesId, newDebt.i128() - balances.art.i128()); // Change the series and debt for the vault
 
@@ -483,8 +485,8 @@ contract Ladle is LadleStorage, AccessControl() {
 
     // ---- Ladle as a token holder ----
 
-    /// @dev Use fyToken in the Ladle to repay debt.
-    function repayLadle(bytes12 vaultId_)
+    /// @dev Use fyToken in the Ladle to repay debt. Return unused fyToken to `to`.
+    function repayFromLadle(bytes12 vaultId_, address to)
         external payable
         returns (uint256 repaid)
     {
@@ -493,11 +495,45 @@ contract Ladle is LadleStorage, AccessControl() {
         DataTypes.Balances memory balances = cauldron.balances(vaultId);
         
         uint256 amount = series.fyToken.balanceOf(address(this));
+        if (amount == 0 || balances.art == 0) return 0;
+
         repaid = amount <= balances.art ? amount : balances.art;
 
         // Update accounting
         cauldron.pour(vaultId, 0, -(repaid.i128()));
         series.fyToken.burn(address(this), repaid);
+
+        // Return remainder
+        if (repaid < amount) IERC20(address(series.fyToken)).safeTransfer(to, repaid - amount);
+    }
+
+    /// @dev Use base in the Ladle to repay debt. Return unused base to `to`.
+    function closeFromLadle(bytes12 vaultId_, address to)
+        external payable
+        returns (uint256 repaid)
+    {
+        (bytes12 vaultId, DataTypes.Vault memory vault) = getVault(vaultId_);
+        DataTypes.Series memory series = getSeries(vault.seriesId);
+        DataTypes.Balances memory balances = cauldron.balances(vaultId);
+        
+        IERC20 base = IERC20(cauldron.assets(series.baseId));
+        uint256 amount = base.balanceOf(address(this));
+        if (amount == 0 || balances.art == 0) return 0;
+
+        uint256 debtInBase = cauldron.debtToBase(vault.seriesId, balances.art);
+        uint128 repaidInBase = ((amount <= debtInBase) ? amount : debtInBase).u128();
+        repaid = (repaidInBase == debtInBase) ? balances.art : cauldron.debtFromBase(vault.seriesId, repaidInBase);
+
+        // Update accounting
+        cauldron.pour(vaultId, 0, -(repaid.i128()));
+
+        // Manage underlying
+        IJoin baseJoin = getJoin(series.baseId);
+        base.safeTransfer(address(baseJoin), repaidInBase);
+        baseJoin.join(address(this), repaidInBase);
+
+        // Return remainder
+        if (repaidInBase < amount) base.safeTransfer(to, repaidInBase - amount);
     }
 
     /// @dev Allow users to redeem fyToken, to be used with batch.

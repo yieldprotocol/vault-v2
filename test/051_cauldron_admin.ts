@@ -60,7 +60,7 @@ describe('Cauldron - admin', function () {
     ilk1 = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId1, 'Mock Ilk'])) as ERC20Mock
     ilk2 = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId2, 'Mock Ilk'])) as ERC20Mock
     joinFactory = (await deployContract(ownerAcc, JoinFactoryArtifact, [])) as JoinFactory
-    await joinFactory.grantRoles([id('createJoin(address)')], owner)
+    await joinFactory.grantRoles([id(joinFactory.interface, 'createJoin(address)')], owner)
 
     join = (await ethers.getContractAt(
       'Join',
@@ -91,12 +91,12 @@ describe('Cauldron - admin', function () {
 
     await cauldron.grantRoles(
       [
-        id('addAsset(bytes6,address)'),
-        id('setDebtLimits(bytes6,bytes6,uint96,uint24,uint8)'),
-        id('setRateOracle(bytes6,address)'),
-        id('setSpotOracle(bytes6,bytes6,address,uint32)'),
-        id('addSeries(bytes6,bytes6,address)'),
-        id('addIlks(bytes6,bytes6[])'),
+        id(cauldron.interface, 'addAsset(bytes6,address)'),
+        id(cauldron.interface, 'setDebtLimits(bytes6,bytes6,uint96,uint24,uint8)'),
+        id(cauldron.interface, 'setLendingOracle(bytes6,address)'),
+        id(cauldron.interface, 'setSpotOracle(bytes6,bytes6,address,uint32)'),
+        id(cauldron.interface, 'addSeries(bytes6,bytes6,address)'),
+        id(cauldron.interface, 'addIlks(bytes6,bytes6[])'),
       ],
       owner
     )
@@ -155,15 +155,15 @@ describe('Cauldron - admin', function () {
     })
 
     it('does not allow adding a rate oracle for an unknown base', async () => {
-      await expect(cauldron.setRateOracle(mockAssetId, oracle.address)).to.be.revertedWith('Base not found')
+      await expect(cauldron.setLendingOracle(mockAssetId, oracle.address)).to.be.revertedWith('Base not found')
     })
 
     it('adds a rate oracle', async () => {
-      expect(await cauldron.setRateOracle(baseId, oracle.address))
+      expect(await cauldron.setLendingOracle(baseId, oracle.address))
         .to.emit(cauldron, 'RateOracleAdded')
         .withArgs(baseId, oracle.address)
 
-      expect(await cauldron.rateOracles(baseId)).to.equal(oracle.address)
+      expect(await cauldron.lendingOracles(baseId)).to.equal(oracle.address)
     })
 
     it('does not allow adding a series without a rate oracle for its base', async () => {
@@ -172,7 +172,7 @@ describe('Cauldron - admin', function () {
 
     describe('with a rate oracle added', async () => {
       beforeEach(async () => {
-        await cauldron.setRateOracle(baseId, oracle.address)
+        await cauldron.setLendingOracle(baseId, oracle.address)
       })
 
       it('does not allow not linking a series to a fyToken', async () => {

@@ -15,8 +15,6 @@ import "../../mocks/oracles/uniswap/UniswapV3OracleLibraryMock.sol";
 contract UniswapV3Oracle is IOracle, AccessControl {
     using CastBytes32Bytes6 for bytes32;
 
-    uint8 public constant override decimals = 18;
-
     event SecondsAgoSet(uint32 indexed secondsAgo);
     event SourceSet(bytes6 indexed base, bytes6 indexed quote, address indexed source);
 
@@ -50,16 +48,6 @@ contract UniswapV3Oracle is IOracle, AccessControl {
      */
     function setSource(bytes6 base, bytes6 quote, address source) external auth {
         _setSource(base, quote, source);
-    }
-
-    /**
-     * @notice Set or reset a number of oracle sources
-     */
-    function setSources(bytes6[] memory bases, bytes6[] memory quotes, address[] memory sources_) external auth {
-        require(bases.length == quotes.length && quotes.length == sources_.length, "Mismatched inputs");
-        for (uint256 i; i < bases.length; i++) {
-            _setSource(bases[i], quotes[i], sources_[i]);
-        }
     }
 
     /**

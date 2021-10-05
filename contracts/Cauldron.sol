@@ -6,6 +6,7 @@ import "@yield-protocol/vault-interfaces/DataTypes.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
 import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
+import "@yield-protocol/utils-v2/contracts/math/WDivUp.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU128I128.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastI128U128.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
@@ -24,6 +25,7 @@ contract Cauldron is AccessControl() {
     using CauldronMath for uint128;
     using WMul for uint256;
     using WDiv for uint256;
+    using WDivUp for uint256;
     using CastU128I128 for uint128;
     using CastI128U128 for int128;
     using CastU256U128 for uint256;
@@ -53,7 +55,7 @@ contract Cauldron is AccessControl() {
     mapping (bytes6 => DataTypes.Series)                        public series;          // Series available in Cauldron. We can possibly use a bytes6 (3e14 possible series).
     mapping (bytes6 => mapping(bytes6 => bool))                 public ilks;            // [seriesId][assetId] Assets that are approved as collateral for a series
 
-    mapping (bytes6 => IOracle)                                 public rateOracles;     // Rate (borrowing rate) accruals oracle for the underlying
+    mapping (bytes6 => IOracle)                                 public lendingOracles;  // Variable rate lending oracle for an underlying
     mapping (bytes6 => mapping(bytes6 => DataTypes.SpotOracle)) public spotOracles;     // [assetId][assetId] Spot price oracles
 
     // ==== Protocol data ====
@@ -93,12 +95,12 @@ contract Cauldron is AccessControl() {
     }
 
     /// @dev Set a rate oracle. Can be reset.
-    function setRateOracle(bytes6 baseId, IOracle oracle)
+    function setLendingOracle(bytes6 baseId, IOracle oracle)
         external
         auth
     {
         require (assets[baseId] != address(0), "Base not found");
-        rateOracles[baseId] = oracle;
+        lendingOracles[baseId] = oracle;
         emit RateOracleAdded(baseId, address(oracle));
     }
 
@@ -126,7 +128,7 @@ contract Cauldron is AccessControl() {
         require (base != address(0), "Base not found");
         require (fyToken != IFYToken(address(0)), "Series need a fyToken");
         require (fyToken.underlying() == base, "Mismatched series and base");
-        require (rateOracles[baseId] != IOracle(address(0)), "Rate oracle not found");
+        require (lendingOracles[baseId] != IOracle(address(0)), "Rate oracle not found");
         require (series[seriesId].fyToken == IFYToken(address(0)), "Id already used");
         series[seriesId] = DataTypes.Series({
             fyToken: fyToken,
@@ -257,14 +259,14 @@ contract Cauldron is AccessControl() {
     }
 
     /// @dev Convert a debt amount for a series from base to fyToken terms.
-    /// @notice Think about rounding if using, since we are dividing.
+    /// @notice Think about rounding up if using, since we are dividing.
     function debtFromBase(bytes6 seriesId, uint128 base)
         external
         returns (uint128 art)
     {
         if (uint32(block.timestamp) >= series[seriesId].maturity) {
             DataTypes.Series memory series_ = series[seriesId];
-            art = uint256(base).wdiv(_accrual(seriesId, series_)).u128();
+            art = uint256(base).wdivup(_accrual(seriesId, series_)).u128();
         } else {
             art = base;
         }
@@ -439,7 +441,7 @@ contract Cauldron is AccessControl() {
         internal
     {
         require (uint32(block.timestamp) >= series_.maturity, "Only after maturity");
-        IOracle rateOracle = rateOracles[series_.baseId];
+        IOracle rateOracle = lendingOracles[series_.baseId];
         (uint256 rateAtMaturity,) = rateOracle.get(series_.baseId, bytes32("rate"), 0);   // The value returned is an accumulator, it doesn't need an input amount
         ratesAtMaturity[seriesId] = rateAtMaturity;
         emit SeriesMatured(seriesId, rateAtMaturity);
@@ -464,7 +466,7 @@ contract Cauldron is AccessControl() {
         if (rateAtMaturity == 0) {  // After maturity, but rate not yet recorded. Let's record it, and accrual is then 1.
             _mature(seriesId, series_);
         } else {
-            IOracle rateOracle = rateOracles[series_.baseId];
+            IOracle rateOracle = lendingOracles[series_.baseId];
             (uint256 rate,) = rateOracle.get(series_.baseId, bytes32("rate"), 0);   // The value returned is an accumulator, it doesn't need an input amount
             accrual_ = rate.wdiv(rateAtMaturity);
         }
@@ -482,7 +484,7 @@ contract Cauldron is AccessControl() {
     {
         DataTypes.SpotOracle memory spotOracle_ = spotOracles[series_.baseId][vault_.ilkId];
         uint256 ratio = uint256(spotOracle_.ratio) * 1e12;   // Normalized to 18 decimals
-        (uint256 inkValue,) = spotOracle_.oracle.get(series_.baseId, vault_.ilkId, balances_.ink);    // ink * spot
+        (uint256 inkValue,) = spotOracle_.oracle.get(vault_.ilkId, series_.baseId, balances_.ink);    // ink * spot
 
         if (uint32(block.timestamp) >= series_.maturity) {
             uint256 accrual_ = _accrual(vault_.seriesId, series_);

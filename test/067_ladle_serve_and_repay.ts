@@ -3,6 +3,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { constants } from '@yield-protocol/utils-v2'
 const { WAD, MAX128 } = constants
 const MAX = MAX128
+import { ETH } from '../src/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { FYToken } from '../typechain/FYToken'
@@ -45,7 +46,7 @@ describe('Ladle - serve and repay', function () {
   })
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const ilkId = ETH
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
 
   let vaultId: string
@@ -81,7 +82,8 @@ describe('Ladle - serve and repay', function () {
   })
 
   it('repays debt with base', async () => {
-    await ladle.pour(vaultId, owner, WAD, WAD)
+    const debtBefore = WAD.mul(8)
+    await ladle.pour(vaultId, owner, WAD.mul(8), debtBefore)
 
     const baseBalanceBefore = await base.balanceOf(owner)
     const debtRepaidInBase = WAD.div(2)
@@ -94,12 +96,13 @@ describe('Ladle - serve and repay', function () {
       .withArgs(vaultId, seriesId, ilkId, inkRetrieved, debtRepaidInFY.mul(-1))
       .to.emit(pool, 'Trade')
       .withArgs(await fyToken.maturity(), ladle.address, fyToken.address, debtRepaidInBase, debtRepaidInFY.mul(-1))
-    expect((await cauldron.balances(vaultId)).art).to.equal(WAD.sub(debtRepaidInFY))
+    expect((await cauldron.balances(vaultId)).art).to.equal(debtBefore.sub(debtRepaidInFY))
     expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(debtRepaidInBase))
   })
 
   it('repays debt with base in a batch', async () => {
-    await ladle.pour(vaultId, owner, WAD, WAD)
+    const debtBefore = WAD.mul(8)
+    await ladle.pour(vaultId, owner, WAD.mul(8), debtBefore)
 
     const baseBalanceBefore = await base.balanceOf(owner)
     const debtRepaidInBase = WAD.div(2)
@@ -117,7 +120,7 @@ describe('Ladle - serve and repay', function () {
       .withArgs(vaultId, seriesId, ilkId, inkRetrieved, debtRepaidInFY.mul(-1))
       .to.emit(pool, 'Trade')
       .withArgs(await fyToken.maturity(), ladle.address, fyToken.address, debtRepaidInBase, debtRepaidInFY.mul(-1))
-    expect((await cauldron.balances(vaultId)).art).to.equal(WAD.sub(debtRepaidInFY))
+    expect((await cauldron.balances(vaultId)).art).to.equal(debtBefore.sub(debtRepaidInFY))
     expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(debtRepaidInBase))
   })
 

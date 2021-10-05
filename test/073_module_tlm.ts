@@ -1,6 +1,7 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { id, constants } from '@yield-protocol/utils-v2'
 const { WAD, MAX256 } = constants
+import { ETH } from '../src/constants'
 
 import TLMMockArtifact from '../artifacts/contracts/mocks/TLMMock.sol/TLMMock.json'
 import TLMModuleArtifact from '../artifacts/contracts/modules/TLMModule.sol/TLMModule.json'
@@ -49,7 +50,7 @@ describe('Ladle - module', function () {
   })
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const ilkId = ETH
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const zeroAddress = '0x' + '0'.repeat(40)
 
@@ -74,7 +75,7 @@ describe('Ladle - module', function () {
       zeroAddress,
       tlm.address,
     ])) as TLMModule
-    await ladle.grantRoles([id('addModule(address,bool)')], owner)
+    await ladle.grantRoles([id(ladle.ladle.interface, 'addModule(address,bool)')], owner)
 
     await ladle.addModule(tlmModule.address, true)
   })

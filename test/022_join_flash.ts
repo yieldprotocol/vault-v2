@@ -53,7 +53,7 @@ describe('Join - flash', function () {
   beforeEach(async () => {
     token = (await deployContract(ownerAcc, ERC20MockArtifact, ['MTK', 'Mock Token'])) as ERC20Mock
     joinFactory = (await deployContract(ownerAcc, JoinFactoryArtifact, [])) as JoinFactory
-    await joinFactory.grantRoles([id('createJoin(address)')], owner)
+    await joinFactory.grantRoles([id(joinFactory.interface, 'createJoin(address)')], owner)
 
     join = (await ethers.getContractAt(
       'Join',
@@ -61,7 +61,12 @@ describe('Join - flash', function () {
       ownerAcc
     )) as Join
     await join.grantRoles(
-      [id('join(address,uint128)'), id('exit(address,uint128)'), id('setFlashFeeFactor(uint256)')],
+      [
+        id(join.interface, 'join(address,uint128)'),
+        id(join.interface, 'exit(address,uint128)'),
+        id(join.interface, 'retrieve(address,address)'),
+        id(join.interface, 'setFlashFeeFactor(uint256)'),
+      ],
       owner
     )
 

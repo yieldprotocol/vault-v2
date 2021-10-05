@@ -20,6 +20,7 @@ contract Witch is AccessControl() {
     using CastU256U128 for uint256;
     using CastU256U32 for uint256;
 
+    event Point(bytes32 indexed param, address value);
     event IlkSet(bytes6 indexed ilkId, uint32 duration, uint64 initialOffer, uint128 dust);
     event Bought(bytes12 indexed vaultId, address indexed buyer, uint256 ink, uint256 art);
     event Auctioned(bytes12 indexed vaultId, uint256 indexed start);
@@ -30,6 +31,7 @@ contract Witch is AccessControl() {
     }
 
     struct Ilk {
+        bool initialized;     // Set to true if set, as we might want all parameters set to zero
         uint32 duration;      // Time that auctions take to go to minimal price and stay there.
         uint64 initialOffer;  // Proportion of collateral that is sold at auction start (1e18 = 100%)
         uint128 dust;         // Minimum collateral that must be left when buying, unless buying all
@@ -40,13 +42,21 @@ contract Witch is AccessControl() {
     // uint128 public dust;                     // Minimum collateral that must be left when buying, unless buying all
 
     ICauldron immutable public cauldron;
-    ILadle immutable public ladle;
+    ILadle public ladle;
     mapping(bytes12 => Auction) public auctions;
     mapping(bytes6 => Ilk) public ilks;
 
     constructor (ICauldron cauldron_, ILadle ladle_) {
         cauldron = cauldron_;
         ladle = ladle_;
+    }
+
+
+    /// @dev Point to a different ladle
+    function point(bytes32 param, address value) external auth {
+        if (param == "ladle") ladle = ILadle(value);
+        else revert("Unrecognized parameter");
+        emit Point(param, value);
     }
 
     /// @dev Set:
@@ -56,6 +66,7 @@ contract Witch is AccessControl() {
     function setIlk(bytes6 ilkId, uint32 duration, uint64 initialOffer, uint128 dust) external auth {
         require (initialOffer <= 1e18, "Only at or under 100%");
         ilks[ilkId] = Ilk({
+            initialized: true,
             duration: duration,
             initialOffer: initialOffer,
             dust: dust
@@ -132,6 +143,7 @@ contract Witch is AccessControl() {
         cauldron.slurp(vaultId, ink.u128(), balances_.art);                                                     // Remove debt and collateral from the vault
         settle(msg.sender, vault_.ilkId, series_.baseId, ink.u128(), cauldron.debtToBase(vault_.seriesId, balances_.art));                                        // Move the assets
         cauldron.give(vaultId, auction_.owner);
+        delete auctions[vaultId];
 
         emit Bought(vaultId, msg.sender, ink, balances_.art); // Still the initially read `art` value, not the updated one
     }

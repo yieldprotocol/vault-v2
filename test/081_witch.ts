@@ -2,7 +2,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 
 import { constants } from '@yield-protocol/utils-v2'
 const { WAD } = constants
-import { RATE } from '../src/constants'
+import { RATE, ETH } from '../src/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
@@ -20,9 +20,11 @@ const { loadFixture } = waffle
 import { YieldEnvironment } from './shared/fixtures'
 import { LadleWrapper } from '../src/ladleWrapper'
 
-function bytes6ToBytes32(x: string): string {
-  return x + '00'.repeat(26)
+function stringToBytes32(x: string): string {
+  return ethers.utils.formatBytes32String(x)
 }
+
+const ZERO_ADDRESS = '0x' + '00'.repeat(20)
 
 describe('Witch', function () {
   this.timeout(0)
@@ -65,7 +67,7 @@ describe('Witch', function () {
   })
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const ilkId = ETH
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   let vaultId: string
 
@@ -94,6 +96,14 @@ describe('Witch', function () {
     await witch.setIlk(ilkId, 3 * 60 * 60, WAD.div(2), 0)
   })
 
+  it('allows to change the ladle', async () => {
+    const mockAddress = owner
+    expect(await witch.point(stringToBytes32('ladle'), mockAddress))
+      .to.emit(witch, 'Point')
+      .withArgs(stringToBytes32('ladle'), mockAddress)
+    expect(await witch.ladle()).to.equal(mockAddress)
+  })
+
   it('does not allow to set the initial proportion over 100%', async () => {
     await expect(witch.setIlk(ilkId, 1, WAD.mul(2), 3)).to.be.revertedWith('Only at or under 100%')
   })
@@ -102,13 +112,14 @@ describe('Witch', function () {
     expect(await witch.setIlk(ilkId, 1, 2, 3))
       .to.emit(witch, 'IlkSet')
       .withArgs(ilkId, 1, 2, 3)
+    expect((await witch.ilks(ilkId)).initialized).to.be.true
     expect((await witch.ilks(ilkId)).duration).to.equal(1)
     expect((await witch.ilks(ilkId)).initialOffer).to.equal(2)
     expect((await witch.ilks(ilkId)).dust).to.equal(3)
   })
 
   it('auctions undercollateralized vaults', async () => {
-    await spotSource.set(WAD.div(2))
+    await spotSource.set(WAD.mul(2))
     await witch.auction(vaultId)
     const event = (await witch.queryFilter(witch.filters.Auctioned(null, null)))[0]
     expect((await cauldron.vaults(vaultId)).owner).to.equal(witch.address)
@@ -119,7 +130,7 @@ describe('Witch', function () {
 
   describe('once a vault has been auctioned', async () => {
     beforeEach(async () => {
-      await spotSource.set(WAD.div(2))
+      await spotSource.set(WAD.mul(2))
       await witch.auction(vaultId)
     })
 
@@ -173,6 +184,7 @@ describe('Witch', function () {
         expect(ink).to.equal(WAD)
         expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(WAD))
         expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(ink))
+        expect((await witch.auctions(vaultId)).owner).to.equal(ZERO_ADDRESS)
       })
 
       describe('after maturity, with a rate increase', async () => {
@@ -184,6 +196,8 @@ describe('Witch', function () {
         })
 
         it('debt to repay grows with rate after maturity', async () => {
+          await cauldron.setDebtLimits(baseId, ilkId, 1000000, 0, 18) // Disable the dust level, not relevant
+
           const baseBalanceBefore = await base.balanceOf(owner)
           const ilkBalanceBefore = await ilk.balanceOf(owner)
           await expect(witch.buy(vaultId, WAD, 0))
@@ -197,8 +211,8 @@ describe('Witch', function () {
 
           const art = WAD.sub((await cauldron.balances(vaultId)).art)
           const ink = WAD.sub((await cauldron.balances(vaultId)).ink)
-          expect(art).to.equal(WAD.mul(100).div(110)) // The rate increased by a 10%, so by paying WAD base we only repay 100/110 of the debt in fyToken terms
-          expect(ink).to.equal(WAD.mul(100).div(110)) // We only pay 100/110 of the debt, so we get 100/110 of the collateral
+          expect(art).to.equal(WAD.mul(100).div(110).add(1)) // The rate increased by a 10%, so by paying WAD base we only repay 100/110 of the debt in fyToken terms
+          expect(ink).to.equal(WAD.mul(100).div(110).add(1)) // We only pay 100/110 of the debt, so we get 100/110 of the collateral
           expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(WAD))
           expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(ink))
         })
@@ -212,6 +226,7 @@ describe('Witch', function () {
           expect((await cauldron.balances(vaultId)).ink).to.equal(0)
           expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(WAD.mul(110).div(100)))
           expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(WAD))
+          expect((await witch.auctions(vaultId)).owner).to.equal(ZERO_ADDRESS)
         })
       })
     })

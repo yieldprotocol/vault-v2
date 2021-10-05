@@ -150,12 +150,20 @@ export class LadleWrapper {
     return this.ladle.repayVault(vaultId, to, ink, max)
   }
 
-  public repayLadleAction(vaultId: string): string {
-    return this.ladle.interface.encodeFunctionData('repayLadle', [vaultId])
+  public repayFromLadleAction(vaultId: string, to: string): string {
+    return this.ladle.interface.encodeFunctionData('repayFromLadle', [vaultId, to])
   }
 
-  public async repayLadle(vaultId: string): Promise<ContractTransaction> {
-    return this.ladle.repayLadle(vaultId)
+  public async repayFromLadle(vaultId: string, to: string): Promise<ContractTransaction> {
+    return this.ladle.repayFromLadle(vaultId, to)
+  }
+
+  public closeFromLadleAction(vaultId: string, to: string): string {
+    return this.ladle.interface.encodeFunctionData('closeFromLadle', [vaultId, to])
+  }
+
+  public async closeFromLadle(vaultId: string, to: string): Promise<ContractTransaction> {
+    return this.ladle.closeFromLadle(vaultId, to)
   }
 
   public retrieveAction(token: string, to: string): string {

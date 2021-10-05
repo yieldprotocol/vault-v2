@@ -22,9 +22,9 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit,
     using CastU256U128 for uint256;
     using CastU256U32 for uint256;
 
+    event Point(bytes32 indexed param, address value);
     event SeriesMatured(uint256 chiAtMaturity);
     event Redeemed(address indexed from, address indexed to, uint256 amount, uint256 redeemed);
-    event OracleSet(address indexed oracle);
 
     uint256 constant CHI_NOT_SET = type(uint256).max;
 
@@ -32,11 +32,11 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit,
     bytes32 constant internal FLASH_LOAN_RETURN = keccak256("ERC3156FlashBorrower.onFlashLoan");
 
     IOracle public oracle;                                      // Oracle for the savings rate.
-    IJoin public immutable join;                                // Source of redemption funds.
+    IJoin public join;                                          // Source of redemption funds.
     address public immutable override underlying;
-    bytes6 public immutable underlyingId;                             // Needed to access the oracle
+    bytes6 public immutable underlyingId;                       // Needed to access the oracle
     uint256 public immutable override maturity;
-    uint256 public chiAtMaturity = CHI_NOT_SET;           // Spot price (exchange rate) between the base and an interest accruing token at maturity 
+    uint256 public chiAtMaturity = CHI_NOT_SET;                 // Spot price (exchange rate) between the base and an interest accruing token at maturity 
 
     constructor(
         bytes6 underlyingId_,
@@ -59,7 +59,6 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit,
         maturity = maturity_;
         underlying = address(IJoin(join_).asset());
         oracle = oracle_;
-        emit OracleSet(address(oracle_));
     }
 
     modifier afterMaturity() {
@@ -78,13 +77,12 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit,
         _;
     }
 
-    /// @dev Set the oracle parameter
-    function setOracle(IOracle oracle_)
-        external
-        auth    
-    {
-        oracle = oracle_;
-        emit OracleSet(address(oracle_));
+    /// @dev Point to a different Oracle or Join
+    function point(bytes32 param, address value) external auth {
+        if (param == "oracle") oracle = IOracle(value);
+        else if (param == "join") join = IJoin(value);
+        else revert("Unrecognized parameter");
+        emit Point(param, value);
     }
 
     /// @dev Mature the fyToken by recording the chi.
@@ -131,17 +129,19 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit,
         accrual_ = accrual_ >= 1e18 ? accrual_ : 1e18;     // The accrual can't be below 1 (with 18 decimals)
     }
 
-    /// @dev Burn the fyToken after maturity for an amount that increases according to `chi`
+    /// @dev Burn fyToken after maturity for an amount that increases according to `chi`
+    /// If `amount` is 0, the contract will redeem instead the fyToken balance of this contract. Useful for batches.
     function redeem(address to, uint256 amount)
         external override
         afterMaturity
         returns (uint256 redeemed)
     {
-        _burn(msg.sender, amount);
-        redeemed = amount.wmul(_accrual());
+        uint256 amount_ = (amount == 0) ? _balanceOf[address(this)] : amount;
+        _burn(msg.sender, amount_);
+        redeemed = amount_.wmul(_accrual());
         join.exit(to, redeemed.u128());
         
-        emit Redeemed(msg.sender, to, amount, redeemed);
+        emit Redeemed(msg.sender, to, amount_, redeemed);
     }
 
     /// @dev Mint fyTokens.

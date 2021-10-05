@@ -1,14 +1,13 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { constants, id } from '@yield-protocol/utils-v2'
 const { WAD } = constants
-import { CHI } from '../src/constants'
+import { CHI, ETH } from '../src/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { CompoundMultiOracle } from '../typechain/CompoundMultiOracle'
-import { ISourceMock } from '../typechain/ISourceMock'
 import { CTokenChiMock } from '../typechain/CTokenChiMock'
 
 import { ethers, waffle } from 'hardhat'
@@ -17,7 +16,10 @@ const { loadFixture } = waffle
 
 import { YieldEnvironment } from './shared/fixtures'
 import { LadleWrapper } from '../src/ladleWrapper'
-import { BigNumber } from 'ethers'
+
+function stringToBytes32(x: string): string {
+  return ethers.utils.formatBytes32String(x)
+}
 
 describe('FYToken', function () {
   this.timeout(0)
@@ -34,7 +36,7 @@ describe('FYToken', function () {
   let ladle: LadleWrapper
 
   async function fixture() {
-    return await YieldEnvironment.setup(ownerAcc, [baseId, ilkId], [seriesId])
+    return await YieldEnvironment.setup(ownerAcc, [baseId], [seriesId])
   }
 
   before(async () => {
@@ -48,7 +50,7 @@ describe('FYToken', function () {
   })
 
   const baseId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const ilkId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+  const ilkId = ETH
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   let vaultId: string
 
@@ -62,11 +64,21 @@ describe('FYToken', function () {
     chiOracle = (env.oracles.get(CHI) as unknown) as CompoundMultiOracle
     chiSource = (await ethers.getContractAt('CTokenChiMock', await chiOracle.sources(baseId, CHI))) as CTokenChiMock
 
-    await baseJoin.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], fyToken.address)
-    await baseJoin.grantRoles([id('join(address,uint128)'), id('exit(address,uint128)')], owner)
+    await baseJoin.grantRoles(
+      [id(baseJoin.interface, 'join(address,uint128)'), id(baseJoin.interface, 'exit(address,uint128)')],
+      fyToken.address
+    )
+    await baseJoin.grantRoles(
+      [id(baseJoin.interface, 'join(address,uint128)'), id(baseJoin.interface, 'exit(address,uint128)')],
+      owner
+    )
 
     await fyToken.grantRoles(
-      [id('mint(address,uint256)'), id('burn(address,uint256)'), id('setOracle(address)')],
+      [
+        id(fyToken.interface, 'mint(address,uint256)'),
+        id(fyToken.interface, 'burn(address,uint256)'),
+        id(fyToken.interface, 'point(bytes32,address)'),
+      ],
       owner
     )
 
@@ -77,11 +89,16 @@ describe('FYToken', function () {
     await baseJoin.join(owner, WAD.mul(2)) // This loads the base join to serve redemptions
   })
 
-  it('allows to change the chi oracle', async () => {
+  it('allows to change the chi oracle or join', async () => {
     const mockAddress = owner
-    expect(await fyToken.setOracle(mockAddress))
-      .to.emit(fyToken, 'OracleSet')
-      .withArgs(mockAddress)
+    expect(await fyToken.point(stringToBytes32('oracle'), mockAddress))
+      .to.emit(fyToken, 'Point')
+      .withArgs(stringToBytes32('oracle'), mockAddress)
+    expect(await fyToken.oracle()).to.equal(mockAddress)
+
+    expect(await fyToken.point(stringToBytes32('join'), mockAddress))
+      .to.emit(fyToken, 'Point')
+      .withArgs(stringToBytes32('join'), mockAddress)
     expect(await fyToken.oracle()).to.equal(mockAddress)
   })
 
@@ -110,7 +127,7 @@ describe('FYToken', function () {
     it('matures by recording the chi value', async () => {
       expect(await fyToken.mature())
         .to.emit(fyToken, 'SeriesMatured')
-        .withArgs(WAD)
+        .withArgs(await chiSource.exchangeRateStored())
     })
 
     it('matures if needed on first redemption after maturity', async () => {
@@ -153,7 +170,7 @@ describe('FYToken', function () {
         const baseJoinBefore = await base.balanceOf(baseJoin.address)
         await fyToken.transfer(fyToken.address, WAD)
         expect(await fyToken.balanceOf(owner)).to.equal(0)
-        await expect(fyToken.redeem(owner, WAD))
+        await expect(fyToken.redeem(owner, 0))
           .to.emit(fyToken, 'Transfer')
           .withArgs(fyToken.address, '0x0000000000000000000000000000000000000000', WAD)
           .to.emit(fyToken, 'Redeemed')

@@ -2,9 +2,9 @@
 pragma solidity 0.8.6;
 
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
 import "../../constants/Constants.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
 import "./CTokenInterface.sol";
 
 
@@ -13,25 +13,14 @@ contract CompoundMultiOracle is IOracle, AccessControl, Constants {
 
     event SourceSet(bytes6 indexed baseId, bytes6 indexed kind, address indexed source);
 
-    uint8 public constant override decimals = 1; // The Rate and Chi Oracle tracks accumulators, and it makes no sense to talk of decimals
-
     mapping(bytes6 => mapping(bytes6 => address)) public sources;
 
     /**
-     * @notice Set or reset one source
+     * @notice Set or reset a source
      */
     function setSource(bytes6 base, bytes6 kind, address source) external auth {
-        _setSource(base, kind, source);
-    }
-
-    /**
-     * @notice Set or reset an oracle source
-     */
-    function setSources(bytes6[] memory bases, bytes6[] memory kinds, address[] memory sources_) external auth {
-        uint256 length = bases.length;
-        require(length == kinds.length && length == sources_.length, "Mismatched inputs");
-        for (uint256 i; i < length; i++)
-            _setSource(bases[i], kinds[i], sources_[i]);
+        sources[base][kind] = source;
+        emit SourceSet(base, kind, source);
     }
 
     /**
@@ -68,13 +57,5 @@ contract CompoundMultiOracle is IOracle, AccessControl, Constants {
         require(accumulator > 0, "Compound accumulator is zero");
 
         updateTime = block.timestamp;
-    }
-
-    /**
-     * @dev Set a new price source
-     */
-    function _setSource(bytes6 base, bytes6 kind, address source) internal {
-        sources[base][kind] = source;
-        emit SourceSet(base, kind, source);
     }
 }
