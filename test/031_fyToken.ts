@@ -103,6 +103,13 @@ describe('FYToken', function () {
     expect(await fyToken.oracle()).to.equal(mockAddress)
   })
 
+  it('allows to mint with underlying', async () => {
+    await base.mint(baseJoin.address, WAD)
+    expect(await fyToken.mint(owner, WAD))
+      .to.emit(fyToken, 'Minted')
+      .withArgs(owner, WAD)
+  })
+
   it('does not allow to mature before maturity', async () => {
     await expect(fyToken.mature()).to.be.revertedWith('Only after maturity')
   })

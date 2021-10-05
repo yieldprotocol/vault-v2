@@ -144,6 +144,15 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit,
         emit Redeemed(msg.sender, to, amount_, redeemed);
     }
 
+    /// @dev Mint fyToken providing an equal amount of underlying to the protocol
+    function mintWithUnderlying(address to, uint256 amount)
+        external override
+        beforeMaturity
+    {
+        _mint(to, amount);
+        join.join(msg.sender, amount.u128());
+    }
+
     /// @dev Mint fyTokens.
     function mint(address to, uint256 amount)
         external override
