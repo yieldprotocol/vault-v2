@@ -31,7 +31,6 @@ describe('Ladle - remove and repay', function () {
   let pool: PoolMock
   let base: ERC20Mock
   let baseJoin: Join
-  let ilk: ERC20Mock
   let ladle: LadleWrapper
 
   async function fixture() {
@@ -63,11 +62,10 @@ describe('Ladle - remove and repay', function () {
     ladle = env.ladle
     base = env.assets.get(baseId) as ERC20Mock
     baseJoin = env.joins.get(baseId) as Join
-    ilk = env.assets.get(ilkId) as ERC20Mock
     fyToken = env.series.get(seriesId) as FYToken
     pool = env.pools.get(seriesId) as PoolMock
 
-    vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
+    vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(baseId) as string
 
     await baseJoin.grantRoles(
       [id(baseJoin.interface, 'join(address,uint128)'), id(baseJoin.interface, 'exit(address,uint128)')],
@@ -75,13 +73,13 @@ describe('Ladle - remove and repay', function () {
     )
 
     // Borrow and add liquidity
-    await ladle.serve(vaultId, pool.address, WAD, WAD, MAX)
+    // await ladle.serve(vaultId, pool.address, WAD, WAD, MAX)
     await ladle.pour(vaultId, pool.address, WAD.mul(4), WAD.mul(4))
-    await pool.mint(owner, true, 0)
+    // await pool.mint(owner, true, 0)
 
-    // Add some base to the baseJoin to serve redemptions
-    await base.mint(baseJoin.address, WAD.mul(3))
-    await baseJoin.join(owner, WAD.mul(3))
+    // Add some base to the baseJoin to serve redemptions and remainder returns
+    await base.mint(baseJoin.address, WAD.mul(10))
+    await baseJoin.join(owner, WAD.mul(10))
   })
 
   it('repays debt with fyToken, returns base and surplus fyToken', async () => {
@@ -107,6 +105,23 @@ describe('Ladle - remove and repay', function () {
     const fyTokenObtained = (await fyToken.balanceOf(owner)).sub(fyTokenBalanceBefore)
     expect(fyTokenOut).to.equal(debtRepaid.add(fyTokenObtained))
     expect(baseObtained).to.equal(baseOut)
+  })
+
+  it.only('repays debt with base, returns surplus', async () => {
+    const baseBalanceBefore = await base.balanceOf(owner)
+    const debtBefore = await cauldron.callStatic.debtToBase(seriesId, (await cauldron.balances(vaultId)).art)
+    const ilkBefore = (await cauldron.balances(vaultId)).ink
+
+    await base.mint(ladle.address, debtBefore.div(2))
+    await ladle.closeFromLadle(vaultId, owner) // close with base
+    expect(
+      await cauldron.callStatic.debtToBase(seriesId, (await cauldron.balances(vaultId)).art)
+    ).to.equal(debtBefore.div(2))
+
+    await base.mint(ladle.address, debtBefore)
+    await ladle.closeFromLadle(vaultId, owner) // close with base
+    expect((await cauldron.balances(vaultId)).art).to.equal(0)
+    expect((await base.balanceOf(owner)).sub(baseBalanceBefore)).to.equal(debtBefore.div(2).add(ilkBefore))
   })
 
   it('repays debt with base, returns base and surplus fyToken', async () => {
