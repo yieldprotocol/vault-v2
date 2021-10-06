@@ -102,7 +102,7 @@ describe('Ladle - module', function () {
 
   it('redeems mature v1 fyDai', async () => {
     const poolTokensToBurn = (await v1PoolSep.balanceOf(owner)).div(2)
-    const calldata = module.interface.encodeFunctionData('migrateLiquidity', [
+    const calldata = module.interface.encodeFunctionData('burnForDai', [
       v1PoolSep.address,
       owner,
       poolTokensToBurn,
@@ -115,7 +115,7 @@ describe('Ladle - module', function () {
 
   it('sells v1 fyDai', async () => {
     const poolTokensToBurn = (await v1PoolDec.balanceOf(owner)).div(2)
-    const calldata = module.interface.encodeFunctionData('migrateLiquidity', [
+    const calldata = module.interface.encodeFunctionData('burnForDai', [
       v1PoolDec.address,
       owner,
       poolTokensToBurn,

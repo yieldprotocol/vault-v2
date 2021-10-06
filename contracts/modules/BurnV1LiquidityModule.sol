@@ -22,7 +22,7 @@ contract BurnV1LiquidityModule {
     /// @param pool Pool to burn LP tokens from.
     /// @param poolTokens amount of pool tokens to burn. 
     /// @param minimumFYDaiPrice minimum Dai/fyDai price to be accepted when internally selling fyDai.
-    function migrateLiquidity(IV1Pool pool, address to, uint256 poolTokens, uint256 minimumFYDaiPrice) public {
+    function burnForDai(IV1Pool pool, address to, uint256 poolTokens, uint256 minimumFYDaiPrice) public {
         require(pool == sepPool || pool == decPool, "Unknown pool");
 
         IV1FYDai fyDai = pool.fyDai();
