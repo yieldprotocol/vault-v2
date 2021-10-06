@@ -91,9 +91,7 @@ describe('Ladle - remove and repay', function () {
 
     await fyToken.mint(ladle.address, artBefore.div(2))
     await ladle.repayFromLadle(vaultId, owner)
-    expect((await cauldron.balances(vaultId)).art).to.equal(
-      artBefore.div(2)
-    )
+    expect((await cauldron.balances(vaultId)).art).to.equal(artBefore.div(2))
 
     await fyToken.mint(ladle.address, artBefore)
     await ladle.repayFromLadle(vaultId, owner)
