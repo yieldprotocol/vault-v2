@@ -2281,9 +2281,9 @@
   integrity sha512-GpSwvyXOcOOlV70vbnzjj4fW5xW/FdUF6nQEt1ENy7m4ZCczi1+/buVUPAqmGfqznsORNFzUMjctTIp8a9tuCQ==
 
 "@yield-protocol/utils-v2@^2.4.2":
-  version "2.4.2"
-  resolved "https://registry.yarnpkg.com/@yield-protocol/utils-v2/-/utils-v2-2.4.2.tgz#a0975e94bbb38bb93167c6e8563173c05f3957f4"
-  integrity sha512-jjV9BcRExkOeE1fsecXiWQ65eYBV3te5QDdDahocrhcmvi876Zmq6vJnSjBzXVTzWNubOEILmjnrKyxlyMTYag==
+  version "2.4.5"
+  resolved "https://registry.yarnpkg.com/@yield-protocol/utils-v2/-/utils-v2-2.4.5.tgz#f567d7d4669be91137813850179d18a79947adb8"
+  integrity sha512-aMT3hXon3VYiKsj5L13U+2s4BXUphrWS5380grSPSja2trrsxOwsgluk/jaUPtIZ9oQ2OkGB8ONsy14RKJoayQ==
   dependencies:
     ethereumjs-util "^7.0.8"
     ethers "^5.0.7"

@@ -226,12 +226,20 @@ export class LadleWrapper {
     return this.ladle.transfer(token, receiver, wad)
   }
 
-  public routeAction(target: string, poolCall: string): string {
-    return this.ladle.interface.encodeFunctionData('route', [target, poolCall])
+  public routeAction(target: string, calldata: string): string {
+    return this.ladle.interface.encodeFunctionData('route', [target, calldata])
   }
 
-  public async route(target: string, poolCall: string): Promise<ContractTransaction> {
-    return this.ladle.route(target, poolCall)
+  public async route(target: string, calldata: string): Promise<ContractTransaction> {
+    return this.ladle.route(target, calldata)
+  }
+
+  public moduleCallAction(target: string, calldata: string): string {
+    return this.ladle.interface.encodeFunctionData('moduleCall', [target, calldata])
+  }
+
+  public async moduleCall(target: string, calldata: string): Promise<ContractTransaction> {
+    return this.ladle.moduleCall(target, calldata)
   }
 
   public redeemAction(seriesId: string, to: string, wad: BigNumberish): string {
