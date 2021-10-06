@@ -187,6 +187,7 @@ contract Cauldron is AccessControl(), Constants {
         external
         auth
     {
+        require (vaults[vaultId].seriesId != bytes6(0), "Vault doesn't exist");   // Series can't take bytes6(0) as their id
         DataTypes.Balances memory balances_ = balances[vaultId];
         require (balances_.art == 0 && balances_.ink == 0, "Only empty vaults");
         delete vaults[vaultId];
@@ -197,6 +198,7 @@ contract Cauldron is AccessControl(), Constants {
     function _tweak(bytes12 vaultId, DataTypes.Vault memory vault)
         internal
     {
+        require (vaults[vaultId].seriesId != bytes6(0), "Vault doesn't exist");   // Series can't take bytes6(0) as their id
         require (vault.seriesId != bytes6(0), "Series id is zero");
         require (vault.ilkId != bytes6(0), "Ilk id is zero");
         require (ilks[vault.seriesId][vault.ilkId] == true, "Ilk not added to series");
@@ -231,6 +233,7 @@ contract Cauldron is AccessControl(), Constants {
         returns(DataTypes.Vault memory vault)
     {
         require (vaultId != bytes12(0), "Vault id is zero");
+        require (vaults[vaultId].seriesId != bytes6(0), "Vault doesn't exist");   // Series can't take bytes6(0) as their id
         vault = vaults[vaultId];
         vault.owner = receiver;
         vaults[vaultId] = vault;
