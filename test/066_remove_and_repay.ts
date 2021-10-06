@@ -114,9 +114,9 @@ describe('Ladle - remove and repay', function () {
 
     await base.mint(ladle.address, debtBefore.div(2))
     await ladle.closeFromLadle(vaultId, owner) // close with base
-    expect(
-      await cauldron.callStatic.debtToBase(seriesId, (await cauldron.balances(vaultId)).art)
-    ).to.equal(debtBefore.div(2))
+    expect(await cauldron.callStatic.debtToBase(seriesId, (await cauldron.balances(vaultId)).art)).to.equal(
+      debtBefore.div(2)
+    )
 
     await base.mint(ladle.address, debtBefore)
     await ladle.closeFromLadle(vaultId, owner) // close with base
