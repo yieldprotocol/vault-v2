@@ -128,11 +128,7 @@ export class YieldEnvironment {
 
   public static async cauldronWitchAuth(cauldron: Cauldron, receiver: string) {
     await cauldron.grantRoles(
-      [
-        id(cauldron.interface, 'give(bytes12,address)'),
-        id(cauldron.interface, 'grab(bytes12,address)'),
-        id(cauldron.interface, 'slurp(bytes12,uint128,uint128)'),
-      ],
+      [id(cauldron.interface, 'give(bytes12,address)'), id(cauldron.interface, 'slurp(bytes12,uint128,uint128)')],
       receiver
     )
   }
@@ -163,7 +159,7 @@ export class YieldEnvironment {
 
   public static async witchGovAuth(witch: Witch, receiver: string) {
     await witch.grantRoles(
-      [id(witch.interface, 'point(bytes32,address)'), id(witch.interface, 'setIlk(bytes6,uint32,uint64,uint128)')],
+      [id(witch.interface, 'point(bytes32,address)'), id(witch.interface, 'setIlk(bytes6,uint32,uint64,uint128,bool)')],
       receiver
     )
   }
@@ -369,7 +365,7 @@ export class YieldEnvironment {
       const base = assets.get(baseId) as ERC20Mock
       const ilk = assets.get(ilkId) as ERC20Mock
       await spotOracle.setSource(baseId, base.address, ilkId, ilk.address, spotSource.address)
-      await witch.setIlk(ilkId, 4 * 60 * 60, WAD.div(2), 0)
+      await witch.setIlk(ilkId, 4 * 60 * 60, WAD.div(2), 0, true)
       await wand.makeIlk(baseId, ilkId, spotOracle.address, ratio, 1000000, 1, await base.decimals())
       oracles.set(ilkId, (spotOracle as unknown) as OracleMock)
     }

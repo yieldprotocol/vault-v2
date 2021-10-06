@@ -7,6 +7,7 @@ import "@yield-protocol/vault-interfaces/ICauldron.sol";
 import "@yield-protocol/vault-interfaces/IJoin.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
 import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
+import "@yield-protocol/utils-v2/contracts/math/WMulUp.sol";
 import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
 import "@yield-protocol/utils-v2/contracts/math/WDivUp.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
@@ -15,13 +16,14 @@ import "@yield-protocol/utils-v2/contracts/cast/CastU256U32.sol";
 
 contract Witch is AccessControl() {
     using WMul for uint256;
+    using WMulUp for uint256;
     using WDiv for uint256;
     using WDivUp for uint256;
     using CastU256U128 for uint256;
     using CastU256U32 for uint256;
 
     event Point(bytes32 indexed param, address value);
-    event IlkSet(bytes6 indexed ilkId, uint32 duration, uint64 initialOffer, uint128 dust);
+    event IlkSet(bytes6 indexed ilkId, uint32 duration, uint64 initialOffer, uint128 dust, bool active);
     event Bought(bytes12 indexed vaultId, address indexed buyer, uint256 ink, uint256 art);
     event Auctioned(bytes12 indexed vaultId, uint256 indexed start);
   
@@ -31,7 +33,7 @@ contract Witch is AccessControl() {
     }
 
     struct Ilk {
-        bool initialized;     // Set to true if set, as we might want all parameters set to zero
+        bool active;          // Set to true if set, as we might want all parameters set to zero, or to disable auctions
         uint32 duration;      // Time that auctions take to go to minimal price and stay there.
         uint64 initialOffer;  // Proportion of collateral that is sold at auction start (1e18 = 100%)
         uint128 dust;         // Minimum collateral that must be left when buying, unless buying all
@@ -63,15 +65,16 @@ contract Witch is AccessControl() {
     ///  - the auction duration to calculate liquidation prices
     ///  - the proportion of the collateral that will be sold at auction start
     ///  - the minimum collateral that must be left when buying, unless buying all
-    function setIlk(bytes6 ilkId, uint32 duration, uint64 initialOffer, uint128 dust) external auth {
+    ///  - whether we are enabling or disabling the ilk
+    function setIlk(bytes6 ilkId, uint32 duration, uint64 initialOffer, uint128 dust, bool active) external auth {
         require (initialOffer <= 1e18, "Only at or under 100%");
         ilks[ilkId] = Ilk({
-            initialized: true,
+            active: active,
             duration: duration,
             initialOffer: initialOffer,
             dust: dust
         });
-        emit IlkSet(ilkId, duration, initialOffer, dust);
+        emit IlkSet(ilkId, duration, initialOffer, dust, active);
     }
 
     /// @dev Put an undercollateralized vault up for liquidation.
@@ -79,20 +82,24 @@ contract Witch is AccessControl() {
         external
     {
         require (auctions[vaultId].start == 0, "Vault already under auction");
+        require (cauldron.level(vaultId) < 0, "Not undercollateralized");
         DataTypes.Vault memory vault = cauldron.vaults(vaultId);
+        require (ilks[vault.ilkId].active, "Ilk not active");
         auctions[vaultId] = Auction({
             owner: vault.owner,
             start: block.timestamp.u32()
         });
-        cauldron.grab(vaultId, address(this));
+        cauldron.give(vaultId, address(this));
         emit Auctioned(vaultId, block.timestamp.u32());
     }
 
     /// @dev Pay `base` of the debt in a vault in liquidation, getting at least `min` collateral.
+    /// Use `payAll` to pay all the debt, using `buy` for amounts close to the whole vault might revert.
     function buy(bytes12 vaultId, uint128 base, uint128 min)
         external
         returns (uint256 ink)
     {
+        require (auctions[vaultId].start > 0, "Vault not under auction");
         DataTypes.Balances memory balances_ = cauldron.balances(vaultId);
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
         DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);
@@ -106,7 +113,7 @@ contract Witch is AccessControl() {
             uint256 price = inkPrice(balances_, ilk_.initialOffer, ilk_.duration, elapsed);
             ink = uint256(art).wmul(price);                                                    // Calculate collateral to sell. Using divdrup stops rounding from leaving 1 stray wei in vaults.
             require (ink >= min, "Not enough bought");
-            require (ink == balances_.ink || balances_.ink - ink >= ilk_.dust, "Leaves dust");
+            require (art == balances_.art || balances_.ink - ink >= ilk_.dust, "Leaves dust");
         }
 
         cauldron.slurp(vaultId, ink.u128(), art.u128());                                            // Remove debt and collateral from the vault
@@ -125,6 +132,7 @@ contract Witch is AccessControl() {
         external
         returns (uint256 ink)
     {
+        require (auctions[vaultId].start > 0, "Vault not under auction");
         DataTypes.Balances memory balances_ = cauldron.balances(vaultId);
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
         DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);
@@ -137,7 +145,7 @@ contract Witch is AccessControl() {
             uint256 price = inkPrice(balances_, ilk_.initialOffer, ilk_.duration, elapsed);
             ink = uint256(balances_.art).wmul(price);                                                    // Calculate collateral to sell. Using divdrup stops rounding from leaving 1 stray wei in vaults.
             require (ink >= min, "Not enough bought");
-            require (ink == balances_.ink || balances_.ink - ink >= ilk_.dust, "Leaves dust");
+            ink = (ink > balances_.ink) ? balances_.ink : ink;                                  // The price is rounded up, so we cap this at all the collateral and no more
         }
 
         cauldron.slurp(vaultId, ink.u128(), balances_.art);                                                     // Remove debt and collateral from the vault
@@ -164,7 +172,7 @@ contract Witch is AccessControl() {
         }    
     }
 
-    /// @dev Price of a collateral unit, in underlying, at the present moment, for a given vault
+    /// @dev Price of a collateral unit, in underlying, at the present moment, for a given vault. Rounds up, sometimes twice.
     ///            ink                     min(auction, elapsed)
     /// price = (------- * (p + (1 - p) * -----------------------))
     ///            art                          auction
@@ -172,10 +180,10 @@ contract Witch is AccessControl() {
         private pure
         returns (uint256 price)
     {
-            uint256 term1 = uint256(balances.ink).wdiv(balances.art);
+            uint256 term1 = uint256(balances.ink).wdivup(balances.art);
             uint256 dividend2 = duration_ < elapsed ? duration_ : elapsed;
             uint256 divisor2 = duration_;
-            uint256 term2 = initialOffer_ + (1e18 - initialOffer_).wmul(dividend2.wdiv(divisor2));
-            price = term1.wmul(term2);
+            uint256 term2 = initialOffer_ + (1e18 - initialOffer_).wmulup(dividend2.wdivup(divisor2));
+            price = term1.wmulup(term2);
     }
 }

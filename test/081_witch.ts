@@ -19,6 +19,7 @@ const { loadFixture } = waffle
 
 import { YieldEnvironment } from './shared/fixtures'
 import { LadleWrapper } from '../src/ladleWrapper'
+import { getLastVaultId } from '../src/helpers'
 
 function stringToBytes32(x: string): string {
   return ethers.utils.formatBytes32String(x)
@@ -70,6 +71,10 @@ describe('Witch', function () {
   const ilkId = ETH
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   let vaultId: string
+  let roundVaultId: string
+
+  const posted = WAD.mul(4)
+  const borrowed = WAD.mul(3)
 
   beforeEach(async () => {
     env = await loadFixture(fixture)
@@ -91,9 +96,13 @@ describe('Witch', function () {
     witchFromOther = witch.connect(otherAcc)
 
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
-    await ladle.pour(vaultId, owner, WAD, WAD)
+    await ladle.pour(vaultId, owner, posted, borrowed)
 
-    await witch.setIlk(ilkId, 3 * 60 * 60, WAD.div(2), 0)
+    await ladle.build(seriesId, ilkId)
+    roundVaultId = await getLastVaultId(cauldron)
+    await ladle.pour(roundVaultId, owner, WAD, WAD)
+
+    await witch.setIlk(ilkId, 3 * 60 * 60, WAD.div(2), 0, true)
   })
 
   it('allows to change the ladle', async () => {
@@ -105,17 +114,32 @@ describe('Witch', function () {
   })
 
   it('does not allow to set the initial proportion over 100%', async () => {
-    await expect(witch.setIlk(ilkId, 1, WAD.mul(2), 3)).to.be.revertedWith('Only at or under 100%')
+    await expect(witch.setIlk(ilkId, 1, WAD.mul(2), 3, true)).to.be.revertedWith('Only at or under 100%')
   })
 
   it('allows to set an ilk', async () => {
-    expect(await witch.setIlk(ilkId, 1, 2, 3))
+    expect(await witch.setIlk(ilkId, 1, 2, 3, true))
       .to.emit(witch, 'IlkSet')
-      .withArgs(ilkId, 1, 2, 3)
-    expect((await witch.ilks(ilkId)).initialized).to.be.true
+      .withArgs(ilkId, 1, 2, 3, true)
+    expect((await witch.ilks(ilkId)).active).to.be.true
     expect((await witch.ilks(ilkId)).duration).to.equal(1)
     expect((await witch.ilks(ilkId)).initialOffer).to.equal(2)
     expect((await witch.ilks(ilkId)).dust).to.equal(3)
+  })
+
+  it('does not allow to buy from vaults not being auctioned', async () => {
+    await expect(witch.buy(vaultId, 0, 0)).to.be.revertedWith('Vault not under auction')
+    await expect(witch.payAll(vaultId, 0)).to.be.revertedWith('Vault not under auction')
+  })
+
+  it('does not auction collateralized vaults', async () => {
+    await expect(witch.auction(vaultId)).to.be.revertedWith('Not undercollateralized')
+  })
+
+  it('does not auction vaults if ilk not active', async () => {
+    await spotSource.set(WAD.mul(2))
+    await witch.setIlk(ilkId, 1, 2, 3, false)
+    await expect(witch.auction(vaultId)).to.be.revertedWith('Ilk not active')
   })
 
   it('auctions undercollateralized vaults', async () => {
@@ -145,27 +169,27 @@ describe('Witch', function () {
     it('it can buy no collateral (coverage)', async () => {
       expect(await witch.buy(vaultId, 0, 0))
         .to.emit(witch, 'Bought')
-        .withArgs(owner, vaultId, 0, 0)
+        .withArgs(vaultId, owner, 0, 0)
     })
 
     it('allows to buy 1/2 of the collateral for the whole debt at the beginning', async () => {
       const baseBalanceBefore = await base.balanceOf(owner)
       const ilkBalanceBefore = await ilk.balanceOf(owner)
-      await expect(witch.buy(vaultId, WAD, 0))
+      await expect(witch.buy(vaultId, borrowed, 0))
         .to.emit(witch, 'Bought')
-        .withArgs(vaultId, owner, (await ilk.balanceOf(owner)).sub(ilkBalanceBefore), WAD)
+        .withArgs(vaultId, owner, (await ilk.balanceOf(owner)).sub(ilkBalanceBefore), borrowed)
         .to.emit(cauldron, 'VaultGiven')
         .withArgs(vaultId, owner)
 
-      const ink = WAD.sub((await cauldron.balances(vaultId)).ink)
-      expect(ink.div(10 ** 15)).to.equal(WAD.div(10 ** 15).div(2)) // Nice hack to compare up to some precision
-      expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(WAD))
+      const ink = posted.sub((await cauldron.balances(vaultId)).ink)
+      expect(ink.div(10 ** 15)).to.equal(posted.div(10 ** 15).div(2)) // Nice hack to compare up to some precision
+      expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(borrowed))
       expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(ink))
       expect((await cauldron.vaults(vaultId)).owner).to.equal(owner) // The vault was returned once all the debt was paid off
     })
 
     it('does not buy if leaving dust', async () => {
-      await witch.setIlk(ilkId, 3 * 60 * 60, WAD.div(2), WAD)
+      await witch.setIlk(ilkId, 3 * 60 * 60, WAD.div(2), posted, true)
       await expect(witch.buy(vaultId, WAD, 0)).to.be.revertedWith('Leaves dust')
     })
 
@@ -178,11 +202,11 @@ describe('Witch', function () {
       it('allows to buy all of the collateral for the whole debt at the end', async () => {
         const baseBalanceBefore = await base.balanceOf(owner)
         const ilkBalanceBefore = await ilk.balanceOf(owner)
-        await expect(witch.buy(vaultId, WAD, 0)).to.emit(witch, 'Bought').withArgs(vaultId, owner, WAD, WAD)
+        await expect(witch.payAll(vaultId, 0)).to.emit(witch, 'Bought').withArgs(vaultId, owner, posted, borrowed)
 
-        const ink = WAD.sub((await cauldron.balances(vaultId)).ink)
-        expect(ink).to.equal(WAD)
-        expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(WAD))
+        const ink = posted.sub((await cauldron.balances(vaultId)).ink)
+        expect(ink).to.equal(posted)
+        expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(borrowed))
         expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(ink))
         expect((await witch.auctions(vaultId)).owner).to.equal(ZERO_ADDRESS)
       })
@@ -200,32 +224,32 @@ describe('Witch', function () {
 
           const baseBalanceBefore = await base.balanceOf(owner)
           const ilkBalanceBefore = await ilk.balanceOf(owner)
-          await expect(witch.buy(vaultId, WAD, 0))
+          await expect(witch.buy(vaultId, borrowed, 0))
             .to.emit(witch, 'Bought')
             .withArgs(
               vaultId,
               owner,
-              WAD.sub((await cauldron.balances(vaultId)).art),
-              WAD.sub((await cauldron.balances(vaultId)).ink)
+              posted.sub((await cauldron.balances(vaultId)).ink),
+              borrowed.sub((await cauldron.balances(vaultId)).art)
             )
 
-          const art = WAD.sub((await cauldron.balances(vaultId)).art)
-          const ink = WAD.sub((await cauldron.balances(vaultId)).ink)
-          expect(art).to.equal(WAD.mul(100).div(110).add(1)) // The rate increased by a 10%, so by paying WAD base we only repay 100/110 of the debt in fyToken terms
-          expect(ink).to.equal(WAD.mul(100).div(110).add(1)) // We only pay 100/110 of the debt, so we get 100/110 of the collateral
-          expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(WAD))
+          const art = borrowed.sub((await cauldron.balances(vaultId)).art)
+          const ink = posted.sub((await cauldron.balances(vaultId)).ink)
+          expect(art).to.equal(borrowed.mul(100).div(110).add(1)) // The rate increased by a 10%, so by paying WAD base we only repay 100/110 of the debt in fyToken terms
+          expect(ink).to.equal(posted.mul(100).div(110).add(2)) // We only pay 100/110 of the debt, so we get 100/110 of the collateral
+          expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(borrowed))
           expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(ink))
         })
 
         it('allows to pay all of the debt', async () => {
           const baseBalanceBefore = await base.balanceOf(owner)
           const ilkBalanceBefore = await ilk.balanceOf(owner)
-          await expect(witch.payAll(vaultId, WAD)).to.emit(witch, 'Bought').withArgs(vaultId, owner, WAD, WAD)
+          await expect(witch.payAll(vaultId, 0)).to.emit(witch, 'Bought').withArgs(vaultId, owner, posted, borrowed)
 
           expect((await cauldron.balances(vaultId)).art).to.equal(0)
           expect((await cauldron.balances(vaultId)).ink).to.equal(0)
-          expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(WAD.mul(110).div(100)))
-          expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(WAD))
+          expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(borrowed.mul(110).div(100)))
+          expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(posted))
           expect((await witch.auctions(vaultId)).owner).to.equal(ZERO_ADDRESS)
         })
       })
