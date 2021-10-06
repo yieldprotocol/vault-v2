@@ -513,7 +513,7 @@ contract Ladle is LadleStorage, AccessControl() {
         }
 
         // Return remainder
-        if (repaid < amount) IERC20(address(series.fyToken)).safeTransfer(to, repaid - amount);
+        if (amount - repaid > 0) IERC20(address(series.fyToken)).safeTransfer(to, amount - repaid);
     }
 
     /// @dev Use base in the Ladle to repay debt. Return unused base to `to`.
@@ -537,7 +537,7 @@ contract Ladle is LadleStorage, AccessControl() {
         repaid = (repaidInBase == debtInBase) ? balances.art : cauldron.debtFromBase(vault.seriesId, repaidInBase);
 
         // Update accounting and join base
-        cauldron.pour(vaultId, 0, -(repaid.i128()));
+        cauldron.pour(vaultId, -(repaid.i128()), -(repaid.i128()));
         IJoin baseJoin = getJoin(series.baseId);
         base.safeTransfer(address(baseJoin), repaidInBase);
         baseJoin.join(address(this), repaidInBase);
@@ -545,11 +545,11 @@ contract Ladle is LadleStorage, AccessControl() {
         // Return collateral
         if (repaid > 0) {
             IJoin ilkJoin = getJoin(vault.ilkId);
-            ilkJoin.exit(to, repaid.u128());
+            ilkJoin.exit(to, repaid.u128()); // repaid is the ink collateral released, and equal to the fyToken debt. repaidInBase is the value of the fyToken debt in base terms
         }
 
         // Return remainder
-        if (repaidInBase < amount) base.safeTransfer(to, repaidInBase - amount);
+        if (amount - repaidInBase > 0) base.safeTransfer(to, amount - repaidInBase);
     }
 
     /// @dev Allow users to redeem fyToken, to be used with batch.
