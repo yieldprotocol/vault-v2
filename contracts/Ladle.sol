@@ -545,7 +545,7 @@ contract Ladle is LadleStorage, AccessControl() {
         // Return collateral
         if (repaid > 0) {
             IJoin ilkJoin = getJoin(vault.ilkId);
-            ilkJoin.exit(to, repaid); // repaid is the ink collateral released, and equal to the fyToken debt. repaidInBase is the value of the fyToken debt in base terms
+            ilkJoin.exit(to, repaid.u128()); // repaid is the ink collateral released, and equal to the fyToken debt. repaidInBase is the value of the fyToken debt in base terms
         }
 
         // Return remainder
