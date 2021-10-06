@@ -65,6 +65,7 @@ contract Witch is AccessControl() {
     ///  - the auction duration to calculate liquidation prices
     ///  - the proportion of the collateral that will be sold at auction start
     ///  - the minimum collateral that must be left when buying, unless buying all
+    ///  - whether we are enabling or disabling the ilk
     function setIlk(bytes6 ilkId, uint32 duration, uint64 initialOffer, uint128 dust, bool active) external auth {
         require (initialOffer <= 1e18, "Only at or under 100%");
         ilks[ilkId] = Ilk({
