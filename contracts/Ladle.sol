@@ -486,6 +486,9 @@ contract Ladle is LadleStorage, AccessControl() {
     // ---- Ladle as a token holder ----
 
     /// @dev Use fyToken in the Ladle to repay debt. Return unused fyToken to `to`.
+    /// Return as much collateral as debt was repaid, as well. This function is only used when
+    /// removing liquidity added with "Borrow and Pool", so it's safe to assume the exchange rate
+    /// is 1:1. If used in other contexts, it might revert, which is fine.
     function repayFromLadle(bytes12 vaultId_, address to)
         external payable
         returns (uint256 repaid)
@@ -499,15 +502,24 @@ contract Ladle is LadleStorage, AccessControl() {
 
         repaid = amount <= balances.art ? amount : balances.art;
 
-        // Update accounting
-        cauldron.pour(vaultId, 0, -(repaid.i128()));
+        // Update accounting and burn fyToken
+        cauldron.pour(vaultId, -(repaid.i128()), -(repaid.i128()));
         series.fyToken.burn(address(this), repaid);
+
+        // Return collateral
+        if (repaid > 0) {
+            IJoin ilkJoin = getJoin(vault.ilkId);
+            ilkJoin.exit(to, repaid.u128());
+        }
 
         // Return remainder
         if (repaid < amount) IERC20(address(series.fyToken)).safeTransfer(to, repaid - amount);
     }
 
     /// @dev Use base in the Ladle to repay debt. Return unused base to `to`.
+    /// Return as much collateral as debt was repaid, as well. This function is only used when
+    /// removing liquidity added with "Borrow and Pool", so it's safe to assume the exchange rate
+    /// is 1:1. If used in other contexts, it might revert, which is fine.
     function closeFromLadle(bytes12 vaultId_, address to)
         external payable
         returns (uint256 repaid)
@@ -524,13 +536,17 @@ contract Ladle is LadleStorage, AccessControl() {
         uint128 repaidInBase = ((amount <= debtInBase) ? amount : debtInBase).u128();
         repaid = (repaidInBase == debtInBase) ? balances.art : cauldron.debtFromBase(vault.seriesId, repaidInBase);
 
-        // Update accounting
+        // Update accounting and join base
         cauldron.pour(vaultId, 0, -(repaid.i128()));
-
-        // Manage underlying
         IJoin baseJoin = getJoin(series.baseId);
         base.safeTransfer(address(baseJoin), repaidInBase);
         baseJoin.join(address(this), repaidInBase);
+
+        // Return collateral
+        if (repaid > 0) {
+            IJoin ilkJoin = getJoin(vault.ilkId);
+            ilkJoin.exit(to, repaid.u128());
+        }
 
         // Return remainder
         if (repaidInBase < amount) base.safeTransfer(to, repaidInBase - amount);
