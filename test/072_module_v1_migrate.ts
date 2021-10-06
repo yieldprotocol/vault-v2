@@ -119,11 +119,8 @@ describe('Ladle - module', function () {
   it('reverts if the minimum fyDai price is not reached', async () => {
     const poolTokensToBurn = (await v1PoolDec.balanceOf(owner)).div(2)
     await v1PoolDec.transfer(module.address, poolTokensToBurn)
-    await expect(module.burnForDai(
-      v1PoolDec.address,
-      owner,
-      poolTokensToBurn,
-      WAD.mul(2)
-    )).to.be.revertedWith('Minimum FYDai price not reached')
+    await expect(module.burnForDai(v1PoolDec.address, owner, poolTokensToBurn, WAD.mul(2))).to.be.revertedWith(
+      'Minimum FYDai price not reached'
+    )
   })
 })
