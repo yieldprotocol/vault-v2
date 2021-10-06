@@ -21,7 +21,7 @@ contract BurnV1LiquidityModule {
     /// @dev Burns v1 tokens. If before maturity sells any fyDai for Dai, otherwise redeems fyDai for Dai
     /// @param pool Pool to burn LP tokens from.
     /// @param poolTokens amount of pool tokens to burn. 
-    /// @param minimumFYDaiPrice minimum Dai/fyDai price to be accepted when internally selling fyDai.
+    /// @param minimumFYDaiPrice minimum Dai/fyDai price to be accepted when internally selling fyDai. Only used before maturity.
     function burnForDai(IV1Pool pool, address to, uint256 poolTokens, uint256 minimumFYDaiPrice) public {
         require(pool == sepPool || pool == decPool, "Unknown pool");
 

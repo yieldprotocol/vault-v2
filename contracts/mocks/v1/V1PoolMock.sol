@@ -12,7 +12,7 @@ contract V1PoolMock is ERC20, DelegableMock, IV1Pool {
 
     IERC20 public immutable override dai;
     IV1FYDai public immutable override fyDai;
-    uint128 constant public rate = 105e25; // 5%
+    uint128 constant public rate = 105e16; // 5%
 
     constructor(IERC20 dai_, IV1FYDai fyDai_) ERC20("Pool", "Pool", 18) {
         dai = dai_;
