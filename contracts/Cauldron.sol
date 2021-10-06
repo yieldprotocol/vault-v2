@@ -367,17 +367,6 @@ contract Cauldron is AccessControl(), Constants {
         return balances_;
     }
 
-    /// @dev Give an uncollateralized vault to another user.
-    /// To be used for liquidation engines.
-    function grab(bytes12 vaultId, address receiver)
-        external
-        auth
-    {
-        (DataTypes.Vault memory vault_, DataTypes.Series memory series_, DataTypes.Balances memory balances_) = vaultData(vaultId, true);
-        require(_level(vault_, balances_, series_) < 0, "Not undercollateralized");
-        _give(vaultId, receiver);
-    }
-
     /// @dev Reduce debt and collateral from a vault, ignoring collateralization checks.
     /// To be used by liquidation engines.
     function slurp(bytes12 vaultId, uint128 ink, uint128 art)
