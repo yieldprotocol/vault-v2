@@ -71,6 +71,7 @@ describe('Witch', function () {
   const ilkId = ETH
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   let vaultId: string
+  let otherVaultId: string
   let roundVaultId: string
 
   const posted = WAD.mul(4)
@@ -99,6 +100,10 @@ describe('Witch', function () {
     await ladle.pour(vaultId, owner, posted, borrowed)
 
     await ladle.build(seriesId, ilkId)
+    otherVaultId = await getLastVaultId(cauldron)
+    await ladle.pour(otherVaultId, owner, WAD, WAD)
+
+    await ladle.build(seriesId, ilkId)
     roundVaultId = await getLastVaultId(cauldron)
     await ladle.pour(roundVaultId, owner, WAD, WAD)
 
@@ -114,7 +119,9 @@ describe('Witch', function () {
   })
 
   it('does not allow to set the initial proportion over 100%', async () => {
-    await expect(witch.setIlk(ilkId, 1, WAD.mul(2), 1000000, 0, await ilk.decimals(), true)).to.be.revertedWith('Only at or under 100%')
+    await expect(witch.setIlk(ilkId, 1, WAD.mul(2), 1000000, 0, await ilk.decimals(), true)).to.be.revertedWith(
+      'Only at or under 100%'
+    )
   })
 
   it('allows to set an ilk', async () => {
@@ -144,6 +151,12 @@ describe('Witch', function () {
     await expect(witch.auction(vaultId)).to.be.revertedWith('Ilk not enabled')
   })
 
+  it('does not auction vaults if line exceeded', async () => {
+    await spotSource.set(WAD.mul(2))
+    await witch.setIlk(ilkId, 1, 2, 1, 0, await ilk.decimals(), true)
+    await expect(witch.auction(vaultId)).to.be.revertedWith('Collateral limit reached')
+  })
+
   it('auctions undercollateralized vaults', async () => {
     await spotSource.set(WAD.mul(2))
     await witch.auction(vaultId)
@@ -152,6 +165,7 @@ describe('Witch', function () {
     expect((await witch.auctions(vaultId)).owner).to.equal(owner)
     expect(event.args.start.toNumber()).to.be.greaterThan(0)
     expect((await witch.auctions(vaultId)).start).to.equal(event.args.start)
+    expect((await witch.limits(ilkId)).sum).to.equal(posted)
   })
 
   describe('once a vault has been auctioned', async () => {
@@ -162,6 +176,16 @@ describe('Witch', function () {
 
     it("it can't be auctioned again", async () => {
       await expect(witch.auction(vaultId)).to.be.revertedWith('Vault already under auction')
+    })
+
+    it('it can auction other vaults', async () => {
+      await witch.auction(otherVaultId)
+      expect((await witch.limits(ilkId)).sum).to.equal(posted.add(WAD))
+    })
+
+    it('does not auction further vaults if line exceeded', async () => {
+      await witch.setIlk(ilkId, 1, 2, posted.div(WAD), 0, await ilk.decimals(), true)
+      await expect(witch.auction(otherVaultId)).to.be.revertedWith('Collateral limit reached')
     })
 
     it('does not buy if minimum collateral not reached', async () => {

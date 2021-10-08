@@ -67,7 +67,9 @@ contract Witch is AccessControl() {
     /// @dev Set:
     ///  - the auction duration to calculate liquidation prices
     ///  - the proportion of the collateral that will be sold at auction start
+    ///  - the maximum collateral that can be auctioned at the same time
     ///  - the minimum collateral that must be left when buying, unless buying all
+    ///  - The decimals for maximum and minimum
     ///  - whether we are enabling or disabling the ilk
     function setIlk(bytes6 ilkId, uint32 duration, uint64 initialOffer, uint96 line, uint24 dust, uint8 dec, bool enabled) external auth {
         require (initialOffer <= 1e18, "Only at or under 100%");
@@ -80,7 +82,7 @@ contract Witch is AccessControl() {
             line: line,
             dust: dust,
             dec: dec,
-            sum: 0
+            sum: limits[ilkId].sum
         });
         emit IlkSet(ilkId, duration, initialOffer, line, dust, dec, enabled);
     }
@@ -98,7 +100,7 @@ contract Witch is AccessControl() {
         DataTypes.Balances memory balances_ = cauldron.balances(vaultId);
         Limits memory limits_ = limits[vault_.ilkId];
         limits_.sum += balances_.ink;
-        require (limits_.sum <= limits_.line * (10 ** limits_.dec), "Too many auctions");
+        require (limits_.sum <= limits_.line * (10 ** limits_.dec), "Collateral limit reached");
 
         limits[vault_.ilkId] = limits_;
         auctions[vaultId] = Auction({
@@ -120,7 +122,7 @@ contract Witch is AccessControl() {
         DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);
         DataTypes.Balances memory balances_ = cauldron.balances(vaultId);
         require (balances_.art > 0, "Nothing to buy");                                      // Cheapest way of failing gracefully if given a non existing vault
-        
+
         Auction memory auction_ = auctions[vaultId];
         Ilk memory ilk_ = ilks[vault_.ilkId];
         Limits memory limits_ = limits[vault_.ilkId];

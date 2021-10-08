@@ -159,7 +159,10 @@ export class YieldEnvironment {
 
   public static async witchGovAuth(witch: Witch, receiver: string) {
     await witch.grantRoles(
-      [id(witch.interface, 'point(bytes32,address)'), id(witch.interface, 'setIlk(bytes6,uint32,uint64,uint96,uint24,uint8,bool)')],
+      [
+        id(witch.interface, 'point(bytes32,address)'),
+        id(witch.interface, 'setIlk(bytes6,uint32,uint64,uint96,uint24,uint8,bool)'),
+      ],
       receiver
     )
   }
