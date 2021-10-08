@@ -195,13 +195,27 @@ contract Cauldron is AccessControl(), Constants {
     }
 
     /// @dev Change a vault series and/or collateral types.
-    function _tweak(bytes12 vaultId, DataTypes.Vault memory vault)
+    /// We can change the series if there is no debt, or assets if there are no assets
+    function _tweak(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
         internal
+        returns(DataTypes.Vault memory vault)
     {
-        require (vaults[vaultId].seriesId != bytes6(0), "Vault doesn't exist");   // Series can't take bytes6(0) as their id
-        require (vault.seriesId != bytes6(0), "Series id is zero");
-        require (vault.ilkId != bytes6(0), "Ilk id is zero");
-        require (ilks[vault.seriesId][vault.ilkId] == true, "Ilk not added to series");
+        require (seriesId != bytes6(0), "Series id is zero");
+        require (ilkId != bytes6(0), "Ilk id is zero");
+        require (ilks[seriesId][ilkId] == true, "Ilk not added to series");
+
+        vault = vaults[vaultId];
+        require (vault.seriesId != bytes6(0), "Vault doesn't exist");   // Series can't take bytes6(0) as their id
+
+        DataTypes.Balances memory balances_ = balances[vaultId];
+        if (seriesId != vault.seriesId) {
+            require (balances_.art == 0, "Only with no debt");
+            vault.seriesId = seriesId;
+        }
+        if (ilkId != vault.ilkId) {
+            require (balances_.ink == 0, "Only with no collateral");
+            vault.ilkId = ilkId;
+        }
 
         vaults[vaultId] = vault;
         emit VaultTweaked(vaultId, vault.seriesId, vault.ilkId);
@@ -214,17 +228,7 @@ contract Cauldron is AccessControl(), Constants {
         auth
         returns(DataTypes.Vault memory vault)
     {
-        DataTypes.Balances memory balances_ = balances[vaultId];
-        vault = vaults[vaultId];
-        if (seriesId != vault.seriesId) {
-            require (balances_.art == 0, "Only with no debt");
-            vault.seriesId = seriesId;
-        }
-        if (ilkId != vault.ilkId) {
-            require (balances_.ink == 0, "Only with no collateral");
-            vault.ilkId = ilkId;
-        }
-        _tweak(vaultId, vault);
+        vault = _tweak(vaultId, seriesId, ilkId);
     }
 
     /// @dev Transfer a vault to another user.
@@ -394,13 +398,16 @@ contract Cauldron is AccessControl(), Constants {
         (DataTypes.Vault memory vault_, DataTypes.Series memory oldSeries_, DataTypes.Balances memory balances_) = vaultData(vaultId, true);
         DataTypes.Series memory newSeries_ = series[newSeriesId];
         require (oldSeries_.baseId == newSeries_.baseId, "Mismatched bases in series");
-        
-        // Change the vault series
-        vault_.seriesId = newSeriesId;
-        _tweak(vaultId, vault_);
 
-        // Change the vault balances
-        balances_ = _pour(vaultId, vault_, balances_, newSeries_, 0, art);
+        // Set the vault art to zero
+        int128 oldArt = balances_.art.i128();
+        balances_ = _pour(vaultId, vault_, balances_, oldSeries_, 0, -oldArt);
+
+        // Change the vault series
+        _tweak(vaultId, newSeriesId, vault_.ilkId);
+
+        // Set the vault art to it's newSeries value by adding `art` to that from the old series
+        balances_ = _pour(vaultId, vault_, balances_, newSeries_, 0, oldArt + art);
 
         require(_level(vault_, balances_, newSeries_) >= 0, "Undercollateralized");
         emit VaultRolled(vaultId, newSeriesId, balances_.art);
