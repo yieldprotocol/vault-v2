@@ -102,7 +102,7 @@ describe('Witch', function () {
     roundVaultId = await getLastVaultId(cauldron)
     await ladle.pour(roundVaultId, owner, WAD, WAD)
 
-    await witch.setIlk(ilkId, 3 * 60 * 60, WAD.div(2), 0, true)
+    await witch.setIlk(ilkId, 3 * 60 * 60, WAD.div(2), 1000000, 0, await ilk.decimals(), true)
   })
 
   it('allows to change the ladle', async () => {
@@ -114,17 +114,19 @@ describe('Witch', function () {
   })
 
   it('does not allow to set the initial proportion over 100%', async () => {
-    await expect(witch.setIlk(ilkId, 1, WAD.mul(2), 3, true)).to.be.revertedWith('Only at or under 100%')
+    await expect(witch.setIlk(ilkId, 1, WAD.mul(2), 1000000, 0, await ilk.decimals(), true)).to.be.revertedWith('Only at or under 100%')
   })
 
   it('allows to set an ilk', async () => {
-    expect(await witch.setIlk(ilkId, 1, 2, 3, true))
+    expect(await witch.setIlk(ilkId, 1, 2, 3, 4, 5, true))
       .to.emit(witch, 'IlkSet')
-      .withArgs(ilkId, 1, 2, 3, true)
-    expect((await witch.ilks(ilkId)).active).to.be.true
+      .withArgs(ilkId, 1, 2, 3, 4, 5, true)
+    expect((await witch.ilks(ilkId)).enabled).to.be.true
     expect((await witch.ilks(ilkId)).duration).to.equal(1)
     expect((await witch.ilks(ilkId)).initialOffer).to.equal(2)
-    expect((await witch.ilks(ilkId)).dust).to.equal(3)
+    expect((await witch.limits(ilkId)).line).to.equal(3)
+    expect((await witch.limits(ilkId)).dust).to.equal(4)
+    expect((await witch.limits(ilkId)).dec).to.equal(5)
   })
 
   it('does not allow to buy from vaults not being auctioned', async () => {
@@ -136,10 +138,10 @@ describe('Witch', function () {
     await expect(witch.auction(vaultId)).to.be.revertedWith('Not undercollateralized')
   })
 
-  it('does not auction vaults if ilk not active', async () => {
+  it('does not auction vaults if ilk not enabled', async () => {
     await spotSource.set(WAD.mul(2))
-    await witch.setIlk(ilkId, 1, 2, 3, false)
-    await expect(witch.auction(vaultId)).to.be.revertedWith('Ilk not active')
+    await witch.setIlk(ilkId, 1, 2, 1000000, 0, await ilk.decimals(), false)
+    await expect(witch.auction(vaultId)).to.be.revertedWith('Ilk not enabled')
   })
 
   it('auctions undercollateralized vaults', async () => {
@@ -189,7 +191,7 @@ describe('Witch', function () {
     })
 
     it('does not buy if leaving dust', async () => {
-      await witch.setIlk(ilkId, 3 * 60 * 60, WAD.div(2), posted, true)
+      await witch.setIlk(ilkId, 3 * 60 * 60, WAD.div(2), 1000000, posted.div(WAD), await ilk.decimals(), true)
       await expect(witch.buy(vaultId, WAD, 0)).to.be.revertedWith('Leaves dust')
     })
 
