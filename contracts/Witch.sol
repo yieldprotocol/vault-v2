@@ -23,7 +23,7 @@ contract Witch is AccessControl() {
     using CastU256U32 for uint256;
 
     event Point(bytes32 indexed param, address value);
-    event IlkSet(bytes6 indexed ilkId, uint32 duration, uint64 initialOffer, uint96 line, uint24 dust, uint8 dec, bool enabled);
+    event IlkSet(bytes6 indexed ilkId, uint32 duration, uint64 initialOffer, uint96 line, uint24 dust, uint8 dec);
     event Bought(bytes12 indexed vaultId, address indexed buyer, uint256 ink, uint256 art);
     event Auctioned(bytes12 indexed vaultId, uint256 indexed start);
   
@@ -33,7 +33,6 @@ contract Witch is AccessControl() {
     }
 
     struct Ilk {
-        bool enabled;          // Set to true if set, as we might want all parameters set to zero, or to disable auctions
         uint32 duration;      // Time that auctions take to go to minimal price and stay there.
         uint64 initialOffer;  // Proportion of collateral that is sold at auction start (1e18 = 100%)
     }
@@ -71,10 +70,9 @@ contract Witch is AccessControl() {
     ///  - the minimum collateral that must be left when buying, unless buying all
     ///  - The decimals for maximum and minimum
     ///  - whether we are enabling or disabling the ilk
-    function setIlk(bytes6 ilkId, uint32 duration, uint64 initialOffer, uint96 line, uint24 dust, uint8 dec, bool enabled) external auth {
+    function setIlk(bytes6 ilkId, uint32 duration, uint64 initialOffer, uint96 line, uint24 dust, uint8 dec) external auth {
         require (initialOffer <= 1e18, "Only at or under 100%");
         ilks[ilkId] = Ilk({
-            enabled: enabled,
             duration: duration,
             initialOffer: initialOffer
         });
@@ -84,7 +82,7 @@ contract Witch is AccessControl() {
             dec: dec,
             sum: limits[ilkId].sum
         });
-        emit IlkSet(ilkId, duration, initialOffer, line, dust, dec, enabled);
+        emit IlkSet(ilkId, duration, initialOffer, line, dust, dec);
     }
 
     /// @dev Put an undercollateralized vault up for liquidation.
@@ -95,8 +93,6 @@ contract Witch is AccessControl() {
         require (cauldron.level(vaultId) < 0, "Not undercollateralized");
 
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
-        require (ilks[vault_.ilkId].enabled, "Ilk not enabled");
-
         DataTypes.Balances memory balances_ = cauldron.balances(vaultId);
         Limits memory limits_ = limits[vault_.ilkId];
         limits_.sum += balances_.ink;
