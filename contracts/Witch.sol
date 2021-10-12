@@ -63,13 +63,12 @@ contract Witch is AccessControl() {
         emit Point(param, value);
     }
 
-    /// @dev Set:
+    /// @dev Governance function to set:
     ///  - the auction duration to calculate liquidation prices
     ///  - the proportion of the collateral that will be sold at auction start
     ///  - the maximum collateral that can be auctioned at the same time
     ///  - the minimum collateral that must be left when buying, unless buying all
     ///  - The decimals for maximum and minimum
-    ///  - whether we are enabling or disabling the ilk
     function setIlk(bytes6 ilkId, uint32 duration, uint64 initialOffer, uint96 line, uint24 dust, uint8 dec) external auth {
         require (initialOffer <= 1e18, "Only at or under 100%");
         ilks[ilkId] = Ilk({
@@ -80,7 +79,7 @@ contract Witch is AccessControl() {
             line: line,
             dust: dust,
             dec: dec,
-            sum: limits[ilkId].sum
+            sum: limits[ilkId].sum      // sum is initialized at zero, and doesn't change when changing any ilk parameters
         });
         emit IlkSet(ilkId, duration, initialOffer, line, dust, dec);
     }
