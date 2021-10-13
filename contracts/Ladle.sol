@@ -141,11 +141,11 @@ contract Ladle is LadleStorage, AccessControl() {
     }
 
     /// @dev Add or remove a module.
-    /// @notice Modules must not do any changes to the vault (owner, seriesId, ilkId),
-    /// it would be disastrous in combination with batch vault caching.
-    /// Modules must not be contracts that can self-destruct.
-    /// In general, treat modules as you would Ladle upgrades. Modules have unrestricted access to the Ladle
+    /// @notice Treat modules as you would Ladle upgrades. Modules have unrestricted access to the Ladle
     /// storage, and can wreak havoc easily.
+    /// Modules must not do any changes to any vault (owner, seriesId, ilkId) because of vault caching.
+    /// Modules must not be contracts that can self-destruct because of `moduleCall`.
+    /// Modules can't use `msg.value` because of `batch`.
     function addModule(address module, bool set)
         external
         auth
