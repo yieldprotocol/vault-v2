@@ -501,16 +501,12 @@ contract Ladle is LadleStorage, AccessControl() {
         DataTypes.Balances memory balances = cauldron.balances(vaultId);
         
         uint256 amount = series.fyToken.balanceOf(address(this));
-        if (amount == 0 || balances.art == 0) return 0;
-
         repaid = amount <= balances.art ? amount : balances.art;
 
-        // Update accounting and burn fyToken
-        cauldron.pour(vaultId, -(repaid.i128()), -(repaid.i128()));
-        series.fyToken.burn(address(this), repaid);
-
-        // Return collateral
+        // Update accounting, burn fyToken and return collateral
         if (repaid > 0) {
+            cauldron.pour(vaultId, -(repaid.i128()), -(repaid.i128()));
+            series.fyToken.burn(address(this), repaid);
             IJoin ilkJoin = getJoin(vault.ilkId);
             ilkJoin.exit(to, repaid.u128());
         }
@@ -533,20 +529,16 @@ contract Ladle is LadleStorage, AccessControl() {
         
         IERC20 base = IERC20(cauldron.assets(series.baseId));
         uint256 amount = base.balanceOf(address(this));
-        if (amount == 0 || balances.art == 0) return 0;
-
         uint256 debtInBase = cauldron.debtToBase(vault.seriesId, balances.art);
         uint128 repaidInBase = ((amount <= debtInBase) ? amount : debtInBase).u128();
         repaid = (repaidInBase == debtInBase) ? balances.art : cauldron.debtFromBase(vault.seriesId, repaidInBase);
 
-        // Update accounting and join base
-        cauldron.pour(vaultId, -(repaid.i128()), -(repaid.i128()));
-        IJoin baseJoin = getJoin(series.baseId);
-        base.safeTransfer(address(baseJoin), repaidInBase);
-        baseJoin.join(address(this), repaidInBase);
-
-        // Return collateral
-        if (repaid > 0) {
+        // Update accounting, join base and return collateral
+        if (repaidInBase > 0) {
+            cauldron.pour(vaultId, -(repaid.i128()), -(repaid.i128()));
+            IJoin baseJoin = getJoin(series.baseId);
+            base.safeTransfer(address(baseJoin), repaidInBase);
+            baseJoin.join(address(this), repaidInBase);
             IJoin ilkJoin = getJoin(vault.ilkId);
             ilkJoin.exit(to, repaid.u128()); // repaid is the ink collateral released, and equal to the fyToken debt. repaidInBase is the value of the fyToken debt in base terms
         }
