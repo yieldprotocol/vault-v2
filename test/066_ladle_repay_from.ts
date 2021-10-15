@@ -100,6 +100,23 @@ describe('Ladle - remove and repay', function () {
     expect((await fyToken.balanceOf(owner)).sub(fyTokenBalanceBefore)).to.equal(artBefore.div(2))
   })
 
+  it('repays debt with base, returns surplus', async () => {
+    const baseBalanceBefore = await base.balanceOf(owner)
+    const debtBefore = await cauldron.callStatic.debtToBase(seriesId, (await cauldron.balances(vaultId)).art)
+    const ilkBefore = (await cauldron.balances(vaultId)).ink
+
+    await base.mint(ladle.address, debtBefore.div(2))
+    await ladle.closeFromLadle(vaultId, owner) // close with base
+    expect(await cauldron.callStatic.debtToBase(seriesId, (await cauldron.balances(vaultId)).art)).to.equal(
+      debtBefore.div(2)
+    )
+
+    await base.mint(ladle.address, debtBefore)
+    await ladle.closeFromLadle(vaultId, owner) // close with base
+    expect((await cauldron.balances(vaultId)).art).to.equal(0)
+    expect((await base.balanceOf(owner)).sub(baseBalanceBefore)).to.equal(debtBefore.div(2).add(ilkBefore))
+  })
+
   it('if there is no debt, returns fyToken', async () => {
     // Make a vault with no debt
     await fyToken.mint(ladle.address, (await cauldron.balances(vaultId)).art)
