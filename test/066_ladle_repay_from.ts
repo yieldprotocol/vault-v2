@@ -116,4 +116,28 @@ describe('Ladle - remove and repay', function () {
     expect((await cauldron.balances(vaultId)).art).to.equal(0)
     expect((await base.balanceOf(owner)).sub(baseBalanceBefore)).to.equal(debtBefore.div(2).add(ilkBefore))
   })
+
+  it('if there is no debt, returns fyToken', async () => {
+    // Make a vault with no debt
+    await fyToken.mint(ladle.address, (await cauldron.balances(vaultId)).art)
+    await ladle.repayFromLadle(vaultId, owner)
+    expect((await cauldron.balances(vaultId)).art).to.equal(0)
+
+    const fyTokenBalanceBefore = await fyToken.balanceOf(owner)
+    await fyToken.mint(ladle.address, WAD)
+    await ladle.repayFromLadle(vaultId, owner)
+    expect(await fyToken.balanceOf(owner)).to.equal(fyTokenBalanceBefore.add(WAD))
+  })
+
+  it('if there is no debt, returns base', async () => {
+    // Make a vault with no debt
+    await fyToken.mint(ladle.address, (await cauldron.balances(vaultId)).art)
+    await ladle.repayFromLadle(vaultId, owner)
+    expect((await cauldron.balances(vaultId)).art).to.equal(0)
+
+    const baseBalanceBefore = await base.balanceOf(owner)
+    await base.mint(ladle.address, WAD)
+    await ladle.closeFromLadle(vaultId, owner) // close with base
+    expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.add(WAD))
+  })
 })
