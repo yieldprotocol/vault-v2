@@ -79,7 +79,7 @@ describe('Oracles - Chainlink', function () {
 
   it('revert on unknown sources', async () => {
     await expect(
-      chainlinkMultiOracle.callStatic.get(bytes6ToBytes32(mockBytes6), bytes6ToBytes32(mockBytes6), WAD)
+      chainlinkMultiOracle.callStatic.get(bytes6ToBytes32(DAI), bytes6ToBytes32(mockBytes6), WAD)
     ).to.be.revertedWith('Source not found')
   })
 

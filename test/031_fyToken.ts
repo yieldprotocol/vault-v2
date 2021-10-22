@@ -56,6 +56,7 @@ describe('FYToken', function () {
 
   beforeEach(async () => {
     env = await loadFixture(fixture)
+
     cauldron = env.cauldron
     ladle = env.ladle
     base = env.assets.get(baseId) as ERC20Mock
@@ -100,6 +101,13 @@ describe('FYToken', function () {
       .to.emit(fyToken, 'Point')
       .withArgs(stringToBytes32('join'), mockAddress)
     expect(await fyToken.oracle()).to.equal(mockAddress)
+  })
+
+  it('allows to mint with underlying', async () => {
+    await base.mint(baseJoin.address, WAD)
+    expect(await fyToken.mint(owner, WAD))
+      .to.emit(fyToken, 'Minted')
+      .withArgs(owner, WAD)
   })
 
   it('does not allow to mature before maturity', async () => {

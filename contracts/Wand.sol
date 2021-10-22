@@ -14,7 +14,7 @@ import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "./constants/Constants.sol";
 
 interface IWitchGov {
-    function ilks(bytes6) external view returns(bool, uint32, uint64, uint128);
+    function limits(bytes6) external view returns(uint96, uint24, uint8, uint128);
 }
 
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient governance features.
@@ -99,8 +99,8 @@ contract Wand is AccessControl, Constants {
     /// @notice `oracle` must be able to deliver a value for baseId and ilkId
     function makeIlk(bytes6 baseId, bytes6 ilkId, IMultiOracleGov oracle, uint32 ratio, uint96 max, uint24 min, uint8 dec) external auth {
         require (address(oracle) != address(0), "Oracle required");
-        (bool ilkInitialized,,,) = witch.ilks(ilkId);
-        require (ilkInitialized == true, "Initialize ilk in Witch");
+        (uint96 line,,,) = witch.limits(ilkId);
+        require (line > 0, "Initialize ilk in Witch");
         cauldron.setSpotOracle(baseId, ilkId, IOracle(address(oracle)), ratio);
         cauldron.setDebtLimits(baseId, ilkId, max, min, dec);
 
@@ -136,9 +136,10 @@ contract Wand is AccessControl, Constants {
             symbol    // Derive from base and maturity, perhaps
         ));
 
-        // Allow the fyToken to pull from the base join for redemption
-        bytes4[] memory sigs = new bytes4[](1);
-        sigs[0] = EXIT;
+        // Allow the fyToken to pull from the base join for redemption, and to push to mint with underlying
+        bytes4[] memory sigs = new bytes4[](2);
+        sigs[0] = JOIN;
+        sigs[1] = EXIT;
         AccessControl(address(baseJoin)).grantRoles(sigs, address(fyToken));
 
         // Allow the ladle to issue and cancel fyToken

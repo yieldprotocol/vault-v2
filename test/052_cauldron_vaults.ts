@@ -82,6 +82,18 @@ describe('Cauldron - vaults', function () {
     await expect(cauldron.build(owner, vaultId, seriesId, mockAssetId)).to.be.revertedWith('Ilk not added to series')
   })
 
+  it("does not allow destroying vaults that don't exist", async () => {
+    await expect(cauldron.destroy(vaultId)).to.be.revertedWith("Vault doesn't exist")
+  })
+
+  it("does not allow giving vaults that don't exist", async () => {
+    await expect(cauldron.give(vaultId, owner)).to.be.revertedWith("Vault doesn't exist")
+  })
+
+  it("does not allow tweaking vaults that don't exist", async () => {
+    await expect(cauldron.tweak(vaultId, otherSeriesId, otherIlkId)).to.be.revertedWith("Vault doesn't exist")
+  })
+
   it('builds a vault', async () => {
     await expect(cauldron.build(owner, vaultId, seriesId, ilkId))
       .to.emit(cauldron, 'VaultBuilt')

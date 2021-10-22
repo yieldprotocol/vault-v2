@@ -141,6 +141,11 @@ contract Ladle is LadleStorage, AccessControl() {
     }
 
     /// @dev Add or remove a module.
+    /// @notice Treat modules as you would Ladle upgrades. Modules have unrestricted access to the Ladle
+    /// storage, and can wreak havoc easily.
+    /// Modules must not do any changes to any vault (owner, seriesId, ilkId) because of vault caching.
+    /// Modules must not be contracts that can self-destruct because of `moduleCall`.
+    /// Modules can't use `msg.value` because of `batch`.
     function addModule(address module, bool set)
         external
         auth
@@ -184,8 +189,6 @@ contract Ladle is LadleStorage, AccessControl() {
     }
 
     /// @dev Allow users to use functionality coded in a module, to be used with batch
-    /// @notice Modules must not do any changes to the vault (owner, seriesId, ilkId),
-    /// it would be disastrous in combination with batch vault caching 
     function moduleCall(address module, bytes calldata data)
         external payable
         returns (bytes memory result)
@@ -486,6 +489,9 @@ contract Ladle is LadleStorage, AccessControl() {
     // ---- Ladle as a token holder ----
 
     /// @dev Use fyToken in the Ladle to repay debt. Return unused fyToken to `to`.
+    /// Return as much collateral as debt was repaid, as well. This function is only used when
+    /// removing liquidity added with "Borrow and Pool", so it's safe to assume the exchange rate
+    /// is 1:1. If used in other contexts, it might revert, which is fine.
     function repayFromLadle(bytes12 vaultId_, address to)
         external payable
         returns (uint256 repaid)
@@ -495,19 +501,24 @@ contract Ladle is LadleStorage, AccessControl() {
         DataTypes.Balances memory balances = cauldron.balances(vaultId);
         
         uint256 amount = series.fyToken.balanceOf(address(this));
-        if (amount == 0 || balances.art == 0) return 0;
-
         repaid = amount <= balances.art ? amount : balances.art;
 
-        // Update accounting
-        cauldron.pour(vaultId, 0, -(repaid.i128()));
-        series.fyToken.burn(address(this), repaid);
+        // Update accounting, burn fyToken and return collateral
+        if (repaid > 0) {
+            cauldron.pour(vaultId, -(repaid.i128()), -(repaid.i128()));
+            series.fyToken.burn(address(this), repaid);
+            IJoin ilkJoin = getJoin(vault.ilkId);
+            ilkJoin.exit(to, repaid.u128());
+        }
 
         // Return remainder
-        if (repaid < amount) IERC20(address(series.fyToken)).safeTransfer(to, repaid - amount);
+        if (amount - repaid > 0) IERC20(address(series.fyToken)).safeTransfer(to, amount - repaid);
     }
 
     /// @dev Use base in the Ladle to repay debt. Return unused base to `to`.
+    /// Return as much collateral as debt was repaid, as well. This function is only used when
+    /// removing liquidity added with "Borrow and Pool", so it's safe to assume the exchange rate
+    /// is 1:1. If used in other contexts, it might revert, which is fine.
     function closeFromLadle(bytes12 vaultId_, address to)
         external payable
         returns (uint256 repaid)
@@ -518,22 +529,22 @@ contract Ladle is LadleStorage, AccessControl() {
         
         IERC20 base = IERC20(cauldron.assets(series.baseId));
         uint256 amount = base.balanceOf(address(this));
-        if (amount == 0 || balances.art == 0) return 0;
-
         uint256 debtInBase = cauldron.debtToBase(vault.seriesId, balances.art);
         uint128 repaidInBase = ((amount <= debtInBase) ? amount : debtInBase).u128();
         repaid = (repaidInBase == debtInBase) ? balances.art : cauldron.debtFromBase(vault.seriesId, repaidInBase);
 
-        // Update accounting
-        cauldron.pour(vaultId, 0, -(repaid.i128()));
-
-        // Manage underlying
-        IJoin baseJoin = getJoin(series.baseId);
-        base.safeTransfer(address(baseJoin), repaidInBase);
-        baseJoin.join(address(this), repaidInBase);
+        // Update accounting, join base and return collateral
+        if (repaidInBase > 0) {
+            cauldron.pour(vaultId, -(repaid.i128()), -(repaid.i128()));
+            IJoin baseJoin = getJoin(series.baseId);
+            base.safeTransfer(address(baseJoin), repaidInBase);
+            baseJoin.join(address(this), repaidInBase);
+            IJoin ilkJoin = getJoin(vault.ilkId);
+            ilkJoin.exit(to, repaid.u128()); // repaid is the ink collateral released, and equal to the fyToken debt. repaidInBase is the value of the fyToken debt in base terms
+        }
 
         // Return remainder
-        if (repaidInBase < amount) base.safeTransfer(to, repaidInBase - amount);
+        if (amount - repaidInBase > 0) base.safeTransfer(to, amount - repaidInBase);
     }
 
     /// @dev Allow users to redeem fyToken, to be used with batch.

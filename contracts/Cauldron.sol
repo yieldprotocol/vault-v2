@@ -12,6 +12,7 @@ import "@yield-protocol/utils-v2/contracts/cast/CastI128U128.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U32.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256I256.sol";
+import "./constants/Constants.sol";
 
 library CauldronMath {
     /// @dev Add a number (which might be negative) to a positive, and revert if the result is negative.
@@ -21,7 +22,7 @@ library CauldronMath {
     }
 }
 
-contract Cauldron is AccessControl() {
+contract Cauldron is AccessControl(), Constants {
     using CauldronMath for uint128;
     using WMul for uint256;
     using WDiv for uint256;
@@ -186,6 +187,7 @@ contract Cauldron is AccessControl() {
         external
         auth
     {
+        require (vaults[vaultId].seriesId != bytes6(0), "Vault doesn't exist");   // Series can't take bytes6(0) as their id
         DataTypes.Balances memory balances_ = balances[vaultId];
         require (balances_.art == 0 && balances_.ink == 0, "Only empty vaults");
         delete vaults[vaultId];
@@ -193,12 +195,27 @@ contract Cauldron is AccessControl() {
     }
 
     /// @dev Change a vault series and/or collateral types.
-    function _tweak(bytes12 vaultId, DataTypes.Vault memory vault)
+    /// We can change the series if there is no debt, or assets if there are no assets
+    function _tweak(bytes12 vaultId, bytes6 seriesId, bytes6 ilkId)
         internal
+        returns(DataTypes.Vault memory vault)
     {
-        require (vault.seriesId != bytes6(0), "Series id is zero");
-        require (vault.ilkId != bytes6(0), "Ilk id is zero");
-        require (ilks[vault.seriesId][vault.ilkId] == true, "Ilk not added to series");
+        require (seriesId != bytes6(0), "Series id is zero");
+        require (ilkId != bytes6(0), "Ilk id is zero");
+        require (ilks[seriesId][ilkId] == true, "Ilk not added to series");
+
+        vault = vaults[vaultId];
+        require (vault.seriesId != bytes6(0), "Vault doesn't exist");   // Series can't take bytes6(0) as their id
+
+        DataTypes.Balances memory balances_ = balances[vaultId];
+        if (seriesId != vault.seriesId) {
+            require (balances_.art == 0, "Only with no debt");
+            vault.seriesId = seriesId;
+        }
+        if (ilkId != vault.ilkId) {
+            require (balances_.ink == 0, "Only with no collateral");
+            vault.ilkId = ilkId;
+        }
 
         vaults[vaultId] = vault;
         emit VaultTweaked(vaultId, vault.seriesId, vault.ilkId);
@@ -211,17 +228,7 @@ contract Cauldron is AccessControl() {
         auth
         returns(DataTypes.Vault memory vault)
     {
-        DataTypes.Balances memory balances_ = balances[vaultId];
-        vault = vaults[vaultId];
-        if (seriesId != vault.seriesId) {
-            require (balances_.art == 0, "Only with no debt");
-            vault.seriesId = seriesId;
-        }
-        if (ilkId != vault.ilkId) {
-            require (balances_.ink == 0, "Only with no collateral");
-            vault.ilkId = ilkId;
-        }
-        _tweak(vaultId, vault);
+        vault = _tweak(vaultId, seriesId, ilkId);
     }
 
     /// @dev Transfer a vault to another user.
@@ -230,6 +237,7 @@ contract Cauldron is AccessControl() {
         returns(DataTypes.Vault memory vault)
     {
         require (vaultId != bytes12(0), "Vault id is zero");
+        require (vaults[vaultId].seriesId != bytes6(0), "Vault doesn't exist");   // Series can't take bytes6(0) as their id
         vault = vaults[vaultId];
         vault.owner = receiver;
         vaults[vaultId] = vault;
@@ -366,17 +374,6 @@ contract Cauldron is AccessControl() {
         return balances_;
     }
 
-    /// @dev Give an uncollateralized vault to another user.
-    /// To be used for liquidation engines.
-    function grab(bytes12 vaultId, address receiver)
-        external
-        auth
-    {
-        (DataTypes.Vault memory vault_, DataTypes.Series memory series_, DataTypes.Balances memory balances_) = vaultData(vaultId, true);
-        require(_level(vault_, balances_, series_) < 0, "Not undercollateralized");
-        _give(vaultId, receiver);
-    }
-
     /// @dev Reduce debt and collateral from a vault, ignoring collateralization checks.
     /// To be used by liquidation engines.
     function slurp(bytes12 vaultId, uint128 ink, uint128 art)
@@ -401,13 +398,16 @@ contract Cauldron is AccessControl() {
         (DataTypes.Vault memory vault_, DataTypes.Series memory oldSeries_, DataTypes.Balances memory balances_) = vaultData(vaultId, true);
         DataTypes.Series memory newSeries_ = series[newSeriesId];
         require (oldSeries_.baseId == newSeries_.baseId, "Mismatched bases in series");
-        
-        // Change the vault series
-        vault_.seriesId = newSeriesId;
-        _tweak(vaultId, vault_);
 
-        // Change the vault balances
-        balances_ = _pour(vaultId, vault_, balances_, newSeries_, 0, art);
+        // Set the vault art to zero
+        int128 oldArt = balances_.art.i128();
+        balances_ = _pour(vaultId, vault_, balances_, oldSeries_, 0, -oldArt);
+
+        // Change the vault series
+        _tweak(vaultId, newSeriesId, vault_.ilkId);
+
+        // Set the vault art to it's newSeries value by adding `art` to that from the old series
+        balances_ = _pour(vaultId, vault_, balances_, newSeries_, 0, oldArt + art);
 
         require(_level(vault_, balances_, newSeries_) >= 0, "Undercollateralized");
         emit VaultRolled(vaultId, newSeriesId, balances_.art);
@@ -442,7 +442,7 @@ contract Cauldron is AccessControl() {
     {
         require (uint32(block.timestamp) >= series_.maturity, "Only after maturity");
         IOracle rateOracle = lendingOracles[series_.baseId];
-        (uint256 rateAtMaturity,) = rateOracle.get(series_.baseId, bytes32("rate"), 0);   // The value returned is an accumulator, it doesn't need an input amount
+        (uint256 rateAtMaturity,) = rateOracle.get(series_.baseId, RATE, 0);   // The value returned is an accumulator, it doesn't need an input amount
         ratesAtMaturity[seriesId] = rateAtMaturity;
         emit SeriesMatured(seriesId, rateAtMaturity);
     }
@@ -467,7 +467,7 @@ contract Cauldron is AccessControl() {
             _mature(seriesId, series_);
         } else {
             IOracle rateOracle = lendingOracles[series_.baseId];
-            (uint256 rate,) = rateOracle.get(series_.baseId, bytes32("rate"), 0);   // The value returned is an accumulator, it doesn't need an input amount
+            (uint256 rate,) = rateOracle.get(series_.baseId, RATE, 0);   // The value returned is an accumulator, it doesn't need an input amount
             accrual_ = rate.wdiv(rateAtMaturity);
         }
         accrual_ = accrual_ >= 1e18 ? accrual_ : 1e18;     // The accrual can't be below 1 (with 18 decimals)
