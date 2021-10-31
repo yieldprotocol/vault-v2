@@ -11,6 +11,7 @@
     "contracts/oracles/compound/*.sol",
     "contracts/oracles/composite/*.sol",
     "contracts/oracles/uniswap/*.sol",
+    "contracts/oracles/lido/*.sol",
     "dist"
   ],
   "main": "dist/index.js",
