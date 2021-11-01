@@ -1,6 +1,6 @@
 import { constants, id } from '@yield-protocol/utils-v2'
 const { WAD } = constants
-import { ETH, DAI, WSTETH } from '../src/constants'
+import { ETH, DAI, WSTETH, STETH } from '../src/constants'
 
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { LidoOracle } from '../typechain/LidoOracle'
@@ -37,17 +37,20 @@ describe('Oracles - Chainlink', function () {
   })
 
   beforeEach(async () => {
-    lidoOracle = (await deployContract(ownerAcc, LidoOracleArtifact)) as LidoOracle
+    lidoOracle = (await deployContract(ownerAcc, LidoOracleArtifact, [
+      bytes6ToBytes32(WSTETH),
+      bytes6ToBytes32(STETH),
+    ])) as LidoOracle
     await lidoOracle.grantRole(id(lidoOracle.interface, 'setSource(address)'), owner)
     await lidoOracle['setSource(address)'](lidoMock.address) //mockOracle
   })
 
   it('sets and retrieves the value at spot price', async () => {
-    expect((await lidoOracle.callStatic.get(bytes6ToBytes32(ETH), bytes6ToBytes32(WSTETH), WAD))[0]).to.equal(
+    expect((await lidoOracle.callStatic.get(bytes6ToBytes32(STETH), bytes6ToBytes32(WSTETH), WAD))[0]).to.equal(
       '991729660855795538'
     )
     expect(
-      (await lidoOracle.callStatic.get(bytes6ToBytes32(WSTETH), bytes6ToBytes32(ETH), parseEther('1')))[0]
+      (await lidoOracle.callStatic.get(bytes6ToBytes32(WSTETH), bytes6ToBytes32(STETH), parseEther('1')))[0]
     ).to.equal('1008339308050006006')
   })
 

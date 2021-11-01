@@ -14,11 +14,17 @@ import './IWstETH.sol';
  */
 contract LidoOracle is IOracle, AccessControl, Constants {
     using CastBytes32Bytes6 for bytes32;
-    IWstETH iwstETH;
-    bytes32 public WstETH = 0x3035000000000000000000000000000000000000000000000000000000000000;
+    IWstETH wstETH;
+    bytes32 public immutable wstEthId;
+    bytes32 public immutable stEthId;
+
+    constructor(bytes32 wstEthId_, bytes32 stEthId_) public {
+        wstEthId = wstEthId_;
+        stEthId = stEthId_;
+    }
 
     function setSource(IWstETH wstETH_) external auth {
-        iwstETH = wstETH_;
+        wstETH = wstETH_;
     }
 
     /**
@@ -27,9 +33,9 @@ contract LidoOracle is IOracle, AccessControl, Constants {
     function peek(
         bytes32 base,
         bytes32 quote,
-        uint256 amount
-    ) external view virtual override returns (uint256 value, uint256 updateTime) {
-        return _peek(base.b6(), quote.b6(), amount);
+        uint256 baseAmount
+    ) external view virtual override returns (uint256 quoteAmount, uint256 updateTime) {
+        return _peek(base.b6(), quote.b6(), baseAmount);
     }
 
     /**
@@ -38,23 +44,24 @@ contract LidoOracle is IOracle, AccessControl, Constants {
     function get(
         bytes32 base,
         bytes32 quote,
-        uint256 amount
-    ) external virtual override returns (uint256 value, uint256 updateTime) {
-        return _peek(base.b6(), quote.b6(), amount);
+        uint256 baseAmount
+    ) external virtual override returns (uint256 quoteAmount, uint256 updateTime) {
+        return _peek(base.b6(), quote.b6(), baseAmount);
     }
 
     function _peek(
         bytes6 base,
         bytes6 quote,
-        uint256 amount
-    ) private view returns (uint256 value, uint256 updateTime) {
-        require(base == WstETH || quote == WstETH, 'Source not found');
-        if (base == WstETH) {
+        uint256 baseAmount
+    ) private view returns (uint256 quoteAmount, uint256 updateTime) {
+        require((base == wstEthId && quote == stEthId) || (base == stEthId && quote == wstEthId), 'Source not found');
+
+        if (base == wstEthId) {
             //Base equals WstETH
-            value = iwstETH.getStETHByWstETH(amount);
-        } else if (quote == WstETH) {
+            quoteAmount = wstETH.getStETHByWstETH(baseAmount);
+        } else if (quote == wstEthId) {
             //Base equals stETH
-            value = iwstETH.getWstETHByStETH(amount);
+            quoteAmount = wstETH.getWstETHByStETH(baseAmount);
         }
         updateTime = block.timestamp;
     }

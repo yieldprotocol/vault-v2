@@ -10,10 +10,10 @@ contract LidoMock is ISourceMock {
     }
 
     function getWstETHByStETH(uint256 _stETHAmount) external view returns (uint256) {
-        return (_stETHAmount * 10**18) / price;
+        return (_stETHAmount * 1e18) / price;
     }
 
     function getStETHByWstETH(uint256 _wstETHAmount) external view returns (uint256) {
-        return (_wstETHAmount * price) / 10**18;
+        return (_wstETHAmount * price) / 1e18;
     }
 }

@@ -115,7 +115,10 @@ describe('Oracles - Composite', function () {
   describe('Lido Oracle', () => {
     beforeEach(async () => {
       lidoMock = (await deployContract(ownerAcc, LidoMockArtifact)) as LidoMock
-      lidoOracle = (await deployContract(ownerAcc, LidoOracleArtifact)) as LidoOracle
+      lidoOracle = (await deployContract(ownerAcc, LidoOracleArtifact, [
+        bytes6ToBytes32(WSTETH),
+        bytes6ToBytes32(STETH),
+      ])) as LidoOracle
       await lidoOracle.grantRole(id(lidoOracle.interface, 'setSource(address)'), owner)
       await lidoOracle['setSource(address)'](lidoMock.address) //mockOracle
       await lidoMock.set('1008339308050006006')
@@ -126,7 +129,7 @@ describe('Oracles - Composite', function () {
 
       //Set stETH/ETH chainlink oracle
       await chainlinkMultiOracle.setSource(STETH, steth.address, ETH, weth.address, stethEthAggregator.address)
-      await stethEthAggregator.set(parseEther('1'))
+      await stethEthAggregator.set('992415619690099500')
       // Set up the CompositeMultiOracle to draw from the ChainlinkMultiOracle
       await compositeMultiOracle.setSource(WSTETH, STETH, lidoOracle.address)
       await compositeMultiOracle.setSource(STETH, ETH, chainlinkMultiOracle.address)
@@ -141,23 +144,23 @@ describe('Oracles - Composite', function () {
       ).to.equal('1008339308050006006')
       expect(
         (await compositeMultiOracle.peek(bytes6ToBytes32(STETH), bytes6ToBytes32(ETH), parseEther('1')))[0]
-      ).to.equal(parseEther('1'))
+      ).to.equal('992415619690099500')
       expect(
         (await compositeMultiOracle.peek(bytes6ToBytes32(STETH), bytes6ToBytes32(WSTETH), parseEther('1')))[0]
       ).to.equal('991729660855795538')
       expect(
         (await compositeMultiOracle.peek(bytes6ToBytes32(ETH), bytes6ToBytes32(STETH), parseEther('1')))[0]
-      ).to.equal(parseEther('1'))
+      ).to.equal('1007642342743727538')
     })
 
     it('retrieves the value at spot price for WSTETH -> ETH and reverse', async () => {
       expect(
         (await compositeMultiOracle.peek(bytes6ToBytes32(WSTETH), bytes6ToBytes32(ETH), parseEther('1')))[0]
-      ).to.equal('1008339308050006006')
+      ).to.equal('1000691679256332845')
 
       expect(
         (await compositeMultiOracle.peek(bytes6ToBytes32(ETH), bytes6ToBytes32(WSTETH), parseEther('1')))[0]
-      ).to.equal('991729660855795538')
+      ).to.equal('999308798833176199')
     })
   })
 })
