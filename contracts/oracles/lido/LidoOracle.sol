@@ -5,14 +5,13 @@ import '@yield-protocol/utils-v2/contracts/access/AccessControl.sol';
 import '@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol';
 import '@yield-protocol/utils-v2/contracts/token/IERC20Metadata.sol';
 import '@yield-protocol/vault-interfaces/IOracle.sol';
-import '../../constants/Constants.sol';
 import './IWstETH.sol';
 
 /**
  * @title LidoOracle
  * @notice Oracle to fetch WstETH-stETH exchange amounts
  */
-contract LidoOracle is IOracle, AccessControl, Constants {
+contract LidoOracle is IOracle, AccessControl {
     using CastBytes32Bytes6 for bytes32;
     IWstETH public wstETH;
     bytes32 public immutable wstEthId;
@@ -20,7 +19,7 @@ contract LidoOracle is IOracle, AccessControl, Constants {
 
     event SourceSet(IWstETH wstETH);
 
-    constructor(bytes32 wstEthId_, bytes32 stEthId_) public {
+    constructor(bytes32 wstEthId_, bytes32 stEthId_) {
         wstEthId = wstEthId_;
         stEthId = stEthId_;
     }
