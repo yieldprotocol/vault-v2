@@ -17,13 +17,13 @@ interface IWstETH {
     function getStETHByWstETH(uint256 _wstETHAmount) external view returns (uint256);
 
     /**
-     * @notice Get amount of stETH obtained for a one wstETH
+     * @notice Get amount of stETH obtained for one wstETH
      * @return Amount of stETH obtained for one wstETH
      */
     function stEthPerToken() external view returns (uint256);
 
     /**
-     * @notice Get amount of wstETH obtained for a one stETH
+     * @notice Get amount of wstETH obtained for one stETH
      * @return Amount of wstETH obtained for one stETH
      */
     function tokensPerStEth() external view returns (uint256);

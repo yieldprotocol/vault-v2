@@ -39,6 +39,10 @@ import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20M
 
 var WSTETHADD = '0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0'
 
+function bytes6ToBytes32(x: string): string {
+  return x + '00'.repeat(26)
+}
+
 describe('WstETH', function () {
   this.timeout(0)
   let ownerAcc: SignerWithAddress
@@ -68,11 +72,10 @@ describe('WstETH', function () {
   }
 
   beforeEach(async () => {
-    env = await loadFixture(fixture)
-
     const signers = await ethers.getSigners()
     ownerAcc = signers[0]
     owner = await ownerAcc.getAddress()
+    env = await loadFixture(fixture)
 
     wand = env.wand
     witch = env.witch
@@ -99,11 +102,14 @@ describe('WstETH', function () {
 
     // Setting up Lido Oracle
     lidoMock = (await deployContract(ownerAcc, LidoMockArtifact)) as LidoMock
-    lidoOracle = (await deployContract(ownerAcc, LidoOracleArtifact)) as LidoOracle
+    lidoOracle = (await deployContract(ownerAcc, LidoOracleArtifact, [
+      bytes6ToBytes32(WSTETH),
+      bytes6ToBytes32(STETH),
+    ])) as LidoOracle
     await lidoOracle.grantRole(id(lidoOracle.interface, 'setSource(address)'), owner)
     await lidoOracle['setSource(address)'](lidoMock.address) //mockOracle
     await lidoMock.set('1008339308050006006')
-
+    console.log('here2')
     // Setting up stethEth Chainlink oracle
     stethEthAggregator = (await deployContract(
       ownerAcc,
@@ -121,7 +127,7 @@ describe('WstETH', function () {
       ],
       owner
     )
-
+    console.log('here3')
     // Set up the CompositeMultiOracle to draw from the ChainlinkMultiOracle
     await compositeMultiOracle.setSource(WSTETH, STETH, lidoOracle.address)
     await compositeMultiOracle.setSource(STETH, ETH, chainlinkMultiOracle.address)
@@ -132,6 +138,7 @@ describe('WstETH', function () {
   })
 
   it('WstETH could be added as an asset', async () => {
+    console.log('here')
     await wand.addAsset(WSTETH, WSTETHADD)
   })
 
@@ -141,13 +148,8 @@ describe('WstETH', function () {
   })
 
   it('Borrow USDC with wstETH collateral', async () => {
-    await cauldron.grantRoles(
-      [
-        id(cauldron.interface, 'addIlks(bytes6,bytes6[])'),
-      ],
-      owner
-    )
-    await cauldron.addIlks(seriesId, [WSTETH]);
+    await cauldron.grantRoles([id(cauldron.interface, 'addIlks(bytes6,bytes6[])')], owner)
+    await cauldron.addIlks(seriesId, [WSTETH])
 
     // Build a vault
     await env.ladle.build(seriesId, WSTETH)

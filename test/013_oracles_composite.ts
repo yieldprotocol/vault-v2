@@ -10,21 +10,15 @@ import DAIMockArtifact from '../artifacts/contracts/mocks/DAIMock.sol/DAIMock.js
 import USDCMockArtifact from '../artifacts/contracts/mocks/USDCMock.sol/USDCMock.json'
 import WETH9MockArtifact from '../artifacts/contracts/mocks/WETH9Mock.sol/WETH9Mock.json'
 import STETHMockArtifact from '../artifacts/contracts/mocks/STETHMock.sol/STETHMock.json'
-import { LidoOracle } from '../typechain/LidoOracle'
-import { LidoMock } from '../typechain/LidoMock'
-import LidoOracleArtifact from '../artifacts/contracts/oracles/lido/LidoOracle.sol/LidoOracle.json'
-import LidoMockArtifact from '../artifacts/contracts/mocks/oracles/lido/LidoMock.sol/LidoMock.json'
 import { ChainlinkMultiOracle } from '../typechain/ChainlinkMultiOracle'
 import { CompositeMultiOracle } from '../typechain/CompositeMultiOracle'
 import { ChainlinkAggregatorV3Mock } from '../typechain/ChainlinkAggregatorV3Mock'
 import { DAIMock } from '../typechain/DAIMock'
 import { USDCMock } from '../typechain/USDCMock'
 import { WETH9Mock } from '../typechain/WETH9Mock'
-import { STETHMock } from '../typechain/STETHMock'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
-import { parseEther } from '@ethersproject/units'
 const { deployContract } = waffle
 
 function bytes6ToBytes32(x: string): string {
@@ -39,14 +33,12 @@ describe('Oracles - Composite', function () {
   let dai: DAIMock
   let usdc: USDCMock
   let weth: WETH9Mock
-  let steth: STETHMock
+
   let chainlinkMultiOracle: ChainlinkMultiOracle
   let compositeMultiOracle: CompositeMultiOracle
-  let lidoOracle: LidoOracle
-  let lidoMock: LidoMock
+
   let daiEthAggregator: ChainlinkAggregatorV3Mock
   let usdcEthAggregator: ChainlinkAggregatorV3Mock
-  let stethEthAggregator: ChainlinkAggregatorV3Mock
 
   const oneUSDC = WAD.div(1000000000000)
 
@@ -60,7 +52,6 @@ describe('Oracles - Composite', function () {
     dai = (await deployContract(ownerAcc, DAIMockArtifact)) as DAIMock
     usdc = (await deployContract(ownerAcc, USDCMockArtifact)) as USDCMock
     weth = (await deployContract(ownerAcc, WETH9MockArtifact)) as WETH9Mock
-    steth = (await deployContract(ownerAcc, STETHMockArtifact)) as STETHMock
 
     daiEthAggregator = (await deployContract(ownerAcc, ChainlinkAggregatorV3MockArtifact)) as ChainlinkAggregatorV3Mock
     usdcEthAggregator = (await deployContract(ownerAcc, ChainlinkAggregatorV3MockArtifact)) as ChainlinkAggregatorV3Mock
@@ -110,57 +101,5 @@ describe('Oracles - Composite', function () {
   it('retrieves the value at spot price for DAI -> USDC and reverse', async () => {
     expect((await compositeMultiOracle.peek(bytes6ToBytes32(DAI), bytes6ToBytes32(USDC), WAD))[0]).to.equal(oneUSDC)
     expect((await compositeMultiOracle.peek(bytes6ToBytes32(USDC), bytes6ToBytes32(DAI), oneUSDC))[0]).to.equal(WAD)
-  })
-
-  describe('Lido Oracle', () => {
-    beforeEach(async () => {
-      lidoMock = (await deployContract(ownerAcc, LidoMockArtifact)) as LidoMock
-      lidoOracle = (await deployContract(ownerAcc, LidoOracleArtifact, [
-        bytes6ToBytes32(WSTETH),
-        bytes6ToBytes32(STETH),
-      ])) as LidoOracle
-      await lidoOracle.grantRole(id(lidoOracle.interface, 'setSource(address)'), owner)
-      await lidoOracle['setSource(address)'](lidoMock.address) //mockOracle
-      await lidoMock.set('1008339308050006006')
-      stethEthAggregator = (await deployContract(
-        ownerAcc,
-        ChainlinkAggregatorV3MockArtifact
-      )) as ChainlinkAggregatorV3Mock
-
-      //Set stETH/ETH chainlink oracle
-      await chainlinkMultiOracle.setSource(STETH, steth.address, ETH, weth.address, stethEthAggregator.address)
-      await stethEthAggregator.set('992415619690099500')
-      // Set up the CompositeMultiOracle to draw from the ChainlinkMultiOracle
-      await compositeMultiOracle.setSource(WSTETH, STETH, lidoOracle.address)
-      await compositeMultiOracle.setSource(STETH, ETH, chainlinkMultiOracle.address)
-
-      //Set path for wsteth-steth-eth
-      await compositeMultiOracle.setPath(WSTETH, ETH, [STETH])
-    })
-
-    it('retrieves the value at spot price for direct pairs', async () => {
-      expect(
-        (await compositeMultiOracle.peek(bytes6ToBytes32(WSTETH), bytes6ToBytes32(STETH), parseEther('1')))[0]
-      ).to.equal('1008339308050006006')
-      expect(
-        (await compositeMultiOracle.peek(bytes6ToBytes32(STETH), bytes6ToBytes32(ETH), parseEther('1')))[0]
-      ).to.equal('992415619690099500')
-      expect(
-        (await compositeMultiOracle.peek(bytes6ToBytes32(STETH), bytes6ToBytes32(WSTETH), parseEther('1')))[0]
-      ).to.equal('991729660855795538')
-      expect(
-        (await compositeMultiOracle.peek(bytes6ToBytes32(ETH), bytes6ToBytes32(STETH), parseEther('1')))[0]
-      ).to.equal('1007642342743727538')
-    })
-
-    it('retrieves the value at spot price for WSTETH -> ETH and reverse', async () => {
-      expect(
-        (await compositeMultiOracle.peek(bytes6ToBytes32(WSTETH), bytes6ToBytes32(ETH), parseEther('1')))[0]
-      ).to.equal('1000691679256332845')
-
-      expect(
-        (await compositeMultiOracle.peek(bytes6ToBytes32(ETH), bytes6ToBytes32(WSTETH), parseEther('1')))[0]
-      ).to.equal('999308798833176199')
-    })
   })
 })

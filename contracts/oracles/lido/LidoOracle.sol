@@ -10,21 +10,27 @@ import './IWstETH.sol';
 
 /**
  * @title LidoOracle
- * @notice
+ * @notice Oracle to fetch WstETH-stETH exchange amounts
  */
 contract LidoOracle is IOracle, AccessControl, Constants {
     using CastBytes32Bytes6 for bytes32;
-    IWstETH wstETH;
+    IWstETH public wstETH;
     bytes32 public immutable wstEthId;
     bytes32 public immutable stEthId;
+
+    event SourceSet(IWstETH wstETH);
 
     constructor(bytes32 wstEthId_, bytes32 stEthId_) public {
         wstEthId = wstEthId_;
         stEthId = stEthId_;
     }
 
+    /**
+     * @notice Set the source for fetching the price from
+     */
     function setSource(IWstETH wstETH_) external auth {
         wstETH = wstETH_;
+        emit SourceSet(wstETH_);
     }
 
     /**
