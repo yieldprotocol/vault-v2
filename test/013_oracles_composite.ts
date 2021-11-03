@@ -1,7 +1,7 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { constants, id } from '@yield-protocol/utils-v2'
 const { WAD } = constants
-import { ETH, DAI, USDC } from '../src/constants'
+import { ETH, DAI, USDC, WSTETH, STETH } from '../src/constants'
 
 import ChainlinkMultiOracleArtifact from '../artifacts/contracts/oracles/chainlink/ChainlinkMultiOracle.sol/ChainlinkMultiOracle.json'
 import CompositeMultiOracleArtifact from '../artifacts/contracts/oracles/composite/CompositeMultiOracle.sol/CompositeMultiOracle.json'
@@ -9,7 +9,6 @@ import ChainlinkAggregatorV3MockArtifact from '../artifacts/contracts/mocks/orac
 import DAIMockArtifact from '../artifacts/contracts/mocks/DAIMock.sol/DAIMock.json'
 import USDCMockArtifact from '../artifacts/contracts/mocks/USDCMock.sol/USDCMock.json'
 import WETH9MockArtifact from '../artifacts/contracts/mocks/WETH9Mock.sol/WETH9Mock.json'
-
 import { ChainlinkMultiOracle } from '../typechain/ChainlinkMultiOracle'
 import { CompositeMultiOracle } from '../typechain/CompositeMultiOracle'
 import { ChainlinkAggregatorV3Mock } from '../typechain/ChainlinkAggregatorV3Mock'
@@ -33,6 +32,7 @@ describe('Oracles - Composite', function () {
   let dai: DAIMock
   let usdc: USDCMock
   let weth: WETH9Mock
+
   let chainlinkMultiOracle: ChainlinkMultiOracle
   let compositeMultiOracle: CompositeMultiOracle
 
