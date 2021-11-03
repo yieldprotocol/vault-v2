@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.6;
 
-import '@yield-protocol/utils-v2/contracts/access/AccessControl.sol';
-import '@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol';
-import '@yield-protocol/utils-v2/contracts/token/IERC20Metadata.sol';
-import '@yield-protocol/vault-interfaces/IOracle.sol';
-import './IWstETH.sol';
+import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
+import "@yield-protocol/utils-v2/contracts/token/IERC20Metadata.sol";
+import "@yield-protocol/vault-interfaces/IOracle.sol";
+import "./IWstETH.sol";
 
 /**
  * @title LidoOracle
@@ -25,7 +25,7 @@ contract LidoOracle is IOracle, AccessControl {
     }
 
     /**
-     * @notice Set the source for fetching the price from
+     * @notice Set the source for fetching the price from. It should be the wstETH contract.
      */
     function setSource(IWstETH wstETH_) external auth {
         wstETH = wstETH_;
@@ -34,6 +34,7 @@ contract LidoOracle is IOracle, AccessControl {
 
     /**
      * @notice Retrieve the value of the amount at the latest oracle price.
+     * Only `wstEthId` and `stEthId` are accepted as asset identifiers.
      */
     function peek(
         bytes32 base,
@@ -45,6 +46,7 @@ contract LidoOracle is IOracle, AccessControl {
 
     /**
      * @notice Retrieve the value of the amount at the latest oracle price. Same as `peek` for this oracle.
+     * Only `wstEthId` and `stEthId` are accepted as asset identifiers.
      */
     function get(
         bytes32 base,
@@ -54,12 +56,17 @@ contract LidoOracle is IOracle, AccessControl {
         return _peek(base.b6(), quote.b6(), baseAmount);
     }
 
+
+    /**
+     * @notice Retrieve the value of the amount at the latest oracle price.
+     * Only `wstEthId` and `stEthId` are accepted as asset identifiers.
+     */
     function _peek(
         bytes6 base,
         bytes6 quote,
         uint256 baseAmount
     ) private view returns (uint256 quoteAmount, uint256 updateTime) {
-        require((base == wstEthId && quote == stEthId) || (base == stEthId && quote == wstEthId), 'Source not found');
+        require((base == wstEthId && quote == stEthId) || (base == stEthId && quote == wstEthId), "Source not found");
 
         if (base == wstEthId) {
             //Base equals WstETH
