@@ -9,7 +9,6 @@ import ChainlinkAggregatorV3MockArtifact from '../artifacts/contracts/mocks/orac
 import DAIMockArtifact from '../artifacts/contracts/mocks/DAIMock.sol/DAIMock.json'
 import USDCMockArtifact from '../artifacts/contracts/mocks/USDCMock.sol/USDCMock.json'
 import WETH9MockArtifact from '../artifacts/contracts/mocks/WETH9Mock.sol/WETH9Mock.json'
-import STETHMockArtifact from '../artifacts/contracts/mocks/STETHMock.sol/STETHMock.json'
 import { ChainlinkMultiOracle } from '../typechain/ChainlinkMultiOracle'
 import { CompositeMultiOracle } from '../typechain/CompositeMultiOracle'
 import { ChainlinkAggregatorV3Mock } from '../typechain/ChainlinkAggregatorV3Mock'

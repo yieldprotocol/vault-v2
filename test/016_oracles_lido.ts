@@ -7,21 +7,21 @@ const { WAD } = constants
 import { USDC, ETH, DAI, WSTETH, STETH } from '../src/constants'
 
 import { LidoOracle } from '../typechain/LidoOracle'
-import { LidoMock } from '../typechain/LidoMock'
+import { WstETHMock } from '../typechain/WstETHMock'
 import { ChainlinkAggregatorV3Mock } from '../typechain/ChainlinkAggregatorV3Mock'
 import { ChainlinkMultiOracle } from '../typechain/ChainlinkMultiOracle'
 import { CompositeMultiOracle } from '../typechain/CompositeMultiOracle'
 import { WETH9Mock } from '../typechain/WETH9Mock'
-import { STETHMock } from '../typechain/STETHMock'
+import { ERC20Mock } from '../typechain/ERC20Mock'
 import { USDCMock } from '../typechain/USDCMock'
 
 import LidoOracleArtifact from '../artifacts/contracts/oracles/lido/LidoOracle.sol/LidoOracle.json'
-import LidoMockArtifact from '../artifacts/contracts/mocks/oracles/lido/LidoMock.sol/LidoMock.json'
+import WstETHMockArtifact from '../artifacts/contracts/mocks/oracles/lido/WstETHMock.sol/WstETHMock.json'
 import ChainlinkAggregatorV3MockArtifact from '../artifacts/contracts/mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol/ChainlinkAggregatorV3Mock.json'
 import ChainlinkMultiOracleArtifact from '../artifacts/contracts/oracles/chainlink/ChainlinkMultiOracle.sol/ChainlinkMultiOracle.json'
 import CompositeMultiOracleArtifact from '../artifacts/contracts/oracles/composite/CompositeMultiOracle.sol/CompositeMultiOracle.json'
 import WETH9MockArtifact from '../artifacts/contracts/mocks/WETH9Mock.sol/WETH9Mock.json'
-import STETHMockArtifact from '../artifacts/contracts/mocks/STETHMock.sol/STETHMock.json'
+import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
 import USDCMockArtifact from '../artifacts/contracts/mocks/USDCMock.sol/USDCMock.json'
 
 const { deployContract } = waffle
@@ -36,10 +36,10 @@ describe('Oracles - Lido', function () {
   let ownerAcc: SignerWithAddress
   let owner: string
   let weth: WETH9Mock
-  let steth: STETHMock
+  let steth: ERC20Mock
   let usdc: USDCMock
   let lidoOracle: LidoOracle
-  let lidoMock: LidoMock
+  let lidoMock: WstETHMock
   let chainlinkMultiOracle: ChainlinkMultiOracle
   let compositeMultiOracle: CompositeMultiOracle
   let stethEthAggregator: ChainlinkAggregatorV3Mock
@@ -50,12 +50,12 @@ describe('Oracles - Lido', function () {
     const signers = await ethers.getSigners()
     ownerAcc = signers[0]
     owner = await ownerAcc.getAddress()
-    lidoMock = (await deployContract(ownerAcc, LidoMockArtifact)) as LidoMock
+    lidoMock = (await deployContract(ownerAcc, WstETHMockArtifact)) as WstETHMock
     await lidoMock.set('1008339308050006006')
 
     weth = (await deployContract(ownerAcc, WETH9MockArtifact)) as WETH9Mock
     usdc = (await deployContract(ownerAcc, USDCMockArtifact)) as USDCMock
-    steth = (await deployContract(ownerAcc, STETHMockArtifact)) as STETHMock
+    steth = (await deployContract(ownerAcc, ERC20MockArtifact, ['Liquid staked Ether 2.0', 'stETH'])) as ERC20Mock
 
     chainlinkMultiOracle = (await deployContract(ownerAcc, ChainlinkMultiOracleArtifact, [])) as ChainlinkMultiOracle
     await chainlinkMultiOracle.grantRole(
