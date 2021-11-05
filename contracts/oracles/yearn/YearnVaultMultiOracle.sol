@@ -54,9 +54,7 @@ contract YearnVaultMultiOracle is IOracle, AccessControl {
         bytes6 vaultTokenId,
         IERC20Metadata vaultToken
     ) external auth {
-        if (baseId == vaultTokenId) {
-            revert SetSourceNotNeeded();
-        }
+        if (baseId == vaultTokenId) revert SetSourceNotNeeded();
 
         uint8 decimals = vaultToken.decimals();
 
@@ -132,14 +130,10 @@ contract YearnVaultMultiOracle is IOracle, AccessControl {
         if (baseId == quoteId) return (amountBase, updateTime);
 
         Source memory source = sources[baseId][quoteId];
-        if (source.source == address(0)) {
-            revert SourceNotFound();
-        }
+        if (source.source == address(0)) revert SourceNotFound();
 
         uint256 price = IYvToken(source.source).pricePerShare();
-        if (price == 0) {
-            revert ZeroPrice();
-        }
+        if (price == 0) revert ZeroPrice();
 
         if (source.inverse == true) {
             // yvUSDC/USDC: 100 USDC (*10^6) * (10^6 / 1083121 USDC per yvUSDC) = 92325788 yvUSDC wei
