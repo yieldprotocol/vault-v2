@@ -14,8 +14,6 @@ error SetSourceNotNeeded(); // not necessary to set when baseId == quoteId
 error SourceNotFound();     // baseId-quoteId not found in sources
 error ZeroPrice();          // vault token returned share price of 0
 
-
-
 /**
  *@title  YearnVaultMultiOracle
  *@notice Provides current values for Yearn Vault tokens (e.g. yvUSDC/USDC)
@@ -63,7 +61,7 @@ contract YearnVaultMultiOracle is IOracle, AccessControl {
         uint8 decimals = vaultToken.decimals();
 
         _setSource(baseId, vaultTokenId, vaultToken, decimals, false);
-        _setSource(vaultTokenId, baseId, vaultToken, decimals, false);
+        _setSource(vaultTokenId, baseId, vaultToken, decimals, true);
     }
 
     /**
@@ -81,7 +79,7 @@ contract YearnVaultMultiOracle is IOracle, AccessControl {
         uint8 decimals,
         bool inverse
     ) internal {
-        sources[baseId][quoteId] = Source({ source: address(source), decimals: decimals, inverse: inverse });
+        sources[baseId][quoteId] = Source({source: address(source), decimals: decimals, inverse: inverse});
         emit SourceSet(baseId, quoteId, address(source), decimals, inverse);
     }
 
@@ -91,7 +89,7 @@ contract YearnVaultMultiOracle is IOracle, AccessControl {
      *@param  baseId id of base (denominator of rate used)
      *@param  quoteId id of quote (returned amount in this)
      *@param  amountBase amount in base to convert to amount in quote
-     *@return amountQuote product of rate and amountBase
+     *@return amountQuote product of exchange rate and amountBase
      *@return updateTime current block timestamp
      */
     function get(
@@ -104,7 +102,7 @@ contract YearnVaultMultiOracle is IOracle, AccessControl {
 
     /**
      *@notice External function to convert amountBase at the current vault share price
-     *@dev    This function is exactly the same as peek() and provided as a convenience
+     *@dev    This function is exactly the same as get() and provided as a convenience
      *        for contracts that need to call peek
      */
     function peek(
