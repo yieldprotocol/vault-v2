@@ -22,14 +22,17 @@ contract LidoModule is LadleStorage {
     using TransferHelper for IWstETH;
     using TransferHelper for IWETH9;
     using TransferHelper for address payable;
-    IWstETH public wstETH;
+    IWstETH public immutable wstETH;
+    IERC20 public immutable stETH;
 
     constructor(
         ICauldron cauldron,
-        IWETH9 steth,
-        IWstETH wstETH_
-    ) LadleStorage(cauldron, steth) {
+        IWETH9 weth,
+        IWstETH wstETH_,
+        IERC20 stETH_
+    ) LadleStorage(cauldron, weth) {
         wstETH = wstETH_;
+        stETH = stETH_;
     }
 
     /// @dev Obtains a join by assetId, and verifies that it exists
@@ -38,11 +41,11 @@ contract LidoModule is LadleStorage {
         require(join != IJoin(address(0)), 'Join not found');
     }
 
-    /// @dev Accept stEth, wrap it and forward it to the WstethJoin
+    /// @dev Wrap stEth held by this Ladle and forward it to the WstEthJoin
     /// This function should be called first in a batch, and the Join should keep track of stored reserves
-    /// Passing the id for a join that doesn't link to a contract implemnting IWETH9 will fail
+    /// Passing the id for a join that doesn't link to a contract implemnting IWstETH will fail
     function joinStEth(bytes6 wstEthId) external returns (uint256 stEthTransferred) {
-        stEthTransferred = weth.balanceOf(address(this));
+        stEthTransferred = stETH.balanceOf(address(this));
         IJoin wstEthJoin = getJoin(wstEthId);
         uint256 wrappedAmount = wstETH.wrap(stEthTransferred);
         wstETH.safeTransfer(address(wstEthJoin), wrappedAmount);
@@ -50,9 +53,9 @@ contract LidoModule is LadleStorage {
 
     /// @dev Unwrap WstETH held by this Ladle, and send the stETH
     /// This function should be called last in a batch, and the Ladle should have no reason to keep an WSTETH balance
-    function exitStEth(address to) external returns (uint256 ethTransferred) {
-        ethTransferred = wstETH.balanceOf(address(this));
-        uint256 unwrappedAmount = wstETH.unwrap(ethTransferred);
-        weth.safeTransfer(to, unwrappedAmount);
+    function exitStEth(address to) external returns (uint256 wstEthTransferred) {
+        wstEthTransferred = wstETH.balanceOf(address(this));
+        uint256 unwrappedAmount = wstETH.unwrap(wstEthTransferred);
+        stETH.safeTransfer(to, unwrappedAmount);
     }
 }
