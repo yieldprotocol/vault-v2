@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.6;
 
-import '@yield-protocol/utils-v2/contracts/access/AccessControl.sol';
-import '@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol';
-import '@yield-protocol/utils-v2/contracts/token/IERC20Metadata.sol';
+import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
+import "@yield-protocol/utils-v2/contracts/token/IERC20Metadata.sol";
 
-import '@yield-protocol/vault-interfaces/IOracle.sol';
+import "@yield-protocol/vault-interfaces/IOracle.sol";
 
-import './IYvToken.sol';
+import "./IYvToken.sol";
 
 // custom errors
 // error SetSourceNotNeeded(); // not necessary to set when baseId == quoteId
@@ -77,7 +77,7 @@ contract YearnVaultMultiOracle is IOracle, AccessControl {
         uint8 decimals,
         bool inverse
     ) internal {
-        sources[baseId][quoteId] = Source({source: address(source), decimals: decimals, inverse: inverse});
+        sources[baseId][quoteId] = Source({ source: address(source), decimals: decimals, inverse: inverse });
         emit SourceSet(baseId, quoteId, address(source), decimals, inverse);
     }
 
