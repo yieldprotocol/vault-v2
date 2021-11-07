@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.6;
 
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
-import "@yield-protocol/utils-v2/contracts/token/IERC20Metadata.sol";
+import '@yield-protocol/utils-v2/contracts/access/AccessControl.sol';
+import '@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol';
+import '@yield-protocol/utils-v2/contracts/token/IERC20Metadata.sol';
 
-import "@yield-protocol/vault-interfaces/IOracle.sol";
+import '@yield-protocol/vault-interfaces/IOracle.sol';
 
-import "./IYvToken.sol";
+import './IYvToken.sol';
 
 // custom errors
-error SetSourceNotNeeded(); // not necessary to set when baseId == quoteId
-error SourceNotFound();     // baseId-quoteId not found in sources
-error ZeroPrice();          // vault token returned share price of 0
+// error SetSourceNotNeeded(); // not necessary to set when baseId == quoteId
+// error SourceNotFound();     // baseId-quoteId not found in sources
+// error ZeroPrice();          // vault token returned share price of 0
 
 /**
  *@title  YearnVaultMultiOracle
@@ -54,7 +54,7 @@ contract YearnVaultMultiOracle is IOracle, AccessControl {
         bytes6 vaultTokenId,
         IERC20Metadata vaultToken
     ) external auth {
-        if (baseId == vaultTokenId) revert SetSourceNotNeeded();
+        if (baseId == vaultTokenId) revert("Set Source Not Needed");
 
         uint8 decimals = vaultToken.decimals();
 
@@ -130,10 +130,10 @@ contract YearnVaultMultiOracle is IOracle, AccessControl {
         if (baseId == quoteId) return (amountBase, updateTime);
 
         Source memory source = sources[baseId][quoteId];
-        if (source.source == address(0)) revert SourceNotFound();
+        if (source.source == address(0)) revert("Source Not Found");
 
         uint256 price = IYvToken(source.source).pricePerShare();
-        if (price == 0) revert ZeroPrice();
+        if (price == 0) revert("Zero Price");
 
         if (source.inverse == true) {
             // yvUSDC/USDC: 100 USDC (*10^6) * (10^6 / 1083121 USDC per yvUSDC) = 92325788 yvUSDC wei
