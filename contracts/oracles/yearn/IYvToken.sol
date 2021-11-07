@@ -9,8 +9,4 @@ interface IYvToken is IERC20 {
     // @dev total vault assets / total token supply (calculated not cached)
     // if sqrt(Vault.totalAssets()) >>> 1e39, this could potentially revert
     function pricePerShare() external view returns (uint256);
-
-    // @notice Returns decimals used with Yearn Vault token.
-    // @dev decimals is stored as a public state variable on the vault contract
-    function decimals() external view returns (uint256);
 }
