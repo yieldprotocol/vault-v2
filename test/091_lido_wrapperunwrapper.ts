@@ -7,7 +7,6 @@ import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { deployContract } = waffle
 
-import { STETHMock } from '../typechain/STETHMock'
 import { WstETHMock } from '../typechain/WSTETHMock'
 import { LidoWrapHandler } from '../typechain/LidoWrapHandler'
 import { ERC20Mock } from '../typechain/ERC20Mock'
@@ -22,7 +21,7 @@ describe('Lido Wrapper-Unwrapper', function () {
   let ownerAcc: SignerWithAddress
   let dummyAcc: SignerWithAddress
   let owner: string
-  let steth: STETHMock
+  let steth: ERC20Mock
   let wsteth: WstETHMock
   let lido: LidoWrapHandler
   const amount = ethers.utils.parseEther('1')

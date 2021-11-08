@@ -23,13 +23,13 @@ contract LidoWrapHandler {
     constructor(IWstETH wstETH_, IERC20 stETH_) {
         wstETH = wstETH_;
         stETH = stETH_;
+        stETH_.approve(address(wstETH_), type(uint256).max);
     }
 
     /// @dev Wrap stEth held by this contract and forward it to the 'to' address
     function wrap(address to) external returns (uint256 wrappedAmount) {
         uint256 stEthTransferred = stETH.balanceOf(address(this));
         require(stEthTransferred > 0, 'No stETH to wrap');
-        stETH.approve(address(wstETH), stEthTransferred);
         wrappedAmount = wstETH.wrap(stEthTransferred);
         wstETH.safeTransfer(to, wrappedAmount);
         emit Wrapped(to, wrappedAmount);

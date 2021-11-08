@@ -1,10 +1,11 @@
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.6;
 import '@yield-protocol/utils-v2/contracts/token/ERC20Permit.sol';
 
 contract WstETHMock is ERC20Permit {
     ERC20 stETH;
 
-    constructor(ERC20 _stETH) public ERC20Permit('Wrapped liquid staked Ether 2.0', 'wstETH', 18) {
+    constructor(ERC20 _stETH) ERC20Permit('Wrapped liquid staked Ether 2.0', 'wstETH', 18) {
         stETH = _stETH;
     }
 
