@@ -21,7 +21,7 @@ contract YearnVaultMock is ERC20Permit, IYvToken {
         return price;
     }
 
-    /// @notice use to set sharee price of mock
+    /// @notice use to set share price of mock
     /// @dev be sure to use correct decimals
     function setPrice(uint256 price_) public {
         price = price_;
