@@ -23,7 +23,6 @@ contract YearnVaultMultiOracle is IOracle, AccessControl {
         bytes6 indexed quoteId,
         address indexed source,
         uint8 decimals,
-        bool inverse
     );
 
     struct Source {
@@ -73,7 +72,7 @@ contract YearnVaultMultiOracle is IOracle, AccessControl {
         bool inverse
     ) internal {
         sources[baseId][quoteId] = Source({ source: address(source), decimals: decimals, inverse: inverse });
-        emit SourceSet(baseId, quoteId, address(source), decimals, inverse);
+        emit SourceSet(baseId, quoteId, address(source), decimals);
     }
 
     /**

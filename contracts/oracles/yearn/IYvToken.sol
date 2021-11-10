@@ -7,6 +7,5 @@ import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 interface IYvToken is IERC20 {
     // @notice Returns the price for a single Yearn Vault share.
     // @dev total vault assets / total token supply (calculated not cached)
-    // if sqrt(Vault.totalAssets()) >>> 1e39, this could potentially revert
     function pricePerShare() external view returns (uint256);
 }
