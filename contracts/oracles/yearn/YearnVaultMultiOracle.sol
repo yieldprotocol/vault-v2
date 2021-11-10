@@ -22,7 +22,7 @@ contract YearnVaultMultiOracle is IOracle, AccessControl {
         bytes6 indexed baseId,
         bytes6 indexed quoteId,
         address indexed source,
-        uint8 decimals,
+        uint8 decimals
     );
 
     struct Source {
