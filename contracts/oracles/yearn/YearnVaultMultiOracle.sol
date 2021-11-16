@@ -3,7 +3,6 @@ pragma solidity 0.8.6;
 
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
-import "@yield-protocol/utils-v2/contracts/token/IERC20Metadata.sol";
 
 import "@yield-protocol/vault-interfaces/IOracle.sol";
 
@@ -40,13 +39,13 @@ contract YearnVaultMultiOracle is IOracle, AccessControl {
     /**
      *@notice Set or reset an oracle source and its inverse
      *@param  baseId id used for related base token
-     *@param  quoteID id for token for quote
+     *@param  quoteId id for token for quote
      *@param  vaultToken address for Yearn vault token
      */
     function setSource(
         bytes6 baseId,
         bytes6 quoteId,
-        IERC20Metadata vaultToken
+        IYvToken vaultToken
     ) external auth {
         require(baseId != quoteId, "Set source not needed");
 
@@ -67,7 +66,7 @@ contract YearnVaultMultiOracle is IOracle, AccessControl {
     function _setSource(
         bytes6 baseId,
         bytes6 quoteId,
-        IERC20Metadata source,
+        IYvToken source,
         uint8 decimals,
         bool inverse
     ) internal {
