@@ -4,7 +4,7 @@ import { expect } from 'chai'
 import { parseEther } from '@ethersproject/units'
 import { constants, id } from '@yield-protocol/utils-v2'
 const { WAD } = constants
-import { USDC, ETH, DAI, YVUSDC, YVDAI, YVSTETH } from '../src/constants'
+import { USDC, ETH, DAI, YVUSDC, YVDAI } from '../src/constants'
 
 import { YearnVaultMultiOracle } from '../typechain/YearnVaultMultiOracle'
 import { YearnVaultMock } from '../typechain/YearnVaultMock'
