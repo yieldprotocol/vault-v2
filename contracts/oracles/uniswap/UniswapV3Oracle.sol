@@ -74,7 +74,7 @@ contract UniswapV3Oracle is IOracle, AccessControl {
         } else {
             value = UniswapV3OracleLibraryMock.consult(sourceData.factory, sourceData.baseToken, sourceData.quoteToken, sourceData.fee, amount, sourceData.secondsAgo);
         }
-        updateTime = block.timestamp - secondsAgo;
+        updateTime = block.timestamp - sourceData.secondsAgo;
     }
 
     function _setSource(bytes6 base, bytes6 quote, address source,uint32 secondsAgo) internal {
