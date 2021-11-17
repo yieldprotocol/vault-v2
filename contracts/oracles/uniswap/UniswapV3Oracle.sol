@@ -15,7 +15,7 @@ import "../../mocks/oracles/uniswap/UniswapV3OracleLibraryMock.sol";
 contract UniswapV3Oracle is IOracle, AccessControl {
     using CastBytes32Bytes6 for bytes32;
 
-    event SourceSet(bytes6 indexed base, bytes6 indexed quote, address indexed source);
+    event SourceSet(bytes6 indexed base, bytes6 indexed quote, address indexed source, uint32 secondsAgo);
 
     struct Source {
         address source;
@@ -87,7 +87,7 @@ contract UniswapV3Oracle is IOracle, AccessControl {
             IUniswapV3PoolImmutables(source).fee(),
             secondsAgo
         );
-        emit SourceSet(base, quote, source);
-        emit SourceSet(quote, base, source);
+        emit SourceSet(base, quote, source, secondsAgo);
+        emit SourceSet(quote, base, source, secondsAgo);
     }
 }
