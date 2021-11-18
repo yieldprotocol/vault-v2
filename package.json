@@ -1,6 +1,6 @@
 {
   "name": "@yield-protocol/vault-v2",
-  "version": "0.12.0",
+  "version": "0.12.2",
   "description": "Yield Collateralized Debt Engine v2",
   "author": "Yield Inc.",
   "files": [
@@ -12,6 +12,7 @@
     "contracts/oracles/composite/*.sol",
     "contracts/oracles/uniswap/*.sol",
     "contracts/oracles/lido/*.sol",
+    "contracts/utils/*.sol",
     "dist"
   ],
   "main": "dist/index.js",
