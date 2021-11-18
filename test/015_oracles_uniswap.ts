@@ -47,8 +47,8 @@ describe('Oracles - Uniswap', function () {
     uniswapV3PoolAddress = await sendStatic(uniswapV3Factory as Contract, 'createPool', ownerAcc, [token0, token1, 0])
     uniswapV3Pool = (await ethers.getContractAt('UniswapV3PoolMock', uniswapV3PoolAddress)) as UniswapV3PoolMock
     uniswapV3Oracle = (await deployContract(ownerAcc, UniswapV3OracleArtifact, [])) as UniswapV3Oracle
-    await uniswapV3Oracle.grantRole(id(uniswapV3Oracle.interface, 'setSource(bytes6,bytes6,address)'), owner)
-    await uniswapV3Oracle.setSource(baseId, ethQuoteId, uniswapV3PoolAddress)
+    await uniswapV3Oracle.grantRole(id(uniswapV3Oracle.interface, 'setSource(bytes6,bytes6,address,uint32)'), owner)
+    await uniswapV3Oracle.setSource(baseId, ethQuoteId, uniswapV3PoolAddress, 1)
   })
 
   it('retrieves the value at spot price from a uniswap v3 oracle', async () => {
