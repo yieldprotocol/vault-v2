@@ -1,59 +1,59 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.6;
 
-import '@yield-protocol/utils-v2/contracts/access/AccessControl.sol';
-import '@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol';
-import '@yield-protocol/utils-v2/contracts/math/WPow.sol';
-import '@yield-protocol/vault-interfaces/IOracle.sol';
+import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
+import "@yield-protocol/utils-v2/contracts/math/WPow.sol";
+import "@yield-protocol/vault-interfaces/IOracle.sol";
 
-import '../../constants/Constants.sol';
+import "../../constants/Constants.sol";
 
 /**
 A collection of independent Accumulator Oracles
 
 Each Accumulator is simple: it starts when `setSource` is called, 
-and each `get` call returns accumulationRate ^ (time in seconds since oracle creation)
+and each `get` call returns perSecondRate ^ (time in seconds since oracle creation)
  */
 contract AccumulatorMultiOracle is IOracle, AccessControl, Constants {
     using CastBytes32Bytes6 for bytes32;
     using WPow for uint256;
 
     struct Accumulator {
-        // @dev secondly rate
-        uint256 accumulationRate;
-        // @dev rate accumulated so far - check `get` for details
-        uint256 currentRate;
-        // time when `currentRate` was last updated
+        /// @dev secondly rate
+        uint256 perSecondRate;
+        /// @dev rate accumulated so far - check `get` for details
+        uint256 accumulated;
+        /// @dev time when `accumulated` was last updated
         uint256 lastUpdated;
     }
 
     mapping(bytes6 => mapping(bytes6 => Accumulator)) public sources;
 
-    event SourceSet(bytes6 indexed baseId, bytes6 indexed kind, uint256 startRate, uint256 accumulationRate);
-    event AccumulationRateUpdated(bytes6 indexed baseId, bytes6 indexed kind, uint256 accumulationRate);
+    event SourceSet(bytes6 indexed baseId, bytes6 indexed kind, uint256 startRate, uint256 perSecondRate);
+    event PerSecondRateUpdated(bytes6 indexed baseId, bytes6 indexed kind, uint256 perSecondRate);
 
     /**
     @notice Set a source
     @param baseId: base to set the source for
     @param kindId: kind of oracle (example: chi/rate)
     @param startRate: rate the oracle starts with
-    @param accumulationRate: secondly rate
+    @param perSecondRate: secondly rate
      */
     function setSource(
         bytes6 baseId,
         bytes6 kindId,
         uint256 startRate,
-        uint256 accumulationRate
+        uint256 perSecondRate
     ) external auth {
         Accumulator memory source = sources[baseId][kindId];
-        require(source.currentRate == 0, "Source's already set");
+        require(source.accumulated == 0, "Source is already set");
 
         sources[baseId][kindId] = Accumulator({
-            accumulationRate: accumulationRate,
-            currentRate: startRate,
+            perSecondRate: perSecondRate,
+            accumulated: startRate,
             lastUpdated: block.timestamp
         });
-        emit SourceSet(baseId, kindId, startRate, accumulationRate);
+        emit SourceSet(baseId, kindId, startRate, perSecondRate);
     }
 
     /**
@@ -62,66 +62,66 @@ contract AccumulatorMultiOracle is IOracle, AccessControl, Constants {
     The accumulation rate can only be updated on an up-to-date oracle: get() was called in the
     same block. See get() for more details
      */
-    function updateAccumulationRate(
+    function updatePerSecondRate(
         bytes6 baseId,
         bytes6 kindId,
-        uint256 accumulationRate
+        uint256 perSecondRate
     ) external auth {
         Accumulator memory source = sources[baseId][kindId];
-        require(source.currentRate != 0, 'Source not found');
+        require(source.accumulated != 0, "Source not found");
 
-        require(source.lastUpdated == block.timestamp, 'stale accumulator');
-        sources[baseId][kindId].accumulationRate = accumulationRate;
+        require(source.lastUpdated == block.timestamp, "stale accumulator");
+        sources[baseId][kindId].perSecondRate = perSecondRate;
 
-        emit AccumulationRateUpdated(baseId, kindId, accumulationRate);
+        emit PerSecondRateUpdated(baseId, kindId, perSecondRate);
     }
 
     /**
-     * @notice Retrieve the latest stored accumulator.
+     * @notice Retrieve the latest stored accumulated rate.
      */
     function peek(
         bytes32 base,
         bytes32 kind,
         uint256
-    ) external view virtual override returns (uint256 accumulator, uint256 updateTime) {
+    ) external view virtual override returns (uint256 accumulated, uint256 updateTime) {
         Accumulator memory source = sources[base.b6()][kind.b6()];
-        require(source.currentRate != 0, 'Source not found');
+        require(source.accumulated != 0, "Source not found");
 
-        accumulator = source.currentRate;
-        require(accumulator > 0, 'Accumulator is zero');
+        accumulated = source.accumulated;
+        require(accumulated > 0, "Accumulated rate is zero");
 
         updateTime = block.timestamp;
     }
 
     /**
-    @notice Retrieve the latest accumulator from source, updating it if necessary.
+    @notice Retrieve the latest accumulated rate from source, updating it if necessary.
 
     Computes baseRate ^ (block.timestamp - creation timestamp)
 
     pow() is not O(1), so the naive implementation will become slower as the time passes
     To workaround that, each time get() is called, we:
         1) compute the return value
-        2) store the return value in `currentRate` field, update lastUpdated timestamp
+        2) store the return value in `accumulated` field, update lastUpdated timestamp
 
-    Becase we have `currentRate`, step 1 becomes `currentRate * baseRate ^ (block.timestamp - lastUpdated)
+    Becase we have `accumulated`, step 1 becomes `accumulated * baseRate ^ (block.timestamp - lastUpdated)
      */
     function get(
         bytes32 base,
         bytes32 kind,
         uint256
-    ) external virtual override returns (uint256 accumulator, uint256 updateTime) {
-        Accumulator memory state = sources[base.b6()][kind.b6()];
-        require(state.currentRate != 0, 'Source not found');
+    ) external virtual override returns (uint256 accumulated, uint256 updateTime) {
+        Accumulator memory accumulator = sources[base.b6()][kind.b6()];
+        require(accumulator.accumulated != 0, "Source not found");
 
-        uint256 cycles = (block.timestamp - state.lastUpdated);
-        state.currentRate *= state.accumulationRate.wpow(cycles);
-        state.currentRate /= 1e18;
-        state.lastUpdated = block.timestamp;
+        uint256 cycles = (block.timestamp - accumulator.lastUpdated);
+        accumulator.accumulated *= accumulator.perSecondRate.wpow(cycles);
+        accumulator.accumulated /= 1e18;
+        accumulator.lastUpdated = block.timestamp;
 
-        accumulator = state.currentRate;
-        require(accumulator > 0, 'Accumulator is zero');
+        accumulated = accumulator.accumulated;
+        require(accumulated > 0, "Accumulated rate is zero");
 
-        sources[base.b6()][kind.b6()] = state;
+        sources[base.b6()][kind.b6()] = accumulator;
 
         updateTime = block.timestamp;
     }

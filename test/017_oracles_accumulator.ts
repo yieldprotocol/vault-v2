@@ -55,22 +55,22 @@ describe('AccumulatorMultiOracle', function () {
       []
     )) as AccumulatorMultiOracle
     await oracle.grantRole(id(oracle.interface, 'setSource(bytes6,bytes6,uint256,uint256)'), owner)
-    await oracle.grantRole(id(oracle.interface, 'updateAccumulationRate(bytes6,bytes6,uint256)'), owner)
+    await oracle.grantRole(id(oracle.interface, 'updatePerSecondRate(bytes6,bytes6,uint256)'), owner)
   })
 
   it('setSource can be only called once', async () => {
     await oracle.setSource(baseId1, RATE, WAD, WAD)
-    await expect(oracle.setSource(baseId1, RATE, WAD, WAD)).to.be.revertedWith("Source's already set")
+    await expect(oracle.setSource(baseId1, RATE, WAD, WAD)).to.be.revertedWith("Source is already set")
   })
 
-  describe('updateAccumulationRate', function () {
+  describe('updatePerSecondRate', function () {
     it("can't be called on uninitialized source", async () => {
-      await expect(oracle.updateAccumulationRate(baseId1, RATE, WAD)).to.be.revertedWith('Source not found')
+      await expect(oracle.updatePerSecondRate(baseId1, RATE, WAD)).to.be.revertedWith('Source not found')
     })
     it("can't be called on not-up-to-date source", async () => {
       await oracle.setSource(baseId1, RATE, WAD, WAD)
       await ff(100)
-      await expect(oracle.updateAccumulationRate(baseId1, RATE, WAD)).to.be.revertedWith('stale accumulator')
+      await expect(oracle.updatePerSecondRate(baseId1, RATE, WAD)).to.be.revertedWith('stale accumulator')
     })
   })
 
