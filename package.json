@@ -1,6 +1,6 @@
 {
   "name": "@yield-protocol/vault-v2",
-  "version": "0.12.2",
+  "version": "0.12.3",
   "description": "Yield Collateralized Debt Engine v2",
   "author": "Yield Inc.",
   "files": [
@@ -30,7 +30,7 @@
   },
   "devDependencies": {
     "@ethersproject/providers": "^5.0.15",
-    "@nomiclabs/hardhat-ethers": "^2.0.1",
+    "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-etherscan": "^2.1.0",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
     "@truffle/hdwallet-provider": "^1.0.40",
@@ -41,9 +41,9 @@
     "chai": "4.2.0",
     "dss-interfaces": "0.1.1",
     "erc3156": "^0.4.8",
-    "ethereum-waffle": "^3.2.2",
-    "ethers": "^5.0.0",
-    "hardhat": "^2.2.0",
+    "ethereum-waffle": "^3.4.0",
+    "ethers": "^5.4.6",
+    "hardhat": "^2.6.4",
     "hardhat-abi-exporter": "^2.0.3",
     "hardhat-contract-sizer": "^2.0.3",
     "hardhat-deploy": "^0.7.0-beta.44",
@@ -57,7 +57,8 @@
     "tsdx": "^0.14.1",
     "typechain": "^4.0.3",
     "typechain-target-ethers-v5": "^5.0.1",
-    "typescript": "^3.9.7"
+    "typescript": "^3.9.7",
+    "uniswapv3-oracle": "^1.0.1"
   },
   "repository": {
     "url": "git+https://github.com/yieldprotocol/vault-v2.git",
