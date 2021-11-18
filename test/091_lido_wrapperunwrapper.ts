@@ -10,7 +10,7 @@ import { ERC20Mock } from '../typechain/ERC20Mock'
 
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
 import WstETHMockArtifact from '../artifacts/contracts/mocks/WstETHMock.sol/WstETHMock.json'
-import LidoWrapHandlerArtifact from '../artifacts/contracts/modules/LidoWrapHandler.sol/LidoWrapHandler.json'
+import LidoWrapHandlerArtifact from '../artifacts/contracts/utils/LidoWrapHandler.sol/LidoWrapHandler.json'
 import { parseEther } from '@ethersproject/units'
 
 describe('Lido Wrapper-Unwrapper', function () {
