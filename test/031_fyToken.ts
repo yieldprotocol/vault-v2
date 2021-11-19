@@ -62,7 +62,7 @@ describe('FYToken', function () {
     base = env.assets.get(baseId) as ERC20Mock
     baseJoin = env.joins.get(baseId) as Join
     fyToken = env.series.get(seriesId) as FYToken
-    chiOracle = (env.oracles.get(CHI) as unknown) as CompoundMultiOracle
+    chiOracle = env.oracles.get(CHI) as unknown as CompoundMultiOracle
     chiSource = (await ethers.getContractAt('CTokenChiMock', await chiOracle.sources(baseId, CHI))) as CTokenChiMock
 
     await baseJoin.grantRoles(
