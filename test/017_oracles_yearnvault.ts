@@ -59,10 +59,7 @@ describe('Oracles - Yearn Vault', function () {
     usdc = (await deployContract(ownerAcc, USDCMockArtifact)) as USDCMock
 
     yearnVaultMultiOracle = (await deployContract(ownerAcc, YearnVaultMultiOracleArtifact, [])) as YearnVaultMultiOracle
-    await yearnVaultMultiOracle.grantRole(
-      id(yearnVaultMultiOracle.interface, 'setSource(bytes6,address)'),
-      owner
-    )
+    await yearnVaultMultiOracle.grantRole(id(yearnVaultMultiOracle.interface, 'setSource(bytes6,address)'), owner)
   })
 
   it('get() reverts if pair not found', async () => {
