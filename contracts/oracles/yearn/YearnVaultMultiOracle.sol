@@ -37,22 +37,19 @@ contract YearnVaultMultiOracle is IOracle, AccessControl {
     mapping(bytes6 => mapping(bytes6 => Source)) public sources;
 
     /**
-     *@notice Set or reset an oracle source and its inverse
-     *@param  baseId id used for related base token
-     *@param  quoteId id for token for quote
+     *@notice Set or reset a Yearn Vault Token oracle source and its inverse
+     *@param  underlyingId id used for underlying base token (e.g. USDC)
      *@param  vaultToken address for Yearn vault token
      */
     function setSource(
-        bytes6 baseId,
-        bytes6 quoteId,
+        bytes6 underlyingId,
         IYvToken vaultToken
     ) external auth {
-        require(baseId != quoteId, "Set source not needed");
-
+        bytes6 vaultTokenId = bytes6(bytes(vaultToken.symbol()));
         uint8 decimals = vaultToken.decimals();
 
-        _setSource(baseId, quoteId, vaultToken, decimals, false);
-        _setSource(quoteId, baseId, vaultToken, decimals, true);
+        _setSource(vaultTokenId, underlyingId, vaultToken, decimals, false);
+        _setSource(underlyingId, vaultTokenId, vaultToken, decimals, true);
     }
 
     /**
