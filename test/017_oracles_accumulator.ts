@@ -60,7 +60,7 @@ describe('AccumulatorMultiOracle', function () {
 
   it('setSource can be only called once', async () => {
     await oracle.setSource(baseId1, RATE, WAD, WAD)
-    await expect(oracle.setSource(baseId1, RATE, WAD, WAD)).to.be.revertedWith("Source is already set")
+    await expect(oracle.setSource(baseId1, RATE, WAD, WAD)).to.be.revertedWith('Source is already set')
   })
 
   describe('updatePerSecondRate', function () {

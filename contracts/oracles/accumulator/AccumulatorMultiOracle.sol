@@ -113,16 +113,17 @@ contract AccumulatorMultiOracle is IOracle, AccessControl, Constants {
         Accumulator memory accumulator = sources[base.b6()][kind.b6()];
         require(accumulator.accumulated != 0, "Source not found");
 
-        uint256 cycles = (block.timestamp - accumulator.lastUpdated);
-        accumulator.accumulated *= accumulator.perSecondRate.wpow(cycles);
-        accumulator.accumulated /= 1e18;
-        accumulator.lastUpdated = block.timestamp;
+        uint256 secondsSinceLastUpdate = (block.timestamp - accumulator.lastUpdated);
+        if (secondsSinceLastUpdate > 0) {
+            accumulator.accumulated *= accumulator.perSecondRate.wpow(secondsSinceLastUpdate);
+            accumulator.accumulated /= 1e18;
+            accumulator.lastUpdated = block.timestamp;
+
+            sources[base.b6()][kind.b6()] = accumulator;
+        }
 
         accumulated = accumulator.accumulated;
         require(accumulated > 0, "Accumulated rate is zero");
-
-        sources[base.b6()][kind.b6()] = accumulator;
-
         updateTime = block.timestamp;
     }
 }
