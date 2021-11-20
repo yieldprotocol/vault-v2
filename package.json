@@ -67,5 +67,8 @@
     "url": "https://github.com/yieldprotocol/vault-v2/issues"
   },
   "license": "GPL-3.0-or-later",
-  "homepage": "https://github.com/yieldprotocol/vault-v2#readme"
+  "homepage": "https://github.com/yieldprotocol/vault-v2#readme",
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.3.3"
+  }
 }
