@@ -15,8 +15,7 @@ import "../../mocks/oracles/uniswap/UniswapV3OracleLibraryMock.sol";
 contract UniswapV3Oracle is IOracle, AccessControl {
     using CastBytes32Bytes6 for bytes32;
 
-    event SecondsAgoSet(uint32 indexed secondsAgo);
-    event SourceSet(bytes6 indexed base, bytes6 indexed quote, address indexed source);
+    event SourceSet(bytes6 indexed base, bytes6 indexed quote, address indexed source, uint32 secondsAgo);
 
     struct Source {
         address source;
@@ -28,26 +27,18 @@ contract UniswapV3Oracle is IOracle, AccessControl {
         address baseToken;
         address quoteToken;
         uint24 fee;
+        uint32 secondsAgo;
     }
 
-    uint32 public secondsAgo;
     mapping(bytes6 => mapping(bytes6 => Source)) public sources;
     mapping(address => SourceData) public sourcesData;
 
     /**
-     * @notice Set or reset the number of seconds Uniswap will use for its Time Weighted Average Price computation
+     * @notice Set or reset an oracle source & its inverse and secondsAgo
      */
-    function setSecondsAgo(uint32 secondsAgo_) external auth {
-        require(secondsAgo_ != 0, "Uniswap must look into the past.");
-        secondsAgo = secondsAgo_;
-        emit SecondsAgoSet(secondsAgo_);
-    }
-
-    /**
-     * @notice Set or reset an oracle source and its inverse
-     */
-    function setSource(bytes6 base, bytes6 quote, address source) external auth {
-        _setSource(base, quote, source);
+    function setSource(bytes6 base, bytes6 quote, address source,uint32 secondsAgo) external auth {
+        require(secondsAgo != 0, 'Uniswap must look into the past.');
+        _setSource(base, quote, source,secondsAgo);
     }
 
     /**
@@ -79,23 +70,24 @@ contract UniswapV3Oracle is IOracle, AccessControl {
         require(source.source != address(0), "Source not found");
         sourceData = sourcesData[source.source];
         if (source.inverse) {
-            value = UniswapV3OracleLibraryMock.consult(sourceData.factory, sourceData.quoteToken, sourceData.baseToken, sourceData.fee, amount, secondsAgo);
+            value = UniswapV3OracleLibraryMock.consult(sourceData.factory, sourceData.quoteToken, sourceData.baseToken, sourceData.fee, amount, sourceData.secondsAgo);
         } else {
-            value = UniswapV3OracleLibraryMock.consult(sourceData.factory, sourceData.baseToken, sourceData.quoteToken, sourceData.fee, amount, secondsAgo);
+            value = UniswapV3OracleLibraryMock.consult(sourceData.factory, sourceData.baseToken, sourceData.quoteToken, sourceData.fee, amount, sourceData.secondsAgo);
         }
-        updateTime = block.timestamp - secondsAgo;
+        updateTime = block.timestamp - sourceData.secondsAgo;
     }
 
-    function _setSource(bytes6 base, bytes6 quote, address source) internal {
+    function _setSource(bytes6 base, bytes6 quote, address source,uint32 secondsAgo) internal {
         sources[base][quote] = Source(source, false);
         sources[quote][base] = Source(source, true);
         sourcesData[source] = SourceData(
             IUniswapV3PoolImmutables(source).factory(),
             IUniswapV3PoolImmutables(source).token0(),
             IUniswapV3PoolImmutables(source).token1(),
-            IUniswapV3PoolImmutables(source).fee()
+            IUniswapV3PoolImmutables(source).fee(),
+            secondsAgo
         );
-        emit SourceSet(base, quote, source);
-        emit SourceSet(quote, base, source);
+        emit SourceSet(base, quote, source, secondsAgo);
+        emit SourceSet(quote, base, source, secondsAgo);
     }
 }

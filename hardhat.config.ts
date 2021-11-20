@@ -9,6 +9,7 @@ import 'hardhat-gas-reporter'
 import 'hardhat-typechain'
 import 'solidity-coverage'
 import 'hardhat-deploy'
+import "hardhat-gas-reporter";
 
 import { task } from 'hardhat/config'
 import { TASK_TEST } from 'hardhat/builtin-tasks/task-names'
@@ -108,7 +109,10 @@ module.exports = {
     disambiguatePaths: false,
   },
   gasReporter: {
-    enabled: false,
+    currency: "USD",
+    enabled: process.env.REPORT_GAS ? true : false,
+    excludeContracts: [],
+    src: "./contracts",
   },
   defaultNetwork: 'hardhat',
   namedAccounts: {
