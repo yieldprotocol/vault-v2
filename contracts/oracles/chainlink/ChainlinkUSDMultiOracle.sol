@@ -101,7 +101,7 @@ contract ChainlinkUSDMultiOracle is IOracle, AccessControl, Constants {
             amountQuote /= (10**(baseDecimals - quoteDecimals));
         }
 
-        if (updateTime1 < updateTime2) {
+        updateTime = (updateTime1 < updateTime2) ? updateTime1 : updateTime2;
             updateTime = updateTime2;
         } else {
             updateTime = updateTime1;
