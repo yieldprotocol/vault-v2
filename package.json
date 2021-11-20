@@ -1,6 +1,6 @@
 {
   "name": "@yield-protocol/vault-v2",
-  "version": "0.12.2",
+  "version": "0.13.0",
   "description": "Yield Collateralized Debt Engine v2",
   "author": "Yield Inc.",
   "files": [
@@ -50,7 +50,8 @@
     "hardhat-gas-reporter": "^1.0.3",
     "hardhat-typechain": "^0.3.4",
     "mocha": "^8.3.2",
-    "prettier": "^2.0.5",
+    "prettier": "^2.4.1",
+    "prettier-plugin-solidity": "^1.0.0-beta.19",
     "solhint": "^3.3.3",
     "solidity-coverage": "^0.7.14",
     "ts-node": "^8.10.2",

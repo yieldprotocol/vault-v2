@@ -59,12 +59,14 @@ describe('Cauldron - level', function () {
     base = env.assets.get(baseId) as ERC20
     ilk = env.assets.get(ilkId) as ERC20
 
-    rateOracle = (env.oracles.get(RATE) as unknown) as CompoundMultiOracle
+    rateOracle = env.oracles.get(RATE) as unknown as CompoundMultiOracle
     rateSource = (await ethers.getContractAt('ISourceMock', await rateOracle.sources(baseId, RATE))) as ISourceMock
-    spotOracle = (env.oracles.get(ilkId) as unknown) as ChainlinkMultiOracle
+    spotOracle = env.oracles.get(ilkId) as unknown as ChainlinkMultiOracle
     spotSource = (await ethers.getContractAt(
       'ISourceMock',
-      (await spotOracle.sources(baseId, ilkId))[0]
+      (
+        await spotOracle.sources(baseId, ilkId)
+      )[0]
     )) as ISourceMock
     fyToken = env.series.get(seriesId) as FYToken
     vaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string

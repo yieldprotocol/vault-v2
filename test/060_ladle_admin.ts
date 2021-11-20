@@ -117,7 +117,7 @@ describe('Ladle - admin', function () {
     maturity = timestamp + THREE_MONTHS
 
     const SafeERC20NamerFactory = await ethers.getContractFactory('SafeERC20Namer')
-    const safeERC20NamerLibrary = ((await SafeERC20NamerFactory.deploy()) as unknown) as SafeERC20Namer
+    const safeERC20NamerLibrary = (await SafeERC20NamerFactory.deploy()) as unknown as SafeERC20Namer
     await safeERC20NamerLibrary.deployed()
 
     fyTokenFactory = await ethers.getContractFactory('FYToken', {
@@ -125,14 +125,14 @@ describe('Ladle - admin', function () {
         SafeERC20Namer: safeERC20NamerLibrary.address,
       },
     })
-    fyToken = ((await fyTokenFactory.deploy(
+    fyToken = (await fyTokenFactory.deploy(
       baseId,
       rateOracle.address,
       baseJoin.address,
       maturity,
       seriesId,
       'Mock FYToken'
-    )) as unknown) as FYToken
+    )) as unknown as FYToken
     await fyToken.deployed()
 
     await cauldron.addSeries(seriesId, baseId, fyToken.address)
@@ -185,14 +185,14 @@ describe('Ladle - admin', function () {
 
     it('does not allow adding a pool with a mismatched fyToken', async () => {
       // Deploy other series
-      const otherFYToken = ((await fyTokenFactory.deploy(
+      const otherFYToken = (await fyTokenFactory.deploy(
         baseId,
         rateOracle.address,
         baseJoin.address,
         maturity,
         seriesId,
         'Mock FYToken'
-      )) as unknown) as FYToken
+      )) as unknown as FYToken
       await otherFYToken.deployed()
 
       await cauldron.addSeries(otherSeriesId, baseId, otherFYToken.address)
