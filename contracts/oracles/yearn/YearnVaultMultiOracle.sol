@@ -41,8 +41,10 @@ contract YearnVaultMultiOracle is IOracle, AccessControl {
      *@param  vaultTokenId address for Yearn vault token
      *@param  underlyingId id used for underlying base token (e.g. USDC)
      *@param  vaultToken address for Yearn vault token
+     *@dev    parameter ORDER IS crucial!  If id's are out of order the math will be wrong
      */
     function setSource(
+        bytes6 vaultTokenId,
         bytes6 underlyingId,
         IYvToken vaultToken
     ) external auth {

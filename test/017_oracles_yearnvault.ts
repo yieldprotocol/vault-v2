@@ -59,7 +59,7 @@ describe('Oracles - Yearn Vault', function () {
     usdc = (await deployContract(ownerAcc, USDCMockArtifact)) as USDCMock
 
     yearnVaultMultiOracle = (await deployContract(ownerAcc, YearnVaultMultiOracleArtifact, [])) as YearnVaultMultiOracle
-    await yearnVaultMultiOracle.grantRole(id(yearnVaultMultiOracle.interface, 'setSource(bytes6,address)'), owner)
+    await yearnVaultMultiOracle.grantRole(id(yearnVaultMultiOracle.interface, 'setSource(bytes6,bytes6,address)'), owner)
   })
 
   it('get() reverts if pair not found', async () => {
@@ -70,9 +70,9 @@ describe('Oracles - Yearn Vault', function () {
 
   it('setSource() sets a pair and the inverse pair', async () => {
     //Set yvUSDC/USDC yearn vault oracle
-    expect(await yearnVaultMultiOracle.setSource(USDC, yvUSDCMock.address))
+    expect(await yearnVaultMultiOracle.setSource(YVUSDC, USDC, yvUSDCMock.address))
       .to.emit(yearnVaultMultiOracle, 'SourceSet')
-      .withArgs(USDC, YVUSDC, yvUSDCMock.address, 6, true)
+      .withArgs(YVUSDC, USDC, yvUSDCMock.address, 6)
 
     await expect(yearnVaultMultiOracle.get(bytes6ToBytes32(USDC), bytes6ToBytes32(YVUSDC), '2' + '000000')).not.to.be
       .reverted
@@ -80,8 +80,8 @@ describe('Oracles - Yearn Vault', function () {
 
   describe('with sources set', function () {
     beforeEach(async () => {
-      await yearnVaultMultiOracle.setSource(USDC, yvUSDCMock.address)
-      await yearnVaultMultiOracle.setSource(DAI, yvDAIMock.address)
+      await yearnVaultMultiOracle.setSource(YVUSDC,  USDC, yvUSDCMock.address)
+      await yearnVaultMultiOracle.setSource(YVDAI, DAI, yvDAIMock.address)
     })
 
     it('get() and peek() return correct values', async () => {
