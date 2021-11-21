@@ -17,9 +17,9 @@ interface ICauldron {
     function balances(bytes12 vault) external view returns (Balances memory);
 }
 
-//Staking wrapper for Abracadabra platform
+//Staking wrapper for Yield platform
 //use convex LP positions as collateral while still receiving rewards
-contract ConvexStakingWrapperAbra is ConvexStakingWrapper {
+contract ConvexStakingWrapperYield is ConvexStakingWrapper {
     using SafeERC20 for IERC20;
     using Address for address;
 
@@ -77,8 +77,8 @@ contract ConvexStakingWrapperAbra is ConvexStakingWrapper {
         vaults.push(_vault);
     }
 
-    // What does collateralvault do and how does it work?
-    // Get user's balance of collateral deposited at various locations (vaults or vaults for yield) vaultId cauldron.balances[vaultId].ink
+    
+    // Get user's balance of collateral deposited at in various vaults
     function _getDepositedBalance(address _account) internal view override returns (uint256) {
         if (_account == address(0) || _account == collateralVault) {
             return 0;
@@ -88,17 +88,13 @@ contract ConvexStakingWrapperAbra is ConvexStakingWrapper {
             return balanceOf(_account);
         }
 
-        //add up all shares of all vaults
+        //add up all balances of all vaults
         uint256 collateral;
         for (uint256 i = 0; i < vaults.length; i++) {
             try ICauldron(cauldron).balances(vaults[i]) returns (Balances memory _balance) {
                 collateral = collateral + (_balance.ink);
             } catch {}
         }
-
-        //convert shares to balance amount via bento box
-        // uint256 collateral = IBentoBox(collateralVault).toAmount(address(this), share, false);
-
         //add to balance of this token
         return balanceOf(_account) + collateral;
     }
