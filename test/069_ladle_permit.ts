@@ -54,7 +54,7 @@ describe('Ladle - permit', function () {
     ilkJoin = env.joins.get(ilkId) as Join
     ilk = env.assets.get(ilkId) as ERC20Mock
     fyToken = env.series.get(seriesId) as FYToken
-    dai = (env.assets.get(DAI) as unknown) as DAIMock
+    dai = env.assets.get(DAI) as unknown as DAIMock
 
     ilkVaultId = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId) as string
   })
