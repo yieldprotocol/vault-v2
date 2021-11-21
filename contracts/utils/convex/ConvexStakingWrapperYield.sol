@@ -3,9 +3,8 @@
 pragma solidity 0.8.6;
 pragma experimental ABIEncoderV2;
 
-// import "../interfaces/IBentoBox.sol";
 import './ConvexStakingWrapper.sol';
-
+import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 
 struct Balances {
     uint128 art; // Debt amount
@@ -19,7 +18,7 @@ interface ICauldron {
 
 //Staking wrapper for Yield platform
 //use convex LP positions as collateral while still receiving rewards
-contract ConvexStakingWrapperYield is ConvexStakingWrapper {
+contract ConvexStakingWrapperYield is ConvexStakingWrapper,AccessControl {
     using SafeERC20 for IERC20;
     using Address for address;
 
@@ -34,7 +33,7 @@ contract ConvexStakingWrapperYield is ConvexStakingWrapper {
         address _convexPool,
         uint256 _poolId,
         address _vault
-    ) external override {
+    ) external override auth{
         require(!isInit, 'already init');
         owner = address(0xa3C5A1e09150B75ff251c1a7815A07182c3de2FB); //default to convex multisig
         emit OwnershipTransferred(address(0), owner);
@@ -61,23 +60,38 @@ contract ConvexStakingWrapperYield is ConvexStakingWrapper {
         return vaults.length;
     }
 
-    // Set the locations of vaults where the user's funds have been deposited & the accounting is kept
-    function setVault(bytes12 _vault) external onlyOwner {
-        //allow settings and changing vaults that receive staking rewards.
-        // require(_cauldron != address(0), "invalid cauldron");
+    function setCauldron(address _cauldron) external auth{
+        require(_cauldron!=address(0), 'cauldron address cannot be 0');
+        cauldron = _cauldron;
+        
+    }
 
-        //do not allow doubles
+    // Set the locations of vaults where the user's funds have been deposited & the accounting is kept
+    function setVault(bytes12 _vault) external auth {
         for (uint256 i = 0; i < vaults.length; i++) {
             require(vaults[i] != _vault, 'already added');
         }
-
-        //IMPORTANT: when adding a cauldron,
-        // it should be added to this list BEFORE anyone starts using it
-        // or else a user may receive more than what they should
         vaults.push(_vault);
     }
 
-    
+    function removeVault(bytes12 _vault) external auth {
+        for (uint256 i = 0; i < vaults.length; i++) {
+            if(vaults[i] == _vault){
+                remove(i);
+                break;
+            }
+        }
+    }
+
+    function remove(uint _index) internal{
+        require(_index < vaults.length, "index out of bound");
+
+        for (uint i = _index; i < vaults.length - 1; i++) {
+            vaults[i] = vaults[i + 1];
+        }
+        vaults.pop();
+    }
+
     // Get user's balance of collateral deposited at in various vaults
     function _getDepositedBalance(address _account) internal view override returns (uint256) {
         if (_account == address(0) || _account == collateralVault) {
