@@ -1,5 +1,5 @@
 //https://etherscan.io/address/0x3ba207c25a278524e1cc7faaea950753049072a4#code
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.6;
 pragma experimental ABIEncoderV2;
 
