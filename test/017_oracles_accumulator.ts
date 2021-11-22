@@ -15,8 +15,11 @@ function bytes6ToBytes32(x: string): string {
 
 // fast forward X seconds
 async function ff(seconds: number) {
+  const block = await ethers.provider.getBlock('latest')
+  console.log(`FFing ${seconds} seconds from ${block.timestamp} (expecting: ${block.timestamp + seconds})`)
   await network.provider.send('evm_increaseTime', [seconds])
   await network.provider.send('evm_mine')
+  console.log(`FFeded to: ${(await ethers.provider.getBlock('latest')).timestamp}`)
 }
 
 // make the next block's timestamp fast forward X seconds
