@@ -1,37 +1,64 @@
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { ethers, waffle } from 'hardhat'
+import * as fs from 'fs'
+import { YieldEnvironment } from './shared/fixtures'
+import { constants, id } from '@yield-protocol/utils-v2'
+const { WAD } = constants
 import { expect } from 'chai'
-import { parseEther } from '@ethersproject/units'
-import { ETH,CVX3CRV,USDC,DAI } from '../src/constants'
+import { ETH, DAI, USDC, CVX3CRV } from '../src/constants'
+import {
+  Ladle,
+  ERC20Mock,
+  WstETHMock,
+  LidoWrapHandler,
+  ConvexStakingWrapperYieldMock,
+  ChainlinkMultiOracle,
+  ISourceMock,
+  Wand,
+  Witch,
+  CompositeMultiOracle,
+  CurvePoolMock,
+  DummyConvexCurveOracle,
+  ChainlinkAggregatorV3Mock,
+  WETH9Mock,
+  DAIMock,
+  USDCMock
+} from '../typechain'
 
-import { ChainlinkAggregatorV3Mock } from '../typechain/ChainlinkAggregatorV3Mock'
-import {DummyConvexCurveOracle} from '../typechain/DummyConvexCurveOracle'
-import {CurvePoolMock} from '../typechain/CurvePoolMock'
-import { ChainlinkMultiOracle } from '../typechain/ChainlinkMultiOracle'
-import { CompositeMultiOracle } from '../typechain/CompositeMultiOracle'
-
+import ConvexStakingWrapperYieldMockArtifact from '../artifacts/contracts/mocks/ConvexStakingWrapperYieldMock.sol/ConvexStakingWrapperYieldMock.json'
+import ChainlinkMultiOracleArtifact from '../artifacts/contracts/oracles/chainlink/ChainlinkMultiOracle.sol/ChainlinkMultiOracle.json'
 import ChainlinkAggregatorV3MockArtifact from '../artifacts/contracts/mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol/ChainlinkAggregatorV3Mock.json'
 import DummyConvexCurveOracleArtifact from '../artifacts/contracts/oracles/convex/DummyConvexCurveOracle.sol/DummyConvexCurveOracle.json'
 import CurvePoolMockArtifact from '../artifacts/contracts/mocks/oracles/convex/CurvePoolMock.sol/CurvePoolMock.json'
-import ChainlinkMultiOracleArtifact from '../artifacts/contracts/oracles/chainlink/ChainlinkMultiOracle.sol/ChainlinkMultiOracle.json'
 import CompositeMultiOracleArtifact from '../artifacts/contracts/oracles/composite/CompositeMultiOracle.sol/CompositeMultiOracle.json'
 import WETH9MockArtifact from '../artifacts/contracts/mocks/WETH9Mock.sol/WETH9Mock.json'
 import DAIMockArtifact from '../artifacts/contracts/mocks/DAIMock.sol/DAIMock.json'
 import USDCMockArtifact from '../artifacts/contracts/mocks/USDCMock.sol/USDCMock.json'
 
-import { id } from '@yield-protocol/utils-v2'
-import { DAIMock, USDCMock, WETH9Mock } from '../typechain'
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
+import { parseEther } from '@ethersproject/units'
+import { LadleWrapper } from '../src/ladleWrapper'
 const { deployContract } = waffle
 
 function bytes6ToBytes32(x: string): string {
-  return x + '00'.repeat(26)
-}
+    return x + '00'.repeat(26)
+  }
 
-describe('Oracles - Convex', function () {
-  this.timeout(0)
-
+/**
+ * @dev This script tests the stEth, wstEth and LidoWrapHandler integration with the Ladle
+ */
+describe('Convex Wrapper', function () {
+  let wstEth: ERC20Mock
+  let stEth: ERC20Mock
+  let ladle: Ladle
+  let wand: Wand
+  let witch: Witch
   let ownerAcc: SignerWithAddress
-  let owner: string
+  
+  let convex: ConvexStakingWrapperYieldMock
+  
+  
+  const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
+
   let DummyConvexCurveOracle: DummyConvexCurveOracle
   let daiEthAggregator: ChainlinkAggregatorV3Mock
   let usdcEthAggregator: ChainlinkAggregatorV3Mock
@@ -44,11 +71,36 @@ describe('Oracles - Convex', function () {
 
   let chainlinkMultiOracle: ChainlinkMultiOracle
   let compositeMultiOracle: CompositeMultiOracle
+  
 
+  let env: YieldEnvironment
+
+  async function fixture() {
+    return await YieldEnvironment.setup(ownerAcc, [USDC, ETH], [seriesId])
+  }
   before(async () => {
     const signers = await ethers.getSigners()
     ownerAcc = signers[0]
-    owner = await ownerAcc.getAddress()
+
+    env = await fixture()
+    convex = ((await deployContract(
+      ownerAcc,
+      ConvexStakingWrapperYieldMockArtifact
+    )) as unknown) as ConvexStakingWrapperYieldMock
+    
+    ladle = env.ladle.ladle
+    wand = env.wand
+    witch = env.witch
+    // const usdcSource = (await ethers.getContractAt(
+    //   'ISourceMock',
+    //   (await chainlinkMultiOracle.sources(USDC, ETH))[0]
+    // )) as ISourceMock
+    // await usdcSource.set("1") // ETH wei per USDC
+
+    await ladle.grantRoles(
+      [id(ladle.interface, 'addToken(address,bool)'), id(ladle.interface, 'addIntegration(address,bool)')],
+      ownerAcc.address
+    )
 
     weth = (await deployContract(ownerAcc, WETH9MockArtifact)) as WETH9Mock
     usdc = (await deployContract(ownerAcc, USDCMockArtifact)) as USDCMock
@@ -66,12 +118,11 @@ describe('Oracles - Convex', function () {
     chainlinkMultiOracle = (await deployContract(ownerAcc, ChainlinkMultiOracleArtifact, [])) as ChainlinkMultiOracle
     await chainlinkMultiOracle.grantRole(
       id(chainlinkMultiOracle.interface, 'setSource(bytes6,address,bytes6,address,address)'),
-      owner
+      ownerAcc.address
     )
 
-    //Set DAI/ETH chainlink oracle
+    //Set stETH/ETH chainlink oracle
     await chainlinkMultiOracle.setSource(DAI, dai.address, ETH, weth.address, daiEthAggregator.address)
-    //Set USDC/ETH chainlink oracle
     await chainlinkMultiOracle.setSource(USDC, usdc.address, ETH, weth.address, usdcEthAggregator.address)
 
     compositeMultiOracle = (await deployContract(ownerAcc, CompositeMultiOracleArtifact)) as CompositeMultiOracle
@@ -80,7 +131,7 @@ describe('Oracles - Convex', function () {
         id(compositeMultiOracle.interface, 'setSource(bytes6,bytes6,address)'),
         id(compositeMultiOracle.interface, 'setPath(bytes6,bytes6,bytes6[])'),
       ],
-      owner
+      ownerAcc.address
     )
     
 
@@ -101,64 +152,30 @@ describe('Oracles - Convex', function () {
     await compositeMultiOracle.setPath(DAI, CVX3CRV, [ETH])
     
     await compositeMultiOracle.setPath(USDC, CVX3CRV, [ETH])
-    
   })
 
-  it('How many ETH for one cvx3CRV', async () => {
-    const eth = (await DummyConvexCurveOracle.callStatic.get(bytes6ToBytes32(CVX3CRV), bytes6ToBytes32(ETH), parseEther('1')))[0]
-    expect(eth.toString()).equals('234675878990471')
+  it('Add integration', async () => {
+    expect(await ladle.addIntegration(convex.address, true)).to.emit(ladle, 'IntegrationAdded')
+    await wand.addAsset(CVX3CRV,convex.address)
+    await witch.setIlk(CVX3CRV, 4 * 60 * 60, WAD.div(2), 1000000, 0, 18)
+    await wand.makeIlk(USDC, CVX3CRV, DummyConvexCurveOracle.address, 1000000, 1000000, 1000000, 6)
   })
 
-  it('How many CVX3CRV for one ETH', async () => {
-    const cvx3crv = (await DummyConvexCurveOracle.callStatic.get(bytes6ToBytes32(ETH), bytes6ToBytes32(CVX3CRV), parseEther('1')))[0]
-    expect(cvx3crv.toString()).equals('4261196354315583239214')
+  it('routes calls through the Ladle', async () => {
+    await convex.approve(ladle.address, parseEther('1'))
+
+    const wrapCall = convex.interface.encodeFunctionData('deposit', [parseEther('1'), ladle.address])
+    await ladle.route(convex.address, wrapCall)
+    expect((await convex.balanceOf(ladle.address)).toString()).to.equals(parseEther('1').toString())
   })
 
-  describe('Composite', () => {
-    it('retrieves the value at spot price for direct pairs', async () => {
-      // DAI-ETH
-      expect(
-        (await compositeMultiOracle.peek(bytes6ToBytes32(DAI), bytes6ToBytes32(ETH), parseEther('1')))[0]
-      ).to.equal('230213930000000')
-      expect(
-        (await compositeMultiOracle.peek(bytes6ToBytes32(ETH), bytes6ToBytes32(DAI), parseEther('1')))[0]
-      ).to.equal('4343785799582153868794')
+  it('transfers wstEth through the Ladle', async () => {
+    // await wstEth.connect(stEthWhaleAcc).approve(ladle.address, MAX256)
+    // await ladle.connect(stEthWhaleAcc).transfer(wstEth.address, lidoWrapHandler.address, WAD)
+  })
 
-      // USDC-ETH
-      expect(
-        (await compositeMultiOracle.peek(bytes6ToBytes32(USDC), bytes6ToBytes32(ETH), parseEther('1')))[0]
-      ).to.equal('230171858101077000000000000')
-      expect(
-        (await compositeMultiOracle.peek(bytes6ToBytes32(ETH), bytes6ToBytes32(USDC), parseEther('1')))[0]
-      ).to.equal('4344579777')
-
-      // ETH-CVX3CRV
-      expect(
-        (await compositeMultiOracle.peek(bytes6ToBytes32(ETH), bytes6ToBytes32(CVX3CRV), parseEther('1')))[0]
-      ).to.equal('4261196354315583239214')
-      expect(
-        (await compositeMultiOracle.peek(bytes6ToBytes32(CVX3CRV), bytes6ToBytes32(ETH), parseEther('1')))[0]
-      ).to.equal('234675878990471')
-    })
-
-    it('retrieves the value at spot price for CVX3CRV -> DAI and reverse', async () => {
-      expect(
-        (await compositeMultiOracle.peek(bytes6ToBytes32(DAI), bytes6ToBytes32(CVX3CRV), parseEther('1')))[0]
-      ).to.equal('980986759228662877')
-
-      expect(
-        (await compositeMultiOracle.peek(bytes6ToBytes32(CVX3CRV), bytes6ToBytes32(DAI), parseEther('1')))[0]
-      ).to.equal('1019381750663267856')
-    })
-
-    it('retrieves the value at spot price for CVX3CRV -> USDC and reverse', async () => {
-      expect(
-        (await compositeMultiOracle.peek(bytes6ToBytes32(CVX3CRV), bytes6ToBytes32(USDC), parseEther('1')))[0]
-      ).to.equal('1019568')
-
-      expect(
-        (await compositeMultiOracle.peek(bytes6ToBytes32(USDC), bytes6ToBytes32(CVX3CRV), parseEther('1')))[0]
-      ).to.equal('980807482606353056428760359622')
-    })
+  it('transfers stEth through the Ladle', async () => {
+    // await stEth.connect(stEthWhaleAcc).approve(ladle.address, MAX256)
+    // await ladle.connect(stEthWhaleAcc).transfer(stEth.address, lidoWrapHandler.address, WAD)
   })
 })
