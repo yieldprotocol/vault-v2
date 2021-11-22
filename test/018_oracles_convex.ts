@@ -104,12 +104,12 @@ describe('Oracles - Convex', function () {
     
   })
 
-  it('How many ETH for one cvx3CRV', async () => {
+  it('cvx3CRV->ETH', async () => {
     const eth = (await DummyConvexCurveOracle.callStatic.get(bytes6ToBytes32(CVX3CRV), bytes6ToBytes32(ETH), parseEther('1')))[0]
     expect(eth.toString()).equals('234675878990471')
   })
 
-  it('How many CVX3CRV for one ETH', async () => {
+  it('ETH->cvx3CRV', async () => {
     const cvx3crv = (await DummyConvexCurveOracle.callStatic.get(bytes6ToBytes32(ETH), bytes6ToBytes32(CVX3CRV), parseEther('1')))[0]
     expect(cvx3crv.toString()).equals('4261196354315583239214')
   })
@@ -132,13 +132,6 @@ describe('Oracles - Convex', function () {
         (await compositeMultiOracle.peek(bytes6ToBytes32(ETH), bytes6ToBytes32(USDC), parseEther('1')))[0]
       ).to.equal('4344579777')
 
-      // ETH-CVX3CRV
-      expect(
-        (await compositeMultiOracle.peek(bytes6ToBytes32(ETH), bytes6ToBytes32(CVX3CRV), parseEther('1')))[0]
-      ).to.equal('4261196354315583239214')
-      expect(
-        (await compositeMultiOracle.peek(bytes6ToBytes32(CVX3CRV), bytes6ToBytes32(ETH), parseEther('1')))[0]
-      ).to.equal('234675878990471')
     })
 
     it('retrieves the value at spot price for CVX3CRV -> DAI and reverse', async () => {

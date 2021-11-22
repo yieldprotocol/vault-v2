@@ -63,9 +63,9 @@ contract DummyConvexCurveOracle  is IOracle{
         
         uint price  = (threecrv.get_virtual_price()*minStable)/1e18;
         
-        if(base==cvx3CrvId&&(quote==ethId)){
+        if(base==cvx3CrvId&&quote==ethId){
             quoteAmount = baseAmount * price/(1e18);
-        } if(quote==cvx3CrvId&&(base==ethId)){
+        } if(quote==cvx3CrvId&&base==ethId){
             quoteAmount = baseAmount * (1e18)/price;
         }
         updateTime = block.timestamp;
