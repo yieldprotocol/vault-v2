@@ -243,9 +243,9 @@ export class YieldEnvironment {
     for (let assetId of assetIds) {
       const symbol = Buffer.from(assetId.slice(2), 'hex').toString('utf8')
       let asset: ERC20Mock
-      if (assetId === DAI) asset = (dai as unknown) as ERC20Mock
-      else if (assetId === USDC) asset = (usdc as unknown) as ERC20Mock
-      else if (assetId === ETH) asset = (weth as unknown) as ERC20Mock
+      if (assetId === DAI) asset = dai as unknown as ERC20Mock
+      else if (assetId === USDC) asset = usdc as unknown as ERC20Mock
+      else if (assetId === ETH) asset = weth as unknown as ERC20Mock
       else asset = (await deployContract(owner, ERC20MockArtifact, [assetId, symbol])) as ERC20Mock
 
       assets.set(assetId, asset)
@@ -283,7 +283,7 @@ export class YieldEnvironment {
 
     // ==== Libraries ====
     const SafeERC20NamerFactory = await ethers.getContractFactory('SafeERC20Namer')
-    const safeERC20NamerLibrary = ((await SafeERC20NamerFactory.deploy()) as unknown) as SafeERC20Namer
+    const safeERC20NamerLibrary = (await SafeERC20NamerFactory.deploy()) as unknown as SafeERC20Namer
     await safeERC20NamerLibrary.deployed()
 
     // ==== Protocol ====
@@ -300,7 +300,7 @@ export class YieldEnvironment {
         SafeERC20Namer: safeERC20NamerLibrary.address,
       },
     })
-    const fyTokenFactory = ((await fyTokenFactoryFactory.deploy()) as unknown) as FYTokenFactory
+    const fyTokenFactory = (await fyTokenFactoryFactory.deploy()) as unknown as FYTokenFactory
     await fyTokenFactory.deployed()
 
     const wand = (await deployContract(owner, WandArtifact, [
@@ -314,8 +314,8 @@ export class YieldEnvironment {
 
     const chiRateOracle = (await deployContract(owner, CompoundMultiOracleArtifact, [])) as CompoundMultiOracle
     const spotOracle = (await deployContract(owner, ChainlinkMultiOracleArtifact, [])) as ChainlinkMultiOracle
-    oracles.set(RATE, (chiRateOracle as unknown) as OracleMock)
-    oracles.set(CHI, (chiRateOracle as unknown) as OracleMock)
+    oracles.set(RATE, chiRateOracle as unknown as OracleMock)
+    oracles.set(CHI, chiRateOracle as unknown as OracleMock)
 
     // ==== Orchestration ====
     await this.cauldronLadleAuth(cauldron, ladle.address)
@@ -370,7 +370,7 @@ export class YieldEnvironment {
       await spotOracle.setSource(baseId, base.address, ilkId, ilk.address, spotSource.address)
       await witch.setIlk(ilkId, 4 * 60 * 60, WAD.div(2), 1000000, 0, await ilk.decimals())
       await wand.makeIlk(baseId, ilkId, spotOracle.address, ratio, 1000000, 1, await base.decimals())
-      oracles.set(ilkId, (spotOracle as unknown) as OracleMock)
+      oracles.set(ilkId, spotOracle as unknown as OracleMock)
     }
 
     // ==== Add series and pools ====
@@ -384,7 +384,9 @@ export class YieldEnvironment {
       await wand.addSeries(seriesId, baseId, maturity, assetIds, seriesId, seriesId)
       const fyToken = (await ethers.getContractAt(
         'FYToken',
-        (await cauldron.series(seriesId)).fyToken,
+        (
+          await cauldron.series(seriesId)
+        ).fyToken,
         owner
       )) as FYToken
       const pool = (await ethers.getContractAt('PoolMock', await ladle.pools(seriesId), owner)) as PoolMock
