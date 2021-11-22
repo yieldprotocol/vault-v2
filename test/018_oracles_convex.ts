@@ -126,8 +126,8 @@ describe('Oracles - Convex', function () {
 
       // USDC-ETH
       expect(
-        (await compositeMultiOracle.peek(bytes6ToBytes32(USDC), bytes6ToBytes32(ETH), parseEther('1')))[0]
-      ).to.equal('230171858101077000000000000')
+        (await compositeMultiOracle.peek(bytes6ToBytes32(USDC), bytes6ToBytes32(ETH), "1000000"))[0]
+      ).to.equal('230171858101077')
       expect(
         (await compositeMultiOracle.peek(bytes6ToBytes32(ETH), bytes6ToBytes32(USDC), parseEther('1')))[0]
       ).to.equal('4344579777')
@@ -157,8 +157,8 @@ describe('Oracles - Convex', function () {
       ).to.equal('1019568')
 
       expect(
-        (await compositeMultiOracle.peek(bytes6ToBytes32(USDC), bytes6ToBytes32(CVX3CRV), parseEther('1')))[0]
-      ).to.equal('980807482606353056428760359622')
+        (await compositeMultiOracle.peek(bytes6ToBytes32(USDC), bytes6ToBytes32(CVX3CRV), "1000000"))[0]
+      ).to.equal('980807482606353056')
     })
   })
 })
