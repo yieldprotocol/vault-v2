@@ -32,7 +32,7 @@ contract ConvexStakingWrapperYield is ConvexStakingWrapper,AccessControl {
         convexToken = _convexToken;
         convexPool = _convexPool;
         convexPoolId = _poolId;
-        collateralVault = address(0xF5BCE5077908a1b7370B9ae04AdC565EBd643966); //TODO: We will have to come up with our own vault. Perhaps join might work here
+        collateralVault = address(0); //TODO: set to the join so that the protocol can't claim the reward
 
         //add rewards
         addRewards();
