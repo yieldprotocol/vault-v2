@@ -1,6 +1,6 @@
 {
   "name": "@yield-protocol/vault-v2",
-  "version": "0.13.1",
+  "version": "0.14.0",
   "description": "Yield Collateralized Debt Engine v2",
   "author": "Yield Inc.",
   "files": [
@@ -59,7 +59,8 @@
     "tsdx": "^0.14.1",
     "typechain": "^4.0.3",
     "typechain-target-ethers-v5": "^5.0.1",
-    "typescript": "^3.9.7"
+    "typescript": "^3.9.7",
+    "uniswapv3-oracle": "^1.0.1"
   },
   "repository": {
     "url": "git+https://github.com/yieldprotocol/vault-v2.git",

@@ -79,9 +79,9 @@ describe('Oracles - Yearn Vault', function () {
 
   it('setSource() sets a pair and the inverse pair', async () => {
     //Set yvUSDC/USDC yearn vault oracle
-    expect(await yearnVaultMultiOracle.setSource(YVUSDC, USDC, yvUSDCMock.address))
+    await expect(yearnVaultMultiOracle.setSource(YVUSDC, USDC, yvUSDCMock.address))
       .to.emit(yearnVaultMultiOracle, 'SourceSet')
-      .withArgs(USDC, YVUSDC, yvUSDCMock.address, 6, true)
+      .withArgs(USDC, YVUSDC, yvUSDCMock.address, 6)
 
     await expect(yearnVaultMultiOracle.get(bytes6ToBytes32(USDC), bytes6ToBytes32(YVUSDC), '2' + '000000')).not.to.be
       .reverted
