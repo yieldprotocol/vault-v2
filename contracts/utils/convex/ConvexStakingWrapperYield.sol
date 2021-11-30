@@ -4,108 +4,105 @@ pragma solidity 0.8.6;
 pragma experimental ABIEncoderV2;
 
 import './ConvexStakingWrapper.sol';
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 
 struct Balances {
     uint128 art; // Debt amount
     uint128 ink; // Collateral amount
 }
 
+struct Vault {
+    address owner;
+    bytes6 seriesId; // Each vault is related to only one series, which also determines the underlying.
+    bytes6 ilkId; // Asset accepted as collateral
+}
+
 interface ICauldron {
     /// @dev Each vault records debt and collateral balances_.
     function balances(bytes12 vault) external view returns (Balances memory);
+
+    /// @dev A user can own one or more Vaults, with each vault being able to borrow from a single series.
+    function vaults(bytes12 vault) external view returns (Vault memory);
 }
 
-//Staking wrapper for Yield platform
-//use convex LP positions as collateral while still receiving rewards
-contract ConvexStakingWrapperYield is ConvexStakingWrapper,AccessControl {
+/// @title Convex staking wrapper for Yield platform
+/// @notice Enables use of convex LP positions as collateral while still receiving rewards
+contract ConvexStakingWrapperYield is ConvexStakingWrapper {
     using SafeERC20 for IERC20;
     using Address for address;
 
+    /// @notice Mapping to keep track of the user & their vaults
+    mapping(address => bytes12[]) public vaults;
 
-    mapping(address=>bytes12[]) public vaults;
-    address cauldron;
+    ICauldron cauldron;
 
-    constructor() public {}
+    /// @notice Event called when a vault is set for a user
+    /// @param account The account for which vault is set
+    /// @param vault The vaultId
+    event VaultSet(address account, bytes12 vault);
 
-    function initialize(
-        address _curveToken,
-        address _convexToken,
-        address _convexPool,
-        uint256 _poolId,
-        address _vault
-    ) external override auth{
-        require(!isInit, 'already init');
-        owner = address(0xa3C5A1e09150B75ff251c1a7815A07182c3de2FB); //TODO: Find why this needs to be set to convex multisig
-        emit OwnershipTransferred(address(0), owner);//TODO: Find why this needs to be done
-        _tokenname = string(abi.encodePacked('Staked ', ERC20(_convexToken).name(), ' Yield'));
-        _tokensymbol = string(abi.encodePacked('stk', ERC20(_convexToken).symbol(), '-yield'));
+    constructor(
+        address curveToken_,
+        address convexToken_,
+        address convexPool_,
+        uint256 poolId_,
+        address join_,
+        ICauldron cauldron_,
+        address timelock_
+    ) {
+        owner = address(timelock_);
+        emit OwnershipTransferred(address(0), owner);
+        _tokenname = string(abi.encodePacked('Staked ', ERC20(convexToken_).name(), ' Yield'));
+        _tokensymbol = string(abi.encodePacked('stk', ERC20(convexToken_).symbol(), '-yield'));
         isShutdown = false;
         isInit = true;
-        curveToken = _curveToken;
-        convexToken = _convexToken;
-        convexPool = _convexPool;
-        convexPoolId = _poolId;
-        collateralVault = _vault; //TODO: Add the join address
+        curveToken = curveToken_;
+        convexToken = convexToken_;
+        convexPool = convexPool_;
+        convexPoolId = poolId_;
+        collateralVault = join_; //TODO: Add the join address
+        cauldron = cauldron_;
 
         //add rewards
         addRewards();
         setApprovals();
     }
 
-    function setCauldron(address _cauldron) external auth{
-        require(_cauldron!=address(0), 'cauldron address cannot be 0');
-        cauldron = _cauldron;
-    }
-
-    // Set the locations of vaults where the user's funds have been deposited & the accounting is kept
-    function setVault(address _account, bytes12 _vault) external auth {
-        bytes12[] storage userVault = vaults[_account];
+    /// @notice Adds a vault to the user's vault list
+    /// @param vault_ The vaulId being added
+    function addVault(bytes12 vault_) external {
+        address account = cauldron.vaults(vault_).owner;
+        require(account != address(0), 'No owner for the vault');
+        bytes12[] storage userVault = vaults[account];
         for (uint256 i = 0; i < userVault.length; i++) {
-            require(userVault[i] != _vault, 'already added');
+            require(userVault[i] != vault_, 'already added');
         }
-        userVault.push(_vault);
-        vaults[_account] = userVault;
+        userVault.push(vault_);
+        vaults[account] = userVault;
+        emit VaultSet(account, vault_);
     }
 
-    function removeVault(address _account, bytes12 _vault) external auth {
-        bytes12[] storage userVault = vaults[_account];
-        for (uint256 i = 0; i < userVault.length; i++) {
-            if(userVault[i] == _vault){
-                vaults[_account] = remove(i,userVault);
-                break;
-            }
-        }
-    }
-
-    function remove(uint _index,bytes12[] storage userVault) internal returns (bytes12[] memory){
-        require(_index < userVault.length, "index out of bound");
-
-        for (uint i = _index; i < userVault.length - 1; i++) {
-            userVault[i] = userVault[i + 1];
-        }
-        userVault.pop();
-        return userVault;
-    }
-
-    // Get user's balance of collateral deposited at in various vaults
-    function _getDepositedBalance(address _account) internal view override returns (uint256) {
-        if (_account == address(0) || _account == collateralVault) {
+    /// @notice Get user's balance of collateral deposited in various vaults
+    /// @param account_ User's address for which balance is requested
+    /// @return User's balance of collateral
+    function _getDepositedBalance(address account_) internal view override returns (uint256) {
+        if (account_ == address(0) || account_ == collateralVault) {
             return 0;
         }
 
-        if (vaults[_account].length == 0) {
-            return balanceOf(_account);
+        if (vaults[account_].length == 0) {
+            return balanceOf(account_);
         }
-    bytes12[] memory userVault = vaults[_account];
+        bytes12[] memory userVault = vaults[account_];
+
         //add up all balances of all vaults
         uint256 collateral;
+        Balances memory balance;
         for (uint256 i = 0; i < userVault.length; i++) {
-            try ICauldron(cauldron).balances(userVault[i]) returns (Balances memory _balance) {
-                collateral = collateral + (_balance.ink);
-            } catch {}
+            balance = cauldron.balances(userVault[i]);
+            collateral = collateral + balance.ink;
         }
+
         //add to balance of this token
-        return balanceOf(_account) + collateral;
+        return balanceOf(account_) + collateral;
     }
 }
