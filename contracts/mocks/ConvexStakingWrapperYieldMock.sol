@@ -72,24 +72,4 @@ contract ConvexStakingWrapperYieldMock is ERC20 {
         userVault.push(vault_);
         vaults[account] = userVault;
     }
-
-    function removeVault(address _account, bytes12 _vault) external {
-        bytes12[] storage userVault = vaults[_account];
-        for (uint256 i = 0; i < userVault.length; i++) {
-            if (userVault[i] == _vault) {
-                vaults[_account] = remove(i, userVault);
-                break;
-            }
-        }
-    }
-
-    function remove(uint256 _index, bytes12[] storage userVault) internal returns (bytes12[] memory) {
-        require(_index < userVault.length, 'index out of bound');
-
-        for (uint256 i = _index; i < userVault.length - 1; i++) {
-            userVault[i] = userVault[i + 1];
-        }
-        userVault.pop();
-        return userVault;
-    }
 }

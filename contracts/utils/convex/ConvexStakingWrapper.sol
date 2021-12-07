@@ -2,21 +2,15 @@
 pragma solidity 0.8.6;
 pragma experimental ABIEncoderV2;
 
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import '@openzeppelin/contracts/utils/Address.sol';
-import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
-import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+import '@yield-protocol/utils-v2/contracts/token/IERC20.sol';
+import '@yield-protocol/utils-v2/contracts/token/ERC20.sol';
+import '@yield-protocol/utils-v2/contracts/token/TransferHelper.sol';
 import './interfaces/IRewardStaking.sol';
 import './interfaces/IConvexDeposits.sol';
 import './CvxMining.sol';
 
-//Example of a tokenize a convex staked position.
-//if used as collateral some modifications will be needed to fit the specific platform
-
-//Based on Curve.fi's gauge wrapper implementations at https://github.com/curvefi/curve-dao-contracts/tree/master/contracts/gauges/wrappers
-contract ConvexStakingWrapper is ERC20, ReentrancyGuard {
-    using SafeERC20 for IERC20;
+contract ConvexStakingWrapper is ERC20 {
+    using TransferHelper for IERC20;
 
     struct EarnedData {
         address token;
@@ -58,11 +52,18 @@ contract ConvexStakingWrapper is ERC20, ReentrancyGuard {
     string internal _tokenname;
     string internal _tokensymbol;
 
+    uint256 private constant _NOT_ENTERED = 1;
+    uint256 private constant _ENTERED = 2;
+
+    uint256 private _status;
+
     event Deposited(address indexed _user, address indexed _account, uint256 _amount, bool _wrapped);
     event Withdrawn(address indexed _user, uint256 _amount, bool _unwrapped);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
-    constructor() ERC20('StakedConvexToken', 'stkCvx') {}
+    constructor() ERC20('StakedConvexToken', 'stkCvx', 18) {
+        _status = _NOT_ENTERED;
+    }
 
     function initialize(
         address _curveToken,
@@ -91,16 +92,27 @@ contract ConvexStakingWrapper is ERC20, ReentrancyGuard {
         setApprovals();
     }
 
-    function name() public view override returns (string memory) {
-        return _tokenname;
-    }
+    // function name() public view override returns (string memory) {
+    //     return _tokenname;
+    // }
 
-    function symbol() public view override returns (string memory) {
-        return _tokensymbol;
-    }
+    // function symbol() public view override returns (string memory) {
+    //     return _tokensymbol;
+    // }
 
-    function decimals() public view override returns (uint8) {
-        return 18;
+    // function decimals() public view override returns (uint8) {
+    //     return 18;
+    // }
+
+    modifier nonReentrant() {
+        // On the first call to nonReentrant, _notEntered will be true
+        require(_status != _ENTERED, 'ReentrancyGuard: reentrant call');
+        // Any calls to nonReentrant after this point will fail
+        _status = _ENTERED;
+        _;
+        // By storing the original value once again, a refund is triggered (see
+        // https://eips.ethereum.org/EIPS/eip-2200)
+        _status = _NOT_ENTERED;
     }
 
     modifier onlyOwner() {
@@ -124,10 +136,10 @@ contract ConvexStakingWrapper is ERC20, ReentrancyGuard {
     }
 
     function setApprovals() public {
-        IERC20(curveToken).safeApprove(convexBooster, 0);
-        IERC20(curveToken).safeApprove(convexBooster, type(uint128).max);
-        IERC20(convexToken).safeApprove(convexPool, 0);
-        IERC20(convexToken).safeApprove(convexPool, type(uint128).max);
+        IERC20(curveToken).approve(convexBooster, 0);
+        IERC20(curveToken).approve(convexBooster, type(uint128).max);
+        IERC20(convexToken).approve(convexPool, 0);
+        IERC20(convexToken).approve(convexPool, type(uint128).max);
     }
 
     function addRewards() public {
@@ -163,13 +175,11 @@ contract ConvexStakingWrapper is ERC20, ReentrancyGuard {
         }
         //get balance from collateralVault
 
-        return balanceOf(_account);
+        return _balanceOf[_account];
     }
 
     function _getTotalSupply() internal view virtual returns (uint256) {
-        //override and add any supply needed (interest based growth)
-
-        return totalSupply();
+        return _totalSupply;
     }
 
     function _calcCvxIntegral(
@@ -182,7 +192,7 @@ contract ConvexStakingWrapper is ERC20, ReentrancyGuard {
         uint256 d_cvxreward = bal - cvx_reward_remaining;
 
         if (_supply > 0 && d_cvxreward > 0) {
-            cvx_reward_integral = cvx_reward_integral + (d_cvxreward * (1e20)) / (_supply);
+            cvx_reward_integral = cvx_reward_integral + (d_cvxreward * 1e20) / (_supply);
         }
 
         //update user integrals for cvx
@@ -194,7 +204,7 @@ contract ConvexStakingWrapper is ERC20, ReentrancyGuard {
             uint256 userI = cvx_reward_integral_for[_accounts[u]];
             if (_isClaim || userI < cvx_reward_integral) {
                 uint256 receiveable = cvx_claimable_reward[_accounts[u]] +
-                    ((_balances[u] * (cvx_reward_integral - (userI))) / (1e20));
+                    ((_balances[u] * (cvx_reward_integral - userI)) / 1e20);
                 if (_isClaim) {
                     if (receiveable > 0) {
                         cvx_claimable_reward[_accounts[u]] = 0;
@@ -229,9 +239,7 @@ contract ConvexStakingWrapper is ERC20, ReentrancyGuard {
         // uint256 d_reward = bal-(reward.reward_remaining);
 
         if (_supply > 0 && bal - (reward.reward_remaining) > 0) {
-            reward.reward_integral =
-                reward.reward_integral +
-                uint128(bal - ((reward.reward_remaining) * (1e20)) / (_supply));
+            reward.reward_integral = reward.reward_integral + uint128(bal - (reward.reward_remaining * 1e20) / _supply);
         }
 
         //update user integrals
@@ -244,7 +252,7 @@ contract ConvexStakingWrapper is ERC20, ReentrancyGuard {
             if (_isClaim || userI < reward.reward_integral) {
                 if (_isClaim) {
                     uint256 receiveable = reward.claimable_reward[_accounts[u]] +
-                        ((_balances[u] * (uint256(reward.reward_integral) - (userI))) / (1e20));
+                        ((_balances[u] * (uint256(reward.reward_integral) - userI)) / 1e20);
                     if (receiveable > 0) {
                         reward.claimable_reward[_accounts[u]] = 0;
                         IERC20(reward.reward_token).safeTransfer(_accounts[u], receiveable);
@@ -253,7 +261,7 @@ contract ConvexStakingWrapper is ERC20, ReentrancyGuard {
                 } else {
                     reward.claimable_reward[_accounts[u]] =
                         reward.claimable_reward[_accounts[u]] +
-                        ((_balances[u] * (uint256(reward.reward_integral) - (userI))) / (1e20));
+                        ((_balances[u] * (uint256(reward.reward_integral) - userI)) / 1e20);
                 }
                 reward.reward_integral_for[_accounts[u]] = reward.reward_integral;
             }
@@ -317,24 +325,24 @@ contract ConvexStakingWrapper is ERC20, ReentrancyGuard {
 
             //change in reward is current balance - remaining reward + earned
             uint256 bal = IERC20(reward.reward_token).balanceOf(address(this));
-            uint256 d_reward = bal - (reward.reward_remaining);
-            d_reward = d_reward + (IRewardStaking(reward.reward_pool).earned(address(this)));
+            uint256 d_reward = bal - reward.reward_remaining;
+            d_reward = d_reward + IRewardStaking(reward.reward_pool).earned(address(this));
 
             uint256 I = reward.reward_integral;
             if (supply > 0) {
-                I = I + (d_reward * (1e20)) / (supply);
+                I = I + (d_reward * 1e20) / supply;
             }
 
-            uint256 newlyClaimable = (_getDepositedBalance(_account) * (I - (reward.reward_integral_for[_account]))) /
-                (1e20);
-            claimable[i].amount = reward.claimable_reward[_account] + (newlyClaimable);
+            uint256 newlyClaimable = (_getDepositedBalance(_account) * (I - reward.reward_integral_for[_account])) /
+                1e20;
+            claimable[i].amount = reward.claimable_reward[_account] + newlyClaimable;
             claimable[i].token = reward.reward_token;
 
             //calc cvx here
             if (reward.reward_token == crv) {
                 claimable[rewardCount].amount =
                     cvx_claimable_reward[_account] +
-                    (CvxMining.ConvertCrvToCvx(newlyClaimable));
+                    CvxMining.ConvertCrvToCvx(newlyClaimable);
                 claimable[rewardCount].token = cvx;
             }
         }
@@ -403,11 +411,12 @@ contract ConvexStakingWrapper is ERC20, ReentrancyGuard {
         emit Withdrawn(msg.sender, _amount, true);
     }
 
-    function _beforeTokenTransfer(
-        address _from,
-        address _to,
-        uint256 _amount
-    ) internal override {
-        _checkpoint([_from, _to]);
+    function _transfer(
+        address src,
+        address dst,
+        uint256 wad
+    ) internal override returns (bool) {
+        _checkpoint([src, dst]);
+        return super._transfer(src, dst, wad);
     }
 }

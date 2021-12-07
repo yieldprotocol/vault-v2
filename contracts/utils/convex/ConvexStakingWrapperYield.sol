@@ -27,8 +27,7 @@ interface ICauldron {
 /// @title Convex staking wrapper for Yield platform
 /// @notice Enables use of convex LP positions as collateral while still receiving rewards
 contract ConvexStakingWrapperYield is ConvexStakingWrapper {
-    using SafeERC20 for IERC20;
-    using Address for address;
+    using TransferHelper for IERC20;
 
     /// @notice Mapping to keep track of the user & their vaults
     mapping(address => bytes12[]) public vaults;
@@ -90,7 +89,7 @@ contract ConvexStakingWrapperYield is ConvexStakingWrapper {
         }
 
         if (vaults[account_].length == 0) {
-            return balanceOf(account_);
+            return _balanceOf[account_];
         }
         bytes12[] memory userVault = vaults[account_];
 
@@ -103,6 +102,6 @@ contract ConvexStakingWrapperYield is ConvexStakingWrapper {
         }
 
         //add to balance of this token
-        return balanceOf(account_) + collateral;
+        return _balanceOf[account_] + collateral;
     }
 }

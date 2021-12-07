@@ -263,12 +263,13 @@ describe('Convex Wrapper', async function () {
     await convex.approve(ladle.address, posted)
     const wrapCall = convexWrapper.interface.encodeFunctionData('stake', [posted, join])
     var beforeJoinBalance = await convexWrapper.balanceOf(join)
+    var beforeFyTokenBalance = await fyToken.balanceOf(ownerAcc.address)
     await ladle.batch([
       ladle.routeAction(convexWrapper.address, wrapCall),
       ladle.pourAction(vaultId, ownerAcc.address, posted, borrowed),
     ])
 
     expect(await convexWrapper.balanceOf(join)).to.eq(posted.add(beforeJoinBalance))
-    // expect(await fyToken.balanceOf(ownerAcc.address)).to.eq(borrowed)
+    expect(await fyToken.balanceOf(ownerAcc.address)).to.eq(borrowed.add(beforeFyTokenBalance))
   })
 })
