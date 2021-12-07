@@ -24,6 +24,7 @@ contract Witch is AccessControl() {
 
     event Point(bytes32 indexed param, address value);
     event IlkSet(bytes6 indexed ilkId, uint32 duration, uint64 initialOffer, uint96 line, uint24 dust, uint8 dec);
+    event AuctionRewardSet(uint128 auctionReward);
     event Bought(bytes12 indexed vaultId, address indexed buyer, uint256 ink, uint256 art);
     event Auctioned(bytes12 indexed vaultId, uint256 indexed start);
   
@@ -49,6 +50,7 @@ contract Witch is AccessControl() {
     mapping(bytes12 => Auction) public auctions;
     mapping(bytes6 => Ilk) public ilks;
     mapping(bytes6 => Limits) public limits;
+    uint128 public auctionReward = 10;                                  // Divisor applied to the collateral in a vault, given as a reward for calling `auction`
 
     constructor (ICauldron cauldron_, ILadle ladle_) {
         cauldron = cauldron_;
@@ -84,6 +86,12 @@ contract Witch is AccessControl() {
         emit IlkSet(ilkId, duration, initialOffer, line, dust, dec);
     }
 
+    function setAuctionReward(uint128 auctionReward_) external auth {
+        require (auctionReward_ != 0, "Cannot be zero");
+        auctionReward = auctionReward_;
+        emit AuctionRewardSet(auctionReward_);
+    }
+
     /// @dev Put an undercollateralized vault up for liquidation.
     function auction(bytes12 vaultId)
         external
@@ -103,6 +111,14 @@ contract Witch is AccessControl() {
             start: block.timestamp.u32()
         });
         cauldron.give(vaultId, address(this));
+
+        uint128 reward = balances_.ink / auctionReward;  // The caller is rewarded with a portion of the collateral
+        if (reward != 0) {
+            IJoin ilkJoin = ladle.joins(vault_.ilkId);
+            require (ilkJoin != IJoin(address(0)), "Join not found");
+            ilkJoin.exit(msg.sender, reward);
+        }
+
         emit Auctioned(vaultId, block.timestamp.u32());
     }
 
