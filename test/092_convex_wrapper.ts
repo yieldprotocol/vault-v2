@@ -1,5 +1,4 @@
 import { ethers, waffle } from 'hardhat'
-import * as fs from 'fs'
 import { YieldEnvironment } from './shared/fixtures'
 import { constants, id } from '@yield-protocol/utils-v2'
 const { WAD } = constants

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
-import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import '@yield-protocol/utils-v2/contracts/token/ERC20.sol';
 struct Balances {
     uint128 art; // Debt amount
     uint128 ink; // Collateral amount
@@ -25,7 +25,7 @@ contract ConvexStakingWrapperYieldMock is ERC20 {
     mapping(address => bytes12[]) public vaults;
     ICauldron cauldron;
 
-    constructor() ERC20('StakedConvexToken', 'stkCvx') {}
+    constructor() ERC20('StakedConvexToken', 'stkCvx', 18) {}
 
     function deposit(uint256 _amount, address _to) external {
         if (_amount > 0) {
