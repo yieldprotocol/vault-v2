@@ -7,6 +7,7 @@ import '@yield-protocol/utils-v2/contracts/token/IERC20Metadata.sol';
 import '@yield-protocol/vault-interfaces/IOracle.sol';
 import '../../constants/Constants.sol';
 import './AggregatorV3Interface.sol';
+import './FlagsInterface.sol';
 
 /**
  * @title ChainlinkUSDMultiOracle
@@ -87,7 +88,7 @@ contract ChainlinkUSDMultiOracle is IOracle, AccessControl, Constants {
         bytes6 baseId,
         bytes6 quoteId,
         uint256 amountBase
-    ) private view returns (uint256 amountQuote, uint256 updateTime) {
+    ) internal view returns (uint256 amountQuote, uint256 updateTime) {
         (uint256 basePrice, uint256 updateTime1, uint8 baseDecimals) = _getPriceInUSD(baseId);
         (uint256 quotePrice, uint256 updateTime2, uint8 quoteDecimals) = _getPriceInUSD(quoteId);
 
