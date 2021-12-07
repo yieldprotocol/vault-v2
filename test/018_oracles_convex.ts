@@ -1,5 +1,5 @@
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { ethers, waffle } from 'hardhat'
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { expect } from 'chai'
 import { parseEther } from '@ethersproject/units'
 import { ETH, CVX3CRV, USDC, DAI } from '../src/constants'
