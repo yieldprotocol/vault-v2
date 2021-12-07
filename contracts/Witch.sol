@@ -86,8 +86,8 @@ contract Witch is AccessControl() {
         emit IlkSet(ilkId, duration, initialOffer, line, dust, dec);
     }
 
+    /// @dev Set the auction reward as a divisor on the vault collateral. Set to zero to disable.
     function setAuctionReward(uint128 auctionReward_) external auth {
-        require (auctionReward_ != 0, "Cannot be zero");
         auctionReward = auctionReward_;
         emit AuctionRewardSet(auctionReward_);
     }
@@ -112,11 +112,13 @@ contract Witch is AccessControl() {
         });
         cauldron.give(vaultId, address(this));
 
-        uint128 reward = balances_.ink / auctionReward;  // The caller is rewarded with a portion of the collateral
-        cauldron.slurp(vaultId, reward, 0);             // The reward is subtracted from the vault being auctioned
-        IJoin ilkJoin = ladle.joins(vault_.ilkId);
-        require (ilkJoin != IJoin(address(0)), "Join not found");
-        ilkJoin.exit(msg.sender, reward);
+        if (auctionReward != 0) {
+            uint128 reward = balances_.ink / auctionReward;  // The caller is rewarded with a portion of the collateral
+            cauldron.slurp(vaultId, reward, 0);             // The reward is subtracted from the vault being auctioned
+            IJoin ilkJoin = ladle.joins(vault_.ilkId);
+            require (ilkJoin != IJoin(address(0)), "Join not found");
+            ilkJoin.exit(msg.sender, reward);            
+        }
 
         emit Auctioned(vaultId, block.timestamp.u32());
     }
