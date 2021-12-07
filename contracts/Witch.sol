@@ -113,6 +113,7 @@ contract Witch is AccessControl() {
         cauldron.give(vaultId, address(this));
 
         uint128 reward = balances_.ink / auctionReward;  // The caller is rewarded with a portion of the collateral
+        cauldron.slurp(vaultId, reward, 0);             // The reward is subtracted from the vault being auctioned
         if (reward != 0) {
             IJoin ilkJoin = ladle.joins(vault_.ilkId);
             require (ilkJoin != IJoin(address(0)), "Join not found");
