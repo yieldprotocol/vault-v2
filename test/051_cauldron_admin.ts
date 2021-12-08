@@ -69,7 +69,7 @@ describe('Cauldron - admin', function () {
     )) as Join
 
     const SafeERC20NamerFactory = await ethers.getContractFactory('SafeERC20Namer')
-    const safeERC20NamerLibrary = ((await SafeERC20NamerFactory.deploy()) as unknown) as SafeERC20Namer
+    const safeERC20NamerLibrary = (await SafeERC20NamerFactory.deploy()) as unknown as SafeERC20Namer
     await safeERC20NamerLibrary.deployed()
 
     const fyTokenFactory = await ethers.getContractFactory('FYToken', {
@@ -77,14 +77,14 @@ describe('Cauldron - admin', function () {
         SafeERC20Namer: safeERC20NamerLibrary.address,
       },
     })
-    fyToken = ((await fyTokenFactory.deploy(
+    fyToken = (await fyTokenFactory.deploy(
       baseId,
       base.address,
       join.address,
       maturity,
       seriesId,
       'Mock FYToken'
-    )) as unknown) as FYToken
+    )) as unknown as FYToken
     await fyToken.deployed()
 
     oracle = (await deployContract(ownerAcc, OracleMockArtifact, [])) as OracleMock
