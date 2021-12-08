@@ -13,7 +13,7 @@ import {
   Witch,
   CompositeMultiOracle,
   CurvePoolMock,
-  DummyConvexCurveOracle,
+  Cvx3CrvOracle,
   ChainlinkAggregatorV3Mock,
   WETH9Mock,
   DAIMock,
@@ -24,7 +24,7 @@ import {
 
 import ConvexStakingWrapperYieldMockArtifact from '../artifacts/contracts/mocks/ConvexStakingWrapperYieldMock.sol/ConvexStakingWrapperYieldMock.json'
 import ChainlinkAggregatorV3MockArtifact from '../artifacts/contracts/mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol/ChainlinkAggregatorV3Mock.json'
-import DummyConvexCurveOracleArtifact from '../artifacts/contracts/oracles/convex/DummyConvexCurveOracle.sol/DummyConvexCurveOracle.json'
+import Cvx3CrvOracleArtifact from '../artifacts/contracts/oracles/convex/Cvx3CrvOracle.sol/Cvx3CrvOracle.json'
 import CurvePoolMockArtifact from '../artifacts/contracts/mocks/oracles/convex/CurvePoolMock.sol/CurvePoolMock.json'
 import CompositeMultiOracleArtifact from '../artifacts/contracts/oracles/composite/CompositeMultiOracle.sol/CompositeMultiOracle.json'
 import ConvexLadleModuleArtifact from '../artifacts/contracts/utils/convex/ConvexLadleModule.sol/ConvexLadleModule.json'
@@ -64,7 +64,7 @@ describe('Convex Wrapper', async function () {
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const seriesId2 = ethers.utils.hexlify(ethers.utils.randomBytes(6))
 
-  let DummyConvexCurveOracle: DummyConvexCurveOracle
+  let cvx3CrvOracle: Cvx3CrvOracle
   let daiEthAggregator: ChainlinkAggregatorV3Mock
   let usdcEthAggregator: ChainlinkAggregatorV3Mock
   let usdtEthAggregator: ChainlinkAggregatorV3Mock
@@ -129,14 +129,7 @@ describe('Convex Wrapper', async function () {
       ownerAcc,
       ChainlinkAggregatorV3MockArtifact
     )) as unknown) as ChainlinkAggregatorV3Mock
-    DummyConvexCurveOracle = ((await deployContract(ownerAcc, DummyConvexCurveOracleArtifact, [
-      bytes6ToBytes32(CVX3CRV),
-      bytes6ToBytes32(ETH),
-      curvePool.address,
-      daiEthAggregator.address,
-      usdcEthAggregator.address,
-      usdtEthAggregator.address,
-    ])) as unknown) as DummyConvexCurveOracle
+    cvx3CrvOracle = ((await deployContract(ownerAcc, Cvx3CrvOracleArtifact)) as unknown) as Cvx3CrvOracle
     convexLadleModule = (await deployContract(ownerAcc, ConvexLadleModuleArtifact, [
       cauldron.address,
       weth.address,
@@ -163,12 +156,24 @@ describe('Convex Wrapper', async function () {
     await cauldron.grantRoles([id(cauldron.interface, 'addIlks(bytes6,bytes6[])')], ownerAcc.address)
     await ladle.grantRoles([id(ladle.ladle.interface, 'addIntegration(address,bool)')], ownerAcc.address)
     await ladle.grantRoles([id(ladle.ladle.interface, 'addModule(address,bool)')], ownerAcc.address)
+    await cvx3CrvOracle.grantRole(
+      id(cvx3CrvOracle.interface, 'setSource(bytes32,bytes32,address,address,address,address)'),
+      ownerAcc.address
+    )
+    await cvx3CrvOracle['setSource(bytes32,bytes32,address,address,address,address)'](
+      bytes6ToBytes32(CVX3CRV),
+      bytes6ToBytes32(ETH),
+      curvePool.address,
+      daiEthAggregator.address,
+      usdcEthAggregator.address,
+      usdtEthAggregator.address
+    )
 
     await chainlinkMultiOracle.setSource(DAI, dai.address, ETH, weth.address, daiEthAggregator.address)
     await chainlinkMultiOracle.setSource(USDC, usdc.address, ETH, weth.address, usdcEthAggregator.address)
 
     // Set up the CompositeMultiOracle to draw from the ChainlinkMultiOracle
-    await compositeMultiOracle.setSource(CVX3CRV, ETH, DummyConvexCurveOracle.address)
+    await compositeMultiOracle.setSource(CVX3CRV, ETH, cvx3CrvOracle.address)
     await compositeMultiOracle.setSource(DAI, ETH, chainlinkMultiOracle.address)
     await compositeMultiOracle.setSource(USDC, ETH, chainlinkMultiOracle.address)
     await compositeMultiOracle.setPath(DAI, CVX3CRV, [ETH])

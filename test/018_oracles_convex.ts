@@ -5,13 +5,13 @@ import { parseEther } from '@ethersproject/units'
 import { ETH, CVX3CRV, USDC, DAI } from '../src/constants'
 
 import { ChainlinkAggregatorV3Mock } from '../typechain/ChainlinkAggregatorV3Mock'
-import { DummyConvexCurveOracle } from '../typechain/DummyConvexCurveOracle'
+import { Cvx3CrvOracle } from '../typechain/Cvx3CrvOracle'
 import { CurvePoolMock } from '../typechain/CurvePoolMock'
 import { ChainlinkMultiOracle } from '../typechain/ChainlinkMultiOracle'
 import { CompositeMultiOracle } from '../typechain/CompositeMultiOracle'
 
 import ChainlinkAggregatorV3MockArtifact from '../artifacts/contracts/mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol/ChainlinkAggregatorV3Mock.json'
-import DummyConvexCurveOracleArtifact from '../artifacts/contracts/oracles/convex/DummyConvexCurveOracle.sol/DummyConvexCurveOracle.json'
+import Cvx3CrvOracleArtifact from '../artifacts/contracts/oracles/convex/Cvx3CrvOracle.sol/Cvx3CrvOracle.json'
 import CurvePoolMockArtifact from '../artifacts/contracts/mocks/oracles/convex/CurvePoolMock.sol/CurvePoolMock.json'
 import ChainlinkMultiOracleArtifact from '../artifacts/contracts/oracles/chainlink/ChainlinkMultiOracle.sol/ChainlinkMultiOracle.json'
 import CompositeMultiOracleArtifact from '../artifacts/contracts/oracles/composite/CompositeMultiOracle.sol/CompositeMultiOracle.json'
@@ -31,8 +31,9 @@ describe('Oracles - Convex', function () {
   this.timeout(0)
 
   let ownerAcc: SignerWithAddress
+  let dummyAcc: SignerWithAddress
   let owner: string
-  let DummyConvexCurveOracle: DummyConvexCurveOracle
+  let cvx3CrvOracle: Cvx3CrvOracle
   let daiEthAggregator: ChainlinkAggregatorV3Mock
   let usdcEthAggregator: ChainlinkAggregatorV3Mock
   let usdtEthAggregator: ChainlinkAggregatorV3Mock
@@ -49,6 +50,7 @@ describe('Oracles - Convex', function () {
     const signers = await ethers.getSigners()
     ownerAcc = signers[0]
     owner = await ownerAcc.getAddress()
+    dummyAcc = signers[1]
 
     weth = (await deployContract(ownerAcc, WETH9MockArtifact)) as WETH9Mock
     usdc = (await deployContract(ownerAcc, USDCMockArtifact)) as USDCMock
@@ -92,35 +94,37 @@ describe('Oracles - Convex', function () {
       owner
     )
 
-    DummyConvexCurveOracle = ((await deployContract(ownerAcc, DummyConvexCurveOracleArtifact, [
+    cvx3CrvOracle = ((await deployContract(ownerAcc, Cvx3CrvOracleArtifact)) as unknown) as Cvx3CrvOracle
+
+    await cvx3CrvOracle.grantRole(
+      id(cvx3CrvOracle.interface, 'setSource(bytes32,bytes32,address,address,address,address)'),
+      owner
+    )
+    await cvx3CrvOracle['setSource(bytes32,bytes32,address,address,address,address)'](
       bytes6ToBytes32(CVX3CRV),
       bytes6ToBytes32(ETH),
       curvePool.address,
       daiEthAggregator.address,
       usdcEthAggregator.address,
-      usdtEthAggregator.address,
-    ])) as unknown) as DummyConvexCurveOracle
+      usdtEthAggregator.address
+    )
 
     // Set up the CompositeMultiOracle to draw from the ChainlinkMultiOracle
-    await compositeMultiOracle.setSource(CVX3CRV, ETH, DummyConvexCurveOracle.address)
+    await compositeMultiOracle.setSource(CVX3CRV, ETH, cvx3CrvOracle.address)
     await compositeMultiOracle.setSource(DAI, ETH, chainlinkMultiOracle.address)
     await compositeMultiOracle.setSource(USDC, ETH, chainlinkMultiOracle.address)
-
     await compositeMultiOracle.setPath(DAI, CVX3CRV, [ETH])
-
     await compositeMultiOracle.setPath(USDC, CVX3CRV, [ETH])
   })
 
   it('cvx3CRV->ETH', async () => {
-    const eth = (
-      await DummyConvexCurveOracle.callStatic.get(bytes6ToBytes32(CVX3CRV), bytes6ToBytes32(ETH), parseEther('1'))
-    )[0]
+    const eth = (await cvx3CrvOracle.callStatic.get(bytes6ToBytes32(CVX3CRV), bytes6ToBytes32(ETH), parseEther('1')))[0]
     expect(eth.toString()).equals('234675878990471')
   })
 
   it('ETH->cvx3CRV', async () => {
     const cvx3crv = (
-      await DummyConvexCurveOracle.callStatic.get(bytes6ToBytes32(ETH), bytes6ToBytes32(CVX3CRV), parseEther('1'))
+      await cvx3CrvOracle.callStatic.get(bytes6ToBytes32(ETH), bytes6ToBytes32(CVX3CRV), parseEther('1'))
     )[0]
     expect(cvx3crv.toString()).equals('4261196354315583239214')
   })
