@@ -3,26 +3,9 @@
 pragma solidity 0.8.6;
 pragma experimental ABIEncoderV2;
 
+import '@yield-protocol/vault-interfaces/ICauldron.sol';
+import '@yield-protocol/vault-interfaces/DataTypes.sol';
 import './ConvexStakingWrapper.sol';
-
-struct Balances {
-    uint128 art; // Debt amount
-    uint128 ink; // Collateral amount
-}
-
-struct Vault {
-    address owner;
-    bytes6 seriesId; // Each vault is related to only one series, which also determines the underlying.
-    bytes6 ilkId; // Asset accepted as collateral
-}
-
-interface ICauldron {
-    /// @dev Each vault records debt and collateral balances_.
-    function balances(bytes12 vault) external view returns (Balances memory);
-
-    /// @dev A user can own one or more Vaults, with each vault being able to borrow from a single series.
-    function vaults(bytes12 vault) external view returns (Vault memory);
-}
 
 /// @title Convex staking wrapper for Yield platform
 /// @notice Enables use of convex LP positions as collateral while still receiving rewards
@@ -95,7 +78,7 @@ contract ConvexStakingWrapperYield is ConvexStakingWrapper {
 
         //add up all balances of all vaults
         uint256 collateral;
-        Balances memory balance;
+        DataTypes.Balances memory balance;
         for (uint256 i = 0; i < userVault.length; i++) {
             balance = cauldron.balances(userVault[i]);
             collateral = collateral + balance.ink;
