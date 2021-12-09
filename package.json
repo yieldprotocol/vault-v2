@@ -13,7 +13,10 @@
     "contracts/oracles/composite/*.sol",
     "contracts/oracles/uniswap/*.sol",
     "contracts/oracles/lido/*.sol",
+    "contracts/oracles/convex/*.sol",
     "contracts/utils/*.sol",
+    "contracts/utils/convex/*.sol",
+    "contracts/utils/convex/interfaces/*.sol",
     "dist"
   ],
   "main": "dist/index.js",
