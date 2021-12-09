@@ -97,9 +97,9 @@ describe('Oracles - Yearn Vault', function () {
 
       // check inverted pairs
       const invertedYvUSDCRate = parseInt(((1 / parseFloat(initialYvUSDCRate)) * 10 ** 12).toString()).toString()
-      expect((await yearnVaultMultiOracle.callStatic.get(bytes6ToBytes32(USDC), bytes6ToBytes32(YVUSDC), '1000000'))[0]).to.equal(
-        BigNumber.from(invertedYvUSDCRate).toString()
-      )
+      expect(
+        (await yearnVaultMultiOracle.callStatic.get(bytes6ToBytes32(USDC), bytes6ToBytes32(YVUSDC), '1000000'))[0]
+      ).to.equal(BigNumber.from(invertedYvUSDCRate).toString())
 
       expect((await yearnVaultMultiOracle.peek(bytes6ToBytes32(DAI), bytes6ToBytes32(YVDAI), WAD))[0]).to.equal(
         WAD.mul(WAD).div(BigNumber.from(initialYvDAIRate)).toString()
