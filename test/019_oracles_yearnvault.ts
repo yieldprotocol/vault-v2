@@ -89,7 +89,7 @@ describe('Oracles - Yearn Vault', function () {
 
     it('get() and peek() return correct values', async () => {
       expect(
-        (await yearnVaultMultiOracle.get(bytes6ToBytes32(YVUSDC), bytes6ToBytes32(USDC), '2' + '000000'))[0]
+        (await yearnVaultMultiOracle.callStatic.get(bytes6ToBytes32(YVUSDC), bytes6ToBytes32(USDC), '2' + '000000'))[0]
       ).to.equal(BigNumber.from(initialYvUSDCRate).mul(2).toString())
       expect((await yearnVaultMultiOracle.peek(bytes6ToBytes32(YVDAI), bytes6ToBytes32(DAI), WAD.mul(2)))[0]).to.equal(
         BigNumber.from(initialYvDAIRate).mul(2).toString()
@@ -97,7 +97,7 @@ describe('Oracles - Yearn Vault', function () {
 
       // check inverted pairs
       const invertedYvUSDCRate = parseInt(((1 / parseFloat(initialYvUSDCRate)) * 10 ** 12).toString()).toString()
-      expect((await yearnVaultMultiOracle.get(bytes6ToBytes32(USDC), bytes6ToBytes32(YVUSDC), '1000000'))[0]).to.equal(
+      expect((await yearnVaultMultiOracle.callStatic.get(bytes6ToBytes32(USDC), bytes6ToBytes32(YVUSDC), '1000000'))[0]).to.equal(
         BigNumber.from(invertedYvUSDCRate).toString()
       )
 
@@ -109,7 +109,7 @@ describe('Oracles - Yearn Vault', function () {
       const newPrice = '1088888'
       await yvUSDCMock.setPrice(newPrice)
       expect(
-        (await yearnVaultMultiOracle.get(bytes6ToBytes32(YVUSDC), bytes6ToBytes32(USDC), '2' + '000000'))[0]
+        (await yearnVaultMultiOracle.callStatic.get(bytes6ToBytes32(YVUSDC), bytes6ToBytes32(USDC), '2' + '000000'))[0]
       ).to.equal(BigNumber.from(newPrice).mul(2).toString())
     })
 
