@@ -7,13 +7,13 @@ const { WAD } = constants
 import { USDC, ETH, DAI, YVUSDC, YVDAI } from '../src/constants'
 
 import { YearnVaultMultiOracle } from '../typechain/YearnVaultMultiOracle'
-import { YearnVaultMock } from '../typechain/YearnVaultMock'
+import { YvTokenMock } from '../typechain/YvTokenMock'
 import { WETH9Mock } from '../typechain/WETH9Mock'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { USDCMock } from '../typechain/USDCMock'
 
 import YearnVaultMultiOracleArtifact from '../artifacts/contracts/oracles/yearn/YearnVaultMultiOracle.sol/YearnVaultMultiOracle.json'
-import YearnVaultMockArtifact from '../artifacts/contracts/mocks/YearnVaultMock.sol/YearnVaultMock.json'
+import YvTokenMockArtifact from '../artifacts/contracts/mocks/YvTokenMock.sol/YvTokenMock.json'
 import WETH9MockArtifact from '../artifacts/contracts/mocks/WETH9Mock.sol/WETH9Mock.json'
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
 import USDCMockArtifact from '../artifacts/contracts/mocks/USDCMock.sol/USDCMock.json'
@@ -34,27 +34,27 @@ describe('Oracles - Yearn Vault', function () {
   let initialYvUSDCRate = '1083891' // 6 decimals
   let initialYvDAIRate = '1071594513314087964' // 18 decimals
   let yearnVaultMultiOracle: YearnVaultMultiOracle
-  let yvUSDCMock: YearnVaultMock
-  let yvDAIMock: YearnVaultMock
+  let yvUSDCMock: YvTokenMock
+  let yvDAIMock: YvTokenMock
 
   before(async () => {
     const signers = await ethers.getSigners()
     ownerAcc = signers[0]
     owner = await ownerAcc.getAddress()
 
-    yvUSDCMock = (await deployContract(ownerAcc, YearnVaultMockArtifact, [
+    yvUSDCMock = (await deployContract(ownerAcc, YvTokenMockArtifact, [
       'Yearn Vault USD Coin',
       'yvUSDC',
       6,
       BigNumber.from(initialYvUSDCRate),
-    ])) as YearnVaultMock
+    ])) as YvTokenMock
 
-    yvDAIMock = (await deployContract(ownerAcc, YearnVaultMockArtifact, [
+    yvDAIMock = (await deployContract(ownerAcc, YvTokenMockArtifact, [
       'Yearn Vault DAI',
       'yvDAI',
       18,
       BigNumber.from(initialYvDAIRate),
-    ])) as YearnVaultMock
+    ])) as YvTokenMock
 
     usdc = (await deployContract(ownerAcc, USDCMockArtifact)) as USDCMock
 
