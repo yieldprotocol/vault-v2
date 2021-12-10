@@ -75,7 +75,7 @@ contract YearnVaultMultiOracle is IOracle, AccessControl {
 
     /**
      *@notice External function to convert amountBase base at the current vault share price
-     *@dev    This external function calls _get() which calculates current (not cached) price
+     *@dev    This external function calls _peek() which calculates current (not cached) price
      *@param  baseId id of base (denominator of rate used)
      *@param  quoteId id of quote (returned amount in this)
      *@param  amountBase amount in base to convert to amount in quote
@@ -86,8 +86,8 @@ contract YearnVaultMultiOracle is IOracle, AccessControl {
         bytes32 baseId,
         bytes32 quoteId,
         uint256 amountBase
-    ) external view override returns (uint256 amountQuote, uint256 updateTime) {
-        return _get(baseId.b6(), quoteId.b6(), amountBase);
+    ) external override returns (uint256 amountQuote, uint256 updateTime) {
+        return _peek(baseId.b6(), quoteId.b6(), amountBase);
     }
 
     /**
@@ -100,7 +100,7 @@ contract YearnVaultMultiOracle is IOracle, AccessControl {
         bytes32 quoteId,
         uint256 amountBase
     ) external view override returns (uint256 amountQuote, uint256 updateTime) {
-        return _get(baseId.b6(), quoteId.b6(), amountBase);
+        return _peek(baseId.b6(), quoteId.b6(), amountBase);
     }
 
     /**
@@ -112,7 +112,7 @@ contract YearnVaultMultiOracle is IOracle, AccessControl {
      *@return amountQuote product of exchange rate and amountBase
      *@return updateTime current block timestamp
      */
-    function _get(
+    function _peek(
         bytes6 baseId,
         bytes6 quoteId,
         uint256 amountBase
