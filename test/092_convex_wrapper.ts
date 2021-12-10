@@ -92,11 +92,11 @@ describe('Convex Wrapper', async function () {
     ownerAcc = signers[0]
 
     env = await fixture()
-
-    convexWrapper = ((await deployContract(
+    
+    convexWrapper = (await deployContract(
       ownerAcc,
       ConvexStakingWrapperYieldMockArtifact
-    )) as unknown) as ConvexStakingWrapperYieldMock
+    )) as unknown as ConvexStakingWrapperYieldMock
     await convexWrapper.setCauldron(env.cauldron.address)
 
     ladle = env.ladle
@@ -110,38 +110,38 @@ describe('Convex Wrapper', async function () {
     )
 
     usdc = env.assets.get(USDC) as USDCMock //(await deployContract(ownerAcc, USDCMockArtifact)) as USDCMock
-    weth = (env.assets.get(ETH) as unknown) as WETH9Mock
-    dai = (env.assets.get(DAI) as unknown) as DAIMock
+    weth = env.assets.get(ETH) as unknown as WETH9Mock
+    dai = env.assets.get(DAI) as unknown as DAIMock
     convex = (await deployContract(ownerAcc, ERC20MockArtifact, ['Liquid staked Ether 2.0', 'stETH'])) as ERC20Mock
     await convex.mint(ownerAcc.address, parseEther('1000000'))
 
-    curvePool = ((await deployContract(ownerAcc, CurvePoolMockArtifact)) as unknown) as CurvePoolMock
+    curvePool = (await deployContract(ownerAcc, CurvePoolMockArtifact)) as unknown as CurvePoolMock
 
-    usdcEthAggregator = ((await deployContract(
+    usdcEthAggregator = (await deployContract(
       ownerAcc,
       ChainlinkAggregatorV3MockArtifact
-    )) as unknown) as ChainlinkAggregatorV3Mock
-    daiEthAggregator = ((await deployContract(
+    )) as unknown as ChainlinkAggregatorV3Mock
+    daiEthAggregator = (await deployContract(
       ownerAcc,
       ChainlinkAggregatorV3MockArtifact
-    )) as unknown) as ChainlinkAggregatorV3Mock
-    usdtEthAggregator = ((await deployContract(
+    )) as unknown as ChainlinkAggregatorV3Mock
+    usdtEthAggregator = (await deployContract(
       ownerAcc,
       ChainlinkAggregatorV3MockArtifact
-    )) as unknown) as ChainlinkAggregatorV3Mock
-    cvx3CrvOracle = ((await deployContract(ownerAcc, Cvx3CrvOracleArtifact)) as unknown) as Cvx3CrvOracle
+    )) as unknown as ChainlinkAggregatorV3Mock
+    cvx3CrvOracle = (await deployContract(ownerAcc, Cvx3CrvOracleArtifact)) as unknown as Cvx3CrvOracle
     convexLadleModule = (await deployContract(ownerAcc, ConvexLadleModuleArtifact, [
       cauldron.address,
       weth.address,
     ])) as ConvexLadleModule
     compositeMultiOracle = (await deployContract(ownerAcc, CompositeMultiOracleArtifact)) as CompositeMultiOracle
-    chainlinkMultiOracle = (env.oracles.get(ETH) as unknown) as ChainlinkMultiOracle
-
+    chainlinkMultiOracle = env.oracles.get(ETH) as unknown as ChainlinkMultiOracle
+    
     await usdcEthAggregator.set('230171858101077')
     await daiEthAggregator.set('230213930000000')
     await usdtEthAggregator.set('230334420255290')
     await curvePool.set('1019568078072415210')
-
+    
     await chainlinkMultiOracle.grantRole(
       id(chainlinkMultiOracle.interface, 'setSource(bytes6,address,bytes6,address,address)'),
       ownerAcc.address
@@ -160,6 +160,7 @@ describe('Convex Wrapper', async function () {
       id(cvx3CrvOracle.interface, 'setSource(bytes32,bytes32,address,address,address,address)'),
       ownerAcc.address
     )
+    
     await cvx3CrvOracle['setSource(bytes32,bytes32,address,address,address,address)'](
       bytes6ToBytes32(CVX3CRV),
       bytes6ToBytes32(ETH),
@@ -220,7 +221,7 @@ describe('Convex Wrapper', async function () {
       .div(1000000)
       .mul(101)
       .div(100)
-
+    
     // Transfer the amount to join before pouring
     await convex.approve(ladle.address, posted)
     const wrapCall = convexWrapper.interface.encodeFunctionData('stake', [posted, join])
@@ -228,7 +229,7 @@ describe('Convex Wrapper', async function () {
       ladle.routeAction(convexWrapper.address, wrapCall),
       ladle.pourAction(vaultId, ownerAcc.address, posted, borrowed),
     ])
-
+    
     expect(await convexWrapper.balanceOf(join)).to.eq(posted)
     expect(await fyToken.balanceOf(ownerAcc.address)).to.eq(borrowed)
   })

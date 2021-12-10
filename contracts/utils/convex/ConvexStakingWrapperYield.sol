@@ -49,6 +49,11 @@ contract ConvexStakingWrapperYield is ConvexStakingWrapper {
         setApprovals();
     }
 
+    function setCollateralVault(address join_) external {
+        require(msg.sender==owner,'Only owner can set vault');
+        collateralVault = join_;
+    }
+
     /// @notice Adds a vault to the user's vault list
     /// @param vault_ The vaulId being added
     function addVault(bytes12 vault_) external {
@@ -86,5 +91,29 @@ contract ConvexStakingWrapperYield is ConvexStakingWrapper {
 
         //add to balance of this token
         return _balanceOf[account_] + collateral;
+    }
+
+    function withdrawFor(uint256 _amount,address _account) external nonReentrant {
+        //dont need to call checkpoint since _burn() will
+        if (_amount > 0) {
+            _burn(_account, _amount);
+            IRewardStaking(convexPool).withdraw(_amount, false);
+            IERC20(convexToken).safeTransfer(_account, _amount);
+        }
+
+        emit Withdrawn(_account, _amount, false);
+    }
+
+    function stakeFor(uint256 _amount,address account, address _to) external nonReentrant {
+        require(!isShutdown, 'shutdown');
+
+        //dont need to call checkpoint since _mint() will
+        if (_amount > 0) {
+            _mint(_to, _amount);
+            IERC20(convexToken).safeTransferFrom(account, address(this), _amount);
+            IRewardStaking(convexPool).stake(_amount);
+        }
+
+        emit Deposited(msg.sender, _to, _amount, false);
     }
 }
