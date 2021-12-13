@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
-pragma experimental ABIEncoderV2;
 
 import '@yield-protocol/utils-v2/contracts/token/IERC20.sol';
 import '@yield-protocol/utils-v2/contracts/token/ERC20.sol';
+import '@yield-protocol/utils-v2/contracts/access/AccessControl.sol';
 import '@yield-protocol/utils-v2/contracts/token/TransferHelper.sol';
 import './interfaces/IRewardStaking.sol';
 import './interfaces/IConvexDeposits.sol';
-import "./interfaces/ICvx.sol";
+import './interfaces/ICvx.sol';
 
-library CvxMining{
+library CvxMining {
     ICvx public constant cvx = ICvx(0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B);
 
-    function ConvertCrvToCvx(uint256 _amount) internal view returns(uint256){
+    function ConvertCrvToCvx(uint256 _amount) internal view returns (uint256) {
         uint256 supply = cvx.totalSupply();
         uint256 reductionPerCliff = cvx.reductionPerCliff();
         uint256 totalCliffs = cvx.totalCliffs();
@@ -20,15 +20,15 @@ library CvxMining{
 
         uint256 cliff = supply / reductionPerCliff;
         //mint if below total cliffs
-        if(cliff < totalCliffs){
+        if (cliff < totalCliffs) {
             //for reduction% take inverse of current cliff
             uint256 reduction = totalCliffs - cliff;
             //reduce
-            _amount = _amount * reduction / totalCliffs;
+            _amount = (_amount * reduction) / totalCliffs;
 
             //supply cap check
             uint256 amtTillMax = maxSupply - supply;
-            if(_amount > amtTillMax){
+            if (_amount > amtTillMax) {
                 _amount = amtTillMax;
             }
 
@@ -39,7 +39,7 @@ library CvxMining{
     }
 }
 
-contract ConvexStakingWrapper is ERC20 {
+contract ConvexStakingWrapper is ERC20, AccessControl {
     using TransferHelper for IERC20;
 
     struct EarnedData {
@@ -50,8 +50,8 @@ contract ConvexStakingWrapper is ERC20 {
     struct RewardType {
         address reward_token;
         address reward_pool;
-        uint128 reward_integral;
-        uint128 reward_remaining;
+        uint256 reward_integral;
+        uint256 reward_remaining;
         mapping(address => uint256) reward_integral_for;
         mapping(address => uint256) claimable_reward;
     }
@@ -77,15 +77,10 @@ contract ConvexStakingWrapper is ERC20 {
     //management
     bool public isShutdown;
     bool public isInit;
-    address public owner;
+    bool private _status;
 
-    string internal _tokenname;
-    string internal _tokensymbol;
-
-    uint256 private constant _NOT_ENTERED = 1;
-    uint256 private constant _ENTERED = 2;
-
-    uint256 private _status;
+    bool private constant _NOT_ENTERED = false;
+    bool private constant _ENTERED = true;
 
     event Deposited(address indexed _user, address indexed _account, uint256 _amount, bool _wrapped);
     event Withdrawn(address indexed _user, uint256 _amount, bool _unwrapped);
@@ -94,45 +89,6 @@ contract ConvexStakingWrapper is ERC20 {
     constructor() ERC20('StakedConvexToken', 'stkCvx', 18) {
         _status = _NOT_ENTERED;
     }
-
-    function initialize(
-        address _curveToken,
-        address _convexToken,
-        address _convexPool,
-        uint256 _poolId,
-        address _vault
-    ) external virtual {
-        require(!isInit, 'already init');
-        owner = address(0xa3C5A1e09150B75ff251c1a7815A07182c3de2FB); //default to convex multisig
-        emit OwnershipTransferred(address(0), owner);
-
-        _tokenname = string(abi.encodePacked('Staked ', ERC20(_convexToken).name()));
-        _tokensymbol = string(abi.encodePacked('stk', ERC20(_convexToken).symbol()));
-
-        isShutdown = false;
-        isInit = true;
-        curveToken = _curveToken;
-        convexToken = _convexToken;
-        convexPool = _convexPool;
-        convexPoolId = _poolId;
-        collateralVault = _vault;
-
-        //add rewards
-        addRewards();
-        setApprovals();
-    }
-
-    // function name() public view override returns (string memory) {
-    //     return _tokenname;
-    // }
-
-    // function symbol() public view override returns (string memory) {
-    //     return _tokensymbol;
-    // }
-
-    // function decimals() public view override returns (uint8) {
-    //     return 18;
-    // }
 
     modifier nonReentrant() {
         // On the first call to nonReentrant, _notEntered will be true
@@ -145,31 +101,15 @@ contract ConvexStakingWrapper is ERC20 {
         _status = _NOT_ENTERED;
     }
 
-    modifier onlyOwner() {
-        require(owner == msg.sender, 'Ownable: caller is not the owner');
-        _;
-    }
-
-    function transferOwnership(address newOwner) public virtual onlyOwner {
-        require(newOwner != address(0), 'Ownable: new owner is the zero address');
-        emit OwnershipTransferred(owner, newOwner);
-        owner = newOwner;
-    }
-
-    function renounceOwnership() public virtual onlyOwner {
-        emit OwnershipTransferred(owner, address(0));
-        owner = address(0);
-    }
-
-    function shutdown() external onlyOwner {
+    function shutdown() external auth {
         isShutdown = true;
     }
 
     function setApprovals() public {
         IERC20(curveToken).approve(convexBooster, 0);
-        IERC20(curveToken).approve(convexBooster, type(uint128).max);
+        IERC20(curveToken).approve(convexBooster, type(uint256).max);
         IERC20(convexToken).approve(convexPool, 0);
-        IERC20(convexToken).approve(convexPool, type(uint128).max);
+        IERC20(convexToken).approve(convexPool, type(uint256).max);
     }
 
     function addRewards() public {
@@ -269,7 +209,7 @@ contract ConvexStakingWrapper is ERC20 {
         // uint256 d_reward = bal-(reward.reward_remaining);
 
         if (_supply > 0 && bal - (reward.reward_remaining) > 0) {
-            reward.reward_integral = reward.reward_integral + uint128(bal - (reward.reward_remaining * 1e20) / _supply);
+            reward.reward_integral = reward.reward_integral + ((bal - reward.reward_remaining) * 1e20) / _supply;
         }
 
         //update user integrals

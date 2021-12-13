@@ -14,7 +14,7 @@ contract ConvexLadleModule is LadleStorage {
     /// @param convexStakingWrapper The address of the convex wrapper to which the vault will be added
     /// @param vaultId The vaulId to be added
     function addVault(IConvexStakingWrapperYield convexStakingWrapper, bytes12 vaultId) external {
-        if (vaultId == 0x000000000000000000000000) {
+        if (vaultId == bytes12(0)) {
             convexStakingWrapper.addVault(cachedVaultId);
         } else {
             convexStakingWrapper.addVault(vaultId);

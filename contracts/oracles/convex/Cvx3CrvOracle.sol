@@ -90,18 +90,25 @@ contract Cvx3CrvOracle is IOracle, AccessControl {
         bytes6 quote,
         uint256 baseAmount
     ) private view returns (uint256 quoteAmount, uint256 updateTime) {
+        require(
+            (base == ethId && quote == cvx3CrvId) || (base == cvx3CrvId && quote == ethId),
+            'Invalid quote or base'
+        );
         (, int256 daiPrice, , , ) = DAI.latestRoundData();
         (, int256 usdcPrice, , , ) = USDC.latestRoundData();
         (, int256 usdtPrice, , , ) = USDT.latestRoundData();
+        require(daiPrice > 0 && usdcPrice > 0 && usdtPrice > 0, 'Chainlink pricefeed reporting 0');
+
+        // This won't overflow as ?
         uint256 minStable = min(uint256(daiPrice), min(uint256(usdcPrice), uint256(usdtPrice)));
 
         uint256 price = (threecrv.get_virtual_price() * minStable) / 1e18;
 
         if (base == cvx3CrvId && quote == ethId) {
-            quoteAmount = (baseAmount * price) / (1e18);
+            quoteAmount = (baseAmount * price) / 1e18;
         }
         if (quote == cvx3CrvId && base == ethId) {
-            quoteAmount = (baseAmount * (1e18)) / price;
+            quoteAmount = (baseAmount * 1e18) / price;
         }
         updateTime = block.timestamp;
     }

@@ -1,7 +1,6 @@
 //https://etherscan.io/address/0x3ba207c25a278524e1cc7faaea950753049072a4#code
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.6;
-pragma experimental ABIEncoderV2;
 
 import '@yield-protocol/vault-interfaces/ICauldron.sol';
 import '@yield-protocol/vault-interfaces/DataTypes.sol';
@@ -15,12 +14,12 @@ contract ConvexStakingWrapperYield is ConvexStakingWrapper {
     /// @notice Mapping to keep track of the user & their vaults
     mapping(address => bytes12[]) public vaults;
 
-    ICauldron cauldron;
+    ICauldron public cauldron;
 
     /// @notice Event called when a vault is set for a user
     /// @param account The account for which vault is set
     /// @param vault The vaultId
-    event VaultSet(address account, bytes12 vault);
+    event VaultSet(address indexed account, bytes12 indexed vault);
 
     constructor(
         address curveToken_,
@@ -28,13 +27,10 @@ contract ConvexStakingWrapperYield is ConvexStakingWrapper {
         address convexPool_,
         uint256 poolId_,
         address join_,
-        ICauldron cauldron_,
-        address timelock_
+        ICauldron cauldron_
     ) {
-        owner = address(timelock_);
-        emit OwnershipTransferred(address(0), owner);
-        _tokenname = string(abi.encodePacked('Staked ', ERC20(convexToken_).name(), ' Yield'));
-        _tokensymbol = string(abi.encodePacked('stk', ERC20(convexToken_).symbol(), '-yield'));
+        name = string(abi.encodePacked('Staked ', ERC20(convexToken_).name(), ' Yield'));
+        symbol = string(abi.encodePacked('stk', ERC20(convexToken_).symbol(), '-yield'));
         isShutdown = false;
         isInit = true;
         curveToken = curveToken_;
@@ -43,29 +39,26 @@ contract ConvexStakingWrapperYield is ConvexStakingWrapper {
         convexPoolId = poolId_;
         collateralVault = join_; //TODO: Add the join address
         cauldron = cauldron_;
-
-        //add rewards
-        addRewards();
-        setApprovals();
     }
 
-    function setCollateralVault(address join_) external {
-        require(msg.sender==owner,'Only owner can set vault');
+    /// @notice Points the collateral vault to the join storing the wrappedCvx3Crv
+    /// @param join_ Join which will store the wrappedCvx3Crv of the user
+    function point(address join_) external auth {
         collateralVault = join_;
     }
 
     /// @notice Adds a vault to the user's vault list
-    /// @param vault_ The vaulId being added
-    function addVault(bytes12 vault_) external {
-        address account = cauldron.vaults(vault_).owner;
+    /// @param vaultId The vaulId being added
+    function addVault(bytes12 vaultId) external {
+        address account = cauldron.vaults(vaultId).owner;
         require(account != address(0), 'No owner for the vault');
-        bytes12[] storage userVault = vaults[account];
-        for (uint256 i = 0; i < userVault.length; i++) {
-            require(userVault[i] != vault_, 'already added');
+        bytes12[] storage vaults_ = vaults[account];
+        for (uint256 i = 0; i < vaults_.length; i++) {
+            require(vaults_[i] != vaultId, 'already added');
         }
-        userVault.push(vault_);
-        vaults[account] = userVault;
-        emit VaultSet(account, vault_);
+        vaults_.push(vaultId);
+        vaults[account] = vaults_;
+        emit VaultSet(account, vaultId);
     }
 
     /// @notice Get user's balance of collateral deposited in various vaults
@@ -93,27 +86,39 @@ contract ConvexStakingWrapperYield is ConvexStakingWrapper {
         return _balanceOf[account_] + collateral;
     }
 
-    function withdrawFor(uint256 _amount,address _account) external nonReentrant {
+    /// @notice Unwraps the token and returns the supplied cvx token to the user
+    /// @dev Have added auth to this function to prevent somebody else to withdraw tokens for an account they don't own
+    /// @param amount_ The amount of tokens to withdraw
+    /// @param account_ The account for which to withdraw
+    function withdrawFor(uint256 amount_, address account_) external nonReentrant auth {
         //dont need to call checkpoint since _burn() will
-        if (_amount > 0) {
-            _burn(_account, _amount);
-            IRewardStaking(convexPool).withdraw(_amount, false);
-            IERC20(convexToken).safeTransfer(_account, _amount);
+        if (amount_ > 0) {
+            _burn(account_, amount_);
+            IRewardStaking(convexPool).withdraw(amount_, false);
+            IERC20(convexToken).safeTransfer(account_, amount_);
         }
 
-        emit Withdrawn(_account, _amount, false);
+        emit Withdrawn(account_, amount_, false);
     }
 
-    function stakeFor(uint256 _amount,address account, address _to) external nonReentrant {
+    /// @notice Stake for a user
+    /// @param amount_ The amount to stake
+    /// @param account_ The address for which to stake
+    /// @param to_ The address to which the wrapped token would be sent
+    function stakeFor(
+        uint256 amount_,
+        address account_,
+        address to_
+    ) external nonReentrant {
         require(!isShutdown, 'shutdown');
 
         //dont need to call checkpoint since _mint() will
-        if (_amount > 0) {
-            _mint(_to, _amount);
-            IERC20(convexToken).safeTransferFrom(account, address(this), _amount);
-            IRewardStaking(convexPool).stake(_amount);
+        if (amount_ > 0) {
+            _mint(to_, amount_);
+            IERC20(convexToken).safeTransferFrom(account_, address(this), amount_);
+            IRewardStaking(convexPool).stake(amount_);
         }
 
-        emit Deposited(msg.sender, _to, _amount, false);
+        emit Deposited(msg.sender, to_, amount_, false);
     }
 }
