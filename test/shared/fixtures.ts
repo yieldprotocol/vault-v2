@@ -399,6 +399,7 @@ export class YieldEnvironment {
           id(fyToken.interface, 'mint(address,uint256)'),
           id(fyToken.interface, 'burn(address,uint256)'),
           id(fyToken.interface, 'point(bytes32,address)'),
+          id(fyToken.interface, 'setFlashFeeFactor(uint256)'),
         ],
         ownerAdd
       ) // Only test environment
