@@ -6,7 +6,7 @@ import { expect } from 'chai'
 import { ETH, DAI, USDC, CVX3CRV } from '../src/constants'
 import {
   ERC20Mock,
-  ConvexLadleModule,
+  ConvexModule,
   ConvexStakingWrapperYieldMock,
   ChainlinkMultiOracle,
   Wand,
@@ -27,7 +27,7 @@ import ChainlinkAggregatorV3MockArtifact from '../artifacts/contracts/mocks/orac
 import Cvx3CrvOracleArtifact from '../artifacts/contracts/oracles/convex/Cvx3CrvOracle.sol/Cvx3CrvOracle.json'
 import CurvePoolMockArtifact from '../artifacts/contracts/mocks/oracles/convex/CurvePoolMock.sol/CurvePoolMock.json'
 import CompositeMultiOracleArtifact from '../artifacts/contracts/oracles/composite/CompositeMultiOracle.sol/CompositeMultiOracle.json'
-import ConvexLadleModuleArtifact from '../artifacts/contracts/utils/convex/ConvexLadleModule.sol/ConvexLadleModule.json'
+import ConvexLadleModuleArtifact from '../artifacts/contracts/utils/convex/ConvexModule.sol/ConvexModule.json'
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { parseEther } from '@ethersproject/units'
@@ -78,7 +78,7 @@ describe('Convex Wrapper', async function () {
   let chainlinkMultiOracle: ChainlinkMultiOracle
   let compositeMultiOracle: CompositeMultiOracle
 
-  let convexLadleModule: ConvexLadleModule
+  let convexLadleModule: ConvexModule
 
   let env: YieldEnvironment
 
@@ -133,7 +133,7 @@ describe('Convex Wrapper', async function () {
     convexLadleModule = (await deployContract(ownerAcc, ConvexLadleModuleArtifact, [
       cauldron.address,
       weth.address,
-    ])) as ConvexLadleModule
+    ])) as ConvexModule
     compositeMultiOracle = (await deployContract(ownerAcc, CompositeMultiOracleArtifact)) as CompositeMultiOracle
     chainlinkMultiOracle = env.oracles.get(ETH) as unknown as ChainlinkMultiOracle
     
@@ -225,6 +225,7 @@ describe('Convex Wrapper', async function () {
     // Transfer the amount to join before pouring
     await convex.approve(ladle.address, posted)
     const wrapCall = convexWrapper.interface.encodeFunctionData('stake', [posted, join])
+    
     await ladle.batch([
       ladle.routeAction(convexWrapper.address, wrapCall),
       ladle.pourAction(vaultId, ownerAcc.address, posted, borrowed),

@@ -7,7 +7,7 @@ import './interfaces/IConvexStakingWrapperYield.sol';
 import '../../LadleStorage.sol';
 
 /// @title Convex Ladle Module to handle vault addition
-contract ConvexLadleModule is LadleStorage {
+contract ConvexModule is LadleStorage {
     constructor(ICauldron cauldron_, IWETH9 weth_) LadleStorage(cauldron_, weth_) {}
 
     /// @notice Adds a vault to the user's vault list in the convex wrapper

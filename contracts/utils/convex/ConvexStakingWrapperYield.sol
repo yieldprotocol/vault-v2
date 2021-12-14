@@ -29,8 +29,8 @@ contract ConvexStakingWrapperYield is ConvexStakingWrapper {
         address join_,
         ICauldron cauldron_
     ) {
-        name = string(abi.encodePacked('Staked ', ERC20(convexToken_).name(), ' Yield'));
-        symbol = string(abi.encodePacked('stk', ERC20(convexToken_).symbol(), '-yield'));
+        name = string(abi.encodePacked('Wrapped ', ERC20(convexToken_).name()));
+        symbol = string(abi.encodePacked('wrp', ERC20(convexToken_).symbol()));
         isShutdown = false;
         isInit = true;
         curveToken = curveToken_;
@@ -86,39 +86,25 @@ contract ConvexStakingWrapperYield is ConvexStakingWrapper {
         return _balanceOf[account_] + collateral;
     }
 
-    /// @notice Unwraps the token and returns the supplied cvx token to the user
-    /// @dev Have added auth to this function to prevent somebody else to withdraw tokens for an account they don't own
-    /// @param amount_ The amount of tokens to withdraw
-    /// @param account_ The account for which to withdraw
-    function withdrawFor(uint256 amount_, address account_) external nonReentrant auth {
-        //dont need to call checkpoint since _burn() will
-        if (amount_ > 0) {
-            _burn(account_, amount_);
-            IRewardStaking(convexPool).withdraw(amount_, false);
-            IERC20(convexToken).safeTransfer(account_, amount_);
-        }
-
-        emit Withdrawn(account_, amount_, false);
+    /// @dev Wrap cvx3CRV held by this contract and forward it to the 'to' address
+    /// @param to_ Address to send the wrapped token to
+    function wrap(address to_) external {
+        uint256 amount_ = IERC20(convexToken).balanceOf(address(this));
+        require(amount_ > 0, 'No cvx3CRV to wrap');
+        _mint(to_, amount_);
+        IRewardStaking(convexPool).stake(amount_);
+        emit Deposited(msg.sender, to_, amount_, false);
     }
 
-    /// @notice Stake for a user
-    /// @param amount_ The amount to stake
-    /// @param account_ The address for which to stake
-    /// @param to_ The address to which the wrapped token would be sent
-    function stakeFor(
-        uint256 amount_,
-        address account_,
-        address to_
-    ) external nonReentrant {
-        require(!isShutdown, 'shutdown');
+    /// @dev Unwrap Wrapped cvx3CRV held by this contract, and send the cvx3Crv to the 'to' address
+    /// @param to_ Address to send the unwrapped token to
+    function unwrap(address to_) external {
+        uint256 amount_ = _balanceOf[address(this)];
+        require(amount_ > 0, 'No wcvx3CRV to unwrap');
+        _burn(address(this), amount_);
+        IRewardStaking(convexPool).withdraw(amount_, false);
+        IERC20(convexToken).safeTransfer(to_, amount_);
 
-        //dont need to call checkpoint since _mint() will
-        if (amount_ > 0) {
-            _mint(to_, amount_);
-            IERC20(convexToken).safeTransferFrom(account_, address(this), amount_);
-            IRewardStaking(convexPool).stake(amount_);
-        }
-
-        emit Deposited(msg.sender, to_, amount_, false);
+        emit Withdrawn(to_, amount_, false);
     }
 }
