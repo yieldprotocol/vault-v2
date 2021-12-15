@@ -23,6 +23,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit,
     using CastU256U32 for uint256;
 
     event Point(bytes32 indexed param, address value);
+    event FlashFeeFactorSet(uint256 indexed fee);
     event SeriesMatured(uint256 chiAtMaturity);
     event Redeemed(address indexed from, address indexed to, uint256 amount, uint256 redeemed);
 
@@ -30,6 +31,8 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit,
 
     uint256 constant internal MAX_TIME_TO_MATURITY = 126144000; // seconds in four years
     bytes32 constant internal FLASH_LOAN_RETURN = keccak256("ERC3156FlashBorrower.onFlashLoan");
+    uint256 constant FLASH_LOANS_DISABLED = type(uint256).max;
+    uint256 public flashFeeFactor = FLASH_LOANS_DISABLED;       // Fee on flash loans, as a percentage in fixed point with 18 decimals. Flash loans disabled by default.
 
     IOracle public oracle;                                      // Oracle for the savings rate.
     IJoin public join;                                          // Source of redemption funds.
@@ -83,6 +86,15 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit,
         else if (param == "join") join = IJoin(value);
         else revert("Unrecognized parameter");
         emit Point(param, value);
+    }
+
+    /// @dev Set the flash loan fee factor
+    function setFlashFeeFactor(uint256 flashFeeFactor_)
+        external
+        auth
+    {
+        flashFeeFactor = flashFeeFactor_;
+        emit FlashFeeFactorSet(flashFeeFactor_);
     }
 
     /// @dev Mature the fyToken by recording the chi.
@@ -203,17 +215,25 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit,
 
     /**
      * @dev From ERC-3156. The fee to be charged for a given loan.
-     * @param token The loan currency. It must be a FYDai.
-     * param amount The amount of tokens lent.
+     * @param token The loan currency. It must be the asset.
+     * @param amount The amount of tokens lent.
      * @return The amount of `token` to be charged for the loan, on top of the returned principal.
      */
-    function flashFee(address token, uint256)
+    function flashFee(address token, uint256 amount)
         external view override
-        beforeMaturity
         returns (uint256)
     {
         require(token == address(this), "Unsupported currency");
-        return 0;
+        return _flashFee(amount);
+    }
+
+    /**
+     * @dev The fee to be charged for a given loan.
+     * @param amount The amount of tokens lent.
+     * @return The amount of `token` to be charged for the loan, on top of the returned principal.
+     */
+    function _flashFee(uint256 amount) internal view returns (uint256) {
+        return amount.wmul(flashFeeFactor);
     }
 
     /**
@@ -232,8 +252,9 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit,
     {
         require(token == address(this), "Unsupported currency");
         _mint(address(receiver), amount);
+        uint128 fee = _flashFee(amount).u128();
         require(receiver.onFlashLoan(msg.sender, token, amount, 0, data) == FLASH_LOAN_RETURN, "Non-compliant borrower");
-        _burn(address(receiver), amount);
+        _burn(address(receiver), amount + fee);
         return true;
     }
 }
