@@ -39,13 +39,13 @@ contract YearnVaultMultiOracle is IOracle, AccessControl {
     /**
      *@notice Set or reset a Yearn Vault Token oracle source and its inverse
      *@param  vaultTokenId address for Yearn vault token
-     *@param  underlyingId id used for underlying base token (e.g. USDC)
      *@param  vaultToken address for Yearn vault token
+     *@param  underlyingId id used for underlying base token (e.g. USDC)
      *@dev    parameter ORDER IS crucial!  If id's are out of order the math will be wrong
      */
     function setSource(
-        bytes6 vaultTokenId,
         bytes6 underlyingId,
+        bytes6 vaultTokenId,
         IYvToken vaultToken
     ) external auth {
         uint8 decimals = vaultToken.decimals();
