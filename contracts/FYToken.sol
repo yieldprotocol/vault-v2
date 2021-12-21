@@ -32,7 +32,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit,
     uint256 constant internal MAX_TIME_TO_MATURITY = 126144000; // seconds in four years
     bytes32 constant internal FLASH_LOAN_RETURN = keccak256("ERC3156FlashBorrower.onFlashLoan");
     uint256 constant FLASH_LOANS_DISABLED = type(uint256).max;
-    uint256 public flashFeeFactor = FLASH_LOANS_DISABLED;       // Fee on flash loans, as a percentage in fixed point with 18 decimals. Flash loans disabled by default.
+    uint256 public flashFeeFactor = FLASH_LOANS_DISABLED;       // Fee on flash loans, as a percentage in fixed point with 18 decimals. Flash loans disabled by default by overflow from `flashFee`.
 
     IOracle public oracle;                                      // Oracle for the savings rate.
     IJoin public join;                                          // Source of redemption funds.
