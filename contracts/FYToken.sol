@@ -253,7 +253,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit,
         require(token == address(this), "Unsupported currency");
         _mint(address(receiver), amount);
         uint128 fee = _flashFee(amount).u128();
-        require(receiver.onFlashLoan(msg.sender, token, amount, 0, data) == FLASH_LOAN_RETURN, "Non-compliant borrower");
+        require(receiver.onFlashLoan(msg.sender, token, amount, fee, data) == FLASH_LOAN_RETURN, "Non-compliant borrower");
         _burn(address(receiver), amount + fee);
         return true;
     }
