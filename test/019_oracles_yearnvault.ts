@@ -7,16 +7,18 @@ const { WAD } = constants
 import { USDC, ETH, DAI, YVUSDC, YVDAI } from '../src/constants'
 
 import { YearnVaultMultiOracle } from '../typechain/YearnVaultMultiOracle'
-import { YearnVaultMock } from '../typechain/YearnVaultMock'
+import { YvTokenMock } from '../typechain/YvTokenMock'
 import { WETH9Mock } from '../typechain/WETH9Mock'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { USDCMock } from '../typechain/USDCMock'
+import { DAIMock } from '../typechain/DAIMock'
 
 import YearnVaultMultiOracleArtifact from '../artifacts/contracts/oracles/yearn/YearnVaultMultiOracle.sol/YearnVaultMultiOracle.json'
-import YearnVaultMockArtifact from '../artifacts/contracts/mocks/YearnVaultMock.sol/YearnVaultMock.json'
+import YvTokenMockArtifact from '../artifacts/contracts/mocks/YvTokenMock.sol/YvTokenMock.json'
 import WETH9MockArtifact from '../artifacts/contracts/mocks/WETH9Mock.sol/WETH9Mock.json'
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
 import USDCMockArtifact from '../artifacts/contracts/mocks/USDCMock.sol/USDCMock.json'
+import DAIMockArtifact from '../artifacts/contracts/mocks/DAIMock.sol/DAIMock.json'
 import { BigNumber } from '@ethersproject/bignumber'
 
 const { deployContract } = waffle
@@ -31,32 +33,35 @@ describe('Oracles - Yearn Vault', function () {
   let ownerAcc: SignerWithAddress
   let owner: string
   let usdc: USDCMock
+  let dai: DAIMock
   let initialYvUSDCRate = '1083891' // 6 decimals
   let initialYvDAIRate = '1071594513314087964' // 18 decimals
   let yearnVaultMultiOracle: YearnVaultMultiOracle
-  let yvUSDCMock: YearnVaultMock
-  let yvDAIMock: YearnVaultMock
+  let yvUSDCMock: YvTokenMock
+  let yvDAIMock: YvTokenMock
 
   before(async () => {
     const signers = await ethers.getSigners()
     ownerAcc = signers[0]
     owner = await ownerAcc.getAddress()
 
-    yvUSDCMock = (await deployContract(ownerAcc, YearnVaultMockArtifact, [
+    usdc = (await deployContract(ownerAcc, USDCMockArtifact)) as USDCMock
+    yvUSDCMock = (await deployContract(ownerAcc, YvTokenMockArtifact, [
       'Yearn Vault USD Coin',
       'yvUSDC',
       6,
-      BigNumber.from(initialYvUSDCRate),
-    ])) as YearnVaultMock
+      usdc.address,
+    ])) as YvTokenMock
+    yvUSDCMock.set(BigNumber.from(initialYvUSDCRate))
 
-    yvDAIMock = (await deployContract(ownerAcc, YearnVaultMockArtifact, [
+    dai = (await deployContract(ownerAcc, DAIMockArtifact)) as DAIMock
+    yvDAIMock = (await deployContract(ownerAcc, YvTokenMockArtifact, [
       'Yearn Vault DAI',
       'yvDAI',
       18,
-      BigNumber.from(initialYvDAIRate),
-    ])) as YearnVaultMock
-
-    usdc = (await deployContract(ownerAcc, USDCMockArtifact)) as USDCMock
+      dai.address,
+    ])) as YvTokenMock
+    yvDAIMock.set(BigNumber.from(initialYvDAIRate))
 
     yearnVaultMultiOracle = (await deployContract(ownerAcc, YearnVaultMultiOracleArtifact, [])) as YearnVaultMultiOracle
     await yearnVaultMultiOracle.grantRole(
@@ -66,8 +71,9 @@ describe('Oracles - Yearn Vault', function () {
   })
 
   it('get() reverts if pair not found', async () => {
+    console.log('hello')
     await expect(
-      yearnVaultMultiOracle.get(bytes6ToBytes32(YVUSDC), bytes6ToBytes32(USDC), '2' + '000000')
+      yearnVaultMultiOracle.callStatic.get(bytes6ToBytes32(YVUSDC), bytes6ToBytes32(USDC), '2' + '000000')
     ).to.be.revertedWith('Source not found')
   })
 
@@ -77,8 +83,8 @@ describe('Oracles - Yearn Vault', function () {
       .to.emit(yearnVaultMultiOracle, 'SourceSet')
       .withArgs(USDC, YVUSDC, yvUSDCMock.address, 6)
 
-    await expect(yearnVaultMultiOracle.get(bytes6ToBytes32(USDC), bytes6ToBytes32(YVUSDC), '2' + '000000')).not.to.be
-      .reverted
+    await expect(yearnVaultMultiOracle.callStatic.get(bytes6ToBytes32(USDC), bytes6ToBytes32(YVUSDC), '2' + '000000'))
+      .not.to.be.reverted
   })
 
   describe('with sources set', function () {
@@ -107,14 +113,14 @@ describe('Oracles - Yearn Vault', function () {
 
       // change price
       const newPrice = '1088888'
-      await yvUSDCMock.setPrice(newPrice)
+      await yvUSDCMock.set(newPrice)
       expect(
         (await yearnVaultMultiOracle.callStatic.get(bytes6ToBytes32(YVUSDC), bytes6ToBytes32(USDC), '2' + '000000'))[0]
       ).to.equal(BigNumber.from(newPrice).mul(2).toString())
     })
 
     it('get() reverts on zero price ', async () => {
-      await yvUSDCMock.setPrice(0)
+      await yvUSDCMock.set(0)
       await expect(
         yearnVaultMultiOracle.get(bytes6ToBytes32(YVUSDC), bytes6ToBytes32(USDC), '2' + '000000')
       ).to.be.revertedWith('Zero price')
