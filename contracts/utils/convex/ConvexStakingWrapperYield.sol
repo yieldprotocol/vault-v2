@@ -91,6 +91,7 @@ contract ConvexStakingWrapperYield is ConvexStakingWrapper {
     function wrap(address to_) external {
         uint256 amount_ = IERC20(convexToken).balanceOf(address(this));
         require(amount_ > 0, 'No cvx3CRV to wrap');
+        _checkpoint([address(0),tx.origin]);
         _mint(to_, amount_);
         IRewardStaking(convexPool).stake(amount_);
         emit Deposited(msg.sender, to_, amount_, false);
@@ -101,6 +102,7 @@ contract ConvexStakingWrapperYield is ConvexStakingWrapper {
     function unwrap(address to_) external {
         uint256 amount_ = _balanceOf[address(this)];
         require(amount_ > 0, 'No wcvx3CRV to unwrap');
+        _checkpoint([address(0),to_]);
         _burn(address(this), amount_);
         IRewardStaking(convexPool).withdraw(amount_, false);
         IERC20(convexToken).safeTransfer(to_, amount_);

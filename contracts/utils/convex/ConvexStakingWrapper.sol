@@ -50,8 +50,8 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
     struct RewardType {
         address reward_token;
         address reward_pool;
-        uint256 reward_integral;
-        uint256 reward_remaining;
+        uint128 reward_integral;
+        uint128 reward_remaining;
         mapping(address => uint256) reward_integral_for;
         mapping(address => uint256) claimable_reward;
     }
@@ -202,16 +202,13 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         bool _isClaim
     ) internal {
         RewardType storage reward = rewards[_index];
-
         //get difference in balance and remaining rewards
         //getReward is unguarded so we use reward_remaining to keep track of how much was actually claimed
         uint256 bal = IERC20(reward.reward_token).balanceOf(address(this));
         // uint256 d_reward = bal-(reward.reward_remaining);
-
-        if (_supply > 0 && bal - (reward.reward_remaining) > 0) {
-            reward.reward_integral = reward.reward_integral + ((bal - reward.reward_remaining) * 1e20) / _supply;
+        if (_supply > 0 && (bal - reward.reward_remaining) > 0) {
+            reward.reward_integral = reward.reward_integral + uint128((bal - reward.reward_remaining) * 1e20 / _supply);
         }
-
         //update user integrals
         for (uint256 u = 0; u < _accounts.length; u++) {
             //do not give rewards to address 0
@@ -226,7 +223,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
                     if (receiveable > 0) {
                         reward.claimable_reward[_accounts[u]] = 0;
                         IERC20(reward.reward_token).safeTransfer(_accounts[u], receiveable);
-                        bal = bal - (receiveable);
+                        bal = bal - receiveable;
                     }
                 } else {
                     reward.claimable_reward[_accounts[u]] =
@@ -386,7 +383,18 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         address dst,
         uint256 wad
     ) internal override returns (bool) {
-        _checkpoint([src, dst]);
+        _checkpoint([address(0),tx.origin]);
+        // _checkpoint([src, dst]);
         return super._transfer(src, dst, wad);
     }
+
+    // function _burn(address src, uint wad) internal override returns (bool) {
+    //     _checkpoint([src, address(0)]);
+    //     return super._burn(src, wad);
+    // }
+
+    // function _mint(address dst, uint wad) internal override returns (bool) {
+    //     _checkpoint([address(0),dst]);
+    //     return super._mint(dst, wad);
+    // }
 }
