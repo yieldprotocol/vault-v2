@@ -92,7 +92,7 @@ describe('Convex Wrapper', async function () {
     ownerAcc = signers[0]
 
     env = await fixture()
-    
+
     convexWrapper = (await deployContract(
       ownerAcc,
       ConvexStakingWrapperYieldMockArtifact
@@ -136,12 +136,12 @@ describe('Convex Wrapper', async function () {
     ])) as ConvexModule
     compositeMultiOracle = (await deployContract(ownerAcc, CompositeMultiOracleArtifact)) as CompositeMultiOracle
     chainlinkMultiOracle = env.oracles.get(ETH) as unknown as ChainlinkMultiOracle
-    
+
     await usdcEthAggregator.set('230171858101077')
     await daiEthAggregator.set('230213930000000')
     await usdtEthAggregator.set('230334420255290')
     await curvePool.set('1019568078072415210')
-    
+
     await chainlinkMultiOracle.grantRole(
       id(chainlinkMultiOracle.interface, 'setSource(bytes6,address,bytes6,address,address)'),
       ownerAcc.address
@@ -160,7 +160,7 @@ describe('Convex Wrapper', async function () {
       id(cvx3CrvOracle.interface, 'setSource(bytes32,bytes32,address,address,address,address)'),
       ownerAcc.address
     )
-    
+
     await cvx3CrvOracle['setSource(bytes32,bytes32,address,address,address,address)'](
       bytes6ToBytes32(CVX3CRV),
       bytes6ToBytes32(ETH),
@@ -221,16 +221,16 @@ describe('Convex Wrapper', async function () {
       .div(1000000)
       .mul(101)
       .div(100)
-    
+
     // Transfer the amount to join before pouring
     await convex.approve(ladle.address, posted)
     const wrapCall = convexWrapper.interface.encodeFunctionData('stake', [posted, join])
-    
+
     await ladle.batch([
       ladle.routeAction(convexWrapper.address, wrapCall),
       ladle.pourAction(vaultId, ownerAcc.address, posted, borrowed),
     ])
-    
+
     expect(await convexWrapper.balanceOf(join)).to.eq(posted)
     expect(await fyToken.balanceOf(ownerAcc.address)).to.eq(borrowed)
   })

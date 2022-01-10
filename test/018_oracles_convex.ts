@@ -56,20 +56,20 @@ describe('Oracles - Convex', function () {
     usdc = (await deployContract(ownerAcc, USDCMockArtifact)) as USDCMock
     dai = (await deployContract(ownerAcc, DAIMockArtifact)) as DAIMock
 
-    curvePool = ((await deployContract(ownerAcc, CurvePoolMockArtifact)) as unknown) as CurvePoolMock
+    curvePool = (await deployContract(ownerAcc, CurvePoolMockArtifact)) as unknown as CurvePoolMock
     await curvePool.set('1019568078072415210')
-    usdcEthAggregator = ((await deployContract(
+    usdcEthAggregator = (await deployContract(
       ownerAcc,
       ChainlinkAggregatorV3MockArtifact
-    )) as unknown) as ChainlinkAggregatorV3Mock
-    daiEthAggregator = ((await deployContract(
+    )) as unknown as ChainlinkAggregatorV3Mock
+    daiEthAggregator = (await deployContract(
       ownerAcc,
       ChainlinkAggregatorV3MockArtifact
-    )) as unknown) as ChainlinkAggregatorV3Mock
-    usdtEthAggregator = ((await deployContract(
+    )) as unknown as ChainlinkAggregatorV3Mock
+    usdtEthAggregator = (await deployContract(
       ownerAcc,
       ChainlinkAggregatorV3MockArtifact
-    )) as unknown) as ChainlinkAggregatorV3Mock
+    )) as unknown as ChainlinkAggregatorV3Mock
     await usdcEthAggregator.set('230171858101077')
     await daiEthAggregator.set('230213930000000')
     await usdtEthAggregator.set('230334420255290')
@@ -94,7 +94,7 @@ describe('Oracles - Convex', function () {
       owner
     )
 
-    cvx3CrvOracle = ((await deployContract(ownerAcc, Cvx3CrvOracleArtifact)) as unknown) as Cvx3CrvOracle
+    cvx3CrvOracle = (await deployContract(ownerAcc, Cvx3CrvOracleArtifact)) as unknown as Cvx3CrvOracle
 
     await cvx3CrvOracle.grantRole(
       id(cvx3CrvOracle.interface, 'setSource(bytes32,bytes32,address,address,address,address)'),
