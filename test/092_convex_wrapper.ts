@@ -64,7 +64,7 @@ describe('Convex Wrapper', async function () {
   let crv: ERC20Mock
   let cvx3CRV: ERC20Mock
   let convexWrapper: ConvexStakingWrapperYieldMock
-  let convexPool:ConvexPoolMock
+  let convexPool: ConvexPoolMock
 
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const seriesId2 = ethers.utils.hexlify(ethers.utils.randomBytes(6))
@@ -111,13 +111,20 @@ describe('Convex Wrapper', async function () {
     weth = env.assets.get(ETH) as unknown as WETH9Mock
     dai = env.assets.get(DAI) as unknown as DAIMock
     convex = (await deployContract(ownerAcc, ERC20MockArtifact, ['Convex Token', 'CVX'])) as ERC20Mock
-    cvx3CRV = (await deployContract(ownerAcc, ERC20MockArtifact, ['Curve.fi DAI/USDC/USDT Convex Deposit  Mock', 'Cvx3Crv Mock'])) as ERC20Mock
+    cvx3CRV = (await deployContract(ownerAcc, ERC20MockArtifact, [
+      'Curve.fi DAI/USDC/USDT Convex Deposit  Mock',
+      'Cvx3Crv Mock',
+    ])) as ERC20Mock
     crv = (await deployContract(ownerAcc, ERC20MockArtifact, ['CurveDAO Token Mock', 'CRV'])) as ERC20Mock
     await convex.mint(ownerAcc.address, parseEther('1000000'))
 
     curvePool = (await deployContract(ownerAcc, CurvePoolMockArtifact)) as unknown as CurvePoolMock
-    convexPool = (await deployContract(ownerAcc, ConvexPoolMockArtifact,[crv.address,cvx3CRV.address,convex.address])) as unknown as ConvexPoolMock
-    
+    convexPool = (await deployContract(ownerAcc, ConvexPoolMockArtifact, [
+      crv.address,
+      cvx3CRV.address,
+      convex.address,
+    ])) as unknown as ConvexPoolMock
+
     usdcEthAggregator = (await deployContract(
       ownerAcc,
       ChainlinkAggregatorV3MockArtifact
@@ -137,19 +144,16 @@ describe('Convex Wrapper', async function () {
     ])) as ConvexModule
     compositeMultiOracle = (await deployContract(ownerAcc, CompositeMultiOracleArtifact)) as CompositeMultiOracle
     chainlinkMultiOracle = env.oracles.get(ETH) as unknown as ChainlinkMultiOracle
-    
-    convexWrapper = (await deployContract(
-      ownerAcc,
-      ConvexStakingWrapperYieldMockArtifact,[
-        cvx3CRV.address,
-        convexPool.address,
-        0,
-        '0x0000000000000000000000000000000000000000',
-        cauldron.address,
-        crv.address,
-        convex.address,
-      ]
-    )) as unknown as ConvexStakingWrapperYieldMock
+
+    convexWrapper = (await deployContract(ownerAcc, ConvexStakingWrapperYieldMockArtifact, [
+      cvx3CRV.address,
+      convexPool.address,
+      0,
+      '0x0000000000000000000000000000000000000000',
+      cauldron.address,
+      crv.address,
+      convex.address,
+    ])) as unknown as ConvexStakingWrapperYieldMock
 
     await usdcEthAggregator.set('230171858101077')
     await daiEthAggregator.set('230213930000000')
@@ -196,7 +200,6 @@ describe('Convex Wrapper', async function () {
 
     // Add integrations
     await ladle.ladle.addIntegration(convexWrapper.address, true)
-    
 
     // Add Module
     await ladle.ladle.addModule(convexLadleModule.address, true)
@@ -205,8 +208,8 @@ describe('Convex Wrapper', async function () {
 
     await wand.addAsset(CVX3CRV, convexWrapper.address)
     await witch.setIlk(CVX3CRV, 4 * 60 * 60, WAD.div(2), 1000000, 0, 18)
-    
-    await ladle.ladle.addToken(cvx3CRV.address,true)
+
+    await ladle.ladle.addToken(cvx3CRV.address, true)
 
     await cvx3CRV.mint(ownerAcc.address, ethers.utils.parseEther('100000'))
     await crv.mint(convexPool.address, ethers.utils.parseEther('100000'))
@@ -268,7 +271,6 @@ describe('Convex Wrapper', async function () {
       '0x000000000000000000000000',
     ])
     await ladle.batch([
-      
       ladle.buildAction(seriesId, CVX3CRV),
       ladle.moduleCallAction(convexLadleModule.address, addVaultCall),
     ])
