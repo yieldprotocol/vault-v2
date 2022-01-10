@@ -207,7 +207,9 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         uint256 bal = IERC20(reward.reward_token).balanceOf(address(this));
         // uint256 d_reward = bal-(reward.reward_remaining);
         if (_supply > 0 && (bal - reward.reward_remaining) > 0) {
-            reward.reward_integral = reward.reward_integral + uint128((bal - reward.reward_remaining) * 1e20 / _supply);
+            reward.reward_integral =
+                reward.reward_integral +
+                uint128(((bal - reward.reward_remaining) * 1e20) / _supply);
         }
         //update user integrals
         for (uint256 u = 0; u < _accounts.length; u++) {
@@ -383,18 +385,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         address dst,
         uint256 wad
     ) internal override returns (bool) {
-        _checkpoint([address(0),tx.origin]);
-        // _checkpoint([src, dst]);
+        _checkpoint([address(0), tx.origin]);
         return super._transfer(src, dst, wad);
     }
-
-    // function _burn(address src, uint wad) internal override returns (bool) {
-    //     _checkpoint([src, address(0)]);
-    //     return super._burn(src, wad);
-    // }
-
-    // function _mint(address dst, uint wad) internal override returns (bool) {
-    //     _checkpoint([address(0),dst]);
-    //     return super._mint(dst, wad);
-    // }
 }
