@@ -83,6 +83,7 @@ describe('FYToken - flash', function () {
       expect(await borrower.flashBalance()).to.equal(WAD)
       expect(await borrower.flashToken()).to.equal(fyToken.address)
       expect(await borrower.flashAmount()).to.equal(WAD)
+      expect(await borrower.flashFee()).to.equal(0)
       expect(await borrower.flashInitiator()).to.equal(borrower.address)
     })
 
@@ -121,6 +122,7 @@ describe('FYToken - flash', function () {
         expect(await borrower.flashBalance()).to.equal(principal.add(fee))
         expect(await borrower.flashToken()).to.equal(fyToken.address)
         expect(await borrower.flashAmount()).to.equal(principal)
+        expect(await borrower.flashFee()).to.equal(fee)
         expect(await borrower.flashInitiator()).to.equal(borrower.address)
       })
     })
