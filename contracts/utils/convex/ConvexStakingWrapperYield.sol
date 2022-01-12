@@ -88,10 +88,10 @@ contract ConvexStakingWrapperYield is ConvexStakingWrapper {
 
     /// @dev Wrap cvx3CRV held by this contract and forward it to the 'to' address
     /// @param to_ Address to send the wrapped token to
-    function wrap(address to_) external {
+    function wrap(address to_, address from_) external {
         uint256 amount_ = IERC20(convexToken).balanceOf(address(this));
         require(amount_ > 0, 'No cvx3CRV to wrap');
-        _checkpoint([address(0), tx.origin]);
+        _checkpoint([address(0), from_]);
         _mint(to_, amount_);
         IRewardStaking(convexPool).stake(amount_);
         emit Deposited(msg.sender, to_, amount_, false);
