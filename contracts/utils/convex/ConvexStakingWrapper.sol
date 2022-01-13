@@ -379,13 +379,4 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         //events
         emit Withdrawn(msg.sender, _amount, true);
     }
-
-    function _transfer(
-        address src,
-        address dst,
-        uint256 wad
-    ) internal override returns (bool) {
-        _checkpoint([address(0), tx.origin]);
-        return super._transfer(src, dst, wad);
-    }
 }
