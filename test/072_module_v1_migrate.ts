@@ -102,25 +102,9 @@ describe('Ladle - module', function () {
 
   it('redeems mature v1 fyDai', async () => {
     const poolTokensToBurn = (await v1PoolSep.balanceOf(owner)).div(2)
-    const calldata = module.interface.encodeFunctionData('burnForDai', [v1PoolSep.address, owner, poolTokensToBurn, 0])
+    const calldata = module.interface.encodeFunctionData('burnForDai', [v1PoolSep.address, owner, poolTokensToBurn])
     await v1PoolSep.transfer(ladle.address, poolTokensToBurn)
     await ladle.moduleCall(module.address, calldata)
     expect(await base.balanceOf(owner)).to.not.equal(0)
-  })
-
-  it('sells v1 fyDai', async () => {
-    const poolTokensToBurn = (await v1PoolDec.balanceOf(owner)).div(2)
-    const calldata = module.interface.encodeFunctionData('burnForDai', [v1PoolDec.address, owner, poolTokensToBurn, 0])
-    await v1PoolDec.transfer(ladle.address, poolTokensToBurn)
-    await ladle.moduleCall(module.address, calldata)
-    expect(await base.balanceOf(owner)).to.not.equal(0)
-  })
-
-  it('reverts if the minimum fyDai price is not reached', async () => {
-    const poolTokensToBurn = (await v1PoolDec.balanceOf(owner)).div(2)
-    await v1PoolDec.transfer(module.address, poolTokensToBurn)
-    await expect(module.burnForDai(v1PoolDec.address, owner, poolTokensToBurn, WAD.mul(2))).to.be.revertedWith(
-      'Minimum FYDai price not reached'
-    )
   })
 })

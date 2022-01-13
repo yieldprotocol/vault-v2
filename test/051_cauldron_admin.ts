@@ -51,7 +51,7 @@ describe('Cauldron - admin', function () {
   const otherIlk1 = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const ilkId2 = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
-  const maturity = 1640995199
+  const maturity = 1672531199
   const ratio = 1000000 // == 100% collateralization ratio
 
   beforeEach(async () => {
