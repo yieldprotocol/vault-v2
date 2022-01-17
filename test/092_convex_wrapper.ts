@@ -7,7 +7,7 @@ import { ETH, DAI, USDC, CVX3CRV } from '../src/constants'
 import {
   ERC20Mock,
   ConvexModule,
-  ConvexStakingWrapperYieldMock,
+  ConvexYieldWrapperMock,
   ConvexPoolMock,
   ChainlinkMultiOracle,
   Wand,
@@ -23,7 +23,7 @@ import {
   FYToken,
 } from '../typechain'
 
-import ConvexStakingWrapperYieldMockArtifact from '../artifacts/contracts/mocks/ConvexStakingWrapperYieldMock.sol/ConvexStakingWrapperYieldMock.json'
+import ConvexYieldWrapperMockArtifact from '../artifacts/contracts/mocks/ConvexYieldWrapperMock.sol/ConvexYieldWrapperMock.json'
 import ChainlinkAggregatorV3MockArtifact from '../artifacts/contracts/mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol/ChainlinkAggregatorV3Mock.json'
 import Cvx3CrvOracleArtifact from '../artifacts/contracts/oracles/convex/Cvx3CrvOracle.sol/Cvx3CrvOracle.json'
 import CurvePoolMockArtifact from '../artifacts/contracts/mocks/oracles/convex/CurvePoolMock.sol/CurvePoolMock.json'
@@ -63,7 +63,7 @@ describe('Convex Wrapper', async function () {
   let convex: ERC20Mock
   let crv: ERC20Mock
   let cvx3CRV: ERC20Mock
-  let convexWrapper: ConvexStakingWrapperYieldMock
+  let convexWrapper: ConvexYieldWrapperMock
   let convexPool: ConvexPoolMock
 
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
@@ -145,7 +145,7 @@ describe('Convex Wrapper', async function () {
     compositeMultiOracle = (await deployContract(ownerAcc, CompositeMultiOracleArtifact)) as CompositeMultiOracle
     chainlinkMultiOracle = env.oracles.get(ETH) as unknown as ChainlinkMultiOracle
 
-    convexWrapper = (await deployContract(ownerAcc, ConvexStakingWrapperYieldMockArtifact, [
+    convexWrapper = (await deployContract(ownerAcc, ConvexYieldWrapperMockArtifact, [
       cvx3CRV.address,
       convexPool.address,
       0,
@@ -153,7 +153,7 @@ describe('Convex Wrapper', async function () {
       cauldron.address,
       crv.address,
       convex.address,
-    ])) as unknown as ConvexStakingWrapperYieldMock
+    ])) as unknown as ConvexYieldWrapperMock
 
     await usdcEthAggregator.set('230171858101077')
     await daiEthAggregator.set('230213930000000')

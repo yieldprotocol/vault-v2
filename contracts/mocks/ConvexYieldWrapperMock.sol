@@ -49,7 +49,7 @@ interface IRewardStaking {
     function balanceOf(address _account) external view returns (uint256);
 }
 
-contract ConvexStakingWrapperYieldMock is ERC20, AccessControl {
+contract ConvexYieldWrapperMock is ERC20, AccessControl {
     using TransferHelper for IERC20;
 
     struct RewardType {

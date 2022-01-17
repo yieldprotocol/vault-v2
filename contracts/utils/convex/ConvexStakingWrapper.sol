@@ -76,7 +76,6 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
 
     //management
     bool public isShutdown;
-    bool public isInit;
     bool private _status;
 
     bool private constant _NOT_ENTERED = false;
@@ -86,8 +85,25 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
     event Withdrawn(address indexed _user, uint256 _amount, bool _unwrapped);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
-    constructor() ERC20('StakedConvexToken', 'stkCvx', 18) {
-        _status = _NOT_ENTERED;
+    constructor(
+        address _curveToken,
+        address _convexToken,
+        address _convexPool,
+        uint256 _poolId,
+        address _vault,
+        string memory name,
+        string memory symbol,
+        uint8 decimals
+    ) public ERC20(name, symbol, decimals) {
+        curveToken = _curveToken;
+        convexToken = _convexToken;
+        convexPool = _convexPool;
+        convexPoolId = _poolId;
+        collateralVault = _vault;
+
+        //add rewards
+        addRewards();
+        setApprovals();
     }
 
     modifier nonReentrant() {
