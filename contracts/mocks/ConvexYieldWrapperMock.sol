@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
+
 pragma solidity 0.8.6;
 
 import '@yield-protocol/utils-v2/contracts/token/ERC20.sol';
@@ -121,6 +122,19 @@ contract ConvexYieldWrapperMock is ERC20, AccessControl {
         vaults[account] = userVault;
     }
 
+    /// @notice Remove a vault from the user's vault list
+    /// @param vaultId The vaulId being added
+    /// @param account The user from whom the vault needs to be removed
+    function removeVault(bytes12 vaultId, address account) public {
+        bytes12[] storage vaults_ = vaults[account];
+        for (uint256 i = 0; i < vaults_.length; i++) {
+            if (vaults_[i] == vaultId) {
+                vaults_[i] = bytes12(0);
+            }
+        }
+        vaults[account] = vaults_;
+    }
+
     function wrap(address _to, address from_) external {
         uint256 amount_ = IERC20(convexToken).balanceOf(address(this));
         require(amount_ > 0, 'No cvx3CRV to wrap');
@@ -186,17 +200,18 @@ contract ConvexYieldWrapperMock is ERC20, AccessControl {
             return 0;
         }
 
-        if (vaults[account_].length == 0) {
-            return _balanceOf[account_];
-        }
         bytes12[] memory userVault = vaults[account_];
 
         //add up all balances of all vaults
         uint256 collateral;
         Balances memory balance;
         for (uint256 i = 0; i < userVault.length; i++) {
-            balance = cauldron.balances(userVault[i]);
-            collateral = collateral + balance.ink;
+            if (userVault[i] != bytes12(0)) {
+                if (cauldron.vaults(userVault[i]).owner == account_) {
+                    balance = cauldron.balances(userVault[i]);
+                    collateral = collateral + balance.ink;
+                }
+            }
         }
 
         //add to balance of this token
@@ -327,16 +342,6 @@ contract ConvexYieldWrapperMock is ERC20, AccessControl {
 
     function point(address join_) public {
         collateralVault = join_;
-    }
-
-    function _transfer(
-        address src,
-        address dst,
-        uint256 wad
-    ) internal override returns (bool) {
-        _checkpoint([address(0), tx.origin]);
-        // _checkpoint([src, dst]);
-        return super._transfer(src, dst, wad);
     }
 
     function user_checkpoint(address[2] calldata _accounts) external returns (bool) {

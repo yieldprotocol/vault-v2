@@ -1,5 +1,5 @@
-//https://etherscan.io/address/0x3ba207c25a278524e1cc7faaea950753049072a4#code
 // SPDX-License-Identifier: BUSL-1.1
+
 pragma solidity 0.8.6;
 
 import '@yield-protocol/vault-interfaces/ICauldron.sol';
@@ -69,6 +69,7 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
             if (vaults_[i] == vaultId) {
                 vaults_[i] = bytes12(0);
                 emit VaultRemoved(account, vaultId);
+                break;
             }
         }
         vaults[account] = vaults_;
@@ -93,10 +94,6 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
                     balance = cauldron.balances(userVault[i]);
                     collateral = collateral + balance.ink;
                 }
-                // else {
-                //     //Remove vault
-                //     removeVault(userVault[i], account_);
-                // }
             }
         }
 
