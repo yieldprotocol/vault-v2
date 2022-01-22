@@ -40,14 +40,14 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
         cauldron = cauldron_;
     }
 
-    /// @notice Points the collateral vault to the join storing the wrappedCvx3Crv
-    /// @param join_ Join which will store the wrappedCvx3Crv of the user
+    /// @notice Points the collateral vault to the join storing the wrappedConvex
+    /// @param join_ Join which will store the wrappedConvex of the user
     function point(address join_) external auth {
         collateralVault = join_;
     }
 
     /// @notice Adds a vault to the user's vault list
-    /// @param vaultId The vaulId being added
+    /// @param vaultId The id of the vault being added
     function addVault(bytes12 vaultId) external {
         address account = cauldron.vaults(vaultId).owner;
         require(account != address(0), 'No owner for the vault');
@@ -61,18 +61,21 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
     }
 
     /// @notice Remove a vault from the user's vault list
-    /// @param vaultId The vaulId being added
+    /// @param vaultId The id of the vault being removed
     /// @param account The user from whom the vault needs to be removed
     function removeVault(bytes12 vaultId, address account) public {
-        bytes12[] storage vaults_ = vaults[account];
-        for (uint256 i = 0; i < vaults_.length; i++) {
-            if (vaults_[i] == vaultId) {
-                vaults_[i] = bytes12(0);
-                emit VaultRemoved(account, vaultId);
-                break;
+        address owner = cauldron.vaults(vaultId).owner;
+        if (account != owner) {
+            bytes12[] storage vaults_ = vaults[account];
+            for (uint256 i = 0; i < vaults_.length; i++) {
+                if (vaults_[i] == vaultId) {
+                    vaults_[i] = bytes12(0);
+                    emit VaultRemoved(account, vaultId);
+                    break;
+                }
             }
+            vaults[account] = vaults_;
         }
-        vaults[account] = vaults_;
     }
 
     /// @notice Get user's balance of collateral deposited in various vaults
@@ -101,23 +104,26 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
         return _balanceOf[account_] + collateral;
     }
 
-    /// @dev Wrap cvx3CRV held by this contract and forward it to the 'to' address
+    /// @dev Wrap convex token held by this contract and forward it to the 'to' address
     /// @param to_ Address to send the wrapped token to
     /// @param from_ Address of the user whose token is being wrapped
     function wrap(address to_, address from_) external {
         uint256 amount_ = IERC20(convexToken).balanceOf(address(this));
-        require(amount_ > 0, 'No cvx3CRV to wrap');
+        require(amount_ > 0, 'No convex token to wrap');
+
         _checkpoint([address(0), from_]);
         _mint(to_, amount_);
         IRewardStaking(convexPool).stake(amount_);
+
         emit Deposited(msg.sender, to_, amount_, false);
     }
 
-    /// @dev Unwrap Wrapped cvx3CRV held by this contract, and send the cvx3Crv to the 'to' address
-    /// @param to_ Address to send the unwrapped token to
+    /// @dev Unwrap Wrapped convex token held by this contract, and send the unwrapped convex token to the 'to' address
+    /// @param to_ Address to send the unwrapped convex token to
     function unwrap(address to_) external {
         uint256 amount_ = _balanceOf[address(this)];
-        require(amount_ > 0, 'No wcvx3CRV to unwrap');
+        require(amount_ > 0, 'No wrapped convex token');
+
         _checkpoint([address(0), to_]);
         _burn(address(this), amount_);
         IRewardStaking(convexPool).withdraw(amount_, false);

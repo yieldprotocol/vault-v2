@@ -68,8 +68,8 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
     address public curveToken;
     address public convexToken;
     address public convexPool;
-    uint256 public convexPoolId;
     address public collateralVault;
+    uint256 public convexPoolId;
 
     //rewards
     RewardType[] public rewards;
