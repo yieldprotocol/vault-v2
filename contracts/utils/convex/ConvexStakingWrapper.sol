@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// Original contract: https://github.com/convex-eth/platform/blob/main/contracts/contracts/wrappers/ConvexStakingWrapper.sol
 pragma solidity 0.8.6;
 
 import '@yield-protocol/utils-v2/contracts/token/IERC20.sol';
@@ -117,10 +118,12 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         _status = _NOT_ENTERED;
     }
 
+    /// @notice Initiate shutdown of the system
     function shutdown() external auth {
         isShutdown = true;
     }
 
+    /// @notice Give maximum approval to the pool & convex booster contract to transfer funds from wrapper
     function setApprovals() public {
         IERC20(curveToken).approve(convexBooster, 0);
         IERC20(curveToken).approve(convexBooster, type(uint256).max);
@@ -128,6 +131,8 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         IERC20(convexToken).approve(convexPool, type(uint256).max);
     }
 
+    /// @notice Adds reward tokens by reading the available rewards from the RewardStaking pool
+    /// @dev CRV token is added as a reward by default
     function addRewards() public {
         address mainPool = convexPool;
 
@@ -151,10 +156,15 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         }
     }
 
+    /// @notice Returns the length of the reward tokens added
+    /// @return Returns the count of reward tokens
     function rewardLength() external view returns (uint256) {
         return rewards.length;
     }
 
+    /// @notice Get user's balance
+    /// @param _account User's address for which balance is requested
+    /// @return User's balance of collateral
     function _getDepositedBalance(address _account) internal view virtual returns (uint256) {
         if (_account == address(0) || _account == collateralVault) {
             return 0;
@@ -164,10 +174,17 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         return _balanceOf[_account];
     }
 
+    /// @notice TotalSupply of wrapped token
+    /// @return Returns the total supply of wrapped token
     function _getTotalSupply() internal view virtual returns (uint256) {
         return _totalSupply;
     }
 
+    /// @notice Calculates & upgrades the integral for distributing the CVX rewards
+    /// @param _accounts Accounts for which the CvxIntegral has to be calculated
+    /// @param _balances Balances of the accounts
+    /// @param _supply Total supply of the wrapped token
+    /// @param _isClaim Whether to claim the calculated rewards
     function _calcCvxIntegral(
         address[2] memory _accounts,
         uint256[2] memory _balances,
@@ -210,6 +227,12 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         }
     }
 
+    /// @notice Calculates & upgrades the integral for distributing the reward token
+    /// @param _index The index of the reward token for which the calculations are to be done
+    /// @param _accounts Accounts for which the CvxIntegral has to be calculated
+    /// @param _balances Balances of the accounts
+    /// @param _supply Total supply of the wrapped token
+    /// @param _isClaim Whether to claim the calculated rewards
     function _calcRewardIntegral(
         uint256 _index,
         address[2] memory _accounts,
@@ -258,6 +281,8 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         }
     }
 
+    /// @notice Create a checkpoint for the supplied addresses by updating the reward integrals & claimable reward for them
+    /// @param _accounts The accounts for which checkpoints have to be calculated
     function _checkpoint(address[2] memory _accounts) internal {
         //if shutdown, no longer checkpoint in case there are problems
         if (isShutdown) return;
@@ -276,6 +301,8 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         _calcCvxIntegral(_accounts, depositedBalance, supply, false);
     }
 
+    /// @notice Create a checkpoint for the supplied addresses by updating the reward integrals & claimable reward for them & claims the rewards
+    /// @param _accounts The accounts for which checkpoints have to be calculated
     function _checkpointAndClaim(address[2] memory _accounts) internal {
         uint256 supply = _getTotalSupply();
         uint256[2] memory depositedBalance;
@@ -290,15 +317,23 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         _calcCvxIntegral(_accounts, depositedBalance, supply, true);
     }
 
+    /// @notice Create a checkpoint for the supplied addresses by updating the reward integrals & claimable reward for them
+    /// @param _accounts The accounts for which checkpoints have to be calculated
     function user_checkpoint(address[2] calldata _accounts) external returns (bool) {
         _checkpoint([_accounts[0], _accounts[1]]);
         return true;
     }
 
+    /// @notice Get the balance of the user
+    /// @param _account Address whose balance is to be checked
+    /// @return The balance of the supplied address
     function totalBalanceOf(address _account) external view returns (uint256) {
         return _getDepositedBalance(_account);
     }
 
+    /// @notice Get the amount of tokens the user has earned
+    /// @param _account Address whose balance is to be checked
+    /// @return claimable Array of earned tokens and their amount
     function earned(address _account) external view returns (EarnedData[] memory claimable) {
         uint256 supply = _getTotalSupply();
         // uint256 depositedBalance = _getDepositedBalance(_account);
@@ -334,6 +369,8 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         return claimable;
     }
 
+    /// @notice Claim reward for the supplied account
+    /// @param _account Address whose reward is to be claimed
     function getReward(address _account) external {
         //claim directly in checkpoint logic to save a bit of gas
         _checkpointAndClaim([_account, address(0)]);

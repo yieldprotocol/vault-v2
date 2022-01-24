@@ -16,10 +16,10 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
 
     ICauldron public cauldron;
 
-    /// @notice Event called when a vault is set for a user
-    /// @param account The account for which vault is set
-    /// @param vaultId The vaultId
-    event VaultSet(address indexed account, bytes12 indexed vaultId);
+    /// @notice Event called when a vault is added for a user
+    /// @param account The account for which vault is added
+    /// @param vaultId The vaultId to be added
+    event VaultAdded(address indexed account, bytes12 indexed vaultId);
 
     /// @notice Event called when a vault is removed for a user
     /// @param account The account for which vault is removed
@@ -57,7 +57,7 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
         }
         vaults_.push(vaultId);
         vaults[account] = vaults_;
-        emit VaultSet(account, vaultId);
+        emit VaultAdded(account, vaultId);
     }
 
     /// @notice Remove a vault from the user's vault list
@@ -108,6 +108,7 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
     /// @param to_ Address to send the wrapped token to
     /// @param from_ Address of the user whose token is being wrapped
     function wrap(address to_, address from_) external {
+        require(!isShutdown, 'shutdown');
         uint256 amount_ = IERC20(convexToken).balanceOf(address(this));
         require(amount_ > 0, 'No convex token to wrap');
 
@@ -121,6 +122,7 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
     /// @dev Unwrap Wrapped convex token held by this contract, and send the unwrapped convex token to the 'to' address
     /// @param to_ Address to send the unwrapped convex token to
     function unwrap(address to_) external {
+        require(!isShutdown, 'shutdown');
         uint256 amount_ = _balanceOf[address(this)];
         require(amount_ > 0, 'No wrapped convex token');
 
