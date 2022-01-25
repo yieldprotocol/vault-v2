@@ -10,9 +10,12 @@ import "./interfaces/IRewardStaking.sol";
 import "./interfaces/IConvexDeposits.sol";
 import "./interfaces/ICvx.sol";
 
+/// @notice Contains function to calc amount of CVX to mint from a given amount of CRV
 library CvxMining {
     ICvx public constant cvx = ICvx(0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B);
 
+    /// @param _amount The amount of CRV to burn
+    /// @return The amount of CVX to mint
     function ConvertCrvToCvx(uint256 _amount) internal view returns (uint256) {
         uint256 supply = cvx.totalSupply();
         uint256 reductionPerCliff = cvx.reductionPerCliff();
@@ -157,7 +160,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
     }
 
     /// @notice Returns the length of the reward tokens added
-    /// @return Returns the count of reward tokens
+    /// @return The count of reward tokens
     function rewardLength() external view returns (uint256) {
         return rewards.length;
     }
