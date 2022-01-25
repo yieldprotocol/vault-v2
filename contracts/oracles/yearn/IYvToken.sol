@@ -8,4 +8,11 @@ interface IYvToken is IERC20Metadata {
     // @notice Returns the price for a single Yearn Vault share.
     // @dev total vault assets / total token supply (calculated not cached)
     function pricePerShare() external view returns (uint256);
+
+    // @dev Used to redeem yvTokens for underlying
+    function withdraw() external returns (uint256);
+
+    // @dev Returns address of underlying token
+    function token() external returns (address);
+
 }

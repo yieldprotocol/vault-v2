@@ -54,54 +54,89 @@ describe('FYToken - flash', function () {
     borrower = (await deployContract(ownerAcc, FlashBorrowerArtifact, [fyToken.address])) as FlashBorrower
   })
 
-  it('should do a simple flash loan', async () => {
-    await borrower.flashBorrow(fyToken.address, WAD, actions.normal)
-
-    expect(await fyToken.balanceOf(owner)).to.equal(0)
-    expect(await borrower.flashBalance()).to.equal(WAD)
-    expect(await borrower.flashToken()).to.equal(fyToken.address)
-    expect(await borrower.flashAmount()).to.equal(WAD)
-    expect(await borrower.flashInitiator()).to.equal(borrower.address)
+  it('flash loans are disabled by default', async () => {
+    await expect(fyToken.flashLoan(borrower.address, fyToken.address, 1, actions.normal)).to.be.reverted
   })
 
-  it('can repay the flash loan by transfer', async () => {
-    await expect(borrower.flashBorrow(fyToken.address, WAD, actions.transfer))
-      .to.emit(fyToken, 'Transfer')
-      .withArgs(fyToken.address, '0x0000000000000000000000000000000000000000', WAD)
-
-    expect(await fyToken.balanceOf(owner)).to.equal(0)
-    expect(await borrower.flashBalance()).to.equal(WAD)
-    expect(await borrower.flashToken()).to.equal(fyToken.address)
-    expect(await borrower.flashAmount()).to.equal(WAD)
-    expect(await borrower.flashInitiator()).to.equal(borrower.address)
-  })
-
-  it('the receiver needs to approve the repayment if not the initiator', async () => {
-    await expect(fyToken.flashLoan(borrower.address, fyToken.address, WAD, actions.normal)).to.be.revertedWith(
-      'ERC20: Insufficient approval'
-    )
-  })
-
-  it('needs to have enough funds to repay a flash loan', async () => {
-    await expect(borrower.flashBorrow(fyToken.address, WAD, actions.steal)).to.be.revertedWith(
-      'ERC20: Insufficient balance'
-    )
-  })
-
-  it('should do two nested flash loans', async () => {
-    await borrower.flashBorrow(fyToken.address, WAD, actions.reenter) // It will borrow WAD, and then reenter and borrow WAD * 2
-    expect(await borrower.flashBalance()).to.equal(WAD.mul(3))
-  })
-
-  describe('after maturity', async () => {
+  describe('with a zero fee', async () => {
     beforeEach(async () => {
-      await ethers.provider.send('evm_mine', [(await fyToken.maturity()).toNumber()])
+      const feeFactor = 0
+      await fyToken.setFlashFeeFactor(feeFactor)
     })
 
-    it('does not allow to flash mint after maturity', async () => {
-      await expect(borrower.flashBorrow(fyToken.address, WAD, actions.normal)).to.be.revertedWith(
-        'Only before maturity'
+    it('should do a simple flash loan', async () => {
+      await borrower.flashBorrow(fyToken.address, WAD, actions.normal)
+
+      expect(await fyToken.balanceOf(owner)).to.equal(0)
+      expect(await borrower.flashBalance()).to.equal(WAD)
+      expect(await borrower.flashToken()).to.equal(fyToken.address)
+      expect(await borrower.flashAmount()).to.equal(WAD)
+      expect(await borrower.flashInitiator()).to.equal(borrower.address)
+    })
+
+    it('can repay the flash loan by transfer', async () => {
+      await expect(borrower.flashBorrow(fyToken.address, WAD, actions.transfer))
+        .to.emit(fyToken, 'Transfer')
+        .withArgs(fyToken.address, '0x0000000000000000000000000000000000000000', WAD)
+
+      expect(await fyToken.balanceOf(owner)).to.equal(0)
+      expect(await borrower.flashBalance()).to.equal(WAD)
+      expect(await borrower.flashToken()).to.equal(fyToken.address)
+      expect(await borrower.flashAmount()).to.equal(WAD)
+      expect(await borrower.flashFee()).to.equal(0)
+      expect(await borrower.flashInitiator()).to.equal(borrower.address)
+    })
+
+    it('the receiver needs to approve the repayment if not the initiator', async () => {
+      await expect(fyToken.flashLoan(borrower.address, fyToken.address, WAD, actions.normal)).to.be.revertedWith(
+        'ERC20: Insufficient approval'
       )
+    })
+
+    it('needs to have enough funds to repay a flash loan', async () => {
+      await expect(borrower.flashBorrow(fyToken.address, WAD, actions.steal)).to.be.revertedWith(
+        'ERC20: Insufficient balance'
+      )
+    })
+
+    it('should do two nested flash loans', async () => {
+      await borrower.flashBorrow(fyToken.address, WAD, actions.reenter) // It will borrow WAD, and then reenter and borrow WAD * 2
+      expect(await borrower.flashBalance()).to.equal(WAD.mul(3))
+    })
+
+    describe('with a non-zero fee', async () => {
+      beforeEach(async () => {
+        const feeFactor = WAD.mul(5).div(100) // 5%
+        await fyToken.setFlashFeeFactor(feeFactor)
+      })
+
+      it('should do a simple flash loan', async () => {
+        const principal = WAD
+        const fee = principal.mul(5).div(100)
+        await fyToken.mint(borrower.address, fee)
+        await expect(borrower.flashBorrow(fyToken.address, principal, actions.normal))
+          .to.emit(fyToken, 'Transfer')
+          .withArgs(borrower.address, '0x0000000000000000000000000000000000000000', principal.add(fee))
+
+        expect(await fyToken.balanceOf(owner)).to.equal(0)
+        expect(await borrower.flashBalance()).to.equal(principal.add(fee))
+        expect(await borrower.flashToken()).to.equal(fyToken.address)
+        expect(await borrower.flashAmount()).to.equal(principal)
+        expect(await borrower.flashFee()).to.equal(fee)
+        expect(await borrower.flashInitiator()).to.equal(borrower.address)
+      })
+    })
+
+    describe('after maturity', async () => {
+      beforeEach(async () => {
+        await ethers.provider.send('evm_mine', [(await fyToken.maturity()).toNumber()])
+      })
+
+      it('does not allow to flash mint after maturity', async () => {
+        await expect(borrower.flashBorrow(fyToken.address, WAD, actions.normal)).to.be.revertedWith(
+          'Only before maturity'
+        )
+      })
     })
   })
 })
