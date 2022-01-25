@@ -2,13 +2,13 @@
 // Original contract: https://github.com/convex-eth/platform/blob/main/contracts/contracts/wrappers/ConvexStakingWrapper.sol
 pragma solidity 0.8.6;
 
-import '@yield-protocol/utils-v2/contracts/token/IERC20.sol';
-import '@yield-protocol/utils-v2/contracts/token/ERC20.sol';
-import '@yield-protocol/utils-v2/contracts/access/AccessControl.sol';
-import '@yield-protocol/utils-v2/contracts/token/TransferHelper.sol';
-import './interfaces/IRewardStaking.sol';
-import './interfaces/IConvexDeposits.sol';
-import './interfaces/ICvx.sol';
+import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
+import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
+import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
+import "./interfaces/IRewardStaking.sol";
+import "./interfaces/IConvexDeposits.sol";
+import "./interfaces/ICvx.sol";
 
 library CvxMining {
     ICvx public constant cvx = ICvx(0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B);
