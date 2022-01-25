@@ -199,9 +199,12 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
     ) internal {
         uint256 bal = IERC20(cvx).balanceOf(address(this));
         uint256 d_cvxreward = bal - cvx_reward_remaining;
+        uint256 cvxRewardIntegral = cvx_reward_integral;
 
         if (_supply > 0 && d_cvxreward > 0) {
-            cvx_reward_integral = cvx_reward_integral + (d_cvxreward * 1e20) / (_supply);
+            cvxRewardIntegral = cvxRewardIntegral + (d_cvxreward * 1e20) / (_supply);
+            cvx_reward_integral = cvxRewardIntegral;
+
         }
 
         //update user integrals for cvx
@@ -211,9 +214,9 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
             if (_accounts[u] == collateralVault) continue;
 
             uint256 userI = cvx_reward_integral_for[_accounts[u]];
-            if (_isClaim || userI < cvx_reward_integral) {
+            if (_isClaim || userI < cvxRewardIntegral) {
                 uint256 receiveable = cvx_claimable_reward[_accounts[u]] +
-                    ((_balances[u] * (cvx_reward_integral - userI)) / 1e20);
+                    ((_balances[u] * (cvxRewardIntegral - userI)) / 1e20);
                 if (_isClaim) {
                     if (receiveable > 0) {
                         cvx_claimable_reward[_accounts[u]] = 0;
@@ -223,7 +226,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
                 } else {
                     cvx_claimable_reward[_accounts[u]] = receiveable;
                 }
-                cvx_reward_integral_for[_accounts[u]] = cvx_reward_integral;
+                cvx_reward_integral_for[_accounts[u]] = cvxRewardIntegral;
             }
         }
 
