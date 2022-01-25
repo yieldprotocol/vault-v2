@@ -139,16 +139,19 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
     function addRewards() public {
         address mainPool = convexPool;
 
-        if (rewards.length == 0) {
+        uint256 rewardsLength = rewards.length;
+
+        if (rewardsLength == 0) {
             RewardType storage reward = rewards.push();
             reward.reward_token = crv;
             reward.reward_pool = mainPool;
             reward.reward_integral = 0;
             reward.reward_remaining = 0;
+            rewardsLength += 1;
         }
 
         uint256 extraCount = IRewardStaking(mainPool).extraRewardsLength();
-        uint256 startIndex = rewards.length - 1;
+        uint256 startIndex = rewardsLength - 1;
         for (uint256 i = startIndex; i < extraCount; i++) {
             address extraPool = IRewardStaking(mainPool).extraRewards(i);
             RewardType storage reward = rewards.push();
