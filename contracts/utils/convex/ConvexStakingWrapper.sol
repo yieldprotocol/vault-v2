@@ -2,13 +2,13 @@
 // Original contract: https://github.com/convex-eth/platform/blob/main/contracts/contracts/wrappers/ConvexStakingWrapper.sol
 pragma solidity 0.8.6;
 
-import '@yield-protocol/utils-v2/contracts/token/IERC20.sol';
-import '@yield-protocol/utils-v2/contracts/token/ERC20.sol';
-import '@yield-protocol/utils-v2/contracts/access/AccessControl.sol';
-import '@yield-protocol/utils-v2/contracts/token/TransferHelper.sol';
-import './interfaces/IRewardStaking.sol';
-import './interfaces/IConvexDeposits.sol';
-import './interfaces/ICvx.sol';
+import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
+import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
+import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
+import "./interfaces/IRewardStaking.sol";
+import "./interfaces/IConvexDeposits.sol";
+import "./interfaces/ICvx.sol";
 
 library CvxMining {
     ICvx public constant cvx = ICvx(0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B);
@@ -109,7 +109,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
 
     modifier nonReentrant() {
         // On the first call to nonReentrant, _notEntered will be true
-        require(_status != _ENTERED, 'ReentrancyGuard: reentrant call');
+        require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
         // Any calls to nonReentrant after this point will fail
         _status = _ENTERED;
         _;
@@ -378,7 +378,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
 
     //deposit a curve token
     function deposit(uint256 _amount, address _to) external nonReentrant {
-        require(!isShutdown, 'shutdown');
+        require(!isShutdown, "shutdown");
 
         //dont need to call checkpoint since _mint() will
 
@@ -393,7 +393,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
 
     //stake a convex token
     function stake(uint256 _amount, address _to) external nonReentrant {
-        require(!isShutdown, 'shutdown');
+        require(!isShutdown, "shutdown");
 
         //dont need to call checkpoint since _mint() will
 
