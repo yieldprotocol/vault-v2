@@ -13,6 +13,7 @@ export const LINK = ethers.utils.formatBytes32String('06').slice(0, 14)
 export const ENS = ethers.utils.formatBytes32String('07').slice(0, 14)
 export const YVDAI = ethers.utils.formatBytes32String('08').slice(0, 14)
 export const YVUSDC = ethers.utils.formatBytes32String('09').slice(0, 14)
+export const CVX3CRV = ethers.utils.formatBytes32String('10').slice(0, 14)
 /**
  *
  * █▀ ▀█▀ █▀█ █▀█ █
