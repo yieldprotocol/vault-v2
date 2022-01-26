@@ -145,6 +145,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
 
     /// @notice TotalSupply of wrapped token
     /// @return The total supply of wrapped token
+    /// @dev This function is provided and marked virtual as convenience to future development
     function _getTotalSupply() internal view virtual returns (uint256) {
         return _totalSupply;
     }
