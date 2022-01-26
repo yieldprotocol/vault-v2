@@ -87,7 +87,6 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
 
     event Deposited(address indexed _user, address indexed _account, uint256 _amount, bool _wrapped);
     event Withdrawn(address indexed _user, uint256 _amount, bool _unwrapped);
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     constructor(
         address _curveToken,
