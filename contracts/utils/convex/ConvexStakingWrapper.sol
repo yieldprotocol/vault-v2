@@ -133,6 +133,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
     /// @notice Get user's balance
     /// @param _account User's address for which balance is requested
     /// @return User's balance of collateral
+    /// @dev Included here to allow inheriting contracts to override.
     function _getDepositedBalance(address _account) internal view virtual returns (uint256) {
         if (_account == address(0) || _account == collateralVault) {
             return 0;
