@@ -30,7 +30,7 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
     /// @param token Address of the token being rescued
     /// @param amount Amount of the token being rescued
     /// @param destination Address to which the rescued tokens have been sent
-    event Recovered(address token, uint256 amount, address destination);
+    event Recovered(address indexed token, uint256 amount, address indexed destination);
 
     constructor(
         address curveToken_,
