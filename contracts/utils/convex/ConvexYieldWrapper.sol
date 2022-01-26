@@ -117,7 +117,7 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
     function wrap(address to_, address from_) external {
         require(!isShutdown, 'shutdown');
         uint256 amount_ = IERC20(convexToken).balanceOf(address(this));
-        require(amount_ > 0, 'No convex token to wrap');
+        require(amount_ != 0, 'No convex token to wrap');
 
         _checkpoint([address(0), from_]);
         _mint(to_, amount_);
@@ -131,7 +131,7 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
     function unwrap(address to_) external {
         require(!isShutdown, 'shutdown');
         uint256 amount_ = _balanceOf[address(this)];
-        require(amount_ > 0, 'No wrapped convex token');
+        require(amount_ != 0, 'No wrapped convex token');
 
         _checkpoint([address(0), to_]);
         _burn(address(this), amount_);
