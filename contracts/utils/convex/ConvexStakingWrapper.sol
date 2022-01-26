@@ -98,7 +98,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         string memory name,
         string memory symbol,
         uint8 decimals
-    ) public ERC20(name, symbol, decimals) {
+    ) ERC20(name, symbol, decimals) {
         curveToken = _curveToken;
         convexToken = _convexToken;
         convexPool = _convexPool;
