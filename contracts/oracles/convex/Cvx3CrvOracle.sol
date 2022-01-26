@@ -110,7 +110,7 @@ contract Cvx3CrvOracle is IOracle, AccessControl {
         (, int256 usdcPrice, , , ) = USDC.latestRoundData();
         (, int256 usdtPrice, , , ) = USDT.latestRoundData();
 
-        require(daiPrice > 0 && usdcPrice > 0 && usdtPrice > 0, 'Chainlink pricefeed reporting 0');
+        require(daiPrice != 0 && usdcPrice != 0 && usdtPrice != 0, 'Chainlink pricefeed reporting 0');
 
         // This won't overflow as the max value for int256 is less than the max value for uint256
         uint256 minStable = min(uint256(daiPrice), min(uint256(usdcPrice), uint256(usdtPrice)));
