@@ -342,7 +342,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
 
     /// @notice Get the amount of tokens the user has earned
     /// @param _account Address whose balance is to be checked
-    /// @return Claimable Array of earned tokens and their amount
+    /// @return claimable Array of earned tokens and their amount
     function earned(address _account) external view returns (EarnedData[] memory claimable) {
         uint256 supply = _getTotalSupply();
         // uint256 depositedBalance = _getDepositedBalance(_account);
