@@ -112,7 +112,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
 
     modifier nonReentrant() {
         // On the first call to nonReentrant, _notEntered will be true
-        require(_status != _ENTERED, 'ReentrancyGuard: reentrant call');
+        require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
         // Any calls to nonReentrant after this point will fail
         _status = _ENTERED;
         _;
@@ -389,7 +389,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
     /// @param _amount Amount being deposited
     /// @param _to Address to send the convex tokens to
     function deposit(uint256 _amount, address _to) external nonReentrant {
-        require(!isShutdown, 'shutdown');
+        require(!isShutdown, "shutdown");
 
         //dont need to call checkpoint since _mint() will
 
@@ -406,7 +406,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
     /// @param _amount Amount being deposited
     /// @param _to Address to send the convex tokens to
     function stake(uint256 _amount, address _to) external nonReentrant {
-        require(!isShutdown, 'shutdown');
+        require(!isShutdown, "shutdown");
 
         //dont need to call checkpoint since _mint() will
 
