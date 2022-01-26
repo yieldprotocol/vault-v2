@@ -179,8 +179,9 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
             uint256 rewardCount = rewards.length;
             for (uint256 i = 0; i < rewardCount; i++) {
                 RewardType storage reward = rewards[i];
-                balance_ = IERC20(reward.reward_token).balanceOf(address(this));
-                if (balance_ != 0) IERC20(reward.reward_token).safeTransfer(rescueAddress_, balance_);
+                uint256 rewardToken = reward.reward_token;
+                balance_ = IERC20(rewardToken).balanceOf(address(this));
+                if (balance_ != 0) IERC20(rewardToken).safeTransfer(rescueAddress_, balance_);
             }
         }
         // Shutdown the contract
