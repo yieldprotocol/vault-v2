@@ -12,8 +12,7 @@ import '../chainlink/AggregatorV3Interface.sol';
 /**
  *@title  Cvx3CrvOracle
  *@notice Provides current values for Cvx3Crv
- *@dev    Both peek() and get() are provided for convenience
- *        Prices are calculated, never based on cached values
+ *@dev    Both peek() (view) and get() (transactional) are provided for convenience
  */
 contract Cvx3CrvOracle is IOracle, AccessControl {
     using CastBytes32Bytes6 for bytes32;
@@ -59,7 +58,11 @@ contract Cvx3CrvOracle is IOracle, AccessControl {
 
     /**
      * @notice Retrieve the value of the amount at the latest oracle price.
-     * Only `cvx3crvid` and `ethId` are accepted as asset identifiers.
+     * @dev Only cvx3crvid and ethId are accepted as asset identifiers.
+     * @param base Id of base token
+     * @param quote Id of quoted token
+     * @return quoteAmount Total amount in terms of quoted token
+     * @return updateTime Time quote was last updated
      */
     function peek(
         bytes32 base,
@@ -71,7 +74,11 @@ contract Cvx3CrvOracle is IOracle, AccessControl {
 
     /**
      * @notice Retrieve the value of the amount at the latest oracle price. Same as `peek` for this oracle.
-     * Only `cvx3crvid` and `ethId` are accepted as asset identifiers.
+     * @dev Only cvx3crvid and ethId are accepted as asset identifiers.
+     * @param base Id of base token
+     * @param quote Id of quoted token
+     * @return quoteAmount Total amount in terms of quoted token
+     * @return updateTime Time quote was last updated
      */
     function get(
         bytes32 base,
@@ -83,7 +90,11 @@ contract Cvx3CrvOracle is IOracle, AccessControl {
 
     /**
      * @notice Retrieve the value of the amount at the latest oracle price.
-     * Only `cvx3crvid` and `ethId` are accepted as asset identifiers.
+     * @dev Only cvx3crvid and ethId are accepted as asset identifiers.
+     * @param base Id of base token
+     * @param quote Id of quoted token
+     * @return quoteAmount Total amount in terms of quoted token
+     * @return updateTime Time quote was last updated
      */
     function _peek(
         bytes6 base,
@@ -98,7 +109,7 @@ contract Cvx3CrvOracle is IOracle, AccessControl {
         (, int256 usdcPrice, , , ) = USDC.latestRoundData();
         (, int256 usdtPrice, , , ) = USDT.latestRoundData();
 
-        require(daiPrice > 0 && usdcPrice > 0 && usdtPrice > 0, 'Chainlink pricefeed reporting 0');
+        require(daiPrice != 0 && usdcPrice != 0 && usdtPrice != 0, 'Chainlink pricefeed reporting 0');
 
         // This won't overflow as the max value for int256 is less than the max value for uint256
         uint256 minStable = min(uint256(daiPrice), min(uint256(usdcPrice), uint256(usdtPrice)));
@@ -107,8 +118,7 @@ contract Cvx3CrvOracle is IOracle, AccessControl {
 
         if (base == cvx3CrvId && quote == ethId) {
             quoteAmount = (baseAmount * price) / 1e18;
-        }
-        if (quote == cvx3CrvId && base == ethId) {
+        } else {
             quoteAmount = (baseAmount * 1e18) / price;
         }
 

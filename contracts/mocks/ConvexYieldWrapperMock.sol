@@ -206,11 +206,9 @@ contract ConvexYieldWrapperMock is ERC20, AccessControl {
         uint256 collateral;
         Balances memory balance;
         for (uint256 i = 0; i < userVault.length; i++) {
-            if (userVault[i] != bytes12(0)) {
-                if (cauldron.vaults(userVault[i]).owner == account_) {
-                    balance = cauldron.balances(userVault[i]);
-                    collateral = collateral + balance.ink;
-                }
+            if (cauldron.vaults(userVault[i]).owner == account_) {
+                balance = cauldron.balances(userVault[i]);
+                collateral = collateral + balance.ink;
             }
         }
 
