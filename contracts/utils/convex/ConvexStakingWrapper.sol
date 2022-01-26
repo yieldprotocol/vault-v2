@@ -198,7 +198,8 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         bool _isClaim
     ) internal {
         uint256 bal = IERC20(cvx).balanceOf(address(this));
-        uint256 d_cvxreward = bal - cvx_reward_remaining;
+        uint256 cvxRewardRemaining = cvx_reward_remaining;
+        uint256 d_cvxreward = bal - cvxRewardRemaining;
         uint256 cvxRewardIntegral = cvx_reward_integral;
 
         if (_supply > 0 && d_cvxreward > 0) {
@@ -231,8 +232,8 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         }
 
         //update reward total
-        if (bal != cvx_reward_remaining) {
-            cvx_reward_remaining = bal;
+        if (bal != cvxRewardRemaining) {
+            cvxRewardRemaining = bal;
         }
     }
 
