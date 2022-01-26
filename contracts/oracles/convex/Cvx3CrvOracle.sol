@@ -12,8 +12,7 @@ import '../chainlink/AggregatorV3Interface.sol';
 /**
  *@title  Cvx3CrvOracle
  *@notice Provides current values for Cvx3Crv
- *@dev    Both peek() and get() are provided for convenience
- *        Prices are calculated, never based on cached values
+ *@dev    Both peek() (view) and get() (transactional) are provided for convenience
  */
 contract Cvx3CrvOracle is IOracle, AccessControl {
     using CastBytes32Bytes6 for bytes32;
