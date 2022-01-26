@@ -99,11 +99,9 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
         DataTypes.Balances memory balance;
         uint256 userVaultLength = userVault.length;
         for (uint256 i = 0; i < userVaultLength; i++) {
-            if (userVault[i] != bytes12(0)) {
-                if (cauldron.vaults(userVault[i]).owner == account_) {
-                    balance = cauldron.balances(userVault[i]);
-                    collateral = collateral + balance.ink;
-                }
+            if (cauldron.vaults(userVault[i]).owner == account_) {
+                balance = cauldron.balances(userVault[i]);
+                collateral = collateral + balance.ink;
             }
         }
 
