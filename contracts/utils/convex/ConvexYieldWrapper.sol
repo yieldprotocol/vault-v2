@@ -71,7 +71,7 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
             uint256 vaultsLength = vaults_.length;
             for (uint256 i = 0; i < vaultsLength; i++) {
                 if (vaults_[i] == vaultId) {
-                    vaults_[i] = bytes12(0);
+                    delete vaults_[i];
                     emit VaultRemoved(account, vaultId);
                     break;
                 }
