@@ -229,7 +229,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
 
         //update reward total
         if (bal != cvxRewardRemaining) {
-            cvxRewardRemaining = bal;
+            cvx_reward_remaining = bal;
         }
     }
 
@@ -286,7 +286,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
 
         //update remaining reward here since balance could have changed if claiming
         if (bal != rewardRemaining) {
-            rewardRemaining = uint128(bal);
+            reward.reward_remaining = uint128(bal);
         }
     }
 
