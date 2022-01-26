@@ -43,6 +43,7 @@ library CvxMining {
     }
 }
 
+/// @notice Wrapper used to manage staking of Convex tokens
 contract ConvexStakingWrapper is ERC20, AccessControl {
     using TransferHelper for IERC20;
 
@@ -387,7 +388,9 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         _checkpointAndClaim([_account, address(0)]);
     }
 
-    //deposit a curve token
+    /// @notice Deposit a curve token, receive a convex token
+    /// @param _amount Amount being deposited
+    /// @param _to Address to send the convex tokens to
     function deposit(uint256 _amount, address _to) external nonReentrant {
         require(!isShutdown, "shutdown");
 
@@ -402,7 +405,9 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         emit Deposited(msg.sender, _to, _amount, true);
     }
 
-    //stake a convex token
+    /// @notice Deposit and stake a convex token
+    /// @param _amount Amount being deposited
+    /// @param _to Address to send the convex tokens to
     function stake(uint256 _amount, address _to) external nonReentrant {
         require(!isShutdown, "shutdown");
 
@@ -417,7 +422,8 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         emit Deposited(msg.sender, _to, _amount, false);
     }
 
-    //withdraw to convex deposit token
+    /// @notice Withdraw to convex deposit token
+    /// @param _amount Amount being withdrawn
     function withdraw(uint256 _amount) external nonReentrant {
         //dont need to call checkpoint since _burn() will
 
@@ -430,7 +436,8 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         emit Withdrawn(msg.sender, _amount, false);
     }
 
-    //withdraw to underlying curve lp token
+    /// @notice Withdraw convex tokena nd unwrap to underlying curve lp token
+    /// @param _amount Amount being withdrawn and unwrapped
     function withdrawAndUnwrap(uint256 _amount) external nonReentrant {
         //dont need to call checkpoint since _burn() will
 
