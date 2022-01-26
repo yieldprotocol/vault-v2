@@ -348,15 +348,15 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
     /// @return claimable Array of earned tokens and their amount
     function earned(address _account) external view returns (EarnedData[] memory claimable) {
         uint256 supply = _getTotalSupply();
-        // uint256 depositedBalance = _getDepositedBalance(_account);
         uint256 rewardCount = rewards.length;
         claimable = new EarnedData[](rewardCount + 1);
 
         for (uint256 i = 0; i < rewardCount; i++) {
             RewardType storage reward = rewards[i];
+            address rewardToken = reward.reward_token;
 
             //change in reward is current balance - remaining reward + earned
-            uint256 bal = IERC20(reward.reward_token).balanceOf(address(this));
+            uint256 bal = IERC20(rewardToken).balanceOf(address(this));
             uint256 d_reward = bal - reward.reward_remaining;
             d_reward = d_reward + IRewardStaking(reward.reward_pool).earned(address(this));
 
@@ -368,10 +368,10 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
             uint256 newlyClaimable = (_getDepositedBalance(_account) * (I - reward.reward_integral_for[_account])) /
                 1e20;
             claimable[i].amount = reward.claimable_reward[_account] + newlyClaimable;
-            claimable[i].token = reward.reward_token;
+            claimable[i].token = rewardToken;
 
             //calc cvx here
-            if (reward.reward_token == crv) {
+            if (rewardToken == crv) {
                 claimable[rewardCount].amount =
                     cvx_claimable_reward[_account] +
                     CvxMining.ConvertCrvToCvx(newlyClaimable);
