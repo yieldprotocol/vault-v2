@@ -53,8 +53,12 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
         require(account != address(0), "No owner for the vault");
         bytes12[] storage vaults_ = vaults[account];
         uint256 vaultsLength = vaults_.length;
+
+        // If the vault id is already present in the user array do nothing
         for (uint256 i = 0; i < vaultsLength; i++) {
-            require(vaults_[i] != vaultId, "already added");
+            if (vaults_[i] == vaultId) {
+                return;
+            }
         }
         vaults_.push(vaultId);
         vaults[account] = vaults_;
