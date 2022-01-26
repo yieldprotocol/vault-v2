@@ -54,11 +54,8 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
         bytes12[] storage vaults_ = vaults[account];
         uint256 vaultsLength = vaults_.length;
 
-        // If the vault id is already present in the user array do nothing
         for (uint256 i = 0; i < vaultsLength; i++) {
-            if (vaults_[i] == vaultId) {
-                return;
-            }
+            require (vaults_[i] != vaultId, "Vault already added");
         }
         vaults_.push(vaultId);
         vaults[account] = vaults_;
@@ -73,6 +70,7 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
         if (account != owner) {
             bytes12[] storage vaults_ = vaults[account];
             uint256 vaultsLength = vaults_.length;
+            bool found;
             for (uint256 i = 0; i < vaultsLength; i++) {
                 if (vaults_[i] == vaultId) {
                     bool isLast = i == vaultsLength - 1;
@@ -80,10 +78,12 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
                         vaults_[i] = vaults_[vaultsLength - 1];
                     }
                     vaults_.pop();
+                    found = true;
                     emit VaultRemoved(account, vaultId);
                     break;
                 }
             }
+            require (found, "Vault not found");
             vaults[account] = vaults_;
         }
     }
