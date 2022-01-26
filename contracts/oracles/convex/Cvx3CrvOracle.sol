@@ -59,7 +59,11 @@ contract Cvx3CrvOracle is IOracle, AccessControl {
 
     /**
      * @notice Retrieve the value of the amount at the latest oracle price.
-     * Only `cvx3crvid` and `ethId` are accepted as asset identifiers.
+     * @dev Only cvx3crvid and ethId are accepted as asset identifiers.
+     * @param base Id of base token
+     * @param quote Id of quoted token
+     * @return quoteAmount Total amount in terms of quoted token
+     * @return updateTime Time quote was last updated
      */
     function peek(
         bytes32 base,
@@ -71,7 +75,11 @@ contract Cvx3CrvOracle is IOracle, AccessControl {
 
     /**
      * @notice Retrieve the value of the amount at the latest oracle price. Same as `peek` for this oracle.
-     * Only `cvx3crvid` and `ethId` are accepted as asset identifiers.
+     * @dev Only cvx3crvid and ethId are accepted as asset identifiers.
+     * @param base Id of base token
+     * @param quote Id of quoted token
+     * @return quoteAmount Total amount in terms of quoted token
+     * @return updateTime Time quote was last updated
      */
     function get(
         bytes32 base,
@@ -83,7 +91,11 @@ contract Cvx3CrvOracle is IOracle, AccessControl {
 
     /**
      * @notice Retrieve the value of the amount at the latest oracle price.
-     * Only `cvx3crvid` and `ethId` are accepted as asset identifiers.
+     * @dev Only cvx3crvid and ethId are accepted as asset identifiers.
+     * @param base Id of base token
+     * @param quote Id of quoted token
+     * @return quoteAmount Total amount in terms of quoted token
+     * @return updateTime Time quote was last updated
      */
     function _peek(
         bytes6 base,
