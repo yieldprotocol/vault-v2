@@ -119,8 +119,7 @@ contract Cvx3CrvOracle is IOracle, AccessControl {
 
         if (base == cvx3CrvId && quote == ethId) {
             quoteAmount = (baseAmount * price) / 1e18;
-        }
-        if (quote == cvx3CrvId && base == ethId) {
+        } else {
             quoteAmount = (baseAmount * 1e18) / price;
         }
 
