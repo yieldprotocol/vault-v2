@@ -89,11 +89,6 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         _status = _NOT_ENTERED;
     }
 
-    /// @notice Initiate shutdown of the system
-    function shutdown() external auth {
-        isShutdown = true;
-    }
-
     /// @notice Give maximum approval to the pool & convex booster contract to transfer funds from wrapper
     function setApprovals() public {
         IERC20(curveToken).approve(convexBooster, type(uint256).max);
@@ -351,68 +346,5 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
     function getReward(address _account) external {
         //claim directly in checkpoint logic to save a bit of gas
         _checkpointAndClaim([_account, address(0)]);
-    }
-
-    /// @notice Deposit a curve token, receive a convex token
-    /// @param _amount Amount being deposited
-    /// @param _to Address to send the convex tokens to
-    function deposit(uint256 _amount, address _to) external nonReentrant {
-        require(!isShutdown, "shutdown");
-
-        //dont need to call checkpoint since _mint() will
-
-        if (_amount > 0) {
-            _mint(_to, _amount);
-            IERC20(curveToken).safeTransferFrom(msg.sender, address(this), _amount);
-            IConvexDeposits(convexBooster).deposit(convexPoolId, _amount, true);
-        }
-
-        emit Deposited(msg.sender, _to, _amount, true);
-    }
-
-    /// @notice Deposit and stake a convex token
-    /// @param _amount Amount being deposited
-    /// @param _to Address to send the convex tokens to
-    function stake(uint256 _amount, address _to) external nonReentrant {
-        require(!isShutdown, "shutdown");
-
-        //dont need to call checkpoint since _mint() will
-
-        if (_amount > 0) {
-            _mint(_to, _amount);
-            IERC20(convexToken).safeTransferFrom(msg.sender, address(this), _amount);
-            IRewardStaking(convexPool).stake(_amount);
-        }
-
-        emit Deposited(msg.sender, _to, _amount, false);
-    }
-
-    /// @notice Withdraw to convex deposit token
-    /// @param _amount Amount being withdrawn
-    function withdraw(uint256 _amount) external nonReentrant {
-        //dont need to call checkpoint since _burn() will
-
-        if (_amount > 0) {
-            _burn(msg.sender, _amount);
-            IRewardStaking(convexPool).withdraw(_amount, false);
-            IERC20(convexToken).safeTransfer(msg.sender, _amount);
-        }
-
-        emit Withdrawn(msg.sender, _amount, false);
-    }
-
-    /// @notice Withdraw convex tokena nd unwrap to underlying curve lp token
-    /// @param _amount Amount being withdrawn and unwrapped
-    function withdrawAndUnwrap(uint256 _amount) external nonReentrant {
-        //dont need to call checkpoint since _burn() will
-
-        if (_amount > 0) {
-            _burn(msg.sender, _amount);
-            IRewardStaking(convexPool).withdrawAndUnwrap(_amount, false);
-            IERC20(curveToken).safeTransfer(msg.sender, _amount);
-        }
-
-        //events
-        emit Withdrawn(msg.sender, _amount, true);
     }
 }

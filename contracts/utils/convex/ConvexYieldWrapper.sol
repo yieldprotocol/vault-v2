@@ -26,6 +26,12 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
     /// @param vaultId The vaultId to be removed
     event VaultRemoved(address indexed account, bytes12 indexed vaultId);
 
+    /// @notice Event called when tokens are rescued from the contract
+    /// @param token Address of the token being rescued
+    /// @param amount Amount of the token being rescued
+    /// @param destination Address to which the rescued tokens have been sent
+    event Recovered(address token, uint256 amount, address destination);
+
     constructor(
         address curveToken_,
         address convexToken_,
@@ -55,7 +61,7 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
         uint256 vaultsLength = vaults_.length;
 
         for (uint256 i = 0; i < vaultsLength; i++) {
-            require (vaults_[i] != vaultId, "Vault already added");
+            require(vaults_[i] != vaultId, "Vault already added");
         }
         vaults_.push(vaultId);
         vaults[account] = vaults_;
@@ -83,7 +89,7 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
                     break;
                 }
             }
-            require (found, "Vault not found");
+            require(found, "Vault not found");
             vaults[account] = vaults_;
         }
     }
@@ -119,7 +125,7 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
     function wrap(address to_, address from_) external {
         require(!isShutdown, "shutdown");
         uint256 amount_ = IERC20(convexToken).balanceOf(address(this));
-        require(amount_ > 0, 'No convex token to wrap');
+        require(amount_ > 0, "No convex token to wrap");
 
         _checkpoint([address(0), from_]);
         _mint(to_, amount_);
@@ -133,7 +139,7 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
     function unwrap(address to_) external {
         require(!isShutdown, "shutdown");
         uint256 amount_ = _balanceOf[address(this)];
-        require(amount_ > 0, 'No wrapped convex token');
+        require(amount_ > 0, "No wrapped convex token");
 
         _checkpoint([address(0), to_]);
         _burn(address(this), amount_);
@@ -141,5 +147,43 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
         IERC20(convexToken).safeTransfer(to_, amount_);
 
         emit Withdrawn(to_, amount_, false);
+    }
+
+    /// @notice A simple function to recover any ERC20 tokens
+    /// @param token_ Address of the token being rescued
+    /// @param amount_ Amount of the token being rescued
+    /// @param destination_ Address to which the rescued tokens have been sent
+    function recoverERC20(
+        address token_,
+        uint256 amount_,
+        address destination_
+    ) external auth {
+        require(amount_ != 0, "amount is 0");
+        IERC20(token_).safeTransfer(destination_, amount_);
+        emit Recovered(token_, amount_, destination_);
+    }
+
+    /// @notice A function to shutdown the contract & withdraw the staked convex tokens & transfer rewards
+    /// @param rescueAddress_ Address to which the rescued tokens would be sent to
+    function shutdownAndRescue(address rescueAddress_) external auth {
+        uint256 balance_ = IRewardStaking(convexPool).balanceOf(address(this));
+
+        if (balance_ != 0) {
+            // Withdraw the convex tokens from the convex pool
+            IRewardStaking(convexPool).withdraw(balance_, true);
+
+            // Transfer the withdrawn convex tokens to rescue address
+            IERC20(convexToken).safeTransfer(rescueAddress_, balance_);
+
+            // Transfer the reward tokens if any to the rescueAddress
+            uint256 rewardCount = rewards.length;
+            for (uint256 i = 0; i < rewardCount; i++) {
+                RewardType storage reward = rewards[i];
+                balance_ = IERC20(reward.reward_token).balanceOf(address(this));
+                if (balance_ != 0) IERC20(reward.reward_token).safeTransfer(rescueAddress_, balance_);
+            }
+        }
+        // Shutdown the contract
+        isShutdown = true;
     }
 }
