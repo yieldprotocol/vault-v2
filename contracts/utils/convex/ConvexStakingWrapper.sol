@@ -145,8 +145,6 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
             RewardType storage reward = rewards.push();
             reward.reward_token = crv;
             reward.reward_pool = mainPool;
-            reward.reward_integral = 0;
-            reward.reward_remaining = 0;
             rewardsLength += 1;
         }
 
@@ -157,8 +155,6 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
             RewardType storage reward = rewards.push();
             reward.reward_token = IRewardStaking(extraPool).rewardToken();
             reward.reward_pool = extraPool;
-            reward.reward_integral = 0;
-            reward.reward_remaining = 0;
         }
     }
 
