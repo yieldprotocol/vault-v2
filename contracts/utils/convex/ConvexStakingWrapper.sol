@@ -209,7 +209,8 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         }
 
         //update user integrals for cvx
-        for (uint256 u = 0; u < _accounts.length; u++) {
+        uint256 accountsLength = _accounts.length;
+        for (uint256 u = 0; u < accountsLength; u++) {
             //do not give rewards to address 0
             if (_accounts[u] == address(0)) continue;
             if (_accounts[u] == collateralVault) continue;
@@ -261,7 +262,8 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
                 uint128(((bal - reward.reward_remaining) * 1e20) / _supply);
         }
         //update user integrals
-        for (uint256 u = 0; u < _accounts.length; u++) {
+        uint256 accountsLength = _accounts.length;
+        for (uint256 u = 0; u < accountsLength; u++) {
             //do not give rewards to address 0
             if (_accounts[u] == address(0)) continue;
             if (_accounts[u] == collateralVault) continue;
