@@ -174,15 +174,6 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
 
             // Transfer the withdrawn convex tokens to rescue address
             IERC20(convexToken).safeTransfer(rescueAddress_, balance_);
-
-            // Transfer the reward tokens if any to the rescueAddress
-            uint256 rewardCount = rewards.length;
-            for (uint256 i = 0; i < rewardCount; i++) {
-                RewardType storage reward = rewards[i];
-                address rewardToken = reward.reward_token;
-                balance_ = IERC20(rewardToken).balanceOf(address(this));
-                if (balance_ != 0) IERC20(rewardToken).safeTransfer(rescueAddress_, balance_);
-            }
         }
         // Shutdown the contract
         isShutdown = true;

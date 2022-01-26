@@ -91,6 +91,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
 
     /// @notice Give maximum approval to the pool & convex booster contract to transfer funds from wrapper
     function setApprovals() public {
+        IERC20(curveToken).approve(convexBooster, 0);
         IERC20(curveToken).approve(convexBooster, type(uint256).max);
         IERC20(convexToken).approve(convexPool, type(uint256).max);
     }
