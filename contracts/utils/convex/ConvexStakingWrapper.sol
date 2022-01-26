@@ -2,13 +2,13 @@
 // Original contract: https://github.com/convex-eth/platform/blob/main/contracts/contracts/wrappers/ConvexStakingWrapper.sol
 pragma solidity 0.8.6;
 
-import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
-import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
-import "./interfaces/IRewardStaking.sol";
-import "./interfaces/IConvexDeposits.sol";
-import "./interfaces/ICvx.sol";
+import '@yield-protocol/utils-v2/contracts/token/IERC20.sol';
+import '@yield-protocol/utils-v2/contracts/token/ERC20.sol';
+import '@yield-protocol/utils-v2/contracts/access/AccessControl.sol';
+import '@yield-protocol/utils-v2/contracts/token/TransferHelper.sol';
+import './interfaces/IRewardStaking.sol';
+import './interfaces/IConvexDeposits.sol';
+import './interfaces/ICvx.sol';
 
 /// @notice Contains function to calc amount of CVX to mint from a given amount of CRV
 library CvxMining {
@@ -112,7 +112,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
 
     modifier nonReentrant() {
         // On the first call to nonReentrant, _notEntered will be true
-        require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
+        require(_status != _ENTERED, 'ReentrancyGuard: reentrant call');
         // Any calls to nonReentrant after this point will fail
         _status = _ENTERED;
         _;
@@ -201,7 +201,6 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         if (_supply != 0 && d_cvxreward != 0) {
             cvxRewardIntegral = cvxRewardIntegral + (d_cvxreward * 1e20) / (_supply);
             cvx_reward_integral = cvxRewardIntegral;
-
         }
 
         //update user integrals for cvx
@@ -256,9 +255,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         //getReward is unguarded so we use reward_remaining to keep track of how much was actually claimed
         uint256 bal = IERC20(reward.reward_token).balanceOf(address(this));
         if (_supply != 0 && (bal - rewardRemaining) != 0) {
-            rewardIntegral =
-                uint128(rewardIntegral) +
-                uint128(((bal - rewardRemaining) * 1e20) / _supply);
+            rewardIntegral = uint128(rewardIntegral) + uint128(((bal - rewardRemaining) * 1e20) / _supply);
             reward.reward_integral = uint128(rewardIntegral);
         }
         //update user integrals
@@ -392,7 +389,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
     /// @param _amount Amount being deposited
     /// @param _to Address to send the convex tokens to
     function deposit(uint256 _amount, address _to) external nonReentrant {
-        require(!isShutdown, "shutdown");
+        require(!isShutdown, 'shutdown');
 
         //dont need to call checkpoint since _mint() will
 
@@ -409,7 +406,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
     /// @param _amount Amount being deposited
     /// @param _to Address to send the convex tokens to
     function stake(uint256 _amount, address _to) external nonReentrant {
-        require(!isShutdown, "shutdown");
+        require(!isShutdown, 'shutdown');
 
         //dont need to call checkpoint since _mint() will
 
