@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.6;
 
-import '@yield-protocol/utils-v2/contracts/access/AccessControl.sol';
-import '@yield-protocol/vault-interfaces/IOracle.sol';
-import '@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol';
+import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import "@yield-protocol/vault-interfaces/IOracle.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
 
-import './ICurvePool.sol';
-import '../chainlink/AggregatorV3Interface.sol';
+import "./ICurvePool.sol";
+import "../chainlink/AggregatorV3Interface.sol";
 
 // Oracle Code Inspiration: https://github.com/Abracadabra-money/magic-internet-money/blob/main/contracts/oracles/3CrvOracle.sol
 /**
@@ -103,7 +103,7 @@ contract Cvx3CrvOracle is IOracle, AccessControl {
     ) private view returns (uint256 quoteAmount, uint256 updateTime) {
         require(
             (base == ethId && quote == cvx3CrvId) || (base == cvx3CrvId && quote == ethId),
-            'Invalid quote or base'
+            "Invalid quote or base"
         );
         (, int256 daiPrice, , , ) = DAI.latestRoundData();
         (, int256 usdcPrice, , , ) = USDC.latestRoundData();

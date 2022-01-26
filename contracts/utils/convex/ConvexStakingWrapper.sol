@@ -2,46 +2,14 @@
 // Original contract: https://github.com/convex-eth/platform/blob/main/contracts/contracts/wrappers/ConvexStakingWrapper.sol
 pragma solidity 0.8.6;
 
-import '@yield-protocol/utils-v2/contracts/token/IERC20.sol';
-import '@yield-protocol/utils-v2/contracts/token/ERC20.sol';
-import '@yield-protocol/utils-v2/contracts/access/AccessControl.sol';
-import '@yield-protocol/utils-v2/contracts/token/TransferHelper.sol';
-import './interfaces/IRewardStaking.sol';
-import './interfaces/IConvexDeposits.sol';
-import './interfaces/ICvx.sol';
-
-/// @notice Contains function to calc amount of CVX to mint from a given amount of CRV
-library CvxMining {
-    ICvx public constant cvx = ICvx(0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B);
-
-    /// @param _amount The amount of CRV to burn
-    /// @return The amount of CVX to mint
-    function ConvertCrvToCvx(uint256 _amount) internal view returns (uint256) {
-        uint256 supply = cvx.totalSupply();
-        uint256 reductionPerCliff = cvx.reductionPerCliff();
-        uint256 totalCliffs = cvx.totalCliffs();
-        uint256 maxSupply = cvx.maxSupply();
-
-        uint256 cliff = supply / reductionPerCliff;
-        //mint if below total cliffs
-        if (cliff < totalCliffs) {
-            //for reduction% take inverse of current cliff
-            uint256 reduction = totalCliffs - cliff;
-            //reduce
-            _amount = (_amount * reduction) / totalCliffs;
-
-            //supply cap check
-            uint256 amtTillMax = maxSupply - supply;
-            if (_amount > amtTillMax) {
-                _amount = amtTillMax;
-            }
-
-            //mint
-            return _amount;
-        }
-        return 0;
-    }
-}
+import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
+import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
+import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
+import "./interfaces/IRewardStaking.sol";
+import "./interfaces/IConvexDeposits.sol";
+import "./interfaces/ICvx.sol";
+import "./CvxMining.sol";
 
 /// @notice Wrapper used to manage staking of Convex tokens
 contract ConvexStakingWrapper is ERC20, AccessControl {
@@ -112,7 +80,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
 
     modifier nonReentrant() {
         // On the first call to nonReentrant, _notEntered will be true
-        require(_status != _ENTERED, 'ReentrancyGuard: reentrant call');
+        require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
         // Any calls to nonReentrant after this point will fail
         _status = _ENTERED;
         _;
@@ -128,9 +96,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
 
     /// @notice Give maximum approval to the pool & convex booster contract to transfer funds from wrapper
     function setApprovals() public {
-        IERC20(curveToken).approve(convexBooster, 0);
         IERC20(curveToken).approve(convexBooster, type(uint256).max);
-        IERC20(convexToken).approve(convexPool, 0);
         IERC20(convexToken).approve(convexPool, type(uint256).max);
     }
 
@@ -167,6 +133,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
     /// @notice Get user's balance
     /// @param _account User's address for which balance is requested
     /// @return User's balance of collateral
+    /// @dev Included here to allow inheriting contracts to override.
     function _getDepositedBalance(address _account) internal view virtual returns (uint256) {
         if (_account == address(0) || _account == collateralVault) {
             return 0;
@@ -389,7 +356,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
     /// @param _amount Amount being deposited
     /// @param _to Address to send the convex tokens to
     function deposit(uint256 _amount, address _to) external nonReentrant {
-        require(!isShutdown, 'shutdown');
+        require(!isShutdown, "shutdown");
 
         //dont need to call checkpoint since _mint() will
 
@@ -406,7 +373,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
     /// @param _amount Amount being deposited
     /// @param _to Address to send the convex tokens to
     function stake(uint256 _amount, address _to) external nonReentrant {
-        require(!isShutdown, 'shutdown');
+        require(!isShutdown, "shutdown");
 
         //dont need to call checkpoint since _mint() will
 
