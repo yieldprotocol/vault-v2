@@ -94,7 +94,7 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
 
         bytes12[] memory userVault = vaults[account_];
 
-        //add up all balances of all vaults
+        //add up all balances of all vaults registered in the wrapper and owned by the account
         uint256 collateral;
         DataTypes.Balances memory balance;
         uint256 userVaultLength = userVault.length;
