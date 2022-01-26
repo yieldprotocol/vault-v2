@@ -198,7 +198,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         uint256 d_cvxreward = bal - cvxRewardRemaining;
         uint256 cvxRewardIntegral = cvx_reward_integral;
 
-        if (_supply != 0 && d_cvxreward != 0) {
+        if (_supply > 0 && d_cvxreward > 0) {
             cvxRewardIntegral = cvxRewardIntegral + (d_cvxreward * 1e20) / (_supply);
             cvx_reward_integral = cvxRewardIntegral;
         }
@@ -215,7 +215,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
                 uint256 receiveable = cvx_claimable_reward[_accounts[u]] +
                     ((_balances[u] * (cvxRewardIntegral - userI)) / 1e20);
                 if (_isClaim) {
-                    if (receiveable != 0) {
+                    if (receiveable > 0) {
                         cvx_claimable_reward[_accounts[u]] = 0;
                         IERC20(cvx).safeTransfer(_accounts[u], receiveable);
                         bal = bal - (receiveable);
@@ -254,7 +254,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         //get difference in balance and remaining rewards
         //getReward is unguarded so we use reward_remaining to keep track of how much was actually claimed
         uint256 bal = IERC20(reward.reward_token).balanceOf(address(this));
-        if (_supply != 0 && (bal - rewardRemaining) != 0) {
+        if (_supply > 0 && (bal - rewardRemaining) > 0) {
             rewardIntegral = uint128(rewardIntegral) + uint128(((bal - rewardRemaining) * 1e20) / _supply);
             reward.reward_integral = uint128(rewardIntegral);
         }
@@ -270,7 +270,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
                 if (_isClaim) {
                     uint256 receiveable = reward.claimable_reward[_accounts[u]] +
                         ((_balances[u] * (uint256(rewardIntegral) - userI)) / 1e20);
-                    if (receiveable != 0) {
+                    if (receiveable > 0) {
                         reward.claimable_reward[_accounts[u]] = 0;
                         IERC20(reward.reward_token).safeTransfer(_accounts[u], receiveable);
                         bal = bal - receiveable;
@@ -358,7 +358,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
             d_reward = d_reward + IRewardStaking(reward.reward_pool).earned(address(this));
 
             uint256 I = reward.reward_integral;
-            if (supply != 0) {
+            if (supply > 0) {
                 I = I + (d_reward * 1e20) / supply;
             }
 
@@ -393,7 +393,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
 
         //dont need to call checkpoint since _mint() will
 
-        if (_amount != 0) {
+        if (_amount > 0) {
             _mint(_to, _amount);
             IERC20(curveToken).safeTransferFrom(msg.sender, address(this), _amount);
             IConvexDeposits(convexBooster).deposit(convexPoolId, _amount, true);
@@ -410,7 +410,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
 
         //dont need to call checkpoint since _mint() will
 
-        if (_amount != 0) {
+        if (_amount > 0) {
             _mint(_to, _amount);
             IERC20(convexToken).safeTransferFrom(msg.sender, address(this), _amount);
             IRewardStaking(convexPool).stake(_amount);
@@ -424,7 +424,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
     function withdraw(uint256 _amount) external nonReentrant {
         //dont need to call checkpoint since _burn() will
 
-        if (_amount != 0) {
+        if (_amount > 0) {
             _burn(msg.sender, _amount);
             IRewardStaking(convexPool).withdraw(_amount, false);
             IERC20(convexToken).safeTransfer(msg.sender, _amount);
@@ -438,7 +438,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
     function withdrawAndUnwrap(uint256 _amount) external nonReentrant {
         //dont need to call checkpoint since _burn() will
 
-        if (_amount != 0) {
+        if (_amount > 0) {
             _burn(msg.sender, _amount);
             IRewardStaking(convexPool).withdrawAndUnwrap(_amount, false);
             IERC20(curveToken).safeTransfer(msg.sender, _amount);
