@@ -73,25 +73,25 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
     /// @param account The user from whom the vault needs to be removed
     function removeVault(bytes12 vaultId, address account) public {
         address owner = cauldron.vaults(vaultId).owner;
-        if (account != owner) {
-            bytes12[] storage vaults_ = vaults[account];
-            uint256 vaultsLength = vaults_.length;
-            bool found;
-            for (uint256 i = 0; i < vaultsLength; i++) {
-                if (vaults_[i] == vaultId) {
-                    bool isLast = i == vaultsLength - 1;
-                    if (!isLast) {
-                        vaults_[i] = vaults_[vaultsLength - 1];
-                    }
-                    vaults_.pop();
-                    found = true;
-                    emit VaultRemoved(account, vaultId);
-                    break;
+        require(account != owner, "account is not the owner");
+
+        bytes12[] storage vaults_ = vaults[account];
+        uint256 vaultsLength = vaults_.length;
+        bool found;
+        for (uint256 i = 0; i < vaultsLength; i++) {
+            if (vaults_[i] == vaultId) {
+                bool isLast = i == vaultsLength - 1;
+                if (!isLast) {
+                    vaults_[i] = vaults_[vaultsLength - 1];
                 }
+                vaults_.pop();
+                found = true;
+                emit VaultRemoved(account, vaultId);
+                break;
             }
-            require(found, "Vault not found");
-            vaults[account] = vaults_;
         }
+        require(found, "Vault not found");
+        vaults[account] = vaults_;
     }
 
     /// @notice Get user's balance of collateral deposited in various vaults
@@ -120,18 +120,17 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
     }
 
     /// @dev Wrap convex token held by this contract and forward it to the `to` address
-    /// @param to_ Address to send the wrapped token to
     /// @param from_ Address of the user whose token is being wrapped
-    function wrap(address to_, address from_) external {
+    function wrap(address from_) external {
         require(!isShutdown, "shutdown");
         uint256 amount_ = IERC20(convexToken).balanceOf(address(this));
         require(amount_ > 0, "No convex token to wrap");
 
         _checkpoint([address(0), from_]);
-        _mint(to_, amount_);
+        _mint(collateralVault, amount_);
         IRewardStaking(convexPool).stake(amount_);
 
-        emit Deposited(msg.sender, to_, amount_, false);
+        emit Deposited(from_, collateralVault, amount_, false);
     }
 
     /// @dev Unwrap Wrapped convex token held by this contract, and send the unwrapped convex token to the `to` address
@@ -177,5 +176,17 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
         }
         // Shutdown the contract
         isShutdown = true;
+    }
+
+    function _transfer(
+        address src,
+        address dst,
+        uint256 wad
+    ) internal virtual override returns (bool) {
+        if ((src == collateralVault && dst == address(this)) || (src == address(this) && dst == collateralVault)) {
+            return super._transfer(src, dst, wad);
+        }
+        _checkpoint([src, dst]);
+        return super._transfer(src, dst, wad);
     }
 }
