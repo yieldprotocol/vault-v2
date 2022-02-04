@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.6;
-import '@yield-protocol/vault-interfaces/ICauldron.sol';
-import '@yield-protocol/vault-interfaces/IFYToken.sol';
-import '@yield-protocol/vault-interfaces/DataTypes.sol';
-import './interfaces/IConvexYieldWrapper.sol';
-import '../../LadleStorage.sol';
+import "@yield-protocol/vault-interfaces/ICauldron.sol";
+import "@yield-protocol/vault-interfaces/DataTypes.sol";
+import "./interfaces/IConvexYieldWrapper.sol";
+import "../../LadleStorage.sol";
 
 /// @title Convex Ladle Module to handle vault addition
 contract ConvexModule is LadleStorage {
