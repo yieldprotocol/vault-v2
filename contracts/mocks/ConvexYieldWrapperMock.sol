@@ -2,10 +2,10 @@
 
 pragma solidity 0.8.6;
 
-import '@yield-protocol/utils-v2/contracts/token/ERC20.sol';
-import '@yield-protocol/vault-interfaces/DataTypes.sol';
-import '@yield-protocol/utils-v2/contracts/token/TransferHelper.sol';
-import '@yield-protocol/utils-v2/contracts/access/AccessControl.sol';
+import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
+import "@yield-protocol/vault-interfaces/DataTypes.sol";
+import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
+import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 
 struct Balances {
     uint128 art; // Debt amount
@@ -94,7 +94,7 @@ contract ConvexYieldWrapperMock is ERC20, AccessControl {
         ICauldron cauldron_,
         address crv_,
         address cvx_
-    ) ERC20('StakedConvexToken', 'stkCvx', 18) {
+    ) ERC20("StakedConvexToken", "stkCvx", 18) {
         convexToken = convexToken_;
         convexPool = convexPool_;
         convexPoolId = poolId_;
@@ -113,10 +113,10 @@ contract ConvexYieldWrapperMock is ERC20, AccessControl {
     // Set the locations of vaults where the user's funds have been deposited & the accounting is kept
     function addVault(bytes12 vault_) external {
         address account = cauldron.vaults(vault_).owner;
-        require(account != address(0), 'No owner for the vault');
+        require(account != address(0), "No owner for the vault");
         bytes12[] storage userVault = vaults[account];
         for (uint256 i = 0; i < userVault.length; i++) {
-            require(userVault[i] != vault_, 'already added');
+            require(userVault[i] != vault_, "already added");
         }
         userVault.push(vault_);
         vaults[account] = userVault;
@@ -137,8 +137,8 @@ contract ConvexYieldWrapperMock is ERC20, AccessControl {
 
     function wrap(address _to, address from_) external {
         uint256 amount_ = IERC20(convexToken).balanceOf(address(this));
-        require(amount_ > 0, 'No cvx3CRV to wrap');
-        _checkpoint([address(0), from_]);
+        require(amount_ > 0, "No cvx3CRV to wrap");
+        _checkpoint(from_);
         _mint(_to, amount_);
         IRewardStaking(convexPool).stake(amount_);
         emit Deposited(msg.sender, _to, amount_, false);
@@ -146,8 +146,8 @@ contract ConvexYieldWrapperMock is ERC20, AccessControl {
 
     function unwrap(address to_) external {
         uint256 amount_ = _balanceOf[address(this)];
-        require(amount_ > 0, 'No wcvx3CRV to unwrap');
-        _checkpoint([address(0), to_]);
+        require(amount_ > 0, "No wcvx3CRV to unwrap");
+        _checkpoint(to_);
         _burn(address(this), amount_);
         IRewardStaking(convexPool).withdraw(amount_, false);
         IERC20(convexToken).safeTransfer(to_, amount_);
@@ -157,39 +157,35 @@ contract ConvexYieldWrapperMock is ERC20, AccessControl {
 
     function getReward(address _account) external {
         //claim directly in checkpoint logic to save a bit of gas
-        _checkpointAndClaim([_account, address(0)]);
+        _checkpointAndClaim(_account);
     }
 
-    function _checkpoint(address[2] memory _accounts) internal {
-        //if shutdown, no longer checkpoint in case there are problems
-        // if (isShutdown) return;
-
+    function _checkpoint(address _account) internal {
         uint256 supply = _totalSupply;
-        uint256[2] memory depositedBalance;
-        depositedBalance[0] = _getDepositedBalance(_accounts[0]);
-        depositedBalance[1] = _getDepositedBalance(_accounts[1]);
+        uint256 depositedBalance;
+        depositedBalance = _getDepositedBalance(_account);
 
         IRewardStaking(convexPool).getReward(address(this), true);
 
         uint256 rewardCount = rewards.length;
         for (uint256 i = 0; i < rewardCount; i++) {
-            _calcRewardIntegral(i, _accounts, depositedBalance, supply, false);
+            _calcRewardIntegral(i, _account, depositedBalance, supply, false);
         }
-        _calcCvxIntegral(_accounts, depositedBalance, supply, false);
+        _calcCvxIntegral(_account, depositedBalance, supply, false);
     }
 
-    function _checkpointAndClaim(address[2] memory _accounts) internal {
+    function _checkpointAndClaim(address _account) internal {
         uint256 supply = _totalSupply;
-        uint256[2] memory depositedBalance;
-        depositedBalance[0] = _getDepositedBalance(_accounts[0]); //only do first slot
+        uint256 depositedBalance;
+        depositedBalance = _getDepositedBalance(_account); //only do first slot
 
         IRewardStaking(convexPool).getReward(address(this), true);
 
         uint256 rewardCount = rewards.length;
         for (uint256 i = 0; i < rewardCount; i++) {
-            _calcRewardIntegral(i, _accounts, depositedBalance, supply, true);
+            _calcRewardIntegral(i, _account, depositedBalance, supply, true);
         }
-        _calcCvxIntegral(_accounts, depositedBalance, supply, true);
+        _calcCvxIntegral(_account, depositedBalance, supply, true);
     }
 
     /// @notice Get user's balance of collateral deposited in various vaults
@@ -217,92 +213,92 @@ contract ConvexYieldWrapperMock is ERC20, AccessControl {
     }
 
     function _calcCvxIntegral(
-        address[2] memory _accounts,
-        uint256[2] memory _balances,
+        address _account,
+        uint256 _balance,
         uint256 _supply,
         bool _isClaim
     ) internal {
         uint256 bal = IERC20(cvx).balanceOf(address(this));
-        uint256 d_cvxreward = bal - cvx_reward_remaining;
+        uint256 cvxRewardRemaining = cvx_reward_remaining;
+        uint256 d_cvxreward = bal - cvxRewardRemaining;
+        uint256 cvxRewardIntegral = cvx_reward_integral;
 
         if (_supply > 0 && d_cvxreward > 0) {
-            cvx_reward_integral = cvx_reward_integral + (d_cvxreward * 1e20) / (_supply);
+            cvxRewardIntegral = cvxRewardIntegral + (d_cvxreward * 1e20) / (_supply);
+            cvx_reward_integral = cvxRewardIntegral;
         }
 
         //update user integrals for cvx
-        for (uint256 u = 0; u < _accounts.length; u++) {
-            //do not give rewards to address 0
-            if (_accounts[u] == address(0)) continue;
-            if (_accounts[u] == collateralVault) continue;
+        //do not give rewards to address 0
+        if (_account == address(0)) return;
+        if (_account == collateralVault) return;
 
-            uint256 userI = cvx_reward_integral_for[_accounts[u]];
-            if (_isClaim || userI < cvx_reward_integral) {
-                uint256 receiveable = cvx_claimable_reward[_accounts[u]] +
-                    ((_balances[u] * (cvx_reward_integral - userI)) / 1e20);
-                if (_isClaim) {
-                    if (receiveable > 0) {
-                        cvx_claimable_reward[_accounts[u]] = 0;
-                        IERC20(cvx).safeTransfer(_accounts[u], receiveable);
-                        bal = bal - receiveable;
-                    }
-                } else {
-                    cvx_claimable_reward[_accounts[u]] = receiveable;
+        uint256 userI = cvx_reward_integral_for[_account];
+        if (_isClaim || userI < cvxRewardIntegral) {
+            uint256 receiveable = cvx_claimable_reward[_account] + ((_balance * (cvxRewardIntegral - userI)) / 1e20);
+            if (_isClaim) {
+                if (receiveable > 0) {
+                    cvx_claimable_reward[_account] = 0;
+                    IERC20(cvx).safeTransfer(_account, receiveable);
+                    bal = bal - (receiveable);
                 }
-                cvx_reward_integral_for[_accounts[u]] = cvx_reward_integral;
+            } else {
+                cvx_claimable_reward[_account] = receiveable;
             }
+            cvx_reward_integral_for[_account] = cvxRewardIntegral;
         }
 
         //update reward total
-        if (bal != cvx_reward_remaining) {
+        if (bal != cvxRewardRemaining) {
             cvx_reward_remaining = bal;
         }
     }
 
     function _calcRewardIntegral(
         uint256 _index,
-        address[2] memory _accounts,
-        uint256[2] memory _balances,
+        address _account,
+        uint256 _balance,
         uint256 _supply,
         bool _isClaim
     ) internal {
         RewardType storage reward = rewards[_index];
 
+        uint256 rewardIntegral = reward.reward_integral;
+        uint256 rewardRemaining = reward.reward_remaining;
+
         //get difference in balance and remaining rewards
         //getReward is unguarded so we use reward_remaining to keep track of how much was actually claimed
         uint256 bal = IERC20(reward.reward_token).balanceOf(address(this));
-        // uint256 d_reward = bal-(reward.reward_remaining);
-
-        if (_supply > 0 && bal - (reward.reward_remaining) > 0) {
-            reward.reward_integral = reward.reward_integral + ((bal - reward.reward_remaining) * 1e20) / _supply;
+        if (_supply > 0 && (bal - rewardRemaining) > 0) {
+            rewardIntegral = uint128(rewardIntegral) + uint128(((bal - rewardRemaining) * 1e20) / _supply);
+            reward.reward_integral = uint128(rewardIntegral);
         }
 
         //update user integrals
-        for (uint256 u = 0; u < _accounts.length; u++) {
-            //do not give rewards to address 0
-            if (_accounts[u] == address(0)) continue;
-            if (_accounts[u] == collateralVault) continue;
+        //do not give rewards to address 0
+        if (_account == address(0)) return;
+        if (_account == collateralVault) return;
 
-            uint256 userI = reward.reward_integral_for[_accounts[u]];
-            if (_isClaim || userI < reward.reward_integral) {
-                if (_isClaim) {
-                    uint256 receiveable = reward.claimable_reward[_accounts[u]] +
-                        ((_balances[u] * (uint256(reward.reward_integral) - userI)) / 1e20);
-                    if (receiveable > 0) {
-                        reward.claimable_reward[_accounts[u]] = 0;
-                        IERC20(reward.reward_token).safeTransfer(_accounts[u], receiveable);
-                        bal = bal - (receiveable);
-                    }
-                } else {
-                    reward.claimable_reward[_accounts[u]] =
-                        reward.claimable_reward[_accounts[u]] +
-                        ((_balances[u] * (uint256(reward.reward_integral) - userI)) / 1e20);
+        uint256 userI = reward.reward_integral_for[_account];
+        if (_isClaim || userI < rewardIntegral) {
+            if (_isClaim) {
+                uint256 receiveable = reward.claimable_reward[_account] +
+                    ((_balance * (uint256(rewardIntegral) - userI)) / 1e20);
+                if (receiveable > 0) {
+                    reward.claimable_reward[_account] = 0;
+                    IERC20(reward.reward_token).safeTransfer(_account, receiveable);
+                    bal = bal - receiveable;
                 }
-                reward.reward_integral_for[_accounts[u]] = reward.reward_integral;
+            } else {
+                reward.claimable_reward[_account] =
+                    reward.claimable_reward[_account] +
+                    ((_balance * (uint256(rewardIntegral) - userI)) / 1e20);
             }
+            reward.reward_integral_for[_account] = rewardIntegral;
         }
 
         //update remaining reward here since balance could have changed if claiming
-        if (bal != reward.reward_remaining) {
+        if (bal != rewardRemaining) {
             reward.reward_remaining = uint128(bal);
         }
     }
@@ -342,8 +338,8 @@ contract ConvexYieldWrapperMock is ERC20, AccessControl {
         collateralVault = join_;
     }
 
-    function user_checkpoint(address[2] calldata _accounts) external returns (bool) {
-        _checkpoint([_accounts[0], _accounts[1]]);
+    function user_checkpoint(address _account) external returns (bool) {
+        _checkpoint(_account);
         return true;
     }
 }

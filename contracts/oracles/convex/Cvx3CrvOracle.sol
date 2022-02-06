@@ -61,6 +61,7 @@ contract Cvx3CrvOracle is IOracle, AccessControl {
      * @dev Only cvx3crvid and ethId are accepted as asset identifiers.
      * @param base Id of base token
      * @param quote Id of quoted token
+     * @param baseAmount Amount for which quote is expected
      * @return quoteAmount Total amount in terms of quoted token
      * @return updateTime Time quote was last updated
      */
@@ -77,6 +78,7 @@ contract Cvx3CrvOracle is IOracle, AccessControl {
      * @dev Only cvx3crvid and ethId are accepted as asset identifiers.
      * @param base Id of base token
      * @param quote Id of quoted token
+     * @param baseAmount Amount for which quote is expected
      * @return quoteAmount Total amount in terms of quoted token
      * @return updateTime Time quote was last updated
      */
@@ -93,6 +95,7 @@ contract Cvx3CrvOracle is IOracle, AccessControl {
      * @dev Only cvx3crvid and ethId are accepted as asset identifiers.
      * @param base Id of base token
      * @param quote Id of quoted token
+     * @param baseAmount Amount for which quote is expected
      * @return quoteAmount Total amount in terms of quoted token
      * @return updateTime Time quote was last updated
      */
