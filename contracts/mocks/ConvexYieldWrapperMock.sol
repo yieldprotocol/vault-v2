@@ -230,8 +230,12 @@ contract ConvexYieldWrapperMock is ERC20, AccessControl {
 
         //update user integrals for cvx
         //do not give rewards to address 0
-        if (_account == address(0)) return;
-        if (_account == collateralVault) return;
+        if (_account == address(0) || _account == collateralVault) {
+            if (bal != cvxRewardRemaining) {
+                cvx_reward_remaining = bal;
+            }
+            return;
+        }
 
         uint256 userI = cvx_reward_integral_for[_account];
         if (_isClaim || userI < cvxRewardIntegral) {
@@ -276,8 +280,12 @@ contract ConvexYieldWrapperMock is ERC20, AccessControl {
 
         //update user integrals
         //do not give rewards to address 0
-        if (_account == address(0)) return;
-        if (_account == collateralVault) return;
+        if (_account == address(0) || _account == collateralVault) {
+            if (bal != rewardRemaining) {
+                reward.reward_remaining = uint128(bal);
+            }
+            return;
+        }
 
         uint256 userI = reward.reward_integral_for[_account];
         if (_isClaim || userI < rewardIntegral) {

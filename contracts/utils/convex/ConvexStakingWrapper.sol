@@ -169,8 +169,12 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
 
         //update user integrals for cvx
         //do not give rewards to address 0
-        if (_account == address(0)) return;
-        if (_account == collateralVault) return;
+        if (_account == address(0) || _account == collateralVault || _account == address(this)) {
+            if (bal != cvxRewardRemaining) {
+                cvx_reward_remaining = uint128(bal);
+            }
+            return;
+        }
 
         uint256 userI = cvx_reward_integral_for[_account];
         if (_isClaim || userI < cvxRewardIntegral) {
@@ -219,11 +223,15 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
             reward.reward_integral = uint128(rewardIntegral);
         }
 
-        //update user integrals
-        //do not give rewards to address 0
-        if (_account == address(0)) return;
-        if (_account == collateralVault) return;
+        //do not give rewards to address 0 or collateralVault or the contract
+        if (_account == address(0) || _account == collateralVault || _account == address(this)) {
+            if (bal != rewardRemaining) {
+                reward.reward_remaining = uint128(bal);
+            }
+            return;
+        }
 
+        //update user integrals
         uint256 userI = reward.reward_integral_for[_account];
         if (_isClaim || userI < rewardIntegral) {
             if (_isClaim) {
