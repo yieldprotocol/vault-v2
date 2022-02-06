@@ -2,10 +2,10 @@
 
 pragma solidity 0.8.6;
 
-import '@yield-protocol/utils-v2/contracts/token/ERC20.sol';
-import '@yield-protocol/vault-interfaces/DataTypes.sol';
-import '@yield-protocol/utils-v2/contracts/token/TransferHelper.sol';
-import '@yield-protocol/utils-v2/contracts/access/AccessControl.sol';
+import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
+import "@yield-protocol/vault-interfaces/DataTypes.sol";
+import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
+import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 
 struct Balances {
     uint128 art; // Debt amount
@@ -94,7 +94,7 @@ contract ConvexYieldWrapperMock is ERC20, AccessControl {
         ICauldron cauldron_,
         address crv_,
         address cvx_
-    ) ERC20('StakedConvexToken', 'stkCvx', 18) {
+    ) ERC20("StakedConvexToken", "stkCvx", 18) {
         convexToken = convexToken_;
         convexPool = convexPool_;
         convexPoolId = poolId_;
@@ -113,10 +113,10 @@ contract ConvexYieldWrapperMock is ERC20, AccessControl {
     // Set the locations of vaults where the user's funds have been deposited & the accounting is kept
     function addVault(bytes12 vault_) external {
         address account = cauldron.vaults(vault_).owner;
-        require(account != address(0), 'No owner for the vault');
+        require(account != address(0), "No owner for the vault");
         bytes12[] storage userVault = vaults[account];
         for (uint256 i = 0; i < userVault.length; i++) {
-            require(userVault[i] != vault_, 'already added');
+            require(userVault[i] != vault_, "already added");
         }
         userVault.push(vault_);
         vaults[account] = userVault;
@@ -135,18 +135,18 @@ contract ConvexYieldWrapperMock is ERC20, AccessControl {
         vaults[account] = vaults_;
     }
 
-    function wrap(address _to, address from_) external {
+    function wrap(address from_) external {
         uint256 amount_ = IERC20(convexToken).balanceOf(address(this));
-        require(amount_ > 0, 'No cvx3CRV to wrap');
+        require(amount_ > 0, "No cvx3CRV to wrap");
         _checkpoint([address(0), from_]);
-        _mint(_to, amount_);
+        _mint(collateralVault, amount_);
         IRewardStaking(convexPool).stake(amount_);
-        emit Deposited(msg.sender, _to, amount_, false);
+        emit Deposited(msg.sender, collateralVault, amount_, false);
     }
 
     function unwrap(address to_) external {
         uint256 amount_ = _balanceOf[address(this)];
-        require(amount_ > 0, 'No wcvx3CRV to unwrap');
+        require(amount_ > 0, "No wcvx3CRV to unwrap");
         _checkpoint([address(0), to_]);
         _burn(address(this), amount_);
         IRewardStaking(convexPool).withdraw(amount_, false);

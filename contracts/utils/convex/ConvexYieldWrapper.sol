@@ -120,18 +120,17 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
     }
 
     /// @dev Wrap convex token held by this contract and forward it to the `to` address
-    /// @param to_ Address to send the wrapped token to
     /// @param from_ Address of the user whose token is being wrapped
-    function wrap(address to_, address from_) external {
+    function wrap(address from_) external {
         require(!isShutdown, "shutdown");
         uint256 amount_ = IERC20(convexToken).balanceOf(address(this));
         require(amount_ > 0, "No convex token to wrap");
 
         _checkpoint([address(0), from_]);
-        _mint(to_, amount_);
+        _mint(collateralVault, amount_);
         IRewardStaking(convexPool).stake(amount_);
 
-        emit Deposited(msg.sender, to_, amount_, false);
+        emit Deposited(msg.sender, collateralVault, amount_, false);
     }
 
     /// @dev Unwrap Wrapped convex token held by this contract, and send the unwrapped convex token to the `to` address
