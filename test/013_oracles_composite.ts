@@ -19,6 +19,7 @@ import { WETH9Mock } from '../typechain/WETH9Mock'
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
 const { deployContract } = waffle
+import { BigNumber } from '@ethersproject/bignumber'
 
 function bytes6ToBytes32(x: string): string {
   return x + '00'.repeat(26)
@@ -82,10 +83,18 @@ describe('Oracles - Composite', function () {
     await compositeMultiOracle.setPath(DAI, USDC, [ETH])
   })
 
-  it('retrieves the value at spot price for direct pairs', async () => {
+  it('retrieves the value at spot price and gets updateTime for direct pairs', async () => {
     expect((await compositeMultiOracle.peek(bytes6ToBytes32(DAI), bytes6ToBytes32(ETH), WAD))[0]).to.equal(
       WAD.div(2500)
     )
+    const [price, updateTime] = await compositeMultiOracle.peek(bytes6ToBytes32(DAI), bytes6ToBytes32(ETH), WAD);
+    expect(updateTime.gt(BigNumber.from('0'))).to.be.true;
+    expect(
+      BigNumber.from(updateTime.toString())
+        .lt(
+          BigNumber.from("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+        )
+    ).to.be.true;
     expect((await compositeMultiOracle.peek(bytes6ToBytes32(USDC), bytes6ToBytes32(ETH), oneUSDC))[0]).to.equal(
       WAD.div(2500)
     )
@@ -95,6 +104,11 @@ describe('Oracles - Composite', function () {
     expect((await compositeMultiOracle.peek(bytes6ToBytes32(ETH), bytes6ToBytes32(USDC), WAD))[0]).to.equal(
       oneUSDC.mul(2500)
     )
+  })
+
+  it('reverts on timestamp greater than current block', async () => {
+    await daiEthAggregator.setTimestamp(BigNumber.from("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")) // 1 DAI (1^18) in ETH
+    await expect(compositeMultiOracle.peek(bytes6ToBytes32(DAI), bytes6ToBytes32(ETH), WAD)).to.be.revertedWith('Invalid updateTime')
   })
 
   it('retrieves the value at spot price for DAI -> USDC and reverse', async () => {
