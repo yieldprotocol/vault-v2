@@ -13,7 +13,7 @@ import "@yield-protocol/utils-v2/contracts/math/WDivUp.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U32.sol";
 
-
+/// TODO: Add full natspec
 contract Witch is AccessControl() {
     using WMul for uint256;
     using WMulUp for uint256;
@@ -22,11 +22,11 @@ contract Witch is AccessControl() {
     using CastU256U128 for uint256;
     using CastU256U32 for uint256;
 
-    event Point(bytes32 indexed param, address value);
+    event Point(bytes32 indexed param, address indexed value);
     event IlkSet(bytes6 indexed ilkId, uint32 duration, uint64 initialOffer, uint96 line, uint24 dust, uint8 dec);
     event Bought(bytes12 indexed vaultId, address indexed buyer, uint256 ink, uint256 art);
     event Auctioned(bytes12 indexed vaultId, uint256 indexed start);
-  
+
     struct Auction {
         address owner;
         uint32 start;
@@ -40,7 +40,7 @@ contract Witch is AccessControl() {
     struct Limits {
         uint96 line;                                                    // Maximum concurrent auctioned collateral
         uint24 dust;                                                    // Minimum collateral that must be left when buying, unless buying all
-        uint8 dec;                                                      // Multiplying factor (10**dec) for line and dust 
+        uint8 dec;                                                      // Multiplying factor (10**dec) for line and dust
         uint128 sum;                                                    // Current concurrent auctioned collateral
     }
 
@@ -58,8 +58,8 @@ contract Witch is AccessControl() {
 
     /// @dev Point to a different ladle
     function point(bytes32 param, address value) external auth {
-        if (param == "ladle") ladle = ILadle(value);
-        else revert("Unrecognized parameter");
+        require(param == "ladle", "Unrecognized");
+        ladle = ILadle(value);
         emit Point(param, value);
     }
 
@@ -186,7 +186,7 @@ contract Witch is AccessControl() {
             IJoin baseJoin = ladle.joins(baseId);
             require (baseJoin != IJoin(address(0)), "Join not found");
             baseJoin.join(user, art);
-        }    
+        }
     }
 
     /// @dev Price of a collateral unit, in underlying, at the present moment, for a given vault. Rounds up, sometimes twice.
