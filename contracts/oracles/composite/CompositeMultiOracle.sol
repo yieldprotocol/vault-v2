@@ -53,6 +53,7 @@ contract CompositeMultiOracle is IOracle, AccessControl {
         external view virtual override
         returns (uint256 amountQuote, uint256 updateTime)
     {
+        updateTime = type(uint256).max;
         amountQuote = amountBase;
         bytes6 base_ = base.b6();
         bytes6 quote_ = quote.b6();
@@ -62,6 +63,7 @@ contract CompositeMultiOracle is IOracle, AccessControl {
             base_ = path[p];
         }
         (amountQuote, updateTime) = _peek(base_, quote_, amountQuote, updateTime);
+        require(updateTime <= block.timestamp, "Invalid updateTime");
     }
 
     /// @dev Convert amountBase base into quote at the latest oracle price, through a path is exists, updating state if necessary.
@@ -69,6 +71,7 @@ contract CompositeMultiOracle is IOracle, AccessControl {
         external virtual override
         returns (uint256 amountQuote, uint256 updateTime)
     {
+        updateTime = type(uint256).max;
         amountQuote = amountBase;
         bytes6 base_ = base.b6();
         bytes6 quote_ = quote.b6();
@@ -78,6 +81,7 @@ contract CompositeMultiOracle is IOracle, AccessControl {
             base_ = path[p];
         }
         (amountQuote, updateTime) = _get(base_, quote_, amountQuote, updateTime);
+        require(updateTime <= block.timestamp, "Invalid updateTime");
     }
 
     /// @dev Convert amountBase base into quote at the latest oracle price, using only direct sources.
