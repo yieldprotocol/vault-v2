@@ -7,8 +7,6 @@ import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
 import "./interfaces/IRewardStaking.sol";
-import "./interfaces/IConvexDeposits.sol";
-import "./interfaces/ICvx.sol";
 import "./CvxMining.sol";
 
 /// @notice Wrapper used to manage staking of Convex tokens
@@ -91,8 +89,9 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
 
     /// @notice Give maximum approval to the pool & convex booster contract to transfer funds from wrapper
     function setApprovals() public {
-        IERC20(curveToken).approve(convexBooster, 0);
-        IERC20(curveToken).approve(convexBooster, type(uint256).max);
+        address _curveToken = curveToken;
+        IERC20(_curveToken).approve(convexBooster, 0);
+        IERC20(_curveToken).approve(convexBooster, type(uint256).max);
         IERC20(convexToken).approve(convexPool, type(uint256).max);
     }
 
@@ -111,6 +110,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         }
 
         uint256 extraCount = IRewardStaking(mainPool).extraRewardsLength();
+
         uint256 startIndex = rewardsLength - 1;
         for (uint256 i = startIndex; i < extraCount; i++) {
             address extraPool = IRewardStaking(mainPool).extraRewards(i);
@@ -292,6 +292,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
 
     /// @notice Create a checkpoint for the supplied addresses by updating the reward integrals & claimable reward for them
     /// @param _accounts The accounts for which checkpoints have to be calculated
+    /// @return Status of whether the checkpoint was successful
     function user_checkpoint(address[2] calldata _accounts) external returns (bool) {
         _checkpoint([_accounts[0], _accounts[1]]);
         return true;

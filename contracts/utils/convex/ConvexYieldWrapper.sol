@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: BUSL-1.1
-
 pragma solidity 0.8.6;
 
 import "@yield-protocol/vault-interfaces/ICauldron.sol";
@@ -159,6 +158,7 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
         address destination_
     ) external auth {
         require(amount_ != 0, "amount is 0");
+        require(token_ != convexToken, "cannot withdraw wrappable token");
         IERC20(token_).safeTransfer(destination_, amount_);
         emit Recovered(token_, amount_, destination_);
     }
