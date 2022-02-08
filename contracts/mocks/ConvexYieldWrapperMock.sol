@@ -104,16 +104,6 @@ contract ConvexYieldWrapperMock is ERC20, AccessControl {
     /// @param destination Address to which the rescued tokens have been sent
     event Recovered(address indexed token, uint256 amount, address indexed destination);
 
-    /// @notice Event called when a vault is added for a user
-    /// @param account The account for which vault is added
-    /// @param vaultId The vaultId to be added
-    event VaultAdded(address indexed account, bytes12 indexed vaultId);
-
-    /// @notice Event called when a vault is removed for a user
-    /// @param account The account for which vault is removed
-    /// @param vaultId The vaultId to be removed
-    event VaultRemoved(address indexed account, bytes12 indexed vaultId);
-
     constructor(
         address convexToken_,
         address convexPool_,
@@ -139,22 +129,22 @@ contract ConvexYieldWrapperMock is ERC20, AccessControl {
     }
 
     // Set the locations of vaults where the user's funds have been deposited & the accounting is kept
-    function addVault(bytes12 vault_) external {
-        address account = cauldron.vaults(vault_).owner;
+    function addVault(bytes12 vaultId) external {
+        address account = cauldron.vaults(vaultId).owner;
         require(cauldron.assets(cauldron.vaults(vaultId).ilkId) == address(this), "Vault is for different ilk");
         require(account != address(0), "No owner for the vault");
         bytes12[] storage vaults_ = vaults[account];
         uint256 vaultsLength = vaults_.length;
 
         for (uint256 i = 0; i < vaultsLength; i++) {
-            require(vaults_[i] != vault_, "Vault already added");
+            require(vaults_[i] != vaultId, "Vault already added");
         }
-        vaults_.push(vault_);
-        emit VaultAdded(account, vault_);
+        vaults_.push(vaultId);
+        emit VaultAdded(account, vaultId);
     }
 
     /// @notice Remove a vault from the user's vault list
-    /// @param vaultId The vaulId being added
+    /// @param vaultId The vaulId being removed
     /// @param account The user from whom the vault needs to be removed
     function removeVault(bytes12 vaultId, address account) public {
         address owner = cauldron.vaults(vaultId).owner;
@@ -171,7 +161,6 @@ contract ConvexYieldWrapperMock is ERC20, AccessControl {
                 emit VaultRemoved(account, vaultId);
                 return;
             }
-            require(found, "Vault not found");
         }
         revert("Vault not found");
     }
