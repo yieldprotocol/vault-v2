@@ -306,17 +306,14 @@ describe('Convex Wrapper', async function () {
   })
 
   it('Adding a vault for a different collateral fails', async () => {
-    await wand.makeIlk(USDC, CVX3CRV, compositeMultiOracle.address, 1000000, 1000000, 1, 6)
-    await cauldron.addIlks(seriesId, [CVX3CRV])
-    var join = await ladle.joins(CVX3CRV)
-    await convexWrapper.point(join)
-    // Batch action to build a vault & add it to the wrapper
+    
+    
     const addVaultCall = convexLadleModule.interface.encodeFunctionData('addVault', [
       convexWrapper.address,
       '0x000000000000000000000000',
     ])
     await expect(
       ladle.batch([ladle.buildAction(seriesId, USDC), ladle.moduleCallAction(convexLadleModule.address, addVaultCall)])
-    ).to.be.revertedWith('revert Vault is for different ilk')
+    ).to.be.revertedWith('Vault is for different ilk')
   })
 })
