@@ -35,7 +35,10 @@ contract CompositeMultiOracle is IOracle, AccessControl {
         }
     }
 
-    /// @dev Set or reset an price path
+    /// @notice Set or reset an price path and its reverse path
+    /// @param base Id of base token
+    /// @param quote Id of quote token
+    /// @param path Path from base to quote
     function setPath(
         bytes6 base,
         bytes6 quote,
@@ -57,7 +60,11 @@ contract CompositeMultiOracle is IOracle, AccessControl {
         emit PathSet(quote, base, path);
     }
 
-    /// @dev Convert amountBase base into quote at the latest oracle price, through a path is exists.
+    /// @notice Convert amountBase base into quote at the latest oracle price, through a path is exists.
+    /// @param base Id of base token
+    /// @param quote Id of quote token
+    /// @param amountBase Amount of base to convert to quote
+    /// @return amountQuote Amount of quote token converted from base
     function peek(
         bytes32 base,
         bytes32 quote,
@@ -79,7 +86,12 @@ contract CompositeMultiOracle is IOracle, AccessControl {
         require(updateTime <= block.timestamp, "Invalid updateTime");
     }
 
-    /// @dev Convert amountBase base into quote at the latest oracle price, through a path is exists, updating state if necessary.
+    /// @notice Convert amountBase base into quote at the latest oracle price, through a path is exists.
+    /// @dev This function is transactional
+    /// @param base Id of base token
+    /// @param quote Id of quote token
+    /// @param amountBase Amount of base to convert to quote
+    /// @return amountQuote Amount of quote token converted from base
     function get(
         bytes32 base,
         bytes32 quote,
@@ -101,7 +113,13 @@ contract CompositeMultiOracle is IOracle, AccessControl {
         require(updateTime <= block.timestamp, "Invalid updateTime");
     }
 
-    /// @dev Convert amountBase base into quote at the latest oracle price, using only direct sources.
+    /// @notice Convert amountBase base into quote at the latest oracle price, through a path is exists.
+    /// @param base Id of base token
+    /// @param quote Id of quote token
+    /// @param amountBase Amount of base to convert to quote
+    /// @param updateTimeIn Lowest updateTime value obtained received seen until now
+    /// @return amountQuote Amount of quote token converted from base
+    /// @return updateTimeOut Lower of current price's updateTime or updateTimeIn
     function _peek(
         bytes6 base,
         bytes6 quote,
@@ -114,7 +132,13 @@ contract CompositeMultiOracle is IOracle, AccessControl {
         updateTimeOut = (updateTimeOut < updateTimeIn) ? updateTimeOut : updateTimeIn; // Take the oldest update time
     }
 
-    /// @dev Convert amountBase base into quote at the latest oracle price, using only direct sources, updating state if necessary.
+    /// @notice Convert amountBase base into quote at the latest oracle price, through a path is exists.
+    /// @param base Id of base token
+    /// @param quote Id of quote token
+    /// @param amountBase Amount of base to convert to quote
+    /// @param updateTimeIn Lowest updateTime value obtained received seen until now
+    /// @return amountQuote Amount of quote token converted from base
+    /// @return updateTimeOut Lower of current price's updateTime or updateTimeIn
     function _get(
         bytes6 base,
         bytes6 quote,
