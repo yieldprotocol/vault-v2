@@ -42,13 +42,13 @@ contract CompositeMultiOracle is IOracle, AccessControl {
     function setPath(
         bytes6 base,
         bytes6 quote,
-        bytes6[] memory path
+        bytes6[] calldata path
     ) external auth {
         uint256 pathLength = path.length;
         bytes6[] memory reverse = new bytes6[](pathLength);
         bytes6 base_ = base;
         unchecked {
-            for (uint256 p = 0; p < pathLength; ++p) {
+            for (uint256 p; p < pathLength; ++p) {
                 require(sources[base_][path[p]] != IOracle(address(0)), "Source not found");
                 base_ = path[p];
                 reverse[pathLength - (p + 1)] = base_;
@@ -77,7 +77,7 @@ contract CompositeMultiOracle is IOracle, AccessControl {
         bytes6[] memory path = paths[base_][quote_];
         uint256 pathLength = path.length;
         unchecked {
-            for (uint256 p = 0; p < pathLength; ++p) {
+            for (uint256 p; p < pathLength; ++p) {
                 (amountQuote, updateTime) = _peek(base_, path[p], amountQuote, updateTime);
                 base_ = path[p];
             }
@@ -104,7 +104,7 @@ contract CompositeMultiOracle is IOracle, AccessControl {
         bytes6[] memory path = paths[base_][quote_];
         uint256 pathLength = path.length;
         unchecked {
-            for (uint256 p = 0; p < pathLength; ++p) {
+            for (uint256 p; p < pathLength; ++p) {
                 (amountQuote, updateTime) = _get(base_, path[p], amountQuote, updateTime);
                 base_ = path[p];
             }
