@@ -101,8 +101,10 @@ contract Cvx3CrvOracle is IOracle, AccessControl {
         bytes6 quote,
         uint256 baseAmount
     ) private view returns (uint256 quoteAmount, uint256 updateTime) {
+        bytes32 cvx3CrvId_ = cvx3CrvId;
+        bytes32 ethId_ = ethId;
         require(
-            (base == ethId && quote == cvx3CrvId) || (base == cvx3CrvId && quote == ethId),
+            (base == ethId_ && quote == cvx3CrvId_) || (base == cvx3CrvId_ && quote == ethId_),
             "Invalid quote or base"
         );
 
@@ -134,7 +136,7 @@ contract Cvx3CrvOracle is IOracle, AccessControl {
 
         uint256 price = (threecrv.get_virtual_price() * minStable) / 1e18;
 
-        if (base == cvx3CrvId && quote == ethId) {
+        if (base == cvx3CrvId_) {
             quoteAmount = (baseAmount * price) / 1e18;
         } else {
             quoteAmount = (baseAmount * 1e18) / price;
