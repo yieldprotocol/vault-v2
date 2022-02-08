@@ -89,11 +89,8 @@ describe('Oracles - Composite', function () {
     )
     const [price, updateTime] = await compositeMultiOracle.peek(bytes6ToBytes32(DAI), bytes6ToBytes32(ETH), WAD)
     expect(updateTime.gt(BigNumber.from('0'))).to.be.true
-    expect(
-      BigNumber.from(updateTime.toString()).lt(
-        BigNumber.from('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')
-      )
-    ).to.be.true
+    expect(updateTime.lt(BigNumber.from('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'))).to.be
+      .true
     expect((await compositeMultiOracle.peek(bytes6ToBytes32(USDC), bytes6ToBytes32(ETH), oneUSDC))[0]).to.equal(
       WAD.div(2500)
     )
