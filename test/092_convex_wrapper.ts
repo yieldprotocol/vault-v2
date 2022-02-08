@@ -306,8 +306,6 @@ describe('Convex Wrapper', async function () {
   })
 
   it('Adding a vault for a different collateral fails', async () => {
-    
-    
     const addVaultCall = convexLadleModule.interface.encodeFunctionData('addVault', [
       convexWrapper.address,
       '0x000000000000000000000000',
