@@ -183,7 +183,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
                 if (receiveable > 0) {
                     cvx_claimable_reward[_account] = 0;
                     IERC20(cvx).safeTransfer(_account, receiveable);
-                    bal = bal - (receiveable);
+                    bal -= receiveable;
                 }
             } else {
                 cvx_claimable_reward[_account] = receiveable;
