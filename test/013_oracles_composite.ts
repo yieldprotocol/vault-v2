@@ -76,43 +76,82 @@ describe('Oracles - Composite', function () {
       owner
     )
 
-    // Set up the CompositeMultiOracle to draw from the ChainlinkMultiOracle
-    await compositeMultiOracle.setSource(DAI, ETH, chainlinkMultiOracle.address)
-    await compositeMultiOracle.setSource(USDC, ETH, chainlinkMultiOracle.address)
-
-    await compositeMultiOracle.setPath(DAI, USDC, [ETH])
   })
 
-  it('retrieves the value at spot price and gets updateTime for direct pairs', async () => {
-    expect((await compositeMultiOracle.peek(bytes6ToBytes32(DAI), bytes6ToBytes32(ETH), WAD))[0]).to.equal(
-      WAD.div(2500)
-    )
-    const [price, updateTime] = await compositeMultiOracle.peek(bytes6ToBytes32(DAI), bytes6ToBytes32(ETH), WAD)
-    expect(updateTime.gt(BigNumber.from('0'))).to.be.true
-    expect(updateTime.lt(BigNumber.from('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'))).to.be
-      .true
-    expect((await compositeMultiOracle.peek(bytes6ToBytes32(USDC), bytes6ToBytes32(ETH), oneUSDC))[0]).to.equal(
-      WAD.div(2500)
-    )
-    expect((await compositeMultiOracle.peek(bytes6ToBytes32(ETH), bytes6ToBytes32(DAI), WAD))[0]).to.equal(
-      WAD.mul(2500)
-    )
-    expect((await compositeMultiOracle.peek(bytes6ToBytes32(ETH), bytes6ToBytes32(USDC), WAD))[0]).to.equal(
-      oneUSDC.mul(2500)
-    )
+  it('setSource() sets source both ways', async () => {
+    const quoteId = DAI
+    const baseId = ETH
+    const source = chainlinkMultiOracle.address
+    expect(await compositeMultiOracle.sources(baseId, quoteId)).to.equal( '0x0000000000000000000000000000000000000000');
+    expect(await compositeMultiOracle.setSource(baseId, quoteId, source)).to.emit(compositeMultiOracle, "SourceSet").withArgs(quoteId, baseId, source)
+    expect(await compositeMultiOracle.sources(baseId, quoteId)).to.equal(source);
+    expect(await compositeMultiOracle.sources(quoteId, baseId)).to.equal(source);
   })
 
-  it('reverts on timestamp greater than current block', async () => {
-    await daiEthAggregator.setTimestamp(
-      BigNumber.from('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')
-    ) // 1 DAI (1^18) in ETH
-    await expect(compositeMultiOracle.peek(bytes6ToBytes32(DAI), bytes6ToBytes32(ETH), WAD)).to.be.revertedWith(
-      'Invalid updateTime'
-    )
+  it('setPaths() sets path and reverse path', async () => {
+    const quoteId = DAI
+    const baseId = ETH
+    const path = [USDC]
+    const source = chainlinkMultiOracle.address
+    await compositeMultiOracle.setSource(DAI, USDC, chainlinkMultiOracle.address)
+    await compositeMultiOracle.setSource(ETH, USDC, chainlinkMultiOracle.address)
+    expect(await compositeMultiOracle.setPath(baseId, quoteId, path)).to.emit(compositeMultiOracle, "PathSet")
+    expect(await compositeMultiOracle.paths(baseId, quoteId, 0)).to.equal(path[0]);
+    expect(await compositeMultiOracle.paths(quoteId, baseId, 0)).to.equal(path[0]);
+})
+
+  describe('With sources and paths set', async() => {
+    beforeEach(async () => {
+      // Set up the CompositeMultiOracle to draw from the ChainlinkMultiOracle
+      await compositeMultiOracle.setSource(DAI, ETH, chainlinkMultiOracle.address)
+      await compositeMultiOracle.setSource(USDC, ETH, chainlinkMultiOracle.address)
+      await compositeMultiOracle.setPath(DAI, USDC, [ETH])
+
+    })
+
+    it('retrieves the value at spot price and gets updateTime for direct pairs', async () => {
+      expect((await compositeMultiOracle.peek(bytes6ToBytes32(DAI), bytes6ToBytes32(ETH), WAD))[0]).to.equal(
+        WAD.div(2500)
+      )
+      const [price, updateTime] = await compositeMultiOracle.peek(bytes6ToBytes32(DAI), bytes6ToBytes32(ETH), WAD)
+      expect(updateTime.gt(BigNumber.from('0'))).to.be.true
+      expect(updateTime.lt(BigNumber.from('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'))).to.be
+        .true
+      expect((await compositeMultiOracle.peek(bytes6ToBytes32(USDC), bytes6ToBytes32(ETH), oneUSDC))[0]).to.equal(
+        WAD.div(2500)
+      )
+      expect((await compositeMultiOracle.peek(bytes6ToBytes32(ETH), bytes6ToBytes32(DAI), WAD))[0]).to.equal(
+        WAD.mul(2500)
+      )
+      expect((await compositeMultiOracle.peek(bytes6ToBytes32(ETH), bytes6ToBytes32(USDC), WAD))[0]).to.equal(
+        oneUSDC.mul(2500)
+      )
+    })
+
+    it('reverts on timestamp greater than current block', async () => {
+      await daiEthAggregator.setTimestamp(
+        BigNumber.from('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')
+      )
+      await expect(compositeMultiOracle.peek(bytes6ToBytes32(DAI), bytes6ToBytes32(ETH), WAD)).to.be.revertedWith(
+        'Invalid updateTime'
+      )
+    })
+
+    it('uses the oldest timestamp found', async () => {
+      const { timestamp } = await ethers.provider.getBlock('latest')
+      const one = BigNumber.from('0x1')
+      await daiEthAggregator.setTimestamp(one)
+      await usdcEthAggregator.setTimestamp(timestamp)
+      expect((await compositeMultiOracle.peek(bytes6ToBytes32(DAI), bytes6ToBytes32(USDC), WAD))[1]).to.equal(
+        one
+      )
+    })
+
+    it('retrieves the value at spot price for DAI -> USDC and reverse', async () => {
+      expect((await compositeMultiOracle.peek(bytes6ToBytes32(DAI), bytes6ToBytes32(USDC), WAD))[0]).to.equal(oneUSDC)
+      expect((await compositeMultiOracle.peek(bytes6ToBytes32(USDC), bytes6ToBytes32(DAI), oneUSDC))[0]).to.equal(WAD)
+    })
+
   })
 
-  it('retrieves the value at spot price for DAI -> USDC and reverse', async () => {
-    expect((await compositeMultiOracle.peek(bytes6ToBytes32(DAI), bytes6ToBytes32(USDC), WAD))[0]).to.equal(oneUSDC)
-    expect((await compositeMultiOracle.peek(bytes6ToBytes32(USDC), bytes6ToBytes32(DAI), oneUSDC))[0]).to.equal(WAD)
-  })
 })
