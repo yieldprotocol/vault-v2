@@ -49,10 +49,10 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
 
     //management
     bool public isShutdown;
-    bool private _status;
+    uint8 private _status = 1;
 
-    bool private constant _NOT_ENTERED = false;
-    bool private constant _ENTERED = true;
+    uint8 private constant _NOT_ENTERED = 1;
+    uint8 private constant _ENTERED = 2;
 
     event Deposited(address indexed _user, address indexed _account, uint256 _amount, bool _wrapped);
     event Withdrawn(address indexed _user, uint256 _amount, bool _unwrapped);

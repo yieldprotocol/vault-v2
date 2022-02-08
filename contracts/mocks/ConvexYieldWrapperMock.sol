@@ -86,6 +86,16 @@ contract ConvexYieldWrapperMock is ERC20, AccessControl {
     event Withdrawn(address indexed _user, uint256 _amount, bool _unwrapped);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
+    /// @notice Event called when a vault is added for a user
+    /// @param account The account for which vault is added
+    /// @param vaultId The vaultId to be added
+    event VaultAdded(address indexed account, bytes12 indexed vaultId);
+
+    /// @notice Event called when a vault is removed for a user
+    /// @param account The account for which vault is removed
+    /// @param vaultId The vaultId to be removed
+    event VaultRemoved(address indexed account, bytes12 indexed vaultId);
+
     constructor(
         address convexToken_,
         address convexPool_,
@@ -114,25 +124,36 @@ contract ConvexYieldWrapperMock is ERC20, AccessControl {
     function addVault(bytes12 vault_) external {
         address account = cauldron.vaults(vault_).owner;
         require(account != address(0), "No owner for the vault");
-        bytes12[] storage userVault = vaults[account];
-        for (uint256 i = 0; i < userVault.length; i++) {
-            require(userVault[i] != vault_, "already added");
+        bytes12[] storage vaults_ = vaults[account];
+        uint256 vaultsLength = vaults_.length;
+
+        for (uint256 i = 0; i < vaultsLength; i++) {
+            require(vaults_[i] != vault_, "Vault already added");
         }
-        userVault.push(vault_);
-        vaults[account] = userVault;
+        vaults_.push(vault_);
+        emit VaultAdded(account, vault_);
     }
 
     /// @notice Remove a vault from the user's vault list
     /// @param vaultId The vaulId being added
     /// @param account The user from whom the vault needs to be removed
     function removeVault(bytes12 vaultId, address account) public {
+        address owner = cauldron.vaults(vaultId).owner;
+        require(account != owner, "Vault doesn't belong to account");
         bytes12[] storage vaults_ = vaults[account];
-        for (uint256 i = 0; i < vaults_.length; i++) {
+        uint256 vaultsLength = vaults_.length;
+        for (uint256 i = 0; i < vaultsLength; i++) {
             if (vaults_[i] == vaultId) {
-                vaults_[i] = bytes12(0);
+                bool isLast = i == vaultsLength - 1;
+                if (!isLast) {
+                    vaults_[i] = vaults_[vaultsLength - 1];
+                }
+                vaults_.pop();
+                emit VaultRemoved(account, vaultId);
+                return;
             }
         }
-        vaults[account] = vaults_;
+        revert("Vault not found");
     }
 
     function wrap(address _to, address from_) external {
@@ -147,6 +168,7 @@ contract ConvexYieldWrapperMock is ERC20, AccessControl {
     function unwrap(address to_) external {
         uint256 amount_ = _balanceOf[address(this)];
         require(amount_ > 0, "No wcvx3CRV to unwrap");
+
         _checkpoint(to_);
         _burn(address(this), amount_);
         IRewardStaking(convexPool).withdraw(amount_, false);
