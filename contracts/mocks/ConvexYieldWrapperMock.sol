@@ -24,6 +24,9 @@ interface ICauldron {
 
     /// @dev A user can own one or more Vaults, with each vault being able to borrow from a single series.
     function vaults(bytes12 vault) external view returns (Vault memory);
+
+    /// @dev Assets available in Cauldron.
+    function assets(bytes6 assetsId) external view returns (address);
 }
 
 interface IRewardStaking {
@@ -85,6 +88,21 @@ contract ConvexYieldWrapperMock is ERC20, AccessControl {
     event Deposited(address indexed _user, address indexed _account, uint256 _amount, bool _wrapped);
     event Withdrawn(address indexed _user, uint256 _amount, bool _unwrapped);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    /// @notice Event called when a vault is added for a user
+    /// @param account The account for which vault is added
+    /// @param vaultId The vaultId to be added
+    event VaultAdded(address indexed account, bytes12 indexed vaultId);
+
+    /// @notice Event called when a vault is removed for a user
+    /// @param account The account for which vault is removed
+    /// @param vaultId The vaultId to be removed
+    event VaultRemoved(address indexed account, bytes12 indexed vaultId);
+
+    /// @notice Event called when tokens are rescued from the contract
+    /// @param token Address of the token being rescued
+    /// @param amount Amount of the token being rescued
+    /// @param destination Address to which the rescued tokens have been sent
+    event Recovered(address indexed token, uint256 amount, address indexed destination);
 
     constructor(
         address convexToken_,
@@ -111,28 +129,40 @@ contract ConvexYieldWrapperMock is ERC20, AccessControl {
     }
 
     // Set the locations of vaults where the user's funds have been deposited & the accounting is kept
-    function addVault(bytes12 vault_) external {
-        address account = cauldron.vaults(vault_).owner;
+    function addVault(bytes12 vaultId) external {
+        address account = cauldron.vaults(vaultId).owner;
+        require(cauldron.assets(cauldron.vaults(vaultId).ilkId) == address(this), "Vault is for different ilk");
         require(account != address(0), "No owner for the vault");
-        bytes12[] storage userVault = vaults[account];
-        for (uint256 i = 0; i < userVault.length; i++) {
-            require(userVault[i] != vault_, "already added");
+        bytes12[] storage vaults_ = vaults[account];
+        uint256 vaultsLength = vaults_.length;
+
+        for (uint256 i = 0; i < vaultsLength; i++) {
+            require(vaults_[i] != vaultId, "Vault already added");
         }
-        userVault.push(vault_);
-        vaults[account] = userVault;
+        vaults_.push(vaultId);
+        emit VaultAdded(account, vaultId);
     }
 
     /// @notice Remove a vault from the user's vault list
-    /// @param vaultId The vaulId being added
+    /// @param vaultId The vaulId being removed
     /// @param account The user from whom the vault needs to be removed
     function removeVault(bytes12 vaultId, address account) public {
+        address owner = cauldron.vaults(vaultId).owner;
+        require(account != owner, "Vault doesn't belong to account");
         bytes12[] storage vaults_ = vaults[account];
-        for (uint256 i = 0; i < vaults_.length; i++) {
+        uint256 vaultsLength = vaults_.length;
+        for (uint256 i = 0; i < vaultsLength; i++) {
             if (vaults_[i] == vaultId) {
-                vaults_[i] = bytes12(0);
+                bool isLast = i == vaultsLength - 1;
+                if (!isLast) {
+                    vaults_[i] = vaults_[vaultsLength - 1];
+                }
+                vaults_.pop();
+                emit VaultRemoved(account, vaultId);
+                return;
             }
         }
-        vaults[account] = vaults_;
+        revert("Vault not found");
     }
 
     function wrap(address from_) external {
