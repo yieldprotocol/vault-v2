@@ -169,7 +169,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
 
         //update user integrals for cvx
         uint256 accountsLength = _accounts.length;
-        for (uint256 u = 0; u < accountsLength; u++) {
+        for (uint256 u; u < accountsLength; ++u) {
             //do not give rewards to address 0
             if (_accounts[u] == address(0)) continue;
             if (_accounts[u] == collateralVault) continue;
@@ -224,7 +224,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         }
         //update user integrals
         uint256 accountsLength = _accounts.length;
-        for (uint256 u = 0; u < accountsLength; u++) {
+        for (uint256 u; u < accountsLength; ++u) {
             //do not give rewards to address 0
             if (_accounts[u] == address(0)) continue;
             if (_accounts[u] == collateralVault) continue;
@@ -268,7 +268,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         IRewardStaking(convexPool).getReward(address(this), true);
 
         uint256 rewardCount = rewards.length;
-        for (uint256 i = 0; i < rewardCount; i++) {
+        for (uint256 i; i < rewardCount; ++i) {
             _calcRewardIntegral(i, _accounts, depositedBalance, supply, false);
         }
         _calcCvxIntegral(_accounts, depositedBalance, supply, false);
@@ -284,7 +284,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         IRewardStaking(convexPool).getReward(address(this), true);
 
         uint256 rewardCount = rewards.length;
-        for (uint256 i = 0; i < rewardCount; i++) {
+        for (uint256 i; i < rewardCount; ++i) {
             _calcRewardIntegral(i, _accounts, depositedBalance, supply, true);
         }
         _calcCvxIntegral(_accounts, depositedBalance, supply, true);
@@ -312,7 +312,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         uint256 rewardCount = rewards.length;
         claimable = new EarnedData[](rewardCount + 1);
 
-        for (uint256 i = 0; i < rewardCount; i++) {
+        for (uint256 i; i < rewardCount; ++i) {
             RewardType storage reward = rewards[i];
             address rewardToken = reward.reward_token;
 
