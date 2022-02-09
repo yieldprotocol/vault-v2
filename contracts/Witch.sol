@@ -138,9 +138,18 @@ contract Witch is AccessControl {
 
         uint256 art = cauldron.debtFromBase(vault_.seriesId, base);
         {
-            uint256 elapsed = uint32(block.timestamp) - auction_.start; // Auctions will malfunction on the 7th of February 2106, at 06:28:16 GMT, we should replace this contract before then.
-            uint256 price = _inkPrice(balances_, ilk_.initialOffer, ilk_.duration, elapsed);
-            ink = uint256(art).wmul(price); // Calculate collateral to sell. Using divdrup stops rounding from leaving 1 stray wei in vaults.
+            // If the world is still here, auctions will malfunction on the 7th of February 2106, at 06:28:16 GMT
+            // TODO: Replace this contract before then 😰
+            uint256 elapsed = uint32(block.timestamp) - auction_.start;
+
+            //       (        a         )
+            // ink = (art_in / total_art) * total_ink * (p + (1 - p) * t)
+
+            uint256 t = ilk_.duration < elapsed ? 1 : elapsed / ilk_.duration;  // why is this ilk_.duration and not auction.duration?
+            uint256 a = (art / balances_.art);
+            uint256 p = ilk_.initialOffer;
+            ink = a * balances_.ink * (p + (1 - p) * t);
+
             require(ink >= min, "Not enough bought");
             require(art == balances_.art || balances_.ink - ink >= limits_.dust * (10**limits_.dec), "Leaves dust");
             limits[vault_.ilkId].sum = limits_.sum - ink.u128();
