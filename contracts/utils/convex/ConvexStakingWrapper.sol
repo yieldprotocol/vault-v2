@@ -292,7 +292,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
 
     /// @notice Create a checkpoint for the supplied addresses by updating the reward integrals & claimable reward for them
     /// @param _accounts The accounts for which checkpoints have to be calculated
-    function user_checkpoint(address[2] calldata _accounts) external returns (bool) {
+    function user_checkpoint(address[2] calldata _accounts) external nonReentrant returns (bool) {
         _checkpoint([_accounts[0], _accounts[1]]);
         return true;
     }
@@ -344,7 +344,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
 
     /// @notice Claim reward for the supplied account
     /// @param _account Address whose reward is to be claimed
-    function getReward(address _account) external {
+    function getReward(address _account) external nonReentrant {
         //claim directly in checkpoint logic to save a bit of gas
         _checkpointAndClaim([_account, address(0)]);
     }
