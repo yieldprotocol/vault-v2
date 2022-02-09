@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
-import '@yield-protocol/utils-v2/contracts/token/ERC20.sol';
-import '@yield-protocol/vault-interfaces/DataTypes.sol';
-import '@yield-protocol/utils-v2/contracts/token/TransferHelper.sol';
+import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
+import "@yield-protocol/vault-interfaces/DataTypes.sol";
+import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
 
 contract ConvexPoolMock {
     using TransferHelper for IERC20;
@@ -37,7 +37,7 @@ contract ConvexPoolMock {
     /// @param _amount The amount of token to be staked
     /// @return true if the staking was successful
     function stake(uint256 _amount) public returns (bool) {
-        require(_amount > 0, 'RewardPool : Cannot stake 0');
+        require(_amount > 0, "RewardPool : Cannot stake 0");
 
         _totalSupply = _totalSupply + _amount;
         _balances[msg.sender] = _balances[msg.sender] + _amount;
@@ -51,7 +51,7 @@ contract ConvexPoolMock {
     /// @param _claim Whether to claim the extra rewards
     /// @return true if the withdrawal was successful
     function withdraw(uint256 _amount, bool _claim) public returns (bool) {
-        require(_amount > 0, 'RewardPool : Cannot withdraw 0');
+        require(_amount > 0, "RewardPool : Cannot withdraw 0");
 
         _totalSupply = _totalSupply - _amount;
         _balances[msg.sender] = _balances[msg.sender] - _amount;
@@ -59,5 +59,9 @@ contract ConvexPoolMock {
         stakingToken.safeTransfer(msg.sender, _amount);
 
         return true;
+    }
+
+    function extraRewardsLength() public view returns (uint256) {
+        return 0;
     }
 }
