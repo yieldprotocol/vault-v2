@@ -107,7 +107,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
             RewardType storage reward = rewards.push();
             reward.reward_token = crv;
             reward.reward_pool = mainPool;
-            rewardsLength += 1;
+            rewardsLength = 1;
         }
 
         uint256 extraCount = IRewardStaking(mainPool).extraRewardsLength();
