@@ -182,7 +182,9 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
                     if (receiveable > 0) {
                         cvx_claimable_reward[_accounts[u]] = 0;
                         IERC20(cvx).safeTransfer(_accounts[u], receiveable);
-                        bal = bal - (receiveable);
+                        unchecked {
+                            bal = bal - receiveable;
+                        }
                     }
                 } else {
                     cvx_claimable_reward[_accounts[u]] = receiveable;
@@ -219,7 +221,9 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         //getReward is unguarded so we use reward_remaining to keep track of how much was actually claimed
         uint256 bal = IERC20(reward.reward_token).balanceOf(address(this));
         if (_supply > 0 && (bal - rewardRemaining) > 0) {
-            rewardIntegral = uint128(rewardIntegral) + uint128(((bal - rewardRemaining) * 1e20) / _supply);
+            unchecked {
+                rewardIntegral = uint128(rewardIntegral) + uint128(((bal - rewardRemaining) * 1e20) / _supply);
+            }
             reward.reward_integral = uint128(rewardIntegral);
         }
         //update user integrals
@@ -240,9 +244,11 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
                         bal = bal - receiveable;
                     }
                 } else {
-                    reward.claimable_reward[_accounts[u]] =
-                        reward.claimable_reward[_accounts[u]] +
-                        ((_balances[u] * (uint256(rewardIntegral) - userI)) / 1e20);
+                    unchecked {
+                        reward.claimable_reward[_accounts[u]] =
+                            reward.claimable_reward[_accounts[u]] +
+                            ((_balances[u] * (uint256(rewardIntegral) - userI)) / 1e20);
+                    }
                 }
                 reward.reward_integral_for[_accounts[u]] = rewardIntegral;
             }
