@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: BUSL-1.1
-
 pragma solidity 0.8.6;
 
 import "@yield-protocol/vault-interfaces/ICauldron.sol";
@@ -56,11 +55,12 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
     /// @param vaultId The id of the vault being added
     function addVault(bytes12 vaultId) external {
         address account = cauldron.vaults(vaultId).owner;
+        require(cauldron.assets(cauldron.vaults(vaultId).ilkId) == address(this), "Vault is for different ilk");
         require(account != address(0), "No owner for the vault");
         bytes12[] storage vaults_ = vaults[account];
         uint256 vaultsLength = vaults_.length;
 
-        for (uint256 i = 0; i < vaultsLength; i++) {
+        for (uint256 i; i < vaultsLength; ++i) {
             require(vaults_[i] != vaultId, "Vault already added");
         }
         vaults_.push(vaultId);
@@ -75,7 +75,7 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
         require(account != owner, "vault doesn't belong to account");
         bytes12[] storage vaults_ = vaults[account];
         uint256 vaultsLength = vaults_.length;
-        for (uint256 i = 0; i < vaultsLength; i++) {
+        for (uint256 i; i < vaultsLength; ++i) {
             if (vaults_[i] == vaultId) {
                 unchecked {
                     bool isLast = i == vaultsLength - 1;
@@ -105,7 +105,7 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
         uint256 collateral;
         DataTypes.Balances memory balance;
         uint256 userVaultLength = userVault.length;
-        for (uint256 i = 0; i < userVaultLength; i++) {
+        for (uint256 i; i < userVaultLength; ++i) {
             if (cauldron.vaults(userVault[i]).owner == account_) {
                 balance = cauldron.balances(userVault[i]);
                 collateral = collateral + balance.ink;

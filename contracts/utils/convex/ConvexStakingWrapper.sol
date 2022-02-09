@@ -7,8 +7,6 @@ import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
 import "./interfaces/IRewardStaking.sol";
-import "./interfaces/IConvexDeposits.sol";
-import "./interfaces/ICvx.sol";
 import "./CvxMining.sol";
 
 /// @notice Wrapper used to manage staking of Convex tokens
@@ -91,8 +89,9 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
 
     /// @notice Give maximum approval to the pool & convex booster contract to transfer funds from wrapper
     function setApprovals() public {
-        IERC20(curveToken).approve(convexBooster, 0);
-        IERC20(curveToken).approve(convexBooster, type(uint256).max);
+        address _curveToken = curveToken;
+        IERC20(_curveToken).approve(convexBooster, 0);
+        IERC20(_curveToken).approve(convexBooster, type(uint256).max);
         IERC20(convexToken).approve(convexPool, type(uint256).max);
     }
 
@@ -107,10 +106,11 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
             RewardType storage reward = rewards.push();
             reward.reward_token = crv;
             reward.reward_pool = mainPool;
-            rewardsLength += 1;
+            rewardsLength = 1;
         }
 
         uint256 extraCount = IRewardStaking(mainPool).extraRewardsLength();
+
         uint256 startIndex = rewardsLength - 1;
         for (uint256 i = startIndex; i < extraCount; i++) {
             address extraPool = IRewardStaking(mainPool).extraRewards(i);
@@ -169,7 +169,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
 
         //update user integrals for cvx
         uint256 accountsLength = _accounts.length;
-        for (uint256 u = 0; u < accountsLength; u++) {
+        for (uint256 u; u < accountsLength; ++u) {
             //do not give rewards to address 0
             if (_accounts[u] == address(0)) continue;
             if (_accounts[u] == collateralVault) continue;
@@ -228,7 +228,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         }
         //update user integrals
         uint256 accountsLength = _accounts.length;
-        for (uint256 u = 0; u < accountsLength; u++) {
+        for (uint256 u; u < accountsLength; ++u) {
             //do not give rewards to address 0
             if (_accounts[u] == address(0)) continue;
             if (_accounts[u] == collateralVault) continue;
@@ -274,7 +274,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         IRewardStaking(convexPool).getReward(address(this), true);
 
         uint256 rewardCount = rewards.length;
-        for (uint256 i = 0; i < rewardCount; i++) {
+        for (uint256 i; i < rewardCount; ++i) {
             _calcRewardIntegral(i, _accounts, depositedBalance, supply, false);
         }
         _calcCvxIntegral(_accounts, depositedBalance, supply, false);
@@ -290,7 +290,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         IRewardStaking(convexPool).getReward(address(this), true);
 
         uint256 rewardCount = rewards.length;
-        for (uint256 i = 0; i < rewardCount; i++) {
+        for (uint256 i; i < rewardCount; ++i) {
             _calcRewardIntegral(i, _accounts, depositedBalance, supply, true);
         }
         _calcCvxIntegral(_accounts, depositedBalance, supply, true);
@@ -298,7 +298,8 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
 
     /// @notice Create a checkpoint for the supplied addresses by updating the reward integrals & claimable reward for them
     /// @param _accounts The accounts for which checkpoints have to be calculated
-    function user_checkpoint(address[2] calldata _accounts) external returns (bool) {
+    /// @return Status of whether the checkpoint was successful
+    function user_checkpoint(address[2] calldata _accounts) external nonReentrant returns (bool) {
         _checkpoint([_accounts[0], _accounts[1]]);
         return true;
     }
@@ -318,7 +319,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         uint256 rewardCount = rewards.length;
         claimable = new EarnedData[](rewardCount + 1);
 
-        for (uint256 i = 0; i < rewardCount; i++) {
+        for (uint256 i; i < rewardCount; ++i) {
             RewardType storage reward = rewards[i];
             address rewardToken = reward.reward_token;
 
@@ -350,7 +351,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
 
     /// @notice Claim reward for the supplied account
     /// @param _account Address whose reward is to be claimed
-    function getReward(address _account) external {
+    function getReward(address _account) external nonReentrant {
         //claim directly in checkpoint logic to save a bit of gas
         _checkpointAndClaim([_account, address(0)]);
     }
