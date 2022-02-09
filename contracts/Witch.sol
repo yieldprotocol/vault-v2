@@ -13,6 +13,7 @@ import "@yield-protocol/utils-v2/contracts/math/WDivUp.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U32.sol";
 
+
 /// @title  The Witch is a Liquidation Engine for the Yield protocol
 /// @notice The Witch grabs uncollateralized vaults, replacing the owner by itself. Then it sells the vault collateral
 /// in exchange for underlying to pay its debt. The amount of collateral given increases over time, until it offers
@@ -138,6 +139,7 @@ contract Witch is AccessControl {
 
         uint256 art = cauldron.debtFromBase(vault_.seriesId, base);
         {
+
             // If the world is still here, auctions will malfunction on the 7th of February 2106, at 06:28:16 GMT
             // TODO: Replace this contract before then 😰
             uint256 elapsed = uint32(block.timestamp) - auction_.start;
@@ -145,10 +147,11 @@ contract Witch is AccessControl {
             //       (        a         )
             // ink = (art_in / total_art) * total_ink * (p + (1 - p) * t)
 
-            uint256 t = ilk_.duration < elapsed ? 1 : elapsed / ilk_.duration;  // why is this ilk_.duration and not auction.duration?
-            uint256 a = (art / balances_.art);
+            uint256 t = elapsed > ilk_.duration ? 1 : elapsed.wdiv(ilk_.duration);
+
+            uint256 a = art.wdiv(balances_.art);
             uint256 p = ilk_.initialOffer;
-            ink = a * balances_.ink * (p + (1 - p) * t);
+            ink = a.wmul(balances_.ink).wmul(p + (10 ** 18 - p).wmul(t));
 
             require(ink >= min, "Not enough bought");
             require(art == balances_.art || balances_.ink - ink >= limits_.dust * (10**limits_.dec), "Leaves dust");
