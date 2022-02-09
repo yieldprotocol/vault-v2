@@ -304,4 +304,14 @@ describe('Convex Wrapper', async function () {
     expect(await convexWrapper.balanceOf(join)).to.eq(posted.add(beforeJoinBalance))
     expect(await fyToken.balanceOf(ownerAcc.address)).to.eq(borrowed.add(beforeFyTokenBalance))
   })
+
+  it('Adding a vault for a different collateral fails', async () => {
+    const addVaultCall = convexLadleModule.interface.encodeFunctionData('addVault', [
+      convexWrapper.address,
+      '0x000000000000000000000000',
+    ])
+    await expect(
+      ladle.batch([ladle.buildAction(seriesId, USDC), ladle.moduleCallAction(convexLadleModule.address, addVaultCall)])
+    ).to.be.revertedWith('Vault is for different ilk')
+  })
 })
