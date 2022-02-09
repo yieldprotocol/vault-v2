@@ -166,41 +166,41 @@ contract Witch is AccessControl {
         emit Bought(vaultId, msg.sender, ink, art);
     }
 
-    /// @dev Pay all debt from a vault in liquidation, getting at least `min` collateral.
-    /// @param vaultId Id of vault to buy
-    /// @param min Minimum amount of collateral that must be received
-    /// @return ink Amount of vault collateral received
-    function payAll(bytes12 vaultId, uint128 min) external returns (uint256 ink) {
-        require(auctions[vaultId].start > 0, "Vault not under auction");
-        DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
-        DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);
-        DataTypes.Balances memory balances_ = cauldron.balances(vaultId);
-        Auction memory auction_ = auctions[vaultId];
-        Ilk memory ilk_ = ilks[vault_.ilkId];
+    // /// @dev Pay all debt from a vault in liquidation, getting at least `min` collateral.
+    // /// @param vaultId Id of vault to buy
+    // /// @param min Minimum amount of collateral that must be received
+    // /// @return ink Amount of vault collateral received
+    // function payAll(bytes12 vaultId, uint128 min) external returns (uint256 ink) {
+    //     require(auctions[vaultId].start > 0, "Vault not under auction");
+    //     DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
+    //     DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);
+    //     DataTypes.Balances memory balances_ = cauldron.balances(vaultId);
+    //     Auction memory auction_ = auctions[vaultId];
+    //     Ilk memory ilk_ = ilks[vault_.ilkId];
 
-        require(balances_.art > 0, "Nothing to buy"); // Cheapest way of failing gracefully if given a non existing vault
-        {
-            uint256 elapsed = uint32(block.timestamp) - auction_.start; // Auctions will malfunction on the 7th of February 2106, at 06:28:16 GMT, we should replace this contract before then.
-            uint256 price = _inkPrice(balances_, ilk_.initialOffer, ilk_.duration, elapsed);
-            ink = uint256(balances_.art).wmul(price); // Calculate collateral to sell. Using divdrup stops rounding from leaving 1 stray wei in vaults.
-            require(ink >= min, "Not enough bought");
-            ink = (ink > balances_.ink) ? balances_.ink : ink; // The price is rounded up, so we cap this at all the collateral and no more
-            limits[vault_.ilkId].sum -= ink.u128();
-        }
+    //     require(balances_.art > 0, "Nothing to buy"); // Cheapest way of failing gracefully if given a non existing vault
+    //     {
+    //         uint256 elapsed = uint32(block.timestamp) - auction_.start; // Auctions will malfunction on the 7th of February 2106, at 06:28:16 GMT, we should replace this contract before then.
+    //         uint256 price = _inkPrice(balances_, ilk_.initialOffer, ilk_.duration, elapsed);
+    //         ink = uint256(balances_.art).wmul(price); // Calculate collateral to sell. Using divdrup stops rounding from leaving 1 stray wei in vaults.
+    //         require(ink >= min, "Not enough bought");
+    //         ink = (ink > balances_.ink) ? balances_.ink : ink; // The price is rounded up, so we cap this at all the collateral and no more
+    //         limits[vault_.ilkId].sum -= ink.u128();
+    //     }
 
-        cauldron.slurp(vaultId, ink.u128(), balances_.art); // Remove debt and collateral from the vault
-        _settle(
-            msg.sender,
-            vault_.ilkId,
-            series_.baseId,
-            ink.u128(),
-            cauldron.debtToBase(vault_.seriesId, balances_.art)
-        ); // Move the assets
-        cauldron.give(vaultId, auction_.owner);
-        delete auctions[vaultId];
+    //     cauldron.slurp(vaultId, ink.u128(), balances_.art); // Remove debt and collateral from the vault
+    //     _settle(
+    //         msg.sender,
+    //         vault_.ilkId,
+    //         series_.baseId,
+    //         ink.u128(),
+    //         cauldron.debtToBase(vault_.seriesId, balances_.art)
+    //     ); // Move the assets
+    //     cauldron.give(vaultId, auction_.owner);
+    //     delete auctions[vaultId];
 
-        emit Bought(vaultId, msg.sender, ink, balances_.art); // Still the initially read `art` value, not the updated one
-    }
+    //     emit Bought(vaultId, msg.sender, ink, balances_.art); // Still the initially read `art` value, not the updated one
+    // }
 
     /// @dev Move base from the buyer to the protocol, and collateral from the protocol to the buyer
     /// @param user  Address of buyer
@@ -229,24 +229,24 @@ contract Witch is AccessControl {
         }
     }
 
-    /// @dev Price of a collateral unit, in underlying, at the present moment, for a given vault. Rounds up, sometimes twice.
-    ///            ink                     min(auction, elapsed)
-    /// price = (------- * (p + (1 - p) * -----------------------))
-    ///            art                          auction
-    /// @param initialOffer Proportion of collateral that is sold at auction start (1e18 = 100%)
-    /// @param duration Time that auctions take to go to minimal price
-    /// @param elapsed Time that has passed since auction began
-    /// @return price Current price of collateral
-    function _inkPrice(
-        DataTypes.Balances memory balances,
-        uint256 initialOffer,
-        uint256 duration,
-        uint256 elapsed
-    ) private pure returns (uint256 price) {
-        uint256 term1 = uint256(balances.ink).wdivup(balances.art);
-        uint256 dividend2 = duration < elapsed ? duration : elapsed;
-        uint256 divisor2 = duration;
-        uint256 term2 = initialOffer + (1e18 - initialOffer).wmulup(dividend2.wdivup(divisor2));
-        price = term1.wmulup(term2);
-    }
+//     /// @dev Price of a collateral unit, in underlying, at the present moment, for a given vault. Rounds up, sometimes twice.
+//     ///            ink                     min(auction, elapsed)
+//     /// price = (------- * (p + (1 - p) * -----------------------))
+//     ///            art                          auction
+//     /// @param initialOffer Proportion of collateral that is sold at auction start (1e18 = 100%)
+//     /// @param duration Time that auctions take to go to minimal price
+//     /// @param elapsed Time that has passed since auction began
+//     /// @return price Current price of collateral
+//     function _inkPrice(
+//         DataTypes.Balances memory balances,
+//         uint256 initialOffer,
+//         uint256 duration,
+//         uint256 elapsed
+//     ) private pure returns (uint256 price) {
+//         uint256 term1 = uint256(balances.ink).wdivup(balances.art);
+//         uint256 dividend2 = duration < elapsed ? duration : elapsed;
+//         uint256 divisor2 = duration;
+//         uint256 term2 = initialOffer + (1e18 - initialOffer).wmulup(dividend2.wdivup(divisor2));
+//         price = term1.wmulup(term2);
+//     }
 }
