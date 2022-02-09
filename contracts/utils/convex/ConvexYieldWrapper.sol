@@ -60,7 +60,7 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
         bytes12[] storage vaults_ = vaults[account];
         uint256 vaultsLength = vaults_.length;
 
-        for (uint256 i = 0; i < vaultsLength; i++) {
+        for (uint256 i; i < vaultsLength; ++i) {
             require(vaults_[i] != vaultId, "Vault already added");
         }
         vaults_.push(vaultId);
@@ -75,7 +75,7 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
         require(account != owner, "vault doesn't belong to account");
         bytes12[] storage vaults_ = vaults[account];
         uint256 vaultsLength = vaults_.length;
-        for (uint256 i = 0; i < vaultsLength; i++) {
+        for (uint256 i; i < vaultsLength; ++i) {
             if (vaults_[i] == vaultId) {
                 bool isLast = i == vaultsLength - 1;
                 if (!isLast) {
@@ -103,7 +103,7 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
         uint256 collateral;
         DataTypes.Balances memory balance;
         uint256 userVaultLength = userVault.length;
-        for (uint256 i = 0; i < userVaultLength; i++) {
+        for (uint256 i; i < userVaultLength; ++i) {
             if (cauldron.vaults(userVault[i]).owner == account_) {
                 balance = cauldron.balances(userVault[i]);
                 collateral = collateral + balance.ink;
