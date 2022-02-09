@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: BUSL-1.1
-
 pragma solidity 0.8.6;
 
 import "@yield-protocol/vault-interfaces/ICauldron.sol";
@@ -56,6 +55,7 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
     /// @param vaultId The id of the vault being added
     function addVault(bytes12 vaultId) external {
         address account = cauldron.vaults(vaultId).owner;
+        require(cauldron.assets(cauldron.vaults(vaultId).ilkId) == address(this), "Vault is for different ilk");
         require(account != address(0), "No owner for the vault");
         bytes12[] storage vaults_ = vaults[account];
         uint256 vaultsLength = vaults_.length;
