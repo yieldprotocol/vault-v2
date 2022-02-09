@@ -143,7 +143,7 @@ contract Witch is AccessControl {
             ink = uint256(art).wmul(price); // Calculate collateral to sell. Using divdrup stops rounding from leaving 1 stray wei in vaults.
             require(ink >= min, "Not enough bought");
             require(art == balances_.art || balances_.ink - ink >= limits_.dust * (10**limits_.dec), "Leaves dust");
-            limits[vault_.ilkId].sum -= ink.u128();
+            limits[vault_.ilkId].sum = limits_.sum - ink.u128();
         }
 
         cauldron.slurp(vaultId, ink.u128(), art.u128()); // Remove debt and collateral from the vault
