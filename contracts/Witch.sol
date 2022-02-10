@@ -213,6 +213,8 @@ contract Witch is AccessControl {
             min               // min
         );
 
+        ink = (ink > balances_.ink) ? balances_.ink : ink;
+
         cauldron.slurp(vaultId, ink.u128(), balances_.art); // Remove debt and collateral from the vault
         _settle(
             msg.sender,
