@@ -6,14 +6,13 @@ import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
 import "./interfaces/IRewardStaking.sol";
 import "./CvxMining.sol";
 
 /// @notice Wrapper used to manage staking of Convex tokens
 contract ConvexStakingWrapper is ERC20, AccessControl {
     using TransferHelper for IERC20;
-    using CastU256U128 for uint256;
+
     struct EarnedData {
         address token;
         uint256 amount;
@@ -169,27 +168,22 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         }
 
         //update user integrals for cvx
+        //do not give rewards to collateral vault or this contract
+        if (_account == collateralVault || _account == address(this)) {
+            if (bal != cvxRewardRemaining) {
+                cvx_reward_remaining = uint128(bal);
+            }
+            return;
+        }
 
-        uint256 accountsLength = _accounts.length;
-        for (uint256 u; u < accountsLength; ++u) {
-            //do not give rewards to address 0
-            if (_accounts[u] == address(0)) continue;
-            if (_accounts[u] == collateralVault) continue;
-
-            uint256 userI = cvx_reward_integral_for[_accounts[u]];
-            if (_isClaim || userI < cvxRewardIntegral) {
-                uint256 receiveable = cvx_claimable_reward[_accounts[u]] +
-                    ((_balances[u] * (cvxRewardIntegral - userI)) / 1e20);
-                if (_isClaim) {
-                    if (receiveable > 0) {
-                        cvx_claimable_reward[_accounts[u]] = 0;
-                        IERC20(cvx).safeTransfer(_accounts[u], receiveable);
-                        unchecked {
-                            bal -= receiveable;
-                        }
-                    }
-                } else {
-                    cvx_claimable_reward[_accounts[u]] = receiveable;
+        uint256 userI = cvx_reward_integral_for[_account];
+        if (_isClaim || userI < cvxRewardIntegral) {
+            uint256 receiveable = cvx_claimable_reward[_account] + ((_balance * (cvxRewardIntegral - userI)) / 1e20);
+            if (_isClaim) {
+                if (receiveable > 0) {
+                    cvx_claimable_reward[_account] = 0;
+                    IERC20(cvx).safeTransfer(_account, receiveable);
+                    bal -= receiveable;
                 }
             } else {
                 cvx_claimable_reward[_account] = receiveable;
@@ -225,10 +219,8 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         //getReward is unguarded so we use reward_remaining to keep track of how much was actually claimed
         uint256 bal = IERC20(reward.reward_token).balanceOf(address(this));
         if (_supply > 0 && (bal - rewardRemaining) > 0) {
-            unchecked {
-                rewardIntegral = rewardIntegral + ((bal - rewardRemaining) * 1e20) / _supply;
-            }
-            reward.reward_integral = rewardIntegral.u128();
+            rewardIntegral = uint128(rewardIntegral) + uint128(((bal - rewardRemaining) * 1e20) / _supply);
+            reward.reward_integral = uint128(rewardIntegral);
         }
 
         //do not give rewards to collateralVault or this contract
@@ -260,7 +252,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
 
         //update remaining reward here since balance could have changed if claiming
         if (bal != rewardRemaining) {
-            reward.reward_remaining = bal.u128();
+            reward.reward_remaining = uint128(bal);
         }
     }
 
