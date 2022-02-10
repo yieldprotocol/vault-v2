@@ -12,6 +12,7 @@ import "./CvxMining.sol";
 
 /// @notice Wrapper used to manage staking of Convex tokens
 contract ConvexStakingWrapper is ERC20, AccessControl {
+    using CastU256U128 for uint256;
     struct EarnedData {
         address token;
         uint256 amount;
