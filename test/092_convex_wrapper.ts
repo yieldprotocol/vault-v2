@@ -1,4 +1,4 @@
-import { ethers, waffle } from 'hardhat'
+import { ethers, network, waffle } from 'hardhat'
 import { YieldEnvironment } from './shared/fixtures'
 import { constants, id } from '@yield-protocol/utils-v2'
 const { WAD } = constants
@@ -7,7 +7,7 @@ import { ETH, DAI, USDC, CVX3CRV } from '../src/constants'
 import {
   ERC20Mock,
   ConvexModule,
-  ConvexYieldWrapperMock,
+  ConvexYieldWrapper,
   ConvexPoolMock,
   ChainlinkMultiOracle,
   Wand,
@@ -21,9 +21,11 @@ import {
   USDCMock,
   Cauldron,
   FYToken,
+  CurveProxy
 } from '../typechain'
 
 import ConvexYieldWrapperMockArtifact from '../artifacts/contracts/mocks/ConvexYieldWrapperMock.sol/ConvexYieldWrapperMock.json'
+import ConvexYieldWrapperArtifact from '../artifacts/contracts/utils/convex/ConvexYieldWrapper.sol/ConvexYieldWrapper.json'
 import ChainlinkAggregatorV3MockArtifact from '../artifacts/contracts/mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol/ChainlinkAggregatorV3Mock.json'
 import Cvx3CrvOracleArtifact from '../artifacts/contracts/oracles/convex/Cvx3CrvOracle.sol/Cvx3CrvOracle.json'
 import CurvePoolMockArtifact from '../artifacts/contracts/mocks/oracles/convex/CurvePoolMock.sol/CurvePoolMock.json'
@@ -31,6 +33,7 @@ import CompositeMultiOracleArtifact from '../artifacts/contracts/oracles/composi
 import ConvexLadleModuleArtifact from '../artifacts/contracts/utils/convex/ConvexModule.sol/ConvexModule.json'
 import ConvexPoolMockArtifact from '../artifacts/contracts/mocks/ConvexPoolMock.sol/ConvexPoolMock.json'
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
+import CurveProxyArtifact from '../artifacts/contracts/mocks/CurveProxy.sol/CurveProxy.json'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { parseEther } from '@ethersproject/units'
 import { getLastVaultId } from '../src/helpers'
@@ -63,8 +66,9 @@ describe('Convex Wrapper', async function () {
   let convex: ERC20Mock
   let crv: ERC20Mock
   let cvx3CRV: ERC20Mock
-  let convexWrapper: ConvexYieldWrapperMock
+  let convexWrapper: ConvexYieldWrapper
   let convexPool: ConvexPoolMock
+  let curveProxy: CurveProxy
 
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const seriesId2 = ethers.utils.hexlify(ethers.utils.randomBytes(6))
@@ -144,16 +148,18 @@ describe('Convex Wrapper', async function () {
     ])) as ConvexModule
     compositeMultiOracle = (await deployContract(ownerAcc, CompositeMultiOracleArtifact)) as CompositeMultiOracle
     chainlinkMultiOracle = env.oracles.get(ETH) as unknown as ChainlinkMultiOracle
-
-    convexWrapper = (await deployContract(ownerAcc, ConvexYieldWrapperMockArtifact, [
+    curveProxy = (await deployContract(ownerAcc, CurveProxyArtifact, [crv.address])) as CurveProxy
+    convexWrapper = (await deployContract(ownerAcc, ConvexYieldWrapperArtifact, [
+      crv.address,
       cvx3CRV.address,
       convexPool.address,
       0,
       '0x0000000000000000000000000000000000000000',
       cauldron.address,
-      crv.address,
-      convex.address,
-    ])) as unknown as ConvexYieldWrapperMock
+      'stk',
+      'wCVX3CRV',
+      18,
+    ])) as unknown as ConvexYieldWrapper
 
     await usdcEthAggregator.set('230171858101077')
     await daiEthAggregator.set('230213930000000')
@@ -174,6 +180,7 @@ describe('Convex Wrapper', async function () {
     await cauldron.grantRoles([id(cauldron.interface, 'addIlks(bytes6,bytes6[])')], ownerAcc.address)
     await ladle.grantRoles([id(ladle.ladle.interface, 'addIntegration(address,bool)')], ownerAcc.address)
     await ladle.grantRoles([id(ladle.ladle.interface, 'addModule(address,bool)')], ownerAcc.address)
+    await convexWrapper.grantRoles([id(convexWrapper.interface, 'point(address)')], ownerAcc.address)
     await cvx3CrvOracle.grantRole(
       id(cvx3CrvOracle.interface, 'setSource(bytes32,bytes32,address,address,address,address)'),
       ownerAcc.address
@@ -197,6 +204,20 @@ describe('Convex Wrapper', async function () {
     await compositeMultiOracle.setSource(USDC, ETH, chainlinkMultiOracle.address)
     await compositeMultiOracle.setPath(DAI, CVX3CRV, [ETH])
     await compositeMultiOracle.setPath(USDC, CVX3CRV, [ETH])
+
+    await network.provider.send('hardhat_setCode', [
+      '0xF403C135812408BFbE8713b5A23a04b3D48AAE31',
+      CurveProxyArtifact.bytecode,
+    ])
+    
+    // var cTemp = await curveProxy.attach('0xF403C135812408BFbE8713b5A23a04b3D48AAE31')
+    // // await cTemp.set(crv.address)
+    // const trace = await network.provider.send('eth_getStorageAt', [convexWrapper.address, '0x0', 'latest'])
+    // await network.provider.send('hardhat_setStorageAt', [
+    //   '0xF403C135812408BFbE8713b5A23a04b3D48AAE31',
+    //   '0x0',
+    //   trace,
+    // ])
 
     // Add integrations
     await ladle.ladle.addIntegration(convexWrapper.address, true)
@@ -253,7 +274,7 @@ describe('Convex Wrapper', async function () {
     await ladle.batch([
       ladle.transferAction(cvx3CRV.address, convexWrapper.address, posted),
       ladle.routeAction(convexWrapper.address, wrapCall),
-      ladle.pourAction(vaultId, ownerAcc.address, posted, borrowed),
+      // ladle.pourAction(vaultId, ownerAcc.address, posted, borrowed),
     ])
 
     expect(await convexWrapper.balanceOf(join)).to.eq(posted)
