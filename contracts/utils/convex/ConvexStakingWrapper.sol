@@ -169,26 +169,22 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
 
         //update user integrals for cvx
         //do not give rewards to collateral vault or this contract
-        if (_account == collateralVault || _account == address(this)) {
-            if (bal != cvxRewardRemaining) {
-                cvx_reward_remaining = uint128(bal);
-            }
-            return;
-        }
-
-        uint256 userI = cvx_reward_integral_for[_account];
-        if (_isClaim || userI < cvxRewardIntegral) {
-            uint256 receiveable = cvx_claimable_reward[_account] + ((_balance * (cvxRewardIntegral - userI)) / 1e20);
-            if (_isClaim) {
-                if (receiveable > 0) {
-                    cvx_claimable_reward[_account] = 0;
-                    IERC20(cvx).safeTransfer(_account, receiveable);
-                    bal -= receiveable;
+        if (_account != collateralVault && _account != address(this)) {
+            uint256 userI = cvx_reward_integral_for[_account];
+            if (_isClaim || userI < cvxRewardIntegral) {
+                uint256 receiveable = cvx_claimable_reward[_account] +
+                    ((_balance * (cvxRewardIntegral - userI)) / 1e20);
+                if (_isClaim) {
+                    if (receiveable > 0) {
+                        cvx_claimable_reward[_account] = 0;
+                        IERC20(cvx).safeTransfer(_account, receiveable);
+                        bal -= receiveable;
+                    }
+                } else {
+                    cvx_claimable_reward[_account] = receiveable;
                 }
-            } else {
-                cvx_claimable_reward[_account] = receiveable;
+                cvx_reward_integral_for[_account] = cvxRewardIntegral;
             }
-            cvx_reward_integral_for[_account] = cvxRewardIntegral;
         }
 
         //update reward total
@@ -224,30 +220,25 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
         }
 
         //do not give rewards to collateralVault or this contract
-        if (_account == collateralVault || _account == address(this)) {
-            if (bal != rewardRemaining) {
-                reward.reward_remaining = uint128(bal);
-            }
-            return;
-        }
-
-        //update user integrals
-        uint256 userI = reward.reward_integral_for[_account];
-        if (_isClaim || userI < rewardIntegral) {
-            if (_isClaim) {
-                uint256 receiveable = reward.claimable_reward[_account] +
-                    ((_balance * (uint256(rewardIntegral) - userI)) / 1e20);
-                if (receiveable > 0) {
-                    reward.claimable_reward[_account] = 0;
-                    IERC20(reward.reward_token).safeTransfer(_account, receiveable);
-                    bal = bal - receiveable;
+        if (_account != collateralVault && _account != address(this)) {
+            //update user integrals
+            uint256 userI = reward.reward_integral_for[_account];
+            if (_isClaim || userI < rewardIntegral) {
+                if (_isClaim) {
+                    uint256 receiveable = reward.claimable_reward[_account] +
+                        ((_balance * (uint256(rewardIntegral) - userI)) / 1e20);
+                    if (receiveable > 0) {
+                        reward.claimable_reward[_account] = 0;
+                        IERC20(reward.reward_token).safeTransfer(_account, receiveable);
+                        bal = bal - receiveable;
+                    }
+                } else {
+                    reward.claimable_reward[_account] =
+                        reward.claimable_reward[_account] +
+                        ((_balance * (uint256(rewardIntegral) - userI)) / 1e20);
                 }
-            } else {
-                reward.claimable_reward[_account] =
-                    reward.claimable_reward[_account] +
-                    ((_balance * (uint256(rewardIntegral) - userI)) / 1e20);
+                reward.reward_integral_for[_account] = rewardIntegral;
             }
-            reward.reward_integral_for[_account] = rewardIntegral;
         }
 
         //update remaining reward here since balance could have changed if claiming
