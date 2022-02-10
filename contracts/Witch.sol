@@ -116,10 +116,10 @@ contract Witch is AccessControl {
     }
 
     function _inkOut(
-        bytes6 ilkId,
-        uint256 auctionStart,
+        bytes6  ilkId,
+        uint32  auctionStart,
         uint256 duration,
-        uint256 p,
+        uint64  p,
         uint256 artIn,
         uint256 totalArt,
         uint256 totalInk,
