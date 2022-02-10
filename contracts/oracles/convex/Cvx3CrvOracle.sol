@@ -24,6 +24,15 @@ contract Cvx3CrvOracle is IOracle, AccessControl {
     bytes32 public cvx3CrvId;
     bytes32 public ethId;
 
+    event SourceSet(
+        bytes32 cvx3CrvId_,
+        bytes32 ethId_,
+        ICurvePool threecrv_,
+        AggregatorV3Interface DAI_,
+        AggregatorV3Interface USDC_,
+        AggregatorV3Interface USDT_
+    );
+
     /**
      *@notice Set threecrv pool and the chainlink sources
      *@param  cvx3CrvId_ cvx3crv Id
@@ -47,6 +56,7 @@ contract Cvx3CrvOracle is IOracle, AccessControl {
         DAI = DAI_;
         USDC = USDC_;
         USDT = USDT_;
+        emit SourceSet(cvx3CrvId_, ethId_, threecrv_, DAI_, USDC_, USDT_);
     }
 
     /**
@@ -61,6 +71,7 @@ contract Cvx3CrvOracle is IOracle, AccessControl {
      * @dev Only cvx3crvid and ethId are accepted as asset identifiers.
      * @param base Id of base token
      * @param quote Id of quoted token
+     * @param baseAmount Amount of base token for which to get a quote
      * @return quoteAmount Total amount in terms of quoted token
      * @return updateTime Time quote was last updated
      */
@@ -77,6 +88,7 @@ contract Cvx3CrvOracle is IOracle, AccessControl {
      * @dev Only cvx3crvid and ethId are accepted as asset identifiers.
      * @param base Id of base token
      * @param quote Id of quoted token
+     * @param baseAmount Amount of base token for which to get a quote
      * @return quoteAmount Total amount in terms of quoted token
      * @return updateTime Time quote was last updated
      */
@@ -93,6 +105,7 @@ contract Cvx3CrvOracle is IOracle, AccessControl {
      * @dev Only cvx3crvid and ethId are accepted as asset identifiers.
      * @param base Id of base token
      * @param quote Id of quoted token
+     * @param baseAmount Amount of base token for which to get a quote
      * @return quoteAmount Total amount in terms of quoted token
      * @return updateTime Time quote was last updated
      */
@@ -101,8 +114,10 @@ contract Cvx3CrvOracle is IOracle, AccessControl {
         bytes6 quote,
         uint256 baseAmount
     ) private view returns (uint256 quoteAmount, uint256 updateTime) {
+        bytes32 cvx3CrvId_ = cvx3CrvId;
+        bytes32 ethId_ = ethId;
         require(
-            (base == ethId && quote == cvx3CrvId) || (base == cvx3CrvId && quote == ethId),
+            (base == ethId_ && quote == cvx3CrvId_) || (base == cvx3CrvId_ && quote == ethId_),
             "Invalid quote or base"
         );
         (, int256 daiPrice, , , ) = DAI.latestRoundData();
@@ -116,7 +131,7 @@ contract Cvx3CrvOracle is IOracle, AccessControl {
 
         uint256 price = (threecrv.get_virtual_price() * minStable) / 1e18;
 
-        if (base == cvx3CrvId && quote == ethId) {
+        if (base == cvx3CrvId_) {
             quoteAmount = (baseAmount * price) / 1e18;
         } else {
             quoteAmount = (baseAmount * 1e18) / price;
