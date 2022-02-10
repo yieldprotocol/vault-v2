@@ -176,16 +176,18 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
 
             uint256 userI = cvx_reward_integral_for[_accounts[u]];
             if (_isClaim || userI < cvxRewardIntegral) {
-                uint256 receiveable = cvx_claimable_reward[_accounts[u]] +
-                    ((_balances[u] * (cvxRewardIntegral - userI)) / 1e20);
                 if (_isClaim) {
+                    uint256 receiveable = cvx_claimable_reward[_accounts[u]] +
+                        ((_balances[u] * (cvxRewardIntegral - userI)) / 1e20);
                     if (receiveable > 0) {
                         cvx_claimable_reward[_accounts[u]] = 0;
                         IERC20(cvx).safeTransfer(_accounts[u], receiveable);
                         bal = bal - (receiveable);
                     }
                 } else {
-                    cvx_claimable_reward[_accounts[u]] = receiveable;
+                    cvx_claimable_reward[_accounts[u]] =
+                        cvx_claimable_reward[_accounts[u]] +
+                        ((_balances[u] * (cvxRewardIntegral - userI)) / 1e20);
                 }
                 cvx_reward_integral_for[_accounts[u]] = cvxRewardIntegral;
             }
