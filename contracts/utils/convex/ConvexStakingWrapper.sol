@@ -11,8 +11,6 @@ import "./CvxMining.sol";
 
 /// @notice Wrapper used to manage staking of Convex tokens
 contract ConvexStakingWrapper is ERC20, AccessControl {
-    using TransferHelper for IERC20;
-
     struct EarnedData {
         address token;
         uint256 amount;
@@ -181,7 +179,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
                 if (_isClaim) {
                     if (receiveable > 0) {
                         cvx_claimable_reward[_accounts[u]] = 0;
-                        IERC20(cvx).safeTransfer(_accounts[u], receiveable);
+                        TransferHelper.safeTransfer(IERC20(cvx), _accounts[u], receiveable);
                         bal = bal - (receiveable);
                     }
                 } else {
@@ -236,7 +234,7 @@ contract ConvexStakingWrapper is ERC20, AccessControl {
                         ((_balances[u] * (uint256(rewardIntegral) - userI)) / 1e20);
                     if (receiveable > 0) {
                         reward.claimable_reward[_accounts[u]] = 0;
-                        IERC20(reward.reward_token).safeTransfer(_accounts[u], receiveable);
+                        TransferHelper.safeTransfer(IERC20(reward.reward_token), _accounts[u], receiveable);
                         bal = bal - receiveable;
                     }
                 } else {
