@@ -4,13 +4,12 @@ pragma solidity 0.8.6;
 
 import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
 import "./interfaces/IRewardStaking.sol";
 import "./CvxMining.sol";
 
 /// @notice Wrapper used to manage staking of Convex tokens
-contract ConvexStakingWrapper is ERC20, AccessControl {
+contract ConvexStakingWrapper is ERC20 {
     using TransferHelper for IERC20;
 
     struct EarnedData {

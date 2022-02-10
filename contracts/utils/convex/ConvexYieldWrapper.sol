@@ -3,11 +3,12 @@ pragma solidity 0.8.6;
 
 import "@yield-protocol/vault-interfaces/ICauldron.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
+import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "./ConvexStakingWrapper.sol";
 
 /// @title Convex staking wrapper for Yield platform
 /// @notice Enables use of convex LP positions as collateral while still receiving rewards
-contract ConvexYieldWrapper is ConvexStakingWrapper {
+contract ConvexYieldWrapper is ConvexStakingWrapper, AccessControl {
     using TransferHelper for IERC20;
 
     /// @notice Mapping to keep track of the user & their vaults
