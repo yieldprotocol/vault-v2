@@ -117,7 +117,7 @@ contract Cvx3CrvOracle is IOracle, AccessControl {
         // DAI Price
         (roundId, daiPrice, , updateTime, answeredInRound) = DAI.latestRoundData();
         require(daiPrice > 0, "Chainlink DAI price <= 0");
-        require(updateTime != 0, "Incomplete round for DAI");
+        require(updateTime > 0, "Incomplete round for DAI");
         require(answeredInRound >= roundId, "Stale price for DAI");
 
         // USDC Price
