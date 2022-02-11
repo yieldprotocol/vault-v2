@@ -139,7 +139,7 @@ describe('Witch', function () {
 
   it('does not allow to buy from vaults not being auctioned', async () => {
     await expect(witch.buy(vaultId, 0, 0)).to.be.revertedWith('Vault not under auction')
-    // await expect(witch.payAll(vaultId, 0)).to.be.revertedWith('Vault not under auction')
+    await expect(witch.payAll(vaultId, 0)).to.be.revertedWith('Vault not under auction')
   })
 
   it('does not auction collateralized vaults', async () => {
