@@ -13,10 +13,12 @@ import "@yield-protocol/utils-v2/contracts/math/WDivUp.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U32.sol";
 
-/// @title  The Witch is a Liquidation Engine for the Yield protocol
-/// @notice The Witch grabs uncollateralized vaults, replacing the owner by itself. Then it sells the vault collateral
-/// in exchange for underlying to pay its debt. The amount of collateral given increases over time, until it offers
-/// to sell all the collateral for underlying to pay all the debt. The auction is held open at the final price indefinitely.
+
+/// @title  The Witch is a Auction/Liquidation Engine for the Yield protocol
+/// @notice The Witch grabs uncollateralized vaults, replacing the owner by itself. Then it sells
+/// the vault collateral in exchange for underlying to pay its debt. The amount of collateral
+/// given increases over time, until it offers to sell all the collateral for underlying to pay
+/// all the debt. The auction is held open at the final price indefinitely.
 /// @dev After the debt is settled, the Witch returns the vault to its original owner.
 contract Witch is AccessControl {
     using WMul for uint256;
@@ -26,10 +28,17 @@ contract Witch is AccessControl {
     using CastU256U128 for uint256;
     using CastU256U32 for uint256;
 
-    event Point(bytes32 indexed param, address indexed value);
-    event IlkSet(bytes6 indexed ilkId, uint32 duration, uint64 initialOffer, uint96 line, uint24 dust, uint8 dec);
-    event Bought(bytes12 indexed vaultId, address indexed buyer, uint256 ink, uint256 art);
     event Auctioned(bytes12 indexed vaultId, uint256 indexed start);
+    event Bought(bytes12 indexed vaultId, address indexed buyer, uint256 ink, uint256 art);
+    event IlkSet(
+        bytes6 indexed ilkId,
+        uint32 duration,
+        uint64 initialOffer,
+        uint96 line,
+        uint24 dust,
+        uint8 dec
+    );
+    event Point(bytes32 indexed param, address indexed value);
 
     struct Auction {
         address owner;
@@ -60,6 +69,8 @@ contract Witch is AccessControl {
     }
 
     /// @dev Point to a different ladle
+    ///@param param Name of parameter to set (must be "ladle")
+    ///@param address Address of new ladle
     function point(bytes32 param, address value) external auth {
         require(param == "ladle", "Unrecognized");
         ladle = ILadle(value);
@@ -115,14 +126,24 @@ contract Witch is AccessControl {
         emit Auctioned(vaultId, block.timestamp.u32());
     }
 
+    /// @dev Private fn called by buy() and payAll()
+    /// @param ilkId
+    /// @param auctionStart
+    /// @param duration
+    /// @param p
+    /// @param artIn
+    /// @param totalArt
+    /// @param totalInk
+    /// @param min
+    /// @return inkOut Amount of collateral
     function _inkOut(
         bytes6  ilkId,
         uint32  auctionStart,
-        uint256 duration,
+        uint32 duration,
         uint64  p,
         uint256 artIn,
-        uint256 totalArt,
-        uint256 totalInk,
+        uint128 totalArt,
+        uint128 totalInk,
         uint128 min
     ) private returns (uint256 inkOut) {
         Limits memory limits_ = limits[ilkId];
@@ -130,14 +151,14 @@ contract Witch is AccessControl {
         // If the world is still here, auctions will malfunction on the 7th of February 2106, at 06:28:16 GMT
         // TODO: Replace this contract before then 😰
         uint256 elapsed = uint32(block.timestamp) - auctionStart;
-        uint256 t = elapsed > duration ? 1 : elapsed.wdiv(duration);
+        uint256 t = elapsed > duration ? 1 : elapsed.wdivup(duration);
 
-        //       (        a         )
+
+        //          (      a         )
         // inkOut = (artIn / totalArt) * totalInk * (p + (1 - p) * t)
         {
-            uint256 a = totalArt.wdiv(artIn);
-            uint256 p = p;
-            inkOut = a.wmul(totalInk).wmul(p + (10**18 - p).wmul(t));
+            uint256 a = uint256(artIn).wdivup(totalArt);
+            inkOut = a.wmul(totalInk).wmul(uint256(p) + uint256(1e18 - p).wmulup(t));
         }
 
         require(inkOut >= min, "Not enough bought");
@@ -150,7 +171,7 @@ contract Witch is AccessControl {
     /// @param vaultId Id of vault to buy
     /// @param base Amount of base to pay
     /// @param min Minimum amount of collateral that must be received
-    /// @return ink Amount of vault collateral received
+    /// @return ink Amount of vault collateral sold
     function buy(
         bytes12 vaultId,
         uint128 base,
@@ -171,16 +192,18 @@ contract Witch is AccessControl {
             auction_.start,    // auctionStart
             ilk_.duration,     // duration
             ilk_.initialOffer, // p
-            balances_.art,     // artIn
-            art,               // totalArt
+            art,               // artIn
+            balances_.art,     // totalArt
             balances_.ink,     // totalInk
             min               // min
         );
 
         cauldron.slurp(vaultId, ink.u128(), art.u128()); // Remove debt and collateral from the vault
         _settle(msg.sender, vault_.ilkId, series_.baseId, ink.u128(), base); // Move the assets
+
         if (balances_.art - art == 0) {
             // If there is no debt left, return the vault with the collateral to the owner
+
             cauldron.give(vaultId, auction_.owner);
             delete auctions[vaultId];
         }
@@ -191,7 +214,7 @@ contract Witch is AccessControl {
     /// @dev Pay all debt from a vault in liquidation, getting at least `min` collateral.
     /// @param vaultId Id of vault to buy
     /// @param min Minimum amount of collateral that must be received
-    /// @return ink Amount of vault collateral received
+    /// @return ink Amount of vault collateral sold
     function payAll(bytes12 vaultId, uint128 min) external returns (uint256 ink) {
         require(auctions[vaultId].start > 0, "Vault not under auction");
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
@@ -255,25 +278,4 @@ contract Witch is AccessControl {
             baseJoin.join(user, art);
         }
     }
-
-    //     /// @dev Price of a collateral unit, in underlying, at the present moment, for a given vault. Rounds up, sometimes twice.
-    //     ///            ink                     min(auction, elapsed)
-    //     /// price = (------- * (p + (1 - p) * -----------------------))
-    //     ///            art                          auction
-    //     /// @param initialOffer Proportion of collateral that is sold at auction start (1e18 = 100%)
-    //     /// @param duration Time that auctions take to go to minimal price
-    //     /// @param elapsed Time that has passed since auction began
-    //     /// @return price Current price of collateral
-    //     function _inkPrice(
-    //         DataTypes.Balances memory balances,
-    //         uint256 initialOffer,
-    //         uint256 duration,
-    //         uint256 elapsed
-    //     ) private pure returns (uint256 price) {
-    //         uint256 term1 = uint256(balances.ink).wdivup(balances.art);
-    //         uint256 dividend2 = duration < elapsed ? duration : elapsed;
-    //         uint256 divisor2 = duration;
-    //         uint256 term2 = initialOffer + (1e18 - initialOffer).wmulup(dividend2.wdivup(divisor2));
-    //         price = term1.wmulup(term2);
-    //     }
 }
