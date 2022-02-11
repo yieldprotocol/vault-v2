@@ -13,7 +13,6 @@ import "@yield-protocol/utils-v2/contracts/math/WDivUp.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U32.sol";
 
-
 /// @title  The Witch is a Auction/Liquidation Engine for the Yield protocol
 /// @notice The Witch grabs uncollateralized vaults, replacing the owner by itself. Then it sells
 /// the vault collateral in exchange for underlying to pay its debt. The amount of collateral
@@ -30,14 +29,7 @@ contract Witch is AccessControl {
 
     event Auctioned(bytes12 indexed vaultId, uint256 indexed start);
     event Bought(bytes12 indexed vaultId, address indexed buyer, uint256 ink, uint256 art);
-    event IlkSet(
-        bytes6 indexed ilkId,
-        uint32 duration,
-        uint64 initialOffer,
-        uint96 line,
-        uint24 dust,
-        uint8 dec
-    );
+    event IlkSet(bytes6 indexed ilkId, uint32 duration, uint64 initialOffer, uint96 line, uint24 dust, uint8 dec);
     event Point(bytes32 indexed param, address indexed value);
 
     struct Auction {
@@ -69,8 +61,8 @@ contract Witch is AccessControl {
     }
 
     /// @dev Point to a different ladle
-    ///@param param Name of parameter to set (must be "ladle")
-    ///@param address Address of new ladle
+    /// @param param Name of parameter to set (must be "ladle")
+    /// @param value Address of new ladle
     function point(bytes32 param, address value) external auth {
         require(param == "ladle", "Unrecognized");
         ladle = ILadle(value);
@@ -127,20 +119,20 @@ contract Witch is AccessControl {
     }
 
     /// @dev Private fn called by buy() and payAll()
-    /// @param ilkId
-    /// @param auctionStart
-    /// @param duration
-    /// @param p
-    /// @param artIn
-    /// @param totalArt
-    /// @param totalInk
-    /// @param min
+    /// @param ilkId Id of asset used for collateral
+    /// @param auctionStart Block timestamp when auction was started
+    /// @param duration Time that auctions take to go to minimal
+    /// @param p Initial Offer. Proportion of collateral sold at auction start(1e18 = 100%)
+    /// @param artIn Portion of debt being bought (in terms of base)
+    /// @param totalArt Total debt
+    /// @param totalInk Total collateral
+    /// @param min Minimum amount of collateral acceptable by buyer
     /// @return inkOut Amount of collateral
     function _inkOut(
-        bytes6  ilkId,
-        uint32  auctionStart,
+        bytes6 ilkId,
+        uint32 auctionStart,
         uint32 duration,
-        uint64  p,
+        uint64 p,
         uint256 artIn,
         uint128 totalArt,
         uint128 totalInk,
@@ -148,17 +140,22 @@ contract Witch is AccessControl {
     ) private returns (uint256 inkOut) {
         Limits memory limits_ = limits[ilkId];
 
-        // If the world is still here, auctions will malfunction on the 7th of February 2106, at 06:28:16 GMT
+        // If the world has not turned to ashes and darkness, auctions will malfunction on
+        // the 7th of February 2106, at 06:28:16 GMT
         // TODO: Replace this contract before then 😰
-        uint256 elapsed = uint32(block.timestamp) - auctionStart;
-        uint256 t = elapsed > duration ? 1 : elapsed.wdivup(duration);
+        // UPDATE: Added reminder to Google calendar
+        uint256 elapsed;
+        unchecked {
+            elapsed = uint32(block.timestamp) - auctionStart;
+        }
 
+        uint256 t = elapsed > duration ? 1e18 : elapsed.wdivup(duration);
 
         //          (      a         )
         // inkOut = (artIn / totalArt) * totalInk * (p + (1 - p) * t)
         {
             uint256 a = uint256(artIn).wdivup(totalArt);
-            inkOut = a.wmul(totalInk).wmul(uint256(p) + uint256(1e18 - p).wmulup(t));
+            inkOut = a.wmul(totalInk).wmulup(uint256(p) + uint256(1e18 - p).wmulup(t));
         }
 
         require(inkOut >= min, "Not enough bought");
@@ -198,7 +195,7 @@ contract Witch is AccessControl {
             min               // min
         );
 
-        cauldron.slurp(vaultId, ink.u128(), art.u128()); // Remove debt and collateral from the vault
+        cauldron.slurp(vaultId, ink.u128(), art.u128()); // Remove debt and collateral from vault
         _settle(msg.sender, vault_.ilkId, series_.baseId, ink.u128(), base); // Move the assets
 
         if (balances_.art - art == 0) {
@@ -238,7 +235,7 @@ contract Witch is AccessControl {
 
         ink = (ink > balances_.ink) ? balances_.ink : ink;
 
-        cauldron.slurp(vaultId, ink.u128(), balances_.art); // Remove debt and collateral from the vault
+        cauldron.slurp(vaultId, ink.u128(), balances_.art); // Remove debt + collateral from vault
         _settle(
             msg.sender,
             vault_.ilkId,
@@ -249,7 +246,8 @@ contract Witch is AccessControl {
         cauldron.give(vaultId, auction_.owner);
         delete auctions[vaultId];
 
-        emit Bought(vaultId, msg.sender, ink, balances_.art); // Still the initially read `art` value, not the updated one
+        // Still using the initially read `art` value, not the updated one
+        emit Bought(vaultId, msg.sender, ink, balances_.art);
     }
 
     /// @dev Move base from the buyer to the protocol, and collateral from the protocol to the buyer
