@@ -143,7 +143,7 @@ contract Witch is AccessControl {
         // If the world has not turned to ashes and darkness, auctions will malfunction on
         // the 7th of February 2106, at 06:28:16 GMT
         // TODO: Replace this contract before then 😰
-        // UPDATE: Added reminder to Google calendar
+        // UPDATE: Added reminder to Google calendar ✅
         uint256 elapsed;
         unchecked {
             elapsed = uint32(block.timestamp) - auctionStart;
