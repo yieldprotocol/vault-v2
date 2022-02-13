@@ -21,7 +21,7 @@ import {
   USDCMock,
   Cauldron,
   FYToken,
-  CurveProxy
+  CurveProxy,
 } from '../typechain'
 
 import ConvexYieldWrapperMockArtifact from '../artifacts/contracts/mocks/ConvexYieldWrapperMock.sol/ConvexYieldWrapperMock.json'
@@ -69,6 +69,7 @@ describe('Convex Wrapper', async function () {
   let convexWrapper: ConvexYieldWrapper
   let convexPool: ConvexPoolMock
   let curveProxy: CurveProxy
+  let cvxProxy: CurveProxy
 
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const seriesId2 = ethers.utils.hexlify(ethers.utils.randomBytes(6))
@@ -120,7 +121,9 @@ describe('Convex Wrapper', async function () {
       'Cvx3Crv Mock',
     ])) as ERC20Mock
     crv = (await deployContract(ownerAcc, ERC20MockArtifact, ['CurveDAO Token Mock', 'CRV'])) as ERC20Mock
+
     await convex.mint(ownerAcc.address, parseEther('1000000'))
+    await crv.mint(ownerAcc.address, parseEther('1000000'))
 
     curvePool = (await deployContract(ownerAcc, CurvePoolMockArtifact)) as unknown as CurvePoolMock
     convexPool = (await deployContract(ownerAcc, ConvexPoolMockArtifact, [
@@ -149,6 +152,7 @@ describe('Convex Wrapper', async function () {
     compositeMultiOracle = (await deployContract(ownerAcc, CompositeMultiOracleArtifact)) as CompositeMultiOracle
     chainlinkMultiOracle = env.oracles.get(ETH) as unknown as ChainlinkMultiOracle
     curveProxy = (await deployContract(ownerAcc, CurveProxyArtifact, [crv.address])) as CurveProxy
+    cvxProxy = (await deployContract(ownerAcc, CurveProxyArtifact, [convex.address])) as CurveProxy
     convexWrapper = (await deployContract(ownerAcc, ConvexYieldWrapperArtifact, [
       crv.address,
       cvx3CRV.address,
@@ -205,19 +209,11 @@ describe('Convex Wrapper', async function () {
     await compositeMultiOracle.setPath(DAI, CVX3CRV, [ETH])
     await compositeMultiOracle.setPath(USDC, CVX3CRV, [ETH])
 
-    await network.provider.send('hardhat_setCode', [
-      '0xF403C135812408BFbE8713b5A23a04b3D48AAE31',
-      CurveProxyArtifact.bytecode,
-    ])
+    const crv_proxy_code = await ethers.provider.getCode(curveProxy.address)
+    expect(await network.provider.send('hardhat_setCode', [await convexWrapper.crv(), crv_proxy_code])).to.be.true
     
-    // var cTemp = await curveProxy.attach('0xF403C135812408BFbE8713b5A23a04b3D48AAE31')
-    // // await cTemp.set(crv.address)
-    // const trace = await network.provider.send('eth_getStorageAt', [convexWrapper.address, '0x0', 'latest'])
-    // await network.provider.send('hardhat_setStorageAt', [
-    //   '0xF403C135812408BFbE8713b5A23a04b3D48AAE31',
-    //   '0x0',
-    //   trace,
-    // ])
+    const cvx_proxy_code = await ethers.provider.getCode(cvxProxy.address)
+    expect(await network.provider.send('hardhat_setCode', [await convexWrapper.cvx(), cvx_proxy_code])).to.be.true
 
     // Add integrations
     await ladle.ladle.addIntegration(convexWrapper.address, true)
@@ -274,7 +270,7 @@ describe('Convex Wrapper', async function () {
     await ladle.batch([
       ladle.transferAction(cvx3CRV.address, convexWrapper.address, posted),
       ladle.routeAction(convexWrapper.address, wrapCall),
-      // ladle.pourAction(vaultId, ownerAcc.address, posted, borrowed),
+      ladle.pourAction(vaultId, ownerAcc.address, posted, borrowed),
     ])
 
     expect(await convexWrapper.balanceOf(join)).to.eq(posted)
