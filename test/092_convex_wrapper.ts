@@ -230,11 +230,9 @@ describe('Convex Wrapper', async function () {
     await cvx3CRV.mint(ownerAcc.address, ethers.utils.parseEther('100000000'))
     await crv.mint(convexPool.address, ethers.utils.parseEther('100000000'))
     await convex.mint(convexPool.address, ethers.utils.parseEther('100000000'))
-    await crv.mint(curveProxy.address, ethers.utils.parseEther('100000000'))
-    await convex.mint(cvxProxy.address, ethers.utils.parseEther('100000000'))
 
-    await crv.mint('0xD533a949740bb3306d119CC777fa900bA034cd52', ethers.utils.parseEther('100000000'))
-    await convex.mint('0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B', ethers.utils.parseEther('100000000'))
+    await crv.mint(await convexWrapper.crv(), ethers.utils.parseEther('100000000'))
+    await convex.mint(await convexWrapper.cvx(), ethers.utils.parseEther('100000000'))
   })
 
   it('Borrow USDC with CVX3CRV collateral', async () => {
@@ -292,8 +290,8 @@ describe('Convex Wrapper', async function () {
     await convexWrapper.getReward(ownerAcc.address)
     var crvAfter = await crv.balanceOf(ownerAcc.address)
     var cvxAfter = await convex.balanceOf(ownerAcc.address)
-    console.log('User1 ' + crvAfter.toString())
-    console.log('Earned ' + crvAfter.sub(crvBefore).toString())
+    console.log('User Total Crv ' + crvAfter.toString())
+    console.log('Earned Crv ' + crvAfter.sub(crvBefore).toString())
     if (crvBefore.gt(crvAfter)) throw 'Reward claim failed'
     if (cvxBefore.gt(cvxAfter)) throw 'Reward claim failed'
 
@@ -322,8 +320,8 @@ describe('Convex Wrapper', async function () {
     await convexWrapper.getReward(ownerAcc.address)
     crvAfter = await crv.balanceOf(ownerAcc.address)
     cvxAfter = await convex.balanceOf(ownerAcc.address)
-    console.log('Earned ' + crvAfter.sub(crvBefore).toString())
-    console.log('User1 ' + crvAfter.toString())
+    console.log('User Earned Crv ' + crvAfter.sub(crvBefore).toString())
+    console.log('Total User Crv ' + crvAfter.toString())
     if (crvBefore.gt(crvAfter)) throw 'Reward claim failed'
     if (cvxBefore.gt(cvxAfter)) throw 'Reward claim failed'
   })
@@ -383,8 +381,8 @@ describe('Convex Wrapper', async function () {
     await convexWrapper.getReward(ownerAcc.address)
     var crvAfter = await crv.balanceOf(ownerAcc.address)
     var cvxAfter = await convex.balanceOf(ownerAcc.address)
-    console.log('User1 ' + crvAfter.toString())
-    console.log('Earned ' + crvAfter.sub(crvBefore).toString())
+    console.log('User Total Crv ' + crvAfter.toString())
+    console.log('User Earned Crv ' + crvAfter.sub(crvBefore).toString())
     if (crvBefore.gt(crvAfter)) throw 'Reward claim failed'
     if (cvxBefore.gt(cvxAfter)) throw 'Reward claim failed'
 
@@ -413,8 +411,8 @@ describe('Convex Wrapper', async function () {
     await convexWrapper.getReward(ownerAcc.address)
     crvAfter = await crv.balanceOf(ownerAcc.address)
     cvxAfter = await convex.balanceOf(ownerAcc.address)
-    console.log('Earned ' + crvAfter.sub(crvBefore).toString())
-    console.log('User1 ' + crvAfter.toString())
+    console.log('User Earned Crv ' + crvAfter.sub(crvBefore).toString())
+    console.log('Total User Crv ' + crvAfter.toString())
     if (crvBefore.gt(crvAfter)) throw 'Reward claim failed'
     if (cvxBefore.gt(cvxAfter)) throw 'Reward claim failed'
   })
