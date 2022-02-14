@@ -78,11 +78,9 @@ contract ConvexYieldWrapper is ConvexStakingWrapper, AccessControl {
         uint256 vaultsLength = vaults_.length;
         for (uint256 i; i < vaultsLength; ++i) {
             if (vaults_[i] == vaultId) {
-                unchecked {
-                    bool isLast = i == vaultsLength - 1;
-                    if (!isLast) {
-                        vaults_[i] = vaults_[vaultsLength - 1];
-                    }
+                bool isLast = i == vaultsLength - 1;
+                if (!isLast) {
+                    vaults_[i] = vaults_[vaultsLength - 1];
                 }
                 vaults_.pop();
                 emit VaultRemoved(account, vaultId);
@@ -125,7 +123,7 @@ contract ConvexYieldWrapper is ConvexStakingWrapper, AccessControl {
         uint256 amount_ = IERC20(convexToken).balanceOf(address(this));
         require(amount_ > 0, "No convex token to wrap");
 
-        _checkpoint([address(0), from_]);
+        _checkpoint(from_);
         _mint(to_, amount_);
         IRewardStaking(convexPool).stake(amount_);
 
@@ -139,7 +137,7 @@ contract ConvexYieldWrapper is ConvexStakingWrapper, AccessControl {
         uint256 amount_ = _balanceOf[address(this)];
         require(amount_ > 0, "No wrapped convex token");
 
-        _checkpoint([address(0), to_]);
+        _checkpoint(to_);
         _burn(address(this), amount_);
         IRewardStaking(convexPool).withdraw(amount_, false);
         IERC20(convexToken).safeTransfer(to_, amount_);
