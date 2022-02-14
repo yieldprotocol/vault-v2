@@ -148,7 +148,7 @@ contract ConvexYieldWrapperMock is ERC20, AccessControl {
     /// @param account The user from whom the vault needs to be removed
     function removeVault(bytes12 vaultId, address account) public {
         address owner = cauldron.vaults(vaultId).owner;
-        require(account != owner, "Vault doesn't belong to account");
+        require(account == owner, "Vault doesn't belong to account");
         bytes12[] storage vaults_ = vaults[account];
         uint256 vaultsLength = vaults_.length;
         for (uint256 i = 0; i < vaultsLength; i++) {
