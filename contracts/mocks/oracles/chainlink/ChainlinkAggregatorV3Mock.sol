@@ -13,6 +13,11 @@ contract ChainlinkAggregatorV3Mock is ISourceMock {
         timestamp = block.timestamp;
     }
 
+
+    function setTimestamp(uint timestamp_) external {// Set timestamp for testing
+        timestamp = timestamp_;
+    }
+
     function latestRoundData() public view returns (uint80, int256, uint256, uint256, uint80) {
         return (0, price, 0, timestamp, 0);
     }
