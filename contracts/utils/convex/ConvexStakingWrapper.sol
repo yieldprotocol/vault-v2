@@ -172,9 +172,9 @@ contract ConvexStakingWrapper is ERC20 {
         if (_account != collateralVault && _account != address(this)) {
             uint256 userI = cvx_reward_integral_for[_account];
             if (_isClaim || userI < cvxRewardIntegral) {
-                uint256 receiveable = cvx_claimable_reward[_account] +
-                    ((_balance * (cvxRewardIntegral - userI)) / 1e20);
                 if (_isClaim) {
+                    uint256 receiveable = cvx_claimable_reward[_account] +
+                        ((_balance * (cvxRewardIntegral - userI)) / 1e20);
                     if (receiveable > 0) {
                         cvx_claimable_reward[_account] = 0;
                         TransferHelper.safeTransfer(IERC20(cvx), _account, receiveable);
@@ -183,7 +183,9 @@ contract ConvexStakingWrapper is ERC20 {
                         }
                     }
                 } else {
-                    cvx_claimable_reward[_account] = receiveable;
+                    cvx_claimable_reward[_account] =
+                        cvx_claimable_reward[_account] +
+                        ((_balance * (cvxRewardIntegral - userI)) / 1e20);
                 }
                 cvx_reward_integral_for[_account] = cvxRewardIntegral;
             }
