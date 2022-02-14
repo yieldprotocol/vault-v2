@@ -26,7 +26,7 @@ contract Witch is AccessControl() {
     event IlkSet(bytes6 indexed ilkId, uint32 duration, uint64 initialOffer, uint96 line, uint24 dust, uint8 dec);
     event Bought(bytes12 indexed vaultId, address indexed buyer, uint256 ink, uint256 art);
     event Auctioned(bytes12 indexed vaultId, uint256 indexed start);
-  
+
     struct Auction {
         address owner;
         uint32 start;
@@ -40,7 +40,7 @@ contract Witch is AccessControl() {
     struct Limits {
         uint96 line;                                                    // Maximum concurrent auctioned collateral
         uint24 dust;                                                    // Minimum collateral that must be left when buying, unless buying all
-        uint8 dec;                                                      // Multiplying factor (10**dec) for line and dust 
+        uint8 dec;                                                      // Multiplying factor (10**dec) for line and dust
         uint128 sum;                                                    // Current concurrent auctioned collateral
     }
 
@@ -186,7 +186,7 @@ contract Witch is AccessControl() {
             IJoin baseJoin = ladle.joins(baseId);
             require (baseJoin != IJoin(address(0)), "Join not found");
             baseJoin.join(user, art);
-        }    
+        }
     }
 
     /// @dev Price of a collateral unit, in underlying, at the present moment, for a given vault. Rounds up, sometimes twice.
