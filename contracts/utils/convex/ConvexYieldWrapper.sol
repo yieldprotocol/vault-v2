@@ -180,21 +180,11 @@ contract ConvexYieldWrapper is ConvexStakingWrapper, AccessControl {
         address dst,
         uint256 wad
     ) internal virtual override returns (bool) {
-        // If the transfer is from join(collateralVault) to contract or vice versa, then there is no need to do a checkpoint
-        if ((src == collateralVault && dst == address(this)) || (src == address(this) && dst == collateralVault)) {
-            return super._transfer(src, dst, wad);
-        }
+        address wrapper = address(this);
 
-        // If the transfer is to this contract then the checkpoint needs to be done only for the src
-        // This is required to prevent the contract from receiving any rewards
-        // If the contract has some balance & checkpoint is done it would end up receiving rewards so we need to prevent that
-        if (dst == address(this)) {
-            _checkpoint([src, address(0)]);
-            return super._transfer(src, dst, wad);
-        }
+        if (src != wrapper && src != collateralVault) _checkpoint(src);
+        if (dst != wrapper && dst != collateralVault) _checkpoint(dst);
 
-        // Checkpoint is necessary when the transfer is between users
-        _checkpoint([src, dst]);
         return super._transfer(src, dst, wad);
     }
 }
