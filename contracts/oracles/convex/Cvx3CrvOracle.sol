@@ -136,12 +136,13 @@ contract Cvx3CrvOracle is IOracle, AccessControl {
         // USDC Price
         (roundId, usdcPrice, , updateTime, answeredInRound) = USDC.latestRoundData();
         require(usdcPrice > 0, "Chainlink USDC price <= 0");
-        require(updateTime != 0, "Incomplete round for USDC");
+        require(updateTime > 0, "Incomplete round for USDC");
+        require(answeredInRound >= roundId, "Stale price for USDC");
 
         // USDT Price
         (roundId, usdtPrice, , updateTime, answeredInRound) = USDT.latestRoundData();
         require(usdtPrice > 0, "Chainlink USDT price <= 0");
-        require(updateTime != 0, "Incomplete round for USDT");
+        require(updateTime > 0, "Incomplete round for USDT");
         require(answeredInRound >= roundId, "Stale price for USDT");
 
         // This won't overflow as the max value for int256 is less than the max value for uint256
