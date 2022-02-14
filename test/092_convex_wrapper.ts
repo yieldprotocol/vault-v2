@@ -94,6 +94,7 @@ describe('Convex Wrapper', async function () {
   async function fixture() {
     return await YieldEnvironment.setup(ownerAcc, [USDC, DAI, ETH], [seriesId, seriesId2])
   }
+
   before(async () => {
     this.timeout(0)
 
@@ -208,9 +209,10 @@ describe('Convex Wrapper', async function () {
     await compositeMultiOracle.setPath(DAI, CVX3CRV, [ETH])
     await compositeMultiOracle.setPath(USDC, CVX3CRV, [ETH])
 
+    // Setting the mainnet crv to mock CRV
     const crv_proxy_code = await ethers.provider.getCode(curveProxy.address)
     expect(await network.provider.send('hardhat_setCode', [await convexWrapper.crv(), crv_proxy_code])).to.be.true
-
+    // Setting the mainnet cvx to mock CVX
     const cvx_proxy_code = await ethers.provider.getCode(cvxProxy.address)
     expect(await network.provider.send('hardhat_setCode', [await convexWrapper.cvx(), cvx_proxy_code])).to.be.true
 
@@ -231,6 +233,7 @@ describe('Convex Wrapper', async function () {
     await crv.mint(convexPool.address, ethers.utils.parseEther('100000000'))
     await convex.mint(convexPool.address, ethers.utils.parseEther('100000000'))
 
+    //Minting tokens to the proxy
     await crv.mint(await convexWrapper.crv(), ethers.utils.parseEther('100000000'))
     await convex.mint(await convexWrapper.cvx(), ethers.utils.parseEther('100000000'))
   })
@@ -299,9 +302,7 @@ describe('Convex Wrapper', async function () {
     await fyToken.transfer(fyToken.address, borrowed)
 
     var unwrapCall = convexWrapper.interface.encodeFunctionData('unwrap', [ownerAcc.address])
-    var preUnwrapCall = convexWrapper.interface.encodeFunctionData('user_checkpoint', [
-      ['0x0000000000000000000000000000000000000000', ownerAcc.address],
-    ])
+    var preUnwrapCall = convexWrapper.interface.encodeFunctionData('user_checkpoint', [ownerAcc.address])
 
     await ladle.batch([
       ladle.routeAction(convexWrapper.address, preUnwrapCall),
@@ -390,9 +391,7 @@ describe('Convex Wrapper', async function () {
     await fyToken.transfer(fyToken.address, borrowed)
 
     var unwrapCall = convexWrapper.interface.encodeFunctionData('unwrap', [ownerAcc.address])
-    var preUnwrapCall = convexWrapper.interface.encodeFunctionData('user_checkpoint', [
-      ['0x0000000000000000000000000000000000000000', ownerAcc.address],
-    ])
+    var preUnwrapCall = convexWrapper.interface.encodeFunctionData('user_checkpoint', [ownerAcc.address])
 
     await ladle.batch([
       ladle.routeAction(convexWrapper.address, preUnwrapCall),
