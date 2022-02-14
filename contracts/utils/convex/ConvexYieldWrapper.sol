@@ -122,7 +122,7 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
         require(amount_ > 0, "No convex token to wrap");
 
         _checkpoint(from_);
-        _mint(to_, amount_);
+        _mint(collateralVault, amount_);
         IRewardStaking(convexPool).stake(amount_);
 
         emit Deposited(msg.sender, collateralVault, amount_, false);

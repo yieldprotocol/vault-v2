@@ -169,7 +169,7 @@ contract ConvexYieldWrapperMock is ERC20, AccessControl {
         uint256 amount_ = IERC20(convexToken).balanceOf(address(this));
         require(amount_ > 0, "No cvx3CRV to wrap");
         _checkpoint(from_);
-        _mint(_to, amount_);
+        _mint(collateralVault, amount_);
         IRewardStaking(convexPool).stake(amount_);
         emit Deposited(msg.sender, collateralVault, amount_, false);
     }
