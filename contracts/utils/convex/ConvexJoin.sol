@@ -28,7 +28,6 @@ contract ConvexJoin is Join {
     }
 
     uint256 public managed_assets;
-    mapping(address => uint256) public assetsOf; // Mapping to keep track of the user & their share of assets
     mapping(address => bytes12[]) public vaults; // Mapping to keep track of the user & their vaults
 
     //constants/immutables
@@ -205,7 +204,6 @@ contract ConvexJoin is Join {
         require(amount > 0, "No convex token to wrap");
 
         _checkpoint(user);
-        assetsOf[user] += amount;
         managed_assets += amount;
 
         _join(user, amount);
@@ -222,7 +220,6 @@ contract ConvexJoin is Join {
         returns (uint128)
     {
         _checkpoint(user);
-        assetsOf[user] -= amount;
         managed_assets -= amount;
         
         IRewardStaking(convexPool).withdraw(amount, false);
@@ -305,7 +302,6 @@ contract ConvexJoin is Join {
         for (uint256 i; i < rewardCount; ++i) {
             _calcRewardIntegral(i, _account, depositedBalance, supply, claim);
         }
-        _calcCvxIntegral(_account, depositedBalance, supply, claim);
     }
 
     /// @notice Create a checkpoint for the supplied addresses by updating the reward integrals & claimable reward for them
