@@ -121,10 +121,7 @@ describe('Convex Wrapper', async function () {
       'Cvx3Crv Mock',
     ])) as ERC20Mock
     crv = (await deployContract(ownerAcc, ERC20MockArtifact, ['CurveDAO Token Mock', 'CRV'])) as ERC20Mock
-
-    await convex.mint(ownerAcc.address, parseEther('1000000'))
-    await crv.mint(ownerAcc.address, parseEther('1000000'))
-
+    
     curvePool = (await deployContract(ownerAcc, CurvePoolMockArtifact)) as unknown as CurvePoolMock
     convexPool = (await deployContract(ownerAcc, ConvexPoolMockArtifact, [
       crv.address,
@@ -229,13 +226,15 @@ describe('Convex Wrapper', async function () {
 
     await ladle.ladle.addToken(cvx3CRV.address, true)
 
-    await cvx3CRV.mint(ownerAcc.address, ethers.utils.parseEther('100000000'))
-    await crv.mint(convexPool.address, ethers.utils.parseEther('100000000'))
-    await convex.mint(convexPool.address, ethers.utils.parseEther('100000000'))
+    await cvx3CRV.mint(ownerAcc.address, ethers.utils.parseEther('10'))
+    await crv.mint(convexPool.address, ethers.utils.parseEther('10'))
+    await convex.mint(convexPool.address, ethers.utils.parseEther('10'))
 
     //Minting tokens to the proxy
-    await crv.mint(await convexWrapper.crv(), ethers.utils.parseEther('100000000'))
-    await convex.mint(await convexWrapper.cvx(), ethers.utils.parseEther('100000000'))
+    console.log(await convexWrapper.crv())
+    console.log(await convexWrapper.cvx())
+    await crv.mint(await convexWrapper.crv(), ethers.utils.parseEther('10'))
+    await convex.mint(await convexWrapper.cvx(), ethers.utils.parseEther('10'))
   })
 
   it('Borrow USDC with CVX3CRV collateral', async () => {
@@ -314,7 +313,7 @@ describe('Convex Wrapper', async function () {
     const cvx3CrvAfter = (await cvx3CRV.balanceOf(ownerAcc.address)).toString()
     console.log(`${cvx3CrvAfter} cvx3Crv after`)
     if (cvx3CrvAfter !== cvx3CrvBefore) throw 'cvx3Crv balance mismatch'
-
+    console.log('Claiming leftover rewards')
     // Claim leftover rewards
     crvBefore = await crv.balanceOf(ownerAcc.address)
     cvxBefore = await convex.balanceOf(ownerAcc.address)
@@ -392,18 +391,18 @@ describe('Convex Wrapper', async function () {
 
     var unwrapCall = convexWrapper.interface.encodeFunctionData('unwrap', [ownerAcc.address])
     var preUnwrapCall = convexWrapper.interface.encodeFunctionData('user_checkpoint', [ownerAcc.address])
-
+    
     await ladle.batch([
       ladle.routeAction(convexWrapper.address, preUnwrapCall),
       ladle.pourAction(vaultId, convexWrapper.address, posted.mul(-1), borrowed.mul(-1)),
       ladle.routeAction(convexWrapper.address, unwrapCall),
     ])
-
+    
     console.log(`repaid and withdrawn`)
     const cvx3CrvAfter = (await cvx3CRV.balanceOf(ownerAcc.address)).toString()
     console.log(`${cvx3CrvAfter} cvx3Crv after`)
     if (cvx3CrvAfter !== cvx3CrvBefore) throw 'cvx3Crv balance mismatch'
-
+    console.log('Claiming leftover rewards')
     // Claim leftover rewards
     crvBefore = await crv.balanceOf(ownerAcc.address)
     cvxBefore = await convex.balanceOf(ownerAcc.address)
