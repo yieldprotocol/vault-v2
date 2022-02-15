@@ -176,4 +176,17 @@ contract ConvexYieldWrapper is ConvexStakingWrapper, AccessControl {
         // Shutdown the contract
         isShutdown = true;
     }
+
+    function _transfer(
+        address src,
+        address dst,
+        uint256 wad
+    ) internal virtual override returns (bool) {
+        address wrapper = address(this);
+
+        if (src != wrapper && src != collateralVault) _checkpoint(src);
+        if (dst != wrapper && dst != collateralVault) _checkpoint(dst);
+
+        return super._transfer(src, dst, wad);
+    }
 }
