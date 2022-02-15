@@ -44,7 +44,6 @@ contract ConvexJoin is Join {
     RewardType[] public rewards;
 
     //management
-    bool public isShutdown;
     uint8 private _status = 1;
 
     uint8 private constant _NOT_ENTERED = 1;
@@ -200,7 +199,6 @@ contract ConvexJoin is Join {
         auth
         returns (uint128)
     {
-        require(!isShutdown, "shutdown");
         require(amount > 0, "No convex token to wrap");
 
         _checkpoint(user);
