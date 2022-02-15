@@ -73,8 +73,7 @@ contract ConvexYieldWrapper is ConvexStakingWrapper, AccessControl {
     /// @param account The user from whom the vault needs to be removed
     function removeVault(bytes12 vaultId, address account) public {
         address owner = cauldron.vaults(vaultId).owner;
-        require(account != address(0), "zero address passed");
-        require(account == owner, "vault doesn't belong to account");
+        require(account != owner, "vault belongs to account");
         bytes12[] storage vaults_ = vaults[account];
         uint256 vaultsLength = vaults_.length;
         for (uint256 i; i < vaultsLength; ++i) {
