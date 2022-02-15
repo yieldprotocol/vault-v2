@@ -78,9 +78,11 @@ contract ConvexYieldWrapper is ConvexStakingWrapper, AccessControl {
         uint256 vaultsLength = vaults_.length;
         for (uint256 i; i < vaultsLength; ++i) {
             if (vaults_[i] == vaultId) {
-                bool isLast = i == vaultsLength - 1;
-                if (!isLast) {
-                    vaults_[i] = vaults_[vaultsLength - 1];
+                unchecked {
+                    bool isLast = i == vaultsLength - 1;
+                    if (!isLast) {
+                        vaults_[i] = vaults_[vaultsLength - 1];
+                    }
                 }
                 vaults_.pop();
                 emit VaultRemoved(account, vaultId);
@@ -172,5 +174,18 @@ contract ConvexYieldWrapper is ConvexStakingWrapper, AccessControl {
         }
         // Shutdown the contract
         isShutdown = true;
+    }
+
+    function _transfer(
+        address src,
+        address dst,
+        uint256 wad
+    ) internal virtual override returns (bool) {
+        address wrapper = address(this);
+
+        if (src != wrapper && src != collateralVault) _checkpoint(src);
+        if (dst != wrapper && dst != collateralVault) _checkpoint(dst);
+
+        return super._transfer(src, dst, wad);
     }
 }
