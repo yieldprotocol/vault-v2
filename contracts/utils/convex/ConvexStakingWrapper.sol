@@ -5,12 +5,13 @@ pragma solidity 0.8.6;
 import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
 import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
 import "./interfaces/IRewardStaking.sol";
 import "./CvxMining.sol";
 
 /// @notice Wrapper used to manage staking of Convex tokens
 contract ConvexStakingWrapper is ERC20 {
-    using TransferHelper for IERC20;
+    using CastU256U128 for uint256;
 
     struct EarnedData {
         address token;
@@ -179,8 +180,10 @@ contract ConvexStakingWrapper is ERC20 {
                         ((_balance * (cvxRewardIntegral - userI)) / 1e20);
                     if (receiveable > 0) {
                         cvx_claimable_reward[_account] = 0;
-                        IERC20(cvx).safeTransfer(_account, receiveable);
-                        bal -= receiveable;
+                        TransferHelper.safeTransfer(IERC20(cvx), _account, receiveable);
+                        unchecked {
+                            bal -= receiveable;
+                        }
                     }
                 } else {
                     cvx_claimable_reward[_account] =
@@ -233,8 +236,10 @@ contract ConvexStakingWrapper is ERC20 {
                         ((_balance * (uint256(rewardIntegral) - userI)) / 1e20);
                     if (receiveable > 0) {
                         reward.claimable_reward[_account] = 0;
-                        IERC20(reward.reward_token).safeTransfer(_account, receiveable);
-                        bal = bal - receiveable;
+                        TransferHelper.safeTransfer(IERC20(reward.reward_token), _account, receiveable);
+                        unchecked {
+                            bal -= receiveable;
+                        }
                     }
                 } else {
                     reward.claimable_reward[_account] =
