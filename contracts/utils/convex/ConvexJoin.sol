@@ -27,11 +27,7 @@ contract ConvexJoin is Join {
         mapping(address => uint256) claimable_reward;
     }
 
-    uint256 public cvx_reward_integral;
-    uint256 public cvx_reward_remaining;
     uint256 public managed_assets;
-    mapping(address => uint256) public cvx_reward_integral_for;
-    mapping(address => uint256) public cvx_claimable_reward;
     mapping(address => uint256) public assetsOf; // Mapping to keep track of the user & their share of assets
     mapping(address => bytes12[]) public vaults; // Mapping to keep track of the user & their vaults
 
@@ -175,10 +171,15 @@ contract ConvexJoin is Join {
         uint256 rewardsLength = rewards.length;
 
         if (rewardsLength == 0) {
+            // We add cvx as a regular reward, but earnings will be calculated separately
+            RewardType storage reward = rewards.push();
+            reward.reward_token = cvx;
+            reward.reward_pool = address(0);
+
             RewardType storage reward = rewards.push();
             reward.reward_token = crv;
             reward.reward_pool = mainPool;
-            rewardsLength = 1;
+            rewardsLength = 2;
         }
 
         uint256 extraCount = IRewardStaking(mainPool).extraRewardsLength();
@@ -232,57 +233,6 @@ contract ConvexJoin is Join {
     }
 
     /// ------ REWARDS MATH ------
-
-    /// @notice Calculates & upgrades the integral for distributing the CVX rewards
-    /// @param _account Account for which the CvxIntegral has to be calculated
-    /// @param _balance Balance of the accounts
-    /// @param _supply Total supply of the wrapped token
-    /// @param _isClaim Whether to claim the calculated rewards
-    function _calcCvxIntegral(
-        address _account,
-        uint256 _balance,
-        uint256 _supply,
-        bool _isClaim
-    ) internal {
-        uint256 bal = IERC20(cvx).balanceOf(address(this));
-        uint256 cvxRewardRemaining = cvx_reward_remaining;
-        uint256 d_cvxreward = bal - cvxRewardRemaining;
-        uint256 cvxRewardIntegral = cvx_reward_integral;
-
-        if (_supply > 0 && d_cvxreward > 0) {
-            cvxRewardIntegral = cvxRewardIntegral + (d_cvxreward * 1e20) / (_supply);
-            cvx_reward_integral = cvxRewardIntegral;
-        }
-
-        //update user integrals for cvx
-        //do not give rewards to collateral vault or this contract
-        if (_account != collateralVault && _account != address(this)) {
-            uint256 userI = cvx_reward_integral_for[_account];
-            if (_isClaim || userI < cvxRewardIntegral) {
-                if (_isClaim) {
-                    uint256 receiveable = cvx_claimable_reward[_account] +
-                        ((_balance * (cvxRewardIntegral - userI)) / 1e20);
-                    if (receiveable > 0) {
-                        cvx_claimable_reward[_account] = 0;
-                        TransferHelper.safeTransfer(IERC20(cvx), _account, receiveable);
-                        unchecked {
-                            bal -= receiveable;
-                        }
-                    }
-                } else {
-                    cvx_claimable_reward[_account] =
-                        cvx_claimable_reward[_account] +
-                        ((_balance * (cvxRewardIntegral - userI)) / 1e20);
-                }
-                cvx_reward_integral_for[_account] = cvxRewardIntegral;
-            }
-        }
-
-        //update reward total
-        if (bal != cvxRewardRemaining) {
-            cvx_reward_remaining = bal;
-        }
-    }
 
     /// @notice Calculates & upgrades the integral for distributing the reward token
     /// @param _index The index of the reward token for which the calculations are to be done
@@ -381,7 +331,9 @@ contract ConvexJoin is Join {
         uint256 rewardCount = rewards.length;
         claimable = new EarnedData[](rewardCount + 1);
 
-        for (uint256 i; i < rewardCount; ++i) {
+        RewardType storage cvx_reward = rewards[0];
+
+        for (uint256 i = 1; i < rewardCount; ++i) {
             RewardType storage reward = rewards[i];
             address rewardToken = reward.reward_token;
 
@@ -403,7 +355,7 @@ contract ConvexJoin is Join {
             //calc cvx here
             if (rewardToken == crv) {
                 claimable[rewardCount].amount =
-                    cvx_claimable_reward[_account] +
+                    cvx_reward.claimable_reward[_account] +
                     CvxMining.ConvertCrvToCvx(newlyClaimable);
                 claimable[rewardCount].token = cvx;
             }
