@@ -61,6 +61,7 @@ describe('Convex Wrapper', async function () {
   let wand: Wand
   let witch: Witch
   let ownerAcc: SignerWithAddress
+  let dummyAcc: SignerWithAddress
   let cauldron: Cauldron
   let convex: ERC20Mock
   let crv: ERC20Mock
@@ -100,7 +101,7 @@ describe('Convex Wrapper', async function () {
 
     const signers = await ethers.getSigners()
     ownerAcc = signers[0]
-
+    dummyAcc = signers[1]
     env = await fixture()
     ladle = env.ladle
     wand = env.wand
@@ -431,31 +432,6 @@ describe('Convex Wrapper', async function () {
     ).to.be.revertedWith('Vault is for different ilk')
   })
 
-  it('Remove vault in the same call', async () => {
-    await wand.makeIlk(DAI, CVX3CRV, compositeMultiOracle.address, 1000000, 1000000, 1, 18)
-    await cauldron.addIlks(seriesId, [CVX3CRV])
-
-    // Batch action to build a vault & add it to the wrapper
-    const addVaultCall = convexLadleModule.interface.encodeFunctionData('addVault', [
-      convexWrapper.address,
-      '0x000000000000000000000000',
-    ])
-
-    const removeVaultCall = convexLadleModule.interface.encodeFunctionData('removeVault', [
-      convexWrapper.address,
-      '0x000000000000000000000000',
-      ownerAcc.address,
-    ])
-
-    await ladle.batch([
-      ladle.buildAction(seriesId, CVX3CRV),
-      ladle.moduleCallAction(convexLadleModule.address, addVaultCall),
-      ladle.moduleCallAction(convexLadleModule.address, removeVaultCall),
-    ])
-
-    await expect(convexWrapper.vaults(ownerAcc.address, [2])).to.be.revertedWith('')
-  })
-
   it('Remove vault in different call', async () => {
     await wand.makeIlk(DAI, CVX3CRV, compositeMultiOracle.address, 1000000, 1000000, 1, 18)
     await cauldron.addIlks(seriesId, [CVX3CRV])
@@ -470,6 +446,8 @@ describe('Convex Wrapper', async function () {
       ladle.buildAction(seriesId, CVX3CRV),
       ladle.moduleCallAction(convexLadleModule.address, addVaultCall),
     ])
+
+    await cauldron.give(await getLastVaultId(cauldron),dummyAcc.address)
 
     const removeVaultCall = convexLadleModule.interface.encodeFunctionData('removeVault', [
       convexWrapper.address,
