@@ -338,7 +338,6 @@ contract ConvexStakingWrapper is ERC20 {
                 claimable[rewardCount].token = cvx;
             }
         }
-        return claimable;
     }
 
     /// @notice Claim reward for the supplied account

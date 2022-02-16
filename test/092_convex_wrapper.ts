@@ -61,6 +61,7 @@ describe('Convex Wrapper', async function () {
   let wand: Wand
   let witch: Witch
   let ownerAcc: SignerWithAddress
+  let dummyAcc: SignerWithAddress
   let cauldron: Cauldron
   let convex: ERC20Mock
   let crv: ERC20Mock
@@ -100,7 +101,7 @@ describe('Convex Wrapper', async function () {
 
     const signers = await ethers.getSigners()
     ownerAcc = signers[0]
-
+    dummyAcc = signers[1]
     env = await fixture()
     ladle = env.ladle
     wand = env.wand
@@ -268,7 +269,7 @@ describe('Convex Wrapper', async function () {
 
     // Transfer the amount to join before pouring
     await cvx3CRV.approve(ladle.address, posted)
-    const wrapCall = convexWrapper.interface.encodeFunctionData('wrap', [join, ownerAcc.address])
+    const wrapCall = convexWrapper.interface.encodeFunctionData('wrap', [ownerAcc.address])
 
     await ladle.batch([
       ladle.transferAction(cvx3CRV.address, convexWrapper.address, posted),
@@ -360,7 +361,7 @@ describe('Convex Wrapper', async function () {
       .div(100)
     // Transfer the amount to join before pouring
     await cvx3CRV.approve(ladle.address, posted)
-    const wrapCall = convexWrapper.interface.encodeFunctionData('wrap', [join, ownerAcc.address])
+    const wrapCall = convexWrapper.interface.encodeFunctionData('wrap', [ownerAcc.address])
     var beforeJoinBalance = await convexWrapper.balanceOf(join)
     var beforeFyTokenBalance = await fyToken.balanceOf(ownerAcc.address)
     await ladle.batch([
@@ -431,7 +432,7 @@ describe('Convex Wrapper', async function () {
     ).to.be.revertedWith('Vault is for different ilk')
   })
 
-  it('Remove vault in the same call', async () => {
+  it('Remove vault in different call', async () => {
     await wand.makeIlk(DAI, CVX3CRV, compositeMultiOracle.address, 1000000, 1000000, 1, 18)
     await cauldron.addIlks(seriesId, [CVX3CRV])
 
@@ -441,22 +442,25 @@ describe('Convex Wrapper', async function () {
       '0x000000000000000000000000',
     ])
 
-    const removeVaultCall = convexLadleModule.interface.encodeFunctionData('removeVault', [
-      convexWrapper.address,
-      '0x000000000000000000000000',
-      ownerAcc.address,
-    ])
-
     await ladle.batch([
       ladle.buildAction(seriesId, CVX3CRV),
       ladle.moduleCallAction(convexLadleModule.address, addVaultCall),
-      ladle.moduleCallAction(convexLadleModule.address, removeVaultCall),
     ])
 
+    await cauldron.give(await getLastVaultId(cauldron), dummyAcc.address)
+
+    const removeVaultCall = convexLadleModule.interface.encodeFunctionData('removeVault', [
+      convexWrapper.address,
+      await getLastVaultId(cauldron),
+      ownerAcc.address,
+    ])
+
+    expect(await convexWrapper.vaults(ownerAcc.address, [2])).to.be.eq(await getLastVaultId(cauldron))
+    await ladle.batch([ladle.moduleCallAction(convexLadleModule.address, removeVaultCall)])
     await expect(convexWrapper.vaults(ownerAcc.address, [2])).to.be.revertedWith('')
   })
 
-  it('Remove vault in different call', async () => {
+  it('Vault belonging to a user cant be removed', async () => {
     await wand.makeIlk(DAI, CVX3CRV, compositeMultiOracle.address, 1000000, 1000000, 1, 18)
     await cauldron.addIlks(seriesId, [CVX3CRV])
 
@@ -478,7 +482,8 @@ describe('Convex Wrapper', async function () {
     ])
 
     expect(await convexWrapper.vaults(ownerAcc.address, [2])).to.be.eq(await getLastVaultId(cauldron))
-    await ladle.batch([ladle.moduleCallAction(convexLadleModule.address, removeVaultCall)])
-    await expect(convexWrapper.vaults(ownerAcc.address, [2])).to.be.revertedWith('')
+    await expect(ladle.batch([ladle.moduleCallAction(convexLadleModule.address, removeVaultCall)])).to.be.revertedWith(
+      'Vault belongs to account'
+    )
   })
 })
