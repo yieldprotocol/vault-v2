@@ -268,7 +268,7 @@ describe('Convex Wrapper', async function () {
 
     // Transfer the amount to join before pouring
     await cvx3CRV.approve(ladle.address, posted)
-    const wrapCall = convexWrapper.interface.encodeFunctionData('wrap', [join, ownerAcc.address])
+    const wrapCall = convexWrapper.interface.encodeFunctionData('wrap', [ownerAcc.address])
 
     await ladle.batch([
       ladle.transferAction(cvx3CRV.address, convexWrapper.address, posted),
@@ -360,7 +360,7 @@ describe('Convex Wrapper', async function () {
       .div(100)
     // Transfer the amount to join before pouring
     await cvx3CRV.approve(ladle.address, posted)
-    const wrapCall = convexWrapper.interface.encodeFunctionData('wrap', [join, ownerAcc.address])
+    const wrapCall = convexWrapper.interface.encodeFunctionData('wrap', [ownerAcc.address])
     var beforeJoinBalance = await convexWrapper.balanceOf(join)
     var beforeFyTokenBalance = await fyToken.balanceOf(ownerAcc.address)
     await ladle.batch([
