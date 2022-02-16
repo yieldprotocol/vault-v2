@@ -172,7 +172,7 @@ contract ConvexJoin is Join {
             // We add cvx as a regular reward, but earnings will be calculated separately
             RewardType storage reward = rewards.push();
             reward.reward_token = cvx;
-            reward.reward_pool = address(0);
+            // There is no reward pool for cvx
 
             RewardType storage reward = rewards.push();
             reward.reward_token = crv;
