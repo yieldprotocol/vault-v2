@@ -120,11 +120,30 @@ contract Cvx3CrvOracle is IOracle, AccessControl {
             (base == ethId_ && quote == cvx3CrvId_) || (base == cvx3CrvId_ && quote == ethId_),
             "Invalid quote or base"
         );
-        (, int256 daiPrice, , , ) = DAI.latestRoundData();
-        (, int256 usdcPrice, , , ) = USDC.latestRoundData();
-        (, int256 usdtPrice, , , ) = USDT.latestRoundData();
 
-        require(daiPrice > 0 && usdcPrice > 0 && usdtPrice > 0, "Chainlink pricefeed reporting 0");
+        uint80 roundId;
+        uint80 answeredInRound;
+        int256 daiPrice;
+        int256 usdcPrice;
+        int256 usdtPrice;
+
+        // DAI Price
+        (roundId, daiPrice, , updateTime, answeredInRound) = DAI.latestRoundData();
+        require(daiPrice > 0, "Chainlink DAI price <= 0");
+        require(updateTime > 0, "Incomplete round for DAI");
+        require(answeredInRound >= roundId, "Stale price for DAI");
+
+        // USDC Price
+        (roundId, usdcPrice, , updateTime, answeredInRound) = USDC.latestRoundData();
+        require(usdcPrice > 0, "Chainlink USDC price <= 0");
+        require(updateTime > 0, "Incomplete round for USDC");
+        require(answeredInRound >= roundId, "Stale price for USDC");
+
+        // USDT Price
+        (roundId, usdtPrice, , updateTime, answeredInRound) = USDT.latestRoundData();
+        require(usdtPrice > 0, "Chainlink USDT price <= 0");
+        require(updateTime > 0, "Incomplete round for USDT");
+        require(answeredInRound >= roundId, "Stale price for USDT");
 
         // This won't overflow as the max value for int256 is less than the max value for uint256
         uint256 minStable = min(uint256(daiPrice), min(uint256(usdcPrice), uint256(usdtPrice)));
