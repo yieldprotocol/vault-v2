@@ -165,13 +165,13 @@ contract ConvexYieldWrapperMock is ERC20, AccessControl {
         revert("Vault not found");
     }
 
-    function wrap(address _to, address from_) external {
+    function wrap(address from_) external {
         uint256 amount_ = IERC20(convexToken).balanceOf(address(this));
         require(amount_ > 0, "No cvx3CRV to wrap");
         _checkpoint(from_);
-        _mint(_to, amount_);
+        _mint(collateralVault, amount_);
         IRewardStaking(convexPool).stake(amount_);
-        emit Deposited(msg.sender, _to, amount_, false);
+        emit Deposited(msg.sender, collateralVault, amount_, false);
     }
 
     function unwrap(address to_) external {
