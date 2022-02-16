@@ -80,7 +80,7 @@ contract Cvx3CrvOracle is IOracle, AccessControl {
         bytes32 quote,
         uint256 baseAmount
     ) external view virtual override returns (uint256 quoteAmount, uint256 updateTime) {
-        return _peek(base.b6(), quote.b6(), baseAmount);
+        (quoteAmount, updateTime) = _peek(base.b6(), quote.b6(), baseAmount);
     }
 
     /**
@@ -97,7 +97,7 @@ contract Cvx3CrvOracle is IOracle, AccessControl {
         bytes32 quote,
         uint256 baseAmount
     ) external virtual override returns (uint256 quoteAmount, uint256 updateTime) {
-        return _peek(base.b6(), quote.b6(), baseAmount);
+        (quoteAmount, updateTime) = _peek(base.b6(), quote.b6(), baseAmount);
     }
 
     /**
