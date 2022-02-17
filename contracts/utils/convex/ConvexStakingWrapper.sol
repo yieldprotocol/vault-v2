@@ -45,9 +45,6 @@ contract ConvexStakingWrapper is ERC20 {
     uint256 private constant CRV_INDEX = 0;
     uint256 private constant CVX_INDEX = 1;
 
-    //rewards
-    RewardType[] public rewards;
-
     //management
     bool public isShutdown;
     uint8 private _status = 1;
