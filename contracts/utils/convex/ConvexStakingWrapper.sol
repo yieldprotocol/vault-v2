@@ -33,6 +33,7 @@ contract ConvexStakingWrapper is ERC20 {
     mapping(address => uint256) public cvx_claimable_reward;
 
     //constants/immutables
+    uint256 public convexPoolId;
     address public constant convexBooster = address(0xF403C135812408BFbE8713b5A23a04b3D48AAE31);
     address public constant crv = address(0xD533a949740bb3306d119CC777fa900bA034cd52);
     address public constant cvx = address(0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B);
@@ -40,7 +41,6 @@ contract ConvexStakingWrapper is ERC20 {
     address public convexToken;
     address public convexPool;
     address public collateralVault;
-    uint256 public convexPoolId;
 
     uint256 private constant CRV_INDEX = 0;
     uint256 private constant CVX_INDEX = 1;
@@ -54,6 +54,9 @@ contract ConvexStakingWrapper is ERC20 {
 
     uint8 private constant _NOT_ENTERED = 1;
     uint8 private constant _ENTERED = 2;
+
+    //rewards
+    RewardType[] public rewards;
 
     event Deposited(address indexed _user, address indexed _account, uint256 _amount, bool _wrapped);
     event Withdrawn(address indexed _user, uint256 _amount, bool _unwrapped);
