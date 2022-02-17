@@ -108,7 +108,7 @@ contract ConvexStakingWrapper is ERC20 {
 
             reward = rewards.push();
             reward.reward_token = cvx;
-            reward.reward_pool = address(0);
+            reward.reward_pool = address(0); // This is set to address(0) as initially we don't know if the pool has cvx rewards
             reward.reward_integral = 0;
             reward.reward_remaining = 0;
 
@@ -126,7 +126,7 @@ contract ConvexStakingWrapper is ERC20 {
             } else if (registeredRewards[extraToken] == 0) {
                 //add new token to list
                 RewardType storage reward = rewards.push();
-                reward.reward_token = IRewardStaking(extraPool).rewardToken();
+                reward.reward_token = extraToken;
                 reward.reward_pool = extraPool;
                 reward.reward_integral = 0;
                 reward.reward_remaining = 0;
@@ -281,7 +281,7 @@ contract ConvexStakingWrapper is ERC20 {
             if (reward.reward_pool == address(0)) {
                 //cvx reward may not have a reward pool yet
                 //so just add whats already been checkpointed
-                claimable[i].amount = claimable[i].amount + reward.claimable_reward[_account];
+                claimable[i].amount += reward.claimable_reward[_account];
                 claimable[i].token = reward.reward_token;
                 continue;
             }
@@ -298,7 +298,7 @@ contract ConvexStakingWrapper is ERC20 {
 
             uint256 newlyClaimable = (_getDepositedBalance(_account) * (I - (reward.reward_integral_for[_account]))) /
                 (1e20);
-            claimable[i].amount = claimable[i].amount + reward.claimable_reward[_account] + newlyClaimable;
+            claimable[i].amount += reward.claimable_reward[_account] + newlyClaimable;
             claimable[i].token = reward.reward_token;
 
             //calc cvx minted from crv and add to cvx claimables
