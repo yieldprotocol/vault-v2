@@ -118,7 +118,8 @@ contract Witch is AccessControl {
         emit Auctioned(vaultId, block.timestamp.u32());
     }
 
-    /// @dev Private fn called by buy() and payAll()
+    /// @notice This fn returns the amount of collateral which will be sold to buyer
+    /// @dev This fn is used to avoid Stack Too Deep in by buy() and payAll() and to DRY the code
     /// @param ilkId Id of asset used for collateral
     /// @param auctionStart Block timestamp when auction was started
     /// @param duration Time that auctions take to go to minimal
