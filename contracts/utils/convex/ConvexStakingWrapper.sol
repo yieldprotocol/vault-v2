@@ -103,21 +103,18 @@ contract ConvexStakingWrapper is ERC20 {
             RewardType storage reward = rewards.push();
             reward.reward_token = crv;
             reward.reward_pool = mainPool;
-            reward.reward_integral = 0;
-            reward.reward_remaining = 0;
 
             reward = rewards.push();
             reward.reward_token = cvx;
-            reward.reward_pool = address(0); // This is set to address(0) as initially we don't know if the pool has cvx rewards
-            reward.reward_integral = 0;
-            reward.reward_remaining = 0;
+            // The reward_pool is set to address(0) as initially we don't know if the pool has cvx rewards.
+            // And since the default is address(0) we don't explicitly set it
 
             registeredRewards[crv] = CRV_INDEX + 1; //mark registered at index+1
             registeredRewards[cvx] = CVX_INDEX + 1; //mark registered at index+1
         }
 
         uint256 extraCount = IRewardStaking(mainPool).extraRewardsLength();
-        for (uint256 i = 0; i < extraCount; i++) {
+        for (uint256 i; i < extraCount; ++i) {
             address extraPool = IRewardStaking(mainPool).extraRewards(i);
             address extraToken = IRewardStaking(extraPool).rewardToken();
             if (extraToken == cvx) {
@@ -128,8 +125,6 @@ contract ConvexStakingWrapper is ERC20 {
                 RewardType storage reward = rewards.push();
                 reward.reward_token = extraToken;
                 reward.reward_pool = extraPool;
-                reward.reward_integral = 0;
-                reward.reward_remaining = 0;
 
                 registeredRewards[extraToken] = rewards.length; //mark registered at index+1
             }
@@ -275,7 +270,7 @@ contract ConvexStakingWrapper is ERC20 {
         uint256 rewardCount = rewards.length;
         claimable = new EarnedData[](rewardCount);
 
-        for (uint256 i = 0; i < rewardCount; i++) {
+        for (uint256 i; i < rewardCount; ++i) {
             RewardType storage reward = rewards[i];
 
             if (reward.reward_pool == address(0)) {
