@@ -118,52 +118,6 @@ contract Witch is AccessControl {
         emit Auctioned(vaultId, block.timestamp.u32());
     }
 
-    /// @notice This fn returns the amount of collateral which will be sold to buyer
-    /// @dev This fn is used to avoid Stack Too Deep in by buy() and payAll() and to DRY the code
-    /// @param ilkId Id of asset used for collateral
-    /// @param auctionStart Block timestamp when auction was started
-    /// @param duration Time that auctions take to go to minimal
-    /// @param p Initial Offer. Proportion of collateral sold at auction start(1e18 = 100%)
-    /// @param artIn Portion of debt being bought (in terms of base)
-    /// @param totalArt Total debt
-    /// @param totalInk Total collateral
-    /// @param min Minimum amount of collateral acceptable by buyer
-    /// @return inkOut Amount of collateral
-    function _inkOut(
-        bytes6 ilkId,
-        uint32 auctionStart,
-        uint32 duration,
-        uint64 p,
-        uint256 artIn,
-        uint128 totalArt,
-        uint128 totalInk,
-        uint128 min
-    ) private returns (uint256 inkOut) {
-        Limits memory limits_ = limits[ilkId];
-
-        // If the world has not turned to ashes and darkness, auctions will malfunction on
-        // the 7th of February 2106, at 06:28:16 GMT
-        // TODO: Replace this contract before then 😰
-        // UPDATE: Added reminder to Google calendar ✅
-        uint256 elapsed;
-        unchecked {
-            elapsed = uint32(block.timestamp) - auctionStart;
-        }
-
-        uint256 t = elapsed > duration ? 1e18 : elapsed.wdivup(duration);
-
-        //          (      a         )
-        // inkOut = (artIn / totalArt) * totalInk * (p + (1 - p) * t)
-        {
-            uint256 a = uint256(artIn).wdivup(totalArt);
-            inkOut = a.wmul(totalInk).wmulup(uint256(p) + uint256(1e18 - p).wmulup(t));
-        }
-
-        require(inkOut >= min, "Not enough bought");
-        require(totalArt == artIn || totalInk - inkOut >= limits_.dust * (10**limits_.dec), "Leaves dust");
-        limits[ilkId].sum = limits_.sum - inkOut.u128();
-    }
-
     /// @dev Pay `base` of the debt in a vault in liquidation, getting at least `min` collateral.
     /// Use `payAll` to pay all the debt, using `buy` for amounts close to the whole vault might revert.
     /// @param vaultId Id of vault to buy
@@ -175,38 +129,40 @@ contract Witch is AccessControl {
         uint128 base,
         uint128 min
     ) external returns (uint256 ink) {
-        require(auctions[vaultId].start > 0, "Vault not under auction");
+        Auction memory auction_ = auctions[vaultId];
+        require(auction_.start != 0, "Vault not under auction");
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
-        DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);
         DataTypes.Balances memory balances_ = cauldron.balances(vaultId);
         require(balances_.art > 0, "Nothing to buy"); // Cheapest way of failing gracefully if given a non existing vault
 
-        Auction memory auction_ = auctions[vaultId];
-        Ilk memory ilk_ = ilks[vault_.ilkId];
-        uint256 art = cauldron.debtFromBase(vault_.seriesId, base);
+        uint256 artIn = cauldron.debtFromBase(vault_.seriesId, base);
 
-        ink = _inkOut(
+        ink = _buy(
             vault_.ilkId,      // ilkId
+            vaultId,          // vaultId
             auction_.start,    // auctionStart
-            ilk_.duration,     // duration
-            ilk_.initialOffer, // p
-            art,               // artIn
+            artIn,             // artIn
             balances_.art,     // totalArt
             balances_.ink,     // totalInk
+            base,             // base
+            cauldron.series(vault_.seriesId).baseId, // baseId
             min               // min
         );
 
-        cauldron.slurp(vaultId, ink.u128(), art.u128()); // Remove debt and collateral from vault
-        _settle(msg.sender, vault_.ilkId, series_.baseId, ink.u128(), base); // Move the assets
+        // Ensure enough dust is left
+        Limits memory limits_ = limits[vault_.ilkId];
+        require(balances_.art == artIn || balances_.ink - ink >= limits_.dust * (10**limits_.dec), "Leaves dust");
 
-        if (balances_.art - art == 0) {
+        // Update sum
+        limits[vault_.ilkId].sum = limits_.sum - ink.u128();
+
+
+        if (balances_.art - artIn == 0) {
             // If there is no debt left, return the vault with the collateral to the owner
-
             cauldron.give(vaultId, auction_.owner);
             delete auctions[vaultId];
         }
 
-        emit Bought(vaultId, msg.sender, ink, art);
     }
 
     /// @dev Pay all debt from a vault in liquidation, getting at least `min` collateral.
@@ -214,41 +170,84 @@ contract Witch is AccessControl {
     /// @param min Minimum amount of collateral that must be received
     /// @return ink Amount of vault collateral sold
     function payAll(bytes12 vaultId, uint128 min) external returns (uint256 ink) {
-        require(auctions[vaultId].start > 0, "Vault not under auction");
-        DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
-        DataTypes.Series memory series_ = cauldron.series(vault_.seriesId);
-        DataTypes.Balances memory balances_ = cauldron.balances(vaultId);
         Auction memory auction_ = auctions[vaultId];
-        Ilk memory ilk_ = ilks[vault_.ilkId];
-
+        require(auction_.start > 0, "Vault not under auction");
+        DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
+        DataTypes.Balances memory balances_ = cauldron.balances(vaultId);
         require(balances_.art > 0, "Nothing to buy"); // Cheapest way of failing gracefully if given a non existing vault
 
-        ink = _inkOut(
+
+        ink = _buy(
             vault_.ilkId,      // ilkId
+            vaultId,          // vaultId
             auction_.start,    // auctionStart
-            ilk_.duration,     // duration
-            ilk_.initialOffer, // p
-            balances_.art,     // artIn
+            balances_.art,             // artIn
             balances_.art,     // totalArt
             balances_.ink,     // totalInk
+            cauldron.debtToBase(vault_.seriesId, balances_.art), // base
+            cauldron.series(vault_.seriesId).baseId, // baseId
             min               // min
         );
 
         ink = (ink > balances_.ink) ? balances_.ink : ink;
 
-        cauldron.slurp(vaultId, ink.u128(), balances_.art); // Remove debt + collateral from vault
-        _settle(
-            msg.sender,
-            vault_.ilkId,
-            series_.baseId,
-            ink.u128(),
-            cauldron.debtToBase(vault_.seriesId, balances_.art)
-        ); // Move the assets
         cauldron.give(vaultId, auction_.owner);
         delete auctions[vaultId];
 
+    }
+
+    /// @notice Calcs collateral purchased, slurps vault, and settles tokens
+    /// @param ilkId Id of asset used for collateral
+    /// @param vaultId Id of vault to buy
+    /// @param auctionStart Block timestamp when auction was started
+    /// @param artIn Portion of debt being bought (in terms of base)
+    /// @param totalArt Total debt
+    /// @param totalInk Total collateral
+    /// @param min Minimum amount of collateral acceptable by buyer
+    /// @return inkOut Amount of collateral
+    function _buy(
+        bytes6 ilkId,
+        bytes12 vaultId,
+        uint32 auctionStart,
+        uint256 artIn,
+        uint128 totalArt,
+        uint128 totalInk,
+        uint128 base,
+        bytes6 baseId,
+        uint128 min
+    ) private returns (uint256 inkOut) {
+        //          (      a         )
+        // inkOut = (artIn / totalArt) * totalInk * (p + (1 - p) * t)
+        uint256 a = uint256(artIn).wdivup(totalArt);
+        (uint256 t, uint64 p) = _calculateT(ilkId, auctionStart);
+        inkOut = a.wmul(totalInk).wmulup(uint256(p) + uint256(1e18 - p).wmulup(t));
+
+        require(inkOut >= min, "Not enough bought");
+
+        cauldron.slurp(vaultId, inkOut.u128(), artIn.u128()); // Remove debt and collateral from vault
+        _settle(msg.sender, ilkId, baseId, inkOut.u128(), base); // Move the assets
+
         // Still using the initially read `art` value, not the updated one
-        emit Bought(vaultId, msg.sender, ink, balances_.art);
+        emit Bought(vaultId, msg.sender, inkOut, totalArt);
+    }
+
+    function _calculateT(
+        bytes6 ilkId,
+        uint32 auctionStart
+    ) private returns (uint256 t, uint64 p) {
+        Ilk memory ilk_ = ilks[ilkId];
+        uint32 duration = ilk_.duration;
+        p = ilk_.initialOffer;
+
+        // If the world has not turned to ashes and darkness, auctions will malfunction on
+        // the 7th of February 2106, at 06:28:16 GMT
+        // TODO: Replace this contract before then 😰
+        // UPDATE: Added reminder to Google calendar ✅
+        uint256 elapsed;
+        unchecked {
+            elapsed = uint32(block.timestamp) - auctionStart;
+        }
+        t = elapsed > duration ? 1e18 : elapsed.wdivup(duration);
     }
 
     /// @dev Move base from the buyer to the protocol, and collateral from the protocol to the buyer
