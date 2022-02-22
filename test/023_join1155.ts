@@ -8,7 +8,6 @@ import Join1155Artifact from '../artifacts/contracts/other/notional/Join1155.sol
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
 import ERC1155MockArtifact from '../artifacts/contracts/other/notional/ERC1155Mock.sol/ERC1155Mock.json'
 
-
 import { Join1155 } from '../typechain/Join1155'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { ERC1155Mock } from '../typechain/ERC1155Mock'
@@ -44,7 +43,6 @@ describe('Join1155', function () {
     otherERC20 = (await deployContract(ownerAcc, ERC20MockArtifact, ['', ''])) as ERC20Mock
     otherERC1155 = (await deployContract(ownerAcc, ERC1155MockArtifact)) as ERC1155Mock
     join = (await deployContract(ownerAcc, Join1155Artifact, [token.address, tokenId])) as Join1155
-
 
     await join.grantRoles(
       [

@@ -46,10 +46,7 @@ describe('Oracles - Notional', function () {
     usdc = (await deployContract(ownerAcc, USDCMockArtifact)) as USDCMock
 
     notionalMultiOracle = (await deployContract(ownerAcc, NotionalMultiOracleArtifact, [])) as NotionalMultiOracle
-    await notionalMultiOracle.grantRole(
-      id(notionalMultiOracle.interface, 'setSource(bytes6,bytes6,address)'),
-      owner
-    )
+    await notionalMultiOracle.grantRole(id(notionalMultiOracle.interface, 'setSource(bytes6,bytes6,address)'), owner)
     await notionalMultiOracle.setSource(FDAI, DAI, dai.address)
     await notionalMultiOracle.setSource(USDC, FUSDC, usdc.address)
   })
@@ -73,9 +70,9 @@ describe('Oracles - Notional', function () {
     expect(
       (await notionalMultiOracle.callStatic.get(bytes6ToBytes32(FUSDC), bytes6ToBytes32(USDC), WAD.mul(2500)))[0]
     ).to.equal(oneUSDC.mul(2500))
-    expect((await notionalMultiOracle.callStatic.get(bytes6ToBytes32(DAI), bytes6ToBytes32(FDAI), WAD.mul(2500)))[0]).to.equal(
-      WAD.mul(2500)
-    )
+    expect(
+      (await notionalMultiOracle.callStatic.get(bytes6ToBytes32(DAI), bytes6ToBytes32(FDAI), WAD.mul(2500)))[0]
+    ).to.equal(WAD.mul(2500))
     // expect((await notionalMultiOracle.callStatic.get(bytes6ToBytes32(USDC), bytes6ToBytes32(FUSDC), oneUSDC.mul(2500)))[0]).to.equal(
     //   WAD.mul(2500)
     // )

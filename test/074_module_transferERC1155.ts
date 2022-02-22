@@ -67,13 +67,25 @@ describe('Ladle - module', function () {
   })
 
   it('transfers ERC1155 through the ladle', async () => {
-    const calldata = transferModule.interface.encodeFunctionData('transfer1155', [token.address, tokenId, other, WAD, '0x00'])
+    const calldata = transferModule.interface.encodeFunctionData('transfer1155', [
+      token.address,
+      tokenId,
+      other,
+      WAD,
+      '0x00',
+    ])
     await ladle.moduleCall(transferModule.address, calldata)
     expect(await token.balanceOf(other, tokenId)).to.equal(WAD)
   })
 
   it('attempting to transfer an unregistered token reverts', async () => {
-    const calldata = transferModule.interface.encodeFunctionData('transfer1155', [ladle.address, tokenId, other, WAD, '0x00'])
+    const calldata = transferModule.interface.encodeFunctionData('transfer1155', [
+      ladle.address,
+      tokenId,
+      other,
+      WAD,
+      '0x00',
+    ])
     await expect(ladle.moduleCall(transferModule.address, calldata)).to.be.revertedWith('Unknown token')
   })
 })
