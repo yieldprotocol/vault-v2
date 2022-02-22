@@ -72,10 +72,10 @@ contract NotionalMultiOracle is IOracle, AccessControl {
         int price = 1e18; // We price fCash at face value
         if (source.inverse == true) {
             // fUSDC/USDC: 1 fUSDC (*10^18) * (1^6)/(10^18 fUSDC per USDC) = 10^6 USDC wei
-            amountQuote = amountBase * (10 ** source.quoteDecimals) / uint(price);
+            amountQuote = amountBase * (10 ** source.baseDecimals) / (10 ** source.quoteDecimals);
         } else {
             // USDC/fUSDC: 1 USDC (*10^6) * 10^18 fUSDC per USDC / 10^6 = 10^18 fUSDC wei
-            amountQuote = amountBase * uint(price) / (10 ** source.baseDecimals);
+            amountQuote = amountBase * (10 ** source.quoteDecimals) / (10 ** source.baseDecimals);
         }  
     }
 }
