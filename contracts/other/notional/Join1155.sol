@@ -7,7 +7,7 @@ import "@yield-protocol/utils-v2/contracts/token/MinimalTransferHelper.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
-import "./ERC1155.sol"; // TODO: Use solmate
+import "./ERC1155.sol"; // TODO: Move to yield-utils-v2
 // ERC1155TokenReceiver is in ERC1155.sol
 
 contract Join1155 is IJoin, ERC1155TokenReceiver, AccessControl() {
@@ -99,7 +99,7 @@ contract Join1155 is IJoin, ERC1155TokenReceiver, AccessControl() {
     {
         ERC1155 token = ERC1155(asset);
         storedBalance -= amount;
-        token.safeTransferFrom(address(this), user, amount, id, "");
+        token.safeTransferFrom(address(this), user, id, amount, "");
         return amount;
     }
 
@@ -108,7 +108,7 @@ contract Join1155 is IJoin, ERC1155TokenReceiver, AccessControl() {
         external
         auth
     {
-        require(address(token) != address(asset) && id_ != id, "Use exit for asset");
+        require(address(token) != address(asset) || id_ != id, "Use exit for asset");
         token.safeTransferFrom(address(this), to, id_, token.balanceOf(address(this), id_), "");
     }
 
