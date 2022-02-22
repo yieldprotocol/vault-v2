@@ -14,41 +14,34 @@ import "@yield-protocol/vault-interfaces/IOracle.sol";
 contract NotionalMultiOracle is IOracle, AccessControl {
     using CastBytes32Bytes6 for bytes32;
 
-    event SourceSet(bytes6 indexed baseId, bytes6 indexed quoteId, address source, uint256 id, address underlying);
+    event SourceSet(bytes6 indexed notionalId, bytes6 indexed underlyingId, address underlying);
 
     struct Source {
-        address source;
         uint8 baseDecimals;
         uint8 quoteDecimals;
-        uint256 id;
         bool inverse;
     }
 
     mapping(bytes6 => mapping(bytes6 => Source)) public sources;
 
     /// @dev Set or reset an oracle source and its inverse
-    function setSource(bytes6 baseId, bytes6 quoteId, address source, uint id, IERC20Metadata underlying)
+    function setSource(bytes6 notionalId, bytes6 underlyingId, IERC20Metadata underlying)
         external auth
     {
-        sources[baseId][quoteId] = Source({
-            source: source,
-            id: id;
+        require (notionalId != underlyingId, "Wrong input");
+        sources[notionalId][underlyingId] = Source({
             baseDecimals: 18, // I'm assuming here that fCash has 18 decimals
             quoteDecimals: underlying.decimals(), // Ideally we would get the underlying from fCash
             inverse: false
         });
-        emit SourceSet(baseId, quoteId, source, id, underlying);
+        emit SourceSet(notionalId, underlyingId, address(underlying));
 
-        if (baseId != quoteId) {
-            sources[quoteId][baseId] = Source({
-                source: source,
-                id: id;
-                baseDecimals: underlying.decimals(), // We are reversing the base and the quote
-                quoteDecimals: 18,
-                inverse: true
-            });
-            emit SourceSet(quoteId, baseId, source, id, underlying);
-        }
+        sources[underlyingId][notionalId] = Source({
+            baseDecimals: underlying.decimals(), // We are reversing the base and the quote
+            quoteDecimals: 18,
+            inverse: true
+        });
+        emit SourceSet(underlyingId, notionalId, address(underlying));
     }
 
     /// @dev Convert amountBase base into quote at the latest oracle price.
@@ -75,8 +68,8 @@ contract NotionalMultiOracle is IOracle, AccessControl {
         returns (uint amountQuote, uint updateTime)
     {
         Source memory source = sources[baseId][quoteId];
-        require (source.source != address(0), "Source not found");
-        int price = 1e18;
+        require (source.baseDecimals == 18 || source.quoteDecimals == 18, "Source not found"); // A bit meh as a test of existence
+        int price = 1e18; // We price fCash at face value
         if (source.inverse == true) {
             // fUSDC/USDC: 1 fUSDC (*10^18) * (1^6)/(10^18 fUSDC per USDC) = 10^6 USDC wei
             amountQuote = amountBase * (10 ** source.quoteDecimals) / uint(price);
