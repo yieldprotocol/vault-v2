@@ -1,14 +1,8 @@
 import { constants, id } from '@yield-protocol/utils-v2'
 
-import { sendStatic } from './shared/helpers'
-
-import { Contract } from '@ethersproject/contracts'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-import { Event } from '@ethersproject/contracts/lib/index'
-import { Result } from '@ethersproject/abi'
 
 const { WAD, MAX256 } = constants
-const MAX = MAX256
 
 import Join1155Artifact from '../artifacts/contracts/other/notional/Join1155.sol/Join1155.json'
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'

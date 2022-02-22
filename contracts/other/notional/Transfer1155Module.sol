@@ -15,6 +15,6 @@ contract Transfer1155Module is LadleStorage {
         external payable
     {
         require(tokens[address(token)], "Unknown token");
-        token.safeTransferFrom(msg.sender, receiver, wad, id, data);
+        token.safeTransferFrom(msg.sender, receiver, id, wad, data);
     }
 }
