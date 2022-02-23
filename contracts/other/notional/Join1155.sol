@@ -17,7 +17,7 @@ contract Join1155 is IJoin, ERC1155TokenReceiver, AccessControl() {
     event FlashFeeFactorSet(uint256 indexed fee);
 
     bytes32 constant internal FLASH_LOAN_RETURN = keccak256("ERC3156FlashBorrower.onFlashLoan");
-    uint256 constant FLASH_LOANS_DISABLED = type(uint256).max;
+    uint256 constant public FLASH_LOANS_DISABLED = type(uint256).max;
 
     address public immutable override asset;
     uint256 public immutable id;    // This ERC1155 Join only accepts one id from the ERC1155 token

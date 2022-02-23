@@ -20,7 +20,7 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
     event FlashFeeFactorSet(uint256 indexed fee);
 
     bytes32 constant internal FLASH_LOAN_RETURN = keccak256("ERC3156FlashBorrower.onFlashLoan");
-    uint256 constant FLASH_LOANS_DISABLED = type(uint256).max;
+    uint256 constant public FLASH_LOANS_DISABLED = type(uint256).max;
 
     address public immutable override asset;
     uint256 public storedBalance;
