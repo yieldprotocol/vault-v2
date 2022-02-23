@@ -25,6 +25,10 @@ The asset type for fCash is 1
 
 The maturities are in strict 90 day intervals, with `x = 90 * 86400` as all valid maturities.
 
+Mar 29 2022 = 212 * (86400 * 90) = 1648512000
+Jun 27 2022 = 213 * (86400 * 90) = 1656288000
+Dec 24 2022 = 215 * (86400 * 90) = 1671840000
+
 ## fCash in Yield
 A Join to handle ERC1155 assets is included in this folder. Each Join1155 contract can handle only *one* token type from a given ERC1155 contract, meaning that we will need a Join1155 for fDAI-Jun22, another for fDAI-Sep22, and so on.
 
