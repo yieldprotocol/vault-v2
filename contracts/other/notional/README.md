@@ -29,6 +29,18 @@ Mar 29 2022 = 212 * (86400 * 90) = 1648512000
 Jun 27 2022 = 213 * (86400 * 90) = 1656288000
 Dec 24 2022 = 215 * (86400 * 90) = 1671840000
 
+```
+        currencyId  maturity  assetTypeId
+Format:       FFFF FFFFFFFFFF FF
+```
+
+`fDAI Mar 29 2022  = 2*(16**12)+1648512000*(16**2)+1 = 563371972493313`
+`fDAI Jun 27 2022  = 2*(16**12)+1656288000*(16**2)+1 = 563373963149313`
+`fDAI Dec 24 2022  = 2*(16**12)+1671840000*(16**2)+1 = 563377944461313`
+`fUSDC Mar 29 2022 = 3*(16**12)+1648512000*(16**2)+1 = 844846949203969`
+`fUSDC Jun 27 2022 = 3*(16**12)+1656288000*(16**2)+1 = 844848939859969`
+`fUSDC Dec 24 2022 = 3*(16**12)+1671840000*(16**2)+1 = 844852921171969`
+
 ## fCash in Yield
 A Join to handle ERC1155 assets is included in this folder. Each Join1155 contract can handle only *one* token type from a given ERC1155 contract, meaning that we will need a Join1155 for fDAI-Jun22, another for fDAI-Sep22, and so on.
 
