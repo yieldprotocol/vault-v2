@@ -76,6 +76,7 @@ contract NotionalMultiOracle is IOracle, AccessControl {
         } else {
             // USDC/fUSDC: 1 USDC (*10^6) * 10^18 fUSDC per USDC / 10^6 = 10^18 fUSDC wei
             amountQuote = amountBase * (10 ** source.quoteDecimals) / (10 ** source.baseDecimals);
-        }  
+        }
+        updateTime = block.timestamp;
     }
 }
