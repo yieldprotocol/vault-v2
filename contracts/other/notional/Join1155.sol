@@ -108,20 +108,20 @@ contract Join1155 is IJoin, ERC1155TokenReceiver, AccessControl() {
         return amount;
     }
 
+    /// @dev Retrieve any ERC20 tokens. Useful for airdropped tokens.
+    function retrieve(IERC20 token, address to)
+        external
+        auth
+    {
+        MinimalTransferHelper.safeTransfer(token, to, token.balanceOf(address(this)));
+    }
+
     /// @dev Retrieve any ERC1155 tokens other than the `asset`. Useful for airdropped tokens.
-    function retrieve(ERC1155 token, uint256 id_, address to)
+    function retrieveERC1155(ERC1155 token, uint256 id_, address to)
         external
         auth
     {
         require(address(token) != address(asset) || id_ != id, "Use exit for asset");
         token.safeTransferFrom(address(this), to, id_, token.balanceOf(address(this), id_), "");
-    }
-
-    /// @dev Retrieve any ERC20 tokens. Useful for airdropped tokens.
-    function retrieveERC20(IERC20 token, address to)
-        external
-        auth
-    {
-        MinimalTransferHelper.safeTransfer(token, to, token.balanceOf(address(this)));
     }
 }
