@@ -119,7 +119,9 @@ contract ConvexStakingWrapper is ERC20 {
             address extraToken = IRewardStaking(extraPool).rewardToken();
             if (extraToken == cvx) {
                 //update cvx reward pool address
-                rewards[CVX_INDEX].reward_pool = extraPool;
+                if (rewards[CVX_INDEX].reward_pool == address(0)) {
+                    rewards[CVX_INDEX].reward_pool = extraPool;
+                }
             } else if (registeredRewards[extraToken] == 0) {
                 //add new token to list
                 RewardType storage reward = rewards.push();
