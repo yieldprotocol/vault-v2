@@ -31,8 +31,10 @@ contract Join1155 is IJoin, ERC1155TokenReceiver, AccessControl() {
 
     /// @dev Advertising through ERC165 the available functions
     function supportsInterface(bytes4 interfaceID) external view returns (bool) {
-        return  interfaceID == Join1155.supportsInterface.selector ||    // ERC-165 support (i.e. `bytes4(keccak256('supportsInterface(bytes4)'))`).
-                interfaceID == ERC1155TokenReceiver.onERC1155Received.selector ^ ERC1155TokenReceiver.onERC1155BatchReceived.selector;      // ERC-1155 `ERC1155TokenReceiver` support (i.e. `bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes)")) ^ bytes4(keccak256("onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)"))`).
+        // ERC-165 support = `bytes4(keccak256('supportsInterface(bytes4)'))`.
+        // ERC-1155 `ERC1155TokenReceiver` support = `bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes)")) ^ bytes4(keccak256("onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)"))`.
+        return  interfaceID == Join1155.supportsInterface.selector ||
+                interfaceID == ERC1155TokenReceiver.onERC1155Received.selector ^ ERC1155TokenReceiver.onERC1155BatchReceived.selector;
     }
 
     /// @dev Called by the sender after a transfer to verify it was received. Ensures only `id` tokens are received.
