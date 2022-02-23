@@ -56,8 +56,10 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
         IERC20 token = IERC20(asset);
         uint256 _storedBalance = storedBalance;
         uint256 available = token.balanceOf(address(this)) - _storedBalance; // Fine to panic if this underflows
-        storedBalance = _storedBalance + amount;
-        unchecked { if (available < amount) token.safeTransferFrom(user, address(this), amount - available); }
+        unchecked {
+            storedBalance = _storedBalance + amount;    // Unlikely that a uint128 added to the stored balance will make it overflow
+            if (available < amount) token.safeTransferFrom(user, address(this), amount - available); 
+        }
         return amount;        
     }
 

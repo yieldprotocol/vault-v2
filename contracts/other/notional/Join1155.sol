@@ -80,8 +80,11 @@ contract Join1155 is IJoin, ERC1155TokenReceiver, AccessControl() {
         ERC1155 token = ERC1155(asset);
         uint256 _storedBalance = storedBalance;
         uint256 available = token.balanceOf(address(this), id) - _storedBalance; // Fine to panic if this underflows
-        storedBalance = _storedBalance + amount;
-        unchecked { if (available < amount) token.safeTransferFrom(user, address(this), id, amount - available, ""); }
+        
+        unchecked {
+            storedBalance = _storedBalance + amount;    // Unlikely that a uint128 added to the stored balance will make it overflow
+            if (available < amount) token.safeTransferFrom(user, address(this), id, amount - available, "");
+        }
         return amount;        
     }
 
