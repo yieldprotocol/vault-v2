@@ -11,7 +11,7 @@ Accepting fCash as collateral also eases arbitraging and leverage between Notion
 
 fCash is kept internally in the Notional contracts, but there is a [proxy](https://github.com/notional-finance/contracts-v2/blob/master/contracts/external/actions/ERC1155Action.sol) that allows working with fCash as an ERC1155 token.
 
-The Notional [proxy]([0x1344A36A1B56144C3Bc62E7757377D288fDE0369](https://etherscan.io/address/0x1344A36A1B56144C3Bc62E7757377D288fDE0369)) is deployed on the Ethereum mainnet. It has links to the [ERC1155]([0xffd7531ed937f703b269815950cb75bdaaa341c9](https://etherscan.io/address/0xffd7531ed937f703b269815950cb75bdaaa341c9)) and [Views]([0xde14d5f07456c86f070c108a04ae2fafdbd2a939](https://etherscan.io/address/0xde14d5f07456c86f070c108a04ae2fafdbd2a939)) proxies. Not sure but I think that you call all functions on the main proxy.
+The Notional [proxy]([0x1344A36A1B56144C3Bc62E7757377D288fDE0369](https://etherscan.io/address/0x1344A36A1B56144C3Bc62E7757377D288fDE0369)) is deployed on the Ethereum mainnet. It has links to the [ERC1155]([0xffd7531ed937f703b269815950cb75bdaaa341c9](https://etherscan.io/address/0xffd7531ed937f703b269815950cb75bdaaa341c9)) and [Views]([0xde14d5f07456c86f070c108a04ae2fafdbd2a939](https://etherscan.io/address/0xde14d5f07456c86f070c108a04ae2fafdbd2a939)) proxies. You call all functions on the main proxy.
 
 FCash are kept with 8 decimals in Notional, as it happens for any other monetary amounts.
 
