@@ -79,12 +79,12 @@ describe('Oracles - Notional', function () {
       (await notionalMultiOracle.callStatic.get(bytes6ToBytes32(USDC), bytes6ToBytes32(FUSDC), oneUSDC.mul(2500)))[0]
     ).to.equal(oneFCASH.mul(2500))
 
-    expect((await notionalMultiOracle.peek(bytes6ToBytes32(FDAI), bytes6ToBytes32(DAI), oneFCASH.mul(2500)))[0]).to.equal(
-      WAD.mul(2500)
-    )
-    expect((await notionalMultiOracle.peek(bytes6ToBytes32(FUSDC), bytes6ToBytes32(USDC), oneFCASH.mul(2500)))[0]).to.equal(
-      oneUSDC.mul(2500)
-    )
+    expect(
+      (await notionalMultiOracle.peek(bytes6ToBytes32(FDAI), bytes6ToBytes32(DAI), oneFCASH.mul(2500)))[0]
+    ).to.equal(WAD.mul(2500))
+    expect(
+      (await notionalMultiOracle.peek(bytes6ToBytes32(FUSDC), bytes6ToBytes32(USDC), oneFCASH.mul(2500)))[0]
+    ).to.equal(oneUSDC.mul(2500))
     expect((await notionalMultiOracle.peek(bytes6ToBytes32(DAI), bytes6ToBytes32(FDAI), WAD.mul(2500)))[0]).to.equal(
       oneFCASH.mul(2500)
     )
