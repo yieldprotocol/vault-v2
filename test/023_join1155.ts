@@ -25,7 +25,7 @@ describe('Join1155', function () {
   let other: string
   let join: Join1155
   let token: ERC1155Mock
-  let tokenId: number = 1
+  let tokenId = '1'
   let otherERC20: ERC20Mock
   let otherERC1155: ERC1155Mock
 
