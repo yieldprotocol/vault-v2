@@ -1,4 +1,5 @@
 import { constants, id } from '@yield-protocol/utils-v2'
+import { BigNumber } from 'ethers'
 const { WAD } = constants
 import { DAI, USDC } from '../src/constants'
 
@@ -33,7 +34,8 @@ describe('Oracles - Notional', function () {
   const FDAI = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const FUSDC = ethers.utils.hexlify(ethers.utils.randomBytes(6))
 
-  const oneUSDC = WAD.div(1000000000000)
+  const oneUSDC = BigNumber.from(10).pow(6)
+  const oneFCASH = BigNumber.from(10).pow(8)
 
   before(async () => {
     const signers = await ethers.getSigners()
@@ -48,12 +50,12 @@ describe('Oracles - Notional', function () {
     notionalMultiOracle = (await deployContract(ownerAcc, NotionalMultiOracleArtifact, [])) as NotionalMultiOracle
     await notionalMultiOracle.grantRole(id(notionalMultiOracle.interface, 'setSource(bytes6,bytes6,address)'), owner)
     await notionalMultiOracle.setSource(FDAI, DAI, dai.address)
-    await notionalMultiOracle.setSource(USDC, FUSDC, usdc.address)
+    await notionalMultiOracle.setSource(FUSDC, USDC, usdc.address)
   })
 
   it('revert on unknown sources', async () => {
     await expect(
-      notionalMultiOracle.callStatic.get(bytes6ToBytes32(FDAI), bytes6ToBytes32(USDC), WAD)
+      notionalMultiOracle.callStatic.get(bytes6ToBytes32(FDAI), bytes6ToBytes32(USDC), oneFCASH)
     ).to.be.revertedWith('Source not found')
   })
 
@@ -65,29 +67,29 @@ describe('Oracles - Notional', function () {
 
   it('retrieves the face value from a notional multioracle', async () => {
     expect(
-      (await notionalMultiOracle.callStatic.get(bytes6ToBytes32(FDAI), bytes6ToBytes32(DAI), WAD.mul(2500)))[0]
+      (await notionalMultiOracle.callStatic.get(bytes6ToBytes32(FDAI), bytes6ToBytes32(DAI), oneFCASH.mul(2500)))[0]
     ).to.equal(WAD.mul(2500))
     expect(
-      (await notionalMultiOracle.callStatic.get(bytes6ToBytes32(FUSDC), bytes6ToBytes32(USDC), WAD.mul(2500)))[0]
+      (await notionalMultiOracle.callStatic.get(bytes6ToBytes32(FUSDC), bytes6ToBytes32(USDC), oneFCASH.mul(2500)))[0]
     ).to.equal(oneUSDC.mul(2500))
     expect(
       (await notionalMultiOracle.callStatic.get(bytes6ToBytes32(DAI), bytes6ToBytes32(FDAI), WAD.mul(2500)))[0]
-    ).to.equal(WAD.mul(2500))
+    ).to.equal(oneFCASH.mul(2500))
     expect(
       (await notionalMultiOracle.callStatic.get(bytes6ToBytes32(USDC), bytes6ToBytes32(FUSDC), oneUSDC.mul(2500)))[0]
-    ).to.equal(WAD.mul(2500))
+    ).to.equal(oneFCASH.mul(2500))
 
-    expect((await notionalMultiOracle.peek(bytes6ToBytes32(FDAI), bytes6ToBytes32(DAI), WAD.mul(2500)))[0]).to.equal(
+    expect((await notionalMultiOracle.peek(bytes6ToBytes32(FDAI), bytes6ToBytes32(DAI), oneFCASH.mul(2500)))[0]).to.equal(
       WAD.mul(2500)
     )
-    expect((await notionalMultiOracle.peek(bytes6ToBytes32(FUSDC), bytes6ToBytes32(USDC), WAD.mul(2500)))[0]).to.equal(
+    expect((await notionalMultiOracle.peek(bytes6ToBytes32(FUSDC), bytes6ToBytes32(USDC), oneFCASH.mul(2500)))[0]).to.equal(
       oneUSDC.mul(2500)
     )
     expect((await notionalMultiOracle.peek(bytes6ToBytes32(DAI), bytes6ToBytes32(FDAI), WAD.mul(2500)))[0]).to.equal(
-      WAD.mul(2500)
+      oneFCASH.mul(2500)
     )
     expect(
       (await notionalMultiOracle.peek(bytes6ToBytes32(USDC), bytes6ToBytes32(FUSDC), oneUSDC.mul(2500)))[0]
-    ).to.equal(WAD.mul(2500))
+    ).to.equal(oneFCASH.mul(2500))
   })
 })
