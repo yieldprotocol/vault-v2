@@ -48,8 +48,8 @@ describe('Join1155', function () {
       [
         id(join.interface, 'join(address,uint128)'),
         id(join.interface, 'exit(address,uint128)'),
-        id(join.interface, 'retrieve(address,uint256,address)'),
-        id(join.interface, 'retrieveERC20(address,address)'),
+        id(join.interface, 'retrieve(address,address)'),
+        id(join.interface, 'retrieveERC1155(address,uint256,address)'),
       ],
       owner
     )
@@ -60,14 +60,14 @@ describe('Join1155', function () {
 
   it('retrieves airdropped ERC20 tokens', async () => {
     await otherERC20.mint(join.address, WAD)
-    expect(await join.retrieveERC20(otherERC20.address, other))
+    expect(await join.retrieve(otherERC20.address, other))
       .to.emit(otherERC20, 'Transfer')
       .withArgs(join.address, other, WAD)
   })
 
   it('retrieves airdropped ERC1155 tokens', async () => {
     await otherERC1155.mint(join.address, tokenId, WAD, '0x00')
-    expect(await join.retrieve(otherERC1155.address, tokenId, other))
+    expect(await join.retrieveERC1155(otherERC1155.address, tokenId, other))
       .to.emit(otherERC1155, 'TransferSingle')
       .withArgs(join.address, join.address, other, tokenId, WAD)
   })
