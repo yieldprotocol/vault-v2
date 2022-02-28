@@ -20,7 +20,7 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
     event FlashFeeFactorSet(uint256 indexed fee);
 
     bytes32 constant internal FLASH_LOAN_RETURN = keccak256("ERC3156FlashBorrower.onFlashLoan");
-    uint256 constant FLASH_LOANS_DISABLED = type(uint256).max;
+    uint256 constant public FLASH_LOANS_DISABLED = type(uint256).max;
 
     address public immutable override asset;
     uint256 public storedBalance;
@@ -56,8 +56,10 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
         IERC20 token = IERC20(asset);
         uint256 _storedBalance = storedBalance;
         uint256 available = token.balanceOf(address(this)) - _storedBalance; // Fine to panic if this underflows
-        storedBalance = _storedBalance + amount;
-        unchecked { if (available < amount) token.safeTransferFrom(user, address(this), amount - available); }
+        unchecked {
+            storedBalance = _storedBalance + amount;    // Unlikely that a uint128 added to the stored balance will make it overflow
+            if (available < amount) token.safeTransferFrom(user, address(this), amount - available); 
+        }
         return amount;        
     }
 

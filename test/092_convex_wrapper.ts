@@ -1,4 +1,4 @@
-import { ethers, waffle } from 'hardhat'
+import { ethers, network, waffle } from 'hardhat'
 import { YieldEnvironment } from './shared/fixtures'
 import { constants, id } from '@yield-protocol/utils-v2'
 const { WAD } = constants
@@ -7,7 +7,7 @@ import { ETH, DAI, USDC, CVX3CRV } from '../src/constants'
 import {
   ERC20Mock,
   ConvexModule,
-  ConvexYieldWrapperMock,
+  ConvexYieldWrapper,
   ConvexPoolMock,
   ChainlinkMultiOracle,
   Wand,
@@ -21,9 +21,10 @@ import {
   USDCMock,
   Cauldron,
   FYToken,
+  TokenProxy,
 } from '../typechain'
 
-import ConvexYieldWrapperMockArtifact from '../artifacts/contracts/mocks/ConvexYieldWrapperMock.sol/ConvexYieldWrapperMock.json'
+import ConvexYieldWrapperArtifact from '../artifacts/contracts/utils/convex/ConvexYieldWrapper.sol/ConvexYieldWrapper.json'
 import ChainlinkAggregatorV3MockArtifact from '../artifacts/contracts/mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol/ChainlinkAggregatorV3Mock.json'
 import Cvx3CrvOracleArtifact from '../artifacts/contracts/oracles/convex/Cvx3CrvOracle.sol/Cvx3CrvOracle.json'
 import CurvePoolMockArtifact from '../artifacts/contracts/mocks/oracles/convex/CurvePoolMock.sol/CurvePoolMock.json'
@@ -31,6 +32,7 @@ import CompositeMultiOracleArtifact from '../artifacts/contracts/oracles/composi
 import ConvexLadleModuleArtifact from '../artifacts/contracts/utils/convex/ConvexModule.sol/ConvexModule.json'
 import ConvexPoolMockArtifact from '../artifacts/contracts/mocks/ConvexPoolMock.sol/ConvexPoolMock.json'
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
+import TokenProxyArtifact from '../artifacts/contracts/mocks/TokenProxy.sol/TokenProxy.json'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { parseEther } from '@ethersproject/units'
 import { getLastVaultId } from '../src/helpers'
@@ -59,12 +61,15 @@ describe('Convex Wrapper', async function () {
   let wand: Wand
   let witch: Witch
   let ownerAcc: SignerWithAddress
+  let dummyAcc: SignerWithAddress
   let cauldron: Cauldron
   let convex: ERC20Mock
   let crv: ERC20Mock
   let cvx3CRV: ERC20Mock
-  let convexWrapper: ConvexYieldWrapperMock
+  let convexWrapper: ConvexYieldWrapper
   let convexPool: ConvexPoolMock
+  let curveProxy: TokenProxy
+  let cvxProxy: TokenProxy
 
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const seriesId2 = ethers.utils.hexlify(ethers.utils.randomBytes(6))
@@ -90,12 +95,13 @@ describe('Convex Wrapper', async function () {
   async function fixture() {
     return await YieldEnvironment.setup(ownerAcc, [USDC, DAI, ETH], [seriesId, seriesId2])
   }
+
   before(async () => {
     this.timeout(0)
 
     const signers = await ethers.getSigners()
     ownerAcc = signers[0]
-
+    dummyAcc = signers[1]
     env = await fixture()
     ladle = env.ladle
     wand = env.wand
@@ -116,7 +122,6 @@ describe('Convex Wrapper', async function () {
       'Cvx3Crv Mock',
     ])) as ERC20Mock
     crv = (await deployContract(ownerAcc, ERC20MockArtifact, ['CurveDAO Token Mock', 'CRV'])) as ERC20Mock
-    await convex.mint(ownerAcc.address, parseEther('1000000'))
 
     curvePool = (await deployContract(ownerAcc, CurvePoolMockArtifact)) as unknown as CurvePoolMock
     convexPool = (await deployContract(ownerAcc, ConvexPoolMockArtifact, [
@@ -144,16 +149,19 @@ describe('Convex Wrapper', async function () {
     ])) as ConvexModule
     compositeMultiOracle = (await deployContract(ownerAcc, CompositeMultiOracleArtifact)) as CompositeMultiOracle
     chainlinkMultiOracle = env.oracles.get(ETH) as unknown as ChainlinkMultiOracle
-
-    convexWrapper = (await deployContract(ownerAcc, ConvexYieldWrapperMockArtifact, [
+    curveProxy = (await deployContract(ownerAcc, TokenProxyArtifact, [crv.address])) as TokenProxy
+    cvxProxy = (await deployContract(ownerAcc, TokenProxyArtifact, [convex.address])) as TokenProxy
+    convexWrapper = (await deployContract(ownerAcc, ConvexYieldWrapperArtifact, [
+      crv.address,
       cvx3CRV.address,
       convexPool.address,
       0,
       '0x0000000000000000000000000000000000000000',
       cauldron.address,
-      crv.address,
-      convex.address,
-    ])) as unknown as ConvexYieldWrapperMock
+      'stk',
+      'wCVX3CRV',
+      18,
+    ])) as unknown as ConvexYieldWrapper
 
     await usdcEthAggregator.set('230171858101077')
     await daiEthAggregator.set('230213930000000')
@@ -174,6 +182,7 @@ describe('Convex Wrapper', async function () {
     await cauldron.grantRoles([id(cauldron.interface, 'addIlks(bytes6,bytes6[])')], ownerAcc.address)
     await ladle.grantRoles([id(ladle.ladle.interface, 'addIntegration(address,bool)')], ownerAcc.address)
     await ladle.grantRoles([id(ladle.ladle.interface, 'addModule(address,bool)')], ownerAcc.address)
+    await convexWrapper.grantRoles([id(convexWrapper.interface, 'point(address)')], ownerAcc.address)
     await cvx3CrvOracle.grantRole(
       id(cvx3CrvOracle.interface, 'setSource(bytes32,bytes32,address,address,address,address)'),
       ownerAcc.address
@@ -198,6 +207,13 @@ describe('Convex Wrapper', async function () {
     await compositeMultiOracle.setPath(DAI, CVX3CRV, [ETH])
     await compositeMultiOracle.setPath(USDC, CVX3CRV, [ETH])
 
+    // Setting the mainnet crv to mock CRV
+    const crv_proxy_code = await ethers.provider.getCode(curveProxy.address)
+    expect(await network.provider.send('hardhat_setCode', [await convexWrapper.crv(), crv_proxy_code])).to.be.true
+    // Setting the mainnet cvx to mock CVX
+    const cvx_proxy_code = await ethers.provider.getCode(cvxProxy.address)
+    expect(await network.provider.send('hardhat_setCode', [await convexWrapper.cvx(), cvx_proxy_code])).to.be.true
+
     // Add integrations
     await ladle.ladle.addIntegration(convexWrapper.address, true)
 
@@ -211,9 +227,13 @@ describe('Convex Wrapper', async function () {
 
     await ladle.ladle.addToken(cvx3CRV.address, true)
 
-    await cvx3CRV.mint(ownerAcc.address, ethers.utils.parseEther('100000'))
-    await crv.mint(convexPool.address, ethers.utils.parseEther('100000'))
-    await convex.mint(convexPool.address, ethers.utils.parseEther('100000'))
+    await cvx3CRV.mint(ownerAcc.address, ethers.utils.parseEther('10'))
+    await crv.mint(convexPool.address, ethers.utils.parseEther('10'))
+    await convex.mint(convexPool.address, ethers.utils.parseEther('10'))
+
+    //Minting tokens to the proxy
+    await crv.mint(await convexWrapper.crv(), ethers.utils.parseEther('10'))
+    await convex.mint(await convexWrapper.cvx(), ethers.utils.parseEther('10'))
   })
 
   it('Borrow USDC with CVX3CRV collateral', async () => {
@@ -230,6 +250,7 @@ describe('Convex Wrapper', async function () {
       ladle.buildAction(seriesId, CVX3CRV),
       ladle.moduleCallAction(convexLadleModule.address, addVaultCall),
     ])
+    var cvx3CrvBefore = (await cvx3CRV.balanceOf(ownerAcc.address)).toString()
 
     var vaultId = await getLastVaultId(cauldron)
 
@@ -248,7 +269,7 @@ describe('Convex Wrapper', async function () {
 
     // Transfer the amount to join before pouring
     await cvx3CRV.approve(ladle.address, posted)
-    const wrapCall = convexWrapper.interface.encodeFunctionData('wrap', [join, ownerAcc.address])
+    const wrapCall = convexWrapper.interface.encodeFunctionData('wrap', [ownerAcc.address])
 
     await ladle.batch([
       ladle.transferAction(cvx3CRV.address, convexWrapper.address, posted),
@@ -258,6 +279,54 @@ describe('Convex Wrapper', async function () {
 
     expect(await convexWrapper.balanceOf(join)).to.eq(posted)
     expect(await fyToken.balanceOf(ownerAcc.address)).to.eq(borrowed)
+
+    if ((await cauldron.balances(vaultId)).art.toString() !== borrowed.toString()) throw 'art mismatch'
+    if ((await cauldron.balances(vaultId)).ink.toString() !== posted.toString()) throw 'ink mismatch'
+
+    console.log('Borrowed Successfully')
+    var crvBefore = await crv.balanceOf(ownerAcc.address)
+    var cvxBefore = await convex.balanceOf(ownerAcc.address)
+    // Claim CVX & CRV reward
+    console.log('Claiming Reward')
+    await convexWrapper.getReward(ownerAcc.address)
+    var crvAfter = await crv.balanceOf(ownerAcc.address)
+    var cvxAfter = await convex.balanceOf(ownerAcc.address)
+    console.log('User Total Crv ' + crvAfter.toString())
+    console.log('Earned Crv ' + crvAfter.sub(crvBefore).toString())
+    console.log('User Total cvx ' + cvxAfter.toString())
+    console.log('Earned cvx ' + cvxAfter.sub(cvxBefore).toString())
+    if (crvBefore.gt(crvAfter)) throw 'Reward claim failed'
+    if (cvxBefore.gt(cvxAfter)) throw 'Reward claim failed'
+
+    // Repay fyDai and withdraw cvx3Crv
+    await fyToken.transfer(fyToken.address, borrowed)
+
+    var unwrapCall = convexWrapper.interface.encodeFunctionData('unwrap', [ownerAcc.address])
+    var preUnwrapCall = convexWrapper.interface.encodeFunctionData('user_checkpoint', [ownerAcc.address])
+
+    await ladle.batch([
+      ladle.routeAction(convexWrapper.address, preUnwrapCall),
+      ladle.pourAction(vaultId, convexWrapper.address, posted.mul(-1), borrowed.mul(-1)),
+      ladle.routeAction(convexWrapper.address, unwrapCall),
+    ])
+
+    console.log(`repaid and withdrawn`)
+    const cvx3CrvAfter = (await cvx3CRV.balanceOf(ownerAcc.address)).toString()
+    console.log(`${cvx3CrvAfter} cvx3Crv after`)
+    if (cvx3CrvAfter !== cvx3CrvBefore) throw 'cvx3Crv balance mismatch'
+    console.log('Claiming leftover rewards')
+    // Claim leftover rewards
+    crvBefore = await crv.balanceOf(ownerAcc.address)
+    cvxBefore = await convex.balanceOf(ownerAcc.address)
+    await convexWrapper.getReward(ownerAcc.address)
+    crvAfter = await crv.balanceOf(ownerAcc.address)
+    cvxAfter = await convex.balanceOf(ownerAcc.address)
+    console.log('User Earned Crv ' + crvAfter.sub(crvBefore).toString())
+    console.log('Total User Crv ' + crvAfter.toString())
+    console.log('User Earned cvx ' + cvxAfter.sub(cvxBefore).toString())
+    console.log('Total User cvx ' + cvxAfter.toString())
+    if (crvBefore.gt(crvAfter)) throw 'Reward claim failed'
+    if (cvxBefore.gt(cvxAfter)) throw 'Reward claim failed'
   })
 
   it('Borrow DAI with CVX3CRV collateral', async () => {
@@ -275,7 +344,7 @@ describe('Convex Wrapper', async function () {
       ladle.moduleCallAction(convexLadleModule.address, addVaultCall),
     ])
     var vaultId = await getLastVaultId(cauldron)
-
+    var cvx3CrvBefore = (await cvx3CRV.balanceOf(ownerAcc.address)).toString()
     expect(await convexWrapper.vaults(ownerAcc.address, [1])).to.eq(vaultId)
 
     const dust = (await cauldron.debt(DAI, CVX3CRV)).min
@@ -292,7 +361,7 @@ describe('Convex Wrapper', async function () {
       .div(100)
     // Transfer the amount to join before pouring
     await cvx3CRV.approve(ladle.address, posted)
-    const wrapCall = convexWrapper.interface.encodeFunctionData('wrap', [join, ownerAcc.address])
+    const wrapCall = convexWrapper.interface.encodeFunctionData('wrap', [ownerAcc.address])
     var beforeJoinBalance = await convexWrapper.balanceOf(join)
     var beforeFyTokenBalance = await fyToken.balanceOf(ownerAcc.address)
     await ladle.batch([
@@ -303,6 +372,54 @@ describe('Convex Wrapper', async function () {
 
     expect(await convexWrapper.balanceOf(join)).to.eq(posted.add(beforeJoinBalance))
     expect(await fyToken.balanceOf(ownerAcc.address)).to.eq(borrowed.add(beforeFyTokenBalance))
+
+    if ((await cauldron.balances(vaultId)).art.toString() !== borrowed.toString()) throw 'art mismatch'
+    if ((await cauldron.balances(vaultId)).ink.toString() !== posted.toString()) throw 'ink mismatch'
+
+    console.log('Borrowed Successfully')
+    var crvBefore = await crv.balanceOf(ownerAcc.address)
+    var cvxBefore = await convex.balanceOf(ownerAcc.address)
+    // Claim CVX & CRV reward
+    console.log('Claiming Reward')
+    await convexWrapper.getReward(ownerAcc.address)
+    var crvAfter = await crv.balanceOf(ownerAcc.address)
+    var cvxAfter = await convex.balanceOf(ownerAcc.address)
+    console.log('User Total Crv ' + crvAfter.toString())
+    console.log('User Earned Crv ' + crvAfter.sub(crvBefore).toString())
+    console.log('User Total cvx ' + cvxAfter.toString())
+    console.log('Earned cvx ' + cvxAfter.sub(cvxBefore).toString())
+    if (crvBefore.gt(crvAfter)) throw 'Reward claim failed'
+    if (cvxBefore.gt(cvxAfter)) throw 'Reward claim failed'
+
+    // Repay fyDai and withdraw cvx3Crv
+    await fyToken.transfer(fyToken.address, borrowed)
+
+    var unwrapCall = convexWrapper.interface.encodeFunctionData('unwrap', [ownerAcc.address])
+    var preUnwrapCall = convexWrapper.interface.encodeFunctionData('user_checkpoint', [ownerAcc.address])
+
+    await ladle.batch([
+      ladle.routeAction(convexWrapper.address, preUnwrapCall),
+      ladle.pourAction(vaultId, convexWrapper.address, posted.mul(-1), borrowed.mul(-1)),
+      ladle.routeAction(convexWrapper.address, unwrapCall),
+    ])
+
+    console.log(`repaid and withdrawn`)
+    const cvx3CrvAfter = (await cvx3CRV.balanceOf(ownerAcc.address)).toString()
+    console.log(`${cvx3CrvAfter} cvx3Crv after`)
+    if (cvx3CrvAfter !== cvx3CrvBefore) throw 'cvx3Crv balance mismatch'
+    console.log('Claiming leftover rewards')
+    // Claim leftover rewards
+    crvBefore = await crv.balanceOf(ownerAcc.address)
+    cvxBefore = await convex.balanceOf(ownerAcc.address)
+    await convexWrapper.getReward(ownerAcc.address)
+    crvAfter = await crv.balanceOf(ownerAcc.address)
+    cvxAfter = await convex.balanceOf(ownerAcc.address)
+    console.log('User Earned Crv ' + crvAfter.sub(crvBefore).toString())
+    console.log('Total User Crv ' + crvAfter.toString())
+    console.log('User Earned cvx ' + cvxAfter.sub(cvxBefore).toString())
+    console.log('Total User cvx ' + cvxAfter.toString())
+    if (crvBefore.gt(crvAfter)) throw 'Reward claim failed'
+    if (cvxBefore.gt(cvxAfter)) throw 'Reward claim failed'
   })
 
   it('Adding a vault for a different collateral fails', async () => {
@@ -315,7 +432,7 @@ describe('Convex Wrapper', async function () {
     ).to.be.revertedWith('Vault is for different ilk')
   })
 
-  it('Remove vault in the same call', async () => {
+  it('Remove vault in different call', async () => {
     await wand.makeIlk(DAI, CVX3CRV, compositeMultiOracle.address, 1000000, 1000000, 1, 18)
     await cauldron.addIlks(seriesId, [CVX3CRV])
 
@@ -325,22 +442,25 @@ describe('Convex Wrapper', async function () {
       '0x000000000000000000000000',
     ])
 
-    const removeVaultCall = convexLadleModule.interface.encodeFunctionData('removeVault', [
-      convexWrapper.address,
-      '0x000000000000000000000000',
-      ownerAcc.address,
-    ])
-
     await ladle.batch([
       ladle.buildAction(seriesId, CVX3CRV),
       ladle.moduleCallAction(convexLadleModule.address, addVaultCall),
-      ladle.moduleCallAction(convexLadleModule.address, removeVaultCall),
     ])
 
+    await cauldron.give(await getLastVaultId(cauldron), dummyAcc.address)
+
+    const removeVaultCall = convexLadleModule.interface.encodeFunctionData('removeVault', [
+      convexWrapper.address,
+      await getLastVaultId(cauldron),
+      ownerAcc.address,
+    ])
+
+    expect(await convexWrapper.vaults(ownerAcc.address, [2])).to.be.eq(await getLastVaultId(cauldron))
+    await ladle.batch([ladle.moduleCallAction(convexLadleModule.address, removeVaultCall)])
     await expect(convexWrapper.vaults(ownerAcc.address, [2])).to.be.revertedWith('')
   })
 
-  it('Remove vault in different call', async () => {
+  it('Vault belonging to a user cant be removed', async () => {
     await wand.makeIlk(DAI, CVX3CRV, compositeMultiOracle.address, 1000000, 1000000, 1, 18)
     await cauldron.addIlks(seriesId, [CVX3CRV])
 
@@ -362,7 +482,8 @@ describe('Convex Wrapper', async function () {
     ])
 
     expect(await convexWrapper.vaults(ownerAcc.address, [2])).to.be.eq(await getLastVaultId(cauldron))
-    await ladle.batch([ladle.moduleCallAction(convexLadleModule.address, removeVaultCall)])
-    await expect(convexWrapper.vaults(ownerAcc.address, [2])).to.be.revertedWith('')
+    await expect(ladle.batch([ladle.moduleCallAction(convexLadleModule.address, removeVaultCall)])).to.be.revertedWith(
+      'Vault belongs to account'
+    )
   })
 })
