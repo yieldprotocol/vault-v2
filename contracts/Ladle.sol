@@ -273,7 +273,7 @@ contract Ladle is LadleStorage, AccessControl() {
 
     /// @dev Create a new vault, linked to a series (and therefore underlying) and a collateral
     function build(bytes6 seriesId, bytes6 ilkId, uint8 salt)
-        external payable
+        external virtual payable
         returns(bytes12, DataTypes.Vault memory)
     {
         return _build(seriesId, ilkId, salt);
@@ -281,7 +281,7 @@ contract Ladle is LadleStorage, AccessControl() {
 
     /// @dev Create a new vault, linked to a series (and therefore underlying) and a collateral
     function _build(bytes6 seriesId, bytes6 ilkId, uint8 salt)
-        private
+        internal
         returns(bytes12 vaultId, DataTypes.Vault memory vault)
     {
         vaultId = _generateVaultId(salt);

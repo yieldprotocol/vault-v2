@@ -362,6 +362,7 @@ contract Cauldron is AccessControl(), Constants {
     /// To be used by debt management contracts.
     function pour(bytes12 vaultId, int128 ink, int128 art)
         external
+        virtual
         auth
         returns (DataTypes.Balances memory)
     {
