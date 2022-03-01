@@ -3,32 +3,17 @@
 pragma solidity 0.8.6;
 
 import "@yield-protocol/vault-interfaces/ICauldron.sol";
-import "@yield-protocol/vault-interfaces/IJoin.sol";
-import "erc3156/contracts/interfaces/IERC3156FlashLender.sol";
 import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
 import "./interfaces/IRewardStaking.sol";
 import "./CvxMining.sol";
+import "../../Join.sol";
 
 /// @notice Wrapper used to manage staking of Convex tokens
-contract ConvexJoin is ERC20, IJoin, IERC3156FlashLender, AccessControl {
+contract ConvexJoinOld is ERC20, Join {
     using CastU256U128 for uint256;
-    using TransferHelper for IERC20;
-    using WMul for uint256;
-    using CastU256U128 for uint256;
-
-    event FlashFeeFactorSet(uint256 indexed fee);
-
-    bytes32 internal constant FLASH_LOAN_RETURN = keccak256("ERC3156FlashBorrower.onFlashLoan");
-    uint256 public constant FLASH_LOANS_DISABLED = type(uint256).max;
-
-    address public immutable override asset;
-    uint256 public storedBalance;
-    uint256 public flashFeeFactor = FLASH_LOANS_DISABLED;
 
     struct EarnedData {
         address token;
@@ -91,13 +76,13 @@ contract ConvexJoin is ERC20, IJoin, IERC3156FlashLender, AccessControl {
         string memory name,
         string memory symbol,
         uint8 decimals
-    ) ERC20(name, symbol, decimals) {
+    ) ERC20(name, symbol, decimals) Join(_convexToken) {
         curveToken = _curveToken;
         convexToken = _convexToken;
         convexPool = _convexPool;
         convexPoolId = _poolId;
         cauldron = _cauldron;
-        asset = _convexToken;
+
         //add rewards
         addRewards();
         setApprovals();
@@ -223,6 +208,34 @@ contract ConvexJoin is ERC20, IJoin, IERC3156FlashLender, AccessControl {
         }
     }
 
+    /// ------ JOIN and EXIT ------
+    // The following code is commented as the join & exit function can't be overriden
+    // /// @dev Take convex LP token and credit it to the `user` address.
+    // function join(address user, uint128 amount) external override auth returns (uint128) {
+    //     require(amount > 0, "No convex token to wrap");
+
+    //     _checkpoint(user, false);
+    //     managed_assets += amount;
+
+    //     _join(user, amount);
+    //     IRewardStaking(convexPool).stake(amount);
+    //     emit Deposited(msg.sender, user, amount, false);
+
+    //     return amount;
+    // }
+
+    // /// @dev Debit convex LP tokens held by this contract and send them to the `user` address.
+    // function exit(address user, uint128 amount) external override auth returns (uint128) {
+    //     _checkpoint(user, false);
+    //     managed_assets -= amount;
+
+    //     IRewardStaking(convexPool).withdraw(amount, false);
+    //     _exit(user, amount);
+    //     emit Withdrawn(user, amount, false);
+
+    //     return amount;
+    // }
+
     /// ------ REWARDS MATH ------
 
     /// @notice Calculates & upgrades the integral for distributing the reward token
@@ -247,10 +260,8 @@ contract ConvexJoin is ERC20, IJoin, IERC3156FlashLender, AccessControl {
         //getReward is unguarded so we use reward_remaining to keep track of how much was actually claimed
         uint256 bal = IERC20(reward.reward_token).balanceOf(address(this));
         if (_supply > 0 && (bal - rewardRemaining) > 0) {
-            unchecked {
-                rewardIntegral = rewardIntegral + ((bal - rewardRemaining) * 1e20) / _supply;
-                reward.reward_integral = rewardIntegral.u128();
-            }
+            rewardIntegral = uint128(rewardIntegral) + uint128(((bal - rewardRemaining) * 1e20) / _supply);
+            reward.reward_integral = uint128(rewardIntegral);
         }
 
         //do not give rewards to this contract
@@ -260,18 +271,18 @@ contract ConvexJoin is ERC20, IJoin, IERC3156FlashLender, AccessControl {
             if (_isClaim || userI < rewardIntegral) {
                 if (_isClaim) {
                     uint256 receiveable = reward.claimable_reward[_account] +
-                        ((_balance * (rewardIntegral - userI)) / 1e20);
+                        ((_balance * (uint256(rewardIntegral) - userI)) / 1e20);
                     if (receiveable > 0) {
                         reward.claimable_reward[_account] = 0;
+                        TransferHelper.safeTransfer(IERC20(reward.reward_token), _account, receiveable);
                         unchecked {
                             bal -= receiveable;
                         }
-                        IERC20(reward.reward_token).safeTransfer(_account, receiveable);
                     }
                 } else {
                     reward.claimable_reward[_account] =
                         reward.claimable_reward[_account] +
-                        ((_balance * (rewardIntegral - userI)) / 1e20);
+                        ((_balance * (uint256(rewardIntegral) - userI)) / 1e20);
                 }
                 reward.reward_integral_for[_account] = rewardIntegral;
             }
@@ -279,7 +290,7 @@ contract ConvexJoin is ERC20, IJoin, IERC3156FlashLender, AccessControl {
 
         //update remaining reward here since balance could have changed if claiming
         if (bal != rewardRemaining) {
-            reward.reward_remaining = bal.u128();
+            reward.reward_remaining = uint128(bal);
         }
     }
 
@@ -290,7 +301,7 @@ contract ConvexJoin is ERC20, IJoin, IERC3156FlashLender, AccessControl {
     function _checkpoint(address _account, bool claim) internal {
         uint256 supply = managed_assets;
         uint256 depositedBalance;
-        depositedBalance = aggregatedAssetsOf(_account);
+        depositedBalance = aggregatedAssetsOf(_account); //only do first slot
 
         IRewardStaking(convexPool).getReward(address(this), true);
 
@@ -319,23 +330,17 @@ contract ConvexJoin is ERC20, IJoin, IERC3156FlashLender, AccessControl {
     /// @return claimable Array of earned tokens and their amount
     function earned(address _account) external view returns (EarnedData[] memory claimable) {
         uint256 supply = managed_assets;
-        // uint256 depositedBalance = _getDepositedBalance(_account);
         uint256 rewardCount = rewards.length;
-        claimable = new EarnedData[](rewardCount);
+        claimable = new EarnedData[](rewardCount + 1);
 
-        for (uint256 i; i < rewardCount; ++i) {
+        RewardType storage cvx_reward = rewards[0];
+
+        for (uint256 i = 1; i < rewardCount; ++i) {
             RewardType storage reward = rewards[i];
-
-            if (reward.reward_pool == address(0)) {
-                //cvx reward may not have a reward pool yet
-                //so just add whats already been checkpointed
-                claimable[i].amount += reward.claimable_reward[_account];
-                claimable[i].token = reward.reward_token;
-                continue;
-            }
+            address rewardToken = reward.reward_token;
 
             //change in reward is current balance - remaining reward + earned
-            uint256 bal = IERC20(reward.reward_token).balanceOf(address(this));
+            uint256 bal = IERC20(rewardToken).balanceOf(address(this));
             uint256 d_reward = bal - reward.reward_remaining;
             d_reward = d_reward + IRewardStaking(reward.reward_pool).earned(address(this));
 
@@ -344,140 +349,18 @@ contract ConvexJoin is ERC20, IJoin, IERC3156FlashLender, AccessControl {
                 I = I + (d_reward * 1e20) / supply;
             }
 
-            uint256 newlyClaimable = (aggregatedAssetsOf(_account) * (I - (reward.reward_integral_for[_account]))) /
-                (1e20);
-            claimable[i].amount += reward.claimable_reward[_account] + newlyClaimable;
-            claimable[i].token = reward.reward_token;
+            uint256 newlyClaimable = (aggregatedAssetsOf(_account) * (I - reward.reward_integral_for[_account])) / 1e20;
+            claimable[i].amount = reward.claimable_reward[_account] + newlyClaimable;
+            claimable[i].token = rewardToken;
 
-            //calc cvx minted from crv and add to cvx claimables
-            //note: crv is always index 0 so will always run before cvx
-            if (i == CRV_INDEX) {
-                //because someone can call claim for the pool outside of checkpoints, need to recalculate crv without the local balance
-                I = reward.reward_integral;
-                if (supply > 0) {
-                    I = I + (IRewardStaking(reward.reward_pool).earned(address(this)) * 1e20) / supply;
-                }
-                newlyClaimable = (aggregatedAssetsOf(_account) * (I - reward.reward_integral_for[_account])) / 1e20;
-                claimable[CVX_INDEX].amount = CvxMining.ConvertCrvToCvx(newlyClaimable);
-                claimable[CVX_INDEX].token = cvx;
+            //calc cvx here
+            if (rewardToken == crv) {
+                claimable[rewardCount].amount =
+                    cvx_reward.claimable_reward[_account] +
+                    CvxMining.ConvertCrvToCvx(newlyClaimable);
+                claimable[rewardCount].token = cvx;
             }
         }
-    }
-
-    /// ------ JOIN ------
-
-    /// @dev Set the flash loan fee factor
-    function setFlashFeeFactor(uint256 flashFeeFactor_) external auth {
-        flashFeeFactor = flashFeeFactor_;
-        emit FlashFeeFactorSet(flashFeeFactor_);
-    }
-
-    /// @dev Take convex LP token and credit it to the `user` address.
-    function join(address user, uint128 amount) external override auth returns (uint128) {
-        require(amount > 0, "No convex token to wrap");
-
-        _checkpoint(user, false);
-        managed_assets += amount;
-
-        _join(user, amount);
-        IRewardStaking(convexPool).stake(amount);
-        emit Deposited(msg.sender, user, amount, false);
-
-        return amount;
-    }
-
-    /// @dev Take `amount` `asset` from `user` using `transferFrom`, minus any unaccounted `asset` in this contract.
-    function _join(address user, uint128 amount) internal returns (uint128) {
-        IERC20 token = IERC20(asset);
-        uint256 _storedBalance = storedBalance;
-        uint256 available = token.balanceOf(address(this)) - _storedBalance; // Fine to panic if this underflows
-        unchecked {
-            storedBalance = _storedBalance + amount; // Unlikely that a uint128 added to the stored balance will make it overflow
-            if (available < amount) token.safeTransferFrom(user, address(this), amount - available);
-        }
-        return amount;
-    }
-
-    /// @dev Debit convex LP tokens held by this contract and send them to the `user` address.
-    function exit(address user, uint128 amount) external override auth returns (uint128) {
-        _checkpoint(user, false);
-        managed_assets -= amount;
-
-        IRewardStaking(convexPool).withdraw(amount, false);
-        _exit(user, amount);
-        emit Withdrawn(user, amount, false);
-
-        return amount;
-    }
-
-    /// @dev Transfer `amount` `asset` to `user`
-    function _exit(address user, uint128 amount) internal returns (uint128) {
-        IERC20 token = IERC20(asset);
-        storedBalance -= amount;
-        token.safeTransfer(user, amount);
-        return amount;
-    }
-
-    /// @dev Retrieve any tokens other than the `asset`. Useful for airdropped tokens.
-    function retrieve(IERC20 token, address to) external auth {
-        require(address(token) != address(asset), "Use exit for asset");
-        token.safeTransfer(to, token.balanceOf(address(this)));
-    }
-
-    /**
-     * @dev From ERC-3156. The amount of currency available to be lended.
-     * @param token The loan currency. It must be a FYDai contract.
-     * @return The amount of `token` that can be borrowed.
-     */
-    function maxFlashLoan(address token) external view override returns (uint256) {
-        return token == asset ? storedBalance : 0;
-    }
-
-    /**
-     * @dev From ERC-3156. The fee to be charged for a given loan.
-     * @param token The loan currency. It must be the asset.
-     * @param amount The amount of tokens lent.
-     * @return The amount of `token` to be charged for the loan, on top of the returned principal.
-     */
-    function flashFee(address token, uint256 amount) external view override returns (uint256) {
-        require(token == asset, "Unsupported currency");
-        return _flashFee(amount);
-    }
-
-    /**
-     * @dev The fee to be charged for a given loan.
-     * @param amount The amount of tokens lent.
-     * @return The amount of `token` to be charged for the loan, on top of the returned principal.
-     */
-    function _flashFee(uint256 amount) internal view returns (uint256) {
-        return amount.wmul(flashFeeFactor);
-    }
-
-    /**
-     * @dev From ERC-3156. Loan `amount` `asset` to `receiver`, which needs to return them plus fee to this contract within the same transaction.
-     * If the principal + fee are transferred to this contract, they won't be pulled from the receiver.
-     * @param receiver The contract receiving the tokens, needs to implement the `onFlashLoan(address user, uint256 amount, uint256 fee, bytes calldata)` interface.
-     * @param token The loan currency. Must be a fyDai contract.
-     * @param amount The amount of tokens lent.
-     * @param data A data parameter to be passed on to the `receiver` for any custom use.
-     */
-    function flashLoan(
-        IERC3156FlashBorrower receiver,
-        address token,
-        uint256 amount,
-        bytes memory data
-    ) external override returns (bool) {
-        require(token == asset, "Unsupported currency");
-        uint128 _amount = amount.u128();
-        uint128 _fee = _flashFee(amount).u128();
-        _exit(address(receiver), _amount);
-
-        require(
-            receiver.onFlashLoan(msg.sender, token, _amount, _fee, data) == FLASH_LOAN_RETURN,
-            "Non-compliant borrower"
-        );
-
-        _join(address(receiver), _amount + _fee);
-        return true;
+        return claimable;
     }
 }
