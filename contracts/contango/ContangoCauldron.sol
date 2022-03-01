@@ -30,6 +30,15 @@ contract ContangoCauldron is Cauldron {
         commonCcy = _commonCurrency;
     }
 
+    function setParams(
+        uint128 _collateralisationRatio,
+        bytes6 _commonCurrency,
+        uint8 _commonCcyDecimals
+    ) external auth {
+        collateralisationRatio = _collateralisationRatio * uint128(10**(18 - _commonCcyDecimals));
+        commonCcy = _commonCurrency;
+    }
+
     function pour(
         bytes12 vaultId,
         int128 ink,
@@ -67,10 +76,7 @@ contract ContangoCauldron is Cauldron {
     }
 
     function getFreeCollateralUSD() public returns (int256) {
-        (uint128 _collateralisationRatio, bytes6 _commonCurrency) = (
-            collateralisationRatio,
-            commonCcy
-        );
+        (uint128 _collateralisationRatio, bytes6 _commonCurrency) = (collateralisationRatio, commonCcy);
 
         uint256 totalInk;
         uint256 totalArt;
