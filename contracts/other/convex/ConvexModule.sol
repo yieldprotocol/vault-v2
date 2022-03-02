@@ -2,11 +2,11 @@
 pragma solidity 0.8.6;
 import "@yield-protocol/vault-interfaces/ICauldron.sol";
 import "./interfaces/IConvexYieldWrapper.sol";
-import "../../LadleStorage.sol";
+import "../../Ladle.sol";
 
 /// @title Convex Ladle Module to handle vault addition
-contract ConvexModule is LadleStorage {
-    constructor(ICauldron cauldron_, IWETH9 weth_) LadleStorage(cauldron_, weth_) {}
+contract ConvexModule is Ladle {
+    constructor(ICauldron cauldron_, IWETH9 weth_) Ladle(cauldron_, weth_) {}
 
     /// @notice Adds a vault to the user's vault list in the convex wrapper
     /// @param convexStakingWrapper The address of the convex wrapper to which the vault will be added

@@ -41,7 +41,7 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
 
     /// @dev Take `amount` `asset` from `user` using `transferFrom`, minus any unaccounted `asset` in this contract.
     function join(address user, uint128 amount)
-        external override
+        external virtual override
         auth
         returns (uint128)
     {
@@ -65,7 +65,7 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl() {
 
     /// @dev Transfer `amount` `asset` to `user`
     function exit(address user, uint128 amount)
-        external override
+        external virtual override
         auth
         returns (uint128)
     {
