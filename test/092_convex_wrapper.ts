@@ -24,12 +24,12 @@ import {
   TokenProxy,
 } from '../typechain'
 
-import ConvexYieldWrapperArtifact from '../artifacts/contracts/utils/convex/ConvexYieldWrapper.sol/ConvexYieldWrapper.json'
+import ConvexYieldWrapperArtifact from '../artifacts/contracts/other/convex/ConvexYieldWrapper.sol/ConvexYieldWrapper.json'
 import ChainlinkAggregatorV3MockArtifact from '../artifacts/contracts/mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol/ChainlinkAggregatorV3Mock.json'
 import Cvx3CrvOracleArtifact from '../artifacts/contracts/oracles/convex/Cvx3CrvOracle.sol/Cvx3CrvOracle.json'
 import CurvePoolMockArtifact from '../artifacts/contracts/mocks/oracles/convex/CurvePoolMock.sol/CurvePoolMock.json'
 import CompositeMultiOracleArtifact from '../artifacts/contracts/oracles/composite/CompositeMultiOracle.sol/CompositeMultiOracle.json'
-import ConvexLadleModuleArtifact from '../artifacts/contracts/utils/convex/ConvexModule.sol/ConvexModule.json'
+import ConvexLadleModuleArtifact from '../artifacts/contracts/other/convex/ConvexModule.sol/ConvexModule.json'
 import ConvexPoolMockArtifact from '../artifacts/contracts/mocks/ConvexPoolMock.sol/ConvexPoolMock.json'
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
 import TokenProxyArtifact from '../artifacts/contracts/mocks/TokenProxy.sol/TokenProxy.json'
