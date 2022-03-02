@@ -18,24 +18,19 @@ contract ContangoCauldron is Cauldron {
     mapping(bytes6 => DataTypes.Balances) public balancesPerAsset;
     int256 public peekFreeCollateralUSD;
 
-    uint128 public collateralisationRatio;
+    uint128 public collateralisationRatio; // Must be on commonCcy precision
     bytes6 public commonCcy; // Currency to use as common ground for all the ink & art
 
-    constructor(
-        uint128 _collateralisationRatio,
-        bytes6 _commonCurrency,
-        uint8 _commonCcyDecimals
-    ) {
-        collateralisationRatio = _collateralisationRatio * uint128(10**(18 - _commonCcyDecimals));
+    constructor(uint128 _collateralisationRatio, bytes6 _commonCurrency) {
+        collateralisationRatio = _collateralisationRatio;
         commonCcy = _commonCurrency;
     }
 
-    function setParams(
-        uint128 _collateralisationRatio,
-        bytes6 _commonCurrency,
-        uint8 _commonCcyDecimals
-    ) external auth {
-        collateralisationRatio = _collateralisationRatio * uint128(10**(18 - _commonCcyDecimals));
+    function setCollateralisationRatio(uint128 _collateralisationRatio) external auth {
+        collateralisationRatio = _collateralisationRatio;
+    }
+
+    function setCommonCurrency(bytes6 _commonCurrency) external auth {
         commonCcy = _commonCurrency;
     }
 
@@ -52,15 +47,15 @@ contract ContangoCauldron is Cauldron {
 
         balances_ = _pour(vaultId, vault_, balances_, series_, ink, art);
 
-        _pour(vault_.ilkId, ink, vault_.seriesId, art);
+        _pour(vault_.ilkId, vault_.seriesId, ink, art);
 
         return balances_;
     }
 
     function _pour(
         bytes6 inkId,
-        int128 ink,
         bytes6 artId,
+        int128 ink,
         int128 art
     ) internal {
         if (ink != 0) {
