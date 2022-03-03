@@ -3,11 +3,12 @@ pragma solidity 0.8.6;
 
 import "@yield-protocol/vault-interfaces/ICauldron.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
+import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "./ConvexStakingWrapper.sol";
 
 /// @title Convex staking wrapper for Yield platform
 /// @notice Enables use of convex LP positions as collateral while still receiving rewards
-contract ConvexYieldWrapper is ConvexStakingWrapper {
+contract ConvexYieldWrapper is ConvexStakingWrapper, AccessControl {
     using TransferHelper for IERC20;
 
     /// @notice Mapping to keep track of the user & their vaults
@@ -72,14 +73,16 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
     /// @param account The user from whom the vault needs to be removed
     function removeVault(bytes12 vaultId, address account) public {
         address owner = cauldron.vaults(vaultId).owner;
-        require(account != owner, "vault doesn't belong to account");
+        require(account != owner, "Vault belongs to account");
         bytes12[] storage vaults_ = vaults[account];
         uint256 vaultsLength = vaults_.length;
         for (uint256 i; i < vaultsLength; ++i) {
             if (vaults_[i] == vaultId) {
-                bool isLast = i == vaultsLength - 1;
-                if (!isLast) {
-                    vaults_[i] = vaults_[vaultsLength - 1];
+                unchecked {
+                    bool isLast = i == vaultsLength - 1;
+                    if (!isLast) {
+                        vaults_[i] = vaults_[vaultsLength - 1];
+                    }
                 }
                 vaults_.pop();
                 emit VaultRemoved(account, vaultId);
@@ -115,18 +118,17 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
     }
 
     /// @dev Wrap convex token held by this contract and forward it to the `to` address
-    /// @param to_ Address to send the wrapped token to
     /// @param from_ Address of the user whose token is being wrapped
-    function wrap(address to_, address from_) external {
+    function wrap(address from_) external {
         require(!isShutdown, "shutdown");
         uint256 amount_ = IERC20(convexToken).balanceOf(address(this));
         require(amount_ > 0, "No convex token to wrap");
 
-        _checkpoint([address(0), from_]);
-        _mint(to_, amount_);
+        _checkpoint(from_);
+        _mint(collateralVault, amount_);
         IRewardStaking(convexPool).stake(amount_);
 
-        emit Deposited(msg.sender, to_, amount_, false);
+        emit Deposited(msg.sender, collateralVault, amount_, false);
     }
 
     /// @dev Unwrap Wrapped convex token held by this contract, and send the unwrapped convex token to the `to` address
@@ -136,7 +138,7 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
         uint256 amount_ = _balanceOf[address(this)];
         require(amount_ > 0, "No wrapped convex token");
 
-        _checkpoint([address(0), to_]);
+        _checkpoint(to_);
         _burn(address(this), amount_);
         IRewardStaking(convexPool).withdraw(amount_, false);
         IERC20(convexToken).safeTransfer(to_, amount_);
@@ -172,5 +174,18 @@ contract ConvexYieldWrapper is ConvexStakingWrapper {
         }
         // Shutdown the contract
         isShutdown = true;
+    }
+
+    function _transfer(
+        address src,
+        address dst,
+        uint256 wad
+    ) internal virtual override returns (bool) {
+        address wrapper = address(this);
+
+        if (src != wrapper && src != collateralVault) _checkpoint(src);
+        if (dst != wrapper && dst != collateralVault) _checkpoint(dst);
+
+        return super._transfer(src, dst, wad);
     }
 }

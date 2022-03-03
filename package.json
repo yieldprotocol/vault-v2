@@ -1,6 +1,6 @@
 {
   "name": "@yield-protocol/vault-v2",
-  "version": "0.15.0",
+  "version": "0.15.1-notional-rc2",
   "description": "Yield Collateralized Debt Engine v2",
   "author": "Yield Inc.",
   "files": [
@@ -14,6 +14,8 @@
     "contracts/oracles/uniswap/*.sol",
     "contracts/oracles/lido/*.sol",
     "contracts/oracles/convex/*.sol",
+    "contracts/oracles/yearn/*.sol",
+    "contracts/other/notional/*.sol",
     "contracts/utils/*.sol",
     "contracts/utils/convex/*.sol",
     "contracts/utils/convex/interfaces/*.sol",
@@ -47,7 +49,7 @@
     "erc3156": "^0.4.8",
     "ethereum-waffle": "^3.2.2",
     "ethers": "^5.0.0",
-    "hardhat": "^2.2.0",
+    "hardhat": "2.4.3",
     "hardhat-abi-exporter": "^2.0.3",
     "hardhat-contract-sizer": "^2.0.3",
     "hardhat-deploy": "^0.7.0-beta.44",

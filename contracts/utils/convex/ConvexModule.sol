@@ -28,6 +28,10 @@ contract ConvexModule is LadleStorage {
         bytes12 vaultId,
         address account
     ) external {
-        convexStakingWrapper.removeVault(vaultId, account);
+        if (vaultId == bytes12(0)) {
+            convexStakingWrapper.removeVault(cachedVaultId, account);
+        } else {
+            convexStakingWrapper.removeVault(vaultId, account);
+        }
     }
 }

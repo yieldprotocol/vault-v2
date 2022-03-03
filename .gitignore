@@ -42,5 +42,5 @@ crytic-export/
 # Typescript
 dist/
 
-# VSCodeCounter
-.VSCodeCounter
+# VsCodeCounter
+.VsCodeCounter/

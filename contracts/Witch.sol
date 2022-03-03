@@ -43,10 +43,10 @@ contract Witch is AccessControl {
     }
 
     struct Limits {
-        uint96 line; // Maximum concurrent auctioned collateral
-        uint24 dust; // Minimum collateral that must be left when buying, unless buying all
-        uint8 dec; // Multiplying factor (10**dec) for line and dust
-        uint128 sum; // Current concurrent auctioned collateral
+        uint96 line;                                                    // Maximum concurrent auctioned collateral
+        uint24 dust;                                                    // Minimum collateral that must be left when buying, unless buying all
+        uint8 dec;                                                      // Multiplying factor (10**dec) for line and dust
+        uint128 sum;                                                    // Current concurrent auctioned collateral
     }
 
     ICauldron public immutable cauldron;
