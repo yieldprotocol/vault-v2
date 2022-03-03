@@ -228,7 +228,7 @@ contract Witch is AccessControl {
         _settle(msg.sender, ilkId, baseId, inkOut.u128(), base); // Move the assets
 
         // Still using the initially read `art` value, not the updated one
-        emit Bought(vaultId, msg.sender, inkOut, totalArt);
+        emit Bought(vaultId, msg.sender, inkOut, artIn);
     }
 
     function _calculateT(
