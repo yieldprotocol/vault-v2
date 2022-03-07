@@ -47,24 +47,24 @@ contract ContangoCauldron is Cauldron {
 
         balances_ = _pour(vaultId, vault_, balances_, series_, ink, art);
 
-        _pour(vault_.ilkId, vault_.seriesId, ink, art);
+        _updateVaultBalancesPerAsset(series_, vault_, ink, art);
 
         return balances_;
     }
 
-    function _pour(
-        bytes6 inkId,
-        bytes6 artId,
+    function _updateVaultBalancesPerAsset(
+        DataTypes.Series memory series,
+        DataTypes.Vault memory vault,
         int128 ink,
         int128 art
     ) internal {
         if (ink != 0) {
-            assetsInUse.add(inkId);
-            balancesPerAsset[inkId].ink = balancesPerAsset[inkId].ink.add(ink);
+            assetsInUse.add(vault.ilkId);
+            balancesPerAsset[vault.ilkId].ink = balancesPerAsset[vault.ilkId].ink.add(ink);
         }
         if (art != 0) {
-            assetsInUse.add(artId);
-            balancesPerAsset[artId].art = balancesPerAsset[artId].art.add(art);
+            assetsInUse.add(series.baseId);
+            balancesPerAsset[series.baseId].art = balancesPerAsset[series.baseId].art.add(art);
         }
 
         require(getFreeCollateralUSD() >= 0, "Undercollateralised");
