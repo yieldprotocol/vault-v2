@@ -168,7 +168,8 @@ describe('Convex Wrapper', async function () {
       [id(convexJoin.interface, 'join(address,uint128)'), id(convexJoin.interface, 'exit(address,uint128)')],
       ladle.address
     )
-    await ladle.addJoin(CVX3CRV,convexJoin.address)
+    await cauldron.addAsset(CVX3CRV, cvx3CRV.address)
+    await ladle.addJoin(CVX3CRV, convexJoin.address)
 
     await usdcEthAggregator.set('230171858101077')
     await daiEthAggregator.set('230213930000000')
