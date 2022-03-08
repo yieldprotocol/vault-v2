@@ -58,7 +58,7 @@ function bytesToBytes32(bytes: string): string {
  */
 describe('Convex Join', async function () {
   this.timeout(0)
-  
+
   let ladle: LadleWrapper
   let wand: Wand
   let witch: Witch
