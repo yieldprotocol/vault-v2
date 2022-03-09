@@ -12,12 +12,12 @@ contract ContangoLadle is Ladle {
         bytes6,
         uint8
     ) external payable override auth returns (bytes12, DataTypes.Vault memory) {
-        revert("Use build");
+        revert("Use deterministicBuild");
     }
 
     // @dev deterministic version of build, only contango can create vaults here
     // all other methods rely on being vault owner, so no need to secure them
-    function build(
+    function deterministicBuild(
         bytes12 vaultId,
         bytes6 seriesId,
         bytes6 ilkId

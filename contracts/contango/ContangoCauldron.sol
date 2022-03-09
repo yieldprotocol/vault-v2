@@ -16,7 +16,7 @@ contract ContangoCauldron is Cauldron {
 
     EnumerableSet.Bytes6Set private assetsInUse;
     mapping(bytes6 => DataTypes.Balances) public balancesPerAsset;
-    int256 public peekFreeCollateralUSD;
+    int256 public peekFreeCollateral;
 
     uint128 public collateralisationRatio; // Must be on commonCcy precision
     bytes6 public commonCcy; // Currency to use as common ground for all the ink & art
@@ -67,10 +67,10 @@ contract ContangoCauldron is Cauldron {
             balancesPerAsset[series.baseId].art = balancesPerAsset[series.baseId].art.add(art);
         }
 
-        require(getFreeCollateralUSD() >= 0, "Undercollateralised");
+        require(getFreeCollateral() >= 0, "Undercollateralised");
     }
 
-    function getFreeCollateralUSD() public returns (int256) {
+    function getFreeCollateral() public returns (int256) {
         (uint128 _collateralisationRatio, bytes6 _commonCurrency) = (collateralisationRatio, commonCcy);
 
         uint256 totalInk;
@@ -91,8 +91,8 @@ contract ContangoCauldron is Cauldron {
             }
         }
 
-        peekFreeCollateralUSD = totalInk.i256() - totalArt.wmul(_collateralisationRatio).i256();
-        return peekFreeCollateralUSD;
+        peekFreeCollateral = totalInk.i256() - totalArt.wmul(_collateralisationRatio).i256();
+        return peekFreeCollateral;
     }
 
     function _valueAsset(
