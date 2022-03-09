@@ -20,7 +20,7 @@ import { expect } from 'chai'
 import { parseUnits } from 'ethers/lib/utils'
 const { loadFixture } = waffle
 
-describe('Cauldron - level', function () {
+describe.only('Cauldron - level', function () {
   this.timeout(0)
 
   let ownerAcc: SignerWithAddress
@@ -112,7 +112,7 @@ describe('Cauldron - level', function () {
   //   ).to.be.revertedWith('Undercollateralized')
   // })
 
-  it.only('pour updates vault & global balances', async () => {
+  it('pour updates vault & global balances', async () => {
     expect(await cauldron.peekFreeCollateral()).to.be.eq(parseUnits('0'))
     expect((await cauldron.balances(vaultId1)).ink).to.be.eq(parseUnits('0'))
     expect((await cauldron.balances(vaultId1)).art).to.be.eq(parseUnits('0'))
@@ -151,9 +151,9 @@ describe('Cauldron - level', function () {
   //   }
   // })
 
-  // it("users can't borrow and become undercollateralized", async () => {
-  //   await expect(cauldron.pour(vaultId, 0, oneUSDC.mul(2))).to.be.revertedWith('Undercollateralized')
-  // })
+  it("users can't borrow and become undercollateralized", async () => {
+    await expect(cauldron.pour(vaultId1, 0, parseUnits('2', 6))).to.be.revertedWith('Undercollateralised')
+  })
 
   // it("users can't withdraw and become undercollateralized", async () => {
   //   await expect(cauldron.pour(vaultId, oneUSDC.mul(-1), 0)).to.be.revertedWith('Undercollateralized')
