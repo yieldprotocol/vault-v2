@@ -70,13 +70,13 @@ describe.only('ContangoCauldron - global state', function () {
     ilk1 = env.assets.get(ilkId1) as ERC20
     ilk2 = env.assets.get(ilkId2) as ERC20
 
-    rateOracle = (env.oracles.get(RATE) as unknown) as CompoundMultiOracle
+    rateOracle = env.oracles.get(RATE) as unknown as CompoundMultiOracle
     rateSource = ISourceMock__factory.connect(await rateOracle.sources(baseId, RATE), ownerAcc)
 
-    spotOracle1 = (env.oracles.get(ilkId1) as unknown) as ChainlinkMultiOracle
+    spotOracle1 = env.oracles.get(ilkId1) as unknown as ChainlinkMultiOracle
     spotSource1 = ISourceMock__factory.connect((await spotOracle1.sources(baseId, ilkId1))[0], ownerAcc)
 
-    spotOracle2 = (env.oracles.get(ilkId2) as unknown) as ChainlinkMultiOracle
+    spotOracle2 = env.oracles.get(ilkId2) as unknown as ChainlinkMultiOracle
     spotSource2 = ISourceMock__factory.connect((await spotOracle2.sources(baseId, ilkId2))[0], ownerAcc)
 
     const chainlinkAggregatorV3MockFactory = (await ethers.getContractFactory(
@@ -105,25 +105,57 @@ describe.only('ContangoCauldron - global state', function () {
   })
 
   it('pour updates vault & global balances', async () => {
-    expect((await cauldron.balances(vaultId1)).ink).to.be.eq(parseUnits('0'))
-    expect((await cauldron.balances(vaultId1)).art).to.be.eq(parseUnits('0'))
-    expect((await cauldron.balances(vaultId2)).ink).to.be.eq(parseUnits('0'))
-    expect((await cauldron.balances(vaultId2)).art).to.be.eq(parseUnits('0'))
-    expect((await cauldron.balancesPerAsset(ilkId1)).ink).to.be.eq(parseUnits('0'))
-    expect((await cauldron.balancesPerAsset(baseId)).art).to.be.eq(parseUnits('0'))
+    const vaultId3 = ethers.utils.formatBytes32String('other').slice(0, 26)
+    await env.ladle.deterministicBuild(vaultId3, seriesId, ilkId1)
 
+    // USDCETH vault
     await cauldron.pour(vaultId1, parseUnits('1'), parseUnits('1000', 6))
     expect((await cauldron.balances(vaultId1)).ink).to.be.eq(parseUnits('1'))
     expect((await cauldron.balances(vaultId1)).art).to.be.eq(parseUnits('1000', 6))
     expect((await cauldron.balancesPerAsset(ilkId1)).ink).to.be.eq(parseUnits('1'))
     expect((await cauldron.balancesPerAsset(baseId)).art).to.be.eq(parseUnits('1000', 6))
+    // 1 * 1 - 1000 * 0.00025 * 1.1
+    expect(await cauldron.callStatic.getFreeCollateral()).to.equal(parseUnits('0.725'))
 
+    // USDCDAI vault
     await cauldron.pour(vaultId2, parseUnits('1200'), parseUnits('1000', 6))
     expect((await cauldron.balances(vaultId2)).ink).to.be.eq(parseUnits('1200'))
     expect((await cauldron.balances(vaultId2)).art).to.be.eq(parseUnits('1000', 6))
     expect((await cauldron.balancesPerAsset(ilkId1)).ink).to.be.eq(parseUnits('1'))
     expect((await cauldron.balancesPerAsset(ilkId2)).ink).to.be.eq(parseUnits('1200'))
     expect((await cauldron.balancesPerAsset(baseId)).art).to.be.eq(parseUnits('2000', 6))
+    // 0.725 + 1200 * 0.000251 - 1000 * 0.00025 * 1.1
+    expect(await cauldron.callStatic.getFreeCollateral()).to.equal(parseUnits('0.7512'))
+
+    // Second USDCETH vault
+    await cauldron.pour(vaultId3, parseUnits('10'), parseUnits('20000', 6))
+    expect((await cauldron.balances(vaultId3)).ink).to.be.eq(parseUnits('10'))
+    expect((await cauldron.balances(vaultId3)).art).to.be.eq(parseUnits('20000', 6))
+    expect((await cauldron.balancesPerAsset(ilkId1)).ink).to.be.eq(parseUnits('11'))
+    expect((await cauldron.balancesPerAsset(ilkId2)).ink).to.be.eq(parseUnits('1200'))
+    expect((await cauldron.balancesPerAsset(baseId)).art).to.be.eq(parseUnits('22000', 6))
+    // 0.7512 + 10 * 1 - 20000 * 0.00025 * 1.1
+    expect(await cauldron.callStatic.getFreeCollateral()).to.equal(parseUnits('5.2512'))
+
+    // Increase debt on USDCDAI vault
+    await cauldron.pour(vaultId2, parseUnits('800'), parseUnits('400', 6))
+    expect((await cauldron.balances(vaultId2)).ink).to.be.eq(parseUnits('2000'))
+    expect((await cauldron.balances(vaultId2)).art).to.be.eq(parseUnits('1400', 6))
+    expect((await cauldron.balancesPerAsset(ilkId1)).ink).to.be.eq(parseUnits('11'))
+    expect((await cauldron.balancesPerAsset(ilkId2)).ink).to.be.eq(parseUnits('2000'))
+    expect((await cauldron.balancesPerAsset(baseId)).art).to.be.eq(parseUnits('22400', 6))
+    // 5.2512 + 800 * 0.000251 - 400 * 0.00025 * 1.1
+    expect(await cauldron.callStatic.getFreeCollateral()).to.equal(parseUnits('5.342'))
+
+    // Repay debt and withdraw on USDCETH vault
+    await cauldron.pour(vaultId1, parseUnits('-0.6'), parseUnits('-600', 6))
+    expect((await cauldron.balances(vaultId1)).ink).to.be.eq(parseUnits('0.4'))
+    expect((await cauldron.balances(vaultId1)).art).to.be.eq(parseUnits('400', 6))
+    expect((await cauldron.balancesPerAsset(ilkId1)).ink).to.be.eq(parseUnits('10.4'))
+    expect((await cauldron.balancesPerAsset(ilkId2)).ink).to.be.eq(parseUnits('2000'))
+    expect((await cauldron.balancesPerAsset(baseId)).art).to.be.eq(parseUnits('21800', 6))
+    // 5.342 + -0.6 * 1 - -600 * 0.00025 * 1.1
+    expect(await cauldron.callStatic.getFreeCollateral()).to.equal(parseUnits('4.907'))
   })
 
   it('before maturity, freeCollateral is ink * inkSpot - art * artSpot * ratio', async () => {

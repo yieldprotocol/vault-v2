@@ -79,9 +79,9 @@ contract ContangoCauldron is Cauldron {
 
         uint256 totalInk;
         uint256 totalArt;
+        uint256 length = assetsInUse.length();
 
-        //TODO is this reading .length() from storage each time?
-        for (uint256 index; index < assetsInUse.length(); index++) {
+        for (uint256 index; index < length;) {
             bytes6 assetId = assetsInUse.get(index);
             DataTypes.Balances memory _balances = balancesPerAsset[assetId];
             if (assetId != _commonCurrency && (_balances.ink > 0 || _balances.art > 0)) {
@@ -92,6 +92,10 @@ contract ContangoCauldron is Cauldron {
                 //TODO maybe remove unsed asset?
                 totalInk += _balances.ink;
                 totalArt += _balances.art;
+            }
+
+            unchecked {
+                ++index;
             }
         }
 
