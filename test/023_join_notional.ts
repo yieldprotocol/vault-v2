@@ -107,6 +107,20 @@ describe('Join1155', function () {
           .withArgs(join.address, join.address, owner, tokenId, WAD)
         expect(await join.storedBalance()).to.equal(0)
       })
+
+      describe('after maturity', async () => {
+        beforeEach(async () => {
+          //
+        })
+
+        // Doesn't allow to join
+        // Allows to redeem fCash for underlying
+
+          // Once fCash is redeemed
+          // Pushes underlying to user
+
+        // Allows to redeem on first exit
+      })  
     })
   })
 })
