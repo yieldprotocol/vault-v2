@@ -17,8 +17,8 @@
     "contracts/oracles/yearn/*.sol",
     "contracts/other/notional/*.sol",
     "contracts/utils/*.sol",
-    "contracts/utils/convex/*.sol",
-    "contracts/utils/convex/interfaces/*.sol",
+    "contracts/other/convex/*.sol",
+    "contracts/other/convex/interfaces/*.sol",
     "dist"
   ],
   "main": "dist/index.js",

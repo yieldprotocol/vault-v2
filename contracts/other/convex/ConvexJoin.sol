@@ -219,6 +219,7 @@ contract ConvexJoin is ERC20, Join {
 
         _join(user, amount);
         IRewardStaking(convexPool).stake(amount);
+        storedBalance -= amount;
         emit Deposited(msg.sender, user, amount, false);
 
         return amount;
