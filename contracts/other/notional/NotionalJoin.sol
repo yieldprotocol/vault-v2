@@ -11,7 +11,7 @@ import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
 import "./IBatchAction.sol";
 import "./ERC1155.sol";
 
-contract Join1155 is IJoin, ERC1155TokenReceiver, AccessControl() {
+contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl() {
     using WMul for uint256;
     using WDiv for uint256;
     using CastU256U128 for uint256;
@@ -64,7 +64,7 @@ contract Join1155 is IJoin, ERC1155TokenReceiver, AccessControl() {
     function supportsInterface(bytes4 interfaceID) external view returns (bool) {
         // ERC-165 support = `bytes4(keccak256('supportsInterface(bytes4)'))`.
         // ERC-1155 `ERC1155TokenReceiver` support = `bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes)")) ^ bytes4(keccak256("onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)"))`.
-        return  interfaceID == Join1155.supportsInterface.selector ||
+        return  interfaceID == NotionalJoin.supportsInterface.selector ||
                 interfaceID == ERC1155TokenReceiver.onERC1155Received.selector ^ ERC1155TokenReceiver.onERC1155BatchReceived.selector;
     }
 
