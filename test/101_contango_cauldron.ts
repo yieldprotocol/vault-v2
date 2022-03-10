@@ -1,37 +1,25 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-
-import { RATE, USDC, ETH, DAI } from '../src/constants'
-
+import { expect } from 'chai'
+import { parseUnits } from 'ethers/lib/utils'
+import { ethers, waffle } from 'hardhat'
+import { DAI, ETH, RATE, USDC } from '../src/constants'
 import {
-  FYToken,
-  ERC20Mock as ERC20,
-  ChainlinkMultiOracle,
+  ChainlinkAggregatorV3Mock__factory, ChainlinkMultiOracle,
   CompoundMultiOracle,
   ContangoCauldron,
-  ISourceMock,
-  ChainlinkAggregatorV3Mock__factory,
+  ISourceMock
 } from '../typechain'
 import { ISourceMock__factory } from '../typechain/factories/ISourceMock__factory'
-
 import { YieldEnvironment } from './shared/contango_fixtures'
 
-import { ethers, waffle } from 'hardhat'
-import { expect } from 'chai'
-import { formatUnits, parseUnits } from 'ethers/lib/utils'
 const { loadFixture } = waffle
 
 describe.only('ContangoCauldron - global state', function () {
   this.timeout(0)
 
   let ownerAcc: SignerWithAddress
-  let otherAcc: SignerWithAddress
-  let owner: string
   let env: YieldEnvironment
   let cauldron: ContangoCauldron
-  let fyToken: FYToken
-  let base: ERC20
-  let ilk1: ERC20
-  let ilk2: ERC20
   let spotOracle1: ChainlinkMultiOracle
   let spotOracle2: ChainlinkMultiOracle
   let spotSource1: ISourceMock
@@ -54,8 +42,6 @@ describe.only('ContangoCauldron - global state', function () {
   before(async () => {
     const signers = await ethers.getSigners()
     ownerAcc = signers[0]
-    otherAcc = signers[1]
-    owner = await ownerAcc.getAddress()
   })
 
   after(async () => {
@@ -66,17 +52,14 @@ describe.only('ContangoCauldron - global state', function () {
     this.timeout(0)
     env = await loadFixture(fixture)
     cauldron = env.cauldron as ContangoCauldron
-    base = env.assets.get(baseId) as ERC20
-    ilk1 = env.assets.get(ilkId1) as ERC20
-    ilk2 = env.assets.get(ilkId2) as ERC20
 
-    rateOracle = env.oracles.get(RATE) as unknown as CompoundMultiOracle
+    rateOracle = (env.oracles.get(RATE) as unknown) as CompoundMultiOracle
     rateSource = ISourceMock__factory.connect(await rateOracle.sources(baseId, RATE), ownerAcc)
 
-    spotOracle1 = env.oracles.get(ilkId1) as unknown as ChainlinkMultiOracle
+    spotOracle1 = (env.oracles.get(ilkId1) as unknown) as ChainlinkMultiOracle
     spotSource1 = ISourceMock__factory.connect((await spotOracle1.sources(baseId, ilkId1))[0], ownerAcc)
 
-    spotOracle2 = env.oracles.get(ilkId2) as unknown as ChainlinkMultiOracle
+    spotOracle2 = (env.oracles.get(ilkId2) as unknown) as ChainlinkMultiOracle
     spotSource2 = ISourceMock__factory.connect((await spotOracle2.sources(baseId, ilkId2))[0], ownerAcc)
 
     const chainlinkAggregatorV3MockFactory = (await ethers.getContractFactory(
@@ -95,7 +78,6 @@ describe.only('ContangoCauldron - global state', function () {
     )
     await env.cauldron.setSpotOracle(ilkId2, ilkId1, spotOracle1.address, parseUnits('1', 6))
 
-    fyToken = env.series.get(seriesId) as FYToken
     vaultId1 = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId1) as string
     vaultId2 = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId2) as string
 
@@ -215,7 +197,7 @@ describe.only('ContangoCauldron - global state', function () {
     expect(await cauldron.assetsInUseLength()).to.equal(2)
   })
 
-  it('before maturity, freeCollateral is ink * inkSpot - art * artSpot * ratio', async () => {
+  it('freeCollateral is ink * inkSpot - art * artSpot * ratio', async () => {
     await cauldron.pour(vaultId2, parseUnits('1200'), parseUnits('1000', 6))
     const ink = (await cauldron.balances(vaultId2)).ink
     const art = (await cauldron.balances(vaultId2)).art
