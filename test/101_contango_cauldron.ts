@@ -110,52 +110,109 @@ describe.only('ContangoCauldron - global state', function () {
 
     // USDCETH vault
     await cauldron.pour(vaultId1, parseUnits('1'), parseUnits('1000', 6))
-    expect((await cauldron.balances(vaultId1)).ink).to.be.eq(parseUnits('1'))
-    expect((await cauldron.balances(vaultId1)).art).to.be.eq(parseUnits('1000', 6))
-    expect((await cauldron.balancesPerAsset(ilkId1)).ink).to.be.eq(parseUnits('1'))
-    expect((await cauldron.balancesPerAsset(baseId)).art).to.be.eq(parseUnits('1000', 6))
+    expect((await cauldron.balances(vaultId1)).ink).to.equal(parseUnits('1'))
+    expect((await cauldron.balances(vaultId1)).art).to.equal(parseUnits('1000', 6))
+    expect((await cauldron.balancesPerAsset(ilkId1)).ink).to.equal(parseUnits('1'))
+    expect((await cauldron.balancesPerAsset(baseId)).art).to.equal(parseUnits('1000', 6))
     // 1 * 1 - 1000 * 0.00025 * 1.1
     expect(await cauldron.callStatic.getFreeCollateral()).to.equal(parseUnits('0.725'))
+    expect(await cauldron.assetsInUseLength()).to.equal(2)
 
     // USDCDAI vault
     await cauldron.pour(vaultId2, parseUnits('1200'), parseUnits('1000', 6))
-    expect((await cauldron.balances(vaultId2)).ink).to.be.eq(parseUnits('1200'))
-    expect((await cauldron.balances(vaultId2)).art).to.be.eq(parseUnits('1000', 6))
-    expect((await cauldron.balancesPerAsset(ilkId1)).ink).to.be.eq(parseUnits('1'))
-    expect((await cauldron.balancesPerAsset(ilkId2)).ink).to.be.eq(parseUnits('1200'))
-    expect((await cauldron.balancesPerAsset(baseId)).art).to.be.eq(parseUnits('2000', 6))
+    expect((await cauldron.balances(vaultId2)).ink).to.equal(parseUnits('1200'))
+    expect((await cauldron.balances(vaultId2)).art).to.equal(parseUnits('1000', 6))
+    expect((await cauldron.balancesPerAsset(ilkId1)).ink).to.equal(parseUnits('1'))
+    expect((await cauldron.balancesPerAsset(ilkId2)).ink).to.equal(parseUnits('1200'))
+    expect((await cauldron.balancesPerAsset(baseId)).art).to.equal(parseUnits('2000', 6))
     // 0.725 + 1200 * 0.000251 - 1000 * 0.00025 * 1.1
     expect(await cauldron.callStatic.getFreeCollateral()).to.equal(parseUnits('0.7512'))
+    expect(await cauldron.assetsInUseLength()).to.equal(3)
 
     // Second USDCETH vault
     await cauldron.pour(vaultId3, parseUnits('10'), parseUnits('20000', 6))
-    expect((await cauldron.balances(vaultId3)).ink).to.be.eq(parseUnits('10'))
-    expect((await cauldron.balances(vaultId3)).art).to.be.eq(parseUnits('20000', 6))
-    expect((await cauldron.balancesPerAsset(ilkId1)).ink).to.be.eq(parseUnits('11'))
-    expect((await cauldron.balancesPerAsset(ilkId2)).ink).to.be.eq(parseUnits('1200'))
-    expect((await cauldron.balancesPerAsset(baseId)).art).to.be.eq(parseUnits('22000', 6))
+    expect((await cauldron.balances(vaultId3)).ink).to.equal(parseUnits('10'))
+    expect((await cauldron.balances(vaultId3)).art).to.equal(parseUnits('20000', 6))
+    expect((await cauldron.balancesPerAsset(ilkId1)).ink).to.equal(parseUnits('11'))
+    expect((await cauldron.balancesPerAsset(ilkId2)).ink).to.equal(parseUnits('1200'))
+    expect((await cauldron.balancesPerAsset(baseId)).art).to.equal(parseUnits('22000', 6))
     // 0.7512 + 10 * 1 - 20000 * 0.00025 * 1.1
     expect(await cauldron.callStatic.getFreeCollateral()).to.equal(parseUnits('5.2512'))
+    expect(await cauldron.assetsInUseLength()).to.equal(3)
 
     // Increase debt on USDCDAI vault
     await cauldron.pour(vaultId2, parseUnits('800'), parseUnits('400', 6))
-    expect((await cauldron.balances(vaultId2)).ink).to.be.eq(parseUnits('2000'))
-    expect((await cauldron.balances(vaultId2)).art).to.be.eq(parseUnits('1400', 6))
-    expect((await cauldron.balancesPerAsset(ilkId1)).ink).to.be.eq(parseUnits('11'))
-    expect((await cauldron.balancesPerAsset(ilkId2)).ink).to.be.eq(parseUnits('2000'))
-    expect((await cauldron.balancesPerAsset(baseId)).art).to.be.eq(parseUnits('22400', 6))
+    expect((await cauldron.balances(vaultId2)).ink).to.equal(parseUnits('2000'))
+    expect((await cauldron.balances(vaultId2)).art).to.equal(parseUnits('1400', 6))
+    expect((await cauldron.balancesPerAsset(ilkId1)).ink).to.equal(parseUnits('11'))
+    expect((await cauldron.balancesPerAsset(ilkId2)).ink).to.equal(parseUnits('2000'))
+    expect((await cauldron.balancesPerAsset(baseId)).art).to.equal(parseUnits('22400', 6))
     // 5.2512 + 800 * 0.000251 - 400 * 0.00025 * 1.1
     expect(await cauldron.callStatic.getFreeCollateral()).to.equal(parseUnits('5.342'))
+    expect(await cauldron.assetsInUseLength()).to.equal(3)
 
     // Repay debt and withdraw on USDCETH vault
     await cauldron.pour(vaultId1, parseUnits('-0.6'), parseUnits('-600', 6))
-    expect((await cauldron.balances(vaultId1)).ink).to.be.eq(parseUnits('0.4'))
-    expect((await cauldron.balances(vaultId1)).art).to.be.eq(parseUnits('400', 6))
-    expect((await cauldron.balancesPerAsset(ilkId1)).ink).to.be.eq(parseUnits('10.4'))
-    expect((await cauldron.balancesPerAsset(ilkId2)).ink).to.be.eq(parseUnits('2000'))
-    expect((await cauldron.balancesPerAsset(baseId)).art).to.be.eq(parseUnits('21800', 6))
+    expect((await cauldron.balances(vaultId1)).ink).to.equal(parseUnits('0.4'))
+    expect((await cauldron.balances(vaultId1)).art).to.equal(parseUnits('400', 6))
+    expect((await cauldron.balancesPerAsset(ilkId1)).ink).to.equal(parseUnits('10.4'))
+    expect((await cauldron.balancesPerAsset(ilkId2)).ink).to.equal(parseUnits('2000'))
+    expect((await cauldron.balancesPerAsset(baseId)).art).to.equal(parseUnits('21800', 6))
     // 5.342 + -0.6 * 1 - -600 * 0.00025 * 1.1
     expect(await cauldron.callStatic.getFreeCollateral()).to.equal(parseUnits('4.907'))
+    expect(await cauldron.assetsInUseLength()).to.equal(3)
+
+    // Fully repay USDCDAI vault
+    await cauldron.pour(vaultId2, parseUnits('-2000'), parseUnits('-1400', 6))
+    expect((await cauldron.balances(vaultId2)).ink).to.equal(0)
+    expect((await cauldron.balances(vaultId2)).art).to.equal(0)
+    expect((await cauldron.balancesPerAsset(ilkId1)).ink).to.equal(parseUnits('10.4'))
+    expect((await cauldron.balancesPerAsset(ilkId2)).ink).to.equal(0)
+    expect((await cauldron.balancesPerAsset(baseId)).art).to.equal(parseUnits('20400', 6))
+    // 4.907 + -2000 * 0.000251 - -1400 * 0.00025 * 1.1
+    expect(await cauldron.callStatic.getFreeCollateral()).to.equal(parseUnits('4.79'))
+    expect(await cauldron.assetsInUseLength()).to.equal(3)
+  })
+
+  it('prunes the assets in use (remove last)', async () => {
+    const vaultId3 = ethers.utils.formatBytes32String('other').slice(0, 26)
+    await env.ladle.deterministicBuild(vaultId3, seriesId, ilkId1)
+
+    // USDCETH vault
+    await cauldron.pour(vaultId1, parseUnits('1'), parseUnits('1000', 6))
+    expect(await cauldron.assetsInUseLength()).to.equal(2)
+    // USDCDAI vault
+    await cauldron.pour(vaultId2, parseUnits('1200'), parseUnits('1000', 6))
+    expect(await cauldron.assetsInUseLength()).to.equal(3)
+
+    // Fully repay USDCDAI vault
+    await cauldron.pour(vaultId2, parseUnits('-1200'), parseUnits('-1000', 6))
+    expect(await cauldron.assetsInUseLength()).to.equal(3)
+
+    expect(await cauldron.callStatic.pruneAssetsInUse()).to.equal(2)
+    await cauldron.pruneAssetsInUse()
+    expect(await cauldron.assetsInUseLength()).to.equal(2)
+  })
+
+  it('prunes the assets in use (remove from middle)', async () => {
+    const vaultId3 = ethers.utils.formatBytes32String('other').slice(0, 26)
+    await env.ladle.deterministicBuild(vaultId3, seriesId, ilkId1)
+
+    // USDCETH vault
+    await cauldron.pour(vaultId1, parseUnits('1'), parseUnits('1000', 6))
+    expect(await cauldron.assetsInUseLength()).to.equal(2)
+    // USDCDAI vault
+    await cauldron.pour(vaultId2, parseUnits('1200'), parseUnits('1000', 6))
+    expect(await cauldron.assetsInUseLength()).to.equal(3)
+
+    // Fully repay both vaults (but leave collateral)
+    await cauldron.pour(vaultId2, 0, parseUnits('-1000', 6))
+    await cauldron.pour(vaultId1, 0, parseUnits('-1000', 6))
+    expect(await cauldron.assetsInUseLength()).to.equal(3)
+
+    expect(await cauldron.callStatic.pruneAssetsInUse()).to.equal(2)
+    await cauldron.pruneAssetsInUse()
+    expect(await cauldron.assetsInUseLength()).to.equal(2)
   })
 
   it('before maturity, freeCollateral is ink * inkSpot - art * artSpot * ratio', async () => {

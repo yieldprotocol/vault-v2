@@ -50,8 +50,8 @@ contract ContangoCauldron is Cauldron {
         // If there is debt and we are less safe
         if (balances_.art > 0 && (ink < 0 || art > 0)) {
             require(_level(vault_, balances_, series_) >= 0, "Vault Undercollateralised");
-            _updateVaultBalancesPerAsset(series_, vault_, ink, art);
         }
+        _updateVaultBalancesPerAsset(series_, vault_, ink, art);
 
         return balances_;
     }
@@ -81,7 +81,7 @@ contract ContangoCauldron is Cauldron {
         uint256 totalArt;
         uint256 length = assetsInUse.length();
 
-        for (uint256 index; index < length;) {
+        for (uint256 index; index < length; ) {
             bytes6 assetId = assetsInUse.get(index);
             DataTypes.Balances memory _balances = balancesPerAsset[assetId];
             if (assetId != _commonCurrency && (_balances.ink > 0 || _balances.art > 0)) {
@@ -89,7 +89,6 @@ contract ContangoCauldron is Cauldron {
                 totalInk += _valueAsset(oracle, assetId, _commonCurrency, _balances.ink);
                 totalArt += _valueAsset(oracle, assetId, _commonCurrency, _balances.art);
             } else {
-                //TODO maybe remove unsed asset?
                 totalInk += _balances.ink;
                 totalArt += _balances.art;
             }
@@ -101,6 +100,33 @@ contract ContangoCauldron is Cauldron {
 
         peekFreeCollateral = totalInk.i256() - totalArt.wmul(_collateralisationRatio).i256();
         return peekFreeCollateral;
+    }
+
+    function assetsInUseLength() external view returns (uint256) {
+        return assetsInUse.length();
+    }
+
+    function pruneAssetsInUse() external returns (uint256) {
+        bytes6 _commonCurrency = commonCcy;
+        uint256 length = assetsInUse.length();
+
+        for (uint256 index; index < length; ) {
+            bytes6 assetId = assetsInUse.get(index);
+            DataTypes.Balances memory _balances = balancesPerAsset[assetId];
+
+            if (assetId != _commonCurrency && _balances.ink == 0 && _balances.art == 0) {
+                assetsInUse.remove(assetId);
+
+                unchecked {
+                    --length;
+                }
+            } else {
+                unchecked {
+                    ++index;
+                }
+            }
+        }
+        return length;
     }
 
     function _valueAsset(
