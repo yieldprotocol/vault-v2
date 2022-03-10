@@ -20,7 +20,7 @@ import { expect } from 'chai'
 import { formatUnits, parseUnits } from 'ethers/lib/utils'
 const { loadFixture } = waffle
 
-describe.only('Cauldron - level', function () {
+describe.only('ContangoCauldron - global state', function () {
   this.timeout(0)
 
   let ownerAcc: SignerWithAddress
@@ -104,14 +104,6 @@ describe.only('Cauldron - level', function () {
     await spotSource3.set(parseUnits('0.000251')) // ETH per DAI (1 ETH = 3984 DAI)
   })
 
-  // it.only('deterministicBuild is restricted', async () => {
-  //   await expect(
-  //     ladle
-  //       .connect(otherAcc)
-  //       .deterministicBuild(ethers.utils.hexlify(ethers.utils.randomBytes(12)), seriesId, ilkId1)
-  //   ).to.be.revertedWith('Undercollateralized')
-  // })
-
   it('pour updates vault & global balances', async () => {
     expect((await cauldron.balances(vaultId1)).ink).to.be.eq(parseUnits('0'))
     expect((await cauldron.balances(vaultId1)).art).to.be.eq(parseUnits('0'))
@@ -134,7 +126,7 @@ describe.only('Cauldron - level', function () {
     expect((await cauldron.balancesPerAsset(baseId)).art).to.be.eq(parseUnits('2000', 6))
   })
 
-  it("before maturity, freeCollateral is ink * inkSpot - art * artSpot' * ratio", async () => {
+  it('before maturity, freeCollateral is ink * inkSpot - art * artSpot * ratio', async () => {
     await cauldron.pour(vaultId2, parseUnits('1200'), parseUnits('1000', 6))
     const ink = (await cauldron.balances(vaultId2)).ink
     const art = (await cauldron.balances(vaultId2)).art
@@ -142,7 +134,11 @@ describe.only('Cauldron - level', function () {
     // 1200*0.000251 - 1000*.00025*1.1
     expect(await cauldron.callStatic.getFreeCollateral()).to.equal(parseUnits('0.0262'))
 
-    const spots = [[parseUnits('0.0004'), parseUnits("0.00041")], [parseUnits('0.0002'), parseUnits("0.00019")], [parseUnits('0.0001'), parseUnits("0.00009")]]
+    const spots = [
+      [parseUnits('0.0004'), parseUnits('0.00041')],
+      [parseUnits('0.0002'), parseUnits('0.00019')],
+      [parseUnits('0.0001'), parseUnits('0.00009')],
+    ]
     for (let [inkSpot, artSpot] of spots) {
       await spotSource1.set(artSpot)
       await spotSource3.set(inkSpot)
@@ -150,10 +146,10 @@ describe.only('Cauldron - level', function () {
         cauldron.setCollateralisationRatio(ratio)
 
         // Ink as ETH
-        const inkValuedAsCommonCcy = ink.mul(inkSpot).div(parseUnits("1"));
+        const inkValuedAsCommonCcy = ink.mul(inkSpot).div(parseUnits('1'))
         // art * 1e12 (bring to 18 digits precision)
-        const artValuedAsCommonCcy = art.mul(parseUnits("1", 12)).mul(artSpot).div(parseUnits("1"))
-        const artTimesRatio = artValuedAsCommonCcy.mul(ratio).div(parseUnits("1"))
+        const artValuedAsCommonCcy = art.mul(parseUnits('1', 12)).mul(artSpot).div(parseUnits('1'))
+        const artTimesRatio = artValuedAsCommonCcy.mul(ratio).div(parseUnits('1'))
 
         const expectedFreeCollateral = inkValuedAsCommonCcy.sub(artTimesRatio)
         expect(await cauldron.callStatic.getFreeCollateral()).to.equal(expectedFreeCollateral)
@@ -165,52 +161,8 @@ describe.only('Cauldron - level', function () {
     await expect(cauldron.pour(vaultId1, 0, parseUnits('2', 6))).to.be.revertedWith('Undercollateralised')
   })
 
-  // it("users can't withdraw and become undercollateralized", async () => {
-  //   await expect(cauldron.pour(vaultId, oneUSDC.mul(-1), 0)).to.be.revertedWith('Undercollateralized')
-  // })
-
-  // it('does not allow to mature before maturity', async () => {
-  //   await expect(cauldron.mature(seriesId)).to.be.revertedWith('Only after maturity')
-  // })
-
-  // describe('after maturity', async () => {
-  //   beforeEach(async () => {
-  //     await spotSource.set(WAD.mul(1))
-  //     await rateSource.set(WAD.mul(1))
-  //     await ethers.provider.send('evm_mine', [(await fyToken.maturity()).toNumber()])
-  //   })
-
-  //   it('matures by recording the rate value', async () => {
-  //     expect(await cauldron.mature(seriesId))
-  //       .to.emit(cauldron, 'SeriesMatured')
-  //       .withArgs(seriesId, WAD)
-  //   })
-
-  //   it("rate accrual can't be below 1", async () => {
-  //     await rateSource.set(WAD.mul(100).div(110))
-  //     expect(await cauldron.callStatic.accrual(seriesId)).to.equal(WAD)
-  //   })
-
-  //   it('after maturity, level is ink * spot - art * accrual * ratio', async () => {
-  //     await cauldron.level(vaultId)
-
-  //     const ink = (await cauldron.balances(vaultId)).ink
-  //     const art = (await cauldron.balances(vaultId)).art
-  //     const spots = [WAD.div(2500), WAD.div(5000), WAD.div(10000)]
-  //     for (let spot of spots) {
-  //       await spotSource.set(spot)
-  //       for (let rate of [110, 120, 140]) {
-  //         await rateSource.set(WAD.mul(rate).div(100))
-  //         // accrual = rate / 100
-  //         for (let ratio of [50, 100, 200]) {
-  //           await cauldron.setSpotOracle(baseId, ilkId1, spotOracle.address, ratio * 10000)
-  //           const reverseSpot = oneUSDC.mul(WAD).div(spot)
-  //           const expectedLevel = ink.mul(reverseSpot).div(WAD).sub(art.mul(rate).mul(ratio).div(10000))
-  //           expect(await cauldron.callStatic.level(vaultId)).to.equal(expectedLevel)
-  //           // console.log(`${ink} * ${RAY.mul(spot)} - ${art} * ${ratio} = ${await cauldron.level(vaultId)} | ${expectedLevel} `)
-  //         }
-  //       }
-  //     }
-  //   })
-  // })
+  it("users can't withdraw and become undercollateralized", async () => {
+    await cauldron.pour(vaultId1, parseUnits('1.1'), parseUnits('4000', 6))
+    await expect(cauldron.pour(vaultId1, -1, 0)).to.be.revertedWith('Undercollateralised')
+  })
 })

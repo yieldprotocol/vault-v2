@@ -14,7 +14,7 @@ contract ContangoCauldron is Cauldron {
     using WMul for uint256;
     using WDivUp for uint256;
 
-    EnumerableSet.Bytes6Set public assetsInUse;
+    EnumerableSet.Bytes6Set private assetsInUse;
     mapping(bytes6 => DataTypes.Balances) public balancesPerAsset;
     int256 public peekFreeCollateral;
 
@@ -49,7 +49,7 @@ contract ContangoCauldron is Cauldron {
 
         // If there is debt and we are less safe
         if (balances_.art > 0 && (ink < 0 || art > 0)) {
-            require(_level(vault_, balances_, series_) >= 0, "Undercollateralised");
+            require(_level(vault_, balances_, series_) >= 0, "Vault Undercollateralised");
             _updateVaultBalancesPerAsset(series_, vault_, ink, art);
         }
 
@@ -71,7 +71,7 @@ contract ContangoCauldron is Cauldron {
             balancesPerAsset[series.baseId].art = balancesPerAsset[series.baseId].art.add(art);
         }
 
-        require(getFreeCollateral() >= 0, "Undercollateralised");
+        require(getFreeCollateral() >= 0, "Cauldron Undercollateralised");
     }
 
     function getFreeCollateral() public returns (int256) {
@@ -107,8 +107,6 @@ contract ContangoCauldron is Cauldron {
     ) internal returns (uint256 value) {
         if (amount > 0) {
             (value, ) = oracle.get(assetId, valuationAsset, amount);
-        } else {
-            value = 0;
         }
     }
 }
