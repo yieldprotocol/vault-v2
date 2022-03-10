@@ -84,13 +84,17 @@ contract ContangoCauldron is Cauldron {
         for (uint256 index; index < length; ) {
             bytes6 assetId = assetsInUse.get(index);
             DataTypes.Balances memory _balances = balancesPerAsset[assetId];
-            if (assetId != _commonCurrency && (_balances.ink > 0 || _balances.art > 0)) {
-                IOracle oracle = spotOracles[assetId][_commonCurrency].oracle;
-                totalInk += _valueAsset(oracle, assetId, _commonCurrency, _balances.ink);
-                totalArt += _valueAsset(oracle, assetId, _commonCurrency, _balances.art);
-            } else {
-                totalInk += _balances.ink;
-                totalArt += _balances.art;
+            IOracle oracle = spotOracles[assetId][_commonCurrency].oracle;
+
+            if (_balances.ink > 0) {
+                totalInk += assetId == _commonCurrency
+                    ? _balances.ink
+                    : _valueAsset(oracle, assetId, _commonCurrency, _balances.ink);
+            }
+            if (_balances.art > 0) {
+                totalArt += assetId == _commonCurrency
+                    ? _balances.art
+                    : _valueAsset(oracle, assetId, _commonCurrency, _balances.art);
             }
 
             unchecked {
