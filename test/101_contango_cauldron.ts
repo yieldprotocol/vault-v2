@@ -17,7 +17,7 @@ import { YieldEnvironment } from './shared/contango_fixtures'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
-import { parseUnits } from 'ethers/lib/utils'
+import { formatUnits, parseUnits } from 'ethers/lib/utils'
 const { loadFixture } = waffle
 
 describe.only('Cauldron - level', function () {
@@ -70,13 +70,13 @@ describe.only('Cauldron - level', function () {
     ilk1 = env.assets.get(ilkId1) as ERC20
     ilk2 = env.assets.get(ilkId2) as ERC20
 
-    rateOracle = env.oracles.get(RATE) as unknown as CompoundMultiOracle
+    rateOracle = (env.oracles.get(RATE) as unknown) as CompoundMultiOracle
     rateSource = ISourceMock__factory.connect(await rateOracle.sources(baseId, RATE), ownerAcc)
 
-    spotOracle1 = env.oracles.get(ilkId1) as unknown as ChainlinkMultiOracle
+    spotOracle1 = (env.oracles.get(ilkId1) as unknown) as ChainlinkMultiOracle
     spotSource1 = ISourceMock__factory.connect((await spotOracle1.sources(baseId, ilkId1))[0], ownerAcc)
 
-    spotOracle2 = env.oracles.get(ilkId2) as unknown as ChainlinkMultiOracle
+    spotOracle2 = (env.oracles.get(ilkId2) as unknown) as ChainlinkMultiOracle
     spotSource2 = ISourceMock__factory.connect((await spotOracle2.sources(baseId, ilkId2))[0], ownerAcc)
 
     const chainlinkAggregatorV3MockFactory = (await ethers.getContractFactory(
@@ -99,9 +99,9 @@ describe.only('Cauldron - level', function () {
     vaultId1 = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId1) as string
     vaultId2 = (env.vaults.get(seriesId) as Map<string, string>).get(ilkId2) as string
 
-    await spotSource1.set(parseUnits('0.00036')) // ETH per USDC
+    await spotSource1.set(parseUnits('0.00025')) // ETH per USDC (1 ETH = 4000 USDC)
     await spotSource2.set(parseUnits('1.00001')) // DAI per USDC
-    await spotSource3.set(parseUnits('0.000359')) // ETH per DAI
+    await spotSource3.set(parseUnits('0.000251')) // ETH per DAI (1 ETH = 3984 DAI)
   })
 
   // it.only('deterministicBuild is restricted', async () => {
@@ -113,43 +113,53 @@ describe.only('Cauldron - level', function () {
   // })
 
   it('pour updates vault & global balances', async () => {
-    expect(await cauldron.peekFreeCollateral()).to.be.eq(parseUnits('0'))
     expect((await cauldron.balances(vaultId1)).ink).to.be.eq(parseUnits('0'))
     expect((await cauldron.balances(vaultId1)).art).to.be.eq(parseUnits('0'))
     expect((await cauldron.balances(vaultId2)).ink).to.be.eq(parseUnits('0'))
     expect((await cauldron.balances(vaultId2)).art).to.be.eq(parseUnits('0'))
+    expect((await cauldron.balancesPerAsset(ilkId1)).ink).to.be.eq(parseUnits('0'))
+    expect((await cauldron.balancesPerAsset(baseId)).art).to.be.eq(parseUnits('0'))
 
     await cauldron.pour(vaultId1, parseUnits('1'), parseUnits('1000', 6))
-    expect(await cauldron.peekFreeCollateral()).to.be.eq(parseUnits('0.604'))
     expect((await cauldron.balances(vaultId1)).ink).to.be.eq(parseUnits('1'))
     expect((await cauldron.balances(vaultId1)).art).to.be.eq(parseUnits('1000', 6))
+    expect((await cauldron.balancesPerAsset(ilkId1)).ink).to.be.eq(parseUnits('1'))
+    expect((await cauldron.balancesPerAsset(baseId)).art).to.be.eq(parseUnits('1000', 6))
 
     await cauldron.pour(vaultId2, parseUnits('1200'), parseUnits('1000', 6))
-    expect(await cauldron.peekFreeCollateral()).to.be.eq(parseUnits('0.6388')) // 0.604 + 0.0348
     expect((await cauldron.balances(vaultId2)).ink).to.be.eq(parseUnits('1200'))
     expect((await cauldron.balances(vaultId2)).art).to.be.eq(parseUnits('1000', 6))
+    expect((await cauldron.balancesPerAsset(ilkId1)).ink).to.be.eq(parseUnits('1'))
+    expect((await cauldron.balancesPerAsset(ilkId2)).ink).to.be.eq(parseUnits('1200'))
+    expect((await cauldron.balancesPerAsset(baseId)).art).to.be.eq(parseUnits('2000', 6))
   })
 
-  // it.only('before maturity, level is ink * spot - art * ratio', async () => {
-  //   const ink = (await cauldron.balances(vaultId)).ink
-  //   const art = (await cauldron.balances(vaultId)).art
-  //   const spots = [WAD.div(2500), WAD.div(5000), WAD.div(10000)]
-  //   for (let spot of spots) {
-  //     await spotSource.set(spot)
-  //     for (let ratio of [50, 100, 200]) {
-  //       await cauldron.setSpotOracle(baseId, ilkId1, spotOracle.address, ratio * 10000)
-  //       const reverseSpot = oneUSDC.mul(WAD).div(spot)
-  //       // When setting the oracles, we set them as underlying/collateral matching Chainlink, for which ETH is always the quote.
-  //       // We set for example the USDC/ETH spot to WAD.div(2500), meaning that 1 ETH gets you 2500 USDC, or that 1 USDC gets you 1/2500 of 1 ETH.
-  //       // Then for `level` we want the collateral/underlying spot price (this one ETH collateral, how much USDC is worth?)
-  //       // The reverse is (10**6)*(10**18)/spot (1/spot, in fixed point math with the decimals of the reverse quote (USDC, 6).
-  //       // Finally, to get the value of the collateral we multiply the amount of ETH (ink) by the reverse spot (ETH/USDC) as a fixed point multiplication with the ETH decimals (18) so that the reulst is in USDC.
-  //       const expectedLevel = ink.mul(reverseSpot).div(WAD).sub(art.mul(ratio).div(100))
-  //       // console.log(`${ink} * ${reverseSpot} / ${WAD} - ${art} * ${ratio} = ${await cauldron.callStatic.level(vaultId)} | ${expectedLevel} `)
-  //       expect(await cauldron.callStatic.level(vaultId)).to.equal(expectedLevel)
-  //     }
-  //   }
-  // })
+  it("before maturity, freeCollateral is ink * inkSpot - art * artSpot' * ratio", async () => {
+    await cauldron.pour(vaultId2, parseUnits('1200'), parseUnits('1000', 6))
+    const ink = (await cauldron.balances(vaultId2)).ink
+    const art = (await cauldron.balances(vaultId2)).art
+
+    // 1200*0.000251 - 1000*.00025*1.1
+    expect(await cauldron.callStatic.getFreeCollateral()).to.equal(parseUnits('0.0262'))
+
+    const spots = [[parseUnits('0.0004'), parseUnits("0.00041")], [parseUnits('0.0002'), parseUnits("0.00019")], [parseUnits('0.0001'), parseUnits("0.00009")]]
+    for (let [inkSpot, artSpot] of spots) {
+      await spotSource1.set(artSpot)
+      await spotSource3.set(inkSpot)
+      for (let ratio of [parseUnits('1.05'), parseUnits('1.1'), parseUnits('1.2')]) {
+        cauldron.setCollateralisationRatio(ratio)
+
+        // Ink as ETH
+        const inkValuedAsCommonCcy = ink.mul(inkSpot).div(parseUnits("1"));
+        // art * 1e12 (bring to 18 digits precision)
+        const artValuedAsCommonCcy = art.mul(parseUnits("1", 12)).mul(artSpot).div(parseUnits("1"))
+        const artTimesRatio = artValuedAsCommonCcy.mul(ratio).div(parseUnits("1"))
+
+        const expectedFreeCollateral = inkValuedAsCommonCcy.sub(artTimesRatio)
+        expect(await cauldron.callStatic.getFreeCollateral()).to.equal(expectedFreeCollateral)
+      }
+    }
+  })
 
   it("users can't borrow and become undercollateralized", async () => {
     await expect(cauldron.pour(vaultId1, 0, parseUnits('2', 6))).to.be.revertedWith('Undercollateralised')

@@ -14,7 +14,7 @@ contract ContangoCauldron is Cauldron {
     using WMul for uint256;
     using WDivUp for uint256;
 
-    EnumerableSet.Bytes6Set private assetsInUse;
+    EnumerableSet.Bytes6Set public assetsInUse;
     mapping(bytes6 => DataTypes.Balances) public balancesPerAsset;
     int256 public peekFreeCollateral;
 

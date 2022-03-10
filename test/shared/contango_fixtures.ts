@@ -103,6 +103,8 @@ export class YieldEnvironment {
         id(cauldron.interface, 'setDebtLimits(bytes6,bytes6,uint96,uint24,uint8)'),
         id(cauldron.interface, 'setLendingOracle(bytes6,address)'),
         id(cauldron.interface, 'setSpotOracle(bytes6,bytes6,address,uint32)'),
+        id(cauldron.interface, 'setCollateralisationRatio(uint128)'),
+        id(cauldron.interface, 'setCommonCurrency(bytes6)'),
       ],
       receiver
     )
