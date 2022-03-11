@@ -54,13 +54,13 @@ describe.only('ContangoCauldron - global state', function () {
     env = await loadFixture(fixture)
     cauldron = env.cauldron as ContangoCauldron
 
-    rateOracle = (env.oracles.get(RATE) as unknown) as CompoundMultiOracle
+    rateOracle = env.oracles.get(RATE) as unknown as CompoundMultiOracle
     rateSource = ISourceMock__factory.connect(await rateOracle.sources(baseId, RATE), ownerAcc)
 
-    spotOracle1 = (env.oracles.get(ilkId1) as unknown) as ChainlinkMultiOracle
+    spotOracle1 = env.oracles.get(ilkId1) as unknown as ChainlinkMultiOracle
     spotSource1 = ISourceMock__factory.connect((await spotOracle1.sources(baseId, ilkId1))[0], ownerAcc)
 
-    spotOracle2 = (env.oracles.get(ilkId2) as unknown) as ChainlinkMultiOracle
+    spotOracle2 = env.oracles.get(ilkId2) as unknown as ChainlinkMultiOracle
     spotSource2 = ISourceMock__factory.connect((await spotOracle2.sources(baseId, ilkId2))[0], ownerAcc)
 
     const chainlinkAggregatorV3MockFactory = (await ethers.getContractFactory(
@@ -230,12 +230,12 @@ describe.only('ContangoCauldron - global state', function () {
   })
 
   it("users can't borrow and become undercollateralized", async () => {
-    await expect(cauldron.pour(vaultId1, 0, parseUnits('2', 6))).to.be.revertedWith('Undercollateralised')
+    await expect(cauldron.pour(vaultId1, 0, parseUnits('2', 6))).to.be.revertedWith('Vault Undercollateralised')
   })
 
   it("users can't withdraw and become undercollateralized", async () => {
     await cauldron.pour(vaultId1, parseUnits('1.1'), parseUnits('4000', 6))
-    await expect(cauldron.pour(vaultId1, -1, 0)).to.be.revertedWith('Undercollateralised')
+    await expect(cauldron.pour(vaultId1, -1, 0)).to.be.revertedWith('Vault Undercollateralised')
   })
 
   it('pour is authorised', async () => {
@@ -254,5 +254,54 @@ describe.only('ContangoCauldron - global state', function () {
     await expect(cauldron.connect((await ethers.getSigners())[10]).setCommonCurrency(USDC)).to.be.revertedWith(
       'Access denied'
     )
+  })
+
+  describe('global vault is collateralised', () => {
+    beforeEach(async () => {
+      const vaultId3 = ethers.utils.formatBytes32String('other').slice(0, 26)
+      await env.ladle.deterministicBuild(vaultId3, seriesId, ilkId1)
+      await cauldron.pour(vaultId3, parseUnits('10'), parseUnits('1000', 6))
+    })
+
+    it("users can't borrow and become undercollateralized", async () => {
+      await expect(cauldron.pour(vaultId1, parseUnits('1.1'), parseUnits('4000.01', 6))).to.be.revertedWith(
+        'Vault Undercollateralised'
+      )
+    })
+
+    it("users can't withdraw and become undercollateralized", async () => {
+      await cauldron.pour(vaultId1, parseUnits('1.1'), parseUnits('4000', 6))
+      await expect(cauldron.pour(vaultId1, -1, 0)).to.be.revertedWith('Vault Undercollateralised')
+    })
+  })
+
+  describe('global vault is undercollateralised', () => {
+    beforeEach(async () => {
+      const vaultId3 = ethers.utils.formatBytes32String('other').slice(0, 26)
+      await env.ladle.deterministicBuild(vaultId3, seriesId, ilkId1)
+      await cauldron.pour(vaultId3, parseUnits('11'), parseUnits('40000', 6))
+      await cauldron.pour(vaultId1, parseUnits('1.1'), parseUnits('4000', 6))
+
+      await spotSource1.set(parseUnits('0.000251')) // ETH per USDC (1 ETH = 3,984.06 USDC)
+      expect(await cauldron.callStatic.getFreeCollateral()).to.equal(parseUnits('-0.0484'))
+    })
+
+    it('users can repay debt', async () => {
+      await cauldron.pour(vaultId1, 0, -1)
+      expect(await cauldron.peekFreeCollateral()).to.equal(parseUnits('-0.0483999997239'))
+    })
+
+    it('users can increase collateral', async () => {
+      await cauldron.pour(vaultId1, 1, 0)
+      expect(await cauldron.peekFreeCollateral()).to.equal(parseUnits('-0.048399999999999999'))
+    })
+
+    it("users can't borrow and become undercollateralized", async () => {
+      await expect(cauldron.pour(vaultId1, 0, 1)).to.be.revertedWith('Vault Undercollateralised')
+    })
+
+    it("users can't withdraw and become undercollateralized", async () => {
+      await expect(cauldron.pour(vaultId1, -1, 0)).to.be.revertedWith('Vault Undercollateralised')
+    })
   })
 })

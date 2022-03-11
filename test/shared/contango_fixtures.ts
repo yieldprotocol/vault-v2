@@ -1,51 +1,50 @@
-import { id, constants } from '@yield-protocol/utils-v2'
-
-import { sendStatic } from './helpers'
-
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
-
-const { WAD, THREE_MONTHS } = constants
-import { CHI, RATE, ETH, DAI, USDC } from '../../src/constants'
-
+import { constants, id } from '@yield-protocol/utils-v2'
+import { parseUnits } from 'ethers/lib/utils'
+import { ethers, waffle } from 'hardhat'
 import CauldronArtifact from '../../artifacts/contracts/contango/ContangoCauldron.sol/ContangoCauldron.json'
 import LadleArtifact from '../../artifacts/contracts/contango/ContangoLadle.sol/ContangoLadle.json'
-import WandArtifact from '../../artifacts/contracts/Wand.sol/Wand.json'
 import WitchArtifact from '../../artifacts/contracts/contango/ContangoWitch.sol/ContangoWitch.json'
 import JoinFactoryArtifact from '../../artifacts/contracts/JoinFactory.sol/JoinFactory.json'
+import DAIMockArtifact from '../../artifacts/contracts/mocks/DAIMock.sol/DAIMock.json'
+import ERC20MockArtifact from '../../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
+import ChainlinkAggregatorV3MockArtifact from '../../artifacts/contracts/mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol/ChainlinkAggregatorV3Mock.json'
+import CTokenChiMockArtifact from '../../artifacts/contracts/mocks/oracles/compound/CTokenChiMock.sol/CTokenChiMock.json'
+import CTokenRateMockArtifact from '../../artifacts/contracts/mocks/oracles/compound/CTokenRateMock.sol/CTokenRateMock.json'
 import PoolFactoryMockArtifact from '../../artifacts/contracts/mocks/PoolFactoryMock.sol/PoolFactoryMock.json'
-
+import USDCMockArtifact from '../../artifacts/contracts/mocks/USDCMock.sol/USDCMock.json'
+import WETH9MockArtifact from '../../artifacts/contracts/mocks/WETH9Mock.sol/WETH9Mock.json'
 import ChainlinkMultiOracleArtifact from '../../artifacts/contracts/oracles/chainlink/ChainlinkMultiOracle.sol/ChainlinkMultiOracle.json'
 import CompoundMultiOracleArtifact from '../../artifacts/contracts/oracles/compound/CompoundMultiOracle.sol/CompoundMultiOracle.json'
-import ChainlinkAggregatorV3MockArtifact from '../../artifacts/contracts/mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol/ChainlinkAggregatorV3Mock.json'
-import CTokenRateMockArtifact from '../../artifacts/contracts/mocks/oracles/compound/CTokenRateMock.sol/CTokenRateMock.json'
-import CTokenChiMockArtifact from '../../artifacts/contracts/mocks/oracles/compound/CTokenChiMock.sol/CTokenChiMock.json'
-
-import ERC20MockArtifact from '../../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
-import WETH9MockArtifact from '../../artifacts/contracts/mocks/WETH9Mock.sol/WETH9Mock.json'
-import DAIMockArtifact from '../../artifacts/contracts/mocks/DAIMock.sol/DAIMock.json'
-import USDCMockArtifact from '../../artifacts/contracts/mocks/USDCMock.sol/USDCMock.json'
-
+import WandArtifact from '../../artifacts/contracts/Wand.sol/Wand.json'
+import { CHI, DAI, ETH, RATE, USDC } from '../../src/constants'
 import { ContangoCauldron, ContangoLadle, ContangoWitch } from '../../typechain'
-import { Join } from '../../typechain/Join'
-import { FYToken } from '../../typechain/FYToken'
-import { JoinFactory } from '../../typechain/JoinFactory'
-import { FYTokenFactory } from '../../typechain/FYTokenFactory'
-import { Wand } from '../../typechain/Wand'
-import { PoolMock } from '../../typechain/PoolMock'
-import { PoolFactoryMock } from '../../typechain/PoolFactoryMock'
-import { OracleMock } from '../../typechain/OracleMock'
-import { ISourceMock } from '../../typechain/ISourceMock'
 import { ChainlinkMultiOracle } from '../../typechain/ChainlinkMultiOracle'
 import { CompoundMultiOracle } from '../../typechain/CompoundMultiOracle'
-import { SafeERC20Namer } from '../../typechain/SafeERC20Namer'
-
-import { ERC20Mock } from '../../typechain/ERC20Mock'
-import { WETH9Mock } from '../../typechain/WETH9Mock'
 import { DAIMock } from '../../typechain/DAIMock'
+import { ERC20Mock } from '../../typechain/ERC20Mock'
+import { FYToken } from '../../typechain/FYToken'
+import { FYTokenFactory } from '../../typechain/FYTokenFactory'
+import { ISourceMock } from '../../typechain/ISourceMock'
+import { Join } from '../../typechain/Join'
+import { JoinFactory } from '../../typechain/JoinFactory'
+import { OracleMock } from '../../typechain/OracleMock'
+import { PoolFactoryMock } from '../../typechain/PoolFactoryMock'
+import { PoolMock } from '../../typechain/PoolMock'
+import { SafeERC20Namer } from '../../typechain/SafeERC20Namer'
 import { USDCMock } from '../../typechain/USDCMock'
+import { Wand } from '../../typechain/Wand'
+import { WETH9Mock } from '../../typechain/WETH9Mock'
 
-import { ethers, waffle } from 'hardhat'
-import { parseEther } from 'ethers/lib/utils'
+
+
+const { WAD, THREE_MONTHS } = constants
+
+
+
+
+
+
 
 const { deployContract } = waffle
 
@@ -288,7 +287,7 @@ export class YieldEnvironment {
 
     // ==== Protocol ====
 
-    const cauldron = (await deployContract(owner, CauldronArtifact, [parseEther('1.1'), ETH])) as ContangoCauldron
+    const cauldron = (await deployContract(owner, CauldronArtifact, [parseUnits('1.1'), ETH])) as ContangoCauldron
     const ladle = (await deployContract(owner, LadleArtifact, [cauldron.address, weth.address])) as ContangoLadle
     const witch = (await deployContract(owner, WitchArtifact, [cauldron.address, ladle.address])) as ContangoWitch
     const joinFactory = (await deployContract(owner, JoinFactoryArtifact, [])) as JoinFactory
@@ -360,7 +359,7 @@ export class YieldEnvironment {
     await wand.makeBase(baseId, chiRateOracle.address)
 
     // ==== Make ilkIds the ilks, creating spot oracles and settting debt limits ====
-    const ratio = 1000000 //  1000000 == 100% collateralization ratio
+    const ratio = 1100000 //  1100000 == 110% collateralization ratio
     for (let ilkId of assetIds) {
       // Including ilkId == baseId
       const spotSource = sources.get(ilkId) as ISourceMock

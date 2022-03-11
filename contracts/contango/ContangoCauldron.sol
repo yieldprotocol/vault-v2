@@ -47,11 +47,13 @@ contract ContangoCauldron is Cauldron {
 
         balances_ = _pour(vaultId, vault_, balances_, series_, ink, art);
 
+        _updateVaultBalancesPerAsset(series_, vault_, ink, art);
+
         // If there is debt and we are less safe
         if (balances_.art > 0 && (ink < 0 || art > 0)) {
             require(_level(vault_, balances_, series_) >= 0, "Vault Undercollateralised");
+            require(peekFreeCollateral >= 0, "Cauldron Undercollateralised");
         }
-        _updateVaultBalancesPerAsset(series_, vault_, ink, art);
 
         return balances_;
     }
@@ -71,10 +73,10 @@ contract ContangoCauldron is Cauldron {
             balancesPerAsset[series.baseId].art = balancesPerAsset[series.baseId].art.add(art);
         }
 
-        require(getFreeCollateral() >= 0, "Cauldron Undercollateralised");
+        getFreeCollateral();
     }
 
-    function getFreeCollateral() public returns (int256) {
+    function getFreeCollateral() public returns (int256 _peekFreeCollateral) {
         (uint128 _collateralisationRatio, bytes6 _commonCurrency) = (collateralisationRatio, commonCcy);
 
         uint256 totalInk;
@@ -102,8 +104,8 @@ contract ContangoCauldron is Cauldron {
             }
         }
 
-        peekFreeCollateral = totalInk.i256() - totalArt.wmul(_collateralisationRatio).i256();
-        return peekFreeCollateral;
+        _peekFreeCollateral = totalInk.i256() - totalArt.wmul(_collateralisationRatio).i256();
+        peekFreeCollateral = _peekFreeCollateral;
     }
 
     function assetsInUseLength() external view returns (uint256) {
