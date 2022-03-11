@@ -17,6 +17,7 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl() {
     using CastU256U128 for uint256;
 
     event FlashFeeFactorSet(uint256 indexed fee);
+    event Redeemed(uint256 fCash, uint256 underlying, uint256 accrual);
 
     bytes32 constant internal FLASH_LOAN_RETURN = keccak256("ERC3156FlashBorrower.onFlashLoan");
     uint256 constant public FLASH_LOANS_DISABLED = type(uint256).max;
@@ -176,9 +177,12 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl() {
         IBatchAction(asset).batchBalanceAction(address(this), withdrawActions);
 
         uint256 underlyingBalance = IERC20(underlying).balanceOf(address(this));
-        accrual = underlyingBalance.wdiv(storedBalance); // There is a rounding loss here. Some wei will be forever locked in the join.
+        uint256 storedBalance_ = storedBalance;
+        accrual = underlyingBalance.wdiv(storedBalance_); // There is a rounding loss here. Some wei will be forever locked in the join.
         // This becomes now to an exit-only underlying Join.
         storedBalance = underlyingBalance;
+
+        emit Redeemed(storedBalance_, underlyingBalance, accrual);
     }
 
     /// @dev Retrieve any ERC20 tokens. Useful for airdropped tokens.
