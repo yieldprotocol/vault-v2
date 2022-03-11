@@ -14,9 +14,11 @@ contract ContangoCauldron is Cauldron {
     using WMul for uint256;
     using WDivUp for uint256;
 
+    event BalancesUpdated(bytes6 indexed assetId, uint128 ink, uint128 art);
+    event FreeCollateralCalculated(int256 freeCollateral);
+
     EnumerableSet.Bytes6Set private assetsInUse;
     mapping(bytes6 => DataTypes.Balances) public balancesPerAsset;
-    int256 public peekFreeCollateral;
 
     uint128 public collateralisationRatio; // Must be on commonCcy precision
     bytes6 public commonCcy; // Currency to use as common ground for all the ink & art
@@ -47,17 +49,11 @@ contract ContangoCauldron is Cauldron {
 
         balances_ = _pour(vaultId, vault_, balances_, series_, ink, art);
 
-        int256 _prevFreeCollateral = peekFreeCollateral;
-
         _updateVaultBalancesPerAsset(series_, vault_, ink, art);
 
         // If there is debt and we are less safe
         if (balances_.art > 0 && (ink < 0 || art > 0)) {
-            require(_level(vault_, balances_, series_) >= 0, "Vault Undercollateralised");
-            int256 _currentFreeCollateral = peekFreeCollateral;
-            if (_currentFreeCollateral < 0) {
-                require(_currentFreeCollateral >= _prevFreeCollateral, "Cauldron Undercollateralised");
-            }
+            require(_level(vault_, balances_, series_) >= 0, "Undercollateralised");
         }
 
         return balances_;
@@ -70,18 +66,14 @@ contract ContangoCauldron is Cauldron {
         int128 art
     ) internal {
         if (ink != 0) {
-            assetsInUse.add(vault.ilkId);
-            balancesPerAsset[vault.ilkId].ink = balancesPerAsset[vault.ilkId].ink.add(ink);
+            _updateBalances(vault.ilkId, ink, 0);
         }
         if (art != 0) {
-            assetsInUse.add(series.baseId);
-            balancesPerAsset[series.baseId].art = balancesPerAsset[series.baseId].art.add(art);
+            _updateBalances(series.baseId, 0, art);
         }
-
-        getFreeCollateral();
     }
 
-    function getFreeCollateral() public returns (int256 _peekFreeCollateral) {
+    function getFreeCollateral() public returns (int256 freeCollateral) {
         (uint128 _collateralisationRatio, bytes6 _commonCurrency) = (collateralisationRatio, commonCcy);
 
         uint256 totalInk;
@@ -93,24 +85,16 @@ contract ContangoCauldron is Cauldron {
             DataTypes.Balances memory _balances = balancesPerAsset[assetId];
             IOracle oracle = spotOracles[assetId][_commonCurrency].oracle;
 
-            if (_balances.ink > 0) {
-                totalInk += assetId == _commonCurrency
-                    ? _balances.ink
-                    : _valueAsset(oracle, assetId, _commonCurrency, _balances.ink);
-            }
-            if (_balances.art > 0) {
-                totalArt += assetId == _commonCurrency
-                    ? _balances.art
-                    : _valueAsset(oracle, assetId, _commonCurrency, _balances.art);
-            }
+            totalInk += _valueAsset(oracle, assetId, _commonCurrency, _balances.ink);
+            totalArt += _valueAsset(oracle, assetId, _commonCurrency, _balances.art);
 
             unchecked {
                 ++index;
             }
         }
 
-        _peekFreeCollateral = totalInk.i256() - totalArt.wmul(_collateralisationRatio).i256();
-        peekFreeCollateral = _peekFreeCollateral;
+        freeCollateral = totalInk.i256() - totalArt.wmul(_collateralisationRatio).i256();
+        emit FreeCollateralCalculated(freeCollateral);
     }
 
     function assetsInUseLength() external view returns (uint256) {
@@ -147,7 +131,28 @@ contract ContangoCauldron is Cauldron {
         uint256 amount
     ) internal returns (uint256 value) {
         if (amount > 0) {
-            (value, ) = oracle.get(assetId, valuationAsset, amount);
+            if (assetId == valuationAsset) {
+                value = amount;
+            } else {
+                (value, ) = oracle.get(assetId, valuationAsset, amount);
+            }
         }
+    }
+
+    function _updateBalances(
+        bytes6 assetId,
+        int128 ink,
+        int128 art
+    ) internal {
+        assetsInUse.add(assetId);
+        DataTypes.Balances memory balances_ = balancesPerAsset[assetId];
+        if (ink != 0) {
+            balances_.ink = balances_.ink.add(ink);
+        }
+        if (art != 0) {
+            balances_.art = balances_.art.add(art);
+        }
+        balancesPerAsset[assetId] = balances_;
+        emit BalancesUpdated(assetId, balances_.ink, balances_.art);
     }
 }
