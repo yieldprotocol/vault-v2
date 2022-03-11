@@ -11,7 +11,7 @@ contract ContangoLadle is Ladle {
         bytes6,
         bytes6,
         uint8
-    ) external payable override auth returns (bytes12, DataTypes.Vault memory) {
+    ) external payable override returns (bytes12, DataTypes.Vault memory) {
         revert("Use deterministicBuild");
     }
 
