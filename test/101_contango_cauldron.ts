@@ -54,13 +54,13 @@ describe.only('ContangoCauldron - global state', function () {
     env = await loadFixture(fixture)
     cauldron = env.cauldron as ContangoCauldron
 
-    rateOracle = env.oracles.get(RATE) as unknown as CompoundMultiOracle
+    rateOracle = (env.oracles.get(RATE) as unknown) as CompoundMultiOracle
     rateSource = ISourceMock__factory.connect(await rateOracle.sources(baseId, RATE), ownerAcc)
 
-    spotOracle1 = env.oracles.get(ilkId1) as unknown as ChainlinkMultiOracle
+    spotOracle1 = (env.oracles.get(ilkId1) as unknown) as ChainlinkMultiOracle
     spotSource1 = ISourceMock__factory.connect((await spotOracle1.sources(baseId, ilkId1))[0], ownerAcc)
 
-    spotOracle2 = env.oracles.get(ilkId2) as unknown as ChainlinkMultiOracle
+    spotOracle2 = (env.oracles.get(ilkId2) as unknown) as ChainlinkMultiOracle
     spotSource2 = ISourceMock__factory.connect((await spotOracle2.sources(baseId, ilkId2))[0], ownerAcc)
 
     const chainlinkAggregatorV3MockFactory = (await ethers.getContractFactory(
@@ -236,5 +236,23 @@ describe.only('ContangoCauldron - global state', function () {
   it("users can't withdraw and become undercollateralized", async () => {
     await cauldron.pour(vaultId1, parseUnits('1.1'), parseUnits('4000', 6))
     await expect(cauldron.pour(vaultId1, -1, 0)).to.be.revertedWith('Undercollateralised')
+  })
+
+  it('pour is authorised', async () => {
+    await expect(cauldron.connect((await ethers.getSigners())[10]).pour(vaultId1, 0, 0)).to.be.revertedWith(
+      'Access denied'
+    )
+  })
+
+  it('setCollateralisationRatio is authorised', async () => {
+    await expect(cauldron.connect((await ethers.getSigners())[10]).setCollateralisationRatio(0)).to.be.revertedWith(
+      'Access denied'
+    )
+  })
+
+  it('setCommonCurrency is authorised', async () => {
+    await expect(cauldron.connect((await ethers.getSigners())[10]).setCommonCurrency(USDC)).to.be.revertedWith(
+      'Access denied'
+    )
   })
 })
