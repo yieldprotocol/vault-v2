@@ -5,9 +5,9 @@ import { ethers, waffle } from 'hardhat'
 import CauldronArtifact from '../../artifacts/contracts/contango/ContangoCauldron.sol/ContangoCauldron.json'
 import LadleArtifact from '../../artifacts/contracts/contango/ContangoLadle.sol/ContangoLadle.json'
 import WitchArtifact from '../../artifacts/contracts/contango/ContangoWitch.sol/ContangoWitch.json'
-import JoinFactoryArtifact from '../../artifacts/contracts/JoinFactory.sol/JoinFactory.json'
 import DAIMockArtifact from '../../artifacts/contracts/mocks/DAIMock.sol/DAIMock.json'
 import ERC20MockArtifact from '../../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
+import JoinFactoryArtifact from '../../artifacts/contracts/mocks/JoinFactoryMock.sol/JoinFactoryMock.json'
 import ChainlinkAggregatorV3MockArtifact from '../../artifacts/contracts/mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol/ChainlinkAggregatorV3Mock.json'
 import CTokenChiMockArtifact from '../../artifacts/contracts/mocks/oracles/compound/CTokenChiMock.sol/CTokenChiMock.json'
 import CTokenRateMockArtifact from '../../artifacts/contracts/mocks/oracles/compound/CTokenRateMock.sol/CTokenRateMock.json'
@@ -24,10 +24,10 @@ import { CompoundMultiOracle } from '../../typechain/CompoundMultiOracle'
 import { DAIMock } from '../../typechain/DAIMock'
 import { ERC20Mock } from '../../typechain/ERC20Mock'
 import { FYToken } from '../../typechain/FYToken'
-import { FYTokenFactory } from '../../typechain/FYTokenFactory'
+import { IFYTokenFactory } from '../../typechain/IFYTokenFactory'
+import { IJoinFactory } from '../../typechain/IJoinFactory'
 import { ISourceMock } from '../../typechain/ISourceMock'
 import { Join } from '../../typechain/Join'
-import { JoinFactory } from '../../typechain/JoinFactory'
 import { OracleMock } from '../../typechain/OracleMock'
 import { PoolFactoryMock } from '../../typechain/PoolFactoryMock'
 import { PoolMock } from '../../typechain/PoolMock'
@@ -53,7 +53,7 @@ export class YieldEnvironment {
   cauldron: ContangoCauldron
   ladle: ContangoLadle
   witch: ContangoWitch
-  joinFactory: JoinFactory
+  joinFactory: IJoinFactory
   poolFactory: PoolFactoryMock
   wand: Wand
   assets: Map<string, ERC20Mock>
@@ -68,7 +68,7 @@ export class YieldEnvironment {
     cauldron: ContangoCauldron,
     ladle: ContangoLadle,
     witch: ContangoWitch,
-    joinFactory: JoinFactory,
+    joinFactory: IJoinFactory,
     poolFactory: PoolFactoryMock,
     wand: Wand,
     assets: Map<string, ERC20Mock>,
@@ -166,11 +166,11 @@ export class YieldEnvironment {
     )
   }
 
-  public static async joinFactoryAuth(joinFactory: JoinFactory, receiver: string) {
+  public static async joinFactoryAuth(joinFactory: IJoinFactory, receiver: string) {
     await joinFactory.grantRoles([id(joinFactory.interface, 'createJoin(address)')], receiver)
   }
 
-  public static async fyTokenFactoryAuth(fyTokenFactory: FYTokenFactory, receiver: string) {
+  public static async fyTokenFactoryAuth(fyTokenFactory: IFYTokenFactory, receiver: string) {
     await fyTokenFactory.grantRoles(
       [id(fyTokenFactory.interface, 'createFYToken(bytes6,address,address,uint32,string,string)')],
       receiver
@@ -290,15 +290,15 @@ export class YieldEnvironment {
     const cauldron = (await deployContract(owner, CauldronArtifact, [parseUnits('1.1'), ETH])) as ContangoCauldron
     const ladle = (await deployContract(owner, LadleArtifact, [cauldron.address, weth.address])) as ContangoLadle
     const witch = (await deployContract(owner, WitchArtifact, [cauldron.address, ladle.address])) as ContangoWitch
-    const joinFactory = (await deployContract(owner, JoinFactoryArtifact, [])) as JoinFactory
+    const joinFactory = (await deployContract(owner, JoinFactoryArtifact, [])) as IJoinFactory
     const poolFactory = (await deployContract(owner, PoolFactoryMockArtifact, [])) as PoolFactoryMock
 
-    const fyTokenFactoryFactory = await ethers.getContractFactory('FYTokenFactory', {
+    const fyTokenFactoryFactory = await ethers.getContractFactory('FYTokenFactoryMock', {
       libraries: {
         SafeERC20Namer: safeERC20NamerLibrary.address,
       },
     })
-    const fyTokenFactory = ((await fyTokenFactoryFactory.deploy()) as unknown) as FYTokenFactory
+    const fyTokenFactory = (await fyTokenFactoryFactory.deploy()) as unknown as IFYTokenFactory
     await fyTokenFactory.deployed()
 
     const wand = (await deployContract(owner, WandArtifact, [

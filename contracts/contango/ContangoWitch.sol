@@ -10,7 +10,7 @@ contract ContangoWitch is Witch {
     // @dev check the aggregate of all vaults status first
     function _isVaultUndercollateralised(bytes12 vaultId) internal override returns (bool) {
         return
-            IContangoCauldron(address(cauldron)).getFreeCollateralUSD() < 0 &&
+            IContangoCauldron(address(cauldron)).getFreeCollateral() < 0 &&
             super._isVaultUndercollateralised(vaultId);
     }
 }

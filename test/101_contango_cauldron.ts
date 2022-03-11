@@ -15,7 +15,7 @@ import { YieldEnvironment } from './shared/contango_fixtures'
 
 const { loadFixture } = waffle
 
-describe.only('ContangoCauldron - global state', function () {
+describe('ContangoCauldron', function () {
   this.timeout(0)
 
   let ownerAcc: SignerWithAddress
