@@ -49,7 +49,12 @@ contract ContangoCauldron is Cauldron {
 
         balances_ = _pour(vaultId, vault_, balances_, series_, ink, art);
 
-        _updateVaultBalancesPerAsset(series_, vault_, ink, art);
+        if (ink != 0) {
+            _updateBalances(vault_.ilkId, ink, 0);
+        }
+        if (art != 0) {
+            _updateBalances(series_.baseId, 0, art);
+        }
 
         // If there is debt and we are less safe
         if (balances_.art > 0 && (ink < 0 || art > 0)) {
@@ -57,20 +62,6 @@ contract ContangoCauldron is Cauldron {
         }
 
         return balances_;
-    }
-
-    function _updateVaultBalancesPerAsset(
-        DataTypes.Series memory series,
-        DataTypes.Vault memory vault,
-        int128 ink,
-        int128 art
-    ) internal {
-        if (ink != 0) {
-            _updateBalances(vault.ilkId, ink, 0);
-        }
-        if (art != 0) {
-            _updateBalances(series.baseId, 0, art);
-        }
     }
 
     function getFreeCollateral() public returns (int256 freeCollateral) {
