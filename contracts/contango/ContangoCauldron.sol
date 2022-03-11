@@ -47,12 +47,17 @@ contract ContangoCauldron is Cauldron {
 
         balances_ = _pour(vaultId, vault_, balances_, series_, ink, art);
 
+        int256 _prevFreeCollateral = peekFreeCollateral;
+
         _updateVaultBalancesPerAsset(series_, vault_, ink, art);
 
         // If there is debt and we are less safe
         if (balances_.art > 0 && (ink < 0 || art > 0)) {
             require(_level(vault_, balances_, series_) >= 0, "Vault Undercollateralised");
-            require(peekFreeCollateral >= 0, "Cauldron Undercollateralised");
+            int256 _currentFreeCollateral = peekFreeCollateral;
+            if (_currentFreeCollateral < 0) {
+                require(_currentFreeCollateral >= _prevFreeCollateral, "Cauldron Undercollateralised");
+            }
         }
 
         return balances_;

@@ -54,13 +54,13 @@ describe.only('ContangoCauldron - global state', function () {
     env = await loadFixture(fixture)
     cauldron = env.cauldron as ContangoCauldron
 
-    rateOracle = env.oracles.get(RATE) as unknown as CompoundMultiOracle
+    rateOracle = (env.oracles.get(RATE) as unknown) as CompoundMultiOracle
     rateSource = ISourceMock__factory.connect(await rateOracle.sources(baseId, RATE), ownerAcc)
 
-    spotOracle1 = env.oracles.get(ilkId1) as unknown as ChainlinkMultiOracle
+    spotOracle1 = (env.oracles.get(ilkId1) as unknown) as ChainlinkMultiOracle
     spotSource1 = ISourceMock__factory.connect((await spotOracle1.sources(baseId, ilkId1))[0], ownerAcc)
 
-    spotOracle2 = env.oracles.get(ilkId2) as unknown as ChainlinkMultiOracle
+    spotOracle2 = (env.oracles.get(ilkId2) as unknown) as ChainlinkMultiOracle
     spotSource2 = ISourceMock__factory.connect((await spotOracle2.sources(baseId, ilkId2))[0], ownerAcc)
 
     const chainlinkAggregatorV3MockFactory = (await ethers.getContractFactory(
@@ -282,8 +282,10 @@ describe.only('ContangoCauldron - global state', function () {
       await cauldron.pour(vaultId3, parseUnits('11'), parseUnits('40000', 6))
       await cauldron.pour(vaultId1, parseUnits('1.1'), parseUnits('4000', 6))
 
-      await spotSource1.set(parseUnits('0.000251')) // ETH per USDC (1 ETH = 3,984.06 USDC)
-      expect(await cauldron.callStatic.getFreeCollateral()).to.equal(parseUnits('-0.0484'))
+      await spotSource1.set(parseUnits('0.000251')) // ETH per USDC (1 ETH = 3984.06 USDC)
+      // -0.0484 * 3984.06 = -192.83 USDC underwater
+      await cauldron.getFreeCollateral()
+      expect(await cauldron.peekFreeCollateral()).to.equal(parseUnits('-0.0484'))
     })
 
     it('users can repay debt', async () => {
@@ -294,6 +296,18 @@ describe.only('ContangoCauldron - global state', function () {
     it('users can increase collateral', async () => {
       await cauldron.pour(vaultId1, 1, 0)
       expect(await cauldron.peekFreeCollateral()).to.equal(parseUnits('-0.048399999999999999'))
+    })
+
+    it('users can open new positions', async () => {
+      await cauldron.pour(vaultId2, parseUnits('1200'), parseUnits('1000', 6))
+      expect(await cauldron.peekFreeCollateral()).to.equal(parseUnits('-0.0233'))
+    })
+
+    it('users can close positions', async () => {
+      const ink = (await cauldron.balances(vaultId1)).ink
+      const art = (await cauldron.balances(vaultId1)).art
+      await cauldron.pour(vaultId1, ink.mul(-1), art.mul(-1))
+      expect(await cauldron.peekFreeCollateral()).to.equal(parseUnits('-0.044'))
     })
 
     it("users can't borrow and become undercollateralized", async () => {
