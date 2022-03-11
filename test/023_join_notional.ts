@@ -52,7 +52,7 @@ describe('Join1155', function () {
       fCash.address,
       underlying.address,
       maturity,
-      currencyId
+      currencyId,
     ])) as NotionalJoin
 
     await join.grantRoles(
@@ -142,9 +142,9 @@ describe('Join1155', function () {
               .withArgs(join.address, owner, WAD.mul(2))
             expect(await join.storedBalance()).to.equal(WAD.mul(2))
             expect(await underlying.balanceOf(owner)).to.equal(WAD.mul(2))
-          })    
+          })
         })
-  
+
         it('redeems on first exit', async () => {
           expect(await join.exit(owner, WAD))
             .to.emit(join, 'Redeemed')
@@ -155,7 +155,7 @@ describe('Join1155', function () {
           expect(await join.accrual()).to.equal(WAD.mul(2))
           expect(await underlying.balanceOf(owner)).to.equal(WAD.mul(2))
         })
-      })  
+      })
     })
   })
 })
