@@ -231,6 +231,7 @@ contract ConvexJoin is ERC20, Join {
         managed_assets -= amount;
 
         IRewardStaking(convexPool).withdraw(amount, false);
+        storedBalance += amount;
         _exit(user, amount);
         emit Withdrawn(user, amount, false);
 

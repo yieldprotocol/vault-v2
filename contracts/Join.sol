@@ -60,7 +60,7 @@ contract Join is IJoin, IERC3156FlashLender, AccessControl {
     /// @dev Transfer `amount` `asset` to `user`
     function _exit(address user, uint128 amount) internal returns (uint128) {
         IERC20 token = IERC20(asset);
-        if (storedBalance > amount) storedBalance -= amount;
+        storedBalance -= amount;
         token.safeTransfer(user, amount);
         return amount;
     }
