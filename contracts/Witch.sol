@@ -186,17 +186,51 @@ contract Witch is AccessControl {
         ink = _buy(buyParamas);
 
     }
+/*
 
-    /// @notice Calcs collateral purchased, slurps vault, and settles tokens
-    /// @param buyParamas (struct):
-    ///  ilkId: Id of asset used for collateral
-    ///  vaultId: Id of vault to buy
-    ///  auctionStart: Block timestamp when auction was started
-    ///  artIn: Portion of debt being bought (in terms of base)
-    ///  totalArt: Total debt
-    ///  totalInk: Total collateral
-    ///  min: Minimum amount of collateral acceptable by buyer
-    /// @return inkOut Amount of collateral
+     x x x
+   x      x    Hi Fren!
+  x  .  .  x   I want to buy this vault under auction!  I'll pay
+  x        x   you in the same `base` currency of the debt, but
+  x        x   I want no less than `uint min` of the collateral, ok?
+  x   ===  x
+   x       x
+    xxxxxxx
+       x                            __  Ok Fren!
+       x     ┌───────────┐  _(\    |@@|
+       xxxxxx│BASE BUCKS │ (__/\__ \--/ __
+       x     │   $$$     │    \___|----|  |   __
+       x     └───────────┘        \ }{ /\ )_ / _\
+      x x                         /\__/\ \__O (__
+                                 (--/\--)    \__/
+                          │      _)(  )(_
+                          │     `---''---`
+                          ▼
+   _______
+  /  12   \  First lets check how much time `t` is left on the auction
+ |    |    | because that helps us determine the price we will accept
+ |9   |   3| for the debt! Yay!
+ |     \   |                       p + (1 - p) * t
+ |         |
+  \___6___/          (p is the auction starting price!)
+
+                          │
+                          │
+                          ▼                  (\
+                                              \ \
+ Then the Cauldron updates our internal    __    \/ ___,.-------..__        __
+ accounting by slurping up the debt      //\\ _,-'\\               `'--._ //\\
+ and the collateral from the vault!      \\ ;'      \\                   `: //
+                                          `(          \\                   )'
+ The Ladle then dishes out the collateral   :.          \\,----,         ,;
+ to you, dear user.  And the base you        `.`--.___   (    /  ___.--','
+ paid is settled up with the join.             `.     ``-----'-''     ,'
+                                                  -.               ,-
+                                                     `-._______.-'gpyy
+
+
+*/
+
     function _buy(BuyParamas memory buyParamas) private returns (uint256 inkOut) {
         Auction memory auction_ = auctions[buyParamas.vaultId];
         require(auction_.start != 0, "Vault not under auction");
