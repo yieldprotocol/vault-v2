@@ -163,6 +163,8 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl() {
         public
         afterMaturity
     {
+        require (accrual == 0, "Already redeemed");
+
         // Build an action to withdraw all mature fCash into underlying, then withdraw.
         IBatchAction.BalanceAction[] memory withdrawActions = new IBatchAction.BalanceAction[](1);
         withdrawActions[0] = IBatchAction.BalanceAction({
