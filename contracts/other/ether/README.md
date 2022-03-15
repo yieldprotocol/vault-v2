@@ -6,5 +6,5 @@ The simplest solution is to implement a module to wrap ether received by the Lad
 
 ladle.moduleCall{ value: etherToWrap }(
     WrapEtherModule,
-    wrap(etherToWrap, receiver)
+    wrap(receiver, etherToWrap)
 )
