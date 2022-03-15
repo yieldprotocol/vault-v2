@@ -28,7 +28,7 @@ describe('Ladle - module', function () {
   let ladle: LadleWrapper
   let weth: WETH9Mock
   let wrapEtherModule: WrapEtherModule
-  
+
   async function fixture() {
     return await YieldEnvironment.setup(ownerAcc, [], [])
   }
@@ -58,10 +58,7 @@ describe('Ladle - module', function () {
   })
 
   it('wraps Ether to a destination through the ladle', async () => {
-    const calldata = wrapEtherModule.interface.encodeFunctionData('wrap', [
-      other,
-      WAD
-    ])
+    const calldata = wrapEtherModule.interface.encodeFunctionData('wrap', [other, WAD])
     await ladle.ladle.moduleCall(wrapEtherModule.address, calldata, { value: WAD })
     expect(await weth.balanceOf(other)).to.equal(WAD)
   })
