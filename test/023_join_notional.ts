@@ -138,7 +138,7 @@ describe('Join1155', function () {
 
           it('does not allow to redeem again', async () => {
             await expect(join.redeem()).to.be.revertedWith('Already redeemed')
-          })  
+          })
 
           it('pushes underlying to user', async () => {
             expect(await join.exit(owner, WAD))
