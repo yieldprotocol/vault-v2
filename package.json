@@ -1,6 +1,6 @@
 {
   "name": "@yield-protocol/vault-v2",
-  "version": "0.15.1-ether-rc1",
+  "version": "0.15.1-ether-rc2",
   "description": "Yield Collateralized Debt Engine v2",
   "author": "Yield Inc.",
   "files": [
@@ -16,6 +16,7 @@
     "contracts/oracles/convex/*.sol",
     "contracts/oracles/yearn/*.sol",
     "contracts/other/notional/*.sol",
+    "contracts/other/ether/*.sol",
     "contracts/utils/*.sol",
     "contracts/utils/convex/*.sol",
     "contracts/utils/convex/interfaces/*.sol",
