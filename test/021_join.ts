@@ -10,11 +10,11 @@ import { Result } from '@ethersproject/abi'
 const { WAD, MAX256 } = constants
 const MAX = MAX256
 
-import JoinFactoryArtifact from '../artifacts/contracts/JoinFactory.sol/JoinFactory.json'
+import JoinFactoryArtifact from '../artifacts/contracts/mocks/JoinFactoryMock.sol/JoinFactoryMock.json'
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
 
 import { Join } from '../typechain/Join'
-import { JoinFactory } from '../typechain/JoinFactory'
+import { IJoinFactory } from '../typechain/IJoinFactory'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 
 import { ethers, waffle } from 'hardhat'
@@ -29,7 +29,7 @@ describe('Join', function () {
   let otherAcc: SignerWithAddress
   let other: string
   let join: Join
-  let joinFactory: JoinFactory
+  let joinFactory: IJoinFactory
   let token: ERC20Mock
   let otherToken: ERC20Mock
 
@@ -46,7 +46,7 @@ describe('Join', function () {
     token = (await deployContract(ownerAcc, ERC20MockArtifact, ['MTK', 'Mock Token'])) as ERC20Mock
     otherToken = (await deployContract(ownerAcc, ERC20MockArtifact, ['OTH', 'Other Token'])) as ERC20Mock
 
-    joinFactory = (await deployContract(ownerAcc, JoinFactoryArtifact, [])) as JoinFactory
+    joinFactory = (await deployContract(ownerAcc, JoinFactoryArtifact, [])) as IJoinFactory
     await joinFactory.grantRoles([id(joinFactory.interface, 'createJoin(address)')], owner)
 
     join = (await ethers.getContractAt(
