@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.6;
 
-import './ChainlinkUSDMultiOracle.sol';
+import "./ChainlinkUSDMultiOracle.sol";
 
 
 /**
@@ -17,16 +17,16 @@ contract ChainlinkL2USDMultiOracle is ChainlinkUSDMultiOracle {
     FlagsInterface public chainlinkFlags;
     // https://docs.chain.link/docs/l2-sequencer-flag/
     address internal constant FLAG_ARBITRUM_SEQ_OFFLINE =
-        address(bytes20(bytes32(uint256(keccak256('chainlink.flags.arbitrum-seq-offline')) - 1)));
+        address(bytes20(bytes32(uint256(keccak256("chainlink.flags.arbitrum-seq-offline")) - 1)));
 
     constructor(FlagsInterface flags) {
-        require(address(flags) != address(0), 'FlagsInterface has to be set');
+        require(address(flags) != address(0), "FlagsInterface has to be set");
         chainlinkFlags = flags;
     }
 
     modifier onlyFresh() {
         // If flag is raised we shouldn't perform any critical operations
-        require(!chainlinkFlags.getFlag(FLAG_ARBITRUM_SEQ_OFFLINE), 'Chainlink feeds are not being updated');
+        require(!chainlinkFlags.getFlag(FLAG_ARBITRUM_SEQ_OFFLINE), "Chainlink feeds are not being updated");
         _;
     }
 

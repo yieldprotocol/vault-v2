@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.6;
 
-import '@yield-protocol/utils-v2/contracts/access/AccessControl.sol';
-import '@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol';
-import '@yield-protocol/utils-v2/contracts/token/IERC20Metadata.sol';
-import '@yield-protocol/vault-interfaces/IOracle.sol';
-import '../../constants/Constants.sol';
-import './AggregatorV3Interface.sol';
-import './FlagsInterface.sol';
+import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
+import "@yield-protocol/utils-v2/contracts/token/IERC20Metadata.sol";
+import "@yield-protocol/vault-interfaces/IOracle.sol";
+import "../../constants/Constants.sol";
+import "./AggregatorV3Interface.sol";
+import "./FlagsInterface.sol";
 
 /**
  * @title ChainlinkUSDMultiOracle
@@ -31,7 +31,7 @@ contract ChainlinkUSDMultiOracle is IOracle, AccessControl, Constants {
         IERC20Metadata base,
         address source
     ) external auth {
-        require(AggregatorV3Interface(source).decimals() == 8, 'Non-8-decimals USD source');
+        require(AggregatorV3Interface(source).decimals() == 8, "Non-8-decimals USD source");
 
         sources[baseId] = Source({source: source, baseDecimals: base.decimals()});
         emit SourceSet(baseId, base, source);
@@ -73,11 +73,11 @@ contract ChainlinkUSDMultiOracle is IOracle, AccessControl, Constants {
         uint80 roundId;
         uint80 answeredInRound;
         Source memory source = sources[baseId];
-        require(source.source != address(0), 'Source not found');
+        require(source.source != address(0), "Source not found");
         (roundId, price, , updateTime, answeredInRound) = AggregatorV3Interface(source.source).latestRoundData();
-        require(price > 0, 'Chainlink price <= 0');
-        require(updateTime != 0, 'Incomplete round');
-        require(answeredInRound >= roundId, 'Stale price');
+        require(price > 0, "Chainlink price <= 0");
+        require(updateTime != 0, "Incomplete round");
+        require(answeredInRound >= roundId, "Stale price");
 
         uintPrice = uint256(price);
         baseDecimals = source.baseDecimals;
