@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.6;
-import '../../../oracles/chainlink/FlagsInterface.sol';
+import "../../../oracles/chainlink/FlagsInterface.sol";
 
 /**
 Mock FlagsInterface
@@ -17,28 +17,28 @@ contract FlagsInterfaceMock is FlagsInterface {
     }
 
     function getFlags(address[] calldata) external pure override returns (bool[] memory) {
-        revert('not implemented');
+        revert("not implemented");
     }
 
     function raiseFlag(address) external pure override {
-        revert('not implemented');
+        revert("not implemented");
     }
 
     function raiseFlags(address[] calldata) external pure override {
-        revert('not implemented');
+        revert("not implemented");
     }
 
     function lowerFlags(address[] calldata) external pure override {
-        revert('not implemented');
+        revert("not implemented");
     }
 
     function setRaisingAccessController(address) external pure override {
-        revert('not implemented');
+        revert("not implemented");
     }
 
     // helpers
     function flagSetArbitrumSeqOffline(bool value) public {
-        address flag = address(bytes20(bytes32(uint256(keccak256('chainlink.flags.arbitrum-seq-offline')) - 1)));
+        address flag = address(bytes20(bytes32(uint256(keccak256("chainlink.flags.arbitrum-seq-offline")) - 1)));
         flags[flag] = value;
     }
 }
