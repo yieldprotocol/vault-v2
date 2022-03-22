@@ -1,0 +1,3 @@
+[submodule "lib/vault-interfaces"]
+	path = lib/vault-interfaces
+	url = https://github.com/yieldprotocol/vault-interfaces
