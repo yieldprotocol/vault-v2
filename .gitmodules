@@ -1,3 +1,6 @@
 [submodule "lib/vault-interfaces"]
 	path = lib/vault-interfaces
 	url = https://github.com/yieldprotocol/vault-interfaces
+[submodule "lib/yield-utils-v2"]
+	path = lib/yield-utils-v2
+	url = https://github.com/yieldprotocol/yield-utils-v2
