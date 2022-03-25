@@ -86,6 +86,7 @@ interface Vm {
 
     function assume(bool) external;
     // When fuzzing, generate new inputs if conditional not met}
+}
 
 contract Test {
     event log                    (string);
