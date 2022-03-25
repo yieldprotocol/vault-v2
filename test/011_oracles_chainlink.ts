@@ -67,8 +67,6 @@ describe('Oracles - Chainlink', function () {
     )
     await chainlinkMultiOracle.setSource(DAI, dai.address, ETH, weth.address, daiEthAggregator.address)
     await chainlinkMultiOracle.setSource(USDC, usdc.address, ETH, weth.address, usdcEthAggregator.address)
-    console.log(daiEthAggregator.address);
-    console.log(usdcEthAggregator.address);
 
     await daiEthAggregator.set(WAD.div(2500)) // 1 DAI (1^18) in ETH
     await usdcEthAggregator.set(WAD.div(2500)) // 1 USDC (1^6) in ETH
