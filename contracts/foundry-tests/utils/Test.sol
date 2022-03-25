@@ -3,6 +3,9 @@ pragma solidity 0.8.6;
 
 // TODO: Replace with forge-std.
 interface Vm {
+
+    function warp(uint256) external;
+
     function expectEmit(
         bool,
         bool,

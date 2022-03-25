@@ -35,6 +35,7 @@ contract ChainlinkMultiOracleTest is Test, TestConstants, AccessControl {
         chainlinkMultiOracle.grantRole(0xef532f2e, address(this));
         chainlinkMultiOracle.setSource(DAI, dai, ETH, weth, address(daiEthAggregator));
         chainlinkMultiOracle.setSource(USDC, usdc, ETH, weth, address(usdcEthAggregator));
+        vm.warp(uint256(mockBytes32));
         daiEthAggregator.set(WAD / 2500);
         usdcEthAggregator.set(WAD / 2500);
     }
