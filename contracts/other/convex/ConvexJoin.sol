@@ -3,16 +3,15 @@
 pragma solidity 0.8.6;
 
 import "@yield-protocol/vault-interfaces/ICauldron.sol";
-import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
 import "./interfaces/IRewardStaking.sol";
 import "./CvxMining.sol";
-import "../../Join.sol";
+import "../../BasicJoin.sol";
 
 /// @notice Wrapper used to manage staking of Convex tokens
-contract ConvexJoin is ERC20, Join {
+contract ConvexJoin is BasicJoin {
     using CastU256U128 for uint256;
 
     struct EarnedData {
@@ -36,11 +35,11 @@ contract ConvexJoin is ERC20, Join {
     address public constant convexBooster = address(0xF403C135812408BFbE8713b5A23a04b3D48AAE31);
     address public constant crv = address(0xD533a949740bb3306d119CC777fa900bA034cd52);
     address public constant cvx = address(0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B);
-    address public curveToken;
-    address public convexToken;
-    address public convexPool;
-    uint256 public convexPoolId;
-    ICauldron public cauldron;
+    address public immutable curveToken;
+    address public immutable convexToken;
+    address public immutable convexPool;
+    uint256 public immutable convexPoolId;
+    ICauldron public immutable cauldron;
 
     //rewards
     RewardType[] public rewards;
@@ -72,20 +71,13 @@ contract ConvexJoin is ERC20, Join {
         address _convexToken,
         address _convexPool,
         uint256 _poolId,
-        ICauldron _cauldron,
-        string memory name,
-        string memory symbol,
-        uint8 decimals
-    ) ERC20(name, symbol, decimals) Join(_convexToken) {
+        ICauldron _cauldron
+    ) BasicJoin(_convexToken) {
         curveToken = _curveToken;
         convexToken = _convexToken;
         convexPool = _convexPool;
         convexPoolId = _poolId;
         cauldron = _cauldron;
-
-        //add rewards
-        addRewards();
-        setApprovals();
     }
 
     modifier nonReentrant() {
@@ -218,8 +210,8 @@ contract ConvexJoin is ERC20, Join {
         managed_assets += amount;
 
         _join(user, amount);
-        IRewardStaking(convexPool).stake(amount);
         storedBalance -= amount;
+        IRewardStaking(convexPool).stake(amount);
         emit Deposited(msg.sender, user, amount, false);
 
         return amount;
