@@ -303,6 +303,8 @@ contract ConvexJoin is BasicJoin {
         IRewardStaking(convexPool).getReward(address(this), true);
 
         uint256 rewardCount = rewards.length;
+        // Assuming that the reward distribution takes am avg of 230k gas per reward token we are setting an upper limit of 40 to prevent DOS attack
+        rewardCount = rewardCount >= 40 ? 40 : rewardCount;
         for (uint256 i; i < rewardCount; ++i) {
             _calcRewardIntegral(i, _account, depositedBalance, supply, claim);
         }
