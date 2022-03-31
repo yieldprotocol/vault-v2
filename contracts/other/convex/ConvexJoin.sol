@@ -8,10 +8,10 @@ import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
 import "./interfaces/IRewardStaking.sol";
 import "./CvxMining.sol";
-import "../../BasicJoin.sol";
+import "../../Join.sol";
 
 /// @notice Wrapper used to manage staking of Convex tokens
-contract ConvexJoin is BasicJoin {
+contract ConvexJoin is Join {
     using CastU256U128 for uint256;
 
     struct EarnedData {
@@ -72,7 +72,7 @@ contract ConvexJoin is BasicJoin {
         address _convexPool,
         uint256 _poolId,
         ICauldron _cauldron
-    ) BasicJoin(_convexToken) {
+    ) Join(_convexToken) {
         curveToken = _curveToken;
         convexToken = _convexToken;
         convexPool = _convexPool;
