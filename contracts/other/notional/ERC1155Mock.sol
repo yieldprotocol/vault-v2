@@ -2,7 +2,6 @@
 pragma solidity >=0.8.0;
 import "./ERC1155.sol"; // TODO: Move to yield-utils-v2
 
-
 contract ERC1155Mock is ERC1155 {
 
     function uri(uint256) public view virtual override returns (string memory) {
