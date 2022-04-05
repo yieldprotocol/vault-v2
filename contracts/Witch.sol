@@ -89,7 +89,7 @@ contract Witch is AccessControl() {
         external
     {
         require (auctions[vaultId].start == 0, "Vault already under auction");
-        require (cauldron.level(vaultId) < 0, "Not undercollateralized");
+        require (_isVaultUndercollateralised(vaultId), "Not undercollateralized");
 
         DataTypes.Vault memory vault_ = cauldron.vaults(vaultId);
         DataTypes.Balances memory balances_ = cauldron.balances(vaultId);
@@ -202,5 +202,9 @@ contract Witch is AccessControl() {
             uint256 divisor2 = duration_;
             uint256 term2 = initialOffer_ + (1e18 - initialOffer_).wmulup(dividend2.wdivup(divisor2));
             price = term1.wmulup(term2);
+    }
+
+    function _isVaultUndercollateralised(bytes12 vaultId) internal virtual returns(bool) {
+        return cauldron.level(vaultId) < 0;
     }
 }
