@@ -44,3 +44,6 @@ dist/
 
 # VsCodeCounter
 .VsCodeCounter/
+
+# Foundry
+out/

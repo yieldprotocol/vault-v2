@@ -1,0 +1,10 @@
+[default]
+src = 'contracts/foundry-tests'
+out = 'out'
+libs = ['lib']
+remappings = [
+    '@yield-protocol/utils-v2/=lib/yield-utils-v2/',
+    '@yield-protocol/vault-interfaces/=lib/vault-interfaces/',
+]
+
+# See more config options https://github.com/gakonst/foundry/tree/master/config
