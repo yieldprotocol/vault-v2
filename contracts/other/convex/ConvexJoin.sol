@@ -32,10 +32,10 @@ contract ConvexJoin is Join {
     mapping(address => bytes12[]) public vaults; // Mapping to keep track of the user & their vaults
 
     //constants/immutables
-    address public constant convexBooster = address(0xF403C135812408BFbE8713b5A23a04b3D48AAE31);
-    address public constant crv = address(0xD533a949740bb3306d119CC777fa900bA034cd52);
-    address public constant cvx = address(0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B);
-    address public immutable curveToken;
+
+    address public immutable crv; // = address(0xD533a949740bb3306d119CC777fa900bA034cd52);
+    address public immutable cvx; // = address(0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B);
+    // address public immutable curveToken;
     address public immutable convexToken;
     address public immutable convexPool;
     uint256 public immutable convexPoolId;
@@ -67,17 +67,19 @@ contract ConvexJoin is Join {
     event VaultRemoved(address indexed account, bytes12 indexed vaultId);
 
     constructor(
-        address _curveToken,
         address _convexToken,
         address _convexPool,
         uint256 _poolId,
-        ICauldron _cauldron
+        ICauldron _cauldron,
+        address _crv,
+        address _cvx
     ) Join(_convexToken) {
-        curveToken = _curveToken;
         convexToken = _convexToken;
         convexPool = _convexPool;
         convexPoolId = _poolId;
         cauldron = _cauldron;
+        crv = _crv;
+        cvx = _cvx;
     }
 
     modifier nonReentrant() {
@@ -93,9 +95,6 @@ contract ConvexJoin is Join {
 
     /// @notice Give maximum approval to the pool & convex booster contract to transfer funds from wrapper
     function setApprovals() public {
-        address _curveToken = curveToken;
-        IERC20(_curveToken).approve(convexBooster, 0);
-        IERC20(_curveToken).approve(convexBooster, type(uint256).max);
         IERC20(convexToken).approve(convexPool, type(uint256).max);
     }
 
