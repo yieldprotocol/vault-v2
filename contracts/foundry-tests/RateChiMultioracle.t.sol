@@ -23,6 +23,8 @@ contract RateChiMultiOracleTest is Test, TestConstants, AccessControl {
         compoundMultiOracle.grantRole(0x92b45d9c, address(this));
         compoundMultiOracle.setSource(baseId, CHI, address(cTokenChi));
         compoundMultiOracle.setSource(baseId, RATE, address(cTokenRate));
+        cTokenChi.set(WAD * 2);
+        cTokenRate.set(WAD * 3);
     }
 
     function testRevertUnknownSource() public {
@@ -31,8 +33,6 @@ contract RateChiMultiOracleTest is Test, TestConstants, AccessControl {
     }
 
     function testSetRetrieveChiRate() public {
-        cTokenChi.set(WAD * 2);
-        cTokenRate.set(WAD * 3);
         (uint256 getChiPrice,) = compoundMultiOracle.get(bytes32(baseId), bytes32(CHI), WAD);
         require(getChiPrice == WAD * 2, "Failed to get CHI spot price");
         (uint256 getRatePrice,) = compoundMultiOracle.get(bytes32(baseId), bytes32(RATE), WAD);
