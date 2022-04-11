@@ -218,7 +218,10 @@ contract ConvexJoin is Join {
 
     /// @dev Debit convex LP tokens held by this contract and send them to the `user` address.
     function exit(address user, uint128 amount) external override auth returns (uint128) {
-        _checkpoint(user, false);
+        // CHECKPOINT NEEDS TO BE CALLED BEFORE CALLING POUR FOR EXIT
+        // SINCE THE VAULT IS UPDATED BEFORE CALLING EXIT CALLING CHECKPOINT HERE WOULD RESULT IN AN INCORRECT
+        // CALCULATION
+        //_checkpoint(user, false);
         managed_assets -= amount;
 
         IRewardStaking(convexPool).withdraw(amount, false);
