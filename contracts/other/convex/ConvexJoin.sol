@@ -204,8 +204,8 @@ contract ConvexJoin is Join {
     /// @dev Take convex LP token and credit it to the `user` address.
     function join(address user, uint128 amount) external override auth returns (uint128) {
         require(amount > 0, "No convex token to wrap");
-        // CHECKPOINT NEEDS TO BE CALLED BEFORE CALLING POUR FOR JOIN
-        // _checkpoint(user, false);
+
+        _checkpoint(user, false);
         managed_assets += amount;
 
         _join(user, amount);
