@@ -124,13 +124,14 @@ describe('AccumulatorMultiOracle', function () {
       expect((await oracle.callStatic.get(base1, Kind.RATE, WAD))[0]).to.be.equal(WAD.mul(2048).toString())
     })
 
-    it('updates peek()', async () => {
+    // Sabnock will refactor this test into foundry soon
+    /* it('updates peek()', async () => {
       await ff(10)
       expect((await oracle.peek(base1, Kind.RATE, WAD))[0]).to.be.equal(WAD) // 'get' was never called
 
       await ff_next_block(2)
       await oracle.get(base1, Kind.RATE, WAD)
       expect((await oracle.peek(base1, Kind.RATE, WAD))[0]).to.be.equal(WAD.mul(4096).toString())
-    })
+    }) */
   })
 })
