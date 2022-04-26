@@ -205,7 +205,7 @@ contract ConvexJoin is Join {
     function join(address user, uint128 amount) external override auth returns (uint128) {
         require(amount > 0, "No convex token to wrap");
 
-        // _checkpoint(user, false);
+        _checkpoint(user, false);
         managed_assets += amount;
 
         _join(user, amount);
