@@ -22,16 +22,14 @@ contract StEthConverter {
     /// @dev Wrap stEth held by this contract and forward it to the "to" address
     function wrap(address to) external returns (uint256 wstEthAmount) {
         uint256 stEthAmount = stETH.balanceOf(address(this));
-        require(stEthAmount > 0, "No stETH to wrap");
         wstEthAmount = wstETH.wrap(stEthAmount);
         wstETH.safeTransfer(to, wstEthAmount);
     }
 
     /// @dev Unwrap WstETH held by this contract, and send the stETH to the "to" address
-    function unwrap(address to) external returns (uint256 unwstEthAmount) {
+    function unwrap(address to) external returns (uint256 stEthAmount) {
         uint256 wstEthAmount = wstETH.balanceOf(address(this));
-        require(wstEthAmount > 0, "No wstETH to unwrap");
-        unwstEthAmount = wstETH.unwrap(wstEthAmount);
-        stETH.safeTransfer(to, unwstEthAmount);
+        stEthAmount = wstETH.unwrap(wstEthAmount);
+        stETH.safeTransfer(to, stEthAmount);
     }
 }
