@@ -139,17 +139,17 @@ contract ConvexJoin is Join {
     }
 
     /// @notice Get user's balance of collateral deposited in various vaults
-    /// @param account_ User's address for which balance is requested
+    /// @param account User's address for which balance is requested
     /// @return User's balance of collateral
-    function aggregatedAssetsOf(address account_) internal view returns (uint256) {
-        bytes12[] memory userVault = vaults[account_];
+    function aggregatedAssetsOf(address account) internal view returns (uint256) {
+        bytes12[] memory userVault = vaults[account];
 
         //add up all balances of all vaults registered in the join and owned by the account
         uint256 collateral;
         DataTypes.Balances memory balance;
         uint256 userVaultLength = userVault.length;
         for (uint256 i; i < userVaultLength; ++i) {
-            if (cauldron.vaults(userVault[i]).owner == account_) {
+            if (cauldron.vaults(userVault[i]).owner == account) {
                 balance = cauldron.balances(userVault[i]);
                 collateral = collateral + balance.ink;
             }
@@ -201,31 +201,30 @@ contract ConvexJoin is Join {
 
     /// ------ JOIN and EXIT ------
 
-    /// @dev Take convex LP token and credit it to the `user` address.
+    /// @notice Take convex LP token and credit it to the `user` address.
+    /// @dev Before the join is called the vault is already updated, so the balance needs to be adjusted to the previous state for calculating the checkpoint
     function join(address user, uint128 amount) external override auth returns (uint128) {
         require(amount > 0, "No convex token to wrap");
 
-        _checkpoint(user, false);
+        _checkpoint(user, amount, false);
         managed_assets += amount;
 
         _join(user, amount);
-        storedBalance -= amount;
+        storedBalance -= amount; // _join would have increased the balance & we need to reduce it to reflect the stake in next line
         IRewardStaking(convexPool).stake(amount);
         emit Deposited(msg.sender, user, amount, false);
 
         return amount;
     }
 
-    /// @dev Debit convex LP tokens held by this contract and send them to the `user` address.
+    /// @notice Debit convex LP tokens held by this contract and send them to the `user` address.
+    /// @dev IMPORTANT: Checkpoint needs to be called before calling pour for exit
+    /// since the vault is updated before calling exit calling checkpoint here would result in an incorrect calculation
     function exit(address user, uint128 amount) external override auth returns (uint128) {
-        // CHECKPOINT NEEDS TO BE CALLED BEFORE CALLING POUR FOR EXIT
-        // SINCE THE VAULT IS UPDATED BEFORE CALLING EXIT CALLING CHECKPOINT HERE WOULD RESULT IN AN INCORRECT
-        // CALCULATION
-        //_checkpoint(user, false);
         managed_assets -= amount;
 
         IRewardStaking(convexPool).withdraw(amount, false);
-        storedBalance += amount;
+        storedBalance += amount; // _exit would have decreased the balance & we need to increase it to reflect the withdraw in the previous line
         _exit(user, amount);
         emit Withdrawn(user, amount, false);
 
@@ -235,19 +234,17 @@ contract ConvexJoin is Join {
     /// ------ REWARDS MATH ------
 
     /// @notice Calculates & upgrades the integral for distributing the reward token
-    /// @param _index The index of the reward token for which the calculations are to be done
-    /// @param _account Account for which the CvxIntegral has to be calculated
-    /// @param _balance Balance of the accounts
-    /// @param _supply Total supply of the wrapped token
-    /// @param _isClaim Whether to claim the calculated rewards
+    /// @param index The index of the reward token for which the calculations are to be done
+    /// @param account Account for which the CvxIntegral has to be calculated
+    /// @param balance Balance of the accounts
+    /// @param claim Whether to claim the calculated rewards
     function _calcRewardIntegral(
-        uint256 _index,
-        address _account,
-        uint256 _balance,
-        uint256 _supply,
-        bool _isClaim
+        uint256 index,
+        address account,
+        uint256 balance,
+        bool claim
     ) internal {
-        RewardType storage reward = rewards[_index];
+        RewardType storage reward = rewards[index];
 
         uint256 rewardIntegral = reward.reward_integral;
         uint256 rewardRemaining = reward.reward_remaining;
@@ -255,35 +252,36 @@ contract ConvexJoin is Join {
         //get difference in balance and remaining rewards
         //getReward is unguarded so we use reward_remaining to keep track of how much was actually claimed
         uint256 bal = IERC20(reward.reward_token).balanceOf(address(this));
-        if (_supply > 0 && (bal - rewardRemaining) > 0) {
+        uint256 supply = managed_assets;
+        if (supply > 0 && (bal - rewardRemaining) > 0) {
             unchecked {
                 // bal-rewardRemaining can't underflow because of the check above
-                rewardIntegral = rewardIntegral + ((bal - rewardRemaining) * 1e20) / _supply;
+                rewardIntegral = rewardIntegral + ((bal - rewardRemaining) * 1e20) / supply;
                 reward.reward_integral = rewardIntegral.u128();
             }
         }
 
         //do not give rewards to this contract
-        if (_account != address(this)) {
+        if (account != address(this)) {
             //update user integrals
-            uint256 userI = reward.reward_integral_for[_account];
-            if (_isClaim || userI < rewardIntegral) {
-                if (_isClaim) {
-                    uint256 receiveable = reward.claimable_reward[_account] +
-                        ((_balance * (rewardIntegral - userI)) / 1e20);
+            uint256 userI = reward.reward_integral_for[account];
+            if (claim || userI < rewardIntegral) {
+                if (claim) {
+                    uint256 receiveable = reward.claimable_reward[account] +
+                        ((balance * (rewardIntegral - userI)) / 1e20);
                     if (receiveable > 0) {
-                        reward.claimable_reward[_account] = 0;
+                        reward.claimable_reward[account] = 0;
                         unchecked {
                             bal -= receiveable;
                         }
-                        TransferHelper.safeTransfer(IERC20(reward.reward_token), _account, receiveable);
+                        TransferHelper.safeTransfer(IERC20(reward.reward_token), account, receiveable);
                     }
                 } else {
-                    reward.claimable_reward[_account] =
-                        reward.claimable_reward[_account] +
-                        ((_balance * (rewardIntegral - userI)) / 1e20);
+                    reward.claimable_reward[account] =
+                        reward.claimable_reward[account] +
+                        ((balance * (rewardIntegral - userI)) / 1e20);
                 }
-                reward.reward_integral_for[_account] = rewardIntegral;
+                reward.reward_integral_for[account] = rewardIntegral;
             }
         }
 
@@ -296,11 +294,17 @@ contract ConvexJoin is Join {
     /// ------ CHECKPOINT AND CLAIM ------
 
     /// @notice Create a checkpoint for the supplied addresses by updating the reward integrals & claimable reward for them & claims the rewards
-    /// @param _account The account for which checkpoints have to be calculated
-    function _checkpoint(address _account, bool claim) internal {
-        uint256 supply = managed_assets;
+    /// @dev Before the join is called the vault is already updated, so the balance needs to be adjusted to the previous state for calculating the checkpoint
+    /// @param account The account for which checkpoints have to be calculated
+    /// @param delta Amount to be subtracted from depositedBalance while joining
+    /// @param claim Whether to claim the rewards for the account
+    function _checkpoint(
+        address account,
+        uint256 delta,
+        bool claim
+    ) internal {
         uint256 depositedBalance;
-        depositedBalance = aggregatedAssetsOf(_account);
+        depositedBalance = aggregatedAssetsOf(account) - delta;
 
         IRewardStaking(convexPool).getReward(address(this), true);
 
@@ -308,30 +312,30 @@ contract ConvexJoin is Join {
         // Assuming that the reward distribution takes am avg of 230k gas per reward token we are setting an upper limit of 40 to prevent DOS attack
         rewardCount = rewardCount >= 40 ? 40 : rewardCount;
         for (uint256 i; i < rewardCount; ++i) {
-            _calcRewardIntegral(i, _account, depositedBalance, supply, claim);
+            _calcRewardIntegral(i, account, depositedBalance, claim);
         }
     }
 
     /// @notice Create a checkpoint for the supplied addresses by updating the reward integrals & claimable reward for them
-    /// @param _account The accounts for which checkpoints have to be calculated
-    function checkpoint(address _account) external returns (bool) {
-        _checkpoint(_account, false);
+    /// @param account The accounts for which checkpoints have to be calculated
+    function checkpoint(address account) external returns (bool) {
+        _checkpoint(account, 0, false);
         return true;
     }
 
     /// @notice Claim reward for the supplied account
-    /// @param _account Address whose reward is to be claimed
-    function getReward(address _account) external nonReentrant {
+    /// @param account Address whose reward is to be claimed
+    function getReward(address account) external nonReentrant {
         //claim directly in checkpoint logic to save a bit of gas
-        _checkpoint(_account, true);
+        _checkpoint(account, 0, true);
     }
 
     /// @notice Get the amount of tokens the user has earned
-    /// @param _account Address whose balance is to be checked
+    /// @param account Address whose balance is to be checked
     /// @return claimable Array of earned tokens and their amount
-    function earned(address _account) external view returns (EarnedData[] memory claimable) {
+    function earned(address account) external view returns (EarnedData[] memory claimable) {
         uint256 supply = managed_assets;
-        uint256 depositedBalance = aggregatedAssetsOf(_account);
+        uint256 depositedBalance = aggregatedAssetsOf(account);
         uint256 rewardCount = rewards.length;
         claimable = new EarnedData[](rewardCount);
 
@@ -341,7 +345,7 @@ contract ConvexJoin is Join {
             if (reward.reward_pool == address(0)) {
                 //cvx reward may not have a reward pool yet
                 //so just add whats already been checkpointed
-                claimable[i].amount += reward.claimable_reward[_account];
+                claimable[i].amount += reward.claimable_reward[account];
                 claimable[i].token = reward.reward_token;
                 continue;
             }
@@ -356,8 +360,8 @@ contract ConvexJoin is Join {
                 I = I + (d_reward * 1e20) / supply;
             }
 
-            uint256 newlyClaimable = (depositedBalance * (I - (reward.reward_integral_for[_account]))) / (1e20);
-            claimable[i].amount += reward.claimable_reward[_account] + newlyClaimable;
+            uint256 newlyClaimable = (depositedBalance * (I - (reward.reward_integral_for[account]))) / (1e20);
+            claimable[i].amount += reward.claimable_reward[account] + newlyClaimable;
             claimable[i].token = reward.reward_token;
 
             //calc cvx minted from crv and add to cvx claimables
@@ -368,7 +372,7 @@ contract ConvexJoin is Join {
                 if (supply > 0) {
                     I = I + (IRewardStaking(reward.reward_pool).earned(address(this)) * 1e20) / supply;
                 }
-                newlyClaimable = (depositedBalance * (I - reward.reward_integral_for[_account])) / 1e20;
+                newlyClaimable = (depositedBalance * (I - reward.reward_integral_for[account])) / 1e20;
                 claimable[CVX_INDEX].amount = CvxMining.ConvertCrvToCvx(newlyClaimable);
                 claimable[CVX_INDEX].token = cvx;
             }
