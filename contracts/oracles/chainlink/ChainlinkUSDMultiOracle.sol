@@ -4,7 +4,7 @@ pragma solidity 0.8.6;
 import '@yield-protocol/utils-v2/contracts/access/AccessControl.sol';
 import '@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol';
 import '@yield-protocol/utils-v2/contracts/token/IERC20Metadata.sol';
-import '@yield-protocol/vault-interfaces/IOracle.sol';
+import '@yield-protocol/vault-interfaces/src/IOracle.sol';
 import '../../constants/Constants.sol';
 import './AggregatorV3Interface.sol';
 import './FlagsInterface.sol';
