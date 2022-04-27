@@ -67,12 +67,4 @@ describe('Lido Wrapper-Unwrapper', function () {
     expect(await steth.balanceOf(ownerAcc.address)).to.equal(0)
     expect(await steth.balanceOf(dummyAcc.address)).to.equal(amount)
   })
-
-  it('should not be able to wrap stETH without transferring stETH first', async () => {
-    await expect(lido.wrap(ownerAcc.address)).to.be.revertedWith('No stETH to wrap')
-  })
-
-  it('should not be able to unwrap wstETH without transferring wstETH first', async () => {
-    await expect(lido.unwrap(ownerAcc.address)).to.be.revertedWith('No wstETH to unwrap')
-  })
 })
