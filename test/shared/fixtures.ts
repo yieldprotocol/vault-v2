@@ -11,7 +11,7 @@ import CauldronArtifact from '../../artifacts/contracts/Cauldron.sol/Cauldron.js
 import LadleArtifact from '../../artifacts/contracts/Ladle.sol/Ladle.json'
 import WandArtifact from '../../artifacts/contracts/Wand.sol/Wand.json'
 import WitchArtifact from '../../artifacts/contracts/Witch.sol/Witch.json'
-import JoinFactoryArtifact from '../../artifacts/contracts/JoinFactory.sol/JoinFactory.json'
+import JoinFactoryArtifact from '../../artifacts/contracts/mocks/JoinFactoryMock.sol/JoinFactoryMock.json'
 import PoolFactoryMockArtifact from '../../artifacts/contracts/mocks/PoolFactoryMock.sol/PoolFactoryMock.json'
 
 import ChainlinkMultiOracleArtifact from '../../artifacts/contracts/oracles/chainlink/ChainlinkMultiOracle.sol/ChainlinkMultiOracle.json'
@@ -30,8 +30,8 @@ import { Join } from '../../typechain/Join'
 import { FYToken } from '../../typechain/FYToken'
 import { Ladle } from '../../typechain/Ladle'
 import { Witch } from '../../typechain/Witch'
-import { JoinFactory } from '../../typechain/JoinFactory'
-import { FYTokenFactory } from '../../typechain/FYTokenFactory'
+import { IJoinFactory } from '../../typechain/IJoinFactory'
+import { IFYTokenFactory } from '../../typechain/IFYTokenFactory'
 import { Wand } from '../../typechain/Wand'
 import { PoolMock } from '../../typechain/PoolMock'
 import { PoolFactoryMock } from '../../typechain/PoolFactoryMock'
@@ -57,7 +57,7 @@ export class YieldEnvironment {
   cauldron: Cauldron
   ladle: LadleWrapper
   witch: Witch
-  joinFactory: JoinFactory
+  joinFactory: IJoinFactory
   poolFactory: PoolFactoryMock
   wand: Wand
   assets: Map<string, ERC20Mock>
@@ -72,7 +72,7 @@ export class YieldEnvironment {
     cauldron: Cauldron,
     ladle: LadleWrapper,
     witch: Witch,
-    joinFactory: JoinFactory,
+    joinFactory: IJoinFactory,
     poolFactory: PoolFactoryMock,
     wand: Wand,
     assets: Map<string, ERC20Mock>,
@@ -167,11 +167,11 @@ export class YieldEnvironment {
     )
   }
 
-  public static async joinFactoryAuth(joinFactory: JoinFactory, receiver: string) {
+  public static async joinFactoryAuth(joinFactory: IJoinFactory, receiver: string) {
     await joinFactory.grantRoles([id(joinFactory.interface, 'createJoin(address)')], receiver)
   }
 
-  public static async fyTokenFactoryAuth(fyTokenFactory: FYTokenFactory, receiver: string) {
+  public static async fyTokenFactoryAuth(fyTokenFactory: IFYTokenFactory, receiver: string) {
     await fyTokenFactory.grantRoles(
       [id(fyTokenFactory.interface, 'createFYToken(bytes6,address,address,uint32,string,string)')],
       receiver
@@ -292,15 +292,15 @@ export class YieldEnvironment {
     const innerLadle = (await deployContract(owner, LadleArtifact, [cauldron.address, weth.address])) as Ladle
     const ladle = new LadleWrapper(innerLadle)
     const witch = (await deployContract(owner, WitchArtifact, [cauldron.address, ladle.address])) as Witch
-    const joinFactory = (await deployContract(owner, JoinFactoryArtifact, [])) as JoinFactory
+    const joinFactory = (await deployContract(owner, JoinFactoryArtifact, [])) as IJoinFactory
     const poolFactory = (await deployContract(owner, PoolFactoryMockArtifact, [])) as PoolFactoryMock
 
-    const fyTokenFactoryFactory = await ethers.getContractFactory('FYTokenFactory', {
+    const fyTokenFactoryFactory = await ethers.getContractFactory('FYTokenFactoryMock', {
       libraries: {
         SafeERC20Namer: safeERC20NamerLibrary.address,
       },
     })
-    const fyTokenFactory = (await fyTokenFactoryFactory.deploy()) as unknown as FYTokenFactory
+    const fyTokenFactory = (await fyTokenFactoryFactory.deploy()) as unknown as IFYTokenFactory
     await fyTokenFactory.deployed()
 
     const wand = (await deployContract(owner, WandArtifact, [

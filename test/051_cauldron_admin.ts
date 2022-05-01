@@ -6,13 +6,13 @@ import { Contract } from '@ethersproject/contracts'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 
 import CauldronArtifact from '../artifacts/contracts/Cauldron.sol/Cauldron.json'
-import JoinFactoryArtifact from '../artifacts/contracts/JoinFactory.sol/JoinFactory.json'
+import JoinFactoryArtifact from '../artifacts/contracts/mocks/JoinFactoryMock.sol/JoinFactoryMock.json'
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
 import OracleMockArtifact from '../artifacts/contracts/mocks/oracles/OracleMock.sol/OracleMock.json'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
-import { JoinFactory } from '../typechain/JoinFactory'
+import { IJoinFactory } from '../typechain/IJoinFactory'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { OracleMock } from '../typechain/OracleMock'
@@ -33,7 +33,7 @@ describe('Cauldron - admin', function () {
   let ilk1: ERC20Mock
   let ilk2: ERC20Mock
   let join: Join
-  let joinFactory: JoinFactory
+  let joinFactory: IJoinFactory
   let oracle: OracleMock
 
   const mockAssetId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
@@ -59,7 +59,7 @@ describe('Cauldron - admin', function () {
     base = (await deployContract(ownerAcc, ERC20MockArtifact, [baseId, 'Mock Base'])) as ERC20Mock
     ilk1 = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId1, 'Mock Ilk'])) as ERC20Mock
     ilk2 = (await deployContract(ownerAcc, ERC20MockArtifact, [ilkId2, 'Mock Ilk'])) as ERC20Mock
-    joinFactory = (await deployContract(ownerAcc, JoinFactoryArtifact, [])) as JoinFactory
+    joinFactory = (await deployContract(ownerAcc, JoinFactoryArtifact, [])) as IJoinFactory
     await joinFactory.grantRoles([id(joinFactory.interface, 'createJoin(address)')], owner)
 
     join = (await ethers.getContractAt(
