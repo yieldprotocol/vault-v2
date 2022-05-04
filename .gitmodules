@@ -4,3 +4,6 @@
 [submodule "lib/yield-utils-v2"]
 	path = lib/yield-utils-v2
 	url = https://github.com/yieldprotocol/yield-utils-v2
+[submodule "lib/forge-std"]
+	path = lib/forge-std
+	url = https://github.com/brockelmore/forge-std
