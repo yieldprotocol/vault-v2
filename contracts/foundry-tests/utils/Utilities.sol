@@ -7,11 +7,16 @@ import "forge-std/Test.sol";
 contract Utilities is Test {
     bytes32 internal nextUser = keccak256(abi.encodePacked("user address"));
 
-    function getNextUserAddress() external returns (address payable) {
+    function getNextUserAddress() public returns (address payable) {
         //bytes32 to address conversion
         address payable user = payable(address(uint160(uint256(nextUser))));
         nextUser = keccak256(abi.encodePacked(nextUser));
         return user;
+    }
+
+    function getNextUserAddress(string memory label) external returns (address payable user) {
+        user = getNextUserAddress();
+        vm.label(user, label);
     }
 
     //create users with 100 ether balance

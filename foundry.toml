@@ -2,9 +2,7 @@
 src = 'contracts/foundry-tests'
 out = 'out'
 libs = ['lib']
-remappings = [
-    '@yield-protocol/utils-v2/=lib/yield-utils-v2/',
-    '@yield-protocol/vault-interfaces/=lib/vault-interfaces/',
-]
+block_timestamp = 1651743369 # Arbitrary Thursday, 5 May 2022 09:36:09
+verbosity = 3
 
 # See more config options https://github.com/gakonst/foundry/tree/master/config
