@@ -52,7 +52,8 @@
     "typechain": "^4.0.3",
     "typechain-target-ethers-v5": "^5.0.1",
     "typescript": "^3.9.7",
-    "uniswapv3-oracle": "^1.0.1"
+    "uniswapv3-oracle": "^1.0.1",
+    "forge-std": "github:foundry-rs/forge-std"
   },
   "repository": {
     "url": "git+https://github.com/yieldprotocol/vault-v2.git",

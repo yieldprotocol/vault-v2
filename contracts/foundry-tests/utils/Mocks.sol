@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Unlicense
 pragma solidity >=0.8.0;
 
-import "forge-std/Test.sol";
+import "./Test.sol";
 import "@yield-protocol/vault-interfaces/src/DataTypes.sol";
 
 //common utilities for forge tests
