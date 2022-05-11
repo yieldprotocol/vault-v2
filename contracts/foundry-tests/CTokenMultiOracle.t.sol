@@ -43,17 +43,17 @@ contract CTokenMultiOracleTest is Test, TestConstants, AccessControl {
         uint256 cUsdcUsdcAmount;
         uint256 daicDaiAmount;
         (cDaiDaiAmount,) = cTokenMultiOracle.get(cDaiId, DAI, WAD);
-        require(cDaiDaiAmount == WAD * 2);
+        assertEq(cDaiDaiAmount, WAD * 2);
         (cUsdcUsdcAmount,) = cTokenMultiOracle.get(cUsdcId, USDC, WAD);
-        require(cUsdcUsdcAmount == WAD * 2);
+        assertEq(cUsdcUsdcAmount, WAD * 2);
         (daicDaiAmount,) = cTokenMultiOracle.get(DAI, cDaiId, WAD);
-        require(daicDaiAmount == WAD / 2);
+        assertEq(daicDaiAmount, WAD / 2);
         (cDaiDaiAmount,) = cTokenMultiOracle.peek(cDaiId, DAI, WAD);
-        require(cDaiDaiAmount == WAD * 2);
+        assertEq(cDaiDaiAmount, WAD * 2);
         (cUsdcUsdcAmount,) = cTokenMultiOracle.peek(cUsdcId, USDC, WAD);
-        require(cUsdcUsdcAmount == WAD * 2);
+        assertEq(cUsdcUsdcAmount, WAD * 2);
         (daicDaiAmount,) = cTokenMultiOracle.peek(DAI, cDaiId, WAD);
-        require(daicDaiAmount == WAD / 2);
+        assertEq(daicDaiAmount, WAD / 2);
     }
 
 }
