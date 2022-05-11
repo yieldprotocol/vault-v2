@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.6;
-import "@yield-protocol/vault-interfaces/IFYToken.sol";
-import "@yield-protocol/vault-interfaces/IOracle.sol";
-import "@yield-protocol/vault-interfaces/DataTypes.sol";
+import "@yield-protocol/vault-interfaces/src/IFYToken.sol";
+import "@yield-protocol/vault-interfaces/src/IOracle.sol";
+import "@yield-protocol/vault-interfaces/src/DataTypes.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
 import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";

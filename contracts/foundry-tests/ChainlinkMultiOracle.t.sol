@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.6;
 
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "../oracles/chainlink/ChainlinkMultiOracle.sol";
 import "../mocks/DAIMock.sol";
 import "../mocks/USDCMock.sol";
@@ -11,18 +10,18 @@ import "../mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol";
 import "./utils/Test.sol";
 import "./utils/TestConstants.sol";
 
-contract ChainlinkMultiOracleTest is Test, TestConstants, AccessControl {
+contract ChainlinkMultiOracleTest is Test, TestConstants {
     OracleMock public oracleMock;
     DAIMock public dai;
     USDCMock public usdc;
     WETH9Mock public weth;
     ChainlinkMultiOracle public chainlinkMultiOracle;
-    ChainlinkAggregatorV3Mock public daiEthAggregator; 
+    ChainlinkAggregatorV3Mock public daiEthAggregator;
     ChainlinkAggregatorV3Mock public usdcEthAggregator;
 
     bytes32 public mockBytes32 = 0x0000000000000000000000000000000000000000000000000000000000000001;
     bytes6 public mockBytes6 = 0x000000000001;
-    uint256 public oneUSDC = WAD / 1000000000000;
+    uint256 public oneUSDC = 1e6;
 
     function setUp() public {
         oracleMock = new OracleMock();

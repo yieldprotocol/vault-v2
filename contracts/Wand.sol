@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.6;
-import "@yield-protocol/vault-interfaces/ICauldronGov.sol";
-import "@yield-protocol/vault-interfaces/ILadleGov.sol";
-// import "@yield-protocol/vault-interfaces/IWitchGov.sol";
-import "@yield-protocol/vault-interfaces/IMultiOracleGov.sol";
-import "@yield-protocol/vault-interfaces/IJoinFactory.sol";
-import "@yield-protocol/vault-interfaces/IJoin.sol";
-import "@yield-protocol/vault-interfaces/IFYTokenFactory.sol";
-import "@yield-protocol/vault-interfaces/IFYToken.sol";
-import "@yield-protocol/vault-interfaces/DataTypes.sol";
+import "@yield-protocol/vault-interfaces/src/ICauldronGov.sol";
+import "@yield-protocol/vault-interfaces/src/ILadleGov.sol";
+// import "@yield-protocol/vault-interfaces/src/IWitchGov.sol";
+import "@yield-protocol/vault-interfaces/src/IMultiOracleGov.sol";
+import "@yield-protocol/vault-interfaces/src/IJoinFactory.sol";
+import "@yield-protocol/vault-interfaces/src/IJoin.sol";
+import "@yield-protocol/vault-interfaces/src/IFYTokenFactory.sol";
+import "@yield-protocol/vault-interfaces/src/IFYToken.sol";
+import "@yield-protocol/vault-interfaces/src/DataTypes.sol";
 import "@yield-protocol/yieldspace-interfaces/IPoolFactory.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "./constants/Constants.sol";

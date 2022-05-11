@@ -3,7 +3,7 @@
 pragma solidity 0.8.6;
 
 import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
-import "@yield-protocol/vault-interfaces/DataTypes.sol";
+import "@yield-protocol/vault-interfaces/src/DataTypes.sol";
 import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 
