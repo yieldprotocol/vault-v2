@@ -162,43 +162,11 @@ contract Witch is AccessControl {
         emit Auctioned(vaultId, block.timestamp.u32());
     }
 
-    /// @dev Pay `base` of the debt in a vault in liquidation, getting at least `minInkOut` collateral.
-    /// Use `payAll` to pay all the debt, using `paySome` for amounts close to the whole vault might revert.
-    /// @param vaultId Id of vault to buy
-    /// @param baseIn Amount of base that the liquidator is paying
-    /// @param minInkOut Minimum amount of collateral that must be received
-    /// @return inkOut Amount of vault collateral sold
-    function paySome(
-        bytes12 vaultId,
-        uint128 baseIn,
-        uint128 minInkOut
-    ) external returns (uint256 inkOut) {
-        Auction storage auction_ = auctions[vaultId];
-        require(
-            auction_.start > 0,
-            "Vault not under auction"
-        );
-
-        DataTypes.Vault memory vault = cauldron.vaults(vaultId);
-        DataTypes.Series memory series = cauldron.series(vault.seriesId);
-
-        // Find out how much debt is being repaid
-        uint128 artIn = uint128(cauldron.debtFromBase(vault.seriesId, baseIn));
-
-        require(
-            (inkOut = _liquidate(vaultId, vault, auction_, artIn)) >= minInkOut,
-            "Not enough bought"
-        );
-
-        // Move the assets
-        _settle(msg.sender, vault.ilkId, series.baseId, inkOut.u128(), baseIn);
-    }
-
     /// @dev Pay all debt from a vault in liquidation, getting at least `minInkOut` collateral.
     /// @param vaultId Id of vault to buy
     /// @param minInkOut Minimum amount of collateral that must be received
     /// @return inkOut Amount of vault collateral sold
-    function payAll(bytes12 vaultId, uint128 minInkOut) external returns (uint256 inkOut) {
+    function payBase(bytes12 vaultId, uint128 minInkOut) external returns (uint256 inkOut) {
         Auction storage auction_ = auctions[vaultId];
         require(
             auction_.start > 0,
@@ -216,15 +184,22 @@ contract Witch is AccessControl {
             "Not enough bought"
         );
 
-        // Move the assets
-        _settle(msg.sender, vault.ilkId, series.baseId, inkOut.u128(), baseIn);
+        // Give collateral to the user
+        IJoin ilkJoin = ladle.joins(vault.ilkId);
+        require(ilkJoin != IJoin(address(0)), "Join not found");
+        ilkJoin.exit(msg.sender, inkOut.u128());
+
+        // Take underlying from user
+        IJoin baseJoin = ladle.joins(series.baseId);
+        require(baseJoin != IJoin(address(0)), "Join not found");
+        baseJoin.join(msg.sender, baseIn);
     }
 
     /// @dev Pay all debt from a vault in liquidation, getting at least `minInkOut` collateral.
     /// @param vaultId Id of vault to buy
     /// @param minInkOut Minimum amount of collateral that must be received
     /// @return inkOut Amount of vault collateral sold
-    function payFYToken(bytes12 vaultId, uint128 artIn, uint128 minInkOut) external returns (uint256 inkOut) {
+    function payFYToken(bytes12 vaultId, uint128 minInkOut) external returns (uint256 inkOut) {
         Auction storage auction_ = auctions[vaultId];
         require(
             auction_.start > 0,
@@ -234,22 +209,18 @@ contract Witch is AccessControl {
         DataTypes.Vault memory vault = cauldron.vaults(vaultId);
 
         require(
-            (inkOut = _liquidate(vaultId, vault, auction_, artIn)) >= minInkOut,
+            (inkOut = _liquidate(vaultId, vault, auction_, auction_.art)) >= minInkOut,
             "Not enough bought"
         );
 
-        // Move the assets
-        if (inkOut != 0) {
-            // Give collateral to the user
-            IJoin ilkJoin = ladle.joins(vault.ilkId);
-            require(ilkJoin != IJoin(address(0)), "Join not found");
-            ilkJoin.exit(msg.sender, inkOut.u128());
-        }
-        if (artIn != 0) {
-            // Burn fyToken from user
-            DataTypes.Series memory series = cauldron.series(vault.seriesId);
-            series.fyToken.burn(msg.sender, artIn);
-        }
+        // Give collateral to the user
+        IJoin ilkJoin = ladle.joins(vault.ilkId);
+        require(ilkJoin != IJoin(address(0)), "Join not found");
+        ilkJoin.exit(msg.sender, inkOut.u128());
+
+        // Burn fyToken from user
+        DataTypes.Series memory series = cauldron.series(vault.seriesId);
+        series.fyToken.burn(msg.sender, auction_.art);
     }
 
 /*
@@ -327,19 +298,14 @@ contract Witch is AccessControl {
             Limits memory limits_ = limits[vault.ilkId][auction_.baseId];
             limits_.sum -= inkOut.u128();
             limits[vault.ilkId][auction_.baseId] = limits_;
-
-            // Ensure enough dust is left
-            require(auction.art == artIn || auction.art - artIn >= limits_.dust * (10**limits_.dec), "Leaves dust");
         }
 
         // Remove debt and collateral from vault
         cauldron.slurp(vaultId, inkOut.u128(), artIn.u128());
 
-        if (auction_.art == artIn) {
-            // If there is no debt left, return the vault with the collateral to the owner
-            delete auctions[vaultId];
-            cauldron.give(vaultId, auction_.owner);
-        }
+        // If there is no debt left, return the vault with the collateral to the owner
+        delete auctions[vaultId];
+        cauldron.give(vaultId, auction_.owner);
 
         emit Bought(vaultId, msg.sender, inkOut, artIn);
     }
@@ -360,32 +326,5 @@ contract Witch is AccessControl {
         }
         uint256 timeProportion = elapsed > duration ? 1e18 : elapsed.wdiv(duration);
         proportion = uint256(initialProportion) + uint256(1e18 - initialProportion).wmul(timeProportion);
-    }
-
-    /// @dev Move base from the buyer to the protocol, and collateral from the protocol to the buyer
-    /// @param user  Address of buyer
-    /// @param ilkId Id of asset used for collateral
-    /// @param baseId Id of borrowed token
-    /// @param ink Amount of collateral
-    /// @param art Amount of debt
-    function _settle(
-        address user,
-        bytes6 ilkId,
-        bytes6 baseId,
-        uint128 ink,
-        uint128 art
-    ) private {
-        if (ink != 0) {
-            // Give collateral to the user
-            IJoin ilkJoin = ladle.joins(ilkId);
-            require(ilkJoin != IJoin(address(0)), "Join not found");
-            ilkJoin.exit(user, ink);
-        }
-        if (art != 0) {
-            // Take underlying from user
-            IJoin baseJoin = ladle.joins(baseId);
-            require(baseJoin != IJoin(address(0)), "Join not found");
-            baseJoin.join(user, art);
-        }
     }
 }
