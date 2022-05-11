@@ -278,19 +278,15 @@ contract Witch is AccessControl {
             "Vault not under auction"
         );
 
-        {
-            // Calculate how much collateral to give for liquidating at a certain time, for a certain vault.
-            // inkOut = totalInk * (p + (1 - p) * t)
-            uint256 proportionNow = _calcProportion(vault.ilkId, auction_.baseId, auction_.start);
-            inkOut = uint256(auction.ink).wmul(proportionNow);
-        }
+        // Calculate how much collateral to give for liquidating at a certain time, for a certain vault.
+        // inkOut = totalInk * (p + (1 - p) * t)
+        uint256 proportionNow = _calcProportion(vault.ilkId, auction_.baseId, auction_.start);
+        inkOut = uint256(auction.ink).wmul(proportionNow);
 
-        {
-            // Update concurrent collateral under auction
-            Limits memory limits_ = limits[vault.ilkId][auction_.baseId];
-            limits_.sum -= inkOut.u128();
-            limits[vault.ilkId][auction_.baseId] = limits_;
-        }
+        // Update concurrent collateral under auction
+        Limits memory limits_ = limits[vault.ilkId][auction_.baseId];
+        limits_.sum -= inkOut.u128();
+        limits[vault.ilkId][auction_.baseId] = limits_;
 
         // Remove debt and collateral from vault
         cauldron.slurp(vaultId, inkOut.u128(), auction_.art);
