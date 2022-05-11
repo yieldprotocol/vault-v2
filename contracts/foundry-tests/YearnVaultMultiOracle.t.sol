@@ -24,9 +24,13 @@ contract YearnVaultMultiOracleTest is Test, TestConstants, AccessControl {
         usdc = new USDCMock();
         yearnVaultMultiOracle = new YearnVaultMultiOracle();
         yvDAI = new YvTokenMock("Yearn Vault DAI", "yvDAI", 18, ERC20(address(dai)));
-        yvDAI.set(1071594513314087964);
+        // Amount of yvDAI you receive for 1 DAI
+        uint256 daiToYvdaiPrice = 1071594513314087964;
+        yvDAI.set(daiToYvdaiPrice);
         yvUSDC = new YvTokenMock("Yearn Vault USDC", "yvUSDC", 6, ERC20(address(usdc)));
-        yvUSDC.set(1083891);
+        // Amount of yvUSDC you receive for 1 USDC
+        uint256 usdcToYvusdcPrice = 1083891;
+        yvUSDC.set(usdcToYvusdcPrice);
         yearnVaultMultiOracle.grantRole(0x92b45d9c, address(this));
     }
 
@@ -54,16 +58,24 @@ contract YearnVaultMultiOracleTest is Test, TestConstants, AccessControl {
     function testGetAndPeek() public {
         setYearnVaultMultiOracleSource();
         (uint256 yvusdcUsdcConversion,) = yearnVaultMultiOracle.get(YVUSDC, USDC, 2000000);
-        require(yvusdcUsdcConversion == 1083891 * 2, "Get yvUSDC-USDC conversion unsuccessful");
+        uint256 yvusdcToUsdcPrice = 1083891 * 2; // Amount of USDC you receive for 2000000 yvUSDC
+        assertEq(yvusdcUsdcConversion, yvusdcToUsdcPrice, "Get yvUSDC-USDC conversion unsuccessful");
+
         (uint256 yvdaiDaiConversion,) = yearnVaultMultiOracle.get(YVDAI, DAI, WAD * 2);
-        require(yvdaiDaiConversion == 1071594513314087964 * 2, "Peek yvDAI-DAI conversion unsuccessful");
+        uint256 yvdaiToDaiPrice = 1071594513314087964 * 2; // Amount of DAI you receive for 1e18 * 2 yvDAI
+        assertEq(yvdaiDaiConversion, yvdaiToDaiPrice, "Peek yvDAI-DAI conversion unsuccessful");
+
         (uint256 usdcYvusdcConversion,) = yearnVaultMultiOracle.get(USDC, YVUSDC, 1000000);
-        require(usdcYvusdcConversion == 922601, "Get USDC-yvUSDC conversion unsuccessful");
+        uint256 usdcToYvusdcPrice = 922601; // Amount of yvUSDC received for 1000000 USDC
+        assertEq(usdcYvusdcConversion, usdcToYvusdcPrice, "Get USDC-yvUSDC conversion unsuccessful");
+
         (uint256 daiYvdaiConversion,) = yearnVaultMultiOracle.peek(DAI, YVDAI, WAD);
-        require(daiYvdaiConversion == WAD * WAD / 1071594513314087964, "Peek DAI-yvDAI conversion unsuccessful");
-        yvUSDC.set(1088888);
+        uint256 daiToYvdaiPrice = WAD * WAD / 1071594513314087964; // Amount of yvDAI received for 1e18 DAI
+        assertEq(daiYvdaiConversion, daiToYvdaiPrice, "Peek DAI-yvDAI conversion unsuccessful");
+
+        yvUSDC.set(1088888); // Sets new price for USDC to yvUSDC conversion
         (uint256 newPrice,) = yearnVaultMultiOracle.get(YVUSDC, USDC, 2000000);
-        require(newPrice == 1088888 * 2, "Get new price unsuccessful");
+        assertEq(newPrice, 1088888 * 2, "Get new price unsuccessful");
     }
 
     function testRevertOnZeroPrice() public {

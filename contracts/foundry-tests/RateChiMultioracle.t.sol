@@ -33,13 +33,13 @@ contract RateChiMultiOracleTest is Test, TestConstants, AccessControl {
     }
 
     function testSetRetrieveChiRate() public {
-        (uint256 getChiPrice,) = compoundMultiOracle.get(bytes32(baseId), bytes32(CHI), WAD);
-        require(getChiPrice == WAD * 2, "Failed to get CHI spot price");
-        (uint256 getRatePrice,) = compoundMultiOracle.get(bytes32(baseId), bytes32(RATE), WAD);
-        require(getRatePrice == WAD * 3, "Failed to get RATE spot price");
-        (uint256 peekChiPrice,) = compoundMultiOracle.peek(bytes32(baseId), bytes32(CHI), WAD);
-        require(peekChiPrice == WAD * 2, "Failed to peek CHI spot price");
-        (uint256 peekRatePrice,) = compoundMultiOracle.peek(bytes32(baseId), bytes32(RATE), WAD);
-        require(peekRatePrice == WAD * 3, "Failed to peek RATE spot price");
+        (uint256 getChi,) = compoundMultiOracle.get(bytes32(baseId), bytes32(CHI), WAD);
+        assertEq(getChi, WAD * 2, "Failed to get CHI spot price");
+        (uint256 getRate,) = compoundMultiOracle.get(bytes32(baseId), bytes32(RATE), WAD);
+        assertEq(getRate, WAD * 3, "Failed to get RATE spot price");
+        (uint256 peekChi,) = compoundMultiOracle.peek(bytes32(baseId), bytes32(CHI), WAD);
+        assertEq(peekChi, WAD * 2, "Failed to peek CHI spot price");
+        (uint256 peekRate,) = compoundMultiOracle.peek(bytes32(baseId), bytes32(RATE), WAD);
+        assertEq(peekRate, WAD * 3, "Failed to peek RATE spot price");
     }
 }

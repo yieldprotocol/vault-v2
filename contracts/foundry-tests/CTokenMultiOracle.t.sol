@@ -38,19 +38,22 @@ contract CTokenMultiOracleTest is Test, TestConstants, AccessControl {
     }
 
     function testGetCTokenConversions() public {
-        (uint256 cDaiDaiConversion,) = cTokenMultiOracle.get(cDaiId, DAI, WAD);
-        require(cDaiDaiConversion == WAD * 2);
-        (uint256 cUsdcUsdcConversion,) = cTokenMultiOracle.get(cUsdcId, USDC, WAD);
-        require(cUsdcUsdcConversion == WAD * 2);
-        (uint256 daiCDaiConversion,) = cTokenMultiOracle.get(DAI, cDaiId, WAD);
-        require(daiCDaiConversion == WAD / 2);
-        (uint256 peekCDaiDaiConversion,) = cTokenMultiOracle.peek(cDaiId, DAI, WAD);
-        require(peekCDaiDaiConversion == WAD * 2);
-        (uint256 peekCUsdcUsdcConversion,) = cTokenMultiOracle.peek(cUsdcId, USDC, WAD);
-        require(peekCUsdcUsdcConversion == WAD * 2);
-        (uint256 peekDaiCDaiConversion,) = cTokenMultiOracle.peek(DAI, cDaiId, WAD);
-        require(peekDaiCDaiConversion == WAD / 2);
-
+        // To use for both get and peek calls
+        uint256 cDaiDaiAmount;
+        uint256 cUsdcUsdcAmount;
+        uint256 daicDaiAmount;
+        (cDaiDaiAmount,) = cTokenMultiOracle.get(cDaiId, DAI, WAD);
+        require(cDaiDaiAmount == WAD * 2);
+        (cUsdcUsdcAmount,) = cTokenMultiOracle.get(cUsdcId, USDC, WAD);
+        require(cUsdcUsdcAmount == WAD * 2);
+        (daicDaiAmount,) = cTokenMultiOracle.get(DAI, cDaiId, WAD);
+        require(daicDaiAmount == WAD / 2);
+        (cDaiDaiAmount,) = cTokenMultiOracle.peek(cDaiId, DAI, WAD);
+        require(cDaiDaiAmount == WAD * 2);
+        (cUsdcUsdcAmount,) = cTokenMultiOracle.peek(cUsdcId, USDC, WAD);
+        require(cUsdcUsdcAmount == WAD * 2);
+        (daicDaiAmount,) = cTokenMultiOracle.peek(DAI, cDaiId, WAD);
+        require(daicDaiAmount == WAD / 2);
     }
 
 }

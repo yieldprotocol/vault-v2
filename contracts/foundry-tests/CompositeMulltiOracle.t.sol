@@ -39,6 +39,7 @@ contract CompositeMultiOracleTest is Test, TestConstants, AccessControl {
         chainlinkMultiOracle.setSource(DAI, dai, ETH, weth, address(daiEthAggregator));
         chainlinkMultiOracle.setSource(USDC, usdc, ETH, weth, address(usdcEthAggregator));
         vm.warp(uint256(mockBytes32));
+        // WAD / 2500 here represents the amount of ETH received for either 1 DAI or 1 USDC
         daiEthAggregator.set(WAD / 2500);
         usdcEthAggregator.set(WAD / 2500);
         bytes4[] memory roles = new bytes4[](2);
@@ -52,7 +53,7 @@ contract CompositeMultiOracleTest is Test, TestConstants, AccessControl {
         bytes6 baseId = DAI;
         bytes6 quoteId = ETH;
         address source = address(chainlinkMultiOracle);
-        require(address(compositeMultiOracle.sources(baseId, quoteId)) == 0x0000000000000000000000000000000000000000);
+        assertEq(address(compositeMultiOracle.sources(baseId, quoteId)), 0x0000000000000000000000000000000000000000);
         vm.expectEmit(true, true, true, false);
         emit SourceSet(baseId, quoteId, IOracle(source));
         compositeMultiOracle.setSource(baseId, quoteId, IOracle(source));
@@ -67,8 +68,8 @@ contract CompositeMultiOracleTest is Test, TestConstants, AccessControl {
         vm.expectEmit(true, true, true, false);
         emit PathSet(baseId, quoteId, path);
         compositeMultiOracle.setPath(baseId, quoteId, path);
-        require(compositeMultiOracle.paths(baseId, quoteId, 0) == path[0]);
-        require(compositeMultiOracle.paths(quoteId, baseId, 0) == path[0]);
+        assertEq(compositeMultiOracle.paths(baseId, quoteId, 0), path[0]);
+        assertEq(compositeMultiOracle.paths(quoteId, baseId, 0), path[0]);
     }
 
     function setChainlinkMultiOracleSource() public {
@@ -80,16 +81,16 @@ contract CompositeMultiOracleTest is Test, TestConstants, AccessControl {
 
     function testRetrieveConversionAndUpdateTime() public {
         setChainlinkMultiOracleSource();
-        (uint256 conversion, uint256 updateTime) = compositeMultiOracle.peek(DAI, ETH, WAD);
-        require(conversion == WAD / 2500, "Get conversion unsuccessful");
-        require(updateTime > 0, "Update time below lower bound");
-        require(updateTime < 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, "Update time above upper bound");
-        (uint256 usdcEthConversion,) = compositeMultiOracle.peek(USDC, ETH, oneUSDC);
-        require(usdcEthConversion == WAD / 2500, "Get USDC-ETH conversion unsuccessful");
-        (uint256 ethDaiConversion,) = compositeMultiOracle.peek(ETH, DAI, WAD);
-        require(ethDaiConversion == WAD * 2500, "Get ETH-DAI conversion unsuccessful");
-        (uint256 ethUsdcConversion,) = compositeMultiOracle.peek(ETH, USDC, WAD);
-        require(ethUsdcConversion == oneUSDC * 2500, "Get ETH-USDC conversion unsuccessful");
+        (uint256 amount, uint256 updateTime) = compositeMultiOracle.peek(DAI, ETH, WAD);
+        assertEq(amount, WAD / 2500, "Get conversion unsuccessful");
+        assertGt(updateTime, 0, "Update time below lower bound");
+        assertLt(updateTime, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, "Update time above upper bound");
+        (uint256 usdcEthAmount,) = compositeMultiOracle.peek(USDC, ETH, oneUSDC);
+        assertEq(usdcEthAmount, WAD / 2500, "Get USDC-ETH conversion unsuccessful");
+        (uint256 ethDaiAmount,) = compositeMultiOracle.peek(ETH, DAI, WAD);
+        assertEq(ethDaiAmount, WAD * 2500, "Get ETH-DAI conversion unsuccessful");
+        (uint256 ethUsdcAmount,) = compositeMultiOracle.peek(ETH, USDC, WAD);
+        assertEq(ethUsdcAmount, oneUSDC * 2500, "Get ETH-USDC conversion unsuccessful");
     }
 
     function testRevertOnTimestampGreaterThanCurrentBlock() public {
@@ -104,14 +105,14 @@ contract CompositeMultiOracleTest is Test, TestConstants, AccessControl {
         daiEthAggregator.setTimestamp(1);
         usdcEthAggregator.setTimestamp(block.timestamp);
         (,uint256 updateTime) = compositeMultiOracle.peek(DAI, USDC, WAD);
-        require(updateTime == 1);
+        assertEq(updateTime, 1);
     }
 
     function testRetrieveDaiUsdcConversionAndReverse() public {
         setChainlinkMultiOracleSource();
-        (uint256 daiUsdcConversion,) = compositeMultiOracle.peek(DAI, USDC, WAD);
-        require(daiUsdcConversion == oneUSDC);
-        (uint256 usdcDaiConversion,) = compositeMultiOracle.peek(USDC, DAI, oneUSDC);
-        require(usdcDaiConversion == WAD); 
+        (uint256 daiUsdcAmount,) = compositeMultiOracle.peek(DAI, USDC, WAD);
+        assertEq(daiUsdcAmount, oneUSDC);
+        (uint256 usdcDaiAmount,) = compositeMultiOracle.peek(USDC, DAI, oneUSDC);
+        assertEq(usdcDaiAmount, WAD); 
     }
 }

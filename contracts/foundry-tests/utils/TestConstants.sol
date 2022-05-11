@@ -2,7 +2,7 @@
 pragma solidity 0.8.6;
 
 contract TestConstants {
-    uint256 public constant WAD = 1000000000000000000;
+    uint256 public constant WAD = 1e18;
 
     bytes6 public constant CHI = 0x434849000000;
     bytes6 public constant RATE = 0x524154450000;
