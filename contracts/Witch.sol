@@ -102,8 +102,7 @@ contract Witch is AccessControl() {
             owner: vault_.owner,
             start: block.timestamp.u32()
         });
-        cauldron.give(vaultId, address(this));
-        emit Auctioned(vaultId, block.timestamp.u32());
+        _auctionStarted(vaultId);
     }
 
     /// @dev Pay `base` of the debt in a vault in liquidation, getting at least `min` collateral.
@@ -135,11 +134,10 @@ contract Witch is AccessControl() {
         cauldron.slurp(vaultId, ink.u128(), art.u128());                                            // Remove debt and collateral from the vault
         settle(msg.sender, vault_.ilkId, series_.baseId, ink.u128(), base);                   // Move the assets
         if (balances_.art - art == 0) {                                                             // If there is no debt left, return the vault with the collateral to the owner
-            cauldron.give(vaultId, auction_.owner);
-            delete auctions[vaultId];
+            _auctionEnded(vaultId, auction_.owner);
         }
 
-        emit Bought(vaultId, msg.sender, ink, art);
+        _collateralBought(vaultId, ink, art);
     }
 
 
@@ -167,10 +165,9 @@ contract Witch is AccessControl() {
 
         cauldron.slurp(vaultId, ink.u128(), balances_.art);                                                     // Remove debt and collateral from the vault
         settle(msg.sender, vault_.ilkId, series_.baseId, ink.u128(), cauldron.debtToBase(vault_.seriesId, balances_.art));                                        // Move the assets
-        cauldron.give(vaultId, auction_.owner);
-        delete auctions[vaultId];
+        _auctionEnded(vaultId, auction_.owner);
 
-        emit Bought(vaultId, msg.sender, ink, balances_.art); // Still the initially read `art` value, not the updated one
+        _collateralBought(vaultId, ink, balances_.art); // Still the initially read `art` value, not the updated one
     }
 
     /// @dev Move base from the buyer to the protocol, and collateral from the protocol to the buyer
@@ -206,5 +203,19 @@ contract Witch is AccessControl() {
 
     function _isVaultUndercollateralised(bytes12 vaultId) internal virtual returns(bool) {
         return cauldron.level(vaultId) < 0;
+    }
+
+    function _auctionStarted(bytes12 vaultId) internal virtual {
+        cauldron.give(vaultId, address(this));
+        emit Auctioned(vaultId, block.timestamp.u32());
+    }
+
+    function _collateralBought(bytes12 vaultId, uint256 ink, uint256 art) internal virtual {
+        emit Bought(vaultId, msg.sender, ink, art);
+    }
+
+    function _auctionEnded(bytes12 vaultId, address owner) internal virtual {
+        cauldron.give(vaultId, owner);
+        delete auctions[vaultId];
     }
 }
