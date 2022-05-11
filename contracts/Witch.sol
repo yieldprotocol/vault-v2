@@ -156,10 +156,10 @@ contract Witch is AccessControl {
         emit Auctioned(vaultId, uint32(block.timestamp));
     }
 
-    /// @dev Pay all debt from a vault in liquidation, getting at least `minInkOut` collateral.
+    /// @dev Pay with underlying all debt from a vault in liquidation, getting at least `minInkOut` collateral.
     /// @param vaultId Id of vault to buy
     /// @param minInkOut Minimum amount of collateral that must be received
-    /// @return inkOut Amount of vault collateral sold
+    /// @return inkOut Amount of vault collateral received
     function payBase(bytes12 vaultId, uint128 minInkOut) external returns (uint256 inkOut) {
         Auction storage auction_ = auctions[vaultId];
         require(
@@ -189,10 +189,10 @@ contract Witch is AccessControl {
         baseJoin.join(msg.sender, baseIn);
     }
 
-    /// @dev Pay all debt from a vault in liquidation, getting at least `minInkOut` collateral.
+    /// @dev Pay all debt from a vault in liquidation in fyToken, getting at least `minInkOut` collateral.
     /// @param vaultId Id of vault to buy
     /// @param minInkOut Minimum amount of collateral that must be received
-    /// @return inkOut Amount of vault collateral sold
+    /// @return inkOut Amount of vault collateral received
     function payFYToken(bytes12 vaultId, uint128 minInkOut) external returns (uint256 inkOut) {
         Auction storage auction_ = auctions[vaultId];
         require(
@@ -217,55 +217,10 @@ contract Witch is AccessControl {
         series.fyToken.burn(msg.sender, auction_.art);
     }
 
-/*
-
-     x x x
-   x      x    Hi Fren!
-  x  .  .  x   I want to buy this vault under auction!  I'll pay
-  x        x   you in the same `base` currency of the debt, but
-  x        x   I want no less than `uint min` of the collateral, ok?
-  x   ===  x
-   x       x
-    xxxxxxx
-       x                            __  Ok Fren!
-       x     ┌───────────┐  _(\    |@@|
-       xxxxxx│BASE BUCKS │ (__/\__ \--/ __
-       x     │   $$$     │    \___|----|  |   __
-       x     └───────────┘        \ }{ /\ )_ / _\
-      x x                         /\__/\ \__O (__
-                                 (--/\--)    \__/
-                          │      _)(  )(_
-                          │     `---''---`
-                          ▼
-   _______
-  /  12   \  First lets check how much time `t` is left on the auction
- |    |    | because that helps us determine the price we will accept
- |9   |   3| for the debt! Yay!
- |     \   |                       p + (1 - p) * t
- |         |
-  \___6___/          (p is the auction starting price!)
-
-                          │
-                          │
-                          ▼                  (\
-                                              \ \
- Then the Cauldron updates our internal    __    \/ ___,.-------..__        __
- accounting by slurping up the debt      //\\ _,-'\\               `'--._ //\\
- and the collateral from the vault!      \\ ;'      \\                   `: //
-                                          `(          \\                   )'
- The Ladle then dishes out the collateral   :.          \\,----,         ,;
- to you, dear user.  And the base you        `.`--.___   (    /  ___.--','
- paid is settled up with the join.             `.     ``-----'-''     ,'
-                                                  -.               ,-
-                                                     `-._______.-'gpyy
-
-
-*/
-
-    /// @notice Remove debt from a vault, and return how much collateral should be given out.
-    /// Auction limits apply.
-    /// @dev If the debt is returned to zero, the vault is returned to its original owner.
+    /// @notice Remove debt from a vault, and return how much collateral should be given out. 
+    /// The vault is then returned to its original owner. Auction limits apply.
     /// This function doesn't verify the vaultId matches the vault and balances passed. Check before calling.
+    /// This function doesn't move any assets. Make sure you do that in the calling function.
     function _liquidate(
         bytes12 vaultId,
         DataTypes.Vault memory vault,
@@ -279,7 +234,6 @@ contract Witch is AccessControl {
         );
 
         // Calculate how much collateral to give for liquidating at a certain time, for a certain vault.
-        // inkOut = totalInk * (p + (1 - p) * t)
         uint256 proportionNow = _calcProportion(vault.ilkId, auction_.baseId, auction_.start);
         inkOut = uint256(auction.ink).wmul(proportionNow);
 
@@ -299,6 +253,7 @@ contract Witch is AccessControl {
     }
 
     /// @notice Calculate the proportion of collateral to give out, based on the max chosen by governance and time passed, with 18 decimals.
+    /// @dev inkOut = auction.ink * (p + (1 - p) * min(elapsed / duration, 1))
     function _calcProportion(bytes6 ilkId, bytes6 baseId, uint32 auctionStart) private view returns (uint256 proportion) {
         Line memory line_ = lines[ilkId][baseId];
         uint256 duration = line_.duration;
@@ -312,7 +267,11 @@ contract Witch is AccessControl {
         unchecked {
             elapsed = uint32(block.timestamp) - auctionStart;
         }
-        uint256 timeProportion = elapsed > duration ? 1e18 : elapsed.wdiv(duration);
-        proportion = uint256(initialProportion) + uint256(1e18 - initialProportion).wmul(timeProportion);
+        if (elapsed > duration) {
+            proportion = 1e18;
+        } else {
+            uint256 timeProportion = elapsed.wdiv(duration);
+            proportion = uint256(initialProportion) + uint256(1e18 - initialProportion).wmul(timeProportion);
+        }
     }
 }
