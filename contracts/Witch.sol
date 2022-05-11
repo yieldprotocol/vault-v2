@@ -7,25 +7,19 @@ import "@yield-protocol/vault-interfaces/ICauldron.sol";
 import "@yield-protocol/vault-interfaces/IJoin.sol";
 import "@yield-protocol/vault-interfaces/DataTypes.sol";
 import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
-import "@yield-protocol/utils-v2/contracts/math/WMulUp.sol";
 import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
-import "@yield-protocol/utils-v2/contracts/math/WDivUp.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastU256U32.sol";
 
 /// @title  The Witch is a Auction/Liquidation Engine for the Yield protocol
 /// @notice The Witch grabs uncollateralized vaults, replacing the owner by itself. Then it sells
-/// the vault collateral in exchange for underlying to pay its debt. The amount of collateral
-/// given increases over time, until it offers to sell all the collateral for underlying to pay
-/// all the debt. The auction is held open at the final price indefinitely.
-/// @dev After the debt is settled, the Witch returns the vault to its original owner.
+/// part or all of the vault collateral in exchange for underlying or fyTokens to pay its debt.
+/// The amount of collateral given increases over time, until it offers to sell all the collateral
+/// under auction if repaying all the debt under auction. The auction is held open at the final price
+/// indefinitely. After the debt is settled, the Witch returns the vault to its original owner.
 contract Witch is AccessControl {
     using WMul for uint256;
-    using WMulUp for uint256;
     using WDiv for uint256;
-    using WDivUp for uint256;
     using CastU256U128 for uint256;
-    using CastU256U32 for uint256;
 
     event Auctioned(bytes12 indexed vaultId, uint256 indexed start);
     event Bought(bytes12 indexed vaultId, address indexed buyer, uint256 ink, uint256 art);
@@ -150,7 +144,7 @@ contract Witch is AccessControl {
 
         auctions[vaultId] = Auction({
             owner: vault.owner,
-            start: block.timestamp.u32(),
+            start: uint32(block.timestamp), // Overflow is desired
             baseId: series.baseId,
             art: art,
             ink: ink
@@ -159,7 +153,7 @@ contract Witch is AccessControl {
         // The Witch is now in control of the vault under auction
         // TODO: Consider using `stir` to take only the part of the vault being auctioned.
         cauldron.give(vaultId, address(this));
-        emit Auctioned(vaultId, block.timestamp.u32());
+        emit Auctioned(vaultId, uint32(block.timestamp));
     }
 
     /// @dev Pay all debt from a vault in liquidation, getting at least `minInkOut` collateral.
@@ -180,7 +174,7 @@ contract Witch is AccessControl {
         uint128 baseIn = cauldron.debtToBase(vault.seriesId, auction_.art);
 
         require(
-            (inkOut = _liquidate(vaultId, vault, auction_, auction_.art)) >= minInkOut,
+            (inkOut = _liquidate(vaultId, vault, auction_)) >= minInkOut,
             "Not enough bought"
         );
 
@@ -209,7 +203,7 @@ contract Witch is AccessControl {
         DataTypes.Vault memory vault = cauldron.vaults(vaultId);
 
         require(
-            (inkOut = _liquidate(vaultId, vault, auction_, auction_.art)) >= minInkOut,
+            (inkOut = _liquidate(vaultId, vault, auction_)) >= minInkOut,
             "Not enough bought"
         );
 
@@ -275,8 +269,7 @@ contract Witch is AccessControl {
     function _liquidate(
         bytes12 vaultId,
         DataTypes.Vault memory vault,
-        Auction storage auction,
-        uint256 artIn
+        Auction storage auction
     ) private returns (uint256 inkOut) {
         Auction memory auction_ = auctions[vaultId];
         // Duplicate check, but guarantees data integrity
@@ -286,11 +279,10 @@ contract Witch is AccessControl {
         );
 
         {
-            // Calculate how much collateral to give for paying a certain amount of debt, at a certain time, for a certain vault.
-            // inkOut = (artIn / totalArt) * totalInk * (p + (1 - p) * t)
-            uint256 inkAtEnd = uint256(artIn).wdiv(auction.art).wmul(auction.ink);
+            // Calculate how much collateral to give for liquidating at a certain time, for a certain vault.
+            // inkOut = totalInk * (p + (1 - p) * t)
             uint256 proportionNow = _calcProportion(vault.ilkId, auction_.baseId, auction_.start);
-            inkOut = inkAtEnd.wmul(proportionNow);
+            inkOut = uint256(auction.ink).wmul(proportionNow);
         }
 
         {
@@ -301,13 +293,13 @@ contract Witch is AccessControl {
         }
 
         // Remove debt and collateral from vault
-        cauldron.slurp(vaultId, inkOut.u128(), artIn.u128());
+        cauldron.slurp(vaultId, inkOut.u128(), auction_.art);
 
         // If there is no debt left, return the vault with the collateral to the owner
         delete auctions[vaultId];
         cauldron.give(vaultId, auction_.owner);
 
-        emit Bought(vaultId, msg.sender, inkOut, artIn);
+        emit Bought(vaultId, msg.sender, inkOut, auction_.art);
     }
 
     /// @notice Calculate the proportion of collateral to give out, based on the max chosen by governance and time passed, with 18 decimals.
@@ -322,7 +314,7 @@ contract Witch is AccessControl {
         // UPDATE: Added reminder to Google calendar ✅
         uint256 elapsed;
         unchecked {
-            elapsed = block.timestamp - uint256(auctionStart);
+            elapsed = uint32(block.timestamp) - auctionStart;
         }
         uint256 timeProportion = elapsed > duration ? 1e18 : elapsed.wdiv(duration);
         proportion = uint256(initialProportion) + uint256(1e18 - initialProportion).wmul(timeProportion);
