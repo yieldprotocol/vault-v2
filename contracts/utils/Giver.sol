@@ -7,8 +7,8 @@ import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 
 /// @title A contract that allows owner of a vault to give the vault
 contract Giver is AccessControl {
-    mapping(bytes6 => bool) public ilkBlacklist;
     ICauldron public immutable cauldron;
+    mapping(bytes6 => bool) public ilkBlacklist;
 
     /// @notice Event emitted after an ilk is blacklisted
     /// @param ilkId Ilkid to be blacklisted
@@ -20,8 +20,9 @@ contract Giver is AccessControl {
 
     /// @notice Function to blacklist
     /// @param ilkId the ilkId to be blacklisted
-    function blacklistIlk(bytes6 ilkId) external auth {
-        ilkBlacklist[ilkId] = true;
+    /// @param set bool value to ban/unban an ilk
+    function banIlk(bytes6 ilkId, bool set) external auth {
+        ilkBlacklist[ilkId] = set;
         emit IlkBlacklisted(ilkId);
     }
 
