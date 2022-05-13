@@ -68,7 +68,7 @@ describe('Oracles - Composite', function () {
     await usdcEthAggregator.set(WAD.div(2500)) // 1 USDC (1^6) in ETH
 
     compositeMultiOracle = (await deployContract(ownerAcc, CompositeMultiOracleArtifact)) as CompositeMultiOracle
-    compositeMultiOracle.grantRoles(
+    await compositeMultiOracle.grantRoles(
       [
         id(compositeMultiOracle.interface, 'setSource(bytes6,bytes6,address)'),
         id(compositeMultiOracle.interface, 'setPath(bytes6,bytes6,bytes6[])'),
