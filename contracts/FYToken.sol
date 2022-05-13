@@ -5,9 +5,9 @@ import "erc3156/contracts/interfaces/IERC3156FlashBorrower.sol";
 import "erc3156/contracts/interfaces/IERC3156FlashLender.sol";
 import "@yield-protocol/utils-v2/contracts/token/ERC20Permit.sol";
 import "@yield-protocol/utils-v2/contracts/token/SafeERC20Namer.sol";
-import "@yield-protocol/vault-interfaces/IFYToken.sol";
-import "@yield-protocol/vault-interfaces/IJoin.sol";
-import "@yield-protocol/vault-interfaces/IOracle.sol";
+import "@yield-protocol/vault-interfaces/src/IFYToken.sol";
+import "@yield-protocol/vault-interfaces/src/IJoin.sol";
+import "@yield-protocol/vault-interfaces/src/IOracle.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
 import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
@@ -35,7 +35,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl(), ERC20Permit,
     uint256 public flashFeeFactor = FLASH_LOANS_DISABLED;       // Fee on flash loans, as a percentage in fixed point with 18 decimals. Flash loans disabled by default by overflow from `flashFee`.
 
     IOracle public oracle;                                      // Oracle for the savings rate.
-    IJoin public join;                                          // Source of redemption funds.
+    IJoin public override join;                                 // Source of redemption funds.
     address public immutable override underlying;
     bytes6 public immutable underlyingId;                       // Needed to access the oracle
     uint256 public immutable override maturity;
