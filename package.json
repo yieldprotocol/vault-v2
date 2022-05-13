@@ -1,6 +1,6 @@
 {
   "name": "@yield-protocol/vault-v2",
-  "version": "0.15.1-notional-rc2",
+  "version": "0.16.3",
   "description": "Yield Collateralized Debt Engine v2",
   "author": "Yield Inc.",
   "files": [
