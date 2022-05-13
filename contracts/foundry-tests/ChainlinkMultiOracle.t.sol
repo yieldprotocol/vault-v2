@@ -35,14 +35,15 @@ contract ChainlinkMultiOracleTest is Test, TestConstants {
         chainlinkMultiOracle.setSource(DAI, dai, ETH, weth, address(daiEthAggregator));
         chainlinkMultiOracle.setSource(USDC, usdc, ETH, weth, address(usdcEthAggregator));
         vm.warp(uint256(mockBytes32));
+        // WAD / 2500 here represents the amount of ETH received for either 1 DAI or 1 USDC
         daiEthAggregator.set(WAD / 2500);
         usdcEthAggregator.set(WAD / 2500);
     }
 
-    function testGetSpotPrice() public {
+    function testGetConversion() public {
         oracleMock.set(WAD * 2);
-        (uint256 oracleSpotPrice, ) = oracleMock.get(mockBytes32, mockBytes32, WAD);
-        assertEq(oracleSpotPrice, WAD * 2, "Get spot price unsuccessful");
+        (uint256 oracleConversion,) = oracleMock.get(mockBytes32, mockBytes32, WAD);
+        assertEq(oracleConversion, WAD * 2, "Get conversion unsuccessful");
     }
 
     function testRevertOnUnknownSource() public {
@@ -50,21 +51,21 @@ contract ChainlinkMultiOracleTest is Test, TestConstants {
         chainlinkMultiOracle.get(bytes32(DAI), bytes32(mockBytes6), WAD);
     }
 
-    function testChainlinkMultiOracleSpotPrice() public {
-        (uint256 daiEthSpotPrice, ) = chainlinkMultiOracle.get(bytes32(DAI), bytes32(ETH), WAD * 2500);
-        assertEq(daiEthSpotPrice, WAD, "Get DAI-ETH spot price unsuccessful");
-        (uint256 usdcEthSpotPrice, ) = chainlinkMultiOracle.get(bytes32(USDC), bytes32(ETH), oneUSDC * 2500);
-        assertEq(usdcEthSpotPrice, WAD, "Get USDC-ETH spot price unsuccessful");
-        (uint256 ethDaiSpotPrice, ) = chainlinkMultiOracle.get(bytes32(ETH), bytes32(DAI), WAD);
-        assertEq(ethDaiSpotPrice, WAD * 2500, "Get ETH-DAI spot price unsuccessful");
-        (uint256 ethUsdcSpotPrice, ) = chainlinkMultiOracle.get(bytes32(ETH), bytes32(USDC), WAD);
-        assertEq(ethUsdcSpotPrice, oneUSDC * 2500, "Get ETH-USDC spot price unsuccessful");
+    function testChainlinkMultiOracleConversion() public {
+        (uint256 daiEthAmount,) = chainlinkMultiOracle.get(bytes32(DAI), bytes32(ETH), WAD * 2500);
+        assertEq(daiEthAmount, WAD, "Get DAI-ETH conversion unsuccessful");
+        (uint256 usdcEthAmount,) = chainlinkMultiOracle.get(bytes32(USDC), bytes32(ETH), oneUSDC * 2500);
+        assertEq(usdcEthAmount, WAD, "Get USDC-ETH conversion unsuccessful");
+        (uint256 ethDaiAmount,) = chainlinkMultiOracle.get(bytes32(ETH), bytes32(DAI), WAD);
+        assertEq(ethDaiAmount, WAD * 2500, "Get ETH-DAI conversion unsuccessful");
+        (uint256 ethUsdcAmount,) = chainlinkMultiOracle.get(bytes32(ETH), bytes32(USDC), WAD);
+        assertEq(ethUsdcAmount, oneUSDC * 2500, "Get ETH-USDC conversion unsuccessful");
     }
 
-    function testChainlinkMultiOracleSpotPriceThroughEth() public {
-        (uint256 daiUsdcSpotPrice, ) = chainlinkMultiOracle.get(bytes32(DAI), bytes32(USDC), WAD * 2500);
-        assertEq(daiUsdcSpotPrice, oneUSDC * 2500, "Get DAI-USDC spot price unsuccessful");
-        (uint256 usdcDaiSpotPrice, ) = chainlinkMultiOracle.get(bytes32(USDC), bytes32(DAI), oneUSDC * 2500);
-        assertEq(usdcDaiSpotPrice, WAD * 2500, "Get USDC-DAI spot price unsuccessful");
+    function testChainlinkMultiOracleConversionThroughEth() public {
+        (uint256 daiUsdcAmount,) = chainlinkMultiOracle.get(bytes32(DAI), bytes32(USDC), WAD * 2500);
+        assertEq(daiUsdcAmount, oneUSDC * 2500, "Get DAI-USDC conversion unsuccessful");
+        (uint256 usdcDaiAmount,) = chainlinkMultiOracle.get(bytes32(USDC), bytes32(DAI), oneUSDC * 2500);
+        assertEq(usdcDaiAmount, WAD * 2500, "Get USDC-DAI conversion unsuccessful");
     }
 }

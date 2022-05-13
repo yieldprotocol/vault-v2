@@ -5,12 +5,12 @@ import { expect } from 'chai'
 const { deployContract } = waffle
 
 import { WstETHMock } from '../typechain/WstETHMock'
-import { LidoWrapHandler } from '../typechain/LidoWrapHandler'
+import { StEthConverter } from '../typechain/StEthConverter'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
 import WstETHMockArtifact from '../artifacts/contracts/mocks/WstETHMock.sol/WstETHMock.json'
-import LidoWrapHandlerArtifact from '../artifacts/contracts/utils/LidoWrapHandler.sol/LidoWrapHandler.json'
+import StEthConverterArtifact from '../artifacts/contracts/other/lido/StEthConverter.sol/StEthConverter.json'
 import { parseEther } from '@ethersproject/units'
 
 describe('Lido Wrapper-Unwrapper', function () {
@@ -20,7 +20,7 @@ describe('Lido Wrapper-Unwrapper', function () {
   let owner: string
   let steth: ERC20Mock
   let wsteth: WstETHMock
-  let lido: LidoWrapHandler
+  let lido: StEthConverter
   const amount = ethers.utils.parseEther('1')
 
   before(async () => {
@@ -32,7 +32,7 @@ describe('Lido Wrapper-Unwrapper', function () {
 
     steth = (await deployContract(ownerAcc, ERC20MockArtifact, ['staked Ether 2.0', 'stETH'])) as ERC20Mock
     wsteth = (await deployContract(ownerAcc, WstETHMockArtifact, [steth.address])) as WstETHMock
-    lido = (await deployContract(ownerAcc, LidoWrapHandlerArtifact, [wsteth.address, steth.address])) as LidoWrapHandler
+    lido = (await deployContract(ownerAcc, StEthConverterArtifact, [wsteth.address, steth.address])) as StEthConverter
 
     await steth.mint(owner, parseEther('2'))
     await wsteth.mint(owner, amount)
@@ -66,13 +66,5 @@ describe('Lido Wrapper-Unwrapper', function () {
     await lido.unwrap(dummyAcc.address)
     expect(await steth.balanceOf(ownerAcc.address)).to.equal(0)
     expect(await steth.balanceOf(dummyAcc.address)).to.equal(amount)
-  })
-
-  it('should not be able to wrap stETH without transferring stETH first', async () => {
-    await expect(lido.wrap(ownerAcc.address)).to.be.revertedWith('No stETH to wrap')
-  })
-
-  it('should not be able to unwrap wstETH without transferring wstETH first', async () => {
-    await expect(lido.unwrap(ownerAcc.address)).to.be.revertedWith('No wstETH to unwrap')
   })
 })
