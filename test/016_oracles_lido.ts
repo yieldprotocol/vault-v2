@@ -82,7 +82,7 @@ describe('Oracles - Lido', function () {
     await lidoOracle['setSource(address)'](lidoMock.address) //mockOracle
 
     compositeMultiOracle = (await deployContract(ownerAcc, CompositeMultiOracleArtifact)) as CompositeMultiOracle
-    compositeMultiOracle.grantRoles(
+    await compositeMultiOracle.grantRoles(
       [
         id(compositeMultiOracle.interface, 'setSource(bytes6,bytes6,address)'),
         id(compositeMultiOracle.interface, 'setPath(bytes6,bytes6,bytes6[])'),
@@ -94,7 +94,7 @@ describe('Oracles - Lido', function () {
     await compositeMultiOracle.setSource(STETH, ETH, chainlinkMultiOracle.address)
     await compositeMultiOracle.setSource(USDC, ETH, chainlinkMultiOracle.address)
 
-    //Set path for wsteth-steth-eth
+    // Set path for wsteth-steth-eth
     await compositeMultiOracle.setPath(WSTETH, ETH, [STETH])
 
     // Set path for wsteth-steth-eth.USDC
