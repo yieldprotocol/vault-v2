@@ -185,7 +185,7 @@ export class YieldEnvironment {
     assetId: string,
     asset: ERC20Mock | DAIMock | USDCMock | WETH9Mock
   ): Promise<Join> {
-    const join = (await ethers.getContractAt('Join', await ladle.joins(assetId), owner)) as Join
+    const join = (await ethers.getContractAt('FlashJoin', await ladle.joins(assetId), owner)) as Join
     await asset.approve(await ladle.joins(assetId), ethers.constants.MaxUint256) // Owner approves all joins to take from him. Only testing
 
     await join.grantRoles(
