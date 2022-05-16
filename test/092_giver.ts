@@ -80,7 +80,7 @@ describe('Giver', function () {
     expect(await giver.bannedIlks(ilkId)).be.false
   })
 
-  it('Can give a vault of asset which is not banned', async () => {
+  it('Can give a vault of asset which was unbanned', async () => {
     expect(await giver.bannedIlks(ilkId)).to.be.false
     await giver.connect(ownerAcc2).give(vaultId, owner)
     const vaultData = await cauldron.vaults(vaultId)
