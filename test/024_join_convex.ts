@@ -67,6 +67,7 @@ describe('Convex Join', async function () {
   let cauldron: Cauldron
   let convex: ERC20Mock
   let crv: ERC20Mock
+  let cvx: ERC20Mock
   let cvx3CRV: ERC20Mock
   let convexPool: ConvexPoolMock
   let curveProxy: TokenProxy
@@ -124,6 +125,7 @@ describe('Convex Join', async function () {
       'Cvx3Crv Mock',
     ])) as ERC20Mock
     crv = (await deployContract(ownerAcc, ERC20MockArtifact, ['CurveDAO Token Mock', 'CRV'])) as ERC20Mock
+    cvx = (await deployContract(ownerAcc, ERC20MockArtifact, ['Convex Token Mock', 'CVX'])) as ERC20Mock
 
     curvePool = (await deployContract(ownerAcc, CurvePoolMockArtifact)) as unknown as CurvePoolMock
     convexPool = (await deployContract(ownerAcc, ConvexPoolMockArtifact, [
@@ -154,15 +156,15 @@ describe('Convex Join', async function () {
     curveProxy = (await deployContract(ownerAcc, TokenProxyArtifact, [crv.address])) as TokenProxy
     cvxProxy = (await deployContract(ownerAcc, TokenProxyArtifact, [convex.address])) as TokenProxy
     convexJoin = (await deployContract(ownerAcc, ConvexJoinArtifact, [
-      crv.address,
       cvx3CRV.address,
       convexPool.address,
       0,
       cauldron.address,
-      'stk',
-      'wCVX3CRV',
-      18,
+      crv.address,
+      cvx.address,
     ])) as unknown as ConvexJoin
+    await convexJoin.addRewards()
+    await convexJoin.setApprovals()
     await convexJoin.grantRoles(
       [
         id(convexJoin.interface, 'join(address,uint128)'),
@@ -172,6 +174,7 @@ describe('Convex Join', async function () {
       ],
       ladle.address
     )
+
     await cauldron.addAsset(CVX3CRV, cvx3CRV.address)
     await ladle.addJoin(CVX3CRV, convexJoin.address)
 
@@ -219,13 +222,6 @@ describe('Convex Join', async function () {
     await compositeMultiOracle.setPath(DAI, CVX3CRV, [ETH])
     await compositeMultiOracle.setPath(USDC, CVX3CRV, [ETH])
 
-    // Setting the mainnet crv to mock CRV
-    const crv_proxy_code = await ethers.provider.getCode(curveProxy.address)
-    expect(await network.provider.send('hardhat_setCode', [await convexJoin.crv(), crv_proxy_code])).to.be.true
-    // Setting the mainnet cvx to mock CVX
-    const cvx_proxy_code = await ethers.provider.getCode(cvxProxy.address)
-    expect(await network.provider.send('hardhat_setCode', [await convexJoin.cvx(), cvx_proxy_code])).to.be.true
-
     // Add Module
     await ladle.ladle.addModule(convexLadleModule.address, true)
 
@@ -236,13 +232,13 @@ describe('Convex Join', async function () {
 
     await ladle.ladle.addToken(cvx3CRV.address, true)
 
-    await cvx3CRV.mint(ownerAcc.address, ethers.utils.parseEther('10'))
-    await crv.mint(convexPool.address, ethers.utils.parseEther('10'))
-    await convex.mint(convexPool.address, ethers.utils.parseEther('10'))
+    await cvx3CRV.mint(ownerAcc.address, ethers.utils.parseEther('100000000'))
+    await crv.mint(convexPool.address, ethers.utils.parseEther('100000000'))
+    await convex.mint(convexPool.address, ethers.utils.parseEther('100000000'))
 
     //Minting tokens to the proxy
-    await crv.mint(await convexJoin.crv(), ethers.utils.parseEther('10'))
-    await convex.mint(await convexJoin.cvx(), ethers.utils.parseEther('10'))
+    await crv.mint(await convexJoin.crv(), ethers.utils.parseEther('100000000'))
+    await convex.mint(await convexJoin.cvx(), ethers.utils.parseEther('100000000'))
   })
 
   it('Borrow USDC with CVX3CRV collateral', async () => {
@@ -277,12 +273,13 @@ describe('Convex Join', async function () {
       .div(100)
 
     // Transfer the amount to join before pouring
-    await cvx3CRV.approve(ladle.address, posted)
-
-    await ladle.batch([
-      ladle.transferAction(cvx3CRV.address, join, posted),
-      ladle.pourAction(vaultId, ownerAcc.address, posted, borrowed),
-    ])
+    await cvx3CRV.connect(ownerAcc).approve(ladle.address, posted.add(100))
+    await ladle
+      .connect(ownerAcc)
+      .batch([
+        ladle.connect(ownerAcc).transferAction(cvx3CRV.address, convexJoin.address, posted),
+        ladle.connect(ownerAcc).pourAction(vaultId, ownerAcc.address, posted, borrowed),
+      ])
 
     expect(await fyToken.balanceOf(ownerAcc.address)).to.eq(borrowed)
 
@@ -362,7 +359,6 @@ describe('Convex Join', async function () {
     // Transfer the amount to join before pouring
     await cvx3CRV.approve(ladle.address, posted)
 
-    var beforeJoinBalance = await convexJoin.balanceOf(join)
     var beforeFyTokenBalance = await fyToken.balanceOf(ownerAcc.address)
     await ladle.batch([
       ladle.transferAction(cvx3CRV.address, join, posted),
