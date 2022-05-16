@@ -8,22 +8,22 @@ import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 /// @title A contract that allows owner of a vault to give the vault
 contract Giver is AccessControl {
     ICauldron public immutable cauldron;
-    mapping(bytes6 => bool) public ilkBlacklist;
+    mapping(bytes6 => bool) public bannedIlks;
 
-    /// @notice Event emitted after an ilk is blacklisted
-    /// @param ilkId Ilkid to be blacklisted
-    event IlkBlacklisted(bytes6 ilkId);
+    /// @notice Event emitted after an ilk is banned
+    /// @param ilkId Ilkid to be banned
+    event IlkBanned(bytes6 ilkId);
 
     constructor(ICauldron cauldron_) {
         cauldron = cauldron_;
     }
 
-    /// @notice Function to blacklist
-    /// @param ilkId the ilkId to be blacklisted
+    /// @notice Function to ban
+    /// @param ilkId the ilkId to be banned
     /// @param set bool value to ban/unban an ilk
     function banIlk(bytes6 ilkId, bool set) external auth {
-        ilkBlacklist[ilkId] = set;
-        emit IlkBlacklisted(ilkId);
+        bannedIlks[ilkId] = set;
+        emit IlkBanned(ilkId);
     }
 
     /// @notice A give function which allows the owner of vault to give the vault to another address
@@ -33,7 +33,7 @@ contract Giver is AccessControl {
     function give(bytes12 vaultId, address receiver) external returns (DataTypes.Vault memory vault) {
         vault = cauldron.vaults(vaultId);
         require(vault.owner == msg.sender, "msg.sender is not the owner");
-        require(!ilkBlacklist[vault.ilkId], "ilk is blacklisted");
+        require(!bannedIlks[vault.ilkId], "ilk is banned");
         vault = cauldron.give(vaultId, receiver);
     }
 }
