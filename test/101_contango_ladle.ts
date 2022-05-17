@@ -2,7 +2,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { expect } from 'chai'
 import { ethers, waffle } from 'hardhat'
 import { ETH } from '../src/constants'
-import { ContangoCauldron, ContangoLadle } from '../typechain'
+import { Cauldron, ContangoLadle } from '../typechain'
 import { YieldEnvironment } from './shared/contango_fixtures'
 
 const { loadFixture } = waffle
@@ -13,7 +13,7 @@ describe('ContangoLadle', function () {
   let env: YieldEnvironment
   let ownerAcc: SignerWithAddress
   let owner: string
-  let cauldron: ContangoCauldron
+  let cauldron: Cauldron
   let ladle: ContangoLadle
 
   async function fixture() {
