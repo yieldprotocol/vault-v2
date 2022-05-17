@@ -90,7 +90,7 @@ contract Witch is AccessControl {
         require(initialOffer <= 1e18, "InitialOffer above 100%");
         require(proportion <= 1e18, "Proportion above 100%");
         require(initialOffer == 0 || initialOffer >= 1e16, "InitialOffer below 1%");
-        require(proportion == 0 || proportion >= 1e16, "Proportion below 1%");
+        require(proportion >= 1e16, "Proportion below 1%");
         lines[ilkId][baseId] = Line({
             duration: duration,
             proportion: proportion,
