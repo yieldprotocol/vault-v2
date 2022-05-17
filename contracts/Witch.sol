@@ -166,10 +166,11 @@ contract Witch is AccessControl {
         require(auction_.start != 0, "Vault not under auction");
         require(cauldron.level(vaultId) >= 0, "Undercollateralized");
 
+        DataTypes.Vault memory vault = cauldron.vaults(vaultId);
+        DataTypes.Series memory series = cauldron.series(vault.seriesId);
+
         // Update concurrent collateral under auction
-        Limits memory limits_ = limits[ilkId][baseId];
-        limits_.sum -= auction_.ink;
-        limits[ilkId][baseId] = limits_;
+        limits[vault.ilkId][series.baseId].sum -= auction_.ink;
 
         cauldron.give(vaultId, auction_.owner);
         delete auctions[vaultId];
