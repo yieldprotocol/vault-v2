@@ -2,14 +2,14 @@
 pragma solidity 0.8.6;
 
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "../oracles/chainlink/ChainlinkMultiOracle.sol";
-import "../oracles/composite/CompositeMultiOracle.sol";
-import "../mocks/DAIMock.sol";
-import "../mocks/USDCMock.sol";
-import "../mocks/WETH9Mock.sol";
-import "../mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol";
-import "./utils/Test.sol";
-import "./utils/TestConstants.sol";
+import "../../oracles/chainlink/ChainlinkMultiOracle.sol";
+import "../../oracles/composite/CompositeMultiOracle.sol";
+import "../../mocks/DAIMock.sol";
+import "../../mocks/USDCMock.sol";
+import "../../mocks/WETH9Mock.sol";
+import "../../mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol";
+import "../utils/Test.sol";
+import "../utils/TestConstants.sol";
 
 contract CompositeMultiOracleTest is Test, TestConstants, AccessControl {
 
