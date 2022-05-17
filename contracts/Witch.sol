@@ -192,7 +192,7 @@ contract Witch is AccessControl {
 
         // If offering too much base, take only the necessary.
         artIn = artIn > auction_.art ? auction_.art : artIn;
-        baseIn = cauldron.debtToBase(vault.seriesId, auction_.art);
+        baseIn = cauldron.debtToBase(vault.seriesId, artIn);
 
         require(
             (inkOut = _liquidate(vaultId, vault, auction_, artIn)) >= minInkOut,
