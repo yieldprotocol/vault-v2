@@ -18,6 +18,9 @@ output/
 typechain/
 deployments/
 
+# Foundry files
+out/
+
 # Secret files
 .etherscanKey
 .infuraKey

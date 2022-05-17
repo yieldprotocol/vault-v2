@@ -165,14 +165,16 @@ contract Witch is AccessControl {
     /// @dev Pay `base` of the debt in a vault in liquidation, getting at least `minInkOut` collateral.
     /// Use `payAll` to pay all the debt, using `paySome` for amounts close to the whole vault might revert.
     /// @param vaultId Id of vault to buy
-    /// @param baseIn Amount of base that the liquidator is paying
+    /// @param to Receiver of the collateral bought
+    /// @param maxBaseIn Maximum amount of base that the liquidator will pay
     /// @param minInkOut Minimum amount of collateral that must be received
     /// @return inkOut Amount of vault collateral sold
-    function paySome(
+    function payBase(
         bytes12 vaultId,
-        uint128 baseIn,
+        address to,
+        uint128 maxBaseIn,
         uint128 minInkOut
-    ) external returns (uint256 inkOut) {
+    ) external returns (uint256 baseIn, uint256 inkOut) {
         Auction storage auction_ = auctions[vaultId];
         require(
             auction_.start > 0,
@@ -185,20 +187,43 @@ contract Witch is AccessControl {
         // Find out how much debt is being repaid
         uint128 artIn = uint128(cauldron.debtFromBase(vault.seriesId, baseIn));
 
+        // If offering too much base, take only the necessary.
+        artIn = artIn > auction_.art ? auction_.art : artIn;
+        baseIn = cauldron.debtToBase(vault.seriesId, auction_.art);
+
         require(
             (inkOut = _liquidate(vaultId, vault, auction_, artIn)) >= minInkOut,
             "Not enough bought"
         );
 
         // Move the assets
-        _settle(msg.sender, vault.ilkId, series.baseId, inkOut.u128(), baseIn);
+        if (inkOut != 0) {
+            // Give collateral to the user
+            IJoin ilkJoin = ladle.joins(ilkId);
+            require(ilkJoin != IJoin(address(0)), "Join not found");
+            ilkJoin.exit(msg.sender, inkOut);
+        }
+        if (baseIn != 0) {
+            // Take underlying from user
+            IJoin baseJoin = ladle.joins(baseId);
+            require(baseJoin != IJoin(address(0)), "Join not found");
+            baseJoin.join(msg.sender, baseIn);
+        }
     }
 
-    /// @dev Pay all debt from a vault in liquidation, getting at least `minInkOut` collateral.
+    /// @dev Pay debt from a vault in liquidation using fyToken, getting at least `minInkOut` collateral.
+    /// @notice If too much fyToken are offered, only the necessary amount are taken.
     /// @param vaultId Id of vault to buy
+    /// @param to Receiver for the collateral bought
+    /// @param maxArtIn Maximum amount of fyToken that will be paid
     /// @param minInkOut Minimum amount of collateral that must be received
     /// @return inkOut Amount of vault collateral sold
-    function payAll(bytes12 vaultId, uint128 minInkOut) external returns (uint256 inkOut) {
+    function payFYToken(
+        bytes12 vaultId,
+        address to,
+        uint128 maxArtIn,
+        uint128 minInkOut
+    ) external returns (uint256 artIn, uint256 inkOut) {
         Auction storage auction_ = auctions[vaultId];
         require(
             auction_.start > 0,
@@ -206,32 +231,9 @@ contract Witch is AccessControl {
         );
 
         DataTypes.Vault memory vault = cauldron.vaults(vaultId);
-        DataTypes.Series memory series = cauldron.series(vault.seriesId);
 
-        // Find out how much the debt is worth
-        uint128 baseIn = cauldron.debtToBase(vault.seriesId, auction_.art);
-
-        require(
-            (inkOut = _liquidate(vaultId, vault, auction_, auction_.art)) >= minInkOut,
-            "Not enough bought"
-        );
-
-        // Move the assets
-        _settle(msg.sender, vault.ilkId, series.baseId, inkOut.u128(), baseIn);
-    }
-
-    /// @dev Pay all debt from a vault in liquidation, getting at least `minInkOut` collateral.
-    /// @param vaultId Id of vault to buy
-    /// @param minInkOut Minimum amount of collateral that must be received
-    /// @return inkOut Amount of vault collateral sold
-    function payFYToken(bytes12 vaultId, uint128 artIn, uint128 minInkOut) external returns (uint256 inkOut) {
-        Auction storage auction_ = auctions[vaultId];
-        require(
-            auction_.start > 0,
-            "Vault not under auction"
-        );
-
-        DataTypes.Vault memory vault = cauldron.vaults(vaultId);
+        // If offering too much base, take only the necessary.
+        artIn = maxArtIn > auction_.art ? auction_.art : maxArtIn;
 
         require(
             (inkOut = _liquidate(vaultId, vault, auction_, artIn)) >= minInkOut,
@@ -257,21 +259,21 @@ contract Witch is AccessControl {
      x x x
    x      x    Hi Fren!
   x  .  .  x   I want to buy this vault under auction!  I'll pay
-  x        x   you in the same `base` currency of the debt, but
+  x        x   you in the same `base` currency of the debt, or in fyToken, but
   x        x   I want no less than `uint min` of the collateral, ok?
   x   ===  x
    x       x
     xxxxxxx
-       x                            __  Ok Fren!
-       x     ┌───────────┐  _(\    |@@|
-       xxxxxx│BASE BUCKS │ (__/\__ \--/ __
-       x     │   $$$     │    \___|----|  |   __
-       x     └───────────┘        \ }{ /\ )_ / _\
-      x x                         /\__/\ \__O (__
-                                 (--/\--)    \__/
-                          │      _)(  )(_
-                          │     `---''---`
-                          ▼
+       x                             __  Ok Fren!
+       x     ┌────────────┐  _(\    |@@|
+       xxxxxx│ BASE BUCKS │ (__/\__ \--/ __
+       x     │     OR     │    \___|----|  |   __
+       x     │   FYTOKEN  │        \ }{ /\ )_ / _\
+      x x    └────────────┘        /\__/\ \__O (__
+                                  (--/\--)    \__/
+                           │      _)(  )(_
+                           │     `---''---`
+                           ▼
    _______
   /  12   \  First lets check how much time `t` is left on the auction
  |    |    | because that helps us determine the price we will accept
@@ -288,9 +290,9 @@ contract Witch is AccessControl {
  accounting by slurping up the debt      //\\ _,-'\\               `'--._ //\\
  and the collateral from the vault!      \\ ;'      \\                   `: //
                                           `(          \\                   )'
- The Ladle then dishes out the collateral   :.          \\,----,         ,;
- to you, dear user.  And the base you        `.`--.___   (    /  ___.--','
- paid is settled up with the join.             `.     ``-----'-''     ,'
+ The Join  then dishes out the collateral   :.          \\,----,         ,;
+ to you, dear user. And the debt is          `.`--.___   (    /  ___.--','
+ settled with the base join or debt fyToken.   `.     ``-----'-''     ,'
                                                   -.               ,-
                                                      `-._______.-'gpyy
 
@@ -358,34 +360,10 @@ contract Witch is AccessControl {
         unchecked {
             elapsed = block.timestamp - uint256(auctionStart);
         }
-        uint256 timeProportion = elapsed > duration ? 1e18 : elapsed.wdiv(duration);
-        proportion = uint256(initialProportion) + uint256(1e18 - initialProportion).wmul(timeProportion);
-    }
-
-    /// @dev Move base from the buyer to the protocol, and collateral from the protocol to the buyer
-    /// @param user  Address of buyer
-    /// @param ilkId Id of asset used for collateral
-    /// @param baseId Id of borrowed token
-    /// @param ink Amount of collateral
-    /// @param art Amount of debt
-    function _settle(
-        address user,
-        bytes6 ilkId,
-        bytes6 baseId,
-        uint128 ink,
-        uint128 art
-    ) private {
-        if (ink != 0) {
-            // Give collateral to the user
-            IJoin ilkJoin = ladle.joins(ilkId);
-            require(ilkJoin != IJoin(address(0)), "Join not found");
-            ilkJoin.exit(user, ink);
-        }
-        if (art != 0) {
-            // Take underlying from user
-            IJoin baseJoin = ladle.joins(baseId);
-            require(baseJoin != IJoin(address(0)), "Join not found");
-            baseJoin.join(user, art);
+        if (elapsed > duration || initialProportion == 1e18) {
+            proportion = 1e18;
+        } else {
+            proportion = uint256(initialProportion) + uint256(1e18 - initialProportion).wmul(elapsed.wdiv(duration));
         }
     }
 }
