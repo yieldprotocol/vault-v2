@@ -243,30 +243,29 @@ describe('Witch', function () {
           await rateSource.set(rate.mul(110).div(100))
         })
 
-        /*
-        TODO: To be rewritten in foundry
-        it('debt to repay grows with rate after maturity', async () => {
-          await cauldron.setDebtLimits(baseId, ilkId, 1000000, 0, 18) // Disable the dust level, not relevant
-
-          const baseBalanceBefore = await base.balanceOf(owner)
-          const ilkBalanceBefore = await ilk.balanceOf(owner)
-          await expect(witch.buy(vaultId, borrowed, 0))
-            .to.emit(witch, 'Bought')
-            .withArgs(
-              vaultId,
-              owner,
-              posted.sub((await cauldron.balances(vaultId)).ink),
-              borrowed.sub((await cauldron.balances(vaultId)).art)
-            )
-
-          const art = borrowed.sub((await cauldron.balances(vaultId)).art)
-          const ink = posted.sub((await cauldron.balances(vaultId)).ink)
-          expect(art).to.equal(borrowed.mul(100).div(110).add(1)) // The rate increased by a 10%, so by paying WAD base we only repay 100/110 of the debt in fyToken terms
-          expect(ink).to.equal(posted.mul(100).div(110).add(2)) // We only pay 100/110 of the debt, so we get 100/110 of the collateral
-          expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(borrowed))
-          expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(ink))
-        })
-        */
+        
+        // TODO: To be rewritten in foundry
+        // it('debt to repay grows with rate after maturity', async () => {
+        //   await cauldron.setDebtLimits(baseId, ilkId, 1000000, 0, 18) // Disable the dust level, not relevant
+        // 
+        //   const baseBalanceBefore = await base.balanceOf(owner)
+        //   const ilkBalanceBefore = await ilk.balanceOf(owner)
+        //   await expect(witch.buy(vaultId, borrowed, 0))
+        //     .to.emit(witch, 'Bought')
+        //     .withArgs(
+        //       vaultId,
+        //       owner,
+        //       posted.sub((await cauldron.balances(vaultId)).ink),
+        //       borrowed.sub((await cauldron.balances(vaultId)).art)
+        //     )
+        // 
+        //   const art = borrowed.sub((await cauldron.balances(vaultId)).art)
+        //   const ink = posted.sub((await cauldron.balances(vaultId)).ink)
+        //   expect(art).to.equal(borrowed.mul(100).div(110).add(1)) // The rate increased by a 10%, so by paying WAD base we only repay 100/110 of the debt in fyToken terms
+        //   expect(ink).to.equal(posted.mul(100).div(110).add(2)) // We only pay 100/110 of the debt, so we get 100/110 of the collateral
+        //   expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(borrowed))
+        //   expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(ink))
+        // })
 
         it('allows to pay all of the debt', async () => {
           const baseBalanceBefore = await base.balanceOf(owner)
