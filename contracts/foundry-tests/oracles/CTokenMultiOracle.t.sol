@@ -2,12 +2,12 @@
 pragma solidity 0.8.6;
 
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "../oracles/compound/CTokenMultiOracle.sol";
-import "../mocks/DAIMock.sol";
-import "../mocks/USDCMock.sol";
-import "../mocks/oracles/compound/CTokenMock.sol";
-import "./utils/Test.sol";
-import "./utils/TestConstants.sol";
+import "../../oracles/compound/CTokenMultiOracle.sol";
+import "../../mocks/DAIMock.sol";
+import "../../mocks/USDCMock.sol";
+import "../../mocks/oracles/compound/CTokenMock.sol";
+import "../utils/Test.sol";
+import "../utils/TestConstants.sol";
 
 contract CTokenMultiOracleTest is Test, TestConstants, AccessControl {
     CTokenMultiOracle public cTokenMultiOracle;

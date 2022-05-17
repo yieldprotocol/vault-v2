@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.6;
 
-import "../oracles/chainlink/ChainlinkMultiOracle.sol";
-import "../mocks/DAIMock.sol";
-import "../mocks/USDCMock.sol";
-import "../mocks/WETH9Mock.sol";
-import "../mocks/oracles/OracleMock.sol";
-import "../mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol";
-import "./utils/Test.sol";
-import "./utils/TestConstants.sol";
+import "../../oracles/chainlink/ChainlinkMultiOracle.sol";
+import "../../mocks/DAIMock.sol";
+import "../../mocks/USDCMock.sol";
+import "../../mocks/WETH9Mock.sol";
+import "../../mocks/oracles/OracleMock.sol";
+import "../../mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol";
+import "../utils/Test.sol";
+import "../utils/TestConstants.sol";
 
 contract ChainlinkMultiOracleTest is Test, TestConstants {
     OracleMock public oracleMock;

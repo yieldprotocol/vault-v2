@@ -2,12 +2,12 @@
 pragma solidity 0.8.6;
 
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "../oracles/yearn/YearnVaultMultiOracle.sol";
-import "../mocks/DAIMock.sol";
-import "../mocks/USDCMock.sol";
-import "../mocks/YvTokenMock.sol";
-import "./utils/Test.sol";
-import "./utils/TestConstants.sol";
+import "../../oracles/yearn/YearnVaultMultiOracle.sol";
+import "../../mocks/DAIMock.sol";
+import "../../mocks/USDCMock.sol";
+import "../../mocks/YvTokenMock.sol";
+import "../utils/Test.sol";
+import "../utils/TestConstants.sol";
 
 contract YearnVaultMultiOracleTest is Test, TestConstants, AccessControl {
 

@@ -2,16 +2,16 @@
 pragma solidity 0.8.6;
 
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "../oracles/chainlink/ChainlinkMultiOracle.sol";
-import "../oracles/composite/CompositeMultiOracle.sol";
-import "../oracles/lido/LidoOracle.sol";
-import "../mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol";
-import "../mocks/oracles/lido/WstETHMock.sol";
-import "../mocks/ERC20Mock.sol";
-import "../mocks/USDCMock.sol";
-import "../mocks/WETH9Mock.sol";
-import "./utils/Test.sol";
-import "./utils/TestConstants.sol";
+import "../../oracles/chainlink/ChainlinkMultiOracle.sol";
+import "../../oracles/composite/CompositeMultiOracle.sol";
+import "../../oracles/lido/LidoOracle.sol";
+import "../../mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol";
+import "../../mocks/oracles/lido/WstETHMock.sol";
+import "../../mocks/ERC20Mock.sol";
+import "../../mocks/USDCMock.sol";
+import "../../mocks/WETH9Mock.sol";
+import "../utils/Test.sol";
+import "../utils/TestConstants.sol";
 
 contract LidoOracleTest is Test, TestConstants, AccessControl {
     WETH9Mock public weth;

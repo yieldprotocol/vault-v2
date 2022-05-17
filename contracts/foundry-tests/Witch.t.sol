@@ -56,7 +56,7 @@ contract WitchTest is Test, TestConstants {
     }
 }
 
-contract WitchAuctionTest is WitchTest {
+/* contract WitchAuctionTest is WitchTest {
     using Mocks for *;
 
     function setUp() public override {
@@ -446,4 +446,4 @@ contract WitchAuctionExpiredTest is WitchTestWithAuctionedVault {
         vm.prank(keeper);
         sut.payAll(VAULT_A, inkToBuy);
     }
-}
+} */
