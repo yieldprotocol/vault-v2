@@ -7,11 +7,8 @@ import "@yield-protocol/vault-interfaces/src/ICauldron.sol";
 import "@yield-protocol/vault-interfaces/src/IJoin.sol";
 import "@yield-protocol/vault-interfaces/src/DataTypes.sol";
 import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
-import "@yield-protocol/utils-v2/contracts/math/WMulUp.sol";
 import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
-import "@yield-protocol/utils-v2/contracts/math/WDivUp.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastU256U32.sol";
 
 /// @title  The Witch is a Auction/Liquidation Engine for the Yield protocol
 /// @notice The Witch grabs uncollateralized vaults, replacing the owner by itself. Then it sells
@@ -21,16 +18,14 @@ import "@yield-protocol/utils-v2/contracts/cast/CastU256U32.sol";
 /// @dev After the debt is settled, the Witch returns the vault to its original owner.
 contract Witch is AccessControl {
     using WMul for uint256;
-    using WMulUp for uint256;
     using WDiv for uint256;
-    using WDivUp for uint256;
     using CastU256U128 for uint256;
-    using CastU256U32 for uint256;
 
     event Auctioned(bytes12 indexed vaultId, uint256 indexed start);
+    event Cancelled(bytes12 indexed vaultId);
     event Bought(bytes12 indexed vaultId, address indexed buyer, uint256 ink, uint256 art);
-    event LineSet(bytes6 indexed ilkId, bytes6 baseId, uint32 duration, uint64 proportion, uint64 initialOffer);
-    event LimitSet(bytes6 indexed ilkId, bytes6 baseId, uint96 max, uint24 dust, uint8 dec);
+    event LineSet(bytes6 indexed ilkId, bytes6 indexed baseId, uint32 duration, uint64 proportion, uint64 initialOffer);
+    event LimitSet(bytes6 indexed ilkId, bytes6 indexed baseId, uint96 max, uint24 dust, uint8 dec);
     event Point(bytes32 indexed param, address indexed value);
 
     struct Auction {
@@ -152,7 +147,7 @@ contract Witch is AccessControl {
 
         auctions[vaultId] = Auction({
             owner: vault.owner,
-            start: block.timestamp.u32(),
+            start: uint32(block.timestamp), // Overflow is fine
             baseId: series.baseId,
             art: art,
             ink: ink
@@ -161,7 +156,7 @@ contract Witch is AccessControl {
         // The Witch is now in control of the vault under auction
         // TODO: Consider using `stir` to take only the part of the vault being auctioned.
         cauldron.give(vaultId, address(this));
-        emit Auctioned(vaultId, block.timestamp.u32());
+        emit Auctioned(vaultId, uint32(block.timestamp));
     }
 
     /// @dev Cancel an auction for a vault that isn't undercollateralized anymore
@@ -182,8 +177,7 @@ contract Witch is AccessControl {
         emit Cancelled(vaultId);
     }
 
-    /// @dev Pay `base` of the debt in a vault in liquidation, getting at least `minInkOut` collateral.
-    /// Use `payAll` to pay all the debt, using `paySome` for amounts close to the whole vault might revert.
+    /// @dev Pay at most `maxBaseIn` of the debt in a vault in liquidation, getting at least `minInkOut` collateral.
     /// @param vaultId Id of vault to buy
     /// @param to Receiver of the collateral bought
     /// @param minInkOut Minimum amount of collateral that must be received
@@ -236,7 +230,7 @@ contract Witch is AccessControl {
         }
     }
 
-    /// @dev Pay debt from a vault in liquidation using fyToken, getting at least `minInkOut` collateral.
+    /// @dev Pay up to `maxArtIn` debt from a vault in liquidation using fyToken, getting at least `minInkOut` collateral.
     /// @notice If too much fyToken are offered, only the necessary amount are taken.
     /// @param vaultId Id of vault to buy
     /// @param to Receiver for the collateral bought
@@ -351,7 +345,7 @@ contract Witch is AccessControl {
         uint256 elapsed;
         uint256 proportionNow;
         unchecked {
-            elapsed = block.timestamp - uint256(auction_.start);
+            elapsed = uint32(block.timestamp) - uint256(auction_.start); // Overflow on block.timestamp is fine
         }
         if (elapsed > duration || initialProportion == 1e18) {
             proportionNow = 1e18;
