@@ -164,6 +164,24 @@ contract Witch is AccessControl {
         emit Auctioned(vaultId, block.timestamp.u32());
     }
 
+    /// @dev Cancel an auction for a vault that isn't undercollateralized anymore
+    /// @param vaultId Id of vault to return
+    function cancel(bytes12 vaultId) external {
+        Auction storage auction_ = auctions[vaultId];
+        require(auction_.start != 0, "Vault not under auction");
+        require(cauldron.level(vaultId) >= 0, "Undercollateralized");
+
+        // Update concurrent collateral under auction
+        Limits memory limits_ = limits[ilkId][baseId];
+        limits_.sum -= auction_.ink;
+        limits[ilkId][baseId] = limits_;
+
+        cauldron.give(vaultId, auction_.owner);
+        delete auctions[vaultId];
+
+        emit Cancelled(vaultId);
+    }
+
     /// @dev Pay `base` of the debt in a vault in liquidation, getting at least `minInkOut` collateral.
     /// Use `payAll` to pay all the debt, using `paySome` for amounts close to the whole vault might revert.
     /// @param vaultId Id of vault to buy
@@ -194,7 +212,7 @@ contract Witch is AccessControl {
         artIn = artIn > auction_.art ? auction_.art : artIn;
         baseIn = cauldron.debtToBase(vault.seriesId, artIn);
 
-        // Calculate the collateral to be sold, and update the Cauldron
+        // Calculate the collateral to be sold
         require(
             (inkOut = _calcPayout(vault.ilkId, auction_.baseId, auction_, artIn)) >= minInkOut,
             "Not enough bought"
@@ -240,10 +258,10 @@ contract Witch is AccessControl {
 
         DataTypes.Vault memory vault = cauldron.vaults(vaultId);
 
-        // If offering too much base, take only the necessary.
+        // If offering too much fyToken, take only the necessary.
         artIn = maxArtIn > auction_.art ? auction_.art : maxArtIn;
 
-        // Calculate the collateral to be sold, and update the Cauldron
+        // Calculate the collateral to be sold
         require(
             (inkOut = _calcPayout(vault.ilkId, auction_.baseId, auction_, artIn)) >= minInkOut,
             "Not enough bought"
