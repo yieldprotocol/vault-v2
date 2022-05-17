@@ -192,7 +192,6 @@ export class YieldEnvironment {
         id(join.interface, 'join(address,uint128)'),
         id(join.interface, 'exit(address,uint128)'),
         id(join.interface, 'retrieve(address,address)'),
-        id(join.interface, 'setFlashFeeFactor(uint256)'),
       ],
       await owner.getAddress()
     ) // Only test environment
@@ -395,7 +394,6 @@ export class YieldEnvironment {
           id(fyToken.interface, 'mint(address,uint256)'),
           id(fyToken.interface, 'burn(address,uint256)'),
           id(fyToken.interface, 'point(bytes32,address)'),
-          id(fyToken.interface, 'setFlashFeeFactor(uint256)'),
         ],
         ownerAdd
       ) // Only test environment

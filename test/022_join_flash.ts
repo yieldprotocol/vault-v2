@@ -1,20 +1,13 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { constants, id } from '@yield-protocol/utils-v2'
 
-import { sendStatic } from './shared/helpers'
-
-import { Contract } from '@ethersproject/contracts'
-import { Event } from '@ethersproject/contracts/lib/index'
-import { Result } from '@ethersproject/abi'
-
 const { WAD } = constants
 
-import JoinFactoryArtifact from '../artifacts/contracts/mocks/JoinFactoryMock.sol/JoinFactoryMock.json'
 import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
+import FlashJoinArtifact from '../artifacts/contracts/FlashJoin.sol/FlashJoin.json'
 import FlashBorrowerArtifact from '../artifacts/contracts/mocks/FlashBorrower.sol/FlashBorrower.json'
 
-import { Join } from '../typechain/Join'
-import { IJoinFactory } from '../typechain/IJoinFactory'
+import { FlashJoin } from '../typechain/FlashJoin'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { FlashBorrower } from '../typechain/FlashBorrower'
 
@@ -29,8 +22,7 @@ describe('Join - flash', function () {
   let owner: string
   let otherAcc: SignerWithAddress
   let other: string
-  let join: Join
-  let joinFactory: IJoinFactory
+  let join: FlashJoin
   let token: ERC20Mock
   let borrower: FlashBorrower
 
@@ -52,14 +44,7 @@ describe('Join - flash', function () {
 
   beforeEach(async () => {
     token = (await deployContract(ownerAcc, ERC20MockArtifact, ['MTK', 'Mock Token'])) as ERC20Mock
-    joinFactory = (await deployContract(ownerAcc, JoinFactoryArtifact, [])) as IJoinFactory
-    await joinFactory.grantRoles([id(joinFactory.interface, 'createJoin(address)')], owner)
-
-    join = (await ethers.getContractAt(
-      'Join',
-      await sendStatic(joinFactory as Contract, 'createJoin', ownerAcc, [token.address]),
-      ownerAcc
-    )) as Join
+    join = (await deployContract(ownerAcc, FlashJoinArtifact, [token.address])) as FlashJoin
     await join.grantRoles(
       [
         id(join.interface, 'join(address,uint128)'),

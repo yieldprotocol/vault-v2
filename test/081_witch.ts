@@ -240,6 +240,8 @@ describe('Witch', function () {
           await rateSource.set(rate.mul(110).div(100))
         })
 
+        /*
+        TODO: To be rewritten in foundry
         it('debt to repay grows with rate after maturity', async () => {
           await cauldron.setDebtLimits(baseId, ilkId, 1000000, 0, 18) // Disable the dust level, not relevant
 
@@ -261,6 +263,7 @@ describe('Witch', function () {
           expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(borrowed))
           expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(ink))
         })
+        */
 
         it('allows to pay all of the debt', async () => {
           const baseBalanceBefore = await base.balanceOf(owner)
