@@ -168,6 +168,7 @@ contract Witch is AccessControl {
     /// @param to Receiver of the collateral bought
     /// @param maxBaseIn Maximum amount of base that the liquidator will pay
     /// @param minInkOut Minimum amount of collateral that must be received
+    /// @return baseIn Amount of underlying taken
     /// @return inkOut Amount of vault collateral sold
     function payBase(
         bytes12 vaultId,
@@ -185,7 +186,7 @@ contract Witch is AccessControl {
         DataTypes.Series memory series = cauldron.series(vault.seriesId);
 
         // Find out how much debt is being repaid
-        uint128 artIn = uint128(cauldron.debtFromBase(vault.seriesId, baseIn));
+        uint128 artIn = uint128(cauldron.debtFromBase(vault.seriesId, maxBaseIn));
 
         // If offering too much base, take only the necessary.
         artIn = artIn > auction_.art ? auction_.art : artIn;
@@ -199,15 +200,15 @@ contract Witch is AccessControl {
         // Move the assets
         if (inkOut != 0) {
             // Give collateral to the user
-            IJoin ilkJoin = ladle.joins(ilkId);
+            IJoin ilkJoin = ladle.joins(vault.ilkId);
             require(ilkJoin != IJoin(address(0)), "Join not found");
-            ilkJoin.exit(msg.sender, inkOut);
+            ilkJoin.exit(msg.sender, inkOut.u128());
         }
         if (baseIn != 0) {
             // Take underlying from user
-            IJoin baseJoin = ladle.joins(baseId);
+            IJoin baseJoin = ladle.joins(series.baseId);
             require(baseJoin != IJoin(address(0)), "Join not found");
-            baseJoin.join(msg.sender, baseIn);
+            baseJoin.join(msg.sender, baseIn.u128());
         }
     }
 
@@ -217,6 +218,7 @@ contract Witch is AccessControl {
     /// @param to Receiver for the collateral bought
     /// @param maxArtIn Maximum amount of fyToken that will be paid
     /// @param minInkOut Minimum amount of collateral that must be received
+    /// @return artIn Amount of fyToken taken
     /// @return inkOut Amount of vault collateral sold
     function payFYToken(
         bytes12 vaultId,
@@ -309,10 +311,9 @@ contract Witch is AccessControl {
         Auction storage auction,
         uint256 artIn
     ) private returns (uint256 inkOut) {
-        Auction memory auction_ = auctions[vaultId];
         // Duplicate check, but guarantees data integrity
         require(
-            auction_.start > 0,
+            auction.start > 0,
             "Vault not under auction"
         );
 
@@ -320,15 +321,15 @@ contract Witch is AccessControl {
             // Calculate how much collateral to give for paying a certain amount of debt, at a certain time, for a certain vault.
             // inkOut = (artIn / totalArt) * totalInk * (p + (1 - p) * t)
             uint256 inkAtEnd = uint256(artIn).wdiv(auction.art).wmul(auction.ink);
-            uint256 proportionNow = _calcProportion(vault.ilkId, auction_.baseId, auction_.start);
+            uint256 proportionNow = _calcProportion(vault.ilkId, auction.baseId, auction.start);
             inkOut = inkAtEnd.wmul(proportionNow);
         }
 
         {
             // Update concurrent collateral under auction
-            Limits memory limits_ = limits[vault.ilkId][auction_.baseId];
+            Limits memory limits_ = limits[vault.ilkId][auction.baseId];
             limits_.sum -= inkOut.u128();
-            limits[vault.ilkId][auction_.baseId] = limits_;
+            limits[vault.ilkId][auction.baseId] = limits_;
 
             // Ensure enough dust is left
             require(auction.art == artIn || auction.art - artIn >= limits_.dust * (10**limits_.dec), "Leaves dust");
@@ -337,10 +338,10 @@ contract Witch is AccessControl {
         // Remove debt and collateral from vault
         cauldron.slurp(vaultId, inkOut.u128(), artIn.u128());
 
-        if (auction_.art == artIn) {
+        if (auction.art == artIn) {
             // If there is no debt left, return the vault with the collateral to the owner
             delete auctions[vaultId];
-            cauldron.give(vaultId, auction_.owner);
+            cauldron.give(vaultId, auction.owner);
         }
 
         emit Bought(vaultId, msg.sender, inkOut, artIn);

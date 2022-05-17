@@ -77,6 +77,9 @@ describe('Witch', function () {
   const posted = WAD.mul(4)
   const borrowed = WAD.mul(3)
 
+  /*
+  TODO: Tests to be rewritten in foundry
+
   beforeEach(async () => {
     env = await loadFixture(fixture)
     cauldron = env.cauldron
@@ -276,4 +279,5 @@ describe('Witch', function () {
       })
     })
   })
+  */
 })
