@@ -2,9 +2,9 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { constants, id } from '@yield-protocol/utils-v2'
 import { parseUnits } from 'ethers/lib/utils'
 import { ethers, waffle } from 'hardhat'
-import CauldronArtifact from '../../artifacts/contracts/contango/ContangoCauldron.sol/ContangoCauldron.json'
-import LadleArtifact from '../../artifacts/contracts/contango/ContangoLadle.sol/ContangoLadle.json'
-import WitchArtifact from '../../artifacts/contracts/contango/ContangoWitch.sol/ContangoWitch.json'
+import LadleArtifact from '../../artifacts/contracts/other/contango/ContangoLadle.sol/ContangoLadle.json'
+import CauldronArtifact from '../../artifacts/contracts/Cauldron.sol/Cauldron.json'
+import WitchArtifact from '../../artifacts/contracts/other/contango/ContangoWitch.sol/ContangoWitch.json'
 import DAIMockArtifact from '../../artifacts/contracts/mocks/DAIMock.sol/DAIMock.json'
 import ERC20MockArtifact from '../../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
 import JoinFactoryArtifact from '../../artifacts/contracts/mocks/JoinFactoryMock.sol/JoinFactoryMock.json'
@@ -18,7 +18,7 @@ import ChainlinkMultiOracleArtifact from '../../artifacts/contracts/oracles/chai
 import CompoundMultiOracleArtifact from '../../artifacts/contracts/oracles/compound/CompoundMultiOracle.sol/CompoundMultiOracle.json'
 import WandArtifact from '../../artifacts/contracts/Wand.sol/Wand.json'
 import { CHI, DAI, ETH, RATE, USDC } from '../../src/constants'
-import { ContangoCauldron, ContangoLadle, ContangoWitch } from '../../typechain'
+import { Cauldron, ContangoLadle, ContangoWitch } from '../../typechain'
 import { ChainlinkMultiOracle } from '../../typechain/ChainlinkMultiOracle'
 import { CompoundMultiOracle } from '../../typechain/CompoundMultiOracle'
 import { DAIMock } from '../../typechain/DAIMock'
@@ -50,7 +50,7 @@ const { deployContract } = waffle
 
 export class YieldEnvironment {
   owner: SignerWithAddress
-  cauldron: ContangoCauldron
+  cauldron: Cauldron
   ladle: ContangoLadle
   witch: ContangoWitch
   joinFactory: IJoinFactory
@@ -65,7 +65,7 @@ export class YieldEnvironment {
 
   constructor(
     owner: SignerWithAddress,
-    cauldron: ContangoCauldron,
+    cauldron: Cauldron,
     ladle: ContangoLadle,
     witch: ContangoWitch,
     joinFactory: IJoinFactory,
@@ -93,7 +93,7 @@ export class YieldEnvironment {
     this.vaults = vaults
   }
 
-  public static async cauldronGovAuth(cauldron: ContangoCauldron, receiver: string) {
+  public static async cauldronGovAuth(cauldron: Cauldron, receiver: string) {
     await cauldron.grantRoles(
       [
         id(cauldron.interface, 'addAsset(bytes6,address)'),
@@ -102,14 +102,12 @@ export class YieldEnvironment {
         id(cauldron.interface, 'setDebtLimits(bytes6,bytes6,uint96,uint24,uint8)'),
         id(cauldron.interface, 'setLendingOracle(bytes6,address)'),
         id(cauldron.interface, 'setSpotOracle(bytes6,bytes6,address,uint32)'),
-        id(cauldron.interface, 'setCollateralisationRatio(uint128)'),
-        id(cauldron.interface, 'setCommonCurrency(bytes6)'),
       ],
       receiver
     )
   }
 
-  public static async cauldronLadleAuth(cauldron: ContangoCauldron, receiver: string) {
+  public static async cauldronLadleAuth(cauldron: Cauldron, receiver: string) {
     await cauldron.grantRoles(
       [
         id(cauldron.interface, 'build(address,bytes12,bytes6,bytes6)'),
@@ -124,7 +122,7 @@ export class YieldEnvironment {
     )
   }
 
-  public static async cauldronWitchAuth(cauldron: ContangoCauldron, receiver: string) {
+  public static async cauldronWitchAuth(cauldron: Cauldron, receiver: string) {
     await cauldron.grantRoles(
       [id(cauldron.interface, 'give(bytes12,address)'), id(cauldron.interface, 'slurp(bytes12,uint128,uint128)')],
       receiver
@@ -286,7 +284,7 @@ export class YieldEnvironment {
 
     // ==== Protocol ====
 
-    const cauldron = (await deployContract(owner, CauldronArtifact, [parseUnits('1.1'), ETH])) as ContangoCauldron
+    const cauldron = (await deployContract(owner, CauldronArtifact, [])) as Cauldron
     const ladle = (await deployContract(owner, LadleArtifact, [cauldron.address, weth.address])) as ContangoLadle
     const witch = (await deployContract(owner, WitchArtifact, [cauldron.address, ladle.address])) as ContangoWitch
     const joinFactory = (await deployContract(owner, JoinFactoryArtifact, [])) as IJoinFactory
