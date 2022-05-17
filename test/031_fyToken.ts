@@ -104,10 +104,10 @@ describe('FYToken', function () {
   })
 
   it('allows to mint with underlying', async () => {
+    const beforeFyTokenBalance = await fyToken.balanceOf(owner)
     await base.mint(baseJoin.address, WAD)
-    expect(await fyToken.mint(owner, WAD))
-      .to.emit(fyToken, 'Minted')
-      .withArgs(owner, WAD)
+    await fyToken.mintWithUnderlying(owner, WAD)
+    expect((await fyToken.balanceOf(owner)).sub(beforeFyTokenBalance)).to.equal(WAD)
   })
 
   it('does not allow to mature before maturity', async () => {
