@@ -56,6 +56,95 @@ contract WitchTest is Test, TestConstants {
     }
 }
 
+// ZeroState
+//   point
+//    - auth
+//    - "Unrecognized"
+//    - Storage changes
+//    - Point
+//   setLine
+//    - auth
+//    - "InitialOffer above 100%"
+//    - "Proportion above 100%"
+//    - "InitialOffer below 1%"
+//    - "Proportion below 1%"
+//    - Storage changes
+//    - LineSet
+//   setLimit
+//    - auth
+//    - Storage changes
+//    - LimitSet
+//   _calcPayout
+//      - elapsed < duration
+//      - elapsed >= duration
+//      - fuzz initialProportion
+//      - fuzz elapsed
+//   auction -> WithAuction (two auctions)
+//      - "Vault already under auction"
+//      - "Not undercollateralized"
+//      - "Collateral limit reached"
+//      - Soft collateral limit
+//      - Auction whole vault if dust limit hit
+//      - Take vault ownership
+//      - Storage changes
+//      - Auctioned
+//     cancel -> ZeroState
+//      - "Vault not under auction"
+//      - "Undercollateralized"
+//      - Return vault
+//      - Storage changes
+//      - Cancelled
+//     payBase -> WithPartialAuction
+//      - "Vault not under auction"
+//      - "Not enough bought"
+//      - "Leaves dust"
+//      - Storage changes
+//      - Cauldron accounting
+//      - Token transfers
+//      - Bought
+//      - Return values
+//       payBaseFromPartial
+//        - "Vault not under auction"
+//        - "Not enough bought"
+//        - "Leaves dust"
+//        - Storage changes
+//        - Cauldron accounting
+//        - Token transfers
+//        - Bought
+//        - Return values
+//       payBaseAllFromPartial
+//        - Pay over the vault debt
+//        - Return vault
+//        - Storage changes
+//     payBaseAll -> ZeroState
+//      - Pay over the vault debt
+//      - Return vault
+//      - Storage changes
+//     payFYToken -> WithPartialAuction
+//      - "Vault not under auction"
+//      - "Not enough bought"
+//      - Storage changes
+//      - Cauldron accounting
+//      - Token transfers/burns
+//      - Bought
+//      - Return values
+//       payFYTokenFromPartial
+//        - "Vault not under auction"
+//        - "Not enough bought"
+//        - Storage changes
+//        - Cauldron accounting
+//        - Token transfers/burns
+//        - Bought
+//        - Return values
+//       payFYTokenAllFromPartial
+//        - Pay over the vault debt
+//        - Return vault
+//        - Storage changes
+//     payFYToken -> ZeroState
+//      - Pay over the vault debt
+//      - Return vault
+//      - Storage changes
+
 /* contract WitchAuctionTest is WitchTest {
     using Mocks for *;
 
