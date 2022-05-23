@@ -24,6 +24,22 @@ library Mocks  {
         return where;
     }
 
+    function mock(function () external returns(uint256) f, uint256 returned1) internal {
+        vm.mockCall(
+            f.address,
+            abi.encodeWithSelector(f.selector),
+            abi.encode(returned1)
+        );
+    }
+    
+    function mock(function () external returns(uint112, uint112, uint32) f, uint112 returned1, uint112 returned2, uint32 returned3) internal {
+        vm.mockCall(
+            f.address,
+            abi.encodeWithSelector(f.selector),
+            abi.encode(returned1, returned2, returned3)
+        );
+    }
+
     function mock(function (bytes12) external returns(int) f, bytes12 param1, int returned1) internal {
         vm.mockCall(
             f.address,
