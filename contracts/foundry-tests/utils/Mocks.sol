@@ -31,12 +31,36 @@ library Mocks  {
             abi.encode(returned1)
         );
     }
+
+    function mock(function () external returns(uint32) f, uint32 returned1) internal {
+        vm.mockCall(
+            f.address,
+            abi.encodeWithSelector(f.selector),
+            abi.encode(returned1)
+        );
+    }
+
+    function mock(function () external returns(int128) f, int128 returned1) internal {
+        vm.mockCall(
+            f.address,
+            abi.encodeWithSelector(f.selector),
+            abi.encode(returned1)
+        );
+    }
     
     function mock(function () external returns(uint112, uint112, uint32) f, uint112 returned1, uint112 returned2, uint32 returned3) internal {
         vm.mockCall(
             f.address,
             abi.encodeWithSelector(f.selector),
             abi.encode(returned1, returned2, returned3)
+        );
+    }
+
+    function mock(function (address) external returns(uint256) f, address param1, uint256 returned1) internal {
+        vm.mockCall(
+            f.address,
+            abi.encodeWithSelector(f.selector, param1),
+            abi.encode(returned1)
         );
     }
 
