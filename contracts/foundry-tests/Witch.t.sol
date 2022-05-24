@@ -3,41 +3,57 @@ pragma solidity 0.8.6;
 
 import "./utils/Test.sol";
 import "./utils/TestConstants.sol";
-import "./utils/Utilities.sol";
+// import "./utils/Utilities.sol";
 import "./utils/Mocks.sol";
 
 import "../Witch.sol";
 
-contract WitchTest is Test, TestConstants {
+abstract contract StateZero is Test, TestConstants {
     using Mocks for *;
 
     event Auctioned(bytes12 indexed vaultId, uint256 indexed start);
+    event Cancelled(bytes12 indexed vaultId);
     event Bought(bytes12 indexed vaultId, address indexed buyer, uint256 ink, uint256 art);
+    event LineSet(bytes6 indexed ilkId, bytes6 indexed baseId, uint32 duration, uint64 proportion, uint64 initialOffer);
+    event LimitSet(bytes6 indexed ilkId, bytes6 indexed baseId, uint96 max, uint24 dust, uint8 dec);
+    event Point(bytes32 indexed param, address indexed value);
 
     bytes12 internal constant VAULT_ID = "vault";
     bytes6 internal constant ILK_ID = USDC;
     uint32 internal constant AUCTION_DURATION = 1 hours;
 
-    Utilities internal utils;
+    // Utilities internal utils;
 
-    address internal admin;
+    // address internal admin;
+    address internal deployer = 0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84;
+    address internal ada = address(0xada);
+    address internal bob = address(0xb0b);
+    address internal bad = address(0xbad);
+    address internal cool = address(0xc001);
 
     ICauldron internal cauldron;
     ILadle internal ladle;
 
-    Witch internal sut;
+    Witch internal witch;
 
     function setUp() public virtual {
-        utils = new Utilities();
+        // utils = new Utilities();
 
-        admin = utils.getNextUserAddress("Admin");
+        // admin = utils.getNextUserAddress("Admin");
+
         cauldron = ICauldron(Mocks.mock("Cauldron"));
         ladle = ILadle(Mocks.mock("Ladle"));
 
-        sut = new Witch(cauldron, ladle);
+        vm.startPrank(ada);
+        witch = new Witch(cauldron, ladle);
+        witch.grantRole(Witch.point.selector, ada);
+        vm.stopPrank();
+
+        vm.label(ada, "ada");
+        vm.label(bob, "bob");
     }
 
-    function _vaultIsCollateralised(bytes12 vaultId) internal {
+    /* function _vaultIsCollateralised(bytes12 vaultId) internal {
         cauldron.level.mock(vaultId, 0); // >= 0 means vault is collateralised
     }
 
@@ -52,7 +68,36 @@ contract WitchTest is Test, TestConstants {
     ) internal {
         cauldron.vaults.mock(vaultId, vault);
         cauldron.balances.mock(vaultId, vaultBalances);
-        cauldron.give.mock(vaultId, address(sut), vault);
+        cauldron.give.mock(vaultId, address(witch), vault);
+    } */
+}
+
+contract StateZeroTest is StateZero {
+    function testPointRequiresAuth() public {
+        // console2.log("Cannot point to new contract without permission");
+
+        vm.prank(bob);
+        vm.expectRevert("Access denied");
+        witch.point("ladle", bad);
+    }
+
+    function testPointRequiresLadle() public {
+        // console2.log("Cannot point to new contract other than a Ladle");
+        vm.prank(ada);
+        vm.expectRevert("Unrecognized");
+        witch.point("cauldron", bad);
+    }
+
+    function testPoint() public {
+        // console2.log("Points to a new Ladle");
+
+        vm.expectEmit(true, true, false, true);
+        emit Point("ladle", cool);
+
+        vm.prank(ada);
+        witch.point("ladle", cool);
+
+        assertEq(address(witch.ladle()), cool);
     }
 }
 
@@ -75,19 +120,20 @@ contract WitchTest is Test, TestConstants {
 //    - Storage changes
 //    - LimitSet
 //   _calcPayout
-//      - elapsed < duration
-//      - elapsed >= duration
-//      - fuzz initialProportion
-//      - fuzz elapsed
+//    - elapsed < duration
+//    - elapsed >= duration
+//    - fuzz initialProportion
+//    - fuzz elapsed
 //   auction -> WithAuction (two auctions)
-//      - "Vault already under auction"
-//      - "Not undercollateralized"
-//      - "Collateral limit reached"
-//      - Soft collateral limit
-//      - Auction whole vault if dust limit hit
-//      - Take vault ownership
-//      - Storage changes
-//      - Auctioned
+//    - "Vault already under auction"
+//    - "Not undercollateralized"
+//    - "Collateral limit reached"
+//    - Soft collateral limit
+//    - Auction whole vault if dust limit hit
+//    - Take vault ownership
+//    - Storage changes
+//    - Auctioned
+//   WithAuction
 //     cancel -> ZeroState
 //      - "Vault not under auction"
 //      - "Undercollateralized"
@@ -103,6 +149,23 @@ contract WitchTest is Test, TestConstants {
 //      - Token transfers
 //      - Bought
 //      - Return values
+//     payBaseAll -> ZeroState
+//      - Pay over the vault debt
+//      - Return vault
+//      - Storage changes
+//     payFYToken -> WithPartialAuction
+//      - "Vault not under auction"
+//      - "Not enough bought"
+//      - Storage changes
+//      - Cauldron accounting
+//      - Token transfers/burns
+//      - Bought
+//      - Return values
+//     payFYToken -> ZeroState
+//      - Pay over the vault debt
+//      - Return vault
+//      - Storage changes
+//     WithPartialAuction
 //       payBaseFromPartial
 //        - "Vault not under auction"
 //        - "Not enough bought"
@@ -116,18 +179,6 @@ contract WitchTest is Test, TestConstants {
 //        - Pay over the vault debt
 //        - Return vault
 //        - Storage changes
-//     payBaseAll -> ZeroState
-//      - Pay over the vault debt
-//      - Return vault
-//      - Storage changes
-//     payFYToken -> WithPartialAuction
-//      - "Vault not under auction"
-//      - "Not enough bought"
-//      - Storage changes
-//      - Cauldron accounting
-//      - Token transfers/burns
-//      - Bought
-//      - Return values
 //       payFYTokenFromPartial
 //        - "Vault not under auction"
 //        - "Not enough bought"
@@ -140,10 +191,6 @@ contract WitchTest is Test, TestConstants {
 //        - Pay over the vault debt
 //        - Return vault
 //        - Storage changes
-//     payFYToken -> ZeroState
-//      - Pay over the vault debt
-//      - Return vault
-//      - Storage changes
 
 /* contract WitchAuctionTest is WitchTest {
     using Mocks for *;
