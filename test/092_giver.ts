@@ -91,7 +91,7 @@ describe('Giver', function () {
     await expect(giver.connect(ownerAcc).seize(vaultId, owner2)).to.be.revertedWith('Access denied')
   })
 
-  it('Can call the seize function with authentication', async () => {
+  it('Seize a vault', async () => {
     await giver.grantRole(id(giver.interface, 'seize(bytes12,address)'), owner)
     await giver.connect(ownerAcc).seize(vaultId, owner2)
     const vaultData = await cauldron.vaults(vaultId)
