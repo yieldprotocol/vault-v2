@@ -87,7 +87,7 @@ describe('Giver', function () {
     expect(vaultData['owner']).to.not.eq(owner2)
   })
 
-  it('Cannot call the seize function without authentication', async () => {
+  it('Cannot seize a vault without authentication', async () => {
     await expect(giver.connect(ownerAcc).seize(vaultId, owner2)).to.be.revertedWith('Access denied')
   })
 
