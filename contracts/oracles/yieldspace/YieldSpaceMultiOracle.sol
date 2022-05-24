@@ -7,6 +7,8 @@ import "@yield-protocol/vault-interfaces/src/IOracle.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
 import "@yield-protocol/yieldspace-v2/contracts/YieldMath.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
+import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
 
 contract YieldSpaceMultiOracle is IOracle, AccessControl {
     using CastBytes32Bytes6 for bytes32;
@@ -15,6 +17,8 @@ contract YieldSpaceMultiOracle is IOracle, AccessControl {
     using Math64x64 for int256;
     using Math64x64 for uint256;
     using Exp64x64 for uint128;
+    using WMul for uint256;
+    using WDiv for uint256;
 
     event SourceSet(
         bytes6 indexed baseId,
@@ -28,7 +32,7 @@ contract YieldSpaceMultiOracle is IOracle, AccessControl {
     struct Source {
         address pool;
         uint32 maturity;
-        bool inverse;
+        bool lending;
         int128 ts;
         int128 g;
     }
@@ -43,11 +47,17 @@ contract YieldSpaceMultiOracle is IOracle, AccessControl {
         wad64x64 = uint256(1e18).fromUInt();
     }
 
+    /// @notice Set or reset a FYToken oracle source and its inverse
+    /// @param  seriesId FYToken id
+    /// @param  baseId Underlying id
+    /// @param  pool Pool where you can trade FYToken <-> underlying
+    /// @dev    parameter ORDER IS crucial!  If id's are out of order the math will be wrong
     function setSource(
+        bytes6 seriesId,
         bytes6 baseId,
-        bytes6 quoteId,
         address pool
     ) external auth {
+        // Cache pool immutable values to save gas when discounting the amounts
         uint32 maturity = IPool(pool).maturity();
         int128 ts = IPool(pool).ts();
         int128 g1 = IPool(pool).g1();
@@ -56,11 +66,11 @@ contract YieldSpaceMultiOracle is IOracle, AccessControl {
         // Initialise or update the TWAR observations
         poolOracle.update(pool);
 
-        sources[baseId][quoteId] = Source(pool, maturity, false, ts, g2);
-        emit SourceSet(baseId, quoteId, pool, maturity, ts, g2);
+        sources[seriesId][baseId] = Source(pool, maturity, false, ts, g2);
+        emit SourceSet(seriesId, baseId, pool, maturity, ts, g2);
 
-        sources[quoteId][baseId] = Source(pool, maturity, true, ts, g1);
-        emit SourceSet(quoteId, baseId, pool, maturity, ts, g1);
+        sources[baseId][seriesId] = Source(pool, maturity, true, ts, g1);
+        emit SourceSet(baseId, seriesId, pool, maturity, ts, g1);
     }
 
     /// @inheritdoc IOracle
@@ -108,12 +118,19 @@ contract YieldSpaceMultiOracle is IOracle, AccessControl {
         require(source.pool != address(0), "Source not found");
     }
 
+    /// @dev Discount `amount` using the TWAR oracle rates. 
+    /// Lending => underlying to FYToken. Borrowing => FYToken to underlying
+    /// @param source Input params for the formulae
+    /// @param amount Amount to be discounted
+    /// @param unitPrice TWAR provided by the oracle
+    /// @param updateTime Time when the TWAR observation was calculated
+    /// @return the discounted amount, <= `amount` when borrowing, >= `amount` when lending 
     function _discount(
         Source memory source,
         uint256 amount,
         uint128 unitPrice,
         uint256 updateTime
-    ) internal view returns (uint256 discountedAmount) {
+    ) internal view returns (uint256) {
         int128 timeTillMaturity = uint128(source.maturity - updateTime).fromUInt();
         int128 powerValue64 = source.g.mul(source.ts).mul(timeTillMaturity);
         // scale to 18 dec and convert to regular non-64
@@ -123,10 +140,6 @@ contract YieldSpaceMultiOracle is IOracle, AccessControl {
         uint256 bottom = uint128(1e18).pow(powerValue, uint128(1e18)) / 1e18;
         uint256 marginalPrice = top / bottom;
 
-        if (source.inverse) {
-            discountedAmount = (amount * marginalPrice) / 1e18;
-        } else {
-            discountedAmount = (amount * 1e18) / marginalPrice;
-        }
+        return source.lending ? amount.wmul(marginalPrice) : amount.wdiv(marginalPrice);
     }
 }

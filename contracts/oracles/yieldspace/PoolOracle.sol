@@ -53,13 +53,17 @@ contract PoolOracle is IPoolOracle {
         minTimeElapsed = minTimeElapsed_;
     }
 
-    // returns the index of the observation corresponding to the given timestamp
+    /// @dev calculates the index of the observation corresponding to the given timestamp
+    /// @param timestamp The timestamp to calculate the index for
+    /// @return index The index corresponding to the `timestamp`
     function observationIndexOf(uint256 timestamp) public view returns (uint256 index) {
         uint256 epochPeriod = timestamp / periodSize;
         return epochPeriod % granularity;
     }
 
-    // returns the observation from the oldest epoch (at the beginning of the window) relative to the current time
+    /// @dev returns the observation from the oldest epoch (at the beginning of the window) relative to the current time
+    /// @param pool Address of pool for which the observation is required
+    /// @return The oldest observation available for `pool`
     function getOldestObservationInWindow(address pool) public view returns (Observation memory) {
         if (poolObservations[pool].length == 0) {
             revert NoObservationsForPool(pool);
@@ -129,6 +133,9 @@ contract PoolOracle is IPoolOracle {
         return peek(pool);
     }
 
+    /// @dev computes the most up-to-date TWAR based last calculated ratio and the current cached balances on the pool
+    /// @param pool Address of pool for which the ratio is required 
+    /// @return lastRatio The latest TWAR for `pool`
     function _getCurrentCumulativeRatio(address pool) internal view returns (uint256 lastRatio) {
         lastRatio = IPool(pool).cumulativeBalancesRatio();
         (uint256 baseCached, uint256 fyTokenCached, uint256 blockTimestampLast) = IPool(pool).getCache();

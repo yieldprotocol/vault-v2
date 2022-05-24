@@ -93,7 +93,7 @@ contract YieldSpaceMultiOracleTest is Test, TestConstants {
         oracle.get(FYETH2206, USDC, 2 ether);
     }
 
-    function testPeekDiscountLendingPosition() public {
+    function testPeekDiscountBorrowingPosition() public {
         pOracle.peek.mock(pool, TWAR);
 
         (uint256 value, uint256 updateTime) = oracle.peek(FYUSDC2206, USDC, 1000e6);
@@ -109,7 +109,7 @@ contract YieldSpaceMultiOracleTest is Test, TestConstants {
         assertEq(value, 1000e6);
     }
 
-    function testPeekDiscountBorrowingPosition() public {
+    function testPeekDiscountLendingPosition() public {
         pOracle.peek.mock(pool, TWAR);
 
         (uint256 value, uint256 updateTime) = oracle.peek(USDC, FYUSDC2206, 1000e6);
@@ -118,7 +118,7 @@ contract YieldSpaceMultiOracleTest is Test, TestConstants {
         assertEq(value, 1000.690277e6);
     }
 
-    function testGetDiscountLendingPosition() public {
+    function testGetDiscountBorrowingPosition() public {
         pOracle.get.mock(pool, TWAR);
 
         (uint256 value, uint256 updateTime) = oracle.get(FYUSDC2206, USDC, 1000e6);
@@ -134,7 +134,7 @@ contract YieldSpaceMultiOracleTest is Test, TestConstants {
         assertEq(value, 1000e6);
     }
 
-    function testGetDiscountBorrowingPosition() public {
+    function testGetDiscountLendingPosition() public {
         pOracle.get.mock(pool, TWAR);
 
         (uint256 value, uint256 updateTime) = oracle.get(USDC, FYUSDC2206, 1000e6);
