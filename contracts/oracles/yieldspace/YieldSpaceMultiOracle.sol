@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.6;
+pragma solidity 0.8.6;
 
 import "./IPoolOracle.sol";
 import "@yield-protocol/yieldspace-interfaces/IPool.sol";
@@ -52,6 +52,9 @@ contract YieldSpaceMultiOracle is IOracle, AccessControl {
         int128 ts = IPool(pool).ts();
         int128 g1 = IPool(pool).g1();
         int128 g2 = IPool(pool).g2();
+
+        // Initialise or update the TWAR observations
+        poolOracle.update(pool);
 
         sources[baseId][quoteId] = Source(pool, maturity, false, ts, g2);
         emit SourceSet(baseId, quoteId, pool, maturity, ts, g2);

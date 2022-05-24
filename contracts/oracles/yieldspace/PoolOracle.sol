@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.6;
+pragma solidity 0.8.6;
 
 import {IPool} from "@yield-protocol/yieldspace-interfaces/IPool.sol";
 import {IPoolOracle} from "./IPoolOracle.sol";
@@ -86,9 +86,8 @@ contract PoolOracle is IPoolOracle {
         }
     }
 
-    // update the cumulative ratio for the observation at the current timestamp. each observation is updated at most
-    // once per epoch period.
-    function update(address pool) public {
+    // @inheritdoc IPoolOracle
+    function update(address pool) public override {
         // populate the array with empty observations (oldest call only)
         for (uint256 i = poolObservations[pool].length; i < granularity; i++) {
             poolObservations[pool].push();
@@ -107,7 +106,7 @@ contract PoolOracle is IPoolOracle {
         }
     }
 
-    // @inheritdoc IPoolOracle
+    /// @inheritdoc IPoolOracle
     function peek(address pool) public view override returns (uint256 twar) {
         Observation memory oldestObservation = getOldestObservationInWindow(pool);
 
@@ -124,7 +123,7 @@ contract PoolOracle is IPoolOracle {
         return ((_getCurrentCumulativeRatio(pool) - oldestObservation.ratioCumulative) * 1e18) / (timeElapsed * 1e27);
     }
 
-    // @inheritdoc IPoolOracle
+    /// @inheritdoc IPoolOracle
     function get(address pool) external override returns (uint256 twar) {
         update(pool);
         return peek(pool);

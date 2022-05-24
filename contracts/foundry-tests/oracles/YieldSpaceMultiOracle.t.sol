@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.6;
+pragma solidity 0.8.6;
 
 import "../utils/Test.sol";
 import "../utils/Mocks.sol";
@@ -20,7 +20,7 @@ contract YieldSpaceMultiOracleTest is Test, TestConstants {
     );
 
     uint256 internal constant NOW = 1645870528;
-    uint256 internal constant ORACLE_RATE = 1073988998320842609;
+    uint256 internal constant TWAR = 1073988998320842609;
     uint32 internal constant MATURITY = 1656039600;
     int128 internal constant TS = 23381681843;
     int128 internal constant G1 = 13835058055282163712;
@@ -46,6 +46,8 @@ contract YieldSpaceMultiOracleTest is Test, TestConstants {
 
         oracle.grantRole(oracle.setSource.selector, address(0xa11ce));
 
+        pOracle.update.mock(pool);
+
         vm.prank(address(0xa11ce));
         oracle.setSource(FYUSDC2206, USDC, pool);
     }
@@ -62,6 +64,8 @@ contract YieldSpaceMultiOracleTest is Test, TestConstants {
 
         vm.expectEmit(true, true, true, true);
         emit SourceSet(USDC, FYUSDC2206, pool, MATURITY, TS, G1);
+
+        pOracle.update.verify(pool);
 
         vm.prank(address(0xa11ce));
         oracle.setSource(FYUSDC2206, USDC, pool);
@@ -90,7 +94,7 @@ contract YieldSpaceMultiOracleTest is Test, TestConstants {
     }
 
     function testPeekDiscountLendingPosition() public {
-        pOracle.peek.mock(pool, ORACLE_RATE);
+        pOracle.peek.mock(pool, TWAR);
 
         (uint256 value, uint256 updateTime) = oracle.peek(FYUSDC2206, USDC, 1000e6);
 
@@ -106,7 +110,7 @@ contract YieldSpaceMultiOracleTest is Test, TestConstants {
     }
 
     function testPeekDiscountBorrowingPosition() public {
-        pOracle.peek.mock(pool, ORACLE_RATE);
+        pOracle.peek.mock(pool, TWAR);
 
         (uint256 value, uint256 updateTime) = oracle.peek(USDC, FYUSDC2206, 1000e6);
 
@@ -115,7 +119,7 @@ contract YieldSpaceMultiOracleTest is Test, TestConstants {
     }
 
     function testGetDiscountLendingPosition() public {
-        pOracle.get.mock(pool, ORACLE_RATE);
+        pOracle.get.mock(pool, TWAR);
 
         (uint256 value, uint256 updateTime) = oracle.get(FYUSDC2206, USDC, 1000e6);
 
@@ -131,7 +135,7 @@ contract YieldSpaceMultiOracleTest is Test, TestConstants {
     }
 
     function testGetDiscountBorrowingPosition() public {
-        pOracle.get.mock(pool, ORACLE_RATE);
+        pOracle.get.mock(pool, TWAR);
 
         (uint256 value, uint256 updateTime) = oracle.get(USDC, FYUSDC2206, 1000e6);
 

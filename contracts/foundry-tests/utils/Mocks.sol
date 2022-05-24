@@ -24,6 +24,16 @@ library Mocks  {
         return where;
     }
 
+    // ===================================== mock =====================================
+
+    function mock(function (address) external f, address param1) internal {
+        vm.mockCall(
+            f.address,
+            abi.encodeWithSelector(f.selector, param1),
+            abi.encode(0)
+        );
+    }
+
     function mock(function () external returns(uint256) f, uint256 returned1) internal {
         vm.mockCall(
             f.address,
@@ -133,6 +143,15 @@ library Mocks  {
             f.address,
             abi.encodeWithSelector(f.selector, param1, param2),
             abi.encode(returned1)
+        );
+    }
+
+    // ===================================== verify =====================================
+
+    function verify(function (address) external f, address param1) internal {
+        vm.expectCall(
+            f.address,
+            abi.encodeWithSelector(f.selector, param1)
         );
     }
 }
