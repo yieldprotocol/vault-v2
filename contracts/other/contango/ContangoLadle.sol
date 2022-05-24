@@ -23,7 +23,5 @@ contract ContangoLadle is Ladle {
         bytes6 ilkId
     ) external payable auth returns (DataTypes.Vault memory vault) {
         vault = cauldron.build(msg.sender, vaultId, seriesId, ilkId);
-        // Store the vault data in the cache
-        cachedVaultId = vaultId;
     }
 }
