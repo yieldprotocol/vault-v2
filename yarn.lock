@@ -2783,10 +2783,10 @@
   resolved "https://registry.npmjs.org/@yield-protocol/yieldspace-interfaces/-/yieldspace-interfaces-2.3.2.tgz"
   integrity sha512-8U43J4lfWnkagCTKi/JGdG4DAP69kwfCC85NAUUxb51gPGuZLSmfzm1UjroCPC5jQN4Nw0tCvIMKjIEYK0jaZw==
 
-"@yield-protocol/yieldspace-v2@^0.12.2":
-  version "0.12.2"
-  resolved "https://registry.yarnpkg.com/@yield-protocol/yieldspace-v2/-/yieldspace-v2-0.12.2.tgz#17659e0289889a7993615860ced7c3fbe1e88752"
-  integrity sha512-2PvnhQvszxsxyM5E2TYb0KKyJOjPUGculyV1STxbdRy+P58KNc5Fd40lpM+7AqftXlecLUa1j0aUle09qz7m+Q==
+"@yield-protocol/yieldspace-v2@^0.12.3":
+  version "0.12.3"
+  resolved "https://registry.yarnpkg.com/@yield-protocol/yieldspace-v2/-/yieldspace-v2-0.12.3.tgz#ed2b0403bd4b98dd305399e16c32cad47c6a128a"
+  integrity sha512-Lq5eggILP3QGk7pSmmC8tntI0KS3hXbqdoKIcjUEF6KhfZkxJtHQrZR9qnrrhOyDombAwT0iVvZps8EVFI8AqA==
 
 abab@^2.0.0:
   version "2.0.5"
