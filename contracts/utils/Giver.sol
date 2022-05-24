@@ -36,4 +36,14 @@ contract Giver is AccessControl {
         require(!bannedIlks[vault.ilkId], "ilk is banned");
         vault = cauldron.give(vaultId, receiver);
     }
+
+    /// @notice A give function which allows the authenticated address to give the vault of any user to another address
+    /// @param vaultId The vaultId of the vault to be given
+    /// @param receiver The address to which the vault is being given to
+    /// @return vault The vault which has been given
+    function seize(bytes12 vaultId, address receiver) external auth returns (DataTypes.Vault memory vault) {
+        vault = cauldron.vaults(vaultId);
+        require(!bannedIlks[vault.ilkId], "ilk is banned");
+        vault = cauldron.give(vaultId, receiver);
+    }
 }
