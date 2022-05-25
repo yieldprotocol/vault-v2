@@ -18,8 +18,7 @@
     "test10:ci": "hardhat test test/10*",
     "test:deploy": "hardhat deploy --tags DeployTest",
     "coverage": "hardhat coverage",
-    "lint:collisions": "yarn build && hardhat lint:collisions",
-    "lint:sol": "yarn lint:collisions && solhint -f table contracts/*.sol",
+    "lint:sol": "solhint -f table contracts/*.sol",
     "lint:ts": "prettier ./test/*.ts --check",
     "lint:ts:fix": "prettier ./test/*.ts --write",
     "prepublishOnly": "npx tsdx build --tsconfig ./tsconfig-publish.json"
