@@ -1,0 +1,18 @@
+output: mythx.json
+format: json
+analyze:
+    mode: quick
+    async: true
+    create-group: true
+    group-name: Utils
+    solc: 0.8.1
+    targets:
+      - contracts/access/AccessControl.sol:AccessControl
+      - contracts/access/Ownable.sol:Ownable
+      - contracts/token/AllTransferHelper.sol:AllTransferHelper
+      - contracts/token/TransferHelper.sol:TransferHelper
+      - contracts/token/ERC20.sol:ERC20
+      - contracts/token/ERC20Permit.sol:ERC20Permit
+      - contracts/token/SafeERC20Namer.sol:SafeERC20Namer
+      - contracts/utils/AddressStringUtil.sol:AddressStringUtil
+      - contracts/utils/RevertMsgExtractor.sol:RevertMsgExtractor
