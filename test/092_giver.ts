@@ -86,4 +86,15 @@ describe('Giver', function () {
     const vaultData = await cauldron.vaults(vaultId)
     expect(vaultData['owner']).to.not.eq(owner2)
   })
+
+  it('Cannot seize a vault without authentication', async () => {
+    await expect(giver.connect(ownerAcc).seize(vaultId, owner2)).to.be.revertedWith('Access denied')
+  })
+
+  it('Seize a vault', async () => {
+    await giver.grantRole(id(giver.interface, 'seize(bytes12,address)'), owner)
+    await giver.connect(ownerAcc).seize(vaultId, owner2)
+    const vaultData = await cauldron.vaults(vaultId)
+    expect(vaultData['owner']).to.not.eq(owner)
+  })
 })
