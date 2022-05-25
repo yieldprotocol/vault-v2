@@ -14,7 +14,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
         with:
-          node-version: 14.14.x
+          node-version: 12.x
           registry-url: 'https://registry.npmjs.org'
       
       - id: yarn-cache
@@ -29,17 +29,17 @@ jobs:
       - run: yarn
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - run: yarn workspaces run lint:ts
-      - run: yarn workspaces run lint:sol
+      - run: yarn lint:ts
+      - run: yarn lint:sol
 
-  test05:
+  test:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
         with:
-          node-version: 14.14.x
+          node-version: 12.x
           registry-url: 'https://registry.npmjs.org'
 
       - id: yarn-cache
@@ -54,17 +54,17 @@ jobs:
       - run: yarn
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - run: yarn workspaces run build
-      - run: yarn workspaces run test05:ci
+      - run: yarn build
+      - run: yarn test
 
-  test09:
+  migrations:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
         with:
-          node-version: 14.14.x
+          node-version: 12.x
           registry-url: 'https://registry.npmjs.org'
 
       - id: yarn-cache
@@ -79,48 +79,4 @@ jobs:
       - run: yarn
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - run: yarn workspaces run build
-      - run: yarn workspaces run test09:ci
-
-  test10:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
-        with:
-          node-version: 14.14.x
-          registry-url: 'https://registry.npmjs.org'
-
-      - id: yarn-cache
-        run: echo "::set-output name=dir::$(yarn cache dir)"
-
-      - uses: actions/cache@v1
-        with:
-          path: ${{ steps.yarn-cache.outputs.dir }}
-          key: yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            yarn-
-      - run: yarn
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - run: yarn workspaces run build
-      - run: yarn workspaces run test10:ci
-
-  foundry-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-
-      - name: Install Foundry
-        uses: onbjerg/foundry-toolchain@v1
-        with:
-          version: nightly
-
-      - name: Build contracts
-        run: forge build     
-
-      - name: Run tests
-        run: forge test
+      - run: yarn test:deploy
