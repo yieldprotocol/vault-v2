@@ -121,6 +121,8 @@ jobs:
 
       - name: Build contracts
         run: forge build
+        working-directory: packages/foundry
 
       - name: Run tests
         run: forge test
+        working-directory: packages/foundry
