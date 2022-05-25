@@ -120,9 +120,7 @@ jobs:
           version: nightly
 
       - name: Build contracts
-        run: forge build
-        working-directory: packages/foundry
+        run: yarn workspaces run forge:build
 
       - name: Run tests
-        run: forge test
-        working-directory: packages/foundry
+        run: yarn workspaces run forge:test
