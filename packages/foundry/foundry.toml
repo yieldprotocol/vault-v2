@@ -1,5 +1,5 @@
 [default]
-src = '../hardhat/contracts/foundry-tests'
+src = 'contracts/foundry-tests'
 out = 'out'
 libs = ['lib']
 block_timestamp = 1651743369 # Arbitrary Thursday, 5 May 2022 09:36:09

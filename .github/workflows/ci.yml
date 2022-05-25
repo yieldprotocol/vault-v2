@@ -120,7 +120,7 @@ jobs:
           version: nightly
 
       - name: Build contracts
-        run: forge build     
+        run: forge build --root packages/foundry  
 
       - name: Run tests
-        run: forge test
+        run: forge test --root packages/foundry
