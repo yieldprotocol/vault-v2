@@ -54,8 +54,8 @@ jobs:
       - run: yarn
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - run: yarn workspaces run build
-      - run: yarn workspaces run test05:ci
+      - run: yarn workspaces run hardhat:build
+      - run: yarn workspaces run hardhat:test:05
 
   test09:
     runs-on: ubuntu-latest
@@ -79,8 +79,8 @@ jobs:
       - run: yarn
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - run: yarn workspaces run build
-      - run: yarn workspaces run test09:ci
+      - run: yarn workspaces run hardhat:build
+      - run: yarn workspaces run hardhat:test:09
 
   test10:
     runs-on: ubuntu-latest
@@ -104,8 +104,8 @@ jobs:
       - run: yarn
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - run: yarn workspaces run build
-      - run: yarn workspaces run test10:ci
+      - run: yarn workspaces run hardhat:build
+      - run: yarn workspaces run hardhat:test:10
 
   foundry-tests:
     runs-on: ubuntu-latest
