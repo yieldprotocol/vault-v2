@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.6;
+pragma solidity 0.8.14;
 import "@yield-protocol/vault-interfaces/src/ICauldronGov.sol";
 import "@yield-protocol/vault-interfaces/src/ILadleGov.sol";
 import "@yield-protocol/vault-interfaces/src/IJoin.sol";
@@ -62,7 +62,7 @@ contract Wandv2 is AccessControl {
         string memory name,
         string memory symbol
     ) internal returns (IFYToken) {
-        AccessControl fyToken = AccessControl(
+        IFYToken fyToken = IFYToken(
             new FYToken(
                 underlyingId_,
                 oracle,
@@ -72,6 +72,7 @@ contract Wandv2 is AccessControl {
                 symbol // Derive from base and maturity, perhaps
             )
         );
+        AccessControl fyTokenAC = AccessControl(address(fyToken));
 
         // Allow the fyToken to pull from the base join for redemption, and to push to mint with underlying
         bytes4[] memory sigs = new bytes4[](2);
@@ -83,13 +84,13 @@ contract Wandv2 is AccessControl {
         sigs = new bytes4[](2);
         sigs[0] = MINT;
         sigs[1] = BURN;
-        fyToken.grantRoles(sigs, address(ladle));
+        fyTokenAC.grantRoles(sigs, address(ladle));
 
         // Pass ownership of the fyToken to msg.sender
-        fyToken.grantRole(ROOT, msg.sender);
-        fyToken.renounceRole(ROOT, address(this));
+        fyTokenAC.grantRole(ROOT, msg.sender);
+        fyTokenAC.renounceRole(ROOT, address(this));
 
-        return IFYToken(address(fyToken));
+        return fyToken;
     }
 
     function setPool(
@@ -102,7 +103,6 @@ contract Wandv2 is AccessControl {
     ) internal {
         // Create the pool for the base and fyToken
         Pool pool = new Pool(IERC20(base), fyToken, ts_, g1_, g2_);
-
         // Register pool in Ladle
         ladle.addPool(seriesId, address(pool));
     }
