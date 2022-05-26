@@ -99,13 +99,13 @@ describe('Wand-V2', async function () {
 
   it('Create a series', async () => {
     await wand.addSeries(
-      seriesId3,
-      USDC,
-      BigNumber.from('1680271200'),
-      [DAI, ETH],
-      'temp',
-      'temp',
-      ONE64.div(secondsIn30Years),
+      seriesId3,// seriesId
+      USDC,// baseId
+      BigNumber.from('1680271200'),// Maturity
+      [DAI, ETH],// Ilks
+      'temp',// Name
+      'temp',// Symbol
+      ONE64.div(secondsIn30Years),// Timestretch
       ONE64.mul(75).div(100),
       ONE64.mul(100).div(75)
     )

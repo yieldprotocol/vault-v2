@@ -9,12 +9,12 @@ import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 import "./FYToken.sol";
 
-/// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient governance features.
+/// @dev A wand to create new series.
 contract Wandv2 is AccessControl {
-    bytes4 public constant JOIN = IJoin.join.selector; // bytes4(keccak256("join(address,uint128)"));
-    bytes4 public constant EXIT = IJoin.exit.selector; // bytes4(keccak256("exit(address,uint128)"));
-    bytes4 public constant MINT = IFYToken.mint.selector; // bytes4(keccak256("mint(address,uint256)"));
-    bytes4 public constant BURN = IFYToken.burn.selector; // bytes4(keccak256("burn(address,uint256)"));
+    bytes4 public constant JOIN = IJoin.join.selector;
+    bytes4 public constant EXIT = IJoin.exit.selector;
+    bytes4 public constant MINT = IFYToken.mint.selector;
+    bytes4 public constant BURN = IFYToken.burn.selector;
 
     ICauldronGov public cauldron;
     ILadleGov public ladle;
@@ -24,8 +24,16 @@ contract Wandv2 is AccessControl {
         ladle = ladle_;
     }
 
-    /// @dev Add an existing series to the protocol, by deploying a FYToken, and registering it in the cauldron with the approved ilks
-    /// This must be followed by a call to addPool
+    /// @dev Add a series to the protocol, by deploying a FYToken, and registering it in the cauldron with the approved ilks
+    /// @param seriesId The id for the series
+    /// @param baseId The id of the base Token
+    /// @param maturity Maturity date for the fyToken
+    /// @param ilkIds The ilk for the fyToken
+    /// @param name Name of the fyToken
+    /// @param symbol Symbol of the fyToken
+    /// @param ts time stretch, in 64.64
+    /// @param g1 in 64.64
+    /// @param g2 in 64.64
     function addSeries(
         bytes6 seriesId,
         bytes6 baseId,
@@ -33,9 +41,9 @@ contract Wandv2 is AccessControl {
         bytes6[] calldata ilkIds,
         string memory name,
         string memory symbol,
-        int128 ts_,
-        int128 g1_,
-        int128 g2_
+        int128 ts,
+        int128 g1,
+        int128 g2
     ) external auth {
         address base = cauldron.assets(baseId);
         require(base != address(0), "Base not found");
@@ -46,15 +54,23 @@ contract Wandv2 is AccessControl {
         IOracle oracle = cauldron.lendingOracles(baseId); // The lending oracles in the Cauldron are also configured to return chi
         require(address(oracle) != address(0), "Chi oracle not found");
 
-        IFYToken fyToken = setFyToken(baseId, oracle, baseJoin, maturity, name, symbol);
+        IFYToken fyToken = createFyToken(baseId, oracle, baseJoin, maturity, name, symbol);
+        createPool(seriesId, fyToken, ts, g1, g2, base);
+
         // Add fyToken/series to the Cauldron and approve ilks for the series
         cauldron.addSeries(seriesId, baseId, fyToken);
         cauldron.addIlks(seriesId, ilkIds);
-
-        setPool(seriesId, fyToken, ts_, g1_, g2_, base);
     }
 
-    function setFyToken(
+    /// @notice A function to create a new FYToken & set the right permissions
+    /// @param underlyingId_ id of the underlying asset
+    /// @param oracle Lending oracle
+    /// @param join Join of the underlying asset
+    /// @param maturity Maturity date for the fyToken
+    /// @param name Name of the fyToken
+    /// @param symbol Symbol of the fyToken
+    /// @return IFYToken The fyToken that was created
+    function createFyToken(
         bytes6 underlyingId_,
         IOracle oracle,
         IJoin join,
@@ -68,8 +84,8 @@ contract Wandv2 is AccessControl {
                 oracle,
                 join,
                 maturity,
-                name, // Derive from base and maturity, perhaps
-                symbol // Derive from base and maturity, perhaps
+                name,
+                symbol
             )
         );
         AccessControl fyTokenAC = AccessControl(address(fyToken));
@@ -93,16 +109,23 @@ contract Wandv2 is AccessControl {
         return fyToken;
     }
 
-    function setPool(
+    /// @notice Creates a pool with the given parameters
+    /// @param seriesId The id for the series
+    /// @param fyToken The fyToken for the series
+    /// @param ts time stretch, in 64.64
+    /// @param g1 in 64.64
+    /// @param g2 in 64.64
+    /// @param base address of the base asset
+    function createPool(
         bytes6 seriesId,
         IFYToken fyToken,
-        int128 ts_,
-        int128 g1_,
-        int128 g2_,
+        int128 ts,
+        int128 g1,
+        int128 g2,
         address base
     ) internal {
         // Create the pool for the base and fyToken
-        Pool pool = new Pool(IERC20(base), fyToken, ts_, g1_, g2_);
+        Pool pool = new Pool(IERC20(base), fyToken, ts, g1, g2);
         // Register pool in Ladle
         ladle.addPool(seriesId, address(pool));
     }
