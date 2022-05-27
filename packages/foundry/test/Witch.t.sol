@@ -6,7 +6,7 @@ import "./utils/TestConstants.sol";
 import "./utils/Utilities.sol";
 import "./utils/Mocks.sol";
 
-import "../Witch.sol";
+import "@yield-protocol/vault-v2/Witch.sol";
 
 contract WitchTest is Test, TestConstants {
     using Mocks for *;

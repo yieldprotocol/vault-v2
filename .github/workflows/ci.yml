@@ -29,8 +29,8 @@ jobs:
       - run: yarn
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - run: yarn workspace @yield-protocol/vault-v2-hardhat lint:ts
-      - run: yarn workspace @yield-protocol/vault-v2-hardhat lint:sol
+      - run: yarn workspace @yield-protocol/vault-v2 lint:ts
+      - run: yarn workspace @yield-protocol/vault-v2 lint:sol
 
   test05:
     runs-on: ubuntu-latest
@@ -54,8 +54,8 @@ jobs:
       - run: yarn
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - run: yarn workspace @yield-protocol/vault-v2-hardhat hardhat:build
-      - run: yarn workspace @yield-protocol/vault-v2-hardhat hardhat:test:05
+      - run: yarn workspace @yield-protocol/vault-v2 hardhat:build
+      - run: yarn workspace @yield-protocol/vault-v2 hardhat:test:05
 
   test09:
     runs-on: ubuntu-latest
@@ -79,8 +79,8 @@ jobs:
       - run: yarn
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - run: yarn workspace @yield-protocol/vault-v2-hardhat hardhat:build
-      - run: yarn workspace @yield-protocol/vault-v2-hardhat hardhat:test:09
+      - run: yarn workspace @yield-protocol/vault-v2 hardhat:build
+      - run: yarn workspace @yield-protocol/vault-v2 hardhat:test:09
 
   test10:
     runs-on: ubuntu-latest
@@ -104,8 +104,8 @@ jobs:
       - run: yarn
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - run: yarn workspace @yield-protocol/vault-v2-hardhat hardhat:build
-      - run: yarn workspace @yield-protocol/vault-v2-hardhat hardhat:test:10
+      - run: yarn workspace @yield-protocol/vault-v2 hardhat:build
+      - run: yarn workspace @yield-protocol/vault-v2 hardhat:test:10
 
   foundry-tests:
     runs-on: ubuntu-latest
