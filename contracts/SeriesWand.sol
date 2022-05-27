@@ -4,10 +4,7 @@ import "@yield-protocol/vault-interfaces/src/ICauldronGov.sol";
 import "@yield-protocol/vault-interfaces/src/ILadleGov.sol";
 import "@yield-protocol/vault-interfaces/src/IJoin.sol";
 import "@yield-protocol/vault-interfaces/src/IFYToken.sol";
-import "@yield-protocol/yieldspace-v2/contracts/Pool.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
-import "./FYToken.sol";
 
 /// @dev A wand to create new series.
 contract SeriesWand is AccessControl {

@@ -1,14 +1,29 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.14;
 import "@yield-protocol/vault-interfaces/src/ICauldronGov.sol";
-import "@yield-protocol/vault-interfaces/src/ICauldron.sol";
 import "@yield-protocol/vault-interfaces/src/IOracle.sol";
 import "@yield-protocol/vault-interfaces/src/ILadleGov.sol";
 import "@yield-protocol/vault-interfaces/src/IJoin.sol";
-import "@yield-protocol/vault-interfaces/src/IWitch.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC20Metadata.sol";
 import {IEmergencyBrake} from "@yield-protocol/utils-v2/contracts/utils/EmergencyBrake.sol";
+
+interface IWitchCustom {
+    /// @dev Governance function to set:
+    ///  - the auction duration to calculate liquidation prices
+    ///  - the proportion of the collateral that will be sold at auction start
+    ///  - the maximum collateral that can be auctioned at the same time
+    ///  - the minimum collateral that must be left when buying, unless buying all
+    ///  - The decimals for maximum and minimum
+    function setIlk(
+        bytes6 ilkId,
+        uint32 duration,
+        uint64 initialOffer,
+        uint96 line,
+        uint24 dust,
+        uint8 dec
+    ) external;
+}
 
 interface IChainlinkMultiOracle {
     function setSource(
@@ -30,7 +45,7 @@ contract CollateralWand is AccessControl {
     ILadleGov public ladle;
     IEmergencyBrake public cloak;
     IChainlinkMultiOracle public chainlinkMultiOracle;
-    IWitch public witch;
+    IWitchCustom public witch;
 
     struct AuctionLimit {
         bytes6 ilkId;
@@ -66,7 +81,7 @@ contract CollateralWand is AccessControl {
     constructor(
         ICauldronGov cauldron_,
         ILadleGov ladle_,
-        IWitch witch_,
+        IWitchCustom witch_,
         IEmergencyBrake cloak_,
         IChainlinkMultiOracle chainlinkMultiOracle_
     ) {
