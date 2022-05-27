@@ -8,16 +8,26 @@ import {
   Wand,
   Witch,
   Cauldron,
-  Wandv2,
+  SeriesWand,
   YieldMath,
   FlashJoin,
   DAIMock,
   FYToken,
   OracleMock,
   ERC20Mock,
+  CollateralWand,
+  ISourceMock,
+  AggregatorV3Interface,
+  EmergencyBrake,
+  Pool,
 } from '../typechain'
-import Wandv2Artifact from '../artifacts/contracts/Wand-v2.sol/Wandv2.json'
+import SeriesWandArtifact from '../artifacts/contracts/SeriesWand.sol/SeriesWand.json'
+import CollateralWandArtifact from '../artifacts/contracts/CollateralWand.sol/CollateralWand.json'
+import FlashJoinArtifact from '../artifacts/contracts/FlashJoin.sol/FlashJoin.json'
+import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
 import YieldMathArtifact from '../artifacts/@yield-protocol/yieldspace-v2/contracts/YieldMath.sol/YieldMath.json'
+import EmergencyBrakeArtifact from '../artifacts/@yield-protocol/utils-v2/contracts/utils/EmergencyBrake.sol/EmergencyBrake.json'
+import ChainlinkAggregatorV3MockArtifact from '../artifacts/contracts/mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol/ChainlinkAggregatorV3Mock.json'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { LadleWrapper } from '../src/ladleWrapper'
 import { BigNumber } from '@ethersproject/bignumber'
@@ -38,10 +48,12 @@ function bytesToBytes32(bytes: string): string {
 const ONE64 = BigNumber.from('18446744073709551616') // In 64.64 format
 const secondsInOneYear = BigNumber.from(31557600)
 const secondsIn30Years = secondsInOneYear.mul(30) // Seconds in 30 years
+const TESTASSET = ethers.utils.formatBytes32String('10').slice(0, 14)
+
 /**
- * @dev This script tests the ConvexJoin and ConvexLadleModule integration with the Ladle
+ * @dev This script tests the SeriesWand
  */
-describe('Wand-V2', async function () {
+describe('Chainlink Series Wand-V2', async function () {
   this.timeout(0)
 
   let ladle: LadleWrapper
@@ -50,9 +62,15 @@ describe('Wand-V2', async function () {
   let ownerAcc: SignerWithAddress
   let dummyAcc: SignerWithAddress
   let cauldron: Cauldron
-  let wand: Wandv2
+  let wand: SeriesWand
+  let collateralWand: CollateralWand
   let join: FlashJoin
-
+  let joinNew: FlashJoin
+  let asset: ERC20Mock
+  let aggregator: ISourceMock
+  let cloak: EmergencyBrake
+  let fyToken: FYToken
+  let pool: Pool
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
   const seriesId3 = ethers.utils.hexlify(ethers.utils.randomBytes(6))
 
@@ -74,13 +92,9 @@ describe('Wand-V2', async function () {
     cauldron = env.cauldron
 
     yieldMath = (await deployContract(ownerAcc, YieldMathArtifact)) as YieldMath
-    const wandFactory = await ethers.getContractFactory('Wandv2', {
-      libraries: {
-        SafeERC20Namer: env.safeERC20NamerLibrary.address,
-        YieldMath: yieldMath.address,
-      },
-    })
-    wand = (await wandFactory.deploy(cauldron.address, ladle.address)) as unknown as Wandv2
+
+    const wandFactory = await ethers.getContractFactory('SeriesWand')
+    wand = (await wandFactory.deploy(cauldron.address, ladle.address)) as unknown as SeriesWand
 
     join = (await ethers.getContractAt('FlashJoin', await ladle.joins(USDC))) as FlashJoin
 
@@ -91,23 +105,46 @@ describe('Wand-V2', async function () {
       wand.address
     )
     await ladle.grantRoles([id(ladle.ladle.interface, 'addPool(bytes6,address)')], wand.address)
-    await wand.grantRole(
-      id(wand.interface, 'addSeries(bytes6,bytes6,uint32,bytes6[],string,string,int128,int128,int128)'),
-      ownerAcc.address
-    )
+    await wand.grantRole(id(wand.interface, 'addSeries(bytes6,bytes6,bytes6[],address,address)'), ownerAcc.address)
+
+    //Deploy Fytoken
+    const fyTokenFactory = await ethers.getContractFactory('FYToken', {
+      libraries: {
+        SafeERC20Namer: env.safeERC20NamerLibrary.address,
+      },
+    })
+    fyToken = (await fyTokenFactory.deploy(
+      USDC,
+      env.spotOracle.address,
+      join.address,
+      BigNumber.from('1680271200'), // Maturity
+      'temp', // Name
+      'temp' // Symbol
+    )) as unknown as FYToken
+    await fyToken.grantRole('0x00000000', wand.address)
+    //Deploy Pool
+    const PoolFactory = await ethers.getContractFactory('Pool', {
+      libraries: {
+        YieldMath: yieldMath.address,
+      },
+    })
+    pool = (await PoolFactory.deploy(
+      await cauldron.assets(USDC),
+      fyToken.address,
+      ONE64.div(secondsIn30Years), // Timestretch
+      ONE64.mul(75).div(100),
+      ONE64.mul(100).div(75)
+    )) as unknown as Pool
+    // await pool.grantRole('0x00000000', wand.address)
   })
 
   it('Create a series', async () => {
     await wand.addSeries(
       seriesId3, // seriesId
       USDC, // baseId
-      BigNumber.from('1680271200'), // Maturity
       [DAI, ETH], // Ilks
-      'temp', // Name
-      'temp', // Symbol
-      ONE64.div(secondsIn30Years), // Timestretch
-      ONE64.mul(75).div(100),
-      ONE64.mul(100).div(75)
+      fyToken.address,
+      pool.address
     )
   })
 

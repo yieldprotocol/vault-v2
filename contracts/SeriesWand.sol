@@ -10,7 +10,7 @@ import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 import "./FYToken.sol";
 
 /// @dev A wand to create new series.
-contract Wandv2 is AccessControl {
+contract SeriesWand is AccessControl {
     bytes4 public constant JOIN = IJoin.join.selector;
     bytes4 public constant EXIT = IJoin.exit.selector;
     bytes4 public constant MINT = IFYToken.mint.selector;
@@ -27,23 +27,15 @@ contract Wandv2 is AccessControl {
     /// @dev Add a series to the protocol, by deploying a FYToken, and registering it in the cauldron with the approved ilks
     /// @param seriesId The id for the series
     /// @param baseId The id of the base Token
-    /// @param maturity Maturity date for the fyToken
     /// @param ilkIds The ilk for the fyToken
-    /// @param name Name of the fyToken
-    /// @param symbol Symbol of the fyToken
-    /// @param ts time stretch, in 64.64
-    /// @param g1 in 64.64
-    /// @param g2 in 64.64
+    /// @param fyToken fytoken for the series
+    /// @param pool address of the pool for the series
     function addSeries(
         bytes6 seriesId,
         bytes6 baseId,
-        uint32 maturity,
         bytes6[] calldata ilkIds,
-        string memory name,
-        string memory symbol,
-        int128 ts,
-        int128 g1,
-        int128 g2
+        IFYToken fyToken,
+        address pool
     ) external auth {
         address base = cauldron.assets(baseId);
         require(base != address(0), "Base not found");
@@ -54,40 +46,19 @@ contract Wandv2 is AccessControl {
         IOracle oracle = cauldron.lendingOracles(baseId); // The lending oracles in the Cauldron are also configured to return chi
         require(address(oracle) != address(0), "Chi oracle not found");
 
-        IFYToken fyToken = createFyToken(baseId, oracle, baseJoin, maturity, name, symbol);
-        createPool(seriesId, fyToken, ts, g1, g2, base);
+        orchestrateFyToken(baseJoin, fyToken);
 
         // Add fyToken/series to the Cauldron and approve ilks for the series
         cauldron.addSeries(seriesId, baseId, fyToken);
         cauldron.addIlks(seriesId, ilkIds);
+        // Register pool in Ladle
+        ladle.addPool(seriesId, pool);
     }
 
     /// @notice A function to create a new FYToken & set the right permissions
-    /// @param underlyingId_ id of the underlying asset
-    /// @param oracle Lending oracle
     /// @param join Join of the underlying asset
-    /// @param maturity Maturity date for the fyToken
-    /// @param name Name of the fyToken
-    /// @param symbol Symbol of the fyToken
-    /// @return IFYToken The fyToken that was created
-    function createFyToken(
-        bytes6 underlyingId_,
-        IOracle oracle,
-        IJoin join,
-        uint256 maturity,
-        string memory name,
-        string memory symbol
-    ) internal returns (IFYToken) {
-        IFYToken fyToken = IFYToken(
-            new FYToken(
-                underlyingId_,
-                oracle,
-                join,
-                maturity,
-                name,
-                symbol
-            )
-        );
+    /// @param fyToken The fyToken
+    function orchestrateFyToken(IJoin join, IFYToken fyToken) internal {
         AccessControl fyTokenAC = AccessControl(address(fyToken));
 
         // Allow the fyToken to pull from the base join for redemption, and to push to mint with underlying
@@ -105,28 +76,5 @@ contract Wandv2 is AccessControl {
         // Pass ownership of the fyToken to msg.sender
         fyTokenAC.grantRole(ROOT, msg.sender);
         fyTokenAC.renounceRole(ROOT, address(this));
-
-        return fyToken;
-    }
-
-    /// @notice Creates a pool with the given parameters
-    /// @param seriesId The id for the series
-    /// @param fyToken The fyToken for the series
-    /// @param ts time stretch, in 64.64
-    /// @param g1 in 64.64
-    /// @param g2 in 64.64
-    /// @param base address of the base asset
-    function createPool(
-        bytes6 seriesId,
-        IFYToken fyToken,
-        int128 ts,
-        int128 g1,
-        int128 g2,
-        address base
-    ) internal {
-        // Create the pool for the base and fyToken
-        Pool pool = new Pool(IERC20(base), fyToken, ts, g1, g2);
-        // Register pool in Ladle
-        ladle.addPool(seriesId, address(pool));
     }
 }

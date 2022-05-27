@@ -67,6 +67,7 @@ export class YieldEnvironment {
   joins: Map<string, Join>
   vaults: Map<string, Map<string, string>>
   safeERC20NamerLibrary: SafeERC20Namer
+  spotOracle: ChainlinkMultiOracle
   static safeERC20NamerLibrary: SafeERC20Namer
   constructor(
     owner: SignerWithAddress,
@@ -82,7 +83,8 @@ export class YieldEnvironment {
     pools: Map<string, PoolMock>,
     joins: Map<string, Join>,
     vaults: Map<string, Map<string, string>>,
-    safeERC20NamerLibrary: SafeERC20Namer
+    safeERC20NamerLibrary: SafeERC20Namer,
+    spotOracle: ChainlinkMultiOracle
   ) {
     this.owner = owner
     this.cauldron = cauldron
@@ -98,6 +100,7 @@ export class YieldEnvironment {
     this.joins = joins
     this.vaults = vaults
     this.safeERC20NamerLibrary = safeERC20NamerLibrary
+    this.spotOracle = spotOracle
   }
 
   public static async cauldronGovAuth(cauldron: Cauldron, receiver: string) {
@@ -433,7 +436,8 @@ export class YieldEnvironment {
       pools,
       joins,
       vaults,
-      safeERC20NamerLibrary
+      safeERC20NamerLibrary,
+      spotOracle
     )
   }
 }
