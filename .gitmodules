@@ -4,3 +4,6 @@
 [submodule "packages/foundry/lib/yield-utils-v2"]
 	path = lib/yield-utils-v2
 	url = https://github.com/yieldprotocol/yield-utils-v2
+[submodule "packages/foundry/lib/uniswap-v3-oracle"]
+	path = packages/foundry/lib/uniswap-v3-oracle
+	url = https://github.com/hack3r-0m/uniswap-v3-oracle
