@@ -7,6 +7,7 @@ import "@yield-protocol/vault-interfaces/src/IFYToken.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 
 /// @dev A wand to create new series.
+/// @author @iamsahu
 contract SeriesWand is AccessControl {
     bytes4 public constant JOIN = IJoin.join.selector;
     bytes4 public constant EXIT = IJoin.exit.selector;

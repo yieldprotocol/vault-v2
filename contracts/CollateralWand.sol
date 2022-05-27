@@ -9,12 +9,13 @@ import "@yield-protocol/utils-v2/contracts/token/IERC20Metadata.sol";
 import {IEmergencyBrake} from "@yield-protocol/utils-v2/contracts/utils/EmergencyBrake.sol";
 
 interface IWitchCustom {
-    /// @dev Governance function to set:
-    ///  - the auction duration to calculate liquidation prices
-    ///  - the proportion of the collateral that will be sold at auction start
-    ///  - the maximum collateral that can be auctioned at the same time
-    ///  - the minimum collateral that must be left when buying, unless buying all
-    ///  - The decimals for maximum and minimum
+    //// @dev Function to set the auction limit on the witch
+    /// @param ilkId Id of the ilk
+    /// @param duration the auction duration to calculate liquidation prices
+    /// @param initialOffer the proportion of the collateral that will be sold at auction start
+    /// @param line the maximum collateral that can be auctioned at the same time
+    /// @param dust the minimum collateral that must be left when buying, unless buying all
+    /// @param dec The decimals for maximum and minimum
     function setIlk(
         bytes6 ilkId,
         uint32 duration,

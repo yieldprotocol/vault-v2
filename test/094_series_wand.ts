@@ -21,21 +21,13 @@ import {
   EmergencyBrake,
   Pool,
 } from '../typechain'
-import SeriesWandArtifact from '../artifacts/contracts/SeriesWand.sol/SeriesWand.json'
-import CollateralWandArtifact from '../artifacts/contracts/CollateralWand.sol/CollateralWand.json'
-import FlashJoinArtifact from '../artifacts/contracts/FlashJoin.sol/FlashJoin.json'
-import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
+
 import YieldMathArtifact from '../artifacts/@yield-protocol/yieldspace-v2/contracts/YieldMath.sol/YieldMath.json'
-import EmergencyBrakeArtifact from '../artifacts/@yield-protocol/utils-v2/contracts/utils/EmergencyBrake.sol/EmergencyBrake.json'
-import ChainlinkAggregatorV3MockArtifact from '../artifacts/contracts/mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol/ChainlinkAggregatorV3Mock.json'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { LadleWrapper } from '../src/ladleWrapper'
 import { BigNumber } from '@ethersproject/bignumber'
 const { deployContract } = waffle
 
-function bytes6ToBytes32(x: string): string {
-  return x + '00'.repeat(26)
-}
 function bytesToString(bytes: string): string {
   return ethers.utils.parseBytes32String(bytes + '0'.repeat(66 - bytes.length))
 }
@@ -48,7 +40,6 @@ function bytesToBytes32(bytes: string): string {
 const ONE64 = BigNumber.from('18446744073709551616') // In 64.64 format
 const secondsInOneYear = BigNumber.from(31557600)
 const secondsIn30Years = secondsInOneYear.mul(30) // Seconds in 30 years
-const TESTASSET = ethers.utils.formatBytes32String('10').slice(0, 14)
 
 /**
  * @dev This script tests the SeriesWand
@@ -63,12 +54,7 @@ describe('Chainlink Series Wand-V2', async function () {
   let dummyAcc: SignerWithAddress
   let cauldron: Cauldron
   let wand: SeriesWand
-  let collateralWand: CollateralWand
   let join: FlashJoin
-  let joinNew: FlashJoin
-  let asset: ERC20Mock
-  let aggregator: ISourceMock
-  let cloak: EmergencyBrake
   let fyToken: FYToken
   let pool: Pool
   const seriesId = ethers.utils.hexlify(ethers.utils.randomBytes(6))
