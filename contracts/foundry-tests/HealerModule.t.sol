@@ -8,6 +8,7 @@ import "../mocks/WETH9Mock.sol";
 import "../other/backd/HealerModule.sol";
 import "./utils/Test.sol";
 import "./utils/Mocks.sol";
+import {console} from "forge-std/console.sol";
 
 interface ILadleCustom {
     function addModule(address module, bool set) external;
@@ -29,6 +30,11 @@ contract HealerModuleTest is Test {
         ladle = ILadle(Mocks.mock("Ladle"));
         healer = new HealerModule(cauldron, weth);
 
-        // ILadleCustom(ladle).addModule(address(healer), set);
+        ILadleCustom(address(ladle)).addModule(address(healer), true);
+    }
+
+    function testHeal() public {
+        console.log("Should add collateral to vault");
+        ILadleCustom(address(ladle)).moduleCall(address(healer), abi.encode());
     }
 }

@@ -15,7 +15,7 @@ contract HealerModule is LadleStorage {
 
     constructor(ICauldron cauldron_, IWETH9 weth_) LadleStorage(cauldron_, weth_) {}
 
-    function heal(bytes12 vaultId_, address to, int128 ink, int128 art)
+    function heal(bytes12 vaultId_, int128 ink, int128 art)
         external payable
     {
         require (ink >= 0, "Only add collateral");
