@@ -10,3 +10,6 @@
 [submodule "lib/Yield-UniswapOracleV3"]
 	path = lib/Yield-UniswapOracleV3
 	url = https://github.com/iamsahu/Yield-UniswapOracleV3
+[submodule "packages/foundry/lib/ERC3156"]
+	path = packages/foundry/lib/ERC3156
+	url = https://github.com/alcueca/ERC3156
