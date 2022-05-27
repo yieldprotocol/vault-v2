@@ -1,6 +1,6 @@
 [default]
 src = 'contracts'
-test = 'contracts/test'
+test = 'test'
 out = 'out'
 libs = ['lib']
 block_timestamp = 1651743369 # Arbitrary Thursday, 5 May 2022 09:36:09
