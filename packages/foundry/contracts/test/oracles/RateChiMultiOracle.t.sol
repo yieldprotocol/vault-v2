@@ -2,9 +2,9 @@
 pragma solidity 0.8.14;
 
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "@yield-protocol/vault-v2/oracles/compound/CompoundMultiOracle.sol";
-import "@yield-protocol/vault-v2/mocks/oracles/compound/CTokenChiMock.sol";
-import "@yield-protocol/vault-v2/mocks/oracles/compound/CTokenRateMock.sol";
+import "../../oracles/compound/CompoundMultiOracle.sol";
+import "../../mocks/oracles/compound/CTokenChiMock.sol";
+import "../../mocks/oracles/compound/CTokenRateMock.sol";
 import "../utils/Test.sol";
 import "../utils/TestConstants.sol";
 
