@@ -24,24 +24,20 @@ contract HealerModule is LadleStorage {
         DataTypes.Series memory series;
         if (art != 0) series = getSeries(vault.seriesId);
 
-        int128 fee;
-        if (art > 0 && vault.ilkId != series.baseId && borrowingFee != 0)
-            fee = ((series.maturity - block.timestamp) * uint256(int256(art)).wmul(borrowingFee)).i128();
+        int128 fee = ((series.maturity - block.timestamp) * uint256(int256(art)).wmul(borrowingFee)).i128();
 
         // Update accounting
         cauldron.pour(vaultId, ink, art + fee);
 
         // Manage collateral
-        if (ink != 0) {
+        if (ink > 0) {
             IJoin ilkJoin = getJoin(vault.ilkId);
-            if (ink > 0) ilkJoin.join(vault.owner, uint128(ink));
-            if (ink < 0) ilkJoin.exit(to, uint128(-ink));
+            ilkJoin.join(vault.owner, uint128(ink));
         }
 
         // Manage debt tokens
-        if (art != 0) {
-            if (art > 0) series.fyToken.mint(to, uint128(art));
-            else series.fyToken.burn(msg.sender, uint128(-art));
+        if (art > 0) {
+            series.fyToken.burn(msg.sender, uint128(-art));
         }
 
     }
