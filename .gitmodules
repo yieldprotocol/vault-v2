@@ -7,3 +7,6 @@
 [submodule "packages/foundry/lib/Yield-UniswapOracleV3"]
 	path = packages/foundry/lib/Yield-UniswapOracleV3
 	url = https://github.com/iamsahu/Yield-UniswapOracleV3
+[submodule "lib/Yield-UniswapOracleV3"]
+	path = lib/Yield-UniswapOracleV3
+	url = https://github.com/iamsahu/Yield-UniswapOracleV3
