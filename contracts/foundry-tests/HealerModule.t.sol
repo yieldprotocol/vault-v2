@@ -7,22 +7,22 @@ import "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
 import "../mocks/WETH9Mock.sol";
 import "../other/backd/HealerModule.sol";
 import "./utils/Test.sol";
-import "./utils/Mocks.sol";
 import {console} from "forge-std/console.sol";
 
 interface ILadleCustom {
+    function grantRole(bytes4 role, address account) external;
+
     function addModule(address module, bool set) external;
 
     function moduleCall(address module, bytes calldata data) external payable returns (bytes memory result);
 }
 
 contract HealerModuleTest is Test {
-    using Mocks for *;
-
-    ICauldron public cauldron;
-    ILadle public ladle;
-    HealerModule public healer;
+    ICauldron public cauldron = ICauldron(0xc88191F8cb8e6D4a668B047c1C8503432c3Ca867);
+    ILadle public ladle = ILadle(0x6cB18fF2A33e981D1e38A663Ca056c0a5265066A);
     IWETH9 public weth;
+    WETH9Mock public wethMock;
+    HealerModule public healer;
 
     address public dai = 0x6B175474E89094C44Da98b954EedeAC495271d0F; // DAI token address
     bytes6 public ilkId = 0x303100000000; // DAI
@@ -30,10 +30,10 @@ contract HealerModuleTest is Test {
     bytes12 public vaultId;
 
     function setUp() public {
-        weth = IWETH9(Mocks.mock("WETH9"));
-        cauldron = ICauldron(Mocks.mock("Cauldron"));
-        ladle = ILadle(Mocks.mock("Ladle"));
+        wethMock = new WETH9Mock();
+        weth = IWETH9(address(wethMock));
         healer = new HealerModule(cauldron, weth);
+        ILadleCustom(address(ladle)).grantRole(ILadleCustom(address(ladle)).addModule.selector, address(this));
         ILadleCustom(address(ladle)).addModule(address(healer), true);
         (vaultId, ) = ladle.build(seriesId, ilkId, 0);
     }
@@ -42,7 +42,7 @@ contract HealerModuleTest is Test {
         console.log("Should add collateral to vault");
         ILadleCustom(address(ladle)).moduleCall(
             address(healer), 
-            abi.encodeWithSelector(bytes4(healer.heal.selector), vaultId, 1, 0)
+            abi.encodeWithSelector(healer.heal.selector, vaultId, 1, 0)
         );
     }
 }
