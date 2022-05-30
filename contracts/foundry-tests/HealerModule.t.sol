@@ -4,7 +4,6 @@ pragma solidity 0.8.14;
 import "@yield-protocol/vault-interfaces/src/ICauldron.sol";
 import "@yield-protocol/vault-interfaces/src/ILadle.sol";
 import "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
-import "@std/console.sol";
 import "../mocks/WETH9Mock.sol";
 import "../other/backd/HealerModule.sol";
 import "./utils/Test.sol";
@@ -37,7 +36,6 @@ contract HealerModuleTest is Test {
     }
 
     function testHeal() public {
-        console.log("Should add collateral to vault");
         ILadleCustom(address(ladle)).moduleCall(
             address(healer), 
             abi.encodeWithSelector(healer.heal.selector, vaultId, 1, 0)

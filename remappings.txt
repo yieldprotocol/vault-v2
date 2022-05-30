@@ -1,4 +1,3 @@
 @yield-protocol/utils-v2/=lib/yield-utils-v2/
 @yield-protocol/vault-interfaces/=lib/vault-interfaces/
 @yield-protocol/yieldspace-interfaces/=lib/yieldspace-interfaces/
-@std/=lib/forge-std/src
