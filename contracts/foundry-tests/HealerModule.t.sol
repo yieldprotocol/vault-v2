@@ -7,11 +7,9 @@ import "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
 import "../mocks/WETH9Mock.sol";
 import "../other/backd/HealerModule.sol";
 import "./utils/Test.sol";
-import {console} from "forge-std/console.sol";
+import "forge-std/console.sol";
 
 interface ILadleCustom {
-    function grantRole(bytes4 role, address account) external;
-
     function addModule(address module, bool set) external;
 
     function moduleCall(address module, bytes calldata data) external payable returns (bytes memory result);
@@ -33,7 +31,7 @@ contract HealerModuleTest is Test {
         wethMock = new WETH9Mock();
         weth = IWETH9(address(wethMock));
         healer = new HealerModule(cauldron, weth);
-        ILadleCustom(address(ladle)).grantRole(ILadleCustom(address(ladle)).addModule.selector, address(this));
+        vm.prank(0x3b870db67a45611CF4723d44487EAF398fAc51E3);
         ILadleCustom(address(ladle)).addModule(address(healer), true);
         (vaultId, ) = ladle.build(seriesId, ilkId, 0);
     }

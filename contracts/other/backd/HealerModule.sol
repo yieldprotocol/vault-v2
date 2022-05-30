@@ -20,26 +20,12 @@ contract HealerModule is LadleStorage {
     {
         require (ink >= 0, "Only add collateral");
         require (art <= 0, "Only repay debt");
+        
         (bytes12 vaultId, DataTypes.Vault memory vault) = getVault(vaultId_);
         DataTypes.Series memory series;
         if (art != 0) series = getSeries(vault.seriesId);
 
-        int128 fee = ((series.maturity - block.timestamp) * uint256(int256(art)).wmul(borrowingFee)).i128();
-
-        // Update accounting
-        cauldron.pour(vaultId, ink, art + fee);
-
-        // Manage collateral
-        if (ink > 0) {
-            IJoin ilkJoin = getJoin(vault.ilkId);
-            ilkJoin.join(vault.owner, uint128(ink));
-        }
-
-        // Manage debt tokens
-        if (art > 0) {
-            series.fyToken.burn(msg.sender, uint128(-art));
-        }
-
+        cauldron.pour(vaultId, ink, art);
     }
 
     function getVault(bytes12 vaultId_)
