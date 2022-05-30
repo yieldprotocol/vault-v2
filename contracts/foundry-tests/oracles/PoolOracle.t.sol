@@ -129,9 +129,25 @@ contract PoolOracleTest is Test {
         address pool = Mocks.mock("IPool");
 
         // Saturday, 26 February 2022 10:15:28
-        vm.warp(1645870528);
-        IPool(pool).cumulativeBalancesRatio.mock(6081248333687398745122493757731327);
-        IPool(pool).getCache.mock(1102997721918618810252394, 1199964191067551228067732, 1645859234);
+        uint256 timestamp = 1645870528;
+        vm.warp(timestamp);
+        _stubPoolState(
+            // cast find-block 1645870528 # Saturday, 26 February 2022 10:15:28
+            // 14281108
+            // cast call 0x5D14Ab14adB3a3D9769a67a1D09634634bdE4C9B "cumulativeBalancesRatio()(uint256)" -b 14281108
+            // 6081248333687398745122493757731327
+            // cast call 0x5D14Ab14adB3a3D9769a67a1D09634634bdE4C9B "getCache()(uint112,uint112,uint32)"  -b 14281108
+            // 1102997721918618810252394
+            // 1199964191067551228067732
+            // 1645859234
+            PoolState({
+                pool: pool,
+                cumulativeBalancesRatio: 6081248333687398745122493757731327,
+                baseCached: 1102997721918618810252394,
+                fyTokenCached: 1199964191067551228067732,
+                blockTimestampLast: 1645859234
+            })
+        );
         oracle.update(pool);
 
         vm.record();
@@ -140,71 +156,132 @@ contract PoolOracleTest is Test {
         vm.warp(1645956927);
 
         PoolOracle.Observation memory oldestObservation = oracle.getOldestObservationInWindow(pool);
-        assertEq(oldestObservation.timestamp, 1645870528);
+        assertEq(oldestObservation.timestamp, timestamp);
+
+        // The value of ratioCumulative was derived and stored from the pool state at the time of update
+        // currentCumulativeRatio => cumulativeBalancesRatio + ((fyTokenCached * (block.timestamp - blockTimestampLast)) / baseCached)
+        //
         // https://www.wolframalpha.com/input?i=6081248333687398745122493757731327+%2B+%28%28%281199964191067551228067732+*+1e27%29+%2F+1102997721918618810252394%29+*+%281645870528+-+1645859234%29%29
         // 6.09353520908578405938336777296503555592051557672491409350744... × 10^33
         assertEq(oldestObservation.ratioCumulative, 6093535209085784059383367772965035);
 
-        IPool(pool).cumulativeBalancesRatio.mock(6177238896109883718081380861139109);
-        IPool(pool).getCache.mock(1146659164970519061317333, 1231180360591421143492220, 1645948463);
+        // Given a new current pool state
+        _stubPoolState(
+            // cast find-block 1645956927 # Sunday, 27 February 2022 10:15:27
+            // 14287609
+            // cast call 0x5D14Ab14adB3a3D9769a67a1D09634634bdE4C9B "cumulativeBalancesRatio()(uint256)" -b 14287609
+            // 6177238896109883718081380861139109
+            // cast call 0x5D14Ab14adB3a3D9769a67a1D09634634bdE4C9B "getCache()(uint112,uint112,uint32)"  -b 14287609
+            // 1146659164970519061317333
+            // 1231180360591421143492220
+            // 1645948463
+            PoolState({
+                pool: pool,
+                cumulativeBalancesRatio: 6177238896109883718081380861139109,
+                baseCached: 1146659164970519061317333,
+                fyTokenCached: 1231180360591421143492220,
+                blockTimestampLast: 1645948463
+            })
+        );
 
+        // TWAR is calculated as ((currentCumulativeRatio - oldestObservation.ratioCumulative)) / (block.timestamp - oldestObservation.timestamp);
+        //
         // https://www.wolframalpha.com/input?i=6177238896109883718081380861139109+%2B+%28%28%281231180360591421143492220+*+1e27%29+%2F+1146659164970519061317333%29+*+%281645956927+-+1645948463%29%29
         // 6.18632678455170653998367337614150763172612596547147924230199... × 10^33
+        //
         // https://www.wolframalpha.com/input?i=%286.186326784551706539983673376-6.093535209085784059383367772%29+%2F+%281645956927+-+1645870528%29%29
         // 1.0739889983208426092929964930149654509890160765749603583374... × 10^-6
         assertEq(oracle.peek(pool), 1073988998320842609);
-
-        (, bytes32[] memory writes) = vm.accesses(address(oracle));
-        assertEq(writes.length, 0);
-        // Index 6 for 06h (belt and braces)
-        (uint256 ts, uint256 ratio) = oracle.poolObservations(pool, 6);
-        assertEq(ts, 0);
-        assertEq(ratio, 0);
     }
 
     function testGet() public {
         address pool = Mocks.mock("IPool");
 
         // Saturday, 26 February 2022 10:15:28
-        vm.warp(1645870528);
-        IPool(pool).cumulativeBalancesRatio.mock(6081248333687398745122493757731327);
-        IPool(pool).getCache.mock(1102997721918618810252394, 1199964191067551228067732, 1645859234);
+        uint256 initialObservationTS = 1645870528;
+        vm.warp(initialObservationTS);
+        _stubPoolState(
+            // cast find-block 1645870528 # Saturday, 26 February 2022 10:15:28
+            // 14281108
+            // cast call 0x5D14Ab14adB3a3D9769a67a1D09634634bdE4C9B "cumulativeBalancesRatio()(uint256)" -b 14281108
+            // 6081248333687398745122493757731327
+            // cast call 0x5D14Ab14adB3a3D9769a67a1D09634634bdE4C9B "getCache()(uint112,uint112,uint32)"  -b 14281108
+            // 1102997721918618810252394
+            // 1199964191067551228067732
+            // 1645859234
+            PoolState({
+                pool: pool,
+                cumulativeBalancesRatio: 6081248333687398745122493757731327,
+                baseCached: 1102997721918618810252394,
+                fyTokenCached: 1199964191067551228067732,
+                blockTimestampLast: 1645859234
+            })
+        );
         oracle.update(pool);
 
         vm.record();
 
         // Saturday, 26 February 2022 17:15:28 (6h after)
-        vm.warp(1645895728);
+        uint256 currentTS = 1645895728;
+        vm.warp(currentTS);
 
         PoolOracle.Observation memory oldestObservation = oracle.getOldestObservationInWindow(pool);
-        assertEq(oldestObservation.timestamp, 1645870528);
+        assertEq(oldestObservation.timestamp, initialObservationTS);
+
+        // The value of ratioCumulative was derived and stored from the pool state at the time of update
+        // currentCumulativeRatio => cumulativeBalancesRatio + ((fyTokenCached * (block.timestamp - blockTimestampLast)) / baseCached)
+        //
         // https://www.wolframalpha.com/input?i=6081248333687398745122493757731327+%2B+%28%28%281199964191067551228067732+*+1e27%29+%2F+1102997721918618810252394%29+*+%281645870528+-+1645859234%29%29
         // 6.09353520908578405938336777296503555592051557672491409350744... × 10^33
         assertEq(oldestObservation.ratioCumulative, 6093535209085784059383367772965035);
 
-        IPool(pool).cumulativeBalancesRatio.mock(6093861582613277914021074715108661);
-        IPool(pool).getCache.mock(1145485947716596761765740, 1230501498069318499806766, 1645870828);
+        // Given a new current pool state
+        _stubPoolState(
+            // cast find-block 1645895728 # Saturday, 26 February 2022 17:15:28
+            // 14283021
+            // cast call 0x5D14Ab14adB3a3D9769a67a1D09634634bdE4C9B "cumulativeBalancesRatio()(uint256)" -b 14283021
+            // 6093861582613277914021074715108661
+            // cast call 0x5D14Ab14adB3a3D9769a67a1D09634634bdE4C9B "getCache()(uint112,uint112,uint32)"  -b 14283021
+            // 1145485947716596761765740
+            // 1230501498069318499806766
+            // 1645870828
+            PoolState({
+                pool: pool,
+                cumulativeBalancesRatio: 6093861582613277914021074715108661,
+                baseCached: 1145485947716596761765740,
+                fyTokenCached: 1230501498069318499806766,
+                blockTimestampLast: 1645870828
+            })
+        );
 
+        // TWAR is calculated as ((currentCumulativeRatio - oldestObservation.ratioCumulative)) / (block.timestamp - oldestObservation.timestamp);
+        //
         // https://www.wolframalpha.com/input?i=6093861582613277914021074715108661+%2B+%28%28%281230501498069318499806766+*+1e27%29+%2F+1145485947716596761765740%29+*+%281645895728+-+1645870828%29%29
         // 6120609608080550173985092961928170
+        //
         // https://www.wolframalpha.com/input?i=%286120609.608080550173985092961928170-6093535.209085784059383367772964055%29+%2F+%281645895728+-+1645870528%29%29
         // 1.0743809124907188334017932128617063492
         assertEq(oracle.get(pool), 1074380912490718833);
 
+        // Verify writes to storage
         (, bytes32[] memory writes) = vm.accesses(address(oracle));
+        // 2 writes to strage as Observation uses 2 slots
         assertEq(writes.length, 2);
         // Index 17 for 17h
         (uint256 ts, uint256 ratio) = oracle.poolObservations(pool, 17);
-        assertEq(ts, 1645895728);
+        assertEq(ts, currentTS);
         assertEq(ratio, 6120609608080550173985092961928170);
     }
 
     function testGetOldestObservationInWindow() public {
         address pool = Mocks.mock("IPool");
 
+        uint256 cumulativeBalancesRatio = 42;
+
         // Saturday, 26 February 2022 07:32:48
-        vm.warp(1645860768);
-        IPool(pool).cumulativeBalancesRatio.mock(6081248333687398745122493757731327);
+        uint256 timestamp = 1645860768;
+        vm.warp(timestamp);
+        IPool(pool).cumulativeBalancesRatio.mock(cumulativeBalancesRatio);
         _poolWasUpdatedOnTheSameBlock(pool);
         oracle.update(pool);
 
@@ -212,14 +289,14 @@ contract PoolOracleTest is Test {
         skip(23 hours);
 
         PoolOracle.Observation memory oldestObservation = oracle.getOldestObservationInWindow(pool);
-        assertEq(oldestObservation.timestamp, 1645860768);
-        assertEq(oldestObservation.ratioCumulative, 6081248333687398745122493757731327);
+        assertEq(oldestObservation.timestamp, timestamp);
+        assertEq(oldestObservation.ratioCumulative, cumulativeBalancesRatio);
 
         // On the edge case of not having values 24 hours before, it searches for the oldest available
         rewind(6 hours);
         oldestObservation = oracle.getOldestObservationInWindow(pool);
-        assertEq(oldestObservation.timestamp, 1645860768);
-        assertEq(oldestObservation.ratioCumulative, 6081248333687398745122493757731327);
+        assertEq(oldestObservation.timestamp, timestamp);
+        assertEq(oldestObservation.ratioCumulative, cumulativeBalancesRatio);
 
         // If there are no values recorded for the pool it'll fail
         address pool2 = Mocks.mock("IPool2");
@@ -232,7 +309,7 @@ contract PoolOracleTest is Test {
 
         // Saturday, 26 February 2022 07:32:48
         vm.warp(1645860768);
-        IPool(pool).cumulativeBalancesRatio.mock(6081248333687398745122493757731327);
+        IPool(pool).cumulativeBalancesRatio.mock(42);
         _poolWasUpdatedOnTheSameBlock(pool);
         oracle.update(pool);
 
@@ -255,7 +332,7 @@ contract PoolOracleTest is Test {
         vm.warp(1645860768);
 
         // Oracle has only one value
-        IPool(pool).cumulativeBalancesRatio.mock(6081248333687398745122493757731327);
+        IPool(pool).cumulativeBalancesRatio.mock(42);
         _poolWasUpdatedOnTheSameBlock(pool);
         oracle.update(pool);
 
@@ -272,8 +349,23 @@ contract PoolOracleTest is Test {
         vm.warp(1645870528);
 
         // Oracle has only one value
-        IPool(pool).cumulativeBalancesRatio.mock(6081248333687398745122493757731327);
-        IPool(pool).getCache.mock(1102997721918618810252394, 1199964191067551228067732, 1645859234);
+        _stubPoolState(
+            // cast find-block 1645870528 # Saturday, 26 February 2022 10:15:28
+            // 14281108
+            // cast call 0x5D14Ab14adB3a3D9769a67a1D09634634bdE4C9B "cumulativeBalancesRatio()(uint256)" -b 14281108
+            // 6081248333687398745122493757731327
+            // cast call 0x5D14Ab14adB3a3D9769a67a1D09634634bdE4C9B "getCache()(uint112,uint112,uint32)"  -b 14281108
+            // 1102997721918618810252394
+            // 1199964191067551228067732
+            // 1645859234
+            PoolState({
+                pool: pool,
+                cumulativeBalancesRatio: 6081248333687398745122493757731327,
+                baseCached: 1102997721918618810252394,
+                fyTokenCached: 1199964191067551228067732,
+                blockTimestampLast: 1645859234
+            })
+        );
         oracle.update(pool);
 
         // at 5 minutes or more we can safely (?) use the available observation,
@@ -361,24 +453,67 @@ contract PoolOracleTest is Test {
         // current value
         IPool(pool).cumulativeBalancesRatio.mock(5e30);
 
+        vm.record();
+
         // should use the first observation (idx 7)
         // (5e30 - 1e30) / ((1645943568 - 1645860768) * 1e9)
         vm.warp(initialTs + 23 hours);
         assertEq(oracle.peek(pool), 48309178743961352);
+        // Verify reads to storage
+        (bytes32[] memory reads, ) = vm.accesses(address(oracle));
+        // 1) length for loop
+        // 2) length for bound check (maybe use assembly to remove this?)
+        // 3) slot 1 of Observation
+        // 4) slot 2 of Observation
+        assertEq(reads.length, 4);
 
         // should use the second observation (idx 9)
         // (5e30 - 2e30) / (1645950768 - 1645867968)
         vm.warp(initialTs + 25 hours);
         assertEq(oracle.peek(pool), 36231884057971014);
+        // Verify reads to storage
+        (reads, ) = vm.accesses(address(oracle));
+        // 1) length for loop
+        // 2) length for bound check (maybe use assembly to remove this?)
+        // 3) slot 1 of Observation
+        // 4) slot 2 of Observation
+        assertEq(reads.length, 4);
 
         // missing slot, so it should use the second (next) observation (idx 9)
         // (5e30 - 2e30) / (1645947168 - 1645867968)
         vm.warp(initialTs + 24 hours);
         assertEq(oracle.peek(pool), 37878787878787878);
+        // Verify reads to storage
+        (reads, ) = vm.accesses(address(oracle));
+        // 1) length for loop
+        // 2) length for bound check (maybe use assembly to remove this?)
+        // 3) slot 1 of 1st Observation
+        // 4) slot 2 of 1st Observation
+        // 5) length for bound check (maybe use assembly to remove this?)
+        // 6) slot 1 of 2nd Observation
+        // 7) slot 2 of 2nd Observation
+        assertEq(reads.length, 7);
     }
 
     function _poolWasUpdatedOnTheSameBlock(address pool) internal {
+        // This is a bit of a hack, when a trade on the pool already happened on the same block,
+        // we'll get the raw cumulativeBalancesRatio without updating it using the cache
+        // I'm setting those 2 values to 0 so we always skip said update, see the line inside the `if`
+        // on `_getCurrentCumulativeRatio(address pool)`
         IPool(pool).getCache.mock(1, 0, 0);
+    }
+
+    function _stubPoolState(PoolState memory state) internal {
+        IPool(state.pool).cumulativeBalancesRatio.mock(state.cumulativeBalancesRatio);
+        IPool(state.pool).getCache.mock(state.baseCached, state.fyTokenCached, state.blockTimestampLast);
+    }
+
+    struct PoolState {
+        address pool;
+        uint256 cumulativeBalancesRatio;
+        uint112 baseCached;
+        uint112 fyTokenCached;
+        uint32 blockTimestampLast;
     }
 
     event ObservationRecorded(address indexed pool, uint256 index, PoolOracle.Observation observation);

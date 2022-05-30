@@ -63,28 +63,39 @@ contract PoolOracle is IPoolOracle {
 
     /// @dev returns the observation from the oldest epoch (at the beginning of the window) relative to the current time
     /// @param pool Address of pool for which the observation is required
-    /// @return The oldest observation available for `pool`
-    function getOldestObservationInWindow(address pool) public view returns (Observation memory) {
-        if (poolObservations[pool].length == 0) {
+    /// @return o The oldest observation available for `pool`
+    function getOldestObservationInWindow(address pool) public view returns (Observation memory o) {
+        uint256 length = poolObservations[pool].length;
+        if (length == 0) {
             revert NoObservationsForPool(pool);
         }
 
         unchecked {
             uint256 observationIndex = observationIndexOf(block.timestamp);
-            uint256 length = poolObservations[pool].length;
-            uint256 oldestObservationIndex;
-            // can't possible overflow
-            for (uint256 i; i < length; ++i) {
-                // no overflow issue. if observationIndex + 1 overflows, result is still zero.
-                oldestObservationIndex = (++observationIndex) % granularity;
-                // If no data exists for this index, check the next one,
-                // this should only happen during the first timeWindow for a given pool
-                // If the elapsedTime is bigger than the timeWindow,
-                // we also check the next one in case only this particular observation is stale
-                if (block.timestamp - poolObservations[pool][oldestObservationIndex].timestamp < windowSize) {
-                    return poolObservations[pool][oldestObservationIndex];
+            uint256 i;
+            do {
+                // can't possible overflow
+                // compute the oldestObservation given `observationIndex`, basically `widowSize` in the past
+                uint256 oldestObservationIndex = (++observationIndex) % granularity;
+
+                // Read the oldet observation
+                o = poolObservations[pool][oldestObservationIndex];
+
+                // For an observation to be valid, it has to be newer than the `windowSize`            
+                if (block.timestamp - o.timestamp < windowSize) {
+                    return o;
                 }
-            }
+
+                // If the observation was not newer than the `windowSize` then we loop and try with the next one
+                // We do this for 2 reasons
+                //  a) The current slot may have never been updated due to low volume at the time, but the next may be.
+                //     Finding a not-that-old observation (not strictly `windowTime` old) is better than aborting the whole tx
+                //  b) We're within the first `windowTime` (i.e. 24hs) of this pool being in use by the oracle, 
+                //     hence we don't have enough history for every slot to be valid, 
+                //     so we loop hoping for the newer slots to have valid data
+
+                ++i; // can't possible overflow
+            } while (i < length);
 
             revert MissingHistoricalObservation(pool);
         }
@@ -93,6 +104,7 @@ contract PoolOracle is IPoolOracle {
     // @inheritdoc IPoolOracle
     function update(address pool) public override {
         // populate the array with empty observations (oldest call only)
+        // the first time ever that this method is called for a given `pool` we initialise its array of observations
         for (uint256 i = poolObservations[pool].length; i < granularity; i++) {
             poolObservations[pool].push();
         }
@@ -115,10 +127,11 @@ contract PoolOracle is IPoolOracle {
         Observation memory oldestObservation = getOldestObservationInWindow(pool);
 
         uint256 timeElapsed = block.timestamp - oldestObservation.timestamp;
-        if (timeElapsed > windowSize) {
-            revert MissingHistoricalObservation(pool);
-        }
 
+        // This check is to safeguard the edge case where the pool was initialised just now (or very, very recently)
+        // and hence the TWAR can't be trusted as it would be easy to manipulate it.
+        // This can happen cause even if we always try to use a value that's `windowSize` old, if said value is stale or invalid
+        // we'll loop and try newere ones until we find a valid one (or we blow).
         if (timeElapsed < minTimeElapsed) {
             revert InsufficientElapsedTime(pool, timeElapsed);
         }
@@ -133,9 +146,6 @@ contract PoolOracle is IPoolOracle {
         return peek(pool);
     }
 
-    /// @dev computes the most up-to-date TWAR based last calculated ratio and the current cached balances on the pool
-    /// @param pool Address of pool for which the ratio is required 
-    /// @return lastRatio The latest TWAR for `pool`
     function _getCurrentCumulativeRatio(address pool) internal view returns (uint256 lastRatio) {
         lastRatio = IPool(pool).cumulativeBalancesRatio();
         (uint256 baseCached, uint256 fyTokenCached, uint256 blockTimestampLast) = IPool(pool).getCache();
