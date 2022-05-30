@@ -6,17 +6,16 @@ import "@yield-protocol/vault-interfaces/src/ICauldron.sol";
 import "@yield-protocol/vault-interfaces/src/DataTypes.sol";
 import "@yield-protocol/yieldspace-interfaces/IPool.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
 import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256I128.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU128I128.sol";
-import "./LadleStorage.sol";
+import "./LadleStorageV2.sol";
 
 
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
-contract LadleTV is LadleStorage, AccessControl() {
+contract LadleTV is LadleStorageV2 {
     using WMul for uint256;
     using CastU256U128 for uint256;
     using CastU256I128 for uint256;
@@ -28,7 +27,7 @@ contract LadleTV is LadleStorage, AccessControl() {
 
     mapping (address => IConverter) public converters; // Converter contracts between a Yield-Bearing Vault and its underlying.
 
-    constructor (ICauldron cauldron, IWETH9 weth) LadleStorage(cauldron, weth) { }
+    constructor (ICauldron cauldron, IWETH9 weth) LadleStorageV2(cauldron, weth) { }
 
     // ---- Data sourcing ----
     /// @dev Obtains a vault by vaultId from the Cauldron, and verifies that msg.sender is the owner
