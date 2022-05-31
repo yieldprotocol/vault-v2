@@ -4,8 +4,6 @@ pragma solidity 0.8.14;
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 
 abstract contract BaseConverter is AccessControl {
-    constructor(address _asset, address _wrappedAsset) {}
-
     // View functions
     function wrappedFrom(uint256 assets) external view virtual returns (uint256);
 

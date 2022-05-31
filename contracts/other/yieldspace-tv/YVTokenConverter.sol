@@ -19,29 +19,23 @@ contract YVTokenConverter is BaseConverter {
     // Return exactly how many wrappedAsset would be obtained from wrapping assets.
     function wrappedFrom(uint256 assets) external view override returns (uint256 shares) {
         require(assets > 0);
-
-        uint256 depositLimit = wrappedAsset.depositLimit();
-        uint256 totalAssets = wrappedAsset.totalAssets();
-
-        if (assets == type(uint256).max) {
-            uint256 diff = depositLimit - totalAssets;
-            uint256 assetBalance = asset.balanceOf(address(this));
-            assets = diff < assetBalance ? diff : assetBalance;
-        } else {
-            require((totalAssets + assets) <= depositLimit);
-        }
-
-        shares = issueSharesForAmount(assets);
+        return (assets * wrappedAsset.totalSupply()) / wrappedAsset.totalAssets();
     }
 
     // Return exactly how many asset would be obtained from unwrapping wrappedAssets
-    function assetFrom(uint256 wrappedAssets) external view override returns (uint256) {}
+    function assetFrom(uint256 wrappedAssets) external view override returns (uint256) {
+        return (wrappedAssets * wrappedAsset.totalAssets()) / wrappedAsset.totalSupply();
+    }
 
     // Return exactly how many wrappedAssets would need to be unwrapped to obtain assets.
-    function wrappedFor(uint256 assets) external view override returns (uint256) {}
+    function wrappedFor(uint256 assets) external view override returns (uint256) {
+        return (assets * wrappedAsset.totalSupply()) / wrappedAsset.totalAssets();
+    }
 
     // Return exactly how many assets would need to be wrapped to obtain wrappedAssets.
-    function assetFor(uint256 wrappedAssets) external view override returns (uint256) {}
+    function assetFor(uint256 wrappedAssets) external view override returns (uint256) {
+        return (wrappedAssets * wrappedAsset.totalAssets()) / wrappedAsset.totalSupply();
+    }
 
     // State modifier functions
     function wrap(address to) external override {
@@ -52,14 +46,5 @@ contract YVTokenConverter is BaseConverter {
     function unwrap(address to) external override {
         uint256 amount = IERC20(address(wrappedAsset)).balanceOf(address(this));
         wrappedAsset.withdraw(amount, to); // Wouldn't the converter needs to be the depositer?
-    }
-
-    function issueSharesForAmount(uint256 amount) internal returns (uint256 shares) {
-        uint256 totalSupply = wrappedAsset.totalSupply();
-        if (totalSupply > 0) {
-            shares = (amount * totalSupply) / wrappedAsset.totalAssets();
-        } else {
-            shares = amount;
-        }
     }
 }
