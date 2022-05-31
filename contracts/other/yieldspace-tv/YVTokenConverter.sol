@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.14;
 
-import "./BaseConverter.sol";
+import "./IConverter.sol";
 import "../../oracles/yearn/IYvToken.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 
 /// @title A contract to convert between yvToken to underlying & vice versa
-contract YVTokenConverter is BaseConverter {
+contract YVTokenConverter is IConverter {
     /// @notice The wrapped asset
     IYvToken wrappedAsset;
 
