@@ -10,9 +10,17 @@ interface IYvToken is IERC20Metadata {
     function pricePerShare() external view returns (uint256);
 
     // @dev Used to redeem yvTokens for underlying
-    function withdraw() external returns (uint256);
+    function withdraw(uint256 _amount, address _recipient) external returns (uint256);
 
     // @dev Returns address of underlying token
     function token() external returns (address);
 
+    // @dev Used to deposit underlying & get yvTokens in return
+    function deposit(uint256 _amount, address _recipient) external returns (uint256);
+
+    function totalAssets() external view returns (uint256);
+
+    function totalSupply() external view returns (uint256);
+
+    function depositLimit() external view returns (uint256);
 }
