@@ -1,7 +1,7 @@
 [default]
 src = 'contracts/foundry-tests'
 out = 'out'
-libs = ['lib']
+libs = ['lib', 'node_modules']
 block_timestamp = 1651743369 # Arbitrary Thursday, 5 May 2022 09:36:09
 verbosity = 3
 solc_version = '0.8.14'
