@@ -4,6 +4,7 @@ pragma solidity 0.8.14;
 import "@yield-protocol/vault-interfaces/src/ICauldron.sol";
 import "@yield-protocol/vault-interfaces/src/ILadle.sol";
 import "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
+import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
 import "../mocks/WETH9Mock.sol";
 import "../other/backd/HealerModule.sol";
 import "./utils/Test.sol";
@@ -22,6 +23,7 @@ contract HealerModuleTest is Test {
     HealerModule public healer;
 
     address public dai = 0x6B175474E89094C44Da98b954EedeAC495271d0F; // DAI token address
+    address public join = 0x4fE92119CDf873Cf8826F4E6EcfD4E578E3D44Dc;
     bytes6 public ilkId = 0x303100000000; // DAI
     bytes6 public seriesId = 0x303130370000; // ETH/DAI Sept 22 series
     bytes12 public vaultId;
@@ -33,6 +35,10 @@ contract HealerModuleTest is Test {
         vm.prank(0x3b870db67a45611CF4723d44487EAF398fAc51E3);
         ILadleCustom(address(ladle)).addModule(address(healer), true);
         (vaultId, ) = ladle.build(seriesId, ilkId, 0);
+
+        // Populate vault.owner with DAI and send it to the join
+        deal(dai, address(this), 1);
+        ERC20(dai).transfer(join, 1);
     }
 
     function testHeal() public {

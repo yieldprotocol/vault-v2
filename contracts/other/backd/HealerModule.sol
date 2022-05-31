@@ -6,7 +6,6 @@ import "@yield-protocol/vault-interfaces/src/ILadle.sol";
 import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256I128.sol";
 import "../../LadleStorage.sol";
-import "../../utils/Giver.sol";
 
 ///@title Ladle module that allows any vault to be poured to as long as it adds collateral or repays debt
 contract HealerModule is LadleStorage {
@@ -15,17 +14,27 @@ contract HealerModule is LadleStorage {
 
     constructor(ICauldron cauldron_, IWETH9 weth_) LadleStorage(cauldron_, weth_) {}
 
-    function heal(bytes12 vaultId_, int128 ink, int128 art)
+    function heal(bytes12 vaultId, int128 ink, int128 art)
         external payable
     {
         require (ink >= 0, "Only add collateral");
         require (art <= 0, "Only repay debt");
         
-        (bytes12 vaultId, DataTypes.Vault memory vault) = getVault(vaultId_);
-        DataTypes.Series memory series;
-        if (art != 0) series = getSeries(vault.seriesId);
-
         cauldron.pour(vaultId, ink, art);
+
+        (,DataTypes.Vault memory vault) = getVault(vaultId);
+
+        // Manage collateral
+        if (ink != 0) {
+            IJoin ilkJoin = getJoin(vault.ilkId);
+            ilkJoin.join(vault.owner, uint128(ink));
+        }
+
+        // Manage debt tokens
+        if (art != 0) {
+            DataTypes.Series memory series = getSeries(vault.seriesId);
+            series.fyToken.burn(msg.sender, uint128(-art));
+        }
     }
 
     function getVault(bytes12 vaultId_)
