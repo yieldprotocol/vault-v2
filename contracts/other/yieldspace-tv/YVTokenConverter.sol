@@ -25,7 +25,6 @@ contract YVTokenConverter is IConverter {
     /// @param assets Amount of assets to be wrapped
     /// @return The amount of wrapped assets that would be received
     function wrappedFrom(uint256 assets) external view override returns (uint256) {
-        require(assets > 0);
         return (assets * wrappedAsset.totalSupply()) / wrappedAsset.totalAssets();
     }
 
