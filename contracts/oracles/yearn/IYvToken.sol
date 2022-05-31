@@ -21,9 +21,11 @@ interface IYvToken is IERC20Metadata {
     // @dev Used to deposit underlying & get yvTokens in return
     function deposit(uint256 _amount, address _recipient) external returns (uint256);
 
+    // @dev Returns the total quantity of all assets under control of this
+    // Vault, whether they're loaned out to a Strategy, or currently held in
+    // the Vault.
     function totalAssets() external view returns (uint256);
 
+    // @dev Returns the totalSupply of the token
     function totalSupply() external view returns (uint256);
-
-    function depositLimit() external view returns (uint256);
 }
