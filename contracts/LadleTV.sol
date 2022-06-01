@@ -13,7 +13,6 @@ import "@yield-protocol/utils-v2/contracts/cast/CastU256I128.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU128I128.sol";
 import "./LadleStorageV2.sol";
 
-
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
 contract LadleTV is LadleStorageV2 {
     using WMul for uint256;
@@ -22,10 +21,6 @@ contract LadleTV is LadleStorageV2 {
     using CastU128I128 for uint128;
     using TransferHelper for IERC20;
     using TransferHelper for address payable;
-
-    event ConverterAdded(address indexed asset, IConverter indexed converter);
-
-    mapping (address => IConverter) public converters; // Converter contracts between a Yield-Bearing Vault and its underlying.
 
     constructor (ICauldron cauldron, IWETH9 weth) LadleStorageV2(cauldron, weth) { }
 
@@ -69,6 +64,15 @@ contract LadleTV is LadleStorageV2 {
         require (pool != IPool(address(0)), "Pool not found");
     }
 
+
+    /// @dev Obtains a converter by wrapped asset address, and verifies that it exists
+    function getConverter(address wrappedAsset)
+        internal view returns(IConverter converter)
+    {
+        converter = converters[wrappedAsset];
+        require (converter != IConverter(address(0)), "Converter not found");
+    }
+
     // ---- Administration ----
 
     /// @dev Add or remove an integration.
@@ -103,7 +107,7 @@ contract LadleTV is LadleStorageV2 {
         if (address(converter) != address(0)) _addToken(ybvToken, true); // Removal must be done separately
 
         converters[ybvToken] = converter;
-        emit ConverterAdded(ybvToken, address(converter));
+        emit ConverterAdded(ybvToken, converter);
     }
 
     /// @dev Add a new Pool for a Series, or replace an existing one for a new one.
@@ -129,6 +133,36 @@ contract LadleTV is LadleStorageV2 {
         emit PoolAdded(seriesId, address(pool));
     }
 
+    /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
+    /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
+    /// Borrow only before maturity.
+    function _pour(bytes12 vaultId, DataTypes.Vault memory vault, address to, int128 ink, int128 art)
+        private
+    {
+        DataTypes.Series memory series;
+        if (art != 0) series = getSeries(vault.seriesId);
+
+        int128 fee;
+        if (art > 0 && vault.ilkId != series.baseId && borrowingFee != 0)
+            fee = ((series.maturity - block.timestamp) * uint256(int256(art)).wmul(borrowingFee)).i128();
+
+        // Update accounting
+        cauldron.pour(vaultId, ink, art + fee);
+
+        // Manage collateral
+        if (ink != 0) {
+            IJoin ilkJoin = getJoin(vault.ilkId);
+            if (ink > 0) ilkJoin.join(vault.owner, uint128(ink));
+            if (ink < 0) ilkJoin.exit(to, uint128(-ink));
+        }
+
+        // Manage debt tokens
+        if (art != 0) {
+            if (art > 0) series.fyToken.mint(to, uint128(art));
+            else series.fyToken.burn(msg.sender, uint128(-art));
+        }
+    }
+
     /// @dev Add collateral and borrow from vault, so that a precise amount of base is obtained by the user.
     /// The base is obtained by borrowing fyToken and buying base with it in a pool.
     /// Only before maturity.
@@ -138,12 +172,12 @@ contract LadleTV is LadleStorageV2 {
     {
         (bytes12 vaultId, DataTypes.Vault memory vault) = getVault(vaultId_);
         IPool pool = getPool(vault.seriesId);
-        
-        converter = getConverter(address(pool.base()));
-        ybvTokens = converter.wrappedFor(baseAmount); // Find out how many ybvTokens we need to buy, so that when unwrapped we get `base`
-        art = pool.buyBase(address(converter), ybvTokens, max); // The return value of `buyBase` is in fyToken, so it's the actual debt
+        IConverter converter = getConverter(address(pool.base()));
+
+        uint256 wrappedAmount = converter.wrappedFor(base);                // Find out how many wrapped tokens we need to buy, so that when unwrapped we get `base`
+        art = pool.buyBase(address(converter), wrappedAmount.u128(), max); // The return value of `buyBase` is in fyToken, so it's the actual debt
         converter.unwrap(to);
-        _pour(vaultId, vault, address(pool), ink.i128(), art.si128()); // Both pool and converter must not be a reentrancy risk
+        _pour(vaultId, vault, address(pool), ink.i128(), art.i128());      // Both pool and converter must not be a reentrancy risk
     }
 
     /// @dev Change series and debt of a vault.
@@ -151,40 +185,44 @@ contract LadleTV is LadleStorageV2 {
         external payable
         returns (DataTypes.Vault memory vault, uint128 newDebt)
     {
-        bytes12 vaultId;
-        (vaultId, vault) = getVault(vaultId_);
-        DataTypes.Balances memory balances = cauldron.balances(vaultId);
-        DataTypes.Series memory series = getSeries(vault.seriesId);
+        (, vault) = getVault(vaultId_);
+        DataTypes.Balances memory balances = cauldron.balances(vaultId_);
         DataTypes.Series memory newSeries = getSeries(newSeriesId);
         
         {
             IPool pool = getPool(newSeriesId);
             IFYToken fyToken = IFYToken(newSeries.fyToken);
-            IJoin baseJoin = getJoin(series.baseId);
 
             // Calculate debt in base terms
             uint128 base = cauldron.debtToBase(vault.seriesId, balances.art);
 
-            // Convert base debt to ybvToken debt
-            converter = getConverter(address(pool.base()));
-            ybvTokens = converter.wrappedFor(base);                       // This is how many ybvTokens we have to buy so that when unwrapped they pay off the existing debt.
+            {
+                IConverter converter = getConverter(address(pool.base()));
+                IJoin baseJoin = getJoin(getSeries(vault.seriesId).baseId);
 
-            // Mint fyToken to the pool, as a kind of flash loan
-            fyToken.mint(address(pool), ybvTokens * loan);                // Loan is the size of the flash loan relative to the debt amount, 2 should be safe most of the time
+                // Convert base debt to ybvToken debt
+                converter = getConverter(address(pool.base()));
 
-            // Buy the base required to pay off the debt in series 1, and find out the debt in series 2
-            newDebt = pool.buyBase(address(baseJoin), ybvTokens, max);    // new debt is in fyTokens of the new series
-            converter.unwrap(address(baseJoin));                          // The converter must unwrap ybvTokens exactly into base
-            baseJoin.join(address(baseJoin), base);                       // Repay the old series debt
+                uint256 wrappedAmount = converter.wrappedFor(base);            // This is how many wrapped tokens we have to buy so that when unwrapped they pay off the existing debt.
 
-            pool.retrieveFYToken(address(fyToken));                       // Get the surplus fyToken
-            fyToken.burn(address(fyToken), (base * loan) - newDebt);      // Burn the surplus
+                // Mint fyToken to the pool, as a kind of flash loan
+                fyToken.mint(address(pool), wrappedAmount * loan);             // Loan is the size of the flash loan relative to the debt amount, 2 should be safe most of the time
+
+                // Buy the base required to pay off the debt in series 1, and find out the debt in series 2
+                newDebt = pool.buyBase(address(baseJoin), wrappedAmount.u128(), max); // new debt is in fyTokens of the new series
+
+                converter.unwrap(address(baseJoin));                           // The converter must unwrap ybvTokens exactly into base
+                baseJoin.join(address(baseJoin), base);                        // Repay the old series debt
+            }
+
+            pool.retrieveFYToken(address(fyToken));                        // Get the surplus fyToken
+            fyToken.burn(address(fyToken), (base * loan) - newDebt);       // Burn the surplus
         }
 
         if (vault.ilkId != newSeries.baseId && borrowingFee != 0)
             newDebt += ((newSeries.maturity - block.timestamp) * uint256(newDebt).wmul(borrowingFee)).u128();  // Add borrowing fee, also stops users form rolling to a mature series
 
-        (vault,) = cauldron.roll(vaultId, newSeriesId, newDebt.i128() - balances.art.i128()); // Change the series and debt for the vault
+        (vault,) = cauldron.roll(vaultId_, newSeriesId, newDebt.i128() - balances.art.i128()); // Change the series and debt for the vault
 
         return (vault, newDebt);
     }
