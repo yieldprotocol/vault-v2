@@ -2,7 +2,7 @@
 pragma solidity 0.8.14;
 
 import "./IPoolFactory.sol";
-import "./PoolMock.sol";
+import "../mocks/PoolMock.sol";
 
 
 /// @dev The PoolFactory can deterministically create new pool instances.

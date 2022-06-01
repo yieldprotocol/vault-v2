@@ -10,8 +10,8 @@ import "@yield-protocol/vault-interfaces/src/IFYTokenFactory.sol";
 import "@yield-protocol/vault-interfaces/src/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/src/DataTypes.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "./mocks/IPoolFactory.sol";
-import "./constants/Constants.sol";
+import "./IPoolFactory.sol";
+import "../constants/Constants.sol";
 
 interface IWitchGov {
     function limits(bytes6) external view returns(uint96, uint24, uint8, uint128);

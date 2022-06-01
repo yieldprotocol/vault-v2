@@ -4,7 +4,7 @@ import "@yield-protocol/utils-v2/contracts/access/Ownable.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
 import "@yield-protocol/vault-interfaces/src/IFYToken.sol";
-import "./IPoolFactory.sol";
+import "../deprecated/IPoolFactory.sol";
 import "./ERC20Mock.sol";
 
 library RMath { // Fixed point arithmetic in Ray units

@@ -9,10 +9,10 @@ import { CHI, RATE, ETH, DAI, USDC } from '../../src/constants'
 
 import CauldronArtifact from '../../artifacts/contracts/Cauldron.sol/Cauldron.json'
 import LadleArtifact from '../../artifacts/contracts/Ladle.sol/Ladle.json'
-import WandArtifact from '../../artifacts/contracts/Wand.sol/Wand.json'
+import WandArtifact from '../../artifacts/deprecated/Wand.sol/Wand.json'
 import WitchArtifact from '../../artifacts/contracts/Witch.sol/Witch.json'
-import JoinFactoryArtifact from '../../artifacts/contracts/mocks/JoinFactoryMock.sol/JoinFactoryMock.json'
-import PoolFactoryMockArtifact from '../../artifacts/contracts/mocks/PoolFactoryMock.sol/PoolFactoryMock.json'
+import JoinFactoryArtifact from '../../artifacts/contracts/deprecated/JoinFactoryMock.sol/JoinFactoryMock.json'
+import PoolFactoryMockArtifact from '../../artifacts/contracts/deprecated/PoolFactoryMock.sol/PoolFactoryMock.json'
 
 import ChainlinkMultiOracleArtifact from '../../artifacts/contracts/oracles/chainlink/ChainlinkMultiOracle.sol/ChainlinkMultiOracle.json'
 import CompoundMultiOracleArtifact from '../../artifacts/contracts/oracles/compound/CompoundMultiOracle.sol/CompoundMultiOracle.json'

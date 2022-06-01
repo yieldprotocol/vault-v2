@@ -2,9 +2,9 @@
 pragma solidity 0.8.14;
 import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
-import "../../modules/IV1FYDai.sol";
-import "../../modules/IV1Pool.sol";
-import "../ERC20Mock.sol";
+import "./IV1FYDai.sol";
+import "./IV1Pool.sol";
+import "../mocks/ERC20Mock.sol";
 import "./DelegableMock.sol";
 
 
