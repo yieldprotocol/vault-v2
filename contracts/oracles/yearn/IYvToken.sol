@@ -28,4 +28,7 @@ interface IYvToken is IERC20Metadata {
 
     // @dev Returns the totalSupply of the token
     function totalSupply() external view returns (uint256);
+
+    // @dev Returns the balance of the account
+    function balanceOf(address account) external view returns (uint256);
 }
