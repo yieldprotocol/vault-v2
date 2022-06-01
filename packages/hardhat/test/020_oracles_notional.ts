@@ -5,9 +5,9 @@ import { DAI, USDC } from '../src/constants'
 
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 
-import NotionalMultiOracleArtifact from '../artifacts/contracts/other/notional/NotionalMultiOracle.sol/NotionalMultiOracle.json'
-import DAIMockArtifact from '../artifacts/contracts/mocks/DAIMock.sol/DAIMock.json'
-import USDCMockArtifact from '../artifacts/contracts/mocks/USDCMock.sol/USDCMock.json'
+import NotionalMultiOracleArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/other/notional/NotionalMultiOracle.sol/NotionalMultiOracle.json'
+import DAIMockArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/mocks/DAIMock.sol/DAIMock.json'
+import USDCMockArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/mocks/USDCMock.sol/USDCMock.json'
 
 import { IOracle } from '../typechain/IOracle'
 import { NotionalMultiOracle } from '../typechain/NotionalMultiOracle'

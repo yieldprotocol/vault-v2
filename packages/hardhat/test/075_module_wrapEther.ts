@@ -2,8 +2,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { id, constants } from '@yield-protocol/utils-v2'
 const { WAD, MAX256 } = constants
 
-import WETH9MockArtifact from '../artifacts/contracts/mocks/WETH9Mock.sol/WETH9Mock.json'
-import WrapEtherModuleArtifact from '../artifacts/contracts/other/ether/WrapEtherModule.sol/WrapEtherModule.json'
+import WrapEtherModuleArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/other/ether/WrapEtherModule.sol/WrapEtherModule.json'
 
 import { WETH9Mock } from '../typechain/WETH9Mock'
 import { Cauldron } from '../typechain/Cauldron'
@@ -15,7 +14,6 @@ const { deployContract, loadFixture } = waffle
 
 import { YieldEnvironment } from './shared/fixtures'
 import { LadleWrapper } from '../src/ladleWrapper'
-import { ETH } from '../src/constants'
 
 describe('Ladle - module', function () {
   this.timeout(0)

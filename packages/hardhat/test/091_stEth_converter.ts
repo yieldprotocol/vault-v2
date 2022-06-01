@@ -8,9 +8,9 @@ import { WstETHMock } from '../typechain/WstETHMock'
 import { StEthConverter } from '../typechain/StEthConverter'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 
-import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
-import WstETHMockArtifact from '../artifacts/contracts/mocks/WstETHMock.sol/WstETHMock.json'
-import StEthConverterArtifact from '../artifacts/contracts/other/lido/StEthConverter.sol/StEthConverter.json'
+import ERC20MockArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
+import WstETHMockArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/mocks/WstETHMock.sol/WstETHMock.json' // TODO egill
+import StEthConverterArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/other/lido/StEthConverter.sol/StEthConverter.json'
 import { parseEther } from '@ethersproject/units'
 
 describe('Lido Wrapper-Unwrapper', function () {

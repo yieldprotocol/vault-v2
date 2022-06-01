@@ -3,15 +3,14 @@ import { id, constants } from '@yield-protocol/utils-v2'
 const { WAD, MAX256 } = constants
 import { ETH, DAI } from '../src/constants'
 
-import V1FYDaiMockArtifact from '../artifacts/contracts/mocks/v1/V1FYDaiMock.sol/V1FYDaiMock.json'
-import V1PoolMockArtifact from '../artifacts/contracts/mocks/v1/V1PoolMock.sol/V1PoolMock.json'
-import BurnModuleArtifact from '../artifacts/contracts/modules/BurnV1LiquidityModule.sol/BurnV1LiquidityModule.json'
+import V1FYDaiMockArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/mocks/v1/V1FYDaiMock.sol/V1FYDaiMock.json'
+import V1PoolMockArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/mocks/v1/V1PoolMock.sol/V1PoolMock.json'
+import BurnModuleArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/modules/BurnV1LiquidityModule.sol/BurnV1LiquidityModule.json'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { BurnV1LiquidityModule } from '../typechain/BurnV1LiquidityModule'
 
 import { ERC20Mock } from '../typechain/ERC20Mock'
-import { DAIMock } from '../typechain/DAIMock'
 import { V1FYDaiMock } from '../typechain/V1FYDaiMock'
 import { V1PoolMock } from '../typechain/V1PoolMock'
 

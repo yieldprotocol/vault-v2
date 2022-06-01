@@ -6,8 +6,8 @@ import { sendStatic } from './shared/helpers'
 import { Contract } from '@ethersproject/contracts'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 
-import UniswapV3FactoryMockArtifact from '../artifacts/contracts/mocks/oracles/uniswap/UniswapV3FactoryMock.sol/UniswapV3FactoryMock.json'
-import UniswapV3OracleArtifact from '../artifacts/contracts/oracles/uniswap/UniswapV3Oracle.sol/UniswapV3Oracle.json'
+import UniswapV3FactoryMockArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/mocks/oracles/uniswap/UniswapV3FactoryMock.sol/UniswapV3FactoryMock.json'
+import UniswapV3OracleArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/oracles/uniswap/UniswapV3Oracle.sol/UniswapV3Oracle.json'
 
 import { UniswapV3FactoryMock } from '../typechain/UniswapV3FactoryMock'
 import { UniswapV3PoolMock } from '../typechain/UniswapV3PoolMock'

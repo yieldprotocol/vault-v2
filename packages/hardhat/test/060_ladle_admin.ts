@@ -9,11 +9,11 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 const { WAD, THREE_MONTHS } = constants
 import { RATE } from '../src/constants'
 
-import FYTokenArtifact from '../artifacts/contracts/FYToken.sol/FYToken.json'
-import JoinFactoryArtifact from '../artifacts/contracts/mocks/JoinFactoryMock.sol/JoinFactoryMock.json'
-import OracleMockArtifact from '../artifacts/contracts/mocks/oracles/OracleMock.sol/OracleMock.json'
-import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
-import PoolFactoryMockArtifact from '../artifacts/contracts/mocks/PoolFactoryMock.sol/PoolFactoryMock.json'
+import FYTokenArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/FYToken.sol/FYToken.json'
+import JoinFactoryArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/mocks/JoinFactoryMock.sol/JoinFactoryMock.json'
+import OracleMockArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/mocks/oracles/OracleMock.sol/OracleMock.json'
+import ERC20MockArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
+import PoolFactoryMockArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/mocks/PoolFactoryMock.sol/PoolFactoryMock.json'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'

@@ -1,7 +1,7 @@
 import { readdirSync, writeFileSync } from 'fs'
 import path from 'path'
 
-const exclude: string[] = ['test', 'convex/interfaces']
+const exclude: string[] = ['test', 'convex/interfaces', 'lido/WstETHMock.sol']
 
 const importPaths: string[] = []
 const base: string = '@yield-protocol/vault-v2/contracts/'
@@ -10,7 +10,7 @@ const solFilesInDirectory = (directoryPath: string, pathAddition = '') => {
   const files = readdirSync(directoryPath)
 
   files.forEach(function (file) {
-    if (!exclude.includes(file) && !exclude.some(path => directoryPath.includes(path))) {
+    if (!exclude.includes(file) && !exclude.some(path => `${directoryPath}/${file}`.includes(path))) {
       if (file.includes('.sol')) {
         const fileWithoutExtension = file.substring(0, file.length - 4)
         importPaths.push(`import {${fileWithoutExtension}} from "${base}${pathAddition}${file}";\n`)

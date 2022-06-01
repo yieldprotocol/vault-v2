@@ -3,9 +3,9 @@ import { constants, id } from '@yield-protocol/utils-v2'
 
 const { WAD } = constants
 
-import ERC20MockArtifact from '../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
-import FlashJoinArtifact from '../artifacts/contracts/FlashJoin.sol/FlashJoin.json'
-import FlashBorrowerArtifact from '../artifacts/contracts/mocks/FlashBorrower.sol/FlashBorrower.json'
+import ERC20MockArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
+import FlashJoinArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/FlashJoin.sol/FlashJoin.json'
+import FlashBorrowerArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/mocks/FlashBorrower.sol/FlashBorrower.json'
 
 import { FlashJoin } from '../typechain/FlashJoin'
 import { ERC20Mock } from '../typechain/ERC20Mock'

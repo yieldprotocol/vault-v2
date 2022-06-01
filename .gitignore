@@ -48,3 +48,7 @@ dist/
 
 # Foundry
 out/
+
+# Import file (hardhat)
+
+packages/hardhat/contracts/Importer.sol
