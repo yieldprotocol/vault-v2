@@ -8,15 +8,15 @@ import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 /// @title A contract to convert between yvToken to underlying & vice versa
 contract YVTokenConverter is IConverter {
     /// @notice The wrapped asset
-    IYvToken wrappedAsset;
+    IYvToken public wrappedAsset;
 
     /// @notice The asset
-    IERC20 asset;
+    IERC20 public asset;
 
-    constructor(address asset_, address wrappedAsset_) {
-        wrappedAsset = IYvToken(wrappedAsset_);
-        asset = IERC20(asset_);
-        asset.approve(wrappedAsset_, type(uint256).max);
+    constructor(IERC20 asset_, IYvToken wrappedAsset_) {
+        wrappedAsset = wrappedAsset_;
+        asset = asset_;
+        asset.approve(address(wrappedAsset_), type(uint256).max);
     }
 
     /* View Functions
@@ -39,14 +39,14 @@ contract YVTokenConverter is IConverter {
     /// @param assets Amount of assets to be obtained
     /// @return Amount of wrapped assets that would be required
     function wrappedFor(uint256 assets) external view override returns (uint256) {
-        return (assets * wrappedAsset.totalSupply()) / wrappedAsset.totalAssets();
+        return (assets * wrappedAsset.totalSupply() + wrappedAsset.totalAssets()) / wrappedAsset.totalAssets();
     }
 
     /// @notice A function to get exactly how many assets would need to be wrapped to obtain wrappedAssets.
     /// @param wrappedAssets Amount of wrapped asset to be obtained
     /// @return Amount of assets that would be required
     function assetFor(uint256 wrappedAssets) external view override returns (uint256) {
-        return (wrappedAssets * wrappedAsset.totalAssets()) / wrappedAsset.totalSupply();
+        return (wrappedAssets * wrappedAsset.totalAssets() + wrappedAsset.totalSupply()) / wrappedAsset.totalSupply();
     }
 
     /* Converter functions
