@@ -6,8 +6,8 @@
   "files": [
     "contracts/*.sol",
     "contracts/**/*.sol",
-    "!contracts/mocks/*.sol",
-    "!contracts/deprecated/*.sol",
+    "!contracts/mocks/**/*.sol",
+    "!contracts/deprecated/**/*.sol",
     "dist"
   ],
   "main": "dist/index.js",
