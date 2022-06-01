@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.6;
+pragma solidity 0.8.14;
 
 contract TestConstants {
     uint256 public constant WAD = 1e18;
@@ -14,4 +14,8 @@ contract TestConstants {
     bytes6 public constant STETH = 0x303500000000;
     bytes6 public constant YVDAI = 0x303800000000;
     bytes6 public constant YVUSDC = 0x303900000000;
+
+    bytes6 public constant FYETH2206 = bytes6("0006");
+    bytes6 public constant FYDAI2206 = bytes6("0106");
+    bytes6 public constant FYUSDC2206 = bytes6("0206");
 }

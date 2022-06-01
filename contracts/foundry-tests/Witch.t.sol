@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.6;
+pragma solidity 0.8.14;
 
 import "./utils/Test.sol";
 import "./utils/TestConstants.sol";
@@ -201,39 +201,39 @@ contract StateZeroTest is StateZero {
 
     function testUnknwonUserCanNotChangeLadle() public {
         vm.expectRevert("Access denied");
-        sut.point("ladle", address(1));
+        witch.point("ladle", address(1));
     }
 
     function testCanChangeLadle() public {
         // Given
-        assertEq(address(sut.ladle()), address(ladle));
+        assertEq(address(witch.ladle()), address(ladle));
         address anotherLadle = Mocks.mock("Ladle2");
 
-        sut.grantRole(sut.point.selector, admin);
+        witch.grantRole(witch.point.selector, admin);
 
         // When
         vm.prank(admin);
-        sut.point("ladle", anotherLadle);
+        witch.point("ladle", anotherLadle);
 
         // Then
-        assertEq(address(sut.ladle()), anotherLadle);
+        assertEq(address(witch.ladle()), anotherLadle);
     }
 
     function testUnknwonUserCanNotSetIlk() public {
         vm.expectRevert("Access denied");
-        sut.setIlk(ILK_ID, AUCTION_DURATION, 1e18 + 1, 1000000, 0, 6);
+        witch.setIlk(ILK_ID, AUCTION_DURATION, 1e18 + 1, 1000000, 0, 6);
     }
 
     function testSetIlkWithMaxInitialProportionGt100() public {
         // Given
-        sut.grantRole(sut.setIlk.selector, admin);
+        witch.grantRole(witch.setIlk.selector, admin);
 
         // Expect
         vm.expectRevert("Only at or under 100%");
 
         // When
         vm.prank(admin);
-        sut.setIlk(ILK_ID, AUCTION_DURATION, 1e18 + 1, 1000000, 0, 6);
+        witch.setIlk(ILK_ID, AUCTION_DURATION, 1e18 + 1, 1000000, 0, 6);
     }
 
     function testSetIlkWithMaxInitialProportion() public {
@@ -243,17 +243,17 @@ contract StateZeroTest is StateZero {
 
     function _setIlkWithMaxInitialProportion100(uint64 _initialOffer) internal {
         // Given
-        sut.grantRole(sut.setIlk.selector, admin);
+        witch.grantRole(witch.setIlk.selector, admin);
 
         // When
         vm.prank(admin);
-        sut.setIlk(ILK_ID, AUCTION_DURATION, _initialOffer, 1000000, 0, 6);
+        witch.setIlk(ILK_ID, AUCTION_DURATION, _initialOffer, 1000000, 0, 6);
 
         // Then
-        (uint32 duration, uint64 initialOffer) = sut.ilks(ILK_ID);
+        (uint32 duration, uint64 initialOffer) = witch.ilks(ILK_ID);
         assertEq(duration, AUCTION_DURATION);
         assertEq(initialOffer, _initialOffer);
-        (uint96 line, uint24 dust, uint8 dec, uint128 sum) = sut.limits(ILK_ID);
+        (uint96 line, uint24 dust, uint8 dec, uint128 sum) = witch.limits(ILK_ID);
         assertEq(line, 1000000);
         assertEq(dust, 0);
         assertEq(dec, 6);
@@ -262,24 +262,24 @@ contract StateZeroTest is StateZero {
 
     function testDoNotAllowToBuyFromVaultsNotBeingAuctioned() public {
         vm.expectRevert("Vault not under auction");
-        sut.buy(VAULT_ID, 0, 0);
+        witch.buy(VAULT_ID, 0, 0);
 
         vm.expectRevert("Vault not under auction");
-        sut.payAll(VAULT_ID, 0);
+        witch.payAll(VAULT_ID, 0);
     }
 
     function testDoNotAuctionCollateralisedVaults() public {
         _vaultIsCollateralised(VAULT_ID);
 
         vm.expectRevert("Not undercollateralized");
-        sut.auction(VAULT_ID);
+        witch.auction(VAULT_ID);
     }
 
     function testDoNotAuctionVaultIfLineExceeded() public {
         // Given
-        sut.grantRole(sut.setIlk.selector, admin);
+        witch.grantRole(witch.setIlk.selector, admin);
         vm.prank(admin);
-        sut.setIlk(ILK_ID, 1, 2, 1, 0, 6);
+        witch.setIlk(ILK_ID, 1, 2, 1, 0, 6);
 
         _vaultIsUndercollateralised(VAULT_ID);
         cauldron.vaults.mock(VAULT_ID, DataTypes.Vault(address(0xb0b), "series", ILK_ID));
@@ -289,14 +289,14 @@ contract StateZeroTest is StateZero {
         vm.expectRevert("Collateral limit reached");
 
         // When
-        sut.auction(VAULT_ID);
+        witch.auction(VAULT_ID);
     }
 
     function testAuctionsUndercollateralisedVaults() public {
         // Given
-        sut.grantRole(sut.setIlk.selector, admin);
+        witch.grantRole(witch.setIlk.selector, admin);
         vm.prank(admin);
-        sut.setIlk(ILK_ID, AUCTION_DURATION, 0.5e18, 1000000, 0, 6);
+        witch.setIlk(ILK_ID, AUCTION_DURATION, 0.5e18, 1000000, 0, 6);
 
         address owner = address(0xb0b);
         DataTypes.Vault memory vault = DataTypes.Vault(owner, "series", ILK_ID);
@@ -309,11 +309,11 @@ contract StateZeroTest is StateZero {
         emit Auctioned(VAULT_ID, block.timestamp);
 
         // When
-        sut.auction(VAULT_ID);
+        witch.auction(VAULT_ID);
 
         // Then
-        (address _owner, uint32 _start) = sut.auctions(VAULT_ID);
-        (, , , uint128 _sum) = sut.limits(ILK_ID);
+        (address _owner, uint32 _start) = witch.auctions(VAULT_ID);
+        (, , , uint128 _sum) = witch.limits(ILK_ID);
         assertEq(_owner, owner);
         assertEq(_start, block.timestamp);
         assertEq(_sum, balances.ink);
@@ -346,14 +346,14 @@ contract WitchTestWithAuctionedVault is WitchTest {
 
         keeper = utils.getNextUserAddress("Keeper");
 
-        sut.grantRole(sut.setIlk.selector, admin);
+        witch.grantRole(witch.setIlk.selector, admin);
         vm.prank(admin);
-        sut.setIlk(ILK_ID, AUCTION_DURATION, 0.5e18, 1000000, 0, 6);
+        witch.setIlk(ILK_ID, AUCTION_DURATION, 0.5e18, 1000000, 0, 6);
 
         _stubVaultForAuction(VAULT_A, vaultA, vaultABalances);
         _vaultIsUndercollateralised(VAULT_A);
 
-        sut.auction(VAULT_A);
+        witch.auction(VAULT_A);
     }
 
     function _stubBuy(
@@ -390,7 +390,7 @@ contract WitchAuctionedTest is WitchTestWithAuctionedVault {
 
     function testVaultCanNotBeAuctionedTwice() public {
         vm.expectRevert("Vault already under auction");
-        sut.auction(VAULT_A);
+        witch.auction(VAULT_A);
     }
 
     function testItCanAuctionOtherVaults() public {
@@ -399,10 +399,10 @@ contract WitchAuctionedTest is WitchTestWithAuctionedVault {
         _vaultIsUndercollateralised(VAULT_B);
 
         // When
-        sut.auction(VAULT_B);
+        witch.auction(VAULT_B);
 
         // Then
-        (, , , uint128 _sum) = sut.limits(ILK_ID);
+        (, , , uint128 _sum) = witch.limits(ILK_ID);
         assertEq(_sum, vaultABalances.ink + vaultBBalances.ink);
     }
 
@@ -412,13 +412,13 @@ contract WitchAuctionedTest is WitchTestWithAuctionedVault {
         _vaultIsUndercollateralised(VAULT_B);
 
         vm.prank(admin);
-        sut.setIlk(ILK_ID, AUCTION_DURATION, 0.5e18, 4, 0, 6);
+        witch.setIlk(ILK_ID, AUCTION_DURATION, 0.5e18, 4, 0, 6);
 
         // Expect
         vm.expectRevert("Collateral limit reached");
 
         // When
-        sut.auction(VAULT_B);
+        witch.auction(VAULT_B);
     }
 
     function testDoesNotAllowBuyingUnderMinimumRequired() public {
@@ -426,7 +426,7 @@ contract WitchAuctionedTest is WitchTestWithAuctionedVault {
         cauldron.debtFromBase.mock(SERIES_ID, 1e18, 1e18);
 
         vm.expectRevert("Not enough bought");
-        sut.buy(VAULT_A, 1e18, 1e6);
+        witch.buy(VAULT_A, 1e18, 1e6);
     }
 
     function testCanBuyZeroCollateral() public {
@@ -436,7 +436,7 @@ contract WitchAuctionedTest is WitchTestWithAuctionedVault {
         emit Bought(VAULT_A, keeper, 0, 0);
 
         vm.prank(keeper);
-        sut.buy(VAULT_A, 0, 0);
+        witch.buy(VAULT_A, 0, 0);
     }
 
     function testAllowsToBuyHalfOfCollateralAmountFromTheBeggining() public {
@@ -451,7 +451,7 @@ contract WitchAuctionedTest is WitchTestWithAuctionedVault {
         emit Bought(VAULT_A, keeper, inkBought, baseToRepayArt);
 
         vm.prank(keeper);
-        sut.buy(VAULT_A, baseToRepayArt, inkToBuy);
+        witch.buy(VAULT_A, baseToRepayArt, inkToBuy);
     }
 
     function testAllowsToBuyHalfOfCollateralAmountFromTheBegginingPayingAllDebt() public {
@@ -467,7 +467,7 @@ contract WitchAuctionedTest is WitchTestWithAuctionedVault {
         emit Bought(VAULT_A, keeper, inkBought, baseToRepayArt);
 
         vm.prank(keeper);
-        sut.payAll(VAULT_A, inkToBuy);
+        witch.payAll(VAULT_A, inkToBuy);
     }
 
     function testCanNotBuyMoreThanAuctionedPrice() public {
@@ -478,7 +478,7 @@ contract WitchAuctionedTest is WitchTestWithAuctionedVault {
         cauldron.debtFromBase.mock(SERIES_ID, baseToRepayArt, baseToRepayArt);
 
         vm.expectRevert("Not enough bought");
-        sut.buy(VAULT_A, baseToRepayArt, inkToBuy);
+        witch.buy(VAULT_A, baseToRepayArt, inkToBuy);
     }
 
     function testAuctionPriceIncreasesWithTime() public {
@@ -491,7 +491,7 @@ contract WitchAuctionedTest is WitchTestWithAuctionedVault {
 
         // Can't buy that much collateral
         vm.expectRevert("Not enough bought");
-        sut.buy(VAULT_A, baseToRepayArt, inkToBuy);
+        witch.buy(VAULT_A, baseToRepayArt, inkToBuy);
 
         // after 1/2 of AUCTION_DURATION the offered qty grows by 50%
         skip(AUCTION_DURATION / 2);
@@ -500,7 +500,7 @@ contract WitchAuctionedTest is WitchTestWithAuctionedVault {
         emit Bought(VAULT_A, keeper, inkBought, baseToRepayArt);
 
         vm.prank(keeper);
-        sut.buy(VAULT_A, baseToRepayArt, inkToBuy);
+        witch.buy(VAULT_A, baseToRepayArt, inkToBuy);
     }
 
     function testCanNotBuyIfLeavingDust() public {
@@ -511,10 +511,10 @@ contract WitchAuctionedTest is WitchTestWithAuctionedVault {
         cauldron.debtFromBase.mock(SERIES_ID, baseToRepayArt, baseToRepayArt);
 
         vm.prank(admin);
-        sut.setIlk(ILK_ID, AUCTION_DURATION, 0.5e18, 1000000, 3, 6);
+        witch.setIlk(ILK_ID, AUCTION_DURATION, 0.5e18, 1000000, 3, 6);
 
         vm.expectRevert("Leaves dust");
-        sut.buy(VAULT_A, baseToRepayArt, inkToBuy);
+        witch.buy(VAULT_A, baseToRepayArt, inkToBuy);
     }
 
     function testAmountToRepayGrowsAfterMaturity() public {
@@ -530,7 +530,7 @@ contract WitchAuctionedTest is WitchTestWithAuctionedVault {
         emit Bought(VAULT_A, keeper, inkBought, debtFromBase);
 
         vm.prank(keeper);
-        sut.buy(VAULT_A, baseToRepayArt, inkToBuy);
+        witch.buy(VAULT_A, baseToRepayArt, inkToBuy);
     }
 
     function testAmountToRepayGrowsAfterMaturityPayAll() public {
@@ -556,7 +556,7 @@ contract WitchAuctionedTest is WitchTestWithAuctionedVault {
         emit Bought(VAULT_A, keeper, inkBought, baseToRepayArt);
 
         vm.prank(keeper);
-        sut.payAll(VAULT_A, inkToBuy);
+        witch.payAll(VAULT_A, inkToBuy);
     }
 }
 
@@ -580,6 +580,6 @@ contract WitchAuctionExpiredTest is WitchTestWithAuctionedVault {
         emit Bought(VAULT_A, keeper, inkToBuy, baseToRepayArt);
 
         vm.prank(keeper);
-        sut.payAll(VAULT_A, inkToBuy);
+        witch.payAll(VAULT_A, inkToBuy);
     }
 } */

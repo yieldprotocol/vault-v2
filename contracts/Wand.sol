@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.6;
+pragma solidity 0.8.14;
 import "@yield-protocol/vault-interfaces/src/ICauldronGov.sol";
 import "@yield-protocol/vault-interfaces/src/ILadleGov.sol";
 // import "@yield-protocol/vault-interfaces/src/IWitchGov.sol";

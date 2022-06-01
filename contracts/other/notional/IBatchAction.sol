@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.6;
+pragma solidity 0.8.14;
 
 interface IBatchAction {
     /// @notice Specifies different deposit actions that can occur during BalanceAction or BalanceActionWithTrades

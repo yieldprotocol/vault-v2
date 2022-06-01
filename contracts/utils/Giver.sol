@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.6;
+pragma solidity 0.8.14;
 
 import "@yield-protocol/vault-interfaces/src/ICauldron.sol";
 import "@yield-protocol/vault-interfaces/src/DataTypes.sol";
@@ -33,6 +33,16 @@ contract Giver is AccessControl {
     function give(bytes12 vaultId, address receiver) external returns (DataTypes.Vault memory vault) {
         vault = cauldron.vaults(vaultId);
         require(vault.owner == msg.sender, "msg.sender is not the owner");
+        require(!bannedIlks[vault.ilkId], "ilk is banned");
+        vault = cauldron.give(vaultId, receiver);
+    }
+
+    /// @notice A give function which allows the authenticated address to give the vault of any user to another address
+    /// @param vaultId The vaultId of the vault to be given
+    /// @param receiver The address to which the vault is being given to
+    /// @return vault The vault which has been given
+    function seize(bytes12 vaultId, address receiver) external auth returns (DataTypes.Vault memory vault) {
+        vault = cauldron.vaults(vaultId);
         require(!bannedIlks[vault.ilkId], "ilk is banned");
         vault = cauldron.give(vaultId, receiver);
     }

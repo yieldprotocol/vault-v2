@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.6;
+pragma solidity 0.8.14;
 
 interface IRewardStaking {
     function stakeFor(address, uint256) external;

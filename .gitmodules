@@ -4,3 +4,9 @@
 [submodule "lib/yield-utils-v2"]
 	path = lib/yield-utils-v2
 	url = https://github.com/yieldprotocol/yield-utils-v2
+[submodule "lib/yieldspace-interfaces"]
+	path = lib/yieldspace-interfaces
+	url = https://github.com/yieldprotocol/yieldspace-interfaces
+[submodule "lib/yieldspace-v2"]
+	path = lib/yieldspace-v2
+	url = https://github.com/yieldprotocol/yieldspace-v2
