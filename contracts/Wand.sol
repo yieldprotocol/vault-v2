@@ -9,8 +9,8 @@ import "@yield-protocol/vault-interfaces/src/IJoin.sol";
 import "@yield-protocol/vault-interfaces/src/IFYTokenFactory.sol";
 import "@yield-protocol/vault-interfaces/src/IFYToken.sol";
 import "@yield-protocol/vault-interfaces/src/DataTypes.sol";
-import "@yield-protocol/yieldspace-interfaces/IPoolFactory.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import "./mocks/IPoolFactory.sol";
 import "./constants/Constants.sol";
 
 interface IWitchGov {
