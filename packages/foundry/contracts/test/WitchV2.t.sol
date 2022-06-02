@@ -8,7 +8,7 @@ import "./utils/Mocks.sol";
 
 import "../WitchV2.sol";
 
-abstract contract WitchStateZero is Test, TestConstants {
+abstract contract WitchV2StateZero is Test, TestConstants {
     using Mocks for *;
 
     event Auctioned(bytes12 indexed vaultId, uint256 indexed start);
@@ -69,7 +69,7 @@ abstract contract WitchStateZero is Test, TestConstants {
     }
 }
 
-contract WitchStateZeroTest is WitchStateZero {
+contract WitchV2StateZeroTest is WitchV2StateZero {
     function testPointRequiresAuth() public {
         vm.prank(bob);
         vm.expectRevert("Access denied");
@@ -181,7 +181,7 @@ contract WitchStateZeroTest is WitchStateZero {
     }
 }
 
-abstract contract WitchWithMetadata is WitchStateZero {
+abstract contract WitchV2WithMetadata is WitchV2StateZero {
     using Mocks for *;
 
     DataTypes.Vault vault;
@@ -229,7 +229,7 @@ abstract contract WitchWithMetadata is WitchStateZero {
     }
 }
 
-contract WitchWithMetadataTest is WitchWithMetadata {
+contract WitchV2WithMetadataTest is WitchV2WithMetadata {
     using Mocks for *;
 
     function testCalcPayout() public {
@@ -304,7 +304,7 @@ contract WitchWithMetadataTest is WitchWithMetadata {
     }
 }
 
-contract WitchWithAuction is WitchWithMetadata {
+contract WitchV2WithAuction is WitchV2WithMetadata {
     using Mocks for *;
 
     bytes12 internal constant VAULT_ID_2 = "vault2";
@@ -317,7 +317,25 @@ contract WitchWithAuction is WitchWithMetadata {
         witch.auction(VAULT_ID);
     }
 
-    function testCalcPayoutWithAuction() public {
+    function _stubVault(
+        bytes12 vaultId,
+        uint128 ink,
+        uint128 art,
+        int256 level
+    ) internal {
+        DataTypes.Vault memory v = DataTypes.Vault({
+            owner: bob,
+            seriesId: SERIES_ID,
+            ilkId: ILK_ID
+        });
+        DataTypes.Balances memory b = DataTypes.Balances(art, ink);
+        cauldron.vaults.mock(vaultId, v);
+        cauldron.balances.mock(vaultId, b);
+        cauldron.level.mock(vaultId, level);
+        cauldron.give.mock(vaultId, address(witch), v);
+    }
+
+    function testCalcPayoutAfterAuction() public {
         // 100 * 0.5 * 0.714 = 35.7
         // (ink * proportion * initialOffer)
         assertEq(witch.calcPayout(VAULT_ID, 50_000e6), 35.7 ether);
@@ -411,32 +429,51 @@ contract WitchWithAuction is WitchWithMetadata {
         assertEq(_sum, 50 ether);
     }
 
-    function _stubVault(
-        bytes12 vaultId,
-        uint128 ink,
-        uint128 art,
-        int256 level
-    ) internal {
-        DataTypes.Vault memory v = DataTypes.Vault({
-            owner: bob,
-            seriesId: SERIES_ID,
-            ilkId: ILK_ID
-        });
-        DataTypes.Balances memory b = DataTypes.Balances(art, ink);
-        cauldron.vaults.mock(vaultId, v);
-        cauldron.balances.mock(vaultId, b);
-        cauldron.level.mock(vaultId, level);
-        cauldron.give.mock(vaultId, address(witch), v);
+    function testCancelNonExistentAuction() public {
+        vm.expectRevert("Vault not under auction");
+        witch.cancel(VAULT_ID_2);
+    }
+
+    function testCancelUndercollateralisedAuction() public {
+        vm.expectRevert("Undercollateralized");
+        witch.cancel(VAULT_ID);
+    }
+
+    function testCancelAuction() public {
+        (, , , uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 50 ether);
+
+        cauldron.level.mock(VAULT_ID, 0);
+        cauldron.give.mock(VAULT_ID, bob, vault);
+        cauldron.give.verify(VAULT_ID, bob);
+
+        vm.expectEmit(true, true, true, true);
+        emit Cancelled(VAULT_ID);
+
+        witch.cancel(VAULT_ID);
+
+        // sum is reduced by the auction.ink
+        (, , , sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 0);
+
+        // Auction was deleted
+        (
+            address owner,
+            uint32 start,
+            bytes6 baseId,
+            uint128 ink,
+            uint128 art
+        ) = witch.auctions(VAULT_ID);
+        assertEq(owner, address(0));
+        assertEq(start, 0);
+        assertEq(baseId, "");
+        assertEq(art, 0);
+        assertEq(ink, 0);
     }
 }
 
 //   WithAuction
-//     cancel -> ZeroState
-//      - "Vault not under auction"
-//      - "Undercollateralized"
-//      - Return vault
-//      - Storage changes
-//      - Cancelled
+
 //     payBase -> WithPartialAuction
 //      - "Vault not under auction"
 //      - "Not enough bought"
