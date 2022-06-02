@@ -16,5 +16,9 @@
     "typechain/**/*",
     "types/**/*",
     "packages/hardhat/hardhat.config.ts"
+  ],
+  "files": [
+    "../../node_modules/@nomiclabs/hardhat-ethers/internal/type-extensions.d.ts",
+    "../../node_modules/@nomiclabs/hardhat-waffle/dist/src/type-extensions.d.ts"
   ]
 }
