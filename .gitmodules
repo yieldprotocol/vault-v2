@@ -22,6 +22,3 @@
 [submodule "packages/foundry/lib/dss-interfaces"]
 	path = packages/foundry/lib/dss-interfaces
 	url = https://github.com/makerdao/dss-interfaces
-[submodule "packages/foundry/lib/yieldspace-v2.git"]
-	path = packages/foundry/lib/yieldspace-v2.git
-	url = https://github.com/yieldprotocol/yieldspace-v2.git
