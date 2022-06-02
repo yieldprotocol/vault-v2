@@ -13,9 +13,26 @@ abstract contract WitchStateZero is Test, TestConstants {
 
     event Auctioned(bytes12 indexed vaultId, uint256 indexed start);
     event Cancelled(bytes12 indexed vaultId);
-    event Bought(bytes12 indexed vaultId, address indexed buyer, uint256 ink, uint256 art);
-    event LineSet(bytes6 indexed ilkId, bytes6 indexed baseId, uint32 duration, uint64 proportion, uint64 initialOffer);
-    event LimitSet(bytes6 indexed ilkId, bytes6 indexed baseId, uint96 max, uint24 dust, uint8 dec);
+    event Bought(
+        bytes12 indexed vaultId,
+        address indexed buyer,
+        uint256 ink,
+        uint256 art
+    );
+    event LineSet(
+        bytes6 indexed ilkId,
+        bytes6 indexed baseId,
+        uint32 duration,
+        uint64 proportion,
+        uint64 initialOffer
+    );
+    event LimitSet(
+        bytes6 indexed ilkId,
+        bytes6 indexed baseId,
+        uint96 max,
+        uint24 dust,
+        uint8 dec
+    );
     event Point(bytes32 indexed param, address indexed value);
 
     bytes12 internal constant VAULT_ID = "vault";
@@ -23,8 +40,6 @@ abstract contract WitchStateZero is Test, TestConstants {
     bytes6 internal constant BASE_ID = USDC;
     bytes6 internal constant SERIES_ID = FYETH2206;
     uint32 internal constant AUCTION_DURATION = 1 hours;
-
-    // Utilities internal utils;
 
     // address internal admin;
     address internal deployer = 0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84;
@@ -39,10 +54,6 @@ abstract contract WitchStateZero is Test, TestConstants {
     WitchV2 internal witch;
 
     function setUp() public virtual {
-        // utils = new Utilities();
-
-        // admin = utils.getNextUserAddress("Admin");
-
         cauldron = ICauldron(Mocks.mock("Cauldron"));
         ladle = ILadle(Mocks.mock("Ladle"));
 
@@ -56,24 +67,6 @@ abstract contract WitchStateZero is Test, TestConstants {
         vm.label(ada, "ada");
         vm.label(bob, "bob");
     }
-
-    /* function _vaultIsCollateralised(bytes12 vaultId) internal {
-        cauldron.level.mock(vaultId, 0); // >= 0 means vault is collateralised
-    }
-
-    function _vaultIsUndercollateralised(bytes12 vaultId) internal {
-        cauldron.level.mock(vaultId, -1); // < 0 means vault is undercollateralised
-    }
-
-    function _stubVaultForAuction(
-        bytes12 vaultId,
-        DataTypes.Vault memory vault,
-        DataTypes.Balances memory vaultBalances
-    ) internal {
-        cauldron.vaults.mock(vaultId, vault);
-        cauldron.balances.mock(vaultId, vaultBalances);
-        cauldron.give.mock(vaultId, address(witch), vault);
-    } */
 }
 
 contract WitchStateZeroTest is WitchStateZero {
@@ -134,12 +127,25 @@ contract WitchStateZeroTest is WitchStateZero {
         uint64 initialOffer = 0.75e18;
 
         vm.expectEmit(true, true, false, true);
-        emit LineSet(ILK_ID, BASE_ID, AUCTION_DURATION, proportion, initialOffer);
+        emit LineSet(
+            ILK_ID,
+            BASE_ID,
+            AUCTION_DURATION,
+            proportion,
+            initialOffer
+        );
 
         vm.prank(ada);
-        witch.setLine(ILK_ID, BASE_ID, AUCTION_DURATION, proportion, initialOffer);
+        witch.setLine(
+            ILK_ID,
+            BASE_ID,
+            AUCTION_DURATION,
+            proportion,
+            initialOffer
+        );
 
-        (uint32 _duration, uint64 _proportion, uint64 _initialOffer) = witch.lines(ILK_ID, BASE_ID);
+        (uint32 _duration, uint64 _proportion, uint64 _initialOffer) = witch
+            .lines(ILK_ID, BASE_ID);
 
         assertEq(_duration, AUCTION_DURATION);
         assertEq(_proportion, proportion);
@@ -163,14 +169,15 @@ contract WitchStateZeroTest is WitchStateZero {
         vm.prank(ada);
         witch.setLimit(ILK_ID, BASE_ID, max, dust, dec);
 
-        (uint96 _max, uint24 _dust, uint8 _dec, uint128 _sum) = witch.limits(ILK_ID, BASE_ID);
+        (uint96 _max, uint24 _dust, uint8 _dec, uint128 _sum) = witch.limits(
+            ILK_ID,
+            BASE_ID
+        );
 
         assertEq(_max, max);
         assertEq(_dust, dust);
         assertEq(_dec, dec);
         assertEq(_sum, 0);
-
-        // TOOD check that sum is kept after updates
     }
 }
 
@@ -191,7 +198,11 @@ abstract contract WitchWithMetadata is WitchStateZero {
     function setUp() public virtual override {
         super.setUp();
 
-        vault = DataTypes.Vault({owner: bob, seriesId: SERIES_ID, ilkId: ILK_ID});
+        vault = DataTypes.Vault({
+            owner: bob,
+            seriesId: SERIES_ID,
+            ilkId: ILK_ID
+        });
 
         series = DataTypes.Series({
             fyToken: IFYToken(address(0xf140)),
@@ -207,7 +218,13 @@ abstract contract WitchWithMetadata is WitchStateZero {
 
         vm.startPrank(ada);
         witch.setLimit(ILK_ID, BASE_ID, max, dust, dec);
-        witch.setLine(ILK_ID, BASE_ID, AUCTION_DURATION, proportion, initialOffer);
+        witch.setLine(
+            ILK_ID,
+            BASE_ID,
+            AUCTION_DURATION,
+            proportion,
+            initialOffer
+        );
         vm.stopPrank();
     }
 }
@@ -269,12 +286,21 @@ contract WitchWithMetadataTest is WitchWithMetadata {
         // 100 * 0.5
         assertEq(auction.ink, 50 ether);
 
-        (address owner, uint32 start, bytes6 baseId, uint128 ink, uint128 art) = witch.auctions(VAULT_ID);
+        (
+            address owner,
+            uint32 start,
+            bytes6 baseId,
+            uint128 ink,
+            uint128 art
+        ) = witch.auctions(VAULT_ID);
         assertEq(owner, auction.owner);
         assertEq(start, auction.start);
         assertEq(baseId, auction.baseId);
         assertEq(art, auction.art);
         assertEq(ink, auction.ink);
+
+        (, , , uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 50 ether);
     }
 }
 
@@ -299,7 +325,10 @@ contract WitchWithAuction is WitchWithMetadata {
         skip(5 minutes);
         // 100 * 0.5 * (0.714 + (1 - 0.714) * 300/3600) = 36.8916666667
         // (ink * proportion * (initialOffer + (1 - initialOffer) * timeElapsed)
-        assertEq(witch.calcPayout(VAULT_ID, 50_000e6), 36.89166666666666665 ether);
+        assertEq(
+            witch.calcPayout(VAULT_ID, 50_000e6),
+            36.89166666666666665 ether
+        );
 
         skip(25 minutes);
         // 100 * 0.5 * (0.714 + (1 - 0.714) * 1800/3600) = 42.85
@@ -363,13 +392,36 @@ contract WitchWithAuction is WitchWithMetadata {
         assertEq(auction.ink, 5 ether);
     }
 
+    function testUpdateLimit() public {
+        (, , , uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 50 ether);
+
+        vm.prank(ada);
+        witch.setLimit(ILK_ID, BASE_ID, 1, 2, 3);
+
+        (uint96 _max, uint24 _dust, uint8 _dec, uint128 _sum) = witch.limits(
+            ILK_ID,
+            BASE_ID
+        );
+
+        assertEq(_max, 1);
+        assertEq(_dust, 2);
+        assertEq(_dec, 3);
+        // Sum is copied from old values
+        assertEq(_sum, 50 ether);
+    }
+
     function _stubVault(
         bytes12 vaultId,
         uint128 ink,
         uint128 art,
         int256 level
     ) internal {
-        DataTypes.Vault memory v = DataTypes.Vault({owner: bob, seriesId: SERIES_ID, ilkId: ILK_ID});
+        DataTypes.Vault memory v = DataTypes.Vault({
+            owner: bob,
+            seriesId: SERIES_ID,
+            ilkId: ILK_ID
+        });
         DataTypes.Balances memory b = DataTypes.Balances(art, ink);
         cauldron.vaults.mock(vaultId, v);
         cauldron.balances.mock(vaultId, b);
@@ -378,10 +430,6 @@ contract WitchWithAuction is WitchWithMetadata {
     }
 }
 
-//   auction -> WithAuction (two auctions)
-//    - Take vault ownership
-//    - Storage changes
-//    - Auctioned
 //   WithAuction
 //     cancel -> ZeroState
 //      - "Vault not under auction"
