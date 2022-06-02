@@ -45,6 +45,7 @@ abstract contract WitchV2StateZero is Test, TestConstants {
     address internal deployer = 0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84;
     address internal ada = address(0xada);
     address internal bob = address(0xb0b);
+    address internal bot = address(0xb07);
     address internal bad = address(0xbad);
     address internal cool = address(0xc001);
 
@@ -302,19 +303,35 @@ contract WitchV2WithMetadataTest is WitchV2WithMetadata {
         (, , , uint128 sum) = witch.limits(ILK_ID, BASE_ID);
         assertEq(sum, 50 ether);
     }
+
+    function testCancelNonExistentAuction() public {
+        vm.expectRevert("Vault not under auction");
+        witch.cancel(VAULT_ID);
+    }
+
+    function testPayBaseNonExistingAuction() public {
+        vm.expectRevert("Vault not under auction");
+        witch.payBase(VAULT_ID, address(0), 0, 0);
+    }
+
+    function testPayFYTokenNonExistingAuction() public {
+        vm.expectRevert("Vault not under auction");
+        witch.payFYToken(VAULT_ID, address(0), 0, 0);
+    }
 }
 
 contract WitchV2WithAuction is WitchV2WithMetadata {
     using Mocks for *;
 
     bytes12 internal constant VAULT_ID_2 = "vault2";
+    WitchV2.Auction auction;
 
     function setUp() public virtual override {
         super.setUp();
 
         cauldron.level.mock(VAULT_ID, -1);
         cauldron.give.mock(VAULT_ID, address(witch), vault);
-        witch.auction(VAULT_ID);
+        auction = witch.auction(VAULT_ID);
     }
 
     function _stubVault(
@@ -400,14 +417,14 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         // Half of this vault would be less than the min of 5k
         _stubVault(VAULT_ID_2, 5 ether, 9999e6, -1);
 
-        WitchV2.Auction memory auction = witch.auction(VAULT_ID_2);
+        WitchV2.Auction memory auction2 = witch.auction(VAULT_ID_2);
 
-        assertEq(auction.owner, vault.owner);
-        assertEq(auction.start, uint32(block.timestamp));
-        assertEq(auction.baseId, series.baseId);
+        assertEq(auction2.owner, vault.owner);
+        assertEq(auction2.start, uint32(block.timestamp));
+        assertEq(auction2.baseId, series.baseId);
         // 100% of the vault was put for liquidation
-        assertEq(auction.art, 9999e6);
-        assertEq(auction.ink, 5 ether);
+        assertEq(auction2.art, 9999e6);
+        assertEq(auction2.ink, 5 ether);
     }
 
     function testUpdateLimit() public {
@@ -427,11 +444,6 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         assertEq(_dec, 3);
         // Sum is copied from old values
         assertEq(_sum, 50 ether);
-    }
-
-    function testCancelNonExistentAuction() public {
-        vm.expectRevert("Vault not under auction");
-        witch.cancel(VAULT_ID_2);
     }
 
     function testCancelUndercollateralisedAuction() public {
@@ -470,14 +482,39 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         assertEq(art, 0);
         assertEq(ink, 0);
     }
+
+    function testPayBaseNotEnoughBought() public {
+        // Bot tries to get all collateral but auction just started
+        uint128 minInkOut = 50 ether;
+        uint128 maxBaseIn = 50_000e6;
+
+        // make fyToken 1:1 with base to make things simpler
+        cauldron.debtFromBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+        cauldron.debtToBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+
+        vm.expectRevert("Not enough bought");
+        witch.payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
+    }
+
+    function testPayBaseLeavesDust() public {
+        // Bot tries to pay an amount that'd leave dust
+        uint128 maxBaseIn = auction.art - 4999e6;
+        uint128 minInkOut = uint128(witch.calcPayout(VAULT_ID, maxBaseIn));
+
+        cauldron.slurp.mock(VAULT_ID, minInkOut, maxBaseIn, balances);
+
+        // make fyToken 1:1 with base to make things simpler
+        cauldron.debtFromBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+        cauldron.debtToBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+
+        vm.expectRevert("Leaves dust");
+        witch.payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
+    }
 }
 
 //   WithAuction
 
 //     payBase -> WithPartialAuction
-//      - "Vault not under auction"
-//      - "Not enough bought"
-//      - "Leaves dust"
 //      - Storage changes
 //      - Cauldron accounting
 //      - Token transfers
