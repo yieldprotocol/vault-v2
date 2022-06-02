@@ -1,0 +1,8 @@
+@yield-protocol/utils-v2/=lib/yield-utils-v2/
+@yield-protocol/vault-interfaces/=lib/vault-interfaces/
+@yield-protocol/yieldspace-interfaces/=lib/yieldspace-interfaces/
+@yield-protocol/yieldspace-v2/=lib/yieldspace-v2/
+forge-std/=lib/forge-std/
+uniswapv3-oracle/=lib/Yield-UniswapOracleV3/
+erc3156/=lib/ERC3156/
+dss-interfaces/=lib/dss-interfaces/
