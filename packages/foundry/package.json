@@ -1,6 +1,12 @@
 {
+  "name": "@yield-protocol/vault-v2",
+  "version": "0.16.6",
   "description": "Yield Collateralized Debt Engine v2",
   "author": "Yield Inc.",
+  "scripts": {
+    "forge:build": "forge build",
+    "forge:test": "forge test"
+  },
   "repository": {
     "url": "git+https://github.com/yieldprotocol/vault-v2.git",
     "type": "git"
@@ -9,7 +15,5 @@
     "url": "https://github.com/yieldprotocol/vault-v2/issues"
   },
   "license": "GPL-3.0-or-later",
-  "homepage": "https://github.com/yieldprotocol/vault-v2#readme",
-  "private": "true",
-  "workspaces": ["packages/*"]
+  "homepage": "https://github.com/yieldprotocol/vault-v2#readme"
 }

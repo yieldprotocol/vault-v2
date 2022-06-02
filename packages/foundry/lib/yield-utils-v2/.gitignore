@@ -16,7 +16,6 @@ node_modules/
 abi/
 output/
 typechain/
-typechain-old/
 deployments/
 
 # Secret files
@@ -43,12 +42,3 @@ crytic-export/
 # Typescript
 dist/
 
-# VsCodeCounter
-.VsCodeCounter/
-
-# Foundry
-out/
-
-# Import file (hardhat)
-
-packages/hardhat/contracts/Importer.sol
