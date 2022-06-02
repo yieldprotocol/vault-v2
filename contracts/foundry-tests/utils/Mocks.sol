@@ -154,6 +154,13 @@ library Mocks  {
             abi.encodeWithSelector(f.selector, param1)
         );
     }
+
+    function verify(function (bytes12, address) external returns(DataTypes.Vault memory) f, bytes12 param1, address param2) internal {
+        vm.expectCall(
+            f.address,
+            abi.encodeWithSelector(f.selector, param1, param2)
+        );
+    }
 }
 
 contract StrictMock {

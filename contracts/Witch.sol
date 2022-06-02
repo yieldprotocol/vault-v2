@@ -86,11 +86,7 @@ contract Witch is AccessControl {
         require(proportion <= 1e18, "Proportion above 100%");
         require(initialOffer == 0 || initialOffer >= 0.01e18, "InitialOffer below 1%");
         require(proportion >= 0.01e18, "Proportion below 1%");
-        lines[ilkId][baseId] = Line({
-            duration: duration,
-            proportion: proportion,
-            initialOffer: initialOffer
-        });
+        lines[ilkId][baseId] = Line({duration: duration, proportion: proportion, initialOffer: initialOffer});
         emit LineSet(ilkId, baseId, duration, proportion, initialOffer);
     }
 
@@ -123,7 +119,7 @@ contract Witch is AccessControl {
 
     /// @dev Put an undercollateralized vault up for liquidation
     /// @param vaultId Id of vault to liquidate
-    function auction(bytes12 vaultId) external {
+    function auction(bytes12 vaultId) external returns (Auction memory auction_) {
         require(auctions[vaultId].start == 0, "Vault already under auction");
         require(cauldron.level(vaultId) < 0, "Not undercollateralized");
 
@@ -136,27 +132,40 @@ contract Witch is AccessControl {
         // This avoids the scenario where some vaults might be too large to be auctioned.
         Limits memory limits_ = limits[vault.ilkId][series.baseId];
         require(limits_.sum <= limits_.max * (10**limits_.dec), "Collateral limit reached");
-        limits_.sum += balances.ink;
+
+        auction_ = _auction(vault, series, balances, limits_);
+
+        limits_.sum += auction_.ink;
         limits[vault.ilkId][series.baseId] = limits_;
 
-        // We store the proportion of the vault to auction, which is the whole vault if the debt would be below dust.
-        Line storage line = lines[vault.ilkId][series.baseId];
-        uint128 art = uint256(balances.art).wmul(line.proportion).u128();
-        if (art < limits_.dust) art = balances.art;
-        uint128 ink = (art == balances.art) ? balances.ink : uint256(balances.ink).wmul(line.proportion).u128();
-
-        auctions[vaultId] = Auction({
-            owner: vault.owner,
-            start: uint32(block.timestamp), // Overflow is fine
-            baseId: series.baseId,
-            art: art,
-            ink: ink
-        });
+        auctions[vaultId] = auction_;
 
         // The Witch is now in control of the vault under auction
         // TODO: Consider using `stir` to take only the part of the vault being auctioned.
         cauldron.give(vaultId, address(this));
         emit Auctioned(vaultId, uint32(block.timestamp));
+    }
+
+    function _auction(
+        DataTypes.Vault memory vault,
+        DataTypes.Series memory series,
+        DataTypes.Balances memory balances,
+        Limits memory limits_
+    ) internal view returns (Auction memory) {
+        // We store the proportion of the vault to auction, which is the whole vault if the debt would be below dust.
+        Line storage line = lines[vault.ilkId][series.baseId];
+        uint128 art = uint256(balances.art).wmul(line.proportion).u128();
+        if (art < limits_.dust * (10**limits_.dec)) art = balances.art;
+        uint128 ink = (art == balances.art) ? balances.ink : uint256(balances.ink).wmul(line.proportion).u128();
+
+        return
+            Auction({
+                owner: vault.owner,
+                start: uint32(block.timestamp), // Overflow is fine
+                baseId: series.baseId,
+                art: art,
+                ink: ink
+            });
     }
 
     /// @dev Cancel an auction for a vault that isn't undercollateralized anymore
@@ -191,11 +200,8 @@ contract Witch is AccessControl {
         uint128 minInkOut,
         uint128 maxBaseIn
     ) external returns (uint256 inkOut, uint256 baseIn) {
-        Auction storage auction_ = auctions[vaultId];
-        require(
-            auction_.start > 0,
-            "Vault not under auction"
-        );
+        Auction memory auction_ = auctions[vaultId];
+        require(auction_.start > 0, "Vault not under auction");
 
         DataTypes.Vault memory vault = cauldron.vaults(vaultId);
         DataTypes.Series memory series = cauldron.series(vault.seriesId);
@@ -245,11 +251,8 @@ contract Witch is AccessControl {
         uint128 minInkOut,
         uint128 maxArtIn
     ) external returns (uint256 inkOut, uint256 artIn) {
-        Auction storage auction_ = auctions[vaultId];
-        require(
-            auction_.start > 0,
-            "Vault not under auction"
-        );
+        Auction memory auction_ = auctions[vaultId];
+        require(auction_.start > 0, "Vault not under auction");
 
         DataTypes.Vault memory vault = cauldron.vaults(vaultId);
 
@@ -281,7 +284,7 @@ contract Witch is AccessControl {
         emit Bought(vaultId, to, inkOut, artIn);
     }
 
-/*
+    /*
 
      x x x
    x      x    Hi Fren!
@@ -325,12 +328,29 @@ contract Witch is AccessControl {
 
 
 */
+    /// @dev quoutes hoy much ink a liquidator is expected to get if it repays an `artIn` amount
+    /// @param vaultId The vault to get a quote for
+    /// @param artIn How much of the vault debt will be paid. 0 means all
+    /// @return inkOut How much collateral the liquidator is expected to get
+    function calcPayout(bytes12 vaultId, uint256 artIn) external view returns (uint256 inkOut) {
+        Auction memory auction_ = auctions[vaultId];
+        DataTypes.Vault memory vault = cauldron.vaults(vaultId);
+
+        if (auction_.ink == 0) {
+            DataTypes.Series memory series = cauldron.series(vault.seriesId);
+            DataTypes.Balances memory balances = cauldron.balances(vaultId);
+            Limits memory limits_ = limits[vault.ilkId][series.baseId];
+            auction_ = _auction(vault, series, balances, limits_);
+        }
+
+        inkOut = _calcPayout(vault.ilkId, auction_.baseId, auction_, artIn);
+    }
 
     /// @notice Return how much collateral should be given out.
     function _calcPayout(
         bytes6 ilkId,
         bytes6 baseId,
-        Auction storage auction_,
+        Auction memory auction_,
         uint256 artIn
     ) internal view returns (uint256 inkOut) {
         // Calculate how much collateral to give for paying a certain amount of debt, at a certain time, for a certain vault.
@@ -353,7 +373,7 @@ contract Witch is AccessControl {
         } else {
             proportionNow = uint256(initialProportion) + uint256(1e18 - initialProportion).wmul(elapsed.wdiv(duration));
         }
-        
+
         uint256 inkAtEnd = uint256(artIn).wdiv(auction_.art).wmul(auction_.ink);
         inkOut = inkAtEnd.wmul(proportionNow);
     }
@@ -361,18 +381,15 @@ contract Witch is AccessControl {
     /// @notice Update accounting on the Witch and on the Cauldron. Delete the auction and give back the vault if finished.
     /// This function doesn't verify the vaultId matches the vault and auction passed. Check before calling.
     function _updateAccounting(
-        bytes12 vaultId, 
+        bytes12 vaultId,
         bytes6 ilkId,
         bytes6 baseId,
-        Auction storage auction_,
+        Auction memory auction_,
         uint256 inkOut,
         uint256 artIn
     ) internal {
         // Duplicate check, but guarantees data integrity
-        require(
-            auction_.start > 0,
-            "Vault not under auction"
-        );
+        require(auction_.start > 0, "Vault not under auction");
 
         // Update concurrent collateral under auction
         Limits memory limits_ = limits[ilkId][baseId];

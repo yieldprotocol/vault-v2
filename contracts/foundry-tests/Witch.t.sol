@@ -19,7 +19,9 @@ abstract contract WitchStateZero is Test, TestConstants {
     event Point(bytes32 indexed param, address indexed value);
 
     bytes12 internal constant VAULT_ID = "vault";
-    bytes6 internal constant ILK_ID = USDC;
+    bytes6 internal constant ILK_ID = ETH;
+    bytes6 internal constant BASE_ID = USDC;
+    bytes6 internal constant SERIES_ID = FYETH2206;
     uint32 internal constant AUCTION_DURATION = 1 hours;
 
     // Utilities internal utils;
@@ -128,21 +130,18 @@ contract WitchStateZeroTest is WitchStateZero {
     }
 
     function testSetLine() public {
-        bytes6 ilkId = "ilk";
-        bytes6 baseId = "base";
-        uint32 duration = 10 minutes;
         uint64 proportion = 0.5e18;
         uint64 initialOffer = 0.75e18;
 
         vm.expectEmit(true, true, false, true);
-        emit LineSet(ilkId, baseId, duration, proportion, initialOffer);
+        emit LineSet(ILK_ID, BASE_ID, AUCTION_DURATION, proportion, initialOffer);
 
         vm.prank(ada);
-        witch.setLine(ilkId, baseId, duration, proportion, initialOffer);
+        witch.setLine(ILK_ID, BASE_ID, AUCTION_DURATION, proportion, initialOffer);
 
-        (uint32 _duration, uint64 _proportion, uint64 _initialOffer) = witch.lines(ilkId, baseId);
+        (uint32 _duration, uint64 _proportion, uint64 _initialOffer) = witch.lines(ILK_ID, BASE_ID);
 
-        assertEq(_duration, duration);
+        assertEq(_duration, AUCTION_DURATION);
         assertEq(_proportion, proportion);
         assertEq(_initialOffer, initialOffer);
     }
@@ -154,19 +153,17 @@ contract WitchStateZeroTest is WitchStateZero {
     }
 
     function testSetLimit() public {
-        bytes6 ilkId = "ilk";
-        bytes6 baseId = "base";
-        uint96 max = 50e6;
-        uint24 dust = 1e6;
-        uint8 dec = 12;
+        uint96 max = 1;
+        uint24 dust = 2;
+        uint8 dec = 3;
 
         vm.expectEmit(true, true, false, true);
-        emit LimitSet(ilkId, baseId, max, dust, dec);
+        emit LimitSet(ILK_ID, BASE_ID, max, dust, dec);
 
         vm.prank(ada);
-        witch.setLimit(ilkId, baseId, max, dust, dec);
+        witch.setLimit(ILK_ID, BASE_ID, max, dust, dec);
 
-        (uint96 _max, uint24 _dust, uint8 _dec, uint128 _sum) = witch.limits(ilkId, baseId);
+        (uint96 _max, uint24 _dust, uint8 _dec, uint128 _sum) = witch.limits(ILK_ID, BASE_ID);
 
         assertEq(_max, max);
         assertEq(_dust, dust);
@@ -177,19 +174,211 @@ contract WitchStateZeroTest is WitchStateZero {
     }
 }
 
-// ZeroState
+abstract contract WitchWithMetadata is WitchStateZero {
+    using Mocks for *;
 
-//   _calcPayout
-//    - elapsed < duration
-//    - elapsed >= duration
-//    - fuzz initialProportion
-//    - fuzz elapsed
+    DataTypes.Vault vault;
+    DataTypes.Series series;
+    DataTypes.Balances balances;
+
+    uint96 max = 100e12;
+    uint24 dust = 5000;
+    uint8 dec = 6;
+
+    uint64 proportion = 0.5e18;
+    uint64 initialOffer = 0.714e18;
+
+    function setUp() public virtual override {
+        super.setUp();
+
+        vault = DataTypes.Vault({owner: bob, seriesId: SERIES_ID, ilkId: ILK_ID});
+
+        series = DataTypes.Series({
+            fyToken: IFYToken(address(0xf140)),
+            baseId: BASE_ID,
+            maturity: uint32(block.timestamp + 30 days)
+        });
+
+        balances = DataTypes.Balances({art: 100_000e6, ink: 100 ether});
+
+        cauldron.vaults.mock(VAULT_ID, vault);
+        cauldron.series.mock(SERIES_ID, series);
+        cauldron.balances.mock(VAULT_ID, balances);
+
+        vm.startPrank(ada);
+        witch.setLimit(ILK_ID, BASE_ID, max, dust, dec);
+        witch.setLine(ILK_ID, BASE_ID, AUCTION_DURATION, proportion, initialOffer);
+        vm.stopPrank();
+    }
+}
+
+contract WitchWithMetadataTest is WitchWithMetadata {
+    using Mocks for *;
+
+    function testCalcPayout() public {
+        // 100 * 0.5 * 0.714 = 35.7
+        // (ink * proportion * initialOffer)
+        assertEq(witch.calcPayout(VAULT_ID, 50_000e6), 35.7 ether);
+
+        skip(5 minutes);
+        // Nothing changes as auction was never started
+        assertEq(witch.calcPayout(VAULT_ID, 50_000e6), 35.7 ether);
+    }
+
+    function testCalcPayoutFuzzInitialOffer(uint64 io) public {
+        vm.assume(io <= 1e18 && io >= 0.01e18);
+
+        vm.prank(ada);
+        witch.setLine(ILK_ID, BASE_ID, AUCTION_DURATION, proportion, io);
+
+        uint256 inkOut = witch.calcPayout(VAULT_ID, 50_000e6);
+
+        assertLe(inkOut, 50 ether);
+        assertGe(inkOut, 0.5 ether);
+    }
+
+    function testCalcPayoutFuzzElapsed(uint16 elapsed) public {
+        skip(elapsed);
+
+        uint256 inkOut = witch.calcPayout(VAULT_ID, 50_000e6);
+
+        assertLe(inkOut, 50 ether);
+    }
+
+    function testVaultNotUndercollateralised() public {
+        cauldron.level.mock(VAULT_ID, 0);
+        vm.expectRevert("Not undercollateralized");
+        witch.auction(VAULT_ID);
+    }
+
+    function testCanAuctionVault() public {
+        cauldron.level.mock(VAULT_ID, -1);
+        cauldron.give.mock(VAULT_ID, address(witch), vault);
+        cauldron.give.verify(VAULT_ID, address(witch));
+
+        vm.expectEmit(true, true, true, true);
+        emit Auctioned(VAULT_ID, uint32(block.timestamp));
+
+        Witch.Auction memory auction = witch.auction(VAULT_ID);
+
+        assertEq(auction.owner, vault.owner);
+        assertEq(auction.start, uint32(block.timestamp));
+        assertEq(auction.baseId, series.baseId);
+        // 100,000 / 2
+        assertEq(auction.art, 50_000e6);
+        // 100 * 0.5
+        assertEq(auction.ink, 50 ether);
+
+        (address owner, uint32 start, bytes6 baseId, uint128 ink, uint128 art) = witch.auctions(VAULT_ID);
+        assertEq(owner, auction.owner);
+        assertEq(start, auction.start);
+        assertEq(baseId, auction.baseId);
+        assertEq(art, auction.art);
+        assertEq(ink, auction.ink);
+    }
+}
+
+contract WitchWithAuction is WitchWithMetadata {
+    using Mocks for *;
+
+    bytes12 internal constant VAULT_ID_2 = "vault2";
+
+    function setUp() public virtual override {
+        super.setUp();
+
+        cauldron.level.mock(VAULT_ID, -1);
+        cauldron.give.mock(VAULT_ID, address(witch), vault);
+        witch.auction(VAULT_ID);
+    }
+
+    function testCalcPayoutWithAuction() public {
+        // 100 * 0.5 * 0.714 = 35.7
+        // (ink * proportion * initialOffer)
+        assertEq(witch.calcPayout(VAULT_ID, 50_000e6), 35.7 ether);
+
+        skip(5 minutes);
+        // 100 * 0.5 * (0.714 + (1 - 0.714) * 300/3600) = 36.8916666667
+        // (ink * proportion * (initialOffer + (1 - initialOffer) * timeElapsed)
+        assertEq(witch.calcPayout(VAULT_ID, 50_000e6), 36.89166666666666665 ether);
+
+        skip(25 minutes);
+        // 100 * 0.5 * (0.714 + (1 - 0.714) * 1800/3600) = 42.85
+        // (ink * proportion * (initialOffer + (1 - initialOffer) * timeElapsed)
+        assertEq(witch.calcPayout(VAULT_ID, 50_000e6), 42.85 ether);
+
+        // Right at auction end
+        skip(30 minutes);
+        // 100 * 0.5 = 50
+        // (ink * proportion)
+        assertEq(witch.calcPayout(VAULT_ID, 50_000e6), 50 ether);
+
+        // After the auction ends the value is fixed
+        skip(1 hours);
+        assertEq(witch.calcPayout(VAULT_ID, 50_000e6), 50 ether);
+    }
+
+    function testAuctionAlreadyExists() public {
+        vm.expectRevert("Vault already under auction");
+        witch.auction(VAULT_ID);
+    }
+
+    function testCollateralLimits() public {
+        // Given
+        (, , , uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 50 ether);
+
+        _stubVault(VAULT_ID_2, 101 ether, 100_000e6, -1);
+
+        // When
+        witch.auction(VAULT_ID_2);
+
+        // Then
+        (, , , sum) = witch.limits(ILK_ID, BASE_ID);
+        // Max is 100, but the position could be auctioned due to the soft limit
+        // Next position will fail
+        assertEq(sum, 100.5 ether);
+
+        // Given
+        bytes12 otherVaultId = "other vault";
+        _stubVault(otherVaultId, 10 ether, 20_000e6, -1);
+
+        // Expect
+        vm.expectRevert("Collateral limit reached");
+
+        // When
+        witch.auction(otherVaultId);
+    }
+
+    function testDustLimit() public {
+        // Half of this vault would be less than the min of 5k
+        _stubVault(VAULT_ID_2, 5 ether, 9999e6, -1);
+
+        Witch.Auction memory auction = witch.auction(VAULT_ID_2);
+
+        assertEq(auction.owner, vault.owner);
+        assertEq(auction.start, uint32(block.timestamp));
+        assertEq(auction.baseId, series.baseId);
+        // 100% of the vault was put for liquidation
+        assertEq(auction.art, 9999e6);
+        assertEq(auction.ink, 5 ether);
+    }
+
+    function _stubVault(
+        bytes12 vaultId,
+        uint128 ink,
+        uint128 art,
+        int256 level
+    ) internal {
+        DataTypes.Vault memory v = DataTypes.Vault({owner: bob, seriesId: SERIES_ID, ilkId: ILK_ID});
+        DataTypes.Balances memory b = DataTypes.Balances(art, ink);
+        cauldron.vaults.mock(vaultId, v);
+        cauldron.balances.mock(vaultId, b);
+        cauldron.level.mock(vaultId, level);
+        cauldron.give.mock(vaultId, address(witch), v);
+    }
+}
+
 //   auction -> WithAuction (two auctions)
-//    - "Vault already under auction"
-//    - "Not undercollateralized"
-//    - "Collateral limit reached"
-//    - Soft collateral limit
-//    - Auction whole vault if dust limit hit
 //    - Take vault ownership
 //    - Storage changes
 //    - Auctioned
