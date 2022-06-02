@@ -1,17 +1,17 @@
 [submodule "packages/foundry/lib/vault-interfaces"]
-	path = lib/vault-interfaces
+	path = packages/foundry/lib/vault-interfaces
 	url = https://github.com/yieldprotocol/vault-interfaces
 [submodule "packages/foundry/lib/yield-utils-v2"]
-	path = lib/yield-utils-v2
+	path = packages/foundry/lib/yield-utils-v2
 	url = https://github.com/yieldprotocol/yield-utils-v2
 [submodule "packages/foundry/lib/yieldspace-v2"]
-	path = lib/yieldspace-v2
+	path = packages/foundry/lib/yieldspace-v2
 	url = https://github.com/yieldprotocol/yieldspace-v2
 [submodule "packages/foundry/lib/Yield-UniswapOracleV3"]
 	path = packages/foundry/lib/Yield-UniswapOracleV3
 	url = https://github.com/iamsahu/Yield-UniswapOracleV3
-[submodule "lib/Yield-UniswapOracleV3"]
-	path = lib/Yield-UniswapOracleV3
+[submodule "packages/foundry/lib/Yield-UniswapOracleV3"]
+	path = packages/foundry/lib/Yield-UniswapOracleV3
 	url = https://github.com/iamsahu/Yield-UniswapOracleV3
 [submodule "packages/foundry/lib/ERC3156"]
 	path = packages/foundry/lib/ERC3156
@@ -22,3 +22,6 @@
 [submodule "packages/foundry/lib/dss-interfaces"]
 	path = packages/foundry/lib/dss-interfaces
 	url = https://github.com/makerdao/dss-interfaces
+[submodule "packages/foundry/lib/yieldspace-v2.git"]
+	path = packages/foundry/lib/yieldspace-v2.git
+	url = https://github.com/yieldprotocol/yieldspace-v2.git
