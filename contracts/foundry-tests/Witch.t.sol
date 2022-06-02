@@ -8,7 +8,7 @@ import "./utils/Mocks.sol";
 
 import "../Witch.sol";
 
-abstract contract StateZero is Test, TestConstants {
+abstract contract WitchStateZero is Test, TestConstants {
     using Mocks for *;
 
     event Auctioned(bytes12 indexed vaultId, uint256 indexed start);
@@ -47,6 +47,8 @@ abstract contract StateZero is Test, TestConstants {
         vm.startPrank(ada);
         witch = new Witch(cauldron, ladle);
         witch.grantRole(Witch.point.selector, ada);
+        witch.grantRole(Witch.setLine.selector, ada);
+        witch.grantRole(Witch.setLimit.selector, ada);
         vm.stopPrank();
 
         vm.label(ada, "ada");
@@ -72,25 +74,20 @@ abstract contract StateZero is Test, TestConstants {
     } */
 }
 
-contract StateZeroTest is StateZero {
+contract WitchStateZeroTest is WitchStateZero {
     function testPointRequiresAuth() public {
-        // console2.log("Cannot point to new contract without permission");
-
         vm.prank(bob);
         vm.expectRevert("Access denied");
         witch.point("ladle", bad);
     }
 
     function testPointRequiresLadle() public {
-        // console2.log("Cannot point to new contract other than a Ladle");
         vm.prank(ada);
         vm.expectRevert("Unrecognized");
         witch.point("cauldron", bad);
     }
 
     function testPoint() public {
-        // console2.log("Points to a new Ladle");
-
         vm.expectEmit(true, true, false, true);
         emit Point("ladle", cool);
 
@@ -99,26 +96,89 @@ contract StateZeroTest is StateZero {
 
         assertEq(address(witch.ladle()), cool);
     }
+
+    function testSetLineRequiresAuth() public {
+        vm.prank(bob);
+        vm.expectRevert("Access denied");
+        witch.setLine("", "", 0, 0, 0);
+    }
+
+    function testSetLineRequiresInitialOfferTooHigh() public {
+        vm.prank(ada);
+        vm.expectRevert("InitialOffer above 100%");
+        witch.setLine("", "", 0, 0, 1e18 + 1);
+    }
+
+    function testSetLineRequiresProportionTooHigh() public {
+        vm.prank(ada);
+        vm.expectRevert("Proportion above 100%");
+        witch.setLine("", "", 0, 1e18 + 1, 0);
+    }
+
+    function testSetLineRequiresInitialOfferTooLow() public {
+        vm.prank(ada);
+        vm.expectRevert("InitialOffer below 1%");
+        witch.setLine("", "", 0, 0, 0.01e18 - 1);
+    }
+
+    function testSetLineRequiresProportionTooLow() public {
+        vm.prank(ada);
+        vm.expectRevert("Proportion below 1%");
+        witch.setLine("", "", 0, 0.01e18 - 1, 0);
+    }
+
+    function testSetLine() public {
+        bytes6 ilkId = "ilk";
+        bytes6 baseId = "base";
+        uint32 duration = 10 minutes;
+        uint64 proportion = 0.5e18;
+        uint64 initialOffer = 0.75e18;
+
+        vm.expectEmit(true, true, false, true);
+        emit LineSet(ilkId, baseId, duration, proportion, initialOffer);
+
+        vm.prank(ada);
+        witch.setLine(ilkId, baseId, duration, proportion, initialOffer);
+
+        (uint32 _duration, uint64 _proportion, uint64 _initialOffer) = witch.lines(ilkId, baseId);
+
+        assertEq(_duration, duration);
+        assertEq(_proportion, proportion);
+        assertEq(_initialOffer, initialOffer);
+    }
+
+    function testSetLimitRequiresAuth() public {
+        vm.prank(bob);
+        vm.expectRevert("Access denied");
+        witch.setLimit("", "", 0, 0, 0);
+    }
+
+    function testSetLimit() public {
+        bytes6 ilkId = "ilk";
+        bytes6 baseId = "base";
+        uint96 max = 50e6;
+        uint24 dust = 1e6;
+        uint8 dec = 12;
+
+        vm.expectEmit(true, true, false, true);
+        emit LimitSet(ilkId, baseId, max, dust, dec);
+
+        vm.prank(ada);
+        witch.setLimit(ilkId, baseId, max, dust, dec);
+
+        (uint96 _max, uint24 _dust, uint8 _dec, uint128 _sum) = witch.limits(ilkId, baseId);
+
+        assertEq(_max, max);
+        assertEq(_dust, dust);
+        assertEq(_dec, dec);
+        assertEq(_sum, 0);
+
+        // TOOD check that sum is kept after updates
+    }
 }
 
 // ZeroState
-//   point
-//    - auth
-//    - "Unrecognized"
-//    - Storage changes
-//    - Point
-//   setLine
-//    - auth
-//    - "InitialOffer above 100%"
-//    - "Proportion above 100%"
-//    - "InitialOffer below 1%"
-//    - "Proportion below 1%"
-//    - Storage changes
-//    - LineSet
-//   setLimit
-//    - auth
-//    - Storage changes
-//    - LimitSet
+
 //   _calcPayout
 //    - elapsed < duration
 //    - elapsed >= duration
