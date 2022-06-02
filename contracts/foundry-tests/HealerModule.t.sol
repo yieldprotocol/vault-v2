@@ -6,7 +6,7 @@ import "@yield-protocol/vault-interfaces/src/ILadle.sol";
 import "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
 import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
 import "../mocks/WETH9Mock.sol";
-import "../other/backd/HealerModule.sol";
+import "../modules/HealerModule.sol";
 import "./utils/Test.sol";
 
 interface ILadleCustom {

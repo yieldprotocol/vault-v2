@@ -5,7 +5,7 @@ import "@yield-protocol/vault-interfaces/src/ICauldron.sol";
 import "@yield-protocol/vault-interfaces/src/ILadle.sol";
 import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256I128.sol";
-import "../../LadleStorage.sol";
+import "../LadleStorage.sol";
 
 ///@title Ladle module that allows any vault to be poured to as long as it adds collateral or repays debt
 contract HealerModule is LadleStorage {
@@ -19,10 +19,8 @@ contract HealerModule is LadleStorage {
     {
         require (ink >= 0, "Only add collateral");
         require (art <= 0, "Only repay debt");
-        
+        (, DataTypes.Vault memory vault) = getVault(vaultId);        
         cauldron.pour(vaultId, ink, art);
-
-        (,DataTypes.Vault memory vault) = getVault(vaultId);
 
         // Manage collateral
         if (ink != 0) {
