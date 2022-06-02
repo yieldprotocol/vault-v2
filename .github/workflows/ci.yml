@@ -147,4 +147,4 @@ jobs:
         run: forge build     
 
       - name: Run tests
-        run: forge test --fork-url ${{ secrets.ALCHEMY_MAINNET_RPC }} 
+        run: forge test --fork-url ${{ secrets.ALCHEMY_MAINNET_RPC }}
