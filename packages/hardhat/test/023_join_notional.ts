@@ -4,9 +4,9 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 
 const { WAD, MAX256 } = constants
 
-import NotionalJoinArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/other/notional/NotionalJoin.sol/NotionalJoin.json'
-import ERC20MockArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
-import FCashMockArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/other/notional/FCashMock.sol/FCashMock.json'
+import NotionalJoinArtifact from '../artifacts/foundry-contracts/other/notional/NotionalJoin.sol/NotionalJoin.json'
+import ERC20MockArtifact from '../artifacts/foundry-contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
+import FCashMockArtifact from '../artifacts/foundry-contracts/other/notional/FCashMock.sol/FCashMock.json'
 
 import { NotionalJoin } from '../typechain/NotionalJoin'
 import { ERC20Mock } from '../typechain/ERC20Mock'

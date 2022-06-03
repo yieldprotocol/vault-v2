@@ -1,21 +1,21 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { constants, id } from '@yield-protocol/utils-v2'
 import { ethers, waffle } from 'hardhat'
-import LadleArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/other/contango/ContangoLadle.sol/ContangoLadle.json'
-import CauldronArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/Cauldron.sol/Cauldron.json'
-import WitchArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/other/contango/ContangoWitch.sol/ContangoWitch.json'
-import DAIMockArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/mocks/DAIMock.sol/DAIMock.json'
-import ERC20MockArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
-import JoinFactoryArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/deprecated/JoinFactoryMock.sol/JoinFactoryMock.json'
-import ChainlinkAggregatorV3MockArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol/ChainlinkAggregatorV3Mock.json'
-import CTokenChiMockArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/mocks/oracles/compound/CTokenChiMock.sol/CTokenChiMock.json'
-import CTokenRateMockArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/mocks/oracles/compound/CTokenRateMock.sol/CTokenRateMock.json'
-import PoolFactoryMockArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/deprecated/PoolFactoryMock.sol/PoolFactoryMock.json'
-import USDCMockArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/mocks/USDCMock.sol/USDCMock.json'
-import WETH9MockArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/mocks/WETH9Mock.sol/WETH9Mock.json'
-import ChainlinkMultiOracleArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/oracles/chainlink/ChainlinkMultiOracle.sol/ChainlinkMultiOracle.json'
-import CompoundMultiOracleArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/oracles/compound/CompoundMultiOracle.sol/CompoundMultiOracle.json'
-import WandArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/deprecated/Wand.sol/Wand.json'
+import LadleArtifact from '../../artifacts/foundry-contracts/other/contango/ContangoLadle.sol/ContangoLadle.json'
+import CauldronArtifact from '../../artifacts/foundry-contracts/Cauldron.sol/Cauldron.json'
+import WitchArtifact from '../../artifacts/foundry-contracts/other/contango/ContangoWitch.sol/ContangoWitch.json'
+import DAIMockArtifact from '../../artifacts/foundry-contracts/mocks/DAIMock.sol/DAIMock.json'
+import ERC20MockArtifact from '../../artifacts/foundry-contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
+import JoinFactoryArtifact from '../../artifacts/foundry-contracts/deprecated/JoinFactoryMock.sol/JoinFactoryMock.json'
+import ChainlinkAggregatorV3MockArtifact from '../../artifacts/foundry-contracts/mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol/ChainlinkAggregatorV3Mock.json'
+import CTokenChiMockArtifact from '../../artifacts/foundry-contracts/mocks/oracles/compound/CTokenChiMock.sol/CTokenChiMock.json'
+import CTokenRateMockArtifact from '../../artifacts/foundry-contracts/mocks/oracles/compound/CTokenRateMock.sol/CTokenRateMock.json'
+import PoolFactoryMockArtifact from '../../artifacts/foundry-contracts/deprecated/PoolFactoryMock.sol/PoolFactoryMock.json'
+import USDCMockArtifact from '../../artifacts/foundry-contracts/mocks/USDCMock.sol/USDCMock.json'
+import WETH9MockArtifact from '../../artifacts/foundry-contracts/mocks/WETH9Mock.sol/WETH9Mock.json'
+import ChainlinkMultiOracleArtifact from '../../artifacts/foundry-contracts/oracles/chainlink/ChainlinkMultiOracle.sol/ChainlinkMultiOracle.json'
+import CompoundMultiOracleArtifact from '../../artifacts/foundry-contracts/oracles/compound/CompoundMultiOracle.sol/CompoundMultiOracle.json'
+import WandArtifact from '../../artifacts/foundry-contracts/deprecated/Wand.sol/Wand.json'
 import { CHI, DAI, ETH, RATE, USDC } from '../../src/constants'
 import { Cauldron, ContangoLadle, ContangoWitch } from '../../typechain'
 import { ChainlinkMultiOracle } from '../../typechain/ChainlinkMultiOracle'
@@ -35,15 +35,7 @@ import { USDCMock } from '../../typechain/USDCMock'
 import { Wand } from '../../typechain/Wand'
 import { WETH9Mock } from '../../typechain/WETH9Mock'
 
-
-
 const { WAD, THREE_MONTHS } = constants
-
-
-
-
-
-
 
 const { deployContract } = waffle
 
@@ -238,9 +230,9 @@ export class YieldEnvironment {
     for (let assetId of assetIds) {
       const symbol = Buffer.from(assetId.slice(2), 'hex').toString('utf8')
       let asset: ERC20Mock
-      if (assetId === DAI) asset = (dai as unknown) as ERC20Mock
-      else if (assetId === USDC) asset = (usdc as unknown) as ERC20Mock
-      else if (assetId === ETH) asset = (weth as unknown) as ERC20Mock
+      if (assetId === DAI) asset = dai as unknown as ERC20Mock
+      else if (assetId === USDC) asset = usdc as unknown as ERC20Mock
+      else if (assetId === ETH) asset = weth as unknown as ERC20Mock
       else asset = (await deployContract(owner, ERC20MockArtifact, [assetId, symbol])) as ERC20Mock
 
       assets.set(assetId, asset)
@@ -278,7 +270,7 @@ export class YieldEnvironment {
 
     // ==== Libraries ====
     const SafeERC20NamerFactory = await ethers.getContractFactory('SafeERC20Namer')
-    const safeERC20NamerLibrary = ((await SafeERC20NamerFactory.deploy()) as unknown) as SafeERC20Namer
+    const safeERC20NamerLibrary = (await SafeERC20NamerFactory.deploy()) as unknown as SafeERC20Namer
     await safeERC20NamerLibrary.deployed()
 
     // ==== Protocol ====
@@ -308,8 +300,8 @@ export class YieldEnvironment {
 
     const chiRateOracle = (await deployContract(owner, CompoundMultiOracleArtifact, [])) as CompoundMultiOracle
     const spotOracle = (await deployContract(owner, ChainlinkMultiOracleArtifact, [])) as ChainlinkMultiOracle
-    oracles.set(RATE, (chiRateOracle as unknown) as OracleMock)
-    oracles.set(CHI, (chiRateOracle as unknown) as OracleMock)
+    oracles.set(RATE, chiRateOracle as unknown as OracleMock)
+    oracles.set(CHI, chiRateOracle as unknown as OracleMock)
 
     // ==== Orchestration ====
     await this.cauldronLadleAuth(cauldron, ladle.address)
@@ -364,7 +356,7 @@ export class YieldEnvironment {
       await spotOracle.setSource(baseId, base.address, ilkId, ilk.address, spotSource.address)
       await witch.setIlk(ilkId, 4 * 60 * 60, WAD.div(2), 1000000, 0, await ilk.decimals())
       await wand.makeIlk(baseId, ilkId, spotOracle.address, ratio, 1000000, 1, await base.decimals())
-      oracles.set(ilkId, (spotOracle as unknown) as OracleMock)
+      oracles.set(ilkId, spotOracle as unknown as OracleMock)
     }
 
     // ==== Add series and pools ====
@@ -378,7 +370,9 @@ export class YieldEnvironment {
       await wand.addSeries(seriesId, baseId, maturity, assetIds, seriesId, seriesId)
       const fyToken = (await ethers.getContractAt(
         'FYToken',
-        (await cauldron.series(seriesId)).fyToken,
+        (
+          await cauldron.series(seriesId)
+        ).fyToken,
         owner
       )) as FYToken
       const pool = (await ethers.getContractAt('PoolMock', await ladle.pools(seriesId), owner)) as PoolMock

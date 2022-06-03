@@ -45,8 +45,11 @@ module.exports = {
       optimizer: {
         enabled: true,
         runs: 1000,
-      }
-    }
+      },
+    },
+  },
+  paths: {
+    sources: './foundry-contracts/',
   },
   typechain: {
     outDir: 'typechain',

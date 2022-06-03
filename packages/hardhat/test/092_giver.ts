@@ -3,8 +3,8 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { constants, id } from '@yield-protocol/utils-v2'
 const { WAD } = constants
 
-import FlashBorrowerArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/mocks/FlashBorrower.sol/FlashBorrower.json'
-import GiverArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/utils/Giver.sol/Giver.json'
+import FlashBorrowerArtifact from '../artifacts/foundry-contracts/mocks/FlashBorrower.sol/FlashBorrower.json'
+import GiverArtifact from '../artifacts/foundry-contracts/utils/Giver.sol/Giver.json'
 
 import { FYToken } from '../typechain/FYToken'
 import { Cauldron, FlashBorrower, Giver } from '../typechain'

@@ -2,8 +2,8 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { id, constants } from '@yield-protocol/utils-v2'
 const { WAD, MAX256 } = constants
 
-import ERC1155MockArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/other/notional/ERC1155Mock.sol/ERC1155Mock.json'
-import Transfer1155ModuleArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/other/notional/Transfer1155Module.sol/Transfer1155Module.json'
+import ERC1155MockArtifact from '../artifacts/foundry-contracts/other/notional/ERC1155Mock.sol/ERC1155Mock.json'
+import Transfer1155ModuleArtifact from '../artifacts/foundry-contracts/other/notional/Transfer1155Module.sol/Transfer1155Module.json'
 
 import { ERC1155Mock } from '../typechain/ERC1155Mock'
 import { Cauldron } from '../typechain/Cauldron'

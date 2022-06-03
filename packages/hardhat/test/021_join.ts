@@ -10,8 +10,8 @@ import { Result } from '@ethersproject/abi'
 const { WAD, MAX256 } = constants
 const MAX = MAX256
 
-import JoinFactoryArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/deprecated/JoinFactoryMock.sol/JoinFactoryMock.json'
-import ERC20MockArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
+import JoinFactoryArtifact from '../artifacts/foundry-contracts/deprecated/JoinFactoryMock.sol/JoinFactoryMock.json'
+import ERC20MockArtifact from '../artifacts/foundry-contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
 
 import { Join } from '../typechain/Join'
 import { IJoinFactory } from '../typechain/IJoinFactory'

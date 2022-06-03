@@ -4,7 +4,7 @@ const { WAD, MAX128 } = constants
 const MAX = MAX128
 import { ETH } from '../src/constants'
 
-import RestrictedERC20MockArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/mocks/RestrictedERC20Mock.sol/RestrictedERC20Mock.json'
+import RestrictedERC20MockArtifact from '../artifacts/foundry-contracts/mocks/RestrictedERC20Mock.sol/RestrictedERC20Mock.json'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'

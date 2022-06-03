@@ -3,8 +3,8 @@ import { id, constants } from '@yield-protocol/utils-v2'
 const { WAD, MAX256 } = constants
 import { ETH } from '../src/constants'
 
-import TLMMockArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/mocks/TLMMock.sol/TLMMock.json'
-import TLMModuleArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/modules/TLMModule.sol/TLMModule.json'
+import TLMMockArtifact from '../artifacts/foundry-contracts/mocks/TLMMock.sol/TLMMock.json'
+import TLMModuleArtifact from '../artifacts/foundry-contracts/modules/TLMModule.sol/TLMModule.json'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
