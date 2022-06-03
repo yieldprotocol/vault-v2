@@ -4,6 +4,9 @@ pragma solidity 0.8.14;
 import {IPool} from "@yield-protocol/yieldspace-tv/src/interfaces/IPool.sol";
 import {IPoolOracle} from "./IPoolOracle.sol";
 
+// TODO: Migrate to YieldSpace-tv, unless this needs to be used with v2 pools (last one maturing EO September 2022)
+contract PoolOracle { }
+
 /**
  * @title PoolOracle
  * @author Bruno Bonanno
@@ -11,6 +14,7 @@ import {IPoolOracle} from "./IPoolOracle.sol";
  * Adapted from https://github.com/Uniswap/v2-periphery/blob/master/contracts/examples/ExampleSlidingWindowOracle.sol
  */
 //solhint-disable not-rely-on-time
+/*
 contract PoolOracle is IPoolOracle {
     event ObservationRecorded(address indexed pool, uint256 index, Observation observation);
 
@@ -154,3 +158,4 @@ contract PoolOracle is IPoolOracle {
         }
     }
 }
+*/

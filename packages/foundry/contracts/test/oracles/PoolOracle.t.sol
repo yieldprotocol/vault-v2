@@ -7,6 +7,7 @@ import "../utils/Mocks.sol";
 import "../../oracles/yieldspace/PoolOracle.sol";
 
 contract PoolOracleTest is Test {
+    /*
     using Mocks for *;
 
     PoolOracle private oracle;
@@ -517,4 +518,5 @@ contract PoolOracleTest is Test {
     }
 
     event ObservationRecorded(address indexed pool, uint256 index, PoolOracle.Observation observation);
+    */
 }
