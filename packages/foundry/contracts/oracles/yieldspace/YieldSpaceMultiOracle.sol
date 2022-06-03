@@ -5,7 +5,7 @@ import "./IPoolOracle.sol";
 import "@yield-protocol/yieldspace-interfaces/IPool.sol";
 import "@yield-protocol/vault-interfaces/src/IOracle.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
-import "@yield-protocol/yieldspace-v2/contracts/YieldMath.sol";
+import "@yield-protocol/yieldspace-tv/src/YieldMath.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
 import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
