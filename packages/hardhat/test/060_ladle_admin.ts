@@ -10,10 +10,10 @@ const { WAD, THREE_MONTHS } = constants
 import { RATE } from '../src/constants'
 
 import FYTokenArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/FYToken.sol/FYToken.json'
-import JoinFactoryArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/mocks/JoinFactoryMock.sol/JoinFactoryMock.json'
+import JoinFactoryArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/deprecated/JoinFactoryMock.sol/JoinFactoryMock.json'
 import OracleMockArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/mocks/oracles/OracleMock.sol/OracleMock.json'
 import ERC20MockArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
-import PoolFactoryMockArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/mocks/PoolFactoryMock.sol/PoolFactoryMock.json'
+import PoolFactoryMockArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/deprecated/PoolFactoryMock.sol/PoolFactoryMock.json'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
