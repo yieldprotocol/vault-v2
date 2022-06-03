@@ -2461,11 +2461,6 @@
   resolved "https://registry.yarnpkg.com/@yield-protocol/vault-interfaces/-/vault-interfaces-2.4.1.tgz#5c5c33cd589c04cf8acc0dc51641c803668c9a0d"
   integrity sha512-qqyBx6DERbkMhRTEVxvxr0OVVyxVyEq1rw/bfFjR/rW1xRAVufF+IQiyR5EFo807i/cW0MVjxt1KPVZGSyrLHA==
 
-"@yield-protocol/yieldspace-interfaces@^2.3.2":
-  version "2.3.2"
-  resolved "https://registry.yarnpkg.com/@yield-protocol/yieldspace-interfaces/-/yieldspace-interfaces-2.3.2.tgz#a0b9f28bea2cfb6a328b35c59cbe50ad1fbf5b3a"
-  integrity sha512-8U43J4lfWnkagCTKi/JGdG4DAP69kwfCC85NAUUxb51gPGuZLSmfzm1UjroCPC5jQN4Nw0tCvIMKjIEYK0jaZw==
-
 "@yield-protocol/yieldspace-tv@^0.0.6rc3":
   version "0.0.6"
   resolved "https://registry.yarnpkg.com/@yield-protocol/yieldspace-tv/-/yieldspace-tv-0.0.6.tgz#2a14c0f6d49bb938535be3a560171debc8c97dd0"
