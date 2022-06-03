@@ -9,10 +9,10 @@ import { CHI, RATE, ETH, DAI, USDC } from '../../src/constants'
 
 import CauldronArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/Cauldron.sol/Cauldron.json'
 import LadleArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/Ladle.sol/Ladle.json'
-import WandArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/Wand.sol/Wand.json'
+import WandArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/deprecated/Wand.sol/Wand.json'
 import WitchArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/Witch.sol/Witch.json'
-import JoinFactoryArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/mocks/JoinFactoryMock.sol/JoinFactoryMock.json'
-import PoolFactoryMockArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/mocks/PoolFactoryMock.sol/PoolFactoryMock.json'
+import JoinFactoryArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/deprecated/JoinFactoryMock.sol/JoinFactoryMock.json'
+import PoolFactoryMockArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/deprecated/PoolFactoryMock.sol/PoolFactoryMock.json'
 
 import ChainlinkMultiOracleArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/oracles/chainlink/ChainlinkMultiOracle.sol/ChainlinkMultiOracle.json'
 import CompoundMultiOracleArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/oracles/compound/CompoundMultiOracle.sol/CompoundMultiOracle.json'
