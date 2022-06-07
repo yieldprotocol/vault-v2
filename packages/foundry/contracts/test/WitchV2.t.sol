@@ -322,6 +322,8 @@ contract WitchV2WithMetadataTest is WitchV2WithMetadata {
 
 contract WitchV2WithAuction is WitchV2WithMetadata {
     using Mocks for *;
+    using WMul for uint256;
+    using WMul for uint128;
 
     bytes12 internal constant VAULT_ID_2 = "vault2";
     WitchV2.Auction auction;
@@ -510,6 +512,22 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         vm.expectRevert("Leaves dust");
         witch.payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
     }
+
+
+// WIP
+    function testPayBase() public {
+        // Bot Will pay 40% of the debt (for some reason)
+        uint128 maxBaseIn = uint128(auction.art.wmul(0.4e18));
+        uint128 minInkOut = uint128(witch.calcPayout(VAULT_ID, maxBaseIn));
+
+        cauldron.slurp.mock(VAULT_ID, minInkOut, maxBaseIn, balances);
+
+        // make fyToken 1:1 with base to make things simpler
+        cauldron.debtFromBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+        cauldron.debtToBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+
+        witch.payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
+    }
 }
 
 //   WithAuction
@@ -525,7 +543,6 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
 //      - Return vault
 //      - Storage changes
 //     payFYToken -> WithPartialAuction
-//      - "Vault not under auction"
 //      - "Not enough bought"
 //      - Storage changes
 //      - Cauldron accounting
