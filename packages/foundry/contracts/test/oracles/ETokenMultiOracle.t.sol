@@ -3,7 +3,6 @@ pragma solidity 0.8.14;
 
 import "../utils/Test.sol";
 import {IEToken} from "../../oracles/euler/IEToken.sol";
-import {ETokenMock} from "../../mocks/oracles/euler/ETokenMock.sol";
 import {ETokenMultiOracle} from "../../oracles/euler/ETokenMultiOracle.sol";
 
 abstract contract ZeroState is Test {
@@ -14,6 +13,8 @@ abstract contract ZeroState is Test {
 
     function setUp() public virtual {
         oracle = new ETokenMultiOracle();
+
+        vm.label(address(eToken), "eToken");
     }
 }
 
@@ -39,49 +40,73 @@ abstract contract PermissionedState is ZeroState {
 }
 
 contract PermissionedStateTest is PermissionedState {
-    function testSetSource() public {
+    function testSetSourceSetsRegularSource() public {
+        vm.expectEmit(true, true, true, true);
+        emit SourceSet(eDAI, DAI, address(eToken), false);
+        
         oracle.setSource(DAI, eDAI, eToken);
 
+        (address source, bool inverse) = oracle.sources(eDAI, DAI);
+        assertEq(source, address(eToken));
+        assertFalse(inverse);
+    }
+
+    function testSetSourceSetsInverseSource() public {
         vm.expectEmit(true, true, true, true);
         emit SourceSet(DAI, eDAI, address(eToken), true);
-        oracle.sources(eDAI, DAI);
+        
+        oracle.setSource(DAI, eDAI, eToken);
+
+        (address source, bool inverse) = oracle.sources(DAI, eDAI);
+        assertEq(source, address(eToken));
+        assertTrue(inverse);
     }
 }
 
-contract ETokenMultiOracleTest is Test {
-    ETokenMultiOracle public oracle;
-    bytes6 public constant DAI = "1";
-    bytes6 public constant eDAI = "2";
+abstract contract SourceSetState is PermissionedState {
+    function setUp() public virtual override {
+        super.setUp();
 
-    function setUp() public {
-        oracle = new ETokenMultiOracle();
+        oracle.setSource(DAI, eDAI, eToken);
     }
+}
 
-    function testRevertOnUnknownPair() public {
-        vm.expectRevert("Source not found");
-        oracle.get(eDAI, DAI, 1e18);
-    }
-
-    function testOracleGet() public {
-        bytes32 baseId = eDAI;
-        bytes32 quoteId = DAI;
-        uint256 amountBase = 1e18;
-
-        ETokenMock eToken = new ETokenMock();
+contract SourceSetStateTest is SourceSetState {
+    function testOracleGetAndPeekETokenToUnderlying() public {
+        uint256 amountBase = 123456789;
+        uint256 expectedQuote = 0x777;
 
         vm.mockCall(
             address(eToken),
             abi.encodeWithSelector(IEToken.convertBalanceToUnderlying.selector, amountBase),
-            abi.encode(0x777)
+            abi.encode(expectedQuote)
         );
 
-        oracle.grantRole(bytes4(keccak256("setSource(bytes6,bytes6,address)")), address(this));
+        (uint256 result, uint256 updateTime) = oracle.get(eDAI, DAI, amountBase);
+        assertEq(result, expectedQuote);
+        assertEq(updateTime, block.timestamp);
 
-        oracle.setSource(DAI, eDAI, eToken);
-
-        (uint256 result, ) = oracle.get(baseId, quoteId, amountBase);
-        assertEq(result, 0x777);
+        (result, updateTime) = oracle.peek(eDAI, DAI, amountBase);
+        assertEq(result, expectedQuote);
+        assertEq(updateTime, block.timestamp);
     }
 
-    //TODO test setSource needs role
+    function testOracleGetAndPeekUnderlyingToEToken() public {
+        uint256 amountBase = 987654321;
+        uint256 expectedQuote = 0x333;
+
+        vm.mockCall(
+            address(eToken),
+            abi.encodeWithSelector(IEToken.convertUnderlyingToBalance.selector, amountBase),
+            abi.encode(expectedQuote)
+        );
+
+        (uint256 result, uint256 updateTime) = oracle.get(DAI, eDAI, amountBase);
+        assertEq(result, expectedQuote);
+        assertEq(updateTime, block.timestamp);
+
+        (result, updateTime) = oracle.peek(DAI, eDAI, amountBase);
+        assertEq(result, expectedQuote);
+        assertEq(updateTime, block.timestamp);
+    }
 }
