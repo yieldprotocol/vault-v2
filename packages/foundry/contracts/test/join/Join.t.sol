@@ -33,9 +33,6 @@ contract JoinTest is Test, TestConstants {
         join.grantRole(join.exit.selector, admin);
         join.grantRole(join.retrieve.selector, admin);
 
-        // set block timestamp
-        vm.warp(1);
-
         token.mint(admin, WAD * 100);
         vm.prank(admin);
         token.approve(address(join), WAD * 100);
@@ -70,7 +67,7 @@ contract JoinTest is Test, TestConstants {
         assertEq(join.storedBalance(), WAD);
     }
 
-    function testCombinesSurplusAndTokens() public {
+    function testCombinesSurplusAndTokensFromUser() public {
         token.mint(address(join), WAD);
 
         vm.expectEmit(true, true, false, true);
