@@ -280,7 +280,7 @@ contract WitchV2WithMetadataTest is WitchV2WithMetadata {
         vm.expectEmit(true, true, true, true);
         emit Auctioned(VAULT_ID, uint32(block.timestamp));
 
-        Auction memory auction = witch.auction(VAULT_ID);
+        WitchDataTypes.Auction memory auction = witch.auction(VAULT_ID);
 
         assertEq(auction.owner, vault.owner);
         assertEq(auction.start, uint32(block.timestamp));
@@ -329,7 +329,7 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
     using WMul for uint128;
 
     bytes12 internal constant VAULT_ID_2 = "vault2";
-    Auction auction;
+    WitchDataTypes.Auction auction;
 
     function setUp() public virtual override {
         super.setUp();
@@ -422,7 +422,7 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         // Half of this vault would be less than the min of 5k
         _stubVault(VAULT_ID_2, 5 ether, 9999e6, -1);
 
-        Auction memory auction2 = witch.auction(VAULT_ID_2);
+        WitchDataTypes.Auction memory auction2 = witch.auction(VAULT_ID_2);
 
         assertEq(auction2.owner, vault.owner);
         assertEq(auction2.start, uint32(block.timestamp));
@@ -870,7 +870,7 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
     }
 
     function _auctionWasDeleted(bytes12 vaultId) internal {
-        Auction memory auction_ = iWitch.auctions(vaultId);
+        WitchDataTypes.Auction memory auction_ = iWitch.auctions(vaultId);
         assertEq(auction_.owner, address(0));
         assertEq(auction_.start, 0);
         assertEq(auction_.baseId, "");
@@ -883,7 +883,7 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         uint128 art,
         uint128 ink
     ) internal {
-        Auction memory auction_ = iWitch.auctions(vaultId);
+        WitchDataTypes.Auction memory auction_ = iWitch.auctions(vaultId);
         assertEq(auction_.owner, auction.owner, "owner");
         assertEq(auction_.start, auction.start, "start");
         assertEq(auction_.baseId, auction.baseId, "baseId");

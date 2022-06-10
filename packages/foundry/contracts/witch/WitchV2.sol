@@ -12,7 +12,7 @@ import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
 
 import "./WitchDataTypes.sol";
 
-/// @title  The Witch is a Auction/Liquidation Engine for the Yield protocol
+/// @title  The Witch is a WitchDataTypes.Auction/Liquidation Engine for the Yield protocol
 /// @notice The Witch grabs uncollateralized vaults, replacing the owner by itself. Then it sells
 /// the vault collateral in exchange for underlying to pay its debt. The amount of collateral
 /// given increases over time, until it offers to sell all the collateral for underlying to pay
@@ -49,9 +49,9 @@ contract WitchV2 is AccessControl {
 
     ICauldron public immutable cauldron;
     ILadle public ladle;
-    mapping(bytes12 => Auction) public auctions;
-    mapping(bytes6 => mapping(bytes6 => Line)) public lines;
-    mapping(bytes6 => mapping(bytes6 => Limits)) public limits;
+    mapping(bytes12 => WitchDataTypes.Auction) public auctions;
+    mapping(bytes6 => mapping(bytes6 => WitchDataTypes.Line)) public lines;
+    mapping(bytes6 => mapping(bytes6 => WitchDataTypes.Limits)) public limits;
 
     constructor(ICauldron cauldron_, ILadle ladle_) {
         cauldron = cauldron_;
@@ -87,7 +87,7 @@ contract WitchV2 is AccessControl {
             "InitialOffer below 1%"
         );
         require(proportion >= 0.01e18, "Proportion below 1%");
-        lines[ilkId][baseId] = Line({
+        lines[ilkId][baseId] = WitchDataTypes.Line({
             duration: duration,
             proportion: proportion,
             initialOffer: initialOffer
@@ -113,7 +113,7 @@ contract WitchV2 is AccessControl {
         uint24 dust,
         uint8 dec
     ) external auth {
-        limits[ilkId][baseId] = Limits({
+        limits[ilkId][baseId] = WitchDataTypes.Limits({
             max: max,
             dust: dust,
             dec: dec,
@@ -126,7 +126,7 @@ contract WitchV2 is AccessControl {
     /// @param vaultId Id of vault to liquidate
     function auction(bytes12 vaultId)
         external
-        returns (Auction memory auction_)
+        returns (WitchDataTypes.Auction memory auction_)
     {
         require(auctions[vaultId].start == 0, "Vault already under auction");
         require(cauldron.level(vaultId) < 0, "Not undercollateralized");
@@ -138,7 +138,7 @@ contract WitchV2 is AccessControl {
         // There is a limit on how much collateral can be concurrently put at auction, but it is a soft limit.
         // If the limit has been surpassed, no more vaults of that collateral can be put for auction.
         // This avoids the scenario where some vaults might be too large to be auctioned.
-        Limits memory limits_ = limits[vault.ilkId][series.baseId];
+        WitchDataTypes.Limits memory limits_ = limits[vault.ilkId][series.baseId];
         require(
             limits_.sum <= limits_.max * (10**limits_.dec),
             "Collateral limit reached"
@@ -158,10 +158,10 @@ contract WitchV2 is AccessControl {
         DataTypes.Vault memory vault,
         DataTypes.Series memory series,
         DataTypes.Balances memory balances,
-        Limits memory limits_
-    ) internal view returns (Auction memory) {
+        WitchDataTypes.Limits memory limits_
+    ) internal view returns (WitchDataTypes.Auction memory) {
         // We store the proportion of the vault to auction, which is the whole vault if the debt would be below dust.
-        Line storage line = lines[vault.ilkId][series.baseId];
+        WitchDataTypes.Line storage line = lines[vault.ilkId][series.baseId];
         uint128 art = uint256(balances.art).wmul(line.proportion).u128();
         if (art < limits_.dust * (10**limits_.dec)) art = balances.art;
         uint128 ink = (art == balances.art)
@@ -169,7 +169,7 @@ contract WitchV2 is AccessControl {
             : uint256(balances.ink).wmul(line.proportion).u128();
 
         return
-            Auction({
+            WitchDataTypes.Auction({
                 owner: vault.owner,
                 start: uint32(block.timestamp), // Overflow is fine
                 baseId: series.baseId,
@@ -181,7 +181,7 @@ contract WitchV2 is AccessControl {
     /// @dev Cancel an auction for a vault that isn't undercollateralized anymore
     /// @param vaultId Id of vault to return
     function cancel(bytes12 vaultId) external {
-        Auction storage auction_ = auctions[vaultId];
+        WitchDataTypes.Auction storage auction_ = auctions[vaultId];
         require(auction_.start != 0, "Vault not under auction");
         require(cauldron.level(vaultId) >= 0, "Undercollateralized");
 
@@ -209,7 +209,7 @@ contract WitchV2 is AccessControl {
         uint128 minInkOut,
         uint128 maxBaseIn
     ) external returns (uint256 inkOut, uint256 baseIn) {
-        Auction memory auction_ = auctions[vaultId];
+        WitchDataTypes.Auction memory auction_ = auctions[vaultId];
         require(auction_.start > 0, "Vault not under auction");
 
         DataTypes.Vault memory vault = cauldron.vaults(vaultId);
@@ -276,7 +276,7 @@ contract WitchV2 is AccessControl {
         uint128 minInkOut,
         uint128 maxArtIn
     ) external returns (uint256 inkOut, uint256 artIn) {
-        Auction memory auction_ = auctions[vaultId];
+        WitchDataTypes.Auction memory auction_ = auctions[vaultId];
         require(auction_.start > 0, "Vault not under auction");
 
         DataTypes.Vault memory vault = cauldron.vaults(vaultId);
@@ -374,13 +374,13 @@ contract WitchV2 is AccessControl {
         view
         returns (uint256 inkOut)
     {
-        Auction memory auction_ = auctions[vaultId];
+        WitchDataTypes.Auction memory auction_ = auctions[vaultId];
         DataTypes.Vault memory vault = cauldron.vaults(vaultId);
 
         if (auction_.ink == 0) {
             DataTypes.Series memory series = cauldron.series(vault.seriesId);
             DataTypes.Balances memory balances = cauldron.balances(vaultId);
-            Limits memory limits_ = limits[vault.ilkId][series.baseId];
+            WitchDataTypes.Limits memory limits_ = limits[vault.ilkId][series.baseId];
             auction_ = _auction(vault, series, balances, limits_);
         }
 
@@ -391,12 +391,12 @@ contract WitchV2 is AccessControl {
     function _calcPayout(
         bytes6 ilkId,
         bytes6 baseId,
-        Auction memory auction_,
+        WitchDataTypes.Auction memory auction_,
         uint256 artIn
     ) internal view returns (uint256 inkOut) {
         // Calculate how much collateral to give for paying a certain amount of debt, at a certain time, for a certain vault.
         // inkOut = (artIn / totalArt) * totalInk * (p + (1 - p) * t)
-        Line memory line_ = lines[ilkId][baseId];
+        WitchDataTypes.Line memory line_ = lines[ilkId][baseId];
         uint256 duration = line_.duration;
         uint256 initialProportion = line_.initialOffer;
 
@@ -427,7 +427,7 @@ contract WitchV2 is AccessControl {
         bytes12 vaultId,
         bytes6 ilkId,
         bytes6 baseId,
-        Auction memory auction_,
+        WitchDataTypes.Auction memory auction_,
         uint256 inkOut,
         uint256 artIn
     ) internal {
@@ -435,7 +435,7 @@ contract WitchV2 is AccessControl {
         require(auction_.start > 0, "Vault not under auction");
 
         // Update concurrent collateral under auction
-        Limits memory limits_ = limits[ilkId][baseId];
+        WitchDataTypes.Limits memory limits_ = limits[ilkId][baseId];
 
         // Update local auction
         {

@@ -10,15 +10,21 @@ interface IWitchV2 {
 
     function ladle() external returns (ILadle);
 
-    function auctions(bytes12) external returns (Auction memory);
+    function auctions(bytes12) external returns (WitchDataTypes.Auction memory);
 
-    function lines(bytes6, bytes6) external returns (Line memory);
+    function lines(bytes6, bytes6)
+        external
+        returns (WitchDataTypes.Line memory);
 
-    function limits(bytes6, bytes6) external returns (Limits memory);
+    function limits(bytes6, bytes6)
+        external
+        returns (WitchDataTypes.Limits memory);
 
     /// @dev Put an undercollateralized vault up for liquidation
     /// @param vaultId Id of vault to liquidate
-    function auction(bytes12 vaultId) external returns (Auction memory);
+    function auction(bytes12 vaultId)
+        external
+        returns (WitchDataTypes.Auction memory);
 
     /// @dev Cancel an auction for a vault that isn't undercollateralized anymore
     /// @param vaultId Id of vault to return
