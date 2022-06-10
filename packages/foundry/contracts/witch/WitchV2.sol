@@ -10,6 +10,8 @@ import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
 import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
 
+import "./WitchDataTypes.sol";
+
 /// @title  The Witch is a Auction/Liquidation Engine for the Yield protocol
 /// @notice The Witch grabs uncollateralized vaults, replacing the owner by itself. Then it sells
 /// the vault collateral in exchange for underlying to pay its debt. The amount of collateral
@@ -44,27 +46,6 @@ contract WitchV2 is AccessControl {
         uint8 dec
     );
     event Point(bytes32 indexed param, address indexed value);
-
-    struct Auction {
-        address owner;
-        uint32 start;
-        bytes6 baseId; // We cache the baseId here
-        uint128 ink;
-        uint128 art;
-    }
-
-    struct Line {
-        uint32 duration; // Time that auctions take to go to minimal price and stay there
-        uint64 proportion; // Proportion of the vault that is available each auction (1e18 = 100%)
-        uint64 initialOffer; // Proportion of collateral that is sold at auction start (1e18 = 100%)
-    }
-
-    struct Limits {
-        uint96 max; // Maximum concurrent auctioned collateral
-        uint24 dust; // Minimum collateral that must be left when buying, unless buying all
-        uint8 dec; // Multiplying factor (10**dec) for max and dust
-        uint128 sum; // Current concurrent auctioned collateral
-    }
 
     ICauldron public immutable cauldron;
     ILadle public ladle;
