@@ -327,48 +327,48 @@ contract WitchV2 is AccessControl {
 
     /*
 
-     x x x
-   x      x    Hi Fren!
-  x  .  .  x   I want to buy this vault under auction!  I'll pay
-  x        x   you in the same `base` currency of the debt, or in fyToken, but
-  x        x   I want no less than `uint min` of the collateral, ok?
-  x   ===  x
-   x       x
-    xxxxxxx
-       x                             __  Ok Fren!
-       x     ┌────────────┐  _(\    |@@|
-       xxxxxx│ BASE BUCKS │ (__/\__ \--/ __
-       x     │     OR     │    \___|----|  |   __
-       x     │   FYTOKEN  │        \ }{ /\ )_ / _\
-      x x    └────────────┘        /\__/\ \__O (__
-                                  (--/\--)    \__/
-                           │      _)(  )(_
-                           │     `---''---`
-                           ▼
-   _______
-  /  12   \  First lets check how much time `t` is left on the auction
- |    |    | because that helps us determine the price we will accept
- |9   |   3| for the debt! Yay!
- |     \   |                       p + (1 - p) * t
- |         |
-  \___6___/          (p is the auction starting price!)
+        x x x
+    x      x    Hi Fren!
+    x  .  .  x   I want to buy this vault under auction!  I'll pay
+    x        x   you in the same `base` currency of the debt, or in fyToken, but
+    x        x   I want no less than `uint min` of the collateral, ok?
+    x   ===  x
+    x       x
+        xxxxxxx
+        x                             __  Ok Fren!
+        x     ┌────────────┐  _(\    |@@|
+        xxxxxx│ BASE BUCKS │ (__/\__ \--/ __
+        x     │     OR     │    \___|----|  |   __
+        x     │   FYTOKEN  │        \ }{ /\ )_ / _\
+        x x    └────────────┘        /\__/\ \__O (__
+                                    (--/\--)    \__/
+                            │      _)(  )(_
+                            │     `---''---`
+                            ▼
+    _______
+    /  12   \  First lets check how much time `t` is left on the auction
+    |    |    | because that helps us determine the price we will accept
+    |9   |   3| for the debt! Yay!
+    |     \   |                       p + (1 - p) * t
+    |         |
+    \___6___/          (p is the auction starting price!)
 
-                          │
-                          │
-                          ▼                  (\
-                                              \ \
- Then the Cauldron updates our internal    __    \/ ___,.-------..__        __
- accounting by slurping up the debt      //\\ _,-'\\               `'--._ //\\
- and the collateral from the vault!      \\ ;'      \\                   `: //
-                                          `(          \\                   )'
- The Join  then dishes out the collateral   :.          \\,----,         ,;
- to you, dear user. And the debt is          `.`--.___   (    /  ___.--','
- settled with the base join or debt fyToken.   `.     ``-----'-''     ,'
-                                                  -.               ,-
-                                                     `-._______.-'gpyy
+                            │
+                            │
+                            ▼                  (\
+                                                \ \
+    Then the Cauldron updates our internal    __    \/ ___,.-------..__        __
+    accounting by slurping up the debt      //\\ _,-'\\               `'--._ //\\
+    and the collateral from the vault!      \\ ;'      \\                   `: //
+                                            `(          \\                   )'
+    The Join  then dishes out the collateral   :.          \\,----,         ,;
+    to you, dear user. And the debt is          `.`--.___   (    /  ___.--','
+    settled with the base join or debt fyToken.   `.     ``-----'-''     ,'
+                                                    -.               ,-
+                                                        `-._______.-'gpyy
 
 
-*/
+    */
     /// @dev quoutes hoy much ink a liquidator is expected to get if it repays an `artIn` amount
     /// @param vaultId The vault to get a quote for
     /// @param artIn How much of the vault debt will be paid. 0 means all
