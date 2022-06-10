@@ -151,10 +151,7 @@ contract WitchV2 is AccessControl {
 
         auctions[vaultId] = auction_;
 
-        // The Witch is now in control of the vault under auction
-        // TODO: Consider using `stir` to take only the part of the vault being auctioned.
-        cauldron.give(vaultId, address(this));
-        emit Auctioned(vaultId, uint32(block.timestamp));
+        _auctionStarted(vaultId);
     }
 
     function _auction(
@@ -194,8 +191,7 @@ contract WitchV2 is AccessControl {
         // Update concurrent collateral under auction
         limits[vault.ilkId][series.baseId].sum -= auction_.ink;
 
-        cauldron.give(vaultId, auction_.owner);
-        delete auctions[vaultId];
+        _auctionEnded(vaultId, auction_.owner);
 
         emit Cancelled(vaultId);
     }
@@ -263,7 +259,7 @@ contract WitchV2 is AccessControl {
             baseJoin.join(msg.sender, baseIn.u128());
         }
 
-        emit Bought(vaultId, to, inkOut, artIn);
+        _collateralBought(vaultId, to, inkOut, artIn);
     }
 
     /// @dev Pay up to `maxArtIn` debt from a vault in liquidation using fyToken, getting at least `minInkOut` collateral.
@@ -322,7 +318,7 @@ contract WitchV2 is AccessControl {
             series.fyToken.burn(msg.sender, artIn);
         }
 
-        emit Bought(vaultId, to, inkOut, artIn);
+        _collateralBought(vaultId, to, inkOut, artIn);
     }
 
     /*
@@ -445,8 +441,8 @@ contract WitchV2 is AccessControl {
         {
             if (auction_.art == artIn) {
                 // If there is no debt left, return the vault with the collateral to the owner
-                cauldron.give(vaultId, auction_.owner);
-                delete auctions[vaultId];
+                _auctionEnded(vaultId, auction_.owner);
+
                 // Update limits - reduce it by the whole auction
                 limits_.sum -= auction_.ink;
             } else {
@@ -473,5 +469,26 @@ contract WitchV2 is AccessControl {
 
         // Update accounting at Cauldron
         cauldron.slurp(vaultId, inkOut.u128(), artIn.u128());
+    }
+
+    function _auctionStarted(bytes12 vaultId) internal virtual {
+        // The Witch is now in control of the vault under auction
+        // TODO: Consider using `stir` to take only the part of the vault being auctioned.
+        cauldron.give(vaultId, address(this));
+        emit Auctioned(vaultId, uint32(block.timestamp));
+    }
+
+    function _collateralBought(
+        bytes12 vaultId,
+        address buyer,
+        uint256 ink,
+        uint256 art
+    ) internal virtual {
+        emit Bought(vaultId, buyer, ink, art);
+    }
+
+    function _auctionEnded(bytes12 vaultId, address owner) internal virtual {
+        cauldron.give(vaultId, owner);
+        delete auctions[vaultId];
     }
 }
