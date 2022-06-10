@@ -146,6 +146,14 @@ library Mocks  {
         );
     }
 
+    function mock(function (address, uint256) external f, address param1, uint256 param2) internal {
+        vm.mockCall(
+            f.address,
+            abi.encodeWithSelector(f.selector, param1, param2),
+            abi.encode(0)
+        );
+    }
+
     // ===================================== verify =====================================
 
     function verify(function (address) external f, address param1) internal {
@@ -173,6 +181,13 @@ library Mocks  {
         vm.expectCall(
             f.address,
             abi.encodeWithSelector(f.selector, param1, param2, param3)
+        );
+    }
+
+     function verify(function (address, uint256) external f, address param1, uint256 param2) internal {
+        vm.expectCall(
+            f.address,
+            abi.encodeWithSelector(f.selector, param1, param2)
         );
     }
 }
