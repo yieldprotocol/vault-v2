@@ -513,8 +513,6 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         witch.payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
     }
 
-
-// WIP
     function testPayBase() public {
         // Bot Will pay 40% of the debt (for some reason)
         uint128 maxBaseIn = uint128(auction.art.wmul(0.4e18));
@@ -526,6 +524,17 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         cauldron.debtFromBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
         cauldron.debtToBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
 
+        IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
+        ladle.joins.mock(vault.ilkId, ilkJoin);
+        ilkJoin.exit.mock(bot, minInkOut, minInkOut);
+        ilkJoin.exit.verify(bot, minInkOut);
+
+        IJoin baseJoin = IJoin(Mocks.mock("BaseJoin"));
+        ladle.joins.mock(series.baseId, baseJoin);
+        baseJoin.join.mock(bot, maxBaseIn, maxBaseIn);
+        baseJoin.join.verify(bot, maxBaseIn);
+
+        vm.prank(bot);
         witch.payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
     }
 }
