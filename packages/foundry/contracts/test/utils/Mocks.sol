@@ -114,6 +114,14 @@ library Mocks  {
         );
     }
 
+    function mock(function (address, bytes12, bytes6, bytes6) external returns(DataTypes.Vault memory) f, address p1, bytes12 p2, bytes6 p3, bytes6 p4, DataTypes.Vault memory r1) internal {
+        vm.mockCall(
+            f.address,
+            abi.encodeWithSelector(f.selector, p1, p2, p3, p4),
+            abi.encode(r1)
+        );
+    }
+
     function mock(function (bytes6) external view returns(DataTypes.Series memory) f, bytes6 param1, DataTypes.Series memory returned1) internal {
         vm.mockCall(
             f.address,
@@ -188,6 +196,13 @@ library Mocks  {
         vm.expectCall(
             f.address,
             abi.encodeWithSelector(f.selector, param1, param2)
+        );
+    }
+
+    function verify(function (address, bytes12, bytes6, bytes6) external returns(DataTypes.Vault memory) f, address p1, bytes12 p2, bytes6 p3, bytes6 p4) internal {
+        vm.expectCall(
+            f.address,
+            abi.encodeWithSelector(f.selector, p1, p2, p3, p4)
         );
     }
 }
