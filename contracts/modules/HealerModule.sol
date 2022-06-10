@@ -25,7 +25,7 @@ contract HealerModule is LadleStorage {
         // Manage collateral
         if (ink != 0) {
             IJoin ilkJoin = getJoin(vault.ilkId);
-            ilkJoin.join(vault.owner, uint128(ink));
+            ilkJoin.join(msg.sender, uint128(ink));
         }
 
         // Manage debt tokens
