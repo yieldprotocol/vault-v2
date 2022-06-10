@@ -23,9 +23,26 @@ contract WitchV2 is AccessControl {
 
     event Auctioned(bytes12 indexed vaultId, uint256 indexed start);
     event Cancelled(bytes12 indexed vaultId);
-    event Bought(bytes12 indexed vaultId, address indexed buyer, uint256 ink, uint256 art);
-    event LineSet(bytes6 indexed ilkId, bytes6 indexed baseId, uint32 duration, uint64 proportion, uint64 initialOffer);
-    event LimitSet(bytes6 indexed ilkId, bytes6 indexed baseId, uint96 max, uint24 dust, uint8 dec);
+    event Bought(
+        bytes12 indexed vaultId,
+        address indexed buyer,
+        uint256 ink,
+        uint256 art
+    );
+    event LineSet(
+        bytes6 indexed ilkId,
+        bytes6 indexed baseId,
+        uint32 duration,
+        uint64 proportion,
+        uint64 initialOffer
+    );
+    event LimitSet(
+        bytes6 indexed ilkId,
+        bytes6 indexed baseId,
+        uint96 max,
+        uint24 dust,
+        uint8 dec
+    );
     event Point(bytes32 indexed param, address indexed value);
 
     struct Auction {
@@ -84,9 +101,16 @@ contract WitchV2 is AccessControl {
     ) external auth {
         require(initialOffer <= 1e18, "InitialOffer above 100%");
         require(proportion <= 1e18, "Proportion above 100%");
-        require(initialOffer == 0 || initialOffer >= 0.01e18, "InitialOffer below 1%");
+        require(
+            initialOffer == 0 || initialOffer >= 0.01e18,
+            "InitialOffer below 1%"
+        );
         require(proportion >= 0.01e18, "Proportion below 1%");
-        lines[ilkId][baseId] = Line({duration: duration, proportion: proportion, initialOffer: initialOffer});
+        lines[ilkId][baseId] = Line({
+            duration: duration,
+            proportion: proportion,
+            initialOffer: initialOffer
+        });
         emit LineSet(ilkId, baseId, duration, proportion, initialOffer);
     }
 
@@ -119,7 +143,10 @@ contract WitchV2 is AccessControl {
 
     /// @dev Put an undercollateralized vault up for liquidation
     /// @param vaultId Id of vault to liquidate
-    function auction(bytes12 vaultId) external returns (Auction memory auction_) {
+    function auction(bytes12 vaultId)
+        external
+        returns (Auction memory auction_)
+    {
         require(auctions[vaultId].start == 0, "Vault already under auction");
         require(cauldron.level(vaultId) < 0, "Not undercollateralized");
 
@@ -131,7 +158,10 @@ contract WitchV2 is AccessControl {
         // If the limit has been surpassed, no more vaults of that collateral can be put for auction.
         // This avoids the scenario where some vaults might be too large to be auctioned.
         Limits memory limits_ = limits[vault.ilkId][series.baseId];
-        require(limits_.sum <= limits_.max * (10**limits_.dec), "Collateral limit reached");
+        require(
+            limits_.sum <= limits_.max * (10**limits_.dec),
+            "Collateral limit reached"
+        );
 
         auction_ = _auction(vault, series, balances, limits_);
 
@@ -156,7 +186,9 @@ contract WitchV2 is AccessControl {
         Line storage line = lines[vault.ilkId][series.baseId];
         uint128 art = uint256(balances.art).wmul(line.proportion).u128();
         if (art < limits_.dust * (10**limits_.dec)) art = balances.art;
-        uint128 ink = (art == balances.art) ? balances.ink : uint256(balances.ink).wmul(line.proportion).u128();
+        uint128 ink = (art == balances.art)
+            ? balances.ink
+            : uint256(balances.ink).wmul(line.proportion).u128();
 
         return
             Auction({
@@ -207,7 +239,9 @@ contract WitchV2 is AccessControl {
         DataTypes.Series memory series = cauldron.series(vault.seriesId);
 
         // Find out how much debt is being repaid
-        uint128 artIn = uint128(cauldron.debtFromBase(vault.seriesId, maxBaseIn));
+        uint128 artIn = uint128(
+            cauldron.debtFromBase(vault.seriesId, maxBaseIn)
+        );
 
         // If offering too much base, take only the necessary.
         artIn = artIn > auction_.art ? auction_.art : artIn;
@@ -215,12 +249,24 @@ contract WitchV2 is AccessControl {
 
         // Calculate the collateral to be sold
         require(
-            (inkOut = _calcPayout(vault.ilkId, auction_.baseId, auction_, artIn)) >= minInkOut,
+            (inkOut = _calcPayout(
+                vault.ilkId,
+                auction_.baseId,
+                auction_,
+                artIn
+            )) >= minInkOut,
             "Not enough bought"
         );
 
         // Update Cauldron and local auction data
-        _updateAccounting(vaultId, vault.ilkId, auction_.baseId, auction_, inkOut, artIn);
+        _updateAccounting(
+            vaultId,
+            vault.ilkId,
+            auction_.baseId,
+            auction_,
+            inkOut,
+            artIn
+        );
 
         // Move the assets
         if (inkOut != 0) {
@@ -235,6 +281,8 @@ contract WitchV2 is AccessControl {
             require(baseJoin != IJoin(address(0)), "Join not found");
             baseJoin.join(msg.sender, baseIn.u128());
         }
+
+        emit Bought(vaultId, to, inkOut, artIn);
     }
 
     /// @dev Pay up to `maxArtIn` debt from a vault in liquidation using fyToken, getting at least `minInkOut` collateral.
@@ -261,12 +309,24 @@ contract WitchV2 is AccessControl {
 
         // Calculate the collateral to be sold
         require(
-            (inkOut = _calcPayout(vault.ilkId, auction_.baseId, auction_, artIn)) >= minInkOut,
+            (inkOut = _calcPayout(
+                vault.ilkId,
+                auction_.baseId,
+                auction_,
+                artIn
+            )) >= minInkOut,
             "Not enough bought"
         );
 
         // Update Cauldron and local auction data
-        _updateAccounting(vaultId, vault.ilkId, auction_.baseId, auction_, inkOut, artIn);
+        _updateAccounting(
+            vaultId,
+            vault.ilkId,
+            auction_.baseId,
+            auction_,
+            inkOut,
+            artIn
+        );
 
         // Move the assets
         if (inkOut != 0) {
@@ -332,7 +392,11 @@ contract WitchV2 is AccessControl {
     /// @param vaultId The vault to get a quote for
     /// @param artIn How much of the vault debt will be paid. 0 means all
     /// @return inkOut How much collateral the liquidator is expected to get
-    function calcPayout(bytes12 vaultId, uint256 artIn) external view returns (uint256 inkOut) {
+    function calcPayout(bytes12 vaultId, uint256 artIn)
+        external
+        view
+        returns (uint256 inkOut)
+    {
         Auction memory auction_ = auctions[vaultId];
         DataTypes.Vault memory vault = cauldron.vaults(vaultId);
 
@@ -371,7 +435,9 @@ contract WitchV2 is AccessControl {
         if (elapsed > duration || initialProportion == 1e18) {
             proportionNow = 1e18;
         } else {
-            proportionNow = uint256(initialProportion) + uint256(1e18 - initialProportion).wmul(elapsed.wdiv(duration));
+            proportionNow =
+                uint256(initialProportion) +
+                uint256(1e18 - initialProportion).wmul(elapsed.wdiv(duration));
         }
 
         uint256 inkAtEnd = uint256(artIn).wdiv(auction_.art).wmul(auction_.ink);
@@ -393,8 +459,6 @@ contract WitchV2 is AccessControl {
 
         // Update concurrent collateral under auction
         Limits memory limits_ = limits[ilkId][baseId];
-        limits_.sum -= inkOut.u128();
-        limits[ilkId][baseId] = limits_;
 
         // Update local auction
         {
@@ -402,15 +466,29 @@ contract WitchV2 is AccessControl {
                 // If there is no debt left, return the vault with the collateral to the owner
                 cauldron.give(vaultId, auction_.owner);
                 delete auctions[vaultId];
+                // Update limits - reduce it by the whole auction
+                limits_.sum -= auction_.ink;
             } else {
                 // Ensure enough dust is left
-                require(auction_.art - artIn >= limits_.dust * (10**limits_.dec), "Leaves dust");
+                require(
+                    auction_.art - artIn >= limits_.dust * (10**limits_.dec),
+                    "Leaves dust"
+                );
 
                 // Update the auction
                 auction_.ink -= inkOut.u128();
                 auction_.art -= artIn.u128();
+
+                // Store auction changes
+                auctions[vaultId] = auction_;
+
+                // Update limits - reduce it by whatever was bought
+                limits_.sum -= inkOut.u128();
             }
         }
+
+        // Store limit changes
+        limits[ilkId][baseId] = limits_;
 
         // Update accounting at Cauldron
         cauldron.slurp(vaultId, inkOut.u128(), artIn.u128());

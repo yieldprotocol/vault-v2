@@ -518,7 +518,9 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         uint128 maxBaseIn = uint128(auction.art.wmul(0.4e18));
         uint128 minInkOut = uint128(witch.calcPayout(VAULT_ID, maxBaseIn));
 
+        // Reduce balances on tha vault
         cauldron.slurp.mock(VAULT_ID, minInkOut, maxBaseIn, balances);
+        cauldron.slurp.verify(VAULT_ID, minInkOut, maxBaseIn);
 
         // make fyToken 1:1 with base to make things simpler
         cauldron.debtFromBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
@@ -534,23 +536,98 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         baseJoin.join.mock(bot, maxBaseIn, maxBaseIn);
         baseJoin.join.verify(bot, maxBaseIn);
 
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID, bot, minInkOut, maxBaseIn);
+
         vm.prank(bot);
-        witch.payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
+        (uint256 inkOut, uint256 baseIn) = witch.payBase(
+            VAULT_ID,
+            bot,
+            minInkOut,
+            maxBaseIn
+        );
+        assertEq(inkOut, minInkOut);
+        assertEq(baseIn, maxBaseIn);
+
+        // sum is reduced by the auction.ink
+        (, , , uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, auction.ink - minInkOut, "sum");
+
+        // Auction was updated
+        (
+            address owner,
+            uint32 start,
+            bytes6 baseId,
+            uint128 ink,
+            uint128 art
+        ) = witch.auctions(VAULT_ID);
+        assertEq(owner, auction.owner, "owner");
+        assertEq(start, auction.start, "start");
+        assertEq(baseId, auction.baseId, "baseId");
+        assertEq(art, auction.art - maxBaseIn, "art");
+        assertEq(ink, auction.ink - minInkOut, "ink");
+    }
+
+    function testPayBaseAll() public {
+        uint128 maxBaseIn = uint128(auction.art);
+        uint128 minInkOut = uint128(witch.calcPayout(VAULT_ID, maxBaseIn));
+
+        // Reduce balances on tha vault
+        cauldron.slurp.mock(VAULT_ID, minInkOut, maxBaseIn, balances);
+        cauldron.slurp.verify(VAULT_ID, minInkOut, maxBaseIn);
+        // Vault returns to it's owner after all the liquidation is done
+        cauldron.give.mock(VAULT_ID, bob, vault);
+        cauldron.give.verify(VAULT_ID, bob);
+
+        // make fyToken 1:1 with base to make things simpler
+        cauldron.debtFromBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+        cauldron.debtToBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+
+        IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
+        ladle.joins.mock(vault.ilkId, ilkJoin);
+        ilkJoin.exit.mock(bot, minInkOut, minInkOut);
+        ilkJoin.exit.verify(bot, minInkOut);
+
+        IJoin baseJoin = IJoin(Mocks.mock("BaseJoin"));
+        ladle.joins.mock(series.baseId, baseJoin);
+        baseJoin.join.mock(bot, maxBaseIn, maxBaseIn);
+        baseJoin.join.verify(bot, maxBaseIn);
+
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID, bot, minInkOut, maxBaseIn);
+
+        vm.prank(bot);
+        (uint256 inkOut, uint256 baseIn) = witch.payBase(
+            VAULT_ID,
+            bot,
+            minInkOut,
+            maxBaseIn
+        );
+        assertEq(inkOut, minInkOut);
+        assertEq(baseIn, maxBaseIn);
+
+        // sum is reduced by the auction.ink
+        (, , , uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 0, "sum");
+
+        // Auction was deleted
+        (
+            address owner,
+            uint32 start,
+            bytes6 baseId,
+            uint128 ink,
+            uint128 art
+        ) = witch.auctions(VAULT_ID);
+        assertEq(owner, address(0), "owner");
+        assertEq(start, 0, "start");
+        assertEq(baseId, "", "baseId");
+        assertEq(art, 0, "art");
+        assertEq(ink, 0, "ink");
     }
 }
 
 //   WithAuction
 
-//     payBase -> WithPartialAuction
-//      - Storage changes
-//      - Cauldron accounting
-//      - Token transfers
-//      - Bought
-//      - Return values
-//     payBaseAll -> ZeroState
-//      - Pay over the vault debt
-//      - Return vault
-//      - Storage changes
 //     payFYToken -> WithPartialAuction
 //      - "Not enough bought"
 //      - Storage changes
