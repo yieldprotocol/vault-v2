@@ -6,7 +6,7 @@ import { Contract } from '@ethersproject/contracts'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 
 import CauldronArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/Cauldron.sol/Cauldron.json'
-import JoinFactoryArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/mocks/JoinFactoryMock.sol/JoinFactoryMock.json'
+import JoinFactoryArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/deprecated/JoinFactoryMock.sol/JoinFactoryMock.json'
 import ERC20MockArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
 import OracleMockArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/mocks/oracles/OracleMock.sol/OracleMock.json'
 

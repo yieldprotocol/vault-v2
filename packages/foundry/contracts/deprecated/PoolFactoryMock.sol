@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.14;
 
-import "@yield-protocol/yieldspace-interfaces/IPoolFactory.sol";
-import "./PoolMock.sol";
+import "./IPoolFactory.sol";
+import "../mocks/PoolMock.sol";
 
 
 /// @dev The PoolFactory can deterministically create new pool instances.
