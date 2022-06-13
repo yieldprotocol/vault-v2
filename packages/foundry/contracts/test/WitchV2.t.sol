@@ -286,18 +286,12 @@ contract WitchV2WithMetadataTest is WitchV2WithMetadata {
         // 100 * 0.5
         assertEq(auction.ink, 50 ether);
 
-        (
-            address owner,
-            uint32 start,
-            bytes6 baseId,
-            uint128 ink,
-            uint128 art
-        ) = witch.auctions(VAULT_ID);
-        assertEq(owner, auction.owner);
-        assertEq(start, auction.start);
-        assertEq(baseId, auction.baseId);
-        assertEq(art, auction.art);
-        assertEq(ink, auction.ink);
+        WitchDataTypes.Auction memory auction_ = iWitch.auctions(VAULT_ID);
+        assertEq(auction_.owner, auction.owner);
+        assertEq(auction_.start, auction.start);
+        assertEq(auction_.baseId, auction.baseId);
+        assertEq(auction_.art, auction.art);
+        assertEq(auction_.ink, auction.ink);
 
         (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
         assertEq(sum, 50 ether);
@@ -335,22 +329,27 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         auction = witch.auction(VAULT_ID);
     }
 
-    function _stubVault(
-        bytes12 vaultId,
-        uint128 ink,
-        uint128 art,
-        int256 level
-    ) internal {
+    struct StubVault {
+        bytes12 vaultId;
+        uint128 ink;
+        uint128 art;
+        int256 level;
+    }
+
+    function _stubVault(StubVault memory params) internal {
         DataTypes.Vault memory v = DataTypes.Vault({
             owner: bob,
             seriesId: SERIES_ID,
             ilkId: ILK_ID
         });
-        DataTypes.Balances memory b = DataTypes.Balances(art, ink);
-        cauldron.vaults.mock(vaultId, v);
-        cauldron.balances.mock(vaultId, b);
-        cauldron.level.mock(vaultId, level);
-        cauldron.give.mock(vaultId, address(witch), v);
+        DataTypes.Balances memory b = DataTypes.Balances(
+            params.art,
+            params.ink
+        );
+        cauldron.vaults.mock(params.vaultId, v);
+        cauldron.balances.mock(params.vaultId, b);
+        cauldron.level.mock(params.vaultId, params.level);
+        cauldron.give.mock(params.vaultId, address(witch), v);
     }
 
     function testCalcPayoutAfterAuction() public {
@@ -392,7 +391,14 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
         assertEq(sum, 50 ether);
 
-        _stubVault(VAULT_ID_2, 101 ether, 100_000e6, -1);
+        _stubVault(
+            StubVault({
+                vaultId: VAULT_ID_2,
+                ink: 101 ether,
+                art: 100_000e6,
+                level: -1
+            })
+        );
 
         // When
         witch.auction(VAULT_ID_2);
@@ -405,7 +411,14 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
 
         // Given
         bytes12 otherVaultId = "other vault";
-        _stubVault(otherVaultId, 10 ether, 20_000e6, -1);
+        _stubVault(
+            StubVault({
+                vaultId: otherVaultId,
+                ink: 10 ether,
+                art: 20_000e6,
+                level: -1
+            })
+        );
 
         // Expect
         vm.expectRevert("Collateral limit reached");
@@ -416,7 +429,14 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
 
     function testDustLimit() public {
         // Half of this vault would be less than the min of 5k
-        _stubVault(VAULT_ID_2, 5 ether, 9999e6, -1);
+        _stubVault(
+            StubVault({
+                vaultId: VAULT_ID_2,
+                ink: 5 ether,
+                art: 9999e6,
+                level: -1
+            })
+        );
 
         WitchDataTypes.Auction memory auction2 = witch.auction(VAULT_ID_2);
 
