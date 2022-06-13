@@ -242,6 +242,17 @@ contract WitchV2WithMetadataTest is WitchV2WithMetadata {
         assertEq(witch.calcPayout(VAULT_ID, 50_000e6), 35.7 ether);
     }
 
+    function testCalcPayoutEdgeCases() public {
+        assertEq(witch.calcPayout(VAULT_ID, 0), 35.7 ether);
+    }
+
+    function testCalcPayoutFuzzArtIn(uint48 artIn) public {
+        vm.assume(artIn <= 50_000e6);
+        uint256 result = witch.calcPayout(VAULT_ID, artIn);
+        assertLe(result, 35.7 ether);
+        assertGt(result, 0);
+    }
+
     function testCalcPayoutFuzzInitialOffer(uint64 io) public {
         vm.assume(io <= 1e18 && io >= 0.01e18);
 

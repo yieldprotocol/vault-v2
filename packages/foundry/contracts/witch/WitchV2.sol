@@ -375,6 +375,10 @@ contract WitchV2 is AccessControl {
             auction_ = _auction(vault, series, balances, debt);
         }
 
+        if (artIn == 0) {
+            artIn = auction_.art;
+        }
+
         inkOut = _calcPayout(vault.ilkId, auction_.baseId, auction_, artIn);
     }
 
