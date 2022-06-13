@@ -355,12 +355,13 @@ contract WitchV2 is AccessControl {
     */
     /// @dev quoutes hoy much ink a liquidator is expected to get if it repays an `artIn` amount
     /// @param vaultId The vault to get a quote for
-    /// @param artIn How much of the vault debt will be paid. 0 means all
+    /// @param maxArtIn How much of the vault debt will be paid. 0  means all. GT than available art, it means all
     /// @return inkOut How much collateral the liquidator is expected to get
-    function calcPayout(bytes12 vaultId, uint256 artIn)
+    /// @return artIn How much debt the liquidator is expected to pay
+    function calcPayout(bytes12 vaultId, uint256 maxArtIn)
         external
         view
-        returns (uint256 inkOut)
+        returns (uint256 inkOut, uint256 artIn)
     {
         WitchDataTypes.Auction memory auction_ = auctions[vaultId];
         DataTypes.Vault memory vault = cauldron.vaults(vaultId);
@@ -375,9 +376,11 @@ contract WitchV2 is AccessControl {
             auction_ = _auction(vault, series, balances, debt);
         }
 
-        if (artIn == 0) {
-            artIn = auction_.art;
-        }
+        // 0 value is to offer a nice API for people that wants to pay all
+        // GT check is to cater for partial buys right before this method executes
+        artIn = (maxArtIn == 0 || maxArtIn > auction_.art)
+            ? auction_.art
+            : maxArtIn;
 
         inkOut = _calcPayout(vault.ilkId, auction_.baseId, auction_, artIn);
     }
