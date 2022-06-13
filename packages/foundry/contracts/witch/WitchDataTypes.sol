@@ -17,9 +17,7 @@ library WitchDataTypes {
     }
 
     struct Limits {
-        uint96 max; // Maximum concurrent auctioned collateral
-        uint24 dust; // Minimum collateral that must be left when buying, unless buying all
-        uint8 dec; // Multiplying factor (10**dec) for max and dust
+        uint128 max; // Maximum concurrent auctioned collateral
         uint128 sum; // Current concurrent auctioned collateral
     }
 }
