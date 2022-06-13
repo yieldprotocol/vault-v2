@@ -122,6 +122,14 @@ library Mocks  {
         );
     }
 
+    function mock(function (bytes6, bytes6) external returns(DataTypes.Debt memory) f, bytes6 p1, bytes6 p2, DataTypes.Debt memory r1) internal {
+        vm.mockCall(
+            f.address,
+            abi.encodeWithSelector(f.selector, p1, p2),
+            abi.encode(r1)
+        );
+    }
+
     function mock(function (bytes6) external view returns(DataTypes.Series memory) f, bytes6 param1, DataTypes.Series memory returned1) internal {
         vm.mockCall(
             f.address,

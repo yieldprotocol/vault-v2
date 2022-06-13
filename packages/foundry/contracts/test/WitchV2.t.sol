@@ -26,13 +26,7 @@ abstract contract WitchV2StateZero is Test, TestConstants {
         uint64 proportion,
         uint64 initialOffer
     );
-    event LimitSet(
-        bytes6 indexed ilkId,
-        bytes6 indexed baseId,
-        uint96 max,
-        uint24 dust,
-        uint8 dec
-    );
+    event LimitSet(bytes6 indexed ilkId, bytes6 indexed baseId, uint128 max);
     event Point(bytes32 indexed param, address indexed value);
 
     bytes12 internal constant VAULT_ID = "vault";
@@ -159,28 +153,21 @@ contract WitchV2StateZeroTest is WitchV2StateZero {
     function testSetLimitRequiresAuth() public {
         vm.prank(bob);
         vm.expectRevert("Access denied");
-        witch.setLimit("", "", 0, 0, 0);
+        witch.setLimit("", "", 0);
     }
 
     function testSetLimit() public {
         uint96 max = 1;
-        uint24 dust = 2;
-        uint8 dec = 3;
 
         vm.expectEmit(true, true, false, true);
-        emit LimitSet(ILK_ID, BASE_ID, max, dust, dec);
+        emit LimitSet(ILK_ID, BASE_ID, max);
 
         vm.prank(ada);
-        witch.setLimit(ILK_ID, BASE_ID, max, dust, dec);
+        witch.setLimit(ILK_ID, BASE_ID, max);
 
-        (uint96 _max, uint24 _dust, uint8 _dec, uint128 _sum) = witch.limits(
-            ILK_ID,
-            BASE_ID
-        );
+        (uint128 _max, uint128 _sum) = witch.limits(ILK_ID, BASE_ID);
 
         assertEq(_max, max);
-        assertEq(_dust, dust);
-        assertEq(_dec, dec);
         assertEq(_sum, 0);
     }
 }
@@ -191,8 +178,9 @@ abstract contract WitchV2WithMetadata is WitchV2StateZero {
     DataTypes.Vault vault;
     DataTypes.Series series;
     DataTypes.Balances balances;
+    DataTypes.Debt debt;
 
-    uint96 max = 100e12;
+    uint96 max = 100e18;
     uint24 dust = 5000;
     uint8 dec = 6;
 
@@ -216,12 +204,20 @@ abstract contract WitchV2WithMetadata is WitchV2StateZero {
 
         balances = DataTypes.Balances({art: 100_000e6, ink: 100 ether});
 
+        debt = DataTypes.Debt({
+            max: 0, // Not used by the Witch
+            min: dust, // Witch uses the cauldron min debt as dust
+            dec: dec,
+            sum: 0 // Not used by the Witch
+        });
+
         cauldron.vaults.mock(VAULT_ID, vault);
         cauldron.series.mock(SERIES_ID, series);
         cauldron.balances.mock(VAULT_ID, balances);
+        cauldron.debt.mock(BASE_ID, ILK_ID, debt);
 
         vm.startPrank(ada);
-        witch.setLimit(ILK_ID, BASE_ID, max, dust, dec);
+        witch.setLimit(ILK_ID, BASE_ID, max);
         witch.setLine(
             ILK_ID,
             BASE_ID,
@@ -290,20 +286,14 @@ contract WitchV2WithMetadataTest is WitchV2WithMetadata {
         // 100 * 0.5
         assertEq(auction.ink, 50 ether);
 
-        (
-            address owner,
-            uint32 start,
-            bytes6 baseId,
-            uint128 ink,
-            uint128 art
-        ) = witch.auctions(VAULT_ID);
-        assertEq(owner, auction.owner);
-        assertEq(start, auction.start);
-        assertEq(baseId, auction.baseId);
-        assertEq(art, auction.art);
-        assertEq(ink, auction.ink);
+        WitchDataTypes.Auction memory auction_ = iWitch.auctions(VAULT_ID);
+        assertEq(auction_.owner, auction.owner);
+        assertEq(auction_.start, auction.start);
+        assertEq(auction_.baseId, auction.baseId);
+        assertEq(auction_.art, auction.art);
+        assertEq(auction_.ink, auction.ink);
 
-        (, , , uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
         assertEq(sum, 50 ether);
     }
 
@@ -339,22 +329,27 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         auction = witch.auction(VAULT_ID);
     }
 
-    function _stubVault(
-        bytes12 vaultId,
-        uint128 ink,
-        uint128 art,
-        int256 level
-    ) internal {
+    struct StubVault {
+        bytes12 vaultId;
+        uint128 ink;
+        uint128 art;
+        int256 level;
+    }
+
+    function _stubVault(StubVault memory params) internal {
         DataTypes.Vault memory v = DataTypes.Vault({
             owner: bob,
             seriesId: SERIES_ID,
             ilkId: ILK_ID
         });
-        DataTypes.Balances memory b = DataTypes.Balances(art, ink);
-        cauldron.vaults.mock(vaultId, v);
-        cauldron.balances.mock(vaultId, b);
-        cauldron.level.mock(vaultId, level);
-        cauldron.give.mock(vaultId, address(witch), v);
+        DataTypes.Balances memory b = DataTypes.Balances(
+            params.art,
+            params.ink
+        );
+        cauldron.vaults.mock(params.vaultId, v);
+        cauldron.balances.mock(params.vaultId, b);
+        cauldron.level.mock(params.vaultId, params.level);
+        cauldron.give.mock(params.vaultId, address(witch), v);
     }
 
     function testCalcPayoutAfterAuction() public {
@@ -393,23 +388,37 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
 
     function testCollateralLimits() public {
         // Given
-        (, , , uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
         assertEq(sum, 50 ether);
 
-        _stubVault(VAULT_ID_2, 101 ether, 100_000e6, -1);
+        _stubVault(
+            StubVault({
+                vaultId: VAULT_ID_2,
+                ink: 101 ether,
+                art: 100_000e6,
+                level: -1
+            })
+        );
 
         // When
         witch.auction(VAULT_ID_2);
 
         // Then
-        (, , , sum) = witch.limits(ILK_ID, BASE_ID);
+        (, sum) = witch.limits(ILK_ID, BASE_ID);
         // Max is 100, but the position could be auctioned due to the soft limit
         // Next position will fail
         assertEq(sum, 100.5 ether);
 
         // Given
         bytes12 otherVaultId = "other vault";
-        _stubVault(otherVaultId, 10 ether, 20_000e6, -1);
+        _stubVault(
+            StubVault({
+                vaultId: otherVaultId,
+                ink: 10 ether,
+                art: 20_000e6,
+                level: -1
+            })
+        );
 
         // Expect
         vm.expectRevert("Collateral limit reached");
@@ -420,7 +429,14 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
 
     function testDustLimit() public {
         // Half of this vault would be less than the min of 5k
-        _stubVault(VAULT_ID_2, 5 ether, 9999e6, -1);
+        _stubVault(
+            StubVault({
+                vaultId: VAULT_ID_2,
+                ink: 5 ether,
+                art: 9999e6,
+                level: -1
+            })
+        );
 
         WitchDataTypes.Auction memory auction2 = witch.auction(VAULT_ID_2);
 
@@ -433,20 +449,15 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
     }
 
     function testUpdateLimit() public {
-        (, , , uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
         assertEq(sum, 50 ether);
 
         vm.prank(ada);
-        witch.setLimit(ILK_ID, BASE_ID, 1, 2, 3);
+        witch.setLimit(ILK_ID, BASE_ID, 1);
 
-        (uint96 _max, uint24 _dust, uint8 _dec, uint128 _sum) = witch.limits(
-            ILK_ID,
-            BASE_ID
-        );
+        (uint128 _max, uint128 _sum) = witch.limits(ILK_ID, BASE_ID);
 
         assertEq(_max, 1);
-        assertEq(_dust, 2);
-        assertEq(_dec, 3);
         // Sum is copied from old values
         assertEq(_sum, 50 ether);
     }
@@ -457,7 +468,7 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
     }
 
     function testCancelAuction() public {
-        (, , , uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
         assertEq(sum, 50 ether);
 
         cauldron.level.mock(VAULT_ID, 0);
@@ -470,7 +481,7 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         witch.cancel(VAULT_ID);
 
         // sum is reduced by the auction.ink
-        (, , , sum) = witch.limits(ILK_ID, BASE_ID);
+        (, sum) = witch.limits(ILK_ID, BASE_ID);
         assertEq(sum, 0);
 
         _auctionWasDeleted(VAULT_ID);
@@ -492,16 +503,13 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
     function testPayBaseLeavesDust() public {
         // Bot tries to pay an amount that'd leaves dust
         uint128 maxBaseIn = auction.art - 4999e6;
-        uint128 minInkOut = uint128(witch.calcPayout(VAULT_ID, maxBaseIn));
-
-        cauldron.slurp.mock(VAULT_ID, minInkOut, maxBaseIn, balances);
 
         // make fyToken 1:1 with base to make things simpler
         cauldron.debtFromBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
         cauldron.debtToBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
 
         vm.expectRevert("Leaves dust");
-        witch.payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
+        witch.payBase(VAULT_ID, bot, 0, maxBaseIn);
     }
 
     function testPayBasePartial() public {
@@ -541,7 +549,7 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         assertEq(baseIn, maxBaseIn);
 
         // sum is reduced by the auction.ink
-        (, , , uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
         assertEq(sum, auction.ink - minInkOut, "sum");
 
         _auctionWasUpdated(VAULT_ID, maxBaseIn, minInkOut);
@@ -589,7 +597,7 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         assertEq(baseIn, maxBaseIn);
 
         // sum is reduced by the auction.ink
-        (, , , uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
         assertEq(sum, auction.ink - minInkOut, "sum");
 
         _auctionWasUpdated(VAULT_ID, maxBaseIn, minInkOut);
@@ -634,7 +642,7 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         assertEq(baseIn, maxBaseIn);
 
         // sum is reduced by the auction.ink
-        (, , , uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
         assertEq(sum, 0, "sum");
 
         _auctionWasDeleted(VAULT_ID);
@@ -684,7 +692,7 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         assertEq(baseIn, maxBaseIn);
 
         // sum is reduced by the auction.ink
-        (, , , uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
         assertEq(sum, 0, "sum");
 
         _auctionWasDeleted(VAULT_ID);
@@ -739,7 +747,7 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         assertEq(artIn, maxArtIn);
 
         // sum is reduced by the auction.ink
-        (, , , uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
         assertEq(sum, auction.ink - minInkOut, "sum");
 
         _auctionWasUpdated(VAULT_ID, maxArtIn, minInkOut);
@@ -781,7 +789,7 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         assertEq(artIn, maxArtIn);
 
         // sum is reduced by the auction.ink
-        (, , , uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
         assertEq(sum, auction.ink - minInkOut, "sum");
 
         _auctionWasUpdated(VAULT_ID, maxArtIn, minInkOut);
@@ -820,7 +828,7 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         assertEq(baseIn, maxArtIn);
 
         // sum is reduced by the auction.ink
-        (, , , uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
         assertEq(sum, 0, "sum");
 
         _auctionWasDeleted(VAULT_ID);
@@ -863,7 +871,7 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         assertEq(baseIn, maxArtIn);
 
         // sum is reduced by the auction.ink
-        (, , , uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
         assertEq(sum, 0, "sum");
 
         _auctionWasDeleted(VAULT_ID);

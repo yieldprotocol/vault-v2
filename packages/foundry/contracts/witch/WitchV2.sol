@@ -38,13 +38,7 @@ contract WitchV2 is AccessControl {
         uint64 proportion,
         uint64 initialOffer
     );
-    event LimitSet(
-        bytes6 indexed ilkId,
-        bytes6 indexed baseId,
-        uint96 max,
-        uint24 dust,
-        uint8 dec
-    );
+    event LimitSet(bytes6 indexed ilkId, bytes6 indexed baseId, uint128 max);
     event Point(bytes32 indexed param, address indexed value);
 
     ICauldron public immutable cauldron;
@@ -104,22 +98,16 @@ contract WitchV2 is AccessControl {
     /// @param ilkId Id of asset used for collateral
     /// @param baseId Id of asset used for underlying
     /// @param max Maximum concurrent auctioned collateral
-    /// @param dust Minimum collateral that must be left when buying, unless buying all
-    /// @param dec Multiplying factor (10**dec) for max and dust
     function setLimit(
         bytes6 ilkId,
         bytes6 baseId,
-        uint96 max,
-        uint24 dust,
-        uint8 dec
+        uint128 max
     ) external auth {
         limits[ilkId][baseId] = WitchDataTypes.Limits({
             max: max,
-            dust: dust,
-            dec: dec,
             sum: limits[ilkId][baseId].sum // sum is initialized at zero, and doesn't change when changing any ilk parameters
         });
-        emit LimitSet(ilkId, baseId, max, dust, dec);
+        emit LimitSet(ilkId, baseId, max);
     }
 
     /// @dev Put an undercollateralized vault up for liquidation
@@ -134,17 +122,17 @@ contract WitchV2 is AccessControl {
         DataTypes.Vault memory vault = cauldron.vaults(vaultId);
         DataTypes.Series memory series = cauldron.series(vault.seriesId);
         DataTypes.Balances memory balances = cauldron.balances(vaultId);
+        DataTypes.Debt memory debt = cauldron.debt(series.baseId, vault.ilkId);
 
         // There is a limit on how much collateral can be concurrently put at auction, but it is a soft limit.
         // If the limit has been surpassed, no more vaults of that collateral can be put for auction.
         // This avoids the scenario where some vaults might be too large to be auctioned.
-        WitchDataTypes.Limits memory limits_ = limits[vault.ilkId][series.baseId];
-        require(
-            limits_.sum <= limits_.max * (10**limits_.dec),
-            "Collateral limit reached"
-        );
+        WitchDataTypes.Limits memory limits_ = limits[vault.ilkId][
+            series.baseId
+        ];
+        require(limits_.sum <= limits_.max, "Collateral limit reached");
 
-        auction_ = _auction(vault, series, balances, limits_);
+        auction_ = _auction(vault, series, balances, debt);
 
         limits_.sum += auction_.ink;
         limits[vault.ilkId][series.baseId] = limits_;
@@ -158,12 +146,12 @@ contract WitchV2 is AccessControl {
         DataTypes.Vault memory vault,
         DataTypes.Series memory series,
         DataTypes.Balances memory balances,
-        WitchDataTypes.Limits memory limits_
+        DataTypes.Debt memory debt
     ) internal view returns (WitchDataTypes.Auction memory) {
         // We store the proportion of the vault to auction, which is the whole vault if the debt would be below dust.
         WitchDataTypes.Line storage line = lines[vault.ilkId][series.baseId];
         uint128 art = uint256(balances.art).wmul(line.proportion).u128();
-        if (art < limits_.dust * (10**limits_.dec)) art = balances.art;
+        if (art < debt.min * (10**debt.dec)) art = balances.art;
         uint128 ink = (art == balances.art)
             ? balances.ink
             : uint256(balances.ink).wmul(line.proportion).u128();
@@ -380,8 +368,11 @@ contract WitchV2 is AccessControl {
         if (auction_.ink == 0) {
             DataTypes.Series memory series = cauldron.series(vault.seriesId);
             DataTypes.Balances memory balances = cauldron.balances(vaultId);
-            WitchDataTypes.Limits memory limits_ = limits[vault.ilkId][series.baseId];
-            auction_ = _auction(vault, series, balances, limits_);
+            DataTypes.Debt memory debt = cauldron.debt(
+                series.baseId,
+                vault.ilkId
+            );
+            auction_ = _auction(vault, series, balances, debt);
         }
 
         inkOut = _calcPayout(vault.ilkId, auction_.baseId, auction_, artIn);
@@ -447,8 +438,9 @@ contract WitchV2 is AccessControl {
                 limits_.sum -= auction_.ink;
             } else {
                 // Ensure enough dust is left
+                DataTypes.Debt memory debt = cauldron.debt(baseId, ilkId);
                 require(
-                    auction_.art - artIn >= limits_.dust * (10**limits_.dec),
+                    auction_.art - artIn >= debt.min * (10**debt.dec),
                     "Leaves dust"
                 );
 
