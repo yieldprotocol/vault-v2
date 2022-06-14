@@ -23,6 +23,8 @@ contract WitchV2 is AccessControl {
     using WDiv for uint256;
     using CastU256U128 for uint256;
 
+    error VaultAlreadyInAuction(bytes12 vaultId, address witch);
+
     event Auctioned(bytes12 indexed vaultId, uint256 indexed start);
     event Cancelled(bytes12 indexed vaultId);
     event Bought(
@@ -40,12 +42,14 @@ contract WitchV2 is AccessControl {
     );
     event LimitSet(bytes6 indexed ilkId, bytes6 indexed baseId, uint128 max);
     event Point(bytes32 indexed param, address indexed value);
+    event AnotherWitchSet(address indexed a, bool isWitch);
 
     ICauldron public immutable cauldron;
     ILadle public ladle;
     mapping(bytes12 => WitchDataTypes.Auction) public auctions;
     mapping(bytes6 => mapping(bytes6 => WitchDataTypes.Line)) public lines;
     mapping(bytes6 => mapping(bytes6 => WitchDataTypes.Limits)) public limits;
+    mapping(address => bool) public otherWitches;
 
     constructor(ICauldron cauldron_, ILadle ladle_) {
         cauldron = cauldron_;
@@ -110,16 +114,27 @@ contract WitchV2 is AccessControl {
         emit LimitSet(ilkId, baseId, max);
     }
 
+    /// @dev Governance function to set other liquidation contracts that may have taken vaults already.
+    /// @param a The address that may be set/unset as another witch
+    /// @param isWitch Is this address a witch or not
+    function setAnotherWitch(address a, bool isWitch) external auth {
+        otherWitches[a] = isWitch;
+        emit AnotherWitchSet(a, isWitch);
+    }
+
     /// @dev Put an undercollateralized vault up for liquidation
     /// @param vaultId Id of vault to liquidate
     function auction(bytes12 vaultId)
         external
         returns (WitchDataTypes.Auction memory auction_)
     {
+        DataTypes.Vault memory vault = cauldron.vaults(vaultId);
+        if (otherWitches[vault.owner]) {
+            revert VaultAlreadyInAuction(vaultId, vault.owner);
+        }
         require(auctions[vaultId].start == 0, "Vault already under auction");
         require(cauldron.level(vaultId) < 0, "Not undercollateralized");
 
-        DataTypes.Vault memory vault = cauldron.vaults(vaultId);
         DataTypes.Series memory series = cauldron.series(vault.seriesId);
         DataTypes.Balances memory balances = cauldron.balances(vaultId);
         DataTypes.Debt memory debt = cauldron.debt(series.baseId, vault.ilkId);

@@ -28,6 +28,7 @@ abstract contract WitchV2StateZero is Test, TestConstants {
     );
     event LimitSet(bytes6 indexed ilkId, bytes6 indexed baseId, uint128 max);
     event Point(bytes32 indexed param, address indexed value);
+    event AnotherWitchSet(address indexed a, bool isWitch);
 
     bytes12 internal constant VAULT_ID = "vault";
     bytes6 internal constant ILK_ID = ETH;
@@ -58,6 +59,7 @@ abstract contract WitchV2StateZero is Test, TestConstants {
         witch.grantRole(WitchV2.point.selector, ada);
         witch.grantRole(WitchV2.setLine.selector, ada);
         witch.grantRole(WitchV2.setLimit.selector, ada);
+        witch.grantRole(WitchV2.setAnotherWitch.selector, ada);
         vm.stopPrank();
 
         vm.label(ada, "ada");
@@ -169,6 +171,24 @@ contract WitchV2StateZeroTest is WitchV2StateZero {
 
         assertEq(_max, max);
         assertEq(_sum, 0);
+    }
+
+    function testSetAnotherWitchRequiresAuth() public {
+        vm.prank(bob);
+        vm.expectRevert("Access denied");
+        witch.setAnotherWitch(address(0), true);
+    }
+
+    function testSetAnotherWitch() public {
+        address anotherWitch = Mocks.mock("anotherWitch");
+
+        vm.expectEmit(true, true, false, true);
+        emit AnotherWitchSet(anotherWitch, true);
+
+        vm.prank(ada);
+        witch.setAnotherWitch(anotherWitch, true);
+
+        assertTrue(witch.otherWitches(anotherWitch));
     }
 }
 
@@ -289,6 +309,27 @@ contract WitchV2WithMetadataTest is WitchV2WithMetadata {
     function testVaultNotUndercollateralised() public {
         cauldron.level.mock(VAULT_ID, 0);
         vm.expectRevert("Not undercollateralized");
+        witch.auction(VAULT_ID);
+    }
+
+    function testVaultBelongsToAnotherWitch() public {
+        // Given
+        address anotherWitch = Mocks.mock("anotherWitch");
+        vm.prank(ada);
+        witch.setAnotherWitch(anotherWitch, true);
+
+        // anotherWitch got to auction first
+        vault.owner = anotherWitch;
+        cauldron.vaults.mock(VAULT_ID, vault);
+
+        // When
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                WitchV2.VaultAlreadyInAuction.selector,
+                VAULT_ID,
+                anotherWitch
+            )
+        );
         witch.auction(VAULT_ID);
     }
 
