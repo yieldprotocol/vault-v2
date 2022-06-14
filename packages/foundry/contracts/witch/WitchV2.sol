@@ -132,7 +132,7 @@ contract WitchV2 is AccessControl {
         ];
         require(limits_.sum <= limits_.max, "Collateral limit reached");
 
-        auction_ = _auction(vault, series, balances, debt);
+        auction_ = _calcAuction(vault, series, balances, debt);
 
         limits_.sum += auction_.ink;
         limits[vault.ilkId][series.baseId] = limits_;
@@ -142,7 +142,10 @@ contract WitchV2 is AccessControl {
         _auctionStarted(vaultId);
     }
 
-    function _auction(
+    /// @dev Calculates the auction initial values, the 2 non-trivial values are how much art must be repayed
+    /// and what's the max ink that will be offered in exchange. For the realtime amount of ink that's on offer
+    /// use `_calcPayout`
+    function _calcAuction(
         DataTypes.Vault memory vault,
         DataTypes.Series memory series,
         DataTypes.Balances memory balances,
@@ -354,26 +357,32 @@ contract WitchV2 is AccessControl {
 
     */
     /// @dev quoutes hoy much ink a liquidator is expected to get if it repays an `artIn` amount
+    /// Works for both Auctioned and ToBeAuctioned vaults
     /// @param vaultId The vault to get a quote for
-    /// @param artIn How much of the vault debt will be paid. 0 means all
+    /// @param maxArtIn How much of the vault debt will be paid. GT than available art means all
     /// @return inkOut How much collateral the liquidator is expected to get
-    function calcPayout(bytes12 vaultId, uint256 artIn)
+    /// @return artIn How much debt the liquidator is expected to pay
+    function calcPayout(bytes12 vaultId, uint256 maxArtIn)
         external
         view
-        returns (uint256 inkOut)
+        returns (uint256 inkOut, uint256 artIn)
     {
         WitchDataTypes.Auction memory auction_ = auctions[vaultId];
         DataTypes.Vault memory vault = cauldron.vaults(vaultId);
 
-        if (auction_.ink == 0) {
+        // If the vault hasn't been auctioned yet, we calculate what values it'd have if it was started right now
+        if (auction_.start == 0) {
             DataTypes.Series memory series = cauldron.series(vault.seriesId);
             DataTypes.Balances memory balances = cauldron.balances(vaultId);
             DataTypes.Debt memory debt = cauldron.debt(
                 series.baseId,
                 vault.ilkId
             );
-            auction_ = _auction(vault, series, balances, debt);
+            auction_ = _calcAuction(vault, series, balances, debt);
         }
+
+        // GT check is to cater for partial buys right before this method executes
+        artIn = maxArtIn > auction_.art ? auction_.art : maxArtIn;
 
         inkOut = _calcPayout(vault.ilkId, auction_.baseId, auction_, artIn);
     }
