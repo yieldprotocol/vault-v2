@@ -29,6 +29,11 @@ abstract contract WitchV2StateZero is Test, TestConstants {
     event LimitSet(bytes6 indexed ilkId, bytes6 indexed baseId, uint128 max);
     event Point(bytes32 indexed param, address indexed value);
     event AnotherWitchSet(address indexed a, bool isWitch);
+    event IgnoredPairSet(
+        bytes6 indexed ilkId,
+        bytes6 indexed baseId,
+        bool ignore
+    );
 
     bytes12 internal constant VAULT_ID = "vault";
     bytes6 internal constant ILK_ID = ETH;
@@ -60,6 +65,7 @@ abstract contract WitchV2StateZero is Test, TestConstants {
         witch.grantRole(WitchV2.setLine.selector, ada);
         witch.grantRole(WitchV2.setLimit.selector, ada);
         witch.grantRole(WitchV2.setAnotherWitch.selector, ada);
+        witch.grantRole(WitchV2.setIgnoredPair.selector, ada);
         vm.stopPrank();
 
         vm.label(ada, "ada");
@@ -189,6 +195,22 @@ contract WitchV2StateZeroTest is WitchV2StateZero {
         witch.setAnotherWitch(anotherWitch, true);
 
         assertTrue(witch.otherWitches(anotherWitch));
+    }
+
+    function testSetIgnoredPairRequiresAuth() public {
+        vm.prank(bob);
+        vm.expectRevert("Access denied");
+        witch.setIgnoredPair("", "", true);
+    }
+
+    function testSetIgnoredPair() public {
+        vm.expectEmit(true, true, false, true);
+        emit IgnoredPairSet(ILK_ID, BASE_ID, true);
+
+        vm.prank(ada);
+        witch.setIgnoredPair(ILK_ID, BASE_ID, true);
+
+        assertTrue(witch.ignoredPairs(ILK_ID, BASE_ID));
     }
 }
 
@@ -328,6 +350,23 @@ contract WitchV2WithMetadataTest is WitchV2WithMetadata {
                 WitchV2.VaultAlreadyInAuction.selector,
                 VAULT_ID,
                 anotherWitch
+            )
+        );
+        witch.auction(VAULT_ID);
+    }
+
+    function testVaultIsMadeOfAnIgnoredPair() public {
+        // Given
+        vm.prank(ada);
+        witch.setIgnoredPair(ILK_ID, BASE_ID, true);
+
+        // When
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                WitchV2.VaultNotLiquidable.selector,
+                VAULT_ID,
+                ILK_ID,
+                BASE_ID
             )
         );
         witch.auction(VAULT_ID);

@@ -24,6 +24,7 @@ contract WitchV2 is AccessControl {
     using CastU256U128 for uint256;
 
     error VaultAlreadyInAuction(bytes12 vaultId, address witch);
+    error VaultNotLiquidable(bytes12 vaultId, bytes6 ilkId, bytes6 baseId);
 
     event Auctioned(bytes12 indexed vaultId, uint256 indexed start);
     event Cancelled(bytes12 indexed vaultId);
@@ -43,6 +44,11 @@ contract WitchV2 is AccessControl {
     event LimitSet(bytes6 indexed ilkId, bytes6 indexed baseId, uint128 max);
     event Point(bytes32 indexed param, address indexed value);
     event AnotherWitchSet(address indexed a, bool isWitch);
+    event IgnoredPairSet(
+        bytes6 indexed ilkId,
+        bytes6 indexed baseId,
+        bool ignore
+    );
 
     ICauldron public immutable cauldron;
     ILadle public ladle;
@@ -50,6 +56,7 @@ contract WitchV2 is AccessControl {
     mapping(bytes6 => mapping(bytes6 => WitchDataTypes.Line)) public lines;
     mapping(bytes6 => mapping(bytes6 => WitchDataTypes.Limits)) public limits;
     mapping(address => bool) public otherWitches;
+    mapping(bytes6 => mapping(bytes6 => bool)) public ignoredPairs;
 
     constructor(ICauldron cauldron_, ILadle ladle_) {
         cauldron = cauldron_;
@@ -122,6 +129,19 @@ contract WitchV2 is AccessControl {
         emit AnotherWitchSet(a, isWitch);
     }
 
+    /// @dev Governance function to to ignore pairs that can't be liquidated
+    /// @param ilkId Id of asset used for collateral
+    /// @param baseId Id of asset used for underlying
+    /// @param ignore Should this pair be ignored for liquidation
+    function setIgnoredPair(
+        bytes6 ilkId,
+        bytes6 baseId,
+        bool ignore
+    ) external auth {
+        ignoredPairs[ilkId][baseId] = ignore;
+        emit IgnoredPairSet(ilkId, baseId, ignore);
+    }
+
     /// @dev Put an undercollateralized vault up for liquidation
     /// @param vaultId Id of vault to liquidate
     function auction(bytes12 vaultId)
@@ -133,9 +153,13 @@ contract WitchV2 is AccessControl {
             revert VaultAlreadyInAuction(vaultId, vault.owner);
         }
         require(auctions[vaultId].start == 0, "Vault already under auction");
+        DataTypes.Series memory series = cauldron.series(vault.seriesId);
+        if (ignoredPairs[vault.ilkId][series.baseId]) {
+            revert VaultNotLiquidable(vaultId, vault.ilkId, series.baseId);
+        }
+
         require(cauldron.level(vaultId) < 0, "Not undercollateralized");
 
-        DataTypes.Series memory series = cauldron.series(vault.seriesId);
         DataTypes.Balances memory balances = cauldron.balances(vaultId);
         DataTypes.Debt memory debt = cauldron.debt(series.baseId, vault.ilkId);
 
