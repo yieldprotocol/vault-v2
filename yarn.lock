@@ -2469,10 +2469,10 @@
   resolved "https://registry.yarnpkg.com/@yield-protocol/vault-interfaces/-/vault-interfaces-2.4.1.tgz#5c5c33cd589c04cf8acc0dc51641c803668c9a0d"
   integrity sha512-qqyBx6DERbkMhRTEVxvxr0OVVyxVyEq1rw/bfFjR/rW1xRAVufF+IQiyR5EFo807i/cW0MVjxt1KPVZGSyrLHA==
 
-"@yield-protocol/yieldspace-tv@^0.1.1-rc10":
-  version "0.1.1-rc10"
-  resolved "https://registry.yarnpkg.com/@yield-protocol/yieldspace-tv/-/yieldspace-tv-0.1.1-rc10.tgz#3a4a0a5b1b8fc86df249a38a69b91018e86fb862"
-  integrity sha512-hfnuB+TtKj0t6CbIoJcVztsiHsIu/Hnb/Ii3W6Iu4VqoFRTy6lXJ1kefNheXQgFBA1dCGVLyrLTsGYnfdF+WCg==
+"@yield-protocol/yieldspace-tv@^0.1.1-rc15":
+  version "0.1.1-rc15"
+  resolved "https://registry.yarnpkg.com/@yield-protocol/yieldspace-tv/-/yieldspace-tv-0.1.1-rc15.tgz#fc016c5cdab0f8c7374683f70b98b30d7d12bdec"
+  integrity sha512-UllgEwgbadG6E9oV64+ARaymsp7YdS+hC892xSnep+UnvLze0BcgRawYKRZ4jyBs6BhehYWcRjANJ6+rnsHplA==
 
 abab@^2.0.0:
   version "2.0.6"

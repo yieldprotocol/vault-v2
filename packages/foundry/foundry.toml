@@ -1,5 +1,6 @@
 [default]
-src = 'contracts'
+src = 'packages/foundry/contracts'
+root = './packages/foundry'
 test = 'test'
 out = 'out'
 libs = ['lib']
