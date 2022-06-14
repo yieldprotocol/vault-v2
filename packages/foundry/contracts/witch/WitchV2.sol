@@ -132,7 +132,7 @@ contract WitchV2 is AccessControl {
         ];
         require(limits_.sum <= limits_.max, "Collateral limit reached");
 
-        auction_ = _calculateAuctionInitialValues(vault, series, balances, debt);
+        auction_ = _calcAuction(vault, series, balances, debt);
 
         limits_.sum += auction_.ink;
         limits[vault.ilkId][series.baseId] = limits_;
@@ -145,7 +145,7 @@ contract WitchV2 is AccessControl {
     /// @dev Calculates the auction initial values, the 2 non-trivial values are how much art must be repayed
     /// and what's the max ink that will be offered in exchange. For the realtime amount of ink that's on offer
     /// use `_calcPayout`
-    function _calculateAuctionInitialValues(
+    function _calcAuction(
         DataTypes.Vault memory vault,
         DataTypes.Series memory series,
         DataTypes.Balances memory balances,
@@ -378,7 +378,7 @@ contract WitchV2 is AccessControl {
                 series.baseId,
                 vault.ilkId
             );
-            auction_ = _calculateAuctionInitialValues(vault, series, balances, debt);
+            auction_ = _calcAuction(vault, series, balances, debt);
         }
 
         // GT check is to cater for partial buys right before this method executes
