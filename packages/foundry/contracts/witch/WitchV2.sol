@@ -23,7 +23,7 @@ contract WitchV2 is AccessControl {
     using WDiv for uint256;
     using CastU256U128 for uint256;
 
-    error VaultAlreadyInAuction(bytes12 vaultId, address witch);
+    error VaultAlreadyUnderAuction(bytes12 vaultId, address witch);
     error VaultNotLiquidable(bytes12 vaultId, bytes6 ilkId, bytes6 baseId);
 
     event Auctioned(bytes12 indexed vaultId, uint256 indexed start);
@@ -149,10 +149,9 @@ contract WitchV2 is AccessControl {
         returns (WitchDataTypes.Auction memory auction_)
     {
         DataTypes.Vault memory vault = cauldron.vaults(vaultId);
-        if (otherWitches[vault.owner]) {
-            revert VaultAlreadyInAuction(vaultId, vault.owner);
+        if (vault.owner == address(this) || otherWitches[vault.owner]) {
+            revert VaultAlreadyUnderAuction(vaultId, vault.owner);
         }
-        require(auctions[vaultId].start == 0, "Vault already under auction");
         DataTypes.Series memory series = cauldron.series(vault.seriesId);
         if (ignoredPairs[vault.ilkId][series.baseId]) {
             revert VaultNotLiquidable(vaultId, vault.ilkId, series.baseId);

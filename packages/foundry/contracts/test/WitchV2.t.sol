@@ -347,7 +347,7 @@ contract WitchV2WithMetadataTest is WitchV2WithMetadata {
         // When
         vm.expectRevert(
             abi.encodeWithSelector(
-                WitchV2.VaultAlreadyInAuction.selector,
+                WitchV2.VaultAlreadyUnderAuction.selector,
                 VAULT_ID,
                 anotherWitch
             )
@@ -431,6 +431,9 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         cauldron.level.mock(VAULT_ID, -1);
         cauldron.give.mock(VAULT_ID, address(witch), vault);
         auction = witch.auction(VAULT_ID);
+        vault.owner = address(witch);
+        // Mocks are not pass by reference, so we need to re-mock
+        cauldron.vaults.mock(VAULT_ID, vault);
     }
 
     struct StubVault {
@@ -488,7 +491,13 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
     }
 
     function testAuctionAlreadyExists() public {
-        vm.expectRevert("Vault already under auction");
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                WitchV2.VaultAlreadyUnderAuction.selector,
+                VAULT_ID,
+                address(witch)
+            )
+        );
         witch.auction(VAULT_ID);
     }
 
@@ -546,7 +555,7 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
 
         WitchDataTypes.Auction memory auction2 = witch.auction(VAULT_ID_2);
 
-        assertEq(auction2.owner, vault.owner);
+        assertEq(auction2.owner, address(0xb0b));
         assertEq(auction2.start, uint32(block.timestamp));
         assertEq(auction2.baseId, series.baseId);
         // 100% of the vault was put for liquidation
