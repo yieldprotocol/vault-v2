@@ -161,7 +161,8 @@ contract WitchV2 is AccessControl {
 
     /// @dev Put an undercollateralized vault up for liquidation
     /// @param vaultId Id of vault to liquidate
-    function auction(bytes12 vaultId)
+    /// @param to Receiver of the auctioneer reward
+    function auction(bytes12 vaultId, address to)
         external
         returns (WitchDataTypes.Auction memory auction_)
     {
@@ -187,7 +188,7 @@ contract WitchV2 is AccessControl {
         ];
         require(limits_.sum <= limits_.max, "Collateral limit reached");
 
-        auction_ = _calcAuction(vault, series, balances, debt);
+        auction_ = _calcAuction(vault, series, balances, debt, to);
 
         limits_.sum += auction_.ink;
         limits[vault.ilkId][series.baseId] = limits_;
@@ -204,7 +205,8 @@ contract WitchV2 is AccessControl {
         DataTypes.Vault memory vault,
         DataTypes.Series memory series,
         DataTypes.Balances memory balances,
-        DataTypes.Debt memory debt
+        DataTypes.Debt memory debt,
+        address to
     ) internal view returns (WitchDataTypes.Auction memory) {
         // We store the proportion of the vault to auction, which is the whole vault if the debt would be below dust.
         WitchDataTypes.Line storage line = lines[vault.ilkId][series.baseId];
@@ -223,7 +225,7 @@ contract WitchV2 is AccessControl {
                 ilkId: vault.ilkId,
                 art: art,
                 ink: ink,
-                auctioneer: msg.sender
+                auctioneer: to
             });
     }
 
@@ -376,7 +378,7 @@ contract WitchV2 is AccessControl {
             IJoin ilkJoin = ladle.joins(ilkId);
             require(ilkJoin != IJoin(address(0)), "Join not found");
 
-            if (auctioneer != msg.sender) {
+            if (auctioneer != to) {
                 // Pay auctioneer's cut
                 auctioneerCut = inkOut.wmul(auctioneerReward);
                 ilkJoin.exit(auctioneer, auctioneerCut.u128());
@@ -458,7 +460,7 @@ contract WitchV2 is AccessControl {
                 series.baseId,
                 vault.ilkId
             );
-            auction_ = _calcAuction(vault, series, balances, debt);
+            auction_ = _calcAuction(vault, series, balances, debt, msg.sender);
         }
 
         // GT check is to cater for partial buys right before this method executes

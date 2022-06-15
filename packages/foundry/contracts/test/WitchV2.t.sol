@@ -378,7 +378,7 @@ contract WitchV2WithMetadataTest is WitchV2WithMetadata {
     function testVaultNotUndercollateralised() public {
         cauldron.level.mock(VAULT_ID, 0);
         vm.expectRevert("Not undercollateralized");
-        witch.auction(VAULT_ID);
+        witch.auction(VAULT_ID, bot);
     }
 
     function testVaultBelongsToAnotherWitch() public {
@@ -399,7 +399,7 @@ contract WitchV2WithMetadataTest is WitchV2WithMetadata {
                 anotherWitch
             )
         );
-        witch.auction(VAULT_ID);
+        witch.auction(VAULT_ID, bot);
     }
 
     function testVaultIsMadeOfAnIgnoredPair() public {
@@ -416,7 +416,7 @@ contract WitchV2WithMetadataTest is WitchV2WithMetadata {
                 BASE_ID
             )
         );
-        witch.auction(VAULT_ID);
+        witch.auction(VAULT_ID, bot);
     }
 
     function testCanAuctionVault() public {
@@ -427,7 +427,7 @@ contract WitchV2WithMetadataTest is WitchV2WithMetadata {
         vm.expectEmit(true, true, true, true);
         emit Auctioned(VAULT_ID, uint32(block.timestamp));
 
-        WitchDataTypes.Auction memory auction = witch.auction(VAULT_ID);
+        WitchDataTypes.Auction memory auction = witch.auction(VAULT_ID, bot);
 
         assertEq(auction.owner, vault.owner);
         assertEq(auction.start, uint32(block.timestamp));
@@ -478,7 +478,7 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         cauldron.level.mock(VAULT_ID, -1);
         cauldron.give.mock(VAULT_ID, address(witch), vault);
         vm.prank(bot);
-        auction = witch.auction(VAULT_ID);
+        auction = witch.auction(VAULT_ID, bot);
         vault.owner = address(witch);
         // Mocks are not pass by reference, so we need to re-mock
         cauldron.vaults.mock(VAULT_ID, vault);
@@ -605,7 +605,7 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
                 address(witch)
             )
         );
-        witch.auction(VAULT_ID);
+        witch.auction(VAULT_ID, bot);
     }
 
     function testCollateralLimits() public {
@@ -623,7 +623,7 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         );
 
         // When
-        witch.auction(VAULT_ID_2);
+        witch.auction(VAULT_ID_2, bot);
 
         // Then
         (, sum) = witch.limits(ILK_ID, BASE_ID);
@@ -646,7 +646,7 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         vm.expectRevert("Collateral limit reached");
 
         // When
-        witch.auction(otherVaultId);
+        witch.auction(otherVaultId, bot);
     }
 
     function testDustLimit() public {
@@ -660,7 +660,7 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
             })
         );
 
-        WitchDataTypes.Auction memory auction2 = witch.auction(VAULT_ID_2);
+        WitchDataTypes.Auction memory auction2 = witch.auction(VAULT_ID_2, bot);
 
         assertEq(auction2.owner, address(0xb0b));
         assertEq(auction2.start, uint32(block.timestamp));
