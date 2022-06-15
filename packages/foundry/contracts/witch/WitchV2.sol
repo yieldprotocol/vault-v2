@@ -43,7 +43,7 @@ contract WitchV2 is AccessControl {
     );
     event LimitSet(bytes6 indexed ilkId, bytes6 indexed baseId, uint128 max);
     event Point(bytes32 indexed param, address indexed value);
-    event AnotherWitchSet(address indexed a, bool isWitch);
+    event AnotherWitchSet(address indexed value, bool isWitch);
     event IgnoredPairSet(
         bytes6 indexed ilkId,
         bytes6 indexed baseId,
@@ -122,11 +122,11 @@ contract WitchV2 is AccessControl {
     }
 
     /// @dev Governance function to set other liquidation contracts that may have taken vaults already.
-    /// @param a The address that may be set/unset as another witch
+    /// @param value The address that may be set/unset as another witch
     /// @param isWitch Is this address a witch or not
-    function setAnotherWitch(address a, bool isWitch) external auth {
-        otherWitches[a] = isWitch;
-        emit AnotherWitchSet(a, isWitch);
+    function setAnotherWitch(address value, bool isWitch) external auth {
+        otherWitches[value] = isWitch;
+        emit AnotherWitchSet(value, isWitch);
     }
 
     /// @dev Governance function to to ignore pairs that can't be liquidated
