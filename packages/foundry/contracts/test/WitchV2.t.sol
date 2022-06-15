@@ -28,6 +28,12 @@ abstract contract WitchV2StateZero is Test, TestConstants {
     );
     event LimitSet(bytes6 indexed ilkId, bytes6 indexed baseId, uint128 max);
     event Point(bytes32 indexed param, address indexed value);
+    event AnotherWitchSet(address indexed a, bool isWitch);
+    event IgnoredPairSet(
+        bytes6 indexed ilkId,
+        bytes6 indexed baseId,
+        bool ignore
+    );
 
     bytes12 internal constant VAULT_ID = "vault";
     bytes6 internal constant ILK_ID = ETH;
@@ -58,6 +64,8 @@ abstract contract WitchV2StateZero is Test, TestConstants {
         witch.grantRole(WitchV2.point.selector, ada);
         witch.grantRole(WitchV2.setLine.selector, ada);
         witch.grantRole(WitchV2.setLimit.selector, ada);
+        witch.grantRole(WitchV2.setAnotherWitch.selector, ada);
+        witch.grantRole(WitchV2.setIgnoredPair.selector, ada);
         vm.stopPrank();
 
         vm.label(ada, "ada");
@@ -169,6 +177,40 @@ contract WitchV2StateZeroTest is WitchV2StateZero {
 
         assertEq(_max, max);
         assertEq(_sum, 0);
+    }
+
+    function testSetAnotherWitchRequiresAuth() public {
+        vm.prank(bob);
+        vm.expectRevert("Access denied");
+        witch.setAnotherWitch(address(0), true);
+    }
+
+    function testSetAnotherWitch() public {
+        address anotherWitch = Mocks.mock("anotherWitch");
+
+        vm.expectEmit(true, true, false, true);
+        emit AnotherWitchSet(anotherWitch, true);
+
+        vm.prank(ada);
+        witch.setAnotherWitch(anotherWitch, true);
+
+        assertTrue(witch.otherWitches(anotherWitch));
+    }
+
+    function testSetIgnoredPairRequiresAuth() public {
+        vm.prank(bob);
+        vm.expectRevert("Access denied");
+        witch.setIgnoredPair("", "", true);
+    }
+
+    function testSetIgnoredPair() public {
+        vm.expectEmit(true, true, false, true);
+        emit IgnoredPairSet(ILK_ID, BASE_ID, true);
+
+        vm.prank(ada);
+        witch.setIgnoredPair(ILK_ID, BASE_ID, true);
+
+        assertTrue(witch.ignoredPairs(ILK_ID, BASE_ID));
     }
 }
 
@@ -292,6 +334,44 @@ contract WitchV2WithMetadataTest is WitchV2WithMetadata {
         witch.auction(VAULT_ID);
     }
 
+    function testVaultBelongsToAnotherWitch() public {
+        // Given
+        address anotherWitch = Mocks.mock("anotherWitch");
+        vm.prank(ada);
+        witch.setAnotherWitch(anotherWitch, true);
+
+        // anotherWitch got to auction first
+        vault.owner = anotherWitch;
+        cauldron.vaults.mock(VAULT_ID, vault);
+
+        // When
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                WitchV2.VaultAlreadyUnderAuction.selector,
+                VAULT_ID,
+                anotherWitch
+            )
+        );
+        witch.auction(VAULT_ID);
+    }
+
+    function testVaultIsMadeOfAnIgnoredPair() public {
+        // Given
+        vm.prank(ada);
+        witch.setIgnoredPair(ILK_ID, BASE_ID, true);
+
+        // When
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                WitchV2.VaultNotLiquidable.selector,
+                VAULT_ID,
+                ILK_ID,
+                BASE_ID
+            )
+        );
+        witch.auction(VAULT_ID);
+    }
+
     function testCanAuctionVault() public {
         cauldron.level.mock(VAULT_ID, -1);
         cauldron.give.mock(VAULT_ID, address(witch), vault);
@@ -351,6 +431,9 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         cauldron.level.mock(VAULT_ID, -1);
         cauldron.give.mock(VAULT_ID, address(witch), vault);
         auction = witch.auction(VAULT_ID);
+        vault.owner = address(witch);
+        // Mocks are not pass by reference, so we need to re-mock
+        cauldron.vaults.mock(VAULT_ID, vault);
     }
 
     struct StubVault {
@@ -408,7 +491,13 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
     }
 
     function testAuctionAlreadyExists() public {
-        vm.expectRevert("Vault already under auction");
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                WitchV2.VaultAlreadyUnderAuction.selector,
+                VAULT_ID,
+                address(witch)
+            )
+        );
         witch.auction(VAULT_ID);
     }
 
@@ -466,7 +555,7 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
 
         WitchDataTypes.Auction memory auction2 = witch.auction(VAULT_ID_2);
 
-        assertEq(auction2.owner, vault.owner);
+        assertEq(auction2.owner, address(0xb0b));
         assertEq(auction2.start, uint32(block.timestamp));
         assertEq(auction2.baseId, series.baseId);
         // 100% of the vault was put for liquidation

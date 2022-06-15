@@ -23,6 +23,9 @@ contract WitchV2 is AccessControl {
     using WDiv for uint256;
     using CastU256U128 for uint256;
 
+    error VaultAlreadyUnderAuction(bytes12 vaultId, address witch);
+    error VaultNotLiquidable(bytes12 vaultId, bytes6 ilkId, bytes6 baseId);
+
     event Auctioned(bytes12 indexed vaultId, uint256 indexed start);
     event Cancelled(bytes12 indexed vaultId);
     event Bought(
@@ -40,12 +43,20 @@ contract WitchV2 is AccessControl {
     );
     event LimitSet(bytes6 indexed ilkId, bytes6 indexed baseId, uint128 max);
     event Point(bytes32 indexed param, address indexed value);
+    event AnotherWitchSet(address indexed value, bool isWitch);
+    event IgnoredPairSet(
+        bytes6 indexed ilkId,
+        bytes6 indexed baseId,
+        bool ignore
+    );
 
     ICauldron public immutable cauldron;
     ILadle public ladle;
     mapping(bytes12 => WitchDataTypes.Auction) public auctions;
     mapping(bytes6 => mapping(bytes6 => WitchDataTypes.Line)) public lines;
     mapping(bytes6 => mapping(bytes6 => WitchDataTypes.Limits)) public limits;
+    mapping(address => bool) public otherWitches;
+    mapping(bytes6 => mapping(bytes6 => bool)) public ignoredPairs;
 
     constructor(ICauldron cauldron_, ILadle ladle_) {
         cauldron = cauldron_;
@@ -110,17 +121,44 @@ contract WitchV2 is AccessControl {
         emit LimitSet(ilkId, baseId, max);
     }
 
+    /// @dev Governance function to set other liquidation contracts that may have taken vaults already.
+    /// @param value The address that may be set/unset as another witch
+    /// @param isWitch Is this address a witch or not
+    function setAnotherWitch(address value, bool isWitch) external auth {
+        otherWitches[value] = isWitch;
+        emit AnotherWitchSet(value, isWitch);
+    }
+
+    /// @dev Governance function to to ignore pairs that can't be liquidated
+    /// @param ilkId Id of asset used for collateral
+    /// @param baseId Id of asset used for underlying
+    /// @param ignore Should this pair be ignored for liquidation
+    function setIgnoredPair(
+        bytes6 ilkId,
+        bytes6 baseId,
+        bool ignore
+    ) external auth {
+        ignoredPairs[ilkId][baseId] = ignore;
+        emit IgnoredPairSet(ilkId, baseId, ignore);
+    }
+
     /// @dev Put an undercollateralized vault up for liquidation
     /// @param vaultId Id of vault to liquidate
     function auction(bytes12 vaultId)
         external
         returns (WitchDataTypes.Auction memory auction_)
     {
-        require(auctions[vaultId].start == 0, "Vault already under auction");
+        DataTypes.Vault memory vault = cauldron.vaults(vaultId);
+        if (vault.owner == address(this) || otherWitches[vault.owner]) {
+            revert VaultAlreadyUnderAuction(vaultId, vault.owner);
+        }
+        DataTypes.Series memory series = cauldron.series(vault.seriesId);
+        if (ignoredPairs[vault.ilkId][series.baseId]) {
+            revert VaultNotLiquidable(vaultId, vault.ilkId, series.baseId);
+        }
+
         require(cauldron.level(vaultId) < 0, "Not undercollateralized");
 
-        DataTypes.Vault memory vault = cauldron.vaults(vaultId);
-        DataTypes.Series memory series = cauldron.series(vault.seriesId);
         DataTypes.Balances memory balances = cauldron.balances(vaultId);
         DataTypes.Debt memory debt = cauldron.debt(series.baseId, vault.ilkId);
 
