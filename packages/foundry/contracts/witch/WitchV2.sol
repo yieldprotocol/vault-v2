@@ -29,6 +29,7 @@ contract WitchV2 is AccessControl {
 
     event Auctioned(bytes12 indexed vaultId, uint256 indexed start);
     event Cancelled(bytes12 indexed vaultId);
+    event Ended(bytes12 indexed vaultId);
     event Bought(
         bytes12 indexed vaultId,
         address indexed buyer,
@@ -579,5 +580,6 @@ contract WitchV2 is AccessControl {
     function _auctionEnded(bytes12 vaultId, address owner) internal virtual {
         cauldron.give(vaultId, owner);
         delete auctions[vaultId];
+        emit Ended(vaultId);
     }
 }

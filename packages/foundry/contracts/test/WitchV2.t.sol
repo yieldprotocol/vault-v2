@@ -13,6 +13,7 @@ abstract contract WitchV2StateZero is Test, TestConstants {
 
     event Auctioned(bytes12 indexed vaultId, uint256 indexed start);
     event Cancelled(bytes12 indexed vaultId);
+    event Ended(bytes12 indexed vaultId);
     event Bought(
         bytes12 indexed vaultId,
         address indexed buyer,
@@ -34,7 +35,7 @@ abstract contract WitchV2StateZero is Test, TestConstants {
         bytes6 indexed baseId,
         bool ignore
     );
-        event AuctioneerRewardSet(uint128 auctioneerReward);
+    event AuctioneerRewardSet(uint128 auctioneerReward);
 
     bytes12 internal constant VAULT_ID = "vault";
     bytes6 internal constant ILK_ID = ETH;
@@ -223,7 +224,13 @@ contract WitchV2StateZeroTest is WitchV2StateZero {
 
     function testSetAuctioneerRewardTooHigh() public {
         vm.prank(ada);
-        vm.expectRevert(abi.encodeWithSelector(WitchV2.AuctioneerRewardTooHigh.selector, 1e18, 1.00001e18));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                WitchV2.AuctioneerRewardTooHigh.selector,
+                1e18,
+                1.00001e18
+            )
+        );
         witch.setAuctioneerReward(1.00001e18);
     }
 
@@ -691,6 +698,8 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         cauldron.give.verify(VAULT_ID, bob);
 
         vm.expectEmit(true, true, true, true);
+        emit Ended(VAULT_ID);
+        vm.expectEmit(true, true, true, true);
         emit Cancelled(VAULT_ID);
 
         witch.cancel(VAULT_ID);
@@ -850,6 +859,8 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         baseJoin.join.verify(bot, maxBaseIn);
 
         vm.expectEmit(true, true, true, true);
+        emit Ended(VAULT_ID);
+        vm.expectEmit(true, true, true, true);
         emit Bought(VAULT_ID, bot, minInkOut, maxBaseIn);
 
         vm.prank(bot);
@@ -901,6 +912,8 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         baseJoin.join.mock(bot, maxBaseIn, maxBaseIn);
         baseJoin.join.verify(bot, maxBaseIn);
 
+        vm.expectEmit(true, true, true, true);
+        emit Ended(VAULT_ID);
         vm.expectEmit(true, true, true, true);
         emit Bought(VAULT_ID, bot, minInkOut, maxBaseIn);
 
@@ -968,6 +981,8 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         baseJoin.join.mock(bot2, maxBaseIn, maxBaseIn);
         baseJoin.join.verify(bot2, maxBaseIn);
 
+        vm.expectEmit(true, true, true, true);
+        emit Ended(VAULT_ID);
         vm.expectEmit(true, true, true, true);
         emit Bought(VAULT_ID, bot2, liquidatorCut + auctioneerCut, maxBaseIn);
 
@@ -1132,6 +1147,8 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         series.fyToken.burn.verify(bot2, maxArtIn);
 
         vm.expectEmit(true, true, true, true);
+        emit Ended(VAULT_ID);
+        vm.expectEmit(true, true, true, true);
         emit Bought(VAULT_ID, bot2, liquidatorCut + auctioneerCut, maxArtIn);
 
         vm.prank(bot2);
@@ -1172,6 +1189,8 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         series.fyToken.burn.mock(bot, maxArtIn);
         series.fyToken.burn.verify(bot, maxArtIn);
 
+        vm.expectEmit(true, true, true, true);
+        emit Ended(VAULT_ID);
         vm.expectEmit(true, true, true, true);
         emit Bought(VAULT_ID, bot, minInkOut, maxArtIn);
 
@@ -1217,6 +1236,8 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         series.fyToken.burn.mock(bot, maxArtIn);
         series.fyToken.burn.verify(bot, maxArtIn);
 
+        vm.expectEmit(true, true, true, true);
+        emit Ended(VAULT_ID);
         vm.expectEmit(true, true, true, true);
         emit Bought(VAULT_ID, bot, minInkOut, maxArtIn);
 
