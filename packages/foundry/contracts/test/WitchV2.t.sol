@@ -34,6 +34,7 @@ abstract contract WitchV2StateZero is Test, TestConstants {
         bytes6 indexed baseId,
         bool ignore
     );
+        event AuctioneerRewardSet(uint128 auctioneerReward);
 
     bytes12 internal constant VAULT_ID = "vault";
     bytes6 internal constant ILK_ID = ETH;
@@ -66,6 +67,7 @@ abstract contract WitchV2StateZero is Test, TestConstants {
         witch.grantRole(WitchV2.setLimit.selector, ada);
         witch.grantRole(WitchV2.setAnotherWitch.selector, ada);
         witch.grantRole(WitchV2.setIgnoredPair.selector, ada);
+        witch.grantRole(WitchV2.setAuctioneerReward.selector, ada);
         vm.stopPrank();
 
         vm.label(ada, "ada");
@@ -212,6 +214,28 @@ contract WitchV2StateZeroTest is WitchV2StateZero {
 
         assertTrue(witch.ignoredPairs(ILK_ID, BASE_ID));
     }
+
+    function testSetAuctioneerRewardRequiresAuth() public {
+        vm.prank(bob);
+        vm.expectRevert("Access denied");
+        witch.setAuctioneerReward(0);
+    }
+
+    function testSetAuctioneerRewardTooHigh() public {
+        vm.prank(ada);
+        vm.expectRevert(abi.encodeWithSelector(WitchV2.AuctioneerRewardTooHigh.selector, 1e18, 1.00001e18));
+        witch.setAuctioneerReward(1.00001e18);
+    }
+
+    function testSetAuctioneerReward() public {
+        vm.expectEmit(true, true, false, true);
+        emit AuctioneerRewardSet(0.02e18);
+
+        vm.prank(ada);
+        witch.setAuctioneerReward(0.02e18);
+
+        assertEq(witch.auctioneerReward(), 0.02e18);
+    }
 }
 
 abstract contract WitchV2WithMetadata is WitchV2StateZero {
@@ -277,32 +301,48 @@ contract WitchV2WithMetadataTest is WitchV2WithMetadata {
     function testCalcPayout() public {
         // 100 * 0.5 * 0.714 = 35.7
         // (ink * proportion * initialOffer)
-        (uint256 inkOut, uint256 artIn) = witch.calcPayout(VAULT_ID, 50_000e6);
-        assertEq(inkOut, 35.7 ether);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 artIn) = witch
+            .calcPayout(VAULT_ID, 50_000e6);
+        assertEq(liquidatorCut, 35.7 ether);
+        // on a non-started auction it's always assumed that liquidator == auctioneer
+        assertEq(auctioneerCut, 0);
         assertEq(artIn, 50_000e6);
 
         skip(5 minutes);
         // Nothing changes as auction was never started
-        (inkOut, artIn) = witch.calcPayout(VAULT_ID, 50_000e6);
-        assertEq(inkOut, 35.7 ether);
+        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(
+            VAULT_ID,
+            50_000e6
+        );
+        assertEq(liquidatorCut, 35.7 ether);
+        assertEq(auctioneerCut, 0);
         assertEq(artIn, 50_000e6);
     }
 
     function testCalcPayoutEdgeCases() public {
-        (uint256 inkOut, uint256 artIn) = witch.calcPayout(VAULT_ID, 0);
-        assertEq(inkOut, 0);
+        (uint256 liquidatorCut, , uint256 artIn) = witch.calcPayout(
+            VAULT_ID,
+            0
+        );
+        assertEq(liquidatorCut, 0);
         assertEq(artIn, 0);
 
-        (inkOut, artIn) = witch.calcPayout(VAULT_ID, type(uint256).max);
-        assertEq(inkOut, 35.7 ether);
+        (liquidatorCut, , artIn) = witch.calcPayout(
+            VAULT_ID,
+            type(uint256).max
+        );
+        assertEq(liquidatorCut, 35.7 ether);
         assertEq(artIn, 50_000e6);
     }
 
     function testCalcPayoutFuzzArtIn(uint256 maxArtIn) public {
-        (uint256 inkOut, uint256 artIn) = witch.calcPayout(VAULT_ID, maxArtIn);
+        (uint256 liquidatorCut, , uint256 artIn) = witch.calcPayout(
+            VAULT_ID,
+            maxArtIn
+        );
 
-        assertLe(inkOut, 35.7 ether);
-        assertGe(inkOut, 0);
+        assertLe(liquidatorCut, 35.7 ether);
+        assertGe(liquidatorCut, 0);
 
         assertGe(artIn, 0);
         assertLe(artIn, 50_000e6);
@@ -314,18 +354,18 @@ contract WitchV2WithMetadataTest is WitchV2WithMetadata {
         vm.prank(ada);
         witch.setLine(ILK_ID, BASE_ID, AUCTION_DURATION, proportion, io);
 
-        (uint256 inkOut, ) = witch.calcPayout(VAULT_ID, 50_000e6);
+        (uint256 liquidatorCut, , ) = witch.calcPayout(VAULT_ID, 50_000e6);
 
-        assertLe(inkOut, 50 ether);
-        assertGe(inkOut, 0.5 ether);
+        assertLe(liquidatorCut, 50 ether);
+        assertGe(liquidatorCut, 0.5 ether);
     }
 
     function testCalcPayoutFuzzElapsed(uint16 elapsed) public {
         skip(elapsed);
 
-        (uint256 inkOut, ) = witch.calcPayout(VAULT_ID, 50_000e6);
+        (uint256 liquidatorCut, , ) = witch.calcPayout(VAULT_ID, 50_000e6);
 
-        assertLe(inkOut, 50 ether);
+        assertLe(liquidatorCut, 50 ether);
     }
 
     function testVaultNotUndercollateralised() public {
@@ -430,6 +470,7 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
 
         cauldron.level.mock(VAULT_ID, -1);
         cauldron.give.mock(VAULT_ID, address(witch), vault);
+        vm.prank(bot);
         auction = witch.auction(VAULT_ID);
         vault.owner = address(witch);
         // Mocks are not pass by reference, so we need to re-mock
@@ -459,35 +500,94 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         cauldron.give.mock(params.vaultId, address(witch), v);
     }
 
-    function testCalcPayoutAfterAuction() public {
+    function testCalcPayoutAfterAuctionForAuctioneer() public {
+        vm.startPrank(bot);
+
         // 100 * 0.5 * 0.714 = 35.7
         // (ink * proportion * initialOffer)
-        (uint256 inkOut, ) = witch.calcPayout(VAULT_ID, 50_000e6);
-        assertEq(inkOut, 35.7 ether);
+        (uint256 liquidatorCut, uint256 auctioneerCut, ) = witch.calcPayout(
+            VAULT_ID,
+            50_000e6
+        );
+        assertEq(liquidatorCut, 35.7 ether);
+        assertEq(auctioneerCut, 0);
 
         skip(5 minutes);
         // 100 * 0.5 * (0.714 + (1 - 0.714) * 300/3600) = 36.8916666667
         // (ink * proportion * (initialOffer + (1 - initialOffer) * timeElapsed)
-        (inkOut, ) = witch.calcPayout(VAULT_ID, 50_000e6);
-        assertEq(inkOut, 36.89166666666666665 ether);
+        (liquidatorCut, auctioneerCut, ) = witch.calcPayout(VAULT_ID, 50_000e6);
+        assertEq(liquidatorCut, 36.89166666666666665 ether);
+        assertEq(auctioneerCut, 0);
 
         skip(25 minutes);
         // 100 * 0.5 * (0.714 + (1 - 0.714) * 1800/3600) = 42.85
         // (ink * proportion * (initialOffer + (1 - initialOffer) * timeElapsed)
-        (inkOut, ) = witch.calcPayout(VAULT_ID, 50_000e6);
-        assertEq(inkOut, 42.85 ether);
+        (liquidatorCut, auctioneerCut, ) = witch.calcPayout(VAULT_ID, 50_000e6);
+        assertEq(liquidatorCut, 42.85 ether);
+        assertEq(auctioneerCut, 0);
 
         // Right at auction end
         skip(30 minutes);
         // 100 * 0.5 = 50
         // (ink * proportion)
-        (inkOut, ) = witch.calcPayout(VAULT_ID, 50_000e6);
-        assertEq(inkOut, 50 ether);
+        (liquidatorCut, auctioneerCut, ) = witch.calcPayout(VAULT_ID, 50_000e6);
+        assertEq(liquidatorCut, 50 ether);
+        assertEq(auctioneerCut, 0);
 
         // After the auction ends the value is fixed
         skip(1 hours);
-        (inkOut, ) = witch.calcPayout(VAULT_ID, 50_000e6);
-        assertEq(inkOut, 50 ether);
+        (liquidatorCut, auctioneerCut, ) = witch.calcPayout(VAULT_ID, 50_000e6);
+        assertEq(liquidatorCut, 50 ether);
+        assertEq(auctioneerCut, 0);
+    }
+
+    function testCalcPayoutAfterAuctionForNonAuctioneer() public {
+        vm.startPrank(address(0xb072));
+
+        // liquidatorCut = 100  * 0.5        * 0.714        * 0.99                       = 35.343
+        //                 (ink * proportion * initialOffer * (1 - auctioneerReward))
+        // auctioneerCut = 100  * 0.5        * 0.714        * 0.01                       = 0.357
+        //                 (ink * proportion * initialOffer * auctioneerReward)
+        (uint256 liquidatorCut, uint256 auctioneerCut, ) = witch.calcPayout(
+            VAULT_ID,
+            50_000e6
+        );
+        assertEq(liquidatorCut, 35.343 ether, "liquidatorCut");
+        assertEq(auctioneerCut, 0.357 ether, "auctioneerCut");
+
+        skip(5 minutes);
+        // 100 * 0.5 * (0.714 + (1 - 0.714) * 300/3600) = 36.8916666667
+        // (ink * proportion * (initialOffer + (1 - initialOffer) * timeElapsed)
+        (liquidatorCut, auctioneerCut, ) = witch.calcPayout(VAULT_ID, 50_000e6);
+        // 36.8916666667 * 0.99
+        assertEq(liquidatorCut, 36.522749999999999984 ether);
+        // 36.8916666667 * 0.01
+        assertEq(auctioneerCut, 0.368916666666666666 ether);
+
+        skip(25 minutes);
+        // 100 * 0.5 * (0.714 + (1 - 0.714) * 1800/3600) = 42.85
+        // (ink * proportion * (initialOffer + (1 - initialOffer) * timeElapsed)
+        (liquidatorCut, auctioneerCut, ) = witch.calcPayout(VAULT_ID, 50_000e6);
+        // 42.85 * 0.99
+        assertEq(liquidatorCut, 42.4215 ether);
+        // 42.85 * 0.01
+        assertEq(auctioneerCut, 0.4285 ether);
+
+        // Right at auction end
+        skip(30 minutes);
+        // 100 * 0.5 = 50
+        // (ink * proportion)
+        (liquidatorCut, auctioneerCut, ) = witch.calcPayout(VAULT_ID, 50_000e6);
+        // 50 * 0.99
+        assertEq(liquidatorCut, 49.5 ether);
+        // 50 * 0.01
+        assertEq(auctioneerCut, 0.5 ether);
+
+        // After the auction ends the value is fixed
+        skip(1 hours);
+        (liquidatorCut, auctioneerCut, ) = witch.calcPayout(VAULT_ID, 50_000e6);
+        assertEq(liquidatorCut, 49.5 ether);
+        assertEq(auctioneerCut, 0.5 ether);
     }
 
     function testAuctionAlreadyExists() public {
@@ -630,7 +730,8 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
     function testPayBasePartial() public {
         // Bot Will pay 40% of the debt (for some reason)
         uint128 maxBaseIn = uint128(auction.art.wmul(0.4e18));
-        (uint256 minInkOut_, ) = witch.calcPayout(VAULT_ID, maxBaseIn);
+        vm.prank(bot);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, maxBaseIn);
         uint128 minInkOut = uint128(minInkOut_);
 
         // Reduce balances on tha vault
@@ -679,7 +780,8 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
 
         // Bot Will pay another 20% of the debt (for some reason)
         uint128 maxBaseIn = uint128(auction.art.wmul(0.2e18));
-        (uint256 minInkOut_, ) = witch.calcPayout(VAULT_ID, maxBaseIn);
+        vm.prank(bot);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, maxBaseIn);
         uint128 minInkOut = uint128(minInkOut_);
 
         // Reduce balances on tha vault
@@ -722,7 +824,8 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
 
     function testPayBaseAll() public {
         uint128 maxBaseIn = uint128(auction.art);
-        (uint256 minInkOut_, ) = witch.calcPayout(VAULT_ID, maxBaseIn);
+        vm.prank(bot);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, maxBaseIn);
         uint128 minInkOut = uint128(minInkOut_);
 
         // Reduce balances on tha vault
@@ -773,7 +876,8 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         auction = iWitch.auctions(VAULT_ID);
 
         uint128 maxBaseIn = uint128(auction.art);
-        (uint256 minInkOut_, ) = witch.calcPayout(VAULT_ID, maxBaseIn);
+        vm.prank(bot);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, maxBaseIn);
         uint128 minInkOut = uint128(minInkOut_);
 
         // Reduce balances on tha vault
@@ -817,6 +921,73 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         _auctionWasDeleted(VAULT_ID);
     }
 
+    function testPayBaseOnAnAuctionStartedBySomeoneElse() public {
+        address bot2 = address(0xb072);
+
+        uint128 maxBaseIn = uint128(auction.art);
+        vm.prank(bot2);
+        (uint256 liquidatorCut_, uint256 auctioneerCut_, ) = witch.calcPayout(
+            VAULT_ID,
+            maxBaseIn
+        );
+        uint128 liquidatorCut = uint128(liquidatorCut_);
+        uint128 auctioneerCut = uint128(auctioneerCut_);
+
+        // Reduce balances on tha vault
+        cauldron.slurp.mock(
+            VAULT_ID,
+            liquidatorCut + auctioneerCut,
+            maxBaseIn,
+            balances
+        );
+        cauldron.slurp.verify(
+            VAULT_ID,
+            liquidatorCut + auctioneerCut,
+            maxBaseIn
+        );
+        // Vault returns to it's owner after all the liquidation is done
+        cauldron.give.mock(VAULT_ID, bob, vault);
+        cauldron.give.verify(VAULT_ID, bob);
+
+        // make fyToken 1:1 with base to make things simpler
+        cauldron.debtFromBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+        cauldron.debtToBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+
+        IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
+        ladle.joins.mock(vault.ilkId, ilkJoin);
+
+        // Liquidator share
+        ilkJoin.exit.mock(bot2, liquidatorCut, liquidatorCut);
+        ilkJoin.exit.verify(bot2, liquidatorCut);
+        // Auctioneer share
+        ilkJoin.exit.mock(bot, auctioneerCut, auctioneerCut);
+        ilkJoin.exit.verify(bot, auctioneerCut);
+
+        IJoin baseJoin = IJoin(Mocks.mock("BaseJoin"));
+        ladle.joins.mock(series.baseId, baseJoin);
+        baseJoin.join.mock(bot2, maxBaseIn, maxBaseIn);
+        baseJoin.join.verify(bot2, maxBaseIn);
+
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID, bot2, liquidatorCut + auctioneerCut, maxBaseIn);
+
+        vm.prank(bot2);
+        (uint256 inkOut, uint256 baseIn) = witch.payBase(
+            VAULT_ID,
+            bot2,
+            liquidatorCut,
+            maxBaseIn
+        );
+        assertEq(inkOut, liquidatorCut);
+        assertEq(baseIn, maxBaseIn);
+
+        // sum is reduced by the auction.ink
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 0, "sum");
+
+        _auctionWasDeleted(VAULT_ID);
+    }
+
     function testPayFYTokenNotEnoughBought() public {
         // Bot tries to get all collateral but auction just started
         uint128 minInkOut = 50 ether;
@@ -829,7 +1000,7 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
     function testPayFYTokenLeavesDust() public {
         // Bot tries to pay an amount that'd leaves dust
         uint128 maxArtIn = auction.art - 4999e6;
-        (uint256 minInkOut_, ) = witch.calcPayout(VAULT_ID, maxArtIn);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, maxArtIn);
         uint128 minInkOut = uint128(minInkOut_);
 
         vm.expectRevert("Leaves dust");
@@ -839,7 +1010,8 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
     function testPayFYTokenPartial() public {
         // Bot Will pay 40% of the debt (for some reason)
         uint128 maxArtIn = uint128(auction.art.wmul(0.4e18));
-        (uint256 minInkOut_, ) = witch.calcPayout(VAULT_ID, maxArtIn);
+        vm.prank(bot);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, maxArtIn);
         uint128 minInkOut = uint128(minInkOut_);
 
         // Reduce balances on tha vault
@@ -882,7 +1054,8 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
 
         // Bot Will pay another 20% of the debt (for some reason)
         uint128 maxArtIn = uint128(auction.art.wmul(0.2e18));
-        (uint256 minInkOut_, ) = witch.calcPayout(VAULT_ID, maxArtIn);
+        vm.prank(bot);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, maxArtIn);
         uint128 minInkOut = uint128(minInkOut_);
 
         // Reduce balances on tha vault
@@ -917,9 +1090,71 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         _auctionWasUpdated(VAULT_ID, maxArtIn, minInkOut);
     }
 
+    function testPayFYTokenAllStartedBySomeoneElse() public {
+        address bot2 = address(0xb072);
+
+        uint128 maxArtIn = uint128(auction.art);
+        vm.prank(bot2);
+        (uint256 liquidatorCut_, uint256 auctioneerCut_, ) = witch.calcPayout(
+            VAULT_ID,
+            maxArtIn
+        );
+        uint128 liquidatorCut = uint128(liquidatorCut_);
+        uint128 auctioneerCut = uint128(auctioneerCut_);
+
+        // Reduce balances on tha vault
+        cauldron.slurp.mock(
+            VAULT_ID,
+            liquidatorCut + auctioneerCut,
+            maxArtIn,
+            balances
+        );
+        cauldron.slurp.verify(
+            VAULT_ID,
+            liquidatorCut + auctioneerCut,
+            maxArtIn
+        );
+        // Vault returns to it's owner after all the liquidation is done
+        cauldron.give.mock(VAULT_ID, bob, vault);
+        cauldron.give.verify(VAULT_ID, bob);
+
+        IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
+        ladle.joins.mock(vault.ilkId, ilkJoin);
+
+        // Liquidator share
+        ilkJoin.exit.mock(bot2, liquidatorCut, liquidatorCut);
+        ilkJoin.exit.verify(bot2, liquidatorCut);
+        // Auctioneer share
+        ilkJoin.exit.mock(bot, auctioneerCut, auctioneerCut);
+        ilkJoin.exit.verify(bot, auctioneerCut);
+
+        series.fyToken.burn.mock(bot2, maxArtIn);
+        series.fyToken.burn.verify(bot2, maxArtIn);
+
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID, bot2, liquidatorCut + auctioneerCut, maxArtIn);
+
+        vm.prank(bot2);
+        (uint256 inkOut, uint256 baseIn) = witch.payFYToken(
+            VAULT_ID,
+            bot2,
+            liquidatorCut,
+            maxArtIn
+        );
+        assertEq(inkOut, liquidatorCut);
+        assertEq(baseIn, maxArtIn);
+
+        // sum is reduced by the auction.ink
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 0, "sum");
+
+        _auctionWasDeleted(VAULT_ID);
+    }
+
     function testPayFYTokenAll() public {
         uint128 maxArtIn = uint128(auction.art);
-        (uint256 minInkOut_, ) = witch.calcPayout(VAULT_ID, maxArtIn);
+        vm.prank(bot);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, maxArtIn);
         uint128 minInkOut = uint128(minInkOut_);
 
         // Reduce balances on tha vault
@@ -963,7 +1198,8 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         // Refresh auction copy
         auction = iWitch.auctions(VAULT_ID);
         uint128 maxArtIn = uint128(auction.art);
-        (uint256 minInkOut_, ) = witch.calcPayout(VAULT_ID, maxArtIn);
+        vm.prank(bot);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, maxArtIn);
         uint128 minInkOut = uint128(minInkOut_);
 
         // Reduce balances on tha vault

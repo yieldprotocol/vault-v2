@@ -25,6 +25,7 @@ contract WitchV2 is AccessControl {
 
     error VaultAlreadyUnderAuction(bytes12 vaultId, address witch);
     error VaultNotLiquidable(bytes12 vaultId, bytes6 ilkId, bytes6 baseId);
+    error AuctioneerRewardTooHigh(uint128 max, uint128 actual);
 
     event Auctioned(bytes12 indexed vaultId, uint256 indexed start);
     event Cancelled(bytes12 indexed vaultId);
@@ -49,9 +50,14 @@ contract WitchV2 is AccessControl {
         bytes6 indexed baseId,
         bool ignore
     );
+    event AuctioneerRewardSet(uint128 auctioneerReward);
 
     ICauldron public immutable cauldron;
     ILadle public ladle;
+
+    // Reward given to whomever calls `auction`. It represents a % of the bought collateral
+    uint128 public auctioneerReward = 0.01e18;
+
     mapping(bytes12 => WitchDataTypes.Auction) public auctions;
     mapping(bytes6 => mapping(bytes6 => WitchDataTypes.Line)) public lines;
     mapping(bytes6 => mapping(bytes6 => WitchDataTypes.Limits)) public limits;
@@ -129,7 +135,7 @@ contract WitchV2 is AccessControl {
         emit AnotherWitchSet(value, isWitch);
     }
 
-    /// @dev Governance function to to ignore pairs that can't be liquidated
+    /// @dev Governance function to ignore pairs that can't be liquidated
     /// @param ilkId Id of asset used for collateral
     /// @param baseId Id of asset used for underlying
     /// @param ignore Should this pair be ignored for liquidation
@@ -140,6 +146,16 @@ contract WitchV2 is AccessControl {
     ) external auth {
         ignoredPairs[ilkId][baseId] = ignore;
         emit IgnoredPairSet(ilkId, baseId, ignore);
+    }
+
+    /// @dev Governance function to set the % paid to whomever starts an auction
+    /// @param auctioneerReward_ New % to be used, must have 18 dec precision
+    function setAuctioneerReward(uint128 auctioneerReward_) external auth {
+        if (auctioneerReward_ > 1e18) {
+            revert AuctioneerRewardTooHigh(1e18, auctioneerReward_);
+        }
+        auctioneerReward = auctioneerReward_;
+        emit AuctioneerRewardSet(auctioneerReward_);
     }
 
     /// @dev Put an undercollateralized vault up for liquidation
@@ -203,7 +219,8 @@ contract WitchV2 is AccessControl {
                 start: uint32(block.timestamp), // Overflow is fine
                 baseId: series.baseId,
                 art: art,
-                ink: ink
+                ink: ink,
+                auctioneer: msg.sender
             });
     }
 
@@ -275,20 +292,22 @@ contract WitchV2 is AccessControl {
         );
 
         // Move the assets
-        if (inkOut != 0) {
-            // Give collateral to the user
-            IJoin ilkJoin = ladle.joins(vault.ilkId);
-            require(ilkJoin != IJoin(address(0)), "Join not found");
-            ilkJoin.exit(to, inkOut.u128());
-        }
+        uint256 auctioneerCut = _payInk(
+            auction_.auctioneer,
+            inkOut,
+            vault.ilkId,
+            to
+        );
         if (baseIn != 0) {
-            // Take underlying from user
+            // Take underlying from liquidator
             IJoin baseJoin = ladle.joins(series.baseId);
             require(baseJoin != IJoin(address(0)), "Join not found");
             baseJoin.join(msg.sender, baseIn.u128());
         }
 
         _collateralBought(vaultId, to, inkOut, artIn);
+        // What the liquidator actually gets is the computed inkOut minus what's paid to the auctioneer
+        inkOut -= auctioneerCut;
     }
 
     /// @dev Pay up to `maxArtIn` debt from a vault in liquidation using fyToken, getting at least `minInkOut` collateral.
@@ -335,19 +354,42 @@ contract WitchV2 is AccessControl {
         );
 
         // Move the assets
-        if (inkOut != 0) {
-            // Give collateral to the user
-            IJoin ilkJoin = ladle.joins(vault.ilkId);
-            require(ilkJoin != IJoin(address(0)), "Join not found");
-            ilkJoin.exit(to, inkOut.u128());
-        }
+        uint256 auctioneerCut = _payInk(
+            auction_.auctioneer,
+            inkOut,
+            vault.ilkId,
+            to
+        );
         if (artIn != 0) {
-            // Burn fyToken from user
+            // Burn fyToken from liquidator
             DataTypes.Series memory series = cauldron.series(vault.seriesId);
             series.fyToken.burn(msg.sender, artIn);
         }
 
         _collateralBought(vaultId, to, inkOut, artIn);
+        // What the liquidator actually gets is the computed inkOut minus what's paid to the auctioneer
+        inkOut -= auctioneerCut;
+    }
+
+    function _payInk(
+        address auctioneer,
+        uint256 inkOut,
+        bytes6 ilkId,
+        address to
+    ) internal returns (uint256 auctioneerCut) {
+        if (inkOut != 0) {
+            IJoin ilkJoin = ladle.joins(ilkId);
+            require(ilkJoin != IJoin(address(0)), "Join not found");
+
+            if (auctioneer != msg.sender) {
+                // Pay auctioneer's cut
+                auctioneerCut = inkOut.wmul(auctioneerReward);
+                ilkJoin.exit(auctioneer, auctioneerCut.u128());
+            }
+
+            // Give collateral to the liquidator
+            ilkJoin.exit(to, (inkOut - auctioneerCut).u128());
+        }
     }
 
     /*
@@ -398,12 +440,17 @@ contract WitchV2 is AccessControl {
     /// Works for both Auctioned and ToBeAuctioned vaults
     /// @param vaultId The vault to get a quote for
     /// @param maxArtIn How much of the vault debt will be paid. GT than available art means all
-    /// @return inkOut How much collateral the liquidator is expected to get
+    /// @return liquidatorCut How much collateral the liquidator is expected to get
+    /// @return auctioneerCut How much collateral the auctioneer is expected to get. 0 if liquidator == auctioneer
     /// @return artIn How much debt the liquidator is expected to pay
     function calcPayout(bytes12 vaultId, uint256 maxArtIn)
         external
         view
-        returns (uint256 inkOut, uint256 artIn)
+        returns (
+            uint256 liquidatorCut,
+            uint256 auctioneerCut,
+            uint256 artIn
+        )
     {
         WitchDataTypes.Auction memory auction_ = auctions[vaultId];
         DataTypes.Vault memory vault = cauldron.vaults(vaultId);
@@ -422,7 +469,16 @@ contract WitchV2 is AccessControl {
         // GT check is to cater for partial buys right before this method executes
         artIn = maxArtIn > auction_.art ? auction_.art : maxArtIn;
 
-        inkOut = _calcPayout(vault.ilkId, auction_.baseId, auction_, artIn);
+        liquidatorCut = _calcPayout(
+            vault.ilkId,
+            auction_.baseId,
+            auction_,
+            artIn
+        );
+        if (auction_.auctioneer != msg.sender) {
+            auctioneerCut = liquidatorCut.wmul(auctioneerReward);
+            liquidatorCut -= auctioneerCut;
+        }
     }
 
     /// @notice Return how much collateral should be given out.

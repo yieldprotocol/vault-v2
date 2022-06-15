@@ -8,6 +8,7 @@ library WitchDataTypes {
         bytes6 baseId; // We cache the baseId here
         uint128 ink;
         uint128 art;
+        address auctioneer;
     }
 
     struct Line {
