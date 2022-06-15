@@ -217,7 +217,9 @@ contract WitchV2 is AccessControl {
             WitchDataTypes.Auction({
                 owner: vault.owner,
                 start: uint32(block.timestamp), // Overflow is fine
+                seriesId: vault.seriesId,
                 baseId: series.baseId,
+                ilkId: vault.ilkId,
                 art: art,
                 ink: ink,
                 auctioneer: msg.sender
@@ -228,14 +230,11 @@ contract WitchV2 is AccessControl {
     /// @param vaultId Id of vault to return
     function cancel(bytes12 vaultId) external {
         WitchDataTypes.Auction storage auction_ = auctions[vaultId];
-        require(auction_.start != 0, "Vault not under auction");
+        require(auction_.start > 0, "Vault not under auction");
         require(cauldron.level(vaultId) >= 0, "Undercollateralized");
 
-        DataTypes.Vault memory vault = cauldron.vaults(vaultId);
-        DataTypes.Series memory series = cauldron.series(vault.seriesId);
-
         // Update concurrent collateral under auction
-        limits[vault.ilkId][series.baseId].sum -= auction_.ink;
+        limits[auction_.ilkId][auction_.baseId].sum -= auction_.ink;
 
         _auctionEnded(vaultId, auction_.owner);
 
@@ -258,22 +257,19 @@ contract WitchV2 is AccessControl {
         WitchDataTypes.Auction memory auction_ = auctions[vaultId];
         require(auction_.start > 0, "Vault not under auction");
 
-        DataTypes.Vault memory vault = cauldron.vaults(vaultId);
-        DataTypes.Series memory series = cauldron.series(vault.seriesId);
-
         // Find out how much debt is being repaid
         uint128 artIn = uint128(
-            cauldron.debtFromBase(vault.seriesId, maxBaseIn)
+            cauldron.debtFromBase(auction_.seriesId, maxBaseIn)
         );
 
         // If offering too much base, take only the necessary.
         artIn = artIn > auction_.art ? auction_.art : artIn;
-        baseIn = cauldron.debtToBase(vault.seriesId, artIn);
+        baseIn = cauldron.debtToBase(auction_.seriesId, artIn);
 
         // Calculate the collateral to be sold
         require(
             (inkOut = _calcPayout(
-                vault.ilkId,
+                auction_.ilkId,
                 auction_.baseId,
                 auction_,
                 artIn
@@ -284,7 +280,7 @@ contract WitchV2 is AccessControl {
         // Update Cauldron and local auction data
         _updateAccounting(
             vaultId,
-            vault.ilkId,
+            auction_.ilkId,
             auction_.baseId,
             auction_,
             inkOut,
@@ -295,12 +291,12 @@ contract WitchV2 is AccessControl {
         uint256 auctioneerCut = _payInk(
             auction_.auctioneer,
             inkOut,
-            vault.ilkId,
+            auction_.ilkId,
             to
         );
         if (baseIn != 0) {
             // Take underlying from liquidator
-            IJoin baseJoin = ladle.joins(series.baseId);
+            IJoin baseJoin = ladle.joins(auction_.baseId);
             require(baseJoin != IJoin(address(0)), "Join not found");
             baseJoin.join(msg.sender, baseIn.u128());
         }
@@ -327,15 +323,13 @@ contract WitchV2 is AccessControl {
         WitchDataTypes.Auction memory auction_ = auctions[vaultId];
         require(auction_.start > 0, "Vault not under auction");
 
-        DataTypes.Vault memory vault = cauldron.vaults(vaultId);
-
         // If offering too much fyToken, take only the necessary.
         artIn = maxArtIn > auction_.art ? auction_.art : maxArtIn;
 
         // Calculate the collateral to be sold
         require(
             (inkOut = _calcPayout(
-                vault.ilkId,
+                auction_.ilkId,
                 auction_.baseId,
                 auction_,
                 artIn
@@ -346,7 +340,7 @@ contract WitchV2 is AccessControl {
         // Update Cauldron and local auction data
         _updateAccounting(
             vaultId,
-            vault.ilkId,
+            auction_.ilkId,
             auction_.baseId,
             auction_,
             inkOut,
@@ -357,12 +351,12 @@ contract WitchV2 is AccessControl {
         uint256 auctioneerCut = _payInk(
             auction_.auctioneer,
             inkOut,
-            vault.ilkId,
+            auction_.ilkId,
             to
         );
         if (artIn != 0) {
             // Burn fyToken from liquidator
-            DataTypes.Series memory series = cauldron.series(vault.seriesId);
+            DataTypes.Series memory series = cauldron.series(auction_.seriesId);
             series.fyToken.burn(msg.sender, artIn);
         }
 
