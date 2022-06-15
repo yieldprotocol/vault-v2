@@ -239,6 +239,22 @@ contract WitchV2 is AccessControl {
         // Update concurrent collateral under auction
         limits[auction_.ilkId][auction_.baseId].sum -= auction_.ink;
 
+        // Pay auctioneer's cut
+        {
+            uint256 inkOut = _calcPayout(
+                auction_.ilkId,
+                auction_.baseId,
+                auction_,
+                auction_.art
+            );
+            IJoin ilkJoin = ladle.joins(auction_.ilkId);
+            require(ilkJoin != IJoin(address(0)), "Join not found");
+            uint256 auctioneerCut = uint256(inkOut).wmul(auctioneerReward);
+            // Update accounting at Cauldron
+            cauldron.slurp(vaultId, auctioneerCut.u128(), 0);
+            ilkJoin.exit(auction_.auctioneer, auctioneerCut.u128());
+        }
+
         _auctionEnded(vaultId, auction_.owner);
 
         emit Cancelled(vaultId);

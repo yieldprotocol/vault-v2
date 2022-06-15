@@ -697,6 +697,55 @@ contract WitchV2WithAuction is WitchV2WithMetadata {
         cauldron.give.mock(VAULT_ID, bob, vault);
         cauldron.give.verify(VAULT_ID, bob);
 
+        (, uint256 auctioneerCut_, ) = witch.calcPayout(VAULT_ID, 50_000e6);
+        uint128 auctioneerCut = uint128(auctioneerCut_);
+
+        // Reduce balances on tha vault
+        cauldron.slurp.mock(VAULT_ID, auctioneerCut, 0, balances);
+        cauldron.slurp.verify(VAULT_ID, auctioneerCut, 0);
+
+        IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
+        ladle.joins.mock(vault.ilkId, ilkJoin);
+        ilkJoin.exit.mock(bot, auctioneerCut, auctioneerCut);
+        ilkJoin.exit.verify(bot, auctioneerCut);
+
+        vm.expectEmit(true, true, true, true);
+        emit Ended(VAULT_ID);
+        vm.expectEmit(true, true, true, true);
+        emit Cancelled(VAULT_ID);
+
+        witch.cancel(VAULT_ID);
+
+        // sum is reduced by the auction.ink
+        (, sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 0);
+
+        _auctionWasDeleted(VAULT_ID);
+    }
+
+    function testCancelPartiallyBoughtAuction() public {
+        // liquidate 40% of the vault
+        testPayBasePartial();
+
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 35.72 ether);
+
+        cauldron.level.mock(VAULT_ID, 0);
+        cauldron.give.mock(VAULT_ID, bob, vault);
+        cauldron.give.verify(VAULT_ID, bob);
+
+        (, uint256 auctioneerCut_, ) = witch.calcPayout(VAULT_ID, 50_000e6);
+        uint128 auctioneerCut = uint128(auctioneerCut_);
+
+        // Reduce balances on tha vault
+        cauldron.slurp.mock(VAULT_ID, auctioneerCut, 0, balances);
+        cauldron.slurp.verify(VAULT_ID, auctioneerCut, 0);
+
+        IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
+        ladle.joins.mock(vault.ilkId, ilkJoin);
+        ilkJoin.exit.mock(bot, auctioneerCut, auctioneerCut);
+        ilkJoin.exit.verify(bot, auctioneerCut);
+
         vm.expectEmit(true, true, true, true);
         emit Ended(VAULT_ID);
         vm.expectEmit(true, true, true, true);
