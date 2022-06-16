@@ -10,7 +10,7 @@ const solFilesInDirectory = (directoryPath: string, pathAddition = '') => {
   const files = readdirSync(directoryPath)
 
   files.forEach(function (file) {
-    if (!exclude.includes(file) && !exclude.some(path => `${directoryPath}/${file}`.includes(path))) {
+    if (!exclude.includes(file) && !exclude.some((path) => `${directoryPath}/${file}`.includes(path))) {
       if (file.includes('.sol')) {
         const fileWithoutExtension = file.substring(0, file.length - 4)
         importPaths.push(`import {${fileWithoutExtension}} from "${base}${pathAddition}${file}";\n`)
@@ -19,20 +19,21 @@ const solFilesInDirectory = (directoryPath: string, pathAddition = '') => {
         solFilesInDirectory(newDirectoryPath, `${pathAddition}${file}/`)
       }
     }
-  });
+  })
   return importPaths
 }
 
 async function main() {
-  const entryDirectoryPath = path.join(__dirname, '../../foundry/contracts');
+  const entryDirectoryPath = path.join(__dirname, '../../foundry/contracts')
   const imports = solFilesInDirectory(entryDirectoryPath)
 
-  let str = `// SPDX-License-Identifier: BUSL-1.1 \npragma solidity 0.8.14;\n\n`;
+  let str = `// SPDX-License-Identifier: BUSL-1.1 \npragma solidity 0.8.14;\n\n`
 
-  imports.forEach(imp => {
+  imports.forEach((imp) => {
     str += imp
   })
-
+  str += `import {ICvx} from "@yield-protocol/vault-v2/contracts/other/convex/interfaces/ICvx.sol";\n`
+  str += `import {Pool} from "@yield-protocol/yieldspace-v2/contracts/Pool.sol";`
   const importerFilePath = path.join(__dirname, '../contracts/Importer.sol')
 
   writeFileSync(importerFilePath, str)
@@ -41,6 +42,6 @@ async function main() {
 main()
   .then(() => process.exit(0))
   .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });
+    console.error(error)
+    process.exit(1)
+  })
