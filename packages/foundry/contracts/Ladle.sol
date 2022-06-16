@@ -379,9 +379,8 @@ contract Ladle is LadleStorage, AccessControl() {
         (bytes12 vaultId, DataTypes.Vault memory vault) = getVault(vaultId_);
         IPool pool = getPool(vault.seriesId);
         
-        art = pool.buyBasePreview(base);
+        art = pool.buyBase(to, base, max);
         _pour(vaultId, vault, address(pool), ink.i128(), art.i128());
-        pool.buyBase(to, base, max);
     }
 
     /// @dev Repay vault debt using underlying token at a 1:1 exchange rate, without trading in a pool.
