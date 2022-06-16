@@ -112,11 +112,11 @@ contract CollateralWand is AccessControl {
         DebtLimit[] calldata debtLimits,
         SeriesIlk[] calldata seriesIlks
     ) external auth {
-        orchestrateJoin(joinAddress, deployer);
-        addAsset(assetId, assetAddress, joinAddress);
+        _orchestrateJoin(joinAddress, deployer);
+        _addAsset(assetId, assetAddress, joinAddress);
         for (uint256 index = 0; index < chainlinkSources.length; index++) {
             ChainlinkSource memory chainlinksource = chainlinkSources[index];
-            updateChainLinkSource(
+            _updateChainLinkSource(
                 chainlinksource.baseId,
                 chainlinksource.base,
                 chainlinksource.quoteId,
@@ -125,37 +125,28 @@ contract CollateralWand is AccessControl {
             );
         }
 
-        makeIlk(joinAddress, auctionLimits, debtLimits);
+        _makeIlk(joinAddress, auctionLimits, debtLimits);
 
-        addIlksToSeries(seriesIlks);
+        _addIlksToSeries(seriesIlks);
     }
 
     /// @notice Orchestrate the join to grant & revoke the correct permissions
     /// @param joinAddress address of the join to be orchestrated
     /// @param deployer address of the deployer
-    function orchestrateJoin(address joinAddress, address deployer) internal {
-        AccessControl joinAccessControl = AccessControl(joinAddress);
+    function _orchestrateJoin(address joinAddress, address deployer) internal {
+        AccessControl join = AccessControl(joinAddress);
 
         // revoke role of deployer
-        joinAccessControl.revokeRole(ROOT, deployer);
+        join.revokeRole(ROOT, deployer);
         // grant ROOT to cloak
-        joinAccessControl.grantRole(ROOT, address(cloak));
-        // cloak plan
-        bytes4[] memory sigs = new bytes4[](2);
-        sigs[0] = JOIN;
-        sigs[1] = EXIT;
-
-        IEmergencyBrake.Permission[]
-            memory permissions = new IEmergencyBrake.Permission[](1);
-        permissions[0] = IEmergencyBrake.Permission(joinAddress, sigs);
-        cloak.plan(address(ladle), permissions);
+        join.grantRole(ROOT, address(cloak));
     }
 
     /// @notice Function to update CompositeSource
     /// @param baseId id of the base asset
     /// @param quoteId id of the quote asset
     /// @param source address of the oracle for baseId/quoteId
-    function updateCompositeSource(
+    function _updateCompositeSource(
         bytes6 baseId,
         bytes6 quoteId,
         IOracle source
@@ -165,7 +156,7 @@ contract CollateralWand is AccessControl {
     /// @param baseId id of the base asset
     /// @param quoteId id of the quote asset
     /// @param sources sources of the oracle
-    function updateCompositePath(
+    function _updateCompositePath(
         bytes6 baseId,
         bytes6 quoteId,
         IOracle[] calldata sources
@@ -177,7 +168,7 @@ contract CollateralWand is AccessControl {
     /// @param quoteId quoteId
     /// @param quote address of the quote asset
     /// @param source address of the oracle for baseId/quoteId
-    function updateChainLinkSource(
+    function _updateChainLinkSource(
         bytes6 baseId,
         address base,
         bytes6 quoteId,
@@ -198,7 +189,7 @@ contract CollateralWand is AccessControl {
     /// @param assetId Id for the asset being added
     /// @param assetAddress Address of the asset being added
     /// @param joinAddress Address of the join for the asset
-    function addAsset(
+    function _addAsset(
         bytes6 assetId,
         address assetAddress,
         address joinAddress
@@ -212,13 +203,19 @@ contract CollateralWand is AccessControl {
         AccessControl(joinAddress).grantRoles(sigs, address(ladle));
         // Register the Join in the Ladle
         ladle.addJoin(assetId, joinAddress);
+
+        // cloak plan
+        IEmergencyBrake.Permission[]
+            memory permissions = new IEmergencyBrake.Permission[](1);
+        permissions[0] = IEmergencyBrake.Permission(joinAddress, sigs);
+        cloak.plan(address(ladle), permissions);
     }
 
     /// @notice Makes the asset into an ilk by setting up auction & debt limits
     /// @param joinAddress address of the join of the ilk
     /// @param auctionLimits auction limits for the ilks
     /// @param debtLimits debt limits for the ilks against bases
-    function makeIlk(
+    function _makeIlk(
         address joinAddress,
         AuctionLimit[] memory auctionLimits,
         DebtLimit[] memory debtLimits
@@ -226,7 +223,7 @@ contract CollateralWand is AccessControl {
         // Configure auction limits for the ilk on the witch
         for (uint256 index = 0; index < auctionLimits.length; index++) {
             AuctionLimit memory auctionLimit = auctionLimits[index];
-            updateAuctionLimit(
+            _updateAuctionLimit(
                 auctionLimit.ilkId,
                 auctionLimit.duration,
                 auctionLimit.initialOffer,
@@ -236,8 +233,8 @@ contract CollateralWand is AccessControl {
             );
         }
         // Allow Witch to exit ilk
-        AccessControl joinAccessControl = AccessControl(joinAddress);
-        joinAccessControl.grantRole(EXIT, address(witch));
+        AccessControl join = AccessControl(joinAddress);
+        join.grantRole(EXIT, address(witch));
         // Log a plan to undo the orchestration above in emergencies
         bytes4[] memory sigs = new bytes4[](1);
         sigs[0] = EXIT;
@@ -249,7 +246,7 @@ contract CollateralWand is AccessControl {
 
         for (uint256 index = 0; index < debtLimits.length; index++) {
             DebtLimit memory debtLimit = debtLimits[index];
-            updateDebtLimit(
+            _updateDebtLimit(
                 debtLimit.baseId,
                 debtLimit.ilkId,
                 debtLimit.ratio,
@@ -267,7 +264,7 @@ contract CollateralWand is AccessControl {
     /// @param line the maximum collateral that can be auctioned at the same time
     /// @param dust the minimum collateral that must be left when buying, unless buying all
     /// @param dec The decimals for maximum and minimum
-    function updateAuctionLimit(
+    function _updateAuctionLimit(
         bytes6 ilkId,
         uint32 duration,
         uint64 initialOffer,
@@ -285,7 +282,7 @@ contract CollateralWand is AccessControl {
     /// @param line ceiling, modified by decimals
     /// @param dust vault debt, modified by decimals
     /// @param dec to append to debt ceiling and minimum vault debt.
-    function updateDebtLimit(
+    function _updateDebtLimit(
         bytes6 baseId,
         bytes6 ilkId,
         uint32 ratio,
@@ -304,7 +301,7 @@ contract CollateralWand is AccessControl {
 
     /// @notice Ilks to accept for series
     /// @param seriesIlks series & ilks to be added
-    function addIlksToSeries(SeriesIlk[] calldata seriesIlks) internal {
+    function _addIlksToSeries(SeriesIlk[] calldata seriesIlks) internal {
         // Add ilks to the series
         for (uint256 index = 0; index < seriesIlks.length; index++) {
             SeriesIlk memory seriesIlk = seriesIlks[index];

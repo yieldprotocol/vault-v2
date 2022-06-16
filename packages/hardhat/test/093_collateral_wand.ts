@@ -155,7 +155,7 @@ describe('Chainlink Collateral Wand-V2', async function () {
         {
           ilkId: TESTASSET,
           duration: 3600,
-          initialOffer: 1000000,
+          initialOffer: 1000000000000000000,
           line: 1000000,
           dust: 5000,
           dec: 18,
