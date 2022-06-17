@@ -8,7 +8,7 @@ import "../../mocks/DAIMock.sol";
 import "../../mocks/USDCMock.sol";
 import "../../mocks/WETH9Mock.sol";
 import "../../mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol";
-import "../utils/Test.sol";
+import "forge-std/src/Test.sol";
 import "../utils/TestConstants.sol";
 
 contract CompositeMultiOracleTest is Test, TestConstants, AccessControl {

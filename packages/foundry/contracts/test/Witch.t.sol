@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.14;
 
-import "./utils/Test.sol";
+import "forge-std/src/Test.sol";
 import "./utils/TestConstants.sol";
 import "./utils/Utilities.sol";
 import "./utils/Mocks.sol";

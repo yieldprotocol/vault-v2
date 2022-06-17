@@ -6,7 +6,7 @@ import "../../oracles/yearn/YearnVaultMultiOracle.sol";
 import "../../mocks/DAIMock.sol";
 import "../../mocks/USDCMock.sol";
 import "../../mocks/YvTokenMock.sol";
-import "../utils/Test.sol";
+import "forge-std/src/Test.sol";
 import "../utils/TestConstants.sol";
 
 contract YearnVaultMultiOracleTest is Test, TestConstants, AccessControl {

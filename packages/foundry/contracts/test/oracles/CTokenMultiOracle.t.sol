@@ -6,7 +6,7 @@ import "../../oracles/compound/CTokenMultiOracle.sol";
 import "../../mocks/DAIMock.sol";
 import "../../mocks/USDCMock.sol";
 import "../../mocks/oracles/compound/CTokenMock.sol";
-import "../utils/Test.sol";
+import "forge-std/src/Test.sol";
 import "../utils/TestConstants.sol";
 
 contract CTokenMultiOracleTest is Test, TestConstants, AccessControl {

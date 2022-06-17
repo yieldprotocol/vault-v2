@@ -10,7 +10,7 @@ import "../../mocks/oracles/lido/WstETHMock.sol";
 import "../../mocks/ERC20Mock.sol";
 import "../../mocks/USDCMock.sol";
 import "../../mocks/WETH9Mock.sol";
-import "../utils/Test.sol";
+import "forge-std/src/Test.sol";
 import "../utils/TestConstants.sol";
 
 contract LidoOracleTest is Test, TestConstants, AccessControl {
