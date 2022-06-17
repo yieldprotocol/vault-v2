@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.14;
 
+import "forge-std/src/Test.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "../../oracles/yearn/YearnVaultMultiOracle.sol";
 import "../../mocks/DAIMock.sol";
 import "../../mocks/USDCMock.sol";
 import "../../mocks/YvTokenMock.sol";
-import "forge-std/src/Test.sol";
 import "../utils/TestConstants.sol";
 
 contract YearnVaultMultiOracleTest is Test, TestConstants, AccessControl {

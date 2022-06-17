@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.14;
 
+import "forge-std/src/Test.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "../../oracles/chainlink/ChainlinkMultiOracle.sol";
 import "../../oracles/composite/CompositeMultiOracle.sol";
@@ -8,7 +9,6 @@ import "../../mocks/DAIMock.sol";
 import "../../mocks/USDCMock.sol";
 import "../../mocks/WETH9Mock.sol";
 import "../../mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol";
-import "forge-std/src/Test.sol";
 import "../utils/TestConstants.sol";
 
 contract CompositeMultiOracleTest is Test, TestConstants, AccessControl {
