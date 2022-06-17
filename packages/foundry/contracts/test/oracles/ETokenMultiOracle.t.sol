@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.14;
 
-import "../utils/Test.sol";
+import "forge-std/src/Test.sol";
 import {IEToken} from "../../oracles/euler/IEToken.sol";
 import {ETokenMultiOracle} from "../../oracles/euler/ETokenMultiOracle.sol";
 

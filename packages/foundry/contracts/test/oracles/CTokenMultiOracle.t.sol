@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.14;
 
+import "forge-std/src/Test.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "../../oracles/compound/CTokenMultiOracle.sol";
 import "../../mocks/DAIMock.sol";
 import "../../mocks/USDCMock.sol";
 import "../../mocks/oracles/compound/CTokenMock.sol";
-import "../utils/Test.sol";
 import "../utils/TestConstants.sol";
 
 contract CTokenMultiOracleTest is Test, TestConstants, AccessControl {

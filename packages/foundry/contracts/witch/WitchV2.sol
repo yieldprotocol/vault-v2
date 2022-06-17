@@ -23,6 +23,9 @@ contract WitchV2 is AccessControl {
     using WDiv for uint256;
     using CastU256U128 for uint256;
 
+    error VaultAlreadyUnderAuction(bytes12 vaultId, address witch);
+    error VaultNotLiquidable(bytes12 vaultId, bytes6 ilkId, bytes6 baseId);
+
     event Auctioned(bytes12 indexed vaultId, uint256 indexed start);
     event Cancelled(bytes12 indexed vaultId);
     event Bought(
@@ -40,12 +43,20 @@ contract WitchV2 is AccessControl {
     );
     event LimitSet(bytes6 indexed ilkId, bytes6 indexed baseId, uint128 max);
     event Point(bytes32 indexed param, address indexed value);
+    event AnotherWitchSet(address indexed value, bool isWitch);
+    event IgnoredPairSet(
+        bytes6 indexed ilkId,
+        bytes6 indexed baseId,
+        bool ignore
+    );
 
     ICauldron public immutable cauldron;
     ILadle public ladle;
     mapping(bytes12 => WitchDataTypes.Auction) public auctions;
     mapping(bytes6 => mapping(bytes6 => WitchDataTypes.Line)) public lines;
     mapping(bytes6 => mapping(bytes6 => WitchDataTypes.Limits)) public limits;
+    mapping(address => bool) public otherWitches;
+    mapping(bytes6 => mapping(bytes6 => bool)) public ignoredPairs;
 
     constructor(ICauldron cauldron_, ILadle ladle_) {
         cauldron = cauldron_;
@@ -110,17 +121,44 @@ contract WitchV2 is AccessControl {
         emit LimitSet(ilkId, baseId, max);
     }
 
+    /// @dev Governance function to set other liquidation contracts that may have taken vaults already.
+    /// @param value The address that may be set/unset as another witch
+    /// @param isWitch Is this address a witch or not
+    function setAnotherWitch(address value, bool isWitch) external auth {
+        otherWitches[value] = isWitch;
+        emit AnotherWitchSet(value, isWitch);
+    }
+
+    /// @dev Governance function to to ignore pairs that can't be liquidated
+    /// @param ilkId Id of asset used for collateral
+    /// @param baseId Id of asset used for underlying
+    /// @param ignore Should this pair be ignored for liquidation
+    function setIgnoredPair(
+        bytes6 ilkId,
+        bytes6 baseId,
+        bool ignore
+    ) external auth {
+        ignoredPairs[ilkId][baseId] = ignore;
+        emit IgnoredPairSet(ilkId, baseId, ignore);
+    }
+
     /// @dev Put an undercollateralized vault up for liquidation
     /// @param vaultId Id of vault to liquidate
     function auction(bytes12 vaultId)
         external
         returns (WitchDataTypes.Auction memory auction_)
     {
-        require(auctions[vaultId].start == 0, "Vault already under auction");
+        DataTypes.Vault memory vault = cauldron.vaults(vaultId);
+        if (vault.owner == address(this) || otherWitches[vault.owner]) {
+            revert VaultAlreadyUnderAuction(vaultId, vault.owner);
+        }
+        DataTypes.Series memory series = cauldron.series(vault.seriesId);
+        if (ignoredPairs[vault.ilkId][series.baseId]) {
+            revert VaultNotLiquidable(vaultId, vault.ilkId, series.baseId);
+        }
+
         require(cauldron.level(vaultId) < 0, "Not undercollateralized");
 
-        DataTypes.Vault memory vault = cauldron.vaults(vaultId);
-        DataTypes.Series memory series = cauldron.series(vault.seriesId);
         DataTypes.Balances memory balances = cauldron.balances(vaultId);
         DataTypes.Debt memory debt = cauldron.debt(series.baseId, vault.ilkId);
 
@@ -132,7 +170,7 @@ contract WitchV2 is AccessControl {
         ];
         require(limits_.sum <= limits_.max, "Collateral limit reached");
 
-        auction_ = _auction(vault, series, balances, debt);
+        auction_ = _calcAuction(vault, series, balances, debt);
 
         limits_.sum += auction_.ink;
         limits[vault.ilkId][series.baseId] = limits_;
@@ -142,7 +180,10 @@ contract WitchV2 is AccessControl {
         _auctionStarted(vaultId);
     }
 
-    function _auction(
+    /// @dev Calculates the auction initial values, the 2 non-trivial values are how much art must be repayed
+    /// and what's the max ink that will be offered in exchange. For the realtime amount of ink that's on offer
+    /// use `_calcPayout`
+    function _calcAuction(
         DataTypes.Vault memory vault,
         DataTypes.Series memory series,
         DataTypes.Balances memory balances,
@@ -354,26 +395,32 @@ contract WitchV2 is AccessControl {
 
     */
     /// @dev quoutes hoy much ink a liquidator is expected to get if it repays an `artIn` amount
+    /// Works for both Auctioned and ToBeAuctioned vaults
     /// @param vaultId The vault to get a quote for
-    /// @param artIn How much of the vault debt will be paid. 0 means all
+    /// @param maxArtIn How much of the vault debt will be paid. GT than available art means all
     /// @return inkOut How much collateral the liquidator is expected to get
-    function calcPayout(bytes12 vaultId, uint256 artIn)
+    /// @return artIn How much debt the liquidator is expected to pay
+    function calcPayout(bytes12 vaultId, uint256 maxArtIn)
         external
         view
-        returns (uint256 inkOut)
+        returns (uint256 inkOut, uint256 artIn)
     {
         WitchDataTypes.Auction memory auction_ = auctions[vaultId];
         DataTypes.Vault memory vault = cauldron.vaults(vaultId);
 
-        if (auction_.ink == 0) {
+        // If the vault hasn't been auctioned yet, we calculate what values it'd have if it was started right now
+        if (auction_.start == 0) {
             DataTypes.Series memory series = cauldron.series(vault.seriesId);
             DataTypes.Balances memory balances = cauldron.balances(vaultId);
             DataTypes.Debt memory debt = cauldron.debt(
                 series.baseId,
                 vault.ilkId
             );
-            auction_ = _auction(vault, series, balances, debt);
+            auction_ = _calcAuction(vault, series, balances, debt);
         }
+
+        // GT check is to cater for partial buys right before this method executes
+        artIn = maxArtIn > auction_.art ? auction_.art : maxArtIn;
 
         inkOut = _calcPayout(vault.ilkId, auction_.baseId, auction_, artIn);
     }
