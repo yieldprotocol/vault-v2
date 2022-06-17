@@ -135,7 +135,7 @@ contract Ladle is LadleStorage, AccessControl() {
         bool set = (pool != IPool(address(0))) ? true : false;
         _addToken(address(fyToken), set);       // address(0) disables the token
         _addToken(address(pool), set);          // address(0) disables the token
-        _addIntegration(address(fyToken), set);  // address(0) disables the integration
+        _addIntegration(address(fyToken), set); // address(0) disables the integration
         _addIntegration(address(pool), set);    // address(0) disables the integration
 
         emit PoolAdded(seriesId, address(pool));
