@@ -5,7 +5,8 @@
   "author": "Yield Inc.",
   "scripts": {
     "forge:build": "forge build",
-    "forge:test": "forge test"
+    "forge:test": "forge test",
+    "forge:snapshot": "forge snapshot"
   },
   "repository": {
     "url": "git+https://github.com/yieldprotocol/vault-v2.git",
