@@ -211,6 +211,15 @@ contract WitchV2 is AccessControl {
         _auctionStarted(vaultId);
     }
 
+    /// @dev Moves the vault ownership to the witch.
+    /// Useful as a method so it can be overriden by specialised witches that may need to do extra accounting or notify 3rd parties
+    function _auctionStarted(bytes12 vaultId) internal virtual {
+        // The Witch is now in control of the vault under auction
+        // TODO: Consider using `stir` to take only the part of the vault being auctioned.
+        cauldron.give(vaultId, address(this));
+        emit Auctioned(vaultId, uint32(block.timestamp));
+    }
+
     /// @dev Calculates the auction initial values, the 2 non-trivial values are how much art must be repayed
     /// and what's the max ink that will be offered in exchange. For the realtime amount of ink that's on offer
     /// use `_calcPayout`
@@ -255,6 +264,14 @@ contract WitchV2 is AccessControl {
         _auctionEnded(vaultId, auction_.owner);
 
         emit Cancelled(vaultId);
+    }
+
+    /// @dev Moves the vault ownership back to the original owner & clean internal state.
+    /// Useful as a method so it can be overriden by specialised witches that may need to do extra accounting or notify 3rd parties
+    function _auctionEnded(bytes12 vaultId, address owner) internal virtual {
+        cauldron.give(vaultId, owner);
+        delete auctions[vaultId];
+        emit Ended(vaultId);
     }
 
     // ======================================================================
@@ -444,6 +461,17 @@ contract WitchV2 is AccessControl {
         cauldron.slurp(vaultId, inkOut.u128(), artIn.u128());
     }
 
+    /// @dev Logs that a certain amount of a vault was liquidated
+    /// Useful as a method so it can be overriden by specialised witches that may need to do extra accounting or notify 3rd parties
+    function _collateralBought(
+        bytes12 vaultId,
+        address buyer,
+        uint256 ink,
+        uint256 art
+    ) internal virtual {
+        emit Bought(vaultId, buyer, ink, art);
+    }
+
     // ======================================================================
     // =                         Quoting functions                          =
     // ======================================================================
@@ -570,37 +598,5 @@ contract WitchV2 is AccessControl {
             auctioneerCut = liquidatorCut.wmul(auctioneerReward);
             liquidatorCut -= auctioneerCut;
         }
-    }
-
-    // ======================================================================
-    // =                        Lifecycle functions                         =
-    // ======================================================================
-
-    /// @dev Moves the vault ownership to the witch.
-    /// Useful as a method so it can be overriden by specialised witches that may need to do extra accounting or notify 3rd parties
-    function _auctionStarted(bytes12 vaultId) internal virtual {
-        // The Witch is now in control of the vault under auction
-        // TODO: Consider using `stir` to take only the part of the vault being auctioned.
-        cauldron.give(vaultId, address(this));
-        emit Auctioned(vaultId, uint32(block.timestamp));
-    }
-
-    /// @dev Logs that a certain amount of a vault was liquidated
-    /// Useful as a method so it can be overriden by specialised witches that may need to do extra accounting or notify 3rd parties
-    function _collateralBought(
-        bytes12 vaultId,
-        address buyer,
-        uint256 ink,
-        uint256 art
-    ) internal virtual {
-        emit Bought(vaultId, buyer, ink, art);
-    }
-
-    /// @dev Moves the vault ownership back to the original owner & clean internal state.
-    /// Useful as a method so it can be overriden by specialised witches that may need to do extra accounting or notify 3rd parties
-    function _auctionEnded(bytes12 vaultId, address owner) internal virtual {
-        cauldron.give(vaultId, owner);
-        delete auctions[vaultId];
-        emit Ended(vaultId);
     }
 }
