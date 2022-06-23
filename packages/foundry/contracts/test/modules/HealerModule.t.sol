@@ -2,6 +2,7 @@
 pragma solidity 0.8.14;
 
 import "forge-std/src/Test.sol";
+import "forge-std/src/console.sol";
 import "@yield-protocol/vault-interfaces/src/ICauldron.sol";
 import "@yield-protocol/vault-interfaces/src/ILadle.sol";
 import "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
@@ -35,16 +36,52 @@ contract HealerModuleTest is Test {
         vm.prank(0x3b870db67a45611CF4723d44487EAF398fAc51E3);
         ILadleCustom(address(ladle)).addModule(address(healer), true);
         (vaultId, ) = ladle.build(seriesId, ilkId, 0);
-
-        // Populate vault.owner with DAI and send it to the join
-        deal(dai, address(this), 1);
-        ERC20(dai).transfer(join, 1);
     }
 
     function testHeal() public {
+        console.log("Can add collateral and/or repay debt to a given vault");
+        
+        // Populate vault.owner with DAI 
+        DataTypes.Vault memory vault = cauldron.vaults(vaultId);
+        deal(dai, address(this), 10 ** 18);        
+        IERC20(dai).approve(address(join), 15000);
+        
+        // Provide initial values for art and ink
+        ladle.pour(vaultId, vault.owner, 15000, 10000);
+
+        vm.startPrank(address(ladle));
+
+        // Provision ladle with 1 DAI to add 1 to art
+        deal(dai, address(ladle), 1);
+        IERC20(dai).approve(address(join), 1);
+        // Provision ladle with 1 fyDAI to subtract 1 from ink
+        deal(address(cauldron.series(seriesId).fyToken), address(ladle), 1);
+
         ILadleCustom(address(ladle)).moduleCall(
             address(healer), 
-            abi.encodeWithSelector(healer.heal.selector, vaultId, 1, 0)
+            abi.encodeWithSelector(healer.heal.selector, vaultId, 1, -1)
+        );
+        vm.stopPrank();
+
+        assertEq(cauldron.balances(vaultId).ink, 15001);
+        assertEq(int128(cauldron.balances(vaultId).art), 9999);
+    }
+
+    function testCannotAddDebt() public {
+        console.log("Cannot add to debt");
+        vm.expectRevert(bytes("Only repay debt"));
+        ILadleCustom(address(ladle)).moduleCall(
+            address(healer),
+            abi.encodeWithSelector(healer.heal.selector, vaultId, 0, 1)
+        );
+    }
+
+    function testCannotRemoveCollateral() public {
+        console.log("Cannot remove collateral");
+        vm.expectRevert(bytes("Only add collateral"));
+        ILadleCustom(address(ladle)).moduleCall(
+            address(healer),
+            abi.encodeWithSelector(healer.heal.selector, vaultId, -1, 0)
         );
     }
 }
