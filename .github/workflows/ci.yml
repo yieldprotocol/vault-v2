@@ -97,5 +97,8 @@ jobs:
       - name: Build contracts
         run: yarn workspace @yield-protocol/vault-v2 forge:build
 
+      - name: Check gas consumption
+        run: yarn workspace @yield-protocol/vault-v2 forge:snapshot --check --fork-url ${{ secrets.ALCHEMY_MAINNET_RPC }}
+
       - name: Run tests
         run: yarn workspace @yield-protocol/vault-v2 forge:test --fork-url ${{ secrets.ALCHEMY_MAINNET_RPC }}

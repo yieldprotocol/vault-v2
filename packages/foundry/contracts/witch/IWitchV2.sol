@@ -22,7 +22,8 @@ interface IWitchV2 {
 
     /// @dev Put an undercollateralized vault up for liquidation
     /// @param vaultId Id of vault to liquidate
-    function auction(bytes12 vaultId)
+    /// @param to Receiver of the auctioneer reward
+    function auction(bytes12 vaultId, address to)
         external
         returns (WitchDataTypes.Auction memory);
 
