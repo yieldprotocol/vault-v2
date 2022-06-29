@@ -9,7 +9,7 @@ import "../utils/TestConstants.sol";
 
 import {FlashBorrower} from "erc3156/contracts/FlashBorrower.sol";
 
-contract JoinFlashTest is Test, TestConstants {
+abstract contract ZeroState is Test, TestConstants {
     event FlashFeeFactorSet(uint256 indexed fee);
 
     DAIMock public token;
@@ -35,7 +35,7 @@ contract JoinFlashTest is Test, TestConstants {
             "0x0000000000000000000000000000000000000000000000000000000000000003"
         );
 
-    function setUp() public {
+    function setUp() public virtual {
         utils = new Utilities();
 
         token = new DAIMock();
@@ -54,58 +54,14 @@ contract JoinFlashTest is Test, TestConstants {
         vm.prank(admin);
         join.join(admin, uint128(WAD * 100));
     }
+}
 
+contract JoinFlashTest is ZeroState {
     function testFlashDisabledByDefault() public {
         vm.expectRevert(stdError.arithmeticError);
         join.flashLoan(borrower, address(token), WAD, bytes(actions.none));
     }
 
-    function testRevertsWithoutRepayApproval() public {
-        uint256 feeFactor = 0;
-        vm.prank(admin);
-        join.setFlashFeeFactor(feeFactor);
-
-        vm.prank(address(borrower));
-        vm.expectRevert();
-        join.flashLoan(borrower, address(token), WAD, bytes(actions.none));
-    }
-
-    // with zero fee
-    function testFlashNoFee() public {
-        uint256 feeFactor = 0;
-        vm.prank(admin);
-        join.setFlashFeeFactor(feeFactor);
-
-        borrower.flashBorrow(address(token), WAD);
-
-        assertEq(token.balanceOf(admin), 0);
-        assertEq(borrower.flashBalance(), WAD);
-        assertEq(borrower.flashToken(), address(token));
-        assertEq(borrower.flashAmount(), WAD);
-        assertEq(borrower.flashInitiator(), address(borrower));
-    }
-
-    // with zero fee
-    function testRevertsWithInsuffienctBalance() public {
-        uint256 feeFactor = 0;
-        vm.prank(admin);
-        join.setFlashFeeFactor(feeFactor);
-
-        vm.expectRevert("ERC20: Insufficient approval");
-        borrower.flashBorrowAndSteal(address(token), WAD);
-    }
-
-    // with zero fee
-    function testTwoNestedFlash() public {
-        uint256 feeFactor = 0;
-        vm.prank(admin);
-        join.setFlashFeeFactor(feeFactor);
-
-        borrower.flashBorrowAndReenter(address(token), WAD); // It will borrow WAD, and then reenter and borrow WAD * 2
-        assertEq(borrower.flashBalance(), WAD * 3);
-    }
-
-    // with zero fee
     function testSetsFlashFeeFactor() public {
         uint256 feeFactor = (WAD * 5) / 100; // 5%
         vm.prank(admin);
@@ -115,9 +71,46 @@ contract JoinFlashTest is Test, TestConstants {
         join.setFlashFeeFactor(feeFactor);
         assertEq(join.flashFeeFactor(), feeFactor);
     }
+}
 
-    // with non-zero fee
-    function testFlashWithFee() public {
+abstract contract WithFee is ZeroState {
+    function setUp() public override {
+        super.setUp();
+
+        uint256 feeFactor = 0;
+        vm.prank(admin);
+        join.setFlashFeeFactor(feeFactor);
+    }
+}
+
+contract JoinFlashWithFee is WithFee {
+    function testRevertsWithoutRepayApproval() public {
+        vm.prank(address(borrower));
+        vm.expectRevert();
+        join.flashLoan(borrower, address(token), WAD, bytes(actions.none));
+    }
+
+    function testFlashNoFee() public {
+        borrower.flashBorrow(address(token), WAD);
+
+        assertEq(token.balanceOf(admin), 0);
+        assertEq(borrower.flashBalance(), WAD);
+        assertEq(borrower.flashToken(), address(token));
+        assertEq(borrower.flashAmount(), WAD);
+        assertEq(borrower.flashInitiator(), address(borrower));
+    }
+
+    function testRevertsWithInsuffienctBalance() public {
+        vm.expectRevert("ERC20: Insufficient approval");
+        borrower.flashBorrowAndSteal(address(token), WAD);
+    }
+
+    function testTwoNestedFlash() public {
+        borrower.flashBorrowAndReenter(address(token), WAD); // It will borrow WAD, and then reenter and borrow WAD * 2
+        assertEq(borrower.flashBalance(), WAD * 3);
+    }
+
+    function testFlashWithNonZeroFee() public {
         uint256 feeFactor = (WAD * 5) / 100; // 5%
         vm.prank(admin);
         join.setFlashFeeFactor(feeFactor);
