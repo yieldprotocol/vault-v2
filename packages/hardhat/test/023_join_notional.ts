@@ -27,7 +27,7 @@ describe('Join1155', function () {
   let join: NotionalJoin
   let fCash: FCashMock
   let underlying: ERC20Mock
-  const maturity: number = 1656288000
+  const maturity: number = 1671840000
   const currencyId: string = '2'
   const fCashId: string = '563373963149313'
 
