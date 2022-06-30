@@ -5,8 +5,8 @@ import "forge-std/src/Test.sol";
 import "./utils/TestConstants.sol";
 import "./utils/Mocks.sol";
 
-import "../witch/WitchV2.sol";
-import "../witch/IWitchV2.sol";
+import "../witchV2/WitchV2.sol";
+import "../witchV2/IWitchV2.sol";
 
 abstract contract WitchV2StateZero is Test, TestConstants {
     using Mocks for *;
