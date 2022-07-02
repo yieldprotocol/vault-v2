@@ -11,6 +11,7 @@ import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
 import "./IBatchAction.sol";
 import "./ERC1155.sol";
 
+
 contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl() {
     using WMul for uint256;
     using WDiv for uint256;
@@ -24,6 +25,7 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl() {
 
     address public immutable override asset;
     address public immutable underlying;
+    address public immutable underlyingJoin;
     uint40 public immutable maturity;    // Maturity date for fCash
     uint16 public immutable currencyId;  // Notional currency id for the underlying
     uint256 public immutable id;         // This ERC1155 Join only accepts one id from the ERC1155 token
@@ -31,11 +33,12 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl() {
     uint256 public accrual;              // fCash to underlying factor, with 18 decimals
     uint256 public flashFeeFactor = FLASH_LOANS_DISABLED; // Fee on flash loans, as a percentage in fixed point with 18 decimals. Flash loans disabled by default.
 
-    constructor(address asset_, address underlying_, uint40 maturity_, uint16 currencyId_) {
+    constructor(address asset_, address underlying_, address underlyingJoin_, uint40 maturity_, uint16 currencyId_) {
         asset = asset_;
         underlying = underlying_;
         maturity = maturity_;
         currencyId = currencyId_;
+        underlyingJoin = underlyingJoin_;
 
         // TransferAssets.encodeAssetId
         id = uint256(
@@ -46,18 +49,12 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl() {
     }
 
     modifier afterMaturity() {
-        require(
-            block.timestamp >= maturity,
-            "Only after maturity"
-        );
+        require(block.timestamp >= maturity, "Only after maturity");
         _;
     }
 
     modifier beforeMaturity() {
-        require(
-            block.timestamp < maturity,
-            "Only before maturity"
-        );
+        require(block.timestamp < maturity,"Only before maturity");
         _;
     }
 
@@ -70,25 +67,13 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl() {
     }
 
     /// @dev Called by the sender after a transfer to verify it was received. Ensures only `id` tokens are received.
-    function onERC1155Received(
-        address,
-        address,
-        uint256 _id,
-        uint256,
-        bytes calldata 
-    ) external override returns(bytes4) {
+    function onERC1155Received(address, address, uint256 _id, uint256, bytes calldata) external override returns(bytes4) {
         require (_id == id, "Token id not accepted");
         return ERC1155TokenReceiver.onERC1155Received.selector;
     }
 
     /// @dev Called by the sender after a batch transfer to verify it was received. Ensures only `id` tokens are received.
-    function onERC1155BatchReceived(
-        address,
-        address,
-        uint256[] calldata _ids,
-        uint256[] calldata,
-        bytes calldata
-    ) external override returns(bytes4) {
+    function onERC1155BatchReceived(address, address, uint256[] calldata _ids, uint256[] calldata, bytes calldata) external override returns(bytes4) {
         uint256 length = _ids.length;
         for (uint256 i; i < length; ++i)
             require (_ids[i] == id, "Token id not accepted");
@@ -96,20 +81,12 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl() {
     }
 
     /// @dev Take `amount` `asset` from `user` using `transferFrom`, minus any unaccounted `asset` in this contract.
-    function join(address user, uint128 amount)
-        external override
-        auth
-        returns (uint128)
-    {
+    function join(address user, uint128 amount) external override auth returns (uint128) {
         return _join(user, amount);
     }
 
     /// @dev Take `amount` `asset` from `user` using `transferFrom`, minus any unaccounted `asset` in this contract.
-    function _join(address user, uint128 amount)
-        internal
-        beforeMaturity
-        returns (uint128)
-    {
+    function _join(address user, uint128 amount) internal beforeMaturity returns (uint128) {
         ERC1155 token = ERC1155(asset);
         uint256 _storedBalance = storedBalance;
         uint256 available = token.balanceOf(address(this), id) - _storedBalance; // Fine to panic if this underflows
@@ -123,11 +100,7 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl() {
 
     /// @dev Before maturity, transfer `amount` `asset` to `user`.
     /// After maturity, withdraw if necessary, then transfer `amount.wmul(accrual)` `underlying` to `user`.
-    function exit(address user, uint128 amount)
-        external override
-        auth
-        returns (uint128)
-    {
+    function exit(address user, uint128 amount) external override auth returns (uint128) {
         if (block.timestamp < maturity) {
             return _exit(user, amount);
         } else {
@@ -137,32 +110,22 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl() {
     }
 
     /// @dev Transfer `amount` `asset` to `user`
-    function _exit(address user, uint128 amount)
-        internal
-        beforeMaturity
-        returns (uint128)
-    {
+    function _exit(address user, uint128 amount) internal beforeMaturity returns (uint128) {
         storedBalance -= amount;
         ERC1155(asset).safeTransferFrom(address(this), user, id, amount, "");
         return amount;
     }
 
     /// @dev Transfer `amount` `underlying` to `user`
-    function _exitUnderlying(address user, uint128 amount)
-        internal
-        afterMaturity
-        returns (uint128)
-    {
-        storedBalance -= amount;
-        MinimalTransferHelper.safeTransfer(IERC20(underlying), user, amount);
+    /// @param user Recipient of token transfer
+    /// @param amount Amount of underlying tokens to transfer
+    function _exitUnderlying(address user, uint128 amount) internal afterMaturity returns (uint128) {
+        IJoin(underlyingJoin).exit(user, amount);
         return amount;
     }
 
-    /// @dev Switch to an exit-only underlying Join, converting all fCash holdings to underlying in the process.
-    function redeem()
-        public
-        afterMaturity
-    {
+    /// @dev Converts all fCash holdings to underlying and send it to the main underlying join
+    function redeem() public afterMaturity {
         require (accrual == 0, "Already redeemed");
 
         // Build an action to withdraw all mature fCash into underlying, then withdraw.
@@ -181,26 +144,24 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl() {
         uint256 underlyingBalance = IERC20(underlying).balanceOf(address(this));
         uint256 storedBalance_ = storedBalance;
         accrual = underlyingBalance.wdiv(storedBalance_); // There is a rounding loss here. Some wei will be forever locked in the join.
-        // This becomes now to an exit-only underlying Join.
-        storedBalance = underlyingBalance;
+        
+        // transfer underlying to main join
+        IJoin(underlyingJoin).join(address(this), underlyingBalance.u128());
+
+        // no more fCash left in holding
+        storedBalance = 0;
 
         emit Redeemed(storedBalance_, underlyingBalance, accrual);
     }
 
     /// @dev Retrieve any ERC20 tokens. Useful for airdropped tokens.
-    function retrieve(IERC20 token, address to)
-        external
-        auth
-    {
+    function retrieve(IERC20 token, address to) external auth {
         require(address(token) != address(underlying), "Use exit for underlying");
         MinimalTransferHelper.safeTransfer(token, to, token.balanceOf(address(this)));
     }
     
     /// @dev Retrieve any ERC1155 tokens other than the `asset`. Useful for airdropped tokens.
-    function retrieveERC1155(ERC1155 token, uint256 id_, address to)
-        external
-        auth
-    {
+    function retrieveERC1155(ERC1155 token, uint256 id_, address to) external auth {
         require(address(token) != address(asset) || id_ != id, "Use exit for asset");
         token.safeTransferFrom(address(this), to, id_, token.balanceOf(address(this), id_), "");
     }
