@@ -1,0 +1,67 @@
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.14;
+
+import "forge-std/src/Test.sol";
+import "forge-std/src/console.sol";
+
+import "@yield-protocol/vault-interfaces/src/ICauldron.sol";
+import "@yield-protocol/vault-interfaces/src/ILadle.sol";
+
+import "../../other/notional/Transfer1155Module.sol";
+import "../../other/notional/FCashMock.sol";
+
+interface ILadleCustom {
+    function addModule(address module, bool set) external;
+    function moduleCall(address module, bytes calldata data) external payable returns (bytes memory result);
+}
+
+
+contract Transfer1155ModuleTest is Test {
+    ICauldron public cauldron = ICauldron(0xc88191F8cb8e6D4a668B047c1C8503432c3Ca867);
+    ILadle public ladle = ILadle(0x6cB18fF2A33e981D1e38A663Ca056c0a5265066A);
+    
+    address public dai = 0x6B175474E89094C44Da98b954EedeAC495271d0F;        // DAI token contract
+    address public join = 0x4fE92119CDf873Cf8826F4E6EcfD4E578E3D44Dc;      // DAI Join
+    address public timelock = 0x3b870db67a45611CF4723d44487EAF398fAc51E3; // Governance Timelock
+
+    FCashMock public fcash;
+
+    IWETH9 public weth;
+    WETH9Mock public wethMock;
+
+    bytes6 public ilkId = 0x303100000000;        // DAI
+    bytes6 public seriesId = 0x303130370000;    // ETH/DAI Sept 22 series
+    bytes12 public vaultId;
+
+    function setUp() public virtual {
+        fcash = new FCashMock()
+        vm.label(address(dai), "Dai contract");
+
+        vault = new FlashLoanVault(IERC20(dai), "yvDAI", "yvDAI");
+        vm.label(address(vault), "FlashLoanVault contract");
+
+        borrower = new FlashBorrower(IERC3156FlashLender(address(vault)));
+        vm.label(address(borrower), "FlashBorrower contract");
+
+        user = address(1);
+        vm.label(user, "user");
+        
+        deployer = 0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84;
+        vm.label(deployer, "deployer");
+
+        // user: mint and approve
+        userTokens = 100 * 1e18;
+        dai.mint(user, userTokens);
+        vm.prank(user);
+        dai.approve(address(vault), type(uint).max);
+
+        // vault: mint starting capital of underlying asset
+        vaultTokens = 1000 * 1e18;
+        //dai.mint(address(vault), vaultTokens);
+        dai.mint(deployer, vaultTokens);
+        vm.prank(deployer);
+        dai.approve(address(vault), type(uint).max);
+        vault.deposit(vaultTokens, deployer);
+        
+    }
+}
