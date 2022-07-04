@@ -32,6 +32,8 @@ abstract contract StateMatured is Test, TestConstants {
     uint16 currencyId = 2;         
     uint256 fCashId = 4;
 
+    event Redeemed(uint256 fCash, uint256 underlying, uint256 accrual);
+
     function setUp() public virtual {
 
         dai = new DAIMock();
@@ -120,6 +122,9 @@ contract StateMaturedTest is StateMatured {
 
         underlyingJoin.join.verify(address(njoin), 10e18);
         underlyingJoin.exit.verify(user, 10e18);
+        
+        vm.expectEmit(true, true, true, false);
+        emit Redeemed(0, 10e18, 1e18);
 
         vm.prank(deployer);
         njoin.exit(user, 10e18);
@@ -141,7 +146,7 @@ abstract contract StateRedeemed is StateMatured {
         // state transition: accrual > 0
         underlyingJoin.join.mock(address(njoin), 10e18, 10e18);
         underlyingJoin.exit.mock(user, 10e18, 10e18);
-
+          
         vm.prank(deployer);
         njoin.exit(user, 10e18);
 
