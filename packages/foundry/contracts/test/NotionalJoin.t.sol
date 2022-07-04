@@ -110,7 +110,8 @@ contract StateMaturedTest is StateMatured {
         njoin.redeem();
 
         assertTrue(njoin.storedBalance() == 0); 
-        assertTrue(dai.balanceOf(address(njoin)) == 10e18); 
+        assertTrue(dai.balanceOf(address(njoin)) == 0); 
+        assertTrue(dai.balanceOf(address(underlyingJoin)) == 10e18);
 
         //vm.expectEmit(true, true, true);
         //emit Redeemed(10e18, 10e18, 10e18);
