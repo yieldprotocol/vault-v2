@@ -146,6 +146,7 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl() {
         accrual = underlyingBalance.wdiv(storedBalance_); // There is a rounding loss here. Some wei will be forever locked in the join.
         
         // transfer underlying to main join
+        IERC20(underlying).safeTransfer(address(underlyingJoin), underlyingBalance.u128());
         IJoin(underlyingJoin).join(address(this), underlyingBalance.u128());
 
         // no more fCash left in holding

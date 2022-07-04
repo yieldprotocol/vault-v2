@@ -3,12 +3,12 @@ pragma solidity 0.8.14;
 
 import "forge-std/src/Test.sol";
 import "forge-std/src/console2.sol";
-import {IJoin} from "@yield-protocol/vault-interfaces/src/IJoin.sol";
 
 import "../test/utils/TestConstants.sol";
 import "../test/utils/Mocks.sol";
 import "../mocks/ERC20Mock.sol";
 
+import {IJoin} from "@yield-protocol/vault-interfaces/src/IJoin.sol";
 import {NotionalJoin} from "../other/notional/NotionalJoin.sol";
 import {FCashMock} from "../other/notional/FCashMock.sol";
 import {DAIMock} from "../mocks/DAIMock.sol";
@@ -48,6 +48,8 @@ abstract contract StateMatured is Test, TestConstants {
     uint16 currencyId = 2;         
     uint256 fCashId = 4;
 
+    event Redeemed(uint256 fCash, uint256 underlying, uint256 accrual);
+
     function setUp() public virtual {
 
         dai = new DAIMock();
@@ -77,6 +79,8 @@ abstract contract StateMatured is Test, TestConstants {
        .sig(njoin.storedBalance.selector)
        .checked_write(10e18);
 
+       fcash.setAccrual(10**18);  // set fCash == underlying for simplicity
+
     }  
 }
 
@@ -100,12 +104,16 @@ contract StateMaturedTest is StateMatured {
         console2.log("Call redeem from Njoin");
 
         // mock join fn call, returns amount 
-        underlyingJoin.join.mock(address(njoin), 10**18, 10**18);
+        underlyingJoin.join.mock(address(njoin), 10e18, 10e18);
         //underlyingJoin.join.verify(address(njoin), 10**18);
 
         njoin.redeem();
-        assertTrue(njoin.storedBalance() == 10); 
 
+        assertTrue(njoin.storedBalance() == 0); 
+        assertTrue(dai.balanceOf(address(njoin)) == 10e18); 
+
+        //vm.expectEmit(true, true, true);
+        //emit Redeemed(10e18, 10e18, 10e18);
     }
 }
 
