@@ -32,8 +32,6 @@ abstract contract StateMatured is Test, TestConstants {
     uint16 currencyId = 2;         
     uint256 fCashId = 4;
 
-    event Redeemed(uint256 fCash, uint256 underlying, uint256 accrual);
-
     function setUp() public virtual {
 
         dai = new DAIMock();
@@ -80,26 +78,39 @@ abstract contract StateMatured is Test, TestConstants {
 contract StateMaturedTest is StateMatured {
     using Mocks for *;
 
-    // sanity check
+    // sanity check - maturity
     function testMaturity() public {
         console2.log("fCash tokens are mature");
-        skip(3600);
         assertGe(block.timestamp, maturity);         
     }  
-
+    
+    // sanity check - fCash balances
     function testFCashBalance() public {
         console2.log("10 fDai tokens in Notional Join");
         assertTrue(njoin.storedBalance() == 10e18); 
         assertTrue(fcash.balanceOf(address(njoin), fCashId) == 10e18); 
     }
-
+    
+    // sanity check - accrual
     function testAccrual() public {
         console2.log("Accrual in Njoin should be 0");
         assertTrue(njoin.accrual() == 0); 
     }
     
+    function testCannotExitUnderlyingBeforeReedem() public {
+        console2.log("First exit call should not bypass redeem()");
+        
+        // mock for _exitUnderlying()
+        underlyingJoin.exit.mock(user, 10e18, 10e18);
+        underlyingJoin.join.verify(address(njoin), 10e18);
+
+        vm.expectRevert(bytes("Not mocked!"));
+        vm.prank(deployer);
+        njoin.exit(user, 10e18);
+    }
+
     function testRedeem() public {
-        console2.log("First exit() should call redeem()");
+        console2.log("First exit call should call redeem()");
 
         // mock for redeem()
         underlyingJoin.join.mock(address(njoin), 10e18, 10e18);
