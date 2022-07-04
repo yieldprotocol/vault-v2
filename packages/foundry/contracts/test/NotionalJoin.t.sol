@@ -15,25 +15,6 @@ import {DAIMock} from "../mocks/DAIMock.sol";
 
 using stdStorage for StdStorage;
 
-/*
-    test transfer of underlying to join - thru redeem
-    test subsequent transfers
-
-    contracts:
-    fCash token -> FCashMock
-    fcash join -> NotionalJoin 
-    dai Join ->   mock.contract()
-    
-    test redeem():
-    use FCashMock to simulate converting fCash to Dai:
-        IBatchAction(asset).batchBalanceAction(address(this), withdrawActions);
-
-    send Dai to desired join: 
-            IJoin(underlyingJoin).join(address(this), underlyingBalance.u128());
-            it should return `amount`
-            test for this
-*/
-
 abstract contract StateMatured is Test, TestConstants {
     using Mocks for *;
 
