@@ -28,7 +28,7 @@ abstract contract StateMatured is Test, TestConstants {
     address deployer;
 
     // arbitrary values for testing
-    uint40 maturity = 1651743369;   
+    uint40 maturity = 1651743369;   // 4/07/2022 23:09:57 GMT
     uint16 currencyId = 2;         
     uint256 fCashId = 4;
 
@@ -97,16 +97,17 @@ contract StateMaturedTest is StateMatured {
         assertTrue(njoin.accrual() == 0); 
     }
     
+    // test will fail on .join() call to underlying join in redeem()
     function testCannotExitUnderlyingBeforeReedem() public {
         console2.log("First exit call should not bypass redeem()");
         
         // mock for _exitUnderlying()
         underlyingJoin.exit.mock(user, 10e18, 10e18);
-        underlyingJoin.join.verify(address(njoin), 10e18);
 
         vm.expectRevert(bytes("Not mocked!"));
         vm.prank(deployer);
         njoin.exit(user, 10e18);
+
     }
 
     function testRedeem() public {
@@ -131,7 +132,7 @@ contract StateMaturedTest is StateMatured {
     }
 }
 
-abstract contract StateExitUnderlying is StateMatured {
+abstract contract StateRedeemed is StateMatured {
     using Mocks for *;
 
      function setUp() public override virtual {
@@ -148,7 +149,8 @@ abstract contract StateExitUnderlying is StateMatured {
     }
 
 }
-contract StateExitUnderlyingTest is StateExitUnderlying {
+
+contract StateRedeemedTest is StateRedeemed {
     using Mocks for *;
 
     function testSubsequentExit() public {
@@ -162,7 +164,6 @@ contract StateExitUnderlyingTest is StateExitUnderlying {
 
         assertTrue(njoin.storedBalance() == 0); 
         assertTrue(dai.balanceOf(address(njoin)) == 0); 
-
         assertTrue(dai.balanceOf(address(underlyingJoin)) == 10e18);
     }
 }

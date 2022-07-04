@@ -81,11 +81,15 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl() {
     }
 
     /// @dev Take `amount` `asset` from `user` using `transferFrom`, minus any unaccounted `asset` in this contract.
+    /// @param user Address of receiver of tokens
+    /// @param amount Amount of tokens
     function join(address user, uint128 amount) external override auth returns (uint128) {
         return _join(user, amount);
     }
 
     /// @dev Take `amount` `asset` from `user` using `transferFrom`, minus any unaccounted `asset` in this contract.
+    /// @param user Address of receiver of tokens
+    /// @param amount Amount of tokens
     function _join(address user, uint128 amount) internal beforeMaturity returns (uint128) {
         ERC1155 token = ERC1155(asset);
         uint256 _storedBalance = storedBalance;
@@ -99,6 +103,8 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl() {
     }
 
     /// @dev Before maturity, transfer `amount` `asset` to `user`.
+    /// @param user Address of receiver of tokens
+    /// @param amount Amount of tokens
     /// After maturity, withdraw if necessary, then transfer `amount.wmul(accrual)` `underlying` to `user`.
     function exit(address user, uint128 amount) external override auth returns (uint128) {
         if (block.timestamp < maturity) {
@@ -110,6 +116,8 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl() {
     }
 
     /// @dev Transfer `amount` `asset` to `user`
+    /// @param user Address of receiver of fCash tokens
+    /// @param amount Amount of ERC1155 tokens
     function _exit(address user, uint128 amount) internal beforeMaturity returns (uint128) {
         storedBalance -= amount;
         ERC1155(asset).safeTransferFrom(address(this), user, id, amount, "");
@@ -156,12 +164,17 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl() {
     }
 
     /// @dev Retrieve any ERC20 tokens. Useful for airdropped tokens.
+    /// @param token ERC20 contract object
+    /// @param to Address of receiver
     function retrieve(IERC20 token, address to) external auth {
         require(address(token) != address(underlying), "Use exit for underlying");
         MinimalTransferHelper.safeTransfer(token, to, token.balanceOf(address(this)));
     }
     
     /// @dev Retrieve any ERC1155 tokens other than the `asset`. Useful for airdropped tokens.
+    /// @param token ERC1155 token passed as contract object
+    /// @param id_ ID of ERC1155 token
+    /// @param to Address of receiver
     function retrieveERC1155(ERC1155 token, uint256 id_, address to) external auth {
         require(address(token) != address(asset) || id_ != id, "Use exit for asset");
         token.safeTransferFrom(address(this), to, id_, token.balanceOf(address(this), id_), "");
