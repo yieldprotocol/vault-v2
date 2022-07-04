@@ -42,6 +42,9 @@ abstract contract StateMatured is Test, TestConstants {
     DAIMock public dai;
 
     IJoin internal underlyingJoin;
+    
+    address user; 
+    address deployer;
 
     // arbitrary values for testing
     uint40 maturity = 1651743369;   
@@ -63,6 +66,15 @@ abstract contract StateMatured is Test, TestConstants {
 
         njoin = new NotionalJoin(address(fcash), address(dai), address(underlyingJoin), maturity, currencyId);
         vm.label(address(njoin), "Notional Join");
+        
+        user = address(1);
+        vm.label(user, "user");
+
+        deployer = 0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84;
+        vm.label(deployer, "deployer");
+
+        //grant access permissions to deployer
+        njoin.grantRole(NotionalJoin.exit.selector, deployer);
 
 
        // njoin has 10 fCash tokens 
@@ -79,7 +91,7 @@ abstract contract StateMatured is Test, TestConstants {
        .sig(njoin.storedBalance.selector)
        .checked_write(10e18);
 
-       fcash.setAccrual(10**18);  // set fCash == underlying for simplicity
+       fcash.setAccrual(1e18);  // set fCash == underlying for simplicity
 
     }  
 }
@@ -100,23 +112,72 @@ contract StateMaturedTest is StateMatured {
         assertTrue(fcash.balanceOf(address(njoin), fCashId) == 10e18); 
     }
 
+    function testAccrual() public {
+        console2.log("Accrual in Njoin should be 0");
+        assertTrue(njoin.accrual() == 0); 
+    }
+    
     function testRedeem() public {
-        console2.log("Call redeem from Njoin");
+        console2.log("First exit() should call redeem()");
 
-        // mock join fn call, returns amount 
+        // mock for redeem()
         underlyingJoin.join.mock(address(njoin), 10e18, 10e18);
-        //underlyingJoin.join.verify(address(njoin), 10**18);
+        // mock for _exitUnderlying()
+        underlyingJoin.exit.mock(user, 10e18, 10e18);
 
-        njoin.redeem();
+        underlyingJoin.join.verify(address(njoin), 10e18);
+        underlyingJoin.exit.verify(user, 10e18);
+
+        vm.prank(deployer);
+        njoin.exit(user, 10e18);
 
         assertTrue(njoin.storedBalance() == 0); 
         assertTrue(dai.balanceOf(address(njoin)) == 0); 
+        
+        assertTrue(njoin.accrual() == 1e18);
         assertTrue(dai.balanceOf(address(underlyingJoin)) == 10e18);
-
-        //vm.expectEmit(true, true, true);
-        //emit Redeemed(10e18, 10e18, 10e18);
     }
 }
+
+abstract contract StateExitUnderlying is StateMatured {
+    using Mocks for *;
+
+     function setUp() public override virtual {
+        super.setUp();
+
+        // state transition: accrual > 0
+        underlyingJoin.join.mock(address(njoin), 10e18, 10e18);
+        underlyingJoin.exit.mock(user, 10e18, 10e18);
+
+        vm.prank(deployer);
+        njoin.exit(user, 10e18);
+
+        assertTrue(njoin.accrual() == 1e18);
+    }
+
+}
+contract StateExitUnderlyingTest is StateExitUnderlying {
+    using Mocks for *;
+
+    function testSubsequentExit() public {
+        console2.log("Redeem should be skipped, _exitUnderlying executed");
+
+        underlyingJoin.exit.mock(user, 10e18, 10e18);
+        underlyingJoin.exit.verify(user, 10e18);
+
+        vm.prank(deployer);
+        njoin.exit(user, 10e18);
+
+        assertTrue(njoin.storedBalance() == 0); 
+        assertTrue(dai.balanceOf(address(njoin)) == 0); 
+
+        assertTrue(dai.balanceOf(address(underlyingJoin)) == 10e18);
+    }
+}
+    
+    
+
+
 
 
 
