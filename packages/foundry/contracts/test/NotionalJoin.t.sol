@@ -158,6 +158,14 @@ abstract contract StateRedeemed is StateMatured {
 contract StateRedeemedTest is StateRedeemed {
     using Mocks for *;
 
+    function testCannotRedeem() public {
+        console2.log("Redeem will revert since accrual > 0");
+        
+        vm.prank(deployer);
+        vm.expectRevert("Already redeemed");
+        njoin.redeem();
+    }
+
     function testSubsequentExit() public {
         console2.log("Redeem should be skipped, _exitUnderlying executed");
 
