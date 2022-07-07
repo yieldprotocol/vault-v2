@@ -95,6 +95,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
     ///Before maturity, returns amount as if at maturity.
     function _convertToUnderlying(uint256 principalAmount) private view returns (uint256 underlyingAmount) {
         return principalAmount;
+    }
 
     ///@dev Converts the amount of the underlying to the principal
     function convertToPrincipal(uint256 underlyingAmount) external view returns (uint256 principalAmount) {
@@ -156,13 +157,13 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
 
     /// @dev Burn fyToken after maturity for an amount that increases according to `chi`
     /// If `amount` is 0, the contract will redeem instead the fyToken balance of this contract. Useful for batches.
-    function redeem(address principalAmount, address receiver, address holder) external override afterMaturity returns (uint256 underlyingAmount) {
+    function redeem(uint256 principalAmount, address receiver, address holder) external override afterMaturity returns (uint256 underlyingAmount) {
         uint256 amount_ = (principalAmount == 0) ? _balanceOf[address(this)] : principalAmount;
         _burn(holder, amount_);
-        underlyingAmount_ = _convertToUnderlying(amount_.wmul(_accrual()));
-        join.exit(to, underlyingAmount_.u128());
+        underlyingAmount = _convertToUnderlying(amount_.wmul(_accrual()));
+        join.exit(receiver, underlyingAmount.u128());
 
-        emit Redeemed(holder, receiver, amount_, underlyingAmount_);
+        emit Redeemed(holder, receiver, amount_, underlyingAmount);
     }
 
     ///@dev returns the maximum withdrawable amount for the address holder in terms of the underlying
@@ -176,17 +177,17 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
     }
 
     ///@dev returns the amount of underlying redeemable in terms of the principal
-    function _previewWithdraw(uint256 principalAmount) private view returns (uint256 principalAmount) {
+    function _previewWithdraw(uint256 underlyingAmount) private view returns (uint256 principalAmount) {
         return _convertToPrincipal(underlyingAmount);
     }
 
     function withdraw(uint256 underlyingAmount, address receiver, address holder) external afterMaturity returns (uint256 principalAmount) {
-        uint256 amount_ = (underlyingAmount == 0) ? _convertToPrincipal(_balanceOf[address(this)]) : convertToPrincipal(underlyingAmount);
+        uint256 amount_ = (underlyingAmount == 0) ? _convertToPrincipal(_balanceOf[address(this)]) : _convertToPrincipal(underlyingAmount);
         _burn(holder, amount_);
-        underlyingAmount_ = _convertToUnderlying(amount_.wmul(_accrual()));
-        join.exit(receiver, underlyingAmount_.u128());
+        principalAmount = amount_.wmul(_accrual());
+        join.exit(receiver, _convertToUnderlying(principalAmount).u128());
 
-        emit Redeemed(holder, receiver, amount_, underlyingAmount_);
+        emit Redeemed(holder, receiver, amount_, _convertToUnderlying(principalAmount));
     }
 
     /// @dev Mint fyToken providing an equal amount of underlying to the protocol
