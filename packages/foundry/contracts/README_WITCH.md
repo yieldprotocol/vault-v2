@@ -46,6 +46,24 @@ An auction can finish when there is no debt (with `_auctionEnded` called inside 
 
 An auction finishing erases the auction data structure, and returns the vault to its original owner.
 
+## Orchestration
+The Witch has the following permissions on other contracts in the Yield Protocol:
+ - `cauldron.give` - Allows to change the owner of any vault.
+ - `cauldron.slurp` - Allows to change the balances of any vault, skipping collateralization checks.
+ - `join.join` - Allows to make a join recognize unaccounted tokens it holds, or pull them from any user that has given approval.
+ - `join.exit` - Allows to take tokens from a join and send them to any address.
+
+Any of these permissions will have a catastrophic impact if abused.
+
+## Governance Errors or Attacks
+While governance actions will be carefully tested, it is in everyone's interest to disclose what's the worst that could happen.
+ - `point`: Would disable liquidations as all payments fail.
+ - `setLine`: Proportion being set to zero or at a very small number would disable liquidations. Setting a `line` for a non-existing pair might mean that the real pair is not set to be liquidable.
+ - `setLimit`: Setting a `limit` for a non-existing pair might mean that the real pair is not set to be liquidable. Setting `max` to zero would only allow one concurrent auction. Setting `max` to 2^128-1 would allow any amount of colalteral to be auctioned concurrently.
+ - `setAnotherWitch`: It can be misused to protect specific users from liquidation.
+ - `setIgnoredPair`: It can be misused to disable liquidations for any pair.
+ - `setAuctioneerReward`: It can be misused to direct all profit for auctioneers, effectively disincentivizing liquidators to liquidate.
+
 ## Design Decisions
 
 ### Dependencies
