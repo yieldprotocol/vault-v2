@@ -213,7 +213,6 @@ contract Witch is AccessControl {
     /// Useful as a method so it can be overriden by specialised witches that may need to do extra accounting or notify 3rd parties
     function _auctionStarted(bytes12 vaultId) internal virtual {
         // The Witch is now in control of the vault under auction
-        // TODO: Consider using `stir` to take only the part of the vault being auctioned.
         cauldron.give(vaultId, address(this));
         emit Auctioned(vaultId, uint32(block.timestamp));
     }
