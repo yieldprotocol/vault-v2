@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.14;
 
-import "../../witch/WitchV2.sol";
+import "../../Witch.sol";
 import "./interfaces/IContangoWitchListener.sol";
 
-contract ContangoWitch is WitchV2 {
+contract ContangoWitch is Witch {
 
     IContangoWitchListener public immutable contango;
 
@@ -12,7 +12,7 @@ contract ContangoWitch is WitchV2 {
         IContangoWitchListener contango_,
         ICauldron cauldron_,
         ILadle ladle_
-    ) WitchV2(cauldron_, ladle_) {
+    ) Witch(cauldron_, ladle_) {
         contango = contango_;
     }
 

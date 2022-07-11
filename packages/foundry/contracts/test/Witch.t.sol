@@ -3,447 +3,1288 @@ pragma solidity 0.8.14;
 
 import "forge-std/src/Test.sol";
 import "./utils/TestConstants.sol";
-import "./utils/Utilities.sol";
 import "./utils/Mocks.sol";
 
+import "@yield-protocol/vault-interfaces/src/IWitch.sol";
 import "../Witch.sol";
 
-contract WitchTest is Test, TestConstants {
+abstract contract WitchStateZero is Test, TestConstants {
     using Mocks for *;
 
     event Auctioned(bytes12 indexed vaultId, uint256 indexed start);
-    event Bought(bytes12 indexed vaultId, address indexed buyer, uint256 ink, uint256 art);
+    event Cancelled(bytes12 indexed vaultId);
+    event Ended(bytes12 indexed vaultId);
+    event Bought(
+        bytes12 indexed vaultId,
+        address indexed buyer,
+        uint256 ink,
+        uint256 art
+    );
+    event LineSet(
+        bytes6 indexed ilkId,
+        bytes6 indexed baseId,
+        uint32 duration,
+        uint64 proportion,
+        uint64 initialOffer
+    );
+    event LimitSet(bytes6 indexed ilkId, bytes6 indexed baseId, uint128 max);
+    event Point(bytes32 indexed param, address indexed value);
+    event AnotherWitchSet(address indexed a, bool isWitch);
+    event IgnoredPairSet(
+        bytes6 indexed ilkId,
+        bytes6 indexed baseId,
+        bool ignore
+    );
+    event AuctioneerRewardSet(uint128 auctioneerReward);
 
     bytes12 internal constant VAULT_ID = "vault";
-    bytes6 internal constant ILK_ID = USDC;
+    bytes6 internal constant ILK_ID = ETH;
+    bytes6 internal constant BASE_ID = USDC;
+    bytes6 internal constant SERIES_ID = FYETH2206;
     uint32 internal constant AUCTION_DURATION = 1 hours;
 
-    Utilities internal utils;
-
-    address internal admin;
+    // address internal admin;
+    address internal deployer = 0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84;
+    address internal ada = address(0xada);
+    address internal bob = address(0xb0b);
+    address internal bot = address(0xb07);
+    address internal bad = address(0xbad);
+    address internal cool = address(0xc001);
 
     ICauldron internal cauldron;
     ILadle internal ladle;
 
     Witch internal witch;
+    IWitch internal iWitch;
 
     function setUp() public virtual {
-        utils = new Utilities();
-
-        admin = utils.getNextUserAddress("Admin");
         cauldron = ICauldron(Mocks.mock("Cauldron"));
         ladle = ILadle(Mocks.mock("Ladle"));
 
+        vm.startPrank(ada);
         witch = new Witch(cauldron, ladle);
-    }
+        witch.grantRole(Witch.point.selector, ada);
+        witch.grantRole(Witch.setLine.selector, ada);
+        witch.grantRole(Witch.setLimit.selector, ada);
+        witch.grantRole(Witch.setAnotherWitch.selector, ada);
+        witch.grantRole(Witch.setIgnoredPair.selector, ada);
+        witch.grantRole(Witch.setAuctioneerReward.selector, ada);
+        vm.stopPrank();
 
-    function _vaultIsCollateralised(bytes12 vaultId) internal {
-        cauldron.level.mock(vaultId, 0); // >= 0 means vault is collateralised
-    }
+        vm.label(ada, "ada");
+        vm.label(bob, "bob");
 
-    function _vaultIsUndercollateralised(bytes12 vaultId) internal {
-        cauldron.level.mock(vaultId, -1); // < 0 means vault is undercollateralised
-    }
-
-    function _stubVaultForAuction(
-        bytes12 vaultId,
-        DataTypes.Vault memory vault,
-        DataTypes.Balances memory vaultBalances
-    ) internal {
-        cauldron.vaults.mock(vaultId, vault);
-        cauldron.balances.mock(vaultId, vaultBalances);
-        cauldron.give.mock(vaultId, address(witch), vault);
+        iWitch = IWitch(address(witch));
     }
 }
 
-/* contract WitchAuctionTest is WitchTest {
-    using Mocks for *;
-
-    function setUp() public override {
-        super.setUp();
-    }
-
-    function testUnknwonUserCanNotChangeLadle() public {
+contract WitchStateZeroTest is WitchStateZero {
+    function testPointRequiresAuth() public {
+        vm.prank(bob);
         vm.expectRevert("Access denied");
-        witch.point("ladle", address(1));
+        witch.point("ladle", bad);
     }
 
-    function testCanChangeLadle() public {
-        // Given
-        assertEq(address(witch.ladle()), address(ladle));
-        address anotherLadle = Mocks.mock("Ladle2");
-
-        witch.grantRole(witch.point.selector, admin);
-
-        // When
-        vm.prank(admin);
-        witch.point("ladle", anotherLadle);
-
-        // Then
-        assertEq(address(witch.ladle()), anotherLadle);
+    function testPointRequiresLadle() public {
+        vm.prank(ada);
+        vm.expectRevert("Unrecognized");
+        witch.point("cauldron", bad);
     }
 
-    function testUnknwonUserCanNotSetIlk() public {
+    function testPoint() public {
+        vm.expectEmit(true, true, false, true);
+        emit Point("ladle", cool);
+
+        vm.prank(ada);
+        witch.point("ladle", cool);
+
+        assertEq(address(witch.ladle()), cool);
+    }
+
+    function testSetLineRequiresAuth() public {
+        vm.prank(bob);
         vm.expectRevert("Access denied");
-        witch.setIlk(ILK_ID, AUCTION_DURATION, 1e18 + 1, 1000000, 0, 6);
+        witch.setLine("", "", 0, 0, 0);
     }
 
-    function testSetIlkWithMaxInitialProportionGt100() public {
-        // Given
-        witch.grantRole(witch.setIlk.selector, admin);
-
-        // Expect
-        vm.expectRevert("Only at or under 100%");
-
-        // When
-        vm.prank(admin);
-        witch.setIlk(ILK_ID, AUCTION_DURATION, 1e18 + 1, 1000000, 0, 6);
+    function testSetLineRequiresInitialOfferTooHigh() public {
+        vm.prank(ada);
+        vm.expectRevert("InitialOffer above 100%");
+        witch.setLine("", "", 0, 0, 1e18 + 1);
     }
 
-    function testSetIlkWithMaxInitialProportion() public {
-        _setIlkWithMaxInitialProportion100(1e18); //100%
-        _setIlkWithMaxInitialProportion100(1e18 - 1); //99.9999%
+    function testSetLineRequiresProportionTooHigh() public {
+        vm.prank(ada);
+        vm.expectRevert("Proportion above 100%");
+        witch.setLine("", "", 0, 1e18 + 1, 0);
     }
 
-    function _setIlkWithMaxInitialProportion100(uint64 _initialOffer) internal {
-        // Given
-        witch.grantRole(witch.setIlk.selector, admin);
-
-        // When
-        vm.prank(admin);
-        witch.setIlk(ILK_ID, AUCTION_DURATION, _initialOffer, 1000000, 0, 6);
-
-        // Then
-        (uint32 duration, uint64 initialOffer) = witch.ilks(ILK_ID);
-        assertEq(duration, AUCTION_DURATION);
-        assertEq(initialOffer, _initialOffer);
-        (uint96 line, uint24 dust, uint8 dec, uint128 sum) = witch.limits(ILK_ID);
-        assertEq(line, 1000000);
-        assertEq(dust, 0);
-        assertEq(dec, 6);
-        assertEq(sum, 0);
+    function testSetLineRequiresInitialOfferTooLow() public {
+        vm.prank(ada);
+        vm.expectRevert("InitialOffer below 1%");
+        witch.setLine("", "", 0, 0, 0.01e18 - 1);
     }
 
-    function testDoNotAllowToBuyFromVaultsNotBeingAuctioned() public {
-        vm.expectRevert("Vault not under auction");
-        witch.buy(VAULT_ID, 0, 0);
-
-        vm.expectRevert("Vault not under auction");
-        witch.payAll(VAULT_ID, 0);
+    function testSetLineRequiresProportionTooLow() public {
+        vm.prank(ada);
+        vm.expectRevert("Proportion below 1%");
+        witch.setLine("", "", 0, 0.01e18 - 1, 0);
     }
 
-    function testDoNotAuctionCollateralisedVaults() public {
-        _vaultIsCollateralised(VAULT_ID);
+    function testSetLine() public {
+        uint64 proportion = 0.5e18;
+        uint64 initialOffer = 0.75e18;
 
-        vm.expectRevert("Not undercollateralized");
-        witch.auction(VAULT_ID);
+        vm.expectEmit(true, true, false, true);
+        emit LineSet(
+            ILK_ID,
+            BASE_ID,
+            AUCTION_DURATION,
+            proportion,
+            initialOffer
+        );
+
+        vm.prank(ada);
+        witch.setLine(
+            ILK_ID,
+            BASE_ID,
+            AUCTION_DURATION,
+            proportion,
+            initialOffer
+        );
+
+        (uint32 _duration, uint64 _proportion, uint64 _initialOffer) = witch
+            .lines(ILK_ID, BASE_ID);
+
+        assertEq(_duration, AUCTION_DURATION);
+        assertEq(_proportion, proportion);
+        assertEq(_initialOffer, initialOffer);
     }
 
-    function testDoNotAuctionVaultIfLineExceeded() public {
-        // Given
-        witch.grantRole(witch.setIlk.selector, admin);
-        vm.prank(admin);
-        witch.setIlk(ILK_ID, 1, 2, 1, 0, 6);
-
-        _vaultIsUndercollateralised(VAULT_ID);
-        cauldron.vaults.mock(VAULT_ID, DataTypes.Vault(address(0xb0b), "series", ILK_ID));
-        cauldron.balances.mock(VAULT_ID, DataTypes.Balances(3e6, 4e6));
-
-        // Expect
-        vm.expectRevert("Collateral limit reached");
-
-        // When
-        witch.auction(VAULT_ID);
+    function testSetLimitRequiresAuth() public {
+        vm.prank(bob);
+        vm.expectRevert("Access denied");
+        witch.setLimit("", "", 0);
     }
 
-    function testAuctionsUndercollateralisedVaults() public {
-        // Given
-        witch.grantRole(witch.setIlk.selector, admin);
-        vm.prank(admin);
-        witch.setIlk(ILK_ID, AUCTION_DURATION, 0.5e18, 1000000, 0, 6);
+    function testSetLimit() public {
+        uint96 max = 1;
 
-        address owner = address(0xb0b);
-        DataTypes.Vault memory vault = DataTypes.Vault(owner, "series", ILK_ID);
-        DataTypes.Balances memory balances = DataTypes.Balances(3e18, 4e6);
-        _stubVaultForAuction(VAULT_ID, vault, balances);
-        _vaultIsUndercollateralised(VAULT_ID);
+        vm.expectEmit(true, true, false, true);
+        emit LimitSet(ILK_ID, BASE_ID, max);
 
-        // Expect
-        vm.expectEmit(true, true, false, false);
-        emit Auctioned(VAULT_ID, block.timestamp);
+        vm.prank(ada);
+        witch.setLimit(ILK_ID, BASE_ID, max);
 
-        // When
-        witch.auction(VAULT_ID);
+        (uint128 _max, uint128 _sum) = witch.limits(ILK_ID, BASE_ID);
 
-        // Then
-        (address _owner, uint32 _start) = witch.auctions(VAULT_ID);
-        (, , , uint128 _sum) = witch.limits(ILK_ID);
-        assertEq(_owner, owner);
-        assertEq(_start, block.timestamp);
-        assertEq(_sum, balances.ink);
+        assertEq(_max, max);
+        assertEq(_sum, 0);
+    }
+
+    function testSetAnotherWitchRequiresAuth() public {
+        vm.prank(bob);
+        vm.expectRevert("Access denied");
+        witch.setAnotherWitch(address(0), true);
+    }
+
+    function testSetAnotherWitch() public {
+        address anotherWitch = Mocks.mock("anotherWitch");
+
+        vm.expectEmit(true, true, false, true);
+        emit AnotherWitchSet(anotherWitch, true);
+
+        vm.prank(ada);
+        witch.setAnotherWitch(anotherWitch, true);
+
+        assertTrue(witch.otherWitches(anotherWitch));
+    }
+
+    function testSetIgnoredPairRequiresAuth() public {
+        vm.prank(bob);
+        vm.expectRevert("Access denied");
+        witch.setIgnoredPair("", "", true);
+    }
+
+    function testSetIgnoredPair() public {
+        vm.expectEmit(true, true, false, true);
+        emit IgnoredPairSet(ILK_ID, BASE_ID, true);
+
+        vm.prank(ada);
+        witch.setIgnoredPair(ILK_ID, BASE_ID, true);
+
+        assertTrue(witch.ignoredPairs(ILK_ID, BASE_ID));
+    }
+
+    function testSetAuctioneerRewardRequiresAuth() public {
+        vm.prank(bob);
+        vm.expectRevert("Access denied");
+        witch.setAuctioneerReward(0);
+    }
+
+    function testSetAuctioneerRewardTooHigh() public {
+        vm.prank(ada);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Witch.AuctioneerRewardTooHigh.selector,
+                1e18,
+                1.00001e18
+            )
+        );
+        witch.setAuctioneerReward(1.00001e18);
+    }
+
+    function testSetAuctioneerReward() public {
+        vm.expectEmit(true, true, false, true);
+        emit AuctioneerRewardSet(0.02e18);
+
+        vm.prank(ada);
+        witch.setAuctioneerReward(0.02e18);
+
+        assertEq(witch.auctioneerReward(), 0.02e18);
     }
 }
 
-contract WitchTestWithAuctionedVault is WitchTest {
+abstract contract WitchWithMetadata is WitchStateZero {
     using Mocks for *;
 
-    bytes6 internal constant BASE_ID = DAI;
+    DataTypes.Vault vault;
+    DataTypes.Series series;
+    DataTypes.Balances balances;
+    DataTypes.Debt debt;
 
-    bytes6 internal constant SERIES_ID = "series";
-    DataTypes.Series internal series =
-        DataTypes.Series(IFYToken(address(0)), BASE_ID, uint32(block.timestamp + 30 days));
+    uint96 max = 100e18;
+    uint24 dust = 5000;
+    uint8 dec = 6;
 
-    bytes12 internal constant VAULT_A = "vaultA";
-    address internal constant BOB = address(0xb0b);
-    DataTypes.Vault internal vaultA = DataTypes.Vault(BOB, SERIES_ID, ILK_ID);
-    DataTypes.Balances internal vaultABalances = DataTypes.Balances(3e18, 4e6);
-
-    bytes12 internal constant VAULT_B = "vaultB";
-    address internal constant COCO = address(0xc0c0);
-    DataTypes.Vault internal vaultB = DataTypes.Vault(COCO, SERIES_ID, ILK_ID);
-    DataTypes.Balances internal vaultBBalances = DataTypes.Balances(6e18, 8e6);
-
-    address internal keeper;
+    uint64 proportion = 0.5e18;
+    uint64 initialOffer = 0.714e18;
 
     function setUp() public virtual override {
         super.setUp();
 
-        keeper = utils.getNextUserAddress("Keeper");
+        vault = DataTypes.Vault({
+            owner: bob,
+            seriesId: SERIES_ID,
+            ilkId: ILK_ID
+        });
 
-        witch.grantRole(witch.setIlk.selector, admin);
-        vm.prank(admin);
-        witch.setIlk(ILK_ID, AUCTION_DURATION, 0.5e18, 1000000, 0, 6);
+        series = DataTypes.Series({
+            fyToken: IFYToken(Mocks.mock("FYToken")),
+            baseId: BASE_ID,
+            maturity: uint32(block.timestamp + 30 days)
+        });
 
-        _stubVaultForAuction(VAULT_A, vaultA, vaultABalances);
-        _vaultIsUndercollateralised(VAULT_A);
+        balances = DataTypes.Balances({art: 100_000e6, ink: 100 ether});
 
-        witch.auction(VAULT_A);
-    }
+        debt = DataTypes.Debt({
+            max: 0, // Not used by the Witch
+            min: dust, // Witch uses the cauldron min debt as dust
+            dec: dec,
+            sum: 0 // Not used by the Witch
+        });
 
-    function _stubBuy(
-        uint128 baseToRepayArt,
-        uint128 debtFromBase,
-        uint128 inkBought
-    ) internal {
+        cauldron.vaults.mock(VAULT_ID, vault);
         cauldron.series.mock(SERIES_ID, series);
-        cauldron.debtFromBase.mock(SERIES_ID, baseToRepayArt, debtFromBase);
+        cauldron.balances.mock(VAULT_ID, balances);
+        cauldron.debt.mock(BASE_ID, ILK_ID, debt);
 
-        cauldron.slurp.mock(VAULT_A, inkBought, debtFromBase, vaultABalances);
-        cauldron.give.mock(VAULT_A, BOB, vaultA);
-
-        IJoin baseJoin = IJoin(Mocks.mock("BaseJoin"));
-        IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
-        ladle.joins.mock(BASE_ID, baseJoin);
-        ladle.joins.mock(ILK_ID, ilkJoin);
-
-        baseJoin.join.mock(keeper, baseToRepayArt, baseToRepayArt);
-        ilkJoin.exit.mock(keeper, inkBought, inkBought);
-    }
-
-    function _stubBuy(uint128 baseToRepayArt, uint128 inkBought) internal {
-        _stubBuy(baseToRepayArt, baseToRepayArt, inkBought);
+        vm.startPrank(ada);
+        witch.setLimit(ILK_ID, BASE_ID, max);
+        witch.setLine(
+            ILK_ID,
+            BASE_ID,
+            AUCTION_DURATION,
+            proportion,
+            initialOffer
+        );
+        vm.stopPrank();
     }
 }
 
-contract WitchAuctionedTest is WitchTestWithAuctionedVault {
+contract WitchWithMetadataTest is WitchWithMetadata {
     using Mocks for *;
 
-    function setUp() public override {
-        super.setUp();
+    function testCalcPayout() public {
+        // 100 * 0.5 * 0.714 = 35.7
+        // (ink * proportion * initialOffer)
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 artIn) = witch
+            .calcPayout(VAULT_ID, bot, 50_000e6);
+        assertEq(liquidatorCut, 35.7 ether);
+        // on a non-started auction it's always assumed that liquidator == auctioneer
+        assertEq(auctioneerCut, 0);
+        assertEq(artIn, 50_000e6);
+
+        skip(5 minutes);
+        // Nothing changes as auction was never started
+        (liquidatorCut, auctioneerCut, artIn) = witch.calcPayout(
+            VAULT_ID,
+            bot,
+            50_000e6
+        );
+        assertEq(liquidatorCut, 35.7 ether);
+        assertEq(auctioneerCut, 0);
+        assertEq(artIn, 50_000e6);
     }
 
-    function testVaultCanNotBeAuctionedTwice() public {
-        vm.expectRevert("Vault already under auction");
-        witch.auction(VAULT_A);
+    function testCalcPayoutEdgeCases() public {
+        (uint256 liquidatorCut, , uint256 artIn) = witch.calcPayout(
+            VAULT_ID,
+            bot,
+            0
+        );
+        assertEq(liquidatorCut, 0);
+        assertEq(artIn, 0);
+
+        (liquidatorCut, , artIn) = witch.calcPayout(
+            VAULT_ID,
+            bot,
+            type(uint256).max
+        );
+        assertEq(liquidatorCut, 35.7 ether);
+        assertEq(artIn, 50_000e6);
     }
 
-    function testItCanAuctionOtherVaults() public {
+    function testCalcPayoutFuzzArtIn(uint256 maxArtIn) public {
+        (uint256 liquidatorCut, , uint256 artIn) = witch.calcPayout(
+            VAULT_ID,
+            bot,
+            maxArtIn
+        );
+
+        assertLe(liquidatorCut, 35.7 ether);
+        assertGe(liquidatorCut, 0);
+
+        assertGe(artIn, 0);
+        assertLe(artIn, 50_000e6);
+    }
+
+    function testCalcPayoutFuzzInitialOffer(uint64 io) public {
+        vm.assume(io <= 1e18 && io >= 0.01e18);
+
+        vm.prank(ada);
+        witch.setLine(ILK_ID, BASE_ID, AUCTION_DURATION, proportion, io);
+
+        (uint256 liquidatorCut, , ) = witch.calcPayout(VAULT_ID, bot, 50_000e6);
+
+        assertLe(liquidatorCut, 50 ether);
+        assertGe(liquidatorCut, 0.5 ether);
+    }
+
+    function testCalcPayoutFuzzElapsed(uint16 elapsed) public {
+        skip(elapsed);
+
+        (uint256 liquidatorCut, , ) = witch.calcPayout(VAULT_ID, bot, 50_000e6);
+
+        assertLe(liquidatorCut, 50 ether);
+    }
+
+    function testVaultNotUndercollateralised() public {
+        cauldron.level.mock(VAULT_ID, 0);
+        vm.expectRevert("Not undercollateralized");
+        witch.auction(VAULT_ID, bot);
+    }
+
+    function testVaultBelongsToAnotherWitch() public {
         // Given
-        _stubVaultForAuction(VAULT_B, vaultB, vaultBBalances);
-        _vaultIsUndercollateralised(VAULT_B);
+        address anotherWitch = Mocks.mock("anotherWitch");
+        vm.prank(ada);
+        witch.setAnotherWitch(anotherWitch, true);
+
+        // anotherWitch got to auction first
+        vault.owner = anotherWitch;
+        cauldron.vaults.mock(VAULT_ID, vault);
 
         // When
-        witch.auction(VAULT_B);
-
-        // Then
-        (, , , uint128 _sum) = witch.limits(ILK_ID);
-        assertEq(_sum, vaultABalances.ink + vaultBBalances.ink);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Witch.VaultAlreadyUnderAuction.selector,
+                VAULT_ID,
+                anotherWitch
+            )
+        );
+        witch.auction(VAULT_ID, bot);
     }
 
-    function testDonNotAuctionFurtherVaultsIfLineExceeded() public {
+    function testVaultIsMadeOfAnIgnoredPair() public {
         // Given
-        _stubVaultForAuction(VAULT_B, vaultB, vaultBBalances);
-        _vaultIsUndercollateralised(VAULT_B);
+        vm.prank(ada);
+        witch.setIgnoredPair(ILK_ID, BASE_ID, true);
 
-        vm.prank(admin);
-        witch.setIlk(ILK_ID, AUCTION_DURATION, 0.5e18, 4, 0, 6);
+        // When
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Witch.VaultNotLiquidable.selector,
+                VAULT_ID,
+                ILK_ID,
+                BASE_ID
+            )
+        );
+        witch.auction(VAULT_ID, bot);
+    }
+
+    function testCanAuctionVault() public {
+        cauldron.level.mock(VAULT_ID, -1);
+        cauldron.give.mock(VAULT_ID, address(witch), vault);
+        cauldron.give.verify(VAULT_ID, address(witch));
+
+        vm.expectEmit(true, true, true, true);
+        emit Auctioned(VAULT_ID, uint32(block.timestamp));
+
+        DataTypes.Auction memory auction = witch.auction(VAULT_ID, bot);
+
+        assertEq(auction.owner, vault.owner);
+        assertEq(auction.start, uint32(block.timestamp));
+        assertEq(auction.baseId, series.baseId);
+        // 100,000 / 2
+        assertEq(auction.art, 50_000e6);
+        // 100 * 0.5
+        assertEq(auction.ink, 50 ether);
+
+        DataTypes.Auction memory auction_ = iWitch.auctions(VAULT_ID);
+        assertEq(auction_.owner, auction.owner);
+        assertEq(auction_.start, auction.start);
+        assertEq(auction_.baseId, auction.baseId);
+        assertEq(auction_.art, auction.art);
+        assertEq(auction_.ink, auction.ink);
+
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 50 ether);
+    }
+
+    function testCancelNonExistentAuction() public {
+        vm.expectRevert("Vault not under auction");
+        witch.cancel(VAULT_ID);
+    }
+
+    function testPayBaseNonExistingAuction() public {
+        vm.expectRevert("Vault not under auction");
+        witch.payBase(VAULT_ID, address(0), 0, 0);
+    }
+
+    function testPayFYTokenNonExistingAuction() public {
+        vm.expectRevert("Vault not under auction");
+        witch.payFYToken(VAULT_ID, address(0), 0, 0);
+    }
+}
+
+contract WitchWithAuction is WitchWithMetadata {
+    using Mocks for *;
+    using WMul for uint256;
+    using WMul for uint128;
+
+    bytes12 internal constant VAULT_ID_2 = "vault2";
+    DataTypes.Auction auction;
+
+    function setUp() public virtual override {
+        super.setUp();
+
+        cauldron.level.mock(VAULT_ID, -1);
+        cauldron.give.mock(VAULT_ID, address(witch), vault);
+        vm.prank(bot);
+        auction = witch.auction(VAULT_ID, bot);
+        vault.owner = address(witch);
+        // Mocks are not pass by reference, so we need to re-mock
+        cauldron.vaults.mock(VAULT_ID, vault);
+    }
+
+    struct StubVault {
+        bytes12 vaultId;
+        uint128 ink;
+        uint128 art;
+        int256 level;
+    }
+
+    function _stubVault(StubVault memory params) internal {
+        DataTypes.Vault memory v = DataTypes.Vault({
+            owner: bob,
+            seriesId: SERIES_ID,
+            ilkId: ILK_ID
+        });
+        DataTypes.Balances memory b = DataTypes.Balances(
+            params.art,
+            params.ink
+        );
+        cauldron.vaults.mock(params.vaultId, v);
+        cauldron.balances.mock(params.vaultId, b);
+        cauldron.level.mock(params.vaultId, params.level);
+        cauldron.give.mock(params.vaultId, address(witch), v);
+    }
+
+    function testCalcPayoutAfterAuctionForAuctioneer() public {
+        // 100 * 0.5 * 0.714 = 35.7
+        // (ink * proportion * initialOffer)
+        (uint256 liquidatorCut, uint256 auctioneerCut, ) = witch.calcPayout(
+            VAULT_ID,
+            bot,
+            50_000e6
+        );
+        assertEq(liquidatorCut, 35.7 ether);
+        assertEq(auctioneerCut, 0);
+
+        skip(5 minutes);
+        // 100 * 0.5 * (0.714 + (1 - 0.714) * 300/3600) = 36.8916666667
+        // (ink * proportion * (initialOffer + (1 - initialOffer) * timeElapsed)
+        (liquidatorCut, auctioneerCut, ) = witch.calcPayout(
+            VAULT_ID,
+            bot,
+            50_000e6
+        );
+        assertEq(liquidatorCut, 36.89166666666666665 ether);
+        assertEq(auctioneerCut, 0);
+
+        skip(25 minutes);
+        // 100 * 0.5 * (0.714 + (1 - 0.714) * 1800/3600) = 42.85
+        // (ink * proportion * (initialOffer + (1 - initialOffer) * timeElapsed)
+        (liquidatorCut, auctioneerCut, ) = witch.calcPayout(
+            VAULT_ID,
+            bot,
+            50_000e6
+        );
+        assertEq(liquidatorCut, 42.85 ether);
+        assertEq(auctioneerCut, 0);
+
+        // Right at auction end
+        skip(30 minutes);
+        // 100 * 0.5 = 50
+        // (ink * proportion)
+        (liquidatorCut, auctioneerCut, ) = witch.calcPayout(
+            VAULT_ID,
+            bot,
+            50_000e6
+        );
+        assertEq(liquidatorCut, 50 ether);
+        assertEq(auctioneerCut, 0);
+
+        // After the auction ends the value is fixed
+        skip(1 hours);
+        (liquidatorCut, auctioneerCut, ) = witch.calcPayout(
+            VAULT_ID,
+            bot,
+            50_000e6
+        );
+        assertEq(liquidatorCut, 50 ether);
+        assertEq(auctioneerCut, 0);
+    }
+
+    function testCalcPayoutAfterAuctionForNonAuctioneer() public {
+        address bot2 = address(0xb072);
+
+        // liquidatorCut = 100  * 0.5        * 0.714        * 0.99                       = 35.343
+        //                 (ink * proportion * initialOffer * (1 - auctioneerReward))
+        // auctioneerCut = 100  * 0.5        * 0.714        * 0.01                       = 0.357
+        //                 (ink * proportion * initialOffer * auctioneerReward)
+        (uint256 liquidatorCut, uint256 auctioneerCut, ) = witch.calcPayout(
+            VAULT_ID,
+            bot2,
+            50_000e6
+        );
+        assertEq(liquidatorCut, 35.343 ether, "liquidatorCut");
+        assertEq(auctioneerCut, 0.357 ether, "auctioneerCut");
+
+        skip(5 minutes);
+        // 100 * 0.5 * (0.714 + (1 - 0.714) * 300/3600) = 36.8916666667
+        // (ink * proportion * (initialOffer + (1 - initialOffer) * timeElapsed)
+        (liquidatorCut, auctioneerCut, ) = witch.calcPayout(
+            VAULT_ID,
+            bot2,
+            50_000e6
+        );
+        // 36.8916666667 * 0.99
+        assertEq(liquidatorCut, 36.522749999999999984 ether);
+        // 36.8916666667 * 0.01
+        assertEq(auctioneerCut, 0.368916666666666666 ether);
+
+        skip(25 minutes);
+        // 100 * 0.5 * (0.714 + (1 - 0.714) * 1800/3600) = 42.85
+        // (ink * proportion * (initialOffer + (1 - initialOffer) * timeElapsed)
+        (liquidatorCut, auctioneerCut, ) = witch.calcPayout(
+            VAULT_ID,
+            bot2,
+            50_000e6
+        );
+        // 42.85 * 0.99
+        assertEq(liquidatorCut, 42.4215 ether);
+        // 42.85 * 0.01
+        assertEq(auctioneerCut, 0.4285 ether);
+
+        // Right at auction end
+        skip(30 minutes);
+        // 100 * 0.5 = 50
+        // (ink * proportion)
+        (liquidatorCut, auctioneerCut, ) = witch.calcPayout(
+            VAULT_ID,
+            bot2,
+            50_000e6
+        );
+        // 50 * 0.99
+        assertEq(liquidatorCut, 49.5 ether);
+        // 50 * 0.01
+        assertEq(auctioneerCut, 0.5 ether);
+
+        // After the auction ends the value is fixed
+        skip(1 hours);
+        (liquidatorCut, auctioneerCut, ) = witch.calcPayout(
+            VAULT_ID,
+            bot2,
+            50_000e6
+        );
+        assertEq(liquidatorCut, 49.5 ether);
+        assertEq(auctioneerCut, 0.5 ether);
+    }
+
+    function testAuctionAlreadyExists() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Witch.VaultAlreadyUnderAuction.selector,
+                VAULT_ID,
+                address(witch)
+            )
+        );
+        witch.auction(VAULT_ID, bot);
+    }
+
+    function testCollateralLimits() public {
+        // Given
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 50 ether);
+
+        _stubVault(
+            StubVault({
+                vaultId: VAULT_ID_2,
+                ink: 101 ether,
+                art: 100_000e6,
+                level: -1
+            })
+        );
+
+        // When
+        witch.auction(VAULT_ID_2, bot);
+
+        // Then
+        (, sum) = witch.limits(ILK_ID, BASE_ID);
+        // Max is 100, but the position could be auctioned due to the soft limit
+        // Next position will fail
+        assertEq(sum, 100.5 ether);
+
+        // Given
+        bytes12 otherVaultId = "other vault";
+        _stubVault(
+            StubVault({
+                vaultId: otherVaultId,
+                ink: 10 ether,
+                art: 20_000e6,
+                level: -1
+            })
+        );
 
         // Expect
         vm.expectRevert("Collateral limit reached");
 
         // When
-        witch.auction(VAULT_B);
+        witch.auction(otherVaultId, bot);
     }
 
-    function testDoesNotAllowBuyingUnderMinimumRequired() public {
-        cauldron.series.mock(SERIES_ID, series);
-        cauldron.debtFromBase.mock(SERIES_ID, 1e18, 1e18);
+    function testDustLimit() public {
+        // Half of this vault would be less than the min of 5k
+        _stubVault(
+            StubVault({
+                vaultId: VAULT_ID_2,
+                ink: 5 ether,
+                art: 9999e6,
+                level: -1
+            })
+        );
+
+        DataTypes.Auction memory auction2 = witch.auction(VAULT_ID_2, bot);
+
+        assertEq(auction2.owner, address(0xb0b));
+        assertEq(auction2.start, uint32(block.timestamp));
+        assertEq(auction2.baseId, series.baseId);
+        // 100% of the vault was put for liquidation
+        assertEq(auction2.art, 9999e6);
+        assertEq(auction2.ink, 5 ether);
+    }
+
+    function testUpdateLimit() public {
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 50 ether);
+
+        vm.prank(ada);
+        witch.setLimit(ILK_ID, BASE_ID, 1);
+
+        (uint128 _max, uint128 _sum) = witch.limits(ILK_ID, BASE_ID);
+
+        assertEq(_max, 1);
+        // Sum is copied from old values
+        assertEq(_sum, 50 ether);
+    }
+
+    function testCancelUndercollateralisedAuction() public {
+        vm.expectRevert("Undercollateralized");
+        witch.cancel(VAULT_ID);
+    }
+
+    function testCancelAuction() public {
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 50 ether);
+
+        cauldron.level.mock(VAULT_ID, 0);
+        cauldron.give.mock(VAULT_ID, bob, vault);
+        cauldron.give.verify(VAULT_ID, bob);
+
+        vm.expectEmit(true, true, true, true);
+        emit Ended(VAULT_ID);
+        vm.expectEmit(true, true, true, true);
+        emit Cancelled(VAULT_ID);
+
+        witch.cancel(VAULT_ID);
+
+        // sum is reduced by the auction.ink
+        (, sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 0);
+
+        _auctionWasDeleted(VAULT_ID);
+    }
+
+    function testPayBaseNotEnoughBought() public {
+        // Bot tries to get all collateral but auction just started
+        uint128 minInkOut = 50 ether;
+        uint128 maxBaseIn = 50_000e6;
+
+        // make fyToken 1:1 with base to make things simpler
+        cauldron.debtFromBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+        cauldron.debtToBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
 
         vm.expectRevert("Not enough bought");
-        witch.buy(VAULT_A, 1e18, 1e6);
+        witch.payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
     }
 
-    function testCanBuyZeroCollateral() public {
-        _stubBuy(0, 0);
+    function testPayBaseLeavesDust() public {
+        // Bot tries to pay an amount that'd leaves dust
+        uint128 maxBaseIn = auction.art - 4999e6;
 
-        vm.expectEmit(true, true, false, false);
-        emit Bought(VAULT_A, keeper, 0, 0);
-
-        vm.prank(keeper);
-        witch.buy(VAULT_A, 0, 0);
-    }
-
-    function testAllowsToBuyHalfOfCollateralAmountFromTheBeggining() public {
-        uint128 baseToRepayArt = 3e18;
-        uint128 inkToBuy = 2e6;
-        // There's some rounding up on the calculated ink value, so an extra wei has to be added
-        uint128 inkBought = inkToBuy + 1;
-
-        _stubBuy(baseToRepayArt, inkBought);
-
-        vm.expectEmit(true, true, false, false);
-        emit Bought(VAULT_A, keeper, inkBought, baseToRepayArt);
-
-        vm.prank(keeper);
-        witch.buy(VAULT_A, baseToRepayArt, inkToBuy);
-    }
-
-    function testAllowsToBuyHalfOfCollateralAmountFromTheBegginingPayingAllDebt() public {
-        uint128 baseToRepayArt = 3e18;
-        uint128 inkToBuy = 2e6;
-        // There's some rounding up on the calculated ink value, so an extra wei has to be added
-        uint128 inkBought = inkToBuy + 1;
-
-        _stubBuy(baseToRepayArt, inkBought);
-        cauldron.debtToBase.mock(SERIES_ID, baseToRepayArt, baseToRepayArt);
-
-        vm.expectEmit(true, true, false, false);
-        emit Bought(VAULT_A, keeper, inkBought, baseToRepayArt);
-
-        vm.prank(keeper);
-        witch.payAll(VAULT_A, inkToBuy);
-    }
-
-    function testCanNotBuyMoreThanAuctionedPrice() public {
-        uint128 baseToRepayArt = 3e18;
-        uint128 inkToBuy = 2.1e6;
-
-        cauldron.series.mock(SERIES_ID, series);
-        cauldron.debtFromBase.mock(SERIES_ID, baseToRepayArt, baseToRepayArt);
-
-        vm.expectRevert("Not enough bought");
-        witch.buy(VAULT_A, baseToRepayArt, inkToBuy);
-    }
-
-    function testAuctionPriceIncreasesWithTime() public {
-        uint128 baseToRepayArt = 3e18;
-        uint128 inkToBuy = 3e6;
-        // There's some rounding up on the calculated ink value, so an extra 3 weis have to be added
-        uint128 inkBought = inkToBuy + 3;
-
-        _stubBuy(baseToRepayArt, inkBought);
-
-        // Can't buy that much collateral
-        vm.expectRevert("Not enough bought");
-        witch.buy(VAULT_A, baseToRepayArt, inkToBuy);
-
-        // after 1/2 of AUCTION_DURATION the offered qty grows by 50%
-        skip(AUCTION_DURATION / 2);
-
-        vm.expectEmit(true, true, false, false);
-        emit Bought(VAULT_A, keeper, inkBought, baseToRepayArt);
-
-        vm.prank(keeper);
-        witch.buy(VAULT_A, baseToRepayArt, inkToBuy);
-    }
-
-    function testCanNotBuyIfLeavingDust() public {
-        uint128 baseToRepayArt = 2e18;
-        uint128 inkToBuy = 1.3e6;
-
-        cauldron.series.mock(SERIES_ID, series);
-        cauldron.debtFromBase.mock(SERIES_ID, baseToRepayArt, baseToRepayArt);
-
-        vm.prank(admin);
-        witch.setIlk(ILK_ID, AUCTION_DURATION, 0.5e18, 1000000, 3, 6);
+        // make fyToken 1:1 with base to make things simpler
+        cauldron.debtFromBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+        cauldron.debtToBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
 
         vm.expectRevert("Leaves dust");
-        witch.buy(VAULT_A, baseToRepayArt, inkToBuy);
+        witch.payBase(VAULT_ID, bot, 0, maxBaseIn);
     }
 
-    function testAmountToRepayGrowsAfterMaturity() public {
-        uint128 baseToRepayArt = vaultABalances.art + 100;
-        uint128 inkToBuy = 2e6;
-        // There's some rounding up on the calculated ink value, so an extra wei has to be added
-        uint128 inkBought = inkToBuy + 1;
-        uint128 debtFromBase = vaultABalances.art;
+    function testPayBasePartial() public {
+        // Bot Will pay 40% of the debt (for some reason)
+        uint128 maxBaseIn = uint128(auction.art.wmul(0.4e18));
+        vm.prank(bot);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxBaseIn);
+        uint128 minInkOut = uint128(minInkOut_);
 
-        _stubBuy(baseToRepayArt, debtFromBase, inkBought);
+        // Reduce balances on tha vault
+        cauldron.slurp.mock(VAULT_ID, minInkOut, maxBaseIn, balances);
+        cauldron.slurp.verify(VAULT_ID, minInkOut, maxBaseIn);
 
-        vm.expectEmit(true, true, false, false);
-        emit Bought(VAULT_A, keeper, inkBought, debtFromBase);
+        // make fyToken 1:1 with base to make things simpler
+        cauldron.debtFromBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+        cauldron.debtToBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
 
-        vm.prank(keeper);
-        witch.buy(VAULT_A, baseToRepayArt, inkToBuy);
-    }
-
-    function testAmountToRepayGrowsAfterMaturityPayAll() public {
-        uint128 baseToRepayArt = vaultABalances.art + 100;
-        uint128 inkToBuy = vaultABalances.ink / 2;
-        uint128 inkBought = inkToBuy+1;
-
-        cauldron.series.mock(SERIES_ID, series);
-        cauldron.debtToBase.mock(SERIES_ID, vaultABalances.art, baseToRepayArt);
-
-        cauldron.slurp.mock(VAULT_A, inkBought, vaultABalances.art, vaultABalances);
-        cauldron.give.mock(VAULT_A, BOB, vaultA);
+        IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
+        ladle.joins.mock(vault.ilkId, ilkJoin);
+        ilkJoin.exit.mock(bot, minInkOut, minInkOut);
+        ilkJoin.exit.verify(bot, minInkOut);
 
         IJoin baseJoin = IJoin(Mocks.mock("BaseJoin"));
+        ladle.joins.mock(series.baseId, baseJoin);
+        baseJoin.join.mock(bot, maxBaseIn, maxBaseIn);
+        baseJoin.join.verify(bot, maxBaseIn);
+
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID, bot, minInkOut, maxBaseIn);
+
+        vm.prank(bot);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
+            .payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
+        assertEq(liquidatorCut, minInkOut);
+        assertEq(auctioneerCut, 0);
+        assertEq(baseIn, maxBaseIn);
+
+        // sum is reduced by the auction.ink
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, auction.ink - minInkOut, "sum");
+
+        _auctionWasUpdated(VAULT_ID, maxBaseIn, minInkOut);
+    }
+
+    function testPayBasePartialOnPartiallyLiquidatedVault() public {
+        // liquidate 40% of the vault
+        testPayBasePartial();
+        // Refresh auction copy
+        auction = iWitch.auctions(VAULT_ID);
+
+        // Bot Will pay another 20% of the debt (for some reason)
+        uint128 maxBaseIn = uint128(auction.art.wmul(0.2e18));
+        vm.prank(bot);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxBaseIn);
+        uint128 minInkOut = uint128(minInkOut_);
+
+        // Reduce balances on tha vault
+        cauldron.slurp.mock(VAULT_ID, minInkOut, maxBaseIn, balances);
+        cauldron.slurp.verify(VAULT_ID, minInkOut, maxBaseIn);
+
+        // make fyToken 1:1 with base to make things simpler
+        cauldron.debtFromBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+        cauldron.debtToBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+
         IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
-        ladle.joins.mock(BASE_ID, baseJoin);
-        ladle.joins.mock(ILK_ID, ilkJoin);
+        ladle.joins.mock(vault.ilkId, ilkJoin);
+        ilkJoin.exit.mock(bot, minInkOut, minInkOut);
+        ilkJoin.exit.verify(bot, minInkOut);
 
-        baseJoin.join.mock(keeper, baseToRepayArt, baseToRepayArt);
-        ilkJoin.exit.mock(keeper, inkBought, inkBought);
+        IJoin baseJoin = IJoin(Mocks.mock("BaseJoin"));
+        ladle.joins.mock(series.baseId, baseJoin);
+        baseJoin.join.mock(bot, maxBaseIn, maxBaseIn);
+        baseJoin.join.verify(bot, maxBaseIn);
 
-        vm.expectEmit(true, true, false, false);
-        emit Bought(VAULT_A, keeper, inkBought, baseToRepayArt);
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID, bot, minInkOut, maxBaseIn);
 
-        vm.prank(keeper);
-        witch.payAll(VAULT_A, inkToBuy);
+        vm.prank(bot);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
+            .payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
+        assertEq(liquidatorCut, minInkOut);
+        assertEq(auctioneerCut, 0);
+        assertEq(baseIn, maxBaseIn);
+
+        // sum is reduced by the auction.ink
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, auction.ink - minInkOut, "sum");
+
+        _auctionWasUpdated(VAULT_ID, maxBaseIn, minInkOut);
+    }
+
+    function testPayBaseAll() public {
+        uint128 maxBaseIn = uint128(auction.art);
+        vm.prank(bot);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxBaseIn);
+        uint128 minInkOut = uint128(minInkOut_);
+
+        // Reduce balances on tha vault
+        cauldron.slurp.mock(VAULT_ID, minInkOut, maxBaseIn, balances);
+        cauldron.slurp.verify(VAULT_ID, minInkOut, maxBaseIn);
+        // Vault returns to it's owner after all the liquidation is done
+        cauldron.give.mock(VAULT_ID, bob, vault);
+        cauldron.give.verify(VAULT_ID, bob);
+
+        // make fyToken 1:1 with base to make things simpler
+        cauldron.debtFromBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+        cauldron.debtToBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+
+        IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
+        ladle.joins.mock(vault.ilkId, ilkJoin);
+        ilkJoin.exit.mock(bot, minInkOut, minInkOut);
+        ilkJoin.exit.verify(bot, minInkOut);
+
+        IJoin baseJoin = IJoin(Mocks.mock("BaseJoin"));
+        ladle.joins.mock(series.baseId, baseJoin);
+        baseJoin.join.mock(bot, maxBaseIn, maxBaseIn);
+        baseJoin.join.verify(bot, maxBaseIn);
+
+        vm.expectEmit(true, true, true, true);
+        emit Ended(VAULT_ID);
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID, bot, minInkOut, maxBaseIn);
+
+        vm.prank(bot);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
+            .payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
+        assertEq(liquidatorCut, minInkOut);
+        assertEq(auctioneerCut, 0);
+        assertEq(baseIn, maxBaseIn);
+
+        // sum is reduced by the auction.ink
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 0, "sum");
+
+        _auctionWasDeleted(VAULT_ID);
+    }
+
+    function testPayBaseAllOnPartiallyLiquidatedVault() public {
+        // liquidate 40% of the vault
+        testPayBasePartial();
+        // Refresh auction copy
+        auction = iWitch.auctions(VAULT_ID);
+
+        uint128 maxBaseIn = uint128(auction.art);
+        vm.prank(bot);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxBaseIn);
+        uint128 minInkOut = uint128(minInkOut_);
+
+        // Reduce balances on tha vault
+        cauldron.slurp.mock(VAULT_ID, minInkOut, maxBaseIn, balances);
+        cauldron.slurp.verify(VAULT_ID, minInkOut, maxBaseIn);
+        // Vault returns to it's owner after all the liquidation is done
+        cauldron.give.mock(VAULT_ID, bob, vault);
+        cauldron.give.verify(VAULT_ID, bob);
+
+        // make fyToken 1:1 with base to make things simpler
+        cauldron.debtFromBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+        cauldron.debtToBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+
+        IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
+        ladle.joins.mock(vault.ilkId, ilkJoin);
+        ilkJoin.exit.mock(bot, minInkOut, minInkOut);
+        ilkJoin.exit.verify(bot, minInkOut);
+
+        IJoin baseJoin = IJoin(Mocks.mock("BaseJoin"));
+        ladle.joins.mock(series.baseId, baseJoin);
+        baseJoin.join.mock(bot, maxBaseIn, maxBaseIn);
+        baseJoin.join.verify(bot, maxBaseIn);
+
+        vm.expectEmit(true, true, true, true);
+        emit Ended(VAULT_ID);
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID, bot, minInkOut, maxBaseIn);
+
+        vm.prank(bot);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
+            .payBase(VAULT_ID, bot, minInkOut, maxBaseIn);
+        assertEq(liquidatorCut, minInkOut);
+        assertEq(auctioneerCut, 0);
+        assertEq(baseIn, maxBaseIn);
+
+        // sum is reduced by the auction.ink
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 0, "sum");
+
+        _auctionWasDeleted(VAULT_ID);
+    }
+
+    function testPayBaseOnAnAuctionStartedBySomeoneElse() public {
+        address bot2 = address(0xb072);
+
+        uint128 maxBaseIn = uint128(auction.art);
+        vm.prank(bot2);
+        (uint256 liquidatorCut_, uint256 auctioneerCut_, ) = witch.calcPayout(
+            VAULT_ID,
+            bot2,
+            maxBaseIn
+        );
+        uint128 liquidatorCut = uint128(liquidatorCut_);
+        uint128 auctioneerCut = uint128(auctioneerCut_);
+
+        // Reduce balances on tha vault
+        cauldron.slurp.mock(
+            VAULT_ID,
+            liquidatorCut + auctioneerCut,
+            maxBaseIn,
+            balances
+        );
+        cauldron.slurp.verify(
+            VAULT_ID,
+            liquidatorCut + auctioneerCut,
+            maxBaseIn
+        );
+        // Vault returns to it's owner after all the liquidation is done
+        cauldron.give.mock(VAULT_ID, bob, vault);
+        cauldron.give.verify(VAULT_ID, bob);
+
+        // make fyToken 1:1 with base to make things simpler
+        cauldron.debtFromBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+        cauldron.debtToBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+
+        IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
+        ladle.joins.mock(vault.ilkId, ilkJoin);
+
+        // Liquidator share
+        ilkJoin.exit.mock(bot2, liquidatorCut, liquidatorCut);
+        ilkJoin.exit.verify(bot2, liquidatorCut);
+        // Auctioneer share
+        ilkJoin.exit.mock(bot, auctioneerCut, auctioneerCut);
+        ilkJoin.exit.verify(bot, auctioneerCut);
+
+        IJoin baseJoin = IJoin(Mocks.mock("BaseJoin"));
+        ladle.joins.mock(series.baseId, baseJoin);
+        baseJoin.join.mock(bot2, maxBaseIn, maxBaseIn);
+        baseJoin.join.verify(bot2, maxBaseIn);
+
+        vm.expectEmit(true, true, true, true);
+        emit Ended(VAULT_ID);
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID, bot2, liquidatorCut + auctioneerCut, maxBaseIn);
+
+        vm.prank(bot2);
+        (uint256 _liquidatorCut, uint256 _auctioneerCut, uint256 baseIn) = witch
+            .payBase(VAULT_ID, bot2, liquidatorCut, maxBaseIn);
+        assertEq(_liquidatorCut, liquidatorCut);
+        assertEq(_auctioneerCut, auctioneerCut);
+        assertEq(baseIn, maxBaseIn);
+
+        // sum is reduced by the auction.ink
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 0, "sum");
+
+        _auctionWasDeleted(VAULT_ID);
+    }
+
+    function testPayFYTokenNotEnoughBought() public {
+        // Bot tries to get all collateral but auction just started
+        uint128 minInkOut = 50 ether;
+        uint128 maxArtIn = 50_000e6;
+
+        vm.expectRevert("Not enough bought");
+        witch.payFYToken(VAULT_ID, bot, minInkOut, maxArtIn);
+    }
+
+    function testPayFYTokenLeavesDust() public {
+        // Bot tries to pay an amount that'd leaves dust
+        uint128 maxArtIn = auction.art - 4999e6;
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
+        uint128 minInkOut = uint128(minInkOut_);
+
+        vm.expectRevert("Leaves dust");
+        witch.payFYToken(VAULT_ID, bot, minInkOut, maxArtIn);
+    }
+
+    function testPayFYTokenPartial() public {
+        // Bot Will pay 40% of the debt (for some reason)
+        uint128 maxArtIn = uint128(auction.art.wmul(0.4e18));
+        vm.prank(bot);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
+        uint128 minInkOut = uint128(minInkOut_);
+
+        // Reduce balances on tha vault
+        cauldron.slurp.mock(VAULT_ID, minInkOut, maxArtIn, balances);
+        cauldron.slurp.verify(VAULT_ID, minInkOut, maxArtIn);
+
+        IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
+        ladle.joins.mock(vault.ilkId, ilkJoin);
+        ilkJoin.exit.mock(bot, minInkOut, minInkOut);
+        ilkJoin.exit.verify(bot, minInkOut);
+
+        series.fyToken.burn.mock(bot, maxArtIn);
+        series.fyToken.burn.verify(bot, maxArtIn);
+
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID, bot, minInkOut, maxArtIn);
+
+        vm.prank(bot);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 artIn) = witch
+            .payFYToken(VAULT_ID, bot, minInkOut, maxArtIn);
+        assertEq(liquidatorCut, minInkOut);
+        assertEq(auctioneerCut, 0);
+        assertEq(artIn, maxArtIn);
+
+        // sum is reduced by the auction.ink
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, auction.ink - minInkOut, "sum");
+
+        _auctionWasUpdated(VAULT_ID, maxArtIn, minInkOut);
+    }
+
+    function testPayFYTokenPartialOnPartiallyLiquidatedVault() public {
+        // liquidate 40% of the vault
+        testPayFYTokenPartial();
+        // Refresh auction copy
+        auction = iWitch.auctions(VAULT_ID);
+
+        // Bot Will pay another 20% of the debt (for some reason)
+        uint128 maxArtIn = uint128(auction.art.wmul(0.2e18));
+        vm.prank(bot);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
+        uint128 minInkOut = uint128(minInkOut_);
+
+        // Reduce balances on tha vault
+        cauldron.slurp.mock(VAULT_ID, minInkOut, maxArtIn, balances);
+        cauldron.slurp.verify(VAULT_ID, minInkOut, maxArtIn);
+
+        IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
+        ladle.joins.mock(vault.ilkId, ilkJoin);
+        ilkJoin.exit.mock(bot, minInkOut, minInkOut);
+        ilkJoin.exit.verify(bot, minInkOut);
+
+        series.fyToken.burn.mock(bot, maxArtIn);
+        series.fyToken.burn.verify(bot, maxArtIn);
+
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID, bot, minInkOut, maxArtIn);
+
+        vm.prank(bot);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 artIn) = witch
+            .payFYToken(VAULT_ID, bot, minInkOut, maxArtIn);
+        assertEq(liquidatorCut, minInkOut);
+        assertEq(auctioneerCut, 0);
+        assertEq(artIn, maxArtIn);
+
+        // sum is reduced by the auction.ink
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, auction.ink - minInkOut, "sum");
+
+        _auctionWasUpdated(VAULT_ID, maxArtIn, minInkOut);
+    }
+
+    function testPayFYTokenAllStartedBySomeoneElse() public {
+        address bot2 = address(0xb072);
+
+        uint128 maxArtIn = uint128(auction.art);
+        vm.prank(bot2);
+        (uint256 liquidatorCut_, uint256 auctioneerCut_, ) = witch.calcPayout(
+            VAULT_ID,
+            bot2,
+            maxArtIn
+        );
+        uint128 liquidatorCut = uint128(liquidatorCut_);
+        uint128 auctioneerCut = uint128(auctioneerCut_);
+
+        // Reduce balances on tha vault
+        cauldron.slurp.mock(
+            VAULT_ID,
+            liquidatorCut + auctioneerCut,
+            maxArtIn,
+            balances
+        );
+        cauldron.slurp.verify(
+            VAULT_ID,
+            liquidatorCut + auctioneerCut,
+            maxArtIn
+        );
+        // Vault returns to it's owner after all the liquidation is done
+        cauldron.give.mock(VAULT_ID, bob, vault);
+        cauldron.give.verify(VAULT_ID, bob);
+
+        IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
+        ladle.joins.mock(vault.ilkId, ilkJoin);
+
+        // Liquidator share
+        ilkJoin.exit.mock(bot2, liquidatorCut, liquidatorCut);
+        ilkJoin.exit.verify(bot2, liquidatorCut);
+        // Auctioneer share
+        ilkJoin.exit.mock(bot, auctioneerCut, auctioneerCut);
+        ilkJoin.exit.verify(bot, auctioneerCut);
+
+        series.fyToken.burn.mock(bot2, maxArtIn);
+        series.fyToken.burn.verify(bot2, maxArtIn);
+
+        vm.expectEmit(true, true, true, true);
+        emit Ended(VAULT_ID);
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID, bot2, liquidatorCut + auctioneerCut, maxArtIn);
+
+        vm.prank(bot2);
+        (uint256 _liquidatorCut, uint256 _auctioneerCut, uint256 baseIn) = witch
+            .payFYToken(VAULT_ID, bot2, liquidatorCut, maxArtIn);
+        assertEq(_liquidatorCut, liquidatorCut);
+        assertEq(_auctioneerCut, auctioneerCut);
+        assertEq(baseIn, maxArtIn);
+
+        // sum is reduced by the auction.ink
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 0, "sum");
+
+        _auctionWasDeleted(VAULT_ID);
+    }
+
+    function testPayFYTokenAll() public {
+        uint128 maxArtIn = uint128(auction.art);
+        vm.prank(bot);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
+        uint128 minInkOut = uint128(minInkOut_);
+
+        // Reduce balances on tha vault
+        cauldron.slurp.mock(VAULT_ID, minInkOut, maxArtIn, balances);
+        cauldron.slurp.verify(VAULT_ID, minInkOut, maxArtIn);
+        // Vault returns to it's owner after all the liquidation is done
+        cauldron.give.mock(VAULT_ID, bob, vault);
+        cauldron.give.verify(VAULT_ID, bob);
+
+        IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
+        ladle.joins.mock(vault.ilkId, ilkJoin);
+        ilkJoin.exit.mock(bot, minInkOut, minInkOut);
+        ilkJoin.exit.verify(bot, minInkOut);
+
+        series.fyToken.burn.mock(bot, maxArtIn);
+        series.fyToken.burn.verify(bot, maxArtIn);
+
+        vm.expectEmit(true, true, true, true);
+        emit Ended(VAULT_ID);
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID, bot, minInkOut, maxArtIn);
+
+        vm.prank(bot);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
+            .payFYToken(VAULT_ID, bot, minInkOut, maxArtIn);
+        assertEq(liquidatorCut, minInkOut);
+        assertEq(auctioneerCut, 0);
+        assertEq(baseIn, maxArtIn);
+
+        // sum is reduced by the auction.ink
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 0, "sum");
+
+        _auctionWasDeleted(VAULT_ID);
+    }
+
+    function testPayFYTokenAllOnPartiallyLiquidatedVault() public {
+        // liquidate 40% of the vault
+        testPayFYTokenPartial();
+        // Refresh auction copy
+        auction = iWitch.auctions(VAULT_ID);
+        uint128 maxArtIn = uint128(auction.art);
+        vm.prank(bot);
+        (uint256 minInkOut_, , ) = witch.calcPayout(VAULT_ID, bot, maxArtIn);
+        uint128 minInkOut = uint128(minInkOut_);
+
+        // Reduce balances on tha vault
+        cauldron.slurp.mock(VAULT_ID, minInkOut, maxArtIn, balances);
+        cauldron.slurp.verify(VAULT_ID, minInkOut, maxArtIn);
+        // Vault returns to it's owner after all the liquidation is done
+        cauldron.give.mock(VAULT_ID, bob, vault);
+        cauldron.give.verify(VAULT_ID, bob);
+
+        IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
+        ladle.joins.mock(vault.ilkId, ilkJoin);
+        ilkJoin.exit.mock(bot, minInkOut, minInkOut);
+        ilkJoin.exit.verify(bot, minInkOut);
+
+        series.fyToken.burn.mock(bot, maxArtIn);
+        series.fyToken.burn.verify(bot, maxArtIn);
+
+        vm.expectEmit(true, true, true, true);
+        emit Ended(VAULT_ID);
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID, bot, minInkOut, maxArtIn);
+
+        vm.prank(bot);
+        (uint256 liquidatorCut, uint256 auctioneerCut, uint256 baseIn) = witch
+            .payFYToken(VAULT_ID, bot, minInkOut, maxArtIn);
+        assertEq(liquidatorCut, minInkOut);
+        assertEq(auctioneerCut, 0);
+        assertEq(baseIn, maxArtIn);
+
+        // sum is reduced by the auction.ink
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 0, "sum");
+
+        _auctionWasDeleted(VAULT_ID);
+    }
+
+    function _auctionWasDeleted(bytes12 vaultId) internal {
+        DataTypes.Auction memory auction_ = iWitch.auctions(vaultId);
+        assertEq(auction_.owner, address(0));
+        assertEq(auction_.start, 0);
+        assertEq(auction_.baseId, "");
+        assertEq(auction_.art, 0);
+        assertEq(auction_.ink, 0);
+    }
+
+    function _auctionWasUpdated(
+        bytes12 vaultId,
+        uint128 art,
+        uint128 ink
+    ) internal {
+        DataTypes.Auction memory auction_ = iWitch.auctions(vaultId);
+        assertEq(auction_.owner, auction.owner, "owner");
+        assertEq(auction_.start, auction.start, "start");
+        assertEq(auction_.baseId, auction.baseId, "baseId");
+        assertEq(auction_.art, auction.art - art, "art");
+        assertEq(auction_.ink, auction.ink - ink, "ink");
     }
 }
-
-contract WitchAuctionExpiredTest is WitchTestWithAuctionedVault {
-    using Mocks for *;
-
-    function setUp() public override {
-        super.setUp();
-
-        skip(AUCTION_DURATION);
-    }
-
-    function testAllowsToBuyAllCollateralAfterAuctionExpires() public {
-        uint128 baseToRepayArt = vaultABalances.art;
-        uint128 inkToBuy = vaultABalances.ink;
-
-        _stubBuy(baseToRepayArt, inkToBuy);
-        cauldron.debtToBase.mock(SERIES_ID, baseToRepayArt, baseToRepayArt);
-
-        vm.expectEmit(true, true, false, false);
-        emit Bought(VAULT_A, keeper, inkToBuy, baseToRepayArt);
-
-        vm.prank(keeper);
-        witch.payAll(VAULT_A, inkToBuy);
-    }
-} */

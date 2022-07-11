@@ -10,7 +10,7 @@ import {
   ConvexPoolMock,
   ChainlinkMultiOracle,
   Wand,
-  Witch,
+  WitchOld,
   CompositeMultiOracle,
   CurvePoolMock,
   Cvx3CrvOracle,
@@ -60,7 +60,7 @@ describe('Convex Join', async function () {
 
   let ladle: LadleWrapper
   let wand: Wand
-  let witch: Witch
+  let witch: WitchOld
   let ownerAcc: SignerWithAddress
   let dummyAcc: SignerWithAddress
   let cauldron: Cauldron
