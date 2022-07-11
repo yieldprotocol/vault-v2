@@ -13,7 +13,7 @@ The liquidations process can be divided in three sequential steps: Auction, Paym
 
 ### Auction
 
-file:///home/alberto/Downloads/Flowcharts.png![image](https://user-images.githubusercontent.com/38806121/178305551-15d80e93-e7ef-490a-8a09-c7340b6eb58e.png)
+![image](https://user-images.githubusercontent.com/38806121/178305551-15d80e93-e7ef-490a-8a09-c7340b6eb58e.png)
 
 Any vault that is undercollateralized in the Cauldron can be set up for an auction. The `cauldron.level` function returns the value of the collateral minus the value of the debt in a given vault, adjusted for collateralization ratio and, after maturity, borrowing rate increase. If the return value is negative, it means that the value of the collateral is below the value of the debt and the vault can be sequestered by the Witch for liquidation.
 
@@ -35,9 +35,9 @@ Once the auction is ready to start, the Witch takes the vault from the user with
 
 ### Payment
 
-file:///home/alberto/Downloads/Flowcharts(2).png![image](https://user-images.githubusercontent.com/38806121/178305679-4daafde5-ae89-4c62-8d8a-a5a99a951922.png)
+![image](https://user-images.githubusercontent.com/38806121/178305679-4daafde5-ae89-4c62-8d8a-a5a99a951922.png)
 
-file:///home/alberto/Downloads/Flowcharts(3).png![image](https://user-images.githubusercontent.com/38806121/178305757-5cab5671-b13a-48b4-884b-dcb5fb2d2e7e.png)
+![image](https://user-images.githubusercontent.com/38806121/178305757-5cab5671-b13a-48b4-884b-dcb5fb2d2e7e.png)
 
 In the Yield Protocol, all debt is denominated in fyToken. FYToken can be bought at a discount to their underlying under the appropraite market conditions and will often be most profitable mode of payment for liquidators.
 
@@ -51,7 +51,7 @@ Once the payment is calculated, accounting is adjusted in the Cauldron, collater
 
 ### Closure
 
-file:///home/alberto/Downloads/Flowcharts(1).png![image](https://user-images.githubusercontent.com/38806121/178305843-96f7f140-9647-4e52-b923-8a91440c181a.png)
+![image](https://user-images.githubusercontent.com/38806121/178305843-96f7f140-9647-4e52-b923-8a91440c181a.png)
 
 An auction can finish when there is no debt (with `_auctionEnded` called inside `_updateAccounting`), or anytime if the vault is collateralized (with an external call to `cancel`).
 
