@@ -27,7 +27,6 @@ contract UniswapOracleTest is Test, TestConstants {
         uniswapV3Oracle.setSource(usdcId, wethId, usdcEthPool, 100);
         uniswapV3Oracle.setSource(uniId, wethId, uniEthPool, 100);
         uniswapV3Oracle.setSource(wbtcId, usdcId, wbtcUsdcPool, 100);
-        vm.roll(15044600);
     }
 
     function testFraxUsdcConversion() public {
@@ -39,22 +38,22 @@ contract UniswapOracleTest is Test, TestConstants {
 
     function testUsdcEthConversion() public {
         (uint256 usdcWethAmount,) = uniswapV3Oracle.get(bytes32(usdcId), bytes32(wethId), 1000000);
-        assertEq(usdcWethAmount / 1e9, 903393, "USDC/WETH conversion unsuccessful");    // will show USDC in terms of gwei
+        assertEq(usdcWethAmount / 1e9, 885240, "USDC/WETH conversion unsuccessful");    // will show USDC in terms of gwei
         (uint256 wethUsdcAmount,) = uniswapV3Oracle.get(bytes32(wethId), bytes32(usdcId), 1e18);
-        assertEq(wethUsdcAmount / 1e6, 1106, "WETH/USDC conversion unsuccessful");
+        assertEq(wethUsdcAmount / 1e6, 1129, "WETH/USDC conversion unsuccessful");
     }
 
     function testUniEthConversion() public {
         (uint256 uniWethAmount,) = uniswapV3Oracle.get(bytes32(uniId), bytes32(wethId), 1e18);
-        assertEq(uniWethAmount / 1e9, 4645150, "UNI/WETH conversion unsuccessful");     // will show UNI in terms of gwei
+        assertEq(uniWethAmount / 1e9, 4368531, "UNI/WETH conversion unsuccessful");     // will show UNI in terms of gwei
         (uint256 wethUniAmount,) = uniswapV3Oracle.get(bytes32(wethId), bytes32(uniId), 1e18);
-        assertEq(wethUniAmount / 1e18, 215, "WETH/UNI conversion unsuccessful"); 
+        assertEq(wethUniAmount / 1e18, 228, "WETH/UNI conversion unsuccessful"); 
     }
 
     function testWbtcUsdcConversion() public {
         (uint256 wbtcUsdcAmount,) = uniswapV3Oracle.get(bytes32(wbtcId), bytes32(usdcId), 100000000);
-        assertEq(wbtcUsdcAmount / 1e6, 20066, "WBTC/USDC conversion unsuccessful");
+        assertEq(wbtcUsdcAmount / 1e6, 20078, "WBTC/USDC conversion unsuccessful");
         (uint256 usdcWbtcAmount,) = uniswapV3Oracle.get(bytes32(usdcId), bytes32(wbtcId), 1000000);
-        assertEq(usdcWbtcAmount, 4983, "USDC/WBTC conversion unsuccessful");
+        assertEq(usdcWbtcAmount, 4980, "USDC/WBTC conversion unsuccessful");
     }
 }
