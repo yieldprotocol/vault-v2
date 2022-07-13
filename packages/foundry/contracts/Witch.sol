@@ -581,7 +581,9 @@ contract Witch is AccessControl {
         unchecked {
             elapsed = uint32(block.timestamp) - uint256(auction_.start); // Overflow on block.timestamp is fine
         }
-        if (elapsed > duration || initialProportion == 1e18) {
+        if (duration == type(uint32).max) {     // Interpreted as infinite duration
+            proportionNow = initialProportion;
+        } else if (elapsed > duration) {
             proportionNow = 1e18;
         } else {
             proportionNow =
