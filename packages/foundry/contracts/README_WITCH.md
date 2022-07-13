@@ -37,7 +37,7 @@ Once the auction is ready to start, the Witch takes the vault from the user with
 
 ### Payment
 
-![image](https://user-images.githubusercontent.com/38806121/178740812-dcb15ede-1aa9-4c17-836d-52a96508648d.png)
+![image](https://user-images.githubusercontent.com/38806121/178741273-ac070fa5-7254-4192-9c89-d43fd89f0725.png)
 
 ![image](https://user-images.githubusercontent.com/38806121/178740875-323a06e4-3997-4e57-95c8-a16d44172316.png)
 
