@@ -25,6 +25,51 @@ abstract contract WithSourceSet is ZeroState {
     }
 }
 
+contract AccumulatorOracleTest is ZeroState {
+    function testSetSourceOnlyOnce() public {
+        accumulator.setSource(baseOne, RATE, WAD, WAD);
+        vm.expectRevert("Source is already set");
+        accumulator.setSource(baseOne, RATE, WAD, WAD);
+    }
+
+    function testCannotCallUninitializedSource() public {
+        vm.expectRevert("Source not found");
+        accumulator.updatePerSecondRate(baseOne, RATE, WAD);
+    }
+
+    function testCannotCallStaleAccumulator() public {
+        accumulator.setSource(baseOne, RATE, WAD, WAD);
+        skip(100);
+        vm.expectRevert("stale accumulator");
+        accumulator.updatePerSecondRate(baseOne, RATE, WAD);
+    }
+
+    function testRevertOnSourceUnknown() public {
+        accumulator.setSource(baseOne, RATE, WAD, WAD);
+        vm.expectRevert("Source not found");
+        accumulator.peek(bytes32(baseTwo), RATE, WAD);
+        vm.expectRevert("Source not found");
+        accumulator.peek(bytes32(baseOne), CHI, WAD);
+    }
+
+    function testDoesNotMixUpSources() public {
+        accumulator.setSource(baseOne, RATE, WAD, WAD);
+        accumulator.setSource(baseOne, CHI, WAD * 2, WAD);
+        accumulator.setSource(baseTwo, RATE, WAD * 3, WAD);
+        accumulator.setSource(baseTwo, CHI, WAD * 4, WAD);
+
+        uint256 amount;
+        (amount,) = accumulator.peek(bytes32(baseOne), RATE, WAD);
+        assertEq(amount, WAD, "Conversion unsuccessful");
+        (amount,) = accumulator.peek(bytes32(baseOne), CHI, WAD);
+        assertEq(amount, WAD * 2, "Conversion unsuccessful");
+        (amount,) = accumulator.peek(bytes32(baseTwo), RATE, WAD);
+        assertEq(amount, WAD * 3, "Conversion unsuccessful");
+        (amount,) = accumulator.peek(bytes32(baseTwo), CHI, WAD);
+        assertEq(amount, WAD * 4, "Conversion unsuccessful");
+    }
+}
+
 contract WithSourceSetTest is WithSourceSet {
     function testComputesWithoutCheckpoints() public {
         uint256 amount;
@@ -39,7 +84,15 @@ contract WithSourceSetTest is WithSourceSet {
     }
 
     function testComputesWithCheckpointing() public {
-
+        uint256 amount;
+        vm.roll(block.number + 1);
+        skip(1);
+        (amount,) = accumulator.get(bytes32(baseOne), RATE, WAD);
+        assertEq(amount, WAD * 2, "Conversion unsuccessful");
+        vm.roll(block.number + 1);
+        skip(10);
+        (amount,) = accumulator.get(bytes32(baseOne), RATE, WAD);
+        assertEq(amount, WAD * 2048, "Conversion unsuccessful");
     }
 
     function testUpdatesPeek() public {
