@@ -89,7 +89,7 @@ The Witch uses the same batch pattern as the rest of the Yield Protocol, and nev
 The `point` function is a standard function to change orchestration throughout the Yield Protocol. While it could be simplified for this contract, we prefer to keep it as is for consistency.
 
 ### OtherWitches
-The name is a bit misleading, as any address can be entered. Bettern naming suggestions are welcome.
+The name is a bit misleading, as any address can be entered. Better naming suggestions are welcome.
 
 ### Reentrancy
 We trust other contracts in the Yield Protocol, including tokens accepted as collateral or underlying, as safe against reentrancy. They are only added through governance.
