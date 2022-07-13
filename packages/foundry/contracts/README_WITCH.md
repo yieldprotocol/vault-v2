@@ -2,11 +2,13 @@
 This contest is for the first major refactor on liquidations engine for the Yield Protocol. The existing engine has been heavily used since its launch in October 2021 and in that time we have found that liquidations have not been as fair as we would have liked. More often than not, liquidated users have lost all their collateral as we have failed to make liquidations competitive.
 
 This second version of the Witch aims to:
-1. Give us more flexibility in exploring different liquidation models, including liquidating collateral at a fixed discount in a single transaction if there is not enough competition from liquidators.
+1. Give us more flexibility in exploring different liquidation models.
 2. Make liquidations more profitable for liquidators by allowing payments in fyToken.
 3. Introduce a mechanism to reward starting an auction.
 4. Allow fine-tuning of all parameters for any collateral/underlying pair.
 5. Correct bugs.
+
+For context on the rest of the Yield Protocol, please refer to the [Yield Protocol Docs](https://docs.yieldprotocol.com/#/).
 
 ## Liquidations Process
 The liquidations process can be divided in three sequential steps: Auction, Payment, Closure.
@@ -23,9 +25,9 @@ There are exceptions to this rule.
 
 Governance can choose whether liquidations for any pair should be of the whole vault, or of only a part of the vault.
 
-Auctions are by default a reverse Dutch auction, in which liquidators offer to pay part or all of the debt in the vault, and in exchange they get an amount of the vault collateral that increases with time. At the end of an auction a liquidator gets all the collateral under auction in exchange for paying all the debt under auction. It is possible for governance to set the amount of collateral that would be given for paying all the debt at the start of the auction, and the length of the auction. By modifying these two parameters governance can choose any linear progression for the auction.
+Auctions follow a reverse Dutch auction, in which liquidators offer to pay part or all of the debt in the vault, and in exchange they get an amount of the vault collateral that increases with time. At the end of an auction a liquidator gets all the collateral under auction in exchange for paying all the debt under auction. It is possible for governance to set the amount of collateral that would be given for paying all the debt at the start of the auction, and the length of the auction. By modifying these two parameters governance can choose any linear progression for the auction.
 
-The Witch can be configured to sell collateral under liquidation at a fixed discount. For that we would set the duration to 2^32 - 1, interpreted as infinite. When configured that way, the auction price doesn't change with time and is only determined by the configured `initialOffer` parameter. This is a similar behaviour to Compound liquidations.
+Auctions can be configured to be profitable at the beginning of an auction by setting an `initialOffer` parameter above the LTV ratio of any given pair. Combined with auctioning only part of a vault this allows for a similar behaviour to Compound liquidations, if desired.
 
 All the parameters for each individual auction are calculated in `_calcAuction`.
 
