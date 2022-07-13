@@ -37,9 +37,9 @@ Once the auction is ready to start, the Witch takes the vault from the user with
 
 ### Payment
 
-![image](https://user-images.githubusercontent.com/38806121/178739161-ae49dffb-9d9a-4b95-9ae6-adec1971d4f0.png)
+![image](https://user-images.githubusercontent.com/38806121/178740812-dcb15ede-1aa9-4c17-836d-52a96508648d.png)
 
-![image](https://user-images.githubusercontent.com/38806121/178739053-5ccbcad9-984b-4e95-8891-95d613ec3556.png)
+![image](https://user-images.githubusercontent.com/38806121/178740875-323a06e4-3997-4e57-95c8-a16d44172316.png)
 
 In the Yield Protocol, all debt is denominated in fyToken. FYToken can be bought at a discount to their underlying under the appropraite market conditions and will often be most profitable mode of payment for liquidators.
 
