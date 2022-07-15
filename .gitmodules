@@ -7,9 +7,9 @@
 [submodule "packages/foundry/lib/dss-interfaces"]
 	path = packages/foundry/lib/dss-interfaces
 	url = https://github.com/makerdao/dss-interfaces
-[submodule "packages/foundry/lib/yieldspace-tv"]
-	path = packages/foundry/lib/yieldspace-tv
-	url = https://github.com/yieldprotocol/yieldspace-tv
 [submodule "packages/foundry/lib/forge-std"]
 	path = packages/foundry/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
+[submodule "packages/foundry/lib/yieldspace-tv"]
+	path = packages/foundry/lib/yieldspace-tv
+	url = https://github.com/yieldprotocol/yieldspace-tv
