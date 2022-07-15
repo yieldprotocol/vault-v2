@@ -2,7 +2,7 @@
 pragma solidity 0.8.14;
 
 import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
-import "./interfaces/DataTypes.sol";
+import "../interfaces/DataTypes.sol";
 import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
 
 contract ConvexPoolMock {

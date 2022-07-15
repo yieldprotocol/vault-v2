@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.14;
 
-import "./interfaces/ICauldron.sol";
-import "./interfaces/DataTypes.sol";
+import "../interfaces/ICauldron.sol";
+import "../interfaces/DataTypes.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 
 /// @title A contract that allows owner of a vault to give the vault

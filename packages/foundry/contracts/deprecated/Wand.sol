@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.14;
-import "./interfaces/ICauldronGov.sol";
-import "./interfaces/ILadleGov.sol";
-// import "./interfaces/IWitchGov.sol";
-import "./interfaces/IMultiOracleGov.sol";
-import "./interfaces/IJoinFactory.sol";
-import "./interfaces/IJoin.sol";
-import "./interfaces/IFYTokenFactory.sol";
-import "./interfaces/IFYToken.sol";
-import "./interfaces/DataTypes.sol";
+import "../interfaces/ICauldronGov.sol";
+import "../interfaces/ILadleGov.sol";
+import "../interfaces/IMultiOracleGov.sol";
+import "../interfaces/IJoinFactory.sol";
+import "../interfaces/IJoin.sol";
+import "../interfaces/IFYTokenFactory.sol";
+import "../interfaces/IFYToken.sol";
+import "../interfaces/DataTypes.sol";
 import "./IPoolFactory.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "../constants/Constants.sol";

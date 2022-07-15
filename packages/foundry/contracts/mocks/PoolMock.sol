@@ -3,7 +3,7 @@ pragma solidity 0.8.14;
 import "@yield-protocol/utils-v2/contracts/access/Ownable.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
-import "./interfaces/IFYToken.sol";
+import "../interfaces/IFYToken.sol";
 import "../deprecated/IPoolFactory.sol";
 import "./ERC20Mock.sol";
 

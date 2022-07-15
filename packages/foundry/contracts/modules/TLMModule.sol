@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.14;
-import "./interfaces/ICauldron.sol";
-import "./interfaces/IFYToken.sol";
-import "./interfaces/DataTypes.sol";
+import "../interfaces/ICauldron.sol";
+import "../interfaces/IFYToken.sol";
+import "../interfaces/DataTypes.sol";
 import "../LadleStorage.sol";
 
 

@@ -4,7 +4,7 @@ pragma solidity 0.8.14;
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
 import "@yield-protocol/utils-v2/contracts/math/WPow.sol";
-import "./interfaces/IOracle.sol";
+import "../../interfaces/IOracle.sol";
 
 import "../../constants/Constants.sol";
 
