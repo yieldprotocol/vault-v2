@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.14;
-import "@yield-protocol/vault-interfaces/src/IFYToken.sol";
-import "@yield-protocol/vault-interfaces/src/IJoin.sol";
-import "@yield-protocol/vault-interfaces/src/ICauldron.sol";
-import "@yield-protocol/vault-interfaces/src/IOracle.sol";
-import "@yield-protocol/vault-interfaces/src/DataTypes.sol";
+import "./interfaces/IFYToken.sol";
+import "./interfaces/IJoin.sol";
+import "./interfaces/ICauldron.sol";
+import "./interfaces/IOracle.sol";
+import "./interfaces/DataTypes.sol";
 import "@yield-protocol/yieldspace-tv/src/interfaces/IPool.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC2612.sol";

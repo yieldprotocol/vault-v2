@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.14;
 
-import "@yield-protocol/vault-interfaces/src/ICauldron.sol";
+import "./interfaces/ICauldron.sol";
 import "./interfaces/IConvexJoin.sol";
 import "../../LadleStorage.sol";
 

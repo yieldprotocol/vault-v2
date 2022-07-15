@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.14;
-import "@yield-protocol/vault-interfaces/src/IOracle.sol";
+import "./interfaces/IOracle.sol";
 
 
 /// @dev An oracle that allows to set the spot price to anyone. It also allows to record spot values and return the accrual between a recorded and current spots.

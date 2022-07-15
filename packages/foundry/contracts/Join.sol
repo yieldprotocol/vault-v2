@@ -3,8 +3,8 @@ pragma solidity 0.8.14;
 
 import "erc3156/contracts/interfaces/IERC3156FlashBorrower.sol";
 import "erc3156/contracts/interfaces/IERC3156FlashLender.sol";
-import "@yield-protocol/vault-interfaces/src/IJoin.sol";
-import "@yield-protocol/vault-interfaces/src/IJoinFactory.sol";
+import "./interfaces/IJoin.sol";
+import "./interfaces/IJoinFactory.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";

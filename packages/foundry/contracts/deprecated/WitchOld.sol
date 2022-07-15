@@ -2,10 +2,10 @@
 pragma solidity 0.8.14;
 
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "@yield-protocol/vault-interfaces/src/ILadle.sol";
-import "@yield-protocol/vault-interfaces/src/ICauldron.sol";
-import "@yield-protocol/vault-interfaces/src/IJoin.sol";
-import "@yield-protocol/vault-interfaces/src/DataTypes.sol";
+import "./interfaces/ILadle.sol";
+import "./interfaces/ICauldron.sol";
+import "./interfaces/IJoin.sol";
+import "./interfaces/DataTypes.sol";
 import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
 import "@yield-protocol/utils-v2/contracts/math/WMulUp.sol";
 import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";

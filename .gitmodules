@@ -1,12 +1,6 @@
-[submodule "packages/foundry/lib/vault-interfaces"]
-	path = packages/foundry/lib/vault-interfaces
-	url = https://github.com/yieldprotocol/vault-interfaces
 [submodule "packages/foundry/lib/yield-utils-v2"]
 	path = packages/foundry/lib/yield-utils-v2
 	url = https://github.com/yieldprotocol/yield-utils-v2
-[submodule "packages/foundry/lib/Yield-UniswapOracleV3"]
-	path = packages/foundry/lib/Yield-UniswapOracleV3
-	url = https://github.com/iamsahu/Yield-UniswapOracleV3
 [submodule "packages/foundry/lib/ERC3156"]
 	path = packages/foundry/lib/ERC3156
 	url = https://github.com/alcueca/ERC3156

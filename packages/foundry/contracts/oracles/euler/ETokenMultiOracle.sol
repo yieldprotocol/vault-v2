@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.14;
 
-import {IOracle} from "@yield-protocol/vault-interfaces/src/IOracle.sol";
+import {IOracle} from "./interfaces/IOracle.sol";
 import {CastBytes32Bytes6} from "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
 import {IEToken} from "./IEToken.sol";
 import {AccessControl} from "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@yield-protocol/vault-interfaces/src/ILadle.sol";
+import "./interfaces/ILadle.sol";
 
 interface IContangoLadle is ILadle {
     function deterministicBuild(

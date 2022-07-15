@@ -5,7 +5,7 @@ import "forge-std/src/Test.sol";
 import "./utils/TestConstants.sol";
 import "./utils/Mocks.sol";
 
-import "@yield-protocol/vault-interfaces/src/IWitch.sol";
+import "./interfaces/IWitch.sol";
 import "../Witch.sol";
 
 abstract contract WitchStateZero is Test, TestConstants {
