@@ -6,7 +6,7 @@ import { RATE, ETH } from '../src/constants'
 
 import { Cauldron } from '../typechain/Cauldron'
 import { Join } from '../typechain/Join'
-import { Witch } from '../typechain/Witch'
+import { WitchOld } from '../typechain/WitchOld'
 import { FYToken } from '../typechain/FYToken'
 import { ERC20Mock } from '../typechain/ERC20Mock'
 import { ChainlinkMultiOracle } from '../typechain/ChainlinkMultiOracle'
@@ -27,7 +27,7 @@ function stringToBytes32(x: string): string {
 
 const ZERO_ADDRESS = '0x' + '00'.repeat(20)
 
-describe('Witch', function () {
+describe('WitchOld', function () {
   this.timeout(0)
 
   let env: YieldEnvironment
@@ -37,8 +37,8 @@ describe('Witch', function () {
   let other: string
   let cauldron: Cauldron
   let ladle: LadleWrapper
-  let witch: Witch
-  let witchFromOther: Witch
+  let witch: WitchOld
+  let witchFromOther: WitchOld
   let fyToken: FYToken
   let base: ERC20Mock
   let ilk: ERC20Mock
@@ -193,20 +193,22 @@ describe('Witch', function () {
         .withArgs(vaultId, owner, 0, 0)
     })
 
-    it('allows to buy 1/2 of the collateral for the whole debt at the beginning', async () => {
-      const baseBalanceBefore = await base.balanceOf(owner)
-      const ilkBalanceBefore = await ilk.balanceOf(owner)
-      await expect(witch.buy(vaultId, borrowed, 0))
-        .to.emit(witch, 'Bought')
-        .withArgs(vaultId, owner, (await ilk.balanceOf(owner)).sub(ilkBalanceBefore), borrowed)
-        .to.emit(cauldron, 'VaultGiven')
-        .withArgs(vaultId, owner)
+    describe.skip('TODO: Being rewritten as part of WitchOld v2', async () => {
+      it('allows to buy 1/2 of the collateral for the whole debt at the beginning', async () => {
+        const baseBalanceBefore = await base.balanceOf(owner)
+        const ilkBalanceBefore = await ilk.balanceOf(owner)
+        await expect(witch.buy(vaultId, borrowed, 0))
+          .to.emit(witch, 'Bought')
+          .withArgs(vaultId, owner, (await ilk.balanceOf(owner)).sub(ilkBalanceBefore), borrowed)
+          .to.emit(cauldron, 'VaultGiven')
+          .withArgs(vaultId, owner)
 
-      const ink = posted.sub((await cauldron.balances(vaultId)).ink)
-      expect(ink.div(10 ** 15)).to.equal(posted.div(10 ** 15).div(2)) // Nice hack to compare up to some precision
-      expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(borrowed))
-      expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(ink))
-      expect((await cauldron.vaults(vaultId)).owner).to.equal(owner) // The vault was returned once all the debt was paid off
+        const ink = posted.sub((await cauldron.balances(vaultId)).ink)
+        expect(ink.div(10 ** 15)).to.equal(posted.div(10 ** 15).div(2)) // Nice hack to compare up to some precision
+        expect(await base.balanceOf(owner)).to.equal(baseBalanceBefore.sub(borrowed))
+        expect(await ilk.balanceOf(owner)).to.equal(ilkBalanceBefore.add(ink))
+        expect((await cauldron.vaults(vaultId)).owner).to.equal(owner) // The vault was returned once all the debt was paid off
+      })
     })
 
     it('does not buy if leaving dust', async () => {
