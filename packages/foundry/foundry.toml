@@ -1,4 +1,4 @@
-[default]
+[profile.default]
 src = 'packages/foundry/contracts'
 root = './packages/foundry'
 test = 'test'
