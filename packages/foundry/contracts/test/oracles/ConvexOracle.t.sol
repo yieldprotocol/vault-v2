@@ -84,12 +84,9 @@ contract ConvexOracleTest is Test, TestConstants {
         compositeMultiOracle.setPath(USDC, CVX3CRV, path);
     }
 
-    function testCvx3CrvEthConversion() public {
+    function testCvx3CrvEthConversionAndReverse() public {
         (uint256 cvx3crvEthAmount,) = compositeMultiOracle.peek(CVX3CRV, ETH, WAD);
         assertEq(cvx3crvEthAmount, 893841082516614, "Conversion unsuccessful");
-    }
-
-    function testEthCvx3CrvConversion() public {
         (uint256 ethCvx3CrvAmount,) = compositeMultiOracle.peek(ETH, CVX3CRV, WAD);
         assertEq(ethCvx3CrvAmount, 1118767104757027995881, "Conversion unsuccessful");
     }
@@ -100,23 +97,23 @@ contract ConvexOracleTest is Test, TestConstants {
         (uint256 ethDaiAmount,) = compositeMultiOracle.peek(ETH, DAI, WAD);
         assertEq(ethDaiAmount, 1126596041935200643687, "Conversion unsuccessful");
 
-        (uint256 usdcEthAmount,) = compositeMultiOracle.peek(USDC, ETH, WAD);
-        assertEq(usdcEthAmount, 888934300000000000000000000, "Conversion unsuccessful");
+        (uint256 usdcEthAmount,) = compositeMultiOracle.peek(USDC, ETH, 1e6);
+        assertEq(usdcEthAmount, 888934300000000, "Conversion unsuccessful");
         (uint256 ethUsdcAmount,) = compositeMultiOracle.peek(ETH, USDC, WAD);
         assertEq(ethUsdcAmount, 1124942529, "Conversion unsuccessful");
     }
 
-    function testCvx3CrvDaiConversion() public {
+    function testCvx3CrvDaiConversionAndReverse() public {
         (uint256 cvx3crvDaiAmount,) = compositeMultiOracle.peek(CVX3CRV, DAI, WAD);
         assertEq(cvx3crvDaiAmount, 1006997825682292404, "Conversion unsuccessful");
         (uint256 daiCvx3CrvAmount,) = compositeMultiOracle.peek(DAI, CVX3CRV, WAD);
         assertEq(daiCvx3CrvAmount, 993050803582866704, "Conversion unsuccessful");
     }
 
-    function testCvx3CrvUsdcConversion() public {
+    function testCvx3CrvUsdcConversionAndReverse() public {
         (uint256 cvx3crvUsdcAmount,) = compositeMultiOracle.peek(CVX3CRV, USDC, WAD);
         assertEq(cvx3crvUsdcAmount, 1005519, "Conversion unsuccessful");
-        (uint256 usdcCvx3CrvAmount,) = compositeMultiOracle.peek(USDC, CVX3CRV, WAD);
-        assertEq(usdcCvx3CrvAmount, 994510453130215351599365094240, "Conversion unsuccessful");
+        (uint256 usdcCvx3CrvAmount,) = compositeMultiOracle.peek(USDC, CVX3CRV, 1e6);
+        assertEq(usdcCvx3CrvAmount, 994510453130215351, "Conversion unsuccessful");
     }
 }
