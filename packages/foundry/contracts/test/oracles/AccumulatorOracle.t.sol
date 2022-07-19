@@ -96,6 +96,12 @@ contract WithSourceSetTest is WithSourceSet {
     }
 
     function testUpdatesPeek() public {
-
+        uint256 amount;
+        skip(10);
+        (amount,) = accumulator.peek(bytes32(baseOne), RATE, WAD);
+        assertEq(amount, WAD, "Conversion unsuccessful");
+        vm.roll(block.number + 1);
+        accumulator.get(bytes32(baseOne), RATE, WAD);
+        (amount,) = accumulator.peek(bytes32(baseOne), RATE, WAD);
     }
 }

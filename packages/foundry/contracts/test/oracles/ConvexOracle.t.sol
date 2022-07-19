@@ -14,11 +14,14 @@ contract ConvexOracleTest is Test, TestConstants {
     Cvx3CrvOracle public convexOracle;
     ChainlinkMultiOracle public chainlinkMultiOracle;
     CompositeMultiOracle public compositeMultiOracle;
-    ICurvePool public curvePool = ICurvePool(0xB576491F1E6e5E62f1d8F26062Ee822B40B0E0d4);
+    ICurvePool public curvePool = ICurvePool(0xB576491F1E6e5E62f1d8F26062Ee822B40B0E0d4); // Curve CVX-ETH pool
+    
+    // Chainlink price feeds
     AggregatorV3Interface public daiEthAggregator = AggregatorV3Interface(0x773616E4d11A78F511299002da57A0a94577F1f4);
     AggregatorV3Interface public usdcEthAggregator = AggregatorV3Interface(0x986b5E1e1755e3C2440e960477f25201B0a8bbD4);
     AggregatorV3Interface public usdtEthAggregator = AggregatorV3Interface(0xEe9F2375b4bdF6387aa8265dD4FB8F16512A1d46);
 
+    // Token addresses
     address public dai = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
     address public usdc = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address public weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
