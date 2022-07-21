@@ -33,6 +33,8 @@ contract HealerModuleTest is Test {
         wethMock = new WETH9Mock();
         weth = IWETH9(address(wethMock));
         healer = new HealerModule(cauldron, weth);
+
+        vm.createSelectFork('mainnet');
         vm.prank(0x3b870db67a45611CF4723d44487EAF398fAc51E3);
         ILadleCustom(address(ladle)).addModule(address(healer), true);
         (vaultId, ) = ladle.build(seriesId, ilkId, 0);
