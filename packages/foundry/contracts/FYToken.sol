@@ -146,13 +146,13 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
     }
 
     ///@dev returns the amount of underlying redeemable in terms of the principal
-    function previewRedeem(uint256 principalAmount) public view returns (uint256 underlyingAmount) {
+    function previewRedeem(uint256 principalAmount) external view beforeMaturity returns (uint256 underlyingAmount) {
         return _previewRedeem(principalAmount);
     }
 
     ///@dev returns the amount of underlying redeemable in terms of the principal
-    function _previewRedeem(uint256 principalAmount) private view returns (uint256 underlyingAmount) {
-        return _convertToUnderlying(principalAmount);
+    function _previewRedeem(uint256 principalAmount) internal view returns (uint256 underlyingAmount) {
+        underlyingAmount = principalAmount.wmul(_accrual());
     }
 
     /// @dev Burn fyToken after maturity for an amount that increases according to `chi`
@@ -172,13 +172,13 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
     }
 
     ///@dev returns the amount of the principal withdrawable in terms of the underlying
-    function previewWithdraw(uint256 underlyingAmount) public view returns (uint256 principalAmount) {
+    function previewWithdraw(uint256 underlyingAmount) external view beforeMaturity returns (uint256 principalAmount) {
         return _previewWithdraw(underlyingAmount);
     }
 
     ///@dev returns the amount of underlying redeemable in terms of the principal
-    function _previewWithdraw(uint256 underlyingAmount) private view returns (uint256 principalAmount) {
-        return _convertToPrincipal(underlyingAmount);
+    function _previewWithdraw(uint256 underlyingAmount) internal view returns (uint256 principalAmount) {
+        principalAmount = underlyingAmount.wdiv(_accrual());
     }
 
     function withdraw(uint256 underlyingAmount, address receiver, address holder) external afterMaturity returns (uint256 principalAmount) {
