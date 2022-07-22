@@ -181,7 +181,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
         principalAmount = underlyingAmount.wdiv(_accrual());
     }
 
-    function withdraw(uint256 underlyingAmount, address receiver, address holder) external afterMaturity returns (uint256 principalAmount) {
+    function withdraw(uint256 underlyingAmount, address receiver, address holder) public afterMaturity returns (uint256 principalAmount) {
         uint256 amount_ = (underlyingAmount == 0) ? _convertToPrincipal(_balanceOf[address(this)]) : _convertToPrincipal(underlyingAmount);
         _burn(holder, amount_);
         principalAmount = amount_.wmul(_accrual());
