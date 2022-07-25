@@ -1,6 +1,6 @@
 [submodule "packages/foundry/lib/vault-interfaces"]
-	path = lib/vault-interfaces
-	url = https://github.com/yieldprotocol/vault-interfaces-DEPRECATED
+	path = packages/foundry/lib/vault-interfaces
+	url = https://github.com/yieldprotocol/vault-interfaces
 [submodule "packages/foundry/lib/yield-utils-v2"]
 	path = packages/foundry/lib/yield-utils-v2
 	url = https://github.com/yieldprotocol/yield-utils-v2
