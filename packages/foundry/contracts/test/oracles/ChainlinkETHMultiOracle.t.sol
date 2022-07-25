@@ -2,42 +2,33 @@
 pragma solidity 0.8.14;
 
 import "forge-std/src/Test.sol";
-import "../../oracles/chainlink/ChainlinkMultiOracle.sol";
-import "../../mocks/DAIMock.sol";
-import "../../mocks/USDCMock.sol";
-import "../../mocks/WETH9Mock.sol";
+import "../../oracles/chainlink/ChainlinkETHMultiOracle.sol";
 import "../../mocks/oracles/OracleMock.sol";
-import "../../mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol";
+import "../../oracles/chainlink/AggregatorV3Interface.sol";
 import "../utils/TestConstants.sol";
 
 contract ChainlinkMultiOracleTest is Test, TestConstants {
     OracleMock public oracleMock;
-    DAIMock public dai;
-    USDCMock public usdc;
-    WETH9Mock public weth;
-    ChainlinkMultiOracle public chainlinkMultiOracle;
-    ChainlinkAggregatorV3Mock public daiEthAggregator;
-    ChainlinkAggregatorV3Mock public usdcEthAggregator;
+    ChainlinkETHMultiOracle public chainlinkOracle;
+    AggregatorV3Interface daiEthAggregator = AggregatorV3Interface(0x773616E4d11A78F511299002da57A0a94577F1f4);
+    AggregatorV3Interface usdcEthAggregator = AggregatorV3Interface(0x986b5E1e1755e3C2440e960477f25201B0a8bbD4);
+
+    address public dai = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+    address public usdc = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
 
     bytes32 public mockBytes32 = 0x0000000000000000000000000000000000000000000000000000000000000001;
-    bytes6 public mockBytes6 = 0x000000000001;
     uint256 public oneUSDC = 1e6;
 
     function setUp() public {
         oracleMock = new OracleMock();
-        dai = new DAIMock();
-        usdc = new USDCMock();
-        weth = new WETH9Mock();
         daiEthAggregator = new ChainlinkAggregatorV3Mock();
         usdcEthAggregator = new ChainlinkAggregatorV3Mock();
-        chainlinkMultiOracle = new ChainlinkMultiOracle();
-        chainlinkMultiOracle.grantRole(0xef532f2e, address(this));
-        chainlinkMultiOracle.setSource(DAI, dai, ETH, weth, address(daiEthAggregator));
-        chainlinkMultiOracle.setSource(USDC, usdc, ETH, weth, address(usdcEthAggregator));
-        vm.warp(uint256(mockBytes32));
-        // WAD / 2500 here represents the amount of ETH received for either 1 DAI or 1 USDC
-        daiEthAggregator.set(WAD / 2500);
-        usdcEthAggregator.set(WAD / 2500);
+        chainlinkOracle = new ChainlinkETHMultiOracle();
+
+        vm.createSelectFork('mainnet', 15044600);
+        chainlinkOracle.grantRole(chainlinkMultiOracle.setSource.selector, address(this));
+        chainlinkOracle.setSource(DAI, dai, daiEthAggregator);
+        chainlinkOracle.setSource(USDC, usdc, usdcEthAggregator);
     }
 
     function testGetConversion() public {
@@ -48,7 +39,7 @@ contract ChainlinkMultiOracleTest is Test, TestConstants {
 
     function testRevertOnUnknownSource() public {
         vm.expectRevert("Source not found");
-        chainlinkMultiOracle.get(bytes32(DAI), bytes32(mockBytes6), WAD);
+        chainlinkMultiOracle.get(bytes32(DAI), mockBytes32, WAD);
     }
 
     function testChainlinkMultiOracleConversion() public {

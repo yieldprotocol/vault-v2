@@ -13,41 +13,26 @@ import "./AggregatorV3Interface.sol";
  * @title ChainlinkMultiOracle
  * @notice Chainlink only uses USD or ETH as a quote in the aggregators, and we will use only ETH
  */
-contract ChainlinkMultiOracle is IOracle, AccessControl, Constants {
+contract ChainlinkETHMultiOracle is IOracle, AccessControl, Constants {
     using CastBytes32Bytes6 for bytes32;
 
-    event SourceSet(bytes6 indexed baseId, IERC20Metadata base, bytes6 indexed quoteId, IERC20Metadata quote, address indexed source);
+    event SourceSet(bytes6 indexed assetId, IERC20Metadata asset, address indexed source);
 
     struct Source {
         address source;
-        uint8 baseDecimals;
-        uint8 quoteDecimals;
-        bool inverse;
+        uint8 assetDecimals;
     }
 
     mapping(bytes6 => mapping(bytes6 => Source)) public sources;
 
     /// @dev Set or reset an oracle source and its inverse
-    function setSource(bytes6 baseId, IERC20Metadata base, bytes6 quoteId, IERC20Metadata quote, address source)
+    function setSource(bytes6 assetId, IERC20Metadata asset, address source)
         external auth
     {
-        sources[baseId][quoteId] = Source({
-            source: source,
-            baseDecimals: base.decimals(),
-            quoteDecimals: quote.decimals(),
-            inverse: false
-        });
-        emit SourceSet(baseId, base, quoteId, quote, source);
+        require(AggregatorV3Interface(source).decimals() == 18, 'Non-18-decimals ETH source');
 
-        if (baseId != quoteId) {
-            sources[quoteId][baseId] = Source({
-                source: source,
-                baseDecimals: quote.decimals(), // We are reversing the base and the quote
-                quoteDecimals: base.decimals(),
-                inverse: true
-            });
-            emit SourceSet(quoteId, quote, baseId, base, source);
-        }
+        sources[assetId] = Source({source: source, assetDecimals: asset.decimals()});
+        emit SourceSet(assetId, asset, source);
     }
 
     /// @dev Convert amountBase base into quote at the latest oracle price.
