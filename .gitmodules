@@ -1,21 +1,15 @@
-[submodule "packages/foundry/lib/vault-interfaces"]
-	path = packages/foundry/lib/vault-interfaces
-	url = https://github.com/yieldprotocol/vault-interfaces
 [submodule "packages/foundry/lib/yield-utils-v2"]
 	path = packages/foundry/lib/yield-utils-v2
 	url = https://github.com/yieldprotocol/yield-utils-v2
-[submodule "packages/foundry/lib/Yield-UniswapOracleV3"]
-	path = packages/foundry/lib/Yield-UniswapOracleV3
-	url = https://github.com/iamsahu/Yield-UniswapOracleV3
 [submodule "packages/foundry/lib/ERC3156"]
 	path = packages/foundry/lib/ERC3156
 	url = https://github.com/alcueca/ERC3156
 [submodule "packages/foundry/lib/dss-interfaces"]
 	path = packages/foundry/lib/dss-interfaces
 	url = https://github.com/makerdao/dss-interfaces
-[submodule "packages/foundry/lib/yieldspace-tv"]
-	path = packages/foundry/lib/yieldspace-tv
-	url = https://github.com/yieldprotocol/yieldspace-tv
 [submodule "packages/foundry/lib/forge-std"]
 	path = packages/foundry/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
+[submodule "packages/foundry/lib/yieldspace-tv"]
+	path = packages/foundry/lib/yieldspace-tv
+	url = https://github.com/yieldprotocol/yieldspace-tv

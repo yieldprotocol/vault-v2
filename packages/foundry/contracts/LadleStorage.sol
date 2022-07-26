@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.14;
-import "@yield-protocol/vault-interfaces/src/ICauldron.sol";
-import "@yield-protocol/vault-interfaces/src/IJoin.sol";
+pragma solidity >=0.8.13;
+import "./interfaces/ICauldron.sol";
+import "./interfaces/IJoin.sol";
 import "@yield-protocol/yieldspace-tv/src/interfaces/IPool.sol";
 import "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
 import "./Router.sol";

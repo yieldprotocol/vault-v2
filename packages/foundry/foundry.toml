@@ -1,11 +1,11 @@
 [profile.default]
-src = 'packages/foundry/contracts'
-root = './packages/foundry'
+src = './contracts'
+root = '.'
 test = 'test'
 out = 'out'
 libs = ['lib']
 block_timestamp = 1651743369 # Arbitrary Thursday, 5 May 2022 09:36:09
 verbosity = 3
-solc_version = '0.8.14'
+solc_version = '0.8.15'
 
 # See more config options https://github.com/gakonst/foundry/tree/master/config

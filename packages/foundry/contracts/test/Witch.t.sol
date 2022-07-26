@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.14;
+pragma solidity >=0.8.13;
 
 import "forge-std/src/Test.sol";
 import "./utils/TestConstants.sol";
 import "./utils/Mocks.sol";
 
-import "@yield-protocol/vault-interfaces/src/IWitch.sol";
+import "../interfaces/IWitch.sol";
 import "../Witch.sol";
 
 abstract contract WitchStateZero is Test, TestConstants {
