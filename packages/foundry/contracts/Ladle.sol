@@ -128,7 +128,7 @@ contract Ladle is LadleStorage, AccessControl() {
         auth
     {
         IFYToken fyToken = getSeries(seriesId).fyToken;
-        require (fyToken == pool.fyToken(), "Mismatched pool fyToken and series");
+        require (address(fyToken) == address(pool.fyToken()), "Mismatched pool fyToken and series");
         require (fyToken.underlying() == address(pool.base()), "Mismatched pool base and series");
         pools[seriesId] = pool;
 
