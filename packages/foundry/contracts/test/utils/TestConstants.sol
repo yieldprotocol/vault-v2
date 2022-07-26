@@ -14,6 +14,8 @@ contract TestConstants {
     bytes6 public constant STETH = 0x303500000000;
     bytes6 public constant YVDAI = 0x303800000000;
     bytes6 public constant YVUSDC = 0x303900000000;
+    bytes6 public constant CVX3CRV = 0x313000000000;
+    bytes6 public constant FRAX = 0x313800000000;
 
     bytes6 public constant FYETH2206 = bytes6("0006");
     bytes6 public constant FYDAI2206 = bytes6("0106");

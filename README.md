@@ -63,10 +63,18 @@ $ yarn coverage
 ```
 
 ### Test
-Compile and test the smart contracts with [Buidler](https://buidler.dev/) and Mocha:
+Compile and test the smart contracts with [Foundry](https://getfoundry.sh/):
 
 ```
-$ yarn test
+$ cd packages/foundry
+$ MAINNET_RPC=<your rpc url> forge test -c contracts/test
+```
+
+Additional tests can be run with Hardhat using npm or yarn:
+
+```
+$ cd packages/hardhat
+$ npm run hardhat:test
 ```
 
 ## Bug Bounty
