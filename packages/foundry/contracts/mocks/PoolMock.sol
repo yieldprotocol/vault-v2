@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.14;
+pragma solidity >=0.8.13;
 import "@yield-protocol/utils-v2/contracts/access/Ownable.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
-import "@yield-protocol/vault-interfaces/src/IFYToken.sol";
+import "../interfaces/IFYToken.sol";
 import "../deprecated/IPoolFactory.sol";
 import "./ERC20Mock.sol";
 

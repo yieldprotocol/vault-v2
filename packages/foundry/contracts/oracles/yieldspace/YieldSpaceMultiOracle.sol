@@ -1,15 +1,19 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.14;
+pragma solidity >=0.8.13;
 
 import "./IPoolOracle.sol";
-import "@yield-protocol/yieldspace-interfaces/IPool.sol";
-import "@yield-protocol/vault-interfaces/src/IOracle.sol";
+import "@yield-protocol/yieldspace-tv/src/interfaces/IPool.sol";
+import "../../interfaces/IOracle.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
-import "@yield-protocol/yieldspace-v2/contracts/YieldMath.sol";
+import "@yield-protocol/yieldspace-tv/src/YieldMath.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
 import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
 
+// TODO: Migrate to YieldSpace-tv, unless this needs to be used with v2 pools (last one maturing EO September 2022)
+contract YieldSpaceMultiOracle { }
+
+/*
 contract YieldSpaceMultiOracle is IOracle, AccessControl {
     using CastBytes32Bytes6 for bytes32;
     using Math64x64 for int128;
@@ -143,3 +147,4 @@ contract YieldSpaceMultiOracle is IOracle, AccessControl {
         return source.lending ? amount.wmul(marginalPrice) : amount.wdiv(marginalPrice);
     }
 }
+*/

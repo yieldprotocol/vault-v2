@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.14;
-import "@yield-protocol/vault-interfaces/src/IFYToken.sol";
-import "@yield-protocol/vault-interfaces/src/IJoin.sol";
-import "@yield-protocol/vault-interfaces/src/ICauldron.sol";
-import "@yield-protocol/vault-interfaces/src/IOracle.sol";
-import "@yield-protocol/vault-interfaces/src/DataTypes.sol";
-import "@yield-protocol/yieldspace-interfaces/IPool.sol";
+pragma solidity >=0.8.13;
+import "./interfaces/IFYToken.sol";
+import "./interfaces/IJoin.sol";
+import "./interfaces/ICauldron.sol";
+import "./interfaces/IOracle.sol";
+import "./interfaces/DataTypes.sol";
+import "@yield-protocol/yieldspace-tv/src/interfaces/IPool.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC2612.sol";
-import "dss-interfaces/src/dss/DaiAbstract.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
 import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256I128.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU128I128.sol";
+import "dss-interfaces/src/dss/DaiAbstract.sol";
 import "./LadleStorage.sol";
 
 
@@ -128,7 +128,7 @@ contract Ladle is LadleStorage, AccessControl() {
         auth
     {
         IFYToken fyToken = getSeries(seriesId).fyToken;
-        require (fyToken == pool.fyToken(), "Mismatched pool fyToken and series");
+        require (address(fyToken) == address(pool.fyToken()), "Mismatched pool fyToken and series");
         require (fyToken.underlying() == address(pool.base()), "Mismatched pool base and series");
         pools[seriesId] = pool;
 
