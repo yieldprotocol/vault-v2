@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.14;
+pragma solidity >=0.8.13;
 
 import {IOracle} from "../../interfaces/IOracle.sol";
 import {CastBytes32Bytes6} from "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";

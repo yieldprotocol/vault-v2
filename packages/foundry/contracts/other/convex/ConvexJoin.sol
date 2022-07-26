@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Original contract: https://github.com/convex-eth/platform/blob/main/contracts/contracts/wrappers/ConvexStakingWrapper.sol
-pragma solidity 0.8.14;
+pragma solidity >=0.8.13;
 
 import "../../interfaces/ICauldron.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
