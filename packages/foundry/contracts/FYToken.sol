@@ -166,6 +166,17 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
         emit Redeemed(holder, receiver, amount_, underlyingAmount);
     }
 
+    /// @dev Burn fyToken after maturity for an amount that increases according to `chi`
+    /// If `amount` is 0, the contract will redeem instead the fyToken balance of this contract. Useful for batches.
+    function redeem(address to, uint256 amount) external override afterMaturity returns (uint256 redeemed) {
+        uint256 amount_ = (amount == 0) ? _balanceOf[address(this)] : amount;
+        _burn(msg.sender, amount_);
+        redeemed = amount_.wmul(_accrual());
+        join.exit(to, redeemed.u128());
+
+        emit Redeemed(msg.sender, to, amount_, redeemed);
+    }
+
     ///@dev returns the maximum withdrawable amount for the address holder in terms of the underlying
     function maxWithdraw(address holder) public view returns (uint256 maxUnderlyingAmount) {
         return _convertToUnderlying(_balanceOf[holder]);
