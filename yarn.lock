@@ -2451,10 +2451,10 @@
     ethereumjs-util "^7.0.8"
     ethers "^5.0.7"
 
-"@yield-protocol/yieldspace-tv@^0.1.3":
-  version "0.1.3"
-  resolved "https://registry.yarnpkg.com/@yield-protocol/yieldspace-tv/-/yieldspace-tv-0.1.3.tgz#d2965fbf2d6b27e581da494904f6cf25c9c5baed"
-  integrity sha512-j3qRuiLthuAHp9RBV4giuOHy2J1O7VGuLTCfIzPfz5FbSGzPcKtE+ExHtolrhOyHSuR1X94INS2qqZ46uIHiqw==
+"@yield-protocol/yieldspace-tv@^0.1.3-rc1":
+  version "0.1.3-rc1"
+  resolved "https://registry.yarnpkg.com/@yield-protocol/yieldspace-tv/-/yieldspace-tv-0.1.3-rc1.tgz#27e713e0493eedbe07e21b9cccefc84b729bede8"
+  integrity sha512-83iIv27PYE1GvZKQ6Jg+LbHnDbBBsTwnWDcOKhYaVYVYiuF4kbLvFyA1zRpXIqGQpfFAjapPVIVvBZgrXzLbww==
 
 abab@^2.0.0:
   version "2.0.6"
