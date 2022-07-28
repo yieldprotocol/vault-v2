@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity >=0.8.13;
+pragma solidity 0.8.15;
 
 import "erc3156/contracts/interfaces/IERC3156FlashBorrower.sol";
 import "erc3156/contracts/interfaces/IERC3156FlashLender.sol";
 import "@yield-protocol/utils-v2/contracts/token/ERC20Permit.sol";
 import "@yield-protocol/utils-v2/contracts/token/SafeERC20Namer.sol";
-import "./interfaces/IFYToken.sol";
-import "./interfaces/IJoin.sol";
-import "./interfaces/IOracle.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
 import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U32.sol";
+import "./interfaces/IFYToken.sol";
+import "./interfaces/IJoin.sol";
+import "./interfaces/IOracle.sol";
 import "./constants/Constants.sol";
 
 contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, Constants {
@@ -146,18 +146,18 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
     }
 
     ///@dev returns the amount of underlying redeemable in terms of the principal
-    function previewRedeem(uint256 principalAmount) external view beforeMaturity returns (uint256 underlyingAmount) {
+    function previewRedeem(uint256 principalAmount) external beforeMaturity returns (uint256 underlyingAmount) {
         return _previewRedeem(principalAmount);
     }
 
     ///@dev returns the amount of underlying redeemable in terms of the principal
-    function _previewRedeem(uint256 principalAmount) internal view returns (uint256 underlyingAmount) {
+    function _previewRedeem(uint256 principalAmount) internal returns (uint256 underlyingAmount) {
         underlyingAmount = principalAmount.wmul(_accrual());
     }
 
     /// @dev Burn fyToken after maturity for an amount that increases according to `chi`
     /// If `amount` is 0, the contract will redeem instead the fyToken balance of this contract. Useful for batches.
-    function redeem(uint256 principalAmount, address receiver, address holder) external override afterMaturity returns (uint256 underlyingAmount) {
+    function redeem(uint256 principalAmount, address receiver, address holder) external afterMaturity returns (uint256 underlyingAmount) {
         uint256 amount_ = (principalAmount == 0) ? _balanceOf[address(this)] : principalAmount;
         _burn(holder, amount_);
         underlyingAmount = _convertToUnderlying(amount_.wmul(_accrual()));
@@ -183,12 +183,12 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
     }
 
     ///@dev returns the amount of the principal withdrawable in terms of the underlying
-    function previewWithdraw(uint256 underlyingAmount) external view beforeMaturity returns (uint256 principalAmount) {
+    function previewWithdraw(uint256 underlyingAmount) external beforeMaturity returns (uint256 principalAmount) {
         return _previewWithdraw(underlyingAmount);
     }
 
     ///@dev returns the amount of underlying redeemable in terms of the principal
-    function _previewWithdraw(uint256 underlyingAmount) internal view returns (uint256 principalAmount) {
+    function _previewWithdraw(uint256 underlyingAmount) internal returns (uint256 principalAmount) {
         principalAmount = underlyingAmount.wdiv(_accrual());
     }
 
