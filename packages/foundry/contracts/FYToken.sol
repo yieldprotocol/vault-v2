@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.14;
+pragma solidity >=0.8.13;
 
 import "erc3156/contracts/interfaces/IERC3156FlashBorrower.sol";
 import "erc3156/contracts/interfaces/IERC3156FlashLender.sol";
 import "@yield-protocol/utils-v2/contracts/token/ERC20Permit.sol";
 import "@yield-protocol/utils-v2/contracts/token/SafeERC20Namer.sol";
-import "@yield-protocol/vault-interfaces/src/IFYToken.sol";
-import "@yield-protocol/vault-interfaces/src/IJoin.sol";
-import "@yield-protocol/vault-interfaces/src/IOracle.sol";
+import "./interfaces/IFYToken.sol";
+import "./interfaces/IJoin.sol";
+import "./interfaces/IOracle.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
 import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";

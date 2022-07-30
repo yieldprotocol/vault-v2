@@ -14,7 +14,7 @@
   "scripts": {
     "hardhat:build": "rm -rf artifacts typechain && npx ts-node ./src/importer.ts && hardhat compile",
     "hardhat:test": "hardhat compile && hardhat test --show-stack-traces",
-    "hardhat:test:05": "hardhat test test/01* test/02* test/03* test/05*",
+    "hardhat:test:05": "hardhat test test/02* test/03* test/05*",
     "hardhat:test:09": "hardhat test test/06* test/07* test/08* test/09*",
     "coverage": "hardhat coverage",
     "lint:sol": "solhint -f table contracts/*.sol",
@@ -29,10 +29,8 @@
     "@nomiclabs/hardhat-waffle": "^2.0.1",
     "@truffle/hdwallet-provider": "^1.0.40",
     "@types/mocha": "^8.0.0",
-    "@yield-protocol/utils-v2": "^2.5.0",
-    "@yield-protocol/vault-interfaces": "^2.4.1",
-    "@yield-protocol/yieldspace-interfaces": "^2.3.2",
-    "@yield-protocol/yieldspace-v2": "^0.12.3",
+    "@yield-protocol/utils-v2": "^2.6.0",
+    "@yield-protocol/yieldspace-tv": "^0.1.2-rc0",
     "chai": "4.2.0",
     "dss-interfaces": "0.1.1",
     "erc3156": "^0.4.8",
@@ -53,8 +51,7 @@
     "tsdx": "^0.14.1",
     "typechain": "^4.0.3",
     "typechain-target-ethers-v5": "^5.0.1",
-    "typescript": "^3.9.7",
-    "uniswapv3-oracle": "^1.0.1"
+    "typescript": "^3.9.7"
   },
   "repository": {
     "url": "git+https://github.com/yieldprotocol/vault-v2.git",

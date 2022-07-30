@@ -1,31 +1,27 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.0;
+pragma solidity ^0.8.0;
 
-import "@yield-protocol/vault-interfaces/src/ILadle.sol";
-import "@yield-protocol/vault-interfaces/src/ICauldron.sol";
-import "./WitchDataTypes.sol";
+import "./ILadle.sol";
+import "./ICauldron.sol";
+import "./DataTypes.sol";
 
-interface IWitchV2 {
+interface IWitch {
     function cauldron() external returns (ICauldron);
 
     function ladle() external returns (ILadle);
 
-    function auctions(bytes12) external returns (WitchDataTypes.Auction memory);
+    function auctions(bytes12) external returns (DataTypes.Auction memory);
 
-    function lines(bytes6, bytes6)
-        external
-        returns (WitchDataTypes.Line memory);
+    function lines(bytes6, bytes6) external returns (DataTypes.Line memory);
 
-    function limits(bytes6, bytes6)
-        external
-        returns (WitchDataTypes.Limits memory);
+    function limits(bytes6, bytes6) external returns (DataTypes.Limits memory);
 
     /// @dev Put an undercollateralized vault up for liquidation
     /// @param vaultId Id of vault to liquidate
     /// @param to Receiver of the auctioneer reward
     function auction(bytes12 vaultId, address to)
         external
-        returns (WitchDataTypes.Auction memory);
+        returns (DataTypes.Auction memory);
 
     /// @dev Cancel an auction for a vault that isn't undercollateralized anymore
     /// @param vaultId Id of vault to return
