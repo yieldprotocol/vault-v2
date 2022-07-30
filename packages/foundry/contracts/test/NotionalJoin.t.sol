@@ -77,6 +77,8 @@ abstract contract StateMatured is Test, TestConstants {
        .checked_write(10e18);
 
        fcash.setAccrual(1e18);  // set fCash == underlying for simplicity
+
+        vm.warp(1651743369 + 100);  // set blocktime to pass maturity
     }  
 }
 
@@ -104,7 +106,7 @@ contract StateMaturedTest is StateMatured {
     
     function testRedeem() public {
         console2.log("First exit call should call redeem()");
-       
+
         vm.expectEmit(true, true, true, false);
         emit Redeemed(0, 10e18, 1e18);
 
