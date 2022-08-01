@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
-import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
+import "./IERC5095.sol";
 import "./IJoin.sol";
 
-interface IFYToken is IERC20 {
+interface IFYToken is IERC5095 {
     /// @dev Asset that is returned on redemption.
     function underlying() external view returns (address);
 

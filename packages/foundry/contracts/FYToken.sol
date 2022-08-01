@@ -87,24 +87,24 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
     }
 
     ///@dev Converts the amount of the principal to the underlying
-    function convertToUnderlying(uint256 principalAmount) external view returns (uint256 underlyingAmount) {
-        return _convertToUnderlying(underlyingAmount);
+    function convertToUnderlying(uint256 principalAmount) external pure returns (uint256 underlyingAmount) {
+        return _convertToUnderlying(principalAmount);
     }
 
     ///@dev Converts the amount of the principal to the underlying
     ///Before maturity, returns amount as if at maturity.
-    function _convertToUnderlying(uint256 principalAmount) private view returns (uint256 underlyingAmount) {
+    function _convertToUnderlying(uint256 principalAmount) private pure returns (uint256 underlyingAmount) {
         return principalAmount;
     }
 
     ///@dev Converts the amount of the underlying to the principal
-    function convertToPrincipal(uint256 underlyingAmount) external view returns (uint256 principalAmount) {
+    function convertToPrincipal(uint256 underlyingAmount) external pure returns (uint256 principalAmount) {
         return _convertToPrincipal(underlyingAmount);
     }
 
     ///@dev Converts the amount of the underlying to the principal
     ///Before maturity, returns amount as if at maturity.
-    function _convertToPrincipal(uint256 underlyingAmount) private view returns (uint256 principalAmount) {
+    function _convertToPrincipal(uint256 underlyingAmount) private pure returns (uint256 principalAmount) {
         return underlyingAmount;
     }
 
@@ -141,7 +141,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
     }
 
     ///@dev returns the maximum redeemable amount for the address holder in terms of the principal
-    function maxRedeem(address holder) public view returns (uint256 maxPrincipalAmount) {
+    function maxRedeem(address holder) external view returns (uint256 maxPrincipalAmount) {
         return _balanceOf[holder];
     }
 
@@ -178,7 +178,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
     }
 
     ///@dev returns the maximum withdrawable amount for the address holder in terms of the underlying
-    function maxWithdraw(address holder) public view returns (uint256 maxUnderlyingAmount) {
+    function maxWithdraw(address holder) external view returns (uint256 maxUnderlyingAmount) {
         return _convertToUnderlying(_balanceOf[holder]);
     }
 
@@ -192,7 +192,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
         principalAmount = underlyingAmount.wdiv(_accrual());
     }
 
-    function withdraw(uint256 underlyingAmount, address receiver, address holder) public afterMaturity returns (uint256 principalAmount) {
+    function withdraw(uint256 underlyingAmount, address receiver, address holder) external afterMaturity returns (uint256 principalAmount) {
         uint256 amount_ = (underlyingAmount == 0) ? _convertToPrincipal(_balanceOf[address(this)]) : _convertToPrincipal(underlyingAmount);
         _burn(holder, amount_);
         principalAmount = amount_.wmul(_accrual());
