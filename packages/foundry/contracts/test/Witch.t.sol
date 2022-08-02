@@ -59,8 +59,7 @@ abstract contract WitchStateZero is Test, TestConstants {
         vm.startPrank(ada);
         witch = new Witch(cauldron, ladle);
         witch.grantRole(Witch.point.selector, ada);
-        witch.grantRole(Witch.setLine.selector, ada);
-        witch.grantRole(Witch.setLimit.selector, ada);
+        witch.grantRole(Witch.setLineAndLimit.selector, ada);
         witch.grantRole(Witch.setAnotherWitch.selector, ada);
         witch.grantRole(Witch.setAuctioneerReward.selector, ada);
         vm.stopPrank();
@@ -95,39 +94,40 @@ contract WitchStateZeroTest is WitchStateZero {
         assertEq(address(witch.ladle()), cool);
     }
 
-    function testSetLineRequiresAuth() public {
+    function testSetLineAndLimitRequiresAuth() public {
         vm.prank(bob);
         vm.expectRevert("Access denied");
-        witch.setLine("", "", 0, 0, 0);
+        witch.setLineAndLimit("", "", 0, 0, 0, 0);
     }
 
-    function testSetLineRequiresInitialOfferTooHigh() public {
+    function testSetLineAndLimitRequiresInitialOfferTooHigh() public {
         vm.prank(ada);
         vm.expectRevert("InitialOffer above 100%");
-        witch.setLine("", "", 0, 0, 1e18 + 1);
+        witch.setLineAndLimit("", "", 0, 0, 1e18 + 1, 0);
     }
 
-    function testSetLineRequiresProportionTooHigh() public {
+    function testSetLineAndLimitRequiresProportionTooHigh() public {
         vm.prank(ada);
         vm.expectRevert("Proportion above 100%");
-        witch.setLine("", "", 0, 1e18 + 1, 0);
+        witch.setLineAndLimit("", "", 0, 1e18 + 1, 0, 0);
     }
 
-    function testSetLineRequiresInitialOfferTooLow() public {
+    function testSetLineAndLimitRequiresInitialOfferTooLow() public {
         vm.prank(ada);
         vm.expectRevert("InitialOffer below 1%");
-        witch.setLine("", "", 0, 0, 0.01e18 - 1);
+        witch.setLineAndLimit("", "", 0, 0, 0.01e18 - 1, 0);
     }
 
-    function testSetLineRequiresProportionTooLow() public {
+    function testSetLineAndLimitRequiresProportionTooLow() public {
         vm.prank(ada);
         vm.expectRevert("Proportion below 1%");
-        witch.setLine("", "", 0, 0.01e18 - 1, 1e18);
+        witch.setLineAndLimit("", "", 0, 0.01e18 - 1, 1e18, 0);
     }
 
-    function testSetLine() public {
+    function testSetLineAndLimit() public {
         uint64 proportion = 0.5e18;
         uint64 initialOffer = 0.75e18;
+        uint128 max = 100_000_000e18;
 
         vm.expectEmit(true, true, false, true);
         emit LineSet(
@@ -138,13 +138,17 @@ contract WitchStateZeroTest is WitchStateZero {
             initialOffer
         );
 
+        vm.expectEmit(true, true, false, true);
+        emit LimitSet(ILK_ID, BASE_ID, max);
+
         vm.prank(ada);
-        witch.setLine(
+        witch.setLineAndLimit(
             ILK_ID,
             BASE_ID,
             AUCTION_DURATION,
             proportion,
-            initialOffer
+            initialOffer,
+            max
         );
 
         (uint32 _duration, uint64 _proportion, uint64 _initialOffer) = witch
@@ -153,22 +157,6 @@ contract WitchStateZeroTest is WitchStateZero {
         assertEq(_duration, AUCTION_DURATION);
         assertEq(_proportion, proportion);
         assertEq(_initialOffer, initialOffer);
-    }
-
-    function testSetLimitRequiresAuth() public {
-        vm.prank(bob);
-        vm.expectRevert("Access denied");
-        witch.setLimit("", "", 0);
-    }
-
-    function testSetLimit() public {
-        uint96 max = 1;
-
-        vm.expectEmit(true, true, false, true);
-        emit LimitSet(ILK_ID, BASE_ID, max);
-
-        vm.prank(ada);
-        witch.setLimit(ILK_ID, BASE_ID, max);
 
         (uint128 _max, uint128 _sum) = witch.limits(ILK_ID, BASE_ID);
 
@@ -267,16 +255,15 @@ abstract contract WitchWithMetadata is WitchStateZero {
         cauldron.balances.mock(VAULT_ID, balances);
         cauldron.debt.mock(BASE_ID, ILK_ID, debt);
 
-        vm.startPrank(ada);
-        witch.setLimit(ILK_ID, BASE_ID, max);
-        witch.setLine(
+        vm.prank(ada);
+        witch.setLineAndLimit(
             ILK_ID,
             BASE_ID,
             AUCTION_DURATION,
             proportion,
-            initialOffer
+            initialOffer,
+            max
         );
-        vm.stopPrank();
     }
 }
 
@@ -341,7 +328,14 @@ contract WitchWithMetadataTest is WitchWithMetadata {
         vm.assume(io <= 1e18 && io >= 0.01e18);
 
         vm.prank(ada);
-        witch.setLine(ILK_ID, BASE_ID, AUCTION_DURATION, proportion, io);
+        witch.setLineAndLimit(
+            ILK_ID,
+            BASE_ID,
+            AUCTION_DURATION,
+            proportion,
+            io,
+            max
+        );
 
         (uint256 liquidatorCut, , ) = witch.calcPayout(VAULT_ID, bot, 50_000e6);
 
@@ -395,23 +389,6 @@ contract WitchWithMetadataTest is WitchWithMetadata {
     function testAuctionAVaultWithoutLimitsSet() public {
         // Given
         witch = new Witch(cauldron, ladle);
-
-        // When
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                Witch.VaultNotLiquidable.selector,
-                ILK_ID,
-                BASE_ID
-            )
-        );
-        witch.auction(VAULT_ID, bot);
-    }
-
-    function testAuctionAVaultWithoutLinesSet() public {
-        // Given
-        witch = new Witch(cauldron, ladle);
-        witch.grantRole(Witch.setLimit.selector, address(this));
-        witch.setLimit(ILK_ID, BASE_ID, max);
 
         // When
         vm.expectRevert(
@@ -692,12 +669,13 @@ contract WitchWithAuction is WitchWithMetadata {
     function testDustLimitProportionUnderDust() public {
         proportion = 0.2e18;
         vm.prank(ada);
-        witch.setLine(
+        witch.setLineAndLimit(
             ILK_ID,
             BASE_ID,
             AUCTION_DURATION,
             proportion,
-            initialOffer
+            initialOffer,
+            max
         );
 
         // 20% of this vault would be less than the min of 5k
@@ -723,12 +701,13 @@ contract WitchWithAuction is WitchWithMetadata {
     function testDustLimitRemainderUnderDust() public {
         proportion = 0.6e18;
         vm.prank(ada);
-        witch.setLine(
+        witch.setLineAndLimit(
             ILK_ID,
             BASE_ID,
             AUCTION_DURATION,
             proportion,
-            initialOffer
+            initialOffer,
+            max
         );
 
         // The remainder (40% of this vault) would be less than the min of 5k
@@ -775,12 +754,19 @@ contract WitchWithAuction is WitchWithMetadata {
         assertEq(auction2.ink, 9 ether, "ink");
     }
 
-    function testUpdateLimit() public {
+    function testUpdateLineAndLimitKeepsSum() public {
         (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
         assertEq(sum, 50 ether);
 
         vm.prank(ada);
-        witch.setLimit(ILK_ID, BASE_ID, 1);
+        witch.setLineAndLimit(
+            ILK_ID,
+            BASE_ID,
+            AUCTION_DURATION,
+            proportion,
+            initialOffer,
+            1
+        );
 
         (uint128 _max, uint128 _sum) = witch.limits(ILK_ID, BASE_ID);
 

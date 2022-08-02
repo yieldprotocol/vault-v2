@@ -89,12 +89,14 @@ contract Witch is AccessControl {
     /// @param duration Time that auctions take to go to minimal price
     /// @param proportion Vault proportion that is set for auction each time
     /// @param initialOffer Proportion of collateral that is sold at auction start (1e18 = 100%)
-    function setLine(
+    /// @param max Maximum concurrent auctioned collateral
+    function setLineAndLimit(
         bytes6 ilkId,
         bytes6 baseId,
         uint32 duration,
         uint64 proportion,
-        uint64 initialOffer
+        uint64 initialOffer,
+        uint128 max
     ) external auth {
         require(initialOffer <= 1e18, "InitialOffer above 100%");
         require(proportion <= 1e18, "Proportion above 100%");
@@ -107,22 +109,7 @@ contract Witch is AccessControl {
             initialOffer: initialOffer
         });
         emit LineSet(ilkId, baseId, duration, proportion, initialOffer);
-    }
 
-    /// @dev Governance function to set auction limits.
-    ///  - the auction duration to calculate liquidation prices
-    ///  - the proportion of the collateral that will be sold at auction start
-    ///  - the maximum collateral that can be auctioned at the same time
-    ///  - the minimum collateral that must be left when buying, unless buying all
-    ///  - The decimals for maximum and minimum
-    /// @param ilkId Id of asset used for collateral
-    /// @param baseId Id of asset used for underlying
-    /// @param max Maximum concurrent auctioned collateral
-    function setLimit(
-        bytes6 ilkId,
-        bytes6 baseId,
-        uint128 max
-    ) external auth {
         limits[ilkId][baseId] = DataTypes.Limits({
             max: max,
             sum: limits[ilkId][baseId].sum // sum is initialized at zero, and doesn't change when changing any ilk parameters
@@ -169,8 +156,7 @@ contract Witch is AccessControl {
         DataTypes.Series memory series = cauldron.series(vault.seriesId);
 
         DataTypes.Limits memory limits_ = limits[vault.ilkId][series.baseId];
-        DataTypes.Line memory line = lines[vault.ilkId][series.baseId];
-        if (limits_.max == 0 || line.proportion == 0) {
+        if (limits_.max == 0) {
             revert VaultNotLiquidable(vault.ilkId, series.baseId);
         }
         // There is a limit on how much collateral can be concurrently put at auction, but it is a soft limit.
@@ -183,7 +169,7 @@ contract Witch is AccessControl {
         DataTypes.Balances memory balances = cauldron.balances(vaultId);
         DataTypes.Debt memory debt = cauldron.debt(series.baseId, vault.ilkId);
 
-        auction_ = _calcAuction(vault, series, line, to, balances, debt);
+        auction_ = _calcAuction(vault, series, to, balances, debt);
 
         limits_.sum += auction_.ink;
         limits[vault.ilkId][series.baseId] = limits_;
@@ -207,13 +193,12 @@ contract Witch is AccessControl {
     function _calcAuction(
         DataTypes.Vault memory vault,
         DataTypes.Series memory series,
-        DataTypes.Line memory line,
         address to,
         DataTypes.Balances memory balances,
         DataTypes.Debt memory debt
     ) internal view returns (DataTypes.Auction memory) {
         // We try to partially liquidate the vault if possible.
-        uint256 proportion = line.proportion;
+        uint256 proportion = lines[vault.ilkId][series.baseId].proportion;
 
         // There's a min amount of debt that a vault can hold,
         // this limit is set so liquidations are big enough to be attractive,
@@ -576,8 +561,7 @@ contract Witch is AccessControl {
                 series.baseId,
                 vault.ilkId
             );
-            DataTypes.Line memory line = lines[vault.ilkId][series.baseId];
-            auction_ = _calcAuction(vault, series, line, to, balances, debt);
+            auction_ = _calcAuction(vault, series, to, balances, debt);
         }
 
         // GT check is to cater for partial buys right before this method executes
