@@ -97,11 +97,9 @@ contract Witch is AccessControl {
     ) external auth {
         require(initialOffer <= 1e18, "InitialOffer above 100%");
         require(proportion <= 1e18, "Proportion above 100%");
-        require(
-            initialOffer == 0 || initialOffer >= 0.01e18,
-            "InitialOffer below 1%"
-        );
+        require(initialOffer >= 0.01e18, "InitialOffer below 1%");
         require(proportion >= 0.01e18, "Proportion below 1%");
+
         lines[ilkId][baseId] = DataTypes.Line({
             duration: duration,
             proportion: proportion,

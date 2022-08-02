@@ -122,7 +122,7 @@ contract WitchStateZeroTest is WitchStateZero {
     function testSetLineRequiresProportionTooLow() public {
         vm.prank(ada);
         vm.expectRevert("Proportion below 1%");
-        witch.setLine("", "", 0, 0.01e18 - 1, 0);
+        witch.setLine("", "", 0, 0.01e18 - 1, 1e18);
     }
 
     function testSetLine() public {
