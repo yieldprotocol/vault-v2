@@ -178,7 +178,7 @@ contract Witch is AccessControl {
         returns (DataTypes.Auction memory auction_)
     {
         DataTypes.Vault memory vault = cauldron.vaults(vaultId);
-        if (vault.owner == address(this) || otherWitches[vault.owner]) {
+        if (auctions[vaultId].start != 0 || otherWitches[vault.owner]) {
             revert VaultAlreadyUnderAuction(vaultId, vault.owner);
         }
         DataTypes.Series memory series = cauldron.series(vault.seriesId);
