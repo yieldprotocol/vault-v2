@@ -8,6 +8,7 @@ import "./interfaces/IJoin.sol";
 import "./interfaces/DataTypes.sol";
 import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
 import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
+import "@yield-protocol/utils-v2/contracts/math/WDivUp.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
 
 /// @title  The Witch is a DataTypes.Auction/Liquidation Engine for the Yield protocol
@@ -19,6 +20,7 @@ import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
 contract Witch is AccessControl {
     using WMul for uint256;
     using WDiv for uint256;
+    using WDivUp for uint256;
     using CastU256U128 for uint256;
 
     // ==================== User events ====================
@@ -225,13 +227,37 @@ contract Witch is AccessControl {
         DataTypes.Balances memory balances,
         DataTypes.Debt memory debt
     ) internal view returns (DataTypes.Auction memory) {
-        // We store the proportion of the vault to auction, which is the whole vault if the debt would be below dust.
-        DataTypes.Line storage line = lines[vault.ilkId][series.baseId];
-        uint128 art = uint256(balances.art).wmul(line.proportion).u128();
-        if (art < debt.min * (10**debt.dec)) art = balances.art;
-        uint128 ink = (art == balances.art)
-            ? balances.ink
-            : uint256(balances.ink).wmul(line.proportion).u128();
+        // We try to partially liquidate the vault if possible.
+        uint256 proportion = lines[vault.ilkId][series.baseId].proportion;
+
+        // There's a min amount of debt that a vault can hold,
+        // this limit is set so liquidations are big enough to be attractive,
+        // so 2 things have to be true:
+        //      a) what we are putting up for liquidation has to be over the min
+        //      b) what we leave in the vault has to be over the min (or zero) in case another liquidation has to be performed
+        uint128 min = debt.min * uint128(10**debt.dec);
+
+        // We optimistically assume the proportion to be liquidated is correct.
+        uint128 art = uint256(balances.art).wmul(proportion).u128();
+
+        // If the proportion we'd be liquidating is too small
+        if (art < min) {
+            // We up the amount to the min
+            art = min;
+            // We calculate the new proportion of the vault that we're liquidating
+            proportion = uint256(art).wdivup(balances.art);
+        }
+
+        // If the debt we'd be leaving in the vault is too small
+        if (balances.art - art < min) {
+            // We liquidate everything
+            art = balances.art;
+            // Proportion is set to 100%
+            proportion = 1e18;
+        }
+
+        // We calculate how much ink has to be put for sale based on how much art are we asking to be repaid
+        uint128 ink = uint256(balances.ink).wmul(proportion).u128();
 
         return
             DataTypes.Auction({

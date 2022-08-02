@@ -685,13 +685,54 @@ contract WitchWithAuction is WitchWithMetadata {
         witch.auction(otherVaultId, bot);
     }
 
-    function testDustLimit() public {
-        // Half of this vault would be less than the min of 5k
+    function testDustLimitProportionUnderDust() public {
+        proportion = 0.2e18;
+        vm.prank(ada);
+        witch.setLine(
+            ILK_ID,
+            BASE_ID,
+            AUCTION_DURATION,
+            proportion,
+            initialOffer
+        );
+
+        // 20% of this vault would be less than the min of 5k
         _stubVault(
             StubVault({
                 vaultId: VAULT_ID_2,
-                ink: 5 ether,
-                art: 9999e6,
+                ink: 20 ether,
+                art: 20_000e6,
+                level: -1
+            })
+        );
+
+        DataTypes.Auction memory auction2 = witch.auction(VAULT_ID_2, bot);
+
+        assertEq(auction2.owner, address(0xb0b));
+        assertEq(auction2.start, uint32(block.timestamp));
+        assertEq(auction2.baseId, series.baseId);
+        // Min amount is put for liquidation
+        assertEq(auction2.art, 5_000e6, "art");
+        assertEq(auction2.ink, 5 ether, "ink");
+    }
+
+    function testDustLimitRemainderUnderDust() public {
+        proportion = 0.6e18;
+        vm.prank(ada);
+        witch.setLine(
+            ILK_ID,
+            BASE_ID,
+            AUCTION_DURATION,
+            proportion,
+            initialOffer
+        );
+
+        // The remainder (40% of this vault) would be less than the min of 5k
+        _stubVault(
+            StubVault({
+                vaultId: VAULT_ID_2,
+                ink: 10 ether,
+                art: 10_000e6,
                 level: -1
             })
         );
@@ -702,8 +743,32 @@ contract WitchWithAuction is WitchWithMetadata {
         assertEq(auction2.start, uint32(block.timestamp));
         assertEq(auction2.baseId, series.baseId);
         // 100% of the vault was put for liquidation
-        assertEq(auction2.art, 9999e6);
-        assertEq(auction2.ink, 5 ether);
+        assertEq(auction2.art, 10_000e6, "art");
+        assertEq(auction2.ink, 10 ether, "ink");
+    }
+
+    function testDustLimitProportionUnderDustAndRemainderUnderDustAfterAdjusting()
+        public
+    {
+        // 50% of this vault would be less than the min of 5k
+        // Increasing the liquidated amount to the 5k min would leave a remainder under the limit (9000 - 5000 = 4000)
+        _stubVault(
+            StubVault({
+                vaultId: VAULT_ID_2,
+                ink: 9 ether,
+                art: 9_000e6,
+                level: -1
+            })
+        );
+
+        DataTypes.Auction memory auction2 = witch.auction(VAULT_ID_2, bot);
+
+        assertEq(auction2.owner, address(0xb0b));
+        assertEq(auction2.start, uint32(block.timestamp));
+        assertEq(auction2.baseId, series.baseId);
+        // 100% of the vault was put for liquidation
+        assertEq(auction2.art, 9_000e6, "art");
+        assertEq(auction2.ink, 9 ether, "ink");
     }
 
     function testUpdateLimit() public {
