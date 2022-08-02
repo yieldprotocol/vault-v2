@@ -1025,6 +1025,78 @@ contract WitchWithAuction is WitchWithMetadata {
         _auctionWasDeleted(VAULT_ID);
     }
 
+    function testPayBaseOnAnAuctionStartedByMaliciousActor() public {
+        address bot2 = address(0xb072);
+        address evilAddress = address(0x666);
+        _stubVault(
+            StubVault({
+                vaultId: VAULT_ID_2,
+                ink: 140 ether,
+                art: 100_000e6,
+                level: -1
+            })
+        );
+
+        vm.prank(bot2);
+        auction = witch.auction(VAULT_ID_2, evilAddress);
+
+        uint128 maxBaseIn = uint128(auction.art);
+        vm.prank(bot);
+        (uint256 liquidatorCut_, uint256 auctioneerCut_, ) = witch.calcPayout(
+            VAULT_ID_2,
+            bot,
+            maxBaseIn
+        );
+        uint128 liquidatorCut = uint128(liquidatorCut_);
+        uint128 auctioneerCut = uint128(auctioneerCut_);
+
+        uint128 totalCut = liquidatorCut + auctioneerCut;
+
+        // Reduce balances on tha vault
+        cauldron.slurp.mock(VAULT_ID_2, totalCut, maxBaseIn, balances);
+        cauldron.slurp.verify(VAULT_ID_2, totalCut, maxBaseIn);
+        // Vault returns to it's owner after all the liquidation is done
+        cauldron.give.mock(VAULT_ID_2, bob, vault);
+        cauldron.give.verify(VAULT_ID_2, bob);
+
+        // make fyToken 1:1 with base to make things simpler
+        cauldron.debtFromBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+        cauldron.debtToBase.mock(vault.seriesId, maxBaseIn, maxBaseIn);
+
+        IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
+        ladle.joins.mock(vault.ilkId, ilkJoin);
+
+        // Auctioneer share
+        // Mock is strict, so not mocking it will make it throw, which is what we want
+        // ilkJoin.exit.mock(evilAddress, auctioneerCut, auctioneerCut);
+        ilkJoin.exit.verify(evilAddress, auctioneerCut);
+
+        // Liquidator share
+        ilkJoin.exit.mock(bot, totalCut, totalCut);
+        ilkJoin.exit.verify(bot, totalCut);
+
+        IJoin baseJoin = IJoin(Mocks.mock("BaseJoin"));
+        ladle.joins.mock(series.baseId, baseJoin);
+        baseJoin.join.mock(bot, maxBaseIn, maxBaseIn);
+        baseJoin.join.verify(bot, maxBaseIn);
+
+        vm.expectEmit(true, true, true, true);
+        emit Ended(VAULT_ID_2);
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID_2, bot, totalCut, maxBaseIn);
+
+        vm.prank(bot);
+        (uint256 _liquidatorCut, uint256 _auctioneerCut, uint256 baseIn) = witch
+            .payBase(VAULT_ID_2, bot, liquidatorCut, maxBaseIn);
+
+        // Liquidator gets all
+        assertEq(_liquidatorCut, totalCut);
+        assertEq(_auctioneerCut, 0);
+        assertEq(baseIn, maxBaseIn);
+
+        _auctionWasDeleted(VAULT_ID_2);
+    }
+
     function testPayFYTokenNotEnoughBought() public {
         // Bot tries to get all collateral but auction just started
         uint128 minInkOut = 50 ether;
@@ -1180,6 +1252,72 @@ contract WitchWithAuction is WitchWithMetadata {
         assertEq(sum, 0, "sum");
 
         _auctionWasDeleted(VAULT_ID);
+    }
+
+    function testPayFYTokenAllOnAuctionStartedByMaliciousActor() public {
+        address bot2 = address(0xb072);
+        address evilAddress = address(0x666);
+        _stubVault(
+            StubVault({
+                vaultId: VAULT_ID_2,
+                ink: 140 ether,
+                art: 100_000e6,
+                level: -1
+            })
+        );
+
+        vm.prank(bot2);
+        auction = witch.auction(VAULT_ID_2, evilAddress);
+
+        uint128 maxArtIn = uint128(auction.art);
+        vm.prank(bot);
+        (uint256 liquidatorCut_, uint256 auctioneerCut_, ) = witch.calcPayout(
+            VAULT_ID_2,
+            bot,
+            maxArtIn
+        );
+        uint128 liquidatorCut = uint128(liquidatorCut_);
+        uint128 auctioneerCut = uint128(auctioneerCut_);
+
+        uint128 totalCut = liquidatorCut + auctioneerCut;
+
+        // Reduce balances on tha vault
+        cauldron.slurp.mock(VAULT_ID_2, totalCut, maxArtIn, balances);
+        cauldron.slurp.verify(VAULT_ID_2, totalCut, maxArtIn);
+        // Vault returns to it's owner after all the liquidation is done
+        cauldron.give.mock(VAULT_ID_2, bob, vault);
+        cauldron.give.verify(VAULT_ID_2, bob);
+
+        IJoin ilkJoin = IJoin(Mocks.mock("IlkJoin"));
+        ladle.joins.mock(vault.ilkId, ilkJoin);
+
+        // Auctioneer share
+        // Mock is strict, so not mocking it will make it throw, which is what we want
+        // ilkJoin.exit.mock(evilAddress, auctioneerCut, auctioneerCut);
+        ilkJoin.exit.verify(evilAddress, auctioneerCut);
+
+        // Liquidator share
+        ilkJoin.exit.mock(bot, totalCut, totalCut);
+        ilkJoin.exit.verify(bot, totalCut);
+
+        series.fyToken.burn.mock(bot, maxArtIn);
+        series.fyToken.burn.verify(bot, maxArtIn);
+
+        vm.expectEmit(true, true, true, true);
+        emit Ended(VAULT_ID_2);
+        vm.expectEmit(true, true, true, true);
+        emit Bought(VAULT_ID_2, bot, totalCut, maxArtIn);
+
+        vm.prank(bot);
+        (uint256 _liquidatorCut, uint256 _auctioneerCut, uint256 baseIn) = witch
+            .payFYToken(VAULT_ID_2, bot, liquidatorCut, maxArtIn);
+
+        // Liquidator gets all
+        assertEq(_liquidatorCut, totalCut);
+        assertEq(_auctioneerCut, 0);
+        assertEq(baseIn, maxArtIn);
+
+        _auctionWasDeleted(VAULT_ID_2);
     }
 
     function testPayFYTokenAll() public {

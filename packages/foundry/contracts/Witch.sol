@@ -194,9 +194,7 @@ contract Witch is AccessControl {
         // There is a limit on how much collateral can be concurrently put at auction, but it is a soft limit.
         // If the limit has been surpassed, no more vaults of that collateral can be put for auction.
         // This avoids the scenario where some vaults might be too large to be auctioned.
-        DataTypes.Limits memory limits_ = limits[vault.ilkId][
-            series.baseId
-        ];
+        DataTypes.Limits memory limits_ = limits[vault.ilkId][series.baseId];
         require(limits_.sum <= limits_.max, "Collateral limit reached");
 
         auction_ = _calcAuction(vault, series, to, balances, debt);
@@ -321,7 +319,13 @@ contract Witch is AccessControl {
         );
 
         // Move the assets
-        _payInk(auction_, to, liquidatorCut, auctioneerCut);
+        (liquidatorCut, auctioneerCut) = _payInk(
+            auction_,
+            to,
+            liquidatorCut,
+            auctioneerCut
+        );
+
         if (baseIn != 0) {
             // Take underlying from liquidator
             IJoin baseJoin = ladle.joins(auction_.baseId);
@@ -373,7 +377,13 @@ contract Witch is AccessControl {
         );
 
         // Move the assets
-        _payInk(auction_, to, liquidatorCut, auctioneerCut);
+        (liquidatorCut, auctioneerCut) = _payInk(
+            auction_,
+            to,
+            liquidatorCut,
+            auctioneerCut
+        );
+
         if (artIn != 0) {
             // Burn fyToken from liquidator
             cauldron.series(auction_.seriesId).fyToken.burn(msg.sender, artIn);
@@ -388,7 +398,7 @@ contract Witch is AccessControl {
         address to,
         uint256 liquidatorCut,
         uint256 auctioneerCut
-    ) internal {
+    ) internal returns (uint256, uint256) {
         // If liquidatorCut is 0, then auctioneerCut is 0 too, so no need to double check
         if (liquidatorCut > 0) {
             IJoin ilkJoin = ladle.joins(auction_.ilkId);
@@ -396,12 +406,18 @@ contract Witch is AccessControl {
 
             // Pay auctioneer's cut if necessary
             if (auctioneerCut > 0) {
-                ilkJoin.exit(auction_.auctioneer, auctioneerCut.u128());
+                try
+                    ilkJoin.exit(auction_.auctioneer, auctioneerCut.u128())
+                returns (uint128) {} catch {
+                    liquidatorCut += auctioneerCut;
+                    auctioneerCut = 0;
+                }
             }
 
             // Give collateral to the liquidator
             ilkJoin.exit(to, liquidatorCut.u128());
         }
+        return (liquidatorCut, auctioneerCut);
     }
 
     /// @notice Update accounting on the Witch and on the Cauldron. Delete the auction and give back the vault if finished.
@@ -566,9 +582,7 @@ contract Witch is AccessControl {
     ) internal view returns (uint256 liquidatorCut, uint256 auctioneerCut) {
         // Calculate how much collateral to give for paying a certain amount of debt, at a certain time, for a certain vault.
         // inkOut = (artIn / totalArt) * totalInk * (p + (1 - p) * t)
-        DataTypes.Line memory line_ = lines[auction_.ilkId][
-            auction_.baseId
-        ];
+        DataTypes.Line memory line_ = lines[auction_.ilkId][auction_.baseId];
         uint256 duration = line_.duration;
         uint256 initialProportion = line_.initialOffer;
 
@@ -581,7 +595,8 @@ contract Witch is AccessControl {
         unchecked {
             elapsed = uint32(block.timestamp) - uint256(auction_.start); // Overflow on block.timestamp is fine
         }
-        if (duration == type(uint32).max) {     // Interpreted as infinite duration
+        if (duration == type(uint32).max) {
+            // Interpreted as infinite duration
             proportionNow = initialProportion;
         } else if (elapsed > duration) {
             proportionNow = 1e18;
