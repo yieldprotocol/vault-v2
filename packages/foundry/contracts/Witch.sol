@@ -395,24 +395,24 @@ contract Witch is AccessControl {
         uint256 liquidatorCut,
         uint256 auctioneerCut
     ) internal returns (uint256, uint256) {
-        // If liquidatorCut is 0, then auctioneerCut is 0 too, so no need to double check
-        if (liquidatorCut > 0) {
-            IJoin ilkJoin = ladle.joins(auction_.ilkId);
-            require(ilkJoin != IJoin(address(0)), "Join not found");
+        IJoin ilkJoin = ladle.joins(auction_.ilkId);
+        require(ilkJoin != IJoin(address(0)), "Join not found");
 
-            // Pay auctioneer's cut if necessary
-            if (auctioneerCut > 0) {
-                try
-                    ilkJoin.exit(auction_.auctioneer, auctioneerCut.u128())
-                returns (uint128) {} catch {
-                    liquidatorCut += auctioneerCut;
-                    auctioneerCut = 0;
-                }
+        // Pay auctioneer's cut if necessary
+        if (auctioneerCut > 0) {
+            try
+                ilkJoin.exit(auction_.auctioneer, auctioneerCut.u128())
+            returns (uint128) {} catch {
+                liquidatorCut += auctioneerCut;
+                auctioneerCut = 0;
             }
+        }
 
-            // Give collateral to the liquidator
+        // Give collateral to the liquidator
+        if (liquidatorCut > 0) {
             ilkJoin.exit(to, liquidatorCut.u128());
         }
+        
         return (liquidatorCut, auctioneerCut);
     }
 
