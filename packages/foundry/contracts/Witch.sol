@@ -26,7 +26,7 @@ contract Witch is AccessControl {
     // ==================== User events ====================
 
     error VaultAlreadyUnderAuction(bytes12 vaultId, address witch);
-    error VaultNotLiquidable(bytes12 vaultId, bytes6 ilkId, bytes6 baseId);
+    error VaultNotLiquidable(bytes6 ilkId, bytes6 baseId);
     error AuctioneerRewardTooHigh(uint128 max, uint128 actual);
 
     event Auctioned(bytes12 indexed vaultId, uint256 indexed start);
@@ -51,11 +51,6 @@ contract Witch is AccessControl {
     );
     event LimitSet(bytes6 indexed ilkId, bytes6 indexed baseId, uint128 max);
     event AnotherWitchSet(address indexed value, bool isWitch);
-    event IgnoredPairSet(
-        bytes6 indexed ilkId,
-        bytes6 indexed baseId,
-        bool ignore
-    );
     event AuctioneerRewardSet(uint128 auctioneerReward);
 
     ICauldron public immutable cauldron;
@@ -68,7 +63,6 @@ contract Witch is AccessControl {
     mapping(bytes6 => mapping(bytes6 => DataTypes.Line)) public lines;
     mapping(bytes6 => mapping(bytes6 => DataTypes.Limits)) public limits;
     mapping(address => bool) public otherWitches;
-    mapping(bytes6 => mapping(bytes6 => bool)) public ignoredPairs;
 
     constructor(ICauldron cauldron_, ILadle ladle_) {
         cauldron = cauldron_;
@@ -145,19 +139,6 @@ contract Witch is AccessControl {
         emit AnotherWitchSet(value, isWitch);
     }
 
-    /// @dev Governance function to ignore pairs that can't be liquidated
-    /// @param ilkId Id of asset used for collateral
-    /// @param baseId Id of asset used for underlying
-    /// @param ignore Should this pair be ignored for liquidation
-    function setIgnoredPair(
-        bytes6 ilkId,
-        bytes6 baseId,
-        bool ignore
-    ) external auth {
-        ignoredPairs[ilkId][baseId] = ignore;
-        emit IgnoredPairSet(ilkId, baseId, ignore);
-    }
-
     /// @dev Governance function to set the % paid to whomever starts an auction
     /// @param auctioneerReward_ New % to be used, must have 18 dec precision
     function setAuctioneerReward(uint128 auctioneerReward_) external auth {
@@ -184,22 +165,23 @@ contract Witch is AccessControl {
             revert VaultAlreadyUnderAuction(vaultId, vault.owner);
         }
         DataTypes.Series memory series = cauldron.series(vault.seriesId);
-        if (ignoredPairs[vault.ilkId][series.baseId]) {
-            revert VaultNotLiquidable(vaultId, vault.ilkId, series.baseId);
+
+        DataTypes.Limits memory limits_ = limits[vault.ilkId][series.baseId];
+        DataTypes.Line memory line = lines[vault.ilkId][series.baseId];
+        if (limits_.max == 0 || line.proportion == 0) {
+            revert VaultNotLiquidable(vault.ilkId, series.baseId);
         }
+        // There is a limit on how much collateral can be concurrently put at auction, but it is a soft limit.
+        // If the limit has been surpassed, no more vaults of that collateral can be put for auction.
+        // This avoids the scenario where some vaults might be too large to be auctioned.
+        require(limits_.sum <= limits_.max, "Collateral limit reached");
 
         require(cauldron.level(vaultId) < 0, "Not undercollateralized");
 
         DataTypes.Balances memory balances = cauldron.balances(vaultId);
         DataTypes.Debt memory debt = cauldron.debt(series.baseId, vault.ilkId);
 
-        // There is a limit on how much collateral can be concurrently put at auction, but it is a soft limit.
-        // If the limit has been surpassed, no more vaults of that collateral can be put for auction.
-        // This avoids the scenario where some vaults might be too large to be auctioned.
-        DataTypes.Limits memory limits_ = limits[vault.ilkId][series.baseId];
-        require(limits_.sum <= limits_.max, "Collateral limit reached");
-
-        auction_ = _calcAuction(vault, series, to, balances, debt);
+        auction_ = _calcAuction(vault, series, line, to, balances, debt);
 
         limits_.sum += auction_.ink;
         limits[vault.ilkId][series.baseId] = limits_;
@@ -223,12 +205,13 @@ contract Witch is AccessControl {
     function _calcAuction(
         DataTypes.Vault memory vault,
         DataTypes.Series memory series,
+        DataTypes.Line memory line,
         address to,
         DataTypes.Balances memory balances,
         DataTypes.Debt memory debt
     ) internal view returns (DataTypes.Auction memory) {
         // We try to partially liquidate the vault if possible.
-        uint256 proportion = lines[vault.ilkId][series.baseId].proportion;
+        uint256 proportion = line.proportion;
 
         // There's a min amount of debt that a vault can hold,
         // this limit is set so liquidations are big enough to be attractive,
@@ -591,7 +574,8 @@ contract Witch is AccessControl {
                 series.baseId,
                 vault.ilkId
             );
-            auction_ = _calcAuction(vault, series, to, balances, debt);
+            DataTypes.Line memory line = lines[vault.ilkId][series.baseId];
+            auction_ = _calcAuction(vault, series, line, to, balances, debt);
         }
 
         // GT check is to cater for partial buys right before this method executes

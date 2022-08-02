@@ -30,11 +30,6 @@ abstract contract WitchStateZero is Test, TestConstants {
     event LimitSet(bytes6 indexed ilkId, bytes6 indexed baseId, uint128 max);
     event Point(bytes32 indexed param, address indexed value);
     event AnotherWitchSet(address indexed a, bool isWitch);
-    event IgnoredPairSet(
-        bytes6 indexed ilkId,
-        bytes6 indexed baseId,
-        bool ignore
-    );
     event AuctioneerRewardSet(uint128 auctioneerReward);
 
     bytes12 internal constant VAULT_ID = "vault";
@@ -67,7 +62,6 @@ abstract contract WitchStateZero is Test, TestConstants {
         witch.grantRole(Witch.setLine.selector, ada);
         witch.grantRole(Witch.setLimit.selector, ada);
         witch.grantRole(Witch.setAnotherWitch.selector, ada);
-        witch.grantRole(Witch.setIgnoredPair.selector, ada);
         witch.grantRole(Witch.setAuctioneerReward.selector, ada);
         vm.stopPrank();
 
@@ -198,22 +192,6 @@ contract WitchStateZeroTest is WitchStateZero {
         witch.setAnotherWitch(anotherWitch, true);
 
         assertTrue(witch.otherWitches(anotherWitch));
-    }
-
-    function testSetIgnoredPairRequiresAuth() public {
-        vm.prank(bob);
-        vm.expectRevert("Access denied");
-        witch.setIgnoredPair("", "", true);
-    }
-
-    function testSetIgnoredPair() public {
-        vm.expectEmit(true, true, false, true);
-        emit IgnoredPairSet(ILK_ID, BASE_ID, true);
-
-        vm.prank(ada);
-        witch.setIgnoredPair(ILK_ID, BASE_ID, true);
-
-        assertTrue(witch.ignoredPairs(ILK_ID, BASE_ID));
     }
 
     function testSetAuctioneerRewardRequiresAuth() public {
@@ -406,16 +384,31 @@ contract WitchWithMetadataTest is WitchWithMetadata {
         witch.auction(VAULT_ID, bot);
     }
 
-    function testVaultIsMadeOfAnIgnoredPair() public {
+    function testAuctionAVaultWithoutLimitsSet() public {
         // Given
-        vm.prank(ada);
-        witch.setIgnoredPair(ILK_ID, BASE_ID, true);
+        witch = new Witch(cauldron, ladle);
 
         // When
         vm.expectRevert(
             abi.encodeWithSelector(
                 Witch.VaultNotLiquidable.selector,
-                VAULT_ID,
+                ILK_ID,
+                BASE_ID
+            )
+        );
+        witch.auction(VAULT_ID, bot);
+    }
+
+    function testAuctionAVaultWithoutLinesSet() public {
+        // Given
+        witch = new Witch(cauldron, ladle);
+        witch.grantRole(Witch.setLimit.selector, address(this));
+        witch.setLimit(ILK_ID, BASE_ID, max);
+
+        // When
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Witch.VaultNotLiquidable.selector,
                 ILK_ID,
                 BASE_ID
             )
