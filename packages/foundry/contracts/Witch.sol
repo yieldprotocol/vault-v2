@@ -603,7 +603,8 @@ contract Witch is AccessControl {
         } else {
             proportionNow =
                 uint256(initialProportion) +
-                uint256(1e18 - initialProportion).wmul(elapsed.wdiv(duration));
+                (uint256(1e18 - initialProportion) * elapsed) /
+                duration;
         }
 
         uint256 inkAtEnd = uint256(artIn).wdiv(auction_.art).wmul(auction_.ink);
