@@ -357,6 +357,14 @@ contract WitchWithMetadataTest is WitchWithMetadata {
         assertLe(liquidatorCut, 50 ether);
     }
 
+    function testWitchIsTooOld() public {
+        vm.warp(uint256(type(uint32).max) + 1);
+        vm.expectRevert(
+            abi.encodeWithSelector(Witch.WitchPermanentlyDisabled.selector)
+        );
+        witch.auction(VAULT_ID, bot);
+    }
+
     function testVaultNotUndercollateralised() public {
         cauldron.level.mock(VAULT_ID, 0);
         vm.expectRevert("Not undercollateralized");
@@ -471,6 +479,9 @@ contract WitchWithAuction is WitchWithMetadata {
 
     function setUp() public virtual override {
         super.setUp();
+
+        // Test everyithing on the last moment the witch would be usable
+        vm.warp(type(uint32).max);
 
         cauldron.level.mock(VAULT_ID, -1);
         cauldron.give.mock(VAULT_ID, address(witch), vault);

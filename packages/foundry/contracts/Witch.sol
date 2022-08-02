@@ -28,6 +28,7 @@ contract Witch is AccessControl {
     error VaultAlreadyUnderAuction(bytes12 vaultId, address witch);
     error VaultNotLiquidable(bytes6 ilkId, bytes6 baseId);
     error AuctioneerRewardTooHigh(uint128 max, uint128 actual);
+    error WitchPermanentlyDisabled();
 
     event Auctioned(bytes12 indexed vaultId, uint256 indexed start);
     event Cancelled(bytes12 indexed vaultId);
@@ -158,6 +159,9 @@ contract Witch is AccessControl {
         external
         returns (DataTypes.Auction memory auction_)
     {
+        if (block.timestamp > type(uint32).max) {
+            revert WitchPermanentlyDisabled();
+        }
         DataTypes.Vault memory vault = cauldron.vaults(vaultId);
         if (auctions[vaultId].start != 0 || otherWitches[vault.owner]) {
             revert VaultAlreadyUnderAuction(vaultId, vault.owner);
@@ -594,15 +598,8 @@ contract Witch is AccessControl {
         uint256 duration = line_.duration;
         uint256 initialProportion = line_.initialOffer;
 
-        // If the world has not turned to ashes and darkness, auctions will malfunction on
-        // the 7th of February 2106, at 06:28:16 GMT
-        // TODO: Replace this contract before then 😰
-        // UPDATE: Added reminder to Google calendar ✅
-        uint256 elapsed;
         uint256 proportionNow;
-        unchecked {
-            elapsed = uint32(block.timestamp) - uint256(auction_.start); // Overflow on block.timestamp is fine
-        }
+        uint256 elapsed = block.timestamp - uint256(auction_.start);
         if (duration == type(uint32).max) {
             // Interpreted as infinite duration
             proportionNow = initialProportion;
