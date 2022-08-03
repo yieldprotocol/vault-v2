@@ -47,7 +47,7 @@ describe('Join1155', function () {
 
   beforeEach(async () => {
     underlying = (await deployContract(ownerAcc, ERC20MockArtifact, ['', ''])) as ERC20Mock
-    underlyingJoin = (await deployContract(ownerAcc, JoinArtifact, [underlying.address])) as ERC20Mock
+    underlyingJoin = (await deployContract(ownerAcc, JoinArtifact, [underlying.address])) as Join
     fCash = (await deployContract(ownerAcc, FCashMockArtifact, [underlying.address, fCashId])) as FCashMock
     join = (await deployContract(ownerAcc, NotionalJoinArtifact, [
       fCash.address,
@@ -58,10 +58,7 @@ describe('Join1155', function () {
     ])) as NotionalJoin
 
     await underlyingJoin.grantRoles(
-      [
-        id(underlyingJoin.interface, 'join(address,uint128)'),
-        id(underlyingJoin.interface, 'exit(address,uint128)'),
-      ],
+      [id(underlyingJoin.interface, 'join(address,uint128)'), id(underlyingJoin.interface, 'exit(address,uint128)')],
       join.address
     )
 
