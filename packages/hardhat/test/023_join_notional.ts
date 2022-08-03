@@ -4,13 +4,12 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 
 const { WAD, MAX256 } = constants
 
+import JoinArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/Join.sol/Join.json'
 import NotionalJoinArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/other/notional/NotionalJoin.sol/NotionalJoin.json'
 import ERC20MockArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/mocks/ERC20Mock.sol/ERC20Mock.json'
 import FCashMockArtifact from '../artifacts/@yield-protocol/vault-v2/contracts/other/notional/FCashMock.sol/FCashMock.json'
 
-import { NotionalJoin } from '../typechain/NotionalJoin'
-import { ERC20Mock } from '../typechain/ERC20Mock'
-import { FCashMock } from '../typechain/FCashMock'
+import { Join, NotionalJoin, ERC20Mock, FCashMock } from '../typechain'
 
 import { ethers, waffle } from 'hardhat'
 import { expect } from 'chai'
@@ -24,6 +23,7 @@ describe('Join1155', function () {
   let owner: string
   let otherAcc: SignerWithAddress
   let other: string
+  let underlyingJoin: Join
   let join: NotionalJoin
   let fCash: FCashMock
   let underlying: ERC20Mock
@@ -47,13 +47,23 @@ describe('Join1155', function () {
 
   beforeEach(async () => {
     underlying = (await deployContract(ownerAcc, ERC20MockArtifact, ['', ''])) as ERC20Mock
+    underlyingJoin = (await deployContract(ownerAcc, JoinArtifact, [underlying.address])) as ERC20Mock
     fCash = (await deployContract(ownerAcc, FCashMockArtifact, [underlying.address, fCashId])) as FCashMock
     join = (await deployContract(ownerAcc, NotionalJoinArtifact, [
       fCash.address,
       underlying.address,
+      underlyingJoin.address,
       maturity,
       currencyId,
     ])) as NotionalJoin
+
+    await underlyingJoin.grantRoles(
+      [
+        id(underlyingJoin.interface, 'join(address,uint128)'),
+        id(underlyingJoin.interface, 'exit(address,uint128)'),
+      ],
+      join.address
+    )
 
     await join.grantRoles(
       [
