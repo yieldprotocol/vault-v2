@@ -1,8 +1,15 @@
 {
   "name": "@yield-protocol/vault-v2",
-  "version": "0.16.6",
+  "version": "0.17.1-rc1",
   "description": "Yield Collateralized Debt Engine v2",
   "author": "Yield Inc.",
+  "files": [
+    "contracts/*.sol",
+    "contracts/**/*.sol",
+    "!contracts/mocks/**/*.sol",
+    "!contracts/deprecated/**/*.sol",
+    "!lib"
+  ],
   "scripts": {
     "forge:build": "forge build",
     "forge:test": "forge test",

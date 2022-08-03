@@ -10,7 +10,7 @@ import { CHI, RATE, ETH, DAI, USDC } from '../../src/constants'
 import CauldronArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/Cauldron.sol/Cauldron.json'
 import LadleArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/Ladle.sol/Ladle.json'
 import WandArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/deprecated/Wand.sol/Wand.json'
-import WitchArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/Witch.sol/Witch.json'
+import WitchOldArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/deprecated/WitchOld.sol/WitchOld.json'
 import JoinFactoryArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/deprecated/JoinFactoryMock.sol/JoinFactoryMock.json'
 import PoolFactoryMockArtifact from '../../artifacts/@yield-protocol/vault-v2/contracts/deprecated/PoolFactoryMock.sol/PoolFactoryMock.json'
 
@@ -29,7 +29,7 @@ import { Cauldron } from '../../typechain/Cauldron'
 import { Join } from '../../typechain/Join'
 import { FYToken } from '../../typechain/FYToken'
 import { Ladle } from '../../typechain/Ladle'
-import { Witch } from '../../typechain/Witch'
+import { WitchOld } from '../../typechain/WitchOld'
 import { IJoinFactory } from '../../typechain/IJoinFactory'
 import { IFYTokenFactory } from '../../typechain/IFYTokenFactory'
 import { Wand } from '../../typechain/Wand'
@@ -56,7 +56,7 @@ export class YieldEnvironment {
   owner: SignerWithAddress
   cauldron: Cauldron
   ladle: LadleWrapper
-  witch: Witch
+  witch: WitchOld
   joinFactory: IJoinFactory
   poolFactory: PoolFactoryMock
   wand: Wand
@@ -71,7 +71,7 @@ export class YieldEnvironment {
     owner: SignerWithAddress,
     cauldron: Cauldron,
     ladle: LadleWrapper,
-    witch: Witch,
+    witch: WitchOld,
     joinFactory: IJoinFactory,
     poolFactory: PoolFactoryMock,
     wand: Wand,
@@ -126,7 +126,7 @@ export class YieldEnvironment {
     )
   }
 
-  public static async cauldronWitchAuth(cauldron: Cauldron, receiver: string) {
+  public static async cauldronWitchOldAuth(cauldron: Cauldron, receiver: string) {
     await cauldron.grantRoles(
       [id(cauldron.interface, 'give(bytes12,address)'), id(cauldron.interface, 'slurp(bytes12,uint128,uint128)')],
       receiver
@@ -157,7 +157,7 @@ export class YieldEnvironment {
     )
   }
 
-  public static async witchGovAuth(witch: Witch, receiver: string) {
+  public static async witchGovAuth(witch: WitchOld, receiver: string) {
     await witch.grantRoles(
       [
         id(witch.interface, 'point(bytes32,address)'),
@@ -290,7 +290,7 @@ export class YieldEnvironment {
     const cauldron = (await deployContract(owner, CauldronArtifact, [])) as Cauldron
     const innerLadle = (await deployContract(owner, LadleArtifact, [cauldron.address, weth.address])) as Ladle
     const ladle = new LadleWrapper(innerLadle)
-    const witch = (await deployContract(owner, WitchArtifact, [cauldron.address, ladle.address])) as Witch
+    const witch = (await deployContract(owner, WitchOldArtifact, [cauldron.address, ladle.address])) as WitchOld
     const joinFactory = (await deployContract(owner, JoinFactoryArtifact, [])) as IJoinFactory
     const poolFactory = (await deployContract(owner, PoolFactoryMockArtifact, [])) as PoolFactoryMock
 
@@ -318,7 +318,7 @@ export class YieldEnvironment {
 
     // ==== Orchestration ====
     await this.cauldronLadleAuth(cauldron, ladle.address)
-    await this.cauldronWitchAuth(cauldron, witch.address)
+    await this.cauldronWitchOldAuth(cauldron, witch.address)
 
     await this.cauldronGovAuth(cauldron, wand.address)
     await this.ladleGovAuth(ladle, wand.address)
