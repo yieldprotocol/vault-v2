@@ -69,6 +69,8 @@ abstract contract AfterMaturity is ZeroState {
 }
 
 abstract contract OnceMatured is AfterMaturity {
+    uint256 accrual = FullMath.mulDiv(WAD, 110, 100);                       // 10%
+
     function setUp() public override {
         super.setUp();
         fyDAI.mature();
@@ -172,15 +174,13 @@ contract OnceMaturedTest is OnceMatured {
 
     function testRedeemWithAccrual() public {
         console.log("redeems according to chi accrual");
-        uint256 accrual = FullMath.mulDiv(WAD, 110, 100);                       // 10%
         uint256 ownerBalanceBefore = IERC20(dai).balanceOf(address(this));
         uint256 joinBalanceBefore = IERC20(dai).balanceOf(address(daiJoin));
-        // deal(address(fyDAI), address(this), 1.1e18);                            // add 10% to amount of fyDAI to reflect accrual
         vm.expectEmit(true, true, false, true);
         emit Redeemed(
             address(this), 
             address(this), 
-            FullMath.mulDiv(WAD, accrual, WAD), 
+            WAD, 
             FullMath.mulDiv(WAD, accrual, WAD)
         );
         fyDAI.redeem(address(this), FullMath.mulDiv(WAD, accrual, WAD));
@@ -200,10 +200,8 @@ contract OnceMaturedTest is OnceMatured {
 
     function testRedeemOnTransfer() public {
         console.log("redeems when transfering to the fyToken contract");
-        // uint256 accrual = FullMath.mulDiv(WAD, 110, 100);
         uint256 ownerBalanceBefore = IERC20(dai).balanceOf(address(this));
         uint256 joinBalanceBefore = IERC20(dai).balanceOf(address(daiJoin));
-        // deal(address(fyDAI), address(this), 1.1e18);                            // add 10% to amount of fyDAI to reflect accrual
         fyDAI.transfer(address(fyDAI), WAD);
         assertEq(fyDAI.balanceOf(address(this)), 0);
         vm.expectEmit(true, true, false, true);
@@ -211,16 +209,16 @@ contract OnceMaturedTest is OnceMatured {
             address(this),
             address(this), 
             WAD, 
-            WAD
+            FullMath.mulDiv(WAD, accrual, WAD)
         );
         fyDAI.redeem(address(this), 0);
         assertEq(
             IERC20(dai).balanceOf(address(this)), 
-            ownerBalanceBefore + WAD
+            ownerBalanceBefore + FullMath.mulDiv(WAD, accrual, WAD)
         );
         assertEq(
             IERC20(dai).balanceOf(address(daiJoin)), 
-            joinBalanceBefore - WAD
+            joinBalanceBefore - FullMath.mulDiv(WAD, accrual, WAD)
         );
     }
 }
