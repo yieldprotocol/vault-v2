@@ -81,7 +81,7 @@ describe('Join1155', function () {
     expect(await join.join(owner, WAD))
       .to.emit(fCash, 'TransferSingle')
       .withArgs(join.address, owner, join.address, fCashId, WAD)
-    expect(await join.storedBalance()).to.equal(WAD)
+    expect(await underlyingJoin.storedBalance()).to.equal(WAD)
   })
 
   describe('with fCashs in the join', async () => {
@@ -91,14 +91,14 @@ describe('Join1155', function () {
 
     it('accepts surplus as a transfer', async () => {
       expect(await join.join(owner, WAD)).to.not.emit(fCash, 'TransferSingle')
-      expect(await join.storedBalance()).to.equal(WAD)
+      expect(await underlyingJoin.storedBalance()).to.equal(WAD)
     })
 
     it('combines surplus and fCashs pulled from the user', async () => {
       expect(await join.join(owner, WAD.mul(2)))
         .to.emit(fCash, 'TransferSingle')
         .withArgs(join.address, owner, join.address, fCashId, WAD)
-      expect(await join.storedBalance()).to.equal(WAD.mul(2))
+      expect(await underlyingJoin.storedBalance()).to.equal(WAD.mul(2))
     })
 
     describe('with a positive stored balance', async () => {
@@ -110,7 +110,7 @@ describe('Join1155', function () {
         expect(await join.exit(owner, WAD))
           .to.emit(fCash, 'TransferSingle')
           .withArgs(join.address, join.address, owner, fCashId, WAD)
-        expect(await join.storedBalance()).to.equal(WAD)
+        expect(await underlyingJoin.storedBalance()).to.equal(WAD)
       })
 
       describe('after maturity', async () => {
@@ -134,7 +134,7 @@ describe('Join1155', function () {
           expect(await join.redeem())
             .to.emit(join, 'Redeemed')
             .withArgs(WAD.mul(2), WAD.mul(4), WAD.mul(2))
-          expect(await join.storedBalance()).to.equal(WAD.mul(4))
+          expect(await underlyingJoin.storedBalance()).to.equal(WAD.mul(4))
           expect(await join.accrual()).to.equal(WAD.mul(2))
         })
 
@@ -151,7 +151,7 @@ describe('Join1155', function () {
             expect(await join.exit(owner, WAD))
               .to.emit(underlying, 'Transfer')
               .withArgs(join.address, owner, WAD.mul(2))
-            expect(await join.storedBalance()).to.equal(WAD.mul(2))
+            expect(await underlyingJoin.storedBalance()).to.equal(WAD.mul(2))
             expect(await underlying.balanceOf(owner)).to.equal(WAD.mul(2))
           })
         })
@@ -162,7 +162,7 @@ describe('Join1155', function () {
             .withArgs(WAD.mul(2), WAD.mul(4), WAD.mul(2))
             .to.emit(underlying, 'Transfer')
             .withArgs(join.address, owner, WAD.mul(2))
-          expect(await join.storedBalance()).to.equal(WAD.mul(2))
+          expect(await underlyingJoin.storedBalance()).to.equal(WAD.mul(2))
           expect(await join.accrual()).to.equal(WAD.mul(2))
           expect(await underlying.balanceOf(owner)).to.equal(WAD.mul(2))
         })
