@@ -30,7 +30,7 @@ abstract contract WitchStateZero is Test, TestConstants {
     event LimitSet(bytes6 indexed ilkId, bytes6 indexed baseId, uint128 max);
     event Point(bytes32 indexed param, address indexed value);
     event AnotherWitchSet(address indexed a, bool isWitch);
-    event AuctioneerRewardSet(uint128 auctioneerReward);
+    event AuctioneerRewardSet(uint256 auctioneerReward);
 
     bytes12 internal constant VAULT_ID = "vault";
     bytes6 internal constant ILK_ID = ETH;
@@ -353,9 +353,7 @@ contract WitchWithMetadataTest is WitchWithMetadata {
 
     function testWitchIsTooOld() public {
         vm.warp(uint256(type(uint32).max) + 1);
-        vm.expectRevert(
-            abi.encodeWithSelector(Witch.WitchPermanentlyDisabled.selector)
-        );
+        vm.expectRevert(abi.encodeWithSelector(Witch.WitchIsDead.selector));
         witch.auction(VAULT_ID, bot);
     }
 
