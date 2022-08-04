@@ -16,7 +16,7 @@ import {DAIMock} from "../mocks/DAIMock.sol";
 
 using stdStorage for StdStorage;
 
-abstract contract StateMatured is Test, TestConstants {
+abstract contract StateZero is Test, TestConstants {
     using Mocks for *;
 
     Join public underlyingJoin; 
@@ -26,16 +26,23 @@ abstract contract StateMatured is Test, TestConstants {
         
     address user; 
     address deployer;
+    uint256 fCashTokens;
 
-    // arbitrary values for testing
-    uint40 maturity = 1651743369;   // 4/07/2022 23:09:57 GMT
-    uint16 currencyId = 2;         
-    uint256 fCashId = 4;
+    uint40 maturity;  
+    uint16 currencyId;         
+    uint256 fCashId;
 
     event Redeemed(uint256 fCash, uint256 underlying, uint256 accrual);
+    event TransferSingle(address indexed operator, address indexed from, address indexed to, uint256 id, uint256 amount);
 
     function setUp() public virtual {
         
+        // arbitrary values for testing
+        fCashTokens = 10e18;
+        maturity = 1671840000;  // 4/07/2022 23:09:57 GMT
+        currencyId = 2;         
+        fCashId = 563377944461313;
+
         //... Users ...
         user = address(1);
         vm.label(user, "user");
@@ -48,6 +55,7 @@ abstract contract StateMatured is Test, TestConstants {
         vm.label(address(dai), "Dai token contract");
         
         fcash = new FCashMock(ERC20Mock(address(dai)), fCashId);
+        fcash.setAccrual(1e18);  // set fCash == underlying for simplicity
         vm.label(address(fcash), "fCashMock contract");
 
         //... Deploy Joins and grant access ...
@@ -57,29 +65,114 @@ abstract contract StateMatured is Test, TestConstants {
         njoin = new NotionalJoin(address(fcash), address(dai), address(underlyingJoin), maturity, currencyId);
         vm.label(address(njoin), "Notional Join");
 
+        //... Permissions ...
+        njoin.grantRole(NotionalJoin.join.selector, deployer);
         njoin.grantRole(NotionalJoin.exit.selector, deployer);
-        njoin.grantRole(NotionalJoin.exit.selector, deployer);
+        njoin.grantRole(NotionalJoin.retrieve.selector, deployer);
+        njoin.grantRole(NotionalJoin.retrieveERC1155.selector, deployer);
+
         underlyingJoin.grantRole(Join.join.selector, address(njoin));       
         underlyingJoin.grantRole(Join.exit.selector, address(njoin));
         
-       // njoin has 10 fCash tokens 
-       stdstore
-       .target(address(fcash))
-       .sig(fcash.balanceOf.selector)
-       .with_key(address(njoin))
-       .with_key(fCashId)
-       .checked_write(10e18);
 
-       // storedBalance = 10 fCash Tokens
-        stdstore
-       .target(address(njoin))
-       .sig(njoin.storedBalance.selector)
-       .checked_write(10e18);
-
-       fcash.setAccrual(1e18);  // set fCash == underlying for simplicity
-
-        vm.warp(1651743369 + 100);  // set blocktime to pass maturity
+        fcash.mint(user, fCashId, 10e18, "");
+        vm.prank(user);
+        fcash.setApprovalForAll(address(njoin), true);
+        
     }  
+}
+
+contract StateZeroTest is StateZero {
+    
+    function testJoin() public {
+        console2.log("join pulls fCash from user");
+
+        vm.expectEmit(true, true, true, true);
+        emit TransferSingle(address(njoin), user, address(njoin), fCashId, 1e18);
+
+        njoin.join(user, 1e18);
+
+        assertTrue(njoin.storedBalance() ==  1e18);
+        assertTrue(fcash.balanceOf(user, fCashId) ==  fCashTokens - 1e18);
+    }
+}
+
+// Njoin receives fcash tokens from user
+abstract contract StateJoined is StateZero {
+    function setUp() public override virtual {
+        super.setUp();
+
+        njoin.join(user, 2e18);
+
+    }
+}
+
+// Njoin has 2e18 fCash | storedBalance = 2e18
+contract StateJoinedTest is StateJoined {
+
+    function testAcceptSurplus() public {
+        console2.log("accepts surplus as a transfer");
+        
+        //surplus 
+        vm.prank(user);
+        fcash.safeTransferFrom(user, address(njoin), fCashId, 1e18, "");
+
+        // no TransferSingle event emitted
+        njoin.join(user, 1e18);
+        
+        assertTrue(njoin.storedBalance() ==  3e18);
+        assertTrue(fcash.balanceOf(user, fCashId) ==  fCashTokens - 3e18);
+
+    }
+
+    function testSurplusRegistered() public {
+        console2.log("combines surplus and fCashs pulled from the user");
+
+        // surplus of 1e18
+        vm.prank(user);
+        fcash.safeTransferFrom(user, address(njoin), fCashId, 1e18, "");
+
+        vm.expectEmit(true, true, true, true);
+        emit TransferSingle(address(njoin), user, address(njoin), fCashId, 1e18);
+        
+        // 1e18 transferred from user | 1e18 taken from surplus
+        njoin.join(user, 2e18);
+
+        assertTrue(njoin.storedBalance() ==  4e18);
+        assertTrue(fcash.balanceOf(user, fCashId) ==  fCashTokens - 4e18);
+    }
+}
+
+abstract contract StatePositiveStoredBalance is StateJoined {
+    function setUp() public override virtual {
+        super.setUp(); 
+    }
+}
+
+// Njoin holds 2e18 of fCash
+contract StatePositiveStoredBalanceTest is StatePositiveStoredBalance {
+    function testExit() public {
+        console2.log("pushes fCash to user");
+
+        vm.expectEmit(true, true, true, true);
+        emit TransferSingle(address(njoin), address(njoin), user, fCashId, 1e18);
+
+        njoin.exit(user, 1e18);
+
+        assertTrue(njoin.storedBalance() ==  1e18);
+        assertTrue(fcash.balanceOf(user, fCashId) ==  fCashTokens - 1e18);
+
+    }
+}
+
+// Njoin holds 2e18 of fCash
+abstract contract StateMatured is StatePositiveStoredBalance {
+    function setUp() public override virtual {
+        super.setUp();
+        
+        // set blocktime to pass maturity
+        vm.warp(maturity + 100); 
+    }
 }
 
 contract StateMaturedTest is StateMatured {
@@ -90,35 +183,35 @@ contract StateMaturedTest is StateMatured {
         console2.log("fCash tokens are mature");
         assertGe(block.timestamp, maturity);         
     }  
-    
-    // sanity check - fCash balances
-    function testFCashBalance() public {
-        console2.log("10 fDai tokens in Notional Join");
-        assertTrue(njoin.storedBalance() == 10e18); 
-        assertTrue(fcash.balanceOf(address(njoin), fCashId) == 10e18); 
-    }
-    
+       
     // sanity check - accrual
     function testAccrual() public {
         console2.log("Accrual in Njoin should be 0");
         assertTrue(njoin.accrual() == 0); 
     }
-    
+
+    function testCannotJoin() public {
+        console2.log("Cannot call join() after maturity");
+
+        vm.expectRevert("Only before maturity");
+        njoin.join(user, 1e18);
+    }
+
     function testRedeem() public {
         console2.log("First exit call should call redeem()");
 
         vm.expectEmit(true, true, true, false);
         emit Redeemed(0, 10e18, 1e18);
 
-        vm.prank(deployer);
-        njoin.exit(user, 5e18);
+        njoin.exit(user, 1e18);
         
         assertTrue(njoin.accrual() == 1e18);
         assertTrue(njoin.storedBalance() == 0); 
         assertTrue(dai.balanceOf(address(njoin)) == 0); 
-                
-        assertTrue(dai.balanceOf(user) == 5e18);
-        assertTrue(dai.balanceOf(address(underlyingJoin)) == 5e18);
+        
+        // 1 dai to user on redemption, 1 dai remains in underlyingJoin
+        assertTrue(dai.balanceOf(user) == 1e18);
+        assertTrue(dai.balanceOf(address(underlyingJoin)) == 1e18);
     }
 }
 
@@ -129,7 +222,7 @@ abstract contract StateRedeemed is StateMatured {
 
         // state transition: accrual > 0         
         vm.prank(deployer);
-        njoin.exit(user, 5e18);
+        njoin.exit(user, 1e18);
         assertTrue(njoin.accrual() == 1e18);
     }
 
@@ -140,7 +233,6 @@ contract StateRedeemedTest is StateRedeemed {
     function testCannotRedeem() public {
         console2.log("Redeem will revert since accrual > 0");
         
-        vm.prank(deployer);
         vm.expectRevert("Already redeemed");
         njoin.redeem();
     }
@@ -149,16 +241,17 @@ contract StateRedeemedTest is StateRedeemed {
         console2.log("_exitUnderlying executed");
 
         vm.prank(deployer);
-        njoin.exit(user, 5e18);
+        njoin.exit(user, 1e18);
 
         assertTrue(njoin.storedBalance() == 0); 
         assertTrue(dai.balanceOf(address(njoin)) == 0); 
         assertTrue(dai.balanceOf(address(underlyingJoin)) == 0);
 
-        assertTrue(dai.balanceOf(address(user)) == 10e18);
+        assertTrue(dai.balanceOf(address(user)) == 2e18);
         
     }
 }
+
     
     
 
