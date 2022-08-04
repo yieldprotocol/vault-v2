@@ -8,6 +8,7 @@ import "./interfaces/IJoin.sol";
 import "./interfaces/DataTypes.sol";
 import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
 import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
+import "@yield-protocol/utils-v2/contracts/math/WDivUp.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
 
 /// @title  The Witch is a DataTypes.Auction/Liquidation Engine for the Yield protocol
@@ -19,13 +20,15 @@ import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
 contract Witch is AccessControl {
     using WMul for uint256;
     using WDiv for uint256;
+    using WDivUp for uint256;
     using CastU256U128 for uint256;
 
     // ==================== User events ====================
 
     error VaultAlreadyUnderAuction(bytes12 vaultId, address witch);
-    error VaultNotLiquidable(bytes12 vaultId, bytes6 ilkId, bytes6 baseId);
-    error AuctioneerRewardTooHigh(uint128 max, uint128 actual);
+    error VaultNotLiquidable(bytes6 ilkId, bytes6 baseId);
+    error AuctioneerRewardTooHigh(uint256 max, uint256 actual);
+    error WitchIsDead();
 
     event Auctioned(bytes12 indexed vaultId, uint256 indexed start);
     event Cancelled(bytes12 indexed vaultId);
@@ -49,24 +52,18 @@ contract Witch is AccessControl {
     );
     event LimitSet(bytes6 indexed ilkId, bytes6 indexed baseId, uint128 max);
     event AnotherWitchSet(address indexed value, bool isWitch);
-    event IgnoredPairSet(
-        bytes6 indexed ilkId,
-        bytes6 indexed baseId,
-        bool ignore
-    );
-    event AuctioneerRewardSet(uint128 auctioneerReward);
+    event AuctioneerRewardSet(uint256 auctioneerReward);
 
     ICauldron public immutable cauldron;
     ILadle public ladle;
 
     // Reward given to whomever calls `auction`. It represents a % of the bought collateral
-    uint128 public auctioneerReward = 0.01e18;
+    uint256 public auctioneerReward = 0.01e18;
 
     mapping(bytes12 => DataTypes.Auction) public auctions;
     mapping(bytes6 => mapping(bytes6 => DataTypes.Line)) public lines;
     mapping(bytes6 => mapping(bytes6 => DataTypes.Limits)) public limits;
     mapping(address => bool) public otherWitches;
-    mapping(bytes6 => mapping(bytes6 => bool)) public ignoredPairs;
 
     constructor(ICauldron cauldron_, ILadle ladle_) {
         cauldron = cauldron_;
@@ -92,42 +89,27 @@ contract Witch is AccessControl {
     /// @param duration Time that auctions take to go to minimal price
     /// @param proportion Vault proportion that is set for auction each time
     /// @param initialOffer Proportion of collateral that is sold at auction start (1e18 = 100%)
-    function setLine(
+    /// @param max Maximum concurrent auctioned collateral
+    function setLineAndLimit(
         bytes6 ilkId,
         bytes6 baseId,
         uint32 duration,
         uint64 proportion,
-        uint64 initialOffer
+        uint64 initialOffer,
+        uint128 max
     ) external auth {
         require(initialOffer <= 1e18, "InitialOffer above 100%");
         require(proportion <= 1e18, "Proportion above 100%");
-        require(
-            initialOffer == 0 || initialOffer >= 0.01e18,
-            "InitialOffer below 1%"
-        );
+        require(initialOffer >= 0.01e18, "InitialOffer below 1%");
         require(proportion >= 0.01e18, "Proportion below 1%");
+
         lines[ilkId][baseId] = DataTypes.Line({
             duration: duration,
             proportion: proportion,
             initialOffer: initialOffer
         });
         emit LineSet(ilkId, baseId, duration, proportion, initialOffer);
-    }
 
-    /// @dev Governance function to set auction limits.
-    ///  - the auction duration to calculate liquidation prices
-    ///  - the proportion of the collateral that will be sold at auction start
-    ///  - the maximum collateral that can be auctioned at the same time
-    ///  - the minimum collateral that must be left when buying, unless buying all
-    ///  - The decimals for maximum and minimum
-    /// @param ilkId Id of asset used for collateral
-    /// @param baseId Id of asset used for underlying
-    /// @param max Maximum concurrent auctioned collateral
-    function setLimit(
-        bytes6 ilkId,
-        bytes6 baseId,
-        uint128 max
-    ) external auth {
         limits[ilkId][baseId] = DataTypes.Limits({
             max: max,
             sum: limits[ilkId][baseId].sum // sum is initialized at zero, and doesn't change when changing any ilk parameters
@@ -143,22 +125,9 @@ contract Witch is AccessControl {
         emit AnotherWitchSet(value, isWitch);
     }
 
-    /// @dev Governance function to ignore pairs that can't be liquidated
-    /// @param ilkId Id of asset used for collateral
-    /// @param baseId Id of asset used for underlying
-    /// @param ignore Should this pair be ignored for liquidation
-    function setIgnoredPair(
-        bytes6 ilkId,
-        bytes6 baseId,
-        bool ignore
-    ) external auth {
-        ignoredPairs[ilkId][baseId] = ignore;
-        emit IgnoredPairSet(ilkId, baseId, ignore);
-    }
-
     /// @dev Governance function to set the % paid to whomever starts an auction
     /// @param auctioneerReward_ New % to be used, must have 18 dec precision
-    function setAuctioneerReward(uint128 auctioneerReward_) external auth {
+    function setAuctioneerReward(uint256 auctioneerReward_) external auth {
         if (auctioneerReward_ > 1e18) {
             revert AuctioneerRewardTooHigh(1e18, auctioneerReward_);
         }
@@ -177,27 +146,32 @@ contract Witch is AccessControl {
         external
         returns (DataTypes.Auction memory auction_)
     {
+        // If the world has not turned to ashes and darkness, auctions will malfunction on
+        // the 7th of February 2106, at 06:28:16 GMT
+        // TODO: Replace this contract before then 😰
+        // UPDATE: Enshrined issue in a folk song that will be remembered ✅
+        if (block.timestamp > type(uint32).max) {
+            revert WitchIsDead();
+        }
         DataTypes.Vault memory vault = cauldron.vaults(vaultId);
-        if (vault.owner == address(this) || otherWitches[vault.owner]) {
+        if (auctions[vaultId].start != 0 || otherWitches[vault.owner]) {
             revert VaultAlreadyUnderAuction(vaultId, vault.owner);
         }
         DataTypes.Series memory series = cauldron.series(vault.seriesId);
-        if (ignoredPairs[vault.ilkId][series.baseId]) {
-            revert VaultNotLiquidable(vaultId, vault.ilkId, series.baseId);
+
+        DataTypes.Limits memory limits_ = limits[vault.ilkId][series.baseId];
+        if (limits_.max == 0) {
+            revert VaultNotLiquidable(vault.ilkId, series.baseId);
         }
+        // There is a limit on how much collateral can be concurrently put at auction, but it is a soft limit.
+        // If the limit has been surpassed, no more vaults of that collateral can be put for auction.
+        // This avoids the scenario where some vaults might be too large to be auctioned.
+        require(limits_.sum <= limits_.max, "Collateral limit reached");
 
         require(cauldron.level(vaultId) < 0, "Not undercollateralized");
 
         DataTypes.Balances memory balances = cauldron.balances(vaultId);
         DataTypes.Debt memory debt = cauldron.debt(series.baseId, vault.ilkId);
-
-        // There is a limit on how much collateral can be concurrently put at auction, but it is a soft limit.
-        // If the limit has been surpassed, no more vaults of that collateral can be put for auction.
-        // This avoids the scenario where some vaults might be too large to be auctioned.
-        DataTypes.Limits memory limits_ = limits[vault.ilkId][
-            series.baseId
-        ];
-        require(limits_.sum <= limits_.max, "Collateral limit reached");
 
         auction_ = _calcAuction(vault, series, to, balances, debt);
 
@@ -227,13 +201,37 @@ contract Witch is AccessControl {
         DataTypes.Balances memory balances,
         DataTypes.Debt memory debt
     ) internal view returns (DataTypes.Auction memory) {
-        // We store the proportion of the vault to auction, which is the whole vault if the debt would be below dust.
-        DataTypes.Line storage line = lines[vault.ilkId][series.baseId];
-        uint128 art = uint256(balances.art).wmul(line.proportion).u128();
-        if (art < debt.min * (10**debt.dec)) art = balances.art;
-        uint128 ink = (art == balances.art)
-            ? balances.ink
-            : uint256(balances.ink).wmul(line.proportion).u128();
+        // We try to partially liquidate the vault if possible.
+        uint256 proportion = lines[vault.ilkId][series.baseId].proportion;
+
+        // There's a min amount of debt that a vault can hold,
+        // this limit is set so liquidations are big enough to be attractive,
+        // so 2 things have to be true:
+        //      a) what we are putting up for liquidation has to be over the min
+        //      b) what we leave in the vault has to be over the min (or zero) in case another liquidation has to be performed
+        uint256 min = debt.min * (10**debt.dec);
+
+        // We optimistically assume the proportion to be liquidated is correct.
+        uint256 art = uint256(balances.art).wmul(proportion);
+
+        // If the proportion we'd be liquidating is too small
+        if (art < min) {
+            // We up the amount to the min
+            art = min;
+            // We calculate the new proportion of the vault that we're liquidating
+            proportion = art.wdivup(balances.art);
+        }
+
+        // If the debt we'd be leaving in the vault is too small
+        if (balances.art - art < min) {
+            // We liquidate everything
+            art = balances.art;
+            // Proportion is set to 100%
+            proportion = 1e18;
+        }
+
+        // We calculate how much ink has to be put for sale based on how much art are we asking to be repaid
+        uint256 ink = uint256(balances.ink).wmul(proportion);
 
         return
             DataTypes.Auction({
@@ -242,8 +240,8 @@ contract Witch is AccessControl {
                 seriesId: vault.seriesId,
                 baseId: series.baseId,
                 ilkId: vault.ilkId,
-                art: art,
-                ink: ink,
+                art: art.u128(),
+                ink: ink.u128(),
                 auctioneer: to
             });
     }
@@ -300,13 +298,11 @@ contract Witch is AccessControl {
         require(auction_.start > 0, "Vault not under auction");
 
         // Find out how much debt is being repaid
-        uint128 artIn = uint128(
-            cauldron.debtFromBase(auction_.seriesId, maxBaseIn)
-        );
+        uint256 artIn = cauldron.debtFromBase(auction_.seriesId, maxBaseIn);
 
         // If offering too much base, take only the necessary.
         artIn = artIn > auction_.art ? auction_.art : artIn;
-        baseIn = cauldron.debtToBase(auction_.seriesId, artIn);
+        baseIn = cauldron.debtToBase(auction_.seriesId, artIn.u128());
 
         // Calculate the collateral to be sold
         (liquidatorCut, auctioneerCut) = _calcPayout(auction_, to, artIn);
@@ -321,7 +317,13 @@ contract Witch is AccessControl {
         );
 
         // Move the assets
-        _payInk(auction_, to, liquidatorCut, auctioneerCut);
+        (liquidatorCut, auctioneerCut) = _payInk(
+            auction_,
+            to,
+            liquidatorCut,
+            auctioneerCut
+        );
+
         if (baseIn != 0) {
             // Take underlying from liquidator
             IJoin baseJoin = ladle.joins(auction_.baseId);
@@ -373,7 +375,13 @@ contract Witch is AccessControl {
         );
 
         // Move the assets
-        _payInk(auction_, to, liquidatorCut, auctioneerCut);
+        (liquidatorCut, auctioneerCut) = _payInk(
+            auction_,
+            to,
+            liquidatorCut,
+            auctioneerCut
+        );
+
         if (artIn != 0) {
             // Burn fyToken from liquidator
             cauldron.series(auction_.seriesId).fyToken.burn(msg.sender, artIn);
@@ -388,20 +396,27 @@ contract Witch is AccessControl {
         address to,
         uint256 liquidatorCut,
         uint256 auctioneerCut
-    ) internal {
-        // If liquidatorCut is 0, then auctioneerCut is 0 too, so no need to double check
-        if (liquidatorCut > 0) {
-            IJoin ilkJoin = ladle.joins(auction_.ilkId);
-            require(ilkJoin != IJoin(address(0)), "Join not found");
+    ) internal returns (uint256, uint256) {
+        IJoin ilkJoin = ladle.joins(auction_.ilkId);
+        require(ilkJoin != IJoin(address(0)), "Join not found");
 
-            // Pay auctioneer's cut if necessary
-            if (auctioneerCut > 0) {
-                ilkJoin.exit(auction_.auctioneer, auctioneerCut.u128());
+        // Pay auctioneer's cut if necessary
+        if (auctioneerCut > 0) {
+            // A transfer revert would block the auction, in that case the liquidator gets the auctioneer's cut as well
+            try
+                ilkJoin.exit(auction_.auctioneer, auctioneerCut.u128())
+            returns (uint128) {} catch {
+                liquidatorCut += auctioneerCut;
+                auctioneerCut = 0;
             }
+        }
 
-            // Give collateral to the liquidator
+        // Give collateral to the liquidator
+        if (liquidatorCut > 0) {
             ilkJoin.exit(to, liquidatorCut.u128());
         }
+
+        return (liquidatorCut, auctioneerCut);
     }
 
     /// @notice Update accounting on the Witch and on the Cauldron. Delete the auction and give back the vault if finished.
@@ -566,29 +581,22 @@ contract Witch is AccessControl {
     ) internal view returns (uint256 liquidatorCut, uint256 auctioneerCut) {
         // Calculate how much collateral to give for paying a certain amount of debt, at a certain time, for a certain vault.
         // inkOut = (artIn / totalArt) * totalInk * (p + (1 - p) * t)
-        DataTypes.Line memory line_ = lines[auction_.ilkId][
-            auction_.baseId
-        ];
+        DataTypes.Line memory line_ = lines[auction_.ilkId][auction_.baseId];
         uint256 duration = line_.duration;
         uint256 initialProportion = line_.initialOffer;
 
-        // If the world has not turned to ashes and darkness, auctions will malfunction on
-        // the 7th of February 2106, at 06:28:16 GMT
-        // TODO: Replace this contract before then 😰
-        // UPDATE: Added reminder to Google calendar ✅
-        uint256 elapsed;
         uint256 proportionNow;
-        unchecked {
-            elapsed = uint32(block.timestamp) - uint256(auction_.start); // Overflow on block.timestamp is fine
-        }
-        if (duration == type(uint32).max) {     // Interpreted as infinite duration
+        uint256 elapsed = block.timestamp - uint256(auction_.start);
+        if (duration == type(uint32).max) {
+            // Interpreted as infinite duration
             proportionNow = initialProportion;
         } else if (elapsed > duration) {
             proportionNow = 1e18;
         } else {
             proportionNow =
                 uint256(initialProportion) +
-                uint256(1e18 - initialProportion).wmul(elapsed.wdiv(duration));
+                (uint256(1e18 - initialProportion) * elapsed) /
+                duration;
         }
 
         uint256 inkAtEnd = uint256(artIn).wdiv(auction_.art).wmul(auction_.ink);
