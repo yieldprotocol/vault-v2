@@ -19,7 +19,7 @@ interface IWitch {
         external
         returns (DataTypes.Auction memory auction_);
 
-    /// @dev Queries the params that govern how much collateral is sold over time.
+    /// @dev Queries the params that govern how time influences collateral price in auctions
     /// @param ilkId Id of asset used for collateral
     /// @param baseId Id of asset used for underlying
     /// @return line Parameters that govern how much collateral is sold over time.
