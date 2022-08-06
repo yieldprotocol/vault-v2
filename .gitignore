@@ -20,6 +20,7 @@ typechain-old/
 deployments/
 
 # Secret files
+.env
 .etherscanKey
 .infuraKey
 .mythxKey
