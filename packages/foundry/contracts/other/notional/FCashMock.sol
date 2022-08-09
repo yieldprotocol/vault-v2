@@ -36,7 +36,7 @@ contract FCashMock is ERC1155 {
 
     function batchBalanceAction(address account, IBatchAction.BalanceAction[] calldata actions) external {
         uint256 toBurn = balanceOf[account][fCashId];
-        uint256 toMint = toBurn.wmul(accrual);
+        uint256 toMint = toBurn.wmul(accrual); 
         _burn(account, fCashId, toBurn);
         underlying.mint(account, toMint);
     }
