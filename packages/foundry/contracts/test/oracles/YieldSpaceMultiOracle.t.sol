@@ -3,13 +3,12 @@ pragma solidity >=0.8.13;
 
 import "forge-std/src/Test.sol";
 import "../utils/Mocks.sol";
-
-import "../../oracles/yieldspace/YieldSpaceMultiOracle.sol";
 import "../utils/TestConstants.sol";
+import "../../oracles/yieldspace/YieldSpaceMultiOracle.sol";
 
 contract YieldSpaceMultiOracleTest is Test, TestConstants {
-    /*
     using Mocks for *;
+    using Math64x64 for int128;
 
     event SourceSet(
         bytes6 indexed baseId,
@@ -71,40 +70,59 @@ contract YieldSpaceMultiOracleTest is Test, TestConstants {
         vm.prank(address(0xa11ce));
         oracle.setSource(FYUSDC2206, USDC, pool);
 
-        (address _pool, uint32 _maturity, bool _inverse, int128 _ts, int128 _g) = oracle.sources(FYUSDC2206, USDC);
+        (address _pool, uint32 _maturity, bool _inverse, int128 gts) = oracle
+            .sources(FYUSDC2206, USDC);
         assertEq(_pool, pool);
         assertEq(_maturity, MATURITY);
         assertEq(_inverse, false);
-        assertEq(_ts, TS);
-        assertEq(_g, G2);
+        assertEq(gts, TS.mul(G2));
 
-        (_pool, _maturity, _inverse, _ts, _g) = oracle.sources(USDC, FYUSDC2206);
+        (_pool, _maturity, _inverse, gts) = oracle.sources(USDC, FYUSDC2206);
         assertEq(_pool, pool);
         assertEq(_maturity, MATURITY);
         assertEq(_inverse, true);
-        assertEq(_ts, TS);
-        assertEq(_g, G1);
+        assertEq(gts, TS.mul(G1));
     }
 
     function testRevertOnUnknownPair() public {
-        vm.expectRevert("Source not found");
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                YieldSpaceMultiOracle.SourceNotFound.selector,
+                FYETH2206,
+                USDC
+            )
+        );
         oracle.peek(FYETH2206, USDC, 2 ether);
 
-        vm.expectRevert("Source not found");
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                YieldSpaceMultiOracle.SourceNotFound.selector,
+                FYETH2206,
+                USDC
+            )
+        );
         oracle.get(FYETH2206, USDC, 2 ether);
     }
 
     function testPeekDiscountBorrowingPosition() public {
         pOracle.peek.mock(pool, TWAR);
 
-        (uint256 value, uint256 updateTime) = oracle.peek(FYUSDC2206, USDC, 1000e6);
+        (uint256 value, uint256 updateTime) = oracle.peek(
+            FYUSDC2206,
+            USDC,
+            1000e6
+        );
 
         assertEq(updateTime, NOW);
         assertEq(value, 998.774016e6);
     }
 
     function testPeekSameAsset() public {
-        (uint256 value, uint256 updateTime) = oracle.peek(FYUSDC2206, FYUSDC2206, 1000e6);
+        (uint256 value, uint256 updateTime) = oracle.peek(
+            FYUSDC2206,
+            FYUSDC2206,
+            1000e6
+        );
 
         assertEq(updateTime, NOW);
         assertEq(value, 1000e6);
@@ -113,7 +131,11 @@ contract YieldSpaceMultiOracleTest is Test, TestConstants {
     function testPeekDiscountLendingPosition() public {
         pOracle.peek.mock(pool, TWAR);
 
-        (uint256 value, uint256 updateTime) = oracle.peek(USDC, FYUSDC2206, 1000e6);
+        (uint256 value, uint256 updateTime) = oracle.peek(
+            USDC,
+            FYUSDC2206,
+            1000e6
+        );
 
         assertEq(updateTime, NOW);
         assertEq(value, 1000.690277e6);
@@ -122,14 +144,22 @@ contract YieldSpaceMultiOracleTest is Test, TestConstants {
     function testGetDiscountBorrowingPosition() public {
         pOracle.get.mock(pool, TWAR);
 
-        (uint256 value, uint256 updateTime) = oracle.get(FYUSDC2206, USDC, 1000e6);
+        (uint256 value, uint256 updateTime) = oracle.get(
+            FYUSDC2206,
+            USDC,
+            1000e6
+        );
 
         assertEq(updateTime, NOW);
         assertEq(value, 998.774016e6);
     }
 
     function testGetSameAsset() public {
-        (uint256 value, uint256 updateTime) = oracle.get(FYUSDC2206, FYUSDC2206, 1000e6);
+        (uint256 value, uint256 updateTime) = oracle.get(
+            FYUSDC2206,
+            FYUSDC2206,
+            1000e6
+        );
 
         assertEq(updateTime, NOW);
         assertEq(value, 1000e6);
@@ -138,10 +168,13 @@ contract YieldSpaceMultiOracleTest is Test, TestConstants {
     function testGetDiscountLendingPosition() public {
         pOracle.get.mock(pool, TWAR);
 
-        (uint256 value, uint256 updateTime) = oracle.get(USDC, FYUSDC2206, 1000e6);
+        (uint256 value, uint256 updateTime) = oracle.get(
+            USDC,
+            FYUSDC2206,
+            1000e6
+        );
 
         assertEq(updateTime, NOW);
         assertEq(value, 1000.690277e6);
     }
-    */
 }

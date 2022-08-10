@@ -1,21 +1,19 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity >=0.8.13;
 
-import "./IPoolOracle.sol";
 import "@yield-protocol/yieldspace-tv/src/interfaces/IPool.sol";
-import "../../interfaces/IOracle.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
+import "@yield-protocol/yieldspace-tv/src/interfaces/IPoolOracle.sol";
 import "@yield-protocol/yieldspace-tv/src/YieldMath.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
 import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
+import "../../interfaces/IOracle.sol";
 
-// TODO: Migrate to YieldSpace-tv, unless this needs to be used with v2 pools (last one maturing EO September 2022)
-contract YieldSpaceMultiOracle { }
-
-/*
 contract YieldSpaceMultiOracle is IOracle, AccessControl {
     using CastBytes32Bytes6 for bytes32;
+    using CastU256U128 for uint256;
     using Math64x64 for int128;
     using Math64x64 for uint128;
     using Math64x64 for int256;
@@ -23,6 +21,8 @@ contract YieldSpaceMultiOracle is IOracle, AccessControl {
     using Exp64x64 for uint128;
     using WMul for uint256;
     using WDiv for uint256;
+
+    error SourceNotFound(bytes32 baseId, bytes32 quoteId);
 
     event SourceSet(
         bytes6 indexed baseId,
@@ -37,18 +37,17 @@ contract YieldSpaceMultiOracle is IOracle, AccessControl {
         address pool;
         uint32 maturity;
         bool lending;
-        int128 ts;
-        int128 g;
+        int128 gts;
     }
+
+    uint128 public constant ONE = 1e18;
 
     mapping(bytes6 => mapping(bytes6 => Source)) public sources;
 
     IPoolOracle public immutable poolOracle;
-    int128 public immutable wad64x64;
 
     constructor(IPoolOracle _poolOracle) {
         poolOracle = _poolOracle;
-        wad64x64 = uint256(1e18).fromUInt();
     }
 
     /// @notice Set or reset a FYToken oracle source and its inverse
@@ -70,10 +69,10 @@ contract YieldSpaceMultiOracle is IOracle, AccessControl {
         // Initialise or update the TWAR observations
         poolOracle.update(pool);
 
-        sources[seriesId][baseId] = Source(pool, maturity, false, ts, g2);
+        sources[seriesId][baseId] = Source(pool, maturity, false, ts.mul(g2));
         emit SourceSet(seriesId, baseId, pool, maturity, ts, g2);
 
-        sources[baseId][seriesId] = Source(pool, maturity, true, ts, g1);
+        sources[baseId][seriesId] = Source(pool, maturity, true, ts.mul(g1));
         emit SourceSet(baseId, seriesId, pool, maturity, ts, g1);
     }
 
@@ -90,11 +89,14 @@ contract YieldSpaceMultiOracle is IOracle, AccessControl {
 
         Source memory source = _source(base, quote);
 
-        if (source.maturity > updateTime) {
-            value = _discount(source, amount, uint128(poolOracle.peek(source.pool)), updateTime);
-        } else {
-            value = amount;
-        }
+        value = source.maturity > updateTime
+            ? _discount(
+                source,
+                amount,
+                poolOracle.peek(source.pool),
+                updateTime
+            )
+            : amount;
     }
 
     /// @inheritdoc IOracle
@@ -110,41 +112,50 @@ contract YieldSpaceMultiOracle is IOracle, AccessControl {
 
         Source memory source = _source(base, quote);
 
-        if (source.maturity > updateTime) {
-            value = _discount(source, amount, uint128(poolOracle.get(source.pool)), updateTime);
-        } else {
-            value = amount;
+        value = source.maturity > updateTime
+            ? _discount(source, amount, poolOracle.get(source.pool), updateTime)
+            : amount;
+    }
+
+    /// @dev Load a source for the base/quote and verify is valid
+    /// @param base The asset in which the amount to be converted is represented
+    /// @param quote The asset in which the converted value will be represented
+    function _source(bytes32 base, bytes32 quote)
+        internal
+        view
+        returns (Source memory source)
+    {
+        source = sources[base.b6()][quote.b6()];
+
+        if (source.pool == address(0)) {
+            revert SourceNotFound(base, quote);
         }
     }
 
-    function _source(bytes32 base, bytes32 quote) internal view returns (Source memory source) {
-        source = sources[base.b6()][quote.b6()];
-        require(source.pool != address(0), "Source not found");
-    }
-
-    /// @dev Discount `amount` using the TWAR oracle rates. 
+    /// @dev Discount `amount` using the TWAR oracle rates.
     /// Lending => underlying to FYToken. Borrowing => FYToken to underlying
     /// @param source Input params for the formulae
     /// @param amount Amount to be discounted
     /// @param unitPrice TWAR provided by the oracle
     /// @param updateTime Time when the TWAR observation was calculated
-    /// @return the discounted amount, <= `amount` when borrowing, >= `amount` when lending 
+    /// @return the discounted amount, <= `amount` when borrowing, >= `amount` when lending
     function _discount(
         Source memory source,
         uint256 amount,
-        uint128 unitPrice,
+        uint256 unitPrice,
         uint256 updateTime
-    ) internal view returns (uint256) {
-        int128 timeTillMaturity = uint128(source.maturity - updateTime).fromUInt();
-        int128 powerValue64 = source.g.mul(source.ts).mul(timeTillMaturity);
-        // scale to 18 dec and convert to regular non-64
-        uint128 powerValue = uint128(powerValue64.mul(wad64x64).toUInt());
+    ) internal pure returns (uint256) {
+        int128 timeTillMaturity = (source.maturity - updateTime).fromUInt();
 
-        uint256 top = unitPrice.pow(powerValue, uint128(1e18));
-        uint256 bottom = uint128(1e18).pow(powerValue, uint128(1e18)) / 1e18;
+        uint128 powerValue = source.gts.mul(timeTillMaturity).mulu(ONE).u128();
+
+        uint256 top = (unitPrice).u128().pow(powerValue, ONE);
+        uint256 bottom = ONE.pow(powerValue, ONE) / ONE;
         uint256 marginalPrice = top / bottom;
 
-        return source.lending ? amount.wmul(marginalPrice) : amount.wdiv(marginalPrice);
+        return
+            source.lending
+                ? amount.wmul(marginalPrice)
+                : amount.wdiv(marginalPrice);
     }
 }
-*/
