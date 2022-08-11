@@ -8,7 +8,7 @@ import "../../oracles/yieldspace/YieldSpaceMultiOracle.sol";
 
 contract YieldSpaceMultiOracleTest is Test, TestConstants {
     using Mocks for *;
-    using Math64x64 for int128;
+    using Math64x64 for *;
 
     event SourceSet(
         bytes6 indexed baseId,
@@ -16,15 +16,19 @@ contract YieldSpaceMultiOracleTest is Test, TestConstants {
         address indexed pool,
         uint32 maturity,
         int128 ts,
-        int128 g
+        int128 mu
     );
 
-    uint256 internal constant NOW = 1645870528;
-    uint256 internal constant TWAR = 1073988998320842609;
-    uint32 internal constant MATURITY = 1656039600;
-    int128 internal constant TS = 23381681843;
-    int128 internal constant G1 = 13835058055282163712;
-    int128 internal constant G2 = 24595658764946068821;
+    uint256 internal Z = 1_100_000e6;
+    uint256 internal Y = 1_500_000e6;
+    uint256 internal TWAR = Y.divu(Z).mulu(1e18);
+    uint256 internal NOW = 1645870528;
+    uint32 internal MATURITY = uint32(NOW + (90 * 24 * 60 * 60 * 10));
+    int128 internal TS = uint256(1).divu(25 * 365 * 24 * 60 * 60 * 10);
+    int128 internal G1 = uint256(900).divu(1000);
+    int128 internal G2 = uint256(1050).divu(1000);
+    int128 internal C = uint256(11).divu(10);
+    int128 internal MU = uint256(105).divu(100);
 
     IPoolOracle internal pOracle;
     address internal pool;
@@ -43,6 +47,8 @@ contract YieldSpaceMultiOracleTest is Test, TestConstants {
         IPool(pool).ts.mock(TS);
         IPool(pool).g1.mock(G1);
         IPool(pool).g2.mock(G2);
+        IPool(pool).getC.mock(C);
+        IPool(pool).mu.mock(MU);
 
         oracle.grantRole(oracle.setSource.selector, address(0xa11ce));
 
@@ -60,28 +66,35 @@ contract YieldSpaceMultiOracleTest is Test, TestConstants {
 
     function testSetSource() public {
         vm.expectEmit(true, true, true, true);
-        emit SourceSet(FYUSDC2206, USDC, pool, MATURITY, TS, G2);
+        emit SourceSet(FYUSDC2206, USDC, pool, MATURITY, TS, MU);
 
         vm.expectEmit(true, true, true, true);
-        emit SourceSet(USDC, FYUSDC2206, pool, MATURITY, TS, G1);
+        emit SourceSet(USDC, FYUSDC2206, pool, MATURITY, TS, MU);
 
         pOracle.update.verify(pool);
 
         vm.prank(address(0xa11ce));
         oracle.setSource(FYUSDC2206, USDC, pool);
 
-        (address _pool, uint32 _maturity, bool _inverse, int128 gts) = oracle
-            .sources(FYUSDC2206, USDC);
+        (
+            address _pool,
+            uint32 _maturity,
+            bool _inverse,
+            int128 ts,
+            int128 mu
+        ) = oracle.sources(FYUSDC2206, USDC);
         assertEq(_pool, pool);
         assertEq(_maturity, MATURITY);
         assertEq(_inverse, false);
-        assertEq(gts, TS.mul(G2));
+        assertEq(ts, TS);
+        assertEq(mu, MU);
 
-        (_pool, _maturity, _inverse, gts) = oracle.sources(USDC, FYUSDC2206);
+        (_pool, _maturity, _inverse, ts, mu) = oracle.sources(USDC, FYUSDC2206);
         assertEq(_pool, pool);
         assertEq(_maturity, MATURITY);
         assertEq(_inverse, true);
-        assertEq(gts, TS.mul(G1));
+        assertEq(ts, TS);
+        assertEq(mu, MU);
     }
 
     function testRevertOnUnknownPair() public {
@@ -104,7 +117,7 @@ contract YieldSpaceMultiOracleTest is Test, TestConstants {
         oracle.get(FYETH2206, USDC, 2 ether);
     }
 
-    function testPeekDiscountBorrowingPosition() public {
+    function testPeekFYTokenToBase() public {
         pOracle.peek.mock(pool, TWAR);
 
         (uint256 value, uint256 updateTime) = oracle.peek(
@@ -114,15 +127,22 @@ contract YieldSpaceMultiOracleTest is Test, TestConstants {
         );
 
         assertEq(updateTime, NOW);
-        assertEq(value, 998.774016e6);
+        assertEq(value, 996.838905e6);
     }
 
-    function testPeekSameAsset() public {
+    function testPeekSameBaseAsset() public {
         (uint256 value, uint256 updateTime) = oracle.peek(
             FYUSDC2206,
             FYUSDC2206,
             1000e6
         );
+
+        assertEq(updateTime, NOW);
+        assertEq(value, 1000e6);
+    }
+
+    function testPeekSameQuoteAsset() public {
+        (uint256 value, uint256 updateTime) = oracle.peek(USDC, USDC, 1000e6);
 
         assertEq(updateTime, NOW);
         assertEq(value, 1000e6);
@@ -138,7 +158,7 @@ contract YieldSpaceMultiOracleTest is Test, TestConstants {
         );
 
         assertEq(updateTime, NOW);
-        assertEq(value, 1000.690277e6);
+        assertEq(value, 1003.700614e6);
     }
 
     function testGetDiscountBorrowingPosition() public {
@@ -151,15 +171,22 @@ contract YieldSpaceMultiOracleTest is Test, TestConstants {
         );
 
         assertEq(updateTime, NOW);
-        assertEq(value, 998.774016e6);
+        assertEq(value, 996.838905e6);
     }
 
-    function testGetSameAsset() public {
+    function testGetSameBaseAsset() public {
         (uint256 value, uint256 updateTime) = oracle.get(
             FYUSDC2206,
             FYUSDC2206,
             1000e6
         );
+
+        assertEq(updateTime, NOW);
+        assertEq(value, 1000e6);
+    }
+
+    function testGetSameQuoteAsset() public {
+        (uint256 value, uint256 updateTime) = oracle.get(USDC, USDC, 1000e6);
 
         assertEq(updateTime, NOW);
         assertEq(value, 1000e6);
@@ -175,6 +202,6 @@ contract YieldSpaceMultiOracleTest is Test, TestConstants {
         );
 
         assertEq(updateTime, NOW);
-        assertEq(value, 1000.690277e6);
+        assertEq(value, 1003.700614e6);
     }
 }

@@ -11,16 +11,11 @@ import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
 import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
 import "../../interfaces/IOracle.sol";
 
+import "forge-std/src/Test.sol";
+
 contract YieldSpaceMultiOracle is IOracle, AccessControl {
     using CastBytes32Bytes6 for bytes32;
-    using CastU256U128 for uint256;
-    using Math64x64 for int128;
-    using Math64x64 for uint128;
-    using Math64x64 for int256;
-    using Math64x64 for uint256;
-    using Exp64x64 for uint128;
-    using WMul for uint256;
-    using WDiv for uint256;
+    using Math64x64 for *;
 
     error SourceNotFound(bytes32 baseId, bytes32 quoteId);
 
@@ -30,14 +25,15 @@ contract YieldSpaceMultiOracle is IOracle, AccessControl {
         address indexed pool,
         uint32 maturity,
         int128 ts,
-        int128 g
+        int128 mu
     );
 
     struct Source {
         address pool;
         uint32 maturity;
         bool lending;
-        int128 gts;
+        int128 ts;
+        int128 mu;
     }
 
     uint128 public constant ONE = 1e18;
@@ -63,17 +59,16 @@ contract YieldSpaceMultiOracle is IOracle, AccessControl {
         // Cache pool immutable values to save gas when discounting the amounts
         uint32 maturity = IPool(pool).maturity();
         int128 ts = IPool(pool).ts();
-        int128 g1 = IPool(pool).g1();
-        int128 g2 = IPool(pool).g2();
+        int128 mu = IPool(pool).mu();
 
         // Initialise or update the TWAR observations
         poolOracle.update(pool);
 
-        sources[seriesId][baseId] = Source(pool, maturity, false, ts.mul(g2));
-        emit SourceSet(seriesId, baseId, pool, maturity, ts, g2);
+        sources[seriesId][baseId] = Source(pool, maturity, false, ts, mu);
+        emit SourceSet(seriesId, baseId, pool, maturity, ts, mu);
 
-        sources[baseId][seriesId] = Source(pool, maturity, true, ts.mul(g1));
-        emit SourceSet(baseId, seriesId, pool, maturity, ts, g1);
+        sources[baseId][seriesId] = Source(pool, maturity, true, ts, mu);
+        emit SourceSet(baseId, seriesId, pool, maturity, ts, mu);
     }
 
     /// @inheritdoc IOracle
@@ -144,18 +139,33 @@ contract YieldSpaceMultiOracle is IOracle, AccessControl {
         uint256 amount,
         uint256 unitPrice,
         uint256 updateTime
-    ) internal pure returns (uint256) {
+    ) internal view returns (uint256) {
         int128 timeTillMaturity = (source.maturity - updateTime).fromUInt();
 
-        uint128 powerValue = source.gts.mul(timeTillMaturity).mulu(ONE).u128();
+        int128 g = source.lending
+            ? IPool(source.pool).g2()
+            : IPool(source.pool).g1();
+        int128 c = IPool(source.pool).getC();
 
-        uint256 top = (unitPrice).u128().pow(powerValue, ONE);
-        uint256 bottom = ONE.pow(powerValue, ONE) / ONE;
-        uint256 marginalPrice = top / bottom;
+        int128 power = source.ts.mul(g).mul(timeTillMaturity);
+
+        int128 rate = pow(c.div(source.mu).mul(unitPrice.divu(1e18)), power);
 
         return
             source.lending
-                ? amount.wmul(marginalPrice)
-                : amount.wdiv(marginalPrice);
+                ? rate.mulu(amount)
+                : amount.divu(1e18).div(rate).mulu(1e18);
+
+//         console.logInt(amount.divu(1e18));
+//         console.logInt(amount.divu(1e18).div(rate));
+//         console.log(amount.divu(1e18).div(rate).mulu(1e18));
+
+// return         rate.mulu(amount);
+    }
+
+    // TODO move to Exp64x64
+    /// @dev x^y = 2^(y*log_2(x))
+    function pow(int128 x, int128 y) internal pure returns (int128) {
+        return Math64x64.exp_2(y.mul(Math64x64.log_2(x)));
     }
 }
