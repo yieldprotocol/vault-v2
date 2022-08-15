@@ -47,10 +47,10 @@ contract YieldSpaceMultiOracle is IOracle, AccessControl {
     }
 
     /// @notice Set or reset a FYToken oracle source and its inverse
+    /// @dev    parameter ORDER IS crucial! If the ids are out of order the math will be wrong
     /// @param  seriesId FYToken id
     /// @param  baseId Underlying id
     /// @param  pool Pool where you can trade FYToken <-> underlying
-    /// @dev    parameter ORDER IS crucial!  If id's are out of order the math will be wrong
     function setSource(
         bytes6 seriesId,
         bytes6 baseId,
@@ -112,7 +112,7 @@ contract YieldSpaceMultiOracle is IOracle, AccessControl {
             : amount;
     }
 
-    /// @dev Load a source for the base/quote and verify is valid
+    /// @dev Load the source for the base/quote and verify is valid
     /// @param base The asset in which the amount to be converted is represented
     /// @param quote The asset in which the converted value will be represented
     function _source(bytes32 base, bytes32 quote)
@@ -131,41 +131,50 @@ contract YieldSpaceMultiOracle is IOracle, AccessControl {
     /// Lending => underlying to FYToken. Borrowing => FYToken to underlying
     /// @param source Input params for the formulae
     /// @param amount Amount to be discounted
-    /// @param unitPrice TWAR provided by the oracle
+    /// @param twar TWAR provided by the oracle
     /// @param updateTime Time when the TWAR observation was calculated
     /// @return the discounted amount, <= `amount` when borrowing, >= `amount` when lending
     function _discount(
         Source memory source,
         uint256 amount,
-        uint256 unitPrice,
+        uint256 twar,
         uint256 updateTime
     ) internal view returns (uint256) {
+        /*
+            https://www.desmos.com/calculator/39jpmawgpu
+            
+            p = (c/μ * twar)^t
+            p = (c/μ * twar)^(ts*g*ttm)
+        */
+
+        // ttm
         int128 timeTillMaturity = (source.maturity - updateTime).fromUInt();
 
+        int128 c = IPool(source.pool).getC();
         int128 g = source.lending
             ? IPool(source.pool).g2()
             : IPool(source.pool).g1();
-        int128 c = IPool(source.pool).getC();
 
-        int128 power = source.ts.mul(g).mul(timeTillMaturity);
+        // t = ts * g * ttm
+        int128 t = source.ts.mul(g).mul(timeTillMaturity);
 
-        int128 rate = pow(c.div(source.mu).mul(unitPrice.divu(1e18)), power);
+        // make twar a binary 64.64 fraction
+        int128 twar64 = twar.divu(ONE);
+
+        // p = (c/μ * twar)^t
+        int128 p = pow(c.div(source.mu).mul(twar64), t);
 
         return
             source.lending
-                ? rate.mulu(amount)
-                : amount.divu(1e18).div(rate).mulu(1e18);
-
-//         console.logInt(amount.divu(1e18));
-//         console.logInt(amount.divu(1e18).div(rate));
-//         console.log(amount.divu(1e18).div(rate).mulu(1e18));
-
-// return         rate.mulu(amount);
+                ? p.mulu(amount) // apply discount, result is already a regular unsigned integer
+                : amount
+                .divu(ONE) // make amount a binary 64.64 fraction
+                .div(p).mulu(ONE); // apply discount && make the result a regular unsigned integer
     }
 
     // TODO move to Exp64x64
     /// @dev x^y = 2^(y*log_2(x))
     function pow(int128 x, int128 y) internal pure returns (int128) {
-        return Math64x64.exp_2(y.mul(Math64x64.log_2(x)));
+        return y.mul(x.log_2()).exp_2();
     }
 }
