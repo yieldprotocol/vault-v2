@@ -141,6 +141,7 @@ contract YieldSpaceMultiOracle is IOracle, AccessControl {
         uint256 updateTime
     ) internal view returns (uint256) {
         /*
+            https://hackmd.io/VlQkYJ6cTzWIaIyxuR1g2w
             https://www.desmos.com/calculator/39jpmawgpu
             
             p = (c/μ * twar)^t
