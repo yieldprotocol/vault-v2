@@ -10,6 +10,7 @@ import "../../Join.sol";
 import "../../interfaces/ILadle.sol";
 import "../../oracles/uniswap/uniswapv0.8/FullMath.sol";
 import "../utils/TestConstants.sol";
+import "../../mocks/oracles/compound/CTokenChiMock.sol";
 
 abstract contract ZeroState is Test, TestConstants {
     using CastU256I128 for uint256;
@@ -28,6 +29,7 @@ abstract contract ZeroState is Test, TestConstants {
     address public dai = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
     address public weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     bytes6 public ilkId = 0x303100000000; // For DAI
+    // CHI Id 0x434849000000
     bytes6 public seriesId = 0x303130370000; // ETH/DAI Dec 22 series
     bytes12 public vaultId;
 
@@ -69,11 +71,15 @@ abstract contract AfterMaturity is ZeroState {
 }
 
 abstract contract OnceMatured is AfterMaturity {
+    CTokenChiMock public chiOracle;
     uint256 accrual = FullMath.mulDiv(WAD, 110, 100);                       // 10%
 
     function setUp() public override {
         super.setUp();
         fyDAI.mature();
+        chiOracle = new CTokenChiMock();
+        chiOracle.set(accrual);
+        fyDAI.point("oracle", address(chiOracle));
     }
 }
 
