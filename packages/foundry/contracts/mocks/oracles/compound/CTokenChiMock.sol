@@ -13,4 +13,10 @@ contract CTokenChiMock is ISourceMock {
     function exchangeRateCurrent() public view returns (uint) {
         return exchangeRateStored;
     }
+
+    function get(bytes32 base, bytes32 kind, uint256) external view returns (uint256 accumulator, uint256 updateTime)
+    {
+        accumulator = exchangeRateStored;
+        updateTime = block.timestamp;
+    }
 }

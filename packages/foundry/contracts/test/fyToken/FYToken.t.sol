@@ -9,8 +9,9 @@ import "../../FYToken.sol";
 import "../../Join.sol";
 import "../../interfaces/ILadle.sol";
 import "../../oracles/uniswap/uniswapv0.8/FullMath.sol";
-import "../utils/TestConstants.sol";
 import "../../mocks/oracles/compound/CTokenChiMock.sol";
+import "../../mocks/FlashBorrower.sol";
+import "../utils/TestConstants.sol";
 
 abstract contract ZeroState is Test, TestConstants {
     using CastU256I128 for uint256;
@@ -23,17 +24,17 @@ abstract contract ZeroState is Test, TestConstants {
     ILadle public ladle = ILadle(0x6cB18fF2A33e981D1e38A663Ca056c0a5265066A);
     FYToken public fyDAI = FYToken(0xFCb9B8C5160Cf2999f9879D8230dCed469E72eeb);
     Join public daiJoin = Join(0x4fE92119CDf873Cf8826F4E6EcfD4E578E3D44Dc);
+    FlashBorrower public borrower;
 
-    // address public oldFYDAI = 0x30d94Da9ee56d3EF0c97EBa22223784F6bCf37B9;
     address public timelock = 0x3b870db67a45611CF4723d44487EAF398fAc51E3;
     address public dai = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
     address public weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     bytes6 public ilkId = 0x303100000000; // For DAI
-    // CHI Id 0x434849000000
     bytes6 public seriesId = 0x303130370000; // ETH/DAI Dec 22 series
     bytes12 public vaultId;
 
     function setUp() virtual public {
+        borrower = new FlashBorrower(fyDAI);
         vm.createSelectFork('mainnet', 15266900);
 
         vm.startPrank(timelock);
@@ -76,10 +77,10 @@ abstract contract OnceMatured is AfterMaturity {
 
     function setUp() public override {
         super.setUp();
-        fyDAI.mature();
         chiOracle = new CTokenChiMock();
-        chiOracle.set(accrual);
-        fyDAI.point("oracle", address(chiOracle));
+        fyDAI.mature();
+        fyDAI.point("oracle", address(chiOracle));                          // Uses new oracle to update to new chi value
+        chiOracle.set(220434062002504964823286680 * 110 / 100);             // Will set chi returned to be 10% 
     }
 }
 
@@ -175,7 +176,7 @@ contract AfterMaturityTest is AfterMaturity {
 contract OnceMaturedTest is OnceMatured {
     function testChiAccrualNotBelowOne() public {
         console.log("cannot have chi accrual below 1");
-        assertEq(fyDAI.accrual(), WAD);
+        assertGt(fyDAI.accrual(), WAD);
     }
 
     function testRedeemWithAccrual() public {
@@ -189,7 +190,7 @@ contract OnceMaturedTest is OnceMatured {
             WAD, 
             FullMath.mulDiv(WAD, accrual, WAD)
         );
-        fyDAI.redeem(address(this), FullMath.mulDiv(WAD, accrual, WAD));
+        fyDAI.redeem(address(this), WAD);
         assertEq(
             IERC20(dai).balanceOf(address(this)), 
             ownerBalanceBefore + FullMath.mulDiv(WAD, accrual, WAD)
