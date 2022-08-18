@@ -24,7 +24,6 @@ abstract contract ZeroState is Test, TestConstants {
     ILadle public ladle = ILadle(0x6cB18fF2A33e981D1e38A663Ca056c0a5265066A);
     FYToken public fyDAI = FYToken(0xFCb9B8C5160Cf2999f9879D8230dCed469E72eeb);
     Join public daiJoin = Join(0x4fE92119CDf873Cf8826F4E6EcfD4E578E3D44Dc);
-    FlashBorrower public borrower;
 
     address public timelock = 0x3b870db67a45611CF4723d44487EAF398fAc51E3;
     address public dai = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
@@ -33,21 +32,13 @@ abstract contract ZeroState is Test, TestConstants {
     bytes6 public seriesId = 0x303130370000; // ETH/DAI Dec 22 series
     bytes12 public vaultId;
 
-    function setUp() virtual public {
-        borrower = new FlashBorrower(fyDAI);
+    function setUp() public virtual {
         vm.createSelectFork('mainnet', 15266900);
 
         vm.startPrank(timelock);
-        bytes4[] memory joinRoles = new bytes4[](2);
-        joinRoles[0] = daiJoin.join.selector;
-        joinRoles[1] = daiJoin.exit.selector;
-        daiJoin.grantRoles(joinRoles, address(fyDAI));
-        daiJoin.grantRoles(joinRoles, address(this));
-
-        bytes4[] memory fyTokenRoles = new bytes4[](3);
+        bytes4[] memory fyTokenRoles = new bytes4[](2);
         fyTokenRoles[0] = fyDAI.mint.selector;
-        fyTokenRoles[1] = fyDAI.burn.selector;
-        fyTokenRoles[2] = fyDAI.point.selector;
+        fyTokenRoles[1] = fyDAI.point.selector;
         fyDAI.grantRoles(fyTokenRoles, address(this));
         vm.stopPrank();
 
@@ -118,7 +109,6 @@ contract FYTokenTest is ZeroState {
     function testCantRedeemBeforeMaturity() public {
         console.log("can't redeem before maturity");
         vm.expectRevert("Only after maturity");
-        // fyDAI.redeem(WAD, address(this), address(this));     Needs to be fixed, has some error
         fyDAI.redeem(address(this), WAD);
     }
 }
