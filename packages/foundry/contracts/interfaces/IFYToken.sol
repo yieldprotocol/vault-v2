@@ -4,15 +4,9 @@ import "./IERC5095.sol";
 import "./IJoin.sol";
 
 interface IFYToken is IERC5095 {
-    /// @dev Asset that is returned on redemption.
-    function underlying() external view returns (address);
-
     /// @dev Source of redemption funds.
     function join() external view returns (IJoin);
-
-    /// @dev Unix time at which redemption of fyToken for underlying are possible
-    function maturity() external view returns (uint256);
-
+    
     /// @dev Record price data at maturity
     function mature() external;
 
