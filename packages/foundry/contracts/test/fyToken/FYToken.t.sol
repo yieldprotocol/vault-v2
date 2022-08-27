@@ -7,6 +7,7 @@ import "@yield-protocol/utils-v2/contracts/cast/CastU256I128.sol";
 import "../../Cauldron.sol";
 import "../../FYToken.sol";
 import "../../Join.sol";
+import "../../interfaces/IJoin.sol";
 import "../../interfaces/ILadle.sol";
 import "../../oracles/uniswap/uniswapv0.8/FullMath.sol";
 import "../../mocks/oracles/compound/CTokenChiMock.sol";
@@ -111,6 +112,16 @@ contract FYTokenTest is ZeroState {
         vm.expectRevert("Only after maturity");
         fyDAI.redeem(address(this), WAD);
     }
+
+    function testConvertToPrincipal() public {
+        console.log("can convert amount of underlying to principal");
+        assertEq(fyDAI.convertToPrincipal(1000), 1000);
+    }
+
+    function testConvertToUnderlying() public {
+        console.log("can convert amount of principal to underlying");
+        assertEq(fyDAI.convertToUnderlying(1000), 1000);
+    }
 }
 
 contract AfterMaturityTest is AfterMaturity {
@@ -167,6 +178,22 @@ contract OnceMaturedTest is OnceMatured {
     function testChiAccrualNotBelowOne() public {
         console.log("cannot have chi accrual below 1");
         assertGt(fyDAI.accrual(), WAD);
+    }
+
+    function testPreviewRedeem() public {
+        console.log("can preview the amount of underlying redeemed");
+    }
+
+    function testMaxRedeem() public {
+        console.log("can get the max amount of principal redeemable");
+    }
+
+    function testPreviewWithdraw() public {
+        console.log("can preview the amount of principal withdrawn");
+    }
+
+    function testMaxWithdraw() public {
+        console.log("can get the max amount of underlying withdrawable");
     }
 
     function testRedeemWithAccrual() public {

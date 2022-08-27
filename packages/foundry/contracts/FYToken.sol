@@ -87,25 +87,33 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
     }
 
     ///@dev Converts the amount of the principal to the underlying
-    function convertToUnderlying(uint256 principalAmount) external pure returns (uint256 underlyingAmount) {
+    function convertToUnderlying(uint256 principalAmount) external override returns (uint256 underlyingAmount) {
         return _convertToUnderlying(principalAmount);
     }
 
     ///@dev Converts the amount of the principal to the underlying
     ///Before maturity, returns amount as if at maturity.
-    function _convertToUnderlying(uint256 principalAmount) private pure returns (uint256 underlyingAmount) {
-        return principalAmount;
+    function _convertToUnderlying(uint256 principalAmount) internal returns (uint256 underlyingAmount) {
+        if (chiAtMaturity == CHI_NOT_SET) {
+            return principalAmount;
+        } else {
+            return _accrual();
+        }
     }
 
     ///@dev Converts the amount of the underlying to the principal
-    function convertToPrincipal(uint256 underlyingAmount) external pure returns (uint256 principalAmount) {
+    function convertToPrincipal(uint256 underlyingAmount) external override returns (uint256 principalAmount) {
         return _convertToPrincipal(underlyingAmount);
     }
 
     ///@dev Converts the amount of the underlying to the principal
     ///Before maturity, returns amount as if at maturity.
-    function _convertToPrincipal(uint256 underlyingAmount) private pure returns (uint256 principalAmount) {
-        return underlyingAmount;
+    function _convertToPrincipal(uint256 underlyingAmount) internal returns (uint256 princpalAmount) {
+        if (chiAtMaturity == CHI_NOT_SET) {
+            return underlyingAmount;
+        } else {
+            return _accrual();
+        }
     }
 
     /// @dev Mature the fyToken by recording the chi.
@@ -141,12 +149,12 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
     }
 
     ///@dev returns the maximum redeemable amount for the address holder in terms of the principal
-    function maxRedeem(address holder) external view returns (uint256 maxPrincipalAmount) {
+    function maxRedeem(address holder) external override view returns (uint256 maxPrincipalAmount) {
         return _balanceOf[holder];
     }
 
     ///@dev returns the amount of underlying redeemable in terms of the principal
-    function previewRedeem(uint256 principalAmount) external beforeMaturity returns (uint256 underlyingAmount) {
+    function previewRedeem(uint256 principalAmount) external override beforeMaturity returns (uint256 underlyingAmount) {
         return _previewRedeem(principalAmount);
     }
 
@@ -157,7 +165,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
 
     /// @dev Burn fyToken after maturity for an amount that increases according to `chi`
     /// If `amount` is 0, the contract will redeem instead the fyToken balance of this contract. Useful for batches.
-    function redeem(uint256 principalAmount, address receiver, address holder) external afterMaturity returns (uint256 underlyingAmount) {
+    function redeem(uint256 principalAmount, address receiver, address holder) external override afterMaturity returns (uint256 underlyingAmount) {
         if (msg.sender != holder) {
             uint256 allowed = _allowance[holder][msg.sender];
 
@@ -184,12 +192,12 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
     }
 
     ///@dev returns the maximum withdrawable amount for the address holder in terms of the underlying
-    function maxWithdraw(address holder) external view returns (uint256 maxUnderlyingAmount) {
+    function maxWithdraw(address holder) external override returns (uint256 maxUnderlyingAmount) {
         return _convertToUnderlying(_balanceOf[holder]);
     }
 
     ///@dev returns the amount of the principal withdrawable in terms of the underlying
-    function previewWithdraw(uint256 underlyingAmount) external beforeMaturity returns (uint256 principalAmount) {
+    function previewWithdraw(uint256 underlyingAmount) external override beforeMaturity returns (uint256 principalAmount) {
         return _previewWithdraw(underlyingAmount);
     }
 
@@ -198,7 +206,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
         principalAmount = underlyingAmount.wdiv(_accrual());
     }
 
-    function withdraw(uint256 underlyingAmount, address receiver, address holder) external afterMaturity returns (uint256 principalAmount) {
+    function withdraw(uint256 underlyingAmount, address receiver, address holder) external override afterMaturity returns (uint256 principalAmount) {
         uint256 amount_ = (underlyingAmount == 0) ? _convertToPrincipal(_balanceOf[address(this)]) : _convertToPrincipal(underlyingAmount);
         _burn(holder, amount_);
         principalAmount = amount_.wmul(_accrual());
