@@ -14,7 +14,7 @@ interface IFYToken is IERC5095 {
     function mintWithUnderlying(address to, uint256 amount) external;
 
     /// @dev Burn fyToken after maturity for an amount of underlying.
-    function redeem(address to, uint256 amount) external returns (uint256);
+    function redeem(address to) external returns (uint256);
 
     /// @dev Mint fyToken.
     /// This function can only be called by other Yield contracts, not users directly.

@@ -36,8 +36,8 @@ abstract contract ZeroState is Test, TestConstants {
     bytes12 public vaultId;
 
     function setUp() public virtual {
-        borrower = new FlashBorrower(fyDAI);
         vm.createSelectFork('mainnet', 15266900);
+        borrower = new FlashBorrower(fyDAI);
 
         // fyDAI.grantRole(fyDAI.mint.selector, address(borrower));
 

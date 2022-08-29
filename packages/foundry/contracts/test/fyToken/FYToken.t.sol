@@ -9,6 +9,7 @@ import "../../FYToken.sol";
 import "../../Join.sol";
 import "../../interfaces/IJoin.sol";
 import "../../interfaces/ILadle.sol";
+import "../../interfaces/IOracle.sol";
 import "../../oracles/uniswap/uniswapv0.8/FullMath.sol";
 import "../../mocks/oracles/compound/CTokenChiMock.sol";
 import "../../mocks/FlashBorrower.sol";
@@ -21,9 +22,10 @@ abstract contract ZeroState is Test, TestConstants {
     event SeriesMatured(uint256 chiAtMaturity);
     event Redeemed(address indexed from, address indexed to, uint256 amount, uint256 redeemed);
 
+    FYToken public fyDAI;
     Cauldron public cauldron = Cauldron(0xc88191F8cb8e6D4a668B047c1C8503432c3Ca867);
     ILadle public ladle = ILadle(0x6cB18fF2A33e981D1e38A663Ca056c0a5265066A);
-    FYToken public fyDAI = FYToken(0xFCb9B8C5160Cf2999f9879D8230dCed469E72eeb);
+    // FYToken public fyDAI = FYToken(0xFCb9B8C5160Cf2999f9879D8230dCed469E72eeb);
     Join public daiJoin = Join(0x4fE92119CDf873Cf8826F4E6EcfD4E578E3D44Dc);
 
     address public timelock = 0x3b870db67a45611CF4723d44487EAF398fAc51E3;
@@ -35,8 +37,17 @@ abstract contract ZeroState is Test, TestConstants {
 
     function setUp() public virtual {
         vm.createSelectFork('mainnet', 15266900);
-
+        
         vm.startPrank(timelock);
+        fyDAI = new FYToken(
+            DAI,
+            IOracle(0x53FBa816BD69a7f2a096f58687f87dd3020d0d5c), // Compound oracle
+            daiJoin,
+            1664550000,
+            "FYDAI2209",
+            "FYDAI2209"
+        );
+
         bytes4[] memory fyTokenRoles = new bytes4[](2);
         fyTokenRoles[0] = fyDAI.mint.selector;
         fyTokenRoles[1] = fyDAI.point.selector;
@@ -79,7 +90,6 @@ abstract contract OnceMatured is AfterMaturity {
 contract FYTokenTest is ZeroState {
     function testChangeOracle() public {
         console.log("can change the CHI oracle");
-        vm.prank(timelock);
         vm.expectEmit(true, false, false, true);
         emit Point("oracle", address(this));
         fyDAI.point("oracle", address(this));
@@ -87,7 +97,6 @@ contract FYTokenTest is ZeroState {
 
     function testChangeJoin() public {
         console.log("can change Join");
-        vm.prank(timelock);
         vm.expectEmit(true, false, false, true);
         emit Point("join", address(this));
         fyDAI.point("join", address(this));
@@ -110,7 +119,7 @@ contract FYTokenTest is ZeroState {
     function testCantRedeemBeforeMaturity() public {
         console.log("can't redeem before maturity");
         vm.expectRevert("Only after maturity");
-        fyDAI.redeem(address(this), WAD);
+        fyDAI.redeem(address(this));
     }
 
     function testConvertToPrincipal() public {
@@ -158,7 +167,7 @@ contract AfterMaturityTest is AfterMaturity {
             WAD, 
             WAD
         );
-        fyDAI.redeem(address(this), WAD);
+        fyDAI.redeem(address(this));
         assertEq(
             IERC20(dai).balanceOf(address(this)), 
             ownerBalanceBefore + WAD
@@ -207,7 +216,7 @@ contract OnceMaturedTest is OnceMatured {
             WAD, 
             FullMath.mulDiv(WAD, accrual, WAD)
         );
-        fyDAI.redeem(address(this), WAD);
+        fyDAI.redeem(address(this));
         assertEq(
             IERC20(dai).balanceOf(address(this)), 
             ownerBalanceBefore + FullMath.mulDiv(WAD, accrual, WAD)
@@ -226,6 +235,7 @@ contract OnceMaturedTest is OnceMatured {
         console.log("redeems when transfering to the fyToken contract");
         uint256 ownerBalanceBefore = IERC20(dai).balanceOf(address(this));
         uint256 joinBalanceBefore = IERC20(dai).balanceOf(address(daiJoin));
+        deal(address(fyDAI), address(this), WAD);
         fyDAI.transfer(address(fyDAI), WAD);
         assertEq(fyDAI.balanceOf(address(this)), 0);
         vm.expectEmit(true, true, false, true);
@@ -235,7 +245,7 @@ contract OnceMaturedTest is OnceMatured {
             WAD, 
             FullMath.mulDiv(WAD, accrual, WAD)
         );
-        fyDAI.redeem(address(this), 0);
+        fyDAI.redeem(address(this));
         assertEq(
             IERC20(dai).balanceOf(address(this)), 
             ownerBalanceBefore + FullMath.mulDiv(WAD, accrual, WAD)
