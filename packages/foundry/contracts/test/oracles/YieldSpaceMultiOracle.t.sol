@@ -127,7 +127,7 @@ contract YieldSpaceMultiOracleTest is Test, TestConstants {
         );
 
         assertEq(updateTime, NOW);
-        assertEq(value, 996.838905e6);
+        assertEq(value, 996.313029e6);
     }
 
     function testPeekSameBaseAsset() public {
@@ -158,7 +158,7 @@ contract YieldSpaceMultiOracleTest is Test, TestConstants {
         );
 
         assertEq(updateTime, NOW);
-        assertEq(value, 1003.700614e6);
+        assertEq(value, 1003.171118e6);
     }
 
     function testGetDiscountBorrowingPosition() public {
@@ -171,7 +171,7 @@ contract YieldSpaceMultiOracleTest is Test, TestConstants {
         );
 
         assertEq(updateTime, NOW);
-        assertEq(value, 996.838905e6);
+        assertEq(value, 996.313029e6);
     }
 
     function testGetSameBaseAsset() public {
@@ -202,6 +202,6 @@ contract YieldSpaceMultiOracleTest is Test, TestConstants {
         );
 
         assertEq(updateTime, NOW);
-        assertEq(value, 1003.700614e6);
+        assertEq(value, 1003.171118e6);
     }
 }

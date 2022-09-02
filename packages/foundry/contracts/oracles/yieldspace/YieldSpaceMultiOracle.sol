@@ -16,6 +16,7 @@ import "forge-std/src/Test.sol";
 contract YieldSpaceMultiOracle is IOracle, AccessControl {
     using CastBytes32Bytes6 for bytes32;
     using Math64x64 for *;
+    using Exp64x64 for *;
 
     error SourceNotFound(bytes32 baseId, bytes32 quoteId);
 
@@ -91,7 +92,7 @@ contract YieldSpaceMultiOracle is IOracle, AccessControl {
                 poolOracle.peek(source.pool),
                 updateTime
             )
-            : amount;
+            : amount; // FYTokens are valued 1:1 after expiry
     }
 
     /// @inheritdoc IOracle
@@ -109,7 +110,7 @@ contract YieldSpaceMultiOracle is IOracle, AccessControl {
 
         value = source.maturity > updateTime
             ? _discount(source, amount, poolOracle.get(source.pool), updateTime)
-            : amount;
+            : amount; // FYTokens are valued 1:1 after expiry
     }
 
     /// @dev Load the source for the base/quote and verify is valid
@@ -153,8 +154,8 @@ contract YieldSpaceMultiOracle is IOracle, AccessControl {
 
         int128 c = IPool(source.pool).getC();
         int128 g = source.lending
-            ? IPool(source.pool).g2()
-            : IPool(source.pool).g1();
+            ? IPool(source.pool).g1()
+            : IPool(source.pool).g2();
 
         // t = ts * g * ttm
         int128 t = source.ts.mul(g).mul(timeTillMaturity);
@@ -163,19 +164,12 @@ contract YieldSpaceMultiOracle is IOracle, AccessControl {
         int128 twar64 = twar.divu(ONE);
 
         // p = (c/μ * twar)^t
-        int128 p = pow(c.div(source.mu).mul(twar64), t);
+        int128 p = c.div(source.mu).mul(twar64).pow(t);
 
         return
             source.lending
                 ? p.mulu(amount) // apply discount, result is already a regular unsigned integer
                 : amount
-                .divu(ONE) // make amount a binary 64.64 fraction
-                .div(p).mulu(ONE); // apply discount && make the result a regular unsigned integer
-    }
-
-    // TODO move to Exp64x64
-    /// @dev x^y = 2^(y*log_2(x))
-    function pow(int128 x, int128 y) internal pure returns (int128) {
-        return y.mul(x.log_2()).exp_2();
+                .divu(ONE).div(p).mulu(ONE); // make amount a binary 64.64 fraction // apply discount && make the result a regular unsigned integer
     }
 }

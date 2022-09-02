@@ -34,63 +34,47 @@ contract YieldSpaceMultiOracleDAIIntegrationTest is Test, TestConstants {
         skip(10 minutes);
     }
 
-    function testPeekDiscountBorrowingPosition() public {
+    function testDiscountBorrowingPosition() public {
         uint128 amount = 1000e18;
         uint256 actual = pool.unwrapPreview(pool.sellFYTokenPreview(amount));
 
-        (uint256 value, uint256 updateTime) = oracle.peek(
+        (uint256 peek, uint256 peekUpdateTime) = oracle.peek(
+            FYDAI2212,
+            DAI,
+            amount
+        );
+        (uint256 get, uint256 getUpdateTime) = oracle.get(
             FYDAI2212,
             DAI,
             amount
         );
 
         assertEq(actual, 968.791448811035957254e18, "actual");
-        assertEq(value, 974.786684685888342732e18, "value");
-        assertEq(updateTime, block.timestamp, "timestamp");
+        assertEq(peek, 968.965096873157987825e18, "peek");
+        assertEq(peekUpdateTime, block.timestamp, "timestamp");
+        assertEq(peekUpdateTime, getUpdateTime, "timestamp match");
+        assertEq(peek, get, "value match");
     }
 
-    function testPeekDiscountLendingPosition() public {
+    function testDiscountLendingPosition() public {
         uint128 amount = 1000e18;
         uint256 actual = pool.sellBasePreview(amount);
 
-        (uint256 value, uint256 updateTime) = oracle.peek(
+        (uint256 peek, uint256 peekUpdateTime) = oracle.peek(
+            DAI,
+            FYDAI2212,
+            amount
+        );
+        (uint256 get, uint256 getUpdateTime) = oracle.get(
             DAI,
             FYDAI2212,
             amount
         );
 
         assertEq(actual, 1025.713037174416877184e18, "actual");
-        assertEq(value, 1032.028917478030299490e18, "value");
-        assertEq(updateTime, block.timestamp, "timestamp");
-    }
-
-    function testGetDiscountBorrowingPosition() public {
-        uint128 amount = 1000e18;
-        uint256 actual = pool.unwrapPreview(pool.sellFYTokenPreview(amount));
-
-        (uint256 value, uint256 updateTime) = oracle.get(
-            FYDAI2212,
-            DAI,
-            amount
-        );
-
-        assertEq(actual, 968.791448811035957254e18, "actual");
-        assertEq(value, 974.786684685888342732e18, "value");
-        assertEq(updateTime, block.timestamp, "timestamp");
-    }
-
-    function testGetDiscountLendingPosition() public {
-        uint128 amount = 1000e18;
-        uint256 actual = pool.sellBasePreview(amount);
-
-        (uint256 value, uint256 updateTime) = oracle.get(
-            DAI,
-            FYDAI2212,
-            amount
-        );
-
-        assertEq(actual, 1025.713037174416877184e18, "actual");
-        assertEq(value, 1032.028917478030299490e18, "value");
-        assertEq(updateTime, block.timestamp, "timestamp");
+        assertEq(peek, 1025.865469553717080957e18, "peek");
+        assertEq(peekUpdateTime, block.timestamp, "timestamp");
+        assertEq(peekUpdateTime, getUpdateTime, "timestamp match");
+        assertEq(peek, get, "value match");
     }
 }
