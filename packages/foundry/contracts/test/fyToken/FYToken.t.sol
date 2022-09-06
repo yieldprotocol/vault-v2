@@ -15,6 +15,16 @@ import "../../mocks/oracles/compound/CTokenChiMock.sol";
 import "../../mocks/FlashBorrower.sol";
 import "../utils/TestConstants.sol";
 
+interface ILadleCustom {
+    function addToken(address token, bool set) external;
+
+    function batch(bytes[] calldata calls) external payable returns(bytes[] memory results);
+
+    function transfer(IERC20 token, address receiver, uint128 wad) external payable;
+
+    function redeem(bytes6 seriesId, address to, uint256 wad) external payable returns (uint256);
+}
+
 abstract contract ZeroState is Test, TestConstants {
     using CastU256I128 for uint256;
 
@@ -37,8 +47,8 @@ abstract contract ZeroState is Test, TestConstants {
 
     function setUp() public virtual {
         vm.createSelectFork('mainnet', 15266900);
-        
         vm.startPrank(timelock);
+
         fyDAI = new FYToken(
             DAI,
             IOracle(0x53FBa816BD69a7f2a096f58687f87dd3020d0d5c), // Compound oracle
@@ -52,13 +62,18 @@ abstract contract ZeroState is Test, TestConstants {
         fyTokenRoles[0] = fyDAI.mint.selector;
         fyTokenRoles[1] = fyDAI.point.selector;
         fyDAI.grantRoles(fyTokenRoles, address(this));
+
+        bytes4[] memory daiJoinRoles = new bytes4[](2);
+        daiJoinRoles[0] = daiJoin.join.selector;
+        daiJoinRoles[1] = daiJoin.exit.selector;
+        daiJoin.grantRoles(daiJoinRoles, address(fyDAI));
+
         vm.stopPrank();
 
         (vaultId, ) = ladle.build(seriesId, ilkId, 0);                  // create vault
         deal(dai, address(this), WAD * 1);                              // populate the test address/vault owner with 1 DAI
         IERC20(dai).approve(address(daiJoin), WAD);         
         ladle.pour(vaultId, address(this), WAD.i128(), WAD.i128());     // add ink and art to vault, will mint 1 fyDAI
-
         
         deal(dai, address(this), WAD * 2);                              // populate the test address/vault owner with 2 DAI
         IERC20(dai).approve(address(daiJoin), WAD * 2);
@@ -119,7 +134,7 @@ contract FYTokenTest is ZeroState {
     function testCantRedeemBeforeMaturity() public {
         console.log("can't redeem before maturity");
         vm.expectRevert("Only after maturity");
-        fyDAI.redeem(address(this));
+        fyDAI.redeem(address(this), WAD);
     }
 
     function testConvertToPrincipal() public {
@@ -130,6 +145,16 @@ contract FYTokenTest is ZeroState {
     function testConvertToUnderlying() public {
         console.log("can convert amount of principal to underlying");
         assertEq(fyDAI.convertToUnderlying(1000), 1000);
+    }
+
+    function testPreviewRedeem() public {
+        console.log("can preview the amount of underlying redeemed");
+        assertEq(fyDAI.previewRedeem(WAD), WAD);
+    }
+
+    function testPreviewWithdraw() public {
+        console.log("can preview the amount of principal withdrawn");
+        assertEq(fyDAI.previewWithdraw(WAD), WAD);
     }
 }
 
@@ -160,6 +185,7 @@ contract AfterMaturityTest is AfterMaturity {
         console.log("matures on first redemption after maturity if needed");
         uint256 ownerBalanceBefore = IERC20(dai).balanceOf(address(this));
         uint256 joinBalanceBefore = IERC20(dai).balanceOf(address(daiJoin));
+        deal(address(fyDAI), address(this), WAD);
         vm.expectEmit(true, true, false, true);
         emit Redeemed(
             address(this), 
@@ -167,7 +193,7 @@ contract AfterMaturityTest is AfterMaturity {
             WAD, 
             WAD
         );
-        fyDAI.redeem(address(this));
+        fyDAI.redeem(address(this), WAD);
         assertEq(
             IERC20(dai).balanceOf(address(this)), 
             ownerBalanceBefore + WAD
@@ -189,26 +215,23 @@ contract OnceMaturedTest is OnceMatured {
         assertGt(fyDAI.accrual(), WAD);
     }
 
-    function testPreviewRedeem() public {
-        console.log("can preview the amount of underlying redeemed");
-    }
-
     function testMaxRedeem() public {
         console.log("can get the max amount of principal redeemable");
-    }
-
-    function testPreviewWithdraw() public {
-        console.log("can preview the amount of principal withdrawn");
+        deal(address(fyDAI), address(this), WAD * 2);
+        assertEq(fyDAI.maxRedeem(address(this)), WAD * 2);
     }
 
     function testMaxWithdraw() public {
         console.log("can get the max amount of underlying withdrawable");
+        deal(address(fyDAI), address(this), WAD * 2);
+        assertEq(fyDAI.maxRedeem(address(this)), WAD * 2);
     }
 
     function testRedeemWithAccrual() public {
         console.log("redeems according to chi accrual");
         uint256 ownerBalanceBefore = IERC20(dai).balanceOf(address(this));
         uint256 joinBalanceBefore = IERC20(dai).balanceOf(address(daiJoin));
+        deal(address(fyDAI), address(this), WAD);
         vm.expectEmit(true, true, false, true);
         emit Redeemed(
             address(this), 
@@ -216,7 +239,7 @@ contract OnceMaturedTest is OnceMatured {
             WAD, 
             FullMath.mulDiv(WAD, accrual, WAD)
         );
-        fyDAI.redeem(address(this));
+        fyDAI.redeem(address(this), WAD);
         assertEq(
             IERC20(dai).balanceOf(address(this)), 
             ownerBalanceBefore + FullMath.mulDiv(WAD, accrual, WAD)
@@ -245,7 +268,7 @@ contract OnceMaturedTest is OnceMatured {
             WAD, 
             FullMath.mulDiv(WAD, accrual, WAD)
         );
-        fyDAI.redeem(address(this));
+        fyDAI.redeem(address(this), WAD);
         assertEq(
             IERC20(dai).balanceOf(address(this)), 
             ownerBalanceBefore + FullMath.mulDiv(WAD, accrual, WAD)
@@ -254,5 +277,30 @@ contract OnceMaturedTest is OnceMatured {
             IERC20(dai).balanceOf(address(daiJoin)), 
             joinBalanceBefore - FullMath.mulDiv(WAD, accrual, WAD)
         );
+    }
+
+    function testRedeemByTransferAndApprove() public {
+        console.log("redeems by transfer and approve combination");
+        uint256 ownerBalanceBefore = IERC20(dai).balanceOf(address(this));
+        uint256 joinBalanceBefore = IERC20(dai).balanceOf(address(daiJoin));
+    }
+
+    function testRedeemByBatch() public {
+        console.log("redeems by transferring to the fyToken contract in a batch");
+        uint256 ownerBalanceBefore = IERC20(dai).balanceOf(address(this));
+        uint256 joinBalanceBefore = IERC20(dai).balanceOf(address(daiJoin));
+        deal(address(fyDAI), address(this), WAD);
+        deal(address(fyDAI), address(ladle), WAD);
+        console.logUint(fyDAI.balanceOf(address(ladle)));
+
+        // Batch setup
+        fyDAI.approve(address(ladle), WAD);
+        vm.prank(timelock);
+        ILadleCustom(address(ladle)).addToken(address(fyDAI), true);
+
+        bytes[] memory calls = new bytes[](2);
+        calls[0] = abi.encodeWithSelector(ILadleCustom(address(ladle)).transfer.selector, address(fyDAI), address(fyDAI), WAD);
+        calls[1] = abi.encodeWithSelector(ILadleCustom(address(ladle)).redeem.selector, seriesId, address(this), 0);
+        ILadleCustom(address(ladle)).batch(calls);
     }
 }
