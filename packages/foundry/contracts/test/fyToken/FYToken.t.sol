@@ -42,7 +42,7 @@ abstract contract ZeroState is Test, TestConstants {
     address public dai = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
     address public weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     bytes6 public ilkId = 0x303100000000; // For DAI
-    bytes6 public seriesId = 0x303130370000; // ETH/DAI Dec 22 series
+    bytes6 public seriesId = 0x303130390000; // ETH/DAI March 23 series
     bytes12 public vaultId;
 
     function setUp() public virtual {
@@ -62,11 +62,18 @@ abstract contract ZeroState is Test, TestConstants {
         fyTokenRoles[0] = fyDAI.mint.selector;
         fyTokenRoles[1] = fyDAI.point.selector;
         fyDAI.grantRoles(fyTokenRoles, address(this));
+        fyDAI.grantRoles(fyTokenRoles, address(ladle));
 
         bytes4[] memory daiJoinRoles = new bytes4[](2);
         daiJoinRoles[0] = daiJoin.join.selector;
         daiJoinRoles[1] = daiJoin.exit.selector;
         daiJoin.grantRoles(daiJoinRoles, address(fyDAI));
+
+        ILadleCustom(address(ladle)).addToken(address(fyDAI), true);
+        cauldron.addSeries(seriesId, 0x303100000000, fyDAI);
+        bytes6[] memory ilkIds = new bytes6[](1);
+        ilkIds[0] = ilkId;
+        cauldron.addIlks(seriesId, ilkIds);
 
         vm.stopPrank();
 
@@ -291,13 +298,7 @@ contract OnceMaturedTest is OnceMatured {
         uint256 joinBalanceBefore = IERC20(dai).balanceOf(address(daiJoin));
         deal(address(fyDAI), address(this), WAD);
         deal(address(fyDAI), address(ladle), WAD);
-        console.logUint(fyDAI.balanceOf(address(ladle)));
-
-        // Batch setup
         fyDAI.approve(address(ladle), WAD);
-        vm.prank(timelock);
-        ILadleCustom(address(ladle)).addToken(address(fyDAI), true);
-
         bytes[] memory calls = new bytes[](2);
         calls[0] = abi.encodeWithSelector(ILadleCustom(address(ladle)).transfer.selector, address(fyDAI), address(fyDAI), WAD);
         calls[1] = abi.encodeWithSelector(ILadleCustom(address(ladle)).redeem.selector, seriesId, address(this), 0);
