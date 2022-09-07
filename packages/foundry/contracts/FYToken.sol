@@ -112,7 +112,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
         if (chiAtMaturity == CHI_NOT_SET) {
             return underlyingAmount;
         } else {
-            return _accrual();
+            return underlyingAmount.wdiv(_accrual());
         }
     }
 
@@ -190,6 +190,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
 
         emit Redeemed(msg.sender, to, amount_, redeemed);
     }
+
     ///@dev returns the maximum withdrawable amount for the address holder in terms of the underlying
     function maxWithdraw(address holder) external override returns (uint256 maxUnderlyingAmount) {
         return _convertToUnderlying(_balanceOf[holder]);
@@ -206,12 +207,17 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
     }
 
     function withdraw(uint256 underlyingAmount, address receiver, address holder) external override afterMaturity returns (uint256 principalAmount) {
-        uint256 amount_ = (underlyingAmount == 0) ? _convertToPrincipal(_balanceOf[address(this)]) : _convertToPrincipal(underlyingAmount);
-        _burn(holder, amount_);
-        principalAmount = amount_.wmul(_accrual());
-        join.exit(receiver, _convertToUnderlying(principalAmount).u128());
+        if (msg.sender != holder) {
+            uint256 allowed = _allowance[holder][msg.sender];
 
-        emit Redeemed(holder, receiver, amount_, _convertToUnderlying(principalAmount));
+            if (allowed != type(uint256).max) _allowance[holder][msg.sender] = allowed - principalAmount;
+        }
+
+        principalAmount = (underlyingAmount == 0) ? _convertToPrincipal(_balanceOf[address(this)]) : _convertToPrincipal(underlyingAmount);
+        _burn(holder, principalAmount);
+        join.exit(receiver, underlyingAmount.u128());
+
+        emit Redeemed(holder, receiver, principalAmount, _convertToUnderlying(principalAmount));
     }
 
     /// @dev Mint fyToken providing an equal amount of underlying to the protocol

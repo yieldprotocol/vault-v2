@@ -38,19 +38,6 @@ abstract contract ZeroState is Test, TestConstants {
     function setUp() public virtual {
         vm.createSelectFork('mainnet', 15266900);
         borrower = new FlashBorrower(fyDAI);
-
-        // fyDAI.grantRole(fyDAI.mint.selector, address(borrower));
-
-        // (vaultId, ) = ladle.build(seriesId, ilkId, 0);                  // create vault
-        // deal(dai, address(this), WAD * 1);                              // populate the test address/vault owner with 1 DAI
-        // IERC20(dai).approve(address(daiJoin), WAD);         
-        // ladle.pour(vaultId, address(this), WAD.i128(), WAD.i128());     // add ink and art to vault, will mint 1 fyDAI
-
-        
-        // deal(dai, address(this), WAD * 2);                              // populate the test address/vault owner with 2 DAI
-        // IERC20(dai).approve(address(daiJoin), WAD * 2);
-        // vm.prank(address(ladle));
-        // daiJoin.join(address(this), uint128(WAD * 2));                  // Join takes the 2 DAI
     }
 }
 

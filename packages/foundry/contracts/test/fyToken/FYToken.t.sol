@@ -192,7 +192,6 @@ contract AfterMaturityTest is AfterMaturity {
         console.log("matures on first redemption after maturity if needed");
         uint256 ownerBalanceBefore = IERC20(dai).balanceOf(address(this));
         uint256 joinBalanceBefore = IERC20(dai).balanceOf(address(daiJoin));
-        deal(address(fyDAI), address(this), WAD);
         vm.expectEmit(true, true, false, true);
         emit Redeemed(
             address(this), 
@@ -238,7 +237,6 @@ contract OnceMaturedTest is OnceMatured {
         console.log("redeems according to chi accrual");
         uint256 ownerBalanceBefore = IERC20(dai).balanceOf(address(this));
         uint256 joinBalanceBefore = IERC20(dai).balanceOf(address(daiJoin));
-        deal(address(fyDAI), address(this), WAD);
         vm.expectEmit(true, true, false, true);
         emit Redeemed(
             address(this), 
@@ -265,7 +263,6 @@ contract OnceMaturedTest is OnceMatured {
         console.log("redeems when transfering to the fyToken contract");
         uint256 ownerBalanceBefore = IERC20(dai).balanceOf(address(this));
         uint256 joinBalanceBefore = IERC20(dai).balanceOf(address(daiJoin));
-        deal(address(fyDAI), address(this), WAD);
         fyDAI.transfer(address(fyDAI), WAD);
         assertEq(fyDAI.balanceOf(address(this)), 0);
         vm.expectEmit(true, true, false, true);
@@ -290,18 +287,105 @@ contract OnceMaturedTest is OnceMatured {
         console.log("redeems by transfer and approve combination");
         uint256 ownerBalanceBefore = IERC20(dai).balanceOf(address(this));
         uint256 joinBalanceBefore = IERC20(dai).balanceOf(address(daiJoin));
+        fyDAI.transfer(address(fyDAI), WAD / 2);
+        assertEq(fyDAI.balanceOf(address(this)), WAD / 2);
+        vm.expectEmit(true, true, false, true);
+        emit Redeemed(
+            address(this), 
+            address(this), 
+            WAD,
+            FullMath.mulDiv(WAD, accrual, WAD)
+        );
+        fyDAI.redeem(WAD, address(this), address(this));
+        assertEq(
+            IERC20(dai).balanceOf(address(this)), 
+            ownerBalanceBefore + FullMath.mulDiv(WAD, accrual, WAD)
+        );
+        assertEq(
+            IERC20(dai).balanceOf(address(daiJoin)), 
+            joinBalanceBefore - FullMath.mulDiv(WAD, accrual, WAD)
+        );        
     }
 
     function testRedeemByBatch() public {
         console.log("redeems by transferring to the fyToken contract in a batch");
         uint256 ownerBalanceBefore = IERC20(dai).balanceOf(address(this));
         uint256 joinBalanceBefore = IERC20(dai).balanceOf(address(daiJoin));
-        deal(address(fyDAI), address(this), WAD);
-        deal(address(fyDAI), address(ladle), WAD);
+        fyDAI.approve(address(ladle), WAD);
+        bytes[] memory calls = new bytes[](2);
+        calls[0] = abi.encodeWithSelector(ILadleCustom(address(ladle)).transfer.selector, address(fyDAI), address(fyDAI), WAD);
+        calls[1] = abi.encodeWithSelector(ILadleCustom(address(ladle)).redeem.selector, seriesId, address(this), WAD);
+        ILadleCustom(address(ladle)).batch(calls);
+        assertEq(
+            IERC20(dai).balanceOf(address(this)), 
+            ownerBalanceBefore + FullMath.mulDiv(WAD, accrual, WAD)
+        );
+        assertEq(
+            IERC20(dai).balanceOf(address(daiJoin)), 
+            joinBalanceBefore - FullMath.mulDiv(WAD, accrual, WAD)
+        );
+    }
+
+    function testRedeemByBatchWithZeroAmount() public {
+        console.log("redeems with an amount of 0 by transferring to the fyToken contract in a batch");
+        uint256 ownerBalanceBefore = IERC20(dai).balanceOf(address(this));
+        uint256 joinBalanceBefore = IERC20(dai).balanceOf(address(daiJoin));
         fyDAI.approve(address(ladle), WAD);
         bytes[] memory calls = new bytes[](2);
         calls[0] = abi.encodeWithSelector(ILadleCustom(address(ladle)).transfer.selector, address(fyDAI), address(fyDAI), WAD);
         calls[1] = abi.encodeWithSelector(ILadleCustom(address(ladle)).redeem.selector, seriesId, address(this), 0);
         ILadleCustom(address(ladle)).batch(calls);
+        assertEq(
+            IERC20(dai).balanceOf(address(this)), 
+            ownerBalanceBefore + FullMath.mulDiv(WAD, accrual, WAD)
+        );
+        assertEq(
+            IERC20(dai).balanceOf(address(daiJoin)), 
+            joinBalanceBefore - FullMath.mulDiv(WAD, accrual, WAD)
+        );
+    }
+
+    function testRedeemERC5095() public {
+        console.log("redeems with ERC5095 redeem");
+        uint256 ownerBalanceBefore = IERC20(dai).balanceOf(address(this));
+        uint256 joinBalanceBefore = IERC20(dai).balanceOf(address(daiJoin));
+        vm.expectEmit(true, true, false, true);
+        emit Redeemed(
+            address(this), 
+            address(this), 
+            WAD, 
+            FullMath.mulDiv(WAD, accrual, WAD)
+        );
+        fyDAI.redeem(WAD, address(this), address(this));
+        assertEq(
+            IERC20(dai).balanceOf(address(this)), 
+            ownerBalanceBefore + FullMath.mulDiv(WAD, accrual, WAD)
+        );
+        assertEq(
+            IERC20(dai).balanceOf(address(daiJoin)), 
+            joinBalanceBefore - FullMath.mulDiv(WAD, accrual, WAD)
+        );        
+    }
+
+    function testWithdrawERC5095() public {
+        console.log("withdrwas with ERC5095 withdraw");
+        uint256 ownerBalanceBefore = IERC20(dai).balanceOf(address(this));
+        uint256 joinBalanceBefore = IERC20(dai).balanceOf(address(daiJoin));
+        vm.expectEmit(true, true, false, true);
+        emit Redeemed(
+            address(this), 
+            address(this), 
+            WAD, 
+            FullMath.mulDiv(WAD, accrual, WAD)
+        );
+        fyDAI.withdraw(FullMath.mulDiv(WAD, accrual, WAD), address(this), address(this));
+        assertEq(
+            IERC20(dai).balanceOf(address(this)), 
+            ownerBalanceBefore + FullMath.mulDiv(WAD, accrual, WAD)
+        );
+        assertEq(
+            IERC20(dai).balanceOf(address(daiJoin)), 
+            joinBalanceBefore - FullMath.mulDiv(WAD, accrual, WAD)
+        );
     }
 }
