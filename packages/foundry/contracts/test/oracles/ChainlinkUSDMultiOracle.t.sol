@@ -22,12 +22,13 @@ contract ChainlinkUSDMultiOracleTest is Test, TestConstants {
     address public frax = 0x853d955aCEf822Db058eb8505911ED77F175b99e;
 
     function setUp() public {
+        vm.createSelectFork('mainnet', 15044600);
+
         oracleL1 = new ChainlinkUSDMultiOracle();
         flagsL2 = new FlagsInterfaceMock();
         oracleL2 = new ChainlinkL2USDMultiOracle(flagsL2);
         aggregator = new ChainlinkAggregatorV3MockEx(18);   // for testing non-8-digit source
 
-        vm.createSelectFork('mainnet', 15044600);
         oracleL1.grantRole(oracleL1.setSource.selector, address(this));
         oracleL2.grantRole(oracleL2.setSource.selector, address(this));
     }
