@@ -38,6 +38,7 @@ interface ICauldron {
     // @dev Spot price oracle addresses and collateralization ratios
     function spotOracles(bytes6 baseId, bytes6 ilkId)
         external
+        view
         returns (DataTypes.SpotOracle memory);
 
     /// @dev Create a new vault, linked to a series (and therefore underlying) and up to 5 collateral types
