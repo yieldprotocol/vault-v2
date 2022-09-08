@@ -99,6 +99,7 @@ abstract contract AfterMaturity is ZeroState {
 abstract contract OnceMatured is AfterMaturity {
     CTokenChiMock public chiOracle;
     uint256 accrual = FullMath.mulDiv(WAD, 110, 100);                       // 10%
+    address fyTokenHolder = address(1);
 
     function setUp() public override {
         super.setUp();
@@ -219,6 +220,18 @@ contract OnceMaturedTest is OnceMatured {
     function testChiAccrualNotBelowOne() public {
         console.log("cannot have chi accrual below 1");
         assertGt(fyDAI.accrual(), WAD);
+    }
+
+    function testConvertToUnderlyingWithAccrual() public {
+        console.log("can convert the amount of underlying plus the accrual to principal");
+        assertEq(fyDAI.convertToUnderlying(1000), 1100);
+        assertEq(fyDAI.convertToUnderlying(5000), 5500);
+    }
+
+    function testConvertToPrincipalWithAccrual() public {
+        console.log("can convert the amount of underlying plus the accrual to principal");
+        assertEq(fyDAI.convertToPrincipal(1100), 1000);
+        assertEq(fyDAI.convertToPrincipal(5500), 5000);
     }
 
     function testMaxRedeem() public {
@@ -367,6 +380,65 @@ contract OnceMaturedTest is OnceMatured {
         );        
     }
 
+    function testRedeemWithZeroAmount() public {
+        console.log("Redeems the contract's balance when amount is 0");
+        uint256 ownerBalanceBefore = IERC20(dai).balanceOf(address(this));
+        uint256 joinBalanceBefore = IERC20(dai).balanceOf(address(daiJoin));
+        deal(address(fyDAI), address(fyDAI), WAD * 10);
+
+        vm.expectEmit(true, true, false, true);
+        emit Redeemed(
+            address(this), 
+            address(this), 
+            WAD * 10, 
+            FullMath.mulDiv(WAD * 10, accrual, WAD)
+        );
+        fyDAI.redeem(0, address(this), address(this));
+        assertEq(
+            fyDAI.balanceOf(address(fyDAI)), 
+            0
+        );
+        assertEq(
+            IERC20(dai).balanceOf(address(this)), 
+            ownerBalanceBefore + FullMath.mulDiv(WAD * 10, accrual, WAD)
+        );
+        assertEq(
+            IERC20(dai).balanceOf(address(daiJoin)),
+            joinBalanceBefore - FullMath.mulDiv(WAD * 10, accrual, WAD)
+        );
+    }
+
+    function testRedeemApproval() public {
+        console.log("can redeem only the approved amount from holder");
+        uint256 ownerBalanceBefore = IERC20(dai).balanceOf(address(this));
+        uint256 joinBalanceBefore = IERC20(dai).balanceOf(address(daiJoin));
+        deal(address(fyDAI), fyTokenHolder, WAD * 5);
+        vm.prank(fyTokenHolder);
+        fyDAI.approve(address(this), WAD * 5);
+
+        vm.expectRevert("ERC20: Insufficient approval");
+        fyDAI.redeem(
+            WAD * 10, 
+            address(this), 
+            fyTokenHolder
+        );
+
+        fyDAI.redeem(
+            WAD * 4,
+            address(this),
+            fyTokenHolder
+        );
+        assertEq(fyDAI.balanceOf(fyTokenHolder), WAD);
+        assertEq(
+            IERC20(dai).balanceOf(address(this)), 
+            ownerBalanceBefore + FullMath.mulDiv(WAD * 4, accrual, WAD)
+        );
+        assertEq(
+            IERC20(dai).balanceOf(address(daiJoin)),
+            joinBalanceBefore - FullMath.mulDiv(WAD * 4, accrual, WAD)
+        );
+    }
+
     function testWithdrawERC5095() public {
         console.log("withdrwas with ERC5095 withdraw");
         uint256 ownerBalanceBefore = IERC20(dai).balanceOf(address(this));
@@ -386,6 +458,66 @@ contract OnceMaturedTest is OnceMatured {
         assertEq(
             IERC20(dai).balanceOf(address(daiJoin)), 
             joinBalanceBefore - FullMath.mulDiv(WAD, accrual, WAD)
+        );
+    }
+
+    function testWithdrawWithZeroAmount() public {
+        console.log("Withdraws the contract's balance when amount is 0");
+        uint256 ownerBalanceBefore = IERC20(dai).balanceOf(address(this));
+        uint256 joinBalanceBefore = IERC20(dai).balanceOf(address(daiJoin));
+        deal(address(fyDAI), address(fyDAI), WAD * 10);
+
+        vm.expectEmit(true, true, false, true);
+        emit Redeemed(
+            address(this), 
+            address(this), 
+            WAD * 10, 
+            FullMath.mulDiv(WAD * 10, accrual, WAD)
+        );
+        fyDAI.withdraw(0, address(this), address(this));
+        assertEq(
+            fyDAI.balanceOf(address(fyDAI)), 
+            0
+        );
+        assertEq(
+            IERC20(dai).balanceOf(address(this)), 
+            ownerBalanceBefore + FullMath.mulDiv(WAD * 10, accrual, WAD)
+        );
+        assertEq(
+            IERC20(dai).balanceOf(address(daiJoin)),
+            joinBalanceBefore - FullMath.mulDiv(WAD * 10, accrual, WAD)
+        );
+    }
+
+    function testWithdrawApproval() public {
+        console.log("can withdraw only the approved amount from holder");
+        uint256 ownerBalanceBefore = IERC20(dai).balanceOf(address(this));
+        uint256 joinBalanceBefore = IERC20(dai).balanceOf(address(daiJoin));
+        deal(address(fyDAI), fyTokenHolder, WAD * 5);
+        vm.prank(fyTokenHolder);
+        fyDAI.approve(address(this), WAD * 5);
+
+        uint256 amountToWithdraw = fyDAI.convertToUnderlying(WAD * 10);     // so revert works properly
+        vm.expectRevert("ERC20: Insufficient approval");
+        fyDAI.withdraw(
+            amountToWithdraw,
+            address(this),
+            fyTokenHolder
+        );
+
+        fyDAI.withdraw(
+            fyDAI.convertToUnderlying(WAD * 4),
+            address(this),
+            fyTokenHolder
+        );
+        assertEq(fyDAI.balanceOf(fyTokenHolder), WAD);
+        assertEq(
+            IERC20(dai).balanceOf(address(this)),
+            ownerBalanceBefore + FullMath.mulDiv(WAD * 4, accrual, WAD)
+        );
+        assertEq(
+            IERC20(dai).balanceOf(address(daiJoin)),
+            joinBalanceBefore - FullMath.mulDiv(WAD * 4, accrual, WAD)
         );
     }
 }
