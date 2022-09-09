@@ -24,7 +24,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
     event Point(bytes32 indexed param, address value);
     event FlashFeeFactorSet(uint256 indexed fee);
     event SeriesMatured(uint256 chiAtMaturity);
-    event Redeemed(address indexed from, address indexed to, uint256 amount, uint256 redeemed);
+    event Redeemed(address indexed holder, address indexed receiver, uint256 principalAmount, uint256 underlyingAmount);
 
     uint256 constant CHI_NOT_SET = type(uint256).max;
 
@@ -124,7 +124,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
     }
 
     /// @dev Mature the fyToken by recording the chi.
-    function _mature() private returns (uint256 _chiAtMaturity) {
+    function _mature() internal returns (uint256 _chiAtMaturity) {
         (_chiAtMaturity, ) = oracle.get(underlyingId, CHI, 0); // The value returned is an accumulator, it doesn't need an input amount
         chiAtMaturity = _chiAtMaturity;
         emit SeriesMatured(_chiAtMaturity);
@@ -137,7 +137,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
 
     /// @dev Retrieve the chi accrual since maturity, maturing if necessary.
     /// Note: Call only after checking we are past maturity
-    function _accrual() private returns (uint256 accrual_) {
+    function _accrual() internal returns (uint256 accrual_) {
         if (chiAtMaturity == CHI_NOT_SET) {
             // After maturity, but chi not yet recorded. Let's record it, and accrual is then 1.
             _mature();
@@ -158,7 +158,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
         return _convertToUnderlying(principalAmount);
     }
 
-    /// @dev Burn fyToken after maturity for an amount that increases according to `chi`
+    /// @dev Burn fyToken after maturity for an amount of principal that increases according to `chi`
     /// If `amount` is 0, the contract will redeem instead the fyToken balance of this contract. Useful for batches.
     function redeem(uint256 principalAmount, address receiver, address holder) external override afterMaturity returns (uint256 underlyingAmount) {
         principalAmount = (principalAmount == 0) ? _balanceOf[address(this)] : principalAmount;
@@ -169,15 +169,15 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
         emit Redeemed(holder, receiver, principalAmount, underlyingAmount);
     }
 
-    /// @dev Burn fyToken after maturity for an amount that increases according to `chi`
+    /// @dev Burn fyToken after maturity for an amount of principal that increases according to `chi`
     /// If `amount` is 0, the contract will redeem instead the fyToken balance of this contract. Useful for batches.
-    function redeem(address to, uint256 amount) external override afterMaturity returns (uint256 redeemed) {
-        uint256 amount_ = (amount == 0) ? _balanceOf[address(this)] : amount;
-        _burn(msg.sender, amount_);
-        redeemed = amount_.wmul(_accrual());
-        join.exit(to, redeemed.u128());
+    function redeem(address receiver, uint256 principalAmount) external override afterMaturity returns (uint256 underlyingAmount) {
+        principalAmount = (principalAmount == 0) ? _balanceOf[address(this)] : principalAmount;
+        _burn(msg.sender, principalAmount);
+        underlyingAmount = principalAmount.wmul(_accrual());
+        join.exit(receiver, underlyingAmount.u128());
 
-        emit Redeemed(msg.sender, to, amount_, redeemed);
+        emit Redeemed(msg.sender, receiver, principalAmount, underlyingAmount);
     }
 
     ///@dev returns the maximum withdrawable amount for the address holder in terms of the underlying
@@ -190,6 +190,8 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
         return _convertToPrincipal(underlyingAmount);
     }
 
+    /// @dev Burn fyToken after maturity for an amount of underlying that increases according to `chi`
+    /// If `amount` is 0, the contract will redeem instead the fyToken balance of this contract. Useful for batches.
     function withdraw(uint256 underlyingAmount, address receiver, address holder) external override afterMaturity returns (uint256 principalAmount) {
         principalAmount = (underlyingAmount == 0) ? _balanceOf[address(this)] : _convertToPrincipal(underlyingAmount);
         _burn(holder, principalAmount);
@@ -200,36 +202,36 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
     }
 
     /// @dev Mint fyToken providing an equal amount of underlying to the protocol
-    function mintWithUnderlying(address to, uint256 amount) external override beforeMaturity {
-        _mint(to, amount);
-        join.join(msg.sender, amount.u128());
+    function mintWithUnderlying(address receiver, uint256 underlyingAmount) external override beforeMaturity {
+        _mint(receiver, underlyingAmount);
+        join.join(msg.sender, underlyingAmount.u128());
     }
 
     /// @dev Mint fyTokens.
-    function mint(address to, uint256 amount) external override beforeMaturity auth {
-        _mint(to, amount);
+    function mint(address receiver, uint256 principalAmount) external override beforeMaturity auth {
+        _mint(receiver, principalAmount);
     }
 
     /// @dev Burn fyTokens. The user needs to have either transferred the tokens to this contract, or have approved this contract to take them.
-    function burn(address from, uint256 amount) external override auth {
-        _burn(from, amount);
+    function burn(address holder, uint256 principalAmount) external override auth {
+        _burn(holder, principalAmount);
     }
 
     /// @dev Burn fyTokens.
     /// Any tokens locked in this contract will be burned first and subtracted from the amount to burn from the user's wallet.
     /// This feature allows someone to transfer fyToken to this contract to enable a `burn`, potentially saving the cost of `approve` or `permit`.
-    function _burn(address from, uint256 amount) internal override returns (bool) {
+    function _burn(address holder, uint256 principalAmount) internal override returns (bool) {
         // First use any tokens locked in this contract
         uint256 available = _balanceOf[address(this)];
-        if (available >= amount) {
-            return super._burn(address(this), amount);
+        if (available >= principalAmount) {
+            return super._burn(address(this), principalAmount);
         } else {
             if (available > 0) super._burn(address(this), available);
             unchecked {
-                _decreaseAllowance(from, amount - available);
+                _decreaseAllowance(holder, principalAmount - available);
             }
             unchecked {
-                return super._burn(from, amount - available);
+                return super._burn(holder, principalAmount - available);
             }
         }
     }
@@ -246,21 +248,21 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
     /**
      * @dev From ERC-3156. The fee to be charged for a given loan.
      * @param token The loan currency. It must be the asset.
-     * @param amount The amount of tokens lent.
+     * @param principalAmount The amount of tokens lent.
      * @return The amount of `token` to be charged for the loan, on top of the returned principal.
      */
-    function flashFee(address token, uint256 amount) external view override returns (uint256) {
+    function flashFee(address token, uint256 principalAmount) external view override returns (uint256) {
         require(token == address(this), "Unsupported currency");
-        return _flashFee(amount);
+        return _flashFee(principalAmount);
     }
 
     /**
      * @dev The fee to be charged for a given loan.
-     * @param amount The amount of tokens lent.
+     * @param principalAmount The amount of tokens lent.
      * @return The amount of `token` to be charged for the loan, on top of the returned principal.
      */
-    function _flashFee(uint256 amount) internal view returns (uint256) {
-        return amount.wmul(flashFeeFactor);
+    function _flashFee(uint256 principalAmount) internal view returns (uint256) {
+        return principalAmount.wmul(flashFeeFactor);
     }
 
     /**
@@ -269,23 +271,23 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
      * If the borrower transfers the principal + fee to this contract, they will be burnt here instead of pulled from the borrower.
      * @param receiver The contract receiving the tokens, needs to implement the `onFlashLoan(address user, uint256 amount, uint256 fee, bytes calldata)` interface.
      * @param token The loan currency. Must be a fyDai contract.
-     * @param amount The amount of tokens lent.
+     * @param principalAmount The amount of tokens lent.
      * @param data A data parameter to be passed on to the `receiver` for any custom use.
      */
     function flashLoan(
         IERC3156FlashBorrower receiver,
         address token,
-        uint256 amount,
+        uint256 principalAmount,
         bytes memory data
     ) external override beforeMaturity returns (bool) {
         require(token == address(this), "Unsupported currency");
-        _mint(address(receiver), amount);
-        uint128 fee = _flashFee(amount).u128();
+        _mint(address(receiver), principalAmount);
+        uint128 fee = _flashFee(principalAmount).u128();
         require(
-            receiver.onFlashLoan(msg.sender, token, amount, fee, data) == FLASH_LOAN_RETURN,
+            receiver.onFlashLoan(msg.sender, token, principalAmount, fee, data) == FLASH_LOAN_RETURN,
             "Non-compliant borrower"
         );
-        _burn(address(receiver), amount + fee);
+        _burn(address(receiver), principalAmount + fee);
         return true;
     }
 }
