@@ -27,7 +27,7 @@ async function main() {
   const entryDirectoryPath = path.join(__dirname, '../../foundry/contracts');
   const imports = solFilesInDirectory(entryDirectoryPath)
 
-  let str = `// SPDX-License-Identifier: BUSL-1.1 \npragma solidity 0.8.14;\n\n`;
+  let str = `// SPDX-License-Identifier: BUSL-1.1 \npragma solidity >=0.8.14;\n\n`;
 
   imports.forEach(imp => {
     str += imp
