@@ -48,7 +48,7 @@ contract YieldSpaceMultiOracle is IOracle, AccessControl {
     }
 
     /// @notice Set or reset a FYToken oracle source and its inverse
-    /// @dev    parameter ORDER IS crucial! If the ids are out of order the math will be wrong
+    /// @dev    PARAMETER ORDER IS CRUCIAL! If the ids are out of order the math will be wrong
     /// @param  seriesId FYToken id
     /// @param  baseId Underlying id
     /// @param  pool Pool where you can trade FYToken <-> underlying
