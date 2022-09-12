@@ -5,7 +5,6 @@ import "../../Witch.sol";
 import "./interfaces/IContangoWitchListener.sol";
 
 contract ContangoWitch is Witch {
-
     IContangoWitchListener public immutable contango;
 
     constructor(
@@ -16,8 +15,12 @@ contract ContangoWitch is Witch {
         contango = contango_;
     }
 
-    function _auctionStarted(bytes12 vaultId) internal override {
-        super._auctionStarted(vaultId);
+    function _auctionStarted(
+        bytes12 vaultId,
+        DataTypes.Auction memory auction_,
+        DataTypes.Line memory line
+    ) internal override returns (DataTypes.Vault memory vault) {
+        vault = super._auctionStarted(vaultId, auction_, line);
         contango.auctionStarted(vaultId);
     }
 

@@ -26,6 +26,7 @@ deployments/
 .mythxKey
 .secret
 build/
+.env
 
 # Solidity-coverage
 coverage/

@@ -63,11 +63,13 @@ $ yarn coverage
 ```
 
 ### Test
+Be sure to have an `.env` file located at `packages/foundry` with the value `MAINNET_RPC=<your rpc url>` to be used for forked tests.
+
 Compile and test the smart contracts with [Foundry](https://getfoundry.sh/):
 
 ```
 $ cd packages/foundry
-$ MAINNET_RPC=<your rpc url> forge test -c contracts/test
+$ forge test
 ```
 
 Additional tests can be run with Hardhat using npm or yarn:
