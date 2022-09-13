@@ -8,6 +8,7 @@ import "@yield-protocol/utils-v2/contracts/token/SafeERC20Namer.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
 import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
+import "@yield-protocol/utils-v2/contracts/math/WDivUp.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U32.sol";
 import "./interfaces/IFYToken.sol";
@@ -18,6 +19,8 @@ import "./constants/Constants.sol";
 contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, Constants {
     using WMul for uint256;
     using WDiv for uint256;
+    using WDivUp for uint256;
+
     using CastU256U128 for uint256;
     using CastU256U32 for uint256;
 
@@ -112,7 +115,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
         if (chiAtMaturity == CHI_NOT_SET) {
             return underlyingAmount;
         } else {
-            return underlyingAmount.wdiv(_accrual());
+            return underlyingAmount.wdivup(_accrual());
         }
     }
 
