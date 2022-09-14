@@ -248,8 +248,8 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl {
         token.safeTransferFrom(
             address(this),
             to,
-            fCashId_,
-            token.balanceOf(address(this), fCashId_),
+            id,
+            token.balanceOf(address(this), id),
             ""
         );
     }
