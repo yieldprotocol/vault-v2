@@ -83,11 +83,11 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl {
     function onERC1155Received(
         address,
         address,
-        uint256 fCashId_,
+        uint256 id,
         uint256,
         bytes calldata
     ) external override returns (bytes4) {
-        require(fCashId_ == fCashId, "Token fCashId not accepted");
+        require(id == fCashId, "Token fCashId not accepted");
         return ERC1155TokenReceiver.onERC1155Received.selector;
     }
 
@@ -95,13 +95,13 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl {
     function onERC1155BatchReceived(
         address,
         address,
-        uint256[] calldata fCashIds_,
+        uint256[] calldata ids,
         uint256[] calldata,
         bytes calldata
     ) external override returns (bytes4) {
-        uint256 length = fCashIds_.length;
+        uint256 length = ids.length;
         for (uint256 i; i < length; ++i)
-            require(fCashIds_[i] == fCashId, "Token fCashId not accepted");
+            require(ids[i] == fCashId, "Token fCashId not accepted");
         return ERC1155TokenReceiver.onERC1155BatchReceived.selector;
     }
 
@@ -234,7 +234,7 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl {
 
     /// @dev Retrieve any ERC1155 tokens other than the `asset`. Useful for airdropped tokens.
     /// @param token ERC1155 token passed as contract object
-    /// @param fCashId ID of ERC1155 token
+    /// @param id ID of ERC1155 token
     /// @param to Address of receiver
     function retrieveERC1155(
         ERC1155 token,
@@ -242,7 +242,7 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl {
         address to
     ) external auth {
         require(
-            address(token) != address(asset) || fCashId_ != fCashId,
+            address(token) != address(asset) || id != fCashId,
             "Use exit for asset"
         );
         token.safeTransferFrom(
