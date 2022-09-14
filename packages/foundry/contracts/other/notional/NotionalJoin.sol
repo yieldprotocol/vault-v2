@@ -28,7 +28,7 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl {
     address public immutable underlyingJoin;
     uint40 public immutable maturity; // Maturity date for fCash
     uint16 public immutable currencyId; // Notional currency id for the underlying
-    uint256 public immutable id; // This ERC1155 Join only accepts one id from the ERC1155 token
+    uint256 public immutable fCashId; // This ERC1155 Join only accepts one fCashId from the ERC1155 token
     uint256 public storedBalance; // After maturity, this is reused as the balance for underlying
     uint256 public accrual; // fCash to underlying factor, with 18 decimals
     uint256 public flashFeeFactor = FLASH_LOANS_DISABLED; // Fee on flash loans, as a percentage in fixed point with 18 decimals. Flash loans disabled by default.
@@ -47,7 +47,7 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl {
         underlyingJoin = underlyingJoin_;
 
         // TransferAssets.encodeAssetId
-        id = uint256(
+        fCashId = uint256(
             (bytes32(uint256(currencyId_)) << 48) |
                 (bytes32(uint256(maturity_)) << 8) |
                 bytes32(uint256(1))
@@ -79,29 +79,29 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl {
                 ERC1155TokenReceiver.onERC1155BatchReceived.selector;
     }
 
-    /// @dev Called by the sender after a transfer to verify it was received. Ensures only `id` tokens are received.
+    /// @dev Called by the sender after a transfer to verify it was received. Ensures only `fCashId` tokens are received.
     function onERC1155Received(
         address,
         address,
-        uint256 _id,
+        uint256 id,
         uint256,
         bytes calldata
     ) external override returns (bytes4) {
-        require(_id == id, "Token id not accepted");
+        require(id == fCashId, "Token fCashId not accepted");
         return ERC1155TokenReceiver.onERC1155Received.selector;
     }
 
-    /// @dev Called by the sender after a batch transfer to verify it was received. Ensures only `id` tokens are received.
+    /// @dev Called by the sender after a batch transfer to verify it was received. Ensures only `fCashId` tokens are received.
     function onERC1155BatchReceived(
         address,
         address,
-        uint256[] calldata _ids,
+        uint256[] calldata ids,
         uint256[] calldata,
         bytes calldata
     ) external override returns (bytes4) {
-        uint256 length = _ids.length;
+        uint256 length = ids.length;
         for (uint256 i; i < length; ++i)
-            require(_ids[i] == id, "Token id not accepted");
+            require(ids[i] == fCashId, "Token fCashId not accepted");
         return ERC1155TokenReceiver.onERC1155BatchReceived.selector;
     }
 
@@ -127,7 +127,7 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl {
     {
         ERC1155 token = ERC1155(asset);
         uint256 _storedBalance = storedBalance;
-        uint256 available = token.balanceOf(address(this), id) - _storedBalance; // Fine to panic if this underflows
+        uint256 available = token.balanceOf(address(this), fCashId) - _storedBalance; // Fine to panic if this underflows
 
         unchecked {
             storedBalance = _storedBalance + amount; // Unlikely that a uint128 added to the stored balance will make it overflow
@@ -135,7 +135,7 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl {
                 token.safeTransferFrom(
                     user,
                     address(this),
-                    id,
+                    fCashId,
                     amount - available,
                     ""
                 );
@@ -166,7 +166,7 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl {
     /// @param amount Amount of ERC1155 tokens
     function _exit(address user, uint128 amount) internal returns (uint128) {
         storedBalance -= amount;
-        ERC1155(asset).safeTransferFrom(address(this), user, id, amount, "");
+        ERC1155(asset).safeTransferFrom(address(this), user, fCashId, amount, "");
         return amount;
     }
 
@@ -234,22 +234,22 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl {
 
     /// @dev Retrieve any ERC1155 tokens other than the `asset`. Useful for airdropped tokens.
     /// @param token ERC1155 token passed as contract object
-    /// @param id_ ID of ERC1155 token
+    /// @param id ID of ERC1155 token
     /// @param to Address of receiver
     function retrieveERC1155(
         ERC1155 token,
-        uint256 id_,
+        uint256 id,
         address to
     ) external auth {
         require(
-            address(token) != address(asset) || id_ != id,
+            address(token) != address(asset) || id != fCashId,
             "Use exit for asset"
         );
         token.safeTransferFrom(
             address(this),
             to,
-            id_,
-            token.balanceOf(address(this), id_),
+            id,
+            token.balanceOf(address(this), id),
             ""
         );
     }

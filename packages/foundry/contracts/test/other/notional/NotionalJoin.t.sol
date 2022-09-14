@@ -4,15 +4,15 @@ pragma solidity >=0.8.13;
 import "forge-std/src/Test.sol";
 import "forge-std/src/console2.sol";
 
-import "../test/utils/TestConstants.sol";
-import "../test/utils/Mocks.sol";
-import "../mocks/ERC20Mock.sol";
+import "../../../test/utils/TestConstants.sol";
+import "../../../test/utils/Mocks.sol";
+import "../../../mocks/ERC20Mock.sol";
 
 //import {IJoin} from "@yield-protocol/vault-interfaces/src/IJoin.sol";
-import {Join} from "../Join.sol";
-import {NotionalJoin} from "../other/notional/NotionalJoin.sol";
-import {FCashMock} from "../other/notional/FCashMock.sol";
-import {DAIMock} from "../mocks/DAIMock.sol";
+import {Join} from "../../../Join.sol";
+import {NotionalJoin} from "../../../other/notional/NotionalJoin.sol";
+import {FCashMock} from "../../../other/notional/FCashMock.sol";
+import {DAIMock} from "../../../mocks/DAIMock.sol";
 
 using stdStorage for StdStorage;
 
