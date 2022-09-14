@@ -238,7 +238,7 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl {
     /// @param to Address of receiver
     function retrieveERC1155(
         ERC1155 token,
-        uint256 fCashId_,
+        uint256 id,
         address to
     ) external auth {
         require(
