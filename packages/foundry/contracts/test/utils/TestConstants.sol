@@ -20,6 +20,9 @@ contract TestConstants {
     bytes6 public constant FYETH2206 = bytes6("0006");
     bytes6 public constant FYDAI2206 = bytes6("0106");
     bytes6 public constant FYUSDC2206 = bytes6("0206");
+    bytes6 public constant FYUSDC2209 = bytes6("0207");
+    bytes6 public constant FYUSDC2212 = bytes6("0208");
+    bytes6 public constant FYDAI2212 = bytes6("0108");
 
     uint32 public constant EOJUN22 = 1656039600;
 }

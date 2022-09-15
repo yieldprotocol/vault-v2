@@ -1,28 +1,22 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity >=0.8.13;
 
-import "./IPoolOracle.sol";
 import "@yield-protocol/yieldspace-tv/src/interfaces/IPool.sol";
-import "../../interfaces/IOracle.sol";
-import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
+import "@yield-protocol/yieldspace-tv/src/interfaces/IPoolOracle.sol";
 import "@yield-protocol/yieldspace-tv/src/YieldMath.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
 import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
+import "../../interfaces/IOracle.sol";
 
-// TODO: Migrate to YieldSpace-tv, unless this needs to be used with v2 pools (last one maturing EO September 2022)
-contract YieldSpaceMultiOracle { }
-
-/*
 contract YieldSpaceMultiOracle is IOracle, AccessControl {
     using CastBytes32Bytes6 for bytes32;
-    using Math64x64 for int128;
-    using Math64x64 for uint128;
-    using Math64x64 for int256;
-    using Math64x64 for uint256;
-    using Exp64x64 for uint128;
-    using WMul for uint256;
-    using WDiv for uint256;
+    using Math64x64 for *;
+    using Exp64x64 for *;
+
+    error SourceNotFound(bytes32 baseId, bytes32 quoteId);
 
     event SourceSet(
         bytes6 indexed baseId,
@@ -30,7 +24,7 @@ contract YieldSpaceMultiOracle is IOracle, AccessControl {
         address indexed pool,
         uint32 maturity,
         int128 ts,
-        int128 g
+        int128 mu
     );
 
     struct Source {
@@ -38,24 +32,24 @@ contract YieldSpaceMultiOracle is IOracle, AccessControl {
         uint32 maturity;
         bool lending;
         int128 ts;
-        int128 g;
+        int128 mu;
     }
+
+    uint128 public constant ONE = 1e18;
 
     mapping(bytes6 => mapping(bytes6 => Source)) public sources;
 
     IPoolOracle public immutable poolOracle;
-    int128 public immutable wad64x64;
 
     constructor(IPoolOracle _poolOracle) {
         poolOracle = _poolOracle;
-        wad64x64 = uint256(1e18).fromUInt();
     }
 
     /// @notice Set or reset a FYToken oracle source and its inverse
+    /// @dev    PARAMETER ORDER IS CRUCIAL! If the ids are out of order the math will be wrong
     /// @param  seriesId FYToken id
     /// @param  baseId Underlying id
     /// @param  pool Pool where you can trade FYToken <-> underlying
-    /// @dev    parameter ORDER IS crucial!  If id's are out of order the math will be wrong
     function setSource(
         bytes6 seriesId,
         bytes6 baseId,
@@ -64,17 +58,16 @@ contract YieldSpaceMultiOracle is IOracle, AccessControl {
         // Cache pool immutable values to save gas when discounting the amounts
         uint32 maturity = IPool(pool).maturity();
         int128 ts = IPool(pool).ts();
-        int128 g1 = IPool(pool).g1();
-        int128 g2 = IPool(pool).g2();
+        int128 mu = IPool(pool).mu();
 
         // Initialise or update the TWAR observations
         poolOracle.update(pool);
 
-        sources[seriesId][baseId] = Source(pool, maturity, false, ts, g2);
-        emit SourceSet(seriesId, baseId, pool, maturity, ts, g2);
+        sources[seriesId][baseId] = Source(pool, maturity, false, ts, mu);
+        emit SourceSet(seriesId, baseId, pool, maturity, ts, mu);
 
-        sources[baseId][seriesId] = Source(pool, maturity, true, ts, g1);
-        emit SourceSet(baseId, seriesId, pool, maturity, ts, g1);
+        sources[baseId][seriesId] = Source(pool, maturity, true, ts, mu);
+        emit SourceSet(baseId, seriesId, pool, maturity, ts, mu);
     }
 
     /// @inheritdoc IOracle
@@ -90,11 +83,14 @@ contract YieldSpaceMultiOracle is IOracle, AccessControl {
 
         Source memory source = _source(base, quote);
 
-        if (source.maturity > updateTime) {
-            value = _discount(source, amount, uint128(poolOracle.peek(source.pool)), updateTime);
-        } else {
-            value = amount;
-        }
+        value = source.maturity > updateTime
+            ? _discount(
+                source,
+                amount,
+                poolOracle.peek(source.pool),
+                updateTime
+            )
+            : amount; // FYTokens are valued 1:1 after expiry
     }
 
     /// @inheritdoc IOracle
@@ -110,41 +106,68 @@ contract YieldSpaceMultiOracle is IOracle, AccessControl {
 
         Source memory source = _source(base, quote);
 
-        if (source.maturity > updateTime) {
-            value = _discount(source, amount, uint128(poolOracle.get(source.pool)), updateTime);
-        } else {
-            value = amount;
+        value = source.maturity > updateTime
+            ? _discount(source, amount, poolOracle.get(source.pool), updateTime)
+            : amount; // FYTokens are valued 1:1 after expiry
+    }
+
+    /// @dev Load the source for the base/quote and verify is valid
+    /// @param base The asset in which the amount to be converted is represented
+    /// @param quote The asset in which the converted value will be represented
+    function _source(bytes32 base, bytes32 quote)
+        internal
+        view
+        returns (Source memory source)
+    {
+        source = sources[base.b6()][quote.b6()];
+
+        if (source.pool == address(0)) {
+            revert SourceNotFound(base, quote);
         }
     }
 
-    function _source(bytes32 base, bytes32 quote) internal view returns (Source memory source) {
-        source = sources[base.b6()][quote.b6()];
-        require(source.pool != address(0), "Source not found");
-    }
-
-    /// @dev Discount `amount` using the TWAR oracle rates. 
+    /// @dev Discount `amount` using the TWAR oracle rates.
     /// Lending => underlying to FYToken. Borrowing => FYToken to underlying
     /// @param source Input params for the formulae
     /// @param amount Amount to be discounted
-    /// @param unitPrice TWAR provided by the oracle
+    /// @param twar TWAR provided by the oracle
     /// @param updateTime Time when the TWAR observation was calculated
-    /// @return the discounted amount, <= `amount` when borrowing, >= `amount` when lending 
+    /// @return the discounted amount, <= `amount` when borrowing, >= `amount` when lending
     function _discount(
         Source memory source,
         uint256 amount,
-        uint128 unitPrice,
+        uint256 twar,
         uint256 updateTime
     ) internal view returns (uint256) {
-        int128 timeTillMaturity = uint128(source.maturity - updateTime).fromUInt();
-        int128 powerValue64 = source.g.mul(source.ts).mul(timeTillMaturity);
-        // scale to 18 dec and convert to regular non-64
-        uint128 powerValue = uint128(powerValue64.mul(wad64x64).toUInt());
+        /*
+            https://hackmd.io/VlQkYJ6cTzWIaIyxuR1g2w
+            https://www.desmos.com/calculator/39jpmawgpu
+            
+            p = (c/μ * twar)^t
+            p = (c/μ * twar)^(ts*g*ttm)
+        */
 
-        uint256 top = unitPrice.pow(powerValue, uint128(1e18));
-        uint256 bottom = uint128(1e18).pow(powerValue, uint128(1e18)) / 1e18;
-        uint256 marginalPrice = top / bottom;
+        // ttm
+        int128 timeTillMaturity = (source.maturity - updateTime).fromUInt();
 
-        return source.lending ? amount.wmul(marginalPrice) : amount.wdiv(marginalPrice);
+        int128 c = IPool(source.pool).getC();
+        int128 g = source.lending
+            ? IPool(source.pool).g1()
+            : IPool(source.pool).g2();
+
+        // t = ts * g * ttm
+        int128 t = source.ts.mul(g).mul(timeTillMaturity);
+
+        // make twar a binary 64.64 fraction
+        int128 twar64 = twar.divu(ONE);
+
+        // p = (c/μ * twar)^t
+        int128 p = c.div(source.mu).mul(twar64).pow(t);
+
+        return
+            source.lending
+                ? p.mulu(amount) // apply discount, result is already a regular unsigned integer
+                : amount
+                .divu(ONE).div(p).mulu(ONE); // make amount a binary 64.64 fraction // apply discount && make the result a regular unsigned integer
     }
 }
-*/
