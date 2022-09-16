@@ -74,7 +74,7 @@ contract StrategyOracle is IOracle, AccessControl {
         require(address(source.strategy) != address(0), "Source not found");
         if (source.inverse == true) {
             value =
-                (amount * (source.strategy.totalSupply() * source.decimals)) /
+                (amount * source.strategy.totalSupply()) /
                 source.strategy.cached();
         } else {
             // value of 1 strategy token =  number of LP tokens in strat(cached)
