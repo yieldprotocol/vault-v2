@@ -6,12 +6,12 @@ import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
 import "../../interfaces/IOracle.sol";
 
 interface IStrategy {
-    /// @notice Explain to an end user what this does
-    /// @return Documents the return variables of a contract’s function state variable
+    /// @notice Returns LP tokens owned by the strategy after the last operation
+    /// @return LP tokens amount
     function cached() external view returns (uint256);
 
-    /// @notice Explain to an end user what this does
-    /// @return Documents the return variables of a contract’s function state variable
+    /// @notice Returns total supply of the strategy token
+    /// @return Total Supply of strategy token
     function totalSupply() external view returns (uint256);
 }
 
