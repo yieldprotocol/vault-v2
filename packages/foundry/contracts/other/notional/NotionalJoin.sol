@@ -107,7 +107,7 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl {
 
     /// @dev Take `amount` `asset` from `user` using `transferFrom`, minus any unaccounted `asset` in this contract.
     /// @param user Address of receiver of tokens
-    /// @param amount Amount of tokens
+    /// @param amount Amount of tokens, always as an fCash amount.
     function join(address user, uint128 amount)
         external
         override
@@ -145,7 +145,7 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl {
 
     /// @dev Before maturity, transfer `amount` `asset` to `user`.
     /// @param user Address of receiver of tokens
-    /// @param amount Amount of tokens
+    /// @param amount Amount of tokens, always as an fCash amount.
     /// After maturity, withdraw if necessary, then transfer `amount.wmul(accrual)` `underlying` to `user`.
     function exit(address user, uint128 amount)
         external
@@ -157,7 +157,7 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl {
             return _exit(user, amount);
         } else {
             if (accrual == 0) redeem(); // Redeem all fCash, switch to underlying join, set accrual.
-            return _exitUnderlying(user, uint256(amount).wmul(accrual).u128());
+            return _exitUnderlying(user, uint256(amount).wmul(accrual).u128()); // This converts from fCash units to underlying units
         }
     }
 
@@ -201,7 +201,11 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl {
 
         uint256 underlyingBalance = IERC20(underlying).balanceOf(address(this));
         uint256 storedBalance_ = storedBalance;
-        accrual = underlyingBalance.wdiv(storedBalance_); // There is a rounding loss here. Some wei will be forever locked in the join.
+        // The accrual covers the possible return from holding fCash after maturity, and also the change in decimals
+        // from fCash to underlying. FCash always has 8 decimals. If the underlying is DAI multiplying fCash amounts
+        // by the accrual will be add 10 decimals, and if the underlying is USDC the same will subtract 2 decimals.
+        // There is a rounding loss when calculating the accrual and some wei will be forever locked in the join.
+        accrual = underlyingBalance.wdiv(storedBalance_);
 
         // transfer underlying to main join
         MinimalTransferHelper.safeTransfer(
