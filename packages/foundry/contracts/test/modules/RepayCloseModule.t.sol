@@ -32,18 +32,19 @@ contract RepayCloseModuleTest is Test, TestConstants {
 
     function setUp() public {
         vm.createSelectFork('mainnet');
-
+        // deployments
         wethMock = new WETH9Mock();
         weth = IWETH9(address(wethMock));
         module = new RepayCloseModule(cauldron, weth);
-
+        // add module
         vm.prank(0x3b870db67a45611CF4723d44487EAF398fAc51E3);
         ILadleCustom(address(ladle)).addModule(address(module), true);
+        // create vault
         (vaultId, ) = ladle.build(seriesId, ilkId, 0);
-        
+        // provide tokens
         deal(address(dai), address(this), WAD * 2);
-        deal(address(fyDAI), address(module), WAD);
-        
+        deal(address(dai), address(ladle), WAD);
+        deal(address(fyDAI), address(ladle), WAD);
         // provision vault
         DataTypes.Vault memory vault = cauldron.vaults(vaultId);
         dai.approve(address(ladle), WAD * 2);
@@ -54,21 +55,33 @@ contract RepayCloseModuleTest is Test, TestConstants {
 
     function testRepayFromLadle() public {
         console.log("Can repay from ladle");
+        uint256 joinBalanceBefore = dai.balanceOf(address(join));
+        uint256 baseBalanceBefore = dai.balanceOf(address(this));
+        vm.prank(address(ladle));
+        ILadleCustom(address(ladle)).moduleCall(
+            address(module),
+            abi.encodeWithSelector(module.repayFromLadle.selector, vaultId, address(this), address(this))
+        );
 
-        uint256 repaid = module.repayFromLadle(vaultId, address(this), address(this));
-        console.log(repaid);
-
-        assertEq(cauldron.balances(vaultId).ink, WAD * 2);
-        assertEq(cauldron.balances(vaultId).art, WAD);
+        assertEq(joinBalanceBefore, dai.balanceOf(address(join)) + WAD);
+        assertEq(baseBalanceBefore, dai.balanceOf(address(this)) - WAD);
+        assertEq(cauldron.balances(vaultId).ink, WAD);
+        assertEq(cauldron.balances(vaultId).art, 0);
     }
 
     function testCloseFromLadle() public {
         console.log("Can close from ladle");
+        uint256 joinBalanceBefore = dai.balanceOf(address(join));
+        uint256 baseBalanceBefore = dai.balanceOf(address(this));
+        vm.prank(address(ladle));
+        ILadleCustom(address(ladle)).moduleCall(
+            address(module),
+            abi.encodeWithSelector(module.closeFromLadle.selector, vaultId, address(this), address(this))
+        );
 
-        uint256 repaid = module.closeFromLadle(vaultId, address(this), address(this));
-        console.log(repaid);
-
-        assertEq(cauldron.balances(vaultId).ink, WAD * 2);
-        assertEq(cauldron.balances(vaultId).art, WAD);
+        assertEq(joinBalanceBefore, dai.balanceOf(address(join)));
+        assertEq(baseBalanceBefore, dai.balanceOf(address(this)) - WAD);
+        assertEq(cauldron.balances(vaultId).ink, WAD);
+        assertEq(cauldron.balances(vaultId).art, 0);
     }
 }
