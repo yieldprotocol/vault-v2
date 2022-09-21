@@ -20,6 +20,23 @@ contract RepayCloseModule is LadleStorage {
         external payable
         returns (uint256 repaid)
     {
+        (bytes12 vaultId, DataTypes.Vault memory vault) = getVault(vaultId_);
+        DataTypes.Series memory series = getSeries(vault.seriesId);
+        DataTypes.Balances memory balances = cauldron.balances(vaultId);
+        
+        uint256 amount = series.fyToken.balanceOf(address(this));
+        repaid = amount <= balances.art ? amount : balances.art;
+
+        // Update accounting, burn fyToken and return collateral
+        if (repaid > 0) {
+            cauldron.pour(vaultId, -(repaid.i128()), -(repaid.i128()));
+            series.fyToken.burn(address(this), repaid);
+            IJoin ilkJoin = getJoin(vault.ilkId);
+            ilkJoin.exit(collateralReceiver, repaid.u128());
+        }
+
+        // Return remainder
+        if (amount - repaid > 0) IERC20(address(series.fyToken)).safeTransfer(remainderReceiver, amount - repaid);
 
     }
 
