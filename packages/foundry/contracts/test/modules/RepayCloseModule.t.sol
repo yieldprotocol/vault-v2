@@ -30,6 +30,9 @@ contract RepayCloseModuleTest is Test, TestConstants {
     bytes6 public seriesId = 0x303130370000; // ETH/DAI Dec 22 series
     bytes12 public vaultId;
 
+    address public foo = address(1);
+    address public bar = address(2);
+
     function setUp() public {
         vm.createSelectFork('mainnet');
         // deployments
@@ -56,15 +59,18 @@ contract RepayCloseModuleTest is Test, TestConstants {
     function testRepayFromLadle() public {
         console.log("Can repay from ladle");
         uint256 joinBalanceBefore = dai.balanceOf(address(join));
-        uint256 baseBalanceBefore = dai.balanceOf(address(this));
+        uint256 baseBalanceBefore = dai.balanceOf(address(foo));
+                
         vm.prank(address(ladle));
-        ILadleCustom(address(ladle)).moduleCall(
+        bytes memory data = ILadleCustom(address(ladle)).moduleCall(
             address(module),
-            abi.encodeWithSelector(module.repayFromLadle.selector, vaultId, address(this), address(this))
+            abi.encodeWithSelector(module.repayFromLadle.selector, vaultId, foo, bar)
         );
+        uint256 repaid = abi.decode(data, (uint256));
 
+        assertEq(repaid, WAD);
         assertEq(joinBalanceBefore, dai.balanceOf(address(join)) + WAD);
-        assertEq(baseBalanceBefore, dai.balanceOf(address(this)) - WAD);
+        assertEq(baseBalanceBefore, dai.balanceOf(address(foo)) - WAD);
         assertEq(cauldron.balances(vaultId).ink, WAD);
         assertEq(cauldron.balances(vaultId).art, 0);
     }
@@ -72,15 +78,18 @@ contract RepayCloseModuleTest is Test, TestConstants {
     function testCloseFromLadle() public {
         console.log("Can close from ladle");
         uint256 joinBalanceBefore = dai.balanceOf(address(join));
-        uint256 baseBalanceBefore = dai.balanceOf(address(this));
-        vm.prank(address(ladle));
-        ILadleCustom(address(ladle)).moduleCall(
-            address(module),
-            abi.encodeWithSelector(module.closeFromLadle.selector, vaultId, address(this), address(this))
-        );
+        uint256 baseBalanceBefore = dai.balanceOf(address(foo));
 
+        vm.prank(address(ladle));
+        bytes memory data = ILadleCustom(address(ladle)).moduleCall(
+            address(module),
+            abi.encodeWithSelector(module.closeFromLadle.selector, vaultId, foo, bar)
+        );
+        uint256 repaid = abi.decode(data, (uint256));
+
+        assertEq(repaid, WAD);
         assertEq(joinBalanceBefore, dai.balanceOf(address(join)));
-        assertEq(baseBalanceBefore, dai.balanceOf(address(this)) - WAD);
+        assertEq(baseBalanceBefore, dai.balanceOf(address(foo)) - WAD);
         assertEq(cauldron.balances(vaultId).ink, WAD);
         assertEq(cauldron.balances(vaultId).art, 0);
     }
