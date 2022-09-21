@@ -20,6 +20,7 @@ contract RepayCloseModule is LadleStorage {
     /// Return as much collateral as debt was repaid, as well. This function is only used when
     /// removing liquidity added with "Borrow and Pool", so it's safe to assume the exchange rate
     /// is 1:1. If used in other contexts, it might revert, which is fine.
+    /// Can only be used for Borrow and Pool vaults, which have the same ilkId and underlyhing
     function repayFromLadle(bytes12 vaultId_, address collateralReceiver, address remainderReceiver)
         external payable
         returns (uint256 repaid)
@@ -27,6 +28,7 @@ contract RepayCloseModule is LadleStorage {
         (bytes12 vaultId, DataTypes.Vault memory vault) = getVault(vaultId_);
         DataTypes.Series memory series = getSeries(vault.seriesId);
         DataTypes.Balances memory balances = cauldron.balances(vaultId);
+        require(series.fyToken.underlying() == cauldron.assets(vault.ilkId), "Only for Borrow and Pool");
         
         uint256 amount = series.fyToken.balanceOf(address(this));
         repaid = amount <= balances.art ? amount : balances.art;
@@ -48,6 +50,7 @@ contract RepayCloseModule is LadleStorage {
     /// Return as much collateral as debt was repaid, as well. This function is only used when
     /// removing liquidity added with "Borrow and Pool", so it's safe to assume the exchange rate
     /// is 1:1. If used in other contexts, it might revert, which is fine.
+    /// Can only be used for Borrow and Pool vaults, which have the same ilkId and underlyhing
     function closeFromLadle(bytes12 vaultId_, address collateralReceiver, address remainderReceiver)
         external payable
         returns (uint256 repaid)
@@ -55,6 +58,7 @@ contract RepayCloseModule is LadleStorage {
         (bytes12 vaultId, DataTypes.Vault memory vault) = getVault(vaultId_);
         DataTypes.Series memory series = getSeries(vault.seriesId);
         DataTypes.Balances memory balances = cauldron.balances(vaultId);
+        require(series.fyToken.underlying() == cauldron.assets(vault.ilkId), "Only for Borrow and Pool");
         
         IERC20 base = IERC20(cauldron.assets(series.baseId));
         uint256 amount = base.balanceOf(address(this));
