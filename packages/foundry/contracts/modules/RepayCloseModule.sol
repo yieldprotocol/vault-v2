@@ -16,6 +16,10 @@ contract RepayCloseModule is LadleStorage {
     ///@param weth_ address of WETH
     constructor(ICauldron cauldron_, IWETH9 weth_) LadleStorage(cauldron_, weth_) {}
 
+    /// @dev Use fyToken in the Ladle to repay debt. Return unused fyToken to `to`.
+    /// Return as much collateral as debt was repaid, as well. This function is only used when
+    /// removing liquidity added with "Borrow and Pool", so it's safe to assume the exchange rate
+    /// is 1:1. If used in other contexts, it might revert, which is fine.
     function repayFromLadle(bytes12 vaultId_, address collateralReceiver, address remainderReceiver)
         external payable
         returns (uint256 repaid)
@@ -40,6 +44,10 @@ contract RepayCloseModule is LadleStorage {
 
     }
 
+    /// @dev Use base in the Ladle to repay debt. Return unused base to `to`.
+    /// Return as much collateral as debt was repaid, as well. This function is only used when
+    /// removing liquidity added with "Borrow and Pool", so it's safe to assume the exchange rate
+    /// is 1:1. If used in other contexts, it might revert, which is fine.
     function closeFromLadle(bytes12 vaultId_, address collateralReceiver, address remainderReceiver)
         external payable
         returns (uint256 repaid)
