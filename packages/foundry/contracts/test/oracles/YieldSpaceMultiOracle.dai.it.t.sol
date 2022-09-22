@@ -29,7 +29,7 @@ contract YieldSpaceMultiOracleDAIIntegrationTest is Test, TestConstants {
         pool = IPool(ladle.pools(FYDAI2212));
 
         vm.prank(address(0xa11ce));
-        oracle.setSource(FYDAI2212, DAI, address(pool));
+        oracle.setSource(FYDAI2212, DAI, pool);
 
         skip(10 minutes);
     }
