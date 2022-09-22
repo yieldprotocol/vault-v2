@@ -74,20 +74,22 @@ contract WithVaultProvisioned is ZeroTest {
         // create vault
         (vaultId, ) = ladle.build(seriesId, ilkId, 0);
         // provide tokens
-        deal(address(dai), address(this), WAD * 2);
-        deal(address(dai), address(ladle), WAD);
-        deal(address(fyDAI), address(ladle), WAD);
+        deal(address(dai), address(this), WAD * 6);
+        deal(address(dai), address(ladle), WAD * 10);
+        deal(address(fyDAI), address(ladle), WAD * 10);
         // provision vault
         DataTypes.Vault memory vault = cauldron.vaults(vaultId);
-        dai.approve(address(ladle), WAD * 2);
-        dai.transfer(join, WAD * 2);
-        ladle.pour(vaultId, vault.owner, 1e18 * 2, 1e18);
+        dai.approve(address(ladle), WAD * 6);
+        dai.transfer(join, WAD * 6);
+        ladle.pour(vaultId, vault.owner, 1e18 * 6, 1e18 * 3);
     }
 
     function testRepayFromLadle() public {
         console.log("Can repay from ladle");
+        uint256 ladleBalanceBefore = fyDAI.balanceOf(address(ladle));
         uint256 joinBalanceBefore = dai.balanceOf(address(join));
-        uint256 baseBalanceBefore = dai.balanceOf(address(foo));
+        uint256 fooBalanceBefore = dai.balanceOf(address(foo));
+        uint256 barBalanceBefore = fyDAI.balanceOf(address(bar));
                 
         vm.prank(address(ladle));
         bytes memory data = ILadleCustom(address(ladle)).moduleCall(
@@ -96,18 +98,26 @@ contract WithVaultProvisioned is ZeroTest {
         );
         uint256 repaid = abi.decode(data, (uint256));
 
-        assertEq(repaid, WAD);
-        assertEq(joinBalanceBefore, dai.balanceOf(address(join)) + WAD);
-        assertEq(baseBalanceBefore, dai.balanceOf(address(foo)) - WAD);
-        assertEq(cauldron.balances(vaultId).ink, WAD);
+        // the ladle will repay the 3 DAI vault debt in this case
+        assertEq(repaid, WAD * 3);
+        // the ladle will burn 3 fyDAI from its own balance, send the 
+        // amount repaid (3) to foo from the join and then 
+        // finally send its remaining fyToken balance (7 DAI) to bar
+        assertEq(ladleBalanceBefore, fyDAI.balanceOf(address(ladle)) + WAD * 10);
+        assertEq(joinBalanceBefore, dai.balanceOf(address(join)) + WAD * 3);
+        assertEq(fooBalanceBefore, dai.balanceOf(address(foo)) - WAD * 3);
+        assertEq(barBalanceBefore, fyDAI.balanceOf(address(bar)) - WAD * 7);
+        // Both balances subtracted by 3 DAI since that is the amount repaid
+        assertEq(cauldron.balances(vaultId).ink, WAD * 3);
         assertEq(cauldron.balances(vaultId).art, 0);
     }
 
     function testCloseFromLadle() public {
         console.log("Can close from ladle");
-        uint256 joinBalanceBefore = dai.balanceOf(address(join));
-        uint256 baseBalanceBefore = dai.balanceOf(address(foo));
-
+        uint256 ladleBalanceBefore = dai.balanceOf(address(ladle));
+        uint256 fooBalanceBefore = dai.balanceOf(address(foo));
+        uint256 barBalanceBefore = dai.balanceOf(address(bar));
+    
         vm.prank(address(ladle));
         bytes memory data = ILadleCustom(address(ladle)).moduleCall(
             address(module),
@@ -115,10 +125,15 @@ contract WithVaultProvisioned is ZeroTest {
         );
         uint256 repaid = abi.decode(data, (uint256));
 
-        assertEq(repaid, WAD);
-        assertEq(joinBalanceBefore, dai.balanceOf(address(join)));
-        assertEq(baseBalanceBefore, dai.balanceOf(address(foo)) - WAD);
-        assertEq(cauldron.balances(vaultId).ink, WAD);
+        // the ladle will repay the 3 DAI vault debt in this case
+        assertEq(repaid, WAD * 3);
+        // the ladle transfers 3 DAI to the Join which sends it to foo
+        // then sends the remainder (7 DAI in this case) to bar
+        assertEq(ladleBalanceBefore, dai.balanceOf(address(ladle)) + WAD * 10);
+        assertEq(fooBalanceBefore, dai.balanceOf(address(foo)) - WAD * 3);
+        assertEq(barBalanceBefore, dai.balanceOf(address(bar)) - WAD * 7);
+        // Both balances subtracted by 3 DAI since that is the amount repaid
+        assertEq(cauldron.balances(vaultId).ink, WAD * 3);
         assertEq(cauldron.balances(vaultId).art, 0);
     }
 }
