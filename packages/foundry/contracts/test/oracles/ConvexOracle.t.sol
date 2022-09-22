@@ -27,11 +27,12 @@ contract ConvexOracleTest is Test, TestConstants {
     address public weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
     function setUp() public {
+        vm.createSelectFork('mainnet', 15044600);
+
         convexOracle = new Cvx3CrvOracle();
         chainlinkMultiOracle = new ChainlinkMultiOracle();
         compositeMultiOracle = new CompositeMultiOracle();
         
-        vm.createSelectFork('mainnet', 15044600);
         convexOracle.grantRole(
             convexOracle.setSource.selector, 
             address(this)

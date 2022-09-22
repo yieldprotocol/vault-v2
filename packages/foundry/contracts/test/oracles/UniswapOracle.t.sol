@@ -21,9 +21,10 @@ contract UniswapOracleTest is Test, TestConstants {
 
     
     function setUp() public {
+        vm.createSelectFork('mainnet', 15044600);
+
         uniswapV3Oracle = new UniswapV3Oracle();
         
-        vm.createSelectFork('mainnet', 15044600);
         uniswapV3Oracle.grantRole(uniswapV3Oracle.setSource.selector, address(this));
         uniswapV3Oracle.setSource(fraxId, usdcId, fraxUsdcPool, 100);
         uniswapV3Oracle.setSource(usdcId, wethId, usdcEthPool, 100);

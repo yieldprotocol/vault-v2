@@ -6,7 +6,7 @@ import "./ICauldron.sol";
 interface ILadle {
     function joins(bytes6) external view returns (IJoin);
 
-    function pools(bytes6) external returns (address);
+    function pools(bytes6) external view returns (address);
 
     function cauldron() external view returns (ICauldron);
 

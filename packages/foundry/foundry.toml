@@ -9,4 +9,11 @@ verbosity = 3
 solc_version = '0.8.15'
 rpc_endpoints = { mainnet = "${MAINNET_RPC}" }
 
+[profile.dev]
+ignored_error_codes = [
+    5667, # unused args warning
+    5574  # code size warning
+] 
+optimizer = false
+
 # See more config options https://github.com/gakonst/foundry/tree/master/config

@@ -7,16 +7,17 @@ import "./DataTypes.sol";
 
 interface IWitch {
     /// @return The Cauldron the witch is using under-the-bonnet
-    function cauldron() external returns (ICauldron);
+    function cauldron() external view returns (ICauldron);
 
     /// @return The Ladle the witch is using under-the-bonnet
-    function ladle() external returns (ILadle);
+    function ladle() external view returns (ILadle);
 
     /// @dev Queries the ongoing auctions
     /// @param vaultId Id of the vault to query an auction for
     /// @return auction_ Info associated to the auction
     function auctions(bytes12 vaultId)
         external
+        view
         returns (DataTypes.Auction memory auction_);
 
     /// @dev Queries the params that govern how time influences collateral price in auctions
@@ -25,6 +26,7 @@ interface IWitch {
     /// @return line Parameters that govern how much collateral is sold over time.
     function lines(bytes6 ilkId, bytes6 baseId)
         external
+        view
         returns (DataTypes.Line memory line);
 
     /// @dev Queries the params that govern how much collateral of each kind can be sold at any given time.
@@ -33,6 +35,7 @@ interface IWitch {
     /// @return limits_ Parameters that govern how much collateral of each kind can be sold at any given time.
     function limits(bytes6 ilkId, bytes6 baseId)
         external
+        view
         returns (DataTypes.Limits memory limits_);
 
     /// @dev Put an under-collateralised vault up for liquidation
