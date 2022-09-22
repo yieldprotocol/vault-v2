@@ -33,7 +33,7 @@ contract StrategyOracleTest is Test {
         assertEq(amount, 1000626265483608378);
     }
 
-    function testPeek2() public {
+    function testPeekReversed() public {
         (uint256 amount, ) = strategyOracle.peek(
             bytes32(quoteId),
             bytes32(baseId),
