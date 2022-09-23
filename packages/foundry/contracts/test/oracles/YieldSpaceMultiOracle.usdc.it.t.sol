@@ -31,7 +31,7 @@ contract YieldSpaceMultiOracleUSDCIntegrationTest is Test, TestConstants {
         _provideLendingLiquidity();
 
         vm.prank(address(0xa11ce));
-        oracle.setSource(FYUSDC2212, USDC, address(pool));
+        oracle.setSource(FYUSDC2212, USDC, pool);
 
         skip(10 minutes);
     }
