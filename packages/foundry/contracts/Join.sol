@@ -17,7 +17,7 @@ contract Join is IJoin, AccessControl {
     using CastU256U128 for uint256;
 
     address public immutable override asset;
-    uint256 public storedBalance;
+    uint256 public override storedBalance;
 
     constructor(address asset_) {
         asset = asset_;
@@ -54,7 +54,7 @@ contract Join is IJoin, AccessControl {
     }
 
     /// @dev Retrieve any tokens other than the `asset`. Useful for airdropped tokens.
-    function retrieve(IERC20 token, address to) external auth {
+    function retrieve(IERC20 token, address to) external override auth {
         require(address(token) != address(asset), "Use exit for asset");
         token.safeTransfer(to, token.balanceOf(address(this)));
     }
