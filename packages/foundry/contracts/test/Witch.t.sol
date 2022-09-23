@@ -821,8 +821,7 @@ contract WitchWithAuction is WitchWithMetadata {
     function testVaultDebtBelowDustLimit()
         public
     {
-        // 50% of this vault would be less than the min of 5k
-        // Increasing the liquidated amount to the 5k min would leave a remainder under the limit (9000 - 5000 = 4000)
+        // 4999 is below the min debt of 5k
         _stubVault(
             StubVault({
                 vaultId: VAULT_ID_2,
