@@ -289,27 +289,36 @@ contract Witch is AccessControl {
         //      b) what we leave in the vault has to be over the min (or zero) in case another liquidation has to be performed
         uint256 min = debt.min * (10**debt.dec);
 
-        // We optimistically assume the vaultProportion to be liquidated is correct.
-        uint256 art = uint256(balances.art).wmul(vaultProportion);
+        uint256 art;
+        uint256 ink;
 
-        // If the vaultProportion we'd be liquidating is too small
-        if (art < min) {
-            // We up the amount to the min
-            art = min;
-            // We calculate the new vaultProportion of the vault that we're liquidating
-            vaultProportion = art.wdivup(balances.art);
-        }
+        if (balances.art > min) {
+            // We optimistically assume the vaultProportion to be liquidated is correct.
+            art = uint256(balances.art).wmul(vaultProportion);
 
-        // If the debt we'd be leaving in the vault is too small
-        if (balances.art - art < min) {
-            // We liquidate everything
+            // If the vaultProportion we'd be liquidating is too small
+            if (art < min) {
+                // We up the amount to the min
+                art = min;
+                // We calculate the new vaultProportion of the vault that we're liquidating
+                vaultProportion = art.wdivup(balances.art);
+            }
+
+            // If the debt we'd be leaving in the vault is too small
+            if (balances.art - art < min) {
+                // We liquidate everything
+                art = balances.art;
+                // Proportion is set to 100%
+                vaultProportion = ONE_HUNDRED_PERCENT;
+            }
+
+            // We calculate how much ink has to be put for sale based on how much art are we asking to be repaid
+            ink = uint256(balances.ink).wmul(vaultProportion);
+        } else {
+            // If min debt was raised, any vault that's left below the new min should be liquidated 100%
             art = balances.art;
-            // Proportion is set to 100%
-            vaultProportion = ONE_HUNDRED_PERCENT;
+            ink = balances.ink;
         }
-
-        // We calculate how much ink has to be put for sale based on how much art are we asking to be repaid
-        uint256 ink = uint256(balances.ink).wmul(vaultProportion);
 
         auction_ = DataTypes.Auction({
             owner: vault.owner,

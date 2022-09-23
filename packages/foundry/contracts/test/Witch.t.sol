@@ -818,6 +818,33 @@ contract WitchWithAuction is WitchWithMetadata {
         assertEq(auction2.ink, 9 ether, "ink");
     }
 
+    function testVaultDebtBelowDustLimit()
+        public
+    {
+        // 50% of this vault would be less than the min of 5k
+        // Increasing the liquidated amount to the 5k min would leave a remainder under the limit (9000 - 5000 = 4000)
+        _stubVault(
+            StubVault({
+                vaultId: VAULT_ID_2,
+                ink: 9 ether,
+                art: 4999e6,
+                level: -1
+            })
+        );
+
+        (DataTypes.Auction memory auction2, , ) = witch.auction(
+            VAULT_ID_2,
+            bot
+        );
+
+        assertEq(auction2.owner, address(0xb0b));
+        assertEq(auction2.start, uint32(block.timestamp));
+        assertEq(auction2.baseId, series.baseId);
+        // 100% of the vault was put for liquidation
+        assertEq(auction2.art, 4999e6, "art");
+        assertEq(auction2.ink, 9 ether, "ink");
+    }
+
     function testUpdateLineAndLimitKeepsSum() public {
         (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
         assertEq(sum, 50 ether);
