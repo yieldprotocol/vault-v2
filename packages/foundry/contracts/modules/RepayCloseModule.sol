@@ -46,41 +46,6 @@ contract RepayCloseModule is LadleStorage {
 
     }
 
-    /// @dev Use base in the Ladle to repay debt. Returns collateral to collateralReceiver and unused fyToken to remainderReceiver.
-    /// Return as much collateral as debt was repaid, as well. This function is only used when
-    /// removing liquidity added with "Borrow and Pool", so it's safe to assume the exchange rate
-    /// is 1:1. If used in other contexts, it might revert, which is fine.
-    /// Can only be used for Borrow and Pool vaults, which have the same ilkId and underlyhing
-    function closeFromLadle(bytes12 vaultId_, address collateralReceiver, address remainderReceiver)
-        external payable
-        returns (uint256 repaid)
-    {
-        (bytes12 vaultId, DataTypes.Vault memory vault) = getVault(vaultId_);
-        DataTypes.Series memory series = getSeries(vault.seriesId);
-        DataTypes.Balances memory balances = cauldron.balances(vaultId);
-        require(series.fyToken.underlying() == cauldron.assets(vault.ilkId), "Only for Borrow and Pool");
-        
-        IERC20 base = IERC20(cauldron.assets(series.baseId));
-        uint256 amount = base.balanceOf(address(this));
-        uint256 debtInBase = cauldron.debtToBase(vault.seriesId, balances.art);
-        uint128 repaidInBase = ((amount <= debtInBase) ? amount : debtInBase).u128();
-        repaid = (repaidInBase == debtInBase) ? balances.art : cauldron.debtFromBase(vault.seriesId, repaidInBase);
-
-        // Update accounting, join base and return collateral
-        if (repaidInBase > 0) {
-            cauldron.pour(vaultId, -(repaid.i128()), -(repaid.i128()));
-            IJoin baseJoin = getJoin(series.baseId);
-            base.safeTransfer(address(baseJoin), repaidInBase);
-            baseJoin.join(address(this), repaidInBase);
-            IJoin ilkJoin = getJoin(vault.ilkId);
-            ilkJoin.exit(collateralReceiver, repaid.u128()); // repaid is the ink collateral released, and equal to the fyToken debt. repaidInBase is the value of the fyToken debt in base terms
-        }
-
-        // Return remainder
-        if (amount - repaidInBase > 0) base.safeTransfer(remainderReceiver, amount - repaidInBase);
-
-    }
-
     /// @dev Obtains a vault by vaultId from the Cauldron, and verifies that msg.sender is the owner
     /// If bytes(0) is passed as the vaultId it tries to load a vault from the cache
     function getVault(bytes12 vaultId_)

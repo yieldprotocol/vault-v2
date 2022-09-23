@@ -111,29 +111,4 @@ contract WithVaultProvisioned is ZeroTest {
         assertEq(cauldron.balances(vaultId).ink, WAD * 3);
         assertEq(cauldron.balances(vaultId).art, 0);
     }
-
-    function testCloseFromLadle() public {
-        console.log("Can close from ladle");
-        uint256 ladleBalanceBefore = dai.balanceOf(address(ladle));
-        uint256 fooBalanceBefore = dai.balanceOf(address(foo));
-        uint256 barBalanceBefore = dai.balanceOf(address(bar));
-    
-        vm.prank(address(ladle));
-        bytes memory data = ILadleCustom(address(ladle)).moduleCall(
-            address(module),
-            abi.encodeWithSelector(module.closeFromLadle.selector, vaultId, foo, bar)
-        );
-        uint256 repaid = abi.decode(data, (uint256));
-
-        // the ladle will repay the 3 DAI vault debt in this case
-        assertEq(repaid, WAD * 3);
-        // the ladle transfers 3 DAI to the Join which sends it to foo
-        // then sends the remainder (7 DAI in this case) to bar
-        assertEq(ladleBalanceBefore, dai.balanceOf(address(ladle)) + WAD * 10);
-        assertEq(fooBalanceBefore, dai.balanceOf(address(foo)) - WAD * 3);
-        assertEq(barBalanceBefore, dai.balanceOf(address(bar)) - WAD * 7);
-        // Both balances subtracted by 3 DAI since that is the amount repaid
-        assertEq(cauldron.balances(vaultId).ink, WAD * 3);
-        assertEq(cauldron.balances(vaultId).art, 0);
-    }
 }
