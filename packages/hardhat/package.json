@@ -14,7 +14,7 @@
   "scripts": {
     "hardhat:build": "rm -rf artifacts typechain && npx ts-node ./src/importer.ts && hardhat compile",
     "hardhat:test": "hardhat compile && hardhat test --show-stack-traces",
-    "hardhat:test:05": "hardhat test test/02* test/03* test/05*",
+    "hardhat:test:05": "hardhat test test/02* test/05*",
     "hardhat:test:09": "hardhat test test/06* test/07* test/08* test/09*",
     "coverage": "hardhat coverage",
     "lint:sol": "solhint -f table contracts/*.sol",
@@ -30,7 +30,7 @@
     "@truffle/hdwallet-provider": "^1.0.40",
     "@types/mocha": "^8.0.0",
     "@yield-protocol/utils-v2": "^2.6.0",
-    "@yield-protocol/yieldspace-tv": "0.1.6-rc1",
+    "@yield-protocol/yieldspace-tv": "0.1.7",
     "chai": "4.2.0",
     "dss-interfaces": "0.1.1",
     "erc3156": "^0.4.8",
