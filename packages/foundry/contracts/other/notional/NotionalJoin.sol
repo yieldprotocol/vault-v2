@@ -8,7 +8,7 @@ import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
 import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
-import "./IBatchAction.sol";
+import "./interfaces/IBatchAction.sol";
 import "./ERC1155.sol";
 
 contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl {
