@@ -72,7 +72,7 @@ contract Witch is AccessControl {
         uint64 collateralProportion
     );
     event LimitSet(bytes6 indexed ilkId, bytes6 indexed baseId, uint128 max);
-    event AnotherWitchSet(address indexed value, bool isWitch);
+    event ProtectedSet(address indexed value, bool protected);
     event AuctioneerRewardSet(uint256 auctioneerReward);
 
     ICauldron public immutable cauldron;
@@ -87,7 +87,7 @@ contract Witch is AccessControl {
     mapping(bytes12 => DataTypes.Auction) public auctions;
     mapping(bytes6 => mapping(bytes6 => DataTypes.Line)) public lines;
     mapping(bytes6 => mapping(bytes6 => DataTypes.Limits)) public limits;
-    mapping(address => bool) public isWitch;
+    mapping(address => bool) public protected;
 
     constructor(ICauldron cauldron_, ILadle ladle_) {
         cauldron = cauldron_;
@@ -160,12 +160,12 @@ contract Witch is AccessControl {
         emit LimitSet(ilkId, baseId, max);
     }
 
-    /// @dev Governance function to set other liquidation contracts that may have taken vaults already.
-    /// @param value The address that may be set/unset as another witch
-    /// @param _isWitch Is this address a witch or not
-    function setAnotherWitch(address value, bool _isWitch) external auth {
-        isWitch[value] = _isWitch;
-        emit AnotherWitchSet(value, _isWitch);
+    /// @dev Governance function to protect specific vault owners from liquidations.
+    /// @param owner The address that may be set/unset as protected
+    /// @param _protected Is this address protected or not
+    function setProtected(address owner, bool _protected) external auth {
+        protected[owner] = _protected;
+        emit ProtectedSet(owner, _protected);
     }
 
     /// @dev Governance function to set the % paid to whomever starts an auction
@@ -207,7 +207,7 @@ contract Witch is AccessControl {
             revert WitchIsDead();
         }
         vault = cauldron.vaults(vaultId);
-        if (auctions[vaultId].start != 0 || isWitch[vault.owner]) {
+        if (auctions[vaultId].start != 0 || protected[vault.owner]) {
             revert VaultAlreadyUnderAuction(vaultId, vault.owner);
         }
         series = cauldron.series(vault.seriesId);

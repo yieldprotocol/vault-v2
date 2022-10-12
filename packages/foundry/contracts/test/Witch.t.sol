@@ -38,7 +38,7 @@ abstract contract WitchStateZero is Test, TestConstants {
         address indexed oldValue,
         address indexed newValue
     );
-    event AnotherWitchSet(address indexed a, bool isWitch);
+    event ProtectedSet(address indexed a, bool protected);
     event AuctioneerRewardSet(uint256 auctioneerReward);
 
     bytes12 internal constant VAULT_ID = "vault";
@@ -69,7 +69,7 @@ abstract contract WitchStateZero is Test, TestConstants {
         witch = new Witch(cauldron, ladle);
         witch.grantRole(Witch.point.selector, ada);
         witch.grantRole(Witch.setLineAndLimit.selector, ada);
-        witch.grantRole(Witch.setAnotherWitch.selector, ada);
+        witch.grantRole(Witch.setProtected.selector, ada);
         witch.grantRole(Witch.setAuctioneerReward.selector, ada);
         vm.stopPrank();
 
@@ -178,22 +178,22 @@ contract WitchStateZeroTest is WitchStateZero {
         assertEq(_sum, 0);
     }
 
-    function testSetAnotherWitchRequiresAuth() public {
+    function testSetProtectedRequiresAuth() public {
         vm.prank(bob);
         vm.expectRevert("Access denied");
-        witch.setAnotherWitch(address(0), true);
+        witch.setProtected(address(0), true);
     }
 
-    function testSetAnotherWitch() public {
-        address anotherWitch = Mocks.mock("anotherWitch");
+    function testSetProtected() public {
+        address protected = Mocks.mock("protected");
 
         vm.expectEmit(true, true, false, true);
-        emit AnotherWitchSet(anotherWitch, true);
+        emit ProtectedSet(protected, true);
 
         vm.prank(ada);
-        witch.setAnotherWitch(anotherWitch, true);
+        witch.setProtected(protected, true);
 
-        assertTrue(witch.isWitch(anotherWitch));
+        assertTrue(witch.protected(protected));
     }
 
     function testSetAuctioneerRewardRequiresAuth() public {
@@ -382,14 +382,14 @@ contract WitchWithMetadataTest is WitchWithMetadata {
         witch.auction(VAULT_ID, bot);
     }
 
-    function testVaultBelongsToAnotherWitch() public {
+    function testVaultIsProtected() public {
         // Given
-        address anotherWitch = Mocks.mock("anotherWitch");
+        address owner = Mocks.mock("owner");
         vm.prank(ada);
-        witch.setAnotherWitch(anotherWitch, true);
+        witch.setProtected(owner, true);
 
-        // anotherWitch got to auction first
-        vault.owner = anotherWitch;
+        // protected owner
+        vault.owner = owner;
         cauldron.vaults.mock(VAULT_ID, vault);
 
         // When
@@ -397,7 +397,7 @@ contract WitchWithMetadataTest is WitchWithMetadata {
             abi.encodeWithSelector(
                 Witch.VaultAlreadyUnderAuction.selector,
                 VAULT_ID,
-                anotherWitch
+                owner
             )
         );
         witch.auction(VAULT_ID, bot);
@@ -884,6 +884,29 @@ contract WitchWithAuction is WitchWithMetadata {
         emit Cancelled(VAULT_ID);
 
         witch.cancel(VAULT_ID);
+
+        // sum is reduced by auction.ink
+        (, sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 0);
+
+        _auctionWasDeleted(VAULT_ID);
+    }
+
+    function testClearOwnedAuction() public {
+        vm.expectRevert(abi.encodeWithSelector(Witch.AuctionIsCorrect.selector,VAULT_ID));
+        witch.clear(VAULT_ID);
+    }
+
+    function testClearVault() public {
+        (, uint128 sum) = witch.limits(ILK_ID, BASE_ID);
+        assertEq(sum, 50 ether);
+
+        // let's give the vault back to the owner
+        address owner = Mocks.mock("owner");
+        vault.owner = owner;
+        cauldron.vaults.mock(VAULT_ID, vault);
+
+        witch.clear(VAULT_ID);
 
         // sum is reduced by auction.ink
         (, sum) = witch.limits(ILK_ID, BASE_ID);
