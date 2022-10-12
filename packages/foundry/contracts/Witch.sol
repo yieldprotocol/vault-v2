@@ -27,6 +27,7 @@ contract Witch is AccessControl {
 
     error VaultAlreadyUnderAuction(bytes12 vaultId, address witch);
     error VaultNotLiquidatable(bytes6 ilkId, bytes6 baseId);
+    error AuctionIsCorrect(bytes12 vaultId);
     error AuctioneerRewardTooHigh(uint256 max, uint256 actual);
     error WitchIsDead();
     error CollateralLimitExceeded(uint256 current, uint256 max);
@@ -47,6 +48,7 @@ contract Witch is AccessControl {
         uint256 initialCollateralProportion
     );
     event Cancelled(bytes12 indexed vaultId);
+    event Cleared(bytes12 indexed vaultId);
     event Ended(bytes12 indexed vaultId);
     event Bought(
         bytes12 indexed vaultId,
@@ -355,6 +357,21 @@ contract Witch is AccessControl {
         cauldron.give(vaultId, owner);
         delete auctions[vaultId];
         emit Ended(vaultId);
+    }
+
+    /// @dev Remove an auction for a vault that isn't owned by this Witch
+    /// @notice Other witches or similar contracts can take vaults
+    /// @param vaultId Id of the vault whose auction we will clear
+    function clear(bytes12 vaultId) external {
+        DataTypes.Auction memory auction_ = _auction(vaultId);
+        if (cauldron.vaults(vaultId).owner == address(this)) {
+            revert AuctionIsCorrect(vaultId);
+        }
+
+        // Update concurrent collateral under auction
+        limits[auction_.ilkId][auction_.baseId].sum -= auction_.ink;
+        delete auctions[vaultId];
+        emit Cleared(vaultId);
     }
 
     // ======================================================================
