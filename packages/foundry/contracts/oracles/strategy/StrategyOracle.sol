@@ -44,13 +44,13 @@ contract StrategyOracle is IOracle, AccessControl {
             inverse: false
         });
         emit SourceSet(strategyId, quoteId, strategy);
-        if (strategyId != quoteId) {
-            sources[quoteId][strategyId] = Source({
-                strategy: strategy,
-                inverse: true
-            });
-            emit SourceSet(quoteId, strategyId, strategy);
-        }
+
+        // Storing the inverse by default as we can assume that quoteId will never be the same as strategyId
+        sources[quoteId][strategyId] = Source({
+            strategy: strategy,
+            inverse: true
+        });
+        emit SourceSet(quoteId, strategyId, strategy);
     }
 
     function peek(
