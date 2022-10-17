@@ -3,6 +3,7 @@
 *~
 *.swp
 *.swo
+.idea
 
 # Packaging
 *.tar.gz

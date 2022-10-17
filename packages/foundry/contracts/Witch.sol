@@ -27,6 +27,7 @@ contract Witch is AccessControl {
 
     error VaultAlreadyUnderAuction(bytes12 vaultId, address witch);
     error VaultNotLiquidatable(bytes6 ilkId, bytes6 baseId);
+    error AuctionIsCorrect(bytes12 vaultId);
     error AuctioneerRewardTooHigh(uint256 max, uint256 actual);
     error WitchIsDead();
     error CollateralLimitExceeded(uint256 current, uint256 max);
@@ -47,6 +48,7 @@ contract Witch is AccessControl {
         uint256 initialCollateralProportion
     );
     event Cancelled(bytes12 indexed vaultId);
+    event Cleared(bytes12 indexed vaultId);
     event Ended(bytes12 indexed vaultId);
     event Bought(
         bytes12 indexed vaultId,
@@ -70,7 +72,7 @@ contract Witch is AccessControl {
         uint64 collateralProportion
     );
     event LimitSet(bytes6 indexed ilkId, bytes6 indexed baseId, uint128 max);
-    event AnotherWitchSet(address indexed value, bool isWitch);
+    event ProtectedSet(address indexed value, bool protected);
     event AuctioneerRewardSet(uint256 auctioneerReward);
 
     ICauldron public immutable cauldron;
@@ -85,7 +87,7 @@ contract Witch is AccessControl {
     mapping(bytes12 => DataTypes.Auction) public auctions;
     mapping(bytes6 => mapping(bytes6 => DataTypes.Line)) public lines;
     mapping(bytes6 => mapping(bytes6 => DataTypes.Limits)) public limits;
-    mapping(address => bool) public isWitch;
+    mapping(address => bool) public protected;
 
     constructor(ICauldron cauldron_, ILadle ladle_) {
         cauldron = cauldron_;
@@ -158,12 +160,12 @@ contract Witch is AccessControl {
         emit LimitSet(ilkId, baseId, max);
     }
 
-    /// @dev Governance function to set other liquidation contracts that may have taken vaults already.
-    /// @param value The address that may be set/unset as another witch
-    /// @param _isWitch Is this address a witch or not
-    function setAnotherWitch(address value, bool _isWitch) external auth {
-        isWitch[value] = _isWitch;
-        emit AnotherWitchSet(value, _isWitch);
+    /// @dev Governance function to protect specific vault owners from liquidations.
+    /// @param owner The address that may be set/unset as protected
+    /// @param _protected Is this address protected or not
+    function setProtected(address owner, bool _protected) external auth {
+        protected[owner] = _protected;
+        emit ProtectedSet(owner, _protected);
     }
 
     /// @dev Governance function to set the % paid to whomever starts an auction
@@ -205,7 +207,7 @@ contract Witch is AccessControl {
             revert WitchIsDead();
         }
         vault = cauldron.vaults(vaultId);
-        if (auctions[vaultId].start != 0 || isWitch[vault.owner]) {
+        if (auctions[vaultId].start != 0 || protected[vault.owner]) {
             revert VaultAlreadyUnderAuction(vaultId, vault.owner);
         }
         series = cauldron.series(vault.seriesId);
@@ -289,27 +291,36 @@ contract Witch is AccessControl {
         //      b) what we leave in the vault has to be over the min (or zero) in case another liquidation has to be performed
         uint256 min = debt.min * (10**debt.dec);
 
-        // We optimistically assume the vaultProportion to be liquidated is correct.
-        uint256 art = uint256(balances.art).wmul(vaultProportion);
+        uint256 art;
+        uint256 ink;
 
-        // If the vaultProportion we'd be liquidating is too small
-        if (art < min) {
-            // We up the amount to the min
-            art = min;
-            // We calculate the new vaultProportion of the vault that we're liquidating
-            vaultProportion = art.wdivup(balances.art);
-        }
+        if (balances.art > min) {
+            // We optimistically assume the vaultProportion to be liquidated is correct.
+            art = uint256(balances.art).wmul(vaultProportion);
 
-        // If the debt we'd be leaving in the vault is too small
-        if (balances.art - art < min) {
-            // We liquidate everything
+            // If the vaultProportion we'd be liquidating is too small
+            if (art < min) {
+                // We up the amount to the min
+                art = min;
+                // We calculate the new vaultProportion of the vault that we're liquidating
+                vaultProportion = art.wdivup(balances.art);
+            }
+
+            // If the debt we'd be leaving in the vault is too small
+            if (balances.art - art < min) {
+                // We liquidate everything
+                art = balances.art;
+                // Proportion is set to 100%
+                vaultProportion = ONE_HUNDRED_PERCENT;
+            }
+
+            // We calculate how much ink has to be put for sale based on how much art are we asking to be repaid
+            ink = uint256(balances.ink).wmul(vaultProportion);
+        } else {
+            // If min debt was raised, any vault that's left below the new min should be liquidated 100%
             art = balances.art;
-            // Proportion is set to 100%
-            vaultProportion = ONE_HUNDRED_PERCENT;
+            ink = balances.ink;
         }
-
-        // We calculate how much ink has to be put for sale based on how much art are we asking to be repaid
-        uint256 ink = uint256(balances.ink).wmul(vaultProportion);
 
         auction_ = DataTypes.Auction({
             owner: vault.owner,
@@ -346,6 +357,21 @@ contract Witch is AccessControl {
         cauldron.give(vaultId, owner);
         delete auctions[vaultId];
         emit Ended(vaultId);
+    }
+
+    /// @dev Remove an auction for a vault that isn't owned by this Witch
+    /// @notice Other witches or similar contracts can take vaults
+    /// @param vaultId Id of the vault whose auction we will clear
+    function clear(bytes12 vaultId) external {
+        DataTypes.Auction memory auction_ = _auction(vaultId);
+        if (cauldron.vaults(vaultId).owner == address(this)) {
+            revert AuctionIsCorrect(vaultId);
+        }
+
+        // Update concurrent collateral under auction
+        limits[auction_.ilkId][auction_.baseId].sum -= auction_.ink;
+        delete auctions[vaultId];
+        emit Cleared(vaultId);
     }
 
     // ======================================================================

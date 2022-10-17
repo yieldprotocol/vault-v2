@@ -2,10 +2,27 @@
 pragma solidity ^0.8.0;
 import "./IERC5095.sol";
 import "./IJoin.sol";
+import "./IOracle.sol";
 
 interface IFYToken is IERC5095 {
+
+    /// @dev Oracle for the savings rate.
+    function oracle() view external returns (IOracle);
+
     /// @dev Source of redemption funds.
-    function join() external view returns (IJoin);
+    function join() view external returns (IJoin); 
+
+    /// @dev Asset to be paid out on redemption.
+    function underlying() view external returns (address);
+
+    /// @dev Yield id of the asset to be paid out on redemption.
+    function underlyingId() view external returns (bytes6);
+
+    /// @dev Time at which redemptions are enabled.
+    function maturity() view external returns (uint256);
+
+    /// @dev Spot price (exchange rate) between the base and an interest accruing token at maturity, set to 2^256-1 before maturity
+    function chiAtMaturity() view external returns (uint256);
     
     /// @dev Record price data at maturity
     function mature() external;

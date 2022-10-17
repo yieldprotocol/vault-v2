@@ -6,6 +6,7 @@
   "files": [
     "contracts/*.sol",
     "contracts/**/*.sol",
+    "contracts/**/**/*.sol",
     "!contracts/mocks/**/*.sol",
     "!contracts/test/**/*.sol",
     "!contracts/deprecated/**/*.sol",

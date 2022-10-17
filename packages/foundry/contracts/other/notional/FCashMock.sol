@@ -3,7 +3,7 @@ pragma solidity >=0.8.0;
 import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
 import "../../mocks/ERC20Mock.sol";
 import "./ERC1155.sol"; // TODO: Move to yield-utils-v2
-import "./IBatchAction.sol";
+import "./interfaces/IBatchAction.sol";
 
 contract FCashMock is ERC1155 {
     using WMul for uint256;

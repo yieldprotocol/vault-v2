@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
-import "../../interfaces/IJoin.sol";
+import "../../../interfaces/IJoin.sol";
 
 interface INotionalJoin is IJoin {
     function underlying() external view returns(address);
