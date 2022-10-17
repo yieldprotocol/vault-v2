@@ -8,7 +8,7 @@ import "../../oracles/strategy/StrategyOracle.sol";
 contract StrategyOracleTest is Test {
     StrategyOracle public strategyOracle;
     bytes6 baseId = 0xc02aaa39b223;
-    bytes6 quoteId = 0x1f9840a85d5a;
+    bytes6 quoteId; // = 0x1f9840a85d5a;
 
     function setUp() public {
         strategyOracle = new StrategyOracle();
@@ -16,10 +16,9 @@ contract StrategyOracleTest is Test {
             strategyOracle.setSource.selector,
             address(this)
         );
+        quoteId = IStrategy(0x831dF23f7278575BA0b136296a285600cD75d076).baseId();
         strategyOracle.setSource(
             baseId,
-            quoteId,
-            18,
             IStrategy(0x831dF23f7278575BA0b136296a285600cD75d076)
         );
     }

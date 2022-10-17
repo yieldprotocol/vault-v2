@@ -13,6 +13,10 @@ interface IStrategy {
     /// @notice Returns total supply of the strategy token
     /// @return Total Supply of strategy token
     function totalSupply() external view returns (uint256);
+
+    /// @notice Returns baseId of the strategy
+    /// @return baseId
+    function baseId() external view returns (bytes6);
 }
 
 /// @title Oracle contract to get price of strategy tokens in terms of base & vice versa
@@ -27,41 +31,34 @@ contract StrategyOracle is IOracle, AccessControl {
     );
 
     struct Source {
-        uint8 decimals;
         bool inverse;
         IStrategy strategy;
     }
 
     mapping(bytes6 => mapping(bytes6 => Source)) public sources;
 
-    function setSource(
-        bytes6 baseId,
-        bytes6 quoteId,
-        uint8 decimals,
-        IStrategy strategy
-    ) external auth {
-        sources[baseId][quoteId] = Source({
+    function setSource(bytes6 strategyId, IStrategy strategy) external auth {
+        bytes6 quoteId = strategy.baseId();
+        sources[strategyId][quoteId] = Source({
             strategy: strategy,
-            decimals: decimals,
             inverse: false
         });
-        emit SourceSet(baseId, quoteId, strategy);
-        if (baseId != quoteId) {
-            sources[quoteId][baseId] = Source({
+        emit SourceSet(strategyId, quoteId, strategy);
+        if (strategyId != quoteId) {
+            sources[quoteId][strategyId] = Source({
                 strategy: strategy,
-                decimals: decimals,
                 inverse: true
             });
-            emit SourceSet(quoteId, baseId, strategy);
+            emit SourceSet(quoteId, strategyId, strategy);
         }
     }
 
     function peek(
-        bytes32 base,
-        bytes32 quote,
+        bytes32 baseId,
+        bytes32 quoteId,
         uint256 amount
     ) external view returns (uint256 value, uint256 updateTime) {
-        return _peek(base.b6(), quote.b6(), amount);
+        return _peek(baseId.b6(), quoteId.b6(), amount);
     }
 
     function _peek(
@@ -87,10 +84,10 @@ contract StrategyOracle is IOracle, AccessControl {
     }
 
     function get(
-        bytes32 base,
-        bytes32 quote,
+        bytes32 baseId,
+        bytes32 quoteId,
         uint256 amount
     ) external returns (uint256 value, uint256 updateTime) {
-        return _peek(base.b6(), quote.b6(), amount);
+        return _peek(baseId.b6(), quoteId.b6(), amount);
     }
 }
