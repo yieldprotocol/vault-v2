@@ -104,9 +104,10 @@ abstract contract OnceMatured is AfterMaturity {
     function setUp() public override {
         super.setUp();
         chiOracle = new CTokenChiMock();
-        fyDAI.mature();
         fyDAI.point("oracle", address(chiOracle));                          // Uses new oracle to update to new chi value
-        chiOracle.set(220434062002504964823286680 * 110 / 100);             // Will set chi returned to be 10% 
+        chiOracle.set(220434062002504964823286680); 
+        fyDAI.mature();
+        chiOracle.set(220434062002504964823286680 * 110 / 100);             // Will set chi returned to be 10%
     }
 }
 
@@ -217,6 +218,12 @@ contract AfterMaturityTest is AfterMaturity {
 }
 
 contract OnceMaturedTest is OnceMatured {
+    function testCannotChangeOracle() public {
+        console.log("can't change the CHI oracle once matured");
+        vm.expectRevert("Already matured");
+        fyDAI.point("oracle", address(this));
+    }
+
     function testChiAccrualNotBelowOne() public {
         console.log("cannot have chi accrual below 1");
         assertGt(fyDAI.accrual(), WAD);
