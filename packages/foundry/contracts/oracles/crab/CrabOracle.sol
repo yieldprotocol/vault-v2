@@ -37,9 +37,9 @@ contract CrabOracle is IOracle, AccessControl {
     IOracle uniswapV3Oracle =
         IOracle(0x358538ea4F52Ac15C551f88C701696f6d9b38F3C);
     // TODO: Update this before deployment
-    bytes6 crab = 0x323900000000;
-    bytes6 public weth = 0x303100000000;
-    bytes6 public oSQTH = 0x313900000000;
+    bytes6 public constant crab = 0x323900000000;
+    bytes6 public constant weth = 0x303100000000;
+    bytes6 public constant oSQTH = 0x313900000000;
 
     constructor(ICrabStrategy crabStrategy_) {
         crabStrategy = crabStrategy_;
