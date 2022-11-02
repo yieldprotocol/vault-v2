@@ -95,7 +95,7 @@ contract CrabOracle is IOracle, AccessControl {
         (, , uint256 ethCollateral, uint256 oSQTHDebt) = crabStrategy
             .getVaultDetails();
 
-        //Base equals weth
+        // Crab Price calculation
         (uint256 oSQTHPrice, uint256 updatTime) = uniswapV3Oracle.peek(
             oSQTH,
             weth,
@@ -104,6 +104,7 @@ contract CrabOracle is IOracle, AccessControl {
         require(updatTime != 0, "Incomplete round");
         uint256 crabPrice = (ethCollateral * 1e18 - oSQTHPrice * oSQTHDebt) /
             crabStrategy.totalSupply();
+
         if (base == crab) {
             //Base equals crab
             quoteAmount = (crabPrice * baseAmount) / 1e18;
@@ -111,6 +112,7 @@ contract CrabOracle is IOracle, AccessControl {
             //Base equals weth
             quoteAmount = (baseAmount * 1e18) / crabPrice;
         }
+
         updateTime = block.timestamp;
     }
 }
