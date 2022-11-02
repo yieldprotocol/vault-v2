@@ -34,15 +34,33 @@ interface ICrabStrategy {
 contract CrabOracle is IOracle, AccessControl {
     using CastBytes32Bytes6 for bytes32;
     ICrabStrategy crabStrategy;
-    IOracle uniswapV3Oracle =
-        IOracle(0x358538ea4F52Ac15C551f88C701696f6d9b38F3C);
+    IOracle uniswapV3Oracle;
     // TODO: Update this before deployment
-    bytes6 public constant crab = 0x323900000000;
+    bytes6 public crab;
+    bytes6 public oSQTH;
     bytes6 public constant weth = 0x303100000000;
-    bytes6 public constant oSQTH = 0x313900000000;
 
-    constructor(ICrabStrategy crabStrategy_) {
+    event SourceSet(
+        bytes6 crab_,
+        bytes6 oSQTH_,
+        ICrabStrategy crabStrategy_,
+        IOracle uniswapV3Oracle_
+    );
+
+    /**
+     * @notice Set crabstrategy & uniswap source
+     */
+    function setSource(
+        bytes6 crab_,
+        bytes6 oSQTH_,
+        ICrabStrategy crabStrategy_,
+        IOracle uniswapV3Oracle_
+    ) external auth {
+        crab = crab_;
+        oSQTH = oSQTH_;
         crabStrategy = crabStrategy_;
+        uniswapV3Oracle = uniswapV3Oracle_;
+        emit SourceSet(crab_, oSQTH_, crabStrategy_, uniswapV3Oracle_);
     }
 
     /**
