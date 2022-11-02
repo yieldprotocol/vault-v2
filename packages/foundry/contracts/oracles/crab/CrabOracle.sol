@@ -34,9 +34,12 @@ interface ICrabStrategy {
 contract CrabOracle is IOracle, AccessControl {
     using CastBytes32Bytes6 for bytes32;
     ICrabStrategy crabStrategy;
+    IOracle uniswapV3Oracle =
+        IOracle(0x358538ea4F52Ac15C551f88C701696f6d9b38F3C);
     // TODO: Update this before deployment
-    bytes6 crab = 0x303000000000;
-    bytes6 weth = 0x303100000000;
+    bytes6 crab = 0x323900000000;
+    bytes6 public weth = 0x303100000000;
+    bytes6 public oSQTH = 0x313900000000;
 
     constructor(ICrabStrategy crabStrategy_) {
         crabStrategy = crabStrategy_;
@@ -89,17 +92,24 @@ contract CrabOracle is IOracle, AccessControl {
             (base == crab && quote == weth) || (base == weth && quote == crab),
             "Source not found"
         );
-        (, , uint256 strategyCollateral, ) = crabStrategy.getVaultDetails();
+        (, , uint256 ethCollateral, uint256 oSQTHDebt) = crabStrategy
+            .getVaultDetails();
+
+        //Base equals weth
+        (uint256 oSQTHPrice, uint256 updatTime) = uniswapV3Oracle.peek(
+            oSQTH,
+            weth,
+            1e18
+        );
+        require(updatTime != 0, "Incomplete round");
+        uint256 crabPrice = (ethCollateral * 1e18 - oSQTHPrice * oSQTHDebt) /
+            crabStrategy.totalSupply();
         if (base == crab) {
             //Base equals crab
-            quoteAmount =
-                (baseAmount * strategyCollateral) /
-                (baseAmount + crabStrategy.totalSupply());
+            quoteAmount = (crabPrice * baseAmount) / 1e18;
         } else if (quote == crab) {
             //Base equals weth
-            quoteAmount =
-                (crabStrategy.totalSupply() * baseAmount) /
-                (strategyCollateral - baseAmount);
+            quoteAmount = (baseAmount * 1e18) / crabPrice;
         }
         updateTime = block.timestamp;
     }
