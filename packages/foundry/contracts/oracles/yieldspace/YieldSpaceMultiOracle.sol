@@ -44,7 +44,7 @@ contract YieldSpaceMultiOracle is IOracle, AccessControl {
         IPool pool
     ) external auth {
         // Initialise or update the TWAR observations
-        poolOracle.update(pool);
+        poolOracle.updatePool(pool);
 
         sources[seriesId][baseId] = Source(pool, false);
         emit SourceSet(seriesId, baseId, pool);
