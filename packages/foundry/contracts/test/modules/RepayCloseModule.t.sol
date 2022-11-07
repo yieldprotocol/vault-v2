@@ -24,20 +24,20 @@ abstract contract ZeroTest is Test, TestConstants {
     RepayCloseModule public module;
 
     IERC20 public dai = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
-    IERC20 public fyDAI = IERC20(0x79A6Be1Ae54153AA6Fc7e4795272c63F63B2a6DC);
+    IERC20 public fyDAI = IERC20(0xFCb9B8C5160Cf2999f9879D8230dCed469E72eeb);
     IERC20 public usdc = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
     address public join = 0x4fE92119CDf873Cf8826F4E6EcfD4E578E3D44Dc;           // DAI Join
     address public otherJoin = 0x0d9A1A773be5a83eEbda23bf98efB8585C3ae4f4;      // USDC Join
     bytes6 public ilkId = 0x303100000000;                                       // DAI
     bytes6 public otherIlkId = 0x303200000000;                                  // USDC
-    bytes6 public seriesId = 0x303130390000;                                    // ETH/DAI Dec 22 series
+    bytes6 public seriesId = 0x303130370000;                                    // ETH/DAI Dec 22 series
     bytes12 public vaultId;
 
     address public foo = address(1);
     address public bar = address(2);
 
     function setUp() public virtual {
-        vm.createSelectFork('mainnet');
+        vm.createSelectFork('mainnet', 15266900);
         // deployments
         wethMock = new WETH9Mock();
         weth = IWETH9(address(wethMock));

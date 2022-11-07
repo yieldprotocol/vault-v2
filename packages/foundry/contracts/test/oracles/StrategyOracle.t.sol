@@ -4,6 +4,7 @@ pragma solidity >=0.8.13;
 import "forge-std/src/Test.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "../../oracles/strategy/StrategyOracle.sol";
+import "../../interfaces/IStrategy.sol";
 
 contract StrategyOracleTest is Test {
     StrategyOracle public strategyOracle;
@@ -11,6 +12,8 @@ contract StrategyOracleTest is Test {
     bytes6 quoteId; // = 0x1f9840a85d5a;
 
     function setUp() public {
+        vm.createSelectFork('mainnet', 15917726);
+
         strategyOracle = new StrategyOracle();
         strategyOracle.grantRole(
             strategyOracle.setSource.selector,
@@ -29,7 +32,7 @@ contract StrategyOracleTest is Test {
             bytes32(quoteId),
             1e18
         );
-        assertEq(amount, 1000626265483608378);
+        assertEq(amount, 1000626265483608379);
     }
 
     function testPeekReversed() public {
@@ -38,6 +41,6 @@ contract StrategyOracleTest is Test {
             bytes32(baseId),
             1e18
         );
-        assertEq(amount, 999374126479374693);
+        assertEq(amount, 999374126479374692);
     }
 }

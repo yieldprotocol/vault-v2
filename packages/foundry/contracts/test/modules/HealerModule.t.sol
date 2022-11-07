@@ -26,11 +26,11 @@ contract HealerModuleTest is Test {
     address public dai = 0x6B175474E89094C44Da98b954EedeAC495271d0F; // DAI token address
     address public join = 0x4fE92119CDf873Cf8826F4E6EcfD4E578E3D44Dc;
     bytes6 public ilkId = 0x303100000000; // DAI
-    bytes6 public seriesId = 0x303130390000; // ETH/DAI Sept 22 series
+    bytes6 public seriesId = 0x303130370000; // ETH/DAI Sept 22 series
     bytes12 public vaultId;
 
     function setUp() public {
-        vm.createSelectFork('mainnet');
+        vm.createSelectFork('mainnet', 15266900);
 
         wethMock = new WETH9Mock();
         weth = IWETH9(address(wethMock));
