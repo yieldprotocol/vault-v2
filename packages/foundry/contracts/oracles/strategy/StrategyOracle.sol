@@ -4,20 +4,7 @@ pragma solidity >=0.8.13;
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
 import "../../interfaces/IOracle.sol";
-
-interface IStrategy {
-    /// @notice Returns LP tokens owned by the strategy after the last operation
-    /// @return LP tokens amount
-    function cached() external view returns (uint256);
-
-    /// @notice Returns total supply of the strategy token
-    /// @return Total Supply of strategy token
-    function totalSupply() external view returns (uint256);
-
-    /// @notice Returns baseId of the strategy
-    /// @return baseId
-    function baseId() external view returns (bytes6);
-}
+import "../../interfaces/IStrategy.sol";
 
 /// @title Oracle contract to get price of strategy tokens in terms of base & vice versa
 /// @author iamsahu

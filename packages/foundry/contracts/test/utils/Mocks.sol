@@ -3,6 +3,7 @@ pragma solidity >=0.8.0;
 
 import "forge-std/src/Test.sol";
 import "@yield-protocol/yieldspace-tv/src/interfaces/IPool.sol";
+import "@yield-protocol/yieldspace-tv/src/interfaces/IPoolOracle.sol";
 import "../../interfaces/DataTypes.sol";
 
 //common utilities for forge tests
@@ -35,7 +36,15 @@ library Mocks  {
         );
     }
 
-    function mock(function (IPool) external f, IPool param1) internal {
+    function mock(function (IPool) external returns(bool) f, IPool param1) internal {
+        vm.mockCall(
+            f.address,
+            abi.encodeWithSelector(f.selector, param1),
+            abi.encode(0)
+        );
+    }
+
+    function mock(function (IPoolOracle) external f, IPool param1) internal {
         vm.mockCall(
             f.address,
             abi.encodeWithSelector(f.selector, param1),
@@ -202,6 +211,14 @@ library Mocks  {
             abi.encodeWithSelector(f.selector, param1)
         );
     }
+    
+    function verify(function (IPool) external returns(bool) f, IPool param1) internal {
+        vm.expectCall(
+            f.address,
+            abi.encodeWithSelector(f.selector, param1)
+        );
+    }
+
 
     function verify(function (bytes12, address) external returns(DataTypes.Vault memory) f, bytes12 param1, address param2) internal {
         vm.expectCall(
