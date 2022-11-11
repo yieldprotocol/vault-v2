@@ -1,6 +1,6 @@
 {
   "name": "@yield-protocol/vault-v2-hardhat",
-  "version": "0.16.6-rc.1",
+  "version": "0.16.6",
   "description": "Yield Collateralized Debt Engine v2",
   "author": "Yield Inc.",
   "files": [
