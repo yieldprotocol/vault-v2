@@ -6,7 +6,7 @@ import "@yield-protocol/utils-v2/contracts/cast/CastU256I128.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
 import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
 
-contract RepayCloseModule is LadleStorage {
+contract RepayFromLadleModule is LadleStorage {
     using CastU256I128 for uint256;
     using CastU256U128 for uint256;
     using TransferHelper for IERC20;

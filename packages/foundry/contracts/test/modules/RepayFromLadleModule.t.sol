@@ -7,7 +7,7 @@ import "../../interfaces/ICauldron.sol";
 import "../../interfaces/ILadle.sol";
 import "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
 import "../../mocks/WETH9Mock.sol";
-import "../../modules/RepayCloseModule.sol";
+import "../../modules/RepayFromLadleModule.sol";
 import "../utils/TestConstants.sol";
 
 interface ILadleCustom {
@@ -21,7 +21,7 @@ abstract contract ZeroTest is Test, TestConstants {
     ILadle public ladle = ILadle(0x6cB18fF2A33e981D1e38A663Ca056c0a5265066A);
     IWETH9 public weth;
     WETH9Mock public wethMock;
-    RepayCloseModule public module;
+    RepayFromLadleModule public module;
 
     IERC20 public dai = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
     IERC20 public fyDAI = IERC20(0xFCb9B8C5160Cf2999f9879D8230dCed469E72eeb);
@@ -41,14 +41,14 @@ abstract contract ZeroTest is Test, TestConstants {
         // deployments
         wethMock = new WETH9Mock();
         weth = IWETH9(address(wethMock));
-        module = new RepayCloseModule(cauldron, weth);
+        module = new RepayFromLadleModule(cauldron, weth);
         // add module
         vm.prank(0x3b870db67a45611CF4723d44487EAF398fAc51E3);
         ILadleCustom(address(ladle)).addModule(address(module), true);
     }
 }
 
-contract RepayCloseModuleTest is ZeroTest {
+contract RepayFromLadleModuleTest is ZeroTest {
     function testOnlyBorrowAndPoolVault() public {
         console.log("can only be used with Borrow and Pool vaults");
         // Provide USDC ilkId instead of DAI
