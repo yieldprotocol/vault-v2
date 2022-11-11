@@ -182,6 +182,20 @@ contract AfterMaturityTest is AfterMaturity {
         fyDAI.mature();
     }
 
+    function testMatureRevertsOnZeroChi() public {
+        console.log("can't mature if chi is zero");
+
+        CTokenChiMock chiOracle = new CTokenChiMock(); // Use a new oracle that we can force to be zero
+        fyDAI.mature();
+        fyDAI.point("oracle", address(chiOracle));
+        chiOracle.set(0); 
+
+        vm.prank(timelock);
+        fyDAI.mature();
+        vm.expectRevert("Chi oracle malfunction");
+        fyDAI.mature();
+    }
+
     function testMatureRecordsChiValue() public {
         console.log("records chi value when matureed");
         vm.prank(timelock);
