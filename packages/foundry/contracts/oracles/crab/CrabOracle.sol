@@ -35,10 +35,9 @@ contract CrabOracle is IOracle, AccessControl {
     using CastBytes32Bytes6 for bytes32;
     ICrabStrategy crabStrategy;
     IOracle uniswapV3Oracle;
-    // TODO: Update this before deployment
+    bytes6 public constant weth = 0x303000000000;
     bytes6 public crab;
     bytes6 public oSQTH;
-    bytes6 public constant weth = 0x303100000000;
 
     event SourceSet(
         bytes6 crab_,
@@ -65,7 +64,7 @@ contract CrabOracle is IOracle, AccessControl {
 
     /**
      * @notice Retrieve the value of the amount at the latest oracle price.
-     * Only `wstEthId` and `stEthId` are accepted as asset identifiers.
+     * Only `crabId` and `ethId` are accepted as asset identifiers.
      */
     function peek(
         bytes32 base,
@@ -83,7 +82,7 @@ contract CrabOracle is IOracle, AccessControl {
 
     /**
      * @notice Retrieve the value of the amount at the latest oracle price. Same as `peek` for this oracle.
-     * Only `wstEthId` and `stEthId` are accepted as asset identifiers.
+     * Only `crabId` and `ethId` are accepted as asset identifiers.
      */
     function get(
         bytes32 base,
@@ -114,12 +113,12 @@ contract CrabOracle is IOracle, AccessControl {
             .getVaultDetails();
 
         // Crab Price calculation
-        (uint256 oSQTHPrice, uint256 updatTime) = uniswapV3Oracle.peek(
+        (uint256 oSQTHPrice, uint256 lastUpdateTime) = uniswapV3Oracle.peek(
             oSQTH,
             weth,
             1e18
         );
-        require(updatTime != 0, "Incomplete round");
+        require(lastUpdateTime != 0, "Incomplete round");
         uint256 crabPrice = (ethCollateral * 1e18 - oSQTHPrice * oSQTHDebt) /
             crabStrategy.totalSupply();
 
