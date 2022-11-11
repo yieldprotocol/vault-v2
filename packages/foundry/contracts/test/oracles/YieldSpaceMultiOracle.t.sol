@@ -32,7 +32,7 @@ contract YieldSpaceMultiOracleTest is Test, TestConstants {
 
         oracle.grantRole(oracle.setSource.selector, address(0xa11ce));
 
-        pOracle.update.mock(pool);
+        pOracle.updatePool.mock(pool);
 
         vm.prank(address(0xa11ce));
         oracle.setSource(FYUSDC2206, USDC, pool);
@@ -51,7 +51,7 @@ contract YieldSpaceMultiOracleTest is Test, TestConstants {
         vm.expectEmit(true, true, true, true);
         emit SourceSet(USDC, FYUSDC2206, pool);
 
-        pOracle.update.verify(pool);
+        pOracle.updatePool.verify(pool);
 
         vm.prank(address(0xa11ce));
         oracle.setSource(FYUSDC2206, USDC, pool);

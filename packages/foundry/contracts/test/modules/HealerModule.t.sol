@@ -30,7 +30,7 @@ contract HealerModuleTest is Test {
     bytes12 public vaultId;
 
     function setUp() public {
-        vm.createSelectFork('mainnet');
+        vm.createSelectFork('mainnet', 15266900);
 
         wethMock = new WETH9Mock();
         weth = IWETH9(address(wethMock));
