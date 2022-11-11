@@ -129,6 +129,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
     /// @dev Mature the fyToken by recording the chi.
     function _mature() internal returns (uint256 _chiAtMaturity) {
         (_chiAtMaturity, ) = oracle.get(underlyingId, CHI, 0); // The value returned is an accumulator, it doesn't need an input amount
+        require (_chiAtMaturity > 0, "Chi oracle malfunction"); // The chi accumulator needs to have been started
         chiAtMaturity = _chiAtMaturity;
         emit SeriesMatured(_chiAtMaturity);
     }
