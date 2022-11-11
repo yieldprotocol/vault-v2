@@ -10,7 +10,7 @@ import "../../oracles/uniswap/UniswapV3Oracle.sol";
 contract CrabOracleTest is Test {
     CrabOracle public crabOracle;
     bytes6 baseId = 0x323900000000;
-    bytes6 quoteId = 0x303100000000;
+    bytes6 quoteId = 0x303000000000;
     UniswapV3Oracle uniswapV3Oracle =
         UniswapV3Oracle(0x358538ea4F52Ac15C551f88C701696f6d9b38F3C);
 

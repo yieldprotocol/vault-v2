@@ -109,27 +109,34 @@ contract CrabOracle is IOracle, AccessControl {
             (base == crab && quote == weth) || (base == weth && quote == crab),
             "Source not found"
         );
+
+        if (base == crab) {
+            //Base equals crab
+            quoteAmount = (_getCrabPrice() * baseAmount) / 1e18;
+        } else if (quote == crab) {
+            //Base equals weth
+            quoteAmount = (baseAmount * 1e18) / _getCrabPrice();
+        }
+
+        updateTime = block.timestamp;
+    }
+
+    /// @notice Returns price of one crab token in terms of ETH
+    /// @return crabPrice Price of one crab token in terms of ETH
+    function _getCrabPrice() internal view returns (uint256 crabPrice) {
+        // Get ETH collateral & oSQTH debt of the crab strategy
         (, , uint256 ethCollateral, uint256 oSQTHDebt) = crabStrategy
             .getVaultDetails();
-
-        // Crab Price calculation
+        // Get oSQTH price from uniswapOracle
         (uint256 oSQTHPrice, uint256 lastUpdateTime) = uniswapV3Oracle.peek(
             oSQTH,
             weth,
             1e18
         );
         require(lastUpdateTime != 0, "Incomplete round");
-        uint256 crabPrice = (ethCollateral * 1e18 - oSQTHPrice * oSQTHDebt) /
+        // Crab Price calculation
+        crabPrice =
+            (ethCollateral * 1e18 - oSQTHPrice * oSQTHDebt) /
             crabStrategy.totalSupply();
-
-        if (base == crab) {
-            //Base equals crab
-            quoteAmount = (crabPrice * baseAmount) / 1e18;
-        } else if (quote == crab) {
-            //Base equals weth
-            quoteAmount = (baseAmount * 1e18) / crabPrice;
-        }
-
-        updateTime = block.timestamp;
     }
 }
