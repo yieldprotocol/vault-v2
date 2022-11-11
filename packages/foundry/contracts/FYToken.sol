@@ -181,7 +181,7 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
     function redeem(address receiver, uint256 principalAmount) external override afterMaturity returns (uint256 underlyingAmount) {
         principalAmount = (principalAmount == 0) ? _balanceOf[address(this)] : principalAmount;
         _burn(msg.sender, principalAmount);
-        underlyingAmount = principalAmount.wmul(_accrual());
+        underlyingAmount = _convertToUnderlying(principalAmount);
         join.exit(receiver, underlyingAmount.u128());
 
         emit Redeemed(msg.sender, receiver, principalAmount, underlyingAmount);
