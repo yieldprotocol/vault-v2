@@ -77,9 +77,12 @@ contract FYToken is IFYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
 
     /// @dev Point to a different Oracle or Join
     function point(bytes32 param, address value) external auth {
-        if (param == "oracle") oracle = IOracle(value);
-        else if (param == "join") join = IJoin(value);
-        else revert("Unrecognized parameter");
+        if (param == "oracle") {
+            require (chiAtMaturity == CHI_NOT_SET, "Already matured");
+            oracle = IOracle(value);
+        } else if (param == "join") {
+            join = IJoin(value);
+        } else revert("Unrecognized parameter");
         emit Point(param, value);
     }
 
