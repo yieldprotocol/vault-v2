@@ -37,7 +37,7 @@ abstract contract ZeroTest is Test, TestConstants {
     address public bar = address(2);
 
     function setUp() public virtual {
-        vm.createSelectFork('mainnet');
+        vm.createSelectFork('mainnet', 15266900);
         // deployments
         wethMock = new WETH9Mock();
         weth = IWETH9(address(wethMock));
