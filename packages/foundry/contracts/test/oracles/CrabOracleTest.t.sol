@@ -8,7 +8,7 @@ import {ICrabStrategy} from "../../oracles/crab/CrabOracle.sol";
 import "../../oracles/uniswap/UniswapV3Oracle.sol";
 import "../utils/TestConstants.sol";
 
-contract CrabOracleTest is Test {
+contract CrabOracleTest is Test, TestConstants {
     CrabOracle public crabOracle;
     bytes6 baseId = ETH;
     bytes6 quoteId = 0x303000000000;
