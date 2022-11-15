@@ -21,10 +21,11 @@ contract CrabOracleTest is Test, TestConstants {
     function setUp() public {
         vm.createSelectFork("mainnet", 15974678);
         crabOracle = new CrabOracle();
-        crabOracle.grantRole(0xac426579, address(this));
+        crabOracle.grantRole(0x553aaac9, address(this));
         crabOracle.setSource(
             baseId,
             0x313900000000,
+            ETH,
             ICrabStrategy(crabStrategyV2),
             IOracle(address(uniswapV3Oracle))
         );
@@ -32,8 +33,8 @@ contract CrabOracleTest is Test, TestConstants {
         vm.startPrank(timelock);
         uniswapV3Oracle.grantRole(0xe4650418, timelock);
         uniswapV3Oracle.setSource(
-            crabOracle.weth(),
-            crabOracle.oSQTH(),
+            crabOracle.ethId(),
+            crabOracle.oSQTHId(),
             uniswapV3oSQTHPool,
             100
         );

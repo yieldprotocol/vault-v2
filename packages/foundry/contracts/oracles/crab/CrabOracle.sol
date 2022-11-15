@@ -35,31 +35,41 @@ contract CrabOracle is IOracle, AccessControl {
     using CastBytes32Bytes6 for bytes32;
     ICrabStrategy crabStrategy;
     IOracle uniswapV3Oracle;
-    bytes6 public constant weth = 0x303000000000;
-    bytes6 public crab;
-    bytes6 public oSQTH;
+    bytes6 public ethId;
+    bytes6 public crabId;
+    bytes6 public oSQTHId;
 
     event SourceSet(
         bytes6 crab_,
         bytes6 oSQTH_,
-        ICrabStrategy crabStrategy_,
-        IOracle uniswapV3Oracle_
+        bytes6 ethId_,
+        ICrabStrategy indexed crabStrategy_,
+        IOracle indexed uniswapV3Oracle_
     );
 
     /**
      * @notice Set crabstrategy & uniswap source
      */
     function setSource(
-        bytes6 crab_,
-        bytes6 oSQTH_,
+        bytes6 crabId_,
+        bytes6 oSQTHId_,
+        bytes6 ethId_,
         ICrabStrategy crabStrategy_,
         IOracle uniswapV3Oracle_
     ) external auth {
-        crab = crab_;
-        oSQTH = oSQTH_;
+        crabId = crabId_;
+        oSQTHId = oSQTHId_;
+        ethId = ethId_;
         crabStrategy = crabStrategy_;
         uniswapV3Oracle = uniswapV3Oracle_;
-        emit SourceSet(crab_, oSQTH_, crabStrategy_, uniswapV3Oracle_);
+
+        emit SourceSet(
+            crabId_,
+            oSQTHId_,
+            ethId_,
+            crabStrategy_,
+            uniswapV3Oracle_
+        );
     }
 
     /**
@@ -106,15 +116,14 @@ contract CrabOracle is IOracle, AccessControl {
         uint256 baseAmount
     ) private view returns (uint256 quoteAmount, uint256 updateTime) {
         require(
-            (base == crab && quote == weth) || (base == weth && quote == crab),
+            (base == crabId && quote == ethId) ||
+                (base == ethId && quote == crabId),
             "Source not found"
         );
 
-        if (base == crab) {
-            //Base equals crab
+        if (base == crabId) {
             quoteAmount = (_getCrabPrice() * baseAmount) / 1e18;
-        } else if (quote == crab) {
-            //Base equals weth
+        } else if (quote == crabId) {
             quoteAmount = (baseAmount * 1e18) / _getCrabPrice();
         }
 
@@ -129,8 +138,8 @@ contract CrabOracle is IOracle, AccessControl {
             .getVaultDetails();
         // Get oSQTH price from uniswapOracle
         (uint256 oSQTHPrice, uint256 lastUpdateTime) = uniswapV3Oracle.peek(
-            oSQTH,
-            weth,
+            oSQTHId,
+            ethId,
             1e18
         );
         require(lastUpdateTime != 0, "Incomplete round");
