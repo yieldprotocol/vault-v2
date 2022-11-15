@@ -10,8 +10,8 @@ import "../utils/TestConstants.sol";
 
 contract CrabOracleTest is Test, TestConstants {
     CrabOracle public crabOracle;
-    bytes6 baseId = ETH;
-    bytes6 quoteId = 0x303000000000;
+    bytes6 baseId = 0x323900000000;
+    bytes6 quoteId = ETH;
     UniswapV3Oracle uniswapV3Oracle =
         UniswapV3Oracle(0x358538ea4F52Ac15C551f88C701696f6d9b38F3C);
     address uniswapV3oSQTHPool = 0x82c427AdFDf2d245Ec51D8046b41c4ee87F0d29C;
