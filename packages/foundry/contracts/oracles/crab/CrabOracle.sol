@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity >=0.8.13;
 
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC20Metadata.sol";
 import "../../interfaces/IOracle.sol";
@@ -31,13 +30,13 @@ interface ICrabStrategy {
  * @title CrabOracle
  * @notice Oracle to fetch Crab-ETH exchange amounts
  */
-contract CrabOracle is IOracle, AccessControl {
+contract CrabOracle is IOracle {
     using CastBytes32Bytes6 for bytes32;
-    ICrabStrategy crabStrategy;
-    IOracle uniswapV3Oracle;
-    bytes6 public ethId;
-    bytes6 public crabId;
-    bytes6 public oSQTHId;
+    ICrabStrategy immutable crabStrategy;
+    IOracle immutable uniswapV3Oracle;
+    bytes6 immutable ethId;
+    bytes6 immutable crabId;
+    bytes6 immutable oSQTHId;
 
     event SourceSet(
         bytes6 crab_,
@@ -50,13 +49,13 @@ contract CrabOracle is IOracle, AccessControl {
     /**
      * @notice Set crabstrategy & uniswap source
      */
-    function setSource(
+    constructor(
         bytes6 crabId_,
         bytes6 oSQTHId_,
         bytes6 ethId_,
         ICrabStrategy crabStrategy_,
         IOracle uniswapV3Oracle_
-    ) external auth {
+    ) {
         crabId = crabId_;
         oSQTHId = oSQTHId_;
         ethId = ethId_;
@@ -122,9 +121,9 @@ contract CrabOracle is IOracle, AccessControl {
         );
 
         if (base == crabId) {
-            quoteAmount = (_getCrabPrice() * baseAmount) / 1e18;
+            quoteAmount = (_getCrabPrice() * baseAmount) / 1e18; // 1e18 is used to Normalize
         } else if (quote == crabId) {
-            quoteAmount = (baseAmount * 1e18) / _getCrabPrice();
+            quoteAmount = (baseAmount * 1e18) / _getCrabPrice(); // 1e18 is used to Normalize
         }
 
         updateTime = block.timestamp;
@@ -144,6 +143,9 @@ contract CrabOracle is IOracle, AccessControl {
         );
         require(lastUpdateTime != 0, "Incomplete round");
         // Crab Price calculation
+        // Crab at any point has a combination of ETH collateral and squeeth debt so you can calc crab/eth value with:
+        // Crab net value in eth terms = Eth collateral - oSQTH/ETH price * (oSQTH debt)
+        // Price of 1 crab in terms of ETH = Crab net value / totalSupply of Crab
         crabPrice =
             (ethCollateral * 1e18 - oSQTHPrice * oSQTHDebt) /
             crabStrategy.totalSupply();

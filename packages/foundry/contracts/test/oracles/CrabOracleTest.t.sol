@@ -18,14 +18,7 @@ contract CrabOracleTest is Test, TestConstants {
 
     function setUp() public {
         vm.createSelectFork("mainnet", 15974678);
-        crabOracle = new CrabOracle();
-        crabOracle.grantRole(
-            bytes4(
-                keccak256("setSource(bytes6,bytes6,bytes6,address,address)")
-            ),
-            address(this)
-        );
-        crabOracle.setSource(
+        crabOracle = new CrabOracle(
             CRAB,
             OSQTH,
             ETH,
@@ -34,16 +27,8 @@ contract CrabOracleTest is Test, TestConstants {
         );
 
         vm.startPrank(timelock);
-        uniswapV3Oracle.grantRole(
-            bytes4(keccak256("setSource(bytes6,bytes6,address,uint32)")),
-            timelock
-        );
-        uniswapV3Oracle.setSource(
-            crabOracle.ethId(),
-            crabOracle.oSQTHId(),
-            uniswapV3oSQTHPool,
-            100
-        );
+        uniswapV3Oracle.grantRole(uniswapV3Oracle.setSource.selector, timelock);
+        uniswapV3Oracle.setSource(ETH, OSQTH, uniswapV3oSQTHPool, 100);
         vm.stopPrank();
     }
 
