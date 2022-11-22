@@ -287,7 +287,7 @@ contract StateMaturedTest is StateMatured {
 
     function testRedeem() public {
         console2.log("First exit call should call redeem()");
-        (address currency, uint16 currencyId_) = whichCurrency(fCashId);
+        (address currency, ) = whichCurrency(fCashId);
         vm.expectEmit(true, true, true, false);
         emit Redeemed(0, 10e8, 1e8);
 
@@ -327,15 +327,15 @@ contract StateRedeemedTest is StateRedeemed {
 
     function testSubsequentExit() public {
         console2.log("_exitUnderlying executed");
-
+        (address currency, ) = whichCurrency(fCashId);
         vm.prank(me);
         njoin.exit(user, 1e8);
 
         assertTrue(njoin.storedBalance() == 0); 
-        assertTrue(dai.balanceOf(address(njoin)) == 0); 
-        assertTrue(dai.balanceOf(address(underlyingJoin)) == 0);
+        assertTrue(IERC20(currency).balanceOf(address(njoin)) == 0); 
+        assertTrue(IERC20(currency).balanceOf(address(underlyingJoin)) == 0);
 
-        assertTrue(dai.balanceOf(address(user)) == 2e8);
+        assertTrue(IERC20(currency).balanceOf(address(user)) == 2e8);
         
     }
 }
