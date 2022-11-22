@@ -3,6 +3,7 @@ pragma solidity >=0.8.13;
 
 import "../../interfaces/IJoin.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
+import "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
 import "@yield-protocol/utils-v2/contracts/token/MinimalTransferHelper.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
@@ -256,5 +257,11 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl {
             token.balanceOf(address(this), id),
             ""
         );
+    }
+
+    /// @dev Notional will send unwrapped ETH on redemption, which we have to wrap into WETH.
+    receive() external payable {
+        require(fCashId >> 48 == 1 && msg.sender == asset, "Only ETH NotionalJoins");
+        IWETH9(underlying).deposit{ value: msg.value }();
     }
 }
