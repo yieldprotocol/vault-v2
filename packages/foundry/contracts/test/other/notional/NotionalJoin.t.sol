@@ -30,9 +30,9 @@ abstract contract StateZero is Test, TestConstants {
     bytes6 public daiId = 0x303100000000;
     bytes6 public usdcId = 0x303200000000;
     bytes6 public underlyingId;
-    IWETH9 public weth;
-    IERC20 public dai;
-    IERC20 public usdc;
+    IWETH9 public weth = IWETH9(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+    IERC20 public dai = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
+    IERC20 public usdc = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
     IERC20 public underlying;
 
     address me;
@@ -51,13 +51,17 @@ abstract contract StateZero is Test, TestConstants {
         deal(address(token), user, start + amount);
     }
 
-    function getFCash(address to, uint256 id, uint256 amount) public returns (uint256 fCashAmount) {
-        uint16 currencyId_ = uint16(id >> 48);
-        address currency;
+    function whichCurrency(uint256 id) internal returns (address currency,uint16 currencyId_){
+        currencyId_ = uint16(id >> 48);
         if (currencyId_ == 1) currency = address(weth);
         else if (currencyId_ == 2) currency = address(dai);
         else if (currencyId_ == 3) currency = address(usdc);
+    }
+
+    function getFCash(address to, uint256 id, uint256 amount) public returns (uint256 fCashAmount) {
+        (address currency, uint16 currencyId_) = whichCurrency(id);
         cash(IERC20(currency), address(this), amount);
+        IERC20(currency).approve(address(notional),type(uint).max);
 
         fCash.setApprovalForAll(address(this), true);
 
@@ -96,16 +100,18 @@ abstract contract StateZero is Test, TestConstants {
         } else {
             notional.batchBalanceAndTradeAction(address(this), actions);
         }
+
+        fCash.safeTransferFrom(address(this),user,fCashId,fCashAmount,"");
     }
 
     function setUp() public virtual {
-        vm.createSelectFork('mainnet', 15741300);
+        vm.createSelectFork('mainnet', 16017869);
         
         // arbitrary values for testing
-        fCashTokens = 10e8;
-        maturity = 1672412400;  // EODEC
-        currencyId = 2;
-        underlyingId = daiId;
+        fCashTokens = 10e18;
+        maturity = 1679616000;  // EODEC
+        currencyId = 3;
+        underlyingId = usdcId;
 
 
         //... Users ...
@@ -140,11 +146,28 @@ abstract contract StateZero is Test, TestConstants {
         underlyingJoin.grantRole(Join.exit.selector, address(njoin));
 
         vm.stopPrank();
-
-        uint256 fCashAmount = getFCash(user, fCashId, 10e8);
+        
+        fCashId = encodeAssetId(currencyId, maturity, 1);
+        uint256 amount = currencyId == 3 ? 10e8 : 10e18;
+        uint256 fCashAmount = getFCash(user, fCashId, amount);
         vm.prank(user);
         fCash.setApprovalForAll(address(njoin), true);
-    }  
+    }
+
+    function encodeAssetId(
+        uint256 currencyId,
+        uint256 maturity,
+        uint256 assetType
+    ) internal pure returns (uint256) {
+        return
+            uint256(
+                (bytes32(uint256(uint16(currencyId))) << 48) |
+                    (bytes32(uint256(uint40(maturity))) << 8) |
+                    bytes32(uint256(uint8(assetType)))
+            );
+    }
+
+    receive() external payable {}
 }
 
 contract StateZeroTest is StateZero {
@@ -154,7 +177,7 @@ contract StateZeroTest is StateZero {
 
         vm.expectEmit(true, true, true, true);
         emit TransferSingle(address(njoin), user, address(njoin), fCashId, 1e8);
-
+        fCashTokens = fCash.balanceOf(user, fCashId);
         njoin.join(user, 1e8);
 
         assertTrue(njoin.storedBalance() ==  1e8);
@@ -178,21 +201,21 @@ contract StateJoinedTest is StateJoined {
     function testAcceptSurplus() public {
         console2.log("accepts surplus as a transfer");
         
+        fCashTokens = fCash.balanceOf(user, fCashId);
         //surplus 
         vm.prank(user);
         fCash.safeTransferFrom(user, address(njoin), fCashId, 1e8, "");
-
         // no TransferSingle event emitted
         njoin.join(user, 1e8);
         
         assertTrue(njoin.storedBalance() ==  3e8);
-        assertTrue(fCash.balanceOf(user, fCashId) ==  fCashTokens - 3e8);
+        assertTrue(fCash.balanceOf(user, fCashId) ==  fCashTokens - 1e8);
 
     }
 
     function testSurplusRegistered() public {
         console2.log("combines surplus and fCashs pulled from the user");
-
+        fCashTokens = fCash.balanceOf(user, fCashId);
         // surplus of 1e8
         vm.prank(user);
         fCash.safeTransferFrom(user, address(njoin), fCashId, 1e8, "");
@@ -204,7 +227,7 @@ contract StateJoinedTest is StateJoined {
         njoin.join(user, 2e8);
 
         assertTrue(njoin.storedBalance() ==  4e8);
-        assertTrue(fCash.balanceOf(user, fCashId) ==  fCashTokens - 4e8);
+        assertTrue(fCash.balanceOf(user, fCashId) ==  fCashTokens - 2e8);
     }
 }
 
@@ -218,14 +241,14 @@ abstract contract StatePositiveStoredBalance is StateJoined {
 contract StatePositiveStoredBalanceTest is StatePositiveStoredBalance {
     function testExit() public {
         console2.log("pushes fCash to user");
-
+        fCashTokens = fCash.balanceOf(user, fCashId);
         vm.expectEmit(true, true, true, true);
         emit TransferSingle(address(njoin), address(njoin), user, fCashId, 1e8);
 
         njoin.exit(user, 1e8);
 
         assertTrue(njoin.storedBalance() ==  1e8);
-        assertTrue(fCash.balanceOf(user, fCashId) ==  fCashTokens - 1e8);
+        assertTrue(fCash.balanceOf(user, fCashId) ==  fCashTokens + 1e8);
 
     }
 }
@@ -264,19 +287,19 @@ contract StateMaturedTest is StateMatured {
 
     function testRedeem() public {
         console2.log("First exit call should call redeem()");
-
+        (address currency, uint16 currencyId_) = whichCurrency(fCashId);
         vm.expectEmit(true, true, true, false);
         emit Redeemed(0, 10e8, 1e8);
 
         njoin.exit(user, 1e8);
         
         assertTrue(njoin.accrual() == 1e8);
-        assertTrue(njoin.storedBalance() == 0); 
-        assertTrue(dai.balanceOf(address(njoin)) == 0); 
+        assertTrue(njoin.storedBalance() == 0);
+        assertTrue(IERC20(currency).balanceOf(address(njoin)) == 0); 
         
         // 1 dai to user on redemption, 1 dai remains in underlyingJoin
-        assertTrue(dai.balanceOf(user) == 1e8);
-        assertTrue(dai.balanceOf(address(underlyingJoin)) == 1e8);
+        assertTrue(IERC20(currency).balanceOf(user) == 1e8);
+        assertTrue(IERC20(currency).balanceOf(address(underlyingJoin)) == 1e8);
     }
 }
 
@@ -316,11 +339,3 @@ contract StateRedeemedTest is StateRedeemed {
         
     }
 }
-
-    
-    
-
-
-
-
-
