@@ -295,6 +295,7 @@ contract StateMaturedTest is StateMatured {
         emit Redeemed(0, 10e8, 1e8);
         uint beforeUserBalance = IERC20(currency).balanceOf(user);
         uint beforeJoinBalance = IERC20(currency).balanceOf(address(underlyingJoin));
+        vm.prank(me);
         njoin.exit(user, 1e8);
         
         assertGt(njoin.accrual(), 0);
