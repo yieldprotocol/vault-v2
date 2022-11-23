@@ -200,6 +200,10 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl {
 
         IBatchAction(asset).batchBalanceAction(address(this), withdrawActions);
 
+        // If this is an ETH Notional Join, we wrap all Ether we own on redemption. It should
+        // only have arrived from Notional. Donations accepted :)
+        if (fCashId >> 48 == 1) IWETH9(underlying).deposit{ value: address(this).balance }();
+
         uint256 underlyingBalance = IERC20(underlying).balanceOf(address(this));
         uint256 storedBalance_ = storedBalance;
         // The accrual covers the possible return from holding fCash after maturity, and also the change in decimals
@@ -262,6 +266,5 @@ contract NotionalJoin is IJoin, ERC1155TokenReceiver, AccessControl {
     /// @dev Notional will send unwrapped ETH on redemption, which we have to wrap into WETH.
     receive() external payable {
         require(fCashId >> 48 == 1 && msg.sender == asset, "Only ETH NotionalJoins");
-        IWETH9(underlying).deposit{ value: msg.value }();
     }
 }
