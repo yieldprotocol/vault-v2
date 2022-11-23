@@ -109,8 +109,8 @@ abstract contract StateZero is Test, TestConstants {
         // arbitrary values for testing
         fCashTokens = 10e18;
         maturity = 1679616000;  // EODEC
-        currencyId = 2;
-        underlyingId = daiId;
+        currencyId = 3;
+        underlyingId = usdcId;
 
 
         //... Users ...
@@ -290,16 +290,23 @@ contract StateMaturedTest is StateMatured {
         assertTrue(njoin.accrual() == 0);
         vm.expectEmit(true, true, true, false);
         emit Redeemed(0, 10e8, 1e8);
-
+        uint beforeUserBalance = IERC20(currency).balanceOf(user);
+        uint beforeJoinBalance = IERC20(currency).balanceOf(address(underlyingJoin));
         njoin.exit(user, 1e8);
         
         assertGt(njoin.accrual(), 0);
         assertTrue(njoin.storedBalance() == 0);
         assertTrue(IERC20(currency).balanceOf(address(njoin)) == 0); 
+        uint afterUserBalance = IERC20(currency).balanceOf(user);
+        uint afterJoinBalance = IERC20(currency).balanceOf(address(underlyingJoin));
         
-        // 1 dai to user on redemption, 1 dai remains in underlyingJoin
-        assertTrue(IERC20(currency).balanceOf(user) == 1e8);
-        assertTrue(IERC20(currency).balanceOf(address(underlyingJoin)) == 1e8);
+        if(currencyId == 3){
+            assertApproxEqAbs(afterUserBalance - beforeUserBalance, 1e6, 1e5);
+            assertApproxEqAbs(afterJoinBalance - beforeJoinBalance, 1e6, 1e5);
+        }else{
+            assertApproxEqAbs(afterUserBalance - beforeUserBalance, 1e18, 1e17);
+            assertApproxEqAbs(afterJoinBalance - beforeJoinBalance, 1e18, 1e17);
+        }
     }
 }
 
@@ -327,15 +334,23 @@ contract StateRedeemedTest is StateRedeemed {
 
     function testSubsequentExit() public {
         console2.log("_exitUnderlying executed");
-        (address currency, ) = whichCurrency(fCashId);
+        (address currency, uint16 currencyId) = whichCurrency(fCashId);
+        uint beforeUserBalance = IERC20(currency).balanceOf(user);
+        uint beforeJoinBalance = IERC20(currency).balanceOf(address(underlyingJoin));
         vm.prank(me);
         njoin.exit(user, 1e8);
 
         assertTrue(njoin.storedBalance() == 0); 
         assertTrue(IERC20(currency).balanceOf(address(njoin)) == 0); 
-
-        assertTrue(IERC20(currency).balanceOf(address(underlyingJoin)) == 0);
-        assertTrue(IERC20(currency).balanceOf(address(user)) == 2e8);
+        uint afterUserBalance = IERC20(currency).balanceOf(user);
+        uint afterJoinBalance = IERC20(currency).balanceOf(address(underlyingJoin));
+        if(currencyId == 3){
+            assertApproxEqAbs(afterUserBalance - beforeUserBalance, 1e6, 1e5);
+            assertApproxEqAbs(beforeJoinBalance - afterJoinBalance, 1e6, 1e5);
+        }else{
+            assertApproxEqAbs(afterUserBalance - beforeUserBalance, 1e18, 1e17);
+            assertApproxEqAbs(beforeJoinBalance - afterJoinBalance, 1e18, 1e17);
+        }
         
     }
 }
