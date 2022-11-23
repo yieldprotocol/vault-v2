@@ -177,6 +177,7 @@ contract StateZeroTest is StateZero {
         vm.expectEmit(true, true, true, true);
         emit TransferSingle(address(njoin), user, address(njoin), fCashId, 1e8);
         fCashTokens = fCash.balanceOf(user, fCashId);
+        vm.prank(me);
         njoin.join(user, 1e8);
 
         assertTrue(njoin.storedBalance() ==  1e8);
@@ -188,7 +189,7 @@ contract StateZeroTest is StateZero {
 abstract contract StateJoined is StateZero {
     function setUp() public override virtual {
         super.setUp();
-
+        vm.prank(me);
         njoin.join(user, 2e8);
 
     }
@@ -205,6 +206,7 @@ contract StateJoinedTest is StateJoined {
         vm.prank(user);
         fCash.safeTransferFrom(user, address(njoin), fCashId, 1e8, "");
         // no TransferSingle event emitted
+        vm.prank(me);
         njoin.join(user, 1e8);
         
         assertTrue(njoin.storedBalance() ==  3e8);
@@ -223,6 +225,7 @@ contract StateJoinedTest is StateJoined {
         emit TransferSingle(address(njoin), user, address(njoin), fCashId, 1e8);
         
         // 1e8 transferred from user | 1e8 taken from surplus
+        vm.prank(me);
         njoin.join(user, 2e8);
 
         assertTrue(njoin.storedBalance() ==  4e8);
@@ -243,7 +246,7 @@ contract StatePositiveStoredBalanceTest is StatePositiveStoredBalance {
         fCashTokens = fCash.balanceOf(user, fCashId);
         vm.expectEmit(true, true, true, true);
         emit TransferSingle(address(njoin), address(njoin), user, fCashId, 1e8);
-
+        vm.prank(me);
         njoin.exit(user, 1e8);
 
         assertTrue(njoin.storedBalance() ==  1e8);
@@ -278,8 +281,8 @@ contract StateMaturedTest is StateMatured {
 
     function testCannotJoin() public {
         console2.log("Cannot call join() after maturity");
-
         vm.expectRevert("Only before maturity");
+        vm.prank(me);
         njoin.join(user, 1e8);
     }
 
