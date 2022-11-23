@@ -14,7 +14,6 @@ import { NotionalJoin } from "../../../other/notional/NotionalJoin.sol";
 import { ERC1155 } from "../../../other/notional/ERC1155.sol";
 import { IWETH9 } from "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
 import "./NotionalTypes.sol";
-
 using stdStorage for StdStorage;
 
 abstract contract StateZero is Test, TestConstants {
@@ -110,8 +109,8 @@ abstract contract StateZero is Test, TestConstants {
         // arbitrary values for testing
         fCashTokens = 10e18;
         maturity = 1679616000;  // EODEC
-        currencyId = 3;
-        underlyingId = usdcId;
+        currencyId = 2;
+        underlyingId = daiId;
 
 
         //... Users ...
@@ -265,7 +264,6 @@ abstract contract StateMatured is StatePositiveStoredBalance {
 
 contract StateMaturedTest is StateMatured {
     using Mocks for *;
-
     // sanity check - maturity
     function testMaturity() public {
         console2.log("fCash tokens are mature");
@@ -287,13 +285,15 @@ contract StateMaturedTest is StateMatured {
 
     function testRedeem() public {
         console2.log("First exit call should call redeem()");
-        (address currency, ) = whichCurrency(fCashId);
+        (address currency,uint16 currencyId ) = whichCurrency(fCashId);
+        
+        assertTrue(njoin.accrual() == 0);
         vm.expectEmit(true, true, true, false);
         emit Redeemed(0, 10e8, 1e8);
 
         njoin.exit(user, 1e8);
         
-        assertTrue(njoin.accrual() == 1e8);
+        assertGt(njoin.accrual(), 0);
         assertTrue(njoin.storedBalance() == 0);
         assertTrue(IERC20(currency).balanceOf(address(njoin)) == 0); 
         
@@ -311,7 +311,7 @@ abstract contract StateRedeemed is StateMatured {
         // state transition: accrual > 0         
         vm.prank(me);
         njoin.exit(user, 1e8);
-        assertTrue(njoin.accrual() == 1e8);
+        assertGt(njoin.accrual(),0);
     }
 
 }
@@ -333,8 +333,8 @@ contract StateRedeemedTest is StateRedeemed {
 
         assertTrue(njoin.storedBalance() == 0); 
         assertTrue(IERC20(currency).balanceOf(address(njoin)) == 0); 
-        assertTrue(IERC20(currency).balanceOf(address(underlyingJoin)) == 0);
 
+        assertTrue(IERC20(currency).balanceOf(address(underlyingJoin)) == 0);
         assertTrue(IERC20(currency).balanceOf(address(user)) == 2e8);
         
     }
