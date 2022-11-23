@@ -14,7 +14,7 @@
   ],
   "scripts": {
     "forge:build": "forge build",
-    "forge:test": "forge test -vvvv",
+    "forge:test": "forge test -vvv",
     "forge:snapshot": "forge snapshot"
   },
   "repository": {
