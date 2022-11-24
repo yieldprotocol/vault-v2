@@ -29,13 +29,12 @@ abstract contract StateZero is Test, TestConstants {
 
     // FETH2212: `0xa6624D8CF4A1Ba950d380D1e38A2D5261b711145`
     // FETH2303: `0xa9d104c4e020087944332632a8c5b451885fba4a`
-
     // FUSDC2303: `0x3FdDa15EccEE67248048a560ab61Dd2CdBDeA5E6`
     // FDAI2303: `0xE6A63e2166fcEeB447BFB1c0f4f398083214b7aB`
     // FUSDC2212: `0xA9078E573EC536c4066A5E89F715553Ed67B13E0`
     // FDAI2212: `0x83e99A843607CfFFC97A3acA15422aC672a463eF`
 
-    NotionalJoin public nJoin = NotionalJoin(payable(0x83e99A843607CfFFC97A3acA15422aC672a463eF));
+    NotionalJoin public nJoin;
     IJoin public underlyingJoin; 
     IERC20 public underlying;
 
@@ -142,6 +141,7 @@ abstract contract StateZero is Test, TestConstants {
     function setUp() public virtual {
         vm.createSelectFork('tenderly');
         
+        nJoin = NotionalJoin(payable(vm.envAddress("STRATEGY")));
         fCashId = nJoin.fCashId();
         maturity = nJoin.maturity();
         underlyingJoin = IJoin(nJoin.underlyingJoin());
