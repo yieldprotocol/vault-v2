@@ -141,7 +141,7 @@ abstract contract StateZero is Test, TestConstants {
     function setUp() public virtual {
         vm.createSelectFork('tenderly');
         
-        nJoin = NotionalJoin(payable(vm.envAddress("STRATEGY")));
+        nJoin = NotionalJoin(payable(vm.envAddress("JOIN")));
         fCashId = nJoin.fCashId();
         maturity = nJoin.maturity();
         underlyingJoin = IJoin(nJoin.underlyingJoin());
