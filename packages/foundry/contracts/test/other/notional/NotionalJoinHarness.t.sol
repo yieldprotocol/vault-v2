@@ -30,7 +30,7 @@ abstract contract StateZero is Test, TestConstants {
     // FETH2212: `0xa6624D8CF4A1Ba950d380D1e38A2D5261b711145`
     // FETH2303: `0xa9d104c4e020087944332632a8c5b451885fba4a`
 
-    NotionalJoin public nJoin = NotionalJoin(payable(0xa6624D8CF4A1Ba950d380D1e38A2D5261b711145));
+    NotionalJoin public nJoin = NotionalJoin(payable(0xA9d104c4E020087944332632A8c5B451885FbA4a));
     IJoin public underlyingJoin; 
     IERC20 public underlying;
 
@@ -183,7 +183,7 @@ abstract contract StateJoined is StateZero {
     function setUp() public override virtual {
         super.setUp();
         
-        uint128 joinedAmount = fCashUnit;
+        uint128 joinedAmount = fCashUnit * 10;
 
         vm.prank(user);
         fCash.safeTransferFrom(user, address(nJoin), fCashId, joinedAmount, "");
@@ -250,59 +250,55 @@ contract StateMaturedTest is StateMatured {
         assertTrue(nJoin.accrual() == 0);
         assertTrue(underlying.balanceOf(address(nJoin)) == 0);
         uint256 storedBalance = nJoin.storedBalance(); 
+        uint256 underlyingJoinBalance = underlying.balanceOf(address(underlyingJoin));
         uint256 userBalance = underlying.balanceOf(user);
+        uint256 storedBalanceInUnderlying = storedBalance * underlyingUnit / fCashUnit;
+        uint256 exitInUnderlying = fCashExited * underlyingUnit / fCashUnit;
         
         vm.prank(ladle);
         nJoin.exit(user, fCashExited);
         
         assertGt(nJoin.accrual(), 0);
         assertApproxEqRel(underlying.balanceOf(user), userBalance + fCashExited * underlyingUnit / fCashUnit, 1e17);
-        assertApproxEqRel(nJoin.storedBalance(), (storedBalance - fCashExited) * underlyingUnit / fCashUnit, 1e17);
+        assertApproxEqRel(underlying.balanceOf(address(underlyingJoin)), underlyingJoinBalance + storedBalanceInUnderlying - exitInUnderlying, 1e17);
+        assertEq(nJoin.storedBalance(), 0);
     }
 }
-// 
-// abstract contract StateRedeemed is StateMatured {
-// 
-//      function setUp() public override virtual {
-//         super.setUp();
-// 
-//         // state transition: accrual > 0         
-//         vm.prank(me);
-//         nJoin.exit(user, 1e8);
-//         assertGt(nJoin.accrual(),0);
-//     }
-// 
-// }
-// 
-// contract StateRedeemedTest is StateRedeemed {
-// 
-//     function testHarnessCannotRedeem() public {
-//         console2.log("Redeem will revert since accrual > 0");
-//         
-//         vm.expectRevert("Already redeemed");
-//         nJoin.redeem();
-//     }
-// 
-//     function testHarnessSubsequentExit() public {
-//         console2.log("_exitUnderlying executed");
-//         (address currency, uint16 currencyId) = whichCurrency(fCashId);
-//         uint beforeUserBalance = IERC20(currency).balanceOf(user);
-//         uint beforeJoinBalance = IERC20(currency).balanceOf(address(underlyingJoin));
-//         vm.prank(me);
-//         nJoin.exit(user, 1e8);
-// 
-//         assertTrue(nJoin.storedBalance() == 0); 
-//         assertTrue(IERC20(currency).balanceOf(address(nJoin)) == 0); 
-//         uint afterUserBalance = IERC20(currency).balanceOf(user);
-//         uint afterJoinBalance = IERC20(currency).balanceOf(address(underlyingJoin));
-//         if(currencyId == 3){
-//             assertApproxEqAbs(afterUserBalance - beforeUserBalance, 1e6, 1e5);
-//             assertApproxEqAbs(beforeJoinBalance - afterJoinBalance, 1e6, 1e5);
-//         }else{
-//             assertApproxEqAbs(afterUserBalance - beforeUserBalance, 1e18, 1e17);
-//             assertApproxEqAbs(beforeJoinBalance - afterJoinBalance, 1e18, 1e17);
-//         }
-//         
-//     }
-// }
-// 
+
+abstract contract StateRedeemed is StateMatured {
+
+     function setUp() public override virtual {
+        super.setUp();
+
+        nJoin.redeem();
+    }
+
+}
+
+contract StateRedeemedTest is StateRedeemed {
+
+    function testHarnessCannotRedeem() public {
+        console2.log("Redeem will revert since accrual > 0");
+        
+        vm.expectRevert("Already redeemed");
+        nJoin.redeem();
+    }
+
+    function testHarnessSubsequentExit() public {
+        console2.log("Regular underlying exit");
+        
+        uint128 fCashExited = uint128(fCashUnit);
+
+        uint256 storedBalance = nJoin.storedBalance(); 
+        uint256 underlyingJoinBalance = underlying.balanceOf(address(underlyingJoin));
+        uint256 userBalance = underlying.balanceOf(user);
+        uint256 exitInUnderlying = fCashExited * underlyingUnit / fCashUnit;
+        
+        vm.prank(ladle);
+        nJoin.exit(user, fCashExited);
+        
+        assertApproxEqRel(underlying.balanceOf(user), userBalance + fCashExited * underlyingUnit / fCashUnit, 1e17);
+        assertApproxEqRel(underlying.balanceOf(address(underlyingJoin)), underlyingJoinBalance - exitInUnderlying, 1e17);
+        assertEq(nJoin.storedBalance(), 0);
+    }
+}
