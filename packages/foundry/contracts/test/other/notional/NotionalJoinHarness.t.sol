@@ -161,7 +161,7 @@ abstract contract StateZero is Test, TestConstants {
 
 contract StateZeroTest is StateZero {
     
-    function testJoin() public {
+    function testHarnessJoin() public {
         console2.log("join()");
 
         uint128 joinedAmount = fCashUnit;
@@ -196,7 +196,7 @@ abstract contract StateJoined is StateZero {
 
 
 contract StateJoinedTest is StateJoined {
-    function testExit() public {
+    function testHarnessExit() public {
         console2.log("pushes fCash to user");
 
         uint128 amountExited = fCashUnit;
@@ -211,64 +211,55 @@ contract StateJoinedTest is StateJoined {
         assertTrackPlusEq("userFCash", amountExited, fCash.balanceOf(user, fCashId));
     }
 }
-// 
-// // Njoin holds 2e8 of fCash
-// abstract contract StateMatured is StatePositiveStoredBalance {
-//     function setUp() public override virtual {
-//         super.setUp();
-//         
-//         // set blocktime to pass maturity
-//         vm.warp(maturity + 100); 
-//     }
-// }
-// 
-// contract StateMaturedTest is StateMatured {
-//     // sanity check - maturity
-//     function testMaturity() public {
-//         console2.log("fCash tokens are mature");
-//         assertGe(block.timestamp, maturity);         
-//     }  
-//        
-//     // sanity check - accrual
-//     function testAccrual() public {
-//         console2.log("Accrual in Njoin should be 0");
-//         assertTrue(nJoin.accrual() == 0); 
-//     }
-// 
-//     function testCannotJoin() public {
-//         console2.log("Cannot call join() after maturity");
-//         vm.expectRevert("Only before maturity");
-//         vm.prank(me);
-//         nJoin.join(user, 1e8);
-//     }
-// 
-//     function testRedeem() public {
-//         console2.log("First exit call should call redeem()");
-//         (address currency,uint16 currencyId ) = whichCurrency(fCashId);
-//         
-//         assertTrue(nJoin.accrual() == 0);
-//         vm.expectEmit(true, true, true, false);
-//         emit Redeemed(0, 10e8, 1e8);
-//         uint beforeUserBalance = IERC20(currency).balanceOf(user);
-//         uint beforeJoinBalance = IERC20(currency).balanceOf(address(underlyingJoin));
-//         vm.prank(me);
-//         nJoin.exit(user, 1e8);
-//         
-//         assertGt(nJoin.accrual(), 0);
-//         assertTrue(nJoin.storedBalance() == 0);
-//         assertTrue(IERC20(currency).balanceOf(address(nJoin)) == 0); 
-//         uint afterUserBalance = IERC20(currency).balanceOf(user);
-//         uint afterJoinBalance = IERC20(currency).balanceOf(address(underlyingJoin));
-//         
-//         if(currencyId == 3){
-//             assertApproxEqAbs(afterUserBalance - beforeUserBalance, 1e6, 1e5);
-//             assertApproxEqAbs(afterJoinBalance - beforeJoinBalance, 1e6, 1e5);
-//         }else{
-//             assertApproxEqAbs(afterUserBalance - beforeUserBalance, 1e18, 1e17);
-//             assertApproxEqAbs(afterJoinBalance - beforeJoinBalance, 1e18, 1e17);
-//         }
-//     }
-// }
+
+// Njoin holds 2e8 of fCash
+abstract contract StateMatured is StateJoined {
+    function setUp() public override virtual {
+        super.setUp();
+        
+        // set blocktime to pass maturity
+        vm.warp(maturity + 100); 
+    }
+}
+
+contract StateMaturedTest is StateMatured {
+    // sanity check - maturity
+    function testHarnessMaturity() public {
+        console2.log("fCash tokens are mature");
+        assertGe(block.timestamp, maturity);         
+    }  
+       
+    // sanity check - accrual
+    function testHarnessAccrual() public {
+        console2.log("Accrual in Njoin should be 0");
+        assertTrue(nJoin.accrual() == 0); 
+    }
+
+    function testHarnessCannotJoin() public {
+        console2.log("Cannot call join() after maturity");
+        vm.expectRevert("Only before maturity");
+        vm.prank(ladle);
+        nJoin.join(user, fCashUnit);
+    }
+
+    function testHarnessRedeem() public {
+        console2.log("First exit call should call redeem()");
+        
+        uint128 fCashExited = uint128(fCashUnit);
+
+        assertTrue(nJoin.accrual() == 0);
+        assertTrue(underlying.balanceOf(address(nJoin)) == 0);
+        uint256 storedBalance = nJoin.storedBalance(); 
+        uint256 userBalance = underlying.balanceOf(user);
+        
+        vm.prank(ladle);
+        nJoin.exit(user, fCashExited);
+        
+        assertGt(nJoin.accrual(), 0);
+        assertApproxEqRel(underlying.balanceOf(user), userBalance + fCashExited * underlyingUnit / fCashUnit, 1e17);
+        assertApproxEqRel(nJoin.storedBalance(), (storedBalance - fCashExited) * underlyingUnit / fCashUnit, 1e17);
+    }
+}
 // 
 // abstract contract StateRedeemed is StateMatured {
 // 
@@ -285,14 +276,14 @@ contract StateJoinedTest is StateJoined {
 // 
 // contract StateRedeemedTest is StateRedeemed {
 // 
-//     function testCannotRedeem() public {
+//     function testHarnessCannotRedeem() public {
 //         console2.log("Redeem will revert since accrual > 0");
 //         
 //         vm.expectRevert("Already redeemed");
 //         nJoin.redeem();
 //     }
 // 
-//     function testSubsequentExit() public {
+//     function testHarnessSubsequentExit() public {
 //         console2.log("_exitUnderlying executed");
 //         (address currency, uint16 currencyId) = whichCurrency(fCashId);
 //         uint beforeUserBalance = IERC20(currency).balanceOf(user);
