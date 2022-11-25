@@ -47,4 +47,8 @@ contract TestExtensions is Test {
         uint256 start = token.balanceOf(to);
         deal(address(token), to, start + amount);
     }
+
+    function equal(string memory a, string memory b) public returns(bool) {
+        return keccak256(abi.encodePacked(a)) == keccak256(abi.encodePacked(b));
+    }
 }

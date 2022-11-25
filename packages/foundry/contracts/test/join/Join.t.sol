@@ -6,12 +6,13 @@ import "forge-std/src/console2.sol";
 
 import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 import { TestExtensions } from "../TestExtensions.sol";
+import { TestConstants } from "../utils/TestConstants.sol";
 import { Join } from "../../Join.sol";
 import { ERC20Mock } from "../../mocks/ERC20Mock.sol";
 
 using stdStorage for StdStorage;
 
-abstract contract Deployed is Test, TestExtensions {
+abstract contract Deployed is Test, TestExtensions, TestConstants {
 
     Join public join; 
     IERC20 public token;
@@ -19,44 +20,71 @@ abstract contract Deployed is Test, TestExtensions {
     IERC20 public otherToken;
     uint128 public otherUnit;
         
-    address admin;
     address user;
     address other;
-    address deployer;
+    address ladle;
+    address me;
 
-    function setUp() public virtual {
-        vm.createSelectFork('mainnet');
-
-        //... Users ...
-        admin = address(1);
-        user = address(2);
-        other = address(3);
-        vm.label(admin, "admin");
-        vm.label(user, "user");
-        vm.label(other, "other");
-        
-        deployer = 0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84;
-        vm.label(deployer, "deployer");
+    function setUpMock() public {
+        ladle = address(3);
 
         //... Contracts ...
         token = IERC20(address(new ERC20Mock("", "")));
         unit = uint128(10 ** ERC20Mock(address(token)).decimals());
-        vm.label(address(token), "token");
 
         otherToken = IERC20(address(new ERC20Mock("", "")));
         otherUnit = uint128(10 ** ERC20Mock(address(otherToken)).decimals());
-        vm.label(address(otherToken), "otherToken");
 
         //... Deploy Joins and grant access ...
         join = new Join(address(token));
-        vm.label(address(join), "join");
 
         //... Permissions ...
-        join.grantRole(Join.join.selector, admin);
-        join.grantRole(Join.exit.selector, admin);
-        join.grantRole(Join.retrieve.selector, admin);
+        join.grantRole(Join.join.selector, ladle);
+        join.grantRole(Join.exit.selector, ladle);
+        join.grantRole(Join.retrieve.selector, ladle);
+    }
+
+    function setUpHarness(string memory network) public {
+        ladle = addresses[network][LADLE];
+
+        join = Join(vm.envAddress("JOIN"));
+        token = IERC20(join.asset());
+        unit = uint128(10 ** ERC20Mock(address(token)).decimals());
+
+        otherToken = IERC20(address(new ERC20Mock("", "")));
+        otherUnit = uint128(10 ** ERC20Mock(address(otherToken)).decimals());
+
+        // Grant ladle permissions to retrieve tokens, since no one has them.
+        vm.prank(addresses[network][TIMELOCK]);
+        join.grantRole(Join.retrieve.selector, ladle);
+    }
+
+    function setUp() public virtual {
+        string memory network = vm.envString(NETWORK);
+        if (!equal(network, LOCALHOST)) vm.createSelectFork(network);
+
+        if (vm.envBool(MOCK)) setUpMock();
+        else setUpHarness(network);
+
+        //... Users ...
+        user = address(1);
+        other = address(2);
+        me = 0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84;
+
+        vm.label(ladle, "ladle");
+        vm.label(user, "user");
+        vm.label(other, "other");
+        vm.label(me, "me");
+        vm.label(address(token), "token");
+        vm.label(address(otherToken), "otherToken");
+        vm.label(address(join), "join");
 
         cash(token, user, 100 * unit);
+
+        // If there are any unclaimed assets in the Join, join them.
+        uint128 unclaimedTokens = uint128(token.balanceOf(address(join)) - join.storedBalance());
+        vm.prank(ladle);
+        join.join(address(join), unclaimedTokens);
     }  
 }
 
@@ -87,7 +115,7 @@ contract DeployedTest is Deployed {
 
         vm.prank(user);
         token.approve(address(join), unit);
-        vm.prank(admin);
+        vm.prank(ladle);
         join.join(user, unit);
 
         assertTrackMinusEq("userBalance", unit, token.balanceOf(user));
@@ -102,7 +130,7 @@ contract DeployedTest is Deployed {
 
         vm.prank(user);
         token.transfer(address(join), unit);
-        vm.prank(admin);
+        vm.prank(ladle);
         join.join(user, unit);
 
         assertTrackMinusEq("userBalance", unit, token.balanceOf(user));
@@ -119,7 +147,7 @@ contract DeployedTest is Deployed {
         token.approve(address(join), unit/2);
         vm.prank(user);
         token.transfer(address(join), unit/2);
-        vm.prank(admin);
+        vm.prank(ladle);
         join.join(user, unit);
 
         assertTrackMinusEq("userBalance", unit, token.balanceOf(user));
@@ -134,7 +162,7 @@ abstract contract WithTokens is Deployed {
 
         vm.prank(user);
         token.transfer(address(join), unit);
-        vm.prank(admin);
+        vm.prank(ladle);
         join.join(user, unit);
 
     }
@@ -147,7 +175,7 @@ contract WithTokensTest is WithTokens {
         track("storedBalance", join.storedBalance());
         track("joinBalance", token.balanceOf(address(join)));
 
-        vm.prank(admin);
+        vm.prank(ladle);
         join.exit(other, unit);
 
         assertTrackPlusEq("otherBalance", unit, token.balanceOf(other));
@@ -171,7 +199,7 @@ contract WithOtherTokensTest is WithOtherTokens {
         track("otherBalance", otherToken.balanceOf(other));
         track("joinBalance", otherToken.balanceOf(address(join)));
 
-        vm.prank(admin);
+        vm.prank(ladle);
         join.retrieve(otherToken, other);
 
         assertTrackPlusEq("otherBalance", retrievedTokens, otherToken.balanceOf(other));
