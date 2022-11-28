@@ -8,12 +8,13 @@ import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 import { TestExtensions } from "../TestExtensions.sol";
 import { TestConstants } from "../utils/TestConstants.sol";
 import { IERC3156FlashBorrower, IERC3156FlashLender, Join, FlashJoin } from "../../FlashJoin.sol";
-import { ERC20Mock } from "../../mocks/ERC20Mock.sol";
+import { ERC20, ERC20Mock } from "../../mocks/ERC20Mock.sol";
 import { FlashBorrower } from "../../mocks/FlashBorrower.sol";
 
 using stdStorage for StdStorage;
 
 abstract contract Deployed is Test, TestExtensions, TestConstants {
+    event Transfer(address indexed from, address indexed to, uint256 value);
 
     FlashJoin public join; 
     FlashBorrower borrower;
@@ -100,23 +101,80 @@ abstract contract Deployed is Test, TestExtensions, TestConstants {
         join.setFlashFeeFactor(0);
 
         // Make sure that the Join has enough funds to run the tests
-        uint128 joinTopUp = uint128(100 * unit - join.storedBalance());
-        cash(token, address(join), joinTopUp);
-        vm.prank(ladle);
-        join.join(address(join), joinTopUp);
+        if (join.storedBalance() < 100 * unit) {
+            uint128 joinTopUp = uint128(100 * unit - join.storedBalance());
+            cash(token, address(join), joinTopUp);
+            vm.prank(ladle);
+            join.join(address(join), joinTopUp);
+        }
     }  
 }
 
 contract ZeroFeeTest is Deployed {
 
     function testNeedsApproveRepayment() public {
-        vm.expectRevert("ERC20: Insufficient approval");
-        vm.prank(user);
-        join.flashLoan(IERC3156FlashBorrower(address(borrower)), address(token), WAD, abi.encode(FlashBorrower.Action.NORMAL));
+        vm.expectRevert(); // You can't trust everyone using the same revert messages
+        join.flashLoan(IERC3156FlashBorrower(address(borrower)), address(token), unit, abi.encode(FlashBorrower.Action.NORMAL));
+    }
+
+    function testSimpleFlashLoan() public {
+        borrower.flashBorrow(address(token), unit, FlashBorrower.Action.NORMAL);
+
+        assertEq(token.balanceOf(me), 0);
+        assertEq(borrower.flashBalance(), unit);
+        assertEq(borrower.flashToken(), address(token));
+        assertEq(borrower.flashAmount(), unit);
+        assertEq(borrower.flashInitiator(), address(borrower));
+    }
+
+    function testRepayByTransfer() public {
+        vm.expectEmit(true, true, true, false);
+        emit Transfer(address(borrower), address(join), unit);
+        borrower.flashBorrow(address(token), unit, FlashBorrower.Action.TRANSFER);
+
+        assertEq(token.balanceOf(me), 0);
+        assertEq(borrower.flashBalance(), unit);
+        assertEq(borrower.flashToken(), address(token));
+        assertEq(borrower.flashAmount(), unit);
+        assertEq(borrower.flashInitiator(), address(borrower));
+    }
+
+    function testNeedsToRepay() public {
+        vm.expectRevert();
+        borrower.flashBorrow(address(token), unit, FlashBorrower.Action.STEAL);
+    }
+
+    function testNestedFlashLoans() public {
+        borrower.flashBorrow(address(token), unit, FlashBorrower.Action.REENTER);
+        assertEq(borrower.flashBalance(), 3 * unit);
     }
 }
 
+abstract contract NonZeroFees is Deployed {
+    function setUp() public override virtual {
+        super.setUp();
+        vm.prank(timelock);
+        join.setFlashFeeFactor(5e16); // 5%
+    }
+}
 
+contract NonZeroFeesTest is NonZeroFees {
+    function testFeeFlashLoan() public {
+        uint256 principal = unit;
+        uint256 fee = principal * 5 / 100;
+        cash(token, address(borrower), fee);
+
+        track("storedBalance", join.storedBalance());
+        borrower.flashBorrow(address(token), principal, FlashBorrower.Action.NORMAL);
+
+        assertEq(token.balanceOf(me), 0);
+        assertEq(borrower.flashBalance(), principal + fee);
+        assertEq(borrower.flashToken(), address(token));
+        assertEq(borrower.flashAmount(), principal);
+        assertEq(borrower.flashInitiator(), address(borrower));
+        assertTrackPlusEq("storedBalance", fee, join.storedBalance());
+    }
+}
     
 // Deployed
 // join
