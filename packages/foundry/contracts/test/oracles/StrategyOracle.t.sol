@@ -5,14 +5,16 @@ import "forge-std/src/Test.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "../../oracles/strategy/StrategyOracle.sol";
 import "../../interfaces/IStrategy.sol";
+import { TestConstants } from "../utils/TestConstants.sol";
+import { TestExtensions } from "../TestExtensions.sol";
 
-contract StrategyOracleTest is Test {
+contract StrategyOracleTest is Test, TestConstants, TestExtensions {
     StrategyOracle public strategyOracle;
     bytes6 baseId = 0xc02aaa39b223;
     bytes6 quoteId; // = 0x1f9840a85d5a;
 
     function setUp() public {
-        vm.createSelectFork('mainnet', 15917726);
+        vm.createSelectFork(MAINNET, 15917726);
 
         strategyOracle = new StrategyOracle();
         strategyOracle.grantRole(

@@ -17,7 +17,7 @@ contract CrabOracleTest is Test, TestConstants {
     address timelock = 0x3b870db67a45611CF4723d44487EAF398fAc51E3;
 
     function setUp() public {
-        vm.createSelectFork("mainnet", 15974678);
+        vm.createSelectFork(MAINNET, 15974678);
         crabOracle = new CrabOracle(
             CRAB,
             OSQTH,

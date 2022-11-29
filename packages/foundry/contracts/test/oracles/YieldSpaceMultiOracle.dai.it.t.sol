@@ -19,7 +19,7 @@ contract YieldSpaceMultiOracleDAIIntegrationTest is Test, TestConstants {
     IPool internal pool;
 
     function setUp() public {
-        vm.createSelectFork("mainnet", 15313316);
+        vm.createSelectFork(MAINNET, 15313316);
 
         pOracle = new PoolOracle(24 hours, 24, 5 minutes);
         oracle = new YieldSpaceMultiOracle(pOracle);

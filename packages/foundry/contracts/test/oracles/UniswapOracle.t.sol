@@ -4,8 +4,9 @@ pragma solidity >=0.8.13;
 import "forge-std/src/Test.sol";
 import "../../oracles/uniswap/UniswapV3Oracle.sol";
 import "../utils/TestConstants.sol";
+import { TestExtensions } from "../TestExtensions.sol";
 
-contract UniswapOracleTest is Test, TestConstants {
+contract UniswapOracleTest is Test, TestConstants, TestExtensions {
     UniswapV3Oracle public uniswapV3Oracle;
 
     bytes6 fraxId = 0x853d955acef8;
@@ -21,7 +22,7 @@ contract UniswapOracleTest is Test, TestConstants {
 
     
     function setUp() public {
-        vm.createSelectFork('mainnet', 15044600);
+        vm.createSelectFork(MAINNET, 15044600);
 
         uniswapV3Oracle = new UniswapV3Oracle();
         

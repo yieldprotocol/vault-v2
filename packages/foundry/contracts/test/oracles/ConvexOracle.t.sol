@@ -9,8 +9,9 @@ import "../../oracles/convex/Cvx3CrvOracle.sol";
 import "../../oracles/chainlink/AggregatorV3Interface.sol";
 import "../../oracles/convex/ICurvePool.sol";
 import "../utils/TestConstants.sol";
+import { TestExtensions } from "../TestExtensions.sol";
 
-contract ConvexOracleTest is Test, TestConstants {
+contract ConvexOracleTest is Test, TestConstants, TestExtensions {
     Cvx3CrvOracle public convexOracle;
     ChainlinkMultiOracle public chainlinkMultiOracle;
     CompositeMultiOracle public compositeMultiOracle;
@@ -27,7 +28,7 @@ contract ConvexOracleTest is Test, TestConstants {
     address public weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
     function setUp() public {
-        vm.createSelectFork('mainnet', 15044600);
+        vm.createSelectFork(MAINNET, 15044600);
 
         convexOracle = new Cvx3CrvOracle();
         chainlinkMultiOracle = new ChainlinkMultiOracle();
