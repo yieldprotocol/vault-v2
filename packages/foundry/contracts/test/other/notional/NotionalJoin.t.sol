@@ -104,7 +104,7 @@ abstract contract StateZero is Test, TestConstants {
     }
 
     function setUp() public virtual {
-        vm.createSelectFork('mainnet', 16017869);
+        vm.createSelectFork(MAINNET, 16017869);
         
         // arbitrary values for testing
         fCashTokens = 10e18;
