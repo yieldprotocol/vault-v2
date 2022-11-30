@@ -5,6 +5,7 @@ import "forge-std/src/Test.sol";
 import "forge-std/src/console2.sol";
 
 import "../../../test/utils/TestConstants.sol";
+import "../../../test/TestExtensions.sol";
 
 import { ERC1155 } from "../../../other/notional/ERC1155.sol";
 import { IWETH9 } from "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
@@ -16,7 +17,7 @@ import "./NotionalTypes.sol";
 
 using stdStorage for StdStorage;
 
-abstract contract StateZero is Test, TestConstants {
+abstract contract StateZero is Test, TestExtensions, TestConstants {
     using stdStorage for StdStorage;
 
     event Redeemed(uint256 fCashAmount, uint256 underlying, uint256 accrual);
@@ -45,49 +46,6 @@ abstract contract StateZero is Test, TestConstants {
 
     address public me;
     address public user;
-
-    mapping(string => uint256) tracked;
-
-
-    function track(string memory id, uint256 amount) public {
-        tracked[id] = amount;
-    }
-
-    function assertTrackPlusEq(string memory id, uint256 plus, uint256 amount) public {
-        assertEq(tracked[id] + plus, amount);
-    }
-
-    function assertTrackMinusEq(string memory id, uint256 minus, uint256 amount) public {
-        assertEq(tracked[id] - minus, amount);
-    }
-
-    function assertTrackPlusApproxEqAbs(string memory id, uint256 plus, uint256 amount, uint256 delta) public {
-        assertApproxEqAbs(tracked[id] + plus, amount, delta);
-    }
-
-    function assertTrackMinusApproxEqAbs(string memory id, uint256 minus, uint256 amount, uint256 delta) public {
-        assertApproxEqAbs(tracked[id] - minus, amount, delta);
-    }
-
-    function assertApproxGeAbs(uint256 a, uint256 b, uint256 delta) public {
-        assertGe(a, b);
-        assertApproxEqAbs(a, b, delta);
-    }
-
-    function assertTrackPlusApproxGeAbs(string memory id, uint256 plus, uint256 amount, uint256 delta) public {
-        assertGe(tracked[id] + plus, amount);
-        assertApproxEqAbs(tracked[id] + plus, amount, delta);
-    }
-
-    function assertTrackMinusApproxGeAbs(string memory id, uint256 minus, uint256 amount, uint256 delta) public {
-        assertGe(tracked[id] - minus, amount);
-        assertApproxEqAbs(tracked[id] - minus, amount, delta);
-    }
-
-    function cash(IERC20 token, address to, uint256 amount) public {
-        uint256 start = token.balanceOf(to);
-        deal(address(token), to, start + amount);
-    }
 
     /// @dev Gets fCash of the same denomination as the NotionalJoin
     function getFCash(address to, uint256 amount) public returns (uint256 fCashAmount) {
@@ -138,9 +96,16 @@ abstract contract StateZero is Test, TestConstants {
 
     receive() external payable {}
 
-    function setUp() public virtual {
-        vm.createSelectFork(TENDERLY);
-        
+    modifier onlyHarness() {
+        if (vm.envBool(MOCK)) return;
+        _;
+    }
+
+    function setUpMock() public {}
+
+    function setUpHarness(string memory network) public {
+        // TODO: When using tenderly, guess how to pull the right addresses
+
         nJoin = NotionalJoin(payable(vm.envAddress("JOIN")));
         fCashId = nJoin.fCashId();
         maturity = nJoin.maturity();
@@ -162,11 +127,19 @@ abstract contract StateZero is Test, TestConstants {
         vm.prank(user);
         fCash.setApprovalForAll(address(nJoin), true);
     }
+
+    function setUp() public virtual {
+        string memory network = vm.envString(NETWORK);
+        if (!equal(network, LOCALHOST)) vm.createSelectFork(network);
+
+        if (vm.envBool(MOCK)) setUpMock();
+        else setUpHarness(network);
+    }
 }
 
 contract StateZeroTest is StateZero {
     
-    function testHarnessJoin() public {
+    function testHarnessJoin() public onlyHarness {
         console2.log("join()");
 
         uint128 joinedAmount = fCashUnit;
@@ -185,7 +158,7 @@ contract StateZeroTest is StateZero {
 
 // Njoin receives fCash tokens from user
 abstract contract StateJoined is StateZero {
-    function setUp() public override virtual {
+    function setUp() public onlyHarness override virtual {
         super.setUp();
         
         uint128 joinedAmount = fCashUnit * 10;
@@ -201,7 +174,7 @@ abstract contract StateJoined is StateZero {
 
 
 contract StateJoinedTest is StateJoined {
-    function testHarnessExit() public {
+    function testHarnessExit() public onlyHarness {
         console2.log("pushes fCash to user");
 
         uint128 amountExited = fCashUnit;
@@ -219,7 +192,7 @@ contract StateJoinedTest is StateJoined {
 
 // Njoin holds 2e8 of fCash
 abstract contract StateMatured is StateJoined {
-    function setUp() public override virtual {
+    function setUp() public onlyHarness override virtual {
         super.setUp();
         
         // set blocktime to pass maturity
@@ -229,25 +202,25 @@ abstract contract StateMatured is StateJoined {
 
 contract StateMaturedTest is StateMatured {
     // sanity check - maturity
-    function testHarnessMaturity() public {
+    function testHarnessMaturity() public onlyHarness {
         console2.log("fCash tokens are mature");
         assertGe(block.timestamp, maturity);         
     }  
        
     // sanity check - accrual
-    function testHarnessAccrual() public {
+    function testHarnessAccrual() public onlyHarness {
         console2.log("Accrual in Njoin should be 0");
         assertTrue(nJoin.accrual() == 0); 
     }
 
-    function testHarnessCannotJoin() public {
+    function testHarnessCannotJoin() public onlyHarness {
         console2.log("Cannot call join() after maturity");
         vm.expectRevert("Only before maturity");
         vm.prank(ladle);
         nJoin.join(user, fCashUnit);
     }
 
-    function testHarnessRedeem() public {
+    function testHarnessRedeem() public onlyHarness {
         console2.log("First exit call should call redeem()");
         
         uint128 fCashExited = uint128(fCashUnit);
@@ -272,7 +245,7 @@ contract StateMaturedTest is StateMatured {
 
 abstract contract StateRedeemed is StateMatured {
 
-     function setUp() public override virtual {
+     function setUp() public override virtual onlyHarness {
         super.setUp();
 
         nJoin.redeem();
@@ -282,14 +255,14 @@ abstract contract StateRedeemed is StateMatured {
 
 contract StateRedeemedTest is StateRedeemed {
 
-    function testHarnessCannotRedeem() public {
+    function testHarnessCannotRedeem() public onlyHarness {
         console2.log("Redeem will revert since accrual > 0");
         
         vm.expectRevert("Already redeemed");
         nJoin.redeem();
     }
 
-    function testHarnessSubsequentExit() public {
+    function testHarnessSubsequentExit() public onlyHarness {
         console2.log("Regular underlying exit");
         
         uint128 fCashExited = uint128(fCashUnit);

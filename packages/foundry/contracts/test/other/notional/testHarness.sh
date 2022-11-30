@@ -8,6 +8,9 @@ JOINS=(\
   "0xA9078E573EC536c4066A5E89F715553Ed67B13E0"\
   "0x83e99A843607CfFFC97A3acA15422aC672a463eF")
 
+export NETWORK=TENDERLY
+export MOCK=false
+
 for join in ${JOINS[@]}; do
   JOIN=$join forge test --match-path contracts/test/other/notional/NotionalJoinHarness.t.sol
 done
