@@ -139,7 +139,7 @@ abstract contract StateZero is Test, TestConstants {
     receive() external payable {}
 
     function setUp() public virtual {
-        vm.createSelectFork('tenderly');
+        vm.createSelectFork(TENDERLY);
         
         nJoin = NotionalJoin(payable(vm.envAddress("JOIN")));
         fCashId = nJoin.fCashId();
