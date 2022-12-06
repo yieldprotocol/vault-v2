@@ -102,5 +102,3 @@ jobs:
         env:
           ARBITRUM_RPC: $${{ secrets.ARBITRUM_RPC}}
           MAINNET_RPC: ${{ secrets.MAINNET_RPC }}
-          MOCK: true
-          NETWORK: MAINNET

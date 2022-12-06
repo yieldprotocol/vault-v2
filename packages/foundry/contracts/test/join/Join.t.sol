@@ -60,10 +60,10 @@ abstract contract Deployed is Test, TestExtensions, TestConstants {
     }
 
     function setUp() public virtual {
-        string memory network = vm.envString(NETWORK);
+        string memory network = vm.envOr(NETWORK, LOCALHOST);
         if (!equal(network, LOCALHOST)) vm.createSelectFork(network);
 
-        if (vm.envBool(MOCK)) setUpMock();
+        if (vm.envOr(MOCK, true)) setUpMock();
         else setUpHarness(network);
 
         //... Users ...
