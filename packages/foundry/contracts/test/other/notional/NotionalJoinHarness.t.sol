@@ -97,7 +97,7 @@ abstract contract StateZero is Test, TestExtensions, TestConstants {
     receive() external payable {}
 
     modifier onlyHarness() {
-        if (vm.envBool(MOCK)) return;
+        if (vm.envOr(MOCK, true)) return; // Absence of MOCK makes it default to true
         _;
     }
 
@@ -129,10 +129,10 @@ abstract contract StateZero is Test, TestExtensions, TestConstants {
     }
 
     function setUp() public virtual {
-        string memory network = vm.envString(NETWORK);
+        string memory network = vm.envOr(NETWORK, LOCALHOST);
         if (!equal(network, LOCALHOST)) vm.createSelectFork(network);
 
-        if (vm.envBool(MOCK)) setUpMock();
+        if (vm.envOr(MOCK, true)) setUpMock();
         else setUpHarness(network);
     }
 }
