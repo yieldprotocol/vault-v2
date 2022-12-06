@@ -9,8 +9,9 @@ import "../../oracles/chainlink/AggregatorV3Interface.sol";
 import "../../mocks/oracles/chainlink/FlagsInterfaceMock.sol";
 import "../../mocks/oracles/chainlink/ChainlinkAggregatorV3MockEx.sol";
 import "../utils/TestConstants.sol";
+import { TestExtensions } from "../TestExtensions.sol";
 
-contract ChainlinkUSDMultiOracleTest is Test, TestConstants {
+contract ChainlinkUSDMultiOracleTest is Test, TestConstants, TestExtensions {
     ChainlinkUSDMultiOracle public oracleL1;
     ChainlinkL2USDMultiOracle public oracleL2;
     FlagsInterfaceMock public flagsL2;
@@ -22,7 +23,7 @@ contract ChainlinkUSDMultiOracleTest is Test, TestConstants {
     address public frax = 0x853d955aCEf822Db058eb8505911ED77F175b99e;
 
     function setUp() public {
-        vm.createSelectFork('mainnet', 15044600);
+        vm.createSelectFork(MAINNET, 15044600);
 
         oracleL1 = new ChainlinkUSDMultiOracle();
         flagsL2 = new FlagsInterfaceMock();

@@ -9,6 +9,8 @@ import "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
 import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
 import "../../mocks/WETH9Mock.sol";
 import "../../modules/HealerModule.sol";
+import { TestConstants } from "../utils/TestConstants.sol";
+import { TestExtensions } from "../TestExtensions.sol";
 
 interface ILadleCustom {
     function addModule(address module, bool set) external;
@@ -16,7 +18,7 @@ interface ILadleCustom {
     function moduleCall(address module, bytes calldata data) external payable returns (bytes memory result);
 }
 
-contract HealerModuleTest is Test {
+contract HealerModuleTest is Test, TestConstants, TestExtensions {
     ICauldron public cauldron = ICauldron(0xc88191F8cb8e6D4a668B047c1C8503432c3Ca867);
     ILadle public ladle = ILadle(0x6cB18fF2A33e981D1e38A663Ca056c0a5265066A);
     IWETH9 public weth;
@@ -30,7 +32,7 @@ contract HealerModuleTest is Test {
     bytes12 public vaultId;
 
     function setUp() public {
-        vm.createSelectFork('mainnet', 15266900);
+        vm.createSelectFork(MAINNET, 15266900);
 
         wethMock = new WETH9Mock();
         weth = IWETH9(address(wethMock));

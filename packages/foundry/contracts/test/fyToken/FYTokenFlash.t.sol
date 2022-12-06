@@ -12,9 +12,9 @@ import "../../oracles/uniswap/uniswapv0.8/FullMath.sol";
 import "../../mocks/oracles/compound/CTokenChiMock.sol";
 import "../../mocks/FlashBorrower.sol";
 import "../utils/TestConstants.sol";
+import { TestExtensions } from "../TestExtensions.sol";
 
-
-abstract contract ZeroState is Test, TestConstants {
+abstract contract ZeroState is Test, TestConstants, TestExtensions {
     using CastU256I128 for uint256;
 
     event Point(bytes32 indexed param, address value);
@@ -36,7 +36,7 @@ abstract contract ZeroState is Test, TestConstants {
     bytes12 public vaultId;
 
     function setUp() public virtual {
-        vm.createSelectFork('mainnet', 15266900);
+        vm.createSelectFork(MAINNET, 15266900);
         borrower = new FlashBorrower(fyDAI);
     }
 }
