@@ -69,10 +69,7 @@ abstract contract ZeroState is Test, TestConstants, TestExtensions {
         console.log("fyToken created");
 
         bytes4[] memory fyTokenRoles = new bytes4[](2);
-        fyTokenRoles[0] = fyToken.mint.selector;It might be easier for me to use a mainnet fork for the non-harness test since with mocks you can't call any ladle functions like addToken, build,  pour, batch, etc
-2:24
-Would have to rewrite a lot less that way
-￼
+        fyTokenRoles[0] = fyToken.mint.selector;
 
         fyTokenRoles[1] = fyToken.point.selector;
         fyToken.grantRoles(fyTokenRoles, address(this));
@@ -83,16 +80,15 @@ Would have to rewrite a lot less that way
         daiJoinRoles[1] = join.exit.selector;
         join.grantRoles(daiJoinRoles, address(fyToken));
 
-        vm.startPrank(timelock);
+        // vm.startPrank(timelock);
 
-        ILadleCustom(address(ladle)).addToken(address(fyToken), true);
-        console.log("and after");
-        cauldron.addSeries(seriesId, 0x303100000000, fyToken);
-        bytes6[] memory ilkIds = new bytes6[](1);
-        ilkIds[0] = fyToken.underlyingId();
-        cauldron.addIlks(seriesId, ilkIds);
+        // ILadleCustom(address(ladle)).addToken(address(fyToken), true);
+        // cauldron.addSeries(seriesId, 0x303100000000, fyToken);
+        // bytes6[] memory ilkIds = new bytes6[](1);
+        // ilkIds[0] = fyToken.underlyingId();
+        // cauldron.addIlks(seriesId, ilkIds);
 
-        vm.stopPrank();
+        // vm.stopPrank();
 
     }
 
@@ -124,16 +120,6 @@ Would have to rewrite a lot less that way
         vm.label(address(join), "join");
 
         cash(token, user, 100 * unit);
-
-        // (vaultId, ) = ladle.build(seriesId, fyToken.underlyingId, 0);                  // create vault
-        // deal(fyToken.underlying(), address(this), WAD * 1);                              // populate the test address/vault owner with 1 DAI
-        // IERC20(fyToken.underlying()).approve(address(join), WAD);         
-        // ladle.pour(vaultId, address(this), WAD.i128(), WAD.i128());     // add ink and art to vault, will mint 1 fyToken
-        
-        // deal(fyToken.underlying(), address(this), WAD * 2);                              // populate the test address/vault owner with 2 DAI
-        // IERC20(fyToken.underlying()).approve(address(join), WAD * 2);
-        // vm.prank(address(ladle));
-        // join.join(address(this), uint128(WAD * 2));                  // Join takes the 2 DAI
     }
 }
 
