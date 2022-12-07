@@ -13,6 +13,7 @@ import "../../interfaces/IOracle.sol";
 import "../../oracles/uniswap/uniswapv0.8/FullMath.sol";
 import "../../mocks/oracles/compound/CTokenChiMock.sol";
 import "../../mocks/FlashBorrower.sol";
+import "../../mocks/ERC20Mock.sol";
 import "../utils/TestConstants.sol";
 import { TestExtensions } from "../TestExtensions.sol";
 
@@ -33,60 +34,164 @@ abstract contract ZeroState is Test, TestConstants, TestExtensions {
     event SeriesMatured(uint256 chiAtMaturity);
     event Redeemed(address indexed from, address indexed to, uint256 amount, uint256 redeemed);
 
-    FYToken public fyDAI;
-    Cauldron public cauldron = Cauldron(0xc88191F8cb8e6D4a668B047c1C8503432c3Ca867);
-    ILadle public ladle = ILadle(0x6cB18fF2A33e981D1e38A663Ca056c0a5265066A);
-    // FYToken public fyDAI = FYToken(0xFCb9B8C5160Cf2999f9879D8230dCed469E72eeb);
-    Join public daiJoin = Join(0x4fE92119CDf873Cf8826F4E6EcfD4E578E3D44Dc);
+    FYToken public fyToken;
+    Join public join;
+    address public timelock;
+    Cauldron public cauldron;
+    IERC20 public token;
+    uint128 public unit;
+    address user;
+    bytes6 public seriesId = 0x303130390000; // DAI March 23 series
+    // bytes12 public vaultId;
 
-    address public timelock = 0x3b870db67a45611CF4723d44487EAF398fAc51E3;
-    address public dai = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
-    address public weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    bytes6 public ilkId = 0x303100000000; // For DAI
-    bytes6 public seriesId = 0x303130390000; // ETH/DAI March 23 series
-    bytes12 public vaultId;
+    ILadle public ladle;
+    IOracle public oracle;
+    CTokenChiMock public mockOracle;
 
-    function setUp() public virtual {
-        vm.createSelectFork(MAINNET, 15266900);
-        vm.startPrank(timelock);
+    function setUpMock() public {
+        timelock = address(1);
+        cauldron = Cauldron(address(2));
+        ladle = ILadle(address(3));
 
-        fyDAI = new FYToken(
-            DAI,
-            IOracle(0x53FBa816BD69a7f2a096f58687f87dd3020d0d5c), // Compound oracle
-            daiJoin,
-            1664550000,
-            "FYDAI2209",
-            "FYDAI2209"
+        mockOracle = new CTokenChiMock();
+        token = IERC20(address(new ERC20Mock("", "")));
+        bytes6 mockIlkId = 0x000000000001;
+        join = new Join(address(token));
+
+        fyToken = new FYToken(
+            mockIlkId,
+            IOracle(address(mockOracle)),
+            join,
+            1680427572,
+            "",
+            ""
         );
+        console.log("fyToken created");
 
         bytes4[] memory fyTokenRoles = new bytes4[](2);
-        fyTokenRoles[0] = fyDAI.mint.selector;
-        fyTokenRoles[1] = fyDAI.point.selector;
-        fyDAI.grantRoles(fyTokenRoles, address(this));
-        fyDAI.grantRoles(fyTokenRoles, address(ladle));
+        fyTokenRoles[0] = fyToken.mint.selector;It might be easier for me to use a mainnet fork for the non-harness test since with mocks you can't call any ladle functions like addToken, build,  pour, batch, etc
+2:24
+Would have to rewrite a lot less that way
+￼
+
+        fyTokenRoles[1] = fyToken.point.selector;
+        fyToken.grantRoles(fyTokenRoles, address(this));
+        fyToken.grantRoles(fyTokenRoles, address(ladle));
 
         bytes4[] memory daiJoinRoles = new bytes4[](2);
-        daiJoinRoles[0] = daiJoin.join.selector;
-        daiJoinRoles[1] = daiJoin.exit.selector;
-        daiJoin.grantRoles(daiJoinRoles, address(fyDAI));
+        daiJoinRoles[0] = join.join.selector;
+        daiJoinRoles[1] = join.exit.selector;
+        join.grantRoles(daiJoinRoles, address(fyToken));
 
-        ILadleCustom(address(ladle)).addToken(address(fyDAI), true);
-        cauldron.addSeries(seriesId, 0x303100000000, fyDAI);
+        vm.startPrank(timelock);
+
+        ILadleCustom(address(ladle)).addToken(address(fyToken), true);
+        console.log("and after");
+        cauldron.addSeries(seriesId, 0x303100000000, fyToken);
         bytes6[] memory ilkIds = new bytes6[](1);
-        ilkIds[0] = ilkId;
+        ilkIds[0] = fyToken.underlyingId();
         cauldron.addIlks(seriesId, ilkIds);
 
         vm.stopPrank();
 
-        (vaultId, ) = ladle.build(seriesId, ilkId, 0);                  // create vault
-        deal(dai, address(this), WAD * 1);                              // populate the test address/vault owner with 1 DAI
-        IERC20(dai).approve(address(daiJoin), WAD);         
-        ladle.pour(vaultId, address(this), WAD.i128(), WAD.i128());     // add ink and art to vault, will mint 1 fyDAI
+    }
+
+    function setUpHarness(string memory network) public {
+        timelock = addresses[network][TIMELOCK];
+        cauldron = Cauldron(addresses[network][CAULDRON]);
+        ladle = ILadle(addresses[network][LADLE]);
+
+        fyToken = FYToken(vm.envAddress("FYTOKEN"));
+        token = IERC20(fyToken.underlying());
+        oracle = fyToken.oracle();
+        unit = uint128(10 ** ERC20Mock(address(token)).decimals());
+    } 
+
+    function setUp() public virtual {
+        string memory network = vm.envOr(NETWORK, LOCALHOST);
+        if (!equal(network, LOCALHOST)) vm.createSelectFork(network);
+
+        if (vm.envOr(MOCK, true)) setUpMock();
+        else setUpHarness(network);
+
+        user = address(1);
+
+        vm.label(address(cauldron), "cauldron");
+        vm.label(address(ladle), "ladle");
+        vm.label(user, "user");
+        vm.label(address(token), "token");
+        vm.label(address(oracle), "oracle");
+        vm.label(address(join), "join");
+
+        cash(token, user, 100 * unit);
+
+        // (vaultId, ) = ladle.build(seriesId, fyToken.underlyingId, 0);                  // create vault
+        // deal(fyToken.underlying(), address(this), WAD * 1);                              // populate the test address/vault owner with 1 DAI
+        // IERC20(fyToken.underlying()).approve(address(join), WAD);         
+        // ladle.pour(vaultId, address(this), WAD.i128(), WAD.i128());     // add ink and art to vault, will mint 1 fyToken
         
-        deal(dai, address(this), WAD * 2);                              // populate the test address/vault owner with 2 DAI
-        IERC20(dai).approve(address(daiJoin), WAD * 2);
-        vm.prank(address(ladle));
-        daiJoin.join(address(this), uint128(WAD * 2));                  // Join takes the 2 DAI
+        // deal(fyToken.underlying(), address(this), WAD * 2);                              // populate the test address/vault owner with 2 DAI
+        // IERC20(fyToken.underlying()).approve(address(join), WAD * 2);
+        // vm.prank(address(ladle));
+        // join.join(address(this), uint128(WAD * 2));                  // Join takes the 2 DAI
+    }
+}
+
+contract FYTokenTest is ZeroState {
+    function testChangeOracle() public {
+        console.log("can change the CHI oracle");
+        vm.expectEmit(true, false, false, true);
+        emit Point("oracle", address(this));
+        vm.prank(timelock);
+        fyToken.point("oracle", address(this));
+    }
+
+    function testChangeJoin() public {
+        console.log("can change Join");
+        vm.expectEmit(true, false, false, true);
+        emit Point("join", address(this));
+        vm.prank(timelock);
+        fyToken.point("join", address(this));
+    }
+
+    function testMintWithUnderlying() public {
+        console.log("can mint with underlying");
+        uint256 balance = fyToken.balanceOf(address(this));   // will have 1 fyToken
+        fyToken.mint(address(this), WAD);
+        assertEq(fyToken.balanceOf(address(this)) - balance, WAD);
+    }
+
+    function testCantMatureBeforeMaturity() public {
+        console.log("can't mature before maturity");
+        vm.prank(timelock);
+        vm.expectRevert("Only after maturity");
+        fyToken.mature();
+    }
+
+    function testCantRedeemBeforeMaturity() public {
+        console.log("can't redeem before maturity");
+        vm.expectRevert("Only after maturity");
+        fyToken.redeem(address(this), WAD);
+    }
+
+    function testConvertToPrincipal() public {
+        console.log("can convert amount of underlying to principal");
+        assertEq(fyToken.convertToPrincipal(1000), 1000);
+    }
+
+    function testConvertToUnderlying() public {
+        console.log("can convert amount of principal to underlying");
+        assertEq(fyToken.convertToUnderlying(1000), 1000);
+    }
+
+    function testPreviewRedeem() public {
+        console.log("can preview the amount of underlying redeemed");
+        assertEq(fyToken.previewRedeem(WAD), WAD);
+    }
+
+    function testPreviewWithdraw() public {
+        console.log("can preview the amount of principal withdrawn");
+        assertEq(fyToken.previewWithdraw(WAD), WAD);
     }
 }
 
@@ -94,6 +199,70 @@ abstract contract AfterMaturity is ZeroState {
     function setUp() public virtual override {
         super.setUp();
         vm.warp(1664550000);
+    }
+}
+
+contract AfterMaturityTest is AfterMaturity {
+    function testCantMintAfterMaturity() public {
+        console.log("can't mint after maturity");
+        vm.expectRevert("Only before maturity");
+        fyToken.mint(address(this), WAD);
+    }
+
+    function testMatureOnlyOnce() public {
+        console.log("can only mature once");
+        vm.prank(timelock);
+        fyToken.mature();
+        vm.expectRevert("Already matured");
+        fyToken.mature();
+    }
+
+    function testMatureRevertsOnZeroChi() public {
+        console.log("can't mature if chi is zero");
+
+        CTokenChiMock chiOracle = new CTokenChiMock(); // Use a new oracle that we can force to be zero
+        fyToken.mature();
+        fyToken.point("oracle", address(chiOracle));
+        chiOracle.set(0); 
+
+        vm.prank(timelock);
+        fyToken.mature();
+        vm.expectRevert("Chi oracle malfunction");
+        fyToken.mature();
+    }
+
+    function testMatureRecordsChiValue() public {
+        console.log("records chi value when matureed");
+        vm.prank(timelock);
+        vm.expectEmit(false, false, false, true);
+        emit SeriesMatured(220434062002504964823286680);
+        fyToken.mature();
+    }
+
+    function testMaturesFirstRedemptionAfterMaturity() public {
+        console.log("matures on first redemption after maturity if needed");
+        uint256 ownerBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(this));
+        uint256 joinBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(join));
+        vm.expectEmit(true, true, false, true);
+        emit Redeemed(
+            address(this), 
+            address(this), 
+            WAD, 
+            WAD
+        );
+        fyToken.redeem(address(this), WAD);
+        assertEq(
+            IERC20(fyToken.underlying()).balanceOf(address(this)), 
+            ownerBalanceBefore + WAD
+        );
+        assertEq(
+            IERC20(fyToken.underlying()).balanceOf(address(join)), 
+            joinBalanceBefore - WAD
+        );
+        assertEq(
+            fyToken.balanceOf(address(this)), 
+            0
+        );
     }
 }
 
@@ -105,130 +274,10 @@ abstract contract OnceMatured is AfterMaturity {
     function setUp() public override {
         super.setUp();
         chiOracle = new CTokenChiMock();
-        fyDAI.point("oracle", address(chiOracle));                          // Uses new oracle to update to new chi value
+        fyToken.point("oracle", address(chiOracle));                          // Uses new oracle to update to new chi value
         chiOracle.set(220434062002504964823286680); 
-        fyDAI.mature();
+        fyToken.mature();
         chiOracle.set(220434062002504964823286680 * 110 / 100);             // Will set chi returned to be 10%
-    }
-}
-
-contract FYTokenTest is ZeroState {
-    function testChangeOracle() public {
-        console.log("can change the CHI oracle");
-        vm.expectEmit(true, false, false, true);
-        emit Point("oracle", address(this));
-        fyDAI.point("oracle", address(this));
-    }
-
-    function testChangeJoin() public {
-        console.log("can change Join");
-        vm.expectEmit(true, false, false, true);
-        emit Point("join", address(this));
-        fyDAI.point("join", address(this));
-    }
-
-    function testMintWithUnderlying() public {
-        console.log("can mint with underlying");
-        uint256 balance = fyDAI.balanceOf(address(this));   // will have 1 fyDAI
-        fyDAI.mint(address(this), WAD);
-        assertEq(fyDAI.balanceOf(address(this)) - balance, WAD);
-    }
-
-    function testCantMatureBeforeMaturity() public {
-        console.log("can't mature before maturity");
-        vm.prank(timelock);
-        vm.expectRevert("Only after maturity");
-        fyDAI.mature();
-    }
-
-    function testCantRedeemBeforeMaturity() public {
-        console.log("can't redeem before maturity");
-        vm.expectRevert("Only after maturity");
-        fyDAI.redeem(address(this), WAD);
-    }
-
-    function testConvertToPrincipal() public {
-        console.log("can convert amount of underlying to principal");
-        assertEq(fyDAI.convertToPrincipal(1000), 1000);
-    }
-
-    function testConvertToUnderlying() public {
-        console.log("can convert amount of principal to underlying");
-        assertEq(fyDAI.convertToUnderlying(1000), 1000);
-    }
-
-    function testPreviewRedeem() public {
-        console.log("can preview the amount of underlying redeemed");
-        assertEq(fyDAI.previewRedeem(WAD), WAD);
-    }
-
-    function testPreviewWithdraw() public {
-        console.log("can preview the amount of principal withdrawn");
-        assertEq(fyDAI.previewWithdraw(WAD), WAD);
-    }
-}
-
-contract AfterMaturityTest is AfterMaturity {
-    function testCantMintAfterMaturity() public {
-        console.log("can't mint after maturity");
-        vm.expectRevert("Only before maturity");
-        fyDAI.mint(address(this), WAD);
-    }
-
-    function testMatureOnlyOnce() public {
-        console.log("can only mature once");
-        vm.prank(timelock);
-        fyDAI.mature();
-        vm.expectRevert("Already matured");
-        fyDAI.mature();
-    }
-
-    function testMatureRevertsOnZeroChi() public {
-        console.log("can't mature if chi is zero");
-
-        CTokenChiMock chiOracle = new CTokenChiMock(); // Use a new oracle that we can force to be zero
-        fyDAI.mature();
-        fyDAI.point("oracle", address(chiOracle));
-        chiOracle.set(0); 
-
-        vm.prank(timelock);
-        fyDAI.mature();
-        vm.expectRevert("Chi oracle malfunction");
-        fyDAI.mature();
-    }
-
-    function testMatureRecordsChiValue() public {
-        console.log("records chi value when matureed");
-        vm.prank(timelock);
-        vm.expectEmit(false, false, false, true);
-        emit SeriesMatured(220434062002504964823286680);
-        fyDAI.mature();
-    }
-
-    function testMaturesFirstRedemptionAfterMaturity() public {
-        console.log("matures on first redemption after maturity if needed");
-        uint256 ownerBalanceBefore = IERC20(dai).balanceOf(address(this));
-        uint256 joinBalanceBefore = IERC20(dai).balanceOf(address(daiJoin));
-        vm.expectEmit(true, true, false, true);
-        emit Redeemed(
-            address(this), 
-            address(this), 
-            WAD, 
-            WAD
-        );
-        fyDAI.redeem(address(this), WAD);
-        assertEq(
-            IERC20(dai).balanceOf(address(this)), 
-            ownerBalanceBefore + WAD
-        );
-        assertEq(
-            IERC20(dai).balanceOf(address(daiJoin)), 
-            joinBalanceBefore - WAD
-        );
-        assertEq(
-            fyDAI.balanceOf(address(this)), 
-            0
-        );
     }
 }
 
@@ -236,42 +285,42 @@ contract OnceMaturedTest is OnceMatured {
     function testCannotChangeOracle() public {
         console.log("can't change the CHI oracle once matured");
         vm.expectRevert("Already matured");
-        fyDAI.point("oracle", address(this));
+        fyToken.point("oracle", address(this));
     }
 
     function testChiAccrualNotBelowOne() public {
         console.log("cannot have chi accrual below 1");
-        assertGt(fyDAI.accrual(), WAD);
+        assertGt(fyToken.accrual(), WAD);
     }
 
     function testConvertToUnderlyingWithAccrual() public {
         console.log("can convert the amount of underlying plus the accrual to principal");
-        assertEq(fyDAI.convertToUnderlying(1000), 1100);
-        assertEq(fyDAI.convertToUnderlying(5000), 5500);
+        assertEq(fyToken.convertToUnderlying(1000), 1100);
+        assertEq(fyToken.convertToUnderlying(5000), 5500);
     }
 
     function testConvertToPrincipalWithAccrual() public {
         console.log("can convert the amount of underlying plus the accrual to principal");
-        assertEq(fyDAI.convertToPrincipal(1100), 1000);
-        assertEq(fyDAI.convertToPrincipal(5500), 5000);
+        assertEq(fyToken.convertToPrincipal(1100), 1000);
+        assertEq(fyToken.convertToPrincipal(5500), 5000);
     }
 
     function testMaxRedeem() public {
         console.log("can get the max amount of principal redeemable");
-        deal(address(fyDAI), address(this), WAD * 2);
-        assertEq(fyDAI.maxRedeem(address(this)), WAD * 2);
+        deal(address(fyToken), address(this), WAD * 2);
+        assertEq(fyToken.maxRedeem(address(this)), WAD * 2);
     }
 
     function testMaxWithdraw() public {
         console.log("can get the max amount of underlying withdrawable");
-        deal(address(fyDAI), address(this), WAD * 2);
-        assertEq(fyDAI.maxRedeem(address(this)), WAD * 2);
+        deal(address(fyToken), address(this), WAD * 2);
+        assertEq(fyToken.maxRedeem(address(this)), WAD * 2);
     }
 
     function testRedeemWithAccrual() public {
         console.log("redeems according to chi accrual");
-        uint256 ownerBalanceBefore = IERC20(dai).balanceOf(address(this));
-        uint256 joinBalanceBefore = IERC20(dai).balanceOf(address(daiJoin));
+        uint256 ownerBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(this));
+        uint256 joinBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(join));
         vm.expectEmit(true, true, false, true);
         emit Redeemed(
             address(this), 
@@ -279,27 +328,27 @@ contract OnceMaturedTest is OnceMatured {
             WAD, 
             FullMath.mulDiv(WAD, accrual, WAD)
         );
-        fyDAI.redeem(address(this), WAD);
+        fyToken.redeem(address(this), WAD);
         assertEq(
-            IERC20(dai).balanceOf(address(this)), 
+            IERC20(fyToken.underlying()).balanceOf(address(this)), 
             ownerBalanceBefore + FullMath.mulDiv(WAD, accrual, WAD)
         );
         assertEq(
-            IERC20(dai).balanceOf(address(daiJoin)), 
+            IERC20(fyToken.underlying()).balanceOf(address(join)), 
             joinBalanceBefore - FullMath.mulDiv(WAD, accrual, WAD)
         );
         assertEq(
-            fyDAI.balanceOf(address(this)), 
+            fyToken.balanceOf(address(this)), 
             0
         );
     }
 
     function testRedeemOnTransfer() public {
         console.log("redeems when transfering to the fyToken contract");
-        uint256 ownerBalanceBefore = IERC20(dai).balanceOf(address(this));
-        uint256 joinBalanceBefore = IERC20(dai).balanceOf(address(daiJoin));
-        fyDAI.transfer(address(fyDAI), WAD);
-        assertEq(fyDAI.balanceOf(address(this)), 0);
+        uint256 ownerBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(this));
+        uint256 joinBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(join));
+        fyToken.transfer(address(fyToken), WAD);
+        assertEq(fyToken.balanceOf(address(this)), 0);
         vm.expectEmit(true, true, false, true);
         emit Redeemed(
             address(this),
@@ -307,23 +356,23 @@ contract OnceMaturedTest is OnceMatured {
             WAD, 
             FullMath.mulDiv(WAD, accrual, WAD)
         );
-        fyDAI.redeem(address(this), WAD);
+        fyToken.redeem(address(this), WAD);
         assertEq(
-            IERC20(dai).balanceOf(address(this)), 
+            IERC20(fyToken.underlying()).balanceOf(address(this)), 
             ownerBalanceBefore + FullMath.mulDiv(WAD, accrual, WAD)
         );
         assertEq(
-            IERC20(dai).balanceOf(address(daiJoin)), 
+            IERC20(fyToken.underlying()).balanceOf(address(join)), 
             joinBalanceBefore - FullMath.mulDiv(WAD, accrual, WAD)
         );
     }
 
     function testRedeemByTransferAndApprove() public {
         console.log("redeems by transfer and approve combination");
-        uint256 ownerBalanceBefore = IERC20(dai).balanceOf(address(this));
-        uint256 joinBalanceBefore = IERC20(dai).balanceOf(address(daiJoin));
-        fyDAI.transfer(address(fyDAI), WAD / 2);
-        assertEq(fyDAI.balanceOf(address(this)), WAD / 2);
+        uint256 ownerBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(this));
+        uint256 joinBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(join));
+        fyToken.transfer(address(fyToken), WAD / 2);
+        assertEq(fyToken.balanceOf(address(this)), WAD / 2);
         vm.expectEmit(true, true, false, true);
         emit Redeemed(
             address(this), 
@@ -331,59 +380,59 @@ contract OnceMaturedTest is OnceMatured {
             WAD,
             FullMath.mulDiv(WAD, accrual, WAD)
         );
-        fyDAI.redeem(WAD, address(this), address(this));
+        fyToken.redeem(WAD, address(this), address(this));
         assertEq(
-            IERC20(dai).balanceOf(address(this)), 
+            IERC20(fyToken.underlying()).balanceOf(address(this)), 
             ownerBalanceBefore + FullMath.mulDiv(WAD, accrual, WAD)
         );
         assertEq(
-            IERC20(dai).balanceOf(address(daiJoin)), 
+            IERC20(fyToken.underlying()).balanceOf(address(join)), 
             joinBalanceBefore - FullMath.mulDiv(WAD, accrual, WAD)
         );        
     }
 
     function testRedeemByBatch() public {
         console.log("redeems by transferring to the fyToken contract in a batch");
-        uint256 ownerBalanceBefore = IERC20(dai).balanceOf(address(this));
-        uint256 joinBalanceBefore = IERC20(dai).balanceOf(address(daiJoin));
-        fyDAI.approve(address(ladle), WAD);
+        uint256 ownerBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(this));
+        uint256 joinBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(join));
+        fyToken.approve(address(ladle), WAD);
         bytes[] memory calls = new bytes[](2);
-        calls[0] = abi.encodeWithSelector(ILadleCustom(address(ladle)).transfer.selector, address(fyDAI), address(fyDAI), WAD);
+        calls[0] = abi.encodeWithSelector(ILadleCustom(address(ladle)).transfer.selector, address(fyToken), address(fyToken), WAD);
         calls[1] = abi.encodeWithSelector(ILadleCustom(address(ladle)).redeem.selector, seriesId, address(this), WAD);
         ILadleCustom(address(ladle)).batch(calls);
         assertEq(
-            IERC20(dai).balanceOf(address(this)), 
+            IERC20(fyToken.underlying()).balanceOf(address(this)), 
             ownerBalanceBefore + FullMath.mulDiv(WAD, accrual, WAD)
         );
         assertEq(
-            IERC20(dai).balanceOf(address(daiJoin)), 
+            IERC20(fyToken.underlying()).balanceOf(address(join)), 
             joinBalanceBefore - FullMath.mulDiv(WAD, accrual, WAD)
         );
     }
 
     function testRedeemByBatchWithZeroAmount() public {
         console.log("redeems with an amount of 0 by transferring to the fyToken contract in a batch");
-        uint256 ownerBalanceBefore = IERC20(dai).balanceOf(address(this));
-        uint256 joinBalanceBefore = IERC20(dai).balanceOf(address(daiJoin));
-        fyDAI.approve(address(ladle), WAD);
+        uint256 ownerBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(this));
+        uint256 joinBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(join));
+        fyToken.approve(address(ladle), WAD);
         bytes[] memory calls = new bytes[](2);
-        calls[0] = abi.encodeWithSelector(ILadleCustom(address(ladle)).transfer.selector, address(fyDAI), address(fyDAI), WAD);
+        calls[0] = abi.encodeWithSelector(ILadleCustom(address(ladle)).transfer.selector, address(fyToken), address(fyToken), WAD);
         calls[1] = abi.encodeWithSelector(ILadleCustom(address(ladle)).redeem.selector, seriesId, address(this), 0);
         ILadleCustom(address(ladle)).batch(calls);
         assertEq(
-            IERC20(dai).balanceOf(address(this)), 
+            IERC20(fyToken.underlying()).balanceOf(address(this)), 
             ownerBalanceBefore + FullMath.mulDiv(WAD, accrual, WAD)
         );
         assertEq(
-            IERC20(dai).balanceOf(address(daiJoin)), 
+            IERC20(fyToken.underlying()).balanceOf(address(join)), 
             joinBalanceBefore - FullMath.mulDiv(WAD, accrual, WAD)
         );
     }
 
     function testRedeemERC5095() public {
         console.log("redeems with ERC5095 redeem");
-        uint256 ownerBalanceBefore = IERC20(dai).balanceOf(address(this));
-        uint256 joinBalanceBefore = IERC20(dai).balanceOf(address(daiJoin));
+        uint256 ownerBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(this));
+        uint256 joinBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(join));
         vm.expectEmit(true, true, false, true);
         emit Redeemed(
             address(this), 
@@ -391,22 +440,22 @@ contract OnceMaturedTest is OnceMatured {
             WAD, 
             FullMath.mulDiv(WAD, accrual, WAD)
         );
-        fyDAI.redeem(WAD, address(this), address(this));
+        fyToken.redeem(WAD, address(this), address(this));
         assertEq(
-            IERC20(dai).balanceOf(address(this)), 
+            IERC20(fyToken.underlying()).balanceOf(address(this)), 
             ownerBalanceBefore + FullMath.mulDiv(WAD, accrual, WAD)
         );
         assertEq(
-            IERC20(dai).balanceOf(address(daiJoin)), 
+            IERC20(fyToken.underlying()).balanceOf(address(join)), 
             joinBalanceBefore - FullMath.mulDiv(WAD, accrual, WAD)
         );        
     }
 
     function testRedeemWithZeroAmount() public {
         console.log("Redeems the contract's balance when amount is 0");
-        uint256 ownerBalanceBefore = IERC20(dai).balanceOf(address(this));
-        uint256 joinBalanceBefore = IERC20(dai).balanceOf(address(daiJoin));
-        deal(address(fyDAI), address(fyDAI), WAD * 10);
+        uint256 ownerBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(this));
+        uint256 joinBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(join));
+        deal(address(fyToken), address(fyToken), WAD * 10);
 
         vm.expectEmit(true, true, false, true);
         emit Redeemed(
@@ -415,56 +464,56 @@ contract OnceMaturedTest is OnceMatured {
             WAD * 10, 
             FullMath.mulDiv(WAD * 10, accrual, WAD)
         );
-        fyDAI.redeem(0, address(this), address(this));
+        fyToken.redeem(0, address(this), address(this));
         assertEq(
-            fyDAI.balanceOf(address(fyDAI)), 
+            fyToken.balanceOf(address(fyToken)), 
             0
         );
         assertEq(
-            IERC20(dai).balanceOf(address(this)), 
+            IERC20(fyToken.underlying()).balanceOf(address(this)), 
             ownerBalanceBefore + FullMath.mulDiv(WAD * 10, accrual, WAD)
         );
         assertEq(
-            IERC20(dai).balanceOf(address(daiJoin)),
+            IERC20(fyToken.underlying()).balanceOf(address(join)),
             joinBalanceBefore - FullMath.mulDiv(WAD * 10, accrual, WAD)
         );
     }
 
     function testRedeemApproval() public {
         console.log("can redeem only the approved amount from holder");
-        uint256 ownerBalanceBefore = IERC20(dai).balanceOf(address(this));
-        uint256 joinBalanceBefore = IERC20(dai).balanceOf(address(daiJoin));
-        deal(address(fyDAI), fyTokenHolder, WAD * 5);
+        uint256 ownerBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(this));
+        uint256 joinBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(join));
+        deal(address(fyToken), fyTokenHolder, WAD * 5);
         vm.prank(fyTokenHolder);
-        fyDAI.approve(address(this), WAD * 5);
+        fyToken.approve(address(this), WAD * 5);
 
         vm.expectRevert("ERC20: Insufficient approval");
-        fyDAI.redeem(
+        fyToken.redeem(
             WAD * 10, 
             address(this), 
             fyTokenHolder
         );
 
-        fyDAI.redeem(
+        fyToken.redeem(
             WAD * 4,
             address(this),
             fyTokenHolder
         );
-        assertEq(fyDAI.balanceOf(fyTokenHolder), WAD);
+        assertEq(fyToken.balanceOf(fyTokenHolder), WAD);
         assertEq(
-            IERC20(dai).balanceOf(address(this)), 
+            IERC20(fyToken.underlying()).balanceOf(address(this)), 
             ownerBalanceBefore + FullMath.mulDiv(WAD * 4, accrual, WAD)
         );
         assertEq(
-            IERC20(dai).balanceOf(address(daiJoin)),
+            IERC20(fyToken.underlying()).balanceOf(address(join)),
             joinBalanceBefore - FullMath.mulDiv(WAD * 4, accrual, WAD)
         );
     }
 
     function testWithdrawERC5095() public {
         console.log("withdrwas with ERC5095 withdraw");
-        uint256 ownerBalanceBefore = IERC20(dai).balanceOf(address(this));
-        uint256 joinBalanceBefore = IERC20(dai).balanceOf(address(daiJoin));
+        uint256 ownerBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(this));
+        uint256 joinBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(join));
         vm.expectEmit(true, true, false, true);
         emit Redeemed(
             address(this), 
@@ -472,22 +521,22 @@ contract OnceMaturedTest is OnceMatured {
             WAD, 
             FullMath.mulDiv(WAD, accrual, WAD)
         );
-        fyDAI.withdraw(FullMath.mulDiv(WAD, accrual, WAD), address(this), address(this));
+        fyToken.withdraw(FullMath.mulDiv(WAD, accrual, WAD), address(this), address(this));
         assertEq(
-            IERC20(dai).balanceOf(address(this)), 
+            IERC20(fyToken.underlying()).balanceOf(address(this)), 
             ownerBalanceBefore + FullMath.mulDiv(WAD, accrual, WAD)
         );
         assertEq(
-            IERC20(dai).balanceOf(address(daiJoin)), 
+            IERC20(fyToken.underlying()).balanceOf(address(join)), 
             joinBalanceBefore - FullMath.mulDiv(WAD, accrual, WAD)
         );
     }
 
     function testWithdrawWithZeroAmount() public {
         console.log("Withdraws the contract's balance when amount is 0");
-        uint256 ownerBalanceBefore = IERC20(dai).balanceOf(address(this));
-        uint256 joinBalanceBefore = IERC20(dai).balanceOf(address(daiJoin));
-        deal(address(fyDAI), address(fyDAI), WAD * 10);
+        uint256 ownerBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(this));
+        uint256 joinBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(join));
+        deal(address(fyToken), address(fyToken), WAD * 10);
 
         vm.expectEmit(true, true, false, true);
         emit Redeemed(
@@ -496,49 +545,49 @@ contract OnceMaturedTest is OnceMatured {
             WAD * 10, 
             FullMath.mulDiv(WAD * 10, accrual, WAD)
         );
-        fyDAI.withdraw(0, address(this), address(this));
+        fyToken.withdraw(0, address(this), address(this));
         assertEq(
-            fyDAI.balanceOf(address(fyDAI)), 
+            fyToken.balanceOf(address(fyToken)), 
             0
         );
         assertEq(
-            IERC20(dai).balanceOf(address(this)), 
+            IERC20(fyToken.underlying()).balanceOf(address(this)), 
             ownerBalanceBefore + FullMath.mulDiv(WAD * 10, accrual, WAD)
         );
         assertEq(
-            IERC20(dai).balanceOf(address(daiJoin)),
+            IERC20(fyToken.underlying()).balanceOf(address(join)),
             joinBalanceBefore - FullMath.mulDiv(WAD * 10, accrual, WAD)
         );
     }
 
     function testWithdrawApproval() public {
         console.log("can withdraw only the approved amount from holder");
-        uint256 ownerBalanceBefore = IERC20(dai).balanceOf(address(this));
-        uint256 joinBalanceBefore = IERC20(dai).balanceOf(address(daiJoin));
-        deal(address(fyDAI), fyTokenHolder, WAD * 5);
+        uint256 ownerBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(this));
+        uint256 joinBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(join));
+        deal(address(fyToken), fyTokenHolder, WAD * 5);
         vm.prank(fyTokenHolder);
-        fyDAI.approve(address(this), WAD * 5);
+        fyToken.approve(address(this), WAD * 5);
 
-        uint256 amountToWithdraw = fyDAI.convertToUnderlying(WAD * 10);     // so revert works properly
+        uint256 amountToWithdraw = fyToken.convertToUnderlying(WAD * 10);     // so revert works properly
         vm.expectRevert("ERC20: Insufficient approval");
-        fyDAI.withdraw(
+        fyToken.withdraw(
             amountToWithdraw,
             address(this),
             fyTokenHolder
         );
 
-        fyDAI.withdraw(
-            fyDAI.convertToUnderlying(WAD * 4),
+        fyToken.withdraw(
+            fyToken.convertToUnderlying(WAD * 4),
             address(this),
             fyTokenHolder
         );
-        assertEq(fyDAI.balanceOf(fyTokenHolder), WAD);
+        assertEq(fyToken.balanceOf(fyTokenHolder), WAD);
         assertEq(
-            IERC20(dai).balanceOf(address(this)),
+            IERC20(fyToken.underlying()).balanceOf(address(this)),
             ownerBalanceBefore + FullMath.mulDiv(WAD * 4, accrual, WAD)
         );
         assertEq(
-            IERC20(dai).balanceOf(address(daiJoin)),
+            IERC20(fyToken.underlying()).balanceOf(address(join)),
             joinBalanceBefore - FullMath.mulDiv(WAD * 4, accrual, WAD)
         );
     }
