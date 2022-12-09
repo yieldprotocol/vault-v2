@@ -17,16 +17,6 @@ import { ERC20Mock } from "../../mocks/ERC20Mock.sol";
 import { TestConstants } from "../utils/TestConstants.sol";
 import { TestExtensions } from "../TestExtensions.sol";
 
-// interface ILadleCustom {
-//     function addToken(address token, bool set) external;
-
-//     function batch(bytes[] calldata calls) external payable returns(bytes[] memory results);
-
-//     function transfer(IERC20 token, address receiver, uint128 wad) external payable;
-
-//     function redeem(bytes6 seriesId, address to, uint256 wad) external payable returns (uint256);
-// }
-
 abstract contract ZeroState is Test, TestConstants, TestExtensions {
     using CastU256I128 for uint256;
 
@@ -78,7 +68,6 @@ abstract contract ZeroState is Test, TestConstants, TestExtensions {
 
         // populate join
         cash(token, address(join), 100 * unit);
-        console.log(token.balanceOf(address(join)));
     }
 
     function setUpHarness(string memory network) public {
@@ -86,9 +75,8 @@ abstract contract ZeroState is Test, TestConstants, TestExtensions {
         cauldron = Cauldron(addresses[network][CAULDRON]);
         ladle = ILadle(addresses[network][LADLE]);
 
-        join = Join(0x3bDb887Dc46ec0E964Df89fFE2980db0121f0fD0);
-
         fyToken = FYToken(vm.envAddress("FYTOKEN"));
+        join = Join(address(fyToken.join()));
         token = IERC20(fyToken.underlying());
         oracle = fyToken.oracle();
         unit = uint128(10 ** ERC20Mock(address(token)).decimals());
@@ -111,6 +99,7 @@ abstract contract ZeroState is Test, TestConstants, TestExtensions {
         vm.label(address(join), "join");
 
         cash(token, user, 100 * unit);
+        cash(token, address(ladle), 100 * unit);
         cash(fyToken, user, 100 * unit);
     }
 }
@@ -137,8 +126,8 @@ contract FYTokenTest is ZeroState {
         console.log("can mint with underlying");
         track("userTokenBalance", fyToken.balanceOf(user));
         
-        vm.prank(user);
-        token.approve(address(fyToken), unit);
+        vm.prank(address(ladle));
+        token.approve(address(join), unit);
         vm.prank(address(ladle));
         fyToken.mintWithUnderlying(user, unit);
 
@@ -203,26 +192,27 @@ contract AfterMaturityTest is AfterMaturity {
         fyToken.mature();
     }
 
-    function testMatureRevertsOnZeroChi() public {
-        console.log("can't mature if chi is zero");
+    // live contracts do not have the require
+    // function testMatureRevertsOnZeroChi() public {
+    //     console.log("can't mature if chi is zero");
 
-        CTokenChiMock chiOracle = new CTokenChiMock(); // Use a new oracle that we can force to be zero
-        chiOracle.set(0);
+    //     CTokenChiMock chiOracle = new CTokenChiMock(); // Use a new oracle that we can force to be zero
+    //     chiOracle.set(0);
 
-        vm.startPrank(timelock);
-        fyToken.point("oracle", address(chiOracle));
-        vm.expectRevert("Chi oracle malfunction");
-        fyToken.mature();
-        vm.stopPrank();
-    }
+    //     vm.startPrank(timelock);
+    //     fyToken.point("oracle", address(chiOracle));
+    //     vm.expectRevert("Chi oracle malfunction");
+    //     fyToken.mature();
+    //     vm.stopPrank();
+    // }
 
-    function testMatureRecordsChiValue() public {
-        console.log("records chi value when matureed");
-        vm.prank(timelock);
-        vm.expectEmit(false, false, false, true);
-        emit SeriesMatured(220434062002504964823286680);
-        fyToken.mature();
-    }
+    // function testMatureRecordsChiValue() public {
+    //     console.log("records chi value when matureed");
+    //     vm.prank(timelock);
+    //     vm.expectEmit(false, false, false, true);
+    //     emit SeriesMatured(220434062002504964823286680);
+    //     fyToken.mature();
+    // }
 
     // made onlyHarness since no way to associate mockIlk with mockERC20?
     function testMaturesFirstRedemptionAfterMaturity() public onlyHarness {
@@ -230,50 +220,50 @@ contract AfterMaturityTest is AfterMaturity {
         track("userTokenBalance", token.balanceOf(user));
         track("userFYTokenBalance", fyToken.balanceOf(user));
 
-        console.log(token.balanceOf(address(join)));
-
         vm.expectEmit(true, true, false, true);
         emit Redeemed(
-            address(this), 
-            address(this), 
-            WAD, 
-            WAD
+            user, 
+            user, 
+            unit, 
+            unit
         );
         vm.prank(user);
-        fyToken.redeem(address(this), WAD);
-
+        fyToken.redeem(user, unit);
 
         assertTrackPlusEq("userTokenBalance", unit, token.balanceOf(user));
         assertTrackMinusEq("userFYTokenBalance", unit, fyToken.balanceOf(user));
     }
 }
 
-// abstract contract OnceMatured is AfterMaturity {
-//     CTokenChiMock public chiOracle;
-//     uint256 accrual = FullMath.mulDiv(WAD, 110, 100);                       // 10%
-//     address fyTokenHolder = address(1);
+abstract contract OnceMatured is AfterMaturity {
+    CTokenChiMock public chiOracle;
+    uint256 accrual = FullMath.mulDiv(unit, 110, 100);                       // 10%
+    address fyTokenHolder = address(1);
 
-//     function setUp() public override {
-//         super.setUp();
-//         chiOracle = new CTokenChiMock();
-//         fyToken.point("oracle", address(chiOracle));                          // Uses new oracle to update to new chi value
-//         chiOracle.set(220434062002504964823286680); 
-//         fyToken.mature();
-//         chiOracle.set(220434062002504964823286680 * 110 / 100);             // Will set chi returned to be 10%
-//     }
-// }
+    function setUp() public override {
+        super.setUp();
+        chiOracle = new CTokenChiMock();
+        vm.startPrank(timelock);
+        fyToken.mature();
+        fyToken.point("oracle", address(chiOracle));                          // Uses new oracle to update to new chi value
+        vm.stopPrank();
+        chiOracle.set(fyToken.chiAtMaturity() * 110 / 100);                   // Will set chi returned to be 10%
+    }
+}
 
-// contract OnceMaturedTest is OnceMatured {
-//     function testCannotChangeOracle() public {
-//         console.log("can't change the CHI oracle once matured");
-//         vm.expectRevert("Already matured");
-//         fyToken.point("oracle", address(this));
-//     }
+contract OnceMaturedTest is OnceMatured {
+    // check is not on live contracts
+    // function testCannotChangeOracle() public {
+    //     console.log("can't change the CHI oracle once matured");
+    //     vm.expectRevert("Already matured");
+    //     vm.prank(timelock);
+    //     fyToken.point("oracle", address(this));
+    // }
 
-//     function testChiAccrualNotBelowOne() public {
-//         console.log("cannot have chi accrual below 1");
-//         assertGt(fyToken.accrual(), WAD);
-//     }
+    function testChiAccrualNotBelowOne() public {
+        console.log("cannot have chi accrual below 1");
+        assertGt(fyToken.accrual(), WAD);
+    }
 
 //     function testConvertToUnderlyingWithAccrual() public {
 //         console.log("can convert the amount of underlying plus the accrual to principal");
@@ -573,4 +563,4 @@ contract AfterMaturityTest is AfterMaturity {
 //             joinBalanceBefore - FullMath.mulDiv(WAD * 4, accrual, WAD)
 //         );
 //     }
-// }
+}
