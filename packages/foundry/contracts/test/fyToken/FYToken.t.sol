@@ -295,8 +295,8 @@ contract OnceMaturedTest is OnceMatured {
 
     function testRedeemWithAccrual() public {
         console.log("redeems according to chi accrual");
-        // uint256 ownerBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(this));
-        // uint256 joinBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(join));
+        track("userTokenBalance", token.balanceOf(user));
+        track("userFYTokenBalance", fyToken.balanceOf(user));
         vm.expectEmit(true, true, false, true);
         emit Redeemed(
             user, 
@@ -306,67 +306,54 @@ contract OnceMaturedTest is OnceMatured {
         );
         vm.prank(user);
         fyToken.redeem(user, unit);
-        // assertEq(
-        //     IERC20(fyToken.underlying()).balanceOf(address(this)), 
-        //     ownerBalanceBefore + FullMath.mulDiv(WAD, accrual, WAD)
-        // );
-        // assertEq(
-        //     IERC20(fyToken.underlying()).balanceOf(address(join)), 
-        //     joinBalanceBefore - FullMath.mulDiv(WAD, accrual, WAD)
-        // );
-        // assertEq(
-        //     fyToken.balanceOf(address(this)), 
-        //     0
-        // );
+        assertTrackPlusEq("userTokenBalance", unit * 110 / 100, token.balanceOf(user));
+        assertTrackMinusEq("userFYTokenBalance", unit, fyToken.balanceOf(user));
     }
 
-//     function testRedeemOnTransfer() public {
-//         console.log("redeems when transfering to the fyToken contract");
-//         uint256 ownerBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(this));
-//         uint256 joinBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(join));
-//         fyToken.transfer(address(fyToken), WAD);
-//         assertEq(fyToken.balanceOf(address(this)), 0);
-//         vm.expectEmit(true, true, false, true);
-//         emit Redeemed(
-//             address(this),
-//             address(this), 
-//             WAD, 
-//             FullMath.mulDiv(WAD, accrual, WAD)
-//         );
-//         fyToken.redeem(address(this), WAD);
-//         assertEq(
-//             IERC20(fyToken.underlying()).balanceOf(address(this)), 
-//             ownerBalanceBefore + FullMath.mulDiv(WAD, accrual, WAD)
-//         );
-//         assertEq(
-//             IERC20(fyToken.underlying()).balanceOf(address(join)), 
-//             joinBalanceBefore - FullMath.mulDiv(WAD, accrual, WAD)
-//         );
-//     }
+    function testRedeemOnTransfer() public {
+        console.log("redeems when transfering to the fyToken contract");
+        track("userTokenBalance", token.balanceOf(user));
+        track("userFYTokenBalance", fyToken.balanceOf(user));
+        vm.startPrank(user);
+        fyToken.transfer(address(fyToken), WAD);
+        assertEq(fyToken.balanceOf(address(this)), 0);
+        vm.expectEmit(true, true, false, true);
+        emit Redeemed(
+            user,
+            user, 
+            unit, 
+            unit * 110 / 100
+        );
+        fyToken.redeem(user, unit);
+        vm.stopPrank();
+        assertTrackPlusEq("userTokenBalance", unit * 110 / 100, token.balanceOf(user));
+        assertTrackMinusEq("userFYTokenBalance", unit, fyToken.balanceOf(user));
+    }
 
-//     function testRedeemByTransferAndApprove() public {
-//         console.log("redeems by transfer and approve combination");
-//         uint256 ownerBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(this));
-//         uint256 joinBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(join));
-//         fyToken.transfer(address(fyToken), WAD / 2);
-//         assertEq(fyToken.balanceOf(address(this)), WAD / 2);
-//         vm.expectEmit(true, true, false, true);
-//         emit Redeemed(
-//             address(this), 
-//             address(this), 
-//             WAD,
-//             FullMath.mulDiv(WAD, accrual, WAD)
-//         );
-//         fyToken.redeem(WAD, address(this), address(this));
-//         assertEq(
-//             IERC20(fyToken.underlying()).balanceOf(address(this)), 
-//             ownerBalanceBefore + FullMath.mulDiv(WAD, accrual, WAD)
-//         );
-//         assertEq(
-//             IERC20(fyToken.underlying()).balanceOf(address(join)), 
-//             joinBalanceBefore - FullMath.mulDiv(WAD, accrual, WAD)
-//         );        
-//     }
+    // only possible with 5095 redeem?
+    // function testRedeemByTransferAndApprove() public {
+    //     console.log("redeems by transfer and approve combination");
+    //     uint256 ownerBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(this));
+    //     uint256 joinBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(join));
+    //     fyToken.transfer(address(fyToken), WAD / 2);
+    //     assertEq(fyToken.balanceOf(address(this)), WAD / 2);
+    //     vm.expectEmit(true, true, false, true);
+    //     emit Redeemed(
+    //         address(this), 
+    //         address(this), 
+    //         WAD,
+    //         FullMath.mulDiv(WAD, accrual, WAD)
+    //     );
+    //     fyToken.redeem(WAD, address(this), address(this));
+    //     assertEq(
+    //         IERC20(fyToken.underlying()).balanceOf(address(this)), 
+    //         ownerBalanceBefore + FullMath.mulDiv(WAD, accrual, WAD)
+    //     );
+    //     assertEq(
+    //         IERC20(fyToken.underlying()).balanceOf(address(join)), 
+    //         joinBalanceBefore - FullMath.mulDiv(WAD, accrual, WAD)
+    //     );        
+    // }
 
     // disregarding batch system
     // function testRedeemByBatch() public {
@@ -430,64 +417,64 @@ contract OnceMaturedTest is OnceMatured {
     //     );        
     // }
 
-//     function testRedeemWithZeroAmount() public {
-//         console.log("Redeems the contract's balance when amount is 0");
-//         uint256 ownerBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(this));
-//         uint256 joinBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(join));
-//         deal(address(fyToken), address(fyToken), WAD * 10);
+    function testRedeemWithZeroAmount() public {
+        console.log("Redeems the contract's balance when amount is 0");
+        uint256 ownerBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(this));
+        uint256 joinBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(join));
+        deal(address(fyToken), address(fyToken), WAD * 10);
 
-//         vm.expectEmit(true, true, false, true);
-//         emit Redeemed(
-//             address(this), 
-//             address(this), 
-//             WAD * 10, 
-//             FullMath.mulDiv(WAD * 10, accrual, WAD)
-//         );
-//         fyToken.redeem(0, address(this), address(this));
-//         assertEq(
-//             fyToken.balanceOf(address(fyToken)), 
-//             0
-//         );
-//         assertEq(
-//             IERC20(fyToken.underlying()).balanceOf(address(this)), 
-//             ownerBalanceBefore + FullMath.mulDiv(WAD * 10, accrual, WAD)
-//         );
-//         assertEq(
-//             IERC20(fyToken.underlying()).balanceOf(address(join)),
-//             joinBalanceBefore - FullMath.mulDiv(WAD * 10, accrual, WAD)
-//         );
-//     }
+        vm.expectEmit(true, true, false, true);
+        emit Redeemed(
+            address(this), 
+            address(this), 
+            WAD * 10, 
+            FullMath.mulDiv(WAD * 10, accrual, WAD)
+        );
+        fyToken.redeem(0, address(this), address(this));
+        assertEq(
+            fyToken.balanceOf(address(fyToken)), 
+            0
+        );
+        assertEq(
+            IERC20(fyToken.underlying()).balanceOf(address(this)), 
+            ownerBalanceBefore + FullMath.mulDiv(WAD * 10, accrual, WAD)
+        );
+        assertEq(
+            IERC20(fyToken.underlying()).balanceOf(address(join)),
+            joinBalanceBefore - FullMath.mulDiv(WAD * 10, accrual, WAD)
+        );
+    }
 
-//     function testRedeemApproval() public {
-//         console.log("can redeem only the approved amount from holder");
-//         uint256 ownerBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(this));
-//         uint256 joinBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(join));
-//         deal(address(fyToken), fyTokenHolder, WAD * 5);
-//         vm.prank(fyTokenHolder);
-//         fyToken.approve(address(this), WAD * 5);
+    function testRedeemApproval() public {
+        console.log("can redeem only the approved amount from holder");
+        uint256 ownerBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(this));
+        uint256 joinBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(join));
+        deal(address(fyToken), fyTokenHolder, WAD * 5);
+        vm.prank(fyTokenHolder);
+        fyToken.approve(address(this), WAD * 5);
 
-//         vm.expectRevert("ERC20: Insufficient approval");
-//         fyToken.redeem(
-//             WAD * 10, 
-//             address(this), 
-//             fyTokenHolder
-//         );
+        vm.expectRevert("ERC20: Insufficient approval");
+        fyToken.redeem(
+            WAD * 10, 
+            address(this), 
+            fyTokenHolder
+        );
 
-//         fyToken.redeem(
-//             WAD * 4,
-//             address(this),
-//             fyTokenHolder
-//         );
-//         assertEq(fyToken.balanceOf(fyTokenHolder), WAD);
-//         assertEq(
-//             IERC20(fyToken.underlying()).balanceOf(address(this)), 
-//             ownerBalanceBefore + FullMath.mulDiv(WAD * 4, accrual, WAD)
-//         );
-//         assertEq(
-//             IERC20(fyToken.underlying()).balanceOf(address(join)),
-//             joinBalanceBefore - FullMath.mulDiv(WAD * 4, accrual, WAD)
-//         );
-//     }
+        fyToken.redeem(
+            WAD * 4,
+            address(this),
+            fyTokenHolder
+        );
+        assertEq(fyToken.balanceOf(fyTokenHolder), WAD);
+        assertEq(
+            IERC20(fyToken.underlying()).balanceOf(address(this)), 
+            ownerBalanceBefore + FullMath.mulDiv(WAD * 4, accrual, WAD)
+        );
+        assertEq(
+            IERC20(fyToken.underlying()).balanceOf(address(join)),
+            joinBalanceBefore - FullMath.mulDiv(WAD * 4, accrual, WAD)
+        );
+    }
 
     // not available for live contracts
     // function testWithdrawERC5095() public {
@@ -512,63 +499,63 @@ contract OnceMaturedTest is OnceMatured {
     //     );
     // }
 
-//     function testWithdrawWithZeroAmount() public {
-//         console.log("Withdraws the contract's balance when amount is 0");
-//         uint256 ownerBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(this));
-//         uint256 joinBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(join));
-//         deal(address(fyToken), address(fyToken), WAD * 10);
+    function testWithdrawWithZeroAmount() public {
+        console.log("Withdraws the contract's balance when amount is 0");
+        uint256 ownerBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(this));
+        uint256 joinBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(join));
+        deal(address(fyToken), address(fyToken), WAD * 10);
 
-//         vm.expectEmit(true, true, false, true);
-//         emit Redeemed(
-//             address(this), 
-//             address(this), 
-//             WAD * 10, 
-//             FullMath.mulDiv(WAD * 10, accrual, WAD)
-//         );
-//         fyToken.withdraw(0, address(this), address(this));
-//         assertEq(
-//             fyToken.balanceOf(address(fyToken)), 
-//             0
-//         );
-//         assertEq(
-//             IERC20(fyToken.underlying()).balanceOf(address(this)), 
-//             ownerBalanceBefore + FullMath.mulDiv(WAD * 10, accrual, WAD)
-//         );
-//         assertEq(
-//             IERC20(fyToken.underlying()).balanceOf(address(join)),
-//             joinBalanceBefore - FullMath.mulDiv(WAD * 10, accrual, WAD)
-//         );
-//     }
+        vm.expectEmit(true, true, false, true);
+        emit Redeemed(
+            address(this), 
+            address(this), 
+            WAD * 10, 
+            FullMath.mulDiv(WAD * 10, accrual, WAD)
+        );
+        fyToken.withdraw(0, address(this), address(this));
+        assertEq(
+            fyToken.balanceOf(address(fyToken)), 
+            0
+        );
+        assertEq(
+            IERC20(fyToken.underlying()).balanceOf(address(this)), 
+            ownerBalanceBefore + FullMath.mulDiv(WAD * 10, accrual, WAD)
+        );
+        assertEq(
+            IERC20(fyToken.underlying()).balanceOf(address(join)),
+            joinBalanceBefore - FullMath.mulDiv(WAD * 10, accrual, WAD)
+        );
+    }
 
-//     function testWithdrawApproval() public {
-//         console.log("can withdraw only the approved amount from holder");
-//         uint256 ownerBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(this));
-//         uint256 joinBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(join));
-//         deal(address(fyToken), fyTokenHolder, WAD * 5);
-//         vm.prank(fyTokenHolder);
-//         fyToken.approve(address(this), WAD * 5);
+    function testWithdrawApproval() public {
+        console.log("can withdraw only the approved amount from holder");
+        uint256 ownerBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(this));
+        uint256 joinBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(join));
+        deal(address(fyToken), fyTokenHolder, WAD * 5);
+        vm.prank(fyTokenHolder);
+        fyToken.approve(address(this), WAD * 5);
 
-//         uint256 amountToWithdraw = fyToken.convertToUnderlying(WAD * 10);     // so revert works properly
-//         vm.expectRevert("ERC20: Insufficient approval");
-//         fyToken.withdraw(
-//             amountToWithdraw,
-//             address(this),
-//             fyTokenHolder
-//         );
+        uint256 amountToWithdraw = fyToken.convertToUnderlying(WAD * 10);     // so revert works properly
+        vm.expectRevert("ERC20: Insufficient approval");
+        fyToken.withdraw(
+            amountToWithdraw,
+            address(this),
+            fyTokenHolder
+        );
 
-//         fyToken.withdraw(
-//             fyToken.convertToUnderlying(WAD * 4),
-//             address(this),
-//             fyTokenHolder
-//         );
-//         assertEq(fyToken.balanceOf(fyTokenHolder), WAD);
-//         assertEq(
-//             IERC20(fyToken.underlying()).balanceOf(address(this)),
-//             ownerBalanceBefore + FullMath.mulDiv(WAD * 4, accrual, WAD)
-//         );
-//         assertEq(
-//             IERC20(fyToken.underlying()).balanceOf(address(join)),
-//             joinBalanceBefore - FullMath.mulDiv(WAD * 4, accrual, WAD)
-//         );
-//     }
+        fyToken.withdraw(
+            fyToken.convertToUnderlying(WAD * 4),
+            address(this),
+            fyTokenHolder
+        );
+        assertEq(fyToken.balanceOf(fyTokenHolder), WAD);
+        assertEq(
+            IERC20(fyToken.underlying()).balanceOf(address(this)),
+            ownerBalanceBefore + FullMath.mulDiv(WAD * 4, accrual, WAD)
+        );
+        assertEq(
+            IERC20(fyToken.underlying()).balanceOf(address(join)),
+            joinBalanceBefore - FullMath.mulDiv(WAD * 4, accrual, WAD)
+        );
+    }
 }
