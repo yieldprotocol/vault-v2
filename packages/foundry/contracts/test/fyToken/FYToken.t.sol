@@ -56,7 +56,7 @@ abstract contract ZeroState is Test, TestConstants, TestExtensions {
 
         token = IERC20(address(new ERC20Mock("", "")));
         bytes6 mockIlkId = 0x000000000001;
-        join = new Join(address(token)); // Maybe you need to `join` some token into this Join, so that it can serve redemptions. Give yourself permissions if needed.
+        join = new Join(address(token));
 
         fyToken = new FYToken(
             mockIlkId,
@@ -70,6 +70,7 @@ abstract contract ZeroState is Test, TestConstants, TestExtensions {
         fyToken.grantRole(fyToken.point.selector, address(timelock));
         fyToken.grantRole(fyToken.mature.selector, address(timelock));
         fyToken.grantRole(fyToken.mint.selector, address(ladle));
+        join.grantRole(join.join.selector, address(fyToken));
         join.grantRole(join.exit.selector, address(fyToken));
 
         join.grantRole(join.join.selector, address(this));
@@ -136,9 +137,7 @@ contract FYTokenTest is ZeroState {
         assertEq(address(fyToken.join()), address(this));
     }
 
-    // tries to transfer from join so onlyHarness
-    // You can put funds in the mock join, see above 
-    function testMintWithUnderlying() public onlyHarness {
+    function testMintWithUnderlying() public {
         console.log("can mint with underlying");
         track("userTokenBalance", fyToken.balanceOf(user));
         
@@ -164,29 +163,25 @@ contract FYTokenTest is ZeroState {
         fyToken.redeem(user, unit);
     }
 
-    // not on live contracts
-    // Have I got a fork for you: https://rpc.tenderly.co/fork/78da602e-78a8-4705-b73c-3c62991231aa
-    // Addresses here: https://github.com/yieldprotocol/environments-v2/tree/feat/new-identifiers/addresses/tenderly_mainnet
-    // Example here: https://github.com/yieldprotocol/strategy-v2/blob/fix/audit-fixes/test/harness/StrategyHarness.t.sol
-    // function testConvertToPrincipal() public {
-    //     console.log("can convert amount of underlying to principal");
-    //     assertEq(fyToken.convertToPrincipal(1000), 1000);
-    // }
+    function testConvertToPrincipal() public {
+        console.log("can convert amount of underlying to principal");
+        assertEq(fyToken.convertToPrincipal(unit), unit);
+    }
 
-    // function testConvertToUnderlying() public {
-    //     console.log("can convert amount of principal to underlying");
-    //     assertEq(fyToken.convertToUnderlying(1000), 1000);
-    // }
+    function testConvertToUnderlying() public {
+        console.log("can convert amount of principal to underlying");
+        assertEq(fyToken.convertToUnderlying(unit), unit);
+    }
 
-    // function testPreviewRedeem() public {
-    //     console.log("can preview the amount of underlying redeemed");
-    //     assertEq(fyToken.previewRedeem(unit), unit);
-    // }
+    function testPreviewRedeem() public {
+        console.log("can preview the amount of underlying redeemed");
+        assertEq(fyToken.previewRedeem(unit), unit);
+    }
 
-    // function testPreviewWithdraw() public {
-    //     console.log("can preview the amount of principal withdrawn");
-    //     assertEq(fyToken.previewWithdraw(unit), unit);
-    // }
+    function testPreviewWithdraw() public {
+        console.log("can preview the amount of principal withdrawn");
+        assertEq(fyToken.previewWithdraw(unit), unit);
+    }
 }
 
 abstract contract AfterMaturity is ZeroState {
@@ -212,32 +207,30 @@ contract AfterMaturityTest is AfterMaturity {
         fyToken.mature();
     }
 
-    // live contracts do not have the require
-    // function testMatureRevertsOnZeroChi() public {
-    //     console.log("can't mature if chi is zero");
+    function testMatureRevertsOnZeroChi() public {
+        console.log("can't mature if chi is zero");
 
-    //     CTokenChiMock chiOracle = new CTokenChiMock(); // Use a new oracle that we can force to be zero
-    //     chiOracle.set(0);
+        CTokenChiMock chiOracle = new CTokenChiMock(); // Use a new oracle that we can force to be zero
+        chiOracle.set(0);
 
-    //     vm.startPrank(timelock);
-    //     fyToken.point("oracle", address(chiOracle));
-    //     vm.expectRevert("Chi oracle malfunction");
-    //     fyToken.mature();
-    //     vm.stopPrank();
-    // }
+        vm.startPrank(timelock);
+        fyToken.point("oracle", address(chiOracle));
+        vm.expectRevert("Chi oracle malfunction");
+        fyToken.mature();
+        vm.stopPrank();
+    }
 
     function testMatureRecordsChiValue() public {
         console.log("records chi value when matured");
         vm.prank(timelock);
-        // should we still test this emit?
+        // no way to get expected chi before call to mature()?
         // vm.expectEmit(false, false, false, true);
-        // emit SeriesMatured(220434062002504964823286680);
+        // emit SeriesMatured(fyToken.chiAtMaturity());
         fyToken.mature();
-        // Please test the state change and event
+        assert(fyToken.chiAtMaturity() != type(uint256).max && fyToken.chiAtMaturity() > 0);
     }
 
-    // made onlyHarness since no way to associate mockIlk with mockERC20?
-    function testMaturesFirstRedemptionAfterMaturity() public onlyHarness {
+    function testMaturesFirstRedemptionAfterMaturity() public {
         console.log("matures on first redemption after maturity if needed");
         track("userTokenBalance", token.balanceOf(user));
         track("userFYTokenBalance", fyToken.balanceOf(user));
@@ -276,44 +269,40 @@ abstract contract OnceMatured is AfterMaturity {
 
 contract OnceMaturedTest is OnceMatured {
     // not on live contracts
-    // function testCannotChangeOracle() public {
-    //     console.log("can't change the CHI oracle once matured");
-    //     vm.expectRevert("Already matured");
-    //     vm.prank(timelock);
-    //     fyToken.point("oracle", address(this));
-    // }
+    function testCannotChangeOracle() public {
+        console.log("can't change the CHI oracle once matured");
+        vm.expectRevert("Already matured");
+        vm.prank(timelock);
+        fyToken.point("oracle", address(this));
+    }
 
     function testChiAccrualNotBelowOne() public {
         console.log("cannot have chi accrual below 1");
         assertGt(fyToken.accrual(), 0);
     }
 
-    // not on live contracts
-    // function testConvertToUnderlyingWithAccrual() public {
-    //     console.log("can convert the amount of underlying plus the accrual to principal");
-    //     assertEq(fyToken.convertToUnderlying(1000), 1100);
-    //     assertEq(fyToken.convertToUnderlying(5000), 5500);
-    // }
+    function testConvertToUnderlyingWithAccrual() public {
+        console.log("can convert the amount of underlying plus the accrual to principal");
+        assertEq(fyToken.convertToUnderlying(unit), unit * 110 / 100);
+        assertEq(fyToken.convertToUnderlying(unit * 5), unit * 5 * 110 / 100);
+    }
 
-    // function testConvertToPrincipalWithAccrual() public {
-    //     console.log("can convert the amount of underlying plus the accrual to principal");
-    //     assertEq(fyToken.convertToPrincipal(1100), 1000);
-    //     assertEq(fyToken.convertToPrincipal(5500), 5000);
-    // }
+    function testConvertToPrincipalWithAccrual() public {
+        console.log("can convert the amount of underlying plus the accrual to principal");
+        assertEq(fyToken.convertToPrincipal(unit * 110 / 100), unit);
+        assertEq(fyToken.convertToPrincipal(unit * 5 * 110 / 100), unit * 5);
+    }
 
-    // function testMaxRedeem() public {
-    //     console.log("can get the max amount of principal redeemable");
-    //     deal(address(fyToken), address(this), WAD * 2);
-    //     assertEq(fyToken.maxRedeem(address(this)), WAD * 2);
-    // }
+    function testMaxRedeem() public {
+        console.log("can get the max amount of principal redeemable");
+        assertEq(fyToken.maxRedeem(user), unit * 100);
+    }
 
-    // function testMaxWithdraw() public {
-    //     console.log("can get the max amount of underlying withdrawable");
-    //     deal(address(fyToken), address(this), WAD * 2);
-    //     assertEq(fyToken.maxRedeem(address(this)), WAD * 2);
-    // }
+    function testMaxWithdraw() public {
+        console.log("can get the max amount of underlying withdrawable");
+        assertEq(fyToken.maxRedeem(user), unit * 100);
+    }
 
-    // needs to transfer from join so onlyHarness
     function testRedeemWithAccrual() public {
         console.log("redeems according to chi accrual");
         track("userTokenBalance", token.balanceOf(user));
@@ -331,13 +320,12 @@ contract OnceMaturedTest is OnceMatured {
         assertTrackMinusEq("userFYTokenBalance", unit, fyToken.balanceOf(user));
     }
 
-    // needs to transfer from join so onlyHarness
-    function testRedeemOnTransfer() public onlyHarness {
+    function testRedeemOnTransfer() public {
         console.log("redeems when transfering to the fyToken contract");
         track("userTokenBalance", token.balanceOf(user));
         track("userFYTokenBalance", fyToken.balanceOf(user));
         vm.startPrank(user);
-        fyToken.transfer(address(fyToken), WAD);
+        fyToken.transfer(address(fyToken), unit);
         assertEq(fyToken.balanceOf(address(this)), 0);
         vm.expectEmit(true, true, false, true);
         emit Redeemed(
@@ -412,8 +400,7 @@ contract OnceMaturedTest is OnceMatured {
             fyToken.balanceOf(address(fyToken)) * 110 / 100
         );
         vm.prank(user);
-        // fyToken.redeem(0, user, user);
-        fyToken.redeem(user, 0);
+        fyToken.redeem(0, user, user);
         assertTrackPlusEq("userTokenBalance", token.balanceOf(address(fyToken)), token.balanceOf(user));
         assertTrackMinusEq("fyTokenTokenBalance", token.balanceOf(address(fyToken)), token.balanceOf(address(fyToken)));
     }
@@ -473,34 +460,22 @@ contract OnceMaturedTest is OnceMatured {
     //     );
     // }
 
-    // withdraw function not available on live contracts
-    // function testWithdrawWithZeroAmount() public {
-    //     console.log("Withdraws the contract's balance when amount is 0");
-    //     uint256 ownerBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(this));
-    //     uint256 joinBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(join));
-    //     deal(address(fyToken), address(fyToken), WAD * 10);
-
-    //     vm.expectEmit(true, true, false, true);
-    //     emit Redeemed(
-    //         address(this), 
-    //         address(this), 
-    //         WAD * 10, 
-    //         FullMath.mulDiv(WAD * 10, accrual, WAD)
-    //     );
-    //     fyToken.withdraw(0, address(this), address(this));
-    //     assertEq(
-    //         fyToken.balanceOf(address(fyToken)), 
-    //         0
-    //     );
-    //     assertEq(
-    //         IERC20(fyToken.underlying()).balanceOf(address(this)), 
-    //         ownerBalanceBefore + FullMath.mulDiv(WAD * 10, accrual, WAD)
-    //     );
-    //     assertEq(
-    //         IERC20(fyToken.underlying()).balanceOf(address(join)),
-    //         joinBalanceBefore - FullMath.mulDiv(WAD * 10, accrual, WAD)
-    //     );
-    // }
+    function testWithdrawWithZeroAmount() public {
+        console.log("Withdraws the contract's balance when amount is 0");
+        track("userTokenBalance", token.balanceOf(user));
+        track("fyTokenTokenBalance", token.balanceOf(address(fyToken)));
+        vm.expectEmit(true, true, false, true);
+        emit Redeemed(
+            user, 
+            user, 
+            fyToken.balanceOf(address(fyToken)),
+            fyToken.balanceOf(address(fyToken)) * 110 / 100
+        );
+        vm.prank(user);
+        fyToken.withdraw(0, user, user);
+        assertTrackPlusEq("userTokenBalance", token.balanceOf(address(fyToken)), token.balanceOf(user));
+        assertTrackMinusEq("fyTokenTokenBalance", token.balanceOf(address(fyToken)), token.balanceOf(address(fyToken)));
+    }
 
     // function testWithdrawApproval() public {
     //     console.log("can withdraw only the approved amount from holder");
