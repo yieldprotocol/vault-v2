@@ -5,7 +5,7 @@ import "./IJoin.sol";
 import "./ICauldron.sol";
 import "./IFYToken.sol";
 import "./IOracle.sol";
-import "dss-interfaces/dss/DaiAbstract.sol";
+import "dss-interfaces/src/dss/DaiAbstract.sol";
 import "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
 import "@yield-protocol/yieldspace-tv/src/interfaces/IPool.sol";
 
