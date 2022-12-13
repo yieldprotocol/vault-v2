@@ -71,6 +71,8 @@ abstract contract ZeroState is Test, TestConstants, TestExtensions {
         fyToken.grantRole(fyToken.mature.selector, address(timelock));
         fyToken.grantRole(fyToken.mint.selector, address(ladle));
         join.grantRole(join.exit.selector, address(fyToken));
+
+        join.grantRole(join.join.selector, address(this));
     }
 
     function setUpHarness(string memory network) public {
@@ -82,6 +84,9 @@ abstract contract ZeroState is Test, TestConstants, TestExtensions {
         join = Join(address(fyToken.join()));
         token = IERC20(fyToken.underlying());
         oracle = fyToken.oracle();
+
+        vm.prank(address(timelock));
+        join.grantRole(join.join.selector, address(this));
     } 
 
     function setUp() public virtual {
@@ -104,6 +109,11 @@ abstract contract ZeroState is Test, TestConstants, TestExtensions {
         cash(token, user, 100 * unit);
         cash(token, address(ladle), 100 * unit);
         cash(fyToken, user, 100 * unit);
+
+        // provision join
+        cash(token, address(this), unit * 100);
+        token.approve(address(join), unit * 100);
+        join.join(address(this), unit * 100);
     }
 }
 
@@ -114,7 +124,7 @@ contract FYTokenTest is ZeroState {
         emit Point("oracle", address(this));
         vm.prank(timelock);
         fyToken.point("oracle", address(this));
-        // Please test the state change
+        assertEq(address(fyToken.oracle()), address(this));
     }
 
     function testChangeJoin() public {
@@ -123,7 +133,7 @@ contract FYTokenTest is ZeroState {
         emit Point("join", address(this));
         vm.prank(timelock);
         fyToken.point("join", address(this));
-        // Please test the state change
+        assertEq(address(fyToken.join()), address(this));
     }
 
     // tries to transfer from join so onlyHarness
@@ -304,7 +314,7 @@ contract OnceMaturedTest is OnceMatured {
     // }
 
     // needs to transfer from join so onlyHarness
-    function testRedeemWithAccrual() public onlyHarness {
+    function testRedeemWithAccrual() public {
         console.log("redeems according to chi accrual");
         track("userTokenBalance", token.balanceOf(user));
         track("userFYTokenBalance", fyToken.balanceOf(user));
@@ -365,46 +375,6 @@ contract OnceMaturedTest is OnceMatured {
     //         IERC20(fyToken.underlying()).balanceOf(address(join)), 
     //         joinBalanceBefore - FullMath.mulDiv(WAD, accrual, WAD)
     //     );        
-    // }
-
-    // I would move the tests that use the Ladle to a separate test file
-    // disregarding batch system
-    // function testRedeemByBatch() public {
-    //     console.log("redeems by transferring to the fyToken contract in a batch");
-    //     uint256 ownerBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(this));
-    //     uint256 joinBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(join));
-    //     fyToken.approve(address(ladle), WAD);
-    //     bytes[] memory calls = new bytes[](2);
-    //     calls[0] = abi.encodeWithSelector(ILadleCustom(address(ladle)).transfer.selector, address(fyToken), address(fyToken), WAD);
-    //     calls[1] = abi.encodeWithSelector(ILadleCustom(address(ladle)).redeem.selector, seriesId, address(this), WAD);
-    //     ILadleCustom(address(ladle)).batch(calls);
-    //     assertEq(
-    //         IERC20(fyToken.underlying()).balanceOf(address(this)), 
-    //         ownerBalanceBefore + FullMath.mulDiv(WAD, accrual, WAD)
-    //     );
-    //     assertEq(
-    //         IERC20(fyToken.underlying()).balanceOf(address(join)), 
-    //         joinBalanceBefore - FullMath.mulDiv(WAD, accrual, WAD)
-    //     );
-    // }
-
-    // function testRedeemByBatchWithZeroAmount() public {
-    //     console.log("redeems with an amount of 0 by transferring to the fyToken contract in a batch");
-    //     uint256 ownerBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(this));
-    //     uint256 joinBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(join));
-    //     fyToken.approve(address(ladle), WAD);
-    //     bytes[] memory calls = new bytes[](2);
-    //     calls[0] = abi.encodeWithSelector(ILadleCustom(address(ladle)).transfer.selector, address(fyToken), address(fyToken), WAD);
-    //     calls[1] = abi.encodeWithSelector(ILadleCustom(address(ladle)).redeem.selector, seriesId, address(this), 0);
-    //     ILadleCustom(address(ladle)).batch(calls);
-    //     assertEq(
-    //         IERC20(fyToken.underlying()).balanceOf(address(this)), 
-    //         ownerBalanceBefore + FullMath.mulDiv(WAD, accrual, WAD)
-    //     );
-    //     assertEq(
-    //         IERC20(fyToken.underlying()).balanceOf(address(join)), 
-    //         joinBalanceBefore - FullMath.mulDiv(WAD, accrual, WAD)
-    //     );
     // }
 
     // not available for live contracts
