@@ -296,7 +296,8 @@ contract OnceMaturedTest is OnceMatured {
     //     assertEq(fyToken.maxRedeem(address(this)), WAD * 2);
     // }
 
-    function testRedeemWithAccrual() public {
+    // needs to transfer from join so onlyHarness
+    function testRedeemWithAccrual() public onlyHarness {
         console.log("redeems according to chi accrual");
         track("userTokenBalance", token.balanceOf(user));
         track("userFYTokenBalance", fyToken.balanceOf(user));
