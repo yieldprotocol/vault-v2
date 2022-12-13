@@ -14,7 +14,7 @@ import "@yield-protocol/utils-v2/contracts/math/WMul.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256I128.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU128I128.sol";
-import "dss-interfaces/src/dss/DaiAbstract.sol";
+import "dss-interfaces/dss/DaiAbstract.sol";
 import "./LadleStorage.sol";
 
 
