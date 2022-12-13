@@ -3,4 +3,4 @@
 @yield-protocol/vault-v2/contracts=contracts/
 forge-std/=lib/forge-std/
 erc3156/=lib/ERC3156/
-dss-interfaces/=lib/dss-interfaces/
+dss-interfaces/=lib/dss-interfaces/src
