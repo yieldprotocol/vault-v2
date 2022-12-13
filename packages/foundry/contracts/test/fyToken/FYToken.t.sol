@@ -56,7 +56,7 @@ abstract contract ZeroState is Test, TestConstants, TestExtensions {
 
         token = IERC20(address(new ERC20Mock("", "")));
         bytes6 mockIlkId = 0x000000000001;
-        join = new Join(address(token));
+        join = new Join(address(token)); // Maybe you need to `join` some token into this Join, so that it can serve redemptions. Give yourself permissions if needed.
 
         fyToken = new FYToken(
             mockIlkId,
@@ -114,6 +114,7 @@ contract FYTokenTest is ZeroState {
         emit Point("oracle", address(this));
         vm.prank(timelock);
         fyToken.point("oracle", address(this));
+        // Please test the state change
     }
 
     function testChangeJoin() public {
@@ -122,9 +123,11 @@ contract FYTokenTest is ZeroState {
         emit Point("join", address(this));
         vm.prank(timelock);
         fyToken.point("join", address(this));
+        // Please test the state change
     }
 
     // tries to transfer from join so onlyHarness
+    // You can put funds in the mock join, see above 
     function testMintWithUnderlying() public onlyHarness {
         console.log("can mint with underlying");
         track("userTokenBalance", fyToken.balanceOf(user));
@@ -152,6 +155,9 @@ contract FYTokenTest is ZeroState {
     }
 
     // not on live contracts
+    // Have I got a fork for you: https://rpc.tenderly.co/fork/78da602e-78a8-4705-b73c-3c62991231aa
+    // Addresses here: https://github.com/yieldprotocol/environments-v2/tree/feat/new-identifiers/addresses/tenderly_mainnet
+    // Example here: https://github.com/yieldprotocol/strategy-v2/blob/fix/audit-fixes/test/harness/StrategyHarness.t.sol
     // function testConvertToPrincipal() public {
     //     console.log("can convert amount of underlying to principal");
     //     assertEq(fyToken.convertToPrincipal(1000), 1000);
@@ -211,12 +217,13 @@ contract AfterMaturityTest is AfterMaturity {
     // }
 
     function testMatureRecordsChiValue() public {
-        console.log("records chi value when matureed");
+        console.log("records chi value when matured");
         vm.prank(timelock);
         // should we still test this emit?
         // vm.expectEmit(false, false, false, true);
         // emit SeriesMatured(220434062002504964823286680);
         fyToken.mature();
+        // Please test the state change and event
     }
 
     // made onlyHarness since no way to associate mockIlk with mockERC20?
@@ -360,6 +367,7 @@ contract OnceMaturedTest is OnceMatured {
     //     );        
     // }
 
+    // I would move the tests that use the Ladle to a separate test file
     // disregarding batch system
     // function testRedeemByBatch() public {
     //     console.log("redeems by transferring to the fyToken contract in a batch");
