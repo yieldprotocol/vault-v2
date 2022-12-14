@@ -272,7 +272,6 @@ abstract contract OnceMatured is AfterMaturity {
 }
 
 contract OnceMaturedTest is OnceMatured {
-    // not on live contracts
     function testCannotChangeOracle() public {
         console.log("can't change the CHI oracle once matured");
         vm.expectRevert("Already matured");
@@ -344,53 +343,46 @@ contract OnceMaturedTest is OnceMatured {
         assertTrackMinusEq("userFYTokenBalance", unit, fyToken.balanceOf(user));
     }
 
-    // only possible with 5095 redeem?
-    // function testRedeemByTransferAndApprove() public {
-    //     console.log("redeems by transfer and approve combination");
-    //     uint256 ownerBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(this));
-    //     uint256 joinBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(join));
-    //     fyToken.transfer(address(fyToken), WAD / 2);
-    //     assertEq(fyToken.balanceOf(address(this)), WAD / 2);
-    //     vm.expectEmit(true, true, false, true);
-    //     emit Redeemed(
-    //         address(this), 
-    //         address(this), 
-    //         WAD,
-    //         FullMath.mulDiv(WAD, accrual, WAD)
-    //     );
-    //     fyToken.redeem(WAD, address(this), address(this));
-    //     assertEq(
-    //         IERC20(fyToken.underlying()).balanceOf(address(this)), 
-    //         ownerBalanceBefore + FullMath.mulDiv(WAD, accrual, WAD)
-    //     );
-    //     assertEq(
-    //         IERC20(fyToken.underlying()).balanceOf(address(join)), 
-    //         joinBalanceBefore - FullMath.mulDiv(WAD, accrual, WAD)
-    //     );        
-    // }
+    // I think this one is done correctly?
+    function testRedeemByTransferAndApprove() public {
+        console.log("redeems by transfer and approve combination");
+        track("userTokenBalance", token.balanceOf(user));
+        track("userFYTokenBalance", fyToken.balanceOf(user));
 
-    // not available for live contracts
-    // function testRedeemERC5095() public {
-    //     console.log("redeems with ERC5095 redeem");
-    //     uint256 ownerBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(this));
-    //     uint256 joinBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(join));
-    //     vm.expectEmit(true, true, false, true);
-    //     emit Redeemed(
-    //         address(this), 
-    //         address(this), 
-    //         WAD, 
-    //         FullMath.mulDiv(WAD, accrual, WAD)
-    //     );
-    //     fyToken.redeem(WAD, address(this), address(this));
-    //     assertEq(
-    //         IERC20(fyToken.underlying()).balanceOf(address(this)), 
-    //         ownerBalanceBefore + FullMath.mulDiv(WAD, accrual, WAD)
-    //     );
-    //     assertEq(
-    //         IERC20(fyToken.underlying()).balanceOf(address(join)), 
-    //         joinBalanceBefore - FullMath.mulDiv(WAD, accrual, WAD)
-    //     );        
-    // }
+        vm.prank(user);
+        fyToken.transfer(address(fyToken), unit);
+        fyToken.approve(address(fyToken), unit);
+        vm.expectEmit(true, true, false, true);
+        emit Redeemed(
+            user, 
+            user, 
+            unit,
+            unit * 110 / 100
+        );
+        fyToken.redeem(unit, user, user);
+
+        assertTrackPlusEq("userTokenBalance", unit * 110 / 100, token.balanceOf(user));
+        assertTrackMinusEq("userFYTokenBalance", unit, fyToken.balanceOf(user));
+    }
+
+    function testRedeemERC5095() public {
+        console.log("redeems with ERC5095 redeem");
+        track("userTokenBalance", token.balanceOf(user));
+        track("userFYTokenBalance", fyToken.balanceOf(user));
+
+        vm.expectEmit(true, true, false, true);
+        emit Redeemed(
+            user, 
+            user, 
+            unit, 
+            unit * 110 / 100
+        );
+        vm.prank(user);
+        fyToken.redeem(unit, user, user);
+
+        assertTrackPlusEq("userTokenBalance", unit * 110 / 100, token.balanceOf(user));
+        assertTrackMinusEq("userFYTokenBalance", unit, fyToken.balanceOf(user));
+    }
 
     function testRedeemWithZeroAmount() public {
         console.log("Redeems the contract's fyToken balance when amount is 0");
@@ -415,60 +407,49 @@ contract OnceMaturedTest is OnceMatured {
         assertTrackMinusEq("fyTokenfyTokenBalance", unit * 100, fyToken.balanceOf(address(fyToken)));
     }
 
-    // not available for live contracts
-    // function testRedeemApproval() public {
-    //     console.log("can redeem only the approved amount from holder");
-    //     uint256 ownerBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(this));
-    //     uint256 joinBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(join));
-    //     deal(address(fyToken), fyTokenHolder, WAD * 5);
-    //     vm.prank(fyTokenHolder);
-    //     fyToken.approve(address(this), WAD * 5);
+    function testRedeemApproval() public {
+        console.log("can redeem only the approved amount from holder");
+        track("userFYTokenBalance", fyToken.balanceOf(user));
+        track("thisTokenBalance", token.balanceOf(address(this)));
 
-    //     vm.expectRevert("ERC20: Insufficient approval");
-    //     fyToken.redeem(
-    //         WAD * 10, 
-    //         address(this), 
-    //         fyTokenHolder
-    //     );
+        vm.prank(user);
+        fyToken.approve(address(this), unit * 5);
 
-    //     fyToken.redeem(
-    //         WAD * 4,
-    //         address(this),
-    //         fyTokenHolder
-    //     );
-    //     assertEq(fyToken.balanceOf(fyTokenHolder), WAD);
-    //     assertEq(
-    //         IERC20(fyToken.underlying()).balanceOf(address(this)), 
-    //         ownerBalanceBefore + FullMath.mulDiv(WAD * 4, accrual, WAD)
-    //     );
-    //     assertEq(
-    //         IERC20(fyToken.underlying()).balanceOf(address(join)),
-    //         joinBalanceBefore - FullMath.mulDiv(WAD * 4, accrual, WAD)
-    //     );
-    // }
+        vm.expectRevert("ERC20: Insufficient approval");
+        fyToken.redeem(
+            unit * 10, 
+            address(this), 
+            user
+        );
 
-    // not available for live contracts
-    // function testWithdrawERC5095() public {
-    //     console.log("withdrwas with ERC5095 withdraw");
-    //     uint256 ownerBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(this));
-    //     uint256 joinBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(join));
-    //     vm.expectEmit(true, true, false, true);
-    //     emit Redeemed(
-    //         address(this), 
-    //         address(this), 
-    //         WAD, 
-    //         FullMath.mulDiv(WAD, accrual, WAD)
-    //     );
-    //     fyToken.withdraw(FullMath.mulDiv(WAD, accrual, WAD), address(this), address(this));
-    //     assertEq(
-    //         IERC20(fyToken.underlying()).balanceOf(address(this)), 
-    //         ownerBalanceBefore + FullMath.mulDiv(WAD, accrual, WAD)
-    //     );
-    //     assertEq(
-    //         IERC20(fyToken.underlying()).balanceOf(address(join)), 
-    //         joinBalanceBefore - FullMath.mulDiv(WAD, accrual, WAD)
-    //     );
-    // }
+        fyToken.redeem(
+            unit * 4,
+            address(this),
+            user
+        );
+
+        assertTrackMinusEq("userFYTokenBalance", unit * 4, fyToken.balanceOf(user));
+        assertTrackPlusEq("thisTokenBalance", unit * 4 * 110 / 100, token.balanceOf(address(this)));
+    }
+
+    function testWithdrawERC5095() public {
+        console.log("withdrwas with ERC5095 withdraw");
+        track("userTokenBalance", token.balanceOf(user));
+        track("userFYTokenBalance", fyToken.balanceOf(user));
+
+        vm.expectEmit(true, true, false, true);
+        emit Redeemed(
+            user, 
+            user, 
+            unit, 
+            unit * 110 / 100
+        );
+        vm.prank(user);
+        fyToken.withdraw(unit * 110 / 100, user, user);
+
+        assertTrackPlusEq("userTokenBalance", unit * 110 / 100, token.balanceOf(user));
+        assertTrackMinusEq("userFYTokenBalance", unit, fyToken.balanceOf(user));
+    }
 
     function testWithdrawWithZeroAmount() public {
         console.log("Withdraws the contract's fyToken balance when amount is 0");
@@ -493,35 +474,28 @@ contract OnceMaturedTest is OnceMatured {
         assertTrackMinusEq("fyTokenfyTokenBalance", unit * 100, fyToken.balanceOf(address(fyToken)));
     }
 
-    // function testWithdrawApproval() public {
-    //     console.log("can withdraw only the approved amount from holder");
-    //     uint256 ownerBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(this));
-    //     uint256 joinBalanceBefore = IERC20(fyToken.underlying()).balanceOf(address(join));
-    //     deal(address(fyToken), fyTokenHolder, WAD * 5);
-    //     vm.prank(fyTokenHolder);
-    //     fyToken.approve(address(this), WAD * 5);
+    function testWithdrawApproval() public {
+        console.log("can redeem only the approved amount from holder");
+        track("userFYTokenBalance", fyToken.balanceOf(user));
+        track("thisTokenBalance", token.balanceOf(address(this)));
 
-    //     uint256 amountToWithdraw = fyToken.convertToUnderlying(WAD * 10);     // so revert works properly
-    //     vm.expectRevert("ERC20: Insufficient approval");
-    //     fyToken.withdraw(
-    //         amountToWithdraw,
-    //         address(this),
-    //         fyTokenHolder
-    //     );
+        vm.prank(user);
+        fyToken.approve(address(this), unit * 5);
 
-    //     fyToken.withdraw(
-    //         fyToken.convertToUnderlying(WAD * 4),
-    //         address(this),
-    //         fyTokenHolder
-    //     );
-    //     assertEq(fyToken.balanceOf(fyTokenHolder), WAD);
-    //     assertEq(
-    //         IERC20(fyToken.underlying()).balanceOf(address(this)),
-    //         ownerBalanceBefore + FullMath.mulDiv(WAD * 4, accrual, WAD)
-    //     );
-    //     assertEq(
-    //         IERC20(fyToken.underlying()).balanceOf(address(join)),
-    //         joinBalanceBefore - FullMath.mulDiv(WAD * 4, accrual, WAD)
-    //     );
-    // }
+        vm.expectRevert("ERC20: Insufficient approval");
+        fyToken.withdraw(
+            unit * 10 * 110 / 100, 
+            address(this), 
+            user
+        );
+
+        fyToken.withdraw(
+            unit * 4 * 110 / 100,
+            address(this),
+            user
+        );
+
+        assertTrackMinusEq("userFYTokenBalance", unit * 4, fyToken.balanceOf(user));
+        assertTrackPlusEq("thisTokenBalance", unit * 4 * 110 / 100, token.balanceOf(address(this)));
+    }
 }
