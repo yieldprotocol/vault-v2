@@ -5,7 +5,6 @@ import "./IJoin.sol";
 import "./ICauldron.sol";
 import "./IFYToken.sol";
 import "./IOracle.sol";
-import "dss-interfaces/src/dss/DaiAbstract.sol";
 import "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
 import "@yield-protocol/yieldspace-tv/src/interfaces/IPool.sol";
 
@@ -105,7 +104,7 @@ interface ILadle {
         external;
 
     /// @dev Execute a Dai-style permit for the selected token
-    function forwardDaiPermit(DaiAbstract token, address spender, uint256 nonce, uint256 deadline, bool allowed, uint8 v, bytes32 r, bytes32 s)
+    function forwardDaiPermit(IERC20 token, address spender, uint256 nonce, uint256 deadline, bool allowed, uint8 v, bytes32 r, bytes32 s)
         external;
 
     /// @dev Allow users to trigger a token transfer from themselves to a receiver through the ladle, to be used with batch
