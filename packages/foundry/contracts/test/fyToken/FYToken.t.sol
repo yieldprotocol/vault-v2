@@ -107,14 +107,18 @@ abstract contract ZeroState is Test, TestConstants, TestExtensions {
         vm.label(address(oracle), "oracle");
         vm.label(address(join), "join");
 
+        // user has 100 tokens and fyTokens
         cash(token, user, 100 * unit);
-        cash(token, address(ladle), 100 * unit);
         cash(fyToken, user, 100 * unit);
+        // fyToken contract has 100 tokens and fyTokens
+        cash(token, address(fyToken), 100 * unit);
+        // ladle has 100 tokens
+        cash(token, address(ladle), 100 * unit);
 
-        // provision join
-        cash(token, address(this), unit * 100);
-        token.approve(address(join), unit * 100);
-        join.join(address(this), unit * 100);
+        // provision join (give extra tokens so doesn't revert for accruals)
+        cash(token, address(this), unit * 200);
+        token.approve(address(join), unit * 200);
+        join.join(address(this), unit * 200);
     }
 }
 
@@ -243,7 +247,7 @@ contract AfterMaturityTest is AfterMaturity {
             unit
         );
         vm.prank(user);
-        fyToken.redeem(user, unit);
+        fyToken.redeem(unit, user, user);
 
         assertTrackPlusEq("userTokenBalance", unit, token.balanceOf(user));
         assertTrackMinusEq("userFYTokenBalance", unit, fyToken.balanceOf(user));
@@ -388,10 +392,13 @@ contract OnceMaturedTest is OnceMatured {
     //     );        
     // }
 
-    function testRedeemWithZeroAmount() public onlyHarness {
-        console.log("Redeems the contract's balance when amount is 0");
+    function testRedeemWithZeroAmount() public {
+        console.log("Redeems the contract's fyToken balance when amount is 0");
+        cash(fyToken, address(fyToken), unit * 100);
+
         track("userTokenBalance", token.balanceOf(user));
-        track("fyTokenTokenBalance", token.balanceOf(address(fyToken)));
+        track("fyTokenfyTokenBalance", fyToken.balanceOf(address(fyToken)));
+
         vm.expectEmit(true, true, false, true);
         emit Redeemed(
             user, 
@@ -401,8 +408,11 @@ contract OnceMaturedTest is OnceMatured {
         );
         vm.prank(user);
         fyToken.redeem(0, user, user);
-        assertTrackPlusEq("userTokenBalance", token.balanceOf(address(fyToken)), token.balanceOf(user));
-        assertTrackMinusEq("fyTokenTokenBalance", token.balanceOf(address(fyToken)), token.balanceOf(address(fyToken)));
+
+        // user's balance will increase by 100 tokens with accrual
+        // fyToken's balance will decrease by its balance of 100 fyTokens
+        assertTrackPlusEq("userTokenBalance", unit * 100 * 110 / 100, token.balanceOf(user));
+        assertTrackMinusEq("fyTokenfyTokenBalance", unit * 100, fyToken.balanceOf(address(fyToken)));
     }
 
     // not available for live contracts
@@ -461,9 +471,12 @@ contract OnceMaturedTest is OnceMatured {
     // }
 
     function testWithdrawWithZeroAmount() public {
-        console.log("Withdraws the contract's balance when amount is 0");
+        console.log("Withdraws the contract's fyToken balance when amount is 0");
+        cash(fyToken, address(fyToken), 100 * unit);
+        
         track("userTokenBalance", token.balanceOf(user));
-        track("fyTokenTokenBalance", token.balanceOf(address(fyToken)));
+        track("fyTokenfyTokenBalance", fyToken.balanceOf(address(fyToken)));
+        
         vm.expectEmit(true, true, false, true);
         emit Redeemed(
             user, 
@@ -473,8 +486,11 @@ contract OnceMaturedTest is OnceMatured {
         );
         vm.prank(user);
         fyToken.withdraw(0, user, user);
-        assertTrackPlusEq("userTokenBalance", token.balanceOf(address(fyToken)), token.balanceOf(user));
-        assertTrackMinusEq("fyTokenTokenBalance", token.balanceOf(address(fyToken)), token.balanceOf(address(fyToken)));
+
+        // user's balance will increase by 100 tokens with accrual
+        // fyToken's balance will decrease by its balance of 100 fyTokens
+        assertTrackPlusEq("userTokenBalance", unit * 100 * 110 / 100, token.balanceOf(user));
+        assertTrackMinusEq("fyTokenfyTokenBalance", unit * 100, fyToken.balanceOf(address(fyToken)));
     }
 
     // function testWithdrawApproval() public {
