@@ -10,7 +10,9 @@ MAINNET_FYTOKENS=(\
     "0x2ac3f3d6baeda36c28f058b5eb1038bb7bb872ab"\
 )
 
-export NETWORK="TENDERLY"
+export CI=false
+export RPC="HARNESS"
+export NETWORK="MAINNET"
 export MOCK=false
 
 for fytoken in ${MAINNET_FYTOKENS[@]}; do

@@ -28,10 +28,13 @@ contract TestConstants {
 
     uint32 public constant EOJUN22 = 1656039600;
 
+    string public constant CI = "CI";
+    string public constant RPC = "RPC";
     string public constant LOCALHOST = "LOCALHOST";
     string public constant MAINNET = "MAINNET";
     string public constant ARBITRUM = "ARBITRUM";
-    string public constant TENDERLY = "TENDERLY";
+    string public constant HARNESS = "HARNESS";
+    string public constant UNIT_TESTS = "UNIT_TESTS";
     string public constant MOCK = "MOCK";
     string public constant NETWORK = "NETWORK";
 
@@ -45,9 +48,6 @@ contract TestConstants {
         addresses[MAINNET][TIMELOCK] = 0x3b870db67a45611CF4723d44487EAF398fAc51E3;
         addresses[MAINNET][CAULDRON] = 0xc88191F8cb8e6D4a668B047c1C8503432c3Ca867;
         addresses[MAINNET][LADLE] = 0x6cB18fF2A33e981D1e38A663Ca056c0a5265066A;
-        addresses[TENDERLY][TIMELOCK] = 0x3b870db67a45611CF4723d44487EAF398fAc51E3;
-        addresses[TENDERLY][CAULDRON] = 0xc88191F8cb8e6D4a668B047c1C8503432c3Ca867;
-        addresses[TENDERLY][LADLE] = 0x6cB18fF2A33e981D1e38A663Ca056c0a5265066A;
         addresses[ARBITRUM][TIMELOCK] = 0xd0a22827Aed2eF5198EbEc0093EA33A4CD641b6c;
         addresses[ARBITRUM][CAULDRON] = 0x23cc87FBEBDD67ccE167Fa9Ec6Ad3b7fE3892E30;
         addresses[ARBITRUM][LADLE] = 0x16E25cf364CeCC305590128335B8f327975d0560;
