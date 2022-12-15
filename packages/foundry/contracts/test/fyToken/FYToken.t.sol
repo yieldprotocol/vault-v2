@@ -15,7 +15,7 @@ import "../../oracles/uniswap/uniswapv0.8/FullMath.sol";
 import { CTokenChiMock } from "../../mocks/oracles/compound/CTokenChiMock.sol";
 import { ERC20Mock } from "../../mocks/ERC20Mock.sol";
 import { TestConstants } from "../utils/TestConstants.sol";
-import { TestExtensions } from "../TestExtensions.sol";
+import { TestExtensions } from "../utils/TestExtensions.sol";
 
 abstract contract ZeroState is Test, TestConstants, TestExtensions {
     using CastU256I128 for uint256;
@@ -72,7 +72,6 @@ abstract contract ZeroState is Test, TestConstants, TestExtensions {
         fyToken.grantRole(fyToken.mint.selector, address(ladle));
         join.grantRole(join.join.selector, address(fyToken));
         join.grantRole(join.exit.selector, address(fyToken));
-
         join.grantRole(join.join.selector, address(this));
     }
 
@@ -115,10 +114,12 @@ abstract contract ZeroState is Test, TestConstants, TestExtensions {
         // ladle has 100 tokens
         cash(token, address(ladle), 100 * unit);
 
-        // provision join (give extra tokens so doesn't revert for accruals)
-        cash(token, address(this), unit * 200);
-        token.approve(address(join), unit * 200);
-        join.join(address(this), unit * 200);
+        // provision Join if using mocks
+        if (vm.envOr(MOCK, true)) {
+            cash(token, address(this), unit * 200);
+            token.approve(address(join), unit * 200);
+            join.join(address(this), unit * 200);
+        }
     }
 }
 
@@ -224,13 +225,16 @@ contract AfterMaturityTest is AfterMaturity {
         vm.stopPrank();
     }
 
-    function testMatureRecordsChiValue() public {
+    // uses underlyingId so only
+    function testMatureRecordsChiValue() public onlyHarness {
         console.log("records chi value when matured");
-        vm.prank(timelock);
-        // no way to get expected chi before call to mature()?
-        // vm.expectEmit(false, false, false, true);
-        // emit SeriesMatured(fyToken.chiAtMaturity());
+        vm.startPrank(timelock);
+        uint256 chiAtMaturity;
+        (chiAtMaturity, ) = oracle.get(fyToken.underlyingId(), CHI, 0);        
+        vm.expectEmit(false, false, false, true);
+        emit SeriesMatured(chiAtMaturity);
         fyToken.mature();
+        vm.stopPrank();
         assert(fyToken.chiAtMaturity() != type(uint256).max && fyToken.chiAtMaturity() > 0);
     }
 
@@ -327,6 +331,7 @@ contract OnceMaturedTest is OnceMatured {
         console.log("redeems when transfering to the fyToken contract");
         track("userTokenBalance", token.balanceOf(user));
         track("userFYTokenBalance", fyToken.balanceOf(user));
+
         vm.startPrank(user);
         fyToken.transfer(address(fyToken), unit);
         assertEq(fyToken.balanceOf(address(this)), 0);
@@ -337,21 +342,21 @@ contract OnceMaturedTest is OnceMatured {
             unit, 
             unit * 110 / 100
         );
-        fyToken.redeem(user, unit);
+        fyToken.redeem(user, 0);
         vm.stopPrank();
+
         assertTrackPlusEq("userTokenBalance", unit * 110 / 100, token.balanceOf(user));
         assertTrackMinusEq("userFYTokenBalance", unit, fyToken.balanceOf(user));
     }
 
-    // I think this one is done correctly?
-    function testRedeemByTransferAndApprove() public {
+    function testRedeemOnFractionalTransfer() public {
         console.log("redeems by transfer and approve combination");
         track("userTokenBalance", token.balanceOf(user));
         track("userFYTokenBalance", fyToken.balanceOf(user));
 
-        vm.prank(user);
-        fyToken.transfer(address(fyToken), unit);
-        fyToken.approve(address(fyToken), unit);
+        // will redeem half a unit from the contract and half from the user
+        vm.startPrank(user);
+        fyToken.transfer(address(fyToken), unit / 2);
         vm.expectEmit(true, true, false, true);
         emit Redeemed(
             user, 
@@ -359,7 +364,8 @@ contract OnceMaturedTest is OnceMatured {
             unit,
             unit * 110 / 100
         );
-        fyToken.redeem(unit, user, user);
+        fyToken.redeem(user, unit);
+        vm.stopPrank();
 
         assertTrackPlusEq("userTokenBalance", unit * 110 / 100, token.balanceOf(user));
         assertTrackMinusEq("userFYTokenBalance", unit, fyToken.balanceOf(user));
