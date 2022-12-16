@@ -4,7 +4,7 @@ pragma solidity >=0.8.13;
 import "forge-std/src/Test.sol";
 import "../../oracles/uniswap/UniswapV3Oracle.sol";
 import "../utils/TestConstants.sol";
-import { TestExtensions } from "../TestExtensions.sol";
+import { TestExtensions } from "../utils/TestExtensions.sol";
 
 contract UniswapOracleTest is Test, TestConstants, TestExtensions {
     UniswapV3Oracle public uniswapV3Oracle;

@@ -5,7 +5,7 @@ import "forge-std/src/Test.sol";
 import "forge-std/src/console2.sol";
 
 import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
-import { TestExtensions } from "../TestExtensions.sol";
+import { TestExtensions } from "../utils/TestExtensions.sol";
 import { TestConstants } from "../utils/TestConstants.sol";
 import { IERC3156FlashBorrower, IERC3156FlashLender, Join, FlashJoin } from "../../FlashJoin.sol";
 import { ERC20, ERC20Mock } from "../../mocks/ERC20Mock.sol";
