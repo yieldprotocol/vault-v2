@@ -11,7 +11,6 @@ import { Join } from "../../Join.sol";
 import { IJoin } from "../../interfaces/IJoin.sol";
 import { ILadle } from "../../interfaces/ILadle.sol";
 import { IOracle } from "../../interfaces/IOracle.sol";
-import "../../oracles/uniswap/uniswapv0.8/FullMath.sol";
 import { CTokenChiMock } from "../../mocks/oracles/compound/CTokenChiMock.sol";
 import { ERC20Mock } from "../../mocks/ERC20Mock.sol";
 import { TestConstants } from "../utils/TestConstants.sol";
@@ -38,11 +37,6 @@ abstract contract ZeroState is Test, TestConstants, TestExtensions {
 
     modifier onlyHarness() {
         if (vm.envOr(MOCK, true)) return; // Absence of MOCK makes it default to true
-        _;
-    }
-
-    modifier onlyMock() {
-        if (!vm.envOr(MOCK, true)) return;
         _;
     }
 
@@ -84,9 +78,6 @@ abstract contract ZeroState is Test, TestConstants, TestExtensions {
         join = Join(address(fyToken.join()));
         token = IERC20(fyToken.underlying());
         oracle = fyToken.oracle();
-
-        vm.prank(address(timelock));
-        join.grantRole(join.join.selector, address(this));
     } 
 
     function setUp() public virtual {
@@ -97,13 +88,14 @@ abstract contract ZeroState is Test, TestConstants, TestExtensions {
         if (vm.envOr(MOCK, true)) setUpMock();
         else setUpHarness(network);
 
-        user = address(1);
+        user = address(4);
         unit = uint128(10 ** ERC20Mock(address(token)).decimals());
 
         vm.label(address(cauldron), "cauldron");
         vm.label(address(ladle), "ladle");
         vm.label(user, "user");
         vm.label(address(token), "token");
+        vm.label(address(fyToken), "fyToken");
         vm.label(address(oracle), "oracle");
         vm.label(address(join), "join");
 
