@@ -17,5 +17,5 @@ export MOCK=false
 
 for fytoken in ${MAINNET_FYTOKENS[@]}; do
     echo "fyToken: " $fytoken
-    FYTOKEN=$fytoken forge test -c contracts/test/fyToken/FYTokenFlash.t.sol -m testFlashLoan
+    FYTOKEN=$fytoken forge test -c contracts/test/fyToken/FYTokenFlash.t.sol
 done 

@@ -180,7 +180,7 @@ contract WithZeroFeeTest is WithZeroFee {
 
 contract WithNonZeroFeeTest is WithNonZeroFee {
     function testFlashLoan() public {
-        // vm.prank(timelock);
+        if (!vm.envOr(MOCK, true))vm.prank(timelock);
         fyToken.grantRole(fyToken.mint.selector, address(this));
         fyToken.mint(address(borrower), unit * 5 / 100);
         vm.expectEmit(true, true, false, true);
