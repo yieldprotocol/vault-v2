@@ -28,10 +28,13 @@ contract TestConstants {
 
     uint32 public constant EOJUN22 = 1656039600;
 
+    string public constant CI = "CI";
+    string public constant RPC = "RPC";
     string public constant LOCALHOST = "LOCALHOST";
     string public constant MAINNET = "MAINNET";
     string public constant ARBITRUM = "ARBITRUM";
-    string public constant TENDERLY = "TENDERLY";
+    string public constant HARNESS = "HARNESS";
+    string public constant UNIT_TESTS = "UNIT_TESTS";
     string public constant MOCK = "MOCK";
     string public constant NETWORK = "NETWORK";
 
