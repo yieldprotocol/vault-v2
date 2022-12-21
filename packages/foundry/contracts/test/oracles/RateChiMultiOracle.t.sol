@@ -13,21 +13,34 @@ contract RateChiMultiOracleTest is Test, TestConstants, AccessControl {
     CTokenRateMock public cTokenRate;
     CompoundMultiOracle public compoundMultiOracle;
 
-    bytes6 public baseId = 0x25dde80ea598;
-    bytes6 public mockBytes6 = 0x000000000001;
+    bytes6 public baseId = 0x000000000001;
 
-    function setUp() public {
+    function setUpMock() public {
         cTokenChi = new CTokenChiMock();
         cTokenRate = new CTokenRateMock();
         compoundMultiOracle = new CompoundMultiOracle();
-        compoundMultiOracle.grantRole(0x92b45d9c, address(this));
+        compoundMultiOracle.grantRole(compoundMultiOracle.setSource.selector, address(this));
         compoundMultiOracle.setSource(baseId, CHI, address(cTokenChi));
         compoundMultiOracle.setSource(baseId, RATE, address(cTokenRate));
         cTokenChi.set(WAD * 2);
         cTokenRate.set(WAD * 3);
     }
 
+    function setUpHarness(string memory network) public {
+        compoundMultiOracle = CompoundMultiOracle(vm.envAddress("ORACLE"));
+    }
+
+    function setUp() public {
+        string memory rpc = vm.envOr(RPC, HARNESS);
+        vm.createSelectFork(rpc);
+        string memory network = vm.envOr(NETWORK, LOCALHOST);
+
+        if (vm.envOr(MOCK, true)) setUpMock();
+        else setUpHarness(network);
+    }
+
     function testRevertUnknownSource() public {
+        bytes6 mockBytes6 = 0x000000000002;
         vm.expectRevert("Source not found");
         compoundMultiOracle.get(mockBytes6, mockBytes6, WAD);
     }
