@@ -2,6 +2,8 @@
 pragma solidity >=0.8.13;
 
 import "forge-std/src/Test.sol";
+import { IERC20 } from "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
+import { IERC20Metadata } from "@yield-protocol/utils-v2/contracts/token/IERC20Metadata.sol";
 import { ChainlinkMultiOracle } from "../../oracles/chainlink/ChainlinkMultiOracle.sol";
 import { WETH9Mock } from "../../mocks/WETH9Mock.sol";
 import { ChainlinkAggregatorV3Mock } from "../../mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol";
