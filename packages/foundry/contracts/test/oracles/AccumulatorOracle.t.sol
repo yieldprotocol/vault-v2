@@ -11,10 +11,28 @@ abstract contract ZeroState is Test, TestConstants {
     bytes6 public baseOne = 0x6d1caec02cbf;
     bytes6 public baseTwo = 0x8a4fee8b848e;
 
-    function setUp() public virtual {
+    function setUpMock() public {
         accumulator = new AccumulatorMultiOracle();
         accumulator.grantRole(accumulator.setSource.selector, address(this));
         accumulator.grantRole(accumulator.updatePerSecondRate.selector, address(this));
+
+        baseOne = 0x6d1caec02cbf;
+        baseTwo = 0x8a4fee8b848e;
+    }
+
+    function setUpHarness(string memory network) public {
+        accumulator = AccumulatorMultiOracle(vm.envAddress("ORACLE"));
+        baseOne = bytes6(vm.envBytes32("BASE_ONE"));
+        baseTwo = bytes6(vm.envBytes32("BASE_TWO"));
+    }
+
+    function setUp() public virtual {
+        string memory rpc = vm.envOr(RPC, HARNESS);
+        vm.createSelectFork(rpc);
+        string memory network = vm.envOr(NETWORK, LOCALHOST);
+
+        if (vm.envOr(MOCK, true)) setUpMock();
+        else setUpHarness(network);
     }
 }
 
