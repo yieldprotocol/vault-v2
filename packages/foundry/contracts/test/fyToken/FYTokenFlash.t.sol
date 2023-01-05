@@ -72,7 +72,7 @@ abstract contract ZeroState is Test, TestConstants, TestExtensions {
     }
 
     function setUp() public virtual {
-        string memory rpc = vm.envOr(RPC, HARNESS);
+        string memory rpc = vm.envOr(RPC, MAINNET);
         vm.createSelectFork(rpc);
         string memory network = vm.envOr(NETWORK, LOCALHOST);
 

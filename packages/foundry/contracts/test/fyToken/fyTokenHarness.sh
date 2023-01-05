@@ -1,21 +1,24 @@
+# addresses from https://dashboard.tenderly.co/Yield/v2/fork/78da602e-78a8-4705-b73c-3c62991231aa/contracts
+
 ARBITRUM_FYTOKENS=(\
-    
+    "0x523803c57a497c3AD0E850766c8276D4864edEA5"
+    "0x60a6A7fabe11ff36cbE917a17666848f0FF3A60a"\
+    "0xCbB7Eba13F9E1d97B2138F588f5CA2F5167F06cc"\
 )
 
-# addresses from https://dashboard.tenderly.co/Yield/v2/fork/78da602e-78a8-4705-b73c-3c62991231aa/contracts
 MAINNET_FYTOKENS=(\
-    "0x08bfc0437b795e1d0ee4e9489fa3f447385bb1f0"\
-    "0x7194d7ba2df221f369e95e7b1c109123054b3ac2"\
-    "0x2058435d65698b1cd6b06b1edb58b31a0155fa7b"\
-    "0x2ac3f3d6baeda36c28f058b5eb1038bb7bb872ab"\
+    "0x124c9F7E97235Fe3E35820f95D10aFfCe4bE9168"\
+    "0x9ca4D6fbE0Ba91d553e74805d2E2545b04AbEfEA"\
+    "0x667f185407C4CAb52aeb681f0006e4642d8091DF"\
+    "0xFA71e5f0072401dA161b1FC25a9636927AF690D0"\
 )
 
 export CI=false
-export RPC="HARNESS"
-export NETWORK="MAINNET"
+export RPC="ARBITRUM"
+export NETWORK="ARBITRUM"
 export MOCK=false
 
-for fytoken in ${MAINNET_FYTOKENS[@]}; do
+for fytoken in ${ARBITRUM_FYTOKENS[@]}; do
     echo "fyToken: " $fytoken
     FYTOKEN=$fytoken forge test -c contracts/test/fyToken/FYToken.t.sol
 done 
