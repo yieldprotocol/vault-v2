@@ -9,7 +9,7 @@ import "../../oracles/chainlink/AggregatorV3Interface.sol";
 import "../../mocks/oracles/chainlink/FlagsInterfaceMock.sol";
 import "../../mocks/oracles/chainlink/ChainlinkAggregatorV3MockEx.sol";
 import "../utils/TestConstants.sol";
-import { TestExtensions } from "../TestExtensions.sol";
+import { TestExtensions } from "../utils/TestExtensions.sol";
 
 contract ChainlinkUSDMultiOracleTest is Test, TestConstants, TestExtensions {
     ChainlinkUSDMultiOracle public oracleL1;

@@ -6,7 +6,7 @@ import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "../../oracles/strategy/StrategyOracle.sol";
 import "../../interfaces/IStrategy.sol";
 import { TestConstants } from "../utils/TestConstants.sol";
-import { TestExtensions } from "../TestExtensions.sol";
+import { TestExtensions } from "../utils/TestExtensions.sol";
 
 contract StrategyOracleTest is Test, TestConstants, TestExtensions {
     StrategyOracle public strategyOracle;
