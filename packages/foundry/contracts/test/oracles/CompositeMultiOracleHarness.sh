@@ -7,7 +7,7 @@ MAINNET_ORACLE=(\
 )
 
 export CI=false
-export RPC="HARNESS"
+export RPC="MAINNET"
 export NETWORK="MAINNET"
 export MOCK=false
 

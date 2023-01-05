@@ -61,7 +61,7 @@ contract ChainlinkMultiOracleTest is Test, TestConstants {
     }
 
     function setUp() public {
-        string memory rpc = vm.envOr(RPC, HARNESS);
+        string memory rpc = vm.envOr(RPC, MAINNET);
         vm.createSelectFork(rpc);
         string memory network = vm.envOr(NETWORK, LOCALHOST);
 
