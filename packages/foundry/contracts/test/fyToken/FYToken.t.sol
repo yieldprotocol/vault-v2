@@ -45,8 +45,8 @@ abstract contract ZeroState is Test, TestConstants, TestExtensions {
         cauldron = Cauldron(address(2));
         ladle = ILadle(address(3));
 
-        mockOracle = new CTokenChiMock();
-        mockOracle.set(220434062002504964823286680); 
+        oracle = IOracle(address(new CTokenChiMock()));
+        CTokenChiMock(address(oracle)).set(220434062002504964823286680);
 
         token = IERC20(address(new ERC20Mock("", "")));
         bytes6 mockIlkId = 0x000000000001;
@@ -54,7 +54,7 @@ abstract contract ZeroState is Test, TestConstants, TestExtensions {
 
         fyToken = new FYToken(
             mockIlkId,
-            IOracle(address(mockOracle)),
+            oracle,
             join,
             1680427572,
             "",
@@ -219,7 +219,7 @@ contract AfterMaturityTest is AfterMaturity {
     }
 
     // uses underlyingId so only
-    function testMatureRecordsChiValue() public onlyHarness {
+    function testMatureRecordsChiValue() public {
         console.log("records chi value when matured");
         vm.startPrank(timelock);
         uint256 chiAtMaturity;
