@@ -58,6 +58,10 @@ contract ChainlinkMultiOracleTest is Test, TestConstants {
 
     function setUpHarness(string memory network) public {
         chainlinkMultiOracle = ChainlinkMultiOracle(vm.envAddress("ORACLE"));
+        ilkIdA = bytes6(vm.envBytes32("BASE"));
+        ilkIdB = bytes6(vm.envBytes32("QUOTE"));
+        unitForA = uint128(10 ** ERC20Mock(address(vm.envAddress("BASE_ADDRESS"))).decimals());
+        unitForB = uint128(10 ** ERC20Mock(address(vm.envAddress("QUOTE_ADDRESS"))).decimals());
     }
 
     function setUp() public {
