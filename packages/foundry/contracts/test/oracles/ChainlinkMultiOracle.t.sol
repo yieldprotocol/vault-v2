@@ -56,7 +56,7 @@ contract ChainlinkMultiOracleTest is Test, TestConstants {
         bEthAggregator.set(unitForB / 2500);
     }
 
-    function setUpHarness(string memory network) public {
+    function setUpHarness() public {
         chainlinkMultiOracle = ChainlinkMultiOracle(vm.envAddress("ORACLE"));
         ilkIdA = bytes6(vm.envBytes32("BASE"));
         ilkIdB = bytes6(vm.envBytes32("QUOTE"));
@@ -67,10 +67,9 @@ contract ChainlinkMultiOracleTest is Test, TestConstants {
     function setUp() public {
         string memory rpc = vm.envOr(RPC, MAINNET);
         vm.createSelectFork(rpc);
-        string memory network = vm.envOr(NETWORK, LOCALHOST);
 
         if (vm.envOr(MOCK, true)) setUpMock();
-        else setUpHarness(network);
+        else setUpHarness();
     }
 
     function testGetConversion() public {
@@ -97,8 +96,8 @@ contract ChainlinkMultiOracleTest is Test, TestConstants {
 
     function testChainlinkMultiOracleConversionThroughEth() public {
         (uint256 aBAmount,) = chainlinkMultiOracle.get(bytes32(ilkIdA), bytes32(ilkIdB), unitForA);
-        assertGt(aBAmount, 0, "Get DAI-USDC conversion unsuccessful");
+        assertGt(aBAmount, 0, "Get base-quote conversion through ETH unsuccessful");
         (uint256 bAAmount,) = chainlinkMultiOracle.get(bytes32(ilkIdB), bytes32(ilkIdA), unitForB);
-        assertGt(bAAmount, 0, "Get USDC-DAI conversion unsuccessful");
+        assertGt(bAAmount, 0, "Get base-quote conversion through ETH unsuccessful");
     }
 }
