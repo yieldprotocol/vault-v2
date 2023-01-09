@@ -21,9 +21,7 @@ contract ChainlinkMultiOracleTest is Test, TestConstants {
     uint128 public unitForB;
     bytes6 public ilkIdA;
     bytes6 public ilkIdB;
-
-    uint256 public oneUSDC = 1e6;
-
+    
     function setUpMock() public {
         chainlinkMultiOracle = new ChainlinkMultiOracle();
         chainlinkMultiOracle.grantRole(chainlinkMultiOracle.setSource.selector, address(this));
