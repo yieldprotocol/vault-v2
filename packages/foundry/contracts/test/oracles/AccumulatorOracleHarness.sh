@@ -20,9 +20,12 @@ export RPC="ARBITRUM"
 export NETWORK="ARBITRUM"
 export MOCK=false
 
-for token in ${!ARBITRUM_BASES[@]}; do
-   echo     "Oracle:    " $ARBITRUM_ORACLE
-   printf   "Base:       %x\n" $token
-   echo     "Address:   " ${ARBITRUM_BASES[$token]}
-   ORACLE=$ARBITRUM_ORACLE BASE=$(printf "%x" $token) ADDRESS=${ARBITRUM_BASES[$token]} forge test -c contracts/test/oracles/AccumulatorOracle.t.sol
+for base in ${!ARBITRUM_BASES[@]}; do
+    echo     "Accumulator Oracle: " $ARBITRUM_ORACLE
+    printf   "Base:                %x\n" $base
+    echo     "Address:            " ${ARBITRUM_BASES[$base]}
+    ORACLE=$ARBITRUM_ORACLE \
+    BASE=$(printf "%x" $base) \
+    ADDRESS=${ARBITRUM_BASES[$base]} \
+    forge test -c contracts/test/oracles/AccumulatorOracle.t.sol
 done 
