@@ -14,12 +14,12 @@ export RPC="MAINNET"
 export NETWORK="MAINNET"
 export MOCK=false
 
-for oracle in ${MAINNET_ORACLE[@]}; do
-   echo     "Oracle:    " $MAINNET_ORACLE
-   printf   "Base:       %x\n" $token
-   echo     "Address:   " ${MAINNET_BASES[$token]}
-   ORACLE=$MAINNET_ORACLE \
-   BASE=$(printf "%x" $token) \
-   ADDRESS=${MAINNET_BASES[$token]} \
-   forge test -c contracts/test/oracles/CompoundMultiOracle.t.sol
+for base in ${!MAINNET_BASES[@]}; do
+    echo     "Compound Oracle: " $MAINNET_ORACLE
+    printf   "Base:             %x\n" $base
+    echo     "Address:         " ${MAINNET_BASES[$base]}
+    ORACLE=$MAINNET_ORACLE \
+    BASE=$(printf "%x" $base) \
+    BASE_ADDRESS=${MAINNET_BASES[$base]} \
+    forge test -c contracts/test/oracles/CompoundMultiOracle.t.sol
 done 

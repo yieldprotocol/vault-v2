@@ -13,7 +13,7 @@ contract CompoundMultiOracleTest is Test, TestConstants {
     CTokenRateMock public cTokenRate;
     CompoundMultiOracle public compoundMultiOracle;
 
-    bytes6 public baseId = 0x000000000001;
+    bytes6 public baseId;
     uint256 unitForBase;
 
     function setUpMock() public {
@@ -25,10 +25,13 @@ contract CompoundMultiOracleTest is Test, TestConstants {
         compoundMultiOracle.setSource(baseId, RATE, address(cTokenRate));
         cTokenChi.set(WAD * 2);
         cTokenRate.set(WAD * 3);
+
+        baseId = 0x000000000001;
     }
 
     function setUpHarness() public {
         compoundMultiOracle = CompoundMultiOracle(vm.envAddress("ORACLE"));
+        baseId = bytes6(vm.envBytes32("BASE"));
         unitForBase = 10 ** ERC20Mock(address(vm.envAddress("BASE_ADDRESS"))).decimals();
     }
 
@@ -48,12 +51,12 @@ contract CompoundMultiOracleTest is Test, TestConstants {
 
     function testSetRetrieveChiRate() public {
         (uint256 getChi,) = compoundMultiOracle.get(bytes32(baseId), bytes32(CHI), unitForBase);
-        assertEq(getChi, WAD * 2, "Failed to get CHI spot price");
+        assertGt(getChi, 0, "Failed to get CHI spot price");
         (uint256 getRate,) = compoundMultiOracle.get(bytes32(baseId), bytes32(RATE), unitForBase);
-        assertEq(getRate, WAD * 3, "Failed to get RATE spot price");
-        (uint256 peekChi,) = compoundMultiOracle.peek(bytes32(baseId), bytes32(CHI), WAD);
-        assertEq(peekChi, WAD * 2, "Failed to peek CHI spot price");
-        (uint256 peekRate,) = compoundMultiOracle.peek(bytes32(baseId), bytes32(RATE), WAD);
-        assertEq(peekRate, WAD * 3, "Failed to peek RATE spot price");
+        assertGt(getRate, 0, "Failed to get RATE spot price");
+        (uint256 peekChi,) = compoundMultiOracle.peek(bytes32(baseId), bytes32(CHI), unitForBase);
+        assertGt(peekChi, 0, "Failed to peek CHI spot price");
+        (uint256 peekRate,) = compoundMultiOracle.peek(bytes32(baseId), bytes32(RATE), unitForBase);
+        assertGt(peekRate, 0, "Failed to peek RATE spot price");
     }
 }
