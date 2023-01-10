@@ -21,12 +21,12 @@ contract CompoundMultiOracleTest is Test, TestConstants {
         cTokenRate = new CTokenRateMock();
         compoundMultiOracle = new CompoundMultiOracle();
         compoundMultiOracle.grantRole(compoundMultiOracle.setSource.selector, address(this));
+        baseId = 0x000000000001;
+        
         compoundMultiOracle.setSource(baseId, CHI, address(cTokenChi));
         compoundMultiOracle.setSource(baseId, RATE, address(cTokenRate));
         cTokenChi.set(WAD * 2);
         cTokenRate.set(WAD * 3);
-
-        baseId = 0x000000000001;
     }
 
     function setUpHarness() public {
