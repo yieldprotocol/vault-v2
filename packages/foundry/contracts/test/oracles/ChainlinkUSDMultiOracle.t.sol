@@ -8,7 +8,8 @@ import "../../oracles/chainlink/ChainlinkL2USDMultiOracle.sol";
 import "../../oracles/chainlink/AggregatorV3Interface.sol";
 import "../../mocks/oracles/chainlink/FlagsInterfaceMock.sol";
 import "../../mocks/oracles/chainlink/ChainlinkAggregatorV3MockEx.sol";
-import "../utils/TestConstants.sol";
+import { ERC20Mock } from "../../mocks/ERC20Mock.sol";
+import { TestConstants } from "../utils/TestConstants.sol";
 import { TestExtensions } from "../TestExtensions.sol";
 
 contract ChainlinkUSDMultiOracleTest is Test, TestConstants, TestExtensions {
@@ -22,7 +23,23 @@ contract ChainlinkUSDMultiOracleTest is Test, TestConstants, TestExtensions {
     address public dai = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
     address public frax = 0x853d955aCEf822Db058eb8505911ED77F175b99e;
 
-    function setUp() public {
+    // Harness vars
+    bytes6 public base;
+    bytes6 public quote;
+    uint128 public unitForBase;
+    uint128 public unitForQuote;
+
+    modifier onlyMock() {
+        if (!vm.envOr(MOCK, true)) return;
+        _;
+    }
+
+    modifier onlyHarness() {
+        if (vm.envOr(MOCK, false)) return;
+        _;
+    }
+
+    function setUpMock() public {
         vm.createSelectFork(MAINNET, 15044600);
 
         oracleL1 = new ChainlinkUSDMultiOracle();
@@ -34,7 +51,26 @@ contract ChainlinkUSDMultiOracleTest is Test, TestConstants, TestExtensions {
         oracleL2.grantRole(oracleL2.setSource.selector, address(this));
     }
 
-    function testSourceMustBeSet() public {
+    function setUpHarness() public {
+        string memory rpc = vm.envOr(RPC, MAINNET);
+        vm.createSelectFork(rpc);
+
+        oracleL2 = ChainlinkL2USDMultiOracle(vm.envAddress("ORACLE"));
+
+        base = bytes6(vm.envBytes32("BASE"));
+        quote = bytes6(vm.envBytes32("QUOTE"));
+        unitForBase = uint128(10 ** ERC20Mock(address(vm.envAddress("BASE_ADDRESS"))).decimals());
+        unitForQuote = uint128(10 ** ERC20Mock(address(vm.envAddress("QUOTE_ADDRESS"))).decimals());
+
+    }
+
+    function setUp() public {
+        if (vm.envOr(MOCK, true)) setUpMock();
+        else setUpHarness();
+    }
+
+
+    function testSourceMustBeSet() public onlyMock {
         vm.expectRevert("Source not found");
         oracleL1.peek(bytes32(DAI), bytes32(FRAX), WAD);
         oracleL1.setSource(DAI, ERC20(dai), address(daiUsdAggregator));
@@ -52,7 +88,7 @@ contract ChainlinkUSDMultiOracleTest is Test, TestConstants, TestExtensions {
         oracleL2.peek(bytes32(FRAX), bytes32(DAI), WAD);
     }
 
-    function testDoesNotAllowNon8DigitSource() public {
+    function testDoesNotAllowNon8DigitSource() public onlyMock {
         vm.expectRevert("Non-8-decimals USD source");
         oracleL1.setSource(DAI, ERC20(dai), address(aggregator));
 
@@ -60,7 +96,7 @@ contract ChainlinkUSDMultiOracleTest is Test, TestConstants, TestExtensions {
         oracleL2.setSource(DAI, ERC20(dai), address(aggregator));
     }
 
-    function testGetConversion() public {
+    function testGetConversion() public onlyMock {
         uint256 amount;
 
         oracleL1.setSource(DAI, ERC20(dai), address(daiUsdAggregator));
@@ -78,7 +114,7 @@ contract ChainlinkUSDMultiOracleTest is Test, TestConstants, TestExtensions {
         assertEq(amount, 998283706293706293, "Conversion unsuccessful");
     }
 
-    function testCannotGetConversionIfSequencerDown() public {
+    function testCannotGetConversionIfSequencerDown() public onlyMock {
         oracleL2.setSource(DAI, ERC20(dai), address(daiUsdAggregator));
         oracleL2.setSource(FRAX, ERC20(frax), address(fraxUsdAggregator));
         flagsL2.flagSetArbitrumSeqOffline(true);
@@ -86,5 +122,27 @@ contract ChainlinkUSDMultiOracleTest is Test, TestConstants, TestExtensions {
         oracleL2.peek(bytes32(DAI), bytes32(FRAX), WAD);
         flagsL2.flagSetArbitrumSeqOffline(false);
         oracleL2.peek(bytes32(DAI), bytes32(FRAX), WAD);
+    }
+
+    function testConversionHarness() public onlyHarness {
+        uint256 amount;
+        uint256 updateTime;
+        (amount, updateTime) = oracleL2.peek(base, quote, unitForBase);
+        assertGt(updateTime, 0, "Update time below lower bound");
+        assertLt(updateTime, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, "Update time above upper bound");
+
+        if (base == bytes6(ETH)) {
+            (amount,) = oracleL2.peek(bytes32(base), bytes32(quote), unitForBase);
+            assertLe(amount, 10000 * unitForQuote, "Conversion unsuccessful");
+            assertGe(amount, 100 * unitForQuote, "Conversion unsuccessful");
+        } else if (quote == bytes6(ETH)) {
+            (amount,) = oracleL2.peek(bytes32(base), bytes32(quote), unitForBase);
+            assertLe(amount, unitForQuote / 100, "Conversion unsuccessful");
+            assertGe(amount, unitForQuote / 10000, "Conversion unsuccessful");
+        } else { // both DAI & USDC
+            (amount,) = oracleL2.peek(bytes32(base), bytes32(quote), unitForBase);
+            assertLe(amount, unitForQuote + (unitForQuote / 1000));
+            assertGe(amount, unitForQuote - (unitForQuote / 1000));
+        }
     }
 }
