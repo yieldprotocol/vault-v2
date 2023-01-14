@@ -3,8 +3,8 @@ pragma solidity >=0.8.13;
 
 import "forge-std/src/Test.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "../../oracles/crab/CrabOracle.sol";
-import {ICrabStrategy} from "../../oracles/crab/CrabOracle.sol";
+import "../../oracles/opyn/CrabOracle.sol";
+import {ICrabStrategy} from "../../oracles/opyn/CrabOracle.sol";
 import "../../oracles/uniswap/UniswapV3Oracle.sol";
 import "../utils/TestConstants.sol";
 

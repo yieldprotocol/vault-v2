@@ -2,6 +2,7 @@
 pragma solidity >=0.8.13;
 
 import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
+import {wadPow, wadDiv} from "solmate/utils/SignedWadMath.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 import "../../interfaces/IOracle.sol";
 import {ICrabStrategy} from "./CrabOracle.sol";
@@ -33,6 +34,8 @@ contract ZenBullOracle is IOracle {
     IUniswapV3PoolState immutable wethUsdcPool;
     IERC20 immutable eulerDToken;
     IERC20 immutable eulerEToken;
+    bytes6 immutable usdcId;
+    bytes6 immutable zenBullId;
 
     constructor(
         ICrabStrategy crabStrategy_,
@@ -40,7 +43,9 @@ contract ZenBullOracle is IOracle {
         IUniswapV3PoolState osqthWethPool_,
         IUniswapV3PoolState wethUsdcPool_,
         IERC20 eulerDToken_,
-        IERC20 eulerEToken_
+        IERC20 eulerEToken_,
+        bytes6 usdcId_,
+        bytes6 zenBullId_
     ) {
         crabStrategy = crabStrategy_;
         zenBullStrategy = zenBullStrategy_;
@@ -48,6 +53,8 @@ contract ZenBullOracle is IOracle {
         wethUsdcPool = wethUsdcPool_;
         eulerDToken = eulerDToken_;
         eulerEToken = eulerEToken_;
+        usdcId = usdcId_;
+        zenBullId = zenBullId_;
     }
 
     /**
@@ -92,7 +99,16 @@ contract ZenBullOracle is IOracle {
         bytes6 base,
         bytes6 quote,
         uint256 baseAmount
-    ) private view returns (uint256 quoteAmount, uint256 updateTime) {}
+    ) private view returns (uint256 quoteAmount, uint256 updateTime) {
+        if (base == zenBullId && quote == usdcId) {
+            quoteAmount = baseAmount / _getZenBullPrice();
+        } else if (base == usdcId && quote == zenBullId) {
+            quoteAmount = _getZenBullPrice() * baseAmount;
+        } else {
+            revert("ZenBullOracle: Unsupported asset");
+        }
+        updateTime = block.timestamp;
+    }
 
     function _getZenBullPrice() private view returns (uint256) {
         uint256 bullUSDCDebtBalance = eulerDToken.balanceOf(
@@ -106,26 +122,32 @@ contract ZenBullOracle is IOracle {
             .getCrabVaultDetails();
         uint256 crabTotalSupply = crabStrategy.totalSupply();
         uint256 bullTotalSupply = zenBullStrategy.totalSupply();
-
         (, int24 tick, , , , , ) = osqthWethPool.slot0();
-        uint256 osqthWethPrice = (10000 / (10001**uint256(int256(tick))));
+
+        uint256 osqthWethPrice = uint256(
+            wadDiv(1e18, wadPow(10001e14, int256(tick) * 1e18))
+        );
         (, tick, , , , , ) = wethUsdcPool.slot0();
-        uint256 wethUsdcPrice = (10000 /
-            (10001**uint256(int256(tick)) * 10**(6 - 18)));
+        uint256 wethUsdcPrice = uint256(
+            wadDiv(1e18, wadPow(10001e14, int256(tick) * 1e18))
+        );
+
         uint256 crabUsdcValue = ((crabEthBalance / 1e18) *
             wethUsdcPrice -
-            (craboSqthBalance / 1e18) *
-            osqthWethPrice *
-            wethUsdcPrice);
+            ((craboSqthBalance / 1e18) * osqthWethPrice * wethUsdcPrice) /
+            1e18);
 
         uint256 crabUsdcPrice = crabUsdcValue / (crabTotalSupply / 1e18);
+
         uint256 bullUsdcValue = (bullCrabBalance / 1e18) *
             crabUsdcPrice +
             (bullWethCollateralBalance / 1e18) *
             wethUsdcPrice -
             bullUSDCDebtBalance /
             1e6;
+
         uint256 bullUsdcPrice = bullUsdcValue / (bullTotalSupply / 1e18);
+
         return bullUsdcPrice;
     }
 }
