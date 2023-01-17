@@ -17,7 +17,7 @@ contract CompositeMultiOracle is IOracle, AccessControl {
     mapping(bytes6 => mapping(bytes6 => IOracle)) public sources;
     mapping(bytes6 => mapping(bytes6 => bytes6[])) public paths;
 
-    /// @notice Set or reset a Yearn Vault Token oracle source and its inverse
+    /// @notice Set or reset an oracle source and its inverse
     /// @param  baseId id used for underlying base token
     /// @param  quoteId id used for underlying quote token
     /// @param  source Oracle contract for source
