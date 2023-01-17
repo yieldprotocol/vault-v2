@@ -8,6 +8,7 @@ import "../../oracles/composite/CompositeMultiOracle.sol";
 import "../../oracles/convex/Cvx3CrvOracle.sol";
 import "../../oracles/chainlink/AggregatorV3Interface.sol";
 import "../../oracles/convex/ICurvePool.sol";
+import { ERC20Mock } from "../../mocks/ERC20Mock.sol";
 import "../utils/TestConstants.sol";
 import { TestExtensions } from "../TestExtensions.sol";
 
@@ -27,7 +28,23 @@ contract ConvexOracleTest is Test, TestConstants, TestExtensions {
     address public usdc = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address public weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
-    function setUp() public {
+    // Harness vars
+    bytes6 public base;
+    bytes6 public quote;
+    uint128 public unitForBase;
+    uint128 public unitForQuote;
+
+    modifier onlyMock() {
+        if (!vm.envOr(MOCK, true)) return;
+        _;
+    }
+
+    modifier onlyHarness() {
+        if (vm.envOr(MOCK, false)) return;
+        _;
+    }
+
+    function setUpMock() public {
         vm.createSelectFork(MAINNET, 15044600);
 
         convexOracle = new Cvx3CrvOracle();
@@ -46,6 +63,7 @@ contract ConvexOracleTest is Test, TestConstants, TestExtensions {
             usdcEthAggregator, 
             usdtEthAggregator
         );
+
         chainlinkMultiOracle.grantRole(
             chainlinkMultiOracle.setSource.selector, 
             address(this)
@@ -64,6 +82,7 @@ contract ConvexOracleTest is Test, TestConstants, TestExtensions {
             ERC20(weth), 
             address(usdcEthAggregator)
         );
+
         bytes4[] memory roles = new bytes4[](2);
         roles[0] = compositeMultiOracle.setSource.selector;
         roles[1] = compositeMultiOracle.setPath.selector;
@@ -89,7 +108,28 @@ contract ConvexOracleTest is Test, TestConstants, TestExtensions {
         compositeMultiOracle.setPath(USDC, CVX3CRV, path);
     }
 
-    function testCvx3CrvEthConversionAndReverse() public {
+    function setUpHarness() public {
+        string memory rpc = vm.envOr(RPC, MAINNET);
+        vm.createSelectFork(rpc);
+
+        convexOracle = Cvx3CrvOracle(0x52e860327bCc464014259A7cD16DaA5763d7Dc99);
+
+        base = bytes6(vm.envBytes32("BASE"));
+        quote = bytes6(vm.envBytes32("QUOTE"));
+        console.log("here");
+        unitForBase = uint128(10 ** ERC20Mock(address(vm.envAddress("BASE_ADDRESS"))).decimals());
+        console.log("here");
+
+        unitForQuote = uint128(10 ** ERC20Mock(address(vm.envAddress("QUOTE_ADDRESS"))).decimals());
+        console.log("here");
+    }
+
+    function setUp() public {
+        if (vm.envOr(MOCK, true)) setUpMock();
+        else setUpHarness();
+    }
+
+    function testCvx3CrvEthConversionAndReverse() public onlyMock {
         (uint256 cvx3crvEthAmount,) = compositeMultiOracle.peek(CVX3CRV, ETH, WAD);
         assertEq(cvx3crvEthAmount, 902489784942936, "Conversion unsuccessful");
         (uint256 ethCvx3CrvAmount,) = compositeMultiOracle.peek(ETH, CVX3CRV, WAD);
@@ -108,17 +148,35 @@ contract ConvexOracleTest is Test, TestConstants, TestExtensions {
         assertEq(ethUsdcAmount, 1124942529, "Conversion unsuccessful");
     }
 
-    function testCvx3CrvDaiConversionAndReverse() public {
+    function testCvx3CrvDaiConversionAndReverse() public onlyMock {
         (uint256 cvx3crvDaiAmount,) = compositeMultiOracle.peek(CVX3CRV, DAI, WAD);
         assertEq(cvx3crvDaiAmount, 1016741419603662136, "Conversion unsuccessful");
         (uint256 daiCvx3CrvAmount,) = compositeMultiOracle.peek(DAI, CVX3CRV, WAD);
         assertEq(daiCvx3CrvAmount, 983534240583817131, "Conversion unsuccessful");
     }
 
-    function testCvx3CrvUsdcConversionAndReverse() public {
+    function testCvx3CrvUsdcConversionAndReverse() public onlyMock {
         (uint256 cvx3crvUsdcAmount,) = compositeMultiOracle.peek(CVX3CRV, USDC, WAD);
         assertEq(cvx3crvUsdcAmount, 1015249, "Conversion unsuccessful");
         (uint256 usdcCvx3CrvAmount,) = compositeMultiOracle.peek(USDC, CVX3CRV, 1e6);
         assertEq(usdcCvx3CrvAmount, 984979902078566898, "Conversion unsuccessful");
+    }
+
+    function testConversionHarness() public onlyHarness {
+        uint256 amount;
+        uint256 updateTime;
+        (amount, updateTime) = convexOracle.peek(base, quote, unitForBase);
+        assertGt(updateTime, 0, "Update time below lower bound");
+        assertLt(updateTime, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, "Update time above upper bound");
+
+        // if (base == bytes6(ETH)) {
+        //     (amount,) = convexOracle.peek(bytes32(base), bytes32(quote), unitForBase);
+        //     assertLe(amount, 10000 * unitForQuote, "Conversion unsuccessful");
+        //     assertGe(amount, 100 * unitForQuote, "Conversion unsuccessful");
+        // } else {
+        //     (amount,) = convexOracle.peek(bytes32(base), bytes32(quote), unitForBase);
+        //     assertLe(amount, unitForQuote / 100, "Conversion unsuccessful");
+        //     assertGe(amount, unitForQuote / 10000, "Conversion unsuccessful");
+        // }
     }
 }
