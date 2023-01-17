@@ -17,6 +17,7 @@ contract CrabOracleTest is Test, TestConstants {
     address crabStrategyV2 = 0x3B960E47784150F5a63777201ee2B15253D713e8;
     address timelock = 0x3b870db67a45611CF4723d44487EAF398fAc51E3;
 
+    // Harness vars
     bytes6 public base;
     bytes6 public quote;
     uint128 public unitForBase;

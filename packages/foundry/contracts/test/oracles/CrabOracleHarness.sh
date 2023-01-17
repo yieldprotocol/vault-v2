@@ -23,7 +23,7 @@ for base in ${!MAINNET_BASES[@]}; do
             QUOTE=$(printf "%x" $quote) \
             BASE_ADDRESS=${MAINNET_BASES[$base]} \
             QUOTE_ADDRESS=${MAINNET_BASES[$quote]} \
-            forge test -c contracts/test/oracles/CrabOracle.t.sol -m testConversionHarness -vvvv
+            forge test -c contracts/test/oracles/CrabOracle.t.sol -m testConversionHarness
         fi
     done
 done 
