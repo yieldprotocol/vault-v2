@@ -127,6 +127,4 @@ contract YearnVaultMultiOracleTest is Test, TestConstants, AccessControl {
         assertLt(updateTime, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, "Update time above upper bound");
         assertApproxEqRel(amount, 1e18, 1e18);
     }
-
-
 }
