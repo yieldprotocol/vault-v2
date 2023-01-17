@@ -33,8 +33,14 @@ contract CompositeSyncOracle is CompositeMultiOracle {
         external
         returns (IOracle source)
     {
-        require(sources[baseId][quoteId] == IOracle(address(0)), "Only new sources");
+        require(
+            sources[baseId][quoteId] == IOracle(address(0)) &&
+            sources[quoteId][baseId] == IOracle(address(0)),
+            "Only new sources"
+        );
+        require(master != ICauldron(address(0)), "Master not set");
         DataTypes.SpotOracle memory spotOracle = master.spotOracles(baseId, quoteId);
+
         source = spotOracle.oracle;
         sources[baseId][quoteId] = source;
         emit SourceSet(baseId, quoteId, source);
