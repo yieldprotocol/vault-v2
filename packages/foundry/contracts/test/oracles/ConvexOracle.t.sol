@@ -35,12 +35,12 @@ contract ConvexOracleTest is Test, TestConstants, TestExtensions {
     uint128 public unitForQuote;
 
     modifier onlyMock() {
-        if (!vm.envOr(MOCK, true)) return;
+        if (vm.envOr(MOCK, true))
         _;
     }
 
     modifier onlyHarness() {
-        if (vm.envOr(MOCK, false)) return;
+        if (vm.envOr(MOCK, true)) return;
         _;
     }
 
