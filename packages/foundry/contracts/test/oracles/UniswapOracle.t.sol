@@ -101,6 +101,9 @@ contract UniswapOracleTest is Test, TestConstants, TestExtensions {
         (amount, updateTime) = uniswapV3Oracle.peek(base, quote, unitForBase);
         assertGt(updateTime, 0, "Update time below lower bound");
         assertLt(updateTime, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, "Update time above upper bound");
-        assertApproxEqRel(amount, 1e18, 1000e18);
+        assertApproxEqRel(amount, unitForBase, 1000 * unitForBase);
+        // and reverse
+        (amount, updateTime) = uniswapV3Oracle.peek(quote, base, unitForQuote);
+        assertApproxEqRel(amount, unitForQuote, 100 * unitForQuote);
     }
 }

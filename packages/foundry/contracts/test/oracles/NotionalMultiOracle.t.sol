@@ -98,10 +98,8 @@ contract NotionalMultiOracleTest is Test, TestConstants {
         (amount, updateTime) = notionalMultiOracle.peek(base, quote, unitForBase);
         assertGt(updateTime, 0, "Update time below lower bound");
         assertLt(updateTime, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, "Update time above upper bound");
-        console.log(amount);
         assertApproxEqRel(amount, 1e8, 1e6);
         // and reverse
-        console.log(amount);
         (amount, updateTime) = notionalMultiOracle.peek(quote, base, 1e8);
         assertApproxEqRel(amount, unitForBase, unitForBase / 100);
     }
