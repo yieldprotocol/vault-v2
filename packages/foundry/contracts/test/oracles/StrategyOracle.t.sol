@@ -7,7 +7,7 @@ import "../../oracles/strategy/StrategyOracle.sol";
 import "../../interfaces/IStrategy.sol";
 import { ERC20Mock } from "../../mocks/ERC20Mock.sol";
 import { TestConstants } from "../utils/TestConstants.sol";
-import { TestExtensions } from "../TestExtensions.sol";
+import { TestExtensions } from "../utils/TestExtensions.sol";
 
 contract StrategyOracleTest is Test, TestConstants, TestExtensions {
     StrategyOracle public strategyOracle;

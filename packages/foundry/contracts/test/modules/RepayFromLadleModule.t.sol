@@ -9,7 +9,7 @@ import "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
 import "../../mocks/WETH9Mock.sol";
 import "../../modules/RepayFromLadleModule.sol";
 import "../utils/TestConstants.sol";
-import { TestExtensions } from "../TestExtensions.sol";
+import { TestExtensions } from "../utils/TestExtensions.sol";
 
 interface ILadleCustom {
     function addModule(address module, bool set) external;
