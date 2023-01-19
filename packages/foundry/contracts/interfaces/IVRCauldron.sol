@@ -79,14 +79,6 @@ interface ICauldron {
         int128 base
     ) external returns (DataTypes.Balances memory);
 
-    /// @dev Change series and debt of a vault.
-    /// The module calling this function also needs to buy underlying in the pool for the new series, and sell it in pool for the old series.
-//    function roll(
-//        bytes12 vaultId,
-//        bytes6 baseId,
-//        int128 art
-//    ) external returns (DataTypes.VRVault memory, DataTypes.Balances memory);
-
     /// @dev Reduce debt and collateral from a vault, ignoring collateralization checks.
     function slurp(
         bytes12 vaultId,

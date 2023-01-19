@@ -353,43 +353,4 @@ contract VRLadle is VRLadleStorage, AccessControl() {
             baseJoin.exit(refundTo, refund);
         }
     }
-
-//    /// @dev Change series and debt of a vault.
-//    function roll(bytes12 vaultId_, bytes6 newSeriesId, uint8 loan, uint128 max)
-//        external payable
-//        returns (DataTypes.Vault memory vault, uint128 newDebt)
-//    {
-//        bytes12 vaultId;
-//        (vaultId, vault) = getVault(vaultId_);
-//        DataTypes.Balances memory balances = cauldron.balances(vaultId);
-//        DataTypes.Series memory series = getSeries(vault.seriesId);
-//        DataTypes.Series memory newSeries = getSeries(newSeriesId);
-//        
-//        
-//        {
-//            IPool pool = getPool(newSeriesId);
-//            IFYToken fyToken = IFYToken(newSeries.fyToken);
-//            IJoin baseJoin = getJoin(series.baseId);
-//
-//            // Calculate debt in fyToken terms
-//            uint128 base = cauldron.debtToBase(vault.seriesId, balances.art);
-//
-//            // Mint fyToken to the pool, as a kind of flash loan
-//            fyToken.mint(address(pool), base * loan);                // Loan is the size of the flash loan relative to the debt amount, 2 should be safe most of the time
-//
-//            // Buy the base required to pay off the debt in series 1, and find out the debt in series 2
-//            newDebt = pool.buyBase(address(baseJoin), base, max);
-//            baseJoin.join(address(baseJoin), base);                  // Repay the old series debt
-//
-//            pool.retrieveFYToken(address(fyToken));                 // Get the surplus fyToken
-//            fyToken.burn(address(fyToken), (base * loan) - newDebt);    // Burn the surplus
-//        }
-//
-//        if (vault.ilkId != newSeries.baseId && borrowingFee != 0)
-//            newDebt += ((newSeries.maturity - block.timestamp) * uint256(newDebt).wmul(borrowingFee)).u128();  // Add borrowing fee, also stops users form rolling to a mature series
-//
-//        (vault,) = cauldron.roll(vaultId, newSeriesId, newDebt.i128() - balances.art.i128()); // Change the series and debt for the vault
-//
-//        return (vault, newDebt);
-//    }
 }

@@ -390,33 +390,6 @@ contract VRCauldron is AccessControl(), Constants {
         return balances_;
     }
 
-    /// @dev Change base and debt of a vault.
-    /// The module calling this function also needs to buy underlying in the pool for the new series, and sell it in pool for the old series.
-//    function roll(bytes12 vaultId, bytes6 newSeriesId, int128 art)
-//        external
-//        auth
-//        returns (DataTypes.VRVault memory, DataTypes.Balances memory)
-//    {
-//        (DataTypes.VRVault memory vault_, DataTypes.Series memory oldSeries_, DataTypes.Balances memory balances_) = vaultData(vaultId);
-//        DataTypes.Series memory newSeries_ = series[newSeriesId];
-//        require (oldSeries_.baseId == newSeries_.baseId, "Mismatched bases in series");
-//
-//        // Set the vault art to zero
-//        int128 oldArt = balances_.art.i128();
-//        balances_ = _pour(vaultId, vault_, balances_, oldSeries_, 0, -oldArt);
-//
-//        // Change the vault series
-//        _tweak(vaultId, newSeriesId, vault_.ilkId);
-//
-//        // Set the vault art to it's newSeries value by adding `art` to that from the old series
-//        balances_ = _pour(vaultId, vault_, balances_, newSeries_, 0, oldArt + art);
-//
-//        require(_level(vault_, balances_, newSeries_) >= 0, "Undercollateralized");
-//        emit VaultRolled(vaultId, newSeriesId, balances_.art);
-//
-//        return (vault_, balances_);
-//    }
-
     // ==== Accounting ====
 
     /// @dev Return the collateralization level of a vault. It will be negative if undercollateralized.
