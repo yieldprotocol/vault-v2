@@ -2,9 +2,11 @@
 pragma solidity >=0.8.13;
 
 import "forge-std/src/Test.sol";
-import { Mocks } from "../utils/Mocks.sol";
+import { IPool } from "@yield-protocol/yieldspace-tv/src/interfaces/IPool.sol";
+import { IPoolOracle } from "@yield-protocol/yieldspace-tv/src/interfaces/IPoolOracle.sol";
 import { YieldSpaceMultiOracle } from "../../oracles/yieldspace/YieldSpaceMultiOracle.sol";
 import { ERC20Mock } from "../../mocks/ERC20Mock.sol";
+import { Mocks } from "../utils/Mocks.sol";
 import { TestConstants } from "../utils/TestConstants.sol";
 
 contract YieldSpaceMultiOracleTest is Test, TestConstants {

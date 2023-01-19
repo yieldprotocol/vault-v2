@@ -5,6 +5,7 @@ import "forge-std/src/Test.sol";
 import { AccessControl } from "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import { ChainlinkMultiOracle } from "../../oracles/chainlink/ChainlinkMultiOracle.sol";
 import { CompositeMultiOracle } from "../../oracles/composite/CompositeMultiOracle.sol";
+import { IOracle } from "../../interfaces/IOracle.sol";
 import { WETH9Mock } from "../../mocks/WETH9Mock.sol";
 import { DAIMock } from "../../mocks/DAIMock.sol";
 import { USDCMock } from "../../mocks/USDCMock.sol";
