@@ -3,8 +3,9 @@ pragma solidity >=0.8.13;
 
 import "forge-std/src/Test.sol";
 import "../utils/Mocks.sol";
-import "../utils/TestConstants.sol";
 import "../../oracles/yieldspace/YieldSpaceMultiOracle.sol";
+import { ERC20Mock } from "../../mocks/ERC20Mock.sol";
+import { TestConstants } from "../utils/TestConstants.sol";
 
 contract YieldSpaceMultiOracleTest is Test, TestConstants {
     using Mocks for *;
@@ -210,12 +211,12 @@ contract YieldSpaceMultiOracleTest is Test, TestConstants {
     function testConversionHarness() public onlyMock {
         uint256 amount;
         uint256 updateTime;
-        (amount, updateTime) = strategyOracle.peek(base, quote, unitForBase);
+        (amount, updateTime) = oracle.peek(base, quote, unitForBase);
         assertGt(updateTime, 0, "Update time below lower bound");
         assertLt(updateTime, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, "Update time above upper bound");
         assertApproxEqRel(amount, unitForBase, unitForBase / 100);
         // and reverse
-        (amount, updateTime) = strategyOracle.peek(quote, base, unitForQuote);
+        (amount, updateTime) = oracle.peek(quote, base, unitForQuote);
         assertApproxEqRel(amount, unitForQuote, unitForQuote / 100);
     }
 }
