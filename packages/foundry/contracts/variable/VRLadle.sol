@@ -2,9 +2,9 @@
 pragma solidity >=0.8.13;
 import "../interfaces/IFYToken.sol";
 import "../interfaces/IJoin.sol";
-import "../interfaces/IVRCauldron.sol";
 import "../interfaces/IOracle.sol";
 import "../interfaces/DataTypes.sol";
+import "./interfaces/IVRCauldron.sol";
 import "@yield-protocol/yieldspace-tv/src/interfaces/IPool.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC2612.sol";
@@ -27,14 +27,14 @@ contract VRLadle is VRLadleStorage, AccessControl() {
     using TransferHelper for IERC20;
     using TransferHelper for address payable;
 
-    constructor (IVRCauldron cauldron, IWETH9 weth) LadleStorage(cauldron, weth) { }
+    constructor (IVRCauldron cauldron, IWETH9 weth) VRLadleStorage(cauldron, weth) { }
 
     // ---- Data sourcing ----
     /// @dev Obtains a vault by vaultId from the Cauldron, and verifies that msg.sender is the owner
     /// If bytes(0) is passed as the vaultId it tries to load a vault from the cache
     function getVault(bytes12 vaultId_)
         internal view
-        returns (bytes12 vaultId, DataTypes.Vault memory vault)
+        returns (bytes12 vaultId, DataTypes.VRVault memory vault)
     {
         if (vaultId_ == bytes12(0)) { // We use the cache
             require (cachedVaultId != bytes12(0), "Vault not cached");
@@ -240,7 +240,7 @@ contract VRLadle is VRLadleStorage, AccessControl() {
     /// @dev Create a new vault, linked to a series (and therefore underlying) and a collateral
     function build(bytes6 baseId, bytes6 ilkId, uint8 salt)
         external virtual payable
-        returns(bytes12, DataTypes.Vault memory)
+        returns(bytes12, DataTypes.VRVault memory)
     {
         return _build(baseId, ilkId, salt);
     }
@@ -248,7 +248,7 @@ contract VRLadle is VRLadleStorage, AccessControl() {
     /// @dev Create a new vault, linked to a series (and therefore underlying) and a collateral
     function _build(bytes6 baseId, bytes6 ilkId, uint8 salt)
         internal
-        returns(bytes12 vaultId, DataTypes.Vault memory vault)
+        returns(bytes12 vaultId, DataTypes.VRVault memory vault)
     {
         vaultId = _generateVaultId(salt);
         while (cauldron.vaults(vaultId).baseId != bytes6(0)) vaultId = _generateVaultId(++salt); // If the vault exists, generate other random vaultId
@@ -260,7 +260,7 @@ contract VRLadle is VRLadleStorage, AccessControl() {
     /// @dev Change a vault base or collateral.
     function tweak(bytes12 vaultId_, bytes6 baseId, bytes6 ilkId)
         external payable
-        returns(DataTypes.Vault memory vault)
+        returns(DataTypes.VRVault memory vault)
     {
         (bytes12 vaultId, ) = getVault(vaultId_); // getVault verifies the ownership as well
         // tweak checks that the series and the collateral both exist and that the collateral is approved for the series
@@ -270,7 +270,7 @@ contract VRLadle is VRLadleStorage, AccessControl() {
     /// @dev Give a vault to another user.
     function give(bytes12 vaultId_, address receiver)
         external payable
-        returns(DataTypes.Vault memory vault)
+        returns(DataTypes.VRVault memory vault)
     {
         (bytes12 vaultId, ) = getVault(vaultId_);
         vault = cauldron.give(vaultId, receiver);
@@ -298,12 +298,12 @@ contract VRLadle is VRLadleStorage, AccessControl() {
     /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
     /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
     /// Borrow only before maturity.
-    function _pour(bytes12 vaultId, DataTypes.Vault memory vault, address to, int128 ink, int128 base)
+    function _pour(bytes12 vaultId, DataTypes.VRVault memory vault, address to, int128 ink, int128 base)
         private
     {
         int128 fee;
-        if (base > 0 && vault.ilkId != series.baseId && borrowingFee != 0)
-            fee = ((series.maturity - block.timestamp) * uint256(int256(base)).wmul(borrowingFee)).i128();
+        if (base > 0 && vault.ilkId != vault.baseId && borrowingFee != 0)
+            fee = uint256(int256(base)).wmul(borrowingFee).i128();
 
         // Update accounting
         cauldron.pour(vaultId, ink, base + fee);
@@ -329,7 +329,7 @@ contract VRLadle is VRLadleStorage, AccessControl() {
     function pour(bytes12 vaultId_, address to, int128 ink, int128 base)
         external payable
     {
-        (bytes12 vaultId, DataTypes.Vault memory vault) = getVault(vaultId_);
+        (bytes12 vaultId, DataTypes.VRVault memory vault) = getVault(vaultId_);
         _pour(vaultId, vault, to, ink, base);
     }
 
@@ -339,7 +339,7 @@ contract VRLadle is VRLadleStorage, AccessControl() {
         external payable
         returns (uint128 base, uint256 refund)
     {
-        (bytes12 vaultId, DataTypes.Vault memory vault) = getVault(vaultId_);
+        (bytes12 vaultId, DataTypes.VRVault memory vault) = getVault(vaultId_);
 
         DataTypes.Balances memory balances = cauldron.balances(vaultId);
         base = cauldron.debtToBase(vault.baseId, balances.art);
@@ -349,8 +349,8 @@ contract VRLadle is VRLadleStorage, AccessControl() {
         // ask for no refund (with refundTo == address(0)), and save gas
         if (refundTo != address(0)) {
             IJoin baseJoin = getJoin(vault.baseId);
-            refund = IERC20(baseJoin.asset()) - baseJoin.storedBalance();
-            baseJoin.exit(refundTo, refund);
+            refund = IERC20(baseJoin.asset()).balanceOf(address(baseJoin)) - baseJoin.storedBalance();
+            baseJoin.exit(refundTo, refund.u128());
         }
     }
 }

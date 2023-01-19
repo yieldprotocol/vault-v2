@@ -11,12 +11,11 @@ import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
 import "@yield-protocol/utils-v2/contracts/math/WDivUp.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U128.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastU256U32.sol";
-import "../interfaces/IVYToken.sol";
 import "../interfaces/IJoin.sol";
 import "../interfaces/IOracle.sol";
 import "../constants/Constants.sol";
 
-contract VYToken is IVYToken, IERC3156FlashLender, AccessControl, ERC20Permit, Constants {
+contract VYToken is IERC3156FlashLender, AccessControl, ERC20Permit, Constants {
     using WMul for uint256;
     using WDiv for uint256;
     using WDivUp for uint256;
@@ -33,8 +32,8 @@ contract VYToken is IVYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
     uint256 public flashFeeFactor = FLASH_LOANS_DISABLED; // Fee on flash loans, as a percentage in fixed point with 18 decimals. Flash loans disabled by default by overflow from `flashFee`.
 
     IOracle public oracle; // Oracle for the savings rate.
-    IJoin public override join; // Source of redemption funds.
-    address public immutable override underlying;
+    IJoin public join; // Source of redemption funds.
+    address public immutable underlying;
     bytes6 public immutable underlyingId; // Needed to access the oracle
 
     constructor(
@@ -48,7 +47,6 @@ contract VYToken is IVYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
 
         underlyingId = underlyingId_;
         join = join_;
-        maturity = maturity_;
         underlying = address(IJoin(join_).asset());
         oracle = oracle_;
     }
@@ -56,7 +54,6 @@ contract VYToken is IVYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
     /// @dev Point to a different Oracle or Join
     function point(bytes32 param, address value) external auth {
         if (param == "oracle") {
-            require (chiAtMaturity == CHI_NOT_SET, "Already matured");
             oracle = IOracle(value);
         } else if (param == "join") {
             join = IJoin(value);
@@ -71,7 +68,7 @@ contract VYToken is IVYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
     }
 
     ///@dev Converts the amount of the principal to the underlying
-    function convertToUnderlying(uint256 principalAmount) external override returns (uint256 underlyingAmount) {
+    function convertToUnderlying(uint256 principalAmount) external returns (uint256 underlyingAmount) {
         return _convertToUnderlying(principalAmount);
     }
 
@@ -83,7 +80,7 @@ contract VYToken is IVYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
     }
 
     ///@dev Converts the amount of the underlying to the principal
-    function convertToPrincipal(uint256 underlyingAmount) external override returns (uint256 principalAmount) {
+    function convertToPrincipal(uint256 underlyingAmount) external returns (uint256 principalAmount) {
         return _convertToPrincipal(underlyingAmount);
     }
 
@@ -95,18 +92,18 @@ contract VYToken is IVYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
     }
 
     ///@dev returns the maximum redeemable amount for the address holder in terms of the principal
-    function maxRedeem(address holder) external override view returns (uint256 maxPrincipalAmount) {
+    function maxRedeem(address holder) external view returns (uint256 maxPrincipalAmount) {
         return _balanceOf[holder];
     }
 
     ///@dev returns the amount of underlying redeemable in terms of the principal
-    function previewRedeem(uint256 principalAmount) external override returns (uint256 underlyingAmount) {
+    function previewRedeem(uint256 principalAmount) external returns (uint256 underlyingAmount) {
         return _convertToUnderlying(principalAmount);
     }
 
     /// @dev Burn vyToken after maturity for an amount of principal that increases according to `chi`
     /// If `amount` is 0, the contract will redeem instead the vyToken balance of this contract. Useful for batches.
-    function redeem(uint256 principalAmount, address receiver, address holder) external override returns (uint256 underlyingAmount) {
+    function redeem(uint256 principalAmount, address receiver, address holder) external returns (uint256 underlyingAmount) {
         principalAmount = (principalAmount == 0) ? _balanceOf[address(this)] : principalAmount;
         _burn(holder, principalAmount);
         underlyingAmount = _convertToUnderlying(principalAmount);
@@ -117,7 +114,7 @@ contract VYToken is IVYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
 
     /// @dev Burn vyToken after maturity for an amount of principal that increases according to `chi`
     /// If `amount` is 0, the contract will redeem instead the vyToken balance of this contract. Useful for batches.
-    function redeem(address receiver, uint256 principalAmount) external override returns (uint256 underlyingAmount) {
+    function redeem(address receiver, uint256 principalAmount) external returns (uint256 underlyingAmount) {
         principalAmount = (principalAmount == 0) ? _balanceOf[address(this)] : principalAmount;
         _burn(msg.sender, principalAmount);
         underlyingAmount = _convertToUnderlying(principalAmount);
@@ -127,18 +124,18 @@ contract VYToken is IVYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
     }
 
     ///@dev returns the maximum withdrawable amount for the address holder in terms of the underlying
-    function maxWithdraw(address holder) external override returns (uint256 maxUnderlyingAmount) {
+    function maxWithdraw(address holder) external returns (uint256 maxUnderlyingAmount) {
         return _convertToUnderlying(_balanceOf[holder]);
     }
 
     ///@dev returns the amount of the principal withdrawable in terms of the underlying
-    function previewWithdraw(uint256 underlyingAmount) external override returns (uint256 principalAmount) {
+    function previewWithdraw(uint256 underlyingAmount) external returns (uint256 principalAmount) {
         return _convertToPrincipal(underlyingAmount);
     }
 
     /// @dev Burn vyToken after maturity for an amount of underlying that increases according to `chi`
     /// If `amount` is 0, the contract will redeem instead the vyToken balance of this contract. Useful for batches.
-    function withdraw(uint256 underlyingAmount, address receiver, address holder) external override returns (uint256 principalAmount) {
+    function withdraw(uint256 underlyingAmount, address receiver, address holder) external returns (uint256 principalAmount) {
         principalAmount = (underlyingAmount == 0) ? _balanceOf[address(this)] : _convertToPrincipal(underlyingAmount);
         _burn(holder, principalAmount);
         underlyingAmount = _convertToUnderlying(principalAmount);
@@ -148,34 +145,34 @@ contract VYToken is IVYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
     }
 
     /// @dev Mint vyTokens.
-    function mint(address receiver, uint256 principalAmount) external override auth {
-        join.join(msg.sender, _convertToUnderlying(principalAmount.u128()));
+    function mint(address receiver, uint256 principalAmount) external auth {
+        join.join(msg.sender, _convertToUnderlying(principalAmount).u128());
         _mint(receiver, principalAmount);
     }
 
     ///@dev returns the maximum mintable amount for the address holder in terms of the principal
-    function maxMint(address holder) external override returns (uint256 maxPrincipalAmount) {
+    function maxMint(address holder) external returns (uint256 maxPrincipalAmount) {
         return type(uint256).max - _totalSupply;
     }
 
     ///@dev returns the amount of the principal mintable in terms of the underlying
-    function previewMint(uint256 principalAmount) external override returns (uint256 underlyingAmount) {
+    function previewMint(uint256 principalAmount) external returns (uint256 underlyingAmount) {
         return _convertToUnderlying(principalAmount.u128());
     }
 
     /// @dev Mint vyTokens.
-    function deposit(address receiver, uint256 underlyingAmount) external override auth {
-        join.join(msg.sender, underlyingAmount.u128()));
+    function deposit(address receiver, uint256 underlyingAmount) external auth {
+        join.join(msg.sender, underlyingAmount.u128());
         _mint(receiver, _convertToPrincipal(underlyingAmount));
     }
 
     ///@dev returns the maximum depositable amount for the address holder in terms of the underlying
-    function maxDeposit(address holder) external override returns (uint256 maxUnderlyingAmount) {
+    function maxDeposit(address holder) external returns (uint256 maxUnderlyingAmount) {
         return _convertToUnderlying(type(uint256).max - _totalSupply);
     }
 
     ///@dev returns the amount of the underlying depositable in terms of the principal
-    function previewDeposit(uint256 underlyingAmount) external override returns (uint256 principalAmount) {
+    function previewDeposit(uint256 underlyingAmount) external returns (uint256 principalAmount) {
         return _convertToPrincipal(underlyingAmount.u128());
     }
 
@@ -203,7 +200,7 @@ contract VYToken is IVYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
      * @param token The loan currency. It must be a VYToken contract.
      * @return The amount of `token` that can be borrowed.
      */
-    function maxFlashLoan(address token) external view override returns (uint256) {
+    function maxFlashLoan(address token) external view returns (uint256) {
         return token == address(this) ? type(uint256).max - _totalSupply : 0;
     }
 
@@ -213,7 +210,7 @@ contract VYToken is IVYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
      * @param principalAmount The amount of tokens lent.
      * @return The amount of `token` to be charged for the loan, on top of the returned principal.
      */
-    function flashFee(address token, uint256 principalAmount) external view override returns (uint256) {
+    function flashFee(address token, uint256 principalAmount) external view returns (uint256) {
         require(token == address(this), "Unsupported currency");
         return _flashFee(principalAmount);
     }
@@ -241,7 +238,7 @@ contract VYToken is IVYToken, IERC3156FlashLender, AccessControl, ERC20Permit, C
         address token,
         uint256 principalAmount,
         bytes memory data
-    ) external override returns (bool) {
+    ) external returns (bool) {
         require(token == address(this), "Unsupported currency");
         _mint(address(receiver), principalAmount);
         uint128 fee = _flashFee(principalAmount).u128();

@@ -134,7 +134,7 @@ contract VRCauldron is AccessControl(), Constants {
         auth
     {
         require (
-            bases[baseId] != bytes6(0),
+            bases[baseId],
             "Base not found"
         );
         for (uint256 i; i < ilkIds.length; i++) {
@@ -156,8 +156,8 @@ contract VRCauldron is AccessControl(), Constants {
         returns(DataTypes.VRVault memory vault)
     {
         require (vaultId != bytes12(0), "Vault id is zero");
-        require (baseId != bytes12(0), "Base id is zero");
-        require (ilkId != bytes12(0), "Ilk id is zero");
+        require (baseId != bytes6(0), "Base id is zero");
+        require (ilkId != bytes6(0), "Ilk id is zero");
         require (vaults[vaultId].baseId == bytes6(0), "Vault already exists");   // Series can't take bytes6(0) as their id
         require (ilks[baseId][ilkId] == true, "Ilk not added to base");
         vault = DataTypes.VRVault({
@@ -269,7 +269,7 @@ contract VRCauldron is AccessControl(), Constants {
         returns (uint128 art)
     {
         (uint256 rate,) = rateOracles[baseId].get(baseId, RATE, 0);   // The value returned is an accumulator, it doesn't need an input amount
-        art = uint256(base).wdivup(rate.u128();
+        art = uint256(base).wdivup(rate).u128();
     }
 
     /// @dev Convert a debt amount for a to base terms
@@ -277,8 +277,7 @@ contract VRCauldron is AccessControl(), Constants {
         external
         returns (uint128 base)
     {
-        (uint256 rate,) = rateOracles[baseId].get(baseId, RATE, 0);   // The value returned is an accumulator, it doesn't need an input amount
-        base = uint256(art).wmul(rate.u128();
+        _debtToBase(baseId, art);
     }
 
     /// @dev Convert a debt amount for a to base terms
@@ -286,7 +285,8 @@ contract VRCauldron is AccessControl(), Constants {
         internal
         returns (uint128 base)
     {
-        base = debtToBase(baseId, art);
+        (uint256 rate,) = rateOracles[baseId].get(baseId, RATE, 0);   // The value returned is an accumulator, it doesn't need an input amount
+        base = uint256(art).wmul(rate).u128();
     }
 
     /// @dev Move collateral and debt between vaults.
@@ -296,8 +296,8 @@ contract VRCauldron is AccessControl(), Constants {
         returns (DataTypes.Balances memory, DataTypes.Balances memory)
     {
         require (from != to, "Identical vaults");
-        (DataTypes.VRVault memory vaultFrom, , DataTypes.Balances memory balancesFrom) = vaultData(from);
-        (DataTypes.VRVault memory vaultTo, , DataTypes.Balances memory balancesTo) = vaultData(to);
+        (DataTypes.VRVault memory vaultFrom, DataTypes.Balances memory balancesFrom) = vaultData(from);
+        (DataTypes.VRVault memory vaultTo, DataTypes.Balances memory balancesTo) = vaultData(to);
 
         if (ink > 0) {
             require (vaultFrom.ilkId == vaultTo.ilkId, "Different collateral");
@@ -313,8 +313,8 @@ contract VRCauldron is AccessControl(), Constants {
         balances[from] = balancesFrom;
         balances[to] = balancesTo;
 
-        if (ink > 0) require(_level(vaultFrom, balancesFrom, vaultFrom.baseId) >= 0, "Undercollateralized at origin");
-        if (art > 0) require(_level(vaultTo, balancesTo, vaultTo.baseId) >= 0, "Undercollateralized at destination");
+        if (ink > 0) require(_level(vaultFrom, balancesFrom) >= 0, "Undercollateralized at origin");
+        if (art > 0) require(_level(vaultTo, balancesTo) >= 0, "Undercollateralized at destination");
 
         emit VaultStirred(from, to, ink, art);
         return (balancesFrom, balancesTo);
@@ -383,9 +383,9 @@ contract VRCauldron is AccessControl(), Constants {
         (DataTypes.VRVault memory vault_, DataTypes.Balances memory balances_) = vaultData(vaultId);
 
         // Normalize the base amount to debt terms
-        int128 art = _debtFromBase(vault_.baseId, base.u128()).i128();
+        int128 art = _debtFromBase(vault_.baseId, base).i128();
 
-        balances_ = _pour(vaultId, vault_, balances_, -(ink.i128()), -(art.i128()));
+        balances_ = _pour(vaultId, vault_, balances_, -(ink.i128()), -art);
 
         return balances_;
     }
@@ -413,7 +413,7 @@ contract VRCauldron is AccessControl(), Constants {
         DataTypes.SpotOracle memory spotOracle_ = spotOracles[vault_.baseId][vault_.ilkId];
         uint256 ratio = uint256(spotOracle_.ratio) * 1e12;   // Normalized to 18 decimals
         (uint256 inkValue,) = spotOracle_.oracle.get(vault_.ilkId, vault_.baseId, balances_.ink);    // ink * spot
-        uint256 baseValue = _debtToBase(vault_.baseId, balances_.art.u128());                        // art * rate
+        uint256 baseValue = _debtToBase(vault_.baseId, balances_.art);                                 // art * rate
         return inkValue.i256() - baseValue.wmul(ratio).i256();
     }
 }
