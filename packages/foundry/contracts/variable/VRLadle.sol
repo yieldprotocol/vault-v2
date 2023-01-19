@@ -335,7 +335,7 @@ contract VRLadle is VRLadleStorage, AccessControl() {
 
     /// @dev Repay all debt in a vault.
     /// The base tokens need to be already in the join, unaccounted for. The surplus base will be returned to msg.sender.
-    function repay(bytes12 vaultId_, address inkTo, address refundTo, int128 ink, uint128 max)
+    function repay(bytes12 vaultId_, address inkTo, address refundTo, int128 ink)
         external payable
         returns (uint128 base, uint256 refund)
     {
@@ -345,9 +345,13 @@ contract VRLadle is VRLadleStorage, AccessControl() {
         base = cauldron.debtToBase(vault.baseId, balances.art);
         _pour(vaultId, vault, inkTo, ink, -(base.i128()));
 
-        IJoin baseJoin = getJoin(vault.baseId);
-        refund = IERC20(baseJoin.asset()) - baseJoin.storedBalance();
-        baseJoin.exit(refundTo, refund);
+        // Given the low rate of change, we probably prefer to send a few extra wei to the join,
+        // ask for no refund (with refundTo == address(0)), and save gas
+        if (refundTo != address(0)) {
+            IJoin baseJoin = getJoin(vault.baseId);
+            refund = IERC20(baseJoin.asset()) - baseJoin.storedBalance();
+            baseJoin.exit(refundTo, refund);
+        }
     }
 
 //    /// @dev Change series and debt of a vault.
