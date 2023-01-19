@@ -87,5 +87,8 @@ contract StrategyOracleTest is Test, TestConstants, TestExtensions {
         assertGt(updateTime, 0, "Update time below lower bound");
         assertLt(updateTime, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, "Update time above upper bound");
         assertApproxEqRel(amount, 1e18, 1e18);
+        // and reverse
+        (amount, updateTime) = strategyOracle.peek(quote, base, unitForQuote);
+        assertApproxEqRel(amount, 1e18, 1e18);
     }
 }
