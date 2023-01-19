@@ -214,9 +214,9 @@ contract YieldSpaceMultiOracleTest is Test, TestConstants {
         (amount, updateTime) = oracle.peek(base, quote, unitForBase);
         assertGt(updateTime, 0, "Update time below lower bound");
         assertLt(updateTime, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, "Update time above upper bound");
-        assertApproxEqRel(amount, unitForBase, unitForBase / 100);
+        assertApproxEqRel(amount, unitForQuote, unitForQuote / 100);
         // and reverse
         (amount, updateTime) = oracle.peek(quote, base, unitForQuote);
-        assertApproxEqRel(amount, unitForQuote, unitForQuote / 100);
+        assertApproxEqRel(amount, unitForBase, unitForBase / 100);
     }
 }
