@@ -21,5 +21,5 @@ for base in ${!MAINNET_BASES[@]}; do
     ORACLE=$MAINNET_ORACLE \
     BASE=$(printf "%x" $base) \
     BASE_ADDRESS=${MAINNET_BASES[$base]} \
-    forge test -c contracts/test/oracles/CompoundMultiOracle.t.sol
+    forge test -c contracts/test/oracles/CompoundMultiOracle.t.sol -m testConversionHarness
 done 

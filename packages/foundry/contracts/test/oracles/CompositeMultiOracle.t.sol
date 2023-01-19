@@ -2,167 +2,162 @@
 pragma solidity >=0.8.13;
 
 import "forge-std/src/Test.sol";
-import { IERC20 } from "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
-import { IERC20Metadata } from "@yield-protocol/utils-v2/contracts/token/IERC20Metadata.sol";
-import { IOracle } from "../../interfaces/IOracle.sol";
-import { ChainlinkMultiOracle } from "../../oracles/chainlink/ChainlinkMultiOracle.sol";
-import { CompositeMultiOracle } from "../../oracles/composite/CompositeMultiOracle.sol";
-import { WETH9Mock } from "../../mocks/WETH9Mock.sol";
-import { ChainlinkAggregatorV3Mock } from "../../mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol";
+import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import "../../oracles/chainlink/ChainlinkMultiOracle.sol";
+import "../../oracles/composite/CompositeMultiOracle.sol";
+import "../../mocks/DAIMock.sol";
+import "../../mocks/USDCMock.sol";
+import "../../mocks/WETH9Mock.sol";
 import { ERC20Mock } from "../../mocks/ERC20Mock.sol";
-import { TestConstants } from "../utils/TestConstants.sol";
+import "../../mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol";
+import "../utils/TestConstants.sol";
 
-contract CompositeMultiOracleTest is Test, TestConstants {
+contract CompositeMultiOracleTest is Test, TestConstants, AccessControl {
 
     event SourceSet(bytes6 indexed baseId, bytes6 indexed quoteId, IOracle indexed source);
     event PathSet(bytes6 indexed baseId, bytes6 indexed quoteId, bytes6[] indexed path);
 
+    DAIMock public dai;
+    USDCMock public usdc;
     WETH9Mock public weth;
     ChainlinkMultiOracle public chainlinkMultiOracle;
     CompositeMultiOracle public compositeMultiOracle;
-    ChainlinkAggregatorV3Mock public aEthAggregator; 
-    ChainlinkAggregatorV3Mock public bEthAggregator;
-    address timelock;
-    IERC20 public tokenA;
-    IERC20 public tokenB;
-    uint128 public unitForA;
-    uint128 public unitForB;
-    bytes6 public ilkIdA;
-    bytes6 public ilkIdB;
+    ChainlinkAggregatorV3Mock public daiEthAggregator; 
+    ChainlinkAggregatorV3Mock public usdcEthAggregator;
+
+    bytes32 public mockBytes32 = 0x0000000000000000000000000000000000000000000000000000000000000001;
+    uint256 public oneUSDC = WAD / 1000000000000;
     bytes6[] public path = new bytes6[](1);
 
+    // Harness vars
+    bytes6 public base;
+    bytes6 public quote;
+    uint128 public unitForBase;
+    uint128 public unitForQuote;
+
     modifier onlyMock() {
-        if (!vm.envOr(MOCK, true)) return;
+        if (vm.envOr(MOCK, true))
+        _;
+    }
+
+    modifier onlyHarness() {
+        if (vm.envOr(MOCK, true)) return;
         _;
     }
 
     function setUpMock() public {
-        chainlinkMultiOracle = new ChainlinkMultiOracle();
-        chainlinkMultiOracle.grantRole(ChainlinkMultiOracle.setSource.selector, address(this));
-
-        tokenA = IERC20(address(new ERC20Mock("", "")));
-        tokenB = IERC20(address(new ERC20Mock("", "")));
-        unitForA = uint128(10 ** ERC20Mock(address(tokenA)).decimals());
-        unitForB = uint128(10 ** ERC20Mock(address(tokenB)).decimals());
-        ilkIdA = 0x000000000001;
-        ilkIdB = 0x000000000002;
+        dai = new DAIMock();
+        usdc = new USDCMock();
         weth = new WETH9Mock();
-        aEthAggregator = new ChainlinkAggregatorV3Mock();
-        bEthAggregator = new ChainlinkAggregatorV3Mock();
-
-        chainlinkMultiOracle.setSource(
-            ilkIdA, 
-            IERC20Metadata(address(tokenA)), 
-            ETH, 
-            weth, 
-            address(aEthAggregator)
-        );
-        chainlinkMultiOracle.setSource(
-            ilkIdB, 
-            IERC20Metadata(address(tokenB)), 
-            ETH, 
-            weth, 
-            address(bEthAggregator)
-        );
-        aEthAggregator.set(unitForA / 2500);
-        bEthAggregator.set(unitForB / 2500);
-
+        daiEthAggregator = new ChainlinkAggregatorV3Mock();
+        usdcEthAggregator = new ChainlinkAggregatorV3Mock();
+        chainlinkMultiOracle = new ChainlinkMultiOracle();
+        chainlinkMultiOracle.grantRole(0xef532f2e, address(this));
+        chainlinkMultiOracle.setSource(DAI, dai, ETH, weth, address(daiEthAggregator));
+        chainlinkMultiOracle.setSource(USDC, usdc, ETH, weth, address(usdcEthAggregator));
+        vm.warp(uint256(mockBytes32));
+        // WAD / 2500 here represents the amount of ETH received for either 1 DAI or 1 USDC
+        daiEthAggregator.set(WAD / 2500);
+        usdcEthAggregator.set(WAD / 2500);
+        bytes4[] memory roles = new bytes4[](2);
+        roles[0] = 0x92b45d9c;
+        roles[1] = 0x60509e5f;
         compositeMultiOracle = new CompositeMultiOracle();
-        compositeMultiOracle.grantRole(CompositeMultiOracle.setSource.selector, address(this));
-        compositeMultiOracle.grantRole(CompositeMultiOracle.setPath.selector, address(this));
-        compositeMultiOracle.grantRole(CompositeMultiOracle.peek.selector, address(this));
+        compositeMultiOracle.grantRoles(roles, address(this));
     }
 
-    function setUpHarness(string memory network) public {
-        timelock = addresses[network][TIMELOCK];
+    function setUpHarness() public {
+        string memory rpc = vm.envOr(RPC, MAINNET);
+        vm.createSelectFork(rpc);
 
-        chainlinkMultiOracle = ChainlinkMultiOracle(vm.envAddress("CHAINLINK_ORACLE"));
-        compositeMultiOracle = CompositeMultiOracle(vm.envAddress("COMPOSITE_ORACLE"));
-        ilkIdA = bytes6(vm.envBytes32("BASE"));
-        ilkIdB = bytes6(vm.envBytes32("QUOTE"));
-        unitForA = uint128(10 ** ERC20Mock(address(vm.envAddress("BASE_ADDRESS"))).decimals());
-        unitForB = uint128(10 ** ERC20Mock(address(vm.envAddress("QUOTE_ADDRESS"))).decimals());
-    
-        vm.startPrank(timelock);
-        compositeMultiOracle.grantRole(compositeMultiOracle.setSource.selector, address(this));
-        compositeMultiOracle.grantRole(compositeMultiOracle.setPath.selector, address(this));
-        vm.stopPrank();
+        compositeMultiOracle = CompositeMultiOracle(vm.envAddress("ORACLE"));
+        base = bytes6(vm.envBytes32("BASE"));
+        quote = bytes6(vm.envBytes32("QUOTE"));
+        unitForBase = uint128(10 ** ERC20Mock(address(vm.envAddress("BASE_ADDRESS"))).decimals());
+        unitForQuote = uint128(10 ** ERC20Mock(address(vm.envAddress("QUOTE_ADDRESS"))).decimals());
     }
 
     function setUp() public {
-        string memory rpc = vm.envOr(RPC, MAINNET);
-        vm.createSelectFork(rpc);
-        string memory network = vm.envOr(NETWORK, LOCALHOST);
-
         if (vm.envOr(MOCK, true)) setUpMock();
-        else setUpHarness(network);
-
-        vm.label(address(chainlinkMultiOracle), "chainlinkMultiOracle");
-        vm.label(address(compositeMultiOracle), "compositeMultiOracle");
+        else setUpHarness();
     }
-
 
     function testSetSourceBothWays() public onlyMock {
+        bytes6 baseId = DAI;
+        bytes6 quoteId = ETH;
         address source = address(chainlinkMultiOracle);
-        assertEq(address(compositeMultiOracle.sources(ilkIdA, ilkIdB)), 0x0000000000000000000000000000000000000000);
+        assertEq(address(compositeMultiOracle.sources(baseId, quoteId)), 0x0000000000000000000000000000000000000000);
         vm.expectEmit(true, true, true, false);
-        emit SourceSet(ilkIdA, ilkIdB, IOracle(source));
-        compositeMultiOracle.setSource(ilkIdA, ilkIdB, IOracle(source));
+        emit SourceSet(baseId, quoteId, IOracle(source));
+        compositeMultiOracle.setSource(baseId, quoteId, IOracle(source));
     }
 
-    function testSetPathAndReservePath() public {
-        path[0] = ilkIdB;
-        compositeMultiOracle.setSource(ilkIdA, ilkIdB, IOracle(address(chainlinkMultiOracle)));
-        compositeMultiOracle.setSource(ETH, ilkIdB, IOracle(address(chainlinkMultiOracle)));
+    function testSetPathAndReservePath() public onlyMock {
+        bytes6 baseId = DAI;
+        bytes6 quoteId = ETH;
+        path[0] = USDC;
+        compositeMultiOracle.setSource(DAI, USDC, IOracle(address(chainlinkMultiOracle)));
+        compositeMultiOracle.setSource(ETH, USDC, IOracle(address(chainlinkMultiOracle)));
         vm.expectEmit(true, true, true, false);
-        emit PathSet(ilkIdA, ETH, path);
-        compositeMultiOracle.setPath(ilkIdA, ETH, path);
-        assertEq(compositeMultiOracle.paths(ilkIdA, ETH, 0), ilkIdB);
-        assertEq(compositeMultiOracle.paths(ETH, ilkIdA, 0), ilkIdB);
+        emit PathSet(baseId, quoteId, path);
+        compositeMultiOracle.setPath(baseId, quoteId, path);
+        assertEq(compositeMultiOracle.paths(baseId, quoteId, 0), path[0]);
+        assertEq(compositeMultiOracle.paths(quoteId, baseId, 0), path[0]);
     }
 
-    function setChainlinkMultiOracleSource() public {
-        compositeMultiOracle.setSource(ilkIdA, ETH, IOracle(address(chainlinkMultiOracle)));
-        compositeMultiOracle.setSource(ilkIdB, ETH, IOracle(address(chainlinkMultiOracle)));
+    function setChainlinkMultiOracleSource() public onlyMock {
+        compositeMultiOracle.setSource(DAI, ETH, IOracle(address(chainlinkMultiOracle)));
+        compositeMultiOracle.setSource(USDC, ETH, IOracle(address(chainlinkMultiOracle)));
         path[0] = ETH;
-        compositeMultiOracle.setPath(ilkIdA, ilkIdB, path);
+        compositeMultiOracle.setPath(DAI, USDC, path);
     }
 
-    function testRetrieveConversionAndUpdateTime() public {
+    function testRetrieveConversionAndUpdateTime() public onlyMock {
         setChainlinkMultiOracleSource();
-        (uint256 amount, uint256 updateTime) = compositeMultiOracle.peek(ilkIdA, ETH, unitForA);
-        // https://github.com/yieldprotocol/bugs/issues/2
-        // assertGt(amount, 0, "Get conversion unsuccessful");
-        // assertGt(updateTime, 0, "Update time below lower bound");
-        // assertLt(updateTime, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, "Update time above upper bound");
-        (uint256 tokenBEthAmount,) = compositeMultiOracle.peek(ilkIdB, ETH, unitForB);
-        assertGt(tokenBEthAmount, 0, "Get TokenB-ETH conversion unsuccessful");
-        (uint256 ethTokenAAmount,) = compositeMultiOracle.peek(ETH, ilkIdA, WAD);
-        assertGt(ethTokenAAmount, 0, "Get ETH-TokenA conversion unsuccessful");
-        (uint256 ethTokenBBAmount,) = compositeMultiOracle.peek(ETH, ilkIdB, WAD);
-        assertGt(ethTokenBBAmount, 0, "Get ETH-TokenB conversion unsuccessful");
+        (uint256 amount, uint256 updateTime) = compositeMultiOracle.peek(DAI, ETH, WAD);
+        assertEq(amount, WAD / 2500, "Get conversion unsuccessful");
+        assertGt(updateTime, 0, "Update time below lower bound");
+        assertLt(updateTime, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, "Update time above upper bound");
+        (uint256 usdcEthAmount,) = compositeMultiOracle.peek(USDC, ETH, oneUSDC);
+        assertEq(usdcEthAmount, WAD / 2500, "Get USDC-ETH conversion unsuccessful");
+        (uint256 ethDaiAmount,) = compositeMultiOracle.peek(ETH, DAI, WAD);
+        assertEq(ethDaiAmount, WAD * 2500, "Get ETH-DAI conversion unsuccessful");
+        (uint256 ethUsdcAmount,) = compositeMultiOracle.peek(ETH, USDC, WAD);
+        assertEq(ethUsdcAmount, oneUSDC * 2500, "Get ETH-USDC conversion unsuccessful");
     }
 
     function testRevertOnTimestampGreaterThanCurrentBlock() public onlyMock {
         setChainlinkMultiOracleSource();
-        aEthAggregator.setTimestamp(0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff);
+        daiEthAggregator.setTimestamp(0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff);
         vm.expectRevert("Invalid updateTime");
-        compositeMultiOracle.peek(ilkIdA, ETH, unitForA);
+        compositeMultiOracle.peek(DAI, ETH, WAD);
     }
 
     function testUseOldestTimestampFound() public onlyMock {
         setChainlinkMultiOracleSource();
-        aEthAggregator.setTimestamp(1);
-        bEthAggregator.setTimestamp(block.timestamp);
-        (,uint256 updateTime) = compositeMultiOracle.peek(ilkIdA, ilkIdB, unitForA);
+        daiEthAggregator.setTimestamp(1);
+        usdcEthAggregator.setTimestamp(block.timestamp);
+        (,uint256 updateTime) = compositeMultiOracle.peek(DAI, USDC, WAD);
         assertEq(updateTime, 1);
     }
 
-    function testRetrieveilkIdAilkIdBConversionAndReverse() public {
+    function testRetrieveDaiUsdcConversionAndReverse() public onlyMock {
         setChainlinkMultiOracleSource();
-        (uint256 tokenATokenBAmount,) = compositeMultiOracle.peek(ilkIdA, ilkIdB, unitForA);
-        assertGt(tokenATokenBAmount, 0);
-        (uint256 tokenBTokenAAmount,) = compositeMultiOracle.peek(ilkIdB, ilkIdA, unitForB);
-        assertGt(tokenBTokenAAmount, 0); 
+        (uint256 daiUsdcAmount,) = compositeMultiOracle.peek(DAI, USDC, WAD);
+        assertEq(daiUsdcAmount, oneUSDC);
+        (uint256 usdcDaiAmount,) = compositeMultiOracle.peek(USDC, DAI, oneUSDC);
+        assertEq(usdcDaiAmount, WAD); 
+    }
+
+    function testConversionHarness() public onlyHarness {
+        uint256 amount;
+        uint256 updateTime;
+        (amount, updateTime) = compositeMultiOracle.peek(base, quote, unitForBase);
+        assertGt(updateTime, 0, "Update time below lower bound");
+        assertLt(updateTime, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, "Update time above upper bound");
+        assertApproxEqRel(amount, unitForQuote, unitForQuote * 10000);
+        // and reverse
+        (amount, updateTime) = compositeMultiOracle.peek(quote, base, unitForQuote);
+        assertApproxEqRel(amount, unitForBase, unitForBase * 10000);
     }
 }

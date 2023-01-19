@@ -13,16 +13,28 @@ contract CompoundMultiOracleTest is Test, TestConstants {
     CTokenRateMock public cTokenRate;
     CompoundMultiOracle public compoundMultiOracle;
 
-    bytes6 public baseId;
-    uint256 unitForBase;
+    bytes6 public baseId = 0x25dde80ea598;
+    bytes6 public mockBytes6 = 0x000000000001;
+
+    // Harness vars
+    bytes6 public base;
+    uint128 public unitForBase;
+
+    modifier onlyMock() {
+        if (vm.envOr(MOCK, true))
+        _;
+    }
+
+    modifier onlyHarness() {
+        if (vm.envOr(MOCK, true)) return;
+        _;
+    }
 
     function setUpMock() public {
         cTokenChi = new CTokenChiMock();
         cTokenRate = new CTokenRateMock();
         compoundMultiOracle = new CompoundMultiOracle();
-        compoundMultiOracle.grantRole(compoundMultiOracle.setSource.selector, address(this));
-        baseId = 0x000000000001;
-        
+        compoundMultiOracle.grantRole(0x92b45d9c, address(this));
         compoundMultiOracle.setSource(baseId, CHI, address(cTokenChi));
         compoundMultiOracle.setSource(baseId, RATE, address(cTokenRate));
         cTokenChi.set(WAD * 2);
@@ -30,33 +42,43 @@ contract CompoundMultiOracleTest is Test, TestConstants {
     }
 
     function setUpHarness() public {
-        compoundMultiOracle = CompoundMultiOracle(vm.envAddress("ORACLE"));
-        baseId = bytes6(vm.envBytes32("BASE"));
-        unitForBase = 10 ** ERC20Mock(address(vm.envAddress("BASE_ADDRESS"))).decimals();
-    }
-
-    function setUp() public {
         string memory rpc = vm.envOr(RPC, MAINNET);
         vm.createSelectFork(rpc);
 
-        if (vm.envOr(MOCK, true)) setUpMock();
-        else setUpHarness();
+        compoundMultiOracle = CompoundMultiOracle(vm.envAddress("ORACLE"));
+        base = bytes6(vm.envBytes32("BASE"));
+        unitForBase = uint128(10 ** ERC20Mock(address(vm.envAddress("BASE_ADDRESS"))).decimals());
     }
 
-    function testRevertUnknownSource() public {
-        bytes6 mockBytes6 = 0x000000000002;
+    function setUp() public {
+        if (vm.envOr(MOCK, true)) setUpMock();
+        else setUpHarness();
+    }  
+
+    function testRevertUnknownSource() public onlyMock {
         vm.expectRevert("Source not found");
         compoundMultiOracle.get(mockBytes6, mockBytes6, WAD);
     }
 
-    function testSetRetrieveChiRate() public {
-        (uint256 getChi,) = compoundMultiOracle.get(bytes32(baseId), bytes32(CHI), unitForBase);
-        assertGt(getChi, 0, "Failed to get CHI spot price");
-        (uint256 getRate,) = compoundMultiOracle.get(bytes32(baseId), bytes32(RATE), unitForBase);
-        assertGt(getRate, 0, "Failed to get RATE spot price");
-        (uint256 peekChi,) = compoundMultiOracle.peek(bytes32(baseId), bytes32(CHI), unitForBase);
-        assertGt(peekChi, 0, "Failed to peek CHI spot price");
-        (uint256 peekRate,) = compoundMultiOracle.peek(bytes32(baseId), bytes32(RATE), unitForBase);
-        assertGt(peekRate, 0, "Failed to peek RATE spot price");
+    function testSetRetrieveChiRate() public onlyMock {
+        (uint256 getChi,) = compoundMultiOracle.get(bytes32(baseId), bytes32(CHI), WAD);
+        assertEq(getChi, WAD * 2, "Failed to get CHI spot price");
+        (uint256 getRate,) = compoundMultiOracle.get(bytes32(baseId), bytes32(RATE), WAD);
+        assertEq(getRate, WAD * 3, "Failed to get RATE spot price");
+        (uint256 peekChi,) = compoundMultiOracle.peek(bytes32(baseId), bytes32(CHI), WAD);
+        assertEq(peekChi, WAD * 2, "Failed to peek CHI spot price");
+        (uint256 peekRate,) = compoundMultiOracle.peek(bytes32(baseId), bytes32(RATE), WAD);
+        assertEq(peekRate, WAD * 3, "Failed to peek RATE spot price");
+    }
+
+    function testConversionHarness() public onlyHarness {
+        uint256 amount;
+        uint256 updateTime;
+        (amount, updateTime) = compoundMultiOracle.peek(base, CHI, unitForBase);
+        assertGt(updateTime, 0, "Update time below lower bound");
+        assertLt(updateTime, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, "Update time above upper bound");
+        assertApproxEqRel(amount, unitForBase * 200000000, unitForBase * 100);
+        (amount, updateTime) = compoundMultiOracle.peek(base, RATE, unitForBase);
+        assertApproxEqRel(amount, unitForBase * 200000000, unitForBase * 100);
     }
 }
