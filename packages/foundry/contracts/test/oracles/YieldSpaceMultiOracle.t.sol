@@ -208,7 +208,7 @@ contract YieldSpaceMultiOracleTest is Test, TestConstants {
         assertEq(value, 996.313029e6);
     }
 
-    function testConversionHarness() public onlyMock {
+    function testConversionHarness() public onlyHarness {
         uint256 amount;
         uint256 updateTime;
         (amount, updateTime) = oracle.peek(base, quote, unitForBase);
