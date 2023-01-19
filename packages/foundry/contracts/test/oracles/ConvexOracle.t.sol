@@ -10,7 +10,7 @@ import "../../oracles/chainlink/AggregatorV3Interface.sol";
 import "../../oracles/convex/ICurvePool.sol";
 import { ERC20Mock } from "../../mocks/ERC20Mock.sol";
 import "../utils/TestConstants.sol";
-import { TestExtensions } from "../TestExtensions.sol";
+import { TestExtensions } from "../utils/TestExtensions.sol";
 
 contract ConvexOracleTest is Test, TestConstants, TestExtensions {
     Cvx3CrvOracle public convexOracle;

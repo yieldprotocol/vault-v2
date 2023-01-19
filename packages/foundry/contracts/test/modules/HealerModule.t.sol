@@ -10,7 +10,7 @@ import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
 import "../../mocks/WETH9Mock.sol";
 import "../../modules/HealerModule.sol";
 import { TestConstants } from "../utils/TestConstants.sol";
-import { TestExtensions } from "../TestExtensions.sol";
+import { TestExtensions } from "../utils/TestExtensions.sol";
 
 interface ILadleCustom {
     function addModule(address module, bool set) external;
