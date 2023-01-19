@@ -130,19 +130,9 @@ contract ChainlinkUSDMultiOracleTest is Test, TestConstants, TestExtensions {
         (amount, updateTime) = oracleL2.peek(base, quote, unitForBase);
         assertGt(updateTime, 0, "Update time below lower bound");
         assertLt(updateTime, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, "Update time above upper bound");
-
-        if (base == bytes6(ETH)) {
-            (amount,) = oracleL2.peek(bytes32(base), bytes32(quote), unitForBase);
-            assertLe(amount, 10000 * unitForQuote, "Conversion unsuccessful");
-            assertGe(amount, 100 * unitForQuote, "Conversion unsuccessful");
-        } else if (quote == bytes6(ETH)) {
-            (amount,) = oracleL2.peek(bytes32(base), bytes32(quote), unitForBase);
-            assertLe(amount, unitForQuote / 100, "Conversion unsuccessful");
-            assertGe(amount, unitForQuote / 10000, "Conversion unsuccessful");
-        } else { // both DAI & USDC
-            (amount,) = oracleL2.peek(bytes32(base), bytes32(quote), unitForBase);
-            assertLe(amount, unitForQuote + (unitForQuote / 1000));
-            assertGe(amount, unitForQuote - (unitForQuote / 1000));
-        }
+        assertApproxEqRel(amount, unitForQuote, unitForQuote * 10000);
+        // and reverse
+        (amount, updateTime) = oracleL2.peek(quote, base, unitForQuote);
+        assertApproxEqRel(amount, unitForBase, unitForBase * 10000);
     }
 }
