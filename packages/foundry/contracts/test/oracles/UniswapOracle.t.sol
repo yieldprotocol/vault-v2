@@ -2,9 +2,9 @@
 pragma solidity >=0.8.13;
 
 import "forge-std/src/Test.sol";
-import "../../oracles/uniswap/UniswapV3Oracle.sol";
-import "../utils/TestConstants.sol";
+import { UniswapV3Oracle } from "../../oracles/uniswap/UniswapV3Oracle.sol";
 import { ERC20Mock } from "../../mocks/ERC20Mock.sol";
+import { TestConstants } from "../utils/TestConstants.sol";
 import { TestExtensions } from "../utils/TestExtensions.sol";
 
 contract UniswapOracleTest is Test, TestConstants, TestExtensions {

@@ -2,8 +2,8 @@
 pragma solidity >=0.8.13;
 
 import "forge-std/src/Test.sol";
-import "../utils/Mocks.sol";
-import "../../oracles/yieldspace/YieldSpaceMultiOracle.sol";
+import { Mocks } from "../utils/Mocks.sol";
+import { YieldSpaceMultiOracle } from "../../oracles/yieldspace/YieldSpaceMultiOracle.sol";
 import { ERC20Mock } from "../../mocks/ERC20Mock.sol";
 import { TestConstants } from "../utils/TestConstants.sol";
 

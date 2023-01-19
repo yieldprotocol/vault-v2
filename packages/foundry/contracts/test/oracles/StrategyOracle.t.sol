@@ -2,9 +2,9 @@
 pragma solidity >=0.8.13;
 
 import "forge-std/src/Test.sol";
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "../../oracles/strategy/StrategyOracle.sol";
-import "../../interfaces/IStrategy.sol";
+import { AccessControl } from "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import { StrategyOracle } from "../../oracles/strategy/StrategyOracle.sol";
+import { IStrategy } from "../../interfaces/IStrategy.sol";
 import { ERC20Mock } from "../../mocks/ERC20Mock.sol";
 import { TestConstants } from "../utils/TestConstants.sol";
 import { TestExtensions } from "../utils/TestExtensions.sol";

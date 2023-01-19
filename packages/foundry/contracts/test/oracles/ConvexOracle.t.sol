@@ -2,14 +2,14 @@
 pragma solidity >=0.8.13;
 
 import "forge-std/src/Test.sol";
-import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
-import "../../oracles/chainlink/ChainlinkMultiOracle.sol";
-import "../../oracles/composite/CompositeMultiOracle.sol";
-import "../../oracles/convex/Cvx3CrvOracle.sol";
-import "../../oracles/chainlink/AggregatorV3Interface.sol";
-import "../../oracles/convex/ICurvePool.sol";
+import { ERC20 } from "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
+import { ChainlinkMultiOracle } from "../../oracles/chainlink/ChainlinkMultiOracle.sol";
+import { CompositeMultiOracle } from "../../oracles/composite/CompositeMultiOracle.sol";
+import { Cvx3CrvOracle } from "../../oracles/convex/Cvx3CrvOracle.sol";
+import { AggregatorV3Interface } from "../../oracles/chainlink/AggregatorV3Interface.sol";
+import { ICurvePool } from "../../oracles/convex/ICurvePool.sol";
 import { ERC20Mock } from "../../mocks/ERC20Mock.sol";
-import "../utils/TestConstants.sol";
+import { TestConstants } from "../utils/TestConstants.sol";
 import { TestExtensions } from "../utils/TestExtensions.sol";
 
 contract ConvexOracleTest is Test, TestConstants, TestExtensions {

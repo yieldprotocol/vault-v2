@@ -3,12 +3,12 @@ pragma solidity >=0.8.13;
 
 import "forge-std/src/Test.sol";
 import "forge-std/src/console.sol";
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "../../oracles/crab/CrabOracle.sol";
-import {ICrabStrategy} from "../../oracles/crab/CrabOracle.sol";
-import "../../oracles/uniswap/UniswapV3Oracle.sol";
+import { AccessControl } from "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import { CrabOracle } from "../../oracles/crab/CrabOracle.sol";
+import { ICrabStrategy } from "../../oracles/crab/CrabOracle.sol";
+import { UniswapV3Oracle } from "../../oracles/uniswap/UniswapV3Oracle.sol";
 import { ERC20Mock } from "../../mocks/ERC20Mock.sol";
-import "../utils/TestConstants.sol";
+import { TestConstants } from "../utils/TestConstants.sol";
 
 contract CrabOracleTest is Test, TestConstants {
     CrabOracle public crabOracle;

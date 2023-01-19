@@ -2,12 +2,12 @@
 pragma solidity >=0.8.13;
 
 import "forge-std/src/Test.sol";
-import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
-import "../../oracles/chainlink/ChainlinkUSDMultiOracle.sol";
-import "../../oracles/chainlink/ChainlinkL2USDMultiOracle.sol";
-import "../../oracles/chainlink/AggregatorV3Interface.sol";
-import "../../mocks/oracles/chainlink/FlagsInterfaceMock.sol";
-import "../../mocks/oracles/chainlink/ChainlinkAggregatorV3MockEx.sol";
+import { ERC20 } from "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
+import { ChainlinkUSDMultiOracle } from "../../oracles/chainlink/ChainlinkUSDMultiOracle.sol";
+import { ChainlinkL2USDMultiOracle } from "../../oracles/chainlink/ChainlinkL2USDMultiOracle.sol";
+import { AggregatorV3Interface } from "../../oracles/chainlink/AggregatorV3Interface.sol";
+import { FlagsInterface } from "../../mocks/oracles/chainlink/FlagsInterfaceMock.sol";
+import { ChainlinkAggregatorV3Mock } from "../../mocks/oracles/chainlink/ChainlinkAggregatorV3MockEx.sol";
 import { ERC20Mock } from "../../mocks/ERC20Mock.sol";
 import { TestConstants } from "../utils/TestConstants.sol";
 import { TestExtensions } from "../utils/TestExtensions.sol";

@@ -2,16 +2,16 @@
 pragma solidity >=0.8.13;
 
 import "forge-std/src/Test.sol";
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "../../oracles/chainlink/ChainlinkMultiOracle.sol";
-import "../../oracles/composite/CompositeMultiOracle.sol";
-import "../../oracles/lido/LidoOracle.sol";
-import "../../mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol";
-import "../../mocks/oracles/lido/WstETHMock.sol";
+import { AccessControl } from "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import { ChainlinkMultiOracle } from "../../oracles/chainlink/ChainlinkMultiOracle.sol";
+import { CompositeMultiOracle } from "../../oracles/composite/CompositeMultiOracle.sol";
+import { LidoOracle } from "../../oracles/lido/LidoOracle.sol";
+import { ChainlinkAggregatorV3Mock } from "../../mocks/oracles/chainlink/ChainlinkAggregatorV3MockEx.sol";
 import { ERC20Mock } from "../../mocks/ERC20Mock.sol";
-import "../../mocks/USDCMock.sol";
-import "../../mocks/WETH9Mock.sol";
-import "../utils/TestConstants.sol";
+import { WETH9Mock } from "../../mocks/WETH9Mock.sol";
+import { USDCMock } from "../../mocks/USDCMock.sol";
+import { WstETHMock } from "../../mocks/oracles/lido/WstETHMock.sol";
+import { TestConstants } from "../utils/TestConstants.sol";
 
 contract LidoOracleTest is Test, TestConstants, AccessControl {
     WETH9Mock public weth;
@@ -25,6 +25,7 @@ contract LidoOracleTest is Test, TestConstants, AccessControl {
     ChainlinkAggregatorV3Mock public usdcEthAggregator;
 
     bytes6 public mockBytes6 = 0xd1eaa762fae7;
+import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 
     // Harness vars
     bytes6 public base;
