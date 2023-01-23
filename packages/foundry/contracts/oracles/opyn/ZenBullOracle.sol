@@ -8,6 +8,9 @@ import "../../interfaces/IOracle.sol";
 import {ICrabStrategy} from "./CrabOracle.sol";
 import {IUniswapV3PoolState} from "../uniswap/uniswapv0.8/pool/IUniswapV3PoolState.sol";
 
+
+error ZenBullOracleUnsupportedAsset();
+
 interface IZenBullStrategy {
     /**
      * @notice return the internal accounting of the bull strategy's crab balance
@@ -105,11 +108,14 @@ contract ZenBullOracle is IOracle {
         } else if (base == usdcId && quote == zenBullId) {
             quoteAmount = (baseAmount * 1e18) / _getZenBullPrice();
         } else {
-            revert("ZenBullOracle: Unsupported asset");
+            revert ZenBullOracleUnsupportedAsset();
         }
         updateTime = block.timestamp;
     }
 
+    /**
+     * @notice Calculates the price of one zen bull token in USDC
+     */
     function _getZenBullPrice() private view returns (uint256) {
         uint256 bullUSDCDebtBalance = eulerDToken.balanceOf(
             address(zenBullStrategy)
@@ -123,7 +129,6 @@ contract ZenBullOracle is IOracle {
         uint256 crabTotalSupply = crabStrategy.totalSupply();
         uint256 bullTotalSupply = zenBullStrategy.totalSupply();
         (, int24 tick, , , , , ) = osqthWethPool.slot0();
-
         uint256 osqthWethPrice = uint256(
             wadDiv(1e18, wadPow(10001e14, int256(tick) * 1e18))
         );
