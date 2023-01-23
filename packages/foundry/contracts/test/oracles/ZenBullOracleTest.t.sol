@@ -24,7 +24,7 @@ contract ZenBullOracleTest is Test, TestConstants {
     IERC20 eulerEToken_ = IERC20(0x1b808F49ADD4b8C6b5117d9681cF7312Fcf0dC1D);
 
     function setUp() public {
-        vm.createSelectFork(MAINNET, 16403773);
+        vm.createSelectFork(MAINNET, 16468440);
         zenBullOracle = new ZenBullOracle(
             crabStrategy_,
             zenBullStrategy_,
@@ -44,7 +44,7 @@ contract ZenBullOracleTest is Test, TestConstants {
             1e18
         );
         emit log_named_uint("Zenbull in USDC Value", amount);
-        assertEq(amount, 209996781);
+        assertEq(amount, 3481069186);
     }
 
     function testPeekReversed() public {
@@ -54,6 +54,6 @@ contract ZenBullOracleTest is Test, TestConstants {
             1e6
         );
         emit log_named_uint("USDC in Zenbull Value", amount);
-        assertEq(amount, 4761977734000000);
+        assertEq(amount, 287268062359045);
     }
 }

@@ -101,9 +101,9 @@ contract ZenBullOracle is IOracle {
         uint256 baseAmount
     ) private view returns (uint256 quoteAmount, uint256 updateTime) {
         if (base == zenBullId && quote == usdcId) {
-            quoteAmount = baseAmount / _getZenBullPrice();
+            quoteAmount = (_getZenBullPrice() * baseAmount) / 1e18;
         } else if (base == usdcId && quote == zenBullId) {
-            quoteAmount = _getZenBullPrice() * baseAmount;
+            quoteAmount = (baseAmount * 1e18) / _getZenBullPrice();
         } else {
             revert("ZenBullOracle: Unsupported asset");
         }
@@ -143,11 +143,9 @@ contract ZenBullOracle is IOracle {
             crabUsdcPrice +
             (bullWethCollateralBalance / 1e18) *
             wethUsdcPrice -
-            bullUSDCDebtBalance /
-            1e6;
+            bullUSDCDebtBalance;
 
         uint256 bullUsdcPrice = bullUsdcValue / (bullTotalSupply / 1e18);
-
         return bullUsdcPrice;
     }
 }
