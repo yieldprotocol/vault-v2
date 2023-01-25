@@ -44,7 +44,7 @@ contract ZenBullOracleTest is Test, TestConstants {
             1e18
         );
         emit log_named_uint("Zenbull in USDC Value", amount);
-        assertEq(amount, 3481069186);
+        assertEq(amount, 3475041114);
     }
 
     function testPeekReversed() public {
@@ -54,6 +54,6 @@ contract ZenBullOracleTest is Test, TestConstants {
             1e6
         );
         emit log_named_uint("USDC in Zenbull Value", amount);
-        assertEq(amount, 287268062359045);
+        assertEq(amount, 287766379503042);
     }
 }

@@ -2,12 +2,12 @@
 pragma solidity >=0.8.13;
 
 import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
-import {wadPow, wadDiv} from "solmate/utils/SignedWadMath.sol";
+import {wadPow, wadDiv, wadMul} from "solmate/utils/SignedWadMath.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 import "../../interfaces/IOracle.sol";
 import {ICrabStrategy} from "./CrabOracle.sol";
 import {IUniswapV3PoolState} from "../uniswap/uniswapv0.8/pool/IUniswapV3PoolState.sol";
-
+import "forge-std/src/console.sol";
 
 error ZenBullOracleUnsupportedAsset();
 
@@ -28,17 +28,27 @@ interface IZenBullStrategy {
 }
 
 /// @notice Returns price of zen bull token in USDC & vice versa
+/// @dev Based on calculations provided by Opyn team https://gist.github.com/iamsahu/91428eb2029f4a78eabbe26ed7490087
 contract ZenBullOracle is IOracle {
     using CastBytes32Bytes6 for bytes32;
 
-    ICrabStrategy immutable crabStrategy;
-    IZenBullStrategy immutable zenBullStrategy;
-    IUniswapV3PoolState immutable osqthWethPool;
-    IUniswapV3PoolState immutable wethUsdcPool;
-    IERC20 immutable eulerDToken;
-    IERC20 immutable eulerEToken;
-    bytes6 immutable usdcId;
-    bytes6 immutable zenBullId;
+    ICrabStrategy public immutable crabStrategy;
+    IZenBullStrategy public immutable zenBullStrategy;
+    IUniswapV3PoolState public immutable osqthWethPool;
+    IUniswapV3PoolState public immutable wethUsdcPool;
+    IERC20 public immutable eulerDToken;
+    IERC20 public immutable eulerEToken;
+    bytes6 public immutable usdcId;
+    bytes6 public immutable zenBullId;
+
+    event SourceSet(
+        ICrabStrategy crabStrategy,
+        IZenBullStrategy zenBullStrategy,
+        IUniswapV3PoolState osqthWethPool,
+        IUniswapV3PoolState wethUsdcPool,
+        IERC20 eulerDToken,
+        IERC20 eulerEToken
+    );
 
     constructor(
         ICrabStrategy crabStrategy_,
@@ -58,6 +68,14 @@ contract ZenBullOracle is IOracle {
         eulerEToken = eulerEToken_;
         usdcId = usdcId_;
         zenBullId = zenBullId_;
+        emit SourceSet(
+            crabStrategy_,
+            zenBullStrategy_,
+            osqthWethPool_,
+            wethUsdcPool_,
+            eulerDToken_,
+            eulerEToken_
+        );
     }
 
     /**
@@ -137,20 +155,29 @@ contract ZenBullOracle is IOracle {
             wadDiv(1e18, wadPow(10001e14, int256(tick) * 1e18))
         );
 
-        uint256 crabUsdcValue = ((crabEthBalance / 1e18) *
-            wethUsdcPrice -
-            ((craboSqthBalance / 1e18) * osqthWethPrice * wethUsdcPrice) /
-            1e18);
+        uint256 crabUsdcValue = uint256(
+            wadMul(int256(crabEthBalance), int256(wethUsdcPrice)) -
+                wadMul(
+                    int256(craboSqthBalance),
+                    wadMul(int256(osqthWethPrice), int256(wethUsdcPrice))
+                )
+        );
 
-        uint256 crabUsdcPrice = crabUsdcValue / (crabTotalSupply / 1e18);
+        uint256 crabUsdcPrice = uint256(
+            wadDiv(int256(crabUsdcValue), int256(crabTotalSupply))
+        );
+        uint256 bullUsdcValue = uint256(
+            wadMul(int256(bullCrabBalance), int256(crabUsdcPrice)) +
+                wadMul(
+                    int256(bullWethCollateralBalance),
+                    int256(wethUsdcPrice)
+                ) -
+                int256(bullUSDCDebtBalance)
+        );
 
-        uint256 bullUsdcValue = (bullCrabBalance / 1e18) *
-            crabUsdcPrice +
-            (bullWethCollateralBalance / 1e18) *
-            wethUsdcPrice -
-            bullUSDCDebtBalance;
-
-        uint256 bullUsdcPrice = bullUsdcValue / (bullTotalSupply / 1e18);
+        uint256 bullUsdcPrice = uint256(
+            wadDiv(int256(bullUsdcValue), int256(bullTotalSupply))
+        );
         return bullUsdcPrice;
     }
 }
