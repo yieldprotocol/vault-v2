@@ -2,6 +2,7 @@
 pragma solidity >=0.8.13;
 
 import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
+import "@yield-protocol/utils-v2/contracts/cast/CastU256I256.sol";
 import {wadPow, wadDiv, wadMul} from "solmate/utils/SignedWadMath.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 import "../../interfaces/IOracle.sol";
@@ -30,7 +31,13 @@ interface IZenBullStrategy {
 /// @notice Returns price of zen bull token in USDC & vice versa
 /// @dev Based on calculations provided by Opyn team https://gist.github.com/iamsahu/91428eb2029f4a78eabbe26ed7490087
 contract ZenBullOracle is IOracle {
+    using CastU256I256 for uint256;
     using CastBytes32Bytes6 for bytes32;
+    using { wadDiv } for int256;
+    using { wadPow } for int256;
+
+    int256 public constant ONE = 1e18;
+    int256 public constant BASE = 10001e14;
 
     ICrabStrategy public immutable crabStrategy;
     IZenBullStrategy public immutable zenBullStrategy;
@@ -121,20 +128,21 @@ contract ZenBullOracle is IOracle {
         bytes6 quote,
         uint256 baseAmount
     ) private view returns (uint256 quoteAmount, uint256 updateTime) {
+        uint256 zenBullUsdcPrice;
+        (zenBullUsdcPrice, updateTime) = _getZenBullPrice();
         if (base == zenBullId && quote == usdcId) {
-            quoteAmount = (_getZenBullPrice() * baseAmount) / 1e18;
+            quoteAmount = (zenBullUsdcPrice * baseAmount) / 1e18;
         } else if (base == usdcId && quote == zenBullId) {
-            quoteAmount = (baseAmount * 1e18) / _getZenBullPrice();
+            quoteAmount = (baseAmount * 1e18) / zenBullUsdcPrice;
         } else {
             revert ZenBullOracleUnsupportedAsset();
         }
-        updateTime = block.timestamp;
     }
 
     /**
      * @notice Calculates the price of one zen bull token in USDC
      */
-    function _getZenBullPrice() private view returns (uint256) {
+    function _getZenBullPrice() private view returns (uint256, uint256) {
         uint256 bullUSDCDebtBalance = eulerDToken.balanceOf(
             address(zenBullStrategy)
         );
@@ -146,31 +154,32 @@ contract ZenBullOracle is IOracle {
             .getCrabVaultDetails();
         uint256 crabTotalSupply = crabStrategy.totalSupply();
         uint256 bullTotalSupply = zenBullStrategy.totalSupply();
-        (, int24 tick, , , , , ) = osqthWethPool.slot0();
-        int256 osqthWethPrice = wadDiv(
-            1e18,
-            wadPow(10001e14, int256(tick) * 1e18)
-        );
-        (, tick, , , , , ) = wethUsdcPool.slot0();
-        int256 wethUsdcPrice = wadDiv(
-            1e18,
-            wadPow(10001e14, int256(tick) * 1e18)
-        );
 
-        int256 crabUsdcValue = wadMul(int256(crabEthBalance), wethUsdcPrice) -
+        (, int24 tick_, uint16 observationIndex, , , , ) = osqthWethPool.slot0();
+        int256 tick = int256(tick_) * ONE; // Normalize tick
+        int256 osqthWethPrice = ONE.wadDiv(BASE.wadPow(tick));
+        
+        (, tick_, observationIndex, , , , ) = wethUsdcPool.slot0();
+        tick = int256(tick_) * ONE; // Normalize tick
+        int256 wethUsdcPrice = ONE.wadDiv(BASE.wadPow(tick));
+
+        int256 crabUsdcValue = wadMul(crabEthBalance.i256(), wethUsdcPrice) -
             wadMul(
-                int256(craboSqthBalance),
+                craboSqthBalance.i256(),
                 wadMul(osqthWethPrice, wethUsdcPrice)
             );
 
-        int256 crabUsdcPrice = wadDiv(crabUsdcValue, int256(crabTotalSupply));
-        int256 bullUsdcValue = wadMul(int256(bullCrabBalance), crabUsdcPrice) +
-            wadMul(int256(bullWethCollateralBalance), wethUsdcPrice) -
-            int256(bullUSDCDebtBalance);
+        int256 crabUsdcPrice = wadDiv(crabUsdcValue, crabTotalSupply.i256());
+        int256 bullUsdcValue = wadMul(bullCrabBalance.i256(), crabUsdcPrice) +
+            wadMul(bullWethCollateralBalance.i256(), wethUsdcPrice) -
+            bullUSDCDebtBalance.i256();
 
         uint256 bullUsdcPrice = uint256(
-            wadDiv(bullUsdcValue, int256(bullTotalSupply))
+            wadDiv(bullUsdcValue, bullTotalSupply.i256())
         );
-        return bullUsdcPrice;
+
+        (uint32 blockTimestamp, , , ) = wethUsdcPool.observations(observationIndex);
+        
+        return (bullUsdcPrice, blockTimestamp);
     }
 }
