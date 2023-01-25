@@ -1,20 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
-
 /**
  * @dev Interface for the optional metadata functions from the ERC20 standard.
  */
-interface IUSDT is IERC20 {
-    /**
-     * @dev Returns the basisPointsRate of the token.
-     */
+interface IUSDT {
+    function decimals() external view returns (uint8);
+
+    function balanceOf(address _owner) external returns (uint balance);
+
+    function approve(address spender, uint value) external;
 
     function basisPointsRate() external view returns (uint256);
 
-    /**
-     * @dev Returns the maximumFee of the token.
-     */
     function maximumFee() external view returns (uint256);
+
+    function transfer(address to, uint value) external;
+
+    function transferFrom(address from, address to, uint value) external;
+
+    function setParams(uint newBasisPoints, uint newMaxFee) external;
 }

@@ -9,7 +9,6 @@ import { TestExtensions } from "../../utils/TestExtensions.sol";
 import { TestConstants } from "../../utils/TestConstants.sol";
 import { IUSDT } from "../../../other/tether/IUSDT.sol";
 import { TetherJoin } from "../../../other/tether/TetherJoin.sol";
-import { USDTMock } from "../../../other/tether/USDTMock.sol";
 import { ERC20Mock } from "../../../mocks/ERC20Mock.sol";
 
 using stdStorage for StdStorage;
@@ -17,7 +16,7 @@ using stdStorage for StdStorage;
 abstract contract Deployed is Test, TestExtensions, TestConstants {
 
     TetherJoin public join; 
-    IERC20 public token;
+    IUSDT public token;
     uint128 public unit;
     IERC20 public otherToken;
     uint128 public otherUnit;
@@ -28,10 +27,12 @@ abstract contract Deployed is Test, TestExtensions, TestConstants {
     address me;
 
     function setUpMock() public {
+        vm.createSelectFork(MAINNET);
+
         ladle = address(3);
 
         //... Contracts ...
-        token = IUSDT(address(new ERC20Mock("", "")));
+        token = IUSDT(0xdAC17F958D2ee523a2206206994597C13D831ec7);
         unit = uint128(10 ** ERC20Mock(address(token)).decimals());
 
         otherToken = IERC20(address(new ERC20Mock("", "")));
@@ -50,7 +51,7 @@ abstract contract Deployed is Test, TestExtensions, TestConstants {
         ladle = addresses[network][LADLE];
 
         join = TetherJoin(vm.envAddress("JOIN"));
-        token = IERC20(join.asset());
+        token = IUSDT(join.asset());
         unit = uint128(10 ** ERC20Mock(address(token)).decimals());
 
         otherToken = IERC20(address(new ERC20Mock("", "")));
@@ -81,7 +82,7 @@ abstract contract Deployed is Test, TestExtensions, TestConstants {
         vm.label(address(otherToken), "otherToken");
         vm.label(address(join), "join");
 
-        cash(token, user, 100 * unit);
+        deal(address(token), user, 100 * unit);
 
         // If there are any unclaimed assets in the Join, join them.
         uint128 unclaimedTokens = uint128(token.balanceOf(address(join)) - join.storedBalance());
