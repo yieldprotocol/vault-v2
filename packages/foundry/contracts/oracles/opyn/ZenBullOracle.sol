@@ -147,36 +147,29 @@ contract ZenBullOracle is IOracle {
         uint256 crabTotalSupply = crabStrategy.totalSupply();
         uint256 bullTotalSupply = zenBullStrategy.totalSupply();
         (, int24 tick, , , , , ) = osqthWethPool.slot0();
-        uint256 osqthWethPrice = uint256(
-            wadDiv(1e18, wadPow(10001e14, int256(tick) * 1e18))
+        int256 osqthWethPrice = wadDiv(
+            1e18,
+            wadPow(10001e14, int256(tick) * 1e18)
         );
         (, tick, , , , , ) = wethUsdcPool.slot0();
-        uint256 wethUsdcPrice = uint256(
-            wadDiv(1e18, wadPow(10001e14, int256(tick) * 1e18))
+        int256 wethUsdcPrice = wadDiv(
+            1e18,
+            wadPow(10001e14, int256(tick) * 1e18)
         );
 
-        uint256 crabUsdcValue = uint256(
-            wadMul(int256(crabEthBalance), int256(wethUsdcPrice)) -
-                wadMul(
-                    int256(craboSqthBalance),
-                    wadMul(int256(osqthWethPrice), int256(wethUsdcPrice))
-                )
-        );
+        int256 crabUsdcValue = wadMul(int256(crabEthBalance), wethUsdcPrice) -
+            wadMul(
+                int256(craboSqthBalance),
+                wadMul(osqthWethPrice, wethUsdcPrice)
+            );
 
-        uint256 crabUsdcPrice = uint256(
-            wadDiv(int256(crabUsdcValue), int256(crabTotalSupply))
-        );
-        uint256 bullUsdcValue = uint256(
-            wadMul(int256(bullCrabBalance), int256(crabUsdcPrice)) +
-                wadMul(
-                    int256(bullWethCollateralBalance),
-                    int256(wethUsdcPrice)
-                ) -
-                int256(bullUSDCDebtBalance)
-        );
+        int256 crabUsdcPrice = wadDiv(crabUsdcValue, int256(crabTotalSupply));
+        int256 bullUsdcValue = wadMul(int256(bullCrabBalance), crabUsdcPrice) +
+            wadMul(int256(bullWethCollateralBalance), wethUsdcPrice) -
+            int256(bullUSDCDebtBalance);
 
         uint256 bullUsdcPrice = uint256(
-            wadDiv(int256(bullUsdcValue), int256(bullTotalSupply))
+            wadDiv(bullUsdcValue, int256(bullTotalSupply))
         );
         return bullUsdcPrice;
     }
