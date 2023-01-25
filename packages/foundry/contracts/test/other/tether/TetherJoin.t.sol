@@ -147,18 +147,11 @@ contract DeployedTest is Deployed {
         track("storedBalance", join.storedBalance());
         track("joinBalance", token.balanceOf(address(join)));
 
-        console.log(token.balanceOf(user));
-        // user has 100 units
         vm.prank(user);
         token.approve(address(join), unit / 2);
         vm.prank(user);
         token.transfer(address(join), unit / 2);
-        console.log(token.balanceOf(user)); 
-        console.log(token.balanceOf(address(join)));
-        console.log(join.storedBalance());
-        // user now has 99.5 units and join has a quarter unit, as expected
         vm.prank(ladle);
-        // past behavior here is that the 
         join.join(user, unit);
 
         assertTrackMinusEq("userBalance", unit, token.balanceOf(user));

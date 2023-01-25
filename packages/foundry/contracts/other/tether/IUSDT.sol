@@ -5,6 +5,8 @@ pragma solidity ^0.8.13;
  * @dev Interface for the optional metadata functions from the ERC20 standard.
  */
 interface IUSDT {
+    function name() external view returns (string memory);
+
     function decimals() external view returns (uint8);
 
     function balanceOf(address _owner) external returns (uint balance);
