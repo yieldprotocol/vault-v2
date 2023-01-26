@@ -5,7 +5,7 @@ import "forge-std/src/Test.sol";
 import "forge-std/src/console2.sol";
 
 import "../../../test/utils/TestConstants.sol";
-import "../../../test/TestExtensions.sol";
+import "../../../test/utils/TestExtensions.sol";
 
 import { ERC1155 } from "../../../other/notional/ERC1155.sol";
 import { IWETH9 } from "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";

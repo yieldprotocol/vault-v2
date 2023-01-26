@@ -7,7 +7,7 @@ libs = ['lib']
 block_timestamp = 1651743369 # Arbitrary Thursday, 5 May 2022 09:36:09
 verbosity = 3
 solc_version = '0.8.15'
-rpc_endpoints = { MAINNET = "${MAINNET_RPC}", ARBITRUM = "${ARBITRUM_RPC}", TENDERLY = "https://rpc.tenderly.co/fork/797d23ed-3bc3-41e2-9ac6-b94987e6575c" }
+rpc_endpoints = { MAINNET = "${MAINNET_RPC}", ARBITRUM = "${ARBITRUM_RPC}", HARNESS = "" }
 
 [profile.dev]
 ignored_error_codes = [
