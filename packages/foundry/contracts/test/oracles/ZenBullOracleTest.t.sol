@@ -7,7 +7,7 @@ import "../../oracles/opyn/ZenBullOracle.sol";
 import {IZenBullStrategy} from "../../oracles/opyn/ZenBullOracle.sol";
 import "../../oracles/uniswap/UniswapV3Oracle.sol";
 import "../utils/TestConstants.sol";
-import {wadPow, wadDiv} from "solmate/utils/SignedWadMath.sol";
+import {wadPow, wadDiv} from "solmate/src/utils/SignedWadMath.sol";
 
 contract ZenBullOracleTest is Test, TestConstants {
     ZenBullOracle public zenBullOracle;
