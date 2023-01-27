@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity >=0.8.13;
 
-import "forge-std/src/console2.sol";
-
+import "./IUSDT.sol";
 import "../../interfaces/IJoin.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
-import "./IUSDT.sol";
 
 contract TetherJoin is IJoin, AccessControl {
     using TransferHelper for IERC20;
@@ -30,9 +28,11 @@ contract TetherJoin is IJoin, AccessControl {
         uint256 _storedBalance = storedBalance;
         uint256 available = token.balanceOf(address(this)) - _storedBalance; // Fine to panic if this underflows
         unchecked {
-            if (available < amount) {
-                uint256 fee = amount * IUSDT(asset).basisPointsRate() / 10000;
-                token.safeTransferFrom(user, address(this), amount - available);
+            if (available == 0) {
+                token.safeTransferFrom(user, address(this), amount);
+                amount = uint128(token.balanceOf(address(this)) - _storedBalance);
+            } else if (available < amount) {
+                token.safeTransferFrom(user, address(this), (amount - available) * 1000000 / (1000000 - (IUSDT(asset).basisPointsRate() * 100)));
                 amount = uint128(token.balanceOf(address(this)) - _storedBalance);
             }
             storedBalance = _storedBalance + amount; // Unlikely that a uint128 added to the stored balance will make it overflow
