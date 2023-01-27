@@ -6,15 +6,21 @@ import "../../FlashJoin.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
+import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
 
 contract TetherJoin is FlashJoin {
     using TransferHelper for IERC20;
+    using WDiv for uint256;
 
     constructor(address asset_) FlashJoin(asset_) {}
 
+    function _min(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a < b ? a : b;
+    }
+
     /// @dev Calculate the amount of `asset` that needs to be sent to receive `amount` of USDT.
     function _reverseFee(uint256 amount) internal view returns (uint256) {
-        return amount * 1000000 / (1000000 - (IUSDT(asset).basisPointsRate() * 100));
+        return _min(amount.wdiv(1e18 - IUSDT(asset).basisPointsRate() * 1e14), amount + IUSDT(asset).maximumFee());
     }
 
     /// @dev Take `amount` `asset` from `user` using `transferFrom`, minus any unaccounted `asset` in this contract.
