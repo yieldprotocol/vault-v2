@@ -22,6 +22,12 @@ contract TetherJoin is IJoin, AccessControl {
         return _join(user, amount);
     }
 
+
+    /// @dev Calculate the amount of `asset` that needs to be sent to receive `amount` of USDT.
+    function _reverseFee(uint256 amount) internal view returns (uint256) {
+        return amount * 1000000 / (1000000 - (IUSDT(asset).basisPointsRate() * 100));
+    }
+
     /// @dev Take `amount` `asset` from `user` using `transferFrom`, minus any unaccounted `asset` in this contract.
     function _join(address user, uint128 amount) internal returns (uint128) {
         IERC20 token = IERC20(asset);
@@ -32,7 +38,7 @@ contract TetherJoin is IJoin, AccessControl {
                 token.safeTransferFrom(user, address(this), amount);
                 amount = uint128(token.balanceOf(address(this)) - _storedBalance);
             } else if (available < amount) {
-                token.safeTransferFrom(user, address(this), (amount - available) * 1000000 / (1000000 - (IUSDT(asset).basisPointsRate() * 100)));
+                token.safeTransferFrom(user, address(this), _reverseFee(amount - available));
                 amount = uint128(token.balanceOf(address(this)) - _storedBalance);
             }
             storedBalance = _storedBalance + amount; // Unlikely that a uint128 added to the stored balance will make it overflow
