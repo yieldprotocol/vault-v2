@@ -16,7 +16,7 @@ using stdStorage for StdStorage;
 abstract contract Deployed is Test, TestExtensions, TestConstants {
 
     TetherJoin public join; 
-    IUSDT public token;
+    IUSDT public tether;
     uint128 public unit;
     IERC20 public otherToken;
     uint128 public otherUnit;
@@ -25,6 +25,7 @@ abstract contract Deployed is Test, TestExtensions, TestConstants {
     address other;
     address ladle;
     address me;
+    address tetherMultiSig;
 
     function setUpMock() public {
         vm.createSelectFork(MAINNET);
@@ -32,14 +33,14 @@ abstract contract Deployed is Test, TestExtensions, TestConstants {
         ladle = addresses[MAINNET][LADLE];
 
         //... Contracts ...
-        token = IUSDT(0xdAC17F958D2ee523a2206206994597C13D831ec7);
-        unit = uint128(10 ** ERC20Mock(address(token)).decimals());
+        tether = IUSDT(0xdAC17F958D2ee523a2206206994597C13D831ec7);
+        unit = uint128(10 ** ERC20Mock(address(tether)).decimals());
 
         otherToken = IERC20(address(new ERC20Mock("", "")));
         otherUnit = uint128(10 ** ERC20Mock(address(otherToken)).decimals());
 
         //... Deploy Joins and grant access ...
-        join = new TetherJoin(address(token));
+        join = new TetherJoin(address(tether));
 
         //... Permissions ...
         join.grantRole(TetherJoin.join.selector, ladle);
@@ -51,8 +52,8 @@ abstract contract Deployed is Test, TestExtensions, TestConstants {
         ladle = addresses[network][LADLE];
 
         join = TetherJoin(vm.envAddress("JOIN"));
-        token = IUSDT(join.asset());
-        unit = uint128(10 ** ERC20Mock(address(token)).decimals());
+        tether = IUSDT(join.asset());
+        unit = uint128(10 ** ERC20Mock(address(tether)).decimals());
 
         otherToken = IERC20(address(new ERC20Mock("", "")));
         otherUnit = uint128(10 ** ERC20Mock(address(otherToken)).decimals());
@@ -73,19 +74,21 @@ abstract contract Deployed is Test, TestExtensions, TestConstants {
         user = address(0xdeadbeef);
         other = address(2);
         me = 0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84;
+        tetherMultiSig = 0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828;
 
         vm.label(ladle, "ladle");
         vm.label(user, "user");
         vm.label(other, "other");
         vm.label(me, "me");
-        vm.label(address(token), "token");
+        vm.label(address(tether), "tether");
+        vm.label(tetherMultiSig, "tetherMultiSig");
         vm.label(address(otherToken), "otherToken");
         vm.label(address(join), "join");
 
-        deal(address(token), user, 100 * unit);
+        deal(address(tether), user, 100 * unit);
 
         // If there are any unclaimed assets in the Join, join them.
-        uint128 unclaimedTokens = uint128(token.balanceOf(address(join)) - join.storedBalance());
+        uint128 unclaimedTokens = uint128(tether.balanceOf(address(join)) - join.storedBalance());
         vm.prank(ladle);
         join.join(address(join), unclaimedTokens);
     }  
@@ -112,51 +115,100 @@ contract DeployedTest is Deployed {
     }
     
     function testJoinPull() public {
-        track("userBalance", token.balanceOf(user));
+        track("userBalance", tether.balanceOf(user));
         track("storedBalance", join.storedBalance());
-        track("joinBalance", token.balanceOf(address(join)));
+        track("joinBalance", tether.balanceOf(address(join)));
 
         vm.prank(user);
-        token.approve(address(join), unit);
+        tether.approve(address(join), unit);
         vm.prank(ladle);
         join.join(user, unit);
 
-        assertTrackMinusEq("userBalance", unit, token.balanceOf(user));
+        assertTrackMinusEq("userBalance", unit, tether.balanceOf(user));
         assertTrackPlusEq("storedBalance", unit, join.storedBalance());
-        assertTrackPlusEq("joinBalance", unit, token.balanceOf(address(join)));
+        assertTrackPlusEq("joinBalance", unit, tether.balanceOf(address(join)));
     }
 
-    // MUST be combined since .join will attempt to transfer the remainder from the user
     function testJoinPush() public {
-        track("userBalance", token.balanceOf(user));
+        track("userBalance", tether.balanceOf(user));
         track("storedBalance", join.storedBalance());
-        track("joinBalance", token.balanceOf(address(join)));
+        track("joinBalance", tether.balanceOf(address(join)));
 
         vm.prank(user);
-        token.transfer(address(join), unit);
+        tether.transfer(address(join), unit);
         vm.prank(ladle);
         join.join(user, unit);
 
-        assertTrackMinusEq("userBalance", unit, token.balanceOf(user));
+        assertTrackMinusEq("userBalance", unit, tether.balanceOf(user));
         assertTrackPlusEq("storedBalance", unit, join.storedBalance());
-        assertTrackPlusEq("joinBalance", unit, token.balanceOf(address(join)));
+        assertTrackPlusEq("joinBalance", unit, tether.balanceOf(address(join)));
     }
 
     function testJoinCombine() public {
-        track("userBalance", token.balanceOf(user));
+        track("userBalance", tether.balanceOf(user));
         track("storedBalance", join.storedBalance());
-        track("joinBalance", token.balanceOf(address(join)));
+        track("joinBalance", tether.balanceOf(address(join)));
 
         vm.prank(user);
-        token.approve(address(join), unit / 2);
+        tether.approve(address(join), unit / 2);
         vm.prank(user);
-        token.transfer(address(join), unit / 2);
+        tether.transfer(address(join), unit / 2);
         vm.prank(ladle);
         join.join(user, unit);
 
-        assertTrackMinusEq("userBalance", unit, token.balanceOf(user));
+        assertTrackMinusEq("userBalance", unit, tether.balanceOf(user));
         assertTrackPlusEq("storedBalance", unit, join.storedBalance());
-        assertTrackPlusEq("joinBalance", unit, token.balanceOf(address(join)));
+        assertTrackPlusEq("joinBalance", unit, tether.balanceOf(address(join)));
+    }
+}
+
+abstract contract WithFees is Deployed {
+    function setUp() public override virtual {
+        super.setUp();
+
+        // enable fees
+        vm.prank(tetherMultiSig);
+        tether.setParams(19, 49);    // maximum
+    }
+}
+
+contract WithFeesTest is WithFees {
+    function testJoinPullWithFees() public {
+        track("userBalance", tether.balanceOf(user));
+        track("storedBalance", join.storedBalance());
+        track("joinBalance", tether.balanceOf(address(join)));
+
+        uint256 units = unit * 5;
+        uint256 fee = tether.basisPointsRate() * 100;
+        uint256 feeAdjustedUnits = units * unit / (unit - fee); // scale up first so precision isn't lost
+
+        vm.prank(user);
+        tether.approve(address(join), feeAdjustedUnits);
+        vm.prank(ladle);
+        join.join(user, uint128(feeAdjustedUnits));
+
+        assertTrackMinusEq("userBalance", feeAdjustedUnits, tether.balanceOf(user));
+        assertTrackPlusEq("storedBalance", units, join.storedBalance());
+        assertTrackPlusEq("joinBalance", units, tether.balanceOf(address(join)));
+    }
+
+    function testJoinPushWithFees() public {
+        track("userBalance", tether.balanceOf(user));
+        track("storedBalance", join.storedBalance());
+        track("joinBalance", tether.balanceOf(address(join)));
+
+        uint256 units = unit * 5;
+        uint256 fee = tether.basisPointsRate() * 100;
+        uint256 feeAdjustedUnits = units * unit / (unit - fee); // scale up first so precision isn't lost
+
+        vm.prank(user);
+        tether.transfer(address(join), feeAdjustedUnits);
+        vm.prank(ladle);
+        join.join(user, unit * 5);
+
+        assertTrackMinusEq("userBalance", feeAdjustedUnits, tether.balanceOf(user));
+        assertTrackPlusEq("storedBalance", units, join.storedBalance());
+        assertTrackPlusEq("joinBalance", units, tether.balanceOf(address(join)));
     }
 }
 
@@ -165,7 +217,7 @@ abstract contract WithTokens is Deployed {
         super.setUp();
 
         vm.prank(user);
-        token.transfer(address(join), unit);
+        tether.transfer(address(join), unit);
         vm.prank(ladle);
         join.join(user, unit);
     }
@@ -174,16 +226,16 @@ abstract contract WithTokens is Deployed {
 contract WithTokensTest is WithTokens {
 
     function testExit() public {
-        track("otherBalance", token.balanceOf(other));
+        track("otherBalance", tether.balanceOf(other));
         track("storedBalance", join.storedBalance());
-        track("joinBalance", token.balanceOf(address(join)));
+        track("joinBalance", tether.balanceOf(address(join)));
 
         vm.prank(ladle);
         join.exit(other, unit);
 
-        assertTrackPlusEq("otherBalance", unit, token.balanceOf(other));
+        assertTrackPlusEq("otherBalance", unit, tether.balanceOf(other));
         assertTrackMinusEq("storedBalance", unit, join.storedBalance());
-        assertTrackMinusEq("joinBalance", unit, token.balanceOf(address(join)));
+        assertTrackMinusEq("joinBalance", unit, tether.balanceOf(address(join)));
     }
 }
 
