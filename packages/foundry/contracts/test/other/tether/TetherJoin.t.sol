@@ -8,6 +8,7 @@ import "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
 import { TestExtensions } from "../../utils/TestExtensions.sol";
 import { TestConstants } from "../../utils/TestConstants.sol";
 import { IUSDT } from "../../../other/tether/IUSDT.sol";
+import { Join } from "../../../Join.sol";
 import { TetherJoin } from "../../../other/tether/TetherJoin.sol";
 import { ERC20Mock } from "../../../mocks/ERC20Mock.sol";
 
@@ -43,9 +44,9 @@ abstract contract Deployed is Test, TestExtensions, TestConstants {
         join = new TetherJoin(address(tether));
 
         //... Permissions ...
-        join.grantRole(TetherJoin.join.selector, ladle);
-        join.grantRole(TetherJoin.exit.selector, ladle);
-        join.grantRole(TetherJoin.retrieve.selector, ladle);
+        join.grantRole(Join.join.selector, ladle);
+        join.grantRole(Join.exit.selector, ladle);
+        join.grantRole(Join.retrieve.selector, ladle);
     }
 
     function setUpHarness(string memory network) public {
@@ -60,7 +61,7 @@ abstract contract Deployed is Test, TestExtensions, TestConstants {
 
         // Grant ladle permissions to retrieve tokens, since no one has them.
         vm.prank(addresses[network][TIMELOCK]);
-        join.grantRole(TetherJoin.retrieve.selector, ladle);
+        join.grantRole(Join.retrieve.selector, ladle);
     }
 
     function setUp() public virtual {
