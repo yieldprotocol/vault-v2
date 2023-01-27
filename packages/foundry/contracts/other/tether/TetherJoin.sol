@@ -28,15 +28,10 @@ contract TetherJoin is IJoin, AccessControl {
         uint256 _storedBalance = storedBalance;
         uint256 available = token.balanceOf(address(this)) - _storedBalance; // Fine to panic if this underflows
         unchecked {
-            if (available < amount) {
-                uint256 balanceBefore = token.balanceOf(address(this));
-                token.safeTransferFrom(user, address(this), amount - available);
-                uint256 balanceAfter = token.balanceOf(address(this));
-                storedBalance = (balanceAfter - balanceBefore) + _storedBalance; // Unlikely that a uint128 added to the stored balance will make it overflow
-                amount =  uint128(balanceAfter - balanceBefore); // Fine to panic if this overflows
-            }
+            storedBalance = _storedBalance + amount; // Unlikely that a uint128 added to the stored balance will make it overflow
+            if (available < amount) token.safeTransferFrom(user, address(this), amount - available);
         }
-        return amount; 
+        return amount;
     }
 
     /// @dev Transfer `amount` `asset` to `user`

@@ -29,7 +29,7 @@ abstract contract Deployed is Test, TestExtensions, TestConstants {
     function setUpMock() public {
         vm.createSelectFork(MAINNET);
 
-        ladle = address(3);
+        ladle = addresses[MAINNET][LADLE];
 
         //... Contracts ...
         token = IUSDT(0xdAC17F958D2ee523a2206206994597C13D831ec7);
@@ -70,7 +70,7 @@ abstract contract Deployed is Test, TestExtensions, TestConstants {
         else setUpHarness(network);
 
         //... Users ...
-        user = address(1);
+        user = address(0xdeadbeef);
         other = address(2);
         me = 0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84;
 
@@ -155,8 +155,8 @@ contract DeployedTest is Deployed {
         join.join(user, unit);
 
         assertTrackMinusEq("userBalance", unit, token.balanceOf(user));
-        assertTrackPlusEq("storedBalance", unit / 2, join.storedBalance());
-        assertTrackPlusEq("joinBalance", unit / 2, token.balanceOf(address(join)));
+        assertTrackPlusEq("storedBalance", unit, join.storedBalance());
+        assertTrackPlusEq("joinBalance", unit, token.balanceOf(address(join)));
     }
 }
 

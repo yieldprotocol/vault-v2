@@ -9,7 +9,15 @@ interface IUSDT {
 
     function decimals() external view returns (uint8);
 
+    function totalSupply() external returns (uint);
+
+    function balances(address) external returns (uint);
+
     function balanceOf(address _owner) external returns (uint balance);
+
+    function allowance(address owner, address spender) external returns (uint);
+
+    function allowed(address, address) external returns (uint);
 
     function approve(address spender, uint value) external;
 
