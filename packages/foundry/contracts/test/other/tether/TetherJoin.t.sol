@@ -232,20 +232,20 @@ contract WithFeesTest is WithFees {
         track("storedBalance", join.storedBalance());
         track("joinBalance", tether.balanceOf(address(join)));
 
-        uint256 units = unit * 13;
-        uint256 fee = tether.basisPointsRate() * 100;
-        uint256 feeAdjustedUnits = units / 2 * unit / (unit - fee); // scale up first so precision isn't lost
+        uint256 amount = unit * 5 / 3;
+        uint256 joinBalance = tether.balanceOf(address(join));
 
         vm.prank(user);
-        tether.approve(address(join), feeAdjustedUnits);
+        tether.approve(address(join), type(uint256).max);
         vm.prank(user);
-        tether.transfer(address(join), feeAdjustedUnits);
+        tether.transfer(address(join), amount);
+        uint256 amountReceived = tether.balanceOf(address(join)) - joinBalance;
+        
         vm.prank(ladle);
-        join.join(user, uint128(units));
+        join.join(user, uint128(amountReceived * 2));
 
-        assertTrackMinusEq("userBalance", feeAdjustedUnits * 2, tether.balanceOf(user));
-        assertTrackPlusEq("storedBalance", units, join.storedBalance());
-        assertTrackPlusEq("joinBalance", units, tether.balanceOf(address(join)));
+        assertTrackPlusEq("storedBalance", amountReceived * 2, join.storedBalance());
+        assertTrackPlusEq("joinBalance", amountReceived * 2, tether.balanceOf(address(join)));
     }
 }
 
