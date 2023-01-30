@@ -20,6 +20,7 @@ contract TestConstants {
     bytes6 public constant UNI = 0x313000000000;
     bytes6 public constant CVX3CRV = 0x313000000000;
     bytes6 public constant FRAX = 0x313800000000;
+    bytes6 public constant RETH = 0xE03016000000;
     bytes6 public constant CRAB = 0x333800000000;
     bytes6 public constant OSQTH = 0x333900000000;
 
