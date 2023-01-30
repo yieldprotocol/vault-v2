@@ -56,12 +56,12 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
     ChainlinkAggregatorV3Mock public ethAggregator;
     ChainlinkAggregatorV3Mock public daiAggregator;
     ChainlinkAggregatorV3Mock public usdcAggregator;
+    ChainlinkAggregatorV3Mock public baseAggregator;
 
     bytes12 public vaultId = 0x000000000000000000000001;
     bytes12 public zeroVaultId = 0x000000000000000000000000;
 
     bytes6 public zeroId = 0x000000000000;
-
     bytes6[] public ilkIds;
 
     function setUp() public virtual {
@@ -112,6 +112,9 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         usdcAggregator = new ChainlinkAggregatorV3Mock();
         usdcAggregator.set(1e18 / 2);
 
+        baseAggregator = new ChainlinkAggregatorV3Mock();
+        baseAggregator.set(1e18 / 2);
+
         spotOracle = new ChainlinkMultiOracle();
         spotOracle.grantRole(
             ChainlinkMultiOracle.setSource.selector,
@@ -119,22 +122,22 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         );
 
         spotOracle.setSource(
-            baseId,
-            IERC20Metadata(address(base)),
+            ETH,
+            IERC20Metadata(address(weth)),
             usdcId,
             IERC20Metadata(address(usdc)),
             address(usdcAggregator)
         );
         spotOracle.setSource(
+            ETH,
+            IERC20Metadata(address(weth)),
             baseId,
             IERC20Metadata(address(base)),
-            wethId,
-            IERC20Metadata(address(weth)),
             address(ethAggregator)
         );
         spotOracle.setSource(
-            baseId,
-            IERC20Metadata(address(base)),
+            ETH,
+            IERC20Metadata(address(weth)),
             daiId,
             IERC20Metadata(address(dai)),
             address(daiAggregator)
@@ -156,7 +159,7 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
     }
 
     function cauldronGovAuth() public {
-        bytes4[] memory roles = new bytes4[](8);
+        bytes4[] memory roles = new bytes4[](11);
         roles[0] = VRCauldron.addAsset.selector;
         roles[1] = VRCauldron.addIlks.selector;
         roles[2] = VRCauldron.setDebtLimits.selector;
@@ -165,6 +168,10 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         roles[5] = VRCauldron.addBase.selector;
         roles[6] = VRCauldron.destroy.selector;
         roles[7] = VRCauldron.build.selector;
+        roles[8] = VRCauldron.pour.selector;
+        roles[9] = VRCauldron.give.selector;
+        roles[10] = VRCauldron.tweak.selector;
         cauldron.grantRoles(roles, address(this));
     }
+    
 }

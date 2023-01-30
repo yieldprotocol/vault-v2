@@ -1,14 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity >=0.8.13;
 
-import "forge-std/src/Test.sol";
-import "forge-std/src/console.sol";
-import "forge-std/src/Vm.sol";
-
 import "./Fixture.sol";
-import "../../variable/VYToken.sol";
 
 abstract contract ZeroState is Fixture {
+    using CastU256I128 for uint256;
+
     ERC20Mock public ilk;
     bytes6 public ilkId;
     VYToken public vyToken;
@@ -49,7 +46,7 @@ contract AssetAndBaseAdditionTests is ZeroState {
 
     function testBaseAddition() public {
         cauldron.addAsset(usdcId, address(usdc));
-        cauldron.setRateOracle(usdcId, IOracle(address(spotOracle)));
+        cauldron.setRateOracle(usdcId, IOracle(address(chiRateOracle)));
         cauldron.addBase(usdcId);
         assertEq(cauldron.bases(usdcId), true);
     }
@@ -99,7 +96,7 @@ contract IlkAddition is ZeroState {
     function setUp() public virtual override {
         super.setUp();
         cauldron.addAsset(usdcId, address(usdc));
-        cauldron.setRateOracle(usdcId, IOracle(address(spotOracle)));
+        cauldron.setRateOracle(usdcId, IOracle(address(chiRateOracle)));
 
         ilkIds = new bytes6[](1);
         ilkIds[0] = usdcId;
@@ -134,7 +131,7 @@ contract OracleAddition is ZeroState {
 
     function testNotAllowedToAddRateOracleForUnknownBase() public {
         vm.expectRevert("Base not found");
-        cauldron.setRateOracle(otherIlkId, IOracle(address(spotOracle)));
+        cauldron.setRateOracle(otherIlkId, IOracle(address(chiRateOracle)));
     }
 
     function testNotAllowedToAddSpotOracleForUnknownBase() public {
@@ -162,7 +159,7 @@ contract VaultTest is ZeroState {
     function setUp() public virtual override {
         super.setUp();
         cauldron.addAsset(usdcId, address(usdc));
-        cauldron.setRateOracle(usdcId, IOracle(address(spotOracle)));
+        cauldron.setRateOracle(usdcId, IOracle(address(chiRateOracle)));
 
         ilkIds = new bytes6[](1);
         ilkIds[0] = usdcId;
@@ -205,16 +202,29 @@ contract VaultTest is ZeroState {
 }
 
 contract CauldronTestOnBuiltVault is ZeroState {
+    using CastU256I128 for uint256;
+
     function setUp() public virtual override {
         super.setUp();
 
-        ilkIds = new bytes6[](1);
+        ilkIds = new bytes6[](2);
         ilkIds[0] = usdcId;
+        ilkIds[1] = daiId;
 
         cauldron.addAsset(usdcId, address(usdc));
-        cauldron.setRateOracle(usdcId, IOracle(address(spotOracle)));
+        cauldron.addAsset(daiId, address(dai));
+        cauldron.setRateOracle(usdcId, IOracle(address(chiRateOracle)));
         cauldron.setSpotOracle(baseId, usdcId, spotOracle, 1000000);
+        cauldron.setSpotOracle(baseId, daiId, spotOracle, 1000000);
         cauldron.addIlks(baseId, ilkIds);
+        // TODO: Come up with sensible values
+        cauldron.setDebtLimits(
+            baseId,
+            usdcId,
+            uint96(WAD * 20),
+            uint24(1e6),
+            6
+        );
         cauldron.build(address(this), vaultId, baseId, usdcId);
     }
 
@@ -227,5 +237,48 @@ contract CauldronTestOnBuiltVault is ZeroState {
         cauldron.destroy(vaultId);
         (address owner_, , ) = cauldron.vaults(vaultId);
         assertEq(owner_, address(0));
+    }
+
+    function testPour() public {
+        // TODO: Come up with sensible values
+        cauldron.pour(
+            vaultId,
+            (WAD * 10000000000000).i128(),
+            (WAD * 100000).i128()
+        );
+    }
+
+    function testGiveVault() public {
+        cauldron.give(vaultId, user);
+        (address owner_, , ) = cauldron.vaults(vaultId);
+        assertEq(owner_, user);
+    }
+
+    function testChangeVault() public {
+        cauldron.tweak(vaultId, baseId, daiId);
+        (, bytes6 baseId_, bytes6 ilkId_) = cauldron.vaults(vaultId);
+        assertEq(baseId_, baseId);
+        assertEq(ilkId_, daiId);
+    }
+
+    function testCannotTweakVaultWithCollateral() public {
+        cauldron.pour(vaultId, (WAD * 10000000000000).i128(), 0);
+        vm.expectRevert("Only with no collateral");
+        cauldron.tweak(vaultId, baseId, daiId);
+    }
+
+    function testCannotTweakVaultWithDebt() public {
+        cauldron.pour(
+            vaultId,
+            (WAD * 10000000000000).i128(),
+            (WAD * 100000).i128()
+        );
+        vm.expectRevert("Only with no debt");
+        cauldron.tweak(vaultId, otherIlkId, usdcId);
+    }
+
+    function testCannotTweakWithNotAddedToBase() public {
+        vm.expectRevert("Ilk not added to base");
+        cauldron.tweak(vaultId, baseId, otherIlkId);
     }
 }
