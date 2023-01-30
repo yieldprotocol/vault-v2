@@ -179,18 +179,17 @@ contract WithFeesTest is WithFees {
         track("storedBalance", join.storedBalance());
         track("joinBalance", tether.balanceOf(address(join)));
 
-        uint256 units = unit * 5;
-        uint256 fee = tether.basisPointsRate() * 100;
-        uint256 feeAdjustedUnits = units * unit / (unit - fee); // scale up first so precision isn't lost
+        uint256 amount = unit * 5;
+        uint256 fee = amount * tether.basisPointsRate() / 10000;
 
         vm.prank(user);
-        tether.approve(address(join), feeAdjustedUnits);
+        tether.approve(address(join), amount);
         vm.prank(ladle);
-        join.join(user, uint128(feeAdjustedUnits));
+        join.join(user, uint128(amount));
 
-        assertTrackMinusEq("userBalance", feeAdjustedUnits, tether.balanceOf(user));
-        assertTrackPlusEq("storedBalance", units, join.storedBalance());
-        assertTrackPlusEq("joinBalance", units, tether.balanceOf(address(join)));
+        assertTrackMinusEq("userBalance", amount, tether.balanceOf(user));
+        assertTrackPlusEq("storedBalance", amount - fee, join.storedBalance());
+        assertTrackPlusEq("joinBalance", amount - fee, tether.balanceOf(address(join)));
     }
 
     function testJoinPushWithFees() public {
@@ -198,18 +197,17 @@ contract WithFeesTest is WithFees {
         track("storedBalance", join.storedBalance());
         track("joinBalance", tether.balanceOf(address(join)));
 
-        uint256 units = unit * 5;
-        uint256 fee = tether.basisPointsRate() * 100;
-        uint256 feeAdjustedUnits = units * unit / (unit - fee); // scale up first so precision isn't lost
+        uint256 amount = unit * 5;
+        uint256 joinBalance = tether.balanceOf(address(join));
 
         vm.prank(user);
-        tether.transfer(address(join), feeAdjustedUnits);
-        vm.prank(ladle);
-        join.join(user, uint128(units));
+        tether.transfer(address(join), amount);
+        uint256 amountReceived = tether.balanceOf(address(join)) - joinBalance;
 
-        assertTrackMinusEq("userBalance", feeAdjustedUnits, tether.balanceOf(user));
-        assertTrackPlusEq("storedBalance", units, join.storedBalance());
-        assertTrackPlusEq("joinBalance", units, tether.balanceOf(address(join)));
+        vm.prank(ladle);
+        join.join(user, uint128(amountReceived));
+
+        assertTrackPlusEq("storedBalance", amountReceived, join.storedBalance());
     }
 
     function testJoinCombineWithFees() public {
