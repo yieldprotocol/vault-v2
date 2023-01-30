@@ -30,7 +30,7 @@ contract TetherJoin is FlashJoin {
         uint256 available = token.balanceOf(address(this)) - _storedBalance; // Fine to panic if this underflows
         unchecked {
             if (available == 0) {
-                token.safeTransferFrom(user, address(this), amount);
+                token.safeTransferFrom(user, address(this), _reverseFee(amount));
                 amount = uint128(token.balanceOf(address(this)) - _storedBalance);
             } else if (available < amount) {
                 token.safeTransferFrom(user, address(this), _reverseFee(amount - available));

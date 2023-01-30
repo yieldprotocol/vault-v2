@@ -179,17 +179,33 @@ contract WithFeesTest is WithFees {
         track("storedBalance", join.storedBalance());
         track("joinBalance", tether.balanceOf(address(join)));
 
-        uint256 amount = unit * 5;
-        uint256 fee = amount * tether.basisPointsRate() / 10000;
+        uint256 amount = unit * 5 / 3;
 
         vm.prank(user);
-        tether.approve(address(join), amount);
+        tether.approve(address(join), type(uint256).max);
         vm.prank(ladle);
         join.join(user, uint128(amount));
 
-        assertTrackMinusEq("userBalance", amount, tether.balanceOf(user));
-        assertTrackPlusEq("storedBalance", amount - fee, join.storedBalance());
-        assertTrackPlusEq("joinBalance", amount - fee, tether.balanceOf(address(join)));
+        // We only care about what we received, not what the user sent.
+        assertTrackPlusEq("storedBalance", amount, join.storedBalance());
+        assertTrackPlusEq("joinBalance", amount, tether.balanceOf(address(join)));
+    }
+
+    function testJoinPullWithFees(uint256 amount_) public {
+        track("userBalance", tether.balanceOf(user));
+        track("storedBalance", join.storedBalance());
+        track("joinBalance", tether.balanceOf(address(join)));
+
+        uint256 amount = bound(amount_, 1, tether.balanceOf(user) * 99/100); // Up to 99% of the user's balance, to leave some room for fees.
+
+        vm.prank(user);
+        tether.approve(address(join), type(uint256).max);
+        vm.prank(ladle);
+        join.join(user, uint128(amount));
+
+        // We only care about what we received, not what the user sent.
+        assertTrackPlusEq("storedBalance", amount, join.storedBalance());
+        assertTrackPlusEq("joinBalance", amount, tether.balanceOf(address(join)));
     }
 
     function testJoinPushWithFees() public {
@@ -197,7 +213,7 @@ contract WithFeesTest is WithFees {
         track("storedBalance", join.storedBalance());
         track("joinBalance", tether.balanceOf(address(join)));
 
-        uint256 amount = unit * 5;
+        uint256 amount = unit * 5 / 3;
         uint256 joinBalance = tether.balanceOf(address(join));
 
         vm.prank(user);
@@ -207,6 +223,7 @@ contract WithFeesTest is WithFees {
         vm.prank(ladle);
         join.join(user, uint128(amountReceived));
 
+        // We only care about accounting for what we received, not what the user sent.
         assertTrackPlusEq("storedBalance", amountReceived, join.storedBalance());
     }
 
