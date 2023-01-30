@@ -14,6 +14,7 @@ contract TetherJoin is FlashJoin {
 
     constructor(address asset_) FlashJoin(asset_) {}
 
+    /// @dev Calculate the minimum of two uint256s.
     function _min(uint256 a, uint256 b) internal pure returns (uint256) {
         return a < b ? a : b;
     }
@@ -23,7 +24,7 @@ contract TetherJoin is FlashJoin {
         return _min(amount.wdiv(1e18 - IUSDT(asset).basisPointsRate() * 1e14), amount + IUSDT(asset).maximumFee());
     }
 
-    /// @dev Take `amount` `asset` from `user` using `transferFrom`, minus any unaccounted `asset` in this contract.
+    /// @dev Take `asset` from `user` using `transferFrom`, minus any unaccounted `asset` in this contract, so that `amount` of USDT is received.
     function _join(address user, uint128 amount) internal override returns (uint128) {
         IERC20 token = IERC20(asset);
         uint256 _storedBalance = storedBalance;
