@@ -8,7 +8,7 @@ abstract contract ZeroState is Fixture {
     ERC20Mock public ilk;
     bytes6 public ilkId;
     VYToken public vyToken;
-
+    event VaultStirred(bytes12 indexed from, bytes12 indexed to, uint128 ink, uint128 art);
     function setUp() public virtual override {
         super.setUp();
         vyToken = new VYToken(
@@ -287,7 +287,18 @@ contract CauldronTestOnBuiltVault is VaultBuiltState {
     }
 }
 
-contract CauldronStirTests is VaultBuiltState {
+abstract contract CauldronPouredState is VaultBuiltState {
+    function setUp() public virtual override {
+        super.setUp();
+        cauldron.pour(
+            vaultId,
+            (WAD * 10000000000000).i128(),
+            0
+        );
+    }
+}
+
+contract CauldronStirTests is CauldronPouredState {
     function testCannotMoveFromSameVault() public {
         vm.expectRevert("Identical vaults");
         cauldron.stir(vaultId, vaultId, 0, 0);
@@ -296,5 +307,46 @@ contract CauldronStirTests is VaultBuiltState {
     function testCannotMoveToUnitializedVault() public {
         vm.expectRevert("Vault not found");
         cauldron.stir(vaultId, otherVaultId, 0, 0);
+    }
+
+    function testDifferentCollateral() public {
+        cauldron.build(address(this), otherVaultId, baseId, daiId);
+        vm.expectRevert("Different collateral");
+        cauldron.stir(vaultId, otherVaultId, 10, 0);
+    }
+
+    function testUndercollateralizedAtDestination() public {
+        cauldron.pour(
+            vaultId,
+            0,
+            (WAD * 100000).i128()
+        );
+        cauldron.build(address(this), otherVaultId, baseId, daiId);
+        vm.expectRevert("Undercollateralized at destination");
+        cauldron.stir(vaultId, otherVaultId, 0, 10);
+    }
+
+    function testMoveCollateral() public {
+        cauldron.build(address(this), otherVaultId, baseId, usdcId);
+        vm.expectEmit(true, true, false, true);
+        emit VaultStirred(vaultId, otherVaultId, 10, 0);
+        cauldron.stir(vaultId, otherVaultId, 10, 0);
+    }
+
+    function testMoveDebt() public {
+        cauldron.pour(
+            vaultId,
+            0,
+            (WAD * 100000).i128()
+        );
+        cauldron.build(address(this), otherVaultId, baseId, daiId);
+        cauldron.pour(
+            otherVaultId,
+            (WAD * 10000000000000).i128(),
+            0
+        );
+        vm.expectEmit(true, true, false, true);
+        emit VaultStirred(vaultId, otherVaultId, 0, 10);
+        cauldron.stir(vaultId, otherVaultId, 0, 10);
     }
 }
