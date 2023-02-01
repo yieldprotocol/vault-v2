@@ -60,6 +60,7 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
 
     bytes12 public vaultId = 0x000000000000000000000001;
     bytes12 public zeroVaultId = 0x000000000000000000000000;
+    bytes12 public otherVaultId = 0x000000000000000000000002;
 
     bytes6 public zeroId = 0x000000000000;
     bytes6[] public ilkIds;
@@ -159,7 +160,7 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
     }
 
     function cauldronGovAuth() public {
-        bytes4[] memory roles = new bytes4[](11);
+        bytes4[] memory roles = new bytes4[](12);
         roles[0] = VRCauldron.addAsset.selector;
         roles[1] = VRCauldron.addIlks.selector;
         roles[2] = VRCauldron.setDebtLimits.selector;
@@ -171,7 +172,7 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         roles[8] = VRCauldron.pour.selector;
         roles[9] = VRCauldron.give.selector;
         roles[10] = VRCauldron.tweak.selector;
+        roles[11] = VRCauldron.stir.selector;
         cauldron.grantRoles(roles, address(this));
     }
-    
 }

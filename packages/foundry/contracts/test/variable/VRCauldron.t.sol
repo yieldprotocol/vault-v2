@@ -2,10 +2,9 @@
 pragma solidity >=0.8.13;
 
 import "./Fixture.sol";
+using CastU256I128 for uint256;
 
 abstract contract ZeroState is Fixture {
-    using CastU256I128 for uint256;
-
     ERC20Mock public ilk;
     bytes6 public ilkId;
     VYToken public vyToken;
@@ -52,12 +51,15 @@ contract AssetAndBaseAdditionTests is ZeroState {
     }
 }
 
-contract AssetAndIlkAddedTests is ZeroState {
+abstract contract AssetAddedState is ZeroState {
     function setUp() public virtual override {
         super.setUp();
         cauldron.addAsset(usdcId, address(usdc));
+        cauldron.addAsset(daiId, address(dai));
     }
+}
 
+contract AssetAndIlkAddedTests is AssetAddedState {
     function testSameIdentifier() public {
         vm.expectRevert("Id already used");
         cauldron.addAsset(usdcId, address(usdc));
@@ -92,16 +94,18 @@ contract AssetAndIlkAddedTests is ZeroState {
     }
 }
 
-contract IlkAddition is ZeroState {
+abstract contract IlkAddedState is AssetAddedState {
     function setUp() public virtual override {
         super.setUp();
-        cauldron.addAsset(usdcId, address(usdc));
         cauldron.setRateOracle(usdcId, IOracle(address(chiRateOracle)));
 
-        ilkIds = new bytes6[](1);
+        ilkIds = new bytes6[](2);
         ilkIds[0] = usdcId;
+        ilkIds[1] = daiId;
     }
+}
 
+contract IlkAddition is IlkAddedState {
     function testCannotAddIlkWithoutSpotOracle() public {
         vm.expectRevert("Spot oracle not found");
         cauldron.addIlks(baseId, ilkIds);
@@ -114,6 +118,7 @@ contract IlkAddition is ZeroState {
 
     function testAddIlkAndSpotOracle() public {
         cauldron.setSpotOracle(baseId, usdcId, spotOracle, 1000000);
+        cauldron.setSpotOracle(baseId, daiId, spotOracle, 1000000);
         (IOracle oracle, ) = cauldron.spotOracles(baseId, usdcId);
         assertEq(address(oracle), address(spotOracle));
 
@@ -155,16 +160,14 @@ contract OracleAddition is ZeroState {
     }
 }
 
-contract VaultTest is ZeroState {
+abstract contract RateOracleAddedState is AssetAddedState {
     function setUp() public virtual override {
         super.setUp();
-        cauldron.addAsset(usdcId, address(usdc));
         cauldron.setRateOracle(usdcId, IOracle(address(chiRateOracle)));
-
-        ilkIds = new bytes6[](1);
-        ilkIds[0] = usdcId;
     }
+}
 
+contract VaultTest is RateOracleAddedState {
     function testNoZeroVaultId() public {
         vm.expectRevert("Vault id is zero");
         cauldron.build(address(this), zeroVaultId, baseId, usdcId);
@@ -184,11 +187,30 @@ contract VaultTest is ZeroState {
         vm.expectRevert("Ilk not added to base");
         cauldron.build(address(this), vaultId, baseId, usdcId);
     }
+}
 
-    function testVaultBuild() public {
+abstract contract CompleteSetup is IlkAddedState, RateOracleAddedState {
+    function setUp()
+        public
+        virtual
+        override(IlkAddedState, RateOracleAddedState)
+    {
+        super.setUp();
         cauldron.setSpotOracle(baseId, usdcId, spotOracle, 1000000);
+        cauldron.setSpotOracle(baseId, daiId, spotOracle, 1000000);
         cauldron.addIlks(baseId, ilkIds);
+        cauldron.setDebtLimits(
+            baseId,
+            usdcId,
+            uint96(WAD * 20),
+            uint24(1e6),
+            6
+        );
+    }
+}
 
+contract CauldronBuildTest is CompleteSetup {
+    function testVaultBuild() public {
         cauldron.build(address(this), vaultId, baseId, usdcId);
         (
             address owner_,
@@ -201,32 +223,14 @@ contract VaultTest is ZeroState {
     }
 }
 
-contract CauldronTestOnBuiltVault is ZeroState {
-    using CastU256I128 for uint256;
-
+abstract contract VaultBuiltState is CompleteSetup {
     function setUp() public virtual override {
         super.setUp();
-
-        ilkIds = new bytes6[](2);
-        ilkIds[0] = usdcId;
-        ilkIds[1] = daiId;
-
-        cauldron.addAsset(usdcId, address(usdc));
-        cauldron.addAsset(daiId, address(dai));
-        cauldron.setRateOracle(usdcId, IOracle(address(chiRateOracle)));
-        cauldron.setSpotOracle(baseId, usdcId, spotOracle, 1000000);
-        cauldron.setSpotOracle(baseId, daiId, spotOracle, 1000000);
-        cauldron.addIlks(baseId, ilkIds);
-        // TODO: Come up with sensible values
-        cauldron.setDebtLimits(
-            baseId,
-            usdcId,
-            uint96(WAD * 20),
-            uint24(1e6),
-            6
-        );
         cauldron.build(address(this), vaultId, baseId, usdcId);
     }
+}
+
+contract CauldronTestOnBuiltVault is VaultBuiltState {
 
     function testVaultBuildingWithSameIdFails() public {
         vm.expectRevert("Vault already exists");
@@ -280,5 +284,17 @@ contract CauldronTestOnBuiltVault is ZeroState {
     function testCannotTweakWithNotAddedToBase() public {
         vm.expectRevert("Ilk not added to base");
         cauldron.tweak(vaultId, baseId, otherIlkId);
+    }
+}
+
+contract CauldronStirTests is VaultBuiltState {
+    function testCannotMoveFromSameVault() public {
+        vm.expectRevert("Identical vaults");
+        cauldron.stir(vaultId, vaultId, 0, 0);
+    }
+
+    function testCannotMoveToUnitializedVault() public {
+        vm.expectRevert("Vault not found");
+        cauldron.stir(vaultId, otherVaultId, 0, 0);
     }
 }
