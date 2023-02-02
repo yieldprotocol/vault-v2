@@ -278,7 +278,7 @@ contract CauldronTestOnBuiltVault is VaultBuiltState {
             (WAD * 100000).i128()
         );
         vm.expectRevert("Only with no debt");
-        cauldron.tweak(vaultId, otherIlkId, usdcId);
+        cauldron.tweak(vaultId, daiId, usdcId);
     }
 
     function testCannotTweakWithNotAddedToBase() public {
@@ -348,5 +348,16 @@ contract CauldronStirTests is CauldronPouredState {
         vm.expectEmit(true, true, false, true);
         emit VaultStirred(vaultId, otherVaultId, 0, 10);
         cauldron.stir(vaultId, otherVaultId, 0, 10);
+    }
+
+    function testUndercollateralizedAtOrigin() public {
+        cauldron.pour(
+            vaultId,
+            0,
+            (WAD * 100000).i128()
+        );
+        cauldron.build(address(this), otherVaultId, baseId, usdcId);
+        vm.expectRevert("Undercollateralized at origin");
+        cauldron.stir(vaultId, otherVaultId, uint128(WAD * 10000000000000), 0);
     }
 }

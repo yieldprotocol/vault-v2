@@ -47,7 +47,6 @@ contract VRCauldron is AccessControl(), Constants {
 
     event VaultPoured(bytes12 indexed vaultId, bytes6 indexed baseId, bytes6 indexed ilkId, int128 ink, int128 art);
     event VaultStirred(bytes12 indexed from, bytes12 indexed to, uint128 ink, uint128 art);
-    event VaultRolled(bytes12 indexed vaultId, bytes6 indexed baseId, uint128 art);
 
     // ==== Configuration data ====
     mapping (bytes6 => address)                                 public assets;          // Underlyings and collaterals available in Cauldron. 12 bytes still free.
