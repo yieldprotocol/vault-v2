@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
+// Audit as of 2023-02-03, commit 99464fe, https://hackmd.io/AY6oeTvVSCyLdCh1MEG7yQ
 pragma solidity >=0.8.13;
 
 import "./IUSDT.sol";
@@ -8,6 +9,13 @@ import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/utils-v2/contracts/token/TransferHelper.sol";
 import "@yield-protocol/utils-v2/contracts/math/WDiv.sol";
 
+/// @dev Tether includes code in its contract to apply a fee to transfers. In developing this contract,
+/// we took a selfish approach. The TetherJoin will only care about the amount that USDT that it receives,
+/// and about the amount of USDT that it sends. If fees are enabled, the TetherJoin will expect to have 
+/// the amount specified in the join function arguments, and if pulling from the user, it will pull the
+/// amount that it expects to receive, plus the fee. Likewise, if sending to the user, it will send the
+/// amount specified as an argument, and it is responsibility of the receiver to deal with any shortage
+/// on receival due to fees. This aproach extends to flash loans.
 contract TetherJoin is FlashJoin {
     using TransferHelper for IERC20;
     using WDiv for uint256;
