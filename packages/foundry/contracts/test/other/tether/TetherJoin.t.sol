@@ -175,7 +175,6 @@ abstract contract WithFees is Deployed {
 
 contract WithFeesTest is WithFees {
     function testJoinPullWithFees() public {
-        track("userBalance", tether.balanceOf(user));
         track("storedBalance", join.storedBalance());
         track("joinBalance", tether.balanceOf(address(join)));
 
@@ -191,11 +190,13 @@ contract WithFeesTest is WithFees {
         assertTrackPlusEq("joinBalance", amount, tether.balanceOf(address(join)));
     }
 
-    function testJoinPullWithFees(uint256 amount_) public {
-        track("userBalance", tether.balanceOf(user));
+    function testJoinPullWithFees(uint256 basisPoints, uint256 maxFee, uint256 amount_) public {
         track("storedBalance", join.storedBalance());
         track("joinBalance", tether.balanceOf(address(join)));
 
+        // enable fees
+        vm.prank(tetherMultiSig);
+        tether.setParams(bound(basisPoints, 0, 19), bound(maxFee, 0, 49));    // maximum
         uint256 amount = bound(amount_, 1, tether.balanceOf(user) * 99/100); // Up to 99% of the user's balance, to leave some room for fees.
 
         vm.prank(user);
