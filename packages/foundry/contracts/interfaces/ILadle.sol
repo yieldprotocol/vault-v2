@@ -9,25 +9,8 @@ import "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
 import "@yield-protocol/yieldspace-tv/src/interfaces/IPool.sol";
 
 interface ILadle {
-    function tokens(address) 
-        external view 
-        returns (bool);
 
-    function integrations(address) 
-        external view 
-        returns (bool);
-
-    function modules(address) 
-        external view 
-        returns (bool);
-
-    function joins(bytes6) 
-        external view 
-        returns (IJoin);
-
-    function pools(bytes6) 
-        external view 
-        returns (address);
+    // ---- Storage ----
 
     function cauldron() 
         external view
@@ -44,6 +27,26 @@ interface ILadle {
     function borrowingFee() 
         external view
          returns(uint256);
+
+    function joins(bytes6) 
+        external view 
+        returns (IJoin);
+
+    function pools(bytes6) 
+        external view 
+        returns (address);
+
+    function modules(address) 
+        external view 
+        returns (bool);
+
+    function integrations(address) 
+        external view 
+        returns (bool);
+
+    function tokens(address) 
+        external view 
+        returns (bool);
     
     // ---- Administration ----
 
@@ -84,89 +87,89 @@ interface ILadle {
     /// @dev Allows batched call to self (this contract).
     /// @param calls An array of inputs for each call.
     function batch(bytes[] calldata calls)
-        external
+        external payable
         returns(bytes[] memory results);
 
     /// @dev Allow users to route calls to a contract, to be used with batch
     function route(address integration, bytes calldata data)
-        external
+        external payable
         returns (bytes memory result);
 
     /// @dev Allow users to use functionality coded in a module, to be used with batch
     function moduleCall(address module, bytes calldata data)
-        external
+        external payable
         returns (bytes memory result);
 
     // ---- Token management ----
 
     /// @dev Execute an ERC2612 permit for the selected token
     function forwardPermit(IERC2612 token, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
-        external;
+        external payable;
 
     /// @dev Execute a Dai-style permit for the selected token
     function forwardDaiPermit(IERC20 token, address spender, uint256 nonce, uint256 deadline, bool allowed, uint8 v, bytes32 r, bytes32 s)
-        external;
+        external payable;
 
     /// @dev Allow users to trigger a token transfer from themselves to a receiver through the ladle, to be used with batch
     function transfer(IERC20 token, address receiver, uint128 wad)
-        external;
+        external payable;
 
     /// @dev Retrieve any token in the Ladle
     function retrieve(IERC20 token, address to) 
-        external
+        external payable
         returns (uint256 amount);
 
     /// @dev Accept Ether, wrap it and forward it to the WethJoin
     /// This function should be called first in a batch, and the Join should keep track of stored reserves
     /// Passing the id for a join that doesn't link to a contract implemnting IWETH9 will fail
     function joinEther(bytes6 etherId)
-        external
+        external payable
         returns (uint256 ethTransferred);
 
     /// @dev Unwrap Wrapped Ether held by this Ladle, and send the Ether
     /// This function should be called last in a batch, and the Ladle should have no reason to keep an WETH balance
     function exitEther(address to)
-        external
+        external payable
         returns (uint256 ethTransferred);
 
     // ---- Vault management ----
 
     /// @dev Create a new vault, linked to a series (and therefore underlying) and a collateral
     function build(bytes6 seriesId, bytes6 ilkId, uint8 salt)
-        external virtual
+        external virtual payable
         returns(bytes12, DataTypes.Vault memory);
 
     /// @dev Change a vault series or collateral.
     function tweak(bytes12 vaultId_, bytes6 seriesId, bytes6 ilkId)
-        external
+        external payable
         returns(DataTypes.Vault memory vault);
 
     /// @dev Give a vault to another user.
     function give(bytes12 vaultId_, address receiver)
-        external
+        external payable
         returns(DataTypes.Vault memory vault);
 
     /// @dev Destroy an empty vault. Used to recover gas costs.
     function destroy(bytes12 vaultId_)
-        external;
+        external payable;
 
     // ---- Asset and debt management ----
 
     /// @dev Move collateral and debt between vaults.
     function stir(bytes12 from, bytes12 to, uint128 ink, uint128 art)
-        external;
+        external payable;
 
     /// @dev Add collateral and borrow from vault, pull assets from and push borrowed asset to user
     /// Or, repay to vault and remove collateral, pull borrowed asset from and push assets to user
     /// Borrow only before maturity.
     function pour(bytes12 vaultId_, address to, int128 ink, int128 art)
-        external;
+        external payable;
 
     /// @dev Add collateral and borrow from vault, so that a precise amount of base is obtained by the user.
     /// The base is obtained by borrowing fyToken and buying base with it in a pool.
     /// Only before maturity.
     function serve(bytes12 vaultId_, address to, uint128 ink, uint128 base, uint128 max)
-        external
+        external payable
         returns (uint128 art);
 
     /// @dev Repay vault debt using underlying token at a 1:1 exchange rate, without trading in a pool.
@@ -175,26 +178,26 @@ interface ILadle {
     /// The debt to repay must be entered as a negative number, as with `pour`.
     /// Debt cannot be acquired with this function.
     function close(bytes12 vaultId_, address to, int128 ink, int128 art)
-        external
+        external payable
         returns (uint128 base);
 
     /// @dev Repay debt by selling base in a pool and using the resulting fyToken
     /// The base tokens need to be already in the pool, unaccounted for.
     /// Only before maturity. After maturity use close.
     function repay(bytes12 vaultId_, address to, int128 ink, uint128 min)
-        external
+        external payable
         returns (uint128 art);
 
     /// @dev Repay all debt in a vault by buying fyToken from a pool with base.
     /// The base tokens need to be already in the pool, unaccounted for. The surplus base will be returned to msg.sender.
     /// Only before maturity. After maturity use close.
     function repayVault(bytes12 vaultId_, address to, int128 ink, uint128 max)
-        external
+        external payable
         returns (uint128 base);
 
     /// @dev Change series and debt of a vault.
     function roll(bytes12 vaultId_, bytes6 newSeriesId, uint8 loan, uint128 max)
-        external
+        external payable
         returns (DataTypes.Vault memory vault, uint128 newDebt);
 
     // ---- Ladle as a token holder ----
@@ -204,7 +207,7 @@ interface ILadle {
     /// removing liquidity added with "Borrow and Pool", so it's safe to assume the exchange rate
     /// is 1:1. If used in other contexts, it might revert, which is fine.
     function repayFromLadle(bytes12 vaultId_, address to)
-        external
+        external payable
         returns (uint256 repaid);
 
     /// @dev Use base in the Ladle to repay debt. Return unused base to `to`.
@@ -212,12 +215,12 @@ interface ILadle {
     /// removing liquidity added with "Borrow and Pool", so it's safe to assume the exchange rate
     /// is 1:1. If used in other contexts, it might revert, which is fine.
     function closeFromLadle(bytes12 vaultId_, address to)
-        external
+        external payable
         returns (uint256 repaid);
 
     /// @dev Allow users to redeem fyToken, to be used with batch.
     /// If 0 is passed as the amount to redeem, it redeems the fyToken balance of the Ladle instead.
     function redeem(bytes6 seriesId, address to, uint256 wad)
-        external
+        external payable
         returns (uint256);
 }

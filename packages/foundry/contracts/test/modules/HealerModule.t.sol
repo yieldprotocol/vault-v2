@@ -3,20 +3,18 @@ pragma solidity >=0.8.13;
 
 import "forge-std/src/Test.sol";
 import "forge-std/src/console.sol";
-import "../../interfaces/ICauldron.sol";
-import "../../interfaces/ILadle.sol";
-import "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
-import "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
-import "../../mocks/WETH9Mock.sol";
-import "../../modules/HealerModule.sol";
-import { TestConstants } from "../utils/TestConstants.sol";
-import { TestExtensions } from "../utils/TestExtensions.sol";
 
-interface ILadleCustom {
-    function addModule(address module, bool set) external;
+import {ERC20}          from "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
+import {IERC20}         from "@yield-protocol/utils-v2/contracts/token/IERC20.sol";
+import {IWETH9}         from "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
 
-    function moduleCall(address module, bytes calldata data) external payable returns (bytes memory result);
-}
+import {DataTypes}      from "../../interfaces/DataTypes.sol";
+import {ICauldron}      from "../../interfaces/ICauldron.sol";
+import {ILadle}         from "../../interfaces/ILadle.sol";
+import {WETH9Mock}      from "../../mocks/WETH9Mock.sol";
+import {HealerModule}   from "../../modules/HealerModule.sol";
+import {TestConstants}  from "../utils/TestConstants.sol";
+import {TestExtensions} from "../utils/TestExtensions.sol";
 
 contract HealerModuleTest is Test, TestConstants, TestExtensions {
     ICauldron public cauldron = ICauldron(0xc88191F8cb8e6D4a668B047c1C8503432c3Ca867);
@@ -37,20 +35,20 @@ contract HealerModuleTest is Test, TestConstants, TestExtensions {
         wethMock = new WETH9Mock();
         weth = IWETH9(address(wethMock));
         healer = new HealerModule(cauldron, weth);
-        
+
         vm.prank(0x3b870db67a45611CF4723d44487EAF398fAc51E3);
-        ILadleCustom(address(ladle)).addModule(address(healer), true);
-        (vaultId, ) = ladle.build(seriesId, ilkId, 0);
+        ILadle(address(ladle)).addModule(address(healer), true);
+        (vaultId,) = ladle.build(seriesId, ilkId, 0);
     }
 
     function testHeal() public {
         console.log("Can add collateral and/or repay debt to a given vault");
-        
-        // Populate vault.owner with DAI 
+
+        // Populate vault.owner with DAI
         DataTypes.Vault memory vault = cauldron.vaults(vaultId);
-        deal(dai, address(this), 10 ** 18);        
+        deal(dai, address(this), 10 ** 18);
         IERC20(dai).approve(address(join), 15000);
-        
+
         // Provide initial values for art and ink
         ladle.pour(vaultId, vault.owner, 15000, 10000);
 
@@ -62,9 +60,8 @@ contract HealerModuleTest is Test, TestConstants, TestExtensions {
         // Provision ladle with 1 fyDAI to subtract 1 from ink
         deal(address(cauldron.series(seriesId).fyToken), address(ladle), 1);
 
-        ILadleCustom(address(ladle)).moduleCall(
-            address(healer), 
-            abi.encodeWithSelector(healer.heal.selector, vaultId, 1, -1)
+        ILadle(address(ladle)).moduleCall(
+            address(healer), abi.encodeWithSelector(healer.heal.selector, vaultId, 1, -1)
         );
         vm.stopPrank();
 
@@ -75,18 +72,16 @@ contract HealerModuleTest is Test, TestConstants, TestExtensions {
     function testCannotAddDebt() public {
         console.log("Cannot add to debt");
         vm.expectRevert(bytes("Only repay debt"));
-        ILadleCustom(address(ladle)).moduleCall(
-            address(healer),
-            abi.encodeWithSelector(healer.heal.selector, vaultId, 0, 1)
+        ILadle(address(ladle)).moduleCall(
+            address(healer), abi.encodeWithSelector(healer.heal.selector, vaultId, 0, 1)
         );
     }
 
     function testCannotRemoveCollateral() public {
         console.log("Cannot remove collateral");
         vm.expectRevert(bytes("Only add collateral"));
-        ILadleCustom(address(ladle)).moduleCall(
-            address(healer),
-            abi.encodeWithSelector(healer.heal.selector, vaultId, -1, 0)
+        ILadle(address(ladle)).moduleCall(
+            address(healer), abi.encodeWithSelector(healer.heal.selector, vaultId, -1, 0)
         );
     }
 }
