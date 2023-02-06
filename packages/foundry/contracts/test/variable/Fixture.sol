@@ -10,6 +10,7 @@ import "../../variable/VRLadle.sol";
 import "../../variable/VRCauldron.sol";
 import "../../variable/VYToken.sol";
 import "../../Witch.sol";
+import "../../Router.sol";
 import "../../oracles/compound/CompoundMultiOracle.sol";
 import "../../oracles/chainlink/ChainlinkMultiOracle.sol";
 import "../../oracles/accumulator/AccumulatorMultiOracle.sol";
@@ -26,6 +27,7 @@ import "../../mocks/USDCMock.sol";
 import "../../mocks/WETH9Mock.sol";
 import "../../mocks/DAIMock.sol";
 import "../../mocks/ERC20Mock.sol";
+import "../../mocks/RestrictedERC20Mock.sol";
 import "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC20Metadata.sol";
 using CastU256I128 for uint256;
@@ -54,6 +56,7 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
     VYToken public daiYToken;
     CTokenRateMock public cTokenRateMock;
     CTokenChiMock public cTokenChiMock;
+    RestrictedERC20Mock public restrictedERC20Mock;
     AccumulatorMultiOracle public chiRateOracle;
     ChainlinkMultiOracle public spotOracle;
     ChainlinkAggregatorV3Mock public ethAggregator;
@@ -84,6 +87,7 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         weth = new WETH9Mock();
         dai = new DAIMock();
         base = new ERC20Mock("Base", "BASE");
+        restrictedERC20Mock = new RestrictedERC20Mock("Restricted", "RESTRICTED");
 
         usdcJoin = new FlashJoin(address(usdc));
         wethJoin = new FlashJoin(address(weth));
@@ -159,10 +163,12 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
     // ----------------- Permissions ----------------- //
 
     function ladleGovAuth() public {
-        bytes4[] memory roles = new bytes4[](3);
+        bytes4[] memory roles = new bytes4[](5);
         roles[0] = VRLadle.addJoin.selector;
         roles[1] = VRLadle.addModule.selector;
         roles[2] = VRLadle.setFee.selector;
+        roles[3] = VRLadle.addToken.selector;
+        roles[4] = VRLadle.addIntegration.selector;
         ladle.grantRoles(roles, address(this));
     }
 

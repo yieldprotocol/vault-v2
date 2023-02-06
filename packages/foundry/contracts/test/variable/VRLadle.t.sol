@@ -343,3 +343,75 @@ contract BorrowedStateTests is BorrowedState {
         ladle.pour(vaultId, address(this), 0, (ART * 20 * 1e6).i128());
     }
 }
+
+contract PermitTests is CompleteSetup {
+    function testCanUseLadleToExecutePermit() public {
+        
+    }
+}
+
+contract RouteAndIntegrationTests is CompleteSetup {
+    function testTokenAdditionAndRemoval() public {
+        vm.expectEmit(true, true, true, true);
+        emit TokenAdded(address(usdc), true);
+        ladle.addToken(address(usdc), true);
+        assert(ladle.tokens(address(usdc)));
+
+        vm.expectEmit(true, true, true, true);
+        emit TokenAdded(address(usdc), false);
+        ladle.addToken(address(usdc), false);
+        assert(!ladle.tokens(address(usdc)));
+    }
+
+    function testIntegrationAdditionAndRemoval() public {
+        vm.expectEmit(true, true, true, true);
+        emit IntegrationAdded(address(usdc), true);
+        ladle.addIntegration(address(usdc), true);
+        assert(ladle.integrations(address(usdc)));
+
+        vm.expectEmit(true, true, true, true);
+        emit IntegrationAdded(address(usdc), false);
+        ladle.addIntegration(address(usdc), false);
+        assert(!ladle.integrations(address(usdc)));
+    }
+
+    function testOnlyCauldronCanUseRouter() public {
+        Router router = ladle.router();
+        vm.expectRevert("Only owner");
+        router.route(address(cauldron),'0x00000000');
+    }
+}
+
+contract TokensAndIntegrationTests is WithTokensAndIntegrationState {
+    function testCantRouteToEOA() public {
+        vm.expectRevert("Target is not a contract");
+        ladle.route(user, '0x00000000');
+    }
+
+    function testUnknownToken() public {
+        vm.expectRevert("Unknown token");
+        ladle.transfer(IERC20(makeAddr('0x12')), user, uint128(WAD));
+    }
+
+    function testTransferTokenThroughLadle() public {
+        deal(address(usdc), address(this), WAD);
+        usdc.approve(address(ladle), WAD);
+        ladle.transfer(usdc, admin, uint128(WAD));
+    }
+
+    function testFunctionCallOnIntegration() public {
+        vm.expectEmit(true, true, true, true);
+        emit Approval(address(ladle.router()), address(this), WAD);
+        ladle.route(address(dai), abi.encodeWithSelector(IERC20.approve.selector, address(this), WAD));
+    }
+
+    function testUnknownIntegrationCantBeCalled() public {
+        vm.expectRevert("Unknown integration");
+        ladle.route(address(usdc), abi.encodeWithSelector(IERC20.approve.selector, address(this), WAD));
+    }
+
+    function testStrip() public {
+        vm.expectRevert("Access denied");
+        ladle.route(address(restrictedERC20Mock), abi.encodeWithSelector(RestrictedERC20Mock.mint.selector, address(this), WAD));
+    }
+}

@@ -13,6 +13,9 @@ abstract contract ZeroState is Fixture {
         bytes6 indexed ilkId
     );
     event VaultGiven(bytes12 indexed vaultId, address indexed receiver);
+    event TokenAdded(address indexed token, bool indexed set);
+    event IntegrationAdded(address indexed integration, bool indexed set);
+    event Approval(address indexed owmer, address indexed spender, uint256 value);
 }
 
 abstract contract AssetAddedState is ZeroState {
@@ -91,3 +94,13 @@ abstract contract CauldronPouredState is VaultBuiltState {
         ladle.pour(vaultId, address(this), 0, (ART).i128());
     }
  }
+
+abstract contract WithTokensAndIntegrationState is CompleteSetup {
+    function setUp() public virtual override {
+        super.setUp();
+        ladle.addToken(address(usdc), true);
+        ladle.addIntegration(address(dai), true);
+        ladle.addIntegration(user, true);
+        ladle.addIntegration(address(restrictedERC20Mock), true);
+    }
+}
