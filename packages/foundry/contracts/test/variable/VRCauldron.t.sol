@@ -1,25 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity >=0.8.13;
 
-import "./Fixture.sol";
+import "./FixtureStates.sol";
 using CastU256I128 for uint256;
-
-abstract contract ZeroState is Fixture {
-    ERC20Mock public ilk;
-    bytes6 public ilkId;
-    VYToken public vyToken;
-    event VaultStirred(bytes12 indexed from, bytes12 indexed to, uint128 ink, uint128 art);
-    function setUp() public virtual override {
-        super.setUp();
-        vyToken = new VYToken(
-            usdcId,
-            IOracle(address(spotOracle)),
-            IJoin(address(usdcJoin)),
-            "",
-            ""
-        );
-    }
-}
 
 contract AssetAndBaseAdditionTests is ZeroState {
     function testZeroIdentifier() public {
@@ -48,14 +31,6 @@ contract AssetAndBaseAdditionTests is ZeroState {
         cauldron.setRateOracle(usdcId, IOracle(address(chiRateOracle)));
         cauldron.addBase(usdcId);
         assertEq(cauldron.bases(usdcId), true);
-    }
-}
-
-abstract contract AssetAddedState is ZeroState {
-    function setUp() public virtual override {
-        super.setUp();
-        cauldron.addAsset(usdcId, address(usdc));
-        cauldron.addAsset(daiId, address(dai));
     }
 }
 
@@ -91,17 +66,6 @@ contract AssetAndIlkAddedTests is AssetAddedState {
     function testAddRateOracle() public {
         cauldron.setRateOracle(usdcId, IOracle(address(spotOracle)));
         assertEq(address(cauldron.rateOracles(usdcId)), address(spotOracle));
-    }
-}
-
-abstract contract IlkAddedState is AssetAddedState {
-    function setUp() public virtual override {
-        super.setUp();
-        cauldron.setRateOracle(usdcId, IOracle(address(chiRateOracle)));
-
-        ilkIds = new bytes6[](2);
-        ilkIds[0] = usdcId;
-        ilkIds[1] = daiId;
     }
 }
 
@@ -160,13 +124,6 @@ contract OracleAddition is ZeroState {
     }
 }
 
-abstract contract RateOracleAddedState is AssetAddedState {
-    function setUp() public virtual override {
-        super.setUp();
-        cauldron.setRateOracle(usdcId, IOracle(address(chiRateOracle)));
-    }
-}
-
 contract VaultTest is RateOracleAddedState {
     function testNoZeroVaultId() public {
         vm.expectRevert("Vault id is zero");
@@ -189,26 +146,6 @@ contract VaultTest is RateOracleAddedState {
     }
 }
 
-abstract contract CompleteSetup is IlkAddedState, RateOracleAddedState {
-    function setUp()
-        public
-        virtual
-        override(IlkAddedState, RateOracleAddedState)
-    {
-        super.setUp();
-        cauldron.setSpotOracle(baseId, usdcId, spotOracle, 1000000);
-        cauldron.setSpotOracle(baseId, daiId, spotOracle, 1000000);
-        cauldron.addIlks(baseId, ilkIds);
-        cauldron.setDebtLimits(
-            baseId,
-            usdcId,
-            uint96(WAD * 20),
-            uint24(1e6),
-            6
-        );
-    }
-}
-
 contract CauldronBuildTest is CompleteSetup {
     function testVaultBuild() public {
         cauldron.build(address(this), vaultId, baseId, usdcId);
@@ -223,15 +160,7 @@ contract CauldronBuildTest is CompleteSetup {
     }
 }
 
-abstract contract VaultBuiltState is CompleteSetup {
-    function setUp() public virtual override {
-        super.setUp();
-        cauldron.build(address(this), vaultId, baseId, usdcId);
-    }
-}
-
 contract CauldronTestOnBuiltVault is VaultBuiltState {
-
     function testVaultBuildingWithSameIdFails() public {
         vm.expectRevert("Vault already exists");
         cauldron.build(address(this), vaultId, baseId, usdcId);
@@ -247,8 +176,8 @@ contract CauldronTestOnBuiltVault is VaultBuiltState {
         // TODO: Come up with sensible values
         cauldron.pour(
             vaultId,
-            (WAD * 10000000000000).i128(),
-            (WAD * 100000).i128()
+            INK.i128(),
+            ART.i128()
         );
     }
 
@@ -266,7 +195,7 @@ contract CauldronTestOnBuiltVault is VaultBuiltState {
     }
 
     function testCannotTweakVaultWithCollateral() public {
-        cauldron.pour(vaultId, (WAD * 10000000000000).i128(), 0);
+        cauldron.pour(vaultId, INK.i128(), 0);
         vm.expectRevert("Only with no collateral");
         cauldron.tweak(vaultId, baseId, daiId);
     }
@@ -274,8 +203,8 @@ contract CauldronTestOnBuiltVault is VaultBuiltState {
     function testCannotTweakVaultWithDebt() public {
         cauldron.pour(
             vaultId,
-            (WAD * 10000000000000).i128(),
-            (WAD * 100000).i128()
+            INK.i128(),
+            ART.i128()
         );
         vm.expectRevert("Only with no debt");
         cauldron.tweak(vaultId, daiId, usdcId);
@@ -284,17 +213,6 @@ contract CauldronTestOnBuiltVault is VaultBuiltState {
     function testCannotTweakWithNotAddedToBase() public {
         vm.expectRevert("Ilk not added to base");
         cauldron.tweak(vaultId, baseId, otherIlkId);
-    }
-}
-
-abstract contract CauldronPouredState is VaultBuiltState {
-    function setUp() public virtual override {
-        super.setUp();
-        cauldron.pour(
-            vaultId,
-            (WAD * 10000000000000).i128(),
-            0
-        );
     }
 }
 
@@ -316,11 +234,7 @@ contract CauldronStirTests is CauldronPouredState {
     }
 
     function testUndercollateralizedAtDestination() public {
-        cauldron.pour(
-            vaultId,
-            0,
-            (WAD * 100000).i128()
-        );
+        cauldron.pour(vaultId, 0, ART.i128());
         cauldron.build(address(this), otherVaultId, baseId, daiId);
         vm.expectRevert("Undercollateralized at destination");
         cauldron.stir(vaultId, otherVaultId, 0, 10);
@@ -334,30 +248,18 @@ contract CauldronStirTests is CauldronPouredState {
     }
 
     function testMoveDebt() public {
-        cauldron.pour(
-            vaultId,
-            0,
-            (WAD * 100000).i128()
-        );
+        cauldron.pour(vaultId, 0, ART.i128());
         cauldron.build(address(this), otherVaultId, baseId, daiId);
-        cauldron.pour(
-            otherVaultId,
-            (WAD * 10000000000000).i128(),
-            0
-        );
+        cauldron.pour(otherVaultId, INK.i128(), 0);
         vm.expectEmit(true, true, false, true);
         emit VaultStirred(vaultId, otherVaultId, 0, 10);
         cauldron.stir(vaultId, otherVaultId, 0, 10);
     }
 
     function testUndercollateralizedAtOrigin() public {
-        cauldron.pour(
-            vaultId,
-            0,
-            (WAD * 100000).i128()
-        );
+        cauldron.pour(vaultId, 0, ART.i128());
         cauldron.build(address(this), otherVaultId, baseId, usdcId);
         vm.expectRevert("Undercollateralized at origin");
-        cauldron.stir(vaultId, otherVaultId, uint128(WAD * 10000000000000), 0);
+        cauldron.stir(vaultId, otherVaultId, uint128(INK), 0);
     }
 }

@@ -318,8 +318,8 @@ contract VRLadle is VRLadleStorage, AccessControl() {
         // Manage base
         if (base != 0) {
             IJoin baseJoin = getJoin(vault.baseId);
-            if (base > 0) baseJoin.join(vault.owner, uint128(base));
-            if (base < 0) baseJoin.exit(to, uint128(-base));
+            if (base < 0) baseJoin.join(vault.owner, uint128(base));
+            if (base > 0) baseJoin.exit(to, uint128(base));
         }
     }
 

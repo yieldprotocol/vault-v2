@@ -12,6 +12,7 @@ import "../../variable/VYToken.sol";
 import "../../Witch.sol";
 import "../../oracles/compound/CompoundMultiOracle.sol";
 import "../../oracles/chainlink/ChainlinkMultiOracle.sol";
+import "../../oracles/accumulator/AccumulatorMultiOracle.sol";
 import "../../mocks/oracles/compound/CTokenRateMock.sol";
 import "../../mocks/oracles/compound/CTokenChiMock.sol";
 import "../../mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol";
@@ -27,6 +28,7 @@ import "../../mocks/DAIMock.sol";
 import "../../mocks/ERC20Mock.sol";
 import "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
 import "@yield-protocol/utils-v2/contracts/token/IERC20Metadata.sol";
+using CastU256I128 for uint256;
 
 abstract contract Fixture is Test, TestConstants, TestExtensions {
     address public admin = makeAddr("admin");
@@ -41,6 +43,7 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
     FlashJoin public usdcJoin;
     FlashJoin public wethJoin;
     FlashJoin public daiJoin;
+    FlashJoin public baseJoin;
     bytes6 public usdcId = bytes6("USDC");
     bytes6 public wethId = bytes6("WETH");
     bytes6 public daiId = bytes6("DAI");
@@ -51,7 +54,7 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
     VYToken public daiYToken;
     CTokenRateMock public cTokenRateMock;
     CTokenChiMock public cTokenChiMock;
-    CompoundMultiOracle public chiRateOracle;
+    AccumulatorMultiOracle public chiRateOracle;
     ChainlinkMultiOracle public spotOracle;
     ChainlinkAggregatorV3Mock public ethAggregator;
     ChainlinkAggregatorV3Mock public daiAggregator;
@@ -64,6 +67,10 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
 
     bytes6 public zeroId = 0x000000000000;
     bytes6[] public ilkIds;
+
+    uint256 public INK = WAD * 100000;
+    uint256 public ART = WAD ;
+    uint256 public FEE = 1000;
 
     function setUp() public virtual {
         cauldron = new VRCauldron();
@@ -81,15 +88,19 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         usdcJoin = new FlashJoin(address(usdc));
         wethJoin = new FlashJoin(address(weth));
         daiJoin = new FlashJoin(address(dai));
+        baseJoin = new FlashJoin(address(base));
 
-        ladleGovAuth();
-        cauldronGovAuth();
         setUpOracles();
-        makeBase();
+        // Setting permissions
+        ladleGovAuth();
+        cauldronGovAuth(address(ladle));
+        cauldronGovAuth(address(this));
+
+        makeBase(baseId, address(base), baseJoin, address(chiRateOracle));
     }
 
     function setUpOracles() internal {
-        chiRateOracle = new CompoundMultiOracle();
+        chiRateOracle = new AccumulatorMultiOracle();
 
         cTokenRateMock = new CTokenRateMock();
         cTokenRateMock.set(1e18 * 2 * 10000000000);
@@ -98,11 +109,11 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         cTokenChiMock.set(1e18 * 10000000000);
 
         chiRateOracle.grantRole(
-            CompoundMultiOracle.setSource.selector,
+            AccumulatorMultiOracle.setSource.selector,
             address(this)
         );
-        chiRateOracle.setSource(baseId, RATE, address(cTokenRateMock));
-        chiRateOracle.setSource(baseId, CHI, address(cTokenChiMock));
+        chiRateOracle.setSource(baseId, RATE, WAD, WAD * 2);
+        chiRateOracle.setSource(baseId, CHI, WAD, WAD * 2);
 
         ethAggregator = new ChainlinkAggregatorV3Mock();
         ethAggregator.set(1e18 / 2);
@@ -145,11 +156,7 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         );
     }
 
-    function makeBase() internal {
-        cauldron.addAsset(baseId, address(base));
-        cauldron.setRateOracle(baseId, IOracle(address(chiRateOracle)));
-        cauldron.addBase(baseId);
-    }
+    // ----------------- Permissions ----------------- //
 
     function ladleGovAuth() public {
         bytes4[] memory roles = new bytes4[](3);
@@ -159,7 +166,7 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         ladle.grantRoles(roles, address(this));
     }
 
-    function cauldronGovAuth() public {
+    function cauldronGovAuth(address govAuth) public {
         bytes4[] memory roles = new bytes4[](12);
         roles[0] = VRCauldron.addAsset.selector;
         roles[1] = VRCauldron.addIlks.selector;
@@ -173,6 +180,48 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         roles[9] = VRCauldron.give.selector;
         roles[10] = VRCauldron.tweak.selector;
         roles[11] = VRCauldron.stir.selector;
-        cauldron.grantRoles(roles, address(this));
+        cauldron.grantRoles(roles, govAuth);
+    }
+
+    // ----------------- Helpers ----------------- //
+    function addAsset(
+        bytes6 assetId,
+        address assetAddress,
+        FlashJoin join
+    ) public {
+        cauldron.addAsset(assetId, assetAddress);
+        ladle.addJoin(assetId, join);
+
+        bytes4[] memory roles = new bytes4[](2);
+        roles[0] = Join.join.selector;
+        roles[1] = Join.exit.selector;
+        join.grantRoles(roles, address(ladle));
+    }
+
+    function makeBase(
+        bytes6 assetId,
+        address assetAddress,
+        FlashJoin join,
+        address chirateoracle
+    ) internal {
+        addAsset(assetId, assetAddress, join);
+        cauldron.setRateOracle(assetId, IOracle(chirateoracle));
+        cauldron.addBase(assetId);
+
+        cauldron.setSpotOracle(baseId, baseId, IOracle(chirateoracle), 1000000);
+        bytes6[] memory ilk = new bytes6[](1);
+        ilk[0] = baseId;
+        cauldron.addIlks(baseId, ilk);
+        cauldron.setDebtLimits(
+            baseId,
+            baseId,
+            uint96(WAD * 20),
+            uint24(1e6),
+            18
+        );
+        cauldron.build(address(this), 0x000000000000000000000003, assetId, assetId);
+        IERC20(assetAddress).approve(address(join),INK * 10);
+        deal(assetAddress, address(this), INK * 10);
+        ladle.pour(0x000000000000000000000003, address(this), (INK * 10).i128(), 0);
     }
 }
