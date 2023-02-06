@@ -48,7 +48,7 @@ abstract contract StateZero is Test, TestExtensions, TestConstants {
     address public user;
 
     /// @dev Gets fCash of the same denomination as the NotionalJoin
-    function getFCash(address to, uint256 amount) public returns (uint256 fCashAmount) {
+    function getFCash(uint256 amount) public returns (uint256 fCashAmount) {
         uint16 currencyId_ = uint16(fCashId >> 48);
         cash(IERC20(underlying), address(this), amount);
         IERC20(underlying).approve(address(notional),type(uint).max);
@@ -103,7 +103,7 @@ abstract contract StateZero is Test, TestExtensions, TestConstants {
 
     function setUpMock() public {}
 
-    function setUpHarness(string memory network) public {
+    function setUpHarness() public {
         // TODO: When using tenderly, guess how to pull the right addresses
 
         nJoin = NotionalJoin(payable(vm.envAddress("JOIN")));
@@ -123,7 +123,6 @@ abstract contract StateZero is Test, TestExtensions, TestConstants {
         vm.label(address(underlyingJoin), "Underlying Join");
         vm.label(address(notional), "Notional contract");
         
-        uint256 fCashAmount = getFCash(user, 1000 * underlyingUnit);
         vm.prank(user);
         fCash.setApprovalForAll(address(nJoin), true);
     }
@@ -133,7 +132,7 @@ abstract contract StateZero is Test, TestExtensions, TestConstants {
         if (!equal(network, LOCALHOST)) vm.createSelectFork(network);
 
         if (vm.envOr(MOCK, true)) setUpMock();
-        else setUpHarness(network);
+        else setUpHarness();
     }
 }
 
@@ -267,7 +266,6 @@ contract StateRedeemedTest is StateRedeemed {
         
         uint128 fCashExited = uint128(fCashUnit);
 
-        uint256 storedBalance = nJoin.storedBalance(); 
         uint256 underlyingJoinBalance = underlying.balanceOf(address(underlyingJoin));
         uint256 userBalance = underlying.balanceOf(user);
         uint256 exitInUnderlying = fCashExited * underlyingUnit / fCashUnit;

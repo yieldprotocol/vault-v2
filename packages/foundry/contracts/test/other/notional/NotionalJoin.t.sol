@@ -5,6 +5,7 @@ import "forge-std/src/Test.sol";
 import "forge-std/src/console2.sol";
 
 import "../../../test/utils/TestConstants.sol";
+import "../../../test/utils/TestExtensions.sol";
 import "../../../test/utils/Mocks.sol";
 import "../../../mocks/ERC20Mock.sol";
 
@@ -14,11 +15,10 @@ import { NotionalJoin } from "../../../other/notional/NotionalJoin.sol";
 import { ERC1155 } from "../../../other/notional/ERC1155.sol";
 import { IWETH9 } from "@yield-protocol/utils-v2/contracts/interfaces/IWETH9.sol";
 import "./NotionalTypes.sol";
+
 using stdStorage for StdStorage;
 
-abstract contract StateZero is Test, TestConstants {
-    using stdStorage for StdStorage;
-
+abstract contract StateZero is Test, TestConstants, TestExtensions {
     Join public underlyingJoin; 
     NotionalJoin public njoin; 
     address timelock = 0x3b870db67a45611CF4723d44487EAF398fAc51E3;
@@ -45,19 +45,14 @@ abstract contract StateZero is Test, TestConstants {
     event Redeemed(uint256 fCashAmount, uint256 underlying, uint256 accrual);
     event TransferSingle(address indexed operator, address indexed from, address indexed to, uint256 id, uint256 amount);
 
-    function cash(IERC20 token, address user, uint256 amount) public {
-        uint256 start = token.balanceOf(user);
-        deal(address(token), user, start + amount);
-    }
-
-    function whichCurrency(uint256 id) internal returns (address currency,uint16 currencyId_){
+    function whichCurrency(uint256 id) internal view returns (address currency,uint16 currencyId_){
         currencyId_ = uint16(id >> 48);
         if (currencyId_ == 1) currency = address(weth);
         else if (currencyId_ == 2) currency = address(dai);
         else if (currencyId_ == 3) currency = address(usdc);
     }
 
-    function getFCash(address to, uint256 id, uint256 amount) public returns (uint256 fCashAmount) {
+    function getFCash(uint256 id, uint256 amount) public returns (uint256 fCashAmount) {
         (address currency, uint16 currencyId_) = whichCurrency(id);
         cash(IERC20(currency), address(this), amount);
         IERC20(currency).approve(address(notional),type(uint).max);
@@ -148,20 +143,20 @@ abstract contract StateZero is Test, TestConstants {
         
         fCashId = encodeAssetId(currencyId, maturity, 1);
         uint256 amount = currencyId == 3 ? 10e8 : 10e18;
-        uint256 fCashAmount = getFCash(user, fCashId, amount);
+        getFCash(fCashId, amount);
         vm.prank(user);
         fCash.setApprovalForAll(address(njoin), true);
     }
 
     function encodeAssetId(
-        uint256 currencyId,
-        uint256 maturity,
+        uint256 _currencyId,
+        uint256 _maturity,
         uint256 assetType
     ) internal pure returns (uint256) {
         return
             uint256(
-                (bytes32(uint256(uint16(currencyId))) << 48) |
-                    (bytes32(uint256(uint40(maturity))) << 8) |
+                (bytes32(uint256(uint16(_currencyId))) << 48) |
+                    (bytes32(uint256(uint40(_maturity))) << 8) |
                     bytes32(uint256(uint8(assetType)))
             );
     }
@@ -288,7 +283,7 @@ contract StateMaturedTest is StateMatured {
 
     function testRedeem() public {
         console2.log("First exit call should call redeem()");
-        (address currency,uint16 currencyId ) = whichCurrency(fCashId);
+        (address currency,uint16 _currencyId ) = whichCurrency(fCashId);
         
         assertTrue(njoin.accrual() == 0);
         vm.expectEmit(true, true, true, false);
@@ -304,7 +299,7 @@ contract StateMaturedTest is StateMatured {
         uint afterUserBalance = IERC20(currency).balanceOf(user);
         uint afterJoinBalance = IERC20(currency).balanceOf(address(underlyingJoin));
         
-        if(currencyId == 3){
+        if(_currencyId == 3){
             assertApproxEqAbs(afterUserBalance - beforeUserBalance, 1e6, 1e5);
             assertApproxEqAbs(afterJoinBalance - beforeJoinBalance, 1e6, 1e5);
         }else{
@@ -338,7 +333,7 @@ contract StateRedeemedTest is StateRedeemed {
 
     function testSubsequentExit() public {
         console2.log("_exitUnderlying executed");
-        (address currency, uint16 currencyId) = whichCurrency(fCashId);
+        (address currency, uint16 _currencyId) = whichCurrency(fCashId);
         uint beforeUserBalance = IERC20(currency).balanceOf(user);
         uint beforeJoinBalance = IERC20(currency).balanceOf(address(underlyingJoin));
         vm.prank(me);
@@ -348,7 +343,7 @@ contract StateRedeemedTest is StateRedeemed {
         assertTrue(IERC20(currency).balanceOf(address(njoin)) == 0); 
         uint afterUserBalance = IERC20(currency).balanceOf(user);
         uint afterJoinBalance = IERC20(currency).balanceOf(address(underlyingJoin));
-        if(currencyId == 3){
+        if(_currencyId == 3){
             assertApproxEqAbs(afterUserBalance - beforeUserBalance, 1e6, 1e5);
             assertApproxEqAbs(beforeJoinBalance - afterJoinBalance, 1e6, 1e5);
         }else{

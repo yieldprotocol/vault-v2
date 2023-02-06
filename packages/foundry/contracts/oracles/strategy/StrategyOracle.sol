@@ -74,7 +74,7 @@ contract StrategyOracle is IOracle, AccessControl {
         bytes32 baseId,
         bytes32 quoteId,
         uint256 amount
-    ) external returns (uint256 value, uint256 updateTime) {
+    ) external view returns (uint256 value, uint256 updateTime) {
         return _peek(baseId.b6(), quoteId.b6(), amount);
     }
 }
