@@ -2,12 +2,15 @@
 pragma solidity >=0.8.13;
 
 import "forge-std/src/Test.sol";
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "../../oracles/yearn/YearnVaultMultiOracle.sol";
-import "../../mocks/DAIMock.sol";
-import "../../mocks/USDCMock.sol";
-import "../../mocks/YvTokenMock.sol";
-import "../utils/TestConstants.sol";
+import { AccessControl } from "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import { ERC20 } from "@yield-protocol/utils-v2/contracts/token/ERC20.sol";
+import { IYvToken } from "../../oracles/yearn/IYvToken.sol";
+import { YearnVaultMultiOracle } from "../../oracles/yearn/YearnVaultMultiOracle.sol";
+import { DAIMock } from "../../mocks/DAIMock.sol";
+import { USDCMock } from "../../mocks/USDCMock.sol";
+import { YvTokenMock } from "../../mocks/YvTokenMock.sol";
+import { ERC20Mock } from "../../mocks/ERC20Mock.sol";
+import { TestConstants } from "../utils/TestConstants.sol";
 
 contract YearnVaultMultiOracleTest is Test, TestConstants, AccessControl {
 
@@ -19,7 +22,23 @@ contract YearnVaultMultiOracleTest is Test, TestConstants, AccessControl {
     YvTokenMock public yvDAI;
     YvTokenMock public yvUSDC;
 
-    function setUp() public {
+    // Harness vars
+    bytes6 public base;
+    bytes6 public quote;
+    uint128 public unitForBase;
+    uint128 public unitForQuote;
+
+    modifier onlyMock() {
+        if (vm.envOr(MOCK, true))
+        _;
+    }
+
+    modifier onlyHarness() {
+        if (vm.envOr(MOCK, true)) return;
+        _;
+    }
+
+    function setUpMock() public {
         dai = new DAIMock();
         usdc = new USDCMock();
         yearnVaultMultiOracle = new YearnVaultMultiOracle();
@@ -34,12 +53,29 @@ contract YearnVaultMultiOracleTest is Test, TestConstants, AccessControl {
         yearnVaultMultiOracle.grantRole(0x92b45d9c, address(this));
     }
 
-    function testRevertOnUnknownPair() public {
+    function setUpHarness() public {
+        string memory rpc = vm.envOr(RPC, MAINNET);
+        vm.createSelectFork(rpc);
+
+        yearnVaultMultiOracle = YearnVaultMultiOracle(vm.envAddress("ORACLE"));
+
+        base = bytes6(vm.envBytes32("BASE"));
+        quote = bytes6(vm.envBytes32("QUOTE"));
+        unitForBase = uint128(10 ** ERC20Mock(address(vm.envAddress("BASE_ADDRESS"))).decimals());
+        unitForQuote = uint128(10 ** ERC20Mock(address(vm.envAddress("QUOTE_ADDRESS"))).decimals());
+    }
+
+    function setUp() public {
+        if (vm.envOr(MOCK, true)) setUpMock();
+        else setUpHarness();
+    }
+
+    function testRevertOnUnknownPair() public onlyMock {
         vm.expectRevert("Source not found");
         yearnVaultMultiOracle.get(YVUSDC, USDC, 2000000);
     }
 
-    function testSetPairAndInverse() public {
+    function testSetPairAndInverse() public onlyMock {
         bytes6 baseId = USDC;
         bytes6 quoteId = YVUSDC;
         address source = address(yvUSDC);
@@ -50,12 +86,12 @@ contract YearnVaultMultiOracleTest is Test, TestConstants, AccessControl {
         yearnVaultMultiOracle.get(USDC, YVUSDC, 2000000);
     }
 
-    function setYearnVaultMultiOracleSource() public {
+    function setYearnVaultMultiOracleSource() public onlyMock {
         yearnVaultMultiOracle.setSource(USDC, YVUSDC, IYvToken(address(yvUSDC)));
         yearnVaultMultiOracle.setSource(DAI, YVDAI, IYvToken(address(yvDAI)));
     }
 
-    function testGetAndPeek() public {
+    function testGetAndPeek() public onlyMock {
         setYearnVaultMultiOracleSource();
         (uint256 yvusdcUsdcConversion,) = yearnVaultMultiOracle.get(YVUSDC, USDC, 2000000);
         uint256 yvusdcToUsdcPrice = 1083891 * 2; // Amount of USDC you receive for 2000000 yvUSDC
@@ -78,11 +114,19 @@ contract YearnVaultMultiOracleTest is Test, TestConstants, AccessControl {
         assertEq(newPrice, 1088888 * 2, "Get new price unsuccessful");
     }
 
-    function testRevertOnZeroPrice() public {
+    function testRevertOnZeroPrice() public onlyMock {
         setYearnVaultMultiOracleSource();
         yvUSDC.set(0);
         vm.expectRevert("Zero price");
         yearnVaultMultiOracle.get(YVUSDC, USDC, 2000000);
     }
 
+    function testConversionHarness() public onlyHarness {
+        uint256 amount;
+        uint256 updateTime;
+        (amount, updateTime) = yearnVaultMultiOracle.peek(base, quote, unitForBase);
+        assertGt(updateTime, 0, "Update time below lower bound");
+        assertLt(updateTime, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, "Update time above upper bound");
+        assertApproxEqRel(amount, 1e18, 1e18);
+    }
 }

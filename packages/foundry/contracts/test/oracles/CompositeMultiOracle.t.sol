@@ -2,14 +2,16 @@
 pragma solidity >=0.8.13;
 
 import "forge-std/src/Test.sol";
-import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
-import "../../oracles/chainlink/ChainlinkMultiOracle.sol";
-import "../../oracles/composite/CompositeMultiOracle.sol";
-import "../../mocks/DAIMock.sol";
-import "../../mocks/USDCMock.sol";
-import "../../mocks/WETH9Mock.sol";
-import "../../mocks/oracles/chainlink/ChainlinkAggregatorV3Mock.sol";
-import "../utils/TestConstants.sol";
+import { AccessControl } from "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
+import { ChainlinkMultiOracle } from "../../oracles/chainlink/ChainlinkMultiOracle.sol";
+import { CompositeMultiOracle } from "../../oracles/composite/CompositeMultiOracle.sol";
+import { IOracle } from "../../interfaces/IOracle.sol";
+import { WETH9Mock } from "../../mocks/WETH9Mock.sol";
+import { DAIMock } from "../../mocks/DAIMock.sol";
+import { USDCMock } from "../../mocks/USDCMock.sol";
+import { ERC20Mock } from "../../mocks/ERC20Mock.sol";
+import { ChainlinkAggregatorV3Mock } from "../../mocks/oracles/chainlink/ChainlinkAggregatorV3MockEx.sol";
+import { TestConstants } from "../utils/TestConstants.sol";
 
 contract CompositeMultiOracleTest is Test, TestConstants, AccessControl {
 
@@ -28,7 +30,23 @@ contract CompositeMultiOracleTest is Test, TestConstants, AccessControl {
     uint256 public oneUSDC = WAD / 1000000000000;
     bytes6[] public path = new bytes6[](1);
 
-    function setUp() public {
+    // Harness vars
+    bytes6 public base;
+    bytes6 public quote;
+    uint128 public unitForBase;
+    uint128 public unitForQuote;
+
+    modifier onlyMock() {
+        if (vm.envOr(MOCK, true))
+        _;
+    }
+
+    modifier onlyHarness() {
+        if (vm.envOr(MOCK, true)) return;
+        _;
+    }
+
+    function setUpMock() public {
         dai = new DAIMock();
         usdc = new USDCMock();
         weth = new WETH9Mock();
@@ -49,7 +67,23 @@ contract CompositeMultiOracleTest is Test, TestConstants, AccessControl {
         compositeMultiOracle.grantRoles(roles, address(this));
     }
 
-    function testSetSourceBothWays() public {
+    function setUpHarness() public {
+        string memory rpc = vm.envOr(RPC, MAINNET);
+        vm.createSelectFork(rpc);
+
+        compositeMultiOracle = CompositeMultiOracle(vm.envAddress("ORACLE"));
+        base = bytes6(vm.envBytes32("BASE"));
+        quote = bytes6(vm.envBytes32("QUOTE"));
+        unitForBase = uint128(10 ** ERC20Mock(address(vm.envAddress("BASE_ADDRESS"))).decimals());
+        unitForQuote = uint128(10 ** ERC20Mock(address(vm.envAddress("QUOTE_ADDRESS"))).decimals());
+    }
+
+    function setUp() public {
+        if (vm.envOr(MOCK, true)) setUpMock();
+        else setUpHarness();
+    }
+
+    function testSetSourceBothWays() public onlyMock {
         bytes6 baseId = DAI;
         bytes6 quoteId = ETH;
         address source = address(chainlinkMultiOracle);
@@ -59,7 +93,7 @@ contract CompositeMultiOracleTest is Test, TestConstants, AccessControl {
         compositeMultiOracle.setSource(baseId, quoteId, IOracle(source));
     }
 
-    function testSetPathAndReservePath() public {
+    function testSetPathAndReservePath() public onlyMock {
         bytes6 baseId = DAI;
         bytes6 quoteId = ETH;
         path[0] = USDC;
@@ -72,14 +106,14 @@ contract CompositeMultiOracleTest is Test, TestConstants, AccessControl {
         assertEq(compositeMultiOracle.paths(quoteId, baseId, 0), path[0]);
     }
 
-    function setChainlinkMultiOracleSource() public {
+    function setChainlinkMultiOracleSource() public onlyMock {
         compositeMultiOracle.setSource(DAI, ETH, IOracle(address(chainlinkMultiOracle)));
         compositeMultiOracle.setSource(USDC, ETH, IOracle(address(chainlinkMultiOracle)));
         path[0] = ETH;
         compositeMultiOracle.setPath(DAI, USDC, path);
     }
 
-    function testRetrieveConversionAndUpdateTime() public {
+    function testRetrieveConversionAndUpdateTime() public onlyMock {
         setChainlinkMultiOracleSource();
         (uint256 amount, uint256 updateTime) = compositeMultiOracle.peek(DAI, ETH, WAD);
         assertEq(amount, WAD / 2500, "Get conversion unsuccessful");
@@ -93,14 +127,14 @@ contract CompositeMultiOracleTest is Test, TestConstants, AccessControl {
         assertEq(ethUsdcAmount, oneUSDC * 2500, "Get ETH-USDC conversion unsuccessful");
     }
 
-    function testRevertOnTimestampGreaterThanCurrentBlock() public {
+    function testRevertOnTimestampGreaterThanCurrentBlock() public onlyMock {
         setChainlinkMultiOracleSource();
         daiEthAggregator.setTimestamp(0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff);
         vm.expectRevert("Invalid updateTime");
         compositeMultiOracle.peek(DAI, ETH, WAD);
     }
 
-    function testUseOldestTimestampFound() public {
+    function testUseOldestTimestampFound() public onlyMock {
         setChainlinkMultiOracleSource();
         daiEthAggregator.setTimestamp(1);
         usdcEthAggregator.setTimestamp(block.timestamp);
@@ -108,11 +142,23 @@ contract CompositeMultiOracleTest is Test, TestConstants, AccessControl {
         assertEq(updateTime, 1);
     }
 
-    function testRetrieveDaiUsdcConversionAndReverse() public {
+    function testRetrieveDaiUsdcConversionAndReverse() public onlyMock {
         setChainlinkMultiOracleSource();
         (uint256 daiUsdcAmount,) = compositeMultiOracle.peek(DAI, USDC, WAD);
         assertEq(daiUsdcAmount, oneUSDC);
         (uint256 usdcDaiAmount,) = compositeMultiOracle.peek(USDC, DAI, oneUSDC);
         assertEq(usdcDaiAmount, WAD); 
+    }
+
+    function testConversionHarness() public onlyHarness {
+        uint256 amount;
+        uint256 updateTime;
+        (amount, updateTime) = compositeMultiOracle.peek(base, quote, unitForBase);
+        assertGt(updateTime, 0, "Update time below lower bound");
+        assertLt(updateTime, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, "Update time above upper bound");
+        assertApproxEqRel(amount, unitForQuote, unitForQuote * 10000);
+        // and reverse
+        (amount, updateTime) = compositeMultiOracle.peek(quote, base, unitForQuote);
+        assertApproxEqRel(amount, unitForBase, unitForBase * 10000);
     }
 }
