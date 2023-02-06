@@ -4,7 +4,7 @@ pragma solidity >=0.8.13;
 import "./FixtureStates.sol";
 import "../../mocks/ERC20Mock.sol";
 using CastU256I128 for uint256;
-
+using CastI128U128 for int128;
 contract VRLadleAdminTests is ZeroState {
     // @notice Test ability to set borrowing fee
     function testSetBorrowingFee() public {
@@ -42,6 +42,73 @@ contract VRLadleJoinAdminTests is ZeroState {
         ladle.addJoin(otherIlkId, IJoin(address(usdcJoin)));
         assertEq(address(ladle.joins(usdcId)), address(usdcJoin));
         assertEq(address(ladle.joins(otherIlkId)), address(usdcJoin));
+    }
+}
+
+contract VaultTests is VaultBuiltState {
+    function testBuildVault() public {
+        (bytes12 vaultId_, ) = ladle.build(baseId, usdcId, 123);
+        (address owner, bytes6 baseId_, bytes6 ilkId_) = cauldron.vaults(vaultId_);
+        assertEq(baseId_, baseId);
+        assertEq(ilkId_, usdcId);
+        assertEq(owner, address(this));
+    }
+
+    function testZeroIlkId() public {
+        vm.expectRevert("Ilk id is zero");
+        ladle.build(baseId, bytes6(0), 123);
+    }
+
+    function testTweakOnlyOwner() public {
+        vm.expectRevert("Only vault owner");
+        vm.prank(admin);
+        ladle.tweak(vaultId, baseId, usdcId);
+    }
+
+    function testDestroyVault() public {
+        vm.expectEmit(true, false, false, false);
+        emit VaultDestroyed(vaultId);
+        ladle.destroy(vaultId);
+    }
+
+    function testChangeVault() public {
+        vm.expectEmit(true, true, true, false);
+        emit VaultTweaked(vaultId, baseId, daiId);
+        ladle.tweak(vaultId, baseId, daiId);
+
+        (address owner, bytes6 baseId_, bytes6 ilkId_) = cauldron.vaults(vaultId);
+        assertEq(baseId_, baseId);
+        assertEq(ilkId_, daiId);
+        assertEq(owner, address(this));
+    }
+
+    function testGiveVault() public {
+        vm.expectEmit(true, true, false, false);
+        emit VaultGiven(vaultId, admin);
+        ladle.give(vaultId, admin);
+
+        (address owner, bytes6 baseId_, bytes6 ilkId_) = cauldron.vaults(vaultId);
+        assertEq(baseId_, baseId);
+        assertEq(ilkId_, usdcId);
+        assertEq(owner, admin);
+    }
+
+    function testOtherCantChangeOwnerOfVault() public {
+        vm.expectRevert("Only vault owner");
+        vm.prank(admin);
+        ladle.give(vaultId, admin);
+    }
+
+    function testOnlyOwnerCouldMove() public {
+        vm.prank(admin);
+        vm.expectRevert("Only origin vault owner");
+        ladle.stir(vaultId, otherVaultId, 1, 1);
+    }
+
+    function testOnlyDestinationVaultOwner() public {
+        vm.prank(admin);
+        vm.expectRevert("Only destination vault owner");
+        ladle.stir(vaultId, otherVaultId, 0, 1);
     }
 }
 
@@ -127,28 +194,84 @@ contract PouredStateTests is CauldronPouredState {
         assertEq(ink, INK);
         assertEq(art, ART + FEE);
     }
+
+    function testMoveDebt() public{
+        (bytes12 otherVaultId, ) = ladle.build(baseId, usdcId, 123);
+        (address owner, , bytes6 ilkId) = cauldron.vaults(vaultId);
+        deal(cauldron.assets(ilkId), owner, INK);
+        IERC20(cauldron.assets(ilkId)).approve(address(ladle.joins(ilkId)), INK);
+        ladle.pour(otherVaultId, msg.sender, (INK).i128(), 0);
+        ladle.pour(vaultId, address(this), 0, (ART).i128());
+        
+        (uint128 art, uint128 ink) = cauldron.balances(vaultId);
+        vm.expectEmit(true, true, true, true);
+        emit VaultStirred(vaultId, otherVaultId, 0, art);
+        ladle.stir(vaultId, otherVaultId, 0, art);
+    }
+
+    function testMoveCollateral() public {
+        (bytes12 otherVaultId, ) = ladle.build(baseId, usdcId, 123);
+        (uint128 art, uint128 ink) = cauldron.balances(vaultId);
+        
+        vm.expectEmit(true, true, true, true);
+        emit VaultStirred(vaultId, otherVaultId, ink, 0);
+        ladle.stir(vaultId, otherVaultId, ink, 0);
+    }
+
+    function testMoveDebtAndCollateral() public {
+        (bytes12 otherVaultId, ) = ladle.build(baseId, usdcId, 123);
+        ladle.pour(vaultId, address(this), 0, (ART).i128());
+        (uint128 art, uint128 ink) = cauldron.balances(vaultId);
+        
+        vm.expectEmit(true, true, true, true);
+        emit VaultStirred(vaultId, otherVaultId, ink, art);
+        ladle.stir(vaultId, otherVaultId, ink, art);
+    }
 }
 
 contract BorrowedStateTests is BorrowedState {
     IERC20 token;
-    function testRepayDebt() public {
-        ladle.pour(vaultId, address(this), 0, -(ART).i128());
+
+    function setUp() public override {
+        super.setUp();
         (, bytes6 baseId, ) = cauldron.vaults(vaultId);
         token = IERC20(cauldron.assets(baseId));
     }
+    function testRepayDebt() public {
+        token.approve(address(ladle.joins(baseId)), ART);
+        ladle.pour(vaultId, address(this), 0, -(ART.i128()));
+
+        (uint128 art, uint128 ink) = cauldron.balances(vaultId);
+        assertEq(ink, INK);
+        assertEq(art, 0);
+        assertEq(token.balanceOf(address(this)), 0);
+    }
 
     function testRepayDebtWithTransfer() public {
-        (, bytes6 baseId, ) = cauldron.vaults(vaultId);
-
         token.transfer(address(ladle.joins(baseId)), ART);
         ladle.pour(vaultId, admin, 0, -(ART).i128());
+
+        (uint128 art, uint128 ink) = cauldron.balances(vaultId);
+        assertEq(ink, INK);
+        assertEq(art, 0);
+        assertEq(token.balanceOf(address(this)), 0);
     }
 
     function testCantRepayMoreThanDebt() public {
+        token.approve(address(ladle.joins(baseId)), ART + 10);
+        vm.expectRevert("Result below zero");
         ladle.pour(vaultId, admin, 0, -(ART + 10).i128());
     }
 
-    function testCantBorrowOverGlobalDebtLimit() public {
+    function testBorrowWhileUnderGlobalDebtLimit() public {
+        ladle.pour(vaultId, address(this), 0, (ART).i128());
+        (uint128 art, uint128 ink) = cauldron.balances(vaultId);
+        assertEq(ink, INK);
+        assertEq(art, ART * 2);
+    }
 
+    function testCantBorrowOverGlobalDebtLimit() public {
+        vm.expectRevert("Max debt exceeded");
+        ladle.pour(vaultId, address(this), 0, (ART * 20 * 1e6).i128());
     }
 }

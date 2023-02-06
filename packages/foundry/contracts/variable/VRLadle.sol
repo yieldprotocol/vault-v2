@@ -17,7 +17,6 @@ import "@yield-protocol/utils-v2/contracts/cast/CastU128I128.sol";
 import "dss-interfaces/src/dss/DaiAbstract.sol";
 import "./VRLadleStorage.sol";
 
-
 /// @dev Ladle orchestrates contract calls throughout the Yield Protocol v2 into useful and efficient user oriented features.
 contract VRLadle is VRLadleStorage, AccessControl() {
     using WMul for uint256;
@@ -301,13 +300,14 @@ contract VRLadle is VRLadleStorage, AccessControl() {
     function _pour(bytes12 vaultId, DataTypes.VRVault memory vault, address to, int128 ink, int128 base)
         private
     {
+        
         int128 fee;
         if (base > 0 && vault.ilkId != vault.baseId && borrowingFee != 0)
             fee = uint256(int256(base)).wmul(borrowingFee).i128();
 
         // Update accounting
         cauldron.pour(vaultId, ink, base + fee);
-
+        
         // Manage collateral
         if (ink != 0) {
             IJoin ilkJoin = getJoin(vault.ilkId);
@@ -318,7 +318,7 @@ contract VRLadle is VRLadleStorage, AccessControl() {
         // Manage base
         if (base != 0) {
             IJoin baseJoin = getJoin(vault.baseId);
-            if (base < 0) baseJoin.join(vault.owner, uint128(base));
+            if (base < 0) baseJoin.join(vault.owner, uint128(-base));
             if (base > 0) baseJoin.exit(to, uint128(base));
         }
     }

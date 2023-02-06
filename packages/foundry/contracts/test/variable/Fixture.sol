@@ -69,7 +69,7 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
     bytes6[] public ilkIds;
 
     uint256 public INK = WAD * 100000;
-    uint256 public ART = WAD ;
+    uint256 public ART = WAD;
     uint256 public FEE = 1000;
 
     function setUp() public virtual {

@@ -6,6 +6,13 @@ using CastU256I128 for uint256;
 abstract contract ZeroState is Fixture {
     event VaultPoured(bytes12 indexed vaultId, bytes6 indexed baseId, bytes6 indexed ilkId, int128 ink, int128 art);
     event VaultStirred(bytes12 indexed from, bytes12 indexed to, uint128 ink, uint128 art);
+    event VaultDestroyed(bytes12 indexed vaultId);
+    event VaultTweaked(
+        bytes12 indexed vaultId,
+        bytes6 indexed baseId,
+        bytes6 indexed ilkId
+    );
+    event VaultGiven(bytes12 indexed vaultId, address indexed receiver);
 }
 
 abstract contract AssetAddedState is ZeroState {
@@ -51,6 +58,13 @@ abstract contract CompleteSetup is IlkAddedState, RateOracleAddedState {
             uint24(1e6),
             6
         );
+        cauldron.setDebtLimits(
+            baseId,
+            daiId,
+            uint96(WAD * 20),
+            uint24(1e3),
+            18
+        );
     }
 }
 
@@ -72,7 +86,7 @@ abstract contract CauldronPouredState is VaultBuiltState {
 }
 
  abstract contract BorrowedState is CauldronPouredState {
-    function setUp() public override {
+    function setUp() public virtual override {
         super.setUp();
         ladle.pour(vaultId, address(this), 0, (ART).i128());
     }
