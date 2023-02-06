@@ -99,18 +99,12 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         ladleGovAuth();
         cauldronGovAuth(address(ladle));
         cauldronGovAuth(address(this));
-
-        makeBase(baseId, address(base), baseJoin, address(chiRateOracle));
+        addAsset(baseId, address(base), baseJoin);
+        makeBase(baseId, address(base), baseJoin, address(chiRateOracle), 9);
     }
 
     function setUpOracles() internal {
         chiRateOracle = new AccumulatorMultiOracle();
-
-        cTokenRateMock = new CTokenRateMock();
-        cTokenRateMock.set(1e18 * 2 * 10000000000);
-
-        cTokenChiMock = new CTokenChiMock();
-        cTokenChiMock.set(1e18 * 10000000000);
 
         chiRateOracle.grantRole(
             AccumulatorMultiOracle.setSource.selector,
@@ -208,26 +202,28 @@ abstract contract Fixture is Test, TestConstants, TestExtensions {
         bytes6 assetId,
         address assetAddress,
         FlashJoin join,
-        address chirateoracle
+        address chirateoracle,
+        uint8 salt
     ) internal {
-        addAsset(assetId, assetAddress, join);
+        
         cauldron.setRateOracle(assetId, IOracle(chirateoracle));
         cauldron.addBase(assetId);
 
-        cauldron.setSpotOracle(baseId, baseId, IOracle(chirateoracle), 1000000);
+        cauldron.setSpotOracle(assetId, assetId, IOracle(chirateoracle), 1000000);
         bytes6[] memory ilk = new bytes6[](1);
-        ilk[0] = baseId;
-        cauldron.addIlks(baseId, ilk);
+        ilk[0] = assetId;
+        cauldron.addIlks(assetId, ilk);
         cauldron.setDebtLimits(
-            baseId,
-            baseId,
+            assetId,
+            assetId,
             uint96(WAD * 20),
             uint24(1e6),
             18
         );
-        cauldron.build(address(this), 0x000000000000000000000003, assetId, assetId);
+        (bytes12 vaultId_,) = ladle.build(assetId, assetId, salt);
+        // cauldron.build(address(this), vaultId_, assetId, assetId);
         IERC20(assetAddress).approve(address(join),INK * 10);
         deal(assetAddress, address(this), INK * 10);
-        ladle.pour(0x000000000000000000000003, address(this), (INK * 10).i128(), 0);
+        ladle.pour(vaultId_, address(this), (INK * 10).i128(), 0);
     }
 }

@@ -173,7 +173,6 @@ contract CauldronTestOnBuiltVault is VaultBuiltState {
     }
 
     function testPour() public {
-        // TODO: Come up with sensible values
         cauldron.pour(
             vaultId,
             INK.i128(),
@@ -206,6 +205,14 @@ contract CauldronTestOnBuiltVault is VaultBuiltState {
             INK.i128(),
             ART.i128()
         );
+
+        // Adding new base and ilks to it
+        chiRateOracle.setSource(daiId, RATE, WAD, WAD * 2);
+        chiRateOracle.setSource(daiId, CHI, WAD, WAD * 2);
+        makeBase(daiId, address(dai), daiJoin, address(chiRateOracle), 12);
+        cauldron.setSpotOracle(daiId, usdcId, spotOracle, 1000000);
+        cauldron.addIlks(daiId, ilkIds);
+
         vm.expectRevert("Only with no debt");
         cauldron.tweak(vaultId, daiId, usdcId);
     }

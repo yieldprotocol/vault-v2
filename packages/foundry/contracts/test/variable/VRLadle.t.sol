@@ -410,7 +410,7 @@ contract TokensAndIntegrationTests is WithTokensAndIntegrationState {
         ladle.route(address(usdc), abi.encodeWithSelector(IERC20.approve.selector, address(this), WAD));
     }
 
-    function testStrip() public {
+    function testAuthorizationStripping() public {
         vm.expectRevert("Access denied");
         ladle.route(address(restrictedERC20Mock), abi.encodeWithSelector(RestrictedERC20Mock.mint.selector, address(this), WAD));
     }
